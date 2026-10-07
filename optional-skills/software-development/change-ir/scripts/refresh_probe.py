@@ -12,14 +12,21 @@ from pathlib import Path
 from typing import Any
 
 
-ANCHOR_STATES = {"present", "partial", "missing"}
+ANCHOR_STATES = {"present", "partial", "missing", "unknown"}
 
 
 def _candidate_files(root: Path, patterns: list[str]) -> list[Path]:
+    root = root.resolve()
     files: list[Path] = []
     seen: set[Path] = set()
     for pattern in patterns:
+        if Path(pattern).is_absolute() or ".." in Path(pattern).parts:
+            raise ValueError(f"Anchor path must stay inside the repository: {pattern}")
         for path in root.glob(pattern):
+            if not path.resolve().is_relative_to(root):
+                raise ValueError(f"Anchor symlink escapes the repository: {path}")
+            if ".git" in path.resolve().relative_to(root).parts:
+                raise ValueError(f"Git metadata is not an anchor source: {path}")
             if path.is_file() and path not in seen:
                 seen.add(path)
                 files.append(path)
@@ -28,10 +35,8 @@ def _candidate_files(root: Path, patterns: list[str]) -> list[Path]:
 
 def _first_hit(files: list[Path], term: str) -> dict[str, Any] | None:
     for path in files:
-        try:
-            lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-        except OSError:
-            continue
+        # An unreadable file is not evidence of absence. Let the caller record failure.
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
         for lineno, line in enumerate(lines, 1):
             if term in line:
                 return {"path": str(path), "line": lineno, "text": line.strip()[:240]}
@@ -49,7 +54,9 @@ def probe_anchor(root: Path, anchor: dict[str, Any]) -> dict[str, Any]:
     any_ok = not any_terms or any(hits.get(term) is not None for term in any_terms)
     any_hit = any(hit is not None for hit in hits.values())
 
-    if all_ok and any_ok:
+    if not terms:
+        state = "unknown"
+    elif all_ok and any_ok:
         state = "present"
     elif any_hit:
         state = "partial"
@@ -72,10 +79,12 @@ def probe_operation(root: Path, operation: dict[str, Any]) -> dict[str, Any]:
         anchor_state = "present"
     elif states and all(state == "missing" for state in states):
         anchor_state = "missing"
+    elif "unknown" in states:
+        anchor_state = "unknown"
     elif states:
         anchor_state = "partial"
     else:
-        anchor_state = "missing"
+        anchor_state = "unknown"
 
     return {
         "id": operation["id"],

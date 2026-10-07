@@ -1,0 +1,855 @@
+{
+  "run": "007",
+  "scope": "Agent-assisted Change IR v0, kvnloo/hermes-agent#455",
+  "date": "2026-10-07",
+  "previous_target": "59a3866ea5a07290afd9a1d137d52d679b77f3ab",
+  "current_target": "c1b205df6805db947e32091dead615546621ee7a",
+  "historical_fixture_baselines_unchanged": true,
+  "acceptance_inferred": false,
+  "promotion_authorized": false,
+  "measurements": {
+    "unit": "Unicode code points, UTF-8 decoded",
+    "original": 67558,
+    "rendered_review": 5662,
+    "selected_patch": 7509,
+    "total": 13171,
+    "reduction_percent": 80.5,
+    "scope": "one selected operation; no time/token or full-feature-equivalence claim"
+  },
+  "search_coverage": {
+    "complete": false,
+    "included": 100,
+    "query": "is:pr \"root-owned\"",
+    "total_count": 405
+  },
+  "operation_states": {
+    "105624": [
+      {
+        "id": "OP-observe-sibling-addressed-user",
+        "states": [
+          "still_needed"
+        ],
+        "reason": "The exclusive-other-bot gate still drops sibling-addressed human messages in both dispatch and observation. The existing allowlist and topic gates provide the current integration boundary.",
+        "evidence": [
+          "https://github.com/NousResearch/hermes-agent/issues/44881",
+          "c1b205df6805db947e32091dead615546621ee7a:plugins/platforms/telegram/adapter.py#L6130-L6195",
+          "c1b205df6805db947e32091dead615546621ee7a:plugins/platforms/telegram/adapter.py#L6370-L6465",
+          "c1b205df6805db947e32091dead615546621ee7a:gateway/config_loader.py#L205-L235"
+        ],
+        "evidence_ids": [
+          "551ee4d41ed9f6ea8a10",
+          "ec4b470d73294a244d2b",
+          "73530843114698071a5e",
+          "710150a695571c952454"
+        ]
+      },
+      {
+        "id": "OP-mirror-final-response",
+        "states": [
+          "needs_decision"
+        ],
+        "reason": "Final-response mirroring is a separate operation. Deduplication, cross-profile namespace and delivery-finalization policy remain outside this selected observation patch; no current approval is inferred.",
+        "evidence": [
+          "https://github.com/NousResearch/hermes-agent/issues/44881"
+        ],
+        "evidence_ids": [
+          "551ee4d41ed9f6ea8a10"
+        ]
+      },
+      {
+        "id": "OP-preserve-bot-sender-observation",
+        "states": [
+          "already_on_main"
+        ],
+        "reason": "The current bot-sender loop breaker suppresses dispatch without losing eligible observed context. Preserve these branches instead of duplicating an older PR implementation.",
+        "evidence": [
+          "c1b205df6805db947e32091dead615546621ee7a:plugins/platforms/telegram/adapter.py#L6130-L6195",
+          "c1b205df6805db947e32091dead615546621ee7a:plugins/platforms/telegram/adapter.py#L6370-L6465"
+        ],
+        "evidence_ids": [
+          "ec4b470d73294a244d2b",
+          "73530843114698071a5e"
+        ]
+      }
+    ],
+    "31157": [
+      {
+        "id": "OP-mcp-refresh-teardown-guard",
+        "states": [
+          "already_on_main",
+          "moved"
+        ],
+        "reason": "The refresh method now snapshots self.session and returns when it is None in mcp_tool_health.py. Focused teardown/reconnect tests exercise this behavior; the old mcp_tool.py anchor is not the implementation boundary.",
+        "evidence": [
+          "c1b205df6805db947e32091dead615546621ee7a:tools/mcp_tool_health.py#L120-L180",
+          "c1b205df6805db947e32091dead615546621ee7a:tests/tools/test_mcp_dynamic_discovery.py#L100-L205",
+          "https://github.com/NousResearch/hermes-agent/pull/31157#pullrequestreview-4684317812"
+        ],
+        "evidence_ids": [
+          "eb81c8c1cbc329799931",
+          "3e647d187ef4ac96eab2",
+          "4d46ec2d95b9e9d0cc08"
+        ]
+      },
+      {
+        "id": "OP-repo-wide-gitnexus-instruction",
+        "states": [
+          "invalidated"
+        ],
+        "reason": "The explicit review rejects mandatory contributor-local absolute paths in repository-wide instructions. Do not reapply this instruction.",
+        "evidence": [
+          "https://github.com/NousResearch/hermes-agent/pull/31157#discussion_r3570295163"
+        ],
+        "evidence_ids": [
+          "06bbe47467e6982a7a2c"
+        ]
+      },
+      {
+        "id": "OP-gws-generated-credentials",
+        "states": [
+          "needs_decision"
+        ],
+        "reason": "The review requires generated authorized_user payload and restrictive-permission behavior proof. This run does not establish that proof or a current maintainer decision for the GWS change.",
+        "evidence": [
+          "https://github.com/NousResearch/hermes-agent/pull/31157#discussion_r3570295167"
+        ],
+        "evidence_ids": [
+          "ec0aa8a068169fa18e67"
+        ]
+      }
+    ]
+  },
+  "collision_counts": {
+    "same_operation": 1,
+    "overlapping_policy": 2,
+    "complements": 3,
+    "related_distinct_boundary": 9
+  },
+  "test_results": {
+    "workflow_integration": {
+      "passed": 4,
+      "failed": 0
+    },
+    "skill_authoring": {
+      "passed": 7,
+      "failed": 0
+    },
+    "telegram_materialization": {
+      "passed": 30,
+      "failed": 0,
+      "inputs_unchanged": true
+    },
+    "telegram_unmodified_base_with_regression_tests": {
+      "passed": 29,
+      "failed": 1,
+      "expected_failure": "test_sibling_addressed_user_can_be_observed_without_dispatch"
+    },
+    "repository_checks": {
+      "passed": 11,
+      "failed": 0
+    }
+  },
+  "artifacts": [
+    {
+      "name": "105624-packet.json",
+      "sha256": "9cacb800080d277af369d3f5abafd65692a8cc9c761772c1d3c7e5e57279e546",
+      "bytes": 6150
+    },
+    {
+      "name": "105624-current-review.json",
+      "sha256": "8866bfb37e7fb2e2436096688bdeb3668632eb00869d09c4ffb9ac765b62d7af",
+      "bytes": 3541
+    },
+    {
+      "name": "105624-current-refresh.json",
+      "sha256": "e23e266648a6fbdf5e81ca6545cd924ede5db99ed14bf90c4b9214c0a1822228",
+      "bytes": 152275
+    },
+    {
+      "name": "105624-realization.json",
+      "sha256": "df08fd9052d88a6660d3466a1d5233f398efdacb70af44e241ab9dd52a8b6fc8",
+      "bytes": 2754
+    },
+    {
+      "name": "105624-verification.json",
+      "sha256": "50966dd7d4df785c7e7e02eae489a14ca07026f977bec3ebe6185cbe0e583069",
+      "bytes": 2103
+    },
+    {
+      "name": "105624-review.md",
+      "sha256": "23ea59db33160d5ce90aee5da20f7d45cd619709c017fc267101aedf9a713e8f",
+      "bytes": 5662
+    },
+    {
+      "name": "105624-pr.md",
+      "sha256": "d7f820a0e865236cb438b1489ddbe5160838bde44eb57b876f268c1a40af1fe5",
+      "bytes": 2136
+    },
+    {
+      "name": "31157-packet.json",
+      "sha256": "b2d7e26b3f0d1e9261d261bfde3c3749114703e57f4eb1df06f3989b39775cb8",
+      "bytes": 5084
+    },
+    {
+      "name": "31157-previous-refresh.json",
+      "sha256": "e22e2014a4edb5cba72f8c24f0552d30a7c964b557310cbdb1f6033d65c82847",
+      "bytes": 84822
+    },
+    {
+      "name": "31157-current-refresh-002.json",
+      "sha256": "da24ef1065a9006f13567b1c64105b9b0ef43ff3c0f0d3d7ee3cdeecc702c00e",
+      "bytes": 114948
+    },
+    {
+      "name": "31157-review-002.md",
+      "sha256": "600151606cc5b027043c3d24c4e297660e5b8c19adcbdb8a1e73438418f7c4eb",
+      "bytes": 5717
+    },
+    {
+      "name": "78207-packet.json",
+      "sha256": "0a1c232b0899b5ff28b71d8e537bc0d27f75845561c0dc4d4551d6185d3a7fae",
+      "bytes": 9212
+    },
+    {
+      "name": "collisions.json",
+      "sha256": "3978c52da2e3252aec5f655072eba45d693023df1f9c1e6631c7b9e790464ae7",
+      "bytes": 28241
+    },
+    {
+      "name": "relations.json",
+      "sha256": "67ec80da7a8383534f094f194775be07bc7a3392b9aa86e8a6abc3dd8d8239c2",
+      "bytes": 5422
+    },
+    {
+      "name": "measurements.json",
+      "sha256": "e3ad2f151a3d70b98f4018bcf7853984a2f1f2175ea3c227707e4b421f17248c",
+      "bytes": 258
+    },
+    {
+      "name": "discussions.json",
+      "sha256": "cc28b3f9c9e1619ca0bbcad7fa5713030108b8a3bbf1c9915fac2cb6701990e4",
+      "bytes": 44192
+    },
+    {
+      "name": "issues.json",
+      "sha256": "86b00306051d7f953cdc1d56cddc85fb09c67726dab3c4b9cded199a098971c2",
+      "bytes": 35336
+    },
+    {
+      "name": "current-evidence.json",
+      "sha256": "1bacf20d5b3439d72cd2b3b9636303d4d25c0e8e4a11c6fe7067545af3cd83bc",
+      "bytes": 53248
+    },
+    {
+      "name": "previous-evidence.json",
+      "sha256": "6e296bbd46788e8e05c5a219a94ea09733194088a10af2059092cff99bad44b4",
+      "bytes": 24720
+    },
+    {
+      "name": "collision-sources.json",
+      "sha256": "bec1ae6d051790f33a6e58e001de1c580a9c0bae9cf7cf8d42434c2f119e20e2",
+      "bytes": 81277
+    },
+    {
+      "name": "search-candidates.json",
+      "sha256": "d23bcccddc33a0706c45ddaeb5261665b9a1f469f3eecfcfcc37d35063091770",
+      "bytes": 376309
+    },
+    {
+      "name": "red-base.log",
+      "sha256": "8bfdf9f9201efe80a3bff4f066e64a78a2c64b7353d423209b5c6f27115bb7e8",
+      "bytes": 5207
+    }
+  ],
+  "provenance_relations": [
+    {
+      "from": "CHG-31157-selective-salvage:OP-mcp-refresh-teardown-guard",
+      "type": "superseded_by",
+      "to": "NousResearch/hermes-agent@1c82c22eb69c502d6298703d0ebbc971f7eac6cd",
+      "credit": [
+        "sege66",
+        "patrykkopycinski",
+        "salch-cred",
+        "Tranquil-Flow",
+        "ildunari",
+        "andrexibiza",
+        "ly6751",
+        "austinpickett"
+      ]
+    },
+    {
+      "from": "CHG-31157-selective-salvage:OP-mcp-refresh-teardown-guard",
+      "type": "derived_from",
+      "to": "https://github.com/NousResearch/hermes-agent/pull/31157",
+      "credit": [
+        "sege66"
+      ]
+    },
+    {
+      "from": "CHG-31157-selective-salvage:OP-mcp-refresh-teardown-guard",
+      "type": "moved_to",
+      "to": "c1b205df6805db947e32091dead615546621ee7a:tools/mcp_tool_health.py#L132",
+      "credit": []
+    },
+    {
+      "from": "NousResearch/hermes-agent@1c82c22eb69c502d6298703d0ebbc971f7eac6cd",
+      "type": "implements",
+      "to": "CHG-31157-selective-salvage:OP-mcp-refresh-teardown-guard",
+      "credit": [
+        "patrykkopycinski",
+        "salch-cred",
+        "Tranquil-Flow",
+        "ildunari",
+        "andrexibiza",
+        "ly6751"
+      ],
+      "note": "Independent later diagnosis and implementation; not an inferred derivation from the earlier proposal."
+    },
+    {
+      "from": "NousResearch/hermes-agent@37eb4d0b375feb3352ad87c95a1aa8481d605174",
+      "type": "proves",
+      "to": "CHG-31157-selective-salvage:OP-mcp-refresh-teardown-guard",
+      "credit": [
+        "austinpickett",
+        "ly6751",
+        "salch-cred"
+      ],
+      "note": "Behavior-contract test provenance; this run read the tests, it did not execute the MCP suite."
+    },
+    {
+      "from": "CHG-31157-selective-salvage:OP-repo-wide-gitnexus-instruction",
+      "type": "invalidated_by",
+      "to": "https://github.com/NousResearch/hermes-agent/pull/31157#discussion_r3570295163",
+      "credit": [
+        "teknium1"
+      ]
+    }
+  ],
+  "evidence_sources": [
+    {
+      "id": "eb81c8c1cbc329799931",
+      "kind": "code",
+      "ref": "c1b205df6805db947e32091dead615546621ee7a:tools/mcp_tool_health.py#L120-L180",
+      "sha256": "82a3b9ff63ff10dc66a45909144af04114de40f5c78d3cc23577b77b0ad8cf5a",
+      "authors": []
+    },
+    {
+      "id": "3e647d187ef4ac96eab2",
+      "kind": "code",
+      "ref": "c1b205df6805db947e32091dead615546621ee7a:tests/tools/test_mcp_dynamic_discovery.py#L100-L205",
+      "sha256": "d847e9b5cfc6ac5df5b0d24e77244f79d4b8b545befed8696e084a7a21ce030d",
+      "authors": []
+    },
+    {
+      "id": "ec4b470d73294a244d2b",
+      "kind": "code",
+      "ref": "c1b205df6805db947e32091dead615546621ee7a:plugins/platforms/telegram/adapter.py#L6130-L6195",
+      "sha256": "dd029cb16e8a9fed3182c2f6cd4e1d7ec5b665228fc593c8ce37c9675f3656e0",
+      "authors": []
+    },
+    {
+      "id": "73530843114698071a5e",
+      "kind": "code",
+      "ref": "c1b205df6805db947e32091dead615546621ee7a:plugins/platforms/telegram/adapter.py#L6370-L6465",
+      "sha256": "92b4362a451ac8c5fdc67b102789629fa160b3d6b527d831036281ed97d1830d",
+      "authors": []
+    },
+    {
+      "id": "710150a695571c952454",
+      "kind": "code",
+      "ref": "c1b205df6805db947e32091dead615546621ee7a:gateway/config_loader.py#L205-L235",
+      "sha256": "d84fb24528c1502c50411bd67ead98b38396b8278dab4e8734130e99c548a9dd",
+      "authors": []
+    },
+    {
+      "id": "33b32357025f116af8c1",
+      "kind": "code",
+      "ref": "c1b205df6805db947e32091dead615546621ee7a:AGENTS.md#L1-L169",
+      "sha256": "59b55ca1ff4be46dd19cd1b22605dfcdb78f52e009fb056315d6d405f5af1955",
+      "authors": []
+    },
+    {
+      "id": "f03dee8821cb147b7a2a",
+      "kind": "code",
+      "ref": "c1b205df6805db947e32091dead615546621ee7a:website/docs/developer-guide/contributing.md#L1-L250",
+      "sha256": "584ad7f09bcd227a21bfd1974952eede505598ba98ee749daea08fe34fed752a",
+      "authors": []
+    },
+    {
+      "id": "4f7a20ae6547e2a6395d",
+      "kind": "git_history",
+      "ref": "c1b205df6805db947e32091dead615546621ee7a:history",
+      "sha256": "2e9c14fb739278b6f6607aa81e0818a25a8defcdae441d7b60a740d0dac93897",
+      "authors": []
+    },
+    {
+      "id": "21d6a2518c5ef59baa14",
+      "kind": "code",
+      "ref": "59a3866ea5a07290afd9a1d137d52d679b77f3ab:tools/mcp_tool_health.py#L120-L180",
+      "sha256": "82a3b9ff63ff10dc66a45909144af04114de40f5c78d3cc23577b77b0ad8cf5a",
+      "authors": []
+    },
+    {
+      "id": "a811eee4421c5167ae95",
+      "kind": "code",
+      "ref": "59a3866ea5a07290afd9a1d137d52d679b77f3ab:tests/tools/test_mcp_dynamic_discovery.py#L100-L205",
+      "sha256": "d847e9b5cfc6ac5df5b0d24e77244f79d4b8b545befed8696e084a7a21ce030d",
+      "authors": []
+    },
+    {
+      "id": "b0c970df844b247127ff",
+      "kind": "code",
+      "ref": "59a3866ea5a07290afd9a1d137d52d679b77f3ab:AGENTS.md#L1-L169",
+      "sha256": "59b55ca1ff4be46dd19cd1b22605dfcdb78f52e009fb056315d6d405f5af1955",
+      "authors": []
+    },
+    {
+      "id": "e9d24a7b282efb1bf07c",
+      "kind": "git_history",
+      "ref": "59a3866ea5a07290afd9a1d137d52d679b77f3ab:history",
+      "sha256": "e763dc6de278d902910e3cd1df06023556a2c5183fd0615a34161dc9570e84b2",
+      "authors": []
+    },
+    {
+      "id": "19f50bdcae3c1f2bd6bf",
+      "kind": "issue",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/105624",
+      "sha256": "b1a9df46c951260dd3465407d5c314ddcd037040182a6150a1d60ce1b7ad3936",
+      "authors": [
+        "DavidMetcalfe"
+      ]
+    },
+    {
+      "id": "ee69420423a51e7cd288",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/105624#issuecomment-5582279007",
+      "sha256": "eb6ef3c3d8057af60ef22412e509dca8f467ade5ab4c564cade20962aa0b8ee0",
+      "authors": [
+        "Enough1122"
+      ]
+    },
+    {
+      "id": "4a7a8a1eab23f47b19ee",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/105624#issuecomment-5591634810",
+      "sha256": "a7ee856a03a96a8ac289889dc9f49ae15cf428fdc23d058ced11b2f6dd14a068",
+      "authors": [
+        "DavidMetcalfe"
+      ]
+    },
+    {
+      "id": "9527bb17ea07522001f6",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/105624#issuecomment-6008907398",
+      "sha256": "f22946e934337b9c9b01c4ccee8565b8675c6c45d2272dbe136027939d01f24f",
+      "authors": [
+        "eabase"
+      ]
+    },
+    {
+      "id": "497d0b066ed3a41f592e",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/105624#issuecomment-6020831776",
+      "sha256": "26cf4d7516efc718f59d463d96f7312bf49e4f3f027ff02dc8781adb8f79d943",
+      "authors": [
+        "DavidMetcalfe"
+      ]
+    },
+    {
+      "id": "e8666222ae9d13e86d56",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/105624#issuecomment-6022202250",
+      "sha256": "ec728b0149b2c22b4c710d6f31bb53e5f8085dc269902f7b955c74963c257025",
+      "authors": [
+        "eabase"
+      ]
+    },
+    {
+      "id": "a0b823f0d272b71f6ab2",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/105624#issuecomment-6027345692",
+      "sha256": "6ffa2d818071d9eb2b3e65c6424696b64f4646a9307e3e176cddda522e5e36d5",
+      "authors": [
+        "DavidMetcalfe"
+      ]
+    },
+    {
+      "id": "9b505ae05651e04fc70d",
+      "kind": "pull_request",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/105624",
+      "sha256": "5150893085c0296b07a7e566c5410cae5a341d64252ae52654ebda566cff937d",
+      "authors": [
+        "DavidMetcalfe"
+      ]
+    },
+    {
+      "id": "59b51e316ab766d91e82",
+      "kind": "issue",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/31157",
+      "sha256": "14b2c26d83bb9a68884291bec048dfa86635a2cf2634ba927b298458202f3869",
+      "authors": [
+        "sege66"
+      ]
+    },
+    {
+      "id": "59bf1607c313af1cd0f8",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/31157#issuecomment-4526776114",
+      "sha256": "2e60c8d1575307aeb90667bd78070fcb54771cee6eaeae073342b479399b90bf",
+      "authors": [
+        "sege66"
+      ]
+    },
+    {
+      "id": "2cc464fadbe7502749d0",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/31157#issuecomment-4526795890",
+      "sha256": "6e2bf2d59d910e45ec300c1fa5f2ee79bd7cd1bfc904bf4b5a1f9d0d071f1078",
+      "authors": [
+        "sege66"
+      ]
+    },
+    {
+      "id": "4f98b62225103da421ed",
+      "kind": "pull_request",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/31157",
+      "sha256": "212511b3c76edc0309a7dc11f7ee539ab90c4045549a974ae9a30e63cad8d664",
+      "authors": [
+        "sege66"
+      ]
+    },
+    {
+      "id": "4d46ec2d95b9e9d0cc08",
+      "kind": "pr_reviews",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/31157#pullrequestreview-4684317812",
+      "sha256": "6496450a6904eb2c6c4452556ab03957b2cd258ed3c1be1dd6412a4246805864",
+      "authors": [
+        "teknium1"
+      ]
+    },
+    {
+      "id": "06bbe47467e6982a7a2c",
+      "kind": "pr_comments",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/31157#discussion_r3570295163",
+      "sha256": "7e7250cf552b4a587aea70d47ffff0ff94b41bada9ad1488663a1128e1d89ea9",
+      "authors": [
+        "teknium1"
+      ]
+    },
+    {
+      "id": "ec0aa8a068169fa18e67",
+      "kind": "pr_comments",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/31157#discussion_r3570295167",
+      "sha256": "128bd354feccddf01f21d45aea5746215c244f511dc2274503cf0e6c1355cdf6",
+      "authors": [
+        "teknium1"
+      ]
+    },
+    {
+      "id": "551ee4d41ed9f6ea8a10",
+      "kind": "issue",
+      "ref": "https://github.com/NousResearch/hermes-agent/issues/44881",
+      "sha256": "2589013114daae57c843778a48932aa00b435efbaf7bfc711dfca6dbb1550f9a",
+      "authors": [
+        "majkonautic"
+      ]
+    },
+    {
+      "id": "314688dd55d3be3a86d3",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/issues/44881#issuecomment-5580421776",
+      "sha256": "4f983af075f982abb7817c0c046e0fbeb44329f5f1e0fe969dcf86ec6ec87bb1",
+      "authors": [
+        "DavidMetcalfe"
+      ]
+    },
+    {
+      "id": "769882712293889866ee",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/issues/44881#issuecomment-6008913579",
+      "sha256": "d20b7a050580381738720a9654688267ae403b57e2720716d61f3970bb315407",
+      "authors": [
+        "eabase"
+      ]
+    },
+    {
+      "id": "adc7453055187bdf5318",
+      "kind": "issue",
+      "ref": "https://github.com/NousResearch/hermes-agent/issues/78207",
+      "sha256": "4910500e1ed7ea403ed5d9487d6c19d0b4acd94d2a7174791da9836141dfcd15",
+      "authors": [
+        "andrexibiza"
+      ]
+    },
+    {
+      "id": "6a25da406d257362bd28",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/issues/78207#issuecomment-5175518687",
+      "sha256": "c131efc1850d99f0942618f6b9a62903f0d295c208bcc6b27b64e3afd08fc7e4",
+      "authors": [
+        "andrexibiza"
+      ]
+    },
+    {
+      "id": "ae2b2b7b38f458f7665e",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/issues/78207#issuecomment-5175577324",
+      "sha256": "3686aa3abf6e1e6f0c831e2680e5e2fa21261f1e157050f9263c2982ea2c8c46",
+      "authors": [
+        "andrexibiza"
+      ]
+    },
+    {
+      "id": "b0afea9719f2db820026",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/issues/78207#issuecomment-5302814858",
+      "sha256": "7744990f951ac25bb3b3a1ebacf2e60a8267d0e6556fca6bc0ae62924ee9813d",
+      "authors": [
+        "HenrikDanielsson"
+      ]
+    },
+    {
+      "id": "0210de249b7574384c69",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/issues/78207#issuecomment-5303771426",
+      "sha256": "0325380cb9f12ee5c05dc0c0b65cd4163e30fc765e001e169b00184d0b963c5f",
+      "authors": [
+        "agenteskynet-bot"
+      ]
+    },
+    {
+      "id": "c393c03da3e99a4ca7e4",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/issues/78207#issuecomment-5881658299",
+      "sha256": "31a2cc141b756070786c110fa6344bd19366e3e11da453cb3eb81845867feaec",
+      "authors": [
+        "primomcd-droid"
+      ]
+    },
+    {
+      "id": "9ce1b493ce13beaa92ec",
+      "kind": "issue",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102199",
+      "sha256": "a2221c590ca94e75dd18ed422e1c7fc0a5a90d03811187f53230bd066f40f618",
+      "authors": [
+        "fangliquanflq"
+      ]
+    },
+    {
+      "id": "5ac3ec8fdca3002e903f",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102199#issuecomment-5530081793",
+      "sha256": "acc0edc7c7d2e25485ae6b767643c1a0f051b23692d6c505dbfbf9a1934fee4e",
+      "authors": [
+        "Enough1122"
+      ]
+    },
+    {
+      "id": "80d3ff453b327ba34e45",
+      "kind": "pull_request",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102199",
+      "sha256": "5c39ccc255e113ac014eb075ea9ac437d28b86481a54b011a4b62a64bcf6438f",
+      "authors": [
+        "fangliquanflq"
+      ]
+    },
+    {
+      "id": "3faf726c4ef9b2b02daf",
+      "kind": "issue",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102320",
+      "sha256": "608d884cb7eb67d60dbb88f613370bbd98433a3db00440523d3c2aff5e76b361",
+      "authors": [
+        "aniruddhaadak80"
+      ]
+    },
+    {
+      "id": "dd0c896ca859f9d72a00",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102320#issuecomment-5529280029",
+      "sha256": "cff07c4d84dcdb18eb4e865d0c2f1bcf140ec65e1f0b9fc8bf6249b29cd8dcdc",
+      "authors": [
+        "alt-glitch"
+      ]
+    },
+    {
+      "id": "a34eadccfcf690c47197",
+      "kind": "pull_request",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102320",
+      "sha256": "42a239d00437af10404948fd54312b4ad3bc8701253e85618479c390dcf66de1",
+      "authors": [
+        "aniruddhaadak80"
+      ]
+    },
+    {
+      "id": "a9bba3a399d7c81cd061",
+      "kind": "issue",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102258",
+      "sha256": "c8d7abf372ffe68159593cf66d33b3202e2df36ce5bc2d72310dc3f158af4926",
+      "authors": [
+        "Sahilvishnaliya"
+      ]
+    },
+    {
+      "id": "847b5817487c7b6a4bb4",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102258#issuecomment-5528173738",
+      "sha256": "ed9d81ca41a82fbcbc38179642a0f9faa5aae229d8e082c7d0a59d5a5ca07a13",
+      "authors": [
+        "alt-glitch"
+      ]
+    },
+    {
+      "id": "8068d77cd4b8932bc6d3",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102258#issuecomment-5573939755",
+      "sha256": "6bb4f5f8ea9ae9127dc0e5d3374807ca886ae2b8986d630bf6c5f264dcd71a87",
+      "authors": [
+        "Sahilvishnaliya"
+      ]
+    },
+    {
+      "id": "47b82fe6af167cb3c478",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102258#issuecomment-5574017602",
+      "sha256": "75015a19c7b6470f53c5818c348131ef06cebc86d523afb9160660142d5f7f86",
+      "authors": [
+        "Sahilvishnaliya"
+      ]
+    },
+    {
+      "id": "b18af293d0d4996c8bae",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102258#issuecomment-5627728794",
+      "sha256": "8f753e979e52461f43b95bd83bb07004e0ced727ea2d5450bbebe86c836d3f89",
+      "authors": [
+        "salch-cred"
+      ]
+    },
+    {
+      "id": "e8c34bd37b2c1a4c2006",
+      "kind": "pull_request",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102258",
+      "sha256": "c3447002591353ba11dda91d791c3703b3f2a42ce8de99e4df8419552bde6c78",
+      "authors": [
+        "Sahilvishnaliya"
+      ]
+    },
+    {
+      "id": "497e54dfe09279cc4682",
+      "kind": "pr_reviews",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102258#pullrequestreview-5104015335",
+      "sha256": "6337f97f846db7649fbfa9e2973a4d479905a6874a2b55488c4f840a06640876",
+      "authors": [
+        "andrexibiza"
+      ]
+    },
+    {
+      "id": "3ba46bf1100b5bb2837a",
+      "kind": "issue",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102208",
+      "sha256": "eec111a0773e4df50eabde88411d9c1de28903b5fb642a0bb712088dee3ce22b",
+      "authors": [
+        "Sahilvishnaliya"
+      ]
+    },
+    {
+      "id": "ef29e1c278a77b0e81b8",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102208#issuecomment-5530100170",
+      "sha256": "f1715c9bc415aa59d3ff0855578cb9ea3e8e10f5d0b89be0627655b44c110a0a",
+      "authors": [
+        "Enough1122"
+      ]
+    },
+    {
+      "id": "f4297e6c73817c9aefe3",
+      "kind": "pull_request",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/102208",
+      "sha256": "de3f0c9e2f3c0419ea4e7c19ee4bace520210568435266f33d67cf1cc4a0949c",
+      "authors": [
+        "Sahilvishnaliya"
+      ]
+    },
+    {
+      "id": "1f2ee05ae5566d057019",
+      "kind": "issue",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/105608",
+      "sha256": "dfbacc4a67a92a567ec9db0d36bf50dad5330297b0cc51bc6d4b6bc512e22da8",
+      "authors": [
+        "RickyYii"
+      ]
+    },
+    {
+      "id": "67e8a8c819294a150aed",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/105608#issuecomment-5582253913",
+      "sha256": "344d93ebed312d33cfa8eb4d8cdeef1a6670b646ce7218b02f783e199fc07113",
+      "authors": [
+        "Enough1122"
+      ]
+    },
+    {
+      "id": "23eb0e3fcc884e027158",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/105608#issuecomment-5585013525",
+      "sha256": "866b02e8489ac6161a3624bfa92b754fc1dff7b08195c11c86f4d650f7935451",
+      "authors": [
+        "RickyYii"
+      ]
+    },
+    {
+      "id": "bb4db8827d515bbf90a0",
+      "kind": "pull_request",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/105608",
+      "sha256": "8cdd3120b6058afaa6745fe8cdffb0e6f83f4e5d74836573998ccaedae28c807",
+      "authors": [
+        "RickyYii"
+      ]
+    },
+    {
+      "id": "c9fcf27621c9c7adf14a",
+      "kind": "issue",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/128970",
+      "sha256": "c03a194c34af57f8d12a470ed33c815c58b21de019408f5bbadcd9b81ede0145",
+      "authors": [
+        "dskwe"
+      ]
+    },
+    {
+      "id": "4605e22f951dbbe107fa",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/128970#issuecomment-5904674990",
+      "sha256": "a6235b9250722e4837a3327575d20405d3849a9213262f7032ce2c28dd36feef",
+      "authors": [
+        "whyyagswhy"
+      ]
+    },
+    {
+      "id": "71df98e1d73594bf5028",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/128970#issuecomment-5904979758",
+      "sha256": "479af7c62d621f2efae9ef6ef44d93ab1dc3349807ad6b9a306a61844805526b",
+      "authors": [
+        "eabase"
+      ]
+    },
+    {
+      "id": "01c9b8e67a0685896d38",
+      "kind": "issue_comment",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/128970#issuecomment-5905023002",
+      "sha256": "b5d3a0ff57267af72c3be5c686a21a8303a39fecf0226b1998b880f70212910e",
+      "authors": [
+        "dskwe"
+      ]
+    },
+    {
+      "id": "b18ee60480454b045e81",
+      "kind": "pull_request",
+      "ref": "https://github.com/NousResearch/hermes-agent/pull/128970",
+      "sha256": "c72b828bd6a3629eb449585ba8b75305d55077b793f58519d6a329cceae29966",
+      "authors": [
+        "dskwe"
+      ]
+    }
+  ]
+}

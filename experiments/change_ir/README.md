@@ -34,12 +34,12 @@ Refresh states for an operation:
 
 ## Probe
 
-`refresh_probe.py` scans a current checkout for the semantic anchors named by a fixture.
+`../../optional-skills/software-development/change-ir/scripts/refresh_probe.py` scans a current checkout for the semantic anchors named by a fixture.
 
 Example:
 
 ```bash
-python experiments/change_ir/refresh_probe.py \
+python optional-skills/software-development/change-ir/scripts/refresh_probe.py \
   experiments/change_ir/fixtures/105624.json \
   --repo .
 ```
@@ -92,3 +92,12 @@ The decisive rematerialization took one surviving operation from #105624 and rec
 All five experimental criteria passed at the representation/workflow level. The branch-local execution workflow for the rematerialized slice is still queued behind the fork's Actions backlog and is explicitly not counted as a test pass.
 
 See `FINAL.md` for the full assessment.
+
+## Executable workflow
+
+The historical findings above are preserved. Run 005 later verified the queued CI
+result; Run 006 introduced the local workflow. The installable optional
+[Change IR skill](../../optional-skills/software-development/change-ir/SKILL.md)
+now covers source collection through verified PR preparation for #455.
+See [the workflow](LOCAL-WORKFLOW.md) and [Run 007](runs/007-complete-workflow.md)
+for current acceptance evidence and its limits.
