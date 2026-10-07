@@ -9,6 +9,7 @@
     "bundle": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
+    "e2e:native": "node e2e/run.mjs",
     "lint": "eslint src/",
     "fmt": "prettier --write 'src/**/*.{ts,tsx}'",
     "fix": "eslint src/ --fix && npm run fmt",
