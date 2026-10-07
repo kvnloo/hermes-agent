@@ -7,7 +7,50 @@ Everything runs on a private stage: a headless Hyprland output with an isolated 
 window on it (own config, daemon and HOME). Your own Tern windows, panes, config and
 monitors are not touched, and nothing needs root or a portal prompt.
 
-## Workflow
+## Offline rendering (use this for product footage)
+
+`offline/` renders a real session without capturing the screen. Hermes records every message
+it sends Tern (`TERN_TSP_RECORD`); a headless Tern replays that stream at the recorded pace on
+its virtual clock and writes each frame itself. Nothing is dropped or repeated, at any size or
+frame rate, and no desktop, window chrome state or update pill gets into the picture.
+
+```sh
+cd scripts/demo-capture/offline
+
+# record: the real frontend, gateway, model and tools; the prompt is typed a key at a time
+./record.py turn --prompt "Run the tests, fix what fails, and run them again." \
+    --hermes-home ~/.hermes --model MODEL --provider PROVIDER --cwd /tmp/courier
+
+# the same, with a real shell recorded in the pane beside it
+./record.py beside --design 0 --beside "watch -ctn1 pytest -q --tb=line --color=yes" \
+    --prompt "The router test is failing. Fix it and keep it green." ...
+
+# render: 2560x1440 at 60 fps by default, in the Hermes theme, real time
+./render.py turn --theme dark  --keep-frames
+./render.py turn --theme light
+./render.py beside --theme dark --focus left --title "hermes │ zsh"
+./render.py turn --fps 1 --start 6 --seconds 40 --keep-frames --name review   # a frame a second, to look a take over
+```
+
+| Fact | Detail |
+| --- | --- |
+| Clock | `tern serve` moves its clock only by `wait` while a `ctl --file` scenario runs: 120 frames advanced exactly 1,920 ms. Frame *n* is taken at `round(n·1000/fps)` ms |
+| Speed | About 18 frames/s at 2560x1440 (one pane), 9 with two panes |
+| Theme | Headless Tern does not load user themes. `themes/hermes-{dark,light}.css` set the same root colour tokens over `titanium` / `light`; `offline/theme-probe.py` read them from a live window wearing the theme (109 tokens differ, all 185 match after) |
+| Shell beside | `--beside` records a real zsh in a pty of the pane's size; `render.py` prints its output into the right pane at the recorded times. Focus is moved by a pointer press: `focus` waits for a pane to settle, which one playing a recording never does |
+| Re-timing | `--max-gap MS` shortens pauses between Hermes's messages. Off by default; a re-timed video is not real time and must say so |
+| Project | `/tmp/courier`: a small router with one failing test (`offline/project.sh` creates it) |
+
+Things to know:
+
+- A take's model chip shows the model the session was started with while the turn runs, then
+  the model Hermes reports after the turn. With a `fallback_providers` chain in the Hermes
+  home, a failing primary is replaced silently: check which model served a take before
+  publishing it. A home with no fallback chain cannot do this.
+- The tab is named with `--title`; headless Tern would call a replayed surface `omp`.
+- Never run a bare `tern <command>` beside this: without `--control SOCK` it acts on your own window.
+
+## Workflow (screen capture)
 
 ```sh
 cd scripts/demo-capture
