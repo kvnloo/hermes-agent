@@ -1,6 +1,8 @@
-// Slash commands this frontend runs itself: quitting, clearing, and the ones
-// that open a native sheet (model, sessions, help). Everything else goes to
-// the gateway's `slash.exec`.
+// Slash commands this frontend runs through the live session: quitting,
+// clearing, reasoning settings and native sheets (model, sessions, help).
+// Everything else goes to the gateway's `slash.exec`.
+
+import type { ConfigGetResult, ConfigSetResult } from '@hermes/shared/gateway-events'
 
 import type { App } from './app.js'
 import { openHelp } from './overlays/help.js'
@@ -55,6 +57,72 @@ const COMMANDS: readonly LocalCommand[] = [
             title: 'Switch to an expensive model?'
           })
         )
+      }
+    }
+  },
+  {
+    name: 'reasoning',
+    run: async (app, arg) => {
+      const sid = app.sid
+
+      if (!sid) {
+        return
+      }
+
+      if (!arg) {
+        const r = await app.gw.request<ConfigGetResult>('config.get', { key: 'reasoning', session_id: sid })
+
+        if (app.sid === sid && typeof r.value === 'string') {
+          app.info = { ...app.info, reasoning_effort: r.value }
+          app.transcript.panel('/reasoning', `Reasoning effort: ${r.value} (display: ${r.display ?? 'show'}).`)
+        }
+
+        return
+      }
+
+      let scope: 'global' | 'session' | undefined
+
+      const value = arg
+        .split(/\s+/)
+        .filter(part => {
+          const flag = part.toLowerCase()
+
+          if (flag === '--global') {
+            scope = 'global'
+
+            return false
+          }
+
+          if (flag === '--session') {
+            scope ??= 'session'
+
+            return false
+          }
+
+          return true
+        })
+        .join(' ')
+
+      const r = await app.gw.request<ConfigSetResult>('config.set', {
+        key: 'reasoning',
+        session_id: sid,
+        value,
+        ...(scope ? { scope } : {})
+      })
+
+      if (app.sid !== sid) {
+        return
+      }
+
+      // A lazy session has no agent yet, so config.set cannot emit session.info.
+      const current = await app.gw.request<ConfigGetResult>('config.get', { key: 'reasoning', session_id: sid })
+
+      if (app.sid === sid && typeof current.value === 'string') {
+        app.info = { ...app.info, reasoning_effort: current.value }
+      }
+
+      if (app.sid === sid && typeof r.value === 'string') {
+        app.transcript.panel(`/reasoning ${arg}`, `Reasoning: ${r.value}.`)
       }
     }
   },
