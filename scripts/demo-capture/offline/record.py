@@ -46,6 +46,7 @@ parser.add_argument("--timeout", type=float, default=300)
 parser.add_argument("--hold", type=float, default=2.5, help="seconds to keep recording after the turn ends")
 parser.add_argument("--seed", type=int, default=7)
 parser.add_argument("--key-from", help="a dotenv file to take OPENROUTER_API_KEY from, for a Hermes home that has no credentials of its own")
+parser.add_argument("--program", help="record this command (run in ui-tsp/) instead of the Hermes frontend, for --hold seconds: a splash on its own, say")
 parser.add_argument("--beside", help="also record a real shell beside the session: this command line, typed into zsh in a pty")
 args = parser.parse_args()
 
@@ -169,7 +170,7 @@ export TERN_TSP_RECORD="{take}.jsonl"
 # The stage's HOME is not yours: keep your Python's user packages (pytest) reachable for the agent's shell.
 export PYTHONUSERBASE="{os.path.expanduser('~/.local')}" PYTHONDONTWRITEBYTECODE=1 PATH="{os.path.expanduser('~/.local/bin')}:$PATH"
 unset TMUX STY ZELLIJ
-exec node "{repo}/ui-tsp/dist/entry.js" 2> "{take}.err"
+{f'cd "{repo}/ui-tsp" && exec {args.program}' if args.program else f'exec node "{repo}/ui-tsp/dist/entry.js"'} 2> "{take}.err"
 """)
     os.chmod(script, 0o755)
 
@@ -178,7 +179,7 @@ exec node "{repo}/ui-tsp/dist/entry.js" 2> "{take}.err"
 
     # Any key skips the splash, so nothing is typed until the composer is on screen.
     deadline = time.time() + 60
-    while shown(".sf-editor") is None:
+    while not args.program and shown(".sf-editor") is None:
         if time.time() > deadline:
             sys.exit(f"record: no composer after 60 s (see {take}.err)")
         time.sleep(0.25)
