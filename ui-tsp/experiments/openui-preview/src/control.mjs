@@ -15,6 +15,11 @@ export function parseReply(stdout, stderr = '') {
   const lines = stdout.trim().split(/\r?\n/);
   requireInput(lines.length === 1, 'control', 'Expected exactly one complete JSON reply.');
   const reply = JSON.parse(lines[0]);
+  return requireCleanReply(reply, stderr);
+}
+
+// CLI and injected host transports must enforce the same success contract.
+function requireCleanReply(reply, stderr = '') {
   requireInput(reply?.ok === true && !reply.error && !reply.skipped && !reply.skip &&
     !reply.warning && (reply.warnings === undefined || (Array.isArray(reply.warnings) && reply.warnings.length === 0)) && stderr.trim() === '',
     'control', 'Tern command failed, warned or skipped; it is not passing evidence.');
@@ -72,12 +77,18 @@ export async function capturePreview(bundleInput, { control, shotRoot, readCaptu
   let replyBytes = 0;
   const command = async line => {
     stop.throwIfAborted();
-    const reply = await control(line, stop);
-    requireInput(reply?.ok === true && !reply.skipped && !reply.warning, 'control', 'Command did not run successfully.');
-    replyBytes += Buffer.byteLength(JSON.stringify(reply));
+    const raw = await control(line, stop);
+    stop.throwIfAborted();
+    const serialized = JSON.stringify(raw);
+    requireInput(typeof serialized === 'string' && Buffer.byteLength(serialized) <= 2_097_152,
+      'control', 'Oversized or invalid control reply.');
+    replyBytes += Buffer.byteLength(serialized);
     requireInput(replyBytes <= 8_388_608, 'control', 'Capture replies exceeded the total 8 MiB budget.');
+    // Snapshot replies before a transport reuses/mutates them. Retain bounded
+    // failure diagnostics too, without counting them as successful commands.
+    const reply = JSON.parse(serialized);
     replies.push({ command: line, reply });
-    return reply;
+    return requireCleanReply(reply);
   };
   const identity = () => command(`plugins expect ${scriptQuote(marker)}`);
   const expect = async text => { await identity(); await command(`plugins expect ${scriptQuote(text)}`); checks.push(text); };
@@ -86,11 +97,20 @@ export async function capturePreview(bundleInput, { control, shotRoot, readCaptu
   async function shot(label) {
     await identity();
     await command(`shot ${prefix}-${label}`);
-    shots.push({ label, ...(await readCapture(shotRoot, `${prefix}-${label}`, stop)) });
+    const captured = await readCapture(shotRoot, `${prefix}-${label}`, stop);
+    stop.throwIfAborted();
+    // A pane can reload while the shot is written/read, including the last shot.
+    // Pre/post identity checks reduce stale capture; they are not atomic attestation.
+    await identity();
+    shots.push({ label, ...captured });
   }
   try {
     const root = bundle.artifact.document.root;
-    const visible = [...root.children].sort((a, b) => b.code - a.code || (a.id < b.id ? -1 : 1)).slice(0, 127);
+    const limit = bundle.selection.view.visibleLimit;
+    // The viewer reserves a cell for Other only when the child count exceeds
+    // the limit. With exactly 128 children, the 128th is still directly visible.
+    const visible = [...root.children].sort((a, b) => b.code - a.code || (a.id < b.id ? -1 : 1))
+      .slice(0, root.children.length > limit ? limit - 1 : limit);
     const directory = visible.find(node => node.children.length > 0);
     requireInput(directory, 'coverage', 'This smoke recipe needs a visible directory with children; do not count a flat fixture as drill coverage.');
     await identity();
@@ -114,6 +134,7 @@ export async function capturePreview(bundleInput, { control, shotRoot, readCaptu
     await expect(`Location: ${root.id} | Mode: ${bundle.selection.view.mode}`); await shot('restored');
     await command(`tree ${SURFACE}`);
     await command('state'); await command('stats');
+    await identity();
     return freeze({ schema: 'tern-preview-capture/v1', previewId: bundle.id, status: 'captured-not-inspected',
       checks, shots, replies, limitations: ['Human pixel inspection required', 'No input-to-paint measurement', 'No production composer/focus or mobile coverage'] });
   } catch (error) {
