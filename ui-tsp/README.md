@@ -61,7 +61,7 @@ already-installed **e2e 0.16.0** runner. They do not install dependencies, build
 app, launch Tern, create/focus panes, or start a model turn. The parent/operator
 must first integrate and build the real settings frontend and gateway, then
 allocate a **new private local PTY pane** on the isolated Tern control window.
-The active user panes and the existing settings probe are explicitly refused.
+Prepare inspects live `tern ctl state` and accepts only that focused idle pane when its cwd is a private `/tmp` harness directory (not a worktree or conversation pane). Run accepts only the same pane after it is executing the prepared launcher. There is no denylist of pane ids.
 
 Required flags are `--root`, `--entry`, `--control`, `--pane`, `--proof-dir`, and
 `--python`. `--root` identifies the integrated application checkout; `--entry`
@@ -149,20 +149,25 @@ observers incrementally parse complete multi-megabyte JSONL records.
 
 ### Tern 0.6.0 adapter limitations
 
-The installed Tern engine's coordinate clicks and separate-argv text quoting do
-not work with this control API. The narrow `e2e/engine` SPI adapter instead takes
+The installed Tern engine's coordinate clicks and separate-argv text quoting do not work with this control API. The narrow `e2e/engine` SPI adapter instead takes
 fresh native AX, tree, and DOM dump evidence, matches bounds within one pixel,
-rejects hidden/ambiguous targets, and clicks the unique deepest native `nth`
-selector. Selectors stay raw; text is encoded with `JSON.stringify` inside one
-scenario string. It verifies the exact focused pane, launcher/entry identity, and
+and rejects hidden/ambiguous targets. Advertised AX `click` and `scroll-into-view`
+are dispatched with `a11y …` against the unique dump `nth` owned by the AX node's
+tree host (tag plus class metadata), not a bounds-sharing deepest wrapper.
+Pointer `click ${nth}` remains only when the AX node does not list `click`.
+Selectors stay raw; text is encoded with `JSON.stringify` inside one
+scenario string. Click, key, type, reveal, capture, and resource operations share
+one deadline and abort signal for the whole operation; a pre-dispatch timeout is
+`NOT_ACTIONABLE`, and a failure after dispatch is `ACTION_MAY_HAVE_COMMITTED`.
+It verifies the exact focused pane, launcher/entry identity, and
 checkout before and after capture. AX, tree and dump targets belong only to the
 single visible focused pane's native subtree; ownership ambiguity fails closed.
 There is no capture-text or replay fallback.
 The native AX owner is correlated with that pane's **Agent block** region, so
 offscreen descendants remain observable without accepting sibling-pane targets.
 Footer actions use documented [accessibility scrolling](https://docs.stencil.so/tern/scripts/harness.md):
-match the owned AX bounds to one deepest owned DOM selector, dispatch
-`a11y scroll-into-view`, then require fresh visible geometry before clicking.
+keep the owned AX identity, dispatch `a11y scroll-into-view` on that owner, then
+require fresh visible geometry before clicking.
 This scroll is not a focus or click substitute. A broad search placed a footer
 13,035 pixels below the viewport; its visible position and unchanged YAML were verified.
 Locator taps use a native AX `click` action when the target advertises it;

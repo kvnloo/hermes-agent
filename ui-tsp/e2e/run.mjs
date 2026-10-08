@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-import { spawn } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { access, chmod, copyFile, mkdir, readFile, realpath, symlink, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { parseArgs } from 'node:util'
+import { parseArgs, promisify } from 'node:util'
+
+const exec = promisify(execFile)
 
 const source = dirname(fileURLToPath(import.meta.url))
 const { values, positionals } = parseArgs({
@@ -28,7 +30,6 @@ const proof = resolve(values['proof-dir'])
 const control = values.control.replace(/^127\.0\.0\.1:/, '')
 const pane = values.pane
 if (!/^\d+$/.test(control) || !/^\d+$/.test(pane)) throw new Error('This adapter requires an explicit numeric loopback control port and private local PTY pane id.')
-if (['40896678592514', '40896678592520'].includes(pane) || (control === '19763' && ['5', '9'].includes(pane))) throw new Error('Refusing protected user/probe pane.')
 if (!entry.startsWith(`${root}/`)) throw new Error('--entry must belong to --root (the integrated native-settings checkout).')
 if (!isAbsolute(values.python)) throw new Error('--python must be an absolute real Python executable.')
 if (!proof.startsWith('/tmp/') || proof === '/tmp') throw new Error('--proof-dir must be a private directory under /tmp, outside all git worktrees.')
@@ -55,7 +56,24 @@ const manifest = {
   display: process.env.WAYLAND_DISPLAY
 }
 if (!manifest.runtime?.startsWith('/tmp/') || !manifest.display || manifest.display === 'wayland-0') throw new Error('Parent must supply the verified isolated XDG_RUNTIME_DIR and WAYLAND_DISPLAY, not the physical display.')
+const { stdout: nativeStdout } = await exec('tern', ['ctl', '--control', control, 'state'], { timeout: 10000, maxBuffer: 32 * 1024 * 1024, killSignal: 'SIGKILL' })
+const native = JSON.parse(nativeStdout)
+if (native?.ok !== true) throw new Error('Native control state is not available for pane ownership.')
+const focused = native.focused
+if (focused === null || typeof focused !== 'object' || Array.isArray(focused)) throw new Error('Native control did not name a focused pane.')
+if (String(focused.id) !== pane) throw new Error('Refusing a pane that is not the focused harness target.')
+if (!Array.isArray(native.panes) || !native.panes.some(item => String(item?.id) === pane)) throw new Error('Refusing a pane that is not present on this isolated control window.')
+if (Array.isArray(native.panes) && native.panes.some(item => typeof item?.running === 'string' && item.running.includes('launch-native.mjs') && String(item.id) !== pane)) {
+  throw new Error('Refusing because another pane already runs a harness launcher.')
+}
 if (mode === 'prepare') {
+  const cwd = focused.cwd
+  if (typeof cwd !== 'string' || !cwd.startsWith('/tmp/') || cwd === '/tmp' || cwd.startsWith(`${root}/`) || cwd === root) {
+    throw new Error('Refusing an existing user/manual/conversation pane. Create a new idle pane whose cwd is a private /tmp harness directory, then prepare.')
+  }
+  if (focused.busy !== false || (focused.running != null && focused.running !== '')) {
+    throw new Error('Refusing an occupied pane; allocate a fresh idle harness pane.')
+  }
   try { await access(manifestPath); throw new Error('Proof directory already prepared. Use run or a fresh proof directory; never overwrite a profile in use.') } catch (error) { if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error }
   await mkdir(manifest.home, { mode: 0o700 })
   // This is the real application's inert launch config, not a response fixture.
@@ -101,6 +119,10 @@ child.on('exit',code=>process.exit(code ?? 1))
 } else {
   const saved = JSON.parse(await readFile(manifestPath, 'utf8'))
   for (const key of ['root','entry','python','control','pane','proof','runtime','display']) if (saved[key] !== manifest[key]) throw new Error(`Prepared ${key} differs from run. Use the exact prepared isolated target.`)
+  if (typeof focused.running !== 'string' || !focused.running.includes(manifest.launch)) {
+    throw new Error('Refusing to run against a pane that is not executing the prepared harness launcher.')
+  }
+  if (String(focused.id) !== saved.pane) throw new Error('Prepared pane is not the focused harness-owned pane.')
   // Refresh suite code only. Never replace the live application's profile/record.
   for (const name of ['adapter.ts', 'native-settings.e2e.ts', 'config.ts', 'types.ts', 'tsconfig.json']) await copyFile(join(source, name), join(manifest.project, name))
   const child = spawn(process.execPath, [bin, 'run', '--config', join(manifest.project, 'config.ts'), '--workers', '1', '--retries', '0', '--no-cache'], { cwd: manifest.project, env: { ...process.env, NATIVE_SETTINGS_MANIFEST: manifestPath }, stdio: 'inherit' })
