@@ -434,7 +434,7 @@ from gateway.platforms.base_exec_approval import (
 from gateway.platforms.event import MessageEvent, MessageType, ProcessingOutcome, TurnContextUpdate
 from gateway.platforms.base_pending import (
     pending_dispatch_scope, release_pending_dispatch, reserve_pending_dispatch,
-    pending_dispatch_needs_snapshot,
+    settle_pending_dispatch,
 )
 from gateway.warning_notifications import diagnostic_wake_muted
 from hermes_cli.observability.shared_metrics_gateway import records_delivery, stop_reply_clock
@@ -3797,12 +3797,12 @@ class BasePlatformAdapter(BaseTextBatchingMixin, BaseTextDebounceMixin, ABC):
             except Exception:
                 logger.debug("[%s] Session cancellation raised while unwinding %s", self.name,
                              session_key, exc_info=True)
-        if reserved is not None and (task is None or task.done()):
-            if not discard_pending and pending_dispatch_needs_snapshot(self, reserved):
-                restore = getattr(self.gateway_runner, "_restore_pending_dispatch", None)
-                if callable(restore):
-                    restore(session_key, reserved.event, self)
-            release_pending_dispatch(self, session_key, reserved.event)
+        if reserved is not None and task is not None and not task.done():
+            # The bound expired mid-unwind: settle the head once the straggler exits, not before.
+            task.add_done_callback(lambda _: settle_pending_dispatch(
+                self, session_key, reserved, restore=not discard_pending))
+        elif reserved is not None:
+            settle_pending_dispatch(self, session_key, reserved, restore=not discard_pending)
         if discard_pending:
             self._pending_messages.pop(session_key, None)
             self._discard_text_debounce(session_key)

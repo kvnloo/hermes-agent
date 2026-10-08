@@ -463,7 +463,8 @@ class GatewayBusySessionMixin:
         if existing is not None and existing is not event:
             self._session_state(session_key).conversation.queued_events.insert(0, existing)
         adapter._pending_messages[session_key] = event
-        release_pending_dispatch(adapter, session_key, event)
+        # The queue owns the head again: a stopped turn's deferred settle must not requeue it twice.
+        release_pending_dispatch(adapter, session_key, event, claimed=True)
         event._gateway_accepted = True
 
     @staticmethod

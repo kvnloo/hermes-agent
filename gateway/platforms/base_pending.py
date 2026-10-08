@@ -154,6 +154,31 @@ def pending_dispatch_needs_snapshot(
         return True
 
 
+def settle_pending_dispatch(
+    adapter: object,
+    session_key: str,
+    reserved: _PendingDispatchReservation,
+    *,
+    restore: bool,
+) -> None:
+    """Requeue an unclaimed provisional head at the FIFO head, then drop its reservation.
+
+    Runs once the cancelled turn has exited, so a claim made while it unwound
+    is already recorded and the head is never requeued twice.
+    """
+    runner = getattr(adapter, "gateway_runner", None)
+    requeue = getattr(runner, "_restore_pending_dispatch", None)
+    if (
+        restore
+        and callable(requeue)
+        and pending_dispatch_needs_snapshot(adapter, reserved)
+    ):
+        requeue(session_key, reserved.event, adapter)
+    reservations = getattr(adapter, "_pending_dispatch_reservations", None)
+    if isinstance(reservations, dict) and reservations.get(session_key) is reserved:
+        del reservations[session_key]
+
+
 @contextmanager
 def pending_dispatch_scope(
     adapter: object, session_key: str, event: MessageEvent
