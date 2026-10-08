@@ -1,0 +1,66 @@
+{
+  "owner": "dot/ayo",
+  "status": "REVIEW_EVIDENCE_RED_INCLUDED_CONFIG",
+  "issue": "https://github.com/NousResearch/hermes-agent/issues/135279",
+  "coordination": "https://github.com/kvnloo/hermes-agent/issues/447#issuecomment-6070743390",
+  "upstream_main": "8ac5c74432d1f217033993c8370e911b2c91b04a",
+  "reviewed_target": "358bdf42b574ea3572c4e07a59972ef26e5d092b",
+  "branch": "dot/hermes/135279-real-hooks-evidence",
+  "credit": {
+    "implementation": "liuhao1024, PR #135296",
+    "reporter": "saralilyb, including original diagnosis of included-config overwrite",
+    "existing_regression": "aortegamel, prepare-hooks.test.mjs and real macOS global hooks evidence"
+  },
+  "novelty": "Automated real Git/npm/Lefthook matrix: local and included config, byte preservation, actual linked worktree, source copy and real npm dependency/build error controls. No implementation copied or changed.",
+  "overlap": {
+    "135296": "Existing 2-test stub harness retained unchanged; no reviews or check runs returned at inspection. Real global macOS verification already exists; this is Linux matrix coverage, not a new diagnosis.",
+    "135292": "Read head 9b82e6a69c779b009d01d95f3a30e382e32c5992 and full patch: CI skip with fake hook and .git file, not real included config preservation.",
+    "135260": "liuhao1024 already owns av<19 dependency patch for #135245; no duplicate implementation undertaken."
+  },
+  "host": {
+    "platform": "Linux x86_64",
+    "node": "24.19.0",
+    "npm": "11.9.0",
+    "lefthook": "2.1.14",
+    "vitest": "4.1.10"
+  },
+  "setup": [
+    "mkdir -p /tmp/hermes-hooks-home /tmp/hermes-hooks-tools",
+    "HOME=/tmp/hermes-hooks-home npm_config_cache=/tmp/hermes-hooks-cache npm install --prefix /tmp/hermes-hooks-tools --ignore-scripts --no-audit --no-fund lefthook@2.1.14 vitest@4.1.10",
+    "ln -s /tmp/hermes-hooks-tools/node_modules node_modules"
+  ],
+  "commands": [
+    {
+      "cwd": "tests-js",
+      "command": "PATH=/tmp/hermes-hooks-tools/node_modules/.bin:$PATH HOME=/tmp/hermes-hooks-home /tmp/hermes-hooks-tools/node_modules/.bin/vitest run prepare-hooks-real.test.mjs --maxWorkers=2",
+      "fixture_manifest": "Temporarily materialize upstream-main package.json, then restore the reviewed PR manifest byte-for-byte. No implementation edit committed.",
+      "result": "RED: 6 failed, 4 passed. Four global/local cases exit 1; two included cases overwrite custom hooks."
+    },
+    {
+      "cwd": "tests-js",
+      "command": "PATH=/tmp/hermes-hooks-tools/node_modules/.bin:$PATH HOME=/tmp/hermes-hooks-home /tmp/hermes-hooks-tools/node_modules/.bin/vitest run prepare-hooks-real.test.mjs prepare-hooks.test.mjs --maxWorkers=2",
+      "result": "Reviewed target: 2 failed, 10 passed (8/10 new real cases; 2/2 existing mock cases). Global/local now exit 0 with refusal plus continuing diagnostic and byte-identical config/hooks. Included config still overwrites pre-commit and adds pre-commit.old in checkout and linked worktree. Normal installations, source copy, dependency/build error controls pass."
+    },
+    {
+      "cwd": "tests-js",
+      "command": "HOME=/tmp/hermes-hooks-home node /tmp/hermes-hooks-tools/node_modules/eslint/bin/eslint.js prepare-hooks-real.test.mjs",
+      "result": "exit 0"
+    },
+    {
+      "cwd": "tests-js",
+      "command": "node --check prepare-hooks-real.test.mjs",
+      "result": "exit 0"
+    },
+    {
+      "command": "git diff --check",
+      "result": "exit 0"
+    }
+  ],
+  "limitations": [
+    "Two intentional ordinary failing assertions remain visible; no test.fails, skip, monkeypatch or product fix. This branch is evidence only, not merge-ready.",
+    "Linux only; no macOS/Windows claim.",
+    "npm dependency failure uses a missing lock under npm ci --offline; build failure uses real node --check SyntaxError. These are isolated lifecycle controls, not an end-to-end Hermes build.",
+    "First npm tooling install failed on unavailable default HOME cache; rerun with disposable HOME/cache succeeded. First harness run had an absolute worktree path join bug, corrected to resolve before final results. First lint invocation at root lacked config; rerun in tests-js passed.",
+    "No model downloads, paid inference, audio implementation, upstream comments/PRs or promotion."
+  ]
+}
