@@ -36,9 +36,8 @@ function preflight(budget: Budget): number {
 }
 function axOwnerDump(ax: Ax, dump: Dump[], tree: Tree[], visibleOnly: boolean): Dump {
   if (ax.id === undefined || !ax.bounds) throw new EngineError('NOT_ACTIONABLE', 'Owned AX target has no unique native identity.', { retryable:false })
-  const semantic = roles[ax.role ?? '']
-  if (!semantic) throw new EngineError('NOT_ACTIONABLE', 'Owned AX target has no documented role.', { retryable:false })
-  const hosts = flatten(tree).filter(node => node.tag && node.rect && near(node.rect, ax.bounds!) && node.role === semantic)
+  if (!roles[ax.role ?? '']) throw new EngineError('NOT_ACTIONABLE', 'Owned AX target has no documented role.', { retryable:false })
+  const hosts = flatten(tree).filter(node => node.tag && node.rect && near(node.rect, ax.bounds!))
   if (hosts.length !== 1) throw new EngineError('NOT_ACTIONABLE', 'Owned AX action has no unique tree-host identity.', { retryable:false })
   const host = hosts[0]!
   if (!host.rect || !near(host.rect, ax.bounds)) throw new EngineError('NOT_ACTIONABLE', 'Tree host bounds do not agree with the AX owner.', { retryable:false })

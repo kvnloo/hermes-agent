@@ -184,6 +184,11 @@ This scroll is not a focus or click substitute. A broad search placed a footer
 Locator taps use a native AX `click` action when the target advertises it;
 otherwise they retain native pointer dispatch. Settings is addressed by its
 actionable AX name, `Open Hermes settings`, not its decorative `Settings` label.
+Action ownership requires one tagged tree host at the AX bounds and one visible
+dump host with the exact tag/class set and matching geometry. AX roles may be
+implicit in the DOM: the real 0.6.1 Settings owner is AX `Group`, a titled `div`
+without an explicit DOM role. Multiple hosts still fail; no deepest-node or
+class-subset fallback is used for AX actions.
 The label click returned success without issuing `settings.get` in a fresh pane.
 The advertised action produced that request and SDK reconciliation, but a fresh
 screenshot exposed the closed-beta sign-in gate over the app: **not visible proof**.
