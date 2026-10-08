@@ -1,0 +1,59 @@
+name: OpenUI Git snapshot experiment
+on:
+  push:
+    branches: [exp/tern-openui-repository]
+    paths:
+      - ui-tsp/experiments/openui-repository/**
+      - ui-tsp/experiments/openui-preview/**
+      - ui-tsp/experiments/openui-generation/**
+      - .github/workflows/openui-repository-experiment.yml
+permissions:
+  contents: read
+concurrency:
+  group: openui-repository-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  contracts:
+    if: github.repository == 'kvnloo/hermes-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      OPENUI_TELEMETRY_DISABLED: '1'
+      DO_NOT_TRACK: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.16.0'
+      - name: Real Git host-data contracts (no npm install)
+        run: node --test ui-tsp/experiments/openui-repository/test/collect.test.mjs
+      - name: Existing isolated dependency lock (no install scripts or telemetry)
+        working-directory: ui-tsp/experiments/openui-generation
+        run: npm ci --ignore-scripts --no-audit --no-fund --workspaces=false
+      - name: Existing real OpenUI generation tests
+        working-directory: ui-tsp/experiments/openui-generation
+        run: npm test
+      - name: Existing preview and integration contracts
+        working-directory: ui-tsp/experiments/openui-preview
+        run: npm test && node --test test/integration.mjs
+      - name: Real Git to OpenUI to immutable preview CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$(mktemp -d)"
+          git init -q "$out/repo"
+          git -C "$out/repo" config user.name Fixture
+          git -C "$out/repo" config user.email fixture@example.invalid
+          git -C "$out/repo" commit -q --allow-empty -m base
+          base="$(git -C "$out/repo" rev-parse HEAD)"
+          mkdir "$out/repo/src"
+          printf 'one\ntwo\n' > "$out/repo/src/demo.txt"
+          git -C "$out/repo" add .
+          git -C "$out/repo" commit -qm fixture
+          data="$(node ui-tsp/experiments/openui-repository/cli.mjs "$out/repo" "$base" HEAD "$out/data")"
+          bundle="$(node ui-tsp/experiments/openui-preview/cli.mjs prepare ui-tsp/experiments/openui-generation/fixtures/explorer.openui "$data" ci:git-snapshot "$out/bundles")"
+          node -e 'const b=JSON.parse(require("fs").readFileSync(process.argv[1])); if(b.artifact.document.root.code!==2 || b.artifact.document.root.churn!==1 || b.selection.status!=="validated-not-verified") process.exit(1)' "$bundle"
+      - name: Tracked inputs unchanged
+        run: git diff --exit-code
