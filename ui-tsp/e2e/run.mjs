@@ -6,6 +6,7 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { parseArgs, promisify } from 'node:util'
+import { nativeGateOpen } from './types.ts'
 
 const exec = promisify(execFile)
 
@@ -64,14 +65,14 @@ if (!manifest.runtime?.startsWith('/tmp/') || !manifest.display || manifest.disp
 async function nativeCtl(scenario) {
   if (scenario !== 'state') {
     const before = await nativeCtl('state')
-    if (before.gate?.applies !== false) throw new Error('Native account gate blocks preparation; no app input is permitted.')
+    if (!nativeGateOpen(before.gate)) throw new Error('Native account gate blocks preparation; no app input is permitted.')
   }
   const { stdout } = await exec('tern', ['ctl', '--control', control, scenario], { timeout: 20000, maxBuffer: 32 * 1024 * 1024, killSignal: 'SIGKILL' })
   const result = JSON.parse(stdout)
   if (result?.ok !== true) throw new Error(`Native control failed: ${scenario}: ${stdout}`)
   if (scenario !== 'state') {
     const after = await nativeCtl('state')
-    if (after.gate?.applies !== false) throw new Error('Native account gate changed during preparation; do not retry this input.')
+    if (!nativeGateOpen(after.gate)) throw new Error('Native account gate changed during preparation; do not retry this input.')
   }
   return result
 }
@@ -175,7 +176,7 @@ child.on('exit',code=>process.exit(code ?? 1))
   for (const key of ['root','entry','python','control','pane','proof','runtime','display']) if (saved[key] !== manifest[key]) throw new Error(`Prepared ${key} differs from run. Use the exact prepared isolated target.`)
   if (!saved.launch.endsWith(`launch-native.${owner.token}.mjs`)) throw new Error('Prepared launcher is not the owned startup nonce.')
   const native = await nativeCtl('state')
-  if (native.gate?.applies !== false) throw new Error('Native account gate blocks the prepared target; no suite is launched.')
+  if (!nativeGateOpen(native.gate)) throw new Error('Native account gate blocks the prepared target; no suite is launched.')
   const focused = focusedOf(native)
   if (typeof focused.running !== 'string' || !focused.running.includes(saved.launch) || !focused.running.includes(owner.token)) {
     throw new Error('Refusing to run against a pane that is not executing the prepared harness launcher nonce.')

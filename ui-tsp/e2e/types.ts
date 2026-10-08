@@ -26,6 +26,11 @@ export interface Prefs {
     pages?: { id: string; label: string }[]
     sections?: { id: string; title: string; rows: { id: string; label: string; control: Record<string, Json>; hint?: string; warning?: string; changed?: boolean }[] }[] }
 }
+export function nativeGateOpen(value: unknown): boolean {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false
+  const gate = value as Record<string, unknown>
+  return gate.phase === 'off' && gate.error === null && (gate.applies === false || (gate.applies === true && gate.signed_in === true))
+}
 export function record(value: unknown): Record<string, unknown> {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('Expected a JSON object.')
   return value as Record<string, unknown>

@@ -60,8 +60,8 @@ The Tern SDK is [`@stencil-hq/tern`](https://www.npmjs.com/package/@stencil-hq/t
 already-installed **e2e 0.16.0** runner. They do not install dependencies, build the
 app, launch Tern on the host desktop, or start a model turn. The parent/operator
 must first integrate and build the real settings frontend and gateway on the
-isolated Tern control window. `prepare` itself splits a **fresh pane**, binds that
-pane's cwd to the canonical proof directory, and writes an owner receipt plus a
+isolated Tern control window. `prepare` itself opens a **fresh tab and pane**, binds
+that pane's cwd to the canonical proof directory, and writes an owner receipt plus a
 launcher whose filename contains the startup nonce. `--pane` on prepare must **not**
 already exist on the window. Run accepts only that created pane after `running`
 includes the nonce launcher. There is no denylist of pane ids and no `/tmp` cwd heuristic.
@@ -85,8 +85,8 @@ node "$SUITE" prepare --root "$ROOT" --entry "$ROOT/ui-tsp/dist/entry.js" \
   --control 19763 --pane 0 --proof-dir "$PROOF" --python "$PYTHON"
 ```
 
-`prepare` creates a fresh mode-0700 proof directory, splits a new idle pane on the
-isolated control window, requires `realpath(cwd)` to equal that proof directory,
+`prepare` creates a fresh mode-0700 proof directory, opens a new tab on the isolated
+control window, and requires `realpath(cwd)` to equal that proof directory,
 then writes an inert real profile with a dummy localhost provider, a separate
 private HOME and foreign-profile sentinel, `owner.json`, and a nonce-named launcher.
 It prints the created pane id and the exact quoted `tern ctl … run …` command. Only the
@@ -97,6 +97,14 @@ An owned empty managed directory prevents host managed policy from entering the 
 Preparation and real gateway startup refuse a checkout with a project `.env`.
 The real env loader may load and sanitize that fallback; no non-fixture dotenv file is permitted.
 Existing profiles are never overwritten.
+Preparation checks an explicit open native gate on both sides of native input.
+Open means `phase === "off"` and `error === null`, with either `applies === false`
+or `applies === true && signed_in === true`. The latter is the actual authenticated
+0.6.1 beta-window state; `applies` alone does not mean the overlay is blocking.
+Pixel evidence stays `*.pending.png` until a post-capture state check confirms the
+same owned pane and nonce launcher with no account gate; only then is the accepted
+PNG/JSON pair published. Rejected pending images are diagnostics, not native proof.
+Zero-budget and cancelled operations stop before target resolution or dispatch.
 
 Before launch, the parent reads fresh control state and verifies the printed
 `focused.id`, `busy=false`, and `running=null`. Use the launch line prepare printed;
@@ -179,9 +187,10 @@ actionable AX name, `Open Hermes settings`, not its decorative `Settings` label.
 The label click returned success without issuing `settings.get` in a fresh pane.
 The advertised action produced that request and SDK reconciliation, but a fresh
 screenshot exposed the closed-beta sign-in gate over the app: **not visible proof**.
-Captures now require explicit `state.gate.applies === false` before and after
-reading native trees. An active or unknown gate blocks input and acceptance.
-Restore access interactively; never automate account approval or act through a gate.
+Captures require that explicit open gate state before and after reading native
+trees. Signed-out, waiting, waitlisted, errored and unknown states block input and
+acceptance. Restore access interactively; never automate account approval or act
+through a visible gate.
 Field visibility is scoped to the painted native `pf-row` label, not the identical
 text in the search query. Multiple visible row labels still fail as ambiguous.
 
