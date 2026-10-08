@@ -25,7 +25,7 @@ const context = [
 export default {
   projectId: 'hermes-native-bugbash',
   targets: [{ name: 'isolated-tern', engine: nativeControlEngine(native) }],
-  tests: [],
+  tests: ['native-settings.e2e.ts'],
   workers: 1,
   retries: 0,
   timeout: 900000,
