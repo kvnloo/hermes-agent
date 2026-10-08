@@ -3,6 +3,7 @@ import { execFile, spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { access, chmod, copyFile, mkdir, readFile, realpath, symlink, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
+import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { parseArgs, promisify } from 'node:util'
 
@@ -61,9 +62,17 @@ const manifest = {
 if (!manifest.runtime?.startsWith('/tmp/') || !manifest.display || manifest.display === 'wayland-0') throw new Error('Parent must supply the verified isolated XDG_RUNTIME_DIR and WAYLAND_DISPLAY, not the physical display.')
 
 async function nativeCtl(scenario) {
+  if (scenario !== 'state') {
+    const before = await nativeCtl('state')
+    if (before.gate?.applies !== false) throw new Error('Native account gate blocks preparation; no app input is permitted.')
+  }
   const { stdout } = await exec('tern', ['ctl', '--control', control, scenario], { timeout: 20000, maxBuffer: 32 * 1024 * 1024, killSignal: 'SIGKILL' })
   const result = JSON.parse(stdout)
   if (result?.ok !== true) throw new Error(`Native control failed: ${scenario}: ${stdout}`)
+  if (scenario !== 'state') {
+    const after = await nativeCtl('state')
+    if (after.gate?.applies !== false) throw new Error('Native account gate changed during preparation; do not retry this input.')
+  }
   return result
 }
 function paneIds(state) {
@@ -85,13 +94,13 @@ if (mode === 'prepare') {
     throw new Error('Refusing because a harness launcher is already running on this control window.')
   }
   const originFocus = focusedOf(before)
-  if (originFocus.busy !== false) throw new Error('Refusing to split from a busy pane; focus an idle isolated shell first.')
-  await nativeCtl('split down')
+  if (originFocus.busy !== false) throw new Error('Refusing to create a tab from a busy pane; focus an idle isolated shell first.')
+  await nativeCtl('tab new')
   const createdState = await nativeCtl('state')
   const createdFocus = focusedOf(createdState)
   const created = String(createdFocus.id)
   if (origin.has(created) || created === String(originFocus.id)) {
-    throw new Error('Native split did not produce a fresh pane distinct from existing targets.')
+    throw new Error('Native tab creation did not produce a fresh pane distinct from existing targets.')
   }
   if (createdFocus.busy !== false || (createdFocus.running != null && createdFocus.running !== '')) {
     throw new Error('Fresh pane is occupied before harness bind.')
@@ -109,9 +118,7 @@ if (mode === 'prepare') {
     }
     bound = undefined
     if (!bound) {
-      const { promise, resolve } = Promise.withResolvers()
-      setTimeout(resolve, 100)
-      await promise
+      await delay(Math.min(100, Math.max(0, deadline - Date.now())))
     }
   }
   if (!bound) throw new Error('Fresh pane cwd is not the canonical proof directory after harness bind.')
@@ -168,6 +175,7 @@ child.on('exit',code=>process.exit(code ?? 1))
   for (const key of ['root','entry','python','control','pane','proof','runtime','display']) if (saved[key] !== manifest[key]) throw new Error(`Prepared ${key} differs from run. Use the exact prepared isolated target.`)
   if (!saved.launch.endsWith(`launch-native.${owner.token}.mjs`)) throw new Error('Prepared launcher is not the owned startup nonce.')
   const native = await nativeCtl('state')
+  if (native.gate?.applies !== false) throw new Error('Native account gate blocks the prepared target; no suite is launched.')
   const focused = focusedOf(native)
   if (typeof focused.running !== 'string' || !focused.running.includes(saved.launch) || !focused.running.includes(owner.token)) {
     throw new Error('Refusing to run against a pane that is not executing the prepared harness launcher nonce.')
