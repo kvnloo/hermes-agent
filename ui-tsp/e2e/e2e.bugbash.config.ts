@@ -2,11 +2,12 @@ import { readFileSync } from 'node:fs'
 import type { E2EConfig } from 'e2e'
 import { NativeControl, nativeControlEngine } from './adapter.ts'
 import { bugbashTools } from './bugbash-tools.ts'
-import type { Manifest } from './types.ts'
+import { assertOwnedInert, type Manifest } from './types.ts'
 
 const path = process.env.NATIVE_SETTINGS_MANIFEST
 if (!path) throw new Error('Use an owned NATIVE_SETTINGS_MANIFEST; no implicit native target is allowed.')
 const manifest = JSON.parse(readFileSync(path, 'utf8')) as Manifest
+assertOwnedInert(manifest)
 const native = new NativeControl(manifest)
 
 const context = [

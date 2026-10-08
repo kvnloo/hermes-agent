@@ -184,11 +184,12 @@ This scroll is not a focus or click substitute. A broad search placed a footer
 Locator taps use a native AX `click` action when the target advertises it;
 otherwise they retain native pointer dispatch. Settings is addressed by its
 actionable AX name, `Open Hermes settings`, not its decorative `Settings` label.
-Action ownership requires one tagged tree host at the AX bounds and one visible
-dump host with the exact tag/class set and matching geometry. AX roles may be
-implicit in the DOM: the real 0.6.1 Settings owner is AX `Group`, a titled `div`
-without an explicit DOM role. Multiple hosts still fail; no deepest-node or
-class-subset fallback is used for AX actions.
+Action ownership matches an explicit/intrinsic DOM role or an exact AX-name/title
+identity, then requires one tagged tree host and one visible dump host with the
+exact tag/class set and matching geometry. AX roles may be implicit in the DOM:
+the real 0.6.1 Settings owner is a titled `div`; Session is a titled `button` with
+two identical-sized wrappers. Unnamed wrappers do not qualify; ambiguous owners
+still fail, without deepest-node or class-subset fallback.
 The label click returned success without issuing `settings.get` in a fresh pane.
 The advertised action produced that request and SDK reconciliation, but a fresh
 screenshot exposed the closed-beta sign-in gate over the app: **not visible proof**.
@@ -196,6 +197,11 @@ Captures require that explicit open gate state before and after reading native
 trees. Signed-out, waiting, waitlisted, errored and unknown states block input and
 acceptance. Restore access interactively; never automate account approval or act
 through a visible gate.
+Serial and MCP attempts share an atomic per-proof owner claim. The inert sentinel
+and canonical home/config path are required before the engine starts. A second
+engine cannot acquire the same fixture; use separate manifests and proof roots.
+Cleanup atomically quarantines and verifies its claim before removal. A changed
+claim is retained as diagnostic evidence; crashed attempts require a fresh fixture.
 Field visibility is scoped to the painted native `pf-row` label, not the identical
 text in the search query. Multiple visible row labels still fail as ambiguous.
 

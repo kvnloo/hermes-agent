@@ -1,12 +1,11 @@
-import { readFileSync, realpathSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
-import { join, sep } from 'node:path'
+import { join } from 'node:path'
 import { defineTool } from 'e2e/agent'
 import { z } from 'zod'
 import type { NativeControl } from './adapter.ts'
-import type { Manifest } from './types.ts'
+import { assertOwnedInert } from './types.ts'
 
-const SENTINEL = 'isolated inert fixture; no turns or grants\n'
 const INERT_CORRUPT = 'agent: [unterminated\n'
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 const ACTION_MS = 30_000
@@ -32,24 +31,6 @@ function operation(options: object): {
   }
 }
 
-export function assertOwnedInert(manifest: Manifest): string {
-  if (!manifest.runtime?.startsWith('/tmp/') || !manifest.display || manifest.display === 'wayland-0') {
-    throw new Error('Owned isolated runtime/display is required; physical wayland-0 is refused.')
-  }
-  if (!manifest.proof.startsWith('/tmp/') || manifest.proof === '/tmp') {
-    throw new Error('Proof directory must be a private /tmp path.')
-  }
-  const proof = realpathSync(manifest.proof)
-  const home = realpathSync(manifest.home)
-  if (home !== proof && !home.startsWith(`${proof}${sep}`)) {
-    throw new Error('Hermes home is not inside the owned proof directory.')
-  }
-  const sentinel = readFileSync(join(home, '.native-settings-e2e'), 'utf8')
-  if (sentinel !== SENTINEL) throw new Error('Owned inert sentinel is missing or not the native-settings fixture.')
-  const yaml = realpathSync(join(home, 'config.yaml'))
-  if (yaml !== home && !yaml.startsWith(`${home}${sep}`)) throw new Error('config.yaml is not inside the owned inert home.')
-  return yaml
-}
 
 export function bugbashTools(native: NativeControl) {
   return {
