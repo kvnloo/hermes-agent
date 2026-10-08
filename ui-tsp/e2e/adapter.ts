@@ -30,32 +30,28 @@ const box = (r: readonly number[]) => ({ x:r[0]!, y:r[1]!, width:r[2]!, height:r
 const expired = (budget: Budget) => budget.signal.aborted || budget.deadline - Date.now() <= 0
 function preflight(budget: Budget): number {
   const remaining = Math.min(30000, budget.deadline - Date.now())
-  if (remaining <= 0 || budget.signal.aborted) throw new EngineError('NOT_ACTIONABLE', 'Native operation budget expired before dispatch.', { retryable:false })
+  if (remaining <= 0 || budget.signal.aborted) throw new EngineError('OPERATION_TIMEOUT', 'Native operation budget expired before delivery.', { retryable:false })
   return remaining
 }
 function axOwnerDump(ax: Ax, dump: Dump[], tree: Tree[], visibleOnly: boolean): Dump {
-  if (!ax.bounds) throw new EngineError('NOT_ACTIONABLE', 'Owned AX target has no native bounds.', { retryable:false })
+  if (ax.id === undefined || !ax.bounds) throw new EngineError('NOT_ACTIONABLE', 'Owned AX target has no unique native identity.', { retryable:false })
   const semantic = roles[ax.role ?? '']
-  const pool = dump.filter(node => near(node.rect, ax.bounds!) && (!visibleOnly || node.visible))
-  const hosts = flatten(tree).filter(node => node.rect && near(node.rect, ax.bounds!) && node.role === semantic)
-  if (hosts.length === 1) {
-    const host = hosts[0]!
-    const classes = (host.class ?? '').split(/\s+/).filter(Boolean)
-    const tag = host.tag ?? ''
-    const owned = pool.filter(node => {
-      const parts = (node.path.split('>').at(-1) ?? '').split('.')
-      return (!tag || parts[0] === tag) && classes.every(name => parts.includes(name))
-    })
-    if (owned.length === 1) return owned[0]!
-    const atHost = pool.filter(node => host.rect && near(node.rect, host.rect))
-    const roots = atHost.filter(node => !atHost.some(other => other !== node && node.path.startsWith(`${other.path}>`)))
-    if (roots.length === 1) return roots[0]!
-  }
-  if (!visibleOnly && hosts.length === 0) {
-    const roots = pool.filter(node => !pool.some(other => other !== node && node.path.startsWith(`${other.path}>`)))
-    if (roots.length === 1) return roots[0]!
-  }
-  throw new EngineError('NOT_ACTIONABLE', 'Owned AX action has no unique native metadata owner.', { retryable:false })
+  if (!semantic) throw new EngineError('NOT_ACTIONABLE', 'Owned AX target has no documented role.', { retryable:false })
+  const hosts = flatten(tree).filter(node => node.tag && node.rect && near(node.rect, ax.bounds!) && node.role === semantic)
+  if (hosts.length !== 1) throw new EngineError('NOT_ACTIONABLE', 'Owned AX action has no unique tree-host identity.', { retryable:false })
+  const host = hosts[0]!
+  if (!host.rect || !near(host.rect, ax.bounds)) throw new EngineError('NOT_ACTIONABLE', 'Tree host bounds do not agree with the AX owner.', { retryable:false })
+  const hostClasses = (host.class ?? '').split(/\s+/).filter(Boolean).slice().sort()
+  const owned = dump.filter(node => {
+    if (visibleOnly && !node.visible) return false
+    if (!near(node.rect, ax.bounds!) || !near(node.rect, host.rect!)) return false
+    const parts = (node.path.split('>').at(-1) ?? '').split('.').filter(Boolean)
+    if (parts[0] !== host.tag) return false
+    const dumpClasses = parts.slice(1).slice().sort()
+    return dumpClasses.length === hostClasses.length && dumpClasses.every((name, index) => name === hostClasses[index])
+  })
+  if (owned.length !== 1) throw new EngineError('NOT_ACTIONABLE', 'Owned AX action has no unique dump identity.', { retryable:false })
+  return owned[0]!
 }
 
 export class NativeControl {
@@ -72,13 +68,14 @@ export class NativeControl {
 
   #budget(context?: OperationContext): Budget {
     const op = context ?? this.#operation?.()
-    if (op?.signal.aborted) throw new EngineError('NOT_ACTIONABLE', 'Native operation aborted before dispatch.', { retryable:false })
+    if (op?.signal.aborted) throw new EngineError('OPERATION_TIMEOUT', 'Native operation aborted before delivery.', { retryable:false })
     const timeoutMs = Math.max(1, op?.timeoutMs ?? 30000)
     return { deadline: Date.now() + timeoutMs, signal: op?.signal ?? AbortSignal.timeout(timeoutMs) }
   }
 
-  async ctl(scenario: string, timeout: number, signal?: AbortSignal): Promise<unknown> {
-    if (timeout <= 0 || signal?.aborted) throw new EngineError('NOT_ACTIONABLE', 'Native control budget expired before dispatch.', { retryable:false })
+  async ctl(scenario: string, timeout: number, signal?: AbortSignal, delivery?: { started: boolean }): Promise<unknown> {
+    if (timeout <= 0 || signal?.aborted) throw new EngineError('OPERATION_TIMEOUT', 'Native control budget expired before delivery.', { retryable:false })
+    if (delivery) delivery.started = true
     const { stdout } = await exec('tern', ['ctl','--control',this.manifest.control,scenario], { maxBuffer:32*1024*1024, timeout, signal, killSignal:'SIGKILL' })
     const result: unknown = JSON.parse(stdout)
     if (record(result).ok !== true) throw new EngineError('ENGINE_FAILURE', `Native control failed: ${scenario}: ${stdout}`, { retryable:false })
@@ -88,15 +85,25 @@ export class NativeControl {
   async #inspect(scenario: string, budget: Budget): Promise<unknown> {
     try { return await this.ctl(scenario, preflight(budget), budget.signal) }
     catch (cause) {
-      if (expired(budget)) throw new EngineError('NOT_ACTIONABLE', 'Native inspection exceeded its budget before dispatch.', { retryable:false, cause })
+      if (expired(budget)) throw new EngineError('OPERATION_TIMEOUT', 'Native inspection exceeded its budget before delivery.', { retryable:false, cause })
       throw cause
     }
   }
 
   async #dispatch(scenario: string, budget: Budget): Promise<unknown> {
-    preflight(budget)
-    try { return await this.ctl(scenario, Math.min(30000, budget.deadline - Date.now()), budget.signal) }
-    catch (cause) { throw new EngineError('ACTION_MAY_HAVE_COMMITTED', 'Native input failed after dispatch; do not retry it.', { retryable:false, cause }) }
+    const delivery = { started: false }
+    try { return await this.ctl(scenario, preflight(budget), budget.signal, delivery) }
+    catch (cause) {
+      if (delivery.started) throw new EngineError('ACTION_MAY_HAVE_COMMITTED', 'Native input failed after dispatch; do not retry it.', { retryable:false, cause })
+      if (cause instanceof EngineError && cause.code === 'OPERATION_TIMEOUT') throw cause
+      if (expired(budget)) throw new EngineError('OPERATION_TIMEOUT', 'Native input budget expired before delivery.', { retryable:false, cause })
+      throw cause
+    }
+  }
+
+  async #committedSnapshot(budget: Budget): Promise<Snapshot> {
+    try { return await this.snapshot(budget) }
+    catch (cause) { throw new EngineError('ACTION_MAY_HAVE_COMMITTED', 'Native input may have committed; postflight capture failed.', { retryable:false, cause }) }
   }
 
   async #execBounded(file: string, args: string[], budget: Budget, extra: { cwd?: string; env?: NodeJS.ProcessEnv } = {}): Promise<string> {
@@ -105,7 +112,7 @@ export class NativeControl {
       const { stdout } = await exec(file, args, { maxBuffer:32*1024*1024, timeout, signal:budget.signal, killSignal:'SIGKILL', ...extra })
       return stdout
     } catch (cause) {
-      if (expired(budget)) throw new EngineError('NOT_ACTIONABLE', 'Native resource operation exceeded its budget before completion.', { retryable:false, cause })
+      if (expired(budget)) throw new EngineError('OPERATION_TIMEOUT', 'Native resource operation exceeded its budget before completion.', { retryable:false, cause })
       throw cause
     }
   }
@@ -194,9 +201,9 @@ export class NativeControl {
     const owner = axOwnerDump(target, fresh.dump, fresh.tree, false)
     await this.#dispatch(`a11y scroll-into-view ${owner.nth}`, budget)
     for (;;) {
-      const observed = await this.snapshot(budget)
+      const observed = await this.#committedSnapshot(budget)
       if (observed.nodes.find(node => node.ref.id === id)?.states?.hidden === false) return
-      if (expired(budget)) throw new EngineError('NOT_ACTIONABLE','Native accessibility scrolling did not paint the target.',{ retryable:false })
+      if (expired(budget)) throw new EngineError('ACTION_MAY_HAVE_COMMITTED','Native accessibility scrolling did not paint the target.',{ retryable:false })
       const { promise, resolve } = Promise.withResolvers<void>()
       setTimeout(resolve, 100)
       await promise
@@ -238,7 +245,7 @@ export class NativeControl {
       await appendFile(join(this.manifest.proof,'native-actions.jsonl'),JSON.stringify({ time:Date.now(), id, name:node.name, role:node.role, rect:r, nth:target.nth, path:target.path, action:'click' })+'\n',{ mode:0o600 })
       await this.#dispatch(`click ${target.nth}`, budget)
     }
-    await this.snapshot(budget)
+    await this.#committedSnapshot(budget)
   }
 
   async key(key: Key, context?: OperationContext): Promise<void> {
@@ -251,14 +258,14 @@ export class NativeControl {
     const budget = this.#budget(context)
     await this.snapshot(budget)
     await this.#dispatch(`key ${combo}`, budget)
-    await this.snapshot(budget)
+    await this.#committedSnapshot(budget)
   }
 
   async type(text: string, context?: OperationContext): Promise<void> {
     const budget = this.#budget(context)
     await this.snapshot(budget)
     await this.#dispatch(`type ${JSON.stringify(text)}`, budget)
-    await this.snapshot(budget)
+    await this.#committedSnapshot(budget)
   }
 
   async #records(path:string, budget?: Budget): Promise<unknown[]> {
@@ -276,7 +283,7 @@ export class NativeControl {
         const bytes = Buffer.allocUnsafe(size-reader.offset)
         let count = 0
         while (count < bytes.length) {
-          if (budget && expired(budget)) throw new EngineError('NOT_ACTIONABLE','Native record read exceeded its budget.',{ retryable:false })
+          if (budget && expired(budget)) throw new EngineError('OPERATION_TIMEOUT','Native record read exceeded its budget.',{ retryable:false })
           const {bytesRead} = await file.read(bytes,count,bytes.length-count,reader.offset+count)
           if (!bytesRead) break
           count += bytesRead
@@ -304,7 +311,7 @@ export class NativeControl {
       if (frame.dir === 'in' && frame.body.ev === 'ack' && frame.body.sf && frame.body.s !== undefined) this.#acks.set(frame.body.sf,frame.body.s)
     }
     for (;this.#applied<frames.length;this.#applied++) {
-      if (expired(budget)) throw new EngineError('NOT_ACTIONABLE','Native render accounting exceeded its budget.',{ retryable:false })
+      if (expired(budget)) throw new EngineError('OPERATION_TIMEOUT','Native render accounting exceeded its budget.',{ retryable:false })
       const frame = frames[this.#applied]!
       if (frame.dir !== 'out') continue
       if (frame.verb === 'f' && (frame.body.s ?? 0) > (this.#acks.get(frame.body.sf ?? '') ?? -1)) break
