@@ -37,7 +37,7 @@ cd scripts/demo-capture/offline
 | Clock | `tern serve` moves its clock only by `wait` while a `ctl --file` scenario runs: 120 frames advanced exactly 1,920 ms. Frame *n* is taken at `round(n·1000/fps)` ms |
 | Speed | About 18 frames/s at 2560x1440 (one pane), 9 with two panes |
 | Theme | Headless Tern does not load user themes. `themes/hermes-{dark,light}.css` set the same root colour tokens over `titanium` / `light`; `offline/theme-probe.py` read them from a live window wearing the theme (109 tokens differ, all 185 match after) |
-| Shell beside | `--beside` records a real zsh in a pty of the pane's size; `render.py` prints its output into the right pane at the recorded times. Focus is moved by a pointer press: `focus` waits for a pane to settle, which one playing a recording never does |
+| Shell beside | `--beside` records a real zsh in a pty of the pane's size; `render.py` prints its output into the right pane at the recorded times. With `--focus left` the two panes are rendered apart and joined (see Known limits) |
 | Re-timing | `--max-gap MS` shortens pauses between Hermes's messages. Off by default; a re-timed video is not real time and must say so |
 | Project | `/tmp/courier`: a small router with one failing test (`offline/project.sh` creates it) |
 
@@ -223,16 +223,16 @@ normal speed only. In testing a 75-second 1080p60 take missed 1.8% of frames.
 
 ## Known limits
 
-- **A take with a shell beside it is out of step.** With `--focus left` the Hermes pane's replay
-  runs ahead of the shell pane: about 20 seconds ahead by the middle of a 47-second take (its
-  elapsed counter reads 14 s at second 10). The shell pane is right, since its output is printed
-  by frame number, so the moment it turns green is where it was recorded; what Hermes shows
-  beside it is from later in the session. Every pointer press used to move the focus lets real
-  time into Tern's clock, and the paced replay follows the clock. `--focus right` leads by a
-  constant 3 seconds or so and shows Hermes's composer collapsed. Stepping the stream a frame
-  at a time (`surface-play FILE from N until M`, where N and M are the frames' `s` numbers) works
-  by hand but still ended on the session's last frame inside a full render; not understood yet.
-  The single-pane takes are not affected: nothing moves the focus in them.
+- **A take with a shell beside it is two renders joined.** Printing into the shell's pane means
+  moving the focus there and back, which cannot be done on the clock the session replays on:
+  `focus` waits for a pane to settle, which one playing a recording never does, and a pointer
+  press lets real time in (the replay ran 20 seconds ahead by the middle of a 47-second take).
+  So `--focus left` renders the session with nothing printed beside it, then the shell's pane
+  with nothing replayed, and lays the right half of the second over the first. Each half is
+  Tern's own picture of that pane at that instant; the join runs down the gap between them.
+  `--focus right` is one pass, leads by about 3 seconds and shows Hermes's composer collapsed.
+- `surface-play` restarts the pane's stand-in program every time, so a recording cannot be
+  stepped a frame at a time with `from N until M`: each step shows only its own frames.
 
 - A burst is held in RAM until it ends; `capture.sh` refuses one that will not fit.
 - Every take starts in a fresh tab: a program stopped mid-frame can leave half a protocol

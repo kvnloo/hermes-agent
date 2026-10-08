@@ -16,7 +16,8 @@ size or rate, and Tern-native motion (carets, spinners, eased scrolling, fades) 
     --max-gap   shorten every pause between Hermes's messages to at most this long (default: off,
                 real time). The video is then not real time; say so wherever it is shown.
     --focus     which pane holds the focus in a take recorded with --beside (default: right, where
-                the shell's output is printed)
+                the shell's output is printed). With `left`, as it was recorded, the two panes are
+                rendered in two passes and joined down the middle; --events run in both
     --events    lines of `SECONDS COMMAND...`: Tern control commands run at those video times
                 (split right, focus left, feed "file", theme dark "name", ...)
 """
@@ -59,7 +60,6 @@ work = os.path.join(state, "render", name)
 shutil.rmtree(work, ignore_errors=True)
 os.makedirs(work)
 os.makedirs(out, exist_ok=True)
-sock = os.path.join(work, "r.sock")
 
 # The stream, re-timed if asked: only the gaps between what Hermes sent are shortened.
 lines = [json.loads(line) for line in open(source)]
@@ -112,96 +112,127 @@ if args.events:
     events.sort(key=lambda event: event[0])
 
 clean = {k: v for k, v in os.environ.items() if not k.startswith("TERN_")}
-clean.update(HOME=os.path.join(state, "home"), TERN_CONFIG_DIR=state, TERN_DAEMON_SOCKET=os.path.join(work, "daemon.sock"))
-serve = subprocess.Popen(
-    ["tern", "serve", "--control", sock, "--out", work], env=clean,
-    stdout=open(os.path.join(work, "tern.log"), "w"), stderr=subprocess.STDOUT, start_new_session=True,
-)
 
 
-def ctl(*words):
-    reply = subprocess.run(["tern", "ctl", "--control", sock, *words], capture_output=True, text=True).stdout
-    if '"ok":true' not in reply:
-        raise SystemExit(f"render: `{' '.join(words)}` failed: {reply.strip()[:300]}")
-    return json.loads(reply)
+def passed(tag, play, shell, press):
+    """One headless Tern and one scenario: the frames of a pass, as a directory of PNGs.
 
+    `play` replays the session, `shell` prints the recorded shell's output, and `press` moves the focus
+    to the shell's pane for each print and back again (only where nothing is replayed: a press lets
+    real time into the clock).
+    """
+    base = os.path.join(work, tag)
+    os.makedirs(base)
+    sock = os.path.join(base, "r.sock")
+    env = dict(clean, HOME=os.path.join(state, "home"), TERN_CONFIG_DIR=state, TERN_DAEMON_SOCKET=os.path.join(base, "daemon.sock"))
+    serve = subprocess.Popen(
+        ["tern", "serve", "--control", sock, "--out", base], env=env,
+        stdout=open(os.path.join(base, "tern.log"), "w"), stderr=subprocess.STDOUT, start_new_session=True,
+    )
 
-try:
-    deadline = time.time() + 15
-    while not os.path.exists(sock):
-        if time.time() > deadline:
-            raise SystemExit("render: the headless Tern did not start")
-        time.sleep(0.1)
-    time.sleep(0.5)
+    def ctl(*words):
+        reply = subprocess.run(["tern", "ctl", "--control", sock, *words], capture_output=True, text=True).stdout
+        if '"ok":true' not in reply:
+            raise SystemExit(f"render: `{' '.join(words)}` failed: {reply.strip()[:300]}")
+        return json.loads(reply)
 
-    ctl("size", str(meta["width"]), str(meta["height"]), str(args.scale))
-    ctl("appearance", args.theme)
-    # The Hermes theme is the base theme's tokens replaced: titanium under the dark one, `light` under the light.
-    ctl("theme", args.theme, '"titanium"' if args.theme == "dark" else '"light"')
-    ctl("css", "zz-hermes", os.path.join(here, "../themes", f"hermes-{args.theme}.css"))
-    ctl("update", "idle")
-    ctl("rename", json.dumps(args.title, ensure_ascii=False))
-    pane = ctl("state")["panes"][0]
-    if not meta.get("beside") and (pane["cols"], pane["rows"]) != (meta["cols"], meta["rows"]):
-        print(f"render: the pane is {pane['cols']}x{pane['rows']} but the take was {meta['cols']}x{meta['rows']}", file=sys.stderr)
-
-    # One frame is a shot, then exactly 1/fps on Tern's clock. Waits are whole milliseconds, so the
-    # remainder is carried: frame n is taken at round(n * 1000 / fps) ms, never more than half a millisecond off.
-    script = []
-    if beside:
-        # Both panes start as idle shells; the session replays in the left one, the recorded shell's
-        # output is printed into the right one (cleared first, so only the recording shows).
-        script += ["split right", "ready", "focus left"]
-    script.append(f'surface-play "{stream}" paced')
-    if args.start > 0:
-        script.append(f"wait {round(args.start * 1000)}")
-    feeds = os.path.join(work, "feed")
-    os.makedirs(feeds)
-    pending = b"\x1b[2J\x1b[3J\x1b[H" if beside else b""
-    if beside and args.focus == "right":
-        script.append("focus right")
-    clock = 0
-    for frame in range(frames):
-        while events and events[0][0] <= frame / args.fps + 1e-9:
-            script.append(events.pop(0)[1])
-        while chunks and chunks[0][0] <= args.start + frame / args.fps + 1e-9:
-            pending += chunks.pop(0)[1]
-        if pending:
-            path = os.path.join(feeds, f"{frame:06d}.txt")
-            open(path, "wb").write(pending)
-            pending = b""
-            # `focus` waits for a pane to settle, which one playing a recording never does: a press moves the
-            # focus at once. The shell's pane is pressed for the print, then Hermes's composer again.
-            there = f"click {round(meta['width'] * 0.75)} {round(meta['height'] * 0.5)}"
-            back = f"click {round(meta['width'] * 0.25)} {meta['height'] - 30}"
-            script += ([there] if args.focus == "left" else []) + [f'feed "{path}"'] + ([back] if args.focus == "left" else [])
-        script.append(f'shot "f{frame:06d}"')
-        target = round((frame + 1) * 1000 / args.fps)
-        script.append(f"wait {target - clock}")
-        clock = target
-    scenario = os.path.join(work, "frames.scn")
-    open(scenario, "w").write("\n".join(script) + "\n")
-
-    started = time.time()
-    run = subprocess.run(["tern", "ctl", "--control", sock, "--file", scenario], capture_output=True, text=True)
-    failed = [line for line in run.stdout.splitlines() if line.startswith("< ") and '"ok":false' in line]
-    if failed:
-        raise SystemExit(f"render: {len(failed)} commands failed, first: {failed[0][:300]}")
-    took = time.time() - started
-finally:
-    subprocess.run(["tern", "ctl", "--control", sock, "quit"], capture_output=True)
     try:
-        serve.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        os.killpg(serve.pid, signal.SIGTERM)
+        deadline = time.time() + 15
+        while not os.path.exists(sock):
+            if time.time() > deadline:
+                raise SystemExit("render: the headless Tern did not start")
+            time.sleep(0.1)
+        time.sleep(0.5)
 
-shots = os.path.join(work, "serve")
-made = sorted(f for f in os.listdir(shots) if f.endswith(".png"))
-if len(made) != frames:
-    raise SystemExit(f"render: {len(made)} frames written, {frames} expected")
-for extra in os.listdir(shots):
-    if extra.endswith(".json"):
-        os.remove(os.path.join(shots, extra))
+        ctl("size", str(meta["width"]), str(meta["height"]), str(args.scale))
+        ctl("appearance", args.theme)
+        # The Hermes theme is the base theme's tokens replaced: titanium under the dark one, `light` under the light.
+        ctl("theme", args.theme, '"titanium"' if args.theme == "dark" else '"light"')
+        ctl("css", "zz-hermes", os.path.join(here, "../themes", f"hermes-{args.theme}.css"))
+        ctl("update", "idle")
+        ctl("rename", json.dumps(args.title, ensure_ascii=False))
+        pane = ctl("state")["panes"][0]
+        if not beside and (pane["cols"], pane["rows"]) != (meta["cols"], meta["rows"]):
+            print(f"render: the pane is {pane['cols']}x{pane['rows']} but the take was {meta['cols']}x{meta['rows']}", file=sys.stderr)
+
+        # One frame is a shot, then exactly 1/fps on Tern's clock. Waits are whole milliseconds, so the
+        # remainder is carried: frame n is taken at round(n * 1000 / fps) ms, never more than half a millisecond off.
+        script = []
+        if beside:
+            # Both panes start as idle shells; the session replays in the left one, the recorded shell's
+            # output is printed into the right one (cleared first, so only the recording shows).
+            script += ["split right", "ready", "focus left"]
+        if play:
+            script.append(f'surface-play "{stream}" paced')
+        if args.start > 0:
+            script.append(f"wait {round(args.start * 1000)}")
+        feeds = os.path.join(base, "feed")
+        os.makedirs(feeds)
+        pending = b"\x1b[2J\x1b[3J\x1b[H" if shell else b""
+        if shell and not press:
+            script.append("focus right")
+        there = f"click {round(meta['width'] * 0.75)} {round(meta['height'] * 0.5)}"
+        back = f"click {round(meta['width'] * 0.25)} {meta['height'] - 30}"
+        todo, printed = list(events), list(chunks) if shell else []
+        clock = 0
+        for frame in range(frames):
+            while todo and todo[0][0] <= frame / args.fps + 1e-9:
+                script.append(todo.pop(0)[1])
+            while printed and printed[0][0] <= args.start + frame / args.fps + 1e-9:
+                pending += printed.pop(0)[1]
+            if pending:
+                path = os.path.join(feeds, f"{frame:06d}.txt")
+                open(path, "wb").write(pending)
+                pending = b""
+                script += ([there] if press else []) + [f'feed "{path}"']
+                # the focus eases back to the left pane over a few hundred milliseconds, which this pass, with
+                # no clock to keep, waits out before the frame is taken
+                script += [back, "wait 400"] if press else []
+            script.append(f'shot "f{frame:06d}"')
+            target = round((frame + 1) * 1000 / args.fps)
+            script.append(f"wait {target - clock}")
+            clock = target
+        scenario = os.path.join(base, "frames.scn")
+        open(scenario, "w").write("\n".join(script) + "\n")
+
+        run = subprocess.run(["tern", "ctl", "--control", sock, "--file", scenario], capture_output=True, text=True)
+        failed = [line for line in run.stdout.splitlines() if line.startswith("< ") and '"ok":false' in line]
+        if failed:
+            raise SystemExit(f"render: {len(failed)} commands failed, first: {failed[0][:300]}")
+    finally:
+        subprocess.run(["tern", "ctl", "--control", sock, "quit"], capture_output=True)
+        try:
+            serve.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            os.killpg(serve.pid, signal.SIGTERM)
+
+    made = os.path.join(base, "serve")
+    count = len([f for f in os.listdir(made) if f.endswith(".png")])
+    if count != frames:
+        raise SystemExit(f"render: {count} frames written, {frames} expected")
+    for extra in os.listdir(made):
+        if extra.endswith(".json"):
+            os.remove(os.path.join(made, extra))
+    return made
+
+
+started = time.time()
+if beside and args.focus == "left":
+    # Printing into the shell's pane means moving the focus there and back, and that cannot be done on the
+    # clock the session replays on: `focus` waits for a pane to settle, which neither does, and a press lets real time in. So the two panes
+    # are rendered apart, each exact: the session with nothing printed beside it, then the shell's pane
+    # with nothing replayed, and the right half of the second is laid over the first.
+    left, right = passed("session", True, False, False), passed("shell", False, True, True)
+    shots = os.path.join(work, "serve")
+    os.makedirs(shots)
+    subprocess.run(
+        ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", os.path.join(left, "f%06d.png"), "-i", os.path.join(right, "f%06d.png"),
+         "-filter_complex", "[1]crop=iw/2:ih:iw/2:0[shell];[0][shell]overlay=W/2:0", "-start_number", "0", os.path.join(shots, "f%06d.png")],
+        check=True,
+    )
+else:
+    shots = passed("session", True, bool(beside), False)
+took = time.time() - started
 
 video = os.path.join(out, f"{name}_{args.fps}fps.mp4")
 subprocess.run(
