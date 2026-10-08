@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process'
 import { appendFile, mkdir, open, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { StringDecoder } from 'node:string_decoder'
+import { setTimeout as delay } from 'node:timers/promises'
 import { promisify } from 'node:util'
 import { defineEngine, EngineError, parseKey, resolveExpression, type EngineHandle, type Key, type OperationContext, type SemanticNode } from 'e2e/engine'
 import { flatten, record, type Json, type Manifest, type Prefs, type SettingsResult, type TspFrame, type TspNode, type Wire } from './types.ts'
@@ -69,7 +70,8 @@ export class NativeControl {
   #budget(context?: OperationContext): Budget {
     const op = context ?? this.#operation?.()
     if (op?.signal.aborted) throw new EngineError('OPERATION_TIMEOUT', 'Native operation aborted before delivery.', { retryable:false })
-    const timeoutMs = Math.max(1, op?.timeoutMs ?? 30000)
+    const timeoutMs = op?.timeoutMs ?? 30000
+    if (timeoutMs <= 0) throw new EngineError('OPERATION_TIMEOUT', 'Native operation budget expired before delivery.', { retryable:false })
     return { deadline: Date.now() + timeoutMs, signal: op?.signal ?? AbortSignal.timeout(timeoutMs) }
   }
 
@@ -204,9 +206,8 @@ export class NativeControl {
       const observed = await this.#committedSnapshot(budget)
       if (observed.nodes.find(node => node.ref.id === id)?.states?.hidden === false) return
       if (expired(budget)) throw new EngineError('ACTION_MAY_HAVE_COMMITTED','Native accessibility scrolling did not paint the target.',{ retryable:false })
-      const { promise, resolve } = Promise.withResolvers<void>()
-      setTimeout(resolve, 100)
-      await promise
+      try { await delay(Math.min(100, preflight(budget)), undefined, { signal:budget.signal }) }
+      catch (cause) { throw new EngineError('ACTION_MAY_HAVE_COMMITTED','Native accessibility scrolling may have committed before cancellation.',{ retryable:false,cause }) }
     }
   }
 
@@ -391,8 +392,16 @@ export class NativeControl {
     const name = `${String(++this.#sequence).padStart(4,'0')}-${label.replace(/[^a-zA-Z0-9_-]/g,'-')}`
     const dir = join(this.manifest.proof,'observations')
     await mkdir(dir,{recursive:true,mode:0o700})
-    await writeFile(join(dir,`${name}.json`),JSON.stringify(await this.snapshot(budget)),{mode:0o600})
-    await this.#execBounded('grim',['-o','HEADLESS-1',join(dir,`${name}.png`)],budget,{env:{...process.env,XDG_RUNTIME_DIR:this.manifest.runtime,WAYLAND_DISPLAY:this.manifest.display}})
+    const snapshot = await this.snapshot(budget)
+    const pending = join(dir,`${name}.pending.png`)
+    await this.#execBounded('grim',['-o','HEADLESS-1',pending],budget,{env:{...process.env,XDG_RUNTIME_DIR:this.manifest.runtime,WAYLAND_DISPLAY:this.manifest.display}})
+    const after = record(await this.#inspect('state',budget))
+    const focused = record(after.focused)
+    if (record(after.gate).applies !== false || String(focused.id) !== this.manifest.pane || focused.cwd !== this.manifest.root || typeof focused.running !== 'string' || !focused.running.includes(this.manifest.launch)) {
+      throw new EngineError('INVALID_STATE','Native ownership changed during screenshot capture; this image is not accepted as evidence.',{ retryable:false })
+    }
+    await writeFile(join(dir,`${name}.json`),JSON.stringify(snapshot),{mode:0o600})
+    await rename(pending,join(dir,`${name}.png`))
   }
 }
 
