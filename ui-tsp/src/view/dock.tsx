@@ -2,7 +2,7 @@
 // the glass composer (omp.editor) with its model chip, effort, context
 // hairline and session cost. Roles match omp's so Tern's composer sheets apply.
 
-import type { EditEvent, JSX, SendEvent } from '@stencil-hq/tern'
+import type { EditEvent, ImageProps, JSX, SendEvent } from '@stencil-hq/tern'
 
 import type { Dispatch } from '../attention.js'
 import type { Composer } from '../composer.js'
@@ -36,6 +36,7 @@ export interface DockContext {
   cost?: number
   ghost?: string
   now: number
+  orb?: ImageProps
   onInterrupt(): void
   onSubmit(): void
   /** Tern submitted text into the composer (`send` feature). */
@@ -134,7 +135,6 @@ function workingNode(cx: DockContext): JSX.Element {
 
   return (
     <row align="center" gap="sm" key="working" role="omp.working">
-      <spinner key="spinner" style="starburst" tone="accent" />
       <shimmer
         key="label"
         mode="classic"
@@ -194,6 +194,7 @@ function composerNode(cx: DockContext): JSX.Element {
       )}
       <row gap="sm" hidden key="chips" role="omp.composer.chips" wrap />
       <row align="start" gap="sm" key="line" role="omp.composer.line">
+        {cx.orb ? <image key="orb" {...cx.orb} role="hermes.agent.orb" /> : null}
         <editor
           cursor={composer.cursor}
           ghost={cx.ghost || undefined}

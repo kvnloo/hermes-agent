@@ -24,6 +24,7 @@ import { Dispatches } from './attention.js'
 import { localCommand } from './commands.js'
 import { Composer } from './composer.js'
 import { type Busy, busyFrom, ownsEvent, Switches } from './flow.js'
+import { OrbActivity, ThinkingOrb } from './orb.js'
 import type { Overlay, OverlayHost } from './overlay.js'
 import { Completion } from './overlays/completion.js'
 import { openModelPicker } from './overlays/models.js'
@@ -82,6 +83,8 @@ export class App implements OverlayHost {
   readonly #layerOwners = new Map<string, Overlay>()
   readonly #overlayIds = new WeakMap<Overlay, string>()
   #overlaySerial = 0
+  readonly #activity = new OrbActivity()
+  #orb: ThinkingOrb | undefined
   #scheduled = false
   #dispatchTimer: ReturnType<typeof setTimeout> | undefined
   #dispatchDeadline: number | null = null
@@ -159,6 +162,7 @@ export class App implements OverlayHost {
 
     if (this.#tern.caps.features.includes('blobs')) {
       this.#welcome.logo = this.#tern.blob(logo, 'image/png')
+      this.#orb = new ThinkingOrb(this.#tern, this.#surface)
     }
 
     this.transcript.push({ id: 'welcome', kind: 'welcome' })
@@ -185,6 +189,7 @@ export class App implements OverlayHost {
       this.#retry = null
       // Whatever went wrong is in the transcript: let it be seen.
       this.#splash?.ready()
+      this.#activity.event({ type: 'error' } as AnyGatewayEvent)
       this.changed()
     })
     this.#gw.drain()
@@ -193,6 +198,7 @@ export class App implements OverlayHost {
     void this.#readInput()
 
     const code = await this.#done.promise
+    this.#orb?.close()
     await this.#tern.close()
     this.#gw.kill('exit')
 
@@ -386,6 +392,18 @@ export class App implements OverlayHost {
       }
     }
 
+    if (ev.ev === 'theme') {
+      this.#orb?.environment({ dark: ev.dark })
+    }
+
+    if (ev.ev === 'motion') {
+      this.#orb?.environment({ reduce: ev.reduce })
+    }
+
+    if ((ev.ev === 'visible' || ev.ev === 'resize') && (!ev.sf || ev.sf === this.#surface.id)) {
+      this.#orb?.environment({ visible: ev.visible })
+    }
+
     if (ev.ev === 'focus' && ev.id === INPUT_ID && !this.overlays.at(-1)?.modal) {
       this.#focus = INPUT_ID
       this.#surface.focus(INPUT_ID)
@@ -476,6 +494,7 @@ export class App implements OverlayHost {
         this.transcript.notice(error.message, 'error')
         this.#lastSubmitted = null
         this.busy = null
+        this.#activity.event({ type: 'error' } as AnyGatewayEvent)
         this.changed()
       })
   }
@@ -567,6 +586,7 @@ export class App implements OverlayHost {
 
   #startBusy(label: string) {
     this.busy = { label, since: {}, startedAt: Date.now() }
+    this.#activity.reset(true)
     this.changed()
   }
 
@@ -730,6 +750,7 @@ export class App implements OverlayHost {
     this.usage = r.info?.usage ?? null
     // A resumed session may be mid-turn: Esc stops it and new prompts queue behind it.
     this.busy = busyFrom(r)
+    this.#activity.reset(this.busy !== null)
     this.transcript.usageBase(r.info?.usage ?? undefined)
 
     if (r.messages?.length) {
@@ -771,6 +792,7 @@ export class App implements OverlayHost {
     }
 
     const t = this.transcript
+    this.#activity.event(ev)
 
     switch (ev.type) {
       case 'gateway.ready':
@@ -981,6 +1003,9 @@ export class App implements OverlayHost {
       case 'approval.cancelled':
         this.#dropPrompts(key => ev.payload?.request_ids.includes(this.#approvalIds.get(key) ?? '') ?? false)
 
+        break
+
+      case 'voice.status':
         break
 
       default:
@@ -1227,6 +1252,7 @@ export class App implements OverlayHost {
     const used = usage?.context_used ?? 0
     const max = usage?.context_max ?? 0
     const modal = this.overlays.at(-1)?.modal === true
+    this.#orb?.update(this.#activity.state(this.overlays.some(o => o.key.startsWith('prompt:'))), modal)
 
     // Every composer change (keys, native edits and undo, submits, queue edits) ends in a render: refresh here.
     if (!modal) {
@@ -1254,6 +1280,7 @@ export class App implements OverlayHost {
         inputId: INPUT_ID,
         model: info?.model ?? '',
         now,
+        orb: this.#orb?.props(),
         onContext: () => void this.#slash('/usage'),
         onEdit: ev => {
           this.composer.edit(ev)
