@@ -54,6 +54,10 @@
     {
       "command": "git diff --check",
       "result": "exit 0"
+    },
+    {
+      "command": "HOME=/tmp/hermes-hooks-home HERMES_HOME=/tmp/hermes-hooks-home/hermes UV_CACHE_DIR=/tmp/hermes-hooks-uv-cache python scripts/check --base 358bdf42b574ea3572c4e07a59972ef26e5d092b",
+      "result": "exit 0; 11 checks passed on committed test diff. Health reports no measured files changed (MJS test is outside measured units); focused ESLint separately passed."
     }
   ],
   "limitations": [
@@ -62,5 +66,6 @@
     "npm dependency failure uses a missing lock under npm ci --offline; build failure uses real node --check SyntaxError. These are isolated lifecycle controls, not an end-to-end Hermes build.",
     "First npm tooling install failed on unavailable default HOME cache; rerun with disposable HOME/cache succeeded. First harness run had an absolute worktree path join bug, corrected to resolve before final results. First lint invocation at root lacked config; rerun in tests-js passed.",
     "No model downloads, paid inference, audio implementation, upstream comments/PRs or promotion."
-  ]
+  ],
+  "pre_push_refresh": "PR head unchanged, PR comments unchanged, #447 contains only this claim, new fork branch absent remotely. New fork #476 is unrelated."
 }
