@@ -15,6 +15,9 @@ async function boundedRead(path, cap = MAX_BYTES) {
 }
 
 const [command, ...args] = process.argv.slice(2);
+// Opt-in machine output for transcript discovery; the default path-only CLI stays unchanged.
+const jsonOutput = command === 'prepare' && args.at(-1) === '--json';
+if (jsonOutput) args.pop();
 try {
   if (command === 'prepare' && args.length === 4) {
     const [sourcePath, dataPath, scope, destination] = args;
@@ -33,7 +36,7 @@ try {
     if (Buffer.byteLength(json) > MAX_BYTES) throw new Error('Serialized preview exceeds 8 MiB.');
     try { await writeFile(path, json, { flag: 'wx', mode: 0o400 }); }
     catch (error) { if (error.code !== 'EEXIST' || await boundedRead(path) !== json) throw error; }
-    console.log(path);
+    console.log(jsonOutput ? JSON.stringify({ kind: 'hermes.visual.candidate', version: 1, id: bundle.id, path, scope }) : path);
   } else if (command === 'capture' && args.length === 4 && args[3] === '--allow-control-input') {
     const [bundlePath, endpoint, output] = args;
     const out = await assertOutputDirectory(output);
@@ -52,7 +55,7 @@ try {
       throw error;
     }
   } else {
-    throw new Error('Usage: node cli.mjs prepare <program.openui> <host-document.json> <session:branch> <output-dir>\n  or: node cli.mjs capture <bundle.hvisual.json> <control-socket> <tern-shot-output-dir> --allow-control-input');
+    throw new Error('Usage: node cli.mjs prepare <program.openui> <host-document.json> <session:branch> <output-dir> [--json]\n  or: node cli.mjs capture <bundle.hvisual.json> <control-socket> <tern-shot-output-dir> --allow-control-input');
   }
 } catch (error) {
   console.error(`${error.code ?? 'error'}: ${error.message}`);
