@@ -58,10 +58,13 @@ The Tern SDK is [`@stencil-hq/tern`](https://www.npmjs.com/package/@stencil-hq/t
 
 `npm run e2e:native -- prepare …` and `npm run e2e:native -- run …` use the
 already-installed **e2e 0.16.0** runner. They do not install dependencies, build the
-app, launch Tern, create/focus panes, or start a model turn. The parent/operator
-must first integrate and build the real settings frontend and gateway, then
-allocate a **new private local PTY pane** on the isolated Tern control window.
-Prepare inspects live `tern ctl state` and accepts only that focused idle pane when its cwd is a private `/tmp` harness directory (not a worktree or conversation pane). Run accepts only the same pane after it is executing the prepared launcher. There is no denylist of pane ids.
+app, launch Tern on the host desktop, or start a model turn. The parent/operator
+must first integrate and build the real settings frontend and gateway on the
+isolated Tern control window. `prepare` itself splits a **fresh pane**, binds that
+pane's cwd to the canonical proof directory, and writes an owner receipt plus a
+launcher whose filename contains the startup nonce. `--pane` on prepare must **not**
+already exist on the window. Run accepts only that created pane after `running`
+includes the nonce launcher. There is no denylist of pane ids and no `/tmp` cwd heuristic.
 
 Required flags are `--root`, `--entry`, `--control`, `--pane`, `--proof-dir`, and
 `--python`. `--root` identifies the integrated application checkout; `--entry`
@@ -69,49 +72,46 @@ is its built native entry file. `--control` is a numeric loopback control port,
 not the daemon socket. `--python` must identify the existing real Python runtime.
 `--framework-root` defaults to `/mnt/zer0models/hermes-wt/e2e`.
 
-For the current isolated display and the parent-allocated fresh pane 11:
+For the isolated display, pass an unused numeric `--pane` placeholder; prepare prints the created id:
 
 ```sh
 export XDG_RUNTIME_DIR=/tmp/hermes-native-settings-proof/run
 export WAYLAND_DISPLAY=wayland-1
-PANE=11
 ROOT=/mnt/zer0models/hermes-wt/tern-native-settings
 SUITE=/mnt/zer0models/hermes-wt/tern-native-e2e/ui-tsp/e2e/run.mjs
 PROOF=/tmp/hermes-native-settings-e2e-20261007
 PYTHON=/home/kvn/.hermes/hermes-agent/venv/bin/python3
 node "$SUITE" prepare --root "$ROOT" --entry "$ROOT/ui-tsp/dist/entry.js" \
-  --control 19763 --pane "$PANE" --proof-dir "$PROOF" --python "$PYTHON"
+  --control 19763 --pane 0 --proof-dir "$PROOF" --python "$PYTHON"
 ```
 
-`prepare` creates a fresh mode-0700 proof directory, an inert real profile with
-a dummy localhost provider, a separate private HOME and foreign-profile sentinel,
-and a launcher. It prints the exact quoted `tern ctl … run …` command. Only the
-parent runs that command in the allocated pane. The launcher uses the real app
+`prepare` creates a fresh mode-0700 proof directory, splits a new idle pane on the
+isolated control window, requires `realpath(cwd)` to equal that proof directory,
+then writes an inert real profile with a dummy localhost provider, a separate
+private HOME and foreign-profile sentinel, `owner.json`, and a nonce-named launcher.
+It prints the created pane id and the exact quoted `tern ctl … run …` command. Only the
+parent runs that command in the created pane. The launcher uses the real app
 entry and the supplied Python interpreter. Its environment allows only PTY,
-locale, and PATH values plus owned fixture paths and dummy credentials.
+locale, and PATH values plus owned fixture paths, dummy credentials, and the owner nonce.
 An owned empty managed directory prevents host managed policy from entering the fixture.
 Preparation and real gateway startup refuse a checkout with a project `.env`.
 The real env loader may load and sanitize that fallback; no non-fixture dotenv file is permitted.
 Existing profiles are never overwritten.
 
-Before launch, the parent reads fresh control state and verifies `focused.id=11`,
-`busy=false`, and `running=null`. The exact current launch is:
+Before launch, the parent reads fresh control state and verifies the printed
+`focused.id`, `busy=false`, and `running=null`. Use the launch line prepare printed;
+the launcher path contains the proof token.
 
-```sh
-tern ctl --control 19763 \
-  'run "cd /mnt/zer0models/hermes-wt/tern-native-settings && /tmp/hermes-native-settings-e2e-20261007/launch-native.mjs"'
-```
-
-`run` executes in the selected shell; it does **not** allocate a new pane. Run it
-only once while that shell is idle. Do not repeat it after the App is running:
+The printed `tern ctl run` executes in the created shell; it does **not** allocate
+another pane. Run it only once while that shell is idle. Do not repeat it after the App is running:
 that would send command text to the program. After launch the parent confirms
-fresh `focused.id=11`; the suite additionally requires its launcher and checkout.
+the created `focused.id`; the suite additionally requires the nonce launcher and checkout.
 
 After the real gateway session and native app have started in that pane:
 
 ```sh
 node "$SUITE" run --root "$ROOT" --entry "$ROOT/ui-tsp/dist/entry.js" \
-  --control 19763 --pane "$PANE" --proof-dir "$PROOF" --python "$PYTHON"
+  --control 19763 --pane "$CREATED_PANE" --proof-dir "$PROOF" --python "$PYTHON"
 ```
 
 All tests are deterministic, serial, and uncached; no agent model is acquired.
@@ -151,14 +151,17 @@ observers incrementally parse complete multi-megabyte JSONL records.
 
 The installed Tern engine's coordinate clicks and separate-argv text quoting do not work with this control API. The narrow `e2e/engine` SPI adapter instead takes
 fresh native AX, tree, and DOM dump evidence, matches bounds within one pixel,
-and rejects hidden/ambiguous targets. Advertised AX `click` and `scroll-into-view`
-are dispatched with `a11y …` against the unique dump `nth` owned by the AX node's
-tree host (tag plus class metadata), not a bounds-sharing deepest wrapper.
+and rejects hidden/ambiguous targets. Official `a11y <action> <selector>` targets a
+DOM element, not an AX id. Advertised AX `click` and `scroll-into-view` therefore
+dispatch `a11y …` only at the unique dump `nth` whose leaf tag and class set are
+exactly the unique tree host for that AX node, with host/dump/AX bounds agreement.
+There is no outermost or class-subset fallback; missing or ambiguous identity fails closed.
 Pointer `click ${nth}` remains only when the AX node does not list `click`.
 Selectors stay raw; text is encoded with `JSON.stringify` inside one
 scenario string. Click, key, type, reveal, capture, and resource operations share
-one deadline and abort signal for the whole operation; a pre-dispatch timeout is
-`NOT_ACTIONABLE`, and a failure after dispatch is `ACTION_MAY_HAVE_COMMITTED`.
+one deadline and abort signal for the whole operation; a pre-delivery timeout is
+`OPERATION_TIMEOUT`, and a failure after `execFile` starts or after successful dispatch
+is `ACTION_MAY_HAVE_COMMITTED`.
 It verifies the exact focused pane, launcher/entry identity, and
 checkout before and after capture. AX, tree and dump targets belong only to the
 single visible focused pane's native subtree; ownership ambiguity fails closed.
