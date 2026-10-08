@@ -10,6 +10,7 @@ import { openModelPicker, switchModel } from './overlays/models.js'
 import { confirmOverlay } from './overlays/prompts.js'
 import { openSessionPicker } from './overlays/sessions.js'
 import { openSettings } from './overlays/settings.js'
+import { openVisual } from './overlays/visual.js'
 
 /** A client-side slash command. */
 export interface LocalCommand {
@@ -145,6 +146,10 @@ const COMMANDS: readonly LocalCommand[] = [
 
       openSettings(app)
     }
+  },
+  {
+    name: 'visual',
+    run: (app, arg) => openVisual(app, arg)
   },
   {
     // `/help <command>` is the backend's detailed usage.
