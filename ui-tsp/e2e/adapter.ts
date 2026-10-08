@@ -6,7 +6,7 @@ import { StringDecoder } from 'node:string_decoder'
 import { setTimeout as delay } from 'node:timers/promises'
 import { promisify } from 'node:util'
 import { defineEngine, EngineError, parseKey, resolveExpression, type EngineHandle, type Key, type OperationContext, type SemanticNode } from 'e2e/engine'
-import { flatten, record, type Json, type Manifest, type Prefs, type SettingsResult, type TspFrame, type TspNode, type Wire } from './types.ts'
+import { flatten, nativeGateOpen, record, type Json, type Manifest, type Prefs, type SettingsResult, type TspFrame, type TspNode, type Wire } from './types.ts'
 
 const exec = promisify(execFile)
 interface Ax {
@@ -127,7 +127,7 @@ export class NativeControl {
         : this.#budget(input)
     const ctl = (scenario:string) => this.#inspect(scenario, budget)
     const state = record(await ctl('state'))
-    if (record(state.gate).applies !== false) throw new EngineError('INVALID_STATE','Native Tern account gate blocks visible proof; restore access interactively before any input.',{ retryable:false })
+    if (!nativeGateOpen(state.gate)) throw new EngineError('INVALID_STATE','Native Tern account gate blocks visible proof; restore access interactively before any input.',{ retryable:false })
     const panes = state.panes as { id:number }[] | undefined
     const focused = record(state.focused)
     if (!panes?.some(p => String(p.id) === this.manifest.pane) || String(focused.id) !== this.manifest.pane) throw new Error('Native input target changed; parent must reselect the prepared private pane.')
@@ -154,7 +154,7 @@ export class NativeControl {
     const tree = [paneTree]
     const elements = flatten(tree)
     const end = record(await ctl('state'))
-    if (record(end.gate).applies !== false) throw new EngineError('INVALID_STATE','Native Tern account gate changed during capture; no input is permitted.',{ retryable:false })
+    if (!nativeGateOpen(end.gate)) throw new EngineError('INVALID_STATE','Native Tern account gate changed during capture; no input is permitted.',{ retryable:false })
     const after = record(end.focused)
     if (String(after.id) !== this.manifest.pane || after.cwd !== focused.cwd || after.running !== focused.running) throw new Error('Prepared pane ownership changed during native capture.')
     const surfaces = elements.filter(e => (e.class ?? '').split(' ').includes('sf-region') && e.rect)
@@ -397,7 +397,7 @@ export class NativeControl {
     await this.#execBounded('grim',['-o','HEADLESS-1',pending],budget,{env:{...process.env,XDG_RUNTIME_DIR:this.manifest.runtime,WAYLAND_DISPLAY:this.manifest.display}})
     const after = record(await this.#inspect('state',budget))
     const focused = record(after.focused)
-    if (record(after.gate).applies !== false || String(focused.id) !== this.manifest.pane || focused.cwd !== this.manifest.root || typeof focused.running !== 'string' || !focused.running.includes(this.manifest.launch)) {
+    if (!nativeGateOpen(after.gate) || String(focused.id) !== this.manifest.pane || focused.cwd !== this.manifest.root || typeof focused.running !== 'string' || !focused.running.includes(this.manifest.launch)) {
       throw new EngineError('INVALID_STATE','Native ownership changed during screenshot capture; this image is not accepted as evidence.',{ retryable:false })
     }
     await writeFile(join(dir,`${name}.json`),JSON.stringify(snapshot),{mode:0o600})
