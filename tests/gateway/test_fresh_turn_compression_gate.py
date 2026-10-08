@@ -125,15 +125,40 @@ async def test_no_compression_starts_fresh_turn(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_internal_message_not_gated(tmp_path):
-    """The gate mirrors the external-drain gate and only refuses user traffic;
-    internal events keep the pre-gate fresh-turn behavior."""
+async def test_internal_message_is_deferred_until_compression_clears(tmp_path):
+    """Internal wakes are not user-resendable: preserve the exact event in the
+    adapter FIFO and start no agent turn until the compression lock clears."""
     store = _store(tmp_path)
     src = _source(chat_id="555012")
     store.get_or_create_session(src)
 
     runner = _make_runner(store)
-    result, cold_path = await _drive(runner, _event(src, internal=True))
+    event = _event(src, internal=True)
+    event.allow_gateway_control = False
+    event.metadata = {
+        "hermes_plugin_id": "demo",
+        "hermes_plugin_injection": True,
+        "gateway_session_key": "pinned",
+    }
+
+    result, blocked_path = await _drive(runner, event, compression_in_flight=True)
+
+    assert result is None
+    assert blocked_path.await_count == 0
+
+    adapter = runner.adapters[Platform.TELEGRAM]
+    assert len(adapter._pending_messages) == 1
+    session_key, deferred = next(iter(adapter._pending_messages.items()))
+    assert deferred is event
+    assert deferred.internal is True
+    assert deferred.allow_gateway_control is False
+    assert deferred.metadata == event.metadata
+
+    # Simulate the adapter drain after its normal backoff. The same object is
+    # delivered once, now against the post-compression transcript.
+    adapter._pending_messages.pop(session_key)
+    result, resumed_path = await _drive(runner, deferred, compression_in_flight=False)
 
     assert result == "COLD_PATH_REPLY"
-    assert cold_path.await_count == 1
+    assert resumed_path.await_count == 1
+    assert adapter._pending_messages == {}

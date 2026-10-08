@@ -1344,7 +1344,28 @@ class GatewayInboundMixin(GatewayPluginInjectionMixin):
         # commits a snapshot taken before the previous commit — double-compressing the
         # transcript. The running-agent path already demotes for this; the fresh-turn path
         # must refuse too. Lock is TTL-leased (~300 s), so a leaked lock can't wedge this.
-        if not is_internal and await self._session_has_compression_in_flight(_quick_key):
+        if await self._session_has_compression_in_flight(_quick_key):
+            if is_internal:
+                # Internal wakes/completions are not user-resendable. Put the exact event back
+                # through the adapter FIFO instead of starting it on the pre-compression
+                # transcript. BasePlatformAdapter's identical-event drain backoff prevents a
+                # hot loop while the lock remains held and preserves the event's routing/security
+                # metadata until the committed transcript is visible.
+                adapter = self._delivery_adapter_for(source)
+                if adapter is None:
+                    logger.error(
+                        "Could not defer internal turn for session %s during compression — "
+                        "delivery adapter unavailable.",
+                        _quick_key,
+                    )
+                    return None
+                self._enqueue_fifo(_quick_key, event, adapter)
+                logger.info(
+                    "Deferring internal turn for session %s — context compression in flight.",
+                    _quick_key,
+                )
+                return None
+
             logger.info("Refusing new turn for session %s — context compression in flight.", _quick_key)
             return t("gateway.busy.compressing_retry")
 
