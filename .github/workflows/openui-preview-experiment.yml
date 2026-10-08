@@ -1,7 +1,7 @@
 name: OpenUI native preview experiment
 on:
   push:
-    branches: [exp/tern-openui-preview]
+    branches: [exp/tern-openui-preview, exp/tern-openui-capture-guards]
     paths:
       - ui-tsp/experiments/openui-preview/**
       - ui-tsp/experiments/openui-generation/**
