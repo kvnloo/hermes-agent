@@ -41,7 +41,7 @@ export async function openVisual(app: VisualHost, path: string, load: LoadVisual
             ) : !path ? (
               <col key="usage" gap="sm">
                 <text key="command" text="/visual /absolute/path/to/candidate.hvisual.json" />
-                <text key="scope-label" text="Prepare the existing OpenUI bundle with this exact --scope:" />
+                <text key="scope-label" text="Prepare the existing OpenUI bundle with this exact scope argument:" />
                 <text key="scope" text={scope} />
                 <text key="note" text="This command inspects prepared data; it does not generate, approve, publish or share it." />
               </col>
