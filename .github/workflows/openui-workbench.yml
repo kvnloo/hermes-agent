@@ -1,0 +1,42 @@
+name: OpenUI isolated workbench
+on:
+  push:
+    branches: [ci/tern-openui-workbench]
+    paths: [.github/workflows/openui-workbench.yml]
+permissions:
+  contents: read
+jobs:
+  workbench:
+    if: github.repository == 'kvnloo/hermes-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      OPENUI_TELEMETRY_DISABLED: '1'
+      DO_NOT_TRACK: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.16.0'
+      - name: Install existing frontend versions; disable install scripts
+        working-directory: ui-tsp
+        run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false --workspaces=false
+      - name: Install locked OpenUI core; disable install scripts and telemetry
+        working-directory: ui-tsp/experiments/openui-generation
+        run: npm ci --ignore-scripts --no-audit --no-fund --workspaces=false
+      - name: Package tracked source and offline test dependencies only
+        run: |
+          mkdir -p /tmp/openui-workbench
+          git archive --format=tar.gz HEAD > /tmp/openui-workbench/source.tar.gz
+          tar -czf /tmp/openui-workbench/dependencies.tar.gz ui-tsp/node_modules ui-tsp/experiments/openui-generation/node_modules
+          git rev-parse HEAD > /tmp/openui-workbench/revision.txt
+          cd /tmp/openui-workbench
+          sha256sum source.tar.gz dependencies.tar.gz > SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: openui-offline-workbench
+          path: /tmp/openui-workbench
+          retention-days: 2
+          if-no-files-found: error
