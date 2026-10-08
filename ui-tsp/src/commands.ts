@@ -9,7 +9,7 @@ import { openHelp } from './overlays/help.js'
 import { openModelPicker, switchModel } from './overlays/models.js'
 import { confirmOverlay } from './overlays/prompts.js'
 import { openSessionPicker } from './overlays/sessions.js'
-import { openVisual } from './overlays/visual.js'
+import { openVisualPicker } from './overlays/visual-picker.js'
 
 /** A client-side slash command. */
 export interface LocalCommand {
@@ -140,7 +140,7 @@ const COMMANDS: readonly LocalCommand[] = [
   },
   {
     name: 'visual',
-    run: (app, arg) => openVisual(app, arg)
+    run: (app, arg) => openVisualPicker(app, arg)
   },
   {
     // `/help <command>` is the backend's detailed usage.
