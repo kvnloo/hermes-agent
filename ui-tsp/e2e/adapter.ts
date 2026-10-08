@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto'
 import { execFile } from 'node:child_process'
+import { closeSync, fstatSync, lstatSync, mkdtempSync, openSync, realpathSync, renameSync, rmdirSync, unlinkSync } from 'node:fs'
 import { appendFile, mkdir, open, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { StringDecoder } from 'node:string_decoder'
 import { setTimeout as delay } from 'node:timers/promises'
 import { promisify } from 'node:util'
 import { defineEngine, EngineError, parseKey, resolveExpression, type EngineHandle, type Key, type OperationContext, type SemanticNode } from 'e2e/engine'
-import { flatten, nativeGateOpen, record, type Json, type Manifest, type Prefs, type SettingsResult, type TspFrame, type TspNode, type Wire } from './types.ts'
+import { assertOwnedInert, flatten, nativeGateOpen, record, type Json, type Manifest, type Prefs, type SettingsResult, type TspFrame, type TspNode, type Wire } from './types.ts'
 
 const exec = promisify(execFile)
 interface Ax {
@@ -26,6 +27,7 @@ const roles: Record<string, string> = {
   ComboBox:'combobox', TextInput:'textbox', MultilineTextInput:'textbox', TextBox:'textbox', TextField:'textbox',
   SearchField:'searchbox', Meter:'meter', Heading:'heading', Group:'group', Region:'region', Tab:'tab', ListBox:'listbox'
 }
+const intrinsicRoles: Record<string, string> = { button:'button', input:'textbox', textarea:'textbox', select:'combobox', a:'link' }
 const near = (a: readonly number[], b: readonly number[]) => a.length === 4 && b.length === 4 && a.every((v, i) => Math.abs(v - b[i]!) <= 1)
 const box = (r: readonly number[]) => ({ x:r[0]!, y:r[1]!, width:r[2]!, height:r[3]! })
 const expired = (budget: Budget) => budget.signal.aborted || budget.deadline - Date.now() <= 0
@@ -36,8 +38,10 @@ function preflight(budget: Budget): number {
 }
 function axOwnerDump(ax: Ax, dump: Dump[], tree: Tree[], visibleOnly: boolean): Dump {
   if (ax.id === undefined || !ax.bounds) throw new EngineError('NOT_ACTIONABLE', 'Owned AX target has no unique native identity.', { retryable:false })
-  if (!roles[ax.role ?? '']) throw new EngineError('NOT_ACTIONABLE', 'Owned AX target has no documented role.', { retryable:false })
-  const hosts = flatten(tree).filter(node => node.tag && node.rect && near(node.rect, ax.bounds!))
+  const semantic = roles[ax.role ?? '']
+  if (!semantic) throw new EngineError('NOT_ACTIONABLE', 'Owned AX target has no documented role.', { retryable:false })
+  const hosts = flatten(tree).filter(node => node.tag && node.rect && near(node.rect, ax.bounds!) &&
+    (node.role ? node.role === semantic : intrinsicRoles[node.tag!] === semantic || Boolean(ax.name && node.title === ax.name)))
   if (hosts.length !== 1) throw new EngineError('NOT_ACTIONABLE', 'Owned AX action has no unique tree-host identity.', { retryable:false })
   const host = hosts[0]!
   if (!host.rect || !near(host.rect, ax.bounds)) throw new EngineError('NOT_ACTIONABLE', 'Tree host bounds do not agree with the AX owner.', { retryable:false })
@@ -405,9 +409,21 @@ export class NativeControl {
 }
 
 export function nativeControlEngine(native: NativeControl): EngineHandle {
+  let owner: { fd: number; path: string; dev: number; ino: number } | undefined
   return defineEngine({
     name:'hermes-native-control',version:'1.0.0',spiVersion:1,platform:'desktop',
     actions:['tap','press'],
+    async startAttempt(context) {
+      assertOwnedInert(native.manifest)
+      context.signal.throwIfAborted()
+      if (owner) throw new EngineError('NOT_ACTIONABLE', 'Native inert proof already has an active engine owner.', { retryable:false })
+      const path = join(realpathSync(native.manifest.proof), '.native-settings-engine-owner')
+      let fd: number
+      try { fd = openSync(path, 'wx', 0o600) }
+      catch (cause) { throw new EngineError('NOT_ACTIONABLE', 'Cannot claim native inert proof; use a distinct explorer fixture.', { retryable:false, cause }) }
+      const stat = fstatSync(fd)
+      owner = { fd, path, dev:stat.dev, ino:stat.ino }
+    },
     async observe(context) { const s = await native.snapshot(context); return {location:`tern-private:${native.manifest.control}/${native.manifest.pane}`,root:{ref:{id:'root',revision:''},role:'window',children:s.roots},viewport:s.viewport} },
     async locate(expression, context) { return resolveExpression(expression,(await native.snapshot(context)).roots) },
     async perform(ref,action,context) {
@@ -424,6 +440,22 @@ export function nativeControlEngine(native: NativeControl): EngineHandle {
       reveal:{kind:'resource',label:name => name},
       schema:{kind:'resource'},hold:{kind:'resource'},release:{kind:'resource'},evidence:{kind:'resource',label:label => label}
     }) },
-    async endAttempt() { await native.release() }
+    async endAttempt() {
+      if (!owner) return
+      const claim = owner
+      owner = undefined
+      try { await native.release() }
+      finally {
+        try {
+          const quarantine = mkdtempSync(join(native.manifest.proof, '.native-settings-owner-release-'))
+          const path = join(quarantine, 'owner')
+          renameSync(claim.path, path)
+          const stat = lstatSync(path)
+          if (stat.dev !== claim.dev || stat.ino !== claim.ino) throw new EngineError('NOT_ACTIONABLE', 'Native owner identity changed; retain claimed evidence.', { retryable:false })
+          unlinkSync(path)
+          rmdirSync(quarantine)
+        } finally { closeSync(claim.fd) }
+      }
+    }
   })
 }

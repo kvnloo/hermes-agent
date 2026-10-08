@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-import { readFileSync, realpathSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { access } from 'node:fs/promises'
-import { dirname, join, sep } from 'node:path'
+import { dirname, join } from 'node:path'
 import { pathToFileURL, fileURLToPath } from 'node:url'
+import { assertOwnedInert } from './types.ts'
 
 const source = dirname(fileURLToPath(import.meta.url))
-const SENTINEL = 'isolated inert fixture; no turns or grants\n'
 const mode = process.argv[2] ?? 'handshake'
 const framework = process.env.E2E_FRAMEWORK_ROOT ?? '/mnt/zer0models/hermes-wt/e2e'
 const bin = join(framework, 'packages/e2e/dist/cli/bin.js')
@@ -14,20 +14,7 @@ const clientRoot = join(framework, 'packages/e2e/node_modules/@modelcontextproto
 
 function ownedManifest(path) {
   const manifest = JSON.parse(readFileSync(path, 'utf8'))
-  if (!manifest.runtime?.startsWith('/tmp/') || !manifest.display || manifest.display === 'wayland-0') {
-    throw new Error('Owned isolated runtime/display is required; physical wayland-0 is refused.')
-  }
-  if (!manifest.proof?.startsWith('/tmp/') || manifest.proof === '/tmp') {
-    throw new Error('Proof directory must be a private /tmp path.')
-  }
-  const proof = realpathSync(manifest.proof)
-  const home = realpathSync(manifest.home)
-  if (home !== proof && !home.startsWith(`${proof}${sep}`)) {
-    throw new Error('Hermes home is not inside the owned proof directory.')
-  }
-  if (readFileSync(join(home, '.native-settings-e2e'), 'utf8') !== SENTINEL) {
-    throw new Error('Owned inert sentinel is missing or not the native-settings fixture.')
-  }
+  assertOwnedInert(manifest)
   return manifest
 }
 
@@ -75,8 +62,22 @@ if (mode === 'handshake') {
     process.exit(2)
   }
   ownedManifest(manifestPath)
-  process.stderr.write('Manifest+sentinel accepted; open_session is still deferred until parent supplies six owned explorer manifests.\n')
-  process.exit(2)
+  const { client } = await connect({ ...process.env, CI: '' })
+  let session
+  try {
+    const opened = await client.callTool({ name:'open_session', arguments:{ target:'isolated-tern' } })
+    if (opened.isError) throw new Error(JSON.stringify(opened))
+    const text = opened.content.filter(block => block.type === 'text').map(block => block.text).join('\n')
+    session = /^Session ([^\s]+) open on target /.exec(text)?.[1]
+    if (!session) throw new Error('MCP open_session did not return its session identifier.')
+    const catalog = await client.callTool({ name:'tools', arguments:{ session } })
+    const evidence = await client.callTool({ name:'call', arguments:{ session, tool:'native_evidence', args:{ label:'mcp-open-smoke' } } })
+    if (catalog.isError || evidence.isError) throw new Error(JSON.stringify({ catalog, evidence }))
+    process.stdout.write(`${JSON.stringify({ open_session:true, session, catalog, evidence }, null, 2)}\n`)
+  } finally {
+    try { if (session) await client.callTool({ name:'close_session', arguments:{ session } }) }
+    finally { await client.close() }
+  }
 } else {
   process.stderr.write('Use handshake (default) or open.\n')
   process.exit(2)
