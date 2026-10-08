@@ -8,9 +8,9 @@ Verifies that:
 
 from __future__ import annotations
 
+import builtins
 import sys
 from pathlib import Path
-
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -65,6 +65,36 @@ def test_all_profiles_register():
     assert len(names) >= plugin_dir_count, (
         f"Expected at least {plugin_dir_count} profiles (one per plugin dir), got {len(names)}: {names}"
     )
+
+
+def test_solstice_discovery_does_not_require_httpx(monkeypatch):
+    """Profile enumeration must work in the deliberately stripped PM runtime.
+
+    That interpreter does not carry application transports such as ``httpx``;
+    Solstice may import them only when inference actually creates its client.
+    """
+    _clear_provider_caches()
+    sys.modules.pop("agent.gemini_native_adapter", None)
+    for name in [module for module in sys.modules if module == "httpx" or module.startswith("httpx.")]:
+        sys.modules.pop(name, None)
+
+    real_import = builtins.__import__
+
+    def without_httpx(name, *args, **kwargs):
+        if name == "httpx" or name.startswith("httpx."):
+            raise ModuleNotFoundError("No module named 'httpx'", name=name)
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", without_httpx)
+
+    from providers import get_provider_profile
+
+    profile = get_provider_profile("solstice")
+    assert profile is not None
+    assert profile.name == "solstice"
+    assert "agent.gemini_native_adapter" not in sys.modules
+
+    _clear_provider_caches()
 
 
 def test_user_plugin_overrides_bundled(tmp_path, monkeypatch):
