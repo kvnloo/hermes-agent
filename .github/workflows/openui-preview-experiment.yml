@@ -1,7 +1,7 @@
 name: OpenUI native preview experiment
 on:
   push:
-    branches: [exp/tern-openui-preview, exp/tern-openui-capture-guards, exp/tern-openui-frontend]
+    branches: [exp/tern-openui-preview, exp/tern-openui-capture-guards, exp/tern-openui-frontend, exp/tern-openui-discovery]
     paths:
       - ui-tsp/experiments/openui-preview/**
       - ui-tsp/experiments/openui-generation/**
@@ -52,6 +52,16 @@ jobs:
           bundle="$(node cli.mjs prepare ../openui-generation/fixtures/explorer.openui fixtures/repository.json ci:branch "$out/bundles")"
           repeat="$(node cli.mjs prepare ../openui-generation/fixtures/explorer.openui fixtures/repository.json ci:branch "$out/bundles")"
           test "$bundle" = "$repeat"
+          node cli.mjs prepare ../openui-generation/fixtures/explorer.openui fixtures/repository.json ci:branch "$out/bundles" --json > "$out/candidate.json"
+          node --input-type=module - "$out/candidate.json" "$bundle" <<'JS'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const [notice, path] = process.argv.slice(2);
+          const bundle = JSON.parse(readFileSync(path, 'utf8'));
+          assert.deepEqual(JSON.parse(readFileSync(notice, 'utf8')), {
+            kind: 'hermes.visual.candidate', version: 1, id: bundle.id, path, scope: bundle.selection.scope
+          });
+          JS
           if node cli.mjs capture "$bundle" "$out/absent-control.sock" "$out/shots" --allow-control-input; then
             echo 'Missing Tern/control endpoint must never report success' >&2
             exit 1
@@ -60,7 +70,7 @@ jobs:
       - name: No rewritten tracked inputs
         run: git diff --exit-code
   frontend:
-    if: github.repository == 'kvnloo/hermes-agent' && github.ref == 'refs/heads/exp/tern-openui-frontend'
+    if: github.repository == 'kvnloo/hermes-agent' && (github.ref == 'refs/heads/exp/tern-openui-frontend' || github.ref == 'refs/heads/exp/tern-openui-discovery')
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
@@ -84,10 +94,11 @@ jobs:
           --module nodenext --moduleResolution nodenext --jsx react-jsx
           --jsxImportSource @stencil-hq/tern --strict --noUncheckedIndexedAccess
           --esModuleInterop --skipLibCheck
-          src/visuals.ts src/overlays/visual.tsx
+          src/visuals.ts src/overlays/visual.tsx src/visual-discovery.ts src/overlays/visual-picker.tsx
           src/__tests__/visuals.test.ts src/__tests__/visual-overlay.test.ts
           src/__tests__/visual-bundle.test.ts
+          src/__tests__/visual-discovery.test.ts src/__tests__/visual-picker.test.ts
       - name: Native component and real bundle integration tests
-        run: npm test -- src/__tests__/visuals.test.ts src/__tests__/visual-overlay.test.ts src/__tests__/visual-bundle.test.ts
+        run: npm test -- src/__tests__/visuals.test.ts src/__tests__/visual-overlay.test.ts src/__tests__/visual-bundle.test.ts src/__tests__/visual-discovery.test.ts src/__tests__/visual-picker.test.ts
       - name: No rewritten tracked inputs
         run: git diff --exit-code
