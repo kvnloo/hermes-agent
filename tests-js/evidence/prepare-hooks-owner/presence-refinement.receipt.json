@@ -1,0 +1,68 @@
+{
+  "status": "SUPPLEMENTAL_TEST_PUBLISHED; production ownership retained by aortegamel; upstream coordination blocked",
+  "executed_at_utc": "2026-10-09T23:40:00Z",
+  "recovered_local_commit": "7275df47624e43ea695f6b93c26860d8474bc2b7",
+  "first_remote_receipt_commit": "229a7e4a4d6f6aa7ccc4bc647e72443e811d7d12",
+  "exact_recovered_tree": "f8ae07b5bb1cca9cd2fc2d9c54d0ea0a74760f89",
+  "main_sha": "46d7718a52ff33accb15dc0501736fbdb6833cab",
+  "owner_sha": "88422bc186024bf6ed9e50223c58d67eaf4cc1c2",
+  "both_heads_rechecked_utc": "2026-10-09T23:40:50Z",
+  "production_repository_files_changed": false,
+  "results": {
+    "new_owner_regressions": {
+      "passed": 0,
+      "failed": 2,
+      "exit_status": 1,
+      "log": "whitespace-owner.tap"
+    },
+    "temporary_presence_refinement": {
+      "passed": 2,
+      "failed": 0,
+      "exit_status": 0,
+      "log": "whitespace-presence.tap"
+    },
+    "temporary_presence_original_matrix_plus_owner_adjacent": {
+      "passed": 13,
+      "failed": 0,
+      "exit_status": 0,
+      "log": "presence-adjacent.tap"
+    }
+  },
+  "contract": [
+    "Single-space included value preserves pre-commit and directory entries and all config bytes.",
+    "Explicit empty included value is present (Git exit 0 with newline), preserves bytes and explicitly skips installer rather than relying on Lefthook error."
+  ],
+  "temporary_refinement": {
+    "target": "Existing owner package.json prepare guard, in disposable test manifest only",
+    "replace": "String((s('git',['config','--get','core.hooksPath'],{encoding:'utf8',stdio:'pipe'}).stdout||'')).trim()",
+    "with": "s('git',['config','--get','core.hooksPath'],{encoding:'utf8',stdio:'pipe'}).status===0"
+  },
+  "reproduce": "PATH=/path/to/isolated/lefthook-2.1.14/node_modules/.bin:$PATH PREPARE_PACKAGE=/absolute/path/to/package.json node --test tests-js/evidence/prepare-hooks-owner/whitespace-hooks.test.mjs",
+  "isolation": "Real Git/npm/Lefthook 2.1.14; allowlisted environment and disposable HOME/config/repositories. No live hooks, config, user Hermes installation, force or reset-hooks-path.",
+  "coordination": {
+    "target": "https://github.com/NousResearch/hermes-agent/pull/135296",
+    "posted": false,
+    "reason": "Upstream comment was denied by authorization review, including one retry with latest explicit coordinate-ownership user instruction. Prior no-upstream-posting restriction remains; no workaround attempted.",
+    "next_action": "Obtain explicit approval to post bounded coordination note to #135296, then let existing owner incorporate refinement/test. No new upstream PR."
+  },
+  "limits": [
+    "Linux only.",
+    "Original 10-case fixture uses native Node adapter instead of unavailable Vitest; owner adjacent three use existing mocks, while all 12 real cases use actual tools.",
+    "No full install/build/runtime or macOS/Windows claim.",
+    "New supplemental test is provided, not integrated into an upstream test command.",
+    "Production implementation remains unchanged; temporary refinement is verified evidence and not a landed fix."
+  ],
+  "credits": {
+    "original_diagnosis": "saralilyb",
+    "existing_preservation_implementation": "aortegamel",
+    "prior_wrapper_test_collaboration": "liuhao1024",
+    "landed_nonfatal_fix": "ethernet8023"
+  },
+  "checks": {
+    "node_syntax": "PASS",
+    "git_diff_cached_check": "PASS",
+    "scripts_check": "11 checks, ok; no measured files changed",
+    "command": "HOME=/tmp/ayo-hooks-home UV_CACHE_DIR=/tmp/ayo-hooks-uv-cache UV_TOOL_DIR=/tmp/ayo-hooks-uv-tools UV_TOOL_BIN_DIR=/tmp/ayo-hooks-uv-bin python scripts/check --base 46d7718a52ff33accb15dc0501736fbdb6833cab --staged"
+  },
+  "log_normalization": "Trailing whitespace removed from saved logs; assertion outcomes unchanged."
+}

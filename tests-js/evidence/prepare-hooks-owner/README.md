@@ -57,3 +57,17 @@ records scoped versus effective Git queries, config/hook hashes and the real ren
 The existing owner implementation has not been cherry-picked. Owner coordination
 was blocked by posting authorization; the ready-to-post note is in the receipt.
 No new upstream PR, production change, merge or promotion is part of this evidence.
+
+## Whitespace-only follow-up
+
+Recovered evidence was published first at `229a7e4a4d6f6aa7ccc4bc647e72443e811d7d12`.
+See [presence-refinement.receipt.json](presence-refinement.receipt.json) for the
+new two-case real regression, RED on owner 88422bc186 (0/2), GREEN with a
+one-expression key-presence refinement in a disposable manifest (2/2), and
+13/13 original real plus owner-adjacent checks with that refinement.
+The production package remains untouched; aortegamel retains implementation
+ownership. Upstream coordination is still blocked by posting authorization.
+
+Run the focused test using the `PREPARE_PACKAGE` command in the new receipt.
+The receipt gives the exact temporary guard replacement, preserving all other
+owner behavior. No new upstream PR or competing production fix was created.

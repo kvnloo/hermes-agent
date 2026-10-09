@@ -1,0 +1,21 @@
+✔ checkout: preserve global hooks and config byte-for-byte (197.062527ms)
+✔ checkout: preserve local hooks and config byte-for-byte (186.535428ms)
+✔ checkout: preserve included hooks and config byte-for-byte (173.833709ms)
+✔ checkout: real hook installs in the repository (198.85521ms)
+✔ worktree: preserve global hooks and config byte-for-byte (182.009857ms)
+✔ worktree: preserve local hooks and config byte-for-byte (175.765388ms)
+✔ worktree: preserve included hooks and config byte-for-byte (187.212649ms)
+✔ worktree: real hook installs in the repository (193.73299ms)
+✔ source copy inside no Git repository leaves included custom hooks intact (139.352625ms)
+✔ npm still surfaces genuine dependency and build failures (405.257498ms)
+✔ a custom core.hooksPath skips lefthook and exits zero (71.058036ms)
+✔ the default configuration installs hooks and exits zero (79.948313ms)
+✔ a failing lefthook install warns and still exits zero (70.752484ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2143.275823
