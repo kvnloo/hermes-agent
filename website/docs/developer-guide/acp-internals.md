@@ -46,6 +46,23 @@ Responsibilities:
 - session model switching
 - wiring sync AIAgent callbacks into ACP async notifications
 
+### Model-selection confirmation
+
+A successful `session/set_model` response may include the additive Hermes extension
+`_meta.hermes.activeModelId`. It encodes the rebuilt live agent's literal
+`provider:model`, captured before releasing the session's model-change exclusion.
+It is not an echo of the requested picker ID or the resolver's proposed model.
+Missing or blank live identity omits the extension; an empty response remains an
+ACK without active-model evidence. Rejected or failed switches do not emit a
+success response. No catalog refresh, provider inference, or `session/load` replay
+is performed to produce this field.
+
+Clients should correlate the response ID with the model request and session. A
+strict non-default-model acceptance check must compare the actual ID, rather than
+assuming aliases or named custom-provider IDs are equivalent. This describes
+configured live agent state, not a provider usage/billing receipt or proof of a
+completed inference. Other ACP clients can ignore this extension.
+
 ### `SessionManager`
 
 `acp_adapter/session.py` tracks live ACP sessions.

@@ -1,0 +1,23 @@
+{
+  "kind": "hermetic ACP model-confirmation qualification; not installed-provider acceptance",
+  "date": "2026-10-09",
+  "upstreamBase": "46d7718a52ff33accb15dc0501736fbdb6833cab",
+  "branch": "fix/acp-confirm-active-model-3388",
+  "consumer": "hurttlocker/o8#3388 acceptance observer",
+  "testedSourceBlobs": {
+    "acp_adapter/server.py": "092f62796ec934ea638d957850fe665302dbec65",
+    "tests/acp_adapter/test_active_model_confirmation.py": "f5fb4369f4fce75058e6753e023e0ee9ab0674eb"
+  },
+  "setup": "Official pm.build_env with isolated source/output/cache, --group dev --group test --extra acp --no-install-project; Python 3.14.8; locked ACP SDK 0.9.0",
+  "commands": [
+    {"command": "HERMES_TEST_FILE_RETRIES=0 scripts/run_tests.sh tests/acp_adapter/test_active_model_confirmation.py", "baseResult": "1 failed, 5 passed; actual SDK router response lacked activeModelId", "patchedResult": "6 passed"},
+    {"command": "HERMES_TEST_FILE_RETRIES=0 scripts/run_tests.sh tests/acp_adapter/test_active_model_confirmation.py tests/acp_adapter/test_acp_dashboard_model_switch_validation.py", "result": "13 passed, 0 failed"},
+    {"command": "HERMES_TEST_FILE_RETRIES=0 scripts/run_tests.sh tests/acp_adapter -j 4", "result": "28 files, 204 passed, 0 failed, 1 existing Windows-only test skipped on Linux"},
+    {"command": "python scripts/check --base 46d7718a52ff33accb15dc0501736fbdb6833cab", "result": "11 checks passed; code health zero blocking/advisory findings"},
+    {"command": "git diff --check", "result": "passed"}
+  ],
+  "controls": ["requested alias, resolver proposal and actual rebuilt identity differ", "missing live model/provider yields no invented evidence", "rejected, busy and failed construction keep original agent and report failure", "catalog and load/replay paths forbidden in confirmation test"],
+  "independentReview": "Read-only reviewer inspected live-state source and command_op ordering; independently ran 13 focused tests successfully.",
+  "ownership": "Fork #447 and current open ACP work checked. Existing configOptions migrations #75358, #81067, #88630 and #106606 remain owned separately and are not duplicated. No new upstream PR or promotion.",
+  "limitations": ["Agent construction and model resolver are controlled test doubles; actual SDK router and session manager run", "No installed Hermes profile, provider call, o8 mission UI, physical device or Ripple UI acceptance", "No full Hermes repository suite or Windows execution claimed", "Literal live IDs may differ from picker aliases or named custom-provider IDs; downstream strict checks must fail closed", "Initial test attempt omitted SDK unstable-method opt-in and was corrected before the recorded RED/GREEN; it was not a valid switch reproduction"]
+}

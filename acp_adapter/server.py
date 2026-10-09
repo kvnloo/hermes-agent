@@ -1045,6 +1045,19 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
                 # (disabled provider, context window below the floor) stays on the -32603 path.
                 from acp.exceptions import RequestError
                 raise RequestError.invalid_params({"details": str(exc)}) from exc
+            # Snapshot the rebuilt agent while command_op still excludes another switch/turn.
+            # This additive ACP extension confirms live state, never the requested alias or
+            # the resolver's proposal. Do not probe the catalog or replay session/load here.
+            live_model = getattr(state.agent, "model", None)
+            live_provider = getattr(state.agent, "provider", None)
+            active_model = (
+                encode_model_choice(live_provider, live_model)
+                if isinstance(live_model, str) and live_model.strip()
+                and isinstance(live_provider, str) and live_provider.strip() else None
+            )
+            response = SetSessionModelResponse(
+                field_meta={"hermes": {"activeModelId": active_model}} if active_model else None
+            )
         finally:
             with state.runtime_lock:
                 state.command_op = False
@@ -1055,7 +1068,7 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
         logger.info(
             "Session %s: model switched to %s via provider %s", session_id, resolved_model, requested_provider
         )
-        return SetSessionModelResponse()
+        return response
 
     async def set_session_mode(self, mode_id: str, session_id: str, **kwargs: Any) -> SetSessionModeResponse | None:
         """Persist the editor-requested mode so ACP clients do not fail on mode switches."""
