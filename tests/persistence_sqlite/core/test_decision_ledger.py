@@ -12,5 +12,6 @@ def test_decision_ledger_is_fifo_capped_and_survives_reopen(tmp_path):
     reopened = SessionDB(path)
     reopened.create_session("child", source="test", parent_session_id="session")
     reopened.copy_decision_ledger_entries("session", "child")
+    reopened.copy_decision_ledger_entries("session", "child")
     assert reopened.get_decision_ledger_entries("child") == reopened.get_decision_ledger_entries("session")
     reopened.close()
