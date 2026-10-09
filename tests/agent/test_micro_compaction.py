@@ -979,3 +979,129 @@ def test_a_generation_rewritten_in_place_aborts_a_lease_less_pass(tmp_path, mode
 
     assert result is held
     assert [m["content"] for m in db.get_messages_as_conversation("s")] == before
+
+
+def _live_rows(db_path) -> list:
+    """The live transcript as a fresh reader sees it: role, content and the full tool-call payload."""
+    from hermes_state import SessionDB
+
+    return [(m["role"], m.get("content"), m.get("tool_calls"))
+            for m in SessionDB(db_path=db_path).get_messages_as_conversation("s")]
+
+
+def _held_with_a_live_tool_call(tmp_path, mode: str):
+    """``_held_session`` plus an assistant tool call in the part of the history every pass keeps live."""
+    db, cc, _ = _held_session(tmp_path, mode)
+    db.append_messages_batch("s", [
+        {"role": "user", "content": "run it"},
+        {"role": "assistant", "content": "", "tool_calls": [{
+            "id": "call_live", "type": "function", "function": {"name": "terminal", "arguments": '{"cmd":"old"}'}}]},
+        {"role": "tool", "tool_call_id": "call_live", "content": "done"},
+        {"role": "assistant", "content": "finished"},
+    ])
+    return db, cc, db.get_resume_conversations("s")[0]
+
+
+def _commit_with_flush(cc, mode, held, db):
+    from agent.context_compressor import _DB_PERSISTED_MARKER
+
+    result = _run_pass(cc, mode, held)
+    for msg in result:  # finalize_turn's persist flush appends every unpersisted dict
+        if not msg.get(_DB_PERSISTED_MARKER):
+            db.append_message("s", msg["role"], msg.get("content"))
+    return result
+
+
+@pytest.mark.parametrize("mode", ["prune", "micro"])
+def test_a_tool_call_arguments_rewrite_on_another_handle_aborts_a_lease_less_pass(tmp_path, mode):
+    """A row-local rewrite can change an assistant turn's ``tool_calls`` arguments while its content stays
+    empty. A stale surface comparing only content cannot see that, and republishes the old arguments."""
+    from hermes_state import SessionDB
+
+    db, cc, held = _held_with_a_live_tool_call(tmp_path, mode)
+    other = SessionDB(db_path=tmp_path / "state.db")
+    original = next(m for m in other.get_resume_conversations("s")[0]
+                    if (m.get("tool_calls") or [{}])[0].get("id") == "call_live")
+    winner_calls = [{**original["tool_calls"][0], "function": {"name": "terminal", "arguments": '{"cmd":"winner"}'}}]
+    assert other.rewrite_pruned_rows("s", [(original, {**original, "tool_calls": winner_calls})]) == 1
+    before = _live_rows(tmp_path / "state.db")
+
+    result = _commit_with_flush(cc, mode, held, db)
+
+    assert result is held
+    assert _live_rows(tmp_path / "state.db") == before
+
+
+@pytest.mark.parametrize("mode", ["prune", "micro"])
+def test_an_unstamped_trailing_message_does_not_hide_a_stale_durable_prefix(tmp_path, mode):
+    """A turn not yet flushed sits at the end of the held list without a row id. It limits the watermark;
+    it is not a reason to skip the freshness check of the durable rows before it."""
+    from hermes_state import SessionDB
+
+    db, cc, held = _held_session(tmp_path, mode)
+    other = SessionDB(db_path=tmp_path / "state.db")
+    original = dict(next(m for m in other.get_resume_conversations("s")[0] if m.get("role") in ("tool", "assistant")))
+    assert other.rewrite_pruned_rows("s", [(original, {**original, "content": "[rewritten by the other surface]"})]) == 1
+    before = _live_rows(tmp_path / "state.db")
+    held.append({"role": "user", "content": "typed but not flushed yet"})
+
+    result = _run_pass(cc, mode, held)
+
+    assert result is held
+    assert _live_rows(tmp_path / "state.db") == before
+
+
+@pytest.mark.parametrize("mode", ["prune", "micro"])
+def test_a_resume_normalized_but_unchanged_transcript_is_not_stale(tmp_path, mode):
+    """The resume reader strips surrounding whitespace from user and assistant text. A row stored as
+    ``" hello \\n"`` and held as ``"hello"`` is the same message; with no other writer the pass must run."""
+    db, cc, _ = _held_session(tmp_path, mode)
+    db.append_messages_batch("s", [{"role": "user", "content": "  padded question \n"},
+                                   {"role": "assistant", "content": " padded answer \n"}])
+    held = db.get_resume_conversations("s")[0]
+    assert {"padded question", "padded answer"} <= {m.get("content") for m in held}
+
+    result = _run_pass(cc, mode, held)
+
+    assert result is not held
+
+
+def test_a_held_history_without_row_ids_still_sees_an_in_place_rewrite(tmp_path):
+    """ACP restore and API session continuation load the transcript without ``_row_id``. Those dicts still
+    carry the durable identity and the stored-row digest, so a lease-less pass from them must still notice
+    that another handle rewrote a row in place, and must not put the old text back live."""
+    from hermes_state import SessionDB
+
+    db, cc, _ = _held_session(tmp_path, "micro")
+    held = db.get_messages_as_conversation("s")
+    assert not any("_row_id" in m for m in held)
+    other = SessionDB(db_path=tmp_path / "state.db")
+    original = next(m for m in reversed(other.get_resume_conversations("s")[0]) if m.get("role") == "assistant")
+    assert other.rewrite_pruned_rows("s", [(original, {**original, "content": "winner"})]) == 1
+    before = _live_rows(tmp_path / "state.db")
+
+    result = _commit_with_flush(cc, "micro", held, db)
+
+    assert result is held
+    assert _live_rows(tmp_path / "state.db") == before
+
+
+def test_rewrite_pruned_rows_refuses_an_assistant_row_whose_arguments_changed(tmp_path):
+    """The row-local writer names an assistant row by its call ids. Same ids with different stored arguments
+    is another writer's newer row, not the one this prune read: refuse it as stale, write nothing."""
+    from hermes_state import SessionDB
+    from hermes_state_errors import PruneRowStaleError
+
+    db, _, held = _held_with_a_live_tool_call(tmp_path, "prune")
+    stale = next(m for m in held if (m.get("tool_calls") or [{}])[0].get("id") == "call_live")
+    other = SessionDB(db_path=tmp_path / "state.db")
+    winner = next(m for m in other.get_resume_conversations("s")[0] if m.get("_row_id") == stale["_row_id"])
+    winner_calls = [{**winner["tool_calls"][0], "function": {"name": "terminal", "arguments": '{"cmd":"winner"}'}}]
+    other.rewrite_pruned_rows("s", [(winner, {**winner, "tool_calls": winner_calls})])
+    before = _live_rows(tmp_path / "state.db")
+    truncated = [{**stale["tool_calls"][0], "function": {"name": "terminal", "arguments": "{}"}}]
+
+    with pytest.raises(PruneRowStaleError):
+        db.rewrite_pruned_rows("s", [(stale, {**stale, "tool_calls": truncated})])
+
+    assert _live_rows(tmp_path / "state.db") == before
