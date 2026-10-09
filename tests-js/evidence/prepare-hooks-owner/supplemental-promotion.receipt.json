@@ -1,0 +1,351 @@
+{
+  "purpose": "Focused promotion completeness review after the original real matrix; no broad rerun or production edit.",
+  "status": "DO_NOT_PROMOTE_AS_COMPLETE_PRESERVATION_FIX: valid whitespace-only included hooksPath still overwritten by existing owner implementation.",
+  "original_evidence_commit": "9c04327887c89cfca34690e6838038cda9b64477",
+  "base_sha": "46d7718a52ff33accb15dc0501736fbdb6833cab",
+  "owner_sha": "88422bc186024bf6ed9e50223c58d67eaf4cc1c2",
+  "new_finding": {
+    "configuration": "An included Git config sets core.hooksPath to a single space, naming a valid relative directory called one space in the checkout. git config --get returns space + newline, with exit 0.",
+    "root_cause": "The owner skip guard tests String(stdout || \"\").trim(), collapsing this valid configured path to an empty string. Lefthook also misses the included value in its scoped checks, then resolves the real relative hooks directory and replaces its pre-commit.",
+    "observed": "Main AND owner return 0, replace custom pre-commit and create pre-commit.old; all config bytes remain identical.",
+    "suggested_owner_followup": "Use successful effective-config lookup (status 0 / key presence), rather than trimmed value truthiness, as the skip condition. Preserve actual no-key status 1 as the ordinary-install path; choose explicit safe behavior for query errors. This is a design recommendation only, not an implemented patch.",
+    "severity_context": "Narrow edge configuration, but it defeats any claim that all user-configured hooks are preserved. Main already exhibits the behavior; this is an incompleteness of the proposed owner fix, not a regression introduced by it."
+  },
+  "other_new_cases": [
+    "CI=1 does not protect included hooks on current main: overwrite reproduced. Existing owner guard preserves the same setup.",
+    "extensions.worktreeConfig=true plus linked-worktree-only core.hooksPath: main overwrites; existing owner guard preserves. This differs from an ordinary linked worktree sharing common config.",
+    "Explicit empty included hooksPath: both wrappers keep user hook intact in this environment because real Lefthook errors with exit status 128. Owner adds a warning; both wrappers still return 0. Do not generalize this to other Git/Lefthook versions."
+  ],
+  "promotion_recommendation": "Keep production ownership with aortegamel. Supply original 10/10 result plus this supplemental negative case; request the presence-based guard improvement and native Windows/macOS checks before promoting as a complete preservation fix. No new upstream PR. Owner coordination and evidence publication remain separately blocked/paused.",
+  "outside_safety_behavior": [
+    "Owner retains .git presence skip and normal real hook installation, as original matrix verified.",
+    "Owner also adds an explicit warning on Lefthook failure; current main only inherits Lefthook output. This is an existing owner diagnostic change, not newly authored here.",
+    "Original genuine dependency control is npm ci missing-lock rejection (before prepare). Original product-build control is real Node SyntaxError. Neither is a full scripts/build/node-deps.mjs or Hermes updater build execution.",
+    "No CI-specific skip is added by this owner implementation. It installs normal repository hooks even with CI=1 if no custom hooksPath is set. That remains helix4u #135292's distinct scope.",
+    "No claim for inherited system config, command-scope GIT_CONFIG overrides, includeIf/onbranch conditions, query hangs/failures, native Windows/macOS, or other Lefthook versions."
+  ],
+  "assertion_summary": "Eight real scenario/implementation executions; all eight match recorded expected outcomes. Four are preservation-negative controls (main CI, main whitespace, owner whitespace, main worktree-config); not described as green preservation tests.",
+  "raw_results": [
+    {
+      "variant": "included-ci",
+      "implementation": "main",
+      "query": {
+        "args": [
+          "git",
+          "config",
+          "--get",
+          "core.hooksPath"
+        ],
+        "status": 0,
+        "stdout": "/tmp/ayo hook supplement twiob9a0/home/custom hooks\n",
+        "stderr": ""
+      },
+      "target": {
+        "args": [
+          "git",
+          "rev-parse",
+          "--git-path",
+          "hooks"
+        ],
+        "status": 0,
+        "stdout": "/tmp/ayo hook supplement twiob9a0/home/custom hooks\n",
+        "stderr": ""
+      },
+      "prepare": {
+        "args": [
+          "npm",
+          "run",
+          "prepare"
+        ],
+        "status": 0,
+        "stdout": "\n> fixture@1.0.0 prepare\n> node -e \"const {existsSync}=require('fs');const {spawnSync}=require('child_process');if(existsSync('.git'))spawnSync('lefthook',['install'],{stdio:'inherit',shell:true})\"\n\nRenamed /tmp/ayo hook supplement twiob9a0/home/custom hooks/pre-commit to /tmp/ayo hook supplement twiob9a0/home/custom hooks/pre-commit.old\n\nsync hooks: \u2714\ufe0f(pre-commit)\n",
+        "stderr": "(node:28) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.\n(Use `node --trace-deprecation ...` to show where the warning was created)\n"
+      },
+      "hook_preserved": false,
+      "backup_created": true,
+      "configs_preserved": true
+    },
+    {
+      "variant": "included-ci",
+      "implementation": "owner",
+      "query": {
+        "args": [
+          "git",
+          "config",
+          "--get",
+          "core.hooksPath"
+        ],
+        "status": 0,
+        "stdout": "/tmp/ayo hook supplement id3dcvct/home/custom hooks\n",
+        "stderr": ""
+      },
+      "target": {
+        "args": [
+          "git",
+          "rev-parse",
+          "--git-path",
+          "hooks"
+        ],
+        "status": 0,
+        "stdout": "/tmp/ayo hook supplement id3dcvct/home/custom hooks\n",
+        "stderr": ""
+      },
+      "prepare": {
+        "args": [
+          "npm",
+          "run",
+          "prepare"
+        ],
+        "status": 0,
+        "stdout": "\n> fixture@1.0.0 prepare\n> node -e \"const{existsSync:e}=require('fs'),{spawnSync:s}=require('child_process');if(!e('.git'))process.exit(0);try{if(String((s('git',['config','--get','core.hooksPath'],{encoding:'utf8',stdio:'pipe'}).stdout||'')).trim()){console.log('prepare: custom core.hooksPath set, skipping lefthook install');process.exit(0)}}catch{};const r=s('lefthook',['install'],{stdio:'inherit',shell:true});if((r.status??1)!==0)console.warn('prepare: lefthook install failed, continuing without git hooks')\"\n\nprepare: custom core.hooksPath set, skipping lefthook install\n",
+        "stderr": ""
+      },
+      "hook_preserved": true,
+      "backup_created": false,
+      "configs_preserved": true
+    },
+    {
+      "variant": "included-empty",
+      "implementation": "main",
+      "query": {
+        "args": [
+          "git",
+          "config",
+          "--get",
+          "core.hooksPath"
+        ],
+        "status": 0,
+        "stdout": "\n",
+        "stderr": ""
+      },
+      "target": {
+        "args": [
+          "git",
+          "rev-parse",
+          "--git-path",
+          "hooks"
+        ],
+        "status": 0,
+        "stdout": "./\n",
+        "stderr": ""
+      },
+      "prepare": {
+        "args": [
+          "npm",
+          "run",
+          "prepare"
+        ],
+        "status": 0,
+        "stdout": "\n> fixture@1.0.0 prepare\n> node -e \"const {existsSync}=require('fs');const {spawnSync}=require('child_process');if(existsSync('.git'))spawnSync('lefthook',['install'],{stdio:'inherit',shell:true})\"\n\n\u2502  > git rev-parse --path-format=absolute --show-toplevel --git-path hooks --git-path info --git-dir\n\u2502    fatal: The empty string is not a valid path                                                    \n\u2502                                                                                                   \n",
+        "stderr": "exit status 128\n(node:105) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.\n(Use `node --trace-deprecation ...` to show where the warning was created)\n"
+      },
+      "hook_preserved": true,
+      "backup_created": false,
+      "configs_preserved": true
+    },
+    {
+      "variant": "included-empty",
+      "implementation": "owner",
+      "query": {
+        "args": [
+          "git",
+          "config",
+          "--get",
+          "core.hooksPath"
+        ],
+        "status": 0,
+        "stdout": "\n",
+        "stderr": ""
+      },
+      "target": {
+        "args": [
+          "git",
+          "rev-parse",
+          "--git-path",
+          "hooks"
+        ],
+        "status": 0,
+        "stdout": "./\n",
+        "stderr": ""
+      },
+      "prepare": {
+        "args": [
+          "npm",
+          "run",
+          "prepare"
+        ],
+        "status": 0,
+        "stdout": "\n> fixture@1.0.0 prepare\n> node -e \"const{existsSync:e}=require('fs'),{spawnSync:s}=require('child_process');if(!e('.git'))process.exit(0);try{if(String((s('git',['config','--get','core.hooksPath'],{encoding:'utf8',stdio:'pipe'}).stdout||'')).trim()){console.log('prepare: custom core.hooksPath set, skipping lefthook install');process.exit(0)}}catch{};const r=s('lefthook',['install'],{stdio:'inherit',shell:true});if((r.status??1)!==0)console.warn('prepare: lefthook install failed, continuing without git hooks')\"\n\n\u2502  > git rev-parse --path-format=absolute --show-toplevel --git-path hooks --git-path info --git-dir\n\u2502    fatal: The empty string is not a valid path                                                    \n\u2502                                                                                                   \n",
+        "stderr": "exit status 128\nprepare: lefthook install failed, continuing without git hooks\n(node:150) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.\n(Use `node --trace-deprecation ...` to show where the warning was created)\n"
+      },
+      "hook_preserved": true,
+      "backup_created": false,
+      "configs_preserved": true
+    },
+    {
+      "variant": "included-space",
+      "implementation": "main",
+      "query": {
+        "args": [
+          "git",
+          "config",
+          "--get",
+          "core.hooksPath"
+        ],
+        "status": 0,
+        "stdout": " \n",
+        "stderr": ""
+      },
+      "target": {
+        "args": [
+          "git",
+          "rev-parse",
+          "--git-path",
+          "hooks"
+        ],
+        "status": 0,
+        "stdout": " \n",
+        "stderr": ""
+      },
+      "prepare": {
+        "args": [
+          "npm",
+          "run",
+          "prepare"
+        ],
+        "status": 0,
+        "stdout": "\n> fixture@1.0.0 prepare\n> node -e \"const {existsSync}=require('fs');const {spawnSync}=require('child_process');if(existsSync('.git'))spawnSync('lefthook',['install'],{stdio:'inherit',shell:true})\"\n\nRenamed /tmp/ayo hook supplement h6nkkbnr/repo/ /pre-commit to /tmp/ayo hook supplement h6nkkbnr/repo/ /pre-commit.old\n\nsync hooks: \u2714\ufe0f(pre-commit)\n",
+        "stderr": "(node:196) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.\n(Use `node --trace-deprecation ...` to show where the warning was created)\n"
+      },
+      "hook_preserved": false,
+      "backup_created": true,
+      "configs_preserved": true
+    },
+    {
+      "variant": "included-space",
+      "implementation": "owner",
+      "query": {
+        "args": [
+          "git",
+          "config",
+          "--get",
+          "core.hooksPath"
+        ],
+        "status": 0,
+        "stdout": " \n",
+        "stderr": ""
+      },
+      "target": {
+        "args": [
+          "git",
+          "rev-parse",
+          "--git-path",
+          "hooks"
+        ],
+        "status": 0,
+        "stdout": " \n",
+        "stderr": ""
+      },
+      "prepare": {
+        "args": [
+          "npm",
+          "run",
+          "prepare"
+        ],
+        "status": 0,
+        "stdout": "\n> fixture@1.0.0 prepare\n> node -e \"const{existsSync:e}=require('fs'),{spawnSync:s}=require('child_process');if(!e('.git'))process.exit(0);try{if(String((s('git',['config','--get','core.hooksPath'],{encoding:'utf8',stdio:'pipe'}).stdout||'')).trim()){console.log('prepare: custom core.hooksPath set, skipping lefthook install');process.exit(0)}}catch{};const r=s('lefthook',['install'],{stdio:'inherit',shell:true});if((r.status??1)!==0)console.warn('prepare: lefthook install failed, continuing without git hooks')\"\n\nRenamed /tmp/ayo hook supplement phtayzvj/repo/ /pre-commit to /tmp/ayo hook supplement phtayzvj/repo/ /pre-commit.old\n\nsync hooks: \u2714\ufe0f(pre-commit)\n",
+        "stderr": "(node:244) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.\n(Use `node --trace-deprecation ...` to show where the warning was created)\n"
+      },
+      "hook_preserved": false,
+      "backup_created": true,
+      "configs_preserved": true
+    },
+    {
+      "variant": "worktree-config",
+      "implementation": "main",
+      "query": {
+        "args": [
+          "git",
+          "config",
+          "--get",
+          "core.hooksPath"
+        ],
+        "status": 0,
+        "stdout": "/tmp/ayo hook supplement nn2ns78z/home/custom hooks\n",
+        "stderr": ""
+      },
+      "target": {
+        "args": [
+          "git",
+          "rev-parse",
+          "--git-path",
+          "hooks"
+        ],
+        "status": 0,
+        "stdout": "/tmp/ayo hook supplement nn2ns78z/home/custom hooks\n",
+        "stderr": ""
+      },
+      "prepare": {
+        "args": [
+          "npm",
+          "run",
+          "prepare"
+        ],
+        "status": 0,
+        "stdout": "\n> fixture@1.0.0 prepare\n> node -e \"const {existsSync}=require('fs');const {spawnSync}=require('child_process');if(existsSync('.git'))spawnSync('lefthook',['install'],{stdio:'inherit',shell:true})\"\n\nRenamed /tmp/ayo hook supplement nn2ns78z/home/custom hooks/pre-commit to /tmp/ayo hook supplement nn2ns78z/home/custom hooks/pre-commit.old\n\nsync hooks: \u2714\ufe0f(pre-commit)\n",
+        "stderr": "(node:295) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.\n(Use `node --trace-deprecation ...` to show where the warning was created)\n"
+      },
+      "hook_preserved": false,
+      "backup_created": true,
+      "configs_preserved": true
+    },
+    {
+      "variant": "worktree-config",
+      "implementation": "owner",
+      "query": {
+        "args": [
+          "git",
+          "config",
+          "--get",
+          "core.hooksPath"
+        ],
+        "status": 0,
+        "stdout": "/tmp/ayo hook supplement m66sufi_/home/custom hooks\n",
+        "stderr": ""
+      },
+      "target": {
+        "args": [
+          "git",
+          "rev-parse",
+          "--git-path",
+          "hooks"
+        ],
+        "status": 0,
+        "stdout": "/tmp/ayo hook supplement m66sufi_/home/custom hooks\n",
+        "stderr": ""
+      },
+      "prepare": {
+        "args": [
+          "npm",
+          "run",
+          "prepare"
+        ],
+        "status": 0,
+        "stdout": "\n> fixture@1.0.0 prepare\n> node -e \"const{existsSync:e}=require('fs'),{spawnSync:s}=require('child_process');if(!e('.git'))process.exit(0);try{if(String((s('git',['config','--get','core.hooksPath'],{encoding:'utf8',stdio:'pipe'}).stdout||'')).trim()){console.log('prepare: custom core.hooksPath set, skipping lefthook install');process.exit(0)}}catch{};const r=s('lefthook',['install'],{stdio:'inherit',shell:true});if((r.status??1)!==0)console.warn('prepare: lefthook install failed, continuing without git hooks')\"\n\nprepare: custom core.hooksPath set, skipping lefthook install\n",
+        "stderr": ""
+      },
+      "hook_preserved": true,
+      "backup_created": false,
+      "configs_preserved": true
+    }
+  ],
+  "reproduction": {
+    "command": "python /tmp/ayo-hooks-results/supplement.py > /tmp/ayo-hooks-results/supplement.json",
+    "source": "import pathlib, tempfile, subprocess, os, json, hashlib\nrepo=pathlib.Path('/workspace/scratch/df37e4e44cce/wave-hooks')\ndef source(ref): return json.loads(subprocess.check_output(['git','-C',str(repo),'show',f'{ref}:package.json']))['scripts']['prepare']\nresults=[]\nfor variant in ('included-ci','included-empty','included-space','worktree-config'):\n  for name,ref in [('main','46d7718a'),('owner','88422bc186')]:\n    with tempfile.TemporaryDirectory(prefix='ayo hook supplement ') as tmp:\n      root=pathlib.Path(tmp);home=root/'home';work=root/'repo';home.mkdir();work.mkdir()\n      env={'PATH':'/tmp/ayo-hooks-lefthook/node_modules/.bin:'+os.environ['PATH'],'HOME':str(home),'USERPROFILE':str(home),'GIT_CONFIG_NOSYSTEM':'1','GIT_CONFIG_GLOBAL':str(home/'.gitconfig'),'npm_config_cache':str(root/'cache'),'npm_config_userconfig':str(home/'.npmrc'),'npm_config_globalconfig':str(home/'globalnpmrc'),'GIT_AUTHOR_NAME':'Fixture','GIT_AUTHOR_EMAIL':'fixture@example.invalid','GIT_COMMITTER_NAME':'Fixture','GIT_COMMITTER_EMAIL':'fixture@example.invalid'}\n      if variant=='included-ci':env['CI']='1'\n      def run(*args,cwd=None):\n        p=subprocess.run(args,cwd=cwd or work,env=env,text=True,capture_output=True,timeout=30)\n        return {'args':list(args),'status':p.returncode,'stdout':p.stdout,'stderr':p.stderr}\n      assert run('git','init','--quiet')['status']==0\n      assert run('git','commit','--quiet','--allow-empty','-m','fixture')['status']==0\n      common=work\n      if variant=='worktree-config':\n        work=root/'linked';assert run('git','worktree','add','--quiet','--detach',str(work),cwd=common)['status']==0\n        assert run('git','config','extensions.worktreeConfig','true')['status']==0\n      hooks=work if variant=='included-empty' else work/' ' if variant=='included-space' else home/'custom hooks'\n      hooks.mkdir(exist_ok=True)\n      sentinel=hooks/'pre-commit';sentinel.write_text('#!/bin/sh\\n# user custom sentinel\\nexit 0\\n');sentinel.chmod(0o755)\n      (work/'lefthook.yml').write_text('pre-commit:\\n  commands:\\n    fixture:\\n      run: \"echo fixture\"\\n')\n      (work/'package.json').write_text(json.dumps({'name':'fixture','version':'1.0.0','private':True,'scripts':{'prepare':source(ref)}}))\n      globalfile=home/'.gitconfig';globalfile.write_text('# global\\n')\n      if variant=='worktree-config':\n        assert run('git','config','--worktree','core.hooksPath',str(hooks))['status']==0\n      else:\n        inc=home/'included.gitconfig'; inc.write_text('# included\\n')\n        value='' if variant=='included-empty' else ' ' if variant=='included-space' else str(hooks)\n        assert run('git','config','--file',str(inc),'core.hooksPath',value)['status']==0\n        assert run('git','config','--global','include.path',str(inc))['status']==0\n      configs=[p for p in [globalfile,home/'included.gitconfig',common/'.git/config'] if p.exists()]\n      configs+=list((common/'.git/worktrees').glob('*/config.worktree')) if (common/'.git/worktrees').exists() else []\n      before={str(p):p.read_bytes() for p in configs}; old=sentinel.read_bytes()\n      query=run('git','config','--get','core.hooksPath');target=run('git','rev-parse','--git-path','hooks')\n      result=run('npm','run','prepare')\n      results.append({'variant':variant,'implementation':name,'query':query,'target':target,'prepare':result,'hook_preserved':sentinel.read_bytes()==old,'backup_created':(hooks/'pre-commit.old').exists(),'configs_preserved':all(p.read_bytes()==before[str(p)] for p in configs)})\nprint(json.dumps(results,indent=2))\n",
+    "setup": "Reuse isolated Lefthook 2.1.14 and Git/npm/Node environment from original receipt. Script reads immutable package.json prepare strings with git show. Every scenario uses fresh TemporaryDirectory, disposable HOME/config/cache and real Git repositories. No production functions mocked.",
+    "limitations": "Script uses Linux paths and the sandbox checkout path; adjust the repository and tool paths to rerun. Temporary fixture directories removed by context manager after each result."
+  },
+  "publication": "Paused after adapter blob upload cancellation. No new external write in this supplemental review.",
+  "empty_value_semantics": "An explicitly empty configured value is present: git config --get exits 0 with a newline; git rev-parse --git-path hooks resolves ./; Lefthook's combined --path-format=absolute query errors 128. Thus checking key presence distinguishes this from an absent key (status 1), and skipping avoids a needless failing installer without mutating the value.",
+  "ready_to_post_owner_note": "@aortegamel: your 88422bc186 prepare implementation passes the original 10-case real Git/npm/Lefthook matrix, plus CI=1 and worktree-specific hooksPath cases. A focused completeness check found one remaining included-config edge: core.hooksPath set to one space is a valid relative directory, but stdout.trim() removes it, so Lefthook replaces pre-commit and creates pre-commit.old while prepare returns 0. Suggest basing the skip on successful effective git-config lookup/key presence rather than trimmed value truthiness. Empty configured values also return status 0 (distinct from absence) and currently only escape replacement because Lefthook's absolute-path lookup fails. No competing production patch has been authored. Are you continuing the branch and willing to incorporate this small guard refinement?"
+}

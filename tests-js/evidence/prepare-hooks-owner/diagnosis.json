@@ -1,0 +1,86 @@
+{
+  "queries": [
+    {
+      "command": [
+        "git",
+        "config",
+        "--global",
+        "core.hooksPath"
+      ],
+      "status": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "config",
+        "--local",
+        "core.hooksPath"
+      ],
+      "status": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "config",
+        "--get",
+        "core.hooksPath"
+      ],
+      "status": 0,
+      "stdout": "/tmp/ayo included hooks ht_a4u2_/home/custom hooks\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "config",
+        "--global",
+        "--includes",
+        "core.hooksPath"
+      ],
+      "status": 0,
+      "stdout": "/tmp/ayo included hooks ht_a4u2_/home/custom hooks\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "--git-path",
+        "hooks"
+      ],
+      "status": 0,
+      "stdout": "/tmp/ayo included hooks ht_a4u2_/home/custom hooks\n",
+      "stderr": ""
+    }
+  ],
+  "install": {
+    "command": [
+      "lefthook",
+      "install"
+    ],
+    "status": 0,
+    "stdout": "Renamed /tmp/ayo included hooks ht_a4u2_/home/custom hooks/pre-commit to /tmp/ayo included hooks ht_a4u2_/home/custom hooks/pre-commit.old\n\nsync hooks: \u2714\ufe0f(pre-commit)\n",
+    "stderr": ""
+  },
+  "before": {
+    "home/.gitconfig": "620628c057c13274e7e1fc9604b76a814d85a12b58b2a0a5e2483bb894a9830d",
+    "home/included.gitconfig": "917e0e79307ad3aa79b58782e83a056bda159e4098d9d2e73dbb60d166c7bddc",
+    "repo/.git/config": "cfe7ba1238c9a78be7535d7c63bcaf5a4d5011d46b07c9b45d3bbf7d6c312dfe",
+    "home/custom hooks/pre-commit": "a31c9292ef6994f8e34c7fc1196afda6e41eea562132b01704a115e0b931d840"
+  },
+  "after": {
+    "home/.gitconfig": "620628c057c13274e7e1fc9604b76a814d85a12b58b2a0a5e2483bb894a9830d",
+    "home/included.gitconfig": "917e0e79307ad3aa79b58782e83a056bda159e4098d9d2e73dbb60d166c7bddc",
+    "repo/.git/config": "cfe7ba1238c9a78be7535d7c63bcaf5a4d5011d46b07c9b45d3bbf7d6c312dfe",
+    "home/custom hooks/pre-commit": "1943ad6b3e63c93d0f326c5491f450cd443b4d7cd8d32e0587d7bd1735d6596c"
+  },
+  "hook_entries": [
+    "pre-commit",
+    "pre-commit.old"
+  ],
+  "backup_matches_original": true
+}

@@ -1,0 +1,137 @@
+{
+  "status": "EXISTING_OWNER_VALIDATED; implementation BLOCKED_DEDUPE; downstream evidence only",
+  "executed_at_utc": "2026-10-09T22:25:00Z",
+  "base_sha": "46d7718a52ff33accb15dc0501736fbdb6833cab",
+  "base_package_blob": "752da5e9342447fdfad6f7507d69583b9a78ef5c",
+  "merged_fix": {
+    "pr": "https://github.com/NousResearch/hermes-agent/pull/135715",
+    "merge_sha": "cf23a1a5cc3e02b2a2d4526b4a1ac66ffaac614b",
+    "is_ancestor_exit_status": 0
+  },
+  "owner_implementation": {
+    "author": "aortegamel",
+    "commit": "88422bc186024bf6ed9e50223c58d67eaf4cc1c2",
+    "branch": "fix/prepare-custom-hooks-failure",
+    "url": "https://github.com/aortegamel/hermes-agent/commit/88422bc186024bf6ed9e50223c58d67eaf4cc1c2",
+    "prepare_string_unchanged": true,
+    "production_patch_authored_or_cherry_picked": false
+  },
+  "harness_provenance": {
+    "commit": "98ea457a26852fb4c318bca51c5c308b7500994e",
+    "path": "tests-js/prepare-hooks-real.test.mjs",
+    "original_blob": "921d55c6c3c823dc27885dc872a00b08bf040336",
+    "transformations": [
+      "Replace from 'vitest' with from './node-test-adapter.mjs' for native node:test + assert execution.",
+      "Remove exactly:     expect(result.stderr).toMatch(/lefthook install failed.*continuing without git hooks/). This obsolete #135296 wrapper warning was never part of landed #135715 and is not a preservation assertion."
+    ],
+    "otherwise_fixture_and_assertions_unchanged": true,
+    "adapter": "node-test-adapter.mjs",
+    "adapter_semantics": "Maps test.each and afterEach to native node:test; maps each used matcher to node:assert/strict, including deep byte comparisons. No mocks of Git/npm/Lefthook in the real matrix."
+  },
+  "results": {
+    "current_main": {
+      "passed": 8,
+      "failed": 2,
+      "exit_status": 1,
+      "log": "main.tap",
+      "failing_cases": [
+        "checkout: preserve included hooks and config byte-for-byte",
+        "worktree: preserve included hooks and config byte-for-byte"
+      ],
+      "failure": "Custom pre-commit overwritten; directory entries: pre-commit, pre-commit.old; prepare exits 0; configuration bytes unchanged."
+    },
+    "existing_owner_prepare": {
+      "passed": 10,
+      "failed": 0,
+      "exit_status": 0,
+      "log": "owner.tap"
+    },
+    "owner_original_adjacent_tests": {
+      "passed": 3,
+      "failed": 0,
+      "exit_status": 0,
+      "source": "88422bc186:tests-js/prepare-hooks.test.mjs",
+      "transformation": "Only Vitest import replaced by the same native adapter. This original owner suite uses a mock Lefthook, unlike the real matrix.",
+      "log": "owner-adjacent.tap"
+    }
+  },
+  "coverage": [
+    "Global/local/included hooksPath in real Git checkout and linked worktree; config/custom pre-commit byte preservation and no backup hook.",
+    "Normal real hook installation in checkout and linked worktree.",
+    "Source copy without .git preserves included custom hooks.",
+    "Actual npm ci missing-lock error and Node build SyntaxError still surface as failures."
+  ],
+  "root_cause": {
+    "description": "Lefthook 2.1.14 getHooksPathConfig uses scoped --local and --global Git queries without --includes, which return no value for an included hooksPath. Its actual hooks path resolution honors the include. The safety guard therefore permits installation, and Lefthook renames the existing pre-commit to pre-commit.old and writes its own hook while returning 0. Making its status nonfatal cannot prevent successful destructive hook replacement.",
+    "source": "https://github.com/evilmartians/lefthook/blob/v2.1.14/internal/command/install.go",
+    "source_symbol": "getHooksPathConfig / ensureHooksPathUnset / createHooksIfNeeded",
+    "live_diagnosis": "diagnosis.json",
+    "live_queries": "Scoped --global and --local returned 1/empty; effective --get and --global --includes returned the custom path; rev-parse --git-path hooks returned that path. Direct lefthook install returned 0; three config hashes unchanged; hook hash changed; .old hash equals original."
+  },
+  "smallest_preservation_strategy": "Reuse the existing owner effective hooksPath probe before invoking Lefthook. Skip on custom path; retain no-.git and nonfatal-hook behavior. This is validation of aortegamel code, not a newly authored competing fix.",
+  "environment": {
+    "platform": "Linux x86_64",
+    "git": "2.52.0",
+    "node": "24.19.0",
+    "npm": "11.9.0",
+    "lefthook": "2.1.14",
+    "python": "3.12.14"
+  },
+  "setup": {
+    "successful": "mkdir -p /tmp/ayo-hooks-lefthook; cd /tmp/ayo-hooks-lefthook && HOME=/tmp/ayo-hooks-home npm install --ignore-scripts --no-audit --no-fund --save-exact lefthook@2.1.14",
+    "failed": "Combined vitest@4.1.10 / eslint@10.8.0 / lefthook@2.1.14 setup failed: several Vitest transitive package tarballs returned registry HTTP 403, others 502. Not a test failure or success. No workaround for blocked downloads was used. Native Node test runner replaced Vitest for this evidence. Separate Lefthook and ESLint installs succeeded.",
+    "isolation": "Disposable HOME, npm cache, Git config and repositories; no user Hermes installation, live hooks, or global config altered. No --force or --reset-hooks-path.",
+    "ruff": "Initial checker could not provision pinned ruff because its default tool directory was read-only. Setting UV_TOOL_DIR/UV_TOOL_BIN_DIR/UV_CACHE_DIR to disposable /tmp directories succeeded; ruff 0.15.10 then passed all 11 checks."
+  },
+  "commands": [
+    "git fetch https://github.com/NousResearch/hermes-agent.git main",
+    "git merge-base --is-ancestor cf23a1a5cc3e02b2a2d4526b4a1ac66ffaac614b 46d7718a52ff33accb15dc0501736fbdb6833cab",
+    "git fetch https://github.com/aortegamel/hermes-agent.git fix/prepare-custom-hooks-failure:refs/remotes/aortegamel/custom-hooks",
+    "PATH=/tmp/ayo-hooks-lefthook/node_modules/.bin:$PATH HOME=/tmp/ayo-hooks-home node --test --test-reporter=tap /tmp/ayo-hooks-results/main/tests-js/prepare-hooks-real.test.mjs > /tmp/ayo-hooks-results/main.tap 2>&1",
+    "PATH=/tmp/ayo-hooks-lefthook/node_modules/.bin:$PATH HOME=/tmp/ayo-hooks-home node --test --test-reporter=tap /tmp/ayo-hooks-results/owner/tests-js/prepare-hooks-real.test.mjs > /tmp/ayo-hooks-results/owner.tap 2>&1",
+    "PATH=/tmp/ayo-hooks-lefthook/node_modules/.bin:$PATH HOME=/tmp/ayo-hooks-home node --test --test-reporter=tap /tmp/ayo-hooks-results/owner/tests-js/prepare-hooks.test.mjs > /tmp/ayo-hooks-results/owner-adjacent.tap 2>&1",
+    "node --check tests-js/evidence/prepare-hooks-owner/node-test-adapter.mjs",
+    "/tmp/ayo-hooks-eslint/node_modules/.bin/eslint --no-config-lookup --rule no-unused-vars:error --rule no-undef:error --rule valid-typeof:error tests-js/evidence/prepare-hooks-owner/node-test-adapter.mjs",
+    "HOME=/tmp/ayo-hooks-home UV_CACHE_DIR=/tmp/ayo-hooks-uv-cache UV_TOOL_DIR=/tmp/ayo-hooks-uv-tools UV_TOOL_BIN_DIR=/tmp/ayo-hooks-uv-bin python scripts/check --base 46d7718a52ff33accb15dc0501736fbdb6833cab --staged",
+    "git diff --cached --check"
+  ],
+  "coordination": {
+    "fork_claim": "https://github.com/kvnloo/hermes-agent/issues/447#issuecomment-6090254464",
+    "upstream_comment_posted": false,
+    "upstream_coordination_status": "Posting to existing #135296 was denied, including one retry with latest user evidence, because authorization review retained a no-upstream-posting restriction. No workaround or further send. Implementation remains with existing owner.",
+    "ready_to_post_note": "@aortegamel @liuhao1024 @ethernet8023: the remaining included-config overwrite reproduces on main 46d7718a (8/10 real cases pass). The existing aortegamel preservation commit 88422bc186 passes all 10 real cases and its three original adjacent tests. This is saralilyb's existing diagnosis. No competing implementation or upstream PR was created. Are you continuing fix/prepare-custom-hooks-failure, or would you prefer attributed downstream reuse?",
+    "target": "https://github.com/NousResearch/hermes-agent/pull/135296"
+  },
+  "dedupe": {
+    "fork_heads_count": 1120,
+    "checks": [
+      "Read #447 and recent claims twice; root AGENTS.md and relevant CONTRIBUTING sections.",
+      "Current #135279 closed; liuhao1024 #135296 closed as superseded; ethernet8023 #135715 merged.",
+      "Actual aortegamel custom-hooks branch source/diff/test inspected.",
+      "helix4u #135292 open; its CI-only skip remains distinct and was not recreated.",
+      "No repository .agents skills or tests-js nested AGENTS found.",
+      "Pre-publication upstream main and owner branch still matched pinned SHAs."
+    ]
+  },
+  "credits": {
+    "reporter": "saralilyb",
+    "preservation_implementation": "aortegamel / Angleito",
+    "prior_wrapper_and_test_collaboration": "liuhao1024 and aortegamel",
+    "landed_nonfatal_fix": "ethernet8023",
+    "new_real_execution": "dot/ayo"
+  },
+  "limitations": [
+    "Linux only; no macOS/Windows or complete Hermes install/build/runtime claim.",
+    "Original warning assertion intentionally removed; this is an adapted native-runner execution, not an unchanged Vitest run.",
+    "Only package.json prepare strings from base/owner are exercised, in real temporary lifecycle fixtures; no full owner branch checkout build.",
+    "No production change, new upstream PR, merge, force push, promotion, or existing branch modification.",
+    "Owner reply/coordination not established; downstream reuse of implementation remains paused.",
+    "Blank-line trailing whitespace trimmed from committed main.tap; no substantive test output changed."
+  ],
+  "verification": {
+    "node_check": "PASS",
+    "focused_eslint": "PASS: eslint 10.8.0 --no-config-lookup --rule no-unused-vars:error --rule no-undef:error --rule valid-typeof:error; adapter only, not full workspace lint",
+    "git_diff_check": "PASS",
+    "repository_scripts_check": "PASS: 11 checks on staged evidence; health reports no measured files changed (MJS/JSON/Markdown/TAP evidence only)."
+  }
+}

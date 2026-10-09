@@ -1,0 +1,114 @@
+TAP version 13
+# Subtest: checkout: preserve global hooks and config byte-for-byte
+ok 1 - checkout: preserve global hooks and config byte-for-byte
+  ---
+  duration_ms: 247.80609
+  type: 'test'
+  ...
+# Subtest: checkout: preserve local hooks and config byte-for-byte
+ok 2 - checkout: preserve local hooks and config byte-for-byte
+  ---
+  duration_ms: 220.402364
+  type: 'test'
+  ...
+# Subtest: checkout: preserve included hooks and config byte-for-byte
+not ok 3 - checkout: preserve included hooks and config byte-for-byte
+  ---
+  duration_ms: 265.749493
+  type: 'test'
+  location: '/tmp/ayo-hooks-results/main/tests-js/node-test-adapter.mjs:4:44'
+  failureType: 'testCodeFailure'
+  error: |-
+    custom pre-commit overwritten; directory entries: pre-commit, pre-commit.old
+
+    false !== true
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    Object.toBe (file:///tmp/ayo-hooks-results/main/tests-js/node-test-adapter.mjs:10:30)
+    file:///tmp/ayo-hooks-results/main/tests-js/prepare-hooks-real.test.mjs:87:164
+    TestContext.<anonymous> (file:///tmp/ayo-hooks-results/main/tests-js/node-test-adapter.mjs:6:69)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: checkout: real hook installs in the repository
+ok 4 - checkout: real hook installs in the repository
+  ---
+  duration_ms: 179.000226
+  type: 'test'
+  ...
+# Subtest: worktree: preserve global hooks and config byte-for-byte
+ok 5 - worktree: preserve global hooks and config byte-for-byte
+  ---
+  duration_ms: 242.469298
+  type: 'test'
+  ...
+# Subtest: worktree: preserve local hooks and config byte-for-byte
+ok 6 - worktree: preserve local hooks and config byte-for-byte
+  ---
+  duration_ms: 225.727332
+  type: 'test'
+  ...
+# Subtest: worktree: preserve included hooks and config byte-for-byte
+not ok 7 - worktree: preserve included hooks and config byte-for-byte
+  ---
+  duration_ms: 240.405919
+  type: 'test'
+  location: '/tmp/ayo-hooks-results/main/tests-js/node-test-adapter.mjs:4:44'
+  failureType: 'testCodeFailure'
+  error: |-
+    custom pre-commit overwritten; directory entries: pre-commit, pre-commit.old
+
+    false !== true
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    Object.toBe (file:///tmp/ayo-hooks-results/main/tests-js/node-test-adapter.mjs:10:30)
+    file:///tmp/ayo-hooks-results/main/tests-js/prepare-hooks-real.test.mjs:87:164
+    TestContext.<anonymous> (file:///tmp/ayo-hooks-results/main/tests-js/node-test-adapter.mjs:6:69)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: worktree: real hook installs in the repository
+ok 8 - worktree: real hook installs in the repository
+  ---
+  duration_ms: 203.060133
+  type: 'test'
+  ...
+# Subtest: source copy inside no Git repository leaves included custom hooks intact
+ok 9 - source copy inside no Git repository leaves included custom hooks intact
+  ---
+  duration_ms: 139.417757
+  type: 'test'
+  ...
+# Subtest: npm still surfaces genuine dependency and build failures
+ok 10 - npm still surfaces genuine dependency and build failures
+  ---
+  duration_ms: 361.829084
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 8
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2424.434835
