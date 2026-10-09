@@ -216,6 +216,10 @@
     {
       "command": "git hash-object tests-js/prepare-hooks-real.test.mjs; git rev-parse 98ea457a26852fb4c318bca51c5c308b7500994e:tests-js/prepare-hooks-real.test.mjs",
       "result": "both 921d55c6c3c823dc27885dc872a00b08bf040336"
+    },
+    {
+      "command": "HOME=/tmp/hermes-hooks-managed-home HERMES_HOME=/tmp/hermes-hooks-managed-home/hermes UV_CACHE_DIR=/tmp/hermes-hooks-managed-uv-cache python scripts/check --base ddfaf76cc61bde068148d622db50b36967e7c7a8",
+      "result": "exit 0; 11 checks, ok on committed evidence. Health reports no measured files changed; MJS was separately ESLint/syntax checked."
     }
   ],
   "limits": [
@@ -230,5 +234,12 @@
     "local_commit": "b7c3af5c2d",
     "pushed": false,
     "reason": "New priority superseded it. Work preserved in separate clean worktree."
+  },
+  "pre_push_refresh": {
+    "latest_main": "8e0d1569f8054fed689c577995639c0c9bc21b2c",
+    "tested_main": "ddfaf76cc61bde068148d622db50b36967e7c7a8",
+    "package_json_blob_both": "752da5e9342447fdfad6f7507d69583b9a78ef5c",
+    "diff_package_lock_instructions": "empty",
+    "claims": "All fork #447 comments reread; no competing post-merge hooks evidence claim. Original evidence branch still 98ea457a; new branch absent remotely."
   }
 }
