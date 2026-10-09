@@ -93,11 +93,31 @@ def retire_sessions(conn, session_ids):
     retire_local_receipts(conn, session_ids)
 
 
+def _owners_of_kept_targets(conn, candidates):
+    """Ids a local session's surviving transcript still depends on. A reset keeps the policy, FIFO and
+    generation on the logical id and moves the transcript to a child; the logical row and every lineage
+    link before the current target are ended and may be empty and old, yet the target needs them all."""
+    from hermes_state_local import POLICY_PREFIX
+    kept = set()
+    for (raw,) in conn.execute('SELECT value FROM state_meta WHERE key LIKE ?', (POLICY_PREFIX + '%',)):
+        try:
+            receipt = json.loads(raw)
+            target, lineage = receipt['entry']['session_id'], receipt.get('lineage', [receipt['session_id']])
+        except (KeyError, TypeError, ValueError):
+            continue  # an unreadable receipt cannot restore anyway; its rows follow the ordinary rules
+        if target not in candidates and isinstance(lineage, list):
+            kept.update(lineage)
+    return kept
+
+
 def retire_prunable(conn, session_ids):
     """Sweep variant of :func:`retire_sessions`: fence the idle sessions and return only those ids.
     A session with live or unknown work is skipped, so one busy row cannot abort a whole
-    prune/empty-session sweep (explicit deletes still refuse with ``session_busy``)."""
-    quiet = [sid for sid in session_ids if conn.execute(_LIVE_LEDGER_SQL, (sid, sid)).fetchone() is None]
+    prune/empty-session sweep (explicit deletes still refuse with ``session_busy``), and so is
+    every id a kept local target still depends on."""
+    needed = _owners_of_kept_targets(conn, set(session_ids))
+    quiet = [sid for sid in session_ids if sid not in needed
+             and conn.execute(_LIVE_LEDGER_SQL, (sid, sid)).fetchone() is None]
     retire_sessions(conn, quiet)
     return quiet
 
