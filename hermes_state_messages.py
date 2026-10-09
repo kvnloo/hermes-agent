@@ -21,7 +21,7 @@ from agent.message_sanitization import _sanitize_surrogates, coalesce_tool_call_
 from hermes_cli.timefmt import coerce_epoch
 from hermes_state_common import (
     _COMPRESSION_LOCK_ROW_SQL, _ENDED_ROW_SQL, _RESET_END_REASONS, _RESET_END_REASONS_SQL, _ended_by_compression,
-    _json_or, _legacy_reset_child_sql, _placeholders, _sql_json_extract)
+    _id_chunks, _json_or, _legacy_reset_child_sql, _placeholders, _sql_json_extract)
 from hermes_state_identity import (
     _absorbed_uids_json, _restore_identity_columns, _stable_tool_key, _tool_call_uid_map, _tool_call_uid_or_none, _tool_call_uids_json)
 
@@ -99,6 +99,13 @@ def _parse_tool_calls(tool_calls: Any) -> Any:
         return json.loads(tool_calls)
     except (json.JSONDecodeError, TypeError):
         return []
+
+
+def _tool_call_payload(tool_calls: Any) -> list[tuple[Any, Any, Any]]:
+    """``(id, function name, arguments)`` per call: what a row-local rewrite can change in ``tool_calls``."""
+    calls = _parse_tool_calls(tool_calls) or []
+    return [(call.get("id"), (call.get("function") or {}).get("name"), (call.get("function") or {}).get("arguments"))
+            if isinstance(call, dict) else (None, None, call) for call in calls]
 
 
 def _tool_calls_count(tool_calls: Any) -> int:
@@ -724,25 +731,52 @@ class SessionMessagesMixin:
         row = self._read_one("SELECT role FROM messages WHERE id = ? AND session_id = ? AND active = 1", (int(row_id), session_id))
         return row[0] if row else None
 
-    def rewritten_held_row_ids(self, session_id: str, held: List[Tuple[int, Any]]) -> List[int]:
-        """Ids among *held* ``(row_id, content)`` pairs whose ACTIVE row no longer stores that content.
+    def stale_held_rows(self, session_id: str, held: list[dict[str, Any]]) -> list[int]:
+        """Ids of the ACTIVE rows that no longer hold the version the durable *held* dicts were loaded from.
 
-        An in-place commit (the proactive prune's ``rewrite_pruned_rows``) changes what a row says and
-        keeps its id and its ``active`` flag, so an id/activity staleness check cannot see it. A
-        lease-less writer holding the pre-rewrite bodies must: publishing them archives rows it never
-        compared and republishes the stale text over the newer generation (#124102). Absent or inactive
-        rows are NOT reported — that is the activity check's job and it has its own fallback rules.
+        An in-place commit (the proactive prune's ``rewrite_pruned_rows``) changes what a row says and keeps
+        its id and its ``active`` flag, so an id/activity staleness check cannot see it (#124102). A dict
+        names its row by ``_row_id``, else by ``message_uid`` (loaders without row ids still restore it).
+        Absent or inactive rows are not reported: the activity check owns those.
         """
-        ids = [int(row_id) for row_id, _ in held]
-        if not session_id or not ids:
+        by_id: dict[int, dict[str, Any]] = {}
+        by_uid: dict[str, dict[str, Any]] = {}
+        for msg in held:
+            row_id = msg.get("_row_id")
+            if isinstance(row_id, int) and not isinstance(row_id, bool) and row_id > 0:
+                by_id[row_id] = msg
+            elif uid := message_uid_or_none(msg):
+                by_uid[uid] = msg
+        if not session_id:
             return []
-        stored = {
-            int(row["id"]): row["content"] for row in self._read_all(
-                f"SELECT id, content FROM messages WHERE session_id = ? AND active = 1 "
-                f"AND id IN ({_placeholders(ids)})", (session_id, *ids))
-        }
-        return [int(row_id) for row_id, content in held
-                if int(row_id) in stored and stored[int(row_id)] != self._encode_content(content)]
+        stale: list[int] = []
+        for column, named, key in (("id", by_id, lambda row: int(row["id"])),
+                                   ("message_uid", by_uid, lambda row: row["message_uid"])):
+            for chunk in _id_chunks(list(named)):
+                for row in self._read_all(
+                        f"SELECT * FROM messages WHERE session_id = ? AND active = 1 "
+                        f"AND {column} IN ({_placeholders(chunk)})", (session_id, *chunk)):
+                    if self._row_differs_from_held(row, named[key(row)]):
+                        stale.append(int(row["id"]))
+        return stale
+
+    def _row_differs_from_held(self, row, msg: dict[str, Any]) -> bool:
+        """Whether a ``SELECT *`` messages *row* is a newer version than the dict that was loaded from it.
+
+        A dict carrying the stored-row digest is compared by digest, which covers every owned column,
+        ``tool_calls`` arguments included. A row-addressed resume dict has no digest; it is compared through
+        the loader's own lens (stripped user/assistant text, decoded ``tool_calls``), so text the reader
+        normalized is not mistaken for another writer's edit.
+        """
+        from agent.transcript_repair import transcript_row_snapshot
+
+        snapshot = msg.get(DB_ROW_SNAPSHOT)
+        if isinstance(snapshot, str):
+            return transcript_row_snapshot(row) != snapshot
+        role = row["role"]
+        return (self._loaded_view_content(role, self._decode_content(row["content"]))
+                != self._loaded_view_content(role, msg.get("content"))
+                or _tool_call_payload(row["tool_calls"]) != _tool_call_payload(msg.get("tool_calls")))
 
     def _carry_parent_timestamps(self, conn, parent_session_id: str, messages: list[dict[str, Any]]) -> None:
         """Adopt the durable parent row's timestamp onto carried handoff rows so the re-inserted child row keeps
@@ -1117,6 +1151,7 @@ class SessionMessagesMixin:
         and the full writer must not be handed the stale transcript. Returns the rows rewritten.
         """
         from agent.conversation_compression_archive import ABSORBED_ROW_IDS
+        from agent.transcript_repair import transcript_row_snapshot
         from hermes_state_errors import PruneRowStaleError, PruneRowUnresolvedError
 
         def _call_ids(tool_calls: Any) -> List[Any]:
@@ -1143,13 +1178,10 @@ class SessionMessagesMixin:
             if len(ids) != 1:
                 raise PruneRowUnresolvedError(f"{len(ids)} live rows match a pruned {role} message")
             row = conn.execute(
-                "SELECT id, role, content, tool_call_id, tool_calls, timestamp, display_identity, "
-                "COALESCE(display_order, id) AS display_order FROM messages "
-                "WHERE id = ? AND session_id = ? AND active = 1", (ids[0], session_id)).fetchone()
+                "SELECT * FROM messages WHERE id = ? AND session_id = ? AND active = 1", (ids[0], session_id)).fetchone()
             if (row is None or row["role"] != role
                     or (row["tool_call_id"] or None) != (original.get("tool_call_id") or None)
-                    or (role == "assistant" and _call_ids(row["tool_calls"]) != _call_ids(original.get("tool_calls")))
-                    or (role == "tool" and row["content"] != self._encode_content(original.get("content")))):
+                    or self._row_differs_from_held(row, original)):
                 raise PruneRowStaleError(f"row {ids[0]} no longer holds the pruned {role} message")
             return row
 
@@ -1158,8 +1190,11 @@ class SessionMessagesMixin:
             patched_model_config = self._merge_model_config_json(
                 conn, session_id, model_config_patch, on_missing="raise") if patch else None
             updates: List[Tuple[int, List[str], List[Any], Any, Any]] = []
+            versioned.clear()
             for original, replacement in changes:
                 row = _resolve(conn, original)
+                if isinstance(replacement.get(DB_ROW_SNAPSHOT), str):
+                    versioned[int(row["id"])] = replacement
                 role, timestamp = row["role"], row["timestamp"]
                 if replacement.get("role") != role:
                     raise PruneRowUnresolvedError("a prune replacement changed the message role")
@@ -1172,7 +1207,7 @@ class SessionMessagesMixin:
                 if changed:
                     updates.append((int(row["id"]), changed, [
                         value for column, value in zip(_MESSAGE_ROW_COLUMNS, after) if column in changed],
-                        row["display_identity"], row["display_order"]))
+                        row["display_identity"], row["id"] if row["display_order"] is None else row["display_order"]))
             twin_columns = ", ".join(c for c in self._message_column_names(conn)
                                      if c not in ("id", "active", "compacted", "display_order"))
             for row_id, columns, values, identity, order in updates:
@@ -1199,9 +1234,18 @@ class SessionMessagesMixin:
                              (self._display_identity(self._display_dedupe_key(live)), order, row_id))
             if patch:
                 conn.execute("UPDATE sessions SET model_config = ? WHERE id = ?", (patched_model_config, session_id))
+            for chunk in _id_chunks(list(versioned)):
+                for row in conn.execute(f"SELECT * FROM messages WHERE id IN ({_placeholders(chunk)})", chunk):
+                    snapshots[int(row["id"])] = transcript_row_snapshot(row)
             return len(updates)
+        # A replacement that carried the loaded row's digest takes the rewritten row's: it IS that version now.
+        versioned: Dict[int, Dict[str, Any]] = {}
+        snapshots: Dict[int, str] = {}
         self._ensure_display_order(session_id)  # every row holds its stored slot before one is carried over
-        return self._execute_write(_do)
+        rewritten = self._execute_write(_do)
+        for row_id, replacement in versioned.items():
+            replacement[DB_ROW_SNAPSHOT] = snapshots[row_id]
+        return rewritten
 
     def _message_column_names(self, conn) -> list[str]:
         """Column names of the messages table, cached per-connection era."""
