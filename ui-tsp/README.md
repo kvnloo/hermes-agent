@@ -6,18 +6,30 @@ thinking, the composer and every sheet are semantic nodes the terminal lays out,
 animates natively. It is a sibling of the Ink TUI (`ui-tui/`) and talks to the same backend,
 `tui_gateway`, over the same JSON-RPC contract.
 
-## Running
+## Running (downstream experiment)
 
-`hermes` picks it on its own inside Tern (`TERM_PROGRAM=tern`, outside tmux/screen/zellij):
+The experimental TSP frontend is disabled by default. Opt in with
+`HERMES_TERN=1 hermes --tui`, or set `display.tern: true` in
+`config.yaml` to allow Tern detection. Merely running inside Tern
+does **not** change the classic CLI default.
 
 | Switch | Effect |
 | --- | --- |
-| `hermes --cli` | Classic REPL, as always |
-| `HERMES_TERN=0` or `display.tern: false` | Never try the Tern frontend |
-| `HERMES_TERN=1` | Try it even where `TERM_PROGRAM` doesn't say Tern (Tern over ssh) |
+| `hermes --cli` | Classic REPL, highest precedence |
+| `hermes --tui` | Ink TUI, unless TSP is opted into |
+| `display.tern: true` | Attempt TSP when `TERM_PROGRAM=tern` |
+| `HERMES_TERN=1` | Explicit TSP probe, including over SSH |
+| `HERMES_TERN=0` | Disable TSP even when enabled by config |
+| `display.tern: false` | Default: no TSP unless explicitly forced via environment |
 
-The frontend asks the terminal for TSP first. A terminal that doesn't answer makes it exit with
-code 75, and the launcher runs the Ink TUI in its place (`hermes_cli/main_tui_launch.py`).
+The launcher never probes inside tmux/screen/zellij, even with the forced flag.
+A terminal that does not answer TSP exits the native frontend with code 75;
+the launcher then runs Ink. Other TSP failures retain their real exit status
+and are not silently converted to an Ink success.
+
+The standalone `ui-tsp` product is a downstream dogfood carrier, **not**
+the proposed first upstream PR. See [PROMOTION.md](PROMOTION.md) for the
+bounded upstream seam and evidence gates.
 
 ## Layout
 

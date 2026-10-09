@@ -151,24 +151,30 @@ class TestWantsTuiEarly:
 
 
 # ---------------------------------------------------------------------------
-# Tern — the native frontend beats the classic REPL, flags and opt-outs win
+# Tern — TSP requires opt-in; flags, fallback, and no-TTY gate win
 # ---------------------------------------------------------------------------
 class TestTernFrontend:
-    def test_tern_launches_the_tui_over_a_cli_config(self, monkeypatch):
+    def test_detection_alone_keeps_classic_default(self, monkeypatch):
         _patch_config(monkeypatch, "cli")
+        _fake_tty(monkeypatch, True)
+        monkeypatch.setenv("TERM_PROGRAM", "tern")
+        assert m._resolve_use_tui(_args()) is False
+
+    def test_explicit_config_enables_tsp_inside_tern(self, monkeypatch):
+        _patch_config(monkeypatch, "cli", tern=True)
         _fake_tty(monkeypatch, True)
         monkeypatch.setenv("TERM_PROGRAM", "tern")
         assert m._resolve_use_tui(_args()) is True
 
     def test_cli_flag_beats_tern(self, monkeypatch):
-        _patch_config(monkeypatch, "cli")
+        _patch_config(monkeypatch, "cli", tern=True)
         _fake_tty(monkeypatch, True)
         monkeypatch.setenv("TERM_PROGRAM", "tern")
         assert m._resolve_use_tui(_args(cli=True)) is False
 
     @pytest.mark.parametrize("env", [{"TMUX": "/tmp/tmux-1/default,1,0"}, {"HERMES_TERN": "0"}])
     def test_multiplexer_or_opt_out_keeps_the_config(self, monkeypatch, env):
-        _patch_config(monkeypatch, "cli")
+        _patch_config(monkeypatch, "cli", tern=True)
         _fake_tty(monkeypatch, True)
         monkeypatch.setenv("TERM_PROGRAM", "tern")
         for name, value in env.items():
@@ -193,12 +199,72 @@ class TestTernFrontend:
         monkeypatch.setenv("TERM_PROGRAM", "tern")
         monkeypatch.setenv("HERMES_HOME", str(tmp_path))
         (tmp_path / "config.yaml").write_text("display:\n  interface: cli\n")
+        assert m._wants_tui_early([]) is False
+
+        (tmp_path / "config.yaml").write_text("display:\n  interface: cli\n  tern: true\n")
+        monkeypatch.setattr(m, "_EARLY_INTERFACE_CACHE", None)
         assert m._wants_tui_early([]) is True
 
         (tmp_path / "config.yaml").write_text("display:\n  interface: cli\n  tern: false\n")
         monkeypatch.setattr(m, "_EARLY_INTERFACE_CACHE", None)
         assert m._wants_tui_early([]) is False
 
+
+
+    def test_force_does_not_probe_inside_multiplexers(self, monkeypatch):
+        import os
+        from hermes_cli import main_tui_launch as launch
+
+        _patch_config(monkeypatch, "cli", tern=True)
+        _fake_tty(monkeypatch, True)
+        monkeypatch.setenv("HERMES_TERN", "1")
+        monkeypatch.setenv("TMUX", "/tmp/tmux/default,0")
+        assert m._resolve_use_tui(_args()) is False
+        assert m._wants_tui_early([]) is False
+        assert launch._tern_frontend_wanted(dict(os.environ)) is False
+
+    def test_forced_env_overrides_disabled_config(self, monkeypatch):
+        from hermes_cli import main_tui_launch as launch
+
+        _patch_config(monkeypatch, "cli", tern=False)
+        assert launch._tern_frontend_wanted({"HERMES_TERN": "1"}) is True
+        assert launch._tern_frontend_wanted({"HERMES_TERN": "0", "TERM_PROGRAM": "tern"}) is False
+
+    def test_detection_is_not_optin_for_launcher(self, monkeypatch):
+        from hermes_cli import main_tui_launch as launch
+
+        _patch_config(monkeypatch, "cli")
+        assert launch._tern_frontend_wanted({"TERM_PROGRAM": "tern"}) is False
+        _patch_config(monkeypatch, "cli", tern=True)
+        assert launch._tern_frontend_wanted({"TERM_PROGRAM": "tern"}) is True
+
+    def test_no_handshake_falls_back_to_ink(self, monkeypatch, tmp_path):
+        from hermes_cli import main_tui_launch as launch
+
+        calls = []
+        monkeypatch.setattr(launch, "_make_tui_argv", lambda root, dev: (["ink"], root))
+
+        def run(argv, *, cwd, env):
+            calls.append((argv[0], cwd))
+            return launch.NO_TSP_EXIT if argv[0] == "tsp" else 0
+
+        monkeypatch.setattr(launch.subprocess, "call", run)
+        assert launch._run_tui_frontend((["tsp"], tmp_path), tmp_path, False, {}) == 0
+        assert [name for name, _ in calls] == ["tsp", "ink"]
+
+    def test_tsp_error_does_not_get_masked_by_ink(self, monkeypatch, tmp_path):
+        from hermes_cli import main_tui_launch as launch
+
+        calls = []
+        monkeypatch.setattr(launch, "_make_tui_argv", lambda root, dev: (["ink"], root))
+
+        def run(argv, *, cwd, env):
+            calls.append(argv[0])
+            return 42
+
+        monkeypatch.setattr(launch.subprocess, "call", run)
+        assert launch._run_tui_frontend((["tsp"], tmp_path), tmp_path, False, {}) == 42
+        assert calls == ["tsp"]
 
 
 # ---------------------------------------------------------------------------
