@@ -1,0 +1,234 @@
+{
+  "owner": "dot/ayo",
+  "lane": "hooks",
+  "priority": "P2 post-merge regression",
+  "status": "EXECUTED_REMAINING_INCLUDED_CONFIG_OVERWRITE",
+  "branch": "dot/hermes/135279-postmerge-hooks-evidence",
+  "base_sha": "ddfaf76cc61bde068148d622db50b36967e7c7a8",
+  "coordination": "https://github.com/kvnloo/hermes-agent/issues/447#issuecomment-6089516578",
+  "issue": {
+    "url": "https://github.com/NousResearch/hermes-agent/issues/135279",
+    "state": "closed",
+    "state_reason": "completed"
+  },
+  "landed_fix": {
+    "pr": 135715,
+    "author": "ethernet8023",
+    "merged": true,
+    "merge_sha": "cf23a1a5cc3e02b2a2d4526b4a1ac66ffaac614b",
+    "head_sha": "0668184e59b98ebeb4799d60c409da5ec47f3f3e",
+    "ancestry_command": "git merge-base --is-ancestor cf23a1a5cc3e02b2a2d4526b4a1ac66ffaac614b ddfaf76cc61bde068148d622db50b36967e7c7a8",
+    "ancestry_exit": 0
+  },
+  "credit": {
+    "reporter": "saralilyb, including original included-config hazard diagnosis",
+    "prior_fix": "liuhao1024 (#135296)",
+    "prior_related_fix_and_evidence": "aortegamel",
+    "landed_fix": "ethernet8023 (#135715)"
+  },
+  "reused_test": {
+    "source_commit": "98ea457a26852fb4c318bca51c5c308b7500994e",
+    "source_path": "tests-js/prepare-hooks-real.test.mjs",
+    "git_blob": "921d55c6c3c823dc27885dc872a00b08bf040336",
+    "sha256": "aab83095c6bf336ae4718113bf7ac903ab438f6e171b97385936cb1cac15aa4c",
+    "restored_byte_identically": true,
+    "historical_receipt": "https://github.com/kvnloo/hermes-agent/blob/98ea457a26852fb4c318bca51c5c308b7500994e/tests-js/prepare-hooks-real.receipt.json",
+    "historical_receipt_modified": false
+  },
+  "host": {
+    "platform": "Linux x86_64",
+    "git": "2.52.0",
+    "node": "24.19.0",
+    "npm": "11.9.0",
+    "lefthook": "2.1.14",
+    "vitest": "4.1.10"
+  },
+  "setup": [
+    "git worktree add -b dot/hermes/135279-postmerge-hooks-evidence /workspace/dot/hermes/135279-postmerge-hooks-evidence ddfaf76cc61bde068148d622db50b36967e7c7a8",
+    "git show 98ea457a26852fb4c318bca51c5c308b7500994e:tests-js/prepare-hooks-real.test.mjs > tests-js/prepare-hooks-real.test.mjs",
+    "ln -s /tmp/hermes-hooks-managed-tools/node_modules node_modules",
+    "Reused the same disposable tooling install from preceding hooks task; no second cache or dependency install. Fixture HOME/config/cache are isolated, system Git config disabled and child environment allowlisted."
+  ],
+  "tooling_install_for_reproduction": "HOME=/tmp/hermes-hooks-managed-home npm_config_cache=/tmp/hermes-hooks-managed-cache npm install --prefix /tmp/hermes-hooks-managed-tools --ignore-scripts --no-audit --no-fund lefthook@2.1.14 vitest@4.1.10 eslint@9.39.5 @eslint/js@9.39.5 eslint-plugin-perfectionist@5.10.0 eslint-plugin-react-hooks@7.1.1 eslint-plugin-unused-imports@4.4.1 globals@17.7.0 typescript-eslint@8.64.0 typescript@6.0.3",
+  "execution": {
+    "cwd": "/workspace/dot/hermes/135279-postmerge-hooks-evidence",
+    "command": "PATH=/tmp/hermes-hooks-managed-tools/node_modules/.bin:$PATH HOME=/tmp/hermes-hooks-managed-home node /tmp/hermes-hooks-managed-tools/node_modules/vitest/vitest.mjs run prepare-hooks-real.test.mjs --root tests-js --maxWorkers=2 --reporter=json --outputFile=/tmp/hermes-hooks-managed-evidence/RESULT.json",
+    "original": "Exact original harness, unchanged current-main package.json: 6 failed / 4 passed. Four failures occur only at the old #135296-specific continuing-without-hooks diagnostic assertion after all preservation assertions pass. Two failures detect actual included-config hook overwrite.",
+    "preservation_projection": "Second run removes only the single line below, runs same command, and restores original harness bytes in finally. No other assertion or production change. 8 passed / 2 failed.",
+    "only_removed_line": "    expect(result.stderr).toMatch(/lefthook install failed.*continuing without git hooks/)",
+    "manifest_unchanged": true,
+    "prepare": "node -e \"const {existsSync}=require('fs');const {spawnSync}=require('child_process');if(existsSync('.git'))spawnSync('lefthook',['install'],{stdio:'inherit',shell:true})\""
+  },
+  "results": {
+    "postmerge-original": {
+      "numTotalTests": 10,
+      "numPassedTests": 4,
+      "numFailedTests": 6,
+      "success": false,
+      "process_exit": 1,
+      "assertions": [
+        {
+          "fullName": "checkout: preserve global hooks and config byte-for-byte",
+          "status": "failed",
+          "failureMessages": [
+            "AssertionError: expected '(node:2161) [DEP0190] DeprecationWarn\u2026' to match /lefthook install failed.*continuing w\u2026/\n    at /workspace/dot/hermes/135279-postmerge-hooks-evidence/tests-js/prepare-hooks-real.test.mjs:90:27\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2027:60\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)"
+          ]
+        },
+        {
+          "fullName": "checkout: preserve local hooks and config byte-for-byte",
+          "status": "failed",
+          "failureMessages": [
+            "AssertionError: expected '(node:2215) [DEP0190] DeprecationWarn\u2026' to match /lefthook install failed.*continuing w\u2026/\n    at /workspace/dot/hermes/135279-postmerge-hooks-evidence/tests-js/prepare-hooks-real.test.mjs:90:27\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2027:60\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)"
+          ]
+        },
+        {
+          "fullName": "checkout: preserve included hooks and config byte-for-byte",
+          "status": "failed",
+          "failureMessages": [
+            "AssertionError: custom pre-commit overwritten; directory entries: pre-commit, pre-commit.old: expected false to be true // Object.is equality\n    at /workspace/dot/hermes/135279-postmerge-hooks-evidence/tests-js/prepare-hooks-real.test.mjs:87:164\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2027:60\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)"
+          ]
+        },
+        {
+          "fullName": "checkout: real hook installs in the repository",
+          "status": "passed",
+          "failureMessages": []
+        },
+        {
+          "fullName": "worktree: preserve global hooks and config byte-for-byte",
+          "status": "failed",
+          "failureMessages": [
+            "AssertionError: expected '(node:2370) [DEP0190] DeprecationWarn\u2026' to match /lefthook install failed.*continuing w\u2026/\n    at /workspace/dot/hermes/135279-postmerge-hooks-evidence/tests-js/prepare-hooks-real.test.mjs:90:27\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2027:60\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)"
+          ]
+        },
+        {
+          "fullName": "worktree: preserve local hooks and config byte-for-byte",
+          "status": "failed",
+          "failureMessages": [
+            "AssertionError: expected '(node:2427) [DEP0190] DeprecationWarn\u2026' to match /lefthook install failed.*continuing w\u2026/\n    at /workspace/dot/hermes/135279-postmerge-hooks-evidence/tests-js/prepare-hooks-real.test.mjs:90:27\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2027:60\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)"
+          ]
+        },
+        {
+          "fullName": "worktree: preserve included hooks and config byte-for-byte",
+          "status": "failed",
+          "failureMessages": [
+            "AssertionError: custom pre-commit overwritten; directory entries: pre-commit, pre-commit.old: expected false to be true // Object.is equality\n    at /workspace/dot/hermes/135279-postmerge-hooks-evidence/tests-js/prepare-hooks-real.test.mjs:87:164\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2027:60\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)"
+          ]
+        },
+        {
+          "fullName": "worktree: real hook installs in the repository",
+          "status": "passed",
+          "failureMessages": []
+        },
+        {
+          "fullName": "source copy inside no Git repository leaves included custom hooks intact",
+          "status": "passed",
+          "failureMessages": []
+        },
+        {
+          "fullName": "npm still surfaces genuine dependency and build failures",
+          "status": "passed",
+          "failureMessages": []
+        }
+      ]
+    },
+    "postmerge-preservation": {
+      "numTotalTests": 10,
+      "numPassedTests": 8,
+      "numFailedTests": 2,
+      "success": false,
+      "process_exit": 1,
+      "assertions": [
+        {
+          "fullName": "checkout: preserve global hooks and config byte-for-byte",
+          "status": "passed",
+          "failureMessages": []
+        },
+        {
+          "fullName": "checkout: preserve local hooks and config byte-for-byte",
+          "status": "passed",
+          "failureMessages": []
+        },
+        {
+          "fullName": "checkout: preserve included hooks and config byte-for-byte",
+          "status": "failed",
+          "failureMessages": [
+            "AssertionError: custom pre-commit overwritten; directory entries: pre-commit, pre-commit.old: expected false to be true // Object.is equality\n    at /workspace/dot/hermes/135279-postmerge-hooks-evidence/tests-js/prepare-hooks-real.test.mjs:87:164\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2027:60\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)"
+          ]
+        },
+        {
+          "fullName": "checkout: real hook installs in the repository",
+          "status": "passed",
+          "failureMessages": []
+        },
+        {
+          "fullName": "worktree: preserve global hooks and config byte-for-byte",
+          "status": "passed",
+          "failureMessages": []
+        },
+        {
+          "fullName": "worktree: preserve local hooks and config byte-for-byte",
+          "status": "passed",
+          "failureMessages": []
+        },
+        {
+          "fullName": "worktree: preserve included hooks and config byte-for-byte",
+          "status": "failed",
+          "failureMessages": [
+            "AssertionError: custom pre-commit overwritten; directory entries: pre-commit, pre-commit.old: expected false to be true // Object.is equality\n    at /workspace/dot/hermes/135279-postmerge-hooks-evidence/tests-js/prepare-hooks-real.test.mjs:87:164\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2027:60\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///tmp/hermes-hooks-managed-tools/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)"
+          ]
+        },
+        {
+          "fullName": "worktree: real hook installs in the repository",
+          "status": "passed",
+          "failureMessages": []
+        },
+        {
+          "fullName": "source copy inside no Git repository leaves included custom hooks intact",
+          "status": "passed",
+          "failureMessages": []
+        },
+        {
+          "fullName": "npm still surfaces genuine dependency and build failures",
+          "status": "passed",
+          "failureMessages": []
+        }
+      ]
+    }
+  },
+  "conclusion": {
+    "global_local_checkout_and_worktree": "PASS: prepare exit 0, config files byte-identical, custom hook byte-identical, no backup file. This supersedes historical failure-exit RED only for those measured cases. Lefthook refusal diagnostic remains visible; absence of the unmerged wrapper wording is not a regression.",
+    "included_checkout_and_worktree": "FAIL: prepare exit 0 and config bytes preserved, but custom pre-commit replaced and pre-commit.old created. This is the previously reported included-config hazard, now reproduced post-merge; not a new diagnosis or implementation claim.",
+    "controls": "PASS: normal hook install in both layouts; no-.git source copy leaves included custom hooks intact; genuine npm dependency and JS SyntaxError failures remain observable."
+  },
+  "validation": [
+    {
+      "command": "cd tests-js && HOME=/tmp/hermes-hooks-managed-home node /tmp/hermes-hooks-managed-tools/node_modules/eslint/bin/eslint.js prepare-hooks-real.test.mjs",
+      "result": "exit 0"
+    },
+    {
+      "command": "node --check tests-js/prepare-hooks-real.test.mjs",
+      "result": "exit 0"
+    },
+    {
+      "command": "git diff --check",
+      "result": "exit 0"
+    },
+    {
+      "command": "git hash-object tests-js/prepare-hooks-real.test.mjs; git rev-parse 98ea457a26852fb4c318bca51c5c308b7500994e:tests-js/prepare-hooks-real.test.mjs",
+      "result": "both 921d55c6c3c823dc27885dc872a00b08bf040336"
+    }
+  ],
+  "limits": [
+    "Actual execution in disposable repositories; no copied implementation, fake Lefthook or fake worktree.",
+    "Linux only; no native Windows/macOS, full Hermes install/build, model download or inference claim.",
+    "Pinned current main at start of regression run, not a moving branch or guarantee about later commits.",
+    "Evidence-only branch; original harness retains historical warning assertion and intentionally fails on current main. No production fix, upstream PR/comment, reopening, merging or promotion.",
+    "All three checked config files pass before the included hook-byte failure; files outside this fixture are not measured."
+  ],
+  "preserved_prior_task": {
+    "branch": "dot/hermes/135279-managed-hooks-evidence",
+    "local_commit": "b7c3af5c2d",
+    "pushed": false,
+    "reason": "New priority superseded it. Work preserved in separate clean worktree."
+  }
+}
