@@ -211,14 +211,18 @@ class TestTernFrontend:
 
 
 
-    def test_force_does_not_probe_inside_multiplexers(self, monkeypatch):
+    @pytest.mark.parametrize("multiplexer", ("TMUX", "STY", "ZELLIJ"))
+    def test_force_does_not_probe_inside_multiplexers(self, monkeypatch, tmp_path, multiplexer):
         import os
         from hermes_cli import main_tui_launch as launch
 
         _patch_config(monkeypatch, "cli", tern=True)
         _fake_tty(monkeypatch, True)
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        (tmp_path / "config.yaml").write_text("display:\n  interface: cli\n  tern: true\n")
+        monkeypatch.setattr(m, "_EARLY_INTERFACE_CACHE", None)
         monkeypatch.setenv("HERMES_TERN", "1")
-        monkeypatch.setenv("TMUX", "/tmp/tmux/default,0")
+        monkeypatch.setenv(multiplexer, "active")
         assert m._resolve_use_tui(_args()) is False
         assert m._wants_tui_early([]) is False
         assert launch._tern_frontend_wanted(dict(os.environ)) is False
