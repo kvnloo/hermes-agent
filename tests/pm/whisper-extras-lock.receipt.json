@@ -1,0 +1,579 @@
+{
+  "owner": "dot/ayo",
+  "executed_at_utc": "2026-10-09T21:29:02.327073+00:00",
+  "status": "EXECUTED_EXTRAS_AND_LOCK_EVIDENCE",
+  "upstream_pr": 135260,
+  "reviewed_head": "38dc31f53b79b9b60012ea918463180b5b7cbb59",
+  "fresh_main": "ddfaf76cc61bde068148d622db50b36967e7c7a8",
+  "branch": "dot/hermes/135260-extras-lock-evidence",
+  "prior_evidence": "a1ba85f7422eb2019786ae561da4f8b3335c6244",
+  "claim": "https://github.com/kvnloo/hermes-agent/issues/447#issuecomment-6089515958",
+  "credit": {
+    "reporter": "SultaniSaid",
+    "implementation_and_existing_metadata_tests": "liuhao1024",
+    "existing_decode_harness": "dot/ayo at a1ba85f7422eb2019786ae561da4f8b3335c6244"
+  },
+  "scope": "New execution of BOTH extra dependency sets and real resolver rejection plus PM lock check/export; existing real decoding test reused byte-for-byte, no new test or production patch. Prior receipt remains untouched.",
+  "host": {
+    "os": "Linux",
+    "arch": "x86_64",
+    "python": "3.14.7",
+    "uv": "0.12.3"
+  },
+  "summary": {
+    "main_voice_av19": "2 failed: metadata_errors TypeError",
+    "main_stt_whisper_av19": "2 failed: metadata_errors TypeError",
+    "pr_voice_av18": "2 passed",
+    "pr_stt_whisper_av18": "2 passed",
+    "pr_forced_av19_resolution": "Both extras rejected with exit 1: >=11,<19 incompatible with ==19.0.1",
+    "metadata_tests": "2 passed",
+    "updated_lock": "PM --check-lock exit 0",
+    "stale_lock": "PM --check-lock exit 1, lockfile needs to be updated",
+    "locked_exports": "Both PM frozen exports exit 0; av18.1.0 and faster-whisper1.2.1",
+    "package_identity_diff": "PR versus parent lock: no package name/version/source changes"
+  },
+  "environment": {
+    "HOME": "/tmp/dot-audio-447/home",
+    "UV_CACHE_DIR": "/tmp/dot-audio-447/cache",
+    "fixture_root": "/tmp/dot-audio-135260",
+    "dependency_constraints": "Previous run freeze, except PyAV selected per cell; voice adds sounddevice and its real dependencies. Non-av versions identical within each RED/GREEN pair. Constraints supplied for reproducibility, not claiming current default unlocked resolution.",
+    "policy": "uv --no-config for disposable dependency-only controls so repository 14-day quarantine does not exclude PyAV19; PM project checks retain normal project policy. No security setting edited."
+  },
+  "limitations": [
+    "Not a complete Hermes environment install, gateway transcription or model inference; no WhisperModel constructed, no model download or paid inference.",
+    "Linux x86_64 only; no native Windows/macOS or audio hardware claim.",
+    "Canonical test runner used with --confcutdir=tests/pm (root conftest excluded, PM fixture retained), -m integration, retries disabled.",
+    "Focused decode harness is unchanged from prior evidence; novelty is both extras resolver/lock matrix, not a new test.",
+    "Synthetic mono exact PCM fidelity and real stereo 48kHz-to-16kHz mixing/resampling; speaker sink/inference not exercised."
+  ],
+  "attempts_not_counted": [
+    "Initial uv pip matrix inherited repository quarantine: four installs blocked before execution; logs preserved below. Existing empty venvs reused after uv venv refused overwrite (exit2); successful installs/freeze/check then verified each interpreter.",
+    "A test command was started before failed install status was inspected; missing pytest triggered disposable PM bootstrap (including ffmpeg download). Stopped own process tree, preserved aborted log, no pass claimed. All paths under disposable HOME; no user runtime touched.",
+    "Earlier paused WAV candidate canonical run errored on read-only scratch root. New matrix permission explicitly scopes /var/tmp/hermes-pytest-1000; no permission refusal."
+  ],
+  "released_versions": {
+    "av": {
+      "pypi_url": "https://pypi.org/pypi/av/json",
+      "latest": "19.0.1",
+      "requires_dist": null
+    },
+    "faster-whisper": {
+      "pypi_url": "https://pypi.org/pypi/faster-whisper/json",
+      "latest": "1.2.1",
+      "requires_dist": [
+        "ctranslate2<5,>=4.0",
+        "huggingface-hub>=0.21",
+        "tokenizers<1,>=0.13",
+        "onnxruntime<2,>=1.14",
+        "av>=11",
+        "tqdm",
+        "transformers[torch]>=4.23; extra == \"conversion\"",
+        "black==23.*; extra == \"dev\"",
+        "flake8==6.*; extra == \"dev\"",
+        "isort==5.*; extra == \"dev\"",
+        "pytest==7.*; extra == \"dev\""
+      ]
+    }
+  },
+  "inputs": {
+    "pr-stt-whisper.in": "faster-whisper==1.2.1; (platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or platform_system != 'Darwin')\nav>=11,<19; (platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or platform_system != 'Darwin')\npytest==9.1.1\n",
+    "pr-voice.in": "faster-whisper==1.2.1; (platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or platform_system != 'Darwin')\nav>=11,<19; (platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or platform_system != 'Darwin')\nsounddevice==0.5.5\nnumpy==2.4.3\npytest==9.1.1\n",
+    "main-stt-whisper.in": "faster-whisper==1.2.1; (platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or platform_system != 'Darwin')\npytest==9.1.1\n",
+    "main-voice.in": "faster-whisper==1.2.1; (platform_machine != 'ARM64' or sys_platform != 'win32') and (platform_machine != 'x86_64' or platform_system != 'Darwin')\nsounddevice==0.5.5\nnumpy==2.4.3\npytest==9.1.1\n",
+    "constraints-av19.txt": "anyio==4.15.1\ncertifi==2026.7.22\nclick==8.5.0\nctranslate2==4.8.1\nfaster-whisper==1.2.1\nfilelock==4.0.12\nflatbuffers==25.12.19\nfsspec==2026.9.0\nh11==0.16.0\nhf-xet==1.7.0\nhttpcore==1.0.9\nhttpx==0.28.1\nhuggingface-hub==1.24.0\nidna==3.20\niniconfig==2.3.1\nnumpy==2.4.3\nonnxruntime==1.29.0\npackaging==26.0\npluggy==1.6.0\nprotobuf==7.36.2\npsutil==7.2.2\npygments==2.21.0\npytest==9.1.1\npytest-asyncio==1.3.0\npython-dotenv==1.2.2\npyyaml==6.0.3\nsetuptools==84.0.0\ntokenizers==0.23.1\ntqdm==4.70.0\ntyping-extensions==4.16.0\nav==19.0.1\nsounddevice==0.5.5\n",
+    "constraints-av18.txt": "anyio==4.15.1\ncertifi==2026.7.22\nclick==8.5.0\nctranslate2==4.8.1\nfaster-whisper==1.2.1\nfilelock==4.0.12\nflatbuffers==25.12.19\nfsspec==2026.9.0\nh11==0.16.0\nhf-xet==1.7.0\nhttpcore==1.0.9\nhttpx==0.28.1\nhuggingface-hub==1.24.0\nidna==3.20\niniconfig==2.3.1\nnumpy==2.4.3\nonnxruntime==1.29.0\npackaging==26.0\npluggy==1.6.0\nprotobuf==7.36.2\npsutil==7.2.2\npygments==2.21.0\npytest==9.1.1\npytest-asyncio==1.3.0\npython-dotenv==1.2.2\npyyaml==6.0.3\nsetuptools==84.0.0\ntokenizers==0.23.1\ntqdm==4.70.0\ntyping-extensions==4.16.0\nav==18.1.0\nsounddevice==0.5.5\n"
+  },
+  "resolver_and_installs": [
+    {
+      "label": "pr-voice-reject19",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "pip",
+        "compile",
+        "--python",
+        "/tmp/dot-audio-447/venv/bin/python",
+        "/tmp/dot-audio-135260/pr-voice.in",
+        "-c",
+        "/tmp/dot-audio-135260/constraints-av19.txt"
+      ],
+      "exit": 1,
+      "output": "  \u00d7 No solution found when resolving dependencies:\n  \u2570\u2500\u25b6 Because you require av{(platform_machine != 'x86_64' and sys_platform ==\n      'darwin') or (platform_machine != 'ARM64' and sys_platform == 'win32')\n      or (sys_platform != 'darwin' and sys_platform != 'win32')}>=11,<19\n      and av{(platform_machine != 'x86_64' and sys_platform == 'darwin')\n      or (platform_machine != 'ARM64' and sys_platform == 'win32') or\n      (sys_platform != 'darwin' and sys_platform != 'win32')}==19.0.1, we can\n      conclude that your requirements are unsatisfiable.\n"
+    },
+    {
+      "label": "main-voice-av19-venv",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "venv",
+        "--python",
+        "/tmp/dot-audio-447/venv/bin/python",
+        "/tmp/dot-audio-135260/main-voice-av19"
+      ],
+      "exit": 2,
+      "output": "Using CPython 3.14.7 interpreter at: /tmp/dot-audio-447/venv/bin/python\nCreating virtual environment at: /tmp/dot-audio-135260/main-voice-av19\nerror: Failed to create virtual environment\n  Caused by: A virtual environment already exists at: /tmp/dot-audio-135260/main-voice-av19\n\nhint: Use the `--clear` flag or set `UV_VENV_CLEAR=1` to replace the existing virtual environment\n"
+    },
+    {
+      "label": "main-voice-av19-install",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "pip",
+        "install",
+        "--python",
+        "/tmp/dot-audio-135260/main-voice-av19/bin/python",
+        "-r",
+        "/tmp/dot-audio-135260/main-voice.in",
+        "-c",
+        "/tmp/dot-audio-135260/constraints-av19.txt"
+      ],
+      "exit": 0,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/main-voice-av19\nResolved 31 packages in 745ms\nDownloading faster-whisper (1.1MiB)\nDownloading ctranslate2 (37.7MiB)\nDownloading av (33.4MiB)\nDownloading hf-xet (4.0MiB)\n Downloaded faster-whisper\nDownloading tokenizers (3.2MiB)\nDownloading onnxruntime (22.1MiB)\n Downloaded hf-xet\n Downloaded tokenizers\n Downloaded ctranslate2\n Downloaded onnxruntime\n Downloaded av\nPrepared 26 packages in 1.54s\nInstalled 31 packages in 10ms\n + anyio==4.15.1\n + av==19.0.1\n + certifi==2026.7.22\n + cffi==2.1.1\n + click==8.5.0\n + ctranslate2==4.8.1\n + faster-whisper==1.2.1\n + filelock==4.0.12\n + flatbuffers==25.12.19\n + fsspec==2026.9.0\n + h11==0.16.0\n + hf-xet==1.7.0\n + httpcore==1.0.9\n + httpx==0.28.1\n + huggingface-hub==1.24.0\n + idna==3.20\n + iniconfig==2.3.1\n + numpy==2.4.3\n + onnxruntime==1.29.0\n + packaging==26.0\n + pluggy==1.6.0\n + protobuf==7.36.2\n + pycparser==3.11\n + pygments==2.21.0\n + pytest==9.1.1\n + pyyaml==6.0.3\n + setuptools==84.0.0\n + sounddevice==0.5.5\n + tokenizers==0.23.1\n + tqdm==4.70.0\n + typing-extensions==4.16.0\n"
+    },
+    {
+      "label": "main-voice-av19-freeze",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "pip",
+        "freeze",
+        "--python",
+        "/tmp/dot-audio-135260/main-voice-av19/bin/python"
+      ],
+      "exit": 0,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/main-voice-av19\nanyio==4.15.1\nav==19.0.1\ncertifi==2026.7.22\ncffi==2.1.1\nclick==8.5.0\nctranslate2==4.8.1\nfaster-whisper==1.2.1\nfilelock==4.0.12\nflatbuffers==25.12.19\nfsspec==2026.9.0\nh11==0.16.0\nhf-xet==1.7.0\nhttpcore==1.0.9\nhttpx==0.28.1\nhuggingface-hub==1.24.0\nidna==3.20\niniconfig==2.3.1\nnumpy==2.4.3\nonnxruntime==1.29.0\npackaging==26.0\npluggy==1.6.0\nprotobuf==7.36.2\npycparser==3.11\npygments==2.21.0\npytest==9.1.1\npyyaml==6.0.3\nsetuptools==84.0.0\nsounddevice==0.5.5\ntokenizers==0.23.1\ntqdm==4.70.0\ntyping-extensions==4.16.0\n"
+    },
+    {
+      "label": "main-voice-av19-check",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "pip",
+        "check",
+        "--python",
+        "/tmp/dot-audio-135260/main-voice-av19/bin/python"
+      ],
+      "exit": 0,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/main-voice-av19\nChecked 31 packages in 0.45ms\nAll installed packages are compatible\n"
+    },
+    {
+      "label": "pr-voice-av18-venv",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "venv",
+        "--python",
+        "/tmp/dot-audio-447/venv/bin/python",
+        "/tmp/dot-audio-135260/pr-voice-av18"
+      ],
+      "exit": 2,
+      "output": "Using CPython 3.14.7 interpreter at: /tmp/dot-audio-447/venv/bin/python\nCreating virtual environment at: /tmp/dot-audio-135260/pr-voice-av18\nerror: Failed to create virtual environment\n  Caused by: A virtual environment already exists at: /tmp/dot-audio-135260/pr-voice-av18\n\nhint: Use the `--clear` flag or set `UV_VENV_CLEAR=1` to replace the existing virtual environment\n"
+    },
+    {
+      "label": "pr-voice-av18-install",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "pip",
+        "install",
+        "--python",
+        "/tmp/dot-audio-135260/pr-voice-av18/bin/python",
+        "-r",
+        "/tmp/dot-audio-135260/pr-voice.in",
+        "-c",
+        "/tmp/dot-audio-135260/constraints-av18.txt"
+      ],
+      "exit": 0,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/pr-voice-av18\nResolved 31 packages in 10ms\nDownloading av (34.1MiB)\n Downloaded av\nPrepared 1 package in 1.11s\nInstalled 31 packages in 9ms\n + anyio==4.15.1\n + av==18.1.0\n + certifi==2026.7.22\n + cffi==2.1.1\n + click==8.5.0\n + ctranslate2==4.8.1\n + faster-whisper==1.2.1\n + filelock==4.0.12\n + flatbuffers==25.12.19\n + fsspec==2026.9.0\n + h11==0.16.0\n + hf-xet==1.7.0\n + httpcore==1.0.9\n + httpx==0.28.1\n + huggingface-hub==1.24.0\n + idna==3.20\n + iniconfig==2.3.1\n + numpy==2.4.3\n + onnxruntime==1.29.0\n + packaging==26.0\n + pluggy==1.6.0\n + protobuf==7.36.2\n + pycparser==3.11\n + pygments==2.21.0\n + pytest==9.1.1\n + pyyaml==6.0.3\n + setuptools==84.0.0\n + sounddevice==0.5.5\n + tokenizers==0.23.1\n + tqdm==4.70.0\n + typing-extensions==4.16.0\n"
+    },
+    {
+      "label": "pr-voice-av18-freeze",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "pip",
+        "freeze",
+        "--python",
+        "/tmp/dot-audio-135260/pr-voice-av18/bin/python"
+      ],
+      "exit": 0,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/pr-voice-av18\nanyio==4.15.1\nav==18.1.0\ncertifi==2026.7.22\ncffi==2.1.1\nclick==8.5.0\nctranslate2==4.8.1\nfaster-whisper==1.2.1\nfilelock==4.0.12\nflatbuffers==25.12.19\nfsspec==2026.9.0\nh11==0.16.0\nhf-xet==1.7.0\nhttpcore==1.0.9\nhttpx==0.28.1\nhuggingface-hub==1.24.0\nidna==3.20\niniconfig==2.3.1\nnumpy==2.4.3\nonnxruntime==1.29.0\npackaging==26.0\npluggy==1.6.0\nprotobuf==7.36.2\npycparser==3.11\npygments==2.21.0\npytest==9.1.1\npyyaml==6.0.3\nsetuptools==84.0.0\nsounddevice==0.5.5\ntokenizers==0.23.1\ntqdm==4.70.0\ntyping-extensions==4.16.0\n"
+    },
+    {
+      "label": "pr-voice-av18-check",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "pip",
+        "check",
+        "--python",
+        "/tmp/dot-audio-135260/pr-voice-av18/bin/python"
+      ],
+      "exit": 0,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/pr-voice-av18\nChecked 31 packages in 0.54ms\nAll installed packages are compatible\n"
+    },
+    {
+      "label": "pr-stt-whisper-reject19",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "pip",
+        "compile",
+        "--python",
+        "/tmp/dot-audio-447/venv/bin/python",
+        "/tmp/dot-audio-135260/pr-stt-whisper.in",
+        "-c",
+        "/tmp/dot-audio-135260/constraints-av19.txt"
+      ],
+      "exit": 1,
+      "output": "  \u00d7 No solution found when resolving dependencies:\n  \u2570\u2500\u25b6 Because you require av{(platform_machine != 'x86_64' and sys_platform ==\n      'darwin') or (platform_machine != 'ARM64' and sys_platform == 'win32')\n      or (sys_platform != 'darwin' and sys_platform != 'win32')}>=11,<19\n      and av{(platform_machine != 'x86_64' and sys_platform == 'darwin')\n      or (platform_machine != 'ARM64' and sys_platform == 'win32') or\n      (sys_platform != 'darwin' and sys_platform != 'win32')}==19.0.1, we can\n      conclude that your requirements are unsatisfiable.\n"
+    },
+    {
+      "label": "main-stt-whisper-av19-venv",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "venv",
+        "--python",
+        "/tmp/dot-audio-447/venv/bin/python",
+        "/tmp/dot-audio-135260/main-stt-whisper-av19"
+      ],
+      "exit": 2,
+      "output": "Using CPython 3.14.7 interpreter at: /tmp/dot-audio-447/venv/bin/python\nCreating virtual environment at: /tmp/dot-audio-135260/main-stt-whisper-av19\nerror: Failed to create virtual environment\n  Caused by: A virtual environment already exists at: /tmp/dot-audio-135260/main-stt-whisper-av19\n\nhint: Use the `--clear` flag or set `UV_VENV_CLEAR=1` to replace the existing virtual environment\n"
+    },
+    {
+      "label": "main-stt-whisper-av19-install",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "pip",
+        "install",
+        "--python",
+        "/tmp/dot-audio-135260/main-stt-whisper-av19/bin/python",
+        "-r",
+        "/tmp/dot-audio-135260/main-stt-whisper.in",
+        "-c",
+        "/tmp/dot-audio-135260/constraints-av19.txt"
+      ],
+      "exit": 0,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/main-stt-whisper-av19\nResolved 28 packages in 8ms\nInstalled 28 packages in 11ms\n + anyio==4.15.1\n + av==19.0.1\n + certifi==2026.7.22\n + click==8.5.0\n + ctranslate2==4.8.1\n + faster-whisper==1.2.1\n + filelock==4.0.12\n + flatbuffers==25.12.19\n + fsspec==2026.9.0\n + h11==0.16.0\n + hf-xet==1.7.0\n + httpcore==1.0.9\n + httpx==0.28.1\n + huggingface-hub==1.24.0\n + idna==3.20\n + iniconfig==2.3.1\n + numpy==2.4.3\n + onnxruntime==1.29.0\n + packaging==26.0\n + pluggy==1.6.0\n + protobuf==7.36.2\n + pygments==2.21.0\n + pytest==9.1.1\n + pyyaml==6.0.3\n + setuptools==84.0.0\n + tokenizers==0.23.1\n + tqdm==4.70.0\n + typing-extensions==4.16.0\n"
+    },
+    {
+      "label": "main-stt-whisper-av19-freeze",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "pip",
+        "freeze",
+        "--python",
+        "/tmp/dot-audio-135260/main-stt-whisper-av19/bin/python"
+      ],
+      "exit": 0,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/main-stt-whisper-av19\nanyio==4.15.1\nav==19.0.1\ncertifi==2026.7.22\nclick==8.5.0\nctranslate2==4.8.1\nfaster-whisper==1.2.1\nfilelock==4.0.12\nflatbuffers==25.12.19\nfsspec==2026.9.0\nh11==0.16.0\nhf-xet==1.7.0\nhttpcore==1.0.9\nhttpx==0.28.1\nhuggingface-hub==1.24.0\nidna==3.20\niniconfig==2.3.1\nnumpy==2.4.3\nonnxruntime==1.29.0\npackaging==26.0\npluggy==1.6.0\nprotobuf==7.36.2\npygments==2.21.0\npytest==9.1.1\npyyaml==6.0.3\nsetuptools==84.0.0\ntokenizers==0.23.1\ntqdm==4.70.0\ntyping-extensions==4.16.0\n"
+    },
+    {
+      "label": "main-stt-whisper-av19-check",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "pip",
+        "check",
+        "--python",
+        "/tmp/dot-audio-135260/main-stt-whisper-av19/bin/python"
+      ],
+      "exit": 0,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/main-stt-whisper-av19\nChecked 28 packages in 0.38ms\nAll installed packages are compatible\n"
+    },
+    {
+      "label": "pr-stt-whisper-av18-venv",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "venv",
+        "--python",
+        "/tmp/dot-audio-447/venv/bin/python",
+        "/tmp/dot-audio-135260/pr-stt-whisper-av18"
+      ],
+      "exit": 2,
+      "output": "Using CPython 3.14.7 interpreter at: /tmp/dot-audio-447/venv/bin/python\nCreating virtual environment at: /tmp/dot-audio-135260/pr-stt-whisper-av18\nerror: Failed to create virtual environment\n  Caused by: A virtual environment already exists at: /tmp/dot-audio-135260/pr-stt-whisper-av18\n\nhint: Use the `--clear` flag or set `UV_VENV_CLEAR=1` to replace the existing virtual environment\n"
+    },
+    {
+      "label": "pr-stt-whisper-av18-install",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "pip",
+        "install",
+        "--python",
+        "/tmp/dot-audio-135260/pr-stt-whisper-av18/bin/python",
+        "-r",
+        "/tmp/dot-audio-135260/pr-stt-whisper.in",
+        "-c",
+        "/tmp/dot-audio-135260/constraints-av18.txt"
+      ],
+      "exit": 0,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/pr-stt-whisper-av18\nResolved 28 packages in 10ms\nInstalled 28 packages in 11ms\n + anyio==4.15.1\n + av==18.1.0\n + certifi==2026.7.22\n + click==8.5.0\n + ctranslate2==4.8.1\n + faster-whisper==1.2.1\n + filelock==4.0.12\n + flatbuffers==25.12.19\n + fsspec==2026.9.0\n + h11==0.16.0\n + hf-xet==1.7.0\n + httpcore==1.0.9\n + httpx==0.28.1\n + huggingface-hub==1.24.0\n + idna==3.20\n + iniconfig==2.3.1\n + numpy==2.4.3\n + onnxruntime==1.29.0\n + packaging==26.0\n + pluggy==1.6.0\n + protobuf==7.36.2\n + pygments==2.21.0\n + pytest==9.1.1\n + pyyaml==6.0.3\n + setuptools==84.0.0\n + tokenizers==0.23.1\n + tqdm==4.70.0\n + typing-extensions==4.16.0\n"
+    },
+    {
+      "label": "pr-stt-whisper-av18-freeze",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "pip",
+        "freeze",
+        "--python",
+        "/tmp/dot-audio-135260/pr-stt-whisper-av18/bin/python"
+      ],
+      "exit": 0,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/pr-stt-whisper-av18\nanyio==4.15.1\nav==18.1.0\ncertifi==2026.7.22\nclick==8.5.0\nctranslate2==4.8.1\nfaster-whisper==1.2.1\nfilelock==4.0.12\nflatbuffers==25.12.19\nfsspec==2026.9.0\nh11==0.16.0\nhf-xet==1.7.0\nhttpcore==1.0.9\nhttpx==0.28.1\nhuggingface-hub==1.24.0\nidna==3.20\niniconfig==2.3.1\nnumpy==2.4.3\nonnxruntime==1.29.0\npackaging==26.0\npluggy==1.6.0\nprotobuf==7.36.2\npygments==2.21.0\npytest==9.1.1\npyyaml==6.0.3\nsetuptools==84.0.0\ntokenizers==0.23.1\ntqdm==4.70.0\ntyping-extensions==4.16.0\n"
+    },
+    {
+      "label": "pr-stt-whisper-av18-check",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "--no-config",
+        "pip",
+        "check",
+        "--python",
+        "/tmp/dot-audio-135260/pr-stt-whisper-av18/bin/python"
+      ],
+      "exit": 0,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/pr-stt-whisper-av18\nChecked 28 packages in 0.53ms\nAll installed packages are compatible\n"
+    }
+  ],
+  "quarantine_attempt": [
+    {
+      "label": "pr-voice-reject19",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "pip",
+        "compile",
+        "--python",
+        "/tmp/dot-audio-447/venv/bin/python",
+        "/tmp/dot-audio-135260/pr-voice.in",
+        "-c",
+        "/tmp/dot-audio-135260/constraints-av19.txt"
+      ],
+      "exit": 1,
+      "output": "  \u00d7 No solution found when resolving dependencies:\n  \u2570\u2500\u25b6 Because you require av{(platform_machine != 'x86_64' and sys_platform ==\n      'darwin') or (platform_machine != 'ARM64' and sys_platform == 'win32')\n      or (sys_platform != 'darwin' and sys_platform != 'win32')}>=11,<19\n      and av{(platform_machine != 'x86_64' and sys_platform == 'darwin')\n      or (platform_machine != 'ARM64' and sys_platform == 'win32') or\n      (sys_platform != 'darwin' and sys_platform != 'win32')}==19.0.1, we can\n      conclude that your requirements are unsatisfiable.\n"
+    },
+    {
+      "label": "main-voice-av19-venv",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "venv",
+        "--python",
+        "/tmp/dot-audio-447/venv/bin/python",
+        "/tmp/dot-audio-135260/main-voice-av19"
+      ],
+      "exit": 0,
+      "output": "Using CPython 3.14.7 interpreter at: /tmp/dot-audio-447/venv/bin/python\nCreating virtual environment at: /tmp/dot-audio-135260/main-voice-av19\nActivate with: source /tmp/dot-audio-135260/main-voice-av19/bin/activate\n"
+    },
+    {
+      "label": "main-voice-av19-install",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "pip",
+        "install",
+        "--python",
+        "/tmp/dot-audio-135260/main-voice-av19/bin/python",
+        "-r",
+        "/tmp/dot-audio-135260/main-voice.in",
+        "-c",
+        "/tmp/dot-audio-135260/constraints-av19.txt"
+      ],
+      "exit": 1,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/main-voice-av19\n  \u00d7 No solution found when resolving dependencies:\n  \u2570\u2500\u25b6 Because there is no version of av==19.0.1 and faster-whisper>=1.2.1\n      depends on av==19.0.1, we can conclude that faster-whisper>=1.2.1 cannot\n      be used.\n      And because you require faster-whisper{(platform_machine != 'x86_64'\n      and sys_platform == 'darwin') or (platform_machine != 'ARM64' and\n      sys_platform == 'win32') or (sys_platform != 'darwin' and sys_platform\n      != 'win32')}==1.2.1, we can conclude that your requirements are\n      unsatisfiable.\n\nhint: `av` was filtered by `exclude-newer` to only include packages uploaded before 2026-09-25T21:26:07.140312132Z. The requested version, v19.0.1, was published at 2026-10-03T01:47:21.866Z. Consider using `exclude-newer-package` to override the cutoff for this package.\n"
+    },
+    {
+      "label": "pr-voice-av18-venv",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "venv",
+        "--python",
+        "/tmp/dot-audio-447/venv/bin/python",
+        "/tmp/dot-audio-135260/pr-voice-av18"
+      ],
+      "exit": 0,
+      "output": "Using CPython 3.14.7 interpreter at: /tmp/dot-audio-447/venv/bin/python\nCreating virtual environment at: /tmp/dot-audio-135260/pr-voice-av18\nActivate with: source /tmp/dot-audio-135260/pr-voice-av18/bin/activate\n"
+    },
+    {
+      "label": "pr-voice-av18-install",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "pip",
+        "install",
+        "--python",
+        "/tmp/dot-audio-135260/pr-voice-av18/bin/python",
+        "-r",
+        "/tmp/dot-audio-135260/pr-voice.in",
+        "-c",
+        "/tmp/dot-audio-135260/constraints-av18.txt"
+      ],
+      "exit": 1,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/pr-voice-av18\n  \u00d7 No solution found when resolving dependencies:\n  \u2570\u2500\u25b6 Because there is no version of iniconfig==2.3.1 and pytest>=9.1.1\n      depends on iniconfig==2.3.1, we can conclude that pytest>=9.1.1 cannot\n      be used.\n      And because you require pytest==9.1.1, we can conclude that your\n      requirements are unsatisfiable.\n\nhint: `iniconfig` was filtered by `exclude-newer` to only include packages uploaded before 2026-09-25T21:26:07.385609395Z. The requested version, v2.3.1, was published at 2026-10-06T22:48:36.959Z. Consider using `exclude-newer-package` to override the cutoff for this package.\n"
+    },
+    {
+      "label": "pr-stt-whisper-reject19",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "pip",
+        "compile",
+        "--python",
+        "/tmp/dot-audio-447/venv/bin/python",
+        "/tmp/dot-audio-135260/pr-stt-whisper.in",
+        "-c",
+        "/tmp/dot-audio-135260/constraints-av19.txt"
+      ],
+      "exit": 1,
+      "output": "  \u00d7 No solution found when resolving dependencies:\n  \u2570\u2500\u25b6 Because you require av{(platform_machine != 'x86_64' and sys_platform ==\n      'darwin') or (platform_machine != 'ARM64' and sys_platform == 'win32')\n      or (sys_platform != 'darwin' and sys_platform != 'win32')}>=11,<19\n      and av{(platform_machine != 'x86_64' and sys_platform == 'darwin')\n      or (platform_machine != 'ARM64' and sys_platform == 'win32') or\n      (sys_platform != 'darwin' and sys_platform != 'win32')}==19.0.1, we can\n      conclude that your requirements are unsatisfiable.\n"
+    },
+    {
+      "label": "main-stt-whisper-av19-venv",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "venv",
+        "--python",
+        "/tmp/dot-audio-447/venv/bin/python",
+        "/tmp/dot-audio-135260/main-stt-whisper-av19"
+      ],
+      "exit": 0,
+      "output": "Using CPython 3.14.7 interpreter at: /tmp/dot-audio-447/venv/bin/python\nCreating virtual environment at: /tmp/dot-audio-135260/main-stt-whisper-av19\nActivate with: source /tmp/dot-audio-135260/main-stt-whisper-av19/bin/activate\n"
+    },
+    {
+      "label": "main-stt-whisper-av19-install",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "pip",
+        "install",
+        "--python",
+        "/tmp/dot-audio-135260/main-stt-whisper-av19/bin/python",
+        "-r",
+        "/tmp/dot-audio-135260/main-stt-whisper.in",
+        "-c",
+        "/tmp/dot-audio-135260/constraints-av19.txt"
+      ],
+      "exit": 1,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/main-stt-whisper-av19\n  \u00d7 No solution found when resolving dependencies:\n  \u2570\u2500\u25b6 Because there is no version of av==19.0.1 and faster-whisper>=1.2.1\n      depends on av==19.0.1, we can conclude that faster-whisper>=1.2.1 cannot\n      be used.\n      And because you require faster-whisper{(platform_machine != 'x86_64'\n      and sys_platform == 'darwin') or (platform_machine != 'ARM64' and\n      sys_platform == 'win32') or (sys_platform != 'darwin' and sys_platform\n      != 'win32')}==1.2.1, we can conclude that your requirements are\n      unsatisfiable.\n\nhint: `av` was filtered by `exclude-newer` to only include packages uploaded before 2026-09-25T21:26:07.502209212Z. The requested version, v19.0.1, was published at 2026-10-03T01:47:21.866Z. Consider using `exclude-newer-package` to override the cutoff for this package.\n"
+    },
+    {
+      "label": "pr-stt-whisper-av18-venv",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "venv",
+        "--python",
+        "/tmp/dot-audio-447/venv/bin/python",
+        "/tmp/dot-audio-135260/pr-stt-whisper-av18"
+      ],
+      "exit": 0,
+      "output": "Using CPython 3.14.7 interpreter at: /tmp/dot-audio-447/venv/bin/python\nCreating virtual environment at: /tmp/dot-audio-135260/pr-stt-whisper-av18\nActivate with: source /tmp/dot-audio-135260/pr-stt-whisper-av18/bin/activate\n"
+    },
+    {
+      "label": "pr-stt-whisper-av18-install",
+      "command": [
+        "/tmp/dot-audio-447/venv/bin/uv",
+        "pip",
+        "install",
+        "--python",
+        "/tmp/dot-audio-135260/pr-stt-whisper-av18/bin/python",
+        "-r",
+        "/tmp/dot-audio-135260/pr-stt-whisper.in",
+        "-c",
+        "/tmp/dot-audio-135260/constraints-av18.txt"
+      ],
+      "exit": 1,
+      "output": "Using Python 3.14.7 environment at: /tmp/dot-audio-135260/pr-stt-whisper-av18\n  \u00d7 No solution found when resolving dependencies:\n  \u2570\u2500\u25b6 Because there is no version of iniconfig==2.3.1 and pytest>=9.1.1\n      depends on iniconfig==2.3.1, we can conclude that pytest>=9.1.1 cannot\n      be used.\n      And because you require pytest==9.1.1, we can conclude that your\n      requirements are unsatisfiable.\n\nhint: `iniconfig` was filtered by `exclude-newer` to only include packages uploaded before 2026-09-25T21:26:07.599470892Z. The requested version, v2.3.1, was published at 2026-10-06T22:48:36.959Z. Consider using `exclude-newer-package` to override the cutoff for this package.\n"
+    }
+  ],
+  "decode": {
+    "main-voice-av19": {
+      "exit": 1,
+      "command": "HOME=/tmp/dot-audio-447/home HERMES_PYTHON=/tmp/dot-audio-135260/main-voice-av19/bin/python HERMES_TEST_FILE_RETRIES=0 scripts/run_tests.sh tests/pm/test_whisper_decode_live.py --confcutdir=tests/pm -m integration -s",
+      "output": "\u25b6 not activated \u2014 using HERMES_PYTHON: /tmp/dot-audio-135260/main-voice-av19/bin/python\n\u25b6 running per-file parallel test suite via run_tests_parallel.py\n  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)\n\u25b6 pre-compiling bytecode cache\n\u25b6 launching test runner\nDiscovered 1 test files (~2 tests) under ['tests/pm/test_whisper_decode_live.py']; running with -j 5\n[100.0% |     2/~2 | \u27130 | \u27172] \u2717 tests/pm/test_whisper_decode_live.py (2\u2717, 1.4s)\n\n  \u2554\u254d Failed: tests/pm/test_whisper_decode_live.py \u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\n  \u2551 _______________ test_real_whisper_decode_stereo_resamples_stream _______________\n  \u2551 \n  \u2551     def test_real_whisper_decode_stereo_resamples_stream():\n  \u2551         \"\"\"Exercise the real decoder's channel mixing and 48kHz -> 16kHz path.\"\"\"\n  \u2551         import numpy as np\n  \u2551         from faster_whisper.audio import decode_audio\n  \u2551     \n  \u2551         print(_versions())\n  \u2551         t = np.arange(24000) / 48000\n  \u2551         tone = (8192 * np.sin(2 * np.pi * 440 * t)).astype(np.int16)\n  \u2551         stereo = np.column_stack((tone, tone))\n  \u2551     \n  \u2551 >       decoded = decode_audio(io.BytesIO(_wav(stereo, 48000)), sampling_rate=16000)\n  \u2551                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  \u2551 \n  \u2551 tests/pm/test_whisper_decode_live.py:59: \n  \u2551 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n  \u2551 /tmp/dot-audio-135260/main-voice-av19/lib/python3.14/site-packages/faster_whisper/audio.py:46: in decode_audio\n  \u2551     with av.open(input_file, mode=\"r\", metadata_errors=\"ignore\") as container:\n  \u2551          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  \u2551 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n  \u2551 \n  \u2551 >   ???\n  \u2551 E   TypeError: open() got an unexpected keyword argument 'metadata_errors'\n  \u2551 \n  \u2551 av/container/core.py:479: TypeError\n  \u2551 =========================== short test summary info ============================\n  \u2551 FAILED tests/pm/test_whisper_decode_live.py::test_real_whisper_decode_mono_pcm\n  \u2551 FAILED tests/pm/test_whisper_decode_live.py::test_real_whisper_decode_stereo_resamples_stream\n  \u2551 ============================== 2 failed in 0.47s ===============================\n  \u2551\n  \u2551  Repro: python -m pytest tests/pm/test_whisper_decode_live.py --confcutdir=tests/pm -m integration -s\n  \u255a\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\n\n\n=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 1.4s (5 workers) ===\n\n=== Per-file subprocess time distribution ===\n  Files:   1\n  Total subprocess CPU-wall: 1.4s  (runner wall: 1.4s, parallelism: 5x)\n  P50: 1.44s  P90: 1.44s  P95: 1.44s  P99: 1.44s  Max: 1.44s\n  <1s: 0 files (0%)  <2s: 1 files (100%)\n  Top 10 slowest:\n      1.44s  tests/pm/test_whisper_decode_live.py\n\n=== Failure output ===\n\n--- tests/pm/test_whisper_decode_live.py ---\n============================= test session starts ==============================\nplatform linux -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0\nrootdir: /workspace/dot/hermes/135260-extras-lock-evidence\nconfigfile: pyproject.toml\nplugins: anyio-4.15.1\ncollected 2 items\n\ntests/pm/test_whisper_decode_live.py {'faster-whisper': '1.2.1', 'av': '19.0.1', 'numpy': '2.4.3', 'ctranslate2': '4.8.1'}\nF{'faster-whisper': '1.2.1', 'av': '19.0.1', 'numpy': '2.4.3', 'ctranslate2': '4.8.1'}\nF\n\n=================================== FAILURES ===================================\n______________________ test_real_whisper_decode_mono_pcm _______________________\n\ntmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-9whx6zar/pytest-of-agent/pytest-0/test_real_whisper_decode_mono_0')\n\n    def test_real_whisper_decode_mono_pcm(tmp_path):\n        \"\"\"Real av.open + decode must retain deterministic nonzero PCM samples.\"\"\"\n        import numpy as np\n        from faster_whisper.audio import decode_audio\n    \n        print(_versions())\n        samples = np.tile(np.array([0, 4096, 8192, 4096, 0, -4096, -8192, -4096]), 1000)\n        path = tmp_path / \"synthetic tone.wav\"\n        path.write_bytes(_wav(samples, 16000))\n    \n>       decoded = decode_audio(str(path), sampling_rate=16000)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests/pm/test_whisper_decode_live.py:42: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/dot-audio-135260/main-voice-av19/lib/python3.14/site-packages/faster_whisper/audio.py:46: in decode_audio\n    with av.open(input_file, mode=\"r\", metadata_errors=\"ignore\") as container:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\n>   ???\nE   TypeError: open() got an unexpected keyword argument 'metadata_errors'\n\nav/container/core.py:479: TypeError\n_______________ test_real_whisper_decode_stereo_resamples_stream _______________\n\n    def test_real_whisper_decode_stereo_resamples_stream():\n        \"\"\"Exercise the real decoder's channel mixing and 48kHz -> 16kHz path.\"\"\"\n        import numpy as np\n        from faster_whisper.audio import decode_audio\n    \n        print(_versions())\n        t = np.arange(24000) / 48000\n        tone = (8192 * np.sin(2 * np.pi * 440 * t)).astype(np.int16)\n        stereo = np.column_stack((tone, tone))\n    \n>       decoded = decode_audio(io.BytesIO(_wav(stereo, 48000)), sampling_rate=16000)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests/pm/test_whisper_decode_live.py:59: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/dot-audio-135260/main-voice-av19/lib/python3.14/site-packages/faster_whisper/audio.py:46: in decode_audio\n    with av.open(input_file, mode=\"r\", metadata_errors=\"ignore\") as container:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\n>   ???\nE   TypeError: open() got an unexpected keyword argument 'metadata_errors'\n\nav/container/core.py:479: TypeError\n=========================== short test summary info ============================\nFAILED tests/pm/test_whisper_decode_live.py::test_real_whisper_decode_mono_pcm\nFAILED tests/pm/test_whisper_decode_live.py::test_real_whisper_decode_stereo_resamples_stream\n============================== 2 failed in 0.47s ===============================\n\n=== 1 file with test failures (2 tests failed) ===\n  tests/pm/test_whisper_decode_live.py  (2 tests failed)\n"
+    },
+    "main-stt-whisper-av19": {
+      "exit": 1,
+      "command": "HOME=/tmp/dot-audio-447/home HERMES_PYTHON=/tmp/dot-audio-135260/main-stt-whisper-av19/bin/python HERMES_TEST_FILE_RETRIES=0 scripts/run_tests.sh tests/pm/test_whisper_decode_live.py --confcutdir=tests/pm -m integration -s",
+      "output": "\u25b6 not activated \u2014 using HERMES_PYTHON: /tmp/dot-audio-135260/main-stt-whisper-av19/bin/python\n\u25b6 running per-file parallel test suite via run_tests_parallel.py\n  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)\n\u25b6 pre-compiling bytecode cache\n\u25b6 launching test runner\nDiscovered 1 test files (~2 tests) under ['tests/pm/test_whisper_decode_live.py']; running with -j 5\n[100.0% |     2/~2 | \u27130 | \u27172] \u2717 tests/pm/test_whisper_decode_live.py (2\u2717, 1.6s)\n\n  \u2554\u254d Failed: tests/pm/test_whisper_decode_live.py \u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\n  \u2551 _______________ test_real_whisper_decode_stereo_resamples_stream _______________\n  \u2551 \n  \u2551     def test_real_whisper_decode_stereo_resamples_stream():\n  \u2551         \"\"\"Exercise the real decoder's channel mixing and 48kHz -> 16kHz path.\"\"\"\n  \u2551         import numpy as np\n  \u2551         from faster_whisper.audio import decode_audio\n  \u2551     \n  \u2551         print(_versions())\n  \u2551         t = np.arange(24000) / 48000\n  \u2551         tone = (8192 * np.sin(2 * np.pi * 440 * t)).astype(np.int16)\n  \u2551         stereo = np.column_stack((tone, tone))\n  \u2551     \n  \u2551 >       decoded = decode_audio(io.BytesIO(_wav(stereo, 48000)), sampling_rate=16000)\n  \u2551                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  \u2551 \n  \u2551 tests/pm/test_whisper_decode_live.py:59: \n  \u2551 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n  \u2551 /tmp/dot-audio-135260/main-stt-whisper-av19/lib/python3.14/site-packages/faster_whisper/audio.py:46: in decode_audio\n  \u2551     with av.open(input_file, mode=\"r\", metadata_errors=\"ignore\") as container:\n  \u2551          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  \u2551 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n  \u2551 \n  \u2551 >   ???\n  \u2551 E   TypeError: open() got an unexpected keyword argument 'metadata_errors'\n  \u2551 \n  \u2551 av/container/core.py:479: TypeError\n  \u2551 =========================== short test summary info ============================\n  \u2551 FAILED tests/pm/test_whisper_decode_live.py::test_real_whisper_decode_mono_pcm\n  \u2551 FAILED tests/pm/test_whisper_decode_live.py::test_real_whisper_decode_stereo_resamples_stream\n  \u2551 ============================== 2 failed in 0.52s ===============================\n  \u2551\n  \u2551  Repro: python -m pytest tests/pm/test_whisper_decode_live.py --confcutdir=tests/pm -m integration -s\n  \u255a\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\n\n\n=== Summary: 1 files, 0 tests passed, 2 failed (100% complete) in 1.6s (5 workers) ===\n\n=== Per-file subprocess time distribution ===\n  Files:   1\n  Total subprocess CPU-wall: 1.6s  (runner wall: 1.6s, parallelism: 5x)\n  P50: 1.55s  P90: 1.55s  P95: 1.55s  P99: 1.55s  Max: 1.55s\n  <1s: 0 files (0%)  <2s: 1 files (100%)\n  Top 10 slowest:\n      1.55s  tests/pm/test_whisper_decode_live.py\n\n=== Failure output ===\n\n--- tests/pm/test_whisper_decode_live.py ---\n============================= test session starts ==============================\nplatform linux -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0\nrootdir: /workspace/dot/hermes/135260-extras-lock-evidence\nconfigfile: pyproject.toml\nplugins: anyio-4.15.1\ncollected 2 items\n\ntests/pm/test_whisper_decode_live.py {'faster-whisper': '1.2.1', 'av': '19.0.1', 'numpy': '2.4.3', 'ctranslate2': '4.8.1'}\nF{'faster-whisper': '1.2.1', 'av': '19.0.1', 'numpy': '2.4.3', 'ctranslate2': '4.8.1'}\nF\n\n=================================== FAILURES ===================================\n______________________ test_real_whisper_decode_mono_pcm _______________________\n\ntmp_path = PosixPath('/var/tmp/hermes-pytest-1000/r-g9azq_4v/pytest-of-agent/pytest-0/test_real_whisper_decode_mono_0')\n\n    def test_real_whisper_decode_mono_pcm(tmp_path):\n        \"\"\"Real av.open + decode must retain deterministic nonzero PCM samples.\"\"\"\n        import numpy as np\n        from faster_whisper.audio import decode_audio\n    \n        print(_versions())\n        samples = np.tile(np.array([0, 4096, 8192, 4096, 0, -4096, -8192, -4096]), 1000)\n        path = tmp_path / \"synthetic tone.wav\"\n        path.write_bytes(_wav(samples, 16000))\n    \n>       decoded = decode_audio(str(path), sampling_rate=16000)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests/pm/test_whisper_decode_live.py:42: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/dot-audio-135260/main-stt-whisper-av19/lib/python3.14/site-packages/faster_whisper/audio.py:46: in decode_audio\n    with av.open(input_file, mode=\"r\", metadata_errors=\"ignore\") as container:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\n>   ???\nE   TypeError: open() got an unexpected keyword argument 'metadata_errors'\n\nav/container/core.py:479: TypeError\n_______________ test_real_whisper_decode_stereo_resamples_stream _______________\n\n    def test_real_whisper_decode_stereo_resamples_stream():\n        \"\"\"Exercise the real decoder's channel mixing and 48kHz -> 16kHz path.\"\"\"\n        import numpy as np\n        from faster_whisper.audio import decode_audio\n    \n        print(_versions())\n        t = np.arange(24000) / 48000\n        tone = (8192 * np.sin(2 * np.pi * 440 * t)).astype(np.int16)\n        stereo = np.column_stack((tone, tone))\n    \n>       decoded = decode_audio(io.BytesIO(_wav(stereo, 48000)), sampling_rate=16000)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests/pm/test_whisper_decode_live.py:59: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/dot-audio-135260/main-stt-whisper-av19/lib/python3.14/site-packages/faster_whisper/audio.py:46: in decode_audio\n    with av.open(input_file, mode=\"r\", metadata_errors=\"ignore\") as container:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\n>   ???\nE   TypeError: open() got an unexpected keyword argument 'metadata_errors'\n\nav/container/core.py:479: TypeError\n=========================== short test summary info ============================\nFAILED tests/pm/test_whisper_decode_live.py::test_real_whisper_decode_mono_pcm\nFAILED tests/pm/test_whisper_decode_live.py::test_real_whisper_decode_stereo_resamples_stream\n============================== 2 failed in 0.52s ===============================\n\n=== 1 file with test failures (2 tests failed) ===\n  tests/pm/test_whisper_decode_live.py  (2 tests failed)\n"
+    },
+    "pr-voice-av18": {
+      "exit": 0,
+      "command": "HOME=/tmp/dot-audio-447/home HERMES_PYTHON=/tmp/dot-audio-135260/pr-voice-av18/bin/python HERMES_TEST_FILE_RETRIES=0 scripts/run_tests.sh tests/pm/test_whisper_decode_live.py --confcutdir=tests/pm -m integration -s",
+      "output": "\u25b6 not activated \u2014 using HERMES_PYTHON: /tmp/dot-audio-135260/pr-voice-av18/bin/python\n\u25b6 running per-file parallel test suite via run_tests_parallel.py\n  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)\n\u25b6 pre-compiling bytecode cache\n\u25b6 launching test runner\nDiscovered 1 test files (~2 tests) under ['tests/pm/test_whisper_decode_live.py']; running with -j 5\n[100.0% |     2/~2 | \u27132 | \u27170] \u2713 tests/pm/test_whisper_decode_live.py (2\u2713, 1.6s)\n\n=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 1.6s (5 workers) ===\n  Durations cached to test_durations.json (1 files)\n\n=== Per-file subprocess time distribution ===\n  Files:   1\n  Total subprocess CPU-wall: 1.6s  (runner wall: 1.6s, parallelism: 5x)\n  P50: 1.55s  P90: 1.55s  P95: 1.55s  P99: 1.55s  Max: 1.55s\n  <1s: 0 files (0%)  <2s: 1 files (100%)\n  Top 10 slowest:\n      1.55s  tests/pm/test_whisper_decode_live.py\n"
+    },
+    "pr-stt-whisper-av18": {
+      "exit": 0,
+      "command": "HOME=/tmp/dot-audio-447/home HERMES_PYTHON=/tmp/dot-audio-135260/pr-stt-whisper-av18/bin/python HERMES_TEST_FILE_RETRIES=0 scripts/run_tests.sh tests/pm/test_whisper_decode_live.py --confcutdir=tests/pm -m integration -s",
+      "output": "\u25b6 not activated \u2014 using HERMES_PYTHON: /tmp/dot-audio-135260/pr-stt-whisper-av18/bin/python\n\u25b6 running per-file parallel test suite via run_tests_parallel.py\n  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)\n\u25b6 pre-compiling bytecode cache\n\u25b6 launching test runner\nDiscovered 1 test files (~2 tests) under ['tests/pm/test_whisper_decode_live.py']; running with -j 5\n[100.0% |     2/~2 | \u27132 | \u27170] \u2713 tests/pm/test_whisper_decode_live.py (2\u2713, 1.5s)\n\n=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 1.6s (5 workers) ===\n  Durations cached to test_durations.json (1 files)\n\n=== Per-file subprocess time distribution ===\n  Files:   1\n  Total subprocess CPU-wall: 1.5s  (runner wall: 1.6s, parallelism: 5x)\n  P50: 1.55s  P90: 1.55s  P95: 1.55s  P99: 1.55s  Max: 1.55s\n  <1s: 0 files (0%)  <2s: 1 files (100%)\n  Top 10 slowest:\n      1.55s  tests/pm/test_whisper_decode_live.py\n"
+    }
+  },
+  "lock": {
+    "pr": {
+      "exit": 0,
+      "command": "HOME=/tmp/dot-audio-447/home UV_CACHE_DIR=/tmp/dot-audio-447/cache /tmp/dot-audio-447/venv/bin/python -m pm.build_env --source /tmp/dot-audio-135260/pr --check-lock --python /tmp/dot-audio-447/venv/bin/python --cache /tmp/dot-audio-447/cache",
+      "output": "Preparing the isolated Hermes runtime\u2026\n  \u2192 Installing Python dependencies\u2026\n  \u2713 Installing Python dependencies\n  \u2192 Resolving Python dependencies\u2026\n  \u2713 Resolving Python dependencies\n"
+    },
+    "stale": {
+      "exit": 1,
+      "command": "HOME=/tmp/dot-audio-447/home UV_CACHE_DIR=/tmp/dot-audio-447/cache /tmp/dot-audio-447/venv/bin/python -m pm.build_env --source /tmp/dot-audio-135260/stale --check-lock --python /tmp/dot-audio-447/venv/bin/python --cache /tmp/dot-audio-447/cache",
+      "output": "  \u2192 Resolving Python dependencies\u2026\n  \u2717 Resolving Python dependencies failed; last 6 lines of output:\n      Using CPython 3.14.7 interpreter at: /tmp/dot-audio-447/venv/bin/python\n         Updating https://github.com/giampaolo/psutil.git (380bd2b59c67b0e1b04bbf3a90b11744f4f96644)\n          Updated https://github.com/giampaolo/psutil.git (380bd2b59c67b0e1b04bbf3a90b11744f4f96644)\n      Resolved 328 packages in 20.87s\n      error: The lockfile at `uv.lock` needs to be updated, but `--check` was provided.\n      hint: To update the lockfile, run `uv lock`.\npython environment: venv: uv lock exited 1: Using CPython 3.14.7 interpreter at: /tmp/dot-audio-447/venv/bin/python\n   Updating https://github.com/giampaolo/psutil.git (380bd2b59c67b0e1b04bbf3a90b11744f4f96644)\n    Updated https://github.com/giampaolo/psutil.git (380bd2b59c67b0e1b04bbf3a90b11744f4f96644)\nResolved 328 packages in 20.87s\nerror: The lockfile at `uv.lock` needs to be updated, but `--check` was provided.\n\nhint: To update the lockfile, run `uv lock`. \u2014 retry, or run `hermes pm doctor`\n"
+    },
+    "export-voice": {
+      "exit": 0,
+      "command": "HOME=/tmp/dot-audio-447/home UV_CACHE_DIR=/tmp/dot-audio-447/cache /tmp/dot-audio-447/venv/bin/python -m pm.build_env --source /tmp/dot-audio-135260/pr --export-requirements /tmp/dot-audio-135260/pr-voice-locked.txt --extra voice --python /tmp/dot-audio-447/venv/bin/python --cache /tmp/dot-audio-447/cache",
+      "audio_requirements": [
+        "av==18.1.0 ; (python_full_version >= '3.14' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32') or (python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'win32')",
+        "ctranslate2==4.8.1 ; (python_full_version >= '3.14' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32') or (python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'win32')",
+        "faster-whisper==1.2.1 ; (python_full_version >= '3.14' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32') or (python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'win32')",
+        "huggingface-hub==1.24.0 ; (python_full_version >= '3.14' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32') or (python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'win32')",
+        "numpy==2.4.3 ; python_full_version >= '3.14'",
+        "onnxruntime==1.29.0 ; (python_full_version >= '3.14' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32') or (python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'win32')",
+        "sounddevice==0.5.5 ; python_full_version >= '3.14'",
+        "tokenizers==0.23.1 ; (python_full_version >= '3.14' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32') or (python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'win32')"
+      ]
+    },
+    "export-stt-whisper": {
+      "exit": 0,
+      "command": "HOME=/tmp/dot-audio-447/home UV_CACHE_DIR=/tmp/dot-audio-447/cache /tmp/dot-audio-447/venv/bin/python -m pm.build_env --source /tmp/dot-audio-135260/pr --export-requirements /tmp/dot-audio-135260/pr-stt-whisper-locked.txt --extra stt-whisper --python /tmp/dot-audio-447/venv/bin/python --cache /tmp/dot-audio-447/cache",
+      "audio_requirements": [
+        "av==18.1.0 ; (python_full_version >= '3.14' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32') or (python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'win32')",
+        "ctranslate2==4.8.1 ; (python_full_version >= '3.14' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32') or (python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'win32')",
+        "faster-whisper==1.2.1 ; (python_full_version >= '3.14' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32') or (python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'win32')",
+        "huggingface-hub==1.24.0 ; (python_full_version >= '3.14' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32') or (python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'win32')",
+        "numpy==2.4.3 ; (python_full_version >= '3.14' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32') or (python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'win32')",
+        "onnxruntime==1.29.0 ; (python_full_version >= '3.14' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32') or (python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'win32')",
+        "tokenizers==0.23.1 ; (python_full_version >= '3.14' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_machine != 'ARM64' and sys_platform == 'win32') or (python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'win32')"
+      ]
+    }
+  },
+  "metadata": {
+    "exit": 0,
+    "command": "HOME=/tmp/dot-audio-447/home HERMES_PYTHON=/tmp/dot-audio-447/venv/bin/python HERMES_TEST_FILE_RETRIES=0 scripts/run_tests.sh tests/pm/test_extras.py --confcutdir=tests/pm -k faster_whisper -s",
+    "output": "\u25b6 not activated \u2014 using HERMES_PYTHON: /tmp/dot-audio-447/venv/bin/python\n\u25b6 running per-file parallel test suite via run_tests_parallel.py\n  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)\n\u25b6 pre-compiling bytecode cache\n\u25b6 launching test runner\nDiscovered 1 test files (~18 tests) under ['tests/pm/test_extras.py']; running with -j 5\n[100.0% |    18/~18 | \u27132 | \u27170] \u2713 tests/pm/test_extras.py (2\u2713, 2.7s)\n\n=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 3.1s (5 workers) ===\n  Durations cached to test_durations.json (1 files)\n\n=== Per-file subprocess time distribution ===\n  Files:   1\n  Total subprocess CPU-wall: 2.7s  (runner wall: 3.1s, parallelism: 5x)\n  P50: 2.66s  P90: 2.66s  P95: 2.66s  P99: 2.66s  Max: 2.66s\n  <1s: 0 files (0%)  <2s: 0 files (0%)\n  Top 10 slowest:\n      2.66s  tests/pm/test_extras.py\n"
+  },
+  "harness_sha256": "ab0f3fd474000b1f8e93d20cf6442d33a5ae7282fc3f998397af7548ac0f0576",
+  "fixture_provenance": {
+    "pr": "pyproject.toml and uv.lock via git show 38dc31f53b79b9b60012ea918463180b5b7cbb59",
+    "main": "pyproject.toml and uv.lock via git show ddfaf76cc61bde068148d622db50b36967e7c7a8",
+    "stale": "PR pyproject.toml + git show 38dc31f53b79b9b60012ea918463180b5b7cbb59^:uv.lock",
+    "fixture_hashes": {
+      "pr/uv.lock": "ee50c85dc0ce35a5272b8c2c0941e417c3a9aef9f0294245ec4a64350dcfcff3",
+      "pr/pyproject.toml": "dd8c3992efe1acfa33616336869704fc41cd8dc69d7abda03fc78736eb1fc582",
+      "main/uv.lock": "2bc4db483e9cba927cd7147f9ccbb09635f85bb3f1f36d6e9d51d06b65d1c67e",
+      "main/pyproject.toml": "cadde2f6a92574d292103f43abf66408b1d841cd9ea332ca7f3e3dfc5dcc87fd",
+      "stale/uv.lock": "2bc4db483e9cba927cd7147f9ccbb09635f85bb3f1f36d6e9d51d06b65d1c67e",
+      "stale/pyproject.toml": "dd8c3992efe1acfa33616336869704fc41cd8dc69d7abda03fc78736eb1fc582"
+    }
+  },
+  "reproduction_script": "import json\nimport os\nfrom pathlib import Path\nimport subprocess\nimport urllib.request\n\nroot = Path('/tmp/dot-audio-135260')\nuv = '/tmp/dot-audio-447/venv/bin/uv'\npython = '/tmp/dot-audio-447/venv/bin/python'\nenv = dict(os.environ, HOME='/tmp/dot-audio-447/home', UV_CACHE_DIR='/tmp/dot-audio-447/cache')\nresults = []\n\ndef run(label, args):\n    if args[0] == uv:\n        args.insert(1, '--no-config')\n    p = subprocess.run(args, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)\n    (root / (label + '.log')).write_text(p.stdout)\n    results.append(dict(label=label, command=args, exit=p.returncode, output=p.stdout))\n    (root / 'matrix-results.json').write_text(json.dumps(results, indent=2))\n    print(label, p.returncode, flush=True)\n    return p\n\nfor package in ['av', 'faster-whisper']:\n    with urllib.request.urlopen('https://pypi.org/pypi/' + package + '/json') as response:\n        data = json.load(response)\n    (root / (package + '-release.json')).write_text(json.dumps({\n        'version': data['info']['version'], 'requires_dist': data['info']['requires_dist'],\n        'urls': data['urls']}, indent=2))\n\nfor extra in ['voice', 'stt-whisper']:\n    run('pr-' + extra + '-reject19', [uv, 'pip', 'compile', '--python', python,\n        str(root / ('pr-' + extra + '.in')), '-c', str(root / 'constraints-av19.txt')])\n    for label, av in [('main', '19'), ('pr', '18')]:\n        case = label + '-' + extra + '-av' + av\n        venv = root / case\n        run(case + '-venv', [uv, 'venv', '--python', python, str(venv)])\n        installed = run(case + '-install', [uv, 'pip', 'install', '--python', str(venv / 'bin/python'),\n            '-r', str(root / (label + '-' + extra + '.in')),\n            '-c', str(root / ('constraints-av' + av + '.txt'))])\n        if installed.returncode:\n            continue\n        run(case + '-freeze', [uv, 'pip', 'freeze', '--python', str(venv / 'bin/python')])\n        run(case + '-check', [uv, 'pip', 'check', '--python', str(venv / 'bin/python')])\n",
+  "aborted_bootstrap_log": "\u25b6 environment missing or stale for /workspace/dot/hermes/135260-extras-lock-evidence \u2014 re-running under run-in-hermes-env\n\n\u001b[0;36m\u2624 Hermes Agent Setup\u001b[0m\n\n\u001b[0;36m\u2192\u001b[0m Checking for uv...\n\u001b[0;32m\u2713\u001b[0m pinned uv found (uv 0.12.3 (x86_64-unknown-linux-gnu))\n\u001b[0;36m\u2192\u001b[0m Installing python + tools + dependencies via pm (hash-verified via uv.lock)...\n\u001b[0;36m\u2192\u001b[0m (first run on a fresh checkout can take 1-5 minutes)\nDownloading cpython-3.14.7-linux-x86_64-gnu (download) (34.3MiB)\n Downloaded cpython-3.14.7-linux-x86_64-gnu (download)\nInstalled Python 3.14.7 in 1.38s\n + cpython-3.14.7-linux-x86_64-gnu\n  ffmpeg:   3.3%  4.0 MiB / 120.7 MiB\n  ffmpeg:   6.6%  8.0 MiB / 120.7 MiB\n  ffmpeg:   9.9%  12.0 MiB / 120.7 MiB\n  ffmpeg:  13.3%  16.0 MiB / 120.7 MiB\n  ffmpeg:  16.6%  20.0 MiB / 120.7 MiB\n  ffmpeg:  19.9%  24.0 MiB / 120.7 MiB\n  ffmpeg:  23.2%  28.0 MiB / 120.7 MiB\n  ffmpeg:  26.5%  32.0 MiB / 120.7 MiB\n  ffmpeg:  29.8%  36.0 MiB / 120.7 MiB\n  ffmpeg:  34.0%  41.0 MiB / 120.7 MiB\n  ffmpeg:  37.3%  45.0 MiB / 120.7 MiB\n  ffmpeg:  40.6%  49.0 MiB / 120.7 MiB\n  ffmpeg:  43.9%  53.0 MiB / 120.7 MiB\n  ffmpeg:  47.2%  57.0 MiB / 120.7 MiB\n  ffmpeg:  50.5%  61.0 MiB / 120.7 MiB\n  ffmpeg:  53.9%  65.1 MiB / 120.7 MiB\n  ffmpeg:  57.2%  69.1 MiB / 120.7 MiB\n  ffmpeg:  60.5%  73.1 MiB / 120.7 MiB\n  ffmpeg:  63.9%  77.1 MiB / 120.7 MiB\n  ffmpeg:  67.2%  81.1 MiB / 120.7 MiB\n  ffmpeg:  70.5%  85.1 MiB / 120.7 MiB\n  ffmpeg:  73.8%  89.1 MiB / 120.7 MiB\n  ffmpeg:  77.1%  93.1 MiB / 120.7 MiB\n  ffmpeg:  80.4%  97.1 MiB / 120.7 MiB\n  ffmpeg:  83.9%  101.3 MiB / 120.7 MiB\n  ffmpeg:  87.3%  105.4 MiB / 120.7 MiB\n  ffmpeg:  90.6%  109.4 MiB / 120.7 MiB\n  ffmpeg:  94.0%  113.6 MiB / 120.7 MiB\n  ffmpeg:  97.4%  117.6 MiB / 120.7 MiB\n  ffmpeg: 100.0%  120.7 MiB / 120.7 MiB\n  ffmpeg: 100.0%  120.7 MiB / 120.7 MiB\n  ffmpeg: unpacking\n\u2713 ffmpeg\n  node:  12.5%  4.0 MiB / 32.0 MiB\n  node:  28.1%  9.0 MiB / 32.0 MiB\n  node:  40.6%  13.0 MiB / 32.0 MiB\n  node:  53.1%  17.0 MiB / 32.0 MiB\n  node:  68.8%  22.0 MiB / 32.0 MiB\n  node:  84.4%  27.0 MiB / 32.0 MiB\n  node: 100.0%  32.0 MiB / 32.0 MiB\n  node: 100.0%  32.0 MiB / 32.0 MiB\n  node: unpacking\n",
+  "validation": {
+    "scripts_check": {
+      "command": "HOME=/tmp/dot-audio-447/home UV_CACHE_DIR=/tmp/dot-audio-447/cache PATH=/tmp/dot-audio-447/venv/bin:$PATH /tmp/dot-audio-447/venv/bin/python scripts/check --base a1ba85f7422eb2019786ae561da4f8b3335c6244",
+      "exit": 0,
+      "output": "\n=== health (ok) ===\ncode health: no measured files changed\n\nscripts/check: 11 checks, ok\n",
+      "limit": "Run before adding the receipt; no measured code files changed. Receipt separately validated with json.tool and git diff --check."
+    },
+    "original_files_unchanged": true
+  }
+}
