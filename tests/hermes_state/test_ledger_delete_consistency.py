@@ -273,3 +273,48 @@ def test_local_reset_stamps_ended_at_on_the_same_float_clock_as_started_at(tmp_p
         reset_local_target(db, epoch=epoch, parent_session_id=sid, entry=reset)
         parent = db.get_session(sid)
         assert parent['ended_at'] >= max(parent['started_at'], before)
+
+
+def _store_reset(db, epoch, sid, reset):
+    from hermes_state_local_lineage import reset_local_target
+    reset_local_target(db, epoch=epoch, parent_session_id=sid, entry=reset)
+    return reset['session_id']
+
+
+def _canonical_reset(db, epoch, sid, _reset):
+    row = db.get_session(sid)
+    return rt.mutate_runtime_session(db, epoch=epoch, principal_id='human', session_id=sid,
+        request_id='explicit-reset', expected_revision=row['runtime_revision'],
+        expected_generation=row['runtime_generation'], operation='reset', payload={})['target_session_id']
+
+
+@pytest.mark.parametrize('sweep', [
+    lambda db: db.prune_sessions(older_than_days=30),
+    lambda db: db.delete_empty_sessions(),
+    lambda db: 0,
+], ids=['retention', 'empty', 'no_sweep'])
+@pytest.mark.parametrize('reset', [_store_reset, _canonical_reset], ids=['session_store', 'canonical'])
+def test_housekeeping_keeps_the_logical_owner_of_a_live_reset_child(tmp_path, reset, sweep):
+    """A local reset keeps the policy, FIFO and generation on the logical id and moves the transcript
+    to a child. The logical row is ended, empty and old, so a sweep picks it, but the live child
+    still needs it: without it the next message is refused and the session cannot be restored."""
+    from hermes_state_local import local_receipt
+    from hermes_state_local_lineage import validate_local_lineage
+    with closing(SessionDB(tmp_path / 'state.db')) as db:
+        epoch = rt.begin_runtime_epoch(db, instance_id='owner')
+        sid, entry = _local_session(db, epoch)
+        child = reset(db, epoch, sid, entry)
+        db.append_message(child, 'user', 'after reset')
+        db.append_message(child, 'assistant', 'still here')
+        stamp = time.time() - 100 * 86400
+        db._execute_write(lambda c: c.execute('UPDATE sessions SET started_at=?, ended_at=? WHERE id=?',
+                                              (stamp, stamp, sid)))
+
+        sweep(db)
+
+        assert [m['content'] for m in db.get_messages(child)] == ['after reset', 'still here']
+        with db._read_ctx() as conn:
+            assert validate_local_lineage(conn, local_receipt(db, sid)) == child
+        admitted = rt.admit_session_input(db, epoch=epoch, principal_id='human', session_id=sid,
+                                          request_id='next', payload={'text': 'next'})
+        assert admitted['status'] == 'queued'
