@@ -1066,14 +1066,15 @@ def test_a_resume_normalized_but_unchanged_transcript_is_not_stale(tmp_path, mod
     assert result is not held
 
 
-def test_a_held_history_without_row_ids_still_sees_an_in_place_rewrite(tmp_path):
+@pytest.mark.parametrize("live_replay", [False, True])
+def test_a_held_history_without_row_ids_still_sees_an_in_place_rewrite(tmp_path, live_replay):
     """ACP restore and API session continuation load the transcript without ``_row_id``. Those dicts still
     carry the durable identity and the stored-row digest, so a lease-less pass from them must still notice
     that another handle rewrote a row in place, and must not put the old text back live."""
     from hermes_state import SessionDB
 
     db, cc, _ = _held_session(tmp_path, "micro")
-    held = db.get_messages_as_conversation("s")
+    held = db.get_messages_as_conversation("s", repair_alternation=live_replay)
     assert not any("_row_id" in m for m in held)
     other = SessionDB(db_path=tmp_path / "state.db")
     original = next(m for m in reversed(other.get_resume_conversations("s")[0]) if m.get("role") == "assistant")
@@ -1105,3 +1106,19 @@ def test_rewrite_pruned_rows_refuses_an_assistant_row_whose_arguments_changed(tm
         db.rewrite_pruned_rows("s", [(stale, {**stale, "tool_calls": truncated})])
 
     assert _live_rows(tmp_path / "state.db") == before
+
+
+def test_an_in_place_prune_leaves_its_own_history_current(tmp_path):
+    """The rows a prune rewrote are this process's own newer version. A held list that carries stored-row
+    digests must come back from the prune carrying the new ones, or every later pass on it reads as stale."""
+    from agent.context_compressor import _archive_watermark_for
+    from agent.message_metadata import DB_ROW_SNAPSHOT
+
+    db, cc, _ = _held_session(tmp_path, "prune")
+    held = db.get_messages_as_conversation("s", repair_alternation=True)
+    assert all(isinstance(m.get(DB_ROW_SNAPSHOT), str) for m in held)
+
+    pruned, count = cc.prune_tool_results_only(held, current_tokens=120_000)
+
+    assert count > 0 and pruned is not held
+    assert _archive_watermark_for(db, "s", pruned) is not None
