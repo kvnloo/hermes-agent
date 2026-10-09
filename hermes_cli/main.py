@@ -256,12 +256,12 @@ def _early_interface_config_path() -> str:
 
 def _early_display_config() -> "tuple[str, bool]":
     """``(display.interface, display.tern)`` via a minimal YAML read. Best-effort:
-    any error falls back to ``("cli", True)`` (classic REPL, Tern frontend allowed)."""
+    any error falls back to ``("cli", False)`` (classic REPL, TSP opt-in disabled)."""
     global _EARLY_INTERFACE_CACHE
     cfg_path = _early_interface_config_path()
     if _EARLY_INTERFACE_CACHE is not None and _EARLY_INTERFACE_CACHE[0] == cfg_path:
         return _EARLY_INTERFACE_CACHE[1], _EARLY_INTERFACE_CACHE[2]
-    value, tern = "cli", True
+    value, tern = "cli", False
     try:
         if os.path.exists(cfg_path):
             import hermes_yaml as _yaml_iface
@@ -273,31 +273,43 @@ def _early_display_config() -> "tuple[str, bool]":
                 iface = disp.get("interface")
                 if isinstance(iface, str) and iface.strip().lower() == "tui":
                     value = "tui"
-                tern = disp.get("tern") is not False
+                tern = disp.get("tern") is True
     except Exception:
-        value, tern = "cli", True  # best-effort — default to classic REPL on any error
+        value, tern = "cli", False  # unreadable config cannot opt into an experimental frontend
     _EARLY_INTERFACE_CACHE = (cfg_path, value, tern)
     return value, tern
 
 
 
 def _tern_terminal_early(env: "os._Environ[str] | dict" = os.environ) -> bool:
-    """Whether to try the Tern frontend, from the environment alone: ``HERMES_TERN=1``
-    forces it (Tern over ssh), ``HERMES_TERN=0`` opts out, else ``TERM_PROGRAM=tern``
-    outside tmux/screen/zellij (which drop the protocol's APC strings)."""
+    """Whether a TSP probe can reach Tern. HERMES_TERN=1 supports SSH, but
+    never probes through tmux/screen/zellij, which swallow TSP APC.
+    HERMES_TERN=0 disables probing regardless of configuration.
+    """
     flag = (env.get("HERMES_TERN") or "").strip().lower()
     if flag in {"0", "false", "no", "off"}:
         return False
+    if any(env.get(k) for k in ("TMUX", "STY", "ZELLIJ")):
+        return False
     if flag in {"1", "true", "yes", "on"}:
         return True
-    return env.get("TERM_PROGRAM") == "tern" and not any(env.get(k) for k in ("TMUX", "STY", "ZELLIJ"))
+    return env.get("TERM_PROGRAM") == "tern"
+
+
+def _tern_activation_wanted(config_enabled: bool, env: "os._Environ[str] | dict" = os.environ) -> bool:
+    """Experimental TSP needs explicit env opt-in or display.tern: true.
+    Unreadable configuration cannot implicitly enable a frontend.
+    """
+    if not _tern_terminal_early(env):
+        return False
+    return (env.get("HERMES_TERN") or "").strip().lower() in {"1", "true", "yes", "on"} or config_enabled
 
 
 def _wants_tui_early(argv: "list[str] | None" = None) -> bool:
     """Earliest TUI decision, usable before argparse/config imports.
 
     Precedence: ``--cli`` wins, then ``--tui``/``HERMES_TUI=1``, then a
-    real-TTY gate, then Tern (``_tern_terminal_early`` unless ``display.tern: false``),
+    real-TTY gate, then opted-in Tern (``HERMES_TERN=1`` or ``display.tern: true``),
     then ``display.interface``. The TTY gate is load-bearing
     for headless spawners (kanban workers, cron, pipes running ``chat -q``):
     a ``display.interface: tui`` default used to boot the TUI here, whose
@@ -316,7 +328,7 @@ def _wants_tui_early(argv: "list[str] | None" = None) -> bool:
     except Exception:
         return False
     interface, tern = _early_display_config()
-    return (tern and _tern_terminal_early()) or interface == "tui"
+    return _tern_activation_wanted(tern) or interface == "tui"
 
 
 # Mouse-tracking residue suppression — runs BEFORE every other import on the

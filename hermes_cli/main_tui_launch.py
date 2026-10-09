@@ -91,22 +91,26 @@ NO_TSP_EXIT = 75
 
 
 def _tern_frontend_wanted(env: dict) -> bool:
-    """Whether to try the Tern frontend (ui-tsp) before the Ink TUI.
+    """Attempt ui-tsp only with explicit consent.
 
-    ``HERMES_TERN=1`` always tries it (Tern over ssh, where ``TERM_PROGRAM`` doesn't travel),
-    ``HERMES_TERN=0`` or ``display.tern: false`` never does; otherwise it runs when the
-    terminal names itself Tern outside a multiplexer (tmux, screen and zellij drop the
-    protocol's APC strings). ui-tsp still probes and exits ``NO_TSP_EXIT`` without it.
+    HERMES_TERN=1 forces a handshake (including SSH), display.tern: true
+    permits Tern auto-detection, HERMES_TERN=0 disables it, and a multiplexer
+    blocks the probe. Config failures fail closed. No handshake falls back to Ink.
     """
-    from hermes_cli.main import _tern_terminal_early
+    from hermes_cli.main import _tern_activation_wanted, _tern_terminal_early
+
     if not _tern_terminal_early(env):
         return False
+    # Explicit environment opt-in must work even if config is unreadable.
+    if _tern_activation_wanted(False, env):
+        return True
     try:
         from hermes_cli.config import load_config
         display = load_config().get("display", {})
-        return not (isinstance(display, dict) and display.get("tern") is False)
+        enabled = isinstance(display, dict) and display.get("tern") is True
     except Exception:
-        return True
+        enabled = False
+    return _tern_activation_wanted(enabled, env)
 
 
 def _make_tsp_argv(project_root: Path) -> Optional[tuple[list[str], Path]]:
@@ -127,6 +131,17 @@ def _make_tsp_argv(project_root: Path) -> Optional[tuple[list[str], Path]]:
         prepare_launch_dependencies(project_root, env=env)
         build_source_tsp(project_root, env=env)
     return [_tui_node_bin("node"), str(tsp_dir / "dist/entry.js")], tsp_dir
+
+
+def _run_tui_frontend(tsp: Optional[tuple[list[str], Path]], tui_dir: Path,
+                      tui_dev: bool, env: dict) -> int:
+    """Fallback to Ink only for TSP no-handshake (exit 75), not runtime errors."""
+    if tsp is not None:
+        code = subprocess.call(tsp[0], cwd=str(tsp[1]), env=env)
+        if code != NO_TSP_EXIT:
+            return code
+    argv, cwd = _make_tui_argv(tui_dir, tui_dev)
+    return subprocess.call(argv, cwd=str(cwd), env=env)
 
 
 def _find_bundled_tui(hermes_cli_dir: Path | None = None) -> Path | None:
@@ -493,11 +508,7 @@ def _launch_tui(
         try:
             # --dev is the Ink TUI's hot-reload loop; ui-tsp has its own `npm run bundle`.
             tsp = _make_tsp_argv(PROJECT_ROOT) if not tui_dev and _tern_frontend_wanted(env) else None
-            if tsp:
-                code = subprocess.call(tsp[0], cwd=str(tsp[1]), env=env)
-            if code is None or code == NO_TSP_EXIT:
-                argv, cwd = _make_tui_argv(tui_dir, tui_dev)
-                code = subprocess.call(argv, cwd=str(cwd), env=env)
+            code = _run_tui_frontend(tsp, tui_dir, tui_dev, env)
         except KeyboardInterrupt:
             code = 130
 
@@ -548,7 +559,7 @@ def _sync_bundled_skills_quietly() -> None:
 
 def _resolve_use_tui(args) -> bool:
     """Decide whether to launch the TUI: ``--cli`` → classic; ``--tui`` → TUI; no TTY → classic;
-    ``HERMES_TUI=1`` → TUI; Tern (``_tern_frontend_wanted``) → TUI; ``display.interface`` config;
+    ``HERMES_TUI=1`` → TUI; opted-in Tern (``_tern_frontend_wanted``) → TUI; ``display.interface`` config;
     default classic.
 
     The TTY gate is load-bearing: ambient preferences must never hijack a piped
@@ -566,7 +577,7 @@ def _resolve_use_tui(args) -> bool:
         return False
     if os.environ.get("HERMES_TUI") == "1":
         return True
-    # Under Tern the native frontend beats the classic REPL; `--cli` above still wins.
+    # Opted-in TSP can select the TUI; Tern detection alone does not change CLI defaults.
     if _tern_frontend_wanted(dict(os.environ)):
         return True
     try:
