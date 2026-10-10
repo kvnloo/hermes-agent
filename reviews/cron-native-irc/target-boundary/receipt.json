@@ -1,0 +1,83 @@
+{
+  "observed_utc": "2026-10-10T12:56:47Z",
+  "pins": {
+    "owner": "d310978d039e479d1df5f0de8752adf6e64adea2",
+    "base": "dce1e9b37581dd62e480a9064dc04a709c2940d3",
+    "current_main": "f925b01791fe052e7d55dc975750c0bd985aff91",
+    "prior_evidence": "e114b0cf78802d11131e0cb44a831dbbe2a4ae6f"
+  },
+  "runtime": "Linux CPython 3.12.14, unsupported dependency-only diagnostic; no installs",
+  "test_sha256": {
+    "tests/tools/test_cron_target_boundary.py": "3c3ad6d81715f3251c4120c2cf2f98d635c3d61440340616775b706007f419d8",
+    "tests/tools/test_cron_deferred_delivery_validation.py": "d247b3bbc75b5bbc12c9a949ac34ae7e7b743ea69ba6ac90b99ba7fbf4c2dc95",
+    "reviews/cron-native-irc/irc_native_parser_control.py": "22814fe951f6086a35202dc191892bdfe859ea417763437974c4dcafcdb77d10"
+  },
+  "owner": {
+    "exit_code": 1,
+    "passed": 25,
+    "failed": 12,
+    "skipped": 0,
+    "new_composition": {
+      "passed": 24,
+      "failed": 12
+    },
+    "owner_telegram_negative": {
+      "passed": 1
+    },
+    "failure_categories": {
+      "valid_native_irc_channel": 4,
+      "valid_native_irc_nick": 4,
+      "irc_first_preempts_telegram_error": 4
+    }
+  },
+  "irc_scoped_control": {
+    "exit_code": 0,
+    "passed": 37,
+    "failed": 0,
+    "skipped": 0,
+    "new_composition": {
+      "passed": 36
+    },
+    "owner_telegram_negative": {
+      "passed": 1
+    },
+    "scope": "Only discovered IRC PlatformEntry parser, validator and transport guard for the new composition file; no shared resolver or Telegram modifications"
+  },
+  "first_control_attempt": {
+    "exit_code": 1,
+    "new_composition": {
+      "passed": 12,
+      "failed": 6,
+      "setup_errors": 18
+    },
+    "classification": "Harness fixture ordering defect; repaired by explicit _hermetic_environment dependency; frozen test unchanged",
+    "control_sha256": "9472b46f52f4c84aa61e981ab3d9bc6d6640e1f77f156ca5620fc46f9c7dc238"
+  },
+  "current_main": "Static 14-file identity to reviewed base; no current-main tests run",
+  "old_trees_final": {
+    "wave-hooks": {
+      "head": "3f1332c7336c93d5d5da57c0b039f616f67304fc",
+      "status": []
+    },
+    "wave-hermes-cron-owner": {
+      "head": "9ef293da77eb398af549b090ac0ba9a3a9d85f63",
+      "status": [
+        "?? cron_policy_control.py"
+      ]
+    },
+    "wave-hermes-cron-target": {
+      "head": "dce1e9b37581dd62e480a9064dc04a709c2940d3",
+      "status": [
+        "?? tests/tools/test_cron_deferred_delivery_validation.py"
+      ]
+    }
+  },
+  "limitations": [
+    "Unsupported Python 3.12 diagnostic, not a new supported Python receipt",
+    "No full PM installation, complete dependencies, full suite, real transport, server grammar or credentials",
+    "Native single-token seam is not a complete IRC grammar or a ready production repair",
+    "Optional unrelated plugins warn about missing requests; no installation attempted",
+    "Missing croniter; selected tests do not require natural weekday schedules",
+    "No upstream posting or publication"
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "parent": "e114b0cf78802d11131e0cb44a831dbbe2a4ae6f",
+  "scope": "Evidence-only owner review, diagnostic Python3.12; supported3.14 NOT_RUN. No production edit.",
+  "files": [
+    {
+      "path": "reviews/cron-native-irc/irc_native_parser_control.py",
+      "bytes": 1491,
+      "sha256": "22814fe951f6086a35202dc191892bdfe859ea417763437974c4dcafcdb77d10"
+    },
+    {
+      "path": "tests/tools/test_cron_target_boundary.py",
+      "bytes": 3586,
+      "sha256": "3c3ad6d81715f3251c4120c2cf2f98d635c3d61440340616775b706007f419d8"
+    },
+    {
+      "path": "reviews/cron-native-irc/target-boundary/AUDIT.md",
+      "bytes": 11321,
+      "sha256": "1e9169e370c3d8ede85972e2d08e788e4367c8a08f953186e2061aded4155201"
+    },
+    {
+      "path": "reviews/cron-native-irc/target-boundary/PUBLICATION.md",
+      "bytes": 947,
+      "sha256": "58f9fd736756bc7640cd091a55d1e7e815b90f1af993b863c87ec4d6a2795f0e"
+    },
+    {
+      "path": "reviews/cron-native-irc/target-boundary/README.md",
+      "bytes": 8567,
+      "sha256": "e21d99251887943dac72c185299ced2271ea08eaaf9a682268e80bde9d091aa3"
+    },
+    {
+      "path": "reviews/cron-native-irc/target-boundary/artifact-hashes.json",
+      "bytes": 1182,
+      "sha256": "e74fd605dc7f49361bee3fb0d3e42bb7dfab4f9dcfc2d614adb767bf17d7bc48"
+    },
+    {
+      "path": "reviews/cron-native-irc/target-boundary/audit-receipts.json",
+      "bytes": 61167,
+      "sha256": "0efecf3ea167daf220506355861d23336ec0f6aeb15c1ccc19b392ae223e8b21"
+    },
+    {
+      "path": "reviews/cron-native-irc/target-boundary/dependencies-frozen.txt",
+      "bytes": 395,
+      "sha256": "ddff62d98a6e61a1b636318818978382b55de6901df0ea1eae23ef31d3d52ab8"
+    },
+    {
+      "path": "reviews/cron-native-irc/target-boundary/logs/control-fixture-order-attempt.log",
+      "bytes": 75103,
+      "sha256": "bf484cc7e0ebd0f6424f8d9b42c11d63b03d8137bd5a1ef0470653c0e6b7e612"
+    },
+    {
+      "path": "reviews/cron-native-irc/target-boundary/logs/irc-scoped-control.log",
+      "bytes": 1124,
+      "sha256": "f578a2ddb1322d82e047fb17258050687eea035fb14d7151af3a00eef90ae130"
+    },
+    {
+      "path": "reviews/cron-native-irc/target-boundary/logs/owner.log",
+      "bytes": 32248,
+      "sha256": "102456f1428e6c6d64fa47ed0b4df6d96b3a097189ab8000a6cced5919f71c7f"
+    },
+    {
+      "path": "reviews/cron-native-irc/target-boundary/receipt.json",
+      "bytes": 2998,
+      "sha256": "2667eb8ad24821fcd4bc82bbcca8720e0ee7672b18b186dbc0e370f5223d5316"
+    },
+    {
+      "path": "reviews/cron-native-irc/target-boundary/source-matrix.json",
+      "bytes": 7549,
+      "sha256": "f34e5c17173e5756e4e9d3ee2faee03d0502734ecf961d0222237d2fa148b2ec"
+    }
+  ]
+}

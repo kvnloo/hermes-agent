@@ -1,0 +1,465 @@
+▶ not activated — using HERMES_PYTHON: <checkout>/reviews/cron-native-irc/target-boundary/python-single-compile
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 2 test files (~10 tests) under ['tests/tools/test_cron_target_boundary.py', 'tests/tools/test_cronjob_job_args.py']; running with -j 1
+[ 30.0% |     3/~10 | ✓24 | ✗12] ✗ tests/tools/test_cron_target_boundary.py (24✓ 12✗, 7.3s)
+
+  ╔╍ Failed: tests/tools/test_cron_target_boundary.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║         seed = _seed()
+  ║         store = delivery_home / "cron" / "jobs.json"
+  ║         before = store.read_bytes()
+  ║         target = "irc:#future-room,telegram:not-a-chat"
+  ║         result = _dispatch(action, **_arguments(action, lane, target, seed))
+  ║         assert result["success"] is False, result
+  ║ >       assert "telegram:not-a-chat" in result["error"]
+  ║ E       assert 'telegram:not-a-chat' in "invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched."
+  ║
+  ║ tests/tools/test_cron_target_boundary.py:93: AssertionError
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-deliver-create]
+  ║ FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-deliver-update]
+  ║ FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-failure_deliver-create]
+  ║ FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-failure_deliver-update]
+  ║ FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-deliver-create]
+  ║ FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-deliver-update]
+  ║ FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-failure_deliver-create]
+  ║ FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-failure_deliver-update]
+  ║ FAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[deliver-create]
+  ║ FAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[deliver-update]
+  ║ FAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[failure_deliver-create]
+  ║ FAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[failure_deliver-update]
+  ║ ======================== 12 failed, 24 passed in 6.95s =========================
+  ║
+  ║  Repro: python -m pytest tests/tools/test_cron_target_boundary.py -k native_and_explicit_targets or invalid_second_target or native_irc_first or unresolvable_target_is_rejected_upfront --basetemp=<checkout>/reviews/cron-native-irc/target-boundary/tmp-owner
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[100.0% |    10/~10 | ✓25 | ✗12] ✓ tests/tools/test_cronjob_job_args.py (1✓, 0.6s)
+
+=== Summary: 2 files, 25 tests passed, 12 failed (100% complete) in 8.0s (1 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   2
+  Total subprocess CPU-wall: 8.0s  (runner wall: 8.0s, parallelism: 1x)
+  P50: 7.33s  P90: 7.33s  P95: 7.33s  P99: 7.33s  Max: 7.33s
+  <1s: 1 files (50%)  <2s: 1 files (50%)
+  Top 10 slowest:
+      7.33s  tests/tools/test_cron_target_boundary.py
+      0.64s  tests/tools/test_cronjob_job_args.py
+
+=== Failure output ===
+
+--- tests/tools/test_cron_target_boundary.py ---
+============================= test session starts ==============================
+platform linux -- Python 3.12.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: <checkout>
+configfile: pyproject.toml
+plugins: asyncio-1.3.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 36 items
+
+tests/tools/test_cron_target_boundary.py FFFFFFFF....................... [ 86%]
+.FFFF                                                                    [100%]
+
+=================================== FAILURES ===================================
+_ test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-deliver-create] _
+
+delivery_home = PosixPath('<checkout>/reviews/cron-native-irc/target-boundary/tmp-owner/test_native_and_explicit_targe0/home')
+action = 'create', lane = 'deliver', target = 'irc:#future-room'
+chat_id = '#future-room', thread_id = None
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize(
+        "target,chat_id,thread_id",
+        [
+            ("irc:#future-room", "#future-room", None),
+            ("irc:future-nick", "future-nick", None),
+            ("telegram:-1001234567890:17585", "-1001234567890", "17585"),
+        ],
+    )
+    def test_native_and_explicit_targets_remain_schedulable(
+        delivery_home, action, lane, target, chat_id, thread_id,
+    ):
+        fire_target = _resolve_single_delivery_target({}, target)
+        assert fire_target["chat_id"] == chat_id
+        assert fire_target["thread_id"] == thread_id
+        seed = _seed()
+        result = _dispatch(action, **_arguments(action, lane, target, seed))
+>       assert result["success"] is True, result
+E       AssertionError: {'error': "invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.", 'success': False}
+E       assert False is True
+
+tests/tools/test_cron_target_boundary.py:54: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_ test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-deliver-update] _
+
+delivery_home = PosixPath('<checkout>/reviews/cron-native-irc/target-boundary/tmp-owner/test_native_and_explicit_targe1/home')
+action = 'update', lane = 'deliver', target = 'irc:#future-room'
+chat_id = '#future-room', thread_id = None
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize(
+        "target,chat_id,thread_id",
+        [
+            ("irc:#future-room", "#future-room", None),
+            ("irc:future-nick", "future-nick", None),
+            ("telegram:-1001234567890:17585", "-1001234567890", "17585"),
+        ],
+    )
+    def test_native_and_explicit_targets_remain_schedulable(
+        delivery_home, action, lane, target, chat_id, thread_id,
+    ):
+        fire_target = _resolve_single_delivery_target({}, target)
+        assert fire_target["chat_id"] == chat_id
+        assert fire_target["thread_id"] == thread_id
+        seed = _seed()
+        result = _dispatch(action, **_arguments(action, lane, target, seed))
+>       assert result["success"] is True, result
+E       AssertionError: {'error': "invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.", 'success': False}
+E       assert False is True
+
+tests/tools/test_cron_target_boundary.py:54: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_ test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-failure_deliver-create] _
+
+delivery_home = PosixPath('<checkout>/reviews/cron-native-irc/target-boundary/tmp-owner/test_native_and_explicit_targe2/home')
+action = 'create', lane = 'failure_deliver', target = 'irc:#future-room'
+chat_id = '#future-room', thread_id = None
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize(
+        "target,chat_id,thread_id",
+        [
+            ("irc:#future-room", "#future-room", None),
+            ("irc:future-nick", "future-nick", None),
+            ("telegram:-1001234567890:17585", "-1001234567890", "17585"),
+        ],
+    )
+    def test_native_and_explicit_targets_remain_schedulable(
+        delivery_home, action, lane, target, chat_id, thread_id,
+    ):
+        fire_target = _resolve_single_delivery_target({}, target)
+        assert fire_target["chat_id"] == chat_id
+        assert fire_target["thread_id"] == thread_id
+        seed = _seed()
+        result = _dispatch(action, **_arguments(action, lane, target, seed))
+>       assert result["success"] is True, result
+E       AssertionError: {'error': "invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.", 'success': False}
+E       assert False is True
+
+tests/tools/test_cron_target_boundary.py:54: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_ test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-failure_deliver-update] _
+
+delivery_home = PosixPath('<checkout>/reviews/cron-native-irc/target-boundary/tmp-owner/test_native_and_explicit_targe3/home')
+action = 'update', lane = 'failure_deliver', target = 'irc:#future-room'
+chat_id = '#future-room', thread_id = None
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize(
+        "target,chat_id,thread_id",
+        [
+            ("irc:#future-room", "#future-room", None),
+            ("irc:future-nick", "future-nick", None),
+            ("telegram:-1001234567890:17585", "-1001234567890", "17585"),
+        ],
+    )
+    def test_native_and_explicit_targets_remain_schedulable(
+        delivery_home, action, lane, target, chat_id, thread_id,
+    ):
+        fire_target = _resolve_single_delivery_target({}, target)
+        assert fire_target["chat_id"] == chat_id
+        assert fire_target["thread_id"] == thread_id
+        seed = _seed()
+        result = _dispatch(action, **_arguments(action, lane, target, seed))
+>       assert result["success"] is True, result
+E       AssertionError: {'error': "invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.", 'success': False}
+E       assert False is True
+
+tests/tools/test_cron_target_boundary.py:54: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_ test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-deliver-create] _
+
+delivery_home = PosixPath('<checkout>/reviews/cron-native-irc/target-boundary/tmp-owner/test_native_and_explicit_targe4/home')
+action = 'create', lane = 'deliver', target = 'irc:future-nick'
+chat_id = 'future-nick', thread_id = None
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize(
+        "target,chat_id,thread_id",
+        [
+            ("irc:#future-room", "#future-room", None),
+            ("irc:future-nick", "future-nick", None),
+            ("telegram:-1001234567890:17585", "-1001234567890", "17585"),
+        ],
+    )
+    def test_native_and_explicit_targets_remain_schedulable(
+        delivery_home, action, lane, target, chat_id, thread_id,
+    ):
+        fire_target = _resolve_single_delivery_target({}, target)
+        assert fire_target["chat_id"] == chat_id
+        assert fire_target["thread_id"] == thread_id
+        seed = _seed()
+        result = _dispatch(action, **_arguments(action, lane, target, seed))
+>       assert result["success"] is True, result
+E       AssertionError: {'error': "invalid deliver target 'irc:future-nick': Could not resolve 'future-nick' on irc. The plugin parser did not recognize it and no channel-directory entry matched.", 'success': False}
+E       assert False is True
+
+tests/tools/test_cron_target_boundary.py:54: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_ test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-deliver-update] _
+
+delivery_home = PosixPath('<checkout>/reviews/cron-native-irc/target-boundary/tmp-owner/test_native_and_explicit_targe5/home')
+action = 'update', lane = 'deliver', target = 'irc:future-nick'
+chat_id = 'future-nick', thread_id = None
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize(
+        "target,chat_id,thread_id",
+        [
+            ("irc:#future-room", "#future-room", None),
+            ("irc:future-nick", "future-nick", None),
+            ("telegram:-1001234567890:17585", "-1001234567890", "17585"),
+        ],
+    )
+    def test_native_and_explicit_targets_remain_schedulable(
+        delivery_home, action, lane, target, chat_id, thread_id,
+    ):
+        fire_target = _resolve_single_delivery_target({}, target)
+        assert fire_target["chat_id"] == chat_id
+        assert fire_target["thread_id"] == thread_id
+        seed = _seed()
+        result = _dispatch(action, **_arguments(action, lane, target, seed))
+>       assert result["success"] is True, result
+E       AssertionError: {'error': "invalid deliver target 'irc:future-nick': Could not resolve 'future-nick' on irc. The plugin parser did not recognize it and no channel-directory entry matched.", 'success': False}
+E       assert False is True
+
+tests/tools/test_cron_target_boundary.py:54: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_ test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-failure_deliver-create] _
+
+delivery_home = PosixPath('<checkout>/reviews/cron-native-irc/target-boundary/tmp-owner/test_native_and_explicit_targe6/home')
+action = 'create', lane = 'failure_deliver', target = 'irc:future-nick'
+chat_id = 'future-nick', thread_id = None
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize(
+        "target,chat_id,thread_id",
+        [
+            ("irc:#future-room", "#future-room", None),
+            ("irc:future-nick", "future-nick", None),
+            ("telegram:-1001234567890:17585", "-1001234567890", "17585"),
+        ],
+    )
+    def test_native_and_explicit_targets_remain_schedulable(
+        delivery_home, action, lane, target, chat_id, thread_id,
+    ):
+        fire_target = _resolve_single_delivery_target({}, target)
+        assert fire_target["chat_id"] == chat_id
+        assert fire_target["thread_id"] == thread_id
+        seed = _seed()
+        result = _dispatch(action, **_arguments(action, lane, target, seed))
+>       assert result["success"] is True, result
+E       AssertionError: {'error': "invalid deliver target 'irc:future-nick': Could not resolve 'future-nick' on irc. The plugin parser did not recognize it and no channel-directory entry matched.", 'success': False}
+E       assert False is True
+
+tests/tools/test_cron_target_boundary.py:54: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_ test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-failure_deliver-update] _
+
+delivery_home = PosixPath('<checkout>/reviews/cron-native-irc/target-boundary/tmp-owner/test_native_and_explicit_targe7/home')
+action = 'update', lane = 'failure_deliver', target = 'irc:future-nick'
+chat_id = 'future-nick', thread_id = None
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize(
+        "target,chat_id,thread_id",
+        [
+            ("irc:#future-room", "#future-room", None),
+            ("irc:future-nick", "future-nick", None),
+            ("telegram:-1001234567890:17585", "-1001234567890", "17585"),
+        ],
+    )
+    def test_native_and_explicit_targets_remain_schedulable(
+        delivery_home, action, lane, target, chat_id, thread_id,
+    ):
+        fire_target = _resolve_single_delivery_target({}, target)
+        assert fire_target["chat_id"] == chat_id
+        assert fire_target["thread_id"] == thread_id
+        seed = _seed()
+        result = _dispatch(action, **_arguments(action, lane, target, seed))
+>       assert result["success"] is True, result
+E       AssertionError: {'error': "invalid deliver target 'irc:future-nick': Could not resolve 'future-nick' on irc. The plugin parser did not recognize it and no channel-directory entry matched.", 'success': False}
+E       assert False is True
+
+tests/tools/test_cron_target_boundary.py:54: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+____ test_native_irc_first_does_not_hide_telegram_rejection[deliver-create] ____
+
+delivery_home = PosixPath('<checkout>/reviews/cron-native-irc/target-boundary/tmp-owner/test_native_irc_first_does_not0/home')
+action = 'create', lane = 'deliver'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    def test_native_irc_first_does_not_hide_telegram_rejection(delivery_home, action, lane):
+        seed = _seed()
+        store = delivery_home / "cron" / "jobs.json"
+        before = store.read_bytes()
+        target = "irc:#future-room,telegram:not-a-chat"
+        result = _dispatch(action, **_arguments(action, lane, target, seed))
+        assert result["success"] is False, result
+>       assert "telegram:not-a-chat" in result["error"]
+E       assert 'telegram:not-a-chat' in "invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched."
+
+tests/tools/test_cron_target_boundary.py:93: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+____ test_native_irc_first_does_not_hide_telegram_rejection[deliver-update] ____
+
+delivery_home = PosixPath('<checkout>/reviews/cron-native-irc/target-boundary/tmp-owner/test_native_irc_first_does_not1/home')
+action = 'update', lane = 'deliver'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    def test_native_irc_first_does_not_hide_telegram_rejection(delivery_home, action, lane):
+        seed = _seed()
+        store = delivery_home / "cron" / "jobs.json"
+        before = store.read_bytes()
+        target = "irc:#future-room,telegram:not-a-chat"
+        result = _dispatch(action, **_arguments(action, lane, target, seed))
+        assert result["success"] is False, result
+>       assert "telegram:not-a-chat" in result["error"]
+E       assert 'telegram:not-a-chat' in "invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched."
+
+tests/tools/test_cron_target_boundary.py:93: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_ test_native_irc_first_does_not_hide_telegram_rejection[failure_deliver-create] _
+
+delivery_home = PosixPath('<checkout>/reviews/cron-native-irc/target-boundary/tmp-owner/test_native_irc_first_does_not2/home')
+action = 'create', lane = 'failure_deliver'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    def test_native_irc_first_does_not_hide_telegram_rejection(delivery_home, action, lane):
+        seed = _seed()
+        store = delivery_home / "cron" / "jobs.json"
+        before = store.read_bytes()
+        target = "irc:#future-room,telegram:not-a-chat"
+        result = _dispatch(action, **_arguments(action, lane, target, seed))
+        assert result["success"] is False, result
+>       assert "telegram:not-a-chat" in result["error"]
+E       assert 'telegram:not-a-chat' in "invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched."
+
+tests/tools/test_cron_target_boundary.py:93: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_ test_native_irc_first_does_not_hide_telegram_rejection[failure_deliver-update] _
+
+delivery_home = PosixPath('<checkout>/reviews/cron-native-irc/target-boundary/tmp-owner/test_native_irc_first_does_not3/home')
+action = 'update', lane = 'failure_deliver'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    def test_native_irc_first_does_not_hide_telegram_rejection(delivery_home, action, lane):
+        seed = _seed()
+        store = delivery_home / "cron" / "jobs.json"
+        before = store.read_bytes()
+        target = "irc:#future-room,telegram:not-a-chat"
+        result = _dispatch(action, **_arguments(action, lane, target, seed))
+        assert result["success"] is False, result
+>       assert "telegram:not-a-chat" in result["error"]
+E       assert 'telegram:not-a-chat' in "invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched."
+
+tests/tools/test_cron_target_boundary.py:93: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+=========================== short test summary info ============================
+FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-deliver-create]
+FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-deliver-update]
+FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-failure_deliver-create]
+FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-failure_deliver-update]
+FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-deliver-create]
+FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-deliver-update]
+FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-failure_deliver-create]
+FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-failure_deliver-update]
+FAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[deliver-create]
+FAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[deliver-update]
+FAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[failure_deliver-create]
+FAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[failure_deliver-update]
+======================== 12 failed, 24 passed in 6.95s =========================
+
+=== 1 file with test failures (12 tests failed) ===
+  tests/tools/test_cron_target_boundary.py  (12 tests failed)

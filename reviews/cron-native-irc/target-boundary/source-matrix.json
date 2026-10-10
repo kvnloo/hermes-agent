@@ -1,0 +1,164 @@
+{
+  "pins": {
+    "owner": "d310978d039e479d1df5f0de8752adf6e64adea2",
+    "base": "dce1e9b37581dd62e480a9064dc04a709c2940d3",
+    "current_main": "f925b01791fe052e7d55dc975750c0bd985aff91",
+    "prior_evidence": "e114b0cf78802d11131e0cb44a831dbbe2a4ae6f"
+  },
+  "files": [
+    {
+      "path": "tools/cronjob_job_args.py",
+      "sha256": {
+        "owner": "e0a1d09311333d22211820135403d53a8177c853e7234d3cd5b260f3b5e22d34",
+        "base": "ab9c97a213eba4d6f8887d27c1e381ec013bcc0a65352c3c50d12bb5c0e38f57",
+        "current_main": "ab9c97a213eba4d6f8887d27c1e381ec013bcc0a65352c3c50d12bb5c0e38f57",
+        "prior_evidence": "e0a1d09311333d22211820135403d53a8177c853e7234d3cd5b260f3b5e22d34"
+      },
+      "base_equals_current_main": true,
+      "working_tree_equals_owner": true
+    },
+    {
+      "path": "tools/cronjob_tools.py",
+      "sha256": {
+        "owner": "7c16c9b3c4eca45a524235d762bc1492f26a0df66b988c2677132480b8e0e213",
+        "base": "99f980bc671e5dc48bd982a8ed0c21fe93b3ab2262f6c723ff6319d8f6910822",
+        "current_main": "99f980bc671e5dc48bd982a8ed0c21fe93b3ab2262f6c723ff6319d8f6910822",
+        "prior_evidence": "7c16c9b3c4eca45a524235d762bc1492f26a0df66b988c2677132480b8e0e213"
+      },
+      "base_equals_current_main": true,
+      "working_tree_equals_owner": true
+    },
+    {
+      "path": "tools/send_message_targets.py",
+      "sha256": {
+        "owner": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0",
+        "base": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0",
+        "current_main": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0",
+        "prior_evidence": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0"
+      },
+      "base_equals_current_main": true,
+      "working_tree_equals_owner": true
+    },
+    {
+      "path": "tools/send_message_tool.py",
+      "sha256": {
+        "owner": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d",
+        "base": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d",
+        "current_main": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d",
+        "prior_evidence": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d"
+      },
+      "base_equals_current_main": true,
+      "working_tree_equals_owner": true
+    },
+    {
+      "path": "plugins/platforms/irc/adapter.py",
+      "sha256": {
+        "owner": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e",
+        "base": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e",
+        "current_main": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e",
+        "prior_evidence": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e"
+      },
+      "base_equals_current_main": true,
+      "working_tree_equals_owner": true
+    },
+    {
+      "path": "plugins/platforms/telegram/telegram_ids.py",
+      "sha256": {
+        "owner": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1",
+        "base": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1",
+        "current_main": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1",
+        "prior_evidence": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1"
+      },
+      "base_equals_current_main": true,
+      "working_tree_equals_owner": true
+    },
+    {
+      "path": "cron/scheduler_delivery.py",
+      "sha256": {
+        "owner": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e",
+        "base": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e",
+        "current_main": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e",
+        "prior_evidence": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e"
+      },
+      "base_equals_current_main": true,
+      "working_tree_equals_owner": true
+    },
+    {
+      "path": "gateway/platform_registry.py",
+      "sha256": {
+        "owner": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df",
+        "base": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df",
+        "current_main": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df",
+        "prior_evidence": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df"
+      },
+      "base_equals_current_main": true,
+      "working_tree_equals_owner": true
+    },
+    {
+      "path": "tests/tools/test_cronjob_job_args.py",
+      "sha256": {
+        "owner": "dc1c8066edc0b59450b34ba327e4971c23fe3887278d75e92fa8044a858e4332",
+        "base": "349d81cd7f4cb78994338dcf06f78e8d41eab58f01dc2d15df82aac6b58dc551",
+        "current_main": "349d81cd7f4cb78994338dcf06f78e8d41eab58f01dc2d15df82aac6b58dc551",
+        "prior_evidence": "dc1c8066edc0b59450b34ba327e4971c23fe3887278d75e92fa8044a858e4332"
+      },
+      "base_equals_current_main": true,
+      "working_tree_equals_owner": true
+    },
+    {
+      "path": "tests/tools/test_cronjob_tools.py",
+      "sha256": {
+        "owner": "af7eea61967d0bdd42675a98e0f15d1a0bcdcdd37f41fc5b0746431d9aa0c6ec",
+        "base": "af7eea61967d0bdd42675a98e0f15d1a0bcdcdd37f41fc5b0746431d9aa0c6ec",
+        "current_main": "af7eea61967d0bdd42675a98e0f15d1a0bcdcdd37f41fc5b0746431d9aa0c6ec",
+        "prior_evidence": "af7eea61967d0bdd42675a98e0f15d1a0bcdcdd37f41fc5b0746431d9aa0c6ec"
+      },
+      "base_equals_current_main": true,
+      "working_tree_equals_owner": true
+    },
+    {
+      "path": "scripts/run_tests.sh",
+      "sha256": {
+        "owner": "5d81d729ca0b98f89d5c944d2231eaf2a6190817b099a45f924de0af24ec3aac",
+        "base": "5d81d729ca0b98f89d5c944d2231eaf2a6190817b099a45f924de0af24ec3aac",
+        "current_main": "5d81d729ca0b98f89d5c944d2231eaf2a6190817b099a45f924de0af24ec3aac",
+        "prior_evidence": "5d81d729ca0b98f89d5c944d2231eaf2a6190817b099a45f924de0af24ec3aac"
+      },
+      "base_equals_current_main": true,
+      "working_tree_equals_owner": true
+    },
+    {
+      "path": "scripts/run_tests_parallel.py",
+      "sha256": {
+        "owner": "96efd8cb96ffb8a7f049537cf0761f8fd7a96f35aca99a51bbc952468f274a0c",
+        "base": "96efd8cb96ffb8a7f049537cf0761f8fd7a96f35aca99a51bbc952468f274a0c",
+        "current_main": "96efd8cb96ffb8a7f049537cf0761f8fd7a96f35aca99a51bbc952468f274a0c",
+        "prior_evidence": "96efd8cb96ffb8a7f049537cf0761f8fd7a96f35aca99a51bbc952468f274a0c"
+      },
+      "base_equals_current_main": true,
+      "working_tree_equals_owner": true
+    },
+    {
+      "path": "tests/conftest.py",
+      "sha256": {
+        "owner": "2138d2c006bfff0bf3b5d629496108e55cf43c70319e975a9cfdd263900492ec",
+        "base": "2138d2c006bfff0bf3b5d629496108e55cf43c70319e975a9cfdd263900492ec",
+        "current_main": "2138d2c006bfff0bf3b5d629496108e55cf43c70319e975a9cfdd263900492ec",
+        "prior_evidence": "2138d2c006bfff0bf3b5d629496108e55cf43c70319e975a9cfdd263900492ec"
+      },
+      "base_equals_current_main": true,
+      "working_tree_equals_owner": true
+    },
+    {
+      "path": "gateway/config.py",
+      "sha256": {
+        "owner": "0b0afcd42648fcea652c19655d899427672d3cebf29cc8dd3d5539780f45631a",
+        "base": "0b0afcd42648fcea652c19655d899427672d3cebf29cc8dd3d5539780f45631a",
+        "current_main": "0b0afcd42648fcea652c19655d899427672d3cebf29cc8dd3d5539780f45631a",
+        "prior_evidence": "0b0afcd42648fcea652c19655d899427672d3cebf29cc8dd3d5539780f45631a"
+      },
+      "base_equals_current_main": true,
+      "working_tree_equals_owner": true
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+▶ not activated — using HERMES_PYTHON: <checkout>/reviews/cron-native-irc/target-boundary/python-single-compile
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 2 test files (~10 tests) under ['tests/tools/test_cron_target_boundary.py', 'tests/tools/test_cronjob_job_args.py']; running with -j 1
+[ 30.0% |     3/~10 | ✓36 | ✗ 0] ✓ tests/tools/test_cron_target_boundary.py (36✓, 7.8s)
+[100.0% |    10/~10 | ✓37 | ✗ 0] ✓ tests/tools/test_cronjob_job_args.py (1✓, 0.7s)
+
+=== Summary: 2 files, 37 tests passed, 0 failed (100% complete) in 8.5s (1 workers) ===
+  Durations cached to test_durations.json (2 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   2
+  Total subprocess CPU-wall: 8.5s  (runner wall: 8.5s, parallelism: 1x)
+  P50: 7.84s  P90: 7.84s  P95: 7.84s  P99: 7.84s  Max: 7.84s
+  <1s: 1 files (50%)  <2s: 1 files (50%)
+  Top 10 slowest:
+      7.84s  tests/tools/test_cron_target_boundary.py
+      0.68s  tests/tools/test_cronjob_job_args.py

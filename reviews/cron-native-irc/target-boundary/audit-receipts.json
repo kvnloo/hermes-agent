@@ -1,0 +1,584 @@
+{
+  "artifact-hashes.json": {
+    "AUDIT.md": "2e1a6d799431bba504bfe4bb19b80c6510607fc5cc628148c43c6c561f74cf25",
+    "static-identity-verification.json": "b8f97332d93574ae2332bca7b54d6db895a876980d8a156b98bbe40ac08ac3cb",
+    "import-preflight.json": "37110dc512569b84fe23dd990eddc27f33e2baec4c252c8e0a9d12ba578f8a5d",
+    "owner-replay.log": "56e621bd94c2788c40a5fe4afe6164dc114e3b5618ca6df54de1387ad6eae3ca",
+    "control-replay.log": "65e3f61fc7339f7654d89c8b14952e44fc255cd4e6028edad0837b220ca7d99f",
+    "replay-exitcodes.txt": "1fc826738c51bf113552d4fa83c978217ea79c3ee079964420a8e63e6ce7d960"
+  },
+  "control-replay.log": "\u25b6 not activated \u2014 using HERMES_PYTHON: <workspace>/hermes-cron-target-boundary-evidence/python-single-compile\n\u25b6 running per-file parallel test suite via run_tests_parallel.py\n  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)\n\u25b6 pre-compiling bytecode cache\n\u25b6 launching test runner\nDiscovered 2 test files (~10 tests) under ['tests/tools/test_cron_target_boundary.py', 'tests/tools/test_cronjob_job_args.py']; running with -j 1\n[ 30.0% |     3/~10 | \u271336 | \u2717 0] \u2713 tests/tools/test_cron_target_boundary.py (36\u2713, 7.7s)\n[100.0% |    10/~10 | \u271337 | \u2717 0] \u2713 tests/tools/test_cronjob_job_args.py (1\u2713, 0.7s)\n\n=== Summary: 2 files, 37 tests passed, 0 failed (100% complete) in 8.4s (1 workers) ===\n  Durations cached to test_durations.json (2 files)\n\n=== Per-file subprocess time distribution ===\n  Files:   2\n  Total subprocess CPU-wall: 8.4s  (runner wall: 8.4s, parallelism: 1x)\n  P50: 7.71s  P90: 7.71s  P95: 7.71s  P99: 7.71s  Max: 7.71s\n  <1s: 1 files (50%)  <2s: 1 files (50%)\n  Top 10 slowest:\n      7.71s  tests/tools/test_cron_target_boundary.py\n      0.67s  tests/tools/test_cronjob_job_args.py\n",
+  "import-preflight.json": {
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "executable": "<workspace>/hermes-cron-diagnostic-env/bin/python",
+    "control_dotted_import": true,
+    "send_facade_is_shared_resolver": true,
+    "records": [
+      {
+        "module": "tools.cronjob_job_args",
+        "source": "<workspace>/review-hermes-cron-target-boundary/tools/cronjob_job_args.py",
+        "sha256": "e0a1d09311333d22211820135403d53a8177c853e7234d3cd5b260f3b5e22d34"
+      },
+      {
+        "module": "tools.cronjob_tools",
+        "source": "<workspace>/review-hermes-cron-target-boundary/tools/cronjob_tools.py",
+        "sha256": "7c16c9b3c4eca45a524235d762bc1492f26a0df66b988c2677132480b8e0e213"
+      },
+      {
+        "module": "tools.send_message_targets",
+        "source": "<workspace>/review-hermes-cron-target-boundary/tools/send_message_targets.py",
+        "sha256": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0"
+      },
+      {
+        "module": "tools.send_message_tool",
+        "source": "<workspace>/review-hermes-cron-target-boundary/tools/send_message_tool.py",
+        "sha256": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d"
+      },
+      {
+        "module": "cron.scheduler_delivery",
+        "source": "<workspace>/review-hermes-cron-target-boundary/cron/scheduler_delivery.py",
+        "sha256": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e"
+      },
+      {
+        "module": "gateway.platform_registry",
+        "source": "<workspace>/review-hermes-cron-target-boundary/gateway/platform_registry.py",
+        "sha256": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df"
+      },
+      {
+        "module": "plugins.platforms.irc.adapter",
+        "source": "<workspace>/review-hermes-cron-target-boundary/plugins/platforms/irc/adapter.py",
+        "sha256": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e"
+      },
+      {
+        "module": "plugins.platforms.telegram.telegram_ids",
+        "source": "<workspace>/review-hermes-cron-target-boundary/plugins/platforms/telegram/telegram_ids.py",
+        "sha256": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1"
+      },
+      {
+        "module": "reviews.cron-native-irc.irc_native_parser_control",
+        "source": "<workspace>/review-hermes-cron-target-boundary/reviews/cron-native-irc/irc_native_parser_control.py",
+        "sha256": "22814fe951f6086a35202dc191892bdfe859ea417763437974c4dcafcdb77d10"
+      }
+    ]
+  },
+  "owner-replay.log": "\u25b6 not activated \u2014 using HERMES_PYTHON: <workspace>/hermes-cron-target-boundary-evidence/python-single-compile\n\u25b6 running per-file parallel test suite via run_tests_parallel.py\n  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)\n\u25b6 pre-compiling bytecode cache\n\u25b6 launching test runner\nDiscovered 2 test files (~10 tests) under ['tests/tools/test_cron_target_boundary.py', 'tests/tools/test_cronjob_job_args.py']; running with -j 1\n[ 30.0% |     3/~10 | \u271324 | \u271712] \u2717 tests/tools/test_cron_target_boundary.py (24\u2713 12\u2717, 8.0s)\n\n  \u2554\u254d Failed: tests/tools/test_cron_target_boundary.py \u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\n  \u2551         seed = _seed()\n  \u2551         store = delivery_home / \"cron\" / \"jobs.json\"\n  \u2551         before = store.read_bytes()\n  \u2551         target = \"irc:#future-room,telegram:not-a-chat\"\n  \u2551         result = _dispatch(action, **_arguments(action, lane, target, seed))\n  \u2551         assert result[\"success\"] is False, result\n  \u2551 >       assert \"telegram:not-a-chat\" in result[\"error\"]\n  \u2551 E       assert 'telegram:not-a-chat' in \"invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.\"\n  \u2551 \n  \u2551 tests/tools/test_cron_target_boundary.py:93: AssertionError\n  \u2551 ------------------------------ Captured log call -------------------------------\n  \u2551 WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'\n  \u2551 WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'\n  \u2551 WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'\n  \u2551 WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'\n  \u2551 WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'\n  \u2551 =========================== short test summary info ============================\n  \u2551 FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-deliver-create]\n  \u2551 FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-deliver-update]\n  \u2551 FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-failure_deliver-create]\n  \u2551 FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-failure_deliver-update]\n  \u2551 FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-deliver-create]\n  \u2551 FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-deliver-update]\n  \u2551 FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-failure_deliver-create]\n  \u2551 FAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-failure_deliver-update]\n  \u2551 FAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[deliver-create]\n  \u2551 FAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[deliver-update]\n  \u2551 FAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[failure_deliver-create]\n  \u2551 FAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[failure_deliver-update]\n  \u2551 ======================== 12 failed, 24 passed in 7.58s =========================\n  \u2551\n  \u2551  Repro: python -m pytest tests/tools/test_cron_target_boundary.py -k native_and_explicit_targets or invalid_second_target or native_irc_first or unresolvable_target_is_rejected_upfront --basetemp=<workspace>/factory-wave-20261010-1248/hermes-boundary-audit/tmp-owner\n  \u255a\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\u254d\n\n[100.0% |    10/~10 | \u271325 | \u271712] \u2713 tests/tools/test_cronjob_job_args.py (1\u2713, 0.7s)\n\n=== Summary: 2 files, 25 tests passed, 12 failed (100% complete) in 8.7s (1 workers) ===\n  Durations cached to test_durations.json (1 files)\n\n=== Per-file subprocess time distribution ===\n  Files:   2\n  Total subprocess CPU-wall: 8.7s  (runner wall: 8.7s, parallelism: 1x)\n  P50: 7.96s  P90: 7.96s  P95: 7.96s  P99: 7.96s  Max: 7.96s\n  <1s: 1 files (50%)  <2s: 1 files (50%)\n  Top 10 slowest:\n      7.96s  tests/tools/test_cron_target_boundary.py\n      0.71s  tests/tools/test_cronjob_job_args.py\n\n=== Failure output ===\n\n--- tests/tools/test_cron_target_boundary.py ---\n============================= test session starts ==============================\nplatform linux -- Python 3.12.14, pytest-9.1.1, pluggy-1.6.0\nrootdir: <workspace>/review-hermes-cron-target-boundary\nconfigfile: pyproject.toml\nplugins: asyncio-1.3.0, anyio-4.15.1\nasyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollected 36 items\n\ntests/tools/test_cron_target_boundary.py FFFFFFFF....................... [ 86%]\n.FFFF                                                                    [100%]\n\n=================================== FAILURES ===================================\n_ test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-deliver-create] _\n\ndelivery_home = PosixPath('<workspace>/factory-wave-20261010-1248/hermes-boundary-audit/tmp-owner/test_native_and_explicit_targe0/home')\naction = 'create', lane = 'deliver', target = 'irc:#future-room'\nchat_id = '#future-room', thread_id = None\n\n    @pytest.mark.parametrize(\"action\", [\"create\", \"update\"])\n    @pytest.mark.parametrize(\"lane\", [\"deliver\", \"failure_deliver\"])\n    @pytest.mark.parametrize(\n        \"target,chat_id,thread_id\",\n        [\n            (\"irc:#future-room\", \"#future-room\", None),\n            (\"irc:future-nick\", \"future-nick\", None),\n            (\"telegram:-1001234567890:17585\", \"-1001234567890\", \"17585\"),\n        ],\n    )\n    def test_native_and_explicit_targets_remain_schedulable(\n        delivery_home, action, lane, target, chat_id, thread_id,\n    ):\n        fire_target = _resolve_single_delivery_target({}, target)\n        assert fire_target[\"chat_id\"] == chat_id\n        assert fire_target[\"thread_id\"] == thread_id\n        seed = _seed()\n        result = _dispatch(action, **_arguments(action, lane, target, seed))\n>       assert result[\"success\"] is True, result\nE       AssertionError: {'error': \"invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.\", 'success': False}\nE       assert False is True\n\ntests/tools/test_cron_target_boundary.py:54: AssertionError\n------------------------------ Captured log call -------------------------------\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'\n_ test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-deliver-update] _\n\ndelivery_home = PosixPath('<workspace>/factory-wave-20261010-1248/hermes-boundary-audit/tmp-owner/test_native_and_explicit_targe1/home')\naction = 'update', lane = 'deliver', target = 'irc:#future-room'\nchat_id = '#future-room', thread_id = None\n\n    @pytest.mark.parametrize(\"action\", [\"create\", \"update\"])\n    @pytest.mark.parametrize(\"lane\", [\"deliver\", \"failure_deliver\"])\n    @pytest.mark.parametrize(\n        \"target,chat_id,thread_id\",\n        [\n            (\"irc:#future-room\", \"#future-room\", None),\n            (\"irc:future-nick\", \"future-nick\", None),\n            (\"telegram:-1001234567890:17585\", \"-1001234567890\", \"17585\"),\n        ],\n    )\n    def test_native_and_explicit_targets_remain_schedulable(\n        delivery_home, action, lane, target, chat_id, thread_id,\n    ):\n        fire_target = _resolve_single_delivery_target({}, target)\n        assert fire_target[\"chat_id\"] == chat_id\n        assert fire_target[\"thread_id\"] == thread_id\n        seed = _seed()\n        result = _dispatch(action, **_arguments(action, lane, target, seed))\n>       assert result[\"success\"] is True, result\nE       AssertionError: {'error': \"invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.\", 'success': False}\nE       assert False is True\n\ntests/tools/test_cron_target_boundary.py:54: AssertionError\n------------------------------ Captured log call -------------------------------\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'\n_ test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-failure_deliver-create] _\n\ndelivery_home = PosixPath('<workspace>/factory-wave-20261010-1248/hermes-boundary-audit/tmp-owner/test_native_and_explicit_targe2/home')\naction = 'create', lane = 'failure_deliver', target = 'irc:#future-room'\nchat_id = '#future-room', thread_id = None\n\n    @pytest.mark.parametrize(\"action\", [\"create\", \"update\"])\n    @pytest.mark.parametrize(\"lane\", [\"deliver\", \"failure_deliver\"])\n    @pytest.mark.parametrize(\n        \"target,chat_id,thread_id\",\n        [\n            (\"irc:#future-room\", \"#future-room\", None),\n            (\"irc:future-nick\", \"future-nick\", None),\n            (\"telegram:-1001234567890:17585\", \"-1001234567890\", \"17585\"),\n        ],\n    )\n    def test_native_and_explicit_targets_remain_schedulable(\n        delivery_home, action, lane, target, chat_id, thread_id,\n    ):\n        fire_target = _resolve_single_delivery_target({}, target)\n        assert fire_target[\"chat_id\"] == chat_id\n        assert fire_target[\"thread_id\"] == thread_id\n        seed = _seed()\n        result = _dispatch(action, **_arguments(action, lane, target, seed))\n>       assert result[\"success\"] is True, result\nE       AssertionError: {'error': \"invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.\", 'success': False}\nE       assert False is True\n\ntests/tools/test_cron_target_boundary.py:54: AssertionError\n------------------------------ Captured log call -------------------------------\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'\n_ test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-failure_deliver-update] _\n\ndelivery_home = PosixPath('<workspace>/factory-wave-20261010-1248/hermes-boundary-audit/tmp-owner/test_native_and_explicit_targe3/home')\naction = 'update', lane = 'failure_deliver', target = 'irc:#future-room'\nchat_id = '#future-room', thread_id = None\n\n    @pytest.mark.parametrize(\"action\", [\"create\", \"update\"])\n    @pytest.mark.parametrize(\"lane\", [\"deliver\", \"failure_deliver\"])\n    @pytest.mark.parametrize(\n        \"target,chat_id,thread_id\",\n        [\n            (\"irc:#future-room\", \"#future-room\", None),\n            (\"irc:future-nick\", \"future-nick\", None),\n            (\"telegram:-1001234567890:17585\", \"-1001234567890\", \"17585\"),\n        ],\n    )\n    def test_native_and_explicit_targets_remain_schedulable(\n        delivery_home, action, lane, target, chat_id, thread_id,\n    ):\n        fire_target = _resolve_single_delivery_target({}, target)\n        assert fire_target[\"chat_id\"] == chat_id\n        assert fire_target[\"thread_id\"] == thread_id\n        seed = _seed()\n        result = _dispatch(action, **_arguments(action, lane, target, seed))\n>       assert result[\"success\"] is True, result\nE       AssertionError: {'error': \"invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.\", 'success': False}\nE       assert False is True\n\ntests/tools/test_cron_target_boundary.py:54: AssertionError\n------------------------------ Captured log call -------------------------------\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'\n_ test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-deliver-create] _\n\ndelivery_home = PosixPath('<workspace>/factory-wave-20261010-1248/hermes-boundary-audit/tmp-owner/test_native_and_explicit_targe4/home')\naction = 'create', lane = 'deliver', target = 'irc:future-nick'\nchat_id = 'future-nick', thread_id = None\n\n    @pytest.mark.parametrize(\"action\", [\"create\", \"update\"])\n    @pytest.mark.parametrize(\"lane\", [\"deliver\", \"failure_deliver\"])\n    @pytest.mark.parametrize(\n        \"target,chat_id,thread_id\",\n        [\n            (\"irc:#future-room\", \"#future-room\", None),\n            (\"irc:future-nick\", \"future-nick\", None),\n            (\"telegram:-1001234567890:17585\", \"-1001234567890\", \"17585\"),\n        ],\n    )\n    def test_native_and_explicit_targets_remain_schedulable(\n        delivery_home, action, lane, target, chat_id, thread_id,\n    ):\n        fire_target = _resolve_single_delivery_target({}, target)\n        assert fire_target[\"chat_id\"] == chat_id\n        assert fire_target[\"thread_id\"] == thread_id\n        seed = _seed()\n        result = _dispatch(action, **_arguments(action, lane, target, seed))\n>       assert result[\"success\"] is True, result\nE       AssertionError: {'error': \"invalid deliver target 'irc:future-nick': Could not resolve 'future-nick' on irc. The plugin parser did not recognize it and no channel-directory entry matched.\", 'success': False}\nE       assert False is True\n\ntests/tools/test_cron_target_boundary.py:54: AssertionError\n------------------------------ Captured log call -------------------------------\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'\n_ test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-deliver-update] _\n\ndelivery_home = PosixPath('<workspace>/factory-wave-20261010-1248/hermes-boundary-audit/tmp-owner/test_native_and_explicit_targe5/home')\naction = 'update', lane = 'deliver', target = 'irc:future-nick'\nchat_id = 'future-nick', thread_id = None\n\n    @pytest.mark.parametrize(\"action\", [\"create\", \"update\"])\n    @pytest.mark.parametrize(\"lane\", [\"deliver\", \"failure_deliver\"])\n    @pytest.mark.parametrize(\n        \"target,chat_id,thread_id\",\n        [\n            (\"irc:#future-room\", \"#future-room\", None),\n            (\"irc:future-nick\", \"future-nick\", None),\n            (\"telegram:-1001234567890:17585\", \"-1001234567890\", \"17585\"),\n        ],\n    )\n    def test_native_and_explicit_targets_remain_schedulable(\n        delivery_home, action, lane, target, chat_id, thread_id,\n    ):\n        fire_target = _resolve_single_delivery_target({}, target)\n        assert fire_target[\"chat_id\"] == chat_id\n        assert fire_target[\"thread_id\"] == thread_id\n        seed = _seed()\n        result = _dispatch(action, **_arguments(action, lane, target, seed))\n>       assert result[\"success\"] is True, result\nE       AssertionError: {'error': \"invalid deliver target 'irc:future-nick': Could not resolve 'future-nick' on irc. The plugin parser did not recognize it and no channel-directory entry matched.\", 'success': False}\nE       assert False is True\n\ntests/tools/test_cron_target_boundary.py:54: AssertionError\n------------------------------ Captured log call -------------------------------\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'\n_ test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-failure_deliver-create] _\n\ndelivery_home = PosixPath('<workspace>/factory-wave-20261010-1248/hermes-boundary-audit/tmp-owner/test_native_and_explicit_targe6/home')\naction = 'create', lane = 'failure_deliver', target = 'irc:future-nick'\nchat_id = 'future-nick', thread_id = None\n\n    @pytest.mark.parametrize(\"action\", [\"create\", \"update\"])\n    @pytest.mark.parametrize(\"lane\", [\"deliver\", \"failure_deliver\"])\n    @pytest.mark.parametrize(\n        \"target,chat_id,thread_id\",\n        [\n            (\"irc:#future-room\", \"#future-room\", None),\n            (\"irc:future-nick\", \"future-nick\", None),\n            (\"telegram:-1001234567890:17585\", \"-1001234567890\", \"17585\"),\n        ],\n    )\n    def test_native_and_explicit_targets_remain_schedulable(\n        delivery_home, action, lane, target, chat_id, thread_id,\n    ):\n        fire_target = _resolve_single_delivery_target({}, target)\n        assert fire_target[\"chat_id\"] == chat_id\n        assert fire_target[\"thread_id\"] == thread_id\n        seed = _seed()\n        result = _dispatch(action, **_arguments(action, lane, target, seed))\n>       assert result[\"success\"] is True, result\nE       AssertionError: {'error': \"invalid deliver target 'irc:future-nick': Could not resolve 'future-nick' on irc. The plugin parser did not recognize it and no channel-directory entry matched.\", 'success': False}\nE       assert False is True\n\ntests/tools/test_cron_target_boundary.py:54: AssertionError\n------------------------------ Captured log call -------------------------------\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'\n_ test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-failure_deliver-update] _\n\ndelivery_home = PosixPath('<workspace>/factory-wave-20261010-1248/hermes-boundary-audit/tmp-owner/test_native_and_explicit_targe7/home')\naction = 'update', lane = 'failure_deliver', target = 'irc:future-nick'\nchat_id = 'future-nick', thread_id = None\n\n    @pytest.mark.parametrize(\"action\", [\"create\", \"update\"])\n    @pytest.mark.parametrize(\"lane\", [\"deliver\", \"failure_deliver\"])\n    @pytest.mark.parametrize(\n        \"target,chat_id,thread_id\",\n        [\n            (\"irc:#future-room\", \"#future-room\", None),\n            (\"irc:future-nick\", \"future-nick\", None),\n            (\"telegram:-1001234567890:17585\", \"-1001234567890\", \"17585\"),\n        ],\n    )\n    def test_native_and_explicit_targets_remain_schedulable(\n        delivery_home, action, lane, target, chat_id, thread_id,\n    ):\n        fire_target = _resolve_single_delivery_target({}, target)\n        assert fire_target[\"chat_id\"] == chat_id\n        assert fire_target[\"thread_id\"] == thread_id\n        seed = _seed()\n        result = _dispatch(action, **_arguments(action, lane, target, seed))\n>       assert result[\"success\"] is True, result\nE       AssertionError: {'error': \"invalid deliver target 'irc:future-nick': Could not resolve 'future-nick' on irc. The plugin parser did not recognize it and no channel-directory entry matched.\", 'success': False}\nE       assert False is True\n\ntests/tools/test_cron_target_boundary.py:54: AssertionError\n------------------------------ Captured log call -------------------------------\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'\n____ test_native_irc_first_does_not_hide_telegram_rejection[deliver-create] ____\n\ndelivery_home = PosixPath('<workspace>/factory-wave-20261010-1248/hermes-boundary-audit/tmp-owner/test_native_irc_first_does_not0/home')\naction = 'create', lane = 'deliver'\n\n    @pytest.mark.parametrize(\"action\", [\"create\", \"update\"])\n    @pytest.mark.parametrize(\"lane\", [\"deliver\", \"failure_deliver\"])\n    def test_native_irc_first_does_not_hide_telegram_rejection(delivery_home, action, lane):\n        seed = _seed()\n        store = delivery_home / \"cron\" / \"jobs.json\"\n        before = store.read_bytes()\n        target = \"irc:#future-room,telegram:not-a-chat\"\n        result = _dispatch(action, **_arguments(action, lane, target, seed))\n        assert result[\"success\"] is False, result\n>       assert \"telegram:not-a-chat\" in result[\"error\"]\nE       assert 'telegram:not-a-chat' in \"invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.\"\n\ntests/tools/test_cron_target_boundary.py:93: AssertionError\n------------------------------ Captured log call -------------------------------\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'\n____ test_native_irc_first_does_not_hide_telegram_rejection[deliver-update] ____\n\ndelivery_home = PosixPath('<workspace>/factory-wave-20261010-1248/hermes-boundary-audit/tmp-owner/test_native_irc_first_does_not1/home')\naction = 'update', lane = 'deliver'\n\n    @pytest.mark.parametrize(\"action\", [\"create\", \"update\"])\n    @pytest.mark.parametrize(\"lane\", [\"deliver\", \"failure_deliver\"])\n    def test_native_irc_first_does_not_hide_telegram_rejection(delivery_home, action, lane):\n        seed = _seed()\n        store = delivery_home / \"cron\" / \"jobs.json\"\n        before = store.read_bytes()\n        target = \"irc:#future-room,telegram:not-a-chat\"\n        result = _dispatch(action, **_arguments(action, lane, target, seed))\n        assert result[\"success\"] is False, result\n>       assert \"telegram:not-a-chat\" in result[\"error\"]\nE       assert 'telegram:not-a-chat' in \"invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.\"\n\ntests/tools/test_cron_target_boundary.py:93: AssertionError\n------------------------------ Captured log call -------------------------------\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'\n_ test_native_irc_first_does_not_hide_telegram_rejection[failure_deliver-create] _\n\ndelivery_home = PosixPath('<workspace>/factory-wave-20261010-1248/hermes-boundary-audit/tmp-owner/test_native_irc_first_does_not2/home')\naction = 'create', lane = 'failure_deliver'\n\n    @pytest.mark.parametrize(\"action\", [\"create\", \"update\"])\n    @pytest.mark.parametrize(\"lane\", [\"deliver\", \"failure_deliver\"])\n    def test_native_irc_first_does_not_hide_telegram_rejection(delivery_home, action, lane):\n        seed = _seed()\n        store = delivery_home / \"cron\" / \"jobs.json\"\n        before = store.read_bytes()\n        target = \"irc:#future-room,telegram:not-a-chat\"\n        result = _dispatch(action, **_arguments(action, lane, target, seed))\n        assert result[\"success\"] is False, result\n>       assert \"telegram:not-a-chat\" in result[\"error\"]\nE       assert 'telegram:not-a-chat' in \"invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.\"\n\ntests/tools/test_cron_target_boundary.py:93: AssertionError\n------------------------------ Captured log call -------------------------------\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'\n_ test_native_irc_first_does_not_hide_telegram_rejection[failure_deliver-update] _\n\ndelivery_home = PosixPath('<workspace>/factory-wave-20261010-1248/hermes-boundary-audit/tmp-owner/test_native_irc_first_does_not3/home')\naction = 'update', lane = 'failure_deliver'\n\n    @pytest.mark.parametrize(\"action\", [\"create\", \"update\"])\n    @pytest.mark.parametrize(\"lane\", [\"deliver\", \"failure_deliver\"])\n    def test_native_irc_first_does_not_hide_telegram_rejection(delivery_home, action, lane):\n        seed = _seed()\n        store = delivery_home / \"cron\" / \"jobs.json\"\n        before = store.read_bytes()\n        target = \"irc:#future-room,telegram:not-a-chat\"\n        result = _dispatch(action, **_arguments(action, lane, target, seed))\n        assert result[\"success\"] is False, result\n>       assert \"telegram:not-a-chat\" in result[\"error\"]\nE       assert 'telegram:not-a-chat' in \"invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.\"\n\ntests/tools/test_cron_target_boundary.py:93: AssertionError\n------------------------------ Captured log call -------------------------------\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'\nWARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'\n=========================== short test summary info ============================\nFAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-deliver-create]\nFAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-deliver-update]\nFAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-failure_deliver-create]\nFAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:#future-room-#future-room-None-failure_deliver-update]\nFAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-deliver-create]\nFAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-deliver-update]\nFAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-failure_deliver-create]\nFAILED tests/tools/test_cron_target_boundary.py::test_native_and_explicit_targets_remain_schedulable[irc:future-nick-future-nick-None-failure_deliver-update]\nFAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[deliver-create]\nFAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[deliver-update]\nFAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[failure_deliver-create]\nFAILED tests/tools/test_cron_target_boundary.py::test_native_irc_first_does_not_hide_telegram_rejection[failure_deliver-update]\n======================== 12 failed, 24 passed in 7.58s =========================\n\n=== 1 file with test failures (12 tests failed) ===\n  tests/tools/test_cron_target_boundary.py  (12 tests failed)\n",
+  "replay-exitcodes.txt": "owner_rc=1\ncontrol_rc=0\n",
+  "static-identity-verification.json": {
+    "observed_utc": "2026-10-10T13:04:16Z",
+    "repo_head": "e114b0cf78802d11131e0cb44a831dbbe2a4ae6f",
+    "pins": {
+      "owner": "d310978d039e479d1df5f0de8752adf6e64adea2",
+      "base": "dce1e9b37581dd62e480a9064dc04a709c2940d3",
+      "current_main": "f925b01791fe052e7d55dc975750c0bd985aff91",
+      "prior_evidence": "e114b0cf78802d11131e0cb44a831dbbe2a4ae6f"
+    },
+    "artifact_checks": [
+      {
+        "path": "reviews/cron-native-irc/target-boundary/README.md",
+        "expected": "e21d99251887943dac72c185299ced2271ea08eaaf9a682268e80bde9d091aa3",
+        "actual": "e21d99251887943dac72c185299ced2271ea08eaaf9a682268e80bde9d091aa3",
+        "match": true
+      },
+      {
+        "path": "reviews/cron-native-irc/target-boundary/dependencies-frozen.txt",
+        "expected": "ddff62d98a6e61a1b636318818978382b55de6901df0ea1eae23ef31d3d52ab8",
+        "actual": "ddff62d98a6e61a1b636318818978382b55de6901df0ea1eae23ef31d3d52ab8",
+        "match": true
+      },
+      {
+        "path": "reviews/cron-native-irc/target-boundary/logs/control-fixture-order-attempt.log",
+        "expected": "bf484cc7e0ebd0f6424f8d9b42c11d63b03d8137bd5a1ef0470653c0e6b7e612",
+        "actual": "bf484cc7e0ebd0f6424f8d9b42c11d63b03d8137bd5a1ef0470653c0e6b7e612",
+        "match": true
+      },
+      {
+        "path": "reviews/cron-native-irc/target-boundary/logs/irc-scoped-control.log",
+        "expected": "f578a2ddb1322d82e047fb17258050687eea035fb14d7151af3a00eef90ae130",
+        "actual": "f578a2ddb1322d82e047fb17258050687eea035fb14d7151af3a00eef90ae130",
+        "match": true
+      },
+      {
+        "path": "reviews/cron-native-irc/target-boundary/logs/owner.log",
+        "expected": "102456f1428e6c6d64fa47ed0b4df6d96b3a097189ab8000a6cced5919f71c7f",
+        "actual": "102456f1428e6c6d64fa47ed0b4df6d96b3a097189ab8000a6cced5919f71c7f",
+        "match": true
+      },
+      {
+        "path": "reviews/cron-native-irc/target-boundary/receipt.json",
+        "expected": "2667eb8ad24821fcd4bc82bbcca8720e0ee7672b18b186dbc0e370f5223d5316",
+        "actual": "2667eb8ad24821fcd4bc82bbcca8720e0ee7672b18b186dbc0e370f5223d5316",
+        "match": true
+      },
+      {
+        "path": "reviews/cron-native-irc/target-boundary/source-matrix.json",
+        "expected": "f34e5c17173e5756e4e9d3ee2faee03d0502734ecf961d0222237d2fa148b2ec",
+        "actual": "f34e5c17173e5756e4e9d3ee2faee03d0502734ecf961d0222237d2fa148b2ec",
+        "match": true
+      },
+      {
+        "path": "reviews/cron-native-irc/irc_native_parser_control.py",
+        "expected": "22814fe951f6086a35202dc191892bdfe859ea417763437974c4dcafcdb77d10",
+        "actual": "22814fe951f6086a35202dc191892bdfe859ea417763437974c4dcafcdb77d10",
+        "match": true
+      },
+      {
+        "path": "tests/tools/test_cron_target_boundary.py",
+        "expected": "3c3ad6d81715f3251c4120c2cf2f98d635c3d61440340616775b706007f419d8",
+        "actual": "3c3ad6d81715f3251c4120c2cf2f98d635c3d61440340616775b706007f419d8",
+        "match": true
+      }
+    ],
+    "artifact_checks_passed": 9,
+    "source_checks": [
+      {
+        "path": "tools/cronjob_job_args.py",
+        "checks": {
+          "owner": {
+            "expected": "e0a1d09311333d22211820135403d53a8177c853e7234d3cd5b260f3b5e22d34",
+            "actual": "e0a1d09311333d22211820135403d53a8177c853e7234d3cd5b260f3b5e22d34",
+            "match": true
+          },
+          "base": {
+            "expected": "ab9c97a213eba4d6f8887d27c1e381ec013bcc0a65352c3c50d12bb5c0e38f57",
+            "actual": "ab9c97a213eba4d6f8887d27c1e381ec013bcc0a65352c3c50d12bb5c0e38f57",
+            "match": true
+          },
+          "current_main": {
+            "expected": "ab9c97a213eba4d6f8887d27c1e381ec013bcc0a65352c3c50d12bb5c0e38f57",
+            "actual": "ab9c97a213eba4d6f8887d27c1e381ec013bcc0a65352c3c50d12bb5c0e38f57",
+            "match": true
+          },
+          "prior_evidence": {
+            "expected": "e0a1d09311333d22211820135403d53a8177c853e7234d3cd5b260f3b5e22d34",
+            "actual": "e0a1d09311333d22211820135403d53a8177c853e7234d3cd5b260f3b5e22d34",
+            "match": true
+          },
+          "working_tree": {
+            "expected": "e0a1d09311333d22211820135403d53a8177c853e7234d3cd5b260f3b5e22d34",
+            "actual": "e0a1d09311333d22211820135403d53a8177c853e7234d3cd5b260f3b5e22d34",
+            "match": true
+          }
+        },
+        "base_equals_current_main": true
+      },
+      {
+        "path": "tools/cronjob_tools.py",
+        "checks": {
+          "owner": {
+            "expected": "7c16c9b3c4eca45a524235d762bc1492f26a0df66b988c2677132480b8e0e213",
+            "actual": "7c16c9b3c4eca45a524235d762bc1492f26a0df66b988c2677132480b8e0e213",
+            "match": true
+          },
+          "base": {
+            "expected": "99f980bc671e5dc48bd982a8ed0c21fe93b3ab2262f6c723ff6319d8f6910822",
+            "actual": "99f980bc671e5dc48bd982a8ed0c21fe93b3ab2262f6c723ff6319d8f6910822",
+            "match": true
+          },
+          "current_main": {
+            "expected": "99f980bc671e5dc48bd982a8ed0c21fe93b3ab2262f6c723ff6319d8f6910822",
+            "actual": "99f980bc671e5dc48bd982a8ed0c21fe93b3ab2262f6c723ff6319d8f6910822",
+            "match": true
+          },
+          "prior_evidence": {
+            "expected": "7c16c9b3c4eca45a524235d762bc1492f26a0df66b988c2677132480b8e0e213",
+            "actual": "7c16c9b3c4eca45a524235d762bc1492f26a0df66b988c2677132480b8e0e213",
+            "match": true
+          },
+          "working_tree": {
+            "expected": "7c16c9b3c4eca45a524235d762bc1492f26a0df66b988c2677132480b8e0e213",
+            "actual": "7c16c9b3c4eca45a524235d762bc1492f26a0df66b988c2677132480b8e0e213",
+            "match": true
+          }
+        },
+        "base_equals_current_main": true
+      },
+      {
+        "path": "tools/send_message_targets.py",
+        "checks": {
+          "owner": {
+            "expected": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0",
+            "actual": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0",
+            "match": true
+          },
+          "base": {
+            "expected": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0",
+            "actual": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0",
+            "match": true
+          },
+          "current_main": {
+            "expected": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0",
+            "actual": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0",
+            "match": true
+          },
+          "prior_evidence": {
+            "expected": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0",
+            "actual": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0",
+            "match": true
+          },
+          "working_tree": {
+            "expected": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0",
+            "actual": "317075857c73c66b9db91888a36d77f865fe13b563ce3e9f76251797d0e7acc0",
+            "match": true
+          }
+        },
+        "base_equals_current_main": true
+      },
+      {
+        "path": "tools/send_message_tool.py",
+        "checks": {
+          "owner": {
+            "expected": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d",
+            "actual": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d",
+            "match": true
+          },
+          "base": {
+            "expected": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d",
+            "actual": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d",
+            "match": true
+          },
+          "current_main": {
+            "expected": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d",
+            "actual": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d",
+            "match": true
+          },
+          "prior_evidence": {
+            "expected": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d",
+            "actual": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d",
+            "match": true
+          },
+          "working_tree": {
+            "expected": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d",
+            "actual": "26079c7fc5e62af2e6ecfa0daaebef1bb16497cdb96d064840fa31c530d98f2d",
+            "match": true
+          }
+        },
+        "base_equals_current_main": true
+      },
+      {
+        "path": "plugins/platforms/irc/adapter.py",
+        "checks": {
+          "owner": {
+            "expected": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e",
+            "actual": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e",
+            "match": true
+          },
+          "base": {
+            "expected": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e",
+            "actual": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e",
+            "match": true
+          },
+          "current_main": {
+            "expected": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e",
+            "actual": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e",
+            "match": true
+          },
+          "prior_evidence": {
+            "expected": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e",
+            "actual": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e",
+            "match": true
+          },
+          "working_tree": {
+            "expected": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e",
+            "actual": "33bc689ed1b379058a80630e5b01fe9922b7e5d05c70eb62b9ab45a2e735844e",
+            "match": true
+          }
+        },
+        "base_equals_current_main": true
+      },
+      {
+        "path": "plugins/platforms/telegram/telegram_ids.py",
+        "checks": {
+          "owner": {
+            "expected": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1",
+            "actual": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1",
+            "match": true
+          },
+          "base": {
+            "expected": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1",
+            "actual": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1",
+            "match": true
+          },
+          "current_main": {
+            "expected": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1",
+            "actual": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1",
+            "match": true
+          },
+          "prior_evidence": {
+            "expected": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1",
+            "actual": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1",
+            "match": true
+          },
+          "working_tree": {
+            "expected": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1",
+            "actual": "21ba9008248ea3cc0726eafce7d23096473e2d2419dd8756881f07d61af125b1",
+            "match": true
+          }
+        },
+        "base_equals_current_main": true
+      },
+      {
+        "path": "cron/scheduler_delivery.py",
+        "checks": {
+          "owner": {
+            "expected": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e",
+            "actual": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e",
+            "match": true
+          },
+          "base": {
+            "expected": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e",
+            "actual": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e",
+            "match": true
+          },
+          "current_main": {
+            "expected": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e",
+            "actual": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e",
+            "match": true
+          },
+          "prior_evidence": {
+            "expected": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e",
+            "actual": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e",
+            "match": true
+          },
+          "working_tree": {
+            "expected": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e",
+            "actual": "264f9b833288635a3b404741ff55ec9c542989cdad61d11e2b502567b943062e",
+            "match": true
+          }
+        },
+        "base_equals_current_main": true
+      },
+      {
+        "path": "gateway/platform_registry.py",
+        "checks": {
+          "owner": {
+            "expected": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df",
+            "actual": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df",
+            "match": true
+          },
+          "base": {
+            "expected": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df",
+            "actual": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df",
+            "match": true
+          },
+          "current_main": {
+            "expected": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df",
+            "actual": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df",
+            "match": true
+          },
+          "prior_evidence": {
+            "expected": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df",
+            "actual": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df",
+            "match": true
+          },
+          "working_tree": {
+            "expected": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df",
+            "actual": "e141a15023de9245b7e5ce40103c66295a9839a916c6c866a36ba4e6f2de95df",
+            "match": true
+          }
+        },
+        "base_equals_current_main": true
+      },
+      {
+        "path": "tests/tools/test_cronjob_job_args.py",
+        "checks": {
+          "owner": {
+            "expected": "dc1c8066edc0b59450b34ba327e4971c23fe3887278d75e92fa8044a858e4332",
+            "actual": "dc1c8066edc0b59450b34ba327e4971c23fe3887278d75e92fa8044a858e4332",
+            "match": true
+          },
+          "base": {
+            "expected": "349d81cd7f4cb78994338dcf06f78e8d41eab58f01dc2d15df82aac6b58dc551",
+            "actual": "349d81cd7f4cb78994338dcf06f78e8d41eab58f01dc2d15df82aac6b58dc551",
+            "match": true
+          },
+          "current_main": {
+            "expected": "349d81cd7f4cb78994338dcf06f78e8d41eab58f01dc2d15df82aac6b58dc551",
+            "actual": "349d81cd7f4cb78994338dcf06f78e8d41eab58f01dc2d15df82aac6b58dc551",
+            "match": true
+          },
+          "prior_evidence": {
+            "expected": "dc1c8066edc0b59450b34ba327e4971c23fe3887278d75e92fa8044a858e4332",
+            "actual": "dc1c8066edc0b59450b34ba327e4971c23fe3887278d75e92fa8044a858e4332",
+            "match": true
+          },
+          "working_tree": {
+            "expected": "dc1c8066edc0b59450b34ba327e4971c23fe3887278d75e92fa8044a858e4332",
+            "actual": "dc1c8066edc0b59450b34ba327e4971c23fe3887278d75e92fa8044a858e4332",
+            "match": true
+          }
+        },
+        "base_equals_current_main": true
+      },
+      {
+        "path": "tests/tools/test_cronjob_tools.py",
+        "checks": {
+          "owner": {
+            "expected": "af7eea61967d0bdd42675a98e0f15d1a0bcdcdd37f41fc5b0746431d9aa0c6ec",
+            "actual": "af7eea61967d0bdd42675a98e0f15d1a0bcdcdd37f41fc5b0746431d9aa0c6ec",
+            "match": true
+          },
+          "base": {
+            "expected": "af7eea61967d0bdd42675a98e0f15d1a0bcdcdd37f41fc5b0746431d9aa0c6ec",
+            "actual": "af7eea61967d0bdd42675a98e0f15d1a0bcdcdd37f41fc5b0746431d9aa0c6ec",
+            "match": true
+          },
+          "current_main": {
+            "expected": "af7eea61967d0bdd42675a98e0f15d1a0bcdcdd37f41fc5b0746431d9aa0c6ec",
+            "actual": "af7eea61967d0bdd42675a98e0f15d1a0bcdcdd37f41fc5b0746431d9aa0c6ec",
+            "match": true
+          },
+          "prior_evidence": {
+            "expected": "af7eea61967d0bdd42675a98e0f15d1a0bcdcdd37f41fc5b0746431d9aa0c6ec",
+            "actual": "af7eea61967d0bdd42675a98e0f15d1a0bcdcdd37f41fc5b0746431d9aa0c6ec",
+            "match": true
+          },
+          "working_tree": {
+            "expected": "af7eea61967d0bdd42675a98e0f15d1a0bcdcdd37f41fc5b0746431d9aa0c6ec",
+            "actual": "af7eea61967d0bdd42675a98e0f15d1a0bcdcdd37f41fc5b0746431d9aa0c6ec",
+            "match": true
+          }
+        },
+        "base_equals_current_main": true
+      },
+      {
+        "path": "scripts/run_tests.sh",
+        "checks": {
+          "owner": {
+            "expected": "5d81d729ca0b98f89d5c944d2231eaf2a6190817b099a45f924de0af24ec3aac",
+            "actual": "5d81d729ca0b98f89d5c944d2231eaf2a6190817b099a45f924de0af24ec3aac",
+            "match": true
+          },
+          "base": {
+            "expected": "5d81d729ca0b98f89d5c944d2231eaf2a6190817b099a45f924de0af24ec3aac",
+            "actual": "5d81d729ca0b98f89d5c944d2231eaf2a6190817b099a45f924de0af24ec3aac",
+            "match": true
+          },
+          "current_main": {
+            "expected": "5d81d729ca0b98f89d5c944d2231eaf2a6190817b099a45f924de0af24ec3aac",
+            "actual": "5d81d729ca0b98f89d5c944d2231eaf2a6190817b099a45f924de0af24ec3aac",
+            "match": true
+          },
+          "prior_evidence": {
+            "expected": "5d81d729ca0b98f89d5c944d2231eaf2a6190817b099a45f924de0af24ec3aac",
+            "actual": "5d81d729ca0b98f89d5c944d2231eaf2a6190817b099a45f924de0af24ec3aac",
+            "match": true
+          },
+          "working_tree": {
+            "expected": "5d81d729ca0b98f89d5c944d2231eaf2a6190817b099a45f924de0af24ec3aac",
+            "actual": "5d81d729ca0b98f89d5c944d2231eaf2a6190817b099a45f924de0af24ec3aac",
+            "match": true
+          }
+        },
+        "base_equals_current_main": true
+      },
+      {
+        "path": "scripts/run_tests_parallel.py",
+        "checks": {
+          "owner": {
+            "expected": "96efd8cb96ffb8a7f049537cf0761f8fd7a96f35aca99a51bbc952468f274a0c",
+            "actual": "96efd8cb96ffb8a7f049537cf0761f8fd7a96f35aca99a51bbc952468f274a0c",
+            "match": true
+          },
+          "base": {
+            "expected": "96efd8cb96ffb8a7f049537cf0761f8fd7a96f35aca99a51bbc952468f274a0c",
+            "actual": "96efd8cb96ffb8a7f049537cf0761f8fd7a96f35aca99a51bbc952468f274a0c",
+            "match": true
+          },
+          "current_main": {
+            "expected": "96efd8cb96ffb8a7f049537cf0761f8fd7a96f35aca99a51bbc952468f274a0c",
+            "actual": "96efd8cb96ffb8a7f049537cf0761f8fd7a96f35aca99a51bbc952468f274a0c",
+            "match": true
+          },
+          "prior_evidence": {
+            "expected": "96efd8cb96ffb8a7f049537cf0761f8fd7a96f35aca99a51bbc952468f274a0c",
+            "actual": "96efd8cb96ffb8a7f049537cf0761f8fd7a96f35aca99a51bbc952468f274a0c",
+            "match": true
+          },
+          "working_tree": {
+            "expected": "96efd8cb96ffb8a7f049537cf0761f8fd7a96f35aca99a51bbc952468f274a0c",
+            "actual": "96efd8cb96ffb8a7f049537cf0761f8fd7a96f35aca99a51bbc952468f274a0c",
+            "match": true
+          }
+        },
+        "base_equals_current_main": true
+      },
+      {
+        "path": "tests/conftest.py",
+        "checks": {
+          "owner": {
+            "expected": "2138d2c006bfff0bf3b5d629496108e55cf43c70319e975a9cfdd263900492ec",
+            "actual": "2138d2c006bfff0bf3b5d629496108e55cf43c70319e975a9cfdd263900492ec",
+            "match": true
+          },
+          "base": {
+            "expected": "2138d2c006bfff0bf3b5d629496108e55cf43c70319e975a9cfdd263900492ec",
+            "actual": "2138d2c006bfff0bf3b5d629496108e55cf43c70319e975a9cfdd263900492ec",
+            "match": true
+          },
+          "current_main": {
+            "expected": "2138d2c006bfff0bf3b5d629496108e55cf43c70319e975a9cfdd263900492ec",
+            "actual": "2138d2c006bfff0bf3b5d629496108e55cf43c70319e975a9cfdd263900492ec",
+            "match": true
+          },
+          "prior_evidence": {
+            "expected": "2138d2c006bfff0bf3b5d629496108e55cf43c70319e975a9cfdd263900492ec",
+            "actual": "2138d2c006bfff0bf3b5d629496108e55cf43c70319e975a9cfdd263900492ec",
+            "match": true
+          },
+          "working_tree": {
+            "expected": "2138d2c006bfff0bf3b5d629496108e55cf43c70319e975a9cfdd263900492ec",
+            "actual": "2138d2c006bfff0bf3b5d629496108e55cf43c70319e975a9cfdd263900492ec",
+            "match": true
+          }
+        },
+        "base_equals_current_main": true
+      },
+      {
+        "path": "gateway/config.py",
+        "checks": {
+          "owner": {
+            "expected": "0b0afcd42648fcea652c19655d899427672d3cebf29cc8dd3d5539780f45631a",
+            "actual": "0b0afcd42648fcea652c19655d899427672d3cebf29cc8dd3d5539780f45631a",
+            "match": true
+          },
+          "base": {
+            "expected": "0b0afcd42648fcea652c19655d899427672d3cebf29cc8dd3d5539780f45631a",
+            "actual": "0b0afcd42648fcea652c19655d899427672d3cebf29cc8dd3d5539780f45631a",
+            "match": true
+          },
+          "current_main": {
+            "expected": "0b0afcd42648fcea652c19655d899427672d3cebf29cc8dd3d5539780f45631a",
+            "actual": "0b0afcd42648fcea652c19655d899427672d3cebf29cc8dd3d5539780f45631a",
+            "match": true
+          },
+          "prior_evidence": {
+            "expected": "0b0afcd42648fcea652c19655d899427672d3cebf29cc8dd3d5539780f45631a",
+            "actual": "0b0afcd42648fcea652c19655d899427672d3cebf29cc8dd3d5539780f45631a",
+            "match": true
+          },
+          "working_tree": {
+            "expected": "0b0afcd42648fcea652c19655d899427672d3cebf29cc8dd3d5539780f45631a",
+            "actual": "0b0afcd42648fcea652c19655d899427672d3cebf29cc8dd3d5539780f45631a",
+            "match": true
+          }
+        },
+        "base_equals_current_main": true
+      }
+    ],
+    "source_checks_passed": 70,
+    "base_current_main_equal_count": 14,
+    "supplement": {
+      "actual": "d247b3bbc75b5bbc12c9a949ac34ae7e7b743ea69ba6ac90b99ba7fbf4c2dc95",
+      "prior_evidence": "d247b3bbc75b5bbc12c9a949ac34ae7e7b743ea69ba6ac90b99ba7fbf4c2dc95",
+      "match": true
+    },
+    "tracked_diff": [],
+    "status": [
+      "?? reviews/cron-native-irc/irc_native_parser_control.py",
+      "?? reviews/cron-native-irc/target-boundary/",
+      "?? tests/tools/test_cron_target_boundary.py"
+    ],
+    "runtime_system_clock_utc": "2026-10-10T13:03:58.518224+00:00",
+    "time_source": "clock.curr_time; sandbox system clock retained separately"
+  }
+}
