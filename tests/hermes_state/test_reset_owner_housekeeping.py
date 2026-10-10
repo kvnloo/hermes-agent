@@ -54,3 +54,74 @@ def test_sweeps_keep_the_owner_a_retained_reset_child_needs(tmp_path, producer, 
         admitted = rt.admit_session_input(db, epoch=epoch, principal_id='human', session_id=sid,
                                           request_id='after', payload={'text': 'after'})
         assert admitted['status'] == 'queued'
+
+
+def _age(db, *ids, ended=True):
+    stamp = time.time() - 200 * 86400
+    for sid in ids:
+        db._execute_write(lambda c, sid=sid: c.execute(
+            'UPDATE sessions SET started_at=?, last_activity_at=NULL, ended_at=COALESCE(ended_at, ?) WHERE id=?',
+            (stamp, stamp if ended else None, sid)))
+        db._execute_write(lambda c, sid=sid: c.execute(
+            'UPDATE messages SET timestamp=? WHERE session_id=?', (stamp, sid)))
+
+
+def _refused(call):
+    with pytest.raises(rt.RuntimeStoreError, match='session_busy'):
+        call()
+
+
+_QUEUE_PATHS = {
+    # (history on the child, child finalized, deletion/sweep)
+    'retention': (True, True, lambda db, child: db.prune_sessions(older_than_days=90)),
+    'delete_session': (True, True, lambda db, child: _refused(lambda: db.delete_session(child))),
+    'delete_sessions': (True, True, lambda db, child: _refused(lambda: db.delete_sessions([child]))),
+    'never_active': (False, False, lambda db, child: db.prune_never_active_keyed_sessions(older_than_days=90)),
+    'no_sweep': (True, True, lambda db, child: None),
+}
+
+
+@pytest.mark.parametrize('path', list(_QUEUE_PATHS))
+@pytest.mark.parametrize('producer', ['canonical', 'session_store'])
+def test_accepted_work_on_the_logical_owner_keeps_its_reset_child(tmp_path, producer, path):
+    """The inverse direction (JoaoMarcos44, r4238631016): accepted work is queued on the logical owner
+    while the transcript lives in the physical reset child. Deleting or sweeping that child before the
+    input is claimed destroys the conversation the queue runs on, so every path must treat it as busy."""
+    from hermes_state_local_lineage import local_physical_target
+    history, finalized, run = _QUEUE_PATHS[path]
+    with closing(SessionDB(tmp_path / 'state.db')) as db:
+        epoch = rt.begin_runtime_epoch(db, instance_id='owner')
+        sid = _local_session(db, epoch, tmp_path)
+        child = (_mutate(db, epoch, sid, 'reset')['target_session_id'] if producer == 'canonical'
+                 else _store_reset(db, epoch, sid))
+        if history:
+            db.append_message(child, 'user', 'hi')
+            db.append_message(child, 'assistant', 'hello')
+        _age(db, sid)
+        _age(db, child, ended=finalized)
+        admitted = rt.admit_session_input(db, epoch=epoch, principal_id='human', session_id=sid,
+                                          request_id='queued-before-claim', payload={'text': 'next'})
+        assert admitted['status'] == 'queued'
+
+        run(db, child)
+
+        assert db.get_session(child) is not None
+        assert [m['content'] for m in db.get_messages(child)] == (['hi', 'hello'] if history else [])
+        with db._read_ctx() as conn:
+            assert local_physical_target(conn, sid) == child
+            assert conn.execute('SELECT status FROM session_admissions WHERE target_session_id=?',
+                                (sid,)).fetchall()[0][0] == 'queued'
+
+
+@pytest.mark.parametrize('producer', ['canonical', 'session_store'])
+def test_idle_reset_conversation_is_still_pruned_whole(tmp_path, producer):
+    """Control: with nothing accepted, an aged reset conversation is still housekeeping's to delete."""
+    with closing(SessionDB(tmp_path / 'state.db')) as db:
+        epoch = rt.begin_runtime_epoch(db, instance_id='owner')
+        sid = _local_session(db, epoch, tmp_path)
+        child = (_mutate(db, epoch, sid, 'reset')['target_session_id'] if producer == 'canonical'
+                 else _store_reset(db, epoch, sid))
+        db.append_message(child, 'user', 'hi')
+        _age(db, sid, child)
+        db.prune_sessions(older_than_days=90)
+        assert db.get_session(child) is None and db.get_session(sid) is None
