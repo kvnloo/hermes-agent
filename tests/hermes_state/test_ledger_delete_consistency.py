@@ -318,3 +318,77 @@ def test_housekeeping_keeps_the_logical_owner_of_a_live_reset_child(tmp_path, re
         admitted = rt.admit_session_input(db, epoch=epoch, principal_id='human', session_id=sid,
                                           request_id='next', payload={'text': 'next'})
         assert admitted['status'] == 'queued'
+
+
+def _age(db, *ids, ended=True):
+    stamp = time.time() - 100 * 86400
+    for sid in ids:
+        db._execute_write(lambda c, sid=sid: c.execute(
+            'UPDATE sessions SET started_at=?, ended_at=COALESCE(ended_at, ?) WHERE id=?',
+            (stamp, stamp if ended else None, sid)))
+        db._execute_write(lambda c, sid=sid: c.execute(
+            'UPDATE sessions SET last_activity_at=NULL WHERE id=? AND last_activity_at IS NOT NULL', (sid,)))
+        db._execute_write(lambda c, sid=sid: c.execute(
+            'UPDATE messages SET timestamp=? WHERE session_id=?', (stamp, sid)))
+
+
+def _refused(call):
+    from hermes_state_runtime import RuntimeStoreError
+    with pytest.raises(RuntimeStoreError, match='session_busy'):
+        call()
+
+
+_QUEUE_PATHS = {
+    # (history on the child, child finalized, deletion/sweep)
+    'retention': (True, True, lambda db, child: db.prune_sessions(older_than_days=30)),
+    'delete_session': (True, True, lambda db, child: _refused(lambda: db.delete_session(child))),
+    'delete_sessions': (True, True, lambda db, child: _refused(lambda: db.delete_sessions([child]))),
+    'never_active': (False, False, lambda db, child: db.prune_never_active_keyed_sessions(older_than_days=30)),
+    'no_sweep': (True, True, lambda db, child: None),
+}
+
+
+@pytest.mark.parametrize('path', list(_QUEUE_PATHS))
+@pytest.mark.parametrize('reset', [_store_reset, _canonical_reset], ids=['session_store', 'canonical'])
+def test_accepted_work_on_the_logical_owner_keeps_its_reset_child(tmp_path, reset, path):
+    """The inverse of the kept-child case (JoaoMarcos44, PR #106742 r4238631016): accepted work is
+    queued on the logical owner while the transcript lives in the physical reset child. Deleting or
+    sweeping that child before the input is claimed destroys the conversation the queue will run on,
+    so every deletion path must treat the child as busy."""
+    from hermes_state_local import local_receipt
+    from hermes_state_local_lineage import validate_local_lineage
+    history, finalized, run = _QUEUE_PATHS[path]
+    with closing(SessionDB(tmp_path / 'state.db')) as db:
+        epoch = rt.begin_runtime_epoch(db, instance_id='owner')
+        sid, entry = _local_session(db, epoch)
+        child = reset(db, epoch, sid, entry)
+        if history:
+            db.append_message(child, 'user', 'after reset')
+            db.append_message(child, 'assistant', 'still here')
+        _age(db, sid)
+        _age(db, child, ended=finalized)
+        admitted = rt.admit_session_input(db, epoch=epoch, principal_id='human', session_id=sid,
+                                          request_id='queued-before-claim', payload={'text': 'next'})
+        assert admitted['status'] == 'queued'
+
+        run(db, child)
+
+        assert db.get_session(child) is not None
+        assert [m['content'] for m in db.get_messages(child)] == (['after reset', 'still here'] if history else [])
+        with db._read_ctx() as conn:
+            assert validate_local_lineage(conn, local_receipt(db, sid)) == child
+            assert conn.execute('SELECT status FROM session_admissions WHERE target_session_id=?',
+                                (sid,)).fetchall()[0][0] == 'queued'
+
+
+@pytest.mark.parametrize('reset', [_store_reset, _canonical_reset], ids=['session_store', 'canonical'])
+def test_idle_reset_conversation_is_still_pruned_whole(tmp_path, reset):
+    """Control: with nothing accepted, an aged reset conversation is still housekeeping's to delete."""
+    with closing(SessionDB(tmp_path / 'state.db')) as db:
+        epoch = rt.begin_runtime_epoch(db, instance_id='owner')
+        sid, entry = _local_session(db, epoch)
+        child = reset(db, epoch, sid, entry)
+        db.append_message(child, 'user', 'after reset')
+        _age(db, sid, child)
+        db.prune_sessions(older_than_days=30)
+        assert db.get_session(child) is None and db.get_session(sid) is None
