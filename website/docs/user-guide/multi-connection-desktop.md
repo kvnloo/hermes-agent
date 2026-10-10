@@ -59,10 +59,11 @@ Rules worth knowing:
   **Make primary** does not switch the current Sessions workspace; removing
   the primary falls back to the local entry.
 - **At startup, return to Sessions on the last-used gateway** controls which
-  gateway Sessions opens after a full app restart. It is off by default, so
-  Sessions opens on **Primary**. Turn it on to resume the most recent gateway
-  that connected successfully. A failed switch is never remembered, and a
-  removed or unavailable saved gateway falls back to Primary.
+  gateway Sessions opens after a full app restart when no profile is set as the
+  desktop default. It is off by default, so Sessions opens on **Primary** in
+  that case. Turn it on to resume the most recent gateway that connected
+  successfully. A failed switch is never remembered, and a removed or
+  unavailable saved gateway falls back to Primary.
 - **Test** probes the connection's own HTTP *and* WebSocket legs, so a pass
   (the *"Reachable"* toast) means chat will actually work — not just that the
   host pinged.
