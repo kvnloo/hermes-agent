@@ -1826,6 +1826,8 @@ class SessionSessionsMixin:
                             sid for sid in existing
                             if self._guarded_ids(conn, [sid, *_collect_delegate_child_ids(conn, [sid])])
                         }
+                from hermes_state_mutation_retirement import busy_local_dependencies
+                active_ids |= set(existing) & busy_local_dependencies(conn)
                 existing = [sid for sid in existing if sid not in active_ids]
                 if skipped_ids is not None:
                     skipped_ids.extend(sorted(active_ids))

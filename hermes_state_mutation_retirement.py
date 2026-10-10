@@ -39,6 +39,8 @@ def _compact_result(conn, admission_id):
 
 def retire_terminal_receipts(conn, session_ids):
     from hermes_state_terminal import ADMISSION_PREFIX, WORKER_PREFIX, identity_key
+    if set(session_ids) & busy_local_dependencies(conn):
+        raise RuntimeStoreError('session_busy')
     for sid in session_ids:
         admissions = conn.execute('SELECT * FROM session_admissions WHERE target_session_id=?', (sid,)).fetchall()
         workers = conn.execute('SELECT * FROM worker_executions WHERE session_id=?', (sid,)).fetchall()
@@ -110,12 +112,29 @@ def _owners_of_kept_targets(conn, candidates):
     return kept
 
 
+def busy_local_dependencies(conn):
+    """Every id of a local conversation with accepted work anywhere in it. Admissions bind to the
+    logical owner while the transcript lives in the current physical target, so a delete or sweep of
+    any lineage member before the input is claimed would leave the queue running on nothing."""
+    from hermes_state_local import POLICY_PREFIX
+    busy = set()
+    for (raw,) in conn.execute('SELECT value FROM state_meta WHERE key LIKE ?', (POLICY_PREFIX + '%',)):
+        try:
+            receipt = json.loads(raw)
+            ids = {receipt['entry']['session_id'], *receipt.get('lineage', [receipt['session_id']])}
+        except (KeyError, TypeError, ValueError):
+            continue
+        if any(conn.execute(_LIVE_LEDGER_SQL, (sid, sid)).fetchone() for sid in ids):
+            busy |= ids
+    return busy
+
+
 def retire_prunable(conn, session_ids):
     """Sweep variant of :func:`retire_sessions`: fence the idle sessions and return only those ids.
     A session with live or unknown work is skipped, so one busy row cannot abort a whole
     prune/empty-session sweep (explicit deletes still refuse with ``session_busy``), and so is
     every id a kept local target still depends on."""
-    needed = _owners_of_kept_targets(conn, set(session_ids))
+    needed = _owners_of_kept_targets(conn, set(session_ids)) | busy_local_dependencies(conn)
     quiet = [sid for sid in session_ids if sid not in needed
              and conn.execute(_LIVE_LEDGER_SQL, (sid, sid)).fetchone() is None]
     retire_sessions(conn, quiet)
