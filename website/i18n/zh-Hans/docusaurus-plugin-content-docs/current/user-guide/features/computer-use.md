@@ -99,7 +99,7 @@ Hermes 应用多层防护机制：
 
 截图开销较大。Hermes 应用四层优化措施：
 
-- **截图淘汰** — Anthropic 适配器在上下文中仅保留最近 3 张截图；较旧的截图替换为 `[screenshot removed to save context]` 占位符。
+- **截图淘汰** — 在每个 provider 上，截图随每次请求一同发送，直到即将越过 Anthropic 文档规定的单次请求图像上限（20 个图像块，或 24 MB 图像数据）才触发淘汰；此时最旧的一批截图替换为 `[screenshot removed to save context]` 占位符。低于上限时不重写任何内容，因此 prompt-cache 前缀得以保留；达到上限时每批只产生一个较慢的回合，而非每张截图各一个。用户自行附加的图像计入该上限，但永不被移除。
 - **客户端压缩裁剪** — 上下文压缩器检测多模态工具结果，并从旧结果中剥离图像部分。
 - **图像感知 token 估算** — 每张图像计为约 1500 个 token（Anthropic 的固定费率），而非其 base64 字符长度。
 - **服务端上下文编辑（仅限 Anthropic）** — 激活后，适配器通过 `context_management` 启用 `clear_tool_uses_20250919`，由 Anthropic API 在服务端清除旧工具结果。
