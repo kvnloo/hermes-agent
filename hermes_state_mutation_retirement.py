@@ -39,6 +39,8 @@ def _compact_result(conn, admission_id):
 
 def retire_terminal_receipts(conn, session_ids):
     from hermes_state_terminal import ADMISSION_PREFIX, WORKER_PREFIX, identity_key
+    if set(session_ids) & busy_local_conversations(conn):
+        raise RuntimeStoreError('session_busy')
     for sid in session_ids:
         admissions = conn.execute('SELECT * FROM session_admissions WHERE target_session_id=?', (sid,)).fetchall()
         workers = conn.execute('SELECT * FROM worker_executions WHERE session_id=?', (sid,)).fetchall()
@@ -148,13 +150,34 @@ def _retained_local_owners(conn, swept):
     return kept
 
 
+def busy_local_conversations(conn):
+    """Every id of a local conversation with live work anywhere in it. Admissions bind to the
+    logical owner while the transcript lives in the current physical target, so deleting any
+    receipt-lineage member before the input is claimed leaves the queue running on nothing."""
+    from hermes_state_local import POLICY_PREFIX
+    busy = set()
+    for (raw,) in conn.execute('SELECT value FROM state_meta WHERE key GLOB ?', (POLICY_PREFIX + '*',)):
+        try:
+            receipt = json.loads(raw)
+        except (TypeError, ValueError):
+            continue
+        entry = receipt.get('entry') if isinstance(receipt, dict) else None
+        lineage = receipt.get('lineage') if isinstance(receipt, dict) else None
+        ids = {x for x in [receipt.get('session_id') if isinstance(receipt, dict) else None,
+                           entry.get('session_id') if isinstance(entry, dict) else None,
+                           *(lineage if isinstance(lineage, list) else [])] if isinstance(x, str)}
+        if any(conn.execute(_LIVE_LEDGER_SQL, (sid, sid)).fetchone() for sid in ids):
+            busy |= ids
+    return busy
+
+
 def retire_prunable(conn, session_ids):
     """Sweep variant of :func:`retire_sessions`: fence the idle sessions and return only those ids.
     A session with live or unknown work is skipped, so one busy row cannot abort a whole
     prune/empty-session sweep (explicit deletes still refuse with ``session_busy``). The logical
     owner of a kept local reset/compression target is skipped too (explicit deletes remove the
     whole conversation through :func:`delete_in_transaction`)."""
-    owners = _retained_local_owners(conn, set(session_ids))
+    owners = _retained_local_owners(conn, set(session_ids)) | busy_local_conversations(conn)
     quiet = [sid for sid in session_ids if sid not in owners
              and conn.execute(_LIVE_LEDGER_SQL, (sid, sid)).fetchone() is None]
     retire_sessions(conn, quiet)
