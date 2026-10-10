@@ -32,6 +32,7 @@ from gateway.run_inbound_unauthorized import (
     UnauthorizedOwnerNotifier, pairing_code_reply, pairing_profile_arg, pairing_rate_limited_reply,
     unauthorized_owner_hint,
 )
+from gateway.run_inbound_user_turn_gates import user_turn_gate
 from gateway.session import (
     SessionSource, build_session_context, is_shared_multi_user_session,
     neutralize_untrusted_inline_text,
@@ -1326,17 +1327,9 @@ class GatewayInboundMixin(GatewayPluginInjectionMixin):
         # Pending exec approvals go through /approve and /deny only — no bare-text matching, or a
         # conversational "yes" would execute a dangerous command.
         if not is_internal:
-            if await asyncio.to_thread(self._is_telegram_topic_root_lobby, source):
-                # Debounced so a user who forgets about topic mode doesn't get ten reminders.
-                if self._should_send_telegram_lobby_reminder(source):
-                    return self._telegram_topic_root_lobby_message()
-                return None
-            # External-drain new-turn gate: when NAS engaged an external drain (.drain_request.json,
-            # seen by _drain_control_watcher), refuse to START new turns so the in-flight set can
-            # only fall to zero. Reversible.
-            if self._external_drain_active:
-                logger.info("Refusing new turn for session %s — external drain active.", _quick_key)
-                return t("gateway.busy.draining_maintenance")
+            _gated, _gate_reply = await user_turn_gate(self, source, _quick_key)
+            if _gated:
+                return _gate_reply
 
         # Compression new-turn gate (#134239): refuse a user turn, defer an internal one.
         _gated, _gate_reply = await compression_gate(self, event, source, _quick_key, is_internal)
