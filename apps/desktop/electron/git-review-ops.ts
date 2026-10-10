@@ -409,9 +409,19 @@ async function reviewDiff(repoPath, filePath, scope, baseRef, staged, gitBin) {
     return worktree
   }
 
-  // Untracked file: no worktree diff exists, so synthesize an all-add diff via
-  // --no-index (exits non-zero by design when files differ, so go around
-  // simple-git's reject-on-nonzero with a raw execFile).
+  // No unstaged worktree diff. Only synthesize an all-add diff for a file git
+  // doesn't know yet; a clean or fully-staged tracked file must return empty
+  // (matches fileDiffVsHead's guard). The empty worktree diff alone doesn't
+  // distinguish untracked from "changes already staged" or "pristine".
+  const status = await git.raw(['status', '--porcelain', '--', filePath]).catch(() => '')
+
+  if (!status.trim().startsWith('??')) {
+    return ''
+  }
+
+  // Genuinely untracked file: synthesize an all-add diff via --no-index (exits
+  // non-zero by design when files differ, so go around simple-git's
+  // reject-on-nonzero with a raw execFile).
   return execGit(gitBin || 'git', ['diff', '--no-index', '--', '/dev/null', filePath], {
     cwd,
     timeoutMs: 30_000
@@ -422,9 +432,9 @@ async function reviewDiff(repoPath, filePath, scope, baseRef, staged, gitBin) {
 }
 
 // Working-tree-vs-HEAD diff for ONE file — the "what changed since the last
-// commit" view used by the file preview. Unlike reviewDiff this never synthesizes
-// a full-add for a clean tracked file (so a pristine file shows no diff); it only
-// all-adds a genuinely untracked file.
+// commit" view used by the file preview. Like reviewDiff this synthesizes an
+// all-add diff only for a genuinely untracked file (a pristine or staged
+// tracked file returns empty), guarded on `git status --porcelain`'s `??`.
 async function fileDiffVsHead(repoPath, filePath, gitBin) {
   let cwd
 
