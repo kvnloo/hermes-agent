@@ -1,0 +1,54 @@
+{
+  "repository": "https://github.com/NousResearch/hermes-agent",
+  "owner_pr": 134551,
+  "owner_head": "9955c74770259114f14027fd55d104cd2dec3693",
+  "owner_tree": "eea740368d75eb2f87765013d6fe4261c84dad44",
+  "green_actual_checkout": "329373c088b366a51284feb6fc5ab227a87a63b9",
+  "red_actual_checkout": "7f8af627e8cf0b61d882cbf8258b1a20e497f31b",
+  "red_matching_main_revision": "02c96037304cab0aec2e2559db85808bc346dbb8",
+  "existing_implementation_commit": "8a1dc691161c499a9b3e6c0b12e34eb164b50a76",
+  "comparison": "GREEN/owner equality is limited to these five files. RED/owner differs only in posix.sh; RED handoff/marker/lock match the pinned main revision.",
+  "red_delta": "Restores HERMES_UPDATE_HANDOFF_PID=\"$$\" instead of \"$MY_PID\" and removes the accompanying explanatory comment.",
+  "files": [
+    {
+      "path": "scripts/desktop-update/posix.sh",
+      "owner_and_green_git_blob": "007a3b13a22beca7d5ac122b823518b1b7a0ae34",
+      "owner_and_green_sha256": "b6fbc4d2e933948b129b9a49292952761538c7e3c0d1199cb286f496f778a2a1",
+      "source_url": "https://github.com/NousResearch/hermes-agent/blob/9955c74770259114f14027fd55d104cd2dec3693/scripts/desktop-update/posix.sh",
+      "red_git_blob": "7a54fe71994acd4fed34a7353f07f85f9fa25e28",
+      "red_sha256": "c0722450e6c3fcec10f0a9dd2e54dd015acfd95adb3deb3ace750f4b974144a6"
+    },
+    {
+      "path": "scripts/desktop-update/marker.sh",
+      "owner_and_green_git_blob": "2a693353aec1ce4c5d16a4431d146d1888b95a15",
+      "owner_and_green_sha256": "862dd0e74af8030d61a6d8ed445c85a7ce433b1a20c8d6b30ba7ed534884030d",
+      "source_url": "https://github.com/NousResearch/hermes-agent/blob/9955c74770259114f14027fd55d104cd2dec3693/scripts/desktop-update/marker.sh",
+      "red_git_blob": "2a693353aec1ce4c5d16a4431d146d1888b95a15",
+      "red_sha256": "862dd0e74af8030d61a6d8ed445c85a7ce433b1a20c8d6b30ba7ed534884030d"
+    },
+    {
+      "path": "hermes_cli/update_lock.py",
+      "owner_and_green_git_blob": "578b421654cc1e2b8c46f095645d620f2f0a7422",
+      "owner_and_green_sha256": "4159e8c05d6ea42ef0a1dec9ca689f0599c298ef40a67c4812831f267698c028",
+      "source_url": "https://github.com/NousResearch/hermes-agent/blob/9955c74770259114f14027fd55d104cd2dec3693/hermes_cli/update_lock.py",
+      "red_git_blob": "578b421654cc1e2b8c46f095645d620f2f0a7422",
+      "red_sha256": "4159e8c05d6ea42ef0a1dec9ca689f0599c298ef40a67c4812831f267698c028"
+    },
+    {
+      "path": "tests/scripts/desktop_update/test_posix_handoff_pid_export.py",
+      "owner_and_green_git_blob": "6389b364dbb2fc7eb831390cb264f4ba02f4714f",
+      "owner_and_green_sha256": "6f0352c42b9588b6f72df315875d7a49f67d374ae28577906c3b9a55ae62b309",
+      "source_url": "https://github.com/NousResearch/hermes-agent/blob/9955c74770259114f14027fd55d104cd2dec3693/tests/scripts/desktop_update/test_posix_handoff_pid_export.py",
+      "red_git_blob": "6389b364dbb2fc7eb831390cb264f4ba02f4714f",
+      "red_sha256": "6f0352c42b9588b6f72df315875d7a49f67d374ae28577906c3b9a55ae62b309"
+    },
+    {
+      "path": ".github/workflows/tests-os.yml",
+      "owner_and_green_git_blob": "8e335ff7b13f0328a214df831ddb51c9ec330f43",
+      "owner_and_green_sha256": "f715b7283e97f518f67936d1828b0404e8f82c3067108e8a1551de9427cae439",
+      "source_url": "https://github.com/NousResearch/hermes-agent/blob/9955c74770259114f14027fd55d104cd2dec3693/.github/workflows/tests-os.yml",
+      "red_git_blob": "8e335ff7b13f0328a214df831ddb51c9ec330f43",
+      "red_sha256": "f715b7283e97f518f67936d1828b0404e8f82c3067108e8a1551de9427cae439"
+    }
+  ]
+}

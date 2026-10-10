@@ -1,0 +1,135 @@
+{
+  "format_version": 1,
+  "audit_snapshot_utc": "2026-10-10T14:23:10.704928+00:00",
+  "purpose": "Evidence-only owner support for Hermes PR #134551; source and tests unchanged.",
+  "credit": {
+    "consolidated_pr_owner": "teknium1",
+    "existing_implementation_author": "elvin-du",
+    "implementation_git_author": "elvindu"
+  },
+  "source_identity_file": "source-identities.json",
+  "ci_runs": [
+    {
+      "label": "red",
+      "run_id": 38047589100,
+      "run_url": "https://github.com/NousResearch/hermes-agent/actions/runs/38047589100",
+      "event": "workflow_dispatch",
+      "run_head_sha": "7f8af627e8cf0b61d882cbf8258b1a20e497f31b",
+      "run_status": "completed",
+      "run_conclusion": "cancelled",
+      "target_job_id": 114200179903,
+      "target_job_name": "OS-specific tests / macOS-only tests (1/2)",
+      "job_url": "https://github.com/NousResearch/hermes-agent/actions/runs/38047589100/job/114200179903",
+      "target_job_status": "completed",
+      "target_job_conclusion": "failure",
+      "actual_checkout": "7f8af627e8cf0b61d882cbf8258b1a20e497f31b",
+      "selected_raw_log_lines": [
+        11,
+        12,
+        16,
+        31,
+        39,
+        192,
+        284,
+        565,
+        980,
+        992,
+        997,
+        998,
+        1001,
+        1056
+      ]
+    },
+    {
+      "label": "green",
+      "run_id": 38046727803,
+      "run_url": "https://github.com/NousResearch/hermes-agent/actions/runs/38046727803",
+      "event": "pull_request",
+      "run_head_sha": "9955c74770259114f14027fd55d104cd2dec3693",
+      "run_status": "completed",
+      "run_conclusion": "success",
+      "target_job_id": 114197690460,
+      "target_job_name": "OS-specific tests / macOS-only tests (1/2)",
+      "job_url": "https://github.com/NousResearch/hermes-agent/actions/runs/38046727803/job/114197690460",
+      "target_job_status": "completed",
+      "target_job_conclusion": "success",
+      "actual_checkout": "329373c088b366a51284feb6fc5ab227a87a63b9",
+      "selected_raw_log_lines": [
+        11,
+        12,
+        16,
+        31,
+        38,
+        192,
+        195,
+        288,
+        567,
+        982,
+        1031
+      ]
+    }
+  ],
+  "excerpt_transformations": [
+    "Select only the enumerated original 1-based log lines; preserve timestamps.",
+    "Remove ANSI color escapes, including their literal escaped representation.",
+    "Replace /Users/runner/work/_temp with <runner-temp> in selected log lines.",
+    "Exclude environment dumps, credential payloads, and runner identifiers."
+  ],
+  "packet_files": [
+    {
+      "name": "README.md",
+      "bytes": 3651,
+      "sha256": "07adc19ca1f48301fac56ea7434c74f6eaf4268d422b8d3400a3654fc3ae0277"
+    },
+    {
+      "name": "ci-excerpts.txt",
+      "bytes": 3445,
+      "sha256": "f6fd0da0e3d1044f4b37121db92d1fc4b25783dba3cde5f7cda798decbc1b114"
+    },
+    {
+      "name": "source-identities.json",
+      "bytes": 3562,
+      "sha256": "52fe970b5119202bacf3de77e305eb509079cbb6b8aac71afc717482272496bf"
+    }
+  ],
+  "retained_unchanged_raw_inputs": [
+    {
+      "name": "red-macos.log",
+      "bytes": 95963,
+      "sha256": "604cac6d6f6d638655db42ad7766ff98e0772435d68a2530ba0ae29bff832844",
+      "published": false
+    },
+    {
+      "name": "red-run-api.json",
+      "bytes": 19360,
+      "sha256": "ae5eaeaad2b07b85eb299f156b615c5f93be4cffe6e1e4c6317708114b17632b",
+      "published": false
+    },
+    {
+      "name": "red-jobs.json",
+      "bytes": 49935,
+      "sha256": "a5e310e8647e75f020f3cbed0567067009ac98a151dbe11748d59849e12f6aaf",
+      "published": false
+    },
+    {
+      "name": "green-macos.log",
+      "bytes": 90958,
+      "sha256": "600bc335689792c6ba1713fa826740691c7419101feb664df68340517d5aad43",
+      "published": false
+    },
+    {
+      "name": "green-run-api.json",
+      "bytes": 20446,
+      "sha256": "f78fe0e556422e5e9fd997a6d6a91be114ac7e3cf194e58f50ba19977223232e",
+      "published": false
+    },
+    {
+      "name": "green-jobs.json",
+      "bytes": 33329,
+      "sha256": "f2b8867fabec4da2eca127c9367259b56e7201f0ca401e49d79b9480c3d6e7c2",
+      "published": false
+    }
+  ],
+  "raw_recovery": "Original files retained locally, excluded from publication. Recover independent evidence from the public job/run URLs and pinned Git source identities.",
+  "manifest_integrity": "This manifest does not include its own hash; the final publication tree pins all four files."
+}
