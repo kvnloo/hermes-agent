@@ -25,6 +25,7 @@ from gateway.platforms.base import EphemeralReply
 from gateway.platforms.event import MessageEvent, MessageType
 from gateway.run_busy import approval_input_words
 from gateway.run_common import _UNSET
+from gateway.run_inbound_compression_gate import compression_gate
 from gateway.run_inbound_media import rehome_inbound_media
 from gateway.run_plugin_injection import GatewayPluginInjectionMixin
 from gateway.run_inbound_unauthorized import (
@@ -1337,37 +1338,10 @@ class GatewayInboundMixin(GatewayPluginInjectionMixin):
                 logger.info("Refusing new turn for session %s — external drain active.", _quick_key)
                 return t("gateway.busy.draining_maintenance")
 
-        # Compression new-turn gate (#134239): a post-turn compression starts ~0.4 s after
-        # "Turn ended", i.e. while ``_is_session_running`` is already False, so a follow-up
-        # message reaches this fresh-turn path with the guard from #56391 never firing. The
-        # turn it starts reads the pre-rotation history and its own post-turn compression later
-        # commits a snapshot taken before the previous commit — double-compressing the
-        # transcript. The running-agent path already demotes for this; the fresh-turn path
-        # must refuse too. Lock is TTL-leased (~300 s), so a leaked lock can't wedge this.
-        if await self._session_has_compression_in_flight(_quick_key):
-            if is_internal:
-                # Internal wakes/completions are not user-resendable. Put the exact event back
-                # through the adapter FIFO instead of starting it on the pre-compression
-                # transcript. BasePlatformAdapter's identical-event drain backoff prevents a
-                # hot loop while the lock remains held and preserves the event's routing/security
-                # metadata until the committed transcript is visible.
-                adapter = self._delivery_adapter_for(source)
-                if adapter is None:
-                    logger.error(
-                        "Could not defer internal turn for session %s during compression — "
-                        "delivery adapter unavailable.",
-                        _quick_key,
-                    )
-                    return None
-                self._enqueue_fifo(_quick_key, event, adapter)
-                logger.info(
-                    "Deferring internal turn for session %s — context compression in flight.",
-                    _quick_key,
-                )
-                return None
-
-            logger.info("Refusing new turn for session %s — context compression in flight.", _quick_key)
-            return t("gateway.busy.compressing_retry")
+        # Compression new-turn gate (#134239): refuse a user turn, defer an internal one.
+        _gated, _gate_reply = await compression_gate(self, event, source, _quick_key, is_internal)
+        if _gated:
+            return _gate_reply
 
         # Claim this session before any await: many awaits sit between here and _run_agent
         # registering the real AIAgent; without this sentinel a second message during any of them
