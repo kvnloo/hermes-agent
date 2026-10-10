@@ -6,6 +6,7 @@ that drive the CLI/TUI without a live portal.
 """
 
 from decimal import Decimal
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 
@@ -46,6 +47,49 @@ def test_manage_url_omits_org_when_absent():
     url = subscription_manage_url(s)
     assert url == "https://p.example.com/manage-subscription"
     assert "org_id" not in url
+
+
+def _query_keys(url):
+    return sorted(parse_qs(urlparse(url).query).keys())
+
+
+def test_manage_url_emits_org_id_before_plan():
+    s = SubscriptionState(logged_in=True, org_id="org_1", portal_url="https://portal.example/billing")
+    url = subscription_manage_url(s, tier_id="plus")
+    assert url == "https://portal.example/manage-subscription?org_id=org_1&plan=plus"
+    assert _query_keys(url) == ["org_id", "plan"]
+    assert url.index("org_id=") < url.index("plan=")
+
+
+@pytest.mark.parametrize(
+    "portal_url,expected",
+    [
+        ("https://portal.nousresearch.com/billing?topup=open",
+         "https://portal.nousresearch.com/manage-subscription?org_id=org_1&plan=plus"),
+        ("https://portal.nousresearch.com/billing?utm_source=email&ref=x",
+         "https://portal.nousresearch.com/manage-subscription?org_id=org_1&plan=plus"),
+        ("https://portal.nousresearch.com/path/to/billing?org_id=evil&plan=evil&topup=open",
+         "https://portal.nousresearch.com/manage-subscription?org_id=org_1&plan=plus"),
+        ("https://portal.nousresearch.com/billing?topup=open&",
+         "https://portal.nousresearch.com/manage-subscription?org_id=org_1&plan=plus"),
+    ],
+)
+def test_manage_url_strips_stray_portal_query_params(portal_url, expected):
+    # Parity with the TUI/desktop builders, which strip portal_url to its origin
+    # (new URL(portal_url).origin) — unrelated params (topup, utm, ref, spoofed
+    # org_id/plan) must never reach /manage-subscription, only org_id/plan do.
+    s = SubscriptionState(logged_in=True, org_id="org_1", portal_url=portal_url)
+    url = subscription_manage_url(s, tier_id="plus")
+    assert url == expected
+    assert _query_keys(url) == ["org_id", "plan"]
+
+
+def test_manage_url_strips_stray_query_without_org_id_or_plan():
+    s = SubscriptionState(logged_in=True, org_id=None, portal_url="https://portal.nousresearch.com/billing?topup=open")
+    url = subscription_manage_url(s)
+    assert url == "https://portal.nousresearch.com/manage-subscription"
+    assert _query_keys(url) == []
+    assert "topup" not in url
 
 
 
