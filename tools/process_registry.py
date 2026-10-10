@@ -35,6 +35,7 @@ from hermes_cli.config import get_hermes_home
 from tools.process_registry_notifications import format_process_notification
 from tools.process_registry_checkpoint import ProcessCheckpointMixin
 from tools.process_registry_termination import ProcessTerminationMixin
+from tools.process_registry_completion_queue import ProcessCompletionQueueMixin
 from tools.process_registry_results import load_completed_results, save_completed_result
 from tools.process_registry_env_log import log_delta_command
 
@@ -696,7 +697,7 @@ def _is_wsl_launcher_command(command: str) -> bool:
     return False
 
 
-class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
+class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessCompletionQueueMixin):
     """In-memory registry of running and finished background processes.
     Thread-safe: accessed from executor threads (terminal_tool, process handlers),
     the gateway asyncio loop (watchers, reset checks) and the cleanup thread."""
@@ -1585,7 +1586,14 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
         """Move a session from running to finished.
         Idempotent: kill_process() and the reader thread can both call this; only
         the FIRST move enqueues the completion notification, so no duplicates.
-        Returns True when this call is the one that persisted the session."""
+        Returns True when this call is the one that persisted the session.
+
+        The completion-notification enqueue runs UNDER ``self._lock`` so a racing
+        ``kill_process`` cannot see a partially-updated queue: the reader's
+        enqueue and the kill's drain-and-swap (``_replace_stale_completion_notification``)
+        are mutually excluded for the same ``session_id``, which is what lets the
+        kill path atomically correct a stale ``exited`` event the reader put on
+        the queue while the SIGTERM grace window was still draining."""
         with self._lock:
             was_running = session.id in self._running
             if was_running:
@@ -1596,6 +1604,8 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
                 save_completed_result(session)
                 self._running.pop(session.id)
             self._finished[session.id] = session
+            if was_running and session.notify_on_complete:
+                self._enqueue_completion_notification(session)
         # Release the retained Popen/PTY handles now: otherwise every
         # finished-but-unpruned session keeps its stdout pipe (or PTY master)
         # FD open until FINISHED_TTL_SECONDS elapses, and heavy background
@@ -1617,24 +1627,6 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
     def _publish_finished(self, session: ProcessSession, was_running: bool) -> None:
         self._release_finished_handles(session)
         self._write_checkpoint()
-        if was_running and session.notify_on_complete:
-            notification = {
-                "type": "completion",
-                "session_id": session.id,
-                "session_key": session.session_key,
-                "task_id": session.task_id,
-                "owner_task_id": session.owner_task_id,
-                "command": session.command,
-                **({"handoff_note": session.handoff_note} if session.handoff_note else {}),
-                **self._exit_fields(session),
-                # A consumer that relays the output (a bot DM's reply) must know it is not whole.
-                **_completion_output(session),
-                # Stable producer identity across checkpoint recovery (unlike a
-                # consumer-observed completion timestamp).
-                "started_at": session.started_at,
-            }
-            _redact_process_result(notification)
-            self.completion_queue.put(notification)
 
     @staticmethod
     def _exit_fields(session: ProcessSession) -> dict:
@@ -2242,10 +2234,18 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
                 session.termination_source = source
             # The reader thread can finalise the session while the signal path
             # blocks in the SIGKILL grace window: its ``save_completed_result``
-            # then persists this kill as a plain ``exited``. Re-write the receipt
-            # so the durable record matches what the caller was told.
+            # then persists this kill as a plain ``exited`` AND enqueues a stale
+            # ``completion_reason="exited"`` notification on completion_queue
+            # (the reader's enqueue runs under self._lock, BEFORE the kill path
+            # stamps the session ``killed``). Re-write BOTH the durable receipt
+            # AND the live queue event so the CLI/TUI drain surfaces see the kill
+            # attribution, not the reader's plain-exit snapshot — the durable
+            # surface was fixed by 0724a6a0; the live queue was left stale, which
+            # is what this swap corrects.
             if not self._move_to_finished(session):
                 save_completed_result(session)
+                if session.notify_on_complete:
+                    self._replace_stale_completion_notification(session)
             self._write_checkpoint()
             return {
                 "status": "killed", "session_id": session.id, "completion_reason": session.completion_reason,
