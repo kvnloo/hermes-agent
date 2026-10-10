@@ -323,6 +323,11 @@ class GatewayGoalsMixin:
         self, *, agent_result: Any, source: Any, is_internal: bool, event: Any = None,
     ) -> None:
         """Run goal and loop bookkeeping after an agent turn returns."""
+        if event is not None:
+            # Receipt that THIS event's turn returned, and in which task, for a caller that cannot
+            # see the return value (a handoff whose turn the adapter ran): a queued or dropped
+            # event never gets here.
+            event._gateway_turn_task = asyncio.current_task()
         final_text = self._final_text_for_post_turn_hooks(agent_result, event)
         try:
             session_entry = await self.async_session_store.get_or_create_session(

@@ -1860,11 +1860,11 @@ class GatewayStartupMixin:
         # Inline _handle_message keeps success/failure observable (handle_message would detach it).
         response_text = await self._handle_message(synthetic_event)
         if not response_text:
-            # Queued, not run (compression gate, busy session): the adapter runs and answers it.
-            if synthetic_event._gateway_accepted:
+            # A streamed turn and a turn that never ran (queued by the compression gate or behind a
+            # busy session, or dropped) both reply empty; only the turn's receipt tells them apart.
+            if getattr(synthetic_event, "_gateway_turn_task", None) is None:
                 from gateway.run_handoff_queued_turn import run_queued_handoff_turn
                 await run_queued_handoff_turn(self, dest.source, synthetic_event)
-            # Otherwise streaming may have delivered inline; the agent ran without raising — success.
             return
         # Reply into the new thread (else the home channel) via the resolved transport, so a relay-fronted
         # logical platform is stamped on the outbound frame.
