@@ -1774,7 +1774,6 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
   const showReconnectOverlay =
     ptyState === "reconnecting" || (ptyState === "closed" && !banner);
   const showResumeLoadingOverlay = shouldShowResumeLoadingOverlay({
-    hasResumeTarget: Boolean(resumeParam),
     ptyState,
     hydrating: resumeHydrating,
   });
