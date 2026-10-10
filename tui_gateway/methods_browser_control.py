@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from pathlib import Path
 
 from hermes_cli.dashboard_auth.ws_tickets import (
     INTERNAL_PROVIDER as _INTERNAL_PROVIDER, INTERNAL_USER_ID as _INTERNAL_USER_ID)
@@ -157,7 +158,17 @@ def _(rid, params: dict, transport, identity, session_id, broker, _scope, sessio
 
     controller_id = str(params.get("controller_id") or "").strip()
     browser_profile_id = str(params.get("browser_profile_id") or "").strip()
-    profile_id = str(session.get("profile") or "").strip()
+    # Production gateway sessions (session.create / _init_session /
+    # _deferred_session_record) stamp ``profile_home`` — a filesystem path —
+    # and never a bare ``profile`` name, so the cloud ``profile_id`` is derived
+    # from the profile **name** (``Path(profile_home).name``). This matches the
+    # local-API adapter, which sources ``profile_id`` from the request-scoped
+    # profile name (``_api_request_profile.get() or "default"``), and keeps the
+    # shared artifact store keyed by name: ``attach_artifact_store`` slots are
+    # populated only by the local-API adapter under profile names, so a path
+    # here would silently miss every cloud artifact action.
+    home = session.get("profile_home")
+    profile_id = Path(home).name if home else "default"
     if not controller_id or not browser_profile_id or not profile_id:
         return _err(
             rid, _ERR_FORBIDDEN,
