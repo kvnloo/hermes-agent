@@ -518,8 +518,7 @@ def _(rid, params: dict, db_path) -> dict:
 _passthrough(
     "groups.demote", "gateway.hosted_room_replicas", "demote_room",
     """Fence this gateway's stale room authority against a proven newer epoch.""",
-    code=5119, room_code=4119, params=("room_id", "observed_gateway_id", "observed_epoch"),
-    replica_only=True)
+    code=5119, room_code=4119, params=("room_id", "observed_gateway_id", "observed_epoch"))
 
 
 def register(server) -> None:
