@@ -698,8 +698,12 @@ class SessionAuthority:
             self._require_admission_open()
             from gateway.session_runtime_workers import tracked_write
             live.rescan = False  # a _schedule from here on may not be visible to this claim's read
+            # Bound to the head this preflight checked: a cancellation committed while the writer
+            # waits must send the successor through its own preflight, not inherit this verdict.
             row = await tracked_write(self, partial(claim_session_input, self.db, epoch=self.epoch,
-                                                    session_id=ref.session_id, _guard=self._admission_gate()),
+                                                    session_id=ref.session_id, _guard=self._admission_gate(),
+                                                    expected_admission_id=first['admission_id'] if first else None,
+                                                    _on_head_changed=partial(setattr, live, 'rescan', True)),
                                       then=partial(self._stamp_claim, ref, live))
             # Input scheduled while this claim's transaction ran may postdate its read: re-read
             # instead of letting the drain exit idle over a committed admission.

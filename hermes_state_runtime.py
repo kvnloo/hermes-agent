@@ -149,9 +149,15 @@ def list_session_admissions(db, *, session_id: str, pending_only: bool = True) -
         return [_row(row) for row in conn.execute(sql, (session_id,))]
 
 
-def claim_session_input(db, *, epoch: int, session_id: str, _guard=None) -> dict | None:
+_ANY_HEAD = object()
+
+
+def claim_session_input(db, *, epoch: int, session_id: str, _guard=None,
+                        expected_admission_id=_ANY_HEAD, _on_head_changed=None) -> dict | None:
     """Claim the FIFO head. ``_guard(conn)`` (owner admission gate) raises to refuse inside the
-    write transaction, so a drain that began while this waited on the writer still wins."""
+    write transaction, so a drain that began while this waited on the writer still wins.
+    ``expected_admission_id`` binds the claim to the head a caller's preflight validated (None:
+    it saw an empty FIFO): a different head claims nothing and calls ``_on_head_changed()``."""
     def write(conn):
         _epoch(conn, epoch)
         if _guard is not None:
@@ -167,6 +173,10 @@ def claim_session_input(db, *, epoch: int, session_id: str, _guard=None) -> dict
         if blocked or workers:
             return None
         row = conn.execute("SELECT * FROM session_admissions WHERE target_session_id=? AND status='queued' ORDER BY seq LIMIT 1", (session_id,)).fetchone()
+        if expected_admission_id is not _ANY_HEAD and (row['admission_id'] if row else None) != expected_admission_id:
+            if _on_head_changed is not None:
+                _on_head_changed()
+            return None
         if row is None:
             return None
         generation = session['runtime_generation'] + 1
