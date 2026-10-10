@@ -1,0 +1,63 @@
+version: 1
+repo: kvnloo/hermes-agent
+id: hermes-agent
+kind: suite
+summary: Cross-platform agent runtime with CLI/TUI, messaging gateway, durable state and search, skills/plugins, tools, subagents, automation, provider abstraction, and trajectory tooling.
+
+architecture:
+  subsystems:
+    - id: agent-runtime
+      name: Agent execution runtime
+      kind: execution
+      summary: Owns the core model/tool loop, agent state, tool invocation, subagents, and runtime lifecycle.
+      paths: [agent/, hermes/, run_agent.py, tools/, toolsets.py, toolset_distributions.py]
+    - id: durable-state
+      name: Durable state and search
+      kind: memory
+      summary: Persists session/message state, FTS search, identity, timelines, usage, WAL/repair, and portability behind explicit state modules.
+      paths: [hermes_state.py, hermes_state_dbfile.py, hermes_state_fts.py, hermes_state_search.py, hermes_state_sessions.py, hermes_state_messages.py, hermes_state_timeline.py]
+      depends_on: [agent-runtime]
+    - id: gateway
+      name: Messaging gateway
+      kind: integration
+      summary: Projects the runtime into Telegram and other messaging/platform surfaces while preserving shared conversation state.
+      paths: [gateway/, hermes_state_gateway.py, hermes_state_telegram.py]
+      depends_on: [agent-runtime, durable-state]
+    - id: skills-plugins
+      name: Skills and plugin runtime
+      kind: extension
+      summary: Loads reusable skills, plugins, optional MCPs, and plugin catalog metadata through public extension seams.
+      paths: [skills/, plugins/, plugin-catalog/, optional-skills/, optional-mcps/]
+      depends_on: [agent-runtime]
+    - id: automation
+      name: Scheduled automation
+      kind: orchestration
+      summary: Runs durable scheduled tasks and unattended workflows with delivery through runtime surfaces.
+      paths: [cron/, hermes_cli/]
+      depends_on: [agent-runtime, gateway]
+    - id: provider-model-layer
+      name: Provider and model abstraction
+      kind: compute
+      summary: Normalizes model/provider selection and configuration without owning external provider infrastructure.
+      paths: [providers/, model_tools.py, hermes_cli/]
+      depends_on: [agent-runtime]
+    - id: trajectory-evals
+      name: Trajectory and evaluation tooling
+      kind: evidence
+      summary: Produces and compresses agent trajectories and runs evaluation/batch surfaces for research and verification.
+      paths: [evals/, batch_runner.py, mini_swe_runner.py, trajectory_compressor.py]
+      depends_on: [agent-runtime]
+
+  provides_interfaces: []
+  consumes_interfaces: []
+  produces_representations: []
+  consumes_representations: []
+
+  boundaries:
+    owns: [agent execution runtime, durable session state, gateway delivery, skills and plugins, scheduled automation, provider/model runtime integration]
+    not_here: [canonical Zer0 architecture authority, z0intelligence policy authority, token measurement semantics, AODL ontology]
+
+  evidence:
+    docs: [README.md, AGENTS.md, CONTRIBUTING.md]
+    tests: [tests/, tests-js/]
+    schemas: [plugin-catalog/]
