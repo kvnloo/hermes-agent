@@ -1,0 +1,25 @@
+test_real_content_change_is_detected (test_walk_error.WalkErrorContract.test_real_content_change_is_detected) ... ok
+test_unchanged_tree_is_clean (test_walk_error.WalkErrorContract.test_unchanged_tree_is_clean) ... ok
+test_unreadable_subtree_does_not_invent_skew (test_walk_error.WalkErrorContract.test_unreadable_subtree_does_not_invent_skew) ... FAIL
+test_unreadable_subtree_fingerprint_fails_open (test_walk_error.WalkErrorContract.test_unreadable_subtree_fingerprint_fails_open) ... FAIL
+
+======================================================================
+FAIL: test_unreadable_subtree_does_not_invent_skew (test_walk_error.WalkErrorContract.test_unreadable_subtree_does_not_invent_skew)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "test_walk_error.py", line 44, in test_unreadable_subtree_does_not_invent_skew
+    self.assertIsNone(subject.detect_skew(self.root))
+AssertionError: ('tree-content:227abd751388f40a0a18ff75890d1f1bc3f33d84fbdbb6b41e4dd11d3010d511', 'tree-content:bf9a990fa38fc9527d960e8baaafec52728cb7e414d03af9778650f962512c49') is not None
+
+======================================================================
+FAIL: test_unreadable_subtree_fingerprint_fails_open (test_walk_error.WalkErrorContract.test_unreadable_subtree_fingerprint_fails_open)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "test_walk_error.py", line 39, in test_unreadable_subtree_fingerprint_fails_open
+    self.assertIsNone(subject.content_fingerprint(self.root))
+AssertionError: 'tree-content:bf9a990fa38fc9527d960e8baaafec52728cb7e414d03af9778650f962512c49' is not None
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.006s
+
+FAILED (failures=2)
