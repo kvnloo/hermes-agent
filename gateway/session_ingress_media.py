@@ -12,6 +12,8 @@ from pathlib import Path
 import re
 import stat
 import tempfile
+import threading
+from collections import Counter
 
 from hermes_state_runtime import RuntimeStoreError
 from utils import fsync_directory
@@ -19,6 +21,23 @@ from utils import fsync_directory
 
 _API_IMAGE_NAME = re.compile(r'api_[0-9a-f]{32}\.(png|jpg|gif|webp)')
 _SHA256_NAME = re.compile(r'[0-9a-f]{64}')
+
+
+# Content-addressed paths a capture has published or reused for an admission that has not yet
+# committed or been refused. No row holds them yet, so collection checks this registry under the
+# same lock it unlinks with; a capture registers before it decides to reuse or publish the path.
+_IN_FLIGHT = Counter()
+_IN_FLIGHT_LOCK = threading.Lock()
+
+
+def release_capture(paths):
+    """End an in-flight capture's ownership once its admission committed (a row now holds the
+    bytes) or was refused (refused-capture release then decides)."""
+    with _IN_FLIGHT_LOCK:
+        for path in paths:
+            _IN_FLIGHT[path] -= 1
+            if _IN_FLIGHT[path] <= 0:
+                del _IN_FLIGHT[path]
 
 
 def _media_root():
@@ -48,7 +67,7 @@ def sniff_image_mime(data):
     return None
 
 
-def admit_attachments(attachments, *, admitted=None):
+def admit_attachments(attachments, *, admitted=None, hold=None):
     """Wire ``attachments: [{path, mime}]`` -> committed payload fields (``{}`` when absent).
 
     ``admitted()`` returns the durable admission already holding this request's identity (or
@@ -90,7 +109,7 @@ def admit_attachments(attachments, *, admitted=None):
         if row['status'] != 'terminal':
             restore_native_media(committed['media'])
         return {'attachments_v1': committed}
-    return {'attachments_v1': {'media': capture_native_media(paths), 'media_types': mimes}}
+    return {'attachments_v1': {'media': capture_native_media(paths, hold=hold), 'media_types': mimes}}
 
 
 def reconcile_native_retry(db, *, principal_id, session_id, request_id, payload):
@@ -154,7 +173,7 @@ def _open_regular(path):
     return os.fdopen(fd, 'rb')
 
 
-def capture_native_media(paths):
+def capture_native_media(paths, *, hold=None):
     from gateway.platforms.base import get_inbound_media_max_bytes, validate_inbound_media_size
     references = []
     limit = max(0, get_inbound_media_max_bytes())
@@ -166,7 +185,7 @@ def capture_native_media(paths):
     staged = []
     try:
         for value in paths:
-            _capture_file(Path(value), limit, total, references, staged)
+            _capture_file(Path(value), limit, total, references, staged, hold)
             total = sum(reference['size'] for reference in references)
         for temporary, reference in zip(staged, references):
             target = Path(reference['path'])
@@ -186,7 +205,7 @@ def capture_native_media(paths):
     return references
 
 
-def _capture_file(path, limit, total, references, staged):
+def _capture_file(path, limit, total, references, staged, hold=None):
     from gateway.platforms.base import validate_inbound_media_size
     try:
         source = _open_regular(path)
@@ -216,6 +235,10 @@ def _capture_file(path, limit, total, references, staged):
         if target.parent.resolve() != target.parent:
             raise RuntimeStoreError('invalid_params')
         reference = {'path': str(target), 'sha256': digest.hexdigest(), 'size': size}
+        if hold is not None:
+            with _IN_FLIGHT_LOCK:
+                _IN_FLIGHT[str(target)] += 1
+            hold.append(str(target))
         if target.exists() or target.is_symlink():
             restore_native_media([reference])
         references.append(reference)
@@ -410,14 +433,17 @@ def release_unheld_media(db, references, *, retain_history=True):
             path = Path(reference['path'])
             if reference['path'] in held:
                 continue
-            try:
-                if path.parent.resolve() != path.parent or _file_identity(path) in identities:
+            with _IN_FLIGHT_LOCK:
+                if reference['path'] in _IN_FLIGHT:
                     continue
-                path.unlink()
-                released += 1
-                path.parent.rmdir()
-            except (OSError, ValueError):
-                continue
+                try:
+                    if path.parent.resolve() != path.parent or _file_identity(path) in identities:
+                        continue
+                    path.unlink()
+                    released += 1
+                    path.parent.rmdir()
+                except (OSError, ValueError):
+                    continue
         return released
     return db._execute_write(collect)
 

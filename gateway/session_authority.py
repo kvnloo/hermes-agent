@@ -397,6 +397,7 @@ class SessionAuthority:
         from gateway.session_surface import admit_surface
         from gateway.session_display import admit_display
         finite = admit_finite(request.payload)
+        hold = []
         def admitted():
             # The exact durable identity (authenticated principal + target + request id); the
             # attachment fields it yields still pass the full payload-digest comparison below.
@@ -408,7 +409,7 @@ class SessionAuthority:
             return _row(row) if row is not None else None
         payload = {'text': request.payload['text'], **finite, **admit_surface(request.payload),
                    **admit_display(request.payload),
-                   **admit_attachments(request.payload.get('attachments'), admitted=admitted)}
+                   **admit_attachments(request.payload.get('attachments'), admitted=admitted, hold=hold)}
         source = self.sessions[request.ref.session_id].source
         if source is not None and source.user_id != actor.subject:
             # Durable server authorization, not a client payload field. The original
@@ -419,11 +420,15 @@ class SessionAuthority:
                 'profile_id': self.profile_id, 'session_id': request.ref.session_id,
                 'principal_id': actor.subject}
         def admit():
+            from gateway.session_ingress_media import release_capture
             try:
-                return admit_session_input(self.db, epoch=self.epoch, principal_id=actor.subject,
-                                           session_id=request.ref.session_id, request_id=request.request_id,
-                                           payload=payload, intent=request.intent,
-                                           _authorize_write=self._admission_gate(_authorize_write))
+                try:
+                    return admit_session_input(self.db, epoch=self.epoch, principal_id=actor.subject,
+                                               session_id=request.ref.session_id, request_id=request.request_id,
+                                               payload=payload, intent=request.intent,
+                                               _authorize_write=self._admission_gate(_authorize_write))
+                finally:
+                    release_capture(hold)
             except Exception:
                 self._release_refused_capture(request, payload)
                 raise
