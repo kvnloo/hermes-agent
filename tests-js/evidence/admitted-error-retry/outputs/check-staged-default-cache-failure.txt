@@ -1,0 +1,41 @@
+
+=== health (failed) ===
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1311, in mkdir
+    os.mkdir(self, mode)
+FileNotFoundError: [Errno 2] No such file or directory: '<default-read-only-cache>/typescript-6.0.3'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "<candidate-snapshot>/tree/scripts/code_health/__main__.py", line 3, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "<candidate-snapshot>/tree/scripts/code_health/cli.py", line 142, in main
+    return run(repo, gitio.resolve_rev(repo, args.base), head, as_json=args.json)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<candidate-snapshot>/tree/scripts/code_health/cli.py", line 109, in run
+    base_m = measurer.measure(base, base_paths)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<candidate-snapshot>/tree/scripts/code_health/measure.py", line 133, in measure
+    return self._measure_in(root, contents)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<candidate-snapshot>/tree/scripts/code_health/measure.py", line 142, in _measure_in
+    ts_out = measure_ts(self.repo, root, ts) if ts else {}
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<candidate-snapshot>/tree/scripts/code_health/ts_measure.py", line 81, in measure_ts
+    ts_dir = resolve_typescript(repo)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<candidate-snapshot>/tree/scripts/code_health/ts_measure.py", line 71, in resolve_typescript
+    _install(repo, prefix, pin)
+  File "<candidate-snapshot>/tree/scripts/code_health/ts_measure.py", line 37, in _install
+    prefix.mkdir(parents=True, exist_ok=True)
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1315, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1311, in mkdir
+    os.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '<default-read-only-cache>'
+
+scripts/check: 11 checks, FAILED: health

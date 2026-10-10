@@ -1,0 +1,35 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+npm warn Unknown project config "min-release-age". This will stop working in the next major version of npm.
+npm warn Unknown project config "min-release-age-exclude". This will stop working in the next major version of npm.
+
+ RUN  v4.1.10 <checkout>/apps/desktop
+
+ ❯ |ui| src/app/session/hooks/use-prompt-actions/rewind.test.ts (39 tests | 1 failed) 20ms
+     × rebindSurvivorRowIds skips failed turns — they hold no survivor slot 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |ui| src/app/session/hooks/use-prompt-actions/rewind.test.ts > failed-turn-aware ordinal space > rebindSurvivorRowIds skips failed turns — they hold no survivor slot
+AssertionError: expected 9 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 9
+
+ ❯ src/app/session/hooks/use-prompt-actions/rewind.test.ts:450:30
+    448|
+    449|     // u0 failed: untouched. u1 is survivor ordinal 0.
+    450|     expect(rebound[0].rowId).toBe(1)
+       |                              ^
+    451|     expect(rebound[2].rowId).toBe(9)
+    452|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  1 failed | 74 passed (75)
+   Start at  20:58:45
+   Duration  10.89s (transform 6.50s, setup 733ms, import 16.27s, tests 466ms, environment 2.50s)

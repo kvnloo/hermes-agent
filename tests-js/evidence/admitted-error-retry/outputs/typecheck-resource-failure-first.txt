@@ -1,0 +1,15 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+npm warn Unknown project config "min-release-age". This will stop working in the next major version of npm.
+npm warn Unknown project config "min-release-age-exclude". This will stop working in the next major version of npm.
+
+> hermes@0.0.0 typecheck
+> tsc -p . --noEmit && tsc -p tsconfig.electron.json --noEmit && tsc -p tsconfig.e2e.json --noEmit && tsc --ignoreConfig --allowJs --checkJs --noEmit --skipLibCheck --module nodenext --moduleResolution nodenext --target es2022 electron-builder.config.cjs
+
+Killed
+npm error Lifecycle script `typecheck` failed with error:
+npm error code 137
+npm error path <checkout>/apps/desktop
+npm error workspace hermes@0.0.0
+npm error location <checkout>/apps/desktop
+npm error command failed
+npm error command sh -c tsc -p . --noEmit && tsc -p tsconfig.electron.json --noEmit && tsc -p tsconfig.e2e.json --noEmit && tsc --ignoreConfig --allowJs --checkJs --noEmit --skipLibCheck --module nodenext --moduleResolution nodenext --target es2022 electron-builder.config.cjs

@@ -670,9 +670,13 @@ export function isVisibleUserMessage(message: ChatMessage): boolean {
  * gateway's index and the rewind mis-aims / gets refused (#41275, #86573).
  */
 export function isFailedUserTurn(messages: readonly ChatMessage[], index: number): boolean {
+  const rowId = messages[index]?.rowId
   const next = messages[index + 1]
+  // A provider can fail after the gateway durably admitted the prompt. Its
+  // submit ACK or replayed row proves that Retry must replace that turn.
+  const admitted = typeof rowId === 'number' && Number.isSafeInteger(rowId) && rowId > 0
 
-  return next?.role === 'assistant' && Boolean(next.error)
+  return !admitted && next?.role === 'assistant' && Boolean(next.error)
 }
 
 /**

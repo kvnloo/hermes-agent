@@ -1,0 +1,67 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+npm warn Unknown project config "min-release-age". This will stop working in the next major version of npm.
+npm warn Unknown project config "min-release-age-exclude". This will stop working in the next major version of npm.
+
+ RUN  v4.1.10 <checkout>/apps/desktop
+
+stdout | src/app/session/hooks/use-message-stream/admitted-error-retry.test.tsx > provider failure retains acknowledged user admission > retries the durable row (ACK=before error, stopped=false)
+[turn-accept-latency] { sessionId: 'admitted-error-runtime', ms: 56 }
+
+stdout | src/app/session/hooks/use-message-stream/admitted-error-retry.test.tsx > provider failure retains acknowledged user admission > retries the durable row (ACK=after error, stopped=false)
+[turn-accept-latency] { sessionId: 'admitted-error-runtime', ms: 52 }
+
+ ❯ |ui| src/app/session/hooks/use-message-stream/admitted-error-retry.test.tsx (11 tests | 3 failed) 273ms
+     × retries the durable row (ACK=before error, stopped=false) 90ms
+     × retries the durable row (ACK=after error, stopped=false) 60ms
+     × keeps a persisted provider-error turn in the backend user-ordinal space after replay 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |ui| src/app/session/hooks/use-message-stream/admitted-error-retry.test.tsx > provider failure retains acknowledged user admission > retries the durable row (ACK=before error, stopped=false)
+ FAIL  |ui| src/app/session/hooks/use-message-stream/admitted-error-retry.test.tsx > provider failure retains acknowledged user admission > retries the durable row (ACK=after error, stopped=false)
+AssertionError: expected { …(3) } to match object { …(3) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "confirm_truncate": true,
+    "text": "Keep this admitted prompt on its original turn.",
+-   "truncate_before_row_id": 13,
+  }
+
+ ❯ src/app/session/hooks/use-message-stream/admitted-error-retry.test.tsx:165:31
+    163|     const submits = lane.calls.filter(call => call.method === 'prompt.…
+    164|     expect(submits).toHaveLength(2)
+    165|     expect(submits[1].params).toMatchObject({ text: PROMPT, truncate_b…
+       |                               ^
+    166|   })
+    167|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |ui| src/app/session/hooks/use-message-stream/admitted-error-retry.test.tsx > provider failure retains acknowledged user admission > keeps a persisted provider-error turn in the backend user-ordinal space after replay
+AssertionError: expected 13 to be 113 // Object.is equality
+
+- Expected
++ Received
+
+- 113
++ 13
+
+ ❯ src/app/session/hooks/use-message-stream/admitted-error-retry.test.tsx:187:30
+    185|     const rebound = rebindSurvivorRowIds(messages, [113, 115])
+    186|
+    187|     expect(rebound[0].rowId).toBe(113)
+       |                              ^
+    188|     expect(rebound[3].rowId).toBe(115)
+    189|     expect(visibleUserMessageIndices(messages)).toEqual([0, 3])
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 8 passed (11)
+   Start at  21:12:27
+   Duration  7.86s (transform 4.78s, setup 263ms, import 6.61s, tests 273ms, environment 542ms)

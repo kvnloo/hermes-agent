@@ -1,0 +1,251 @@
+{
+  "scope": "Desktop durable-admission classifier only; provider-error Retry addressing and backend ordinal participation",
+  "owner": "dot/ayo",
+  "base": "3eb7ed08d19da393196722d0b219b2ba1ec22810",
+  "branch": "dot/hermes/admitted-provider-error-retry",
+  "coordination": "https://github.com/kvnloo/hermes-agent/issues/447#issuecomment-6092414639",
+  "upstream_head_reverified": "3eb7ed08d19da393196722d0b219b2ba1ec22810",
+  "environment": {
+    "os": "Linux",
+    "node": "24.19.0",
+    "npm": "11.9.0",
+    "vitest": "4.1.10",
+    "python_check_only": "3.12.14",
+    "ruff": "0.15.10",
+    "dependency_setup": "npm ci --cache /tmp/hermes-runtime-npm-cache --ignore-scripts --no-audit --no-fund"
+  },
+  "source_sha256": {
+    "apps/desktop/src/app/session/hooks/use-prompt-actions/utils.ts": "4b1c222fc2577515e919b6a4acf43bc7754f649a24f6cf61ab01a1a1ee3c3d7e",
+    "apps/desktop/src/app/session/hooks/use-prompt-actions/rewind.test.ts": "4626b42b68f718cd136fc60b910d450b7eab9e729ab0c63a335dfcc915fd10df",
+    "apps/desktop/src/app/session/hooks/use-message-stream/admitted-error-retry.test.tsx": "68e3bb47ac595d01db7a74a1383400b3bf30540fd8c61c6f9d23e012821ee315"
+  },
+  "red": {
+    "command": "npx --no-install vitest run --project ui src/app/session/hooks/use-message-stream/admitted-error-retry.test.tsx --maxWorkers=2",
+    "cwd": "apps/desktop",
+    "source": "Only utils.ts restored from exact base; frozen test unchanged",
+    "exit_code": 1,
+    "failed": 3,
+    "passed": 8,
+    "log": "outputs/frozen-red.txt"
+  },
+  "green_adjacent": {
+    "command": "npx --no-install vitest run --project ui src/app/session/hooks/use-message-stream/admitted-error-retry.test.tsx src/app/session/hooks/use-prompt-actions/rewind.test.ts src/app/session/hooks/use-prompt-actions/utils.test.ts src/app/session/hooks/use-message-stream/agent-init-error.test.tsx src/app/session/hooks/use-message-stream/terminal-error-frame.test.tsx src/app/session/hooks/use-message-stream/completion-boundaries.test.tsx src/app/session/hooks/use-message-stream/interrupted-reply.test.tsx src/app/session/hooks/use-message-stream/interrupted-status-sync.test.tsx --maxWorkers=2",
+    "cwd": "apps/desktop",
+    "exit_code": 0,
+    "files": 8,
+    "passed": 122,
+    "failed": 0,
+    "log": "outputs/green-adjacent.txt"
+  },
+  "eslint": {
+    "command": "npx --no-install eslint src/app/session/hooks/use-prompt-actions/utils.ts src/app/session/hooks/use-prompt-actions/rewind.test.ts src/app/session/hooks/use-message-stream/admitted-error-retry.test.tsx",
+    "cwd": "apps/desktop",
+    "exit_code": 0,
+    "warnings": 0,
+    "log": "outputs/eslint.txt"
+  },
+  "prettier": {
+    "command": "npx --no-install prettier --check src/app/session/hooks/use-prompt-actions/utils.ts src/app/session/hooks/use-prompt-actions/rewind.test.ts src/app/session/hooks/use-message-stream/admitted-error-retry.test.tsx",
+    "cwd": "apps/desktop",
+    "exit_code": 0,
+    "log": "outputs/prettier.txt"
+  },
+  "typecheck": {
+    "command": "NODE_OPTIONS=--max-old-space-size=2048 npm run typecheck",
+    "cwd": "apps/desktop",
+    "exit_code": 0,
+    "covers": ["renderer", "Electron", "E2E TypeScript", "electron-builder configuration"],
+    "log": "outputs/typecheck-final.txt"
+  },
+  "scripts_check": {
+    "command": "PATH=/tmp/ayo-hooks-uv-cache/archive-v0/cfyWE4nVRg2xp3ns/bin:$PATH UV_CACHE_DIR=/tmp/hermes-runtime-uv-cache python scripts/check --base 3eb7ed08d19da393196722d0b219b2ba1ec22810",
+    "cwd": ".",
+    "exit_code": 0,
+    "checks": 11,
+    "measured_files": 3,
+    "blocking": 0,
+    "advisory": 0,
+    "log": "outputs/check-final.txt"
+  },
+  "superseded_failures": [
+    {
+      "kind": "initial npm ci cache EROFS",
+      "resolution": "use disposable writable npm cache; no repository setup change"
+    },
+    {
+      "kind": "parallel full typecheck killed",
+      "exit_code": 137,
+      "log": "outputs/typecheck-resource-failure-first.txt"
+    },
+    {
+      "kind": "code-health base gitgrep timeout during resource contention",
+      "exit_code": 1,
+      "log": "outputs/check-resource-failure.txt"
+    },
+    {
+      "kind": "original never-admitted fixture with durable rowId1",
+      "failed": 1,
+      "passed": 74,
+      "log": "outputs/original-fixture-failure.txt",
+      "resolution": "replace contradictory row identity with undefined; preserve survivor behavior assertions; add admitted-survivor positive control"
+    },
+    {
+      "kind": "final typecheck rerun killed during shared memory pressure",
+      "exit_code": 137,
+      "log": "outputs/typecheck-resource-failure-final.txt",
+      "resolution": "exclusive heavy-gate rerun passed on exact final test"
+    },
+    {
+      "kind": "redundant staged checker using old automatic origin/main base908e4a4b timed out",
+      "exit_code": 1,
+      "log": "outputs/check-automatic-old-base-failure.txt",
+      "resolution": "use explicit upstream pinned base3eb7ed08 for narrow candidate; broad old-fork-main delta is outside scope"
+    },
+    {
+      "kind": "staged snapshot checker default TypeScript cache directory is read-only",
+      "exit_code": 1,
+      "log": "outputs/check-staged-default-cache-failure.txt",
+      "resolution": "use supported XDG_CACHE_HOME and npm_config_cache in writable sandbox directories"
+    }
+  ],
+  "independent_review": {
+    "disposition": "PROMOTE bounded classifier",
+    "isolated_final_red": {
+      "failed": 3,
+      "passed": 8,
+      "log": "outputs/independent-red-final.txt"
+    },
+    "isolated_final_green": {
+      "passed": 11,
+      "failed": 0,
+      "log": "outputs/independent-green-final.txt"
+    },
+    "fixture_review": "rowId1 contradicted never-admitted intent; undefined correction plus admitted-survivor positive control accepted"
+  },
+  "known_preexisting_limitation": {
+    "description": "Replacement rewind ACK user_row_id is not bound by existing runRewindSubmit; a second provider error before hydration can make third Retry a plain resubmit. Broader issue135604 reported history loss remains unconfirmed.",
+    "production_owner_paths_unchanged": ["reload", "rewind", "deep-confirm"],
+    "witness": "critic-admission-boundaries.tsx.txt",
+    "witness_sha256": "5877dc544450c07861c3f49f57e01a8ca9f80c6e561909850e09a58418bb4e39",
+    "selection": "critic admission boundaries",
+    "base": {
+      "failed": 4,
+      "passed": 1,
+      "unselected": 11,
+      "log": "outputs/independent-controls-base.txt"
+    },
+    "patch": {
+      "failed": 2,
+      "passed": 3,
+      "unselected": 11,
+      "log": "outputs/independent-controls-patch.txt"
+    },
+    "repeated_retry_cases": {
+      "failed_on_base": 2,
+      "failed_on_patch": 2,
+      "acks": [
+        {
+          "user_row_id": 15,
+          "survivor_row_id_map": {
+            "13": null
+          }
+        },
+        {
+          "user_row_id": 15,
+          "survivor_user_row_ids": []
+        }
+      ]
+    }
+  },
+  "credits": [
+    {
+      "name": "trusktr",
+      "contribution": "Original investigation lead/report; destructive reported path is not claimed reproduced or fixed",
+      "source": "https://github.com/NousResearch/hermes-agent/issues/135604"
+    },
+    {
+      "name": "vondelomlo",
+      "contribution": "Original failed-submit classifier and ordinal work based on issue41275",
+      "source": "https://github.com/NousResearch/hermes-agent/commit/c2a50a86620c573bdfae4b401803dc47b82672a7"
+    },
+    {
+      "name": "JoaoMarcos44",
+      "contribution": "Failed-turn retry guard",
+      "source": "https://github.com/NousResearch/hermes-agent/pull/86623"
+    },
+    {
+      "name": "teknium1",
+      "contribution": "Durable row addressing",
+      "source": "https://github.com/NousResearch/hermes-agent/pull/87294"
+    },
+    {
+      "name": "NorethSea",
+      "contribution": "Durable row-ID and ordinal separation",
+      "source": "https://github.com/NousResearch/hermes-agent/pull/90661"
+    },
+    {
+      "name": "dot/ayo",
+      "contribution": "Bounded classifier refinement; independent automated review and adversarial witnesses"
+    }
+  ],
+  "not_executed": [
+    "full Hermes Python runtime tests",
+    "live provider/model calls",
+    "manual Electron application run",
+    "macOS or Windows runtime checks"
+  ],
+  "artifact_sha256": {
+    "README.md": "4e751a47c94c62414122906dcf46347c9ea145d644d0b461359ce4d58f764a13",
+    "critic-admission-boundaries.tsx.txt": "5877dc544450c07861c3f49f57e01a8ca9f80c6e561909850e09a58418bb4e39",
+    "outputs/check-automatic-old-base-failure.txt": "3a5edd77b038bbc6f1f68bb1bf6573720f42a087a4803a82918a03203cab0a67",
+    "outputs/check-final.txt": "1cd198a9d9613d322b66635a6fb2280585579b1482834bfc5f7a7a17c2a2442c",
+    "outputs/check-resource-failure.txt": "e171aaf687db6fd887037437da32627a019f84f849363b5850682b6cb9cdd17a",
+    "outputs/check-staged-default-cache-failure.txt": "a0911921a25a491f446d2d246ec2b4d3525a0d0f95bff9968bc86ffd37ede545",
+    "outputs/check-staged-final.txt": "711920b442d58974615cd8ccc36ef3744692577eb80f18b85726ae9cd4b46a8e",
+    "outputs/eslint.txt": "004142221202f9ab9115f5d09b060664cfca90e42f174208ecd310e7a79c1bd5",
+    "outputs/frozen-red.txt": "c0229ca14e0fe05758e29d84b4b7d0cf0fbccd151af53afb1a12a610342f1685",
+    "outputs/green-adjacent.txt": "c1593018069eb5340eb68f7a0367db6cdc1dc74392974fbba5d1289e8e5253b9",
+    "outputs/independent-controls-base.txt": "774296cba81aa88a0673a67cee3608abe6dfbbac9809ef8cd4cf2b49b9936efb",
+    "outputs/independent-controls-patch.txt": "a6bb9fa9845c4cbcf99f051f671f9f9f52c9032487681c498881831219f81a3e",
+    "outputs/independent-green-final.txt": "4bb7ef97ffe0b05b244302963c2f1c31763c695ab44230fdc86fd6ed20665f03",
+    "outputs/independent-red-final.txt": "83498cd25404c0d6cd414b217187c4457285f201a29b9996a9d3d65af75bcee1",
+    "outputs/original-fixture-failure.txt": "733ce1d8de988146e98312c91d3abd935d1c1c61f546e160be368c84861a0d8e",
+    "outputs/prettier.txt": "10f1a4662433f79ae0939f942ecaf08193f7ef4b2943f6d77de64353ff204691",
+    "outputs/typecheck-before-final-assertions.txt": "359fcad96a2413be92add20da1603f4faceb53c839861bfe05a594b56e57dfdc",
+    "outputs/typecheck-final.txt": "359fcad96a2413be92add20da1603f4faceb53c839861bfe05a594b56e57dfdc",
+    "outputs/typecheck-resource-failure-final.txt": "0f4af235917c2b2534db7f41eb522a33f297eb5bcfa88da0c5d1b24e45e58a7a",
+    "outputs/typecheck-resource-failure-first.txt": "0f4af235917c2b2534db7f41eb522a33f297eb5bcfa88da0c5d1b24e45e58a7a"
+  },
+  "log_preservation": {
+    "normalization": "Absolute checkout, isolated-checkout, staged-snapshot and default read-only cache prefixes normalized, trailing blank lines removed; no result or error text changed",
+    "original_unmodified_log_sha256": {
+      "independent-controls-patch.log": "07d24113de396caf199198fb8c7f16a677f9f4924532a60fbbea4069fd5656fd",
+      "typecheck-resource-failure-final.log": "f9086c60eb039d67f83cbe31cb0816f1d5329c0ea1c3f9389e2dbc381fa76004",
+      "independent-controls-base.log": "112ad8a22d0535f3632e28fb9c8f4ecd8d18598f55349366f0a899d1190c5c19",
+      "green-adjacent.log": "11c75fc2951eac72bf9dfbcbffc05812575a9011667e2e678ce567c7a6d604c7",
+      "check-final.log": "1cd198a9d9613d322b66635a6fb2280585579b1482834bfc5f7a7a17c2a2442c",
+      "independent-red-final.log": "4a3f6b55c67d67ac40a8f7d901fdd460f29243969044de338da2f72452c26b60",
+      "frozen-red.log": "0af708c1eae95d9ff4360243c9ba7bbdaca78c5bc35f22da72d0038d8017c548",
+      "typecheck-resource-failure-first.log": "f9086c60eb039d67f83cbe31cb0816f1d5329c0ea1c3f9389e2dbc381fa76004",
+      "check-resource-failure.log": "e171aaf687db6fd887037437da32627a019f84f849363b5850682b6cb9cdd17a",
+      "independent-green-final.log": "3a06988f09431bb9baf6b5c025cbb7cccb9a1b2be466cc8aa3eca3953298f0e5",
+      "eslint.log": "004142221202f9ab9115f5d09b060664cfca90e42f174208ecd310e7a79c1bd5",
+      "check-automatic-old-base-failure.log": "3a5edd77b038bbc6f1f68bb1bf6573720f42a087a4803a82918a03203cab0a67",
+      "prettier.log": "10f1a4662433f79ae0939f942ecaf08193f7ef4b2943f6d77de64353ff204691",
+      "original-fixture-failure.log": "ebc086093c3b75e64f0383db77027ccf01fa784e1e1729ab4d19b9e8d42f3c18",
+      "typecheck-before-final-assertions.log": "3b2bb8d62573a8eebfa4c465ffddb5a5907d98864210275baa7eb65b3c859090",
+      "typecheck-final.log": "3b2bb8d62573a8eebfa4c465ffddb5a5907d98864210275baa7eb65b3c859090",
+      "hermes-runtime-check-staged-pinned.log": "044b555b9bcd67c774f327cc6b2ac154da3eace610b5e8ccea971d86a1d50825",
+      "hermes-runtime-check-staged-pinned-cache.log": "711920b442d58974615cd8ccc36ef3744692577eb80f18b85726ae9cd4b46a8e"
+    }
+  },
+  "scripts_check_staged": {
+    "command": "PATH=/tmp/ayo-hooks-uv-cache/archive-v0/cfyWE4nVRg2xp3ns/bin:$PATH XDG_CACHE_HOME=/tmp/hermes-runtime-health-cache npm_config_cache=/tmp/hermes-runtime-npm-cache UV_CACHE_DIR=/tmp/hermes-runtime-uv-cache python scripts/check --staged --base 3eb7ed08d19da393196722d0b219b2ba1ec22810",
+    "exit_code": 0,
+    "checks": 11,
+    "measured_files": 3,
+    "blocking": 0,
+    "advisory": 0,
+    "log": "outputs/check-staged-final.txt"
+  }
+}

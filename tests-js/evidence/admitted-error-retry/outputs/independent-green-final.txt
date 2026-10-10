@@ -1,0 +1,9 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v4.1.10 <isolated-checkout>/apps/desktop
+
+
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+   Start at  21:11:19
+   Duration  7.79s (transform 4.76s, setup 303ms, import 6.51s, tests 264ms, environment 544ms)

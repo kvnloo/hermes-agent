@@ -1,0 +1,11 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+npm warn Unknown project config "min-release-age". This will stop working in the next major version of npm.
+npm warn Unknown project config "min-release-age-exclude". This will stop working in the next major version of npm.
+
+ RUN  v4.1.10 <checkout>/apps/desktop
+
+
+ Test Files  8 passed (8)
+      Tests  122 passed (122)
+   Start at  21:12:42
+   Duration  15.71s (transform 8.97s, setup 919ms, import 22.91s, tests 588ms, environment 4.24s)

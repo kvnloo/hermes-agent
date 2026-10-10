@@ -1,0 +1,5 @@
+
+=== health (failed) ===
+code health: measurement tooling failed: Command '['git', 'grep', '-h', '-o', '-I', '-E', 'HERMES_[A-Z0-9_]+', '908e4a4b44480912ae3571833492c1aeac2d0eda', '--', '*.py', ':!tests/**', ':!**/tests/**']' timed out after 120 seconds
+
+scripts/check: 11 checks, FAILED: health

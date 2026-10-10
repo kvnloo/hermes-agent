@@ -1,0 +1,94 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v4.1.10 <isolated-checkout>/apps/desktop
+
+stdout | src/app/session/hooks/use-message-stream/critic-admission-boundaries.test.tsx > critic admission boundaries > retries the replacement ACK row after a second provider error ({"survivor_row_id_map":{"13":null}})
+[turn-accept-latency] { sessionId: 'admitted-error-runtime', ms: 56 }
+
+stdout | src/app/session/hooks/use-message-stream/critic-admission-boundaries.test.tsx > critic admission boundaries > retries the replacement ACK row after a second provider error ({"survivor_row_id_map":{"13":null}})
+[turn-accept-latency] { sessionId: 'admitted-error-runtime', ms: 1 }
+
+stdout | src/app/session/hooks/use-message-stream/critic-admission-boundaries.test.tsx > critic admission boundaries > retries the replacement ACK row after a second provider error ({"survivor_user_row_ids":[]})
+[turn-accept-latency] { sessionId: 'admitted-error-runtime', ms: 52 }
+
+stdout | src/app/session/hooks/use-message-stream/critic-admission-boundaries.test.tsx > critic admission boundaries > retries the replacement ACK row after a second provider error ({"survivor_user_row_ids":[]})
+[turn-accept-latency] { sessionId: 'admitted-error-runtime', ms: 1 }
+
+ ❯ |ui| src/app/session/hooks/use-message-stream/critic-admission-boundaries.test.tsx (16 tests | 4 failed | 11 skipped) 159ms
+     × preserves both admitted survivor slots through hydrated provider failure 12ms
+     × retains the admitted error row for reload, restore and edit 3ms
+     × retries the replacement ACK row after a second provider error ({"survivor_row_id_map":{"13":null}}) 82ms
+     × retries the replacement ACK row after a second provider error ({"survivor_user_row_ids":[]}) 59ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |ui| src/app/session/hooks/use-message-stream/critic-admission-boundaries.test.tsx > critic admission boundaries > preserves both admitted survivor slots through hydrated provider failure
+AssertionError: expected [ 13, 91 ] to deeply equal [ 91, 93 ]
+
+- Expected
++ Received
+
+  [
++   13,
+    91,
+-   93,
+  ]
+
+ ❯ src/app/session/hooks/use-message-stream/critic-admission-boundaries.test.tsx:224:97
+    222|     expect(users.map(message => message.rowId)).toEqual([13, 15])
+    223|     const positional = rebindSurvivorRowIds(messages, [91, 93])
+    224|     expect(positional.filter(message => message.role === 'user').map(m…
+       |                                                                                                 ^
+    225|     const mapped = rebindSurvivorRowIds(messages, new Map([[13, 91], […
+    226|     expect(mapped.filter(message => message.role === 'user').map(messa…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |ui| src/app/session/hooks/use-message-stream/critic-admission-boundaries.test.tsx > critic admission boundaries > retains the admitted error row for reload, restore and edit
+AssertionError: expected { …(7) } to match object { truncateRowId: 13, …(1) }
+(5 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "truncateOrdinal": 0,
+-   "truncateRowId": 13,
++   "truncateOrdinal": undefined,
++   "truncateRowId": undefined,
+  }
+
+ ❯ src/app/session/hooks/use-message-stream/critic-admission-boundaries.test.tsx:234:44
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |ui| src/app/session/hooks/use-message-stream/critic-admission-boundaries.test.tsx > critic admission boundaries > retries the replacement ACK row after a second provider error ({"survivor_row_id_map":{"13":null}})
+ FAIL  |ui| src/app/session/hooks/use-message-stream/critic-admission-boundaries.test.tsx > critic admission boundaries > retries the replacement ACK row after a second provider error ({"survivor_user_row_ids":[]})
+AssertionError: expected { …(3) } to match object { …(3) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "confirm_truncate": true,
+    "text": "Keep this admitted prompt on its original turn.",
+-   "truncate_before_row_id": 15,
+  }
+
+ ❯ src/app/session/hooks/use-message-stream/critic-admission-boundaries.test.tsx:266:31
+    264|     const submits = lane.calls.filter(call => call.method === 'prompt.…
+    265|     expect(submits).toHaveLength(3)
+    266|     expect(submits[2].params).toMatchObject({ text: PROMPT, truncate_b…
+       |                               ^
+    267|   })
+    268| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 1 passed | 11 skipped (16)
+   Start at  21:09:02
+   Duration  8.10s (transform 4.41s, setup 346ms, import 6.67s, tests 159ms, environment 710ms)
