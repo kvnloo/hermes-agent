@@ -1,0 +1,7 @@
+main frozen exit=1
+owner frozen exit=1
+control frozen exit=0
+main adjacent exit=0
+owner adjacent exit=0
+control adjacent exit=1
+owner resolver exit=0

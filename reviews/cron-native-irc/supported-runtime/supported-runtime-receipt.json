@@ -1,0 +1,340 @@
+{
+  "status": "FOCUSED_SUPPORTED_CPYTHON_3_14_7_MATRIX_VERIFIED; NOT_FULL_PM_OR_FULL_SUITE_CERTIFICATION",
+  "created_utc": "2026-10-10T05:24:39.053268+00:00",
+  "review_target": "https://github.com/NousResearch/hermes-agent/pull/135952",
+  "ownership": {
+    "implementation_owner": "liuhao1024",
+    "original_reporter": "clckmedia",
+    "independent_corroboration": "aron-intframe",
+    "new_competing_implementation": false
+  },
+  "tested_snapshots": {
+    "main": "dce1e9b37581dd62e480a9064dc04a709c2940d3",
+    "owner_production_head": "d310978d039e479d1df5f0de8752adf6e64adea2",
+    "owner_evidence_archive_commit": "34b17471f946e3fb34e1e2e51481da9de1181d20",
+    "published_evidence_commit": "b1f8cbc58c11c82c30c4e812e4943b5ae628460e",
+    "owner_local_remote_equal_tree": "1640a58f040bf4c0573e6c548e74a58eb6a65d37",
+    "method": "git archive immutable revisions into private directories; copied .git pointers used only for canonical runner read-only tracked-file enumeration"
+  },
+  "prior_failure": {
+    "log_sha256": "4056c2289d9a4b820ab552d5ff1e7dd29e681eb6f58e3bd050d2ef0f85d14ba4",
+    "exact_error": "python environment: python: install failed: download failed from https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.14.7+20260901-x86_64-unknown-linux-gnu-install_only.tar.gz: <urlopen error Tunnel connection failed: 403 Forbidden> \u2014 retry, or run `hermes pm doctor`",
+    "interpretation": "Verified proxy transport 403 to standalone GitHub asset. No verified user cancellation or general installation policy denial recovered. That URL was not retried; official python.org source was separately reachable and authorized."
+  },
+  "source_runtime": {
+    "distribution": "Official python.org CPython source, private standard non-PGO/non-LTO default-GIL build at GCC -O3; not Astral PM standalone distribution",
+    "python_tar_url": "https://www.python.org/ftp/python/3.14.7/Python-3.14.7.tar.xz",
+    "official_release_page": "https://www.python.org/downloads/release/python-3147/",
+    "official_python_tar_sha256": "3b48dac8fb59f62eaa67ac83c1eb12bda1b7a08406dd286e252c11a66be27f81",
+    "downloaded_python_tar_sha256": "3b48dac8fb59f62eaa67ac83c1eb12bda1b7a08406dd286e252c11a66be27f81",
+    "sqlite_header_url": "https://www.sqlite.org/2024/sqlite-amalgamation-3460100.zip",
+    "sqlite_archive_sha256": "77823cb110929c2bcb0f5d48e4833b5c59a8a6e40cdea3936b99e199dbbe5784",
+    "sqlite_header_sha256": "89b62c671c5964e137409ce034941b7b05a3af2c9875aba41f47f9483d0c2515",
+    "sqlite_header_runtime_version": "3.46.1",
+    "sqlite_linking": "Private header plus installed system libsqlite3.so.0; runtime CDLL identity and in-memory query smoke verified",
+    "ffi": "Existing libffi-dev3.4.8-2 headers and library in a private sysroot; no system installation changes",
+    "ffi_existing_deb_sha256": "76b2b80193a656733e1408ebec5371334be5fd48eb5f50ab99d6baf6081d0f1b",
+    "build_jobs": 2,
+    "install_compileall_jobs": 2,
+    "smoke": {
+      "python": "3.14.7 (main, Oct 10 2026, 00:19:02) [GCC 14.2.0]",
+      "executable": "<private-runtime>/prefix/cpython-3.14.7/bin/python3.14",
+      "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+      "ssl": "OpenSSL 3.5.7 9 Jun 2026",
+      "sqlite": "3.46.1",
+      "ctypes": "PASS CDLL system sqlite identity",
+      "venv": "PASS import",
+      "ensurepip": "26.2.1",
+      "soabi": "cpython-314-x86_64-linux-gnu",
+      "configure_args": "'--prefix=<private-runtime>/prefix/cpython-3.14.7' '--with-ensurepip=install' 'LDFLAGS=-L<private-runtime>/prefix/lib -L<private-libffi-sysroot>/usr/lib/x86_64-linux-gnu' 'CPPFLAGS=-I<private-runtime>/prefix/include -I<private-libffi-sysroot>/usr/include/x86_64-linux-gnu'"
+    },
+    "missing_optional_stdlib_modules": [
+      "_bz2",
+      "_curses",
+      "_curses_panel",
+      "_dbm",
+      "_gdbm",
+      "_lzma",
+      "_tkinter",
+      "_uuid",
+      "readline"
+    ],
+    "focused_test_impact_of_optional_modules": "No focused test skipped or encountered a missing-module collection/import error. UUID operations use CPython fallback where relevant; absent optional native modules and their paths are not certified."
+  },
+  "dependency_environment": {
+    "classification": "Focused dependency-only isolated venv; Hermes package not installed; PM toolchain/build not invoked",
+    "optional_plugin_load_warnings": {
+      "missing_dependency": "requests",
+      "plugins": [
+        "browser-browser-use",
+        "browser-browserbase",
+        "browser-firecrawl",
+        "krea",
+        "xai"
+      ],
+      "effect": "Warnings retained in raw owner frozen output; contract fixtures load. No claim of successful optional plugin coverage."
+    },
+    "requested_packages": [
+      "annotated-types==0.8.0",
+      "anyio==4.14.2",
+      "certifi==2026.5.20",
+      "croniter==6.0.0",
+      "h11==0.16.0",
+      "httpcore==1.0.9",
+      "httpx==0.28.1",
+      "idna==3.19",
+      "iniconfig==2.3.0",
+      "packaging==26.0",
+      "pluggy==1.6.0",
+      "pydantic-core==2.46.4",
+      "pydantic==2.13.4",
+      "pygments==2.21.0",
+      "pytest-asyncio==1.3.0",
+      "pytest==9.1.1",
+      "python-dateutil==2.9.0.post0",
+      "python-dotenv==1.2.2",
+      "pytz==2026.3.post1",
+      "pyyaml==6.0.3",
+      "ruamel-yaml==0.18.16",
+      "six==1.17.0",
+      "socksio==1.0.0",
+      "typing-extensions==4.16.0",
+      "typing-inspection==0.4.4"
+    ],
+    "requested_packages_match_owner_uv_lock": true,
+    "dependency_check": "PASS 26 installed distributions including ensurepip pip; 25 focused locked packages",
+    "prior_install_correction": "Initial resolution selected pytz2026.5 as unpinned croniter transitive. Before tests it was explicitly replaced with uv.lock pytz2026.3.post1; initial and correction logs retained."
+  },
+  "runner": {
+    "canonical": "scripts/run_tests.sh with its per-file subprocess runner and stripped credential environment",
+    "wrapper": "Changes only compileall -j0 to -j1 and routes pycache into private workspace",
+    "test_workers": 1,
+    "file_retries": 0,
+    "home": "Private temporary HOME; all state/cache/duration paths are private archive snapshots or runtime directory",
+    "control": "Global shared-resolver monkeypatch defaults pass_unresolved_references=True for callers omitting it; not validator-only and not a ready fix",
+    "frozen_test_sha256": "d247b3bbc75b5bbc12c9a949ac34ae7e7b743ea69ba6ac90b99ba7fbf4c2dc95",
+    "control_sha256": "0342a38cff2c8a29577b277fd153906f5da280b89a73a2cdf8032833e9912c50"
+  },
+  "results": {
+    "main-frozen": {
+      "passed": 4,
+      "failed": 8,
+      "skipped": 0,
+      "exit": 1,
+      "summary": "=== Summary: 1 files, 4 tests passed, 8 failed (100% complete) in 5.6s (1 workers) ===",
+      "failed_nodeids": [
+        "tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:5:daily-deliver-create]",
+        "tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:5:daily-deliver-update]",
+        "tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:5:daily-failure_deliver-create]",
+        "tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:5:daily-failure_deliver-update]",
+        "tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:13/daily-deliver-create]",
+        "tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:13/daily-deliver-update]",
+        "tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:13/daily-failure_deliver-create]",
+        "tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:13/daily-failure_deliver-update]"
+      ],
+      "raw_log_sha256": "e62f83ba105d7f41da62c64b4d2ea427ea48f88132eab1b1c1c063e2b246c814",
+      "sanitized_log_sha256": "f076b4ac698bd4c33a1fa1151a860c393402472ec9e61939d903d9abd6385271",
+      "log": "logs/main-frozen.log"
+    },
+    "owner-frozen": {
+      "passed": 8,
+      "failed": 4,
+      "skipped": 0,
+      "exit": 1,
+      "summary": "=== Summary: 1 files, 8 tests passed, 4 failed (100% complete) in 5.1s (1 workers) ===",
+      "failed_nodeids": [
+        "tests/tools/test_cron_deferred_delivery_validation.py::test_deferred_irc_target_remains_schedulable[deliver-create]",
+        "tests/tools/test_cron_deferred_delivery_validation.py::test_deferred_irc_target_remains_schedulable[deliver-update]",
+        "tests/tools/test_cron_deferred_delivery_validation.py::test_deferred_irc_target_remains_schedulable[failure_deliver-create]",
+        "tests/tools/test_cron_deferred_delivery_validation.py::test_deferred_irc_target_remains_schedulable[failure_deliver-update]"
+      ],
+      "raw_log_sha256": "8f5bc40f9de0c8e567be5aea4270e2f72a8108ebeefba6e02f1540e98a06d376",
+      "sanitized_log_sha256": "1e932d4c6e446df5460827be38c3ce212aab0e1842f98d45667672f7d85588c5",
+      "log": "logs/owner-frozen.log"
+    },
+    "control-frozen": {
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0,
+      "exit": 0,
+      "summary": "=== Summary: 1 files, 12 tests passed, 0 failed (100% complete) in 3.6s (1 workers) ===",
+      "failed_nodeids": [],
+      "raw_log_sha256": "16812bc8738aeab4acb176ecfad05ff98895af089ec8737fa9d3f9c214ef49cd",
+      "sanitized_log_sha256": "0ad31e88407ce93c0e50c6338461f02d6850f0e4a83c6b85f01247db1b1f8dea",
+      "log": "logs/control-frozen.log"
+    },
+    "main-adjacent": {
+      "passed": 76,
+      "failed": 0,
+      "skipped": 0,
+      "exit": 0,
+      "summary": "=== Summary: 2 files, 76 tests passed, 0 failed (100% complete) in 4.8s (1 workers) ===",
+      "failed_nodeids": [],
+      "raw_log_sha256": "a62642cbfcc1a6fe353d2572d6f1f4a90cf09ba4a9266f5ddf7f2cdc8e23fbcb",
+      "sanitized_log_sha256": "11cc3ffe644328a40188cbd2579590e4ff7cc21b9329219fa54baf2a2f675e6e",
+      "log": "logs/main-adjacent.log"
+    },
+    "owner-adjacent": {
+      "passed": 79,
+      "failed": 0,
+      "skipped": 0,
+      "exit": 0,
+      "summary": "=== Summary: 2 files, 79 tests passed, 0 failed (100% complete) in 5.0s (1 workers) ===",
+      "failed_nodeids": [],
+      "raw_log_sha256": "0c0c6b1e18ec15d85624463fd9fc3097aee84974c825b499e8e5cef9b97f4ddd",
+      "sanitized_log_sha256": "44dfbbc8b61978142dde71c076c53553b0345feb9c8ca1d5f02fa00395750ec7",
+      "log": "logs/owner-adjacent.log"
+    },
+    "control-adjacent": {
+      "passed": 78,
+      "failed": 1,
+      "skipped": 0,
+      "exit": 1,
+      "summary": "=== Summary: 2 files, 78 tests passed, 1 failed (100% complete) in 4.0s (1 workers) ===",
+      "failed_nodeids": [
+        "tests/tools/test_cronjob_job_args.py::TestValidatePlatformDeliverTargets::test_unresolvable_target_is_rejected_upfront"
+      ],
+      "raw_log_sha256": "a43b15ae7d31783e82fb824bc4c167ed33290cbad7265ac61d1103f77302afea",
+      "sanitized_log_sha256": "9a319252300bc09d4d17056dffa99dcf8ba0c6cc3f64ce67df58bd6ad675247f",
+      "log": "logs/control-adjacent.log"
+    },
+    "owner-resolver": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "exit": 0,
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 0.7s (1 workers) ===",
+      "failed_nodeids": [],
+      "raw_log_sha256": "4ea8341cbf20cf2e59ab601bf8088aeea4f587a3f2468b39aa6144ecc733d924",
+      "sanitized_log_sha256": "1ebfdc2e539a0384f6f3126f1097df7ebf7e764a1b2feb1d7eda19b0ab58cc38",
+      "log": "logs/owner-resolver.log"
+    }
+  },
+  "diagnostic_comparison": {
+    "frozen": "All three frozen 12-case matrices match prior unsupported Python3.12 diagnostic exactly",
+    "adjacent": "Two former croniter importorskip cases now pass with exact declared croniter6.0.0 present: main74pass2skip\u219276pass; owner77pass2skip\u219279pass; control76pass1fail2skip\u219278pass1fail. Telegram negative remains intentionally failing under global experiment."
+  },
+  "original_worktrees_unchanged": true,
+  "parent_fresh_public_check": {
+    "checked_utc_minute": "2026-10-10T05:23Z",
+    "head": "d310978d039e479d1df5f0de8752adf6e64adea2",
+    "state": "open",
+    "draft": true,
+    "updated_at": "2026-10-10T03:49:41Z",
+    "comments": 0,
+    "review_comments": 0,
+    "source": "Existing read-only GitHub PR metadata receipt, recorded by the coordinating review at 05:23 UTC; runtime qualifier and independent auditor made no API query"
+  },
+  "remaining_limits": [
+    "Full Hermes suite not run",
+    "Full PM/standalone-install and complete dependency parity not verified",
+    "Missing optional stdlib modules untested",
+    "Live transport, credentials and provider behavior unverified"
+  ],
+  "runtime_qualification_scope": [
+    "No production edits or existing-test changes",
+    "No system/live Hermes installation, services, transport sends, credentials, inference or paid actions",
+    "No Git config/index/hooks modifications, branch pushes, GitHub API, upstream posts or new competing implementation"
+  ],
+  "independently_audited_source_receipt_sha256": "4b547fb7526388589f89c14b1ba0243fc959ef9d991462805d193b3245b70ac4",
+  "independently_audited_source_readme_sha256": "5e7de78a056926b8d6846b1b98b775778a11b4164810387f7eb9d1f39ee95054",
+  "independent_audit": {
+    "verdict": "PROMOTE evidence-only focused CPython3.14.7 qualification; owner native-IRC finding remains REWORK; global flag control not ready fix",
+    "original_artifact_hashes_verified": 24,
+    "main_owner_relevant_file_hashes_verified": 24,
+    "new_build_install_test_or_api_query_by_auditor": false,
+    "wheel_byte_hash_and_full_PM_dependency_parity_verified": false
+  },
+  "log_provenance": {
+    "logs/main-frozen.log": {
+      "raw_sha256": "e62f83ba105d7f41da62c64b4d2ea427ea48f88132eab1b1c1c063e2b246c814",
+      "sanitized_sha256": "f076b4ac698bd4c33a1fa1151a860c393402472ec9e61939d903d9abd6385271"
+    },
+    "logs/owner-frozen.log": {
+      "raw_sha256": "8f5bc40f9de0c8e567be5aea4270e2f72a8108ebeefba6e02f1540e98a06d376",
+      "sanitized_sha256": "1e932d4c6e446df5460827be38c3ce212aab0e1842f98d45667672f7d85588c5"
+    },
+    "logs/control-frozen.log": {
+      "raw_sha256": "16812bc8738aeab4acb176ecfad05ff98895af089ec8737fa9d3f9c214ef49cd",
+      "sanitized_sha256": "0ad31e88407ce93c0e50c6338461f02d6850f0e4a83c6b85f01247db1b1f8dea"
+    },
+    "logs/main-adjacent.log": {
+      "raw_sha256": "a62642cbfcc1a6fe353d2572d6f1f4a90cf09ba4a9266f5ddf7f2cdc8e23fbcb",
+      "sanitized_sha256": "11cc3ffe644328a40188cbd2579590e4ff7cc21b9329219fa54baf2a2f675e6e"
+    },
+    "logs/owner-adjacent.log": {
+      "raw_sha256": "0c0c6b1e18ec15d85624463fd9fc3097aee84974c825b499e8e5cef9b97f4ddd",
+      "sanitized_sha256": "44dfbbc8b61978142dde71c076c53553b0345feb9c8ca1d5f02fa00395750ec7"
+    },
+    "logs/control-adjacent.log": {
+      "raw_sha256": "a43b15ae7d31783e82fb824bc4c167ed33290cbad7265ac61d1103f77302afea",
+      "sanitized_sha256": "9a319252300bc09d4d17056dffa99dcf8ba0c6cc3f64ce67df58bd6ad675247f"
+    },
+    "logs/owner-resolver.log": {
+      "raw_sha256": "4ea8341cbf20cf2e59ab601bf8088aeea4f587a3f2468b39aa6144ecc733d924",
+      "sanitized_sha256": "1ebfdc2e539a0384f6f3126f1097df7ebf7e764a1b2feb1d7eda19b0ab58cc38"
+    },
+    "logs/matrix-exitcodes.log": {
+      "raw_sha256": "30c1a1484cc2a3023c96b40fc9546af92ba5a967157f8c1e7c52851512f57d1d",
+      "sanitized_sha256": "30c1a1484cc2a3023c96b40fc9546af92ba5a967157f8c1e7c52851512f57d1d"
+    },
+    "logs/dependencies-check-final.log": {
+      "raw_sha256": "99c839409f6b03dc9f2dbce3f49e118b58688aec112a0c9be3ba66685d2ab04a",
+      "sanitized_sha256": "2bf6ca85078e50bd7a380481e9625d8b56669be72c840274502e4fdc87e9b28c"
+    },
+    "logs/dependencies-install.log": {
+      "raw_sha256": "c6d2d5d8e88b753934d26144284e617bec7e851c17932ae06a873af3cf6aa596",
+      "sanitized_sha256": "d96eb3d30931469a9a3f56864996719551a62053676b6985f86a4d9fa82b7cf2"
+    },
+    "logs/dependencies-pytz-lock-correction.log": {
+      "raw_sha256": "82cbb58e16064b93e10ac5ca1dd5de62eec937d37367cfe4842ffc3b92afee5d",
+      "sanitized_sha256": "feb4aa26028d6834dc9d5b6459b862915a3ca33a8050688f837ed456efbda1d6"
+    },
+    "logs/publication-check.log": {
+      "raw_sha256": "de5fe4918f5a7baf0b45f540a5d566bd0427611387af59d7922a3adeb38104c2",
+      "sanitized_sha256": "de5fe4918f5a7baf0b45f540a5d566bd0427611387af59d7922a3adeb38104c2"
+    }
+  },
+  "portable_publication": {
+    "scope": "Sanitized portable evidence and reproducible commands only; no interpreter/binaries/source archives/caches/private build state",
+    "original_python3_12_logs_preserved": true,
+    "source_and_frozen_test_blobs_unchanged": true,
+    "expected_remote_parent": "b1f8cbc58c11c82c30c4e812e4943b5ae628460e",
+    "branch": "dot/hermes/review-cron-native-irc",
+    "upstream_feedback": "UNSENT",
+    "hosted_CI": "UNVERIFIED",
+    "fresh_owner_metadata": {
+      "checked_utc": "2026-10-10T05:31:26.222690+00:00",
+      "head": "d310978d039e479d1df5f0de8752adf6e64adea2",
+      "state": "open draft",
+      "updated_at": "2026-10-10T03:49:41Z",
+      "head_unchanged": true
+    },
+    "fresh_fork_ref": "refs/heads/dot/hermes/review-cron-native-irc -> b1f8cbc58c11c82c30c4e812e4943b5ae628460e"
+  },
+  "sanitization": "Absolute sandbox paths replaced; trailing whitespace normalized in logs; raw and sanitized log hashes both recorded. Private build/configuration/install logs and worktree state manifests are excluded; their audit scope is stated without publishing build state.",
+  "artifact_sha256": {
+    "README.md": "e1cd038a1cddf4928883cdb399042ed0c43a0c441c277d8c134e46e1a1212fb0",
+    "dependencies-frozen.txt": "9ed7e830204b0289e9b99411562c24aabd34f82f048de7a01be13ec4cdaf15a4",
+    "logs/control-adjacent.log": "9a319252300bc09d4d17056dffa99dcf8ba0c6cc3f64ce67df58bd6ad675247f",
+    "logs/control-frozen.log": "0ad31e88407ce93c0e50c6338461f02d6850f0e4a83c6b85f01247db1b1f8dea",
+    "logs/dependencies-check-final.log": "2bf6ca85078e50bd7a380481e9625d8b56669be72c840274502e4fdc87e9b28c",
+    "logs/dependencies-install.log": "d96eb3d30931469a9a3f56864996719551a62053676b6985f86a4d9fa82b7cf2",
+    "logs/dependencies-pytz-lock-correction.log": "feb4aa26028d6834dc9d5b6459b862915a3ca33a8050688f837ed456efbda1d6",
+    "logs/main-adjacent.log": "11cc3ffe644328a40188cbd2579590e4ff7cc21b9329219fa54baf2a2f675e6e",
+    "logs/main-frozen.log": "f076b4ac698bd4c33a1fa1151a860c393402472ec9e61939d903d9abd6385271",
+    "logs/matrix-exitcodes.log": "30c1a1484cc2a3023c96b40fc9546af92ba5a967157f8c1e7c52851512f57d1d",
+    "logs/owner-adjacent.log": "44dfbbc8b61978142dde71c076c53553b0345feb9c8ca1d5f02fa00395750ec7",
+    "logs/owner-frozen.log": "1e932d4c6e446df5460827be38c3ce212aab0e1842f98d45667672f7d85588c5",
+    "logs/owner-resolver.log": "1ebfdc2e539a0384f6f3126f1097df7ebf7e764a1b2feb1d7eda19b0ab58cc38",
+    "requirements.txt": "abe9d1b231291c350e97b71a8855902aa5f8d514e22859b1aa43cc6bbde16d75",
+    "logs/publication-check.log": "de5fe4918f5a7baf0b45f540a5d566bd0427611387af59d7922a3adeb38104c2"
+  },
+  "publication_checker": {
+    "python": "3.14.7",
+    "result": "11 checks passed; no measured code files changed",
+    "base": "b1f8cbc58c11c82c30c4e812e4943b5ae628460e",
+    "pinned_ruff": "0.15.10",
+    "log": "logs/publication-check.log"
+  }
+}

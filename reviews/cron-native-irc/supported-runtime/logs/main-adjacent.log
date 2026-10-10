@@ -1,0 +1,20 @@
+▶ not activated — using HERMES_PYTHON: <private-python-launcher>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 2 test files (~65 tests) under ['tests/tools/test_cronjob_job_args.py', 'tests/tools/test_cronjob_tools.py']; running with -j 1
+[  6.2% |     4/~65 | ✓4 | ✗0] ✓ tests/tools/test_cronjob_job_args.py (4✓, 0.7s)
+[100.0% |    65/~65 | ✓76 | ✗ 0] ✓ tests/tools/test_cronjob_tools.py (72✓, 4.1s)
+
+=== Summary: 2 files, 76 tests passed, 0 failed (100% complete) in 4.8s (1 workers) ===
+  Durations cached to test_durations.json (2 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   2
+  Total subprocess CPU-wall: 4.8s  (runner wall: 4.8s, parallelism: 1x)
+  P50: 4.13s  P90: 4.13s  P95: 4.13s  P99: 4.13s  Max: 4.13s
+  <1s: 1 files (50%)  <2s: 1 files (50%)
+  Top 10 slowest:
+      4.13s  tests/tools/test_cronjob_tools.py
+      0.69s  tests/tools/test_cronjob_job_args.py

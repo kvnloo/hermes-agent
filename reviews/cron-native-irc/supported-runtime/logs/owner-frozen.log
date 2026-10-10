@@ -1,0 +1,229 @@
+▶ not activated — using HERMES_PYTHON: <private-python-launcher>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/tools/test_cron_deferred_delivery_validation.py']; running with -j 1
+[100.0% |     2/~2 | ✓ 8 | ✗ 4] ✗ tests/tools/test_cron_deferred_delivery_validation.py (8✓ 4✗, 5.1s)
+
+  ╔╍ Failed: tests/tools/test_cron_deferred_delivery_validation.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║             "create",
+  ║             prompt="Check status",
+  ║             schedule="every hour",
+  ║             paused=True,
+  ║             deliver="local",
+  ║         )
+  ║         assert seed["success"] is True
+  ║         args = {lane: target, "name": "Native channel"}
+  ║         if action == "create":
+  ║             args.update(prompt="Check status", schedule="every hour", paused=True)
+  ║         else:
+  ║             args["job_id"] = seed["job_id"]
+  ║         result = _dispatch(action, **args)
+  ║ >       assert result["success"] is True, result
+  ║ E       AssertionError: {'error': "invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.", 'success': False}
+  ║ E       assert False is True
+  ║
+  ║ tests/tools/test_cron_deferred_delivery_validation.py:80: AssertionError
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_deferred_irc_target_remains_schedulable[deliver-create]
+  ║ FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_deferred_irc_target_remains_schedulable[deliver-update]
+  ║ FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_deferred_irc_target_remains_schedulable[failure_deliver-create]
+  ║ FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_deferred_irc_target_remains_schedulable[failure_deliver-update]
+  ║ ========================= 4 failed, 8 passed in 4.62s ==========================
+  ║
+  ║  Repro: python -m pytest tests/tools/test_cron_deferred_delivery_validation.py --basetemp=<isolated-test-data>/owner-frozen
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 8 tests passed, 4 failed (100% complete) in 5.1s (1 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 5.1s  (runner wall: 5.1s, parallelism: 1x)
+  P50: 5.07s  P90: 5.07s  P95: 5.07s  P99: 5.07s  Max: 5.07s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      5.07s  tests/tools/test_cron_deferred_delivery_validation.py
+
+=== Failure output ===
+
+--- tests/tools/test_cron_deferred_delivery_validation.py ---
+============================= test session starts ==============================
+platform linux -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <owner-checkout>
+configfile: pyproject.toml
+plugins: asyncio-1.3.0, anyio-4.14.2
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 12 items
+
+tests/tools/test_cron_deferred_delivery_validation.py FFFF........       [100%]
+
+=================================== FAILURES ===================================
+_________ test_deferred_irc_target_remains_schedulable[deliver-create] _________
+
+delivery_home = PosixPath('<isolated-test-data>/owner-frozen/test_deferred_irc_target_remai0/home')
+action = 'create', lane = 'deliver'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    def test_deferred_irc_target_remains_schedulable(delivery_home, action, lane):
+        target = "irc:#future-room"
+        # The real cold plugin-discovery and fire-time paths accept this native channel
+        # without a cached directory, connection, credentials or adapter construction.
+        fire_target = _resolve_single_delivery_target({}, target)
+        assert fire_target["chat_id"] == "#future-room"
+        seed = _dispatch(
+            "create",
+            prompt="Check status",
+            schedule="every hour",
+            paused=True,
+            deliver="local",
+        )
+        assert seed["success"] is True
+        args = {lane: target, "name": "Native channel"}
+        if action == "create":
+            args.update(prompt="Check status", schedule="every hour", paused=True)
+        else:
+            args["job_id"] = seed["job_id"]
+        result = _dispatch(action, **args)
+>       assert result["success"] is True, result
+E       AssertionError: {'error': "invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.", 'success': False}
+E       assert False is True
+
+tests/tools/test_cron_deferred_delivery_validation.py:80: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_________ test_deferred_irc_target_remains_schedulable[deliver-update] _________
+
+delivery_home = PosixPath('<isolated-test-data>/owner-frozen/test_deferred_irc_target_remai1/home')
+action = 'update', lane = 'deliver'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    def test_deferred_irc_target_remains_schedulable(delivery_home, action, lane):
+        target = "irc:#future-room"
+        # The real cold plugin-discovery and fire-time paths accept this native channel
+        # without a cached directory, connection, credentials or adapter construction.
+        fire_target = _resolve_single_delivery_target({}, target)
+        assert fire_target["chat_id"] == "#future-room"
+        seed = _dispatch(
+            "create",
+            prompt="Check status",
+            schedule="every hour",
+            paused=True,
+            deliver="local",
+        )
+        assert seed["success"] is True
+        args = {lane: target, "name": "Native channel"}
+        if action == "create":
+            args.update(prompt="Check status", schedule="every hour", paused=True)
+        else:
+            args["job_id"] = seed["job_id"]
+        result = _dispatch(action, **args)
+>       assert result["success"] is True, result
+E       AssertionError: {'error': "invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.", 'success': False}
+E       assert False is True
+
+tests/tools/test_cron_deferred_delivery_validation.py:80: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_____ test_deferred_irc_target_remains_schedulable[failure_deliver-create] _____
+
+delivery_home = PosixPath('<isolated-test-data>/owner-frozen/test_deferred_irc_target_remai2/home')
+action = 'create', lane = 'failure_deliver'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    def test_deferred_irc_target_remains_schedulable(delivery_home, action, lane):
+        target = "irc:#future-room"
+        # The real cold plugin-discovery and fire-time paths accept this native channel
+        # without a cached directory, connection, credentials or adapter construction.
+        fire_target = _resolve_single_delivery_target({}, target)
+        assert fire_target["chat_id"] == "#future-room"
+        seed = _dispatch(
+            "create",
+            prompt="Check status",
+            schedule="every hour",
+            paused=True,
+            deliver="local",
+        )
+        assert seed["success"] is True
+        args = {lane: target, "name": "Native channel"}
+        if action == "create":
+            args.update(prompt="Check status", schedule="every hour", paused=True)
+        else:
+            args["job_id"] = seed["job_id"]
+        result = _dispatch(action, **args)
+>       assert result["success"] is True, result
+E       AssertionError: {'error': "invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.", 'success': False}
+E       assert False is True
+
+tests/tools/test_cron_deferred_delivery_validation.py:80: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_____ test_deferred_irc_target_remains_schedulable[failure_deliver-update] _____
+
+delivery_home = PosixPath('<isolated-test-data>/owner-frozen/test_deferred_irc_target_remai3/home')
+action = 'update', lane = 'failure_deliver'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    def test_deferred_irc_target_remains_schedulable(delivery_home, action, lane):
+        target = "irc:#future-room"
+        # The real cold plugin-discovery and fire-time paths accept this native channel
+        # without a cached directory, connection, credentials or adapter construction.
+        fire_target = _resolve_single_delivery_target({}, target)
+        assert fire_target["chat_id"] == "#future-room"
+        seed = _dispatch(
+            "create",
+            prompt="Check status",
+            schedule="every hour",
+            paused=True,
+            deliver="local",
+        )
+        assert seed["success"] is True
+        args = {lane: target, "name": "Native channel"}
+        if action == "create":
+            args.update(prompt="Check status", schedule="every hour", paused=True)
+        else:
+            args["job_id"] = seed["job_id"]
+        result = _dispatch(action, **args)
+>       assert result["success"] is True, result
+E       AssertionError: {'error': "invalid deliver target 'irc:#future-room': Could not resolve '#future-room' on irc. The plugin parser did not recognize it and no channel-directory entry matched.", 'success': False}
+E       assert False is True
+
+tests/tools/test_cron_deferred_delivery_validation.py:80: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+=========================== short test summary info ============================
+FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_deferred_irc_target_remains_schedulable[deliver-create]
+FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_deferred_irc_target_remains_schedulable[deliver-update]
+FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_deferred_irc_target_remains_schedulable[failure_deliver-create]
+FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_deferred_irc_target_remains_schedulable[failure_deliver-update]
+========================= 4 failed, 8 passed in 4.62s ==========================
+
+=== 1 file with test failures (4 tests failed) ===
+  tests/tools/test_cron_deferred_delivery_validation.py  (4 tests failed)

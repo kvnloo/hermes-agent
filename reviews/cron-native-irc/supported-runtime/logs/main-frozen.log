@@ -1,0 +1,419 @@
+▶ not activated — using HERMES_PYTHON: <private-python-launcher>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/tools/test_cron_deferred_delivery_validation.py']; running with -j 1
+[100.0% |     2/~2 | ✓ 4 | ✗ 8] ✗ tests/tools/test_cron_deferred_delivery_validation.py (4✓ 8✗, 5.6s)
+
+  ╔╍ Failed: tests/tools/test_cron_deferred_delivery_validation.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║         args = {
+  ║             lane: f"strict-target:stream:5/daily,{bad_target}",
+  ║             "name": "Must not persist",
+  ║         }
+  ║         if action == "create":
+  ║             args.update(prompt="Check status", schedule="every hour", paused=True)
+  ║         else:
+  ║             args["job_id"] = seed["job_id"]
+  ║         result = _dispatch(action, **args)
+  ║ >       assert result["success"] is False, result
+  ║ E       AssertionError: {'success': True, 'job': {'job_id': '6eddc21452b2', 'name': 'Must not persist', 'skill': None, 'skills': [], ...}}
+  ║ E       assert True is False
+  ║
+  ║ tests/tools/test_cron_deferred_delivery_validation.py:111: AssertionError
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+  ║ WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:5:daily-deliver-create]
+  ║ FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:5:daily-deliver-update]
+  ║ FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:5:daily-failure_deliver-create]
+  ║ FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:5:daily-failure_deliver-update]
+  ║ FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:13/daily-deliver-create]
+  ║ FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:13/daily-deliver-update]
+  ║ FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:13/daily-failure_deliver-create]
+  ║ FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:13/daily-failure_deliver-update]
+  ║ ========================= 8 failed, 4 passed in 4.87s ==========================
+  ║
+  ║  Repro: python -m pytest tests/tools/test_cron_deferred_delivery_validation.py --basetemp=<isolated-test-data>/main-frozen
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 4 tests passed, 8 failed (100% complete) in 5.6s (1 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 5.6s  (runner wall: 5.6s, parallelism: 1x)
+  P50: 5.55s  P90: 5.55s  P95: 5.55s  P99: 5.55s  Max: 5.55s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      5.55s  tests/tools/test_cron_deferred_delivery_validation.py
+
+=== Failure output ===
+
+--- tests/tools/test_cron_deferred_delivery_validation.py ---
+============================= test session starts ==============================
+platform linux -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <main-checkout>
+configfile: pyproject.toml
+plugins: asyncio-1.3.0, anyio-4.14.2
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 12 items
+
+tests/tools/test_cron_deferred_delivery_validation.py ....FFFFFFFF       [100%]
+
+=================================== FAILURES ===================================
+_____ test_strict_plugin_failure_is_atomic[stream:5:daily-deliver-create] ______
+
+delivery_home = PosixPath('<isolated-test-data>/main-frozen/test_strict_plugin_failure_is_0/home')
+action = 'create', lane = 'deliver', target_ref = 'stream:5:daily'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize("target_ref", ["stream:5:daily", "stream:13/daily"])
+    def test_strict_plugin_failure_is_atomic(delivery_home, action, lane, target_ref):
+        seed = _dispatch(
+            "create",
+            prompt="Check status",
+            schedule="every hour",
+            paused=True,
+            deliver="strict-target:stream:5/daily",
+        )
+        assert seed["success"] is True
+        store = delivery_home / "cron" / "jobs.json"
+        before = store.read_bytes()
+        # The good first destination must not stage a partial create/update when the
+        # second element violates the plugin parser or its post-resolution validator.
+        bad_target = f"strict-target:{target_ref}"
+        args = {
+            lane: f"strict-target:stream:5/daily,{bad_target}",
+            "name": "Must not persist",
+        }
+        if action == "create":
+            args.update(prompt="Check status", schedule="every hour", paused=True)
+        else:
+            args["job_id"] = seed["job_id"]
+        result = _dispatch(action, **args)
+>       assert result["success"] is False, result
+E       AssertionError: {'success': True, 'job_id': 'bcaf242b5019', 'name': 'Must not persist', 'skill': None, ...}
+E       assert True is False
+
+tests/tools/test_cron_deferred_delivery_validation.py:111: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+WARNING  cron.scheduler:scheduler_delivery.py:655 Invalid cron delivery target 'strict-target:stream:5:daily': Could not resolve 'stream:5:daily' on strict-target. The plugin parser did not recognize it and no channel-directory entry matched.
+_____ test_strict_plugin_failure_is_atomic[stream:5:daily-deliver-update] ______
+
+delivery_home = PosixPath('<isolated-test-data>/main-frozen/test_strict_plugin_failure_is_1/home')
+action = 'update', lane = 'deliver', target_ref = 'stream:5:daily'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize("target_ref", ["stream:5:daily", "stream:13/daily"])
+    def test_strict_plugin_failure_is_atomic(delivery_home, action, lane, target_ref):
+        seed = _dispatch(
+            "create",
+            prompt="Check status",
+            schedule="every hour",
+            paused=True,
+            deliver="strict-target:stream:5/daily",
+        )
+        assert seed["success"] is True
+        store = delivery_home / "cron" / "jobs.json"
+        before = store.read_bytes()
+        # The good first destination must not stage a partial create/update when the
+        # second element violates the plugin parser or its post-resolution validator.
+        bad_target = f"strict-target:{target_ref}"
+        args = {
+            lane: f"strict-target:stream:5/daily,{bad_target}",
+            "name": "Must not persist",
+        }
+        if action == "create":
+            args.update(prompt="Check status", schedule="every hour", paused=True)
+        else:
+            args["job_id"] = seed["job_id"]
+        result = _dispatch(action, **args)
+>       assert result["success"] is False, result
+E       AssertionError: {'success': True, 'job': {'job_id': '2e6e6cf22128', 'name': 'Must not persist', 'skill': None, 'skills': [], ...}}
+E       assert True is False
+
+tests/tools/test_cron_deferred_delivery_validation.py:111: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_ test_strict_plugin_failure_is_atomic[stream:5:daily-failure_deliver-create] __
+
+delivery_home = PosixPath('<isolated-test-data>/main-frozen/test_strict_plugin_failure_is_2/home')
+action = 'create', lane = 'failure_deliver', target_ref = 'stream:5:daily'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize("target_ref", ["stream:5:daily", "stream:13/daily"])
+    def test_strict_plugin_failure_is_atomic(delivery_home, action, lane, target_ref):
+        seed = _dispatch(
+            "create",
+            prompt="Check status",
+            schedule="every hour",
+            paused=True,
+            deliver="strict-target:stream:5/daily",
+        )
+        assert seed["success"] is True
+        store = delivery_home / "cron" / "jobs.json"
+        before = store.read_bytes()
+        # The good first destination must not stage a partial create/update when the
+        # second element violates the plugin parser or its post-resolution validator.
+        bad_target = f"strict-target:{target_ref}"
+        args = {
+            lane: f"strict-target:stream:5/daily,{bad_target}",
+            "name": "Must not persist",
+        }
+        if action == "create":
+            args.update(prompt="Check status", schedule="every hour", paused=True)
+        else:
+            args["job_id"] = seed["job_id"]
+        result = _dispatch(action, **args)
+>       assert result["success"] is False, result
+E       AssertionError: {'success': True, 'job_id': '5e1050d1d288', 'name': 'Must not persist', 'skill': None, ...}
+E       assert True is False
+
+tests/tools/test_cron_deferred_delivery_validation.py:111: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_ test_strict_plugin_failure_is_atomic[stream:5:daily-failure_deliver-update] __
+
+delivery_home = PosixPath('<isolated-test-data>/main-frozen/test_strict_plugin_failure_is_3/home')
+action = 'update', lane = 'failure_deliver', target_ref = 'stream:5:daily'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize("target_ref", ["stream:5:daily", "stream:13/daily"])
+    def test_strict_plugin_failure_is_atomic(delivery_home, action, lane, target_ref):
+        seed = _dispatch(
+            "create",
+            prompt="Check status",
+            schedule="every hour",
+            paused=True,
+            deliver="strict-target:stream:5/daily",
+        )
+        assert seed["success"] is True
+        store = delivery_home / "cron" / "jobs.json"
+        before = store.read_bytes()
+        # The good first destination must not stage a partial create/update when the
+        # second element violates the plugin parser or its post-resolution validator.
+        bad_target = f"strict-target:{target_ref}"
+        args = {
+            lane: f"strict-target:stream:5/daily,{bad_target}",
+            "name": "Must not persist",
+        }
+        if action == "create":
+            args.update(prompt="Check status", schedule="every hour", paused=True)
+        else:
+            args["job_id"] = seed["job_id"]
+        result = _dispatch(action, **args)
+>       assert result["success"] is False, result
+E       AssertionError: {'success': True, 'job': {'job_id': 'd8a55353a9eb', 'name': 'Must not persist', 'skill': None, 'skills': [], ...}}
+E       assert True is False
+
+tests/tools/test_cron_deferred_delivery_validation.py:111: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_____ test_strict_plugin_failure_is_atomic[stream:13/daily-deliver-create] _____
+
+delivery_home = PosixPath('<isolated-test-data>/main-frozen/test_strict_plugin_failure_is_4/home')
+action = 'create', lane = 'deliver', target_ref = 'stream:13/daily'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize("target_ref", ["stream:5:daily", "stream:13/daily"])
+    def test_strict_plugin_failure_is_atomic(delivery_home, action, lane, target_ref):
+        seed = _dispatch(
+            "create",
+            prompt="Check status",
+            schedule="every hour",
+            paused=True,
+            deliver="strict-target:stream:5/daily",
+        )
+        assert seed["success"] is True
+        store = delivery_home / "cron" / "jobs.json"
+        before = store.read_bytes()
+        # The good first destination must not stage a partial create/update when the
+        # second element violates the plugin parser or its post-resolution validator.
+        bad_target = f"strict-target:{target_ref}"
+        args = {
+            lane: f"strict-target:stream:5/daily,{bad_target}",
+            "name": "Must not persist",
+        }
+        if action == "create":
+            args.update(prompt="Check status", schedule="every hour", paused=True)
+        else:
+            args["job_id"] = seed["job_id"]
+        result = _dispatch(action, **args)
+>       assert result["success"] is False, result
+E       AssertionError: {'success': True, 'job_id': '83920b21fce5', 'name': 'Must not persist', 'skill': None, ...}
+E       assert True is False
+
+tests/tools/test_cron_deferred_delivery_validation.py:111: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+WARNING  cron.scheduler:scheduler_delivery.py:655 Invalid cron delivery target 'strict-target:stream:13/daily': Invalid target 'stream:13/daily' on strict-target
+_____ test_strict_plugin_failure_is_atomic[stream:13/daily-deliver-update] _____
+
+delivery_home = PosixPath('<isolated-test-data>/main-frozen/test_strict_plugin_failure_is_5/home')
+action = 'update', lane = 'deliver', target_ref = 'stream:13/daily'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize("target_ref", ["stream:5:daily", "stream:13/daily"])
+    def test_strict_plugin_failure_is_atomic(delivery_home, action, lane, target_ref):
+        seed = _dispatch(
+            "create",
+            prompt="Check status",
+            schedule="every hour",
+            paused=True,
+            deliver="strict-target:stream:5/daily",
+        )
+        assert seed["success"] is True
+        store = delivery_home / "cron" / "jobs.json"
+        before = store.read_bytes()
+        # The good first destination must not stage a partial create/update when the
+        # second element violates the plugin parser or its post-resolution validator.
+        bad_target = f"strict-target:{target_ref}"
+        args = {
+            lane: f"strict-target:stream:5/daily,{bad_target}",
+            "name": "Must not persist",
+        }
+        if action == "create":
+            args.update(prompt="Check status", schedule="every hour", paused=True)
+        else:
+            args["job_id"] = seed["job_id"]
+        result = _dispatch(action, **args)
+>       assert result["success"] is False, result
+E       AssertionError: {'success': True, 'job': {'job_id': '6856355be7b4', 'name': 'Must not persist', 'skill': None, 'skills': [], ...}}
+E       assert True is False
+
+tests/tools/test_cron_deferred_delivery_validation.py:111: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_ test_strict_plugin_failure_is_atomic[stream:13/daily-failure_deliver-create] _
+
+delivery_home = PosixPath('<isolated-test-data>/main-frozen/test_strict_plugin_failure_is_6/home')
+action = 'create', lane = 'failure_deliver', target_ref = 'stream:13/daily'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize("target_ref", ["stream:5:daily", "stream:13/daily"])
+    def test_strict_plugin_failure_is_atomic(delivery_home, action, lane, target_ref):
+        seed = _dispatch(
+            "create",
+            prompt="Check status",
+            schedule="every hour",
+            paused=True,
+            deliver="strict-target:stream:5/daily",
+        )
+        assert seed["success"] is True
+        store = delivery_home / "cron" / "jobs.json"
+        before = store.read_bytes()
+        # The good first destination must not stage a partial create/update when the
+        # second element violates the plugin parser or its post-resolution validator.
+        bad_target = f"strict-target:{target_ref}"
+        args = {
+            lane: f"strict-target:stream:5/daily,{bad_target}",
+            "name": "Must not persist",
+        }
+        if action == "create":
+            args.update(prompt="Check status", schedule="every hour", paused=True)
+        else:
+            args["job_id"] = seed["job_id"]
+        result = _dispatch(action, **args)
+>       assert result["success"] is False, result
+E       AssertionError: {'success': True, 'job_id': 'b7b49b8cacaa', 'name': 'Must not persist', 'skill': None, ...}
+E       assert True is False
+
+tests/tools/test_cron_deferred_delivery_validation.py:111: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+_ test_strict_plugin_failure_is_atomic[stream:13/daily-failure_deliver-update] _
+
+delivery_home = PosixPath('<isolated-test-data>/main-frozen/test_strict_plugin_failure_is_7/home')
+action = 'update', lane = 'failure_deliver', target_ref = 'stream:13/daily'
+
+    @pytest.mark.parametrize("action", ["create", "update"])
+    @pytest.mark.parametrize("lane", ["deliver", "failure_deliver"])
+    @pytest.mark.parametrize("target_ref", ["stream:5:daily", "stream:13/daily"])
+    def test_strict_plugin_failure_is_atomic(delivery_home, action, lane, target_ref):
+        seed = _dispatch(
+            "create",
+            prompt="Check status",
+            schedule="every hour",
+            paused=True,
+            deliver="strict-target:stream:5/daily",
+        )
+        assert seed["success"] is True
+        store = delivery_home / "cron" / "jobs.json"
+        before = store.read_bytes()
+        # The good first destination must not stage a partial create/update when the
+        # second element violates the plugin parser or its post-resolution validator.
+        bad_target = f"strict-target:{target_ref}"
+        args = {
+            lane: f"strict-target:stream:5/daily,{bad_target}",
+            "name": "Must not persist",
+        }
+        if action == "create":
+            args.update(prompt="Check status", schedule="every hour", paused=True)
+        else:
+            args["job_id"] = seed["job_id"]
+        result = _dispatch(action, **args)
+>       assert result["success"] is False, result
+E       AssertionError: {'success': True, 'job': {'job_id': '6eddc21452b2', 'name': 'Must not persist', 'skill': None, 'skills': [], ...}}
+E       assert True is False
+
+tests/tools/test_cron_deferred_delivery_validation.py:111: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browser-use': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-browserbase': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'browser-firecrawl': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'krea': No module named 'requests'
+WARNING  hermes_cli.plugins:plugins_loader.py:537 Failed to load plugin 'xai': No module named 'requests'
+=========================== short test summary info ============================
+FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:5:daily-deliver-create]
+FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:5:daily-deliver-update]
+FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:5:daily-failure_deliver-create]
+FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:5:daily-failure_deliver-update]
+FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:13/daily-deliver-create]
+FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:13/daily-deliver-update]
+FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:13/daily-failure_deliver-create]
+FAILED tests/tools/test_cron_deferred_delivery_validation.py::test_strict_plugin_failure_is_atomic[stream:13/daily-failure_deliver-update]
+========================= 8 failed, 4 passed in 4.87s ==========================
+
+=== 1 file with test failures (8 tests failed) ===
+  tests/tools/test_cron_deferred_delivery_validation.py  (8 tests failed)

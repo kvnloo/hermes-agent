@@ -2,6 +2,8 @@
 
 Tests and diagnostic evidence only for [PR #135952](https://github.com/NousResearch/hermes-agent/pull/135952), implementing [issue #135942](https://github.com/NousResearch/hermes-agent/issues/135942). No production fix is included. Implementation credit remains with liuhao1024; original report: clckmedia; independent partial-target corroboration: aron-intframe.
 
+**Supported-series follow-up:** the same focused matrices now reproduce on actual CPython 3.14.7. See [the portable supported-runtime receipt](supported-runtime/README.md). This closes the focused interpreter gap, while full PM/standalone distribution, dependency parity, the full suite and real transport remain unverified. The original Python 3.12 results and logs below are preserved.
+
 ## Narrow finding
 
 On reviewed owner head `d310978d039e479d1df5f0de8752adf6e64adea2`, `tools/cronjob_job_args.py:306` uses the strict default target resolver. It rejects the valid native IRC destination `irc:#future-room` when no channel-directory entry exists. The bundled IRC plugin has no target parser, but uses `#future-room` as the native channel `chat_id`; the existing cron fire-time path resolves it using `pass_unresolved_references=True` (`cron/scheduler_delivery.py:652-653`).
@@ -31,7 +33,7 @@ The experiment's adjacent failure is the owner's intended `telegram:not-a-chat` 
 
 ## Runtime qualification
 
-All recorded runs are **unsupported-runtime diagnostics on Linux Python 3.12.14** in a separate dependency-only environment. Hermes requires Python `>=3.14,<3.15`. Supported Python 3.14, the PM-supported complete dependency environment, the full suite and real transport remain unverified. Do not treat this receipt as a supported-runtime or production-fix gate.
+The original runs documented below are **unsupported-runtime diagnostics on Linux Python 3.12.14** in a separate dependency-only environment. Hermes requires Python `>=3.14,<3.15`. The separate linked follow-up qualifies the focused matrices on CPython 3.14.7; the PM-supported complete dependency environment, the full suite and real transport remain unverified. Neither receipt certifies a production fix.
 
 The repository's `scripts/run_tests.sh` was used with one worker and retries disabled. The independent replay additionally bounded its `compileall` prepass to one worker through a disposable interpreter launcher, without changing pytest execution. An earlier missing declared `httpx` dependency was recovered in the diagnostic-only environment; those initial results are not reported as product failures. All final adjacent results below include that dependency.
 

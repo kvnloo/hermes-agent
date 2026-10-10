@@ -1,0 +1,18 @@
+▶ not activated — using HERMES_PYTHON: <private-python-launcher>
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~2 tests) under ['tests/tools/test_cron_deferred_delivery_validation.py']; running with -j 1
+[100.0% |     2/~2 | ✓12 | ✗ 0] ✓ tests/tools/test_cron_deferred_delivery_validation.py (12✓, 3.6s)
+
+=== Summary: 1 files, 12 tests passed, 0 failed (100% complete) in 3.6s (1 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 3.6s  (runner wall: 3.6s, parallelism: 1x)
+  P50: 3.59s  P90: 3.59s  P95: 3.59s  P99: 3.59s  Max: 3.59s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      3.59s  tests/tools/test_cron_deferred_delivery_validation.py

@@ -29,7 +29,8 @@
     "dependency_environment": "Separate dependency-only test environment; no Hermes package install or PM-built environment mutated",
     "supported_python_3_14": "NOT_RUN",
     "full_suite": "NOT_RUN",
-    "transport": "No network/adapter construction or real sends; temporary paused job store and enabled-plugin discovery"
+    "transport": "No network/adapter construction or real sends; temporary paused job store and enabled-plugin discovery",
+    "applies_to": "Original archived Python3.12 diagnostic results only; see supported_runtime_followup for the newer focused interpreter qualification"
   },
   "results": [
     {
@@ -220,7 +221,7 @@
     }
   },
   "artifacts": {
-    "README.md": "e1b62c838760528929c878869dbfc1507b4b5acdf119a28185e54fd714010343",
+    "README.md": "1fc44ab2fb3ab2acc77704f1c82800eb4ae6039405c9e430ee3aedf88f2185c9",
     "logs/control-adjacent.log": "f6670dde8df92383979a2c96282a95280f9a80035d651a6441aac30266326901",
     "logs/control-supplement.log": "a8d534b2b504f9fc329866bb9151930a8e4bd786476bdaf83e0423476eb0dd1b",
     "logs/independent-control-adjacent-replay.log": "19a4af0df707d9e34ce3eaa54d0f9cc6f55da45adae854d44f5207603513a6ff",
@@ -245,5 +246,15 @@
     "log": "logs/publication-staged-check.log",
     "python": "3.12.14 diagnostic",
     "pinned_ruff": "0.15.10; check and format both supplemental test and control passed"
+  },
+  "supported_runtime_followup": {
+    "receipt": "supported-runtime/supported-runtime-receipt.json",
+    "receipt_sha256": "f8f0bfba384d8f0d0c00474c40b3a12b15a8d2d2045f62178a515f0dc1e17d28",
+    "source_audited_receipt_sha256": "4b547fb7526388589f89c14b1ba0243fc959ef9d991462805d193b3245b70ac4",
+    "classification": "Focused supported-series CPython3.14.7 matrices, not full PM/standalone or dependency-parity certification",
+    "frozen_test_sha256": "d247b3bbc75b5bbc12c9a949ac34ae7e7b743ea69ba6ac90b99ba7fbf4c2dc95",
+    "original_python3_12_results_retained": true,
+    "full_suite": "NOT_RUN",
+    "global_control": "Experiment only; intended Telegram upfront negative still fails"
   }
 }
