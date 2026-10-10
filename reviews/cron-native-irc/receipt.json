@@ -1,0 +1,249 @@
+{
+  "classification": "DOWNSTREAM_TESTS_AND_REVIEW_EVIDENCE_ONLY; no production fix",
+  "finding": "P2: create/update validation rejects valid native IRC channel irc:#future-room without a cached directory entry",
+  "issue": "https://github.com/NousResearch/hermes-agent/issues/135942",
+  "review_target": "https://github.com/NousResearch/hermes-agent/pull/135952",
+  "credits": {
+    "implementation_owner": "liuhao1024",
+    "original_reporter": "clckmedia",
+    "independent_partial_target_corroboration": "aron-intframe"
+  },
+  "source_snapshots": {
+    "owner_head": "d310978d039e479d1df5f0de8752adf6e64adea2",
+    "actual_owner_parent": "5ba559c9e4b1c8397df7788e319ab634144ca728",
+    "tested_main_snapshot": "dce1e9b37581dd62e480a9064dc04a709c2940d3",
+    "base_note": "Owner Git parent differs from PR base snapshot. The compared cron tools/resolver/delivery files are byte-identical on actual parent and tested current main. No test execution on the actual parent is claimed."
+  },
+  "supplement": {
+    "path": "tests/tools/test_cron_deferred_delivery_validation.py",
+    "sha256": "d247b3bbc75b5bbc12c9a949ac34ae7e7b743ea69ba6ac90b99ba7fbf4c2dc95",
+    "cases": 12,
+    "irc_regressions": 4,
+    "strict_plugin_atomic_guards": 8,
+    "frozen_bytes_unchanged": true
+  },
+  "environment": {
+    "python": "3.12.14",
+    "classification": "UNSUPPORTED_TEST_RUNTIME_DIAGNOSTIC",
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+    "dependency_environment": "Separate dependency-only test environment; no Hermes package install or PM-built environment mutated",
+    "supported_python_3_14": "NOT_RUN",
+    "full_suite": "NOT_RUN",
+    "transport": "No network/adapter construction or real sends; temporary paused job store and enabled-plugin discovery"
+  },
+  "results": [
+    {
+      "state": "current-main",
+      "log": "logs/main-supplement.log",
+      "exit": 1,
+      "passed": 4,
+      "failed": 8,
+      "interpretation": "Existing strict-plugin malformed target acceptance; all four native IRC compatibility cases pass"
+    },
+    {
+      "state": "owner-head-unchanged",
+      "log": "logs/owner-supplement.log",
+      "exit": 1,
+      "passed": 8,
+      "failed": 4,
+      "interpretation": "Strict plugin parser/validator multi-target atomic guards pass, but create/update of native IRC target fail in both delivery lanes"
+    },
+    {
+      "state": "owner-head-plus-disposable-runtime-wrapper",
+      "log": "logs/control-supplement.log",
+      "exit": 0,
+      "passed": 12,
+      "failed": 0,
+      "interpretation": "Global shared-resolver monkeypatch defaults pass_unresolved_references=True where callers omit it; semantic experiment only, not a validator-only patch or ready fix"
+    },
+    {
+      "state": "current-main-adjacent",
+      "log": "logs/main-adjacent.log",
+      "exit": 0,
+      "passed": 74,
+      "skipped": 2
+    },
+    {
+      "state": "owner-head-adjacent",
+      "log": "logs/owner-adjacent.log",
+      "exit": 0,
+      "passed": 77,
+      "skipped": 2
+    },
+    {
+      "state": "owner-head-plus-wrapper-adjacent",
+      "log": "logs/control-adjacent.log",
+      "exit": 1,
+      "passed": 76,
+      "failed": 1,
+      "skipped": 2,
+      "interpretation": "New owner test deliberately rejects Telegram not-a-chat; existing cron fallback accepts it. The wrapper is a semantic experiment, not an all-adjacent-green proposed fix"
+    },
+    {
+      "state": "existing-resolver-contract-controls",
+      "log": "logs/resolver-controls.log",
+      "exit": 0,
+      "passed": 2
+    }
+  ],
+  "control": {
+    "scope": "Global monkeypatch of the shared resolver in the test process; defaults the flag where callers omit it. Not validator-only and not a ready fix. Executable body unchanged; explanatory docstring corrected after recorded execution.",
+    "original_executed_sha256": "008ceccf7d3da7f58dff08a7880176d01d15cbec5c25df1258e29e50c7644542",
+    "current_documented_sha256": "0342a38cff2c8a29577b277fd153906f5da280b89a73a2cdf8032833e9912c50",
+    "executable_body_unchanged": true,
+    "adjacent_negative": "Telegram not-a-chat intended rejection fails under experiment; broad flag is not a ready fix",
+    "executable_body_sha256": "44c392bb2c3de388532556c4e7176d42d295e64b3f6916142d9f16ce1bcd4074"
+  },
+  "independent_review": {
+    "verdict": "PROMOTE narrow P2 valid native IRC finding; REWORK owner implementation",
+    "report_sha256": "f38356ab19ff5d775f3f42678a8829289e0dfc78543cb1f311d7875f115788c7",
+    "receipt_sha256": "143985495073c9a1d9232166071ef4a704ad3b2d1e7e663dbacc81f3bf9bfb2a",
+    "matrix": "All twelve-case and adjacent matrices independently reproduced exactly",
+    "runtime": "Unsupported Python3.12.14 diagnostic; canonical runner retained with compileall prepass bounded to one worker"
+  },
+  "independent_results": {
+    "logs/independent-main-replay-final.log": {
+      "summary": "=== Summary: 1 files, 4 tests passed, 8 failed (100% complete) in 2.9s (1 workers) ===",
+      "sha256": "0fbeae4028fafcfbd7eb3146d60b8c21c106a2c4a8031986080b868ef7741b48"
+    },
+    "logs/independent-owner-replay-final.log": {
+      "summary": "=== Summary: 1 files, 8 tests passed, 4 failed (100% complete) in 2.8s (1 workers) ===",
+      "sha256": "5e8c1fa57b63258f8aa444e65ac57d6063cd6da1fbacd6e7a3362a20f3b6e861"
+    },
+    "logs/independent-control-replay-final.log": {
+      "summary": "=== Summary: 1 files, 12 tests passed, 0 failed (100% complete) in 2.6s (1 workers) ===",
+      "sha256": "f6106974b53965f1c68dc9ffe4c30b311a0ab1f3dfe580ebb344fb97ea649c4c"
+    },
+    "logs/independent-main-adjacent-replay.log": {
+      "summary": "=== Summary: 2 files, 74 tests passed, 0 failed, 2 skipped (100% complete) in 2.9s (1 workers) ===",
+      "sha256": "be97b84e988858c106b599f92c08e9a24c8b4e232778747872c329acd5055a98"
+    },
+    "logs/independent-owner-adjacent-replay.log": {
+      "summary": "=== Summary: 2 files, 77 tests passed, 0 failed, 2 skipped (100% complete) in 2.8s (1 workers) ===",
+      "sha256": "500c41314b2721d0fcaf5a0c72558ab31692cca7a690fbd57bfedac475ed113f"
+    },
+    "logs/independent-control-adjacent-replay.log": {
+      "summary": "=== Summary: 2 files, 76 tests passed, 1 failed, 2 skipped (100% complete) in 2.9s (1 workers) ===",
+      "sha256": "a8105e88b5ff697ff0dcbadbb8aef8cf647d5c062dbc5069e4e799431c4552b8"
+    },
+    "logs/independent-resolver-replay.log": {
+      "summary": "=== Summary: 1 files, 2 tests passed, 0 failed (100% complete) in 0.6s (1 workers) ===",
+      "sha256": "6c5fd13182639b9109c15ff63378eb98542f177916b9cf996fc24360ca32fc4d"
+    }
+  },
+  "original_checker": {
+    "result": "11 checks passed, no blocking/advisory findings",
+    "scope": "Frozen supplemental test only against exact owner head; full publication-scope checker pending"
+  },
+  "fresh_publication_gate": {
+    "status": "FRESH_OWNER_AND_DEDUPE_CHECK_COMPLETE_FOR_FORK_EVIDENCE_PUBLICATION",
+    "checked_utc": "2026-10-10T04:37:30.713873+00:00",
+    "owner_pr_state": "open draft",
+    "owner_head": "d310978d039e479d1df5f0de8752adf6e64adea2",
+    "owner_comments_reviews": 0,
+    "issue_comments": "Only existing aron-intframe corroboration; no native IRC resolution",
+    "bounded_all_state_issue_pr_search": "135942 returns only owner PR 135952",
+    "fork_claims_checked": 23,
+    "matching_fork_claim": false,
+    "new_remote_branch_precheck": "absent, cursor null",
+    "ownership": "implementation remains liuhao1024; independent tests/evidence only",
+    "remote_owner_tree": "897552c057f6614c57756204ecefefe39cf17cb1",
+    "remote_owner_parent": "5ba559c9e4b1c8397df7788e319ab634144ca728",
+    "upstream_comment": "NOT_POSTED",
+    "supported_runtime": "UNVERIFIED; findings diagnostic only"
+  },
+  "sanitization": "Absolute workspace and pytest temporary paths replaced, trailing whitespace normalized; assertions, errors, counts and warnings preserved.",
+  "log_provenance": {
+    "logs/main-supplement.log": {
+      "original_sha256": "15af4705f72bba73febdbdefecd868f367df000cf1b6d24199d2ea05e341d47c",
+      "sanitized_sha256": "b5567d78b59cff3a27f911735157eb91f7ec4cdedbc909c90069b9b29f76a6dc"
+    },
+    "logs/owner-supplement.log": {
+      "original_sha256": "fa26b3df2598794dbb4f6a1c98aa8baae5585a90ffa2cb1810ac837061054498",
+      "sanitized_sha256": "fef01a2c03e80997041d5c1be7645a7918019ed05d45740236eec519b643c620"
+    },
+    "logs/control-supplement.log": {
+      "original_sha256": "7ff3a1a5a8e0346c0c57f5fc8ccd7fc16eb62ed434aaa1b2334b0a89daae49f8",
+      "sanitized_sha256": "a8d534b2b504f9fc329866bb9151930a8e4bd786476bdaf83e0423476eb0dd1b"
+    },
+    "logs/main-adjacent.log": {
+      "original_sha256": "2cfc466d5133b1c8d859511e9a544b50deed3cb9a07f309f95af50d5eb70036f",
+      "sanitized_sha256": "5146d7025f879925c6172a3bbb9e692acf39c53008a178f9d7b441ba22b8e3f4"
+    },
+    "logs/owner-adjacent.log": {
+      "original_sha256": "1d70d159c0b009a33f3f956cb8914fe719cf0371b18645c5e807ae1be5440fd0",
+      "sanitized_sha256": "0d1af7b81831ea3a1b0c7547a82ac5308e1aa2b00556bb35de0ade07818cc1b5"
+    },
+    "logs/control-adjacent.log": {
+      "original_sha256": "13cd3d402bb735d02a29b6aac5da82086921612d10bcd413e37ac5149be66a85",
+      "sanitized_sha256": "f6670dde8df92383979a2c96282a95280f9a80035d651a6441aac30266326901"
+    },
+    "logs/resolver-controls.log": {
+      "original_sha256": "34eb36f50ce74876a830d32620fb555b1109e76eff2defa9802930b5aa4463e8",
+      "sanitized_sha256": "f0c26188209dcbcbb4fcb6f0e871250b672df92680b3c3c99c963392347bda4b"
+    },
+    "logs/original-staged-check.log": {
+      "original_sha256": "b58fea3cfd39cd9788cb4e4a6a532f12c6d58b8d459fa0c7a1ebf9c5868c813e",
+      "sanitized_sha256": "b58fea3cfd39cd9788cb4e4a6a532f12c6d58b8d459fa0c7a1ebf9c5868c813e"
+    },
+    "logs/independent-main-replay-final.log": {
+      "original_sha256": "0fbeae4028fafcfbd7eb3146d60b8c21c106a2c4a8031986080b868ef7741b48",
+      "sanitized_sha256": "207f1bbbd8bac6cbcb12e9d0a7a36c23a3838b2f42245a79aff82a0bdecb1952"
+    },
+    "logs/independent-owner-replay-final.log": {
+      "original_sha256": "5e8c1fa57b63258f8aa444e65ac57d6063cd6da1fbacd6e7a3362a20f3b6e861",
+      "sanitized_sha256": "1b27b14cb227c18b51515d3187aff6499a0cae3993129f67d23917a4c6173ff3"
+    },
+    "logs/independent-control-replay-final.log": {
+      "original_sha256": "f6106974b53965f1c68dc9ffe4c30b311a0ab1f3dfe580ebb344fb97ea649c4c",
+      "sanitized_sha256": "567571ad85d95dc3b2c4d0ce430e41a4d48d9e2dad7bd815bcfef1e9631aa23d"
+    },
+    "logs/independent-main-adjacent-replay.log": {
+      "original_sha256": "be97b84e988858c106b599f92c08e9a24c8b4e232778747872c329acd5055a98",
+      "sanitized_sha256": "ae98b20be5290b94bf8e8dff5825c5469c58d8dcff8f6aa357db53933af44c93"
+    },
+    "logs/independent-owner-adjacent-replay.log": {
+      "original_sha256": "500c41314b2721d0fcaf5a0c72558ab31692cca7a690fbd57bfedac475ed113f",
+      "sanitized_sha256": "6089a888d8b0165bbe3295c2cc6d2615fa3955502d5a72e8a22710d379b8a52b"
+    },
+    "logs/independent-control-adjacent-replay.log": {
+      "original_sha256": "a8105e88b5ff697ff0dcbadbb8aef8cf647d5c062dbc5069e4e799431c4552b8",
+      "sanitized_sha256": "19a4af0df707d9e34ce3eaa54d0f9cc6f55da45adae854d44f5207603513a6ff"
+    },
+    "logs/independent-resolver-replay.log": {
+      "original_sha256": "6c5fd13182639b9109c15ff63378eb98542f177916b9cf996fc24360ca32fc4d",
+      "sanitized_sha256": "0692f9caa4f1c462d04cf17598413f0926e5a8fad928ad95df1533c972e130e2"
+    },
+    "logs/publication-staged-check.log": {
+      "original_sha256": "2259bb4f13d64adea5653d7b1f4793b27ba795823ead8be3af550128a5127312",
+      "sanitized_sha256": "2259bb4f13d64adea5653d7b1f4793b27ba795823ead8be3af550128a5127312"
+    }
+  },
+  "artifacts": {
+    "README.md": "e1b62c838760528929c878869dbfc1507b4b5acdf119a28185e54fd714010343",
+    "logs/control-adjacent.log": "f6670dde8df92383979a2c96282a95280f9a80035d651a6441aac30266326901",
+    "logs/control-supplement.log": "a8d534b2b504f9fc329866bb9151930a8e4bd786476bdaf83e0423476eb0dd1b",
+    "logs/independent-control-adjacent-replay.log": "19a4af0df707d9e34ce3eaa54d0f9cc6f55da45adae854d44f5207603513a6ff",
+    "logs/independent-control-replay-final.log": "567571ad85d95dc3b2c4d0ce430e41a4d48d9e2dad7bd815bcfef1e9631aa23d",
+    "logs/independent-main-adjacent-replay.log": "ae98b20be5290b94bf8e8dff5825c5469c58d8dcff8f6aa357db53933af44c93",
+    "logs/independent-main-replay-final.log": "207f1bbbd8bac6cbcb12e9d0a7a36c23a3838b2f42245a79aff82a0bdecb1952",
+    "logs/independent-owner-adjacent-replay.log": "6089a888d8b0165bbe3295c2cc6d2615fa3955502d5a72e8a22710d379b8a52b",
+    "logs/independent-owner-replay-final.log": "1b27b14cb227c18b51515d3187aff6499a0cae3993129f67d23917a4c6173ff3",
+    "logs/independent-resolver-replay.log": "0692f9caa4f1c462d04cf17598413f0926e5a8fad928ad95df1533c972e130e2",
+    "logs/main-adjacent.log": "5146d7025f879925c6172a3bbb9e692acf39c53008a178f9d7b441ba22b8e3f4",
+    "logs/main-supplement.log": "b5567d78b59cff3a27f911735157eb91f7ec4cdedbc909c90069b9b29f76a6dc",
+    "logs/original-staged-check.log": "b58fea3cfd39cd9788cb4e4a6a532f12c6d58b8d459fa0c7a1ebf9c5868c813e",
+    "logs/owner-adjacent.log": "0d1af7b81831ea3a1b0c7547a82ac5308e1aa2b00556bb35de0ade07818cc1b5",
+    "logs/owner-supplement.log": "fef01a2c03e80997041d5c1be7645a7918019ed05d45740236eec519b643c620",
+    "logs/resolver-controls.log": "f0c26188209dcbcbb4fcb6f0e871250b672df92680b3c3c99c963392347bda4b",
+    "pass_unresolved_control.py": "0342a38cff2c8a29577b277fd153906f5da280b89a73a2cdf8032833e9912c50",
+    "logs/publication-staged-check.log": "2259bb4f13d64adea5653d7b1f4793b27ba795823ead8be3af550128a5127312"
+  },
+  "publication_checker": {
+    "result": "11 checks passed, 0 blocking, 0 advisory",
+    "scope": "Full staged tests/evidence-only publication against exact owner head",
+    "log": "logs/publication-staged-check.log",
+    "python": "3.12.14 diagnostic",
+    "pinned_ruff": "0.15.10; check and format both supplemental test and control passed"
+  }
+}

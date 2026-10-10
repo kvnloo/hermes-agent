@@ -1,0 +1,75 @@
+▶ not activated — using HERMES_PYTHON: <owner-checkout>/../hermes-cron-diagnostic-env/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 2 test files (~68 tests) under ['tests/tools/test_cronjob_job_args.py', 'tests/tools/test_cronjob_tools.py']; running with -j 1
+[ 10.3% |     7/~68 | ✓6 | ✗1] ✗ tests/tools/test_cronjob_job_args.py (6✓ 1✗, 0.7s)
+
+  ╔╍ Failed: tests/tools/test_cronjob_job_args.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ ....F..                                                                  [100%]
+  ║ =================================== FAILURES ===================================
+  ║ _ TestValidatePlatformDeliverTargets.test_unresolvable_target_is_rejected_upfront _
+  ║
+  ║ self = <tests.tools.test_cronjob_job_args.TestValidatePlatformDeliverTargets object at 0x7f2f1a709d90>
+  ║
+  ║     def test_unresolvable_target_is_rejected_upfront(self):
+  ║         # "not-a-chat" is neither an explicit Telegram id/@username nor a channel-directory
+  ║         # entry, so the strict (model-in-the-loop) resolver used by send_message rejects it.
+  ║         with (
+  ║             patch("tools.send_message_tool.prepare_send_message_platforms"),
+  ║             patch("gateway.channel_directory.resolve_channel_name", return_value=None),
+  ║         ):
+  ║             error = _validate_platform_deliver_targets("telegram:not-a-chat")
+  ║ >       assert error is not None
+  ║ E       assert None is not None
+  ║
+  ║ tests/tools/test_cronjob_job_args.py:60: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/tools/test_cronjob_job_args.py::TestValidatePlatformDeliverTargets::test_unresolvable_target_is_rejected_upfront
+  ║ 1 failed, 6 passed in 0.41s
+  ║
+  ║  Repro: python -m pytest tests/tools/test_cronjob_job_args.py -q -p cron_policy_control
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[100.0% |    68/~68 | ✓76 | ✗ 1] ✓ tests/tools/test_cronjob_tools.py (70✓ 2s, 2.4s)
+
+=== Summary: 2 files, 76 tests passed, 1 failed, 2 skipped (100% complete) in 3.1s (1 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   2
+  Total subprocess CPU-wall: 3.1s  (runner wall: 3.1s, parallelism: 1x)
+  P50: 2.36s  P90: 2.36s  P95: 2.36s  P99: 2.36s  Max: 2.36s
+  <1s: 1 files (50%)  <2s: 1 files (50%)
+  Top 10 slowest:
+      2.36s  tests/tools/test_cronjob_tools.py
+      0.73s  tests/tools/test_cronjob_job_args.py
+
+=== Failure output ===
+
+--- tests/tools/test_cronjob_job_args.py ---
+....F..                                                                  [100%]
+=================================== FAILURES ===================================
+_ TestValidatePlatformDeliverTargets.test_unresolvable_target_is_rejected_upfront _
+
+self = <tests.tools.test_cronjob_job_args.TestValidatePlatformDeliverTargets object at 0x7f2f1a709d90>
+
+    def test_unresolvable_target_is_rejected_upfront(self):
+        # "not-a-chat" is neither an explicit Telegram id/@username nor a channel-directory
+        # entry, so the strict (model-in-the-loop) resolver used by send_message rejects it.
+        with (
+            patch("tools.send_message_tool.prepare_send_message_platforms"),
+            patch("gateway.channel_directory.resolve_channel_name", return_value=None),
+        ):
+            error = _validate_platform_deliver_targets("telegram:not-a-chat")
+>       assert error is not None
+E       assert None is not None
+
+tests/tools/test_cronjob_job_args.py:60: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tools/test_cronjob_job_args.py::TestValidatePlatformDeliverTargets::test_unresolvable_target_is_rejected_upfront
+1 failed, 6 passed in 0.41s
+
+=== 1 file with test failures (1 test failed) ===
+  tests/tools/test_cronjob_job_args.py  (1 test failed)
