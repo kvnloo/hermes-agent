@@ -1,0 +1,83 @@
+{
+  "classification": "downstream-only remaining-gap evidence; no RED/GREEN claim",
+  "head": "71e74e11bc389c0ee4a02b09f88dd42421d46bbe",
+  "base": "a62979dc3601c9eae455bff5b35ba8f9bed0df30",
+  "fixture_sha256": "578c0724d83059a474a4735fe73427a7afc95b57eb70dd5b931a01b6ec5cd6dc",
+  "results": {
+    "head": {
+      "passed": 14,
+      "failed": 1,
+      "exit_code": 1,
+      "failure": "returned expired B at assertion"
+    },
+    "base": {
+      "passed": 11,
+      "failed": 1,
+      "exit_code": 1,
+      "failure": "A invalid_grant AuthError before B result assertions"
+    }
+  },
+  "versions": {
+    "python": "3.14.7",
+    "pytest": "9.1.1",
+    "httpx": "0.28.1",
+    "platform": "Linux x86_64",
+    "environment_builder": "pm.build_env",
+    "groups": [
+      "dev",
+      "test"
+    ]
+  },
+  "canonical_command": "HOME=<DISPOSABLE_HOME> HERMES_HOME=<DISPOSABLE_HERMES_HOME> CODEX_HOME=<DISPOSABLE_CODEX_HOME> HERMES_PYTHON=<PM_TEST_PYTHON> scripts/run_tests.sh tests/hermes_cli/test_codex_terminal_pool_refresh.py tests/hermes_cli/test_auth_codex_provider.py --file-retries 0 -j 1",
+  "substituted_functions": [
+    "hermes_cli.auth_codex._codex_http_client"
+  ],
+  "real_boundaries": [
+    "resolver",
+    "refresh_codex_oauth_pure",
+    "response classification/parser",
+    "load_pool",
+    "CredentialPool.try_refresh_matching",
+    "CredentialPool._refresh_entry",
+    "CredentialPool._post_tokens_refresh",
+    "auth-store persistence",
+    "uncontended RLock/flock"
+  ],
+  "log_sanitization": "Exact qualified output except absolute checkout/interpreter/temp paths replaced by placeholders. No lines omitted.",
+  "raw_log_sha256": {
+    "head": "5437f443e9aeed73d3c6fd2b5f1390b2b238b6fc5ce30fdd84d04693846ca15c",
+    "base": "0bd0b120f7f0a8420e12bf2da1340fd9f8c5636fe8d735d07a2c0460c6107a3b"
+  },
+  "ownership_refresh": {
+    "head_unchanged": true,
+    "production_owner": "liuhao1024",
+    "issue_reporter": "azhang",
+    "reviewer": "Kevin (kvnloo)",
+    "claims_comments": 26,
+    "new_claims_comments": 0,
+    "matching_evidence_claim_found": false,
+    "new_branch_absent_before_creation": true
+  },
+  "safety": {
+    "synthetic_only": true,
+    "real_credential_reads": false,
+    "real_oauth_provider_requests": false,
+    "production_changes": false,
+    "later_terminal_preservation_assertions_reached": false,
+    "critic_independent_rerun": false
+  },
+  "lock_dependency_boundaries": [
+    "#133560 borrowed root locking not modified or certified",
+    "#123764 DEAD-row ownership not modified or certified"
+  ],
+  "qualification_checks": {
+    "scripts/check --staged --base 71e74e11bc389c0ee4a02b09f88dd42421d46bbe": "11 checks passed; 0 blocking/advisory health findings",
+    "bash -n replay.sh": "passed",
+    "synthetic/path sanitizer": "passed",
+    "fixture_sha256_matches_qualified_runs": true,
+    "decoded_sanitized_log_sha256": {
+      "head": "6e209fc1cf087c04c3be4e90d45379445abc1e1703778cf89051875ebe9cd256",
+      "base": "7aa5dce63cd6a32efb0a3b657935d8f9c4a1d2a1bef6ed4739aed2f94d45a1ee"
+    }
+  }
+}
