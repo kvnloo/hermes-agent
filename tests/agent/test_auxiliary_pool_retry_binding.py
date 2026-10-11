@@ -26,7 +26,8 @@ MODEL = "deepseek-v3.2"
 
 
 @pytest.fixture
-def endpoint(tmp_path, monkeypatch):
+def endpoint(tmp_path, monkeypatch, request):
+    quota = getattr(request, "param", False)
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     resolve_address = socket.getaddrinfo
 
@@ -45,8 +46,9 @@ def endpoint(tmp_path, monkeypatch):
             payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             key = self.headers.get("Authorization", "").removeprefix("Bearer ")
             requests.append((key, self.path, payload))
-            status = 402 if key in rejected else 200
-            response = {"error": {"type": "server_error", "message": "Insufficient account funds"}}
+            status = (429 if quota else 402) if key in rejected else 200
+            response = {"error": {"type": "server_error", "message": (
+                "You reached your Pro weekly limit." if quota else "Insufficient account funds")}}
             if status == 200:
                 response = {
                     "id": "chatcmpl-pool-test", "object": "chat.completion", "created": 1,
@@ -175,3 +177,85 @@ def test_retry_binding_stays_in_its_profile_and_preserves_standalone_keys(tmp_pa
                                "base_url": base, "api_key": "standalone"})
         assert requests[-1][0] == "standalone"
         assert [(e.id, e.last_status, e.last_status_at) for e in load_pool("opencode-go").entries()] == before
+
+
+@pytest.mark.parametrize("endpoint", [True], indirect=True, ids=["weekly-quota-429"])
+@pytest.mark.parametrize("both_fail", [False, True], ids=["healthy-B", "both-quota"])
+def test_ollama_auto_title_quota_preserves_wire_identity_and_saved_health(
+        tmp_path, monkeypatch, endpoint, both_fail):
+    """Supplement Dinkum #133565; reported/requested by vgm-agente-ia.
+
+    AI authored by OpenAI Codex. Real SDK transport and profile auth reload;
+    synthetic credentials only, no deployed gateway or main-agent turn.
+    """
+    base, requests, rejected = endpoint
+    model = "deepseek-v4.1-flash"
+    home = tmp_path / ".hermes" / "profiles" / "quota-title"
+    home.mkdir(parents=True)
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    keys = ["synthetic-ollama-A", "synthetic-ollama-B"]
+    rows = [{"id": key, "label": key, "auth_type": "api_key", "priority": i,
+             "source": "manual", "access_token": key, "base_url": base}
+            for i, key in enumerate(keys)]
+    rows.append({"id": "env-A", "label": "env-A", "auth_type": "api_key",
+                 "priority": 2, "source": "env:OLLAMA_API_KEY", "base_url": base})
+    (home / "auth.json").write_text(json.dumps({"version": 1, "providers": {},
+                                               "credential_pool": {"ollama-cloud": rows}}))
+    (home / "config.yaml").write_text(json.dumps({
+        "model": {"provider": "ollama-cloud", "default": model, "base_url": base},
+        "credential_pool_strategies": {"ollama-cloud": "fill_first"},
+        "auxiliary": {"title_generation": {"provider": "auto"}},
+    }))
+    runtime = {"provider": "ollama-cloud", "model": model, "base_url": base,
+               "api_key": keys[0], "api_mode": "chat_completions"}
+    original_runtime = dict(runtime)
+    rejected.update(keys if both_fail else keys[:1])
+    with _profile(home):
+        token = set_secret_scope({"OLLAMA_API_KEY": keys[0], "OLLAMA_BASE_URL": base},
+                                 profile_home=str(home))
+        try:
+            initial = load_pool("ollama-cloud")
+            assert len(initial.entries()) == 3
+            assert [e.runtime_api_key for e in initial.entries()] == [*keys, keys[0]]
+            assert initial.select(model=model).runtime_api_key == keys[0]
+            kwargs = dict(task="title_generation", main_runtime=runtime,
+                          messages=[{"role": "user", "content": "Return ok."}],
+                          temperature=0, max_tokens=8, timeout=5)
+            response, error = None, None
+            try:
+                response = aux.call_llm(**kwargs)
+            except APIStatusError as exc:
+                error = exc
+            observed = {e.id: {"status": e.last_status, "code": e.last_error_code}
+                        for e in load_pool("ollama-cloud").entries()}
+            print("synthetic quota receipt:", {"wire": [k for k, _, _ in requests],
+                  "models": [body["model"] for _, _, body in requests], "saved": observed})
+            assert [key for key, _, _ in requests] == keys
+            assert [path for _, path, _ in requests] == ["/v1/chat/completions"] * 2
+            assert requests[0][2]["model"] == model
+            assert all(not body.get("stream", False) for _, _, body in requests)
+            if both_fail:
+                assert error is not None and error.status_code == 429
+                assert "You reached your Pro weekly limit." in str(error)
+            else:
+                assert error is None
+                assert response.choices[0].message.content == "ok"
+            assert runtime == original_runtime
+            # Reload and rehydrate the unchanged environment twice. Duplicate A
+            # must retain exhaustion rather than resurrect the failed credential.
+            for _ in range(2):
+                reloaded = load_pool("ollama-cloud")
+                entries = {e.id: e for e in reloaded.entries()}
+                for entry_id in (keys[0], "env-A"):
+                    assert entries[entry_id].last_status == "exhausted"
+                    assert entries[entry_id].last_error_code == 429
+                assert (entries[keys[1]].last_status == "exhausted") is both_fail
+                selected = reloaded.select(model=model)
+                if both_fail:
+                    assert entries[keys[1]].last_error_code == 429
+                    assert selected is None
+                else:
+                    assert selected.runtime_api_key == keys[1]
+                    assert not aux._is_provider_unhealthy("ollama-cloud")
+        finally:
+            reset_secret_scope(token)
