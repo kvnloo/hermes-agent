@@ -1,0 +1,22 @@
+▶ not activated — using HERMES_PYTHON: /workspace/b4-test-env/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 3 test files (~32 tests) under ['tests/tui_gateway/test_tui_gateway_server_deep_truncate.py', 'tests/tui_gateway/test_composite_carrier_rewind.py', 'tests/hermes_state/test_composite_carrier_rewind.py']; running with -j 2
+[ 46.9% |    15/~32 | ✓17 | ✗ 0] ✓ tests/tui_gateway/test_composite_carrier_rewind.py (17✓, 6.5s)
+[ 62.5% |    20/~32 | ✓22 | ✗ 0] ✓ tests/tui_gateway/test_tui_gateway_server_deep_truncate.py (5✓, 2.2s)
+[100.0% |    32/~32 | ✓34 | ✗ 0] ✓ tests/hermes_state/test_composite_carrier_rewind.py (12✓, 11.6s)
+
+=== Summary: 3 files, 34 tests passed, 0 failed (100% complete) in 11.6s (2 workers) ===
+  Durations cached to test_durations.json (3 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   3
+  Total subprocess CPU-wall: 20.3s  (runner wall: 11.6s, parallelism: 2x)
+  P50: 6.46s  P90: 11.57s  P95: 11.57s  P99: 11.57s  Max: 11.57s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+     11.57s  tests/hermes_state/test_composite_carrier_rewind.py
+      6.46s  tests/tui_gateway/test_composite_carrier_rewind.py
+      2.25s  tests/tui_gateway/test_tui_gateway_server_deep_truncate.py
