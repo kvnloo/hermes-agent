@@ -70,6 +70,64 @@ describe("attachPtyTextareaInputGuards", () => {
     markReplacementWindow: vi.fn(),
     onCompositionCommit: vi.fn(),
     onDanglingInsertText: vi.fn(),
+    onBeforeInputOnly: vi.fn(),
+  });
+
+  it("recovers beforeinput-only Android taps, including rapid repeated letters", () => {
+    const textarea = document.createElement("textarea");
+    const hooks = makeHooks();
+    const cleanup = attachPtyTextareaInputGuards(textarea, hooks);
+
+    // Reported #137986 device trace: NO keydown, NO composition events.
+    textarea.dispatchEvent(insertText("l"));
+    textarea.dispatchEvent(insertText("l"));
+
+    expect(hooks.onBeforeInputOnly).toHaveBeenCalledTimes(2);
+    expect(hooks.onBeforeInputOnly).toHaveBeenNthCalledWith(1, "l");
+    expect(hooks.onBeforeInputOnly).toHaveBeenNthCalledWith(2, "l");
+    expect(hooks.onDanglingInsertText).not.toHaveBeenCalled();
+
+    cleanup();
+    textarea.dispatchEvent(insertText("x"));
+    expect(hooks.onBeforeInputOnly).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not steal an input tied to a real keydown, but adapts after the keydown window", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-13T18:00:00Z"));
+      const textarea = document.createElement("textarea");
+      const hooks = makeHooks();
+      const cleanup = attachPtyTextareaInputGuards(textarea, hooks);
+
+      textarea.dispatchEvent(keydown({ keyCode: 76, key: "l" }));
+      textarea.dispatchEvent(insertText("l"));
+      expect(hooks.onBeforeInputOnly).not.toHaveBeenCalled();
+
+      // Switching to an input-only soft keyboard after a physical key.
+      vi.advanceTimersByTime(100);
+      textarea.dispatchEvent(insertText("a"));
+      expect(hooks.onBeforeInputOnly).toHaveBeenCalledExactlyOnceWith("a");
+      cleanup();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not forward insertText while a real composition is open or just completed", () => {
+    const textarea = document.createElement("textarea");
+    const hooks = makeHooks();
+    const cleanup = attachPtyTextareaInputGuards(textarea, hooks);
+
+    textarea.dispatchEvent(new CompositionEvent("compositionstart"));
+    textarea.dispatchEvent(insertText("中"));
+    expect(hooks.onBeforeInputOnly).not.toHaveBeenCalled();
+
+    textarea.dispatchEvent(new CompositionEvent("compositionend", { data: "中" }));
+    textarea.dispatchEvent(insertText("中"));
+    expect(hooks.onBeforeInputOnly).not.toHaveBeenCalled();
+    expect(hooks.onCompositionCommit).toHaveBeenCalledExactlyOnceWith("中");
+    cleanup();
   });
 
   it("routes a Gboard dangling-229 insertText to the fallback hook", () => {
@@ -170,6 +228,7 @@ describe("attachPtyTextareaInputGuards", () => {
       markReplacementWindow: () => undefined,
       onCompositionCommit: (data) => forwarder.onCompositionEnd(data),
       onDanglingInsertText: (data) => forwarder.onInsertTextFallback(data),
+      onBeforeInputOnly: (data) => forwarder.onBeforeInputOnly(data),
     });
 
     // Gboard sequence per letter: keydown 229 (no keyup) -> insertText.
