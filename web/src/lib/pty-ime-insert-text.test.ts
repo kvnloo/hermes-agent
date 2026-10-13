@@ -114,6 +114,24 @@ describe("attachPtyTextareaInputGuards", () => {
     }
   });
 
+  it("ignores unrelated dashboard keydowns when matching input-only PTY text", () => {
+    const textarea = document.createElement("textarea");
+    const otherInput = document.createElement("input");
+    document.body.append(textarea, otherInput);
+    const hooks = makeHooks();
+    const cleanup = attachPtyTextareaInputGuards(textarea, hooks);
+
+    otherInput.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true, key: "l", composed: true }),
+    );
+    textarea.dispatchEvent(insertText("l"));
+
+    expect(hooks.onBeforeInputOnly).toHaveBeenCalledExactlyOnceWith("l");
+    cleanup();
+    textarea.remove();
+    otherInput.remove();
+  });
+
   it("does not forward insertText while a real composition is open or just completed", () => {
     const textarea = document.createElement("textarea");
     const hooks = makeHooks();
