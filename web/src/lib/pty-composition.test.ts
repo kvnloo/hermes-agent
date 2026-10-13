@@ -202,6 +202,49 @@ describe("dangling-IME insertText fallback (#136179)", () => {
   });
 });
 
+describe("beforeinput-only commits (#137986)", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("does not confuse the previous onData with a new identical key tap", () => {
+    vi.useFakeTimers();
+    const send = vi.fn();
+    const forwarder = createPtyCompositionForwarder(send);
+
+    // The first tap reached xterm. The second was input-only; it is a
+    // different commit even though the last terminal data ends in "l".
+    forwarder.noteTerminalData("l");
+    forwarder.onBeforeInputOnly("l");
+    vi.advanceTimersByTime(16);
+
+    expect(send).toHaveBeenCalledExactlyOnceWith("l");
+  });
+
+  it("preserves two rapid identical beforeinput-only taps", () => {
+    vi.useFakeTimers();
+    const send = vi.fn();
+    const forwarder = createPtyCompositionForwarder(send);
+
+    forwarder.onBeforeInputOnly("l");
+    vi.advanceTimersByTime(16);
+    forwarder.onBeforeInputOnly("l");
+    vi.advanceTimersByTime(16);
+
+    expect(send.mock.calls).toEqual([["l"], ["l"]]);
+  });
+
+  it("yields to xterm onData for the same pending beforeinput-only commit", () => {
+    vi.useFakeTimers();
+    const send = vi.fn();
+    const forwarder = createPtyCompositionForwarder(send);
+
+    forwarder.onBeforeInputOnly("x");
+    forwarder.noteTerminalData("x");
+    vi.runAllTimers();
+
+    expect(send).not.toHaveBeenCalled();
+  });
+});
+
 describe("mobile IME double-send dedup (#115505)", () => {
   afterEach(() => vi.useRealTimers());
 
