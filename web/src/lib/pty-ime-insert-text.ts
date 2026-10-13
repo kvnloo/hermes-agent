@@ -28,13 +28,37 @@ export function isImePlaceholderKey(
   return ev.keyCode === 229 || ev.key === "Unidentified";
 }
 
+// A keydown and its browser beforeinput normally happen in the same short
+// event sequence. After this window, a plain insertText without new key
+// events is treated as the independent beforeinput-only path (#137986).
+const KEYDOWN_PAIR_WINDOW_MS = 80;
+
 export function createDanglingImeInsertTextTracker() {
   let danglingImeKeydown = false;
-  let lastCompositionEndAt = 0;
+  let lastKeydownAt: number | null = null;
+  let lastCompositionEndAt: number | null = null;
+  let composing = false;
+
+  const classifyFallback = (
+    ev: Pick<InputEvent, "inputType" | "data">,
+    now: number = Date.now(),
+  ): "dangling" | "beforeinput-only" | null => {
+    if (ev.inputType !== "insertText" || !ev.data || composing) return null;
+    if (
+      lastCompositionEndAt !== null &&
+      now - lastCompositionEndAt <= RECENT_COMPOSITION_END_MS
+    ) return null;
+
+    if (lastKeydownAt === null || now - lastKeydownAt > KEYDOWN_PAIR_WINDOW_MS) {
+      return "beforeinput-only";
+    }
+    return danglingImeKeydown ? "dangling" : null;
+  };
 
   return {
-    onKeydown(ev: Pick<KeyboardEvent, "keyCode" | "key">) {
+    onKeydown(ev: Pick<KeyboardEvent, "keyCode" | "key">, at: number = Date.now()) {
       danglingImeKeydown = isImePlaceholderKey(ev);
+      lastKeydownAt = at;
     },
     onKeyup(ev: Pick<KeyboardEvent, "keyCode" | "key">) {
       // A keyup for the placeholder key means the sequence is not dangling
@@ -43,16 +67,19 @@ export function createDanglingImeInsertTextTracker() {
         danglingImeKeydown = false;
       }
     },
+    noteCompositionStart() {
+      composing = true;
+    },
     noteCompositionEnd(at: number = Date.now()) {
+      composing = false;
       lastCompositionEndAt = at;
     },
+    classifyFallback,
     shouldFallback(
       ev: Pick<InputEvent, "inputType" | "data">,
       now: number = Date.now(),
     ): boolean {
-      if (ev.inputType !== "insertText" || !ev.data) return false;
-      if (!danglingImeKeydown) return false;
-      return now - lastCompositionEndAt > RECENT_COMPOSITION_END_MS;
+      return classifyFallback(ev, now) !== null;
     },
   };
 }
@@ -64,6 +91,8 @@ export interface PtyTextareaInputGuardHooks {
   onCompositionCommit(data: string | null): void;
   /** insertText letters xterm swallowed behind a dangling IME keydown. */
   onDanglingInsertText(data: string): void;
+  /** Plain beforeinput on devices that emit no keydown/composition events. */
+  onBeforeInputOnly(data: string): void;
 }
 
 /**
@@ -88,10 +117,14 @@ export function attachPtyTextareaInputGuards(
     ) {
       hooks.markReplacementWindow();
     }
-    if (tracker.shouldFallback(input)) {
+    const fallback = hooks.isMobileLike ? tracker.classifyFallback(input) : null;
+    if (fallback === "dangling") {
       hooks.onDanglingInsertText(input.data ?? "");
+    } else if (fallback === "beforeinput-only") {
+      hooks.onBeforeInputOnly(input.data ?? "");
     }
   };
+  const onCompositionStart = () => tracker.noteCompositionStart();
   const onCompositionEnd = (ev: CompositionEvent) => {
     hooks.markReplacementWindow();
     tracker.noteCompositionEnd();
@@ -101,6 +134,7 @@ export function attachPtyTextareaInputGuards(
   const onKeyup = (ev: KeyboardEvent) => tracker.onKeyup(ev);
 
   textarea.addEventListener("beforeinput", onBeforeInput, true);
+  textarea.addEventListener("compositionstart", onCompositionStart, true);
   textarea.addEventListener("compositionend", onCompositionEnd, true);
   textarea.addEventListener("keydown", onKeydown, true);
   textarea.addEventListener("keyup", onKeyup, true);
@@ -112,6 +146,7 @@ export function attachPtyTextareaInputGuards(
   keyEventDoc.addEventListener("keyup", onKeyup, true);
   return () => {
     textarea.removeEventListener("beforeinput", onBeforeInput, true);
+    textarea.removeEventListener("compositionstart", onCompositionStart, true);
     textarea.removeEventListener("compositionend", onCompositionEnd, true);
     textarea.removeEventListener("keydown", onKeydown, true);
     textarea.removeEventListener("keyup", onKeyup, true);
