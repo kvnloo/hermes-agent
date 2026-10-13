@@ -96,6 +96,15 @@ export function createPtyCompositionForwarder(send: (data: string) => void) {
       }
       queue(data);
     },
+    // A verified beforeinput-only sequence has no preceding keydown or
+    // composition event. A previous letter's onData is not evidence this
+    // *new* letter was delivered (especially for fast "ll" typing), so do
+    // not run the past-echo check. The pending 16ms queue still yields to
+    // onData emitted for this input after beforeinput.
+    onBeforeInputOnly(data: string) {
+      if (!data) return;
+      queue(data);
+    },
     noteTerminalData(data: string) {
       if (!data.startsWith("\x1b")) {
         const now = Date.now();
