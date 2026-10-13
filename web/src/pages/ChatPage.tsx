@@ -838,6 +838,7 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
         },
         onCompositionCommit: (data) => compositionForwarder.onCompositionEnd(data),
         onDanglingInsertText: (data) => compositionForwarder.onInsertTextFallback(data),
+        onBeforeInputOnly: (data) => compositionForwarder.onBeforeInputOnly(data),
       });
     }
 
