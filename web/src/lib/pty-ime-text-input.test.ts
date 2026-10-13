@@ -21,6 +21,19 @@ describe("textareaEditToPtyData", () => {
   it("counts an emoji as one character", () => {
     expect(textareaEditToPtyData("hi 👋", "hi ")).toBe(DEL);
   });
+
+  // Ink backspace deletes a grapheme, not each Unicode code point. The
+  // original Array.from implementation over-deleted the following content.
+  it.each(["👩‍👩‍👧", "🇺🇸", "e\u0301", "❤️"])(
+    "removes the %s grapheme with exactly one DEL",
+    (grapheme) => {
+      expect(textareaEditToPtyData(`hi ${grapheme}`, "hi ")).toBe(DEL);
+    },
+  );
+
+  it("replaces a multi-codepoint grapheme without deleting prior text", () => {
+    expect(textareaEditToPtyData("hi 👩‍👩‍👧", "hi ok")).toBe(`${DEL}ok`);
+  });
 });
 
 // Event sequences recorded from Android Chrome + Gboard on the dashboard chat:
