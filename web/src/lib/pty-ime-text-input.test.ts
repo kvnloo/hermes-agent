@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createImeTextInput, textareaEditToPtyData } from "./pty-ime-text-input";
 
@@ -25,11 +25,11 @@ describe("textareaEditToPtyData", () => {
 
 // Event sequences recorded from Android Chrome + Gboard on the dashboard chat:
 // every keystroke is keydown(229) → beforeinput → input, with no composition events.
-function mountTextarea() {
+function mountTextarea(allowBeforeInputOnly = false) {
   const textarea = document.createElement("textarea");
   document.body.appendChild(textarea);
   const sent: string[] = [];
-  const ime = createImeTextInput(textarea, (data) => sent.push(data));
+  const ime = createImeTextInput(textarea, (data) => sent.push(data), allowBeforeInputOnly);
 
   const keydown = (keyCode: number, key = "Unidentified") => {
     const ev = new KeyboardEvent("keydown", { key, keyCode, bubbles: true });
@@ -50,6 +50,81 @@ describe("createImeTextInput", () => {
     dispose?.();
     dispose = null;
     document.body.innerHTML = "";
+  });
+
+  it("recovers no-keydown mobile Gboard taps, including rapid identical letters", () => {
+    const t = mountTextarea(true);
+    dispose = t.ime.dispose;
+
+    // Two Android #137986 beforeinput/input pairs. No keydown or composition.
+    t.edit("insertText", "l", "l");
+    t.edit("insertText", "l", "ll");
+
+    expect(t.sent).toEqual(["l", "l"]);
+  });
+
+  it("recovers corrections and double-space edits without any keydown", () => {
+    const t = mountTextarea(true);
+    dispose = t.ime.dispose;
+    t.textarea.value = "helo";
+
+    t.edit("deleteContentBackward", null, "hel");
+    t.edit("insertText", "lo ", "hello ");
+    t.edit("deleteContentBackward", null, "hello");
+    t.edit("insertText", ". ", "hello. ");
+
+    expect(t.sent.join("")).toBe(`${DEL}lo ${DEL}. `);
+  });
+
+  it("leaves input-only events alone without the mobile opt-in", () => {
+    const t = mountTextarea();
+    dispose = t.ime.dispose;
+
+    t.edit("insertText", "a", "a");
+    expect(t.sent).toEqual([]);
+  });
+
+  it("does not steal a hardware key or later keyless input after one hardware key", () => {
+    const t = mountTextarea(true);
+    dispose = t.ime.dispose;
+
+    const ev = t.keydown(65, "a");
+    t.edit("insertText", "a", "a");
+    t.edit("insertText", "b", "ab");
+
+    expect(t.ime.xtermShouldHandleKeydown(ev)).toBe(true);
+    expect(t.sent).toEqual([]);
+  });
+
+  it("protects an open composition and its trailing insertText, then resumes", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-13T12:00:00Z"));
+      const t = mountTextarea(true);
+      dispose = t.ime.dispose;
+
+      t.textarea.dispatchEvent(new CompositionEvent("compositionstart"));
+      t.edit("insertCompositionText", "中", "中", true);
+      expect(t.sent).toEqual([]);
+
+      t.textarea.dispatchEvent(new CompositionEvent("compositionend", { data: "中" }));
+      t.edit("insertText", "中", "中");
+      expect(t.sent).toEqual([]);
+
+      vi.advanceTimersByTime(81);
+      t.edit("insertText", "x", "中x");
+      expect(t.sent).toEqual(["x"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("removes the no-keydown listeners on disposal", () => {
+    const t = mountTextarea(true);
+    t.ime.dispose();
+    dispose = null;
+    t.edit("insertText", "x", "x");
+    expect(t.sent).toEqual([]);
   });
 
   it("turns a Gboard spelling correction into DEL + the corrected tail", () => {
