@@ -846,7 +846,7 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
 
       textarea.addEventListener("beforeinput", markReplacementInput, true);
       textarea.addEventListener("compositionend", markCompositionEnd, true);
-      imeTextInput = createImeTextInput(textarea, (data) => term.input(data));
+      imeTextInput = createImeTextInput(textarea, (data) => term.input(data), isMobileLike);
       mobileInputCleanup = () => {
         imeTextInput?.dispose();
         textarea.removeEventListener("beforeinput", markReplacementInput, true);
