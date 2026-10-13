@@ -8,11 +8,14 @@
  * `_inputEvent` drops that insertText because `_keyDownSeen` is still armed
  * (`!e.composed || !this._keyDownSeen`) and the 229 never resolves into real
  * composition events — so mobile chat becomes paste-only. The tracker below
- * recognises exactly that dangling-229 shape and routes the letter through
- * the composition commit forwarder, which already defers to xterm's onData
- * and de-duplicates echoes. Every other shape is left to xterm: a 229 keyup
- * before the input, plain desktop keydowns, and real composition commits
- * (whose trailing insertText lands right after compositionend).
+ * recognises that dangling-229 shape and routes the letter through
+ * the composition commit forwarder, which defers to xterm's onData.
+ *
+ * Some Android keyboards also deliver plain taps as beforeinput/input only,
+ * with no keydown or composition event at all (#137986). That path queues a
+ * fresh commit without treating the previous key's identical onData as a
+ * duplicate. Real keydowns and open/recent compositions remain xterm-owned;
+ * the 80 ms keydown correlation is a heuristic pending on-device validation.
  */
 
 import { shouldTreatInputAsMobileReplacement } from "./pty-mobile-input";
