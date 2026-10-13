@@ -119,6 +119,21 @@ describe("createImeTextInput", () => {
     }
   });
 
+  it("does not misroute an input event that the browser reclassifies as paste", () => {
+    const t = mountTextarea(true);
+    dispose = t.ime.dispose;
+
+    t.textarea.dispatchEvent(
+      new InputEvent("beforeinput", { inputType: "insertText", data: "pasted" }),
+    );
+    t.textarea.value = "pasted";
+    t.textarea.dispatchEvent(
+      new InputEvent("input", { inputType: "insertFromPaste", data: "pasted" }),
+    );
+
+    expect(t.sent).toEqual([]);
+  });
+
   it("removes the no-keydown listeners on disposal", () => {
     const t = mountTextarea(true);
     t.ime.dispose();
