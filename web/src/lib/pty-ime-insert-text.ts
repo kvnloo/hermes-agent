@@ -142,15 +142,23 @@ export function attachPtyTextareaInputGuards(
   // before they reach the textarea; observe at document capture — above the
   // guard — so the dangling-229 tracker can arm for Gboard's letters.
   const keyEventDoc = textarea.ownerDocument;
-  keyEventDoc.addEventListener("keydown", onKeydown, true);
-  keyEventDoc.addEventListener("keyup", onKeyup, true);
+  // Document capture sees a key destined for this textarea even if the host
+  // swallows propagation. Ignore keys targeting other dashboard controls.
+  const onDocumentKeydown = (ev: KeyboardEvent) => {
+    if (ev.target === textarea) onKeydown(ev);
+  };
+  const onDocumentKeyup = (ev: KeyboardEvent) => {
+    if (ev.target === textarea) onKeyup(ev);
+  };
+  keyEventDoc.addEventListener("keydown", onDocumentKeydown, true);
+  keyEventDoc.addEventListener("keyup", onDocumentKeyup, true);
   return () => {
     textarea.removeEventListener("beforeinput", onBeforeInput, true);
     textarea.removeEventListener("compositionstart", onCompositionStart, true);
     textarea.removeEventListener("compositionend", onCompositionEnd, true);
     textarea.removeEventListener("keydown", onKeydown, true);
     textarea.removeEventListener("keyup", onKeyup, true);
-    keyEventDoc.removeEventListener("keydown", onKeydown, true);
-    keyEventDoc.removeEventListener("keyup", onKeyup, true);
+    keyEventDoc.removeEventListener("keydown", onDocumentKeydown, true);
+    keyEventDoc.removeEventListener("keyup", onDocumentKeyup, true);
   };
 }
