@@ -16,9 +16,26 @@
 
 const DELETE = "\x7f";
 
+// Ink deletes one extended grapheme cluster per Backspace (#94512).
+// This mirrors the segmentation used in #125379 (snailb1007) and avoids
+// over-deleting ZWJ emoji, combining accents, and flag sequences.
+let graphemeSegmenter: Intl.Segmenter | null | undefined;
+
+function graphemes(text: string): string[] {
+  if (graphemeSegmenter === undefined) {
+    graphemeSegmenter =
+      typeof Intl.Segmenter === "function"
+        ? new Intl.Segmenter(undefined, { granularity: "grapheme" })
+        : null;
+  }
+  return graphemeSegmenter
+    ? Array.from(graphemeSegmenter.segment(text), ({ segment }) => segment)
+    : Array.from(text);
+}
+
 export function textareaEditToPtyData(before: string, after: string): string {
-  const removed = Array.from(before);
-  const added = Array.from(after);
+  const removed = graphemes(before);
+  const added = graphemes(after);
   let common = 0;
   while (common < removed.length && common < added.length && removed[common] === added[common]) {
     common++;
