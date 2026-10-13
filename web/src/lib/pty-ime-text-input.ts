@@ -79,7 +79,12 @@ export function createImeTextInput(
   };
   const onInput = (ev: Event) => {
     // Ownership was decided by beforeinput, never by a later key event.
-    if (before === null || composing || (ev as InputEvent).isComposing) {
+    if (
+      before === null ||
+      composing ||
+      (ev as InputEvent).isComposing ||
+      !isOwnInputType((ev as InputEvent).inputType)
+    ) {
       before = null;
       return;
     }
