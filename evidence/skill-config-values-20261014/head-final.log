@@ -1,0 +1,26 @@
+▶ not activated — using HERMES_PYTHON: <review-root>/test-venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 5 test files (~65 tests) under ['tests/agent/test_skill_config_value_rendering_contract.py', 'tests/agent/test_skill_utils.py', 'tests/agent/test_skill_commands.py', 'tests/cron/test_cron_prompt_injection_skill.py', 'tests/agent/test_skill_config_falsy_values.py']; running with -j 1
+[ 40.0% |    26/~65 | ✓26 | ✗ 0] ✓ tests/agent/test_skill_commands.py (26✓, 6.0s)
+[ 43.1% |    28/~65 | ✓28 | ✗ 0] ✓ tests/agent/test_skill_config_falsy_values.py (2✓, 1.2s)
+[ 46.2% |    30/~65 | ✓58 | ✗ 0] ✓ tests/agent/test_skill_config_value_rendering_contract.py (30✓, 4.8s)
+[ 75.4% |    49/~65 | ✓77 | ✗ 0] ✓ tests/agent/test_skill_utils.py (19✓, 0.7s)
+[100.0% |    65/~65 | ✓94 | ✗ 0] ✓ tests/cron/test_cron_prompt_injection_skill.py (17✓, 2.5s)
+
+=== Summary: 5 files, 94 tests passed, 0 failed (100% complete) in 15.3s (1 workers) ===
+  Durations cached to test_durations.json (5 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   5
+  Total subprocess CPU-wall: 15.3s  (runner wall: 15.3s, parallelism: 1x)
+  P50: 2.49s  P90: 6.01s  P95: 6.01s  P99: 6.01s  Max: 6.01s
+  <1s: 1 files (20%)  <2s: 2 files (40%)
+  Top 10 slowest:
+      6.01s  tests/agent/test_skill_commands.py
+      4.85s  tests/agent/test_skill_config_value_rendering_contract.py
+      2.49s  tests/cron/test_cron_prompt_injection_skill.py
+      1.20s  tests/agent/test_skill_config_falsy_values.py
+      0.74s  tests/agent/test_skill_utils.py

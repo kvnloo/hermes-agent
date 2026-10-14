@@ -1,0 +1,29 @@
+{
+  "source_head": "a4c4b902dbe4074a138a4ecf158c2830cb510ee9",
+  "source_base": "0e427d788d253630d38a3a51cd76849e73cd6925",
+  "independent_unique_cases": 30,
+  "base_contract": {
+    "passed": 14,
+    "failed": 16
+  },
+  "head_contract": {
+    "passed": 30,
+    "failed": 0
+  },
+  "adjacent_unique_cases": 62,
+  "base_adjacent": {
+    "passed": 62,
+    "failed": 0
+  },
+  "head_adjacent": {
+    "passed": 62,
+    "failed": 0
+  },
+  "author_head_cases": 2,
+  "overlay_sha256": "594090f41602a0033e4b66d7cefc7139081395e71fb82ef291f34481a2e44e02",
+  "independent_review": "PASS for bounded rendering evidence; head replay 30 passed",
+  "qa": "CLEAN",
+  "owner": "rodricksz4h5",
+  "upstream_writes": 0,
+  "disposition": "existing-owner; external CI action_required"
+}

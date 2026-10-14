@@ -1,0 +1,199 @@
+▶ not activated — using HERMES_PYTHON: <review-root>/test-venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 4 test files (~63 tests) under ['tests/agent/test_skill_config_value_rendering_contract.py', 'tests/agent/test_skill_utils.py', 'tests/agent/test_skill_commands.py', 'tests/cron/test_cron_prompt_injection_skill.py']; running with -j 1
+[ 41.3% |    26/~63 | ✓26 | ✗ 0] ✓ tests/agent/test_skill_commands.py (26✓, 6.6s)
+[ 44.4% |    28/~63 | ✓40 | ✗16] ✗ tests/agent/test_skill_config_value_rendering_contract.py (14✓ 16✗, 4.6s)
+
+  ╔╍ Failed: tests/agent/test_skill_config_value_rendering_contract.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║     assert _render_value(surface, capsys) == expected
+  ║ E   AssertionError: assert '(not set)' == 'False'
+  ║ E     
+  ║ E     - False
+  ║ E     + (not set)
+  ║ ____________ test_profile_switch_keeps_each_config_value[settings] _____________
+  ║ tests/agent/test_skill_config_value_rendering_contract.py:105: in test_profile_switch_keeps_each_config_value
+  ║     assert _render_value(surface, capsys) == expected
+  ║ E   AssertionError: assert '(not set)' == 'False'
+  ║ E     
+  ║ E     - False
+  ║ E     + (not set)
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[configured-false-invocation]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[configured-false-settings]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[configured-zero-invocation]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[configured-zero-settings]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[configured-float-zero-invocation]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[configured-float-zero-settings]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[empty-list-invocation]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[empty-list-settings]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[empty-mapping-invocation]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[empty-mapping-settings]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[false-default-invocation]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[false-default-settings]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[zero-default-invocation]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[zero-default-settings]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_profile_switch_keeps_each_config_value[invocation]
+  ║ FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_profile_switch_keeps_each_config_value[settings]
+  ║ 16 failed, 14 passed in 4.03s
+  ║
+  ║  Repro: python -m pytest tests/agent/test_skill_config_value_rendering_contract.py -q --tb=short
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 74.6% |    47/~63 | ✓59 | ✗16] ✓ tests/agent/test_skill_utils.py (19✓, 0.8s)
+[100.0% |    63/~63 | ✓76 | ✗16] ✓ tests/cron/test_cron_prompt_injection_skill.py (17✓, 2.4s)
+
+=== Summary: 4 files, 76 tests passed, 16 failed (100% complete) in 14.4s (1 workers) ===
+  Durations cached to test_durations.json (3 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   4
+  Total subprocess CPU-wall: 14.4s  (runner wall: 14.4s, parallelism: 1x)
+  P50: 4.61s  P90: 6.59s  P95: 6.59s  P99: 6.59s  Max: 6.59s
+  <1s: 1 files (25%)  <2s: 1 files (25%)
+  Top 10 slowest:
+      6.59s  tests/agent/test_skill_commands.py
+      4.61s  tests/agent/test_skill_config_value_rendering_contract.py
+      2.41s  tests/cron/test_cron_prompt_injection_skill.py
+      0.79s  tests/agent/test_skill_utils.py
+
+=== Failure output ===
+
+--- tests/agent/test_skill_config_value_rendering_contract.py ---
+FFFFFF..............FFFFFFFFFF                                           [100%]
+=================================== FAILURES ===================================
+______ test_resolved_values_render_verbatim[configured-false-invocation] _______
+tests/agent/test_skill_config_value_rendering_contract.py:94: in test_resolved_values_render_verbatim
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == 'False'
+E     
+E     - False
+E     + (not set)
+_______ test_resolved_values_render_verbatim[configured-false-settings] ________
+tests/agent/test_skill_config_value_rendering_contract.py:94: in test_resolved_values_render_verbatim
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == 'False'
+E     
+E     - False
+E     + (not set)
+_______ test_resolved_values_render_verbatim[configured-zero-invocation] _______
+tests/agent/test_skill_config_value_rendering_contract.py:94: in test_resolved_values_render_verbatim
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == '0'
+E     
+E     - 0
+E     + (not set)
+________ test_resolved_values_render_verbatim[configured-zero-settings] ________
+tests/agent/test_skill_config_value_rendering_contract.py:94: in test_resolved_values_render_verbatim
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == '0'
+E     
+E     - 0
+E     + (not set)
+____ test_resolved_values_render_verbatim[configured-float-zero-invocation] ____
+tests/agent/test_skill_config_value_rendering_contract.py:94: in test_resolved_values_render_verbatim
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == '0.0'
+E     
+E     - 0.0
+E     + (not set)
+_____ test_resolved_values_render_verbatim[configured-float-zero-settings] _____
+tests/agent/test_skill_config_value_rendering_contract.py:94: in test_resolved_values_render_verbatim
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == '0.0'
+E     
+E     - 0.0
+E     + (not set)
+_________ test_resolved_values_render_verbatim[empty-list-invocation] __________
+tests/agent/test_skill_config_value_rendering_contract.py:94: in test_resolved_values_render_verbatim
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == '[]'
+E     
+E     - []
+E     + (not set)
+__________ test_resolved_values_render_verbatim[empty-list-settings] ___________
+tests/agent/test_skill_config_value_rendering_contract.py:94: in test_resolved_values_render_verbatim
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == '[]'
+E     
+E     - []
+E     + (not set)
+________ test_resolved_values_render_verbatim[empty-mapping-invocation] ________
+tests/agent/test_skill_config_value_rendering_contract.py:94: in test_resolved_values_render_verbatim
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == '{}'
+E     
+E     - {}
+E     + (not set)
+_________ test_resolved_values_render_verbatim[empty-mapping-settings] _________
+tests/agent/test_skill_config_value_rendering_contract.py:94: in test_resolved_values_render_verbatim
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == '{}'
+E     
+E     - {}
+E     + (not set)
+________ test_resolved_values_render_verbatim[false-default-invocation] ________
+tests/agent/test_skill_config_value_rendering_contract.py:94: in test_resolved_values_render_verbatim
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == 'False'
+E     
+E     - False
+E     + (not set)
+_________ test_resolved_values_render_verbatim[false-default-settings] _________
+tests/agent/test_skill_config_value_rendering_contract.py:94: in test_resolved_values_render_verbatim
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == 'False'
+E     
+E     - False
+E     + (not set)
+________ test_resolved_values_render_verbatim[zero-default-invocation] _________
+tests/agent/test_skill_config_value_rendering_contract.py:94: in test_resolved_values_render_verbatim
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == '0'
+E     
+E     - 0
+E     + (not set)
+_________ test_resolved_values_render_verbatim[zero-default-settings] __________
+tests/agent/test_skill_config_value_rendering_contract.py:94: in test_resolved_values_render_verbatim
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == '0'
+E     
+E     - 0
+E     + (not set)
+___________ test_profile_switch_keeps_each_config_value[invocation] ____________
+tests/agent/test_skill_config_value_rendering_contract.py:105: in test_profile_switch_keeps_each_config_value
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == 'False'
+E     
+E     - False
+E     + (not set)
+____________ test_profile_switch_keeps_each_config_value[settings] _____________
+tests/agent/test_skill_config_value_rendering_contract.py:105: in test_profile_switch_keeps_each_config_value
+    assert _render_value(surface, capsys) == expected
+E   AssertionError: assert '(not set)' == 'False'
+E     
+E     - False
+E     + (not set)
+=========================== short test summary info ============================
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[configured-false-invocation]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[configured-false-settings]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[configured-zero-invocation]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[configured-zero-settings]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[configured-float-zero-invocation]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[configured-float-zero-settings]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[empty-list-invocation]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[empty-list-settings]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[empty-mapping-invocation]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[empty-mapping-settings]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[false-default-invocation]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[false-default-settings]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[zero-default-invocation]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_resolved_values_render_verbatim[zero-default-settings]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_profile_switch_keeps_each_config_value[invocation]
+FAILED tests/agent/test_skill_config_value_rendering_contract.py::test_profile_switch_keeps_each_config_value[settings]
+16 failed, 14 passed in 4.03s
+
+=== 1 file with test failures (16 tests failed) ===
+  tests/agent/test_skill_config_value_rendering_contract.py  (16 tests failed)

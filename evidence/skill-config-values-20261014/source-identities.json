@@ -1,0 +1,46 @@
+{
+  "base": {
+    "commit": "0e427d788d253630d38a3a51cd76849e73cd6925",
+    "tree": "bd2cd0b844978983c173d24d850bdb9476ea9f7e",
+    "files": {
+      "agent/skill_commands.py": "47c3d33fc40e1ea91f96da5e86dd477ea69a82add4e8a9a3a0ebac4122289b0a",
+      "hermes_cli/config.py": "a1667a958f52aa6201200bde354c3a380d79d49fd7635aeee3a3ebb23533a788",
+      "agent/skill_utils.py": "fbf04204de0e7ab29e694aea2b099f971955e94223866b8abee545855eb2d3d0",
+      "tools/skills_tool.py": "a5fac64ae3c2f2496cd7da46aacd396d6a50a0dd5d9f4ef4d1ba2d8d7ba9df2f",
+      "tests/agent/test_skill_utils.py": "64784201f2b643128a67e74e8dfa7ce90b0bc8f84faee449fdf6e799d2eb498b",
+      "tests/agent/test_skill_commands.py": "fae729f2eeed6344b0031159c2d2810634f8dbdbadda1af7b642e08a76930088",
+      "tests/cron/test_cron_prompt_injection_skill.py": "9ac210796fffef3da00b40d511b1fb10e6c6a04ba9258cdaea6091deea2a859b",
+      "scripts/run_tests.sh": "20c955e19e440bffb2abbc7bc645cc7c4d77a3fcdcd82434facf8b8ac9684467",
+      "pyproject.toml": "ff41b097147124ff2eb51a437d5f44eddea35104900c1c79c7edfb8b7352d901",
+      "uv.lock": "16300cf807347b7fcfa3c19963f5fe950913fdb3e41e3c649ea724bc7dc997da"
+    }
+  },
+  "head": {
+    "commit": "a4c4b902dbe4074a138a4ecf158c2830cb510ee9",
+    "tree": "27fadc3ec3198d4a11c3898bb5ee01e20ad08f68",
+    "files": {
+      "agent/skill_commands.py": "30d55e0f30c0e54e880b1ed22f9975086e8c03dd3579c03b42cad7dad1c861b4",
+      "hermes_cli/config.py": "765e158dc2802b448958457b5cdc59fd9137a6d3e6d0ae8a68b47effe232ec7a",
+      "agent/skill_utils.py": "fbf04204de0e7ab29e694aea2b099f971955e94223866b8abee545855eb2d3d0",
+      "tools/skills_tool.py": "a5fac64ae3c2f2496cd7da46aacd396d6a50a0dd5d9f4ef4d1ba2d8d7ba9df2f",
+      "tests/agent/test_skill_utils.py": "64784201f2b643128a67e74e8dfa7ce90b0bc8f84faee449fdf6e799d2eb498b",
+      "tests/agent/test_skill_commands.py": "fae729f2eeed6344b0031159c2d2810634f8dbdbadda1af7b642e08a76930088",
+      "tests/cron/test_cron_prompt_injection_skill.py": "9ac210796fffef3da00b40d511b1fb10e6c6a04ba9258cdaea6091deea2a859b",
+      "scripts/run_tests.sh": "20c955e19e440bffb2abbc7bc645cc7c4d77a3fcdcd82434facf8b8ac9684467",
+      "pyproject.toml": "ff41b097147124ff2eb51a437d5f44eddea35104900c1c79c7edfb8b7352d901",
+      "uv.lock": "16300cf807347b7fcfa3c19963f5fe950913fdb3e41e3c649ea724bc7dc997da"
+    }
+  },
+  "head_worktree_matches": {
+    "agent/skill_commands.py": true,
+    "hermes_cli/config.py": true,
+    "agent/skill_utils.py": true,
+    "tools/skills_tool.py": true,
+    "tests/agent/test_skill_utils.py": true,
+    "tests/agent/test_skill_commands.py": true,
+    "tests/cron/test_cron_prompt_injection_skill.py": true,
+    "scripts/run_tests.sh": true,
+    "pyproject.toml": true,
+    "uv.lock": true
+  }
+}
