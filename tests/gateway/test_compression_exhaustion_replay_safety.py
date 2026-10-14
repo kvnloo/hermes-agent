@@ -113,6 +113,16 @@ class _ReplayHarness(GatewayTurnMixin):
                 await self._run_agent_mark_streamed_delivery(self.agent_result, turn_ctx)
                 assert stream_adapter.send.await_count >= 1
                 assert not self.agent_result.get("already_sent")
+            else:
+                # Exercise production's explicit no-output observation, even when
+                # the run failed. A caller lacking that observation must fail closed.
+                await self._run_agent_mark_streamed_delivery(
+                    self.agent_result,
+                    SimpleNamespace(
+                        stream_consumer_holder=[None], source=self.source,
+                        session_key="key", _cleanup_msg_ids=[],
+                    ),
+                )
             return self.agent_result
 
         self._run_agent = run_agent
@@ -175,3 +185,48 @@ async def test_one_attempt_only_after_clean_recovery(monkeypatch):
     )
     assert again is False
     assert harness.state.conversation.queued_events == []
+
+@pytest.mark.asyncio
+async def test_missing_stream_observation_does_not_auto_replay(monkeypatch):
+    monkeypatch.setattr(
+        "gateway.run_heartbeat_acceptance.heartbeat_owner_is_current",
+        lambda *_a: True,
+    )
+    harness = _ReplayHarness("fresh")
+    # A proxy/early-return worker which never recorded delivery safety should
+    # not be allowed to replay merely because already_sent is absent.
+    harness._run_agent = AsyncMock(return_value=harness.agent_result)
+    await harness._handle_message_with_agent(harness.event, harness.source, "key", 1)
+    harness._hmwa_agent_error_reply.assert_not_awaited()
+    assert harness.adapter._pending_messages == {}
+    assert not getattr(harness.event, "_gateway_compression_replay_attempted", False)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "consumer_extra,progress_ids",
+    [
+        ({"_delivery_ambiguous": True}, []),
+        ({}, ["acknowledged-progress-1"]),
+    ],
+)
+async def test_ambiguous_or_confirmed_progress_blocks_auto_replay(
+    consumer_extra, progress_ids,
+):
+    harness = _ReplayHarness("fresh")
+    # A transport timeout might have delivered text; successful progress may
+    # have already reached the user. Either is not a clean pre-response retry.
+    consumer = SimpleNamespace(already_sent=False, **consumer_extra)
+    result = dict(harness.agent_result)
+    await harness._run_agent_mark_streamed_delivery(
+        result,
+        SimpleNamespace(
+            stream_consumer_holder=[consumer], source=harness.source,
+            session_key="key", _cleanup_msg_ids=progress_ids,
+        ),
+    )
+    assert result.get("_gateway_replay_visibility_checked") is True
+    assert result.get("_gateway_replay_visible_output") is True
+    assert not harness._hmwa_stage_compression_exhaustion_replay(
+        harness.event, "key", result, "prepared request", [],
+    )
