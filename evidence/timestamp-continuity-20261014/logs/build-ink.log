@@ -1,0 +1,12 @@
+
+> hermes-tui@0.0.1 build:ink
+> npm run build --prefix packages/hermes-ink
+
+
+> @hermes/ink@0.0.1 build
+> esbuild src/entry-exports.ts --bundle --platform=node --format=esm --packages=external --outdir=dist
+
+
+  dist/entry-exports.js  454.7kb
+
+⚡ Done in 20ms

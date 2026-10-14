@@ -1,0 +1,57 @@
+{
+  "source_mismatches": [],
+  "verified_source_count": 589,
+  "dependencies": [
+    {
+      "package": "react",
+      "actual": "19.2.7",
+      "lock": "19.2.7",
+      "path": "node_modules/react"
+    },
+    {
+      "package": "react-reconciler",
+      "actual": "0.33.0",
+      "lock": "0.33.0",
+      "path": "node_modules/react-reconciler"
+    },
+    {
+      "package": "vitest",
+      "actual": "4.1.10",
+      "lock": "4.1.10",
+      "path": "node_modules/vitest"
+    },
+    {
+      "package": "vite",
+      "actual": "8.2.0",
+      "lock": "8.2.0",
+      "path": "node_modules/vite"
+    },
+    {
+      "package": "typescript",
+      "actual": "6.0.3",
+      "lock": "6.0.3",
+      "path": "node_modules/typescript"
+    },
+    {
+      "package": "esbuild",
+      "actual": "0.28.1",
+      "lock": "0.28.1",
+      "path": "node_modules/esbuild"
+    },
+    {
+      "package": "nanostores",
+      "actual": "1.4.2",
+      "lock": "1.4.2",
+      "path": "node_modules/nanostores"
+    },
+    {
+      "package": "@nanostores/react",
+      "actual": "1.1.0",
+      "lock": "1.1.0",
+      "path": "node_modules/@nanostores/react"
+    }
+  ],
+  "root_lock_sha256": "9934677654ce672900b0946898cc28c73671f75896862b5768c24cca84776ccd",
+  "original_dependency_tree": "Copied existing npm-ci install from the identical committed root lock",
+  "note": "Dependencies were reused from prior locked install with identical root lock. No fresh install occurred. Workspace links resolve inside this partial exact-head tree."
+}

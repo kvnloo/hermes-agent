@@ -1,0 +1,11 @@
+{
+  "commit": "0b58039b7c1f77dd54fa0cd080f794a11002bd49",
+  "root_tree": "a2efc59fc2ca61ca5436fbc5d8486461d035f5d2",
+  "commit_api": "https://api.github.com/repos/kvnloo/hermes-agent/git/commits/0b58039b7c1f77dd54fa0cd080f794a11002bd49",
+  "verified_by": "Independent source critic, from remote commit and root/subtree mappings",
+  "original_frozen_manifest_sha256": "7ed9cc49ee66752e701115c10bc91b781d59e531fade7eb928bad994dea42cf2",
+  "clarification": "The frozen source-manifest.json root_tree field contains the requested commit treeish, not the root Git tree SHA. This receipt corrects that field without modifying the original frozen manifest. All 589 path/blob mappings were independently verified against the actual trees.",
+  "ui_tree": "73b57de36aab9f78e00345e29c86f99b27f28c85",
+  "apps_tree": "c7805af849aa9c23959408f2be90e885a316125d",
+  "shared_tree": "91f3a9ba39bf7bb8af44b5537de79a0b573c5a40"
+}

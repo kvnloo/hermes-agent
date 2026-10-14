@@ -1,0 +1,3540 @@
+{
+  "head": "0b58039b7c1f77dd54fa0cd080f794a11002bd49",
+  "scope": "Partial exact-head tree: ui-tui, apps/shared, listed root config files. No full-repository claim.",
+  "files": [
+    {
+      "path": "ui-tui/.gitignore",
+      "git_blob_sha1": "c5323f8723edf8677ef35c7a5608b47a7fd6c08e",
+      "sha256": "5d68a98268786abe0f2644cf692eea8d0241692bff56af0222020419408312fc",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/README.md",
+      "git_blob_sha1": "027fa8951337da3b7e3943cab77656b11d1b2cea",
+      "sha256": "0592853afe54a0ac3c1e0635a8e442ac33eb2e6a754991ff436d8cc75c739129",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/eslint.config.mjs",
+      "git_blob_sha1": "c3fed73f26ce26b38610f699ff86170560f4240b",
+      "sha256": "070a410b51b3d29524b71493211d94617c82790490ffb81c54833b26e405e1a0",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/package.json",
+      "git_blob_sha1": "17c6f69b43a488054baa378a90262046abb5008c",
+      "sha256": "cfc0a76e3a52a838aca09014078f6672b02afcbd1aff8fbbc5e8e2c6e898079e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/ambient.d.ts",
+      "git_blob_sha1": "943ff76bc0176976b2ef952b09509dfd68ec9cf9",
+      "sha256": "4529e8b97f8d7d415c3c4bc09f384071f8aed9a8a8005e39423a61326dba8588",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/index.d.ts",
+      "git_blob_sha1": "d08fce5eb0eeba4e7b90072086b6e5a84ddd0bc7",
+      "sha256": "611348a14f7669b2fa4083b07b6893184c93ace61e9a49d5da46f54c39ef8594",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/index.js",
+      "git_blob_sha1": "8c0fa9c5b500faaae5e07a13db88dcb88d1e1066",
+      "sha256": "b69342a4ec7184479d1ac3a8a6b1bedfe5d834eb3160b8b778e7996349cec99d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/package.json",
+      "git_blob_sha1": "a7cdfbe5184fe3d8f5c333c409f8e6fa5e981cfb",
+      "sha256": "109258a3f307cf7e687d7e8874edbdd6b51a69022fae0c7c33f82fee7ffd0fd8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/bootstrap/state.ts",
+      "git_blob_sha1": "dcbae499fc3a083e42cd4ebb18264bc8e6bfe7c1",
+      "sha256": "4552135df85d3096333ac9c1d6d2693220a7763e46587c575fe4440f77d67c86",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/entry-exports.ts",
+      "git_blob_sha1": "e45a2493382f3e3cd10cdfcc2d5f9d72e532305e",
+      "sha256": "6cfb558ce5b6fc313b6bd52fb1bfaf6b1d7aa52951eb40f79836d4ccc03c78fe",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/hooks/use-stderr.ts",
+      "git_blob_sha1": "0aa7e1f20a2ec9d9921d4abd0975b67f6da2645c",
+      "sha256": "94903245e2a92b398eb1196a08f98a3672930139c7ffcff3afdb74680093f236",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/hooks/use-stdout.ts",
+      "git_blob_sha1": "fde397af2b1b964aaf797c7e806936820f03eeeb",
+      "sha256": "28c1132fbf6891d58e09a437b7ecaece66fbd4231fa320b16085fc42387bb82e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/Ansi.tsx",
+      "git_blob_sha1": "de0d750c356336694a466f5dee8a77f47b2586da",
+      "sha256": "cedb7818fca654dd7041784c50deaed1610bb4fa70e4b479219a73446dc1854c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/absolute-in-zero-height-box.test.tsx",
+      "git_blob_sha1": "b8960e69a1d34b7a2a0fba086290ab9b57842c53",
+      "sha256": "1a364a335a4795abc3809243fb34a85a756f07e98e385f08db89cf495c9b9934",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/ansi-transition.test.ts",
+      "git_blob_sha1": "63a50873278cf078c9a3beeffe368787797bce21",
+      "sha256": "112ee03081b48222834e6b2b6de1f07333f1cb4d4986a7f9f84f7cc85d59f3e7",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/ansi-transition.ts",
+      "git_blob_sha1": "e7fc83bb876700d11ff927787ab582b1ee48f264",
+      "sha256": "d8d1681427389d2d8c331fe43ced45b4228328a0a7c4e6314bc7c51dec960938",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/app-mouse-watchdog.test.ts",
+      "git_blob_sha1": "ef0469424cf2da4ed02afd8a5db7a7ef08fd641f",
+      "sha256": "5a05c744f251f55fc7b30041ff06c06bb689d0150af496271bd5b6c1026b6a13",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/app-mouse.test.ts",
+      "git_blob_sha1": "b3d453624283e0423f219dd42116d1cf8588951e",
+      "sha256": "7a86338544bede18d117aefd1517d5bddd30f2a212f7f018d6dec000ff32c212",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/app-rawmode-mouse.test.ts",
+      "git_blob_sha1": "f1934716c5fbdeeca7bd0cdeb618a31074ed73db",
+      "sha256": "184d8435d989c35c9d257bd8a8e463d7a5c5d4763501e2f324aa0a78457eab9e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/app-stdin-recovery.test.ts",
+      "git_blob_sha1": "d4b5f8777e50cb40b7df0538f9ce34bc7660cf18",
+      "sha256": "87bc9a0aa38048a4854552880112314789f7fce7703f0369aa9280e8d9c6936c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/bidi.ts",
+      "git_blob_sha1": "28edace8a932abc910cba91b500e3460136af4d1",
+      "sha256": "fc9773c9655423c93cfe24edef2a5df6516099efea58a45ffc5ab11b08ccb8d0",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/cache-eviction.ts",
+      "git_blob_sha1": "f0155eb9b0d2c4d282dbf4d76f874aa11eba30b3",
+      "sha256": "a4dcae372de666769a3022443a05c9a58bd9b59279c681b5b0daea2954b1e9e5",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/clearTerminal.ts",
+      "git_blob_sha1": "4ccaeeace08613bbae8eae2b833325415a89ef67",
+      "sha256": "b52ff4f476467879d1aaed292fdbe907a3527d2aec1349a5e9b7c9fcd2282be1",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/colorize.test.ts",
+      "git_blob_sha1": "5953fd0e5e10064cefdd45620f5189dba6224eb1",
+      "sha256": "898694fd329636e65393e97d6f835c3e357b23cb963095690fd7766e07bb77ee",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/colorize.ts",
+      "git_blob_sha1": "ca361ae2cc974e3adef909f69ed72c0d8e139d12",
+      "sha256": "62f92c3f296b2818fd4f82de8fddafa68550a3281447909fd02ceda32571c0e4",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/AlternateScreen.tsx",
+      "git_blob_sha1": "6aea5e96998638528220e5a75a251898ea018823",
+      "sha256": "1f694b678507624b0b67eee15f34c10c579cd3a245a50acd6db37836087f17da",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/App.focus.test.tsx",
+      "git_blob_sha1": "73571643038161c61c830ae2d088ce004212d3dd",
+      "sha256": "551468a6c696047d2ad0c73adf0944b8fff6298a888e92b59d52d6ac087e740e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/App.tsx",
+      "git_blob_sha1": "136f08903d83f4b6eec58760c4e33a3c030bee1c",
+      "sha256": "7ab534ff862cb4f4a16797c268c32550bb8559179fd46b09b392bf9e35820a35",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/AppContext.ts",
+      "git_blob_sha1": "3d13e779ccadb20773ed428db9e1079bfae76141",
+      "sha256": "ca274d2a28ea96409fd9f0fd9e44650bca44484cc3e3e37ffbb736505efc417e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/Box.tsx",
+      "git_blob_sha1": "408d23c227ef800f56f5155e795aea3c5277df17",
+      "sha256": "560f87ea2f052881a1c31e8856c9dc7e96a564167456b7d2d2a6accc9d96df66",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/Button.tsx",
+      "git_blob_sha1": "e99034c6db6f278de0f13f6f4e264d6221471eb0",
+      "sha256": "8c1da28a1b23d36d1b11592705c782e4c151a09ea8bdd11e059deb7039374414",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/ClockContext.tsx",
+      "git_blob_sha1": "99dfc2d88327df861b3be667435912d0d3708dca",
+      "sha256": "b8a6af386d7f179363213a2a0028359e1cf1ba60116f08e02ec2f0231d2ead16",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/CursorAdvanceContext.ts",
+      "git_blob_sha1": "52566c1a917920c43ed492759cd81bce273e3670",
+      "sha256": "de96bf0048cf33f2eb8e330acc06207ad7bca971797d3c8fd5ca525f9b989d9e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/CursorDeclarationContext.ts",
+      "git_blob_sha1": "37356afa170a83327bc426d1a4f19aa98fb69949",
+      "sha256": "6cc152e1aa3f3e596c7ea9ba0534320aad98f51adf5eda3cd8478f998a5a600f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/ErrorOverview.tsx",
+      "git_blob_sha1": "9e87788e6cc2f9b5ae4c5e814700384cddde6f2b",
+      "sha256": "9a89b64b804a9f2ee4d056aa0c93b791a80f0023e046cc52f875db9536349e39",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/Link.tsx",
+      "git_blob_sha1": "6020d50bdab69ef3523d6e4ab081e0a79174a52e",
+      "sha256": "0f78785169e5a31012403424f01cf2b0dc1971125fbbc0fa41dc370f07676475",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/Newline.tsx",
+      "git_blob_sha1": "4010dc9ffd3c36254997624a3010a18d9e311ccd",
+      "sha256": "026eaa8327bcfc6aba941259a15151e1a9773c2deb00ed21fd297ab376521ff0",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/NoSelect.tsx",
+      "git_blob_sha1": "79078189e4ad93cda4102648294c128238f1b217",
+      "sha256": "cdbee1ba3a3b39eed2d1d8bf0d48d86994eae679440e6cf6bd072d86fa8522f7",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/RawAnsi.tsx",
+      "git_blob_sha1": "b5bd8f25361660b36c38a134efb83d0a8644fcc5",
+      "sha256": "d147c82a3614a5dca557de841b5f6b6cdf104129d48899ae28e088107259674c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/ScrollBox.tsx",
+      "git_blob_sha1": "456ea5fceb61a0b08c70e3f6e97e2cef4479db51",
+      "sha256": "82654c98ca347f8ec8f1bf72dffc912241296225cd631f283166e5188777c906",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/Spacer.tsx",
+      "git_blob_sha1": "3ed7609b84c1225bb0ec9228938cbdbba890eaf1",
+      "sha256": "f934626e7f8e847884a4ef3a298f6a04b2e8557ef2989846b9fb87379147df78",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/StdinContext.ts",
+      "git_blob_sha1": "c6e9334dfa28e3f8a927f84e01b42b306431ffef",
+      "sha256": "068ca29342e97ba9ba335d1ec000824e343cfcb3cc01998a584c10927942031b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/TerminalFocusContext.tsx",
+      "git_blob_sha1": "e5f1acdd685354aa53f0b2f8678412fcab42c7b5",
+      "sha256": "6928884fc81446482e6380079545a20eb0d514966408c71c06369e76d3a2f8c4",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/TerminalSizeContext.tsx",
+      "git_blob_sha1": "ec743b3a0ecf538b69d0eb542b39203888467707",
+      "sha256": "a5de7a6a502a9ca3e4d5ddb22bf9c49aee7a676a3c603f5276bd883ae33ee252",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/Text.test.ts",
+      "git_blob_sha1": "f8818f1e567d9bc12a36676ab9a55d7600a1b040",
+      "sha256": "cc55ddc8f901e51d1ad4209ae140258b25d82b3a81a846e9c568a947bdc2b06e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/components/Text.tsx",
+      "git_blob_sha1": "491cb545cb2ce2fed332db521f93e4c67a976d29",
+      "sha256": "637a1bcab241a411759c2a7f5cbaed400286918e4790b841c79cb02cc88d6f7c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/constants.ts",
+      "git_blob_sha1": "c07531439314367ad028ec6b9c29801eefa2de8c",
+      "sha256": "2dacacb41b777dd68839f81ce1cadb4736b129f66639cceb0554c960a19c7fd5",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/cursor.ts",
+      "git_blob_sha1": "fd3781671251c741b163b638cee69601d6f31c8f",
+      "sha256": "5c5d26b3c107bd5a54f68cb6fd0facb5c5470fab4392b277f34d04c764158009",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/devtools.ts",
+      "git_blob_sha1": "73b0c9448d471173a1c08d9d7aa474f06f92698c",
+      "sha256": "e393f300e96afdf0f2c94c28c2dce4f5494a3decd7fa6e43b47c79c51574a32f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/dom.ts",
+      "git_blob_sha1": "834532abc6348d4f1883ce403be274e1fe8488f9",
+      "sha256": "3124ec439e48436582e5eb208834497ac7cba482ec2199efde1360e47800e600",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/click-event.ts",
+      "git_blob_sha1": "1f58659a89bb7c5d7e8e24f875426ca959edc550",
+      "sha256": "3e7c9937abd4f4f60e577964e1d075a09700624e8678f1fb25bc4c447b2a7e2b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/cmd-shortcuts.test.ts",
+      "git_blob_sha1": "88aa02ecde9ec48aca80a0186ae165fb9288562b",
+      "sha256": "27b0e213b8abc6ae477c8894987ade2cd599cac3b9f74e14c7b7747112265803",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/dispatcher.ts",
+      "git_blob_sha1": "1357da1dda1240517c5a70dc9edd79ba9f58966b",
+      "sha256": "ceefba9ebf20f8169826d4e49a85f103ba7374e0ea97636e71e986c055b82987",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/emitter.ts",
+      "git_blob_sha1": "d00c4d9e3c9df75f308011e54cffae288488549d",
+      "sha256": "12fbb39b759344e0f7a04f2155ef98d206ff28d60bfdbe7497a75e505f7db981",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/event-handlers.ts",
+      "git_blob_sha1": "1750dbeee5431bf349565a4033a2b2e682e5ba7c",
+      "sha256": "c4185b1000f097bf47ca7c6dd4628de079c905bbfe6884eb35f275f6c52d2333",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/event.ts",
+      "git_blob_sha1": "61874002ebbdb476ffe9a2a0db8001ec6aefb178",
+      "sha256": "d6d6e35fb3ac57eeff65343305f0b8d31d5af15ec3025c4b3e6bfef060650694",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/focus-event.ts",
+      "git_blob_sha1": "527fd26d22a40d9a5a259cd9ed1daa414bdf723f",
+      "sha256": "5f86537045df159d97fe58e4641e045fde74e9199f19aa62e05efd34b83c6551",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/input-event-control-chord.test.ts",
+      "git_blob_sha1": "b399d801a7b25f760b20d5243009e4c72377002c",
+      "sha256": "90babe044b02b2cecf86ac1b882e20aa0ecc80a473ec27c4c634b67f9b630371",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/input-event.ts",
+      "git_blob_sha1": "b1d3d5d4f1e301ab11d4206c66606909d2be5ee5",
+      "sha256": "9006b1396ae40efc89d2f3ab2cdb473700162fbccfa7d7111bce01e7e3ea57ae",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/keyboard-event.ts",
+      "git_blob_sha1": "6d441dadbd5e546feb2f1f6057b45d95105176c1",
+      "sha256": "0821e4b836e7115cfb8c259fba8c735340c86ce6458c701407efadb91afa0113",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/mouse-event.ts",
+      "git_blob_sha1": "d42839b5fb59897d4b95db087f1d7cd8c58b35b5",
+      "sha256": "53ebd48c3b2a22819b4b38c7cc7950f1a00f45a1c5d186df13edf999248b0f4f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/paste-event.ts",
+      "git_blob_sha1": "38a88f3171f081dd81658f93e40af9264f060ab0",
+      "sha256": "d44368ec27d3194b3d226e4cd29f4652257cbd76e258ad1bd80bb96203207d80",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/resize-event.ts",
+      "git_blob_sha1": "b2627bb290f7201bd085c07ae0b5108c19575fce",
+      "sha256": "108b12cde8b1086f8dec24d93eae4e79009a57794f787c6dd41ffa1b2911e851",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/terminal-event.ts",
+      "git_blob_sha1": "9a86bf8b296dac649b632ff172a470933d1f8493",
+      "sha256": "0967ddd20c92469ad0665e7442adec9108716989e2e4f95a57c0a686f67d90fd",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/events/terminal-focus-event.ts",
+      "git_blob_sha1": "6d0303fdb48c824d9ca7b104d0180ec7f9a5b0e8",
+      "sha256": "3deeaf163eca2739afa1dc03092af47afe26252f85b48e9d038c9ada65b065f9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/focus.ts",
+      "git_blob_sha1": "0317ed9d7ee61a6bf9d07a0890efb37c9ba9e4b3",
+      "sha256": "b0fbde49db2977a76e26a2a7550468376442b965058dc82cce84bb56f2572067",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/frame.ts",
+      "git_blob_sha1": "1c9f55c75f5f1f993b2aedc425adfd8392096ccc",
+      "sha256": "a119379926a7cc23e90cd44e0bdce442215601b6e58b18caf4e7c6ec877fb1cb",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/get-max-width.ts",
+      "git_blob_sha1": "e079463748afb8e44f053e3e8a1d80f1a8a88089",
+      "sha256": "790f9f58831e06257a37043b2b8708d93ca8ad50842ffa347edbb2ec0db74deb",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/global.d.ts",
+      "git_blob_sha1": "336ce12bb9106afdf843063ee67c0c1970f70d37",
+      "sha256": "7992a39d6cde5e050eb78461a8bf9ad986175a94826e835c110b3967290bd249",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hit-test.test.ts",
+      "git_blob_sha1": "1bbf13f96cc12cb877d26741f9411be3a7bfe023",
+      "sha256": "718e13e6dae9279e8d930ebe4cff50caa9d90e57f45e30ea2940afc55eb75b75",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hit-test.ts",
+      "git_blob_sha1": "412a1659614533b9c1f9f6052cec7c2f4a4ab404",
+      "sha256": "115da590607e762f1ca9b1b8c82b7ecd5fdc2955d94073d260d1b7f451e0738b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hooks/use-animation-frame.ts",
+      "git_blob_sha1": "0eef9e1abafd2e688ea81ec8ef290305bb1470d6",
+      "sha256": "eb03c44bcb7bc98a536b9214173b01ffc795cfdc674711fa7d31e1c131452031",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hooks/use-app.ts",
+      "git_blob_sha1": "9c06032448d46c072804a65deca8560f436e3b6a",
+      "sha256": "5e82887d1cfb888fde32836c68c4b16e40cb341c2a0d0cd3f9ec6631ab8e40d9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hooks/use-cursor-advance.ts",
+      "git_blob_sha1": "15831ed86ab729f9679909422dcb6d534fc89aa0",
+      "sha256": "aa9b0368e1f3b07b32f73b5368ed3af250eead4368890641bd9ff201efab602d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hooks/use-declared-cursor.ts",
+      "git_blob_sha1": "288a92eda3acbf7282242ee46457fd83fe4eab04",
+      "sha256": "41f180dcabfd4c6a3540eedecea799061438d20bc3edb780d384e8fb410eb021",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hooks/use-external-process.ts",
+      "git_blob_sha1": "c895edeb218144a477c46280f65070e6a1423c2e",
+      "sha256": "c440337ed31eb937b40cbe1a18c360c2f0272661808b84701b2b5bf207bbbbb5",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hooks/use-input.ts",
+      "git_blob_sha1": "edda48a4a75b9f36ccd1eeeaa9e1fe0519bf7ded",
+      "sha256": "9a3c612bbea2f01f2d97d43521b6ecc49305143d2c8728da3eec955ff2f306e0",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hooks/use-interval.ts",
+      "git_blob_sha1": "af568457bfea88bbef4a4dc4d8a5e7a7513fffb5",
+      "sha256": "17522c16ba12cb3dfd382c81119ef4875b373acddbd923b12f4bd96881b972ee",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hooks/use-search-highlight.ts",
+      "git_blob_sha1": "f43379a5e6c582ea554e2752306c3c7d947714d9",
+      "sha256": "81861ee00f021a968c43bb1033d1018b0a405ec1d671b52b8f3854d30d3334e0",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hooks/use-selection.ts",
+      "git_blob_sha1": "ffd833d343ac3828dcef387b8d22d2046df01989",
+      "sha256": "f2bbcfb78483d9843f6bde278cf2d8d85318c995abac13f6ae280ece921b2494",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hooks/use-stdin.ts",
+      "git_blob_sha1": "58cf746f5774c40c7f2feb4cecafa35ccbe2e5ab",
+      "sha256": "98acbeafce508d607192668f4eb46c2228753c371f30315d05557328c1a68ca2",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hooks/use-tab-status.ts",
+      "git_blob_sha1": "a3cdf17bc2ea25d2715b9f15ddd331dc765e6d65",
+      "sha256": "8bdbd38285b59741d50ace0f188d983e79434fa721e423887e13357b14ee3d2f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hooks/use-terminal-focus.ts",
+      "git_blob_sha1": "230d87a39f4d115aca1f3197a709f6aa45d9cbbf",
+      "sha256": "0e625ac4d63212ad6c9ae25ea96fb723b1644b976c8686aa9d3b1a05addf531b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hooks/use-terminal-title.ts",
+      "git_blob_sha1": "b3ec7a0fa54d28db61614522452645e25bd79cb4",
+      "sha256": "230a85b8e7a85182c8ab10af435ce07d40380127d484d284cbff31bffdedcec9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hooks/use-terminal-viewport.ts",
+      "git_blob_sha1": "ada3059d91ce9f3b38d1fef788fd9d21117190b3",
+      "sha256": "38b957105b35769d72cdfd0cca3136123be593c0cd89496c70f6c2456d2ee9f9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/hyperlinkHover.ts",
+      "git_blob_sha1": "92a43eb06ad8ad1566f5f1aae456ab215cb193b6",
+      "sha256": "ff4d9133e41fcb051f097848d565407f0975f6b44787f48716d5679ca05d5369",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/ink-backpressure.test.ts",
+      "git_blob_sha1": "0c76c08babfed99eb2ac4211772acd9a10ff8fe5",
+      "sha256": "083dfa4d8ac6234bbeb7d7da108478463bbe40a93f836530a7cbdfb45fa8c5f9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/ink-cursor-advance.test.ts",
+      "git_blob_sha1": "c8b69542a90efd391395583691c74692f2dff2ba",
+      "sha256": "d62387b2c554ee453fd9cdc15ea5b7c46cce6d0977979f5ffdd35f7a07696f2f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/ink-focus-redraw.test.ts",
+      "git_blob_sha1": "5abec4faaa5adc24bb30b764e570f724fcab4906",
+      "sha256": "b33560fdb58767aac24a29459b757fd14c04e15a399878a94a480985606bf8ce",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/ink-resize.test.ts",
+      "git_blob_sha1": "eda82542aac32df57c673ce1aac87ae2e8850cf5",
+      "sha256": "38cfd4669f1d6cef923f9a490e241468c7debc4046d99e51670aeb983ca0d80e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/ink.tsx",
+      "git_blob_sha1": "a574c0807923f51a0cf3310dd8638511f3fd1c80",
+      "sha256": "e32ec10cce0c216f87de0e6e94326749963485020d977623143a1acb8bab475a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/instances.ts",
+      "git_blob_sha1": "389384a8d47ce1c15b22bf3e9afa534c61fe8a1c",
+      "sha256": "80190c188a342cf0314dd7fc1695d72bf8f65057ba125751ae3d8ad6a7614c7c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/layout/engine.ts",
+      "git_blob_sha1": "38f6dcb0fb5614d423f9a59cedb31d696ddeeef6",
+      "sha256": "7f7b8d1d5d2fbf827e72c59dca6d42924d585ffbbe8a85903a2d64cf3caeb92a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/layout/geometry.ts",
+      "git_blob_sha1": "871db1bc27f7c9880795a97296b7ac3dd6831dd7",
+      "sha256": "ba1ec84e21a768e525233774a391f44177146b6d099417a4dc4a106d2f2852e9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/layout/node.ts",
+      "git_blob_sha1": "fa84a4f810b4e136444f8138cd5d3a2b7d56ba12",
+      "sha256": "a079b436549121bf20ed826d164f785993ee02b2fe008a413f290f4243c88927",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/layout/yoga.ts",
+      "git_blob_sha1": "e18c7f848c5d2f6ac864babc2a608bea2c1e1a2e",
+      "sha256": "2ca9187ad81196388a2f5e418be282afea29aae5a4bfa7bd70e0e7b655a8ecd1",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/line-width-cache.ts",
+      "git_blob_sha1": "71b02b62268fd2081112bff15ff21479eaa37171",
+      "sha256": "9acf76f6d0bcc6b454fbfa21b18e01a32d2a52d12570bd7a3e11c01693719c9e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/log-update.test.ts",
+      "git_blob_sha1": "5aefad5979db0ad8eb5d2c9ffc7be4c0c6e487e4",
+      "sha256": "b4d8cee8398fef6902a93ce78d35981e0f309e08aec74d4748852a34d406362f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/log-update.ts",
+      "git_blob_sha1": "e4789da676d9d4a704ace30c7dbc0145c49d8330",
+      "sha256": "9a6bc4783501aee3a5daa363dee12f1bf307760675b375a1c59060f561c8ee03",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/lru.ts",
+      "git_blob_sha1": "cd119b5f00340f2e75a0d03de7e6b69221457752",
+      "sha256": "a552501139c2bdf657710228257f50a3f4388f7ebf355dad8800b3b25b7c8fe1",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/measure-element.ts",
+      "git_blob_sha1": "64124d6ec21ffadb861813e2027d9b802f86f070",
+      "sha256": "d12f0963bca668a693516ada544a306bea617c319df0b53155397301c3110305",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/measure-text.ts",
+      "git_blob_sha1": "1d81cdedea8a8f33dade79bf2d4e56f40444d860",
+      "sha256": "b2520c46f3c404ab816cd5b5d2db1ac444797c37c52524af587b7871bb5e388e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/node-cache.ts",
+      "git_blob_sha1": "fe11e067ec1348d05883953aac180ff93c466a58",
+      "sha256": "d12a9ea4f4e7c7ef732296855eb5e92b5ffa0f63ca7b541c3000c39ba8d85147",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/optimizer.ts",
+      "git_blob_sha1": "a4fd3812c768d4cb5768b0b1e02fc9bb89a18267",
+      "sha256": "1c170d015faa3ed9ca527de4c59ca72cc2134e3f9f6e74fb413aaf3673418f88",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/osc-response-chain.test.ts",
+      "git_blob_sha1": "ab4dddfea3928c328b967de299baf09cf5575b7c",
+      "sha256": "16ad2e5c594c658b6be7186d216bdfa5a634230cfb26412a6f29f02c049a7214",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/output.ts",
+      "git_blob_sha1": "58b0866b29a4b8e417a1cc49b20823783373e672",
+      "sha256": "346f1c589da8bd60d464fb6799d632271e14f9ea9e31abbb8123b01282624de2",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/parse-keypress-drop-probe.test.ts",
+      "git_blob_sha1": "3fd03507b150e315908ea9c658ff15d4e5500431",
+      "sha256": "fbd75ea868ef1dcb8b8374b8cc8b96c49fbf0e43b70be0c0f7a41282c0261d52",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/parse-keypress-noregress.test.ts",
+      "git_blob_sha1": "9b7e6b70e20ca269af11451c74cd66798ed67db9",
+      "sha256": "a011355f9fdc5bd975675af947e08cddcfb90707e545249b59abb849795bf52c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/parse-keypress.test.ts",
+      "git_blob_sha1": "aab69e53851adf70f7c65cdee8003ce45524f54a",
+      "sha256": "c80ed9434ec9f4517a2f14c90eaa747fb5bd667a000465e84fa53a3cad690a66",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/parse-keypress.ts",
+      "git_blob_sha1": "63165643d81c667e4cf1a361ddeaa771f3cf25d3",
+      "sha256": "d536f89f15016519ed5514b139ccab01bfcac9b0718883e2ebc805963ad54ee3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/reconciler.ts",
+      "git_blob_sha1": "5fdce3bf9cd271f1d8025b6c083bfcf3c3bf6baf",
+      "sha256": "98232d5a02519ebbc344976bbbbbc6e218b70082534fb110e6384a7e0610623d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/render-border.test.ts",
+      "git_blob_sha1": "a6373907d3794d1c0d445d834604e620fa3feef3",
+      "sha256": "d90007a1e1eddb0349647982275b93362dc16cdd2bbdf60d0c1a382accadad1b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/render-border.ts",
+      "git_blob_sha1": "526729422ddafaaffd4c974bad71c100f6676e73",
+      "sha256": "06896420c638ac7147759857977588bc792dd941296af373344fce36ae1b8fc8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/render-node-to-output.ts",
+      "git_blob_sha1": "9153afb36f366422a87dd7040db4cb00a249b709",
+      "sha256": "137845e346d3936ebe549cc5dd9fd699c7e501a39e87ba87b612f9a6cdff13d8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/render-to-screen.ts",
+      "git_blob_sha1": "57272bd36af3b4a82c3996a4bf3c894fad15ff67",
+      "sha256": "64f3267cafcc0a93caad4a5d25bbc3be9c41fe9385d6fd782fc9a0c10ecea309",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/renderer.ts",
+      "git_blob_sha1": "38e52763549e3dd050433b835bcac40f7d88de66",
+      "sha256": "2ad1a294060a5a051bf2ca222e179c0b6f15de262ea441b20f76898f6f21f028",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/root.ts",
+      "git_blob_sha1": "41d02d52a0d14b48789829a7628d077c6cfea555",
+      "sha256": "26e2d007801e92b66ce8576449b73dd8161de3063986ba5122566b62fd7d7476",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/screen.ts",
+      "git_blob_sha1": "e101fdc0292db78bd98a6ce1ad03740c9dee65b5",
+      "sha256": "319429f2d3416ae5c8c6f15d4ae4d5aabc84a204f86baa1c2e3e517ee1bdbe13",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/searchHighlight.ts",
+      "git_blob_sha1": "278c3fd63c7cb0ff868a67ecc93926898c8ed807",
+      "sha256": "e5ae2482c233aa06175c273a1151c7170a25acf3dfc105eef918bdcd24b7bedd",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/selection.test.ts",
+      "git_blob_sha1": "83d77bf35dba54bd7d9725cb229f34a89e6a0282",
+      "sha256": "ccf2660b45e1ada96f1f7b3ee438a6474844aedd1f2d4ae788f33274471bc4bb",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/selection.ts",
+      "git_blob_sha1": "fae69a055e258f5b6911f61277fed9791e449270",
+      "sha256": "0204c07af360b3b9befd580d99fe98835f795cd4ae6c7de93b66a3affc92c532",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/squash-text-nodes.ts",
+      "git_blob_sha1": "edb26b3b694a1444c8088331345163d80b15d281",
+      "sha256": "b9007c03fdfcf6ab4a5421d29e44a1ae4d04505affa0bcd27a3a9924f86b7561",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/stringWidth.ts",
+      "git_blob_sha1": "69acbac1b88390fbd3c922707f15897933dbc222",
+      "sha256": "4c6b7a9e5eef29dbdcee1cc770eab7e292ecf3eefa9e58136c4fc75f83eaefca",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/styles.ts",
+      "git_blob_sha1": "0fa6cc66e6e98c830541c5038be9ac70a8504fc9",
+      "sha256": "a3b243f7e23440f6a7b8468e11cf163609673405c2630fea1fd967aed6a0f86a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/supports-hyperlinks.ts",
+      "git_blob_sha1": "16aed4a6c0bbeaa5ad71be6b7af175dba5a8967b",
+      "sha256": "274ccd19e10f4214054cb83be358dd195fa04710e1009b74265cd291f8dce472",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/tabstops.ts",
+      "git_blob_sha1": "9b6007b101d252da0a4c23e5477fd3a992f1a9e3",
+      "sha256": "cfc3e2609131439bd9aee3905a4fb9805123660b55b40ffe2f62da952c231026",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/terminal-background.test.ts",
+      "git_blob_sha1": "54c6286feeba01ce91012df2f8debcbc414670ab",
+      "sha256": "c8e812f2e259e4c66e2418b38444794e0423ee70fd00751583d182dd3e1c1d32",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/terminal-focus-state.ts",
+      "git_blob_sha1": "ed6c60ab4ddb523b2ccc2bebefdcf556ce14412d",
+      "sha256": "651a23de2b0837aa9fb7d446cfd759669db06f406d7e92f58e7d63a206484bb7",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/terminal-querier.ts",
+      "git_blob_sha1": "80b1b80ef69eaccd845caf8ab6093b5578da92cd",
+      "sha256": "9b09dcce07386c9a33444314636baeff2873ae51b14d72857767fd0538fbd657",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/terminal.test.ts",
+      "git_blob_sha1": "e69de8c0e1f76cee23ab7c373c8c0bb4f498a491",
+      "sha256": "a35c1866b9d2d80629723173bc1df59773a267d99b1b70fb4c979160894ff06e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/terminal.ts",
+      "git_blob_sha1": "81df8be640b57226d1a393ac395273d7ab38995f",
+      "sha256": "4ddee5f494a10b036f8c5b3c0b38ff9c75943a8f0939e6aec37124f77c667c57",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/termio.ts",
+      "git_blob_sha1": "e14db928cbf3494db5e56906bd734ebbb247fbcd",
+      "sha256": "fb8ce9d3b6023caeafb3bb1093f90252b961b23bfae1d5732ad02e58ff70bb68",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/termio/ansi.ts",
+      "git_blob_sha1": "138cfef29cd08fc654d259119d7127b9f4183b63",
+      "sha256": "d54a65ba74755fab1d08e5728616ffd4006126878d4bf7f99faa6a3e0c1a2fe8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/termio/csi.ts",
+      "git_blob_sha1": "5d4fbe7ef7aa55a6f19c460b88703eb8e81c5bba",
+      "sha256": "426a08b0272cc79006ff790da4e9ecb4c6520c92a1a2f3d4ff2cb0ab2000e766",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/termio/dec.ts",
+      "git_blob_sha1": "f5b89995d057bd12d2b50409f5833f07b4eaff0a",
+      "sha256": "ae3ffae99737c29dee624fb94ab298cfe3f8a9a5a2eed46794c37c6a8d7043f8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/termio/esc.ts",
+      "git_blob_sha1": "4e38d7d03555073c229afb955b1a1b2a62bd180f",
+      "sha256": "6bd688ab5f7c4675c0ca6779ea53228300cb8a509db5dff5fc52defcb2146e99",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/termio/host.ts",
+      "git_blob_sha1": "7b5e5234b4e5a468352d2d35fa2903e27b26862a",
+      "sha256": "eff98e4b4424db93d3d88a80e5c1de15457c3c4568cadc45d98f960e7a16a11c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/termio/osc.test.ts",
+      "git_blob_sha1": "ee3d7139faee744faa6602d022927e63bf8ce98e",
+      "sha256": "5cc1b8b38f18cd7e07a7b3f1528272a4aad8ded0e611ff060961ba6c9f1ff69e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/termio/osc.ts",
+      "git_blob_sha1": "59f881b17d2a319b17ea83464d4a6a5498b0780b",
+      "sha256": "42bc42d08dd38aa52c3d02e85cd0dc7ef0ffe177b17413f2da3308870a2c15f8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/termio/parser.test.ts",
+      "git_blob_sha1": "e5011896341740ba1673c1bf845492e3826976d9",
+      "sha256": "dfdf99fe3d5e50b24c40329123ec7c14e9f53b4ad8d342286b283c177fdb1e20",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/termio/parser.ts",
+      "git_blob_sha1": "5787d28e0b8727c38328ccd9c4facae382226cfb",
+      "sha256": "6ae495e8b1a0855c7ea8f087ca1aca43982629ed8899c5bd3ab14ace3f7eb0d6",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/termio/sgr.ts",
+      "git_blob_sha1": "67a1f6b385b549f0565a30e32a8822da1dd93821",
+      "sha256": "05225d317952955cfd1d15c8f69a4922762c729167823fb40ca9d469d4dde75e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/termio/tokenize.test.ts",
+      "git_blob_sha1": "c828123730d7ae1a158c426912afb9d544e001f0",
+      "sha256": "b65f6701ac2750b9a1b80f6ffb5f31d6cd43a4a85e2cdc607840a242c1d123b3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/termio/tokenize.ts",
+      "git_blob_sha1": "f7a09ac06b015a18e33af475b9d3a44a0ca9b78f",
+      "sha256": "1bb5acc36f60ae8c37db4c460bc13a32774e3535d4018f1b88b2b746abefe0f0",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/termio/types.ts",
+      "git_blob_sha1": "b57cf99899bb54fef716878984ae6cb74409893a",
+      "sha256": "ce586d6e080674457dddd5c1892bde9da807f9382a800d66b9949640db609142",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/useTerminalNotification.ts",
+      "git_blob_sha1": "1fcde2bdb0e3b4d2c71f6c34734c27fcc1bcf884",
+      "sha256": "230bf31cfa58a8e8dcbfeb0cccc20b1b243333c2f5361ba588f0a8bf33739ae3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/warn.ts",
+      "git_blob_sha1": "016b4ecd2b47eb360eedb84bb6473add3ed65018",
+      "sha256": "b212a3b2df2945c59862ebc133b9cb10d4ba78690bfc5c4ffebca76fd8ef1db3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/widest-line.ts",
+      "git_blob_sha1": "ac78cb6d5ac77360dbf05d6d73d2bab8c5be638b",
+      "sha256": "6a4980d1a357b143a2a57af9d5546ef4a90c7c211ad7f7bd14a5272553b9caa9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/wrap-text.test.ts",
+      "git_blob_sha1": "8ccc31d9c9615636444620ee0f71f4f8c09f23ce",
+      "sha256": "3a2fd38261d5ddcb7b4c91f57181d17f66db0570b985e06cd46e5a5ce807dd83",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/wrap-text.ts",
+      "git_blob_sha1": "72574fa90c004872518f38ccd227bfad9559a0c2",
+      "sha256": "27da2fb6183ae5c85a0fae08ece8b89a3223e734084bfb3cc4f49e1c55461385",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/ink/wrapAnsi.ts",
+      "git_blob_sha1": "61b56dbf3f130bdec17bd066b9572445d4cb7a43",
+      "sha256": "8178cca083b6f2401b1c801394740497d24b3aa2e07436f0522e33cd09f667e9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/native-ts/yoga-layout/enums.ts",
+      "git_blob_sha1": "95d66bf3481e20716fcc96d8b99dd8b1e0698b89",
+      "sha256": "6a1c4b7e0c6ff254894e0e18fbcd50482c0af5af5212c46021c7e86e36a186c6",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/native-ts/yoga-layout/index.ts",
+      "git_blob_sha1": "4b99ee2ec2db95d67f69fcabe0ab14632524b7a7",
+      "sha256": "7c379f086888e20161903264304613bd62145bce96cad59748b93783e4fc68c7",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/native-ts/yoga-layout/round-layout.test.ts",
+      "git_blob_sha1": "6f2b403b1a8bd2702fd403dffaffa5f77de900bd",
+      "sha256": "e4e4f545c643330eb1303d208c0733b9b9751d8d0bb24e7fd92194da944f5732",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/utils/debug.ts",
+      "git_blob_sha1": "285a07ac1b72b04278f68387000211a01ad1e6a0",
+      "sha256": "0b74ed561f495cf3bf5e2e53a2a1b2faac66858e38c759102f12bf2aaf99a460",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/utils/earlyInput.ts",
+      "git_blob_sha1": "bdc8418415c69581f86537cdfbaf1acd278afe1a",
+      "sha256": "18c4e192b913e015b1d8f7ea652465965fdda3bec5a7fd3ab184fec946a99b14",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/utils/env.ts",
+      "git_blob_sha1": "f66ad2cf8b0324813c948f8e969e5175993c8a28",
+      "sha256": "bf0d0209779ddd9a36cf1e4724b4938306a0dc3ead46695583f4482e8d4b3165",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/utils/envUtils.ts",
+      "git_blob_sha1": "f3286197b53957a6207a013f25a701fe66c128d9",
+      "sha256": "aa8365964e051d2a7495fa789a60f76ff0f1a50c7f98e6031e53a39656b03c8a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/utils/execFileNoThrow.test.ts",
+      "git_blob_sha1": "0f56662d19e584442229368724f67ffd958fa5da",
+      "sha256": "5fb55b7b4d981e91cc8185d7600ff8821342f4adf5d09fb1492e246c5b1c72c6",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/utils/execFileNoThrow.ts",
+      "git_blob_sha1": "ebb53da4112fb6602ca4f553f1b0228c6f0fac53",
+      "sha256": "f2d703f0f59ffec6c13724d8ff49fe4571177bdefc971eb54fabaa1c6485fa66",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/utils/fullscreen.ts",
+      "git_blob_sha1": "523a43102b5a4e58d18b16a9635283929e36559a",
+      "sha256": "4c5ee3e4c2c52fdcd31bff83db17c2e061b5c5333d02f567e10ab773a6b6af9d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/utils/intl.ts",
+      "git_blob_sha1": "6f9dfaf92df48b401ae9c0110df768a7fb201105",
+      "sha256": "ccad7501487b01d88e1ed37d50333fa01bc310d0e86c5c56402a009dfd882777",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/utils/log.ts",
+      "git_blob_sha1": "369763eee0a714b6ee0ae0047184b70de045ad31",
+      "sha256": "2ea5a5d9a50788c75c09c5864f63e9a036275a881f6d1335c82e62eb7f1b17c4",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/utils/semver.ts",
+      "git_blob_sha1": "87025ed0fd4d43f033672365fe7be48a0d4d9c63",
+      "sha256": "a1d6a07e656cf7e956e3fca3a21d041f04202288048eacba6c7227c199220dad",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/src/utils/sliceAnsi.ts",
+      "git_blob_sha1": "50a9237dfb7aaee935b6b61eec9bef1c3dae0e70",
+      "sha256": "39ed992302f8e4e1fdcaf97534fe3d37105893dac63706178f98ec843954ec2d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/text-input.d.ts",
+      "git_blob_sha1": "f9f5df1c8d80e80733b804b64a4efa2e0e644d07",
+      "sha256": "d8e52c36844a298989c810e2ccfdf4d2be5956017332228161be1a97107724c6",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/text-input.js",
+      "git_blob_sha1": "8cb79c0ccb5df6abf3cc9f2e9e5e9e205a428563",
+      "sha256": "a7ef3c4168bf5f64d83a4a3c5ece1c317e117390d79f8c3143145f97e0a15611",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/packages/hermes-ink/tsconfig.json",
+      "git_blob_sha1": "21601918fe6f6d75e87930508d9d2021f8cde204",
+      "sha256": "769372b42a668ba263c643b7994b6b036043d14260e1805952caaf2838d9d5f7",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/scripts/bench-history-scroll.tsx",
+      "git_blob_sha1": "7f7a73234fb0532ac62464f98a423c6f706f729f",
+      "sha256": "1c353d0d902ecd4a468004d44179ead5ff05b74ae2955fcd056e0b301e76377f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/scripts/bench-native-history.tsx",
+      "git_blob_sha1": "63346458d2ddb82353ba33c68d5af9e47a4e0287",
+      "sha256": "b5d4e39f1dd0604ea6c285427c7274c0aeb2791eec32d7de80a4ad327b20f883",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/scripts/bench-streaming-md.tsx",
+      "git_blob_sha1": "3655969db92b8ba8fca5192c3c1a30c79ac9a26a",
+      "sha256": "f586ee94472687f6737a800d99548fed47417fdb5220a7bb0d4e30d8bb70b223",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/scripts/billing-fixtures.tsx",
+      "git_blob_sha1": "53bcbeb9a8dcf196a55ab55cc2db80cb1eb3a072",
+      "sha256": "b50608bf5fe3c4a0dc81decce98100534b0291057d50d24bb09c126dc7291ae6",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/scripts/i18n-export-en.ts",
+      "git_blob_sha1": "5d912ebf4e4fa445968c2ae3786aaa9df5aa8193",
+      "sha256": "cb68e892f77437d7cd9751b05ca068969c94fdaf30cb34ec2281a2f9a8a96a12",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/scripts/i18n-keys.ts",
+      "git_blob_sha1": "7fc4d7850b52af6963c69d7093f2ef9001ce1fb5",
+      "sha256": "501fbace5d5faccd956d28d138c2b671cf2ffd696caf37a07f80a336c2baf4ed",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/scripts/profile-tui.mjs",
+      "git_blob_sha1": "ffdfedd03484474a342aaca62703efce3ec060a9",
+      "sha256": "5a74883ba7cf00dfdee1c58c4884644135f1c8f914e64874dd8b5cbb08ac9118",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/scripts/visual/paths.mjs",
+      "git_blob_sha1": "fe971b5646b9eb0b035671b0f59da356bd2b8834",
+      "sha256": "8178d1463b8aff90884cc866213d619a4d5b1b8736aaff8b9386823343c9a1e3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/scripts/visual/render.tsx",
+      "git_blob_sha1": "8ebf1af45af9b212ec1ccf8171466deff01ccc4f",
+      "sha256": "9174aff6f5254316d799d245ff2d81b9bb90dede06b7b7af94f81629d28eef92",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/scripts/visual/run.mjs",
+      "git_blob_sha1": "939437a501279ad4d9716323eed5e508ed4d31b4",
+      "sha256": "e51b64bee28f048845096f2885caac050aaf24b21c36690b7f11509827a32b37",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/scripts/visual/shot.mjs",
+      "git_blob_sha1": "8907894910dc59260581e271e427d066647706ab",
+      "sha256": "b672c66fb38e52386bc61fbd68eb47b5ad56bc94ea9d6548d4030186ae424188",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/activeSessionSwitcher.test.ts",
+      "git_blob_sha1": "557037aa6211764cd0bf61378b2625410cf63472",
+      "sha256": "971b324deb7b67c5585569c6e80991e73f4d8eee7b2a740a788052899825cbe4",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/agentControls.test.ts",
+      "git_blob_sha1": "a180b51ccf707fb9f00083463b984835226025e9",
+      "sha256": "6d4985ff686af9ded886072bb71f4bd24e678829789f0519c6d4fdba687e8cff",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/agentRoster.test.ts",
+      "git_blob_sha1": "ae9f4c43d75c12bd847cd1fea80b746d2abcba6d",
+      "sha256": "af7e2bbf80bf0988eedcf116d5f38f5dd99bd5010f2904d020486553569e2c01",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/agentsCompact.test.tsx",
+      "git_blob_sha1": "a5b7e7fb416789bff9f9ec91240e30044542529b",
+      "sha256": "21f614363386498ab2364030eb829ac9ed988a282cd0831a0cf198bb23405d8a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/agentsDock.test.tsx",
+      "git_blob_sha1": "66ab13a3c76d09e9e14de8f81acce2b39c14b0bc",
+      "sha256": "0ec9ef0110222835c5441f74f740abe3b53808c1cdeb0db04dbbdf93547201b2",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/agentsHydration.test.tsx",
+      "git_blob_sha1": "d3b48453b8f8cda1930a0b7a04b13e79263cdc1e",
+      "sha256": "3ad8744b93b5d09179dbfc6830fb604ea448673f689e87a337d0f66068778bf3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/appChromeBlockedTimers.test.tsx",
+      "git_blob_sha1": "eafc6d0cee14635ca12c4bb0f4f1c05de58c03bd",
+      "sha256": "1b7d887afa6693eb05cb3d4520a5ee7c143c71b3da7b6c8d1e984fe39b973015",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/appChromeStatusRule.test.tsx",
+      "git_blob_sha1": "31eaf8555f9cb69272084f620b22fa878cf85b7e",
+      "sha256": "43c9f6306df5db2bbd3d7abaf89739c3778650986578462f7b32026f59767ab7",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/approvalAction.test.ts",
+      "git_blob_sha1": "422ea56fb88c0b44eb14d76aa3e9782a3331228c",
+      "sha256": "020e440e34fd33abeb00a750500eed8fdcada0fceb069091159725926834d562",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/attachments.test.ts",
+      "git_blob_sha1": "50e5088bcc034dc8ccb0d029858f1a5688dc3bab",
+      "sha256": "61e0ff3330caa1c503647dc4ad1de536b97f5c269b4062010af35bfb0ff8acb8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/billingStepUp.test.tsx",
+      "git_blob_sha1": "f503d09b399047423b2426acc503560b071e904a",
+      "sha256": "208384255266a579c95895be30644db166453e6c68b93f15cc86783a6a427731",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/blockLayout.test.ts",
+      "git_blob_sha1": "1bd98f7ffb8903fa03e6626f5ca009ec2e14b672",
+      "sha256": "83f4d068cae69229232457bee3f4ee2e64c207672b8c3df24a218fe97c43b606",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/brandingMcpCount.test.ts",
+      "git_blob_sha1": "75ad383d55a936a297b95cb8cb3df3142a751715",
+      "sha256": "728de714f8c095d38e0300a11afe0c628838557150f126e670d54d4ff4d18a22",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/bundleNoAsyncEsmDeadlock.test.ts",
+      "git_blob_sha1": "5a0d7feda67b47755d202e120517bd10e2c63819",
+      "sha256": "abab1cb3ff3685c532ef9c4193a38c60a3adeb91600abbbf8c6bf8e51b8f5689",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/charts.test.ts",
+      "git_blob_sha1": "0f3880518ab43b5fb942c407c5581c24f22d50eb",
+      "sha256": "8e71e19fe6aa4a7f0d5d8e3ea8e2d0f5cf0fa4db45fc7d7e6aa756d214ff4aa9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/chatBitsCatalog.test.ts",
+      "git_blob_sha1": "7540de2e6640a599b8c875bec4e3d022092196c9",
+      "sha256": "58dfb3229a45068cb218e16ddd7ae6cd249ef66f2d109c6210349c6df84e4237",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/clipboard.test.ts",
+      "git_blob_sha1": "a06a73485445cf59cd0bee9969e4e60a2000f067",
+      "sha256": "268b5dbe735be0d3662e4acbf3f00293cfb03d96d6141d20e2fb767ecec694e8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/completionApply.test.ts",
+      "git_blob_sha1": "b8870a942783ebaef8e81845f1fac849f48656fa",
+      "sha256": "c0c850a38fe61a04b477db2bcaf8420a97bda7e566d73961c73c1b9f6e6fe44c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/composerHighlights.test.ts",
+      "git_blob_sha1": "0fcc9598ab82b936f73c54a91d62980a9032977e",
+      "sha256": "150ec25cb55babb65ee482b8cb3369d4e911f1474bbadd723e5d6c5fa042be09",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/contentTables.test.ts",
+      "git_blob_sha1": "6f2f4d1e76777aca70de5ff552258a09c1932bd9",
+      "sha256": "a9ef62e6398eb566eb68de463621024d2c48e9d6f304807e2e6d6060065341be",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/createGatewayEventHandler.test.ts",
+      "git_blob_sha1": "47475f6e57912c2b51c56458f25bb25001c2c6fe",
+      "sha256": "a92ed6dcdd217740cc3ed7701ef28bb0ccb690f2b08fb2499bab0880d6a8b94c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/createSlashHandler.test.ts",
+      "git_blob_sha1": "2de8caabc735dd24a518bd6ea89878c993fb3d47",
+      "sha256": "b9ba7ba6ec2cc12bf43240546c35c08b06fc508137ceec438ed442b2e8238f11",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/cursorDriftRegression.test.ts",
+      "git_blob_sha1": "4ab4e7936395a834d2b9c51944cd4007d7ae4a28",
+      "sha256": "a7442a2b24c3cb7b53335964c3dc15bf558ee41f0125f92734262a49137c7bd0",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/details.test.ts",
+      "git_blob_sha1": "f1bb0e2296d7e8d1a3fa4f3fabcb6ede84425d18",
+      "sha256": "e10ccc68e1fe7b3b4df302886a5a9f5465c1d983d0056ea23116ebf8c34a79e8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/emoji.test.ts",
+      "git_blob_sha1": "fdb2b742e060f43a3c8c849c85541aae7ee067f5",
+      "sha256": "365f93746f50ece0a9f863d0aff6d5c7a2cd2c0b4f9d4e3c316e3f4971391a7f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/externalLink.test.ts",
+      "git_blob_sha1": "5a3673f831427e2c67729bd89d65036124610331",
+      "sha256": "d849fcad4a17d1af53cf565415fa1e26d1ee0aa29dfb14a679d14a49b2c3efa6",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/forceTruecolor.test.ts",
+      "git_blob_sha1": "03d30fa69b7a67ac7fb8e386597b5077a86bf7bd",
+      "sha256": "73e3a1bbdd4094568897918df037511bd4baccdc8cadb9318496b87c35a6ccee",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/gatewayClient.test.ts",
+      "git_blob_sha1": "c462e2af90bc02b27d8bbf2cc6016495fce0c709",
+      "sha256": "505bb0115a98b375eea21a600050c7927518bde7a7be1137cbfcdb33d9bfd271",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/gatewayClientHeartbeatLiveness.test.ts",
+      "git_blob_sha1": "a91421c5bb1a1a867ce2c26ddc757f9d180607da",
+      "sha256": "2c9ce01bee896f02d2d258d062e085ba830c3b9385c4c451e938e3670e400b95",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/gatewayClientKillLatch.test.ts",
+      "git_blob_sha1": "10fb26a76fb8935ba3de5f514f55f775fc9d9eda",
+      "sha256": "30f7d10a6a5d842f615d4e1367b316a7b7ff66c10192a9711f711e97fdcf117f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/gatewayRecovery.test.ts",
+      "git_blob_sha1": "5ede200a9bbfbd80c70367cadff91b6c0a5a47aa",
+      "sha256": "11a8ecbed7a25eb0b5745d94d3478fb48e0eac09e345a009d5d53c54b7b7d3db",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/goalBar.test.tsx",
+      "git_blob_sha1": "259278e46630d24c224b2ca666d590ecc1212415",
+      "sha256": "98eee86d30d4c706ac014b43d58422967cf70c35b03353807bfd2cecba4cfd93",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/gracefulExit.test.ts",
+      "git_blob_sha1": "6c805dfce7cc2435a50b80427050dc24f3ac8cba",
+      "sha256": "c00a655c884c58e914d536570269cb8b6c23338328bb800422f645a4a388ac99",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/i18nRuntime.test.ts",
+      "git_blob_sha1": "a6c8b868959fb6b72f4813a868bfa32d8d522337",
+      "sha256": "34c7a2e0718e750398de74bd9698ccfb020536d053535dd0afad14dfd962195b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/imeVietnameseTelex.test.tsx",
+      "git_blob_sha1": "fffd243b0571d73a47214356e40606d96ac45095",
+      "sha256": "67e43916b482ac18a3a72fdf6b6847a6cb78a3bb21aa128a5f520786f088086e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/inlineSlashSkill.test.ts",
+      "git_blob_sha1": "7a5e78a9fba04c422d37645d8bf80db140a69149",
+      "sha256": "3f93fab5a6c8d2d34f9c7ac7f53fb5109725f293050da35dec098140a5b04471",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/inputSelectionClipboard.test.ts",
+      "git_blob_sha1": "5167971420bdf92b5a351f32e28216062e2f4aff",
+      "sha256": "504dd98824ea42f9bdefe610b8b19f4c30cf5fd7feb82e4d23761587d2a46536",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/journeyCommand.test.ts",
+      "git_blob_sha1": "e448f40a7399ddb02d4b1aeb578552bb8ed28c40",
+      "sha256": "2ab7eadec9e190c5f0ad2e7ec09fc89481462caae7913eca1fa8c6a7a30ed9fd",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/libTextI18n.test.ts",
+      "git_blob_sha1": "f1977fa415fe945d71faa62b964d6589bc2d8ec7",
+      "sha256": "cfed951111030cd41d82245fd43cb23bb3586ceda5d7274e1b94c54204f2ab52",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/loaders.test.ts",
+      "git_blob_sha1": "3e1d007a2d82fabb6f0bbe1cd9ea31c969acd99e",
+      "sha256": "81a48db6670cd70eedaa94c439b5bfba65c3a88fe590f0021b243ee09941a90f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/markdown.test.ts",
+      "git_blob_sha1": "1bc0e805396a8a8d1a57f0f6891d117e2ffeb411",
+      "sha256": "c3be124428a73fb393c7be0d71eefda9f39af32949df821225f64e7e365914ef",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/mathUnicode.test.ts",
+      "git_blob_sha1": "6f190a23113c2dc6fe9e66a3679892b978448ecc",
+      "sha256": "c7fb35586f8bc8824180eca548330e1f0b1278c819a0f13c3336c59cc3943bb5",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/memoryMonitor.test.ts",
+      "git_blob_sha1": "0983847593d5f86808fca6923217abac56bc4814",
+      "sha256": "0a3341bb26f3b8f79037c2229d48f023d8d4c1f974248ca4c4fcf682435f54a9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/mergeUsageStable.test.ts",
+      "git_blob_sha1": "378cadcab765b71dc46c245f411da7b56e703f09",
+      "sha256": "bc2c45d68514d5678ba86d6ed3a0b4317b480007953016b74b9fe19e631ba2d3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/messageLine.test.ts",
+      "git_blob_sha1": "9ca72e371cd9aaab815d1b43a8041ec8e2dd8a2e",
+      "sha256": "01495fe66b2523b95ecd7e6bbb0e557199611c4b6d45c82b4e57f43e43f4d5af",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/messages.test.ts",
+      "git_blob_sha1": "0e3c04b70deddf75e495b66f412aeac7cb703697",
+      "sha256": "cb8f50259567d0b0c3ea0d34b229ee4f54bdd6ede3f28a94f283713c3e3509bf",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/moaProgressActivity.test.ts",
+      "git_blob_sha1": "e311dba187050a88753be44085066917e6846116",
+      "sha256": "1262fadfe25094e55731e42dea7a65abe46dae0bd0ec0283c035e8a78f9cefa8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/modelPicker.test.ts",
+      "git_blob_sha1": "2565e9b711f01d2c11804629d99c88ddaef41515",
+      "sha256": "ff00c36d8c0ce0c700a7948594c74884cc26fd53eb8b30b50b1926cea68da5c0",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/modelPickerReasoning.test.ts",
+      "git_blob_sha1": "5ed71720fafa18a8a3a787eaa23a1ec9d0200d4e",
+      "sha256": "fecb25fa1e12ab374249f4c95123e3faff3c7d8ff12a7f6ae2216b84ad7f1c31",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/orchestratorPromptSession.test.ts",
+      "git_blob_sha1": "677a4b77edb5513374d1a10ea2756946698ae962",
+      "sha256": "88d19ef211a8380ac6f52ddb6c9023f0494fa644928f2085bc1bf8b6b4e8a244",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/osc52.test.ts",
+      "git_blob_sha1": "0109fc2d4c2ab5298b91abbd726960e3a173405b",
+      "sha256": "f2cc59474deaea67e7cece3bcd1c6ddb0302878a190fd3f7fbd4879801ced3bf",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/overlayPrimitives.test.ts",
+      "git_blob_sha1": "27cbd336a86d4487716523b0e01909bfddd030b8",
+      "sha256": "7f51a262cfe3d2326ec77d2d1ee54113fcdce858e2912d06569db099f86ae716",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/parentLog.test.ts",
+      "git_blob_sha1": "d4f9d342a0350a49b6da1808bd3b0bb52d0153b0",
+      "sha256": "bfa891e9ee2d12658f810b851d622bc45e1224bb32dff75134ea8918175a3de5",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/paths.test.ts",
+      "git_blob_sha1": "0ee8ad4c7d95ae5d3a3e05c7a8a31e2bdfd48bb7",
+      "sha256": "d22dc1ebf449470349dce1ba476f67d3086e34e51d55c3d10723800aff6d7542",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/petPane.test.tsx",
+      "git_blob_sha1": "bfcbea2bcb76cf66baf8e01c0937eb2e8e87042a",
+      "sha256": "c08b510707fb278f9bec83445bc33920f3b974d528c32d352170ef0f4b78da46",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/petPolling.test.ts",
+      "git_blob_sha1": "2cdfe096b88ff9489ab7e7c7885a700c9d96a82f",
+      "sha256": "b7fd0c752ecca90f65bbd6fa3424e053a9f538e03b5ae56373976cbfa13875d6",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/platform.test.ts",
+      "git_blob_sha1": "4c292d1766e1d6d57cb7a9ca9a5ab49142e07db8",
+      "sha256": "7c22970ebfb48ab32d2c3ad60d1513506564ac4e755668119c0dec440d8bbb01",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/precisionWheel.test.ts",
+      "git_blob_sha1": "13567521799c09359a96da7f34894e94402286f2",
+      "sha256": "94e8908dfc6aecf437e09a0900ffe94756d0580bca3d07bb8cebaf70aca38c66",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/processDock.test.tsx",
+      "git_blob_sha1": "bf75b4b28d0345f9f5c063f9ac8a274cf76ec27f",
+      "sha256": "d4c7efce8928cf234f48ac0c9c32606d9d7015b95a1487b452e1a49becebcce1",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/prompt.test.ts",
+      "git_blob_sha1": "7b923c79a400b787d41333354c91c0fb7b42ca2f",
+      "sha256": "f0bd10937931242cd34c84e613fb312d08a3823cb9c4b09b19894bb79bb39f6e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/providers.test.ts",
+      "git_blob_sha1": "7566212186b2e5a13d8eb87399a247051113f7fd",
+      "sha256": "daea2efb399081a40066310512455eec66e160a13d01a5ab2d505575caa62214",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/queueScopeRenderer.test.tsx",
+      "git_blob_sha1": "895114a8f81e2bfa18523b30ce96b2485b130585",
+      "sha256": "396189ec22535502fa418978b4f133dea1954edca9bf7521d06cce44ba953648",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/queueSubmission.test.ts",
+      "git_blob_sha1": "62f43366b37b5293aae0e34f9f030dda3006d4a7",
+      "sha256": "5588591659822c8fd697b133fd4f2558611985c61157fa254e3dbb98508c583c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/reasoning.test.ts",
+      "git_blob_sha1": "5d661e0059d1ab9f585ebbee35bbf0c755b91d78",
+      "sha256": "50ac7670535720e5a6ced8a9b864030c49f89414ed82a8419cc48b083fccd388",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/rpc.test.ts",
+      "git_blob_sha1": "7980093a9eea7d610f1c532c9239e837705d3c41",
+      "sha256": "678392918a6778d1713d6df87af26bdfb2600c9fe5ca904da75fb429b4b59e4a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/scroll.test.ts",
+      "git_blob_sha1": "89f2356b92d79f07ded3f363c11583b03a6bce8f",
+      "sha256": "86de78c820c22c842e90fc42dfa794d93086c1e1da6242b5c2cfe4b8187de10a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/scrollBoxRendererBounds.test.ts",
+      "git_blob_sha1": "5a413400cbac8cc8177b32372e6fc454cf9843e8",
+      "sha256": "d1fc092dc103e0a04a0fa0ea083cbd59d2123101802297710e3060ec537e0a7d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/slashParity.test.ts",
+      "git_blob_sha1": "1281d6bb035a5bf140f3d3435e4165c69f0e4706",
+      "sha256": "dd533052c33a2767f5d8b769912953c3c0bc3027b72db0225f8076c54257164d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/spawnHistoryStore.test.ts",
+      "git_blob_sha1": "544280e5c4242bf8f9a444cc72f460821b3d6e2c",
+      "sha256": "b707102c479c9e7959791325189ed68197b0ac8c0e9ceae97193b0e04d3d38b5",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/startupLatency.test.ts",
+      "git_blob_sha1": "a63e0993a3986381b3b06f6c45706371c46bd91b",
+      "sha256": "167504cf021bafc1b4e08d76d98ad511041ef2dc122d8fca6c327dc5dd7bb9d1",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/startupLatencyDashboard.test.ts",
+      "git_blob_sha1": "26b704dcd6289df257f19988156f5f3340de7939",
+      "sha256": "a83b9e2134080278cb669a7352e9eef239d773f413096a68d3eb3331b3ebd4ec",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/stateIsolation.test.ts",
+      "git_blob_sha1": "0a6b898f4a3a4377caccbe11c56593b3a8903ec9",
+      "sha256": "536d6db275338f9d7ca8a4b47a563254427011f7bce527a1328df34371dfc3af",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/statusBarTicker.test.ts",
+      "git_blob_sha1": "4f3369bfa337bb3677e5536d68c659a802c554ab",
+      "sha256": "5112441330209e926431e3c7b64c4fae4e51a58acf0a0bdf6b3d5221b068ca7e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/statusRule.test.ts",
+      "git_blob_sha1": "3fad1f02503bd7d8fcf7e3ea9b33d80c7f790d59",
+      "sha256": "b737a9f6a8c8aef2b1ba3db79e12a321dd7d2aaf8b8b381d0a10a3f635864a1e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/steerCommand.test.ts",
+      "git_blob_sha1": "45a1ef889d17476ebe5fbd05f9642814cbf88e2a",
+      "sha256": "a7283936b62e30710dc776a73e564f87859cc0556156723066520bad42406146",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/streamingMarkdown.test.ts",
+      "git_blob_sha1": "f05523fd203e56a23d562f85fad96330872f608b",
+      "sha256": "1bad2b03922f95e46141181115cc228179624da354532c54f52303dec0b68af3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/streamingTimestamps.test.tsx",
+      "git_blob_sha1": "aec7ab53bd256194b971e57aa3faeaafa20f24a8",
+      "sha256": "bfae0febf54cb406c04f3c73172768223f7e655828fa69d37f5982b04f7cd9ba",
+      "source": "connector exact-ref"
+    },
+    {
+      "path": "ui-tui/src/__tests__/subagentTree.test.ts",
+      "git_blob_sha1": "0380f9d1f38c31e0c1781c762397fd5a08d67080",
+      "sha256": "dbda7268a4f4adbe7f12a2f0f05fdb3b573812c86946f9e45b475a5a14f4eff9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/submissionCore.test.ts",
+      "git_blob_sha1": "19e33e3bb9cac74773b0014cf3d90f84921514f6",
+      "sha256": "bf7e69edd2c36076f54f174a1b2304b0fe0d154d5e379167e6657e77e03f6860",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/subscriptionCommand.test.ts",
+      "git_blob_sha1": "bc54517d6599cc1fa6900888744ae82361f7c93e",
+      "sha256": "185f6ffb563539868c8f1d0258ec0cd22570e3e8de54c53259c777287c67f229",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/subscriptionOverlay.test.tsx",
+      "git_blob_sha1": "18b5a535234ebd8cbe4ff131da7191cd1179ddca",
+      "sha256": "dc59de89a09e970652234d11e599da43acbd95fdbf6c3c59a65183eb5375323e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/syntax.test.ts",
+      "git_blob_sha1": "7978adcaef4d31210b06eef5e9d8ff88f63f8b5c",
+      "sha256": "2ee1e1f5484b860ce0dec5dcd904c72162030718bbe06c5f22b8b2ecc28729e9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/terminalModes.test.ts",
+      "git_blob_sha1": "e22ecd56e00e29a5113d6dac6d4df956ed82be84",
+      "sha256": "fa2fadaa8477e94a0f0b26c1210cbc681281d63e08de879765b3289f68fd684f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/terminalParity.test.ts",
+      "git_blob_sha1": "7c641c4854d53d900e264a6c9f2a7be900db5e44",
+      "sha256": "6c41475138cea4d1a51bbd0d311f5cbac8c80e6e5d6ace38ac725f51ac47b883",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/terminalSetup.test.ts",
+      "git_blob_sha1": "dd1166655d2c88c21278d44618afc77fefdf5587",
+      "sha256": "66b1337da2f7f6f248150cb35cc4834123bc6d7c4c20084a769bb7bd071a5f07",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/termuxComposerLayout.test.ts",
+      "git_blob_sha1": "e11bb62e3ae7f1bd8cef621934387b1e9d2253fe",
+      "sha256": "c553cd0b9b839ae07dafb7ba2871cdff41184ea67ed80048c604c73fcd1291c7",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/text.test.ts",
+      "git_blob_sha1": "e566871c8b33e77a76fabb0330bca6102d8834a4",
+      "sha256": "93155e3376d7e268b86d82e4ccf1e8fa8adf96de5a7081a042ceaac669f13ca2",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputBurstInput.test.ts",
+      "git_blob_sha1": "7614abf454372b5c67a16eca2e7741e518ab341b",
+      "sha256": "3c837a0d41b7641bf850053ee2bb2d0cc36d2f1a487657cf11b29d94997a0ff5",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputCursorSourceOfTruth.test.ts",
+      "git_blob_sha1": "d2b25bcb71d884d9c5ce018b48d675bb2d25ef86",
+      "sha256": "aef069d9e0ec74734228ad3c28eedf2cc5024c5d7e2255a3868c3ef28a7bcb12",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputCut.test.ts",
+      "git_blob_sha1": "cf8d02deabb7f4a7953d149c610e26d8955e6ce2",
+      "sha256": "29ac1357a2371a9d64417770ab9216e885f725686f3a6c92fc1ba836109ed2e1",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputFastEcho.test.ts",
+      "git_blob_sha1": "ab4a31933f6fdb50a9fded6f0f74690a1916add7",
+      "sha256": "f2bda31fa45ec38a0f846cd7b32a5669692766189fb30d9c2acb793382f27be8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputKillLine.test.ts",
+      "git_blob_sha1": "7b7359b0efba38e2ae37bc26260a90a2b04ad918",
+      "sha256": "f2747404e8b88c36ba9870bad1d063e9811a272ca8406a2ec967a4b430ebebf7",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputLineKill.test.ts",
+      "git_blob_sha1": "09c22f7466f240a8e7a3581d815c64bbc707ad07",
+      "sha256": "5bf9b72fb27424a4da77c8730467685abe9dc87cd118b1927067543a74e73e78",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputLineNav.test.ts",
+      "git_blob_sha1": "56e6775ef4fb71e88f0c8f5812f4acbe02787357",
+      "sha256": "7e53667b06d186c66dbaae41e97b159c4ff4e064ba76512370c07595933fed16",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputPassThrough.test.ts",
+      "git_blob_sha1": "ff8c29ebcd13435eb0cb9f29f5c6a4db1f7cf075",
+      "sha256": "28bae3e7c476a4af477dd6a22e2176994444b5a78d7fd9116ee93fe8a45a320d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputRedoShift.test.tsx",
+      "git_blob_sha1": "046ee67cd2cd6b12acc27ea8c9484753047a1107",
+      "sha256": "154257be9a9fc6c3ea12821fe0987fe4b33d0416cc97ec5ee94bf0b48d9320bb",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputReturnBurst.test.ts",
+      "git_blob_sha1": "8470623b8215bc2b71852b0e61a8cbf093d949f9",
+      "sha256": "2387c1cc2383a9726ebb306269ff1dcec5efb6517c48e033e64529f99750286e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputRightClick.test.ts",
+      "git_blob_sha1": "8f71adfe597fb85f23bfd9fdd503850c72871a14",
+      "sha256": "86b7bff19ae3d40bfcbef1db088291dfba7d6ea3891db9c6915cc08bd8542643",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputStaleParentEcho.test.tsx",
+      "git_blob_sha1": "e811f2329d268f27d71cf47f46a3feba30d98a5e",
+      "sha256": "8724f12d172b33b0d8d403483738a24174bcd1fa576d2efeb1658034b961c4ef",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputSubmitClear.test.tsx",
+      "git_blob_sha1": "358e3a55e53ecedcb2a7d008d195ad9c32ddd44a",
+      "sha256": "f564be0fbf08e0cf98b37f60ae6e8cbacf3afc5642433db3e082474ad343186d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputWordDelete.test.ts",
+      "git_blob_sha1": "0d4519072fba088f43386d41a3df263f10617ab1",
+      "sha256": "e38f45bac65a2caae459ebf9231212e80c5b9b5a28275314a97f8e3c1f67702d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/textInputWrap.test.ts",
+      "git_blob_sha1": "5e9fa67f101fe4e8852472891fd4eb8f87cba4bb",
+      "sha256": "3262bf2632c38de3389d4f86f6024dab6f5f6fe3a0066b33a611dd7d8d57743b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/theme.test.ts",
+      "git_blob_sha1": "c8be6f9d00b240cc391eda71cf811727bcefa021",
+      "sha256": "a324bc32eb8c5f1ca4020c829f3abe190d0bf9915787445663c3b6ba49c4a7fa",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/themeBoot.test.ts",
+      "git_blob_sha1": "d1188efdd7cd4e5640bb947b265e7492b0237e20",
+      "sha256": "12ba5029da58e5f723722bf9a69dfc051de22bee57bd01dd4e062aec57752371",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/thinkingLiveCollapse.test.tsx",
+      "git_blob_sha1": "27fa9b1de2198246f9006e16893ab2b893291199",
+      "sha256": "e9b4ed63c338b35a5339ddbea01eb19e434e3f4ba78a6a3a1594f18441e4c326",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/thinkingMoaReferenceVisibility.test.tsx",
+      "git_blob_sha1": "29b128b835c6dd19b5c5c751cf64b8a3d21e5688",
+      "sha256": "c3fdd6b4ee61f6c6d338a9a418c056d86b05ba41feefd9005c7f713ee60a1608",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/topupCommand.test.ts",
+      "git_blob_sha1": "0a7dedbbe748031c8a049ae3df181c6ef3fc1cd5",
+      "sha256": "9b919a7b7b5429d5394467893c937ee1b2586232b2e9b5f9a3700cbda5d4af57",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/turnControllerNotice.test.ts",
+      "git_blob_sha1": "0e4a7566d32eaedb9dcf00faf4e9b0014340f558",
+      "sha256": "9499579d7f898edf06879a1e6721dfa3d1a55e621e62c034a78a7d639dcd3875",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/turnControllerTodos.test.ts",
+      "git_blob_sha1": "74d9a6f33b5396cdf3b64c2e2f0e8847941a7e25",
+      "sha256": "5dd3cd913621ee7170dfbe518e0f8ceff919fa69f66445c49974d4936264ed7d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/turnStore.test.ts",
+      "git_blob_sha1": "e7071f7373451a8e1e010668632d8650dcb12289",
+      "sha256": "4c9e3555e436bdf1963e5b08dd4028dfb2bb797111cdde60c768decddbdd2f6b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/usageCommand.test.ts",
+      "git_blob_sha1": "6d8a9431ab375192304c20a0fae7c3dd9c3d3e4a",
+      "sha256": "5d4b10ff36e685fbcf4c1210868a8c1f57d74cc62b7d8520af6cc91562851232",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/useBatteryPoll.test.ts",
+      "git_blob_sha1": "13cafff8153de2807177541c12b6ef70bd18916b",
+      "sha256": "8ee16c6471f05b611c914fb1e822d28e92d1eb4dcf0064e571914ec277c3ea56",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/useCompletion.test.ts",
+      "git_blob_sha1": "67a9fcfea8cc272cb03faedf5abea89e48935b2e",
+      "sha256": "27315e2ba2d78e1203f04023ffe1887362c5f0305a62036774192cd7fb3c2e08",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/useComposerState.test.ts",
+      "git_blob_sha1": "0f542af73da516a0bf28bf565fee788787d8015d",
+      "sha256": "9eb014b7e110484f0bfb4a4a88ac379699fc9c361de8559cf67956d3a7c16545",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/useConfigSync.test.ts",
+      "git_blob_sha1": "79c38f0749c8de7451cf81efa7eabbb963b1a141",
+      "sha256": "af99c29137c8e61c57e7c2208df041e885590067e07dfe1b48111b1bf8d3b3f6",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/useInputHandlers.test.ts",
+      "git_blob_sha1": "ac1417aa77a0df337b640e429df9751819f465ef",
+      "sha256": "46a3cca4e4fe7de921873687d90b213d4a2fb7365797efc49e9af33ccc6dabeb",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/useQueue.test.ts",
+      "git_blob_sha1": "072ea8cb6ae3cc949ffdfe9bd262cd4654c8782e",
+      "sha256": "73dab3f1d4dab5c29d1542e08c28f2d74324bd16f6eeec79765e9ea1d3e7b8f2",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/useSessionLifecycle.test.ts",
+      "git_blob_sha1": "81dfa63221a5706791dd2378c180dc87abc0dcb7",
+      "sha256": "3225c31d18fbb9b3d3b4a27067efbed244816ca9145a19fc813074c8b5e46e96",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/useSessionLifecycleStoredSid.test.ts",
+      "git_blob_sha1": "ffcb928da8ac69fb50b9ee5b88bdb1b64648a97a",
+      "sha256": "0f26cab4255f8bab1eb28a6eb1af36e66c3f3e842874aae6e44fed752df7123d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/useSubmission.test.ts",
+      "git_blob_sha1": "9529b20218ceba9dc55b49fa85de2a55917a1461",
+      "sha256": "edb6e270ffc2183130384f8894705de3ecf447d4338948e2f46e1bb5f3aa22f8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/useVirtualHistoryHeights.test.ts",
+      "git_blob_sha1": "0046e00ea66c8e4a00974e4745e390863577a433",
+      "sha256": "68e5f6d63398343bb2db41621dc22c8a595442675d467a6948e72faae210b029",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/userMessages.test.ts",
+      "git_blob_sha1": "e8c032497bf8f96674b06a5cb432919d21f5670e",
+      "sha256": "d613dd1aaa0f2a23469ef1d2adf34f025f9d60414f6c9155b9fed4aa75edbac7",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/userWidgets.test.ts",
+      "git_blob_sha1": "59aa6f71c313fa43e9e4822fb750ce53735ba7ad",
+      "sha256": "ac29bdab86d2a9a4651907f5ddb72a0ac9c0cd2968b689440526219027cbba9c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/viewport.test.ts",
+      "git_blob_sha1": "eca079470d91b70200963afa02cdafba2c470b2f",
+      "sha256": "544f027fd90141e84d897a2d9af126d3ee3a8c3d5376fcad7da8ff67651ae3bf",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/viewportStore.test.ts",
+      "git_blob_sha1": "6f512f87840a142a2527510b2d211aca0e9aaa66",
+      "sha256": "d5bf229b7866db5250049d39ad67e72aca51a688d82128d0e2eabbf1117ee538",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/virtualHeights.test.ts",
+      "git_blob_sha1": "d6076fe5f730b0b5a8d5670a71422bfc6ea303ae",
+      "sha256": "9b6f079b4ae8e0e984283e1f85a5a17684fb496d23e4a43758333c389abbdd2c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/virtualHistoryClamp.test.ts",
+      "git_blob_sha1": "d14f308d8f6265846d4a541eee92eb0b1e880808",
+      "sha256": "1beb3434117df79e8fb9f0fe67c664ef99d2e26e439653d8ad1acd7a0434fb86",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/virtualHistoryOffsetCache.test.ts",
+      "git_blob_sha1": "1ad3a971d9418df70f6f20d95d00ce9fad7a2180",
+      "sha256": "279cc6b2d9d6ffaf1fb88508ac289866177f497a3c856ef4df2e515aeeee98db",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/voiceSubmitModeRenderer.test.tsx",
+      "git_blob_sha1": "1bab8ffb701648335780f056a93f3cdadc4faa18",
+      "sha256": "fdcc49fc19a663a8ea159f05645f7cfc7258d11166f3e540fe1ebba2d6d0ab1f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/wakeCommand.test.ts",
+      "git_blob_sha1": "b3077f6d2ba2b89886854c8c59b310add24d8ea3",
+      "sha256": "9b73610e40dcbbdf8594cf6427fa5775d22ba6ea53303e6c10d0a959c2808d1e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/weatherApp.test.ts",
+      "git_blob_sha1": "46cb2ee875c7264ad29c371327818a3d61a14574",
+      "sha256": "f62d4822b6dc0330e5976289e5a6e46bb98ac0f3b65f7ccf32ddac71c1976496",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/wheelAccel.test.ts",
+      "git_blob_sha1": "64828b6677e1ba49defdb7a64e75b4c03b78e4b5",
+      "sha256": "5f88f8bda0b3056c9100f26c29f66c9409a991e436637b7ec2c4ced58d49449d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/widgetGrid.test.ts",
+      "git_blob_sha1": "fb99e7c90f6ba68234eea71996ed1ab06c004c72",
+      "sha256": "1275b84c8931253afa6c2a4800cd21484dee850d9e66b85ab596595bcb8369ec",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/widgetGridComponent.test.tsx",
+      "git_blob_sha1": "5ee02e1b15cb69f2b1ed1d51ef84ee373cbb15d9",
+      "sha256": "454aa7886f99c835689cdb6bb17f3e1d031233ce9ae304164e7675e405eea532",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/__tests__/widgetSdk.test.ts",
+      "git_blob_sha1": "674d5397318aad90381fba76f3edf4d19a3dbf24",
+      "sha256": "a588c56dde7954b1ca9de7d2431aca626def1f7b81e2b1e0d7c6f123b83a267d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app.tsx",
+      "git_blob_sha1": "5fc0ba988880c9fcace8dd0c0bf1312bf7eb48af",
+      "sha256": "0ac9384e5b5c5a0ba6e3862b186f8263514e00cf2727798359d5803c1bfea96d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/agentRoster.ts",
+      "git_blob_sha1": "3668f4eb86a48008fe2e8829d4032d2d8012b93f",
+      "sha256": "8cd6c943a6fd5811dac4c5d83af71a962cd2e22603f785190a0934a73b90e3d0",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/connectionOperationStore.ts",
+      "git_blob_sha1": "7295f5c19c6d2839debd309b416708f266478edc",
+      "sha256": "cb6ed9deb5469804fef911669bb6372a9b645d6a0a710a10af4e81ccaff28843",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/createGatewayEventHandler.ts",
+      "git_blob_sha1": "e0a76c19568387e019510d7e9b128c12b2e8b2c6",
+      "sha256": "662e19e999509c1e664b197a892b91d2fd024fee6385c6329b21757de734439c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/createServerRequestHandler.ts",
+      "git_blob_sha1": "2e4e8b84da32bf6af3eea67fc33342f1480eb5b5",
+      "sha256": "7441ba2c0cff3f6afab2f47a2b6d7dac09445d1864b5c10d40fb51b632e436d5",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/createSlashHandler.ts",
+      "git_blob_sha1": "5b868ba38e6c46763355f120f8cb5ac68595ea9c",
+      "sha256": "7ef75b0a8638136306e8468236c09d2e3c4e78183f06dca860e4996d5ef63cc7",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/delegationStore.ts",
+      "git_blob_sha1": "aa50738edfecccce7f1d6050a3d1850350f4711c",
+      "sha256": "cd27e622fe273cc19f8870cb4b44fc9cff46ca11b84c949a4d5f5f4b30236abe",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/gatewayContext.tsx",
+      "git_blob_sha1": "9187f15a3ad804c8802d8ca299c2f0e22c30f106",
+      "sha256": "a476905a1aa56a9cb22bc01df1f6916afe9b5f98864c1153cbcca6e58c3c47db",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/gatewayRecovery.ts",
+      "git_blob_sha1": "f68cc5acfb17462fef88a4bca38190a4b62d7742",
+      "sha256": "a16fc9524e3f30345796952a8a2a5c55bc0e4e335b5918c24fd41742122c6843",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/goalStatus.ts",
+      "git_blob_sha1": "cb284152760c27ff226b7c5cc9ce49946c3b4d02",
+      "sha256": "d545f81447dbd201a60862f8cc7b4da128b42c54cdfcde409f16b33870f4cecb",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/inputSelectionStore.ts",
+      "git_blob_sha1": "76268ba7668f03147ba677770a798279348f411a",
+      "sha256": "942c11c35d1af247fa4883a46cd54854a9b71205f05790160e84365871c18ba0",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/interfaces.ts",
+      "git_blob_sha1": "6bea7c363f801f08d5fc2b5ffe3a9dc4d25d7f30",
+      "sha256": "9069dfb2c189132eb94f93e7189c30227c38c157efce59b44e4947541c00549a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/overlayStore.ts",
+      "git_blob_sha1": "e5322213190e2096c92d316defdce96f642abc07",
+      "sha256": "206f0bf714473cfc599ff54a6884b9f5584b199d1001049cccc2059dc1ef0cfc",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/petFlashStore.ts",
+      "git_blob_sha1": "48841a3c4be69a2cce70b37de75aefeccfac33d3",
+      "sha256": "960b405b21d89d81bf7a273fc4c7fe6f103456a84916400e39d89094c1392483",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/processRoster.ts",
+      "git_blob_sha1": "930d06b1b8c854fa13132a3eb0d6ebdbffbad030",
+      "sha256": "65a401c05771f2215c342bccd8b7da42f9df5f9e7da1ea603efcab1a74fbac15",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/scroll.ts",
+      "git_blob_sha1": "6e284dde25d99c8e27b2b41a0fd7f7ab8c80ef49",
+      "sha256": "4867a49efe8d86378694fd7015eda30937274a49ac58975804aa0328fb9ed885",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/serverRequestStore.ts",
+      "git_blob_sha1": "be7c71b1ddd50d8eed0db4db0fce5dbe3e211430",
+      "sha256": "391744c5672898c66da2871080a5b173de1e476da828f5fca3e701883cac4ec5",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/sessionResumeView.test.ts",
+      "git_blob_sha1": "88642d7286406821773e5eeeb0b82b21dc5d3be0",
+      "sha256": "6afe35faba9ec815b404d74d6c853c885a232ca09d9ac557d8ace74fa4bbb398",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/sessionResumeView.ts",
+      "git_blob_sha1": "131a44b5e907dde5d0cbceb3aa6506ff5b8cfb78",
+      "sha256": "990dd6ed4e1cb9c98b72944de6a1ccaa4852a3e9b0fef602bc7ef90fc0b273b1",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/setupHandoff.ts",
+      "git_blob_sha1": "6ca6c41955a4ab682229be07eec198fb450ef962",
+      "sha256": "d569a4817e4eb95eb584749ccd8de35b36b7ce75f2618198b8d4a2e0ba2d2ed3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/slash/commands/core.ts",
+      "git_blob_sha1": "c9958b0b27534978cc160a576295527be5030eef",
+      "sha256": "3093e043d4e628f641b0536fb031993ee427702efcfcb7e85f739ba6d401d501",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/slash/commands/debug.ts",
+      "git_blob_sha1": "974f011b358b5c0cf145c858ca932fbce37fce67",
+      "sha256": "5fdb6a29f94a96327c6d6ea174989603960b348f18f0284c42814ab3d5099f0c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/slash/commands/ops.ts",
+      "git_blob_sha1": "2e0ff48e0c2e7f3524122d11daeb481090c9220c",
+      "sha256": "e6b8e5c1509ca466326aa10520b8c7aa7adfae963f5b4fd14a72e26bcb783f3b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/slash/commands/session.ts",
+      "git_blob_sha1": "8296d65348b96afc1d98b348c94804e8982ce7a8",
+      "sha256": "67cf321c2b9a3bd165ea2ad874a8b0d306c2e964334d92959eb3fb6ae4f39a7d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/slash/commands/setup.ts",
+      "git_blob_sha1": "0bd9024c8a15db099678cb194c51511788550a84",
+      "sha256": "2123186d1b780871c3c954cd1ef15141759f992f243c887b9d8a4043fc7d791f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/slash/commands/subscription.ts",
+      "git_blob_sha1": "3d0e81f68aec01a3c99cac9a7f5be89eab5aad96",
+      "sha256": "41fe6d0b3f5022683fc4ad9c5e3eba65f929ed05a07499a8435ae422d0fe3685",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/slash/commands/topup.ts",
+      "git_blob_sha1": "2350bf08526dc864a93a089394a8adb51aabc1ae",
+      "sha256": "840038f5834bfebc1dec9d7cb2111c190c2bc951bf4ec2aff960febb691bc8ab",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/slash/commands/wake.ts",
+      "git_blob_sha1": "37fb88059d74cc310a8621a8017f0734002f548b",
+      "sha256": "1c96dd38ea25bd2e93b43116396aad7969d5f66a2e9b2da4a12ad6b01c7e514c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/slash/fuzzyScore.test.ts",
+      "git_blob_sha1": "acd7d399a786e1b1db941ce6a374f313072d4a88",
+      "sha256": "2e55bcef332dc9f5fcc314017a736d8f1af04304297b5984e56276aec7252402",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/slash/fuzzyScore.ts",
+      "git_blob_sha1": "51b3d55f8fe775723b7472c5baf7926e706f9836",
+      "sha256": "c503fe5472b175ef2526d56f40b0625f1c4246614b4bc3d36dc05c559153afcc",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/slash/registry.ts",
+      "git_blob_sha1": "6922280e16a55b3a5f98b8a7941b80765f629c74",
+      "sha256": "cd234748cc2a668b63398fecad746408982fa95a6c70d050e8e6ceae99d08c8b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/slash/types.ts",
+      "git_blob_sha1": "bbd187a23b3f015eee4149a18e01fd06b5d1e2ae",
+      "sha256": "15997bb2438314e977450f56a9eb80055396ca4f1f804e430774516341361993",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/spawnHistoryStore.ts",
+      "git_blob_sha1": "e522a1d39023da7767219a1e5f7ca17cc69fb4e2",
+      "sha256": "0d928e4fb14148efc465105d83ad125df08ff25796328fa69ddb3daf3a7d9767",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/startupLatency.ts",
+      "git_blob_sha1": "8df2db56778796f4f59dca373c2191b5fd9fb94e",
+      "sha256": "9e670a377abdada0aa9c367bf3a333a489eb61e754c44fad45a1e61e5fa058af",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/submissionCore.ts",
+      "git_blob_sha1": "16406e0143e54de2496be91bdaa1b5acffb3bdc9",
+      "sha256": "43019b6168f3312a395d7666e9e500464bebe824c555715b012cc693a789e4f9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/turnController.ts",
+      "git_blob_sha1": "ca902e5f2103d7a9e2b77104981015a50cdd66ad",
+      "sha256": "9a560d42dc8e2f912218afa0386ca3652e5cc778cd50fc472cb4ae4cc3dbe947",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/turnStore.ts",
+      "git_blob_sha1": "54823d1c255c2945d7a4e3d17c32779c8666f26f",
+      "sha256": "48da36f6161c4b08a2da9ec600d5adbb98a96e71292b5b2e6aa16bcd65101a50",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/uiStore.ts",
+      "git_blob_sha1": "b29c0ecea1c8c9324de3e8d4c6960e6d5c11fab6",
+      "sha256": "fce6b874551c37c985c788e363b420228841bbab2e124664405aa46356ef3c4a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/useBatteryPoll.ts",
+      "git_blob_sha1": "50523aee94b337c3b68d23685fd1029b3bc002aa",
+      "sha256": "8a5abfc3ffcd7934ca994554636089e60fe6489ec3ffdb70f1c4dd95dc5ef6e5",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/useComposerState.ts",
+      "git_blob_sha1": "8454ebd61fccf8fe22aa73fe2bf8bf92c6a884b8",
+      "sha256": "af18af323150abe9666ec132314b9207b737c584b8024bb64cefafcb05690303",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/useConfigSync.ts",
+      "git_blob_sha1": "7b6c422fe6e0db0e9b8746b428bfa67227040214",
+      "sha256": "3c27b8f443d225a764ca97b5aab9f8dc38d5204d513e49694423d123b9ed5eed",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/useInputHandlers.ts",
+      "git_blob_sha1": "76febe62ca7b442db6586164bcbd8a5159c9f1f2",
+      "sha256": "535e1d93ec1f8d7f8a62eb5ab7c585d1ad6f36d4648482d0dd050ff0a785f0e6",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/useLongRunToolCharms.ts",
+      "git_blob_sha1": "5d2f0d6632e11ba7fa9658d9201504c8363497b8",
+      "sha256": "057128ff200c5665e7d0c77072766a4c0790281b8d9cd2243ad3405323fbbf18",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/useMainApp.ts",
+      "git_blob_sha1": "46230d3e167249d89d0a7097c50905ac0c50bd1c",
+      "sha256": "f22d66199b921ec2fa60dac8394ed1e5b61aa784989f220f49cf16dbf436223f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/usePet.ts",
+      "git_blob_sha1": "b4ae6fb3d268ef2338b62527f69b352e3dda94f8",
+      "sha256": "b02b4ae345ec0088e88137002ccb3fe21d3c13448a3090e66c6751927dde6a5f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/useSessionLifecycle.ts",
+      "git_blob_sha1": "96531403f4fde5fcd1b4bb51c8cd60aa72bf818d",
+      "sha256": "255b296ce479fbadcaf868d44ab5e9776899e3836073312f677335d2b51c18d1",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/useSubmission.ts",
+      "git_blob_sha1": "76fe467e4a8de6454c26ed6c61f69bdbe7202b26",
+      "sha256": "1088befce85d0fd7f64127af28b795dce84255f675279ac735a7dacf4636702c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/userMessages.ts",
+      "git_blob_sha1": "70d4ce24f56c426a04b4ae8fd952d065459bcd21",
+      "sha256": "24e9d9f2f7a1757ac5d8771e383e87304c383fe9aff0aab27e3d9ba296f9073b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/app/wakeState.ts",
+      "git_blob_sha1": "a9e527ecd24d5054bc638d55bf6ab83cd71bdf43",
+      "sha256": "1902da6495f796691d357a4275909f6c7402da874fea76cb989211c738d904e1",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/banner.ts",
+      "git_blob_sha1": "748e5a452bc94a5225f3743114cb516defac729b",
+      "sha256": "a8f99e833c0452cc5c17d8927a94fcedb217aa01eb7b81241f33b4ae39d0a56b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/accordion.tsx",
+      "git_blob_sha1": "943259ee15bb93d927033f96b61093c4bd985aa5",
+      "sha256": "5e0d59c041f7de7d8a45d097b59f161d3156bd4c6237e591c1f50e21a31c9a44",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/activeSessionSwitcher.tsx",
+      "git_blob_sha1": "8f86f0881ff3fca26c462ab7b3b8e488b858d8a7",
+      "sha256": "f1181c6e9f775668ade7f2f2169bdd5101db5dc42e5e85c8e7afdda85fb9e289",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/agentControls.tsx",
+      "git_blob_sha1": "145d3ee05bb8f334362be948b273ebd158b427ec",
+      "sha256": "be4439c789a4d6bc55217b335f2ab90930515d41545fd859fcb8fbdd07158bad",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/agentsOverlay.tsx",
+      "git_blob_sha1": "04d70b6a38499f92d2fe1ff643a5a8e8a0cf910b",
+      "sha256": "b9e9616240ce8aa9fe5a633eba85c1bf347167f69cf8eef5e41041de81dafe35",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/agentsPanel.tsx",
+      "git_blob_sha1": "7952e3571d77b1b8e519d50cda4af2852625e0ce",
+      "sha256": "f55cd4996f978bd6271e8af6877878fff1c156426e1c4cd365d655476cabe878",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/appChrome.tsx",
+      "git_blob_sha1": "967f26906560303965fbf81cc038bc4557bcef49",
+      "sha256": "43a8ab0f67d86c665f6482737ed8f6268edef0b5ed9c0e96344446d561f5ba79",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/appLayout.tsx",
+      "git_blob_sha1": "0c8bde2f92a6db45d5ae1a693a8e20637f551438",
+      "sha256": "fe232742c8873b56cc3c9d034de910b133212d5d4d562dcd8d0cb1583c79988d",
+      "source": "connector exact-ref"
+    },
+    {
+      "path": "ui-tui/src/components/appOverlays.tsx",
+      "git_blob_sha1": "d0ed5b7424bcbea6996539d4e9d106f829d19c57",
+      "sha256": "4f49f76b443d72a372d82e54e1df4b02f8859f25405a5ff6411b1503f23a14b9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/billingOverlay.tsx",
+      "git_blob_sha1": "3e0a4601fc6dcd14aec746d16f63b6cd4a450435",
+      "sha256": "3de9d89ae7a608e877adf6937b53ddc2c040832b5c92d9ee019f18aef3919672",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/branding.tsx",
+      "git_blob_sha1": "1c2e507349b36ed71559b962a6f149cd8b5f785a",
+      "sha256": "0444b03006c9eff05e6737ff49d8c13c51a9eda50ad7c510350fd62c4be3524d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/connectionSetupOverlay.tsx",
+      "git_blob_sha1": "b8c002936168507259fbf45fc2f7ea19cdcf99c0",
+      "sha256": "10c0b75de592a3d56d1118f4a0a86805f6288f1e53603c114890bac060ce9f45",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/fpsOverlay.tsx",
+      "git_blob_sha1": "4400c9d44a2c38c5216eac7b96c0305d5fc344de",
+      "sha256": "b47fcd8c6470783ee022a1ab541b639af6c8b5be2704418bef12adde9e00d8be",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/goalBar.tsx",
+      "git_blob_sha1": "d13fabe0be7231eb9d15ef6c9bdee49f5af69f75",
+      "sha256": "eac9be6efaea9f5351ea020fef90f8a1182fab8a7181bc8f009cca2df35d8d33",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/gridStreamsDemo.tsx",
+      "git_blob_sha1": "d94c85b957b2822353747384f72caa5b06af4de0",
+      "sha256": "e28ae1cad7541b6f7020e6f12f155ddb254729b7c6b8f127cde0e0dc5a41eb85",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/gridTestOverlay.tsx",
+      "git_blob_sha1": "12fca743930ae00306487b7e7d882ade9ceb9198",
+      "sha256": "a9386c82b8b6cc052e3bbbadf2ad714adbeff5553a7231df80d8d13d202f7187",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/helpHint.tsx",
+      "git_blob_sha1": "694342912d83aac7f9d270d2a471a484ceaca8e7",
+      "sha256": "156fe7664ec5c3c75329110a29c27565b6a9ab05dde7e2fbca4d808217ed8a82",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/journey.tsx",
+      "git_blob_sha1": "ab75a77fad338b9f6fab8360978e6a1794983a3b",
+      "sha256": "f15c1490e2e7a1e1994ceb419169a7ee129e99430953da682a8e06475540ce9f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/loaders.tsx",
+      "git_blob_sha1": "2877fb82e86cadb7762382c2c13efa2eb2163cec",
+      "sha256": "3dc4a6924bf073271ad85e79091954dc8fa59f32fcbdbc9e71cfa04bd05206b1",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/markdown.tsx",
+      "git_blob_sha1": "1912bca2511ffef0d978c5014ef938aa5ebeb7cc",
+      "sha256": "b9f746d614913bfbbb50634677fd152d5bc100c66aa8a6632dc8b9543e687016",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/maskedPrompt.tsx",
+      "git_blob_sha1": "4e906e1730e3505b18a174a49aa3a1a358acdfbf",
+      "sha256": "248e3839807fa4f3a928ce4f293a5602c8a22566e3477cd5366f28d593e6e15b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/messageLine.tsx",
+      "git_blob_sha1": "135448153fb3e7c7f21e3e49375ea4568973f0b3",
+      "sha256": "795ec185cacc4e42bcbf257e38c47a0bcfbcec451ec4ddee0acbad6fbb83a00d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/modelPicker.tsx",
+      "git_blob_sha1": "4ffe265fdd8ceb88eb45b1564be03f4f154b9894",
+      "sha256": "0e41959aa2473f857088fefe07847d0fc8597aa82cbf5939154c1cd4ce745d6d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/overlay.tsx",
+      "git_blob_sha1": "115f6510bcc39ce1d1ca1f8399e56e8c35863b26",
+      "sha256": "383622470852efbec8ad07b8ee2933037aafa6bbeb4703559fcabe3a21441181",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/overlayControls.tsx",
+      "git_blob_sha1": "6d9fa5d9ec0a1b128354ffa7fc6fec321e274575",
+      "sha256": "e96bbea6f95f396e1b90a8671a9e194805aac23c4e4863e6f1e537c0b3830df9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/overlayPrimitives.tsx",
+      "git_blob_sha1": "91df713e62fc15bde098349151064cdad7cd6495",
+      "sha256": "cecf0687bcdff5ff31aa936980612c966b61973c069c6643f0606abc0d084b65",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/overlayScrollbar.tsx",
+      "git_blob_sha1": "d12b147a8954a6db89b6632b046fe7496023c741",
+      "sha256": "e0c413066299d8d11ea4235bb89b160d62cc349273971d0d6838797c403660ef",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/petPicker.tsx",
+      "git_blob_sha1": "047a9a9c78bbc7b1b2095484690b0123d2e17a5b",
+      "sha256": "3d598b19070708089faddeb473ee980f7435195e169bcaf4dd54f4b81e238b47",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/petSprite.tsx",
+      "git_blob_sha1": "dcf18e40573feff638de6f43e3eb16dba72708f0",
+      "sha256": "18a78a9035e5d02946bd7cdd08fb4dd7879edbff758993474632b91f121e8d7d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/pluginsHub.tsx",
+      "git_blob_sha1": "ee8d15d8c257bc7f374c783305e38e3ec0641b89",
+      "sha256": "7f9a953818020d5197d43a1e9a80c68fd3e37ce88698bec71ca2b8bcbd0c2c2a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/prompts.tsx",
+      "git_blob_sha1": "6a5066d80f9b9560e855b70ce5d85bbb6dc0831e",
+      "sha256": "7e3b21478b724d1543668c855b65466343b9a756185b098cb843dfa7488cd8e6",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/queuedMessages.tsx",
+      "git_blob_sha1": "bd375781360b044cc7defc395be9a0b2c783a9fb",
+      "sha256": "359cfa0a551a138002a765ee28e577cbc6d9549c8909ec27b390b25be3019909",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/skillsHub.tsx",
+      "git_blob_sha1": "2d168392d359f31413e0f7ea8611e43c803c73de",
+      "sha256": "d035d69c3504018fcc128650d448643b003889ef9ea48e11e62270bd21f53a16",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/streamingAssistant.tsx",
+      "git_blob_sha1": "b3487c36a8931bfbd2bfac6faaedfb0bad6161e4",
+      "sha256": "594b220b256f14f2d667b8f0b304dbcdd57d26a2f59df2f54f0481a93e6493e5",
+      "source": "connector exact-ref"
+    },
+    {
+      "path": "ui-tui/src/components/streamingMarkdown.tsx",
+      "git_blob_sha1": "992bf9a67b6551f77423ff46d58d950c32a31332",
+      "sha256": "64e66bc694b223116d7f77d49f14e6fb9e6741d6b29c3506c93671bcb3141c52",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/subscriptionOverlay.tsx",
+      "git_blob_sha1": "34f0d88bc9249227256c0b8aa6892968bbfa847b",
+      "sha256": "1f015658c969e503da89d3e608c07a09129841e810c0c78775c2b7779c08a329",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/textInput.tsx",
+      "git_blob_sha1": "daca6ae643fdec39085c838c8c504efceaf20a5f",
+      "sha256": "292d380fc530a5e1310f273432e8151e9ff37869d355a9ea18d52640cf5928a6",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/themed.tsx",
+      "git_blob_sha1": "25fb43b44cc61971599de0a34d579aeed05af979",
+      "sha256": "877ee860b25ae738f52d46f40caf9f06e02aebc41e5dc906a00432d46dbdc5ae",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/thinking.tsx",
+      "git_blob_sha1": "e6c1cac555b6a8ad8f6064301556909a60c04e5f",
+      "sha256": "43db86538bdbd90c8613412ae57c4b544e3bee650b343c007b1922bbcbd9288a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/todoPanel.tsx",
+      "git_blob_sha1": "cb5d70094708ec66ef87c40197ac41bc092ec1ff",
+      "sha256": "589220e3aac53e077266b76e2513bf1a191489f35b1dc92788ad690dffa6fca6",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/components/widgetGrid.tsx",
+      "git_blob_sha1": "0c34c7915343248260c39a1093be28fd6e809905",
+      "sha256": "d1ab93cefaf1fd1a4c2a9bb726fac80ee8e1ad9bb98bc9990a7eabd763af5b67",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/config/env.ts",
+      "git_blob_sha1": "0c4ada42f0de1298e5a01dcb149508adb8be8ad0",
+      "sha256": "5264b38f364ad5e4bbfeb2d976df79fe7fc3b13668b18fcc6f9e06bbb677f1e7",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/config/limits.ts",
+      "git_blob_sha1": "e66e370406c372e58057c4f75f9cf8ba6ff0fc50",
+      "sha256": "2a3e54644eb050d6a0edab48b03ab4438e1c58ae46ad27979ae165279572d3d3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/config/timing.ts",
+      "git_blob_sha1": "abecd3e87e9a5a96e033090744f706dfa3da88bc",
+      "sha256": "733e87415e49faf3bef21f03a4a3e27856967872e18b56266d36ef58035ab63b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/content/charms.ts",
+      "git_blob_sha1": "546e44dd09d97c53881f483feeaa20b98da6a481",
+      "sha256": "bc9c219d9bd2bb2d4dbd5b4c39de106aecbfc853cc582686110b894727605b18",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/content/faces.ts",
+      "git_blob_sha1": "1a1e738a09de1bf1b1cd50e71b8b54326cf3ce8d",
+      "sha256": "faa41148dc9144cd278425322893416bfd0aa5562179b0024bdc3fb04d356314",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/content/fortunes.ts",
+      "git_blob_sha1": "c8142edb41687efb5c254f57087ef7be64502ccb",
+      "sha256": "3baf06160e416ac1d106a0fdd7e3f7b02a9d7ec35ca7b7cf849a42638c723eec",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/content/hotkeys.ts",
+      "git_blob_sha1": "c8ad7a6acaf20a82343118204476002195ba68e9",
+      "sha256": "5d896b5d8ea6d58191c73c0847273732b0bffca78f7f8ef04c54e3790ae3a77a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/content/placeholders.ts",
+      "git_blob_sha1": "7b913a08fc701cf761d0994199ebcfedb10664b9",
+      "sha256": "37a30ad96906f17b8d4ad7406e465e62329980a2199f8bc793b1d5098ca6ccfb",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/content/setup.ts",
+      "git_blob_sha1": "c1590a1c996fd1db5ecba50a9e18fabfc7a5b921",
+      "sha256": "07b32696b2aa90d52312364f8f15d965b7f3d51a2b97ea587d85d7c1c1d98c3e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/content/verbs.ts",
+      "git_blob_sha1": "c19c32c71f9fdd69a3933b50dda22a12fcc8d250",
+      "sha256": "5c888a53496700f496340ecfa89f7cc395dc94249c30592f2e7ada89c9f441f9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/domain/attachments.ts",
+      "git_blob_sha1": "c7c98f9d199d2aae3fd3a13697821cb7daf2abda",
+      "sha256": "db058a7cd677362db65899cd2f4be3e5423e4c675dc0d12b23e83e5686ff366c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/domain/blockLayout.ts",
+      "git_blob_sha1": "544c84e078cf1108b9a8843f1c3c8de428c92517",
+      "sha256": "176b258333724432487c5cdc8c0dac29a293810a188526f820b65b5017df2622",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/domain/composerHighlights.ts",
+      "git_blob_sha1": "f5ee602ad3f3b1f22500e66980a804a263ceaad3",
+      "sha256": "b870d6f8a7e6220aaee03228258ea32f67629d06e626acf2f1502bfac817f15c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/domain/details.ts",
+      "git_blob_sha1": "b0f5bf79a17adf06f4782a39cc9c5593f91c49b2",
+      "sha256": "ff60f18bd4fc568b4fdfec828c86e3d3d0ef2f808c9b7a6298959388c87195ff",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/domain/messages.ts",
+      "git_blob_sha1": "9af6ac3eaeed7736a01f6cd5f155983acf381a7b",
+      "sha256": "7d575cfc58c0202c4a7b35f2d56397465cf24f44b46126ce63b7c156d8d7c637",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/domain/paths.ts",
+      "git_blob_sha1": "1d52c9c045ee9e0a538dd515c13d6186f89fd528",
+      "sha256": "b39450c09b150ccc18b2504ae5925aa807bbe0b57b40063b21cf86601e029a2d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/domain/providers.ts",
+      "git_blob_sha1": "83ac016ff19b4d8c34beca5e6c55d7de705a9c16",
+      "sha256": "2818e9f2ce6d77d9ad1d89f5b64fbb4d6cfd9bf914f71fdf95cd1c529e83ff02",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/domain/roles.ts",
+      "git_blob_sha1": "9e33aa094e2578af6f4d829cbb24d5644529a78e",
+      "sha256": "b0e652d617f7fd34067670a76f8f3aa02c1c9b3dab8a88c4acc6d5f52d884344",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/domain/slash.ts",
+      "git_blob_sha1": "cf9bad368e952fcecb7b32b6c4fb5ca57823b37b",
+      "sha256": "7ee3ccf9699f3744d838c7451f040d7a5471bdff305fc49b888201282040a56b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/domain/usage.ts",
+      "git_blob_sha1": "3f3b67efc250ef456ccb5407e6576847a64e9260",
+      "sha256": "27d26a6c7e6625a6fe43c073a6bd47d9334707d115a6e1d0e7736bcb90db7e10",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/domain/viewport.ts",
+      "git_blob_sha1": "4fdbfcc9307424881459413564d8264e2e6c488a",
+      "sha256": "267db23caa6ab76c35c96c6affbf1b103d37e47d980db5acbee73c290a37647e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/entry.tsx",
+      "git_blob_sha1": "210889d72a487122bb737da2b55ca943d186e5a3",
+      "sha256": "1b8c02617e4bcb19ec7413557dd3cf92c02558caefd4e3aa15044c4d760fa97e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/gatewayClient.ts",
+      "git_blob_sha1": "5f272900aa519a567e0b4180d924002ee155377e",
+      "sha256": "c12c25f7fe94385bbd75e0ba7ee13edb6997f5533d4a1567ba70ea48bb9407cf",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/gatewayTypes.ts",
+      "git_blob_sha1": "beae19afb6424d7682e50c9d3b8c8d48fc25dda4",
+      "sha256": "998f0516f900c94bcd16b44122cc299d3a1340dbf8580b7c90ac838dd02c23ed",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/hooks/useCompletion.ts",
+      "git_blob_sha1": "f32c2535aa5364ee41a7dd4cf5d79874c75e69bb",
+      "sha256": "cb711b92cee5e57ba59e31421c0c34ed9857e2404498e2033d39259c6af60bea",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/hooks/useGitBranch.ts",
+      "git_blob_sha1": "7eb4880177a9428f52b89dc6b44dd4dd9640954b",
+      "sha256": "c1aa561e6c63ceab79c98c05c2ec1f12d8d1b950adea807e96e10d9df7334867",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/hooks/useInputHistory.ts",
+      "git_blob_sha1": "8192b86c8f27e983fab4469c1ae17a523817a1c6",
+      "sha256": "152c0c4d4ad00e10c96b55fbbc7f756f864d8606e258e05d86fb12248968a349",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/hooks/useQueue.ts",
+      "git_blob_sha1": "2e49b407fb2f37a906246939633f80dee46a7662",
+      "sha256": "653813b54ca778311dc20d602a40caeeae8e5cc1cad4651964ee92fc2e0c0c32",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/hooks/useVirtualHistory.ts",
+      "git_blob_sha1": "4db11d9be641e0e2c9fbe193564a9351973d3c7f",
+      "sha256": "629feea9dbd93667b3992d33a138ee540c6938847f2203519909e762c623b922",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en.ts",
+      "git_blob_sha1": "bf0d94f61d3e54ec6b36439f7d2fd622cf4f945e",
+      "sha256": "1e1984a295786fcfbc5c5fd540b84bc454c113c14ca1f1b1b1d848085f1abef3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/app.ts",
+      "git_blob_sha1": "6b080b271cadaed20b45245970ccd1ecca016a30",
+      "sha256": "f1abf81c77af2d1549e13ae25930f9f59c8697525020eb5e8c06f858361f568e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/billing.ts",
+      "git_blob_sha1": "988d55fc632bfd897b9dff15bac32927e75abb73",
+      "sha256": "7db85fe520234edb83918f6fc16632f8fc522ba8d5e92f8fcdb7abd95cd3c35c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/chatBits.ts",
+      "git_blob_sha1": "24441b04887f75e06e1a6358f66fec5a06bc4e12",
+      "sha256": "45d3ef13aa17410ac4b228d2476975bbb2919870ccc1debd55cf538104b6827c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/chrome.ts",
+      "git_blob_sha1": "c06f9df6301934ae743357d698b5e40f726db3b8",
+      "sha256": "71d593a68cb5e5804b12cab425555a2006e9a197a7df80407647e3dc8a2a8fac",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/connection.ts",
+      "git_blob_sha1": "d2a83a29d2b1b19ba4829ab5f94d3a04f79d0215",
+      "sha256": "13bb04575078da8b8e1bb824342b3f47efa75f8faacc18462b8b420f4ab50807",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/content.ts",
+      "git_blob_sha1": "08da705352e6480d40091652962c75855db29c59",
+      "sha256": "b617b78ad920fd804f4994d39bbac584c156b4d7accd464b739fa47a222e8a0c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/gatewayMsg.ts",
+      "git_blob_sha1": "227e9fc41fa7f166374988696acf55c694aff4e2",
+      "sha256": "3e7a265b8d67466b117ceacd1b8a6b27e1f3decf5e2be28c5278a458a23cfa17",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/hubs.ts",
+      "git_blob_sha1": "7f33907ad378a7d8a17cb34fbe5d7dcd6e62c346",
+      "sha256": "3970317ac121583caae069ae516c67386bb9cb310f92645d27c6189bc9725254",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/lib.ts",
+      "git_blob_sha1": "ab9af07334ba97509c3f4783b13b1fa97c91ce2b",
+      "sha256": "c5b63711b01b958d9beb63481195306e63a2d470c090edf830f2e9b855f7bca9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/libText.ts",
+      "git_blob_sha1": "22c55b7c3fa41f97c45e6b366a6a0009c710aeb9",
+      "sha256": "f62f7d052ee332f1111acfd95dee6986b649e7e4560b5dfdd628be2d70166681",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/overlays.ts",
+      "git_blob_sha1": "4bfee29996a04a79832f668227967e29ba1330ad",
+      "sha256": "deca0175b812850f3b15a1788ce98660a16ca9f24f0dbebff4d65d96b6c6bcaa",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/pickers.ts",
+      "git_blob_sha1": "8c4147418eacc95b18da7e0e09756bbec5cd5009",
+      "sha256": "277d9dc104dbf729bfbb5b5187fc591480f0437e5d95f08921eb9f3beb29b7af",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/secure.ts",
+      "git_blob_sha1": "482787d0a1a66b75924fd39963efdfe85f65d118",
+      "sha256": "d3d280ad93f07f7c8d03e1c6191685934038eb1a80958aafa6729222d06fe005",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/session.ts",
+      "git_blob_sha1": "0e4d08446dcd663eae5b2bf5b74380a8faf41973",
+      "sha256": "17b476c3e573d92fbe4a8c204ac4fdc5a17bcb2483c971d263856aa97b97aeee",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/slash.ts",
+      "git_blob_sha1": "bdd6c8c70a29415f77b0924b66372377c0cd4392",
+      "sha256": "b8304f86da898d41674b505c31c439d60db62453a756efd5d43e81d2da93deec",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/slashCmd.ts",
+      "git_blob_sha1": "2b630b9404af91d6e27c8afb7217d5a3c6f47d86",
+      "sha256": "bf5398af84e8ac37ef587507aea7807a752f1f87ebc77fa89032666bf982e8fa",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/slashCmd/core.ts",
+      "git_blob_sha1": "f8727f13e6e6925f053a34e2a3ab4eed0c959ce4",
+      "sha256": "56fb86751a2c3e55ad917476d2612e36a4fda9efa3eb4f787cfcfbdf3b95d344",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/slashCmd/ops.ts",
+      "git_blob_sha1": "9d130d5005aad21623b971758df37b5cc74ded12",
+      "sha256": "595d61f0cd0da80fa49f0e6cb32e4c2030feb03ff19c8f5352735c9ef04c6a08",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/slashCmd/session.ts",
+      "git_blob_sha1": "da4e42132c4943c48a54fa3528e82018d69314b1",
+      "sha256": "7d94a04aaf1353caa44cae88df6c211154dea16c77daac55914dd19e8db7455f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/subscription.ts",
+      "git_blob_sha1": "9ad476a8fe4c098a2642b4777735fd9c58bf765b",
+      "sha256": "486ac2574f9ff59f325d9e1ce98f9390ebf6d3bf0bb4f6ead9af45ee2970b7a3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/en/userMessages.ts",
+      "git_blob_sha1": "64a313e14fa2cd92ab3b34d5733d02e4dc02a6b8",
+      "sha256": "14758f70aabfcb78c0df5c421be51cb9156850ac0a7abcde1f4cf8eb928ea466",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/index.ts",
+      "git_blob_sha1": "9ef68d05fc96700f2b9f0b1b71488e1b6f4355ea",
+      "sha256": "b0cf26901a3884b8ea3375c34ee35b6c8c499fb29d85af66debfb7fb8dd8b2a2",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/keys.ts",
+      "git_blob_sha1": "5d276ffc858668141002a180283f47343d5fc75c",
+      "sha256": "a01a15b8570e1450f6695ccb633296bb5058b294eeac301d938358e4c800a290",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/loader.ts",
+      "git_blob_sha1": "9ecbf1808bd9bd79e1d405e82fc488c20fac5454",
+      "sha256": "104c431d2ac981aefececfb42669322d309aea2c738e42c2fc53f06a338a5564",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/merge.ts",
+      "git_blob_sha1": "8fc6098470d284eff4223b3fd14d6eb5dccbbd6e",
+      "sha256": "44cf5ec49ff5d1d732552724e31a9f9b83e8f893a23885082fd97687212af8cb",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/runtime.ts",
+      "git_blob_sha1": "72dc56879bbf90a92c2163efd05bf07aaf4de71e",
+      "sha256": "4323d54b95ee7411ae5bb0818f119fce9afd6af07c81efb56e4678a53129173c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/types.ts",
+      "git_blob_sha1": "5298b5753c8c710d96689a7da3488dcb92dff210",
+      "sha256": "30e5c0f3a90c2626de0b4d4efb0846f48fca077a2dc68501616a9764abcb2300",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/i18n/useT.ts",
+      "git_blob_sha1": "5dc1372c696c78c5145b0609013f19c53b85edfb",
+      "sha256": "32d4f89e01b5484ec4a677bda0f7831ecac0b2a60dec1506f922e127277f97be",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/agentRows.ts",
+      "git_blob_sha1": "0248ed8f6327590d083f94ffc55627f6f0831931",
+      "sha256": "5db9a8cd433eb6393ae9337ee64aa04eca08aeff91b5909690a82db4888a9b5e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/billingDialog.ts",
+      "git_blob_sha1": "2a3f65ea937550078ccb03108e8946d501102142",
+      "sha256": "bc6bd104666328edc2cec35745c9e1416be9daa028cbd7bc325ce5f0c22068e1",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/charts.ts",
+      "git_blob_sha1": "d9eba4f1a20f62ea47610c1167bdd0cb158f28e2",
+      "sha256": "fc29086f50183836be5382f0d4780814ba212f0e11de057eb4b774b68264707b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/circularBuffer.ts",
+      "git_blob_sha1": "31502fc227902a6c1396e0fc8a0db6021b619af7",
+      "sha256": "d5873780960973bc9ac56a53a150345089fd5848a3fa3709f8d66762196e5459",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/clipboard.ts",
+      "git_blob_sha1": "e6979daf2eb2245edbc27f1ee8faf0b9095d8686",
+      "sha256": "6dd5bdc0c48cd2c2c35d62eef8763c3e40eab1b9fe1dbff7d61fa935639e7b69",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/color.test.ts",
+      "git_blob_sha1": "01a54f0d97a33dbd7559350cdd14090d7dcf4be8",
+      "sha256": "d8ce4952775d309e01d9dae2a780f75e0528607ee1536c9d49428e57b3088418",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/color.ts",
+      "git_blob_sha1": "55575b291f88a9402ff452cb60c4b2d7524797ce",
+      "sha256": "4423511cc2b5497d7ed613ba908b75029985f5a1860b32314664e5e0c7a48e6e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/editor.test.ts",
+      "git_blob_sha1": "bd870def86abad26a93a6b0537e26b56aad98a4b",
+      "sha256": "eb3cdbaaaf7e7f8e8280db2da3c18cd3a538f4b6e0ae3d525cce66a32dcb442c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/editor.ts",
+      "git_blob_sha1": "12de0604efd80d57d7caf0a08de2a0b617d08ed3",
+      "sha256": "74e81b90b516a05034a4a2fbbb9f92a339b10de48892a587e377a89e32187368",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/emoji.ts",
+      "git_blob_sha1": "6c22e811e30f8d933f2b4151dc3d945e3bc5b7d8",
+      "sha256": "760ef854662866c45d0972da1fd86fde8220c1cea8bbb695e76341d7658f0ab1",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/externalCli.ts",
+      "git_blob_sha1": "7ff88f2b86d4e213139bfbefdf73d84621f43f84",
+      "sha256": "790c524f35fa65124a98deb6bea64865942f752766da86b37fcc5b49ab9e8dff",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/externalLink.ts",
+      "git_blob_sha1": "06e17a948cfbdea3dfd1b2f39603a699e0f9a64a",
+      "sha256": "e87ba64d98869fbb3d7d8e4d9b3b45f588db852990fa79f28a029c7230405335",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/forceTruecolor.ts",
+      "git_blob_sha1": "cd63154e040ed18028d610bf4ae8b78292215a7b",
+      "sha256": "6ecb16434fae4087287887971ebc7752bf69bebe7e3960bca6a3150e9dc4e482",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/fpsStore.ts",
+      "git_blob_sha1": "f4ae63b7a106367b88ee45fcbd49dc75b2a5a46b",
+      "sha256": "bd6fb27007cc0390710f0e98929b6d1364979b8a62709adddf0f416805a35248",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/gracefulExit.ts",
+      "git_blob_sha1": "089269ac1aed7c09430b8f666d322a6d6a1eefba",
+      "sha256": "0a56e7dadc897055ddc0c29b1fb3f425bb9c7631027f6e9cbaca579649608acb",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/history.ts",
+      "git_blob_sha1": "9affbb80859ab2382ae1daefa3859e835ba89218",
+      "sha256": "676114a2ebd2676097b07a32a19dc993a17cf9180ace9eab7df54a42eb599bcd",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/inputMetrics.ts",
+      "git_blob_sha1": "cf5df27c63a0bbfc86b140471730c9b3b0e28300",
+      "sha256": "ceb811febb3f2a4805cedb4efb42a7d4616d89cdfbec85f865fd2b373fc41c59",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/liveProgress.test.ts",
+      "git_blob_sha1": "2f15428db242b7ab1607588c4ccbcfed5c92fe43",
+      "sha256": "06cc2c8c6c3cd3f51643b62dae0f2d3f716193cd7ef5549721ede6c5c91f2906",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/liveProgress.ts",
+      "git_blob_sha1": "12c384f393566bff4c68d625fde63d97a0f492c2",
+      "sha256": "26973b23f123e7cc0deb66339281dfd49b0606c3a6a2cd7f8243519098114b67",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/mathUnicode.ts",
+      "git_blob_sha1": "8d0426148896e363e49b2a4be1967a1b383e66eb",
+      "sha256": "940f87bca08bcf8aaf0aa14991672c2525689ba7b07142517e415cdbba235b60",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/memory.test.ts",
+      "git_blob_sha1": "344a881931978ffa3c9181e075b2689fe54728fd",
+      "sha256": "d8716d1f02cf0c87542f91d9dfa1917679747afded42c3ef743f0953bda73d14",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/memory.ts",
+      "git_blob_sha1": "664b0560ef5071623bdaf088a65d58aea1fd018e",
+      "sha256": "98ea9f1365d5de0cd109ed4429657ce87f2a22f78b6cfe56edf1961001ba3b5c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/memoryMonitor.ts",
+      "git_blob_sha1": "dd20ff27da0f5a7e3ad8ffefacd2f216d1fc253a",
+      "sha256": "b83c3a7d6f45fe38310184bf59ae2b795cc8db4d3b2f47ab4b41d093b90bdafb",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/messages.ts",
+      "git_blob_sha1": "bbbe4d42757734e55515391f495e3f7bcfeaabc8",
+      "sha256": "4c2641e9483ac6e505619346c9bae75d53ff738a32a4f8050fb48f2e7f5a94ea",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/openExternalUrl.test.ts",
+      "git_blob_sha1": "9fde6e768a3f33696a52949f48c9a2529f46a95e",
+      "sha256": "e572f0c329087bc5511bda74cda06c939b3d93ba614d9a90ea3d46ce0b007f7a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/openExternalUrl.ts",
+      "git_blob_sha1": "6c095a8d16f784b4daa84fb7252588a7bb2060c5",
+      "sha256": "3c141800c68ecf8f654ef084fdd6890db319eb436d0f1e796e4d5231729004b0",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/osc52.ts",
+      "git_blob_sha1": "e43bacd094131e8f0e103292e5b6e61f177f5dd0",
+      "sha256": "c4cdaef7dd9b195c0265328f5dd0e573f1407fb446a857515d0e3438aa2ed7f1",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/parentLog.ts",
+      "git_blob_sha1": "9af40300ca80b31926b3d4569d15388bf95a290f",
+      "sha256": "1bb2a7676c9f8073376e5ef37b85b4f0d91cafe90521a607501ea9a661f4b7a3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/perfPane.tsx",
+      "git_blob_sha1": "9d8bea5b8dc9adb4ac0b71de8cf6322480739a13",
+      "sha256": "32ac466bc25941560ef2639dec70c62b83939b89906f6d7b9e25fdf0319a4418",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/petPolling.ts",
+      "git_blob_sha1": "afdc9d51521b9a4137601a75de5b1a21b35918f2",
+      "sha256": "3e7b51b4bcc55e4dd4c1aa4c894c5d3f0203fe40f37276bb8a4ad5606d028a66",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/platform.ts",
+      "git_blob_sha1": "8723206d6ef665af34a644a693104183232cde42",
+      "sha256": "871440f226ef9297594f7d8415b4db3a2a82d69d3b6834ff64bd42fd15df3bdc",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/precisionWheel.ts",
+      "git_blob_sha1": "4ddb447abf03dde6a70426b79cf9f028935bd563",
+      "sha256": "e534055289d9eed69ed988d36c60a65238285c247ad0d47253784f5748be3fc2",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/processGlyph.ts",
+      "git_blob_sha1": "2b23d6ce9f8955ff194d51109013b63ab7da689f",
+      "sha256": "12ae8f82babd10e04abbd2dda13f82c135daeaee3a435de0636ebbcf9855f1cc",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/prompt.ts",
+      "git_blob_sha1": "491d0e4c4d70c2143266bcf3e0b40d3f43da0d13",
+      "sha256": "b6c518904d8b2c21fca12bd9cebfae63c84560f06e39f04891a4b4f0db96bcbc",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/reasoning.ts",
+      "git_blob_sha1": "d80260dbd4f57837132fdb67c53608734dea2054",
+      "sha256": "1d7d1693d4f3cf0442e8f6442bfa39023391bd83ff86ce0f37e6f9eb0c6fe370",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/resizeCoalescer.test.ts",
+      "git_blob_sha1": "b7db0c14748c8587476fe86c0ab10feb272b10e4",
+      "sha256": "1674fb0c38a7398ac57d4f9504b540c6df6c12833763cd09fd1023ae1c6edbf9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/resizeCoalescer.ts",
+      "git_blob_sha1": "fd63127d4b86e592dfc51ea0903a1e08eed7ec4d",
+      "sha256": "d4ecbcafae359dbdbc9cf65439dc50ebb06102b07ecc95cc75f6789d793886fb",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/rpc.ts",
+      "git_blob_sha1": "388860f60d9b3ca6fa8e40aa3f81571d636e3791",
+      "sha256": "74d8eaa4fb6fca85e5de96cdd18fa1718aa7a9dd76009e3a4cbfb6a7c1a9f641",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/starmapPalette.ts",
+      "git_blob_sha1": "7eddeae5a96824bf39c16bfde67338c89fc08a11",
+      "sha256": "b3ad0231523cc84c3bf3f436b1edba4bd985f27ab25014f09a2e8b91cf0c85b3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/subagentGlyph.ts",
+      "git_blob_sha1": "e9c0478346c28fccc165a80076241d1490851fec",
+      "sha256": "8f73c2a1d9b094f8d92f9a4a0de5a6870431ad1273d6f8803206d0ce788947bd",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/subagentTree.ts",
+      "git_blob_sha1": "edc6e5b665e2138b9890aab09bc8b4f1f285ef2f",
+      "sha256": "6347e8fa74547a46f4015aa482b9098d8032c594916050a0091fa26778784de7",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/syntax.ts",
+      "git_blob_sha1": "519679c1f54852c4203fa13aaee89e866b4241f5",
+      "sha256": "ebcfda662f291c0ba54da1a5d703c1abcfb54fe51edc2b40f174c7758a6c37eb",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/terminalModes.ts",
+      "git_blob_sha1": "9c658990cb2e0cae22f3fafbf2d5375b683276ba",
+      "sha256": "d88086aeddd846837d13150727f2f7dca8442e25d47db804b7b95b022b8741ae",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/terminalParity.ts",
+      "git_blob_sha1": "84724cdbc0d5a005dff372d74878546386a12ed1",
+      "sha256": "c0990a4061698c18584ae0b81e6e6bbae79c5467d9fe8fe154f07247ddbf7cf5",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/terminalSetup.ts",
+      "git_blob_sha1": "46fb4b741d8bbdd472808a8cbfe884d2e795bff8",
+      "sha256": "4b0e2521f5277403fff63d44d040393b2e7f586ec8304be2e698a162faf62853",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/termux.ts",
+      "git_blob_sha1": "0bae8c39cde62f19e390d9b8b934b154bbcb12be",
+      "sha256": "65fad3208c7177393d3add9277f0bc16d625c1adf8875e5afdaae2c3ba04ff74",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/text.test.ts",
+      "git_blob_sha1": "7f45ba6f55e5d4bde0d8614e424545c98f5ec5e1",
+      "sha256": "06d7de6385e7297dd2072a51072c66f75a1ff3f3600a0a825b417c8f823564af",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/text.ts",
+      "git_blob_sha1": "9197a7e7e5cdd7d22e53d687320fc345c7c1e5a0",
+      "sha256": "091d87b6d41ba8db8ff79b1c54abd3c859c1d37998ec9072f054ea3ad245f419",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/themeBoot.ts",
+      "git_blob_sha1": "76872f457c5960ac4a1377e9f61671d708436b4c",
+      "sha256": "c0b8bdf3fa6d4dbc0f2639ea57bf4e1ac78e0f6fccdcd3948c244f86df8cbba6",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/todo.test.ts",
+      "git_blob_sha1": "b63b051dd9ee61e9ae2444a54a703a287bdf9b77",
+      "sha256": "73c673522be22d894674c398ecb206ba35be4ffd4a70fd4a491e0465a4a9a07f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/todo.ts",
+      "git_blob_sha1": "375b92cbb9fa31c11256fd4da41d64c1ec463d11",
+      "sha256": "de11ba47ae51a6454a7b995d181b09559215b83ef22f8d033c4feddab82046e9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/viewportStore.ts",
+      "git_blob_sha1": "ab5dcf3e186444c707e8f3ca992d1f99a9356f3f",
+      "sha256": "60ba2c6c1be261dfa0f2587878951a239ace7a129f6760fd882da7ee73fca91d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/virtualHeights.ts",
+      "git_blob_sha1": "cf1ebd95d7f6277e21a697f4c1ea8ccd76ead653",
+      "sha256": "f519e337464afe33bde0ee643696e7cbedcdb6350f28fbec1fa706e9d6fa20ac",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/wheelAccel.ts",
+      "git_blob_sha1": "4b9e1522c025e164e6e9d565dcae51af1d77bc38",
+      "sha256": "34bced78eadc999b0b3e2b95258ccd457f7ad370db9123aeea868b2902edc387",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/lib/widgetGrid.ts",
+      "git_blob_sha1": "957eece33d4fa19ca8b86772647116504522f549",
+      "sha256": "a2f88385f1449f4f537aaf69707c37876f4e622994befdd1c9be01fd18acedc9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/protocol/interpolation.ts",
+      "git_blob_sha1": "804cf1cf040934440dd506a02bd9ff8d05e0ea93",
+      "sha256": "fa8e69a57ed45ef25b306a3e806ae493c0966fb22030801c5c1b849906b0ed04",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/protocol/paste.ts",
+      "git_blob_sha1": "9eae137cea455d3414c37390ee53153d5ef24418",
+      "sha256": "4b30d1c07d1d52ea6cef728ea25c2c35de6383243fba7f6c9d65a2fcef632b1f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/sdk/apps/dialogTest.tsx",
+      "git_blob_sha1": "b8af88e4ecbd96c7fd99cd569246870213f4f50f",
+      "sha256": "aafe003274f39cb440c1a440ec7909deacbcbf63c1961dc93532f722a58af6b6",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/sdk/apps/gridTest.tsx",
+      "git_blob_sha1": "955dc20be69fc76eee245d4701cc2598f30c4a9f",
+      "sha256": "117a97bf659dec05e6e210c333438b50328dac4c3b9842701ecaa0872e8a0207",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/sdk/apps/gridTestState.ts",
+      "git_blob_sha1": "ff9bf2884a891c9f610425e21d623cd9227ffc2f",
+      "sha256": "740a8d80c9687fc07dd974899db980336828dd4723c41ac693baf18119c04781",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/sdk/apps/index.ts",
+      "git_blob_sha1": "35bd0587f6498cfdad3de264389efd342ac84040",
+      "sha256": "2d46d89caef955ef8c57d79c6ce3f5ab1bd2026044537bc3a54fde4b18607651",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/sdk/apps/ticker.tsx",
+      "git_blob_sha1": "ae6da2732129360b87fa252e22d51483a7cb9968",
+      "sha256": "6e8f66976d13b495e06f8b0226aea5d98393c18c90f73644b861d89504a30fd9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/sdk/apps/weather.tsx",
+      "git_blob_sha1": "a8850e683cd7a309199d6876b409b88602b1f574",
+      "sha256": "f3ea43423e9c2b6f9388ac6123a9cb9903df558d19469f9c0a8fef8f84d18b06",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/sdk/host.tsx",
+      "git_blob_sha1": "cf2d611f54b5bd518f14e6e81066eca3604fa6ea",
+      "sha256": "1cc1eb5de11afa75de4acc8cfef74ee6f07adf610e5c2f10ee425893b6bfcd05",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/sdk/index.ts",
+      "git_blob_sha1": "3220b7111ccbb7496483bb5023a3246e54d37f60",
+      "sha256": "ab71a87ca7bed437d70360c3d1d07c617fe815c2d4dfbb4f58f0961de2626f41",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/sdk/registry.ts",
+      "git_blob_sha1": "3a94af11357ac4e6d2d5fecc8bf42b95aab01069",
+      "sha256": "b61a3cbffb95e783ac398b36bd975807b1269e2b4f8a9263b712e45eb654ea53",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/sdk/types.ts",
+      "git_blob_sha1": "f5ffe90b822a1d5896c638f2a0c20acbeb4011d7",
+      "sha256": "1e272b5727e30b85d52a69a6ba7ad5d37919cc52b754c918fcf5244b6d1f4c1e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/sdk/userWidgets.ts",
+      "git_blob_sha1": "895f6e61e77753f26576dc8547b3bb0dda236074",
+      "sha256": "bd57240adc12a87aba0fe08e5aac01604c8fbaf3bcf638ac6303cebaa01ba0e9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/theme.ts",
+      "git_blob_sha1": "4122a623d750e0b34cd32c1a2724a6b45249896a",
+      "sha256": "4d1e9cfba7f4af6fc7d2819844b28af343414861679d7657ce53c7f6fafadc34",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/types.ts",
+      "git_blob_sha1": "8da8375ba1429a1c35ecc3f657d7c3049ca60df6",
+      "sha256": "7cc39bf34b77a71cd8f009536fb915b1cdaca6d84778b54512ea62cdf81fa40f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/src/types/hermes-ink.d.ts",
+      "git_blob_sha1": "2510907a493d6fa6ee07b7ea472d445d0320ff85",
+      "sha256": "1de8dd694ae1d317e885c745e343363cb1f7c60a563aad2986bb639ef4e7af32",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/tsconfig.build.json",
+      "git_blob_sha1": "234e36abae930aa4d1b9cc36091e1ff37e0fb027",
+      "sha256": "1790ff1eb47b6e470cb4de13551aae85bcea3cdcb0fdb926825aea26c9a12c68",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/tsconfig.json",
+      "git_blob_sha1": "7c22642a90d4f018a2af3f6edc02e3cbc565fdce",
+      "sha256": "e158dfbc817f2e5c2e38f02dcc73df4dc3e2592a0e1241e1a0c8ca136806f0f2",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "ui-tui/vitest.config.ts",
+      "git_blob_sha1": "b3efa48af91f52242e3b0103e4e8da3fcce51794",
+      "sha256": "cbf81bc72f098f10aa71db81f0d2db001be43b2d0729a343d239e942b0c95377",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/eslint.config.mjs",
+      "git_blob_sha1": "ea43653a9bf78f920c3323678683cffe6e3d6b1c",
+      "sha256": "7e312481a9dee43ba74102e5b77f434ee746010a730c02fd2741fc15b9d42be9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/package.json",
+      "git_blob_sha1": "a62f7e2ae83c27b300624c8dd3bae22f3de2b96e",
+      "sha256": "7945fbf79594cfa1796e1c182c3bed80cf9819d55608ab63b70d1b9c6e6a471a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/ansi.test.ts",
+      "git_blob_sha1": "c8c041cc8bd00e6423c2de83eeeb84d7167b3579",
+      "sha256": "70611d33a84f7c7f11eb2f5e0554e7a74ecd9b741bcc46f013adba4b2888dec8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/ansi.ts",
+      "git_blob_sha1": "67eebfb0bf745054559a1709d5dfcf60ecf7d632",
+      "sha256": "2b79f0d7de3a64b648733a45e0b26767bed45d341028e2ae9618ee3cc0bb6daa",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/backend-scope.ts",
+      "git_blob_sha1": "5a2be28974c99360ac5f8041ff1926c50b72fc21",
+      "sha256": "fd6998b8f0d4b6969f3147a19d7a1c93c2603f26cddc930b86a9e2e58ff34a3f",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/billing-payment-method.test-d.ts",
+      "git_blob_sha1": "7d2de8dba998ada83292d053930bfe44f149e6db",
+      "sha256": "cb3f73dc5f4f5d1e6c8851e3d5797ac1d22952cd4b71548ba25fabd07f115845",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/billing-policy.ts",
+      "git_blob_sha1": "359abe3a794f29429fef85495082be7ca7754971",
+      "sha256": "491a27b345caf18ae403831d5c43b897f94270b67069e1aa0375df90d447d757",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/billing-types.ts",
+      "git_blob_sha1": "b3a7b9cd5bee320441ef80f04296e874b478c294",
+      "sha256": "bc2974e2d5d2259cfa4aa2a99ef2f74d2227312466c8aa6d8dca236587409aaf",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/catalog-browse.ts",
+      "git_blob_sha1": "43dafea8d00b1aecaa2f765314a61c74f1f602ee",
+      "sha256": "2333bc469d2e0448f0e7d041cb2f8faa31e02e6ee2ba6a3ea500f4b5d077f15e",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/catalog-install.ts",
+      "git_blob_sha1": "451cc24ebd7518ac50356b378acd3d8e6464f511",
+      "sha256": "71710ea3644b77bea53df9681761235a73229a10407ecac87708baea0df23f24",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/charge-settlement.ts",
+      "git_blob_sha1": "6e23252a7189d581ca8099c8759e6a27291e4716",
+      "sha256": "851ce021ccd139b02696319b9ad977662463fad7a91f91998f6b515f73fcb062",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/color.test.ts",
+      "git_blob_sha1": "78dc282169230816e7e6f9b2a68b807587dde805",
+      "sha256": "545b1bd7a395dd1e25df9203605c027fc5e8cb81b87d55005172f890fa00f5c8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/color.ts",
+      "git_blob_sha1": "e4c9f4e6abbabfc2b41ac0e1077bde44aecc2fd0",
+      "sha256": "608965b40f22d98eede54d49319a5423acc12565f7d769a681ec725f33073cba",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/cron-trigger-controller.ts",
+      "git_blob_sha1": "032231bd38dc3a86bcf11cd2ca9e394d9c7bd808",
+      "sha256": "3ac783e39d6926b799f997451a8e86595e1bf99a23bc3a7d6e20bd70764b3a54",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/data-url-read-max.ts",
+      "git_blob_sha1": "1b8cd157f618cb5a070dcae69b6e2f7f60116a4e",
+      "sha256": "c3bd504456faef7ce1bb73c8e1ef017d96e97d0fba35869b4bd542c4af954af3",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/format.test.ts",
+      "git_blob_sha1": "2b1966733522d328b6203e9fc448de394d5c9ec8",
+      "sha256": "cce0210601359e16fceeaef0c9d9d20eb5cb51affdbb1e6dcc23a7e750e4616d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/format.ts",
+      "git_blob_sha1": "c00cd0cc112ae299e2eaaafde7d8c80d7996867d",
+      "sha256": "70b1b4b8e3e013225b40be5c819540b1508e46678b5d83e6676bb68d71d9d521",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/fuzzy.test.ts",
+      "git_blob_sha1": "c708834fcf3e25991fbe228debe2472582703dd0",
+      "sha256": "9c6c46f1a0121568888ea49cc26fde669e325829715f725c00cd64bbcfa7b049",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/fuzzy.ts",
+      "git_blob_sha1": "d047099d4c4fe04e57e7906a6294d15bf5b6135c",
+      "sha256": "005f379adcc672e24133062b99d0e581c38dd00f4f5bacea37b0722af671c4cc",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/gateway-contract.generated.ts",
+      "git_blob_sha1": "4ca52374a765afd1af5ddf6f83de486073c52f22",
+      "sha256": "73ed8030bb41f97bdae093ce7529daa645afc103180a80ca479a135d9a2e8ff9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/gateway-contract.openrpc.json",
+      "git_blob_sha1": "53080ab114bca4e52c911bab69a78460abc58678",
+      "sha256": "8a57ea608ae601c05a8ae49fc71cde7ce75fab2d5edbe7e39910bf2c6271ca60",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/gateway-events.ts",
+      "git_blob_sha1": "6c86696e04c5c5d6a3dbc7910ac4cf21171cf61d",
+      "sha256": "f2172b313c2002d15784d0d74c988cb00e15011220fa9d26d5ce38222d2611e0",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/i18n.test.ts",
+      "git_blob_sha1": "1ad81f37e6a488c4b0727c02156f2eea030f32c7",
+      "sha256": "c1363a7ce9b9e2a600422a954cd5ae34177ec71dd51e3f3b77fcfcc35edea1cf",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/i18n.ts",
+      "git_blob_sha1": "a4f59181bb0d6af21ede01e6ca0e62c81b69a18c",
+      "sha256": "346a7d455250b67af2a72c34b039e588a48b241993e7a3556762f680e2faebca",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/index.ts",
+      "git_blob_sha1": "35ddac34f6126085a350f08d3358f734dc4c3c7c",
+      "sha256": "7144e6ca8062059823b35b65a7b51ee2570ef9d805f0ef9a684d8460020d1b94",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/json-rpc-channel.test.ts",
+      "git_blob_sha1": "fde24a7f049066da8f9f34c69ed7ff4b0d50ebe8",
+      "sha256": "68d880c830dcf74dee2bafb632d00034487a0bdf50b2643d50036f089dab83c8",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/json-rpc-channel.ts",
+      "git_blob_sha1": "ecc3a7627a4a6860a5c7c1e3987df64903ce42c9",
+      "sha256": "496c7d24c40ea43a91e4944d166c532bf33e25971be93ddf58b252d817659268",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/json-rpc-gateway-connect.test.ts",
+      "git_blob_sha1": "bff00a184636874bfebce1e566b28706e4118cdf",
+      "sha256": "1146b64f5c55c927e575ffa5f2d5e63f77bd09dbeeefc2353b18d607f7830c81",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/json-rpc-gateway-replay.test.ts",
+      "git_blob_sha1": "884bf37b2696b1923273e74c277f0daeae48f5e5",
+      "sha256": "df8d2b6caddbc93b471a5077d0a2324becffb55d0dff22579d28c1f797375615",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/json-rpc-gateway.ts",
+      "git_blob_sha1": "8143304c764b8a93291f809d026be297b644f8f7",
+      "sha256": "546f02b18e473e132f2349d12c78ed70b61fa351839f420277eb4bd9096de69d",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/model-search-text.test.ts",
+      "git_blob_sha1": "ddeace112d7b113da8cfc62b8ec0281c955215a9",
+      "sha256": "95738b4e8f4d5275414fb1070c56b36108d30ce5215e204fdc8416ed022a6e45",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/model-search-text.ts",
+      "git_blob_sha1": "e9ba9dfd13120bedd526dafabb3f8e1010f25161",
+      "sha256": "d9def71ec6168ce884ea653c6ce6b7ae626449f5d1e88ccb14e66a700a69d22a",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/reasoning-effort.test.ts",
+      "git_blob_sha1": "b4afc83ad38b4f50e6d6b61a318f6ad139cf029a",
+      "sha256": "35ffdbc2feee62f11d7b82b2cf130c517d21ff6af5314e7eb2803d53846d38ee",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/reasoning-effort.ts",
+      "git_blob_sha1": "e92adf3a1916f0fb29eba8ae0b687bbd5a028573",
+      "sha256": "9ac6319a8947d25e7241c3eab625aa85f1ebd9df16ddf4950a8c98ce3ff070ae",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/reconnect-backoff.test.ts",
+      "git_blob_sha1": "73660bc3a56d9028e91112aea388258c610fe7d2",
+      "sha256": "3156b1815b8be9eedfa3c6d3c4800add121b731f02bf0796d34154971981f4ea",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/reconnect-backoff.ts",
+      "git_blob_sha1": "86b83a91abdcdc41d0738c097e5dbcc6301b6c4c",
+      "sha256": "066a9efab5237e47b0b892ef72ec129485622a45ff8e1b964e278999c8466328",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/skill-scaffold.test.ts",
+      "git_blob_sha1": "954ff41a6c9d97b0577ee9984aaabab3e51c43f4",
+      "sha256": "283e8bd86615d04d4a8a7e1427000b8bc85fce5358ec1caa7bb40869bac8d8b0",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/skill-scaffold.ts",
+      "git_blob_sha1": "fffae405b2a6e2059a4f15be237844698ed0a67e",
+      "sha256": "fb2ed52d1ed50cab8439e7f275e04ace702e888dcd51a39e98eed5bce92064de",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/skin.ts",
+      "git_blob_sha1": "fe120c2b5996e3da2da3264baead8175ec4b1397",
+      "sha256": "59b74561b98c14510dd2eb346e1357273d0cdd2e901eeb687b997571d04e4760",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/slash.test.ts",
+      "git_blob_sha1": "a990ab1a3b91d94745cf8171c63051a0353ef54b",
+      "sha256": "57f02f7a084c0f39533006b39b6f5d8ee5bc23e4bbdbbad8b0f67e41c4ca249c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/slash.ts",
+      "git_blob_sha1": "5f365d3e40743e6e2b3475a91943a52573b4723c",
+      "sha256": "44118cc7d445af3331999ed354fb85fa160705baab8804787e974bb7be84e869",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/theme-presets.ts",
+      "git_blob_sha1": "bc0a76b73af45313c21a30e4a81e082f2b3121d9",
+      "sha256": "ada88929c0500ce1f0a5b9d097c85c0ea6959c65107146bee8017445bd0e937b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/translucency.ts",
+      "git_blob_sha1": "ed3af92abe0ee7b571fd036e3629755990884830",
+      "sha256": "7912511a1becefaa8ec442a75d557d8cd8b7e45f07579d7cb1e698563fc80a74",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/src/websocket-url.ts",
+      "git_blob_sha1": "24592c4642b0f3be18f3fd7911492292a27dfd11",
+      "sha256": "a4282b7d610d3c022a8dbcb77597b85497885eec606f6f09a354d373fea3d10c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "apps/shared/tsconfig.json",
+      "git_blob_sha1": "c602eeebca21a0195bb3ee1ab0a295a14af30bd0",
+      "sha256": "5b93f92433b92f0af8199f5d6b814ed2de978a17f82c9a49ed74d4ff014c5ec1",
+      "source": "existing Git blob"
+    },
+    {
+      "path": ".npmrc",
+      "git_blob_sha1": "0e252084614feed7011cf11ee55865891e6416cd",
+      "sha256": "cb762abe7fd1e479183cfea2d3da66ca3817f3e32fe71408c6e86fc80dd9a6c7",
+      "source": "existing Git blob"
+    },
+    {
+      "path": ".nvmrc",
+      "git_blob_sha1": "6f4247a6255c99f420d1df558d68745592862ff7",
+      "sha256": "20d2add851bf39edcc6b5e830930f962db7e19dffa2cab8610eed551eda6c302",
+      "source": "existing Git blob"
+    },
+    {
+      "path": ".prettierrc",
+      "git_blob_sha1": "12ec3ed7db1be6365793d53b49038956571b673b",
+      "sha256": "d5b594860cf1d62eec2304485cdb3d740e63851f588eefdf26fcfd14d6b6885c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "AGENTS.md",
+      "git_blob_sha1": "65aa3e61bcba610da21279a17385671263be39e9",
+      "sha256": "1c63f46726032e4c41e05673b25a88ff495105a3df3f47046c1e9f6093e4175c",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "git_blob_sha1": "b0baa59b5057c204b3c09d3dd170c0955cfdb39c",
+      "sha256": "9e09829e73a4275de6ce2eb1f5742754b2090878aabb70579bb5be1a610f0fa9",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "eslint.config.shared.mjs",
+      "git_blob_sha1": "827f2fcbb6f393cc7db5f1e6cc2c3c6108188201",
+      "sha256": "9ec870b511f516477a6f032349516432b78b9e94cbb963348c65a3a564e80e8b",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "package-lock.json",
+      "git_blob_sha1": "4ba3299ddea6d59522bcadf8c8f58d5bc6014ba1",
+      "sha256": "9934677654ce672900b0946898cc28c73671f75896862b5768c24cca84776ccd",
+      "source": "existing Git blob"
+    },
+    {
+      "path": "package.json",
+      "git_blob_sha1": "2170d11554b26484be7dfd583b665db65782980c",
+      "sha256": "07122ef9f0c719603efb4ed473310d5c350c86dfa3f3496943df125a7c9d3f9b",
+      "source": "existing Git blob"
+    }
+  ]
+}

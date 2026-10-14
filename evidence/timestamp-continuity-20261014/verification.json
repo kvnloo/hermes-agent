@@ -1,0 +1,97 @@
+{
+  "recorded_at": "2026-10-14T12:26:09Z",
+  "verdict": "FAIL_GAP / LIMITED: author-requested invariant independently reproduced, no repair",
+  "origin_url": "https://github.com/NousResearch/hermes-agent/pull/111511",
+  "downstream_url": "https://github.com/kvnloo/hermes-agent/issues/500",
+  "tested_commit": "0b58039b7c1f77dd54fa0cd080f794a11002bd49",
+  "actual_root_tree": "a2efc59fc2ca61ca5436fbc5d8486461d035f5d2",
+  "api_base": "eb8d21f482142c236550762ebdb5df4004c39696",
+  "requirement": "Kevin/kvnloo author self-review comment 5853446302; not maintainer agreement",
+  "scope": "Partial exact-head tree; native-component integration for one uninterrupted text reply, direct controller and append calls, real Ink rendering",
+  "files": [
+    "src/__tests__/streamingTimestampContinuity.test.tsx",
+    "src/__tests__/streamingTimestamps.test.tsx",
+    "src/__tests__/messages.test.ts",
+    "src/__tests__/turnControllerNotice.test.ts",
+    "src/__tests__/turnControllerTodos.test.ts"
+  ],
+  "command": "TZ=UTC with sanitized HOME/HERMES_HOME/runtime/cache and NODE_OPTIONS=--require=<packet>/offline-guard.cjs; npm run test --prefix ui-tui -- src/__tests__/streamingTimestampContinuity.test.tsx src/__tests__/streamingTimestamps.test.tsx src/__tests__/messages.test.ts src/__tests__/turnControllerNotice.test.ts src/__tests__/turnControllerTodos.test.ts --reporter=verbose",
+  "outcomes": [
+    {
+      "run": "first",
+      "passed": 26,
+      "failed": 1,
+      "exit_code": 1,
+      "log": "logs/targeted-first.log"
+    },
+    {
+      "run": "independent",
+      "passed": 26,
+      "failed": 1,
+      "exit_code": 1,
+      "log": "logs/independent-review.log"
+    }
+  ],
+  "observations": {
+    "same_minute": {
+      "live": "[12:59]",
+      "settled": "[12:59]",
+      "result": "PASS"
+    },
+    "cross_minute": {
+      "live": "[12:59]",
+      "settled": "[13:00]",
+      "result": "FAIL expected equality"
+    },
+    "offline_guard_diagnostics": 0
+  },
+  "quality": {
+    "ink_build": "PASS",
+    "authored_test_scoped_eslint": "PASS",
+    "independent_runtime_review": "accepted scoped defect reproduction",
+    "independent_remote_source_review": "accepted scoped defect reproduction",
+    "source_files_verified": 589,
+    "installed_lock_entries_compared": 1338
+  },
+  "runtime": {
+    "platform": "Linux x86_64",
+    "node": "26.7.0",
+    "vitest": "4.1.10",
+    "dependencies": "Copied exact-lock npm-ci installation; no new install; registry tarball content not independently revalidated"
+  },
+  "not_executed": [
+    "full app or createGatewayEventHandler",
+    "real TTY",
+    "Python gateway/backend/provider",
+    "persistence reload",
+    "base-versus-fix comparison",
+    "current main",
+    "multi-burst/tool/interim/interrupt/error/no-delta/subsequent-turn paths",
+    "full suite",
+    "typecheck",
+    "aggregate/i18n check"
+  ],
+  "provenance_correction": "See root-tree-correction.json; do not treat frozen manifest root_tree as an actual Git tree SHA.",
+  "pre_publication_refresh": "2026-10-14T12:26:00Z: head/timeline unchanged; downstream500 holds only this claim and zero comments; factory/project policy hashes unchanged.",
+  "authored_test_sha256": "5c1db1c8fc44eb46aba145b55d8340d397556f42fc5d7d397f353f8dcc9e53f2",
+  "executed_wrapper_sha256": "db892e27daf2409f82bdf4926e7bb3be1453f73c13f8ef32d97b91dfe75e3c38",
+  "portable_wrapper_status": "Equivalent explicit five-file command; portable wrapper not separately executed",
+  "executed_ink_bundle_sha256": "20a00e874ac7145c88ed358c3db33150dfcc865df7767e2fc07106ce837ea9fd",
+  "artifacts": {
+    "README.md": "3dce340618d379082503e696395345bc915b7ca5cf9ae227c11efad868c43836",
+    "dependency-source-verification.json": "756b3273dbecf5a0ef21143c5ae169b0f2d2e4cafe049575d95db570dcf37704",
+    "independent-runtime-review.md": "685fdeed0a59e9c5cfa13bbfdc8d5bdd5f8fc0632b073928fe8c6f8abcc74b03",
+    "independent-source-review.md": "9870fcf35e0df2318677adff054180a26f2d79f1db99a0b96e3fdb1b7a4dd00c",
+    "independent-tree-provenance.json": "c5e48d6cefc7a150807102993277874d635e2d16d18a08f6994fe7627c2c7450",
+    "logs/build-ink.log": "b1abdc50f0558f859585d17d42d42377ede2ea36afba26956d885c0c86a102f4",
+    "logs/independent-review.log": "d7a62ab6502acae0aa70fb5406f6dae04129c0c9307735043f266dd10caccfad",
+    "logs/scoped-eslint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "logs/targeted-first.log": "d816882ee903ff27d05784c9c0144a170d2abcd5b3ebb99e79dbae1c5518d6ca",
+    "materialization.json": "0ebb9b30a71d63d6f70dd722424308bdfa918b8afb836599de73712bc61c2307",
+    "offline-guard.cjs": "b27d5d69fbd8140e5c51eb91f918476191617d6a17b0e2bd199cb957488926ac",
+    "root-tree-correction.json": "23abb8490fa355edffe2159db8b5c2bd702f75cd49b6873ce66b359f4baa2fa1",
+    "run-targeted.sh": "4f9a8f32630792fe300d61b154c6ac3d2fdab8910116a13f1ae0d1a916d78a30",
+    "source-manifest.json": "7ed9cc49ee66752e701115c10bc91b781d59e531fade7eb928bad994dea42cf2",
+    "streamingTimestampContinuity.test.tsx": "5c1db1c8fc44eb46aba145b55d8340d397556f42fc5d7d397f353f8dcc9e53f2"
+  }
+}
