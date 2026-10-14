@@ -1861,6 +1861,47 @@ class TestExpandedOverflowPatterns:
         assert result.reason == FailoverReason.context_overflow
         assert result.should_compress is True
 
+    def test_custom_litellm_vllm_prompt_too_long_400_is_overflow(self):
+        # @YangKangSung's #122096 repro: custom -> LiteLLM -> vLLM GLM-5.3.
+        # The proxy supplied no token usage, so the 400 must trigger compaction.
+        import httpx
+        import openai
+
+        message = (
+            "400: litellm.BadRequestError: OpenAIException - Prompt too long: "
+            "266450 tokens; the prompt plus at least one generated token must fit "
+            "in the model limit of 262144 tokens (prompt <= 262142).. "
+            "Received Model Group=openai/nvidia/GLM-5.3-NVFP4"
+        )
+        body = {"error": {"message": message}}
+        response = httpx.Response(
+            400,
+            json=body,
+            request=httpx.Request("POST", "http://127.0.0.1:4000/v1/chat/completions"),
+        )
+        error = openai.APIStatusError(message, response=response, body=body)
+        result = classify_api_error(
+            error,
+            provider="custom",
+            model="openai/nvidia/GLM-5.3-NVFP4",
+            base_url="http://127.0.0.1:4000/v1",
+        )
+        assert result.reason == FailoverReason.context_overflow
+        assert result.retryable is True
+        assert result.should_compress is True
+
+    def test_zai_1210_parameter_error_stays_format_error(self):
+        # The numeric 1210 code alone is not evidence of context overflow.
+        error = MockAPIError(
+            "参数错误",
+            status_code=400,
+            body={"error": {"code": "1210", "message": "参数错误"}},
+        )
+        result = classify_api_error(error, provider="zai", model="glm-5")
+        assert result.reason == FailoverReason.format_error
+        assert result.retryable is False
+        assert result.should_compress is False
+
     def test_request_too_large_message_only_is_payload_too_large(self):
         # Anthropic's structured 413 type re-wrapped by a proxy with no
         # status attribute — was falling through to `unknown`.
