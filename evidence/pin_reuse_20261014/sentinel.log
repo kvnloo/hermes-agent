@@ -1,0 +1,100 @@
+▶ not activated — using HERMES_PYTHON: <SANDBOX>/test-venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~13 tests) under ['tests/gateway/test_internal_event_pin_wiring.py']; running with -j 1
+[100.0% |    13/~13 | ✓1 | ✗2] ✗ tests/gateway/test_internal_event_pin_wiring.py (1✓ 2✗, 2.4s)
+
+  ╔╍ Failed: tests/gateway/test_internal_event_pin_wiring.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ =================================== FAILURES ===================================
+  ║ _____ test_sethome_unchanged_config_keeps_pin_verbatim[real-renderer-spy] ______
+  ║ tests/gateway/test_internal_event_pin_wiring.py:1125: in test_sethome_unchanged_config_keeps_pin_verbatim
+  ║     assert observed == {
+  ║ E   AssertionError: assert {'render_coun..., True, True]} == {'render_coun..., True, True]}
+  ║ E     
+  ║ E     Omitting 3 identical items, use -vv to show
+  ║ E     Differing items:
+  ║ E     {'render_counts': [1, 2, 2]} != {'render_counts': [1, 1, 1]}
+  ║ E     Use -v to get more diff
+  ║ ----------------------------- Captured stdout call -----------------------------
+  ║ PIN_REUSE_EVIDENCE {"injected_render_marker": false, "render_counts": [1, 2, 2], "context_unchanged": [true, true, true], "effective_unchanged": [true, true, true], "store_snapshot_unchanged": [true, true, true]}
+  ║ _____ test_sethome_unchanged_config_keeps_pin_verbatim[per-render-marker] ______
+  ║ tests/gateway/test_internal_event_pin_wiring.py:1125: in test_sethome_unchanged_config_keeps_pin_verbatim
+  ║     assert observed == {
+  ║ E   AssertionError: assert {'render_coun...False, False]} == {'render_coun..., True, True]}
+  ║ E     
+  ║ E     Differing items:
+  ║ E     {'effective_unchanged': [True, False, False]} != {'effective_unchanged': [True, True, True]}
+  ║ E     {'store_snapshot_unchanged': [True, False, False]} != {'store_snapshot_unchanged': [True, True, True]}
+  ║ E     {'context_unchanged': [True, False, False]} != {'context_unchanged': [True, True, True]}
+  ║ E     {'render_counts': [1, 2, 2]} != {'render_counts': [1, 1, 1]}
+  ║ E     Use -v to get more diff
+  ║ ----------------------------- Captured stdout call -----------------------------
+  ║ PIN_REUSE_EVIDENCE {"injected_render_marker": true, "render_counts": [1, 2, 2], "context_unchanged": [true, false, false], "effective_unchanged": [true, false, false], "store_snapshot_unchanged": [true, false, false]}
+  ║ Offline evidence guard: 0 network attempts
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/gateway/test_internal_event_pin_wiring.py::test_sethome_unchanged_config_keeps_pin_verbatim[real-renderer-spy]
+  ║ FAILED tests/gateway/test_internal_event_pin_wiring.py::test_sethome_unchanged_config_keeps_pin_verbatim[per-render-marker]
+  ║ ================== 2 failed, 1 passed, 28 deselected in 1.34s ==================
+  ║
+  ║  Repro: python -m pytest tests/gateway/test_internal_event_pin_wiring.py -k test_sethome_refreshes_pinned_context_for_preserving_turn or test_sethome_unchanged_config_keeps_pin_verbatim -p evidence.pin_reuse_20261014.offline_guard --tb=short
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 1 files, 1 tests passed, 2 failed (100% complete) in 2.4s (1 workers) ===
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 2.4s  (runner wall: 2.4s, parallelism: 1x)
+  P50: 2.38s  P90: 2.38s  P95: 2.38s  P99: 2.38s  Max: 2.38s
+  <1s: 0 files (0%)  <2s: 0 files (0%)
+  Top 10 slowest:
+      2.38s  tests/gateway/test_internal_event_pin_wiring.py
+
+=== Failure output ===
+
+--- tests/gateway/test_internal_event_pin_wiring.py ---
+============================= test session starts ==============================
+platform linux -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <SANDBOX>/repo
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 31 items / 28 deselected / 3 selected
+
+tests/gateway/test_internal_event_pin_wiring.py .FF                      [100%]
+
+=================================== FAILURES ===================================
+_____ test_sethome_unchanged_config_keeps_pin_verbatim[real-renderer-spy] ______
+tests/gateway/test_internal_event_pin_wiring.py:1125: in test_sethome_unchanged_config_keeps_pin_verbatim
+    assert observed == {
+E   AssertionError: assert {'render_coun..., True, True]} == {'render_coun..., True, True]}
+E     
+E     Omitting 3 identical items, use -vv to show
+E     Differing items:
+E     {'render_counts': [1, 2, 2]} != {'render_counts': [1, 1, 1]}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+PIN_REUSE_EVIDENCE {"injected_render_marker": false, "render_counts": [1, 2, 2], "context_unchanged": [true, true, true], "effective_unchanged": [true, true, true], "store_snapshot_unchanged": [true, true, true]}
+_____ test_sethome_unchanged_config_keeps_pin_verbatim[per-render-marker] ______
+tests/gateway/test_internal_event_pin_wiring.py:1125: in test_sethome_unchanged_config_keeps_pin_verbatim
+    assert observed == {
+E   AssertionError: assert {'render_coun...False, False]} == {'render_coun..., True, True]}
+E     
+E     Differing items:
+E     {'effective_unchanged': [True, False, False]} != {'effective_unchanged': [True, True, True]}
+E     {'store_snapshot_unchanged': [True, False, False]} != {'store_snapshot_unchanged': [True, True, True]}
+E     {'context_unchanged': [True, False, False]} != {'context_unchanged': [True, True, True]}
+E     {'render_counts': [1, 2, 2]} != {'render_counts': [1, 1, 1]}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+PIN_REUSE_EVIDENCE {"injected_render_marker": true, "render_counts": [1, 2, 2], "context_unchanged": [true, false, false], "effective_unchanged": [true, false, false], "store_snapshot_unchanged": [true, false, false]}
+Offline evidence guard: 0 network attempts
+=========================== short test summary info ============================
+FAILED tests/gateway/test_internal_event_pin_wiring.py::test_sethome_unchanged_config_keeps_pin_verbatim[real-renderer-spy]
+FAILED tests/gateway/test_internal_event_pin_wiring.py::test_sethome_unchanged_config_keeps_pin_verbatim[per-render-marker]
+================== 2 failed, 1 passed, 28 deselected in 1.34s ==================
+
+=== 1 file with test failures (2 tests failed) ===
+  tests/gateway/test_internal_event_pin_wiring.py  (2 tests failed)

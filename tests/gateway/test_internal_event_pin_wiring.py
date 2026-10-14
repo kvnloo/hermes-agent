@@ -1068,11 +1068,15 @@ async def test_sethome_refreshes_pinned_context_for_preserving_turn(monkeypatch)
 
 
 @pytest.mark.asyncio
-async def test_sethome_unchanged_config_keeps_pin_verbatim(monkeypatch):
+@pytest.mark.parametrize("render_marker", [False, True], ids=["real-renderer-spy", "per-render-marker"])
+async def test_sethome_unchanged_config_keeps_pin_verbatim(monkeypatch, render_marker):
     """The config-refresh must not cost byte stability when NOTHING changed: with the home
     held constant, a preserving turn returns the pinned bytes verbatim (the #126109 flip
     stays fixed), and the next human turn renders those same bytes."""
     from gateway.config import HomeChannel
+    from copy import deepcopy
+
+    import gateway.run_agent_cache as cache
 
     home = HomeChannel(platform=Platform.DISCORD, chat_id="111111111111111111", name="Stable home")
     config = _pinned_config()
@@ -1086,11 +1090,41 @@ async def test_sethome_unchanged_config_keeps_pin_verbatim(monkeypatch):
     calls: list[dict] = []
     _capture(runner, calls)
 
+    real_renderer = cache.build_session_context_prompt
+    renders: list[str] = []
+
+    def observed_renderer(context, *, redact_pii=False):
+        text = real_renderer(context, redact_pii=redact_pii)
+        renders.append(text)
+        # Injected renderer variation, not a claim of production nondeterminism.
+        return f"{text}\n[render-sentinel:{len(renders)}]" if render_marker else text
+
+    monkeypatch.setattr(cache, "build_session_context_prompt", observed_renderer)
+
     await _drive(runner, ((False, _human_thread_source()),), channel_prompt="Channel hint.")
     human_prompt = calls[0]["context_prompt"]
+    initial_snapshot = deepcopy(durable["value"])
+    render_counts = [len(renders)]
+    snapshots_unchanged = [durable["value"] == initial_snapshot]
 
     await _send(runner, runner._synthetic_prompt_event(_wake_thread_source(), "[goal] continue"))
-    assert calls[-1]["context_prompt"] == human_prompt, "unchanged config re-rendered the pin"
+    render_counts.append(len(renders))
+    snapshots_unchanged.append(durable["value"] == initial_snapshot)
     await _drive(runner, ((False, _human_thread_source()),), channel_prompt="Channel hint.")
-    assert calls[-1]["context_prompt"] == human_prompt
-    assert _effective_ephemeral(runner, calls[-2]) == _effective_ephemeral(runner, calls[-1])
+    render_counts.append(len(renders))
+    snapshots_unchanged.append(durable["value"] == initial_snapshot)
+
+    first_effective = _effective_ephemeral(runner, calls[0])
+    observed = {
+        "render_counts": render_counts,
+        "context_unchanged": [call["context_prompt"] == human_prompt for call in calls],
+        "effective_unchanged": [_effective_ephemeral(runner, call) == first_effective for call in calls],
+        "store_snapshot_unchanged": snapshots_unchanged,
+    }
+    print("PIN_REUSE_EVIDENCE", json.dumps({"injected_render_marker": render_marker, **observed}))
+    assert observed == {
+        "render_counts": [1, 1, 1],
+        "context_unchanged": [True, True, True],
+        "effective_unchanged": [True, True, True],
+        "store_snapshot_unchanged": [True, True, True],
+    }

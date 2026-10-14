@@ -1,0 +1,67 @@
+{
+  "source_revision": "6e3282b24700582123d15eecda334db1bd9add1e",
+  "scope": "Evidence-only unchanged-config renderer reuse; no production repair",
+  "origin": "https://github.com/NousResearch/hermes-agent/pull/126167",
+  "coordination": "https://github.com/kvnloo/hermes-agent/issues/485",
+  "implementation_owner": "JoaoMarcos44",
+  "source_evidence_provenance": "independent sandbox execution",
+  "production_changes": false,
+  "test_blob": "a8aa59e079246aa751f149b45bc4cc47b0184c56",
+  "runs": [
+    {
+      "name": "original-controls",
+      "exit_code": 0,
+      "passed": 2,
+      "failed": 0,
+      "workers": 1,
+      "file_retries": 0,
+      "log": "baseline-controls.log"
+    },
+    {
+      "name": "stronger-sentinels-and-control",
+      "exit_code": 1,
+      "passed": 1,
+      "failed": 2,
+      "deselected": 28,
+      "workers": 1,
+      "file_retries": 0,
+      "log": "sentinel.log",
+      "real_renderer_call_trace": [
+        1,
+        2,
+        2
+      ],
+      "expected_call_trace": [
+        1,
+        1,
+        1
+      ],
+      "ordinary_renderer_bytes_equal": true,
+      "injected_renderer_bytes": "A -> B -> B",
+      "python_audit_socket_dns_attempts": 0
+    }
+  ],
+  "setup": {
+    "initial_network_setup": "failed DNS before tests, including PM built-in retries; no subsequent invocation of that network setup",
+    "offline_pm_manager_build": "passed",
+    "offline_pm_dev_test_build": "passed",
+    "python": "3.14.7",
+    "uv": "0.12.3",
+    "installed_versions_match_lock": true,
+    "editable_binding": "exact reviewed checkout"
+  },
+  "validation": {
+    "ruff": "0.15.10 passed",
+    "git_diff_check": "passed",
+    "replay_shell_syntax": "passed; equivalent canonical command executed directly"
+  },
+  "limitations": [
+    "No production fix or RED-to-GREEN repair evidence",
+    "No actual database writes/no-op verification; store is mocked",
+    "No production nondeterminism, provider-cache, billing or performance measurement",
+    "No live provider or platform execution; model executor is stubbed",
+    "No full suite, hosted CI, queued drain, eviction, cold-start or privacy-transition coverage",
+    "Audit instrumentation is Python-level, not OS-wide capture"
+  ],
+  "attribution": "JoaoMarcos44 owns implementation; preserve Austin Pickett\u2019s separately reported 243 passes and admission/stop verification."
+}

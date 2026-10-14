@@ -1,0 +1,15 @@
+{
+  "tests/gateway/test_internal_event_pin_wiring.py": "12e5f25c44c16b5e7f4b442916c1a722a973f0e930b8434e507b6803500b80e4",
+  "evidence/pin_reuse_20261014/README.md": "0bf79d71b9fcab577cb6626df49fbfc6349b6d8dc4a47f593009cd5f4487b2cd",
+  "evidence/pin_reuse_20261014/baseline-controls.log": "8473a2d204a62d3356583eadc0387aba0ff059827a7829853de4762dfcfcb8c4",
+  "evidence/pin_reuse_20261014/independent-review.md": "697f3e3ca54fb86e856f7040e6d5a2a7fa93535c6ec438f48e81bddfdc5b2088",
+  "evidence/pin_reuse_20261014/lint.log": "6b1bddb27bd2740b4d235a0781aff73e793265ceee27ec5a96a6a58fe452e9ee",
+  "evidence/pin_reuse_20261014/offline-manager-build.log": "83558e51d839550618d3b333b86c7d451cd1b962a3e9d844bb4aefa3712b6878",
+  "evidence/pin_reuse_20261014/offline-test-build.log": "3fdc83124e2fc7b96da5f7081c4152517a2393cbc1227792080b203ca3fe93b7",
+  "evidence/pin_reuse_20261014/offline_guard.py": "e05caaebee35bbc1f905d2668bc003061cbb7a12dc52fb117611959ea13a785c",
+  "evidence/pin_reuse_20261014/provenance.json": "da763b748a7f07afbd095ebb94d61aa7f34430b72bbe7452357c119a0e16394b",
+  "evidence/pin_reuse_20261014/replay.sh": "15e8cf75582bdc2caa347af51ab6e582b70eacf9ea414c3522945f4b0311267e",
+  "evidence/pin_reuse_20261014/runtime-build.log": "3ae8a2ef96d3db0f4b408a7a014face8b47967ba5ba0a324d2837ba3163587b9",
+  "evidence/pin_reuse_20261014/sentinel.log": "0fda049669a05cea982b022ea9868f9dc9445c576d75c34856348ba31ad663f4",
+  "evidence/pin_reuse_20261014/verification.json": "5f3f3e4ae75e86661b8778b7e3e95820d4dff72d03b9819e5f3f66b9815377ef"
+}
