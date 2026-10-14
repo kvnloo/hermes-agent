@@ -1,0 +1,525 @@
+{
+  "schema_version": 1,
+  "source_repo": "NousResearch/hermes-agent",
+  "owner_repo": "KoNit-K/hermes-agent",
+  "source_head": "dafb54035dff5a6670e87b057bfd9a1d4a1d4094",
+  "source_tree": "075b28103e4b57bda6a7547a21f3636268975f9c",
+  "downstream_issue": "https://github.com/kvnloo/hermes-agent/issues/501",
+  "origin_pr": "https://github.com/NousResearch/hermes-agent/pull/138353",
+  "origin_issue": "https://github.com/NousResearch/hermes-agent/issues/138349",
+  "reporter": "deadczarvc",
+  "production_author": "KoNit-K",
+  "evidence_scope": "Independent real-scanner warning characterization, test-only",
+  "files": [
+    {
+      "path": "agent/skill_commands.py",
+      "sha256": "219c4318f8bc0d85b389c3716ab64be6be8562ae30ddede12bf71bd5c7af8a13",
+      "git_blob": "9e44f48516b3c3d20621c77ccf156e2ab6644ebe",
+      "role": "unchanged exact owner source"
+    },
+    {
+      "path": "pyproject.toml",
+      "sha256": "ff41b097147124ff2eb51a437d5f44eddea35104900c1c79c7edfb8b7352d901",
+      "git_blob": "5145f275d14a0ab119802821c715a33123b15551",
+      "role": "unchanged exact owner source"
+    },
+    {
+      "path": "uv.lock",
+      "sha256": "16300cf807347b7fcfa3c19963f5fe950913fdb3e41e3c649ea724bc7dc997da",
+      "git_blob": "765bf23d7c90461d60497e268932f518d880ea47",
+      "role": "unchanged exact owner source"
+    },
+    {
+      "path": "pm/lock.json",
+      "sha256": "49b79259220160f147255078a19af541a5f328d3871c8041cc1eb909d19eb549",
+      "git_blob": "800fdda38903ae30b47d313aa47704e00d4579ad",
+      "role": "unchanged exact owner source"
+    },
+    {
+      "path": "scripts/run_tests.sh",
+      "sha256": "20c955e19e440bffb2abbc7bc645cc7c4d77a3fcdcd82434facf8b8ac9684467",
+      "git_blob": "36d7abffbfbd976b79d8f647c3bc590d41569048",
+      "role": "unchanged exact owner source"
+    },
+    {
+      "path": "tests/conftest.py",
+      "sha256": "8fa17fb7535c15b202f1bd542c307c7a93e0ad99b87f7a68550069113eaa65b5",
+      "git_blob": "87a8c59d4e40acb4d476ae31cac68d489ca444ae",
+      "role": "unchanged exact owner source"
+    },
+    {
+      "path": "tests/agent/test_skill_cache_thrash.py",
+      "sha256": "c4dccf5cc49ef1e0b76cca47cf19d6c549241e086e7d466ba31a6ef8ff843195",
+      "git_blob": "8cab0fed7ccb0442e7ac48348d2a815337faafff",
+      "role": "unchanged exact owner source"
+    },
+    {
+      "path": "tests/agent/test_skill_collision_warning_contract.py",
+      "sha256": "6efa0fca282a6e894655ae2f550b3741c040e6525857a23fdb029cea176527f0",
+      "git_blob": "6942ba78668a1bd95e52d9daa8d77e66f4b695e6",
+      "role": "new evidence test"
+    }
+  ],
+  "tests": {
+    "canonical_runner": "scripts/run_tests.sh",
+    "file_retries": 0,
+    "workers": 1,
+    "new_file": {
+      "passed": 2,
+      "failed": 1,
+      "failed_assertion": "test_scanner_warning_does_not_recommend_an_unregistered_loader, line 61"
+    },
+    "unchanged_cache_controls": {
+      "passed": 5,
+      "failed": 0
+    },
+    "combined": {
+      "passed": 7,
+      "failed": 1,
+      "exit_code": 1
+    }
+  },
+  "runtime": {
+    "build_tool": "python -m pm.build_env",
+    "source": "/workspace/shared/hermes-skill-warning-evidence-20261014/repo",
+    "groups": [
+      "dev",
+      "test"
+    ],
+    "frozen_lock": true,
+    "build_exit_code": 0,
+    "python": "/workspace/shared/hermes-skill-warning-evidence-20261014/test-venv/bin/python",
+    "version": "3.14.7 (main, Sep  1 2026, 14:18:09) [Clang 22.1.3 ]",
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+    "executable": "/workspace/shared/hermes-skill-warning-evidence-20261014/test-venv/bin/python",
+    "packages": [
+      {
+        "name": "annotated-doc",
+        "version": "0.0.5"
+      },
+      {
+        "name": "annotated-types",
+        "version": "0.8.0"
+      },
+      {
+        "name": "anthropic",
+        "version": "0.87.0"
+      },
+      {
+        "name": "anyio",
+        "version": "4.14.2"
+      },
+      {
+        "name": "attrs",
+        "version": "26.1.0"
+      },
+      {
+        "name": "browser-harness",
+        "version": "0.1.13"
+      },
+      {
+        "name": "cdp-use",
+        "version": "1.4.5"
+      },
+      {
+        "name": "certifi",
+        "version": "2026.5.20"
+      },
+      {
+        "name": "cffi",
+        "version": "2.1.1"
+      },
+      {
+        "name": "charset-normalizer",
+        "version": "3.5.1"
+      },
+      {
+        "name": "click",
+        "version": "8.4.2"
+      },
+      {
+        "name": "croniter",
+        "version": "6.0.0"
+      },
+      {
+        "name": "cryptography",
+        "version": "50.0.1"
+      },
+      {
+        "name": "debugpy",
+        "version": "1.8.20"
+      },
+      {
+        "name": "distro",
+        "version": "1.9.0"
+      },
+      {
+        "name": "docstring_parser",
+        "version": "0.18.0"
+      },
+      {
+        "name": "fastapi",
+        "version": "0.133.1"
+      },
+      {
+        "name": "fetch-use",
+        "version": "0.4.0"
+      },
+      {
+        "name": "fire",
+        "version": "0.7.1"
+      },
+      {
+        "name": "firecrawl-anydoc",
+        "version": "0.2.4"
+      },
+      {
+        "name": "h11",
+        "version": "0.16.0"
+      },
+      {
+        "name": "hermes-agent",
+        "version": "0.0.0"
+      },
+      {
+        "name": "httpcore",
+        "version": "1.0.9"
+      },
+      {
+        "name": "httpcore2",
+        "version": "2.12.0"
+      },
+      {
+        "name": "httptools",
+        "version": "0.8.0"
+      },
+      {
+        "name": "httpx",
+        "version": "0.28.1"
+      },
+      {
+        "name": "httpx2",
+        "version": "2.12.0"
+      },
+      {
+        "name": "idna",
+        "version": "3.19"
+      },
+      {
+        "name": "importlib_metadata",
+        "version": "8.7.1"
+      },
+      {
+        "name": "iniconfig",
+        "version": "2.3.0"
+      },
+      {
+        "name": "Jinja2",
+        "version": "3.1.6"
+      },
+      {
+        "name": "jiter",
+        "version": "0.16.0"
+      },
+      {
+        "name": "jsonschema",
+        "version": "4.26.0"
+      },
+      {
+        "name": "jsonschema-specifications",
+        "version": "2025.9.1"
+      },
+      {
+        "name": "Markdown",
+        "version": "3.10.2"
+      },
+      {
+        "name": "markdown-it-py",
+        "version": "4.2.0"
+      },
+      {
+        "name": "MarkupSafe",
+        "version": "3.0.3"
+      },
+      {
+        "name": "mcp",
+        "version": "2.0.0"
+      },
+      {
+        "name": "mcp-types",
+        "version": "2.0.0"
+      },
+      {
+        "name": "mdurl",
+        "version": "0.1.2"
+      },
+      {
+        "name": "nemo-relay",
+        "version": "0.10.0"
+      },
+      {
+        "name": "openai",
+        "version": "2.24.0"
+      },
+      {
+        "name": "opentelemetry-api",
+        "version": "1.39.1"
+      },
+      {
+        "name": "packaging",
+        "version": "26.0"
+      },
+      {
+        "name": "pathspec",
+        "version": "1.1.1"
+      },
+      {
+        "name": "pillow",
+        "version": "12.3.0"
+      },
+      {
+        "name": "pillow_heif",
+        "version": "1.6.0"
+      },
+      {
+        "name": "pluggy",
+        "version": "1.6.0"
+      },
+      {
+        "name": "prompt_toolkit",
+        "version": "3.0.52"
+      },
+      {
+        "name": "psutil",
+        "version": "7.2.2"
+      },
+      {
+        "name": "ptyprocess",
+        "version": "0.7.0"
+      },
+      {
+        "name": "pycparser",
+        "version": "3.0"
+      },
+      {
+        "name": "pydantic",
+        "version": "2.13.4"
+      },
+      {
+        "name": "pydantic_core",
+        "version": "2.46.4"
+      },
+      {
+        "name": "Pygments",
+        "version": "2.21.0"
+      },
+      {
+        "name": "PyJWT",
+        "version": "2.13.0"
+      },
+      {
+        "name": "pytest",
+        "version": "9.1.1"
+      },
+      {
+        "name": "pytest-asyncio",
+        "version": "1.3.0"
+      },
+      {
+        "name": "python-dateutil",
+        "version": "2.9.0.post0"
+      },
+      {
+        "name": "python-dotenv",
+        "version": "1.2.2"
+      },
+      {
+        "name": "python-multipart",
+        "version": "0.0.32"
+      },
+      {
+        "name": "pytz",
+        "version": "2026.3.post1"
+      },
+      {
+        "name": "referencing",
+        "version": "0.37.0"
+      },
+      {
+        "name": "requests",
+        "version": "2.33.0"
+      },
+      {
+        "name": "resvg_py",
+        "version": "0.4.0"
+      },
+      {
+        "name": "rich",
+        "version": "14.3.3"
+      },
+      {
+        "name": "rpds-py",
+        "version": "2026.6.3"
+      },
+      {
+        "name": "ruamel.yaml",
+        "version": "0.18.16"
+      },
+      {
+        "name": "ruff",
+        "version": "0.15.10"
+      },
+      {
+        "name": "setuptools",
+        "version": "83.0.0"
+      },
+      {
+        "name": "six",
+        "version": "1.17.0"
+      },
+      {
+        "name": "sniffio",
+        "version": "1.3.1"
+      },
+      {
+        "name": "snowballstemmer",
+        "version": "3.1.1"
+      },
+      {
+        "name": "socksio",
+        "version": "1.0.0"
+      },
+      {
+        "name": "sse-starlette",
+        "version": "3.4.8"
+      },
+      {
+        "name": "starlette",
+        "version": "1.3.1"
+      },
+      {
+        "name": "tenacity",
+        "version": "9.1.4"
+      },
+      {
+        "name": "termcolor",
+        "version": "3.3.0"
+      },
+      {
+        "name": "tomli_w",
+        "version": "1.2.0"
+      },
+      {
+        "name": "tqdm",
+        "version": "4.70.0"
+      },
+      {
+        "name": "truststore",
+        "version": "0.10.4"
+      },
+      {
+        "name": "ty",
+        "version": "0.0.82"
+      },
+      {
+        "name": "typing-inspection",
+        "version": "0.4.4"
+      },
+      {
+        "name": "typing_extensions",
+        "version": "4.16.0"
+      },
+      {
+        "name": "urllib3",
+        "version": "2.7.0"
+      },
+      {
+        "name": "uvicorn",
+        "version": "0.41.0"
+      },
+      {
+        "name": "watchfiles",
+        "version": "1.2.0"
+      },
+      {
+        "name": "wcwidth",
+        "version": "0.8.2"
+      },
+      {
+        "name": "websockets",
+        "version": "15.0.1"
+      },
+      {
+        "name": "zipp",
+        "version": "4.1.0"
+      }
+    ]
+  },
+  "qualification": "FAIL_GAP within bounded warning contract; not a production repair or full-suite result",
+  "production_modified": false,
+  "excluded": [
+    "production changes",
+    "warning deduplication #127985",
+    "completion latency #259",
+    "upstream writes",
+    "full suite",
+    "desktop E2E",
+    "i18n IPC"
+  ],
+  "independent_review": {
+    "verdict": "Valid bounded downstream evidence; no blocker to publication",
+    "passed": 7,
+    "failed": 1,
+    "exit_code": 1,
+    "runtime_rebuilt_independently": false,
+    "source_and_fixture_unchanged": true,
+    "distinct_test_cases": 8,
+    "counts_not_additive_across_reruns": true,
+    "file": "independent-review.md"
+  },
+  "prepublication_origin": {
+    "head_sha": "dafb54035dff5a6670e87b057bfd9a1d4a1d4094",
+    "base_sha": "0e427d788d253630d38a3a51cd76849e73cd6925",
+    "state": "open",
+    "draft": true,
+    "merged": false,
+    "verified_utc": "2026-10-14T13:28:09Z"
+  },
+  "artifacts": [
+    {
+      "path": "README.md",
+      "sha256": "dd48ed6435cbf82689207f3b0f3f7168628f40ce5047806cd43c0b42b14972c1"
+    },
+    {
+      "path": "execution.log",
+      "sha256": "1c53eb859b1ad7c1e203e11ba85ee1db1c2bcc0e3a546a7530ee6f78979407f0"
+    },
+    {
+      "path": "independent-execution.log",
+      "sha256": "7ef308f0c3199248ffa818efb9e7c8b4dc1e248f0d84bcecdfbcb8732dff5793"
+    },
+    {
+      "path": "independent-review.md",
+      "sha256": "a1e080fe580874338bfaa6d30b1df5da3007cc9bcddb8896058bb13a846e9bf8"
+    },
+    {
+      "path": "lint.log",
+      "sha256": "6b1bddb27bd2740b4d235a0781aff73e793265ceee27ec5a96a6a58fe452e9ee"
+    },
+    {
+      "path": "replay.sh",
+      "sha256": "508a8d954c86e1272cbec006d599727f92737ca203b883e4b15ebf7a5ea1d59f"
+    },
+    {
+      "path": "runtime-build.log",
+      "sha256": "3a8b9a3af83195b971f9baf912ab76de9d9e4808890d71cf993f868f32b57024"
+    }
+  ],
+  "checks": {
+    "ruff_new_test": "passed",
+    "bash_syntax_replay": "passed",
+    "test_source_diff_check": "passed",
+    "raw_packet_diff_check": "Whitespace warnings only in verbatim execution logs; raw logs intentionally preserved",
+    "aggregate_repository_check": "not run"
+  }
+}

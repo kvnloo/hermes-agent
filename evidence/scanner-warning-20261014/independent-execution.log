@@ -1,0 +1,115 @@
+Independent review; UTC 2026-10-14T13:26:23Z
+HEAD dafb54035dff5a6670e87b057bfd9a1d4a1d4094
+Branch evidence/scanner-collision-warning-20261014
+HOME /workspace/shared/hermes-skill-warning-evidence-20261014/reviewer-home.xnKD34
+Tracked diff pre-run: 219c4318f8bc0d85b389c3716ab64be6be8562ae30ddede12bf71bd5c7af8a13  agent/skill_commands.py
+ea8a8ff56486c7a6006d592c3c1f12a36f8d42a2fc9d418ade6a9bd6a495c475  hermes_cli/commands.py
+6efa0fca282a6e894655ae2f550b3741c040e6525857a23fdb029cea176527f0  tests/agent/test_skill_collision_warning_contract.py
+▶ not activated — using HERMES_PYTHON: /workspace/shared/hermes-skill-warning-evidence-20261014/test-venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 2 test files (~7 tests) under ['tests/agent/test_skill_collision_warning_contract.py', 'tests/agent/test_skill_cache_thrash.py']; running with -j 1
+[ 71.4% |     5/~7 | ✓5 | ✗0] ✓ tests/agent/test_skill_cache_thrash.py (5✓, 1.3s)
+[100.0% |     7/~7 | ✓7 | ✗1] ✗ tests/agent/test_skill_collision_warning_contract.py (2✓ 1✗, 0.7s)
+
+  ╔╍ Failed: tests/agent/test_skill_collision_warning_contract.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ 
+  ║ =================================== FAILURES ===================================
+  ║ ________ test_scanner_warning_does_not_recommend_an_unregistered_loader ________
+  ║ 
+  ║ tmp_path = PosixPath('/tmp/hermes-pytest-1000/r-m0x54tmt/pytest-of-agent/pytest-0/test_scanner_warning_does_not_0')
+  ║ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f76174c17f0>
+  ║ caplog = <_pytest.logging.LogCaptureFixture object at 0x7f7617483890>
+  ║ 
+  ║     def test_scanner_warning_does_not_recommend_an_unregistered_loader(tmp_path, monkeypatch, caplog):
+  ║         from agent.skill_commands import skill_command_collision_note
+  ║         from hermes_cli.commands import resolve_command
+  ║     
+  ║         commands, warnings = _scan_skill("handoff", tmp_path, monkeypatch, caplog)
+  ║         assert "/handoff" not in commands
+  ║         assert warnings, "The collision must remain visible to the user."
+  ║         assert resolve_command("skill") is None
+  ║         # The owner already corrected listing guidance; the scanner must not retain
+  ║         # the unusable route whose failure is independently reported in #138349.
+  ║         assert "/skill handoff" not in skill_command_collision_note("handoff")
+  ║ >       assert all("/skill handoff" not in warning for warning in warnings), warnings
+  ║ E       AssertionError: ["Skill 'handoff' generates slash command '/handoff' which collides with a core Hermes command; skipping auto-registration. Use '/skill handoff' instead."]
+  ║ E       assert False
+  ║ E        +  where False = all(<generator object test_scanner_warning_does_not_recommend_an_unregistered_loader.<locals>.<genexpr> at 0x7f7617511080>)
+  ║ 
+  ║ /workspace/shared/hermes-skill-warning-evidence-20261014/repo/tests/agent/test_skill_collision_warning_contract.py:61: AssertionError
+  ║ ------------------------------ Captured log call -------------------------------
+  ║ WARNING  agent.skill_commands:skill_commands.py:494 Skill 'handoff' generates slash command '/handoff' which collides with a core Hermes command; skipping auto-registration. Use '/skill handoff' instead.
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/agent/test_skill_collision_warning_contract.py::test_scanner_warning_does_not_recommend_an_unregistered_loader
+  ║ ========================= 1 failed, 2 passed in 0.34s ==========================
+  ║
+  ║  Repro: python -m pytest tests/agent/test_skill_collision_warning_contract.py
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+
+=== Summary: 2 files, 7 tests passed, 1 failed (100% complete) in 2.0s (1 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   2
+  Total subprocess CPU-wall: 2.0s  (runner wall: 2.0s, parallelism: 1x)
+  P50: 1.28s  P90: 1.28s  P95: 1.28s  P99: 1.28s  Max: 1.28s
+  <1s: 1 files (50%)  <2s: 2 files (100%)
+  Top 10 slowest:
+      1.28s  tests/agent/test_skill_cache_thrash.py
+      0.71s  tests/agent/test_skill_collision_warning_contract.py
+
+=== Failure output ===
+
+--- tests/agent/test_skill_collision_warning_contract.py ---
+============================= test session starts ==============================
+platform linux -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /workspace/shared/hermes-skill-warning-evidence-20261014/repo
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests/agent/test_skill_collision_warning_contract.py ..F                 [100%]
+
+=================================== FAILURES ===================================
+________ test_scanner_warning_does_not_recommend_an_unregistered_loader ________
+
+tmp_path = PosixPath('/tmp/hermes-pytest-1000/r-m0x54tmt/pytest-of-agent/pytest-0/test_scanner_warning_does_not_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f76174c17f0>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x7f7617483890>
+
+    def test_scanner_warning_does_not_recommend_an_unregistered_loader(tmp_path, monkeypatch, caplog):
+        from agent.skill_commands import skill_command_collision_note
+        from hermes_cli.commands import resolve_command
+    
+        commands, warnings = _scan_skill("handoff", tmp_path, monkeypatch, caplog)
+        assert "/handoff" not in commands
+        assert warnings, "The collision must remain visible to the user."
+        assert resolve_command("skill") is None
+        # The owner already corrected listing guidance; the scanner must not retain
+        # the unusable route whose failure is independently reported in #138349.
+        assert "/skill handoff" not in skill_command_collision_note("handoff")
+>       assert all("/skill handoff" not in warning for warning in warnings), warnings
+E       AssertionError: ["Skill 'handoff' generates slash command '/handoff' which collides with a core Hermes command; skipping auto-registration. Use '/skill handoff' instead."]
+E       assert False
+E        +  where False = all(<generator object test_scanner_warning_does_not_recommend_an_unregistered_loader.<locals>.<genexpr> at 0x7f7617511080>)
+
+/workspace/shared/hermes-skill-warning-evidence-20261014/repo/tests/agent/test_skill_collision_warning_contract.py:61: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  agent.skill_commands:skill_commands.py:494 Skill 'handoff' generates slash command '/handoff' which collides with a core Hermes command; skipping auto-registration. Use '/skill handoff' instead.
+=========================== short test summary info ============================
+FAILED tests/agent/test_skill_collision_warning_contract.py::test_scanner_warning_does_not_recommend_an_unregistered_loader
+========================= 1 failed, 2 passed in 0.34s ==========================
+
+=== 1 file with test failures (1 test failed) ===
+  tests/agent/test_skill_collision_warning_contract.py  (1 test failed)
+
+CANONICAL_RUNNER_EXIT=1
+Tracked diff post-run: A  tests/agent/test_skill_collision_warning_contract.py
+219c4318f8bc0d85b389c3716ab64be6be8562ae30ddede12bf71bd5c7af8a13  agent/skill_commands.py
+ea8a8ff56486c7a6006d592c3c1f12a36f8d42a2fc9d418ade6a9bd6a495c475  hermes_cli/commands.py
+6efa0fca282a6e894655ae2f550b3741c040e6525857a23fdb029cea176527f0  tests/agent/test_skill_collision_warning_contract.py
