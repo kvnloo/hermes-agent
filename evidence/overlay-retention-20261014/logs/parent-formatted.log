@@ -1,0 +1,154 @@
+
+> hermes-tui@0.0.1 test
+> vitest run src/__tests__/agentsOverlayRetention.test.tsx --reporter=verbose
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m<evidence-root>/parent/ui-tui[39m
+
+ [31m×[39m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages done rows through 60 seconds, removes them at 61, and stops ticking[33m 1072[2mms[22m[39m
+[31m   → expected '\n Spawn tree   d0 · 0 agents\n\n No …' to contain '60s ago'[39m
+ [31m×[39m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages failed rows through 60 seconds, removes them at 61, and stops ticking[33m 1026[2mms[22m[39m
+[31m   → expected '\n Spawn tree   d0 · 0 agents\n\n No …' to contain '60s ago'[39m
+ [31m×[39m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages killed rows through 60 seconds, removes them at 61, and stops ticking[33m 1025[2mms[22m[39m
+[31m   → expected '\n Spawn tree   d0 · 0 agents\n\n No …' to contain '60s ago'[39m
+ [31m×[39m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages lost rows through 60 seconds, removes them at 61, and stops ticking[33m 1022[2mms[22m[39m
+[31m   → expected '\n Spawn tree   d0 · 0 agents\n\n No …' to contain '60s ago'[39m
+ [32m✓[39m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mkeeps running process rows visible and ticking beyond the retention horizon[32m 91[2mms[22m[39m
+ [32m✓[39m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mkeeps a static archived replay without process rows timer-free[32m 13[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 4 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages done rows through 60 seconds, removes them at 61, and stops ticking
+[31m[1mAssertionError[22m: expected '\n Spawn tree   d0 · 0 agents\n\n No …' to contain '60s ago'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 60s ago[39m
+[31m+[39m
+[31m+  Spawn tree   d0 · 0 agents[39m
+[31m+[39m
+[31m+  No subagents this turn. Trigger delegate_task to populate the tree.[39m
+[31m+[39m
+[31m+  Processes · 1 done[39m
+[31m+  ✔ retention-done-sentinel · exit 0 · 59s ago[39m
+[31m+[39m
+[31m+  Enter/t tail · d detail · e steer · x stop · Esc back[39m
+[31m+  ↑↓/jk move · g/G top/bottom · Enter tail · d/→ detail · e steer · t tail · x stop · X subtree · p pause · s sort:spawn order · f filter:a…[39m
+[31m+[39m
+
+[36m [2m❯[22m src/__tests__/agentsOverlayRetention.test.tsx:[2m134:35[22m[39m
+    [90m132|[39m
+    [90m133|[39m     [35mawait[39m vi[33m.[39m[34madvanceTimersByTimeAsync[39m([34m1000[39m)
+    [90m134|[39m     [35mawait[39m expect[33m.[39m[34mpoll[39m(view[33m.[39mframe)[33m.[39m[34mtoContain[39m([32m'60s ago'[39m)
+    [90m   |[39m                                   [31m^[39m
+    [90m135|[39m     [34mexpect[39m(view[33m.[39m[34mframe[39m())[33m.[39m[34mtoContain[39m(command)
+    [90m136|[39m     [34mexpect[39m($processSnapshot[33m.[39m[35mget[39m())[33m.[39m[34mtoBe[39m(originalSnapshot)
+
+[31m[1mCaused by: Error[22m: Matcher did not succeed in time.[39m
+[36m [2m❯[22m src/__tests__/agentsOverlayRetention.test.tsx:[2m134:5[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages failed rows through 60 seconds, removes them at 61, and stops ticking
+[31m[1mAssertionError[22m: expected '\n Spawn tree   d0 · 0 agents\n\n No …' to contain '60s ago'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 60s ago[39m
+[31m+[39m
+[31m+  Spawn tree   d0 · 0 agents[39m
+[31m+[39m
+[31m+  No subagents this turn. Trigger delegate_task to populate the tree.[39m
+[31m+[39m
+[31m+  Processes · 1 done[39m
+[31m+  ✘ retention-failed-sentinel · exit 1 · 59s ago[39m
+[31m+[39m
+[31m+  Enter/t tail · d detail · e steer · x stop · Esc back[39m
+[31m+  ↑↓/jk move · g/G top/bottom · Enter tail · d/→ detail · e steer · t tail · x stop · X subtree · p pause · s sort:spawn order · f filter:a…[39m
+[31m+[39m
+
+[36m [2m❯[22m src/__tests__/agentsOverlayRetention.test.tsx:[2m134:35[22m[39m
+    [90m132|[39m
+    [90m133|[39m     [35mawait[39m vi[33m.[39m[34madvanceTimersByTimeAsync[39m([34m1000[39m)
+    [90m134|[39m     [35mawait[39m expect[33m.[39m[34mpoll[39m(view[33m.[39mframe)[33m.[39m[34mtoContain[39m([32m'60s ago'[39m)
+    [90m   |[39m                                   [31m^[39m
+    [90m135|[39m     [34mexpect[39m(view[33m.[39m[34mframe[39m())[33m.[39m[34mtoContain[39m(command)
+    [90m136|[39m     [34mexpect[39m($processSnapshot[33m.[39m[35mget[39m())[33m.[39m[34mtoBe[39m(originalSnapshot)
+
+[31m[1mCaused by: Error[22m: Matcher did not succeed in time.[39m
+[36m [2m❯[22m src/__tests__/agentsOverlayRetention.test.tsx:[2m134:5[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages killed rows through 60 seconds, removes them at 61, and stops ticking
+[31m[1mAssertionError[22m: expected '\n Spawn tree   d0 · 0 agents\n\n No …' to contain '60s ago'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 60s ago[39m
+[31m+[39m
+[31m+  Spawn tree   d0 · 0 agents[39m
+[31m+[39m
+[31m+  No subagents this turn. Trigger delegate_task to populate the tree.[39m
+[31m+[39m
+[31m+  Processes · 1 done[39m
+[31m+  ✘ retention-killed-sentinel · killed · 59s ago[39m
+[31m+[39m
+[31m+  Enter/t tail · d detail · e steer · x stop · Esc back[39m
+[31m+  ↑↓/jk move · g/G top/bottom · Enter tail · d/→ detail · e steer · t tail · x stop · X subtree · p pause · s sort:spawn order · f filter:a…[39m
+[31m+[39m
+
+[36m [2m❯[22m src/__tests__/agentsOverlayRetention.test.tsx:[2m134:35[22m[39m
+    [90m132|[39m
+    [90m133|[39m     [35mawait[39m vi[33m.[39m[34madvanceTimersByTimeAsync[39m([34m1000[39m)
+    [90m134|[39m     [35mawait[39m expect[33m.[39m[34mpoll[39m(view[33m.[39mframe)[33m.[39m[34mtoContain[39m([32m'60s ago'[39m)
+    [90m   |[39m                                   [31m^[39m
+    [90m135|[39m     [34mexpect[39m(view[33m.[39m[34mframe[39m())[33m.[39m[34mtoContain[39m(command)
+    [90m136|[39m     [34mexpect[39m($processSnapshot[33m.[39m[35mget[39m())[33m.[39m[34mtoBe[39m(originalSnapshot)
+
+[31m[1mCaused by: Error[22m: Matcher did not succeed in time.[39m
+[36m [2m❯[22m src/__tests__/agentsOverlayRetention.test.tsx:[2m134:5[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages lost rows through 60 seconds, removes them at 61, and stops ticking
+[31m[1mAssertionError[22m: expected '\n Spawn tree   d0 · 0 agents\n\n No …' to contain '60s ago'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 60s ago[39m
+[31m+[39m
+[31m+  Spawn tree   d0 · 0 agents[39m
+[31m+[39m
+[31m+  No subagents this turn. Trigger delegate_task to populate the tree.[39m
+[31m+[39m
+[31m+  Processes · 1 done[39m
+[31m+  ? retention-lost-sentinel · lost · 59s ago[39m
+[31m+[39m
+[31m+  Enter/t tail · d detail · e steer · x stop · Esc back[39m
+[31m+  ↑↓/jk move · g/G top/bottom · Enter tail · d/→ detail · e steer · t tail · x stop · X subtree · p pause · s sort:spawn order · f filter:a…[39m
+[31m+[39m
+
+[36m [2m❯[22m src/__tests__/agentsOverlayRetention.test.tsx:[2m134:35[22m[39m
+    [90m132|[39m
+    [90m133|[39m     [35mawait[39m vi[33m.[39m[34madvanceTimersByTimeAsync[39m([34m1000[39m)
+    [90m134|[39m     [35mawait[39m expect[33m.[39m[34mpoll[39m(view[33m.[39mframe)[33m.[39m[34mtoContain[39m([32m'60s ago'[39m)
+    [90m   |[39m                                   [31m^[39m
+    [90m135|[39m     [34mexpect[39m(view[33m.[39m[34mframe[39m())[33m.[39m[34mtoContain[39m(command)
+    [90m136|[39m     [34mexpect[39m($processSnapshot[33m.[39m[35mget[39m())[33m.[39m[34mtoBe[39m(originalSnapshot)
+
+[31m[1mCaused by: Error[22m: Matcher did not succeed in time.[39m
+[36m [2m❯[22m src/__tests__/agentsOverlayRetention.test.tsx:[2m134:5[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m4 failed[39m[22m[2m | [22m[1m[32m2 passed[39m[22m[90m (6)[39m
+[2m   Start at [22m 16:31:29
+[2m   Duration [22m 5.17s[2m (transform 589ms, setup 0ms, import 794ms, tests 4.25s, environment 0ms)[22m
+

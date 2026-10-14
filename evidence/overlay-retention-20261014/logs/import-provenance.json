@@ -1,0 +1,14 @@
+{
+  "node": "v26.7.0",
+  "cwd": "<evidence-root>/head/ui-tui",
+  "resolved": {
+    "@hermes/ink": "<evidence-root>/head/ui-tui/packages/hermes-ink/index.js",
+    "@hermes/shared": "<evidence-root>/head/apps/shared/src/index.ts",
+    "@hermes/shared/ansi": "<evidence-root>/head/apps/shared/src/ansi.ts",
+    "react": "<existing-qualified-dependency-root>/node_modules/react/index.js",
+    "nanostores": "<existing-qualified-dependency-root>/node_modules/nanostores/index.js",
+    "@nanostores/react": "<existing-qualified-dependency-root>/node_modules/@nanostores/react/index.js",
+    "vitest": "<existing-qualified-dependency-root>/node_modules/vitest/index.cjs",
+    "esbuild": "<existing-qualified-dependency-root>/node_modules/esbuild/lib/main.js"
+  }
+}

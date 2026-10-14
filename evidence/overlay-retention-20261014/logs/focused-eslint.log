@@ -1,0 +1,19 @@
+
+<evidence-root>/head/ui-tui/src/__tests__/agentsOverlayRetention.test.tsx
+   11:32  error    Expected "$processSnapshot" to come before "applyProcessSnapshot"  perfectionist/sort-named-imports
+   12:29  error    Expected "$spawnHistory" to come before "clearSpawnHistory"        perfectionist/sort-named-imports
+   31:3   warning  Expected blank line before this statement                          padding-line-between-statements
+   34:3   warning  Expected blank line before this statement                          padding-line-between-statements
+   39:3   warning  Expected blank line before this statement                          padding-line-between-statements
+   43:5   warning  Expected blank line before this statement                          padding-line-between-statements
+   45:3   warning  Expected blank line before this statement                          padding-line-between-statements
+   61:3   warning  Expected blank line before this statement                          padding-line-between-statements
+   68:3   warning  Expected blank line before this statement                          padding-line-between-statements
+   82:5   warning  Expected blank line before this statement                          padding-line-between-statements
+   86:5   warning  Expected blank line before this statement                          padding-line-between-statements
+  111:5   warning  Expected blank line before this statement                          padding-line-between-statements
+  115:5   warning  Expected blank line before this statement                          padding-line-between-statements
+
+✖ 13 problems (2 errors, 11 warnings)
+  2 errors and 11 warnings potentially fixable with the `--fix` option.
+

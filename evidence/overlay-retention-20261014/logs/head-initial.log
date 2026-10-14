@@ -1,0 +1,91 @@
+
+> hermes-tui@0.0.1 test
+> vitest run src/__tests__/agentsOverlayRetention.test.tsx --reporter=verbose
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m<evidence-root>/head/ui-tui[39m
+
+ [31m×[39m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages done rows through 60 seconds, removes them at 61, and stops ticking[32m 69[2mms[22m[39m
+[31m   → expected 2 to be 1 // Object.is equality[39m
+ [31m×[39m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages failed rows through 60 seconds, removes them at 61, and stops ticking[32m 23[2mms[22m[39m
+[31m   → expected 2 to be 1 // Object.is equality[39m
+ [31m×[39m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages killed rows through 60 seconds, removes them at 61, and stops ticking[32m 17[2mms[22m[39m
+[31m   → expected 2 to be 1 // Object.is equality[39m
+ [31m×[39m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages lost rows through 60 seconds, removes them at 61, and stops ticking[32m 11[2mms[22m[39m
+[31m   → expected 2 to be 1 // Object.is equality[39m
+ [31m×[39m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mkeeps running process rows visible and ticking beyond the retention horizon[33m 1019[2mms[22m[39m
+[31m   → expected 2 to be 1 // Object.is equality[39m
+ [31m×[39m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mkeeps a static archived replay without process rows timer-free[32m 24[2mms[22m[39m
+[31m   → expected 1 to be +0 // Object.is equality[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 6 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages done rows through 60 seconds, removes them at 61, and stops ticking
+[41m[1m FAIL [22m[49m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages failed rows through 60 seconds, removes them at 61, and stops ticking
+[41m[1m FAIL [22m[49m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages killed rows through 60 seconds, removes them at 61, and stops ticking
+[41m[1m FAIL [22m[49m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mages lost rows through 60 seconds, removes them at 61, and stops ticking
+[31m[1mAssertionError[22m: expected 2 to be 1 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 2[39m
+
+[36m [2m❯[22m src/__tests__/agentsOverlayRetention.test.tsx:[2m105:32[22m[39m
+    [90m103|[39m     [34mexpect[39m(view[33m.[39m[34mframe[39m())[33m.[39m[34mtoContain[39m(command)
+    [90m104|[39m     [34mexpect[39m($processSnapshot[33m.[39m[35mget[39m())[33m.[39m[34mtoBe[39m(originalSnapshot)
+    [90m105|[39m     [34mexpect[39m(vi[33m.[39m[34mgetTimerCount[39m())[33m.[39m[34mtoBe[39m([34m1[39m)
+    [90m   |[39m                                [31m^[39m
+    [90m106|[39m
+    [90m107|[39m     [35mawait[39m vi[33m.[39m[34madvanceTimersByTimeAsync[39m([34m1000[39m)
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mkeeps running process rows visible and ticking beyond the retention horizon
+[31m[1mAssertionError[22m: expected 2 to be 1 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 2[39m
+
+[36m [2m❯[22m src/__tests__/agentsOverlayRetention.test.tsx:[2m124:49[22m[39m
+    [90m122|[39m     [35mconst[39m view [33m=[39m [34mmountOverlay[39m()
+    [90m123|[39m     [35mawait[39m expect[33m.[39m[34mpoll[39m(view[33m.[39mframe)[33m.[39m[34mtoContain[39m([32m'running-control-sentinel'[39m)
+    [90m124|[39m     [35mawait[39m expect[33m.[39m[34mpoll[39m(() [33m=>[39m vi[33m.[39m[34mgetTimerCount[39m())[33m.[39m[34mtoBe[39m([34m1[39m)
+    [90m   |[39m                                                 [31m^[39m
+    [90m125|[39m     [35mconst[39m before [33m=[39m view[33m.[39m[34mframes[39m()
+    [90m126|[39m     [35mawait[39m vi[33m.[39m[34madvanceTimersByTimeAsync[39m([34m61_000[39m)
+
+[31m[1mCaused by: Error[22m: Matcher did not succeed in time.[39m
+[36m [2m❯[22m src/__tests__/agentsOverlayRetention.test.tsx:[2m124:5[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/agentsOverlayRetention.test.tsx[2m > [22mmounted AgentsOverlay retention clock[2m > [22mkeeps a static archived replay without process rows timer-free
+[31m[1mAssertionError[22m: expected 1 to be +0 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 1[39m
+
+[36m [2m❯[22m src/__tests__/agentsOverlayRetention.test.tsx:[2m142:32[22m[39m
+    [90m140|[39m     [35mawait[39m expect[33m.[39m[34mpoll[39m(view[33m.[39mframe)[33m.[39m[34mtoContain[39m([32m'static-replay-sentinel'[39m)
+    [90m141|[39m     [35mawait[39m expect[33m.[39m[34mpoll[39m(() [33m=>[39m view[33m.[39mrequest[33m.[39mmock[33m.[39mcalls[33m.[39mlength)[33m.[39m[34mtoBe[39m([34m1[39m)
+    [90m142|[39m     [34mexpect[39m(vi[33m.[39m[34mgetTimerCount[39m())[33m.[39m[34mtoBe[39m([34m0[39m)
+    [90m   |[39m                                [31m^[39m
+    [90m143|[39m     [35mconst[39m before [33m=[39m view[33m.[39m[34mframes[39m()
+    [90m144|[39m     [35mawait[39m vi[33m.[39m[34madvanceTimersByTimeAsync[39m([34m120_000[39m)
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m6 failed[39m[22m[90m (6)[39m
+[2m   Start at [22m 16:25:47
+[2m   Duration [22m 2.71s[2m (transform 1.16s, setup 0ms, import 1.36s, tests 1.16s, environment 0ms)[22m
+

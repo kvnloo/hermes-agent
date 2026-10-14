@@ -1,0 +1,81 @@
+--- <evidence-root>/independent/fixture-reviewed-before-formatting.tsx	2026-10-14 11:31:25.229547060 -0500
++++ <evidence-root>/packet/agentsOverlayRetention.test.tsx	2026-10-14 11:31:26.156366904 -0500
+@@ -8,8 +8,8 @@
+ 
+ import { applyAgentSnapshot } from '../app/agentRoster.js'
+ import { resetDelegationState } from '../app/delegationStore.js'
+-import { applyProcessSnapshot, $processSnapshot, type ProcessEntry } from '../app/processRoster.js'
+-import { clearSpawnHistory, $spawnHistory } from '../app/spawnHistoryStore.js'
++import { $processSnapshot, applyProcessSnapshot, type ProcessEntry } from '../app/processRoster.js'
++import { $spawnHistory, clearSpawnHistory } from '../app/spawnHistoryStore.js'
+ import { resetTurnState } from '../app/turnStore.js'
+ import { patchUiState, resetUiState } from '../app/uiStore.js'
+ import { AgentsOverlay } from '../components/agentsOverlay.js'
+@@ -28,20 +28,25 @@
+ 
+ function mountOverlay() {
+   const stdout = Object.assign(new PassThrough(), { columns: 140, rows: 40, isTTY: false })
++
+   const stdin = Object.assign(new PassThrough(), {
+     isTTY: true, setRawMode: () => {}, ref: () => {}, unref: () => {}
+   })
++
+   const stderr = new PassThrough()
+   let pending = ''
+   let lastFrame = ''
+   let frameCount = 0
+   stdout.on('data', chunk => { pending += chunk.toString() })
++
+   const request = vi.fn(async (method: string, params: unknown) => {
+     if (method !== 'delegation.status' || JSON.stringify(params) !== '{}') {
+       throw new Error(`Unexpected transport call: ${method}`)
+     }
++
+     return { paused: false }
+   })
++
+   const instance = renderSync(
+     <AgentsOverlay gw={{ request } as unknown as GatewayClient} onClose={() => {}} t={DEFAULT_THEME} />,
+     {
+@@ -58,6 +63,7 @@
+       }
+     }
+   )
++
+   cleanup.push(() => {
+     instance.unmount()
+     instance.cleanup()
+@@ -65,6 +71,7 @@
+     stdin.destroy()
+     stderr.destroy()
+   })
++
+   return { frame: () => lastFrame, frames: () => frameCount, request }
+ }
+ 
+@@ -79,10 +86,12 @@
+     const id = fakeSet(callback, delay, ...args)
+     intervals.set(id, Number(delay))
+     scheduled.push(Number(delay))
++
+     return id
+   })
+   vi.spyOn(globalThis, 'clearInterval').mockImplementation(id => {
+     intervals.delete(id as ReturnType<typeof setInterval>)
++
+     return fakeClear(id)
+   })
+   resetTurnState()
+@@ -108,10 +117,12 @@
+     ['lost', null, 'lost']
+   ] as const)('ages %s rows through 60 seconds, removes them at 61, and stops ticking', async (status, exitCode, reason) => {
+     const command = `retention-${status}-sentinel`
++
+     const process: ProcessEntry = {
+       session_id: command, command, status: 'exited', exit_code: exitCode,
+       completion_reason: reason, exited_at: T0 / 1000 - 59, uptime_seconds: 70
+     }
++
+     applyProcessSnapshot(SID, [process])
+     const originalSnapshot = $processSnapshot.get()
+     const view = mountOverlay()

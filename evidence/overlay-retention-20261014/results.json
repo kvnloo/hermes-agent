@@ -1,0 +1,26 @@
+{
+  "head": "3f2bd549bc3ced2172785e0e91587b80209db10f",
+  "parent": "6a582ba93c9145debe4abf8b0f7001e490427ec7",
+  "independent_cases": 6,
+  "head_focused": {
+    "pass": 6,
+    "fail": 0
+  },
+  "parent_focused": {
+    "pass": 2,
+    "fail": 4,
+    "fail_stage": "frozen 59s display does not become 60s; later expiry assertions not reached"
+  },
+  "head_owner_adjacent": {
+    "pass": 7,
+    "fail": 0
+  },
+  "parent_owner_adjacent": {
+    "pass": 6,
+    "fail": 1
+  },
+  "production_changes": [],
+  "new_installs": 0,
+  "ink_rebuilds_successful": 1,
+  "new_evidence_invariant": "mounted timer -> actual store projection -> current rendered row expiry"
+}
