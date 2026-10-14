@@ -1,0 +1,130 @@
+▶ not activated — using HERMES_PYTHON: <disposable-home>/hermes/installs/5fcfb79309002455/test-environment/gen-8db3ad22d2cb47fc805f59f838653ec1/venv/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 4 test files (~12 tests) under ['tests/gateway/test_compression_replay_delivery_safety.py', 'tests/gateway/test_compression_exhaustion_replay.py', 'tests/gateway/test_auto_reset_clean_context.py', 'tests/gateway/test_duplicate_user_message.py']; running with -j 1
+[  8.3% |     1/~12 | ✓1 | ✗0] ✓ tests/gateway/test_auto_reset_clean_context.py (1✓, 0.9s)
+[ 25.0% |     3/~12 | ✓3 | ✗0] ✓ tests/gateway/test_compression_exhaustion_replay.py (2✓, 0.7s)
+[ 58.3% |     7/~12 | ✓5 | ✗2] ✗ tests/gateway/test_compression_replay_delivery_safety.py (2✓ 2✗, 3.3s)
+
+  ╔╍ Failed: tests/gateway/test_compression_replay_delivery_safety.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║         )
+  ║ E       AssertionError: A platform-confirmed partial stream from the failed turn must block automatic replay; already_sent=None
+  ║ E       assert 'agent:main:telegram:dm:replay-safety' not in {'agent:main:telegram:dm:replay-safety': MessageEvent(text='create the calendar event', message_type=<MessageType.TEXT...ta={}, timestamp=datetime.datetime(2026, 10, 14, 11, 31, 20, 629684), allow_gateway_control=True, reply_expected=None)}
+  ║ E        +  where {'agent:main:telegram:dm:replay-safety': MessageEvent(text='create the calendar event', message_type=<MessageType.TEXT...ta={}, timestamp=datetime.datetime(2026, 10, 14, 11, 31, 20, 629684), allow_gateway_control=True, reply_expected=None)} = <tests.gateway.test_compression_replay_delivery_safety.RecordingAdapter object at 0x7fb1cc986f90>._pending_messages
+  ║
+  ║ tests/gateway/test_compression_replay_delivery_safety.py:154: AssertionError
+  ║ ______________ test_failed_reset_does_not_stage_original_request _______________
+  ║
+  ║ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb1cad7d490>
+  ║ tmp_path = PosixPath('<pytest-temp-root>/pytest-of-agent/pytest-0/test_failed_reset_does_not_sta0')
+  ║
+  ║     @pytest.mark.asyncio
+  ║     async def test_failed_reset_does_not_stage_original_request(monkeypatch, tmp_path):
+  ║         runner, adapter, old, _fresh = _harness(monkeypatch, tmp_path, reset_succeeds=False)
+  ║         event = _event()
+  ║
+  ║         response = await _handle(runner, event)
+  ║
+  ║         runner.async_session_store.reset_session.assert_awaited_once_with(SESSION_KEY)
+  ║         assert runner._hmwa_persist_turn_transcript.call_args.kwargs["session_entry"] is old
+  ║ >       assert SESSION_KEY not in adapter._pending_messages, "reset_session=None must not admit replay"
+  ║ E       AssertionError: reset_session=None must not admit replay
+  ║ E       assert 'agent:main:telegram:dm:replay-safety' not in {'agent:main:telegram:dm:replay-safety': MessageEvent(text='create the calendar event', message_type=<MessageType.TEXT...ta={}, timestamp=datetime.datetime(2026, 10, 14, 11, 31, 21, 556862), allow_gateway_control=True, reply_expected=None)}
+  ║ E        +  where {'agent:main:telegram:dm:replay-safety': MessageEvent(text='create the calendar event', message_type=<MessageType.TEXT...ta={}, timestamp=datetime.datetime(2026, 10, 14, 11, 31, 21, 556862), allow_gateway_control=True, reply_expected=None)} = <tests.gateway.test_compression_replay_delivery_safety.RecordingAdapter object at 0x7fb1cc654410>._pending_messages
+  ║
+  ║ tests/gateway/test_compression_replay_delivery_safety.py:169: AssertionError
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/gateway/test_compression_replay_delivery_safety.py::test_failed_turn_with_confirmed_visible_stream_is_not_replayed
+  ║ FAILED tests/gateway/test_compression_replay_delivery_safety.py::test_failed_reset_does_not_stage_original_request
+  ║ ========================= 2 failed, 2 passed in 2.76s ==========================
+  ║
+  ║  Runner diagnostic suggests bare pytest; use the canonical replay.sh command instead.
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[100.0% |    12/~12 | ✓11 | ✗ 2] ✓ tests/gateway/test_duplicate_user_message.py (6✓, 2.7s)
+
+=== Summary: 4 files, 11 tests passed, 2 failed (100% complete) in 7.7s (1 workers) ===
+  Durations cached to test_durations.json (3 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   4
+  Total subprocess CPU-wall: 7.7s  (runner wall: 7.7s, parallelism: 1x)
+  P50: 2.69s  P90: 3.35s  P95: 3.35s  P99: 3.35s  Max: 3.35s
+  <1s: 2 files (50%)  <2s: 2 files (50%)
+  Top 10 slowest:
+      3.35s  tests/gateway/test_compression_replay_delivery_safety.py
+      2.69s  tests/gateway/test_duplicate_user_message.py
+      0.89s  tests/gateway/test_auto_reset_clean_context.py
+      0.73s  tests/gateway/test_compression_exhaustion_replay.py
+
+=== Failure output ===
+
+--- tests/gateway/test_compression_replay_delivery_safety.py ---
+============================= test session starts ==============================
+platform linux -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <checkout>
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 4 items
+
+tests/gateway/test_compression_replay_delivery_safety.py FF..            [100%]
+
+=================================== FAILURES ===================================
+________ test_failed_turn_with_confirmed_visible_stream_is_not_replayed ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb1cca98640>
+tmp_path = PosixPath('<pytest-temp-root>/pytest-of-agent/pytest-0/test_failed_turn_with_confirme0')
+
+    @pytest.mark.asyncio
+    async def test_failed_turn_with_confirmed_visible_stream_is_not_replayed(monkeypatch, tmp_path):
+        runner, adapter, _old, _fresh = _harness(monkeypatch, tmp_path, streamed=True)
+        event = _event()
+
+        await _handle(runner, event)
+
+        assert adapter.visible_output.is_set()
+        assert any(PARTIAL_TEXT in send["content"] for send in adapter.sent)
+        result = runner._hmwa_shape_agent_response.call_args.args[0]
+        assert result["failed"] is True and result["compression_exhausted"] is True
+        assert not any(message.get("role") in {"tool", "function"} for message in result["messages"])
+>       assert SESSION_KEY not in adapter._pending_messages, (
+            "A platform-confirmed partial stream from the failed turn must block automatic replay; "
+            f"already_sent={result.get('already_sent')!r}"
+        )
+E       AssertionError: A platform-confirmed partial stream from the failed turn must block automatic replay; already_sent=None
+E       assert 'agent:main:telegram:dm:replay-safety' not in {'agent:main:telegram:dm:replay-safety': MessageEvent(text='create the calendar event', message_type=<MessageType.TEXT...ta={}, timestamp=datetime.datetime(2026, 10, 14, 11, 31, 20, 629684), allow_gateway_control=True, reply_expected=None)}
+E        +  where {'agent:main:telegram:dm:replay-safety': MessageEvent(text='create the calendar event', message_type=<MessageType.TEXT...ta={}, timestamp=datetime.datetime(2026, 10, 14, 11, 31, 20, 629684), allow_gateway_control=True, reply_expected=None)} = <tests.gateway.test_compression_replay_delivery_safety.RecordingAdapter object at 0x7fb1cc986f90>._pending_messages
+
+tests/gateway/test_compression_replay_delivery_safety.py:154: AssertionError
+______________ test_failed_reset_does_not_stage_original_request _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb1cad7d490>
+tmp_path = PosixPath('<pytest-temp-root>/pytest-of-agent/pytest-0/test_failed_reset_does_not_sta0')
+
+    @pytest.mark.asyncio
+    async def test_failed_reset_does_not_stage_original_request(monkeypatch, tmp_path):
+        runner, adapter, old, _fresh = _harness(monkeypatch, tmp_path, reset_succeeds=False)
+        event = _event()
+
+        response = await _handle(runner, event)
+
+        runner.async_session_store.reset_session.assert_awaited_once_with(SESSION_KEY)
+        assert runner._hmwa_persist_turn_transcript.call_args.kwargs["session_entry"] is old
+>       assert SESSION_KEY not in adapter._pending_messages, "reset_session=None must not admit replay"
+E       AssertionError: reset_session=None must not admit replay
+E       assert 'agent:main:telegram:dm:replay-safety' not in {'agent:main:telegram:dm:replay-safety': MessageEvent(text='create the calendar event', message_type=<MessageType.TEXT...ta={}, timestamp=datetime.datetime(2026, 10, 14, 11, 31, 21, 556862), allow_gateway_control=True, reply_expected=None)}
+E        +  where {'agent:main:telegram:dm:replay-safety': MessageEvent(text='create the calendar event', message_type=<MessageType.TEXT...ta={}, timestamp=datetime.datetime(2026, 10, 14, 11, 31, 21, 556862), allow_gateway_control=True, reply_expected=None)} = <tests.gateway.test_compression_replay_delivery_safety.RecordingAdapter object at 0x7fb1cc654410>._pending_messages
+
+tests/gateway/test_compression_replay_delivery_safety.py:169: AssertionError
+=========================== short test summary info ============================
+FAILED tests/gateway/test_compression_replay_delivery_safety.py::test_failed_turn_with_confirmed_visible_stream_is_not_replayed
+FAILED tests/gateway/test_compression_replay_delivery_safety.py::test_failed_reset_does_not_stage_original_request
+========================= 2 failed, 2 passed in 2.76s ==========================
+
+=== 1 file with test failures (2 tests failed) ===
+  tests/gateway/test_compression_replay_delivery_safety.py  (2 tests failed)
+
+CANONICAL_RUN_EXIT=1

@@ -1,0 +1,40 @@
+{
+  "tested_owner_head": "ca47f821e7f3d308068e7dd807b387dae4f670a6",
+  "owner_tree": "d5c491922cee8b94edffbb910a19b05e604da74d",
+  "pr_base": "427d605d4985c2d49a795493ef6c5d66413057d1",
+  "platform": "Linux x86_64",
+  "python": "3.14.7",
+  "pytest": "9.1.1",
+  "test_fixture_sha256": "837fbb5dd80b5a873da452262d48961608ff3b0caa80214b7ca0c40f0f4644f4",
+  "supplemental_result": {
+    "passed": 2,
+    "failed": 2
+  },
+  "combined_result": {
+    "passed": 11,
+    "failed": 2
+  },
+  "pristine_control_result": {
+    "passed": 12,
+    "failed": 0
+  },
+  "code_health": {
+    "blocking": 0,
+    "advisory": 0
+  },
+  "scripts_check_passed": 12,
+  "original_log_sha256": {
+    "final-run.log": "259f653c5652bb68475cb5a560aa7c346517a3926f746c28a72ac98b4cf13974",
+    "independent-review-run.log": "07b1650cfe585c21e00850465828b466f8f96761c4838f3d92902ebcb9a9605e",
+    "independent-pristine-control.log": "7030964f055450621b38a3ba2f16cb8bb40043f20907e49163bef8d36c2a623e",
+    "check-staged-explicit-base.log": "f6cc0c2a4a75a3bb7b404988a9ee94ea0a9a8eff962b52cc22a3f9f7f7811453"
+  },
+  "published_log_sha256": {
+    "pristine-control.log": "00f1140753cfd5e1969ff0fd731dc6334786249ad625e1c7a63ca9e55afffc0f",
+    "independent-execution.log": "5ef05c0c71b24bda5a59080e395a0f2c65ed7edc07f5af5ca1dc356e83ec9925",
+    "checks.log": "f6cc0c2a4a75a3bb7b404988a9ee94ea0a9a8eff962b52cc22a3f9f7f7811453",
+    "execution.log": "adba703dba555a0faa5e3606c6a2fbab1b385b0ca575516402c1142dfbe728d5"
+  },
+  "log_normalization": "Disposable workspace and pytest-temp roots replaced; trailing whitespace trimmed; generic bare-pytest diagnostic replaced with canonical-runner instruction. No test results removed.",
+  "scope": "Test-only two replay-admission gaps, no production repair, live provider/platform, outer drain/lease, durable recovery, or full replay-media proof."
+}
