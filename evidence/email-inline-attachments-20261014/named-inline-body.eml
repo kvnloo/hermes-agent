@@ -1,0 +1,21 @@
+From: sender@example.test
+Subject: Named inline main text
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="named-inline-body-characterization"
+
+--named-inline-body-characterization
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline; filename="message.txt"
+
+Please calculate the total from the attached data.
+
+--named-inline-body-characterization
+Content-Type: text/csv
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="data.csv"
+MIME-Version: 1.0
+
+cHJpY2UKMTIK
+
+--named-inline-body-characterization--

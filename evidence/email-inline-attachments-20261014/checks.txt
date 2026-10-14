@@ -1,0 +1,3 @@
+Evidence-only Python files: ruff check passed (0.15.10).
+replay.sh: bash -n passed.
+No whole-repository scripts/check or full-suite claim.

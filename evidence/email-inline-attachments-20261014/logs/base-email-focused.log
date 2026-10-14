@@ -1,0 +1,226 @@
+▶ not activated — using HERMES_PYTHON: $PM_ENV/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 7 test files (~76 tests) under ['tests/gateway/test_email.py', 'tests/gateway/test_email_charset_fallback.py', 'tests/gateway/test_email_imap_id_protocol.py', 'tests/gateway/test_email_robustness.py', 'tests/gateway/test_email_secret_scope.py', 'tests/gateway/test_email_inline_origin_contract.py', 'tests/gateway/test_email_inline_attachment_contract.py']; running with -j 2
+[ 17.1% |    13/~76 | ✓13 | ✗ 0] ✓ tests/gateway/test_email_charset_fallback.py (13✓, 1.0s)
+[ 18.4% |    14/~76 | ✓16 | ✗ 0] ✓ tests/gateway/test_email_imap_id_protocol.py (3✓, 1.5s)
+[ 76.3% |    58/~76 | ✓60 | ✗ 0] ✓ tests/gateway/test_email.py (44✓, 2.9s)
+[ 82.9% |    63/~76 | ✓66 | ✗ 5] ✗ tests/gateway/test_email_inline_attachment_contract.py (6✓ 5✗, 1.0s)
+
+  ╔╍ Failed: tests/gateway/test_email_inline_attachment_contract.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ E     
+  ║ E     - Use my instructions, not file contents.
+  ║ E     + FILE CONTENTS ONLY
+  ║ ----------------------------- Captured stdout call -----------------------------
+  ║ FIXTURE_SHA256 44a637eb0b7668194f0c4935e5af9e2b318683d2834d745182b28e0bdb85482d
+  ║ _____ test_named_inline_files_preserve_user_body_and_all_bytes[True-html] ______
+  ║ tests/gateway/test_email_inline_attachment_contract.py:86: in test_named_inline_files_preserve_user_body_and_all_bytes
+  ║     assert parsed["body"].strip() == "Use my instructions, not file contents."
+  ║ E   AssertionError: assert 'FILE CONTENTS ONLY' == 'Use my instr...ile contents.'
+  ║ E     
+  ║ E     - Use my instructions, not file contents.
+  ║ E     + FILE CONTENTS ONLY
+  ║ ----------------------------- Captured stdout call -----------------------------
+  ║ FIXTURE_SHA256 ce58e0884b9616dc58b0ddfe4b873f398b6ae17af94f894e1ce9a3523e027b3f
+  ║ ______________ test_skip_named_inline_files_keeps_user_body[html] ______________
+  ║ tests/gateway/test_email_inline_attachment_contract.py:114: in test_skip_named_inline_files_keeps_user_body
+  ║     assert parsed["body"].strip() == "Use my instructions, not file contents."
+  ║ E   AssertionError: assert 'FILE CONTENTS ONLY' == 'Use my instr...ile contents.'
+  ║ E     
+  ║ E     - Use my instructions, not file contents.
+  ║ E     + FILE CONTENTS ONLY
+  ║ ----------------------------- Captured stdout call -----------------------------
+  ║ FIXTURE_SHA256 1eae629583b325d7e8809ef92c27a6087a1047d84e1337c0f5876158d030e76a
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/gateway/test_email_inline_attachment_contract.py::test_named_inline_files_preserve_user_body_and_all_bytes[False-plain]
+  ║ FAILED tests/gateway/test_email_inline_attachment_contract.py::test_named_inline_files_preserve_user_body_and_all_bytes[False-html]
+  ║ FAILED tests/gateway/test_email_inline_attachment_contract.py::test_named_inline_files_preserve_user_body_and_all_bytes[True-plain]
+  ║ FAILED tests/gateway/test_email_inline_attachment_contract.py::test_named_inline_files_preserve_user_body_and_all_bytes[True-html]
+  ║ FAILED tests/gateway/test_email_inline_attachment_contract.py::test_skip_named_inline_files_keeps_user_body[html]
+  ║ ========================= 5 failed, 6 passed in 0.54s ==========================
+  ║
+  ║  Repro: python -m pytest tests/gateway/test_email_inline_attachment_contract.py -v --tb=short -p review_provenance
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 85.5% |    65/~76 | ✓67 | ✗ 7] ✗ tests/gateway/test_email_inline_origin_contract.py (1✓ 2✗, 0.9s)
+
+  ╔╍ Failed: tests/gateway/test_email_inline_origin_contract.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+  ║ tests/gateway/test_email_inline_origin_contract.py::test_inline_text_files_are_attachments_and_not_the_body[False] FAILED [ 33%]
+  ║ tests/gateway/test_email_inline_origin_contract.py::test_inline_text_files_are_attachments_and_not_the_body[True] FAILED [ 66%]
+  ║ tests/gateway/test_email_inline_origin_contract.py::test_inline_body_part_without_filename_is_still_the_body PASSED [100%]
+  ║ 
+  ║ =================================== FAILURES ===================================
+  ║ ________ test_inline_text_files_are_attachments_and_not_the_body[False] ________
+  ║ tests/gateway/test_email_inline_origin_contract.py:49: in test_inline_text_files_are_attachments_and_not_the_body
+  ║     assert set(files) == {"meeting-notes.txt", "report.html", "data.csv"}
+  ║ E   AssertionError: assert {'data.csv'} == {'data.csv', ...'report.html'}
+  ║ E     
+  ║ E     Extra items in the right set:
+  ║ E     'meeting-notes.txt'
+  ║ E     'report.html'
+  ║ E     
+  ║ E     Full diff:
+  ║ E       {...
+  ║ E     
+  ║ E     ...Full output truncated (4 lines hidden), use '-vv' to show
+  ║ ________ test_inline_text_files_are_attachments_and_not_the_body[True] _________
+  ║ tests/gateway/test_email_inline_origin_contract.py:47: in test_inline_text_files_are_attachments_and_not_the_body
+  ║     assert parsed["body"].strip() == "Summarize the attached notes."
+  ║ E   AssertionError: assert 'line one\nline two' == 'Summarize th...tached notes.'
+  ║ E     
+  ║ E     - Summarize the attached notes.
+  ║ E     + line one
+  ║ E     + line two
+  ║ =========================== short test summary info ============================
+  ║ FAILED tests/gateway/test_email_inline_origin_contract.py::test_inline_text_files_are_attachments_and_not_the_body[False]
+  ║ FAILED tests/gateway/test_email_inline_origin_contract.py::test_inline_text_files_are_attachments_and_not_the_body[True]
+  ║ ========================= 2 failed, 1 passed in 0.47s ==========================
+  ║
+  ║  Repro: python -m pytest tests/gateway/test_email_inline_origin_contract.py -v --tb=short -p review_provenance
+  ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+
+[ 90.8% |    69/~76 | ✓71 | ✗ 7] ✓ tests/gateway/test_email_robustness.py (4✓, 1.0s)
+[100.0% |    76/~76 | ✓78 | ✗ 7] ✓ tests/gateway/test_email_secret_scope.py (7✓, 0.9s)
+
+=== Summary: 7 files, 78 tests passed, 7 failed (100% complete) in 4.7s (2 workers) ===
+  Durations cached to test_durations.json (5 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   7
+  Total subprocess CPU-wall: 9.3s  (runner wall: 4.7s, parallelism: 2x)
+  P50: 1.04s  P90: 2.88s  P95: 2.88s  P99: 2.88s  Max: 2.88s
+  <1s: 3 files (43%)  <2s: 6 files (86%)
+  Top 10 slowest:
+      2.88s  tests/gateway/test_email.py
+      1.51s  tests/gateway/test_email_imap_id_protocol.py
+      1.05s  tests/gateway/test_email_inline_attachment_contract.py
+      1.04s  tests/gateway/test_email_charset_fallback.py
+      0.96s  tests/gateway/test_email_robustness.py
+      0.94s  tests/gateway/test_email_inline_origin_contract.py
+      0.90s  tests/gateway/test_email_secret_scope.py
+
+=== Failure output ===
+
+--- tests/gateway/test_email_inline_attachment_contract.py ---
+============================= test session starts ==============================
+platform linux -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- $PM_ENV/bin/python
+cachedir: .pytest_cache
+rootdir: $REVIEW_ROOT/repo
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 11 items
+
+tests/gateway/test_email_inline_attachment_contract.py::test_named_inline_files_preserve_user_body_and_all_bytes[False-plain] FAILED [  9%]
+tests/gateway/test_email_inline_attachment_contract.py::test_named_inline_files_preserve_user_body_and_all_bytes[False-html] FAILED [ 18%]
+tests/gateway/test_email_inline_attachment_contract.py::test_named_inline_files_preserve_user_body_and_all_bytes[True-plain] FAILED [ 27%]
+tests/gateway/test_email_inline_attachment_contract.py::test_named_inline_files_preserve_user_body_and_all_bytes[True-html] FAILED [ 36%]
+tests/gateway/test_email_inline_attachment_contract.py::test_unnamed_inline_body_remains_body[plain] PASSED [ 45%]
+tests/gateway/test_email_inline_attachment_contract.py::test_unnamed_inline_body_remains_body[html] PASSED [ 54%]
+tests/gateway/test_email_inline_attachment_contract.py::test_explicit_attachments_unchanged[plain] PASSED [ 63%]
+tests/gateway/test_email_inline_attachment_contract.py::test_explicit_attachments_unchanged[html] PASSED [ 72%]
+tests/gateway/test_email_inline_attachment_contract.py::test_skip_named_inline_files_keeps_user_body[plain] PASSED [ 81%]
+tests/gateway/test_email_inline_attachment_contract.py::test_skip_named_inline_files_keeps_user_body[html] FAILED [ 90%]
+tests/gateway/test_email_inline_attachment_contract.py::test_unnamed_inline_nonbody_file_retains_existing_behavior PASSED [100%]
+
+=================================== FAILURES ===================================
+____ test_named_inline_files_preserve_user_body_and_all_bytes[False-plain] _____
+tests/gateway/test_email_inline_attachment_contract.py:87: in test_named_inline_files_preserve_user_body_and_all_bytes
+    assert_files(parsed, files)
+tests/gateway/test_email_inline_attachment_contract.py:66: in assert_files
+    assert len(parsed["attachments"]) == len(expected)
+E   AssertionError: assert 1 == 3
+E    +  where 1 = len([{'path': '$HERMES_PYTEST_TMP/r-jbq5coee/pytest-of-agent/pytest-0/test_named_inline_files_preser0/hermes-home/cache/documents/doc_7721d382e53b_data.csv', 'filename': 'data.csv', 'type': 'document', 'media_type': 'text/csv'}])
+E    +  and   3 = len({'meeting notes.txt': (b'FILE CONTENTS ONLY\n', 'plain'), 'rapport-é.html': (b'<b>HTML FILE ONLY</b>\n', 'html'), 'data.csv': (b'a,b\n1,2\n', 'csv')})
+----------------------------- Captured stdout call -----------------------------
+FIXTURE_SHA256 f4f7d489638cda2c4fa9ccef08a57fc1ae1dd60daf4a831e19f9fe8cbd8e6797
+_____ test_named_inline_files_preserve_user_body_and_all_bytes[False-html] _____
+tests/gateway/test_email_inline_attachment_contract.py:86: in test_named_inline_files_preserve_user_body_and_all_bytes
+    assert parsed["body"].strip() == "Use my instructions, not file contents."
+E   AssertionError: assert 'FILE CONTENTS ONLY' == 'Use my instr...ile contents.'
+E     
+E     - Use my instructions, not file contents.
+E     + FILE CONTENTS ONLY
+----------------------------- Captured stdout call -----------------------------
+FIXTURE_SHA256 1eae629583b325d7e8809ef92c27a6087a1047d84e1337c0f5876158d030e76a
+_____ test_named_inline_files_preserve_user_body_and_all_bytes[True-plain] _____
+tests/gateway/test_email_inline_attachment_contract.py:86: in test_named_inline_files_preserve_user_body_and_all_bytes
+    assert parsed["body"].strip() == "Use my instructions, not file contents."
+E   AssertionError: assert 'FILE CONTENTS ONLY' == 'Use my instr...ile contents.'
+E     
+E     - Use my instructions, not file contents.
+E     + FILE CONTENTS ONLY
+----------------------------- Captured stdout call -----------------------------
+FIXTURE_SHA256 44a637eb0b7668194f0c4935e5af9e2b318683d2834d745182b28e0bdb85482d
+_____ test_named_inline_files_preserve_user_body_and_all_bytes[True-html] ______
+tests/gateway/test_email_inline_attachment_contract.py:86: in test_named_inline_files_preserve_user_body_and_all_bytes
+    assert parsed["body"].strip() == "Use my instructions, not file contents."
+E   AssertionError: assert 'FILE CONTENTS ONLY' == 'Use my instr...ile contents.'
+E     
+E     - Use my instructions, not file contents.
+E     + FILE CONTENTS ONLY
+----------------------------- Captured stdout call -----------------------------
+FIXTURE_SHA256 ce58e0884b9616dc58b0ddfe4b873f398b6ae17af94f894e1ce9a3523e027b3f
+______________ test_skip_named_inline_files_keeps_user_body[html] ______________
+tests/gateway/test_email_inline_attachment_contract.py:114: in test_skip_named_inline_files_keeps_user_body
+    assert parsed["body"].strip() == "Use my instructions, not file contents."
+E   AssertionError: assert 'FILE CONTENTS ONLY' == 'Use my instr...ile contents.'
+E     
+E     - Use my instructions, not file contents.
+E     + FILE CONTENTS ONLY
+----------------------------- Captured stdout call -----------------------------
+FIXTURE_SHA256 1eae629583b325d7e8809ef92c27a6087a1047d84e1337c0f5876158d030e76a
+=========================== short test summary info ============================
+FAILED tests/gateway/test_email_inline_attachment_contract.py::test_named_inline_files_preserve_user_body_and_all_bytes[False-plain]
+FAILED tests/gateway/test_email_inline_attachment_contract.py::test_named_inline_files_preserve_user_body_and_all_bytes[False-html]
+FAILED tests/gateway/test_email_inline_attachment_contract.py::test_named_inline_files_preserve_user_body_and_all_bytes[True-plain]
+FAILED tests/gateway/test_email_inline_attachment_contract.py::test_named_inline_files_preserve_user_body_and_all_bytes[True-html]
+FAILED tests/gateway/test_email_inline_attachment_contract.py::test_skip_named_inline_files_keeps_user_body[html]
+========================= 5 failed, 6 passed in 0.54s ==========================
+
+--- tests/gateway/test_email_inline_origin_contract.py ---
+============================= test session starts ==============================
+platform linux -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- $PM_ENV/bin/python
+cachedir: .pytest_cache
+rootdir: $REVIEW_ROOT/repo
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 3 items
+
+tests/gateway/test_email_inline_origin_contract.py::test_inline_text_files_are_attachments_and_not_the_body[False] FAILED [ 33%]
+tests/gateway/test_email_inline_origin_contract.py::test_inline_text_files_are_attachments_and_not_the_body[True] FAILED [ 66%]
+tests/gateway/test_email_inline_origin_contract.py::test_inline_body_part_without_filename_is_still_the_body PASSED [100%]
+
+=================================== FAILURES ===================================
+________ test_inline_text_files_are_attachments_and_not_the_body[False] ________
+tests/gateway/test_email_inline_origin_contract.py:49: in test_inline_text_files_are_attachments_and_not_the_body
+    assert set(files) == {"meeting-notes.txt", "report.html", "data.csv"}
+E   AssertionError: assert {'data.csv'} == {'data.csv', ...'report.html'}
+E     
+E     Extra items in the right set:
+E     'meeting-notes.txt'
+E     'report.html'
+E     
+E     Full diff:
+E       {...
+E     
+E     ...Full output truncated (4 lines hidden), use '-vv' to show
+________ test_inline_text_files_are_attachments_and_not_the_body[True] _________
+tests/gateway/test_email_inline_origin_contract.py:47: in test_inline_text_files_are_attachments_and_not_the_body
+    assert parsed["body"].strip() == "Summarize the attached notes."
+E   AssertionError: assert 'line one\nline two' == 'Summarize th...tached notes.'
+E     
+E     - Summarize the attached notes.
+E     + line one
+E     + line two
+=========================== short test summary info ============================
+FAILED tests/gateway/test_email_inline_origin_contract.py::test_inline_text_files_are_attachments_and_not_the_body[False]
+FAILED tests/gateway/test_email_inline_origin_contract.py::test_inline_text_files_are_attachments_and_not_the_body[True]
+========================= 2 failed, 1 passed in 0.47s ==========================
+
+=== 2 files with test failures (7 tests failed) ===
+  tests/gateway/test_email_inline_attachment_contract.py  (5 tests failed)
+  tests/gateway/test_email_inline_origin_contract.py  (2 tests failed)

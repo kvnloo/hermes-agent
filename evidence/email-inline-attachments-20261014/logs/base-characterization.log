@@ -1,0 +1,18 @@
+▶ not activated — using HERMES_PYTHON: $PM_ENV/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 1 test files (~1 tests) under ['tests/gateway/test_email_named_body_characterization.py']; running with -j 1
+[100.0% |     1/~1 | ✓1 | ✗0] ✓ tests/gateway/test_email_named_body_characterization.py (1✓, 0.9s)
+
+=== Summary: 1 files, 1 tests passed, 0 failed (100% complete) in 0.9s (1 workers) ===
+  Durations cached to test_durations.json (1 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   1
+  Total subprocess CPU-wall: 0.9s  (runner wall: 0.9s, parallelism: 1x)
+  P50: 0.92s  P90: 0.92s  P95: 0.92s  P99: 0.92s  Max: 0.92s
+  <1s: 1 files (100%)  <2s: 1 files (100%)
+  Top 10 slowest:
+      0.92s  tests/gateway/test_email_named_body_characterization.py

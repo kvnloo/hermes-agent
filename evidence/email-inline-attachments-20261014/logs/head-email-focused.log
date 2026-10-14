@@ -1,0 +1,30 @@
+▶ not activated — using HERMES_PYTHON: $PM_ENV/bin/python
+▶ running per-file parallel test suite via run_tests_parallel.py
+  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+▶ pre-compiling bytecode cache
+▶ launching test runner
+Discovered 7 test files (~76 tests) under ['tests/gateway/test_email.py', 'tests/gateway/test_email_charset_fallback.py', 'tests/gateway/test_email_imap_id_protocol.py', 'tests/gateway/test_email_robustness.py', 'tests/gateway/test_email_secret_scope.py', 'tests/gateway/test_email_inline_origin_contract.py', 'tests/gateway/test_email_inline_attachment_contract.py']; running with -j 2
+[ 17.1% |    13/~76 | ✓13 | ✗ 0] ✓ tests/gateway/test_email_charset_fallback.py (13✓, 1.4s)
+[ 18.4% |    14/~76 | ✓16 | ✗ 0] ✓ tests/gateway/test_email_imap_id_protocol.py (3✓, 1.6s)
+[ 76.3% |    58/~76 | ✓60 | ✗ 0] ✓ tests/gateway/test_email.py (44✓, 3.4s)
+[ 82.9% |    63/~76 | ✓71 | ✗ 0] ✓ tests/gateway/test_email_inline_attachment_contract.py (11✓, 1.0s)
+[ 85.5% |    65/~76 | ✓74 | ✗ 0] ✓ tests/gateway/test_email_inline_origin_contract.py (3✓, 0.9s)
+[ 90.8% |    69/~76 | ✓78 | ✗ 0] ✓ tests/gateway/test_email_robustness.py (4✓, 0.8s)
+[100.0% |    76/~76 | ✓85 | ✗ 0] ✓ tests/gateway/test_email_secret_scope.py (7✓, 0.9s)
+
+=== Summary: 7 files, 85 tests passed, 0 failed (100% complete) in 5.1s (2 workers) ===
+  Durations cached to test_durations.json (7 files)
+
+=== Per-file subprocess time distribution ===
+  Files:   7
+  Total subprocess CPU-wall: 10.0s  (runner wall: 5.1s, parallelism: 2x)
+  P50: 1.04s  P90: 3.38s  P95: 3.38s  P99: 3.38s  Max: 3.38s
+  <1s: 3 files (43%)  <2s: 6 files (86%)
+  Top 10 slowest:
+      3.38s  tests/gateway/test_email.py
+      1.60s  tests/gateway/test_email_imap_id_protocol.py
+      1.36s  tests/gateway/test_email_charset_fallback.py
+      1.04s  tests/gateway/test_email_inline_attachment_contract.py
+      0.88s  tests/gateway/test_email_secret_scope.py
+      0.86s  tests/gateway/test_email_inline_origin_contract.py
+      0.83s  tests/gateway/test_email_robustness.py

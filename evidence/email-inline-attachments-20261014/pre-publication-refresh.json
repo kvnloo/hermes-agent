@@ -1,0 +1,19 @@
+{
+  "at": "2026-10-14T14:38:13.136Z",
+  "origin": {
+    "url": "https://github.com/NousResearch/hermes-agent/pull/138417",
+    "head": "126a18a9fe75e1e2e94a6cb090a1bcf37b68b381",
+    "base": "0e427d788d253630d38a3a51cd76849e73cd6925",
+    "state": "open",
+    "draft": true
+  },
+  "feedback": [],
+  "claim_url": "https://github.com/kvnloo/hermes-agent/issues/503",
+  "claim_comments": [],
+  "dedupe": [
+    {
+      "url": "https://github.com/kvnloo/hermes-agent/issues/503",
+      "title": "CHECK: independent evidence for email inline text attachments (origin 138417)"
+    }
+  ]
+}

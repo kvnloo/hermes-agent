@@ -1,0 +1,41 @@
+{
+  "refreshed_at": "2026-10-14T14:25:44.625Z",
+  "files": [
+    {
+      "url": "https://github.com/kvnloo/oss-factory/blob/main/AGENTS.md",
+      "sha": "6e82603b5240e8df852ccf8825dc172fc93a07e8"
+    },
+    {
+      "url": "https://github.com/kvnloo/oss-factory/blob/main/factory/CONTROL_PLANE.md",
+      "sha": "9748a97d314de4ee5af978a9035732a0335270ee"
+    },
+    {
+      "url": "https://github.com/kvnloo/oss-factory/blob/main/factory/HITL.md",
+      "sha": "cbeffe3c44c3fa11668b3023866d7ffe6c5c8d32"
+    },
+    {
+      "url": "https://github.com/kvnloo/oss-factory/blob/main/factory/projects.json",
+      "sha": "7f6f7dee7b57dce03817ab61a3d7782b5e06474a"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/blob/main/AGENTS.md",
+      "sha": "4c4ce5c04528945b372af20f4e86970d40a6db6e"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/blob/main/CONTRIBUTING.md",
+      "sha": "750d624c86593a72a1a14d338d82c49516c336c6"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/blob/126a18a9fe75e1e2e94a6cb090a1bcf37b68b381/plugins/AGENTS.md",
+      "sha": "a9fc087d5f10a87db6e2e48cbb82c01ea0d5f148"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/blob/126a18a9fe75e1e2e94a6cb090a1bcf37b68b381/tests/AGENTS.md",
+      "sha": "db77526fb73c1aa2bea028768c4c21f4bbb4c7f1"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/blob/0e427d788d253630d38a3a51cd76849e73cd6925/website/docs/user-guide/messaging/email.md",
+      "sha": "37b3cced272b71a2994d882633001ba5c9df6b1a"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "classification": "observation-only, no product-contract assertion",
+  "fixture_sha256": "4400dc9d94b2b10523392d777369998f845714a103e1cc612e338bd8a781d0b1",
+  "body": "Please calculate the total from the attached data.\n",
+  "attachments": [
+    {
+      "filename": "data.csv",
+      "media_type": "text/csv",
+      "payload": "price\n12\n"
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "classification": "HOLD",
+  "origin_url": "https://github.com/NousResearch/hermes-agent/pull/138417",
+  "author": "rodricksz4h5",
+  "evidence_provenance": "independent",
+  "source_head": "126a18a9fe75e1e2e94a6cb090a1bcf37b68b381",
+  "source_base": "0e427d788d253630d38a3a51cd76849e73cd6925",
+  "tests": {
+    "existing_controls": {
+      "base": {
+        "passed": 71,
+        "failed": 0
+      },
+      "head": {
+        "passed": 71,
+        "failed": 0
+      }
+    },
+    "origin_regression": {
+      "base": {
+        "passed": 1,
+        "failed": 2
+      },
+      "head": {
+        "passed": 3,
+        "failed": 0
+      }
+    },
+    "independent_contracts": {
+      "base": {
+        "passed": 6,
+        "failed": 5
+      },
+      "head": {
+        "passed": 11,
+        "failed": 0
+      }
+    },
+    "distinct_total": 85
+  },
+  "characterization": {
+    "excluded_from_contract_count": true,
+    "fixture_sha256": "4400dc9d94b2b10523392d777369998f845714a103e1cc612e338bd8a781d0b1",
+    "base_body": "Please calculate the total from the attached data.\n",
+    "head_body": "",
+    "content_deleted": false,
+    "head_reclassifies_main_text_as_cached_file": true
+  },
+  "production_changes": false,
+  "source_checkout_tracked_diff_empty": true,
+  "runtime_reused": true,
+  "installed_distribution_count": 90,
+  "unmatched_distribution_versions": [],
+  "test_file_sha256": {
+    "test_email_inline_attachment_contract.py": "6455c890702039229616f80c9b2831ef0b81bc52f539ee78f172cc97d2a01ffe",
+    "test_email_named_body_characterization.py": "e4e77467dcac821ac4c3edd2e64649c7a7ba823c86655501d89afa0e01ec328a",
+    "origin_test_email_inline_text_attachment.py": "b55d31ca28d5f83195ce3a5363064628e8314226ad165910a6d5a18f30926419",
+    "review_provenance.py": "413023332aa8add687166eaa9062e4cc3bbe82b4a15f41dade7cea9abd0a3524"
+  }
+}
