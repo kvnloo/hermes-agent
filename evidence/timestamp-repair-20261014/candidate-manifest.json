@@ -1,0 +1,103 @@
+{
+  "owner_head": "0b58039b7c1f77dd54fa0cd080f794a11002bd49",
+  "owner_root_tree": "a2efc59fc2ca61ca5436fbc5d8486461d035f5d2",
+  "scope": "Partial exact-source ui-tui/apps/shared tree plus listed root config files; not whole repository",
+  "source_verification": [
+    {
+      "variant": "base",
+      "checked": 589,
+      "changes": [
+        "ui-tui/src/__tests__/streamingTimestamps.test.tsx"
+      ]
+    },
+    {
+      "variant": "head",
+      "checked": 589,
+      "changes": [
+        "ui-tui/src/__tests__/streamingTimestamps.test.tsx",
+        "ui-tui/src/app/turnController.ts",
+        "ui-tui/src/app/turnStore.ts",
+        "ui-tui/src/components/streamingAssistant.tsx"
+      ]
+    }
+  ],
+  "test_overlay_identical": true,
+  "revision": "v2",
+  "prior_manifest_sha256": "2c0d61d94c0e86ebd5662441ad05c85e7fe7317937bbc827423e26aa062e03e5",
+  "files": [
+    {
+      "path": "ui-tui/src/app/turnStore.ts",
+      "sha256": "ee579a691b6502d9d70bfba426ec8fbf8c4d39adeedce724bec49475f4033225",
+      "git_blob_sha1": "05fc3e7004059683a2f1502eea165bf1d3bec27b"
+    },
+    {
+      "path": "ui-tui/src/app/turnController.ts",
+      "sha256": "7474c8a0541b8a1a5861b97f5c57685049a4761aa1c5edaa251319c088dd21aa",
+      "git_blob_sha1": "a90ead4a7756e445aa547a17f16ddf4a6068f403"
+    },
+    {
+      "path": "ui-tui/src/components/streamingAssistant.tsx",
+      "sha256": "9828de17b7419cee03dce847e7ac6e63cb043860b6ce93a2c52ff138255c2bd7",
+      "git_blob_sha1": "ef9470ed492cccc1b5f753014c17b6e102b478bd"
+    },
+    {
+      "path": "ui-tui/src/__tests__/streamingTimestampContinuity.test.tsx",
+      "sha256": "32577356160f1267f2685473b05d762fa73d8ed3cb2ee23c5b64e8a810d7eab5",
+      "git_blob_sha1": "a6dafa8c57d8f3eea1b08d414a7407f57d965db2"
+    },
+    {
+      "path": "ui-tui/src/__tests__/streamingTimestamps.test.tsx",
+      "sha256": "929a34c7132e037d6c087994befbca9a805936e1731e46db43c4755d73efb00f",
+      "git_blob_sha1": "9e524ea3029ad15e9701e414acb31348d69f2757"
+    }
+  ],
+  "production_unchanged_from_v1": true,
+  "harness": {
+    "run-targeted.sh": {
+      "sha256": "e1c71d6e75d4cf485542c27a886058e111fdf289cd21e1286de6f17ab6a5858f",
+      "git_blob_sha1": "98f0eb193aaff8d168b1a216e551f660b602acfe"
+    },
+    "offline-guard.cjs": {
+      "sha256": "b27d5d69fbd8140e5c51eb91f918476191617d6a17b0e2bd199cb957488926ac",
+      "git_blob_sha1": "75e1bf70a2ce0c9121b95a6ab96ba6baf6c632d5"
+    },
+    "candidate.patch": {
+      "sha256": "0252cb8f100106f77d5a878872deb62441836c0545a4a984bbf64e6ec1ac5b02",
+      "git_blob_sha1": "2b13be8f06b22f16c93ec385a4b623ee6464b7ba"
+    },
+    "delta-v1.patch": {
+      "sha256": "a98c71428af86bc258f39889712a6fddfe456341bbb9153d650593e9e76b2c06",
+      "git_blob_sha1": "3e407347eeeef1f863797b185f348bea10d4f831"
+    }
+  },
+  "logs": {
+    "base-UTC.log": {
+      "sha256": "36a2519a1a30dcbc83a3769b4edb6c568e32780133c05277059be850b29553ff",
+      "git_blob_sha1": "9d6b1aac985182a8a35af018f09b35c161be47c8"
+    },
+    "lint-fix.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    "head-UTC.log": {
+      "sha256": "c1fd9a0c852d73e858cd161c175b7163a20707ead1f5093625a86ee73ebcea25",
+      "git_blob_sha1": "e5153b61d3231ec8248820c0afef02c4e424d7ab"
+    },
+    "typecheck.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    "base-America_New_York.log": {
+      "sha256": "3c2a08479bbf96f06856c50d6e68ead6a12e40245d70232f83b1f617088e826c",
+      "git_blob_sha1": "d7ec2ad4e399878dc3ef7c13fb2581dd6eb9b7fa"
+    },
+    "head-America_New_York.log": {
+      "sha256": "87b6f4d5f443b1af010e572130c8bbd7b05fbe19ecfea7f7baca206800b2ddd1",
+      "git_blob_sha1": "8926a4f87ccff6592194dd28f88a2cbeddae6b9c"
+    },
+    "lint.log": {
+      "sha256": "c917348895baa645d2fae1d639e13877bed4a9f087b4f59a28fbc8411fe996e2",
+      "git_blob_sha1": "1407fc92c5c6ba85ed75fcc61246664be0e5fb33"
+    }
+  }
+}

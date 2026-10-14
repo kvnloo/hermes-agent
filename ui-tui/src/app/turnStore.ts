@@ -14,6 +14,7 @@ const buildTurnState = (): TurnState => ({
   streamPendingTools: [],
   streamSegments: [],
   streaming: '',
+  streamingCreatedAt: undefined,
   subagents: [],
   todoCollapsed: false,
   todos: [],
@@ -76,6 +77,8 @@ export interface TurnState {
   streamPendingTools: string[]
   streamSegments: Msg[]
   streaming: string
+  /** Unix seconds captured when this assistant burst first becomes visible. */
+  streamingCreatedAt?: number
   subagents: SubagentProgress[]
   todoCollapsed: boolean
   todos: TodoItem[]

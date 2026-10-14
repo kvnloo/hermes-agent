@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react'
-import { memo, useRef } from 'react'
+import { memo } from 'react'
 
 import type { AppLayoutProgressProps } from '../app/interfaces.js'
 import { toggleTodoCollapsed, useTurnSelector } from '../app/turnStore.js'
@@ -35,17 +35,9 @@ export const StreamingAssistant = memo(function StreamingAssistant({
   const streamSegments = useTurnSelector(state => state.streamSegments)
   const streamPendingTools = useTurnSelector(state => state.streamPendingTools)
   const streaming = useTurnSelector(state => state.streaming)
+  const streamingCreatedAt = useTurnSelector(state => state.streamingCreatedAt)
   const activeTools = useTurnSelector(state => state.tools)
   const showStreamingArea = Boolean(streaming)
-
-  // No persisted `createdAt` on the streaming block yet — stamp the wall clock at burst start so the [HH:MM] label renders immediately; reset at burst end.
-  const streamStartedAt = useRef<number | undefined>(undefined)
-
-  if (showStreamingArea) {
-    streamStartedAt.current ??= Date.now() / 1000
-  } else {
-    streamStartedAt.current = undefined
-  }
 
   if (!progress.showProgressArea && !showStreamingArea && !activeTools.length) {
     return null
@@ -67,7 +59,7 @@ export const StreamingAssistant = memo(function StreamingAssistant({
       isStreaming: true,
       key: 'streaming',
       msg: {
-        createdAt: streamStartedAt.current,
+        createdAt: streamingCreatedAt,
         role: 'assistant',
         text: streaming,
         ...(streamPendingTools.length && { tools: streamPendingTools })

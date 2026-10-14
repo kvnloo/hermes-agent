@@ -7,7 +7,7 @@ import { stripAnsi } from '@hermes/shared/ansi'
 import React from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { patchTurnState, resetTurnState } from '../app/turnStore.js'
+import { turnController } from '../app/turnController.js'
 import { StreamingAssistant } from '../components/streamingAssistant.js'
 
 const flushEffects = async () => {
@@ -49,12 +49,12 @@ const mountStreaming = (timestamps?: boolean) => {
 }
 
 afterEach(() => {
-  resetTurnState()
+  turnController.fullReset()
 })
 
 describe('StreamingAssistant — timestamps', () => {
   it('renders a [HH:MM] timestamp on the streaming assistant message when timestamps are on', async () => {
-    patchTurnState({ streaming: 'Hello from the model' })
+    turnController.hydrateStreamingText('Hello from the model')
 
     const { instance, text } = mountStreaming(true)
 
@@ -67,7 +67,7 @@ describe('StreamingAssistant — timestamps', () => {
   })
 
   it('renders no timestamp on the streaming assistant message when timestamps are off', async () => {
-    patchTurnState({ streaming: 'Hello from the model' })
+    turnController.hydrateStreamingText('Hello from the model')
 
     const { instance, text } = mountStreaming(false)
 

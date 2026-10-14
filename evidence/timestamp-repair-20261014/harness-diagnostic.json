@@ -1,0 +1,23 @@
+{
+  "classification": "self-imposed offline guard interception; no platform/reviewer permission denial",
+  "initial_runs": [
+    "logs/base-first.log",
+    "logs/head-first.log"
+  ],
+  "observed": "OFFLINE_GUARD: unexpected node:https.request call before npm test script; matching npm debug GET https://registry.npmjs.org/npm failed",
+  "source": "Installed npm 11.19.0 lib/cli/entry.js invokes lib/cli/update-notifier.js; fresh HOME has no last-checked sentinel; notifier calls pacote.manifest(npm@*) and exits early when update-notifier is false",
+  "change": "Same npm test command and unchanged fail-closed guard; add npm_config_update_notifier=false and npm_config_offline=true to env -i",
+  "post_change": [
+    "logs/base-UTC.log",
+    "logs/base-America_New_York.log",
+    "logs/head-UTC.log",
+    "logs/head-America_New_York.log"
+  ],
+  "post_change_guard_diagnostics": 0,
+  "no_connection_allowed": true,
+  "initial_log_sha256": {
+    "logs/base-first.log": "f790b4b3aa0986e16b05599ea1b20116c82d25ed6c259ac05c0fa84cff71c3bf",
+    "logs/head-first.log": "5aa4510355402358ae186054b5766054df7f59dada2c0f0e5d2d489252b6dbea"
+  },
+  "revision": "v2"
+}

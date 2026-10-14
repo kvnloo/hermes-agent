@@ -1,0 +1,188 @@
+
+> hermes-tui@0.0.1 test
+> vitest run src/__tests__/streamingTimestampContinuity.test.tsx src/__tests__/streamingTimestamps.test.tsx src/__tests__/messages.test.ts src/__tests__/turnControllerNotice.test.ts src/__tests__/turnControllerTodos.test.ts --reporter=verbose
+
+
+ RUN  v4.1.10 <repair-v2-sandbox>/base/ui-tui
+
+ ✓ src/__tests__/turnControllerNotice.test.ts > turnController.startMessage — flash-and-yield notices clear on next prompt > clears a standing credits.usage notice when a new turn starts 3ms
+ ✓ src/__tests__/turnControllerNotice.test.ts > turnController.startMessage — flash-and-yield notices clear on next prompt > clears a standing credits.grant_spent notice when a new turn starts 0ms
+ ✓ src/__tests__/turnControllerNotice.test.ts > turnController.startMessage — flash-and-yield notices clear on next prompt > leaves a sticky credits.depleted notice across a new turn 1ms
+ ✓ src/__tests__/turnControllerTodos.test.ts > turnController.recordTodos — preserves the parent field > keeps parent on a valid nested subtask 4ms
+ ✓ src/__tests__/turnControllerTodos.test.ts > turnController.recordTodos — preserves the parent field > drops a self-referential parent instead of keeping a self-loop 0ms
+ ✓ src/__tests__/turnControllerTodos.test.ts > turnController.recordTodos — preserves the parent field > omits parent entirely when absent, matching pre-nesting payloads 0ms
+ ✓ src/__tests__/messages.test.ts > toTranscriptMessages > preserves assistant tool-call rows so resume does not drop prior turns 2ms
+ ✓ src/__tests__/messages.test.ts > toTranscriptMessages > skips hidden display_kind rows entirely 0ms
+ ✓ src/__tests__/messages.test.ts > toTranscriptMessages > projects model_switch as an event with replaced text 1ms
+ ✓ src/__tests__/messages.test.ts > toTranscriptMessages > projects async_delegation_complete with task_count metadata 0ms
+ ✓ src/__tests__/messages.test.ts > toTranscriptMessages > uses the display-only completion title without exposing the model payload 1ms
+ ✓ src/__tests__/messages.test.ts > toTranscriptMessages > projects async_delegation_complete without metadata as generic text 0ms
+ ✓ src/__tests__/messages.test.ts > MessageLine > preserves a separator after compound user prompt glyphs in transcript rows 27ms
+ ✓ src/__tests__/messages.test.ts > MessageLine > keeps historical thinking blocks collapsed by default 9ms
+ ✓ src/__tests__/messages.test.ts > MessageLine > keeps live thinking blocks expanded while streaming 5ms
+ ✓ src/__tests__/messages.test.ts > upsert > appends when last role differs 1ms
+ ✓ src/__tests__/messages.test.ts > upsert > replaces when last role matches 0ms
+ ✓ src/__tests__/messages.test.ts > upsert > appends to empty 0ms
+ ✓ src/__tests__/messages.test.ts > upsert > does not mutate 0ms
+ ✓ src/__tests__/messages.test.ts > capTranscriptHistory > keeps the intro and the newest bounded display rows 1ms
+ ✓ src/__tests__/messages.test.ts > display.timestamps (#41531) > formats a Unix-seconds timestamp as [HH:MM] and rejects garbage 0ms
+ ✓ src/__tests__/messages.test.ts > display.timestamps (#41531) > threads persisted transcript timestamps onto rehydrated rows 0ms
+ ✓ src/__tests__/messages.test.ts > display.timestamps (#41531) > stamps live rows at append and preserves supplied times 0ms
+ ✓ src/__tests__/streamingTimestamps.test.tsx > StreamingAssistant — timestamps > renders a [HH:MM] timestamp on the streaming assistant message when timestamps are on 85ms
+ ✓ src/__tests__/streamingTimestamps.test.tsx > StreamingAssistant — timestamps > renders no timestamp on the streaming assistant message when timestamps are off 57ms
+stdout | src/__tests__/streamingTimestampContinuity.test.tsx > streaming-to-settled timestamp continuity > preserves the rendered label: 'same-minute control'
+{"end":"2026-10-14T12:59:59.000Z","live":"[08:59]","settled":"[08:59]"}
+
+ ✓ src/__tests__/streamingTimestampContinuity.test.tsx > streaming-to-settled timestamp continuity > preserves the rendered label: 'same-minute control' 148ms
+stdout | src/__tests__/streamingTimestampContinuity.test.tsx > streaming-to-settled timestamp continuity > preserves the rendered label: 'minute-boundary regression'
+{"end":"2026-10-14T13:00:01.000Z","live":"[08:59]","settled":"[09:00]"}
+
+ × src/__tests__/streamingTimestampContinuity.test.tsx > streaming-to-settled timestamp continuity > preserves the rendered label: 'minute-boundary regression' 118ms
+   → expected '[09:00]' to be '[08:59]' // Object.is equality
+ × src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > preserves separate burst times through flush boundaries 52ms
+   → expected undefined to be 1791982795 // Object.is equality
+ × src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > preserves separate burst times through tool boundaries 52ms
+   → expected undefined to be 1791982795 // Object.is equality
+ × src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > preserves separate burst times through interim boundaries 52ms
+   → expected undefined to be 1791982795 // Object.is equality
+ × src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > preserves an interrupted tail and already sealed segment 104ms
+   → expected [ 1791982861, 1791982861 ] to deeply equal [ 1791982795, 1791982801 ]
+ × src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > keeps the active label across remounts and resets it across turns with one mount 62ms
+   → expected '[09:00]' to be '[08:59]' // Object.is equality
+ ✓ src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > retains append-time fallback for no delta 1ms
+ ✓ src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > retains append-time fallback for streaming disabled 1ms
+ ✓ src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > retains append-time fallback for unpublished delta 1ms
+ ✓ src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > does not inherit a discarded clock after error 51ms
+ ✓ src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > does not inherit a discarded clock after reset 52ms
+ ✓ src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > does not inherit a discarded clock after full reset 51ms
+ ✓ src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > does not inherit a discarded clock after idle 51ms
+ × src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > retains hydrated visible burst time and ignores reasoning-only prefixes 58ms
+   → expected undefined to be 1791982801 // Object.is equality
+ × src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > does not lend a flushed tail timestamp to distinct unstreamed final text 53ms
+   → expected [ 1791982801, 1791982801 ] to deeply equal [ 1791982795, 1791982801 ]
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/__tests__/streamingTimestampContinuity.test.tsx > streaming-to-settled timestamp continuity > preserves the rendered label: 'minute-boundary regression'
+AssertionError: expected '[09:00]' to be '[08:59]' // Object.is equality
+
+Expected: "[08:59]"
+Received: "[09:00]"
+
+ ❯ src/__tests__/streamingTimestampContinuity.test.tsx:111:41
+    109|       await expect.poll(settled.text, { timeout: 2000 }).toContain('He…
+    110|       console.info(JSON.stringify({ end, live: initialLabel, settled: …
+    111|       expect(lastLabel(settled.text())).toBe(initialLabel)
+       |                                         ^
+    112|     } finally {
+    113|       settled?.close()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > preserves separate burst times through flush boundaries
+ FAIL  src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > preserves separate burst times through tool boundaries
+ FAIL  src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > preserves separate burst times through interim boundaries
+AssertionError: expected undefined to be 1791982795 // Object.is equality
+
+- Expected:
+1791982795
+
++ Received:
+undefined
+
+ ❯ src/__tests__/streamingTimestampContinuity.test.tsx:153:96
+    151|       }
+    152|
+    153|       expect(getTurnState().streamSegments.find(msg => msg.text === 'F…
+       |                                                                                                ^
+    154|
+    155|       const secondTime = Date.now() / 1000
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > preserves an interrupted tail and already sealed segment
+AssertionError: expected [ 1791982861, 1791982861 ] to deeply equal [ 1791982795, 1791982801 ]
+
+- Expected
++ Received
+
+  [
+-   1791982795,
+-   1791982801,
++   1791982861,
++   1791982861,
+  ]
+
+ ❯ src/__tests__/streamingTimestampContinuity.test.tsx:194:50
+    192|     })
+    193|     expect(calls).toEqual(['session.interrupt'])
+    194|     expect(transcript.map(msg => msg.createdAt)).toEqual([firstTime, s…
+       |                                                  ^
+    195|     expect(transcript[1]?.text).toBe('Unfinished tail\n\n*[interrupted…
+    196|     // A late persisted extension must update text without replacing t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > keeps the active label across remounts and resets it across turns with one mount
+AssertionError: expected '[09:00]' to be '[08:59]' // Object.is equality
+
+Expected: "[08:59]"
+Received: "[09:00]"
+
+ ❯ src/__tests__/streamingTimestampContinuity.test.tsx:215:38
+    213|       live = mountLive()
+    214|       await expect.poll(live.text, { timeout: 2000 }).toContain('First…
+    215|       expect(lastLabel(live.text())).toBe(firstLabel)
+       |                                      ^
+    216|       turnController.recordMessageComplete({ text: 'First reply' })
+    217|       turnController.startMessage()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > retains hydrated visible burst time and ignores reasoning-only prefixes
+AssertionError: expected undefined to be 1791982801 // Object.is equality
+
+- Expected:
+1791982801
+
++ Received:
+undefined
+
+ ❯ src/__tests__/streamingTimestampContinuity.test.tsx:304:78
+    302|       expect(lastLabel(live.text())).toBe(label)
+    303|       const { finalMessages } = turnController.recordMessageComplete({…
+    304|       expect(finalMessages.find(msg => msg.role === 'assistant')?.crea…
+       |                                                                              ^
+    305|     } finally {
+    306|       live.close()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  src/__tests__/streamingTimestampContinuity.test.tsx > displayed burst timestamp lifecycle > does not lend a flushed tail timestamp to distinct unstreamed final text
+AssertionError: expected [ 1791982801, 1791982801 ] to deeply equal [ 1791982795, 1791982801 ]
+
+- Expected
++ Received
+
+  [
+-   1791982795,
++   1791982801,
+    1791982801,
+  ]
+
+ ❯ src/__tests__/streamingTimestampContinuity.test.tsx:317:47
+    315|     const { finalMessages } = turnController.recordMessageComplete({ t…
+    316|     const replies = finalMessages.reduce<Msg[]>(appendTranscriptMessag…
+    317|     expect(replies.map(msg => msg.createdAt)).toEqual([firstTime, Date…
+       |                                               ^
+    318|   })
+    319| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  8 failed | 33 passed (41)
+   Start at  08:55:26
+   Duration  1.74s (transform 2.34s, setup 0ms, import 3.31s, tests 1.11s, environment 1ms)
+

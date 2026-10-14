@@ -348,6 +348,7 @@ class TurnController {
       streamPendingTools: [],
       streamSegments: [],
       streaming: '',
+      streamingCreatedAt: undefined,
       subagents: [],
       tools: [],
       turnTrail: []
@@ -369,6 +370,7 @@ class TurnController {
 
     const segments = this.segmentMessages
     const partial = this.bufRef.trimStart()
+    const createdAt = getTurnState().streamingCreatedAt
     const tools = this.pendingSegmentTools
 
     // Drain streaming/segment state off the nanostore before writing the
@@ -390,7 +392,7 @@ class TurnController {
     if (partial || tools.length) {
       const text = interruptedText(partial)
 
-      appendMessage({ role: 'assistant', text, ...(tools.length && { tools }) })
+      appendMessage({ createdAt, role: 'assistant', text, ...(tools.length && { tools }) })
       this.sealedInterrupt = { partial, text }
     } else {
       sys(t('session.turn.interrupted'))
@@ -480,6 +482,7 @@ class TurnController {
     }
 
     const msg: Msg = {
+      createdAt: split.text ? getTurnState().streamingCreatedAt : undefined,
       role: split.text ? 'assistant' : 'system',
       text: split.text,
       ...(!split.text && { kind: 'trail' as const }),
@@ -494,7 +497,12 @@ class TurnController {
 
     this.pendingSegmentTools = []
     this.bufRef = ''
-    patchTurnState({ streamPendingTools: [], streamSegments: this.segmentMessages, streaming: '' })
+    patchTurnState({
+      streamPendingTools: [],
+      streamSegments: this.segmentMessages,
+      streaming: '',
+      streamingCreatedAt: undefined
+    })
   }
 
   pulseReasoningStreaming() {
@@ -713,7 +721,7 @@ class TurnController {
     ]
 
     if (finalText) {
-      finalMessages.push({ role: 'assistant', text: finalText })
+      finalMessages.push({ createdAt: getTurnState().streamingCreatedAt, role: 'assistant', text: finalText })
     }
 
     const wasInterrupted = this.interrupted
@@ -1014,7 +1022,7 @@ class TurnController {
       this.streamTimer = null
       const raw = this.bufRef.trimStart()
       const visible = hasReasoningTag(raw) ? splitReasoning(raw).text : raw
-      patchTurnState({ streaming: boundedLiveRenderText(visible) })
+      this.publishStreamingText(visible)
     }, this.streamDelay)
   }
 
@@ -1023,7 +1031,19 @@ class TurnController {
     this.bufRef = text
     const raw = this.bufRef.trimStart()
     const visible = hasReasoningTag(raw) ? splitReasoning(raw).text : raw
-    patchTurnState({ streaming: boundedLiveRenderText(visible) })
+    this.publishStreamingText(visible)
+  }
+
+  private publishStreamingText(visible: string) {
+    const streaming = boundedLiveRenderText(visible)
+
+    // The live block and its eventual transcript row share one burst identity,
+    // independent of component mounts. Replies never displayed live keep the
+    // existing append-time fallback; each flushed burst starts its own clock.
+    patchTurnState({
+      streaming,
+      streamingCreatedAt: streaming ? (getTurnState().streamingCreatedAt ?? Date.now() / 1000) : undefined
+    })
   }
 
   startMessage() {
@@ -1052,7 +1072,15 @@ class TurnController {
     }
 
     patchUiState({ busy: true })
-    patchTurnState({ activity: [], outcome: '', subagents: [], toolTokens: 0, tools: [], turnTrail: [] })
+    patchTurnState({
+      activity: [],
+      outcome: '',
+      streamingCreatedAt: undefined,
+      subagents: [],
+      toolTokens: 0,
+      tools: [],
+      turnTrail: []
+    })
   }
 
   upsertSubagent(
