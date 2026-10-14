@@ -1,0 +1,60 @@
+{
+  "owner_head": "0b58039b7c1f77dd54fa0cd080f794a11002bd49",
+  "repair_head": "d41adfda966bcb55d8144533804681ac33ef4312",
+  "repair_tree": "ef15327789059d4d4732ef946faa0f4adcd9d351",
+  "scope": "Partial exact-source source tree, existing dependencies and Ink bundle; two new handler evidence cases only",
+  "verification": [
+    {
+      "variant": "base",
+      "checked": 589,
+      "changes_from_frozen_variant": []
+    },
+    {
+      "variant": "head",
+      "checked": 589,
+      "changes_from_frozen_variant": []
+    }
+  ],
+  "overlay_identical": true,
+  "files": {
+    "packet/gatewayTimestampContinuity.test.tsx": "60d46f5225c90c5476833099788308fbf797c8e9718a7baff02ad1360e12793d",
+    "run-focused.sh": "fc080ecdf1492f842770003891d74adb520495b8d838aabeb66ea618404ac971",
+    "offline-guard.cjs": "b27d5d69fbd8140e5c51eb91f918476191617d6a17b0e2bd199cb957488926ac"
+  },
+  "production_edits": [],
+  "critical_source_sha256": {
+    "base": {
+      "ui-tui/src/app/turnStore.ts": "48da36f6161c4b08a2da9ec600d5adbb98a96e71292b5b2e6aa16bcd65101a50",
+      "ui-tui/src/app/turnController.ts": "9a560d42dc8e2f912218afa0386ca3652e5cc778cd50fc472cb4ae4cc3dbe947",
+      "ui-tui/src/components/streamingAssistant.tsx": "594b220b256f14f2d667b8f0b304dbcdd57d26a2f59df2f54f0481a93e6493e5",
+      "ui-tui/src/app/createGatewayEventHandler.ts": "662e19e999509c1e664b197a892b91d2fd024fee6385c6329b21757de734439c",
+      "ui-tui/src/lib/messages.ts": "4c2641e9483ac6e505619346c9bae75d53ff738a32a4f8050fb48f2e7f5a94ea",
+      "ui-tui/src/app/useMainApp.ts": "f22d66199b921ec2fa60dac8394ed1e5b61aa784989f220f49cf16dbf436223f"
+    },
+    "head": {
+      "ui-tui/src/app/turnStore.ts": "ee579a691b6502d9d70bfba426ec8fbf8c4d39adeedce724bec49475f4033225",
+      "ui-tui/src/app/turnController.ts": "7474c8a0541b8a1a5861b97f5c57685049a4761aa1c5edaa251319c088dd21aa",
+      "ui-tui/src/components/streamingAssistant.tsx": "9828de17b7419cee03dce847e7ac6e63cb043860b6ce93a2c52ff138255c2bd7",
+      "ui-tui/src/app/createGatewayEventHandler.ts": "662e19e999509c1e664b197a892b91d2fd024fee6385c6329b21757de734439c",
+      "ui-tui/src/lib/messages.ts": "4c2641e9483ac6e505619346c9bae75d53ff738a32a4f8050fb48f2e7f5a94ea",
+      "ui-tui/src/app/useMainApp.ts": "f22d66199b921ec2fa60dac8394ed1e5b61aa784989f220f49cf16dbf436223f"
+    }
+  },
+  "root_lock_sha256": "9934677654ce672900b0946898cc28c73671f75896862b5768c24cca84776ccd",
+  "ink_bundle_sha256": "20a00e874ac7145c88ed358c3db33150dfcc865df7767e2fc07106ce837ea9fd",
+  "old_test_overlays_retained_but_not_executed": [
+    "ui-tui/src/__tests__/streamingTimestampContinuity.test.tsx",
+    "ui-tui/src/__tests__/streamingTimestamps.test.tsx"
+  ],
+  "copy_kind": "Independent copied files; workspace package symlinks resolve inside each copy. No install or build.",
+  "runtime_versions": {
+    "vitest": "4.1.10",
+    "vite": "8.2.0",
+    "react": "19.2.7",
+    "react-reconciler": "0.33.0",
+    "nanostores": "1.4.2",
+    "@nanostores/react": "1.1.0",
+    "esbuild": "0.28.1",
+    "typescript": "6.0.3"
+  }
+}

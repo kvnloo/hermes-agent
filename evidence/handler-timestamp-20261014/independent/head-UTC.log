@@ -1,0 +1,21 @@
+
+> hermes-tui@0.0.1 test
+> vitest run src/__tests__/gatewayTimestampContinuity.test.tsx --reporter=verbose
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/workspace/shared/hermes-handler-timestamp-evidence-20261014/head/ui-tui[39m
+
+[90mstdout[2m | src/__tests__/gatewayTimestampContinuity.test.tsx[2m > [22m[2mgateway handler timestamp continuity[2m > [22m[2mnormal completion appends the live timestamp across a minute boundary
+[22m[39m{"case":"normal-handler-append","createdAt":1791982795,"firstTime":1791982795,"live":"[12:59]","settled":"[12:59]"}
+
+ [32m✓[39m src/__tests__/gatewayTimestampContinuity.test.tsx[2m > [22mgateway handler timestamp continuity[2m > [22mnormal completion appends the live timestamp across a minute boundary[32m 106[2mms[22m[39m
+[90mstdout[2m | src/__tests__/gatewayTimestampContinuity.test.tsx[2m > [22m[2mgateway handler timestamp continuity[2m > [22m[2mlate interrupted completion replaces the real row and retains both burst times
+[22m[39m{"case":"late-handler-replacement","firstCreatedAt":1791982795,"firstTime":1791982795,"createdAt":1791982801,"tailTime":1791982801,"live":"[13:00]","settled":"[13:00]","replacementApplied":true}
+
+ [32m✓[39m src/__tests__/gatewayTimestampContinuity.test.tsx[2m > [22mgateway handler timestamp continuity[2m > [22mlate interrupted completion replaces the real row and retains both burst times[32m 121[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m   Start at [22m 13:32:04
+[2m   Duration [22m 1.38s[2m (transform 785ms, setup 0ms, import 1.03s, tests 228ms, environment 0ms)[22m
+

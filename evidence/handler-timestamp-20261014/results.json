@@ -1,0 +1,126 @@
+{
+  "unique_tests": 2,
+  "executions": 4,
+  "runs": [
+    {
+      "variant": "base",
+      "timezone": "UTC",
+      "exit_code": 1,
+      "test_count": 2,
+      "pass": 0,
+      "fail": 2,
+      "observations": [
+        {
+          "case": "normal-handler-append",
+          "createdAt": 1791982801,
+          "firstTime": 1791982795,
+          "live": "[12:59]",
+          "settled": "[13:00]"
+        },
+        {
+          "case": "late-handler-replacement",
+          "firstCreatedAt": 1791982861,
+          "firstTime": 1791982795,
+          "createdAt": 1791982861,
+          "tailTime": 1791982801,
+          "live": "[13:00]",
+          "settled": "[13:01]",
+          "replacementApplied": true
+        }
+      ],
+      "log": "logs/base-UTC.log",
+      "sha256": "80a90b98bab4ccc26ca2887a5170227797c7c51725eff57431cb0acbbc715421",
+      "guard_diagnostics": false
+    },
+    {
+      "variant": "head",
+      "timezone": "UTC",
+      "exit_code": 0,
+      "test_count": 2,
+      "pass": 2,
+      "fail": 0,
+      "observations": [
+        {
+          "case": "normal-handler-append",
+          "createdAt": 1791982795,
+          "firstTime": 1791982795,
+          "live": "[12:59]",
+          "settled": "[12:59]"
+        },
+        {
+          "case": "late-handler-replacement",
+          "firstCreatedAt": 1791982795,
+          "firstTime": 1791982795,
+          "createdAt": 1791982801,
+          "tailTime": 1791982801,
+          "live": "[13:00]",
+          "settled": "[13:00]",
+          "replacementApplied": true
+        }
+      ],
+      "log": "logs/head-UTC.log",
+      "sha256": "4f075c712f6cf8823b2380f2527cc3970d12d3e9cecd0ece137aaf6de3fc28e9",
+      "guard_diagnostics": false
+    },
+    {
+      "variant": "base",
+      "timezone": "America/New_York",
+      "exit_code": 1,
+      "test_count": 2,
+      "pass": 0,
+      "fail": 2,
+      "observations": [
+        {
+          "case": "normal-handler-append",
+          "createdAt": 1791982801,
+          "firstTime": 1791982795,
+          "live": "[08:59]",
+          "settled": "[09:00]"
+        },
+        {
+          "case": "late-handler-replacement",
+          "firstCreatedAt": 1791982861,
+          "firstTime": 1791982795,
+          "createdAt": 1791982861,
+          "tailTime": 1791982801,
+          "live": "[09:00]",
+          "settled": "[09:01]",
+          "replacementApplied": true
+        }
+      ],
+      "log": "logs/base-America_New_York.log",
+      "sha256": "2a86863b849cb8ff8a5e25a9e7289ce0844efc86c77cad6872d1338d44ac5a70",
+      "guard_diagnostics": false
+    },
+    {
+      "variant": "head",
+      "timezone": "America/New_York",
+      "exit_code": 0,
+      "test_count": 2,
+      "pass": 2,
+      "fail": 0,
+      "observations": [
+        {
+          "case": "normal-handler-append",
+          "createdAt": 1791982795,
+          "firstTime": 1791982795,
+          "live": "[08:59]",
+          "settled": "[08:59]"
+        },
+        {
+          "case": "late-handler-replacement",
+          "firstCreatedAt": 1791982795,
+          "firstTime": 1791982795,
+          "createdAt": 1791982801,
+          "tailTime": 1791982801,
+          "live": "[09:00]",
+          "settled": "[09:00]",
+          "replacementApplied": true
+        }
+      ],
+      "log": "logs/head-America_New_York.log",
+      "sha256": "03530a826bf7c9a42bff0713eb56d9a6394c185e2ae09f638dd417e1e185bf74",
+      "guard_diagnostics": false
+    }
+  ]
+}

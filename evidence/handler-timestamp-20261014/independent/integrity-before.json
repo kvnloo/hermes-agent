@@ -1,0 +1,65 @@
+{
+  "manifest": {
+    "owner_head": "0b58039b7c1f77dd54fa0cd080f794a11002bd49",
+    "repair_head": "d41adfda966bcb55d8144533804681ac33ef4312",
+    "repair_tree": "ef15327789059d4d4732ef946faa0f4adcd9d351",
+    "scope": "Partial exact-source source tree, existing dependencies and Ink bundle; two new handler evidence cases only",
+    "verification": [
+      {
+        "variant": "base",
+        "checked": 589,
+        "changes_from_frozen_variant": []
+      },
+      {
+        "variant": "head",
+        "checked": 589,
+        "changes_from_frozen_variant": []
+      }
+    ],
+    "overlay_identical": true,
+    "files": {
+      "packet/gatewayTimestampContinuity.test.tsx": "60d46f5225c90c5476833099788308fbf797c8e9718a7baff02ad1360e12793d",
+      "run-focused.sh": "fc080ecdf1492f842770003891d74adb520495b8d838aabeb66ea618404ac971",
+      "offline-guard.cjs": "b27d5d69fbd8140e5c51eb91f918476191617d6a17b0e2bd199cb957488926ac"
+    },
+    "production_edits": []
+  },
+  "artifact_hash_checks": {
+    "packet/gatewayTimestampContinuity.test.tsx": {
+      "expected": "60d46f5225c90c5476833099788308fbf797c8e9718a7baff02ad1360e12793d",
+      "actual": "60d46f5225c90c5476833099788308fbf797c8e9718a7baff02ad1360e12793d",
+      "matches": true
+    },
+    "run-focused.sh": {
+      "expected": "fc080ecdf1492f842770003891d74adb520495b8d838aabeb66ea618404ac971",
+      "actual": "fc080ecdf1492f842770003891d74adb520495b8d838aabeb66ea618404ac971",
+      "matches": true
+    },
+    "offline-guard.cjs": {
+      "expected": "b27d5d69fbd8140e5c51eb91f918476191617d6a17b0e2bd199cb957488926ac",
+      "actual": "b27d5d69fbd8140e5c51eb91f918476191617d6a17b0e2bd199cb957488926ac",
+      "matches": true
+    }
+  },
+  "source_checks": {
+    "base": {
+      "matching_files": 591,
+      "differences": [],
+      "additions": [
+        "ui-tui/src/__tests__/gatewayTimestampContinuity.test.tsx"
+      ]
+    },
+    "head": {
+      "matching_files": 591,
+      "differences": [],
+      "additions": [
+        "ui-tui/src/__tests__/gatewayTimestampContinuity.test.tsx"
+      ]
+    }
+  },
+  "overlay_checks": {
+    "base": true,
+    "head": true
+  },
+  "guard_unchanged": true
+}

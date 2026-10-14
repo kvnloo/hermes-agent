@@ -1,0 +1,68 @@
+{
+  "at": "2026-10-14T13:33:13.162Z",
+  "owner": "0b58039b7c1f77dd54fa0cd080f794a11002bd49",
+  "adjacent": {
+    "head": "2a8165e64733b149afec901fa463682ac48617ee",
+    "owner": "Sahil-SS9"
+  },
+  "comments": [
+    {
+      "id": 6168357370,
+      "url": "https://github.com/kvnloo/hermes-agent/issues/500#issuecomment-6168357370"
+    },
+    {
+      "id": 6168528667,
+      "url": "https://github.com/kvnloo/hermes-agent/issues/500#issuecomment-6168528667"
+    },
+    {
+      "id": 6168908173,
+      "url": "https://github.com/kvnloo/hermes-agent/issues/500#issuecomment-6168908173"
+    },
+    {
+      "id": 6169460081,
+      "url": "https://github.com/kvnloo/hermes-agent/issues/500#issuecomment-6169460081"
+    }
+  ],
+  "refs": [
+    {
+      "ref": "refs/heads/dot/hermes/111511-shared-reply-timestamp",
+      "node_id": "REF_kwDOTqhvI9oAM3JlZnMvaGVhZHMvZG90L2hlcm1lcy8xMTE1MTEtc2hhcmVkLXJlcGx5LXRpbWVzdGFtcA",
+      "url": "https://api.github.com/repos/kvnloo/hermes-agent/git/refs/heads/dot/hermes/111511-shared-reply-timestamp",
+      "object": {
+        "sha": "d41adfda966bcb55d8144533804681ac33ef4312",
+        "type": "commit",
+        "url": "https://api.github.com/repos/kvnloo/hermes-agent/git/commits/d41adfda966bcb55d8144533804681ac33ef4312"
+      }
+    },
+    {
+      "ref": "refs/heads/dot/hermes/111511-timestamp-boundary-evidence",
+      "node_id": "REF_kwDOTqhvI9oAOHJlZnMvaGVhZHMvZG90L2hlcm1lcy8xMTE1MTEtdGltZXN0YW1wLWJvdW5kYXJ5LWV2aWRlbmNl",
+      "url": "https://api.github.com/repos/kvnloo/hermes-agent/git/refs/heads/dot/hermes/111511-timestamp-boundary-evidence",
+      "object": {
+        "sha": "a2bc7c310166037efe92ab4052a32925892b51d2",
+        "type": "commit",
+        "url": "https://api.github.com/repos/kvnloo/hermes-agent/git/commits/a2bc7c310166037efe92ab4052a32925892b51d2"
+      }
+    },
+    {
+      "ref": "refs/heads/fix/ux-streaming-timestamps",
+      "node_id": "REF_kwDOTqhvI9oAJnJlZnMvaGVhZHMvZml4L3V4LXN0cmVhbWluZy10aW1lc3RhbXBz",
+      "url": "https://api.github.com/repos/kvnloo/hermes-agent/git/refs/heads/fix/ux-streaming-timestamps",
+      "object": {
+        "sha": "0b58039b7c1f77dd54fa0cd080f794a11002bd49",
+        "type": "commit",
+        "url": "https://api.github.com/repos/kvnloo/hermes-agent/git/commits/0b58039b7c1f77dd54fa0cd080f794a11002bd49"
+      }
+    },
+    {
+      "ref": "refs/heads/dot/hermes/111511-handler-timestamp-evidence",
+      "node_id": "REF_kwDOTqhvI9oAN3JlZnMvaGVhZHMvZG90L2hlcm1lcy8xMTE1MTEtaGFuZGxlci10aW1lc3RhbXAtZXZpZGVuY2U",
+      "url": "https://api.github.com/repos/kvnloo/hermes-agent/git/refs/heads/dot/hermes/111511-handler-timestamp-evidence",
+      "object": {
+        "sha": "d41adfda966bcb55d8144533804681ac33ef4312",
+        "type": "commit",
+        "url": "https://api.github.com/repos/kvnloo/hermes-agent/git/commits/d41adfda966bcb55d8144533804681ac33ef4312"
+      }
+    }
+  ]
+}

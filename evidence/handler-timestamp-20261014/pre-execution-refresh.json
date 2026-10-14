@@ -1,0 +1,106 @@
+{
+  "at": "2026-10-14T13:27:50.815Z",
+  "owner": "0b58039b7c1f77dd54fa0cd080f794a11002bd49",
+  "owner_login": "kvnloo",
+  "repair": "d41adfda966bcb55d8144533804681ac33ef4312",
+  "prior_evidence": "a2bc7c310166037efe92ab4052a32925892b51d2",
+  "adjacent": {
+    "head": "2a8165e64733b149afec901fa463682ac48617ee",
+    "owner": "Sahil-SS9"
+  },
+  "claim_url": "https://github.com/kvnloo/hermes-agent/issues/500#issuecomment-6169460081",
+  "branch": "dot/hermes/111511-handler-timestamp-evidence",
+  "rules": [
+    {
+      "repo": "kvnloo/oss-factory",
+      "path": "AGENTS.md",
+      "sha": "6e82603b5240e8df852ccf8825dc172fc93a07e8"
+    },
+    {
+      "repo": "kvnloo/oss-factory",
+      "path": "factory/CONTROL_PLANE.md",
+      "sha": "9748a97d314de4ee5af978a9035732a0335270ee"
+    },
+    {
+      "repo": "kvnloo/oss-factory",
+      "path": "factory/HITL.md",
+      "sha": "cbeffe3c44c3fa11668b3023866d7ffe6c5c8d32"
+    },
+    {
+      "repo": "kvnloo/oss-factory",
+      "path": "factory/projects.json",
+      "sha": "7f6f7dee7b57dce03817ab61a3d7782b5e06474a"
+    },
+    {
+      "repo": "NousResearch/hermes-agent",
+      "path": "AGENTS.md",
+      "sha": "4c4ce5c04528945b372af20f4e86970d40a6db6e"
+    },
+    {
+      "repo": "NousResearch/hermes-agent",
+      "path": "CONTRIBUTING.md",
+      "sha": "750d624c86593a72a1a14d338d82c49516c336c6"
+    },
+    {
+      "repo": "NousResearch/hermes-agent",
+      "path": "tui_gateway/AGENTS.md",
+      "sha": "e56a4245e596bbf8a193a3aa8ef9ad225dea04e5"
+    }
+  ],
+  "comments": [
+    {
+      "id": 5853446302,
+      "url": "https://github.com/NousResearch/hermes-agent/pull/111511#issuecomment-5853446302",
+      "updated_at": "2026-09-27T06:36:50Z"
+    }
+  ],
+  "reviews": [],
+  "inline": [],
+  "origin_search": [
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/pull/123294",
+      "title": "fix(desktop): dedupe settled transcript rows by content key after compaction"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/pull/111511",
+      "title": "fix(tui): thread display.timestamps through StreamingAssistant so streaming messages show their [HH:MM] label"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/pull/126778",
+      "title": "fix(desktop): preserve user message timestamps across hydration"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/pull/102034",
+      "title": "fix(desktop): drop duplicate rehydrated transcript rows after compaction"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/pull/129213",
+      "title": "fix(desktop): ignore stale post-completion stream frames"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/pull/120894",
+      "title": "fix(responses): complete commentary delivery and preserve native reasoning identity"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/pull/130178",
+      "title": "fix(desktop): keep stored order when a compaction handoff re-ids the refreshed tail"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/pull/21850",
+      "title": "gateway/discord: forward edited messages when bot is newly mentioned"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/pull/106742",
+      "title": "One gateway owns every local session: CLI, TUI, Desktop (local), API, ACP, bots and cron attach to the same live conversation"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/pull/129032",
+      "title": "fix(relay): preserve Discord identity and durable buffered inputs"
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/pull/93508",
+      "title": "feat(webapp): serve Desktop renderer in browsers"
+    }
+  ],
+  "downstream_search": []
+}

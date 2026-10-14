@@ -1,0 +1,86 @@
+{
+  "manifest_sha256": "2ff614e2c60a953c22b42ec3528811ca06baac37197c702794f8c58d04e8d9ac",
+  "artifact_hashes": {
+    "packet/gatewayTimestampContinuity.test.tsx": {
+      "sha256": "60d46f5225c90c5476833099788308fbf797c8e9718a7baff02ad1360e12793d",
+      "matches_manifest": true
+    },
+    "run-focused.sh": {
+      "sha256": "fc080ecdf1492f842770003891d74adb520495b8d838aabeb66ea618404ac971",
+      "matches_manifest": true
+    },
+    "offline-guard.cjs": {
+      "sha256": "b27d5d69fbd8140e5c51eb91f918476191617d6a17b0e2bd199cb957488926ac",
+      "matches_manifest": true
+    }
+  },
+  "critical_source_hashes": {
+    "base": {
+      "ui-tui/src/app/turnStore.ts": true,
+      "ui-tui/src/app/turnController.ts": true,
+      "ui-tui/src/components/streamingAssistant.tsx": true,
+      "ui-tui/src/app/createGatewayEventHandler.ts": true,
+      "ui-tui/src/lib/messages.ts": true,
+      "ui-tui/src/app/useMainApp.ts": true
+    },
+    "head": {
+      "ui-tui/src/app/turnStore.ts": true,
+      "ui-tui/src/app/turnController.ts": true,
+      "ui-tui/src/components/streamingAssistant.tsx": true,
+      "ui-tui/src/app/createGatewayEventHandler.ts": true,
+      "ui-tui/src/lib/messages.ts": true,
+      "ui-tui/src/app/useMainApp.ts": true
+    }
+  },
+  "sources": {
+    "base": {
+      "non_node_modules_frozen_files_checked": 591,
+      "differences": [],
+      "overlay_sha256": "60d46f5225c90c5476833099788308fbf797c8e9718a7baff02ad1360e12793d",
+      "lock_matches_manifest": true
+    },
+    "head": {
+      "non_node_modules_frozen_files_checked": 591,
+      "differences": [],
+      "overlay_sha256": "60d46f5225c90c5476833099788308fbf797c8e9718a7baff02ad1360e12793d",
+      "lock_matches_manifest": true
+    }
+  },
+  "guard_unchanged": true,
+  "workspace_links": {
+    "base": {
+      "@hermes/ink": "/workspace/shared/hermes-handler-timestamp-evidence-20261014/base/ui-tui/packages/hermes-ink",
+      "@hermes/shared": "/workspace/shared/hermes-handler-timestamp-evidence-20261014/base/apps/shared"
+    },
+    "head": {
+      "@hermes/ink": "/workspace/shared/hermes-handler-timestamp-evidence-20261014/head/ui-tui/packages/hermes-ink",
+      "@hermes/shared": "/workspace/shared/hermes-handler-timestamp-evidence-20261014/head/apps/shared"
+    }
+  },
+  "log_checks": [
+    {
+      "variant": "base",
+      "timezone": "UTC",
+      "observations_match_author": true,
+      "author_log_hash_matches": true
+    },
+    {
+      "variant": "base",
+      "timezone": "America/New_York",
+      "observations_match_author": true,
+      "author_log_hash_matches": true
+    },
+    {
+      "variant": "head",
+      "timezone": "UTC",
+      "observations_match_author": true,
+      "author_log_hash_matches": true
+    },
+    {
+      "variant": "head",
+      "timezone": "America/New_York",
+      "observations_match_author": true,
+      "author_log_hash_matches": true
+    }
+  ]
+}

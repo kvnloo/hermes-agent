@@ -1,0 +1,108 @@
+
+> hermes-tui@0.0.1 test
+> vitest run src/__tests__/gatewayTimestampContinuity.test.tsx --reporter=verbose
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/workspace/shared/hermes-handler-timestamp-evidence-20261014/base/ui-tui[39m
+
+[90mstdout[2m | src/__tests__/gatewayTimestampContinuity.test.tsx[2m > [22m[2mgateway handler timestamp continuity[2m > [22m[2mnormal completion appends the live timestamp across a minute boundary
+[22m[39m{"case":"normal-handler-append","createdAt":1791982801,"firstTime":1791982795,"live":"[08:59]","settled":"[09:00]"}
+
+ [31m×[39m src/__tests__/gatewayTimestampContinuity.test.tsx[2m > [22mgateway handler timestamp continuity[2m > [22mnormal completion appends the live timestamp across a minute boundary[32m 110[2mms[22m[39m
+[31m   → expected 1791982801 to be 1791982795 // Object.is equality[39m
+[31m   → expected '[09:00]' to be '[08:59]' // Object.is equality[39m
+[90mstdout[2m | src/__tests__/gatewayTimestampContinuity.test.tsx[2m > [22m[2mgateway handler timestamp continuity[2m > [22m[2mlate interrupted completion replaces the real row and retains both burst times
+[22m[39m{"case":"late-handler-replacement","firstCreatedAt":1791982861,"firstTime":1791982795,"createdAt":1791982861,"tailTime":1791982801,"live":"[09:00]","settled":"[09:01]","replacementApplied":true}
+
+ [31m×[39m src/__tests__/gatewayTimestampContinuity.test.tsx[2m > [22mgateway handler timestamp continuity[2m > [22mlate interrupted completion replaces the real row and retains both burst times[32m 120[2mms[22m[39m
+[31m   → expected 1791982861 to be 1791982795 // Object.is equality[39m
+[31m   → expected 1791982861 to be 1791982801 // Object.is equality[39m
+[31m   → expected '[09:01]' to be '[09:00]' // Object.is equality[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/gatewayTimestampContinuity.test.tsx[2m > [22mgateway handler timestamp continuity[2m > [22mnormal completion appends the live timestamp across a minute boundary
+[31m[1mAssertionError[22m: expected 1791982801 to be 1791982795 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1791982795[39m
+[31m+ 1791982801[39m
+
+[36m [2m❯[22m src/__tests__/gatewayTimestampContinuity.test.tsx:[2m160:32[22m[39m
+    [90m158|[39m     await expect.poll(settled, { timeout: 2000 }).toContain('Hello com…
+    [90m159|[39m     console.info(JSON.stringify({ case: 'normal-handler-append', creat…
+    [90m160|[39m     expect[33m.[39m[34msoft[39m(row[33m.[39mcreatedAt)[33m.[39m[34mtoBe[39m(firstTime)
+    [90m   |[39m                                [31m^[39m
+    [90m161|[39m     expect[33m.[39m[34msoft[39m([34mlastLabel[39m([34msettled[39m()))[33m.[39m[34mtoBe[39m(liveLabel)
+    [90m162|[39m   })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/gatewayTimestampContinuity.test.tsx[2m > [22mgateway handler timestamp continuity[2m > [22mnormal completion appends the live timestamp across a minute boundary
+[31m[1mAssertionError[22m: expected '[09:00]' to be '[08:59]' // Object.is equality[39m
+
+Expected: [32m"[0[7m8:59[27m]"[39m
+Received: [31m"[0[7m9:00[27m]"[39m
+
+[36m [2m❯[22m src/__tests__/gatewayTimestampContinuity.test.tsx:[2m161:39[22m[39m
+    [90m159|[39m     console.info(JSON.stringify({ case: 'normal-handler-append', creat…
+    [90m160|[39m     expect[33m.[39m[34msoft[39m(row[33m.[39mcreatedAt)[33m.[39m[34mtoBe[39m(firstTime)
+    [90m161|[39m     expect[33m.[39m[34msoft[39m([34mlastLabel[39m([34msettled[39m()))[33m.[39m[34mtoBe[39m(liveLabel)
+    [90m   |[39m                                       [31m^[39m
+    [90m162|[39m   })
+    [90m163|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/gatewayTimestampContinuity.test.tsx[2m > [22mgateway handler timestamp continuity[2m > [22mlate interrupted completion replaces the real row and retains both burst times
+[31m[1mAssertionError[22m: expected 1791982861 to be 1791982795 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1791982795[39m
+[31m+ 1791982861[39m
+
+[36m [2m❯[22m src/__tests__/gatewayTimestampContinuity.test.tsx:[2m210:37[22m[39m
+
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/gatewayTimestampContinuity.test.tsx[2m > [22mgateway handler timestamp continuity[2m > [22mlate interrupted completion replaces the real row and retains both burst times
+[31m[1mAssertionError[22m: expected 1791982861 to be 1791982801 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1791982801[39m
+[31m+ 1791982861[39m
+
+[36m [2m❯[22m src/__tests__/gatewayTimestampContinuity.test.tsx:[2m211:40[22m[39m
+
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/__tests__/gatewayTimestampContinuity.test.tsx[2m > [22mgateway handler timestamp continuity[2m > [22mlate interrupted completion replaces the real row and retains both burst times
+[31m[1mAssertionError[22m: expected '[09:01]' to be '[09:00]' // Object.is equality[39m
+
+Expected: [32m"[09:0[7m0[27m]"[39m
+Received: [31m"[09:0[7m1[27m]"[39m
+
+[36m [2m❯[22m src/__tests__/gatewayTimestampContinuity.test.tsx:[2m212:39[22m[39m
+    [90m210|[39m     expect[33m.[39m[34msoft[39m(firstRow[33m.[39mcreatedAt)[33m.[39m[34mtoBe[39m(firstTime)
+    [90m211|[39m     expect[33m.[39m[34msoft[39m(updatedTail[33m.[39mcreatedAt)[33m.[39m[34mtoBe[39m(tailTime)
+    [90m212|[39m     expect[33m.[39m[34msoft[39m([34mlastLabel[39m([34msettled[39m()))[33m.[39m[34mtoBe[39m(liveLabel)
+    [90m   |[39m                                       [31m^[39m
+    [90m213|[39m   })
+    [90m214|[39m })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[90m (2)[39m
+[2m   Start at [22m 09:30:12
+[2m   Duration [22m 1.28s[2m (transform 663ms, setup 0ms, import 900ms, tests 231ms, environment 0ms)[22m
+
