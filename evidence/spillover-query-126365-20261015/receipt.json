@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "classification": "LIMITED",
+  "scope": "Preservation of already-executed standalone Python/sqlite3/re query/regex diagnostic; downstream coordination only",
+  "origin_url": "https://github.com/NousResearch/hermes-agent/pull/126365",
+  "dedupe_key": "NousResearch/hermes-agent#126365",
+  "tested_head": "77dcd5879a51815e3c05382fb38f65ea583f0245",
+  "refreshed_head": "77dcd5879a51815e3c05382fb38f65ea583f0245",
+  "refreshed_at": "2026-10-15T15:25:00Z",
+  "origin_state": {
+    "state": "open",
+    "merged": false,
+    "owner": "liuhao1024",
+    "updated_at": "2026-10-15T13:26:57Z",
+    "latest_comment": {
+      "url": "https://github.com/NousResearch/hermes-agent/pull/126365#issuecomment-6193195269",
+      "created_at": "2026-10-15T13:26:57Z",
+      "user": "liuhao1024"
+    },
+    "submitted_review_count": 8,
+    "submitted_review_states": [
+      "COMMENTED"
+    ]
+  },
+  "provenance": {
+    "diagnostic": "independently executed query/regex semantics using source literals; not Hermes runtime",
+    "source_literals": "Pinned public repository files parsed as data; source SHA-256 and Git blob SHA-1 recorded in literal_provenance.json",
+    "original_script_unchanged": true,
+    "preserved_results_unchanged": true,
+    "independent_review": {
+      "attested_at": "2026-10-15T14:28:52Z",
+      "delivery": "Coordinator-delivered independent reviewer attestation",
+      "summary": "Independent review passed; one isolated diagnostic rerun reproduced all results byte-for-byte.",
+      "command": "python -I -B diagnostic.py",
+      "execution_count": 1,
+      "environment": {
+        "python": "3.12.14",
+        "sqlite": "3.53.1",
+        "os": "Linux"
+      },
+      "database_scope": "Two in-memory synthetic databases",
+      "verified_original_manifest_unchanged": true,
+      "github_refetch_performed_by_independent_reviewer": false,
+      "exclusions": [
+        "network calls",
+        "Hermes imports/execution",
+        "repository tests",
+        "cleanup",
+        "credentials",
+        "posts",
+        "pushes"
+      ]
+    },
+    "packaging_pass": {
+      "new_diagnostic_executions": 0,
+      "artifact_copy_equality_verified": true,
+      "helper_execution": "NOT_RUN; input reconstruction helper is new packaging code"
+    }
+  },
+  "result": {
+    "fixtures": 30,
+    "forward_slash_selected": 8,
+    "forward_slash_cases": 8,
+    "backslash_selected": 0,
+    "backslash_cases": 8,
+    "reference_query_selected_rows": 10,
+    "reference_query_extracted_unique_names": 10,
+    "assertions": "PASS in recorded producer and independent rerun",
+    "structured_content_caveat": "NUL-prefixed forward-slash content has 0/2 SQL selection but 2/2 direct regex matches on recorded SQLite version"
+  },
+  "requirement_evidence": "Origin PR explicitly promises session-owned archive lifetime; supported Windows persistence impact is not independently established by synthetic fixtures",
+  "impact_scope": "Source-inferred reference-discovery gap only; no actual Hermes deletion or data-loss observation",
+  "not_tested": [
+    "native Windows",
+    "Hermes imports or runtime",
+    "repository suite",
+    "cleanup functions",
+    "session deletion",
+    "real archive lifetime",
+    "concurrency",
+    "full integration",
+    "new preparation helper execution"
+  ],
+  "credit": [
+    {
+      "handle": "liuhao1024",
+      "contribution": "feature and ownership-linked repair"
+    },
+    {
+      "handle": "austinpickett",
+      "contribution": "integration, conflict resolution, verification and test-dependency repair"
+    },
+    {
+      "handle": "teknium1",
+      "contribution": "earlier retention-floor fix"
+    },
+    {
+      "handle": "Froraut",
+      "contribution": "original issue report"
+    },
+    {
+      "handle": "ehz0ah",
+      "contribution": "prior clock-mismatch evidence"
+    },
+    {
+      "handle": "Lokee86",
+      "contribution": "prior clock-mismatch evidence"
+    },
+    {
+      "handle": "andrexibiza",
+      "contribution": "prior clock-mismatch and additional archive-contract evidence"
+    }
+  ],
+  "coordination": {
+    "repository": "kvnloo/hermes-agent",
+    "proposed_branch": "evidence/126365-spillover-query-20261015",
+    "proposed_base": "7bda2a3368024f7ae1c70cef16583e7c2c891674",
+    "publication_state": "LOCAL_PACKET_AWAITING_INDEPENDENT_PUBLICATION_REVIEW",
+    "existing_mirror": "None found in six REST pages containing all 505 returned issue/PR titles and bodies, normalized for invisible formatting characters; exact-key searches and lane #504 comments also checked. Fresh duplicate check required before any create.",
+    "implementation_claim": false,
+    "global_capacity_claim": false,
+    "origin_writes": 0,
+    "default_branch_writes": 0
+  },
+  "policy_provenance": [
+    {
+      "repository": "kvnloo/oss-factory",
+      "path": "AGENTS.md",
+      "blob_sha1": "6e82603b5240e8df852ccf8825dc172fc93a07e8"
+    },
+    {
+      "repository": "kvnloo/oss-factory",
+      "path": "factory/CONTROL_PLANE.md",
+      "blob_sha1": "9748a97d314de4ee5af978a9035732a0335270ee"
+    },
+    {
+      "repository": "kvnloo/oss-factory",
+      "path": "factory/HITL.md",
+      "blob_sha1": "cbeffe3c44c3fa11668b3023866d7ffe6c5c8d32"
+    },
+    {
+      "repository": "kvnloo/oss-factory",
+      "path": "factory/projects.json",
+      "blob_sha1": "2f6d40b42ee8fb7802401e3815c24c855f5f704b"
+    },
+    {
+      "repository": "kvnloo/hermes-agent",
+      "path": "AGENTS.md",
+      "blob_sha1": "4c4ce5c04528945b372af20f4e86970d40a6db6e"
+    },
+    {
+      "repository": "kvnloo/hermes-agent",
+      "path": "CONTRIBUTING.md",
+      "blob_sha1": "750d624c86593a72a1a14d338d82c49516c336c6"
+    },
+    {
+      "repository": "kvnloo/hermes-agent",
+      "path": "SECURITY.md",
+      "blob_sha1": "cea2a9a2e8869ac7a4b7307332b974a27e9fd27a"
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "pin": "77dcd5879a51815e3c05382fb38f65ea583f0245",
+  "files": {
+    "storage": {
+      "path": "tools/tool_result_storage.py",
+      "url": "https://github.com/NousResearch/hermes-agent/blob/77dcd5879a51815e3c05382fb38f65ea583f0245/tools/tool_result_storage.py",
+      "bytes": 23348,
+      "git_blob_sha1": "aa2c7f4ce4b659831503d569aea190172d51b8a2",
+      "sha256": "986fdb7089a949c36b3eccdff7112e879722e53da9ac1c614ac15444c99b15c8"
+    },
+    "messages": {
+      "path": "hermes_state_messages.py",
+      "url": "https://github.com/NousResearch/hermes-agent/blob/77dcd5879a51815e3c05382fb38f65ea583f0245/hermes_state_messages.py",
+      "bytes": 129347,
+      "git_blob_sha1": "639dc3e19afa0897a3c5f6ae876eb32dffc02b49",
+      "sha256": "2bb7a4df8d022319cbdadc87cc2bfee579d96005d91c44e03110f6db8acacc03"
+    },
+    "maintenance": {
+      "path": "hermes_state_maintenance.py",
+      "url": "https://github.com/NousResearch/hermes-agent/blob/77dcd5879a51815e3c05382fb38f65ea583f0245/hermes_state_maintenance.py",
+      "bytes": 34965,
+      "git_blob_sha1": "a3f48639407942368da5f0b031c9cc74b1833c48",
+      "sha256": "415b3c345a6a16a70479cc6890a21e29f13213ec50bd7595951815dd318e52e8"
+    },
+    "state": {
+      "path": "hermes_state.py",
+      "url": "https://github.com/NousResearch/hermes-agent/blob/77dcd5879a51815e3c05382fb38f65ea583f0245/hermes_state.py",
+      "bytes": 94035,
+      "git_blob_sha1": "4b67b8f46b47d3288a3cceadf9992f641e4ef7d7",
+      "sha256": "c24484b3026a377621dd1a0f1d23de8e0d9d9d0b6d9600d47cee9368646c9577"
+    }
+  },
+  "literals": {
+    "regex": {
+      "path": "tools/tool_result_storage.py",
+      "line_start": 71,
+      "line_end": 71,
+      "source": "_SPILLOVER_NAME_RE = re.compile(r\"spillover/([A-Za-z0-9_.-]+)\")",
+      "literal_source": "r\"spillover/([A-Za-z0-9_.-]+)\"",
+      "value": "spillover/([A-Za-z0-9_.-]+)",
+      "value_utf8_sha256": "e05001d5c1c933a81bfa912c692979905aa34489cc9d79b01f8f0691fcb13c5a"
+    },
+    "substring_gate": {
+      "path": "tools/tool_result_storage.py",
+      "line": 78,
+      "literal_source": "\"spillover/\"",
+      "value": "spillover/"
+    },
+    "reference_query": {
+      "path": "tools/tool_result_storage.py",
+      "line_start": 97,
+      "line_end": 99,
+      "source": "\"SELECT content, api_content FROM messages \"\n                \"WHERE content LIKE '%spillover/%' OR api_content LIKE '%spillover/%' \"\n                \"LIMIT 20001\"",
+      "value": "SELECT content, api_content FROM messages WHERE content LIKE '%spillover/%' OR api_content LIKE '%spillover/%' LIMIT 20001",
+      "value_utf8_sha256": "88caa1f20109208f5f50dba756057d9004c1c15fa83cbc74f7912c722a6be9ba"
+    },
+    "capture_condition": {
+      "path": "hermes_state_maintenance.py",
+      "line_start": 334,
+      "line_end": 335,
+      "exact_predicate": " AND (content LIKE '%spillover/%' OR api_content LIKE '%spillover/%')",
+      "predicate_utf8_sha256": "806a5db426316b787c61c8d910e7e9811b82eeec5948e777f75d496d0ff520dc",
+      "diagnostic_select": "SELECT content, api_content FROM messages WHERE session_id IN (?) AND (content LIKE '%spillover/%' OR api_content LIKE '%spillover/%')",
+      "note": "Diagnostic replaces only session-ID placeholder construction with one bound parameter."
+    },
+    "content_json_prefix": {
+      "path": "hermes_state.py",
+      "line_start": 1613,
+      "line_end": 1613,
+      "source": "_CONTENT_JSON_PREFIX = \"\\x00json:\"",
+      "literal_source": "\"\\x00json:\"",
+      "value": "\u0000json:",
+      "value_utf8_sha256": "b7c985c49ee99cfeee41e46466a9a87dbe87df6d647c731caf0b73297e6c1b4b"
+    }
+  }
+}

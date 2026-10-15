@@ -1,0 +1,42 @@
+SCOPE: Standalone Python/sqlite3/re literal-semantics diagnostic, not a Hermes/native-Windows test or implementation claim.
+HEAD: 77dcd5879a51815e3c05382fb38f65ea583f0245
+PLATFORM: Linux-6.18.44-x86_64-with-glibc2.41
+PYTHON: 3.12.14 SQLITE: 3.53.1
+CASES: 30 REFERENCE_SELECTED: 10 REFERENCE_UNIQUE_NAMES: 10
+GROUP backslash {"capture_sql_selected_rows": 0, "cases": 8, "reference_sql_selected_rows": 0, "rows_with_direct_regex_names": 0, "target_found_after_sql": 0}
+GROUP forward {"capture_sql_selected_rows": 8, "cases": 8, "reference_sql_selected_rows": 8, "rows_with_direct_regex_names": 8, "target_found_after_sql": 8}
+GROUP mixed {"capture_sql_selected_rows": 2, "cases": 2, "reference_sql_selected_rows": 2, "rows_with_direct_regex_names": 2, "target_found_after_sql": 0}
+GROUP negative {"capture_sql_selected_rows": 0, "cases": 8, "reference_sql_selected_rows": 0, "rows_with_direct_regex_names": 0, "target_found_after_sql": 0}
+GROUP structured_backslash {"capture_sql_selected_rows": 0, "cases": 2, "reference_sql_selected_rows": 0, "rows_with_direct_regex_names": 0, "target_found_after_sql": 0}
+GROUP structured_forward {"capture_sql_selected_rows": 0, "cases": 2, "reference_sql_selected_rows": 0, "rows_with_direct_regex_names": 2, "target_found_after_sql": 0}
+CASE posix_forward__raw__content reference_sql=1 capture_sql=1 regex=["posix_forward__raw__content.txt"] target_after_sql=True
+CASE posix_forward__raw__api_content reference_sql=1 capture_sql=1 regex=["posix_forward__raw__api_content.txt"] target_after_sql=True
+CASE posix_forward__json_string__content reference_sql=1 capture_sql=1 regex=["posix_forward__json_string__content.txt"] target_after_sql=True
+CASE posix_forward__json_string__api_content reference_sql=1 capture_sql=1 regex=["posix_forward__json_string__api_content.txt"] target_after_sql=True
+CASE windows_forward__raw__content reference_sql=1 capture_sql=1 regex=["windows_forward__raw__content.txt"] target_after_sql=True
+CASE windows_forward__raw__api_content reference_sql=1 capture_sql=1 regex=["windows_forward__raw__api_content.txt"] target_after_sql=True
+CASE windows_forward__json_string__content reference_sql=1 capture_sql=1 regex=["windows_forward__json_string__content.txt"] target_after_sql=True
+CASE windows_forward__json_string__api_content reference_sql=1 capture_sql=1 regex=["windows_forward__json_string__api_content.txt"] target_after_sql=True
+CASE windows_backslash__raw__content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE windows_backslash__raw__api_content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE windows_backslash__json_string__content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE windows_backslash__json_string__api_content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE windows_unc_backslash__raw__content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE windows_unc_backslash__raw__api_content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE windows_unc_backslash__json_string__content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE windows_unc_backslash__json_string__api_content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE negative_other_directory__raw__content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE negative_other_directory__raw__api_content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE negative_other_directory__json_string__content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE negative_other_directory__json_string__api_content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE negative_no_path__raw__content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE negative_no_path__raw__api_content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE negative_no_path__json_string__content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE negative_no_path__json_string__api_content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE posix_forward__sentinel_json_parts__content reference_sql=0 capture_sql=0 regex=["posix_forward__sentinel_json_parts__content.txt"] target_after_sql=False
+CASE windows_forward__sentinel_json_parts__content reference_sql=0 capture_sql=0 regex=["windows_forward__sentinel_json_parts__content.txt"] target_after_sql=False
+CASE windows_backslash__sentinel_json_parts__content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE windows_unc_backslash__sentinel_json_parts__content reference_sql=0 capture_sql=0 regex=[] target_after_sql=False
+CASE mixed_columns__backslash_in__content reference_sql=1 capture_sql=1 regex=["mixed_columns__backslash_in__content__forward.txt"] target_after_sql=False
+CASE mixed_columns__backslash_in__api_content reference_sql=1 capture_sql=1 regex=["mixed_columns__backslash_in__api_content__forward.txt"] target_after_sql=False
+ASSERTIONS: PASS

@@ -1,0 +1,646 @@
+{
+  "scope": "Standalone Python/sqlite3/re literal-semantics diagnostic, not a Hermes/native-Windows test or implementation claim.",
+  "pin": "77dcd5879a51815e3c05382fb38f65ea583f0245",
+  "pr_url": "https://github.com/NousResearch/hermes-agent/pull/126365",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "sqlite": "3.53.1",
+  "source_provenance": {
+    "storage": {
+      "path": "tools/tool_result_storage.py",
+      "url": "https://github.com/NousResearch/hermes-agent/blob/77dcd5879a51815e3c05382fb38f65ea583f0245/tools/tool_result_storage.py",
+      "bytes": 23348,
+      "git_blob_sha1": "aa2c7f4ce4b659831503d569aea190172d51b8a2",
+      "sha256": "986fdb7089a949c36b3eccdff7112e879722e53da9ac1c614ac15444c99b15c8"
+    },
+    "messages": {
+      "path": "hermes_state_messages.py",
+      "url": "https://github.com/NousResearch/hermes-agent/blob/77dcd5879a51815e3c05382fb38f65ea583f0245/hermes_state_messages.py",
+      "bytes": 129347,
+      "git_blob_sha1": "639dc3e19afa0897a3c5f6ae876eb32dffc02b49",
+      "sha256": "2bb7a4df8d022319cbdadc87cc2bfee579d96005d91c44e03110f6db8acacc03"
+    },
+    "maintenance": {
+      "path": "hermes_state_maintenance.py",
+      "url": "https://github.com/NousResearch/hermes-agent/blob/77dcd5879a51815e3c05382fb38f65ea583f0245/hermes_state_maintenance.py",
+      "bytes": 34965,
+      "git_blob_sha1": "a3f48639407942368da5f0b031c9cc74b1833c48",
+      "sha256": "415b3c345a6a16a70479cc6890a21e29f13213ec50bd7595951815dd318e52e8"
+    },
+    "state": {
+      "path": "hermes_state.py",
+      "url": "https://github.com/NousResearch/hermes-agent/blob/77dcd5879a51815e3c05382fb38f65ea583f0245/hermes_state.py",
+      "bytes": 94035,
+      "git_blob_sha1": "4b67b8f46b47d3288a3cceadf9992f641e4ef7d7",
+      "sha256": "c24484b3026a377621dd1a0f1d23de8e0d9d9d0b6d9600d47cee9368646c9577"
+    }
+  },
+  "literals": {
+    "regex": {
+      "path": "tools/tool_result_storage.py",
+      "line_start": 71,
+      "line_end": 71,
+      "source": "_SPILLOVER_NAME_RE = re.compile(r\"spillover/([A-Za-z0-9_.-]+)\")",
+      "literal_source": "r\"spillover/([A-Za-z0-9_.-]+)\"",
+      "value": "spillover/([A-Za-z0-9_.-]+)",
+      "value_utf8_sha256": "e05001d5c1c933a81bfa912c692979905aa34489cc9d79b01f8f0691fcb13c5a"
+    },
+    "substring_gate": {
+      "path": "tools/tool_result_storage.py",
+      "line": 78,
+      "literal_source": "\"spillover/\"",
+      "value": "spillover/"
+    },
+    "reference_query": {
+      "path": "tools/tool_result_storage.py",
+      "line_start": 97,
+      "line_end": 99,
+      "source": "\"SELECT content, api_content FROM messages \"\n                \"WHERE content LIKE '%spillover/%' OR api_content LIKE '%spillover/%' \"\n                \"LIMIT 20001\"",
+      "value": "SELECT content, api_content FROM messages WHERE content LIKE '%spillover/%' OR api_content LIKE '%spillover/%' LIMIT 20001",
+      "value_utf8_sha256": "88caa1f20109208f5f50dba756057d9004c1c15fa83cbc74f7912c722a6be9ba"
+    },
+    "capture_condition": {
+      "path": "hermes_state_maintenance.py",
+      "line_start": 334,
+      "line_end": 335,
+      "exact_predicate": " AND (content LIKE '%spillover/%' OR api_content LIKE '%spillover/%')",
+      "predicate_utf8_sha256": "806a5db426316b787c61c8d910e7e9811b82eeec5948e777f75d496d0ff520dc",
+      "diagnostic_select": "SELECT content, api_content FROM messages WHERE session_id IN (?) AND (content LIKE '%spillover/%' OR api_content LIKE '%spillover/%')",
+      "note": "Diagnostic replaces only session-ID placeholder construction with one bound parameter."
+    },
+    "content_json_prefix": {
+      "path": "hermes_state.py",
+      "line_start": 1613,
+      "line_end": 1613,
+      "source": "_CONTENT_JSON_PREFIX = \"\\x00json:\"",
+      "literal_source": "\"\\x00json:\"",
+      "value": "\u0000json:",
+      "value_utf8_sha256": "b7c985c49ee99cfeee41e46466a9a87dbe87df6d647c731caf0b73297e6c1b4b"
+    }
+  },
+  "comments_refreshed_count": 27,
+  "latest_comment": {
+    "url": "https://github.com/NousResearch/hermes-agent/pull/126365#issuecomment-6193195269",
+    "created_at": "2026-10-15T13:26:57Z",
+    "updated_at": "2026-10-15T13:26:57Z"
+  },
+  "summary": {
+    "cases": 30,
+    "reference_query_selected_rows": 10,
+    "reference_query_extracted_unique_names": 10,
+    "groups": {
+      "backslash": {
+        "cases": 8,
+        "reference_sql_selected_rows": 0,
+        "capture_sql_selected_rows": 0,
+        "rows_with_direct_regex_names": 0,
+        "target_found_after_sql": 0
+      },
+      "forward": {
+        "cases": 8,
+        "reference_sql_selected_rows": 8,
+        "capture_sql_selected_rows": 8,
+        "rows_with_direct_regex_names": 8,
+        "target_found_after_sql": 8
+      },
+      "mixed": {
+        "cases": 2,
+        "reference_sql_selected_rows": 2,
+        "capture_sql_selected_rows": 2,
+        "rows_with_direct_regex_names": 2,
+        "target_found_after_sql": 0
+      },
+      "negative": {
+        "cases": 8,
+        "reference_sql_selected_rows": 0,
+        "capture_sql_selected_rows": 0,
+        "rows_with_direct_regex_names": 0,
+        "target_found_after_sql": 0
+      },
+      "structured_backslash": {
+        "cases": 2,
+        "reference_sql_selected_rows": 0,
+        "capture_sql_selected_rows": 0,
+        "rows_with_direct_regex_names": 0,
+        "target_found_after_sql": 0
+      },
+      "structured_forward": {
+        "cases": 2,
+        "reference_sql_selected_rows": 0,
+        "capture_sql_selected_rows": 0,
+        "rows_with_direct_regex_names": 2,
+        "target_found_after_sql": 0
+      }
+    }
+  },
+  "reference_query_names": [
+    "mixed_columns__backslash_in__api_content__forward.txt",
+    "mixed_columns__backslash_in__content__forward.txt",
+    "posix_forward__json_string__api_content.txt",
+    "posix_forward__json_string__content.txt",
+    "posix_forward__raw__api_content.txt",
+    "posix_forward__raw__content.txt",
+    "windows_forward__json_string__api_content.txt",
+    "windows_forward__json_string__content.txt",
+    "windows_forward__raw__api_content.txt",
+    "windows_forward__raw__content.txt"
+  ],
+  "results": [
+    {
+      "case_id": "posix_forward__raw__content",
+      "group": "forward",
+      "encoding": "raw",
+      "target_column": "content",
+      "target_basename": "posix_forward__raw__content.txt",
+      "content": "<persisted-output>\nFull output saved to: /synthetic/home/cache/spillover/posix_forward__raw__content.txt\n</persisted-output>",
+      "api_content": null,
+      "capture_selected_rows": 1,
+      "direct_regex_names": [
+        "posix_forward__raw__content.txt"
+      ],
+      "capture_extracted_names": [
+        "posix_forward__raw__content.txt"
+      ],
+      "target_found_direct": true,
+      "target_found_after_sql": true,
+      "reference_selected_rows": 1
+    },
+    {
+      "case_id": "posix_forward__raw__api_content",
+      "group": "forward",
+      "encoding": "raw",
+      "target_column": "api_content",
+      "target_basename": "posix_forward__raw__api_content.txt",
+      "content": null,
+      "api_content": "<persisted-output>\nFull output saved to: /synthetic/home/cache/spillover/posix_forward__raw__api_content.txt\n</persisted-output>",
+      "capture_selected_rows": 1,
+      "direct_regex_names": [
+        "posix_forward__raw__api_content.txt"
+      ],
+      "capture_extracted_names": [
+        "posix_forward__raw__api_content.txt"
+      ],
+      "target_found_direct": true,
+      "target_found_after_sql": true,
+      "reference_selected_rows": 1
+    },
+    {
+      "case_id": "posix_forward__json_string__content",
+      "group": "forward",
+      "encoding": "json_string",
+      "target_column": "content",
+      "target_basename": "posix_forward__json_string__content.txt",
+      "content": "\"<persisted-output>\\nFull output saved to: /synthetic/home/cache/spillover/posix_forward__json_string__content.txt\\n</persisted-output>\"",
+      "api_content": null,
+      "capture_selected_rows": 1,
+      "direct_regex_names": [
+        "posix_forward__json_string__content.txt"
+      ],
+      "capture_extracted_names": [
+        "posix_forward__json_string__content.txt"
+      ],
+      "target_found_direct": true,
+      "target_found_after_sql": true,
+      "reference_selected_rows": 1
+    },
+    {
+      "case_id": "posix_forward__json_string__api_content",
+      "group": "forward",
+      "encoding": "json_string",
+      "target_column": "api_content",
+      "target_basename": "posix_forward__json_string__api_content.txt",
+      "content": null,
+      "api_content": "\"<persisted-output>\\nFull output saved to: /synthetic/home/cache/spillover/posix_forward__json_string__api_content.txt\\n</persisted-output>\"",
+      "capture_selected_rows": 1,
+      "direct_regex_names": [
+        "posix_forward__json_string__api_content.txt"
+      ],
+      "capture_extracted_names": [
+        "posix_forward__json_string__api_content.txt"
+      ],
+      "target_found_direct": true,
+      "target_found_after_sql": true,
+      "reference_selected_rows": 1
+    },
+    {
+      "case_id": "windows_forward__raw__content",
+      "group": "forward",
+      "encoding": "raw",
+      "target_column": "content",
+      "target_basename": "windows_forward__raw__content.txt",
+      "content": "<persisted-output>\nFull output saved to: C:/synthetic/home/cache/spillover/windows_forward__raw__content.txt\n</persisted-output>",
+      "api_content": null,
+      "capture_selected_rows": 1,
+      "direct_regex_names": [
+        "windows_forward__raw__content.txt"
+      ],
+      "capture_extracted_names": [
+        "windows_forward__raw__content.txt"
+      ],
+      "target_found_direct": true,
+      "target_found_after_sql": true,
+      "reference_selected_rows": 1
+    },
+    {
+      "case_id": "windows_forward__raw__api_content",
+      "group": "forward",
+      "encoding": "raw",
+      "target_column": "api_content",
+      "target_basename": "windows_forward__raw__api_content.txt",
+      "content": null,
+      "api_content": "<persisted-output>\nFull output saved to: C:/synthetic/home/cache/spillover/windows_forward__raw__api_content.txt\n</persisted-output>",
+      "capture_selected_rows": 1,
+      "direct_regex_names": [
+        "windows_forward__raw__api_content.txt"
+      ],
+      "capture_extracted_names": [
+        "windows_forward__raw__api_content.txt"
+      ],
+      "target_found_direct": true,
+      "target_found_after_sql": true,
+      "reference_selected_rows": 1
+    },
+    {
+      "case_id": "windows_forward__json_string__content",
+      "group": "forward",
+      "encoding": "json_string",
+      "target_column": "content",
+      "target_basename": "windows_forward__json_string__content.txt",
+      "content": "\"<persisted-output>\\nFull output saved to: C:/synthetic/home/cache/spillover/windows_forward__json_string__content.txt\\n</persisted-output>\"",
+      "api_content": null,
+      "capture_selected_rows": 1,
+      "direct_regex_names": [
+        "windows_forward__json_string__content.txt"
+      ],
+      "capture_extracted_names": [
+        "windows_forward__json_string__content.txt"
+      ],
+      "target_found_direct": true,
+      "target_found_after_sql": true,
+      "reference_selected_rows": 1
+    },
+    {
+      "case_id": "windows_forward__json_string__api_content",
+      "group": "forward",
+      "encoding": "json_string",
+      "target_column": "api_content",
+      "target_basename": "windows_forward__json_string__api_content.txt",
+      "content": null,
+      "api_content": "\"<persisted-output>\\nFull output saved to: C:/synthetic/home/cache/spillover/windows_forward__json_string__api_content.txt\\n</persisted-output>\"",
+      "capture_selected_rows": 1,
+      "direct_regex_names": [
+        "windows_forward__json_string__api_content.txt"
+      ],
+      "capture_extracted_names": [
+        "windows_forward__json_string__api_content.txt"
+      ],
+      "target_found_direct": true,
+      "target_found_after_sql": true,
+      "reference_selected_rows": 1
+    },
+    {
+      "case_id": "windows_backslash__raw__content",
+      "group": "backslash",
+      "encoding": "raw",
+      "target_column": "content",
+      "target_basename": "windows_backslash__raw__content.txt",
+      "content": "<persisted-output>\nFull output saved to: C:\\synthetic\\home\\cache\\spillover\\windows_backslash__raw__content.txt\n</persisted-output>",
+      "api_content": null,
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "windows_backslash__raw__api_content",
+      "group": "backslash",
+      "encoding": "raw",
+      "target_column": "api_content",
+      "target_basename": "windows_backslash__raw__api_content.txt",
+      "content": null,
+      "api_content": "<persisted-output>\nFull output saved to: C:\\synthetic\\home\\cache\\spillover\\windows_backslash__raw__api_content.txt\n</persisted-output>",
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "windows_backslash__json_string__content",
+      "group": "backslash",
+      "encoding": "json_string",
+      "target_column": "content",
+      "target_basename": "windows_backslash__json_string__content.txt",
+      "content": "\"<persisted-output>\\nFull output saved to: C:\\\\synthetic\\\\home\\\\cache\\\\spillover\\\\windows_backslash__json_string__content.txt\\n</persisted-output>\"",
+      "api_content": null,
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "windows_backslash__json_string__api_content",
+      "group": "backslash",
+      "encoding": "json_string",
+      "target_column": "api_content",
+      "target_basename": "windows_backslash__json_string__api_content.txt",
+      "content": null,
+      "api_content": "\"<persisted-output>\\nFull output saved to: C:\\\\synthetic\\\\home\\\\cache\\\\spillover\\\\windows_backslash__json_string__api_content.txt\\n</persisted-output>\"",
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "windows_unc_backslash__raw__content",
+      "group": "backslash",
+      "encoding": "raw",
+      "target_column": "content",
+      "target_basename": "windows_unc_backslash__raw__content.txt",
+      "content": "<persisted-output>\nFull output saved to: \\\\server\\synthetic\\cache\\spillover\\windows_unc_backslash__raw__content.txt\n</persisted-output>",
+      "api_content": null,
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "windows_unc_backslash__raw__api_content",
+      "group": "backslash",
+      "encoding": "raw",
+      "target_column": "api_content",
+      "target_basename": "windows_unc_backslash__raw__api_content.txt",
+      "content": null,
+      "api_content": "<persisted-output>\nFull output saved to: \\\\server\\synthetic\\cache\\spillover\\windows_unc_backslash__raw__api_content.txt\n</persisted-output>",
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "windows_unc_backslash__json_string__content",
+      "group": "backslash",
+      "encoding": "json_string",
+      "target_column": "content",
+      "target_basename": "windows_unc_backslash__json_string__content.txt",
+      "content": "\"<persisted-output>\\nFull output saved to: \\\\\\\\server\\\\synthetic\\\\cache\\\\spillover\\\\windows_unc_backslash__json_string__content.txt\\n</persisted-output>\"",
+      "api_content": null,
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "windows_unc_backslash__json_string__api_content",
+      "group": "backslash",
+      "encoding": "json_string",
+      "target_column": "api_content",
+      "target_basename": "windows_unc_backslash__json_string__api_content.txt",
+      "content": null,
+      "api_content": "\"<persisted-output>\\nFull output saved to: \\\\\\\\server\\\\synthetic\\\\cache\\\\spillover\\\\windows_unc_backslash__json_string__api_content.txt\\n</persisted-output>\"",
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "negative_other_directory__raw__content",
+      "group": "negative",
+      "encoding": "raw",
+      "target_column": "content",
+      "target_basename": null,
+      "content": "<persisted-output>\nFull output saved to: /synthetic/home/cache/not_spill/negative_other_directory__raw__content.txt\n</persisted-output>",
+      "api_content": null,
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "negative_other_directory__raw__api_content",
+      "group": "negative",
+      "encoding": "raw",
+      "target_column": "api_content",
+      "target_basename": null,
+      "content": null,
+      "api_content": "<persisted-output>\nFull output saved to: /synthetic/home/cache/not_spill/negative_other_directory__raw__api_content.txt\n</persisted-output>",
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "negative_other_directory__json_string__content",
+      "group": "negative",
+      "encoding": "json_string",
+      "target_column": "content",
+      "target_basename": null,
+      "content": "\"<persisted-output>\\nFull output saved to: /synthetic/home/cache/not_spill/negative_other_directory__json_string__content.txt\\n</persisted-output>\"",
+      "api_content": null,
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "negative_other_directory__json_string__api_content",
+      "group": "negative",
+      "encoding": "json_string",
+      "target_column": "api_content",
+      "target_basename": null,
+      "content": null,
+      "api_content": "\"<persisted-output>\\nFull output saved to: /synthetic/home/cache/not_spill/negative_other_directory__json_string__api_content.txt\\n</persisted-output>\"",
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "negative_no_path__raw__content",
+      "group": "negative",
+      "encoding": "raw",
+      "target_column": "content",
+      "target_basename": null,
+      "content": "<persisted-output>\nFull output saved to: No archived output is referenced.\n</persisted-output>",
+      "api_content": null,
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "negative_no_path__raw__api_content",
+      "group": "negative",
+      "encoding": "raw",
+      "target_column": "api_content",
+      "target_basename": null,
+      "content": null,
+      "api_content": "<persisted-output>\nFull output saved to: No archived output is referenced.\n</persisted-output>",
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "negative_no_path__json_string__content",
+      "group": "negative",
+      "encoding": "json_string",
+      "target_column": "content",
+      "target_basename": null,
+      "content": "\"<persisted-output>\\nFull output saved to: No archived output is referenced.\\n</persisted-output>\"",
+      "api_content": null,
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "negative_no_path__json_string__api_content",
+      "group": "negative",
+      "encoding": "json_string",
+      "target_column": "api_content",
+      "target_basename": null,
+      "content": null,
+      "api_content": "\"<persisted-output>\\nFull output saved to: No archived output is referenced.\\n</persisted-output>\"",
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "posix_forward__sentinel_json_parts__content",
+      "group": "structured_forward",
+      "encoding": "sentinel_json_parts",
+      "target_column": "content",
+      "target_basename": "posix_forward__sentinel_json_parts__content.txt",
+      "content": "\u0000json:[{\"type\": \"text\", \"text\": \"<persisted-output>\\nFull output saved to: /synthetic/home/cache/spillover/posix_forward__sentinel_json_parts__content.txt\\n</persisted-output>\"}]",
+      "api_content": null,
+      "capture_selected_rows": 0,
+      "direct_regex_names": [
+        "posix_forward__sentinel_json_parts__content.txt"
+      ],
+      "capture_extracted_names": [],
+      "target_found_direct": true,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "windows_forward__sentinel_json_parts__content",
+      "group": "structured_forward",
+      "encoding": "sentinel_json_parts",
+      "target_column": "content",
+      "target_basename": "windows_forward__sentinel_json_parts__content.txt",
+      "content": "\u0000json:[{\"type\": \"text\", \"text\": \"<persisted-output>\\nFull output saved to: C:/synthetic/home/cache/spillover/windows_forward__sentinel_json_parts__content.txt\\n</persisted-output>\"}]",
+      "api_content": null,
+      "capture_selected_rows": 0,
+      "direct_regex_names": [
+        "windows_forward__sentinel_json_parts__content.txt"
+      ],
+      "capture_extracted_names": [],
+      "target_found_direct": true,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "windows_backslash__sentinel_json_parts__content",
+      "group": "structured_backslash",
+      "encoding": "sentinel_json_parts",
+      "target_column": "content",
+      "target_basename": "windows_backslash__sentinel_json_parts__content.txt",
+      "content": "\u0000json:[{\"type\": \"text\", \"text\": \"<persisted-output>\\nFull output saved to: C:\\\\synthetic\\\\home\\\\cache\\\\spillover\\\\windows_backslash__sentinel_json_parts__content.txt\\n</persisted-output>\"}]",
+      "api_content": null,
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "windows_unc_backslash__sentinel_json_parts__content",
+      "group": "structured_backslash",
+      "encoding": "sentinel_json_parts",
+      "target_column": "content",
+      "target_basename": "windows_unc_backslash__sentinel_json_parts__content.txt",
+      "content": "\u0000json:[{\"type\": \"text\", \"text\": \"<persisted-output>\\nFull output saved to: \\\\\\\\server\\\\synthetic\\\\cache\\\\spillover\\\\windows_unc_backslash__sentinel_json_parts__content.txt\\n</persisted-output>\"}]",
+      "api_content": null,
+      "capture_selected_rows": 0,
+      "direct_regex_names": [],
+      "capture_extracted_names": [],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 0
+    },
+    {
+      "case_id": "mixed_columns__backslash_in__content",
+      "group": "mixed",
+      "encoding": "raw",
+      "target_column": "content",
+      "target_basename": "mixed_columns__backslash_in__content__back.txt",
+      "forward_control_basename": "mixed_columns__backslash_in__content__forward.txt",
+      "content": "<persisted-output>\nFull output saved to: C:\\synthetic\\cache\\spillover\\mixed_columns__backslash_in__content__back.txt\n</persisted-output>",
+      "api_content": "<persisted-output>\nFull output saved to: /synthetic/cache/spillover/mixed_columns__backslash_in__content__forward.txt\n</persisted-output>",
+      "capture_selected_rows": 1,
+      "direct_regex_names": [
+        "mixed_columns__backslash_in__content__forward.txt"
+      ],
+      "capture_extracted_names": [
+        "mixed_columns__backslash_in__content__forward.txt"
+      ],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 1
+    },
+    {
+      "case_id": "mixed_columns__backslash_in__api_content",
+      "group": "mixed",
+      "encoding": "raw",
+      "target_column": "api_content",
+      "target_basename": "mixed_columns__backslash_in__api_content__back.txt",
+      "forward_control_basename": "mixed_columns__backslash_in__api_content__forward.txt",
+      "content": "<persisted-output>\nFull output saved to: /synthetic/cache/spillover/mixed_columns__backslash_in__api_content__forward.txt\n</persisted-output>",
+      "api_content": "<persisted-output>\nFull output saved to: C:\\synthetic\\cache\\spillover\\mixed_columns__backslash_in__api_content__back.txt\n</persisted-output>",
+      "capture_selected_rows": 1,
+      "direct_regex_names": [
+        "mixed_columns__backslash_in__api_content__forward.txt"
+      ],
+      "capture_extracted_names": [
+        "mixed_columns__backslash_in__api_content__forward.txt"
+      ],
+      "target_found_direct": false,
+      "target_found_after_sql": false,
+      "reference_selected_rows": 1
+    }
+  ]
+}
