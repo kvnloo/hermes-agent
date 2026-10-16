@@ -3,7 +3,7 @@
 Every writer that wants a "before" copy of the user's config (setup wizard, corrupt-file
 snapshot, model migrations) goes through :func:`backup_config`. Copies live in
 ``<HERMES_HOME>/backups/config/`` — ``backups/`` is already excluded from full backups, so they
-never nest — as ``config.yaml.<reason>.<YYYYMMDD-HHMMSS>``. A copy identical to the newest one
+never nest — as ``config.yaml.<reason>.<YYYYMMDD-HHMMSS>.<sequence>``. A copy identical to the newest one
 for the same reason is skipped, and only the newest ``keep`` per reason survive, so repeated
 ``hermes setup`` runs or a gateway restarting against broken YAML cannot litter the home dir.
 """
@@ -11,7 +11,9 @@ for the same reason is skipped, and only the newest ``keep`` per reason survive,
 from __future__ import annotations
 
 import logging
+import os
 import shutil
+import tempfile
 import time
 from pathlib import Path
 from typing import Optional
@@ -58,11 +60,34 @@ def backup_config(config_path: Path, reason: str, *, keep: int = DEFAULT_KEEP) -
         # within one mtime tick of an earlier comparison is reported identical and never backed up.
         if existing and config_path.read_bytes() == existing[0].read_bytes():
             return None
-        dest = root / f"{config_path.name}.{reason}.{time.strftime('%Y%m%d-%H%M%S')}"
-        if dest.is_symlink() or dest.exists():  # never write through a planted link
-            return None
-        shutil.copy2(config_path, dest)
-        for stale in [dest, *existing][keep:]:
+        prefix = f"{config_path.name}.{reason}.{time.strftime('%Y%m%d-%H%M%S')}."
+        # Rotation frees earlier names. Continue above the newest sequence so a later
+        # copy in the same second still sorts first, including beside legacy unsuffixed copies.
+        sequences = (p.name[len(prefix):] for p in existing if p.name.startswith(prefix))
+        sequence = max((int(s) for s in sequences if s.isdecimal()), default=0) + 1
+        staged_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="wb", prefix=f".{prefix}", suffix=".pending", dir=root, delete=False,
+            ) as staged:
+                staged_path = Path(staged.name)
+                with config_path.open("rb") as source:
+                    shutil.copyfileobj(source, staged)
+                staged.flush()
+                os.fsync(staged.fileno())
+            shutil.copystat(config_path, staged_path)
+            while True:
+                dest = root / f"{prefix}{sequence:012d}"
+                try:
+                    os.link(staged_path, dest)  # complete bytes, no overwrite or symlink following
+                except FileExistsError:
+                    sequence += 1
+                    continue
+                break
+        finally:
+            if staged_path is not None:
+                staged_path.unlink(missing_ok=True)
+        for stale in list_config_backups(config_path, reason)[keep:]:
             stale.unlink(missing_ok=True)
         return dest
     except OSError as exc:
