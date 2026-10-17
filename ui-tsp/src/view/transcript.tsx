@@ -24,6 +24,7 @@ export interface TranscriptContext {
   /** View-only fold state; gateway transcript/tool data remain unchanged. */
   toolCollapsed?(turnId: string, callId: string): boolean | undefined
   foldRevision?(turnId: string): number
+  toggleTool?(turnId: string, callId: string): void
   rewind?(): void
   retry?(turnId: string): void
   canRetry?(turnId: string): boolean
@@ -173,7 +174,8 @@ function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptConte
       )
 
     case 'tool':
-      return toolNode(b.call, cx.now, cx.cwd, cx.toolCollapsed?.(turnId, b.call.id))
+      return toolNode(b.call, cx.now, cx.cwd, cx.toolCollapsed?.(turnId, b.call.id),
+        cx.toggleTool ? () => cx.toggleTool?.(turnId, b.call.id) : undefined)
 
     case 'thinking':
       return thinkingNode(b, id, cx)

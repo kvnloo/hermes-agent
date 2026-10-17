@@ -1276,6 +1276,12 @@ export class App implements OverlayHost {
       },
       foldRevision: (turnId: string) => this.#foldRevs.get(turnId) ?? 0,
       toolCollapsed: (turnId: string, callId: string) => this.#folds.get(turnId + ':' + callId),
+      toggleTool: (turnId: string, callId: string) => {
+        const key = turnId + ':' + callId
+        this.#folds.set(key, !(this.#folds.get(key) ?? true))
+        this.#foldRevs.set(turnId, (this.#foldRevs.get(turnId) ?? 0) + 1)
+        this.changed()
+      },
 
       canRetry: (turnId: string) => this.canRetry(turnId),
       retry: (turnId: string) => this.retryFailed(turnId),
