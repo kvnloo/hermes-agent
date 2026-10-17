@@ -534,7 +534,8 @@ def _launch_tui(
     code: Optional[int] = None
     try:
         try:
-            code = subprocess.call(argv, cwd=str(cwd), env=env)
+            from hermes_cli.main_tsp_launch import run_tui_frontend, tern_frontend_wanted
+            code = run_tui_frontend(argv, cwd, env, probe=not tui_dev and tern_frontend_wanted(env))
         except KeyboardInterrupt:
             code = 130
 

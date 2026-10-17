@@ -421,6 +421,7 @@ export interface ComposerActions {
 }
 
 export interface ComposerRefs {
+  readDraft: () => { revision: number; text: string }
   historyDraftRef: MutableRefObject<string>
   historyRef: MutableRefObject<string[]>
   queueEditRef: MutableRefObject<null | number>

@@ -21,6 +21,21 @@ if (!process.stdin.isTTY) {
   process.exit(0)
 }
 
+// Probe before starting a gateway or changing the screen. Exit 75 alone requests Ink fallback.
+const tern = process.argv.includes('--tern-composer')
+  ? await import('./tern/transport.js').then(async ({ filterTernInput, probeTern }) => {
+      const filter = filterTernInput(process.stdin)
+      const native = await probeTern()
+
+      if (!native) {
+        filter.close()
+        process.exit(75)
+      }
+
+      return { ...native, stdin: filter.stdin, close: async () => { await native.close(); filter.close() } }
+    })
+  : undefined
+
 // Start from a clean slate. If a previous TUI crashed or was kill -9'd, the
 // terminal tab can still have mouse/focus/paste modes enabled.
 resetTerminalModes()
@@ -72,7 +87,8 @@ let consecutiveDeadStreamErrors = 0
 
 setupGracefulExit({
   cleanups: [
-    () => {
+    async () => {
+      await tern?.close()
       resetTerminalModes()
 
       return gw.kill('graceful-exit-cleanup')
@@ -175,7 +191,8 @@ const onFrame =
       }
     : undefined
 
-ink.render(<App gw={gw} />, {
+ink.render(<App gw={gw} tern={tern?.composer} />, {
+  stdin: tern?.stdin,
   exitOnCtrlC: false,
   onFrame,
   // Open URLs in the user's default browser when a link cell is clicked.

@@ -44,6 +44,8 @@ import { terminalParityHints } from '../lib/terminalParity.js'
 import { formatAbandonedClarify, sameToolTrailGroup, toolTrailLabel } from '../lib/text.js'
 import { estimatedMsgHeight, messageHeightKey } from '../lib/virtualHeights.js'
 import { onUserWidgets } from '../sdk/userWidgets.js'
+import type { TernComposer } from '../tern/composer.js'
+import { useTernComposer } from '../tern/useTernComposer.js'
 import type { Msg, PanelSection } from '../types.js'
 
 import { applyAgentSnapshot } from './agentRoster.js'
@@ -258,7 +260,7 @@ export async function startPromptLiveSession({
   return sid
 }
 
-export function useMainApp(gw: GatewayClient) {
+export function useMainApp(gw: GatewayClient, tern?: TernComposer) {
   const { exit } = useApp()
   const { stdout } = useStdout()
   const [cols, setCols] = useState(stdout?.columns ?? 80)
@@ -970,6 +972,7 @@ export function useMainApp(gw: GatewayClient) {
   })
 
   submitLiteralRef.current = submitLiteral
+  useTernComposer(tern, composerRefs, composerActions, dispatchSubmission)
 
   // Drain one queued message whenever the session settles (busy → false):
   // agent turn ends, interrupt, shell.exec finishes, error recovered, or the

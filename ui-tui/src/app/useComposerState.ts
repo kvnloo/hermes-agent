@@ -122,10 +122,12 @@ export function useComposerState({ gw, submitRef, sys }: UseComposerStateOptions
   const [input, setInputState] = useState('')
   const [inputBuf, setInputBufState] = useState<string[]>([])
   const composerRevision = useRef(0)
+  const inputBufRef = useRef<string[]>([])
 
   const setInputBuf = useCallback<StateSetter<string[]>>(next => {
     composerRevision.current++
-    setInputBufState(next)
+    inputBufRef.current = typeof next === 'function' ? next(inputBufRef.current) : next
+    setInputBufState(inputBufRef.current)
   }, [])
 
   const [tokens, setTokens] = useState<ComposerToken[]>([])
@@ -603,6 +605,10 @@ export function useComposerState({ gw, submitRef, sys }: UseComposerStateOptions
 
   const refs = useMemo(
     () => ({
+      readDraft: () => ({
+        revision: composerRevision.current,
+        text: [...inputBufRef.current, inputRef.current].join('\n')
+      }),
       historyDraftRef,
       historyRef,
       queueEditRef,
