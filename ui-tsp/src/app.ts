@@ -610,7 +610,8 @@ export class App implements OverlayHost {
   }
 
   toggleToolExpansion(): void {
-    this.#tools.expand(this.transcript.entries, this.info?.cwd ?? '', this.#tern.caps.kinds.includes('media'))
+    this.#tools.expand(this.transcript.entries, this.info?.cwd ?? '', this.#tern.caps.kinds.includes('media'),
+      !this.#gw.attached && this.info?.terminal_backend === 'local')
     this.#invalidateTools()
   }
 
@@ -1748,6 +1749,7 @@ export class App implements OverlayHost {
       copy: (text: string) => copyToClipboard(text),
       cwd: info?.cwd ?? '',
       media: this.#tern.caps.kinds.includes('media'),
+      hostLocal: !this.#gw.attached && info?.terminal_backend === 'local',
       focusBrowser: (id: string) => void focusBrowserBlock(this, id),
       onCopyError: () => {
         this.transcript.notice('Could not copy the answer to the clipboard.', 'warning')
@@ -1762,7 +1764,8 @@ export class App implements OverlayHost {
         const block = turn?.kind === 'turn' ? turn.blocks.find(b => b.kind === 'tool' && b.call.id === callId) : undefined
 
         if (block?.kind !== 'tool') { return }
-        this.#tools.toggle(turnId, block.call, info?.cwd ?? '', this.#tern.caps.kinds.includes('media'))
+        this.#tools.toggle(turnId, block.call, info?.cwd ?? '', this.#tern.caps.kinds.includes('media'),
+          !this.#gw.attached && info?.terminal_backend === 'local')
         this.#retention?.invalidate(turnId)
         this.changed()
       },

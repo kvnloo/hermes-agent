@@ -7,7 +7,7 @@ import { type JSX, node } from '@stencil-hq/tern'
 
 import { fileHref } from '../links.js'
 import type { Subagent, Todo, ToolCall } from '../model.js'
-import { readMedia } from '../read-media.js'
+import { confirmedWriteArtifact, readMedia, writtenArtifactNode } from '../read-media.js'
 import { record } from '../transcript.js'
 
 import { browserBlockCard } from './browser-blocks.js'
@@ -78,8 +78,8 @@ function moreBadge(lineCount: number, shown: number): Card['badges'] {
 }
 
 /** Renderer-only fold state for a native tool card. */
-export function toolFoldState(call: ToolCall, cwd = '', media = false): { collapsible: boolean; collapsed: boolean } {
-  const card = cardOf(call, 0, cwd, media)
+export function toolFoldState(call: ToolCall, cwd = '', media = false, hostLocal = true): { collapsible: boolean; collapsed: boolean } {
+  const card = cardOf(call, 0, cwd, media, {}, undefined, hostLocal)
 
   return {
     collapsible:
@@ -99,9 +99,10 @@ export function toolNode(
   onToggle?: () => void,
   media = false,
   onInspect?: (callId: string, agentId: string) => void,
-  focusBrowser?: (id: string) => void
+  focusBrowser?: (id: string) => void,
+  hostLocal = true
 ): JSX.Element {
-  const card = browserBlockCard(cardOf(call, now, cwd, media, { collapsed: collapsedOverride, onToggle }, onInspect), call, focusBrowser)
+  const card = browserBlockCard(cardOf(call, now, cwd, media, { collapsed: collapsedOverride, onToggle }, onInspect, hostLocal), call, focusBrowser)
   const runOutcome = card.name === 'bash' || card.name === 'eval' ? runState(call, record(call.result)) : undefined
   const status = call.status === 'unknown' ? 'unknown' : runOutcome ? RUN_STATUS[runOutcome] : (card.status ?? call.status)
   const running = status === 'running'
@@ -160,6 +161,7 @@ interface AdapterInput {
   now: number
   cwd: string
   media: boolean
+  hostLocal: boolean
   presentation: Pick<RunBoxInput, 'collapsed' | 'onToggle'>
   onInspect?: (callId: string, agentId: string) => void
 }
@@ -168,7 +170,7 @@ type CardAdapter = (input: AdapterInput) => Card
 
 const shellAdapter: CardAdapter = ({ call, result, presentation }) => bashCard(call, result, presentation)
 const readAdapter: CardAdapter = ({ call, result, cwd, media }) => readCard(call, result, cwd, media)
-const editAdapter: CardAdapter = ({ call, result, cwd }) => editCard(call, result, cwd)
+const editAdapter: CardAdapter = ({ call, result, cwd, media, hostLocal }) => editCard(call, result, cwd, media, hostLocal)
 const secretAdapter: CardAdapter = () => ({ body: [], frame: 'inline', name: 'secret', title: 'Secret' })
 const browserAdapter: CardAdapter = ({ call, result, cwd }) => browserCard(call, result, cwd, genericBody(call))
 
@@ -251,13 +253,14 @@ function cardOf(
   cwd: string,
   media: boolean,
   presentation: Pick<RunBoxInput, 'collapsed' | 'onToggle'> = {},
-  onInspect?: (callId: string, agentId: string) => void
+  onInspect?: (callId: string, agentId: string) => void,
+  hostLocal = false
 ): Card {
   // Own-property lookup keeps tool names like `constructor` on the honest fallback.
   const registered = Object.hasOwn(CARD_ADAPTERS, call.name) ? CARD_ADAPTERS[call.name] : undefined
   const adapter = registered ?? (call.name.startsWith('browser') ? browserAdapter : genericCard)
 
-  return adapter({ call, result: record(call.result), now, cwd, media, presentation, onInspect })
+  return adapter({ call, result: record(call.result), now, cwd, media, hostLocal, presentation, onInspect })
 }
 
 function genericCard({ call }: Pick<AdapterInput, 'call'>): Card {
@@ -362,13 +365,26 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined, c
   }
 }
 
-function editCard(call: ToolCall, result: Record<string, unknown> | undefined, cwd: string): Card {
-  const path = str(call.args.path) ?? str(call.args.file_path) ?? call.context
+function editCard(call: ToolCall, result: Record<string, unknown> | undefined, cwd: string, media: boolean, hostLocal: boolean): Card {
+  const path = str(result?.resolved_path) ?? str(call.args.path) ?? str(call.args.file_path) ?? call.context
   const lang = langOf(path)
   const diff = hunks(str(result?.diff)) ?? (call.diff ? plainDiff(call.diff) : undefined)
   const content = str(call.args.content) ?? str(call.args.contents)
   const write = call.name === 'write_file'
+  const artifact = confirmedWriteArtifact(call, cwd, hostLocal)
+  const figure = artifact ? writtenArtifactNode(artifact, media) : undefined
   const diagnostics = lspDiagnostics(result, cwd)
+  const error = call.status === 'error' ? errorOf(call) : undefined
+
+  if (error) {
+    diagnostics.push(<text key="error" role="omp.tool.notice" spans={[{ s: 'error', t: error }]} wrap="word" />)
+  }
+
+  // A remote/container path must not open an unrelated same-named host file.
+  if (write && !hostLocal) {
+    diagnostics.push(<text key="location" role="omp.tool.notice" spans={[{ s: 'muted', t: `Artifact location is not host-local: ${path}` }]} wrap="word" />)
+  }
+
   const hunk = /@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(diff ?? call.diff ?? '')
 
   const line = lineOf(call.args.line) ?? lineOf(call.args.start_line) ?? lineOf(result?.line) ??
@@ -378,7 +394,7 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined, c
 
   const head = {
     name: write ? 'write' : 'edit',
-    href: fileHref(path, cwd, { line, endLine: line && hunkCount ? line + hunkCount - 1 : undefined }),
+    href: !write || hostLocal ? fileHref(path, cwd, { line, endLine: line && hunkCount ? line + hunkCount - 1 : undefined }) : undefined,
     target: path,
     targetKind: 'path' as const,
     title: write ? 'Write' : 'Edit'
@@ -389,25 +405,27 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined, c
     const text = content.replace(/\n$/, '')
     const lines = nonemptyLines(text)
     const fileBadge = diff ? [{ text: 'new file', tone: 'success' }] : []
-    const badges = [...fileBadge, ...(moreBadge(lines, WRITE_PREVIEW_LINES) ?? [])]
+    const badges = [...fileBadge, ...(!figure ? moreBadge(lines, WRITE_PREVIEW_LINES) ?? [] : [])]
 
     return {
       ...head,
       badges: badges.length ? badges : undefined,
       body: [
+        ...(figure ? [figure] : []),
         <code key="code" lang={lang ?? 'text'} numbers text={text} wrap />,
         ...diagnostics
       ],
-      folded: true,
+      folded: !figure,
       meta: [`${lines} line${lines === 1 ? '' : 's'}`],
-      preview: { lines: WRITE_PREVIEW_LINES }
+      preview: figure ? undefined : { lines: WRITE_PREVIEW_LINES }
     }
   }
 
   if (!diff) {
     return {
       ...head,
-      body: diagnostics
+      body: [...(figure ? [figure] : []), ...diagnostics],
+      folded: figure ? false : undefined
     }
   }
 
@@ -417,14 +435,16 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined, c
 
   return {
     ...head,
-    badges: moreBadge(lines, DIFF_PREVIEW_LINES),
+    badges: figure ? undefined : moreBadge(lines, DIFF_PREVIEW_LINES),
     body: [
+      ...(figure ? [figure] : []),
       <diff key="diff" lang={lang} text={diff} />,
+      ...(figure && content ? [<code key="source" lang={lang ?? 'text'} numbers text={content} wrap />] : []),
       ...diagnostics
     ],
-    folded: fold,
+    folded: figure ? false : fold,
     meta: [`+${added} −${removed}`],
-    preview: fold ? { lines: DIFF_PREVIEW_LINES } : undefined
+    preview: !figure && fold ? { lines: DIFF_PREVIEW_LINES } : undefined
   }
 }
 

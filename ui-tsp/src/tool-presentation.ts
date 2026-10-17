@@ -34,17 +34,17 @@ export class ToolPresentation {
     this.#revisions.set(turn, (this.#revisions.get(turn) ?? 0) + 1)
   }
 
-  toggle(turn: string, call: ToolCall, cwd: string, media: boolean): void {
-    this.mirror(turn, call.id, !(this.collapsed(turn, call.id) ?? toolFoldState(call, cwd, media).collapsed))
+  toggle(turn: string, call: ToolCall, cwd: string, media: boolean, hostLocal = false): void {
+    this.mirror(turn, call.id, !(this.collapsed(turn, call.id) ?? toolFoldState(call, cwd, media, hostLocal).collapsed))
   }
 
-  expand(entries: readonly Entry[], cwd: string, media: boolean): void {
+  expand(entries: readonly Entry[], cwd: string, media: boolean, hostLocal = false): void {
     const calls = entries.flatMap(entry => entry.kind === 'turn'
-      ? entry.blocks.flatMap(block => block.kind === 'tool' && toolFoldState(block.call, cwd, media).collapsible
+      ? entry.blocks.flatMap(block => block.kind === 'tool' && toolFoldState(block.call, cwd, media, hostLocal).collapsible
         ? [{ turn: entry.id, call: block.call }] : []) : [])
 
     // Mixed pointer folds expand together; the next invocation collapses together.
-    const expand = calls.length ? calls.some(({ turn, call }) => this.collapsed(turn, call.id) ?? toolFoldState(call, cwd, media).collapsed) : !this.#expanded
+    const expand = calls.length ? calls.some(({ turn, call }) => this.collapsed(turn, call.id) ?? toolFoldState(call, cwd, media, hostLocal).collapsed) : !this.#expanded
     this.#expanded = expand
     this.#folds.clear()
 

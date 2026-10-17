@@ -14,6 +14,7 @@ export interface MediaProps {
   readonly link?: string
 }
 
+/** A caller-owned key can remount a new result; it is not a MediaProps git rev. */
 export function mediaNode(props: MediaProps, key = 'media'): Node {
   return node('media', { key, ...props })
 }

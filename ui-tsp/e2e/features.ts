@@ -428,6 +428,39 @@ async function media() {
   }, true)
 }
 
+async function writtenArtifacts() {
+  await step('confirmed SVG and Mermaid writes lead with native figures; failures stay source-only', async () => {
+    const cases = [
+      { id:'written-svg', path:join(manifest.proof,'written.svg'), source:'<svg xmlns="http://www.w3.org/2000/svg" width="240" height="100"><rect width="240" height="100" fill="#234"/><text x="20" y="55" fill="white">Confirmed SVG</text></svg>' },
+      { id:'written-mermaid', path:join(manifest.proof,'written.mmd'), source:'graph LR\n  A[Confirmed] --> B[Mermaid]' }
+    ]
+    await replay('message.start')
+    for (const item of cases) {
+      await writeFile(item.path,item.source)
+      assert.equal(await readFile(item.path,'utf8'),item.source)
+      await replay('tool.start',{name:'write_file',tool_id:item.id,args:{path:item.path,content:item.source}})
+      await replay('tool.complete',{name:'write_file',tool_id:item.id,result:{verified:true,bytes_written:Buffer.byteLength(item.source),resolved_path:item.path}})
+    }
+    await replay('tool.start',{name:'write_file',tool_id:'failed-svg',args:{path:'failed.svg',content:'<svg/>'}})
+    await replay('tool.complete',{name:'write_file',tool_id:'failed-svg',result:{error:'Fixture permission denied'}})
+    await replay('message.complete',{status:'complete',text:''})
+    const nodes = await until(()=>native.rendered(), ns=>[...ns.values()].filter(n=>n.p?.role==='omp.tool.write.figure').length===2, 'two confirmed figure-first cards')
+    for (const item of cases) {
+      const tool = [...nodes.values()].find(n=>n.k==='tool' && n.p?.target===item.path)
+      assert(tool)
+      assert.equal(tool.p?.collapsed,false)
+      assert.equal(tool.p?.preview,undefined)
+      const descendants = [...nodes.values()].filter(n=>n.id.startsWith(tool.id+'.'))
+      assert.equal(descendants[0]?.p?.role,'omp.tool.write.figure')
+      assert(descendants.some(n=>n.k==='code' && n.p?.text===item.source))
+    }
+    const failed = [...nodes.values()].find(n=>n.k==='tool' && n.p?.target==='failed.svg')
+    assert.equal(failed?.p?.status,'error')
+    assert(!(await native.wire()).some(w=>w.dir==='request' && w.body.method==='prompt.submit'))
+    await capture('figure-first')
+  }, true)
+}
+
 async function agentInspector() {
   const agent = {delegation_id:'inspector-delegation',goal:'Inspector alpha',model:'inspector-model',task_count:2,task_index:0}
   await step('explicit subagent fixtures create a clickable task row', async()=>{
@@ -590,7 +623,7 @@ try {
   const wire = await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='delivered' && w.body.result && typeof w.body.result==='object' && !Array.isArray(w.body.result) && 'session_id' in w.body.result), 'real session creation')
   const ids = new Set(wire.filter(w=>w.dir==='request' && w.body.method==='session.create').map(w=>w.body.id))
   sid = String(record(wire.findLast(w=>w.dir==='delivered' && ids.has(w.body.id) && w.body.result)?.body.result).session_id)
-  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes,media,'agent-inspector':agentInspector,retention,'host-lifecycle':hostLifecycle}
+  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes,media,'written-artifacts':writtenArtifacts,'agent-inspector':agentInspector,retention,'host-lifecycle':hostLifecycle}
   assert(journeys[journey],`Unknown journey: ${journey}`)
   await journeys[journey]!()
 } catch (error) { console.error(error); process.exitCode=1 }

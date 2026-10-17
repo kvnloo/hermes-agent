@@ -163,7 +163,7 @@ export class Retention {
     this.#cx = cx
     this.#transcript = transcript
     const ops: Op[] = []
-    const context = `${cx.cwd}:${cx.media}:${cx.toolsHidden}`
+    const context = `${cx.cwd}:${cx.media}:${cx.hostLocal}:${cx.toolsHidden}`
     const structural = this.#structure !== transcript.structureRev
 
     if (structural) {
@@ -277,6 +277,7 @@ export class Retention {
         const resident = new class extends Tree {
           override readonly children = item.trees!
         }('main', node('col', {}))
+
         const changes = new View([resident]).ops(View.from({ main: trees.map(tree => tree.node) }), 'hermes')
         ops.push(...changes.map(op => (op[0] === 'add' || op[0] === 'move') && op[2] === 'main' && op[3] === null
           ? op[0] === 'add' ? ['add', op[1], op[2], before, op[4]] satisfies Op : ['move', op[1], op[2], before] satisfies Op : op))
