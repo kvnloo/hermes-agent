@@ -254,7 +254,7 @@ describe('long-session retention (App and real SDK)', () => {
   })
 
   it('never rebuilds settled nodes on tokens, and preserves main/scroll identity', async () => {
-    const builds = vi.spyOn(transcriptView, 'entryNode')
+    const builds = vi.spyOn(transcriptView, 'projectedEntryNodes')
 
     try {
       await withApp(

@@ -164,7 +164,7 @@ async function withApp(
   }
 }
 
-function history(app: App) {
+function history(app: App, tools = false) {
   for (let i = 0; i < 25; i++) {
     app.transcript.push({ kind: 'user', id: `user${i}`, text: `Prompt ${i}`, at: 1 })
     app.transcript.push({
@@ -174,7 +174,14 @@ function history(app: App) {
       startedAt: 1,
       endedAt: 2,
       status: 'done',
-      blocks: [{ kind: 'text', id: 'answer', text: `Answer ${i}` }]
+      blocks: tools ? [
+        { kind: 'text', id: 'before', text: `Before ${i}` },
+        { kind: 'tool', id: 'call', call: {
+          id: 'call', name: 'read_file', args: { path: 'fixture.ts' }, argsText: '', context: '',
+          status: 'done', startedAt: 1, result: { content: 'fixture' }
+        } },
+        { kind: 'text', id: 'answer', text: `Answer ${i}` }
+      ] : [{ kind: 'text', id: 'answer', text: `Answer ${i}` }]
     })
   }
 
@@ -238,6 +245,37 @@ describe('surface protocol recovery', () => {
       await h.event({ ev: 'gone', sf, ids: ['main'] })
       expect(h.peer.documents.get(sf)!.has('main.turn24')).toBe(true)
       expect(h.tern.surfaces).toHaveLength(1)
+    })
+  })
+
+  it('recovers projected work roots and descendants while cold sibling eviction and visibility compose', async () => {
+    await withApp(async h => {
+      history(h.app, true)
+      await painted()
+      const sf = h.surface().id
+      const nodes = h.peer.documents.get(sf)!
+      const cold = 'main.turn0~call'
+      h.peer.remove(sf, cold)
+      await h.event({ ev: 'gone', sf, ids: [cold] })
+      expect(nodes.has(cold)).toBe(false)
+      const active = 'main.turn24~call'
+      h.peer.remove(sf, active)
+      await h.event({ ev: 'gone', sf, ids: [active] })
+      expect(nodes.has(active)).toBe(true)
+      const descendant = 'main.turn24~call~after.answer'
+      h.peer.remove(sf, descendant)
+      await h.event({ ev: 'gone', sf, ids: [descendant] })
+      expect(nodes.has(descendant)).toBe(true)
+      h.app.toggleToolVisibility()
+      await painted()
+      expect(nodes.has(cold)).toBe(false)
+      h.app.olderHistory()
+      await painted()
+      expect(nodes.get(cold)?.p?.hidden).toBe(true)
+      h.peer.remove(sf, 'main')
+      await h.event({ ev: 'gone', sf, ids: ['main'] })
+      expect(nodes.get(active)?.p?.hidden).toBe(true)
+      expect(nodes.has(descendant)).toBe(true)
     })
   })
 

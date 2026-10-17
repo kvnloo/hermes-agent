@@ -68,9 +68,7 @@ function footerOf(turn: TurnEntry): Node | undefined {
 }
 
 function lastTool(view: View | undefined) {
-  const assistant = view?.regions.find(region => region?.id === 'main')?.children.findLast(child => child.kind === 'col' && child.props.role === 'omp.assistant')
-
-  return assistant?.children.findLast(child => child.kind === 'tool')
+  return view?.regions.find(region => region?.id === 'main')?.children.findLast(child => child.kind === 'tool')
 }
 
 describe('native assistant answer actions', () => {
@@ -168,7 +166,7 @@ describe('native assistant answer actions', () => {
 })
 
 describe('Ctrl+O native tool folding', () => {
-  it('toggles the latest foldable tool and ignores modal sheets and nonempty drafts', async () => {
+  it('toggles every foldable tool and ignores modal sheets and nonempty drafts', async () => {
     const previousSplash = process.env.HERMES_TUI_SPLASH
     process.env.HERMES_TUI_SPLASH = '0'
     const input = new EventEmitter()
@@ -208,12 +206,12 @@ describe('Ctrl+O native tool folding', () => {
       expect(lastTool(latest)?.props.collapsed).toBe(true)
       await press('\x0f') // Ctrl+O
       expect(lastTool(latest)?.props.collapsed).toBe(false)
-      expect(lastTool(latest)?.props.key).toBe('read-2')
+      expect(lastTool(latest)?.props.key).toMatch(/~read-2$/)
 
       const firstTool = latest?.regions.find(region => region?.id === 'main')?.children
-        .flatMap(turn => turn.children).find(child => child.props.key === 'read-1')
+        .find(child => child.kind === 'tool' && String(child.props.key).endsWith('~read-1'))
 
-      expect(firstTool?.props.collapsed).toBe(true)
+      expect(firstTool?.props.collapsed).toBe(false)
       await press('\x0f')
       expect(lastTool(latest)?.props.collapsed).toBe(true)
 

@@ -21,7 +21,8 @@ App-level bindings live in `src/actions.ts`. The same registry supplies grouped
 | Alt+Shift+C | Copy the literal composer text via OSC 52, with a notice |
 | F1 / Alt+/ | Commands and grouped shortcut help |
 | Shift+Tab | Cycle session reasoning effort (unchanged) |
-| Ctrl+O / Ctrl+Shift+O | Toggle the newest foldable tool's detail, only with an empty composer and no overlay/completion (unchanged, including Shift alias) |
+| Ctrl+O | Expand / collapse every tool's detail, only with an empty composer and no overlay/completion |
+| Ctrl+Shift+O | Show / hide successful settled tool activity (same input ownership guards) |
 | Alt+Up | Recall the oldest queued prompt (unchanged) |
 | Escape | Close completion first; otherwise interrupt if busy (unchanged) |
 | Ctrl+D | Quit on an empty prompt; otherwise composer forward-delete (unchanged) |
@@ -88,8 +89,17 @@ it before it reaches the program. Stop is confirmed only by Hermes settlement.
   the gateway (not session-only effort); it does not cycle the reasoning level or
   rewrite existing transcript blocks. Rapid toggles are serialized and stale
   session reads are discarded.
-- No global hide-tool-activity shortcut: active, failed, and approval state must
-  remain visible. Ctrl+Shift+O keeps its pre-existing detail-fold alias instead.
+- Tool visibility and expansion are pane-local presentation preferences, not
+  gateway settings. Hiding retains tool nodes and all context. Running, failed,
+  cancelled, unknown, background and unfinished/failed child-agent activity stay
+  visible, outside host work groups; pending approval temporarily shows all tools.
+  Resume keeps pane preferences and clears per-call overrides.
+- Tern's **Fold tool calls** preference is separate: consecutive settled tools
+  are top-level main siblings so Reader, Spine and Console can group them.
+  Ctrl+O changes individual detail, not the host's group disclosure. Pointer
+  folds feed the same per-call state; a mixed set expands together, then
+  collapses together. Answers and usage stay after work, thought chains stay
+  together. Host folding is never enabled or changed by Hermes.
 - Cycling shares the picker's session-scoped recent selections and the existing
   `switchModel` / expensive-model confirmation path. With no recent selections,
   it uses the configured picker inventory (including provider fallback catalogs).

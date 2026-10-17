@@ -92,14 +92,20 @@ export const APP_ACTIONS: readonly Action[] = [
     run: app => app.toggleReasoning()
   },
   {
-    // Ctrl+Shift+O was already accepted by the Ctrl+O handler. Keep that
-    // alias rather than hiding active/error/approval tool state globally.
     id: 'app.tools.expand',
-    title: 'Toggle latest tool detail (empty prompt)',
+    title: 'Expand / collapse all tool detail (empty prompt)',
     group: 'Reasoning and tools',
-    keys: ['ctrl+o', 'ctrl+shift+o'],
+    keys: ['ctrl+o'],
     when: ctx => ctx.composerEmpty && !ctx.overlayOpen && !ctx.completionOpen,
-    run: app => app.toggleRecentTool()
+    run: app => app.toggleToolExpansion()
+  },
+  {
+    id: 'app.tools.toggleVisibility',
+    title: 'Show / hide settled tool activity (empty prompt)',
+    group: 'Reasoning and tools',
+    keys: ['ctrl+shift+o'],
+    when: ctx => ctx.composerEmpty && !ctx.overlayOpen && !ctx.completionOpen,
+    run: app => app.toggleToolVisibility()
   },
   {
     id: 'app.message.alternate',

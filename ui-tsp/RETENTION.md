@@ -60,6 +60,21 @@ retaining historical handler closures. Queued handlers recheck entry lifetime.
 Clear/resume/rewind reconcile the current gateway projection, deleting resident
 removed entries and forgetting evicted removed entries without invalid ops.
 
+## Work projection identities
+
+A tool-bearing turn owns several main siblings: `main.<turn>` anchors its first
+non-work run, `main.<turn>~<block>` identifies each tool, and
+`main.<turn>~<tool-block>~after` anchors the following text/thinking/footer run.
+These keys do not depend on tool status, visibility, expansion or host style.
+Only successful settled work is a top-level tool; protected work stays inside
+an `omp.activity` column so host group folding cannot conceal its state.
+
+Retention settles all parts as one logical turn and tracks each part's `gone`
+identity independently. Partial eviction never targets a missing part; an
+explicit reload replaces remaining resident parts and restores the full turn
+in order. Global presentation intents invalidate resident turns without
+resurrecting evicted history. Lazy reload applies the current presentation.
+
 ## Evidence plan
 
 Vitest mounts real App/Surface with a fake gateway and records actual emitted

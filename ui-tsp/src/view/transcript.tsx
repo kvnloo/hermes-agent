@@ -3,11 +3,12 @@
 // `omp.assistant` columns holding `omp.thinking` sections, streamed `md` and
 // `tool` nodes, and an `omp.turn.usage` footer.
 
-import { type JSX, node } from '@stencil-hq/tern'
+import { type JSX, Node, node } from '@stencil-hq/tern'
 
 import { answerText, copyAnswer } from '../answer-actions.js'
 import { rewriteLocalMarkdownLinks } from '../links.js'
 import type { Block, Entry, NoticeEntry, TurnEntry, UserEntry } from '../model.js'
+import { settledTool } from '../tool-presentation.js'
 
 import { attachmentNodes } from './attachments.js'
 import { age, compact, duration } from './time.js'
@@ -26,6 +27,7 @@ export interface TranscriptContext {
   copy(text: string): void
   onCopyError?(): void
   /** View-only fold state; gateway transcript/tool data remain unchanged. */
+  toolsHidden?: boolean
   toolCollapsed?(turnId: string, callId: string): boolean | undefined
   foldRevision?(turnId: string): number
   toggleTool?(turnId: string, callId: string): void
@@ -37,10 +39,11 @@ export interface TranscriptContext {
 }
 
 const kNode = Symbol('tsp.node')
+const projections = new WeakMap<Node, JSX.Element[]>()
 
 /** An entry carrying its last built node and the revision it was built at. */
 interface Built {
-  [kNode]?: { rev: number; cwd: string; media: boolean; foldRev: number; rewindKey: string; node: JSX.Element }
+  [kNode]?: { rev: number; cwd: string; media: boolean; foldRev: number; toolsHidden: boolean; rewindKey: string; node: JSX.Element }
 }
 
 /**
@@ -62,14 +65,68 @@ export function entryNode(e: Entry, id: string, cx: TranscriptContext): JSX.Elem
   const cached = built[kNode]
   const media = cx.media ?? false
 
-  if (cached?.rev === rev && cached.cwd === cx.cwd && cached.media === media && cached.foldRev === foldRev && cached.rewindKey === rewindKey) {
+  if (cached?.rev === rev && cached.cwd === cx.cwd && cached.media === media && cached.foldRev === foldRev && cached.toolsHidden === !!cx.toolsHidden && cached.rewindKey === rewindKey) {
     return cached.node
   }
 
   const node = buildEntry(e, id, cx)
-  built[kNode] = { node, rev, cwd: cx.cwd, media, foldRev, rewindKey }
+  built[kNode] = { node, rev, cwd: cx.cwd, media, foldRev, toolsHidden: !!cx.toolsHidden, rewindKey }
 
   return node
+}
+
+/** Consecutive settled tools must be main siblings for Tern's host work folding.
+ * Keep non-work runs (including thought chains) intact and retain turn ownership.
+ * Active/error/unknown work is deliberately nested outside host work groups.
+ */
+export function projectedEntryNodes(e: Entry, id: string, cx: TranscriptContext): JSX.Element[] {
+  const original = entryNode(e, id, cx)
+
+  if (e.kind !== 'turn' || !e.blocks.some(b => b.kind === 'tool') || !(original instanceof Node)) {
+    return [original]
+  }
+
+  const cached = projections.get(original)
+
+  if (cached) { return cached }
+  const projected: JSX.Element[] = []
+  let content: JSX.Element[] = []
+  let key = e.id
+
+  const flush = () => {
+    projected.push(node('col', { key, role: content.some(child => child instanceof Node && child.props.role === 'omp.thinking.live') ? 'omp.activity' : 'omp.assistant' }, content))
+    content = []
+  }
+
+  const lastText = e.blocks.findLast(b => b.kind === 'text')
+
+  for (const block of e.blocks) {
+    if (block.kind !== 'tool') {
+      content.push(blockNode(block, `main.${key}.${block.id}`, e.status === 'live' && block === lastText, cx, e.id))
+
+      continue
+    }
+
+    if (content.length || key === e.id) { flush() }
+    const workKey = `${e.id}~${block.id}`
+    const tool = blockNode(block, `main.${workKey}`, false, cx, e.id)
+
+    if (tool instanceof Node) {
+      const safe = settledTool(block.call)
+      projected.push(safe
+        ? node(tool.kind, { ...tool.props, key: workKey, hidden: cx.toolsHidden || undefined }, tool.children)
+        : node('col', { key: workKey, role: 'omp.activity' }, [tool]))
+    }
+
+    key = `${workKey}~after`
+  }
+
+  content.push(...turnTail(e, `main.${key}`, cx))
+
+  if (content.length) { flush() }
+  projections.set(original, projected)
+
+  return projected
 }
 
 /** Release presentation bytes once Tern owns the settled subtree. */
@@ -126,6 +183,18 @@ function turnNode(turn: TurnEntry, id: string, cx: TranscriptContext): JSX.Eleme
   const lastText = turn.blocks.findLast(b => b.kind === 'text')
   const children = turn.blocks.map(b => blockNode(b, `${id}.${b.id}`, live && b === lastText, cx, turn.id))
 
+  return (
+    <col key={turn.id} role="omp.assistant">
+      {children}
+      {turnTail(turn, id, cx)}
+    </col>
+  )
+}
+
+function turnTail(turn: TurnEntry, id: string, cx: TranscriptContext): JSX.Element[] {
+  const live = turn.status === 'live'
+  const children: JSX.Element[] = []
+
   if (turn.status === 'error') {
     children.push(
       node('card', { head: `${id}.error.head`, key: 'error', role: 'omp.error', tone: 'error' }, [
@@ -174,11 +243,7 @@ function turnNode(turn: TurnEntry, id: string, cx: TranscriptContext): JSX.Eleme
     )
   }
 
-  return (
-    <col key={turn.id} role="omp.assistant">
-      {children}
-    </col>
-  )
+  return children
 }
 
 function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptContext, turnId: string): JSX.Element {
