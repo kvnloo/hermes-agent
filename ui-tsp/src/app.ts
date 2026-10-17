@@ -55,6 +55,7 @@ import { Retention } from './retention.js'
 import { openRewind, rewindDisabledReason } from './rewind.js'
 import { SPLASH_ROLE } from './splash/index.js'
 import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting, splashTickMs } from './splash/launch.js'
+import { SurfaceProtocol, SurfaceView } from './surface-protocol.js'
 import { TodoHud } from './todo-hud.js'
 import { Transcript } from './transcript.js'
 import { dockNodes } from './view/dock.js'
@@ -110,6 +111,9 @@ export class App implements OverlayHost {
   readonly #completion: Completion
   readonly #welcome: WelcomeContext
   #surface!: Surface
+  #protocol!: SurfaceProtocol
+  #surfaceView = new SurfaceView()
+  #skin: SkinPayload | null = null
   /** Owners of native handlers in the last rendered layer and dock prompts. */
   readonly #layerOwners = new Map<string, Overlay>()
   readonly #overlayIds = new WeakMap<Overlay, string>()
@@ -124,7 +128,7 @@ export class App implements OverlayHost {
   #retry: { sid: string; text: string; turnId: string } | null = null
   #startupAttachmentPending = false
   /** The field holding Tern's caret, as last sent. */
-  #focus: string | null = INPUT_ID
+  #focus: string | null | undefined = INPUT_ID
   #exitArmed = 0
   #done = Promise.withResolvers<number>()
   readonly #switches = new Switches()
@@ -168,62 +172,28 @@ export class App implements OverlayHost {
   }
 
   async run(): Promise<number> {
-    this.#surface = this.#tern.open({ id: 'hermes', mode: 'inline', role: 'omp.session', title: 'hermes' })
-
-    if (this.#tern.caps.features.includes('settle')) {
-      this.#retention = new Retention()
-    }
-
-    const dispatch = this.#surface.dispatch.bind(this.#surface)
-
-    this.#surface.dispatch = event => {
-      const handler = this.#retention?.dispatch(event, this.#surface.id, () => this.changed()) ?? dispatch(event)
-
-      if (!handler || !('id' in event) || typeof event.id !== 'string' || (!event.id.startsWith('layer.') && !event.id.startsWith('dock.'))) {
-        return handler
+    this.#protocol = new SurfaceProtocol(this.#tern, {
+      replace: surface => this.#bindSurface(surface),
+      changed: () => this.changed(),
+      credit: () => this.#frames?.credit(),
+      report: message => {
+        // Credit-starved or failed surfaces cannot display their own diagnostic yet.
+        process.stderr.write(`${message}\n`)
+        this.notice(message)
       }
+    })
+    this.#surface = this.#protocol.open()
 
-      let owner: Overlay | undefined
-      let rootId = ''
-
-      for (const [root, overlay] of this.#layerOwners) {
-        if (
-          root.length > rootId.length &&
-          event.id.startsWith(root) &&
-          (event.id.length === root.length || event.id[root.length] === '.')
-        ) {
-          owner = overlay
-          rootId = root
-        }
-      }
-
-      if (!owner) {
-        return handler
-      }
-
-      // Session queues handler calls. Ownership must still hold when the call runs.
-      return () => {
-        if (!this.#surface.closed && this.owns(owner) && this.#overlayIds.get(owner) === rootId) {
-          return handler()
-        }
-      }
-    }
+    this.#bindSurface(this.#surface)
 
     this.#frames = new FramePump(
-      () => this.#surface.closed || !this.#visible || this.#surface.blocked,
-      () => this.#render(),
+      () => this.#protocol.blocked,
+      () => this.#paint(),
       fn => setImmediate(fn)
     )
-    const ack = this.#surface.acknowledge.bind(this.#surface)
-
-    this.#surface.acknowledge = (s: number) => {
-      ack(s)
-      this.#frames.credit()
-    }
 
     if (this.#tern.caps.features.includes('blobs')) {
       this.#welcome.logo = this.#tern.blob(logo, 'image/png')
-      this.#orb = new ThinkingOrb(this.#tern, this.#surface)
     }
 
     this.transcript.push({ id: 'welcome', kind: 'welcome' })
@@ -258,17 +228,110 @@ export class App implements OverlayHost {
       this.changed()
     })
     this.#gw.drain()
-    this.#render()
+    this.#paint()
     this.#surface.focus(INPUT_ID)
     void this.#readInput()
 
     const code = await this.#done.promise
     this.#orb?.close()
     this.#frames.close()
+    this.#protocol.dispose()
     await this.#tern.close()
     this.#gw.kill('exit')
 
     return code
+  }
+
+  #bindSurface(surface: Surface) {
+    this.#orb?.close()
+    this.#surface = surface
+    this.#surfaceView = new SurfaceView()
+    this.#retention = this.#tern.caps.features.includes('settle') ? new Retention() : undefined
+    // Force prompt focus to be reasserted even when its id is unchanged.
+    this.#focus = surface.id === 'hermes' ? INPUT_ID : undefined
+    const view = this.#surfaceView
+    const render = surface.render.bind(surface)
+    const originalDispatch = surface.dispatch.bind(surface)
+
+    surface.render = input => {
+      if (view.recovering) {
+        view.paint(surface, input)
+      } else {
+        render(input)
+        view.remember(input)
+      }
+
+      this.#protocol.rendered()
+    }
+
+    const dispatch = (event: TspEvent) => (view.recovering ? view.dispatch(event) : originalDispatch(event))
+
+    this.#surface.dispatch = event => {
+      const handler = this.#retention?.dispatch(event, this.#surface.id, () => this.changed()) ?? dispatch(event)
+
+      if (surface !== this.#surface || surface.closed) {
+        return
+      }
+
+      if (
+        !handler ||
+        !('id' in event) ||
+        typeof event.id !== 'string' ||
+        (!event.id.startsWith('layer.') && !event.id.startsWith('dock.'))
+      ) {
+        return (
+          handler &&
+          (() => {
+            if (surface === this.#surface && !surface.closed) {
+              return handler()
+            }
+          })
+        )
+      }
+
+      let owner: Overlay | undefined
+      let rootId = ''
+
+      for (const [root, overlay] of this.#layerOwners) {
+        if (
+          root.length > rootId.length &&
+          event.id.startsWith(root) &&
+          (event.id.length === root.length || event.id[root.length] === '.')
+        ) {
+          owner = overlay
+          rootId = root
+        }
+      }
+
+      if (!owner) {
+        return () => {
+          if (surface === this.#surface && !surface.closed) {
+            return handler()
+          }
+        }
+      }
+
+      // Session queues handler calls. Ownership must still hold when the call runs.
+      return () => {
+        if (
+          surface === this.#surface &&
+          !surface.closed &&
+          this.owns(owner) &&
+          this.#overlayIds.get(owner) === rootId
+        ) {
+          return handler()
+        }
+      }
+    }
+
+    if (this.#skin) {
+      this.#applySkin(this.#skin)
+    }
+
+    if (this.#tern.caps.features.includes('blobs')) {
+      this.#orb = new ThinkingOrb(this.#tern, surface)
+      this.#orb.environment({ visible: this.#visible })
+    }
   }
 
   // ── OverlayHost ────────────────────────────────────────────────────
@@ -401,6 +464,10 @@ export class App implements OverlayHost {
   }
 
   #onKey(key: Key) {
+    if (this.#protocol.state !== 'visible') {
+      return
+    }
+
     // Any key skips the launch splash, and is spent doing so.
     if (this.#splash?.active) {
       return this.#splash.skip()
@@ -418,7 +485,9 @@ export class App implements OverlayHost {
     const clear = APP_ACTIONS.find(action => action.id === 'app.clear')!
 
     if (matchesAction(clear, key)) {
-      return top?.key === 'settings' || top?.key === 'report' || top?.key === 'plan' || top?.key === 'history' ? top.onKey(key) : clear.run(this)
+      return top?.key === 'settings' || top?.key === 'report' || top?.key === 'plan' || top?.key === 'history'
+        ? top.onKey(key)
+        : clear.run(this)
     }
 
     if (top && (top.placement !== 'dock' || !this.composer.text) && top.onKey(key)) {
@@ -587,6 +656,12 @@ export class App implements OverlayHost {
   }
 
   #onTernEvent(ev: TspEvent) {
+    this.#protocol.event(ev)
+
+    if ('sf' in ev && ev.sf && ev.sf !== this.#surface.id) {
+      return
+    }
+
     if (ev.ev === 'unknown' && ev.sf === this.#surface.id && !this.#inputOwner() && !this.#splash?.active) {
       const source = eventImageSource(ev.raw)
 
@@ -597,12 +672,16 @@ export class App implements OverlayHost {
 
     this.#retention?.gone(ev, this.#surface.id)
 
-    if (ev.ev === 'gone' && ev.ids.includes(this.#surface.id)) {
-      // Rendering short-circuits after gone: dispose now, not on another animation tick.
-      this.#orb?.close()
+    if (ev.ev === 'gone') {
+      this.#surfaceView.forget(ev.ids)
+      this.#focus = undefined
+
+      if (this.#surface.closed) {
+        this.#orb?.close()
+      }
     }
 
-    if (ev.ev === 'toggle' && ev.sf === 'hermes' && ev.key) {
+    if (ev.ev === 'toggle' && ev.sf === this.#surface.id && ev.key) {
       // Tern owns mouse folding. Mirror only the clicked tool's presentation
       // state, so the subsequent Ctrl+O reverses what the person actually saw.
       for (const entry of this.transcript.entries) {
@@ -840,7 +919,12 @@ export class App implements OverlayHost {
     const entry = this.transcript.user(text, Date.now(), images)
     this.#startBusy('Working…')
     this.#gw
-      .request<PromptSubmitResult>('prompt.submit', { session_id: this.sid, text, image_paths: images.map(image => image.path), ...(queued ? { queued } : {}) })
+      .request<PromptSubmitResult>('prompt.submit', {
+        session_id: this.sid,
+        text,
+        image_paths: images.map(image => image.path),
+        ...(queued ? { queued } : {})
+      })
       .then(result => {
         if (this.sid === submitted.sid && this.transcript.entries.includes(entry)) {
           entry.rowId = result.user_row_id ?? undefined
@@ -1497,6 +1581,7 @@ export class App implements OverlayHost {
 
   #applySkin(skin: SkinPayload | null | undefined) {
     if (skin) {
+      this.#skin = skin
       const palette = programPaletteOf(skin)
 
       this.#surface.palette(palette)
@@ -1522,7 +1607,7 @@ export class App implements OverlayHost {
       onDone: () => {
         this.#splash = undefined
         // The caret was the composer's all along; say so again now that it shows.
-        this.#surface.focus(this.#focus)
+        this.#surface.focus(this.#focus ?? null)
         this.changed()
       },
       open: () => this.#tern.open({ id: 'splash', mode: 'screen', role: SPLASH_ROLE, title: 'hermes' }),
@@ -1650,6 +1735,14 @@ export class App implements OverlayHost {
         this.#dispatchDeadline = null
         this.changed()
       }, Math.max(1, deadline - now))
+    }
+  }
+
+  #paint() {
+    try {
+      this.#render()
+    } catch (error) {
+      this.#protocol.failure(error)
     }
   }
 

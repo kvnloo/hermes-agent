@@ -31,9 +31,12 @@ Changes to presentation context invalidate retained descriptions explicitly.
 
 ## Eviction and explicit lazy reload
 
-A matching-surface `gone.ids` marks only known settled top-level entry IDs as
-evicted. Never send edits, deletes, or settle against an evicted ID. Other
-surfaces and unknown IDs are ignored. Evicted entries are not re-added by tokens.
+A matching-surface `gone.ids` marks known top-level entry IDs as evicted.
+Settled roots stay cold; active/protected roots and partially evicted subtrees
+are rebuilt under normal credits. Never send edits, deletes, or settle against
+an evicted ID. Other surfaces and unknown IDs are ignored. Evicted settled
+entries are not re-added by tokens. Chrome and whole-document lifetime compose
+with [the protocol boundary](SURFACE_PROTOCOL.md).
 A persistent `Load older history` action at the start of main, and the registered
 Ctrl+Home history-scroll intent, reload the newest page of evicted entries (up to
 40) in original order, with original `main.<entry-id>` identities. Restore before

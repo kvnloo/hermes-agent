@@ -44,6 +44,7 @@ async function withApp(
     app: App
     gw: GatewayClient
     surface: Surface
+    currentSurface: () => Surface
     latest: () => View | undefined
     event: (event: TspEvent) => Promise<void>
   }) => Promise<void>
@@ -53,7 +54,10 @@ async function withApp(
   const input = new EventEmitter()
   const tern = new Session(input, { write() {} }, { exitHooks: false, record: '' })
   const connecting = tern.handshake()
-  input.emit('data', `\x1b_tsp;r;${JSON.stringify({ ...tern.caps, features: ['blobs'], r: 'hello', v: 1, term: 'fixture', ver: '0' })}\x1b\\`)
+  input.emit(
+    'data',
+    `\x1b_tsp;r;${JSON.stringify({ ...tern.caps, features: ['blobs'], r: 'hello', v: 1, term: 'fixture', ver: '0' })}\x1b\\`
+  )
   await connecting
   const gw = new GatewayClient()
   const app = new App(tern, gw, 'test')
@@ -76,7 +80,11 @@ async function withApp(
     app.changed()
     await rendered()
     await run({
-      app, gw, surface, latest: () => last,
+      app,
+      gw,
+      surface,
+      currentSurface: () => tern.surfaces[0]!,
+      latest: () => last,
       event: async event => {
         input.emit('data', `\x1b_tsp;e;${JSON.stringify(event)}\x1b\\`)
         await rendered()
@@ -117,11 +125,13 @@ describe('activity orb in the parity dock', () => {
       gw.emit('event', { type: 'message.start', session_id: 'shown' })
       gw.emit('event', { type: 'reasoning.delta', session_id: 'shown', payload: { text: 'Reason' } })
       gw.emit('event', {
-        type: 'todo.updated', session_id: 'shown',
+        type: 'todo.updated',
+        session_id: 'shown',
         payload: { todos: [{ id: 'a', content: 'Work', status: 'in_progress' }] }
       })
       gw.emit('event', {
-        type: 'notification.show', session_id: 'shown',
+        type: 'notification.show',
+        session_id: 'shown',
         payload: { key: 'n', text: 'Attention', kind: 'sticky', level: 'warn' }
       })
       await rendered()
@@ -157,18 +167,20 @@ describe('activity orb in the parity dock', () => {
       await event({ ev: 'resize', sf: 'hermes', visible: true, cols: 80, raw: {} })
       expect(orb(latest())?.props.alt).toBe('Hermes agent: idle')
 
-      const notes = latest()?.regions.find(region => region?.id === 'dock')?.children
-        .find(node => node.props.role === 'omp.dispatches')
+      const notes = latest()
+        ?.regions.find(region => region?.id === 'dock')
+        ?.children.find(node => node.props.role === 'omp.dispatches')
 
-      expect(notes?.children[0]?.children.find(node => node.props.role === 'omp.dispatch.message')?.props.text)
-        .toBe('A Hermes turn finished while this pane was hidden.')
+      expect(notes?.children[0]?.children.find(node => node.props.role === 'omp.dispatch.message')?.props.text).toBe(
+        'A Hermes turn finished while this pane was hidden.'
+      )
       // Only the notice expiry is live, not an idle animation loop.
       expect(vi.getTimerCount()).toBe(1)
     })
   })
 
   it('cancels timers on native visibility, Reduce Motion, modal sheets and gone events', async () => {
-    await withApp(async ({ app, gw, surface, event }) => {
+    await withApp(async ({ app, gw, surface, currentSurface, event }) => {
       gw.emit('event', { type: 'message.start', session_id: 'shown' })
       await rendered()
       expect(vi.getTimerCount()).toBe(1)
@@ -187,7 +199,14 @@ describe('activity orb in the parity dock', () => {
       expect(send).not.toHaveBeenCalled()
       await event({ ev: 'motion', reduce: false, raw: {} })
       expect(vi.getTimerCount()).toBe(1)
-      const sheet = { key: 'test-sheet', modal: true, node: () => new Node('text', { text: 'Sheet' }), onKey: () => false }
+
+      const sheet = {
+        key: 'test-sheet',
+        modal: true,
+        node: () => new Node('text', { text: 'Sheet' }),
+        onKey: () => false
+      }
+
       app.open(sheet)
       await rendered()
       expect(vi.getTimerCount()).toBe(0)
@@ -195,7 +214,10 @@ describe('activity orb in the parity dock', () => {
       await rendered()
       expect(vi.getTimerCount()).toBe(1)
       await event({ ev: 'gone', ids: ['hermes'], raw: {} })
-      expect(vi.getTimerCount()).toBe(0)
+      // Missing whole surfaces now recover: only the replacement orb animates.
+      expect(currentSurface().id).not.toBe(surface.id)
+      expect(surface.closed).toBe(true)
+      expect(vi.getTimerCount()).toBe(1)
       send.mockClear()
       vi.advanceTimersByTime(1_000)
       expect(send).not.toHaveBeenCalled()

@@ -447,6 +447,15 @@ class FakeAppSurface extends FakeSurface {
   focused: (string | null)[] = []
   dispatch = vi.fn<Surface['dispatch']>()
   acknowledge = vi.fn<Surface['acknowledge']>()
+  send = vi.fn<Surface['send']>()
+  seq = 0
+  blocked = false
+  get id() {
+    return this.options.id ?? 'fixture'
+  }
+  gone() {
+    this.closed = true
+  }
 
   constructor(readonly options: { id?: string; mode?: string; role?: string }) {
     super()
@@ -470,7 +479,14 @@ function fakeTern(caps: { reduceMotion?: boolean } = {}) {
 
   const session = {
     blob: () => 'blob',
-    caps: { cell: { h: 16, w: 8 }, cols: 100, dark: true, features: [], kinds: [], reduceMotion: caps.reduceMotion ?? false },
+    caps: {
+      cell: { h: 16, w: 8 },
+      cols: 100,
+      dark: true,
+      features: [],
+      kinds: [],
+      reduceMotion: caps.reduceMotion ?? false
+    },
     close: async () => {
       closed = true
       wake?.()
