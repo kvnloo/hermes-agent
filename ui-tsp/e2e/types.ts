@@ -12,6 +12,8 @@ export interface Manifest {
 export interface Field {
   type: string; category: string; description: string; value: Json; default: Json
   options?: string[]; nullable?: boolean; sensitive?: boolean
+  accepted_types?: ('boolean' | 'number' | 'string' | 'list' | 'object')[] | null
+  accepted_values?: string[] | null
 }
 export interface SettingsResult { fields: Record<string, Field>; profile: string }
 export interface Rpc {
