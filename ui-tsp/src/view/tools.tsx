@@ -13,9 +13,10 @@ import { record } from '../transcript.js'
 import { lspDiagnostics } from './lsp-diagnostics.js'
 import { outputLineCount, runBox, type RunBoxInput, runElapsed, runState, type RunState } from './runbox.js'
 import { age, compact, duration } from './time.js'
+import { browserCard, visionCard } from './tool-adapters.js'
 
 /** How one call presents: omp's tool props (minus status and timing) and its body. */
-interface Card {
+export interface Card {
   name: string
   title: string
   target?: string
@@ -150,6 +151,96 @@ export function toolNode(
   )
 }
 
+interface AdapterInput {
+  call: ToolCall
+  result: Record<string, unknown> | undefined
+  now: number
+  cwd: string
+  media: boolean
+  presentation: Pick<RunBoxInput, 'collapsed' | 'onToggle'>
+}
+
+type CardAdapter = (input: AdapterInput) => Card
+
+const shellAdapter: CardAdapter = ({ call, result, presentation }) => bashCard(call, result, presentation)
+const readAdapter: CardAdapter = ({ call, result, cwd, media }) => readCard(call, result, cwd, media)
+const editAdapter: CardAdapter = ({ call, result, cwd }) => editCard(call, result, cwd)
+const secretAdapter: CardAdapter = () => ({ body: [], frame: 'inline', name: 'secret', title: 'Secret' })
+const browserAdapter: CardAdapter = ({ call, result, cwd }) => browserCard(call, result, cwd, genericBody(call))
+
+const CARD_ADAPTERS: Record<string, CardAdapter> = {
+  terminal: shellAdapter,
+  bash: shellAdapter,
+  shell: shellAdapter,
+  cronjob_manage: ({ call, result, presentation }) => bashCard(
+    {
+      ...call,
+      args: {
+        ...call.args,
+        command: ['cronjob', str(call.args.action) ?? '', str(call.args.job_id) ?? str(call.args.id) ?? '']
+          .filter(Boolean)
+          .join(' ')
+      }
+    },
+    result,
+    presentation
+  ),
+  secret: secretAdapter,
+  password: secretAdapter,
+  read_file: readAdapter,
+  patch: editAdapter,
+  write_file: editAdapter,
+  search_files: ({ call, result, cwd }) => searchCard(call, result, cwd),
+  web_search: ({ call, result }) => webSearchCard(call, result),
+  web_extract: ({ call, result }) => fetchCard(call, result),
+  todo_list: ({ call }) => ({
+    body: call.todos?.length ? [checklistNode(call.todos)] : [],
+    name: 'todo',
+    target: todoCount(call.todos),
+    targetKind: 'text',
+    title: 'Todo'
+  }),
+  delegate_task: ({ call, result, now }) => taskCard(call, result, now),
+  clarify: ({ call, result }) => askCard(call, result),
+  execute_code: ({ call, result, presentation }) => evalCard(call, result, presentation),
+  memory: ({ call, result }) => ({
+    body: [],
+    frame: 'inline',
+    meta: str(result?.usage) ? [`${result?.usage}`] : undefined,
+    name: 'memory',
+    target: call.context || str(call.args.action),
+    targetKind: 'text',
+    title: 'Memory'
+  }),
+  skills_list: ({ result }) => {
+    const skills = Array.isArray(result?.skills) ? result.skills : []
+    const names = skills.map(s => str(record(s)?.name) ?? str(s)).filter(n => n !== undefined)
+
+    return {
+      body: names.length ? [<text key="names" spans={[{ s: 'muted', t: names.join(' · ') }]} wrap="word" />] : [],
+      folded: true,
+      frame: 'inline',
+      meta: [
+        names.length ? `${names.length} skill${names.length === 1 ? '' : 's'}` : (str(result?.message) ?? 'no skills')
+      ],
+      name: 'skill',
+      title: 'Skills'
+    }
+  },
+  skill_view: ({ call, result }) => ({
+    body: str(result?.content) ? [<md key="body">{clip(str(result?.content) ?? '', 6000)}</md>] : [],
+    folded: true,
+    frame: 'inline',
+    name: 'skill',
+    target: str(call.args.name) ?? call.context,
+    targetKind: 'text',
+    title: 'Skill'
+  }),
+  session_search: input => ({ ...genericCard(input), name: 'search', title: 'Session search' }),
+  browser_navigate: browserAdapter,
+  vision_analyze: ({ call, result, cwd }) => visionCard(call, result, cwd, genericBody(call))
+}
+
 function cardOf(
   call: ToolCall,
   now: number,
@@ -157,119 +248,17 @@ function cardOf(
   media: boolean,
   presentation: Pick<RunBoxInput, 'collapsed' | 'onToggle'> = {}
 ): Card {
-  const result = record(call.result)
+  // Own-property lookup keeps tool names like `constructor` on the honest fallback.
+  const registered = Object.hasOwn(CARD_ADAPTERS, call.name) ? CARD_ADAPTERS[call.name] : undefined
+  const adapter = registered ?? (call.name.startsWith('browser') ? browserAdapter : genericCard)
 
-  switch (call.name) {
-    case 'terminal':
+  return adapter({ call, result: record(call.result), now, cwd, media, presentation })
+}
 
-    case 'bash':
-
-    case 'shell':
-      return bashCard(call, result, presentation)
-
-    case 'cronjob_manage':
-      return bashCard(
-        {
-          ...call,
-          args: {
-            ...call.args,
-            command: ['cronjob', str(call.args.action) ?? '', str(call.args.job_id) ?? str(call.args.id) ?? '']
-              .filter(Boolean)
-              .join(' ')
-          }
-        },
-        result,
-        presentation
-      )
-
-    case 'secret':
-
-    case 'password':
-      return { body: [], frame: 'inline', name: 'secret', title: 'Secret' }
-
-    case 'read_file':
-      return readCard(call, result, cwd, media)
-
-    case 'patch':
-
-    case 'write_file':
-      return editCard(call, result, cwd)
-
-    case 'search_files':
-      return searchCard(call, result, cwd)
-
-    case 'web_search':
-      return webSearchCard(call, result)
-
-    case 'web_extract':
-      return fetchCard(call, result)
-
-    case 'todo_list':
-      return {
-        body: call.todos?.length ? [checklistNode(call.todos)] : [],
-        name: 'todo',
-        target: todoCount(call.todos),
-        targetKind: 'text',
-        title: 'Todo'
-      }
-
-    case 'delegate_task':
-      return taskCard(call, result, now)
-
-    case 'clarify':
-      return askCard(call, result)
-
-    case 'execute_code':
-      return evalCard(call, result, presentation)
-
-    case 'memory':
-      return {
-        body: [],
-        frame: 'inline',
-        meta: str(result?.usage) ? [`${result?.usage}`] : undefined,
-        name: 'memory',
-        target: call.context || str(call.args.action),
-        targetKind: 'text',
-        title: 'Memory'
-      }
-    case 'skills_list': {
-      const skills = Array.isArray(result?.skills) ? result.skills : []
-      const names = skills.map(s => str(record(s)?.name) ?? str(s)).filter(n => n !== undefined)
-
-      return {
-        body: names.length ? [<text key="names" spans={[{ s: 'muted', t: names.join(' · ') }]} wrap="word" />] : [],
-        folded: true,
-        frame: 'inline',
-        meta: [
-          names.length ? `${names.length} skill${names.length === 1 ? '' : 's'}` : (str(result?.message) ?? 'no skills')
-        ],
-        name: 'skill',
-        title: 'Skills'
-      }
-    }
-
-    case 'skill_view':
-      return {
-        body: str(result?.content) ? [<md key="body">{clip(str(result?.content) ?? '', 6000)}</md>] : [],
-        folded: true,
-        frame: 'inline',
-        name: 'skill',
-        target: str(call.args.name) ?? call.context,
-        targetKind: 'text',
-        title: 'Skill'
-      }
-  }
-
-  const look = call.name.startsWith('browser')
-    ? { name: 'browser', title: humanize(call.name.replace(/^browser_?/, '')) || 'Browser' }
-    : call.name === 'session_search'
-      ? { name: 'search', title: 'Session search' }
-      : call.name === 'vision_analyze'
-        ? { name: 'image', title: 'Vision' }
-        : { name: call.name, title: humanize(call.name) }
-
+function genericCard({ call }: Pick<AdapterInput, 'call'>): Card {
   return {
-    ...look,
+    name: call.name,
+    title: humanize(call.name),
     body: genericBody(call),
     folded: true,
     frame: 'inline',
@@ -340,6 +329,7 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined, c
   const whole = first === 1 && last !== undefined && last === total
   const meta = first !== undefined && last !== undefined ? [whole ? `${total} lines` : `:${first}-${last}`] : []
   const text = content?.replace(/^ *\d+\|/gm, '') ?? ''
+  const markdown = langOf(path) === 'markdown'
   const hidden = Math.max(0, text.split('\n').filter(line => line.length > 0).length - READ_PREVIEW_LINES)
   const line = lineOf(call.args.offset) ?? first
   const limit = lineOf(call.args.limit)
@@ -349,7 +339,9 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined, c
     badges: hidden > 0 ? [{ text: `${hidden} more line${hidden === 1 ? '' : 's'}`, tone: 'muted' }] : undefined,
     body: [
       ...(preview ? [preview] : []),
-      ...(text ? [<code key="code" lang={langOf(path)} numbers start={first} text={text} wrap />] : [])
+      ...(text ? [markdown
+        ? <md key="markdown">{text}</md>
+        : <code key="code" lang={langOf(path)} numbers start={first} text={text} wrap />] : [])
     ],
     folded: !preview,
     frame: 'inline',
