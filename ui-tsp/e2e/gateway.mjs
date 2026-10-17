@@ -49,7 +49,7 @@ function flush() {
 }
 // Explicit fixture replay: notifications only, never substitutes for real RPC replies.
 let fixtureLines = 0
-const fixtureTypes = new Set(['message.start', 'message.delta', 'reasoning.delta', 'tool.start', 'tool.complete', 'message.complete', 'todo.updated'])
+const fixtureTypes = new Set(['message.start', 'message.delta', 'reasoning.delta', 'tool.start', 'tool.complete', 'message.complete', 'todo.updated', 'background.complete'])
 function replay() {
   if (!m.fixtureEvents || stopped) return
   let text

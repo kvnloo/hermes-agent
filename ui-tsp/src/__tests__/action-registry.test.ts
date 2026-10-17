@@ -195,13 +195,14 @@ describe('app action registry', () => {
   })
 
   it.each(slashShortcuts)('%s uses the existing slash path for /%s', async (_name, bytes, command) => {
-    await withApp(async ({ app, gw, press }) => {
+    await withApp(async ({ app, gw, surface, press }) => {
       app.composer.set('unfinished prompt', 5)
       await press(bytes)
       expect(gw.request).toHaveBeenCalledWith('slash.exec', { command, session_id: 'session-1' })
-      expect(app.transcript.entries).toContainEqual(
-        expect.objectContaining({ kind: 'panel', title: `/${command}`, text: 'Gateway command output' })
-      )
+      expect(app.transcript.entries.some(entry => entry.kind === 'panel')).toBe(false)
+      const root = views.get(surface)?.regions.find(region => region?.id === 'layer')?.children[0]
+      expect(root?.props.head).toBe(`/${command}`)
+      expect(root?.children[0]?.children[0]?.props.text).toBe('Gateway command output')
       expect(app.composer.text).toBe('unfinished prompt')
       expect(app.composer.cursor).toBe(5)
     })
