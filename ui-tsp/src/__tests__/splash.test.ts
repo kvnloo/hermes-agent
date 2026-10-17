@@ -610,6 +610,28 @@ describe('App launch splash', () => {
     expect(app.composer.text).toBe('y')
   })
 
+  it('hands the pane and first key to a modal without waiting for the splash animation', async () => {
+    const { app, splash, tern } = launch()
+    const onKey = vi.fn(() => true)
+    const overlay = { key: 'fixture', node: () => splashNode([]), onKey }
+
+    app.open(overlay)
+    expect(splash()!.closed).toBe(false)
+    app.close(overlay)
+    app.open({ ...overlay, modal: true })
+
+    expect(splash()!.closedWith).toEqual({ keep: false })
+    const drawn = splash()!.frames.length
+    tern.key('x')
+    await vi.advanceTimersByTimeAsync(50)
+    expect(onKey).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ name: 'x' }))
+    expect(app.composer.text).toBe('')
+
+    await vi.advanceTimersByTimeAsync(SPLASH_MAX_MS)
+    expect(splash()!.frames).toHaveLength(drawn)
+    app.quit()
+  })
+
   it('never holds the app past 15 seconds', async () => {
     const { splash } = launch()
 
