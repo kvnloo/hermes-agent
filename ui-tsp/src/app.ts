@@ -405,18 +405,24 @@ export class App implements OverlayHost {
   }
 
   /** Retry only the exact latest error, on the same idle session, never a stale or image-backed request. */
-  retryFailed(turnId: string) {
+  canRetry(turnId: string): boolean {
     const candidate = this.#retry
     if (!candidate || candidate.turnId !== turnId || !this.sid || candidate.sid !== this.sid ||
         this.busy || this.#switches.pending || this.queue.length) {
-      return
+      return false
     }
 
     const latest = this.transcript.entries.findLast(e => e.kind === 'turn')
-    if (!latest || latest.kind !== 'turn' || latest.id !== turnId || !latest.retryable || latest.status !== 'error') {
+
+    return latest?.kind === 'turn' && latest.id === turnId && latest.retryable === true && latest.status === 'error'
+  }
+
+  retryFailed(turnId: string) {
+    if (!this.canRetry(turnId)) {
       return
     }
 
+    const candidate = this.#retry!
     this.#retry = null
     this.#send(candidate.text)
   }
@@ -1107,6 +1113,7 @@ export class App implements OverlayHost {
 
     const cx = {
       copy: (text: string) => copyToClipboard(text),
+      canRetry: (turnId: string) => this.canRetry(turnId),
       retry: (turnId: string) => this.retryFailed(turnId),
       now,
       rewind: () => {

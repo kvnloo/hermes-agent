@@ -18,6 +18,7 @@ export interface TranscriptContext {
   copy(text: string): void
   rewind?(): void
   retry?(turnId: string): void
+  canRetry?(turnId: string): boolean
 }
 
 const kNode = Symbol('tsp.node')
@@ -113,7 +114,7 @@ function turnNode(turn: TurnEntry, id: string, cx: TranscriptContext): JSX.Eleme
           wrap="word"
         />,
         turn.errorHint ? <md key="hint">{turn.errorHint}</md> : null,
-        turn.retryable && cx.retry ? (
+        turn.retryable && cx.retry && cx.canRetry?.(turn.id) ? (
           <text key="retry" onClick={() => cx.retry?.(turn.id)} role="omp.error.retry" text="Retry" title="Retry this failed text-only prompt" />
         ) : null
       ])
