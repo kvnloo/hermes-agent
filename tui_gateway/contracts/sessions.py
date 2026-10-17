@@ -444,14 +444,28 @@ class UndoIntent(WireEnum):
 class SessionUndoParams(SessionParams):
     # ``retry``: the client resends the dropped turn (Ink /retry), so metrics count a retry, not an undo.
     intent: UndoIntent | None = None
+    target_message_id: int | None = Field(default=None, gt=0, strict=True)
+    expected_history_token: str | None = None
 
 
 class SessionUndoResult(Result):
     removed: int
+    turns_removed: int | None = None
+    text: str | None = None
+    history_token: str | None = None
+    messages: list[TranscriptMessage] | None = None
 
 
 method("session.undo", params=SessionUndoParams, result=SessionUndoResult,
-       doc="Drop the last user turn (and everything after it) from an idle session.")
+       doc="Drop the last user turn, or rewind to a durable target_message_id, from an idle session.")
+
+
+class SessionRewindPreviewParams(SessionParams):
+    target_message_id: int = Field(gt=0, strict=True)
+
+
+method("session.rewind_preview", params=SessionRewindPreviewParams, result=SessionUndoResult,
+       doc="Read-only preview of the targeted rewind text, turn count and history token; never mutates history.")
 
 
 class SessionSaveParams(SessionParams):
