@@ -12,7 +12,7 @@ import type {
   Usage
 } from '@hermes/shared/gateway-events'
 
-import type { Block, Entry, NoticeEntry, Todo, ToolCall, TurnEntry } from './model.js'
+import type { Block, Entry, NoticeEntry, Todo, ToolCall, TurnEntry, UserEntry } from './model.js'
 
 type ToolBlock = Extract<Block, { kind: 'tool' }>
 
@@ -58,8 +58,11 @@ export class Transcript {
     this.#touch()
   }
 
-  user(text: string, at = Date.now()) {
-    this.push({ at, id: this.id('u'), kind: 'user', text })
+  user(text: string, at = Date.now()): UserEntry {
+    const entry = { at, id: this.id('u'), kind: 'user', text } satisfies UserEntry
+    this.push(entry)
+
+    return entry
   }
 
   notice(text: string, tone: NoticeEntry['tone'] = 'info') {
@@ -356,7 +359,7 @@ export class Transcript {
 
       if (m.role === 'user') {
         turn = undefined
-        this.entries.push({ at, id: this.id('u'), kind: 'user', text })
+        this.entries.push({ at, id: this.id('u'), kind: 'user', rowId: m.row_id ?? undefined, text })
 
         continue
       }

@@ -6,6 +6,7 @@
 import type {
   ConfigGetResult,
   ConfigSetResult,
+  PromptSubmitResult,
   RequestAnswerResult,
   SessionLiveInfo,
   SessionResumeResult,
@@ -27,6 +28,7 @@ import { localCommand } from './commands.js'
 import { Composer } from './composer.js'
 import { type Busy, busyFrom, ownsEvent, Switches } from './flow.js'
 import { FramePump } from './frame.js'
+import type { UserEntry } from './model.js'
 import { OrbActivity, ThinkingOrb } from './orb.js'
 import type { Overlay, OverlayHost } from './overlay.js'
 import { type ApprovalPrompt, isApprovalPrompt } from './overlays/approval.js'
@@ -35,6 +37,7 @@ import { openModelPicker } from './overlays/models.js'
 import { promptOverlay } from './overlays/prompts.js'
 import { openSettings } from './overlays/settings.js'
 import { programPaletteOf } from './palette.js'
+import { openRewind, rewindDisabledReason } from './rewind.js'
 import { SPLASH_ROLE } from './splash/index.js'
 import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting, splashTickMs } from './splash/launch.js'
 import { TodoHud } from './todo-hud.js'
@@ -77,6 +80,7 @@ export class App implements OverlayHost {
   info: SessionLiveInfo | null = null
   usage: Usage | null = null
   busy: Busy | null = null
+  rewinding: Busy | null = null
   queue: string[] = []
   readonly #tern: Session
   readonly #gw: GatewayClient
@@ -515,7 +519,7 @@ export class App implements OverlayHost {
 
   /** Keyboard Enter and native send share the request-bound deny → submit transaction. */
   async #submitDraft(raw = this.composer.text, approval: ApprovalPrompt | null = this.overlays.find(isApprovalPrompt) ?? null) {
-    if (this.#submittingApproval) {
+    if (this.#submittingApproval || this.rewinding) {
       return
     }
 
@@ -600,10 +604,16 @@ export class App implements OverlayHost {
     const submitted = { sid: this.sid, text, replayable: !this.#startupAttachmentPending }
     this.#lastSubmitted = submitted
     this.#startupAttachmentPending = false
-    this.transcript.user(text)
+    const entry = this.transcript.user(text)
     this.#startBusy('Working…')
     this.#gw
-      .request('prompt.submit', { session_id: this.sid, text, ...(queued ? { queued } : {}) })
+      .request<PromptSubmitResult>('prompt.submit', { session_id: this.sid, text, ...(queued ? { queued } : {}) })
+      .then(result => {
+        if (this.sid === submitted.sid && this.transcript.entries.includes(entry)) {
+          entry.rowId = result.user_row_id ?? undefined
+          this.changed()
+        }
+      })
       .catch((error: Error) => {
         if (this.#lastSubmitted !== submitted || this.sid !== submitted.sid) {
           return
@@ -622,7 +632,7 @@ export class App implements OverlayHost {
     const candidate = this.#retry
 
     if (!candidate || candidate.turnId !== turnId || !this.sid || candidate.sid !== this.sid ||
-        this.busy || this.#switches.pending || this.queue.length) {
+        this.busy || this.rewinding || this.#switches.pending || this.queue.length) {
       return false
     }
 
@@ -642,6 +652,10 @@ export class App implements OverlayHost {
   }
 
   async slash(text: string) {
+    if (this.rewinding) {
+      return
+    }
+
     const [name = '', ...rest] = text.slice(1).split(/\s+/)
     const arg = rest.join(' ')
     const local = localCommand(name)
@@ -771,6 +785,10 @@ export class App implements OverlayHost {
 
   /** Closes the open session and starts a fresh one with an empty transcript. */
   async newSession() {
+    if (this.rewinding) {
+      return
+    }
+
     const token = this.#switches.begin()
 
     try {
@@ -814,7 +832,7 @@ export class App implements OverlayHost {
 
   /** Resumes stored session `id`: its history replaces the transcript, and the session it leaves is closed. */
   async resume(id: string) {
-    if (this.busy) {
+    if (this.busy || this.rewinding) {
       this.transcript.notice('Wait for the current turn to finish (or press Esc) before switching sessions.', 'warning')
       this.changed()
 
@@ -1294,7 +1312,7 @@ export class App implements OverlayHost {
 
   /** Sends the oldest queued prompt once the session is adopted and idle (no turn, switch or startup image pending). */
   #drainQueue() {
-    if (this.busy || !this.sid || this.#switches.pending || this.#startupImage) {
+    if (this.busy || this.rewinding || !this.sid || this.#switches.pending || this.#startupImage) {
       return
     }
 
@@ -1362,16 +1380,8 @@ export class App implements OverlayHost {
       canRetry: (turnId: string) => this.canRetry(turnId),
       retry: (turnId: string) => this.retryFailed(turnId),
       now,
-      rewind: () => {
-        if (!this.sid) {
-          return
-        }
-
-        this.#gw.request('session.undo', { session_id: this.sid }).catch((error: Error) => {
-          this.transcript.notice(error.message, 'error')
-          this.changed()
-        })
-      },
+      rewind: (entry: UserEntry) => void openRewind(this, this.#gw, entry),
+      rewindDisabledReason: (entry: UserEntry) => rewindDisabledReason(this, entry),
       welcome: { ...this.#welcome, version: this.#welcome.version || backend }
     }
 
@@ -1406,7 +1416,7 @@ export class App implements OverlayHost {
           this.changed()
         },
         dispatches,
-        busy: this.busy ?? undefined,
+        busy: this.busy ?? this.rewinding ?? undefined,
         composer: this.composer,
         context: max > 0 ? { max, used } : undefined,
         cost: usage?.cost_usd ?? undefined,
