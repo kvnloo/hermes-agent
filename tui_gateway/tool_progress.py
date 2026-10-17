@@ -299,6 +299,9 @@ def _on_tool_start(sid: str, tool_call_id: str, name: str, args: dict):
             payload["args"] = args
         if _session_verbose(sid) and (args_text := _tool_args_text(args)):
             payload["args_text"] = args_text
+        if session is not None:
+            from tui_gateway.tool_output import start
+            start(session, payload)
         _emit_tool_lifecycle("tool.start", sid, name, args, payload)
 
 
@@ -323,6 +326,9 @@ def _prepare_tool_result_metadata(sid: str, tool_call_id: str, name: str, args: 
 
 def _on_tool_complete(sid: str, tool_call_id: str, name: str, args: dict, result: str):
     session = _sessions.get(sid)
+    if session is not None:
+        from tui_gateway.tool_output import complete
+        complete(session, tool_call_id)
     prepared = session.setdefault("tool_result_metadata", {}) if session is not None else {}
     # Consume the pre-flush preview even when this completion is dropped as stale.
     metadata = prepared.pop(tool_call_id, None)
@@ -481,7 +487,20 @@ def _progress_subagent(sid: str, name: str, preview, kw, event_type):
 
 # event_type -> (handler, requires): `requires` names the arg that must be truthy for the row to be
 # emitted at all ("name" / "preview" / None).
+def _progress_terminal_output(sid, name, preview, kw):
+    from tui_gateway.tool_output import progress
+    session = _sessions.get(sid)
+    owner = _current_runtime_session_record.get()
+    if session is None or (owner is not None and owner is not session):
+        return
+    payload = progress(session, kw["event"], name, preview, kw)
+    if payload is not None:
+        _emit("tool.output.delta", sid, payload)
+
+
 _PROGRESS_HANDLERS = {
+    "tool.output.open": (lambda sid, name, text, kw: _progress_terminal_output(sid, name, text, {**kw, "event": "tool.output.open"}), "name"),
+    "tool.output.delta": (lambda sid, name, text, kw: _progress_terminal_output(sid, name, text, {**kw, "event": "tool.output.delta"}), "name"),
     "tool.output_risk": (_progress_output_risk, "name"), "reasoning.available": (_progress_reasoning, "preview"),
     "moa.reference": (_progress_moa_reference, "name"),
     # Answer-only drops MoA content (references, progress/phase lines that land in the reasoning

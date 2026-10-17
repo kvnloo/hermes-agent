@@ -12,6 +12,7 @@ from .common import (OpenModel, PendingApproval, ProfileParams, SessionLiveInfo,
                      Usage)
 from .connectors_operation import ConnectionRequestPayload
 from .registry import method
+from .events import ToolOutputDeltaPayload, ToolStartPayload
 
 
 # ── shared live-session snapshot ──────────────────────────────────────────────────────────────
@@ -26,11 +27,17 @@ class OpenRequestEntry(Result):
     params: dict[str, JsonValue]
 
 
+class InflightToolOutput(Result):
+    start: ToolStartPayload
+    output: ToolOutputDeltaPayload | None = None
+
+
 class InflightTurn(Result):
     """``session_auto_continue._inflight_snapshot``: the live (or retained failed) turn a reconnecting
     client rebuilds its bubbles from."""
 
     assistant: str = ""
+    tools: list[InflightToolOutput] | None = None
     streaming: bool = False
     user: str = ""
     display_kind: str | None = None

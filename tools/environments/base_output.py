@@ -48,6 +48,7 @@ class _BoundedOutputCollector:
         self._spill_fh: IO[str] | None = None
         self._spill_chars = 0
         self._spill_capped = False
+        self.on_output: Callable[[str], None] | None = None
 
     def _maybe_spill(self, text: str) -> None:
         """Tee ``text`` to the spill file (opened lazily on first overflow)."""
@@ -101,6 +102,8 @@ class _BoundedOutputCollector:
     def append(self, text: str) -> None:
         if not text:
             return
+        if self.on_output is not None:
+            self.on_output(text)
         with self._lock:
             text_len = len(text)
             # Spill tee activates at the first overflow, then mirrors every chunk.

@@ -536,6 +536,9 @@ def _inflight_snapshot(session: dict) -> dict | None:
     if not (user or assistant or streaming or error):
         return None
     snapshot = {"assistant": assistant, "streaming": streaming, "user": user}
+    from tui_gateway.tool_output import snapshot as output_snapshot
+    if tools := output_snapshot(turn):
+        snapshot["tools"] = tools
     if isinstance(display_kind := turn.get("display_kind"), str) and display_kind:
         snapshot["display_kind"] = display_kind
     if isinstance(display_metadata := turn.get("display_metadata"), dict):

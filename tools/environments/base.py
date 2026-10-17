@@ -610,7 +610,8 @@ class BaseEnvironment(ABC):
         stdin_data: str | None = None,
         rewrite_compound_background: bool = True,
         bounded_capture: bool = False,
-        yield_handler: Callable[[ProcessHandle, str], dict] | None = None) -> dict:
+        yield_handler: Callable[[ProcessHandle, str], dict] | None = None,
+        output_callback: Callable[[str], None] | None = None) -> dict:
         """Execute a command, return {"output": str, "returncode": int}. ``bounded_capture=True``
         caps retention at ``tool_output.max_bytes`` WHILE draining; only the foreground terminal
         tool may set it — internal full-fidelity consumers (file-op ``cat`` reads feeding the
@@ -666,6 +667,9 @@ class BaseEnvironment(ABC):
             if fenced:  # the hard-exit kill may have stopped waiting for us before we registered
                 self._force_kill_process(spawned)
             output = _new_output_collector(spawned, bounded_capture)
+            from tools.terminal_output import TerminalOutputTap
+            tap = TerminalOutputTap(output_callback, self._cwd_marker) if output_callback is not None else None
+            output.on_output = tap.feed if tap is not None else None
             output_holder.append(output)
             try:
                 return self._wait_for_process(
@@ -673,6 +677,8 @@ class BaseEnvironment(ABC):
                     watch_interrupt_tid=parent_tid, output=output,
                     **({"yield_handler": yield_handler} if yield_handler is not None else {}))
             finally:
+                if tap is not None:
+                    tap.finish()
                 with _live_foreground_cond:
                     _live_foreground.pop(id(spawned), None)
 

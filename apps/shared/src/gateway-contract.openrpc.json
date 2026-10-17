@@ -16674,6 +16674,30 @@
         "title": "ImageGenerateResult",
         "type": "object"
       },
+      "InflightToolOutput": {
+        "additionalProperties": false,
+        "properties": {
+          "start": {
+            "$ref": "#/components/schemas/ToolStartPayload"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolOutputDeltaPayload"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "start"
+        ],
+        "title": "InflightToolOutput",
+        "type": "object"
+      },
       "InflightTurn": {
         "additionalProperties": false,
         "description": "``session_auto_continue._inflight_snapshot``: the live (or retained failed) turn a reconnecting\nclient rebuilds its bubbles from.",
@@ -16682,6 +16706,21 @@
             "default": "",
             "title": "Assistant",
             "type": "string"
+          },
+          "tools": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/InflightToolOutput"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tools"
           },
           "streaming": {
             "default": false,
@@ -37237,6 +37276,63 @@
         "title": "ToolLabelKind",
         "type": "string"
       },
+      "ToolOutputDeltaPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "tool_id": {
+            "title": "Tool Id",
+            "type": "string"
+          },
+          "turn_id": {
+            "title": "Turn Id",
+            "type": "string"
+          },
+          "stream_id": {
+            "title": "Stream Id",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "output_kind": {
+            "enum": [
+              "terminal",
+              "literal"
+            ],
+            "title": "Output Kind",
+            "type": "string"
+          },
+          "operation": {
+            "enum": [
+              "append",
+              "replace"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "capture_truncated": {
+            "default": false,
+            "title": "Capture Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "tool_id",
+          "turn_id",
+          "stream_id",
+          "seq",
+          "output_kind",
+          "operation",
+          "text"
+        ],
+        "title": "ToolOutputDeltaPayload",
+        "type": "object"
+      },
       "ToolOutputRiskPayload": {
         "additionalProperties": false,
         "description": "``tool_progress._progress_output_risk``.",
@@ -37391,6 +37487,18 @@
             ],
             "default": null,
             "title": "Labels"
+          },
+          "turn_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Turn Id"
           }
         },
         "required": [
@@ -41437,6 +41545,18 @@
           "name": "payload",
           "schema": {
             "$ref": "#/components/schemas/ToolGeneratingPayload"
+          }
+        }
+      ]
+    },
+    {
+      "name": "tool.output.delta",
+      "summary": "Owned foreground output delta; completion replaces the stream with the authoritative result.",
+      "params": [
+        {
+          "name": "payload",
+          "schema": {
+            "$ref": "#/components/schemas/ToolOutputDeltaPayload"
           }
         }
       ]

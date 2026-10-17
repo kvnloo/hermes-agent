@@ -272,9 +272,24 @@ class ToolStartPayload(Payload):
     args_text: str | None = None
     preview: str | None = None
     labels: list[ToolLabel] | None = None
+    turn_id: str | None = None
 
 
 event("tool.start", ToolStartPayload, doc="A tool call began (stable id + full args).")
+
+
+class ToolOutputDeltaPayload(Payload):
+    tool_id: str
+    turn_id: str
+    stream_id: str
+    seq: int
+    output_kind: Literal["terminal", "literal"]
+    operation: Literal["append", "replace"]
+    text: str
+    capture_truncated: bool = False
+
+
+event("tool.output.delta", ToolOutputDeltaPayload, doc="Owned foreground output delta; completion replaces the stream with the authoritative result.")
 
 
 class ToolCompletePayload(Payload):

@@ -3180,6 +3180,7 @@ export interface SessionResumeResult {
 /** ``session_auto_continue._inflight_snapshot``: the live (or retained failed) turn a reconnecting client rebuilds its bubbles from. */
 export interface InflightTurn {
   assistant?: string
+  tools?: InflightToolOutput[] | null
   streaming?: boolean
   user?: string
   display_kind?: string | null
@@ -3190,6 +3191,31 @@ export interface InflightTurn {
   status?: string | null
   recoverable?: boolean | null
   error_surface?: Record<string, unknown> | null
+}
+export interface InflightToolOutput {
+  start: ToolStartPayload
+  output?: ToolOutputDeltaPayload | null
+}
+/** ``tool_progress._on_tool_start`` (+ ``agent_callbacks._mirror_subagent_to_child`` rows with ``preview`` and empty ``args``). ``todos``/``revision`` are NOT set by the emitter; kept optional because tool.start rows may pass through connector redaction unchanged. */
+export interface ToolStartPayload {
+  tool_id: string
+  name: string
+  context?: string | null
+  args?: Record<string, unknown> | null
+  args_text?: string | null
+  preview?: string | null
+  labels?: ToolLabel[] | null
+  turn_id?: string | null
+}
+export interface ToolOutputDeltaPayload {
+  tool_id: string
+  turn_id: string
+  stream_id: string
+  seq: number
+  output_kind: 'terminal' | 'literal'
+  operation: 'append' | 'replace'
+  text: string
+  capture_truncated?: boolean
 }
 export interface QueuedPrompt {
   user: string
@@ -4776,16 +4802,6 @@ export interface ReactionPayload {
 export interface ReviewSummaryPayload {
   text: string
 }
-/** ``tool_progress._on_tool_start`` (+ ``agent_callbacks._mirror_subagent_to_child`` rows with ``preview`` and empty ``args``). ``todos``/``revision`` are NOT set by the emitter; kept optional because tool.start rows may pass through connector redaction unchanged. */
-export interface ToolStartPayload {
-  tool_id: string
-  name: string
-  context?: string | null
-  args?: Record<string, unknown> | null
-  args_text?: string | null
-  preview?: string | null
-  labels?: ToolLabel[] | null
-}
 /** ``tool_progress._on_tool_complete``; ``todos``/``revision`` merged in for the todo tools. */
 export interface ToolCompletePayload {
   tool_id: string
@@ -6025,6 +6041,8 @@ export interface BackendGatewayEventMap {
   'tool.complete': ToolCompletePayload
   /** The model is emitting a tool call's arguments. */
   'tool.generating': ToolGeneratingPayload
+  /** Owned foreground output delta; completion replaces the stream with the authoritative result. */
+  'tool.output.delta': ToolOutputDeltaPayload
   /** Tool output was classified as risky (prompt-injection / secret findings). */
   'tool.output_risk': ToolOutputRiskPayload
   /** A tool call began (stable id + full args). */
@@ -6112,6 +6130,7 @@ export const GATEWAY_EVENT_TYPES = [
   'todo.updated',
   'tool.complete',
   'tool.generating',
+  'tool.output.delta',
   'tool.output_risk',
   'tool.start',
   'voice.dictation',
