@@ -27,6 +27,7 @@ code 75, and the launcher runs the Ink TUI in its place (`hermes_cli/main_tui_la
 | `src/app.ts` | The controller: one inline surface, gateway events → transcript, keys → overlay → completion → composer, one coalesced render per change |
 | `src/model.ts`, `src/transcript.ts` | The structured transcript (prompts, turns of thinking/text/tool blocks, notices, panels) folded from gateway events |
 | `src/composer.ts` | The prompt editor's model: text, caret, undo, history, kill ring |
+| `src/orb.ts` | Owning-agent activity reducer and bounded native thinking-orb animation |
 | `src/view/` | Node builders (TSX on the Tern SDK's runtime) for the transcript, tool cards, dock and welcome card |
 | `src/overlay.ts`, `src/overlays/` | Floating sheets: approvals, clarify, masked prompts, completions, pickers |
 | `src/palette.ts` | The skin as a Tern program palette (`t`) |
@@ -150,6 +151,36 @@ The SDK can bind a callback before an overlay closes, is replaced, or becomes co
 Hermes checks that owner again when the queued callback runs.
 Only the current top overlay can act, and no overlay can act after the surface closes.
 The SDK still owns handler lookup, native events, frame credits and surface transport.
+
+## Thinking orb
+
+The composer includes a 34px native image whose geometry is adapted from OMP Handsfree's
+`omp_hud/voice_orb.py`: the quiet seed, orbit particles, listening rings and response ribbons.
+It follows events belonging to the shown Hermes session, not a guessed progress percentage.
+
+| State | Source |
+| --- | --- |
+| Idle | Finished turn or idle voice status |
+| Working | Submitted turn, tool preparation or active tools |
+| Thinking | Reasoning events or voice transcription |
+| Composing | Streamed answer or interim text |
+| Listening | Voice listening, recording or captured status |
+| Speaking | Voice speaking, playback or TTS status |
+| Waiting | An open approval, clarification or masked-input prompt |
+| Error | Failed turn, rejected submission or failed gateway |
+
+Active tools remain working until their matching completions arrive. Session adoption clears
+the previous activity. Voice states are displayed only when Hermes reports them; this feature
+does not add a microphone, live-talk transport or TTS.
+
+Animation changes only the orb image at 12fps. SVG blobs are cached for a finite 96-frame
+cycle per state and appearance. Blocked protocol credits skip frames instead of building a
+queue. Idle, waiting and error are static; hidden surfaces, modal sheets, reduced motion and
+closed sessions stop the timer. A native `gone` disposes it immediately, without waiting for
+another animation tick. Pane-wide and surface-specific visibility events drive both the orb
+and held completion notices. Tern's `.sf-still` (Reduce Motion) and `.sf-paused` (hidden pane)
+policies are honored through the native `motion` and `visible`/`resize` events, not CSS-only
+freezing of a client-side timer. The image has the accessible name `Hermes agent: <state>`.
 
 ## Developing
 
