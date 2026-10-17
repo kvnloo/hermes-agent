@@ -9,6 +9,7 @@ import { cycleModel } from './model-cycle.js'
 import { openBrowserBlocks } from './overlays/browser-blocks.js'
 import { openHistorySearch } from './overlays/history.js'
 import { openModelPicker } from './overlays/models.js'
+import { openSessionPicker } from './overlays/sessions.js'
 
 export interface ActionContext {
   composerEmpty: boolean
@@ -257,6 +258,22 @@ export const APP_ACTIONS: readonly Action[] = [
     }
   },
   {
+    id: 'app.tree',
+    title: 'Browse the copied-session branch tree',
+    group: 'Navigation',
+    keys: ['alt+t'],
+    when: always,
+    run: app => openSessionPicker(app, true)
+  },
+  {
+    id: 'app.tree.search',
+    title: 'Search saved sessions and branch paths',
+    group: 'Navigation',
+    keys: ['alt+shift+s'],
+    when: always,
+    run: app => openSessionPicker(app, true)
+  },
+  {
     id: 'app.session.fork',
     title: '/fork [message-id]: fork into a new Tern pane',
     group: 'Session',
@@ -309,6 +326,25 @@ const APPROVAL_ACTIONS: readonly { keys: readonly string[]; action: ApprovalActi
 /** App offers these overlay-owned keys only while its composer is empty. */
 export function approvalActionForKey(key: Key): ApprovalAction | undefined {
   return APPROVAL_ACTIONS.find(binding => matchesAction(binding, key))?.action
+}
+
+/** Session/tree-local intents; no branch key resumes or rewinds implicitly. */
+export const SESSION_ACTIONS = [
+  { id: 'close', keys: ['escape'], label: 'Close' },
+  { id: 'activate', keys: ['enter'], label: 'Resume…' },
+  { id: 'previousBranch', keys: ['ctrl+left'], label: 'Previous branch' },
+  { id: 'nextBranch', keys: ['ctrl+right'], label: 'Next branch' },
+  { id: 'search', keys: ['ctrl+f'], label: 'Search' },
+  { id: 'rename', keys: ['f2'], label: 'Rename' },
+  { id: 'sort', keys: ['ctrl+s'], label: 'Sort' },
+  { id: 'path', keys: ['ctrl+l'], label: 'Paths' },
+  { id: 'more', keys: ['ctrl+down'], label: 'Load more' },
+  { id: 'fork', keys: ['alt+shift+f'], label: 'Fork current…' },
+  { id: 'delete', keys: ['ctrl+backspace'], label: 'Delete…' }
+] as const
+
+export function sessionKeyAction(key: Key) {
+  return SESSION_ACTIONS.find(binding => matchesAction(binding, key))?.id
 }
 
 interface ReportAction {

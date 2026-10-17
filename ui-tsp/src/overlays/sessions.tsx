@@ -1,40 +1,93 @@
-// The session picker (`/resume`, `/sessions`): stored sessions as omp's
-// session sheet draws them (two-line cards grouped by day, ages, message
-// counts, the selected one's preview). Enter resumes it in place of the
-// current transcript; ⌫ on an empty search deletes it after a confirm.
+// /sessions is a resume list; /tree is a copied-session lineage projection.
+// Both browse metadata only. Selection never resumes, forks or rewinds.
+import type { SessionRenameResult, SessionTreeResult, SessionTreeRow, SessionTreeSort } from '@hermes/shared/gateway-events'
+import type { JSX, Key, PickerItem } from '@stencil-hq/tern'
 
-import type { SessionListResult, SessionListRow } from '@hermes/shared/gateway-events'
-import type { JSX, Key, PickerGroup, PickerItem } from '@stencil-hq/tern'
-
+import { SESSION_ACTIONS, sessionKeyAction } from '../actions.js'
 import type { App } from '../app.js'
+import { forkSession } from '../fork-session.js'
 import type { Overlay } from '../overlay.js'
+import { adjacentBranch, projectSessionTree } from '../session-tree.js'
 
-import { editQuery, hitRuns, moveSelection, rank } from './search.js'
+import { confirmOverlay } from './prompts.js'
+import { editQuery, moveSelection } from './search.js'
 
-const KEY = 'sessions'
-const LIMIT = 200
-const DAY = 86_400_000
+export const TREE_COMMANDS: [string, string][] = [
+  ['/tree', 'Browse copied-session branches; selection only highlights, activation confirms resume']
+]
 
-/** Opens the session picker; picking a row resumes that session. */
-export function openSessionPicker(app: App) {
+const SORTS: readonly SessionTreeSort[] = ['recent', 'title', 'path']
+
+export function openSessionPicker(app: App, tree = false) {
+  const sid = app.sid
+  const storedSid = app.storedSid
+  let alive = true
+  let revision = 0
   let state: 'loading' | 'ready' | 'error' = 'loading'
   let message = ''
-  let rows: SessionListRow[] = []
+  let rows: SessionTreeRow[] = []
+  let visible = new Set<string>()
   let query = ''
   let selected: string | undefined
-  let deleting: string | null = null
-  let shown: string[] = []
+  let pageSelection: string | undefined
+  let nextOffset: number | null = null
+  let total = 0
+  let sort: SessionTreeSort = 'recent'
+  let paths = true
+  let rename: { id: string; title: string } | null = null
+  let writing = false
+  const current = () => alive && app.sid === sid && app.storedSid === storedSid && app.overlays.includes(overlay)
+  const top = () => current() && app.overlays.at(-1) === overlay
+  const projection = () => projectSessionTree(rows, visible, storedSid)
+  const shown = () => tree ? projection().entries.map(entry => entry.row.id) : [...visible]
 
-  const load = async () => {
+  const repairSelection = () => {
+    const ids = shown()
+
+    if (!selected || !ids.includes(selected)) {
+      selected = ids.includes(storedSid ?? '') ? storedSid ?? undefined : ids[0]
+    }
+  }
+
+  const load = async (offset = 0) => {
+    const token = ++revision
+
+    if (!offset) {
+      pageSelection = selected
+    }
+
     state = 'loading'
+    message = ''
     app.changed()
 
     try {
-      const r = await app.gw.request<SessionListResult>('session.list', { limit: LIMIT })
-      rows = [...(r.sessions ?? [])].sort((a, b) => (b.started_at ?? 0) - (a.started_at ?? 0))
-      selected = rows.find(r => r.id !== app.storedSid)?.id ?? rows[0]?.id
+      const result = await app.gw.request<SessionTreeResult>('session.tree', {
+        active_session_id: storedSid, limit: 200, offset, query,
+        selected_session_id: pageSelection ?? null, sort
+      })
+
+      if (!current() || token !== revision) {
+        return
+      }
+
+      const merged = new Map((offset ? rows : []).map(row => [row.id, row]))
+
+      // A page row supersedes its older ancestor-context copy.
+      for (const row of [...result.ancestors, ...result.sessions]) {
+        merged.set(row.id, row)
+      }
+
+      rows = [...merged.values()]
+      visible = new Set([...(offset ? visible : []), ...result.sessions.map(row => row.id)])
+      nextOffset = result.next_offset
+      total = result.total
       state = 'ready'
+      repairSelection()
     } catch (error) {
+      if (!current() || token !== revision) {
+        return
+      }
+
       state = 'error'
       message = error instanceof Error ? error.message : String(error)
     }
@@ -42,175 +95,234 @@ export function openSessionPicker(app: App) {
     app.changed()
   }
 
-  const resume = (id: string | undefined) => {
-    const row = rows.find(r => r.id === id)
+  const changeQuery = (value: string) => {
+    query = value
+    void load()
+  }
 
-    if (!row) {
-      return
-    }
-
-    app.close(overlay)
-
-    if (row.id !== app.storedSid) {
-      void app.resume(row.resolved_id || row.id)
+  const report = (error: unknown) => {
+    if (current()) {
+      message = error instanceof Error ? error.message : String(error)
+      app.changed()
     }
   }
 
-  const remove = async (id: string) => {
-    deleting = null
+  const saveName = async () => {
+    if (!top() || !rename || writing || !rename.title.trim()) {
+      return
+    }
+
+    const edit = { ...rename }
+    writing = true
+    app.changed()
 
     try {
-      await app.gw.request('session.delete', { session_id: id })
-      rows = rows.filter(r => r.id !== id)
-    } catch (error) {
-      app.transcript.notice(error instanceof Error ? error.message : String(error), 'error')
-    }
+      const result = await app.gw.request<SessionRenameResult>('session.rename', { session_key: edit.id, title: edit.title.trim() })
 
-    app.changed()
+      if (!current()) {
+        return
+      }
+
+      rows = rows.map(row => row.id === result.session_key ? { ...row, title: result.title } : row)
+      rename = null
+      await load()
+    } catch (error) {
+      report(error)
+    } finally {
+      writing = false
+      app.changed()
+    }
   }
 
-  const askDelete = () => {
-    if (!selected) {
+  const confirm = (kind: 'resume' | 'fork' | 'delete', id: string | undefined) => {
+    if (!top() || state !== 'ready' || !id || !visible.has(id) || writing || rename) {
       return
     }
 
-    if (selected === app.storedSid) {
-      app.transcript.notice('The open session cannot be deleted; start a new one first.', 'warning')
-    } else {
-      deleting = selected
+    const row = rows.find(row => row.id === id)
+
+    if (!row || (kind === 'resume' && id === storedSid)) {
+      return
+    }
+
+    if ((kind === 'fork' && id !== storedSid) || (kind === 'delete' && id === storedSid)) {
+      message = kind === 'fork' ? 'Resume this branch before forking it.' : 'The open session cannot be deleted.'
+      app.changed()
+
+      return
+    }
+
+    const titles = { delete: 'Delete saved session?', fork: 'Fork current session into a new pane?', resume: 'Resume saved session?' }
+    const labels = { delete: 'Delete', fork: 'Fork', resume: 'Resume' }
+    app.open(confirmOverlay(app, {
+      confirm: labels[kind],
+      detail: `${labelOf(row)} · ${row.cwd || 'No workspace'} · ${row.id}. ${kind === 'resume' ? 'Replaces this pane’s transcript; no history is undone.' : kind === 'fork' ? 'Copies history into a separate stored session.' : 'Permanently removes its stored transcript.'}`,
+      onConfirm: () => {
+        if (!current() || selected !== id || app.busy || app.rewinding || writing) {
+          return
+        }
+
+        const operations = {
+          delete: async () => {
+            writing = true
+
+            try {
+              await app.gw.request('session.delete', { session_id: id })
+
+              if (current()) {
+                await load()
+              }
+            } finally {
+              writing = false
+              app.changed()
+            }
+          },
+          fork: async () => {
+            app.close(overlay)
+            await forkSession(app)
+          },
+          resume: async () => {
+            app.close(overlay)
+            await app.resume(row.resolved_id || row.id)
+          }
+        }
+
+        void operations[kind]().catch(error => {
+          // Resume/fork close the picker intentionally, but still report errors
+          // only to the original session, never a newly focused pane/session.
+          if (app.sid === sid) {
+            app.transcript.notice(error instanceof Error ? error.message : String(error), 'error')
+            app.changed()
+          }
+        })
+      },
+      title: titles[kind]
+    }))
+  }
+
+  const actions = {
+    activate: () => rename ? void saveName() : confirm('resume', selected),
+    clear: () => changeQuery(''),
+    close: () => {
+      if (rename && !writing) {
+        rename = null
+        app.changed()
+      } else if (!writing) {
+        app.close(overlay)
+      }
+    },
+    delete: () => confirm('delete', selected),
+    fork: () => confirm('fork', selected),
+    more: () => {
+      if (nextOffset !== null && state !== 'loading') {
+        void load(nextOffset)
+      }
+    },
+    nextBranch: () => { selected = adjacentBranch(projection(), selected, 1) },
+    path: () => { paths = !paths },
+    previousBranch: () => { selected = adjacentBranch(projection(), selected, -1) },
+    rename: () => {
+      const row = rows.find(row => row.id === selected)
+
+      if (row && state === 'ready' && !writing) {
+        rename = { id: row.id, title: row.title ?? '' }
+      }
+    },
+    retry: () => void load(),
+    search: () => changeQuery(''),
+    sort: () => {
+      sort = SORTS[(SORTS.indexOf(sort) + 1) % SORTS.length] ?? 'recent'
+      void load()
     }
   }
 
-  const view = (now: number) => {
-    const ranked = rank(rows, query, r => `${labelOf(r)} ${r.preview ?? ''}`)
-    const hits: Record<string, [number, number][]> = {}
-    const buckets = new Map<string, { label: string; ids: string[] }>()
-
-    for (const { item, positions } of ranked) {
-      const label = query ? 'Matches' : dayOf(item.started_at, now)
-      const bucket = buckets.get(label) ?? { ids: [], label }
-      bucket.ids.push(item.id)
-      buckets.set(label, bucket)
-
-      if (positions.length) {
-        hits[item.id] = hitRuns(positions, labelOf(item).length)
-      }
+  const invoke = (intent: keyof typeof actions) => {
+    if (top() && !writing && (!rename || intent === 'activate' || intent === 'close')) {
+      actions[intent]()
+      app.changed()
     }
-
-    const order: (string | PickerGroup)[] = []
-
-    for (const { ids, label } of buckets.values()) {
-      order.push({ count: ids.length, group: label, label }, ...ids)
-    }
-
-    shown = ranked.map(r => r.item.id)
-
-    if (!selected || !shown.includes(selected)) {
-      selected = shown[0]
-    }
-
-    return { hits, order }
   }
 
   const overlay: Overlay = {
-    key: KEY,
+    key: tree ? 'session-tree' : 'sessions',
     modal: true,
+    onClose: () => { alive = false; revision++ },
     node: id => {
-      const now = Date.now()
-      const { hits, order } = view(now)
-      const row = rows.find(r => r.id === selected)
+      const projected = projection()
+      const depths = new Map(projected.entries.map(entry => [entry.row.id, entry.depth]))
+      const row = rows.find(row => row.id === selected)
+      const order = shown()
 
       return (
         <picker
-          actions={[
-            { id: 'resume', keys: ['enter'], label: 'Resume', primary: true },
-            { id: 'delete', keys: ['backspace'], label: 'Delete' },
-            { end: true, id: 'close', keys: ['esc'], label: 'Close' }
-          ]}
-          columns={[
-            { format: 'time', id: 'when' },
-            { format: 'dim', id: 'size' }
-          ]}
-          confirm={
-            deleting
-              ? { act: 'confirm', label: 'Delete', text: `Delete “${labelOf(rows.find(r => r.id === deleting))}”?` }
-              : undefined
-          }
-          current={app.storedSid ? [app.storedSid] : []}
-          empty="No saved sessions yet"
-          hits={hits}
-          icon="history"
-          items={rows.map(r => itemOf(r, now))}
+          actions={SESSION_ACTIONS.map(action => ({
+            ...action,
+            disabled: writing || (action.id === 'more' && nextOffset === null) || (action.id === 'fork' && selected !== storedSid) ? true : undefined,
+            label: action.id === 'sort' ? `Sort: ${sort}` : action.id === 'path' ? `Paths: ${paths ? 'on' : 'off'}` : action.label
+          }))}
+          columns={[{ format: 'dim', id: 'size' }, ...(paths ? [{ format: 'dim', id: 'path' }] : [])]}
+          current={storedSid ? [storedSid] : []}
+          empty="No saved sessions match"
+          items={rows.filter(row => visible.has(row.id)).map(row => itemOf(row, tree ? depths.get(row.id) : undefined, paths))}
           key={id.slice('layer.'.length)}
-          layout="cards"
-          message={state === 'error' ? message : undefined}
+          layout={tree ? 'tree' : 'cards'}
+          message={message || (rename ? 'Editing title · Enter saves · Escape cancels' : undefined)}
           noun="sessions"
           onAction={{
-            cancel: () => {
-              deleting = null
-              app.changed()
-            },
-            clear: () => {
-              query = ''
-              app.changed()
-            },
-            close: () => app.close(overlay),
-            confirm: () => {
-              if (deleting) {
-                void remove(deleting)
-              }
-            },
-            delete: () => {
-              askDelete()
-              app.changed()
-            },
-            resume: () => resume(selected),
-            retry: () => void load()
+            ...Object.fromEntries(SESSION_ACTIONS.map(action => [action.id, () => invoke(action.id)])),
+            clear: () => invoke('clear'),
+            retry: () => invoke('retry')
           }}
-          onActivate={ev => resume(ev.item)}
+          onActivate={ev => {
+            if (top() && visible.has(ev.item) && !rename) {
+              selected = ev.item
+              confirm('resume', selected)
+            }
+          }}
           onSelect={ev => {
-            selected = ev.item
-            deleting = null
-            app.changed()
+            if (top() && visible.has(ev.item) && !rename) {
+              selected = ev.item
+              app.changed()
+            }
           }}
           order={order}
-          placeholder="Search sessions…"
+          placeholder={rename ? 'New session title…' : 'Search all sessions by title, ID or path…'}
           preview="side"
-          query={query}
+          query={rename?.title ?? query}
           selected={selected}
           size="lg"
           state={state}
-          total={rows.length}
+          subtitle={`Copied sessions, not an entry DAG · ${visible.size} of ${total} matches${nextOffset === null ? '' : ' · Load more available'}`}
+          title={tree ? 'Session / branch tree' : 'Saved sessions'}
+          total={total}
         >
-          {row ? preview(row, row.id === app.storedSid) : null}
+          {row ? preview(row, row.id === storedSid) : null}
         </picker>
       )
     },
-    onKey: (k: Key) => {
-      if (deleting) {
-        if (k.name === 'enter' || k.name === 'y') {
-          void remove(deleting)
-        } else if (k.name === 'escape' || k.name === 'n') {
-          deleting = null
-        }
-
+    onKey: (key: Key) => {
+      if (!top()) {
         return true
       }
 
-      if (k.name === 'escape') {
-        app.close(overlay)
-      } else if (k.name === 'enter') {
-        resume(selected)
-      } else if (k.name === 'backspace' && !query) {
-        askDelete()
-      } else {
-        const moved = moveSelection(k, shown, selected)
-        const edited = moved === undefined ? editQuery(k, query) : undefined
+      const intent = sessionKeyAction(key)
+
+      if (intent) {
+        invoke(intent)
+      } else if (!writing && rename) {
+        const edited = editQuery(key, rename.title)
+
+        if (edited !== undefined) {
+          rename.title = edited
+        }
+      } else if (!writing) {
+        const moved = moveSelection(key, shown(), selected)
+        const edited = moved === undefined ? editQuery(key, query) : undefined
 
         if (moved !== undefined) {
           selected = moved
         } else if (edited !== undefined) {
-          query = edited
+          changeQuery(edited)
         }
       }
 
@@ -222,91 +334,39 @@ export function openSessionPicker(app: App) {
   void load()
 }
 
-/** A session's title, else its first prompt. */
-function labelOf(row: SessionListRow | undefined): string {
-  return row?.title?.trim() || row?.preview?.trim() || 'Untitled session'
+function labelOf(row: SessionTreeRow): string {
+  return row.title?.trim() || row.preview?.trim() || 'Untitled session'
 }
 
-function itemOf(row: SessionListRow, now: number): PickerItem {
-  const count = row.live_message_count ?? row.message_count ?? 0
-
+function itemOf(row: SessionTreeRow, depth: number | undefined, paths: boolean): PickerItem {
   return {
-    badges: row.source && row.source !== 'tui' && row.source !== 'cli' ? [{ text: row.source }] : undefined,
-    detail: row.title?.trim() && row.preview?.trim() ? row.preview.trim() : undefined,
-    facts: {
-      size: `${count} msg${count === 1 ? '' : 's'}`,
-      when: row.started_at ? ageOf(row.started_at * 1000, now) : ''
-    },
+    badges: row.parent_session_id ? [{ text: row.edge_kind === 'fork' ? 'copied fork' : row.edge_kind }] : undefined,
+    depth,
+    detail: row.preview || undefined,
+    facts: { size: `${row.message_count} msgs`, ...(paths ? { path: row.cwd || 'No workspace' } : {}) },
     id: row.id,
     label: labelOf(row),
-    title: row.started_at ? dateOf(row.started_at) : undefined
+    title: row.id
   }
 }
 
-function preview(row: SessionListRow, isCurrent: boolean): JSX.Element[] {
-  const count = row.live_message_count ?? row.message_count ?? 0
-
+function preview(row: SessionTreeRow, isCurrent: boolean): JSX.Element[] {
   return [
     <text key="title" role="omp.picker.title" text={labelOf(row)} />,
-    <kv
-      items={[
-        ...(row.started_at ? [{ k: [{ t: 'Started' }], v: dateOf(row.started_at) }] : []),
-        { k: [{ t: 'Messages' }], v: String(count) },
-        ...(row.source ? [{ k: [{ t: 'Source' }], v: row.source }] : []),
-        ...(isCurrent ? [{ k: [{ t: 'Status' }], v: [{ s: 'success', t: 'open' }] }] : []),
-        { k: [{ t: 'ID' }], v: [{ s: 'mono dim', t: row.id }] }
-      ]}
-      key="facts"
-    />,
-    ...(row.preview?.trim()
-      ? [
-          <section head="Conversation" key="conversation">
-            <md key="first" text={row.preview.trim()} tone="user" />
-          </section>
-        ]
-      : [])
+    <kv items={[
+      { k: [{ t: 'Workspace' }], v: row.cwd || 'No workspace' },
+      { k: [{ t: 'ID' }], v: row.id },
+      { k: [{ t: 'Messages' }], v: String(row.message_count) },
+      { k: [{ t: 'Started' }], v: row.started_at ? new Date(row.started_at * 1000).toLocaleString() : 'Unknown' },
+      { k: [{ t: 'Source' }], v: row.source ?? '' },
+      ...(row.parent_session_id ? [
+        { k: [{ t: 'Parent session' }], v: row.parent_session_id },
+        { k: [{ t: 'Edge' }], v: row.edge_kind },
+        { k: [{ t: 'Parent branch-point row' }], v: row.branch_message_id == null ? 'Unknown (legacy or unstored tail)' : String(row.branch_message_id) },
+        { k: [{ t: 'Copied messages at fork' }], v: row.copied_message_count == null ? 'Unknown' : String(row.copied_message_count) }
+      ] : []),
+      ...(isCurrent ? [{ k: [{ t: 'Status' }], v: 'Open in this pane' }] : [])
+    ]} key="facts" />,
+    <text key="model" role="omp.picker.detail" text="Hermes branches copy history into separate sessions. Navigation never undoes messages." wrap="word" />
   ]
-}
-
-/** `25m`, `2h`, `3d`, `1w`, `2mo`, `1y`: how long ago, as omp's session list writes it. */
-function ageOf(at: number, now: number): string {
-  const m = Math.max(0, Math.round((now - at) / 60_000))
-
-  if (m < 60) {
-    return `${Math.max(1, m)}m`
-  }
-
-  const h = Math.round(m / 60)
-
-  if (h < 24) {
-    return `${h}h`
-  }
-
-  const d = Math.round(h / 24)
-
-  return d < 7
-    ? `${d}d`
-    : d < 30
-      ? `${Math.round(d / 7)}w`
-      : d < 365
-        ? `${Math.round(d / 30)}mo`
-        : `${Math.round(d / 365)}y`
-}
-
-/** Today / Yesterday / This week / Earlier, by local calendar day. */
-function dayOf(startedAt: number | undefined, now: number): string {
-  const midnight = new Date(now).setHours(0, 0, 0, 0)
-  const at = (startedAt ?? 0) * 1000
-
-  return at >= midnight
-    ? 'Today'
-    : at >= midnight - DAY
-      ? 'Yesterday'
-      : at >= midnight - 6 * DAY
-        ? 'This week'
-        : 'Earlier'
-}
-
-function dateOf(startedAt: number): string {
-  return new Date(startedAt * 1000).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
 }

@@ -80,6 +80,10 @@ async function withApp(run: (harness: Harness) => Promise<void>) {
       return { sessions: [] }
     }
 
+    if (method === 'session.tree') {
+      return { ancestors: [], next_offset: null, sessions: [], total: 0 }
+    }
+
     if (method === 'commands.catalog') {
       return { pairs: [['/context', 'Context details']] }
     }

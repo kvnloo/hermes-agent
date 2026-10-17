@@ -27,6 +27,7 @@ export interface LocalCommand {
 }
 
 const COMMANDS: readonly LocalCommand[] = [
+  { name: 'tree', run: app => openSessionPicker(app, true) },
   { name: 'history-search', run: openHistorySearch },
   { name: 'editor', run: app => app.editExternal() },
   { name: 'model-next', run: app => cycleModel(app, 1) },

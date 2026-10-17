@@ -16,6 +16,7 @@ App-level bindings live in `src/actions.ts`. The same registry supplies grouped
 | Alt+U | Usage (`/usage`) |
 | Alt+A | Agents (`/agents`) |
 | Alt+S | Session picker |
+| Alt+T / Alt+Shift+S | Session / branch tree and search (`/tree`) |
 | Alt+Shift+F | `/fork`: copy the conversation into a new Tern pane (idle session) |
 | Ctrl+T | Toggle `/reasoning show` / `/reasoning hide` using backend readback |
 | Alt+Shift+C | Copy the literal composer text via OSC 52, with a notice |
@@ -81,6 +82,27 @@ draft that clears the draft, not the running turn. Use the explicit owned path
 or click Stop. Never send a second Ctrl+C blindly (an idle pane can exit). The
 owned chord reaches Hermes even under a modal, but host/OS bindings can still own
 it before it reaches the program. Stop is confirmed only by Hermes settlement.
+
+## Session / branch tree
+
+`/tree` projects Hermes copied-session lineage, **not** OMP’s in-file entry DAG.
+The active ancestry is first. Filtered branch traversal uses raw ancestry and
+the first visible descendant; missing parents and cyclic legacy links remain
+browseable. Selecting or moving the highlight never changes a session. Resume,
+delete and the current-session fork action use a confirmation sheet (Enter
+cancels by default); there is no tree-triggered undo. Forking another branch
+requires resuming it first.
+
+Both `/sessions` and `/tree` support F2 rename with durable readback, Ctrl+S
+sort (recent/title/path), Ctrl+L workspace paths, Ctrl+F search, and explicit
+Ctrl+Down load-more beyond the first 200 results. Ctrl+Left/Right traverse
+previous/next visible branches. Selection stays pinned across sorting and page
+loads. Search runs against stored metadata, not just the loaded page. No idle
+polling is installed. These sheet-local bindings also live in `actions.ts`.
+
+New forks persist the parent’s durable message row and copied-message count.
+Legacy or unstored boundaries are shown as unknown, never inferred from the
+child’s newer row IDs. Compression continuation links are labelled separately.
 
 ## Deliberate limits
 

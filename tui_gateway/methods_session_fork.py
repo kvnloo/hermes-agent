@@ -41,6 +41,8 @@ def _persist_fork(db, session: dict, parent: str, history: list, profile: str) -
     if (agent := session.get("agent")) is not None:
         config = _runtime_model_config(agent, config)
     config["_branched_from"] = parent
+    config["_branch_point"] = {"parent_session_id": parent, "message_id": history[-1].get("_row_id"),
+                               "copied_message_count": len(history)}
     try:
         _persist_branch(
             db, key, parent, _branch_title(db, parent), history,

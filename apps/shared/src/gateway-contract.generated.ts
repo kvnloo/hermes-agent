@@ -3267,6 +3267,47 @@ export interface SessionListRow {
   live_message_count?: number | null
   source?: string
 }
+export interface SessionTreeParams {
+  profile?: string | null
+  offset?: number
+  limit?: number
+  query?: string
+  sort?: SessionTreeSort
+  active_session_id?: string | null
+  selected_session_id?: string | null
+}
+export type SessionTreeSort = 'recent' | 'title' | 'path'
+export interface SessionTreeResult {
+  sessions: SessionTreeRow[]
+  ancestors: SessionTreeRow[]
+  total: number
+  next_offset: number | null
+}
+export interface SessionTreeRow {
+  id: string
+  resolved_id?: string | null
+  title?: string
+  preview?: string
+  started_at?: number
+  message_count?: number
+  live_message_count?: number | null
+  source?: string
+  cwd?: string
+  parent_session_id?: string | null
+  edge_kind: SessionTreeEdge
+  branch_message_id?: number | null
+  copied_message_count?: number | null
+}
+export type SessionTreeEdge = 'root' | 'fork' | 'continuation' | 'parent'
+export interface SessionRenameParams {
+  profile?: string | null
+  session_key: string
+  title: string
+}
+export interface SessionRenameResult {
+  session_key: string
+  title: string
+}
 export interface SessionMostRecentParams {
   profile?: string | null
 }
@@ -5437,6 +5478,8 @@ export interface RpcMethods {
   'session.most_recent': { params: SessionMostRecentParams; result: SessionMostRecentResult }
   /** Redirect the active turn (queued for the next turn while the agent is still building). */
   'session.redirect': { params: SessionCorrectionParams; result: SessionCorrectionResult }
+  /** Rename a visible stored session without resuming it; returns durable title readback. */
+  'session.rename': { params: SessionRenameParams; result: SessionRenameResult }
   /** Attach to a stored session: reuse it if live here, else lazy / deferred / cold / eager rebuild. */
   'session.resume': { params: SessionResumeParams; result: SessionResumeResult }
   /** Read-only preview of the targeted rewind text, turn count and history token; never mutates history. */
@@ -5451,6 +5494,8 @@ export interface RpcMethods {
   'session.steer': { params: SessionCorrectionParams; result: SessionCorrectionResult }
   /** Read or set a live session's title; a title set before the row exists is queued. */
   'session.title': { params: SessionTitleParams; result: SessionTitleResult }
+  /** Read-only copied-session lineage metadata, paged with ancestor context; not an entry DAG. */
+  'session.tree': { params: SessionTreeParams; result: SessionTreeResult }
   /** Drop the last user turn, or rewind to a durable target_message_id, from an idle session. */
   'session.undo': { params: SessionUndoParams; result: SessionUndoResult }
   /** Token / context / cost counters for the session (+ Nous credit lines when available). */
@@ -5769,6 +5814,7 @@ export const RPC_METHODS = [
   'session.list',
   'session.most_recent',
   'session.redirect',
+  'session.rename',
   'session.resume',
   'session.rewind_preview',
   'session.save',
@@ -5776,6 +5822,7 @@ export const RPC_METHODS = [
   'session.status',
   'session.steer',
   'session.title',
+  'session.tree',
   'session.undo',
   'session.usage',
   'session.workspace.move',
