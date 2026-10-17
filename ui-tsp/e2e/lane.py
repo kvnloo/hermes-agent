@@ -189,6 +189,9 @@ class Runner:
             if not gate_open(state):
                 result.update(status='blocked',reason='isolated Tern account gate: '+state['gate']['phase'])
                 if mode=='native-window':
+                    self.ctl(lane,'wait 1000')
+                    dump(lane/'gate-tree.json',self.ctl(lane,'tree'))
+                    dump(lane/'gate-post-wait-state.json',self.ctl(lane,'state'))
                     self.command(['grim','-o','HEADLESS-1',lane/'gate-diagnostic.png'],lane,self.env,lane/'grim.log')
                 return result
             m=self.prepare(lane)

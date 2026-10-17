@@ -136,7 +136,10 @@ async function fileLinks() {
     const deepest = dumps.filter(d => !dumps.some(e=>e!==d && e.nth.startsWith(d.nth+'>')))
     assert.equal(deepest.length,1,'exact read link geometry')
     await native.ctl(`click ${deepest[0]!.nth} meta`, 30000)
-    const state = await until(async()=>record(await native.ctl('state',30000)), s=>JSON.stringify(s.file_blocks).includes(`${manifest.root}/README.md`), 'opened file block')
+    await native.ctl('file wait loaded',30000)
+    const state = record(await native.ctl('state',30000))
+    const opened = (state.file_blocks as {path:string;load:string}[]).find(b=>b.path === `${manifest.root}/README.md`)
+    assert(opened && opened.load !== 'opening' && opened.load !== 'error', 'file must finish loading, not just allocate a block')
     await writeFile(join(manifest.proof,'opened-file.json'),JSON.stringify(state.file_blocks))
     // Opening a split changes the app pane's focus: whole-window diagnostic shot is
     // taken by the parent, not passed off as the adapter's original-pane capture.
