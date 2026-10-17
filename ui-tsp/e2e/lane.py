@@ -48,6 +48,7 @@ class Runner:
                              OPENUI_TELEMETRY_DISABLED='1', DO_NOT_TRACK='1')
         dump(self.out/'source.json', dict(head=self.head, worktree=str(self.root), harness=str(SOURCE),
              harness_head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=SOURCE,text=True).strip(),
+             harness_dirty=subprocess.check_output(['git','status','--porcelain'],cwd=SOURCE,text=True),
              dirty=subprocess.check_output(['git','status','--porcelain'],cwd=self.root,text=True),
              command=sys.argv, model_calls_allowed=False, scratch=str(self.scratch)))
 

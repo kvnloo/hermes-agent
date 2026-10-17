@@ -30,9 +30,18 @@ async function until<T>(fn: () => Promise<T>, accepts: (value:T) => boolean, lab
   throw new Error(`Timed out: ${label}; last=${JSON.stringify(last)?.slice(0,800)}`)
 }
 async function tap(name: string, role?: string) {
-  const snapshot = await native.snapshot()
-  const matches = snapshot.nodes.filter(n => n.name === name && (!role || n.role === role) && !n.states?.hidden)
-  assert.equal(matches.length, 1, `exact owned visible target: ${role ?? ''} ${name}`)
+  // Resolve only after the actual native target stops moving/reconciling.
+  // This is a pre-delivery wait, never a retry of potentially committed input.
+  let previous = ''
+  const matches = await until(async()=>{
+    const snapshot = await native.snapshot()
+    return snapshot.nodes.filter(n => n.name === name && (!role || n.role === role) && !n.states?.hidden)
+  }, nodes=>{
+    const identity = nodes.length===1 ? JSON.stringify({ref:nodes[0]!.ref.id,rect:nodes[0]!.rect}) : ''
+    const stable = identity !== '' && identity === previous
+    previous = identity
+    return stable
+  }, `stable exact owned visible target: ${role ?? ''} ${name}`)
   await native.click(matches[0]!.ref.id)
 }
 async function command(text: string) {
@@ -91,6 +100,7 @@ async function settings() {
     const schema = await native.schema()
     await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='delivered' && w.body.result && typeof w.body.result==='object' && !Array.isArray(w.body.result) && 'fields' in w.body.result), 'real settings.get response')
     const getter = await native.settings()
+    await until(()=>native.prefs(), p=>Boolean(p?.p.sections?.some(section=>section.rows.length)), 'acknowledged populated Settings view')
     assert.deepEqual(Object.keys(getter.fields).sort(), Object.keys(schema).sort())
     await writeFile(join(manifest.proof,'schema-summary.json'), JSON.stringify({fields:Object.keys(schema).length,categories:new Set(Object.values(schema).map(x=>x.category)).size,types:[...new Set(Object.values(schema).map(x=>x.type))]}))
   })
