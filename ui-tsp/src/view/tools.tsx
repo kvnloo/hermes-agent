@@ -798,7 +798,7 @@ function exitOf(call: ToolCall): number | undefined {
   return typeof code === 'number' ? code : undefined
 }
 
-function checklistNode(todos: Todo[]): JSX.Element {
+export function checklistNode(todos: readonly Todo[], mode: 'full' | 'hud' = 'full', key = 'list'): JSX.Element {
   const status = (t: Todo) =>
     t.status === 'completed'
       ? 'done'
@@ -826,7 +826,7 @@ function checklistNode(todos: Todo[]): JSX.Element {
       })
     : [{ id: 'all', items: roots.map(item) }]
 
-  return <checklist key="list" mode="full" phases={phases} />
+  return <checklist key={key} mode={mode} phases={phases} />
 }
 
 /** The unified diff in hermes's colored `inline_diff`, without ANSI and the review header. */

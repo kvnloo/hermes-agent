@@ -6,8 +6,10 @@ import type { EditEvent, JSX, SendEvent } from '@stencil-hq/tern'
 
 import type { Dispatch } from '../attention.js'
 import type { Composer } from '../composer.js'
+import type { Todo } from '../model.js'
 
 import { age, compact } from './time.js'
+import { checklistNode } from './tools.js'
 
 /** What the dock shows. */
 export interface DockContext {
@@ -19,6 +21,10 @@ export interface DockContext {
   ready: boolean
   busy?: { since: object; startedAt: number; label: string }
   queued: readonly string[]
+  /** One current gateway-sourced plan for the visible session. */
+  todos: readonly Todo[]
+  todoExpanded: boolean
+  onTodoToggle(): void
   dispatches: readonly Dispatch[]
   model: string
   /** Hermes's reasoning effort (`none` = off); empty hides the chip. */
@@ -49,6 +55,26 @@ export interface DockContext {
 /** The `dock` region's nodes: the working row, the queued prompts and the composer. */
 export function dockNodes(cx: DockContext): JSX.Element[] {
   const nodes: JSX.Element[] = []
+
+  if (cx.todos.length > 5) {
+    // Count only completed tasks: Tern's native HUD also counts dropped items.
+    const done = cx.todos.filter(todo => todo.status === 'completed').length
+    const active = cx.todos.find(todo => todo.status === 'in_progress')
+    nodes.push(
+      <text
+        key="plan-summary"
+        onClick={cx.onTodoToggle}
+        role="omp.todo.summary"
+        text={`${done}/${cx.todos.length} done${active ? ` · now: ${active.content}` : ''}`}
+        title={cx.todoExpanded ? 'Collapse current plan' : 'Expand current plan'}
+        wrap="none"
+      />
+    )
+  }
+
+  if (cx.todos.length && (cx.todos.length <= 5 || cx.todoExpanded)) {
+    nodes.push(checklistNode(cx.todos, 'full', 'current-plan'))
+  }
 
   if (cx.busy) {
     nodes.push(
