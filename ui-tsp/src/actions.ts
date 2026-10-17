@@ -58,6 +58,14 @@ export const APP_ACTIONS: readonly Action[] = [
     }
   },
   {
+    id: 'app.interrupt.owned',
+    title: 'Interrupt the agent (preserve draft, including under a modal)',
+    group: 'Control',
+    keys: ['ctrl+shift+x'],
+    when: always,
+    run: app => app.interrupt()
+  },
+  {
     id: 'app.exit',
     title: 'Exit (empty prompt; otherwise delete forward)',
     group: 'Control',

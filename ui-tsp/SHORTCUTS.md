@@ -26,8 +26,9 @@ App-level bindings live in `src/actions.ts`. The same registry supplies grouped
 | Escape | Close completion first; otherwise interrupt if busy (unchanged) |
 | Ctrl+D | Quit on an empty prompt; otherwise composer forward-delete (unchanged) |
 | Ctrl+C | Clear draft / interrupt / double-press exit; Settings owns cancellation (unchanged) |
+| Ctrl+Shift+X | Explicit agent interrupt: preserve the draft, even under a modal |
 
-Routing remains splash → Ctrl+C special handling → top overlay → modal guard →
+Routing remains splash → explicit owned interrupt → Ctrl+C special handling → top overlay → modal guard →
 completion → action registry → composer. New chords require exact modifiers.
 Legacy app chords retain their permissive modifier behavior. Unbound Alt letters
 cannot type into the composer; Alt+B/F/D still perform readline word editing.
@@ -55,6 +56,30 @@ unchanged. Outside Tern, or if pane launch fails, a notice retains the new id an
 resume command. No shell interpolation or automatic model request is involved.
 Busy, hydrating, and compute-host-owned histories are refused rather than copied
 partially. Tests use fake pane launchers, never a real user's Tern daemon.
+
+## Carly and host lifecycle
+
+The frontend emits edge-triggered OSC 9;4 progress from confirmed Hermes activity:
+indeterminate working, paused while a server request waits, cleared on settlement,
+backend loss or exit. OSC 777 emits one host notification when input is required
+and one at final confirmed settlement (finished/failed/interrupted), not on idle
+repaints or duplicate completion events. App dispatch notices are independent;
+there is no synthetic percent, keepalive timer or extra bell. Resumed
+running/waiting state is projected too. Host transcript reads retain `omp.*` roles
+and original tool names.
+
+Native `sendable` and the submit transaction share the session/switch,
+modal/approval-owner, rewind, attachment and dictation gate.
+Carly's `agents:ask` retains a prompt at the host until that gate opens. Admission
+while busy still uses the configured queue/steer behavior, not a second turn store.
+
+**Interrupt limitation:** Tern's generated `AgentsCx.interrupt` sends plain Ctrl+C;
+there is no origin bit distinguishing Carly from a person. With a nonempty human
+draft that clears the draft, not the running turn. Use the explicit owned path
+`tern send <exact-owned-block-id> keys ctrl+shift+x` for a draft-preserving stop,
+or click Stop. Never send a second Ctrl+C blindly (an idle pane can exit). The
+owned chord reaches Hermes even under a modal, but host/OS bindings can still own
+it before it reaches the program. Stop is confirmed only by Hermes settlement.
 
 ## Deliberate limits
 

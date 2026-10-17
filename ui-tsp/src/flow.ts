@@ -10,6 +10,10 @@ export interface Busy {
   /** Owner of the working row's timer age; replaced per turn. */
   since: object
   label: string
+  /** False only while prompt.submit has not yet been accepted by Hermes. */
+  confirmed?: boolean
+  /** A resumed waiting turn, until its request overlay is hydrated. */
+  waiting?: boolean
 }
 
 /** What to do with a server request: show it, keep it until the switch in flight lands, or drop it. */
@@ -79,5 +83,8 @@ export function busyFrom(
     return null
   }
 
-  return { label: 'Working…', since: {}, startedAt: r.turn_started_at ? r.turn_started_at * 1000 : now }
+  return {
+    label: 'Working…', since: {}, startedAt: r.turn_started_at ? r.turn_started_at * 1000 : now,
+    ...(r.status === 'waiting' ? { waiting: true } : {})
+  }
 }

@@ -33,6 +33,7 @@ import { Dictation } from './dictation.js'
 import { editExternal } from './external-editor.js'
 import { type Busy, busyFrom, ownsEvent, Switches } from './flow.js'
 import { FramePump } from './frame.js'
+import { HostLifecycle } from './host-lifecycle.js'
 import { ModelRecents } from './model-recents.js'
 import type { UserEntry } from './model.js'
 import { OrbActivity, ThinkingOrb } from './orb.js'
@@ -127,6 +128,8 @@ export class App implements OverlayHost {
   #exitArmed = 0
   #done = Promise.withResolvers<number>()
   readonly #switches = new Switches()
+  readonly #hostLifecycle: HostLifecycle
+  #quitting = false
   /** Server requests for another session, kept while a switch is in flight. */
   #heldRequests: ServerRequest[] = []
   /** Open approval prompts' overlay keys → their approval-queue `request_id` (what approval.cancelled names). */
@@ -141,7 +144,8 @@ export class App implements OverlayHost {
   /** The launch splash while it covers the session chrome (it takes the keys until it leaves). */
   #splash: LaunchSplash | undefined
 
-  constructor(tern: Session, gw: GatewayClient, version: string) {
+  constructor(tern: Session, gw: GatewayClient, version: string, writeHost: (text: string) => void = text => { process.stdout.write(text) }) {
+    this.#hostLifecycle = new HostLifecycle(writeHost)
     this.#tern = tern
     this.#gw = gw
     this.attachments = new Attachments(gw, () => {
@@ -332,6 +336,12 @@ export class App implements OverlayHost {
   }
 
   changed() {
+    this.#hostLifecycle.project({
+      sid: this.#quitting ? null : this.sid,
+      working: Boolean(this.busy && this.busy.confirmed !== false),
+      submitting: this.busy?.confirmed === false,
+      waiting: this.busy?.waiting === true || this.overlays.some(o => o.key.startsWith('prompt:'))
+    })
     this.#frames?.changed()
   }
 
@@ -394,6 +404,12 @@ export class App implements OverlayHost {
     // Any key skips the launch splash, and is spent doing so.
     if (this.#splash?.active) {
       return this.#splash.skip()
+    }
+
+    const stop = APP_ACTIONS.find(action => action.id === 'app.interrupt.owned')!
+
+    if (matchesAction(stop, key)) {
+      return stop.run(this)
     }
 
     const top = this.#inputOwner()
@@ -662,6 +678,8 @@ export class App implements OverlayHost {
   }
 
   quit(code = 0) {
+    this.#quitting = true
+    this.changed()
     void this.dictation.stop(true)
 
     for (const overlay of [...this.overlays]) {
@@ -685,9 +703,21 @@ export class App implements OverlayHost {
     void this.#submitDraft(this.composer.text, this.overlays.find(isApprovalPrompt) ?? null, true)
   }
 
+  /** The painted sendable flag and every submit handler share this admission gate. */
+  #draftAdmitted(): boolean {
+    const owner = this.#inputOwner()
+
+    const approval = this.overlays.find(isApprovalPrompt)
+
+    return !this.#quitting && this.sid !== null && !this.#switches.pending &&
+      !this.#submittingApproval &&
+      !this.rewinding && !this.dictation.blocked && !this.attachments.blocked &&
+      (!owner?.modal || isApprovalPrompt(owner)) && (!approval || this.owns(approval))
+  }
+
   /** Keyboard Enter and native send share the request-bound deny → submit transaction. */
   async #submitDraft(raw = this.composer.text, approval: ApprovalPrompt | null = this.overlays.find(isApprovalPrompt) ?? null, alternate = false) {
-    if (this.#submittingApproval || this.rewinding || this.dictation.blocked) {
+    if (!this.#draftAdmitted()) {
       return
     }
 
@@ -737,6 +767,7 @@ export class App implements OverlayHost {
     const revision = this.composer.rev
     const sid = this.sid
     this.#submittingApproval = true
+    this.changed()
 
     try {
       if (await approval.denyAndConfirm() && this.sid === sid && !this.#switches.pending) {
@@ -813,6 +844,11 @@ export class App implements OverlayHost {
       .then(result => {
         if (this.sid === submitted.sid && this.transcript.entries.includes(entry)) {
           entry.rowId = result.user_row_id ?? undefined
+
+          if (this.#lastSubmitted === submitted && this.busy) {
+            this.busy.confirmed = true
+          }
+
           this.changed()
         }
       })
@@ -941,7 +977,7 @@ export class App implements OverlayHost {
   }
 
   #startBusy(label: string) {
-    this.busy = { label, since: {}, startedAt: Date.now() }
+    this.busy = { label, since: {}, startedAt: Date.now(), confirmed: false }
     this.#activity.reset(true)
     this.changed()
   }
@@ -1011,6 +1047,7 @@ export class App implements OverlayHost {
     }
 
     const token = this.#switches.begin()
+    this.changed()
 
     try {
       const setup = await this.#gw.request<{ provider_configured?: boolean | null }>('setup.status', {})
@@ -1026,7 +1063,15 @@ export class App implements OverlayHost {
       }
 
       if (this.sid) {
-        await this.#gw.request('session.close', { session_id: this.sid }).catch(() => undefined)
+        const closing = this.sid
+        await this.#gw.request('session.close', { session_id: closing }).then(() => {
+          if (this.#switches.current(token) && this.sid === closing) {
+            this.sid = null
+            this.busy = null
+            this.#dropPrompts(() => true)
+            this.changed()
+          }
+        }).catch(() => undefined)
       }
 
       const cwd = process.env.HERMES_TUI_CWD?.trim()
@@ -1071,6 +1116,7 @@ export class App implements OverlayHost {
   /** Resumes and adopts stored session `id`; undefined when a later switch superseded this one. */
   async #resume(id: string): Promise<CreateResult | undefined> {
     const token = this.#switches.begin()
+    this.changed()
 
     try {
       const r = await this.#gw.request<CreateResult>('session.resume', { cols: this.#tern.caps.cols, session_id: id })
@@ -1205,6 +1251,8 @@ export class App implements OverlayHost {
           this.#startBusy('Working…')
         }
 
+        this.busy!.confirmed = true
+        this.busy!.waiting = false
         t.start()
 
         break
@@ -1280,6 +1328,8 @@ export class App implements OverlayHost {
 
         break
       case 'message.complete': {
+        const completed = this.busy
+
         if (!this.#visible && this.busy) {
           const status = ev.payload?.status
           this.dispatches.show({
@@ -1301,6 +1351,11 @@ export class App implements OverlayHost {
           : null
         this.#lastSubmitted = null
         this.busy = null
+
+        if (completed && completed.confirmed !== false && !this.queue.length) {
+          this.#hostLifecycle.finish(ev.payload?.status)
+        }
+
         this.#drainQueue()
 
         break
@@ -1418,6 +1473,10 @@ export class App implements OverlayHost {
       req.fail(-32601, `${req.method} is not supported by the Tern frontend`)
 
       return
+    }
+
+    if (this.busy) {
+      this.busy.waiting = false
     }
 
     this.open(overlay)
@@ -1752,7 +1811,7 @@ export class App implements OverlayHost {
         },
         placeholder: 'Ask Hermes — / commands · @ files',
         queued: this.queue,
-        ready: this.sid !== null && !this.attachments.blocked && !this.dictation.blocked
+        ready: this.#draftAdmitted()
       }),
       layer: [
         ...this.overlays.filter(o => o.placement !== 'dock').map(o => {
