@@ -5,6 +5,7 @@
 import type { CommandsCatalogResult } from '@hermes/shared/gateway-events'
 import type { Key, SpanData } from '@stencil-hq/tern'
 
+import { actionGroups } from '../actions.js'
 import type { App } from '../app.js'
 import type { Overlay } from '../overlay.js'
 
@@ -29,16 +30,6 @@ const HOTKEYS: { group: string; rows: [string[], string][] }[] = [
       [['ctrl+k'], 'Delete to end of line (joins the next line at its end)'],
       [['ctrl+y'], 'Paste the last deleted text'],
       [['ctrl+z', 'shift+ctrl+z'], 'Undo / redo']
-    ]
-  },
-  {
-    group: 'Control',
-    rows: [
-      [['escape'], 'Close the completion / interrupt the agent'],
-      [['shift+tab'], 'Cycle the reasoning effort'],
-      [['alt+up'], 'Edit the oldest queued prompt'],
-      [['ctrl+c'], 'Clear the draft / interrupt / exit (twice)'],
-      [['ctrl+d'], 'Delete forward / exit (empty prompt)']
     ]
   }
 ]
@@ -71,7 +62,7 @@ export async function openHelp(app: App) {
     node: id => (
       <overlay anchor="center" head="Commands and shortcuts" key={id.slice('layer.'.length)} modal role="omp.overlay.hotkeys" size="lg">
         <col gap="lg" key="body">
-          {HOTKEYS.map(({ group, rows }) => (
+          {[...HOTKEYS, ...actionGroups()].map(({ group, rows }) => (
             <section head={group} key={`keys-${group}`} role="omp.hotkeys.group">
               <table
                 cols={[

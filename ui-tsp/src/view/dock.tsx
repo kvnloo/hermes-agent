@@ -4,6 +4,7 @@
 
 import type { EditEvent, JSX, SendEvent } from '@stencil-hq/tern'
 
+import { HELP_HINT } from '../actions.js'
 import type { Dispatch } from '../attention.js'
 import type { Composer } from '../composer.js'
 import type { Todo } from '../model.js'
@@ -257,6 +258,7 @@ function composerNode(cx: DockContext): JSX.Element {
             />
           ) : null}
         </status>
+        <text key="help" role="omp.composer.hint" text={HELP_HINT} tone="muted" wrap="none" />
         <row align="center" gap="xs" key="settings" onClick={cx.onSettings} role="omp.composer.settings" title="Open Hermes settings">
           <icon key="icon" name="settings" />
           <text key="label" text="Settings" />

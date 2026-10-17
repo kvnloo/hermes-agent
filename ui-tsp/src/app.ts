@@ -20,6 +20,7 @@ import { writeActiveSessionFile } from '@tui/lib/activeSessionFile.js'
 
 import logo from '../assets/logo.png'
 
+import { type ActionContext, actionForKey, APP_ACTIONS, matchesAction } from './actions.js'
 import { Dispatches } from './attention.js'
 import { localCommand } from './commands.js'
 import { Composer } from './composer.js'
@@ -101,6 +102,7 @@ export class App implements OverlayHost {
   /** The launcher's startup image until it is attached to the first session (the queue waits for it). */
   #startupImage = process.env.HERMES_TUI_IMAGE?.trim() ?? ''
   #effortWrites: Promise<unknown> = Promise.resolve()
+  #reasoningToggles: Promise<unknown> = Promise.resolve()
   #effortRequested: { sid: string; value: string } | null = null
   /** The launch splash while it covers the session chrome (it takes the keys until it leaves). */
   #splash: LaunchSplash | undefined
@@ -273,8 +275,11 @@ export class App implements OverlayHost {
 
     const top = this.overlays.at(-1)
 
-    if (key.ctrl && key.name === 'c') {
-      return top?.key === 'settings' ? top.onKey(key) : this.#ctrlC()
+    // Ctrl+C retains its pre-overlay priority, except Settings owns cancellation.
+    const clear = APP_ACTIONS.find(action => action.id === 'app.clear')!
+
+    if (matchesAction(clear, key)) {
+      return top?.key === 'settings' ? top.onKey(key) : clear.run(this)
     }
 
     if (top?.onKey(key)) {
@@ -289,41 +294,67 @@ export class App implements OverlayHost {
       return
     }
 
-    if (key.ctrl && !key.alt && !key.meta && key.name === 'o') {
-      // Tern's native selection is not exposed to the program. An empty
-      // composer is the only safe guarantee that no draft is selected.
-      if (!this.overlays.length && !this.#completion.open && !this.composer.text) {
-        this.toggleRecentTool()
-      }
-
-      return
+    const ctx: ActionContext = {
+      composerEmpty: !this.composer.text,
+      busy: Boolean(this.busy),
+      queued: this.queue.length > 0,
+      overlayOpen: this.overlays.length > 0,
+      completionOpen: this.#completion.open
     }
 
-    if (key.name === 'escape') {
-      if (this.busy) {
-        this.#interrupt()
-      }
+    const shortcut = actionForKey(key, ctx)
 
-      return
+    if (shortcut) {
+      return shortcut.run(this)
     }
 
-    if (key.shift && key.name === 'tab') {
-      return this.#cycleEffort()
-    }
-
-    if (key.alt && key.name === 'up' && this.queue.length) {
-      return this.#dequeue()
-    }
-
-    if (key.ctrl && key.name === 'd' && !this.composer.text) {
-      return this.quit()
-    }
-
-    const action = this.composer.key(key)
+    // Unbound Alt letters are commands, never literal typing. Keep readline's
+    // Alt+B/F/D editing behavior by forwarding the key without printable text.
+    const action = this.composer.key(key.alt && /^[a-z]$/i.test(key.name) ? { ...key, text: undefined } : key)
 
     if (action === 'submit') {
       this.#submit(this.composer.take())
     }
+  }
+
+  /** Copy the draft literally, without submitting it or disturbing the caret. */
+  copyPrompt() {
+    try {
+      copyToClipboard(this.composer.text)
+      // OSC52 has no acknowledgement; don't claim the terminal accepted it.
+      this.transcript.notice('Composer text sent to the terminal clipboard (OSC 52).')
+    } catch {
+      this.transcript.notice('Could not copy the composer text to the clipboard.', 'warning')
+    }
+
+    this.changed()
+  }
+
+  /** Use Hermes's existing display command, not an independent UI preference.
+   * Display show/hide is profile-scoped in the gateway, unlike effort levels.
+   * Serialize read→toggle so rapid repeats use canonical backend state.
+   */
+  toggleReasoning() {
+    const sid = this.sid
+
+    const toggle = async () => {
+      if (!sid || this.sid !== sid) {
+        return
+      }
+
+      const current = await this.#gw.request<ConfigGetResult>('config.get', { key: 'reasoning', session_id: sid })
+
+      if (this.sid === sid) {
+        await this.slash(`/reasoning ${current.display === 'hide' ? 'show' : 'hide'}`)
+      }
+    }
+
+    this.#reasoningToggles = this.#reasoningToggles.then(toggle).catch((error: Error) => {
+      if (this.sid === sid) {
+        this.transcript.notice(error.message, 'error')
+        this.changed()
+      }
+    })
   }
 
   /** Toggle the newest foldable tool without altering Hermes tool results. */
@@ -392,7 +423,7 @@ export class App implements OverlayHost {
     }
   }
 
-  #ctrlC() {
+  ctrlC() {
     if (this.composer.text) {
       this.composer.set('')
 
@@ -400,7 +431,7 @@ export class App implements OverlayHost {
     }
 
     if (this.busy) {
-      return this.#interrupt()
+      return this.interrupt()
     }
 
     const now = Date.now()
@@ -437,7 +468,7 @@ export class App implements OverlayHost {
     }
 
     if (text.startsWith('/')) {
-      void this.#slash(text)
+      void this.slash(text)
 
       return
     }
@@ -504,7 +535,7 @@ export class App implements OverlayHost {
     this.#send(candidate.text)
   }
 
-  async #slash(text: string) {
+  async slash(text: string) {
     const [name = '', ...rest] = text.slice(1).split(/\s+/)
     const arg = rest.join(' ')
     const local = localCommand(name)
@@ -552,7 +583,7 @@ export class App implements OverlayHost {
     this.changed()
   }
 
-  #interrupt() {
+  interrupt() {
     if (!this.sid) {
       return
     }
@@ -1114,7 +1145,7 @@ export class App implements OverlayHost {
   }
 
   /** Steps the session's reasoning effort. The native glyph changes only after readback. */
-  #cycleEffort() {
+  cycleEffort() {
     const sid = this.sid
 
     if (!sid) {
@@ -1138,7 +1169,7 @@ export class App implements OverlayHost {
   }
 
   /** Alt+Up / the queue's Edit: the oldest queued prompt back into an empty composer. */
-  #dequeue() {
+  dequeue() {
     const next = this.queue.shift()
 
     if (next !== undefined) {
@@ -1254,20 +1285,20 @@ export class App implements OverlayHost {
         inputId: INPUT_ID,
         model: info?.model ?? '',
         now,
-        onContext: () => void this.#slash('/usage'),
+        onContext: () => void this.slash('/usage'),
         onEdit: ev => {
           this.composer.edit(ev)
           this.changed()
         },
-        onEffort: () => this.#cycleEffort(),
-        onInterrupt: () => this.#interrupt(),
+        onEffort: () => this.cycleEffort(),
+        onInterrupt: () => this.interrupt(),
         onSettings: () => openSettings(this),
         onModel: () => openModelPicker(this),
         onDismiss: key => {
           this.dispatches.clear(key)
           this.changed()
         },
-        onQueueEdit: () => this.#dequeue(),
+        onQueueEdit: () => this.dequeue(),
         onSend: ev => {
           this.#submit(this.composer.take(ev.text))
           this.changed()
