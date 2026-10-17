@@ -34,6 +34,7 @@ import { SPLASH_ROLE } from './splash/index.js'
 import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting, splashTickMs } from './splash/launch.js'
 import { Transcript } from './transcript.js'
 import { dockNodes } from './view/dock.js'
+import { toolFoldState } from './view/tools.js'
 import { entryNode } from './view/transcript.js'
 import { randomTip, type WelcomeContext } from './view/welcome.js'
 
@@ -60,6 +61,9 @@ export class App implements OverlayHost {
   readonly dispatches = new Dispatches()
   readonly composer = new Composer()
   readonly overlays: Overlay[] = []
+  /** Presentation-only collapse overrides, scoped by transcript turn and tool identity. */
+  readonly #folds = new Map<string, boolean>()
+  readonly #foldRevs = new Map<string, number>()
   sid: string | null = null
   /** The stored (database) id of the open session: what `session.list` rows are keyed by. */
   storedSid: string | null = null
@@ -282,6 +286,16 @@ export class App implements OverlayHost {
       return
     }
 
+    if (key.ctrl && !key.alt && !key.meta && key.name === 'o') {
+      // Tern's native selection is not exposed to the program. An empty
+      // composer is the only safe guarantee that no draft is selected.
+      if (!this.overlays.length && !this.#completion.open && !this.composer.text) {
+        this.toggleRecentTool()
+      }
+
+      return
+    }
+
     if (key.name === 'escape') {
       if (this.busy) {
         this.#interrupt()
@@ -309,9 +323,61 @@ export class App implements OverlayHost {
     }
   }
 
+  /** Toggle the newest foldable tool without altering Hermes tool results. */
+  toggleRecentTool(): void {
+    for (let i = this.transcript.entries.length - 1; i >= 0; i--) {
+      const entry = this.transcript.entries[i]
+
+      if (entry?.kind !== 'turn') {
+        continue
+      }
+
+      for (let j = entry.blocks.length - 1; j >= 0; j--) {
+        const block = entry.blocks[j]
+
+        if (block?.kind !== 'tool') {
+          continue
+        }
+
+        const fold = toolFoldState(block.call)
+
+        if (!fold.collapsible) {
+          continue
+        }
+
+        const key = entry.id + ':' + block.call.id
+        this.#folds.set(key, !(this.#folds.get(key) ?? fold.collapsed))
+        this.#foldRevs.set(entry.id, (this.#foldRevs.get(entry.id) ?? 0) + 1)
+        this.changed()
+
+        return
+      }
+    }
+  }
+
   #onTernEvent(ev: TspEvent) {
+    if (ev.ev === 'toggle' && ev.sf === 'hermes' && ev.key) {
+      // Tern owns mouse folding. Mirror only the clicked tool's presentation
+      // state, so the subsequent Ctrl+O reverses what the person actually saw.
+      for (const entry of this.transcript.entries) {
+        if (entry.kind !== 'turn' || !ev.id.startsWith('main.' + entry.id + '.')) {
+          continue
+        }
+
+        const match = entry.blocks.some(b => b.kind === 'tool' && b.call.id === ev.key)
+
+        if (match) {
+          this.#folds.set(entry.id + ':' + ev.key, ev.collapsed)
+          this.#foldRevs.set(entry.id, (this.#foldRevs.get(entry.id) ?? 0) + 1)
+
+          break
+        }
+      }
+    }
+
     if (ev.ev === 'visible' && ev.sf === 'hermes') {
       this.#visible = ev.visible
+
       if (ev.visible) {
         this.dispatches.resume()
       }
@@ -414,6 +480,7 @@ export class App implements OverlayHost {
   /** Retry only the exact latest error, on the same idle session, never a stale or image-backed request. */
   canRetry(turnId: string): boolean {
     const candidate = this.#retry
+
     if (!candidate || candidate.turnId !== turnId || !this.sid || candidate.sid !== this.sid ||
         this.busy || this.#switches.pending || this.queue.length) {
       return false
@@ -529,6 +596,7 @@ export class App implements OverlayHost {
 
     try {
       await this.#gw.request('image.attach', { path, session_id: sid })
+
       if (this.sid === sid) {
         this.#startupAttachmentPending = true
       }
@@ -644,6 +712,8 @@ export class App implements OverlayHost {
   #adopt(r: CreateResult) {
     if (this.sid !== r.session_id) {
       this.dispatches.reset()
+      this.#folds.clear()
+      this.#foldRevs.clear()
       this.#lastSubmitted = null
       this.#retry = null
       this.#startupAttachmentPending = false
@@ -882,6 +952,7 @@ export class App implements OverlayHost {
       case 'btw.complete':
         if (ev.payload && 'text' in ev.payload && typeof ev.payload.text === 'string' && ev.payload.text.trim()) {
           t.panel(ev.type === 'btw.complete' ? '/btw' : 'Background task', ev.payload.text)
+
           if (!this.#visible) {
             this.dispatches.show({
               key: `task:${ev.payload.task_id}`,
@@ -1021,6 +1092,7 @@ export class App implements OverlayHost {
 
         return result
       }
+
       if (this.sid === sid) {
         throw new Error('The backend did not confirm the live reasoning effort.')
       }
@@ -1123,6 +1195,13 @@ export class App implements OverlayHost {
     const cx = {
       copy: (text: string) => copyToClipboard(text),
       cwd: info?.cwd ?? '',
+      onCopyError: () => {
+        this.transcript.notice('Could not copy the answer to the clipboard.', 'warning')
+        this.changed()
+      },
+      foldRevision: (turnId: string) => this.#foldRevs.get(turnId) ?? 0,
+      toolCollapsed: (turnId: string, callId: string) => this.#folds.get(turnId + ':' + callId),
+
       canRetry: (turnId: string) => this.canRetry(turnId),
       retry: (turnId: string) => this.retryFailed(turnId),
       now,
