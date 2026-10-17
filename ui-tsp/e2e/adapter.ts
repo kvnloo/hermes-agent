@@ -266,7 +266,7 @@ export class NativeControl {
   }
 
   // Keep Ctrl out: Tern 0.6 Linux control translates it into Meta.
-  async shortcut(chord: 'alt+m' | 'alt+,' | 'f1' | 'alt+c'): Promise<void> {
+  async shortcut(chord: 'alt+m' | 'alt+,' | 'f1' | 'alt+c' | 'alt+shift+p'): Promise<void> {
     const budget = this.#budget()
     await this.snapshot(budget)
     await appendFile(join(this.manifest.proof,'native-actions.jsonl'), JSON.stringify({ time:Date.now(), action:'key', chord })+'\n', {mode:0o600})

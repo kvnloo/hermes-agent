@@ -33,10 +33,13 @@ import { type ApprovalPrompt, isApprovalPrompt } from './overlays/approval.js'
 import { Completion } from './overlays/completion.js'
 import { JobsSheet } from './overlays/jobs.js'
 import { openModelPicker } from './overlays/models.js'
+import { openPlanReview } from './overlays/plan-review.js'
 import { promptOverlay } from './overlays/prompts.js'
 import { openReportSheet } from './overlays/report-sheet.js'
 import { openSettings } from './overlays/settings.js'
+import type { SheetHost } from './overlays/sheet.js'
 import { programPaletteOf } from './palette.js'
+import { latestPlan } from './plan.js'
 import { isReportCommand, type Report, type ReportNotice } from './reports.js'
 import { SPLASH_ROLE } from './splash/index.js'
 import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting, splashTickMs } from './splash/launch.js'
@@ -242,7 +245,7 @@ export class App implements OverlayHost {
     }
 
     // Inspection results must not cover an approval/clarification waiting for input.
-    const prompt = overlay.key === 'report' ? this.overlays.findIndex(o => o.key.startsWith('prompt:')) : -1
+    const prompt = overlay.key === 'report' || overlay.key === 'plan' ? this.overlays.findIndex(o => o.key.startsWith('prompt:')) : -1
     this.overlays.splice(prompt < 0 ? this.overlays.length : prompt, 0, overlay)
     this.#overlayIds.set(overlay, `${overlay.placement ?? 'layer'}.${overlay.key}:${++this.#overlaySerial}`)
 
@@ -296,19 +299,36 @@ export class App implements OverlayHost {
   }
 
   report(report: Report) {
-    openReportSheet({
+    openReportSheet({ ...this.#sheetHost(), copy: copyToClipboard }, report)
+  }
+
+  reviewPlan() {
+    const sid = this.sid
+    openPlanReview({
+      ...this.#sheetHost(),
+      owns: overlay => this.owns(overlay) && this.sid === sid,
+      submit: text => {
+        if (this.sid === sid) {
+          this.#submit(text)
+          this.changed()
+        }
+      }
+    }, latestPlan(this.transcript.entries))
+  }
+
+  #sheetHost(): SheetHost {
+    return {
       open: overlay => this.open(overlay),
       close: overlay => this.close(overlay),
       changed: () => this.changed(),
-      copy: copyToClipboard,
       scroll: (overlay, to: ScrollTo) => {
         const id = this.#overlayIds.get(overlay)
 
-        if (id && this.overlays.at(-1) === overlay) {
+        if (id && this.owns(overlay)) {
           this.#surface.scroll(`${id}.body.markdown`, to)
         }
       }
-    }, report)
+    }
   }
 
   // ── Input ──────────────────────────────────────────────────────────
@@ -343,7 +363,7 @@ export class App implements OverlayHost {
     const clear = APP_ACTIONS.find(action => action.id === 'app.clear')!
 
     if (matchesAction(clear, key)) {
-      return top?.key === 'settings' || top?.key === 'report' ? top.onKey(key) : clear.run(this)
+      return top?.key === 'settings' || top?.key === 'report' || top?.key === 'plan' ? top.onKey(key) : clear.run(this)
     }
 
     if (top && (top.placement !== 'dock' || !this.composer.text) && top.onKey(key)) {
@@ -900,7 +920,7 @@ export class App implements OverlayHost {
       this.#reports.clear()
 
       for (const overlay of [...this.overlays]) {
-        if (overlay.key === 'report') {
+        if (overlay.key === 'report' || overlay.key === 'plan') {
           this.close(overlay)
         }
       }
@@ -1496,7 +1516,7 @@ export class App implements OverlayHost {
         orb: this.#orb?.props(),
         onContext: () => void this.slash('/usage'),
         onEdit: ev => {
-          if (this.overlays.at(-1)?.key === 'report') {
+          if (this.overlays.at(-1)?.key === 'report' || this.overlays.at(-1)?.key === 'plan') {
             return
           }
 
@@ -1513,7 +1533,7 @@ export class App implements OverlayHost {
         },
         onQueueEdit: () => this.dequeue(),
         onSend: ev => {
-          if (this.overlays.at(-1)?.key === 'report') {
+          if (this.overlays.at(-1)?.key === 'report' || this.overlays.at(-1)?.key === 'plan') {
             return
           }
 
@@ -1521,7 +1541,7 @@ export class App implements OverlayHost {
           this.changed()
         },
         onSubmit: () => {
-          if (this.overlays.at(-1)?.key === 'report') {
+          if (this.overlays.at(-1)?.key === 'report' || this.overlays.at(-1)?.key === 'plan') {
             return
           }
 
@@ -1529,7 +1549,7 @@ export class App implements OverlayHost {
           this.changed()
         },
         onUndo: () => {
-          if (this.overlays.at(-1)?.key === 'report') {
+          if (this.overlays.at(-1)?.key === 'report' || this.overlays.at(-1)?.key === 'plan') {
             return
           }
 

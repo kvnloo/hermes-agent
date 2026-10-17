@@ -161,6 +161,23 @@ Page Up/Down, Home and End scroll the native report overlay, never the transcrip
 Copy sends the exact Markdown through OSC 52 and reports failures in the sheet;
 it does not claim that the host clipboard acknowledged the write.
 
+## Native plan review
+
+Bare `/plan` and Alt+Shift+P review the latest completed assistant message with
+ATX (`#`–`######`) Markdown headings. The table of contents preserves heading
+order and depth; Up/Down or a section click selects its exact Markdown body.
+Page Up/Down and Home/End scroll that body using the same native sheet primitives
+as reports. Code-fence headings, reasoning, user messages and tool output are not
+plan candidates. With no candidate the sheet explains why it has no decisions.
+
+Approve (Alt+A) sends `Approved — proceed with the plan.` once. Refine (Alt+R)
+opens a separate note field; Enter or Send refinement submits
+`Refine the plan: <trimmed note>`. These are ordinary user messages through the
+normal submit/queue path, not tool grants or a new backend authority. Esc/Close
+preserves the composer draft and caret, including cancellation from the note.
+Annotations remain a TODO. `/plan <task>` still invokes Hermes's existing
+plan-generation builtin; it does not have a structured review contract.
+
 ## Native overlay actions
 
 An overlay action belongs to the instance that produced its native node.
