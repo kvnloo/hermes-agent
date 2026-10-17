@@ -7,6 +7,7 @@ import type { ConfigGetResult } from '@hermes/shared/gateway-events'
 import type { App } from './app.js'
 import { forkSession } from './fork-session.js'
 import { cycleModel } from './model-cycle.js'
+import { openAgentHub } from './overlays/agent-hub.js'
 import { openHelp } from './overlays/help.js'
 import { openHistorySearch } from './overlays/history.js'
 import { openModelPicker, switchModel } from './overlays/models.js'
@@ -27,6 +28,7 @@ export interface LocalCommand {
 }
 
 const COMMANDS: readonly LocalCommand[] = [
+  { name: 'agents', run: (app, arg) => arg ? false : openAgentHub(app) },
   { name: 'history-search', run: openHistorySearch },
   { name: 'editor', run: app => app.editExternal() },
   { name: 'model-next', run: app => cycleModel(app, 1) },

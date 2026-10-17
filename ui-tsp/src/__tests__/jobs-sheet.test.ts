@@ -36,7 +36,7 @@ interface Fixture {
 }
 
 const job = (id: string, extra: Partial<JobSnapshot> = {}): JobSnapshot => ({
-  id, kind: 'process', owner_session_id: 'session-1', started: 123, state: 'running', title: `Build ${id}`, ...extra
+  can_cancel: true, id, kind: 'process', owner_session_id: 'session-1', started: 123, state: 'running', title: `Build ${id}`, ...extra
 })
 
 async function withApp(fixture: Fixture, run: (h: {

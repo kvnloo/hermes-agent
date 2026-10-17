@@ -28,7 +28,6 @@ const REPORT_COMMANDS: readonly ReportCommand[] = [
   { name: 'tools', accepts: anyArgument },
   { name: 'help', accepts: anyArgument },
   { name: 'status', accepts: noArgument },
-  { name: 'agents', accepts: noArgument },
   { name: 'mcp', accepts: noArgument }
 ]
 

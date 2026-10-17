@@ -4,6 +4,8 @@ import type { Subagent } from '../model.js'
 import type { Overlay } from '../overlay.js'
 import { age, duration } from '../view/time.js'
 
+import { openAgentHub } from './agent-hub.js'
+
 export interface AgentSelection {
   /** Tool identity scopes legacy task-index ids to their exact delegation. */
   callId: string
@@ -49,7 +51,15 @@ export function agentSelectionForJob(app: App, jobId: string): AgentSelection | 
 
 /** Reads the existing event-folded transcript on every frame, including after completion. */
 export function openAgentInspector(app: App, selection: AgentSelection) {
-  if (!selectedAgent(app, selection)) {
+  const child = selectedAgent(app, selection)
+
+  if (child?.childSessionId) {
+    openAgentHub(app, { childSessionId: child.childSessionId })
+
+    return
+  }
+
+  if (!child) {
     return
   }
 
@@ -73,6 +83,7 @@ export function openAgentInspector(app: App, selection: AgentSelection) {
               <col gap="sm" key="details" role="omp.agent.details">
                 <text key="identity" text={`${selection.callId} · ${selection.agentId}`} tone="muted" />
                 <text key="goal" text={agent.goal} wrap="word" />
+                <text key="capabilities" text="Supported actions: read-only observed activity. Send, stop and full transcript unavailable without a canonical child session." tone="muted" />
                 <text key="model" text={`Model: ${agent.model ?? 'not reported'}`} />
                 <text key="status" text={`Status: ${agent.status}`} tone={agent.status === 'failed' || agent.status === 'cancelled' ? 'error' : undefined} />
                 <row gap="sm" key="elapsed">
@@ -112,6 +123,6 @@ export function openAgentInspector(app: App, selection: AgentSelection) {
     }
   }
 
-  // TODO(agent-inspector-controls): add stop/send intents only with supported backend contracts.
+  // Legacy task-index observations remain read-only: they confer no gateway authority.
   app.open(sheet)
 }

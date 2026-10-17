@@ -482,6 +482,46 @@ async function agentInspector() {
   },true)
 }
 
+async function agentHub() {
+  await step('real gateway reads an explicitly seeded owned child transcript, with no invented control authority', async () => {
+    const wire = await native.wire()
+    const ids = new Set(wire.filter(w => w.dir === 'request' && w.body.method === 'session.create').map(w => w.body.id))
+    const parent = String(record(wire.findLast(w => w.dir === 'delivered' && ids.has(w.body.id) && w.body.result)?.body.result).stored_session_id)
+    const seed = `import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from hermes_state import SessionDB
+db = SessionDB(Path(sys.argv[2]) / 'state.db')
+root = sys.argv[3]
+db.create_session(root, source='tui')
+db.create_session('hub-e2e-child', source='subagent', parent_session_id=root, model_config={'_delegate_from': root, '_delegate_goal': 'Hub seeded child', '_subagent_id': 'sa-hub-e2e'})
+for i in range(51):
+    db.append_message('hub-e2e-child', 'assistant', f'Hub full transcript message {i}')
+db.end_session('hub-e2e-child', 'completed')
+db.close()
+`
+    await promisify(execFile)(manifest.python, ['-c', seed, manifest.root, manifest.home, parent], { cwd: manifest.root })
+    await command('/agents')
+    const nodes = await until(() => native.rendered(), ns => [...ns.values()].some(n => n.p?.role === 'omp.agent.transcript') && [...ns.values()].some(n => JSON.stringify(n.p).includes('Hub full transcript message 0')), 'full first canonical child page')
+    assert([...nodes.values()].some(n => n.p?.role === 'omp.overlay.agent-hub'))
+    assert([...nodes.values()].some(n => String(n.p?.text).includes('Status: completed')))
+    assert(![...nodes.values()].some(n => n.id.startsWith('layer.agent-hub:') && ['send', 'stop'].includes(n.id.split('.').at(-1)!)))
+    await capture('owned-full-transcript')
+  }, true)
+  await step('native Next page reads the real canonical continuation, Close restores the composer', async () => {
+    await tap('Next page')
+    const nodes = await until(() => native.rendered(), ns => [...ns.values()].some(n => JSON.stringify(n.p).includes('Hub full transcript message 50')), 'second canonical page')
+    assert(![...nodes.values()].some(n => n.p?.text === 'Next page'))
+    await capture('next-page')
+    await native.key('Escape')
+    await until(() => native.rendered(), ns => ![...ns.values()].some(n => n.p?.role === 'omp.overlay.agent-hub'), 'hub closed')
+    await native.type('Hub unsent draft')
+    await until(() => native.rendered(), ns => ns.get('dock.composer.line.input')?.p?.text === 'Hub unsent draft', 'parent composer restored')
+    assert(!(await native.wire()).some(w => w.dir === 'request' && ['prompt.submit', 'subagent.message', 'subagent.stop', 'slash.exec'].includes(w.body.method ?? '')))
+    await capture('closed')
+  }, true)
+}
+
 async function retention() {
   const frames = async () => (await readFile(manifest.tsp, 'utf8')).trim().split('\n')
     .map(line => JSON.parse(line) as import('./types.ts').TspFrame)
@@ -534,7 +574,7 @@ try {
   const wire = await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='delivered' && w.body.result && typeof w.body.result==='object' && !Array.isArray(w.body.result) && 'session_id' in w.body.result), 'real session creation')
   const ids = new Set(wire.filter(w=>w.dir==='request' && w.body.method==='session.create').map(w=>w.body.id))
   sid = String(record(wire.findLast(w=>w.dir==='delivered' && ids.has(w.body.id) && w.body.result)?.body.result).session_id)
-  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes,media,'agent-inspector':agentInspector,retention}
+  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes,media,'agent-inspector':agentInspector,'agent-hub':agentHub,retention}
   assert(journeys[journey],`Unknown journey: ${journey}`)
   await journeys[journey]!()
 } catch (error) { console.error(error); process.exitCode=1 }

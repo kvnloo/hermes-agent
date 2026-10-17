@@ -76,6 +76,10 @@ async function withApp(run: (harness: Harness) => Promise<void>) {
       return { jobs: [] }
     }
 
+    if (method === 'subagent.hub') {
+      return { agents: [] }
+    }
+
     if (method === 'session.list') {
       return { sessions: [] }
     }
@@ -203,11 +207,16 @@ describe('app action registry', () => {
     await withApp(async ({ app, gw, surface, press }) => {
       app.composer.set('unfinished prompt', 5)
       await press(bytes)
-      expect(gw.request).toHaveBeenCalledWith('slash.exec', { command, session_id: 'session-1' })
+      const hub = command === 'agents'
+      expect(gw.request).toHaveBeenCalledWith(hub ? 'subagent.hub' : 'slash.exec', hub ? { session_id: 'session-1' } : { command, session_id: 'session-1' })
       expect(app.transcript.entries.some(entry => entry.kind === 'panel')).toBe(false)
       const root = views.get(surface)?.regions.find(region => region?.id === 'layer')?.children[0]
-      expect(root?.props.head).toBe(`/${command}`)
-      expect(root?.children[0]?.children[0]?.props.text).toBe('Gateway command output')
+      expect(root?.props.head).toBe(hub ? 'Agents · owned hub' : `/${command}`)
+
+      if (!hub) {
+        expect(root?.children[0]?.children[0]?.props.text).toBe('Gateway command output')
+      }
+
       expect(app.composer.text).toBe('unfinished prompt')
       expect(app.composer.cursor).toBe(5)
     })

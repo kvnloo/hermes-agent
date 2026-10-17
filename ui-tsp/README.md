@@ -171,7 +171,7 @@ Hermes owns the search text, edit draft, caret and raw keys. Tern owns native la
 ## Native report sheets
 
 `/usage`, `/context` (including Alt+U / Alt+C and the context meter), `/btw`,
-`/history`, `/tools`, detailed `/help`, and the argument-free `/status`, `/agents`
+`/history`, `/tools`, detailed `/help`, and the argument-free `/status`
 and `/mcp` reports open one shared Markdown sheet instead of transcript panels.
 The explicit allowlist is in `src/reports.ts`; unknown commands and mutating
 forms retain their existing behavior. `/help` without arguments keeps its native
@@ -186,6 +186,34 @@ Esc or Close returns to the untouched composer draft/caret. Arrow keys,
 Page Up/Down, Home and End scroll the native report overlay, never the transcript.
 Copy sends the exact Markdown through OSC 52 and reports failures in the sheet;
 it does not claim that the host clipboard acknowledged the write.
+
+## Owned agent hub
+
+`/agents` and Alt+A open a native roster rather than a text report. Task rows with
+an explicit child session id and the Jobs sheet open the same owned detail view.
+Legacy task-index-only observations remain read-only and confer no authority.
+
+The gateway projects live records and durable descendant lineage. Explicit
+`send`, `stop`, and `transcript` flags control the available actions; lineage-only,
+completed, unknown, advisor and aborted records cannot acquire live control from
+an id or a title. Every intent rechecks the exact transport, session generation,
+canonical child id and supported action. No revive/restart is offered.
+
+Send queues steering through the actual child agent. Queued is not delivered:
+a final-boundary race is returned through the existing `missed_steer` result.
+Rejected/failed sends preserve the draft. Stop acknowledges `cancel_requested`,
+not completion; the later runtime/stored verdict remains authoritative. The hub
+never invents a retry countdown. Jobs also advertise explicit cancellation support.
+
+The read-only transcript pages the canonical session messages, including full
+content, tool calls/results and compacted history. It uses the same projection
+while running and after completion, not a truncated live-log substitute. A live
+child can precede its first persisted message flush. Refreshes are event-driven
+only while the sheet is open; close removes subscriptions, and stale responses
+cannot update a replacement visit/session. The parent draft and caret are retained.
+
+Behavior references: OMP's MIT agent hub/transcript viewer by Can Bölük / Stencil,
+at `eb74cf84`. Hermes deliberately does not copy OMP's restart/revive semantics.
 
 ## Native plan review
 

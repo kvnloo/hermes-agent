@@ -204,7 +204,7 @@ describe('native report sheets', () => {
     })
   })
 
-  it.each(['/btw', '/context', '/history', '/tools', '/help usage', '/status', '/agents', '/mcp'])('%s uses the explicit report route', async command => {
+  it.each(['/btw', '/context', '/history', '/tools', '/help usage', '/status', '/mcp'])('%s uses the explicit report route', async command => {
     await withApp(async ({ app, nodes }) => {
       await app.slash(command)
       await rendered()
