@@ -158,7 +158,7 @@ describe('native assistant answer actions', () => {
 
   it('wraps explicit source code nodes using the documented SDK prop', () => {
     const read = node(toolNode({
-      args: { path: 'README.md' }, argsText: '', context: '', id: 'read',
+      args: { path: 'source.ts' }, argsText: '', context: '', id: 'read',
       name: 'read_file', result: { content: '1|some very long source text' }, startedAt: 0, status: 'done'
     }, 0))
 
