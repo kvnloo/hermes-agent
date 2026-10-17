@@ -28,6 +28,7 @@ import { Dispatches } from './attention.js'
 import { BusyInput } from './busy-input.js'
 import { localCommand } from './commands.js'
 import { Composer } from './composer.js'
+import { Dictation } from './dictation.js'
 import { editExternal } from './external-editor.js'
 import { type Busy, busyFrom, ownsEvent, Switches } from './flow.js'
 import { FramePump } from './frame.js'
@@ -83,6 +84,7 @@ export class App implements OverlayHost {
   readonly jobs = new JobsSheet(this)
   readonly composer = new Composer()
   readonly modelRecents = new ModelRecents()
+  readonly dictation = new Dictation(this)
   readonly busyInput = new BusyInput(this)
   readonly attachments: Attachments
   readonly overlays: Overlay[] = []
@@ -228,6 +230,7 @@ export class App implements OverlayHost {
       this.transcript.notice(`The agent backend exited${code === null ? '' : ` (${code})`}.`, 'error')
       // The runtime session died with the process: prompts queue until the next gateway.ready reattaches.
       this.attachments.clear()
+      this.dictation.reset()
       this.sid = null
       this.todoHud.adopt(null)
       this.jobs.adopt(null)
@@ -404,6 +407,12 @@ export class App implements OverlayHost {
 
     if (key.name === 'paste' && key.text && this.#pasteImage(key.text)) {
       return
+    }
+
+    const escape = APP_ACTIONS.find(action => action.id === 'app.interrupt')!
+
+    if (this.dictation.blocked && matchesAction(escape, key)) {
+      return escape.run(this)
     }
 
     if (this.#completion.onKey(key)) {
@@ -603,6 +612,12 @@ export class App implements OverlayHost {
   }
 
   ctrlC() {
+    if (this.dictation.blocked) {
+      void this.dictation.stop(true)
+
+      return
+    }
+
     if (this.composer.text || this.attachments.items.length) {
       this.composer.set('')
       this.attachments.clear()
@@ -625,6 +640,8 @@ export class App implements OverlayHost {
   }
 
   quit(code = 0) {
+    void this.dictation.stop(true)
+
     for (const overlay of [...this.overlays]) {
       this.close(overlay)
     }
@@ -648,7 +665,7 @@ export class App implements OverlayHost {
 
   /** Keyboard Enter and native send share the request-bound deny → submit transaction. */
   async #submitDraft(raw = this.composer.text, approval: ApprovalPrompt | null = this.overlays.find(isApprovalPrompt) ?? null, alternate = false) {
-    if (this.#submittingApproval || this.rewinding) {
+    if (this.#submittingApproval || this.rewinding || this.dictation.blocked) {
       return
     }
 
@@ -1052,6 +1069,8 @@ export class App implements OverlayHost {
 
   #adopt(r: CreateResult) {
     if (this.sid !== r.session_id) {
+      void this.dictation.stop(true)
+      this.dictation.reset()
       this.#dropPrompts(() => true)
       this.dispatches.reset()
       this.#reports.clear()
@@ -1121,6 +1140,7 @@ export class App implements OverlayHost {
       return
     }
 
+    this.dictation.event(ev)
     const t = this.transcript
     this.jobs.event(ev.type)
     this.#activity.event(ev)
@@ -1641,6 +1661,8 @@ export class App implements OverlayHost {
         attachments: this.attachments.items,
         onAttachmentRemove: id => void this.attachments.remove(id),
         onAttachmentRetry: id => this.attachments.retry(id),
+        dictation: this.dictation,
+        onDictation: () => this.dictation.toggle(),
         context: max > 0 ? { max, used } : undefined,
         cost: usage?.cost_usd ?? undefined,
         cwd: info?.cwd ? shortPath(info.cwd) : '',
@@ -1699,7 +1721,7 @@ export class App implements OverlayHost {
         },
         placeholder: 'Ask Hermes — / commands · @ files',
         queued: this.queue,
-        ready: this.sid !== null && !this.attachments.blocked
+        ready: this.sid !== null && !this.attachments.blocked && !this.dictation.blocked
       }),
       layer: [
         ...this.overlays.filter(o => o.placement !== 'dock').map(o => {

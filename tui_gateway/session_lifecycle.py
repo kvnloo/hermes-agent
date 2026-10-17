@@ -517,6 +517,8 @@ def _teardown_session(session: dict | None, *, end_reason: str = "tui_close") ->
     slash-worker is closed in ``_finalize_session`` (the single chokepoint), NOT here. Idempotent via ``_finalized``."""
     if not session:
         return
+    from tui_gateway.dictation import manager
+    manager.release(session=session)
     _finalize_session(session, end_reason=end_reason)
     _announce_session_reclaimed(session, end_reason)
     with contextlib.suppress(Exception):
@@ -1000,6 +1002,8 @@ def _close_sessions_for_transport(transport, *, end_reason: str = "ws_disconnect
     another client attached keeps streaming and is neither parked nor reaped — a watcher leaving must not end the
     turn the remaining client is reading. Only the sessions left clientless take the historical
     close_on_disconnect / park-sentinel path, so a single-client disconnect behaves exactly as it always has."""
+    from tui_gateway.dictation import manager
+    manager.release(transport=transport)
     clientless = _detach_transport_from_sessions(transport)
     reaped = detached = 0
     for sid, session in clientless:

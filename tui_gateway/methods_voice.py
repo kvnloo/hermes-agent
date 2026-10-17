@@ -25,6 +25,17 @@ def _caller_transport():
     return current_transport() or _stdio_transport
 
 
+def _dictation_mic_guard(handler):
+    """Serialize other mic intents against dictation's explicit capture lease."""
+    def guarded(rid, params):
+        from tui_gateway.dictation import manager
+        with manager.lock:
+            if manager.active is not None:
+                return _err(rid, 4019, "Microphone is busy with dictation; finish or cancel it first")
+            return handler(rid, params)
+    return guarded
+
+
 def _voice_emit(event: str, payload: dict | None = None) -> None:
     """Emit toward the session that most recently turned voice on (empty sid = active session)."""
     with _voice_sid_lock:
@@ -458,6 +469,7 @@ def _(rid, params: dict) -> dict:
 
 
 @method("wake.start")
+@_dictation_mic_guard
 def _(rid, params: dict) -> dict:
     """Arm the wake-word listener for the calling surface ("tui" | "gui"); ``{started: False,
     reason}`` when disabled/owned/not ready. ``persist: true`` (explicit gesture) also flips
@@ -635,6 +647,7 @@ def _voice_toggle_status(rid, params: dict) -> dict:
     return _ok(rid, payload)
 
 
+@_dictation_mic_guard
 def _voice_toggle_mode(rid, params: dict) -> dict:
     enabled = params.get("action") == "on"
     os.environ["HERMES_VOICE"] = "1" if enabled else "0"
@@ -712,6 +725,7 @@ def _vr_on_status(state):
 
 
 @method("voice.record")
+@_dictation_mic_guard
 def _(rid, params: dict) -> dict:
     """VAD-bounded push-to-talk. ``start`` emits ``voice.transcript`` when silence stops the
     capture; ``stop`` forces transcription. Three silent captures emit ``no_speech_limit``."""
@@ -776,6 +790,47 @@ def _(rid, params: dict) -> dict:
         if isinstance(e, ImportError):
             return _err(rid, 5025, "voice module not available — install audio dependencies")
         return _err(rid, 5025, str(e))
+
+
+@method("voice.dictate.start")
+@_registry.profile_scoped
+def _dictate_start(rid, params: dict) -> dict:
+    from tui_gateway.dictation import manager
+    session, err = _sess_nowait(params, rid)
+    if err:
+        return err
+    transport = _caller_transport()
+    if session.get("transport", _stdio_transport) is not transport:
+        return _err(rid, 4001, "session is owned by another client")
+    sid, capture_id = params["session_id"], params["capture_id"]
+    if not capture_id.strip():
+        return _err(rid, 4000, "capture_id required")
+    try:
+        with manager.lock, _sessions_lock:
+            if _voice_mode_enabled() or _wake_owner_snapshot()[0] is not None:
+                return _err(rid, 4019, "Turn off voice chat / wake listening before dictating")
+            if _sessions.get(sid) is not session:
+                return _err(rid, 4001, "session closed before dictation started")
+            manager.start(capture_id, session, transport,
+                          lambda payload: _emit("voice.dictation", sid, payload))
+    except RuntimeError as exc:
+        return _err(rid, 4019, str(exc))
+    return _ok(rid, {"capture_id": capture_id})
+
+
+@method("voice.dictate.stop")
+@_registry.profile_scoped
+def _dictate_stop(rid, params: dict) -> dict:
+    from tui_gateway.dictation import manager
+    session, err = _sess_nowait(params, rid)
+    if err:
+        return err
+    try:
+        manager.stop(params["capture_id"], session, _caller_transport(),
+                     cancel=params.get("cancel", False))
+    except RuntimeError as exc:
+        return _err(rid, 4019, str(exc))
+    return _ok(rid, {"capture_id": params["capture_id"]})
 
 
 @method("voice.tts")

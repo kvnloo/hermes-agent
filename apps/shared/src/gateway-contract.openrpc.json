@@ -4489,6 +4489,42 @@
       }
     },
     {
+      "name": "voice.dictate.start",
+      "summary": "Explicitly capture local microphone audio for a review-only draft.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/DictateStartParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/DictateResult"
+        }
+      }
+    },
+    {
+      "name": "voice.dictate.stop",
+      "summary": "Finish dictation, or cancel and discard all audio and hypotheses.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/DictateStopParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/DictateResult"
+        }
+      }
+    },
+    {
       "name": "voice.record",
       "summary": "VAD-bounded push-to-talk; the transcript arrives as a voice.transcript event.",
       "params": [
@@ -12436,6 +12472,118 @@
           "ok"
         ],
         "title": "DiagnosticsShareNousResult",
+        "type": "object"
+      },
+      "DictateResult": {
+        "additionalProperties": false,
+        "properties": {
+          "capture_id": {
+            "title": "Capture Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "capture_id"
+        ],
+        "title": "DictateResult",
+        "type": "object"
+      },
+      "DictateStartParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "capture_id": {
+            "title": "Capture Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "capture_id"
+        ],
+        "title": "DictateStartParams",
+        "type": "object"
+      },
+      "DictateStopParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "capture_id": {
+            "title": "Capture Id",
+            "type": "string"
+          },
+          "cancel": {
+            "default": false,
+            "title": "Cancel",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "session_id",
+          "capture_id"
+        ],
+        "title": "DictateStopParams",
+        "type": "object"
+      },
+      "DictationPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "capture_id": {
+            "title": "Capture Id",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "idle",
+              "starting",
+              "recording",
+              "transcribing",
+              "error"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Text"
+          },
+          "final": {
+            "default": false,
+            "title": "Final",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          }
+        },
+        "required": [
+          "capture_id",
+          "state"
+        ],
+        "title": "DictationPayload",
         "type": "object"
       },
       "DiscoveredRepo": {
@@ -41131,6 +41279,18 @@
           "name": "payload",
           "schema": {
             "$ref": "#/components/schemas/ToolStartPayload"
+          }
+        }
+      ]
+    },
+    {
+      "name": "voice.dictation",
+      "summary": "Replaceable partial hypotheses and one final review-only dictation transcript.",
+      "params": [
+        {
+          "name": "payload",
+          "schema": {
+            "$ref": "#/components/schemas/DictationPayload"
           }
         }
       ]

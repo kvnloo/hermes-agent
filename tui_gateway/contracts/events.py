@@ -15,6 +15,8 @@ closed, so a drifted emitter fails the suite (``registry.check_payload`` raises 
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import Field
 
 from .base import JsonValue, Payload, WireEnum
@@ -667,6 +669,18 @@ class VoiceTranscriptPayload(Payload):
     stop_phrase: bool | None = None
     typed: bool | None = None
     no_speech_limit: bool | None = None
+
+
+class DictationPayload(Payload):
+    capture_id: str
+    state: Literal["idle", "starting", "recording", "transcribing", "error"]
+    text: str | None = None
+    final: bool = False
+    error: str | None = None
+
+
+event("voice.dictation", DictationPayload,
+      doc="Replaceable partial hypotheses and one final review-only dictation transcript.")
 
 
 class WakeDetectedPayload(Payload):
