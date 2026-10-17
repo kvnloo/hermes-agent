@@ -159,6 +159,25 @@ def _queue_attached_image(session: dict, img_bytes: bytes, ext: str, *, prefix: 
     return candidate
 
 
+def _requested_submit_images(rid, session: dict, params: dict):
+    """Validate confirmed attachment identities before any turn mutation; never accept arbitrary paths."""
+    paths = params.get("image_paths")
+    if paths is None:
+        return None, None
+    if (not isinstance(paths, list) or any(not isinstance(path, str) or not path for path in paths)
+            or len(paths) != len(set(paths))):
+        return None, _err(rid, 4015, "image_paths must be unique confirmed attachment paths")
+    if any(path not in session.get("attached_images", []) for path in paths):
+        return None, _err(rid, 4016, "image_paths contains an unconfirmed or removed attachment")
+    return list(paths), None
+
+
+def _consume_submit_images(session: dict, paths: list[str]) -> None:
+    """Called under history_lock after acceptance: later pasted images stay with the next draft."""
+    selected = set(paths)
+    session["attached_images"] = [path for path in session.get("attached_images", []) if path not in selected]
+
+
 def _format_ref_value(value: str) -> str:
     """Quote a value with whitespace/brackets/quotes so the ``@file:`` ref round-trips."""
     if not value or not _ATTACHMENT_REF_NEEDS_QUOTING_RE.search(value):

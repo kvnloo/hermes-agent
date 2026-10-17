@@ -9,6 +9,7 @@ import { answerText, copyAnswer } from '../answer-actions.js'
 import { rewriteLocalMarkdownLinks } from '../links.js'
 import type { Block, Entry, NoticeEntry, TurnEntry, UserEntry } from '../model.js'
 
+import { attachmentNodes } from './attachments.js'
 import { age, compact, duration } from './time.js'
 import { toolNode } from './tools.js'
 import { type WelcomeContext, welcomeNode } from './welcome.js'
@@ -107,6 +108,7 @@ function userNode(e: UserEntry, cx: TranscriptContext): JSX.Element {
         <text key="rewind" onClick={disabled ? undefined : () => cx.rewind?.(e)} role="omp.user.tool" spans={disabled ? [{ s: 'dim', t: 'Rewind (unavailable)' }] : undefined} text={disabled ? undefined : 'Rewind'} title={disabled ?? 'Rewind to this message'} />
       </row>
       <md key="body">{e.text}</md>
+      {e.attachments?.length ? attachmentNodes(e.attachments, cx.media ?? false) : null}
     </card>
   )
 }

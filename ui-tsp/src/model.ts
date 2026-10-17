@@ -4,6 +4,8 @@
 
 import type { SubagentEventPayload, Usage } from '@hermes/shared/gateway-events'
 
+import type { SubmittedImage } from './attachments.js'
+
 /** One todo item as the `todo_list` tool reports it. */
 export interface Todo {
   id: string
@@ -86,6 +88,7 @@ export interface UserEntry {
   /** Durable gateway row address, never the presentation-only entry id. */
   rowId?: number
   rewindUnavailable?: string
+  attachments?: readonly SubmittedImage[]
 }
 
 /** One assistant turn: thinking, text and tool calls as they arrived. */

@@ -220,7 +220,7 @@ describe('non-blocking approvals with deny-and-steer', () => {
       await press('\r')
       expect(calls).toEqual([
         { id: 'first', result: { choice: 'deny' } },
-        { method: 'prompt.submit', params: { session_id: 'session-1', text: 'use rg instead' } }
+        { method: 'prompt.submit', params: { session_id: 'session-1', text: 'use rg instead', image_paths: [] } }
       ])
       expect(app.queue).toEqual([])
       expect(app.composer.text).toBe('')
@@ -321,7 +321,7 @@ describe('non-blocking approvals with deny-and-steer', () => {
       await rendered()
       expect(calls).toEqual([
         { id: 'first', result: { choice: 'deny' } },
-        { method: 'prompt.submit', params: { session_id: 'session-1', text: 'use rg instead' } }
+        { method: 'prompt.submit', params: { session_id: 'session-1', text: 'use rg instead', image_paths: [] } }
       ])
     })
   })

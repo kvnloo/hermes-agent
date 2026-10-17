@@ -313,7 +313,7 @@ describe('explicit busy steer vs follow-up', () => {
       await press('\r')
       expect(calls).toEqual([
         { method: 'request.answer', params: { id: 'approval-1', result: { choice: 'deny' } } },
-        { method: 'prompt.submit', params: { session_id: 'session-1', text: 'Use the smaller scope' } }
+        { method: 'prompt.submit', params: { session_id: 'session-1', text: 'Use the smaller scope', image_paths: [] } }
       ])
       expect(app.composer.text).toBe('')
       expect(app.queue).toEqual([])
@@ -330,7 +330,7 @@ describe('explicit busy steer vs follow-up', () => {
       expect(respond).not.toHaveBeenCalled()
       expect(calls).toEqual([
         { method: 'request.answer', params: { id: 'approval-1', result: { choice: 'deny' } } },
-        { method: 'prompt.submit', params: { session_id: 'session-1', text: 'Use the smaller scope' } }
+        { method: 'prompt.submit', params: { session_id: 'session-1', text: 'Use the smaller scope', image_paths: [] } }
       ])
       expect(app.queue).toEqual([])
     })

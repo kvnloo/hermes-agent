@@ -5,17 +5,22 @@
 import type { EditEvent, ImageProps, JSX, SendEvent } from '@stencil-hq/tern'
 
 import { HELP_HINT } from '../actions.js'
+import type { Attachment } from '../attachments.js'
 import type { Dispatch } from '../attention.js'
 import type { Composer } from '../composer.js'
 import type { Todo } from '../model.js'
 import type { ReportNotice } from '../reports.js'
 
+import { composerAttachments } from './attachments.js'
 import { age, compact } from './time.js'
 import { checklistNode } from './tools.js'
 
 /** What the dock shows. */
 export interface DockContext {
   composer: Composer
+  attachments?: readonly Attachment[]
+  onAttachmentRemove?(id: string): void
+  onAttachmentRetry?(id: string): void
   approval?: JSX.Element
   approvalQueued?: number
   /** The `editor` node's full id, for the caret overlay and focus. */
@@ -221,7 +226,7 @@ function composerNode(cx: DockContext): JSX.Element {
           value={share}
         />
       )}
-      <row gap="sm" hidden key="chips" role="omp.composer.chips" wrap />
+      {composerAttachments(cx.attachments ?? [], id => cx.onAttachmentRemove?.(id), id => cx.onAttachmentRetry?.(id))}
       <row align="start" gap="sm" key="line" role="omp.composer.line">
         {cx.orb ? <image key="orb" {...cx.orb} role="hermes.agent.orb" /> : null}
         <editor

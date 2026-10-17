@@ -187,7 +187,7 @@ describe('read-only plan review', () => {
       await approve()
       await rendered()
       expect(request.mock.calls.filter(([method]) => method === 'prompt.submit')).toEqual([
-        ['prompt.submit', { session_id: 'session-1', text: 'Approved — proceed with the plan.' }]
+        ['prompt.submit', { session_id: 'session-1', text: 'Approved — proceed with the plan.', image_paths: [] }]
       ])
       expect(app.transcript.entries.at(-1)).toMatchObject({ kind: 'user', text: 'Approved — proceed with the plan.' })
       expect(app.composer.text).toBe('preserve my draft')
@@ -233,7 +233,7 @@ describe('read-only plan review', () => {
       await send()
       await rendered()
       expect(request.mock.calls.filter(([method]) => method === 'prompt.submit')).toEqual([
-        ['prompt.submit', { session_id: 'session-1', text: 'Refine the plan: Add failure tests 🦉' }]
+        ['prompt.submit', { session_id: 'session-1', text: 'Refine the plan: Add failure tests 🦉', image_paths: [] }]
       ])
       expect(app.composer.text).toBe('untouched composer')
       expect(app.composer.cursor).toBe(6)
@@ -400,7 +400,7 @@ describe('read-only plan review', () => {
       expect(nodes('layer').some(n => n.props.key === 'note')).toBe(true)
       await press('\x1b[200~Add rollback tests\x1b[201~')
       await press('\r')
-      expect(request).toHaveBeenCalledWith('prompt.submit', { session_id: 'session-1', text: 'Refine the plan: Add rollback tests' })
+      expect(request).toHaveBeenCalledWith('prompt.submit', { session_id: 'session-1', text: 'Refine the plan: Add rollback tests', image_paths: [] })
       expect(app.composer.text).toBe('original draft')
       expect(app.composer.cursor).toBe(3)
     })
@@ -414,7 +414,8 @@ describe('read-only plan review', () => {
       expect(request).toHaveBeenCalledWith('slash.exec', { command: 'plan implement feature', session_id: 'session-1' })
       expect(request).toHaveBeenCalledWith('prompt.submit', {
         session_id: 'session-1',
-        text: 'canonical plan-mode prompt'
+        text: 'canonical plan-mode prompt',
+        image_paths: []
       })
       expect(sheet(nodes)).toBeUndefined()
     })
