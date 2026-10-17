@@ -8,6 +8,9 @@ App-level bindings live in `src/actions.ts`. The same registry supplies grouped
 | --- | --- |
 | Alt+M | Model picker |
 | Alt+P | Session-only model picker (no profile-default control) |
+| Ctrl+P / Ctrl+Shift+P | Next / previous session-recent model (`/model-next`, `/model-prev`) |
+| Ctrl+R | Search prompt history; Enter fills, never sends (`/history-search`) |
+| Ctrl+G | Round-trip the draft through an external editor (`/editor`) |
 | Alt+, / Ctrl+, | Hermes settings (`/settings` still works) |
 | Alt+C | Context window (`/context`) |
 | Alt+U | Usage (`/usage`) |
@@ -50,8 +53,13 @@ bytes, not a complete native-window/preset matrix.
   session reads are discarded.
 - No global hide-tool-activity shortcut: active, failed, and approval state must
   remain visible. Ctrl+Shift+O keeps its pre-existing detail-fold alias instead.
-- Model cycling (Ctrl+P / Ctrl+Shift+P), external editor (Ctrl+G), history search
-  (Ctrl+R), and OMP plan-mode toggling (Alt+Shift+P) are not implemented here.
+- Cycling shares the picker's session-scoped recent selections and the existing
+  `switchModel` / expensive-model confirmation path. With no recent selections,
+  it uses the configured picker inventory (including provider fallback catalogs).
+- External editing prefers `tern open --wait` inside Tern; otherwise `$VISUAL` /
+  `$EDITOR` (or `vi`). A private temporary file is deleted after readback.
+  A changed draft/session is never overwritten; its editor result is shown separately.
+- OMP plan-mode toggling (Alt+Shift+P) is not implemented here.
 - User-configurable bindings remain a single TODO at the registry boundary.
 - OSC 52 has no acknowledgement; the notice reports the clipboard request, not
   guaranteed terminal acceptance.

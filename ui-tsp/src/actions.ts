@@ -4,6 +4,8 @@
 import type { Key, ScrollTo } from '@stencil-hq/tern'
 
 import type { App } from './app.js'
+import { cycleModel } from './model-cycle.js'
+import { openHistorySearch } from './overlays/history.js'
 import { openModelPicker } from './overlays/models.js'
 
 export interface ActionContext {
@@ -121,6 +123,38 @@ export const APP_ACTIONS: readonly Action[] = [
     keys: ['alt+p'],
     when: always,
     run: app => openModelPicker(app, { sessionOnly: true })
+  },
+  {
+    id: 'app.model.cycleForward',
+    title: 'Cycle to the next recent model',
+    group: 'Navigation',
+    keys: ['ctrl+p'],
+    when: always,
+    run: app => cycleModel(app, 1)
+  },
+  {
+    id: 'app.model.cycleBackward',
+    title: 'Cycle to the previous recent model',
+    group: 'Navigation',
+    keys: ['ctrl+shift+p'],
+    when: always,
+    run: app => cycleModel(app, -1)
+  },
+  {
+    id: 'app.history.search',
+    title: 'Search prompt history (fill draft, never send)',
+    group: 'Control',
+    keys: ['ctrl+r'],
+    when: always,
+    run: openHistorySearch
+  },
+  {
+    id: 'app.editor.external',
+    title: 'Edit the draft in an external editor',
+    group: 'Control',
+    keys: ['ctrl+g'],
+    when: always,
+    run: app => { void app.editExternal() }
   },
   {
     id: 'app.settings',
