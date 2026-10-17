@@ -176,7 +176,11 @@ does not add a microphone, live-talk transport or TTS.
 Animation changes only the orb image at 12fps. SVG blobs are cached for a finite 96-frame
 cycle per state and appearance. Blocked protocol credits skip frames instead of building a
 queue. Idle, waiting and error are static; hidden surfaces, modal sheets, reduced motion and
-closed sessions stop the timer. The image has the accessible name `Hermes agent: <state>`.
+closed sessions stop the timer. A native `gone` disposes it immediately, without waiting for
+another animation tick. Pane-wide and surface-specific visibility events drive both the orb
+and held completion notices. Tern's `.sf-still` (Reduce Motion) and `.sf-paused` (hidden pane)
+policies are honored through the native `motion` and `visible`/`resize` events, not CSS-only
+freezing of a client-side timer. The image has the accessible name `Hermes agent: <state>`.
 
 ## Developing
 

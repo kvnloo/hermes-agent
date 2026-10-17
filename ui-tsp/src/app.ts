@@ -365,6 +365,11 @@ export class App implements OverlayHost {
   }
 
   #onTernEvent(ev: TspEvent) {
+    if (ev.ev === 'gone' && ev.ids.includes(this.#surface.id)) {
+      // Rendering short-circuits after gone: dispose now, not on another animation tick.
+      this.#orb?.close()
+    }
+
     if (ev.ev === 'toggle' && ev.sf === 'hermes' && ev.key) {
       // Tern owns mouse folding. Mirror only the clicked tool's presentation
       // state, so the subsequent Ctrl+O reverses what the person actually saw.
@@ -384,8 +389,14 @@ export class App implements OverlayHost {
       }
     }
 
-    if (ev.ev === 'visible' && ev.sf === 'hermes') {
+    if (
+      (ev.ev === 'visible' || ev.ev === 'resize') &&
+      (!ev.sf || ev.sf === this.#surface.id) &&
+      ev.visible !== undefined
+    ) {
+      // The orb and held completion notices share the same pane visibility.
       this.#visible = ev.visible
+      this.#orb?.environment({ visible: ev.visible })
 
       if (ev.visible) {
         this.dispatches.resume()
@@ -398,10 +409,6 @@ export class App implements OverlayHost {
 
     if (ev.ev === 'motion') {
       this.#orb?.environment({ reduce: ev.reduce })
-    }
-
-    if ((ev.ev === 'visible' || ev.ev === 'resize') && (!ev.sf || ev.sf === this.#surface.id)) {
-      this.#orb?.environment({ visible: ev.visible })
     }
 
     if (ev.ev === 'focus' && ev.id === INPUT_ID && !this.overlays.at(-1)?.modal) {
