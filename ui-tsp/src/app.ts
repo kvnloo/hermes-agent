@@ -20,6 +20,7 @@ import { writeActiveSessionFile } from '@tui/lib/activeSessionFile.js'
 
 import logo from '../assets/logo.png'
 
+import { Dispatches } from './attention.js'
 import { localCommand } from './commands.js'
 import { Composer } from './composer.js'
 import { type Busy, busyFrom, ownsEvent, Switches } from './flow.js'
@@ -56,6 +57,7 @@ interface CreateResult extends Partial<
 /** Runs the Tern frontend until the user quits; resolves the exit code. */
 export class App implements OverlayHost {
   readonly transcript = new Transcript()
+  readonly dispatches = new Dispatches()
   readonly composer = new Composer()
   readonly overlays: Overlay[] = []
   sid: string | null = null
@@ -75,6 +77,8 @@ export class App implements OverlayHost {
   readonly #overlayIds = new WeakMap<Overlay, string>()
   #overlaySerial = 0
   #scheduled = false
+  #dispatchTimer: ReturnType<typeof setTimeout> | undefined
+  #dispatchDeadline: number | null = null
   /** The field holding Tern's caret, as last sent. */
   #focus: string | null = INPUT_ID
   #exitArmed = 0
@@ -165,6 +169,7 @@ export class App implements OverlayHost {
       this.sid = null
       this.busy = null
       this.transcript.interrupt()
+      this.dispatches.reset()
       // Whatever went wrong is in the transcript: let it be seen.
       this.#splash?.ready()
       this.changed()
@@ -325,6 +330,12 @@ export class App implements OverlayHost {
   }
 
   quit(code = 0) {
+    if (this.#dispatchTimer) {
+      clearTimeout(this.#dispatchTimer)
+      this.#dispatchTimer = undefined
+      this.#dispatchDeadline = null
+    }
+
     this.#done.resolve(code)
   }
 
@@ -577,6 +588,10 @@ export class App implements OverlayHost {
   }
 
   #adopt(r: CreateResult) {
+    if (this.sid !== r.session_id) {
+      this.dispatches.reset()
+    }
+
     this.sid = r.session_id
     this.storedSid = r.info?.stored_session_id || r.stored_session_id || null
     writeActiveSessionFile(this.storedSid ?? r.session_id)
@@ -747,6 +762,20 @@ export class App implements OverlayHost {
       case 'status.update':
         if (this.busy && ev.payload?.text && ev.payload.kind === 'status') {
           this.#label(ev.payload.text)
+        }
+
+        break
+
+      case 'notification.show':
+        if (ev.payload) {
+          this.dispatches.show(ev.payload)
+        }
+
+        break
+
+      case 'notification.clear':
+        if (ev.payload?.key) {
+          this.dispatches.clear(ev.payload.key)
         }
 
         break
@@ -970,12 +999,38 @@ export class App implements OverlayHost {
 
   // ── View ───────────────────────────────────────────────────────────
 
+  /** Keep exactly one expiry wake-up; the SDK still owns painting and frame credits. */
+  #scheduleDispatchExpiry(now: number) {
+    const deadline = this.dispatches.nextExpiry(now)
+
+    if (deadline === this.#dispatchDeadline) {
+      return
+    }
+
+    if (this.#dispatchTimer) {
+      clearTimeout(this.#dispatchTimer)
+      this.#dispatchTimer = undefined
+    }
+
+    this.#dispatchDeadline = deadline
+
+    if (deadline !== null) {
+      this.#dispatchTimer = setTimeout(() => {
+        this.#dispatchTimer = undefined
+        this.#dispatchDeadline = null
+        this.changed()
+      }, Math.max(1, deadline - now))
+    }
+  }
+
   #render() {
     if (this.#surface.closed) {
       return
     }
 
     const now = Date.now()
+    const dispatches = this.dispatches.active(now)
+    this.#scheduleDispatchExpiry(now)
     const info = this.info
     const usage = this.usage
     const backend = info?.version && info.version !== 'unknown' ? `v${info.version}` : ''
@@ -1009,6 +1064,7 @@ export class App implements OverlayHost {
     this.#surface.render({
       dock: dockNodes({
         branch: info?.branch ?? '',
+        dispatches,
         busy: this.busy ?? undefined,
         composer: this.composer,
         context: max > 0 ? { max, used } : undefined,
@@ -1028,6 +1084,10 @@ export class App implements OverlayHost {
         onInterrupt: () => this.#interrupt(),
         onSettings: () => openSettings(this),
         onModel: () => openModelPicker(this),
+        onDismiss: key => {
+          this.dispatches.clear(key)
+          this.changed()
+        },
         onQueueEdit: () => this.#dequeue(),
         onSend: ev => {
           this.#submit(this.composer.take(ev.text))

@@ -4,6 +4,7 @@
 
 import type { EditEvent, JSX, SendEvent } from '@stencil-hq/tern'
 
+import type { Dispatch } from '../attention.js'
 import type { Composer } from '../composer.js'
 
 import { age, compact } from './time.js'
@@ -18,6 +19,7 @@ export interface DockContext {
   ready: boolean
   busy?: { since: object; startedAt: number; label: string }
   queued: readonly string[]
+  dispatches: readonly Dispatch[]
   model: string
   /** Hermes's reasoning effort (`none` = off); empty hides the chip. */
   effort: string
@@ -38,6 +40,7 @@ export interface DockContext {
   onModel(): void
   onEffort(): void
   onSettings(): void
+  onDismiss(key: string): void
   /** Pull the oldest queued prompt back into the composer. */
   onQueueEdit(): void
   onContext(): void
@@ -51,6 +54,26 @@ export function dockNodes(cx: DockContext): JSX.Element[] {
     nodes.push(
       <col key="hud" role="omp.hud.status">
         {workingNode(cx)}
+      </col>
+    )
+  }
+
+  if (cx.dispatches.length) {
+    nodes.push(
+      <col gap="xs" key="dispatches" role="omp.dispatches">
+        {cx.dispatches.map(note => (
+          <row align="center" gap="xs" key={`note.${note.serial}`} role="omp.dispatch">
+            <icon key="glyph" name="info" />
+            <text grow={1} key="text" role="omp.dispatch.message" text={note.text} />
+            <text
+              key="dismiss"
+              onClick={() => cx.onDismiss(note.key)}
+              role="omp.dispatch.dismiss"
+              text="×"
+              title="Dismiss notice"
+            />
+          </row>
+        ))}
       </col>
     )
   }
