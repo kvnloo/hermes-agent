@@ -364,11 +364,10 @@ describe('elapsed and captured-output evidence', () => {
       app.changed()
       await rendered()
 
-      const turn = latest?.regions
+      const tool = latest?.regions
         .find(region => region?.id === 'main')
-        ?.children.find(n => n.kind === 'col' && n.props.role === 'omp.assistant')
+        ?.children.find(n => n.kind === 'tool')
 
-      const tool = turn?.children.find(n => n.kind === 'tool')
       const box = tool?.children.find(n => n.kind === 'col' && n.props.role === 'omp.run')
       const foot = box?.children.find(n => n.kind === 'row' && n.props.role === 'omp.run.foot')
       const status = foot?.children.find(n => n.kind === 'text' && n.props.role === 'omp.run.state')

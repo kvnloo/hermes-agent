@@ -308,16 +308,18 @@ describe('app action registry', () => {
     })
   })
 
-  it('keeps Ctrl+O and its existing Shift alias limited to empty drafts without overlays', async () => {
+  it('keeps distinct tool expansion and visibility intents limited to empty drafts without overlays', async () => {
     await withApp(async ({ app, press }) => {
-      const fold = vi.spyOn(app, 'toggleRecentTool')
+      const fold = vi.spyOn(app, 'toggleToolExpansion')
+      const hide = vi.spyOn(app, 'toggleToolVisibility')
       app.composer.set('selection might exist')
       await press(chord('o', 5))
       expect(fold).not.toHaveBeenCalled()
       app.composer.set('')
       await press(chord('o', 5))
       await press(chord('o', 6))
-      expect(fold).toHaveBeenCalledTimes(2)
+      expect(fold).toHaveBeenCalledOnce()
+      expect(hide).toHaveBeenCalledOnce()
     })
   })
 

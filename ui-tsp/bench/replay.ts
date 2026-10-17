@@ -262,8 +262,11 @@ export async function replay({
       }
     }
     const wallMs = performance.now() - started
-    const prefix = `main.${turn.id}.`
-    for (const b of turn.blocks) if (b.kind === 'text') liveTextIds.add(`${prefix}${b.id}`)
+    let segment = turn.id
+    for (const b of turn.blocks) {
+      if (b.kind === 'tool') segment = `${turn.id}~${b.id}~after`
+      if (b.kind === 'text') liveTextIds.add(`main.${segment}.${b.id}`)
+    }
     messages.forEach(apply)
     const ordered: string[] = []
     const walk = (id: string) => {
@@ -272,16 +275,18 @@ export async function replay({
       if (liveTextIds.has(id)) ordered.push(String(n.p.text ?? ''))
       for (const child of children.get(id) ?? []) walk(child)
     }
-    walk(`main.${turn.id}`)
+    for (const id of children.get('main') ?? []) {
+      if (id === `main.${turn.id}` || id.startsWith(`main.${turn.id}~`)) walk(id)
+    }
     const wireText = ordered.join('')
     assert.equal(wireText, expected, 'wire reconstruction must preserve every delta, in order')
     for (const b of tools) {
-      const card = nodes.get(`${prefix}${b.id}`)
+      const card = nodes.get(`main.${turn.id}~${b.id}`)
       assert(card, `wire tool ${b.id}`)
       assert.equal(card.p?.status, 'done')
       assert(
         [...nodes.values()].some(
-          n => n.id.startsWith(`${prefix}${b.id}.`) && JSON.stringify(n.p).includes(b.call.resultText!)
+          n => n.id.startsWith(`main.${turn.id}~${b.id}.`) && JSON.stringify(n.p).includes(b.call.resultText!)
         ),
         'wire output missing'
       )
@@ -314,7 +319,7 @@ export async function replay({
       droppedSemanticEvents: 0,
       textUpdatesMerged: deltas - textSnapshots,
       toolRecords: tools.length,
-      toolRunningSnapshotsMerged: tools.filter(b => !toolStates.get(`${prefix}${b.id}`)?.has('running')).length
+      toolRunningSnapshotsMerged: tools.filter(b => !toolStates.get(`main.${turn.id}~${b.id}.${b.call.id}`)?.has('running')).length
     }
   } finally {
     app.quit()
