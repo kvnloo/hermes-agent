@@ -853,6 +853,29 @@ class AudioRecorder(_RecorderBase):
                 return None
             return self._write_wav(audio_data, sample_rate=self._sample_rate)
 
+    def snapshot(self) -> Optional[str]:
+        """Copy captured speech for a replaceable STT hypothesis; keep recording."""
+        with self._lock:
+            if not self._recording or not self._frames or self._peak_rms < self._silence_threshold:
+                return None
+            frames = self._frames.copy()
+            rate = self._sample_rate
+        _, np = _import_audio()
+        audio = np.concatenate(frames, axis=0)
+        if len(audio) < int(rate * 0.3):
+            return None
+        # Final stop can run while this hypothesis is transcribing. A timestamp
+        # filename would let one overwrite (or unlink) the other's audio.
+        os.makedirs(_TEMP_DIR, exist_ok=True)
+        with tempfile.NamedTemporaryFile(prefix="dictation_", suffix=".wav", dir=_TEMP_DIR, delete=False) as tmp:
+            path = tmp.name
+            try:
+                _write_wav_frames(tmp, audio.tobytes(), rate)
+            except Exception:
+                _unlink_quietly(path)
+                raise
+        return path
+
     def _discard(self) -> None:
         with self._lock:
             self._recording, self._frames, self._on_silence_stop, self._current_rms = False, [], None, 0

@@ -402,6 +402,25 @@ method("voice.tts", params=VoiceTtsParams, result=VoiceTtsResult,
        doc="Speak text through the backend TTS engine (barge-in aware).")
 
 
+class DictateStartParams(Params):
+    session_id: str
+    capture_id: str
+
+
+class DictateStopParams(DictateStartParams):
+    cancel: bool = False
+
+
+class DictateResult(Result):
+    capture_id: str
+
+
+method("voice.dictate.start", params=DictateStartParams, result=DictateResult,
+       doc="Explicitly capture local microphone audio for a review-only draft.")
+method("voice.dictate.stop", params=DictateStopParams, result=DictateResult,
+       doc="Finish dictation, or cancel and discard all audio and hypotheses.")
+
+
 # ── wake word ─────────────────────────────────────────────────────────────────────────────────
 
 

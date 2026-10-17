@@ -2941,6 +2941,18 @@ export interface VoiceTtsParams {
 export interface VoiceTtsResult {
   status: string
 }
+export interface DictateStartParams {
+  session_id: string
+  capture_id: string
+}
+export interface DictateResult {
+  capture_id: string
+}
+export interface DictateStopParams {
+  session_id: string
+  capture_id: string
+  cancel?: boolean
+}
 /** ``surface`` names the caller ("tui" | "gui"); ``persist`` is the explicit gesture that also flips ``wake_word.enabled`` on; ``client_capture`` asks for PCM streamed via wake.feed. */
 export interface WakeStartParams {
   surface?: string | null
@@ -4937,6 +4949,13 @@ export interface BrowserControllerCancelPayload {
   command_id: string
   tool_call_id?: string | null
 }
+export interface DictationPayload {
+  capture_id: string
+  state: 'idle' | 'starting' | 'recording' | 'transcribing' | 'error'
+  text?: string | null
+  final?: boolean
+  error?: string | null
+}
 /** ``methods_voice._vr_on_status``; states come from the recorder (idle / listening / transcribing …). */
 export interface VoiceStatusPayload {
   state: string
@@ -5485,6 +5504,10 @@ export interface RpcMethods {
   'vault.unlock': { params: VaultUnlockParams; result: VaultUnlockResult }
   /** Best known verification evidence for a cwd/session; read-only, never runs checks. */
   'verification.status': { params: VerificationStatusParams; result: VerificationStatusResult }
+  /** Explicitly capture local microphone audio for a review-only draft. */
+  'voice.dictate.start': { params: DictateStartParams; result: DictateResult }
+  /** Finish dictation, or cancel and discard all audio and hypotheses. */
+  'voice.dictate.stop': { params: DictateStopParams; result: DictateResult }
   /** VAD-bounded push-to-talk; the transcript arrives as a voice.transcript event. */
   'voice.record': { params: VoiceRecordParams; result: VoiceRecordResult }
   /** /voice parity: report, flip voice mode on/off, or toggle speech output. */
@@ -5754,6 +5777,8 @@ export const RPC_METHODS = [
   'vault.sources',
   'vault.unlock',
   'verification.status',
+  'voice.dictate.start',
+  'voice.dictate.stop',
   'voice.record',
   'voice.toggle',
   'voice.tts',
@@ -5957,6 +5982,8 @@ export interface BackendGatewayEventMap {
   'tool.output_risk': ToolOutputRiskPayload
   /** A tool call began (stable id + full args). */
   'tool.start': ToolStartPayload
+  /** Replaceable partial hypotheses and one final review-only dictation transcript. */
+  'voice.dictation': DictationPayload
   /** Barge-in: the spoken interjection interrupted the turn; no payload. */
   'voice.interrupted': Record<string, never>
   /** Voice recorder state changed. */
@@ -6040,6 +6067,7 @@ export const GATEWAY_EVENT_TYPES = [
   'tool.generating',
   'tool.output_risk',
   'tool.start',
+  'voice.dictation',
   'voice.interrupted',
   'voice.status',
   'voice.transcript',
