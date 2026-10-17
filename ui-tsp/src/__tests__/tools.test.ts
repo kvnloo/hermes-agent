@@ -118,11 +118,11 @@ describe('tool cards', () => {
 
     expect(card.props).toMatchObject({
       badges: [{ text: '4 more lines', tone: 'muted' }],
-      collapsed: true,
+      collapsed: false,
       exit: 1,
       lang: 'bash',
       name: 'bash',
-      preview: { tail: 10 },
+      collapsible: false,
       status: 'error',
       title: 'Bash'
     })
@@ -148,9 +148,9 @@ describe('tool cards', () => {
         { text: 'python' },
         { text: '4 more lines', tone: 'muted' }
       ],
-      collapsed: true,
+      collapsed: false,
+      collapsible: false,
       name: 'eval',
-      preview: { lines: 8 },
       title: 'Eval'
     })
 

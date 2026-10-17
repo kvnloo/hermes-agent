@@ -9,6 +9,7 @@ import { fileHref } from '../links.js'
 import type { Subagent, Todo, ToolCall } from '../model.js'
 import { record } from '../transcript.js'
 
+import { outputLineCount, runBox, type RunBoxInput, runElapsed, runState, type RunState } from './runbox.js'
 import { age, compact, duration } from './time.js'
 
 /** How one call presents: omp's tool props (minus status and timing) and its body. */
@@ -46,6 +47,16 @@ const BASH_PREVIEW_TAIL = 10
 const DIFF_PREVIEW_LINES = 12
 const EVAL_PREVIEW_LINES = 8
 
+const RUN_STATUS: Record<RunState, string> = {
+  running: 'running',
+  ok: 'done',
+  exit: 'error',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+  background: 'background',
+  error: 'error'
+}
+
 function nonemptyLines(text: string): number {
   return text.split('\n').filter(line => line.length > 0).length
 }
@@ -65,18 +76,31 @@ function moreBadge(lineCount: number, shown: number): Card['badges'] {
 export function toolFoldState(call: ToolCall): { collapsible: boolean; collapsed: boolean } {
   const card = cardOf(call, 0, '')
 
-  return { collapsible: card.body.length > 0 || call.status === 'cancelled', collapsed: card.folded ?? false }
+  return {
+    collapsible:
+      card.name === 'bash' || card.name === 'eval'
+        ? card.folded === true
+        : card.body.length > 0 || call.status === 'cancelled',
+    collapsed: card.folded ?? false
+  }
 }
 
 /** The `tool` node of one call, optionally with a keyboard-owned fold override. */
-export function toolNode(call: ToolCall, now: number, cwd = '', collapsedOverride?: boolean): JSX.Element {
-  const card = cardOf(call, now, cwd)
-  const status = card.status ?? call.status
+export function toolNode(
+  call: ToolCall,
+  now: number,
+  cwd = '',
+  collapsedOverride?: boolean,
+  onToggle?: () => void
+): JSX.Element {
+  const card = cardOf(call, now, cwd, { collapsed: collapsedOverride, onToggle })
+  const runOutcome = card.name === 'bash' || card.name === 'eval' ? runState(call, record(call.result)) : undefined
+  const status = runOutcome ? RUN_STATUS[runOutcome] : (card.status ?? call.status)
   const running = status === 'running'
   const body = [...card.body]
   const error = call.status === 'error' ? errorOf(call) : undefined
 
-  if (call.status === 'cancelled') {
+  if (call.status === 'cancelled' && card.name !== 'bash' && card.name !== 'eval') {
     body.push(
       <text
         key="cancelled"
@@ -86,8 +110,7 @@ export function toolNode(call: ToolCall, now: number, cwd = '', collapsedOverrid
     )
   }
 
-  // A failure keeps the error status and the same fold as a success. The
-  // preview shows the tail. Do not hide the body, and do not dump it open.
+  // Run boxes fold only output; whole-tool previews would also hide the state footer.
   const collapsed = collapsedOverride ?? card.folded
 
   return node(
@@ -95,9 +118,9 @@ export function toolNode(call: ToolCall, now: number, cwd = '', collapsedOverrid
     {
       age: running ? age(call, call.startedAt, now) : undefined,
       badges: card.badges,
-      collapsed: body.length > 0 ? collapsed : undefined,
-      collapsible: body.length > 0 ? true : undefined,
-      exit: card.name === 'bash' && !running && call.status !== 'cancelled' ? exitOf(call) : undefined,
+      collapsed: runOutcome ? false : body.length > 0 ? collapsed : undefined,
+      collapsible: runOutcome ? false : body.length > 0 ? true : undefined,
+      exit: card.name === 'bash' && (runOutcome === 'ok' || runOutcome === 'exit') ? exitOf(call) : undefined,
       frame: card.frame === 'inline' && (running || !body.length || card.name !== 'web_search') ? 'inline' : undefined,
       href: card.href,
       key: call.id,
@@ -105,26 +128,37 @@ export function toolNode(call: ToolCall, now: number, cwd = '', collapsedOverrid
       meta: card.meta?.length ? card.meta : undefined,
       name: card.name,
       note: call.status === 'cancelled' ? 'cancelled' : error && !card.body.length ? error : undefined,
-      preview: card.preview,
+      preview: runOutcome ? undefined : card.preview,
       role: card.role,
       status,
       target: card.target,
       targetKind: card.target ? card.targetKind : undefined,
       title: card.title,
-      took: running ? undefined : (card.took ?? call.duration)
+      took: runOutcome
+        ? runOutcome === 'background'
+          ? undefined
+          : runElapsed(call)
+        : running
+          ? undefined
+          : (card.took ?? call.duration)
     },
     body
   )
 }
 
-function cardOf(call: ToolCall, now: number, cwd: string): Card {
+function cardOf(
+  call: ToolCall,
+  now: number,
+  cwd: string,
+  presentation: Pick<RunBoxInput, 'collapsed' | 'onToggle'> = {}
+): Card {
   const result = record(call.result)
 
   switch (call.name) {
     case 'terminal':
 
     case 'shell':
-      return bashCard(call, result)
+      return bashCard(call, result, presentation)
 
     case 'cronjob_manage':
       return bashCard(
@@ -137,7 +171,8 @@ function cardOf(call: ToolCall, now: number, cwd: string): Card {
               .join(' ')
           }
         },
-        result
+        result,
+        presentation
       )
 
     case 'secret':
@@ -178,7 +213,7 @@ function cardOf(call: ToolCall, now: number, cwd: string): Card {
       return askCard(call, result)
 
     case 'execute_code':
-      return evalCard(call, result)
+      return evalCard(call, result, presentation)
 
     case 'memory':
       return {
@@ -236,20 +271,44 @@ function cardOf(call: ToolCall, now: number, cwd: string): Card {
   }
 }
 
-function bashCard(call: ToolCall, result: Record<string, unknown> | undefined): Card {
-  // The cancelled card's notice already says the command was interrupted.
+function bashCard(
+  call: ToolCall,
+  result: Record<string, unknown> | undefined,
+  presentation: Pick<RunBoxInput, 'collapsed' | 'onToggle'> = {}
+): Card {
   const output = (str(result?.output) ?? call.resultText)?.replace(/\s*\[Command interrupted\]\s*$/, '')
   const error = str(result?.error)
-
-  const shown = output ? nonemptyLines(output) : 0
+  const shown = outputLineCount(output ?? '')
+  const state = runState(call, result)
 
   return {
-    badges: moreBadge(shown, BASH_PREVIEW_TAIL),
-    body: [
-      ...(output ? [<ansi follow={call.status === 'running'} key="out" text={output} />] : []),
-      ...(error ? [<text key="err" role="omp.tool.error" spans={[{ s: 'error', t: error }]} wrap="word" />] : [])
+    badges: [
+      ...(state === 'timeout' ? [{ text: 'timeout', tone: 'warning' }] : []),
+      ...(state === 'background' ? [{ text: 'background', tone: 'muted' }] : []),
+      ...(state === 'cancelled' ? [{ text: 'cancelled', tone: 'muted' }] : []),
+      ...(presentation.collapsed === false ? [] : (moreBadge(shown, BASH_PREVIEW_TAIL) ?? []))
     ],
-    folded: true,
+    body: [
+      runBox({
+        ...presentation,
+        command: str(call.args.command) ?? call.context,
+        cwd: str(call.args.workdir),
+        output,
+        error,
+        language: 'bash',
+        state,
+        exit: typeof result?.exit_code === 'number' ? result.exit_code : undefined,
+        elapsedMs: runElapsed(call),
+        truncated: shown > BASH_PREVIEW_TAIL,
+        previewLines: BASH_PREVIEW_TAIL,
+        previewSide: 'last',
+        background: state === 'background',
+        processId: typeof result?.pid === 'number' ? result.pid : undefined,
+        sessionId: str(result?.session_id),
+        captureTruncated: Boolean(str(result?.truncation_note))
+      })
+    ],
+    folded: shown > BASH_PREVIEW_TAIL,
     lang: 'bash',
     name: 'bash',
     preview: { tail: BASH_PREVIEW_TAIL },
@@ -736,35 +795,48 @@ function answerRow(key: string, text: string, picked: boolean): JSX.Element {
   )
 }
 
-function evalCard(call: ToolCall, result: Record<string, unknown> | undefined): Card {
+function evalCard(
+  call: ToolCall,
+  result: Record<string, unknown> | undefined,
+  presentation: Pick<RunBoxInput, 'collapsed' | 'onToggle'>
+): Card {
   const code = str(call.args.code) ?? ''
-  const language = str(call.args.language) === 'js' || str(call.args.language) === 'javascript' ? 'javascript' : 'python'
+
+  const language =
+    str(call.args.language) === 'js' || str(call.args.language) === 'javascript' ? 'javascript' : 'python'
+
   const output = str(result?.output) ?? str(result?.stdout) ?? call.resultText
   const error = str(result?.error) ?? str(result?.stderr)
-
-  const outLines = output ? nonemptyLines(output) : 0
+  const outLines = outputLineCount(output ?? '')
   const fold = outLines > EVAL_PREVIEW_LINES
+  const state = runState(call, result)
 
   return {
-    badges: [{ text: language }, ...(moreBadge(outLines, EVAL_PREVIEW_LINES) ?? [])],
+    badges: [
+      { text: language },
+      ...(state === 'timeout' ? [{ text: 'timeout', tone: 'warning' }] : []),
+      ...(state === 'background' ? [{ text: 'background', tone: 'muted' }] : []),
+      ...(state === 'cancelled' ? [{ text: 'cancelled', tone: 'muted' }] : []),
+      ...(presentation.collapsed === false ? [] : (moreBadge(outLines, EVAL_PREVIEW_LINES) ?? []))
+    ],
     body: [
-      <col key="cell-0" role="omp.tool.eval.cell">
-        <row align="start" key="input" role="omp.tool.eval.input">
-          <icon aria="Input" key="0" name="arrow-left" role="omp.tool.eval.prompt" />
-          <code key="code" lang={language} numbers={false} text={code} wrap />
-        </row>
-        {output || error ? (
-          <row align="start" key="result" role="omp.tool.eval.result">
-            <icon aria="Output" key="0" name="arrow-right" role="omp.tool.eval.prompt" />
-            <col key="outputs" role="omp.tool.eval.outputs">
-              {output ? (
-                <ansi follow={false} key="out" role="omp.tool.eval.output" text={output.replace(/\n$/, '')} />
-              ) : null}
-              {error ? <text key="err" role="omp.tool.error" spans={[{ s: 'error', t: error }]} wrap="word" /> : null}
-            </col>
-          </row>
-        ) : null}
-      </col>
+      runBox({
+        ...presentation,
+        command: code,
+        output,
+        error,
+        language,
+        state,
+        exit: typeof result?.exit_code === 'number' ? result.exit_code : undefined,
+        elapsedMs: runElapsed(call),
+        truncated: fold,
+        previewLines: EVAL_PREVIEW_LINES,
+        previewSide: 'first',
+        background: state === 'background',
+        processId: typeof result?.pid === 'number' ? result.pid : undefined,
+        sessionId: str(result?.session_id),
+        captureTruncated: Boolean(str(result?.truncation_note)) || result?.stdout_truncated === true
+      })
     ],
     folded: fold,
     name: 'eval',
