@@ -284,6 +284,25 @@ async function openui() {
   })
 }
 
+async function media() {
+  const path = join(manifest.root, 'ui-tsp/assets/logo.png')
+  await step('real image path through labelled completed-read replay', async()=>{
+    assert((await readFile(path)).length > 0)
+    await replay('message.start')
+    await replay('tool.start', {name:'read_file',tool_id:'media-read',args:{path}})
+    await replay('tool.complete', {name:'read_file',tool_id:'media-read',result:{mime:'image/png'}})
+    await replay('message.complete', {status:'complete',text:''})
+    const nodes = await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.k==='media' && n.p?.path===path), 'negotiated native media node')
+    const tool = [...nodes.values()].find(n=>n.k==='tool' && n.p?.target===path)
+    assert.equal(tool?.p?.status, 'done')
+    assert.equal(tool?.p?.collapsible, true)
+    assert.equal(tool?.p?.collapsed, false)
+    assert.equal(tool?.p?.preview, undefined)
+    assert(!(await native.wire()).some(w=>w.dir==='request' && w.body.method==='prompt.submit'))
+    await capture('native-image-preview')
+  }, true)
+}
+
 async function smoke() {
   await step('launch welcome and real session without a model call',async()=>{
     assert(flatten((await native.snapshot()).tree).some(n=>(n.text ?? '').toLowerCase().includes('hermes')))
@@ -304,7 +323,7 @@ try {
   const wire = await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='delivered' && w.body.result && typeof w.body.result==='object' && !Array.isArray(w.body.result) && 'session_id' in w.body.result), 'real session creation')
   const ids = new Set(wire.filter(w=>w.dir==='request' && w.body.method==='session.create').map(w=>w.body.id))
   sid = String(record(wire.findLast(w=>w.dir==='delivered' && ids.has(w.body.id) && w.body.result)?.body.result).session_id)
-  const journeys:Record<string,()=>Promise<void>> = {settings,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui}
+  const journeys:Record<string,()=>Promise<void>> = {settings,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,media}
   assert(journeys[journey],`Unknown journey: ${journey}`)
   await journeys[journey]!()
 } catch (error) { console.error(error); process.exitCode=1 }

@@ -17,6 +17,8 @@ import { type WelcomeContext, welcomeNode } from './welcome.js'
 export interface TranscriptContext {
   /** Absolute cwd reported by the owning Hermes session. */
   cwd: string
+  /** The negotiated node kind, not an assumed SDK feature. */
+  media?: boolean
   now: number
   welcome: WelcomeContext
   copy(text: string): void
@@ -33,7 +35,7 @@ const kNode = Symbol('tsp.node')
 
 /** An entry carrying its last built node and the revision it was built at. */
 interface Built {
-  [kNode]?: { rev: number; cwd: string; foldRev: number; node: JSX.Element }
+  [kNode]?: { rev: number; cwd: string; media: boolean; foldRev: number; node: JSX.Element }
 }
 
 /**
@@ -52,13 +54,14 @@ export function entryNode(e: Entry, id: string, cx: TranscriptContext): JSX.Elem
   const rev = e.kind === 'turn' ? e.rev : 0
   const foldRev = e.kind === 'turn' ? (cx.foldRevision?.(e.id) ?? 0) : 0
   const cached = built[kNode]
+  const media = cx.media ?? false
 
-  if (cached?.rev === rev && cached.cwd === cx.cwd && cached.foldRev === foldRev) {
+  if (cached?.rev === rev && cached.cwd === cx.cwd && cached.media === media && cached.foldRev === foldRev) {
     return cached.node
   }
 
   const node = buildEntry(e, id, cx)
-  built[kNode] = { node, rev, cwd: cx.cwd, foldRev }
+  built[kNode] = { node, rev, cwd: cx.cwd, media, foldRev }
 
   return node
 }
@@ -173,7 +176,7 @@ function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptConte
       )
 
     case 'tool':
-      return toolNode(b.call, cx.now, cx.cwd, cx.toolCollapsed?.(turnId, b.call.id))
+      return toolNode(b.call, cx.now, cx.cwd, cx.toolCollapsed?.(turnId, b.call.id), cx.media)
 
     case 'thinking':
       return thinkingNode(b, id, cx)

@@ -385,7 +385,7 @@ export class App implements OverlayHost {
           continue
         }
 
-        const fold = toolFoldState(block.call)
+        const fold = toolFoldState(block.call, this.info?.cwd ?? '', this.#tern.caps.kinds.includes('media'))
 
         if (!fold.collapsible) {
           continue
@@ -1270,6 +1270,7 @@ export class App implements OverlayHost {
     const cx = {
       copy: (text: string) => copyToClipboard(text),
       cwd: info?.cwd ?? '',
+      media: this.#tern.caps.kinds.includes('media'),
       onCopyError: () => {
         this.transcript.notice('Could not copy the answer to the clipboard.', 'warning')
         this.changed()

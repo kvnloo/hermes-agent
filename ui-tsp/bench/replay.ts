@@ -141,7 +141,7 @@ export async function replay({
     } else pending.push(event)
   }
   const tern = {
-    caps: { features: [], reduceMotion: true, cols: 120 },
+    caps: { features: [], kinds: [], reduceMotion: true, cols: 120 },
     open: () => surface,
     close: async () => {
       await surface.close()

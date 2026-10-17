@@ -7,6 +7,7 @@ import { type JSX, node } from '@stencil-hq/tern'
 
 import { fileHref } from '../links.js'
 import type { Subagent, Todo, ToolCall } from '../model.js'
+import { readMedia } from '../read-media.js'
 import { record } from '../transcript.js'
 
 import { age, compact, duration } from './time.js'
@@ -62,15 +63,15 @@ function moreBadge(lineCount: number, shown: number): Card['badges'] {
 }
 
 /** Renderer-only fold state for a native tool card. */
-export function toolFoldState(call: ToolCall): { collapsible: boolean; collapsed: boolean } {
-  const card = cardOf(call, 0, '')
+export function toolFoldState(call: ToolCall, cwd = '', media = false): { collapsible: boolean; collapsed: boolean } {
+  const card = cardOf(call, 0, cwd, media)
 
   return { collapsible: card.body.length > 0 || call.status === 'cancelled', collapsed: card.folded ?? false }
 }
 
 /** The `tool` node of one call, optionally with a keyboard-owned fold override. */
-export function toolNode(call: ToolCall, now: number, cwd = '', collapsedOverride?: boolean): JSX.Element {
-  const card = cardOf(call, now, cwd)
+export function toolNode(call: ToolCall, now: number, cwd = '', collapsedOverride?: boolean, media = false): JSX.Element {
+  const card = cardOf(call, now, cwd, media)
   const status = card.status ?? call.status
   const running = status === 'running'
   const body = [...card.body]
@@ -117,7 +118,7 @@ export function toolNode(call: ToolCall, now: number, cwd = '', collapsedOverrid
   )
 }
 
-function cardOf(call: ToolCall, now: number, cwd: string): Card {
+function cardOf(call: ToolCall, now: number, cwd: string, media: boolean): Card {
   const result = record(call.result)
 
   switch (call.name) {
@@ -146,7 +147,7 @@ function cardOf(call: ToolCall, now: number, cwd: string): Card {
       return { body: [], frame: 'inline', name: 'secret', title: 'Secret' }
 
     case 'read_file':
-      return readCard(call, result, cwd)
+      return readCard(call, result, cwd, media)
 
     case 'patch':
 
@@ -259,8 +260,13 @@ function bashCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   }
 }
 
-function readCard(call: ToolCall, result: Record<string, unknown> | undefined, cwd: string): Card {
+function readCard(call: ToolCall, result: Record<string, unknown> | undefined, cwd: string, media: boolean): Card {
   const path = str(call.args.path) ?? str(call.args.file_path) ?? call.context
+
+  const preview = call.status === 'done'
+    ? readMedia(path, cwd, str(result?.mime) ?? str(result?.mime_type) ?? str(result?.mimetype), media)
+    : undefined
+
   const content = str(result?.content)
   const total = typeof result?.total_lines === 'number' ? result.total_lines : undefined
   const numbered = content ? [...content.matchAll(/^ *(\d+)\|/gm)] : []
@@ -276,14 +282,18 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined, c
 
   return {
     badges: hidden > 0 ? [{ text: `${hidden} more line${hidden === 1 ? '' : 's'}`, tone: 'muted' }] : undefined,
-    body: text ? [<code key="code" lang={langOf(path)} numbers start={first} text={text} wrap />] : [],
-    folded: true,
+    body: [
+      ...(preview ? [preview] : []),
+      ...(text ? [<code key="code" lang={langOf(path)} numbers start={first} text={text} wrap />] : [])
+    ],
+    folded: !preview,
     frame: 'inline',
     href: fileHref(path, cwd, { line, endLine }),
     lang: langOf(path),
     meta,
     name: 'read',
-    preview: { lines: READ_PREVIEW_LINES },
+    // Code-line clipping would hide the native viewer's image and controls.
+    preview: preview ? undefined : { lines: READ_PREVIEW_LINES },
     target: path,
     targetKind: 'path',
     title: 'Read'

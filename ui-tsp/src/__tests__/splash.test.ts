@@ -470,7 +470,7 @@ function fakeTern(caps: { reduceMotion?: boolean } = {}) {
 
   const session = {
     blob: () => 'blob',
-    caps: { cell: { h: 16, w: 8 }, cols: 100, dark: true, features: [], reduceMotion: caps.reduceMotion ?? false },
+    caps: { cell: { h: 16, w: 8 }, cols: 100, dark: true, features: [], kinds: [], reduceMotion: caps.reduceMotion ?? false },
     close: async () => {
       closed = true
       wake?.()
