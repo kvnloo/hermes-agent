@@ -20,6 +20,7 @@ function host() {
       if (prior) {
         this.close(prior)
       }
+
       this.overlays.push(o)
     },
     close(o: Overlay) {
@@ -44,6 +45,7 @@ describe('visual sheet uses the current frontend owner', () => {
   it('shows the exact scope without IO; sessionless help does not load', async () => {
     const app = host(),
       load = vi.fn()
+
     await openVisual(app, '', load)
     expect(tree(app.overlays[0]!)).toContain('stored')
     app.sid = null
@@ -63,6 +65,7 @@ describe('visual sheet uses the current frontend owner', () => {
   it('Escape aborts a pending read; its late completion never reopens the sheet', async () => {
     const app = host(),
       pending = Promise.withResolvers<PreparedVisual>()
+
     let signal: AbortSignal | undefined
 
     const run = openVisual(app, visual.path, async (_path, _scope, abort) => {
@@ -81,6 +84,7 @@ describe('visual sheet uses the current frontend owner', () => {
   it('an old read or error cannot mutate a same-key replacement', async () => {
     const app = host(),
       pending = Promise.withResolvers<PreparedVisual>()
+
     const first = openVisual(app, visual.path, () => pending.promise)
     const old = app.overlays[0]!
     await openVisual(app, visual.path, async () => ({ ...visual, title: 'Replacement' }))
@@ -94,6 +98,7 @@ describe('visual sheet uses the current frontend owner', () => {
   it('does not steal ownership from an approval opened while the read is pending', async () => {
     const app = host(),
       pending = Promise.withResolvers<PreparedVisual>()
+
     const run = openVisual(app, visual.path, () => pending.promise)
     const approval = { key: 'approval', modal: true, node: () => undefined, onKey: () => true } as unknown as Overlay
     app.open(approval)
@@ -105,6 +110,7 @@ describe('visual sheet uses the current frontend owner', () => {
   it('drops cross-session completion and hides already loaded links on branch changes', async () => {
     const app = host(),
       pending = Promise.withResolvers<PreparedVisual>()
+
     const run = openVisual(app, visual.path, () => pending.promise)
     app.sid = 'another-runtime'
     pending.resolve(visual)

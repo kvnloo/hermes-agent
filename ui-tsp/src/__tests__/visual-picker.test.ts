@@ -69,6 +69,7 @@ function host() {
       if (previous) {
         this.close(previous)
       }
+
       this.overlays.push(o)
     },
     close(o: Overlay) {
@@ -100,6 +101,7 @@ describe('visual candidates reuse the live overlay path', () => {
     for (let n = 0; n < 20; n++) {
       tree(app.overlays[0]!)
     }
+
     assert.equal(reads, 0)
     assert.equal(app.composer.text, 'unfinished draft')
   })
@@ -201,6 +203,7 @@ describe('visual candidates reuse the live overlay path', () => {
   it('Escape cancels a selected pending read; a late result cannot reopen it', async () => {
     const app = host(),
       pending = Promise.withResolvers<PreparedVisual>()
+
     let signal: AbortSignal | undefined
     await openVisualPicker(app, '', async (_path, _scope, abort) => {
       signal = abort
@@ -217,6 +220,7 @@ describe('visual candidates reuse the live overlay path', () => {
   it('a transcript clear during validation cannot reveal the old candidate', async () => {
     const app = host(),
       pending = Promise.withResolvers<PreparedVisual>()
+
     await openVisualPicker(app, '', () => pending.promise)
     app.overlays[0]!.onKey(key('enter'))
     app.transcript.entries = []

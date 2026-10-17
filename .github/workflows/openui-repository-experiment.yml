@@ -1,7 +1,7 @@
 name: OpenUI Git snapshot experiment
 on:
   push:
-    branches: [exp/tern-openui-repository]
+    branches: [feat/tern-openui-v2, exp/tern-openui-repository]
     paths:
       - ui-tsp/experiments/openui-repository/**
       - ui-tsp/experiments/openui-preview/**

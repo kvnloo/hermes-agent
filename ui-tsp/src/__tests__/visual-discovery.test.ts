@@ -84,6 +84,7 @@ describe('reported OpenUI candidates', () => {
     const calls = ['running', 'error', 'cancelled'].map(status =>
       call(hint(), { status: status as ToolCall['status'] })
     )
+
     calls.push(
       call(hint(), { name: 'read_file' }),
       call('', { summary: hint(), resultText: hint(), args: { output: hint() } })
@@ -113,9 +114,12 @@ describe('reported OpenUI candidates', () => {
   it('keeps newest-first order and deduplicates retries without mutating the transcript', () => {
     const first = call(),
       retry = call(hint(), { id: 'retry' })
+
     const newest = call(hint({ id: 'b'.repeat(64), path: '/tmp/second.hvisual.json' }), { id: 'new' })
+
     const entries = [turn([first, retry, newest])],
       before = JSON.stringify(entries)
+
     const candidates = recentVisualCandidates(entries, scope)
     assert.deepEqual(
       candidates.map(value => value.callId),
@@ -128,13 +132,16 @@ describe('reported OpenUI candidates', () => {
     const candidates = Array.from({ length: 20 }, (_, n) =>
       call(hint({ path: `/tmp/${n}.hvisual.json` }), { id: String(n) })
     )
+
     assert.equal(recentVisualCandidates([turn(candidates)], scope).length, limits.candidates)
+
     const notices: Entry[] = Array.from({ length: limits.entries }, (_, n) => ({
       kind: 'notice',
       id: String(n),
       text: '',
       tone: 'info'
     }))
+
     assert.deepEqual(recentVisualCandidates([turn([call()]), ...notices], scope), [])
   })
   it('bounds blocks inspected even when a single turn is huge', () => {
@@ -143,6 +150,7 @@ describe('reported OpenUI candidates', () => {
     for (let n = 0; n < limits.blocks; n++) {
       entry.blocks.push({ kind: 'text', id: String(n), text: '' })
     }
+
     assert.deepEqual(recentVisualCandidates([entry], scope), [])
   })
   it('bounds aggregate JSON work, not just per-output size', () => {

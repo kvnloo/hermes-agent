@@ -106,11 +106,13 @@ export async function openVisual(app: VisualHost, path: string, load: LoadVisual
     if (!current() || controller.signal.aborted) {
       return
     }
+
     candidate = result
   } catch (cause) {
     if (!current() || controller.signal.aborted) {
       return
     }
+
     error = cause instanceof Error ? cause.message : String(cause)
   }
 

@@ -27,6 +27,7 @@ export function parseVisualCandidate(output: string, scope: string, callId: stri
   if (output.length > VISUAL_DISCOVERY_LIMITS.outputChars) {
     return undefined
   }
+
   let value: Record<string, unknown> | undefined
 
   try {
@@ -63,12 +64,14 @@ function completedOutput(call: ToolCall, budget: { chars: number }): string | un
   if (call.name !== 'terminal' || call.status !== 'done') {
     return undefined
   }
+
   let raw = call.result
 
   if (typeof raw === 'string') {
     if (raw.length > VISUAL_DISCOVERY_LIMITS.outputChars || raw.length > budget.chars) {
       return undefined
     }
+
     budget.chars -= raw.length
 
     try {
@@ -83,11 +86,13 @@ function completedOutput(call: ToolCall, budget: { chars: number }): string | un
   if (!result || result.exit_code !== 0 || result.error || result.isError || typeof result.output !== 'string') {
     return undefined
   }
+
   const output = result.output
 
   if (output.length > VISUAL_DISCOVERY_LIMITS.outputChars || output.length > budget.chars) {
     return undefined
   }
+
   budget.chars -= output.length
 
   return output
@@ -97,6 +102,7 @@ function completedOutput(call: ToolCall, budget: { chars: number }): string | un
 export function recentVisualCandidates(entries: readonly Entry[], scope: string): readonly VisualCandidate[] {
   const found: VisualCandidate[] = [],
     seen = new Set<string>()
+
   const budget = { chars: VISUAL_DISCOVERY_LIMITS.parseChars }
   let blocks = 0
   const first = Math.max(0, entries.length - VISUAL_DISCOVERY_LIMITS.entries)
@@ -112,26 +118,31 @@ export function recentVisualCandidates(entries: readonly Entry[], scope: string)
       if (++blocks > VISUAL_DISCOVERY_LIMITS.blocks) {
         return Object.freeze(found)
       }
+
       const block = entry.blocks[j]!
 
       if (block.kind !== 'tool') {
         continue
       }
+
       const output = completedOutput(block.call, budget)
 
       if (output === undefined) {
         continue
       }
+
       const candidate = parseVisualCandidate(output, scope, block.call.id)
 
       if (!candidate) {
         continue
       }
+
       const key = JSON.stringify([candidate.id, candidate.path])
 
       if (seen.has(key)) {
         continue
       }
+
       seen.add(key)
       found.push(candidate)
 

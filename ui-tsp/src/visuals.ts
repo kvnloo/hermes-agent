@@ -42,6 +42,7 @@ export function visualScope(session: VisualSession): string | undefined {
   if (!session.sid) {
     return undefined
   }
+
   const scope = JSON.stringify([session.storedSid || session.sid, session.info?.branch ?? ''])
 
   return scope.length <= 256 ? scope : undefined
@@ -94,6 +95,7 @@ export async function readVisualFile(path: string, maxBytes: number, signal?: Ab
   if (!canonical.endsWith('.hvisual.json')) {
     throw new Error('The resolved file must end in .hvisual.json.')
   }
+
   const file = await open(canonical, constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW)
 
   try {
@@ -103,6 +105,7 @@ export async function readVisualFile(path: string, maxBytes: number, signal?: Ab
     if (!stat.isFile() || stat.size > maxBytes) {
       throw new Error('Preview must be a bounded regular file.')
     }
+
     const bytes = Buffer.alloc(maxBytes + 1)
     let used = 0
 
@@ -138,6 +141,7 @@ export async function readPreparedVisual(path: string, scope: string, signal?: A
   if (!root || !isAbsolute(root)) {
     throw new Error('The source-checkout launcher must set HERMES_PYTHON_SRC_ROOT.')
   }
+
   signal?.throwIfAborted()
   const url = pathToFileURL(join(root, 'ui-tsp/experiments/openui-preview/src/bundle.mjs')).href
   const tools = await import(/* @vite-ignore */ url)

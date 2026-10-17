@@ -3,10 +3,10 @@
 ```sh
 # From the harness checkout. The target can be a different worktree at any SHA.
 scripts/dev/tern-e2e.sh /absolute/path/to/worktree \
-  smoke settings file-links answer-copy todo-hud shortcuts ink-fallback \
+  smoke settings file-links answer-copy todo-hud shortcuts ink-fallback openui \
   --node /absolute/path/to/node
 
-# All seven journeys are the default; inspect runtime overrides with --help.
+# All eight journeys are the default; inspect runtime overrides with --help.
 scripts/dev/tern-e2e.sh /absolute/path/to/worktree --node /absolute/path/to/node
 ```
 
@@ -38,6 +38,7 @@ must fit the platform limit. Receipt directories are never auto-pruned.
 | `answer-copy` | native Copy action, exact answer-only OSC52 bytes, attempted host Paste roundtrip | Explicit notification fixture; read-only stdout observation; never seed expected clipboard text |
 | `todo-hud` | exact done/total/current summary, native expand/collapse, full checklist | Explicit `todo.updated` notification fixture |
 | `shortcuts` | Alt+M model picker, Alt+, Settings, F1 action-table help, Alt+C exact `/context` request and real reply; no config writes | Real gateway; allowlisted Alt/F1 control chords, no Ctrl-to-Meta ambiguity |
+| `openui` | exact `/visual` scope, real locked prepare CLI, picker discovery/selection, full-ID validation, dismissal and composer focus | Real CLI output; completed-terminal notification explicitly fixture-replayed; no agent/model turn or renderer installation |
 | `ink-fallback` | actual frontend exits 75 without handshake, real `_launch_tui` runs actual Ink, painted PTY and clean exit | Real non-Tern PTY; only prebuilt-entry resolution overridden, no subprocess/UI/exit mocked |
 
 The preserved **ten-case native Settings suite** runs after the short Settings

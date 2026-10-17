@@ -1,7 +1,7 @@
 name: OpenUI generation experiment
 on:
   push:
-    branches: [exp/tern-openui-generation]
+    branches: [feat/tern-openui-v2, exp/tern-openui-generation]
     paths:
       - ui-tsp/experiments/openui-generation/**
       - .github/workflows/openui-generation-experiment.yml

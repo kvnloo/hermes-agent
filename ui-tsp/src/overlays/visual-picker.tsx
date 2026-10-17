@@ -24,11 +24,13 @@ export async function openVisualPicker(
   const sid = app.sid,
     scope = visualScope(app),
     entries = app.transcript.entries
+
   const candidates = !path && scope ? recentVisualCandidates(entries, scope) : []
 
   if (path || !scope || !candidates.length) {
     return openVisual(app, path, load)
   }
+
   let selected = 0,
     expired = false
 
@@ -44,6 +46,7 @@ export async function openVisualPicker(
     if (!current() || app.overlays.at(-1) !== overlay) {
       return
     }
+
     close()
     await openVisual(app, candidate.path, async (file, owner, signal) => {
       const result = await load(file, owner, signal)

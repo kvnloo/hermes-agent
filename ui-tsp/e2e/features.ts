@@ -1,6 +1,8 @@
 // Per-feature journeys over the same fail-closed native-control adapter as the full suite.
 import assert from 'node:assert/strict'
+import { execFile } from 'node:child_process'
 import { appendFile, readFile, writeFile } from 'node:fs/promises'
+import { promisify } from 'node:util'
 import { join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { NativeControl } from './adapter.ts'
@@ -232,6 +234,56 @@ async function shortcuts() {
     assert(!(await native.wire()).some(w=>w.dir === 'denied' || (w.dir === 'request' && ['prompt.submit','config.set','settings.set'].includes(String(w.body.method)))))
   })
 }
+async function openui() {
+  let scope = '', notice: { id:string; path:string; scope:string } | undefined
+  await step('read exact current /visual scope from native help', async()=>{
+    await command('/visual')
+    const nodes = await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.head === 'Visual preview'), 'visual help')
+    const text = [...nodes.values()].map(n=>n.p?.text).find(t=>typeof t === 'string' && t.startsWith('["'))
+    assert.equal(typeof text, 'string', 'help exposes exact stored-session/branch scope')
+    scope = String(text)
+    assert.equal(JSON.parse(scope).length, 2)
+    await capture('help')
+    await native.key('Escape')
+    await until(()=>native.rendered(),ns=>![...ns.values()].some(n=>n.p?.head === 'Visual preview'), 'dismissed visual help')
+  })
+  await step('real locked OpenUI CLI prepares an exact scoped candidate', async()=>{
+    const {stdout,stderr} = await promisify(execFile)(process.execPath, [
+      join(manifest.root,'ui-tsp/experiments/openui-preview/cli.mjs'), 'prepare',
+      join(manifest.root,'ui-tsp/experiments/openui-generation/fixtures/explorer.openui'),
+      join(manifest.root,'ui-tsp/experiments/openui-preview/fixtures/repository.json'), scope,
+      join(manifest.proof,'openui-bundles'), '--json'
+    ], {env:{...process.env,OPENUI_TELEMETRY_DISABLED:'1',DO_NOT_TRACK:'1'},timeout:30000})
+    assert.equal(stderr,'')
+    notice = JSON.parse(stdout)
+    assert(notice && notice.scope === scope && /^[a-f0-9]{64}$/.test(notice.id))
+    await writeFile(join(manifest.proof,'openui-candidate.json'),stdout)
+  })
+  await step('discover real CLI output through explicit completed-tool fixture replay', async()=>{
+    assert(notice)
+    const output = await readFile(join(manifest.proof,'openui-candidate.json'),'utf8')
+    await replay('message.start')
+    await replay('tool.start',{name:'terminal',tool_id:'openui-prepare',args:{command:'labelled harness prepare output replay'}})
+    await replay('tool.complete',{name:'terminal',tool_id:'openui-prepare',result:{exit_code:0,output}})
+    await replay('message.complete',{status:'complete',text:''})
+    await until(()=>native.rendered(),ns=>[...ns.values()].some(n=>JSON.stringify(n).includes(notice!.id)), 'completed candidate tool output')
+    await command('/visual')
+    await until(()=>native.rendered(),ns=>[...ns.values()].some(n=>n.p?.head === 'Recent visual candidates'), 'candidate picker')
+    await capture('picker')
+    await native.key('Enter')
+    await until(()=>native.rendered(),ns=>[...ns.values()].some(n=>n.p?.text === `Bundle: ${notice!.id}`), 'strictly validated selected bundle')
+    await capture('selected')
+  },true)
+  await step('dismiss preview restores composer without submitting a model prompt', async()=>{
+    await native.key('Escape')
+    await until(()=>native.rendered(),ns=>![...ns.values()].some(n=>n.p?.head === 'Visual preview'), 'preview dismissed')
+    await native.type('OpenUI unsent focus probe')
+    await until(()=>native.rendered(),ns=>ns.get('dock.composer.line.input')?.p?.text === 'OpenUI unsent focus probe', 'composer focus restored')
+    assert(!(await native.wire()).some(w=>w.dir==='request' && w.body.method === 'prompt.submit'))
+    await capture('focus')
+  })
+}
+
 async function smoke() {
   await step('launch welcome and real session without a model call',async()=>{
     assert(flatten((await native.snapshot()).tree).some(n=>(n.text ?? '').toLowerCase().includes('hermes')))
@@ -252,7 +304,7 @@ try {
   const wire = await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='delivered' && w.body.result && typeof w.body.result==='object' && !Array.isArray(w.body.result) && 'session_id' in w.body.result), 'real session creation')
   const ids = new Set(wire.filter(w=>w.dir==='request' && w.body.method==='session.create').map(w=>w.body.id))
   sid = String(record(wire.findLast(w=>w.dir==='delivered' && ids.has(w.body.id) && w.body.result)?.body.result).session_id)
-  const journeys:Record<string,()=>Promise<void>> = {settings,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke}
+  const journeys:Record<string,()=>Promise<void>> = {settings,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui}
   assert(journeys[journey],`Unknown journey: ${journey}`)
   await journeys[journey]!()
 } catch (error) { console.error(error); process.exitCode=1 }
