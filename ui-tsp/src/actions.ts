@@ -46,7 +46,9 @@ export const APP_ACTIONS: readonly Action[] = [
     extraModifiers: true,
     when: always,
     run: app => {
-      if (app.busy) {
+      if (app.dictation.blocked) {
+        void app.dictation.stop(true)
+      } else if (app.busy) {
         app.interrupt()
       }
     }
@@ -103,6 +105,14 @@ export const APP_ACTIONS: readonly Action[] = [
     extraModifiers: true,
     when: ctx => ctx.queued,
     run: app => app.dequeue()
+  },
+  {
+    id: 'app.stt.toggle',
+    title: 'Toggle microphone dictation (review before sending)',
+    group: 'Control',
+    keys: ['alt+v'],
+    when: ctx => !ctx.overlayOpen && !ctx.completionOpen,
+    run: app => app.dictation.toggle()
   },
   {
     id: 'app.model.select',

@@ -7,6 +7,7 @@ import type { EditEvent, ImageProps, JSX, SendEvent } from '@stencil-hq/tern'
 import { HELP_HINT } from '../actions.js'
 import type { Dispatch } from '../attention.js'
 import type { Composer } from '../composer.js'
+import type { Dictation } from '../dictation.js'
 import type { Todo } from '../model.js'
 import type { ReportNotice } from '../reports.js'
 
@@ -16,6 +17,8 @@ import { checklistNode } from './tools.js'
 /** What the dock shows. */
 export interface DockContext {
   composer: Composer
+  dictation?: Dictation
+  onDictation?(): void
   approval?: JSX.Element
   approvalQueued?: number
   /** The `editor` node's full id, for the caret overlay and focus. */
@@ -221,6 +224,12 @@ function composerNode(cx: DockContext): JSX.Element {
           value={share}
         />
       )}
+      {cx.dictation && cx.dictation.state !== 'idle' ? (
+        <col key="dictation" role={`omp.composer.mic.${cx.dictation.state}`}>
+          <text key="status" text={cx.dictation.label} tone={cx.dictation.state === 'error' ? 'error' : 'muted'} />
+          {cx.dictation.partial ? <text key="partial" role="omp.composer.mic.partial" text={cx.dictation.partial} /> : null}
+        </col>
+      ) : null}
       <row gap="sm" hidden key="chips" role="omp.composer.chips" wrap />
       <row align="start" gap="sm" key="line" role="omp.composer.line">
         {cx.orb ? <image key="orb" {...cx.orb} role="hermes.agent.orb" /> : null}
@@ -288,6 +297,7 @@ function composerNode(cx: DockContext): JSX.Element {
           ) : null}
         </status>
         {cx.jobs > 0 ? <text key="jobs" onClick={cx.onJobs} role="omp.composer.jobs" text={`${cx.jobs} ${cx.jobs === 1 ? 'job' : 'jobs'}`} /> : null}
+        {cx.dictation ? <text key="mic" onClick={cx.onDictation} role="omp.composer.mic" text={cx.dictation.state === 'recording' ? 'Finish dictation' : 'Mic'} title={`${cx.dictation.label} · Alt+V`} /> : null}
         <text key="help" role="omp.composer.hint" text={cx.approval ? 'Enter deny and steer' : cx.busy ? `Enter ${cx.busyMode === 'steer' ? 'steer' : 'queue'} · Alt+Enter ${cx.busyMode === 'steer' ? 'queue' : 'steer'}` : HELP_HINT} tone="muted" wrap="none" />
         <row align="center" gap="xs" key="settings" onClick={cx.onSettings} role="omp.composer.settings" title="Open Hermes settings">
           <icon key="icon" name="settings" />
@@ -302,7 +312,9 @@ function composerNode(cx: DockContext): JSX.Element {
             wrap="none"
           />
         ) : null}
-        {cx.busy ? (
+        {cx.dictation?.blocked ? (
+          <text key="send-disabled" role="omp.composer.send.disabled" text="Send disabled: dictation active" tone="muted" />
+        ) : cx.busy ? (
           <text
             key="stop"
             onClick={cx.onInterrupt}
