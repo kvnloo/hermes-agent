@@ -26,6 +26,9 @@ def _lightpanda_vision_preroute(
     (it has no graphical renderer). Returns ``(prerouted, fallback_warning, path)``;
     on fallback failure ``prerouted`` is False and the caller takes the normal
     screenshot path (forcing Chrome) so the standard fallback metadata still applies."""
+    from tools.browser_tern import get_provider
+    if get_provider() is not None:
+        return False, None, screenshot_path
     engine = _cloud._get_browser_engine()
     if engine != "lightpanda" or not _cloud._should_inject_engine(engine):
         return False, None, screenshot_path
@@ -72,6 +75,8 @@ def _native_vision_result(
     native_result = _build_native_vision_tool_result(image_url=str(screenshot_path), question=question,
                                                      image_data_url=data_url,
                                                      image_size_bytes=screenshot_path.stat().st_size)
+    if result.get("tern_target"):
+        native_result["tern_target"] = result["tern_target"]
     meta = native_result.setdefault("meta", {})
     meta["screenshot_path"] = str(screenshot_path)
     if lp_fallback_warning:

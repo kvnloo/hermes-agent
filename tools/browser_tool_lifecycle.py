@@ -621,6 +621,9 @@ def cleanup_browser(task_id: Optional[str] = None) -> None:
     if task_id is None:
         task_id = "default"
 
+    from tools.browser_tern import cleanup as cleanup_tern
+    cleanup_tern(task_id)
+
     session_keys = [task_id]
     sidecar_key = f"{task_id}{_bt._LOCAL_SUFFIX}"
     with _bt._cleanup_lock:
@@ -744,6 +747,9 @@ def _cleanup_single_browser_session(task_id: str) -> None:
 
 def cleanup_all_browsers() -> None:
     """Clean up all active browser sessions (shutdown) and reset cached lookups."""
+    from tools.browser_tern import cleanup as cleanup_tern
+    cleanup_tern()
+
     with _bt._cleanup_lock:
         task_ids = list(_bt._active_sessions.keys())
     for task_id in task_ids:
