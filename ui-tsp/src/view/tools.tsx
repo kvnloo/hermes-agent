@@ -231,7 +231,12 @@ function bashCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   const state = runState(call, result)
 
   return {
-    badges: moreBadge(shown, BASH_PREVIEW_TAIL),
+    badges: [
+      ...(state === 'timeout' ? [{ text: 'timeout', tone: 'warning' }] : []),
+      ...(state === 'background' ? [{ text: 'background', tone: 'muted' }] : []),
+      ...(state === 'cancelled' ? [{ text: 'cancelled', tone: 'muted' }] : []),
+      ...(moreBadge(shown, BASH_PREVIEW_TAIL) ?? [])
+    ],
     body: [runBox({
       command: str(call.args.command) ?? call.context,
       cwd: str(call.args.workdir),
@@ -731,7 +736,13 @@ function evalCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   const state = runState(call, result)
 
   return {
-    badges: [{ text: language }, ...(moreBadge(outLines, EVAL_PREVIEW_LINES) ?? [])],
+    badges: [
+      { text: language },
+      ...(state === 'timeout' ? [{ text: 'timeout', tone: 'warning' }] : []),
+      ...(state === 'background' ? [{ text: 'background', tone: 'muted' }] : []),
+      ...(state === 'cancelled' ? [{ text: 'cancelled', tone: 'muted' }] : []),
+      ...(moreBadge(outLines, EVAL_PREVIEW_LINES) ?? [])
+    ],
     body: [runBox({
       command: code,
       output,

@@ -40,13 +40,13 @@ const RUN_WORD: Record<RunState, string> = {
   error: 'error'
 }
 
-const RUN_TONE: Record<RunState, 'muted' | 'success' | 'warning' | 'error'> = {
-  running: 'muted',
+const RUN_TONE: Record<RunState, 'pending' | 'muted' | 'success' | 'warning' | 'error'> = {
+  running: 'pending',
   ok: 'success',
   exit: 'error',
   timeout: 'warning',
   cancelled: 'muted',
-  background: 'muted',
+  background: 'pending',
   error: 'error'
 }
 
@@ -124,9 +124,9 @@ export function runFootFacts(input: RunBoxInput): string[] {
 
   if (input.state === 'ok' && exit === 0) {
     facts.push('exit 0')
-  } else if (input.state === 'exit' && exit !== undefined) {
-    // State text already says `exit N`; do not repeat it.
-  } else if (input.state === 'background') {
+  }
+
+  if (input.state === 'background') {
     if (numericExit(input.processId) !== undefined) {
       facts.push('pid ' + input.processId)
     } else if (input.sessionId) {
@@ -178,7 +178,7 @@ export function runBox(input: RunBoxInput): JSX.Element {
               <ansi follow={input.state === 'running'} key="output" role="omp.run.output" text={input.output} />
             ) : null}
             {input.error ? (
-              <text key="error" role="omp.tool.error" spans={[{ s: 'error', t: input.error }]} wrap="word" />
+              <text key="error" role="omp.tool.error" spans={[{ s: input.state === 'timeout' ? 'warning' : 'error', t: input.error }]} wrap="word" />
             ) : null}
           </col>
         </row>
