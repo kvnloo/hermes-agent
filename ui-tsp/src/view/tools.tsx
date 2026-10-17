@@ -10,6 +10,7 @@ import type { Subagent, Todo, ToolCall } from '../model.js'
 import { readMedia } from '../read-media.js'
 import { record } from '../transcript.js'
 
+import { lspDiagnostics } from './lsp-diagnostics.js'
 import { outputLineCount, runBox, type RunBoxInput, runElapsed, runState, type RunState } from './runbox.js'
 import { age, compact, duration } from './time.js'
 
@@ -370,7 +371,7 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined, c
   const diff = hunks(str(result?.diff)) ?? (call.diff ? plainDiff(call.diff) : undefined)
   const content = str(call.args.content) ?? str(call.args.contents)
   const write = call.name === 'write_file'
-  const diagnostics = str(result?.lsp_diagnostics)
+  const diagnostics = lspDiagnostics(result, cwd)
   const hunk = /@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(diff ?? call.diff ?? '')
 
   const line = lineOf(call.args.line) ?? lineOf(call.args.start_line) ?? lineOf(result?.line) ??
@@ -398,9 +399,7 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined, c
       badges: badges.length ? badges : undefined,
       body: [
         <code key="code" lang={lang ?? 'text'} numbers text={text} wrap />,
-        ...(diagnostics
-          ? [<text key="lsp" role="omp.tool.notice" spans={[{ s: 'error', t: diagnostics }]} wrap="word" />]
-          : [])
+        ...diagnostics
       ],
       folded: true,
       meta: [`${lines} line${lines === 1 ? '' : 's'}`],
@@ -412,8 +411,6 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined, c
     return {
       ...head,
       body: diagnostics
-        ? [<text key="lsp" role="omp.tool.notice" spans={[{ s: 'error', t: diagnostics }]} wrap="word" />]
-        : []
     }
   }
 
@@ -426,9 +423,7 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined, c
     badges: moreBadge(lines, DIFF_PREVIEW_LINES),
     body: [
       <diff key="diff" lang={lang} text={diff} />,
-      ...(diagnostics
-        ? [<text key="lsp" role="omp.tool.notice" spans={[{ s: 'error', t: diagnostics }]} wrap="word" />]
-        : [])
+      ...diagnostics
     ],
     folded: fold,
     meta: [`+${added} −${removed}`],
