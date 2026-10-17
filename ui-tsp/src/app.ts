@@ -1120,6 +1120,7 @@ export class App implements OverlayHost {
 
     const cx = {
       copy: (text: string) => copyToClipboard(text),
+      cwd: info?.cwd ?? '',
       canRetry: (turnId: string) => this.canRetry(turnId),
       retry: (turnId: string) => this.retryFailed(turnId),
       now,

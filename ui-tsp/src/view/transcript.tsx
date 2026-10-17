@@ -5,6 +5,7 @@
 
 import { type JSX, node } from '@stencil-hq/tern'
 
+import { rewriteLocalMarkdownLinks } from '../links.js'
 import type { Block, Entry, NoticeEntry, TurnEntry, UserEntry } from '../model.js'
 
 import { age, compact, duration } from './time.js'
@@ -13,6 +14,8 @@ import { type WelcomeContext, welcomeNode } from './welcome.js'
 
 /** What entry views need from the app. */
 export interface TranscriptContext {
+  /** Absolute cwd reported by the owning Hermes session. */
+  cwd: string
   now: number
   welcome: WelcomeContext
   copy(text: string): void
@@ -25,7 +28,7 @@ const kNode = Symbol('tsp.node')
 
 /** An entry carrying its last built node and the revision it was built at. */
 interface Built {
-  [kNode]?: { rev: number; node: JSX.Element }
+  [kNode]?: { rev: number; cwd: string; node: JSX.Element }
 }
 
 /**
@@ -44,12 +47,12 @@ export function entryNode(e: Entry, id: string, cx: TranscriptContext): JSX.Elem
   const rev = e.kind === 'turn' ? e.rev : 0
   const cached = built[kNode]
 
-  if (cached?.rev === rev) {
+  if (cached?.rev === rev && cached.cwd === cx.cwd) {
     return cached.node
   }
 
   const node = buildEntry(e, id, cx)
-  built[kNode] = { node, rev }
+  built[kNode] = { node, rev, cwd: cx.cwd }
 
   return node
 }
@@ -145,12 +148,12 @@ function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptConte
     case 'text':
       return (
         <md key={b.id} stream={streaming || undefined}>
-          {b.text}
+          {streaming ? b.text : rewriteLocalMarkdownLinks(b.text, cx.cwd)}
         </md>
       )
 
     case 'tool':
-      return toolNode(b.call, cx.now)
+      return toolNode(b.call, cx.now, cx.cwd)
 
     case 'thinking':
       return thinkingNode(b, id, cx)
