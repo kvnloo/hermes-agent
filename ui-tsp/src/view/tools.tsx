@@ -8,6 +8,7 @@ import { type JSX, node } from '@stencil-hq/tern'
 import type { Subagent, Todo, ToolCall } from '../model.js'
 import { record } from '../transcript.js'
 
+import { runBox, runElapsed, runState } from './runbox.js'
 import { age, compact, duration } from './time.js'
 
 /** How one call presents: omp's tool props (minus status and timing) and its body. */
@@ -63,8 +64,9 @@ export function toolNode(call: ToolCall, now: number): JSX.Element {
   const running = status === 'running'
   const body = [...card.body]
   const error = call.status === 'error' ? errorOf(call) : undefined
+  const runOutcome = card.name === 'bash' ? runState(call, record(call.result)) : undefined
 
-  if (call.status === 'cancelled') {
+  if (call.status === 'cancelled' && card.name !== 'bash' && card.name !== 'eval') {
     body.push(
       <text
         key="cancelled"
@@ -85,7 +87,8 @@ export function toolNode(call: ToolCall, now: number): JSX.Element {
       badges: card.badges,
       collapsed: body.length > 0 ? collapsed : undefined,
       collapsible: body.length > 0 ? true : undefined,
-      exit: card.name === 'bash' && !running && call.status !== 'cancelled' ? exitOf(call) : undefined,
+      exit: card.name === 'bash' && !running && call.status !== 'cancelled' && runOutcome !== 'background'
+        ? exitOf(call) : undefined,
       frame: card.frame === 'inline' && (running || !body.length || card.name !== 'web_search') ? 'inline' : undefined,
       key: call.id,
       lang: card.lang,
@@ -98,7 +101,7 @@ export function toolNode(call: ToolCall, now: number): JSX.Element {
       target: card.target,
       targetKind: card.target ? card.targetKind : undefined,
       title: card.title,
-      took: running ? undefined : (card.took ?? call.duration)
+      took: running || runOutcome === 'background' ? undefined : (card.took ?? call.duration)
     },
     body
   )
@@ -222,18 +225,30 @@ function cardOf(call: ToolCall, now: number): Card {
 }
 
 function bashCard(call: ToolCall, result: Record<string, unknown> | undefined): Card {
-  // The cancelled card's notice already says the command was interrupted.
   const output = (str(result?.output) ?? call.resultText)?.replace(/\s*\[Command interrupted\]\s*$/, '')
   const error = str(result?.error)
-
   const shown = output ? nonemptyLines(output) : 0
+  const state = runState(call, result)
 
   return {
     badges: moreBadge(shown, BASH_PREVIEW_TAIL),
-    body: [
-      ...(output ? [<ansi follow={call.status === 'running'} key="out" text={output} />] : []),
-      ...(error ? [<text key="err" role="omp.tool.error" spans={[{ s: 'error', t: error }]} wrap="word" />] : [])
-    ],
+    body: [runBox({
+      command: str(call.args.command) ?? call.context,
+      cwd: str(call.args.workdir),
+      output,
+      error,
+      language: 'bash',
+      state,
+      exit: typeof result?.exit_code === 'number' ? result.exit_code : undefined,
+      elapsedMs: runElapsed(call),
+      truncated: shown > BASH_PREVIEW_TAIL,
+      previewLines: BASH_PREVIEW_TAIL,
+      previewSide: 'last',
+      background: state === 'background',
+      processId: typeof result?.pid === 'number' ? result.pid : undefined,
+      sessionId: str(result?.session_id),
+      captureTruncated: Boolean(str(result?.truncation_note))
+    })],
     folded: true,
     lang: 'bash',
     name: 'bash',
@@ -711,31 +726,28 @@ function evalCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   const language = str(call.args.language) === 'js' || str(call.args.language) === 'javascript' ? 'javascript' : 'python'
   const output = str(result?.output) ?? str(result?.stdout) ?? call.resultText
   const error = str(result?.error) ?? str(result?.stderr)
-
   const outLines = output ? nonemptyLines(output) : 0
   const fold = outLines > EVAL_PREVIEW_LINES
+  const state = runState(call, result)
 
   return {
     badges: [{ text: language }, ...(moreBadge(outLines, EVAL_PREVIEW_LINES) ?? [])],
-    body: [
-      <col key="cell-0" role="omp.tool.eval.cell">
-        <row align="start" key="input" role="omp.tool.eval.input">
-          <icon aria="Input" key="0" name="arrow-left" role="omp.tool.eval.prompt" />
-          <code key="code" lang={language} numbers={false} text={code} />
-        </row>
-        {output || error ? (
-          <row align="start" key="result" role="omp.tool.eval.result">
-            <icon aria="Output" key="0" name="arrow-right" role="omp.tool.eval.prompt" />
-            <col key="outputs" role="omp.tool.eval.outputs">
-              {output ? (
-                <ansi follow={false} key="out" role="omp.tool.eval.output" text={output.replace(/\n$/, '')} />
-              ) : null}
-              {error ? <text key="err" role="omp.tool.error" spans={[{ s: 'error', t: error }]} wrap="word" /> : null}
-            </col>
-          </row>
-        ) : null}
-      </col>
-    ],
+    body: [runBox({
+      command: code,
+      output,
+      error,
+      language,
+      state,
+      exit: typeof result?.exit_code === 'number' ? result.exit_code : undefined,
+      elapsedMs: runElapsed(call),
+      truncated: fold,
+      previewLines: EVAL_PREVIEW_LINES,
+      previewSide: 'first',
+      background: state === 'background',
+      processId: typeof result?.pid === 'number' ? result.pid : undefined,
+      sessionId: str(result?.session_id),
+      captureTruncated: Boolean(str(result?.truncation_note))
+    })],
     folded: fold,
     name: 'eval',
     preview: fold ? { lines: EVAL_PREVIEW_LINES } : undefined,
