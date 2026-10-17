@@ -282,6 +282,41 @@ profile enumeration and configuration live in
 `profiles.get_asset`. Reads and writes run under the target profile's
 HERMES_HOME override. Asset writes are atomic, type- and size-capped.
 
+Native schema-based settings use `settings.get` and `settings.set` in
+`tui_gateway/methods_settings.py`. The getter returns declared canonical fields,
+their defaults, and the canonical profile name. A session-bound request uses
+that session's full profile runtime scope. A write requires a live session and
+rejects an explicit profile that differs from its owner.
+
+These controls change profile defaults, not live model or reasoning overrides.
+The setter validates field types and current discovery-based options. It saves
+one field through the canonical config writer under the config lock. Explicit
+structured-field replacement and context-window removal use a fresh raw snapshot
+under that same lock. Unreadable or malformed config files remain untouched.
+
+Dynamic plugin discovery happens outside the config writer lock. Managed-policy
+checks cover canonical aliases and every coupled consent path. Reads restore
+environment references from the winning user/managed raw layer, including dynamic
+select options; they do not disclose the expanded value.
+
+Runtime-supported optional fields are part of the canonical schema even when
+DEFAULT_CONFIG intentionally omits them. Unsetting an optional field removes its
+raw leaf, so `stt.provider` resumes autodetection rather than pinning YAML null.
+Legacy reasoning booleans and standard dictionaries appear as semantic choices;
+bespoke provider tiers retain their supported JSON dictionary form.
+
+Credential leaves are `null` in responses. A submitted credential `null` means
+preserve the current stored value, not clear it. An empty string explicitly clears
+a scalar credential. Compound edits preserve omitted credential-bearing entries
+and match list credentials by unique name or route, never by list position.
+Raw environment references remain references. Display-only credential previews
+cannot become replacement credentials. Security, execution, credential, model
+route and consent changes return `confirm_required` before any write. The client
+must ask about the exact profile, field and value with Cancel as the default,
+then repeat that write with `confirmed: true`. Shared-metrics changes use the
+existing coupled consent writer and consent-window reconciliation.
+
+
 ## Failure modes
 
 - Fatal at startup: multiplex config errors and a secondary profile enabling a

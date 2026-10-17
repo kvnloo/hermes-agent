@@ -588,6 +588,38 @@ export interface McpServerStatus {
   error?: string | null
   [key: string]: unknown
 }
+export interface SettingsGetParams {
+  profile?: string | null
+  session_id?: string | null
+}
+export interface SettingsGetResult {
+  fields: Record<string, SettingsField>
+  profile: string
+}
+/** A canonical schema leaf. Sensitive values are null, never credential previews. A null sensitive write preserves the stored credential. An empty string clears it. */
+export interface SettingsField {
+  type: string
+  description: string
+  category: string
+  options?: string[] | null
+  value: unknown
+  default: unknown
+  nullable?: boolean
+  sensitive?: boolean
+}
+export interface SettingsSetParams {
+  profile?: string | null
+  session_id: string
+  key: string
+  value: unknown
+  confirmed?: boolean
+}
+export interface SettingsSetResult {
+  key: string
+  value?: unknown
+  confirm_required: boolean
+  confirm_message: string
+}
 /** ``provider_configured`` is the loose answer; the boot record's fields (``ready``, ``free_tier_account``, ``free_tier_route``, ``other_providers``, ``inference_provider``) ride along on the launch profile. An unknown ``profile`` answers ``ok=False`` + ``error``. */
 export interface SetupStatusResult {
   provider_configured?: boolean | null
@@ -5308,6 +5340,10 @@ export interface RpcMethods {
   'session.usage': { params: SessionUsageParams; result: SessionUsageResult }
   /** Re-home a stored session's workspace; git identity is replaced and a live agent follows. */
   'session.workspace.move': { params: SessionWorkspaceMoveParams; result: SessionWorkspaceMoveResult }
+  /** Read canonical schema fields and profile defaults, not live session overrides. Credentials are redacted. */
+  'settings.get': { params: SettingsGetParams; result: SettingsGetResult }
+  /** Change one declared profile setting for a live session. Risk and consent changes require exact confirmation. */
+  'settings.set': { params: SettingsSetParams; result: SettingsSetResult }
   /** Strict provider check through the same runtime resolution the agent uses on session creation. */
   'setup.runtime_check': { params: SetupRuntimeCheckParams; result: SetupRuntimeCheckResult }
   /** Loose provider check: is ANY provider auth state discoverable for the (launch or named) profile. */
@@ -5614,6 +5650,8 @@ export const RPC_METHODS = [
   'session.undo',
   'session.usage',
   'session.workspace.move',
+  'settings.get',
+  'settings.set',
   'setup.runtime_check',
   'setup.status',
   'shared_metrics.desktop_daily',

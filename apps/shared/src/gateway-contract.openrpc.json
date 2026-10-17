@@ -3589,6 +3589,42 @@
       }
     },
     {
+      "name": "settings.get",
+      "summary": "Read canonical schema fields and profile defaults, not live session overrides. Credentials are redacted.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/SettingsGetParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/SettingsGetResult"
+        }
+      }
+    },
+    {
+      "name": "settings.set",
+      "summary": "Change one declared profile setting for a live session. Risk and consent changes require exact confirmation.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/SettingsSetParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/SettingsSetResult"
+        }
+      }
+    },
+    {
       "name": "setup.runtime_check",
       "summary": "Strict provider check through the same runtime resolution the agent uses on session creation.",
       "params": [
@@ -32323,6 +32359,185 @@
           "cwd"
         ],
         "title": "SessionWorkspaceMoveResult",
+        "type": "object"
+      },
+      "SettingsField": {
+        "additionalProperties": false,
+        "description": "A canonical schema leaf. Sensitive values are null, never credential previews.\nA null sensitive write preserves the stored credential. An empty string clears it.",
+        "properties": {
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Options"
+          },
+          "value": {
+            "title": "Value"
+          },
+          "default": {
+            "title": "Default"
+          },
+          "nullable": {
+            "default": false,
+            "title": "Nullable",
+            "type": "boolean"
+          },
+          "sensitive": {
+            "default": false,
+            "title": "Sensitive",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "type",
+          "description",
+          "category",
+          "value",
+          "default"
+        ],
+        "title": "SettingsField",
+        "type": "object"
+      },
+      "SettingsGetParams": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Session Id"
+          }
+        },
+        "title": "SettingsGetParams",
+        "type": "object"
+      },
+      "SettingsGetResult": {
+        "additionalProperties": false,
+        "properties": {
+          "fields": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SettingsField"
+            },
+            "title": "Fields",
+            "type": "object"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fields",
+          "profile"
+        ],
+        "title": "SettingsGetResult",
+        "type": "object"
+      },
+      "SettingsSetParams": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value"
+          },
+          "confirmed": {
+            "default": false,
+            "title": "Confirmed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "session_id",
+          "key",
+          "value"
+        ],
+        "title": "SettingsSetParams",
+        "type": "object"
+      },
+      "SettingsSetResult": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "value": {
+            "default": null,
+            "title": "Value"
+          },
+          "confirm_required": {
+            "title": "Confirm Required",
+            "type": "boolean"
+          },
+          "confirm_message": {
+            "title": "Confirm Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "confirm_required",
+          "confirm_message"
+        ],
+        "title": "SettingsSetResult",
         "type": "object"
       },
       "SetupReadyPayload": {

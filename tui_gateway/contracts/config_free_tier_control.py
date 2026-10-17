@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, StrictBool
 
 from .base import JsonValue, Params, Result, WireEnum
 from .common import OkResult, OpenModel, ProfileParams, SessionLiveInfo
@@ -106,6 +106,52 @@ class ConfigSetResult(Result):
 
 method("config.set", params=ConfigSetParams, result=ConfigSetResult,
        doc="Change one config key (persisted or session-scoped) and read back the normalised value.")
+
+
+# ── schema-driven profile settings ────────────────────────────────────────────────────────────
+
+
+class SettingsGetParams(ProfileParams):
+    session_id: str | None = None
+
+
+class SettingsField(Result):
+    """A canonical schema leaf. Sensitive values are null, never credential previews.
+    A null sensitive write preserves the stored credential. An empty string clears it."""
+
+    type: str
+    description: str
+    category: str
+    options: list[str] | None = None
+    value: JsonValue
+    default: JsonValue
+    nullable: bool = False
+    sensitive: bool = False
+
+
+class SettingsGetResult(Result):
+    fields: dict[str, SettingsField]
+    profile: str
+
+
+class SettingsSetParams(ProfileParams):
+    session_id: str
+    key: str
+    value: JsonValue
+    confirmed: StrictBool = False
+
+
+class SettingsSetResult(Result):
+    key: str
+    value: JsonValue = None
+    confirm_required: bool
+    confirm_message: str
+
+
+method("settings.get", params=SettingsGetParams, result=SettingsGetResult,
+       doc="Read canonical schema fields and profile defaults, not live session overrides. Credentials are redacted.")
+method("settings.set", params=SettingsSetParams, result=SettingsSetResult,
+       doc="Change one declared profile setting for a live session. Risk and consent changes require exact confirmation.")
 
 
 # ── setup readiness ───────────────────────────────────────────────────────────────────────────
