@@ -28,6 +28,10 @@ export class Transcript {
   entries: Entry[] = []
   /** Bumped on every change; views and the render loop compare it. */
   rev = 0
+  /** Entry membership/completion changes; token deltas do not rescan old history. */
+  structureRev = 0
+  /** Presentation invalidations since the last retained render, including late old-turn updates. */
+  readonly changedEntries = new Set<Entry>()
   #next = 0
   /** The session's running usage at the last completed turn (message.complete reports session totals). */
   #sessionUsage: Usage | undefined
@@ -50,12 +54,15 @@ export class Transcript {
 
   clear() {
     this.entries = []
+    this.changedEntries.clear()
+    this.structureRev++
     this.#live = undefined
     this.#touch()
   }
 
   push(entry: Entry) {
     this.entries.push(entry)
+    this.structureRev++
     this.#touch()
   }
 
@@ -328,6 +335,7 @@ export class Transcript {
     }
 
     turn.endedAt = at
+    this.structureRev++
     this.#live = undefined
 
     if (p.usage) {
@@ -365,6 +373,8 @@ export class Transcript {
   /** Rebuilds the entries of a resumed session from its stored messages. */
   load(messages: TranscriptMessage[]) {
     this.entries = this.entries.filter(e => e.kind === 'welcome')
+    this.changedEntries.clear()
+    this.structureRev++
     this.#live = undefined
     let turn: TurnEntry | undefined
     const calls = new Map<string, ToolCall>()
@@ -510,6 +520,7 @@ export class Transcript {
 
     if (turn) {
       turn.rev++
+      this.changedEntries.add(turn)
     }
   }
 }

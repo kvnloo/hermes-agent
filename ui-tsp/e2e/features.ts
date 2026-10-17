@@ -482,6 +482,38 @@ async function agentInspector() {
   },true)
 }
 
+async function retention() {
+  const frames = async () => (await readFile(manifest.tsp, 'utf8')).trim().split('\n')
+    .map(line => JSON.parse(line) as import('./types.ts').TspFrame)
+  await step('35 labelled fixture turns settle only the cold prefix in real Tern', async () => {
+    for (let i = 0; i < 35; i++) {
+      await replay('message.start')
+      await replay('message.complete', { status:'complete', text:`Retention fixture answer ${i}.` })
+    }
+    await until(() => native.rendered(), ns => [...ns.values()].filter(n => n.p?.role === 'omp.assistant').length === 35, 'all fixture turns acknowledged')
+    const settled = (await frames()).filter(f => f.dir === 'out' && f.verb === 'f')
+      .flatMap(f => f.body.ops ?? []).filter(op => op[0] === 'settle')
+    assert.equal(settled.length, 15)
+    assert(!settled.some(op => op[1] === 'main.welcome'))
+    await capture('settled-history')
+  }, true)
+  await step('streaming preserves resident history and native composer with no model call', async () => {
+    const before = (await frames()).length
+    const old = [...(await native.rendered()).values()].filter(n => n.p?.role === 'omp.assistant').map(n => n.id)
+    await replay('message.start')
+    await replay('message.delta', { text:'Retention streaming fixture.' })
+    await until(() => native.rendered(), ns => [...ns.values()].some(n => n.p?.text === 'Retention streaming fixture.'), 'live fixture text')
+    const ops = (await frames()).slice(before).filter(f => f.dir === 'out' && f.verb === 'f').flatMap(f => f.body.ops ?? [])
+    assert(!ops.some(op => ['del','move','reveal'].includes(String(op[0])) && (op[1] === 'main' || old.includes(String(op[1])))))
+    const nodes = await native.rendered()
+    assert(old.every(id => nodes.has(id)))
+    await native.type('retention unsent draft')
+    await until(() => native.rendered(), ns => ns.get('dock.composer.line.input')?.p?.text === 'retention unsent draft', 'draft preserved alongside retained history')
+    assert(!(await native.wire()).some(w => w.dir === 'request' && w.body.method === 'prompt.submit'))
+    await capture('stream-and-draft')
+  }, true)
+}
+
 async function smoke() {
   await step('launch welcome and real session without a model call',async()=>{
     assert(flatten((await native.snapshot()).tree).some(n=>(n.text ?? '').toLowerCase().includes('hermes')))
@@ -502,7 +534,7 @@ try {
   const wire = await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='delivered' && w.body.result && typeof w.body.result==='object' && !Array.isArray(w.body.result) && 'session_id' in w.body.result), 'real session creation')
   const ids = new Set(wire.filter(w=>w.dir==='request' && w.body.method==='session.create').map(w=>w.body.id))
   sid = String(record(wire.findLast(w=>w.dir==='delivered' && ids.has(w.body.id) && w.body.result)?.body.result).session_id)
-  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes,media,'agent-inspector':agentInspector}
+  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes,media,'agent-inspector':agentInspector,retention}
   assert(journeys[journey],`Unknown journey: ${journey}`)
   await journeys[journey]!()
 } catch (error) { console.error(error); process.exitCode=1 }

@@ -72,6 +72,13 @@ export function entryNode(e: Entry, id: string, cx: TranscriptContext): JSX.Elem
   return node
 }
 
+/** Release presentation bytes once Tern owns the settled subtree. */
+export function forgetEntryNode(e: Entry): void {
+  const holder: object = e
+  const built: Built = holder
+  delete built[kNode]
+}
+
 function buildEntry(e: Exclude<Entry, { kind: 'welcome' }>, id: string, cx: TranscriptContext): JSX.Element {
   switch (e.kind) {
     case 'user':

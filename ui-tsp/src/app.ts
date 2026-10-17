@@ -15,7 +15,7 @@ import type {
   Usage
 } from '@hermes/shared/gateway-events'
 import type { ServerRequest } from '@hermes/shared/json-rpc-channel'
-import type { Key, ScrollTo, Session, Surface, TspEvent } from '@stencil-hq/tern'
+import type { Key, ScrollTo, Session, Surface, TspEvent, ViewInput } from '@stencil-hq/tern'
 import type { GatewayClient } from '@tui/gatewayClient.js'
 import type { AnyGatewayEvent } from '@tui/gatewayTypes.js'
 import { writeActiveSessionFile } from '@tui/lib/activeSessionFile.js'
@@ -50,6 +50,7 @@ import type { SheetHost } from './overlays/sheet.js'
 import { programPaletteOf } from './palette.js'
 import { latestPlan } from './plan.js'
 import { isReportCommand, type Report, type ReportNotice } from './reports.js'
+import { Retention } from './retention.js'
 import { openRewind, rewindDisabledReason } from './rewind.js'
 import { SPLASH_ROLE } from './splash/index.js'
 import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting, splashTickMs } from './splash/launch.js'
@@ -94,6 +95,7 @@ export class App implements OverlayHost {
   /** Completed side-agent results projected only into dismissible dock notices. */
   readonly #reports = new Map<string, ReportNotice>()
   readonly #foldRevs = new Map<string, number>()
+  #retention: Retention | undefined
   sid: string | null = null
   /** The stored (database) id of the open session: what `session.list` rows are keyed by. */
   storedSid: string | null = null
@@ -163,10 +165,15 @@ export class App implements OverlayHost {
 
   async run(): Promise<number> {
     this.#surface = this.#tern.open({ id: 'hermes', mode: 'inline', role: 'omp.session', title: 'hermes' })
+
+    if (this.#tern.caps.features.includes('settle')) {
+      this.#retention = new Retention()
+    }
+
     const dispatch = this.#surface.dispatch.bind(this.#surface)
 
     this.#surface.dispatch = event => {
-      const handler = dispatch(event)
+      const handler = this.#retention?.dispatch(event, this.#surface.id, () => this.changed()) ?? dispatch(event)
 
       if (!handler || !('id' in event) || typeof event.id !== 'string' || (!event.id.startsWith('layer.') && !event.id.startsWith('dock.'))) {
         return handler
@@ -467,6 +474,17 @@ export class App implements OverlayHost {
     }
   }
 
+  /** Explicit history-scroll intent: SDK 0.1 has no viewport/reload event. */
+  olderHistory(): void {
+    if (this.#retention) {
+      this.#retention.request(true)
+    } else {
+      this.#surface.scroll('main', 'start')
+    }
+
+    this.changed()
+  }
+
   /** Copy the draft literally, without submitting it or disturbing the caret. */
   copyPrompt() {
     try {
@@ -532,6 +550,7 @@ export class App implements OverlayHost {
         const key = entry.id + ':' + block.call.id
         this.#folds.set(key, !(this.#folds.get(key) ?? fold.collapsed))
         this.#foldRevs.set(entry.id, (this.#foldRevs.get(entry.id) ?? 0) + 1)
+        this.#retention?.invalidate(entry.id)
         this.changed()
 
         return
@@ -559,6 +578,8 @@ export class App implements OverlayHost {
         void this.attachments.add(source, this.sid)
       }
     }
+
+    this.#retention?.gone(ev, this.#surface.id)
 
     if (ev.ev === 'gone' && ev.ids.includes(this.#surface.id)) {
       // Rendering short-circuits after gone: dispose now, not on another animation tick.
@@ -1601,6 +1622,7 @@ export class App implements OverlayHost {
         const key = turnId + ':' + callId
         this.#folds.set(key, !(this.#folds.get(key) ?? true))
         this.#foldRevs.set(turnId, (this.#foldRevs.get(turnId) ?? 0) + 1)
+        this.#retention?.invalidate(turnId)
         this.changed()
       },
 
@@ -1631,7 +1653,14 @@ export class App implements OverlayHost {
       this.#layerOwners.set(approvalId, approval)
     }
 
-    this.#surface.render({
+    const retained = this.#retention?.render(this.transcript, cx, approvals.length > 0)
+    const retention = this.#retention
+
+    const paint = retention
+      ? (view: ViewInput) => retention.paint(this.#surface, view, retained ?? [])
+      : this.#surface.render.bind(this.#surface)
+
+    paint({
       dock: dockNodes({
         approval: approval?.node(approvalId),
         approvalQueued: approvals.length - 1,
@@ -1734,8 +1763,12 @@ export class App implements OverlayHost {
         }),
         ...(modal ? [] : this.#completion.nodes(INPUT_ID))
       ],
-      main: this.transcript.entries.map(e => entryNode(e, `main.${e.id}`, cx))
+      main: retained ? [] : this.transcript.entries.map(e => entryNode(e, `main.${e.id}`, cx))
     })
+
+    if (!this.#retention) {
+      this.transcript.changedEntries.clear()
+    }
 
     // The top overlay's field holds the caret; a modal sheet without one takes it from the composer.
     const top = this.#inputOwner()
