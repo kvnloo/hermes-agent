@@ -5,7 +5,9 @@
 import type { ConfigGetResult } from '@hermes/shared/gateway-events'
 
 import type { App } from './app.js'
+import { cycleModel } from './model-cycle.js'
 import { openHelp } from './overlays/help.js'
+import { openHistorySearch } from './overlays/history.js'
 import { openModelPicker, switchModel } from './overlays/models.js'
 import { confirmOverlay } from './overlays/prompts.js'
 import { openSessionPicker } from './overlays/sessions.js'
@@ -24,6 +26,10 @@ export interface LocalCommand {
 }
 
 const COMMANDS: readonly LocalCommand[] = [
+  { name: 'history-search', run: openHistorySearch },
+  { name: 'editor', run: app => app.editExternal() },
+  { name: 'model-next', run: app => cycleModel(app, 1) },
+  { name: 'model-prev', run: app => cycleModel(app, -1) },
   {
     aliases: ['exit', 'q'],
     name: 'quit',

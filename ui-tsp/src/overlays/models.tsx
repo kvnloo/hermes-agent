@@ -36,6 +36,7 @@ export async function switchModel(app: App, value: string, confirmed = false, si
   if (!sid || app.sid !== sid) {
     throw new Error('This model change belongs to a previous session.')
   }
+
   const r = await app.gw.request<ConfigSetResult>('config.set', {
     confirm_expensive_model: confirmed,
     key: 'model',
@@ -50,7 +51,16 @@ export async function switchModel(app: App, value: string, confirmed = false, si
   const model = typeof r.value === 'string' ? r.value : ''
 
   if (model) {
-    app.info = { ...app.info, model }
+    const previous = app.info?.model
+    const previousProvider = app.info?.provider ?? ''
+    const provider = value.match(/(?:^|\s)--provider\s+(\S+)/)?.[1] ?? previousProvider
+
+    if (previous) {
+      app.modelRecents.remember(sid, { model: previous, provider: previousProvider })
+    }
+
+    app.modelRecents.remember(sid, { model, provider })
+    app.info = { ...app.info, model, provider }
     app.transcript.notice(r.deferred ? `Model switches to ${model} from the next turn.` : `Switched to ${model}.`)
   }
 
@@ -66,6 +76,7 @@ export async function switchModel(app: App, value: string, confirmed = false, si
 /** Opens the model picker over the session. */
 export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {}) {
   const sid = app.sid
+
   if (!sid) {
     app.transcript.notice('Start a live session before you choose a model.', 'warning')
     app.changed()
@@ -90,6 +101,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
 
   const load = async () => {
     const token = ++generation
+
     if (!sid || app.sid !== sid || !app.overlays.includes(overlay)) {
       return
     }
@@ -103,6 +115,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
       if (token !== generation || app.sid !== sid || !app.overlays.includes(overlay)) {
         return
       }
+
       const list = r.providers ?? []
       const names = providerDisplayNames(list)
       providers = list.map((provider, i) => ({ name: names[i] ?? provider.name, provider }))
@@ -119,6 +132,13 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
         rows.find(row => row.model === r.model && row.provider.slug === currentProvider)?.id ??
         rows.find(row => row.model === r.model)?.id ??
         ''
+      const recent = app.modelRecents.list(sid)
+      rows.sort((a, b) => {
+        const at = recent.findIndex(row => row.model === a.model && row.provider === a.provider.slug)
+        const bt = recent.findIndex(row => row.model === b.model && row.provider === b.provider.slug)
+
+        return (at < 0 ? Infinity : at) - (bt < 0 ? Infinity : bt)
+      })
       selected = current || rows[0]?.id
       state = 'ready'
     } catch (error) {
@@ -143,6 +163,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
     busy = true
     const saveDefault = expected?.global ?? global
     const value = expected?.value ?? `${row.model} --provider ${row.provider.slug} ${saveDefault ? '--global' : '--session'}`
+
     if (confirmed) {
       confirm = null
     }
@@ -161,6 +182,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
           text: `Session: ${sid}. Scope: ${saveDefault ? 'current profile default and live session' : 'this session only'}. Model: ${row.model}. Provider: ${row.provider.slug}. ${r.confirm_message || r.warning || 'The backend requires confirmation.'}`,
           value
         }
+
         confirm = ask
         app.open(confirmOverlay(app, {
           confirm: 'Confirm exact model change',
@@ -290,6 +312,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
               if (options.sessionOnly) {
                 return
               }
+
               global = !global
               app.changed()
             },
@@ -305,6 +328,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
             if (confirm) {
               return
             }
+
             selected = ev.item
             confirm = null
             app.changed()

@@ -28,8 +28,10 @@ import { Dispatches } from './attention.js'
 import { BusyInput } from './busy-input.js'
 import { localCommand } from './commands.js'
 import { Composer } from './composer.js'
+import { editExternal } from './external-editor.js'
 import { type Busy, busyFrom, ownsEvent, Switches } from './flow.js'
 import { FramePump } from './frame.js'
+import { ModelRecents } from './model-recents.js'
 import type { UserEntry } from './model.js'
 import { OrbActivity, ThinkingOrb } from './orb.js'
 import type { Overlay, OverlayHost } from './overlay.js'
@@ -80,6 +82,7 @@ export class App implements OverlayHost {
   readonly todoHud = new TodoHud()
   readonly jobs = new JobsSheet(this)
   readonly composer = new Composer()
+  readonly modelRecents = new ModelRecents()
   readonly busyInput = new BusyInput(this)
   readonly attachments: Attachments
   readonly overlays: Overlay[] = []
@@ -129,6 +132,7 @@ export class App implements OverlayHost {
   #reasoningToggles: Promise<unknown> = Promise.resolve()
   #submittingApproval = false
   #effortRequested: { sid: string; value: string } | null = null
+  #editingExternal = false
   /** The launch splash while it covers the session chrome (it takes the keys until it leaves). */
   #splash: LaunchSplash | undefined
 
@@ -387,7 +391,7 @@ export class App implements OverlayHost {
     const clear = APP_ACTIONS.find(action => action.id === 'app.clear')!
 
     if (matchesAction(clear, key)) {
-      return top?.key === 'settings' || top?.key === 'report' || top?.key === 'plan' ? top.onKey(key) : clear.run(this)
+      return top?.key === 'settings' || top?.key === 'report' || top?.key === 'plan' || top?.key === 'history' ? top.onKey(key) : clear.run(this)
     }
 
     if (top && (top.placement !== 'dock' || !this.composer.text) && top.onKey(key)) {
@@ -426,6 +430,30 @@ export class App implements OverlayHost {
 
     if (action === 'submit') {
       void this.#submitDraft()
+    }
+  }
+
+  /** A terminal $EDITOR needs the grid; native Tern file blocks do not. */
+  async editExternal() {
+    if (this.#editingExternal) {
+      return
+    }
+
+    this.#editingExternal = true
+    const grid = !process.env.TERN_WINDOW_KEY
+
+    if (grid) {
+      this.#surface.suspend()
+    }
+
+    try {
+      await editExternal(this)
+    } finally {
+      this.#editingExternal = false
+
+      if (grid && !this.#surface.closed) {
+        this.#surface.resume()
+      }
     }
   }
 
