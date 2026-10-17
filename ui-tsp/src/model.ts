@@ -85,6 +85,8 @@ export interface TurnEntry {
   errorCode?: string
   /** The gateway's advice on a failed request (what to try next). */
   errorHint?: string
+  /** Provider explicitly marked this failed turn safe for a text-only retry. */
+  retryable?: boolean
   warning?: string
 }
 

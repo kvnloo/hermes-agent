@@ -247,6 +247,7 @@ describe('Transcript', () => {
       error: 'upstream exploded',
       errorCode: '500',
       errorHint: 'custom returned a server error. Wait and send /retry.',
+      retryable: true,
       status: 'error'
     })
     expect(texts(turnOf(t.entries))).toEqual([])

@@ -333,6 +333,7 @@ export class Transcript {
       turn.errorCode = http?.[1] ?? (typeof code === 'string' && code ? code : undefined)
       // The gateway's final text is advice ("wait and /retry, or /model …") followed by the raw error.
       turn.errorHint = final.split(/\n\s*\n/)[0]?.trim() || undefined
+      turn.retryable = p.error_surface?.retryable === true
     }
 
     this.#touch(turn)

@@ -80,6 +80,9 @@ export class App implements OverlayHost {
   #dispatchTimer: ReturnType<typeof setTimeout> | undefined
   #dispatchDeadline: number | null = null
   #visible = true
+  #lastSubmitted: { sid: string; text: string; replayable: boolean } | null = null
+  #retry: { sid: string; text: string; turnId: string } | null = null
+  #startupAttachmentPending = false
   /** The field holding Tern's caret, as last sent. */
   #focus: string | null = INPUT_ID
   #exitArmed = 0
@@ -171,6 +174,8 @@ export class App implements OverlayHost {
       this.busy = null
       this.transcript.interrupt()
       this.dispatches.reset()
+      this.#lastSubmitted = null
+      this.#retry = null
       // Whatever went wrong is in the transcript: let it be seen.
       this.#splash?.ready()
       this.changed()
@@ -353,6 +358,10 @@ export class App implements OverlayHost {
     const text = raw.trim()
 
     if (!text) {
+      if (this.#retry) {
+        this.retryFailed(this.#retry.turnId)
+      }
+
       return
     }
 
@@ -380,15 +389,36 @@ export class App implements OverlayHost {
       return
     }
 
+    this.#retry = null
+    this.#lastSubmitted = { sid: this.sid, text, replayable: !this.#startupAttachmentPending }
+    this.#startupAttachmentPending = false
     this.transcript.user(text)
     this.#startBusy('Working…')
     this.#gw
       .request('prompt.submit', { session_id: this.sid, text, ...(queued ? { queued } : {}) })
       .catch((error: Error) => {
         this.transcript.notice(error.message, 'error')
+        this.#lastSubmitted = null
         this.busy = null
         this.changed()
       })
+  }
+
+  /** Retry only the exact latest error, on the same idle session, never a stale or image-backed request. */
+  retryFailed(turnId: string) {
+    const candidate = this.#retry
+    if (!candidate || candidate.turnId !== turnId || !this.sid || candidate.sid !== this.sid ||
+        this.busy || this.#switches.pending || this.queue.length) {
+      return
+    }
+
+    const latest = this.transcript.entries.findLast(e => e.kind === 'turn')
+    if (!latest || latest.kind !== 'turn' || latest.id !== turnId || !latest.retryable || latest.status !== 'error') {
+      return
+    }
+
+    this.#retry = null
+    this.#send(candidate.text)
   }
 
   async #slash(text: string) {
@@ -486,6 +516,7 @@ export class App implements OverlayHost {
 
     try {
       await this.#gw.request('image.attach', { path, session_id: sid })
+      this.#startupAttachmentPending = true
     } catch (error) {
       this.transcript.notice(
         `Could not attach ${path}: ${error instanceof Error ? error.message : String(error)}`,
@@ -598,6 +629,9 @@ export class App implements OverlayHost {
   #adopt(r: CreateResult) {
     if (this.sid !== r.session_id) {
       this.dispatches.reset()
+      this.#lastSubmitted = null
+      this.#retry = null
+      this.#startupAttachmentPending = false
     }
 
     this.sid = r.session_id
@@ -774,6 +808,13 @@ export class App implements OverlayHost {
         }
 
         t.complete(ev.payload ?? {})
+        const failed = t.entries.findLast(entry => entry.kind === 'turn')
+        const submitted = this.#lastSubmitted
+        this.#retry = ev.payload?.status === 'error' && submitted?.replayable && submitted.sid === this.sid &&
+          failed?.kind === 'turn' && failed.retryable
+          ? { sid: submitted.sid, text: submitted.text, turnId: failed.id }
+          : null
+        this.#lastSubmitted = null
         this.busy = null
         this.#drainQueue()
 
@@ -1066,6 +1107,7 @@ export class App implements OverlayHost {
 
     const cx = {
       copy: (text: string) => copyToClipboard(text),
+      retry: (turnId: string) => this.retryFailed(turnId),
       now,
       rewind: () => {
         if (!this.sid) {
