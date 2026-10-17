@@ -13,7 +13,7 @@ import type {
   Usage
 } from '@hermes/shared/gateway-events'
 import type { ServerRequest } from '@hermes/shared/json-rpc-channel'
-import type { Key, Session, Surface, TspEvent } from '@stencil-hq/tern'
+import type { Key, ScrollTo, Session, Surface, TspEvent } from '@stencil-hq/tern'
 import type { GatewayClient } from '@tui/gatewayClient.js'
 import type { AnyGatewayEvent } from '@tui/gatewayTypes.js'
 import { writeActiveSessionFile } from '@tui/lib/activeSessionFile.js'
@@ -31,8 +31,10 @@ import type { Overlay, OverlayHost } from './overlay.js'
 import { Completion } from './overlays/completion.js'
 import { openModelPicker } from './overlays/models.js'
 import { promptOverlay } from './overlays/prompts.js'
+import { openReportSheet } from './overlays/report-sheet.js'
 import { openSettings } from './overlays/settings.js'
 import { programPaletteOf } from './palette.js'
+import { isReportCommand, type Report, type ReportNotice } from './reports.js'
 import { SPLASH_ROLE } from './splash/index.js'
 import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting, splashTickMs } from './splash/launch.js'
 import { TodoHud } from './todo-hud.js'
@@ -68,6 +70,8 @@ export class App implements OverlayHost {
   readonly overlays: Overlay[] = []
   /** Presentation-only collapse overrides, scoped by transcript turn and tool identity. */
   readonly #folds = new Map<string, boolean>()
+  /** Completed side-agent results projected only into dismissible dock notices. */
+  readonly #reports = new Map<string, ReportNotice>()
   readonly #foldRevs = new Map<string, number>()
   sid: string | null = null
   /** The stored (database) id of the open session: what `session.list` rows are keyed by. */
@@ -230,7 +234,9 @@ export class App implements OverlayHost {
       this.close(same)
     }
 
-    this.overlays.push(overlay)
+    // Inspection results must not cover an approval/clarification waiting for input.
+    const prompt = overlay.key === 'report' ? this.overlays.findIndex(o => o.key.startsWith('prompt:')) : -1
+    this.overlays.splice(prompt < 0 ? this.overlays.length : prompt, 0, overlay)
     this.#overlayIds.set(overlay, `layer.${overlay.key}:${++this.#overlaySerial}`)
 
     if (overlay.modal) {
@@ -257,6 +263,22 @@ export class App implements OverlayHost {
 
   changed() {
     this.#frames?.changed()
+  }
+
+  report(report: Report) {
+    openReportSheet({
+      open: overlay => this.open(overlay),
+      close: overlay => this.close(overlay),
+      changed: () => this.changed(),
+      copy: copyToClipboard,
+      scroll: (overlay, to: ScrollTo) => {
+        const id = this.#overlayIds.get(overlay)
+
+        if (id && this.overlays.at(-1) === overlay) {
+          this.#surface.scroll(`${id}.body.markdown`, to)
+        }
+      }
+    }, report)
   }
 
   // ── Input ──────────────────────────────────────────────────────────
@@ -287,11 +309,11 @@ export class App implements OverlayHost {
 
     const top = this.overlays.at(-1)
 
-    // Ctrl+C retains its pre-overlay priority, except Settings owns cancellation.
+    // Settings owns cancellation; reports must never clear the hidden draft.
     const clear = APP_ACTIONS.find(action => action.id === 'app.clear')!
 
     if (matchesAction(clear, key)) {
-      return top?.key === 'settings' ? top.onKey(key) : clear.run(this)
+      return top?.key === 'settings' || top?.key === 'report' ? top.onKey(key) : clear.run(this)
     }
 
     if (top?.onKey(key)) {
@@ -590,6 +612,8 @@ export class App implements OverlayHost {
       return
     }
 
+    const sid = this.sid
+
     try {
       const r = await this.#gw.request<{ output?: string; warning?: string; type?: string; message?: string }>(
         'slash.exec',
@@ -599,10 +623,20 @@ export class App implements OverlayHost {
         }
       )
 
+      if (this.sid !== sid) {
+        return
+      }
+
       if (r?.type === 'send' && r.message) {
         this.#send(r.message)
       } else if (r?.output?.trim()) {
-        this.transcript.panel(`/${name}${arg ? ` ${arg}` : ''}`, r.output)
+        const title = `/${name}${arg ? ` ${arg}` : ''}`
+
+        if (isReportCommand(name, arg)) {
+          this.report({ title, text: r.output })
+        } else {
+          this.transcript.panel(title, r.output)
+        }
       }
 
       if (r?.warning) {
@@ -779,6 +813,14 @@ export class App implements OverlayHost {
   #adopt(r: CreateResult) {
     if (this.sid !== r.session_id) {
       this.dispatches.reset()
+      this.#reports.clear()
+
+      for (const overlay of [...this.overlays]) {
+        if (overlay.key === 'report') {
+          this.close(overlay)
+        }
+      }
+
       this.#folds.clear()
       this.#foldRevs.clear()
       this.#lastSubmitted = null
@@ -1023,14 +1065,23 @@ export class App implements OverlayHost {
 
       case 'btw.complete':
         if (ev.payload && 'text' in ev.payload && typeof ev.payload.text === 'string' && ev.payload.text.trim()) {
-          t.panel(ev.type === 'btw.complete' ? '/btw' : 'Background task', ev.payload.text)
+          const failed = /^error:/i.test(ev.payload.text.trimStart())
+          const id = `${ev.type}:${ev.payload.task_id}`
+          this.#reports.set(id, {
+            id, failed,
+            title: ev.type === 'btw.complete' ? '/btw' : 'Background task',
+            text: ev.payload.text,
+            label: ev.type === 'btw.complete' ? `Side question ${failed ? 'failed' : 'answered'}` :
+              `background task ${failed ? 'failed' : 'done'}`
+          })
 
           if (!this.#visible) {
             this.dispatches.show({
               key: `task:${ev.payload.task_id}`,
-              text: ev.type === 'btw.complete' ? 'A side question was answered while this pane was hidden.' :
+              text: failed ? 'A side task failed while this pane was hidden. View its report in the dock.' :
+                ev.type === 'btw.complete' ? 'A side question was answered while this pane was hidden.' :
                 'A background task finished while this pane was hidden.',
-              level: 'success',
+              level: failed ? 'error' : 'success',
               kind: 'ttl'
             }, Date.now(), true)
           }
@@ -1314,6 +1365,18 @@ export class App implements OverlayHost {
           this.changed()
         },
         dispatches,
+        reports: [...this.#reports.values()],
+        onReportView: id => {
+          const report = this.#reports.get(id)
+
+          if (report) {
+            this.report(report)
+          }
+        },
+        onReportDismiss: id => {
+          this.#reports.delete(id)
+          this.changed()
+        },
         busy: this.busy ?? undefined,
         composer: this.composer,
         context: max > 0 ? { max, used } : undefined,
@@ -1327,6 +1390,10 @@ export class App implements OverlayHost {
         orb: this.#orb?.props(),
         onContext: () => void this.slash('/usage'),
         onEdit: ev => {
+          if (this.overlays.at(-1)?.key === 'report') {
+            return
+          }
+
           this.composer.edit(ev)
           this.changed()
         },
@@ -1340,14 +1407,26 @@ export class App implements OverlayHost {
         },
         onQueueEdit: () => this.dequeue(),
         onSend: ev => {
+          if (this.overlays.at(-1)?.key === 'report') {
+            return
+          }
+
           this.#submit(this.composer.take(ev.text))
           this.changed()
         },
         onSubmit: () => {
+          if (this.overlays.at(-1)?.key === 'report') {
+            return
+          }
+
           this.#submit(this.composer.take())
           this.changed()
         },
         onUndo: () => {
+          if (this.overlays.at(-1)?.key === 'report') {
+            return
+          }
+
           this.composer.undo()
           this.changed()
         },

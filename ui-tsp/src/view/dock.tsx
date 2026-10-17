@@ -8,6 +8,7 @@ import { HELP_HINT } from '../actions.js'
 import type { Dispatch } from '../attention.js'
 import type { Composer } from '../composer.js'
 import type { Todo } from '../model.js'
+import type { ReportNotice } from '../reports.js'
 
 import { age, compact } from './time.js'
 import { checklistNode } from './tools.js'
@@ -27,6 +28,9 @@ export interface DockContext {
   todoExpanded: boolean
   onTodoToggle(): void
   dispatches: readonly Dispatch[]
+  reports?: readonly ReportNotice[]
+  onReportView?(id: string): void
+  onReportDismiss?(id: string): void
   model: string
   /** Hermes's reasoning effort (`none` = off); empty hides the chip. */
   effort: string
@@ -103,6 +107,17 @@ export function dockNodes(cx: DockContext): JSX.Element[] {
           </row>
         ))}
       </col>
+    )
+  }
+
+  for (const report of cx.reports ?? []) {
+    nodes.push(
+      <row align="center" gap="xs" key={`report.${report.id}`} role="omp.report.notice">
+        <text key="label" text={`${report.label} ·`} tone={report.failed ? 'error' : 'muted'} />
+        <text key="view" onClick={() => cx.onReportView?.(report.id)} role="omp.report.view" text="View" title={`View report: ${report.title}`} />
+        <spacer grow={1} key="fill" />
+        <text key="dismiss" onClick={() => cx.onReportDismiss?.(report.id)} role="omp.dispatch.dismiss" text="×" title="Dismiss report" />
+      </row>
     )
   }
 
