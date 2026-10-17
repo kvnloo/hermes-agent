@@ -33,6 +33,8 @@ interface Confirm {
 
 /** `config.set model` for `value` (`<model> [--provider <slug>] [--session|--global]`); reports the switch in the transcript unless it needs a confirmation. */
 export async function switchModel(app: App, value: string, confirmed = false, sid = app.sid): Promise<ConfigSetResult> {
+  const generation = app.sessionGeneration
+
   if (!sid || app.sid !== sid) {
     throw new Error('This model change belongs to a previous session.')
   }
@@ -43,7 +45,7 @@ export async function switchModel(app: App, value: string, confirmed = false, si
     value
   })
 
-  if (r.confirm_required || app.sid !== sid) {
+  if (r.confirm_required || app.sid !== sid || app.sessionGeneration !== generation) {
     return r
   }
 
@@ -66,6 +68,7 @@ export async function switchModel(app: App, value: string, confirmed = false, si
 /** Opens the model picker over the session. */
 export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {}) {
   const sid = app.sid
+  const sessionGeneration = app.sessionGeneration
   if (!sid) {
     app.transcript.notice('Start a live session before you choose a model.', 'warning')
     app.changed()
@@ -87,10 +90,11 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
   let busy = false
   /** The ids shown, in order, for ↑/↓. */
   let shown: string[] = []
+  const live = () => app.sid === sid && app.sessionGeneration === sessionGeneration && app.overlays.includes(overlay)
 
   const load = async () => {
     const token = ++generation
-    if (!sid || app.sid !== sid || !app.overlays.includes(overlay)) {
+    if (!sid || !live()) {
       return
     }
 
@@ -100,7 +104,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
     try {
       const r = await app.gw.request<ModelOptionsResult>('model.options', { session_id: sid })
 
-      if (token !== generation || app.sid !== sid || !app.overlays.includes(overlay)) {
+      if (token !== generation || !live()) {
         return
       }
       const list = r.providers ?? []
@@ -122,7 +126,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
       selected = current || rows[0]?.id
       state = 'ready'
     } catch (error) {
-      if (token !== generation || app.sid !== sid || !app.overlays.includes(overlay)) {
+      if (token !== generation || !live()) {
         return
       }
 
@@ -136,7 +140,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
   const choose = async (id: string | undefined, confirmed = false, expected?: Confirm) => {
     const row = rows.find(r => r.id === id)
 
-    if (!row || busy || !sid || app.sid !== sid || !app.overlays.includes(overlay) || (confirm && !confirmed) || (confirmed && confirm !== expected)) {
+    if (!row || busy || !sid || !live() || (confirm && !confirmed) || (confirmed && confirm !== expected)) {
       return
     }
 
@@ -150,7 +154,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
     try {
       const r = await switchModel(app, value, confirmed, sid)
 
-      if (app.sid !== sid || !app.overlays.includes(overlay)) {
+      if (!live()) {
         return
       }
 
@@ -178,7 +182,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
         app.close(overlay)
       }
     } catch (error) {
-      if (app.sid === sid && app.overlays.includes(overlay)) {
+      if (live()) {
         state = 'error'
         message = error instanceof Error ? error.message : String(error)
       }
@@ -232,7 +236,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
     key: KEY,
     modal: true,
     node: id => {
-      if (app.sid !== sid) {
+      if (!live()) {
         return (
           <overlay anchor="center" head="Models" key={id.slice('layer.'.length)} modal size="md">
             <col gap="md" key="body">

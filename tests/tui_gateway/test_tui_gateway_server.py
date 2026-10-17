@@ -16,6 +16,7 @@ import pytest
 from hermes_constants import reset_hermes_home_override, set_hermes_home_override
 from hermes_cli.active_sessions import active_session_registry_snapshot
 from hermes_cli.browser_connect import ChromeDebugLaunch
+from hermes_cli.model_switch import ModelSwitchResult
 from tools import async_delegation as ad
 from tui_gateway import server
 from tui_gateway.transport import bind_transport, reset_transport
@@ -10182,7 +10183,12 @@ def test_config_set_model_waits_for_lazy_agent_before_switch(monkeypatch):
 
 
 
-def test_config_set_model_requires_confirmation_for_expensive_model(monkeypatch):
+def test_config_set_model_requires_confirmation_for_expensive_model(tmp_path, monkeypatch):
+    (tmp_path / "config.yaml").write_text("model:\n  default: old/model\n", encoding="utf-8")
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setattr(server, "_hermes_home", tmp_path)
+    monkeypatch.setattr(server, "_session_profile_runtime_scope", lambda *_args, **_kwargs: contextlib.nullcontext())
+
     class _Agent:
         provider = "openrouter"
         model = "old/model"
@@ -10209,10 +10215,14 @@ def test_config_set_model_requires_confirmation_for_expensive_model(monkeypatch)
     )
 
     agent = _Agent()
+    switch_calls = []
+
+    def fake_switch_model(**_kwargs):
+        switch_calls.append(True)
+        return result
+
     server._sessions["sid"] = _session(agent=agent)
-    monkeypatch.setattr(
-        "hermes_cli.model_switch.switch_model", lambda **_kwargs: result
-    )
+    monkeypatch.setattr("hermes_cli.model_switch.switch_model", fake_switch_model)
     monkeypatch.setattr(server, "_restart_slash_worker", lambda sid, session: None)
     monkeypatch.setattr(server, "_emit", lambda *args, **kwargs: None)
 
@@ -10230,6 +10240,8 @@ def test_config_set_model_requires_confirmation_for_expensive_model(monkeypatch)
 
     assert resp["result"]["confirm_required"] is True
     assert agent.switched is False
+    assert switch_calls == []
+
 
     confirmed = server.handle_request(
         {
@@ -10247,59 +10259,312 @@ def test_config_set_model_requires_confirmation_for_expensive_model(monkeypatch)
     assert confirmed["result"]["confirm_required"] is False
     assert confirmed["result"]["value"] == "openai/gpt-5.5-pro"
     assert agent.switched is True
+    assert switch_calls == [True]
 
 
-def test_config_set_model_global_persists(monkeypatch):
-    class _Agent:
-        provider = "openrouter"
-        model = "old/model"
-        base_url = ""
-        api_key = "sk-old"
+def test_config_set_model_preflights_data_policy_before_provider_validation(tmp_path, monkeypatch):
+    config_path = tmp_path / "config.yaml"
+    original_config = b"model:\n  default: old/model\n  provider: openrouter\n"
+    config_path.write_bytes(original_config)
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setattr(server, "_hermes_home", tmp_path)
+    monkeypatch.setattr(server, "_session_profile_runtime_scope", lambda *_args, **_kwargs: contextlib.nullcontext())
+    agent = types.SimpleNamespace(
+        model="old/model", provider="openrouter", base_url="https://openrouter.ai/api/v1", api_key="")
+    session = _session(agent=agent)
+    server._sessions["sid"] = session
+    provider_calls = []
 
-        def switch_model(self, **kwargs):
-            return None
+    def unexpected_call(name):
+        def fail(*_args, **_kwargs):
+            provider_calls.append(name)
+            raise AssertionError(f"{name} ran before model confirmation")
+        return fail
 
-    result = types.SimpleNamespace(
-        success=True,
-        new_model="anthropic/claude-sonnet-4.6",
-        target_provider="anthropic",
-        api_key="sk-new",
-        base_url="https://api.anthropic.com",
-        api_mode="anthropic_messages",
-        warning_message="",
-    )
-    seen = {}
-    saved_values = {}
+    monkeypatch.setattr("hermes_cli.model_switch.switch_model", unexpected_call("switch_model"))
+    monkeypatch.setattr(
+        "hermes_cli.models_validate.validate_requested_model", unexpected_call("validate_requested_model"))
+    monkeypatch.setattr(
+        "agent.usage_pricing.fetch_model_metadata", unexpected_call("fetch_model_metadata"))
+    monkeypatch.setattr(
+        "hermes_cli.model_switch.persist_model_selection", unexpected_call("persist_model_selection"))
+    monkeypatch.setattr(server, "_start_agent_build", unexpected_call("start_agent_build"))
 
-    def _switch_model(**kwargs):
-        seen.update(kwargs)
-        return result
-
-    server._sessions["sid"] = _session(agent=_Agent())
-    monkeypatch.setattr("hermes_cli.model_switch.switch_model", _switch_model)
-    monkeypatch.setattr(server, "_restart_slash_worker", lambda sid, session: None)
-    monkeypatch.setattr(server, "_emit", lambda *args, **kwargs: None)
-    # persist_model_selection uses targeted per-key writes (#48305) so it
-    # preserves sibling model.* keys instead of rewriting the whole block.
-    monkeypatch.setattr("utils.atomic_roundtrip_yaml_update", lambda path, key, value: saved_values.__setitem__(key, value))
-
-    resp = server.handle_request(
-        {
+    try:
+        response = server.handle_request({
             "id": "1",
             "method": "config.set",
             "params": {
                 "session_id": "sid",
                 "key": "model",
-                "value": "anthropic/claude-sonnet-4.6 --global",
+                "value": "muse-spark-1.2-contributor --provider openrouter --global",
             },
-        }
-    )
+        })
 
-    assert resp["result"]["value"] == "anthropic/claude-sonnet-4.6"
-    assert seen["is_global"] is True
-    assert saved_values["model.default"] == "anthropic/claude-sonnet-4.6"
-    assert saved_values["model.provider"] == "anthropic"
-    assert saved_values["model.base_url"] == "https://api.anthropic.com"
+        result = response["result"]
+        assert result["confirm_required"] is True
+        assert "trains on your data" in result["confirm_message"].lower()
+        assert provider_calls == []
+        assert agent.model == "old/model"
+        assert agent.provider == "openrouter"
+        assert "model_override" not in session
+        assert config_path.read_bytes() == original_config
+    finally:
+        server._sessions.pop("sid", None)
+
+
+def _install_catalog_preflight_session(tmp_path, monkeypatch, *, running, has_live_agent, metadata_error=None):
+    import time
+
+    import agent.models_dev as models_dev
+
+    config_path = tmp_path / "config.yaml"
+    original_config = (
+        b"model:\n  default: old/model\n  provider: openai\n"
+        b"agent:\n  system_prompt: preserve me\n")
+    config_path.write_bytes(original_config)
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setattr(server, "_hermes_home", tmp_path)
+    monkeypatch.setattr(
+        server, "_session_profile_runtime_scope",
+        lambda *_args, **_kwargs: contextlib.nullcontext())
+    agent = types.SimpleNamespace(
+        model="old/model", provider="openai", base_url="", api_key="")
+    session = _session(agent=agent)
+    if not has_live_agent:
+        session["agent"] = None
+    session["running"] = running
+    server._sessions["sid"] = session
+
+    # Seed the real models.dev cache with a local row and mark it stale. The actual
+    # get_model_info() defaults to allow_network=False; any attempted stale refresh
+    # or foreground registry fetch is captured below rather than sent off-host.
+    monkeypatch.setattr(models_dev, "_models_dev_cache", {
+        "openai": {
+            "id": "openai",
+            "models": {"gpt-5-pro": {"id": "gpt-5-pro", "cost": {"input": 20.01, "output": 1.0}}},
+        },
+    })
+    monkeypatch.setattr(
+        models_dev, "_models_dev_cache_time",
+        time.time() - models_dev._MODELS_DEV_CACHE_TTL - 1)
+    monkeypatch.setattr(models_dev, "_models_dev_retry_after", 0)
+    refresh_calls = []
+    network_calls = []
+    monkeypatch.setattr(
+        models_dev, "_start_background_refresh_models_dev",
+        lambda: refresh_calls.append("background refresh"))
+
+    def unexpected_network(*args, **kwargs):
+        network_calls.append((args, kwargs))
+        raise AssertionError("models.dev network fetch ran before consent")
+
+    monkeypatch.setattr(models_dev, "_fetch_models_dev_from_network", unexpected_network)
+    actual_get_model_info = models_dev.get_model_info
+    metadata_calls = []
+
+    def tracked_get_model_info(provider, model, **kwargs):
+        metadata_calls.append((provider, model, kwargs.get("allow_network", "default")))
+        if metadata_error is not None:
+            raise RuntimeError(metadata_error)
+        return actual_get_model_info(provider, model, **kwargs)
+
+    monkeypatch.setattr(models_dev, "get_model_info", tracked_get_model_info)
+
+    provider_calls = []
+
+    def unexpected_call(name):
+        def fail(*_args, **_kwargs):
+            provider_calls.append(name)
+            raise AssertionError(f"{name} ran before model confirmation")
+        return fail
+
+    monkeypatch.setattr(server, "_start_agent_build", unexpected_call("start_agent_build"))
+    monkeypatch.setattr("hermes_cli.model_switch.switch_model", unexpected_call("switch_model"))
+    monkeypatch.setattr(
+        "hermes_cli.models_validate.validate_requested_model", unexpected_call("validate_requested_model"))
+    monkeypatch.setattr("agent.usage_pricing.fetch_model_metadata", unexpected_call("fetch_model_metadata"))
+    monkeypatch.setattr("agent.usage_pricing.resolve_billing_route", unexpected_call("resolve_billing_route"))
+    monkeypatch.setattr("agent.usage_pricing.get_pricing_entry", unexpected_call("get_pricing_entry"))
+    return (config_path, original_config, session, provider_calls, metadata_calls,
+            refresh_calls, network_calls)
+
+
+@pytest.mark.parametrize(
+    ("running", "has_live_agent"), [(False, False), (True, True)],
+    ids=["lazy-live", "busy-deferred"])
+def test_config_set_model_preflights_catalog_cost_without_explicit_provider(
+    tmp_path, monkeypatch, running, has_live_agent
+):
+    config_path, original_config, session, provider_calls, metadata_calls, refresh_calls, network_calls = (
+        _install_catalog_preflight_session(
+            tmp_path, monkeypatch, running=running, has_live_agent=has_live_agent))
+
+    try:
+        response = server.handle_request({
+            "id": "1",
+            "method": "config.set",
+            "params": {"session_id": "sid", "key": "model", "value": "gpt-5-pro"},
+        })
+
+        result = response["result"]
+        assert result["confirm_required"] is True
+        assert "known pricing above" in result["confirm_message"].lower()
+        assert provider_calls == []
+        assert metadata_calls == [("openai", "gpt-5-pro", "default")]
+        assert refresh_calls == []
+        assert network_calls == []
+        assert (session["agent"] is not None) is has_live_agent
+        if has_live_agent:
+            assert session["agent"].model == "old/model"
+            assert session["agent"].provider == "openai"
+        assert "model_override" not in session
+        assert "pending_model_switch" not in session
+        assert config_path.read_bytes() == original_config
+    finally:
+        server._sessions.pop("sid", None)
+
+
+@pytest.mark.parametrize(
+    ("running", "has_live_agent"), [(False, False), (True, True)],
+    ids=["lazy-live", "busy-deferred"])
+def test_config_set_model_registry_failure_fails_closed_without_side_effects(
+    tmp_path, monkeypatch, running, has_live_agent
+):
+    """A fault in the real registered cost guard must reject a preflight, not erase its warning."""
+    config_path, original_config, session, provider_calls, metadata_calls, refresh_calls, network_calls = (
+        _install_catalog_preflight_session(
+            tmp_path, monkeypatch, running=running, has_live_agent=has_live_agent,
+            metadata_error="local pricing catalog unavailable"))
+
+    try:
+        response = server.handle_request({
+            "id": "1",
+            "method": "config.set",
+            "params": {"session_id": "sid", "key": "model", "value": "gpt-5-pro"},
+        })
+
+        assert response["error"]["code"] == 5001
+        assert response["error"]["message"] == "local pricing catalog unavailable"
+        assert provider_calls == []
+        assert metadata_calls == [("openai", "gpt-5-pro", "default")]
+        assert refresh_calls == []
+        assert network_calls == []
+        assert (session["agent"] is not None) is has_live_agent
+        if has_live_agent:
+            assert session["agent"].model == "old/model"
+            assert session["agent"].provider == "openai"
+        assert "model_override" not in session
+        assert "pending_model_switch" not in session
+        assert config_path.read_bytes() == original_config
+    finally:
+        server._sessions.pop("sid", None)
+
+
+@pytest.mark.parametrize("bad_confirmation", ["false", 0, 1, [], None, {"consent": True}])
+def test_config_set_model_rejects_non_boolean_confirmation_before_side_effects(
+    tmp_path, monkeypatch, bad_confirmation
+):
+    config_path = tmp_path / "config.yaml"
+    original_config = b"model:\n  default: old/model\n  provider: openrouter\n"
+    config_path.write_bytes(original_config)
+    monkeypatch.setattr(server, "_hermes_home", tmp_path)
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setattr(server, "_session_profile_runtime_scope", lambda *_args, **_kwargs: contextlib.nullcontext())
+    session = _session()
+    session["agent"] = None
+    server._sessions["sid"] = session
+    provider_calls = []
+
+    def unexpected_call(name):
+        def fail(*_args, **_kwargs):
+            provider_calls.append(name)
+            raise AssertionError(f"{name} ran for malformed confirmation")
+        return fail
+
+    monkeypatch.setattr("hermes_cli.model_switch.switch_model", unexpected_call("switch_model"))
+    monkeypatch.setattr(
+        "hermes_cli.models_validate.validate_requested_model", unexpected_call("validate_requested_model"))
+    monkeypatch.setattr(
+        "agent.usage_pricing.fetch_model_metadata", unexpected_call("fetch_model_metadata"))
+    monkeypatch.setattr(
+        "hermes_cli.model_switch.persist_model_selection", unexpected_call("persist_model_selection"))
+    monkeypatch.setattr(server, "_start_agent_build", unexpected_call("start_agent_build"))
+
+    try:
+        response = server.handle_request({
+            "id": "1",
+            "method": "config.set",
+            "params": {
+                "session_id": "sid",
+                "key": "model",
+                "value": "muse-spark-1.2-contributor --provider openrouter --global",
+                "confirm_expensive_model": bad_confirmation,
+            },
+        })
+
+        assert response["error"]["code"] == 4002
+        assert response["error"]["message"] == "confirm_expensive_model must be a boolean"
+        assert provider_calls == []
+        assert session["agent"] is None
+        assert "model_override" not in session
+        assert config_path.read_bytes() == original_config
+    finally:
+        server._sessions.pop("sid", None)
+
+
+def test_config_set_confirmed_model_retry_runs_route_validation(tmp_path, monkeypatch):
+    from hermes_cli import config as config_module
+    profile_config = tmp_path / "config.yaml"
+    profile_config.write_text("model:\n  default: old/model\n  provider: anthropic\n", encoding="utf-8")
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setattr(server, "_hermes_home", tmp_path)
+
+    session = _session()
+    session["profile_home"] = str(tmp_path)
+    session["agent"] = None
+    server._sessions["sid"] = session
+    validation_calls = []
+
+    def validate(model, provider, **_kwargs):
+        validation_calls.append((model, provider))
+        return {"accepted": True, "persist": True, "recognized": True, "message": ""}
+
+    monkeypatch.setattr(server, "_resolve_model", lambda: "old/model")
+    monkeypatch.setattr(config_module, "load_config", lambda: {"model": {"default": "old/model"}})
+    monkeypatch.setattr(
+        "hermes_cli.runtime_provider.resolve_runtime_provider",
+        lambda **_kwargs: {"api_key": "", "base_url": "https://api.anthropic.com",
+                           "api_mode": "anthropic_messages"},
+    )
+    monkeypatch.setattr("hermes_cli.model_switch.resolve_alias", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("hermes_cli.models_validate.validate_requested_model", validate)
+    monkeypatch.setattr("hermes_cli.model_switch.get_model_info", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("hermes_cli.model_switch.get_model_capabilities", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(server, "_session_profile_runtime_scope", lambda _session, **_kwargs: contextlib.nullcontext())
+    monkeypatch.setattr("agent.native_compaction.resolve_native_compaction_capabilities", lambda **_kwargs: {})
+    monkeypatch.setattr(
+        "hermes_cli.observability.shared_metrics_events.record_model_switch", lambda **_kwargs: None)
+
+    try:
+        response = server.handle_request({
+            "id": "1",
+            "method": "config.set",
+            "params": {
+                "session_id": "sid",
+                "key": "model",
+                "value": "muse-spark-1.2-contributor --provider anthropic --session",
+                "confirm_expensive_model": True,
+            },
+        })
+
+        assert "error" not in response
+        assert response["result"]["confirm_required"] is False
+        assert validation_calls == [("muse-spark-1-2-contributor", "anthropic")]
+        assert session["model_override"]["provider"] == "anthropic"
+    finally:
+        server._sessions.pop("sid", None)
+
 
 
 def test_config_set_model_explicit_provider_skips_broken_default_init(monkeypatch):
@@ -10680,7 +10945,7 @@ def test_config_set_model_does_not_leak_inference_provider_env(monkeypatch):
         def switch_model(self, **_kwargs):
             return None
 
-    result = types.SimpleNamespace(
+    result = ModelSwitchResult(
         success=True,
         new_model="claude-sonnet-4.6",
         target_provider="anthropic",
@@ -10740,7 +11005,7 @@ def test_config_set_model_records_per_session_override_not_env(monkeypatch):
         def switch_model(self, **_kwargs):
             return None
 
-    result = types.SimpleNamespace(
+    result = ModelSwitchResult(
         success=True,
         new_model="deepseek-v4-pro",
         target_provider="custom:xuanji",
@@ -10846,7 +11111,7 @@ def test_config_set_model_switches_agent_without_touching_env(monkeypatch):
     monkeypatch.setattr(server, "_emit", lambda *args, **kwargs: None)
 
     def fake_switch_model(**kwargs):
-        return types.SimpleNamespace(
+        return ModelSwitchResult(
             success=True,
             new_model="anthropic/claude-sonnet-4.6",
             target_provider="anthropic",
@@ -10919,7 +11184,7 @@ def test_config_set_model_once_keeps_env_and_records_restore(monkeypatch):
             self.base_url = kwargs["base_url"]
             self.api_mode = kwargs["api_mode"]
 
-    result = types.SimpleNamespace(
+    result = ModelSwitchResult(
         success=True,
         new_model="claude-sonnet-4.6",
         target_provider="anthropic",
@@ -11054,7 +11319,7 @@ def test_config_set_model_session_switch_clears_pending_once_restore(monkeypatch
             self.base_url = kwargs["base_url"]
             self.api_mode = kwargs["api_mode"]
 
-    result = types.SimpleNamespace(
+    result = ModelSwitchResult(
         success=True,
         new_model="new/model",
         target_provider="openrouter",

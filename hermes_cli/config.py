@@ -162,6 +162,63 @@ def validate_env_var_name_for_write(key: str) -> None:
 # read_user_config_raw() + save_config()). save_config itself no longer re-enters via
 # read_raw_config; it takes its raw mapping from require_readable_config_before_write.
 _CONFIG_LOCK = threading.RLock()
+
+_CONFIG_MUTATION_LOCK_HOLDERS: Dict[str, Any] = {}
+_CONFIG_MUTATION_LOCK_HOLDERS_GUARD = threading.Lock()
+
+
+def _config_mutation_lock_holder(config_path: Path) -> Any:
+    key = str(config_path)
+    with _CONFIG_MUTATION_LOCK_HOLDERS_GUARD:
+        return _CONFIG_MUTATION_LOCK_HOLDERS.setdefault(key, threading.local())
+
+
+@contextmanager
+def config_mutation_lock(path: Optional[Path] = None):
+    """Serialize one profile's complete config read-modify-write transaction.
+
+    The in-process config RLock protects config caches and nested ``save_config`` calls;
+    the auth module's advisory file lock also excludes writers in other Hermes processes.
+    Always acquire them in this order: ``_CONFIG_LOCK`` then the profile file lock.
+    """
+    from hermes_cli.auth import _file_lock
+
+    config_path = (Path(path) if path is not None else get_config_path()).expanduser()
+    try:
+        lock_path = config_path.resolve(strict=False)
+    except OSError:
+        lock_path = config_path.absolute()
+    lock_file = lock_path.with_name(lock_path.name + ".lock")
+    with _CONFIG_LOCK:
+        with _file_lock(
+            lock_file,
+            _config_mutation_lock_holder(lock_path),
+            15.0,
+            f"Timed out waiting for the config mutation lock ({lock_file})",
+        ):
+            yield
+
+
+class _ConfigMutationLockProxy:
+    """Reusable ``with`` proxy for dashboard handlers whose profile scope is dynamic."""
+
+    def __init__(self) -> None:
+        self._local = threading.local()
+
+    def __enter__(self):
+        manager = config_mutation_lock()
+        value = manager.__enter__()
+        stack = getattr(self._local, "stack", None)
+        if stack is None:
+            stack = self._local.stack = []
+        stack.append(manager)
+        return value
+
+    def __exit__(self, *exc):
+        return self._local.stack.pop().__exit__(*exc)
+
+
+CONFIG_MUTATION_LOCK = _ConfigMutationLockProxy()
 # path -> last successfully loaded (expanded) config; served after a parse failure so a
 # mid-edit broken YAML never silently drops user overrides (e.g. approvals.deny rules).
 _LAST_EXPANDED_CONFIG_BY_PATH: Dict[str, Any] = {}
@@ -2148,10 +2205,11 @@ def write_platform_config_field(
     """Persist one scalar field under ``platforms.<platform_key>``.
     ``raw=True`` (CLI setup flows) edits only the user's raw file; dashboard routes use the
     default loaded-config path to keep their profile-scoped ``load_config`` behavior."""
-    config = read_raw_config() if raw else load_config()
-    platforms = _ensure_dict(config, "platforms")
-    _ensure_dict(platforms, platform_key)[field_key] = value
-    save_config(config)
+    with config_mutation_lock():
+        config = read_raw_config() if raw else load_config()
+        platforms = _ensure_dict(config, "platforms")
+        _ensure_dict(platforms, platform_key)[field_key] = value
+        save_config(config)
 
 
 # ``terminal.<key>`` -> env var read by tools.terminal_tool. Every key maps to ``TERMINAL_<KEY>``
@@ -3696,52 +3754,53 @@ def set_config_value(key: str, value: str, force: bool = False):
 
     # Read the RAW user config (not merged) so defaults are never dumped back; fail-closed.
     config_path = get_config_path()
-    user_config = require_readable_config_before_write(config_path)
-    value = _coerce_config_set_value(key, value)
-    # A scalar ``model`` shorthand must become a dict before writing sub-keys, or _set_nested
-    # replaces it with an empty dict and the model id is lost.
-    _model_val = user_config.get("model")
-    if key.strip().lower().startswith("model.") and isinstance(_model_val, str) and _model_val:
-        user_config["model"] = {"default": _model_val}
-    from hermes_cli.config_section_guard import _guard_section_overwrite
-    key = _guard_section_overwrite(key, value, user_config, force)
-    value = _refuse_container_type_mismatch(key, value, user_config, force)
-    _old_provider = _model_val.get("provider") if isinstance(_model_val, dict) else None
-    try:
-        _set_nested(user_config, key, value)
-    except ValueError as e:
-        _exit_invalid(f"✗ {e}")
-    if legacy_key and _unset_nested(user_config, legacy_key):
-        print(f"  (removed the shadowed {legacy_key} duplicate)")
-    # A provider switch re-points ``model:`` at a new route; ``base_url``/``api_mode`` are route
-    # state of the OLD provider, and the runtime honours them for whatever provider the block now
-    # names — the new provider's key would be posted to the old endpoint (#113719, #40862). Sync
-    # them the way a persisted ``/model`` switch does: the previous route goes unless it is the
-    # new provider's own endpoint.
-    _route_notice = ""
-    _old_provider = str(_old_provider or "").strip() or "the previous provider"
-    if key == "model.provider" and _old_provider.lower() != str(value).strip().lower():
-        from hermes_cli.route_identity import drop_stale_model_route
-        _popped, _unverified = drop_stale_model_route(user_config.get("model"), value, user_config)
-        if _popped:
-            _route_notice = (
-                "  Cleared " + ", ".join(f"model.{k} ({v})" for k, v in _popped.items())
-                + f" — that route belonged to {_old_provider}, not {value}. {value}'s endpoint resolves "
-                "automatically; set model.base_url again if you meant a custom endpoint.")
-        elif _unverified:
-            _route_notice = color(
-                f"⚠ model.base_url ({user_config['model'].get('base_url')}) was set under {_old_provider} and "
-                f"still applies to {value} — requests go there. If it is not {value}'s endpoint: "
-                "`hermes config unset model.base_url` (and model.api_mode).", Colors.YELLOW)
-    # api_base -> base_url alias at set-time too (mirrors _normalize_root_model_keys).
-    if key.strip().lower() in ("model.api_base", "api_base"):
-        # Normalize the api_base → base_url alias at set-time too (issue #8919), so a fresh `hermes config
-        # set model.api_base ...` lands on the canonical key the runtime resolver actually reads, instead of
-        # being silently ignored.
-        user_config = _normalize_root_model_keys(user_config)
-        key = "model.base_url"
-        print("  (note: 'api_base' is an alias — saved as model.base_url)")
-    _write_user_config(config_path, user_config)
+    with config_mutation_lock(config_path):
+        user_config = require_readable_config_before_write(config_path)
+        value = _coerce_config_set_value(key, value)
+        # A scalar ``model`` shorthand must become a dict before writing sub-keys, or _set_nested
+        # replaces it with an empty dict and the model id is lost.
+        _model_val = user_config.get("model")
+        if key.strip().lower().startswith("model.") and isinstance(_model_val, str) and _model_val:
+            user_config["model"] = {"default": _model_val}
+        from hermes_cli.config_section_guard import _guard_section_overwrite
+        key = _guard_section_overwrite(key, value, user_config, force)
+        value = _refuse_container_type_mismatch(key, value, user_config, force)
+        _old_provider = _model_val.get("provider") if isinstance(_model_val, dict) else None
+        try:
+            _set_nested(user_config, key, value)
+        except ValueError as e:
+            _exit_invalid(f"✗ {e}")
+        if legacy_key and _unset_nested(user_config, legacy_key):
+            print(f"  (removed the shadowed {legacy_key} duplicate)")
+        # A provider switch re-points ``model:`` at a new route; ``base_url``/``api_mode`` are route
+        # state of the OLD provider, and the runtime honours them for whatever provider the block now
+        # names — the new provider's key would be posted to the old endpoint (#113719, #40862). Sync
+        # them the way a persisted ``/model`` switch does: the previous route goes unless it is the
+        # new provider's own endpoint.
+        _route_notice = ""
+        _old_provider = str(_old_provider or "").strip() or "the previous provider"
+        if key == "model.provider" and _old_provider.lower() != str(value).strip().lower():
+            from hermes_cli.route_identity import drop_stale_model_route
+            _popped, _unverified = drop_stale_model_route(user_config.get("model"), value, user_config)
+            if _popped:
+                _route_notice = (
+                    "  Cleared " + ", ".join(f"model.{k} ({v})" for k, v in _popped.items())
+                    + f" — that route belonged to {_old_provider}, not {value}. {value}'s endpoint resolves "
+                    "automatically; set model.base_url again if you meant a custom endpoint.")
+            elif _unverified:
+                _route_notice = color(
+                    f"⚠ model.base_url ({user_config['model'].get('base_url')}) was set under {_old_provider} and "
+                    f"still applies to {value} — requests go there. If it is not {value}'s endpoint: "
+                    "`hermes config unset model.base_url` (and model.api_mode).", Colors.YELLOW)
+        # api_base -> base_url alias at set-time too (mirrors _normalize_root_model_keys).
+        if key.strip().lower() in ("model.api_base", "api_base"):
+            # Normalize the api_base → base_url alias at set-time too (issue #8919), so a fresh `hermes config
+            # set model.api_base ...` lands on the canonical key the runtime resolver actually reads, instead of
+            # being silently ignored.
+            user_config = _normalize_root_model_keys(user_config)
+            key = "model.base_url"
+            print("  (note: 'api_base' is an alias — saved as model.base_url)")
+        _write_user_config(config_path, user_config)
 
     # Keep .env in sync: terminal_tool reads TERMINAL_ENV etc. directly from env vars.
     env_var = terminal_config_env_var_for_key(key)
@@ -3857,26 +3916,27 @@ def unset_config_value(key: str):
         return
 
     config_path = get_config_path()
-    user_config = require_readable_config_before_write(config_path)
+    with config_mutation_lock(config_path):
+        user_config = require_readable_config_before_write(config_path)
 
-    legacy_key = _legacy_gateway_platforms_key(key)
-    key, _redirect_note = _redirect_platform_display_key(key)
-    if _redirect_note:
-        # Mirror set_config_value's display.platforms canonicalization (#71047).
-        print(_redirect_note.replace("saved as", "resolved as"))
-    removed = _unset_nested(user_config, key)
-    if legacy_key:
-        removed = _unset_nested(user_config, legacy_key) or removed
+        legacy_key = _legacy_gateway_platforms_key(key)
+        key, _redirect_note = _redirect_platform_display_key(key)
+        if _redirect_note:
+            # Mirror set_config_value's display.platforms canonicalization (#71047).
+            print(_redirect_note.replace("saved as", "resolved as"))
+        removed = _unset_nested(user_config, key)
+        if legacy_key:
+            removed = _unset_nested(user_config, legacy_key) or removed
 
-    env_var = terminal_config_env_var_for_key(key)
-    if env_var and key != "terminal.cwd":
-        removed = remove_env_value(env_var) or removed
+        env_var = terminal_config_env_var_for_key(key)
+        if env_var and key != "terminal.cwd":
+            removed = remove_env_value(env_var) or removed
 
-    if not removed:
-        _exit_invalid(f"Config key not set: {key}")
+        if not removed:
+            _exit_invalid(f"Config key not set: {key}")
 
-    _write_user_config(config_path, user_config)
-    print(f"✓ Unset {key} from {config_path}")
+        _write_user_config(config_path, user_config)
+        print(f"✓ Unset {key} from {config_path}")
 
 
 # ---- Command handler ----

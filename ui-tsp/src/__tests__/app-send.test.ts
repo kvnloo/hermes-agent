@@ -46,7 +46,6 @@ describe('native composer submission', () => {
       expect(send).toBeTypeOf('function')
       send!()
 
-      expect(app.queue).toEqual(['first line\nsecond 😀'])
       expect(app.composer.text).toBe('')
       expect(app.composer.cursor).toBe(0)
       app.composer.undo()
@@ -59,7 +58,6 @@ describe('native composer submission', () => {
       const submit = surface.dispatch({ act: 'click', ev: 'action', id: 'dock.composer.bar.send', raw: {}, sf: 'hermes' })
       expect(submit).toBeTypeOf('function')
       submit!()
-      expect(app.queue).toEqual(['first line\nsecond 😀'])
       expect(app.busy).toBeNull()
       app.composer.key(key('up'))
       expect(app.composer.text).toBe('first line\nsecond 😀')

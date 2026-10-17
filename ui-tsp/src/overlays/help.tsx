@@ -45,15 +45,30 @@ const HOTKEYS: { group: string; rows: [string[], string][] }[] = [
 
 /** Opens the help sheet; the command list comes from the gateway's catalog. */
 export async function openHelp(app: App) {
+  const sid = app.sid
+  const generation = app.sessionGeneration
+  const overlayGeneration = app.overlayGeneration
   let catalog: CommandsCatalogResult = {}
 
   try {
-    catalog = await app.gw.request<CommandsCatalogResult>('commands.catalog', app.sid ? { session_id: app.sid } : {})
+    catalog = await app.gw.request<CommandsCatalogResult>('commands.catalog', sid ? { session_id: sid } : {})
   } catch (error) {
+    if (app.sid !== sid || app.sessionGeneration !== generation || app.overlayGeneration !== overlayGeneration) {
+      return
+    }
+
     app.transcript.notice(
       `Could not load the command list: ${error instanceof Error ? error.message : String(error)}`,
       'warning'
     )
+  }
+
+  if (app.sid !== sid || app.sessionGeneration !== generation || app.overlayGeneration !== overlayGeneration) {
+    return
+  }
+
+  if (catalog.warning) {
+    app.transcript.notice(catalog.warning, 'warning')
   }
 
   const categories = [
@@ -64,6 +79,19 @@ export async function openHelp(app: App) {
         pairs: (category.pairs ?? []).filter(([command]) => !SETTINGS_COMMANDS.some(([name]) => name === command))
       }))
   ]
+  const listed = new Set<string>()
+
+  for (const category of categories) {
+    for (const [command] of category.pairs) {
+      listed.add(command)
+    }
+  }
+
+  const uncategorized = (catalog.pairs ?? []).filter(([command]) => command !== undefined && !listed.has(command))
+
+  if (uncategorized.length) {
+    categories.push({ name: 'Other commands', pairs: uncategorized })
+  }
 
   const overlay: Overlay = {
     key: KEY,
@@ -73,41 +101,36 @@ export async function openHelp(app: App) {
         <col gap="lg" key="body">
           {HOTKEYS.map(({ group, rows }) => (
             <section head={group} key={`keys-${group}`} role="omp.hotkeys.group">
-              <table
-                cols={[
-                  { head: 'Key', id: 'keys' },
-                  { grow: 1, head: 'Action', id: 'action' }
-                ]}
-                key="table"
-                role="omp.hotkeys.table"
-                rows={rows.map(([keys, action], i) => ({
-                  cells: {
-                    action: [{ t: action }],
-                    keys: keys.flatMap((k, j): SpanData[] => [...(j ? [{ s: 'dim', t: ' ' }] : []), { s: 'key', t: k }])
-                  },
-                  id: String(i)
-                }))}
-              />
+              <col gap="sm" key="rows">
+                {rows.map(([keys, action], i) => (
+                  <col gap="xs" key={String(i)} role="omp.hotkeys.row">
+                    <text
+                      key="keys"
+                      role="omp.hotkeys.keys"
+                      spans={keys.flatMap((k, j): SpanData[] => [...(j ? [{ t: '  ' }] : []), { s: 'key', t: k }])}
+                      wrap="char"
+                    />
+                    <text key="action" role="omp.hotkeys.description" text={action} wrap="word" />
+                  </col>
+                ))}
+              </col>
             </section>
           ))}
           {categories.map(c => (
             <section head={c.name} key={`cmd-${c.name}`} role="omp.hotkeys.group">
-              <table
-                cols={[
-                  { head: 'Command', id: 'command' },
-                  { grow: 1, head: 'Description', id: 'action' }
-                ]}
-                key="table"
-                role="omp.hotkeys.table"
-                rows={(c.pairs ?? []).map(([command = '', text = ''], i) => ({
-                  // The `(usage: …)` tail is `/help <command>`'s business; the table keeps the summary.
-                  cells: {
-                    action: [{ t: text.replace(/\s*\(usage: .+\)\s*$/, '') }],
-                    command: [{ s: 'mono', t: command }]
-                  },
-                  id: String(i)
-                }))}
-              />
+              <col gap="sm" key="rows">
+                {(c.pairs ?? []).map(([command = '', text = ''], i) => (
+                  <col gap="xs" key={String(i)} role="omp.hotkeys.row">
+                    <text key="command" role="omp.hotkeys.command" spans={[{ s: 'mono', t: command }]} wrap="char" />
+                    <text
+                      key="description"
+                      role="omp.hotkeys.description"
+                      text={text}
+                      wrap="word"
+                    />
+                  </col>
+                ))}
+              </col>
             </section>
           ))}
           <row align="center" gap="sm" key="actions" role="omp.actions">

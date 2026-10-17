@@ -119,7 +119,7 @@ class ModelAssignment(BaseModel):
     # read model.base_url / auxiliary.<task>.base_url (+ .api_key) and ignore OPENAI_BASE_URL.
     base_url: str = ""
     api_key: str = ""
-    confirm_expensive_model: bool = False
+    confirm_expensive_model: StrictBool = False
     profile: Optional[str] = None
 
 class MoaModelSlot(BaseModel):

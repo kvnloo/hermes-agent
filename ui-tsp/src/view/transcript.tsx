@@ -16,7 +16,7 @@ export interface TranscriptContext {
   now: number
   welcome: WelcomeContext
   copy(text: string): void
-  rewind?(): void
+  rewind?(rowId: number): void
 }
 
 const kNode = Symbol('tsp.node')
@@ -27,8 +27,8 @@ interface Built {
 }
 
 /**
- * The node of one entry; `id` is its full node id (`main.<key>`). Turns rebuild only when
- * their `rev` moved and prompts, notices and panels never change, so a long transcript
+ * The node of one entry; `id` is its full node id (`main.<key>`). Turns and user prompts rebuild when
+ * their `rev` moved and notices and panels never change, so a long transcript
  * costs one turn's build per frame (timer ages are fixed at first build, see time.ts).
  */
 export function entryNode(e: Entry, id: string, cx: TranscriptContext): JSX.Element {
@@ -39,7 +39,7 @@ export function entryNode(e: Entry, id: string, cx: TranscriptContext): JSX.Elem
   // Entries are plain objects; the symbol slot rides on them (weak type: widen first).
   const holder: object = e
   const built: Built = holder
-  const rev = e.kind === 'turn' ? e.rev : 0
+  const rev = e.kind === 'turn' || e.kind === 'user' ? e.rev : 0
   const cached = built[kNode]
 
   if (cached?.rev === rev) {
@@ -74,6 +74,9 @@ function buildEntry(e: Exclude<Entry, { kind: 'welcome' }>, id: string, cx: Tran
 
 function userNode(e: UserEntry, cx: TranscriptContext): JSX.Element {
   const at = new Date(e.at || Date.now())
+  const rowId = e.rowId
+  const onRewind =
+    typeof rowId === 'number' && Number.isInteger(rowId) && rowId > 0 ? () => cx.rewind?.(rowId) : undefined
 
   return (
     <card key={e.id} role="omp.user" tone="user">
@@ -85,7 +88,13 @@ function userNode(e: UserEntry, cx: TranscriptContext): JSX.Element {
           title={at.toLocaleString()}
         />
         <text key="copy" onClick={() => cx.copy(e.text)} role="omp.user.tool" text="Copy" title="Copy message" />
-        <text key="rewind" onClick={() => cx.rewind?.()} role="omp.user.tool" text="Rewind" title="Rewind to this message" />
+        <text
+          key="rewind"
+          onClick={onRewind}
+          role="omp.user.tool"
+          text="Rewind"
+          title={onRewind ? 'Rewind to this message' : 'Rewind is available once this message is saved'}
+        />
       </row>
       <md key="body">{e.text}</md>
     </card>

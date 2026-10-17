@@ -52,28 +52,23 @@ class _StubCLI:
     _pending_one_turn_model_restore = None
     _app = None
 
-    def _confirm_expensive_model_switch(self, result):
+    def _confirm_expensive_model_switch(self, result, precomputed_warning=None):
         return True
 
-    def _confirm_and_apply_cli_model_switch(
-        self, result, persist_global, one_turn, custom_provs=None
-    ):
+    def _confirm_and_switch_cli_model(self, *args):
         import cli as cli_mod
-
-        return cli_mod.HermesCLI._confirm_and_apply_cli_model_switch(
-            self, result, persist_global, one_turn, custom_provs
-        )
+        return cli_mod.HermesCLI._confirm_and_switch_cli_model(self, *args)
 
 
 def _make_result():
     return ModelSwitchResult(
         success=True,
-        new_model="claude-sonnet-4.6",
-        target_provider="anthropic",
-        api_key="sk-ant",
-        base_url="https://api.anthropic.com",
-        api_mode="anthropic_messages",
-        provider_label="Anthropic",
+        new_model="openai/gpt-5.5-pro",
+        target_provider="openrouter",
+        api_key="sk-test",
+        base_url="https://openrouter.ai/api/v1",
+        api_mode="chat_completions",
+        provider_label="OpenRouter",
     )
 
 
@@ -115,7 +110,7 @@ def test_confirm_runs_off_main_thread_when_tui_present(monkeypatch):
     called_on = {}
     ready = threading.Event()
 
-    def _confirm(self, result):
+    def _confirm(self, result, precomputed_warning=None):
         called_on["thread_id"] = threading.get_ident()
         called_on["is_main"] = threading.current_thread() is threading.main_thread()
         ready.set()
@@ -124,19 +119,29 @@ def test_confirm_runs_off_main_thread_when_tui_present(monkeypatch):
     # The stub's own confirm would shadow the patched one — bind the
     # recorder onto the instance so the worker thread hits it.
     monkeypatch.setattr(stub, "_confirm_expensive_model_switch", _confirm.__get__(stub))
+    stage_and_swap = stub._stage_and_swap_model
+    applied = threading.Event()
+
+    def _stage_and_signal(result, old_model):
+        success = stage_and_swap(result, old_model)
+        applied.set()
+        return success
+
+    monkeypatch.setattr(stub, "_stage_and_swap_model", _stage_and_signal)
+
 
     cli_mod.HermesCLI._handle_model_switch(
-        stub, "/model claude-sonnet-4.6 --provider anthropic"
-    )
+        stub, "/model openai/gpt-5.5-pro --provider openrouter --session")
 
     # The worker thread performs the confirm and completes the apply.
     assert ready.wait(timeout=10)
     assert called_on["is_main"] is False
 
+    assert applied.wait(timeout=10)
     # Apply still lands on CLI + agent state.
-    assert stub.model == "claude-sonnet-4.6"
-    assert stub.provider == "anthropic"
-    assert stub.agent.calls[-1]["new_model"] == "claude-sonnet-4.6"
+    assert stub.model == "openai/gpt-5.5-pro"
+    assert stub.provider == "openrouter"
+    assert stub.agent.calls[-1]["new_model"] == "openai/gpt-5.5-pro"
 
 
 def test_confirm_stays_synchronous_without_app(monkeypatch):
@@ -151,16 +156,15 @@ def test_confirm_stays_synchronous_without_app(monkeypatch):
 
     called_on = {}
 
-    def _confirm(self, result):
+    def _confirm(self, result, precomputed_warning=None):
         called_on["is_main"] = threading.current_thread() is threading.main_thread()
         return True
 
     monkeypatch.setattr(stub, "_confirm_expensive_model_switch", _confirm.__get__(stub))
 
     cli_mod.HermesCLI._handle_model_switch(
-        stub, "/model claude-sonnet-4.6 --provider anthropic"
-    )
+        stub, "/model openai/gpt-5.5-pro --provider openrouter --session")
 
     assert called_on.get("is_main") is True
-    assert stub.model == "claude-sonnet-4.6"
-    assert stub.provider == "anthropic"
+    assert stub.model == "openai/gpt-5.5-pro"
+    assert stub.provider == "openrouter"

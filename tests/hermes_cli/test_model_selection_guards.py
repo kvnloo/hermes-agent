@@ -2,6 +2,8 @@
 
 from unittest.mock import patch
 
+import pytest
+
 from hermes_cli.model_selection_guards import (
     SelectionWarning,
     combined_selection_warning,
@@ -65,16 +67,16 @@ def test_combined_selection_warning_merges_multiple():
     assert "POLICY BLOCK" in merged.message
 
 
-def test_misbehaving_guard_never_breaks_selection():
-    def _boom(*args):
-        raise RuntimeError("bad guard")
+def test_registered_guard_failure_surfaces_in_combined_warning(monkeypatch):
+    """A registry fault must not become permission to select without a warning."""
 
-    with patch(
-        "hermes_cli.model_selection_guards._GUARDS",
-        (_boom,),
-    ):
-        assert selection_warnings("anything") == []
+    def _broken_metadata(*_args, **_kwargs):
+        raise RuntimeError("models.dev metadata unavailable")
 
+    monkeypatch.setattr("agent.models_dev.get_model_info", _broken_metadata)
+
+    with pytest.raises(RuntimeError, match="models.dev metadata unavailable"):
+        combined_selection_warning("anything", provider="anthropic", allow_provider_io=False)
 
 def test_cost_guard_still_fires_through_registry():
     # The registry must preserve the existing cost-guard behavior; feed it

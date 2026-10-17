@@ -734,24 +734,39 @@ def _session_db(session: dict):
 
 
 def _rewind_active_session_history(
-    session: dict, user_ordinal: int, *, require_retryable: bool = False) -> tuple[list[dict], dict, int]:
-    """Rewind one canonical user turn while retaining carrier scaffolding. Caller holds ``history_lock``. Persistent
-    sessions go through ``SessionDB.rewind_user_turn`` (the durable transcript is the authority; memory is installed
-    only after the commit); a session without a key rewinds the warm history alone."""
+    session: dict, user_ordinal: int | None = None, *, target_row_id: int | None = None,
+    require_retryable: bool = False,
+) -> tuple[list[dict], dict, int]:
+    """Rewind one canonical user turn while retaining carrier scaffolding. Caller holds ``history_lock``.
+    Persistent sessions use an exact durable row_id when supplied; the DB commits before memory changes."""
     from agent.context_compressor import history_before_user_originated_turn, retryable_user_text, user_originated_turn_view
 
     history = _history_without_ephemeral_scaffolding(session.get("history", []))
     user_indices = [i for i, m in enumerate(history) if user_originated_turn_view(m) is not None]
-    if user_ordinal < 0 or user_ordinal >= len(user_indices):
-        raise ValueError("target user message is no longer in session history")
     session_key = str(session.get("session_key") or "").strip()
+    if target_row_id is not None:
+        if type(target_row_id) is not int or target_row_id <= 0:
+            raise ValueError("target row_id must be a positive integer")
+        if not session_key:
+            user_ordinal = next(
+                (ordinal for ordinal, index in enumerate(user_indices)
+                 if history[index].get("_row_id", history[index].get("row_id")) == target_row_id),
+                None)
+            if user_ordinal is None:
+                raise ValueError("target user message is no longer in session history")
+        else:
+            user_ordinal = None
+    if user_ordinal is not None and (user_ordinal < 0 or user_ordinal >= len(user_indices)):
+        raise ValueError("target user message is no longer in session history")
+    if user_ordinal is None and target_row_id is None:
+        raise ValueError("a user turn ordinal or row_id is required")
     if session_key:
         with _session_db(session) as db:
             if db is None:
                 raise RuntimeError("session database is unavailable")
             outcome = db.rewind_user_turn(
-                session_key, user_ordinal, warm_history=history, require_retryable=require_retryable,
-                adopt_row_ids=True)
+                session_key, user_ordinal, target_row_id=target_row_id, warm_history=history,
+                require_retryable=require_retryable, adopt_row_ids=True)
         installed, live_view, rewound_count = outcome.prefix, outcome.live_view, outcome.rewound_count
     else:
         target_index = user_indices[user_ordinal]

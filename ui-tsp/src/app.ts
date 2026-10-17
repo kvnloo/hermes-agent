@@ -13,7 +13,9 @@ import type {
   Usage
 } from '@hermes/shared/gateway-events'
 import type { ServerRequest } from '@hermes/shared/json-rpc-channel'
+import { parseCommandDispatch, parseSlashCommand } from '@hermes/shared/slash'
 import type { Key, Session, Surface, TspEvent } from '@stencil-hq/tern'
+import { describeSlashExecError, shouldFallbackToDispatch } from '@tui/app/userMessages.js'
 import type { GatewayClient } from '@tui/gatewayClient.js'
 import type { AnyGatewayEvent } from '@tui/gatewayTypes.js'
 import { writeActiveSessionFile } from '@tui/lib/activeSessionFile.js'
@@ -41,7 +43,9 @@ const EXIT_ARM_MS = 1500
 /** What Shift+Tab / the effort chip cycle through (hermes's `none` turns reasoning off). */
 const EFFORTS = ['none', 'low', 'medium', 'high', 'xhigh']
 
-/** session.create's result, or session.resume's with the state of a turn it may be in. */
+const cancellationKey = (generation: number, sessionId: string | undefined, id: string) =>
+  `${generation}\u0000${sessionId ?? ''}\u0000${id}`
+
 interface CreateResult extends Partial<
   Pick<SessionResumeResult, 'inflight' | 'running' | 'status' | 'turn_started_at'>
 > {
@@ -49,6 +53,13 @@ interface CreateResult extends Partial<
   stored_session_id?: string | null
   info?: SessionLiveInfo
   messages?: TranscriptMessage[]
+}
+
+interface HistoryUndo {
+  events: AnyGatewayEvent[]
+  generation: number
+  phase: 'pending' | 'replaying'
+  sid: string
 }
 
 /** Runs the Tern frontend until the user quits; resolves the exit code. */
@@ -62,7 +73,7 @@ export class App implements OverlayHost {
   info: SessionLiveInfo | null = null
   usage: Usage | null = null
   busy: Busy | null = null
-  queue: string[] = []
+  queue: { text: string; display?: string }[] = []
   readonly #tern: Session
   readonly #gw: GatewayClient
   readonly #completion: Completion
@@ -78,19 +89,27 @@ export class App implements OverlayHost {
   #exitArmed = 0
   #done = Promise.withResolvers<number>()
   readonly #switches = new Switches()
-  /** Server requests for another session, kept while a switch is in flight. */
-  #heldRequests: ServerRequest[] = []
+  /** Changes on every new/resume/reattach request, even before a new sid is adopted. */
+  #sessionGeneration = 0
+  /** Destination traffic received during a switch, owned by its generation and transport order. */
+  #switchTraffic: (
+    | { generation: number; event: AnyGatewayEvent }
+    | { generation: number; request: ServerRequest }
+  )[] = []
+  #historyUndo: HistoryUndo | null = null
+  readonly #cancelledRequestIds = new Set<string>()
+  readonly #cancelledApprovalIds = new Set<string>()
   /** Open approval prompts' overlay keys → their approval-queue `request_id` (what approval.cancelled names). */
   readonly #approvalIds = new Map<string, string>()
   /** The launcher's startup image until it is attached to the first session (the queue waits for it). */
   #startupImage = process.env.HERMES_TUI_IMAGE?.trim() ?? ''
   #effortWrites: Promise<unknown> = Promise.resolve()
-  #effortRequested: { sid: string; value: string } | null = null
+  #effortRequested: { generation: number; sid: string; value: string } | null = null
 
   constructor(tern: Session, gw: GatewayClient, version: string) {
     this.#tern = tern
     this.#gw = gw
-    this.#completion = new Completion(this, gw, () => this.sid)
+    this.#completion = new Completion(this, gw, () => this.sid, () => this.sessionGeneration)
     this.#welcome = {
       tip: randomTip(process.env.HERMES_PYTHON_SRC_ROOT ?? ''),
       version: version && version !== 'unknown' ? `v${version}` : ''
@@ -100,6 +119,16 @@ export class App implements OverlayHost {
   /** The gateway, for overlays that issue their own RPCs. */
   get gw(): GatewayClient {
     return this.#gw
+  }
+
+  /** Monotonic owner token; changes as soon as any new/resume/reattach switch begins. */
+  get sessionGeneration(): number {
+    return this.#sessionGeneration
+  }
+
+  /** Invalidates asynchronous overlay work when a newer overlay has opened. */
+  get overlayGeneration(): number {
+    return this.#overlaySerial
   }
 
   async run(): Promise<number> {
@@ -149,7 +178,7 @@ export class App implements OverlayHost {
     const query = process.env.HERMES_TUI_QUERY?.trim()
 
     if (query || this.#startupImage) {
-      this.queue.push(query || 'What do you see in this image?')
+      this.queue.push({ text: query || 'What do you see in this image?' })
     }
 
     this.#gw.on('event', (ev: AnyGatewayEvent) => this.#onGatewayEvent(ev))
@@ -326,13 +355,20 @@ export class App implements OverlayHost {
     }
 
     if (text.startsWith('/')) {
+      if (this.#historyUndo) {
+        this.transcript.notice('Wait for the current rewind to finish before running slash commands.', 'warning')
+        this.changed()
+
+        return
+      }
+
       void this.#slash(text)
 
       return
     }
 
-    if (this.busy || !this.sid || this.#switches.pending) {
-      this.queue.push(text)
+    if (this.busy || !this.sid || this.#switches.pending || this.#historyUndo) {
+      this.queue.push({ text })
 
       return
     }
@@ -341,28 +377,57 @@ export class App implements OverlayHost {
   }
 
   /** Sends `text` now; `queued` marks a drained queue entry (the gateway must queue it, never steer with it). */
-  #send(text: string, { queued = false }: { queued?: boolean } = {}) {
+  #send(text: string, { queued = false, display }: { queued?: boolean; display?: string } = {}) {
     // A session switch in flight: the prompt belongs to the session it adopts.
-    if (!this.sid || this.#switches.pending) {
-      this.queue.unshift(text)
+    if (this.busy || !this.sid || this.#switches.pending || this.#historyUndo) {
+      this.queue.unshift({ text, display })
 
       return
     }
 
-    this.transcript.user(text)
+    const sid = this.sid
+    const generation = this.#sessionGeneration
+    const user = this.transcript.user(display ?? text)
     this.#startBusy('Working…')
     this.#gw
-      .request('prompt.submit', { session_id: this.sid, text, ...(queued ? { queued } : {}) })
+      .request<{ user_row_id?: number }>('prompt.submit', {
+        session_id: sid,
+        text,
+        ...(queued ? { queued } : {})
+      })
+      .then(r => {
+        if (
+          typeof r?.user_row_id === 'number' &&
+          this.sid === sid &&
+          this.#sessionGeneration === generation
+        ) {
+          this.transcript.setUserRowId(user.id, r.user_row_id)
+          this.changed()
+        }
+      })
       .catch((error: Error) => {
+        if (this.sid !== sid || this.#sessionGeneration !== generation) {
+          return
+        }
+
         this.transcript.notice(error.message, 'error')
         this.busy = null
         this.changed()
       })
   }
 
-  async #slash(text: string) {
-    const [name = '', ...rest] = text.slice(1).split(/\s+/)
-    const arg = rest.join(' ')
+  async #slash(text: string, aliasDepth = 0) {
+    if (this.#historyUndo) {
+      this.transcript.notice('Wait for the current rewind to finish before running slash commands.', 'warning')
+      this.changed()
+
+      return
+    }
+
+    const sid = this.sid
+    const generation = this.#sessionGeneration
+    const current = () => this.sid === sid && this.#sessionGeneration === generation
+    const { name, arg } = parseSlashCommand(text)
     const local = localCommand(name)
 
     if (local) {
@@ -373,39 +438,150 @@ export class App implements OverlayHost {
           return this.changed()
         }
       } catch (error) {
-        this.transcript.notice(error instanceof Error ? error.message : String(error), 'error')
+        if (current()) {
+          this.transcript.notice(error instanceof Error ? error.message : String(error), 'error')
+          this.changed()
+        }
 
-        return this.changed()
+        return
       }
     }
 
-    if (!this.sid) {
+    if (!current()) {
       return
     }
 
-    try {
-      const r = await this.#gw.request<{ output?: string; warning?: string; type?: string; message?: string }>(
-        'slash.exec',
-        {
-          command: text.slice(1),
-          session_id: this.sid
-        }
-      )
+    if (aliasDepth > 8) {
+      this.transcript.notice(`/${name}: too many command aliases`, 'error')
+      this.changed()
 
-      if (r?.type === 'send' && r.message) {
-        this.#send(r.message)
-      } else if (r?.output?.trim()) {
-        this.transcript.panel(`/${name}${arg ? ` ${arg}` : ''}`, r.output)
-      }
-
-      if (r?.warning) {
-        this.transcript.notice(r.warning, 'warning')
-      }
-    } catch (error) {
-      this.transcript.notice(error instanceof Error ? error.message : String(error), 'error')
+      return
     }
 
-    this.changed()
+    if (!sid) {
+      return
+    }
+
+    const title = `/${name}${arg ? ` ${arg}` : ''}`
+    const handle = (raw: unknown) => {
+      if (!current()) {
+        return
+      }
+
+      const dispatch = parseCommandDispatch(raw)
+
+      if (!dispatch) {
+        const result = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : null
+
+        if (result && 'type' in result) {
+          this.transcript.notice(`/${name}: invalid command dispatch response`, 'error')
+
+          return
+        }
+
+        if (result && 'output' in result && typeof result.output === 'string' && result.output.trim()) {
+          this.transcript.panel(title, result.output)
+        }
+
+        if (result && 'warning' in result && typeof result.warning === 'string' && result.warning.trim()) {
+          this.transcript.notice(result.warning, 'warning')
+        }
+
+        return
+      }
+
+      switch (dispatch.type) {
+        case 'exec':
+        case 'plugin':
+          if (dispatch.output?.trim()) {
+            this.transcript.panel(title, dispatch.output)
+          }
+
+          return
+
+        case 'alias':
+          void this.#slash(`/${dispatch.target}${arg ? ` ${arg}` : ''}`, aliasDepth + 1)
+
+          return
+
+        case 'skill':
+          if (!dispatch.message?.trim()) {
+            this.transcript.notice(`/${dispatch.name}: skill payload missing message`, 'error')
+
+            return
+          }
+
+          this.#send(dispatch.message, {
+            display: dispatch.display?.trim() || `/${dispatch.name}${arg ? ` ${arg}` : ''}`
+          })
+
+          return
+
+        case 'prefill':
+        case 'send':
+          if (dispatch.notice?.trim()) {
+            this.transcript.notice(dispatch.notice, 'info')
+          }
+
+          if (dispatch.type === 'prefill') {
+            this.composer.set(dispatch.message)
+            this.changed()
+
+            return
+          }
+
+          if (!dispatch.message.trim()) {
+            this.transcript.notice(`/${name}: empty dispatch message`, 'error')
+
+            return
+          }
+
+          this.#send(dispatch.message, {
+            ...(dispatch.display?.trim() ? { display: dispatch.display.trim() } : {})
+          })
+      }
+    }
+
+    try {
+      const result = await this.#gw.request<unknown>('slash.exec', {
+        command: text.slice(1),
+        session_id: sid
+      })
+
+      if (current()) {
+        handle(result)
+      }
+    } catch (error) {
+      if (!current()) {
+        return
+      }
+
+
+      if (!shouldFallbackToDispatch(error)) {
+        if (current()) {
+          this.transcript.notice(describeSlashExecError(name, error), 'error')
+        }
+      } else {
+        try {
+          const result = await this.#gw.request<unknown>('command.dispatch', { arg, name, session_id: sid })
+
+          if (current()) {
+            handle(result)
+          }
+        } catch (dispatchError) {
+          if (current()) {
+            this.transcript.notice(
+              dispatchError instanceof Error ? dispatchError.message : String(dispatchError),
+              'error'
+            )
+          }
+        }
+      }
+    }
+
+    if (current()) {
+      this.changed()
+    }
   }
 
   #interrupt() {
@@ -469,11 +645,18 @@ export class App implements OverlayHost {
 
   /** After a reconnect: resumes the shown session in the new backend (its runtime id died with the old one). */
   async #reattach(id: string) {
+    const resumed = this.#resume(id)
+    const generation = this.#sessionGeneration
+
     try {
-      if (await this.#resume(id)) {
+      if (await resumed && this.#sessionGeneration === generation) {
         this.transcript.notice('Reconnected to the agent backend.')
       }
     } catch (error) {
+      if (this.#sessionGeneration !== generation) {
+        return
+      }
+
       this.transcript.notice(
         `Could not reattach the session: ${error instanceof Error ? error.message : String(error)}`,
         'error'
@@ -485,7 +668,8 @@ export class App implements OverlayHost {
 
   /** Closes the open session and starts a fresh one with an empty transcript. */
   async newSession() {
-    const token = this.#switches.begin()
+    const token = this.#beginSwitch()
+    let adopted = false
 
     try {
       const setup = await this.#gw.request<{ provider_configured?: boolean | null }>('setup.status', {})
@@ -521,18 +705,19 @@ export class App implements OverlayHost {
       this.transcript.clear()
       this.transcript.push({ id: this.transcript.id('w'), kind: 'welcome' })
       this.#adopt(r)
+      adopted = true
     } finally {
-      this.#settle(token)
+      this.#settle(token, adopted)
     }
   }
 
   /** Resumes stored session `id`: its history replaces the transcript, and the session it leaves is closed. */
-  async resume(id: string) {
+  async resume(id: string): Promise<boolean> {
     if (this.busy) {
       this.transcript.notice('Wait for the current turn to finish (or press Esc) before switching sessions.', 'warning')
       this.changed()
 
-      return
+      return false
     }
 
     const previous = this.sid
@@ -541,11 +726,14 @@ export class App implements OverlayHost {
     if (r && previous && previous !== r.session_id) {
       this.#gw.request('session.close', { session_id: previous }).catch(() => undefined)
     }
+
+    return Boolean(r)
   }
 
   /** Resumes and adopts stored session `id`; undefined when a later switch superseded this one. */
   async #resume(id: string): Promise<CreateResult | undefined> {
-    const token = this.#switches.begin()
+    const token = this.#beginSwitch()
+    let adopted = false
 
     try {
       const r = await this.#gw.request<CreateResult>('session.resume', { cols: this.#tern.caps.cols, session_id: id })
@@ -557,10 +745,11 @@ export class App implements OverlayHost {
       this.transcript.clear()
       this.transcript.push({ id: this.transcript.id('w'), kind: 'welcome' })
       this.#adopt(r)
+      adopted = true
 
       return r
     } finally {
-      this.#settle(token)
+      this.#settle(token, adopted)
     }
   }
 
@@ -585,19 +774,49 @@ export class App implements OverlayHost {
     this.changed()
   }
 
-  /** Ends switch `token`; once none is in flight, held requests for the adopted session open and the queue drains. */
-  #settle(token: number) {
+  /** Starts a new/resume/reattach generation before any asynchronous switch work begins. */
+  #beginSwitch() {
+    const token = this.#switches.begin()
+    this.#sessionGeneration = token
+    this.#historyUndo = null
+
+    return token
+  }
+  /** Ends a switch; failed destination prompts return to the composer, never to the previous session. */
+  #settle(token: number, adopted: boolean) {
     this.#switches.end(token)
 
-    if (this.#switches.pending) {
+    if (this.#switches.pending || this.#sessionGeneration !== token) {
       return
     }
 
-    const held = this.#heldRequests
-    this.#heldRequests = []
+    if (!adopted && this.queue.length) {
+      const restored = this.queue.splice(0).map(prompt => prompt.text).join('\n\n')
 
-    for (const req of held) {
-      this.#onRequest(req)
+      this.composer.set(this.composer.text ? `${restored}\n\n${this.composer.text}` : restored)
+      this.transcript.notice('The session switch failed. Queued prompts are back in the composer; nothing was sent.', 'warning')
+    }
+
+    const traffic = this.#switchTraffic
+
+    this.#switchTraffic = []
+
+    for (const buffered of traffic) {
+      if (this.#switches.pending || this.#sessionGeneration !== token || buffered.generation !== token) {
+        if ('request' in buffered) {
+          buffered.request.fail(-32002, 'A newer session switch superseded this request')
+        }
+
+        continue
+      }
+
+      if ('event' in buffered) {
+        if (buffered.event.session_id === this.sid) {
+          this.#onGatewayEvent(buffered.event)
+        }
+      } else {
+        this.#onRequest(buffered.request)
+      }
     }
 
     this.#drainQueue()
@@ -607,6 +826,76 @@ export class App implements OverlayHost {
   // ── Gateway ────────────────────────────────────────────────────────
 
   #onGatewayEvent(ev: AnyGatewayEvent) {
+    if (ev.type === 'request.cancel') {
+      if (ev.payload?.id === undefined || ev.payload.id === null) {
+        return
+      }
+
+      const id = String(ev.payload.id)
+      const before = this.#switchTraffic.length
+      this.#switchTraffic = this.#switchTraffic.filter(buffered =>
+        !('request' in buffered &&
+          String(buffered.request.id) === id &&
+          buffered.request.params.session_id === ev.session_id)
+      )
+      const held = before !== this.#switchTraffic.length
+      const shown = ownsEvent(this.sid, ev) && this.overlays.some(overlay => overlay.key === `prompt:${id}`)
+
+      if (!held && !shown) {
+        this.#cancelledRequestIds.add(cancellationKey(this.#sessionGeneration, ev.session_id, id))
+      }
+
+      if (shown) {
+        this.#dropPrompts(key => key === `prompt:${id}`)
+      }
+
+      return
+    }
+
+    if (ev.type === 'approval.cancelled') {
+      for (const id of ev.payload?.request_ids ?? []) {
+        const before = this.#switchTraffic.length
+        this.#switchTraffic = this.#switchTraffic.filter(buffered =>
+          !('request' in buffered &&
+            buffered.request.method === 'approval' &&
+            buffered.request.params.request_id === id &&
+            buffered.request.params.session_id === ev.session_id)
+        )
+        const held = before !== this.#switchTraffic.length
+        const shown = ownsEvent(this.sid, ev) &&
+          this.overlays.some(overlay => this.#approvalIds.get(overlay.key) === id)
+
+        if (!held && !shown) {
+          this.#cancelledApprovalIds.add(cancellationKey(this.#sessionGeneration, ev.session_id, id))
+        }
+
+        if (shown) {
+          this.#dropPrompts(key => this.#approvalIds.get(key) === id)
+        }
+      }
+
+      return
+    }
+
+    const historyUndo = this.#historyUndo
+
+    if (
+      historyUndo?.phase === 'pending' &&
+      historyUndo.sid === this.sid &&
+      historyUndo.generation === this.#sessionGeneration &&
+      ev.session_id === historyUndo.sid
+    ) {
+      historyUndo.events.push(ev)
+
+      return
+    }
+
+    if (this.#switches.pending && ev.session_id) {
+      this.#switchTraffic.push({ event: ev, generation: this.#sessionGeneration })
+
+      return
+    }
+
     // Another session's traffic (one being closed, or left by a switch) never reaches this transcript.
     if (!ownsEvent(this.sid, ev)) {
       return
@@ -767,16 +1056,6 @@ export class App implements OverlayHost {
 
         break
 
-      case 'request.cancel':
-        this.#heldRequests = this.#heldRequests.filter(r => r.id !== ev.payload?.id)
-        this.#dropPrompts(key => key === `prompt:${ev.payload?.id}`)
-
-        break
-
-      case 'approval.cancelled':
-        this.#dropPrompts(key => ev.payload?.request_ids.includes(this.#approvalIds.get(key) ?? '') ?? false)
-
-        break
 
       default:
         return
@@ -786,10 +1065,25 @@ export class App implements OverlayHost {
   }
 
   #onRequest(req: ServerRequest) {
-    const route = this.#switches.route(this.sid, req.params.session_id)
+    const sessionId = typeof req.params.session_id === 'string' ? req.params.session_id : undefined
+
+    if (this.#cancelledRequestIds.delete(cancellationKey(this.#sessionGeneration, sessionId, String(req.id)))) {
+      return
+    }
+
+    if (
+      req.method === 'approval' &&
+      typeof req.params.request_id === 'string' &&
+      this.#cancelledApprovalIds.delete(
+        cancellationKey(this.#sessionGeneration, sessionId, req.params.request_id)
+      )
+    ) {
+      return
+    }
+    const route = this.#switches.pending ? 'hold' : this.#switches.route(this.sid, req.params.session_id)
 
     if (route === 'hold') {
-      this.#heldRequests.push(req)
+      this.#switchTraffic.push({ generation: this.#sessionGeneration, request: req })
 
       return
     }
@@ -837,8 +1131,10 @@ export class App implements OverlayHost {
 
   /** The single live effort owner, including a lazy session before its first model turn. */
   setReasoning(value: string, scope?: 'session' | 'global', sid = this.sid): Promise<ConfigSetResult | undefined> {
+    const generation = this.#sessionGeneration
+
     const write = async () => {
-      if (!sid || this.sid !== sid) {
+      if (!sid || this.sid !== sid || this.#sessionGeneration !== generation) {
         return undefined
       }
 
@@ -849,19 +1145,19 @@ export class App implements OverlayHost {
         ...(scope ? { scope } : {})
       })
 
-      if (this.sid !== sid) {
+      if (this.sid !== sid || this.#sessionGeneration !== generation) {
         return undefined
       }
 
       const current = await this.#gw.request<ConfigGetResult>('config.get', { key: 'reasoning', session_id: sid })
 
-      if (this.sid === sid && typeof current.value === 'string') {
+      if (this.sid === sid && this.#sessionGeneration === generation && typeof current.value === 'string') {
         this.info = { ...this.info, reasoning_effort: current.value }
         this.changed()
 
         return result
       }
-      if (this.sid === sid) {
+      if (this.sid === sid && this.#sessionGeneration === generation) {
         throw new Error('The backend did not confirm the live reasoning effort.')
       }
 
@@ -878,17 +1174,19 @@ export class App implements OverlayHost {
   /** Steps the session's reasoning effort. The native glyph changes only after readback. */
   #cycleEffort() {
     const sid = this.sid
+    const generation = this.#sessionGeneration
 
     if (!sid) {
       return
     }
 
-    const current = this.#effortRequested?.sid === sid ? this.#effortRequested.value : this.info?.reasoning_effort ?? ''
+    const current = this.#effortRequested?.sid === sid && this.#effortRequested.generation === generation
+      ? this.#effortRequested.value : this.info?.reasoning_effort ?? ''
     const at = EFFORTS.indexOf(current)
-    const request = { sid, value: EFFORTS[at < 0 ? EFFORTS.indexOf('medium') : (at + 1) % EFFORTS.length]! }
+    const request = { generation, sid, value: EFFORTS[at < 0 ? EFFORTS.indexOf('medium') : (at + 1) % EFFORTS.length]! }
     this.#effortRequested = request
     this.setReasoning(request.value, 'session', sid).catch((error: Error) => {
-      if (this.sid === sid) {
+      if (this.sid === sid && this.#sessionGeneration === generation) {
         this.transcript.notice(error.message, 'error')
         this.changed()
       }
@@ -904,21 +1202,21 @@ export class App implements OverlayHost {
     const next = this.queue.shift()
 
     if (next !== undefined) {
-      this.composer.set(this.composer.text ? `${next}\n${this.composer.text}` : next)
+      this.composer.set(this.composer.text ? `${next.text}\n${this.composer.text}` : next.text)
       this.changed()
     }
   }
 
   /** Sends the oldest queued prompt once the session is adopted and idle (no turn, switch or startup image pending). */
   #drainQueue() {
-    if (this.busy || !this.sid || this.#switches.pending || this.#startupImage) {
+    if (this.busy || !this.sid || this.#switches.pending || this.#startupImage || this.#historyUndo) {
       return
     }
 
     const next = this.queue.shift()
 
     if (next) {
-      this.#send(next, { queued: true })
+      this.#send(next.text, { display: next.display, queued: true })
     }
   }
 
@@ -937,15 +1235,65 @@ export class App implements OverlayHost {
     const cx = {
       copy: (text: string) => copyToClipboard(text),
       now,
-      rewind: () => {
-        if (!this.sid) {
+      rewind: (rowId: number) => {
+        const sid = this.sid
+
+        if (!sid) {
           return
         }
 
-        this.#gw.request('session.undo', { session_id: this.sid }).catch((error: Error) => {
-          this.transcript.notice(error.message, 'error')
+        if (this.busy || this.#switches.pending || this.#historyUndo) {
+          const message = this.#historyUndo
+            ? 'A rewind is already in progress.'
+            : 'Cannot rewind while a turn or session switch is active.'
+          this.transcript.notice(message, 'warning')
           this.changed()
-        })
+
+          return
+        }
+
+        const generation = this.#sessionGeneration
+        const operation: HistoryUndo = { events: [], generation, phase: 'pending', sid }
+        const current = () =>
+          this.#historyUndo === operation && this.sid === sid && this.#sessionGeneration === generation
+        this.#historyUndo = operation
+
+        void (async () => {
+          try {
+            const result = await this.#gw.request<{ count: number; messages: TranscriptMessage[]; removed: number }>(
+              'session.undo',
+              { row_id: rowId, session_id: sid }
+            )
+
+            if (!current()) {
+              return
+            }
+
+            if (!Array.isArray(result.messages)) {
+              throw new Error('The gateway did not return the rewound transcript.')
+            }
+
+            this.transcript.load(result.messages)
+          } catch (error) {
+            if (current()) {
+              this.transcript.notice(error instanceof Error ? error.message : String(error), 'error')
+            }
+          } finally {
+            if (this.#historyUndo === operation) {
+              if (current()) {
+                operation.phase = 'replaying'
+
+                for (const event of operation.events) {
+                  this.#onGatewayEvent(event)
+                }
+              }
+
+              this.#historyUndo = null
+              this.#drainQueue()
+              this.changed()
+            }
+          }
+        })()
       },
       welcome: { ...this.#welcome, version: this.#welcome.version || backend }
     }

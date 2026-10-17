@@ -252,6 +252,7 @@ class TestWebServerEndpoints:
         from hermes_cli.web_server import app, _SESSION_HEADER_NAME, _SESSION_TOKEN
 
         monkeypatch.setattr(hermes_state, "DEFAULT_DB_PATH", get_hermes_home() / "state.db")
+        monkeypatch.setattr(_web_server_gateway, "_ACTION_LOG_DIR", get_hermes_home() / "logs")
 
         self.client = TestClient(app)
         self.client.headers[_SESSION_HEADER_NAME] = _SESSION_TOKEN
@@ -1518,6 +1519,153 @@ CONFIG_SCHEMA = ProviderConfigSchema(
             "already_running": True,
             "action_id": "b" * 32,
         }
+
+
+    @pytest.mark.parametrize("consent", [None, "true", 1, 0])
+    def test_model_set_rejects_malformed_confirmation_without_mutation(self, monkeypatch, consent):
+        """Invalid JSON consent is a request error, never an implicit acknowledgement."""
+        from hermes_constants import get_hermes_home
+        from hermes_cli.config import load_config, save_config
+        from hermes_cli.web_routers import models as model_routes
+
+        config = load_config()
+        config["model"] = {"default": "old-model", "provider": "openrouter"}
+        save_config(config)
+        config_path = get_hermes_home() / "config.yaml"
+        before = config_path.read_bytes()
+        monkeypatch.setattr(
+            model_routes,
+            "_dashboard_code_skew_guard",
+            lambda: pytest.fail("malformed consent must be rejected before route handling"),
+        )
+
+        response = self.client.post(
+            "/api/model/set",
+            json={
+                "scope": "main",
+                "provider": "invalid-provider",
+                "model": "new-model",
+                "confirm_expensive_model": consent,
+            },
+        )
+
+        assert response.status_code == 422
+        current_model = load_config()["model"]
+        assert current_model["default"] == "old-model"
+        assert current_model["provider"] == "openrouter"
+        assert config_path.read_bytes() == before
+
+
+    def test_model_set_confirms_stale_cached_expensive_metadata_without_provider_io(self, monkeypatch):
+        """Cached expensive prices require confirmation without refreshing or validating the route."""
+        from hermes_constants import get_hermes_home
+        from hermes_cli.config import load_config, save_config
+        from hermes_cli.web_routers import models as model_routes
+        import agent.models_dev as models_dev
+        import agent.usage_pricing as usage_pricing
+
+        config = load_config()
+        config["model"] = {"default": "old-model", "provider": "openrouter"}
+        save_config(config)
+        config_path = get_hermes_home() / "config.yaml"
+        before = config_path.read_bytes()
+
+        monkeypatch.setattr(
+            models_dev,
+            "_models_dev_cache",
+            {
+                "anthropic": {
+                    "models": {
+                        "stale-expensive-model": {
+                            "cost": {"input": 25, "output": 125},
+                        },
+                    },
+                },
+            },
+        )
+        monkeypatch.setattr(models_dev, "_models_dev_cache_time", 0)
+        monkeypatch.setattr(
+            models_dev,
+            "_start_background_refresh_models_dev",
+            lambda: pytest.fail("stale metadata must not trigger a background refresh"),
+        )
+        monkeypatch.setattr(
+            models_dev,
+            "_fetch_models_dev_from_network",
+            lambda **_kwargs: pytest.fail("unconfirmed metadata checks must not fetch models.dev"),
+        )
+        monkeypatch.setattr(
+            usage_pricing,
+            "resolve_billing_route",
+            lambda *_args, **_kwargs: pytest.fail("unconfirmed metadata checks must not resolve billing routes"),
+        )
+        monkeypatch.setattr(
+            usage_pricing,
+            "get_pricing_entry",
+            lambda *_args, **_kwargs: pytest.fail("unconfirmed metadata checks must not fetch pricing"),
+        )
+        monkeypatch.setattr(
+            model_routes,
+            "_prepare_main_assignment",
+            lambda *_args, **_kwargs: pytest.fail("provider assignment must wait for confirmation"),
+        )
+
+        response = self.client.post(
+            "/api/model/set",
+            json={"scope": "main", "provider": "anthropic", "model": "stale-expensive-model"},
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["ok"] is False
+        assert body["confirm_required"] is True
+        assert "known pricing above Hermes' safety threshold" in body["confirm_message"]
+        current_model = load_config()["model"]
+        assert current_model["default"] == "old-model"
+        assert current_model["provider"] == "openrouter"
+        assert config_path.read_bytes() == before
+
+
+    def test_model_set_guard_failure_preserves_existing_assignment(self, monkeypatch):
+        """A real registered guard fault is an HTTP refusal and leaves the selected route intact."""
+        from hermes_constants import get_hermes_home
+        from hermes_cli.config import load_config, save_config
+        from hermes_cli.model_switch import ModelSwitchResult
+
+        config = load_config()
+        config["model"] = {"default": "old-model", "provider": "openrouter"}
+        save_config(config)
+        config_path = get_hermes_home() / "config.yaml"
+        before = config_path.read_bytes()
+
+        monkeypatch.setattr(
+            "hermes_cli.model_switch.switch_model",
+            lambda **kwargs: ModelSwitchResult(
+                success=True, new_model=kwargs["raw_input"],
+                target_provider=kwargs["explicit_provider"], provider_label="Anthropic",
+            ),
+        )
+        failures = []
+
+        def _broken_metadata(provider, model):
+            failures.append((provider, model))
+            raise RuntimeError("registered guard metadata failure")
+
+        monkeypatch.setattr("agent.models_dev.get_model_info", _broken_metadata)
+
+        response = self.client.post(
+            "/api/model/set",
+            json={"scope": "main", "provider": "anthropic", "model": "guard-fault-model"},
+        )
+
+        assert response.status_code == 503
+        assert "selection checks are unavailable" in response.json()["detail"].lower()
+        assert "assignment was not changed" in response.json()["detail"].lower()
+        assert failures == [("anthropic", "guard-fault-model")]
+        current_model = load_config()["model"]
+        assert current_model["default"] == "old-model"
+        assert current_model["provider"] == "openrouter"
+        assert config_path.read_bytes() == before
 
 
     def test_model_set_maps_unknown_vendor_to_aggregator(self, monkeypatch):

@@ -27,6 +27,7 @@ export function openSessionPicker(app: App) {
 
   const load = async () => {
     state = 'loading'
+    message = ''
     app.changed()
 
     try {
@@ -42,17 +43,30 @@ export function openSessionPicker(app: App) {
     app.changed()
   }
 
-  const resume = (id: string | undefined) => {
+  const resume = async (id: string | undefined) => {
     const row = rows.find(r => r.id === id)
 
     if (!row) {
       return
     }
 
-    app.close(overlay)
+    if (row.id === app.storedSid) {
+      app.close(overlay)
 
-    if (row.id !== app.storedSid) {
-      void app.resume(row.resolved_id || row.id)
+      return
+    }
+
+    message = ''
+    app.changed()
+
+    try {
+      if (await app.resume(row.resolved_id || row.id)) {
+        app.close(overlay)
+      }
+    } catch (error) {
+      state = 'ready'
+      message = `Could not resume ${labelOf(row)}: ${error instanceof Error ? error.message : String(error)}`
+      app.changed()
     }
   }
 
@@ -143,7 +157,7 @@ export function openSessionPicker(app: App) {
           items={rows.map(r => itemOf(r, now))}
           key={id.slice('layer.'.length)}
           layout="cards"
-          message={state === 'error' ? message : undefined}
+          message={message || undefined}
           noun="sessions"
           onAction={{
             cancel: () => {
@@ -164,10 +178,10 @@ export function openSessionPicker(app: App) {
               askDelete()
               app.changed()
             },
-            resume: () => resume(selected),
+            resume: () => void resume(selected),
             retry: () => void load()
           }}
-          onActivate={ev => resume(ev.item)}
+          onActivate={ev => void resume(ev.item)}
           onSelect={ev => {
             selected = ev.item
             deleting = null
@@ -200,7 +214,7 @@ export function openSessionPicker(app: App) {
       if (k.name === 'escape') {
         app.close(overlay)
       } else if (k.name === 'enter') {
-        resume(selected)
+        void resume(selected)
       } else if (k.name === 'backspace' && !query) {
         askDelete()
       } else {

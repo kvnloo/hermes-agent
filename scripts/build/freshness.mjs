@@ -30,11 +30,13 @@ const tuiInputs = [
   'scripts/build/tui.mjs', 'scripts/build/frontend-common.mjs', 'scripts/build/freshness.mjs',
 ]
 
-// buildTsp bundles ui-tsp plus the renderer-free ui-tui modules it imports
-// (`@tui/*`) and apps/shared; the Tern SDK arrives through package-lock.json.
+// buildTsp bundles ui-tsp plus renderer-free ui-tui modules and apps/shared.
+// esbuild reads workspace package metadata and the nearest tsconfig for each
+// imported TypeScript tree, so those files are compiler inputs too.
 const tspInputs = [
   'ui-tsp/src', 'ui-tsp/assets', 'ui-tsp/scripts', 'ui-tsp/package.json', 'ui-tsp/tsconfig.json',
-  'ui-tui/src', 'apps/shared/src', 'apps/shared/package.json',
+  'ui-tui/src', 'ui-tui/package.json', 'ui-tui/tsconfig.json',
+  'apps/shared/src', 'apps/shared/package.json', 'apps/shared/tsconfig.json',
   'package.json', 'package-lock.json', '.npmrc', 'pm/lock.json',
   'scripts/build/tsp.mjs', 'scripts/build/frontend-common.mjs', 'scripts/build/freshness.mjs',
 ]
@@ -77,10 +79,21 @@ export function sourceHash(source, product) {
   })
 }
 
-function outputHash(out) {
-  // Native binaries can be signed after compilation. Their ABI validation is
-  // owned by native preparation; renderer/main/preload bytes must stay intact.
-  return treeHash(out, readdirSync(out).sort(), name => name === receiptName || name === '.hermes-product',
+function outputHash(out, product) {
+  // A TUI/TSP is executed as an ESM package, so its adjacent package.json is
+  // runtime output just as much as dist/entry.js. Hash both before the receipt
+  // is written; otherwise assembly can ship metadata the receipt never saw.
+  const packaged = product === 'tui' || product === 'tsp'
+  const root = packaged ? resolve(out, '..') : out
+  const entries = packaged ? ['package.json', 'dist'] : readdirSync(out).sort()
+  if (packaged && (!existsSync(join(root, 'package.json')) || !statSync(join(root, 'package.json')).isFile())) {
+    throw new Error(`${product} product is missing its root package.json`)
+  }
+  if (packaged && (!existsSync(join(root, 'dist')) || !statSync(join(root, 'dist')).isDirectory())) {
+    throw new Error(`${product} product is missing its dist directory`)
+  }
+  const receipt = packaged ? `dist/${receiptName}` : receiptName
+  return treeHash(root, entries, name => name === receipt || name === '.hermes-product',
     name => !name.split('/').includes('node_modules') && !name.startsWith('native/'))
 }
 
@@ -161,7 +174,7 @@ export function recordProduct({ source, product, out, inputs, stampClock }) {
   }
   writeFileSync(join(out, receiptName), JSON.stringify({
     schema: 1, product, platform: process.platform, arch: process.arch, node: process.versions.node,
-    inputs, stampClock, outputHash: outputHash(out),
+    inputs, stampClock, outputHash: outputHash(out, product),
   }) + '\n')
 }
 
@@ -183,7 +196,7 @@ export function productCurrent({ source, product, out, prepared }) {
       // consult it reuse the dist already on disk rather than packaging a new bundle.
       && (saved.stampClock === undefined || saved.stampClock === stampClock(paths))
       && JSON.stringify(saved.inputs) === JSON.stringify(buildInputs(source, product, paths))
-      && saved.outputHash === outputHash(out)
+      && saved.outputHash === outputHash(out, product)
   } catch { return false }
 }
 

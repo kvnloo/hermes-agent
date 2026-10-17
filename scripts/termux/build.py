@@ -14,6 +14,7 @@ import sys
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from scripts.bundles.payload import resolve_revision
 from scripts.releases.commit_build import require_commit
 from scripts.termux.deb_version import deb_version_for_tag
 
@@ -45,6 +46,12 @@ def main(argv: list[str] | None = None) -> int:
     for option, path in (("--repo", repo), ("--payload", payload)):
         if not path.is_dir():
             parser.error(f"{option} must name an existing directory: {path}")
+    requested = args.release_commit or args.commit or f"refs/tags/{args.tag}"
+    try:
+        source_commit = resolve_revision(repo, requested)
+    except (OSError, subprocess.CalledProcessError) as exc:
+        parser.error(f"cannot resolve source revision {requested!r}: {exc}")
+
     product = repo / ".build/termux/tui"
     revision = ["--tag", args.tag] if args.tag is not None else ["--commit", args.commit]
     if args.release_commit is not None:
@@ -56,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
          "--source", str(repo), "--out", str(product)],
         ["bash", str(repo / "scripts/termux/build_deb.sh"),
          "--repo", str(repo), "--payload", str(payload), "--out", str(out),
-         "--tui-product", str(product), *revision],
+         "--tui-product", str(product), "--source-commit", source_commit, *revision],
     ]
     try:
         for command in commands:

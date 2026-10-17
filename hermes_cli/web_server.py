@@ -33,7 +33,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from hermes_cli.config import load_config
+from hermes_cli.config import CONFIG_MUTATION_LOCK, load_config
 from hermes_cli.version_info import get_version_info
 
 try:
@@ -890,11 +890,9 @@ def get_install_id() -> Optional[str]:
     return _shared_get_install_id(cache=_INSTALL_ID_CACHE)
 
 
-# Serializes config.yaml read-modify-write cycles for handlers on worker threads
-# (asyncio.to_thread): config.py's _CONFIG_LOCK covers each load/save call, not
-# the span between them, so two off-loop updates could drop each other's writes.
-# RLock so nested helpers that also take it can't self-deadlock.
-_CONFIG_MUTATION_LOCK = threading.RLock()
+# Dashboard handlers enter the same profile-scoped thread + cross-process transaction lock as
+# native settings and raw YAML writers; LateState users keep resolving this live object.
+_CONFIG_MUTATION_LOCK = CONFIG_MUTATION_LOCK
 
 # A finished ``gateway-restart`` child does not mean the gateway is back (it
 # exits once the restart is handed off), so in-flight reuse stops coalescing

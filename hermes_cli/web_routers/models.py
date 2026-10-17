@@ -367,10 +367,18 @@ async def set_model_assignment(body: ModelAssignment, profile: Optional[str] = N
             try:
                 from hermes_cli.model_selection_guards import combined_selection_warning
 
-                # Pricing lookup can hit models.dev / a /models endpoint on a cache miss — off the loop.
-                warning = await asyncio.to_thread(combined_selection_warning, model, provider=provider, base_url=base_url)
-            except Exception:
-                warning = None
+                # Keep unconfirmed checks on cached catalog metadata only; provider and pricing
+                # endpoints are not contacted until the user explicitly confirms.
+                warning = await asyncio.to_thread(
+                    combined_selection_warning, model, provider=provider, base_url=base_url,
+                    allow_provider_io=False,
+                )
+            except Exception as exc:
+                _log.exception("POST /api/model/set refused: model selection guard evaluation failed")
+                raise HTTPException(
+                    status_code=503,
+                    detail="Model selection checks are unavailable; assignment was not changed. Please retry.",
+                ) from exc
             if warning is not None:
                 return {"ok": False, "scope": scope, "provider": provider, "model": model,
                         "confirm_required": True, "confirm_message": warning.message}

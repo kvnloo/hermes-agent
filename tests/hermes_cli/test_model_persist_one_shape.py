@@ -104,6 +104,8 @@ def test_every_persist_surface_writes_the_same_model_block(seeded_home, monkeypa
 def test_same_route_repick_keeps_the_context_pin(seeded_home):
     """A model re-pick on the SAME route keeps ``context_length`` (only the owner change drops it)."""
     from hermes_cli.model_switch import persist_model_selection
+    same_route_seed = "context_length: 96000\nmodel_context_length: 64000\n" + _SEED
+    (seeded_home / "config.yaml").write_text(same_route_seed, encoding="utf-8")
     same_route = ModelSwitchResult(
         success=True, new_model="local-model", target_provider="custom",
         base_url="http://localhost:1234/v1", api_mode="anthropic_messages", is_global=True)
@@ -111,6 +113,145 @@ def test_same_route_repick_keeps_the_context_pin(seeded_home):
     block = _model_block(seeded_home)
     assert block["context_length"] == 32000
     assert block["api_key"] == "sk-stale"  # custom targets keep their inline key
+    raw = yaml.safe_load((seeded_home / "config.yaml").read_text(encoding="utf-8"))
+    assert raw["context_length"] == 96000
+    assert raw["model_context_length"] == 64000
+
+
+
+def test_root_only_legacy_context_pins_clear_on_route_change_and_survive_same_route(seeded_home):
+    from hermes_cli.model_switch import persist_model_selection
+
+    root_only_seed = "context_length: 96000\nmodel_context_length: 64000\n" + _SEED.replace(
+        "  context_length: 32000\n", "")
+    config_path = seeded_home / "config.yaml"
+    config_path.write_text(root_only_seed, encoding="utf-8")
+
+    persist_model_selection(_RESULT)
+
+    changed_route = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    assert "context_length" not in changed_route
+    assert "model_context_length" not in changed_route
+
+    config_path.write_text(root_only_seed, encoding="utf-8")
+    same_route = ModelSwitchResult(
+        success=True, new_model="local-model", target_provider="custom",
+        base_url="http://localhost:1234/v1", api_mode="anthropic_messages", is_global=True)
+
+    persist_model_selection(same_route)
+
+    unchanged_route = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    assert unchanged_route["context_length"] == 96000
+    assert unchanged_route["model_context_length"] == 64000
+    assert "context_length" not in unchanged_route["model"]
+
+
+
+def test_route_change_clears_root_context_aliases_and_preserves_concurrent_setting(seeded_home, monkeypatch):
+    from threading import Event, Thread
+
+    import hermes_cli.config as config_module
+    import utils
+    from tui_gateway import server
+    from hermes_cli.model_switch import persist_model_selection
+
+    monkeypatch.setattr(server, "_hermes_home", seeded_home)
+
+    config_path = seeded_home / "config.yaml"
+    config_path.write_text(
+        "context_length: 96000\n"
+        "model_context_length: 64000\n"
+        "unrelated_root_setting: preserve me\n"
+        "model:\n"
+        "  default: local-model\n"
+        "  provider: custom\n"
+        "  base_url: http://localhost:1234/v1\n"
+        "  context_length: 32000\n"
+        "  model_slots:\n"
+        "    fast: gpt-5-mini\n"
+        "agent:\n"
+        "  system_prompt: keepme\n",
+        encoding="utf-8",
+    )
+
+    original_update = utils.atomic_roundtrip_yaml_update
+    writer_started = Event()
+    writer_finished = Event()
+    writer = []
+
+    def write_concurrent_setting():
+        writer_started.set()
+        server._write_config_key("concurrent_setting", "written concurrently")
+        writer_finished.set()
+
+    def start_writer_during_persist(path, key_path, value):
+        original_update(path, key_path, value)
+        if not writer:
+            thread = Thread(target=write_concurrent_setting)
+            writer.append(thread)
+            thread.start()
+            assert writer_started.wait(timeout=5)
+
+    monkeypatch.setattr(utils, "atomic_roundtrip_yaml_update", start_writer_during_persist)
+    persist_model_selection(_RESULT, config_path)
+
+    writer[0].join(timeout=5)
+    assert not writer[0].is_alive()
+    assert writer_finished.is_set()
+    raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    assert "context_length" not in raw
+    assert "model_context_length" not in raw
+    assert raw["unrelated_root_setting"] == "preserve me"
+    assert raw["concurrent_setting"] == "written concurrently"
+    assert raw["model"]["model_slots"] == {"fast": "gpt-5-mini"}
+    assert raw["agent"]["system_prompt"] == "keepme"
+
+    loaded = config_module.load_config()
+    assert loaded.get("context_length") is None
+    assert loaded["model"].get("context_length") != 96000
+    assert loaded["unrelated_root_setting"] == "preserve me"
+
+
+def test_global_model_read_and_all_key_writes_share_one_profile_lock(seeded_home, monkeypatch):
+    from contextlib import contextmanager
+
+    import hermes_cli.config as config_module
+    import utils
+    from hermes_cli.model_switch import persist_model_selection
+
+    events = []
+    original_read = config_module.read_user_config_raw
+
+    @contextmanager
+    def tracked_lock(path):
+        assert path == seeded_home / "config.yaml"
+        events.append("lock-enter")
+        try:
+            yield
+        finally:
+            events.append("lock-exit")
+
+    def tracked_read(path):
+        assert events == ["lock-enter"]
+        events.append("read")
+        return original_read(path)
+
+    def tracked_write(_path, key, _value):
+        assert events[0] == "lock-enter"
+        assert "lock-exit" not in events
+        events.append(("write", key))
+
+    monkeypatch.setattr(config_module, "config_mutation_lock", tracked_lock)
+    monkeypatch.setattr(config_module, "read_user_config_raw", tracked_read)
+    monkeypatch.setattr(utils, "atomic_roundtrip_yaml_update", tracked_write)
+
+    persist_model_selection(_RESULT)
+
+    assert events[0:2] == ["lock-enter", "read"]
+    assert events[-1] == "lock-exit"
+    writes = [event for event in events if isinstance(event, tuple)]
+    assert len(writes) > 1
+    assert all(events.index(event) < len(events) - 1 for event in writes)
 
 
 def test_custom_to_other_custom_endpoint_drops_the_inline_key(seeded_home):

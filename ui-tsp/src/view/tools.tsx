@@ -337,10 +337,26 @@ function searchCard(call: ToolCall, result: Record<string, unknown> | undefined)
     }
   }
 
+  const dense = str(result?.matches_text)
   const matches = Array.isArray(result?.matches)
     ? result.matches.map(m => record(m)).filter(m => m !== undefined)
     : undefined
 
+  if (dense && !matches?.length) {
+    const count =
+      typeof result?.total_count === 'number' ? result.total_count : (dense.match(/^ {2}\d+:/gm)?.length ?? 0)
+
+    return {
+      body: [<code key="matches" lang="text" text={dense} />],
+      folded: count > 40,
+      frame: 'inline',
+      meta: [`${count} match${count === 1 ? '' : 'es'}${inPath}`],
+      name: 'grep',
+      target: pattern,
+      targetKind: 'pattern',
+      title: 'Grep'
+    }
+  }
   const byFile = new Map<string, { line: number; text: string }[]>()
 
   for (const m of matches ?? []) {

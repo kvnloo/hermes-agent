@@ -32,6 +32,19 @@ export class Composer {
   #browse = -1
   #draft = ''
 
+  /** Starts an independent editing transaction without recording a prior value. */
+  reset(text = '', cursor = text.length) {
+    this.#undo = []
+    this.#redo = []
+    this.#lastEdit = 0
+    this.#kill = ''
+    this.#browse = -1
+    this.#draft = ''
+    this.text = text
+    this.cursor = clamp(cursor, text.length)
+    this.#changed()
+  }
+
   set(text: string, cursor = text.length) {
     this.#record({ merge: false })
     this.text = text

@@ -471,34 +471,35 @@ def atomic_roundtrip_yaml_update(path: Union[str, Path], key_path: str, value: A
     # blind splitting — same navigation as ``hermes config set``'s ``_set_nested``; otherwise
     # /model + TUI persistence wrote ``glm-5: {'3': ...}`` phantom siblings.
     # See #91607.
-    from hermes_cli.config import _greedy_literal_match, _split_key_path
+    from hermes_cli.config import _greedy_literal_match, _split_key_path, config_mutation_lock
 
     path = Path(path)
     from hermes_constants import mkdir_under_hermes_home
 
     mkdir_under_hermes_home(path.parent)
-    yaml_rt, config = _roundtrip_load(path)
-    current = config
-    keys = _split_key_path(key_path)
-    i = 0
-    while True:
-        remaining = keys[i:]
-        seg, consumed = _greedy_literal_match(dict(current), remaining) or (remaining[0], 1)
-        if i + consumed == len(keys):
-            if value is None:
-                current.pop(seg, None)
-            else:
-                current[seg] = value
-            break
-        next_value = current.get(seg)
-        if not isinstance(next_value, CommentedMap):
-            if value is None:
-                return  # nothing to remove under a missing/scalar parent
-            next_value = CommentedMap()
-            current[seg] = next_value
-        current = next_value
-        i += consumed
-    _roundtrip_dump(path, yaml_rt, config)
+    with config_mutation_lock(path):
+        yaml_rt, config = _roundtrip_load(path)
+        current = config
+        keys = _split_key_path(key_path)
+        i = 0
+        while True:
+            remaining = keys[i:]
+            seg, consumed = _greedy_literal_match(dict(current), remaining) or (remaining[0], 1)
+            if i + consumed == len(keys):
+                if value is None:
+                    current.pop(seg, None)
+                else:
+                    current[seg] = value
+                break
+            next_value = current.get(seg)
+            if not isinstance(next_value, CommentedMap):
+                if value is None:
+                    return  # nothing to remove under a missing/scalar parent
+                next_value = CommentedMap()
+                current[seg] = next_value
+            current = next_value
+            i += consumed
+        _roundtrip_dump(path, yaml_rt, config)
 
 
 # ruamel's round-trip dumper resolves plain scalars under YAML 1.2, where only true/false/null are

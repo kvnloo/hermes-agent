@@ -6745,12 +6745,12 @@ def _define_discord_view_classes() -> None:
             self._add_button(_t_discord("platform.discord.picker.cancel", _DISCORD_BUTTON_LABEL_LIMIT), discord.ButtonStyle.grey, "model_expensive_cancel", self._on_cancel)
 
         async def _expensive_warning_for(self, model_id: str):
-            try:
-                from hermes_cli.model_selection_guards import combined_selection_warning
-                # Pricing lookup can hit models.dev on a cache miss — keep it off the event loop.
-                return await asyncio.to_thread(combined_selection_warning, model_id, provider=self._selected_provider)
-            except Exception:
-                return None
+            from hermes_cli.model_selection_guards import combined_selection_warning
+            # Local pricing metadata is read off the event loop; provider I/O is disabled for this preflight.
+            return await asyncio.to_thread(
+                combined_selection_warning, model_id, provider=self._selected_provider,
+                allow_provider_io=False)
+
 
         def _config_embed(self, description: str, *, title: Optional[str] = None, color=None):
             title = title if title is not None else t("platform.discord.picker.title")
@@ -6793,7 +6793,13 @@ def _define_discord_view_classes() -> None:
             if not await self._gate(interaction, resolved_msg=t("platform.discord.picker.already_resolved"), unauth_msg=_unauthorized()):
                 return
             model_id = interaction.data["values"][0]
-            warning = await self._expensive_warning_for(model_id)
+            try:
+                warning = await self._expensive_warning_for(model_id)
+            except Exception as exc:
+                await self._edit(
+                    interaction, t("platform.discord.picker.switch_error", error=str(exc)),
+                    color=discord.Color.red())
+                return
             if warning is not None:
                 self._build_expensive_confirm(model_id)
                 await self._edit(interaction, warning.message, title=f"⚠ {warning.title}", color=discord.Color.red())

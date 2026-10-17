@@ -64,11 +64,14 @@ def _wrap(kind: str, title: str, warning, model_name: str, provider: Optional[st
 
 def _cost_guard(
     model_name: str, provider: Optional[str], base_url: Optional[str], api_key: Optional[str],
-    model_info: Optional[ModelInfo], ctx: Optional[SelectionContext] = None) -> Optional[SelectionWarning]:
+    model_info: Optional[ModelInfo], ctx: Optional[SelectionContext] = None, *,
+    allow_provider_io: bool = True,
+) -> Optional[SelectionWarning]:
     from hermes_cli.model_cost_guard import expensive_model_warning
 
     warning = expensive_model_warning(
-        model_name, provider=provider, base_url=base_url, api_key=api_key, model_info=model_info)
+        model_name, provider=provider, base_url=base_url, api_key=api_key, model_info=model_info,
+        allow_provider_io=allow_provider_io)
     return _wrap("cost", "Expensive Model Warning", warning, model_name, provider)
 
 
@@ -139,17 +142,20 @@ def selection_warnings(
     model_name: str, *, provider: Optional[str] = None, base_url: Optional[str] = None,
     api_key: Optional[str] = None, model_info: Optional[ModelInfo] = None,
     include_kinds: Optional[Iterable[str]] = None,
-    selection_context: Optional[SelectionContext] = None) -> List[SelectionWarning]:
-    """Warnings from every registered guard (empty in the common case). ``include_kinds`` restricts
-    which kinds are returned; ``selection_context`` carries live-session facts for switch-aware guards.
-    Guard exceptions are swallowed — never break model selection."""
+    selection_context: Optional[SelectionContext] = None, allow_provider_io: bool = True,
+) -> List[SelectionWarning]:
+    """Warnings from every registered guard (empty in the common case).
+    ``allow_provider_io=False`` restricts price checks to already-available local metadata.
+    Guard-evaluation failures propagate so callers can reject failed selections."""
     wanted = set(include_kinds) if include_kinds is not None else None
     results: List[SelectionWarning] = []
     for guard in _GUARDS:
-        try:
+        if guard is _cost_guard:
+            warning = guard(
+                model_name, provider, base_url, api_key, model_info, selection_context,
+                allow_provider_io=allow_provider_io)
+        else:
             warning = guard(model_name, provider, base_url, api_key, model_info, selection_context)
-        except Exception:
-            continue
         if warning is not None and (wanted is None or warning.kind in wanted):
             results.append(warning)
     return results
@@ -163,13 +169,13 @@ def combined_message(warnings: List[SelectionWarning]) -> str:
 def combined_selection_warning(
     model_name: str, *, provider: Optional[str] = None, base_url: Optional[str] = None,
     api_key: Optional[str] = None, model_info: Optional[ModelInfo] = None,
-    selection_context: Optional[SelectionContext] = None,
+    selection_context: Optional[SelectionContext] = None, allow_provider_io: bool = True,
 ) -> Optional[SelectionWarning]:
     """Drop-in for ``expensive_model_warning`` call sites: ``None``, the single warning, or a merged
     ``kind="multiple"`` warning stacking every message."""
     warnings = selection_warnings(
         model_name, provider=provider, base_url=base_url, api_key=api_key, model_info=model_info,
-        selection_context=selection_context)
+        selection_context=selection_context, allow_provider_io=allow_provider_io)
     if not warnings:
         return None
     if len(warnings) == 1:

@@ -35,17 +35,9 @@ class _StubCLI:
     _pending_model_switch_note = None
     _pending_one_turn_model_restore = None
 
-    def _confirm_expensive_model_switch(self, result):
+    def _confirm_expensive_model_switch(self, result, precomputed_warning=None):
         return True
 
-    def _confirm_and_apply_cli_model_switch(
-        self, result, persist_global, one_turn, custom_provs=None
-    ):
-        import cli as cli_mod
-
-        return cli_mod.HermesCLI._confirm_and_apply_cli_model_switch(
-            self, result, persist_global, one_turn, custom_provs
-        )
 
 
 def test_cli_model_once_records_restore_and_does_not_persist(monkeypatch):

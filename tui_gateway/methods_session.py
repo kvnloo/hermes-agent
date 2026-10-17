@@ -2022,21 +2022,44 @@ def _(rid, params: dict, session: dict) -> dict:
     busy = _err(rid, 4009, busy_message("undo", bool(session.get("_manual_compress_active"))))
     if session.get("running"):
         return busy
+    has_target = "row_id" in params
+    target_row_id = params.get("row_id")
+    if has_target and (type(target_row_id) is not int or target_row_id <= 0):
+        return _err(rid, 4000, "row_id must be a positive integer.")
     removed = 0
     with session["history_lock"]:
         if session.get("running"):
             return busy
-        history = _history_without_ephemeral_scaffolding(session.get("history", []))
-        # Truncate from the last *real* user turn (not a timeline marker / compaction handoff).
-        from agent.context_compressor import user_originated_turn_view
-        if user_turns := sum(1 for message in history if user_originated_turn_view(message) is not None):
+        if has_target:
             try:
-                removed = _rewind_active_session_history(session, user_turns - 1)[2]
+                removed = _rewind_active_session_history(session, target_row_id=target_row_id)[2]
+            except ValueError as exc:
+                return _err(rid, 4018, str(exc))
             except Exception as exc:
                 return _err(rid, 5008, f"undo: {exc}")
-    if removed:  # Ink /retry is undo + resend and says so via ``intent`` (helper: methods_tools).
+        else:
+            history = _history_without_ephemeral_scaffolding(session.get("history", []))
+            # Legacy /undo removes the last real user turn (not a timeline marker / compaction handoff).
+            from agent.context_compressor import user_originated_turn_view
+            if user_turns := sum(1 for message in history if user_originated_turn_view(message) is not None):
+                try:
+                    removed = _rewind_active_session_history(session, user_turns - 1)[2]
+                except Exception as exc:
+                    return _err(rid, 5008, f"undo: {exc}")
+    if removed:
         _tui_model_friction("retry" if params.get("intent") == "retry" else "undo", session)
-    return _ok(rid, {"removed": removed})
+    history = list(session.get("history", []))
+    if session.get("session_key"):
+        with _session_db(session) as db:
+            if db is None:
+                return _err(rid, 5008, "undo: session database is unavailable")
+            try:
+                history = db.get_messages_as_conversation(
+                    session["session_key"], include_ancestors=True, include_row_ids=True)
+            except Exception as exc:
+                return _err(rid, 5008, f"undo: could not read back the retained transcript: {exc}")
+    messages = _history_to_messages(history, profile_home=session.get("profile_home"))
+    return _ok(rid, {"removed": removed, "count": len(messages), "messages": messages})
 
 
 def _save_via_compute_host(rid, params: dict) -> dict:

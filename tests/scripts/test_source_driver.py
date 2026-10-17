@@ -154,7 +154,12 @@ def test_pm_observer_accepts_ready_fixture_and_leaves_failed_fixture_untouched(t
     root = tmp_path / "source"
     for directory in ("pm", "hermes_cli"):
         shutil.copytree(repo / directory, root / directory, ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(repo / "ui-tsp", root / "ui-tsp",
+                    ignore=shutil.ignore_patterns("dist", "node_modules", "__pycache__"))
     shutil.copy2(repo / "hermes_constants.py", root / "hermes_constants.py")
+    shutil.copy2(repo / "package.json", root / "package.json")
+    (root / "ui-tui").mkdir()
+    shutil.copy2(repo / "ui-tui/package.json", root / "ui-tui/package.json")
     (root / "hermes_bootstrap.py").write_text("raise RuntimeError('bootstrap must not run')", encoding="utf-8")
     (root / "uv.lock").write_text("fixture locked graph", encoding="utf-8")
     home = tmp_path / "home"
@@ -199,8 +204,14 @@ ensure_install_launchers(root, root / '.hermes/bin')
     record = '''import { mkdirSync, writeFileSync } from 'node:fs';
 import { buildInputs, recordProduct } from './scripts/build/freshness.mjs';
 const source = process.cwd();
-for (const [product, out] of [['tui', 'ui-tui/dist'], ['web', 'hermes_cli/web_dist'], ['desktop', 'apps/desktop/release/linux-unpacked/resources/app.asar.unpacked/dist']]) {
-  mkdirSync(out, { recursive: true }); writeFileSync(out + '/index.html', 'fixture product');
+for (const [product, out] of [
+  ['tui', 'ui-tui/dist'],
+  ['tsp', 'ui-tsp/dist'],
+  ['web', 'hermes_cli/web_dist'],
+  ['desktop', 'apps/desktop/release/linux-unpacked/resources/app.asar.unpacked/dist'],
+]) {
+  const filename = product === 'tui' || product === 'tsp' ? 'entry.js' : 'index.html';
+  mkdirSync(out, { recursive: true }); writeFileSync(out + '/' + filename, 'fixture product');
   recordProduct({source, product, out, inputs: buildInputs(source, product)});
 }
 '''

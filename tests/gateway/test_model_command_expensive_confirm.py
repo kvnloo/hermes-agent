@@ -118,6 +118,98 @@ async def test_typed_model_expensive_confirm_once_applies_switch(tmp_path, monke
     assert overrides[0]["model"] == "openai/gpt-5.5-pro"
 
 
+
+
+def _seed_openrouter_price_cache(monkeypatch):
+    import time
+
+    import agent.models_dev as models_dev
+
+    cache = {
+        "openrouter": {
+            "name": "OpenRouter",
+            "env": ["OPENROUTER_API_KEY"],
+            "api": "https://openrouter.ai/api/v1",
+            "models": {
+                "openai/gpt-5.5-pro": {"cost": {"input": 50.0, "output": 200.0}},
+            },
+        },
+    }
+    monkeypatch.setattr(models_dev, "_models_dev_cache", cache)
+    monkeypatch.setattr(models_dev, "_models_dev_cache_time", time.time())
+    reads = []
+
+    def _fetch_models_dev(force_refresh=False, *, allow_network=True):
+        reads.append(allow_network)
+        if allow_network:
+            raise AssertionError("selection guard attempted a models.dev refresh")
+        return cache
+
+    monkeypatch.setattr(models_dev, "fetch_models_dev", _fetch_models_dev)
+    return reads
+
+
+@pytest.mark.parametrize(("choice", "should_switch"), [("once", True), ("cancel", False)])
+@pytest.mark.asyncio
+async def test_typed_gateway_switch_confirms_from_local_guard_before_switch_seam(
+    tmp_path, monkeypatch, choice, should_switch,
+):
+    from hermes_cli.model_cost_guard import expensive_model_warning
+
+    _setup_isolated_home(tmp_path, monkeypatch, warn=False)
+    monkeypatch.setattr("hermes_cli.model_cost_guard.expensive_model_warning", expensive_model_warning)
+    monkeypatch.setattr("gateway.code_skew.detect_code_skew", lambda: None)
+    monkeypatch.setattr(
+        "hermes_cli.context_switch_guard.enrich_model_switch_warnings_for_gateway",
+        lambda *_args, **_kwargs: None,
+    )
+
+    def _blocked_before_consent(*_args, **_kwargs):
+        raise AssertionError("switch validation or capabilities ran before consent")
+
+    monkeypatch.setattr("hermes_cli.models_validate.validate_requested_model", _blocked_before_consent)
+    monkeypatch.setattr("hermes_cli.model_switch.get_model_capabilities", _blocked_before_consent)
+    monkeypatch.setattr("hermes_cli.model_switch.get_model_info", _blocked_before_consent)
+    metadata_reads = _seed_openrouter_price_cache(monkeypatch)
+    runner = _make_runner()
+    runner._evict_cached_agent = lambda _session_key: None
+    events = []
+    approved = {"value": False}
+
+    def _switch_model(**_kwargs):
+        assert approved["value"]
+        events.append("switch")
+        return _fake_switch_result()
+
+    monkeypatch.setattr("hermes_cli.model_switch.switch_model", _switch_model)
+    captured = {}
+
+    async def _request_slash_confirm(**kwargs):
+        captured.update(kwargs)
+        events.append("prompt")
+        return None
+
+    runner._request_slash_confirm = _request_slash_confirm
+
+    await runner._handle_model_command(
+        _make_event("/model openai/gpt-5.5-pro --provider openrouter"))
+
+    assert events == ["prompt"]
+    assert metadata_reads and all(read is False for read in metadata_reads)
+    assert runner._session_model_overrides == {}
+
+    approved["value"] = should_switch
+    reply = await captured["handler"](choice)
+    if should_switch:
+        assert "gpt-5.5-pro" in reply
+        assert events == ["prompt", "switch"]
+        overrides = list(runner._session_model_overrides.values())
+        assert len(overrides) == 1
+        assert overrides[0]["model"] == "openai/gpt-5.5-pro"
+    else:
+        assert "cancel" in reply.lower()
+        assert events == ["prompt"]
+        assert runner._session_model_overrides == {}
 @pytest.mark.asyncio
 async def test_failed_inplace_swap_aborts_commit(tmp_path, monkeypatch):
     """A failed in-place agent swap must be a no-op, not a dead session.
@@ -166,3 +258,56 @@ async def test_failed_inplace_swap_aborts_commit(tmp_path, monkeypatch):
     assert evicted == []
     # The agent stayed on its old model (rolled back).
     assert agent.model == "old-model"
+
+@pytest.mark.asyncio
+async def test_registered_guard_failure_rejects_typed_switch_without_mutation(tmp_path, monkeypatch):
+    """A real registered-guard fault is a recoverable refusal, not a warning-free switch."""
+    from dataclasses import replace
+    from unittest.mock import AsyncMock
+
+    from hermes_cli.model_cost_guard import expensive_model_warning
+
+    config_path = _setup_isolated_home(tmp_path, monkeypatch, warn=False)
+    monkeypatch.setattr("hermes_cli.model_cost_guard.expensive_model_warning", expensive_model_warning)
+    monkeypatch.setattr("gateway.code_skew.detect_code_skew", lambda: None)
+    monkeypatch.setattr(
+        "hermes_cli.context_switch_guard.enrich_model_switch_warnings_for_gateway",
+        lambda *_args, **_kwargs: None,
+    )
+    result = replace(
+        _fake_switch_result(), new_model="guard-fault-model", target_provider="anthropic",
+    )
+    switch_calls = []
+
+    def _switch_model(**_kwargs):
+        switch_calls.append(True)
+        return result
+
+    monkeypatch.setattr("hermes_cli.model_switch.switch_model", _switch_model)
+    failures = []
+
+    def _broken_metadata(provider, model):
+        failures.append((provider, model))
+        raise RuntimeError("registered guard metadata failure")
+
+    monkeypatch.setattr("agent.models_dev.get_model_info", _broken_metadata)
+    before = config_path.read_bytes()
+    runner = _make_runner()
+    runner._record_switch_metrics = lambda *_args, **_kwargs: None
+    runner._evict_cached_agent = lambda *_args, **_kwargs: None
+    runner._model_switch_confirmation = AsyncMock(return_value="switched")
+    event = _make_event("/model guard-fault-model --provider anthropic")
+    old_override = {"model": "old-model", "provider": "openrouter"}
+    session_key = runner._session_key_for_source(event.source)
+    runner._session_model_overrides[session_key] = old_override.copy()
+    before_overrides = {session_key: old_override.copy()}
+
+    reply = await runner._handle_model_command(event)
+
+    assert reply is not None
+    assert "staying on old-model" in reply.lower()
+    assert "no model change was made" in reply.lower()
+    assert failures == [("anthropic", "guard-fault-model")]
+    assert switch_calls == []
+    assert runner._session_model_overrides == before_overrides
+    assert config_path.read_bytes() == before

@@ -27,7 +27,7 @@ def _composite_carrier() -> dict:
 
 
 @pytest.fixture()
-def carrier_session(tmp_path):
+def carrier_session(tmp_path, monkeypatch):
     old_db = server._db
     db = SessionDB(db_path=tmp_path / "state.db")
     installed_ids: list[str] = []
@@ -61,6 +61,7 @@ def carrier_session(tmp_path):
         server._sessions[sid] = session
         return sid, session_key, session
 
+    monkeypatch.setattr(server, "_tui_model_friction", lambda *_args, **_kwargs: None)
     server._db = db
     yield db, install
     for sid in installed_ids:
@@ -76,11 +77,13 @@ def _dispatch(sid: str, name: str) -> dict:
     )
 
 
-def _session_undo(sid: str) -> dict:
-    return server._methods["session.undo"](
-        "request-id",
-        {"session_id": sid},
-    )
+def _session_undo(sid: str, row_id: int | None = None) -> dict:
+    params = {"session_id": sid}
+    if row_id is not None:
+        params["row_id"] = row_id
+    return server.handle_request({
+        "id": "request-id", "method": "session.undo", "params": params,
+    })
 
 
 def _assert_scaffold_preserved(
@@ -367,6 +370,86 @@ def test_session_undo_preserves_the_composite_carriers_scaffold(carrier_session)
 
     assert response["result"]["removed"] == 2
     _assert_scaffold_preserved(db, session_key, session)
+
+
+def test_session_undo_targets_the_clicked_user_row_and_returns_authoritative_history(carrier_session):
+    db, install = carrier_session
+    sid, session_key, session = install([
+        {"role": "user", "content": "same question"},
+        {"role": "assistant", "content": "first answer"},
+        {"role": "user", "content": "same question"},
+        {"role": "assistant", "content": "second answer"},
+        {"role": "user", "content": "later question"},
+        {"role": "assistant", "content": "later answer"},
+    ])
+    before = db.get_messages_as_conversation(session_key, include_row_ids=True)
+    target_row_id = next(message["_row_id"] for index, message in enumerate(before)
+                         if message["role"] == "user" and index > 0)
+
+    response = _session_undo(sid, target_row_id)
+
+    assert "result" in response, response
+    result = response["result"]
+    assert result["removed"] > 0
+    assert result["count"] == len(result["messages"]) == 2
+    assert [(message["role"], message["text"]) for message in result["messages"]] == [
+        ("user", "same question"), ("assistant", "first answer")]
+    assert [message["row_id"] for message in result["messages"]] == [
+        before[0]["_row_id"], before[1]["_row_id"]]
+    durable = db.get_messages_as_conversation(session_key, include_row_ids=True)
+    assert [(message["role"], message["content"]) for message in durable] == [
+        ("user", "same question"), ("assistant", "first answer")]
+    assert session["agent"]._session_messages == session["history"]
+    assert [message["_row_id"] for message in session["history"]] == [
+        before[0]["_row_id"], before[1]["_row_id"]]
+
+
+def test_session_undo_rejects_non_user_and_stale_row_ids_without_latest_fallback(carrier_session):
+    db, install = carrier_session
+    sid, session_key, session = install([
+        {"role": "user", "content": "first"},
+        {"role": "assistant", "content": "reply"},
+        {"role": "user", "content": "latest"},
+        {"role": "assistant", "content": "latest reply"},
+    ])
+    before = db.get_messages_as_conversation(session_key, include_row_ids=True)
+    warm_before = [message.copy() for message in session["history"]]
+    assistant_row_id = before[1]["_row_id"]
+
+    for row_id in (assistant_row_id, max(message["_row_id"] for message in before) + 100):
+        response = _session_undo(sid, row_id)
+        assert response.get("error", {}).get("code") == 4018
+        assert db.get_messages_as_conversation(session_key, include_row_ids=True) == before
+        assert session["history"] == warm_before
+
+    malformed = _session_undo(sid, True)
+    assert malformed.get("error", {}).get("code") == 4000
+    assert db.get_messages_as_conversation(session_key, include_row_ids=True) == before
+
+@pytest.mark.parametrize("row_id", [None, 0, -1])
+def test_session_undo_public_dispatch_rejects_null_and_nonpositive_rows_without_latest_fallback(
+    carrier_session, row_id,
+):
+    db, install = carrier_session
+    sid, session_key, session = install([
+        {"role": "user", "content": "first"},
+        {"role": "assistant", "content": "reply"},
+        {"role": "user", "content": "latest"},
+        {"role": "assistant", "content": "latest reply"},
+    ])
+    before = db.get_messages_as_conversation(session_key, include_row_ids=True)
+    warm_before = [message.copy() for message in session["history"]]
+
+    response = server.handle_request({
+        "id": "request-id", "method": "session.undo",
+        "params": {"session_id": sid, "row_id": row_id},
+    })
+
+    assert response.get("error", {}).get("code") == 4000
+    assert db.get_messages_as_conversation(session_key, include_row_ids=True) == before
+    assert session["history"] == warm_before
+
+
 
 
 def test_history_projection_unwraps_composite_and_hides_sole_handoff():

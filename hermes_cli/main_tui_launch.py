@@ -109,15 +109,46 @@ def _tern_frontend_wanted(env: dict) -> bool:
         return True
 
 
-def _make_tsp_argv(project_root: Path) -> Optional[tuple[list[str], Path]]:
-    """The Tern frontend: the wheel's bundled ``tsp_dist``, else the checkout's receipted
-    ``ui-tsp/dist`` (rebuilt when stale); None when this install carries neither."""
-    bundled = Path(__file__).parent / "tsp_dist" / "entry.js"
-    if bundled.is_file():
-        return [_tui_node_bin("node"), str(bundled)], bundled.parent
+def _make_tsp_argv(project_root: Path) -> tuple[list[str], Path]:
+    """Use a staged product, or build only from a complete source checkout."""
+    referenced = os.environ.get("HERMES_TSP_DIR")
+    if referenced:
+        product = Path(referenced)
+        entry = product / "dist/entry.js"
+        if not entry.is_file() or not (product / "package.json").is_file():
+            raise FileNotFoundError(f"configured TSP product is incomplete: {product}")
+        return [_tui_node_bin("node"), str(entry)], product
+
+    bundled_dir = Path(__file__).parent / "tsp_dist"
+    bundled = bundled_dir / "entry.js"
+    if bundled.is_file() and (bundled_dir / "package.json").is_file():
+        return [_tui_node_bin("node"), str(bundled)], bundled_dir
     tsp_dir = project_root / "ui-tsp"
-    if not (tsp_dir / "package.json").is_file():
-        return None
+    # Sealed payloads omit the source compiler graph. They must use a staged
+    # product; never try to compile a checkout that lacks its full build path.
+    source_files = (
+        project_root / "package.json", project_root / "package-lock.json",
+        project_root / ".npmrc", project_root / "pm/lock.json",
+        project_root / "scripts/build/tsp.mjs",
+        project_root / "scripts/build/node-deps.mjs",
+        project_root / "scripts/build/frontend-common.mjs",
+        project_root / "scripts/build/freshness.mjs",
+        tsp_dir / "package.json", tsp_dir / "tsconfig.json",
+        tsp_dir / "scripts/build.mjs", tsp_dir / "src/entry.ts",
+        project_root / "ui-tui/package.json", project_root / "ui-tui/tsconfig.json",
+        project_root / "apps/shared/package.json", project_root / "apps/shared/tsconfig.json",
+    )
+    source_directories = (
+        tsp_dir / "src", tsp_dir / "assets", tsp_dir / "scripts",
+        project_root / "ui-tui/src", project_root / "apps/shared/src",
+    )
+    if not all(path.is_file() for path in source_files) or not all(
+        path.is_dir() for path in source_directories
+    ):
+        raise FileNotFoundError(
+            f"no complete TSP product or source build graph is available "
+            f"(expected {bundled} or a complete {tsp_dir} checkout)"
+        )
 
     from hermes_cli.source_build import (
         build_source_tsp, prepare_launch_dependencies, source_build_env, source_product_current)

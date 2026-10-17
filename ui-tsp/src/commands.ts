@@ -48,17 +48,18 @@ const COMMANDS: readonly LocalCommand[] = [
       }
 
       const sid = app.sid
+      const generation = app.sessionGeneration
       const r = await switchModel(app, arg, false, sid)
 
-      if (r.confirm_required && app.sid === sid) {
+      if (r.confirm_required && app.sid === sid && app.sessionGeneration === generation) {
         app.open(
           confirmOverlay(app, {
             confirm: 'Switch anyway',
             detail: `Session: ${sid}. Model request: ${arg}. ${r.confirm_message || r.warning || ''}`,
             onConfirm: () => {
-              if (app.sid === sid) {
+              if (app.sid === sid && app.sessionGeneration === generation) {
                 void switchModel(app, arg, true, sid).catch((error: Error) => {
-                  if (app.sid === sid) {
+                  if (app.sid === sid && app.sessionGeneration === generation) {
                     app.transcript.notice(error.message, 'error')
                     app.changed()
                   }
@@ -75,6 +76,7 @@ const COMMANDS: readonly LocalCommand[] = [
     name: 'reasoning',
     run: async (app, arg) => {
       const sid = app.sid
+      const generation = app.sessionGeneration
 
       if (!sid) {
         return
@@ -83,7 +85,7 @@ const COMMANDS: readonly LocalCommand[] = [
       if (!arg) {
         const r = await app.gw.request<ConfigGetResult>('config.get', { key: 'reasoning', session_id: sid })
 
-        if (app.sid === sid && typeof r.value === 'string') {
+        if (app.sid === sid && app.sessionGeneration === generation && typeof r.value === 'string') {
           app.info = { ...app.info, reasoning_effort: r.value }
           app.transcript.panel('/reasoning', `Reasoning effort: ${r.value} (display: ${r.display ?? 'show'}).`)
         }
@@ -116,7 +118,7 @@ const COMMANDS: readonly LocalCommand[] = [
 
       const r = await app.setReasoning(value, scope, sid)
 
-      if (app.sid === sid && typeof r?.value === 'string') {
+      if (app.sid === sid && app.sessionGeneration === generation && typeof r?.value === 'string') {
         app.transcript.panel(`/reasoning ${arg}`, `Reasoning: ${r.value}.`)
       }
     }
@@ -124,12 +126,27 @@ const COMMANDS: readonly LocalCommand[] = [
   {
     aliases: ['resume', 'session', 'switch'],
     name: 'sessions',
-    run: (app, arg) => {
+    run: async (app, arg) => {
       if (!arg) {
         return openSessionPicker(app)
       }
 
-      return arg === 'new' ? app.newSession() : app.resume(arg)
+      if (arg === 'new') {
+        return app.newSession()
+      }
+
+      const sid = app.sid
+      const pending = app.resume(arg)
+      const generation = app.sessionGeneration
+
+      try {
+        await pending
+      } catch (error) {
+        if (app.sid === sid && app.sessionGeneration === generation) {
+          app.transcript.notice(error instanceof Error ? error.message : String(error), 'error')
+          app.changed()
+        }
+      }
     }
   },
   {

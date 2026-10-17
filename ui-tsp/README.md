@@ -75,6 +75,7 @@ Type to search all pages, or press Ctrl+F.
 Use Up/Down to select a row, Enter to edit it, and Tab or Left/Right to change pages.
 Boolean, number, choice and text rows use native controls.
 List and object rows use JSON text. Hermes rejects invalid JSON and the wrong root shape before it sends a write.
+Mixed boolean/string domains use a text editor with the accepted types and values shown in the hint; they are not coerced into switches.
 Untouched nullable values stay unset, including nullable choices.
 Boolean and numeric environment templates stay visible as raw text, not false switches or blank numbers.
 Nullable booleans and numbers show **Unset**, not false or zero.
@@ -83,6 +84,7 @@ Enter validates and commits the number. Typing alone does not change the saved v
 Rejected numeric drafts survive leaving and reopening the editor as their original text.
 Stored credential values remain undisclosed. Null credential leaves in JSON preserve the stored credential. An explicit empty string clears a scalar credential.
 **Clear private value** submits an explicit empty string through the same exact confirmation flow. An untouched blank editor preserves the credential.
+Private list and object drafts are masked too. Confirmation sheets identify the affected key but never print a sensitive proposed value.
 
 Each row has the saved value and its default.
 **Use default for selected field** restores a public field's default. For a structured private field, credential nulls still preserve stored credentials.
@@ -93,6 +95,7 @@ The composer retains its draft and caret. Ctrl+C closes Settings without clearin
 
 Hermes sends one changed key per write and serializes profile operations.
 Duplicate native commits do not repeat a mutation.
+Closing or replacing the sheet drains already queued edits before a replacement reads saved values. Session changes invalidate those edits.
 The displayed saved value comes from canonical `settings.get` readback.
 Coupled readback changes invalidate earlier duplicate-commit acceptance for the affected fields.
 Errors retain the draft and offer **Retry**.
@@ -102,6 +105,8 @@ Policy and consent changes show the exact profile, setting and proposed value.
 **Cancel** is the default. Enter or Escape cancels. Only the explicit confirmation control accepts the change.
 Every open belongs to its original live session and overlay instance.
 Late replies, old native IDs and queued callbacks cannot write into a replacement session or sheet.
+Pending resume events remain in transport order, including events for the same session ID. A failed resume returns queued prompts to the composer instead of sending them into the old session. Superseded held approval requests are refused.
+Delayed skill expansion waits behind an active turn and displays the original command, not its private expanded prompt.
 
 The SDK routes `change` to `onChange`, `select` to `onSelect`, `activate` to `onActivate`, and named `action` to `onAction`.
 Prefs changes use the sheet ID plus `item` (the schema key) and typed `value`.

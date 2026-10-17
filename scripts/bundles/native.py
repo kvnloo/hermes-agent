@@ -97,36 +97,57 @@ def stage_pm_runtime(root: Path, python: Path, repo: Path, *, offline: bool = Fa
 def stage_native(args) -> int:
     """Isolate HOME and PM state, but retain the provider's reusable build cache."""
     from pm.packages import uv_cache_dir
+    from scripts.bundles.frontend_products import snapshot_frontends
+    from scripts.bundles.payload import resolve_revision
 
-    out = Path(args.out).resolve()
-    out.mkdir(parents=True, exist_ok=True)
-    (out / "manifest.json").unlink(missing_ok=True)
     root = Path(__file__).resolve().parents[2]
-    # Resolve before HOME isolation so the build warms the cache CI saves.
-    cache = Path(getattr(args, "cache", None) or os.environ.get("UV_CACHE_DIR") or uv_cache_dir()).resolve()
-    base_env = dict(os.environ)
-    if current_target() == "win32-arm64":
-        from pm.native_build import prepare_windows_environment
+    try:
+        revision = resolve_revision(root, args.ref or "HEAD")
+    except subprocess.CalledProcessError as error:
+        return error.returncode
+    frontends = {
+        name: Path(product).resolve()
+        for name, product in getattr(args, "frontends", {}).items()
+    }
+    with snapshot_frontends(root, revision, frontends) as frozen:
+        out = Path(args.out).resolve()
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "manifest.json").unlink(missing_ok=True)
+        # Resolve before HOME isolation so the build warms the cache CI saves.
+        cache = Path(
+            getattr(args, "cache", None) or os.environ.get("UV_CACHE_DIR") or uv_cache_dir()
+        ).resolve()
+        base_env = dict(os.environ)
+        if current_target() == "win32-arm64":
+            from pm.native_build import prepare_windows_environment
 
-        base_env = prepare_windows_environment(source=root, state=out.parent / ".build-deps", env=base_env)
-    # Rustup resolves its installed toolchain under HOME unless these are explicit.
-    # Preserve the build host's compiler and Cargo cache before isolating app state.
-    for key, directory in (("CARGO_HOME", ".cargo"), ("RUSTUP_HOME", ".rustup")):
-        base_env.setdefault(key, str(Path.home() / directory))
-    with tempfile.TemporaryDirectory(prefix=".build-", dir=out) as work:
-        env = {**base_env, "HOME": work, "USERPROFILE": work,
-               "HERMES_HOME": str(Path(work) / ".hermes"),
-               "HERMES_RUNTIME_DIR": str(out / "tools"),
-               "HERMES_PYTHON_SRC_ROOT": str(root),
-               "XDG_CACHE_HOME": str(Path(work) / "cache"),
-               "XDG_CONFIG_HOME": str(Path(work) / "config"),
-               "UV_CACHE_DIR": str(cache),
-               "PYTHONPATH": os.pathsep.join([str(root), *filter(None, sys.path)])}
-        command = [sys.executable, "-B", "-m", "scripts.bundles.native", "--out", str(out),
-                   "--ref", args.ref or "HEAD", "--source", str(root)]
-        for name, product in getattr(args, "frontends", {}).items():
-            command += [f"--{name}", str(product)]
-        return subprocess.run(command, cwd=root, env=env).returncode
+            base_env = prepare_windows_environment(
+                source=root, state=out.parent / ".build-deps", env=base_env
+            )
+        # Rustup resolves its installed toolchain under HOME unless these are explicit.
+        # Preserve the build host's compiler and Cargo cache before isolating app state.
+        for key, directory in (("CARGO_HOME", ".cargo"), ("RUSTUP_HOME", ".rustup")):
+            base_env.setdefault(key, str(Path.home() / directory))
+        with tempfile.TemporaryDirectory(prefix=".build-", dir=out) as work:
+            env = {
+                **base_env,
+                "HOME": work,
+                "USERPROFILE": work,
+                "HERMES_HOME": str(Path(work) / ".hermes"),
+                "HERMES_RUNTIME_DIR": str(out / "tools"),
+                "HERMES_PYTHON_SRC_ROOT": str(root),
+                "XDG_CACHE_HOME": str(Path(work) / "cache"),
+                "XDG_CONFIG_HOME": str(Path(work) / "config"),
+                "UV_CACHE_DIR": str(cache),
+                "PYTHONPATH": os.pathsep.join([str(root), *filter(None, sys.path)]),
+            }
+            command = [
+                sys.executable, "-B", "-m", "scripts.bundles.native", "--out", str(out),
+                "--ref", revision, "--source", str(root),
+            ]
+            for name, product in frozen.items():
+                command += [f"--{name}", str(product)]
+            return subprocess.run(command, cwd=root, env=env).returncode
 
 
 def prune_staged_store(store_dir: Path, names: list[str]) -> None:
@@ -147,19 +168,22 @@ def prepare_native(*, out: Path, ref: str, source: Path, cache: Path,
     wrapper provisions machine prerequisites and isolates HOME.
     """
     from scripts.bundles.native_prepared import preparation_lock, prepared_path
+    from scripts.bundles.payload import resolve_revision
 
     out = Path(out).absolute()
     if out != out.resolve():
         raise ValueError("symlinked native output")
+    source = Path(source).resolve()
+    revision = resolve_revision(source, ref)
     out.mkdir(parents=True, exist_ok=True)
     with preparation_lock(out):
         prepared_path(out).unlink(missing_ok=True)
         (out / "manifest.json").unlink(missing_ok=True)
-        return _prepare_native(out=out, ref=ref, source=Path(source).resolve(),
+        return _prepare_native(out=out, revision=revision, source=source,
                                cache=Path(cache).resolve(), tools=tools, env=env)
 
 
-def _prepare_native(*, out: Path, ref: str, source: Path, cache: Path,
+def _prepare_native(*, out: Path, revision: str, source: Path, cache: Path,
                     tools: Path | None, env: dict | None) -> Path:
     from pm import paths
     from pm.package import InstallError
@@ -168,10 +192,7 @@ def _prepare_native(*, out: Path, ref: str, source: Path, cache: Path,
     store_dir.mkdir(parents=True, exist_ok=True)
     repo_dir = out / "hermes-agent"
     from scripts.bundles.payload import INERT_SNAPSHOT_DIRS, snapshot
-    print(f"staging repo snapshot ({ref})…", flush=True)
-    revision = subprocess.check_output(
-        ["git", "rev-parse", "--verify", f"{ref}^{{commit}}"], cwd=source,
-        text=True, encoding="utf-8").strip()
+    print(f"staging repo snapshot ({revision})…", flush=True)
     snapshot(source, revision, repo_dir, exclude=INERT_SNAPSHOT_DIRS)
     # PM's provider code reads its adjacent lock. Never combine that tool graph
     # with a revision selecting different pins.
@@ -275,18 +296,19 @@ def _prepare_native(*, out: Path, ref: str, source: Path, cache: Path,
         project=repo_dir / "pyproject.toml", code=repo_dir, repo="hermes-agent",
         placement="contained", target=current_target(), python=python_bin,
         site_packages=site, environment=venv_dir,
-        tools=store_dir, pm_runtime=out / "pm-runtime", ref=ref,
+        tools=store_dir, pm_runtime=out / "pm-runtime", ref=revision,
         resources={name: repo_dir / name for name in RESOURCE_ENV},
         features=out / "enabled-features.json",
     )
     return publish_prepared(out, source, revision, inputs)
 
 
-def finish_native(prepared: Path, frontends: dict[str, Path]) -> int:
-    """Consume verified job-local paths. No dependency acquisition or repair."""
-    from scripts.build.agent import assemble
-    from scripts.build.inputs import AgentInputs
+def _finish_native(prepared: Path, frontends: dict[str, Path], *,
+                   source: Path | None = None, ref: str | None = None,
+                   frontends_are_frozen: bool = False) -> int:
+    """Consume only receipt-checked product snapshots or validate at the boundary."""
     from scripts.bundles.native_prepared import load_prepared, preparation_lock
+    from scripts.bundles.payload import resolve_revision
 
     prepared = Path(prepared).absolute()
     if not prepared.name.endswith(".prepared.json") or not prepared.is_file():
@@ -295,31 +317,67 @@ def finish_native(prepared: Path, frontends: dict[str, Path]) -> int:
     with preparation_lock(out):
         (out / "manifest.json").unlink(missing_ok=True)
         inputs = load_prepared(prepared)
-        values = asdict(inputs)
-        values["frontends"] = {name: Path(path).absolute() for name, path in frontends.items()}
-        assemble(AgentInputs.from_dict(values), out)
+        products = frontends
+        if products and not frontends_are_frozen:
+            if source is None or ref is None:
+                raise ValueError("frontend assembly requires its source checkout and pinned ref")
+            revision = resolve_revision(Path(source), ref)
+            if revision != inputs.ref:
+                raise ValueError("frontend products do not match the prepared source revision")
+            from scripts.bundles.frontend_products import snapshot_frontends
+            with snapshot_frontends(Path(source), revision, products) as frozen:
+                return _assemble_native(inputs, frozen, out)
+        return _assemble_native(inputs, products, out)
+
+
+def _assemble_native(inputs, frontends: dict[str, Path], out: Path) -> int:
+    from scripts.build.agent import assemble
+    from scripts.build.inputs import AgentInputs
+
+    values = asdict(inputs)
+    values["frontends"] = {name: Path(path).absolute() for name, path in frontends.items()}
+    assemble(AgentInputs.from_dict(values), out)
     print(f"✓ manifest ({out / 'manifest.json'})")
     return 0
+
+
+def finish_native(prepared: Path, frontends: dict[str, Path], *,
+                  source: Path | None = None, ref: str | None = None) -> int:
+    if frontends and (source is None or ref is None):
+        raise ValueError("frontend assembly requires its source checkout and pinned ref")
+    return _finish_native(prepared, frontends, source=source, ref=ref)
 
 
 def _stage_native(args) -> int:
     from pm import paths
     from pm.features import FeatureProbeError
     from pm.package import InstallError
+    from scripts.bundles.payload import resolve_revision
 
     try:
-        prepared = prepare_native(
-            out=Path(args.out), ref=args.ref or "HEAD",
-            source=getattr(args, "source", None) or paths.repo_root(),
-            cache=Path(getattr(args, "cache", None) or os.environ["UV_CACHE_DIR"]),
-            tools=getattr(args, "tools", None),
-        )
-        return finish_native(prepared, getattr(args, "frontends", {}))
+        source = Path(getattr(args, "source", None) or paths.repo_root()).resolve()
+        revision = resolve_revision(source, args.ref or "HEAD")
+        frontends = {
+            name: Path(path).resolve()
+            for name, path in getattr(args, "frontends", {}).items()
+        }
+
+        def prepare_and_finish(products, frozen=False):
+            prepared = prepare_native(
+                out=Path(args.out), ref=revision, source=source,
+                cache=Path(getattr(args, "cache", None) or os.environ["UV_CACHE_DIR"]),
+                tools=getattr(args, "tools", None),
+            )
+            return _finish_native(prepared, products, frontends_are_frozen=frozen)
+
+        if frontends:
+            from scripts.bundles.frontend_products import snapshot_frontends
+            with snapshot_frontends(source, revision, frontends) as frozen:
+                return prepare_and_finish(frozen, frozen=True)
+        return prepare_and_finish({})
     except (InstallError, FeatureProbeError) as exc:
         print(f"✗ {exc}")
         return 1
-
-
 
 
 def main() -> int:
@@ -328,9 +386,16 @@ def main() -> int:
     parser.add_argument("--ref", default="HEAD")
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--tui", type=Path)
+    parser.add_argument("--tsp", type=Path)
     parser.add_argument("--web", type=Path)
     args = parser.parse_args()
-    args.frontends = {name: path for name in ("tui", "web") if (path := getattr(args, name)) is not None}
+    supplied = (args.tui, args.tsp, args.web)
+    if any(path is not None for path in supplied) and not all(path is not None for path in supplied):
+        parser.error("supply --tui, --tsp, and --web products together, or none to build them")
+    args.frontends = {
+        name: path for name in ("tui", "tsp", "web")
+        if (path := getattr(args, name)) is not None
+    }
     return _stage_native(args)
 
 

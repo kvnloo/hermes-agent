@@ -1216,8 +1216,13 @@ def _confirm_startup_expensive_model_override(args) -> None:
             selection_warnings,
         )
     except Exception as exc:
-        logger.warning("startup model cost guard unavailable: %s", exc)
-        return
+        sys.stderr.write(
+            "Model-selection safety checks failed for "
+            f"{explicit_provider or 'default'}/{explicit_model or 'configured default'}: "
+            f"required guard helpers could not be imported: {exc}\n"
+        )
+        sys.stderr.write("Refusing startup because the selected model could not be checked.\n")
+        raise SystemExit(1)
 
     try:
         config = load_config()
@@ -1243,8 +1248,10 @@ def _confirm_startup_expensive_model_override(args) -> None:
             api_key=(model_cfg.get("api_key") or ""),
         )
     except Exception as exc:
-        logger.warning("startup model cost guard failed for %s/%s: %s", provider, model, exc)
-        return
+        sys.stderr.write(
+            f"Model-selection safety checks failed for {provider or 'default'}/{model}: {exc}\n")
+        sys.stderr.write("Refusing startup because the selected model could not be checked.\n")
+        raise SystemExit(1)
     if not warnings:
         return
 

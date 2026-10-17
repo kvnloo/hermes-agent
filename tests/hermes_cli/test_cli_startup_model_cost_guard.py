@@ -1,6 +1,8 @@
-from argparse import Namespace
+import builtins
 import sys
 import types
+from argparse import Namespace
+
 
 import pytest
 
@@ -305,3 +307,126 @@ def test_top_level_oneshot_rejects_noninteractive_gpt55_pro_startup_override(
     err = capsys.readouterr().err
     assert "EXPENSIVE MODEL WARNING" in err
     assert "non-interactive" in err
+
+def test_cmd_chat_refuses_startup_when_registered_guard_fails(
+    main_mod, fake_cli, monkeypatch, capsys,
+):
+    monkeypatch.setattr(sys, "stdin", _NonInteractiveStdin())
+    _set_startup_config(monkeypatch, provider="anthropic", default="old-model")
+
+    def _fail_model_metadata(_provider, _model):
+        raise RuntimeError("registered model metadata unavailable")
+
+    monkeypatch.setattr("agent.models_dev.get_model_info", _fail_model_metadata)
+
+    with pytest.raises(SystemExit) as excinfo:
+        main_mod.cmd_chat(_chat_args(model="new-model"))
+
+    assert excinfo.value.code == 1
+    assert not fake_cli
+    assert "safety checks failed" in capsys.readouterr().err.lower()
+
+
+def _isolate_cmd_chat_startup(monkeypatch, main_mod):
+    monkeypatch.setattr(main_mod, "_resolve_use_tui", lambda _args: False)
+    monkeypatch.setattr(main_mod, "_resolve_chat_session_args", lambda *_args: None)
+    monkeypatch.setattr(main_mod, "_warn_retired_xai_models", lambda: None)
+    monkeypatch.setattr(main_mod, "_start_chat_background_prefetch", lambda: None)
+    monkeypatch.setitem(
+        sys.modules,
+        "hermes_cli.stream_json",
+        types.SimpleNamespace(stream_json_requested=lambda _args: False),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "hermes_cli.free_tier_bootstrap",
+        types.SimpleNamespace(run_bootstrap=lambda **_kwargs: None),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "hermes_cli.observability.shared_metrics_consent",
+        types.SimpleNamespace(offer_consent_before_chat=lambda _args: None),
+    )
+    started_processes = []
+    monkeypatch.setitem(
+        sys.modules,
+        "hermes_cli.observability.shared_metrics_process",
+        types.SimpleNamespace(begin_process=started_processes.append),
+    )
+    return started_processes
+
+
+@pytest.mark.parametrize(
+    "failed_module",
+    ["hermes_cli.config", "hermes_cli.model_selection_guards"],
+)
+def test_cmd_chat_refuses_explicit_override_when_guard_helper_import_fails(
+    main_mod, fake_cli, monkeypatch, capsys, failed_module
+):
+    started_processes = _isolate_cmd_chat_startup(monkeypatch, main_mod)
+    monkeypatch.setattr(
+        main_mod, "_guard_noninteractive_user_config", lambda _args: None
+    )
+    config_loads = []
+    guard_checks = []
+    monkeypatch.setattr(
+        "hermes_cli.config.load_config",
+        lambda: config_loads.append(True) or {},
+    )
+    monkeypatch.setattr(
+        "hermes_cli.model_selection_guards.selection_warnings",
+        lambda *args, **kwargs: guard_checks.append((args, kwargs)) or [],
+    )
+
+    failed_imports = []
+    original_import = builtins.__import__
+
+    def fail_guard_helper_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == failed_module:
+            failed_imports.append(name)
+            raise ImportError("guard helper unavailable")
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", fail_guard_helper_import)
+    args = _chat_args(model="explicit-model", provider="explicit-provider")
+
+    with pytest.raises(SystemExit) as excinfo:
+        main_mod.cmd_chat(args)
+
+    assert excinfo.value.code == 1
+    assert failed_imports == [failed_module]
+    assert args.model == "explicit-model"
+    assert args.provider == "explicit-provider"
+    assert config_loads == []
+    assert guard_checks == []
+    assert started_processes == []
+    assert not fake_cli
+    err = capsys.readouterr().err
+    assert "Model-selection safety checks failed" in err
+    assert "Refusing startup because the selected model could not be checked." in err
+
+
+def test_cmd_chat_keeps_implicit_startup_when_guard_imports_are_unavailable(
+    main_mod, fake_cli, monkeypatch, capsys
+):
+    started_processes = _isolate_cmd_chat_startup(monkeypatch, main_mod)
+    blocked_imports = []
+    original_import = builtins.__import__
+
+    def fail_guard_helper_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "hermes_cli.model_selection_guards":
+            blocked_imports.append(name)
+            raise ImportError("guard helper unavailable")
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", fail_guard_helper_import)
+    args = _chat_args()
+
+    main_mod.cmd_chat(args)
+
+    assert blocked_imports == []
+    assert started_processes == ["cli"]
+    assert fake_cli["query"] == "hello"
+    assert "model" not in fake_cli
+    assert "provider" not in fake_cli
+    assert "Model-selection safety checks failed" not in capsys.readouterr().err

@@ -67,6 +67,10 @@ export interface UserEntry {
   id: string
   text: string
   at: number
+  /** Durable gateway row id used for boundary-specific rewind. */
+  rowId?: number
+  /** Bumped when the gateway supplies or changes the durable row address. */
+  rev: number
 }
 
 /** One assistant turn: thinking, text and tool calls as they arrived. */

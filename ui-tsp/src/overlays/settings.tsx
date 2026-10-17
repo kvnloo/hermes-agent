@@ -71,9 +71,91 @@ function fields(result: SettingsGetResult): Record<string, Field> {
   }]))
 }
 
+type AcceptedType = NonNullable<SettingsField['accepted_types']>[number]
+
+function valueType(value: Value): AcceptedType | 'null' {
+  if (value === null) {
+    return 'null'
+  }
+
+  if (Array.isArray(value)) {
+    return 'list'
+  }
+
+  const type = typeof value
+
+  if (type === 'boolean' || type === 'number' || type === 'string' || type === 'object') {
+    return type
+  }
+
+  throw new Error('The settings value has an unsupported type.')
+}
+
+function isMixedDomain(field: Field): boolean {
+  const presentationType = field.type === 'select' ? 'string' : field.type
+
+  if (field.accepted_types?.some(type => type !== presentationType)) {
+    return true
+  }
+
+  return field.accepted_values?.some(value => valueType(value) !== presentationType) ?? false
+}
+
+function stringValue(field: Field, value: string): string {
+  if (field.accepted_values !== undefined && field.accepted_values !== null) {
+    for (const accepted of field.accepted_values) {
+      if (typeof accepted === 'string' && accepted.trim().toLowerCase() === value.trim().toLowerCase()) {
+        if (field.type !== 'select' || !field.options || field.options.includes(accepted)) {
+          return accepted
+        }
+      }
+    }
+
+    throw new Error('Choose one of the declared runtime values.')
+  }
+
+  if (field.type === 'select' && field.options && !field.options.includes(value)) {
+    throw new Error('Choose one of the declared options.')
+  }
+
+  return value
+}
+
 function parse(field: Field, value: Value): Value {
   if (value === null && (field.nullable || field.sensitive)) {
     return null
+  }
+
+  if (field.accepted_types !== undefined && field.accepted_types !== null) {
+    let parsed: Value = null
+    let hasParsed = false
+
+    if (typeof value === 'string') {
+      try {
+        parsed = json(JSON.parse(value) as unknown)
+        hasParsed = true
+      } catch {
+        // The raw text may be a supported string value.
+      }
+    }
+
+    const parsedType = valueType(parsed)
+
+    if (hasParsed && parsedType !== 'null' && field.accepted_types.includes(parsedType)) {
+      return typeof parsed === 'string' ? stringValue(field, parsed) : parsed
+    }
+
+    const inputType = valueType(value)
+
+    if (inputType !== 'null' && field.accepted_types.includes(inputType)) {
+      return typeof value === 'string' ? stringValue(field, value) : value
+    }
+
+    throw new Error(`Use one of the supported types: ${field.accepted_types.join(', ')}.`)
+  }
+
+  if (field.accepted_values !== undefined && field.accepted_values !== null && typeof value === 'string' && (field.type === 'string' || field.type === 'select')) {
+    return stringValue(field, value)
   }
 
   switch (field.type) {
@@ -132,6 +214,16 @@ function parse(field: Field, value: Value): Value {
 }
 
 function control(field: Field, value: Value): PrefsControl {
+  if (isMixedDomain(field)) {
+    return {
+      k: 'text',
+      mono: true,
+      placeholder: value === null ? (field.sensitive ? 'Private value. Leave unchanged to preserve.' : 'Unset') : undefined,
+      secret: field.sensitive,
+      value: value === null ? '' : display(value)
+    }
+  }
+
   // A raw environment reference is not a false switch or an empty numeric value.
   if ((field.type === 'boolean' || field.type === 'number') && typeof value === 'string') {
     return { k: 'text', mono: true, value }
@@ -152,7 +244,7 @@ function control(field: Field, value: Value): PrefsControl {
       return { k: 'choice', options: (field.options ?? []).map(option => ({ label: option || '(empty)', value: option })), value: value === null ? undefined : String(value) }
 
     default:
-      return { k: 'text', mono: field.type === 'list' || field.type === 'object', placeholder: value === null ? (field.sensitive ? 'Private value. Leave unchanged to preserve.' : 'Unset') : undefined, secret: field.sensitive && field.type === 'string', value: value === null && field.type === 'string' ? '' : display(value) }
+      return { k: 'text', mono: field.type === 'list' || field.type === 'object', placeholder: value === null ? (field.sensitive ? 'Private value. Leave unchanged to preserve.' : 'Unset') : undefined, secret: field.sensitive, value: value === null && field.type === 'string' ? '' : display(value) }
   }
 }
 
@@ -162,6 +254,7 @@ class Settings implements Overlay {
   readonly modal = true
   readonly #app: App
   readonly #sid: string
+  readonly #sessionGeneration: number
   #fields: Record<string, Field> = {}
   #profile = ''
   #page = 'profile.general'
@@ -186,14 +279,65 @@ class Settings implements Overlay {
   #confirmation: Confirmation | null = null
   #sessionSaving = false
   #failedEffort: string | null = null
+  #draining = false
+  #drainWarning = false
 
   constructor(app: App, sid: string) {
     this.#app = app
     this.#sid = sid
+    this.#sessionGeneration = app.sessionGeneration
   }
 
   #live(): boolean {
-    return this.#app.sid === this.#sid && this.#app.overlays.includes(this)
+    return this.#sessionCurrent() && this.#app.overlays.includes(this)
+  }
+
+  #sessionCurrent(): boolean {
+    return this.#app.sid === this.#sid && this.#app.sessionGeneration === this.#sessionGeneration
+  }
+
+  #canContinue(): boolean {
+    return this.#live() || (this.#draining && this.#sessionCurrent())
+  }
+
+  #warnBackground(message: string) {
+    if (this.#drainWarning) {
+      return
+    }
+
+    this.#drainWarning = true
+    this.#app.transcript.notice(message, 'warning')
+    this.#app.changed()
+  }
+
+  #cancelUnownedWork() {
+    if (this.#saving || this.#pending.size || this.#readback.size) {
+      this.#warnBackground(this.#sessionCurrent()
+        ? 'Committed Settings changes could not be completed because their Settings sheet was replaced.'
+        : 'Committed Settings changes were not sent because the live session changed.')
+    }
+
+    this.#pending.clear()
+    this.#readback.clear()
+    this.#draining = false
+  }
+
+  #close() {
+    if (this.#confirmation) {
+      this.#cancelConfirmation()
+    }
+
+    if (!this.#sessionCurrent()) {
+      this.#cancelUnownedWork()
+    } else {
+      this.#draining = Boolean(this.#saving || this.#pending.size)
+
+      if (this.#errors.size || this.#readback.size) {
+        this.#warnBackground('Some Settings values were not saved or confirmed before the sheet closed. Reopen Settings to review and retry.')
+      }
+    }
+
+    this.#app.close(this)
   }
 
   async load() {
@@ -293,81 +437,174 @@ class Settings implements Overlay {
   }
 
   async #flush(confirmed?: Confirmation) {
-    if (!this.#live() || this.#saving || (this.#confirmation && !confirmed) || (confirmed && this.#confirmation !== confirmed)) {
+    if (!this.#canContinue()) {
+      this.#cancelUnownedWork()
+
       return
     }
 
-    const edit = confirmed ?? this.#pending.values().next().value as Edit | undefined
-
-    if (!edit) {
+    if (this.#saving || (this.#confirmation && !confirmed) || (confirmed && this.#confirmation !== confirmed)) {
       return
     }
 
-    this.#pending.delete(edit.key)
-    this.#saving = edit
-    this.#confirmation = null
+    const first = confirmed ?? this.#pending.values().next().value as Edit | undefined
+
+    if (!first) {
+      return
+    }
+
+    if (confirmed) {
+      if (this.#pending.get(first.key)?.version === first.version) {
+        this.#pending.delete(first.key)
+      }
+
+      this.#confirmation = null
+    } else {
+      this.#pending.delete(first.key)
+    }
+
+    this.#saving = first
     this.#app.changed()
 
     try {
       await ordered(this.#app, async () => {
-        if (!this.#live()) {
-          return
+        let edit: Edit | undefined = first
+        let isConfirmed = confirmed !== undefined
+
+        while (edit) {
+          if (!this.#canContinue()) {
+            this.#cancelUnownedWork()
+
+            return
+          }
+
+          const attempt = edit
+          try {
+            const result = await this.#app.gw.request<SettingsSetResult>('settings.set', {
+              key: edit.key,
+              profile: this.#profile,
+              session_id: this.#sid,
+              value: edit.value,
+              ...(isConfirmed ? { confirmed: true } : {})
+            })
+
+            if (!this.#canContinue()) {
+              this.#cancelUnownedWork()
+
+              return
+            }
+
+            if (result.confirm_required) {
+              if (this.#live()) {
+                this.#confirmation = { ...edit, message: result.confirm_message, serial: ++this.#confirmationSerial }
+
+                return
+              }
+
+              if (this.#draining) {
+                if (!this.#pending.has(edit.key) && this.#versions.get(edit.key) === edit.version) {
+                  this.#drafts.delete(edit.key)
+                }
+
+                this.#warnBackground('A committed Settings change required additional confirmation and was not applied. Reopen Settings to review and submit it again.')
+              }
+
+              this.#saving = null
+              edit = this.#pending.values().next().value as Edit | undefined
+
+              if (edit) {
+                this.#pending.delete(edit.key)
+                this.#saving = edit
+              }
+
+              isConfirmed = false
+
+              continue
+            }
+
+            this.#accepted.set(edit.key, edit.value)
+            this.#readback.set(edit.key, edit)
+
+            // A transport success is not a confirmed profile value.
+            const current = await this.#app.gw.request<SettingsGetResult>('settings.get', { session_id: this.#sid })
+
+            if (!this.#canContinue()) {
+              this.#cancelUnownedWork()
+
+              return
+            }
+
+            if (!current.fields[edit.key]) {
+              throw new Error('The saved field is absent from the profile readback.')
+            }
+
+            this.#reconcile(current, edit.key)
+
+            if (this.#live()) {
+              this.#message = `Profile value confirmed: ${edit.key}.`
+            }
+          } catch (error) {
+            if (this.#live()) {
+              if (this.#versions.get(attempt.key) === attempt.version) {
+                this.#errors.set(attempt.key, error instanceof Error ? error.message : String(error))
+              }
+
+              this.#message = 'The profile value is not confirmed. Retry or reload saved values.'
+            } else if (this.#draining && this.#sessionCurrent()) {
+              this.#warnBackground('One or more committed Settings changes could not be confirmed after the sheet closed. Reopen Settings to review and retry.')
+            }
+          }
+
+          if (this.#live()) {
+            this.#app.changed()
+          }
+
+          this.#saving = null
+
+          if (this.#confirmation) {
+            return
+          }
+
+          edit = this.#pending.values().next().value as Edit | undefined
+
+          if (edit) {
+            this.#pending.delete(edit.key)
+            this.#saving = edit
+          }
+
+          isConfirmed = false
         }
-
-        const result = await this.#app.gw.request<SettingsSetResult>('settings.set', {
-          key: edit.key,
-          profile: this.#profile,
-          session_id: this.#sid,
-          value: edit.value,
-          ...(confirmed ? { confirmed: true } : {})
-        })
-
-        if (!this.#live()) {
-          return
-        }
-
-        if (result.confirm_required) {
-          this.#confirmation = { ...edit, message: result.confirm_message, serial: ++this.#confirmationSerial }
-
-          return
-        }
-
-        this.#accepted.set(edit.key, edit.value)
-        this.#readback.set(edit.key, edit)
-
-        // A transport success is not a confirmed profile value.
-        const current = await this.#app.gw.request<SettingsGetResult>('settings.get', { session_id: this.#sid })
-
-        if (!this.#live()) {
-          return
-        }
-
-        if (!current.fields[edit.key]) {
-          throw new Error('The saved field is absent from the profile readback.')
-        }
-
-        this.#reconcile(current, edit.key)
-
-        this.#message = `Profile value confirmed: ${edit.key}.`
       })
     } catch (error) {
       if (this.#live()) {
-        if (this.#versions.get(edit.key) === edit.version) {
-          this.#errors.set(edit.key, error instanceof Error ? error.message : String(error))
-        }
-
-        this.#message = 'The profile value is not confirmed. Retry or reload saved values.'
+        this.#message = error instanceof Error ? error.message : String(error)
+      } else if (this.#draining && this.#sessionCurrent()) {
+        this.#warnBackground('One or more committed Settings changes could not be confirmed after the sheet closed. Reopen Settings to review and retry.')
       }
     } finally {
       this.#saving = null
 
       if (this.#live()) {
         this.#app.changed()
+      }
+
+      if (this.#draining) {
+        if (!this.#sessionCurrent()) {
+          this.#cancelUnownedWork()
+        } else if (!this.#pending.size && !this.#confirmation) {
+          if (this.#errors.size || this.#readback.size) {
+            this.#warnBackground('Some Settings values were not saved or confirmed before the sheet closed. Reopen Settings to review and retry.')
+          }
+
+          this.#draining = false
+        }
+      }
+
+      if (!this.#confirmation && (this.#live() || (this.#draining && this.#sessionCurrent()))) {
         void this.#flush()
       }
     }
   }
-
   #reconcile(result: SettingsGetResult, acceptedKey?: string) {
     const next = fields(result)
 
@@ -484,15 +721,15 @@ class Settings implements Overlay {
 
     return shown.map(({ item: [key, field] }) => ({
       changed: !equal(field.value, field.default),
-      control: this.#editing === key && field.type === 'number'
-        ? { k: 'text', mono: true, value: this.#editor.text }
+      control: this.#editing === key && (field.type === 'number' || isMixedDomain(field))
+        ? { k: 'text', mono: true, secret: field.sensitive, value: this.#editor.text }
         : control(field, this.#drafts.has(key) ? this.#drafts.get(key)! : field.value),
       defaultLabel: field.sensitive ? 'Private default' : `Default: ${display(field.default)}`,
       disabled: this.#state !== 'ready' ? 'Load profile settings first.' : undefined,
-      hint: `${field.description}\nSaved profile value: ${field.sensitive ? 'Private. Credential nulls preserve the stored value.' : display(field.value)}\nDefault: ${field.sensitive ? 'Private' : display(field.default)}${field.nullable ? '\nThis value can be unset.' : ''}`,
+      hint: `${field.description}\nSaved profile value: ${field.sensitive ? 'Private. Credential nulls preserve the stored value.' : display(field.value)}\nDefault: ${field.sensitive ? 'Private' : display(field.default)}${field.nullable ? '\nThis value can be unset.' : ''}${!field.sensitive && field.accepted_types?.length ? `\nAccepted types: ${field.accepted_types.join(', ')}` : ''}${!field.sensitive && field.accepted_values?.length ? `\nAccepted values: ${field.accepted_values.map(display).join(', ')}` : ''}`,
       id: key,
       label: key,
-      warning: this.#errors.get(key) ?? (this.#saving?.key === key ? 'Save in progress. The value is not confirmed yet.' : undefined)
+      warning: this.#errors.get(key) ?? (this.#pending.has(key) ? 'Save queued behind an earlier change.' : this.#saving?.key === key ? 'Save in progress. The value is not confirmed yet.' : undefined)
     }))
   }
 
@@ -539,14 +776,14 @@ class Settings implements Overlay {
     if (event.act === 'page' && event.value && (event.value === SESSION_PAGE || Object.values(this.#fields).some(field => `profile.${field.category}` === event.value))) {
       this.#page = event.value
       this.#searching = false
-      this.#search.set('')
+      this.#search.reset('')
       this.#editing = undefined
       this.#selected = undefined
     } else if (event.act === 'close') {
       if (event.value) {
         this.#editing = undefined
       } else {
-        this.#app.close(this)
+        this.#close()
       }
     } else if (event.act === 'model') {
       if (this.#live()) {
@@ -579,7 +816,7 @@ class Settings implements Overlay {
       return
     }
 
-    if (field?.type === 'boolean' && typeof value === 'boolean') {
+    if (field?.type === 'boolean' && typeof value === 'boolean' && !isMixedDomain(field)) {
       this.#edit(key, value !== true)
 
       return
@@ -588,7 +825,7 @@ class Settings implements Overlay {
     this.#editing = key
     this.#option = typeof value === 'string' ? value : undefined
     this.#editorInitial = value === null || value === undefined ? '' : display(value)
-    this.#editor.set(this.#editorInitial)
+    this.#editor.reset(this.#editorInitial)
     this.#app.changed()
   }
 
@@ -612,14 +849,17 @@ class Settings implements Overlay {
       return
     }
 
-    if ((field.type !== 'select' && this.#editor.text === this.#editorInitial) || (field.type === 'select' && this.#option === undefined && field.value === null)) {
+    const choice = field.type === 'select' && !isMixedDomain(field)
+    const number = field.type === 'number' && !isMixedDomain(field)
+
+    if ((!choice && this.#editor.text === this.#editorInitial) || (choice && this.#option === undefined && field.value === null)) {
       this.#editing = undefined
 
       return
     }
 
-    const input = field.type === 'select' ? this.#option ?? ''
-      : field.type === 'number' ? (this.#editor.text.trim() ? this.#editor.text : null)
+    const input = choice ? this.#option ?? ''
+      : number ? (this.#editor.text.trim() ? this.#editor.text : null)
         : this.#editor.text
 
     this.#edit(key, input)
@@ -630,11 +870,11 @@ class Settings implements Overlay {
   }
 
   node(id: string): JSX.Element {
-    if (this.#app.sid !== this.#sid) {
+    if (!this.#sessionCurrent()) {
       return (
         <overlay anchor="center" head="Settings" key={id.slice('layer.'.length)} modal size="lg">
-          <text key="expired" text="This settings sheet belongs to a previous session. Close it and open Settings in the current session." wrap="word" />
-          {this.#button('close', 'Close', () => this.#app.close(this))}
+          <text key="expired" text="This Settings sheet belongs to an earlier session owner. Close it and reopen Settings for the current session." wrap="word" />
+          {this.#button('close', 'Close', () => this.#close())}
         </overlay>
       )
     }
@@ -647,7 +887,7 @@ class Settings implements Overlay {
           <col gap="md" key={`confirmation:${ask.serial}`}>
             <text key="scope" text={`Scope: profile ${this.#profile}. This does not replace live session pins.`} wrap="word" />
             <text key="target" text={`Setting: ${ask.key}`} />
-            <code key="value" lang="json" text={this.#fields[ask.key]?.sensitive && this.#fields[ask.key]?.type === 'string' ? (ask.value === '' ? 'Clear this private value' : 'Replace with the private value you entered') : JSON.stringify(ask.value, null, 2)} />
+            <code key="value" lang="json" text={this.#fields[ask.key]?.sensitive ? (ask.value === '' ? 'Clear this private value' : 'Replace with the private value you entered') : JSON.stringify(ask.value, null, 2)} />
             <text key="risk" text={ask.message} wrap="word" />
             <text key="default" text="Cancel is the default. Enter or Escape cancels this change." wrap="word" />
             <row gap="md" key="actions">
@@ -741,7 +981,7 @@ class Settings implements Overlay {
               this.#editing = undefined
               this.#edit(selectedKey!, '')
             }) : null}
-            {this.#button('close', 'Close', () => this.#app.close(this))}
+            {this.#button('close', 'Close', () => this.#close())}
           </row>
         </col>
       </prefs>
@@ -762,14 +1002,14 @@ class Settings implements Overlay {
     }
 
     if (key.ctrl && key.name === 'c') {
-      this.#app.close(this)
+      this.#close()
 
       return true
     }
 
     if (!this.#live()) {
       if (key.name === 'escape') {
-        this.#app.close(this)
+        this.#close()
       }
 
       return true
@@ -780,7 +1020,7 @@ class Settings implements Overlay {
         this.#editing = undefined
       } else if (key.name === 'enter' && !key.shift && !key.alt) {
         this.#commitEditor()
-      } else if (this.#editing === 'session.effort' || this.#fields[this.#editing]?.type === 'select') {
+      } else if (this.#editing === 'session.effort' || (this.#fields[this.#editing]?.type === 'select' && !isMixedDomain(this.#fields[this.#editing]!))) {
         const options = this.#editing === 'session.effort' ? EFFORTS : this.#fields[this.#editing]?.options ?? []
         const step = key.name === 'up' || key.name === 'left' ? -1 : key.name === 'down' || key.name === 'right' ? 1 : 0
 
@@ -798,9 +1038,9 @@ class Settings implements Overlay {
     if (key.name === 'escape') {
       if (this.#searching) {
         this.#searching = false
-        this.#search.set('')
+        this.#search.reset('')
       } else {
-        this.#app.close(this)
+        this.#close()
       }
 
       return true

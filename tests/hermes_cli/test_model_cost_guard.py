@@ -89,6 +89,50 @@ def test_skips_untrusted_provider_pricing_lookup_for_custom_provider(monkeypatch
     assert pricing_calls == []
 
 
+def test_models_dev_metadata_lookup_failure_surfaces(monkeypatch):
+    def _broken_metadata(*_args, **_kwargs):
+        raise RuntimeError("models.dev unavailable")
+
+    monkeypatch.setattr("agent.models_dev.get_model_info", _broken_metadata)
+
+    with pytest.raises(RuntimeError, match="models.dev unavailable"):
+        expensive_model_warning("unlisted/model", provider="anthropic", allow_provider_io=False)
+
+
+def test_billing_route_lookup_failure_surfaces(monkeypatch):
+    def _broken_route(*_args, **_kwargs):
+        raise RuntimeError("billing route unavailable")
+
+    monkeypatch.setattr("agent.models_dev.get_model_info", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("agent.usage_pricing.resolve_billing_route", _broken_route)
+
+    with pytest.raises(RuntimeError, match="billing route unavailable"):
+        expensive_model_warning("unlisted/model", provider="openrouter")
+
+
+def test_provider_pricing_lookup_failure_surfaces(monkeypatch):
+    def _broken_pricing(*_args, **_kwargs):
+        raise RuntimeError("provider pricing unavailable")
+
+    monkeypatch.setattr("agent.models_dev.get_model_info", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("agent.usage_pricing.get_pricing_entry", _broken_pricing)
+
+    with pytest.raises(RuntimeError, match="provider pricing unavailable"):
+        expensive_model_warning("unlisted/model", provider="openrouter")
+
+
+def test_unconfirmed_preflight_skips_provider_pricing_lookups(monkeypatch):
+    def _provider_lookup_must_not_run(*_args, **_kwargs):
+        raise AssertionError("provider pricing lookup ran during local preflight")
+
+    monkeypatch.setattr("agent.models_dev.get_model_info", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("agent.usage_pricing.resolve_billing_route", _provider_lookup_must_not_run)
+    monkeypatch.setattr("agent.usage_pricing.get_pricing_entry", _provider_lookup_must_not_run)
+
+    assert expensive_model_warning(
+        "unlisted/model", provider="openrouter", allow_provider_io=False
+    ) is None
+
 def test_known_confusing_model_still_warns_on_custom_provider():
     """The gpt-5.5-pro confusion nudge is id-keyed, not pricing-keyed: it must
     survive the custom-provider pricing distrust (54cc39aa15 x 83d373aae6)."""

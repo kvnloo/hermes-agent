@@ -82,8 +82,11 @@ async function buildDeveloperTui() {
     // TMPDIR and the source checkout need not share a filesystem.
     const staged = mkdtempSync(join(repoRoot, 'ui-tui/.dist-'))
     try {
+      const dist = join(repoRoot, 'ui-tui/dist')
       cpSync(join(result.out, 'dist'), staged, { recursive: true })
-      publishDirectory(staged, join(repoRoot, 'ui-tui/dist'), { source: repoRoot })
+      publishDirectory(staged, dist, { source: repoRoot })
+      const receipt = JSON.parse(readFileSync(join(result.out, 'dist/hermes-build.json'), 'utf8'))
+      recordProduct({ source: repoRoot, product: 'tui', out: dist, inputs: receipt.inputs })
     } finally {
       rmSync(staged, { recursive: true, force: true })
     }

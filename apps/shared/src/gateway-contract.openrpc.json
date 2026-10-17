@@ -3536,7 +3536,7 @@
     },
     {
       "name": "session.undo",
-      "summary": "Drop the last user turn (and everything after it) from an idle session.",
+      "summary": "Drop a selected durable user turn, or the latest turn when no row_id is supplied, and return retained history.",
       "params": [
         {
           "name": "params",
@@ -24007,19 +24007,9 @@
             "title": "Provider"
           },
           "confirm_expensive_model": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Confirm Expensive Model"
+            "default": false,
+            "title": "Confirm Expensive Model",
+            "type": "boolean"
           },
           "disabled_skills": {
             "anyOf": [
@@ -31978,6 +31968,11 @@
             "default": null,
             "title": "Profile"
           },
+          "row_id": {
+            "exclusiveMinimum": 0,
+            "title": "Row Id",
+            "type": "integer"
+          },
           "intent": {
             "anyOf": [
               {
@@ -32002,10 +31997,23 @@
           "removed": {
             "title": "Removed",
             "type": "integer"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/TranscriptMessage"
+            },
+            "title": "Messages",
+            "type": "array"
           }
         },
         "required": [
-          "removed"
+          "removed",
+          "count",
+          "messages"
         ],
         "title": "SessionUndoResult",
         "type": "object"
@@ -32391,6 +32399,43 @@
             ],
             "default": null,
             "title": "Options"
+          },
+          "accepted_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "boolean",
+                    "number",
+                    "string",
+                    "list",
+                    "object"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Accepted Types"
+          },
+          "accepted_values": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Accepted Values"
           },
           "value": {
             "title": "Value"

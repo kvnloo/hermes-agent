@@ -6,6 +6,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { afterEach, expect, test } from 'vitest'
 import { buildTui } from '../scripts/build/tui.mjs'
+import { buildTsp } from '../scripts/build/tsp.mjs'
 import { buildWeb } from '../scripts/build/web.mjs'
 import { productOutput, publishDirectory, withProduct } from '../scripts/build/frontend-common.mjs'
 
@@ -312,6 +313,12 @@ test('TUI freshness invalidates source, configuration and compiler inputs and da
   await buildTui({ source, out })
   const current = () => productCurrent({ source, product: 'tui', out: path.join(out, 'dist') })
   expect(current()).toBe(true)
+  const metadata = path.join(out, 'package.json')
+  const originalMetadata = readFileSync(metadata)
+  writeFileSync(metadata, '{"type":"commonjs"}\n')
+  expect(current(), 'runtime package metadata tampering').toBe(false)
+  writeFileSync(metadata, originalMetadata)
+  expect(current(), 'restored runtime package metadata').toBe(true)
   for (const [name, from, to] of sameLengthChanges) {
     const file = path.join(source, name), previous = readFileSync(file, 'utf8'), before = statSync(file)
     expect(previous).toContain(from)
@@ -346,4 +353,61 @@ test('TUI freshness invalidates source, configuration and compiler inputs and da
   expect(execFileSync(process.execPath, [entry], { encoding: 'utf8' }).trim()).toBe('rebuilt source')
   writeFileSync(entry, 'damaged output')
   expect(current()).toBe(false)
+})
+
+function tspSource(source) {
+  put(source, 'package.json', '{"private":true,"type":"module"}')
+  put(source, 'package-lock.json', '{"lockfileVersion":3}')
+  put(source, 'ui-tsp/package.json', '{"type":"module"}')
+  put(source, 'ui-tsp/tsconfig.json', '{"compilerOptions":{"target":"ES2023"}}')
+  put(source, 'ui-tsp/src/entry.ts', 'import { answer } from "@tui/value"; console.log(answer);')
+  put(source, 'ui-tui/package.json', '{"type":"module"}')
+  put(source, 'ui-tui/tsconfig.json', JSON.stringify({ compilerOptions: { target: 'ES2023', useDefineForClassFields: true } }))
+  put(source, 'ui-tui/src/value.ts', 'import { answer } from "@hermes/shared"; export { answer };')
+  put(source, 'apps/shared/package.json', JSON.stringify({
+    name: '@hermes/shared', type: 'module', exports: { '.': './src/index.ts' },
+  }))
+  put(source, 'apps/shared/tsconfig.json', JSON.stringify({
+    compilerOptions: { target: 'ES2023', useDefineForClassFields: true },
+  }))
+  put(source, 'apps/shared/src/index.ts', 'export const answer = "TSP shared bundle";')
+  put(source, 'ui-tsp/scripts/build.mjs', readFileSync(path.join(repo, 'ui-tsp/scripts/build.mjs')))
+  const shared = path.join(source, 'node_modules/@hermes/shared')
+  mkdirSync(path.dirname(shared), { recursive: true })
+  symlinkSync(path.join(source, 'apps/shared'), shared, 'junction')
+  dependency(source, 'ui-tsp', 'esbuild')
+}
+
+test('TSP products are relocatable and receipts cover imported workspace manifests and compiler configs', async () => {
+  const { productCurrent } = await import('../scripts/build/freshness.mjs')
+  const base = fixture()
+  const source = path.join(base, 'source with spaces')
+  const out = path.join(base, 'TSP product')
+  tspSource(source)
+  await buildTsp({ source, out })
+  const dist = path.join(out, 'dist')
+  const current = () => productCurrent({ source, product: 'tsp', out: dist })
+  expect(current()).toBe(true)
+  const metadata = path.join(out, 'package.json')
+  const originalMetadata = readFileSync(metadata)
+  writeFileSync(metadata, '{"type":"commonjs"}\n')
+  expect(current(), 'runtime package metadata tampering').toBe(false)
+  writeFileSync(metadata, originalMetadata)
+  expect(current(), 'restored runtime package metadata').toBe(true)
+  expect(JSON.parse(readFileSync(path.join(out, 'package.json'), 'utf8')).type).toBe('module')
+  for (const name of [
+    'ui-tui/package.json', 'ui-tui/tsconfig.json',
+    'apps/shared/package.json', 'apps/shared/tsconfig.json',
+  ]) {
+    const file = path.join(source, name)
+    const previous = readFileSync(file)
+    writeFileSync(file, Buffer.concat([previous, Buffer.from(' ')]))
+    expect(current(), name).toBe(false)
+    writeFileSync(file, previous)
+    expect(current(), `restored ${name}`).toBe(true)
+  }
+  const entry = path.join(dist, 'entry.js')
+  rmSync(source, { recursive: true })
+  expect(execFileSync(process.execPath, [entry], { cwd: base, encoding: 'utf8' }).trim())
+    .toBe('TSP shared bundle')
 })

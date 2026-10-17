@@ -39,7 +39,10 @@ def verify_products(root: Path, desktop: str, node: Path | None = None) -> None:
             raise RuntimeError("desktop executable is missing or empty")
     if node is None:
         return  # Historical builds have no compiler receipt contract.
-    products = [("tui", root / "ui-tui/dist"), ("web", root / "hermes_cli/web_dist")]
+    products = [("tui", root / "ui-tui/dist")]
+    if (root / "ui-tsp/package.json").is_file():
+        products.append(("tsp", root / "ui-tsp/dist"))
+    products.append(("web", root / "hermes_cli/web_dist"))
     if desktop == "present":
         products.extend(("desktop", out) for out in outputs)
     for product, out in products:

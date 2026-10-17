@@ -15,6 +15,7 @@ possible. The user's pick silently reverted and the confirm was never offered
 on this path at all.
 """
 
+import contextlib
 import threading
 import types
 
@@ -128,14 +129,9 @@ class TestUnguardedPickStillDefers:
         pending = running_session["pending_model_switch"]
         assert pending["display_provider"] == "anthropic"
 
-class TestGuardFailureIsNotFatal:
-    def test_a_raising_guard_falls_back_to_deferring(self, running_session, monkeypatch):
-        """A broken guard must never cost the user their model pick.
-
-        The apply-time check in ``_apply_pending_model_switch`` is still there,
-        so failing open here degrades to the old behaviour rather than to a
-        silently unguarded switch.
-        """
+class TestGuardFailureFailsClosed:
+    def test_a_raising_guard_returns_an_error_without_stashing(self, running_session, monkeypatch):
+        """A broken guard must not silently turn an unconfirmed pick into consent."""
 
         def _boom(*_args, **_kwargs):
             raise RuntimeError("guard table is broken")
@@ -144,7 +140,50 @@ class TestGuardFailureIsNotFatal:
             "hermes_cli.model_selection_guards.combined_selection_warning", _boom
         )
 
-        result = _config_set_model(GUARDED_MODEL)["result"]
+        response = _config_set_model(GUARDED_MODEL)
 
-        assert result["deferred"] is True
-        assert running_session["pending_model_switch"]["raw"] == GUARDED_MODEL
+        assert response["error"]["code"] == 5001
+        assert response["error"]["message"] == "guard table is broken"
+        assert "pending_model_switch" not in running_session
+
+
+def test_env_provider_overrides_profile_config_for_selection_guard(tmp_path, monkeypatch, running_session):
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        "model:\n"
+        "  default: old-model\n"
+        "  provider: custom\n"
+        "  base_url: https://custom.example/v1\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("HERMES_TUI_PROVIDER", "openai-codex")
+    monkeypatch.setenv("HERMES_INFERENCE_PROVIDER", "custom")
+    monkeypatch.setattr(server, "_hermes_home", tmp_path)
+    monkeypatch.setattr(
+        server, "_session_profile_runtime_scope", lambda *_args, **_kwargs: contextlib.nullcontext())
+
+    registry = {
+        "openai": {
+            "models": {
+                "route-priced-model": {
+                    "name": "route-priced-model",
+                    "cost": {"input": 25.01, "output": 125.01},
+                },
+            },
+        },
+    }
+    monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda *_args, **_kwargs: registry)
+
+    response = server.handle_request({
+        "id": "1",
+        "method": "config.set",
+        "params": {"session_id": "sid", "key": "model", "value": "route-priced-model"},
+    })
+
+    result = response["result"]
+    assert result["confirm_required"] is True
+    assert result["deferred"] is False
+    assert "$25.01/M" in result["confirm_message"]
+    assert "$125.01/M" in result["confirm_message"]
+    assert "pending_model_switch" not in running_session

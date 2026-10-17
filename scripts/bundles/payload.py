@@ -16,18 +16,27 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
-# Snapshot dirs the sealed agent payload never reads. Tests, docs and CI
-# definitions never ship; the frontend/desktop sources and build scripts are
-# prebuilt by CI into staged products (AgentInputs.frontends) — a sealed
-# payload never re-enters the source-build graph (is_bundled_payload routes
-# updates to the channel updater), and linux_desktop_entry degrades to the
-# themed icon when apps/desktop/assets is absent. Excluded here means:
-# not packaged, not compiled, not baked. Frontend product staging
-# (scripts/bundles/stage.py) needs its full tree and passes no exclusions.
+# Snapshot dirs the sealed agent payload never reads. Frontend/desktop
+# products are built separately and planted into the assembled package;
+# source workspaces and build scripts do not ship. Frontend product staging
+# (scripts/bundles/stage.py) uses a full source tree and passes no exclusions.
 INERT_SNAPSHOT_DIRS = (
     "tests", "tests-js", "website", "evals", ".github", "nix", "docker",
-    "apps", "ui-tui", "web", "scripts",
+    "apps", "ui-tsp", "ui-tui", "web", "scripts",
 )
+
+def resolve_revision(repo: Path, ref: str) -> str:
+    """Pin a mutable ref once; already-pinned commits are only verified."""
+    if len(ref) == 40 and all(char in "0123456789abcdef" for char in ref):
+        subprocess.run(
+            ["git", "cat-file", "-e", f"{ref}^{{commit}}"], cwd=repo,
+            check=True, stdout=subprocess.DEVNULL,
+        )
+        return ref
+    return subprocess.check_output(
+        ["git", "rev-parse", "--verify", f"{ref}^{{commit}}"], cwd=repo,
+        text=True, encoding="utf-8",
+    ).strip()
 
 
 def snapshot(repo: Path, ref: str, destination: Path, exclude: tuple[str, ...] = ()) -> None:

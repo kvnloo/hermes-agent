@@ -43,18 +43,20 @@ class SessionRewindMixin:
     """``SessionDB`` mixin: soft-delete from one user turn onward, validated against the warm history."""
 
     def rewind_user_turn(
-        self, session_id: str, user_ordinal: int, *, warm_history: Optional[List[Dict[str, Any]]] = None,
+        self, session_id: str, user_ordinal: Optional[int] = None, *,
+        target_row_id: Optional[int] = None, warm_history: Optional[List[Dict[str, Any]]] = None,
         require_retryable: bool = False, require_composite: bool = False, adopt_row_ids: bool = False,
     ) -> RewindOutcome:
-        """Rewind the active transcript to just before user turn ``user_ordinal`` (0 = oldest; negative counts
-        back from the newest and clamps to the oldest, so ``-n`` is ``/undo n``). ``warm_history`` (CLI/TUI):
-        the in-memory view must have the same user turns and the same live target text as the durable
-        transcript, else ``RuntimeError`` and nothing changes; its (richer) prefix is what gets installed.
-        ``require_retryable``: the live payload must be losslessly replayable as text (``ValueError`` from
-        :func:`retryable_user_text` before any write). ``require_composite``: the target must be a compaction
-        carrier. ``adopt_row_ids`` (TUI): copy durable ``_row_id`` identities onto the installed warm prefix so
-        clients can address follow-ups by row; the CLI leaves its history shape alone. Out-of-range /
-        wrong-shape targets raise :class:`RewindTargetUnavailableError`."""
+        """Rewind just before a canonical user turn.
+
+        ``user_ordinal`` is 0-based (negative counts back from newest and clamps to oldest).
+        ``target_row_id`` instead selects one exact persisted user row and takes precedence over
+        the ordinal. ``warm_history`` (CLI/TUI): the in-memory view must agree with the durable
+        transcript, else ``RuntimeError`` and nothing changes; its richer prefix is installed.
+        ``require_retryable`` requires losslessly replayable text; ``require_composite`` requires
+        a compaction carrier. ``adopt_row_ids`` copies durable identities onto the installed
+        warm prefix. Out-of-range or wrong-shape targets raise ``RewindTargetUnavailableError``.
+        """
         from agent.context_compressor import (
             _DB_PERSISTED_MARKER, history_before_user_originated_turn, retryable_user_text,
             split_user_originated_turn, user_originated_turn_view)
@@ -70,11 +72,22 @@ class SessionRewindMixin:
         # (#115493); the merged turn keeps the first row's identity, so the rewind starts at that row.
         durable = self.get_messages_as_conversation(session_id, include_row_ids=True, repair_alternation=True)
         durable_user = _user_indices(durable)
-        if user_ordinal < 0:
-            user_ordinal = max(len(durable_user) + user_ordinal, 0)
-        if user_ordinal >= len(durable_user):
-            raise RewindTargetUnavailableError("target user message is no longer in session history")
-        target_index = durable_user[user_ordinal]
+        if target_row_id is not None:
+            if type(target_row_id) is not int or target_row_id <= 0:
+                raise RewindTargetUnavailableError("target row_id must be a positive integer")
+            target_index = next(
+                (index for index in durable_user if durable[index].get("_row_id") == target_row_id), None)
+            if target_index is None:
+                raise RewindTargetUnavailableError("target user message is no longer in session history")
+            user_ordinal = durable_user.index(target_index)
+        else:
+            if user_ordinal is None:
+                raise RewindTargetUnavailableError("a user turn ordinal or row_id is required")
+            if user_ordinal < 0:
+                user_ordinal = max(len(durable_user) + user_ordinal, 0)
+            if user_ordinal >= len(durable_user):
+                raise RewindTargetUnavailableError("target user message is no longer in session history")
+            target_index = durable_user[user_ordinal]
         target = durable[target_index]
         durable_prefix, live_view = history_before_user_originated_turn(durable, target_index)
         scaffold, _ = split_user_originated_turn(target)
@@ -87,24 +100,28 @@ class SessionRewindMixin:
             warm_user = _user_indices(warm)
             if len(warm_user) != len(durable_user):
                 raise RuntimeError(_HISTORY_CHANGED)
+            warm_target = warm[warm_user[user_ordinal]]
+            warm_target_row_id = warm_target.get("_row_id")
+            if target_row_id is not None and isinstance(warm_target_row_id, int) and warm_target_row_id != target_row_id:
+                raise RuntimeError(_HISTORY_CHANGED)
             prefix, warm_live_view = history_before_user_originated_turn(warm, warm_user[user_ordinal])
             if _comparison_content(live_view) != _comparison_content(warm_live_view):
                 raise RuntimeError(_HISTORY_CHANGED)
         # Retry re-sends the stored bytes: ``"".join`` of the text parts, never the "\n"-joined display
         # flattening (wire bytes == stored bytes; ``"ab"`` must not come back as ``"a\nb"``).
         live_text = retryable_user_text(live_view.get("content")) if require_retryable else None
-        target_row_id = target.get("_row_id")
-        if not isinstance(target_row_id, int):
+        durable_target_row_id = target.get("_row_id")
+        if not isinstance(durable_target_row_id, int):
             raise RuntimeError("rewind target has no durable row identity")
         # The in-txn payload pin compares against the STORED row, which for a merged turn holds only the
         # first ask, never the merged text the live views carry.
         stored_view = next(
-            (user_originated_turn_view(m) for m in stored if m.get("_row_id") == target_row_id), None)
+            (user_originated_turn_view(m) for m in stored if m.get("_row_id") == durable_target_row_id), None)
         if stored_view is None:
             raise RuntimeError(_HISTORY_CHANGED)
         try:
             result = self.rewind_to_message(
-                session_id, target_row_id, preserve_compaction_handoff=scaffold is not None,
+                session_id, durable_target_row_id, preserve_compaction_handoff=scaffold is not None,
                 expected_active_ids=expected_active_ids, expected_target_content=stored_view.get("content"))
         except ValueError as exc:  # target vanished / changed role under us: same class of failure as out-of-range
             raise RewindTargetUnavailableError(str(exc)) from exc

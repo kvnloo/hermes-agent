@@ -116,7 +116,7 @@ _SCHEMA_OVERRIDES: Dict[str, Dict[str, Any]] = {
     "terminal.vercel_runtime": _select(
         "Legacy Vercel Sandbox runtime (deprecated by Vercel; a pinned runtime overrides the image; clear to use the image)",
         "node24", "node22", "python3.13", clearable=True),
-    "terminal.modal_mode": _select("Modal sandbox mode", "sandbox", "function"),
+    "terminal.modal_mode": _select("Modal execution preference", "auto", "direct", "managed"),
     "proxy.enabled": {
         "type": "boolean",
         "description": (
@@ -167,13 +167,20 @@ _SCHEMA_OVERRIDES: Dict[str, Dict[str, Any]] = {
     "display.resume_display": _select("How resumed sessions display history", "minimal", "full", "off"),
     "display.busy_input_mode": _select("Input behavior while agent is running", "interrupt", "queue", "steer"),
     "approvals.mode": _select("Dangerous command approval mode", "manual", "smart", "off"),
-    "context.engine": _select("Context management engine", "default", "custom"),
+    "context.engine": _select("Context management engine", "compressor", "default", "custom"),
     "human_delay.mode": _select("Simulated typing delay mode", "off", "typing", "fixed"),
     "logging.level": _select("Log level for agent.log", "DEBUG", "INFO", "WARNING", "ERROR"),
     "agent.service_tier": _select(
         "Fast mode: fast = always, auto = first N seconds of each turn, cold = first turn only",
         "", "normal", "fast", "auto", "cold",
     ),
+    "agent.verify_on_stop": {
+        "accepted_types": ["boolean", "string"],
+        "accepted_values": ["auto", "0", "1", "true", "false", "yes", "no", "on", "off"],
+    },
+    "agent.tool_use_enforcement": {
+        "accepted_types": ["boolean", "string", "list"],
+    },
     "delegation.reasoning_effort": _select(
         "Reasoning effort for delegated subagents",
         "", "minimal", "low", "medium", "high", "xhigh", "max", "ultra",
@@ -305,6 +312,38 @@ def _config_schema_with_virtual_fields() -> Dict[str, Dict[str, Any]]:
 
 
 CONFIG_SCHEMA = _config_schema_with_virtual_fields()
+
+
+def _build_config_field_paths(
+    config: Dict[str, Any], prefix: str = "", path: Tuple[str, ...] = (),
+) -> Dict[str, Tuple[str, ...]]:
+
+    """Map flattened schema names back to the literal mapping keys in DEFAULT_CONFIG.
+
+    A resource attribute such as ``deployment.environment.name`` is one YAML key, not three
+    nested mappings, even though the presentation schema uses dot-separated names.
+    """
+    paths: Dict[str, Tuple[str, ...]] = {}
+    for key, value in config.items():
+        full_key = f"{prefix}.{key}" if prefix else key
+        if full_key == "_config_version":
+            continue
+        if isinstance(value, dict) and value:
+            paths.update(_build_config_field_paths(value, full_key, (*path, key)))
+        else:
+            paths[full_key] = (*path, key)
+    return paths
+
+
+_CONFIG_FIELD_PATHS = _build_config_field_paths(DEFAULT_CONFIG)
+for _field_key in CONFIG_SCHEMA:
+    _CONFIG_FIELD_PATHS.setdefault(_field_key, tuple(_field_key.split(".")))
+del _field_key
+
+
+def _config_field_path(key: str) -> Tuple[str, ...]:
+    """Literal config-map segments for a flattened settings field."""
+    return _CONFIG_FIELD_PATHS.get(key, tuple(key.split(".")))
 
 
 def _is_command_provider_block(value: Any) -> bool:

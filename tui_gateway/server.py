@@ -1864,15 +1864,18 @@ def _append_model_switch_marker(session: dict | None, *, model: str, provider: s
 
 
 def _write_config_key(key_path: str, value):
-    # Write-back round-trip: raw read is mandatory — saving the overlaid/expanded view would persist it.
-    cfg = current = _load_cfg_raw()
-    *parents, leaf = key_path.split(".")
-    for key in parents:
-        if not isinstance(current.get(key), dict):
-            current[key] = {}
-        current = current[key]
-    current[leaf] = value
-    _save_cfg(cfg)
+    from hermes_cli.config import config_mutation_lock
+    # Keep the raw snapshot, mutation, and commit in the shared per-profile transaction so
+    # legacy config.set writers exclude native and other-process config updates.
+    with config_mutation_lock():
+        cfg = current = _load_cfg_raw()
+        *parents, leaf = key_path.split(".")
+        for key in parents:
+            if not isinstance(current.get(key), dict):
+                current[key] = {}
+            current = current[key]
+        current[leaf] = value
+        _save_cfg(cfg)
 
 
 _STATUSBAR_MODES = frozenset({"off", "top", "bottom"})

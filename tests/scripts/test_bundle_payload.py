@@ -9,7 +9,7 @@ import sys
 
 import pytest
 
-from scripts.bundles.payload import relativize_links, snapshot
+from scripts.bundles.payload import INERT_SNAPSHOT_DIRS, relativize_links, snapshot
 from scripts.build.inputs import project_entries
 from scripts.build.agent import plant_surfaces
 from scripts.build.launchers import posix_launcher
@@ -68,3 +68,41 @@ def test_both_launchers_keep_active_home_and_call_declared_function(tmp_path, ta
                             env={**os.environ, "HERMES_HOME": str(tmp_path / "custom/profiles/memory")}, capture_output=True, text=True)
     assert result.returncode == 7, result.stderr
     assert json.loads(result.stdout) == [str(tmp_path / "custom/profiles/memory"), ["two words", "$(nope)", ""]]
+
+
+def test_sealed_snapshot_omits_frontend_sources_and_build_scripts(tmp_path):
+    repo = tmp_path / "repo"
+    (repo / "hermes_cli").mkdir(parents=True)
+    (repo / "ui-tsp/src").mkdir(parents=True)
+    (repo / "scripts/build").mkdir(parents=True)
+    (repo / "hermes_cli/main.py").write_text("sealed runtime", encoding="utf-8")
+    (repo / "ui-tsp/src/entry.ts").write_text("source-only frontend", encoding="utf-8")
+    (repo / "scripts/build/tsp.mjs").write_text("source-only compiler", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.test",
+         "commit", "-m", "fixture"],
+        cwd=repo, check=True, capture_output=True, text=True)
+
+    sealed = tmp_path / "sealed"
+    snapshot(repo, "HEAD", sealed, exclude=INERT_SNAPSHOT_DIRS)
+
+    assert (sealed / "hermes_cli/main.py").read_text(encoding="utf-8") == "sealed runtime"
+    assert not (sealed / "ui-tsp").exists()
+    assert not (sealed / "scripts").exists()
+
+
+def test_prepared_source_digest_ignores_the_assembly_owned_tsp_product(tmp_path):
+    from scripts.bundles.native_prepared import _source_digest
+
+    code = tmp_path / "agent"
+    (code / "hermes_cli").mkdir(parents=True)
+    (code / "pyproject.toml").write_text(
+        '[project]\nname="fixture"\nversion="1.0.0"\n', encoding="utf-8")
+    source_digest = _source_digest(code)
+    product = code / "hermes_cli/tsp_dist"
+    product.mkdir()
+    (product / "entry.js").write_text("staged frontend", encoding="utf-8")
+
+    assert _source_digest(code) == source_digest

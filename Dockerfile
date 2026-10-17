@@ -289,22 +289,25 @@ RUN /opt/hermes/.venv/bin/python -I scripts/generate_icons.py --source /opt/herm
 # Frontend dependencies never enter the runtime layers.
 FROM runtime_base AS frontend_build
 COPY package.json package-lock.json ./
+COPY .npmrc ./
+COPY pyproject.toml uv.lock ./
 COPY web/package.json web/
 COPY ui-tui/package.json ui-tui/
+COPY ui-tsp/package.json ui-tsp/
 COPY ui-tui/packages/hermes-ink/ ui-tui/packages/hermes-ink/
 COPY apps/shared/ apps/shared/
-COPY scripts/build/node-deps.mjs scripts/build/node-deps.mjs
+COPY scripts/build/ scripts/build/
 ENV npm_config_install_links=false
-RUN node scripts/build/node-deps.mjs --source /opt/hermes --workspace ui-tui --workspace web
+RUN node scripts/build/node-deps.mjs --source /opt/hermes --workspace ui-tui --workspace ui-tsp --workspace web
 
-COPY pyproject.toml uv.lock ./
 COPY web/ web/
 COPY ui-tui/ ui-tui/
-COPY scripts/build/*.mjs scripts/build/
+COPY ui-tsp/ ui-tsp/
 COPY scripts/generate-icons.mjs scripts/generate_icons.py scripts/
 COPY assets/ assets/
 COPY --from=icons /tmp/hermes-icons /tmp/hermes-icons
 RUN node scripts/build/tui.mjs --source /opt/hermes --out /opt/products/tui && \
+    node scripts/build/tsp.mjs --source /opt/hermes --out /opt/products/tsp && \
     node scripts/build/web.mjs --source /opt/hermes --icons /tmp/hermes-icons --out /opt/products/web
 
 FROM python_deps AS runtime
@@ -329,9 +332,6 @@ RUN cd plugins/platforms/photon/sidecar && \
     npm ci --no-audit --fetch-retries=5 && \
     npm cache clean --force
 
-# Shared product outputs are independent of application dependency assembly.
-COPY --from=frontend_build /opt/products/tui /opt/hermes/ui-tui
-COPY --from=frontend_build /opt/products/web /opt/hermes/hermes_cli/web_dist
 # ---------- Bot Screen X socket directory ----------
 # Xvnc would create this itself (/tmp is 1777); pre-creating it keeps ownership
 # deterministic when HERMES_UID is remapped between boots.
@@ -350,6 +350,11 @@ RUN mkdir -p /tmp/hermes-runtime && chmod 0700 /tmp/hermes-runtime
 # gives the non-root hermes user read + traverse but no write; root retains
 # write so the build steps below don't need chmod u+w dances.
 COPY --link --chmod=a+rX,go-w . .
+# Keep generated frontend products isolated from the copied runtime source tree.
+COPY --from=frontend_build /opt/products /opt/products
+# The web receipt fingerprints this prepared input at its recorded absolute path.
+# Keep the exact icon subtree used by frontend_build for runtime freshness checks.
+COPY --from=icons /tmp/hermes-icons/web/public /tmp/hermes-icons/web/public
 
 # The shared assembler binds the prepared environment and frontend products.
 RUN /opt/hermes/.venv/bin/python -m docker.build_agent
@@ -428,11 +433,10 @@ COPY --chmod=0755 docker/cont-init.d/02-reconcile-profiles /etc/cont-init.d/02-r
 
 # ---------- Runtime ----------
 ENV HERMES_WEB_DIST=/opt/hermes/hermes_cli/web_dist
-# Point the TUI launcher at the prebuilt bundle baked at build time (Layer 8:
-# `ui-tui && npm run build`). This makes _make_tui_argv take the prebuilt-bundle
-# fast path (`node --expose-gc /opt/hermes/ui-tui/dist/entry.js`) and skip the
-# _tui_need_npm_install / runtime `npm install` branch entirely — exactly the
-# nix/packaged-release path the launcher was designed for.
+# Point the TUI launcher at the compiler product copied from frontend_build.
+# _make_tui_argv uses its prebuilt fast path (`node --expose-gc
+# /opt/products/tui/dist/entry.js`), avoiding source builds and runtime npm
+# installation — the same path used by packaged releases.
 #
 # Why this is required (not just an optimization): the root package-lock.json
 # describes the WHOLE monorepo workspace set (root + web + ui-tui + apps/*),
@@ -444,7 +448,7 @@ ENV HERMES_WEB_DIST=/opt/hermes/hermes_cli/web_dist
 # embedded-chat (/api/pty) connections → ENOTEMPTY → the chat tab dies with a
 # 502 / "[session ended]". Pointing at the prebuilt bundle sidesteps the whole
 # check. (A separate launcher hardening is tracked independently.)
-ENV HERMES_TUI_DIR=/opt/hermes/ui-tui
+ENV HERMES_TUI_DIR=/opt/products/tui
 ENV HERMES_HOME=/opt/data
 ENV HERMES_WRITE_SAFE_ROOT=/opt/data
 # Opt-in backend SDKs install on first use into PM dependency generations under

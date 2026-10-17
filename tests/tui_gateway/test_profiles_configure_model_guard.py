@@ -62,6 +62,65 @@ def _configure(params):
     return srv._methods["profiles.configure"]("configure", {"name": "default", **params})["result"]
 
 
+
+def _request_configure(params):
+    return srv.handle_request({
+        "id": "configure",
+        "method": "profiles.configure",
+        "params": {"name": "default", **params},
+    })
+
+
+def test_explicit_false_confirmation_still_waits_for_the_guard(home, contributor_guard):
+    result = _configure({
+        "model": GUARDED_MODEL,
+        "provider": "opencode-go",
+        "confirm_expensive_model": False,
+    })
+
+    assert result.get("confirm_required") is True
+    assert GUARD_MESSAGE in (result.get("confirm_message") or "")
+    assert _profile_model(home) != GUARDED_MODEL
+
+
+@pytest.mark.parametrize("bad_confirmation", [None, "true", 0, 1])
+def test_malformed_confirmation_is_rejected_before_guard_or_profile_write(
+    home, monkeypatch, bad_confirmation
+):
+    config_path = home / "config.yaml"
+    original_config = b"model:\n  default: old/model\n  provider: openai\n"
+    config_path.write_bytes(original_config)
+
+    def unexpected_guard_lookup(*_args, **_kwargs):
+        raise AssertionError("model guard ran for malformed confirmation")
+
+    monkeypatch.setattr("agent.models_dev.get_model_info", unexpected_guard_lookup)
+    response = _request_configure({
+        "model": "gpt-5-pro",
+        "provider": "openai",
+        "confirm_expensive_model": bad_confirmation,
+    })
+
+    assert response["error"]["code"] == 4002
+    assert response["error"]["message"] == "confirm_expensive_model must be a boolean"
+    assert config_path.read_bytes() == original_config
+
+
+def test_registered_guard_failure_is_visible_and_preserves_profile_config(home, monkeypatch):
+    config_path = home / "config.yaml"
+    original_config = b"model:\n  default: old/model\n  provider: openai\n"
+    config_path.write_bytes(original_config)
+
+    def broken_local_metadata(provider, model):
+        raise RuntimeError("registered guard metadata failure")
+
+    monkeypatch.setattr("agent.models_dev.get_model_info", broken_local_metadata)
+    response = _request_configure({"model": "gpt-5-pro", "provider": "openai"})
+
+    assert response["error"]["code"] == 5064
+    assert response["error"]["message"] == "registered guard metadata failure"
+    assert config_path.read_bytes() == original_config
+
 def _profile_model(home: Path):
     cfg_path = home / "config.yaml"
     if not cfg_path.is_file():

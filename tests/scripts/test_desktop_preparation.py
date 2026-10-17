@@ -75,6 +75,19 @@ def test_native_version_capture_uses_admitted_build_environment(tmp_path, monkey
     assert capture([sys.executable, "-c", script], tmp_path, env) == env["HERMES_RELEASE_EPOCH"]
 
 
+def test_desktop_frontend_build_prepares_tsp_dependencies(tmp_path):
+    from dataclasses import replace
+    from scripts.bundles.desktop_prepare import BuildRequest
+
+    request = BuildRequest(
+        source=tmp_path, work=tmp_path / "work", cache=tmp_path / "cache",
+        commit="a" * 40, tag=None, version="1.2.3", variant="bundled",
+        target="linux-x64", bundle_env={},
+    )
+    assert request.workspaces() == ["apps/desktop", "ui-tui", "ui-tsp", "web"]
+    assert replace(request, variant="light").workspaces() == ["apps/desktop"]
+
+
 def test_stable_build_rejects_a_claim_tag_for_another_version(tmp_path, monkeypatch):
     from scripts.bundles.desktop_prepare import BuildRequest
 

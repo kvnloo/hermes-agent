@@ -134,6 +134,26 @@ describe('Composer', () => {
     expect(c.text).toBe('a')
   })
 
+  it('resets undo, redo, kill ring, and prompt-history browsing between editor transactions', () => {
+    history.push('previous prompt')
+    const c = new Composer()
+    typed(c, 'FAKE_REVIEW_SECRET')
+    c.key(key('z', { ctrl: true }))
+    c.key(key('z', { ctrl: true, shift: true }))
+    c.key(key('a', { ctrl: true }))
+    c.key(key('k', { ctrl: true }))
+    c.key(key('up'))
+
+    c.reset('https://public.example')
+    c.key(key('y', { ctrl: true }))
+    c.key(key('z', { ctrl: true }))
+    c.key(key('z', { ctrl: true, shift: true }))
+    c.key(key('down'))
+
+    expect(c.text).toBe('https://public.example')
+    expect(history).toEqual(['previous prompt'])
+  })
+
   it('trailing backslash + Enter inserts a newline; Shift+Enter too; Enter submits', () => {
     const c = new Composer()
     typed(c, 'a\\')

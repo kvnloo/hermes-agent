@@ -16,9 +16,13 @@ interface Reply {
 const pending: PromiseWithResolvers<Reply>[] = []
 
 function setup() {
+  let sid: string | null = 'sid'
+  let generation = 0
+  const calls: { method: string; params: Record<string, unknown> }[] = []
   const gw = {
-    request: () => {
+    request: (method: string, params: Record<string, unknown> = {}) => {
       const reply = Promise.withResolvers<Reply>()
+      calls.push({ method, params })
       pending.push(reply)
 
       return reply.promise
@@ -26,10 +30,16 @@ function setup() {
   }
 
   const host = { changed: vi.fn(), close: vi.fn(), open: vi.fn() }
-  const completion = new Completion(host, gw as unknown as GatewayClient, () => 'sid')
+  const completion = new Completion(host, gw as unknown as GatewayClient, () => sid, () => generation)
   const composer = new Composer()
 
-  return { completion, composer }
+  return {
+    completion,
+    composer,
+    calls,
+    setGeneration: (value: number) => (generation = value),
+    setSid: (value: string | null) => (sid = value)
+  }
 }
 
 /** Types `text` and lets the debounce fire its request. */
@@ -96,5 +106,39 @@ describe('Completion', () => {
     expect(completion.onKey({ ...escape, name: 'tab' })).toBe(false)
     expect(composer.text).toBe('/hx')
     expect(completion.ghost).toBe('')
+  })
+  it('scopes path completion to the active session and rejects replaced-session replies', async () => {
+    const { completion, composer, calls, setSid } = setup()
+    type(completion, composer, '@file:src/')
+
+    expect(calls[0]).toEqual({
+      method: 'complete.path',
+      params: { session_id: 'sid', word: '@file:src/' }
+    })
+
+    setSid('replacement')
+    completion.update(composer)
+    vi.advanceTimersByTime(100)
+
+    expect(calls[1]).toEqual({
+      method: 'complete.path',
+      params: { session_id: 'replacement', word: '@file:src/' }
+    })
+
+    pending[0]?.resolve({ items: [row('@file:src/old.ts')] })
+    pending[1]?.resolve({ items: [row('@file:src/new.ts')] })
+    await vi.runAllTimersAsync()
+
+    expect(completion.items.map(item => item.text)).toEqual(['@file:src/new.ts'])
+  })
+
+  it('drops a late completion reply after same-session ownership changes', async () => {
+    const { completion, composer, setGeneration } = setup()
+    type(completion, composer, '@file:src/')
+    setGeneration(1)
+    pending[0]?.resolve({ items: [row('@file:src/old.ts')] })
+    await vi.runAllTimersAsync()
+
+    expect(completion.items).toEqual([])
   })
 })

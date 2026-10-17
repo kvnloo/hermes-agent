@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, StrictBool
 
 from .base import JsonValue, Params, Result, WireEnum
 from .common import OpenModel, ProfileParams, SessionParams, SubagentStatus
@@ -277,7 +277,7 @@ class ProfilesConfigureParams(ProfileParams):
     description: str | None = None
     model: str | None = None
     provider: str | None = None
-    confirm_expensive_model: bool | str | None = None
+    confirm_expensive_model: StrictBool = False
     disabled_skills: list[str] | None = None
     enabled_toolsets: list[str] | None = None
     enabled_mcp_servers: list[str] | None = None

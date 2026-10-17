@@ -17,7 +17,7 @@ export interface DockContext {
   /** The agent accepts prompts (for Tern's `send`). */
   ready: boolean
   busy?: { since: object; startedAt: number; label: string }
-  queued: readonly string[]
+  queued: readonly { text: string; display?: string }[]
   model: string
   /** Hermes's reasoning effort (`none` = off); empty hides the chip. */
   effort: string
@@ -58,10 +58,10 @@ export function dockNodes(cx: DockContext): JSX.Element[] {
   if (cx.queued.length) {
     nodes.push(
       <col gap="xs" key="queue" role="omp.queue">
-        {cx.queued.map((text, i) => (
+        {cx.queued.map((prompt, i) => (
           <row align="center" gap="sm" key={`q${i}`} role="omp.queue.item" title="Queued">
             <icon key="icon" name="corner-down-right" />
-            <text grow={1} key="text" text={text.replace(/\s*\r?\n\s*/g, ' ↵ ')} truncate="end" wrap="none" />
+            <text grow={1} key="text" text={(prompt.display ?? prompt.text).replace(/\s*\r?\n\s*/g, ' ↵ ')} truncate="end" wrap="none" />
             {i === 0 && cx.queued.length > 1 ? (
               <badge key="count" role="omp.queue.count" text={`${cx.queued.length}`} />
             ) : null}

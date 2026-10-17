@@ -1,7 +1,10 @@
-"""Bionic assembly consumes prepared bytes without running foreign binaries."""
+"""Bionic assembly consumes a receipt-checked TUI snapshot without foreign binaries."""
 import json
 from pathlib import Path
 import shutil
+import subprocess
+
+import pytest
 
 from scripts.build.inputs import RESOURCE_ENV, dependency_site
 from scripts.termux.payload_facts import write_facts
@@ -11,11 +14,33 @@ def test_bionic_facts_and_agent_keep_fixed_prefix_and_tui_only(tmp_path):
     from pm.lock import Lockfile, Facts
     from pm.registry import get_package
 
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node is required to validate the TUI receipt")
+    source = tmp_path / "source"
+    build = source / "scripts/build"
+    build.mkdir(parents=True)
+    repository = Path(__file__).resolve().parents[2]
+    for name in ("freshness.mjs", "frontend-common.mjs", "tui.mjs"):
+        shutil.copy2(repository / "scripts/build" / name, build / name)
+    (source / "package.json").write_text('{"type":"module"}\n', encoding="utf-8")
+    (source / "package-lock.json").write_text('{"lockfileVersion":3}\n', encoding="utf-8")
+    subprocess.run(["git", "init", str(source)], check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Fixture"], cwd=source, check=True)
+    subprocess.run(["git", "config", "user.email", "fixture@example.test"], cwd=source, check=True)
+    subprocess.run(["git", "add", "."], cwd=source, check=True)
+    subprocess.run(
+        ["git", "commit", "-m", "frontend source"], cwd=source, check=True, capture_output=True,
+    )
+    revision = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=source, check=True, capture_output=True, text=True,
+    ).stdout.strip()
+
     payload = tmp_path / "payload"
     repo = payload / "app"
     (repo / "pm").mkdir(parents=True)
     lock = repo / "pm/lock.json"
-    shutil.copy2(Path(__file__).resolve().parents[2] / "pm/lock.json", lock)
+    shutil.copy2(repository / "pm/lock.json", lock)
     (repo / "pyproject.toml").write_text('[project]\nname="fixture"\nversion="1"\n[project.scripts]\nprobe="entry:main"\n', encoding="utf-8")
     (repo / "install-stamp.json").write_text('{"distribution":"apt-termux","payload":"bundled"}', encoding="utf-8")
     for name in RESOURCE_ENV:
@@ -36,10 +61,19 @@ def test_bionic_facts_and_agent_keep_fixed_prefix_and_tui_only(tmp_path):
     tui = tmp_path / "tui-product"
     (tui / "dist").mkdir(parents=True)
     (tui / "dist/entry.js").write_text("built", encoding="utf-8")
-    (tui / "package.json").write_text('{"type":"module"}', encoding="utf-8")
+    (tui / "package.json").write_text('{"type":"module"}\n', encoding="utf-8")
+    recorder = (
+        "import { buildInputs, recordProduct } from './scripts/build/freshness.mjs';\n"
+        "const [source, out] = process.argv.slice(1);\n"
+        "recordProduct({source, product:'tui', out, inputs:buildInputs(source,'tui')});\n"
+    )
+    subprocess.run(
+        [node, "--input-type=module", "-e", recorder, str(source), str(tui / "dist")],
+        cwd=source, check=True, capture_output=True, text=True,
+    )
     build_set = tmp_path / "build-set.txt"
     build_set.write_bytes(b"\xef\xbb\xbfnative-fixture\n")
-    write_facts(payload, lock, build_set, tui)
+    write_facts(payload, lock, build_set, tui, source, revision)
     manifest = json.loads((payload / "manifest.json").read_text())
     assert manifest["runtime"]["commands"] == {"probe": "bin/probe"}
     assert manifest["runtime"]["sitePackages"] == site.relative_to(payload).as_posix()

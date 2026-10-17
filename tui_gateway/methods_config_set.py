@@ -19,16 +19,18 @@ _profile_scoped = _registry.profile_scoped
 
 def _write_display_sections(*, sections=None, drop_sections=(), **display_fields) -> None:
     """Persist ``display.<field>`` + ``display.sections`` edits via the raw (uncached) write-back."""
-    cfg = _load_cfg_raw()
-    display = cfg.get("display") if isinstance(cfg.get("display"), dict) else {}
-    cur = display.get("sections") if isinstance(display.get("sections"), dict) else {}
-    display.update(display_fields)
-    cur.update(sections or {})
-    for name in drop_sections:
-        cur.pop(name, None)
-    display["sections"] = cur
-    cfg["display"] = display
-    _save_cfg(cfg)
+    from hermes_cli.config import config_mutation_lock
+    with config_mutation_lock():
+        cfg = _load_cfg_raw()
+        display = cfg.get("display") if isinstance(cfg.get("display"), dict) else {}
+        cur = display.get("sections") if isinstance(display.get("sections"), dict) else {}
+        display.update(display_fields)
+        cur.update(sections or {})
+        for name in drop_sections:
+            cur.pop(name, None)
+        display["sections"] = cur
+        cfg["display"] = display
+        _save_cfg(cfg)
 
 
 def _emit_session_info(sid: str, session: dict) -> None:
@@ -81,7 +83,8 @@ def _stash_pending_model_switch(rid, key, value, session, confirmed, parsed):
         pending_model = str(value)
     pending_provider = (getattr(parsed, "explicit_provider", "") or "").strip()
     if not confirmed:
-        pending_warning = _pending_switch_selection_warning(pending_model, pending_provider)
+        pending_warning = _pending_switch_selection_warning(
+            pending_model, pending_provider, agent=session.get("agent"), session=session)
         if pending_warning is not None:
             return _cfgset_model_ok(rid, key, pending_model, pending_warning, pending_warning, deferred=False)
     # display_*: _session_info shows the user's pick while pending, not the live old model.
@@ -106,15 +109,22 @@ def _cfgset_guarded(fn):
 @_cfgset_guarded
 def _set_model(rid, params, key, value, session):
     """Live/deferred model switch; see _apply_model_switch and _apply_pending_model_switch."""
+    if "confirm_expensive_model" in params and type(params["confirm_expensive_model"]) is not bool:
+        return _err(rid, 4002, "confirm_expensive_model must be a boolean")
     if not value:
         return _err(rid, 4002, "model value required")
-    confirmed = bool(params.get("confirm_expensive_model", False))
+    confirmed = params.get("confirm_expensive_model", False)
+    from hermes_cli.model_switch import parse_model_switch_args
+    parsed_flags = parse_model_switch_args(value if session else str(value))
+    if session and not confirmed and not parsed_flags.errors \
+            and not session.get("running") and not session.get("_compute_host_active"):
+        preflight_warning = _pending_switch_selection_warning(
+            parsed_flags.model_input, parsed_flags.explicit_provider, agent=session.get("agent"), session=session)
+        if preflight_warning is not None:
+            return _cfgset_model_ok(
+                rid, key, parsed_flags.model_input, preflight_warning, preflight_warning, deferred=False)
     if session:
-        from hermes_cli.model_switch import parse_model_switch_args
         sid = params.get("session_id", "")
-        parsed_flags = parse_model_switch_args(value)
-        # Compute-host sessions ALWAYS defer, busy or idle. Their live agent is in
-        # the child process — the direct path below would build a SECOND agent in
         # the server, switch that copy, and leave the child (which handles every
         # turn) on the old model: checkmark shows the pick, requests keep the old
         # model. The stash crosses the boundary in the turn frame and the child's
@@ -149,9 +159,9 @@ def _set_model(rid, params, key, value, session):
         # --once keeps its specific 5001; other sessionless model sets 4001 so
         # --global cannot persist profile defaults before session.create (#106397:
         # an older Desktop client sent a fresh-draft pick this way).
-        from hermes_cli.model_switch import parse_model_switch_args
-        if parse_model_switch_args(str(value)).is_once:
-            result = _apply_model_switch("", {"agent": None}, value, confirm_expensive_model=confirmed)
+        if parsed_flags.is_once:
+            result = _apply_model_switch(
+                "", {"agent": None}, value, confirm_expensive_model=confirmed, parsed_flags=parsed_flags)
         else:
             # One string for every client: the Ink TUI (dashboard /chat, `hermes --tui`) has no
             # Settings; the dashboard has a Models page; only the Desktop has Settings -> Models.
@@ -220,47 +230,51 @@ def _set_busy(rid, params, key, value, session):
 
 
 def _set_verbose(rid, params, key, value, session):
+    from hermes_cli.config import config_mutation_lock
     cycle = ["off", "new", "all", "verbose"]
-    if value and value != "cycle":
-        nv = str(value).strip().lower()
-        if nv not in cycle:
-            return _err(rid, 4002, f"unknown verbose mode: {value}")
-    else:
-        cur = session.get("tool_progress_mode", _load_tool_progress_mode()) if session else _load_tool_progress_mode()
-        nv = cycle[((cycle.index(cur) if cur in cycle else 2) + 1) % len(cycle)]
-    _write_config_key("display.tool_progress", nv)
-    if session:
-        session["tool_progress_mode"] = nv
-        if session.get("agent") is not None:
-            session["agent"].verbose_logging = nv == "verbose"
+    with config_mutation_lock():
+        if value and value != "cycle":
+            nv = str(value).strip().lower()
+            if nv not in cycle:
+                return _err(rid, 4002, f"unknown verbose mode: {value}")
+        else:
+            cur = session.get("tool_progress_mode", _load_tool_progress_mode()) if session else _load_tool_progress_mode()
+            nv = cycle[((cycle.index(cur) if cur in cycle else 2) + 1) % len(cycle)]
+        _write_config_key("display.tool_progress", nv)
+        if session:
+            session["tool_progress_mode"] = nv
+            if session.get("agent") is not None:
+                session["agent"].verbose_logging = nv == "verbose"
     return _kv(rid, key, nv)
 
 
 def _set_focus(rid, params, key, value, session):
     # /focus: enabling stashes the configured tool_progress mode and pins it "off"; disabling restores.
+    from hermes_cli.config import config_mutation_lock
     from hermes_cli.focus_view import FOCUS_TOOL_PROGRESS_MODE, normalize_tool_progress_mode, resolve_focus_arg
-    d_f = _display_cfg()
-    cur_focus = bool(d_f.get("focus_view", False))
-    action, target = resolve_focus_arg(str(value or ""), cur_focus)
-    if action == "usage":
-        return _err(rid, 4002, f"unknown focus value: {value} (use on|off|status)")
-    if action == "status" or target is None:
-        return _kv(rid, key, "on" if cur_focus else "off", tool_progress=_load_tool_progress_mode())
-    if target:
-        saved = (cur_focus and d_f.get("focus_saved_tool_progress")) or _load_tool_progress_mode()
-        _write_config_key("display.focus_saved_tool_progress", normalize_tool_progress_mode(saved))
-        effective = FOCUS_TOOL_PROGRESS_MODE
-    else:
-        effective = normalize_tool_progress_mode(d_f.get("focus_saved_tool_progress") or "all")
-    _write_config_key("display.tool_progress", effective)
-    _write_config_key("display.focus_view", bool(target))
-    if session:
-        session["focus_view"] = bool(target)
-        session["tool_progress_mode"] = effective
-        if session.get("agent") is not None:
-            with contextlib.suppress(Exception):
-                session["agent"].tool_progress_mode = effective
-    return _kv(rid, key, "on" if target else "off", tool_progress=effective)
+    with config_mutation_lock():
+        d_f = _display_cfg()
+        cur_focus = bool(d_f.get("focus_view", False))
+        action, target = resolve_focus_arg(str(value or ""), cur_focus)
+        if action == "usage":
+            return _err(rid, 4002, f"unknown focus value: {value} (use on|off|status)")
+        if action == "status" or target is None:
+            return _kv(rid, key, "on" if cur_focus else "off", tool_progress=_load_tool_progress_mode())
+        if target:
+            saved = (cur_focus and d_f.get("focus_saved_tool_progress")) or _load_tool_progress_mode()
+            _write_config_key("display.focus_saved_tool_progress", normalize_tool_progress_mode(saved))
+            effective = FOCUS_TOOL_PROGRESS_MODE
+        else:
+            effective = normalize_tool_progress_mode(d_f.get("focus_saved_tool_progress") or "all")
+        _write_config_key("display.tool_progress", effective)
+        _write_config_key("display.focus_view", bool(target))
+        if session:
+            session["focus_view"] = bool(target)
+            session["tool_progress_mode"] = effective
+            if session.get("agent") is not None:
+                with contextlib.suppress(Exception):
+                    session["agent"].tool_progress_mode = effective
+        return _kv(rid, key, "on" if target else "off", tool_progress=effective)
 
 
 def _set_approval_mode(rid, params, key, value, session):
@@ -405,13 +419,15 @@ def _toggle_setters() -> dict:
 
 
 def _set_toggle(rid, params, key, value, session):
-    norm, cfg_key, aliases, flipped, report = _toggle_setters()[key]
-    raw = norm(value)
-    nv = flipped() if raw in {"", "toggle"} else aliases.get(raw)
-    if nv is None:
-        return _err(rid, 4002, f"unknown {key} value: {value}")
-    _write_config_key(cfg_key, nv)
-    return _kv(rid, key, report(nv))
+    from hermes_cli.config import config_mutation_lock
+    with config_mutation_lock():
+        norm, cfg_key, aliases, flipped, report = _toggle_setters()[key]
+        raw = norm(value)
+        nv = flipped() if raw in {"", "toggle"} else aliases.get(raw)
+        if nv is None:
+            return _err(rid, 4002, f"unknown {key} value: {value}")
+        _write_config_key(cfg_key, nv)
+        return _kv(rid, key, report(nv))
 
 
 def _set_cwd(rid, params, key, value, session):
@@ -431,21 +447,25 @@ def _set_cwd(rid, params, key, value, session):
 
 @_cfgset_guarded
 def _set_prompt(rid, params, key, value, session):
-    cfg = _load_cfg_raw()  # write-back round-trip
-    if value == "clear":
-        cfg.pop("custom_prompt", None)
-    else:
-        cfg["custom_prompt"] = value
-    _save_cfg(cfg)
+    from hermes_cli.config import config_mutation_lock
+    with config_mutation_lock():
+        cfg = _load_cfg_raw()  # write-back round-trip
+        if value == "clear":
+            cfg.pop("custom_prompt", None)
+        else:
+            cfg["custom_prompt"] = value
+        _save_cfg(cfg)
     return _kv(rid, key, "" if value == "clear" else value)
 
 
 @_cfgset_guarded
 def _set_personality(rid, params, key, value, session):
-    pname, new_prompt = _validate_personality(str(value or ""), _load_cfg_raw())
-    # Persists via hermes_cli.personality (single owner), never the user-owned system prompt.
+    from hermes_cli.config import config_mutation_lock
     from hermes_cli.personality import persist_personality
-    persist_personality(pname)
+    with config_mutation_lock():
+        pname, new_prompt = _validate_personality(str(value or ""), _load_cfg_raw())
+        # Persists via hermes_cli.personality (single owner), never the user-owned system prompt.
+        persist_personality(pname)
     history_reset, info = _apply_personality_to_session(params.get("session_id", ""), session, new_prompt, pname)
     return _kv(rid, key, str(value or "none"), history_reset=history_reset,
                **({"info": info} if info is not None else {}))

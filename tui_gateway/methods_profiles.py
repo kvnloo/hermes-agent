@@ -387,6 +387,9 @@ def _(rid, params: dict) -> dict:
     """Editor Save: ``name`` plus any of ``ui_meta`` (+ ``ui_meta_expected_revisions``), ``soul``,
     ``description``, ``model`` + ``provider`` (+ ``confirm_expensive_model``), ``disabled_skills``,
     ``enabled_toolsets``, ``enabled_mcp_servers``; sections are independent, ``applied`` reports each."""
+    if "confirm_expensive_model" in params and type(params["confirm_expensive_model"]) is not bool:
+        return _err(rid, 4002, "confirm_expensive_model must be a boolean")
+
     _name, profile_dir, err = _resolve_profile(rid, params)
     if err is not None:
         return err
@@ -652,21 +655,20 @@ def _configure_ui_meta(profile_dir, params, applied) -> None:
 
 def _configure_model(profile_dir, params, applied):
     """Apply a ``model`` + ``provider`` pin, or return a confirm message and write NOTHING (client
-    resends with ``confirm_expensive_model``). A failing guard = no warning (as _apply_model_switch)."""
+    resends with ``confirm_expensive_model``). Guard lookup failures refuse the model change."""
     model, provider = _model_provider_params(params)
     if not (model and provider):
         return None
+    confirmed = params.get("confirm_expensive_model", False)
+    if type(confirmed) is not bool:
+        raise ValueError("confirm_expensive_model must be a boolean")
     confirm_message = None
-    # #95293 remainder: this is the Bots editor's model-switch path, and it used to write guarded
-    # (data-policy / expensive) models silently — the ONE surface that bypassed the selection guard every
-    # other switch path enforces. Same handshake contract as ``config.set model``: without
-    # ``confirm_expensive_model`` a guarded pick answers ``confirm_required`` + ``confirm_message`` and
-    # writes NOTHING; the client resends with ``confirm_expensive_model: true`` once the user confirms. A
-    # misbehaving guard must never break the save (treated as "no warning"), matching
-    # ``_apply_model_switch``.
-    if not is_truthy_value(params.get("confirm_expensive_model", False)):
+    # This is the Bots editor's model-switch path. Without explicit confirmation, the same
+    # handshake as ``config.set model`` asks before writing; the guard uses local metadata only.
+    if not confirmed:
         warn = _lazy("hermes_cli.model_selection_guards", "combined_selection_warning")
-        confirm_message = _try(lambda: getattr(warn(model, provider=provider or None), "message", None), None)
+        warning = warn(model, provider=provider or None, allow_provider_io=False)
+        confirm_message = warning.message if warning is not None else None
     if confirm_message is None:
         applied["model"] = _best_effort(lambda: _pin_profile_model(profile_dir, provider, model))
     return confirm_message

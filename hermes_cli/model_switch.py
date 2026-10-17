@@ -354,6 +354,15 @@ class StartupModelRoute(NamedTuple):
     api_key: str = ""
 
 
+
+@dataclass(frozen=True)
+class ModelSwitchTarget:
+    """Model/provider facts that can be resolved without provider or catalog lookups."""
+
+    model: str
+    provider: str
+    base_url: str = ""
+
 def resolve_startup_model_route(
     raw_model: str, *, explicit_provider: str = "", current_provider: str = "",
     user_providers: Optional[dict] = None,
@@ -1020,6 +1029,154 @@ def _entry_aliases(entry: dict) -> frozenset[str]:
     return custom_provider_aliases(str(entry.get("name") or ""), str(entry.get("provider_key") or ""))
 
 
+
+def _local_provider_target(
+    name: str, user_providers: Optional[dict], custom_providers: Optional[list],
+) -> tuple[str, str]:
+    """Resolve a provider identity and configured endpoint without consulting provider metadata."""
+    from hermes_cli.providers import normalize_provider, resolve_custom_provider, resolve_user_provider
+
+    raw = _clean(name).lower()
+    if not raw:
+        return "", ""
+    canonical = normalize_provider(raw)
+    for candidate in dict.fromkeys((raw, canonical)):
+        user = resolve_user_provider(candidate, user_providers)
+        if user is not None:
+            return user.id, user.base_url
+    for candidate in dict.fromkeys((raw, canonical)):
+        custom = resolve_custom_provider(candidate, custom_providers)
+        if custom is not None:
+            return custom.id, custom.base_url
+
+    # A lossy models.dev alias can fold two registered providers onto one canonical slug. Preserve
+    # the exact registry identity just as resolve_provider_full() does, without loading its catalog.
+    from hermes_cli.auth import PROVIDER_REGISTRY
+    if raw in PROVIDER_REGISTRY and sum(
+        1 for registry_id in PROVIDER_REGISTRY if normalize_provider(registry_id) == canonical
+    ) > 1:
+        return raw, ""
+    return canonical, ""
+
+
+def _local_direct_alias(
+    model: str, current_provider: str, user_providers: Optional[dict],
+    custom_providers: Optional[list],
+) -> tuple[str, Optional[DirectAlias]]:
+    """Find an exact or reverse direct alias from the active config, with no model-catalog lookup."""
+    key = _clean(model).lower()
+    if not key:
+        return "", None
+    _ensure_direct_aliases()
+    direct = DIRECT_ALIASES.get(key)
+    if direct is not None:
+        return key, direct
+
+    current_id = _local_provider_target(current_provider, user_providers, custom_providers)[0]
+    fallback: tuple[str, DirectAlias] | None = None
+    for alias, candidate in DIRECT_ALIASES.items():
+        if candidate.model.lower() != key:
+            continue
+        if _local_provider_target(candidate.provider, user_providers, custom_providers)[0] == current_id:
+            return alias, candidate
+        if fallback is None:
+            fallback = (alias, candidate)
+    return fallback or ("", None)
+
+
+def resolve_model_switch_target(
+    raw_input: str, *, current_provider: str = "", current_base_url: str = "",
+    explicit_provider: str = "", user_providers: Optional[dict] = None,
+    custom_providers: Optional[list] = None,
+) -> ModelSwitchTarget:
+    """Resolve only the model/provider facts needed by selection guards, without route probes.
+
+    This deliberately does not inspect provider catalogs, resolve credentials, validate a model,
+    or fetch capabilities. Direct aliases, provider-qualified inputs, and exact configured-model
+    declarations are local; other model aliases remain unresolved and retain the current route
+    until the ordinary switch pipeline runs after consent.
+    """
+    raw = _clean(raw_input)
+    current = _clean(current_provider)
+    explicit = _clean(explicit_provider)
+    provider = current
+    model = raw
+    base_url = _clean(current_base_url)
+
+    if explicit:
+        provider, configured_base = _local_provider_target(explicit, user_providers, custom_providers)
+        base_url = configured_base or (base_url if provider == current else "")
+
+    moa_resolved = False
+    if not explicit and raw:
+        from hermes_cli.config import load_config
+        from hermes_cli.moa_config import exact_moa_preset_name, normalize_moa_config
+        preset = exact_moa_preset_name(normalize_moa_config(load_config().get("moa") or {}), raw)
+        if preset:
+            provider, model, base_url = "moa", preset, ""
+            moa_resolved = True
+
+    alias = None
+    if not moa_resolved and raw:
+        _, alias = _local_direct_alias(raw, current, user_providers, custom_providers)
+    if alias is not None:
+        model = alias.model
+        if not explicit:
+            provider = alias.provider
+        if alias.base_url and (
+            not explicit
+            or _local_provider_target(provider, user_providers, custom_providers)[0]
+            == _local_provider_target(alias.provider, user_providers, custom_providers)[0]
+        ):
+            base_url = alias.base_url
+    elif not explicit and not moa_resolved and raw:
+        # The startup parser shares /model's local provider-qualified/custom-route syntax. Avoid
+        # its aggregator catalog check: aggregator-native slugs stay on the current route here.
+        from hermes_cli.providers import is_routing_aggregator
+        is_aggregator_slash = "/" in raw and is_routing_aggregator(current)
+        route = None
+        if not is_aggregator_slash:
+            route = resolve_startup_model_route(
+                raw, current_provider=current, user_providers=user_providers,
+                custom_providers=custom_providers)
+        if route is not None:
+            provider = route.provider or current
+            model = route.model
+            base_url = route.base_url or _local_provider_target(
+                provider, user_providers, custom_providers)[1]
+        elif raw.lower() not in MODEL_ALIASES and not is_aggregator_slash:
+            matches = _configured_provider_matches(raw, user_providers, custom_providers)
+            if matches:
+                current_slug = current if current in matches else None
+                if current_slug is None:
+                    current_lower = current.lower()
+                    current_slug = next(
+                        (slug for slug in matches if isinstance(user_providers, dict)
+                         and isinstance(user_providers.get(slug), dict)
+                         and current_lower in custom_provider_aliases(
+                             str(user_providers[slug].get("name") or ""), slug)),
+                        None,
+                    )
+                selected = current_slug or (next(iter(matches)) if len(matches) == 1 else None)
+                if selected is not None:
+                    provider, model = selected, matches[selected]
+                    base_url = _local_provider_target(
+                        provider, user_providers, custom_providers)[1]
+
+    if model and provider:
+        model = _resolve_named_custom_model_id(model, provider, custom_providers)
+        from hermes_cli.providers import normalize_provider
+        # These two normalizers need a model catalog; guard preflight must remain local-only.
+        if normalize_provider(provider) not in {"copilot", "copilot-acp", "nvidia"}:
+            model = normalize_model_for_provider(model, provider)
+
+    local_identity = _local_provider_target(provider, user_providers, custom_providers)[0]
+    current_identity = _local_provider_target(current, user_providers, custom_providers)[0]
+    if not base_url and local_identity == current_identity:
+        base_url = _clean(current_base_url)
+    elif not base_url:
+        base_url = _local_provider_target(provider, user_providers, custom_providers)[1]
+    return ModelSwitchTarget(model=model, provider=provider, base_url=base_url)
 # --- Core model-switching pipeline
 
 def _entry_configured_key(cfg: dict, read_env) -> str:
@@ -1760,13 +1917,30 @@ def switch_model(
     return _build_switch_result(st)
 
 
+def _should_clear_selection_context_pin(current_model_cfg: Any, result: ModelSwitchResult) -> bool:
+    """Whether this selection changes the configured model route that owns a context-length pin."""
+    if isinstance(current_model_cfg, dict):
+        configured_model = current_model_cfg.get("default") or current_model_cfg.get("model")
+        configured_provider = current_model_cfg.get("provider")
+        configured_base_url = current_model_cfg.get("base_url")
+    else:
+        configured_model = current_model_cfg if isinstance(current_model_cfg, str) else ""
+        configured_provider = configured_base_url = ""
+    from hermes_cli.route_identity import should_clear_context_pin
+    return should_clear_context_pin(
+        configured_model, result.new_model, configured_base_url, result.base_url,
+        configured_provider, result.target_provider)
+
+
 def model_selection_config_updates(result: ModelSwitchResult, current_model_cfg: Any) -> dict[str, Any]:
     """The ONE config.yaml shape a persisted model selection produces, as ``model.<key>`` -> value
     (``None`` = clear). ``current_model_cfg`` is the on-disk ``model:`` block (raw).
 
     base_url/api_mode are freshly resolved for the target route, so they are always synced —
     ``None`` when the target has none — otherwise the OLD provider's endpoint/wire-protocol lingers
-    (#25106). A context pin is dropped only when its route identity changed (fail-closed).
+    (#25106). A context pin is dropped only when its route identity changed (fail-closed). If only
+    root-level legacy aliases store the pin, ``persist_model_selection`` clears them with the same
+    route comparison.
     Non-custom targets resolve credentials from env/auth.json/the pool, so an inline
     ``model.api_key`` is a leftover that would contaminate later custom resolution. For custom
     targets the inline key belongs to ONE endpoint: it survives only a same-route re-pick (same
@@ -1783,12 +1957,8 @@ def model_selection_config_updates(result: ModelSwitchResult, current_model_cfg:
         "default": result.new_model, "provider": result.target_provider,
         "base_url": result.base_url or None, "api_mode": result.api_mode or None,
     }
-    if "context_length" in model_cfg:
-        from hermes_cli.route_identity import should_clear_context_pin
-        if should_clear_context_pin(
-                model_cfg.get("default") or model_cfg.get("model"), result.new_model,
-                model_cfg.get("base_url"), result.base_url, model_cfg.get("provider"), result.target_provider):
-            updates["context_length"] = None
+    if "context_length" in model_cfg and _should_clear_selection_context_pin(model_cfg, result):
+        updates["context_length"] = None
     target = str(result.target_provider or "").strip().lower()
     route_changed = _route_changed(model_cfg, result)
     stale = ["api_key", "api"] if (not target.startswith("custom") or route_changed) else []
@@ -1825,18 +1995,27 @@ def persist_model_selection(result: ModelSwitchResult, config_path: Any = None) 
     ``HERMES_HOME/config.yaml`` — the context override or ``HERMES_HOME`` at call time).
 
     Targeted key writes, not a whole-``model:`` rewrite: a block rewrite destroys sibling keys the
-    user set there (``model_slots``, ``model_fallback``, ...). ``should_clear_context_pin`` can do
+    user set there (``model_slots``, ``model_fallback``, ...). Context pins, including root-level legacy
+    aliases, clear on a model/route change and remain on a same-route pick. Route comparison can do
     cold-start disk I/O — async callers run this on a worker thread."""
     from pathlib import Path
-    from hermes_cli.config import get_config_path, read_user_config_raw
+    from hermes_cli.config import config_mutation_lock, get_config_path, read_user_config_raw
     from utils import atomic_roundtrip_yaml_update
     path = Path(config_path) if config_path else get_config_path()
-    for key, value in model_selection_config_updates(result, read_user_config_raw(path).get("model")).items():
-        atomic_roundtrip_yaml_update(path, f"model.{key}", value)
-    try:  # owner-only: config files contain API keys
-        os.chmod(path, 0o600)
-    except (OSError, NotImplementedError):
-        pass
+    with config_mutation_lock(path):
+        raw_config = read_user_config_raw(path)
+        updates = model_selection_config_updates(result, raw_config.get("model"))
+        clears_context_pin = _should_clear_selection_context_pin(raw_config.get("model"), result)
+        for key, value in updates.items():
+            atomic_roundtrip_yaml_update(path, f"model.{key}", value)
+        if clears_context_pin:
+            for alias in ("context_length", "model_context_length"):
+                if alias in raw_config:
+                    atomic_roundtrip_yaml_update(path, alias, None)
+        try:  # owner-only: config files contain API keys
+            os.chmod(path, 0o600)
+        except (OSError, NotImplementedError):
+            pass
 
 
 def _extra_headers_from_config(entry: Any) -> dict[str, str]:

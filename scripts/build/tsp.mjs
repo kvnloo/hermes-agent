@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Self-contained Tern frontend (ui-tsp) compiler. Dependencies must already be prepared.
-import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -26,8 +26,11 @@ async function buildDeveloperTsp() {
     const result = await buildTsp({ source: repoRoot, out: join(scratch, 'tsp') })
     const staged = mkdtempSync(join(repoRoot, 'ui-tsp/.dist-'))
     try {
+      const dist = join(repoRoot, 'ui-tsp/dist')
       cpSync(join(result.out, 'dist'), staged, { recursive: true })
-      publishDirectory(staged, join(repoRoot, 'ui-tsp/dist'), { source: repoRoot })
+      publishDirectory(staged, dist, { source: repoRoot })
+      const receipt = JSON.parse(readFileSync(join(result.out, 'dist/hermes-build.json'), 'utf8'))
+      recordProduct({ source: repoRoot, product: 'tsp', out: dist, inputs: receipt.inputs })
     } finally {
       rmSync(staged, { recursive: true, force: true })
     }

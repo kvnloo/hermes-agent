@@ -2,7 +2,7 @@
 
 These modules compile frontends and assemble a runnable agent from prepared
 inputs. They do not replace npm, uv, PM, or Nix.
-[Shared bundle builds](../../docs/shared-bundle-builds.md) describes the
+[Shared bundle builds](../../website/docs/developer-guide/shared-bundle-builds.md) describes the
 providers and distribution adapters.
 
 This reference describes the current interfaces, not completed artifact
@@ -110,6 +110,7 @@ node scripts/build/desktop.mjs --source /work/source \
 | Builder | Required CLI arguments | Additional CLI arguments | Product contents |
 |---|---|---|---|
 | `tui.mjs` | `--source`, `--out` | None | `dist/entry.js` and `package.json` with `type: module` |
+| `tsp.mjs` | `--source`, `--out` | None | `dist/entry.js` and `package.json` with `type: module` |
 | `web.mjs` | `--source`, `--out`, `--icons` | None | `index.html`, Vite assets, and public assets |
 | `desktop.mjs` | `--source`, `--out`, `--icons`, `--stamp`, `--native-deps` | `--typecheck`, `--platform` | Renderer assets, `electron-main.mjs`, `electron-preload.js`, and native `node_modules` |
 
@@ -155,6 +156,10 @@ inputs outside source), missing prepared trees, or damaged outputs are stale.
 Receipts describe a source build, not a portable dependency cache; immutable
 distributions use their existing prebuilt launch path instead. They replace the
 old Python per-profile hashes and TUI mtime lists, not PM's dependency receipts.
+
+TUI and TSP runtime package metadata is part of the complete product and is written before the receipt. Compiler configuration, root npm configuration, shared compiler helpers, and the relevant dependency metadata are build inputs.
+Native preparation resolves the requested source revision once, validates every selected frontend against that revision, then copies the validated products into private frozen inputs before assembly. It rejects mixed-revision products rather than silently rebuilding or borrowing another checkout.
+Docker keeps complete products under `/opt/products` and retains the exact prepared web icon input recorded by the web receipt. Runtime validation checks those inputs against `/opt/hermes`.
 
 The compilers resolve modules from the supplied workspace. They do not run
 npm, uv, PM installation, or icon preparation. TypeScript/Vite scratch files

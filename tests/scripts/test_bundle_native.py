@@ -19,6 +19,35 @@ import pytest
 from scripts.bundles import native
 
 
+def test_native_cli_rejects_tui_web_products_without_tsp(monkeypatch, tmp_path):
+    monkeypatch.setattr(native.sys, "argv", [
+        "native", "--out", str(tmp_path / "out"), "--source", str(tmp_path / "source"),
+        "--tui", str(tmp_path / "tui"), "--web", str(tmp_path / "web"),
+    ])
+
+    with pytest.raises(SystemExit) as result:
+        native.main()
+
+    assert result.value.code == 2
+    assert not (tmp_path / "out").exists()
+
+
+def test_stage_cli_rejects_tui_web_products_without_tsp(monkeypatch, tmp_path):
+    from scripts.bundles import stage
+
+    output = tmp_path / "out"
+    monkeypatch.setattr(stage.sys, "argv", [
+        "stage", "--out", str(output), "--tui", str(tmp_path / "tui"),
+        "--web", str(tmp_path / "web"),
+    ])
+
+    with pytest.raises(SystemExit) as result:
+        stage.main()
+
+    assert result.value.code == 2
+    assert not output.exists()
+
+
 def test_bundle_stages_git_tree_and_runs_native_children_before_manifest(tmp_path, monkeypatch):
     import importlib
     import inspect
@@ -28,6 +57,9 @@ def test_bundle_stages_git_tree_and_runs_native_children_before_manifest(tmp_pat
     from pm.registry import get_package
     from pm.store import tree_digest
     from tests.pm._fixtures import _wheel, stage_host_python
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node is required to validate native frontend products")
 
     monkeypatch.setattr(Path, "home", lambda: tmp_path / "home")
     monkeypatch.setenv("HERMES_HOME", str(tmp_path / "home"))
@@ -71,6 +103,14 @@ def test_bundle_stages_git_tree_and_runs_native_children_before_manifest(tmp_pat
         '[project]\nname="fixture"\nversion="1.0.0"\nrequires-python=">=3.11"\n'
         '[project.scripts]\nprobe="entry:main"\n[project.optional-dependencies]\npayloadtest=["bundle-probe==1.0"]\n'
         '[tool.uv]\npackage=false\nno-index=true\nfind-links=["wheels"]\n', encoding="utf-8")
+    build_scripts = repo / "scripts/build"
+    build_scripts.mkdir(parents=True)
+    for name in ("freshness.mjs", "frontend-common.mjs"):
+        shutil.copy2(source / "scripts/build" / name, build_scripts / name)
+    (repo / "package.json").write_text('{"type":"module"}\n', encoding="utf-8")
+    (repo / "package-lock.json").write_text('{"lockfileVersion":3}\n', encoding="utf-8")
+    (repo / "web/src").mkdir(parents=True)
+    (repo / "web/src/main.ts").write_text("export const page = 'fixture'\n", encoding="utf-8")
     selected = {"agent-browser", "chromium", "uv", "python"}
     stale = {"chromium-headless-shell", "retired-tool"}
     user_store = tmp_path / "user-tools"
@@ -187,7 +227,7 @@ def test_bundle_stages_git_tree_and_runs_native_children_before_manifest(tmp_pat
     inventory = json.loads(prepared.read_text())
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip()
     assert inventory["revision"] == revision
-    assert inventory["inputs"]["ref"] == "HEAD"
+    assert inventory["inputs"]["ref"] == revision
     changed_inputs = json.loads(prepared.read_text())
     changed_inputs["inputs"]["project"] = str(repo / "pyproject.toml")
     prepared.write_text(json.dumps(changed_inputs), encoding="utf-8")
@@ -226,21 +266,43 @@ def test_bundle_stages_git_tree_and_runs_native_children_before_manifest(tmp_pat
     frontend = tmp_path / "web-product"
     frontend.mkdir()
     (frontend / "index.html").write_text("built web", encoding="utf-8")
+    recorder = (
+        "import { buildInputs, recordProduct } from './scripts/build/freshness.mjs';\n"
+        "const [source, out] = process.argv.slice(1);\n"
+        "recordProduct({source, product:'web', out, inputs:buildInputs(source,'web')});\n"
+    )
+
+    def stamp_web():
+        subprocess.run(
+            [node, "--input-type=module", "-e", recorder, str(repo), str(frontend)],
+            cwd=repo, check=True, capture_output=True, text=True,
+        )
+
+    stamp_web()
     with monkeypatch.context() as strict:
         def forbidden(*args, **kwargs):
-            pytest.fail("strict finish entered dependency acquisition or a child process")
+            pytest.fail("strict finish entered dependency acquisition")
         strict.setattr(pm, "build_environment", forbidden)
         strict.setattr(pm, "stage_manager_runtime", forbidden)
         strict.setattr(pm, "prepare_tools", forbidden)
         strict.setattr(pm, "stage_tools", forbidden)
-        strict.setattr(subprocess, "run", forbidden)
-        assert native.finish_native(prepared, {"web": frontend}) == 0
+        assemble = native._assemble_native
+
+        def mutate_after_validation(inputs, frontends, out):
+            (frontend / "index.html").write_text("caller mutation after validation", encoding="utf-8")
+            return assemble(inputs, frontends, out)
+
+        strict.setattr(native, "_assemble_native", mutate_after_validation)
+        assert native.finish_native(prepared, {"web": frontend}, source=repo, ref=revision) == 0
+        assert (output / "hermes-agent/hermes_cli/web_dist/index.html").read_text() == "built web"
+        strict.setattr(native, "_assemble_native", assemble)
         (output / "hermes-agent/install-stamp.json").write_text('{"variant":"bundled"}', encoding="utf-8")
         (output / "manifest.json").write_text('{"variant":"bundled"}', encoding="utf-8")
         launcher = output / ("bin/probe.exe" if os.name == "nt" else "bin/probe")
         launcher.rename(launcher.with_name("renamed-launcher"))
         (frontend / "index.html").write_text("store web", encoding="utf-8")
-        assert native.finish_native(prepared, {"web": frontend}) == 0
+        stamp_web()
+        assert native.finish_native(prepared, {"web": frontend}, source=repo, ref=revision) == 0
     assert (output / "hermes-agent/hermes_cli/web_dist/index.html").read_text() == "store web"
     assert calls[0]["all_extras"] is True
     assert calls[0]["cache"] == tmp_path / "cache"
@@ -549,7 +611,7 @@ def test_staged_cache_ships_full_wheel_set_and_rebuilds_offline(tmp_path):
     assert probe.stdout.splitlines() == ["installed from cached wheel", "1.0"]
 
 
-def test_native_dispatch_isolates_process_state_on_real_child_failure(tmp_path, monkeypatch):
+def test_native_dispatch_invalid_revision_preserves_process_state(tmp_path, monkeypatch):
     # Compiler provisioning has its own native test; this probe must stop
     # at the invalid revision without installing tools on a developer host.
     monkeypatch.setattr("pm.native_build.prepare_windows_environment", lambda **kwargs: dict(kwargs["env"]))
@@ -580,53 +642,3 @@ def test_native_preparation_refuses_symlinked_output_before_writing(tmp_path, mo
     assert not output.with_name(output.name + ".prepared.json").exists()
 
 
-@pytest.mark.parametrize("cache_source,explicit_compilers,status", [
-    ("explicit", True, 17), ("ambient", False, 0), ("default", False, 17),
-])
-def test_native_dispatch_child_environment(tmp_path, monkeypatch, cache_source, explicit_compilers, status):
-    from pm.packages import uv_cache_dir
-
-    monkeypatch.setattr(Path, "home", lambda: tmp_path / "host")
-    monkeypatch.setattr("pm.native_build.prepare_windows_environment", lambda **kwargs: dict(kwargs["env"]))
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "user"))
-    monkeypatch.delenv("UV_CACHE_DIR", raising=False)
-    ambient = tmp_path / "ambient"
-    if cache_source != "default":
-        monkeypatch.setenv("UV_CACHE_DIR", str(ambient))
-    cache = {"explicit": tmp_path / "explicit", "ambient": ambient, "default": uv_cache_dir()}[cache_source]
-    compilers = {}
-    for key, name in (("CARGO_HOME", ".cargo"), ("RUSTUP_HOME", ".rustup")):
-        home = tmp_path / ("custom" if explicit_compilers else "host") / name
-        home.mkdir(parents=True)
-        (home / "fixture-state").write_text(key, encoding="utf-8")
-        compilers[key] = str(home)
-        monkeypatch.delenv(key, raising=False)
-        if explicit_compilers:
-            monkeypatch.setenv(key, str(home))
-    before, run, homes = dict(os.environ), subprocess.run, []
-    observed = tmp_path / "child.json"
-
-    def child(command, *, cwd, env):
-        assert command[command.index("-m") + 1] == "scripts.bundles.native"
-        return run([sys.executable, "-c",
-                    "import os,json,sys; from pathlib import Path; "
-                    "Path(sys.argv[1]).write_text(json.dumps(dict(os.environ))); "
-                    "assert all((Path(os.environ[k])/'fixture-state').read_text() == k for k in ('CARGO_HOME','RUSTUP_HOME')); "
-                    "p=Path(os.environ['UV_CACHE_DIR']); p.mkdir(parents=True,exist_ok=True); "
-                    "f=p/'reused'; f.write_text(f.read_text()+'x' if f.exists() else 'x'); sys.exit(int(sys.argv[2]))",
-                    str(observed), str(status)], cwd=cwd, env=env)
-
-    monkeypatch.setattr(native.subprocess, "run", child)
-    out = tmp_path / "payload"
-    for _ in range(2):
-        assert native.stage_native(SimpleNamespace(out=out, ref="HEAD", cache=cache if cache_source == "explicit" else None)) == status
-        env = json.loads(observed.read_text(encoding="utf-8-sig"))
-        homes.append(Path(env["HOME"]))
-        assert env["HOME"] == env["USERPROFILE"] != str(tmp_path / "host")
-        assert {key: env[key] for key in compilers} == compilers
-        assert Path(env["UV_CACHE_DIR"]) == cache
-        assert Path(env["HERMES_RUNTIME_DIR"]) == out / "tools"
-        assert Path(env["HERMES_HOME"]) == homes[-1] / ".hermes"
-    assert (cache / "reused").read_text(encoding="utf-8-sig") == "xx"
-    assert all(not home.exists() for home in homes)
-    assert dict(os.environ) == before

@@ -123,6 +123,8 @@ class SettingsField(Result):
     description: str
     category: str
     options: list[str] | None = None
+    accepted_types: list[Literal["boolean", "number", "string", "list", "object"]] | None = None
+    accepted_values: list[str] | None = None
     value: JsonValue
     default: JsonValue
     nullable: bool = False

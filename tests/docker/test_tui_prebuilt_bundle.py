@@ -8,7 +8,7 @@ package-lock.json. Without HERMES_TUI_DIR set, ``_make_tui_argv`` falls
 through to source dependency preparation, racing itself across
 concurrent /api/pty connections → ENOTEMPTY.
 
-The fix is ``ENV HERMES_TUI_DIR=/opt/hermes/ui-tui`` in the Dockerfile, which
+The fix is ``ENV HERMES_TUI_DIR=/opt/products/tui`` in the Dockerfile, which
 makes the launcher take the prebuilt-bundle fast path (``node --expose-gc
 .../dist/entry.js``) and skip the install check entirely. These tests assert
 that invariant holds in the built image.
@@ -68,20 +68,82 @@ def test_prebuilt_bundle_present_and_no_runtime_install(built_image: str) -> Non
         "ui = Path('/opt/hermes/ui-tui')\n"
         "argv, cwd = _make_tui_argv(ui, tui_dev=False)\n"
         "out = {\n"
-        "  'dist_entry_exists': (ui / 'dist' / 'entry.js').is_file(),\n"
+        "  'dist_entry_exists': (Path('/opt/products/tui') / 'dist' / 'entry.js').is_file(),\n"
         "  'argv': argv,\n"
         "  'uses_prebuilt': ('dist/entry.js' in ' '.join(argv)) and ('npm' not in argv[0].lower()),\n"
         "}\n"
         "print(json.dumps(out))\n"
     )
     out = json.loads(_exec_py(built_image, py))
-    assert out["dist_entry_exists"], "prebuilt ui-tui/dist/entry.js missing from image"
+    assert out["dist_entry_exists"], "prebuilt TUI product entry is missing from image"
     # With HERMES_TUI_DIR set, _make_tui_argv returns the prebuilt path BEFORE
     # ever reaching the install check — so the resolved argv is what matters.
     assert out["uses_prebuilt"], f"launcher did not take prebuilt path: argv={out['argv']!r}"
     assert "npm" not in out["argv"][0].lower(), (
         f"launcher resolved to an npm invocation, not the prebuilt bundle: {out['argv']!r}"
     )
+
+
+
+def test_prebuilt_tsp_bundle_launches_sealed_product_without_runtime_install(built_image: str) -> None:
+    """The sealed TSP entry launches directly, with no source build or npm path."""
+    py = '''
+import json
+import subprocess
+from pathlib import Path
+from hermes_cli.main_tui_launch import _make_tsp_argv
+
+root = Path("/opt/hermes")
+product = root / "hermes_cli/tsp_dist"
+argv, cwd = _make_tsp_argv(root)
+launch = subprocess.run(
+    argv, cwd=cwd, stdin=subprocess.DEVNULL,
+    capture_output=True, text=True, timeout=30,
+)
+print(json.dumps({
+    "entry": str(product / "entry.js"),
+    "argv": argv,
+    "cwd": str(cwd),
+    "launch_returncode": launch.returncode,
+    "launch_stderr": launch.stderr[-1000:],
+}))
+'''
+    out = json.loads(_exec_py(built_image, py))
+    assert out["argv"][-1] == out["entry"]
+    assert out["cwd"] == "/opt/hermes/hermes_cli/tsp_dist"
+    assert "npm" not in out["argv"][0].lower(), out["argv"]
+    assert out["launch_returncode"] == 75, (
+        f"sealed TSP process did not exit through its no-protocol fallback: {out['launch_stderr']}"
+    )
+
+
+def test_frontend_products_are_current_against_image_source(built_image: str) -> None:
+    """Every complete frontend product must match the image's copied source tree."""
+    py = r'''
+import json
+import subprocess
+
+script = r"""
+import { productCurrent } from './scripts/build/freshness.mjs'
+
+const source = '/opt/hermes'
+const products = {
+  tui: productCurrent({ source, product: 'tui', out: '/opt/products/tui/dist' }),
+  tsp: productCurrent({ source, product: 'tsp', out: '/opt/products/tsp/dist' }),
+  web: productCurrent({ source, product: 'web', out: '/opt/products/web' }),
+}
+console.log(JSON.stringify(products))
+"""
+result = subprocess.run(
+    ["node", "--input-type=module", "-e", script],
+    cwd="/opt/hermes", capture_output=True, text=True, timeout=30,
+)
+assert result.returncode == 0, result.stderr
+print(result.stdout.strip())
+'''
+    current = json.loads(_exec_py(built_image, py))
+    assert set(current) == {"tui", "tsp", "web"}
+    assert all(current.values()), f"frontend products are stale against /opt/hermes: {current}"
 
 
 def test_tui_gateway_child_uses_packaged_python(built_image: str) -> None:

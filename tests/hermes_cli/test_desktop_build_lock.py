@@ -223,12 +223,17 @@ def test_update_path_waits_for_a_held_lock(tmp_path, monkeypatch, capsys):
         built.append(True)
         return None
 
+    workspace_calls: list[tuple[str, ...]] = []
+
+    def prepare_workspaces(_root, workspaces, **_kwargs):
+        workspace_calls.append(tuple(workspaces))
+
     monkeypatch.setattr(source_build_mod, "_install_configured_features_missing_deps", lambda *_: None, raising=False)
-    monkeypatch.setattr(source_build_mod, "source_frontends", lambda _root: ("ui-tui", "web"), raising=False)
+    monkeypatch.setattr(
+        source_build_mod, "source_frontends", lambda _root: ("ui-tui", "ui-tsp", "web"), raising=False)
     monkeypatch.setattr(source_build_mod, "source_build_env", lambda **_kw: {"PATH": "/usr/bin"}, raising=False)
-    monkeypatch.setattr(source_build_mod, "prepare_source_dependencies", lambda *_a, **_kw: None, raising=False)
-    monkeypatch.setattr(source_build_mod, "build_source_tui", lambda *_a, **_kw: None, raising=False)
-    monkeypatch.setattr(source_build_mod, "build_source_web", lambda *_a, **_kw: None, raising=False)
+    monkeypatch.setattr(source_build_mod, "prepare_source_dependencies", prepare_workspaces, raising=False)
+    monkeypatch.setattr(source_build_mod, "source_product_current", lambda *_: True, raising=False)
     monkeypatch.setattr(source_build_mod, "_refresh_installed_desktop_apps", lambda *_a, **_kw: None, raising=False)
     monkeypatch.setattr("hermes_cli.desktop_build_lock.DesktopBuildLock", _ReleaseOnEnter)
     monkeypatch.setattr("hermes_cli.main_desktop.build_prepared_desktop", fake_build_prepared_desktop)
@@ -238,3 +243,4 @@ def test_update_path_waits_for_a_held_lock(tmp_path, monkeypatch, capsys):
 
     assert release_calls == [True], "update path must acquire the lock in wait mode"
     assert built == [True]
+    assert workspace_calls == [("ui-tui", "ui-tsp", "web", "apps/desktop")]

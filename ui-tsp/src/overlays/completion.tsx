@@ -25,6 +25,9 @@ export class Completion {
   #for = ''
   /** The text before the caret last queried (scheduled, in flight or answered); null until the first update. */
   #asked: string | null = null
+  /** Session scope last queried; a changed owner token is new even if the SID repeats. */
+  #askedSid: string | null | undefined
+  #askedGeneration: number | undefined
   /** Bumped by every new query and every dismissal: replies of an older generation are dropped. */
   #gen = 0
   #timer: NodeJS.Timeout | undefined
@@ -32,11 +35,13 @@ export class Completion {
   readonly #host: OverlayHost
   readonly #gw: GatewayClient
   readonly #sid: () => string | null
+  readonly #sessionGeneration: () => number
 
-  constructor(host: OverlayHost, gw: GatewayClient, sid: () => string | null) {
+  constructor(host: OverlayHost, gw: GatewayClient, sid: () => string | null, sessionGeneration: () => number) {
     this.#host = host
     this.#gw = gw
     this.#sid = sid
+    this.#sessionGeneration = sessionGeneration
   }
 
   get open(): boolean {
@@ -61,16 +66,27 @@ export class Completion {
   update(composer: Composer) {
     this.#composer = composer
     const before = composer.text.slice(0, composer.cursor)
+    const sid = this.#sid()
+    const ownerGeneration = this.#sessionGeneration()
+    const scopeChanged = sid !== this.#askedSid || ownerGeneration !== this.#askedGeneration
 
-    if (before === this.#asked) {
+    if (before === this.#asked && !scopeChanged) {
       return
     }
 
     this.#asked = before
+    this.#askedSid = sid
+    this.#askedGeneration = ownerGeneration
     const gen = ++this.#gen
     clearTimeout(this.#timer)
     this.#timer = undefined
     const request = before.includes('\n') ? null : completionRequestForInput(before)
+
+    if (scopeChanged) {
+      this.items = []
+      this.selected = 0
+      this.#for = ''
+    }
 
     if (!request) {
       this.dismiss()
@@ -80,15 +96,22 @@ export class Completion {
 
     this.#timer = setTimeout(() => {
       this.#timer = undefined
-      const sid = this.#sid()
 
-      const params =
-        request.method === 'complete.slash' && sid ? { ...request.params, session_id: sid } : request.params
+      if (gen !== this.#gen || this.#sid() !== sid || this.#sessionGeneration() !== ownerGeneration) {
+        return
+      }
+
+      const params = sid ? { ...request.params, session_id: sid } : request.params
 
       this.#gw
         .request<{ items?: CompletionItem[]; replace_from?: number | null }>(request.method, params)
         .then(r => {
-          if (gen !== this.#gen || composer.text.slice(0, composer.cursor) !== before) {
+          if (
+            gen !== this.#gen ||
+            this.#sid() !== sid ||
+            this.#sessionGeneration() !== ownerGeneration ||
+            composer.text.slice(0, composer.cursor) !== before
+          ) {
             return
           }
 
@@ -110,7 +133,7 @@ export class Completion {
           this.#host.changed()
         })
         .catch(() => {
-          if (gen === this.#gen) {
+          if (gen === this.#gen && this.#sid() === sid && this.#sessionGeneration() === ownerGeneration) {
             this.dismiss()
           }
         })
@@ -137,6 +160,12 @@ export class Completion {
 
     if (!this.open || !composer) {
       return false
+    }
+
+    if (this.#askedSid !== this.#sid() || this.#askedGeneration !== this.#sessionGeneration()) {
+      this.dismiss()
+
+      return true
     }
 
     switch (key.name) {
@@ -212,8 +241,13 @@ export class Completion {
   }
 
   #pick(itemId: string, listId: string, { accept }: { accept: boolean }) {
-    const i = Number(itemId.slice(listId.length + 1))
+    if (this.#askedSid !== this.#sid() || this.#askedGeneration !== this.#sessionGeneration()) {
+      this.dismiss()
 
+      return
+    }
+
+    const i = Number(itemId.slice(listId.length + 1))
     if (Number.isInteger(i) && this.items[i]) {
       this.selected = i
 
@@ -229,7 +263,12 @@ export class Completion {
   #accept(before: string): boolean {
     const composer = this.#composer
 
-    if (!composer || composer.text.slice(0, composer.cursor) !== this.#for) {
+    if (
+      !composer ||
+      this.#askedSid !== this.#sid() ||
+      this.#askedGeneration !== this.#sessionGeneration() ||
+      composer.text.slice(0, composer.cursor) !== this.#for
+    ) {
       return false
     }
 

@@ -5,7 +5,7 @@ listing/browsing stored rows, spawn-tree snapshots, event replay and the statele
 
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import Field, StrictInt
 
 from .base import JsonValue, Params, Result, WireEnum
 from .common import (OpenModel, PendingApproval, ProfileParams, SessionLiveInfo, SessionParams, TranscriptMessage,
@@ -442,16 +442,21 @@ class UndoIntent(WireEnum):
 
 
 class SessionUndoParams(SessionParams):
+    # The durable transcript user row selected for Rewind; omission intentionally means latest turn.
+    # Explicit null and nonpositive values are invalid targets, never a legacy-latest sentinel.
+    row_id: StrictInt = Field(default_factory=lambda: None, gt=0)
     # ``retry``: the client resends the dropped turn (Ink /retry), so metrics count a retry, not an undo.
     intent: UndoIntent | None = None
 
 
 class SessionUndoResult(Result):
     removed: int
+    count: int
+    messages: list[TranscriptMessage]
 
 
 method("session.undo", params=SessionUndoParams, result=SessionUndoResult,
-       doc="Drop the last user turn (and everything after it) from an idle session.")
+       doc="Drop a selected durable user turn, or the latest turn when no row_id is supplied, and return retained history.")
 
 
 class SessionSaveParams(SessionParams):

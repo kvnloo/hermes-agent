@@ -37,4 +37,27 @@ describe('tool cards', () => {
     })
     expect(body instanceof Node && body.props.lang).toBe('typescript')
   })
+  it('renders dense content-search matches and the reported match count', () => {
+    const dense = 'src/a.ts\n  1: first match\n  4: another match'
+    const call: ToolCall = {
+      args: { path: 'src', pattern: 'needle', target: 'content' },
+      argsText: '',
+      context: 'needle',
+      id: 'search-1',
+      name: 'search_files',
+      result: { matches_format: 'path-grouped', matches_text: dense, total_count: 2 },
+      startedAt: 0,
+      status: 'done'
+    }
+    const card = toolNode(call, 0)
+
+    if (!(card instanceof Node)) {
+      throw new Error('A tool card must be a node')
+    }
+
+    const body = card.children[0]
+
+    expect(card.props).toMatchObject({ meta: ['2 matches · in src'], name: 'grep', target: 'needle' })
+    expect(body instanceof Node && body.props.text).toBe(dense)
+  })
 })

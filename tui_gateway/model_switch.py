@@ -248,15 +248,12 @@ def _merge_preflight_warning(result, agent, session: dict, cfg, custom_provs) ->
 def _expensive_model_confirm(result, current_base_url: str, current_api_key, agent=None) -> dict | None:
     """Deferred-confirm response when the selection guards flag the target model (or, with a live
     ``agent``, the switch itself — large cached context), else None."""
-    try:
-        from hermes_cli.model_selection_guards import (
-            combined_selection_warning, selection_context_for_agent)
-        warning = combined_selection_warning(
-            result.new_model, provider=result.target_provider, base_url=result.base_url or current_base_url,
-            api_key=result.api_key or current_api_key, model_info=result.model_info,
-            selection_context=selection_context_for_agent(agent))
-    except Exception:
-        warning = None
+    from hermes_cli.model_selection_guards import (
+        combined_selection_warning, selection_context_for_agent)
+    warning = combined_selection_warning(
+        result.new_model, provider=result.target_provider, base_url=result.base_url or current_base_url,
+        api_key=result.api_key or current_api_key, model_info=result.model_info,
+        selection_context=selection_context_for_agent(agent))
     if warning is None:
         return None
     msg = f"{warning.message}\n\n{result.warning_message}" if result.warning_message else warning.message
@@ -483,17 +480,41 @@ def _sync_agent_model_with_config(sid: str, session: dict) -> None:
             platform="tui", user_config=getattr(session.get("agent"), "_notification_config", None))
 
 
-def _pending_switch_selection_warning(model: str, provider: str) -> str | None:
-    """Selection-guard message for a model queued mid-turn, or ``None``. Runs BEFORE the pick is
-    stashed (the client can still turn the response into a confirm prompt); only pre-resolution
-    inputs exist so it can only under-fire — ``_apply_model_switch`` is the backstop."""
+def _pending_switch_selection_warning(
+    model: str, provider: str = "", agent=None, session: dict | None = None,
+) -> str | None:
+    """Preflight a selection using the effective current route and local metadata only."""
     if not model:
         return None
-    try:
-        from hermes_cli.model_selection_guards import combined_selection_warning
-        warning = combined_selection_warning(model, provider=provider or None)
-    except Exception:
-        return None
+    scope = (_session_profile_runtime_scope(session, hydrate_secrets=False)
+             if session is not None else contextlib.nullcontext())
+    with scope:
+        effective_provider = (provider or "").strip()
+        if not effective_provider and agent is not None:
+            effective_provider = str(getattr(agent, "provider", "") or "").strip()
+        if not effective_provider and isinstance(session, dict):
+            model_override = session.get("model_override")
+            if isinstance(model_override, dict):
+                effective_provider = str(model_override.get("provider") or "").strip()
+            if not effective_provider:
+                resume_overrides = session.get("resume_runtime_overrides")
+                if isinstance(resume_overrides, dict):
+                    effective_provider = str(resume_overrides.get("provider_override") or "").strip()
+        if not effective_provider:
+            env_provider = os.environ.get("HERMES_TUI_PROVIDER", "").strip()
+            if env_provider.lower() != "auto":
+                effective_provider = env_provider
+        if not effective_provider:
+            _configured_model, effective_provider = _config_model_target()
+        if not effective_provider:
+            effective_provider = os.environ.get("HERMES_INFERENCE_PROVIDER", "").strip()
+        if effective_provider.lower() == "auto":
+            effective_provider = ""
+        from hermes_cli.model_selection_guards import (
+            combined_selection_warning, selection_context_for_agent)
+        warning = combined_selection_warning(
+            model, provider=effective_provider or None, selection_context=selection_context_for_agent(agent),
+            allow_provider_io=False)
     return warning.message if warning is not None else None
 
 

@@ -37,10 +37,14 @@ def _settings_profile():
     return profile_name_for_home(str(get_hermes_home())) or _current_profile_name()
 
 
+def _settings_path(key):
+    from hermes_cli.web_server_config import _config_field_path
+    return _config_field_path(key)
+
+
 def _settings_leaf(config, key, fallback=None):
     from hermes_cli.config import cfg_get
-    return cfg_get(config, *key.split("."), default=fallback)
-
+    return cfg_get(config, *_settings_path(key), default=fallback)
 
 def _settings_secret_key(key):
     from hermes_cli.config import _is_secret_config_key
@@ -100,8 +104,10 @@ def _settings_fields(raw, schemas):
     for key, schema in schemas.items():
         value, sensitive = _settings_private_value(_settings_leaf(cfg, key), key)
         default, default_sensitive = _settings_private_value(_settings_leaf(defaults, key), key)
-        field = {name: schema[name] for name in ("type", "description", "category", "options", "nullable")
-                 if name in schema}
+        field = {}
+        for name in ("type", "description", "category", "options", "nullable", "accepted_types", "accepted_values"):
+            if name in schema:
+                field[name] = list(schema[name]) if name in {"accepted_types", "accepted_values"} else schema[name]
         if "options" in field:
             options = list(field["options"])
             source_value = _settings_leaf(cfg, key)
@@ -152,13 +158,32 @@ def _settings_validate(key, value, field):
         raise ValueError(f"{key} must contain finite JSON values.")
     if value is None and (field.get("nullable") or _settings_secret_key(key)):
         return
-    kind = field["type"]
-    valid = {"boolean": type(value) is bool,
-             "number": type(value) in (int, float),
-             "string": isinstance(value, str), "select": isinstance(value, str),
-             "list": isinstance(value, list), "object": isinstance(value, dict)}.get(kind, False)
+    accepted_types = field.get("accepted_types")
+    if accepted_types:
+        valid = any(
+            (kind == "boolean" and type(value) is bool)
+            or (kind == "number" and type(value) in (int, float))
+            or (kind == "string" and isinstance(value, str))
+            or (kind == "list" and isinstance(value, list))
+            or (kind == "object" and isinstance(value, dict))
+            for kind in accepted_types
+        )
+    else:
+        kind = field["type"]
+        valid = {"boolean": type(value) is bool,
+                 "number": type(value) in (int, float),
+                 "string": isinstance(value, str), "select": isinstance(value, str),
+                 "list": isinstance(value, list), "object": isinstance(value, dict)}.get(kind, False)
+    if key == "agent.tool_use_enforcement" and isinstance(value, list):
+        valid = valid and all(isinstance(item, str) for item in value)
     if not valid:
-        raise ValueError(f"{key} requires a {kind} value.")
+        expected = ", ".join(accepted_types) if accepted_types else field["type"]
+        raise ValueError(f"{key} requires a {expected} value.")
+    accepted_values = field.get("accepted_values")
+    if isinstance(value, str) and isinstance(accepted_values, list) and not any(
+            value.strip().casefold() == option.strip().casefold()
+            for option in accepted_values if isinstance(option, str)):
+        raise ValueError(f"{key} requires one of its supported values.")
     options = field.get("options")
     if options is not None and value not in options and not (value == "" and field.get("clearable")):
         raise ValueError(f"{key} requires one of its declared options.")
@@ -250,7 +275,7 @@ _SETTINGS_CONSENT_KEYS = frozenset({"telemetry.shared_metrics.enabled", "telemet
 
 def _settings_write_paths(key):
     if key == "model_context_length":
-        return (key, "model.context_length")
+        return (key, "context_length", "model.context_length")
     if key in _SETTINGS_CONSENT_KEYS:
         return tuple(_SETTINGS_CONSENT_KEYS)
     return (key,)
@@ -280,13 +305,39 @@ def _settings_confirmation(key, value, field, profile):
 
 def _settings_patch(key, value):
     result = value
-    for part in reversed(key.split(".")):
+    for part in reversed(_settings_path(key)):
         result = {part: result}
     return result
 
 
+def _settings_remove(config, key):
+    parts = _settings_path(key)
+    target = config
+    for part in parts[:-1]:
+        if not isinstance(target.get(part), dict):
+            return
+        target = target[part]
+    if isinstance(target, dict):
+        target.pop(parts[-1], None)
+
+
+def _settings_model_patch(value):
+    from hermes_cli.web_server_config import _denormalize_config_from_web
+    return _denormalize_config_from_web(_settings_patch("model", value))
+
+
+def _settings_save_model(raw, patch):
+    from hermes_cli.config import save_config
+    # The canonical model route owns both legacy root context-length aliases. Removing them
+    # before save prevents normalization from restoring a pin from the replaced route.
+    raw.pop("context_length", None)
+    raw.pop("model_context_length", None)
+    raw["model"] = patch["model"]
+    save_config(raw)
+
+
 def _settings_save(key, value, raw):
-    from hermes_cli.config import DEFAULT_CONFIG, _deep_merge, _strip_dotted_keys, save_config
+    from hermes_cli.config import DEFAULT_CONFIG, _deep_merge, save_config
     from hermes_cli.web_server_config import _denormalize_config_from_web
     if key in _SETTINGS_CONSENT_KEYS:
         from hermes_cli.observability.shared_metrics_consent import consent_state, save_consent
@@ -301,21 +352,22 @@ def _settings_save(key, value, raw):
     patch = _denormalize_config_from_web(_settings_patch(key, value))
     missing = object()
     if key == "model_context_length" and value == 0:
-        # The canonical sparse writer intentionally does not delete omitted keys. Only this
-        # explicit virtual-field removal uses a full RAW snapshot under the same config lock.
+        # Clear every legacy spelling before config normalization can migrate one back into model.context_length.
         merged = _deep_merge(raw, patch)
+        merged.pop("context_length", None)
+        merged.pop("model_context_length", None)
         if isinstance(merged.get("model"), dict):
             merged["model"].pop("context_length", None)
         save_config(merged)
     elif value is None and _settings_leaf(DEFAULT_CONFIG, key, missing) is missing:
         # Optional runtime fields inherit only when absent, not when pinned to YAML null.
-        _strip_dotted_keys(raw, {key})
+        _settings_remove(raw, key)
         save_config(raw)
     elif isinstance(value, dict):
         # A structured field is one declared leaf. An explicit {} must revert that leaf,
         # not deep-merge yesterday's entries back into it. All other raw paths stay intact.
         target = raw
-        parts = key.split(".")
+        parts = _settings_path(key)
         for part in parts[:-1]:
             if not isinstance(target.get(part), dict):
                 target[part] = {}
@@ -323,8 +375,7 @@ def _settings_save(key, value, raw):
         target[parts[-1]] = value
         save_config(raw)
     else:
-        save_config(patch, merge_existing=True, preserve_keys={tuple(key.split("."))})
-
+        save_config(patch, merge_existing=True, preserve_keys={_settings_path(key)})
 
 @method("settings.get")
 @_profile_scoped
@@ -351,7 +402,7 @@ def _settings_get(rid, params):
 @_profile_scoped
 def _settings_set(rid, params):
     from hermes_cli import managed_scope
-    from hermes_cli.config import _CONFIG_LOCK, is_managed, require_readable_config_before_write
+    from hermes_cli.config import config_mutation_lock, is_managed, require_readable_config_before_write
     from hermes_cli.web_server_config import _schema_with_dynamic_provider_options
     if not isinstance(params.get("key"), str) or "value" not in params:
         return _err(rid, 4000, "A text key and a JSON value are required.")
@@ -367,13 +418,19 @@ def _settings_set(rid, params):
         schema = _schema_with_dynamic_provider_options()
         if key not in schema:
             raise ValueError("Only declared settings fields can be changed.")
+
+        def require_unmanaged():
+            pinned_keys = managed_scope.managed_config_keys()
+            if is_managed() or any(path == pinned or path.startswith(pinned + ".") or pinned.startswith(path + ".")
+                                   for path in _settings_write_paths(key) for pinned in pinned_keys):
+                raise ValueError("This setting is managed by your administrator.")
+
+        model_snapshot_present = False
+        model_snapshot = None
         with _sessions_lock:
             _settings_session(params, session)
-            with _CONFIG_LOCK:
-                pinned_keys = managed_scope.managed_config_keys()
-                if is_managed() or any(path == pinned or path.startswith(pinned + ".") or pinned.startswith(path + ".")
-                                       for path in _settings_write_paths(key) for pinned in pinned_keys):
-                    raise ValueError("This setting is managed by your administrator.")
+            with config_mutation_lock():
+                require_unmanaged()
                 raw = require_readable_config_before_write()
                 old = _settings_leaf(raw, key)
                 value = _settings_preserve_credentials(value, old, key)
@@ -386,9 +443,31 @@ def _settings_set(rid, params):
                 if message and params.get("confirmed") is not True:
                     return _ok(rid, {"key": key, "confirm_required": True, "confirm_message": message})
                 _settings_session(params, session)
-                _settings_save(key, value, raw)
-                canonical = _settings_fields(require_readable_config_before_write(), schema)[key]["value"]
-        return _ok(rid, {"key": key, "value": canonical, "confirm_required": False, "confirm_message": ""})
+                if key == "model":
+                    import copy
+                    model_snapshot_present = "model" in raw
+                    model_snapshot = copy.deepcopy(raw.get("model"))
+                else:
+                    _settings_save(key, value, raw)
+                    canonical = _settings_fields(require_readable_config_before_write(), schema)[key]["value"]
+        if key == "model":
+            # Route validation can query provider catalogs. Do it outside both shared writer locks,
+            # then commit only if the route being replaced is still the one we inspected.
+            patch = _settings_model_patch(value)
+            if "model" not in patch:
+                raise ValueError("The selected model did not produce a canonical route.")
+            with _sessions_lock:
+                _settings_session(params, session)
+                with config_mutation_lock():
+                    require_unmanaged()
+                    latest = require_readable_config_before_write()
+                    if ("model" in latest) != model_snapshot_present or latest.get("model") != model_snapshot:
+                        raise ValueError(
+                            "The default model changed while it was being validated. Reload Settings and retry.")
+                    _settings_save_model(latest, patch)
+                    canonical = _settings_fields(require_readable_config_before_write(), schema)[key]["value"]
+        return _ok(rid, {"key": key, "value": canonical,
+                         "confirm_required": False, "confirm_message": ""})
     except LookupError as exc:
         return _err(rid, 4001, str(exc))
     except ValueError as exc:

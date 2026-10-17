@@ -61,21 +61,20 @@ def _can_trust_model_info_pricing(
 
 def _can_trust_pricing_lookup(
     model_name: str, *, provider: Optional[str], base_url: Optional[str]) -> bool:
-    try:
-        from agent.usage_pricing import resolve_billing_route
+    from agent.usage_pricing import resolve_billing_route
 
-        route = resolve_billing_route(model_name, provider=provider, base_url=base_url)
-    except Exception:
-        return False
+    route = resolve_billing_route(model_name, provider=provider, base_url=base_url)
     return route.billing_mode != "unknown"
 
 
 def expensive_model_warning(
     model_name: str, *, provider: Optional[str] = None, base_url: Optional[str] = None,
     api_key: Optional[str] = None, model_info: Optional[ModelInfo] = None,
+    allow_provider_io: bool = True,
 ) -> Optional[ExpensiveModelWarning]:
     """Warning payload when KNOWN pricing exceeds the safety thresholds (never fires on unknown
-    pricing). Call after model resolution so aliases / provider-specific ids have settled."""
+    pricing). Call after model resolution so aliases / provider-specific ids have settled. Lookup
+    failures propagate; absent optional catalog metadata remains unknown pricing."""
     model = (model_name or "").strip()
     if not model:
         return None
@@ -90,20 +89,14 @@ def expensive_model_warning(
         return input_cost is None and output_cost is None
 
     if _unpriced() and _known_models_dev_provider(provider):
-        try:
-            from agent.models_dev import get_model_info
+        from agent.models_dev import get_model_info
 
-            input_cost, output_cost, source = _pricing_from_model_info(get_model_info(provider, model))
-        except Exception:
-            pass
+        input_cost, output_cost, source = _pricing_from_model_info(get_model_info(provider, model))
 
-    if _unpriced() and _can_trust_pricing_lookup(model, provider=provider, base_url=base_url):
-        try:
-            from agent.usage_pricing import get_pricing_entry
+    if _unpriced() and allow_provider_io and _can_trust_pricing_lookup(model, provider=provider, base_url=base_url):
+        from agent.usage_pricing import get_pricing_entry
 
-            entry = get_pricing_entry(model, provider=provider, base_url=base_url, api_key=api_key)
-        except Exception:
-            entry = None
+        entry = get_pricing_entry(model, provider=provider, base_url=base_url, api_key=api_key)
         if entry is not None:
             input_cost = entry.input_cost_per_million
             output_cost = entry.output_cost_per_million

@@ -4559,7 +4559,15 @@ class TelegramAdapter(TelegramHeldInboundMixin, BasePlatformAdapter):
                 # Pricing lookup may hit models.dev on a cache miss — keep it off the event loop.
                 warning = await asyncio.to_thread(combined_selection_warning, model_id, provider=provider_slug)
             except Exception:
-                warning = None
+                logger.exception("[%s] model picker guard evaluation failed for %s", self.name, model_id)
+                await query.answer(
+                    text=_toast(
+                        "platform.telegram.picker.switch_error",
+                        error="Model safety checks are unavailable. No change was made; please try again.",
+                    ),
+                    show_alert=True,
+                )
+                return
             if warning is not None:
                 keyboard = InlineKeyboardMarkup([
                     [InlineKeyboardButton(t("platform.telegram.picker.switch_anyway"), callback_data=f"mc:{idx}")], self._picker_back_cancel_row()])

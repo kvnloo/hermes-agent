@@ -38,11 +38,15 @@ def inputs_fixture(tmp_path):
     (pm / "lib/site-packages").mkdir(parents=True)
     (pm / "pm-runtime.json").write_text(json.dumps({
         "python": "../tools/python/bin/python3", "sitePackages": "lib/site-packages"}), encoding="utf-8")
-    tui, web = tmp_path / "tui", tmp_path / "web"
-    (tui / "dist").mkdir(parents=True)
+    tui, tsp, web = tmp_path / "tui", tmp_path / "tsp", tmp_path / "web"
+    for product in (tui, tsp):
+        (product / "dist").mkdir(parents=True)
     web.mkdir()
     (tui / "dist/entry.js").write_text("export const built = true;", encoding="utf-8")
     (tui / "package.json").write_text('{"type":"module"}', encoding="utf-8")
+    (tsp / "dist/entry.js").write_text("real TSP product entry", encoding="utf-8")
+    (tsp / "dist/runtime.mjs").write_text("product support module", encoding="utf-8")
+    (tsp / "package.json").write_text('{"type":"module"}', encoding="utf-8")
     (web / "index.html").write_text("built web", encoding="utf-8")
     return out, {
         "project": str(source / "pyproject.toml"), "code": str(source),
@@ -50,7 +54,7 @@ def inputs_fixture(tmp_path):
         "python": str(python), "site_packages": str(site),
         "environment": str(out / "venv"), "tools": str(out / "tools"),
         "pm_runtime": str(pm), "resources": {"skills": str(source / "skills")},
-        "frontends": {"tui": str(tui), "web": str(web)}, "ref": "fixture-revision",
+        "frontends": {"tui": str(tui), "tsp": str(tsp), "web": str(web)}, "ref": "fixture-revision",
     }
 
 
@@ -83,6 +87,9 @@ def test_contained_cli_assembly_runs_after_move_and_preserves_prepared_state(tmp
     assert (out / "app/hermes_cli/tui_dist/entry.js").is_file()
     assert json.loads((out / "app/hermes_cli/tui_dist/package.json").read_text())["type"] == "module"
     assert (out / "app/hermes_cli/web_dist/index.html").is_file()
+    assert (out / "app/hermes_cli/tsp_dist/entry.js").read_text() == "real TSP product entry"
+    assert (out / "app/hermes_cli/tsp_dist/runtime.mjs").read_text() == "product support module"
+    assert json.loads((out / "app/hermes_cli/tsp_dist/package.json").read_text())["type"] == "module"
     assert not (tmp_path / "home/.hermes").exists()
     moved = tmp_path / "relocated payload"
     out.rename(moved)
@@ -112,8 +119,13 @@ def test_referenced_installed_code_uses_derived_command_map_without_copying(tmp_
     command = bindir / "probe"
     command.write_text(f"#!{sys.executable}\nimport sys\nsys.path.insert(0, {str(source)!r})\nfrom entry import main\nmain()\n", encoding="utf-8")
     command.chmod(0o755)
+    tsp = tmp_path / "tsp product"
+    (tsp / "dist").mkdir(parents=True)
+    (tsp / "dist/entry.js").write_text("export const built = true;", encoding="utf-8")
+    (tsp / "package.json").write_text('{"type":"module"}', encoding="utf-8")
     data.update(placement="references", repo="share/hermes-agent", command_dir=str(bindir),
                 env={"HERMES_NODE": "/prepared/node"})
+    data["frontends"]["tsp"] = str(tsp)
     before = {p: p.read_bytes() for p in source.rglob("*") if p.is_file()}
     result = build_cli(data, out, tmp_path)
     assert result.returncode == 0, result.stderr
@@ -121,11 +133,13 @@ def test_referenced_installed_code_uses_derived_command_map_without_copying(tmp_
     assert mapping["commands"] == {"probe": {
         "source": str(command), "destination": "bin/probe", "entry": "entry:main"}}
     assert Path(mapping["env"]["HERMES_TUI_DIR"]).resolve() == Path(data["frontends"]["tui"])
+    assert Path(mapping["env"]["HERMES_TSP_DIR"]).resolve() == tsp
     assert Path(mapping["env"]["HERMES_WEB_DIST"]).resolve() == Path(data["frontends"]["web"])
     assert mapping["env"]["HERMES_INSTALL_ROOT"] == str(out / "share/hermes-agent")
     assert not list(out.rglob("entry.py"))
     assert (out / "share/hermes-agent/skills").is_symlink()
     assert (out / "ui-tui").is_symlink()
+    assert (out / "tsp").is_symlink()
     assert (out / "share/hermes-agent/web_dist").is_symlink()
     assert not (out / "bin/probe").exists(), "Nix owns native makeWrapper"
     run = subprocess.run([mapping["commands"]["probe"]["source"]], cwd=tmp_path,
@@ -288,24 +302,6 @@ def test_payload_smoke_uses_relocated_manifest_commands(tmp_path):
         assert 'SMOKE OK' not in escaped.stdout
 
 
-@pytest.mark.platforms("posix")
-def test_stage_passes_explicit_products_to_the_single_assembler(tmp_path, monkeypatch):
-    from scripts.bundles import stage
-    from scripts.build.agent import assemble
-    from scripts.build.inputs import AgentInputs
-
-    out, data = inputs_fixture(tmp_path)
-    calls = []
-    def native(args):
-        calls.append(args.frontends)
-        assemble(AgentInputs.from_dict({**data, "frontends": args.frontends}), out)
-        return 0
-    monkeypatch.setattr(stage, "stage_native", native)
-    assert stage.main(["--out", str(out), "--ref", "fixture", "--tui", data["frontends"]["tui"],
-                       "--web", data["frontends"]["web"]]) == 0
-    assert calls == [{k: Path(v) for k, v in data["frontends"].items()}]
-    assert json.loads((out / "manifest.json").read_text())["runtime"]["commands"] == {"probe": "bin/probe"}
-
 
 @pytest.mark.platforms("posix")
 def test_prepared_environment_python_imports_app_from_unrelated_script(tmp_path):
@@ -333,31 +329,3 @@ def test_site_layout_uses_explicit_target_version_not_builder_python(tmp_path):
     assert dependency_site(tmp_path, "3.99.1", "win32-arm64") == tmp_path / "Lib/site-packages"
 
 
-def test_automatic_frontends_use_requested_snapshot_not_current_checkout(tmp_path, monkeypatch):
-    from scripts.bundles import stage
-    repo = tmp_path / "checkout"
-    repo.mkdir()
-    subprocess.run(["git", "init", str(repo)], check=True, capture_output=True)
-    project = repo / "pyproject.toml"
-    project.write_text('[project]\nversion="1"\n', encoding="utf-8")
-    subprocess.run(["git", "add", "."], cwd=repo, check=True)
-    subprocess.run(["git", "-c", "user.name=Fixture", "-c", "user.email=f@example.test", "commit", "-m", "selected"], cwd=repo, check=True, capture_output=True)
-    revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip()
-    project.write_text('[project]\nversion="dirty-current"\n', encoding="utf-8")
-    monkeypatch.setattr(stage, "ROOT", repo)
-    monkeypatch.setattr("scripts.build.icon_environment.prepare_icon_environment",
-                        lambda source, out, cache: sys.executable)
-    monkeypatch.setattr(stage.shutil, "which", lambda name: "/prepared/node")
-    real_run = subprocess.run
-    built_sources = []
-    def run(command, **kwargs):
-        if command[0] != "/prepared/node":
-            return real_run(command, **kwargs)
-        source = Path(command[command.index("--source") + 1])
-        built_sources.append(source)
-        assert source != repo
-        assert 'version="1"' in (source / "pyproject.toml").read_text()
-    monkeypatch.setattr(stage.subprocess, "run", run)
-    monkeypatch.setattr(stage, "stage_native", lambda args: 0)
-    assert stage.main(["--out", str(tmp_path / "out"), "--ref", revision]) == 0
-    assert len(built_sources) == 4

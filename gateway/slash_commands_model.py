@@ -499,25 +499,36 @@ class GatewayModelCommandsMixin:
         return "\n".join(lines)
 
     async def _model_selection_guard_reply(
-        self, event: MessageEvent, ctx: _ModelSwitchContext, result
+        self, event: MessageEvent, ctx: _ModelSwitchContext, raw_input: str,
+        explicit_provider, source,
     ) -> tuple[bool, Optional[str]]:
-        """Selection-guard confirmation for the typed path (pickers confirm via their own UI).
-
-        The unified registry (cost + data-policy guards) runs off-loop — pricing lookups may hit
-        models.dev on a cache miss. Returns ``(fired, reply)``; the reply is None when the platform
-        rendered confirm buttons itself.
-        """
+        """Confirm typed selections using local target facts before running model-switch probes."""
+        target = None
         try:
+            from hermes_cli.model_switch import resolve_model_switch_target
+            target = await asyncio.to_thread(
+                resolve_model_switch_target, raw_input, current_provider=ctx.current_provider,
+                current_base_url=ctx.current_base_url, explicit_provider=explicit_provider,
+                user_providers=ctx.user_provs, custom_providers=ctx.custom_provs,
+            )
             from hermes_cli.model_selection_guards import (
                 combined_selection_warning, selection_context_for_agent)
             warning = await asyncio.to_thread(
-                combined_selection_warning, result.new_model, provider=result.target_provider,
-                base_url=result.base_url or ctx.current_base_url or "",
-                api_key=result.api_key or ctx.current_api_key or "", model_info=result.model_info,
+                combined_selection_warning, target.model, provider=target.provider,
+                base_url=target.base_url or ctx.current_base_url or "",
                 selection_context=selection_context_for_agent(self._cached_agent_for(ctx.session_key)),
+                allow_provider_io=False,
             )
         except Exception:
-            warning = None
+            model = target.model if target is not None else raw_input
+            logger.exception("Model selection guard evaluation failed for %s", model)
+            failure = t(
+                "gateway.model.err_switch_failed",
+                model=model,
+                error="selection checks could not be completed; no model change was made; please retry",
+                current=ctx.current_model or t("gateway.shared.unknown_value"),
+            )
+            return True, t("gateway.model.error_prefix", error=failure)
         if warning is None:
             return False, None
 
@@ -525,6 +536,10 @@ class GatewayModelCommandsMixin:
             if choice == "cancel":
                 return t("gateway.model.switch_cancelled", model=ctx.current_model or t("gateway.shared.unknown_value"))
             # "once" and "always" both proceed — selection guards have no persistent opt-out.
+            result, error = await self._perform_model_switch(
+                ctx, raw_input, explicit_provider, source)
+            if error is not None:
+                return error
             return await self._commit_model_switch(result, ctx, source=ctx.source)
 
         _p = self._typed_command_prefix_for(event.source.platform)
@@ -586,12 +601,17 @@ class GatewayModelCommandsMixin:
         ctx.apply_override(self._session_model_overrides.get(session_key, {}))
         if not request.target and not request.explicit_provider:
             return await self._model_listing_reply(event, ctx, profile_home)
-        result, error = await self._perform_model_switch(ctx, request.target, request.explicit_provider, source)
-        if error is not None:
-            return error
-        guard_fired, guard_reply = await self._model_selection_guard_reply(event, ctx, result)
+        skew_error = _model_switch_skew_guard()
+        if skew_error:
+            return skew_error
+        guard_fired, guard_reply = await self._model_selection_guard_reply(
+            event, ctx, request.target, request.explicit_provider, source)
         if guard_fired:
             return guard_reply
+        result, error = await self._perform_model_switch(
+            ctx, request.target, request.explicit_provider, source)
+        if error is not None:
+            return error
         return await self._commit_model_switch_locked(result, ctx, source=source, picker=False)
 
     # -------------------------------------------------- /codex-runtime, /personality

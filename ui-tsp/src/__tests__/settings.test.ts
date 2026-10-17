@@ -5,6 +5,7 @@ import type { SettingsField, SettingsGetResult } from '@hermes/shared/gateway-ev
 import type { Surface, TspEvent } from '@stencil-hq/tern'
 import { Session, View } from '@stencil-hq/tern'
 import { GatewayClient } from '@tui/gatewayClient.js'
+import { load as loadPromptHistory } from '@tui/lib/history.js'
 import { afterAll, describe, expect, it, vi } from 'vitest'
 
 import { App } from '../app.js'
@@ -29,6 +30,7 @@ const views = new WeakMap<Surface, View>()
 interface Fixture {
   read(session: string): Promise<SettingsGetResult>
   write(key: string, value: unknown, confirmed: boolean, session: string): Promise<unknown>
+  resume?(session: string): Promise<unknown>
 }
 
 function field(type: string, value: unknown, extra: Partial<SettingsField> = {}): SettingsField {
@@ -104,6 +106,14 @@ async function withApp(fixture: Fixture, run: (app: App, surface: Surface, press
 
     if (method === 'settings.set') {
       return fixture.write(p.key, p.value, p.confirmed === true, p.session_id)
+    }
+
+    if (method === 'session.resume' && fixture.resume) {
+      return fixture.resume(p.session_id)
+    }
+
+    if (method === 'session.close') {
+      return {}
     }
 
     if (method === 'complete.slash') {
@@ -445,6 +455,269 @@ describe('native Settings', () => {
     })
   })
 
+  it.each([
+    ['object', { api_key: 'FAKE_COMPOSITE_SECRET' }],
+    ['list', ['FAKE_COMPOSITE_SECRET']]
+  ] as const)('keeps a sensitive %s value out of confirmation text and preserves it on cancel', async (type, proposed) => {
+    const stored = { secret: field(type, null, { sensitive: true }) }
+    let privateValue: unknown = 'original private value'
+
+    await withApp({
+      read: async () => profile(stored),
+      write: async (key, value, confirmed) => {
+        if (!confirmed) {
+          return { confirm_message: 'Replace private credential?', confirm_required: true, key }
+        }
+
+        privateValue = value
+
+        return { confirm_message: '', confirm_required: false, key }
+      }
+    }, async (app, surface, press) => {
+      openSettings(app)
+      await rendered()
+      await surface.dispatch({ ev: 'activate', id: prefs(surface).id, item: 'secret', raw: {}, sf: 'hermes' })?.()
+      await press(`\x1b[200~${JSON.stringify(proposed)}\x1b[201~`)
+      await press('\r')
+      await rendered()
+      const confirmation = views.get(surface)?.regions[2]?.children[0]
+      expect(JSON.stringify(confirmation)).not.toContain('FAKE_COMPOSITE_SECRET')
+      await press('\r')
+      expect(privateValue).toBe('original private value')
+    })
+  })
+
+  it('keeps a rejected private draft out of another field undo, kill ring, and prompt history', async () => {
+    const secret = 'FAKE_REVIEW_SECRET'
+    const publicUrl = 'https://public.example'
+    const stored = {
+      api_key: field('string', null, { sensitive: true }),
+      'delegation.base_url': field('string', publicUrl)
+    }
+    const writes: [string, unknown][] = []
+    const beforeHistory = [...loadPromptHistory()]
+    const fixture: Fixture = {
+      read: async () => profile(stored),
+      write: async (key, value) => {
+        writes.push([key, value])
+
+        if (key === 'api_key') {
+          throw new Error('Credential rejected')
+        }
+
+        stored[key as keyof typeof stored].value = value
+
+        return { confirm_message: '', confirm_required: false, key }
+      }
+    }
+
+    await withApp(fixture, async (app, surface, press) => {
+      openSettings(app)
+      await rendered()
+      await surface.dispatch({ ev: 'activate', id: prefs(surface).id, item: 'api_key', raw: {}, sf: 'hermes' })?.()
+      await press(`\x1b[200~${secret}\x1b[201~`)
+      await press('\r')
+      await rendered()
+      await rendered()
+      expect(row(surface, 'api_key').warning).toContain('Credential rejected')
+
+      await surface.dispatch({ ev: 'activate', id: prefs(surface).id, item: 'api_key', raw: {}, sf: 'hermes' })?.()
+      await press('\x01\x0b')
+      await surface.dispatch({ ev: 'activate', id: prefs(surface).id, item: 'delegation.base_url', raw: {}, sf: 'hermes' })?.()
+      await press('\x19')
+      await rendered()
+      expect(prefs(surface).props.editing).toMatchObject({ draft: publicUrl, row: 'delegation.base_url' })
+      await press('\x1a')
+      await rendered()
+      expect(prefs(surface).props.editing).toMatchObject({ draft: publicUrl, row: 'delegation.base_url' })
+      await press('\r')
+      await rendered()
+      await rendered()
+
+      expect(writes).toEqual([['api_key', secret]])
+      expect(stored['delegation.base_url'].value).toBe(publicUrl)
+      expect(loadPromptHistory()).toEqual(beforeHistory)
+      expect(loadPromptHistory()).not.toContain(secret)
+      expect(app.composer.text).toBe('')
+    })
+  })
+
+  it('drains committed queued settings edits before a same-session replacement reads the profile', async () => {
+    const stored = { limit: field('number', 2), enabled: field('boolean', false) }
+    const firstStarted = Promise.withResolvers<void>()
+    const gate = Promise.withResolvers<void>()
+    const writes: string[] = []
+    let reads = 0
+    const fixture: Fixture = {
+      read: async () => {
+        reads++
+
+        return profile(stored)
+      },
+      write: async (key, value) => {
+        writes.push(key)
+        stored[key as keyof typeof stored].value = value
+
+        if (key === 'limit') {
+          firstStarted.resolve()
+          await gate.promise
+        }
+
+        return { confirm_message: '', confirm_required: false, key }
+      }
+    }
+
+    await withApp(fixture, async (app, surface, press) => {
+      openSettings(app)
+      await rendered()
+      expect(reads).toBe(1)
+
+      await change(surface, 'limit', 4)()
+      await firstStarted.promise
+      await change(surface, 'enabled', true)()
+      await rendered()
+      expect(row(surface, 'enabled').warning).toBe('Save queued behind an earlier change.')
+      await press('\x1b[27u')
+      expect(app.overlays).toHaveLength(0)
+
+      openSettings(app)
+      await rendered()
+      expect(reads).toBe(1)
+      expect(writes).toEqual(['limit'])
+
+      gate.resolve()
+      for (let i = 0; i < 6; i++) {
+        await rendered()
+      }
+
+      expect(writes).toEqual(['limit', 'enabled'])
+      expect(reads).toBe(4)
+      expect(row(surface, 'limit').control).toMatchObject({ value: 4 })
+      expect(row(surface, 'enabled').control).toMatchObject({ on: true })
+    })
+  })
+
+  it('refuses queued edits after a session owner switches away and returns to the same id', async () => {
+    const stored = {
+      'session-1': { limit: field('number', 2), enabled: field('boolean', false) },
+      'session-2': { limit: field('number', 8), enabled: field('boolean', false) }
+    }
+    const firstStarted = Promise.withResolvers<void>()
+    const gate = Promise.withResolvers<void>()
+    const writes: [string, string][] = []
+    let reads = 0
+    const fixture: Fixture = {
+      read: async session => {
+        reads++
+
+        return profile(stored[session as keyof typeof stored])
+      },
+      write: async (key, value, _confirmed, session) => {
+        writes.push([key, session])
+        const target = stored[session as keyof typeof stored]
+        target[key as keyof typeof target].value = value
+
+        if (key === 'limit' && session === 'session-1') {
+          firstStarted.resolve()
+          await gate.promise
+        }
+
+        return { confirm_message: '', confirm_required: false, key }
+      },
+      resume: async session => ({
+        info: { model: `${session}-model`, reasoning_effort: 'low' },
+        session_id: session
+      })
+    }
+
+    await withApp(fixture, async (app, surface, press) => {
+      openSettings(app)
+      await rendered()
+      expect(reads).toBe(1)
+
+      await change(surface, 'limit', 4)()
+      await firstStarted.promise
+      await change(surface, 'enabled', true)()
+      await rendered()
+      await press('\x1b[27u')
+      expect(app.overlays).toHaveLength(0)
+
+      const originalGeneration = app.sessionGeneration
+      expect(await app.resume('session-2')).toBe(true)
+      expect(await app.resume('session-1')).toBe(true)
+      expect(app.sid).toBe('session-1')
+      expect(app.sessionGeneration).not.toBe(originalGeneration)
+
+      openSettings(app)
+      await rendered()
+      expect(reads).toBe(1)
+      expect(writes).toEqual([['limit', 'session-1']])
+
+      gate.resolve()
+      for (let i = 0; i < 6; i++) {
+        await rendered()
+      }
+
+      expect(writes).toEqual([['limit', 'session-1']])
+      expect(reads).toBe(2)
+      expect(row(surface, 'limit').control).toMatchObject({ value: 4 })
+      expect(row(surface, 'enabled').control).toMatchObject({ on: false })
+      expect(stored['session-1'].enabled.value).toBe(false)
+    })
+  })
+
+  it('edits runtime union settings through the accepted type and value domain', async () => {
+    const stored = {
+      'agent.verify_on_stop': field('boolean', false, {
+        accepted_types: ['boolean', 'string'],
+        accepted_values: ['auto', '0', '1', 'true', 'false', 'yes', 'no', 'on', 'off']
+      }),
+      'agent.tool_use_enforcement': field('boolean', false, { accepted_types: ['boolean', 'string', 'list'] })
+    }
+    const writes: [string, unknown][] = []
+    const fixture: Fixture = {
+      read: async () => profile(stored),
+      write: async (key, value) => {
+        writes.push([key, value])
+        stored[key as keyof typeof stored].value = value
+
+        return { confirm_message: '', confirm_required: false, key }
+      }
+    }
+
+    await withApp(fixture, async (_app, surface) => {
+      openSettings(_app)
+      await rendered()
+      expect(row(surface, 'agent.verify_on_stop').control).toMatchObject({ k: 'text', value: 'false' })
+      expect(row(surface, 'agent.verify_on_stop').hint).toContain('Accepted values: auto, 0, 1, true, false, yes, no, on, off')
+      expect(row(surface, 'agent.tool_use_enforcement').control).toMatchObject({ k: 'text', value: 'false' })
+
+      await change(surface, 'agent.verify_on_stop', 'sandbox')()
+      await rendered()
+      expect(row(surface, 'agent.verify_on_stop').warning).toContain('runtime values')
+      expect(writes).toEqual([])
+
+      await change(surface, 'agent.verify_on_stop', 'AUTO')()
+      await rendered()
+      await rendered()
+      expect(writes).toEqual([['agent.verify_on_stop', 'auto']])
+      expect(stored['agent.verify_on_stop'].value).toBe('auto')
+      expect(row(surface, 'agent.verify_on_stop').control).toMatchObject({ k: 'text', value: 'auto' })
+      await change(surface, 'agent.verify_on_stop', 'false')()
+      await rendered()
+      await rendered()
+      expect(writes).toEqual([['agent.verify_on_stop', 'auto'], ['agent.verify_on_stop', false]])
+      expect(stored['agent.verify_on_stop'].value).toBe(false)
+
+      await change(surface, 'agent.tool_use_enforcement', '["deny"]')()
+      await rendered()
+      await rendered()
+      expect(writes).toEqual([['agent.verify_on_stop', 'auto'], ['agent.verify_on_stop', false], ['agent.tool_use_enforcement', ['deny']]])
+      expect(stored['agent.tool_use_enforcement'].value).toEqual(['deny'])
+      expect(row(surface, 'agent.tool_use_enforcement').control).toMatchObject({ k: 'text', value: '["deny"]' })
+    })
+  })
+
   it('drops a late load and a retained native change when another session replaces the sheet', async () => {
     const first = Promise.withResolvers<SettingsGetResult>()
     let reads = 0
@@ -590,6 +863,7 @@ describe('native Settings', () => {
       await change(surface, 'limit', 4)()
       await change(surface, 'enabled', true)()
       await rendered()
+      await click(surface, 'close')()
       app.sid = 'session-2'
       app.info = { model: 'second-model', reasoning_effort: 'low' }
       openSettings(app)

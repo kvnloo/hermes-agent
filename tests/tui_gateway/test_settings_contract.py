@@ -35,6 +35,75 @@ def seed(home, value):
     (home / "config.yaml").write_text(yaml.safe_dump(value), encoding="utf-8")
 
 
+def _prepare_settings_rpc_child(home):
+    import os
+
+    os.environ["HERMES_HOME"] = str(home)
+    os.environ.pop("HERMES_TUI_TOOL_PROGRESS", None)
+    server._hermes_home = Path(home)
+    server._cfg_cache = None
+    server._cfg_sig = None
+    server._cfg_path = None
+    server._served_profile_homes = set()
+    server._sessions = {
+        "launch": {"agent": None, "profile_home": str(home), "session_key": "launch-record"},
+    }
+    web_server_config._schema_with_dynamic_provider_options = lambda: web_server_config.CONFIG_SCHEMA
+    return server
+
+
+def _legacy_public_rpc_worker(home, started, raw_read, resume_read, outcomes):
+    child_server = _prepare_settings_rpc_child(home)
+    original_load = child_server._load_cfg_raw
+
+    def pause_after_disk_read():
+        raw = original_load()
+        raw_read.set()
+        if not resume_read.wait(15):
+            raise TimeoutError("legacy RPC read was not released")
+        return raw
+
+    child_server._load_cfg_raw = pause_after_disk_read
+    try:
+        started.set()
+        response = child_server.handle_request({
+            "id": "legacy-cross-process",
+            "method": "config.set",
+            "params": {"session_id": "launch", "key": "display.in_app_tips", "value": False},
+        })
+        outcomes.put(("legacy", response))
+    except Exception as exc:
+        outcomes.put(("legacy-error", repr(exc)))
+
+
+def _native_public_rpc_worker(home, started, lock_requested, done, outcomes):
+    from contextlib import contextmanager
+
+    child_server = _prepare_settings_rpc_child(home)
+    from hermes_cli import config as config_module
+    original_lock = config_module.config_mutation_lock
+
+    @contextmanager
+    def observe_lock_attempt(path=None):
+        lock_requested.set()
+        with original_lock(path):
+            yield
+
+    config_module.config_mutation_lock = observe_lock_attempt
+    try:
+        started.set()
+        response = child_server.handle_request({
+            "id": "native-cross-process",
+            "method": "settings.set",
+            "params": {"session_id": "launch", "key": "display.show_reasoning", "value": False},
+        })
+        outcomes.put(("native", response))
+    except Exception as exc:
+        outcomes.put(("native-error", repr(exc)))
+    finally:
+        done.set()
+
+
 @pytest.fixture
 def homes(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -238,6 +307,180 @@ def test_bare_model_context_upgrade_does_not_invent_credentials(homes):
     result(rpc("settings.set", session_id="launch", key="model_context_length", value=0))
     assert saved(launch)["model"] == {"default": "bare-fixture"}
     assert saved(launch)["unrelated"] == "keep"
+
+
+def test_model_route_change_keeps_canonical_deletions_and_unrelated_raw_settings(homes, monkeypatch):
+    from hermes_cli.model_switch import ModelSwitchResult
+
+    launch, _ = homes
+    seed(launch, {
+        "model": {
+            "default": "old-fixture", "provider": "custom", "base_url": "http://127.0.0.1:9/v1",
+            "api_key": "inert-fixture-key", "key_env": "INERT_FIXTURE_KEY", "context_length": 4096,
+            "api_mode": "chat_completions",
+        },
+        "context_length": 8192,
+        "model_context_length": 16384,
+        "display": {"show_reasoning": True},
+        "unrelated": {"preserve": ["raw", 1]},
+    })
+    selection = ModelSwitchResult(
+        success=True, new_model="new-fixture", target_provider="openai",
+        base_url="https://api.openai.com/v1", api_mode="chat_completions",
+    )
+    monkeypatch.setattr(web_server_config, "_infer_provider_on_model_change", lambda *_: ("openai", "new-fixture"))
+    monkeypatch.setattr(web_server_config, "_normalize_main_model_assignment", lambda *_: ("openai", "new-fixture"))
+    monkeypatch.setattr(web_server_config, "_validated_main_model_selection", lambda *_: selection)
+
+    response = result(rpc("settings.set", session_id="launch", key="model", value="new-fixture", confirmed=True))
+    assert response["value"] == "new-fixture"
+    raw = saved(launch)
+    assert raw["model"]["provider"] == "openai"
+    assert raw["model"]["default"] == "new-fixture"
+    assert not {"api_key", "key_env", "context_length"} & raw["model"].keys()
+    assert "context_length" not in raw
+    assert "model_context_length" not in raw
+    assert raw["display"]["show_reasoning"] is True
+    assert raw["unrelated"] == {"preserve": ["raw", 1]}
+    from hermes_cli.auth import _model_level_key_env
+    assert _model_level_key_env("openai") == ""
+
+
+def test_slow_model_validation_does_not_hold_the_shared_config_writer_lock(homes, monkeypatch):
+    import contextvars
+    import threading
+    from hermes_cli.model_switch import ModelSwitchResult
+
+    launch, _ = homes
+    seed(launch, {"model": {"default": "old-fixture", "provider": "custom",
+                            "base_url": "http://127.0.0.1:9/v1"}})
+    selection = ModelSwitchResult(
+        success=True, new_model="new-fixture", target_provider="openai",
+        base_url="https://api.openai.com/v1", api_mode="chat_completions",
+    )
+    validating = threading.Event()
+    release_validation = threading.Event()
+    legacy_done = threading.Event()
+    model_done = threading.Event()
+    results = {}
+    failures = []
+    monkeypatch.setattr(web_server_config, "_schema_with_dynamic_provider_options",
+                        lambda: web_server_config.CONFIG_SCHEMA)
+    monkeypatch.setattr(web_server_config, "_infer_provider_on_model_change",
+                        lambda *_: ("openai", "new-fixture"))
+    monkeypatch.setattr(web_server_config, "_normalize_main_model_assignment",
+                        lambda *_: ("openai", "new-fixture"))
+
+    def validate_without_provider_io(*_args):
+        validating.set()
+        if not release_validation.wait(5):
+            raise TimeoutError("model validation was not released")
+        return selection
+
+    monkeypatch.setattr(web_server_config, "_validated_main_model_selection", validate_without_provider_io)
+
+    def run_model():
+        try:
+            results["model"] = contextvars.copy_context().run(
+                rpc, "settings.set", session_id="launch", key="model", value="new-fixture", confirmed=True)
+        except Exception as exc:
+            failures.append(exc)
+        finally:
+            model_done.set()
+
+    def run_legacy():
+        try:
+            results["legacy"] = contextvars.copy_context().run(
+                rpc, "config.set", session_id="launch", key="display.in_app_tips", value=False)
+        except Exception as exc:
+            failures.append(exc)
+        finally:
+            legacy_done.set()
+
+    model_writer = threading.Thread(target=run_model, name="model-validation-writer", daemon=True)
+    model_writer.start()
+    assert validating.wait(2)
+    legacy_writer = threading.Thread(target=run_legacy, name="legacy-config-writer", daemon=True)
+    legacy_writer.start()
+    legacy_completed_during_validation = legacy_done.wait(1.5)
+    release_validation.set()
+    model_writer.join(timeout=5)
+    legacy_writer.join(timeout=5)
+
+    assert not model_writer.is_alive() and not legacy_writer.is_alive()
+    assert legacy_completed_during_validation
+    assert model_done.is_set() and legacy_done.is_set()
+    assert not failures
+    assert "result" in results["model"] and "result" in results["legacy"]
+    raw = saved(launch)
+    assert raw["model"]["default"] == "new-fixture"
+    assert raw["display"]["in_app_tips"] is False
+
+
+def test_settings_accept_runtime_enum_and_union_domains(homes, monkeypatch):
+    launch, _ = homes
+    monkeypatch.delenv("HERMES_VERIFY_ON_STOP", raising=False)
+    fields = result(rpc("settings.get", session_id="launch"))["fields"]
+    assert fields["terminal.modal_mode"]["options"] == ["auto", "direct", "managed"]
+    assert fields["agent.verify_on_stop"]["accepted_types"] == ["boolean", "string"]
+    assert "auto" in fields["agent.verify_on_stop"]["accepted_values"]
+    assert fields["agent.tool_use_enforcement"]["accepted_types"] == ["boolean", "string", "list"]
+
+    for value in ("auto", "direct", "managed"):
+        result(rpc("settings.set", session_id="launch", key="terminal.modal_mode", value=value, confirmed=True))
+        assert saved(launch)["terminal"]["modal_mode"] == value
+    for key, value in (
+        ("context.engine", "compressor"),
+        ("agent.verify_on_stop", "auto"),
+        ("agent.tool_use_enforcement", False),
+    ):
+        response = result(rpc("settings.set", session_id="launch", key=key, value=value, confirmed=True))
+        assert response["value"] == value
+    raw = saved(launch)
+    assert raw["context"]["engine"] == "compressor"
+    assert raw["agent"]["verify_on_stop"] == "auto"
+    assert raw["agent"]["tool_use_enforcement"] is False
+
+    before = (launch / "config.yaml").read_bytes()
+    assert rpc("settings.set", session_id="launch", key="terminal.modal_mode",
+               value="sandbox", confirmed=True)["error"]["code"] == 4002
+    assert (launch / "config.yaml").read_bytes() == before
+
+
+def test_dotted_resource_attribute_setting_uses_its_literal_key(homes):
+    launch, _ = homes
+    key = "monitoring.gateway_health_export.resource_attributes.deployment.environment.name"
+    seed(launch, {"monitoring": {"gateway_health_export": {
+        "resource_attributes": {"deployment.environment.name": "before"},
+    }}})
+    fields = result(rpc("settings.get", session_id="launch"))["fields"]
+    assert fields[key]["value"] == "before"
+    response = result(rpc("settings.set", session_id="launch", key=key, value="after", confirmed=True))
+    assert response["value"] == "after"
+
+    raw = saved(launch)["monitoring"]["gateway_health_export"]["resource_attributes"]
+    assert raw["deployment.environment.name"] == "after"
+    assert "deployment" not in raw
+    from agent.monitoring.otlp_exporter import _safe_resource_attributes
+    assert _safe_resource_attributes(raw)["deployment.environment.name"] == "after"
+
+
+def test_automatic_context_length_reset_clears_all_legacy_aliases(homes):
+    launch, _ = homes
+    seed(launch, {
+        "model": {"default": "fixture-model", "context_length": 8192, "api_key": "inert-fixture-key"},
+        "context_length": 4096,
+        "model_context_length": 16384,
+        "unrelated": {"preserve": True},
+    })
+    response = result(rpc("settings.set", session_id="launch", key="model_context_length", value=0))
+    assert response["value"] == 0
+    assert result(rpc("settings.get", session_id="launch"))["fields"]["model_context_length"]["value"] == 0
+    raw = saved(launch)
+    assert "context_length" not in raw
+    assert "model_context_length" not in raw
+    assert raw["model"] == {"default": "fixture-model", "api_key": "inert-fixture-key"}
+    assert raw["unrelated"] == {"preserve": True}
 
 
 @pytest.mark.parametrize("document", ["model: [unterminated", "- wrong-root\n"])
@@ -447,6 +690,322 @@ def test_settings_remain_available_when_discovery_updates_profile_config(homes, 
     else:
         assert current["value"] is False
         assert saved(launch)["display"]["show_reasoning"] is False
+
+
+@pytest.mark.parametrize(("legacy_key", "legacy_value"), [
+    ("display.in_app_tips", False),
+    ("details_mode.tools", "expanded"),
+    ("prompt", "inert legacy prompt"),
+    ("personality", "concise"),
+])
+def test_legacy_and_native_config_writers_serialize_complete_rmw(homes, monkeypatch, legacy_key, legacy_value):
+    import contextvars
+    import threading
+
+    import utils
+
+    launch, _ = homes
+    snapshot_ready = threading.Event()
+    release_legacy = threading.Event()
+    settings_started = threading.Event()
+    settings_done = threading.Event()
+    results = {}
+    failures = []
+    original_save = server._save_cfg
+    original_roundtrip_dump = utils._roundtrip_dump
+    monkeypatch.setattr(web_server_config, "_schema_with_dynamic_provider_options", lambda: web_server_config.CONFIG_SCHEMA)
+
+    def paused_save(cfg):
+        if threading.current_thread().name == "legacy-config-writer":
+            snapshot_ready.set()
+            if not release_legacy.wait(5):
+                raise TimeoutError("legacy config writer was not released")
+        return original_save(cfg)
+
+    def paused_roundtrip_dump(*args, **kwargs):
+        if threading.current_thread().name == "legacy-config-writer":
+            snapshot_ready.set()
+            if not release_legacy.wait(5):
+                raise TimeoutError("legacy config writer was not released")
+        return original_roundtrip_dump(*args, **kwargs)
+
+    monkeypatch.setattr(server, "_save_cfg", paused_save)
+    monkeypatch.setattr(utils, "_roundtrip_dump", paused_roundtrip_dump)
+
+    def invoke(name, scope, method, **params):
+        try:
+            results[name] = scope.run(rpc, method, **params)
+        except Exception as exc:
+            failures.append(exc)
+
+    legacy_scope = contextvars.copy_context()
+    legacy = threading.Thread(
+        name="legacy-config-writer",
+        target=invoke,
+        args=("legacy", legacy_scope, "config.set"),
+        kwargs={"session_id": "launch", "key": legacy_key, "value": legacy_value},
+        daemon=True,
+    )
+
+    def update_native():
+        settings_started.set()
+        try:
+            results["settings"] = contextvars.copy_context().run(
+                rpc, "settings.set", session_id="launch", key="display.show_reasoning", value=False)
+        except Exception as exc:
+            failures.append(exc)
+        finally:
+            settings_done.set()
+
+    legacy.start()
+    assert snapshot_ready.wait(2)
+    settings = threading.Thread(target=update_native, name="native-settings-writer", daemon=True)
+    settings.start()
+    assert settings_started.wait(2)
+    completed_before_legacy_commit = settings_done.wait(0.5)
+    release_legacy.set()
+    legacy.join(timeout=5)
+    settings.join(timeout=5)
+
+    assert not legacy.is_alive() and not settings.is_alive()
+    assert not completed_before_legacy_commit
+    assert not failures
+    assert "result" in results["legacy"] and "result" in results["settings"]
+    raw = saved(launch)
+    assert raw["display"]["show_reasoning"] is False
+    if legacy_key == "display.in_app_tips":
+        assert raw["display"]["in_app_tips"] is False
+    elif legacy_key == "details_mode.tools":
+        assert raw["display"]["sections"]["tools"] == "expanded"
+    elif legacy_key == "personality":
+        assert raw["display"]["personality"] == "concise"
+    else:
+        assert raw["custom_prompt"] == "inert legacy prompt"
+
+
+
+def test_legacy_and_native_public_config_rpcs_serialize_across_processes(homes):
+    import multiprocessing
+
+    launch, _ = homes
+    seed(launch, {
+        "model": {"default": "fixture-model", "provider": "custom", "api_key": "inert-provider-fixture"},
+        "display": {"show_reasoning": True},
+        "unrelated": {"nested": {"user_owned": [1, "preserve"]}},
+    })
+    env_before = (launch / ".env").read_bytes()
+    context = multiprocessing.get_context("spawn")
+    legacy_started, legacy_read, resume_legacy = context.Event(), context.Event(), context.Event()
+    native_started, native_lock_requested, native_done = context.Event(), context.Event(), context.Event()
+    outcomes = context.Queue()
+    legacy = context.Process(
+        target=_legacy_public_rpc_worker,
+        args=(str(launch), legacy_started, legacy_read, resume_legacy, outcomes),
+    )
+    native = context.Process(
+        target=_native_public_rpc_worker,
+        args=(str(launch), native_started, native_lock_requested, native_done, outcomes),
+    )
+    started = []
+    try:
+        legacy.start()
+        started.append(legacy)
+        assert legacy_started.wait(10), "legacy RPC process did not start"
+        assert legacy_read.wait(10), "legacy RPC did not reach its real raw-config read"
+        native.start()
+        started.append(native)
+        assert native_started.wait(10), "native RPC process did not start"
+        assert native_lock_requested.wait(10), "native settings RPC did not request the profile lock"
+        assert not native_done.wait(0.5), "native settings RPC passed a legacy read-modify-write transaction"
+    finally:
+        resume_legacy.set()
+        for process in started:
+            process.join(timeout=15)
+            if process.is_alive():
+                process.terminate()
+                process.join(timeout=5)
+
+    assert legacy.exitcode == 0
+    assert native.exitcode == 0
+    responses = dict(outcomes.get(timeout=5) for _ in range(2))
+    assert "legacy" in responses and "native" in responses
+    assert "result" in responses["legacy"], responses["legacy"]
+    assert "result" in responses["native"], responses["native"]
+    current = saved(launch)
+    assert current["display"]["in_app_tips"] is False
+    assert current["display"]["show_reasoning"] is False
+    assert current["model"] == {
+        "default": "fixture-model", "provider": "custom", "api_key": "inert-provider-fixture"}
+    assert current["unrelated"] == {"nested": {"user_owned": [1, "preserve"]}}
+    assert (launch / ".env").read_bytes() == env_before
+
+
+@pytest.mark.parametrize(("key", "value", "display", "first_value", "second_value", "final_display"), [
+    ("battery", "toggle", {"battery": False}, "on", "off", {"battery": False}),
+    ("verbose", "cycle", {"tool_progress": "all"}, "verbose", "off", {"tool_progress": "off"}),
+    ("focus", "toggle", {"focus_view": False, "tool_progress": "verbose"},
+     "on", "off", {"focus_view": False, "tool_progress": "verbose", "focus_saved_tool_progress": "verbose"}),
+])
+def test_concurrent_config_set_cycles_and_focus_are_profile_transactions(
+        homes, monkeypatch, key, value, display, first_value, second_value, final_display):
+    import contextvars
+    import threading
+
+    launch, _ = homes
+    monkeypatch.delenv("HERMES_TUI_TOOL_PROGRESS", raising=False)
+    seed(launch, {
+        "model": {"default": "fixture-model", "provider": "custom", "api_key": "inert-provider-fixture"},
+        "display": {"show_reasoning": True, **display},
+        "unrelated": {"nested": {"user_owned": [2, "preserve"]}},
+    })
+    env_before = (launch / ".env").read_bytes()
+    original_display_cfg = server._display_cfg
+    first_read, release_first = threading.Event(), threading.Event()
+    second_read, second_started = threading.Event(), threading.Event()
+    done = {"first": threading.Event(), "second": threading.Event()}
+    results, failures = {}, []
+
+    def pause_after_first_snapshot():
+        current = original_display_cfg()
+        name = threading.current_thread().name
+        if name == "derived-config-first" and not first_read.is_set():
+            first_read.set()
+            if not release_first.wait(5):
+                raise TimeoutError("first derived config read was not released")
+        elif name == "derived-config-second":
+            second_read.set()
+        return current
+
+    monkeypatch.setattr(server, "_display_cfg", pause_after_first_snapshot)
+
+    def invoke(name, scope):
+        if name == "second":
+            second_started.set()
+        try:
+            results[name] = scope.run(rpc, "config.set", session_id="launch", key=key, value=value)
+        except Exception as exc:
+            failures.append(exc)
+        finally:
+            done[name].set()
+
+    first = threading.Thread(
+        name="derived-config-first", target=invoke, args=("first", contextvars.copy_context()), daemon=True)
+    second = threading.Thread(
+        name="derived-config-second", target=invoke, args=("second", contextvars.copy_context()), daemon=True)
+    first.start()
+    try:
+        assert first_read.wait(5), "first RPC did not read its derived display state"
+        second.start()
+        assert second_started.wait(5), "second RPC did not start"
+        assert not second_read.wait(0.5), "second RPC derived its decision before the first commit"
+        assert not done["second"].is_set()
+    finally:
+        release_first.set()
+        first.join(timeout=5)
+        if second.ident is not None:
+            second.join(timeout=5)
+
+    assert not first.is_alive() and not second.is_alive()
+    assert not failures
+    assert result(results["first"])["value"] == first_value
+    assert result(results["second"])["value"] == second_value
+    current = saved(launch)
+    for field, expected in final_display.items():
+        assert current["display"][field] == expected
+    assert current["display"]["show_reasoning"] is True
+    assert current["model"] == {
+        "default": "fixture-model", "provider": "custom", "api_key": "inert-provider-fixture"}
+    assert current["unrelated"] == {"nested": {"user_owned": [2, "preserve"]}}
+    assert (launch / ".env").read_bytes() == env_before
+
+def test_global_model_rpc_keeps_later_settings_context_pin(homes, monkeypatch):
+    import contextvars
+    import threading
+    from types import SimpleNamespace
+
+    import utils
+
+    launch, _ = homes
+    seed(launch, {
+        "model": {
+            "default": "old-model",
+            "provider": "custom",
+            "base_url": "http://localhost:1234/v1",
+            "context_length": 32000,
+        },
+        "display": {"show_reasoning": True},
+    })
+    switch_result = SimpleNamespace(
+        success=True, new_model="claude-haiku", target_provider="anthropic", provider_changed=True,
+        api_key="", base_url="https://api.anthropic.com", api_mode="anthropic_messages",
+        warning_message="", is_global=True)
+    monkeypatch.setattr("hermes_cli.model_switch.switch_model", lambda **_kwargs: switch_result)
+    monkeypatch.setattr(web_server_config, "_schema_with_dynamic_provider_options",
+                        lambda: web_server_config.CONFIG_SCHEMA)
+    monkeypatch.setattr(
+        "hermes_cli.observability.shared_metrics_events.record_model_switch", lambda **_kwargs: None)
+
+    original_atomic_update = utils.atomic_roundtrip_yaml_update
+    model_write_waiting = threading.Event()
+    release_model_write = threading.Event()
+    settings_started = threading.Event()
+    settings_done = threading.Event()
+    responses = {}
+    failures = []
+
+    def pause_model_write(path, key, value):
+        if threading.current_thread().name == "global-model-writer" and not model_write_waiting.is_set():
+            model_write_waiting.set()
+            if not release_model_write.wait(5):
+                raise TimeoutError("global model commit was not released")
+        return original_atomic_update(path, key, value)
+
+    monkeypatch.setattr(utils, "atomic_roundtrip_yaml_update", pause_model_write)
+
+    global_context = contextvars.copy_context()
+    settings_context = contextvars.copy_context()
+
+    def persist_global_model():
+        try:
+            responses["model"] = global_context.run(
+                rpc, "config.set", session_id="launch", key="model",
+                value="claude-haiku --provider anthropic --global", confirm_expensive_model=True)
+        except Exception as exc:
+            failures.append(exc)
+
+    def set_context_pin():
+        settings_started.set()
+        try:
+            responses["settings"] = settings_context.run(
+                rpc, "settings.set", session_id="launch", key="model_context_length",
+                value=8192, confirmed=True)
+        except Exception as exc:
+            failures.append(exc)
+        finally:
+            settings_done.set()
+
+    model_writer = threading.Thread(name="global-model-writer", target=persist_global_model, daemon=True)
+    settings_writer = threading.Thread(name="native-settings-writer", target=set_context_pin, daemon=True)
+    model_writer.start()
+    try:
+        assert model_write_waiting.wait(2)
+        settings_writer.start()
+        assert settings_started.wait(2)
+        settings_completed_before_model_commit = settings_done.wait(0.5)
+    finally:
+        release_model_write.set()
+        model_writer.join(timeout=5)
+        if settings_writer.ident is not None:
+            settings_writer.join(timeout=5)
+
+    assert not model_writer.is_alive() and not settings_writer.is_alive()
+    assert not settings_completed_before_model_commit
+    assert not failures
+    assert "result" in responses["model"] and "result" in responses["settings"]
+    final = saved(launch)
+    assert final["model"]["default"] == "claude-haiku"
+    assert final["model"]["provider"] == "anthropic"
+    assert final["model"]["context_length"] == 8192
 
 
 @pytest.mark.parametrize(("key", "value"), [

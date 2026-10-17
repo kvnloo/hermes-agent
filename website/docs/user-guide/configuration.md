@@ -1061,6 +1061,9 @@ The value is the **first rung** of an escalating ladder, not a fixed interval: c
 
 :::tip Gateway hot-reload of compression and context length
 As of recent releases, editing `model.context_length` or any `compression.*` key in `config.yaml` on a running gateway takes effect on the next message — no gateway restart, no `/reset`, no session rotation required. The cached-agent signature includes these keys, so the gateway transparently rebuilds the agent when it sees a change. API keys and tool/skill config still require the usual reload paths.
+
+Persisting a `/model` selection clears `model.context_length` and legacy root-level `context_length` / `model_context_length` pins when the model or provider route changes. Selecting the same route keeps its pin.
+
 :::
 
 ### Common setups

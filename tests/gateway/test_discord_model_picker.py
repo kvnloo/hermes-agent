@@ -83,3 +83,57 @@ async def test_model_picker_clears_controls_before_running_switch_callback():
     interaction.edit_original_response.assert_awaited_once()
 
 
+
+
+@pytest.mark.asyncio
+async def test_model_picker_refuses_registered_guard_failure_without_changing_runtime_state(monkeypatch):
+    raw_config = b"model:\n  default: old/model\n  provider: openai\n"
+    session = {"model_override": {"model": "old/model", "provider": "openai"}}
+    state = {"config": raw_config, "session": session}
+    before = {"config": raw_config, "session": {"model_override": session["model_override"].copy()}}
+
+    async def on_model_selected(_chat_id: str, model_id: str, provider_slug: str) -> str:
+        state["config"] = f"model: {model_id}\nprovider: {provider_slug}\n".encode()
+        session["model_override"]["model"] = model_id
+        session["model_override"]["provider"] = provider_slug
+        return "Model switched"
+
+    def broken_local_metadata(provider, model):
+        raise RuntimeError("registered guard metadata failure")
+
+    monkeypatch.setattr("agent.models_dev.get_model_info", broken_local_metadata)
+    view = ModelPickerView(
+        providers=[{
+            "slug": "openai",
+            "name": "OpenAI",
+            "models": ["gpt-5-pro"],
+            "total_models": 1,
+            "is_current": True,
+        }],
+        current_model="old/model",
+        current_provider="openai",
+        session_key="session-1",
+        on_model_selected=on_model_selected,
+        allowed_user_ids={"123"},
+    )
+    view._selected_provider = "openai"
+    interaction = SimpleNamespace(
+        user=SimpleNamespace(id=123),
+        channel_id=456,
+        data={"values": ["gpt-5-pro"]},
+        response=SimpleNamespace(
+            defer=AsyncMock(),
+            send_message=AsyncMock(),
+            edit_message=AsyncMock(),
+        ),
+        edit_original_response=AsyncMock(),
+    )
+
+    await view._on_model_selected(interaction)
+
+    assert state == before
+    assert view.resolved is False
+    error_embed = interaction.response.edit_message.await_args.kwargs["embed"]
+    assert "registered guard metadata failure" in error_embed.description
+    interaction.response.send_message.assert_not_awaited()
+    interaction.edit_original_response.assert_not_awaited()

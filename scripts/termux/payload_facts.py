@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 import json
 from pathlib import Path
 import sys
@@ -9,12 +10,17 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 
-def write_facts(payload: Path, lock_path: Path, build_set: Path, tui: Path) -> None:
+def write_facts(payload: Path, lock_path: Path, build_set: Path, tui: Path,
+                source: Path, ref: str) -> None:
     from pm.lock import Lockfile
     from pm.registry import get_package
-    from scripts.bundles.payload import record_tools
+    from scripts.bundles.frontend_products import snapshot_frontends
+    from scripts.bundles.payload import record_tools, resolve_revision
     from scripts.build.agent import assemble
     from scripts.build.inputs import AgentInputs, RESOURCE_ENV, dependency_site
+
+    source = Path(source).resolve()
+    revision = resolve_revision(source, ref)
 
     payload = payload.resolve()
     target = "linux-arm64-bionic"
@@ -27,14 +33,15 @@ def write_facts(payload: Path, lock_path: Path, build_set: Path, tui: Path) -> N
     if version is None or python is None:
         raise ValueError("bionic Python pin/executable missing")
     repo = payload / "app"
-    assemble(AgentInputs(
+    inputs = AgentInputs(
         project=repo / "pyproject.toml", code=repo, repo="app", placement="fixed", target=target,
         python=python,
         site_packages=dependency_site(payload / "venv", version, target),
         environment=payload / "venv", tools=payload / "tools", pm_runtime=payload / "pm-runtime",
-        resources={name: repo / name for name in RESOURCE_ENV}, frontends={"tui": tui.resolve()},
-        stamp=repo / "install-stamp.json",
-    ), payload)
+        resources={name: repo / name for name in RESOURCE_ENV}, stamp=repo / "install-stamp.json",
+    )
+    with snapshot_frontends(source, revision, {"tui": tui}) as frozen:
+        assemble(replace(inputs, frontends=frozen), payload)
 
 
 if __name__ == "__main__":
@@ -42,5 +49,10 @@ if __name__ == "__main__":
     parser.add_argument("payload", type=Path)
     parser.add_argument("build_set", type=Path)
     parser.add_argument("--tui-product", type=Path, required=True)
+    parser.add_argument("--source", type=Path, required=True)
+    parser.add_argument("--ref", required=True)
     args = parser.parse_args()
-    write_facts(args.payload, args.payload / "app/pm/lock.json", args.build_set, args.tui_product)
+    write_facts(
+        args.payload, args.payload / "app/pm/lock.json", args.build_set, args.tui_product,
+        args.source, args.ref,
+    )

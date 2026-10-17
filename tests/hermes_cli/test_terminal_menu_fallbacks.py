@@ -134,3 +134,26 @@ def test_remove_custom_provider_falls_back_on_menu_runtime_error(tmp_path, monke
     assert reloaded["custom_providers"] == [
         {"name": "Local B", "base_url": "http://localhost:8002/v1"},
     ]
+
+def test_prompt_model_selection_aborts_on_registered_guard_failure(
+    tmp_path, monkeypatch, capsys,
+):
+    from hermes_cli.auth import _prompt_model_selection
+
+    config_path = tmp_path / "config.yaml"
+    original_config = "model:\n  default: old-model\n  provider: anthropic\n"
+    config_path.write_text(original_config, encoding="utf-8")
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setattr("hermes_cli.curses_ui.curses_radiolist", lambda *_a, **_kw: 0)
+
+    def _fail_model_metadata(_provider, _model):
+        raise RuntimeError("registered model metadata unavailable")
+
+    monkeypatch.setattr("agent.models_dev.get_model_info", _fail_model_metadata)
+
+    selected = _prompt_model_selection(
+        ["new-model"], current_model="old-model", confirm_provider="anthropic")
+
+    assert selected is None
+    assert "safety checks failed" in capsys.readouterr().out.lower()
+    assert config_path.read_text(encoding="utf-8") == original_config

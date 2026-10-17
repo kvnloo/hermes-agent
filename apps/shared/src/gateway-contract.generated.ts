@@ -602,6 +602,8 @@ export interface SettingsField {
   description: string
   category: string
   options?: string[] | null
+  accepted_types?: ('boolean' | 'number' | 'string' | 'list' | 'object')[] | null
+  accepted_values?: string[] | null
   value: unknown
   default: unknown
   nullable?: boolean
@@ -2083,7 +2085,7 @@ export interface ProfilesConfigureParams {
   description?: string | null
   model?: string | null
   provider?: string | null
-  confirm_expensive_model?: boolean | string | null
+  confirm_expensive_model?: boolean
   disabled_skills?: string[] | null
   enabled_toolsets?: string[] | null
   enabled_mcp_servers?: string[] | null
@@ -3357,11 +3359,14 @@ export interface SessionBranchWholeResult {
 export interface SessionUndoParams {
   session_id: string
   profile?: string | null
+  row_id?: number
   intent?: UndoIntent | null
 }
 export type UndoIntent = 'retry' | 'undo'
 export interface SessionUndoResult {
   removed: number
+  count: number
+  messages: TranscriptMessage[]
 }
 export interface SessionSaveParams {
   session_id: string
@@ -5334,7 +5339,7 @@ export interface RpcMethods {
   'session.steer': { params: SessionCorrectionParams; result: SessionCorrectionResult }
   /** Read or set a live session's title; a title set before the row exists is queued. */
   'session.title': { params: SessionTitleParams; result: SessionTitleResult }
-  /** Drop the last user turn (and everything after it) from an idle session. */
+  /** Drop a selected durable user turn, or the latest turn when no row_id is supplied, and return retained history. */
   'session.undo': { params: SessionUndoParams; result: SessionUndoResult }
   /** Token / context / cost counters for the session (+ Nous credit lines when available). */
   'session.usage': { params: SessionUsageParams; result: SessionUsageResult }

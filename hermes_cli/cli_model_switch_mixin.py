@@ -546,20 +546,20 @@ class CLIModelSwitchMixin:
             "filter": ""}
         self._invalidate(min_interval=0.0)
 
-    def _confirm_expensive_model_switch(self, result) -> bool:
+    def _confirm_expensive_model_switch(self, result, precomputed_warning=None) -> bool:
         """Ask for explicit confirmation before applying costly model switches."""
         if not getattr(result, "success", False):
             return True
-        try:
+        warning = precomputed_warning
+        if warning is None:
             from hermes_cli.model_selection_guards import (
                 combined_selection_warning, selection_context_for_agent)
             warning = combined_selection_warning(
                 result.new_model, provider=result.target_provider,
                 base_url=result.base_url or self.base_url or "",
                 api_key=result.api_key or self.api_key or "", model_info=result.model_info,
-                selection_context=selection_context_for_agent(getattr(self, "agent", None)))
-        except Exception:
-            warning = None
+                selection_context=selection_context_for_agent(getattr(self, "agent", None)),
+                allow_provider_io=False)
         if warning is None:
             return True
         choices = [
@@ -568,6 +568,29 @@ class CLIModelSwitchMixin:
         raw = self._prompt_text_input_modal(
             title=f"!!! {warning.title} !!!", detail=warning.message, choices=choices, timeout=120)
         return self._normalize_slash_confirm_choice(raw, choices) == "once"
+
+    def _confirm_and_switch_cli_model(
+        self, preflight_result, warning, raw_input, persist_global: bool, one_turn: bool,
+        explicit_provider, user_provs, custom_provs, reasoning_effort: str = "",
+    ) -> None:
+        """Confirm local selection warnings before entering the validating switch pipeline."""
+        from cli import _cprint
+        try:
+            if not self._confirm_expensive_model_switch(preflight_result, precomputed_warning=warning):
+                _cprint(f"  {t('cli.model.switch_cancelled')}")
+                return
+            result = _switch_model_from(
+                self, raw_input, is_global=persist_global, explicit_provider=explicit_provider,
+                user_providers=user_provs, custom_providers=custom_provs)
+            if not result.success:
+                _cprint(f"  ✗ {result.error_message}")
+                return
+            _merge_preflight_warning(self, result, custom_provs)
+            _commit_model_switch(
+                self, result, persist_global=persist_global, one_turn=one_turn,
+                reasoning_effort=reasoning_effort)
+        except Exception as exc:
+            _cprint(f"  {t('cli.model.selection_failed', error=exc)}")
 
     def _confirm_and_apply_model_switch_result(
         self, result, persist_global: bool, custom_providers=None, reasoning_effort: str = "") -> None:
@@ -848,18 +871,50 @@ class CLIModelSwitchMixin:
 
         # Live session state is overlaid truthy-only so empty self.* attrs don't clobber config.
         from hermes_cli.inventory import load_picker_context
+        ctx_error = None
         try:
             ctx = load_picker_context().with_overrides(
                 current_provider=self.provider or "", current_model=self.model or "",
                 current_base_url=self.base_url or "")
-        except Exception:
+        except Exception as exc:
             ctx = None
+            ctx_error = exc
         # switch_model() + _open_model_picker still need the raw provider dicts.
         user_provs = ctx.user_providers if ctx is not None else None
         custom_provs = ctx.custom_providers if ctx is not None else None
 
         if not request.target and not request.explicit_provider:
             return _show_model_picker(self, ctx, request.force_refresh)
+
+        from hermes_cli.model_switch import ModelSwitchResult, resolve_model_switch_target
+        try:
+            if ctx_error is not None:
+                raise ctx_error
+            target = resolve_model_switch_target(
+                request.target, current_provider=self.provider or "",
+                current_base_url=self.base_url or "", explicit_provider=request.explicit_provider,
+                user_providers=user_provs, custom_providers=custom_provs)
+            from hermes_cli.model_selection_guards import (
+                combined_selection_warning, selection_context_for_agent)
+            warning = combined_selection_warning(
+                target.model, provider=target.provider,
+                base_url=target.base_url or self.base_url or "",
+                selection_context=selection_context_for_agent(getattr(self, "agent", None)),
+                allow_provider_io=False)
+        except Exception as exc:
+            _cprint(f"  {t('cli.model.selection_failed', error=exc)}")
+            return
+
+        preflight_result = ModelSwitchResult(
+            success=True, new_model=target.model, target_provider=target.provider,
+            base_url=target.base_url)
+        extra = (request.reasoning_effort,) if request.reasoning_effort else ()
+        if warning is not None:
+            _run_confirm_and_apply(
+                self, self._confirm_and_switch_cli_model, preflight_result, warning,
+                request.target, persist_global, one_turn, request.explicit_provider,
+                user_provs, custom_provs, *extra)
+            return
 
         result = _switch_model_from(
             self, request.target, is_global=persist_global,
@@ -869,21 +924,9 @@ class CLIModelSwitchMixin:
             _cprint(f"  ✗ {result.error_message}")
             return
         _merge_preflight_warning(self, result, custom_provs)
-        extra = (request.reasoning_effort,) if request.reasoning_effort else ()
-        _run_confirm_and_apply(
-            self, self._confirm_and_apply_cli_model_switch,
-            result, persist_global, one_turn, custom_provs, *extra)
-
-    def _confirm_and_apply_cli_model_switch(
-        self, result, persist_global: bool, one_turn: bool, custom_provs=None, reasoning_effort: str = "") -> None:
-        """Confirm an expensive model switch and apply it (typed /model path). Runs on a worker
-        thread when the TUI is active (see _run_confirm_and_apply) so the modal can render."""
-        from cli import _cprint
-        if not self._confirm_expensive_model_switch(result):
-            _cprint(f"  {t('cli.model.switch_cancelled')}")
-            return
-        _commit_model_switch(self, result, persist_global=persist_global, one_turn=one_turn,
-                             reasoning_effort=reasoning_effort)
+        _commit_model_switch(
+            self, result, persist_global=persist_global, one_turn=one_turn,
+            reasoning_effort=request.reasoning_effort or "")
 
     def _handle_codex_runtime(self, cmd_original: str) -> None:
         """Handle /codex-runtime — toggle the codex app-server runtime opt-in.

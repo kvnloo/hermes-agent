@@ -12,7 +12,7 @@ import type {
   Usage
 } from '@hermes/shared/gateway-events'
 
-import type { Block, Entry, NoticeEntry, Todo, ToolCall, TurnEntry } from './model.js'
+import type { Block, Entry, NoticeEntry, Todo, ToolCall, TurnEntry, UserEntry } from './model.js'
 
 type ToolBlock = Extract<Block, { kind: 'tool' }>
 
@@ -58,8 +58,33 @@ export class Transcript {
     this.#touch()
   }
 
-  user(text: string, at = Date.now()) {
-    this.push({ at, id: this.id('u'), kind: 'user', text })
+  user(text: string, at = Date.now()): UserEntry {
+    const entry: UserEntry = {
+      at,
+      id: this.id('u'),
+      kind: 'user',
+      rev: 0,
+      text
+    }
+    this.push(entry)
+
+    return entry
+  }
+
+  /** Attaches the prompt.submit durable row id so rewind targets the exact user boundary. */
+  setUserRowId(id: string, rowId: number) {
+    if (!Number.isInteger(rowId) || rowId <= 0) {
+      return
+    }
+
+    const entry = this.entries.find((item): item is UserEntry => item.kind === 'user' && item.id === id)
+
+    if (!entry || entry.rowId === rowId) {
+      return
+    }
+
+    entry.rowId = rowId
+    this.#touch(entry)
   }
 
   notice(text: string, tone: NoticeEntry['tone'] = 'info') {
@@ -360,7 +385,14 @@ export class Transcript {
 
       if (m.role === 'user') {
         turn = undefined
-        this.entries.push({ at, id: this.id('u'), kind: 'user', text })
+        this.entries.push({
+          at,
+          id: this.id('u'),
+          kind: 'user',
+          rev: 0,
+          rowId: typeof m.row_id === 'number' && Number.isInteger(m.row_id) && m.row_id > 0 ? m.row_id : undefined,
+          text
+        })
 
         continue
       }
@@ -487,11 +519,11 @@ export class Transcript {
   }
 
   /** Marks a change: the transcript's, and the turn's when one changed. */
-  #touch(turn?: TurnEntry) {
+  #touch(entry?: TurnEntry | UserEntry) {
     this.rev++
 
-    if (turn) {
-      turn.rev++
+    if (entry) {
+      entry.rev++
     }
   }
 }

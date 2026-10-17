@@ -33,11 +33,12 @@ REPO=""
 TAG=""
 COMMIT_MODE=""
 RELEASE_COMMIT=""
+SOURCE_COMMIT=""
 PAYLOAD=""
 OUT=""
 TUI_PRODUCT=""
 
-usage() { printf 'usage: build_deb.sh --repo <dir> (--tag <tag> | --commit <full-sha>) --payload <dir> --tui-product <dir> --out <dir>\n' >&2; exit 2; }
+usage() { printf 'usage: build_deb.sh --repo <dir> (--tag <tag> | --commit <full-sha>) --payload <dir> --tui-product <dir> --out <dir> [--source-commit <sha>]\n' >&2; exit 2; }
 log()  { printf '\n==> %s\n' "$*"; }
 fail() { printf 'build_deb: FAILED: %s\n' "$*" >&2; exit 1; }
 
@@ -47,6 +48,7 @@ while [ "$#" -gt 0 ]; do
         --tag) TAG="${2:?}"; shift 2 ;;
         --commit) COMMIT_MODE="${2:?}"; shift 2 ;;
         --release-commit) RELEASE_COMMIT="${2:?}"; shift 2 ;;
+        --source-commit) SOURCE_COMMIT="${2:?}"; shift 2 ;;
         --payload) PAYLOAD="${2:?}"; shift 2 ;;
         --tui-product) TUI_PRODUCT="${2:?}"; shift 2 ;;
         --out) OUT="${2:?}"; shift 2 ;;
@@ -68,13 +70,22 @@ IMAGE="${TERMUX_BUILDER_IMAGE:-termux/termux-docker@$DIGEST}"
 
 REPO_ABS="$(cd "$REPO" && pwd)"
 PAYLOAD_ABS="$(cd "$PAYLOAD" && pwd)"
-
-# Resolve source identity before writing output or changing payload files.
+if [ -n "$SOURCE_COMMIT" ]; then
+    [[ "$SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]] || fail "source commit requires an exact full 40-character SHA"
+    git -C "$REPO_ABS" cat-file -e "$SOURCE_COMMIT^{commit}" \
+        || fail "source commit $SOURCE_COMMIT is unavailable in $REPO_ABS"
+    CHECKOUT_COMMIT="$(git -C "$REPO_ABS" rev-parse HEAD)" || fail "not a git checkout: $REPO_ABS"
+    [ "$CHECKOUT_COMMIT" = "$SOURCE_COMMIT" ] || fail "checkout HEAD does not match the pinned source commit"
+fi
 if [ -n "$COMMIT_MODE" ] || [ -n "$RELEASE_COMMIT" ]; then
     SELECTED_COMMIT="${RELEASE_COMMIT:-$COMMIT_MODE}"
     [[ "$SELECTED_COMMIT" =~ ^[a-f0-9]{40}$ ]] || fail "commit identity requires an exact full 40-character SHA"
-    COMMIT="$(git -C "$REPO_ABS" rev-parse HEAD)" || fail "not a git checkout: $REPO_ABS"
-    [ "$COMMIT" = "$SELECTED_COMMIT" ] || fail "checkout HEAD $(echo "$COMMIT" | cut -c1-12) is not the requested commit"
+    if [ -n "$SOURCE_COMMIT" ]; then
+        COMMIT="$SOURCE_COMMIT"
+    else
+        COMMIT="$(git -C "$REPO_ABS" rev-parse HEAD)" || fail "not a git checkout: $REPO_ABS"
+    fi
+    [ "$COMMIT" = "$SELECTED_COMMIT" ] || fail "checkout does not match the requested commit"
     PY_VERSION="$(python3 - "$REPO_ROOT" "$REPO_ABS" "$COMMIT" "$TAG" <<'PY'
 import sys
 from pathlib import Path
@@ -95,13 +106,32 @@ PY
     fi
 else
     unset HERMES_BUILD_COMMIT
-    COMMIT="$(git -C "$REPO_ABS" rev-parse --verify "refs/tags/$TAG^{commit}")" \
-        || fail "tag $TAG not found in $REPO_ABS"
+    if [ -n "$SOURCE_COMMIT" ]; then
+        COMMIT="$SOURCE_COMMIT"
+    else
+        COMMIT="$(git -C "$REPO_ABS" rev-parse --verify "refs/tags/$TAG^{commit}")" \
+            || fail "tag $TAG not found in $REPO_ABS"
+    fi
     PY_VERSION="${TAG#v}"
 fi
 [ -n "$TUI_PRODUCT" ] || fail "--tui-product is required (run scripts/termux/build.py)"
 TUI_PRODUCT="$(cd "$TUI_PRODUCT" && pwd)"
 [ -f "$TUI_PRODUCT/dist/entry.js" ] && [ -f "$TUI_PRODUCT/package.json" ] || fail "incomplete TUI product"
+FRONTEND_STAGE="$(mktemp -d "${TMPDIR:-/tmp}/hermes-termux-products.XXXXXX")" \
+    || fail "cannot create private frontend staging"
+trap 'rm -rf -- "$FRONTEND_STAGE"' EXIT
+python3 - "$REPO_ROOT" "$REPO_ABS" "$COMMIT" "$TUI_PRODUCT" "$FRONTEND_STAGE" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, sys.argv[1])
+from scripts.bundles.frontend_products import copy_frontends
+
+copy_frontends(
+    Path(sys.argv[2]), sys.argv[3], {"tui": Path(sys.argv[4])}, Path(sys.argv[5]),
+)
+PY
+TUI_PRODUCT="$FRONTEND_STAGE/products/tui"
 for d in python node uv npm ffmpeg ripgrep runtime-libs app wheelhouse; do
     [ -d "$PAYLOAD_ABS/$d" ] || fail "payload missing $d/ -- run termux_build.sh + build_cpython.sh + build_node.sh first"
 done
@@ -147,7 +177,7 @@ PYREQS
 . "$HERE/assembly_permissions.sh"
 prepare_assembly
 # Restore host ownership on failure too, after Docker has removed input mounts.
-trap restore_assembly_owner EXIT
+trap 'restore_assembly_owner; rm -rf -- "$FRONTEND_STAGE"' EXIT
 # Mount the payload at its REAL on-device path: the venv records
 # absolute paths (interpreter symlink, pyvenv.cfg) that must be correct
 # on-device from birth -- a /payload alias would bake container paths in.
@@ -225,7 +255,8 @@ for tool in python node uv npm ffmpeg ripgrep; do
     cp -a "$PAYLOAD_ABS/$tool" "$DEST/tools/"
 done
 cp -a "$PAYLOAD_ABS/runtime-libs" "$PAYLOAD_ABS/app" "$PAYLOAD_ABS/venv" "$PAYLOAD_ABS/pm-runtime" "$DEST/"
-python3 "$HERE/payload_facts.py" "$DEST" "$PAYLOAD_ABS/.work/build_set.txt" --tui-product "$TUI_PRODUCT"
+python3 "$HERE/payload_facts.py" "$DEST" "$PAYLOAD_ABS/.work/build_set.txt" \
+    --tui-product "$TUI_PRODUCT" --source "$REPO_ABS" --ref "$COMMIT"
 
 python3 "$HERE/launchers.py" --payload "$DEST" --control "$STAGE/DEBIAN"
 
