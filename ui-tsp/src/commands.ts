@@ -148,6 +148,11 @@ const COMMANDS: readonly LocalCommand[] = [
     }
   },
   {
+    // Bare /plan reviews; argument forms retain Hermes's plan-generation builtin.
+    name: 'plan',
+    run: (app, arg) => arg ? false : app.reviewPlan()
+  },
+  {
     name: 'jobs',
     run: app => app.jobs.show()
   },

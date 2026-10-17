@@ -290,6 +290,40 @@ async function shortcuts() {
     assert.deepEqual(closed.get('dock.composer.line.input')?.p, before)
     assert(![...closed.values()].some(n=>n.p?.role === 'omp.custom'))
   }, true)
+  await step('plan review ToC, section scrolling, refine field and cancel preserve the draft', async()=>{
+    const before = (await native.rendered()).get('dock.composer.line.input')?.p
+    const text = ['# Implementation plan', 'Goal fixture.', '## Build', ...Array.from({length:80}, (_,i)=>`Plan paragraph ${i}`), 'Plan final marker', '## Verify', 'Run the tests.'].join('\n\n')
+    await replay('message.start')
+    await replay('message.delta', {text})
+    await replay('message.complete', {status:'complete', text})
+    await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.k === 'md' && n.p?.text === text), 'completed plan fixture')
+    await native.shortcut('alt+shift+p')
+    await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.role === 'omp.overlay.plan'), 'native plan review')
+    await capture('plan-toc')
+    await native.key('ArrowDown')
+    await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.role === 'omp.plan.body' && String(n.p.text).startsWith('## Build')), 'Build section selected')
+    await native.key('End')
+    await until(async()=>{
+      const snapshot = await native.snapshot()
+      const rect = flatten(snapshot.tree).find(n=>n.text === 'Plan final marker')?.rect
+      return Boolean(rect && rect[1] > 0 && rect[1]+rect[3] <= snapshot.viewport.height)
+    }, Boolean, 'last plan paragraph painted after End')
+    await capture('plan-section-end')
+    await tap('Refine', 'text')
+    await native.type('Add a failure test')
+    await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.role === 'omp.ask.input' && n.p.text === 'Add a failure test'), 'refinement field owns typing')
+    await until(async()=>{
+      const snapshot = await native.snapshot()
+      const field = snapshot.nodes.find(n=>n.role === 'textbox' && n.name === 'How should the plan change?')?.rect
+      const decision = snapshot.nodes.find(n=>n.name === 'Send refinement enter')?.rect
+      return Boolean(field && decision && field.height >= 20 && field.y > 0 && field.y + field.height <= decision.y && decision.y + decision.height <= snapshot.viewport.height)
+    }, Boolean, 'refinement field fully visible above the decision bar')
+    await capture('plan-refine')
+    await native.key('Escape')
+    const closed = await until(()=>native.rendered(), ns=>![...ns.values()].some(n=>n.p?.role === 'omp.overlay.plan'), 'plan review cancelled')
+    assert.deepEqual(closed.get('dock.composer.line.input')?.p, before)
+    assert(!(await native.wire()).some(w=>w.dir === 'denied' || (w.dir === 'request' && ['prompt.submit','request.answer'].includes(String(w.body.method)))))
+  }, true)
 }
 async function openui() {
   let scope = '', notice: { id:string; path:string; scope:string } | undefined

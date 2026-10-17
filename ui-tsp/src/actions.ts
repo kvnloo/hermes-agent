@@ -153,6 +153,14 @@ export const APP_ACTIONS: readonly Action[] = [
     }
   },
   {
+    id: 'app.plan.review',
+    title: 'Review the latest plan',
+    group: 'Session',
+    keys: ['alt+shift+p'],
+    when: always,
+    run: app => app.reviewPlan()
+  },
+  {
     id: 'app.jobs',
     title: 'Show background jobs',
     group: 'Session',
@@ -234,6 +242,16 @@ export const REPORT_ACTIONS: readonly ReportAction[] = [
   { keys: ['home'], intent: { kind: 'scroll', to: 'start' } },
   { keys: ['end'], intent: { kind: 'scroll', to: 'end' } }
 ]
+
+/** Plan-local commands; editing keys remain owned by its private note editor. */
+export const PLAN_ACTIONS = [
+  { keys: ['escape'], action: 'close' },
+  { keys: ['up'], action: 'previous' },
+  { keys: ['down'], action: 'next' },
+  { keys: ['alt+a'], action: 'approve' },
+  { keys: ['alt+r'], action: 'refine' },
+  { keys: ['enter'], action: 'submit' }
+] as const
 
 /** Jobs-local bindings live beside app bindings, never in a rendering module. */
 export function jobsKeyAction(key: Key): 'close' | 'next' | 'previous' | undefined {
