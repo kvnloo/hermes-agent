@@ -23,6 +23,7 @@ export interface DockContext {
   /** The agent accepts prompts (for Tern's `send`). */
   ready: boolean
   busy?: { since: object; startedAt: number; label: string }
+  busyMode?: 'queue' | 'steer'
   queued: readonly string[]
   /** One current gateway-sourced plan for the visible session. */
   todos: readonly Todo[]
@@ -269,7 +270,7 @@ function composerNode(cx: DockContext): JSX.Element {
             />
           ) : null}
         </status>
-        <text key="help" role="omp.composer.hint" text={HELP_HINT} tone="muted" wrap="none" />
+        <text key="help" role="omp.composer.hint" text={cx.approval ? 'Enter deny and steer' : cx.busy ? `Enter ${cx.busyMode === 'steer' ? 'steer' : 'queue'} · Alt+Enter ${cx.busyMode === 'steer' ? 'queue' : 'steer'}` : HELP_HINT} tone="muted" wrap="none" />
         <row align="center" gap="xs" key="settings" onClick={cx.onSettings} role="omp.composer.settings" title="Open Hermes settings">
           <icon key="icon" name="settings" />
           <text key="label" text="Settings" />

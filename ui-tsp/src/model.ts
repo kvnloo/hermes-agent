@@ -64,6 +64,7 @@ export interface ToolCall {
 /** A part of an assistant turn, in the order it streamed. */
 export type Block =
   | { kind: 'text'; id: string; text: string }
+  | { kind: 'steering'; id: string; text: string }
   | { kind: 'thinking'; id: string; text: string; startedAt: number; endedAt?: number }
   | { kind: 'tool'; id: string; call: ToolCall }
 

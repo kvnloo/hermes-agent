@@ -88,6 +88,14 @@ export const APP_ACTIONS: readonly Action[] = [
     run: app => app.toggleRecentTool()
   },
   {
+    id: 'app.message.alternate',
+    title: 'Steer while busy (queue instead when busy mode is steer)',
+    group: 'Control',
+    keys: ['alt+enter'],
+    when: ctx => ctx.busy,
+    run: app => app.submitAlternate()
+  },
+  {
     id: 'app.message.dequeue',
     title: 'Edit the oldest queued prompt',
     group: 'Control',
