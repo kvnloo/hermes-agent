@@ -284,6 +284,40 @@ async function openui() {
   })
 }
 
+async function runBoxes() {
+  await step('terminal and eval outcomes from explicit fixture replay', async () => {
+    await replay('message.start')
+    for (const [id, name, result] of [
+      ['tail', 'terminal', { output:Array.from({length:15},(_,i)=>`line ${i}`).join('\n'), exit_code:0, error:null }],
+      ['deadline', 'terminal', { output:'[Command timed out after 5s]', exit_code:124, error:null }],
+      ['background', 'terminal', { output:'Background process started', exit_code:0, error:null, session_id:'bg-e2e', pid:1234 }],
+      ['eval', 'execute_code', { status:'timeout', output:'partial', error:'Cell timed out after 5s' }]
+    ] as const) {
+      await replay('tool.start', { name, tool_id:id, args:name === 'terminal' ? {command:`echo ${id}`,background:id==='background'} : {code:'print(1)'} })
+      await replay('tool.complete', { name, tool_id:id, result })
+    }
+    await replay('message.complete', {status:'complete',text:''})
+    const nodes = await until(()=>native.rendered(), ns=>[...ns.values()].filter(n=>n.p?.role==='omp.run.state').length===4, 'four run footers')
+    const states = [...nodes.values()].filter(n=>n.p?.role==='omp.run.state').map(n=>n.p?.spans)
+    assert.deepEqual(states.sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))),
+      [[{s:'success',t:'ok'}],[{s:'warning',t:'timeout'}],[{s:'pending',t:'background'}],[{s:'warning',t:'timeout'}]]
+        .sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))
+    const snapshot = await native.snapshot()
+    const text = flatten(snapshot.tree).map(n=>n.text ?? '').join('\n')
+    await writeFile(join(manifest.proof,'run-box-text.txt'),text)
+    assert(text.includes('timeout'), 'native presentation retains timeout')
+    assert(text.includes('background'), 'native presentation retains background')
+    assert(text.includes('truncated: showing last 10 lines'), 'native footer retains exact output count')
+    await capture('outcomes')
+    await tap('Show all output')
+    const expanded = await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.role==='omp.run.output' && String(n.p.text).split('\n').length===15), 'expanded output')
+    assert(![...expanded.values()].some(n=>n.p?.role==='omp.run.facts' && JSON.stringify(n.p.spans).includes('truncated: showing')))
+    await tap('Show less output')
+    await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.role==='omp.run.output' && String(n.p.text).split('\n').length===10), 'restored ten-line tail')
+    await capture('refolded')
+  }, true)
+}
+
 async function smoke() {
   await step('launch welcome and real session without a model call',async()=>{
     assert(flatten((await native.snapshot()).tree).some(n=>(n.text ?? '').toLowerCase().includes('hermes')))
@@ -304,7 +338,7 @@ try {
   const wire = await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='delivered' && w.body.result && typeof w.body.result==='object' && !Array.isArray(w.body.result) && 'session_id' in w.body.result), 'real session creation')
   const ids = new Set(wire.filter(w=>w.dir==='request' && w.body.method==='session.create').map(w=>w.body.id))
   sid = String(record(wire.findLast(w=>w.dir==='delivered' && ids.has(w.body.id) && w.body.result)?.body.result).session_id)
-  const journeys:Record<string,()=>Promise<void>> = {settings,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui}
+  const journeys:Record<string,()=>Promise<void>> = {settings,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes}
   assert(journeys[journey],`Unknown journey: ${journey}`)
   await journeys[journey]!()
 } catch (error) { console.error(error); process.exitCode=1 }
