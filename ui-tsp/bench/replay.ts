@@ -16,7 +16,8 @@ export async function replay({
   hidden = false,
   deltas = 5000,
   history = 1000,
-  quitBeforeAck = false
+  quitBeforeAck = false,
+  retention = false
 } = {}) {
   const gw = new EventEmitter() as EventEmitter & { drain(): void; kill(): void }
   gw.drain = () => {}
@@ -141,7 +142,7 @@ export async function replay({
     } else pending.push(event)
   }
   const tern = {
-    caps: { features: [], kinds: [], reduceMotion: true, cols: 120 },
+    caps: { features: retention ? ['settle'] : [], kinds: [], reduceMotion: true, cols: 120 },
     open: () => surface,
     close: async () => {
       await surface.close()
@@ -199,6 +200,10 @@ export async function replay({
     await tick()
     ack()
     await tick()
+    if (retention) for (let i = 0; i < 3; i++) { ack(); await tick() }
+    const initialBytes = bytes
+    const initialFrames = frames
+    const initialBuilds = frameBuilds.length
     if (hidden) await visible(false)
     emit('message.start')
     let expected = ''
@@ -289,10 +294,14 @@ export async function replay({
       hidden,
       deltas,
       history,
+      retention,
+      streamingBytes: bytes - initialBytes,
+      streamingFrames: frames - initialFrames,
+      streamingBuildP95Ms: pct(frameBuilds.slice(initialBuilds), 0.95),
       events: serial,
       frames,
       bytes,
-      renders,
+      renders: builds.length || renders,
       hiddenRenders,
       buildP50Ms: pct(frameBuilds, 0.5),
       buildP95Ms: pct(frameBuilds, 0.95),
