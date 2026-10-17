@@ -81,6 +81,25 @@ function nativeRun(call: ToolCall) {
 }
 
 describe('Hermes run-state mapping', () => {
+  it('exposes one native semantic input/output/footer builder', () => {
+    const box = node(runBox({ command: 'echo hello', output: 'hello', state: 'ok', exit: 0 }))
+    expect(box.props.role).toBe('omp.run')
+    expect(child(box, 'omp.run.input')).toBeDefined()
+    expect(child(box, 'omp.run.result')).toBeDefined()
+    expect(child(box, 'omp.run.foot')).toBeDefined()
+  })
+
+  it('recognizes Hermes foreground-to-background yield without claiming exit zero', () => {
+    const call = terminal('done', {
+      status: 'yielded_to_background', exit_code: null, error: null, pid: 4321,
+      session_id: 'yield-9', output: 'still running'
+    })
+    const view = nativeRun(call)
+    expect(view.label).toBe('background')
+    expect(view.detail).toContain('pid 4321')
+    expect(view.detail).not.toContain('exit 0')
+  })
+
   it.each([
     {
       name: 'running',
