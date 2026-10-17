@@ -54,6 +54,10 @@ def _clip(text):
 
 def run_cell(request, execution_count):
     """Exec one cell; returns (response payload, FULL stdout text)."""
+    import sys
+    helpers = sys.modules.get("hermes_tools")
+    if helpers is not None:
+        helpers._printed_views = []
     out, err = io.StringIO(), io.StringIO()
     status, trace = "ok", ""
     try:
@@ -70,6 +74,7 @@ def run_cell(request, execution_count):
         "stdout": stdout_text, "stderr": stderr_text,
         "stdout_clipped": stdout_clipped, "stderr_clipped": stderr_clipped,
         "traceback": trace, "execution_count": execution_count,
+        "printed_views": getattr(sys.modules.get("hermes_tools"), "_printed_views", []),
     }, out.getvalue()
 '''
 
@@ -274,7 +279,9 @@ class CellAuthority:
             except Exception:
                 previous = None
         try:
-            return handle_function_call(tool_name, tool_args, task_id=self.task_id)
+            from tools.code_execution_display import nested_dispatch
+            return nested_dispatch(tool_name, tool_args,
+                                   lambda: handle_function_call(tool_name, tool_args, task_id=self.task_id))
         finally:
             if previous is not None:
                 try:
@@ -803,6 +810,7 @@ def _cell_result(kernel: SessionKernel, key: Tuple, status: str, payload: Dict[s
                    "execution_count": kernel.execution_count, "state_reset": state_reset},
     }
     result.update(stdout_metadata)
+    result["_printed_views"] = payload.get("printed_views", [])
     from tools.code_execution_rpc import tool_errors_since
     tool_errors = tool_errors_since(kernel.tool_call_log, kernel.cell_log_start)
     if tool_errors:

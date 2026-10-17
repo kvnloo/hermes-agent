@@ -14135,6 +14135,223 @@
         "title": "ErrorSurface",
         "type": "object"
       },
+      "EvalCell": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "language": {
+            "default": "python",
+            "title": "Language",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "running",
+              "done",
+              "error",
+              "cancelled",
+              "timeout",
+              "background"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "output": {
+            "default": "",
+            "title": "Output",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EvalWork"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "views": {
+            "items": {
+              "$ref": "#/components/schemas/EvalView"
+            },
+            "title": "Views",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "status"
+        ],
+        "title": "EvalCell",
+        "type": "object"
+      },
+      "EvalDisplay": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/EvalCell"
+            },
+            "title": "Cells",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cells"
+        ],
+        "title": "EvalDisplay",
+        "type": "object"
+      },
+      "EvalUpdatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "tool_id": {
+            "title": "Tool Id",
+            "type": "string"
+          },
+          "cell": {
+            "$ref": "#/components/schemas/EvalCell"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tool_id",
+          "cell",
+          "revision"
+        ],
+        "title": "EvalUpdatePayload",
+        "type": "object"
+      },
+      "EvalView": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "table",
+              "json",
+              "markdown"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "start": {
+            "minimum": 0,
+            "title": "Start",
+            "type": "integer"
+          },
+          "printed": {
+            "title": "Printed",
+            "type": "string"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "start",
+          "printed"
+        ],
+        "title": "EvalView",
+        "type": "object"
+      },
+      "EvalWork": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "running",
+              "done",
+              "error",
+              "cancelled",
+              "timeout",
+              "background"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Id"
+          },
+          "preview": {
+            "default": "",
+            "title": "Preview",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tool",
+          "status"
+        ],
+        "title": "EvalWork",
+        "type": "object"
+      },
       "FailedDelegation": {
         "additionalProperties": false,
         "description": "``async_delegation.failed_delegations_for_session`` row: one failed task of an async delegation.",
@@ -37120,6 +37337,29 @@
             "default": null,
             "title": "Inline Diff"
           },
+          "eval_display": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvalDisplay"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "eval_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Eval Revision"
+          },
           "todos": {
             "anyOf": [
               {
@@ -40800,6 +41040,18 @@
           "name": "payload",
           "schema": {
             "$ref": "#/components/schemas/ErrorPayload"
+          }
+        }
+      ]
+    },
+    {
+      "name": "eval.update",
+      "summary": "Observed execute_code cell / nested-work snapshot, stable call and cell IDs.",
+      "params": [
+        {
+          "name": "payload",
+          "schema": {
+            "$ref": "#/components/schemas/EvalUpdatePayload"
           }
         }
       ]

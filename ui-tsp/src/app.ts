@@ -1256,6 +1256,11 @@ export class App implements OverlayHost {
 
         break
 
+      case 'eval.update':
+        if (ev.payload) { t.evalUpdate(ev.payload) }
+
+        break
+
       case 'todo.updated':
         if (this.sid) {
           this.todoHud.update(t.todos(ev.payload?.todos ?? []))

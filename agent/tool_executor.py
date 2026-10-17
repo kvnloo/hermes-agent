@@ -1320,18 +1320,24 @@ class _ConcurrentBatch:
         # propagate_context_to_thread() at the submit site below (GHSA-qg5c-hvr5-hjgr, #13617).
         start = time.time()
         blocked = dispatched = False
-        try:
-            managed = _run_agent_tool_execution_middleware(
-                agent,
-                **ref.middleware_kwargs(),
-                execute=lambda next_args: agent._invoke_tool(
+        from tools.code_execution_display import eval_progress_scope
+
+        def execute(next_args):
+            with eval_progress_scope(ref.call_id, agent.tool_progress_callback):
+                return agent._invoke_tool(
                     ref.name, next_args, ref.task_id, ref.call_id,
                     messages=self.messages,
                     pre_tool_block_checked=True,
                     skip_tool_request_middleware=True,
                     skip_tool_execution_middleware=True,
                     tool_request_middleware_trace=list(ref.trace),
-                ),
+                )
+
+        try:
+            managed = _run_agent_tool_execution_middleware(
+                agent,
+                **ref.middleware_kwargs(),
+                execute=execute,
                 scope_block=scope_block,
                 display_index=index + 1,
                 begin_execution=start_gate.advance,
@@ -1681,7 +1687,9 @@ def _resolve_sequential_dispatch(agent, ref: _ToolCallRef, messages: list) -> _S
     def _execute(next_args: dict) -> Any:
         import model_tools
 
-        with model_tools.suppress_post_tool_call_hook():
+        from tools.code_execution_display import eval_progress_scope
+
+        with model_tools.suppress_post_tool_call_hook(), eval_progress_scope(tool_call_id, agent.tool_progress_callback):
             return model_tools.handle_function_call(
                 function_name,
                 next_args,

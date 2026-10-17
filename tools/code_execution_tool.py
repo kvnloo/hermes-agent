@@ -196,7 +196,8 @@ def generate_hermes_tools_module(enabled_tools: List[str],
     """Source of the hermes_tools.py stub module for SANDBOX_ALLOWED_TOOLS ∩ *enabled_tools*.
     ``transport``: ``"uds"`` (local socket client) or ``"file"`` (file RPC, remote backends)."""
     header = _FILE_TRANSPORT_HEADER if transport == "file" else _UDS_TRANSPORT_HEADER
-    return header + "\n".join(
+    from tools.code_execution_display import PRINT_VIEW_SOURCE
+    return header + PRINT_VIEW_SOURCE + "\n".join(
         f"def {name}({sig}):\n    {doc}\n    return _call({name!r}, {args_expr})\n"
         for name, (sig, doc, args_expr) in sorted(_TOOL_STUBS.items()) if name in set(enabled_tools)
     )
@@ -576,6 +577,7 @@ def _finish_remote_kernel_result(kernel_result: Dict[str, Any], *,
     result = _remote_result(kernel_result.get("status", "error"), stdout_text, exec_start,
                             {"tool_calls_made": kernel_result.get("tool_calls_made", 0)},
                             kernel=kernel_result.get("kernel", {"remote": True}))
+    result["_printed_views"] = kernel_result.get("_printed_views", [])
     if kernel_result.get("tool_errors"):
         result["tool_errors"] = kernel_result["tool_errors"]
     if result["status"] == "timeout":
@@ -700,7 +702,12 @@ def _execute_remote(code: str, task_id: Optional[str], enabled_tools: Optional[L
 # ---- Main entry point ----
 
 
-def execute_code(
+def execute_code(code: str, task_id=None, enabled_tools=None, reset=False) -> str:
+    from tools.code_execution_display import present_execution
+    return present_execution(_execute_code, code, task_id=task_id, enabled_tools=enabled_tools, reset=reset)
+
+
+def _execute_code(
     code: str,
     task_id: Optional[str] = None,
     enabled_tools: Optional[List[str]] = None,
@@ -921,7 +928,10 @@ def build_execute_code_schema(enabled_sandbox_tools: set = None,
         "Helpers require imports: `from hermes_tools import json_parse, shell_quote, retry`. "
         "json_parse(text) — tolerant "
         "json.loads for terminal() output; shell_quote(s) — shlex.quote for "
-        "dynamic shell args; retry(fn, max_attempts=3, delay=2) — exponential backoff."
+        "dynamic shell args; retry(fn, max_attempts=3, delay=2) — exponential backoff. "
+        "Optional `from hermes_tools import print_view`: print_view(value, kind=\"json\") "
+        "prints literal stdout plus a native view; kinds: json, markdown, table "
+        "(table: rows plus columns=[...]). Plain print is unchanged."
     )
     return {
         "name": "execute_code",

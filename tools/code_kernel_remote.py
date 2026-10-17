@@ -403,6 +403,7 @@ def _run_attached_cell(kernel: RemoteKernel, key: Tuple, code: str, *, env, task
         "status": "error", "stdout": cell_payload.get("stdout", ""), "stderr": cell_payload.get("stderr", ""),
         "traceback": cell_payload.get("traceback", ""), "tool_calls_made": tool_call_counter[0], "kernel": kernel_info,
         "tool_errors": tool_errors_since(tool_call_log),
+        "_printed_views": cell_payload.get("printed_views", []),
     }
     if cell_status in ("timeout", "protocol-error", "no-result"):
         # No safe way to interrupt one cell in place (same contract as local): kill, report, respawn.
