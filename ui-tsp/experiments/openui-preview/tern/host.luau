@@ -122,8 +122,10 @@ local function tiles(state, first, last, depth)
         local class = "nv-cell"
         if first == state.selected then class = class .. " nv-selected" end
         return ui.el("div", {key = item.id, class = class, role = "hermes.openui.child." .. item.id,
-            text = item.label, aria = item.label, title = string.format("%s: %d code, %d churn", item.label, item.code, item.churn),
-            grow = math.max(item[state.mode], 1), basis = 0, actions = {click = "drill=" .. item.id}})
+            aria = item.label, title = string.format("%s: %d code, %d churn", item.label, item.code, item.churn),
+            grow = math.max(item[state.mode], 1), basis = 0, actions = {click = "drill=" .. item.id}}, {
+                ui.el("span", {class = "nv-label", text = item.label})
+            })
     end
     local total, accumulated, split = 0, 0, first
     for i = first, last do total = total + math.max(state.items[i][state.mode], 1) end

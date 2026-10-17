@@ -73,6 +73,8 @@ try:
             r.ctl(lane, f'shot dense-{width}-{mode}')
             assert not outside, f'{len(outside)}/{len(cells)} cells overflow the map'
     if a.capture:
+        r.ctl(lane, 'key 1', True)
+        r.ctl(lane, 'wait 100')
         preview = r.root/'ui-tsp/experiments/openui-preview'
         r.command([node, preview/'cli.mjs', 'capture', r.notice['path'], str(r.port), json.loads((lane/'isolation.json').read_text())['shots'],
             '--allow-control-input'], lane, r.env, lane/'capture.log', timeout=150)
