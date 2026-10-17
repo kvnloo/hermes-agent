@@ -32,6 +32,7 @@ import { openSettings } from './overlays/settings.js'
 import { programPaletteOf } from './palette.js'
 import { SPLASH_ROLE } from './splash/index.js'
 import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting, splashTickMs } from './splash/launch.js'
+import { TodoHud } from './todo-hud.js'
 import { Transcript } from './transcript.js'
 import { dockNodes } from './view/dock.js'
 import { entryNode } from './view/transcript.js'
@@ -58,6 +59,7 @@ interface CreateResult extends Partial<
 export class App implements OverlayHost {
   readonly transcript = new Transcript()
   readonly dispatches = new Dispatches()
+  readonly todoHud = new TodoHud()
   readonly composer = new Composer()
   readonly overlays: Overlay[] = []
   sid: string | null = null
@@ -171,6 +173,7 @@ export class App implements OverlayHost {
       this.transcript.notice(`The agent backend exited${code === null ? '' : ` (${code})`}.`, 'error')
       // The runtime session died with the process: prompts queue until the next gateway.ready reattaches.
       this.sid = null
+      this.todoHud.adopt(null)
       this.busy = null
       this.transcript.interrupt()
       this.dispatches.reset()
@@ -651,6 +654,7 @@ export class App implements OverlayHost {
 
     this.sid = r.session_id
     this.storedSid = r.info?.stored_session_id || r.stored_session_id || null
+    this.todoHud.adopt(this.storedSid ?? r.session_id)
     writeActiveSessionFile(this.storedSid ?? r.session_id)
     this.info = r.info ?? this.info
     this.usage = r.info?.usage ?? null
@@ -788,7 +792,9 @@ export class App implements OverlayHost {
         break
 
       case 'todo.updated':
-        t.todos(ev.payload?.todos ?? [])
+        if (this.sid) {
+          this.todoHud.update(t.todos(ev.payload?.todos ?? []))
+        }
 
         break
 
@@ -1151,6 +1157,7 @@ export class App implements OverlayHost {
     this.#surface.render({
       dock: dockNodes({
         branch: info?.branch ?? '',
+        todos: this.todoHud.visible(Boolean(this.busy)),
         dispatches,
         busy: this.busy ?? undefined,
         composer: this.composer,
