@@ -329,13 +329,14 @@ class LintMixin:
         self._lsp_call("snapshot_baseline", path, None)
 
     def _maybe_lsp_diagnostics(self, path: str, *, pre_content: Optional[str] = None,
-                               post_content: Optional[str] = None) -> str:
+                               post_content: Optional[str] = None,
+                               structured: Optional[list] = None) -> str:
         """Formatted LSP diagnostics introduced by this edit, or "" when LSP is
         unavailable/disabled/clean. With both pre and post content a line-shift map
         remaps baseline diagnostics into post-edit coordinates; otherwise every
         pre-existing diagnostic below an inserted line would look new."""
         svc = self._lsp_service()
-        if svc is None or not self._lsp_will_handle(path):
+        if svc is None:
             return ""
         line_shift = None
         if pre_content is not None and post_content is not None and pre_content != post_content:
@@ -344,10 +345,19 @@ class LintMixin:
                 line_shift = build_line_shift(pre_content, post_content)
             except Exception:  # noqa: BLE001
                 line_shift = None
+        failures: list = []
         try:
-            diagnostics = svc.get_diagnostics_sync(path, delta=True, line_shift=line_shift)
+            diagnostics = svc.get_diagnostics_sync(
+                path, delta=True, line_shift=line_shift, failures=failures)
         except Exception:  # noqa: BLE001
-            return ""
+            diagnostics = []
+            failures.append("LSP unavailable: language server failed to return diagnostics")
+        if structured is not None and (diagnostics or failures):
+            try:
+                from agent.lsp.reporter import structured_for_file
+                structured.append(structured_for_file(path, diagnostics, failures=failures))
+            except Exception:  # noqa: BLE001 -- malformed server data never breaks a write
+                structured.append({"path": path, "status": "unavailable", "message": "LSP unavailable: invalid diagnostics"})
         if not diagnostics:
             return ""
         try:

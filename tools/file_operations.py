@@ -1549,12 +1549,15 @@ class ShellFileOperations(LintMixin, SearchMixin, FileOperations):
         # LSP diagnostics are a separate channel, fired only when the syntax tier is
         # clean (no point asking an LSP about a file that won't parse).
         lsp_diagnostics: Optional[str] = None
+        lsp_data: list = []
         if lint_result.success or lint_result.skipped:
-            lsp_diagnostics = self._maybe_lsp_diagnostics(path, pre_content=pre_content, post_content=content) or None
+            lsp_diagnostics = self._maybe_lsp_diagnostics(
+                path, pre_content=pre_content, post_content=content, structured=lsp_data) or None
         return WriteResult(
             bytes_written=len(content_bytes), dirs_created=dirs_created, verified=content_verified,
             _content_sha256=hashlib.sha256(content_bytes).hexdigest(),
-            lint=lint_result.to_dict() if lint_result else None, lsp_diagnostics=lsp_diagnostics)
+            lint=lint_result.to_dict() if lint_result else None, lsp_diagnostics=lsp_diagnostics,
+            lsp_diagnostics_data=lsp_data or None)
 
     # --- PATCH (replace mode) -----------------------------------------------
 
@@ -1639,7 +1642,8 @@ class ShellFileOperations(LintMixin, SearchMixin, FileOperations):
             success=True, diff=self._unified_diff(content, new_content, path), files_modified=[path],
             lint=lint_result.to_dict() if lint_result else None,
             # From the internal write_file call, whose baseline was the pre-patch content.
-            lsp_diagnostics=write_result.lsp_diagnostics)
+            lsp_diagnostics=write_result.lsp_diagnostics,
+            lsp_diagnostics_data=write_result.lsp_diagnostics_data)
 
     def patch_v4a(self, patch_content: str) -> PatchResult:
         """Apply a V4A format patch (``*** Begin Patch`` / ``*** Update File:`` /

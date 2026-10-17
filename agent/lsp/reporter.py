@@ -72,6 +72,27 @@ def report_for_file(
     return f"<diagnostics file=\"{safe_path}\">\n{body}\n</diagnostics>"
 
 
+def structured_for_file(file_path: str, diagnostics: List[Dict[str, Any]], *, failures: List[str]) -> dict:
+    """Native frontend companion to the legacy report; coordinates are 1-based.
+
+    Include warnings/info/hints without changing the model-facing ERROR-only text.
+    Reuse the legacy field limits and sanitization, but JSON needs no HTML escaping.
+    """
+    if failures:
+        return {"path": file_path, "status": "unavailable", "message": failures[0]}
+    rows = []
+    for diagnostic in diagnostics[:MAX_PER_FILE]:
+        start = (diagnostic.get("range") or {}).get("start") or {}
+        rows.append({
+            "severity": SEVERITY_NAMES.get(diagnostic.get("severity") or 1, "ERROR").lower(),
+            "line": int(start.get("line", 0)) + 1,
+            "col": int(start.get("character", 0)) + 1,
+            "message": html.unescape(_sanitize_field(diagnostic.get("message"), limit=MAX_MESSAGE_CHARS)),
+        })
+    return {"path": file_path, "status": "ok", "diagnostics": rows,
+            "omitted": max(0, len(diagnostics) - len(rows))}
+
+
 def truncate(s: str, *, limit: int = MAX_TOTAL_CHARS) -> str:
     """Hard-cap a formatted summary string with the non-imitable elision marker."""
     return elide(s, limit)

@@ -372,6 +372,7 @@ class LSPService:
     def get_diagnostics_sync(
         self, file_path: str, *, delta: bool = True, timeout: Optional[float] = None,
         line_shift: Optional[Callable[[int], Optional[int]]] = None,
+        failures: Optional[List[str]] = None,
     ) -> _Diags:
         """Synchronously open ``file_path``, wait for diagnostics, return them.  Never raises.
 
@@ -379,8 +380,15 @@ class LSPService:
         :func:`agent.lsp.range_shift.build_line_shift`) remaps that baseline into post-edit coordinates
         first, so pre-existing diagnostics that merely moved don't look introduced by this edit.
         ``[]`` when LSP is disabled, nothing matches, or the server can't be spawned.
+        Optional ``failures`` distinguishes a server failure/no verdict from checked-clean
+        for native frontends, without changing the legacy list return value.
         """
         if not self.enabled_for(file_path):
+            # The pre-write snapshot may already have marked the server broken.
+            srv = self._server_for(file_path)
+            key = self._broken_key(srv, file_path) if srv is not None else None
+            if failures is not None and key is not None and self._is_broken(key):
+                failures.append("LSP unavailable: language server is marked broken")
             return []
         server_id = self._server_for(file_path).server_id  # enabled_for guarantees a match
         try:
@@ -395,12 +403,16 @@ class LSPService:
                 eventlog.log_server_error(server_id, file_path, e)
                 logger.debug("LSP diagnostics fetch failed for %s: %s", file_path, e)
             self._mark_broken_for_file(file_path, e)
+            if failures is not None:
+                failures.append("LSP unavailable: language server failed to return diagnostics")
             return []
         if diags is None:
             # Server alive but no verdict on the post-edit content in budget (common for tsserver on big
             # projects).  Report "no data" rather than stale stores — that would be the ghost-diagnostics
             # bug.  Not marked broken: slow is not dead.
             eventlog.log_timeout(server_id, file_path, kind="fresh diagnostics")
+            if failures is not None:
+                failures.append("LSP unavailable: no fresh diagnostics received in time")
             return []
         if delta:
             diags = self._apply_delta(file_path, diags, line_shift)
