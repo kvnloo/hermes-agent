@@ -1158,6 +1158,11 @@ export class App implements OverlayHost {
       dock: dockNodes({
         branch: info?.branch ?? '',
         todos: this.todoHud.visible(Boolean(this.busy)),
+        todoExpanded: this.todoHud.expanded,
+        onTodoToggle: () => {
+          this.todoHud.expanded = !this.todoHud.expanded
+          this.changed()
+        },
         dispatches,
         busy: this.busy ?? undefined,
         composer: this.composer,

@@ -7,10 +7,15 @@ const MAX_CACHED_SESSIONS = 24
 
 export class TodoHud {
   #active: string | null = null
+  expanded = false
   readonly #plans = new Map<string, readonly Todo[]>()
 
   /** A new or resumed session selects its own last plan, never another session's. */
   adopt(key: string | null): void {
+    if (this.#active !== key) {
+      this.expanded = false
+    }
+
     this.#active = key
   }
 

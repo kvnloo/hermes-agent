@@ -90,7 +90,7 @@ async function withApp(
 }
 
 function checklist(view: View | undefined) {
-  return view?.regions[0]?.children.find(item => item.kind === 'checklist')
+  return view?.regions.find(region => region?.id === 'dock')?.children.find(item => item.kind === 'checklist')
 }
 
 describe('Hermes todo HUD projection', () => {
@@ -105,6 +105,14 @@ describe('Hermes todo HUD projection', () => {
       app.transcript.complete({ status: 'complete' }, 3)
       const turn = app.transcript.entries.find(e => e.kind === 'turn')
       const old = turn?.kind === 'turn' ? turn.blocks.find(b => b.kind === 'tool') : undefined
+
+      // A snapshot may arrive without a new todo tool (for example on refresh).
+      gw.emit('event', {
+        type: 'todo.updated', session_id: 'runtime-a',
+        payload: { revision: 0, todos: [todo('a', 'completed'), todo('b', 'in_progress')] }
+      })
+      await rendered()
+      expect(old?.kind === 'tool' && old.call.todos?.[1]?.status).toBe('pending')
 
       app.transcript.start(4)
       app.transcript.toolStart({ name: 'todo_list', tool_id: 'new', args: {} }, 5)
@@ -133,22 +141,34 @@ describe('Hermes todo HUD projection', () => {
     })
   })
 
-  it('renders eight items in Tern hud mode with the correct task and counts', async () => {
-    await withApp(async (_app, gw, _surface, latest) => {
+  it('collapses eight items to exact done counts and expands on a native click', async () => {
+    await withApp(async (_app, gw, surface, latest) => {
       gw.emit('event', {
         type: 'todo.updated', session_id: 'runtime-a',
         payload: { revision: 1, todos: Array.from({ length: 8 }, (_, i) =>
-          todo(String(i), i < 3 ? 'completed' : i === 3 ? 'in_progress' : 'pending', 'Task ' + i)
+          todo(String(i), i < 3 ? 'completed' : i === 3 ? 'in_progress' : i === 7 ? 'cancelled' : 'pending', 'Task ' + i)
         ) }
       })
       await rendered()
+      expect(checklist(latest())).toBeUndefined()
+
+      const summary = () => latest()?.regions.find(region => region?.id === 'dock')?.children
+        .find(item => item.props.role === 'omp.todo.summary')
+
+      expect(summary()?.props.text).toBe('3/8 done · now: Task 3')
+      const action = surface.dispatch({ act: 'click', ev: 'action', id: summary()!.id, raw: {}, sf: 'hermes' })
+      expect(action).toBeTypeOf('function')
+      action!()
+      await rendered()
       const shown = checklist(latest())
-      expect(shown?.props.mode).toBe('hud')
+      expect(shown?.props.mode).toBe('full')
       const phases = shown?.props.phases as { items: { status: string; text: string }[] }[]
       expect(phases[0]?.items.filter(i => i.status === 'done')).toHaveLength(3)
       expect(phases[0]?.items.find(i => i.status === 'active')?.text).toBe('Task 3')
       expect(phases[0]?.items).toHaveLength(8)
-      // Tern itself owns the native HUD click/popover; host E2E still required.
+      surface.dispatch({ act: 'click', ev: 'action', id: summary()!.id, raw: {}, sf: 'hermes' })!()
+      await rendered()
+      expect(checklist(latest())).toBeUndefined()
     })
   })
 

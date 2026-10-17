@@ -223,7 +223,9 @@ export class Transcript {
     const list = toTodos(todos)
     const found = this.#lastTool(c => c.name === 'todo_list')
 
-    if (found) {
+    // Completed calls already own their tool.complete snapshot; later plan events
+    // must not rewrite them, even if no newer todo tool exists in this turn.
+    if (found && found.turn === this.live && found.call.status === 'running') {
       found.call.todos = list
       this.#touch(found.turn)
     }

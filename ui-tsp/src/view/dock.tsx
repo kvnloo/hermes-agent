@@ -23,6 +23,8 @@ export interface DockContext {
   queued: readonly string[]
   /** One current gateway-sourced plan for the visible session. */
   todos: readonly Todo[]
+  todoExpanded: boolean
+  onTodoToggle(): void
   dispatches: readonly Dispatch[]
   model: string
   /** Hermes's reasoning effort (`none` = off); empty hides the chip. */
@@ -54,10 +56,24 @@ export interface DockContext {
 export function dockNodes(cx: DockContext): JSX.Element[] {
   const nodes: JSX.Element[] = []
 
-  if (cx.todos.length) {
-    // Tern's native hud is a compact done/total pill with an expandable popover.
-    // Short plans stay readable as their full, three-to-five-row checklist.
-    nodes.push(checklistNode(cx.todos, cx.todos.length > 5 ? 'hud' : 'full', 'current-plan'))
+  if (cx.todos.length > 5) {
+    // Count only completed tasks: Tern's native HUD also counts dropped items.
+    const done = cx.todos.filter(todo => todo.status === 'completed').length
+    const active = cx.todos.find(todo => todo.status === 'in_progress')
+    nodes.push(
+      <text
+        key="plan-summary"
+        onClick={cx.onTodoToggle}
+        role="omp.todo.summary"
+        text={`${done}/${cx.todos.length} done${active ? ` · now: ${active.content}` : ''}`}
+        title={cx.todoExpanded ? 'Collapse current plan' : 'Expand current plan'}
+        wrap="none"
+      />
+    )
+  }
+
+  if (cx.todos.length && (cx.todos.length <= 5 || cx.todoExpanded)) {
+    nodes.push(checklistNode(cx.todos, 'full', 'current-plan'))
   }
 
   if (cx.busy) {
