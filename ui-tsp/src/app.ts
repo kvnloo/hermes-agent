@@ -349,6 +349,22 @@ export class App implements OverlayHost {
   }
 
   #onTernEvent(ev: TspEvent) {
+    if (ev.ev === 'toggle' && ev.sf === 'hermes' && ev.key) {
+      // Tern owns mouse folding. Mirror only the clicked tool's presentation
+      // state, so the subsequent Ctrl+O reverses what the person actually saw.
+      for (const entry of this.transcript.entries) {
+        if (entry.kind !== 'turn' || !ev.id.startsWith('main.' + entry.id + '.')) continue
+
+        const match = entry.blocks.some(b => b.kind === 'tool' && b.call.id === ev.key)
+
+        if (match) {
+          this.#folds.set(entry.id + ':' + ev.key, ev.collapsed)
+          this.#foldRevs.set(entry.id, (this.#foldRevs.get(entry.id) ?? 0) + 1)
+          break
+        }
+      }
+    }
+
     if (ev.ev === 'visible' && ev.sf === 'hermes') {
       this.#visible = ev.visible
       if (ev.visible) {
