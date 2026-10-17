@@ -59,7 +59,7 @@ function completedTurn(): TurnEntry {
 
 function footerOf(turn: TurnEntry): Node | undefined {
   const entry = node(entryNode(turn, 'main.' + turn.id, {
-    copy: () => undefined, now: 0, welcome: { tip: '', version: '' }
+    copy: () => undefined, cwd: '', now: 0, welcome: { tip: '', version: '' }
   }))
 
   return entry.children.find(child => child instanceof Node && child.props.role === 'omp.turn.actions') as Node | undefined
