@@ -46,6 +46,10 @@ export interface ToolCall {
   context: string
   status: 'cancelled' | 'done' | 'error' | 'running'
   startedAt: number
+  /** True only when the gateway actually emitted tool.start (not a recovery placeholder). */
+  startedObserved?: boolean
+  /** The observed tool.complete timestamp, distinct from tool.start. */
+  finishedAt?: number
   /** Milliseconds, once done. */
   duration?: number
   summary?: string

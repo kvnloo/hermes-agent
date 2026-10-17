@@ -151,7 +151,7 @@ export class Transcript {
     this.#touch(turn)
   }
 
-  toolStart(p: ToolStartPayload, at = Date.now()) {
+  toolStart(p: ToolStartPayload, at = Date.now(), observed = true) {
     const turn = this.start(at)
     this.#endThinking(turn, at)
 
@@ -166,6 +166,7 @@ export class Transcript {
       id: p.tool_id,
       name: p.name,
       startedAt: at,
+      startedObserved: observed,
       status: 'running'
     }
 
@@ -182,7 +183,8 @@ export class Transcript {
     let found = this.#tool(p.tool_id)
 
     if (!found) {
-      this.toolStart({ args: p.args ?? {}, name: p.name, tool_id: p.tool_id }, at)
+      // Historical or late completion with no tool.start must not invent a measured clock.
+      this.toolStart({ args: p.args ?? {}, name: p.name, tool_id: p.tool_id }, at, false)
       found = this.#tool(p.tool_id)
     }
 
@@ -199,6 +201,7 @@ export class Transcript {
       p.name === 'terminal' && typeof output === 'string' && /\[Command interrupted\]\s*$/.test(output)
 
     call.status = interrupted ? 'cancelled' : isToolError(p, call.name) ? 'error' : 'done'
+    call.finishedAt = at
     const resultDuration = record(p.result)?.duration_s
     const durationS = typeof p.duration_s === 'number' ? p.duration_s : typeof resultDuration === 'number' ? resultDuration : undefined
     call.duration = durationS !== undefined ? Math.round(durationS * 1000) : at - call.startedAt
