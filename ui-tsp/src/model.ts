@@ -47,6 +47,15 @@ export interface Subagent {
   activity?: SubagentActivity[]
 }
 
+/** Bounded gateway projection; sequence and generation make replay idempotent. */
+export interface ToolOutput {
+  kind: 'terminal' | 'literal'
+  text: string
+  streamId: string
+  seq: number
+  captureTruncated: boolean
+}
+
 /** One tool call, from `tool.start` to `tool.complete`. */
 export interface ToolCall {
   id: string
@@ -56,6 +65,8 @@ export interface ToolCall {
   /** The gateway's one-line description of the call (`context`). */
   context: string
   status: 'cancelled' | 'done' | 'error' | 'running' | 'unknown'
+  outputTurnId?: string
+  output?: ToolOutput
   startedAt: number
   /** True only when the gateway actually emitted tool.start (not a recovery placeholder). */
   startedObserved?: boolean

@@ -13,6 +13,7 @@ export interface RunBoxInput {
   command: string
   cwd?: string
   output?: string
+  outputKind?: 'terminal' | 'literal'
   error?: string
   language?: string
   state: RunState
@@ -210,9 +211,13 @@ export function runBox(input: RunBoxInput): JSX.Element {
       {input.output || input.error ? (
         <row align="start" gap="xs" key="result" role="omp.run.result">
           <icon aria="Output" key="prompt" name="arrow-right" role="omp.run.prompt" />
-          <col gap="none" key="outputs" role="omp.run.outputs">
+          <col gap="none" grow={1} key="outputs" role="omp.run.outputs">
             {input.output ? (
-              <code key="output" lang="text" numbers={false} role="omp.run.output" text={output} wrap />
+              input.outputKind === 'terminal' ? (
+                <ansi follow={input.state === 'running'} key="output" preview={{ lines: folded ? limit : Math.max(1, outputLineCount(input.output)) }} role="omp.run.output" text={input.output} />
+              ) : (
+                <code key="output" lang="text" numbers={false} role="omp.run.output" text={output} wrap />
+              )
             ) : null}
             {input.error ? (
               <text

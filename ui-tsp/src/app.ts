@@ -1249,6 +1249,13 @@ export class App implements OverlayHost {
 
         break
 
+      case 'tool.output.delta':
+        if (ev.payload) {
+          t.toolOutput(ev.payload)
+        }
+
+        break
+
       case 'tool.complete':
         if (ev.payload) {
           t.toolComplete(ev.payload)

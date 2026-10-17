@@ -277,7 +277,7 @@ function bashCard(
   result: Record<string, unknown> | undefined,
   presentation: Pick<RunBoxInput, 'collapsed' | 'onToggle'> = {}
 ): Card {
-  const output = (str(result?.output) ?? call.resultText)?.replace(/\s*\[Command interrupted\]\s*$/, '')
+  const output = (call.output?.text ?? str(result?.output) ?? call.resultText)?.replace(/\s*\[Command interrupted\]\s*$/, '')
   const error = str(result?.error)
   const shown = outputLineCount(output ?? '')
   const state = runState(call, result)
@@ -295,6 +295,7 @@ function bashCard(
         command: str(call.args.command) ?? call.context,
         cwd: str(call.args.workdir),
         output,
+        outputKind: call.output?.kind ?? 'literal',
         error,
         language: 'bash',
         state,
@@ -306,7 +307,7 @@ function bashCard(
         background: state === 'background',
         processId: typeof result?.pid === 'number' ? result.pid : undefined,
         sessionId: str(result?.session_id),
-        captureTruncated: Boolean(str(result?.truncation_note))
+        captureTruncated: call.output?.captureTruncated || Boolean(str(result?.truncation_note))
       })
     ],
     folded: shown > BASH_PREVIEW_TAIL,
