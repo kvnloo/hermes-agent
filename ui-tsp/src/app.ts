@@ -29,6 +29,7 @@ import { type Busy, busyFrom, ownsEvent, Switches } from './flow.js'
 import { FramePump } from './frame.js'
 import { OrbActivity, ThinkingOrb } from './orb.js'
 import type { Overlay, OverlayHost } from './overlay.js'
+import { openAgentInspector } from './overlays/agent-inspector.js'
 import { type ApprovalPrompt, isApprovalPrompt } from './overlays/approval.js'
 import { Completion } from './overlays/completion.js'
 import { JobsSheet } from './overlays/jobs.js'
@@ -242,7 +243,7 @@ export class App implements OverlayHost {
     }
 
     // Inspection results must not cover an approval/clarification waiting for input.
-    const prompt = overlay.key === 'report' ? this.overlays.findIndex(o => o.key.startsWith('prompt:')) : -1
+    const prompt = (overlay.key === 'report' || overlay.key === 'agent-inspector') ? this.overlays.findIndex(o => o.key.startsWith('prompt:')) : -1
     this.overlays.splice(prompt < 0 ? this.overlays.length : prompt, 0, overlay)
     this.#overlayIds.set(overlay, `${overlay.placement ?? 'layer'}.${overlay.key}:${++this.#overlaySerial}`)
 
@@ -295,19 +296,21 @@ export class App implements OverlayHost {
     this.#frames?.changed()
   }
 
+  scrollOverlay(overlay: Overlay, child: string, to: ScrollTo) {
+    const id = this.#overlayIds.get(overlay)
+
+    if (id && this.overlays.at(-1) === overlay) {
+      this.#surface.scroll(`${id}.${child}`, to)
+    }
+  }
+
   report(report: Report) {
     openReportSheet({
       open: overlay => this.open(overlay),
       close: overlay => this.close(overlay),
       changed: () => this.changed(),
       copy: copyToClipboard,
-      scroll: (overlay, to: ScrollTo) => {
-        const id = this.#overlayIds.get(overlay)
-
-        if (id && this.overlays.at(-1) === overlay) {
-          this.#surface.scroll(`${id}.body.markdown`, to)
-        }
-      }
+      scroll: (overlay, to: ScrollTo) => this.scrollOverlay(overlay, 'body.markdown', to)
     }, report)
   }
 
@@ -1413,6 +1416,7 @@ export class App implements OverlayHost {
         this.transcript.notice('Could not copy the answer to the clipboard.', 'warning')
         this.changed()
       },
+      inspectAgent: (callId: string, agentId: string) => openAgentInspector(this, { callId, agentId }),
       foldRevision: (turnId: string) => this.#foldRevs.get(turnId) ?? 0,
       toolCollapsed: (turnId: string, callId: string) => this.#folds.get(turnId + ':' + callId),
       toggleTool: (turnId: string, callId: string) => {
@@ -1496,7 +1500,7 @@ export class App implements OverlayHost {
         orb: this.#orb?.props(),
         onContext: () => void this.slash('/usage'),
         onEdit: ev => {
-          if (this.overlays.at(-1)?.key === 'report') {
+          if (this.overlays.at(-1)?.key === 'report' || this.overlays.at(-1)?.key === 'agent-inspector') {
             return
           }
 
@@ -1513,7 +1517,7 @@ export class App implements OverlayHost {
         },
         onQueueEdit: () => this.dequeue(),
         onSend: ev => {
-          if (this.overlays.at(-1)?.key === 'report') {
+          if (this.overlays.at(-1)?.key === 'report' || this.overlays.at(-1)?.key === 'agent-inspector') {
             return
           }
 
@@ -1521,7 +1525,7 @@ export class App implements OverlayHost {
           this.changed()
         },
         onSubmit: () => {
-          if (this.overlays.at(-1)?.key === 'report') {
+          if (this.overlays.at(-1)?.key === 'report' || this.overlays.at(-1)?.key === 'agent-inspector') {
             return
           }
 
@@ -1529,7 +1533,7 @@ export class App implements OverlayHost {
           this.changed()
         },
         onUndo: () => {
-          if (this.overlays.at(-1)?.key === 'report') {
+          if (this.overlays.at(-1)?.key === 'report' || this.overlays.at(-1)?.key === 'agent-inspector') {
             return
           }
 

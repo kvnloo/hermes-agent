@@ -94,9 +94,10 @@ export function toolNode(
   cwd = '',
   collapsedOverride?: boolean,
   onToggle?: () => void,
-  media = false
+  media = false,
+  onInspect?: (callId: string, agentId: string) => void
 ): JSX.Element {
-  const card = cardOf(call, now, cwd, media, { collapsed: collapsedOverride, onToggle })
+  const card = cardOf(call, now, cwd, media, { collapsed: collapsedOverride, onToggle }, onInspect)
   const runOutcome = card.name === 'bash' || card.name === 'eval' ? runState(call, record(call.result)) : undefined
   const status = call.status === 'unknown' ? 'unknown' : runOutcome ? RUN_STATUS[runOutcome] : (card.status ?? call.status)
   const running = status === 'running'
@@ -154,7 +155,8 @@ function cardOf(
   now: number,
   cwd: string,
   media: boolean,
-  presentation: Pick<RunBoxInput, 'collapsed' | 'onToggle'> = {}
+  presentation: Pick<RunBoxInput, 'collapsed' | 'onToggle'> = {},
+  onInspect?: (callId: string, agentId: string) => void
 ): Card {
   const result = record(call.result)
 
@@ -213,7 +215,7 @@ function cardOf(
       }
 
     case 'delegate_task':
-      return taskCard(call, result, now)
+      return taskCard(call, result, now, onInspect)
 
     case 'clarify':
       return askCard(call, result)
@@ -617,7 +619,7 @@ function sourceRow(key: string, title: string, url: string | undefined): JSX.Ele
   )
 }
 
-function taskCard(call: ToolCall, result: Record<string, unknown> | undefined, now: number): Card {
+function taskCard(call: ToolCall, result: Record<string, unknown> | undefined, now: number, onInspect?: (callId: string, agentId: string) => void): Card {
   const tasks = Array.isArray(call.args.tasks) ? call.args.tasks.map(t => record(t)).filter(t => t !== undefined) : []
 
   const goals = tasks.length
@@ -630,7 +632,7 @@ function taskCard(call: ToolCall, result: Record<string, unknown> | undefined, n
 
   // Until the first subagent event, the requested tasks stand in as pending rows.
   const rows = agents.length
-    ? agentRows(agents, now)
+    ? agentRows(agents, now, onInspect ? agentId => onInspect(call.id, agentId) : undefined)
     : call.status === 'running' || result?.status === 'dispatched'
       ? goals.map((g, i) => <agent agent="task" key={`p${i}`} name={`Agent ${i + 1}`} status="pending" task={g} />)
       : []
@@ -677,7 +679,7 @@ function taskCard(call: ToolCall, result: Record<string, unknown> | undefined, n
 }
 
 /** Native agent nesting only when a parent exists in this task and is acyclic. */
-function agentRows(agents: readonly Subagent[], now: number): JSX.Element[] {
+function agentRows(agents: readonly Subagent[], now: number, onInspect?: (agentId: string) => void): JSX.Element[] {
   const byId = new Map(agents.map(a => [a.id, a] as const))
   const children = new Map<string, Subagent[]>()
   const roots: Subagent[] = []
@@ -708,12 +710,12 @@ function agentRows(agents: readonly Subagent[], now: number): JSX.Element[] {
   }
 
   const render = (agent: Subagent): JSX.Element =>
-    agentNode(agent, now, (children.get(agent.id) ?? []).map(render))
+    agentNode(agent, now, (children.get(agent.id) ?? []).map(render), onInspect)
 
   return roots.map(render)
 }
 
-function agentNode(a: Subagent, now: number, children: JSX.Element[] = []): JSX.Element {
+function agentNode(a: Subagent, now: number, children: JSX.Element[] = [], onInspect?: (agentId: string) => void): JSX.Element {
   const status =
     a.status === 'done'
       ? 'done'
@@ -735,6 +737,7 @@ function agentNode(a: Subagent, now: number, children: JSX.Element[] = []): JSX.
       key={a.id}
       model={a.model}
       name={a.label ?? `Agent ${a.index + 1}`}
+      onClick={onInspect ? () => onInspect(a.id) : undefined}
       stats={{
         requests: a.calls || undefined,
         tokens: a.tokens || undefined,
@@ -743,6 +746,7 @@ function agentNode(a: Subagent, now: number, children: JSX.Element[] = []): JSX.
       }}
       status={status}
       task={a.goal}
+      title={onInspect ? 'Inspect agent (read-only)' : undefined}
       tool={
         running && a.tool
           ? {
