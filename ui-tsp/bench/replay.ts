@@ -161,7 +161,7 @@ export async function replay({
   } as unknown as Session
   const random = Math.random
   Math.random = () => 0
-  const app = new App(tern, gw as unknown as GatewayClient, 'bench')
+  const app = new App(tern, gw as unknown as GatewayClient, 'bench', () => {})
   Math.random = random
   app.sid = 'bench-session'
   app.info = { cwd: '/bench', model: 'fixture', reasoning_effort: 'medium' }

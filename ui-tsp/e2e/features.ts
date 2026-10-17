@@ -514,6 +514,62 @@ async function retention() {
   }, true)
 }
 
+async function hostLifecycle() {
+  async function hostCheck(label: string, code: string) {
+    const response = await native.ctl(`carly lua ${code}`, 30000)
+    await native.ctl('carly ok', 30000)
+    await native.ctl('carly last', 30000)
+    const tree = await native.ctl('tree', 30000)
+    await writeFile(join(manifest.proof, `host-${label}.json`), JSON.stringify({response, tree}, null, 2))
+    await native.ctl('carly close', 30000)
+  }
+  async function hostState(state: string) {
+    await hostCheck(state, `local found=nil; for _,a in cx.agents:list() do if a.pane==${manifest.pane} then found=a end end; assert(found, 'Hermes agent missing'); assert(found.state==${JSON.stringify(state)}, found.state); return found`)
+  }
+  await step('host observes confirmed work and structured tools/transcript', async () => {
+    await replay('message.start')
+    await replay('tool.start', {tool_id:'host-tool', name:'bash', args:{command:'printf host-tool'}})
+    await until(() => native.rendered(), ns => [...ns.values()].some(n => n.p?.role === 'omp.working'), 'working view')
+    await hostState('working')
+    await replay('tool.complete', {tool_id:'host-tool', name:'bash', result:{exit_code:0, output:'host-tool'}})
+    await replay('message.delta', {text:'Host lifecycle answer.'})
+    await replay('message.complete', {status:'complete', text:'Host lifecycle answer.'})
+    await until(() => native.rendered(), ns => ![...ns.values()].some(n => n.p?.role === 'omp.working'), 'settled view')
+    await hostState('idle')
+    await hostCheck('transcript', `local t=cx.agents:transcript(${manifest.pane}); assert(#t>0, 'missing transcript'); assert(string.find(t[#t].text, 'Host lifecycle answer.', 1, true), t[#t].text); local bash=false; for _,m in t do for _,tool in m.tools do if tool.name=='bash' then bash=true end end end; assert(bash, 'missing structured bash tool'); return t`)
+    await hostCheck('wait', `local answer=await(cx.agents:wait(${manifest.pane}, {timeout=2000})); assert(answer and string.find(answer, 'Host lifecycle answer.', 1, true), tostring(answer)); return answer`)
+  }, true)
+  await step('hidden completion creates one host inbox entry and duplicate completion adds none', async () => {
+    await replay('message.start')
+    await until(() => native.rendered(), ns => [...ns.values()].some(n => n.p?.role === 'omp.working'), 'second working view')
+    await native.ctl('tab prev', 30000)
+    const away = record(await native.ctl('state', 30000))
+    assert.notEqual(String(record(away.focused).id), manifest.pane, 'private alternate tab must own focus')
+    await replay('message.delta', {text:'Hidden lifecycle answer.'})
+    await replay('message.complete', {status:'complete', text:'Hidden lifecycle answer.'})
+    const before = record(await until(() => native.ctl('state', 30000), value => Number(record(record(value).inbox).count) > 0, 'host completion inbox entry'))
+    await replay('message.complete', {status:'complete', text:'Hidden lifecycle answer.'})
+    await delay(150)
+    const after = record(await native.ctl('state', 30000))
+    assert.deepEqual(after.inbox, before.inbox, 'duplicate settlement must not duplicate host attention')
+    await writeFile(join(manifest.proof, 'host-completion-attention.json'), JSON.stringify({before,after}, null, 2))
+    await native.ctl('tab next', 30000)
+    await native.snapshot()
+    await hostState('idle')
+  }, true)
+  await step('native Settings holds Carly input without consuming a human draft', async () => {
+    await native.type('Human draft survives host queue')
+    await tap('Open Hermes settings', 'group')
+    await until(() => native.rendered(), ns => ns.get('dock.composer.line.input')?.p?.sendable === false, 'modal sendable false')
+    await hostCheck('queued-ask', `cx.agents:ask(${manifest.pane}, 'Queued host prompt, held by Settings'); return 'queued'`)
+    await delay(250)
+    assert(!(await native.wire()).some(w => w.dir === 'denied' || (w.dir === 'request' && w.body.method === 'prompt.submit')))
+    assert.equal((await native.rendered()).get('dock.composer.line.input')?.p?.text, 'Human draft survives host queue')
+    await capture('queued-under-settings')
+    // The inert suite forbids model calls; teardown owns this still-queued pane.
+  })
+}
+
 async function smoke() {
   await step('launch welcome and real session without a model call',async()=>{
     assert(flatten((await native.snapshot()).tree).some(n=>(n.text ?? '').toLowerCase().includes('hermes')))
@@ -534,7 +590,7 @@ try {
   const wire = await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='delivered' && w.body.result && typeof w.body.result==='object' && !Array.isArray(w.body.result) && 'session_id' in w.body.result), 'real session creation')
   const ids = new Set(wire.filter(w=>w.dir==='request' && w.body.method==='session.create').map(w=>w.body.id))
   sid = String(record(wire.findLast(w=>w.dir==='delivered' && ids.has(w.body.id) && w.body.result)?.body.result).session_id)
-  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes,media,'agent-inspector':agentInspector,retention}
+  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes,media,'agent-inspector':agentInspector,retention,'host-lifecycle':hostLifecycle}
   assert(journeys[journey],`Unknown journey: ${journey}`)
   await journeys[journey]!()
 } catch (error) { console.error(error); process.exitCode=1 }
