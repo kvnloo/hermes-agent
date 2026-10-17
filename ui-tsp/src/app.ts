@@ -808,8 +808,7 @@ export class App implements OverlayHost {
         }
 
         break
-
-      case 'message.complete':
+      case 'message.complete': {
         if (!this.#visible && this.busy) {
           const status = ev.payload?.status
           this.dispatches.show({
@@ -834,6 +833,7 @@ export class App implements OverlayHost {
         this.#drainQueue()
 
         break
+      }
 
       case 'status.update':
         if (this.busy && ev.payload?.text && ev.payload.kind === 'status') {
