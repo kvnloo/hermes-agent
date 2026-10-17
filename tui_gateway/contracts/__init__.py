@@ -11,6 +11,7 @@ from . import (  # noqa: F401
     events,
     groups_bot_relay,
     i18n,
+    jobs,
     liveness,
     profiles_vault_complete_foreign_subagents,
     projects_pets,

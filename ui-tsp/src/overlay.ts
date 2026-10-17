@@ -12,6 +12,8 @@ export interface Overlay {
   readonly placement?: 'dock'
   /** Covers the transcript and takes every key (a question that must be answered). */
   readonly modal?: boolean
+  /** Release feature-owned subscriptions and deferred work on close/replacement/quit. */
+  onClose?(): void
   /**
    * The `input` that takes Tern's caret while this overlay is on top, given
    * its node id; null for none. Unset: none for a modal overlay, else the composer.

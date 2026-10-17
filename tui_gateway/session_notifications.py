@@ -811,6 +811,13 @@ def _wire_desktop_sinks() -> None:
             return ""
         with _sessions_lock:
             return next((sid for sid, s in _sessions.items() if str(s.get("session_key") or "") == session_key), "")
+    def _jobs_changed(session):
+        sid = _owner_sid(session)
+        if sid:
+            _emit("jobs.changed", sid, {"job_id": session.id})
+
+    if getattr(process_registry, "on_change", None) is None:
+        process_registry.on_change = _jobs_changed
     if getattr(process_registry, "on_output", None) is None:
         process_registry.on_output = lambda session, chunk: _emit(
             "agent.terminal.output", _owner_sid(session), {"process_id": session.id, "chunk": chunk})

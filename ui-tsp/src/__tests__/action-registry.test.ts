@@ -72,6 +72,10 @@ async function withApp(run: (harness: Harness) => Promise<void>) {
       return { fields: {}, profile: 'fixture' }
     }
 
+    if (method === 'jobs.list') {
+      return { jobs: [] }
+    }
+
     if (method === 'session.list') {
       return { sessions: [] }
     }
@@ -130,6 +134,7 @@ const shortcuts = [
   ['alt+,', chord(',', 3), 'settings'],
   ['ctrl+,', chord(',', 5), 'settings'],
   ['alt+s', chord('s', 3), 'sessions'],
+  ['alt+j', chord('j', 3), 'jobs'],
   ['f1', '\x1bOP', 'help'],
   ['alt+/', chord('/', 3), 'help']
 ] as const

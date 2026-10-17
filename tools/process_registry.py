@@ -33,6 +33,7 @@ from typing import Any, Dict, List, Literal, NamedTuple, Optional
 from hermes_cli.config import get_hermes_home
 
 from tools.process_registry_notifications import format_process_notification
+from tools.process_registry_events import ProcessEventsMixin
 from tools.process_registry_checkpoint import ProcessCheckpointMixin
 from tools.process_registry_termination import ProcessTerminationMixin
 from tools.process_registry_results import load_completed_results, save_completed_result
@@ -696,7 +697,7 @@ def _is_wsl_launcher_command(command: str) -> bool:
     return False
 
 
-class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
+class ProcessRegistry(ProcessEventsMixin, ProcessTerminationMixin, ProcessCheckpointMixin):
     """In-memory registry of running and finished background processes.
     Thread-safe: accessed from executor threads (terminal_tool, process handlers),
     the gateway asyncio loop (watchers, reset checks) and the cleanup thread."""
@@ -811,14 +812,6 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
         while lines and any(noise in lines[0] for noise in ProcessRegistry._SHELL_NOISE_SUBSTRINGS):
             lines.pop(0)
         return "\n".join(lines)
-
-    def _emit_output(self, session: ProcessSession, chunk: str) -> None:
-        """Forward a chunk to the live-output sink; called from reader threads, never raises."""
-        sink = self.on_output
-        if sink is None or not chunk:
-            return
-        with suppress(Exception):
-            sink(session, chunk)
 
     def _check_watch_patterns(self, session: ProcessSession, new_text: str) -> None:
         """Scan a freshly-read chunk for watch patterns and queue notifications.
@@ -1168,6 +1161,7 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
             # ghost entry if the interpreter cannot start another thread.
             reader.start()
             self._running[session.id] = session
+        self._emit_process_changed(session)
         self._write_checkpoint()
 
     def _spawn_local_pty(self, session: ProcessSession, safe_command: str, env_vars: dict) -> ProcessSession:
@@ -1615,6 +1609,8 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
         return was_running
 
     def _publish_finished(self, session: ProcessSession, was_running: bool) -> None:
+        if was_running:
+            self._emit_process_changed(session)
         self._release_finished_handles(session)
         self._write_checkpoint()
         if was_running and session.notify_on_complete:
