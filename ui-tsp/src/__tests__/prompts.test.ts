@@ -1,13 +1,16 @@
 import type { ServerRequest } from '@hermes/shared/json-rpc-channel'
 import { describe, expect, it } from 'vitest'
 
-import type { OverlayHost } from '../overlay.js'
+import type { PromptHost } from '../overlays/approval.js'
 import { promptOverlay } from '../overlays/prompts.js'
 
-const host: OverlayHost = {
+const host: PromptHost = {
   changed() {},
   close() {},
-  open() {}
+  open() {},
+  owns: () => true,
+  notice() {},
+  async confirmDenial() {}
 }
 
 function request(method: string, params: Record<string, unknown>): { calls: string[]; req: ServerRequest } {

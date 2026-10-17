@@ -15,6 +15,8 @@ import { checklistNode } from './tools.js'
 /** What the dock shows. */
 export interface DockContext {
   composer: Composer
+  approval?: JSX.Element
+  approvalQueued?: number
   /** The `editor` node's full id, for the caret overlay and focus. */
   inputId: string
   placeholder: string
@@ -124,6 +126,14 @@ export function dockNodes(cx: DockContext): JSX.Element[] {
         ))}
       </col>
     )
+  }
+
+  if (cx.approval) {
+    nodes.push(cx.approval)
+
+    if (cx.approvalQueued) {
+      nodes.push(<text key="approval-queued" role="omp.editor.ask.approval.queued" text={`${cx.approvalQueued} more`} />)
+    }
   }
 
   nodes.push(composerNode(cx))
