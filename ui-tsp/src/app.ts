@@ -22,6 +22,7 @@ import { writeActiveSessionFile } from '@tui/lib/activeSessionFile.js'
 import logo from '../assets/logo.png'
 
 import { type ActionContext, actionForKey, APP_ACTIONS, matchesAction } from './actions.js'
+import { Attachments, eventImageSource, pastedImageSource, type SubmittedImage } from './attachments.js'
 import { Dispatches } from './attention.js'
 import { localCommand } from './commands.js'
 import { Composer } from './composer.js'
@@ -71,6 +72,7 @@ export class App implements OverlayHost {
   readonly todoHud = new TodoHud()
   readonly jobs = new JobsSheet(this)
   readonly composer = new Composer()
+  readonly attachments: Attachments
   readonly overlays: Overlay[] = []
   /** Presentation-only collapse overrides, scoped by transcript turn and tool identity. */
   readonly #folds = new Map<string, boolean>()
@@ -123,6 +125,13 @@ export class App implements OverlayHost {
   constructor(tern: Session, gw: GatewayClient, version: string) {
     this.#tern = tern
     this.#gw = gw
+    this.attachments = new Attachments(gw, () => {
+      this.changed()
+
+      if (this.#startupAttachmentPending && !this.#startupImage) {
+        this.#drainQueue()
+      }
+    }, message => this.notice(message))
     this.#completion = new Completion(this, gw, () => this.sid)
     this.#welcome = {
       tip: randomTip(process.env.HERMES_PYTHON_SRC_ROOT ?? ''),
@@ -204,6 +213,7 @@ export class App implements OverlayHost {
     this.#gw.on('exit', (code: null | number) => {
       this.transcript.notice(`The agent backend exited${code === null ? '' : ` (${code})`}.`, 'error')
       // The runtime session died with the process: prompts queue until the next gateway.ready reattaches.
+      this.attachments.clear()
       this.sid = null
       this.todoHud.adopt(null)
       this.jobs.adopt(null)
@@ -354,6 +364,10 @@ export class App implements OverlayHost {
       return
     }
 
+    if (key.name === 'paste' && key.text && this.#pasteImage(key.text)) {
+      return
+    }
+
     if (this.#completion.onKey(key)) {
       return
     }
@@ -453,7 +467,27 @@ export class App implements OverlayHost {
     }
   }
 
+  #pasteImage(text: string): boolean {
+    const source = pastedImageSource(text)
+
+    if (!source || !this.sid || this.#switches.pending) {
+      return false
+    }
+
+    void this.attachments.add(source, this.sid)
+
+    return true
+  }
+
   #onTernEvent(ev: TspEvent) {
+    if (ev.ev === 'unknown' && ev.sf === this.#surface.id && !this.#inputOwner() && !this.#splash?.active) {
+      const source = eventImageSource(ev.raw)
+
+      if (source && this.sid && !this.#switches.pending) {
+        void this.attachments.add(source, this.sid)
+      }
+    }
+
     if (ev.ev === 'gone' && ev.ids.includes(this.#surface.id)) {
       // Rendering short-circuits after gone: dispose now, not on another animation tick.
       this.#orb?.close()
@@ -507,8 +541,9 @@ export class App implements OverlayHost {
   }
 
   ctrlC() {
-    if (this.composer.text) {
+    if (this.composer.text || this.attachments.items.length) {
       this.composer.set('')
+      this.attachments.clear()
 
       return
     }
@@ -556,8 +591,23 @@ export class App implements OverlayHost {
       return
     }
 
+    if (this.attachments.blocked) {
+      this.transcript.notice('Wait for pending attachments; retry or remove failed images before sending.', 'warning')
+      this.changed()
+
+      return
+    }
+
+    if (this.attachments.items.length && (!this.sid || this.#switches.pending || raw.trim().startsWith('/'))) {
+      this.transcript.notice('Send images with a message in the current session, not a slash command.', 'warning')
+      this.changed()
+
+      return
+    }
+
     if (!approval) {
-      this.#submit(this.composer.take(raw))
+      const images = this.sid ? this.attachments.take(this.sid) : []
+      this.#submit(this.composer.take(raw).trim() || (images.length ? 'What do you see in this image?' : ''), images)
 
       return
     }
@@ -584,7 +634,7 @@ export class App implements OverlayHost {
 
         // prompt.submit is the normal user-message path. Unlike our local queue,
         // an unqueued submission lets the gateway steer a running tool turn.
-        this.#send(raw.trim())
+        this.#send(raw.trim(), { images: this.attachments.take(sid) })
       }
     } finally {
       this.#submittingApproval = false
@@ -592,7 +642,7 @@ export class App implements OverlayHost {
     }
   }
 
-  #submit(raw: string) {
+  #submit(raw: string, images: SubmittedImage[] = []) {
     const text = raw.trim()
 
     if (!text) {
@@ -609,6 +659,12 @@ export class App implements OverlayHost {
       return
     }
 
+    if (images.length) {
+      this.#send(text, { images, queued: Boolean(this.busy) })
+
+      return
+    }
+
     if (this.busy || !this.sid || this.#switches.pending) {
       this.queue.push(text)
 
@@ -619,7 +675,7 @@ export class App implements OverlayHost {
   }
 
   /** Sends `text` now; `queued` marks a drained queue entry (the gateway must queue it, never steer with it). */
-  #send(text: string, { queued = false }: { queued?: boolean } = {}) {
+  #send(text: string, { queued = false, images = [] }: { queued?: boolean; images?: SubmittedImage[] } = {}) {
     // A session switch in flight: the prompt belongs to the session it adopts.
     if (!this.sid || this.#switches.pending) {
       this.queue.unshift(text)
@@ -628,19 +684,34 @@ export class App implements OverlayHost {
     }
 
     this.#retry = null
-    const submitted = { sid: this.sid, text, replayable: !this.#startupAttachmentPending }
+
+    if (this.#startupAttachmentPending) {
+      this.#startupAttachmentPending = false
+      images = [...images, ...this.attachments.take(this.sid)]
+    }
+
+    const submitted = { sid: this.sid, text, replayable: !this.#startupAttachmentPending && !images.length }
     this.#lastSubmitted = submitted
     this.#startupAttachmentPending = false
-    this.transcript.user(text)
+    this.transcript.user(text, Date.now(), images)
     this.#startBusy('Working…')
     this.#gw
-      .request('prompt.submit', { session_id: this.sid, text, ...(queued ? { queued } : {}) })
+      .request('prompt.submit', { session_id: this.sid, text, image_paths: images.map(image => image.path), ...(queued ? { queued } : {}) })
       .catch((error: Error) => {
         if (this.#lastSubmitted !== submitted || this.sid !== submitted.sid) {
           return
         }
 
         this.transcript.notice(error.message, 'error')
+
+        if (images.length) {
+          this.attachments.restore(images, submitted.sid)
+
+          if (!this.composer.text) {
+            this.composer.set(text)
+          }
+        }
+
         this.#lastSubmitted = null
         this.busy = null
         this.#activity.event({ type: 'error' } as AnyGatewayEvent)
@@ -779,11 +850,8 @@ export class App implements OverlayHost {
     const path = this.#startupImage
 
     try {
-      await this.#gw.request('image.attach', { path, session_id: sid })
-
-      if (this.sid === sid) {
-        this.#startupAttachmentPending = true
-      }
+      this.#startupAttachmentPending = true
+      await this.attachments.add({ path, name: path.split('/').at(-1) || 'Startup image' }, sid)
     } catch (error) {
       this.transcript.notice(
         `Could not attach ${path}: ${error instanceof Error ? error.message : String(error)}`,
@@ -910,6 +978,7 @@ export class App implements OverlayHost {
       this.#lastSubmitted = null
       this.#retry = null
       this.#startupAttachmentPending = false
+      this.attachments.clear()
     }
 
     this.sid = r.session_id
@@ -1356,7 +1425,7 @@ export class App implements OverlayHost {
 
   /** Sends the oldest queued prompt once the session is adopted and idle (no turn, switch or startup image pending). */
   #drainQueue() {
-    if (this.busy || !this.sid || this.#switches.pending || this.#startupImage) {
+    if (this.busy || !this.sid || this.#switches.pending || this.#startupImage || this.attachments.blocked) {
       return
     }
 
@@ -1485,6 +1554,9 @@ export class App implements OverlayHost {
         },
         busy: this.busy ?? undefined,
         composer: this.composer,
+        attachments: this.attachments.items,
+        onAttachmentRemove: id => void this.attachments.remove(id),
+        onAttachmentRetry: id => this.attachments.retry(id),
         context: max > 0 ? { max, used } : undefined,
         cost: usage?.cost_usd ?? undefined,
         cwd: info?.cwd ? shortPath(info.cwd) : '',
@@ -1500,7 +1572,12 @@ export class App implements OverlayHost {
             return
           }
 
-          this.composer.edit(ev)
+          if (ev.len === this.composer.text.length && ev.text && this.#pasteImage(ev.text)) {
+            this.composer.edit({ ...ev, text: '', cursor: ev.from })
+          } else {
+            this.composer.edit(ev)
+          }
+
           this.changed()
         },
         onEffort: () => this.cycleEffort(),
@@ -1538,7 +1615,7 @@ export class App implements OverlayHost {
         },
         placeholder: 'Ask Hermes — / commands · @ files',
         queued: this.queue,
-        ready: this.sid !== null
+        ready: this.sid !== null && !this.attachments.blocked
       }),
       layer: [
         ...this.overlays.filter(o => o.placement !== 'dock').map(o => {

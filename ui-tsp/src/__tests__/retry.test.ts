@@ -41,7 +41,7 @@ async function withTurn(retryable: boolean, check: (app: App, calls: unknown) =>
     const send = surface.dispatch({ ev: 'send', id: INPUT_ID, raw: {}, sf: 'hermes', text: 'retry me' })
     expect(send).toBeTypeOf('function')
     send!()
-    expect(calls).toHaveBeenCalledWith('prompt.submit', { session_id: 'session-1', text: 'retry me' })
+    expect(calls).toHaveBeenCalledWith('prompt.submit', { session_id: 'session-1', text: 'retry me', image_paths: [] })
     gw.emit('event', {
       type: 'message.complete',
       session_id: 'session-1',
@@ -64,7 +64,7 @@ describe('native retry action', () => {
       expect(app.canRetry(id)).toBe(true)
       app.retryFailed(id)
       expect(calls).toHaveBeenCalledTimes(2)
-      expect(calls).toHaveBeenLastCalledWith('prompt.submit', { session_id: 'session-1', text: 'retry me' })
+      expect(calls).toHaveBeenLastCalledWith('prompt.submit', { session_id: 'session-1', text: 'retry me', image_paths: [] })
       app.retryFailed(id)
       expect(calls).toHaveBeenCalledTimes(2)
     })

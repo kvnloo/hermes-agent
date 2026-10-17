@@ -12,6 +12,7 @@ import type {
   Usage
 } from '@hermes/shared/gateway-events'
 
+import type { SubmittedImage } from './attachments.js'
 import type { Block, Entry, NoticeEntry, Todo, ToolCall, TurnEntry } from './model.js'
 
 type ToolBlock = Extract<Block, { kind: 'tool' }>
@@ -58,8 +59,8 @@ export class Transcript {
     this.#touch()
   }
 
-  user(text: string, at = Date.now()) {
-    this.push({ at, id: this.id('u'), kind: 'user', text })
+  user(text: string, at = Date.now(), attachments: readonly SubmittedImage[] = []) {
+    this.push({ at, attachments, id: this.id('u'), kind: 'user', text })
   }
 
   notice(text: string, tone: NoticeEntry['tone'] = 'info') {
