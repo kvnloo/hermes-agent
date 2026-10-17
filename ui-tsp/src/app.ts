@@ -79,6 +79,7 @@ export class App implements OverlayHost {
   #scheduled = false
   #dispatchTimer: ReturnType<typeof setTimeout> | undefined
   #dispatchDeadline: number | null = null
+  #visible = true
   /** The field holding Tern's caret, as last sent. */
   #focus: string | null = INPUT_ID
   #exitArmed = 0
@@ -302,6 +303,13 @@ export class App implements OverlayHost {
   }
 
   #onTernEvent(ev: TspEvent) {
+    if (ev.ev === 'visible' && ev.sf === 'hermes') {
+      this.#visible = ev.visible
+      if (ev.visible) {
+        this.dispatches.resume()
+      }
+    }
+
     if (ev.ev === 'focus' && ev.id === INPUT_ID && !this.overlays.at(-1)?.modal) {
       this.#focus = INPUT_ID
       this.#surface.focus(INPUT_ID)
@@ -753,6 +761,18 @@ export class App implements OverlayHost {
         break
 
       case 'message.complete':
+        if (!this.#visible && this.busy) {
+          const status = ev.payload?.status
+          this.dispatches.show({
+            key: `turn:${t.id('done')}`,
+            text: status === 'error' ? 'A Hermes turn failed while this pane was hidden.' :
+              status === 'interrupted' ? 'A Hermes turn was stopped while this pane was hidden.' :
+              'A Hermes turn finished while this pane was hidden.',
+            level: status === 'error' ? 'error' : status === 'interrupted' ? 'warn' : 'success',
+            kind: 'ttl'
+          }, Date.now(), true)
+        }
+
         t.complete(ev.payload ?? {})
         this.busy = null
         this.#drainQueue()
@@ -768,7 +788,7 @@ export class App implements OverlayHost {
 
       case 'notification.show':
         if (ev.payload) {
-          this.dispatches.show(ev.payload)
+          this.dispatches.show(ev.payload, Date.now(), !this.#visible)
         }
 
         break
@@ -806,6 +826,15 @@ export class App implements OverlayHost {
       case 'btw.complete':
         if (ev.payload && 'text' in ev.payload && typeof ev.payload.text === 'string' && ev.payload.text.trim()) {
           t.panel(ev.type === 'btw.complete' ? '/btw' : 'Background task', ev.payload.text)
+          if (!this.#visible) {
+            this.dispatches.show({
+              key: `task:${ev.payload.task_id}`,
+              text: ev.type === 'btw.complete' ? 'A side question was answered while this pane was hidden.' :
+                'A background task finished while this pane was hidden.',
+              level: 'success',
+              kind: 'ttl'
+            }, Date.now(), true)
+          }
         }
 
         break

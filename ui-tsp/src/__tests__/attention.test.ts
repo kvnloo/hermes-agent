@@ -39,4 +39,39 @@ describe('native Tern gateway dispatches', () => {
     notes.show({ text: 'bounded TTL', key: 'cap', level: 'success', kind: 'ttl', ttl_ms: 900_000 }, 100)
     expect(notes.active(100).find(n => n.key === 'cap')?.expiresAt).toBe(60_100)
   })
+  it('holds short notifications while hidden and restarts TTL on return', () => {
+    const notes = new Dispatches()
+    notes.show({ key: 'work', text: 'Started', level: 'info', kind: 'ttl', ttl_ms: 100 }, 100, true)
+    expect(notes.active(20_000)).toEqual([])
+    expect(notes.nextExpiry(20_000)).toBeNull()
+
+    notes.resume(21_000)
+    expect(notes.active(21_099).map(n => n.text)).toEqual(['Started'])
+    expect(notes.active(21_100)).toEqual([])
+  })
+
+  it('cancels held notes and deduplicates repeated keys across visibility', () => {
+    const notes = new Dispatches()
+    notes.show({ key: 'stage', text: 'Old', level: 'info', kind: 'ttl' }, 100, true)
+    notes.show({ key: 'stage', text: 'New', level: 'info', kind: 'ttl' }, 200, true)
+    notes.show({ key: 'cleared', text: 'Cancelled', level: 'warn', kind: 'sticky' }, 300, true)
+    notes.clear('cleared')
+    notes.resume(20_000)
+    expect(notes.active(20_000).map(n => n.text)).toEqual(['New'])
+  })
+
+  it('bounds held notifications and drops held updates on reset', () => {
+    const notes = new Dispatches()
+    for (let i = 0; i < 20; i++) {
+      notes.show({ key: `task:${i}`, text: `Task ${i}`, level: 'success', kind: 'ttl' }, i, true)
+    }
+    notes.resume(20_000)
+    expect(notes.active(20_000).map(n => n.text)).toEqual(
+      Array.from({ length: 8 }, (_, i) => `Task ${i + 12}`)
+    )
+    notes.show({ key: 'unseen', text: 'Unseen', level: 'info', kind: 'ttl' }, 21_000, true)
+    notes.reset()
+    notes.resume(22_000)
+    expect(notes.active(22_000)).toEqual([])
+  })
 })
