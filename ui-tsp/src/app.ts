@@ -1,7 +1,7 @@
 // The app: one inline Tern surface (role `omp.session`, so Tern's chat styles
 // apply) over one tui_gateway session. Gateway events fold into the
-// transcript, keys go to the top overlay or the composer, and every change
-// schedules one render of the whole view; the SDK diffs it into frame ops.
+// transcript. Keys go to the top overlay or the composer. A state change
+// marks the view dirty. Tern draws the frame. The next ack flushes the newest view.
 
 import type {
   ConfigGetResult,
@@ -20,10 +20,13 @@ import { writeActiveSessionFile } from '@tui/lib/activeSessionFile.js'
 
 import logo from '../assets/logo.png'
 
+import { type ActionContext, actionForKey, APP_ACTIONS, matchesAction } from './actions.js'
 import { Dispatches } from './attention.js'
 import { localCommand } from './commands.js'
 import { Composer } from './composer.js'
 import { type Busy, busyFrom, ownsEvent, Switches } from './flow.js'
+import { FramePump } from './frame.js'
+import { OrbActivity, ThinkingOrb } from './orb.js'
 import type { Overlay, OverlayHost } from './overlay.js'
 import { Completion } from './overlays/completion.js'
 import { openModelPicker } from './overlays/models.js'
@@ -32,8 +35,10 @@ import { openSettings } from './overlays/settings.js'
 import { programPaletteOf } from './palette.js'
 import { SPLASH_ROLE } from './splash/index.js'
 import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting, splashTickMs } from './splash/launch.js'
+import { TodoHud } from './todo-hud.js'
 import { Transcript } from './transcript.js'
 import { dockNodes } from './view/dock.js'
+import { toolFoldState } from './view/tools.js'
 import { entryNode } from './view/transcript.js'
 import { randomTip, type WelcomeContext } from './view/welcome.js'
 
@@ -58,8 +63,12 @@ interface CreateResult extends Partial<
 export class App implements OverlayHost {
   readonly transcript = new Transcript()
   readonly dispatches = new Dispatches()
+  readonly todoHud = new TodoHud()
   readonly composer = new Composer()
   readonly overlays: Overlay[] = []
+  /** Presentation-only collapse overrides, scoped by transcript turn and tool identity. */
+  readonly #folds = new Map<string, boolean>()
+  readonly #foldRevs = new Map<string, number>()
   sid: string | null = null
   /** The stored (database) id of the open session: what `session.list` rows are keyed by. */
   storedSid: string | null = null
@@ -76,7 +85,9 @@ export class App implements OverlayHost {
   readonly #layerOwners = new Map<string, Overlay>()
   readonly #overlayIds = new WeakMap<Overlay, string>()
   #overlaySerial = 0
-  #scheduled = false
+  readonly #activity = new OrbActivity()
+  #orb: ThinkingOrb | undefined
+  #frames!: FramePump
   #dispatchTimer: ReturnType<typeof setTimeout> | undefined
   #dispatchDeadline: number | null = null
   #visible = true
@@ -95,6 +106,7 @@ export class App implements OverlayHost {
   /** The launcher's startup image until it is attached to the first session (the queue waits for it). */
   #startupImage = process.env.HERMES_TUI_IMAGE?.trim() ?? ''
   #effortWrites: Promise<unknown> = Promise.resolve()
+  #reasoningToggles: Promise<unknown> = Promise.resolve()
   #effortRequested: { sid: string; value: string } | null = null
   /** The launch splash while it covers the session chrome (it takes the keys until it leaves). */
   #splash: LaunchSplash | undefined
@@ -151,8 +163,21 @@ export class App implements OverlayHost {
       }
     }
 
+    this.#frames = new FramePump(
+      () => this.#surface.closed || !this.#visible || this.#surface.blocked,
+      () => this.#render(),
+      fn => setImmediate(fn)
+    )
+    const ack = this.#surface.acknowledge.bind(this.#surface)
+
+    this.#surface.acknowledge = (s: number) => {
+      ack(s)
+      this.#frames.credit()
+    }
+
     if (this.#tern.caps.features.includes('blobs')) {
       this.#welcome.logo = this.#tern.blob(logo, 'image/png')
+      this.#orb = new ThinkingOrb(this.#tern, this.#surface)
     }
 
     this.transcript.push({ id: 'welcome', kind: 'welcome' })
@@ -171,6 +196,7 @@ export class App implements OverlayHost {
       this.transcript.notice(`The agent backend exited${code === null ? '' : ` (${code})`}.`, 'error')
       // The runtime session died with the process: prompts queue until the next gateway.ready reattaches.
       this.sid = null
+      this.todoHud.adopt(null)
       this.busy = null
       this.transcript.interrupt()
       this.dispatches.reset()
@@ -178,6 +204,7 @@ export class App implements OverlayHost {
       this.#retry = null
       // Whatever went wrong is in the transcript: let it be seen.
       this.#splash?.ready()
+      this.#activity.event({ type: 'error' } as AnyGatewayEvent)
       this.changed()
     })
     this.#gw.drain()
@@ -186,6 +213,8 @@ export class App implements OverlayHost {
     void this.#readInput()
 
     const code = await this.#done.promise
+    this.#orb?.close()
+    this.#frames.close()
     await this.#tern.close()
     this.#gw.kill('exit')
 
@@ -227,15 +256,7 @@ export class App implements OverlayHost {
   }
 
   changed() {
-    if (this.#scheduled) {
-      return
-    }
-
-    this.#scheduled = true
-    setImmediate(() => {
-      this.#scheduled = false
-      this.#render()
-    })
+    this.#frames?.changed()
   }
 
   // ── Input ──────────────────────────────────────────────────────────
@@ -266,8 +287,11 @@ export class App implements OverlayHost {
 
     const top = this.overlays.at(-1)
 
-    if (key.ctrl && key.name === 'c') {
-      return top?.key === 'settings' ? top.onKey(key) : this.#ctrlC()
+    // Ctrl+C retains its pre-overlay priority, except Settings owns cancellation.
+    const clear = APP_ACTIONS.find(action => action.id === 'app.clear')!
+
+    if (matchesAction(clear, key)) {
+      return top?.key === 'settings' ? top.onKey(key) : clear.run(this)
     }
 
     if (top?.onKey(key)) {
@@ -282,39 +306,146 @@ export class App implements OverlayHost {
       return
     }
 
-    if (key.name === 'escape') {
-      if (this.busy) {
-        this.#interrupt()
-      }
-
-      return
+    const ctx: ActionContext = {
+      composerEmpty: !this.composer.text,
+      busy: Boolean(this.busy),
+      queued: this.queue.length > 0,
+      overlayOpen: this.overlays.length > 0,
+      completionOpen: this.#completion.open
     }
 
-    if (key.shift && key.name === 'tab') {
-      return this.#cycleEffort()
+    const shortcut = actionForKey(key, ctx)
+
+    if (shortcut) {
+      return shortcut.run(this)
     }
 
-    if (key.alt && key.name === 'up' && this.queue.length) {
-      return this.#dequeue()
-    }
-
-    if (key.ctrl && key.name === 'd' && !this.composer.text) {
-      return this.quit()
-    }
-
-    const action = this.composer.key(key)
+    // Unbound Alt letters are commands, never literal typing. Keep readline's
+    // Alt+B/F/D editing behavior by forwarding the key without printable text.
+    const action = this.composer.key(key.alt && /^[a-z]$/i.test(key.name) ? { ...key, text: undefined } : key)
 
     if (action === 'submit') {
       this.#submit(this.composer.take())
     }
   }
 
+  /** Copy the draft literally, without submitting it or disturbing the caret. */
+  copyPrompt() {
+    try {
+      copyToClipboard(this.composer.text)
+      // OSC52 has no acknowledgement; don't claim the terminal accepted it.
+      this.transcript.notice('Composer text sent to the terminal clipboard (OSC 52).')
+    } catch {
+      this.transcript.notice('Could not copy the composer text to the clipboard.', 'warning')
+    }
+
+    this.changed()
+  }
+
+  /** Use Hermes's existing display command, not an independent UI preference.
+   * Display show/hide is profile-scoped in the gateway, unlike effort levels.
+   * Serialize read→toggle so rapid repeats use canonical backend state.
+   */
+  toggleReasoning() {
+    const sid = this.sid
+
+    const toggle = async () => {
+      if (!sid || this.sid !== sid) {
+        return
+      }
+
+      const current = await this.#gw.request<ConfigGetResult>('config.get', { key: 'reasoning', session_id: sid })
+
+      if (this.sid === sid) {
+        await this.slash(`/reasoning ${current.display === 'hide' ? 'show' : 'hide'}`)
+      }
+    }
+
+    this.#reasoningToggles = this.#reasoningToggles.then(toggle).catch((error: Error) => {
+      if (this.sid === sid) {
+        this.transcript.notice(error.message, 'error')
+        this.changed()
+      }
+    })
+  }
+
+  /** Toggle the newest foldable tool without altering Hermes tool results. */
+  toggleRecentTool(): void {
+    for (let i = this.transcript.entries.length - 1; i >= 0; i--) {
+      const entry = this.transcript.entries[i]
+
+      if (entry?.kind !== 'turn') {
+        continue
+      }
+
+      for (let j = entry.blocks.length - 1; j >= 0; j--) {
+        const block = entry.blocks[j]
+
+        if (block?.kind !== 'tool') {
+          continue
+        }
+
+        const fold = toolFoldState(block.call)
+
+        if (!fold.collapsible) {
+          continue
+        }
+
+        const key = entry.id + ':' + block.call.id
+        this.#folds.set(key, !(this.#folds.get(key) ?? fold.collapsed))
+        this.#foldRevs.set(entry.id, (this.#foldRevs.get(entry.id) ?? 0) + 1)
+        this.changed()
+
+        return
+      }
+    }
+  }
+
   #onTernEvent(ev: TspEvent) {
-    if (ev.ev === 'visible' && ev.sf === 'hermes') {
+    if (ev.ev === 'gone' && ev.ids.includes(this.#surface.id)) {
+      // Rendering short-circuits after gone: dispose now, not on another animation tick.
+      this.#orb?.close()
+    }
+
+    if (ev.ev === 'toggle' && ev.sf === 'hermes' && ev.key) {
+      // Tern owns mouse folding. Mirror only the clicked tool's presentation
+      // state, so the subsequent Ctrl+O reverses what the person actually saw.
+      for (const entry of this.transcript.entries) {
+        if (entry.kind !== 'turn' || !ev.id.startsWith('main.' + entry.id + '.')) {
+          continue
+        }
+
+        const match = entry.blocks.some(b => b.kind === 'tool' && b.call.id === ev.key)
+
+        if (match) {
+          this.#folds.set(entry.id + ':' + ev.key, ev.collapsed)
+          this.#foldRevs.set(entry.id, (this.#foldRevs.get(entry.id) ?? 0) + 1)
+
+          break
+        }
+      }
+    }
+
+    if (
+      (ev.ev === 'visible' || ev.ev === 'resize') &&
+      (!ev.sf || ev.sf === this.#surface.id) &&
+      ev.visible !== undefined
+    ) {
+      // The orb and held completion notices share the same pane visibility.
       this.#visible = ev.visible
+      this.#orb?.environment({ visible: ev.visible })
+
       if (ev.visible) {
         this.dispatches.resume()
       }
+    }
+
+    if (ev.ev === 'theme') {
+      this.#orb?.environment({ dark: ev.dark })
+    }
+
+    if (ev.ev === 'motion') {
+      this.#orb?.environment({ reduce: ev.reduce })
     }
 
     if (ev.ev === 'focus' && ev.id === INPUT_ID && !this.overlays.at(-1)?.modal) {
@@ -323,7 +454,7 @@ export class App implements OverlayHost {
     }
   }
 
-  #ctrlC() {
+  ctrlC() {
     if (this.composer.text) {
       this.composer.set('')
 
@@ -331,7 +462,7 @@ export class App implements OverlayHost {
     }
 
     if (this.busy) {
-      return this.#interrupt()
+      return this.interrupt()
     }
 
     const now = Date.now()
@@ -368,7 +499,7 @@ export class App implements OverlayHost {
     }
 
     if (text.startsWith('/')) {
-      void this.#slash(text)
+      void this.slash(text)
 
       return
     }
@@ -407,6 +538,7 @@ export class App implements OverlayHost {
         this.transcript.notice(error.message, 'error')
         this.#lastSubmitted = null
         this.busy = null
+        this.#activity.event({ type: 'error' } as AnyGatewayEvent)
         this.changed()
       })
   }
@@ -414,6 +546,7 @@ export class App implements OverlayHost {
   /** Retry only the exact latest error, on the same idle session, never a stale or image-backed request. */
   canRetry(turnId: string): boolean {
     const candidate = this.#retry
+
     if (!candidate || candidate.turnId !== turnId || !this.sid || candidate.sid !== this.sid ||
         this.busy || this.#switches.pending || this.queue.length) {
       return false
@@ -434,7 +567,7 @@ export class App implements OverlayHost {
     this.#send(candidate.text)
   }
 
-  async #slash(text: string) {
+  async slash(text: string) {
     const [name = '', ...rest] = text.slice(1).split(/\s+/)
     const arg = rest.join(' ')
     const local = localCommand(name)
@@ -482,7 +615,7 @@ export class App implements OverlayHost {
     this.changed()
   }
 
-  #interrupt() {
+  interrupt() {
     if (!this.sid) {
       return
     }
@@ -497,6 +630,7 @@ export class App implements OverlayHost {
 
   #startBusy(label: string) {
     this.busy = { label, since: {}, startedAt: Date.now() }
+    this.#activity.reset(true)
     this.changed()
   }
 
@@ -529,6 +663,7 @@ export class App implements OverlayHost {
 
     try {
       await this.#gw.request('image.attach', { path, session_id: sid })
+
       if (this.sid === sid) {
         this.#startupAttachmentPending = true
       }
@@ -644,6 +779,8 @@ export class App implements OverlayHost {
   #adopt(r: CreateResult) {
     if (this.sid !== r.session_id) {
       this.dispatches.reset()
+      this.#folds.clear()
+      this.#foldRevs.clear()
       this.#lastSubmitted = null
       this.#retry = null
       this.#startupAttachmentPending = false
@@ -651,11 +788,13 @@ export class App implements OverlayHost {
 
     this.sid = r.session_id
     this.storedSid = r.info?.stored_session_id || r.stored_session_id || null
+    this.todoHud.adopt(this.storedSid ?? r.session_id)
     writeActiveSessionFile(this.storedSid ?? r.session_id)
     this.info = r.info ?? this.info
     this.usage = r.info?.usage ?? null
     // A resumed session may be mid-turn: Esc stops it and new prompts queue behind it.
     this.busy = busyFrom(r)
+    this.#activity.reset(this.busy !== null)
     this.transcript.usageBase(r.info?.usage ?? undefined)
 
     if (r.messages?.length) {
@@ -697,6 +836,7 @@ export class App implements OverlayHost {
     }
 
     const t = this.transcript
+    this.#activity.event(ev)
 
     switch (ev.type) {
       case 'gateway.ready':
@@ -788,7 +928,9 @@ export class App implements OverlayHost {
         break
 
       case 'todo.updated':
-        t.todos(ev.payload?.todos ?? [])
+        if (this.sid) {
+          this.todoHud.update(t.todos(ev.payload?.todos ?? []))
+        }
 
         break
 
@@ -882,6 +1024,7 @@ export class App implements OverlayHost {
       case 'btw.complete':
         if (ev.payload && 'text' in ev.payload && typeof ev.payload.text === 'string' && ev.payload.text.trim()) {
           t.panel(ev.type === 'btw.complete' ? '/btw' : 'Background task', ev.payload.text)
+
           if (!this.#visible) {
             this.dispatches.show({
               key: `task:${ev.payload.task_id}`,
@@ -904,6 +1047,9 @@ export class App implements OverlayHost {
       case 'approval.cancelled':
         this.#dropPrompts(key => ev.payload?.request_ids.includes(this.#approvalIds.get(key) ?? '') ?? false)
 
+        break
+
+      case 'voice.status':
         break
 
       default:
@@ -1021,6 +1167,7 @@ export class App implements OverlayHost {
 
         return result
       }
+
       if (this.sid === sid) {
         throw new Error('The backend did not confirm the live reasoning effort.')
       }
@@ -1036,7 +1183,7 @@ export class App implements OverlayHost {
   }
 
   /** Steps the session's reasoning effort. The native glyph changes only after readback. */
-  #cycleEffort() {
+  cycleEffort() {
     const sid = this.sid
 
     if (!sid) {
@@ -1060,7 +1207,7 @@ export class App implements OverlayHost {
   }
 
   /** Alt+Up / the queue's Edit: the oldest queued prompt back into an empty composer. */
-  #dequeue() {
+  dequeue() {
     const next = this.queue.shift()
 
     if (next !== undefined) {
@@ -1122,6 +1269,14 @@ export class App implements OverlayHost {
 
     const cx = {
       copy: (text: string) => copyToClipboard(text),
+      cwd: info?.cwd ?? '',
+      onCopyError: () => {
+        this.transcript.notice('Could not copy the answer to the clipboard.', 'warning')
+        this.changed()
+      },
+      foldRevision: (turnId: string) => this.#foldRevs.get(turnId) ?? 0,
+      toolCollapsed: (turnId: string, callId: string) => this.#folds.get(turnId + ':' + callId),
+
       canRetry: (turnId: string) => this.canRetry(turnId),
       retry: (turnId: string) => this.retryFailed(turnId),
       now,
@@ -1141,6 +1296,7 @@ export class App implements OverlayHost {
     const used = usage?.context_used ?? 0
     const max = usage?.context_max ?? 0
     const modal = this.overlays.at(-1)?.modal === true
+    this.#orb?.update(this.#activity.state(this.overlays.some(o => o.key.startsWith('prompt:'))), modal)
 
     // Every composer change (keys, native edits and undo, submits, queue edits) ends in a render: refresh here.
     if (!modal) {
@@ -1151,6 +1307,12 @@ export class App implements OverlayHost {
     this.#surface.render({
       dock: dockNodes({
         branch: info?.branch ?? '',
+        todos: this.todoHud.visible(Boolean(this.busy)),
+        todoExpanded: this.todoHud.expanded,
+        onTodoToggle: () => {
+          this.todoHud.expanded = !this.todoHud.expanded
+          this.changed()
+        },
         dispatches,
         busy: this.busy ?? undefined,
         composer: this.composer,
@@ -1162,20 +1324,21 @@ export class App implements OverlayHost {
         inputId: INPUT_ID,
         model: info?.model ?? '',
         now,
-        onContext: () => void this.#slash('/usage'),
+        orb: this.#orb?.props(),
+        onContext: () => void this.slash('/usage'),
         onEdit: ev => {
           this.composer.edit(ev)
           this.changed()
         },
-        onEffort: () => this.#cycleEffort(),
-        onInterrupt: () => this.#interrupt(),
+        onEffort: () => this.cycleEffort(),
+        onInterrupt: () => this.interrupt(),
         onSettings: () => openSettings(this),
         onModel: () => openModelPicker(this),
         onDismiss: key => {
           this.dispatches.clear(key)
           this.changed()
         },
-        onQueueEdit: () => this.#dequeue(),
+        onQueueEdit: () => this.dequeue(),
         onSend: ev => {
           this.#submit(this.composer.take(ev.text))
           this.changed()

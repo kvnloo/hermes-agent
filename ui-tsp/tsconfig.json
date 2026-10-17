@@ -17,6 +17,6 @@
       "@tui/*": ["../ui-tui/src/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "bench/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -1,0 +1,22 @@
+{
+  "machine": "groot",
+  "cpu": "Intel(R) Core(TM) i9-10900KF CPU @ 3.70GHz",
+  "kernel": "7.2.9-1-cachyos",
+  "node": "v26.7.0",
+  "baseline": "b7fa64fe82",
+  "donor": "b2ff496021",
+  "head": "b2ff4960217ee5dcea3285cedba14b0a073cb7d2",
+  "dirty": " M ui-tsp/package.json\n M ui-tsp/src/__tests__/action-registry.test.ts\n M ui-tsp/src/__tests__/answer-actions.test.ts\n M ui-tsp/src/__tests__/app-orb.test.ts\n M ui-tsp/src/__tests__/app-overlays.test.ts\n M ui-tsp/src/__tests__/app-send.test.ts\n M ui-tsp/src/__tests__/file-links.test.ts\n M ui-tsp/src/__tests__/frame.test.ts\n M ui-tsp/src/__tests__/settings.test.ts\n M ui-tsp/src/__tests__/splash.test.ts\n M ui-tsp/src/__tests__/todo-hud.test.ts\n M ui-tsp/src/app.ts\n M ui-tsp/src/frame.ts\n M ui-tsp/tsconfig.json\n?? ui-tsp/bench/\n?? ui-tsp/src/__tests__/app-frame.test.ts\n?? ui-tsp/src/__tests__/helpers/\n",
+  "loadBefore": [
+    5.53,
+    5.75,
+    5.77
+  ],
+  "runs": 5,
+  "method": "fresh processes; rotating ABC/BCA/CAB order; four identical scenario traces per process; no profiler",
+  "loadAfter": [
+    6.25,
+    5.91,
+    5.83
+  ]
+}

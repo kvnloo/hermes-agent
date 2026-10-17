@@ -276,12 +276,15 @@ describe('Transcript', () => {
     expect(tools(turnOf(t.entries))[0]?.todos).toEqual([{ content: 'Plan', id: '1', status: 'in_progress' }])
 
     t.toolComplete({ name: 'todo_list', todos: [{ content: 'Plan', id: '1', status: 'completed' }], tool_id: 'c1' }, 2)
-    t.todos([
+
+    const plan = t.todos([
       { content: 'Plan', id: '1', status: 'completed' },
       { content: 'Ship', id: '2', status: 'pending' }
     ])
 
-    expect(tools(turnOf(t.entries))[0]?.todos?.map(x => x.status)).toEqual(['completed', 'pending'])
+    expect(plan.map(x => x.status)).toEqual(['completed', 'pending'])
+    // The HUD receives the new plan, but a completed card retains its snapshot.
+    expect(tools(turnOf(t.entries))[0]?.todos).toEqual([{ content: 'Plan', id: '1', status: 'completed' }])
   })
 
   it('folds background subagents into the delegating call after its turn ended', () => {

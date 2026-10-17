@@ -5,6 +5,8 @@
 
 import { type JSX, node } from '@stencil-hq/tern'
 
+import { answerText, copyAnswer } from '../answer-actions.js'
+import { rewriteLocalMarkdownLinks } from '../links.js'
 import type { Block, Entry, NoticeEntry, TurnEntry, UserEntry } from '../model.js'
 
 import { age, compact, duration } from './time.js'
@@ -13,9 +15,15 @@ import { type WelcomeContext, welcomeNode } from './welcome.js'
 
 /** What entry views need from the app. */
 export interface TranscriptContext {
+  /** Absolute cwd reported by the owning Hermes session. */
+  cwd: string
   now: number
   welcome: WelcomeContext
   copy(text: string): void
+  onCopyError?(): void
+  /** View-only fold state; gateway transcript/tool data remain unchanged. */
+  toolCollapsed?(turnId: string, callId: string): boolean | undefined
+  foldRevision?(turnId: string): number
   rewind?(): void
   retry?(turnId: string): void
   canRetry?(turnId: string): boolean
@@ -25,7 +33,7 @@ const kNode = Symbol('tsp.node')
 
 /** An entry carrying its last built node and the revision it was built at. */
 interface Built {
-  [kNode]?: { rev: number; node: JSX.Element }
+  [kNode]?: { rev: number; cwd: string; foldRev: number; node: JSX.Element }
 }
 
 /**
@@ -42,14 +50,15 @@ export function entryNode(e: Entry, id: string, cx: TranscriptContext): JSX.Elem
   const holder: object = e
   const built: Built = holder
   const rev = e.kind === 'turn' ? e.rev : 0
+  const foldRev = e.kind === 'turn' ? (cx.foldRevision?.(e.id) ?? 0) : 0
   const cached = built[kNode]
 
-  if (cached?.rev === rev) {
+  if (cached?.rev === rev && cached.cwd === cx.cwd && cached.foldRev === foldRev) {
     return cached.node
   }
 
   const node = buildEntry(e, id, cx)
-  built[kNode] = { node, rev }
+  built[kNode] = { node, rev, cwd: cx.cwd, foldRev }
 
   return node
 }
@@ -97,7 +106,7 @@ function userNode(e: UserEntry, cx: TranscriptContext): JSX.Element {
 function turnNode(turn: TurnEntry, id: string, cx: TranscriptContext): JSX.Element {
   const live = turn.status === 'live'
   const lastText = turn.blocks.findLast(b => b.kind === 'text')
-  const children = turn.blocks.map(b => blockNode(b, `${id}.${b.id}`, live && b === lastText, cx))
+  const children = turn.blocks.map(b => blockNode(b, `${id}.${b.id}`, live && b === lastText, cx, turn.id))
 
   if (turn.status === 'error') {
     children.push(
@@ -133,6 +142,20 @@ function turnNode(turn: TurnEntry, id: string, cx: TranscriptContext): JSX.Eleme
     children.push(usageNode(turn))
   }
 
+  if (!live && answerText(turn)) {
+    children.push(
+      <row align="center" gap="xs" key="answer-actions" role="omp.turn.actions">
+        <text
+          key="copy"
+          onClick={() => copyAnswer(turn, cx.copy, () => cx.onCopyError?.())}
+          role="omp.turn.copy"
+          text="Copy"
+          title="Copy answer"
+        />
+      </row>
+    )
+  }
+
   return (
     <col key={turn.id} role="omp.assistant">
       {children}
@@ -140,17 +163,17 @@ function turnNode(turn: TurnEntry, id: string, cx: TranscriptContext): JSX.Eleme
   )
 }
 
-function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptContext): JSX.Element {
+function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptContext, turnId: string): JSX.Element {
   switch (b.kind) {
     case 'text':
       return (
         <md key={b.id} stream={streaming || undefined}>
-          {b.text}
+          {streaming ? b.text : rewriteLocalMarkdownLinks(b.text, cx.cwd)}
         </md>
       )
 
     case 'tool':
-      return toolNode(b.call, cx.now)
+      return toolNode(b.call, cx.now, cx.cwd, cx.toolCollapsed?.(turnId, b.call.id))
 
     case 'thinking':
       return thinkingNode(b, id, cx)

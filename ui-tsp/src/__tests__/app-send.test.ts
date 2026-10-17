@@ -7,6 +7,8 @@ import { afterAll, describe, expect, it, vi } from 'vitest'
 
 import { App, INPUT_ID } from '../app.js'
 
+import { acknowledgeFrames } from './helpers/paint.js'
+
 const isolated = await vi.hoisted(async () => {
   // History binds its home at module load. vi.hoisted must set the isolated home before static app imports execute.
   const { mkdtempSync } = await import('node:fs')
@@ -38,6 +40,7 @@ describe('native composer submission', () => {
     app.sid = 'session-1'
     app.busy = { label: 'Working', since: {}, startedAt: 0 }
     app.composer.set('old draft')
+    acknowledgeFrames(tern)
     const running = app.run()
 
     try {

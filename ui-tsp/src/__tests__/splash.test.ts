@@ -446,6 +446,7 @@ class FakeAppSurface extends FakeSurface {
   rendered: unknown[] = []
   focused: (string | null)[] = []
   dispatch = vi.fn<Surface['dispatch']>()
+  acknowledge = vi.fn<Surface['acknowledge']>()
 
   constructor(readonly options: { id?: string; mode?: string; role?: string }) {
     super()

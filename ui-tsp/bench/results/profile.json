@@ -1,0 +1,97 @@
+{
+  "profile": "/home/kvn/.hermes/profiles/clean/cache/scratch/frame-bench-nNTSpT/CPU.20261017.154552.1785431.0.001.cpuprofile",
+  "excludedVerificationSamples": 94,
+  "topSamples": [
+    {
+      "function": "",
+      "bundleLine": 465,
+      "samples": 1593
+    },
+    {
+      "function": "children",
+      "bundleLine": 653,
+      "samples": 775
+    },
+    {
+      "function": "diff",
+      "bundleLine": 591,
+      "samples": 592
+    },
+    {
+      "function": "(garbage collector)",
+      "bundleLine": 0,
+      "samples": 559
+    },
+    {
+      "function": "_Tree",
+      "bundleLine": 460,
+      "samples": 369
+    },
+    {
+      "function": "",
+      "bundleLine": 551,
+      "samples": 243
+    },
+    {
+      "function": "rising",
+      "bundleLine": 629,
+      "samples": 219
+    },
+    {
+      "function": "",
+      "bundleLine": 655,
+      "samples": 153
+    },
+    {
+      "function": "userNode",
+      "bundleLine": 8497,
+      "samples": 96
+    },
+    {
+      "function": "",
+      "bundleLine": 656,
+      "samples": 62
+    },
+    {
+      "function": "",
+      "bundleLine": 661,
+      "samples": 54
+    },
+    {
+      "function": "",
+      "bundleLine": 9615,
+      "samples": 49
+    },
+    {
+      "function": "get kind",
+      "bundleLine": 477,
+      "samples": 49
+    },
+    {
+      "function": "createNode",
+      "bundleLine": 346,
+      "samples": 47
+    },
+    {
+      "function": "#render",
+      "bundleLine": 9513,
+      "samples": 43
+    },
+    {
+      "function": "",
+      "bundleLine": 632,
+      "samples": 38
+    },
+    {
+      "function": "(program)",
+      "bundleLine": 0,
+      "samples": 33
+    },
+    {
+      "function": "flatten",
+      "bundleLine": 167,
+      "samples": 32
+    }
+  ],
+  "scope": "Whole baseline trace; apply/place/walk verification stacks excluded; GC not attributed; sampling run excluded from timings"
+}

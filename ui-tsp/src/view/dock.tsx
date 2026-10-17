@@ -2,12 +2,15 @@
 // the glass composer (omp.editor) with its model chip, effort, context
 // hairline and session cost. Roles match omp's so Tern's composer sheets apply.
 
-import type { EditEvent, JSX, SendEvent } from '@stencil-hq/tern'
+import type { EditEvent, ImageProps, JSX, SendEvent } from '@stencil-hq/tern'
 
+import { HELP_HINT } from '../actions.js'
 import type { Dispatch } from '../attention.js'
 import type { Composer } from '../composer.js'
+import type { Todo } from '../model.js'
 
 import { age, compact } from './time.js'
+import { checklistNode } from './tools.js'
 
 /** What the dock shows. */
 export interface DockContext {
@@ -19,6 +22,10 @@ export interface DockContext {
   ready: boolean
   busy?: { since: object; startedAt: number; label: string }
   queued: readonly string[]
+  /** One current gateway-sourced plan for the visible session. */
+  todos: readonly Todo[]
+  todoExpanded: boolean
+  onTodoToggle(): void
   dispatches: readonly Dispatch[]
   model: string
   /** Hermes's reasoning effort (`none` = off); empty hides the chip. */
@@ -30,6 +37,7 @@ export interface DockContext {
   cost?: number
   ghost?: string
   now: number
+  orb?: ImageProps
   onInterrupt(): void
   onSubmit(): void
   /** Tern submitted text into the composer (`send` feature). */
@@ -49,6 +57,26 @@ export interface DockContext {
 /** The `dock` region's nodes: the working row, the queued prompts and the composer. */
 export function dockNodes(cx: DockContext): JSX.Element[] {
   const nodes: JSX.Element[] = []
+
+  if (cx.todos.length > 5) {
+    // Count only completed tasks: Tern's native HUD also counts dropped items.
+    const done = cx.todos.filter(todo => todo.status === 'completed').length
+    const active = cx.todos.find(todo => todo.status === 'in_progress')
+    nodes.push(
+      <text
+        key="plan-summary"
+        onClick={cx.onTodoToggle}
+        role="omp.todo.summary"
+        text={`${done}/${cx.todos.length} done${active ? ` · now: ${active.content}` : ''}`}
+        title={cx.todoExpanded ? 'Collapse current plan' : 'Expand current plan'}
+        wrap="none"
+      />
+    )
+  }
+
+  if (cx.todos.length && (cx.todos.length <= 5 || cx.todoExpanded)) {
+    nodes.push(checklistNode(cx.todos, 'full', 'current-plan'))
+  }
 
   if (cx.busy) {
     nodes.push(
@@ -108,7 +136,6 @@ function workingNode(cx: DockContext): JSX.Element {
 
   return (
     <row align="center" gap="sm" key="working" role="omp.working">
-      <spinner key="spinner" style="starburst" tone="accent" />
       <shimmer
         key="label"
         mode="classic"
@@ -168,6 +195,7 @@ function composerNode(cx: DockContext): JSX.Element {
       )}
       <row gap="sm" hidden key="chips" role="omp.composer.chips" wrap />
       <row align="start" gap="sm" key="line" role="omp.composer.line">
+        {cx.orb ? <image key="orb" {...cx.orb} role="hermes.agent.orb" /> : null}
         <editor
           cursor={composer.cursor}
           ghost={cx.ghost || undefined}
@@ -231,6 +259,7 @@ function composerNode(cx: DockContext): JSX.Element {
             />
           ) : null}
         </status>
+        <text key="help" role="omp.composer.hint" text={HELP_HINT} tone="muted" wrap="none" />
         <row align="center" gap="xs" key="settings" onClick={cx.onSettings} role="omp.composer.settings" title="Open Hermes settings">
           <icon key="icon" name="settings" />
           <text key="label" text="Settings" />
