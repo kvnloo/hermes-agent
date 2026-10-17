@@ -10,6 +10,7 @@ import type { App } from '../app.js'
 import { FORK_COMMANDS } from '../fork-session.js'
 import type { Overlay } from '../overlay.js'
 
+import { TREE_COMMANDS } from './sessions.js'
 import { SETTINGS_COMMANDS } from './settings.js'
 
 const KEY = 'help'
@@ -50,7 +51,7 @@ export async function openHelp(app: App) {
 
   const categories = [
     { name: 'Native Settings', pairs: SETTINGS_COMMANDS },
-    { name: 'Native session', pairs: FORK_COMMANDS },
+    { name: 'Native session', pairs: [...FORK_COMMANDS, ...TREE_COMMANDS] },
     ...(catalog.categories?.length ? catalog.categories : [{ name: 'Commands', pairs: catalog.pairs ?? [] }])
       .map(category => ({
         ...category,

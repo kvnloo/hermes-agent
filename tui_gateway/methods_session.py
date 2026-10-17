@@ -254,7 +254,10 @@ def _persist_branch(db, new_key: str, parent_key: str, title: str, history: list
         parent_prompt = (db.get_session(parent_key) or {}).get("system_prompt")
     except Exception:
         logger.debug("branch: parent system prompt read failed for %s", parent_key, exc_info=True)
-    db.create_session(new_key, source=source, model=model, model_config={"_branched_from": parent_key},
+    point = {"parent_session_id": parent_key, "message_id": history[-1].get("_row_id") if history else None,
+             "copied_message_count": len(history)}
+    db.create_session(new_key, source=source, model=model,
+                      model_config={"_branched_from": parent_key, "_branch_point": point},
                       parent_session_id=parent_key, cwd=cwd, profile_name=profile_name, user_id=user_id,
                       system_prompt=parent_prompt or None)
     try:

@@ -246,6 +246,61 @@ method("session.list", params=SessionListParams, result=SessionListResult,
        doc="Human-facing stored sessions, most recent first (sub-agent / kanban sources denied).")
 
 
+class SessionTreeSort(WireEnum):
+    RECENT = "recent"
+    TITLE = "title"
+    PATH = "path"
+
+
+class SessionTreeEdge(WireEnum):
+    root = "root"
+    fork = "fork"
+    continuation = "continuation"
+    parent = "parent"
+
+
+class SessionTreeParams(ProfileParams):
+    offset: int = Field(default=0, ge=0)
+    limit: int = Field(default=200, ge=1, le=500)
+    query: str = ""
+    sort: SessionTreeSort = SessionTreeSort.RECENT
+    active_session_id: str | None = None
+    selected_session_id: str | None = None
+
+
+class SessionTreeRow(SessionListRow):
+    cwd: str = ""
+    parent_session_id: str | None = None
+    edge_kind: SessionTreeEdge
+    branch_message_id: int | None = None
+    copied_message_count: int | None = None
+
+
+class SessionTreeResult(Result):
+    sessions: list[SessionTreeRow]
+    ancestors: list[SessionTreeRow]
+    total: int
+    next_offset: int | None
+
+
+method("session.tree", params=SessionTreeParams, result=SessionTreeResult,
+       doc="Read-only copied-session lineage metadata, paged with ancestor context; not an entry DAG.")
+
+
+class SessionRenameParams(ProfileParams):
+    session_key: str
+    title: str
+
+
+class SessionRenameResult(Result):
+    session_key: str
+    title: str
+
+
+method("session.rename", params=SessionRenameParams, result=SessionRenameResult,
+       doc="Rename a visible stored session without resuming it; returns durable title readback.")
+
+
 class SessionMostRecentParams(ProfileParams):
     pass
 

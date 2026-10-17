@@ -514,6 +514,72 @@ async function retention() {
   }, true)
 }
 
+async function sessionTree() {
+  const picker = async () => [...(await native.rendered()).values()].find(n => n.k === 'picker' && n.p?.title === 'Session / branch tree')
+  await step('real gateway pages 207 explicit stored-session fixtures', async () => {
+    await promisify(execFile)(manifest.python, ['-c', `
+import os
+from pathlib import Path
+from hermes_state import SessionDB
+home = Path(os.environ['HERMES_HOME']).resolve()
+assert (home / '.native-settings-e2e').read_text() == 'isolated inert fixture; no turns or grants\\n'
+db = SessionDB(db_path=home / 'state.db')
+try:
+    for i in range(205):
+        key = f't02-page-{i:03}'
+        db.create_session(key, source='tui', cwd='/fixture/work')
+        db.set_session_title(key, f'Stored fixture {i:03}')
+    db.create_session('t02-root', source='tui', cwd='/fixture/root')
+    db.set_session_title('t02-root', 'T02 parent')
+    point = db.append_message('t02-root', 'user', 'Explicit fixture question')
+    db.create_session('t02-child', source='tui', cwd='/fixture/child', parent_session_id='t02-root',
+        model_config={'_branched_from':'t02-root', '_branch_point':{'parent_session_id':'t02-root', 'message_id':point, 'copied_message_count':1}})
+    db.append_message('t02-child', 'user', 'Explicit fixture question')
+    db.set_session_title('t02-child', 'T02 copied fork')
+finally:
+    db.close()
+`], { cwd:manifest.root, env:{ ...process.env, HERMES_HOME:manifest.home, PYTHONPATH:manifest.root } })
+    await command('/tree')
+    const sheet = await until(picker, p => p?.p?.state === 'ready' && p?.p?.total === 207, 'real paged session tree')
+    assert.equal((sheet?.p?.order as Json[])?.length, 200)
+    assert.equal(sheet?.p?.layout, 'tree')
+    await capture('paged-tree')
+    await tap('Load more')
+    await until(picker, p => (p?.p?.order as Json[])?.length === 207, 'explicit load-more beyond 200')
+  }, true)
+  await step('native tree search and selection never resume or undo history', async () => {
+    await native.type('T02 copied')
+    const sheet = await until(picker, p => p?.p?.query === 'T02 copied' && p?.p?.state === 'ready' && p?.p?.total === 1, 'global branch search')
+    assert.deepEqual(sheet?.p?.order, ['t02-child'])
+    const items = sheet?.p?.items as {id:string;depth:number}[]
+    assert.equal(items.find(item => item.id === 't02-child')?.depth, 1)
+    const requests = async () => (await native.wire()).filter(w => w.dir === 'request' && ['session.resume','session.undo','session.fork','session.delete'].includes(w.body.method ?? ''))
+    assert.equal((await requests()).length, 0)
+    await native.key('Enter')
+    await until(() => native.rendered(), ns => [...ns.values()].some(n => n.p?.text === 'Resume saved session?'), 'explicit resume confirmation')
+    assert.equal((await requests()).length, 0)
+    await native.key('Escape')
+    await until(picker, Boolean, 'cancel returns to tree')
+    assert.equal((await requests()).length, 0)
+    await capture('searched-branch')
+    await tap('Rename')
+    await until(picker, p => p?.p?.query === 'T02 copied fork', 'private rename draft')
+    for (let i = 0; i < 'T02 copied fork'.length; i++) await native.key('Backspace')
+    await native.type('T02 copied renamed fork')
+    await native.key('Enter')
+    await until(picker, p => p?.p?.state === 'ready' && JSON.stringify(p?.p?.items).includes('T02 copied renamed fork'), 'durable rename readback')
+    await tap('Sort: recent')
+    await until(picker, p => JSON.stringify(p?.p?.actions).includes('Sort: title'), 'sort keeps renamed selection')
+    assert.equal((await picker())?.p?.selected, 't02-child')
+    const readback = await promisify(execFile)(manifest.python, ['-c', "import sqlite3,sys; db=sqlite3.connect(sys.argv[1]); print(db.execute(\"SELECT title FROM sessions WHERE id = 't02-child'\").fetchone()[0]); db.close()", join(manifest.home, 'state.db')], {cwd:manifest.root})
+    assert.equal(readback.stdout.trim(), 'T02 copied renamed fork')
+    await capture('renamed-branch')
+    await native.key('Escape')
+    await until(picker, p => !p, 'tree closed')
+    assert(!(await native.wire()).some(w => w.dir === 'request' && w.body.method === 'prompt.submit'))
+  }, true)
+}
+
 async function smoke() {
   await step('launch welcome and real session without a model call',async()=>{
     assert(flatten((await native.snapshot()).tree).some(n=>(n.text ?? '').toLowerCase().includes('hermes')))
@@ -534,7 +600,7 @@ try {
   const wire = await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='delivered' && w.body.result && typeof w.body.result==='object' && !Array.isArray(w.body.result) && 'session_id' in w.body.result), 'real session creation')
   const ids = new Set(wire.filter(w=>w.dir==='request' && w.body.method==='session.create').map(w=>w.body.id))
   sid = String(record(wire.findLast(w=>w.dir==='delivered' && ids.has(w.body.id) && w.body.result)?.body.result).session_id)
-  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes,media,'agent-inspector':agentInspector,retention}
+  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes,media,'agent-inspector':agentInspector,retention,'session-tree':sessionTree}
   assert(journeys[journey],`Unknown journey: ${journey}`)
   await journeys[journey]!()
 } catch (error) { console.error(error); process.exitCode=1 }

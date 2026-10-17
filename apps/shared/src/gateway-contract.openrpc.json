@@ -3553,6 +3553,24 @@
       }
     },
     {
+      "name": "session.rename",
+      "summary": "Rename a visible stored session without resuming it; returns durable title readback.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/SessionRenameParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/SessionRenameResult"
+        }
+      }
+    },
+    {
       "name": "session.resume",
       "summary": "Attach to a stored session: reuse it if live here, else lazy / deferred / cold / eager rebuild.",
       "params": [
@@ -3675,6 +3693,24 @@
         "name": "result",
         "schema": {
           "$ref": "#/components/schemas/SessionTitleResult"
+        }
+      }
+    },
+    {
+      "name": "session.tree",
+      "summary": "Read-only copied-session lineage metadata, paged with ancestor context; not an entry DAG.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/SessionTreeParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/SessionTreeResult"
         }
       }
     },
@@ -32090,6 +32126,56 @@
         "title": "SessionReclaimedPayload",
         "type": "object"
       },
+      "SessionRenameParams": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "session_key": {
+            "title": "Session Key",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_key",
+          "title"
+        ],
+        "title": "SessionRenameParams",
+        "type": "object"
+      },
+      "SessionRenameResult": {
+        "additionalProperties": false,
+        "properties": {
+          "session_key": {
+            "title": "Session Key",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_key",
+          "title"
+        ],
+        "title": "SessionRenameResult",
+        "type": "object"
+      },
       "SessionResumeParams": {
         "additionalProperties": false,
         "description": "``session_id`` is the STORED id (or an exact title); the reply's ``session_id`` is the runtime id.",
@@ -32698,6 +32784,240 @@
         ],
         "title": "SessionTitleResult",
         "type": "object"
+      },
+      "SessionTreeEdge": {
+        "enum": [
+          "root",
+          "fork",
+          "continuation",
+          "parent"
+        ],
+        "title": "SessionTreeEdge",
+        "type": "string"
+      },
+      "SessionTreeParams": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "offset": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "maximum": 500,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "query": {
+            "default": "",
+            "title": "Query",
+            "type": "string"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SessionTreeSort",
+            "default": "recent"
+          },
+          "active_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Active Session Id"
+          },
+          "selected_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Selected Session Id"
+          }
+        },
+        "title": "SessionTreeParams",
+        "type": "object"
+      },
+      "SessionTreeResult": {
+        "additionalProperties": false,
+        "properties": {
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/SessionTreeRow"
+            },
+            "title": "Sessions",
+            "type": "array"
+          },
+          "ancestors": {
+            "items": {
+              "$ref": "#/components/schemas/SessionTreeRow"
+            },
+            "title": "Ancestors",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          }
+        },
+        "required": [
+          "sessions",
+          "ancestors",
+          "total",
+          "next_offset"
+        ],
+        "title": "SessionTreeResult",
+        "type": "object"
+      },
+      "SessionTreeRow": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "resolved_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Resolved Id"
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          },
+          "preview": {
+            "default": "",
+            "title": "Preview",
+            "type": "string"
+          },
+          "started_at": {
+            "default": 0,
+            "title": "Started At",
+            "type": "number"
+          },
+          "message_count": {
+            "default": 0,
+            "title": "Message Count",
+            "type": "integer"
+          },
+          "live_message_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Live Message Count"
+          },
+          "source": {
+            "default": "",
+            "title": "Source",
+            "type": "string"
+          },
+          "cwd": {
+            "default": "",
+            "title": "Cwd",
+            "type": "string"
+          },
+          "parent_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Session Id"
+          },
+          "edge_kind": {
+            "$ref": "#/components/schemas/SessionTreeEdge"
+          },
+          "branch_message_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Branch Message Id"
+          },
+          "copied_message_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Copied Message Count"
+          }
+        },
+        "required": [
+          "id",
+          "edge_kind"
+        ],
+        "title": "SessionTreeRow",
+        "type": "object"
+      },
+      "SessionTreeSort": {
+        "enum": [
+          "recent",
+          "title",
+          "path"
+        ],
+        "title": "SessionTreeSort",
+        "type": "string"
       },
       "SessionUndoParams": {
         "additionalProperties": false,

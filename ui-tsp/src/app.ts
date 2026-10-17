@@ -1098,7 +1098,7 @@ export class App implements OverlayHost {
       this.#reports.clear()
 
       for (const overlay of [...this.overlays]) {
-        if (overlay.key === 'report' || overlay.key === 'plan') {
+        if (overlay.key === 'report' || overlay.key === 'plan' || overlay.key === 'sessions' || overlay.key === 'session-tree') {
           this.close(overlay)
         }
       }
