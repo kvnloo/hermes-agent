@@ -56,8 +56,15 @@ function moreBadge(lineCount: number, shown: number): Card['badges'] {
   return [{ text: `${hidden} more line${hidden === 1 ? '' : 's'}`, tone: 'muted' }]
 }
 
-/** The `tool` node of one call. */
-export function toolNode(call: ToolCall, now: number): JSX.Element {
+/** Renderer-only fold state for a native tool card. */
+export function toolFoldState(call: ToolCall): { collapsible: boolean; collapsed: boolean } {
+  const card = cardOf(call, 0)
+
+  return { collapsible: card.body.length > 0 || call.status === 'cancelled', collapsed: card.folded ?? false }
+}
+
+/** The `tool` node of one call, optionally with a keyboard-owned fold override. */
+export function toolNode(call: ToolCall, now: number, collapsedOverride?: boolean): JSX.Element {
   const card = cardOf(call, now)
   const status = card.status ?? call.status
   const running = status === 'running'
@@ -76,7 +83,7 @@ export function toolNode(call: ToolCall, now: number): JSX.Element {
 
   // A failure keeps the error status and the same fold as a success. The
   // preview shows the tail. Do not hide the body, and do not dump it open.
-  const collapsed = card.folded
+  const collapsed = collapsedOverride ?? card.folded
 
   return node(
     'tool',
@@ -258,7 +265,7 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined): 
 
   return {
     badges: hidden > 0 ? [{ text: `${hidden} more line${hidden === 1 ? '' : 's'}`, tone: 'muted' }] : undefined,
-    body: text ? [<code key="code" lang={langOf(path)} numbers start={first} text={text} />] : [],
+    body: text ? [<code key="code" lang={langOf(path)} numbers start={first} text={text} wrap />] : [],
     folded: true,
     frame: 'inline',
     lang: langOf(path),
@@ -297,7 +304,7 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined): 
       ...head,
       badges: badges.length ? badges : undefined,
       body: [
-        <code key="code" lang={lang ?? 'text'} numbers text={text} />,
+        <code key="code" lang={lang ?? 'text'} numbers text={text} wrap />,
         ...(diagnostics
           ? [<text key="lsp" role="omp.tool.notice" spans={[{ s: 'error', t: diagnostics }]} wrap="word" />]
           : [])
@@ -407,6 +414,7 @@ function searchCard(call: ToolCall, result: Record<string, unknown> | undefined)
         <code
           key={`${f}.c${runIndex++}`}
           lang={langOf(path)}
+          wrap
           marks={run.map(h => ({ line: h.line, tone: 'accent' }))}
           numbers
           start={start}
@@ -721,7 +729,7 @@ function evalCard(call: ToolCall, result: Record<string, unknown> | undefined): 
       <col key="cell-0" role="omp.tool.eval.cell">
         <row align="start" key="input" role="omp.tool.eval.input">
           <icon aria="Input" key="0" name="arrow-left" role="omp.tool.eval.prompt" />
-          <code key="code" lang={language} numbers={false} text={code} />
+          <code key="code" lang={language} numbers={false} text={code} wrap />
         </row>
         {output || error ? (
           <row align="start" key="result" role="omp.tool.eval.result">
@@ -751,7 +759,7 @@ function genericBody(call: ToolCall): JSX.Element[] {
     return []
   }
 
-  return [<code key="out" lang={/^\s*[[{]/.test(text) ? 'json' : 'text'} text={clip(text, 4000)} />]
+  return [<code key="out" lang={/^\s*[[{]/.test(text) ? 'json' : 'text'} text={clip(text, 4000)} wrap />]
 }
 
 function errorOf(call: ToolCall): string | undefined {
