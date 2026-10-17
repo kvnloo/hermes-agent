@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createControl, parseReply, capturePreview, readShot, SURFACE } from '../src/control.mjs';
-import { bundle } from './helpers.mjs';
+import { createControl, parseReply, capturePreview as rawCapturePreview, readShot, FOCUSED_SURFACE as SURFACE } from '../src/control.mjs';
+import { bundle, syntheticCapture } from './helpers.mjs';
+const capturePreview = (...args) => syntheticCapture(rawCapturePreview, ...args);
 
 for (const output of ['', '{}', '{"ok":false}', '{"ok":true,"skipped":true}', '{"ok":true,"warning":"unsupported"}',
   '{"ok":true,"warnings":["skipped"]}', '{"ok":true,"warnings":"skip"}', '{"ok":true}\n{"ok":true}', 'not json']) test(`control rejects ${JSON.stringify(output)}`, () => {
@@ -33,7 +34,7 @@ test('recipe captures four states and guards every input with the full preview i
   assert.equal(result.status, 'captured-not-inspected'); assert.equal(result.shots.length, 4);
   assert.equal(new Set(names).size, 4);
   for (const [i, line] of commands.entries()) if (/^(key|click|size|appearance|shot) /.test(line)) {
-    assert.equal(commands[i - 1], `plugins expect "Preview: ${b.id}"`);
+    assert.equal(commands[i - 1], `tree ${SURFACE}`);
   }
   assert.ok(commands.includes(`tree ${SURFACE}`));
   assert.ok(!commands.includes(`tree "${SURFACE}"`));
@@ -48,7 +49,7 @@ test('missing PNG is not reported as successful capture', async () => {
 test('failed identity check stops before any input', async () => {
   const lines = [];
   await assert.rejects(capturePreview(bundle(), {shotRoot: '/tmp/shots', control: async line => {lines.push(line); return {ok: false};}}));
-  assert.equal(lines.length, 1); assert.match(lines[0], /^plugins expect /);
+  assert.equal(lines.length, 1); assert.match(lines[0], /^tree /);
 });
 test('flat input cannot pass the drill/back coverage requirement', async () => {
   const b = bundle({doc: {version: 1, title: 'flat', root: {id: 'root', label: 'root', code: 0, churn: 0, children: []}}});

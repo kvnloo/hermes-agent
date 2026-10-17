@@ -8,6 +8,7 @@ import { validateBundle } from './bundle.mjs';
 
 const runFile = promisify(execFile);
 export const SURFACE = "[data-surface='plugin.hermes-openui.reply']";
+export const FOCUSED_SURFACE = `.tn-pane.on ${SURFACE}`;
 export const scriptQuote = value => JSON.stringify(value);
 
 export function parseReply(stdout, stderr = '') {
@@ -90,8 +91,31 @@ export async function capturePreview(bundleInput, { control, shotRoot, readCaptu
     replies.push({ command: line, reply });
     return requireCleanReply(reply);
   };
-  const identity = () => command(`plugins expect ${scriptQuote(marker)}`);
-  const expect = async text => { await identity(); await command(`plugins expect ${scriptQuote(text)}`); checks.push(text); };
+  // plugins expect searches main only. Inspect the focused pane's visible native
+  // regions together, never a window-global match from another preview pane.
+  const identity = async () => {
+    const reply = await command(`tree ${FOCUSED_SURFACE}`);
+    requireInput(Array.isArray(reply.nodes), 'identity', 'Missing focused native surface tree.');
+    const region = name => reply.nodes.filter(node => typeof node.class === 'string' && node.class.split(/\s+/).includes(name));
+    const main = region('sf-main'), dock = region('sf-dock');
+    requireInput(main.length === 1 && dock.length === 1 &&
+      typeof main[0].text === 'string' && main[0].text.startsWith(bundle.artifact.document.title.slice(0, 64)) &&
+      typeof dock[0].text === 'string' && dock[0].text.match(/^Preview: ([a-f0-9]{64})(?=\s*Location:)/)?.[1] === bundle.id,
+      'identity', `Focused main+dock must identify ${marker} exactly.`);
+    return dock[0].text;
+  };
+  const expect = async text => {
+    // Only observe/retry state reconciliation, never retry an input.
+    const deadline = Date.now() + 25_000;
+    while (true) {
+      const dock = await identity();
+      if (dock.includes(`${text} | Selection:`)) break;
+      requireInput(Date.now() < deadline, 'state', 'Focused preview did not reach the expected state.');
+      await new Promise(resolve => setTimeout(resolve, 50));
+      stop.throwIfAborted();
+    }
+    checks.push(text);
+  };
   const act = async line => { await identity(); await command(line); };
   const prefix = `openui-${randomBytes(12).toString('hex')}`;
   async function shot(label) {
@@ -115,7 +139,7 @@ export async function capturePreview(bundleInput, { control, shotRoot, readCaptu
     requireInput(directory, 'coverage', 'This smoke recipe needs a visible directory with children; do not count a flat fixture as drill coverage.');
     await identity();
     // Control tree consumes the selector verbatim, unlike quoted scenario arguments.
-    await command(`tree ${SURFACE}`);
+    await command(`tree ${FOCUSED_SURFACE}`);
     await act(`size ${bundle.presentation.width} ${bundle.presentation.height}`);
     await act(`appearance ${bundle.presentation.appearance}`);
     await command('state'); await command('stats'); await command('css');
@@ -124,7 +148,7 @@ export async function capturePreview(bundleInput, { control, shotRoot, readCaptu
     await act('key 2'); await expect(`Location: ${root.id} | Mode: churn`); await shot('churn');
     await act('key 1'); await expect(`Location: ${root.id} | Mode: code`);
     // Stable scoped selectors, never pane-global click coordinates or generated commands.
-    await act(`click ${scriptQuote(`.sf-main${SURFACE} [data-role='hermes.openui.child.${directory.id}']`)}`);
+    await act(`click ${scriptQuote(`.tn-pane.on .sf-main${SURFACE} [data-role='hermes.openui.child.${directory.id}']`)}`);
     await expect(`Location: ${directory.id} | Mode: code`); await shot('drill');
     await act('key ArrowLeft'); await expect(`Location: ${root.id} | Mode: code`);
     // Keyboard Enter must reopen the directory Back restored as the selection.
@@ -132,7 +156,7 @@ export async function capturePreview(bundleInput, { control, shotRoot, readCaptu
     await act('key ArrowLeft'); await expect(`Location: ${root.id} | Mode: code`);
     await act(bundle.selection.view.mode === 'churn' ? 'key 2' : 'key 1');
     await expect(`Location: ${root.id} | Mode: ${bundle.selection.view.mode}`); await shot('restored');
-    await command(`tree ${SURFACE}`);
+    await command(`tree ${FOCUSED_SURFACE}`);
     await command('state'); await command('stats');
     await identity();
     return freeze({ schema: 'tern-preview-capture/v1', previewId: bundle.id, status: 'captured-not-inspected',

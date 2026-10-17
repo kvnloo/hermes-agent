@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capturePreview } from '../src/control.mjs';
-import { bundle } from './helpers.mjs';
+import { capturePreview as rawCapturePreview } from '../src/control.mjs';
+import { bundle, syntheticCapture } from './helpers.mjs';
+const capturePreview = (...args) => syntheticCapture(rawCapturePreview, ...args);
 
 // These are transport/recipe tests, not Tern or rendered-pixel evidence.
 const shot = name => ({ path: `/synthetic/${name}.png`, sha256: 'd'.repeat(64), width: 100, height: 100, bytes: 100 });
@@ -106,7 +107,7 @@ test('a preview replacement during the last PNG read invalidates that shot', asy
   let changed = false, reads = 0;
   await assert.rejects(capturePreview(bundle(), transport({
     readCapture: async (_root, name) => { if (++reads === 4) changed = true; return shot(name); },
-    control: async line => line.startsWith('plugins expect "Preview:') && changed
+    control: async line => line.startsWith('tree ') && changed
       ? { ok: false, error: 'preview identity changed' } : { ok: true },
   })), error => failed(error) && error.captureEvidence.shots.length === 3);
 });
@@ -115,7 +116,7 @@ test('replacement during final metadata collection also invalidates capture succ
   let changed = false, stats = 0;
   await assert.rejects(capturePreview(bundle(), transport({ control: async line => {
     if (line === 'stats' && ++stats === 2) changed = true;
-    if (changed && line.startsWith('plugins expect "Preview:')) return { ok: false, error: 'changed' };
+    if (changed && line.startsWith('tree ')) return { ok: false, error: 'changed' };
     return { ok: true };
   } })), failed);
 });
