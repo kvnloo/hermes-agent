@@ -575,7 +575,7 @@ function taskCard(call: ToolCall, result: Record<string, unknown> | undefined, n
 
 /** Native agent nesting only when a parent exists in this task and is acyclic. */
 function agentRows(agents: readonly Subagent[], now: number): JSX.Element[] {
-  const byId = new Map(agents.map(a => [a.id, a]))
+  const byId = new Map(agents.map(a => [a.id, a] as const))
   const children = new Map<string, Subagent[]>()
   const roots: Subagent[] = []
 

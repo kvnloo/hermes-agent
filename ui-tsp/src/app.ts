@@ -390,13 +390,18 @@ export class App implements OverlayHost {
     }
 
     this.#retry = null
-    this.#lastSubmitted = { sid: this.sid, text, replayable: !this.#startupAttachmentPending }
+    const submitted = { sid: this.sid, text, replayable: !this.#startupAttachmentPending }
+    this.#lastSubmitted = submitted
     this.#startupAttachmentPending = false
     this.transcript.user(text)
     this.#startBusy('Working…')
     this.#gw
       .request('prompt.submit', { session_id: this.sid, text, ...(queued ? { queued } : {}) })
       .catch((error: Error) => {
+        if (this.#lastSubmitted !== submitted || this.sid !== submitted.sid) {
+          return
+        }
+
         this.transcript.notice(error.message, 'error')
         this.#lastSubmitted = null
         this.busy = null
@@ -522,7 +527,9 @@ export class App implements OverlayHost {
 
     try {
       await this.#gw.request('image.attach', { path, session_id: sid })
-      this.#startupAttachmentPending = true
+      if (this.sid === sid) {
+        this.#startupAttachmentPending = true
+      }
     } catch (error) {
       this.transcript.notice(
         `Could not attach ${path}: ${error instanceof Error ? error.message : String(error)}`,

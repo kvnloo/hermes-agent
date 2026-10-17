@@ -24,7 +24,7 @@ afterAll(() => {
   rmSync(isolated.home, { force: true, recursive: true })
 })
 
-async function withTurn(retryable: boolean, check: (app: App, calls: ReturnType<typeof vi.spyOn<GatewayClient, 'request'>>) => void) {
+async function withTurn(retryable: boolean, check: (app: App, calls: unknown) => void) {
   const tern = new Session(new EventEmitter(), { write() {} }, { exitHooks: false, record: '' })
   const gw = new GatewayClient()
   const calls = vi.spyOn(gw, 'request').mockResolvedValue({} as never)
