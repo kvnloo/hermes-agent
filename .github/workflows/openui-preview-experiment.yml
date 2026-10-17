@@ -1,7 +1,7 @@
 name: OpenUI native preview experiment
 on:
   push:
-    branches: [exp/tern-openui-preview, exp/tern-openui-capture-guards, exp/tern-openui-frontend, exp/tern-openui-discovery]
+    branches: [feat/tern-openui-v2, exp/tern-openui-preview, exp/tern-openui-capture-guards, exp/tern-openui-frontend, exp/tern-openui-discovery]
     paths:
       - ui-tsp/experiments/openui-preview/**
       - ui-tsp/experiments/openui-generation/**
@@ -70,7 +70,7 @@ jobs:
       - name: No rewritten tracked inputs
         run: git diff --exit-code
   frontend:
-    if: github.repository == 'kvnloo/hermes-agent' && (github.ref == 'refs/heads/exp/tern-openui-frontend' || github.ref == 'refs/heads/exp/tern-openui-discovery')
+    if: github.repository == 'kvnloo/hermes-agent'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
@@ -85,12 +85,13 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '22.16.0'
+          # Bundles npm 11.19.0; npm 10.9.8 crashes in Arborist edgesOut here.
+          node-version: '26.7.0'
       - name: Install the existing frontend package versions without scripts or manifest changes
         run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false --workspaces=false
       - name: Typecheck the new frontend modules against the real Tern SDK
         run: >-
-          npx --no-install tsc --noEmit --target ES2024 --lib ES2024
+          npx --no-install tsc --ignoreConfig --types node --noEmit --target ES2024 --lib ES2024
           --module nodenext --moduleResolution nodenext --jsx react-jsx
           --jsxImportSource @stencil-hq/tern --strict --noUncheckedIndexedAccess
           --esModuleInterop --skipLibCheck
