@@ -35,6 +35,7 @@ import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting, splashTick
 import { Transcript } from './transcript.js'
 import { dockNodes } from './view/dock.js'
 import { entryNode } from './view/transcript.js'
+import { toolFoldState } from './view/tools.js'
 import { randomTip, type WelcomeContext } from './view/welcome.js'
 
 /** The composer's `editor` node id (dock → composer → line → input). */
@@ -60,6 +61,9 @@ export class App implements OverlayHost {
   readonly dispatches = new Dispatches()
   readonly composer = new Composer()
   readonly overlays: Overlay[] = []
+  /** Presentation-only collapse overrides, scoped by transcript turn and tool identity. */
+  readonly #folds = new Map<string, boolean>()
+  readonly #foldRevs = new Map<string, number>()
   sid: string | null = null
   /** The stored (database) id of the open session: what `session.list` rows are keyed by. */
   storedSid: string | null = null
@@ -282,6 +286,16 @@ export class App implements OverlayHost {
       return
     }
 
+    if (key.ctrl && !key.alt && !key.meta && key.name === 'o') {
+      // Tern's native selection is not exposed to the program. An empty
+      // composer is the only safe guarantee that no draft is selected.
+      if (!this.overlays.length && !this.#completion.open && !this.composer.text) {
+        this.toggleRecentTool()
+      }
+
+      return
+    }
+
     if (key.name === 'escape') {
       if (this.busy) {
         this.#interrupt()
@@ -306,6 +320,31 @@ export class App implements OverlayHost {
 
     if (action === 'submit') {
       this.#submit(this.composer.take())
+    }
+  }
+
+  /** Toggle the newest foldable tool without altering Hermes tool results. */
+  toggleRecentTool(): void {
+    for (let i = this.transcript.entries.length - 1; i >= 0; i--) {
+      const entry = this.transcript.entries[i]
+
+      if (entry?.kind !== 'turn') continue
+
+      for (let j = entry.blocks.length - 1; j >= 0; j--) {
+        const block = entry.blocks[j]
+
+        if (block?.kind !== 'tool') continue
+
+        const fold = toolFoldState(block.call)
+
+        if (!fold.collapsible) continue
+
+        const key = entry.id + ':' + block.call.id
+        this.#folds.set(key, !(this.#folds.get(key) ?? fold.collapsed))
+        this.#foldRevs.set(entry.id, (this.#foldRevs.get(entry.id) ?? 0) + 1)
+        this.changed()
+        return
+      }
     }
   }
 
@@ -644,6 +683,8 @@ export class App implements OverlayHost {
   #adopt(r: CreateResult) {
     if (this.sid !== r.session_id) {
       this.dispatches.reset()
+      this.#folds.clear()
+      this.#foldRevs.clear()
       this.#lastSubmitted = null
       this.#retry = null
       this.#startupAttachmentPending = false
@@ -1122,6 +1163,12 @@ export class App implements OverlayHost {
 
     const cx = {
       copy: (text: string) => copyToClipboard(text),
+      onCopyError: () => {
+        this.transcript.notice('Could not copy the answer to the clipboard.', 'warning')
+        this.changed()
+      },
+      foldRevision: (turnId: string) => this.#foldRevs.get(turnId) ?? 0,
+      toolCollapsed: (turnId: string, callId: string) => this.#folds.get(turnId + ':' + callId),
       canRetry: (turnId: string) => this.canRetry(turnId),
       retry: (turnId: string) => this.retryFailed(turnId),
       now,
