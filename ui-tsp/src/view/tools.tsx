@@ -10,6 +10,7 @@ import type { Subagent, Todo, ToolCall } from '../model.js'
 import { readMedia } from '../read-media.js'
 import { record } from '../transcript.js'
 
+import { browserBlockCard } from './browser-blocks.js'
 import { lspDiagnostics } from './lsp-diagnostics.js'
 import { outputLineCount, runBox, type RunBoxInput, runElapsed, runState, type RunState } from './runbox.js'
 import { age, compact, duration } from './time.js'
@@ -95,9 +96,10 @@ export function toolNode(
   cwd = '',
   collapsedOverride?: boolean,
   onToggle?: () => void,
-  media = false
+  media = false,
+  focusBrowser?: (id: string) => void
 ): JSX.Element {
-  const card = cardOf(call, now, cwd, media, { collapsed: collapsedOverride, onToggle })
+  const card = browserBlockCard(cardOf(call, now, cwd, media, { collapsed: collapsedOverride, onToggle }), call, focusBrowser)
   const runOutcome = card.name === 'bash' || card.name === 'eval' ? runState(call, record(call.result)) : undefined
   const status = call.status === 'unknown' ? 'unknown' : runOutcome ? RUN_STATUS[runOutcome] : (card.status ?? call.status)
   const running = status === 'running'

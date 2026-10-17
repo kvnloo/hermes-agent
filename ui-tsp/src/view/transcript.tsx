@@ -19,6 +19,7 @@ export interface TranscriptContext {
   cwd: string
   /** The negotiated node kind, not an assumed SDK feature. */
   media?: boolean
+  focusBrowser?(id: string): void
   now: number
   welcome: WelcomeContext
   copy(text: string): void
@@ -189,7 +190,7 @@ function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptConte
 
     case 'tool':
       return toolNode(b.call, cx.now, cx.cwd, cx.toolCollapsed?.(turnId, b.call.id),
-        cx.toggleTool ? () => cx.toggleTool?.(turnId, b.call.id) : undefined, cx.media)
+        cx.toggleTool ? () => cx.toggleTool?.(turnId, b.call.id) : undefined, cx.media, cx.focusBrowser)
 
     case 'thinking':
       return thinkingNode(b, id, cx)
