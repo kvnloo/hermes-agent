@@ -40,6 +40,7 @@ must fit the platform limit. Receipt directories are never auto-pruned.
 | `shortcuts` | Alt+M model picker, Alt+, Settings, F1 action-table help, Alt+C exact `/context` request and real reply; no config writes | Real gateway; allowlisted Alt/F1 control chords, no Ctrl-to-Meta ambiguity |
 | `openui` | exact `/visual` scope, real locked prepare CLI, picker discovery/selection, full-ID validation, dismissal and composer focus | Real CLI output; completed-terminal notification explicitly fixture-replayed; no agent/model turn or renderer installation |
 | `media` | negotiated native media node, exact real PNG path, successful read status, unclipped viewer | Explicit completed-read notification fixture with the real checked-in logo; no model turn or blob fabrication |
+| `written-artifacts` | confirmed SVG/Mermaid figures before retained source; failed SVG stays source-only with visible error | Actual source files plus explicitly labelled completion fixtures; attached-gateway paths are not claimed host-local |
 | `agent-inspector` | real agent-row click, scoped live tools/notes, long-log scrolling, final status, exact draft/cursor restoration | Explicit `subagent.*` notification fixtures; no model turn or control RPCs |
 | `ink-fallback` | actual frontend exits 75 without handshake, real `_launch_tui` runs actual Ink, painted PTY and clean exit | Real non-Tern PTY; only prebuilt-entry resolution overridden, no subprocess/UI/exit mocked |
 

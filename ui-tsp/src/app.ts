@@ -541,7 +541,8 @@ export class App implements OverlayHost {
           continue
         }
 
-        const fold = toolFoldState(block.call, this.info?.cwd ?? '', this.#tern.caps.kinds.includes('media'))
+        const fold = toolFoldState(block.call, this.info?.cwd ?? '', this.#tern.caps.kinds.includes('media'),
+          !this.#gw.attached && this.info?.terminal_backend === 'local')
 
         if (!fold.collapsible) {
           continue
@@ -1610,6 +1611,7 @@ export class App implements OverlayHost {
       copy: (text: string) => copyToClipboard(text),
       cwd: info?.cwd ?? '',
       media: this.#tern.caps.kinds.includes('media'),
+      hostLocal: !this.#gw.attached && info?.terminal_backend === 'local',
       focusBrowser: (id: string) => void focusBrowserBlock(this, id),
       onCopyError: () => {
         this.transcript.notice('Could not copy the answer to the clipboard.', 'warning')
