@@ -157,6 +157,33 @@ async function fileLinks() {
     // taken by the parent, not passed off as the adapter's original-pane capture.
   }, true)
 }
+async function lspDiagnostics() {
+  const rows = Array.from({length:9},(_,i)=>({severity:i===8?'warn':'error',line:i+1,col:1,message:`LSP fixture diagnostic ${i}`}))
+  await step('structured diagnostics from explicit edit replay start collapsed',async()=>{
+    await replay('message.start')
+    await replay('tool.start',{name:'patch',tool_id:'lsp-e2e',args:{path:'README.md'}})
+    await replay('tool.complete',{name:'patch',tool_id:'lsp-e2e',result:{success:true,lsp_diagnostics_data:[
+      {path:'README.md',status:'ok',diagnostics:rows.slice(0,5)},
+      {path:'AGENTS.md',status:'ok',diagnostics:rows.slice(5)}
+    ]}})
+    await replay('message.complete',{status:'complete',text:''})
+    const rendered = await until(()=>native.rendered(),ns=>[...ns.values()].some(n=>n.p?.role==='omp.tool.diagnostics'),'diagnostics section')
+    const section = [...rendered.values()].find(n=>n.p?.role==='omp.tool.diagnostics')!
+    assert.equal(section.p?.collapsed,true)
+    assert.deepEqual(section.p?.head,[{s:'chip',t:'8 errors · 1 warning'}])
+    assert.equal([...rendered.values()].filter(n=>n.p?.role==='omp.tool.diagnostics.file').length,2)
+    const linked = [...rendered.values()].filter(n=>n.p?.role==='omp.tool.diagnostic')
+    assert.equal(linked.length,9)
+    assert(linked.every(n=>typeof n.p?.href==='string' && n.p.href.startsWith(`file://${manifest.root}/`)))
+    await capture('collapsed')
+  },true)
+  await step('native summary click expands diagnostic messages',async()=>{
+    await tap('8 errors · 1 warning')
+    await until(()=>native.snapshot(),snap=>snap.nodes.some(n=>n.name==='LSP fixture diagnostic 0' && !n.states?.hidden),'visible expanded diagnostic')
+    await capture('expanded')
+  },true)
+}
+
 async function answerCopy() {
   await step('completed answer fixture excludes reasoning and tool text',fixtureTurn,true)
   await step('native Copy action emits exact answer-only OSC52 bytes',async()=>{
@@ -304,7 +331,7 @@ try {
   const wire = await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='delivered' && w.body.result && typeof w.body.result==='object' && !Array.isArray(w.body.result) && 'session_id' in w.body.result), 'real session creation')
   const ids = new Set(wire.filter(w=>w.dir==='request' && w.body.method==='session.create').map(w=>w.body.id))
   sid = String(record(wire.findLast(w=>w.dir==='delivered' && ids.has(w.body.id) && w.body.result)?.body.result).session_id)
-  const journeys:Record<string,()=>Promise<void>> = {settings,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui}
+  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui}
   assert(journeys[journey],`Unknown journey: ${journey}`)
   await journeys[journey]!()
 } catch (error) { console.error(error); process.exitCode=1 }
