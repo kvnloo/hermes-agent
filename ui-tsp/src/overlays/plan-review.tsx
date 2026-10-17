@@ -69,7 +69,7 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined) {
     focus: id => (refining ? `${id}.body.note` : null),
     node: id => (
       <Sheet id={id} role="omp.overlay.plan" title="Plan review">
-        {plan ? (
+        {plan && !refining ? (
           <col gap="sm" key="contents" role="omp.plan.contents">
             <text
               key="hint"
@@ -87,11 +87,19 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined) {
             ))}
           </col>
         ) : null}
-        <md key="markdown" role="omp.plan.body">
-          {plan
-            ? `${selected === 0 ? plan.preamble : ''}${plan.sections[selected]?.text ?? ''}`
-            : 'No heading-structured assistant plan found. Ask Hermes for a plan first.'}
-        </md>
+        {refining ? (
+          <text
+            key="refine-hint"
+            text="Describe what should change in the plan. Your original composer draft is preserved."
+            wrap="word"
+          />
+        ) : (
+          <md key="markdown" role="omp.plan.body">
+            {plan
+              ? `${selected === 0 ? plan.preamble : ''}${plan.sections[selected]?.text ?? ''}`
+              : 'No heading-structured assistant plan found. Ask Hermes for a plan first.'}
+          </md>
+        )}
         {plan && refining ? (
           <input
             cursor={note.cursor}
@@ -110,6 +118,19 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined) {
           />
         ) : null}
         <row align="center" gap="sm" key="actions" role="omp.actions">
+          {refining ? (
+            <row
+              key="review"
+              onClick={() => {
+                refining = false
+                host.changed()
+              }}
+              role="omp.btn"
+              title="Back to plan"
+            >
+              <text key="label" text="Back to plan" />
+            </row>
+          ) : null}
           {plan && !refining ? (
             <row key="approve" onClick={commands.approve} role="omp.btn" title="Approve  alt+a">
               <text key="label" text="Approve" />

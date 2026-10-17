@@ -207,6 +207,7 @@ describe('read-only plan review', () => {
       await rendered()
       const field = nodes('layer').find(n => n.props.key === 'note')!
       expect(focus).toHaveBeenLastCalledWith(field.id)
+      expect(body(nodes)).toBeUndefined()
       await press('\r')
       expect(request.mock.calls.some(([method]) => method === 'prompt.submit')).toBe(false)
       await surface.dispatch({
@@ -221,6 +222,12 @@ describe('read-only plan review', () => {
         len: 0
       })?.()
       await rendered()
+      await click('review')()
+      await rendered()
+      expect(body(nodes)).toContain('# Implementation plan')
+      await click('refine')()
+      await rendered()
+      expect(nodes('layer').find(n => n.props.key === 'note')?.props.text).toBe('  Add failure tests 🦉  ')
       const send = click('refine')
       await send()
       await send()
