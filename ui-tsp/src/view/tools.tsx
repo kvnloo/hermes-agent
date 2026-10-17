@@ -116,6 +116,7 @@ function cardOf(call: ToolCall, now: number): Card {
 
   switch (call.name) {
     case 'terminal':
+
     case 'shell':
       return bashCard(call, result)
 
@@ -134,6 +135,7 @@ function cardOf(call: ToolCall, now: number): Card {
       )
 
     case 'secret':
+
     case 'password':
       return { body: [], frame: 'inline', name: 'secret', title: 'Secret' }
 
@@ -414,11 +416,11 @@ function searchCard(call: ToolCall, result: Record<string, unknown> | undefined)
         <code
           key={`${f}.c${runIndex++}`}
           lang={langOf(path)}
-          wrap
           marks={run.map(h => ({ line: h.line, tone: 'accent' }))}
           numbers
           start={start}
           text={run.map(h => h.text).join('\n')}
+          wrap
         />
       )
       run = []
@@ -595,6 +597,7 @@ function agentRows(agents: readonly Subagent[], now: number): JSX.Element[] {
     while (ancestor) {
       if (seen.has(ancestor)) {
         parent = undefined
+
         break
       }
 

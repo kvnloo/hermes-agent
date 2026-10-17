@@ -144,10 +144,10 @@ function turnNode(turn: TurnEntry, id: string, cx: TranscriptContext): JSX.Eleme
       <row align="center" gap="xs" key="answer-actions" role="omp.turn.actions">
         <text
           key="copy"
+          onClick={() => copyAnswer(turn, cx.copy, () => cx.onCopyError?.())}
           role="omp.turn.copy"
           text="Copy"
           title="Copy answer"
-          onClick={() => copyAnswer(turn, cx.copy, () => cx.onCopyError?.())}
         />
       </row>
     )

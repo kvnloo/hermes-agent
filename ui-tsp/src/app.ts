@@ -34,8 +34,8 @@ import { SPLASH_ROLE } from './splash/index.js'
 import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting, splashTickMs } from './splash/launch.js'
 import { Transcript } from './transcript.js'
 import { dockNodes } from './view/dock.js'
-import { entryNode } from './view/transcript.js'
 import { toolFoldState } from './view/tools.js'
+import { entryNode } from './view/transcript.js'
 import { randomTip, type WelcomeContext } from './view/welcome.js'
 
 /** The composer's `editor` node id (dock → composer → line → input). */
@@ -349,6 +349,7 @@ export class App implements OverlayHost {
         this.#folds.set(key, !(this.#folds.get(key) ?? fold.collapsed))
         this.#foldRevs.set(entry.id, (this.#foldRevs.get(entry.id) ?? 0) + 1)
         this.changed()
+
         return
       }
     }
@@ -368,6 +369,7 @@ export class App implements OverlayHost {
         if (match) {
           this.#folds.set(entry.id + ':' + ev.key, ev.collapsed)
           this.#foldRevs.set(entry.id, (this.#foldRevs.get(entry.id) ?? 0) + 1)
+
           break
         }
       }
@@ -375,6 +377,7 @@ export class App implements OverlayHost {
 
     if (ev.ev === 'visible' && ev.sf === 'hermes') {
       this.#visible = ev.visible
+
       if (ev.visible) {
         this.dispatches.resume()
       }
@@ -477,6 +480,7 @@ export class App implements OverlayHost {
   /** Retry only the exact latest error, on the same idle session, never a stale or image-backed request. */
   canRetry(turnId: string): boolean {
     const candidate = this.#retry
+
     if (!candidate || candidate.turnId !== turnId || !this.sid || candidate.sid !== this.sid ||
         this.busy || this.#switches.pending || this.queue.length) {
       return false
@@ -592,6 +596,7 @@ export class App implements OverlayHost {
 
     try {
       await this.#gw.request('image.attach', { path, session_id: sid })
+
       if (this.sid === sid) {
         this.#startupAttachmentPending = true
       }
@@ -947,6 +952,7 @@ export class App implements OverlayHost {
       case 'btw.complete':
         if (ev.payload && 'text' in ev.payload && typeof ev.payload.text === 'string' && ev.payload.text.trim()) {
           t.panel(ev.type === 'btw.complete' ? '/btw' : 'Background task', ev.payload.text)
+
           if (!this.#visible) {
             this.dispatches.show({
               key: `task:${ev.payload.task_id}`,
@@ -1086,6 +1092,7 @@ export class App implements OverlayHost {
 
         return result
       }
+
       if (this.sid === sid) {
         throw new Error('The backend did not confirm the live reasoning effort.')
       }
