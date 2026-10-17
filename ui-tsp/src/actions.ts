@@ -181,6 +181,14 @@ export const APP_ACTIONS: readonly Action[] = [
     }
   },
   {
+    id: 'app.history.older',
+    title: 'Load and scroll to older retained history',
+    group: 'Navigation',
+    keys: ['ctrl+home'],
+    when: ctx => !ctx.overlayOpen && !ctx.completionOpen,
+    run: app => app.olderHistory()
+  },
+  {
     id: 'app.clipboard.copyPrompt',
     title: 'Copy composer text',
     group: 'Control',
