@@ -265,7 +265,11 @@ export async function replay({
     let segment = turn.id
     for (const b of turn.blocks) {
       if (b.kind === 'tool') segment = `${turn.id}~${b.id}~after`
-      if (b.kind === 'text') liveTextIds.add(`main.${segment}.${b.id}`)
+      if (b.kind === 'text') {
+        liveTextIds.add(`main.${segment}.${b.id}`)
+        // The pinned pre-retention App nests every block under the logical turn.
+        liveTextIds.add(`main.${turn.id}.${b.id}`)
+      }
     }
     messages.forEach(apply)
     const ordered: string[] = []
@@ -281,12 +285,12 @@ export async function replay({
     const wireText = ordered.join('')
     assert.equal(wireText, expected, 'wire reconstruction must preserve every delta, in order')
     for (const b of tools) {
-      const card = nodes.get(`main.${turn.id}~${b.id}`)
+      const card = nodes.get(`main.${turn.id}~${b.id}`) ?? nodes.get(`main.${turn.id}.${b.id}`)
       assert(card, `wire tool ${b.id}`)
       assert.equal(card.p?.status, 'done')
       assert(
         [...nodes.values()].some(
-          n => n.id.startsWith(`main.${turn.id}~${b.id}.`) && JSON.stringify(n.p).includes(b.call.resultText!)
+          n => n.id.startsWith(`${card.id}.`) && JSON.stringify(n.p).includes(b.call.resultText!)
         ),
         'wire output missing'
       )
@@ -319,7 +323,7 @@ export async function replay({
       droppedSemanticEvents: 0,
       textUpdatesMerged: deltas - textSnapshots,
       toolRecords: tools.length,
-      toolRunningSnapshotsMerged: tools.filter(b => !toolStates.get(`main.${turn.id}~${b.id}.${b.call.id}`)?.has('running')).length
+      toolRunningSnapshotsMerged: tools.filter(b => !toolStates.get(`main.${turn.id}~${b.id}.${b.call.id}`)?.has('running') && !toolStates.get(`main.${turn.id}.${b.id}`)?.has('running')).length
     }
   } finally {
     app.quit()
