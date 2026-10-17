@@ -6,8 +6,10 @@ import type { EditEvent, JSX, SendEvent } from '@stencil-hq/tern'
 
 import type { Dispatch } from '../attention.js'
 import type { Composer } from '../composer.js'
+import type { Todo } from '../model.js'
 
 import { age, compact } from './time.js'
+import { checklistNode } from './tools.js'
 
 /** What the dock shows. */
 export interface DockContext {
@@ -19,6 +21,8 @@ export interface DockContext {
   ready: boolean
   busy?: { since: object; startedAt: number; label: string }
   queued: readonly string[]
+  /** One current gateway-sourced plan for the visible session. */
+  todos: readonly Todo[]
   dispatches: readonly Dispatch[]
   model: string
   /** Hermes's reasoning effort (`none` = off); empty hides the chip. */
@@ -49,6 +53,12 @@ export interface DockContext {
 /** The `dock` region's nodes: the working row, the queued prompts and the composer. */
 export function dockNodes(cx: DockContext): JSX.Element[] {
   const nodes: JSX.Element[] = []
+
+  if (cx.todos.length) {
+    // Tern's native hud is a compact done/total pill with an expandable popover.
+    // Short plans stay readable as their full, three-to-five-row checklist.
+    nodes.push(checklistNode(cx.todos, cx.todos.length > 5 ? 'hud' : 'full', 'current-plan'))
+  }
 
   if (cx.busy) {
     nodes.push(

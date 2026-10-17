@@ -219,13 +219,16 @@ export class Transcript {
   }
 
   /** The newest todo snapshot lands on the newest todo tool call. */
-  todos(todos: unknown[]) {
+  todos(todos: unknown[]): Todo[] {
+    const list = toTodos(todos)
     const found = this.#lastTool(c => c.name === 'todo_list')
 
     if (found) {
-      found.call.todos = toTodos(todos)
+      found.call.todos = list
       this.#touch(found.turn)
     }
+
+    return list
   }
 
   subagent(type: string, p: SubagentEventPayload, at = Date.now()) {
