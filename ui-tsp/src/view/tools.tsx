@@ -54,7 +54,8 @@ const RUN_STATUS: Record<RunState, string> = {
   timeout: 'timeout',
   cancelled: 'cancelled',
   background: 'background',
-  error: 'error'
+  error: 'error',
+  unknown: 'unknown'
 }
 
 function nonemptyLines(text: string): number {
@@ -95,7 +96,7 @@ export function toolNode(
 ): JSX.Element {
   const card = cardOf(call, now, cwd, { collapsed: collapsedOverride, onToggle })
   const runOutcome = card.name === 'bash' || card.name === 'eval' ? runState(call, record(call.result)) : undefined
-  const status = runOutcome ? RUN_STATUS[runOutcome] : (card.status ?? call.status)
+  const status = call.status === 'unknown' ? 'unknown' : runOutcome ? RUN_STATUS[runOutcome] : (card.status ?? call.status)
   const running = status === 'running'
   const body = [...card.body]
   const error = call.status === 'error' ? errorOf(call) : undefined
@@ -105,7 +106,7 @@ export function toolNode(
       <text
         key="cancelled"
         role="omp.tool.notice"
-        spans={[{ s: 'muted', t: `Interrupted by user after ${duration(call.duration ?? 0)}` }]}
+        spans={[{ s: 'muted', t: call.duration === undefined ? 'Interrupted by user' : `Interrupted by user after ${duration(call.duration)}` }]}
       />
     )
   }
@@ -127,7 +128,7 @@ export function toolNode(
       lang: card.lang,
       meta: card.meta?.length ? card.meta : undefined,
       name: card.name,
-      note: call.status === 'cancelled' ? 'cancelled' : error && !card.body.length ? error : undefined,
+      note: call.status === 'unknown' ? 'no result recorded' : call.status === 'cancelled' ? 'cancelled' : error && !card.body.length ? error : undefined,
       preview: runOutcome ? undefined : card.preview,
       role: card.role,
       status,
@@ -156,6 +157,8 @@ function cardOf(
 
   switch (call.name) {
     case 'terminal':
+
+    case 'bash':
 
     case 'shell':
       return bashCard(call, result, presentation)

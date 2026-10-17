@@ -193,31 +193,8 @@ export class Transcript {
     }
 
     const { call, turn } = found
-
-    const output = record(p.result)?.output
-
-    // An interrupted command still completes: hermes marks its output instead of failing it.
-    const interrupted =
-      p.name === 'terminal' && typeof output === 'string' && /\[Command interrupted\]\s*$/.test(output)
-
-    call.status = interrupted ? 'cancelled' : isToolError(p, call.name) ? 'error' : 'done'
     call.finishedAt = at
-    const resultDuration = record(p.result)?.duration_s
-    const durationS = typeof p.duration_s === 'number' ? p.duration_s : typeof resultDuration === 'number' ? resultDuration : undefined
-    call.duration = durationS !== undefined ? Math.round(durationS * 1000) : at - call.startedAt
-    call.summary = p.summary ?? undefined
-    call.resultText = p.result_text ?? undefined
-    call.result = p.result
-    call.diff = p.inline_diff ?? undefined
-
-    if (p.args) {
-      call.args = { ...call.args, ...p.args }
-    }
-
-    if (Array.isArray(p.todos)) {
-      call.todos = toTodos(p.todos)
-    }
-
+    completeTool(call, p, at - call.startedAt)
     this.#touch(turn)
   }
 
@@ -242,6 +219,7 @@ export class Transcript {
     const byId = p.delegation_id
       ? this.#findTool(c => c.name === 'delegate_task' && record(c.result)?.delegation_id === p.delegation_id)
       : undefined
+
     // An explicit nonmatching delegation id must never land on a different
     // completed task. Before tool.complete, the one live call is a valid donor.
     const found = byId ?? this.#lastTool(c =>
@@ -272,9 +250,11 @@ export class Transcript {
     }
 
     agent.last = p
+
     if (p.parent_id && p.parent_id !== agent.id) {
       agent.parentId = p.parent_id
     }
+
     agent.goal = textField(p, 'task') || p.goal || agent.goal
     agent.label = textField(p, 'name') || agent.label
     agent.model = p.model ?? agent.model
@@ -406,12 +386,13 @@ export class Transcript {
         }
       } else if (m.role === 'tool') {
         const id = m.tool_call_id ?? this.id('c')
-        // History keeps the result only for edit tools (`content`, JSON); the rest come back bare.
-        const result = typeof m.content === 'string' && m.content ? m.content : undefined
+        const result = m.content
         const existing = calls.get(id)
 
         if (existing) {
-          existing.result = result ?? existing.result
+          if (result !== undefined && result !== null) {
+            completeTool(existing, historyCompletion(m, existing, result))
+          }
 
           continue
         }
@@ -424,16 +405,18 @@ export class Transcript {
           args,
           argsText: '',
           context: m.context ?? '',
-          duration: 0,
           id,
           name: bridged?.name ?? m.name ?? 'tool',
-          result,
           startedAt: at,
-          status: record(result)?.error ? 'error' : 'done'
+          status: 'unknown'
         }
 
         if (Array.isArray(args.todos)) {
           call.todos = toTodos(args.todos)
+        }
+
+        if (result !== undefined && result !== null) {
+          completeTool(call, historyCompletion(m, call, result))
         }
 
         calls.set(id, call)
@@ -528,6 +511,52 @@ function trailingText(turn: TurnEntry): string {
   return out
 }
 
+/** History has no clock to measure: only explicitly stored timing is authoritative. */
+function historyCompletion(m: TranscriptMessage, call: ToolCall, result: unknown): ToolCompletePayload {
+  const metadata = record(record(m.display_metadata)?.tool_result_metadata)
+
+  return {
+    tool_id: call.id,
+    name: call.name,
+    result,
+    duration_s: typeof m.duration_s === 'number' ? m.duration_s : undefined,
+    summary: typeof m.summary === 'string' ? m.summary : undefined,
+    result_text: typeof m.result_text === 'string' ? m.result_text : undefined,
+    inline_diff: typeof m.inline_diff === 'string' ? m.inline_diff :
+      typeof metadata?.inline_diff === 'string' ? metadata.inline_diff : undefined
+  }
+}
+
+/** Both live and resumed tools pass through this completion fold and the same view card builder. */
+function completeTool(call: ToolCall, p: ToolCompletePayload, elapsed?: number) {
+  const result = record(p.result)
+  const output = result?.output
+
+  const interrupted = ['terminal', 'shell', 'bash'].includes(call.name) &&
+    typeof output === 'string' && /\[Command interrupted\]\s*$/.test(output)
+
+  call.status = interrupted ? 'cancelled' : isToolError(p, call.name) ? 'error' : 'done'
+
+  const durationS = typeof p.duration_s === 'number' ? p.duration_s :
+    typeof result?.duration_s === 'number' ? result.duration_s : undefined
+
+  call.duration = durationS !== undefined ? Math.round(durationS * 1000) : elapsed
+  call.summary = p.summary ?? undefined
+  call.resultText = p.result_text ?? (typeof p.result === 'string' && !result ? p.result : undefined)
+  call.result = p.result
+  call.diff = p.inline_diff ?? undefined
+
+  if (p.args) {
+    call.args = { ...call.args, ...p.args }
+  }
+
+  const todos = p.todos ?? result?.todos
+
+  if (Array.isArray(todos)) {
+    call.todos = toTodos(todos)
+  }
+}
+
 function isToolError(p: ToolCompletePayload, callName?: string): boolean {
   const r = record(p.result)
 
@@ -536,7 +565,8 @@ function isToolError(p: ToolCompletePayload, callName?: string): boolean {
   }
 
   const name = p.name || callName
-  if ((name === 'terminal' || name === 'shell') && typeof r?.exit_code === 'number' && r.exit_code !== 0) {
+
+  if (['terminal', 'shell', 'bash'].includes(name ?? '') && typeof r?.exit_code === 'number' && r.exit_code !== 0) {
     return true
   }
 
@@ -545,6 +575,7 @@ function isToolError(p: ToolCompletePayload, callName?: string): boolean {
 
 function textField(value: object, key: string): string | undefined {
   const field = (value as Record<string, unknown>)[key]
+
   return typeof field === 'string' && field.length > 0 ? field : undefined
 }
 

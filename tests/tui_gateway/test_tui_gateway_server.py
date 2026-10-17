@@ -2696,6 +2696,7 @@ def test_history_to_messages_preserves_tool_calls_for_resume_display():
             "context": "resume",
             "name": "search_files",
             "role": "tool",
+            "content": "{}",
             "tool_call_id": history[2]["tool_call_id"],
         },
         {"role": "assistant", "text": "first answer"},
@@ -11315,7 +11316,7 @@ def test_session_compress_normalizes_messages_for_desktop_transcript(monkeypatch
         server._sessions.pop("sid", None)
 
     assert response["result"]["messages"] == server._history_to_messages(history)
-    assert "very sensitive tool output" not in str(response["result"]["messages"])
+    assert response["result"]["messages"][0]["content"] == history[1]["content"]
 
 
 def test_session_compress_returns_compute_host_history(monkeypatch):

@@ -7,7 +7,7 @@ import type { ToolCall } from '../model.js'
 
 import { duration } from './time.js'
 
-export type RunState = 'running' | 'ok' | 'exit' | 'timeout' | 'cancelled' | 'background' | 'error'
+export type RunState = 'running' | 'ok' | 'exit' | 'timeout' | 'cancelled' | 'background' | 'error' | 'unknown'
 
 export interface RunBoxInput {
   command: string
@@ -40,7 +40,8 @@ const RUN_WORD: Record<RunState, string> = {
   timeout: 'timeout',
   cancelled: 'cancelled',
   background: 'background',
-  error: 'error'
+  error: 'error',
+  unknown: 'no result recorded'
 }
 
 const RUN_TONE: Record<RunState, 'pending' | 'muted' | 'success' | 'warning' | 'error'> = {
@@ -50,7 +51,8 @@ const RUN_TONE: Record<RunState, 'pending' | 'muted' | 'success' | 'warning' | '
   timeout: 'warning',
   cancelled: 'muted',
   background: 'pending',
-  error: 'error'
+  error: 'error',
+  unknown: 'muted'
 }
 
 function numericExit(value: unknown): number | undefined {
@@ -66,6 +68,10 @@ function namedSession(value: unknown): string | undefined {
  * In particular, background spawn success is NOT foreground exit 0.
  */
 export function runState(call: ToolCall, result: Record<string, unknown> | undefined): RunState {
+  if (call.status === 'unknown') {
+    return 'unknown'
+  }
+
   const status = result?.status
   const error = typeof result?.error === 'string' ? result.error : ''
   const output = typeof result?.output === 'string' ? result.output : ''
