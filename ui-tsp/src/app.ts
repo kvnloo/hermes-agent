@@ -25,6 +25,7 @@ import logo from '../assets/logo.png'
 import { type ActionContext, actionForKey, APP_ACTIONS, matchesAction } from './actions.js'
 import { Attachments, eventImageSource, pastedImageSource, type SubmittedImage } from './attachments.js'
 import { Dispatches } from './attention.js'
+import { focusBrowserBlock } from './browser-blocks.js'
 import { BusyInput } from './busy-input.js'
 import { localCommand } from './commands.js'
 import { Composer } from './composer.js'
@@ -1588,6 +1589,7 @@ export class App implements OverlayHost {
       copy: (text: string) => copyToClipboard(text),
       cwd: info?.cwd ?? '',
       media: this.#tern.caps.kinds.includes('media'),
+      focusBrowser: (id: string) => void focusBrowserBlock(this, id),
       onCopyError: () => {
         this.transcript.notice('Could not copy the answer to the clipboard.', 'warning')
         this.changed()

@@ -458,6 +458,29 @@ export interface ProjectFacts {
   verifyCommands: string[]
   contextFiles: string[]
 }
+export interface BrowserBlocksResult {
+  available: boolean
+  blocks: BrowserBlock[]
+}
+export interface BrowserBlock {
+  target_id: string
+  title: string
+  url: string
+  owner?: number | null
+  owned: boolean
+  available: boolean
+}
+export interface BrowserBlockParams {
+  session_id: string
+  profile?: string | null
+  target_id: string
+}
+export interface BrowserTargetResult {
+  target_id: string
+  title: string
+  url: string
+  in_tern: boolean
+}
 /** ``key`` selects one getter from ``_CONFIG_GETTERS``; ``cwd`` feeds the ``project`` getter, ``session_id`` lets ``reasoning`` / ``fast`` answer with the session's live pin. */
 export interface ConfigGetParams {
   profile?: string | null
@@ -5046,6 +5069,10 @@ export interface RpcMethods {
   'bot_relay.reply': { params: BotRelayReplyParams; result: OkResult }
   /** Replace this gateway's view of agents on other connections; answers the accepted row count. */
   'bot_relay.roster.sync': { params: BotRelayRosterSyncParams; result: BotRelayRosterSyncResult }
+  /** Explicit user intent: hand one undriven Tern browser block to this session. */
+  'browser.adopt': { params: BrowserBlockParams; result: BrowserTargetResult }
+  /** List Tern browser blocks without granting drive permission. */
+  'browser.blocks': { params: SessionParams; result: BrowserBlocksResult }
   /** Hard-detach only the controller owned by this authenticated transport. */
   'browser.controller.detach': { params: BrowserControllerParams; result: BrowserControllerDetachResult }
   /** Acknowledge a heartbeat only for this transport's own attached controller. */
@@ -5054,6 +5081,8 @@ export interface RpcMethods {
   'browser.controller.register': { params: BrowserControllerRegisterParams; result: BrowserControllerRegisterResult }
   /** Deliver one command result to the broker; accepted is false for unknown or settled command ids. */
   'browser.controller.result': { params: BrowserControllerResultParams; result: BrowserControllerResultResult }
+  /** Focus only an agent-owned or explicitly adopted browser block. */
+  'browser.focus': { params: BrowserBlockParams; result: BrowserTargetResult }
   /** Inspect, attach to, or drop the CDP browser the tools use, or switch Browser Use mode (``use``, applies to new sessions); ``messages`` narrate a connect. */
   'browser.manage': { params: BrowserManageParams; result: BrowserManageResult }
   /** Lock one answer of a batch clarify request (editable until every question is locked). */
@@ -5556,10 +5585,13 @@ export const RPC_METHODS = [
   'bot_relay.outbox.drain',
   'bot_relay.reply',
   'bot_relay.roster.sync',
+  'browser.adopt',
+  'browser.blocks',
   'browser.controller.detach',
   'browser.controller.heartbeat',
   'browser.controller.register',
   'browser.controller.result',
+  'browser.focus',
   'browser.manage',
   'clarify.lock',
   'cli.exec',

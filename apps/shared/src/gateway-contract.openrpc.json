@@ -241,6 +241,42 @@
       }
     },
     {
+      "name": "browser.adopt",
+      "summary": "Explicit user intent: hand one undriven Tern browser block to this session.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/BrowserBlockParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/BrowserTargetResult"
+        }
+      }
+    },
+    {
+      "name": "browser.blocks",
+      "summary": "List Tern browser blocks without granting drive permission.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/SessionParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/BrowserBlocksResult"
+        }
+      }
+    },
+    {
       "name": "browser.controller.detach",
       "summary": "Hard-detach only the controller owned by this authenticated transport.",
       "params": [
@@ -309,6 +345,24 @@
         "name": "result",
         "schema": {
           "$ref": "#/components/schemas/BrowserControllerResultResult"
+        }
+      }
+    },
+    {
+      "name": "browser.focus",
+      "summary": "Focus only an agent-owned or explicitly adopted browser block.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/BrowserBlockParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/BrowserTargetResult"
         }
       }
     },
@@ -7288,6 +7342,105 @@
         "title": "BrowserAction",
         "type": "string"
       },
+      "BrowserBlock": {
+        "additionalProperties": false,
+        "properties": {
+          "target_id": {
+            "title": "Target Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Owner"
+          },
+          "owned": {
+            "title": "Owned",
+            "type": "boolean"
+          },
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "target_id",
+          "title",
+          "url",
+          "owned",
+          "available"
+        ],
+        "title": "BrowserBlock",
+        "type": "object"
+      },
+      "BrowserBlockParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "target_id": {
+            "title": "Target Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "target_id"
+        ],
+        "title": "BrowserBlockParams",
+        "type": "object"
+      },
+      "BrowserBlocksResult": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/BrowserBlock"
+            },
+            "title": "Blocks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "available",
+          "blocks"
+        ],
+        "title": "BrowserBlocksResult",
+        "type": "object"
+      },
       "BrowserControllerCancelPayload": {
         "additionalProperties": false,
         "description": "``gateway/browser_control_broker.py::_cancel_frame``.",
@@ -7671,6 +7824,35 @@
           "level"
         ],
         "title": "BrowserProgressPayload",
+        "type": "object"
+      },
+      "BrowserTargetResult": {
+        "additionalProperties": false,
+        "properties": {
+          "target_id": {
+            "title": "Target Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "in_tern": {
+            "title": "In Tern",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "target_id",
+          "title",
+          "url",
+          "in_tern"
+        ],
+        "title": "BrowserTargetResult",
         "type": "object"
       },
       "CapabilityEntry": {

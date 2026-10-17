@@ -93,6 +93,32 @@ Only `--global` persists the effort in the profile config.
 Display commands such as `/reasoning show` do not change the effort.
 A late command response cannot overwrite the status or transcript of another session.
 
+## Tern browser blocks
+
+When the gateway runs in a Tern pane (`TERN_PANE` and `TERN_WINDOW_KEY`) and the
+native browser interface is available, the existing `browser_*` tools use a
+new browser picture-in-picture over that pane. No extra model tool is added.
+An explicit CDP connection still takes precedence.
+
+Press **Alt+Shift+B** to list this window's browser blocks (id, title, URL and
+PiP owner). Listing a block does not grant control. Choose **Hand over to agent**
+on an undriven block to explicitly adopt that exact id for the live session;
+finish the current turn first. Blocks driven by other sessions/scripts cannot
+be adopted. An owned block offers **Focus**, and completed browser cards show
+its title, URL, **in Tern block**, and a **Focus browser block** action.
+
+Cleanup closes only blocks the agent opened. Adopted user blocks are released,
+not closed. Outside Tern, on discovery failure, or when the initial native
+capability probe reports unsupported, the old browser backend remains selected.
+A failure on an already-owned target never silently switches browsers.
+
+The adapter uses `tern browser --help`'s JSON operations and `tern focus` with an
+explicit window key. Native page automation is platform-dependent (headless
+Tern reports it unavailable). This does not implement OMP's extended tab/runtime
+API, CDP emulation, recording, frame helpers or arbitrary Tern window control.
+Ownership and trusted-input protocol are adapted from OMP's Tern browser modules
+(Can Bölük / Stencil, MIT; pinned reference in issue #554).
+
 ## Native Settings
 
 Open `/settings`, `/prefs`, or the composer's **Settings** control.

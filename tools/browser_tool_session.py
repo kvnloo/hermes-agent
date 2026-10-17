@@ -349,6 +349,11 @@ def _get_session_info(task_id: Optional[str] = None) -> Dict[str, Any]:
     if task_id is None:
         task_id = "default"
 
+    from tools.browser_tern import get_provider
+    tern = get_provider()
+    if tern is not None:
+        return tern.session_info
+
     _lifecycle._start_browser_cleanup_thread()
     _lifecycle._update_session_activity(task_id)
 
@@ -875,6 +880,11 @@ def _run_browser_command(
     if timeout is None:
         timeout = _bt._safe_command_timeout()
     args = args or []
+
+    from tools.browser_tern import run_command
+    tern_result = run_command(task_id, command, args)
+    if tern_result is not None:
+        return tern_result
 
     preflight = _browser_command_preflight()
     if "browser_cmd" not in preflight:

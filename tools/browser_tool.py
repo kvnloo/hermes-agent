@@ -782,6 +782,8 @@ def browser_navigate(url: str, task_id: Optional[str] = None) -> str:
         return blocked
 
     response = {"success": True, "url": final_url, "title": title}
+    if result.get("tern_target"):
+        response["tern_target"] = result["tern_target"]
     features = session_info.get("features") or {}
     if features.get("real_profile"):  # auditability: this ran on the user's real-profile copy-browser
         response["used_real_profile"] = True
@@ -831,6 +833,8 @@ def browser_snapshot(
         return blocked
 
     response = {"success": True, **_snapshot_fields(result)}
+    if result.get("tern_target"):
+        response["tern_target"] = result["tern_target"]
     _lp._copy_fallback_warning(response, result)
 
     # Merge supervisor state (pending dialogs + frame tree) when a CDP supervisor is
@@ -848,9 +852,11 @@ def browser_snapshot(
     return _dumps(response)
 
 
-def _json_with_fallback(response: Dict[str, Any], result: Dict[str, Any]) -> str:
+def _json_with_fallback(response: Dict[str, Any], result: Dict[str, Any], **kw) -> str:
     """``json.dumps`` of ``response`` with the Lightpanda fallback metadata copied from ``result``."""
-    return _dumps(_lp._copy_fallback_warning(response, result))
+    if result.get("tern_target"):
+        response["tern_target"] = result["tern_target"]
+    return _dumps(_lp._copy_fallback_warning(response, result), **kw)
 
 
 def _failed_response(result: Dict[str, Any], default_error: str) -> str:
@@ -911,6 +917,8 @@ def browser_type(ref: str, text: str, task_id: Optional[str] = None) -> str:
         response = {"success": True, "typed": display_text, "element": ref}
     else:
         response = _err(result.get("error", f"Failed to type into {ref}"))
+    if result.get("tern_target"):
+        response["tern_target"] = result["tern_target"]
     return _dumps(redact_browser_typed_text_for_display(_lp._copy_fallback_warning(response, result), text))
 
 
@@ -993,6 +1001,9 @@ def browser_console(clear: bool = False, expression: Optional[str] = None, task_
     if blocked is not None:
         return blocked
 
+    from tools.browser_tern import get_provider
+    if get_provider() is not None:
+        return _dumps(_err("Console log buffering is not supported by the Tern adapter; expression evaluation is available"))
     clear_args = ["--clear"] if clear else []
     console_result = _session._run_browser_command(effective_task_id, "console", clear_args)
     errors_result = _session._run_browser_command(effective_task_id, "errors", clear_args)
@@ -1037,7 +1048,7 @@ def _eval_result_or_blocked(effective_task_id: str, parsed: Any, result: Dict[st
     blocked = _blocked_private_page_content(effective_task_id)
     if blocked is not None:
         return blocked
-    return _dumps(_lp._copy_fallback_warning(_eval_ok_response(parsed, **extra), result), default=str)
+    return _json_with_fallback(_eval_ok_response(parsed, **extra), result, default=str)
 
 
 def _eval_supervisor_fast_path(effective_task_id: str, expression: str) -> Optional[str]:
@@ -1220,7 +1231,8 @@ def _capture_vision_screenshot(effective_task_id: str, annotate: bool, screensho
             {"success": True, "data": {"path": str(screenshot_path)}}, _LP_VISION_FALLBACK_REASON)
     else:
         # In the sandbox the CLI writes to ITS filesystem; the file is fetched back below.
-        remote_path = _session.sandbox_screenshot_path(screenshot_path)
+        from tools.browser_tern import get_provider
+        remote_path = None if get_provider() is not None else _session.sandbox_screenshot_path(screenshot_path)
         screenshot_args = (["--annotate"] if annotate else []) + ["--full", remote_path or str(screenshot_path)]
         # A failed Lightpanda pre-route forces Chrome so _run_browser_command
         # doesn't trigger a redundant LP fallback.
@@ -1286,7 +1298,7 @@ def browser_vision(question: str, annotate: bool = False, task_id: Optional[str]
         _lp._copy_fallback_warning(response_data, result)
         if annotate and result.get("data", {}).get("annotations"):
             response_data["annotations"] = result["data"]["annotations"]
-        return _dumps(response_data)
+        return _json_with_fallback(response_data, result)
     except Exception as e:
         # Keep a captured screenshot — the failure is in the analysis, not the capture,
         # and deleting it loses evidence. The 24-hour cleanup bounds disk growth.

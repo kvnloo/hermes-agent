@@ -6,6 +6,7 @@ import type { Key, ScrollTo } from '@stencil-hq/tern'
 import type { App } from './app.js'
 import { forkSession } from './fork-session.js'
 import { cycleModel } from './model-cycle.js'
+import { openBrowserBlocks } from './overlays/browser-blocks.js'
 import { openHistorySearch } from './overlays/history.js'
 import { openModelPicker } from './overlays/models.js'
 
@@ -214,6 +215,14 @@ export const APP_ACTIONS: readonly Action[] = [
     run: app => app.jobs.show()
   },
   {
+    id: 'app.browser.blocks',
+    title: 'Show / hand over Tern browser blocks',
+    group: 'Session',
+    keys: ['alt+shift+b'],
+    when: ctx => !ctx.overlayOpen,
+    run: app => openBrowserBlocks(app)
+  },
+  {
     id: 'app.agents.hub',
     title: 'Show agents',
     group: 'Session',
@@ -315,6 +324,10 @@ export function jobsKeyAction(key: Key): 'close' | 'next' | 'previous' | undefin
   ] as const
 
   return bindings.find(binding => matchesAction({ ...binding, extraModifiers: false }, key))?.action
+}
+
+export function browserBlocksKeyAction(key: Key): 'close' | undefined {
+  return matchesAction({ keys: ['escape'] }, key) ? 'close' : undefined
 }
 
 /** Modifier order in a chord is immaterial; new chords require exact modifiers. */
