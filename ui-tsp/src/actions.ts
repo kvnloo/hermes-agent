@@ -4,6 +4,7 @@
 import type { Key, ScrollTo } from '@stencil-hq/tern'
 
 import type { App } from './app.js'
+import { forkSession } from './fork-session.js'
 import { cycleModel } from './model-cycle.js'
 import { openHistorySearch } from './overlays/history.js'
 import { openModelPicker } from './overlays/models.js'
@@ -221,6 +222,14 @@ export const APP_ACTIONS: readonly Action[] = [
     run: app => {
       void app.slash('/sessions')
     }
+  },
+  {
+    id: 'app.session.fork',
+    title: '/fork [message-id]: fork into a new Tern pane',
+    group: 'Session',
+    keys: ['alt+shift+f'],
+    when: ctx => !ctx.busy,
+    run: app => { void forkSession(app) }
   },
   {
     id: 'app.clipboard.copyPrompt',

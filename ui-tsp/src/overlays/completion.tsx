@@ -9,6 +9,7 @@ import { applyCompletion, completionRequestForInput, completionToApplyOnSubmit }
 import type { GatewayClient } from '@tui/gatewayClient.js'
 
 import type { Composer } from '../composer.js'
+import { FORK_COMMANDS } from '../fork-session.js'
 import type { OverlayHost } from '../overlay.js'
 
 import { SETTINGS_COMMANDS } from './settings.js'
@@ -95,12 +96,13 @@ export class Completion {
           const items = r?.items ?? []
 
           if (request.method === 'complete.slash' && !request.skillsOnly && /^\/\S*$/.test(before)) {
-            for (const [text, meta] of SETTINGS_COMMANDS) {
+            for (const [text, meta] of [...SETTINGS_COMMANDS, ...FORK_COMMANDS]) {
               if (text.startsWith(before) && !items.some(item => item.text === text)) {
                 items.push({ display: text, kind: 'command', meta, text })
               }
             }
           }
+
           this.items =
             request.method === 'complete.slash' && request.skillsOnly ? items.filter(i => i.kind === 'skill') : items
           this.selected = 0
