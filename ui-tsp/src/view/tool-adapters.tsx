@@ -2,7 +2,8 @@
 // vision_tools.py. Native envelopes carry text_summary, not an auxiliary answer.
 import { type JSX } from '@stencil-hq/tern'
 
-import { fileHref } from '../links.js'
+import { displayText } from '../display-text.js'
+import { displayMarkdown, fileHref } from '../links.js'
 import type { ToolCall } from '../model.js'
 import { readMedia } from '../read-media.js'
 import { record } from '../transcript.js'
@@ -10,7 +11,6 @@ import { record } from '../transcript.js'
 import type { Card } from './tools.js'
 
 const str = (value: unknown): string | undefined => typeof value === 'string' && value ? value : undefined
-const excerpt = (text: string): string => text.length > 4000 ? `${text.slice(0, 4000)}\n…` : text
 
 function webHref(value: string | undefined): string | undefined {
   try {
@@ -28,9 +28,9 @@ function analysisBody(call: ToolCall, result: Record<string, unknown> | undefine
   const error = str(result?.error)
 
   return [
-    ...(question ? [<text key="question" role="omp.tool.context" text={question} wrap="word" />] : []),
-    ...(analysis ? [<md key="analysis">{excerpt(analysis)}</md>] : fallback),
-    ...(error ? [<text key="error" role="omp.tool.notice" spans={[{ s: 'error', t: error }]} wrap="word" />] : [])
+    ...(question ? [<text key="question" role="omp.tool.context" text={displayText(question)} wrap="word" />] : []),
+    ...(analysis ? [<md key="analysis">{displayMarkdown(analysis, '')}</md>] : fallback),
+    ...(error ? [<text key="error" role="omp.tool.notice" spans={[{ s: 'error', t: displayText(error) }]} wrap="word" />] : [])
   ]
 }
 
