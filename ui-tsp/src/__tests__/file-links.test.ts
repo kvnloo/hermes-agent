@@ -1,11 +1,32 @@
-import { Node } from '@stencil-hq/tern'
-import { describe, expect, it } from 'vitest'
+import { EventEmitter } from 'node:events'
+import { rmSync } from 'node:fs'
 
+import { Node, Session, View } from '@stencil-hq/tern'
+import { GatewayClient } from '@tui/gatewayClient.js'
+import { afterAll, describe, expect, it, vi } from 'vitest'
+
+import { App } from '../app.js'
 import { fileHref, rewriteLocalMarkdownLinks } from '../links.js'
 import type { ToolCall, TurnEntry } from '../model.js'
 import { Transcript } from '../transcript.js'
 import { entryNode } from '../view/transcript.js'
 import { toolNode } from '../view/tools.js'
+
+const isolated = await vi.hoisted(async () => {
+  const { mkdtempSync } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const home = mkdtempSync(join(tmpdir(), 'hermes-tern-file-links-'))
+  const previous = process.env.HERMES_HOME
+  process.env.HERMES_HOME = home
+  return { home, previous }
+})
+
+afterAll(() => {
+  if (isolated.previous === undefined) delete process.env.HERMES_HOME
+  else process.env.HERMES_HOME = isolated.previous
+  rmSync(isolated.home, { force: true, recursive: true })
+})
 
 const cwd = '/workspace/project'
 
@@ -151,6 +172,41 @@ describe('assistant Markdown file links', () => {
     // Cached historical turns must not keep links from another cwd.
     const alternate = node(entryNode(turn, 'main.turn', { ...cx, cwd: '/other' }))
     expect(childrenOf(alternate, 'md')[0]?.props.text).toBe('See [a](file:///other/src/a.ts)')
+  })
+
+  it('passes the live Hermes session cwd into the emitted Tern surface', async () => {
+    const savedSplash = process.env.HERMES_TUI_SPLASH
+    process.env.HERMES_TUI_SPLASH = '0'
+    const tern = new Session(new EventEmitter(), { write() {} }, { exitHooks: false, record: '' })
+    const app = new App(tern, new GatewayClient(), 'test')
+    app.sid = 'session-1'
+    app.info = { cwd, model: 'fixture' }
+    const running = app.run()
+    const surface = tern.surfaces[0]!
+    const render = surface.render.bind(surface)
+    let latest: View | undefined
+
+    surface.render = view => {
+      latest = View.from(view)
+      render(view)
+    }
+
+    try {
+      app.transcript.start(0)
+      app.transcript.text('See [a](src/a.ts)', 1)
+      app.transcript.complete({ status: 'complete', text: 'See [a](src/a.ts)' }, 2)
+      app.changed()
+      await new Promise<void>(resolve => setImmediate(resolve))
+
+      const assistant = latest?.regions[1]?.children.find(n => n.kind === 'col' && n.props.role === 'omp.assistant')
+      const md = assistant?.children.find(n => n.kind === 'md')
+      expect(md?.props.text).toBe('See [a](file:///workspace/project/src/a.ts)')
+    } finally {
+      app.quit()
+      await running
+      if (savedSplash === undefined) delete process.env.HERMES_TUI_SPLASH
+      else process.env.HERMES_TUI_SPLASH = savedSplash
+    }
   })
 
   it('does not resolve a relative target without an absolute Hermes session cwd', () => {
