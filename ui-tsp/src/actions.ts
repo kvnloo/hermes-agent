@@ -1,7 +1,7 @@
 // OMP-style app actions. Composer editing and overlay-local keys stay with
 // their owners. Inspired by oh-my-pi (Can Bölük / Stencil), MIT.
 
-import type { Key } from '@stencil-hq/tern'
+import type { Key, ScrollTo } from '@stencil-hq/tern'
 
 import type { App } from './app.js'
 import { openModelPicker } from './overlays/models.js'
@@ -202,6 +202,22 @@ const APPROVAL_ACTIONS: readonly { keys: readonly string[]; action: ApprovalActi
 export function approvalActionForKey(key: Key): ApprovalAction | undefined {
   return APPROVAL_ACTIONS.find(binding => matchesAction(binding, key))?.action
 }
+
+interface ReportAction {
+  keys: readonly string[]
+  intent: { kind: 'close' } | { kind: 'scroll'; to: ScrollTo }
+}
+
+/** Overlay-local bindings live beside the app shortcuts, never in the view. */
+export const REPORT_ACTIONS: readonly ReportAction[] = [
+  { keys: ['escape'], intent: { kind: 'close' } },
+  { keys: ['up'], intent: { kind: 'scroll', to: 'line-up' } },
+  { keys: ['down'], intent: { kind: 'scroll', to: 'line-down' } },
+  { keys: ['page_up'], intent: { kind: 'scroll', to: 'page-up' } },
+  { keys: ['page_down'], intent: { kind: 'scroll', to: 'page-down' } },
+  { keys: ['home'], intent: { kind: 'scroll', to: 'start' } },
+  { keys: ['end'], intent: { kind: 'scroll', to: 'end' } }
+]
 
 /** Modifier order in a chord is immaterial; new chords require exact modifiers. */
 export function matchesAction(action: Pick<Action, 'keys' | 'extraModifiers'>, key: Key): boolean {

@@ -142,6 +142,25 @@ Page actions use `act: "page"` and `value` (the page ID).
 Choice previews use `item: "<row>=<option>"`. Close with a row value cancels its editor. Close without a value closes the sheet.
 Hermes owns the search text, edit draft, caret and raw keys. Tern owns native layout, chrome and control rendering.
 
+## Native report sheets
+
+`/usage`, `/context` (including Alt+U / Alt+C and the context meter), `/btw`,
+`/history`, `/tools`, detailed `/help`, and the argument-free `/status`, `/agents`
+and `/mcp` reports open one shared Markdown sheet instead of transcript panels.
+The explicit allowlist is in `src/reports.ts`; unknown commands and mutating
+forms retain their existing behavior. `/help` without arguments keeps its native
+commands/shortcuts sheet.
+
+Background and BTW completion events produce dismissible dock notices with View;
+results stay out of the conversation. Failed side-agent results remain visibly
+labelled as failed. Notices are presentation-only, scoped to the live session,
+with no polling or idle timers. View does not cover a pending approval prompt.
+
+Esc or Close returns to the untouched composer draft/caret. Arrow keys,
+Page Up/Down, Home and End scroll the native report overlay, never the transcript.
+Copy sends the exact Markdown through OSC 52 and reports failures in the sheet;
+it does not claim that the host clipboard acknowledged the write.
+
 ## Native overlay actions
 
 An overlay action belongs to the instance that produced its native node.

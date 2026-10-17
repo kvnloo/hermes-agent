@@ -229,10 +229,40 @@ async function shortcuts() {
     const reply = replies.find(w=>w.dir === 'delivered' && w.body.id === request.id)!.body
     assert(!reply.error, JSON.stringify(reply))
     assert.equal(typeof record(reply.result).output, 'string')
+    const nodes = await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.role === 'omp.overlay.report' && n.p.head === '/context'), 'native context report sheet')
+    assert(![...nodes.values()].some(n=>n.p?.role === 'omp.custom'), 'context must not append a transcript panel')
+    assert.equal([...nodes.values()].find(n=>n.p?.role === 'omp.report.body')?.p?.text, record(reply.result).output)
     await capture('context')
+    await native.key('Escape')
+    await until(()=>native.rendered(), ns=>![...ns.values()].some(n=>n.p?.role === 'omp.overlay.report'), 'context sheet closed')
+    await native.type('Report sheet focus probe')
+    await until(()=>native.rendered(), ns=>ns.get('dock.composer.line.input')?.p?.text === 'Report sheet focus probe', 'composer focus restored after report')
     assert.equal(await native.configBytes(), before)
     assert(!(await native.wire()).some(w=>w.dir === 'denied' || (w.dir === 'request' && ['prompt.submit','config.set','settings.set'].includes(String(w.body.method)))))
   })
+  await step('background report View, native scrolling and Close preserve the draft', async()=>{
+    const text = ['Report first marker', ...Array.from({length:100}, (_,i)=>`Report paragraph ${i}`), 'Report last marker'].join('\n\n')
+    const before = (await native.rendered()).get('dock.composer.line.input')?.p
+    await replay('background.complete', {task_id:'report-scroll-fixture', text})
+    const notice = await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.role === 'omp.report.view'), 'background report dock View')
+    assert(![...notice.values()].some(n=>n.p?.role === 'omp.custom' || n.p?.role === 'omp.overlay.report'))
+    await tap('View report: Background task')
+    await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.role === 'omp.report.body' && n.p.text === text), 'exact long report')
+    const initial = flatten((await native.snapshot()).tree).find(n=>n.text === 'Report first marker')?.rect
+    assert(initial, 'first paragraph exists in native report layout')
+    await capture('report-start')
+    await native.key('End')
+    const end = await until(async()=>{
+      const snapshot = await native.snapshot()
+      return {rect:flatten(snapshot.tree).find(n=>n.text === 'Report last marker')?.rect, height:snapshot.viewport.height}
+    }, value=>Boolean(value.rect && value.rect[1] > 0 && value.rect[1]+value.rect[3] <= value.height), 'last report paragraph scrolled into viewport')
+    await writeFile(join(manifest.proof,'report-scroll.json'), JSON.stringify({initial, end}))
+    await capture('report-end')
+    await native.key('Escape')
+    const closed = await until(()=>native.rendered(), ns=>![...ns.values()].some(n=>n.p?.role === 'omp.overlay.report'), 'report closed')
+    assert.deepEqual(closed.get('dock.composer.line.input')?.p, before)
+    assert(![...closed.values()].some(n=>n.p?.role === 'omp.custom'))
+  }, true)
 }
 async function openui() {
   let scope = '', notice: { id:string; path:string; scope:string } | undefined
