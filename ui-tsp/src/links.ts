@@ -78,10 +78,44 @@ function escaped(line: string, at: number): boolean {
   return n % 2 === 1
 }
 
-/**
- * Resolve inline links without changing text, images, fenced code or inline code.
- * Reference links, titles and unsupported destinations remain Markdown's own job.
- */
+/** Read one Markdown inline link without taking over images or reference links. */
+function linkAt(line: string, at: number): { destStart: number; close: number } | undefined {
+  let depth = 1
+  let labelEnd = at + 1
+
+  while (labelEnd < line.length && depth) {
+    if (!escaped(line, labelEnd)) {
+      if (line[labelEnd] === '[') depth++
+      else if (line[labelEnd] === ']') depth--
+    }
+
+    if (depth) labelEnd++
+  }
+
+  if (depth || line[labelEnd + 1] !== '(') {
+    return undefined
+  }
+
+  const destStart = labelEnd + 2
+  let close = destStart
+  let parentheses = 0
+
+  while (close < line.length) {
+    if (!escaped(line, close)) {
+      if (line[close] === '(') parentheses++
+      else if (line[close] === ')') {
+        if (!parentheses) break
+        parentheses--
+      }
+    }
+
+    close++
+  }
+
+  return close < line.length ? { destStart, close } : undefined
+}
+
+/** Resolve inline links while keeping code spans and image targets literal. */
 function rewriteLine(line: string, cwd: string): string {
   let output = ''
   let ticks = 0
@@ -110,58 +144,27 @@ function rewriteLine(line: string, cwd: string): string {
       continue
     }
 
-    let depth = 1
-    let labelEnd = i + 1
+    const link = linkAt(line, i)
 
-    while (labelEnd < line.length && depth) {
-      if (!escaped(line, labelEnd)) {
-        if (line[labelEnd] === '[') depth++
-        else if (line[labelEnd] === ']') depth--
-      }
-
-      if (depth) labelEnd++
-    }
-
-    if (depth || line[labelEnd + 1] !== '(') {
+    if (!link) {
       output += line[i++]
       continue
     }
 
-    const start = labelEnd + 2
-    let close = start
-    let parentheses = 0
-
-    while (close < line.length) {
-      if (!escaped(line, close)) {
-        if (line[close] === '(') parentheses++
-        if (line[close] === ')') {
-          if (!parentheses) break
-          parentheses--
-        }
-      }
-
-      close++
-    }
-
-    if (close === line.length) {
-      output += line[i++]
-      continue
-    }
-
-    const raw = line.slice(start, close)
+    const raw = line.slice(link.destStart, link.close)
     const angle = raw.startsWith('<') && raw.endsWith('>')
     const dest = angle ? raw.slice(1, -1) : raw
     const href = (angle || !/\s/.test(dest)) ? markdownFileTarget(dest, cwd) : undefined
 
     if (!href) {
-      output += line.slice(i, close + 1)
+      output += line.slice(i, link.close + 1)
     } else {
-      // A URL containing parentheses must be protected from Markdown's link parser.
+      // Parentheses in a file URL need an angle destination for Markdown.
       const safe = /[()]/.test(href) ? '<' + href + '>' : href
-      output += line.slice(i, start) + safe + ')'
+      output += line.slice(i, link.destStart) + safe + ')'
     }
 
-    i = close + 1
+    i = link.close + 1
   }
 
   return output
