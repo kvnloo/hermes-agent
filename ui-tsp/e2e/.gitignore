@@ -1,0 +1,8 @@
+# Native proof must remain in the private /tmp project; never commit receipts.
+proof/
+results/
+.e2e/
+*.jsonl
+*.png
+manifest.json
+response-gate.json

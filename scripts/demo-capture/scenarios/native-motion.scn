@@ -1,0 +1,21 @@
+# Tern-native motion only: eased scrolling and pane changes. No Hermes involved.
+run "clear; seq 1 4000"
+wait 900
+move 600 400
+wheel 0 -900
+wait 350
+wheel 0 -900
+wait 350
+wheel 0 900
+wait 350
+split right
+wait 400
+split down
+wait 400
+zoom
+wait 400
+zoom
+wait 400
+close
+wait 300
+close

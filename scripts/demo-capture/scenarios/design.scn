@@ -1,0 +1,3 @@
+# One splash design from its first frame, held after it settles.
+#   capture.sh design-atlas 4 design atlas
+run "{state}/splash.sh {arg} 120"
