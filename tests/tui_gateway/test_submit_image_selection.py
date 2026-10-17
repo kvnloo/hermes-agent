@@ -115,6 +115,16 @@ def test_invalid_image_id_selection_refuses_before_turn_or_history_mutation(sess
     assert not record["running"]
 
 
+def test_local_image_attach_accepts_the_exact_spaced_path(session, tmp_path):
+    sid, record = session
+    path = tmp_path / "picture with spaces.png"
+    path.write_bytes(PNG)
+    response = call("image.attach", sid, path=str(path))
+    assert response["result"]["attached"], response
+    assert response["result"]["path"] == str(path)
+    assert record["attached_images"] == [str(path)]
+
+
 def test_detached_confirmed_image_is_no_longer_admissible(session):
     sid, record = session
     path = attach(sid)
