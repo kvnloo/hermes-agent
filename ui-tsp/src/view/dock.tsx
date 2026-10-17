@@ -33,6 +33,8 @@ export interface DockContext {
   /** Working directory, already shortened for display. */
   cwd: string
   branch: string
+  jobs: number
+  onJobs(): void
   context?: { used: number; max: number }
   cost?: number
   ghost?: string
@@ -259,6 +261,7 @@ function composerNode(cx: DockContext): JSX.Element {
             />
           ) : null}
         </status>
+        {cx.jobs > 0 ? <text key="jobs" onClick={cx.onJobs} role="omp.composer.jobs" text={`${cx.jobs} ${cx.jobs === 1 ? 'job' : 'jobs'}`} /> : null}
         <text key="help" role="omp.composer.hint" text={HELP_HINT} tone="muted" wrap="none" />
         <row align="center" gap="xs" key="settings" onClick={cx.onSettings} role="omp.composer.settings" title="Open Hermes settings">
           <icon key="icon" name="settings" />

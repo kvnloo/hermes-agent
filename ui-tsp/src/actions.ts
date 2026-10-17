@@ -145,6 +145,14 @@ export const APP_ACTIONS: readonly Action[] = [
     }
   },
   {
+    id: 'app.jobs',
+    title: 'Show background jobs',
+    group: 'Session',
+    keys: ['alt+j'],
+    when: always,
+    run: app => app.jobs.show()
+  },
+  {
     id: 'app.agents.hub',
     title: 'Show agents',
     group: 'Session',
@@ -184,8 +192,19 @@ export const APP_ACTIONS: readonly Action[] = [
   }
 ]
 
+/** Jobs-local bindings live beside app bindings, never in a rendering module. */
+export function jobsKeyAction(key: Key): 'close' | 'next' | 'previous' | undefined {
+  const bindings = [
+    { action: 'close', keys: ['escape'] },
+    { action: 'next', keys: ['down', 'ctrl+n'] },
+    { action: 'previous', keys: ['up', 'ctrl+p'] }
+  ] as const
+
+  return bindings.find(binding => matchesAction({ ...binding, extraModifiers: false }, key))?.action
+}
+
 /** Modifier order in a chord is immaterial; new chords require exact modifiers. */
-export function matchesAction(action: Action, key: Key): boolean {
+export function matchesAction(action: Pick<Action, 'keys' | 'extraModifiers'>, key: Key): boolean {
   return action.keys.some(chord => {
     const parts = chord.split('+')
     const name = parts.pop()

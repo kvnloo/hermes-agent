@@ -148,6 +148,10 @@ const COMMANDS: readonly LocalCommand[] = [
     }
   },
   {
+    name: 'jobs',
+    run: app => app.jobs.show()
+  },
+  {
     name: 'visual',
     run: (app, arg) => openVisualPicker(app, arg)
   },

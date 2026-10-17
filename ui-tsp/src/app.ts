@@ -29,6 +29,7 @@ import { FramePump } from './frame.js'
 import { OrbActivity, ThinkingOrb } from './orb.js'
 import type { Overlay, OverlayHost } from './overlay.js'
 import { Completion } from './overlays/completion.js'
+import { JobsSheet } from './overlays/jobs.js'
 import { openModelPicker } from './overlays/models.js'
 import { promptOverlay } from './overlays/prompts.js'
 import { openSettings } from './overlays/settings.js'
@@ -64,6 +65,7 @@ export class App implements OverlayHost {
   readonly transcript = new Transcript()
   readonly dispatches = new Dispatches()
   readonly todoHud = new TodoHud()
+  readonly jobs = new JobsSheet(this)
   readonly composer = new Composer()
   readonly overlays: Overlay[] = []
   /** Presentation-only collapse overrides, scoped by transcript turn and tool identity. */
@@ -197,6 +199,7 @@ export class App implements OverlayHost {
       // The runtime session died with the process: prompts queue until the next gateway.ready reattaches.
       this.sid = null
       this.todoHud.adopt(null)
+      this.jobs.adopt(null)
       this.busy = null
       this.transcript.interrupt()
       this.dispatches.reset()
@@ -249,6 +252,7 @@ export class App implements OverlayHost {
 
     if (at >= 0) {
       this.overlays.splice(at, 1)
+      overlay.onClose?.()
       this.#overlayIds.delete(overlay)
       this.#approvalIds.delete(overlay.key)
       this.changed()
@@ -476,12 +480,17 @@ export class App implements OverlayHost {
   }
 
   quit(code = 0) {
+    for (const overlay of [...this.overlays]) {
+      this.close(overlay)
+    }
+
     if (this.#dispatchTimer) {
       clearTimeout(this.#dispatchTimer)
       this.#dispatchTimer = undefined
       this.#dispatchDeadline = null
     }
 
+    this.jobs.adopt(null)
     this.#done.resolve(code)
   }
 
@@ -789,6 +798,7 @@ export class App implements OverlayHost {
     this.sid = r.session_id
     this.storedSid = r.info?.stored_session_id || r.stored_session_id || null
     this.todoHud.adopt(this.storedSid ?? r.session_id)
+    this.jobs.adopt(r.session_id)
     writeActiveSessionFile(this.storedSid ?? r.session_id)
     this.info = r.info ?? this.info
     this.usage = r.info?.usage ?? null
@@ -836,6 +846,7 @@ export class App implements OverlayHost {
     }
 
     const t = this.transcript
+    this.jobs.event(ev.type)
     this.#activity.event(ev)
 
     switch (ev.type) {
@@ -1307,6 +1318,8 @@ export class App implements OverlayHost {
     this.#surface.render({
       dock: dockNodes({
         branch: info?.branch ?? '',
+        jobs: this.jobs.count,
+        onJobs: () => this.jobs.show(),
         todos: this.todoHud.visible(Boolean(this.busy)),
         todoExpanded: this.todoHud.expanded,
         onTodoToggle: () => {
