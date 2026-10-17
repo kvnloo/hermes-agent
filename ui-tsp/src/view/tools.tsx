@@ -71,7 +71,7 @@ export function toolFoldState(call: ToolCall): { collapsible: boolean; collapsed
 /** The `tool` node of one call, optionally with a keyboard-owned fold override. */
 export function toolNode(call: ToolCall, now: number, cwd = '', collapsedOverride?: boolean): JSX.Element {
   const card = cardOf(call, now, cwd)
-  const status = card.status ?? call.status
+  const status = call.status === 'unknown' ? 'unknown' : card.status ?? call.status
   const running = status === 'running'
   const body = [...card.body]
   const error = call.status === 'error' ? errorOf(call) : undefined
@@ -104,7 +104,7 @@ export function toolNode(call: ToolCall, now: number, cwd = '', collapsedOverrid
       lang: card.lang,
       meta: card.meta?.length ? card.meta : undefined,
       name: card.name,
-      note: call.status === 'cancelled' ? 'cancelled' : error && !card.body.length ? error : undefined,
+      note: call.status === 'unknown' ? 'no result recorded' : call.status === 'cancelled' ? 'cancelled' : error && !card.body.length ? error : undefined,
       preview: card.preview,
       role: card.role,
       status,
@@ -122,6 +122,8 @@ function cardOf(call: ToolCall, now: number, cwd: string): Card {
 
   switch (call.name) {
     case 'terminal':
+
+    case 'bash':
 
     case 'shell':
       return bashCard(call, result)

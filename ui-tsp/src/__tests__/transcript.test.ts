@@ -393,8 +393,8 @@ describe('Transcript', () => {
     const turn = turnOf(t.entries)
     expect(kinds(turn)).toEqual(['thinking', 'tool', 'text', 'tool', 'tool', 'tool', 'text'])
     expect(tools(turn).map(c => [c.name, c.status])).toEqual([
-      ['todo_list', 'done'],
-      ['terminal', 'done'],
+      ['todo_list', 'unknown'],
+      ['terminal', 'unknown'],
       ['patch', 'done'],
       ['write_file', 'error']
     ])

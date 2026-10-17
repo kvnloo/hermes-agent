@@ -50,7 +50,10 @@ def test_session_history_preserves_codex_message_items(tmp_path):
     assert "error" not in response
     assert response["result"]["count"] == 1
     messages = response["result"]["messages"]
-    assert len(messages) == 1
+    assert len(messages) == 2
     assert messages[0]["role"] == "assistant"
     assert messages[0]["text"] == ""
     assert messages[0]["codex_message_items"] == message_items
+    assert messages[1]["role"] == "tool"
+    assert messages[1]["tool_call_id"] == "call-1"
+    assert "content" not in messages[1]

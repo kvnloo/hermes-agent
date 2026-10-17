@@ -44,7 +44,7 @@ export interface ToolCall {
   argsText: string
   /** The gateway's one-line description of the call (`context`). */
   context: string
-  status: 'cancelled' | 'done' | 'error' | 'running'
+  status: 'cancelled' | 'done' | 'error' | 'running' | 'unknown'
   startedAt: number
   /** Milliseconds, once done. */
   duration?: number

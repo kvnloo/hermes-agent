@@ -287,8 +287,11 @@ def _history_to_messages(history: list[dict], *, profile_home=None, image_urls: 
     so a remote client's history read stays kilobytes instead of re-transmitting every stored attachment."""
     from agent.history_commentary import project_history_commentary
 
+    from .tool_result_display import bounded_tool_result
+
     messages = []
     tool_call_args = {}
+    recorded = {m.get("tool_call_id") for m in history if isinstance(m, dict) and m.get("role") == "tool"}
     for m in history:
         if not isinstance(m, dict):
             continue
@@ -306,6 +309,7 @@ def _history_to_messages(history: list[dict], *, profile_home=None, image_urls: 
             continue
         if role == "user":
             content_text = _DISCORD_TRIGGERING_NOTE_RE.sub(r"\1", content_text)
+        missing_tools = []
         if role == "assistant" and m.get("tool_calls"):
             for tc in m["tool_calls"]:
                 fn, tc_id = tc.get("function", {}), tc.get("id", "")
@@ -315,6 +319,10 @@ def _history_to_messages(history: list[dict], *, profile_home=None, image_urls: 
                     except (json.JSONDecodeError, TypeError):
                         args = {}
                     tool_call_args[tc_id] = (fn["name"], args)
+                    if tc_id not in recorded:
+                        # A crash can leave only the invocation. Do not manufacture success.
+                        missing_tools.append({"role": "tool", "tool_call_id": tc_id, "name": fn["name"],
+                                              "args": args, "context": _tool_ctx(fn["name"], args)})
         if role == "user" and m.get("display_kind") == STEER_DISPLAY_KIND:
             # Mid-turn /steer: show the user's own words, not the model-facing marker wrapper.
             from agent.conversation_compression import _extract_steer_text_from_message
@@ -326,16 +334,16 @@ def _history_to_messages(history: list[dict], *, profile_home=None, image_urls: 
             # `context` is an 80-char preview; ship args so a full-call renderer isn't truncated.
             labels = _bridged_tool_labels(name, args)
             messages.append({"role": "tool", "name": name, "context": _tool_ctx(name, args),
-                             # Edit cards need the original result; other tool outputs
-                             # remain omitted from this compact display projection.
-                             **({"content": m.get("content")} if name in {"write_file", "patch", "skill_manage"} else {}),
-                             **{key: m[key] for key in ("tool_call_id", "timestamp", "display_metadata")
+                             **({"content": bounded_tool_result(m["content"])} if m.get("content") is not None else {}),
+                             **{key: m[key] for key in ("tool_call_id", "timestamp", "display_metadata", "duration_s",
+                                                      "summary", "result_text", "inline_diff")
                                 if m.get(key) is not None},
                              **({"args": args} if args else {}), **({"labels": labels} if labels else {})})
             continue
         # Assistant detail sidecars can carry the only visible reply or reasoning after resume/reload.
         has_assistant_detail = role == "assistant" and any(m.get(key) for key in _HISTORY_ASSISTANT_DETAIL_KEYS)
         if not content_text.strip() and not has_assistant_detail:
+            messages.extend(missing_tools)
             continue
         msg = {"role": role, "text": content_text}
         # Authoring time (Unix seconds) for display.timestamps; display-only.
@@ -359,6 +367,7 @@ def _history_to_messages(history: list[dict], *, profile_home=None, image_urls: 
         if m.get("display_metadata"):
             msg["display_metadata"] = m["display_metadata"]
         messages.append(msg)
+        messages.extend(missing_tools)
     return project_history_commentary(messages, home=profile_home)
 
 
