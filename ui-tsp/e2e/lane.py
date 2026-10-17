@@ -15,7 +15,7 @@ import tempfile
 import time
 
 SOURCE = Path(__file__).resolve().parent
-JOURNEYS = ('smoke', 'settings', 'file-links', 'answer-copy', 'todo-hud', 'shortcuts', 'ink-fallback', 'openui', 'run-box', 'media')
+JOURNEYS = ('smoke', 'settings', 'file-links', 'answer-copy', 'todo-hud', 'shortcuts', 'ink-fallback', 'openui', 'run-box', 'media', 'agent-inspector')
 
 
 def dump(path, value):
