@@ -398,7 +398,8 @@ def _replace_queued_user_row_for_turn(session: dict, queued: dict, is_dispatchin
 
 
 def _handle_busy_submit(rid, sid: str, session: dict, text: Any, transport: Any, queued: bool = False,
-                        turn_author: dict | None = None, display_kind: str | None = None) -> dict | None:
+                        turn_author: dict | None = None, display_kind: str | None = None,
+                        requested_image_paths: list[str] | None = None) -> dict | None:
     """Apply ``display.busy_input_mode`` to a mid-turn prompt instead of rejecting it (rejection made clients busy-retry
     and drop sends): ``interrupt`` (default) → redirect, falling back to hard interrupt + queue; ``queue`` → queue only;
     ``steer`` → inject after the current atomic action. ``queued=True`` (client queue drain) forces queue mode: a "run
@@ -413,9 +414,10 @@ def _handle_busy_submit(rid, sid: str, session: dict, text: Any, transport: Any,
     with session["history_lock"]:
         if not session.get("running"):
             return None  # turn ended since prompt.submit's busy check; caller retries on the idle session
-        image_paths = list(session.get("attached_images", []))
-        if image_paths:
-            session["attached_images"] = []  # claim now so a later paste isn't consumed when the turn yields
+        image_paths = list(session.get("attached_images", []) if requested_image_paths is None else requested_image_paths)
+        if any(path not in session.get("attached_images", []) for path in image_paths):
+            return _err(rid, 4016, "image_paths contains an unconfirmed or removed attachment")
+        _consume_submit_images(session, image_paths)
     plain_text = _coerce_message_text(text).strip() if not image_paths and _is_text_only_busy_payload(text) else ""
     # Text-only corrections steer/redirect in place when supported; media payloads and older agents fall through to
     # the proven interrupt + queue path.
@@ -438,6 +440,8 @@ def _handle_busy_submit(rid, sid: str, session: dict, text: Any, transport: Any,
         # Durable AT ACCEPT (not when the turn runs): a cold resume sees the queued message and a
         # backend restart cannot lose it. Lives on the envelope, never the shared session slot.
         if envelope is not None:
+            if requested_image_paths is not None:
+                envelope["image_paths"] = image_paths
             _persist_queued_user_row(session, envelope, display_kind)
         session["last_active"] = time.time()
     # Attachments need their own model invocation: queue without cancelling so the user gets both results in order.
@@ -479,7 +483,7 @@ def _drain_queued_prompt(rid, sid: str, session: dict) -> bool:
             session["running"] = False
             return True
     kwargs: dict = {"queued_prompt_generation": queue_generation}
-    if queued.get("image_paths"):
+    if "image_paths" in queued:
         kwargs["image_paths"] = queued["image_paths"]
     # Re-place the accept-time rows (if any) at the transcript END before the turn's rows follow
     # them, and slot the dispatching envelope's fresh row for adoption. EVERY queued envelope is

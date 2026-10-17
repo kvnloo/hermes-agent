@@ -604,7 +604,8 @@ def _persist_session_row_for_submit(rid, session, text=None, display_kind=None):
 
 
 def _run_after_agent_ready(
-    rid, sid, session, text, display_kind, display_metadata, hosted_terminal_callback, turn_author=None
+    rid, sid, session, text, display_kind, display_metadata, hosted_terminal_callback, turn_author=None,
+    image_paths=None
 ):
     """Turn thread body: patient wait for a deferred build (a slow build must not eat the
     accepted in-flight message), then run."""
@@ -635,7 +636,7 @@ def _run_after_agent_ready(
             return
     _run_prompt_submit(
         rid, sid, session, text, display_kind=display_kind, display_metadata=display_metadata,
-        terminal_callback=hosted_terminal_callback, turn_author=turn_author)
+        terminal_callback=hosted_terminal_callback, turn_author=turn_author, image_paths=image_paths)
 
 
 _TRUNCATION_PARAMS = (
@@ -660,6 +661,9 @@ def _lock_in_submit_turn(
                 rid, 4004,
                 "confirm_truncate requires truncate_before_user_ordinal, truncate_before_message_id, or truncate_before_row_id",
             ), fields
+        _, image_error = _requested_submit_images(rid, session, params)
+        if image_error is not None:
+            return image_error, {}
         if has_truncation:
             err, fields = _truncate_history_for_submit(
                 rid, sid, session, params, requested_rebind_ids)
@@ -701,6 +705,10 @@ def _(rid, params: dict) -> dict:
         mark_speech_interrupted()
     session, err = _sess_nowait(params, rid)
     if err:
+        return err
+    with session["history_lock"]:
+        image_paths, err = _requested_submit_images(rid, session, params)
+    if err is not None:
         return err
     from tools.bot_relay import DeliveryAuthor
 
@@ -767,7 +775,7 @@ def _(rid, params: dict) -> dict:
             return _err(rid, 4009, "session busy")
         busy_response = _handle_busy_submit(
             rid, sid, session, text, busy_transport, queued=bool(params.get("queued")), turn_author=turn_author,
-            display_kind=display_kind)
+            display_kind=display_kind, requested_image_paths=image_paths)
         if busy_response is not None:
             return busy_response
     raw_rebind_ids = params.get("rebind_survivor_row_ids")
@@ -796,9 +804,12 @@ def _(rid, params: dict) -> dict:
             logger.debug("finalized-session reopen before isolated dispatch failed for %s",
                          sid, exc_info=True)
         isolated_response = _submit_prompt_to_compute_host(
-            rid, sid, session, text, display_kind=display_kind, display_metadata=display_metadata)
+            rid, sid, session, text, image_paths=image_paths, display_kind=display_kind, display_metadata=display_metadata)
         if not isolated_response.get("error"):
             # The truncation already happened inline above (memory + DB).
+            if image_paths is not None:
+                with session["history_lock"]:
+                    _consume_submit_images(session, image_paths)
             isolated_response["result"].update(survivor_fields)
             return isolated_response
         # An ordinal/id alone is not consent. A client that carries a leftover ordinal into an ORDINARY
@@ -821,9 +832,12 @@ def _(rid, params: dict) -> dict:
     # A completed FAILED build must not wedge the session: rebuild, don't replay it.
     if not _restart_completed_failed_agent_build(sid, session, session.get("agent_ready")):
         _start_agent_build(sid, session)
+    if image_paths is not None:
+        with session["history_lock"]:
+            _consume_submit_images(session, image_paths)
     run_thread = threading.Thread(
         target=lambda: _run_after_agent_ready(
-            rid, sid, session, text, display_kind, display_metadata, hosted_terminal_callback, turn_author),
+            rid, sid, session, text, display_kind, display_metadata, hosted_terminal_callback, turn_author, image_paths),
         daemon=True)
     # Handle lets session.interrupt tell a live turn from a stuck `running` flag.
     session["_run_thread"] = run_thread

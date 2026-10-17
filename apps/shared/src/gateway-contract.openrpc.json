@@ -26559,6 +26559,21 @@
             "default": null,
             "title": "Queued"
           },
+          "image_paths": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Image Paths"
+          },
           "surface": {
             "anyOf": [
               {
