@@ -5,6 +5,7 @@
 
 import { type JSX, node } from '@stencil-hq/tern'
 
+import { fileHref } from '../links.js'
 import type { Subagent, Todo, ToolCall } from '../model.js'
 import { record } from '../transcript.js'
 
@@ -16,6 +17,7 @@ interface Card {
   title: string
   target?: string
   targetKind?: 'command' | 'path' | 'pattern' | 'query' | 'text'
+  href?: string
   role?: string
   lang?: string
   meta?: string[]
@@ -33,6 +35,8 @@ interface Card {
 }
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
+const lineOf = (v: unknown): number | undefined =>
+  typeof v === 'number' && Number.isSafeInteger(v) && v > 0 ? v : undefined
 
 /** OMP shows three code lines on a collapsed read, then a more-lines badge. */
 const READ_PREVIEW_LINES = 3
@@ -56,9 +60,9 @@ function moreBadge(lineCount: number, shown: number): Card['badges'] {
   return [{ text: `${hidden} more line${hidden === 1 ? '' : 's'}`, tone: 'muted' }]
 }
 
-/** The `tool` node of one call. */
-export function toolNode(call: ToolCall, now: number): JSX.Element {
-  const card = cardOf(call, now)
+/** The `tool` node of one call. cwd is the Hermes session's, not Tern's. */
+export function toolNode(call: ToolCall, now: number, cwd = ''): JSX.Element {
+  const card = cardOf(call, now, cwd)
   const status = card.status ?? call.status
   const running = status === 'running'
   const body = [...card.body]
@@ -87,6 +91,7 @@ export function toolNode(call: ToolCall, now: number): JSX.Element {
       collapsible: body.length > 0 ? true : undefined,
       exit: card.name === 'bash' && !running && call.status !== 'cancelled' ? exitOf(call) : undefined,
       frame: card.frame === 'inline' && (running || !body.length || card.name !== 'web_search') ? 'inline' : undefined,
+      href: card.href,
       key: call.id,
       lang: card.lang,
       meta: card.meta?.length ? card.meta : undefined,
@@ -104,7 +109,7 @@ export function toolNode(call: ToolCall, now: number): JSX.Element {
   )
 }
 
-function cardOf(call: ToolCall, now: number): Card {
+function cardOf(call: ToolCall, now: number, cwd: string): Card {
   const result = record(call.result)
 
   switch (call.name) {
@@ -131,15 +136,15 @@ function cardOf(call: ToolCall, now: number): Card {
       return { body: [], frame: 'inline', name: 'secret', title: 'Secret' }
 
     case 'read_file':
-      return readCard(call, result)
+      return readCard(call, result, cwd)
 
     case 'patch':
 
     case 'write_file':
-      return editCard(call, result)
+      return editCard(call, result, cwd)
 
     case 'search_files':
-      return searchCard(call, result)
+      return searchCard(call, result, cwd)
 
     case 'web_search':
       return webSearchCard(call, result)
@@ -244,7 +249,7 @@ function bashCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   }
 }
 
-function readCard(call: ToolCall, result: Record<string, unknown> | undefined): Card {
+function readCard(call: ToolCall, result: Record<string, unknown> | undefined, cwd: string): Card {
   const path = str(call.args.path) ?? str(call.args.file_path) ?? call.context
   const content = str(result?.content)
   const total = typeof result?.total_lines === 'number' ? result.total_lines : undefined
@@ -255,12 +260,16 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   const meta = first !== undefined && last !== undefined ? [whole ? `${total} lines` : `:${first}-${last}`] : []
   const text = content?.replace(/^ *\d+\|/gm, '') ?? ''
   const hidden = Math.max(0, text.split('\n').filter(line => line.length > 0).length - READ_PREVIEW_LINES)
+  const line = lineOf(call.args.offset) ?? first
+  const limit = lineOf(call.args.limit)
+  const endLine = line && limit ? line + limit - 1 : last && line && last >= line ? last : undefined
 
   return {
     badges: hidden > 0 ? [{ text: `${hidden} more line${hidden === 1 ? '' : 's'}`, tone: 'muted' }] : undefined,
     body: text ? [<code key="code" lang={langOf(path)} numbers start={first} text={text} />] : [],
     folded: true,
     frame: 'inline',
+    href: fileHref(path, cwd, { line, endLine }),
     lang: langOf(path),
     meta,
     name: 'read',
@@ -271,16 +280,21 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   }
 }
 
-function editCard(call: ToolCall, result: Record<string, unknown> | undefined): Card {
+function editCard(call: ToolCall, result: Record<string, unknown> | undefined, cwd: string): Card {
   const path = str(call.args.path) ?? str(call.args.file_path) ?? call.context
   const lang = langOf(path)
   const diff = hunks(str(result?.diff)) ?? (call.diff ? plainDiff(call.diff) : undefined)
   const content = str(call.args.content) ?? str(call.args.contents)
   const write = call.name === 'write_file'
   const diagnostics = str(result?.lsp_diagnostics)
+  const hunk = /@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(diff ?? call.diff ?? '')
+  const line = lineOf(call.args.line) ?? lineOf(call.args.start_line) ?? lineOf(result?.line) ??
+    (hunk ? lineOf(Number(hunk[1])) : undefined)
+  const hunkCount = hunk?.[2] ? lineOf(Number(hunk[2])) : undefined
 
   const head = {
     name: write ? 'write' : 'edit',
+    href: fileHref(path, cwd, { line, endLine: line && hunkCount ? line + hunkCount - 1 : undefined }),
     target: path,
     targetKind: 'path' as const,
     title: write ? 'Write' : 'Edit'
@@ -336,7 +350,7 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined): 
   }
 }
 
-function searchCard(call: ToolCall, result: Record<string, unknown> | undefined): Card {
+function searchCard(call: ToolCall, result: Record<string, unknown> | undefined, cwd: string): Card {
   const pattern = str(call.args.pattern) ?? call.context
   const where = str(call.args.path)
   const inPath = where && where !== '.' ? ` · in ${where}` : ''
@@ -351,8 +365,8 @@ function searchCard(call: ToolCall, result: Record<string, unknown> | undefined)
         const slash = f.lastIndexOf('/')
 
         return (
-          <row key={`f${i}`} role="omp.tool.file" title={slash > 0 ? f.slice(0, slash + 1) : undefined}>
-            <text key="p" spans={[{ s: 'path', t: slash > 0 ? f.slice(slash + 1) : f }]} />
+          <row href={fileHref(f, cwd)} key={`f${i}`} role="omp.tool.file" title={slash > 0 ? f.slice(0, slash + 1) : undefined}>
+            <text href={fileHref(f, cwd)} key="p" spans={[{ s: 'path', t: slash > 0 ? f.slice(slash + 1) : f }]} />
           </row>
         )
       }),
@@ -385,9 +399,10 @@ function searchCard(call: ToolCall, result: Record<string, unknown> | undefined)
 
   for (const [path, hits] of byFile) {
     const f = `f${fileIndex++}`
+    const fileLink = fileHref(path, cwd, { line: hits.find(hit => hit.line > 0)?.line })
     body.push(
-      <row key={f} role="omp.tool.file">
-        <text key="p" spans={[{ s: 'path', t: path }]} />
+      <row href={fileLink} key={f} role="omp.tool.file">
+        <text href={fileLink} key="p" spans={[{ s: 'path', t: path }]} />
         <text key="n" role="omp.tool.chip" spans={[{ t: String(hits.length) }]} />
       </row>
     )
@@ -406,6 +421,7 @@ function searchCard(call: ToolCall, result: Record<string, unknown> | undefined)
       body.push(
         <code
           key={`${f}.c${runIndex++}`}
+          href={fileHref(path, cwd, { line: start, endLine: run.at(-1)?.line })}
           lang={langOf(path)}
           marks={run.map(h => ({ line: h.line, tone: 'accent' }))}
           numbers
