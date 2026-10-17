@@ -47,15 +47,15 @@ user asked for — don't just dump all 14.
 Default menu when the user's intent is unclear:
 
 ```python
-clarify(
-    question="Which pixel-art style do you want?",
-    choices=[
+clarify(questions=[{
+    "question": "Which pixel-art style do you want?",
+    "choices": [
         "arcade — bold, chunky 80s cabinet feel (16 colors, 8px)",
         "nes — Nintendo 8-bit hardware palette (54 colors, 8px)",
         "gameboy — 4-shade green Game Boy DMG",
         "snes — cleaner 16-bit look (32 colors, 4px)",
     ],
-)
+}])
 ```
 
 When the user already named an era (e.g. "80s arcade", "Gameboy"), skip
@@ -67,15 +67,15 @@ If the user asked for a video/GIF, or the output might benefit from motion,
 ask which scene:
 
 ```python
-clarify(
-    question="Want to animate it? Pick a scene or skip.",
-    choices=[
+clarify(questions=[{
+    "question": "Want to animate it? Pick a scene or skip.",
+    "choices": [
         "night — stars + fireflies + leaves",
         "urban — rain + neon pulse",
         "snow — falling snowflakes",
         "skip — just the image",
     ],
-)
+}])
 ```
 
 Do NOT call `clarify` more than twice in a row. One for style, one for scene if
