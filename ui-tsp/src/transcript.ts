@@ -62,6 +62,12 @@ export class Transcript {
     this.push({ at, id: this.id('u'), kind: 'user', text })
   }
 
+  /** Accepted corrections belong to the original turn, even if its RPC settles after completion. */
+  steer(text: string, turn: TurnEntry) {
+    turn.blocks.push({ id: this.id('s'), kind: 'steering', text })
+    this.#touch(turn)
+  }
+
   notice(text: string, tone: NoticeEntry['tone'] = 'info') {
     this.push({ id: this.id('n'), kind: 'notice', text, tone })
   }

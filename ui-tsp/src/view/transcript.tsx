@@ -169,6 +169,14 @@ function turnNode(turn: TurnEntry, id: string, cx: TranscriptContext): JSX.Eleme
 
 function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptContext, turnId: string): JSX.Element {
   switch (b.kind) {
+    case 'steering':
+      return (
+        <col key={b.id} role="omp.steering">
+          <text key="label" text="Steering" tone="muted" />
+          <md key="body">{b.text}</md>
+        </col>
+      )
+
     case 'text':
       return (
         <md key={b.id} stream={streaming || undefined}>

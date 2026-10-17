@@ -23,6 +23,7 @@ import logo from '../assets/logo.png'
 
 import { type ActionContext, actionForKey, APP_ACTIONS, matchesAction } from './actions.js'
 import { Dispatches } from './attention.js'
+import { BusyInput } from './busy-input.js'
 import { localCommand } from './commands.js'
 import { Composer } from './composer.js'
 import { type Busy, busyFrom, ownsEvent, Switches } from './flow.js'
@@ -71,6 +72,7 @@ export class App implements OverlayHost {
   readonly todoHud = new TodoHud()
   readonly jobs = new JobsSheet(this)
   readonly composer = new Composer()
+  readonly busyInput = new BusyInput(this)
   readonly overlays: Overlay[] = []
   /** Presentation-only collapse overrides, scoped by transcript turn and tool identity. */
   readonly #folds = new Map<string, boolean>()
@@ -265,6 +267,11 @@ export class App implements OverlayHost {
       overlay.onClose?.()
       this.#overlayIds.delete(overlay)
       this.#approvalIds.delete(overlay.key)
+
+      if (overlay.key === 'settings') {
+        void this.busyInput.refresh()
+      }
+
       this.changed()
     }
   }
@@ -544,8 +551,13 @@ export class App implements OverlayHost {
 
   // ── Prompts and commands ───────────────────────────────────────────
 
+  /** The registered busy-only Alt+Enter action; approval denial retains priority. */
+  submitAlternate() {
+    void this.#submitDraft(this.composer.text, this.overlays.find(isApprovalPrompt) ?? null, true)
+  }
+
   /** Keyboard Enter and native send share the request-bound deny → submit transaction. */
-  async #submitDraft(raw = this.composer.text, approval: ApprovalPrompt | null = this.overlays.find(isApprovalPrompt) ?? null) {
+  async #submitDraft(raw = this.composer.text, approval: ApprovalPrompt | null = this.overlays.find(isApprovalPrompt) ?? null, alternate = false) {
     if (this.#submittingApproval) {
       return
     }
@@ -557,6 +569,13 @@ export class App implements OverlayHost {
     }
 
     if (!approval) {
+      if (this.busy && this.sid && !this.#switches.pending &&
+          !raw.trim().startsWith('/') && this.busyInput.shouldSteer(alternate)) {
+        await this.busyInput.steer(raw)
+
+        return
+      }
+
       this.#submit(this.composer.take(raw))
 
       return
@@ -729,6 +748,7 @@ export class App implements OverlayHost {
       this.transcript.notice(error instanceof Error ? error.message : String(error), 'error')
     }
 
+    void this.busyInput.refresh()
     this.changed()
   }
 
@@ -913,6 +933,7 @@ export class App implements OverlayHost {
     }
 
     this.sid = r.session_id
+    void this.busyInput.refresh()
     this.storedSid = r.info?.stored_session_id || r.stored_session_id || null
     this.todoHud.adopt(this.storedSid ?? r.session_id)
     this.jobs.adopt(r.session_id)
@@ -1484,6 +1505,7 @@ export class App implements OverlayHost {
           this.changed()
         },
         busy: this.busy ?? undefined,
+        busyMode: this.busyInput.mode,
         composer: this.composer,
         context: max > 0 ? { max, used } : undefined,
         cost: usage?.cost_usd ?? undefined,
