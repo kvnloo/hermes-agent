@@ -2,6 +2,7 @@
 module is listed here so the generator and the runtime see the same catalog."""
 
 from . import (  # noqa: F401
+    agent_hub,
     billing_delegation_pets,
     browser_blocks,
     common,
