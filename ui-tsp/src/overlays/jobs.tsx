@@ -6,6 +6,7 @@ import { jobsKeyAction } from '../actions.js'
 import type { App } from '../app.js'
 import type { Overlay } from '../overlay.js'
 
+import { agentSelectionForJob, openAgentInspector } from './agent-inspector.js'
 import { confirmOverlay } from './prompts.js'
 
 const STATE_EVENTS = new Set([
@@ -206,6 +207,16 @@ export class JobsSheet implements Overlay {
     this.app.changed()
   }
 
+  #inspect(job: JobSnapshot) {
+    const selection = job.kind === 'subagent' && job.owner_session_id === this.app.sid
+      ? agentSelectionForJob(this.app, job.id) : undefined
+
+    if (selection) {
+      this.app.close(this)
+      openAgentInspector(this.app, selection)
+    }
+  }
+
   #askCancel(job: JobSnapshot) {
     const sid = this.#sid
     const generation = this.#generation
@@ -268,8 +279,18 @@ export class JobsSheet implements Overlay {
 
   node(id: string): JSX.Element {
     const selected = this.#jobs.find(job => job.id === this.#selected)
+    const inspectable = selected?.kind === 'subagent' && agentSelectionForJob(this.app, selected.id)
     const selectedId = selected ? `${id}.body.panes.list.${selected.id}` : undefined
     const choose = (item: string) => this.#select(this.#jobs.find(job => `${id}.body.panes.list.${job.id}` === item)?.id ?? '')
+
+    const activate = (item: string) => {
+      const job = this.#jobs.find(job => `${id}.body.panes.list.${job.id}` === item)
+
+      if (job) {
+        this.#select(job.id)
+        this.#inspect(job)
+      }
+    }
 
     return (
       <overlay anchor="center" head="Background jobs" key={id.slice('layer.'.length)} modal role="omp.overlay.jobs" size="lg">
@@ -277,7 +298,7 @@ export class JobsSheet implements Overlay {
           {this.#error ? <text key="error" text={this.#error} tone="error" /> : null}
           {this.#loading ? <text key="loading" text="Loading jobs…" /> : null}
           <row gap="md" key="panes">
-            <list grow={1} key="list" onActivate={ev => choose(ev.item)} onSelect={ev => choose(ev.item)} role="omp.jobs.list" selected={selectedId}>
+            <list grow={1} key="list" onActivate={ev => activate(ev.item)} onSelect={ev => choose(ev.item)} role="omp.jobs.list" selected={selectedId}>
               {this.#jobs.map(job => (
                 <item detail={[{ t: `${job.kind} · ${job.state}${job.parent_id ? ` · parent ${job.parent_id}` : ''}` }]}
                   key={job.id} label={[{ t: job.title }]} role="omp.jobs.item" />
@@ -288,6 +309,7 @@ export class JobsSheet implements Overlay {
               {selected ? <text key="owner" text={`${selected.id} · owner ${selected.owner_session_id} · started ${selected.started ? new Date(selected.started * 1000).toISOString() : 'unknown'}`} tone="muted" /> : null}
               {this.#tail && this.#tail.job_id === selected?.id ? <code key="output" text={this.#tail.text || (this.#tail.available ? 'No output yet.' : 'Live output unavailable.')} /> : null}
               {this.#tail?.truncated ? <text key="truncated" text="Showing the last 100 lines (up to 16 KiB)." tone="muted" /> : null}
+              {selected && inspectable ? <text key="inspect" onClick={() => this.#inspect(selected)} role="omp.btn" text="Inspect agent (read-only)" /> : null}
               {selected && running(selected) && selected.owner_session_id === this.app.sid ? (
                 <text key="cancel" onClick={() => this.#askCancel(selected)} role="omp.btn" text={this.#cancelling ? 'Cancelling…' : 'Cancel job'} tone="error" />
               ) : null}

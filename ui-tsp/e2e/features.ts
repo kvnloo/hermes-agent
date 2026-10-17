@@ -394,6 +394,60 @@ async function media() {
   }, true)
 }
 
+async function agentInspector() {
+  const agent = {delegation_id:'inspector-delegation',goal:'Inspector alpha',model:'inspector-model',task_count:2,task_index:0}
+  await step('explicit subagent fixtures create a clickable task row', async()=>{
+    await replay('message.start')
+    await replay('tool.start', {name:'delegate_task',tool_id:'inspector-task',args:{tasks:[{goal:agent.goal}]}})
+    await replay('tool.complete', {name:'delegate_task',tool_id:'inspector-task',result:{delegation_id:agent.delegation_id,status:'dispatched'}})
+    await replay('subagent.start', agent)
+    await replay('subagent.tool', {...agent,tool_name:'read',tool_preview:'alpha.ts',tool_count:1})
+    await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.k==='agent' && n.p?.task===agent.goal), 'native agent row')
+    await native.type('Inspector unsent draft')
+    await native.key('ArrowLeft')
+    const before = record((await native.rendered()).get('dock.composer.line.input')?.p)
+    await writeFile(join(manifest.proof,'inspector-draft-before.json'),JSON.stringify(before))
+    const snapshot = await native.snapshot()
+    const targets = flatten(snapshot.tree).filter(n=>n.title==='Inspect agent (read-only)')
+    assert.equal(targets.length,1,'exact native agent row title')
+    const target = targets[0]!
+    const dumps = snapshot.dump.filter(d=>d.visible && d.rect.every((v,i)=>Math.abs(v-(target.rect?.[i] ?? -100))<=1))
+    const deepest = dumps.filter(d=>!dumps.some(e=>e!==d && e.nth.startsWith(d.nth+'>')))
+    assert.equal(deepest.length,1,'exact native agent click geometry')
+    await native.ctl(`click ${deepest[0]!.nth}`,30000)
+    await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.role==='omp.overlay.agent-inspector'),'inspector opened by real click')
+    await capture('opened')
+  }, true)
+  await step('live events stay scoped and final status survives completion',async()=>{
+    await replay('subagent.tool', {...agent,tool_name:'bash',tool_preview:'npm test',tool_count:2})
+    await replay('subagent.tool', {...agent,tool_name:'edit',tool_preview:'fix alpha.ts',tool_count:3})
+    await replay('subagent.progress', {...agent,task_index:1,text:'FOREIGN_AGENT_NOTE'})
+    await replay('subagent.complete', {...agent,status:'completed',duration_seconds:12,summary:'Inspector verified',api_calls:4})
+    const nodes = await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.id.startsWith('layer.agent-inspector:') && n.p?.text==='Status: done'),'finished inspector')
+    const sheet = [...nodes.values()].filter(n=>n.id.startsWith('layer.agent-inspector:'))
+    assert.equal(sheet.filter(n=>n.p?.role==='omp.agent.tool').length,3)
+    assert(!JSON.stringify(sheet).includes('FOREIGN_AGENT_NOTE'))
+    await capture('finished')
+    for (let i=0;i<30;i++) await replay('subagent.progress', {...agent,text:`Long activity ${i}`})
+    await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.id.startsWith('layer.agent-inspector:') && n.p?.text==='Long activity 29'),'long activity log')
+    const lastNote = async()=>flatten((await native.snapshot()).tree).find(n=>n.text==='Long activity 29')?.rect
+    const beforeScroll = await lastNote()
+    assert(beforeScroll, 'native long-log geometry')
+    await native.key('End')
+    const afterScroll = await until(lastNote, rect=>Boolean(rect && rect[1]! < beforeScroll[1]!), 'inspector scroll moves its own log')
+    await writeFile(join(manifest.proof,'inspector-scroll.json'),JSON.stringify({before:beforeScroll,after:afterScroll}))
+    await capture('scrolled')
+    await native.key('Escape')
+    const closed = await until(()=>native.rendered(),ns=>![...ns.values()].some(n=>n.p?.role==='omp.overlay.agent-inspector'),'inspector closed')
+    const before = JSON.parse(await readFile(join(manifest.proof,'inspector-draft-before.json'),'utf8'))
+    const after = closed.get('dock.composer.line.input')?.p
+    assert.equal(after?.text,before.text)
+    assert.equal(after?.cursor,before.cursor)
+    assert(!(await native.wire()).some(w=>w.dir==='request' && w.body.method==='prompt.submit'))
+    await capture('draft-restored')
+  },true)
+}
+
 async function smoke() {
   await step('launch welcome and real session without a model call',async()=>{
     assert(flatten((await native.snapshot()).tree).some(n=>(n.text ?? '').toLowerCase().includes('hermes')))
@@ -414,7 +468,7 @@ try {
   const wire = await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='delivered' && w.body.result && typeof w.body.result==='object' && !Array.isArray(w.body.result) && 'session_id' in w.body.result), 'real session creation')
   const ids = new Set(wire.filter(w=>w.dir==='request' && w.body.method==='session.create').map(w=>w.body.id))
   sid = String(record(wire.findLast(w=>w.dir==='delivered' && ids.has(w.body.id) && w.body.result)?.body.result).session_id)
-  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes,media}
+  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes,media,'agent-inspector':agentInspector}
   assert(journeys[journey],`Unknown journey: ${journey}`)
   await journeys[journey]!()
 } catch (error) { console.error(error); process.exitCode=1 }

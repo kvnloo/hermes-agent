@@ -260,6 +260,15 @@ export class Transcript {
 
     agent.last = p
 
+    if (type === 'subagent.tool' || ((type === 'subagent.progress' || type === 'subagent.thinking') && p.text)) {
+      (agent.activity ??= []).push({
+        at,
+        kind: type === 'subagent.tool' ? 'tool' : 'note',
+        tool: type === 'subagent.tool' ? p.tool_name ?? undefined : undefined,
+        text: p.tool_preview ?? p.text ?? ''
+      })
+    }
+
     if (p.parent_id && p.parent_id !== agent.id) {
       agent.parentId = p.parent_id
     }

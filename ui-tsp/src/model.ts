@@ -12,6 +12,14 @@ export interface Todo {
   parent?: string
 }
 
+/** Observed child activity, retained in the existing transcript projection. */
+export interface SubagentActivity {
+  at: number
+  kind: 'note' | 'tool'
+  tool?: string
+  text: string
+}
+
 /** One delegated child agent, folded from `subagent.*` events. */
 export interface Subagent {
   id: string
@@ -34,6 +42,7 @@ export interface Subagent {
   startedAt: number
   duration?: number
   last?: SubagentEventPayload
+  activity?: SubagentActivity[]
 }
 
 /** One tool call, from `tool.start` to `tool.complete`. */
