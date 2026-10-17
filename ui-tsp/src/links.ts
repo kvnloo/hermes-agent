@@ -18,7 +18,10 @@ function positive(value: number | undefined): number | undefined {
 
 /** No implicit process cwd: relative links must belong to an identified Hermes session. */
 export function fileHref(path: string, cwd: string, opts: FileLinkOptions = {}): string | undefined {
-  if (!path || !path.trim() || /[\x00-\x1f\x7f]/.test(path) || scheme.test(path) || path.startsWith('//')) {
+  // Control bytes cannot be meaningful local file-link targets.
+  const hasControl = Array.from(path).some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)
+
+  if (!path || !path.trim() || hasControl || scheme.test(path) || path.startsWith('//')) {
     return undefined
   }
 
@@ -85,11 +88,11 @@ function linkAt(line: string, at: number): { destStart: number; close: number } 
 
   while (labelEnd < line.length && depth) {
     if (!escaped(line, labelEnd)) {
-      if (line[labelEnd] === '[') depth++
-      else if (line[labelEnd] === ']') depth--
+      if (line[labelEnd] === '[') {depth++}
+      else if (line[labelEnd] === ']') {depth--}
     }
 
-    if (depth) labelEnd++
+    if (depth) {labelEnd++}
   }
 
   if (depth || line[labelEnd + 1] !== '(') {
@@ -102,9 +105,9 @@ function linkAt(line: string, at: number): { destStart: number; close: number } 
 
   while (close < line.length) {
     if (!escaped(line, close)) {
-      if (line[close] === '(') parentheses++
+      if (line[close] === '(') {parentheses++}
       else if (line[close] === ')') {
-        if (!parentheses) break
+        if (!parentheses) {break}
         parentheses--
       }
     }
@@ -131,16 +134,18 @@ function rewriteLine(line: string, cwd: string): string {
 
       const count = end - i
 
-      if (!ticks) ticks = count
-      else if (ticks === count) ticks = 0
+      if (!ticks) {ticks = count}
+      else if (ticks === count) {ticks = 0}
 
       output += line.slice(i, end)
       i = end
+
       continue
     }
 
     if (ticks || line[i] !== '[' || escaped(line, i) || (i > 0 && line[i - 1] === '!')) {
       output += line[i++]
+
       continue
     }
 
@@ -148,6 +153,7 @@ function rewriteLine(line: string, cwd: string): string {
 
     if (!link) {
       output += line[i++]
+
       continue
     }
 
@@ -183,6 +189,7 @@ export function rewriteLocalMarkdownLinks(markdown: string, cwd: string): string
 
     if (fence) {
       const closing = /^ {0,3}([\x60]{3,}|~{3,})\s*$/.exec(line)
+
       if (closing && closing[1]?.[0] === fence.mark && closing[1].length >= fence.length) {
         fence = undefined
       }
@@ -192,6 +199,7 @@ export function rewriteLocalMarkdownLinks(markdown: string, cwd: string): string
 
     if (opening) {
       fence = { mark: opening[1]![0]!, length: opening[1]!.length }
+
       return line
     }
 

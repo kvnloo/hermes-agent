@@ -35,6 +35,7 @@ interface Card {
 }
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
+
 const lineOf = (v: unknown): number | undefined =>
   typeof v === 'number' && Number.isSafeInteger(v) && v > 0 ? v : undefined
 
@@ -114,6 +115,7 @@ function cardOf(call: ToolCall, now: number, cwd: string): Card {
 
   switch (call.name) {
     case 'terminal':
+
     case 'shell':
       return bashCard(call, result)
 
@@ -132,6 +134,7 @@ function cardOf(call: ToolCall, now: number, cwd: string): Card {
       )
 
     case 'secret':
+
     case 'password':
       return { body: [], frame: 'inline', name: 'secret', title: 'Secret' }
 
@@ -288,8 +291,10 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined, c
   const write = call.name === 'write_file'
   const diagnostics = str(result?.lsp_diagnostics)
   const hunk = /@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(diff ?? call.diff ?? '')
+
   const line = lineOf(call.args.line) ?? lineOf(call.args.start_line) ?? lineOf(result?.line) ??
     (hunk ? lineOf(Number(hunk[1])) : undefined)
+
   const hunkCount = hunk?.[2] ? lineOf(Number(hunk[2])) : undefined
 
   const head = {
@@ -420,8 +425,8 @@ function searchCard(call: ToolCall, result: Record<string, unknown> | undefined,
 
       body.push(
         <code
-          key={`${f}.c${runIndex++}`}
           href={fileHref(path, cwd, { line: start, endLine: run.at(-1)?.line })}
+          key={`${f}.c${runIndex++}`}
           lang={langOf(path)}
           marks={run.map(h => ({ line: h.line, tone: 'accent' }))}
           numbers
@@ -603,6 +608,7 @@ function agentRows(agents: readonly Subagent[], now: number): JSX.Element[] {
     while (ancestor) {
       if (seen.has(ancestor)) {
         parent = undefined
+
         break
       }
 

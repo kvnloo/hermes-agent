@@ -9,8 +9,8 @@ import { App } from '../app.js'
 import { fileHref, rewriteLocalMarkdownLinks } from '../links.js'
 import type { ToolCall, TurnEntry } from '../model.js'
 import { Transcript } from '../transcript.js'
-import { entryNode } from '../view/transcript.js'
 import { toolNode } from '../view/tools.js'
+import { entryNode } from '../view/transcript.js'
 
 const isolated = await vi.hoisted(async () => {
   const { mkdtempSync } = await import('node:fs')
@@ -19,12 +19,14 @@ const isolated = await vi.hoisted(async () => {
   const home = mkdtempSync(join(tmpdir(), 'hermes-tern-file-links-'))
   const previous = process.env.HERMES_HOME
   process.env.HERMES_HOME = home
+
   return { home, previous }
 })
 
 afterAll(() => {
-  if (isolated.previous === undefined) delete process.env.HERMES_HOME
-  else process.env.HERMES_HOME = isolated.previous
+  if (isolated.previous === undefined) {delete process.env.HERMES_HOME}
+  else {process.env.HERMES_HOME = isolated.previous}
+
   rmSync(isolated.home, { force: true, recursive: true })
 })
 
@@ -80,6 +82,7 @@ describe('tool file links', () => {
     const range = node(toolNode(call('read_file', { path: 'src/a.ts', offset: 10, limit: 5 }, {
       content: '10|hello\n11|world\n12|one\n13|two\n14|three'
     }), 0, cwd))
+
     expect(range.props.href).toBe('file:///workspace/project/src/a.ts#L10-L14')
   })
 
@@ -87,6 +90,7 @@ describe('tool file links', () => {
     const edit = node(toolNode(call('patch', { path: 'src/a.ts' }, {
       diff: '@@ -12,2 +20,3 @@\n-old\n+new'
     }), 0, cwd))
+
     expect(edit.props.href).toBe('file:///workspace/project/src/a.ts#L20-L22')
 
     const write = node(toolNode(call('write_file', { path: 'src/new.ts', content: 'hello' }), 0, cwd))
@@ -95,6 +99,7 @@ describe('tool file links', () => {
     const glob = node(toolNode(call('search_files', { target: 'files', pattern: '*.ts' }, {
       files: ['src/a.ts', 'src/b.ts']
     }), 0, cwd))
+
     const rows = childrenOf(glob, 'row')
     expect(rows.map(row => row.props.href)).toEqual([
       'file:///workspace/project/src/a.ts',
@@ -131,6 +136,7 @@ describe('assistant Markdown file links', () => {
   it('resolves local targets and line fragments but preserves web URLs and literal code', () => {
     const fence = String.fromCharCode(96).repeat(3)
     const inline = String.fromCharCode(96)
+
     const text = [
       'see [a](src/a.ts) and [line](./README.md#L3) and [web](https://x.y)',
       'file [hash](src/a#b.ts) stays a filename',
@@ -140,6 +146,7 @@ describe('assistant Markdown file links', () => {
       fence,
       '![image](src/image.png)'
     ].join('\n')
+
     const rewritten = rewriteLocalMarkdownLinks(text, cwd)
 
     expect(rewritten).toContain('[a](file:///workspace/project/src/a.ts)')
@@ -198,14 +205,15 @@ describe('assistant Markdown file links', () => {
       app.changed()
       await new Promise<void>(resolve => setImmediate(resolve))
 
-      const assistant = latest?.regions[1]?.children.find(n => n.kind === 'col' && n.props.role === 'omp.assistant')
+      const assistant = latest?.regions.find(region => region?.id === 'main')?.children.find(n => n.kind === 'col' && n.props.role === 'omp.assistant')
       const md = assistant?.children.find(n => n.kind === 'md')
       expect(md?.props.text).toBe('See [a](file:///workspace/project/src/a.ts)')
     } finally {
       app.quit()
       await running
-      if (savedSplash === undefined) delete process.env.HERMES_TUI_SPLASH
-      else process.env.HERMES_TUI_SPLASH = savedSplash
+
+      if (savedSplash === undefined) {delete process.env.HERMES_TUI_SPLASH}
+      else {process.env.HERMES_TUI_SPLASH = savedSplash}
     }
   })
 
