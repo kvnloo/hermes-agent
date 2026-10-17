@@ -81,7 +81,7 @@ export function toolNode(call: ToolCall, now: number, cwd = '', collapsedOverrid
       <text
         key="cancelled"
         role="omp.tool.notice"
-        spans={[{ s: 'muted', t: `Interrupted by user after ${duration(call.duration ?? 0)}` }]}
+        spans={[{ s: 'muted', t: call.duration === undefined ? 'Interrupted by user' : `Interrupted by user after ${duration(call.duration)}` }]}
       />
     )
   }
