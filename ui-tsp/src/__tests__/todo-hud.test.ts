@@ -9,6 +9,8 @@ import { App } from '../app.js'
 import type { Todo } from '../model.js'
 import { TodoHud } from '../todo-hud.js'
 
+import { acknowledgeFrames } from './helpers/paint.js'
+
 const isolated = await vi.hoisted(async () => {
   const { mkdtempSync } = await import('node:fs')
   const { tmpdir } = await import('node:os')
@@ -63,6 +65,7 @@ async function withApp(
   })
 
   const app = new App(tern, gw, 'test')
+  acknowledgeFrames(tern)
   const running = app.run()
   const surface = tern.surfaces[0]!
   const original = surface.render.bind(surface)

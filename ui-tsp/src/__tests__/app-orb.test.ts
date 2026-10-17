@@ -7,6 +7,8 @@ import { afterAll, describe, expect, it, vi } from 'vitest'
 
 import { App } from '../app.js'
 
+import { acknowledgeFrames } from './helpers/paint.js'
+
 // Production's bundle loader imports PNG bytes; Vite's asset loader does not.
 vi.mock('../../assets/logo.png', async () => {
   const { readFileSync } = await import('node:fs')
@@ -57,6 +59,7 @@ async function withApp(
   const app = new App(tern, gw, 'test')
   app.sid = 'shown'
   app.todoHud.adopt('shown')
+  acknowledgeFrames(tern)
   const running = app.run()
   const surface = tern.surfaces[0]!
   const original = surface.render.bind(surface)
@@ -146,11 +149,13 @@ describe('activity orb in the parity dock', () => {
       await rendered()
       await event({ ev: 'visible', visible: false, raw: {} })
       expect(vi.getTimerCount()).toBe(0)
+      const hiddenView = latest()
       gw.emit('event', { type: 'message.complete', session_id: 'shown', payload: { status: 'complete' } })
       await rendered()
-      expect(orb(latest())?.props.alt).toBe('Hermes agent: idle')
+      expect(latest()).toBe(hiddenView)
       expect(vi.getTimerCount()).toBe(0)
       await event({ ev: 'resize', sf: 'hermes', visible: true, cols: 80, raw: {} })
+      expect(orb(latest())?.props.alt).toBe('Hermes agent: idle')
 
       const notes = latest()?.regions.find(region => region?.id === 'dock')?.children
         .find(node => node.props.role === 'omp.dispatches')

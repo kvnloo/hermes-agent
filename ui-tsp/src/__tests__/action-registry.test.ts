@@ -9,6 +9,8 @@ import { afterAll, describe, expect, it, vi } from 'vitest'
 import { type Action, type ActionContext, APP_ACTIONS, matchesAction } from '../actions.js'
 import { App } from '../app.js'
 
+import { acknowledgeFrames } from './helpers/paint.js'
+
 const isolated = await vi.hoisted(async () => {
   const { mkdtempSync } = await import('node:fs')
   const { tmpdir } = await import('node:os')
@@ -95,6 +97,7 @@ async function withApp(run: (harness: Harness) => Promise<void>) {
   const app = new App(tern, gw, 'test')
   app.sid = 'session-1'
   app.info = { model: 'fixture-model', reasoning_effort: 'medium' }
+  acknowledgeFrames(tern)
   const running = app.run()
   const surface = tern.surfaces[0]!
   const render = surface.render.bind(surface)

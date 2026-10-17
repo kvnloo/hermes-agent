@@ -13,6 +13,8 @@ import { Transcript } from '../transcript.js'
 import { toolNode } from '../view/tools.js'
 import { entryNode } from '../view/transcript.js'
 
+import { acknowledgeFrames } from './helpers/paint.js'
+
 const isolated = await vi.hoisted(async () => {
   const { mkdtempSync } = await import('node:fs')
   const { tmpdir } = await import('node:os')
@@ -110,6 +112,7 @@ describe('native assistant answer actions', () => {
     const tern = new Session(new EventEmitter(), { write() {} }, { exitHooks: false, record: '' })
     const app = new App(tern, new GatewayClient(), 'test')
     app.sid = 'session-1'
+    acknowledgeFrames(tern)
     const running = app.run()
     const surface = tern.surfaces[0]!
     const render = surface.render.bind(surface)
@@ -175,6 +178,7 @@ describe('Ctrl+O native tool folding', () => {
     expect(await connecting).toBe(true)
     const app = new App(tern, new GatewayClient(), 'test')
     app.sid = 'session-1'
+    acknowledgeFrames(tern)
     const running = app.run()
     const surface = tern.surfaces[0]!
     const original = surface.render.bind(surface)

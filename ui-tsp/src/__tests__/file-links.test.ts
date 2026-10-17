@@ -12,6 +12,8 @@ import { Transcript } from '../transcript.js'
 import { toolNode } from '../view/tools.js'
 import { entryNode } from '../view/transcript.js'
 
+import { acknowledgeFrames } from './helpers/paint.js'
+
 const isolated = await vi.hoisted(async () => {
   const { mkdtempSync } = await import('node:fs')
   const { tmpdir } = await import('node:os')
@@ -188,6 +190,7 @@ describe('assistant Markdown file links', () => {
     const app = new App(tern, new GatewayClient(), 'test')
     app.sid = 'session-1'
     app.info = { cwd, model: 'fixture' }
+    acknowledgeFrames(tern)
     const running = app.run()
     const surface = tern.surfaces[0]!
     const render = surface.render.bind(surface)

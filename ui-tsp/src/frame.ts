@@ -8,6 +8,7 @@
 export class FramePump {
   #dirty = false
   #queued = false
+  #closed = false
 
   constructor(
     private readonly blocked: () => boolean,
@@ -17,6 +18,10 @@ export class FramePump {
 
   /** State changed. Send now if Tern has credit. Otherwise wait for an ack. */
   changed() {
+    if (this.#closed) {
+      return
+    }
+
     this.#dirty = true
 
     if (this.blocked()) {
@@ -28,11 +33,25 @@ export class FramePump {
 
   /** Tern displayed a frame. Flush the newest view if one is waiting. */
   credit() {
-    if (!this.#dirty || this.blocked()) {
+    if (this.#closed || !this.#dirty || this.blocked()) {
       return
     }
 
     this.#queue()
+  }
+
+  /** Build the final model even without credit: Surface.close flushes it into kept scrollback. */
+  close() {
+    if (this.#closed) {
+      return
+    }
+
+    this.#closed = true
+
+    if (this.#dirty) {
+      this.#dirty = false
+      this.render()
+    }
   }
 
   #queue() {
@@ -48,7 +67,7 @@ export class FramePump {
   }
 
   #flush() {
-    if (!this.#dirty || this.blocked()) {
+    if (this.#closed || !this.#dirty || this.blocked()) {
       return
     }
 

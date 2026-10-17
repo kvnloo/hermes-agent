@@ -11,6 +11,8 @@ import { App } from '../app.js'
 import { localCommand } from '../commands.js'
 import { openSettings } from '../overlays/settings.js'
 
+import { acknowledgeFrames } from './helpers/paint.js'
+
 // Hermes history binds HERMES_HOME at module load. Hoisted isolation must precede those imports.
 const isolated = await vi.hoisted(async () => {
   const { mkdtempSync } = await import('node:fs')
@@ -115,6 +117,7 @@ async function withApp(fixture: Fixture, run: (app: App, surface: Surface, press
   const app = new App(tern, gw, 'test')
   app.sid = 'session-1'
   app.info = { model: 'fixture-model', reasoning_effort: 'medium' }
+  acknowledgeFrames(tern)
   const running = app.run()
   const surface = tern.surfaces[0]!
   const render = surface.render.bind(surface)

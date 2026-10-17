@@ -9,6 +9,8 @@
     "bundle": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
+    "bench:frame": "node bench/run.mjs",
+    "bench:frame:compare": "node bench/compare.mjs",
     "e2e:native": "node e2e/run.mjs",
     "lint": "eslint src/",
     "fmt": "prettier --write 'src/**/*.{ts,tsx}'",

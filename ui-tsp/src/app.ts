@@ -162,11 +162,14 @@ export class App implements OverlayHost {
         }
       }
     }
+
     this.#frames = new FramePump(
-      () => this.#surface.blocked,
-      () => this.#render()
+      () => this.#surface.closed || !this.#visible || this.#surface.blocked,
+      () => this.#render(),
+      fn => setImmediate(fn)
     )
     const ack = this.#surface.acknowledge.bind(this.#surface)
+
     this.#surface.acknowledge = (s: number) => {
       ack(s)
       this.#frames.credit()
@@ -211,6 +214,7 @@ export class App implements OverlayHost {
 
     const code = await this.#done.promise
     this.#orb?.close()
+    this.#frames.close()
     await this.#tern.close()
     this.#gw.kill('exit')
 
@@ -252,7 +256,7 @@ export class App implements OverlayHost {
   }
 
   changed() {
-    this.#frames.changed()
+    this.#frames?.changed()
   }
 
   // ── Input ──────────────────────────────────────────────────────────

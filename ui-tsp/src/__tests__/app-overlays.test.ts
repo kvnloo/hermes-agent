@@ -8,6 +8,8 @@ import { afterAll, describe, expect, it, vi } from 'vitest'
 
 import { App } from '../app.js'
 
+import { acknowledgeFrames } from './helpers/paint.js'
+
 const isolated = await vi.hoisted(async () => {
   // History binds its home at module load, before the App constructor runs.
   const { mkdtempSync } = await import('node:fs')
@@ -68,6 +70,7 @@ async function withApp(run: (app: App, gw: GatewayClient, surface: Surface) => P
   const gw = new GatewayClient()
   const app = new App(tern, gw, 'test')
   app.sid = 'session-1'
+  acknowledgeFrames(tern)
   const running = app.run()
   const surface = tern.surfaces[0]!
   const render = surface.render.bind(surface)

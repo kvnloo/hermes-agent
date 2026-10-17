@@ -6,6 +6,7 @@ function pump(blocked: () => boolean) {
   const renders: number[] = []
   let n = 0
   const queued: Array<() => void> = []
+
   const frames = new FramePump(
     blocked,
     () => {
@@ -19,7 +20,8 @@ function pump(blocked: () => boolean) {
     renders,
     run: () => {
       const batch = queued.splice(0)
-      for (const fn of batch) fn()
+
+      for (const fn of batch) {fn()}
     }
   }
 }
@@ -51,6 +53,25 @@ describe('FramePump', () => {
 
     blocked = false
     p.frames.credit()
+    p.run()
+    expect(p.renders).toEqual([1])
+  })
+
+  it('flushes dirty state for close even while blocked and ignores later changes and credits', () => {
+    const p = pump(() => true)
+    p.frames.changed()
+    p.frames.close()
+    p.frames.close()
+    p.frames.credit()
+    p.frames.changed()
+    p.run()
+    expect(p.renders).toEqual([1])
+  })
+
+  it('does not run a previously queued callback after close', () => {
+    const p = pump(() => false)
+    p.frames.changed()
+    p.frames.close()
     p.run()
     expect(p.renders).toEqual([1])
   })
