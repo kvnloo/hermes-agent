@@ -36,7 +36,9 @@ afterAll(() => {
 const rendered = () => new Promise<void>(resolve => setImmediate(resolve))
 
 function node(value: unknown): Node {
-  if (!(value instanceof Node)) throw new Error('Expected a native Tern node')
+  if (!(value instanceof Node)) {
+    throw new Error('Expected a native Tern node')
+  }
   return value
 }
 
@@ -93,7 +95,9 @@ describe('native assistant answer actions', () => {
 
   it('converts a clipboard failure into a notice, never a thrown exception', () => {
     const failure = vi.fn()
-    expect(() => copyAnswer(completedTurn(), () => { throw new Error('EPIPE') }, failure)).not.toThrow()
+    expect(() => copyAnswer(completedTurn(), () => {
+      throw new Error('EPIPE')
+    }, failure)).not.toThrow()
     expect(failure).toHaveBeenCalledOnce()
   })
 
@@ -164,8 +168,11 @@ describe('Ctrl+O native tool folding', () => {
     } finally {
       app.quit()
       await running
-      if (previousSplash === undefined) delete process.env.HERMES_TUI_SPLASH
-      else process.env.HERMES_TUI_SPLASH = previousSplash
+      if (previousSplash === undefined) {
+        delete process.env.HERMES_TUI_SPLASH
+      } else {
+        process.env.HERMES_TUI_SPLASH = previousSplash
+      }
     }
   })
 })

@@ -328,16 +328,22 @@ export class App implements OverlayHost {
     for (let i = this.transcript.entries.length - 1; i >= 0; i--) {
       const entry = this.transcript.entries[i]
 
-      if (entry?.kind !== 'turn') continue
+      if (entry?.kind !== 'turn') {
+        continue
+      }
 
       for (let j = entry.blocks.length - 1; j >= 0; j--) {
         const block = entry.blocks[j]
 
-        if (block?.kind !== 'tool') continue
+        if (block?.kind !== 'tool') {
+          continue
+        }
 
         const fold = toolFoldState(block.call)
 
-        if (!fold.collapsible) continue
+        if (!fold.collapsible) {
+          continue
+        }
 
         const key = entry.id + ':' + block.call.id
         this.#folds.set(key, !(this.#folds.get(key) ?? fold.collapsed))
@@ -353,7 +359,9 @@ export class App implements OverlayHost {
       // Tern owns mouse folding. Mirror only the clicked tool's presentation
       // state, so the subsequent Ctrl+O reverses what the person actually saw.
       for (const entry of this.transcript.entries) {
-        if (entry.kind !== 'turn' || !ev.id.startsWith('main.' + entry.id + '.')) continue
+        if (entry.kind !== 'turn' || !ev.id.startsWith('main.' + entry.id + '.')) {
+          continue
+        }
 
         const match = entry.blocks.some(b => b.kind === 'tool' && b.call.id === ev.key)
 
