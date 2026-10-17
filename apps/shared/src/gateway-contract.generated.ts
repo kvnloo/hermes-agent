@@ -3391,10 +3391,21 @@ export interface SessionUndoParams {
   session_id: string
   profile?: string | null
   intent?: UndoIntent | null
+  target_message_id?: number | null
+  expected_history_token?: string | null
 }
 export type UndoIntent = 'retry' | 'undo'
 export interface SessionUndoResult {
   removed: number
+  turns_removed?: number | null
+  text?: string | null
+  history_token?: string | null
+  messages?: TranscriptMessage[] | null
+}
+export interface SessionRewindPreviewParams {
+  session_id: string
+  profile?: string | null
+  target_message_id: number
 }
 export interface SessionSaveParams {
   session_id: string
@@ -5366,6 +5377,8 @@ export interface RpcMethods {
   'session.redirect': { params: SessionCorrectionParams; result: SessionCorrectionResult }
   /** Attach to a stored session: reuse it if live here, else lazy / deferred / cold / eager rebuild. */
   'session.resume': { params: SessionResumeParams; result: SessionResumeResult }
+  /** Read-only preview of the targeted rewind text, turn count and history token; never mutates history. */
+  'session.rewind_preview': { params: SessionRewindPreviewParams; result: SessionUndoResult }
   /** Export the transcript to ~/.hermes/sessions/saved (classic /save). */
   'session.save': { params: SessionSaveParams; result: SessionSaveResult }
   /** Set/clear hidden (out of the default list, still resumable by its owner) on a session + lineage. */
@@ -5376,7 +5389,7 @@ export interface RpcMethods {
   'session.steer': { params: SessionCorrectionParams; result: SessionCorrectionResult }
   /** Read or set a live session's title; a title set before the row exists is queued. */
   'session.title': { params: SessionTitleParams; result: SessionTitleResult }
-  /** Drop the last user turn (and everything after it) from an idle session. */
+  /** Drop the last user turn, or rewind to a durable target_message_id, from an idle session. */
   'session.undo': { params: SessionUndoParams; result: SessionUndoResult }
   /** Token / context / cost counters for the session (+ Nous credit lines when available). */
   'session.usage': { params: SessionUsageParams; result: SessionUsageResult }
@@ -5687,6 +5700,7 @@ export const RPC_METHODS = [
   'session.most_recent',
   'session.redirect',
   'session.resume',
+  'session.rewind_preview',
   'session.save',
   'session.set_hidden',
   'session.status',

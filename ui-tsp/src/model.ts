@@ -74,6 +74,9 @@ export interface UserEntry {
   id: string
   text: string
   at: number
+  /** Durable gateway row address, never the presentation-only entry id. */
+  rowId?: number
+  rewindUnavailable?: string
 }
 
 /** One assistant turn: thinking, text and tool calls as they arrived. */

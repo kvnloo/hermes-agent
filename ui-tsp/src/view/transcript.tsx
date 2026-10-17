@@ -27,7 +27,8 @@ export interface TranscriptContext {
   toolCollapsed?(turnId: string, callId: string): boolean | undefined
   foldRevision?(turnId: string): number
   toggleTool?(turnId: string, callId: string): void
-  rewind?(): void
+  rewind?(entry: UserEntry): void
+  rewindDisabledReason?(entry: UserEntry): string | undefined
   retry?(turnId: string): void
   canRetry?(turnId: string): boolean
 }
@@ -36,7 +37,7 @@ const kNode = Symbol('tsp.node')
 
 /** An entry carrying its last built node and the revision it was built at. */
 interface Built {
-  [kNode]?: { rev: number; cwd: string; media: boolean; foldRev: number; node: JSX.Element }
+  [kNode]?: { rev: number; cwd: string; media: boolean; foldRev: number; rewindKey: string; node: JSX.Element }
 }
 
 /**
@@ -54,15 +55,16 @@ export function entryNode(e: Entry, id: string, cx: TranscriptContext): JSX.Elem
   const built: Built = holder
   const rev = e.kind === 'turn' ? e.rev : 0
   const foldRev = e.kind === 'turn' ? (cx.foldRevision?.(e.id) ?? 0) : 0
+  const rewindKey = e.kind === 'user' ? `${e.rowId}:${cx.rewindDisabledReason?.(e) ?? ''}` : ''
   const cached = built[kNode]
   const media = cx.media ?? false
 
-  if (cached?.rev === rev && cached.cwd === cx.cwd && cached.media === media && cached.foldRev === foldRev) {
+  if (cached?.rev === rev && cached.cwd === cx.cwd && cached.media === media && cached.foldRev === foldRev && cached.rewindKey === rewindKey) {
     return cached.node
   }
 
   const node = buildEntry(e, id, cx)
-  built[kNode] = { node, rev, cwd: cx.cwd, media, foldRev }
+  built[kNode] = { node, rev, cwd: cx.cwd, media, foldRev, rewindKey }
 
   return node
 }
@@ -89,6 +91,7 @@ function buildEntry(e: Exclude<Entry, { kind: 'welcome' }>, id: string, cx: Tran
 
 function userNode(e: UserEntry, cx: TranscriptContext): JSX.Element {
   const at = new Date(e.at || Date.now())
+  const disabled = cx.rewindDisabledReason?.(e)
 
   return (
     <card key={e.id} role="omp.user" tone="user">
@@ -100,7 +103,7 @@ function userNode(e: UserEntry, cx: TranscriptContext): JSX.Element {
           title={at.toLocaleString()}
         />
         <text key="copy" onClick={() => cx.copy(e.text)} role="omp.user.tool" text="Copy" title="Copy message" />
-        <text key="rewind" onClick={() => cx.rewind?.()} role="omp.user.tool" text="Rewind" title="Rewind to this message" />
+        <text key="rewind" onClick={disabled ? undefined : () => cx.rewind?.(e)} role="omp.user.tool" spans={disabled ? [{ s: 'dim', t: 'Rewind (unavailable)' }] : undefined} text={disabled ? undefined : 'Rewind'} title={disabled ?? 'Rewind to this message'} />
       </row>
       <md key="body">{e.text}</md>
     </card>

@@ -45,6 +45,7 @@ class SessionRewindMixin:
     def rewind_user_turn(
         self, session_id: str, user_ordinal: int, *, warm_history: Optional[List[Dict[str, Any]]] = None,
         require_retryable: bool = False, require_composite: bool = False, adopt_row_ids: bool = False,
+        target_message_id: int | None = None,
     ) -> RewindOutcome:
         """Rewind the active transcript to just before user turn ``user_ordinal`` (0 = oldest; negative counts
         back from the newest and clamps to the oldest, so ``-n`` is ``/undo n``). ``warm_history`` (CLI/TUI):
@@ -53,8 +54,9 @@ class SessionRewindMixin:
         ``require_retryable``: the live payload must be losslessly replayable as text (``ValueError`` from
         :func:`retryable_user_text` before any write). ``require_composite``: the target must be a compaction
         carrier. ``adopt_row_ids`` (TUI): copy durable ``_row_id`` identities onto the installed warm prefix so
-        clients can address follow-ups by row; the CLI leaves its history shape alone. Out-of-range /
-        wrong-shape targets raise :class:`RewindTargetUnavailableError`."""
+        clients can address follow-ups by row; the CLI leaves its history shape alone. ``target_message_id`` pins
+        the row as well as its ordinal so concurrent history replacement cannot retarget a renderer's intent.
+        Out-of-range / wrong-shape targets raise :class:`RewindTargetUnavailableError`."""
         from agent.context_compressor import (
             _DB_PERSISTED_MARKER, history_before_user_originated_turn, retryable_user_text,
             split_user_originated_turn, user_originated_turn_view)
@@ -76,6 +78,8 @@ class SessionRewindMixin:
             raise RewindTargetUnavailableError("target user message is no longer in session history")
         target_index = durable_user[user_ordinal]
         target = durable[target_index]
+        if target_message_id is not None and target.get("_row_id") != target_message_id:
+            raise RewindTargetUnavailableError("target message identity changed before rewind")
         durable_prefix, live_view = history_before_user_originated_turn(durable, target_index)
         scaffold, _ = split_user_originated_turn(target)
         if require_composite and scaffold is None:

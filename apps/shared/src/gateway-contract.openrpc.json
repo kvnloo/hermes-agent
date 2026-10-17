@@ -3499,6 +3499,24 @@
       }
     },
     {
+      "name": "session.rewind_preview",
+      "summary": "Read-only preview of the targeted rewind text, turn count and history token; never mutates history.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/SessionRewindPreviewParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/SessionUndoResult"
+        }
+      }
+    },
+    {
       "name": "session.save",
       "summary": "Export the transcript to ~/.hermes/sessions/saved (classic /save).",
       "params": [
@@ -3590,7 +3608,7 @@
     },
     {
       "name": "session.undo",
-      "summary": "Drop the last user turn (and everything after it) from an idle session.",
+      "summary": "Drop the last user turn, or rewind to a durable target_message_id, from an idle session.",
       "params": [
         {
           "name": "params",
@@ -31985,6 +32003,38 @@
         "title": "SessionResumeResult",
         "type": "object"
       },
+      "SessionRewindPreviewParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "target_message_id": {
+            "exclusiveMinimum": 0,
+            "title": "Target Message Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "target_message_id"
+        ],
+        "title": "SessionRewindPreviewParams",
+        "type": "object"
+      },
       "SessionSaveParams": {
         "additionalProperties": false,
         "properties": {
@@ -32247,6 +32297,31 @@
               }
             ],
             "default": null
+          },
+          "target_message_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target Message Id"
+          },
+          "expected_history_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expected History Token"
           }
         },
         "required": [
@@ -32261,6 +32336,57 @@
           "removed": {
             "title": "Removed",
             "type": "integer"
+          },
+          "turns_removed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Turns Removed"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Text"
+          },
+          "history_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "History Token"
+          },
+          "messages": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TranscriptMessage"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Messages"
           }
         },
         "required": [
