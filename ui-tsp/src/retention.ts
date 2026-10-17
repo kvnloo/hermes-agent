@@ -13,7 +13,7 @@ import {
 
 import type { Entry } from './model.js'
 import type { Transcript } from './transcript.js'
-import { entryNode, forgetEntryNode, type TranscriptContext } from './view/transcript.js'
+import { forgetEntryNode, projectedEntryNodes, type TranscriptContext } from './view/transcript.js'
 
 export const RETAIN_TURNS = 20
 export const RELOAD_PAGE = 40
@@ -24,7 +24,9 @@ interface RetainedEntry {
   index: number
   settled: boolean
   evicted: boolean
-  tree?: Tree
+  trees?: Tree[]
+  ids: string[]
+  gone: Set<string>
 }
 
 /** No terminal reload/scroll event exists in SDK 0.1; reload is an explicit intent. */
@@ -86,15 +88,16 @@ export class Retention {
     }
 
     for (const id of event.ids) {
-      const item = this.#entries.get(id)
+      const item = [...this.#entries.values()].find(item => item.ids.includes(id))
 
       if (!item?.settled) {
         continue
       }
 
       item.evicted = true
+      item.gone.add(id)
       this.#evicted.add(item)
-      item.tree = undefined
+      item.trees = undefined
       forgetEntryNode(item.entry)
     }
   }
@@ -120,8 +123,8 @@ export class Retention {
       return
     }
 
-    const id = event.id.split('.').slice(0, 2).join('.')
-    const item = this.#entries.get(id)
+    const target = event.id
+    const item = [...this.#entries.values()].find(item => item.ids.some(id => target === id || target.startsWith(id + '.')))
 
     if (!item || item.evicted || !this.#cx) {
       return
@@ -129,7 +132,7 @@ export class Retention {
 
     return () => {
       if (
-        this.#entries.get(id) !== item ||
+        this.#entries.get(`main.${item.entry.id}`) !== item ||
         item.evicted ||
         !this.#cx ||
         !this.#transcript?.entries.includes(item.entry)
@@ -138,7 +141,7 @@ export class Retention {
       }
 
       const router = new Surface({ send() {}, credits: () => 1, dropped() {} }, surface, { listen: false })
-      router.render({ main: [entryNode(item.entry, id, this.#cx)] })
+      router.render({ main: projectedEntryNodes(item.entry, `main.${item.entry.id}`, this.#cx) })
       const action = router.dispatch(event)
 
       if (item.settled) {
@@ -154,7 +157,7 @@ export class Retention {
     this.#cx = cx
     this.#transcript = transcript
     const ops: Op[] = []
-    const context = `${cx.cwd}:${cx.media}`
+    const context = `${cx.cwd}:${cx.media}:${cx.toolsHidden}`
     const structural = this.#structure !== transcript.structureRev
 
     if (structural) {
@@ -165,8 +168,8 @@ export class Retention {
           continue
         }
 
-        if (!item.evicted) {
-          ops.push(['del', id])
+        for (const part of item.ids) {
+          if (!item.gone.has(part)) { ops.push(['del', part]) }
         }
 
         forgetEntryNode(item.entry)
@@ -181,7 +184,7 @@ export class Retention {
         let item = this.#entries.get(id)
 
         if (!item) {
-          item = { entry, index, settled: false, evicted: false }
+          item = { entry, index, settled: false, evicted: false, ids: [], gone: new Set() }
           this.#entries.set(id, item)
         }
 
@@ -248,31 +251,34 @@ export class Retention {
       const wasEvicted = item.evicted
       item.evicted = false
       this.#evicted.delete(item)
-      const element = entryNode(entry, id, cx)
 
-      if (!(element instanceof Node)) {
-        continue
-      }
+      const trees = projectedEntryNodes(entry, id, cx).flatMap(element => element instanceof Node
+        ? [new Tree(`main.${element.props.key}`, element)] : [])
 
-      const tree = new Tree(id, element)
+      const before = this.#nextResident(item.index)
 
-      if (item.tree && !wasEvicted && !restored.has(item)) {
-        ops.push(...new View([item.tree]).ops(new View([tree]), 'main'))
+      if (item.trees && !wasEvicted && !restored.has(item)) {
+        const changes = View.from({ main: item.trees.map(tree => tree.node) }).ops(View.from({ main: trees.map(tree => tree.node) }), 'hermes')
+        ops.push(...changes.map(op => (op[0] === 'add' || op[0] === 'move') && op[2] === 'main' && op[3] === null
+          ? op[0] === 'add' ? ['add', op[1], op[2], before, op[4]] satisfies Op : ['move', op[1], op[2], before] satisfies Op : op))
       } else {
-        if (item.settled && !wasEvicted && !restored.has(item)) {
-          ops.push(['del', id])
+        for (const part of item.ids) {
+          if (!item.gone.has(part)) { ops.push(['del', part]) }
         }
 
-        const before = this.#nextResident(item.index)
-        ops.push(['add', id, 'main', before, tree.wire()])
+        for (const tree of trees) {
+          ops.push(['add', tree.id, 'main', before, tree.wire()])
+        }
       }
 
-      item.tree = tree
+      item.ids = trees.map(tree => tree.id)
+      item.gone.clear()
+      item.trees = trees
       item.settled = settle
 
       if (settle) {
-        ops.push(['settle', id])
-        item.tree = undefined
+        ops.push(...item.ids.map(part => ['settle', part] satisfies Op))
+        item.trees = undefined
         forgetEntryNode(entry)
         this.#hot.delete(item)
       }
@@ -318,8 +324,11 @@ export class Retention {
     for (let i = index + 1; i < entries.length; i++) {
       const id = `main.${entries[i]!.id}`
 
-      if (!this.#entries.get(id)?.evicted) {
-        return id
+      const item = this.#entries.get(id)
+      const resident = item?.ids.find(part => !item.gone.has(part))
+
+      if (resident) {
+        return resident
       }
     }
 

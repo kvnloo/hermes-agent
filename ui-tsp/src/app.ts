@@ -55,10 +55,10 @@ import { openRewind, rewindDisabledReason } from './rewind.js'
 import { SPLASH_ROLE } from './splash/index.js'
 import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting, splashTickMs } from './splash/launch.js'
 import { TodoHud } from './todo-hud.js'
+import { ToolPresentation } from './tool-presentation.js'
 import { Transcript } from './transcript.js'
 import { dockNodes } from './view/dock.js'
-import { toolFoldState } from './view/tools.js'
-import { entryNode } from './view/transcript.js'
+import { projectedEntryNodes } from './view/transcript.js'
 import { randomTip, type WelcomeContext } from './view/welcome.js'
 
 /** The composer's `editor` node id (dock → composer → line → input). */
@@ -91,10 +91,9 @@ export class App implements OverlayHost {
   readonly attachments: Attachments
   readonly overlays: Overlay[] = []
   /** Presentation-only collapse overrides, scoped by transcript turn and tool identity. */
-  readonly #folds = new Map<string, boolean>()
+  readonly #tools = new ToolPresentation()
   /** Completed side-agent results projected only into dismissible dock notices. */
   readonly #reports = new Map<string, ReportNotice>()
-  readonly #foldRevs = new Map<string, number>()
   #retention: Retention | undefined
   sid: string | null = null
   /** The stored (database) id of the open session: what `session.list` rows are keyed by. */
@@ -525,37 +524,24 @@ export class App implements OverlayHost {
     })
   }
 
-  /** Toggle the newest foldable tool without altering Hermes tool results. */
-  toggleRecentTool(): void {
-    for (let i = this.transcript.entries.length - 1; i >= 0; i--) {
-      const entry = this.transcript.entries[i]
+  toggleToolExpansion(): void {
+    this.#tools.expand(this.transcript.entries, this.info?.cwd ?? '', this.#tern.caps.kinds.includes('media'))
+    this.#invalidateTools()
+  }
 
-      if (entry?.kind !== 'turn') {
-        continue
-      }
+  toggleToolVisibility(): void {
+    this.#tools.toggleVisibility()
+    this.#invalidateTools()
+  }
 
-      for (let j = entry.blocks.length - 1; j >= 0; j--) {
-        const block = entry.blocks[j]
-
-        if (block?.kind !== 'tool') {
-          continue
-        }
-
-        const fold = toolFoldState(block.call, this.info?.cwd ?? '', this.#tern.caps.kinds.includes('media'))
-
-        if (!fold.collapsible) {
-          continue
-        }
-
-        const key = entry.id + ':' + block.call.id
-        this.#folds.set(key, !(this.#folds.get(key) ?? fold.collapsed))
-        this.#foldRevs.set(entry.id, (this.#foldRevs.get(entry.id) ?? 0) + 1)
+  #invalidateTools(): void {
+    for (const entry of this.transcript.entries) {
+      if (entry.kind === 'turn') {
         this.#retention?.invalidate(entry.id)
-        this.changed()
-
-        return
       }
     }
+
+    this.changed()
   }
 
   #pasteImage(text: string): boolean {
@@ -590,15 +576,16 @@ export class App implements OverlayHost {
       // Tern owns mouse folding. Mirror only the clicked tool's presentation
       // state, so the subsequent Ctrl+O reverses what the person actually saw.
       for (const entry of this.transcript.entries) {
-        if (entry.kind !== 'turn' || !ev.id.startsWith('main.' + entry.id + '.')) {
+        if (entry.kind !== 'turn' || (!ev.id.startsWith('main.' + entry.id + '.') && !ev.id.startsWith('main.' + entry.id + '~'))) {
           continue
         }
 
-        const match = entry.blocks.some(b => b.kind === 'tool' && b.call.id === ev.key)
+        const match = entry.blocks.find(b => b.kind === 'tool' && (b.call.id === ev.key || `${entry.id}~${b.id}` === ev.key))
 
-        if (match) {
-          this.#folds.set(entry.id + ':' + ev.key, ev.collapsed)
-          this.#foldRevs.set(entry.id, (this.#foldRevs.get(entry.id) ?? 0) + 1)
+        if (match?.kind === 'tool') {
+          this.#tools.mirror(entry.id, match.call.id, ev.collapsed)
+          this.#retention?.invalidate(entry.id)
+          this.changed()
 
           break
         }
@@ -1103,8 +1090,7 @@ export class App implements OverlayHost {
         }
       }
 
-      this.#folds.clear()
-      this.#foldRevs.clear()
+      this.#tools.reset()
       this.#lastSubmitted = null
       this.#retry = null
       this.#startupAttachmentPending = false
@@ -1616,12 +1602,15 @@ export class App implements OverlayHost {
         this.changed()
       },
       inspectAgent: (callId: string, agentId: string) => openAgentInspector(this, { callId, agentId }),
-      foldRevision: (turnId: string) => this.#foldRevs.get(turnId) ?? 0,
-      toolCollapsed: (turnId: string, callId: string) => this.#folds.get(turnId + ':' + callId),
+      toolsHidden: this.#tools.hidden && !this.overlays.some(isApprovalPrompt),
+      foldRevision: (turnId: string) => this.#tools.foldRevision(turnId),
+      toolCollapsed: (turnId: string, callId: string) => this.#tools.collapsed(turnId, callId),
       toggleTool: (turnId: string, callId: string) => {
-        const key = turnId + ':' + callId
-        this.#folds.set(key, !(this.#folds.get(key) ?? true))
-        this.#foldRevs.set(turnId, (this.#foldRevs.get(turnId) ?? 0) + 1)
+        const turn = this.transcript.entries.find(e => e.id === turnId)
+        const block = turn?.kind === 'turn' ? turn.blocks.find(b => b.kind === 'tool' && b.call.id === callId) : undefined
+
+        if (block?.kind !== 'tool') { return }
+        this.#tools.toggle(turnId, block.call, info?.cwd ?? '', this.#tern.caps.kinds.includes('media'))
         this.#retention?.invalidate(turnId)
         this.changed()
       },
@@ -1763,7 +1752,7 @@ export class App implements OverlayHost {
         }),
         ...(modal ? [] : this.#completion.nodes(INPUT_ID))
       ],
-      main: retained ? [] : this.transcript.entries.map(e => entryNode(e, `main.${e.id}`, cx))
+      main: retained ? [] : this.transcript.entries.flatMap(e => projectedEntryNodes(e, `main.${e.id}`, cx))
     })
 
     if (!this.#retention) {
