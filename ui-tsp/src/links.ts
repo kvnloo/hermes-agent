@@ -35,7 +35,7 @@ export function fileHref(path: string, cwd: string, opts: FileLinkOptions = {}):
     // Tern routes file:// links. Line fragments follow #L10 / #L10-L20;
     // column support (#L10C3) still requires native host confirmation.
     if (line) {
-      url.hash = 'L' + line + (end && end >= line ? '-L' + end : col ? 'C' + col : '')
+      url.hash = 'L' + line + (end && end > line ? '-L' + end : col ? 'C' + col : '')
     }
 
     return url.href
