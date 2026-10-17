@@ -231,10 +231,14 @@ export class Transcript {
   subagent(type: string, p: SubagentEventPayload, at = Date.now()) {
     // Background delegations report after their turn ended (and maybe after newer turns
     // started): find the call that dispatched them by its delegation id first.
-    const found =
-      (p.delegation_id
-        ? this.#findTool(c => c.name === 'delegate_task' && record(c.result)?.delegation_id === p.delegation_id)
-        : undefined) ?? this.#lastTool(c => c.name === 'delegate_task')
+    const byId = p.delegation_id
+      ? this.#findTool(c => c.name === 'delegate_task' && record(c.result)?.delegation_id === p.delegation_id)
+      : undefined
+    // An explicit nonmatching delegation id must never land on a different
+    // completed task. Before tool.complete, the one live call is a valid donor.
+    const found = byId ?? this.#lastTool(c =>
+      c.name === 'delegate_task' && (!p.delegation_id || c.status === 'running')
+    )
 
     if (!found) {
       return
@@ -260,6 +264,9 @@ export class Transcript {
     }
 
     agent.last = p
+    if (p.parent_id && p.parent_id !== agent.id) {
+      agent.parentId = p.parent_id
+    }
     agent.goal = textField(p, 'task') || p.goal || agent.goal
     agent.label = textField(p, 'name') || agent.label
     agent.model = p.model ?? agent.model

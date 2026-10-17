@@ -527,7 +527,7 @@ function taskCard(call: ToolCall, result: Record<string, unknown> | undefined, n
 
   // Until the first subagent event, the requested tasks stand in as pending rows.
   const rows = agents.length
-    ? agents.map(a => agentNode(a, now))
+    ? agentRows(agents, now)
     : call.status === 'running' || result?.status === 'dispatched'
       ? goals.map((g, i) => <agent agent="task" key={`p${i}`} name={`Agent ${i + 1}`} status="pending" task={g} />)
       : []
@@ -573,7 +573,43 @@ function taskCard(call: ToolCall, result: Record<string, unknown> | undefined, n
   }
 }
 
-function agentNode(a: Subagent, now: number): JSX.Element {
+/** Native agent nesting only when a parent exists in this task and is acyclic. */
+function agentRows(agents: readonly Subagent[], now: number): JSX.Element[] {
+  const byId = new Map(agents.map(a => [a.id, a]))
+  const children = new Map<string, Subagent[]>()
+  const roots: Subagent[] = []
+
+  for (const agent of agents) {
+    let parent = agent.parentId && byId.has(agent.parentId) ? agent.parentId : undefined
+    const seen = new Set([agent.id])
+    let ancestor = parent
+
+    while (ancestor) {
+      if (seen.has(ancestor)) {
+        parent = undefined
+        break
+      }
+
+      seen.add(ancestor)
+      ancestor = byId.get(ancestor)?.parentId
+    }
+
+    if (parent) {
+      const siblings = children.get(parent) ?? []
+      siblings.push(agent)
+      children.set(parent, siblings)
+    } else {
+      roots.push(agent)
+    }
+  }
+
+  const render = (agent: Subagent): JSX.Element =>
+    agentNode(agent, now, (children.get(agent.id) ?? []).map(render))
+
+  return roots.map(render)
+}
+
+function agentNode(a: Subagent, now: number, children: JSX.Element[] = []): JSX.Element {
   const status =
     a.status === 'done'
       ? 'done'
@@ -590,8 +626,8 @@ function agentNode(a: Subagent, now: number): JSX.Element {
   return (
     <agent
       agent="task"
-      collapsed={a.summary ? true : undefined}
-      collapsible={a.summary ? true : undefined}
+      collapsed={a.summary ? true : children.length ? false : undefined}
+      collapsible={a.summary || children.length ? true : undefined}
       key={a.id}
       model={a.model}
       name={a.label ?? `Agent ${a.index + 1}`}
@@ -614,6 +650,7 @@ function agentNode(a: Subagent, now: number): JSX.Element {
       }
     >
       {a.summary ? <md key="o">{a.summary}</md> : null}
+      {children}
     </agent>
   )
 }

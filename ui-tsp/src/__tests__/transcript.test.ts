@@ -322,6 +322,37 @@ describe('Transcript', () => {
     expect(tools(turnOf(t.entries))).toEqual([])
   })
 
+  it('never attaches an unknown delegation to another completed background task', () => {
+    const t = new Transcript()
+    t.start(0)
+    t.toolStart({ name: 'delegate_task', tool_id: 'a' }, 1)
+    t.toolComplete({ name: 'delegate_task', tool_id: 'a', result: { delegation_id: 'group-a', mode: 'background' } }, 2)
+    t.toolStart({ name: 'delegate_task', tool_id: 'b' }, 3)
+    t.toolComplete({ name: 'delegate_task', tool_id: 'b', result: { delegation_id: 'group-b', mode: 'background' } }, 4)
+    t.complete({ status: 'complete' }, 5)
+
+    const base = { goal: 'Task', task_count: 1, task_index: 0, subagent_id: 'child' }
+    t.subagent('subagent.start', { ...base, delegation_id: 'foreign' }, 6)
+    const [a, b] = tools(turnOf(t.entries))
+    expect(a?.subagents).toBeUndefined()
+    expect(b?.subagents).toBeUndefined()
+
+    t.subagent('subagent.start', { ...base, delegation_id: 'group-a', parent_id: 'root-agent' }, 7)
+    expect(a?.subagents?.[0]).toMatchObject({ id: 'child', parentId: 'root-agent', status: 'running' })
+    expect(b?.subagents).toBeUndefined()
+  })
+
+  it('accepts an explicit delegation while its only parent call is still running', () => {
+    const t = new Transcript()
+    t.start(0)
+    t.toolStart({ name: 'delegate_task', tool_id: 'in-progress' }, 0)
+    t.subagent('subagent.start', {
+      goal: 'Run tests', delegation_id: 'not-yet-in-tool-result', subagent_id: 'child',
+      task_count: 1, task_index: 0
+    }, 1)
+    expect(tools(turnOf(t.entries))[0]?.subagents?.[0]?.status).toBe('running')
+  })
+
   it('loads resumed messages with tool calls, edit results and bridged todos', () => {
     const t = new Transcript()
 

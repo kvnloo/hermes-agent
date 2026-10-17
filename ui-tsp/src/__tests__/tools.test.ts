@@ -26,6 +26,35 @@ function node(value: unknown): Node {
 }
 
 describe('tool cards', () => {
+  it('nests child agents by explicit parent id with stable keys', () => {
+    const card = node(toolNode({
+      args: { tasks: [{ goal: 'root task' }] }, argsText: '', context: '', id: 'call', name: 'delegate_task',
+      startedAt: 0, status: 'running',
+      subagents: [
+        { id: 'root', goal: 'Root', index: 0, status: 'running', startedAt: 0, toolCount: 0, tokens: 0, calls: 0 },
+        { id: 'child', parentId: 'root', goal: 'Child', index: 1, status: 'running', startedAt: 0, toolCount: 0, tokens: 0, calls: 0 }
+      ]
+    }, 0))
+    const agents = card.children.filter(child => child instanceof Node && child.kind === 'agent') as Node[]
+    expect(agents).toHaveLength(1)
+    expect(agents[0]?.props.key).toBe('root')
+    const nested = agents[0]?.children.filter(child => child instanceof Node && child.kind === 'agent') as Node[]
+    expect(nested).toHaveLength(1)
+    expect(nested[0]?.props.key).toBe('child')
+  })
+
+  it('keeps cyclic agent parent ids flat rather than recursing', () => {
+    const card = node(toolNode({
+      args: {}, argsText: '', context: '', id: 'call', name: 'delegate_task',
+      startedAt: 0, status: 'running',
+      subagents: [
+        { id: 'left', parentId: 'right', goal: 'Left', index: 0, status: 'running', startedAt: 0, toolCount: 0, tokens: 0, calls: 0 },
+        { id: 'right', parentId: 'left', goal: 'Right', index: 1, status: 'running', startedAt: 0, toolCount: 0, tokens: 0, calls: 0 }
+      ]
+    }, 0))
+    expect(card.children.filter(child => child instanceof Node && child.kind === 'agent')).toHaveLength(2)
+  })
+
   it('folds a long read to three lines and badges the rest', () => {
     const card = node(toolNode(read('1|a\n2|b\n3|c\n4|d\n5|e'), 0))
 
