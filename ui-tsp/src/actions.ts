@@ -184,8 +184,27 @@ export const APP_ACTIONS: readonly Action[] = [
   }
 ]
 
+type ApprovalAction =
+  { kind: 'move'; delta: number } | { kind: 'choose' } | { kind: 'deny' } | { kind: 'digit'; index: number }
+
+const APPROVAL_ACTIONS: readonly { keys: readonly string[]; action: ApprovalAction }[] = [
+  { keys: ['up'], action: { kind: 'move', delta: -1 } },
+  { keys: ['down'], action: { kind: 'move', delta: 1 } },
+  { keys: ['enter'], action: { kind: 'choose' } },
+  { keys: ['escape'], action: { kind: 'deny' } },
+  ...['1', '2', '3', '4'].map((key, index) => ({
+    keys: [key],
+    action: { kind: 'digit', index } satisfies ApprovalAction
+  }))
+]
+
+/** App offers these overlay-owned keys only while its composer is empty. */
+export function approvalActionForKey(key: Key): ApprovalAction | undefined {
+  return APPROVAL_ACTIONS.find(binding => matchesAction(binding, key))?.action
+}
+
 /** Modifier order in a chord is immaterial; new chords require exact modifiers. */
-export function matchesAction(action: Action, key: Key): boolean {
+export function matchesAction(action: Pick<Action, 'keys' | 'extraModifiers'>, key: Key): boolean {
   return action.keys.some(chord => {
     const parts = chord.split('+')
     const name = parts.pop()

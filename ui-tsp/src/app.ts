@@ -6,6 +6,7 @@
 import type {
   ConfigGetResult,
   ConfigSetResult,
+  RequestAnswerResult,
   SessionLiveInfo,
   SessionResumeResult,
   SkinPayload,
@@ -28,6 +29,7 @@ import { type Busy, busyFrom, ownsEvent, Switches } from './flow.js'
 import { FramePump } from './frame.js'
 import { OrbActivity, ThinkingOrb } from './orb.js'
 import type { Overlay, OverlayHost } from './overlay.js'
+import { type ApprovalPrompt, isApprovalPrompt } from './overlays/approval.js'
 import { Completion } from './overlays/completion.js'
 import { openModelPicker } from './overlays/models.js'
 import { promptOverlay } from './overlays/prompts.js'
@@ -81,7 +83,7 @@ export class App implements OverlayHost {
   readonly #completion: Completion
   readonly #welcome: WelcomeContext
   #surface!: Surface
-  /** Owners of native handlers in the last rendered layer, not the current stack. */
+  /** Owners of native handlers in the last rendered layer and dock prompts. */
   readonly #layerOwners = new Map<string, Overlay>()
   readonly #overlayIds = new WeakMap<Overlay, string>()
   #overlaySerial = 0
@@ -107,6 +109,7 @@ export class App implements OverlayHost {
   #startupImage = process.env.HERMES_TUI_IMAGE?.trim() ?? ''
   #effortWrites: Promise<unknown> = Promise.resolve()
   #reasoningToggles: Promise<unknown> = Promise.resolve()
+  #submittingApproval = false
   #effortRequested: { sid: string; value: string } | null = null
   /** The launch splash while it covers the session chrome (it takes the keys until it leaves). */
   #splash: LaunchSplash | undefined
@@ -133,7 +136,7 @@ export class App implements OverlayHost {
     this.#surface.dispatch = event => {
       const handler = dispatch(event)
 
-      if (!handler || !('id' in event) || typeof event.id !== 'string' || !event.id.startsWith('layer.')) {
+      if (!handler || !('id' in event) || typeof event.id !== 'string' || (!event.id.startsWith('layer.') && !event.id.startsWith('dock.'))) {
         return handler
       }
 
@@ -157,7 +160,7 @@ export class App implements OverlayHost {
 
       // Session queues handler calls. Ownership must still hold when the call runs.
       return () => {
-        if (!this.#surface.closed && this.overlays.at(-1) === owner && this.#overlayIds.get(owner) === rootId) {
+        if (!this.#surface.closed && this.owns(owner) && this.#overlayIds.get(owner) === rootId) {
           return handler()
         }
       }
@@ -202,6 +205,7 @@ export class App implements OverlayHost {
       this.dispatches.reset()
       this.#lastSubmitted = null
       this.#retry = null
+      this.#dropPrompts(() => true)
       // Whatever went wrong is in the transcript: let it be seen.
       this.#splash?.ready()
       this.#activity.event({ type: 'error' } as AnyGatewayEvent)
@@ -231,12 +235,12 @@ export class App implements OverlayHost {
     }
 
     this.overlays.push(overlay)
-    this.#overlayIds.set(overlay, `layer.${overlay.key}:${++this.#overlaySerial}`)
+    this.#overlayIds.set(overlay, `${overlay.placement ?? 'layer'}.${overlay.key}:${++this.#overlaySerial}`)
 
-    if (overlay.modal) {
-      // A modal needs the pane and its first key, not the splash's exit animation.
+    if (overlay.modal || overlay.placement === 'dock') {
+      // A waiting request needs the pane immediately, not the splash's exit animation.
       this.#splash?.dismiss()
-      // The sheet owns the keys now: a list or reply for the composer would only land under it.
+      // Clear a stale completion before handing approval keys to the dock.
       this.#completion.dismiss()
     }
 
@@ -253,6 +257,28 @@ export class App implements OverlayHost {
       this.#approvalIds.delete(overlay.key)
       this.changed()
     }
+  }
+
+  /** One input owner: the top floating overlay, otherwise the oldest dock approval. */
+  #inputOwner(): Overlay | undefined {
+    return this.overlays.findLast(o => o.placement !== 'dock') ?? this.overlays.find(isApprovalPrompt)
+  }
+
+  owns(overlay: Overlay): boolean {
+    return !this.#surface.closed && this.#inputOwner() === overlay && this.#overlayIds.has(overlay)
+  }
+
+  async confirmDenial(id: string): Promise<void> {
+    const result = await this.#gw.request<RequestAnswerResult>('request.answer', { id, result: { choice: 'deny' } })
+
+    if (result.status !== 'ok') {
+      throw new Error('The approval is no longer pending. Your message was not sent.')
+    }
+  }
+
+  notice(message: string) {
+    this.transcript.notice(message, 'error')
+    this.changed()
   }
 
   changed() {
@@ -285,7 +311,7 @@ export class App implements OverlayHost {
       return this.#splash.skip()
     }
 
-    const top = this.overlays.at(-1)
+    const top = this.#inputOwner()
 
     // Ctrl+C retains its pre-overlay priority, except Settings owns cancellation.
     const clear = APP_ACTIONS.find(action => action.id === 'app.clear')!
@@ -294,7 +320,7 @@ export class App implements OverlayHost {
       return top?.key === 'settings' ? top.onKey(key) : clear.run(this)
     }
 
-    if (top?.onKey(key)) {
+    if (top && (top.placement !== 'dock' || !this.composer.text) && top.onKey(key)) {
       return
     }
 
@@ -325,7 +351,7 @@ export class App implements OverlayHost {
     const action = this.composer.key(key.alt && /^[a-z]$/i.test(key.name) ? { ...key, text: undefined } : key)
 
     if (action === 'submit') {
-      this.#submit(this.composer.take())
+      void this.#submitDraft()
     }
   }
 
@@ -448,7 +474,7 @@ export class App implements OverlayHost {
       this.#orb?.environment({ reduce: ev.reduce })
     }
 
-    if (ev.ev === 'focus' && ev.id === INPUT_ID && !this.overlays.at(-1)?.modal) {
+    if (ev.ev === 'focus' && ev.id === INPUT_ID && !this.#inputOwner()?.modal) {
       this.#focus = INPUT_ID
       this.#surface.focus(INPUT_ID)
     }
@@ -486,6 +512,54 @@ export class App implements OverlayHost {
   }
 
   // ── Prompts and commands ───────────────────────────────────────────
+
+  /** Keyboard Enter and native send share the request-bound deny → submit transaction. */
+  async #submitDraft(raw = this.composer.text, approval: ApprovalPrompt | null = this.overlays.find(isApprovalPrompt) ?? null) {
+    if (this.#submittingApproval) {
+      return
+    }
+
+    // Native handlers retain the generation painted with their composer. Never
+    // turn an old Send into a denial of a newly arrived or replaced request.
+    if (approval !== (this.overlays.find(isApprovalPrompt) ?? null)) {
+      return
+    }
+
+    if (!approval) {
+      this.#submit(this.composer.take(raw))
+
+      return
+    }
+
+    if (!raw.trim() || !this.owns(approval) || !this.sid || this.#switches.pending) {
+      return
+    }
+
+    // Native send can carry text not yet delivered by onEdit. Retain it on failure.
+    if (raw !== this.composer.text) {
+      this.composer.set(raw)
+    }
+
+    const revision = this.composer.rev
+    const sid = this.sid
+    this.#submittingApproval = true
+
+    try {
+      if (await approval.denyAndConfirm() && this.sid === sid && !this.#switches.pending) {
+        // Don't erase edits made while a transport was awaiting completion.
+        if (this.composer.rev === revision) {
+          this.composer.take(raw)
+        }
+
+        // prompt.submit is the normal user-message path. Unlike our local queue,
+        // an unqueued submission lets the gateway steer a running tool turn.
+        this.#send(raw.trim())
+      }
+    } finally {
+      this.#submittingApproval = false
+      this.changed()
+    }
+  }
 
   #submit(raw: string) {
     const text = raw.trim()
@@ -778,6 +852,7 @@ export class App implements OverlayHost {
 
   #adopt(r: CreateResult) {
     if (this.sid !== r.session_id) {
+      this.#dropPrompts(() => true)
       this.dispatches.reset()
       this.#folds.clear()
       this.#foldRevs.clear()
@@ -1045,6 +1120,7 @@ export class App implements OverlayHost {
         break
 
       case 'approval.cancelled':
+        this.#heldRequests = this.#heldRequests.filter(r => !ev.payload?.request_ids.includes(String(r.params.request_id ?? '')))
         this.#dropPrompts(key => ev.payload?.request_ids.includes(this.#approvalIds.get(key) ?? '') ?? false)
 
         break
@@ -1295,7 +1371,7 @@ export class App implements OverlayHost {
 
     const used = usage?.context_used ?? 0
     const max = usage?.context_max ?? 0
-    const modal = this.overlays.at(-1)?.modal === true
+    const modal = this.#inputOwner()?.modal === true
     this.#orb?.update(this.#activity.state(this.overlays.some(o => o.key.startsWith('prompt:'))), modal)
 
     // Every composer change (keys, native edits and undo, submits, queue edits) ends in a render: refresh here.
@@ -1304,8 +1380,18 @@ export class App implements OverlayHost {
     }
 
     this.#layerOwners.clear()
+    const approvals = this.overlays.filter(isApprovalPrompt)
+    const approval = approvals[0]
+    const approvalId = approval ? this.#overlayIds.get(approval)! : ''
+
+    if (approval) {
+      this.#layerOwners.set(approvalId, approval)
+    }
+
     this.#surface.render({
       dock: dockNodes({
+        approval: approval?.node(approvalId),
+        approvalQueued: approvals.length - 1,
         branch: info?.branch ?? '',
         todos: this.todoHud.visible(Boolean(this.busy)),
         todoExpanded: this.todoHud.expanded,
@@ -1340,11 +1426,11 @@ export class App implements OverlayHost {
         },
         onQueueEdit: () => this.dequeue(),
         onSend: ev => {
-          this.#submit(this.composer.take(ev.text))
+          void this.#submitDraft(ev.text, approval ?? null)
           this.changed()
         },
         onSubmit: () => {
-          this.#submit(this.composer.take())
+          void this.#submitDraft(this.composer.text, approval ?? null)
           this.changed()
         },
         onUndo: () => {
@@ -1356,7 +1442,7 @@ export class App implements OverlayHost {
         ready: this.sid !== null
       }),
       layer: [
-        ...this.overlays.map(o => {
+        ...this.overlays.filter(o => o.placement !== 'dock').map(o => {
           const id = this.#overlayIds.get(o)!
           this.#layerOwners.set(id, o)
 
@@ -1368,7 +1454,7 @@ export class App implements OverlayHost {
     })
 
     // The top overlay's field holds the caret; a modal sheet without one takes it from the composer.
-    const top = this.overlays.at(-1)
+    const top = this.#inputOwner()
     const focus = top?.focus ? top.focus(this.#overlayIds.get(top)!) : top?.modal ? null : INPUT_ID
 
     if (focus !== this.#focus) {

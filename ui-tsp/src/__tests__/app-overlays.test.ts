@@ -28,7 +28,7 @@ const nativeViews = new WeakMap<Surface, View>()
 function denyEvent(surface: Surface, id: string) {
   const key = `prompt:${id}`
 
-  const root = nativeViews.get(surface)?.regions[2]?.children.find(node => {
+  const root = nativeViews.get(surface)?.regions.flatMap(region => region?.children ?? []).find(node => {
     const nodeKey = node.props.key
 
     return typeof nodeKey === 'string' && (nodeKey === key || nodeKey.startsWith(`${key}:`))
@@ -133,7 +133,7 @@ describe('native overlay ownership', () => {
     })
   })
 
-  it('keeps a covered prompt pending until it owns the top layer again', async () => {
+  it('keeps the oldest dock approval as owner when a second approval queues', async () => {
     await withApp(async (_app, gw, surface) => {
       const lower = approval('lower')
       gw.emit('request', lower.req)
@@ -144,11 +144,13 @@ describe('native overlay ownership', () => {
       await rendered()
 
       await lowerAction()
-      expect(lower.replies).toEqual([])
+      expect(lower.replies).toEqual([{ choice: 'deny' }])
+      expect(upper.replies).toEqual([])
+      await rendered()
       await deny(surface, 'upper')()
       expect(upper.replies).toEqual([{ choice: 'deny' }])
       await lowerAction()
-      expect(lower.replies).toEqual([{ choice: 'deny' }])
+      expect(lower.replies).toHaveLength(1)
     })
   })
 

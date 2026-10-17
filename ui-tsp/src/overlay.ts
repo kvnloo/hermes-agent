@@ -8,6 +8,8 @@ import type { JSX, Key } from '@stencil-hq/tern'
 export interface Overlay {
   /** Logical key among open overlays; replacement and cancellation use this key. */
   readonly key: string
+  /** Dock prompts keep composer focus; other overlays render in the layer. */
+  readonly placement?: 'dock'
   /** Covers the transcript and takes every key (a question that must be answered). */
   readonly modal?: boolean
   /**

@@ -223,7 +223,7 @@ describe('Ctrl+O native tool folding', () => {
         id: 'approval-fixture', method: 'approval', params: { command: 'fixture' }, respond, fail: vi.fn()
       })!
 
-      expect(overlay.modal).toBe(true)
+      expect(overlay.placement).toBe('dock')
 
       app.open(overlay)
       await rendered()

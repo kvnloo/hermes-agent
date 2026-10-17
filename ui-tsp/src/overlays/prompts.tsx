@@ -1,9 +1,7 @@
-// Questions the agent waits on (server requests): a dangerous-command
-// approval, clarify's single/multi-choice or free-text questions, and masked
-// values (sudo, secrets, vault prompts). Each is a modal bottom sheet in the
-// shapes and roles omp's ask sheet uses (`omp.overlay.ask`, its options and
-// action row), which Tern's chat styles size like the composer and read to
-// show the pane as waiting for input.
+// Floating questions the agent waits on: clarify's single/multi-choice or
+// free-text questions, and masked values (sudo, secrets, vault prompts).
+// Approvals use the nonmodal dock prompt in approval.tsx; these questions
+// keep omp's modal ask-sheet shapes and roles.
 
 import type { ServerRequest } from '@hermes/shared/json-rpc-channel'
 import type { JSX, Key } from '@stencil-hq/tern'
@@ -11,6 +9,8 @@ import type { JSX, Key } from '@stencil-hq/tern'
 import { Composer } from '../composer.js'
 import { maskedOffset, maskOf, unmaskEdit } from '../mask.js'
 import type { Overlay, OverlayHost } from '../overlay.js'
+
+import { approvalPrompt, type PromptHost } from './approval.js'
 
 /** Strips the backend's `(Recommended)` suffix from clarify's first choice. */
 const RECOMMENDED = /\s*\(recommended\)\s*$/i
@@ -117,10 +117,10 @@ function moved(key: Key, at: number, count: number): number | undefined {
 }
 
 /** The overlay for a server request, or null for a method this frontend can't answer. */
-export function promptOverlay(host: OverlayHost, req: ServerRequest): Overlay | null {
+export function promptOverlay(host: PromptHost, req: ServerRequest): Overlay | null {
   switch (req.method) {
     case 'approval':
-      return approvalOverlay(host, req)
+      return approvalPrompt(host, req)
 
     case 'clarify':
       if (!questionsOf(req.params.questions).length) {
@@ -146,111 +146,6 @@ export function promptOverlay(host: OverlayHost, req: ServerRequest): Overlay | 
     default:
       return null
   }
-}
-
-// ── Approval ───────────────────────────────────────────────────────────
-
-const APPROVALS: Option[] = [
-  { detail: 'Run it this time only', id: 'once', label: 'Allow once' },
-  { detail: 'Allow matching commands until the session ends', id: 'session', label: 'Allow for this session' },
-  { detail: 'Remember this approval for every session', id: 'always', label: 'Always allow' },
-  { detail: 'Tell the agent not to run it', id: 'deny', label: 'Deny' }
-]
-
-function approvalOverlay(host: OverlayHost, req: ServerRequest): Overlay {
-  const p = req.params
-  const command = str(p.command)
-  const description = str(p.description)
-  const smartDenied = p.smart_denied === true
-  const offered = Array.isArray(p.choices) ? p.choices.filter(c => typeof c === 'string') : []
-
-  // The TUI's rules: explicit choices win; a smart-guard deny leaves once/deny; no permanent scope drops "always".
-  const allowed = new Set(
-    offered.length
-      ? offered
-      : smartDenied
-        ? ['once', 'deny']
-        : p.allow_permanent === false
-          ? ['once', 'session', 'deny']
-          : ['once', 'session', 'always', 'deny']
-  )
-
-  if (p.allow_session === false) {
-    allowed.delete('session')
-  }
-
-  const options = APPROVALS.filter(o => allowed.has(o.id))
-  const key = `prompt:${req.id}`
-  let selected = 0
-
-  const answer = (choice: string) => {
-    req.respond({ choice })
-    host.close(overlay)
-  }
-
-  const overlay: Overlay = {
-    key,
-    modal: true,
-    node: id => (
-      <overlay anchor="bottom" key={id.slice('layer.'.length)} modal role="omp.overlay.ask" size="md">
-        <col gap="md" key="body">
-          <md key="question" role="omp.ask.question" text="Allow this command?" />
-          {command ? <code key="command" lang="bash" text={command} /> : null}
-          {description || smartDenied ? (
-            <row align="center" gap="xs" key="why">
-              <icon key="icon" name="shield" tone={smartDenied ? 'error' : 'warning'} />
-              <md
-                key="text"
-                text={`${smartDenied ? '**The safety check advised against it**' : '**Flagged**'}${description ? ` · ${description}` : ''}`}
-              />
-            </row>
-          ) : null}
-          {optionList(
-            'options',
-            `${id}.body.options`,
-            options,
-            selected,
-            i => {
-              selected = i
-              host.changed()
-            },
-            i => answer(options[i]?.id ?? 'deny')
-          )}
-          {actionsRow([
-            { hint: 'n · escape', key: 'deny', keys: ['escape'], label: 'Deny', onClick: () => answer('deny') },
-            {
-              hint: 'enter · y allows once · up/down move',
-              key: 'choose',
-              keys: ['enter'],
-              label: 'Choose',
-              onClick: () => answer(options[selected]?.id ?? 'deny'),
-              primary: true
-            }
-          ])}
-        </col>
-      </overlay>
-    ),
-    onKey: k => {
-      const n = Number.parseInt(k.name, 10)
-      const to = moved(k, selected, options.length)
-
-      if (to !== undefined) {
-        selected = to
-      } else if (n >= 1 && n <= options.length) {
-        answer(options[n - 1]?.id ?? 'deny')
-      } else if (k.name === 'enter') {
-        answer(options[selected]?.id ?? 'deny')
-      } else if (k.name === 'escape' || k.name === 'n') {
-        answer('deny')
-      } else if (k.name === 'y') {
-        answer('once')
-      }
-
-      return true
-    }
-  }
-
-  return overlay
 }
 
 // ── Clarify ────────────────────────────────────────────────────────────
