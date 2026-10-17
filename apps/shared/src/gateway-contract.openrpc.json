@@ -1591,6 +1591,60 @@
       }
     },
     {
+      "name": "jobs.cancel",
+      "summary": "Cancel one owned running job; foreign and unknown ids are rejected.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/JobIdParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/JobsCancelResult"
+        }
+      }
+    },
+    {
+      "name": "jobs.list",
+      "summary": "Background processes and live subagents owned by the calling session only.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/SessionParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/JobsListResult"
+        }
+      }
+    },
+    {
+      "name": "jobs.tail",
+      "summary": "Last N lines (bounded to 16 KiB) of an owned job's output; does not consume notifications.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/JobsTailParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/JobsTailResult"
+        }
+      }
+    },
+    {
       "name": "learning.delete",
       "summary": "Archive a skill (restorable via curator) or remove a memory chunk.",
       "params": [
@@ -16592,6 +16646,211 @@
         ],
         "title": "InterruptStatus",
         "type": "string"
+      },
+      "JobIdParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "job_id": {
+            "minLength": 1,
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "job_id"
+        ],
+        "title": "JobIdParams",
+        "type": "object"
+      },
+      "JobSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "process",
+              "subagent"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "started": {
+            "title": "Started",
+            "type": "number"
+          },
+          "owner_session_id": {
+            "title": "Owner Session Id",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Id"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "state",
+          "started",
+          "owner_session_id"
+        ],
+        "title": "JobSnapshot",
+        "type": "object"
+      },
+      "JobsCancelResult": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "job_id",
+          "accepted"
+        ],
+        "title": "JobsCancelResult",
+        "type": "object"
+      },
+      "JobsChangedPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "title": "JobsChangedPayload",
+        "type": "object"
+      },
+      "JobsListResult": {
+        "additionalProperties": false,
+        "properties": {
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/JobSnapshot"
+            },
+            "title": "Jobs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "jobs"
+        ],
+        "title": "JobsListResult",
+        "type": "object"
+      },
+      "JobsTailParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "job_id": {
+            "minLength": 1,
+            "title": "Job Id",
+            "type": "string"
+          },
+          "lines": {
+            "default": 100,
+            "maximum": 500,
+            "minimum": 1,
+            "title": "Lines",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "job_id"
+        ],
+        "title": "JobsTailParams",
+        "type": "object"
+      },
+      "JobsTailResult": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "job_id",
+          "text",
+          "available",
+          "truncated"
+        ],
+        "title": "JobsTailResult",
+        "type": "object"
       },
       "LanguageOption": {
         "additionalProperties": false,
@@ -39996,6 +40255,18 @@
           "name": "payload",
           "schema": {
             "$ref": "#/components/schemas/GatewayReadyPayload"
+          }
+        }
+      ]
+    },
+    {
+      "name": "jobs.changed",
+      "summary": "Owned process started or exited; invalidate the jobs snapshot.",
+      "params": [
+        {
+          "name": "payload",
+          "schema": {
+            "$ref": "#/components/schemas/JobsChangedPayload"
           }
         }
       ]

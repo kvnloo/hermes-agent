@@ -1882,6 +1882,39 @@ export interface I18nCatalogResult {
   surface: LocaleSurface
   messages: Record<string, string>
 }
+export interface JobsListResult {
+  jobs: JobSnapshot[]
+}
+export interface JobSnapshot {
+  id: string
+  kind: 'process' | 'subagent'
+  title: string
+  state: string
+  started: number
+  owner_session_id: string
+  parent_id?: string | null
+}
+export interface JobsTailParams {
+  session_id: string
+  profile?: string | null
+  job_id: string
+  lines?: number
+}
+export interface JobsTailResult {
+  job_id: string
+  text: string
+  available: boolean
+  truncated: boolean
+}
+export interface JobIdParams {
+  session_id: string
+  profile?: string | null
+  job_id: string
+}
+export interface JobsCancelResult {
+  job_id: string
+  accepted: boolean
+}
 export type PingParams = Record<string, never>
 export interface PingResult {
   pong: boolean
@@ -4938,6 +4971,9 @@ export interface PetHatchProgressPayload {
 }
 /** ``change_watcher._CHANGE_WATCHES`` payload fn — ``{}`` for every watch except pet.changed. */
 export type ChangeSignalPayload = Record<string, unknown>
+export interface JobsChangedPayload {
+  job_id: string
+}
 export type ConnectorErrorReason = 'INVALID_PARAMS' | 'NOT_OWNER' | 'UNSUPPORTED_RUNTIME' | 'CONNECTOR_REQUEST_FAILED' | 'INVALID_CONNECTOR_RESPONSE' | 'UNKNOWN_TARGET' | 'LINK_STILL_VALID' | 'REISSUE_REFUSED' | 'UNKNOWN_OPERATION' | 'INVALID_ANSWER' | 'NEEDS_NOUS_AUTH' | 'CONNECTOR_NOT_FOUND' | 'TOOLS_UNAVAILABLE' | 'CONNECTORS_UNAVAILABLE' | 'CATALOG_UNAVAILABLE' | 'ACCOUNTS_UNAVAILABLE' | 'CONNECTION_NOT_FOUND' | 'POLICY_UNAVAILABLE' | 'POLICY_CONFLICT' | 'FORBIDDEN_SCOPE' | 'ORG_REQUIRED' | 'ORG_ACCESS_DENIED' | 'INVALID_POLICY'
 
 // ── Client→server methods ──
@@ -5118,6 +5154,12 @@ export interface RpcMethods {
   'input.detect_drop': { params: InputDetectDropParams; result: InputDetectDropResult }
   /** Session/message counts over the last ``days`` for the (optionally scoped) profile store. */
   'insights.get': { params: InsightsGetParams; result: InsightsGetResult }
+  /** Cancel one owned running job; foreign and unknown ids are rejected. */
+  'jobs.cancel': { params: JobIdParams; result: JobsCancelResult }
+  /** Background processes and live subagents owned by the calling session only. */
+  'jobs.list': { params: SessionParams; result: JobsListResult }
+  /** Last N lines (bounded to 16 KiB) of an owned job's output; does not consume notifications. */
+  'jobs.tail': { params: JobsTailParams; result: JobsTailResult }
   /** Archive a skill (restorable via curator) or remove a memory chunk. */
   'learning.delete': { params: LearningNodeParams; result: LearningMutationResult }
   /** Node content (SKILL.md or memory chunk) for an edit prefill. */
@@ -5539,6 +5581,9 @@ export const RPC_METHODS = [
   'image.generate',
   'input.detect_drop',
   'insights.get',
+  'jobs.cancel',
+  'jobs.list',
+  'jobs.tail',
   'learning.delete',
   'learning.detail',
   'learning.edit',
@@ -5790,6 +5835,8 @@ export interface BackendGatewayEventMap {
   error: ErrorPayload
   /** First frame of a connection: the resolved skin, the change-event capability and the replay epoch. */
   'gateway.ready': GatewayReadyPayload
+  /** Owned process started or exited; invalidate the jobs snapshot. */
+  'jobs.changed': JobsChangedPayload
   /** Apply a named desktop layout preset. */
   'layout.apply': LayoutApplyPayload
   /** The turn ended: final text, usage and outcome. */
@@ -5925,6 +5972,7 @@ export const GATEWAY_EVENT_TYPES = [
   'display.status',
   'error',
   'gateway.ready',
+  'jobs.changed',
   'layout.apply',
   'message.complete',
   'message.delta',
