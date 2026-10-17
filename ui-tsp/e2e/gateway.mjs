@@ -47,7 +47,23 @@ function flush() {
     log('delivered', row.body)
   }
 }
-const ticker = setInterval(flush, 25)
+// Explicit fixture replay: notifications only, never substitutes for real RPC replies.
+let fixtureLines = 0
+const fixtureTypes = new Set(['message.start', 'message.delta', 'reasoning.delta', 'tool.start', 'tool.complete', 'message.complete', 'todo.updated'])
+function replay() {
+  if (!m.fixtureEvents || stopped) return
+  let text
+  try { text = readFileSync(m.fixtureEvents, 'utf8') } catch (error) { if (error.code === 'ENOENT') return; throw error }
+  const lines = text.split('\n').slice(0, -1)
+  for (; fixtureLines < lines.length; fixtureLines++) {
+    const params = JSON.parse(lines[fixtureLines])
+    if (!fixtureTypes.has(params.type) || typeof params.session_id !== 'string') throw new Error('Invalid fixture notification')
+    const body = { jsonrpc:'2.0', method:'event', params }
+    log('fixture-replay', body)
+    process.stdout.write(JSON.stringify(body) + '\n')
+  }
+}
+const ticker = setInterval(() => { flush(); replay() }, 25)
 createInterface({ input:process.stdin }).on('line', line => {
   const body = JSON.parse(line)
   log('request', body)

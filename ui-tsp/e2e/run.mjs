@@ -35,7 +35,8 @@ const pane = values.pane
 if (!/^\d+$/.test(control) || !/^\d+$/.test(pane)) throw new Error('This adapter requires an explicit numeric loopback control port and private local PTY pane id.')
 if (!entry.startsWith(`${root}/`)) throw new Error('--entry must belong to --root (the integrated native-settings checkout).')
 if (!isAbsolute(values.python)) throw new Error('--python must be an absolute real Python executable.')
-if (!proof.startsWith('/tmp/') || proof === '/tmp') throw new Error('--proof-dir must be a private directory under /tmp, outside all git worktrees.')
+const owned = JSON.parse(await readFile(join(dirname(proof), 'isolation.json'), 'utf8'))
+if (owned.proof !== proof || owned.config !== process.env.TERN_CONFIG_DIR || owned.daemon !== process.env.TERN_DAEMON_SOCKET || owned.runtime !== process.env.XDG_RUNTIME_DIR) throw new Error('Proof must match the orchestrator-owned isolation receipt.')
 const framework = await realpath(values['framework-root'] ?? '/mnt/zer0models/hermes-wt/e2e')
 const pkg = JSON.parse(await readFile(join(framework, 'packages/e2e/package.json'), 'utf8'))
 if (pkg.version !== '0.16.0') throw new Error(`Expected installed e2e 0.16.0, got ${pkg.version}`)
@@ -60,7 +61,10 @@ const manifest = {
   runtime: process.env.XDG_RUNTIME_DIR,
   display: process.env.WAYLAND_DISPLAY
 }
-if (!manifest.runtime?.startsWith('/tmp/') || !manifest.display || manifest.display === 'wayland-0') throw new Error('Parent must supply the verified isolated XDG_RUNTIME_DIR and WAYLAND_DISPLAY, not the physical display.')
+if (manifest.runtime !== owned.runtime || manifest.display !== owned.display) throw new Error('Parent must supply the exact private runtime/display from the isolation receipt.')
+manifest.evidenceClass = owned.evidenceClass
+manifest.fixtureEvents = join(proof, 'fixture-events.jsonl')
+manifest.shots = owned.shots
 
 async function nativeCtl(scenario) {
   if (scenario !== 'state') {
@@ -134,7 +138,9 @@ if (mode === 'prepare') {
   await mkdir(foreign, { recursive: true, mode: 0o700 })
   await writeFile(join(foreign, 'config.yaml'), 'agent:\n  max_turns: 91\n  reasoning_effort: none\ne2e_preserve: foreign-island\n', { mode: 0o600 })
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2), { mode: 0o600 })
-  for (const name of ['gateway.mjs', 'state.py']) await copyFile(join(source, name), join(proof, name))
+  await writeFile(manifest.record, '', { mode:0o600 })
+  await writeFile(manifest.tsp, '', { mode:0o600 })
+  for (const name of ['gateway.mjs', 'state.py', 'post_exit.py', 'observe-stdout.mjs']) await copyFile(join(source, name), join(proof, name))
   await chmod(join(proof, 'gateway.mjs'), 0o700)
   await writeFile(manifest.launch, `#!/usr/bin/env node
 import { spawn } from 'node:child_process'
@@ -154,14 +160,21 @@ const env = {
   TERN_TSP_RECORD:m.tsp,
   XDG_RUNTIME_DIR:m.runtime,
   WAYLAND_DISPLAY:m.display,
-  TERN_E2E_OWNER:${JSON.stringify(token)}
+  TERN_E2E_OWNER:${JSON.stringify(token)},
+  HERMES_TUI_SPLASH:'0',
+  OPENUI_TELEMETRY_DISABLED:'1',
+  DO_NOT_TRACK:'1',
+  TMPDIR:${JSON.stringify(process.env.TMPDIR)}
 }
 env.OPENAI_API_KEY='inert-e2e-not-a-credential'
-const child=spawn(process.execPath,[m.entry],{cwd:m.root,env,stdio:'inherit'})
-child.on('exit',code=>process.exit(code ?? 1))
+const child=spawn(process.execPath,['--import',${JSON.stringify(join(proof,'observe-stdout.mjs'))},m.entry],{cwd:m.root,env,stdio:'inherit'})
+child.on('exit',code=>{
+  const audit=spawn(m.python,[${JSON.stringify(join(proof,'post_exit.py'))},${JSON.stringify(join(proof,'post-exit-bytes.json'))}],{env,stdio:'inherit'})
+  audit.on('exit',auditCode=>process.exit(auditCode === 0 ? code ?? 1 : 1))
+})
 `, { mode: 0o700 })
   await mkdir(manifest.project, { mode: 0o700 })
-  for (const name of ['adapter.ts', 'native-settings.e2e.ts', 'config.ts', 'types.ts', 'tsconfig.json']) await copyFile(join(source, name), join(manifest.project, name))
+  for (const name of ['adapter.ts', 'native-settings.e2e.ts', 'features.ts', 'config.ts', 'types.ts', 'tsconfig.json']) await copyFile(join(source, name), join(manifest.project, name))
   await writeFile(join(manifest.project, 'package.json'), JSON.stringify({ name: 'hermes-native-settings-private-proof', private: true, type: 'module' }), { mode: 0o600 })
   await symlink(join(framework, 'node_modules'), join(manifest.project, 'node_modules'), 'dir')
   const shellArg = value => "'" + value.replaceAll("'", "'\\''") + "'"
@@ -183,7 +196,7 @@ child.on('exit',code=>process.exit(code ?? 1))
   }
   if (String(focused.id) !== saved.pane || String(focused.id) !== owner.pane) throw new Error('Prepared pane is not the focused harness-created pane.')
   // Refresh suite code only. Never replace the live application's profile/record.
-  for (const name of ['adapter.ts', 'native-settings.e2e.ts', 'config.ts', 'types.ts', 'tsconfig.json']) await copyFile(join(source, name), join(manifest.project, name))
+  for (const name of ['adapter.ts', 'native-settings.e2e.ts', 'features.ts', 'config.ts', 'types.ts', 'tsconfig.json']) await copyFile(join(source, name), join(manifest.project, name))
   const child = spawn(process.execPath, [bin, 'run', '--config', join(manifest.project, 'config.ts'), '--workers', '1', '--retries', '0', '--no-cache'], { cwd: manifest.project, env: { ...process.env, NATIVE_SETTINGS_MANIFEST: manifestPath }, stdio: 'inherit' })
   child.on('exit', code => process.exit(code ?? 1))
 }

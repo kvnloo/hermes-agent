@@ -402,7 +402,18 @@ export class NativeControl {
     await mkdir(dir,{recursive:true,mode:0o700})
     const snapshot = await this.snapshot(budget)
     const pending = join(dir,`${name}.pending.png`)
-    await this.#execBounded('grim',['-o','HEADLESS-1',pending],budget,{env:{...process.env,XDG_RUNTIME_DIR:this.manifest.runtime,WAYLAND_DISPLAY:this.manifest.display}})
+    if (this.manifest.evidenceClass === 'tern-serve') {
+      const shot = record(await this.#inspect(`shot ${name}`, budget))
+      await writeFile(join(dir, `${name}.shot.json`), JSON.stringify(shot), {mode:0o600})
+      // Tern serves shots under its explicit --out directory, never search shared paths.
+      const { copyFile } = await import('node:fs/promises')
+      const png = String(shot.png)
+      if (!png.startsWith(this.manifest.shots! + '/')) throw new Error('Shot escaped owned output directory')
+      await copyFile(png, pending)
+      await copyFile(String(shot.layout), join(dir, `${name}.layout.json`))
+    } else {
+      await this.#execBounded('grim',['-o','HEADLESS-1',pending],budget,{env:{...process.env,XDG_RUNTIME_DIR:this.manifest.runtime,WAYLAND_DISPLAY:this.manifest.display}})
+    }
     const after = record(await this.#inspect('state',budget))
     const focused = record(after.focused)
     if (!nativeGateOpen(after.gate) || String(focused.id) !== this.manifest.pane || focused.cwd !== this.manifest.root || typeof focused.running !== 'string' || !focused.running.includes(this.manifest.launch)) {

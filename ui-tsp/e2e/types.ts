@@ -8,6 +8,7 @@ export interface Manifest {
   root: string; entry: string; python: string; control: string; pane: string; proof: string
   home: string; record: string; tsp: string; gate: string; launch: string; project: string
   runtime: string; display: string
+  evidenceClass?: string; fixtureEvents?: string; shots?: string
 }
 export interface Field {
   type: string; category: string; description: string; value: Json; default: Json
@@ -39,11 +40,9 @@ export function nativeGateOpen(value: unknown): boolean {
   return gate.phase === 'off' && gate.error === null && (gate.applies === false || (gate.applies === true && gate.signed_in === true))
 }
 export function assertOwnedInert(manifest: Manifest): string {
-  if (!manifest.runtime?.startsWith('/tmp/') || !manifest.display || manifest.display === 'wayland-0') {
-    throw new Error('Owned isolated runtime/display is required; physical wayland-0 is refused.')
-  }
-  if (!manifest.proof.startsWith('/tmp/') || manifest.proof === '/tmp') {
-    throw new Error('Proof directory must be a private /tmp path.')
+  const isolation = JSON.parse(readFileSync(join(manifest.proof, '../isolation.json'), 'utf8')) as Record<string, string>
+  if (isolation.proof !== manifest.proof || isolation.runtime !== manifest.runtime || isolation.display !== manifest.display) {
+    throw new Error('Proof must match its orchestrator-owned runtime/display receipt.')
   }
   const proof = realpathSync(manifest.proof)
   const home = realpathSync(manifest.home)

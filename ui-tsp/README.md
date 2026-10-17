@@ -167,6 +167,14 @@ The Tern SDK is [`@stencil-hq/tern`](https://www.npmjs.com/package/@stencil-hq/t
 
 ## Native settings E2E
 
+**Current entry point: [`scripts/dev/tern-e2e.sh`](e2e/README.md).** It owns the
+private compositor, Tern config/daemon, Hermes home, capture and teardown. Use it
+for per-feature receipts from any checkout. The lower-level `prepare` / `run`
+interface below is historical driver documentation, not a standalone launch recipe:
+it now requires the orchestrator's `isolation.json` receipt rather than a `/tmp`
+path heuristic. The wrapper also supports explicitly labelled notification fixtures
+and `tern serve` fallback; neither is ten-case native Settings acceptance.
+
 `npm run e2e:native -- prepare …` and `npm run e2e:native -- run …` use the
 already-installed **e2e 0.16.0** runner. They do not install dependencies, build the
 app, launch Tern on the host desktop, or start a model turn. The parent/operator
