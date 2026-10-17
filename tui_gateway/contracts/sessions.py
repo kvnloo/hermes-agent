@@ -436,6 +436,24 @@ method("session.branch_whole", params=SessionBranchWholeParams, result=SessionBr
        doc="session.branch of the whole history without echoing the copied transcript back.")
 
 
+class SessionForkParams(SessionParams):
+    # Inclusive durable message id from the displayed transcript, never a client ordinal.
+    target_message_id: int | None = Field(default=None, gt=0, strict=True)
+
+
+class SessionForkResult(Result):
+    # This is a STORED id for a different process to resume, not a live runtime id.
+    session_id: str
+    parent: str
+    profile: str
+    message_count: int
+
+
+method("session.fork", params=SessionForkParams, result=SessionForkResult,
+       doc="Copy an idle live session (optionally through a durable target message) into a stored child; "
+           "no child agent is built and the parent is unchanged.")
+
+
 class UndoIntent(WireEnum):
     RETRY = "retry"
     UNDO = "undo"

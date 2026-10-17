@@ -3391,6 +3391,24 @@
       }
     },
     {
+      "name": "session.fork",
+      "summary": "Copy an idle live session (optionally through a durable target message) into a stored child; no child agent is built and the parent is unchanged.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/SessionForkParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/SessionForkResult"
+        }
+      }
+    },
+    {
       "name": "session.history",
       "summary": "The durable display transcript (ancestors included, row ids attached).",
       "params": [
@@ -31017,6 +31035,74 @@
           }
         },
         "title": "SessionForeignPreviewResult",
+        "type": "object"
+      },
+      "SessionForkParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "target_message_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target Message Id"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "title": "SessionForkParams",
+        "type": "object"
+      },
+      "SessionForkResult": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "parent": {
+            "title": "Parent",
+            "type": "string"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "message_count": {
+            "title": "Message Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "parent",
+          "profile",
+          "message_count"
+        ],
+        "title": "SessionForkResult",
         "type": "object"
       },
       "SessionHistoryParams": {

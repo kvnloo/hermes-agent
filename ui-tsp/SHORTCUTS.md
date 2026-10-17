@@ -13,6 +13,7 @@ App-level bindings live in `src/actions.ts`. The same registry supplies grouped
 | Alt+U | Usage (`/usage`) |
 | Alt+A | Agents (`/agents`) |
 | Alt+S | Session picker |
+| Alt+Shift+F | `/fork`: copy the conversation into a new Tern pane (idle session) |
 | Ctrl+T | Toggle `/reasoning show` / `/reasoning hide` using backend readback |
 | Alt+Shift+C | Copy the literal composer text via OSC 52, with a notice |
 | F1 / Alt+/ | Commands and grouped shortcut help |
@@ -40,6 +41,17 @@ Prefer Alt+, for Hermes settings when the host takes Ctrl+,; use Alt+/ if F1 is
 owned by the host/OS. `/settings` and `/help` are always available as text.
 Bindings are tested using a connected real SDK peer and parsed terminal key
 bytes, not a complete native-window/preset matrix.
+
+## Forking
+
+`/fork` creates a durable child through `session.fork` and opens a pane with
+literal argv `hermes --resume <new-id> -p <owning-profile>`. `/fork <message-id>`
+copies through that durable user/assistant message (inclusive). The gateway owns
+all transcript copying and profile resolution; the original pane/session stays
+unchanged. Outside Tern, or if pane launch fails, a notice retains the new id and
+resume command. No shell interpolation or automatic model request is involved.
+Busy, hydrating, and compute-host-owned histories are refused rather than copied
+partially. Tests use fake pane launchers, never a real user's Tern daemon.
 
 ## Deliberate limits
 

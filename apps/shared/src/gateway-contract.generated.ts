@@ -3387,6 +3387,17 @@ export interface SessionBranchWholeResult {
   messages_omitted: boolean
   info: SessionLiveInfo
 }
+export interface SessionForkParams {
+  session_id: string
+  profile?: string | null
+  target_message_id?: number | null
+}
+export interface SessionForkResult {
+  session_id: string
+  parent: string
+  profile: string
+  message_count: number
+}
 export interface SessionUndoParams {
   session_id: string
   profile?: string | null
@@ -5365,6 +5376,8 @@ export interface RpcMethods {
   'session.foreign.list': { params: SessionForeignListParams; result: SessionForeignListResult }
   /** Preview a foreign session's tail before importing it. */
   'session.foreign.preview': { params: SessionForeignIdParams; result: SessionForeignPreviewResult }
+  /** Copy an idle live session (optionally through a durable target message) into a stored child; no child agent is built and the parent is unchanged. */
+  'session.fork': { params: SessionForkParams; result: SessionForkResult }
   /** The durable display transcript (ancestors included, row ids attached). */
   'session.history': { params: SessionHistoryParams; result: SessionHistoryResult }
   /** Stop the running turn (and streaming TTS); retires the crash-recovery marker. */
@@ -5694,6 +5707,7 @@ export const RPC_METHODS = [
   'session.foreign.import',
   'session.foreign.list',
   'session.foreign.preview',
+  'session.fork',
   'session.history',
   'session.interrupt',
   'session.list',

@@ -5,6 +5,7 @@
 import type { ConfigGetResult } from '@hermes/shared/gateway-events'
 
 import type { App } from './app.js'
+import { forkSession } from './fork-session.js'
 import { openHelp } from './overlays/help.js'
 import { openModelPicker, switchModel } from './overlays/models.js'
 import { confirmOverlay } from './overlays/prompts.js'
@@ -24,6 +25,18 @@ export interface LocalCommand {
 }
 
 const COMMANDS: readonly LocalCommand[] = [
+  {
+    name: 'fork',
+    run: (app, arg) => {
+      if (arg && (!/^[1-9][0-9]*$/.test(arg) || !Number.isSafeInteger(Number(arg)))) {
+        app.transcript.notice('Usage: /fork [durable-message-id]', 'warning')
+
+        return
+      }
+
+      return forkSession(app, arg ? Number(arg) : undefined)
+    }
+  },
   {
     aliases: ['exit', 'q'],
     name: 'quit',
