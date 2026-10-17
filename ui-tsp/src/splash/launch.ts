@@ -161,6 +161,13 @@ export class LaunchSplash {
     this.#skipped = true
   }
 
+  /** A modal needs the pane immediately, without spending a key or waiting for a dissolve. */
+  dismiss() {
+    if (this.active) {
+      this.#finish()
+    }
+  }
+
   /** The program palette changed (a skin was chosen, or dropped): the next frame is drawn in it. */
   palette(palette: Palette) {
     if (this.active) {

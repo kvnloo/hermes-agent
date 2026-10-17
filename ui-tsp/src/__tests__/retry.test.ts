@@ -19,8 +19,12 @@ const isolated = await vi.hoisted(async () => {
 })
 
 afterAll(() => {
-  if (isolated.previous === undefined) delete process.env.HERMES_HOME
-  else process.env.HERMES_HOME = isolated.previous
+  if (isolated.previous === undefined) {
+    delete process.env.HERMES_HOME
+  } else {
+    process.env.HERMES_HOME = isolated.previous
+  }
+
   rmSync(isolated.home, { force: true, recursive: true })
 })
 

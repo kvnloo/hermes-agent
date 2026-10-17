@@ -205,6 +205,8 @@ export class App implements OverlayHost {
     this.#overlayIds.set(overlay, `layer.${overlay.key}:${++this.#overlaySerial}`)
 
     if (overlay.modal) {
+      // A modal needs the pane and its first key, not the splash's exit animation.
+      this.#splash?.dismiss()
       // The sheet owns the keys now: a list or reply for the composer would only land under it.
       this.#completion.dismiss()
     }
@@ -806,8 +808,7 @@ export class App implements OverlayHost {
         }
 
         break
-
-      case 'message.complete':
+      case 'message.complete': {
         if (!this.#visible && this.busy) {
           const status = ev.payload?.status
           this.dispatches.show({
@@ -832,6 +833,7 @@ export class App implements OverlayHost {
         this.#drainQueue()
 
         break
+      }
 
       case 'status.update':
         if (this.busy && ev.payload?.text && ev.payload.kind === 'status') {
