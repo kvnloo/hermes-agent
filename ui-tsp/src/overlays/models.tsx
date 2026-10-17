@@ -11,6 +11,7 @@ import { providerDisplayNames } from '@tui/domain/providers.js'
 import type { App } from '../app.js'
 import type { Overlay } from '../overlay.js'
 
+import { confirmOverlay } from './prompts.js'
 import { editQuery, hitRuns, moveSelection, rank } from './search.js'
 
 const KEY = 'models'
@@ -26,18 +27,23 @@ interface Row {
 interface Confirm {
   row: Row
   text: string
+  value: string
+  global: boolean
 }
 
 /** `config.set model` for `value` (`<model> [--provider <slug>] [--session|--global]`); reports the switch in the transcript unless it needs a confirmation. */
-export async function switchModel(app: App, value: string, confirmed = false): Promise<ConfigSetResult> {
+export async function switchModel(app: App, value: string, confirmed = false, sid = app.sid): Promise<ConfigSetResult> {
+  if (!sid || app.sid !== sid) {
+    throw new Error('This model change belongs to a previous session.')
+  }
   const r = await app.gw.request<ConfigSetResult>('config.set', {
     confirm_expensive_model: confirmed,
     key: 'model',
-    session_id: app.sid,
+    session_id: sid,
     value
   })
 
-  if (r.confirm_required) {
+  if (r.confirm_required || app.sid !== sid) {
     return r
   }
 
@@ -58,7 +64,16 @@ export async function switchModel(app: App, value: string, confirmed = false): P
 }
 
 /** Opens the model picker over the session. */
-export function openModelPicker(app: App) {
+export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {}) {
+  const sid = app.sid
+  if (!sid) {
+    app.transcript.notice('Start a live session before you choose a model.', 'warning')
+    app.changed()
+
+    return
+  }
+
+  let generation = 0
   let state: 'loading' | 'ready' | 'error' = 'loading'
   let message = ''
   let rows: Row[] = []
@@ -74,11 +89,20 @@ export function openModelPicker(app: App) {
   let shown: string[] = []
 
   const load = async () => {
+    const token = ++generation
+    if (!sid || app.sid !== sid || !app.overlays.includes(overlay)) {
+      return
+    }
+
     state = 'loading'
     app.changed()
 
     try {
-      const r = await app.gw.request<ModelOptionsResult>('model.options', app.sid ? { session_id: app.sid } : {})
+      const r = await app.gw.request<ModelOptionsResult>('model.options', { session_id: sid })
+
+      if (token !== generation || app.sid !== sid || !app.overlays.includes(overlay)) {
+        return
+      }
       const list = r.providers ?? []
       const names = providerDisplayNames(list)
       providers = list.map((provider, i) => ({ name: names[i] ?? provider.name, provider }))
@@ -98,6 +122,10 @@ export function openModelPicker(app: App) {
       selected = current || rows[0]?.id
       state = 'ready'
     } catch (error) {
+      if (token !== generation || app.sid !== sid || !app.overlays.includes(overlay)) {
+        return
+      }
+
       state = 'error'
       message = error instanceof Error ? error.message : String(error)
     }
@@ -105,30 +133,55 @@ export function openModelPicker(app: App) {
     app.changed()
   }
 
-  const choose = async (id: string | undefined, confirmed = false) => {
+  const choose = async (id: string | undefined, confirmed = false, expected?: Confirm) => {
     const row = rows.find(r => r.id === id)
 
-    if (!row || busy) {
+    if (!row || busy || !sid || app.sid !== sid || !app.overlays.includes(overlay) || (confirm && !confirmed) || (confirmed && confirm !== expected)) {
       return
     }
 
     busy = true
+    const saveDefault = expected?.global ?? global
+    const value = expected?.value ?? `${row.model} --provider ${row.provider.slug} ${saveDefault ? '--global' : '--session'}`
+    if (confirmed) {
+      confirm = null
+    }
 
     try {
-      const r = await switchModel(
-        app,
-        `${row.model} --provider ${row.provider.slug} ${global ? '--global' : '--session'}`,
-        confirmed
-      )
+      const r = await switchModel(app, value, confirmed, sid)
+
+      if (app.sid !== sid || !app.overlays.includes(overlay)) {
+        return
+      }
 
       if (r.confirm_required) {
-        confirm = { row, text: r.confirm_message || r.warning || `${row.model} is expensive. Switch anyway?` }
+        const ask: Confirm = {
+          global: saveDefault,
+          row,
+          text: `Session: ${sid}. Scope: ${saveDefault ? 'current profile default and live session' : 'this session only'}. Model: ${row.model}. Provider: ${row.provider.slug}. ${r.confirm_message || r.warning || 'The backend requires confirmation.'}`,
+          value
+        }
+        confirm = ask
+        app.open(confirmOverlay(app, {
+          confirm: 'Confirm exact model change',
+          detail: ask.text,
+          onCancel: () => {
+            if (confirm === ask) {
+              confirm = null
+              app.changed()
+            }
+          },
+          onConfirm: () => void choose(ask.row.id, true, ask),
+          title: 'Confirm model change'
+        }))
       } else {
         app.close(overlay)
       }
     } catch (error) {
-      app.transcript.notice(error instanceof Error ? error.message : String(error), 'error')
-      app.close(overlay)
+      if (app.sid === sid && app.overlays.includes(overlay)) {
+        state = 'error'
+        message = error instanceof Error ? error.message : String(error)
+      }
     }
 
     busy = false
@@ -179,6 +232,19 @@ export function openModelPicker(app: App) {
     key: KEY,
     modal: true,
     node: id => {
+      if (app.sid !== sid) {
+        return (
+          <overlay anchor="center" head="Models" key={id.slice('layer.'.length)} modal size="md">
+            <col gap="md" key="body">
+              <text key="expired" text="This model picker belongs to a previous live session. Close it and open Models in the current session." wrap="word" />
+              <row key="close" onClick={() => app.close(overlay)} role="omp.btn" title="Close">
+                <text key="label" text="Close" />
+              </row>
+            </col>
+          </overlay>
+        )
+      }
+
       const { hits, order } = view()
       const priced = rows.some(r => r.provider.pricing?.[r.model])
       const columns: PickerColumn[] = priced ? [{ format: 'price', head: '$/M', id: 'price', priority: 2 }] : []
@@ -200,12 +266,11 @@ export function openModelPicker(app: App) {
       return (
         <picker
           actions={[
-            { id: 'global', keys: ['ctrl+g'], label: 'Save as default', on: global },
+            ...(!options.sessionOnly ? [{ id: 'global', keys: ['ctrl+g'], label: 'Save as default', on: global }] : []),
             { end: true, id: 'close', keys: ['esc'], label: 'Close' },
             { id: 'use', keys: ['enter'], label: 'Switch', primary: true }
           ]}
           columns={columns}
-          confirm={confirm ? { act: 'confirm', label: 'Switch anyway', text: confirm.text } : undefined}
           current={current ? [current] : []}
           empty={query ? undefined : 'No models in this scope'}
           hits={hits}
@@ -216,17 +281,15 @@ export function openModelPicker(app: App) {
           message={state === 'error' ? message : undefined}
           noun="models"
           onAction={{
-            cancel: () => {
-              confirm = null
-              app.changed()
-            },
             clear: () => {
               query = ''
               app.changed()
             },
             close: () => app.close(overlay),
-            confirm: () => void choose(confirm?.row.id, true),
             global: () => {
+              if (options.sessionOnly) {
+                return
+              }
               global = !global
               app.changed()
             },
@@ -239,6 +302,9 @@ export function openModelPicker(app: App) {
           }}
           onActivate={ev => void choose(ev.item)}
           onSelect={ev => {
+            if (confirm) {
+              return
+            }
             selected = ev.item
             confirm = null
             app.changed()
@@ -261,9 +327,7 @@ export function openModelPicker(app: App) {
     },
     onKey: (k: Key) => {
       if (confirm) {
-        if (k.name === 'enter' || k.name === 'y') {
-          void choose(confirm.row.id, true)
-        } else if (k.name === 'escape' || k.name === 'n') {
+        if (k.name === 'escape' || k.name === 'enter' || k.name === 'n') {
           confirm = null
         }
 
@@ -282,7 +346,7 @@ export function openModelPicker(app: App) {
         return true
       }
 
-      if (k.ctrl && k.name === 'g') {
+      if (!options.sessionOnly && k.ctrl && k.name === 'g') {
         global = !global
 
         return true

@@ -8,6 +8,8 @@ import type { Key, SpanData } from '@stencil-hq/tern'
 import type { App } from '../app.js'
 import type { Overlay } from '../overlay.js'
 
+import { SETTINGS_COMMANDS } from './settings.js'
+
 const KEY = 'help'
 
 /** The shortcuts this frontend handles (composer.ts, app.ts), by group. */
@@ -54,9 +56,14 @@ export async function openHelp(app: App) {
     )
   }
 
-  const categories = catalog.categories?.length
-    ? catalog.categories
-    : [{ name: 'Commands', pairs: catalog.pairs ?? [] }]
+  const categories = [
+    { name: 'Native Settings', pairs: SETTINGS_COMMANDS },
+    ...(catalog.categories?.length ? catalog.categories : [{ name: 'Commands', pairs: catalog.pairs ?? [] }])
+      .map(category => ({
+        ...category,
+        pairs: (category.pairs ?? []).filter(([command]) => !SETTINGS_COMMANDS.some(([name]) => name === command))
+      }))
+  ]
 
   const overlay: Overlay = {
     key: KEY,

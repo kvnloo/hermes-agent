@@ -11,6 +11,8 @@ import type { GatewayClient } from '@tui/gatewayClient.js'
 import type { Composer } from '../composer.js'
 import type { OverlayHost } from '../overlay.js'
 
+import { SETTINGS_COMMANDS } from './settings.js'
+
 const DEBOUNCE_MS = 60
 
 /** The composer's completion list: queries the gateway as the text before the caret changes and accepts rows into it. */
@@ -91,6 +93,14 @@ export class Completion {
           }
 
           const items = r?.items ?? []
+
+          if (request.method === 'complete.slash' && !request.skillsOnly && /^\/\S*$/.test(before)) {
+            for (const [text, meta] of SETTINGS_COMMANDS) {
+              if (text.startsWith(before) && !items.some(item => item.text === text)) {
+                items.push({ display: text, kind: 'command', meta, text })
+              }
+            }
+          }
           this.items =
             request.method === 'complete.slash' && request.skillsOnly ? items.filter(i => i.kind === 'skill') : items
           this.selected = 0

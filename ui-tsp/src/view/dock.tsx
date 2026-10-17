@@ -37,6 +37,7 @@ export interface DockContext {
   onUndo(): void
   onModel(): void
   onEffort(): void
+  onSettings(): void
   /** Pull the oldest queued prompt back into the composer. */
   onQueueEdit(): void
   onContext(): void
@@ -207,6 +208,10 @@ function composerNode(cx: DockContext): JSX.Element {
             />
           ) : null}
         </status>
+        <row align="center" gap="xs" key="settings" onClick={cx.onSettings} role="omp.composer.settings" title="Open Hermes settings">
+          <icon key="icon" name="settings" />
+          <text key="label" text="Settings" />
+        </row>
         {cx.cost ? (
           <text
             key="usage"
