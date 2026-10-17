@@ -12,6 +12,7 @@ import {
 } from '@stencil-hq/tern'
 
 import type { Entry } from './model.js'
+import { forgetView, SurfaceView } from './surface-protocol.js'
 import type { Transcript } from './transcript.js'
 import { entryNode, forgetEntryNode, type TranscriptContext } from './view/transcript.js'
 
@@ -41,30 +42,11 @@ export class Retention {
   #reveal = false
   #cx: TranscriptContext | undefined
   #transcript: Transcript | undefined
-  #chromeOps: readonly Op[] = []
-  readonly #chrome = new Surface(
-    {
-      send: message => {
-        if (message.verb === 'f') {
-          this.#chromeOps = message.body.ops
-        }
-      },
-      credits: () => 1,
-      dropped() {}
-    },
-    'hermes',
-    { listen: false }
-  )
+  readonly #chrome = new SurfaceView()
 
   /** Build chrome through the SDK, then send history and chrome atomically under real credits. */
   paint(surface: Surface, view: ViewInput, history: readonly Op[]): void {
-    this.#chromeOps = []
-    this.#chrome.render(view)
-    const ops = [...this.#chromeOps, ...history]
-
-    if (ops.length) {
-      surface.send(ops)
-    }
+    this.#chrome.paint(surface, view, history)
   }
 
   request(reveal = false): void {
@@ -85,17 +67,35 @@ export class Retention {
       return
     }
 
-    for (const id of event.ids) {
-      const item = this.#entries.get(id)
+    this.#chrome.forget(event.ids)
 
-      if (!item?.settled) {
+    if (event.ids.includes('main') || event.ids.includes(LOAD_ID)) {
+      this.#loadShown = false
+    }
+
+    for (const item of this.#entries.values()) {
+      const id = `main.${item.entry.id}`
+      const absent = event.ids.includes('main') || event.ids.includes(id)
+      const affected = absent || event.ids.some(gone => gone.startsWith(`${id}.`))
+
+      if (!affected) {
         continue
       }
 
-      item.evicted = true
-      this.#evicted.add(item)
-      item.tree = undefined
       forgetEntryNode(item.entry)
+
+      if (absent) {
+        item.evicted = true
+        this.#evicted.add(item)
+        item.tree = undefined
+      } else if (item.tree) {
+        item.tree = forgetView(new View([item.tree]), event.ids).regions[0]
+      }
+
+      // Settled roots stay cold. Active/error rows and partial subtrees are restored.
+      if (!item.settled || !absent) {
+        this.#hot.add(item)
+      }
     }
   }
 
@@ -219,7 +219,10 @@ export class Retention {
     this.#reload = false
 
     if (reload.length) {
-      for (const item of this.#reading) {this.#hot.add(item)}
+      for (const item of this.#reading) {
+        this.#hot.add(item)
+      }
+
       this.#reading = new Set(reload)
     }
 
@@ -237,7 +240,13 @@ export class Retention {
     for (const item of work) {
       const entry = item.entry
       const id = `main.${entry.id}`
-      const settle = !hold && !this.#reading.has(item) && item.index < cold && safeEntry(entry) && safePrompt(item.index, transcript.entries)
+
+      const settle =
+        !hold &&
+        !this.#reading.has(item) &&
+        item.index < cold &&
+        safeEntry(entry) &&
+        safePrompt(item.index, transcript.entries)
 
       if (item.evicted && settle) {
         this.#hot.delete(item)
