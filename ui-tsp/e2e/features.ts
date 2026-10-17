@@ -193,6 +193,45 @@ async function todoHud() {
     await until(()=>native.rendered(),ns=>![...ns.values()].some(n=>n.k === 'checklist'),'collapsed checklist')
   },true)
 }
+async function shortcuts() {
+  const before = await native.configBytes()
+  await step('Alt+M opens model picker without changing the model', async()=>{
+    await native.shortcut('alt+m')
+    await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.k === 'picker' && n.p?.title === 'Models'), 'model picker from Alt+M')
+    await capture('models')
+    await native.key('Escape')
+    await until(()=>native.rendered(), ns=>![...ns.values()].some(n=>n.k === 'picker'), 'model picker closed')
+  })
+  await step('Alt+, opens Hermes settings', async()=>{
+    await native.shortcut('alt+,')
+    await until(()=>native.prefs(), p=>p?.p.title === 'Hermes settings', 'Settings from Alt+,')
+    await capture('settings')
+    await tap('Close settings', 'button')
+    await until(()=>native.prefs(), p=>!p, 'Settings closed')
+  })
+  await step('F1 opens action-table help', async()=>{
+    await native.shortcut('f1')
+    await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.head === 'Commands and shortcuts'), 'help from F1')
+    await capture('help')
+    await native.key('Escape')
+    await until(()=>native.rendered(), ns=>![...ns.values()].some(n=>n.p?.head === 'Commands and shortcuts'), 'help closed')
+  })
+  await step('Alt+C sends exact read-only /context to real gateway', async()=>{
+    await native.shortcut('alt+c')
+    const rows = await until(()=>native.wire(), rows=>rows.some(w=>w.dir === 'request' && w.body.method === 'slash.exec'), '/context request')
+    const calls = rows.filter(w=>w.dir === 'request' && w.body.method === 'slash.exec')
+    assert.equal(calls.length, 1)
+    const request = calls[0]!.body
+    assert.deepEqual(request.params, {command:'context',session_id:sid})
+    const replies = await until(()=>native.wire(), rows=>rows.some(w=>w.dir === 'delivered' && w.body.id === request.id), 'real /context response')
+    const reply = replies.find(w=>w.dir === 'delivered' && w.body.id === request.id)!.body
+    assert(!reply.error, JSON.stringify(reply))
+    assert.equal(typeof record(reply.result).output, 'string')
+    await capture('context')
+    assert.equal(await native.configBytes(), before)
+    assert(!(await native.wire()).some(w=>w.dir === 'denied' || (w.dir === 'request' && ['prompt.submit','config.set','settings.set'].includes(String(w.body.method)))))
+  })
+}
 async function smoke() {
   await step('launch welcome and real session without a model call',async()=>{
     assert(flatten((await native.snapshot()).tree).some(n=>(n.text ?? '').toLowerCase().includes('hermes')))
@@ -213,7 +252,7 @@ try {
   const wire = await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='delivered' && w.body.result && typeof w.body.result==='object' && !Array.isArray(w.body.result) && 'session_id' in w.body.result), 'real session creation')
   const ids = new Set(wire.filter(w=>w.dir==='request' && w.body.method==='session.create').map(w=>w.body.id))
   sid = String(record(wire.findLast(w=>w.dir==='delivered' && ids.has(w.body.id) && w.body.result)?.body.result).session_id)
-  const journeys:Record<string,()=>Promise<void>> = {settings,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,smoke}
+  const journeys:Record<string,()=>Promise<void>> = {settings,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke}
   assert(journeys[journey],`Unknown journey: ${journey}`)
   await journeys[journey]!()
 } catch (error) { console.error(error); process.exitCode=1 }

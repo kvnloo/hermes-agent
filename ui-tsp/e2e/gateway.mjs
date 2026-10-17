@@ -68,7 +68,7 @@ createInterface({ input:process.stdin }).on('line', line => {
   const body = JSON.parse(line)
   log('request', body)
   const params = body.params ?? {}
-  const forbidden = (!body.method && ('result' in body || 'error' in body)) || body.method === 'prompt.submit' || body.method === 'slash.exec' || /approval|consent|permission|auth\./.test(body.method ?? '') || (body.method?.startsWith('model.') && body.method !== 'model.options') || params.confirmed === true || (body.method === 'config.set' && (params.key !== 'reasoning' || params.scope !== 'session'))
+  const forbidden = (!body.method && ('result' in body || 'error' in body)) || body.method === 'prompt.submit' || (body.method === 'slash.exec' && !(params.command === 'context' && typeof params.session_id === 'string' && Object.keys(params).every(key => ['command','session_id'].includes(key)))) || /approval|consent|permission|auth\./.test(body.method ?? '') || (body.method?.startsWith('model.') && body.method !== 'model.options') || params.confirmed === true || (body.method === 'config.set' && (params.key !== 'reasoning' || params.scope !== 'session'))
   if (forbidden) {
     deny(body, 'No server-request replies, turns, grants, approvals, or global live-config writes in this suite.')
     return

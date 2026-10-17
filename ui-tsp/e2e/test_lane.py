@@ -82,6 +82,30 @@ class LaneTests(unittest.TestCase):
     def test_post_exit_zero_bytes(self): self.audit(b'')
     def test_post_exit_late_bytes_fail(self): self.audit(b'late-tsp-bytes')
 
+    def test_gateway_allows_only_exact_readonly_context_slash(self):
+        node = shutil.which('node')
+        assert node is not None
+        cases = [({'command':'context','session_id':'owned'}, True),
+                 ({'command':'context --extra','session_id':'owned'}, False),
+                 ({'command':'compress','session_id':'owned'}, False),
+                 ({'command':'context','session_id':'owned','confirmed':True}, False),
+                 ({'command':'context'}, False)]
+        for params, allowed in cases:
+            with self.subTest(params=params), tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as temporary:
+                root = Path(temporary)
+                shutil.copyfile(HERE/'gateway.mjs', root/'gateway.mjs')
+                (root/'manifest.json').write_text(json.dumps(dict(root=str(root), python=sys.executable,
+                    proof=str(root), record=str(root/'wire.jsonl'), gate=str(root/'gate.json'))))
+                # An echo subprocess observes forwarding only; no product replies are fabricated.
+                request = dict(jsonrpc='2.0', id=1, method='slash.exec', params=params)
+                result = subprocess.run([node, str(root/'gateway.mjs'), '-c',
+                    'import sys,json; [print(json.dumps({"observed":json.loads(line)}), flush=True) for line in sys.stdin]'],
+                    input=json.dumps(request)+'\n', capture_output=True, text=True, timeout=10)
+                rows = [json.loads(s) for s in (root/'wire.jsonl').read_text().splitlines()]
+                self.assertEqual(result.returncode, 0 if allowed else 1, result.stderr)
+                self.assertEqual(any(row['dir']=='denied' for row in rows), not allowed)
+                self.assertEqual(bool(result.stdout), allowed)
+
     def test_unknown_journey_rejected_before_startup(self):
         result=subprocess.run([sys.executable,str(HERE/'lane.py'),str(HERE),'unknown-journey'],capture_output=True,text=True,timeout=5)
         self.assertEqual(result.returncode,2)
