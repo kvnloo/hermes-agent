@@ -42,7 +42,8 @@ def _reset_early_cache(monkeypatch):
     # The early resolver memoizes the config read; clear it so each test sees
     # a fresh value, and make sure no stray HERMES_TUI leaks in.
     monkeypatch.setattr(m, "_EARLY_INTERFACE_CACHE", None)
-    monkeypatch.delenv("HERMES_TUI", raising=False)
+    for name in ("HERMES_TUI", "HERMES_TERN", "TERM_PROGRAM", "TMUX", "STY", "ZELLIJ"):
+        monkeypatch.delenv(name, raising=False)
     yield
     monkeypatch.setattr(m, "_EARLY_INTERFACE_CACHE", None)
 
@@ -61,11 +62,11 @@ def _fake_tty(monkeypatch, interactive: bool):
     monkeypatch.setattr(_sys.stdout, "isatty", lambda: interactive, raising=False)
 
 
-def _patch_config(monkeypatch, interface):
+def _patch_config(monkeypatch, interface, **display):
     import hermes_cli.config as cfg
 
     monkeypatch.setattr(
-        cfg, "load_config", lambda: {"display": {"interface": interface}}
+        cfg, "load_config", lambda: {"display": {"interface": interface, **display}}
     )
 
 
@@ -141,12 +142,62 @@ class TestWantsTuiEarly:
         _fake_tty(monkeypatch, True)
         monkeypatch.setenv("HERMES_HOME", str(default_home))
         m._suppress_mouse_residue_early()
-        assert m._config_default_interface_early() == "cli"
+        assert m._early_display_config()[0] == "cli"
 
         # What `-p coder` does, after that read already happened.
         monkeypatch.setenv("HERMES_HOME", str(profile_home))
-        assert m._config_default_interface_early() == "tui"
+        assert m._early_display_config()[0] == "tui"
         assert m._wants_tui_early([]) is True
+
+
+# ---------------------------------------------------------------------------
+# Tern — the native frontend beats the classic REPL, flags and opt-outs win
+# ---------------------------------------------------------------------------
+class TestTernFrontend:
+    def test_tern_launches_the_tui_over_a_cli_config(self, monkeypatch):
+        _patch_config(monkeypatch, "cli")
+        _fake_tty(monkeypatch, True)
+        monkeypatch.setenv("TERM_PROGRAM", "tern")
+        assert m._resolve_use_tui(_args()) is True
+
+    def test_cli_flag_beats_tern(self, monkeypatch):
+        _patch_config(monkeypatch, "cli")
+        _fake_tty(monkeypatch, True)
+        monkeypatch.setenv("TERM_PROGRAM", "tern")
+        assert m._resolve_use_tui(_args(cli=True)) is False
+
+    @pytest.mark.parametrize("env", [{"TMUX": "/tmp/tmux-1/default,1,0"}, {"HERMES_TERN": "0"}])
+    def test_multiplexer_or_opt_out_keeps_the_config(self, monkeypatch, env):
+        _patch_config(monkeypatch, "cli")
+        _fake_tty(monkeypatch, True)
+        monkeypatch.setenv("TERM_PROGRAM", "tern")
+        for name, value in env.items():
+            monkeypatch.setenv(name, value)
+        assert m._resolve_use_tui(_args()) is False
+
+    def test_display_tern_false_keeps_the_config(self, monkeypatch):
+        _patch_config(monkeypatch, "cli", tern=False)
+        _fake_tty(monkeypatch, True)
+        monkeypatch.setenv("TERM_PROGRAM", "tern")
+        assert m._resolve_use_tui(_args()) is False
+
+    def test_hermes_tern_forces_it_without_term_program(self, monkeypatch):
+        # Over ssh TERM_PROGRAM doesn't travel; ui-tsp still probes for the protocol.
+        _patch_config(monkeypatch, "cli")
+        _fake_tty(monkeypatch, True)
+        monkeypatch.setenv("HERMES_TERN", "1")
+        assert m._resolve_use_tui(_args()) is True
+
+    def test_early_resolver_agrees(self, tmp_path, monkeypatch):
+        _fake_tty(monkeypatch, True)
+        monkeypatch.setenv("TERM_PROGRAM", "tern")
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        (tmp_path / "config.yaml").write_text("display:\n  interface: cli\n")
+        assert m._wants_tui_early([]) is True
+
+        (tmp_path / "config.yaml").write_text("display:\n  interface: cli\n  tern: false\n")
+        monkeypatch.setattr(m, "_EARLY_INTERFACE_CACHE", None)
+        assert m._wants_tui_early([]) is False
 
 
 

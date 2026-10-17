@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { inlineSlashTrigger } from '../domain/slash.js'
-import { completionRequestForInput } from '../hooks/useCompletion.js'
+import { completionRequestForInput, inlineSlashTrigger } from '../domain/slash.js'
 
 describe('inlineSlashTrigger', () => {
   it('detects a slash typed mid-message', () => {

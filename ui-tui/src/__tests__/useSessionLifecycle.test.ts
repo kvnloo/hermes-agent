@@ -10,9 +10,9 @@ import { patchUiState, resetUiState } from '../app/uiStore.js'
 import {
   hydrateLiveSessionInflight,
   liveSessionInflightMessages,
-  signalFreshSessionBoundary,
-  writeActiveSessionFile
+  signalFreshSessionBoundary
 } from '../app/useSessionLifecycle.js'
+import { writeActiveSessionFile } from '../lib/activeSessionFile.js'
 
 describe('fresh session boundary', () => {
   it('signals only when a live session is replaced by a different session', () => {
