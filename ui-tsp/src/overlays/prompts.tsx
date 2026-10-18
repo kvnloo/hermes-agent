@@ -1,8 +1,8 @@
-// Floating questions the agent waits on: clarify's single/multi-choice or
-// free-text questions, and masked values (sudo, secrets, vault prompts).
-// Approvals use the nonmodal dock prompt in approval.tsx; these questions
-// keep omp's modal ask-sheet shapes and roles.
+// Request-owned questions: clarify and approvals use the nonmodal dock;
+// masked values (sudo, secrets, vault prompts) preempt them in a modal layer.
+// OMP ask vocabulary, with distinct clarify and approval response schemas.
 
+import type { ClarifyResult } from '@hermes/shared/gateway-events'
 import type { ServerRequest } from '@hermes/shared/json-rpc-channel'
 import type { JSX, Key } from '@stencil-hq/tern'
 
@@ -11,6 +11,7 @@ import { maskedOffset, maskOf, unmaskEdit } from '../mask.js'
 import type { Overlay, OverlayHost } from '../overlay.js'
 
 import { approvalPrompt, type PromptHost } from './approval.js'
+import { clarifyNoteOf, ClarifyNotes, clarifyTimer } from './clarify-notes.js'
 
 /** Strips the backend's `(Recommended)` suffix from clarify's first choice. */
 const RECOMMENDED = /\s*\(recommended\)\s*$/i
@@ -191,36 +192,84 @@ function tabLabel(question: string): string {
   return words.length > 4 ? `${words.slice(0, 4).join(' ')}…` : words.join(' ')
 }
 
-function clarifyOverlay(host: OverlayHost, req: ServerRequest): Overlay {
-  const questions = questionsOf(req.params.questions)
+export interface ClarifyPrompt extends Overlay {
+  readonly placement: 'dock'
+  readonly hidden: boolean
+  toggle(): void
+}
+
+export function isClarifyPrompt(overlay: Overlay): overlay is ClarifyPrompt {
+  return (
+    overlay.placement === 'dock' &&
+    'hidden' in overlay &&
+    typeof overlay.hidden === 'boolean' &&
+    'toggle' in overlay &&
+    typeof overlay.toggle === 'function'
+  )
+}
+
+function clarifyAnswers(raw: unknown, questions: Question[]): Record<string, string | null> {
   const answers: Record<string, string | null> = {}
-  const preset = req.params.answers
 
-  if (preset && typeof preset === 'object') {
-    for (const qid in preset) {
-      const v: unknown = Reflect.get(preset, qid)
+  if (raw && typeof raw === 'object') {
+    for (const q of questions) {
+      const value: unknown = Reflect.get(raw, q.qid)
 
-      if (typeof v === 'string' || v === null) {
-        answers[qid] = v
+      if (typeof value === 'string' || value === null) {
+        answers[q.qid] = value
       }
     }
   }
 
-  const drafts: Draft[] = questions.map(() => ({
-    other: new Composer(),
-    picked: new Set(),
-    selected: 0,
-    typing: false
-  }))
+  return answers
+}
 
-  const key = `prompt:${req.id}`
+function clarifyDraft(question: Question, answer: string | null | undefined): Draft {
+  const draft: Draft = { other: new Composer(), picked: new Set(), selected: 0, typing: false }
 
-  let step = Math.max(
-    0,
-    questions.findIndex(q => !(q.qid in answers))
-  )
+  if (!answer) {
+    return draft
+  }
 
-  const optionsOf = (q: Question, d: Draft): Option[] => [
+  let values: unknown = [answer]
+
+  if (question.multi) {
+    try {
+      values = JSON.parse(answer)
+    } catch {
+      values = [answer]
+    }
+  }
+
+  const choices = question.choices.map(choice => choice.replace(RECOMMENDED, ''))
+  const other: string[] = []
+
+  for (const value of Array.isArray(values) ? values : [answer]) {
+    if (typeof value !== 'string') {
+      continue
+    }
+
+    const index = choices.indexOf(value)
+
+    if (index >= 0) {
+      draft.selected = index
+      draft.picked.add(index)
+    } else {
+      other.push(value)
+    }
+  }
+
+  if (other.length) {
+    draft.other.set(other.join('\n'))
+    draft.typing = true
+    draft.selected = choices.length
+  }
+
+  return draft
+}
+
+function optionsOf(q: Question, d: Draft): Option[] {
+  return [
     ...q.choices.map((c, i) => ({
       checked: q.multi && d.picked.has(i),
       id: `option:${i}`,
@@ -230,14 +279,88 @@ function clarifyOverlay(host: OverlayHost, req: ServerRequest): Overlay {
     })),
     { detail: d.other.text || 'Type your own answer', id: 'other', label: 'Other…', role: 'omp.ask.other' }
   ]
+}
+
+function clarifyOverlay(host: PromptHost, req: ServerRequest): ClarifyPrompt {
+  const questions = questionsOf(req.params.questions)
+  const answers = clarifyAnswers(req.params.answers, questions)
+  const drafts = questions.map(q => clarifyDraft(q, answers[q.qid]))
+
+  const notes = questions.map(
+    q =>
+      new ClarifyNotes(
+        host,
+        str(req.params.session_id),
+        req.params.supports_notes === true,
+        req.params.supports_image_refs === true,
+        clarifyNoteOf(req.params.notes, q.qid)
+      )
+  )
+
+  let hidden = false
+  let settled = false
+  let locking = false
+  const live = () => !settled && host.owns(overlay)
+
+  const finish = (result: ClarifyResult) => {
+    if (live()) {
+      req.respond({ ...result })
+      host.close(overlay)
+    }
+  }
+
+  let step = Math.max(
+    0,
+    questions.findIndex(q => !(q.qid in answers))
+  )
 
   /** Records the current question's answer and moves to the next unanswered one, or submits. */
-  const commit = (answer: string | null) => {
+  const commit = async (answer: string | null) => {
+    if (locking || !live() || notes.some(note => note.images?.blocked)) {
+      if (live()) {
+        host.notice('Wait for note images; retry or remove failed attachments before answering.')
+      }
+
+      return
+    }
+
     const q = questions[step]
 
-    if (q) {
-      answers[q.qid] = answer
+    if (!q) {
+      return
     }
+
+    const last = questions.every(other => other.qid === q.qid || other.qid in answers)
+
+    if (!last && host.lockClarify) {
+      locking = true
+      host.changed()
+
+      try {
+        const ack = await host.lockClarify(req.id, q.qid, answer, notes[step]?.result())
+
+        if (settled) {
+          return
+        }
+
+        if (ack.status === 'expired' || ack.remaining?.length === 0) {
+          host.close(overlay)
+
+          return
+        }
+      } catch (error) {
+        if (!settled) {
+          host.notice(`Could not save clarification: ${error instanceof Error ? error.message : String(error)}`)
+        }
+
+        return
+      } finally {
+        locking = false
+        host.changed()
+      }
+    }
+
+    answers[q.qid] = answer
 
     const next = questions.findIndex((other, i) => i > step && !(other.qid in answers))
     const first = questions.findIndex(other => !(other.qid in answers))
@@ -249,8 +372,15 @@ function clarifyOverlay(host: OverlayHost, req: ServerRequest): Overlay {
       return
     }
 
-    req.respond({ answers })
-    host.close(overlay)
+    const extra = Object.fromEntries(
+      questions.flatMap((question, i) => {
+        const note = notes[i]?.result()
+
+        return note ? [[question.qid, note]] : []
+      })
+    )
+
+    finish(Object.keys(extra).length ? { answers, notes: extra } : { answers })
   }
 
   /** The answer the current question would get from Enter / Submit. */
@@ -311,103 +441,91 @@ function clarifyOverlay(host: OverlayHost, req: ServerRequest): Overlay {
   }
 
   const go = (to: number) => {
+    if (locking) {
+      return
+    }
+
     step = (to + questions.length) % questions.length
     host.changed()
   }
 
-  const overlay: Overlay = {
-    key,
-    modal: true,
-    focus: id => {
-      const q = questions[step]
-      const d = drafts[step]
-
-      return q && d && (d.typing || !q.choices.length) ? `${id}.body.answer` : null
+  const overlay: ClarifyPrompt = {
+    key: `prompt:${req.id}`,
+    placement: 'dock',
+    get inputRevision() {
+      return step * 2 + Number(hidden)
     },
-    node: id => {
-      const q = questions[step]
-      const d = drafts[step]
+    get hidden() {
+      return hidden
+    },
+    toggle: () => {
+      if (live()) {
+        hidden = !hidden
+        host.changed()
+      }
+    },
+    onClose: () => {
+      settled = true
 
-      if (!q || !d) {
-        return <overlay anchor="bottom" key={id.slice('layer.'.length)} modal role="omp.overlay.ask" size="md" />
+      for (const note of notes) {
+        note.images?.clear()
+      }
+    },
+    get focus() {
+      return hidden
+        ? undefined
+        : (id: string) => {
+            if (notes[step]?.active) {
+              return `${id}.body.notes.input`
+            }
+
+            const q = questions[step]
+            const d = drafts[step]
+
+            return q && d && (d.typing || !q.choices.length) ? `${id}.body.answer` : null
+          }
+    },
+    node: id =>
+      clarifyNode(id, {
+        questions,
+        drafts,
+        answers,
+        notes,
+        step,
+        hidden,
+        locking,
+        req,
+        host,
+        overlay,
+        optionsOf,
+        submit,
+        commit,
+        finish,
+        activate,
+        go
+      }),
+    onKey: k => {
+      if (!live() || hidden) {
+        return false
       }
 
-      const freeText = !q.choices.length
-      const last = questions.every((other, i) => i === step || other.qid in answers)
+      if (locking) {
+        return true
+      }
 
-      return (
-        <overlay anchor="bottom" key={id.slice('layer.'.length)} modal role="omp.overlay.ask" size="md">
-          <col gap="md" key="body">
-            {questions.length > 1 ? (
-              <row align="center" gap="sm" key="head" role="omp.ask.head">
-                <tabs
-                  active={String(step)}
-                  items={questions.map((other, i) => ({
-                    id: String(i),
-                    label: `${other.qid in answers ? '✓ ' : ''}${tabLabel(other.question)}`
-                  }))}
-                  key="tabs"
-                  onSelect={ev => {
-                    const to = Number(ev.item)
+      const note = notes[step]!
 
-                    if (Number.isInteger(to) && questions[to]) {
-                      go(to)
-                    }
-                  }}
-                  role="omp.ask.questions"
-                />
-                <spacer grow={1} key="fill" />
-                <text key="count" spans={[{ s: 'dim', t: `${step + 1} of ${questions.length}` }]} wrap="none" />
-              </row>
-            ) : null}
-            <md key="question" role="omp.ask.question" text={q.question} />
-            {freeText
-              ? null
-              : optionList(
-                  `q${step}`,
-                  `${id}.body.q${step}`,
-                  optionsOf(q, d),
-                  d.selected,
-                  i => {
-                    d.selected = i
-                    d.typing = i >= q.choices.length
-                    host.changed()
-                  },
-                  activate
-                )}
-            {freeText || d.typing ? (
-              <input
-                cursor={d.other.cursor}
-                key="answer"
-                onEdit={ev => {
-                  d.other.edit(ev)
-                  host.changed()
-                }}
-                onUndo={() => {
-                  d.other.undo()
-                  host.changed()
-                }}
-                placeholder={freeText ? 'Type your answer' : 'Type your own answer'}
-                role="omp.ask.input"
-                text={d.other.text}
-              />
-            ) : null}
-            {actionsRow([
-              { hint: 'escape', key: 'skip', keys: ['escape'], label: 'Skip', onClick: () => commit(null) },
-              {
-                hint: `enter${q.multi && !d.typing ? ' · space toggles' : ''} · up/down move${questions.length > 1 ? ' · tab switches question' : ''}`,
-                key: 'submit',
-                keys: ['enter'],
-                label: last ? 'Submit' : 'Next',
-                onClick: submit,
-                primary: true
-              }
-            ])}
-          </col>
-        </overlay>
-      )
-    },
-    onKey: k => {
+      if (k.name === 'paste' && k.text && note.paste(k.text)) {
+        return true
+      }
+
+      if (note.active && k.name !== 'enter' && k.name !== 'tab') {
+        note.key(k)
+        host.changed()
+
+        return true
+      }
+
       const q = questions[step]
       const d = drafts[step]
 
@@ -461,6 +579,159 @@ function clarifyOverlay(host: OverlayHost, req: ServerRequest): Overlay {
   }
 
   return overlay
+}
+
+interface ClarifyView {
+  questions: Question[]
+  drafts: Draft[]
+  answers: Record<string, string | null>
+  notes: ClarifyNotes[]
+  step: number
+  hidden: boolean
+  locking: boolean
+  req: ServerRequest
+  host: PromptHost
+  overlay: ClarifyPrompt
+  optionsOf(q: Question, d: Draft): Option[]
+  submit(): void
+  commit(answer: string | null): Promise<void>
+  finish(result: ClarifyResult): void
+  activate(i: number): void
+  go(to: number): void
+}
+
+function clarifyNode(id: string, cx: ClarifyView): JSX.Element {
+  const {
+    questions,
+    drafts,
+    answers,
+    notes,
+    step,
+    hidden,
+    locking,
+    req,
+    host,
+    overlay,
+    optionsOf,
+    submit,
+    commit,
+    finish,
+    activate,
+    go
+  } = cx
+
+  const q = questions[step]
+  const d = drafts[step]
+
+  if (!q || !d) {
+    return <col key={id.slice('dock.'.length)} role="omp.editor.ask" />
+  }
+
+  const freeText = !q.choices.length
+  const last = questions.every((other, i) => i === step || other.qid in answers)
+
+  if (hidden) {
+    return (
+      <col gap="xs" key={id.slice('dock.'.length)} role="omp.editor.ask">
+        <text
+          key="waiting"
+          text={`Clarification waiting · ${Object.keys(answers).length}/${questions.length} answered`}
+          tone="pending"
+        />
+        <text key="timer" role="omp.ask.timer" text={clarifyTimer(req.params.deadline_at)} />
+        <text key="show" onClick={overlay.toggle} role="omp.btn" text="Show question · Alt+H" />
+      </col>
+    )
+  }
+
+  return (
+    <col key={id.slice('dock.'.length)} role="omp.editor.ask">
+      <col gap="md" key="body">
+        <text key="timer" role="omp.ask.timer" text={clarifyTimer(req.params.deadline_at)} />
+        {questions.length > 1 ? (
+          <row align="center" gap="sm" key="head" role="omp.ask.head">
+            <tabs
+              active={String(step)}
+              items={questions.map((other, i) => ({
+                id: String(i),
+                label: `${other.qid in answers ? '✓ ' : ''}${tabLabel(other.question)}`
+              }))}
+              key="tabs"
+              onSelect={ev => {
+                const to = Number(ev.item)
+
+                if (Number.isInteger(to) && questions[to]) {
+                  go(to)
+                }
+              }}
+              role="omp.ask.questions"
+            />
+            <spacer grow={1} key="fill" />
+            <text key="count" spans={[{ s: 'dim', t: `${step + 1} of ${questions.length}` }]} wrap="none" />
+          </row>
+        ) : null}
+        <md key="question" role="omp.ask.question" text={q.question} />
+        {locking ? <text key="saving" text="Saving answer…" tone="pending" /> : null}
+        {freeText
+          ? null
+          : optionList(
+              `q${step}`,
+              `${id}.body.q${step}`,
+              optionsOf(q, d),
+              d.selected,
+              i => {
+                d.selected = i
+                d.typing = i >= q.choices.length
+                host.changed()
+              },
+              activate
+            )}
+        {freeText || d.typing ? (
+          <input
+            cursor={d.other.cursor}
+            key="answer"
+            onEdit={ev => {
+              notes[step]!.active = false
+
+              if (notes[step]?.paste(ev.text)) {
+                host.changed()
+
+                return
+              }
+
+              d.other.edit(ev)
+              host.changed()
+            }}
+            onFocus={() => {
+              notes[step]!.active = false
+              host.changed()
+            }}
+            onUndo={() => {
+              d.other.undo()
+              host.changed()
+            }}
+            placeholder={freeText ? 'Type your answer' : 'Type your own answer'}
+            role="omp.ask.input"
+            text={d.other.text}
+          />
+        ) : null}
+        {notes[step]?.node()}
+        {actionsRow([
+          { hint: 'Alt+H', key: 'hide', keys: ['alt', 'h'], label: 'Hide', onClick: overlay.toggle },
+          { hint: '', key: 'cancel', keys: [], label: 'Cancel all', onClick: () => finish({}) },
+          { hint: 'escape', key: 'skip', keys: ['escape'], label: 'Skip', onClick: () => commit(null) },
+          {
+            hint: `enter${q.multi && !d.typing ? ' · space toggles' : ''} · up/down move${questions.length > 1 ? ' · tab switches question' : ''}`,
+            key: 'submit',
+            keys: ['enter'],
+            label: last ? 'Submit' : 'Next',
+            onClick: submit,
+            primary: true
+          }
+        ])}
+      </col>
+    </col>
+  )
 }
 
 // ── Masked values ──────────────────────────────────────────────────────
@@ -611,7 +882,14 @@ export function confirmOverlay(
           <md key="question" role="omp.ask.question" text={ask.title} />
           {ask.detail ? <text key="detail" text={ask.detail} wrap="word" /> : null}
           {actionsRow([
-            { hint: 'enter · escape', key: 'cancel', keys: ['enter', 'escape'], label: 'Cancel (default)', onClick: () => answer(false), primary: true },
+            {
+              hint: 'enter · escape',
+              key: 'cancel',
+              keys: ['enter', 'escape'],
+              label: 'Cancel (default)',
+              onClick: () => answer(false),
+              primary: true
+            },
             {
               hint: 'y',
               key: 'ok',

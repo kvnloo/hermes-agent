@@ -12,6 +12,8 @@ export interface Overlay {
   readonly placement?: 'dock'
   /** Covers the transcript and takes every key (a question that must be answered). */
   readonly modal?: boolean
+  /** Reject queued native handlers after a question/presentation transition. */
+  readonly inputRevision?: number
   /** Release feature-owned subscriptions and deferred work on close/replacement/quit. */
   onClose?(): void
   /**

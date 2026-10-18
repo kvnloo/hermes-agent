@@ -4,7 +4,7 @@ import { open } from 'node:fs/promises'
 import { basename, extname, isAbsolute } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import type { AttachedImageResult, ImageDetachResult } from '@hermes/shared/gateway-events'
+import type { AttachedImageResult, FileAttachResult, ImageDetachResult } from '@hermes/shared/gateway-events'
 import type { JsonObject } from '@stencil-hq/tern'
 import type { GatewayClient } from '@tui/gatewayClient.js'
 
@@ -120,7 +120,7 @@ export class Attachments {
   #generation = 0
   #removing = new Set<string>()
 
-  constructor(readonly gw: GatewayClient, readonly changed: () => void, readonly notice: (message: string) => void) {}
+  constructor(readonly gw: GatewayClient, readonly changed: () => void, readonly notice: (message: string) => void, readonly referenceOnly = false) {}
 
   get blocked(): boolean {
     return this.#removing.size > 0 || this.items.some(item => item.status !== 'attached')
@@ -198,14 +198,20 @@ export class Attachments {
         return
       }
 
-      const result = localPath
+      // Ask notes use workspace references, never the next user turn's image queue.
+      const result = this.referenceOnly
+        ? await this.gw.request<FileAttachResult>('file.attach', {
+          ...(localPath ? { path: localPath } : { data_url: `data:${mime};base64,${data.toString('base64')}`, name: `note.${mime.split('/')[1]}` }),
+          session_id: item.session
+        })
+        : localPath
         ? await this.gw.request<AttachedImageResult>('image.attach', { path: localPath, session_id: item.session })
         : await this.gw.request<AttachedImageResult>('image.attach_bytes', {
           content_base64: data.toString('base64'), filename: `pasted.${mime.split('/')[1] === 'jpeg' ? 'jpg' : mime.split('/')[1]}`, session_id: item.session
         })
 
       if (!result.attached || !result.path) {
-        throw new Error(result.message || 'Gateway did not confirm an attachment path.')
+        throw new Error(('message' in result && result.message) || 'Gateway did not confirm an attachment path.')
       }
 
       const attached: Attachment = { ...item, status: 'attached', path: result.path }
@@ -248,6 +254,11 @@ export class Attachments {
   }
 
   async #detach(item: Attachment & { path: string }): Promise<void> {
+    // file.attach stores durable workspace refs, not disposable queued images.
+    if (this.referenceOnly) {
+      return
+    }
+
     this.#removing.add(item.id)
 
     try {
