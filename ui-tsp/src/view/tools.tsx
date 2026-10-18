@@ -5,16 +5,19 @@
 
 import { type JSX, node } from '@stencil-hq/tern'
 
-import { fileHref } from '../links.js'
+import { displayOptional, displayText } from '../display-text.js'
+import { displayMarkdown, fileHref } from '../links.js'
 import type { Subagent, Todo, ToolCall } from '../model.js'
 import { confirmedWriteArtifact, readMedia, writtenArtifactNode } from '../read-media.js'
 import { record } from '../transcript.js'
 
 import { browserBlockCard } from './browser-blocks.js'
+import { changedFiles, editFiles, fileDiffs } from './edit-results.js'
 import { lspDiagnostics } from './lsp-diagnostics.js'
 import { outputLineCount, runBox, type RunBoxInput, runElapsed, runState, type RunState } from './runbox.js'
 import { age, compact, duration } from './time.js'
 import { browserCard, visionCard } from './tool-adapters.js'
+import { captureFacts, fetchArtifact, outputArtifacts, resultCounts } from './tool-results.js'
 
 /** How one call presents: omp's tool props (minus status and timing) and its body. */
 export interface Card {
@@ -32,6 +35,7 @@ export interface Card {
   /** Folded once settled. */
   folded?: boolean
   preview?: { lines: number } | { tail: number }
+  loadOutput?: boolean
   /** Overrides the derived status (a task stays running while its agents work). */
   status?: 'running'
   /** Overrides the call's own duration (a background task lasts until its agents finish). */
@@ -106,7 +110,8 @@ export function toolNode(
   const runOutcome = card.name === 'bash' || card.name === 'eval' ? runState(call, record(call.result)) : undefined
   const status = call.status === 'unknown' ? 'unknown' : runOutcome ? RUN_STATUS[runOutcome] : (card.status ?? call.status)
   const running = status === 'running'
-  const body = [...card.body]
+  const artifacts = outputArtifacts(record(call.result), cwd)
+  const body = runOutcome ? [...card.body, ...artifacts] : [...artifacts, ...card.body]
   const error = call.status === 'error' ? errorOf(call) : undefined
 
   if (call.status === 'cancelled' && card.name !== 'bash' && card.name !== 'eval') {
@@ -122,6 +127,11 @@ export function toolNode(
   // Run boxes fold only output; whole-tool previews would also hide the state footer.
   const collapsed = collapsedOverride ?? card.folded
 
+  if (onToggle && body.length && card.loadOutput) {
+    body.unshift(<text key="load-output" onClick={onToggle} role="omp.tool.load"
+      text={collapsed ? 'Show all returned output' : 'Show less output'} />)
+  }
+
   return node(
     'tool',
     {
@@ -134,15 +144,15 @@ export function toolNode(
       href: card.href,
       key: call.id,
       lang: card.lang,
-      meta: card.meta?.length ? card.meta : undefined,
+      meta: card.meta?.length ? card.meta.map(displayText) : undefined,
       name: card.name,
-      note: call.status === 'unknown' ? 'no result recorded' : call.status === 'cancelled' ? 'cancelled' : error && !card.body.length ? error : undefined,
+      note: call.status === 'unknown' ? 'no result recorded' : call.status === 'cancelled' ? 'cancelled' : error && !card.body.length ? displayText(error) : undefined,
       preview: runOutcome ? undefined : card.preview,
       role: card.role,
       status,
-      target: card.target,
+      target: displayOptional(card.target),
       targetKind: card.target ? card.targetKind : undefined,
-      title: card.title,
+      title: displayText(card.title),
       took: runOutcome
         ? runOutcome === 'background'
           ? undefined
@@ -198,7 +208,7 @@ const CARD_ADAPTERS: Record<string, CardAdapter> = {
   write_file: editAdapter,
   search_files: ({ call, result, cwd }) => searchCard(call, result, cwd),
   web_search: ({ call, result }) => webSearchCard(call, result),
-  web_extract: ({ call, result }) => fetchCard(call, result),
+  web_extract: ({ call, result, cwd }) => fetchCard(call, result, cwd),
   todo_list: ({ call }) => ({
     body: call.todos?.length ? [checklistNode(call.todos)] : [],
     name: 'todo',
@@ -223,7 +233,7 @@ const CARD_ADAPTERS: Record<string, CardAdapter> = {
     const names = skills.map(s => str(record(s)?.name) ?? str(s)).filter(n => n !== undefined)
 
     return {
-      body: names.length ? [<text key="names" spans={[{ s: 'muted', t: names.join(' · ') }]} wrap="word" />] : [],
+      body: names.length ? [<text key="names" spans={[{ s: 'muted', t: displayText(names.join(' · ')) }]} wrap="word" />] : [],
       folded: true,
       frame: 'inline',
       meta: [
@@ -233,8 +243,8 @@ const CARD_ADAPTERS: Record<string, CardAdapter> = {
       title: 'Skills'
     }
   },
-  skill_view: ({ call, result }) => ({
-    body: str(result?.content) ? [<md key="body">{clip(str(result?.content) ?? '', 6000)}</md>] : [],
+  skill_view: ({ call, result, cwd }) => ({
+    body: str(result?.content) ? [<md key="body">{displayMarkdown(str(result?.content) ?? '', cwd)}</md>] : [],
     folded: true,
     frame: 'inline',
     name: 'skill',
@@ -268,6 +278,8 @@ function genericCard({ call }: Pick<AdapterInput, 'call'>): Card {
     name: call.name,
     title: humanize(call.name),
     body: genericBody(call),
+    loadOutput: true,
+    preview: { lines: 8 },
     folded: true,
     frame: 'inline',
     target: str(call.args.url) ?? str(call.args.target) ?? str(call.args.query) ?? (call.context || undefined),
@@ -309,6 +321,7 @@ function bashCard(
         background: state === 'background',
         processId: typeof result?.pid === 'number' ? result.pid : undefined,
         sessionId: str(result?.session_id),
+        captureFacts: captureFacts(result),
         captureTruncated: Boolean(str(result?.truncation_note))
       })
     ],
@@ -337,6 +350,12 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined, c
   const whole = first === 1 && last !== undefined && last === total
   const meta = first !== undefined && last !== undefined ? [whole ? `${total} lines` : `:${first}-${last}`] : []
   const text = content?.replace(/^ *\d+\|/gm, '') ?? ''
+
+  if (result?.truncated === true || result?.truncated_lines === true) {
+    const returned = numbered.length || outputLineCount(text)
+    meta.push(`${returned} lines returned`, ...(total === undefined ? [] : [`${total} total`, `${Math.max(0, total - returned)} omitted`]), 'source truncated')
+  }
+
   const markdown = langOf(path) === 'markdown'
   const hidden = Math.max(0, text.split('\n').filter(line => line.length > 0).length - READ_PREVIEW_LINES)
   const line = lineOf(call.args.offset) ?? first
@@ -346,10 +365,12 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined, c
   return {
     badges: hidden > 0 ? [{ text: `${hidden} more line${hidden === 1 ? '' : 's'}`, tone: 'muted' }] : undefined,
     body: [
+      ...(result?.truncated === true || result?.truncated_lines === true
+        ? [<text key="source-truncated" role="omp.tool.notice" text={displayText(str(result.hint) ?? 'Source truncated; expansion shows all returned content, not omitted source.')} wrap="word" />] : []),
       ...(preview ? [preview] : []),
       ...(text ? [markdown
-        ? <md key="markdown">{text}</md>
-        : <code key="code" lang={langOf(path)} numbers start={first} text={text} wrap />] : [])
+        ? <md key="markdown">{displayMarkdown(text, cwd)}</md>
+        : <code key="code" lang={langOf(path)} numbers start={first} text={displayText(text)} wrap />] : [])
     ],
     folded: !preview,
     frame: 'inline',
@@ -366,7 +387,9 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined, c
 }
 
 function editCard(call: ToolCall, result: Record<string, unknown> | undefined, cwd: string, media: boolean, hostLocal: boolean): Card {
-  const path = str(result?.resolved_path) ?? str(call.args.path) ?? str(call.args.file_path) ?? call.context
+  const files = fileDiffs(str(result?.diff))
+  const paths = changedFiles(result)
+  const path = str(result?.resolved_path) ?? str(call.args.path) ?? str(call.args.file_path) ?? files[0]?.path ?? paths[0] ?? call.context
   const lang = langOf(path)
   const diff = hunks(str(result?.diff)) ?? (call.diff ? plainDiff(call.diff) : undefined)
   const content = str(call.args.content) ?? str(call.args.contents)
@@ -391,6 +414,15 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined, c
     (hunk ? lineOf(Number(hunk[1])) : undefined)
 
   const hunkCount = hunk?.[2] ? lineOf(Number(hunk[2])) : undefined
+  const identities = new Set([...paths, ...files.map(file => file.path)])
+
+  if (identities.size > 1) {
+    return {
+      name: 'edit', title: 'Edit', target: `${identities.size} files`, targetKind: 'text',
+      body: [...editFiles(files, paths, cwd), ...diagnostics],
+      folded: true, preview: { lines: DIFF_PREVIEW_LINES }, meta: [`${identities.size} files`]
+    }
+  }
 
   const head = {
     name: write ? 'write' : 'edit',
@@ -412,7 +444,7 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined, c
       badges: badges.length ? badges : undefined,
       body: [
         ...(figure ? [figure] : []),
-        <code key="code" lang={lang ?? 'text'} numbers text={text} wrap />,
+        <code key="code" lang={lang ?? 'text'} numbers text={displayText(text)} wrap />,
         ...diagnostics
       ],
       folded: !figure,
@@ -438,8 +470,8 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined, c
     badges: figure ? undefined : moreBadge(lines, DIFF_PREVIEW_LINES),
     body: [
       ...(figure ? [figure] : []),
-      <diff key="diff" lang={lang} text={diff} />,
-      ...(figure && content ? [<code key="source" lang={lang ?? 'text'} numbers text={content} wrap />] : []),
+      <diff key="diff" lang={lang} text={displayText(diff)} />,
+      ...(figure && content ? [<code key="source" lang={lang ?? 'text'} numbers text={displayText(content)} wrap />] : []),
       ...diagnostics
     ],
     folded: figure ? false : fold,
@@ -455,22 +487,23 @@ function searchCard(call: ToolCall, result: Record<string, unknown> | undefined,
   const files = Array.isArray(result?.files) ? result.files.map(f => str(f)).filter(f => f !== undefined) : undefined
 
   if (files || call.args.target === 'files') {
-    const list = (files ?? []).map(f => f.replace(/^\.\//, ''))
+    const list = files ?? []
     const total = typeof result?.total_count === 'number' ? result.total_count : list.length
 
     return {
-      body: list.slice(0, 200).map((f, i) => {
+      body: list.map((f, i) => {
         const slash = f.lastIndexOf('/')
 
         return (
-          <row href={fileHref(f, cwd)} key={`f${i}`} role="omp.tool.file" title={slash > 0 ? f.slice(0, slash + 1) : undefined}>
-            <text href={fileHref(f, cwd)} key="p" spans={[{ s: 'path', t: slash > 0 ? f.slice(slash + 1) : f }]} />
+          <row href={fileHref(f, cwd)} key={`f${i}`} role="omp.tool.file" title={slash > 0 ? displayText(f.slice(0, slash + 1)) : undefined}>
+            <text href={fileHref(f, cwd)} key="p" spans={[{ s: 'path', t: displayText(slash > 0 ? f.slice(slash + 1) : f) }]} />
           </row>
         )
       }),
       folded: list.length > 20,
+      preview: { lines: 20 },
       frame: 'inline',
-      meta: files ? [`${total} file${total === 1 ? '' : 's'}${inPath}`] : undefined,
+      meta: files ? [`${total} file${total === 1 ? '' : 's'}${inPath}`, ...resultCounts(result, list.length, 'files')] : undefined,
       name: 'glob',
       target: pattern,
       targetKind: 'pattern',
@@ -482,10 +515,23 @@ function searchCard(call: ToolCall, result: Record<string, unknown> | undefined,
     ? result.matches.map(m => record(m)).filter(m => m !== undefined)
     : undefined
 
+  const dense = str(result?.matches_text)
+
+  if (dense) {
+    const returned = [...dense.matchAll(/^ {2}\d+: /gm)].length
+
+    return {
+      body: [<code key="matches" lang="text" text={displayText(dense)} wrap />],
+      folded: returned > 40, preview: { lines: 20 }, frame: 'inline',
+      meta: resultCounts(result, returned, 'matches'),
+      name: 'grep', target: pattern, targetKind: 'pattern', title: 'Grep'
+    }
+  }
+
   const byFile = new Map<string, { line: number; text: string }[]>()
 
   for (const m of matches ?? []) {
-    const path = (str(m.path) ?? '').replace(/^\.\//, '')
+    const path = str(m.path) ?? ''
     const list = byFile.get(path) ?? []
     list.push({ line: typeof m.line === 'number' ? m.line : 0, text: typeof m.content === 'string' ? m.content : '' })
     byFile.set(path, list)
@@ -500,7 +546,7 @@ function searchCard(call: ToolCall, result: Record<string, unknown> | undefined,
     const fileLink = fileHref(path, cwd, { line: hits.find(hit => hit.line > 0)?.line })
     body.push(
       <row href={fileLink} key={f} role="omp.tool.file">
-        <text href={fileLink} key="p" spans={[{ s: 'path', t: path }]} />
+        <text href={fileLink} key="p" spans={[{ s: 'path', t: displayText(path) }]} />
         <text key="n" role="omp.tool.chip" spans={[{ t: String(hits.length) }]} />
       </row>
     )
@@ -524,7 +570,7 @@ function searchCard(call: ToolCall, result: Record<string, unknown> | undefined,
           marks={run.map(h => ({ line: h.line, tone: 'accent' }))}
           numbers
           start={start}
-          text={run.map(h => h.text).join('\n')}
+          text={displayText(run.map(h => h.text).join('\n'))}
           wrap
         />
       )
@@ -547,9 +593,10 @@ function searchCard(call: ToolCall, result: Record<string, unknown> | undefined,
   return {
     body,
     folded: total > 40,
+    preview: { lines: 20 },
     frame: 'inline',
     meta: matches
-      ? [`${total} match${total === 1 ? '' : 'es'} · ${byFile.size} file${byFile.size === 1 ? '' : 's'}${inPath}`]
+      ? [`${total} match${total === 1 ? '' : 'es'} · ${byFile.size} file${byFile.size === 1 ? '' : 's'}${inPath}`, ...resultCounts(result, matches.length, 'matches')]
       : undefined,
     name: 'grep',
     target: pattern,
@@ -569,7 +616,12 @@ function webSearchCard(call: ToolCall, result: Record<string, unknown> | undefin
     body: hits.length
       ? [
           <col key="s" role="omp.tool.sources">
-            {hits.map((h, i) => sourceRow(`s${i}`, str(h.title) ?? str(h.url) ?? '', str(h.url)))}
+            {hits.map((h, i) => (
+              <col key={`hit-${i}`} role="omp.tool.search-result">
+                {sourceRow(`s${i}`, str(h.title) ?? str(h.url) ?? '', str(h.url))}
+                {str(h.description) ? <text key="description" role="omp.tool.description" text={displayText(str(h.description) ?? '')} wrap="word" /> : null}
+              </col>
+            ))}
           </col>
         ]
       : [],
@@ -582,7 +634,7 @@ function webSearchCard(call: ToolCall, result: Record<string, unknown> | undefin
   }
 }
 
-function fetchCard(call: ToolCall, result: Record<string, unknown> | undefined): Card {
+function fetchCard(call: ToolCall, result: Record<string, unknown> | undefined, cwd: string): Card {
   const pages = (Array.isArray(result?.results) ? result.results : []).map(p => record(p)).filter(p => p !== undefined)
   const urls = Array.isArray(call.args.urls) ? call.args.urls.map(u => str(u)).filter(u => u !== undefined) : []
   const body: JSX.Element[] = []
@@ -592,8 +644,13 @@ function fetchCard(call: ToolCall, result: Record<string, unknown> | undefined):
     const content = str(p.content)
 
     if (content) {
-      body.push(<md key={`b${i}`}>{clip(content, 4000)}</md>)
+      body.push(<md key={`b${i}`}>{displayMarkdown(content, '')}</md>)
+      body.push(...outputArtifacts(fetchArtifact(content), cwd, `page-${i}`))
     }
+
+    body.push(...outputArtifacts(p, cwd, `descriptor-${i}`))
+
+    if (str(p.error)) { body.push(<text key={`error-${i}`} role="omp.tool.error" text={displayText(str(p.error) ?? '')} wrap="word" />) }
   }
 
   const chars = pages.reduce((n, p) => n + (str(p.content)?.length ?? 0), 0)
@@ -601,8 +658,10 @@ function fetchCard(call: ToolCall, result: Record<string, unknown> | undefined):
   return {
     body,
     folded: true,
-    meta: pages.length ? [`${pages.length} page${pages.length === 1 ? '' : 's'} · ${compact(chars)} chars`] : undefined,
+    meta: pages.length ? [`${pages.length} page${pages.length === 1 ? '' : 's'} · ${compact(chars)} chars returned`,
+      ...(pages.some(page => page.truncated === true || str(page.content)?.includes('──────── [TRUNCATED] ────────')) ? ['source truncated'] : [])] : undefined,
     name: 'fetch',
+    loadOutput: true,
     preview: { lines: 6 },
     target: urls.length > 1 ? `${urls[0]} +${urls.length - 1}` : (urls[0] ?? str(call.args.url) ?? call.context),
     targetKind: 'path',
@@ -623,7 +682,7 @@ function sourceRow(key: string, title: string, url: string | undefined): JSX.Ele
   return (
     <row key={key} role="omp.tool.source">
       <text key="d" role="omp.tool.chip" spans={[{ t: (host.charAt(0) || '·').toUpperCase() }]} />
-      <text key="t" spans={[url ? { href: url, t: title } : { t: title }]} />
+      <text key="t" spans={[url ? { href: url, t: displayText(title) } : { t: displayText(title) }]} />
       {host ? <text key="m" spans={[{ s: 'muted', t: host }]} /> : null}
     </row>
   )
@@ -644,7 +703,7 @@ function taskCard(call: ToolCall, result: Record<string, unknown> | undefined, n
   const rows = agents.length
     ? agentRows(agents, now, onInspect ? agentId => onInspect(call.id, agentId) : undefined)
     : call.status === 'running' || result?.status === 'dispatched'
-      ? goals.map((g, i) => <agent agent="task" key={`p${i}`} name={`Agent ${i + 1}`} status="pending" task={g} />)
+      ? goals.map((g, i) => <agent agent="task" key={`p${i}`} name={`Agent ${i + 1}`} status="pending" task={displayText(g)} />)
       : []
 
   const context = str(call.args.context) ?? (tasks.length === 1 ? str(tasks[0]?.context) : undefined)
@@ -674,7 +733,7 @@ function taskCard(call: ToolCall, result: Record<string, unknown> | undefined, n
     badges: result?.mode === 'background' ? [{ text: 'background' }] : undefined,
     body: [
       ...(context
-        ? [<text key="ctx" role="omp.tool.context" spans={[{ s: 'muted', t: `Context: ${context}` }]} wrap="word" />]
+        ? [<text key="ctx" role="omp.tool.context" spans={[{ s: 'muted', t: displayText(`Context: ${context}`) }]} wrap="word" />]
         : []),
       ...rows
     ],
@@ -745,8 +804,8 @@ function agentNode(a: Subagent, now: number, children: JSX.Element[] = [], onIns
       collapsed={a.summary ? true : children.length ? false : undefined}
       collapsible={a.summary || children.length ? true : undefined}
       key={a.id}
-      model={a.model}
-      name={a.label ?? `Agent ${a.index + 1}`}
+      model={displayOptional(a.model)}
+      name={displayText(a.label ?? `Agent ${a.index + 1}`)}
       onClick={onInspect ? () => onInspect(a.id) : undefined}
       stats={{
         requests: a.calls || undefined,
@@ -755,19 +814,19 @@ function agentNode(a: Subagent, now: number, children: JSX.Element[] = [], onIns
         ...(running ? { age: age(a, a.startedAt, now) } : { took: a.duration })
       }}
       status={status}
-      task={a.goal}
+      task={displayText(a.goal)}
       title={onInspect ? 'Inspect agent (read-only)' : undefined}
       tool={
         running && a.tool
           ? {
               age: a.toolSince ? age(a.toolSince, a.toolSince.at, now) : undefined,
-              intent: a.toolPreview,
+              intent: displayOptional(a.toolPreview),
               name: a.tool
             }
           : undefined
       }
     >
-      {a.summary ? <md key="o">{a.summary}</md> : null}
+      {a.summary ? <md key="o">{displayMarkdown(a.summary, '')}</md> : null}
       {children}
     </agent>
   )
@@ -789,7 +848,7 @@ function askCard(call: ToolCall, result: Record<string, unknown> | undefined): C
 
     // One question already reads in the head; several each get their own.
     if (qs.length > 1) {
-      body.push(<md key={`q${i}`}>{str(q.question) ?? ''}</md>)
+      body.push(<md key={`q${i}`}>{displayMarkdown(str(q.question) ?? '', '')}</md>)
     }
 
     for (const [j, c] of choices.entries()) {
@@ -819,7 +878,7 @@ function answerRow(key: string, text: string, picked: boolean): JSX.Element {
   return (
     <row key={key} role={picked ? 'omp.tool.answer' : 'omp.tool.answer.off'}>
       <text key="c" spans={[picked ? { s: 'success', t: '✓' } : { s: 'dim', t: '·' }]} />
-      <text key="t" spans={[{ t: text }]} />
+      <text key="t" spans={[{ t: displayText(text) }]} />
     </row>
   )
 }
@@ -864,6 +923,7 @@ function evalCard(
         background: state === 'background',
         processId: typeof result?.pid === 'number' ? result.pid : undefined,
         sessionId: str(result?.session_id),
+        captureFacts: captureFacts(result),
         captureTruncated: Boolean(str(result?.truncation_note)) || result?.stdout_truncated === true
       })
     ],
@@ -882,7 +942,7 @@ function genericBody(call: ToolCall): JSX.Element[] {
     return []
   }
 
-  return [<code key="out" lang={/^\s*[[{]/.test(text) ? 'json' : 'text'} text={clip(text, 4000)} wrap />]
+  return [<code key="out" lang={/^\s*[[{]/.test(text) ? 'json' : 'text'} text={displayText(text)} wrap />]
 }
 
 function errorOf(call: ToolCall): string | undefined {
@@ -909,7 +969,7 @@ export function checklistNode(todos: readonly Todo[], mode: 'full' | 'hud' = 'fu
           ? 'dropped'
           : 'pending'
 
-  const item = (t: Todo) => ({ id: t.id, status: status(t), text: t.content })
+  const item = (t: Todo) => ({ id: t.id, status: status(t), text: displayText(t.content) })
   const roots = todos.filter(t => !t.parent)
   const nested = todos.some(t => t.parent)
 
@@ -922,7 +982,7 @@ export function checklistNode(todos: readonly Todo[], mode: 'full' | 'hud' = 'fu
           collapsed: kids.length > 0 && kids.every(k => k.status === 'completed'),
           id: r.id,
           items: kids.length ? kids.map(item) : [item(r)],
-          title: r.content
+          title: displayText(r.content)
         }
       })
     : [{ id: 'all', items: roots.map(item) }]
@@ -1010,8 +1070,4 @@ function humanize(name: string): string {
 
 function pretty(v: unknown): string {
   return typeof v === 'string' ? v : JSON.stringify(v, null, 2)
-}
-
-function clip(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max)}\n…` : text
 }

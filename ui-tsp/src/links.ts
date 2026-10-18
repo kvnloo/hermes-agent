@@ -4,6 +4,8 @@
 import { isAbsolute, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
+import { displayText } from './display-text.js'
+
 export interface FileLinkOptions {
   line?: number
   endLine?: number
@@ -119,7 +121,7 @@ function linkAt(line: string, at: number): { destStart: number; close: number } 
 }
 
 /** Resolve inline links while keeping code spans and image targets literal. */
-function rewriteLine(line: string, cwd: string): string {
+function rewriteLine(line: string, cwd: string, safeDisplay = false): string {
   let output = ''
   let ticks = 0
   let i = 0
@@ -162,7 +164,10 @@ function rewriteLine(line: string, cwd: string): string {
     const dest = angle ? raw.slice(1, -1) : raw
     const href = (angle || !/\s/.test(dest)) ? markdownFileTarget(dest, cwd) : undefined
 
-    if (!href) {
+    if (safeDisplay && displayText(dest) !== dest) {
+      // Unsafe raw destinations stay inert, not links to a sanitized different file.
+      output += line.slice(i + 1, link.destStart - 2) + ' (' + displayText(dest) + ')'
+    } else if (!href) {
       output += line.slice(i, link.close + 1)
     } else {
       // Parentheses in a file URL need an angle destination for Markdown.
@@ -177,8 +182,8 @@ function rewriteLine(line: string, cwd: string): string {
 }
 
 /** Resolve assistant prose against its real session cwd, never Tern's process cwd. */
-export function rewriteLocalMarkdownLinks(markdown: string, cwd: string): string {
-  if (!isAbsolute(cwd) || !markdown.includes('](')) {
+function markdownLinks(markdown: string, cwd: string, safeDisplay = false): string {
+  if ((!isAbsolute(cwd) && !safeDisplay) || !markdown.includes('](')) {
     return markdown
   }
 
@@ -204,6 +209,15 @@ export function rewriteLocalMarkdownLinks(markdown: string, cwd: string): string
     }
 
     // Indented code is not prose either.
-    return /^(?: {4}|\t)/.test(line) ? line : rewriteLine(line, cwd)
+    return /^(?: {4}|\t)/.test(line) ? line : rewriteLine(line, cwd, safeDisplay)
   }).join('')
+}
+
+export function rewriteLocalMarkdownLinks(markdown: string, cwd: string): string {
+  return markdownLinks(markdown, cwd)
+}
+
+/** Resolve raw destinations first; sanitize only the presentation, never retarget a link. */
+export function displayMarkdown(markdown: string, cwd: string): string {
+  return displayText(markdownLinks(markdown, cwd, true))
 }

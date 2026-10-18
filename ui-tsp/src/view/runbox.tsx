@@ -3,6 +3,7 @@
 
 import type { JSX } from '@stencil-hq/tern'
 
+import { displayOptional, displayText } from '../display-text.js'
 import type { ToolCall } from '../model.js'
 
 import { duration } from './time.js'
@@ -31,6 +32,7 @@ export interface RunBoxInput {
   sessionId?: string
   /** The backend explicitly spilled its output capture (which retains head and tail). */
   captureTruncated?: boolean
+  captureFacts?: string[]
 }
 
 const RUN_WORD: Record<RunState, string> = {
@@ -182,7 +184,7 @@ export function runFootFacts(input: RunBoxInput): string[] {
     facts.push('capture truncated: head + tail retained')
   }
 
-  return facts
+  return [...facts, ...(input.captureFacts ?? [])]
 }
 
 /** One run: input, live/retained output, optional error and factual state footer. */
@@ -204,21 +206,21 @@ export function runBox(input: RunBoxInput): JSX.Element {
     <col gap="none" key="run" role="omp.run" tone={tone}>
       <row align="start" gap="xs" key="input" role="omp.run.input">
         <icon aria="Input" key="prompt" name="arrow-left" role="omp.run.prompt" />
-        <code key="code" lang={input.language ?? 'bash'} numbers={false} text={input.command} wrap />
+        <code key="code" lang={input.language ?? 'bash'} numbers={false} text={displayText(input.command)} wrap />
       </row>
-      {input.cwd ? <text key="cwd" role="omp.run.cwd" spans={[{ s: 'muted', t: input.cwd }]} wrap="word" /> : null}
+      {input.cwd ? <text key="cwd" role="omp.run.cwd" spans={[{ s: 'muted', t: displayText(input.cwd) }]} wrap="word" /> : null}
       {input.output || input.error ? (
         <row align="start" gap="xs" key="result" role="omp.run.result">
           <icon aria="Output" key="prompt" name="arrow-right" role="omp.run.prompt" />
           <col gap="none" key="outputs" role="omp.run.outputs">
             {input.output ? (
-              <code key="output" lang="text" numbers={false} role="omp.run.output" text={output} wrap />
+              <code key="output" lang="text" numbers={false} role="omp.run.output" text={displayOptional(output)} wrap />
             ) : null}
             {input.error ? (
               <text
                 key="error"
                 role="omp.tool.error"
-                spans={[{ s: input.state === 'timeout' ? 'warning' : 'error', t: input.error }]}
+                spans={[{ s: input.state === 'timeout' ? 'warning' : 'error', t: displayText(input.error) }]}
                 wrap="word"
               />
             ) : null}
@@ -228,7 +230,7 @@ export function runBox(input: RunBoxInput): JSX.Element {
       <row align="center" gap="sm" key="foot" role="omp.run.foot" wrap>
         <text key="state" role="omp.run.state" spans={[{ s: tone, t: word }]} />
         {facts.length ? (
-          <text key="facts" role="omp.run.facts" spans={[{ s: 'muted', t: facts.join(' · ') }]} wrap="word" />
+          <text key="facts" role="omp.run.facts" spans={[{ s: 'muted', t: displayText(facts.join(' · ')) }]} wrap="word" />
         ) : null}
         {input.truncated && input.onToggle ? (
           <text

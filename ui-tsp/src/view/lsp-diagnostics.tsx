@@ -1,5 +1,6 @@
 import type { JSX } from '@stencil-hq/tern'
 
+import { displayText } from '../display-text.js'
 import { fileHref } from '../links.js'
 import { record } from '../transcript.js'
 
@@ -112,7 +113,7 @@ export function lspDiagnostics(result: Record<string, unknown> | undefined, cwd:
     const legacy = result?.lsp_diagnostics
 
     return typeof legacy === 'string' && legacy
-      ? [<text key="lsp" role="omp.tool.notice" spans={[{ s: 'muted', t: legacy }]} wrap="word" />]
+      ? [<text key="lsp" role="omp.tool.notice" spans={[{ s: 'muted', t: displayText(legacy) }]} wrap="word" />]
       : []
   }
 
@@ -125,7 +126,7 @@ export function lspDiagnostics(result: Record<string, unknown> | undefined, cwd:
         {parsed.files.filter(file => file.diagnostics.length || file.omitted).map((file, i) => (
           <col key={`f${i}`} role="omp.tool.diagnostics.file">
             <row key="head" role="omp.tool.file">
-              <text href={fileHref(file.path, cwd)} key="path" spans={[{ s: 'path', t: file.path }]} />
+              <text href={fileHref(file.path, cwd)} key="path" spans={[{ s: 'path', t: displayText(file.path) }]} />
               <text key="count" role="omp.tool.chip" text={String(file.diagnostics.length)} />
             </row>
             {file.diagnostics.map((diagnostic, j) => {
@@ -136,7 +137,7 @@ export function lspDiagnostics(result: Record<string, unknown> | undefined, cwd:
                 <row href={href} key={`d${j}`} role="omp.tool.diagnostic">
                   <text key="severity" role={`omp.tool.diagnostic.${diagnostic.severity}`} spans={[{ s: look.style, t: look.marker }]} title={look.label} />
                   <text href={href} key="location" spans={[{ s: 'muted mono', t: `${diagnostic.line}:${diagnostic.col}` }]} />
-                  <text key="message" text={diagnostic.message} wrap="word" />
+                  <text key="message" text={displayText(diagnostic.message)} wrap="word" />
                 </row>
               )
             })}
@@ -148,7 +149,7 @@ export function lspDiagnostics(result: Record<string, unknown> | undefined, cwd:
   }
 
   body.push(...parsed.unavailable.map((note, i) => (
-    <text key={`lsp-unavailable-${i}`} role="omp.tool.diagnostics.unavailable" spans={[{ s: 'muted', t: `${note.path}: ${note.message}` }]} wrap="word" />
+    <text key={`lsp-unavailable-${i}`} role="omp.tool.diagnostics.unavailable" spans={[{ s: 'muted', t: displayText(`${note.path}: ${note.message}`) }]} wrap="word" />
   )))
 
   return body
