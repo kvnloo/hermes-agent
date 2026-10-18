@@ -1,7 +1,5 @@
-import { execFileSync } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { rmSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
 
 import { type Op, Session, type Surface, type WireNode } from '@stencil-hq/tern'
 import { GatewayClient } from '@tui/gatewayClient.js'
@@ -459,39 +457,42 @@ describe('long-session retention (App and real SDK)', () => {
     expect(result.toolRecords).toBe(20)
   }, 15_000)
 
-  it('keeps 2,000-entry p95 build within 1.5x 200 entries, with flat streaming bytes', () => {
-    const root = fileURLToPath(new URL('../../..', import.meta.url))
+  it('builds cold history once with size-independent streaming work and bytes', async () => {
+    // Wall-clock p95 belongs to bench:retention, not parallel unit-worker scheduling.
+    const builds = vi.spyOn(transcriptView, 'projectedEntryNodes')
+    const rows: Awaited<ReturnType<typeof replay>>[] = []
+    const streamingBuilds: number[] = []
 
-    const lines = execFileSync(process.execPath, ['ui-tsp/bench/run.mjs', '--retention', '--runs=5'], {
-      cwd: root,
-      encoding: 'utf8',
-      env: { ...process.env, HERMES_TUI_SPLASH: '0' },
-      timeout: 60_000
-    })
-      .trim()
-      .split('\n')
+    try {
+      for (const count of [200, 2000]) {
+        builds.mockClear()
+        const row = await replay({ retention: true, history: count })
+        const historical = builds.mock.calls.filter(([entry]) => entry.id.startsWith('history'))
+        const perEntry = new Map<string, number>()
 
-    const rows = lines.map(
-      line =>
-        JSON.parse(line) as {
-          history: number
-          streamingBuildP95Ms: number
-          streamingBytes: number
-          droppedSemanticEvents: number
+        for (const [entry] of historical) {
+          perEntry.set(entry.id, (perEntry.get(entry.id) ?? 0) + 1)
         }
-    )
 
-    const median = (history: number) =>
-      rows
-        .filter(row => row.history === history)
-        .map(row => row.streamingBuildP95Ms)
-        .sort((a, b) => a - b)[2]!
+        expect(perEntry.size).toBe(count)
 
-    expect(rows).toHaveLength(10)
-    expect(median(200)).toBeGreaterThan(0)
-    expect(median(2000)).toBeLessThanOrEqual(median(200) * 1.5)
-    const bytes = rows.map(row => row.streamingBytes)
-    expect(Math.max(...bytes) / Math.min(...bytes)).toBeLessThan(1.01)
-    expect(rows.every(row => row.droppedSemanticEvents === 0)).toBe(true)
-  }, 65_000)
+        // The retained hot window is 20 turns (40 alternating user/assistant entries).
+        for (let i = 0; i < count - 40; i++) {
+          expect(perEntry.get(`history${i}`)).toBe(1)
+        }
+
+        streamingBuilds.push(historical.length - count)
+        expect(row.droppedSemanticEvents).toBe(0)
+        expect(row.toolRecords).toBe(20)
+        rows.push(row)
+      }
+
+      expect(streamingBuilds[0]).toBeGreaterThan(0)
+      expect(streamingBuilds[1]).toBe(streamingBuilds[0])
+      const bytes = rows.map(row => row.streamingBytes)
+      expect(Math.max(...bytes) / Math.min(...bytes)).toBeLessThan(1.01)
+    } finally {
+      builds.mockRestore()
+    }
+  }, 15_000)
 })
