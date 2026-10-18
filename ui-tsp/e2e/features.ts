@@ -203,12 +203,14 @@ async function lspDiagnostics() {
       }
     }
     await replay('message.complete',{status:'complete',text:''})
-    const rendered = await until(()=>native.rendered(),ns=>[...ns.values()].some(n=>n.p?.role==='omp.tool.lsp.unavailable'),'semantic results')
+    const expectedLinks = [`file://${manifest.root}/README.md#L2-L4`,`file://${manifest.root}/AGENTS.md#L2-L4`]
+    const rendered = await until(()=>native.rendered(),ns=>{
+      const refs = [...ns.values()].filter(n=>n.p?.role==='omp.tool.reference')
+      return [...ns.values()].some(n=>n.p?.role==='omp.tool.lsp.unavailable') && refs.length===2 && refs.every((n,i)=>n.p?.href===expectedLinks[i])
+    },'semantic results after real session.info confirms the local backend')
     const refs = [...rendered.values()].filter(n=>n.p?.role==='omp.tool.reference')
     assert.equal(refs.length,2)
-    // This lane attaches over WebSocket; do not turn fixture-host paths into native local links.
-    assert(refs.every(n=>n.p?.href===undefined))
-    assert([...rendered.values()].some(n=>n.p?.role==='omp.tool.notice' && String(n.p.text).includes('links disabled')))
+    assert.deepEqual(refs.map(n=>n.p?.href),expectedLinks)
     const tree = [...rendered.values()].find(n=>n.p?.role==='omp.tool.symbols')
     assert(tree)
     assert.deepEqual((tree.p?.nodes as {id:string;children:{id:string}[]}[]).map(n=>[n.id,n.children[0]?.id]),[['parent','child']])
