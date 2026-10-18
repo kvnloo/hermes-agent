@@ -11,6 +11,7 @@ import { openAgentHub } from './overlays/agent-hub.js'
 import { openHelp } from './overlays/help.js'
 import { openHistorySearch } from './overlays/history.js'
 import { openLsp } from './overlays/lsp.js'
+import { openModelHub } from './overlays/model-hub.js'
 import { openModelPicker, switchModel } from './overlays/models.js'
 import { confirmOverlay } from './overlays/prompts.js'
 import { openSessionPicker } from './overlays/sessions.js'
@@ -29,6 +30,7 @@ export interface LocalCommand {
 }
 
 const COMMANDS: readonly LocalCommand[] = [
+  { name: 'models', run: app => openModelHub(app) },
   { name: 'tree', run: app => openSessionPicker(app, true) },
   { name: 'agents', run: (app, arg) => arg ? false : openAgentHub(app) },
   { name: 'history-search', run: openHistorySearch },

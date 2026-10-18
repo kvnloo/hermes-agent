@@ -364,9 +364,18 @@ def _(rid, params: dict) -> dict:
     from hermes_cli.inventory import build_model_options_payload
     # A spawned agent owns the live provider/model/base_url; empty attributes must
     # NOT clobber disk config (with_overrides is truthy-only).
-    return _ok(rid, build_model_options_payload(
+    payload = build_model_options_payload(
         _model_picker_context(_session_agent(params)), explicit_only=bool(params.get("explicit_only")),
-        include_unconfigured=bool(params.get("include_unconfigured")), refresh=bool(params.get("refresh"))))
+        include_unconfigured=bool(params.get("include_unconfigured")), refresh=bool(params.get("refresh")))
+    with _sessions_lock:
+        pending = (_sessions.get(params.get('session_id')) or {}).get('pending_model_switch') or {}
+        if pending.get('display_model'):
+            payload['pending_model'] = str(pending['display_model'])
+            payload['pending_provider'] = str(pending.get('display_provider') or payload.get('provider') or '')
+    if params.get('safe_inventory'):
+        from tui_gateway.model_inventory import safe_provider_rows
+        payload['providers'] = safe_provider_rows(payload['providers'])
+    return _ok(rid, payload)
 
 
 @method("model.save_key")

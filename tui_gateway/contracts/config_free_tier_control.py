@@ -454,6 +454,7 @@ method("shared_metrics.desktop_daily", params=SharedMetricsDesktopDailyParams,
 
 class ModelOptionsParams(ProfileParams):
     session_id: str | None = None
+    safe_inventory: bool = False  # native inventory omits endpoint URLs, raw errors and credential extras
     explicit_only: bool = False
     include_unconfigured: bool = False
     refresh: bool = False
@@ -572,6 +573,8 @@ class ModelOptionsResult(Result):
     providers: list[ModelOptionProvider]
     model: str = ""
     provider: str = ""
+    pending_model: str | None = None
+    pending_provider: str | None = None
 
 
 method("model.options", params=ModelOptionsParams, result=ModelOptionsResult,

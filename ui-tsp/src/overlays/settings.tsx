@@ -8,6 +8,7 @@ import { Composer } from '../composer.js'
 import type { Overlay } from '../overlay.js'
 import { ActionButton } from '../view/action-button.js'
 
+import { openModelHub } from './model-hub.js'
 import { openModelPicker } from './models.js'
 import { moveSelection, rank } from './search.js'
 
@@ -15,7 +16,8 @@ const SESSION_PAGE = 'session'
 const EFFORTS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra']
 export const SETTINGS_COMMANDS = [
   ['/settings', 'Edit profile defaults and live session controls in native Settings'],
-  ['/prefs', 'Open native Settings (alias of /settings)']
+  ['/prefs', 'Open native Settings (alias of /settings)'],
+  ['/models', 'Manage profile auxiliary roles, fallback chain and providers (not temporary model selection)']
 ] as const
 type Value = null | boolean | number | string | Value[] | { [key: string]: Value }
 
@@ -564,6 +566,10 @@ class Settings implements Overlay {
       if (this.#live()) {
         openModelPicker(this.#app, { sessionOnly: true })
       }
+    } else if (event.act === 'model-hub') {
+      if (this.#live()) {
+        openModelHub(this.#app)
+      }
     } else if (event.act === 'edit' && event.value) {
       this.#activate(event.value)
     }
@@ -697,6 +703,7 @@ class Settings implements Overlay {
         onAction={{
           close: event => this.#pageAction(event),
           edit: event => this.#pageAction(event),
+          'model-hub': event => this.#pageAction(event),
           model: event => this.#pageAction(event),
           page: event => this.#pageAction(event)
         }}
@@ -753,6 +760,7 @@ class Settings implements Overlay {
               this.#editing = undefined
               this.#edit(selectedKey!, '')
             }) : null}
+            {this.#button('model-hub', 'Manage auxiliary roles, fallbacks and providers', () => openModelHub(this.#app))}
             {this.#button('close', 'Close', () => this.#app.close(this))}
           </row>
         </col>
