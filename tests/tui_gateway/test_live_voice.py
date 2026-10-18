@@ -239,6 +239,37 @@ def test_transport_disconnect_chokepoint_releases_devices(voice, monkeypatch):
     assert f.idle.wait(5)
 
 
+@pytest.mark.parametrize("cancelled", [False, True])
+def test_real_tts_dispatcher_adapter_cleans_audio_and_checks_retirement(tmp_path, monkeypatch, cancelled):
+    from tools import tts_tool, voice_mode
+    monkeypatch.setattr(voice_mode, "_import_audio", lambda: pytest.fail("real audio forbidden"))
+    stop = threading.Event()
+    paths = []
+    def synthesize(text, output_path):
+        assert text == "configured reply"
+        Path(output_path).write_bytes(b"fake generated audio")
+        paths.append(Path(output_path))
+        if cancelled:
+            stop.set()
+        return {"success": True, "file_path": output_path}
+    play = Mock(return_value=True)
+    monkeypatch.setattr(tts_tool, "text_to_speech_tool", synthesize)
+    monkeypatch.setattr(voice_mode, "play_audio_file", play)
+    live_voice.speak("configured reply", stop, lambda: not stop.is_set())
+    assert play.call_count == (0 if cancelled else 1)
+    assert all(not path.exists() for path in paths)
+
+
+def test_configured_tts_error_is_not_a_fallback(monkeypatch):
+    from tools import tts_tool, voice_mode
+    synthesize = Mock(return_value={"success": False, "error": "configured backend unavailable"})
+    monkeypatch.setattr(tts_tool, "text_to_speech_tool", synthesize)
+    monkeypatch.setattr(voice_mode, "play_audio_file", lambda *_args, **_kwargs: pytest.fail("must not play"))
+    with pytest.raises(RuntimeError, match="configured backend unavailable"):
+        live_voice.speak("reply", threading.Event(), lambda: True)
+    synthesize.assert_called_once()
+
+
 def test_full_duplex_endpoint_cancellation_never_writes_audio(monkeypatch):
     from tools import voice_mode
     stream = Mock()

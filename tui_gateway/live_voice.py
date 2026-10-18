@@ -129,10 +129,13 @@ class LiveVoice:
         return lease
 
     def _close_input(self, lease):
-        stream, lease.stream = lease.stream, None
+        stream = lease.stream
         if stream is not None:
-            stream.abort(ignore_errors=True)
-            stream.close(ignore_errors=True)
+            try:
+                stream.abort(ignore_errors=True)
+            finally:
+                stream.close(ignore_errors=True)
+            lease.stream = None
 
     def _cut(self, lease):
         lease.generation += 1

@@ -874,7 +874,7 @@ def _live_start(rid, params: dict) -> dict:
             reset_transport(token)
     try:
         with dictation.lock, manager.lock, _sessions_lock:
-            if dictation.active is not None or _voice_mode_enabled() or _wake_owner_snapshot()[0] is not None or _fd_tts_pending():
+            if dictation.active is not None or _voice_mode_enabled() or _wake_owner_snapshot()[0] is not None or _fd_tts_pending() or _fd_listener_active:
                 return _err(rid, 4019, "Finish dictation, legacy voice, wake listening and playback first")
             if _sessions.get(sid) is not session:
                 return _err(rid, 4001, "session closed before live voice started")
@@ -910,7 +910,9 @@ def _(rid, params: dict) -> dict:
         import hermes_cli.voice  # noqa: F401  (a missing module must answer 5026, not die in a thread)
     except Exception as e:
         return _err(rid, 5026, "voice module not available" if isinstance(e, ImportError) else str(e))
-    threading.Thread(target=_speak_text_with_barge, args=(text,), daemon=True).start()
+    # Register the pending speaker pipeline before releasing the audio admission
+    # lock; a live start must not race an accepted but not-yet-scheduled TTS job.
+    _speak_text_with_barge(text)
     return _ok(rid, {"status": "speaking"})
 
 
