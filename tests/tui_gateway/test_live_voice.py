@@ -108,6 +108,24 @@ def test_consent_owner_and_mutual_exclusion(voice, monkeypatch):
     assert not f.manager.active.stop.is_set()
 
 
+def test_legacy_speech_is_reserved_before_rpc_ack(voice, monkeypatch):
+    pending = []
+    # Do not run a background job: this catches an outer scheduling gap between
+    # acknowledging voice.tts and registering its speaker ownership.
+    class DeferredThread:
+        def __init__(self, *args, **kwargs):
+            pass
+        def start(self):
+            pass
+    monkeypatch.setattr(server.threading, "Thread", DeferredThread)
+    monkeypatch.setattr(server, "_speak_text_with_barge", lambda text: pending.append(text))
+    monkeypatch.setattr(server, "_fd_tts_pending", lambda: bool(pending))
+    assert server._methods["voice.tts"](1, {"text": "legacy reply"})["result"]["status"] == "speaking"
+    assert pending == ["legacy reply"]
+    assert "error" in rpc("start", consent=True)
+    assert voice.manager.active is None
+
+
 def test_spoken_turn_uses_configured_backend_and_never_sends_images_or_draft(voice):
     f = voice
     start(f)
