@@ -367,6 +367,24 @@
       }
     },
     {
+      "name": "browser.frame",
+      "summary": "User selects a verified native frame for evaluation; other child-frame operations fail closed.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/BrowserFrameParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/BrowserTargetResult"
+        }
+      }
+    },
+    {
       "name": "browser.manage",
       "summary": "Inspect, attach to, or drop the CDP browser the tools use, or switch Browser Use mode (``use``, applies to new sessions); ``messages`` narrate a connect.",
       "params": [
@@ -381,6 +399,24 @@
         "name": "result",
         "schema": {
           "$ref": "#/components/schemas/BrowserManageResult"
+        }
+      }
+    },
+    {
+      "name": "browser.release",
+      "summary": "User releases an adopted block, or closes an agent-created block, after confirmed cleanup.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/BrowserBlockParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/BrowserReleaseResult"
         }
       }
     },
@@ -8226,6 +8262,43 @@
         "title": "BrowserControllerResultResult",
         "type": "object"
       },
+      "BrowserFrameParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "target_id": {
+            "title": "Target Id",
+            "type": "string"
+          },
+          "frame": {
+            "pattern": "^(main|(?:0|[1-9][0-9]*)(?:\\.(?:0|[1-9][0-9]*))*)$",
+            "title": "Frame",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "target_id",
+          "frame"
+        ],
+        "title": "BrowserFrameParams",
+        "type": "object"
+      },
       "BrowserManageParams": {
         "additionalProperties": false,
         "properties": {
@@ -8358,6 +8431,25 @@
         "title": "BrowserProgressPayload",
         "type": "object"
       },
+      "BrowserReleaseResult": {
+        "additionalProperties": false,
+        "properties": {
+          "target_id": {
+            "title": "Target Id",
+            "type": "string"
+          },
+          "released": {
+            "title": "Released",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "target_id",
+          "released"
+        ],
+        "title": "BrowserReleaseResult",
+        "type": "object"
+      },
       "BrowserTargetResult": {
         "additionalProperties": false,
         "properties": {
@@ -8376,6 +8468,18 @@
           "in_tern": {
             "title": "In Tern",
             "type": "boolean"
+          },
+          "frame": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Frame"
           }
         },
         "required": [

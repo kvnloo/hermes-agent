@@ -22,7 +22,11 @@ function webHref(value: string | undefined): string | undefined {
   }
 }
 
-function analysisBody(call: ToolCall, result: Record<string, unknown> | undefined, fallback: JSX.Element[]): JSX.Element[] {
+function analysisBody(
+  call: ToolCall,
+  result: Record<string, unknown> | undefined,
+  fallback: JSX.Element[]
+): JSX.Element[] {
   const question = str(call.args.question)
   const analysis = str(result?.analysis) ?? str(result?.text_summary)
   const error = str(result?.error)
@@ -44,8 +48,14 @@ export function browserCard(
   const title = str(result?.title)
   const meta = record(result?.meta)
   const path = str(result?.screenshot_path) ?? str(meta?.screenshot_path)
-  const image = path && call.status === 'done' ? readMedia(path, cwd, undefined, false) : undefined
-  const action = call.name.replace(/^browser_?/, '').replace(/[_-]+/g, ' ').trim()
+
+  const image =
+    path && call.status === 'done' && result?.success !== false ? readMedia(path, cwd, undefined, false) : undefined
+
+  const action = call.name
+    .replace(/^browser_?/, '')
+    .replace(/[_-]+/g, ' ')
+    .trim()
 
   return {
     name: 'browser',
@@ -53,7 +63,9 @@ export function browserCard(
     target: url ?? str(call.args.target) ?? str(call.args.query) ?? (call.context || undefined),
     targetKind: url || str(call.args.target) ? 'path' : str(call.args.query) ? 'query' : 'text',
     href: webHref(url),
-    meta: title ? [title] : undefined,
+    meta: [title, str(result?.error_kind) ? `Tern ${str(result?.error_kind)}` : undefined].filter(
+      (value): value is string => Boolean(value)
+    ),
     body: [...(image ? [image] : []), ...analysisBody(call, result, fallback)],
     folded: !image,
     frame: 'inline'
@@ -74,7 +86,7 @@ export function visionCard(
     title: 'Vision',
     target: path,
     targetKind: 'path',
-    href: path ? webHref(path) ?? fileHref(path, cwd) : undefined,
+    href: path ? (webHref(path) ?? fileHref(path, cwd)) : undefined,
     body: analysisBody(call, result, fallback),
     folded: true,
     frame: 'inline'

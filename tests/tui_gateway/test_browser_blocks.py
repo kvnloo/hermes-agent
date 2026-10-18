@@ -15,7 +15,8 @@ def runtime(monkeypatch, tmp_path):
     monkeypatch.setattr(server, "_sessions", {"owned": owner})
     target = {"target_id": "7", "title": "Page", "url": "https://example.org/", "in_tern": True}
     provider = SimpleNamespace(listing=Mock(return_value=[]), adopt_by_user=Mock(return_value=target),
-                               focus=Mock(return_value=target))
+                               focus=Mock(return_value=target), select_frame=Mock(return_value={**target, "frame": "0"}),
+                               release_by_user=Mock(return_value={"target_id": "7", "released": True}))
     monkeypatch.setattr(browser_tern, "get_provider", lambda: provider)
 
     def call(method, via=transport, **params):
@@ -68,3 +69,29 @@ def test_unavailable_discovery_preserves_legacy_backend(runtime, monkeypatch):
     monkeypatch.setattr(browser_tern, "get_provider", lambda: None)
     assert call("browser.blocks")["result"] == {"available": False, "blocks": []}
     assert "error" in call("browser.adopt", target_id="7")
+
+
+def test_user_frame_and_release_use_exact_task_and_target(runtime):
+    call, _, provider = runtime
+    assert call("browser.frame", target_id="7", frame="0")["result"]["frame"] == "0"
+    provider.select_frame.assert_called_once_with("task-owned", "7", "0")
+    assert call("browser.release", target_id="7")["result"] == {"target_id": "7", "released": True}
+    provider.release_by_user.assert_called_once_with("task-owned", "7")
+
+
+@pytest.mark.parametrize("method", ["browser.frame", "browser.release"])
+def test_frame_and_release_fence_foreign_and_busy_transports(runtime, method):
+    call, owner, provider = runtime
+    params = {"target_id": "7", **({"frame": "0"} if method == "browser.frame" else {})}
+    assert "error" in call(method, via=SimpleNamespace(write=lambda f: True), **params)
+    owner["running"] = True
+    assert "error" in call(method, **params)
+    provider.select_frame.assert_not_called()
+    provider.release_by_user.assert_not_called()
+
+
+@pytest.mark.parametrize("frame", ["00", " 0", "+0", "0.", "main\n", 0, True, None])
+def test_invalid_frame_rejected_at_dispatch_before_provider_call(runtime, frame):
+    call, _, provider = runtime
+    assert "error" in call("browser.frame", target_id="7", frame=frame)
+    provider.select_frame.assert_not_called()

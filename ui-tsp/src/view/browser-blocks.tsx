@@ -27,12 +27,15 @@ export function browserBlockCard<T extends BrowserCard>(card: T, call: ToolCall,
 
   const title = typeof target.title === 'string' ? target.title : ''
   const url = typeof target.url === 'string' ? target.url : ''
+  const frame = typeof target.frame === 'string' ? `evaluation frame ${target.frame}` : undefined
 
   return {
     ...card,
     target: url || card.target,
     targetKind: 'path',
-    meta: [...new Set([...(card.meta ?? []), ...(title ? [title] : []), `in Tern block ${id}`])],
+    meta: [
+      ...new Set([...(card.meta ?? []), ...(title ? [title] : []), `in Tern block ${id}`, ...(frame ? [frame] : [])])
+    ],
     folded: false,
     body: [
       ...(focus

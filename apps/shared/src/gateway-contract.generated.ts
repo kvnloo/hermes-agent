@@ -528,6 +528,17 @@ export interface BrowserTargetResult {
   title: string
   url: string
   in_tern: boolean
+  frame?: string | null
+}
+export interface BrowserFrameParams {
+  session_id: string
+  profile?: string | null
+  target_id: string
+  frame: string
+}
+export interface BrowserReleaseResult {
+  target_id: string
+  released: boolean
 }
 /** ``key`` selects one getter from ``_CONFIG_GETTERS``; ``cwd`` feeds the ``project`` getter, ``session_id`` lets ``reasoning`` / ``fast`` answer with the session's live pin. */
 export interface ConfigGetParams {
@@ -5335,8 +5346,12 @@ export interface RpcMethods {
   'browser.controller.result': { params: BrowserControllerResultParams; result: BrowserControllerResultResult }
   /** Focus only an agent-owned or explicitly adopted browser block. */
   'browser.focus': { params: BrowserBlockParams; result: BrowserTargetResult }
+  /** User selects a verified native frame for evaluation; other child-frame operations fail closed. */
+  'browser.frame': { params: BrowserFrameParams; result: BrowserTargetResult }
   /** Inspect, attach to, or drop the CDP browser the tools use, or switch Browser Use mode (``use``, applies to new sessions); ``messages`` narrate a connect. */
   'browser.manage': { params: BrowserManageParams; result: BrowserManageResult }
+  /** User releases an adopted block, or closes an agent-created block, after confirmed cleanup. */
+  'browser.release': { params: BrowserBlockParams; result: BrowserReleaseResult }
   /** Lock one answer of a batch clarify request (editable until every question is locked). */
   'clarify.lock': { params: ClarifyLockParams; result: ClarifyLockResult }
   /** Run ``hermes <argv>`` non-interactively and capture its output; ``blocked`` explains a refusal. */
@@ -5863,7 +5878,9 @@ export const RPC_METHODS = [
   'browser.controller.register',
   'browser.controller.result',
   'browser.focus',
+  'browser.frame',
   'browser.manage',
+  'browser.release',
   'clarify.lock',
   'cli.exec',
   'client.capabilities',
