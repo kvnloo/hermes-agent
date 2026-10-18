@@ -1233,8 +1233,13 @@ def _acquire_env(plan: _ExecPlan, task_id: Optional[str]) -> Any:
 
 def _yield_kwargs(command: str, **ctx) -> dict:
     """``env.execute`` kwargs enabling yield-to-background (local backend only)."""
+    from tools.terminal_output import current_output_callback
     handler = yield_to_background_handler(command=command, **ctx)
-    return {"yield_handler": handler} if handler is not None else {}
+    kwargs: dict[str, Any] = {"yield_handler": handler} if handler is not None else {}
+    # Remote backends may use in-band shell bookkeeping or non-streaming SDKs.
+    if ctx["env_type"] == "local" and (callback := current_output_callback()) is not None:
+        kwargs["output_callback"] = callback
+    return kwargs
 
 
 def _run_foreground(

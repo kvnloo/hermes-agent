@@ -376,6 +376,27 @@ async function openui() {
 }
 
 async function runBoxes() {
+  await step('owned ANSI deltas retain color, carriage-return progress and Unicode on wire', async () => {
+    await replay('message.start')
+    await replay('tool.start', {name:'terminal',tool_id:'ansi-live',turn_id:'ansi-turn',args:{command:'printf colored-progress'}})
+    const chunks = ['\u001b[31m紅色\u001b[0m\n', '0%\r100% ✓\n']
+    for (const [index, text] of chunks.entries()) {
+      await replay('tool.output.delta', {tool_id:'ansi-live',turn_id:'ansi-turn',stream_id:'ansi-stream',seq:index+1,output_kind:'terminal',operation:'append',text,capture_truncated:false})
+    }
+    const nodes = await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.k==='ansi' && n.p?.text===chunks.join('')), 'raw ANSI stream node')
+    const output = [...nodes.values()].find(n=>n.k==='ansi')
+    assert.equal(output?.p?.follow, true)
+    // ANSI is native-rasterized, not DOM text: wire acknowledgement precedes its paint.
+    await delay(2000)
+    await capture('ansi-live')
+    await replay('tool.complete', {name:'terminal',tool_id:'ansi-live',result:{output:'final ✓',exit_code:0,error:null}})
+    await replay('message.complete', {status:'complete',text:''})
+    await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.k==='code' && n.p?.text==='final ✓'), 'authoritative replacement')
+    await capture('ansi-final')
+    // Separate the old outcomes inventory from the owned incremental stream.
+    await native.type('/clear')
+    await native.key('Enter')
+  }, true)
   await step('terminal and eval outcomes from explicit fixture replay', async () => {
     await replay('message.start')
     for (const [id, name, result] of [

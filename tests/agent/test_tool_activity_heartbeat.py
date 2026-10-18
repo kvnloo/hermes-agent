@@ -360,3 +360,34 @@ def test_sequential_timeout_stops_abandoned_workers_heartbeat(monkeypatch):
         assert not late, f"abandoned tool kept stamping activity: {late[:3]}"
     finally:
         release.set()
+
+
+def test_authorized_terminal_dispatch_installs_call_owned_live_output(monkeypatch, tmp_path):
+    """The production middleware-to-terminal seam, not just a manually installed output tap."""
+    import agent.tool_executor as te
+    import tools.terminal_tool as terminal
+    from tools.environments.local import LocalEnvironment
+    from tools.terminal_output import current_output_callback
+
+    agent = _make_agent(monkeypatch)
+    agent._tool_guardrails = MagicMock(before_call=lambda name, args: MagicMock(allows_execution=True))
+    events = []
+    agent.tool_progress_callback = lambda *args, **kwargs: events.append((args, kwargs))
+    monkeypatch.setattr(terminal, "yield_to_background_handler", lambda **kwargs: None)
+    env = LocalEnvironment(cwd=str(tmp_path), timeout=10)
+
+    def execute(args):
+        kwargs = terminal._yield_kwargs(args["command"], env_type="local")
+        assert callable(kwargs["output_callback"])
+        return env.execute(args["command"], bounded_capture=True, **kwargs)
+
+    result = te._run_agent_tool_execution_middleware(
+        agent, function_name="terminal", function_args={"command": "printf 'live ✓'"},
+        effective_task_id="task", tool_call_id="owned-call", execute=execute,
+    )
+    assert result.result["output"] == "live ✓"
+    deltas = [(args, kw) for args, kw in events if args[0] == "tool.output.delta"]
+    assert "".join(args[2] for args, _ in deltas) == "live ✓"
+    assert all(kw["tool_call_id"] == "owned-call" for _, kw in deltas)
+    assert len({kw["stream_id"] for _, kw in deltas}) == 1
+    assert current_output_callback() is None

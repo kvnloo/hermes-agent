@@ -8,6 +8,7 @@ import type {
   MessageCompletePayload,
   SubagentEventPayload,
   ToolCompletePayload,
+  ToolOutputDeltaPayload,
   ToolStartPayload,
   TranscriptMessage,
   Usage
@@ -174,7 +175,7 @@ export class Transcript {
     const turn = this.start(at)
     this.#endThinking(turn, at)
 
-    if (this.#tool(p.tool_id)) {
+    if (turn.blocks.some(b => b.kind === 'tool' && b.call.id === p.tool_id)) {
       return
     }
 
@@ -183,6 +184,7 @@ export class Transcript {
       argsText: p.args_text ?? '',
       context: p.context ?? '',
       id: p.tool_id,
+      outputTurnId: p.turn_id ?? undefined,
       name: p.name,
       startedAt: at,
       startedObserved: observed,
@@ -195,6 +197,36 @@ export class Transcript {
     }
 
     turn.blocks.push({ call, id: p.tool_id, kind: 'tool' })
+    this.#touch(turn)
+  }
+
+  toolOutput(p: ToolOutputDeltaPayload) {
+    const turn = this.live
+    const block = turn?.blocks.find(b => b.kind === 'tool' && b.call.id === p.tool_id)
+
+    if (block?.kind !== 'tool' || !turn || block.call.status !== 'running' || block.call.outputTurnId !== p.turn_id) {
+      return
+    }
+
+    const call = block.call
+    const previous = call.output
+
+    if (!Number.isSafeInteger(p.seq) || p.seq < 1 || (previous && (previous.streamId !== p.stream_id || p.seq <= previous.seq))) {
+      return
+    }
+
+    // Replayed frames are idempotent; a gap needs a gateway replacement snapshot.
+    if (p.operation === 'append' && p.seq !== (previous?.seq ?? 0) + 1) {
+      return
+    }
+
+    call.output = {
+      kind: p.output_kind,
+      text: p.operation === 'replace' ? p.text : (previous?.text ?? '') + p.text,
+      streamId: p.stream_id,
+      seq: p.seq,
+      captureTruncated: p.capture_truncated === true
+    }
     this.#touch(turn)
   }
 
@@ -494,6 +526,25 @@ export class Transcript {
       this.start(at)
       this.text(turn.assistant ?? '', at)
     }
+
+    for (const tool of turn.tools ?? []) {
+      // Durable history can contain the unfinished assistant tool-call stub.
+      // The live snapshot owns that call; do not render both copies on reconnect.
+      const stub = this.#tool(tool.start.tool_id)
+
+      if (stub?.call.status === 'unknown') {
+        stub.turn.blocks = stub.turn.blocks.filter(b => b.kind !== 'tool' || b.call !== stub.call)
+        this.entries = this.entries.filter(e => e !== stub.turn || stub.turn.blocks.length > 0)
+        this.structureRev++
+        this.#touch(stub.turn)
+      }
+
+      this.toolStart(tool.start, at, false)
+
+      if (tool.output) {
+        this.toolOutput(tool.output)
+      }
+    }
   }
 
   #endThinking(turn: TurnEntry, at: number) {
@@ -616,6 +667,8 @@ function completeTool(call: ToolCall, p: ToolCompletePayload, elapsed?: number) 
     }
   }
 
+  // Final results are replacements, not deltas (they can be stripped, empty or truncated).
+  call.output = undefined
   call.diff = p.inline_diff ?? undefined
 
   if (p.args) {
