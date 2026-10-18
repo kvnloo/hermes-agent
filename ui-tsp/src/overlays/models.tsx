@@ -74,7 +74,7 @@ export async function switchModel(app: App, value: string, confirmed = false, si
 }
 
 /** Opens the model picker over the session. */
-export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {}) {
+export function openModelPicker(app: App, options: { sessionOnly?: boolean; onChoose?: (route: { model: string; provider: string }) => void } = {}) {
   const sid = app.sid
 
   if (!sid) {
@@ -90,6 +90,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
   let rows: Row[] = []
   let providers: { provider: ModelOptionProvider; name: string }[] = []
   let current = ''
+  let pending = false
   let query = ''
   let scope = ALL
   let selected: string | undefined
@@ -110,7 +111,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
     app.changed()
 
     try {
-      const r = await app.gw.request<ModelOptionsResult>('model.options', { session_id: sid })
+      const r = await app.gw.request<ModelOptionsResult>('model.options', { explicit_only: false, include_unconfigured: true, safe_inventory: true, session_id: sid })
 
       if (token !== generation || app.sid !== sid || !app.overlays.includes(overlay)) {
         return
@@ -127,10 +128,13 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
           providerName: name
         }))
       )
-      const currentProvider = list.find(p => p.is_current)?.slug ?? r.provider ?? ''
+      const activeProvider = list.find(p => p.is_current)?.slug ?? r.provider ?? ''
+      const currentProvider = r.pending_model ? r.pending_provider || activeProvider : activeProvider
+      const model = r.pending_model || r.model
+      pending = Boolean(r.pending_model)
       current =
-        rows.find(row => row.model === r.model && row.provider.slug === currentProvider)?.id ??
-        rows.find(row => row.model === r.model)?.id ??
+        rows.find(row => row.model === model && row.provider.slug === currentProvider)?.id ??
+        rows.find(row => row.model === model)?.id ??
         ''
       const recent = app.modelRecents.list(sid)
       rows.sort((a, b) => {
@@ -157,6 +161,21 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
     const row = rows.find(r => r.id === id)
 
     if (!row || busy || !sid || app.sid !== sid || !app.overlays.includes(overlay) || (confirm && !confirmed) || (confirmed && confirm !== expected)) {
+      return
+    }
+
+    if (row.provider.authenticated === false || row.provider.unavailable_models?.includes(row.model)) {
+      message = 'This model is unavailable or its provider is locked. Configure the provider in Hermes model setup.'
+      state = 'error'
+      app.changed()
+
+      return
+    }
+
+    if (options.onChoose) {
+      app.close(overlay)
+      options.onChoose({ model: row.model, provider: row.provider.slug })
+
       return
     }
 
@@ -276,7 +295,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
         ...providers.map(({ provider, name }) => ({
           count: provider.models?.length ?? 0,
           dot: provider.warning ? ('warning' as const) : undefined,
-          group: 'Providers',
+          group: provider.authenticated === false ? 'Locked providers' : 'Providers',
           id: `provider:${provider.slug}`,
           label: name,
           mark: { seed: provider.slug, text: name }
@@ -290,11 +309,12 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
           actions={[
             ...(!options.sessionOnly ? [{ id: 'global', keys: ['ctrl+g'], label: 'Save as default', on: global }] : []),
             { end: true, id: 'close', keys: ['esc'], label: 'Close' },
-            { id: 'use', keys: ['enter'], label: 'Switch', primary: true }
+            { id: 'use', keys: ['enter'], label: options.onChoose ? 'Assign' : 'Switch', primary: true }
           ]}
           columns={columns}
           current={current ? [current] : []}
-          empty={query ? undefined : 'No models in this scope'}
+          empty={query ? undefined : providers.find(p => `provider:${p.provider.slug}` === scope)?.provider.authenticated === false
+            ? 'Provider locked. Use Hermes model setup in a terminal, then reopen Models.' : 'No models in this scope'}
           hits={hits}
           icon="cpu"
           items={rows.map(itemOf)}
@@ -342,10 +362,10 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
           selected={selected}
           size="lg"
           state={state}
-          title="Models"
+          title={options.onChoose ? 'Choose assignment model' : 'Models'}
           total={rows.length}
         >
-          {row ? preview(row, row.id === current) : null}
+          {row ? preview(row, row.id === current, pending) : null}
         </picker>
       )
     },
@@ -420,7 +440,7 @@ function itemOf(row: Row): PickerItem {
           ? [{ text: 'fast', tone: 'info' as const }]
           : [])
     ],
-    disabled: unavailable ? `${row.providerName} doesn't offer ${row.model} on this plan` : undefined,
+    disabled: row.provider.authenticated === false ? 'Provider locked; use Hermes model setup in a terminal' : unavailable ? `${row.providerName} doesn't offer ${row.model} on this plan` : undefined,
     facts:
       price && !free && price.input
         ? { price: `${price.input}·${price.output}` }
@@ -434,7 +454,7 @@ function itemOf(row: Row): PickerItem {
   }
 }
 
-function preview(row: Row, isCurrent: boolean): JSX.Element[] {
+function preview(row: Row, isCurrent: boolean, pending = false): JSX.Element[] {
   const caps = row.provider.capabilities?.[row.model]
   const price = row.provider.pricing?.[row.model]
 
@@ -454,7 +474,7 @@ function preview(row: Row, isCurrent: boolean): JSX.Element[] {
           { k: [{ t: 'Fast mode' }], v: [{ s: 'mono', t: caps.fast || caps.ultrafast ? 'yes' : 'no' }] }
         ]
       : []),
-    ...(row.provider.api_url ? [{ k: [{ t: 'Endpoint' }], v: [{ s: 'mono dim', t: row.provider.api_url }] }] : [])
+    // Endpoint strings can contain embedded credentials. Never display them here.
   ]
 
   const short = row.model.split('/').at(-1) ?? row.model
@@ -468,7 +488,7 @@ function preview(row: Row, isCurrent: boolean): JSX.Element[] {
       truncate="middle"
     />,
     <row gap="xs" key="badges" wrap>
-      {isCurrent ? <badge key="current" text="current" tone="success" /> : null}
+      {isCurrent ? <badge key="current" text={pending ? 'pending · next turn' : 'current'} tone={pending ? 'warning' : 'success'} /> : null}
       {caps?.reasoning ? <badge key="reasoning" text="reasoning" /> : null}
       {caps?.fast || caps?.ultrafast ? (
         <badge key="fast" text={caps.ultrafast ? 'ultrafast' : 'fast'} tone="info" />

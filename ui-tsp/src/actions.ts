@@ -8,6 +8,7 @@ import { forkSession } from './fork-session.js'
 import { cycleModel } from './model-cycle.js'
 import { openBrowserBlocks } from './overlays/browser-blocks.js'
 import { openHistorySearch } from './overlays/history.js'
+import { openModelHub } from './overlays/model-hub.js'
 import { openModelPicker } from './overlays/models.js'
 import { openSessionPicker } from './overlays/sessions.js'
 
@@ -152,6 +153,14 @@ export const APP_ACTIONS: readonly Action[] = [
     run: app => {
       void app.slash('/model')
     }
+  },
+  {
+    id: 'app.model.manage',
+    title: 'Manage profile auxiliary roles, fallbacks and providers',
+    group: 'Navigation',
+    keys: ['alt+shift+o'],
+    when: always,
+    run: openModelHub
   },
   {
     id: 'app.model.selectTemporary',

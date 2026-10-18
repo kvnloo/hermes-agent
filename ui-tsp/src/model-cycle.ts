@@ -12,16 +12,18 @@ export function cycleModel(app: App, direction: -1 | 1): void {
     }
 
     try {
-      const options = await app.gw.request<ModelOptionsResult>('model.options', { session_id: sid })
+      const options = await app.gw.request<ModelOptionsResult>('model.options', { safe_inventory: true, session_id: sid })
 
       if (app.sid !== sid) {
         return
       }
 
-      const provider = options.providers.find(row => row.is_current)?.slug ?? options.provider ?? app.info?.provider ?? ''
-      const current = { model: options.model ?? app.info?.model ?? '', provider }
+      const activeProvider = options.providers.find(row => row.is_current)?.slug ?? options.provider ?? app.info?.provider ?? ''
+      const provider = options.pending_model ? options.pending_provider || activeProvider : activeProvider
+      // Gateway-owned pending intent, not optimistic app.info: rapid cycles must advance while a turn streams.
+      const current = { model: options.pending_model || options.model || app.info?.model || '', provider }
 
-      const available = options.providers.flatMap(p => (p.models ?? [])
+      const available = options.providers.filter(p => p.authenticated !== false).flatMap(p => (p.models ?? [])
         .filter(model => !p.unavailable_models?.includes(model))
         .map(model => ({ model, provider: p.slug })))
 

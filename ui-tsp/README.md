@@ -19,6 +19,44 @@ animates natively. It is a sibling of the Ink TUI (`ui-tui/`) and talks to the s
 The frontend asks the terminal for TSP first. A terminal that doesn't answer makes it exit with
 code 75, and the launcher runs the Ink TUI in its place (`hermes_cli/main_tui_launch.py`).
 
+## Model management
+
+`/models`, **Settings → Manage auxiliary roles, fallbacks and providers**, or the configurable
+`app.model.manage` action (default **Alt+Shift+O**) opens a management hub, distinct from
+`/model` / Alt+P temporary session selection.
+
+- **Auxiliary roles** are Hermes's built-in and plugin-registered auxiliary task slots, not OMP
+  role names. Assign or clear one slot, or reset only auxiliary roles to automatic selection.
+- **Fallback chain** is Hermes's ordered `fallback_providers` chain, including legacy
+  `fallback_model` on read. Add/remove/reorder or clear only this chain. The gateway rejects
+  unavailable/locked models, repeated routes, primary-model cycles and chains over eight entries.
+  Reordering retains private endpoint/credential fields server-side; clearing also removes legacy
+  entries so they cannot reappear. Ambiguous endpoint-specific routes require Hermes setup.
+- Both operations are **profile defaults only**. Hermes has no session-scoped auxiliary-role or
+  fallback assignment API; the hub advertises that limitation. Session model selection remains
+  separate, with its existing expensive-model confirmation and next-turn deferral behavior.
+- Every management change requires explicit confirmation, a matching profile/config revision,
+  and canonical readback. Closing/replacing the owning session discards stale UI replies.
+  Managed settings remain read-only. No idle polling is added.
+- Providers come from Hermes's canonical inventory (credential pool, OAuth, API keys and custom
+  providers), without explicit-provider filtering. Empty locked providers remain visible.
+  Native inventory omits endpoint URLs, credentials, account labels and raw discovery errors.
+  Locked providers direct users to **Hermes model setup in a terminal**; `native_login: false`
+  explicitly reports that this hub cannot launch OAuth or collect API keys. Existing vault prompts
+  retain their separate masked UI; inventory is never a login-secret transport.
+
+For a read-only active-profile parity receipt (catalog caches may warm, but no model call,
+config/credential write or persistent session is made):
+
+```sh
+HERMES_HOME=/path/to/profile python scripts/verify_tern_provider_inventory.py > /path/to/receipt.json
+HERMES_MODEL_PROVIDER_RECEIPT=/path/to/receipt.json npm --prefix ui-tsp test -- src/__tests__/native-model-role-fallback.test.ts
+```
+
+The probe compares the canonical listing with the actual `model.options` RPC. The optional
+connected-SDK test then verifies **every** canonical provider scope and every returned model
+item in the native picker. Use the checkout's activated Python/Node environments.
+
 ## Layout
 
 | Path | What |
