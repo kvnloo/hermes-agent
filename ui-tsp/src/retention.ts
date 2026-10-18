@@ -163,7 +163,7 @@ export class Retention {
     this.#cx = cx
     this.#transcript = transcript
     const ops: Op[] = []
-    const context = `${cx.cwd}:${cx.media}:${cx.hostLocal}:${cx.toolsHidden}`
+    const context = `${cx.cwd}:${cx.media}:${cx.hostLocal}:${cx.toolsHidden}:${cx.hour12 ?? false}`
     const structural = this.#structure !== transcript.structureRev
 
     if (structural) {

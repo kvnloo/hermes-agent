@@ -2,6 +2,8 @@
 // its `name` (bash, read, edit, write, grep, glob, web_search, todo, task, ask,
 // eval pick the icon and the layout), so each hermes tool maps onto the omp
 // tool it resembles, with the same props and body shapes omp sends.
+// File code/diff uses path alone: an explicit lang overrides the host grammar.
+// Older hosts ignoring path retain literal text; only non-file snippets force lang.
 
 import { type JSX, node } from '@stencil-hq/tern'
 
@@ -16,6 +18,7 @@ import { changedFiles, editFiles, fileDiffs } from './edit-results.js'
 import { evalRuns, evalRunState } from './eval.js'
 import { lspDiagnostics } from './lsp-diagnostics.js'
 import { outputLineCount, runBox, type RunBoxInput, runElapsed, runState, type RunState } from './runbox.js'
+import { searchCode } from './search-code.js'
 import { age, compact, duration } from './time.js'
 import { browserCard, visionCard } from './tool-adapters.js'
 import { captureFacts, fetchArtifact, outputArtifacts, resultCounts } from './tool-results.js'
@@ -361,7 +364,7 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined, c
     meta.push(`${returned} lines returned`, ...(total === undefined ? [] : [`${total} total`, `${Math.max(0, total - returned)} omitted`]), 'source truncated')
   }
 
-  const markdown = langOf(path) === 'markdown'
+  const markdown = /\.md$/i.test(path)
   const hidden = Math.max(0, text.split('\n').filter(line => line.length > 0).length - READ_PREVIEW_LINES)
   const line = lineOf(call.args.offset) ?? first
   const limit = lineOf(call.args.limit)
@@ -375,12 +378,11 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined, c
       ...(preview ? [preview] : []),
       ...(text ? [markdown
         ? <md key="markdown">{displayMarkdown(text, cwd)}</md>
-        : <code key="code" lang={langOf(path)} numbers start={first} text={displayText(text)} wrap />] : [])
+        : <code key="code" numbers path={path} start={first} text={displayText(text)} wrap />] : [])
     ],
     folded: !preview,
     frame: 'inline',
     href: fileHref(path, cwd, { line, endLine }),
-    lang: langOf(path),
     meta,
     name: 'read',
     // Code-line clipping would hide the native viewer's image and controls.
@@ -395,7 +397,6 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined, c
   const files = fileDiffs(str(result?.diff))
   const paths = changedFiles(result)
   const path = str(result?.resolved_path) ?? str(call.args.path) ?? str(call.args.file_path) ?? files[0]?.path ?? paths[0] ?? call.context
-  const lang = langOf(path)
   const diff = hunks(str(result?.diff)) ?? (call.diff ? plainDiff(call.diff) : undefined)
   const content = str(call.args.content) ?? str(call.args.contents)
   const write = call.name === 'write_file'
@@ -449,7 +450,7 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined, c
       badges: badges.length ? badges : undefined,
       body: [
         ...(figure ? [figure] : []),
-        <code key="code" lang={lang ?? 'text'} numbers text={displayText(text)} wrap />,
+        <code key="code" numbers path={path} text={displayText(text)} wrap />,
         ...diagnostics
       ],
       folded: !figure,
@@ -475,8 +476,8 @@ function editCard(call: ToolCall, result: Record<string, unknown> | undefined, c
     badges: figure ? undefined : moreBadge(lines, DIFF_PREVIEW_LINES),
     body: [
       ...(figure ? [figure] : []),
-      <diff key="diff" lang={lang} text={displayText(diff)} />,
-      ...(figure && content ? [<code key="source" lang={lang ?? 'text'} numbers text={displayText(content)} wrap />] : []),
+      <diff key="diff" path={path} text={displayText(diff)} />,
+      ...(figure && content ? [<code key="source" numbers path={path} text={displayText(content)} wrap />] : []),
       ...diagnostics
     ],
     folded: figure ? false : fold,
@@ -526,7 +527,7 @@ function searchCard(call: ToolCall, result: Record<string, unknown> | undefined,
     const returned = [...dense.matchAll(/^ {2}\d+: /gm)].length
 
     return {
-      body: [<code key="matches" lang="text" text={displayText(dense)} wrap />],
+      body: searchCode(dense, result?.matches_format),
       folded: returned > 40, preview: { lines: 20 }, frame: 'inline',
       meta: resultCounts(result, returned, 'matches'),
       name: 'grep', target: pattern, targetKind: 'pattern', title: 'Grep'
@@ -571,9 +572,9 @@ function searchCard(call: ToolCall, result: Record<string, unknown> | undefined,
         <code
           href={fileHref(path, cwd, { line: start, endLine: run.at(-1)?.line })}
           key={`${f}.c${runIndex++}`}
-          lang={langOf(path)}
           marks={run.map(h => ({ line: h.line, tone: 'accent' }))}
           numbers
+          path={path}
           start={start}
           text={displayText(run.map(h => h.text).join('\n'))}
           wrap
@@ -1023,34 +1024,6 @@ function diffStats(diff: string): { added: number; removed: number } {
   }
 
   return { added, removed }
-}
-
-const LANGS: Record<string, string> = {
-  c: 'c',
-  cpp: 'cpp',
-  css: 'css',
-  go: 'go',
-  html: 'html',
-  java: 'java',
-  js: 'javascript',
-  json: 'json',
-  jsx: 'jsx',
-  md: 'markdown',
-  py: 'python',
-  rb: 'ruby',
-  rs: 'rust',
-  sh: 'bash',
-  toml: 'toml',
-  ts: 'typescript',
-  tsx: 'tsx',
-  yaml: 'yaml',
-  yml: 'yaml'
-}
-
-function langOf(path: string | undefined): string | undefined {
-  const ext = path?.split('.').pop()?.toLowerCase()
-
-  return ext ? LANGS[ext] : undefined
 }
 
 function todoCount(todos: Todo[] | undefined): string | undefined {

@@ -62,7 +62,7 @@ export function editFiles(files: FileDiff[], paths: string[], cwd: string): JSX.
 
     return <col key={`edit-file-${i}`} role="omp.tool.edit.file">
       <text href={href} key="path" role="omp.tool.file" text={displayText(path)} />
-      {file?.text ? <diff key="diff" text={displayText(file.text)} /> : null}
+      {file?.text ? <diff key="diff" path={path} text={displayText(file.text)} /> : null}
     </col>
   })
 }

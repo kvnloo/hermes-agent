@@ -1761,6 +1761,7 @@ export class App implements OverlayHost {
       copy: (text: string) => copyToClipboard(text),
       cwd: info?.cwd ?? '',
       media: this.#tern.caps.kinds.includes('media'),
+      hour12: this.#tern.caps.hour12 ?? false,
       hostLocal: !this.#gw.attached && info?.terminal_backend === 'local',
       focusBrowser: (id: string) => void focusBrowserBlock(this, id),
       onCopyError: () => {

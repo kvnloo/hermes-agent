@@ -19,6 +19,8 @@ import { type WelcomeContext, welcomeNode } from './welcome.js'
 export interface TranscriptContext {
   /** Absolute cwd reported by the owning Hermes session. */
   cwd: string
+  /** Terminal clock preference; older hosts default to 24-hour time. */
+  hour12?: boolean
   /** The negotiated node kind, not an assumed SDK feature. */
   media?: boolean
   /** Confirmed local gateway transport AND local session terminal backend. */
@@ -45,7 +47,7 @@ const projections = new WeakMap<Node, JSX.Element[]>()
 
 /** An entry carrying its last built node and the revision it was built at. */
 interface Built {
-  [kNode]?: { rev: number; cwd: string; media: boolean; hostLocal: boolean; foldRev: number; toolsHidden: boolean; rewindKey: string; node: JSX.Element }
+  [kNode]?: { rev: number; hour12: boolean; cwd: string; media: boolean; hostLocal: boolean; foldRev: number; toolsHidden: boolean; rewindKey: string; node: JSX.Element }
 }
 
 /**
@@ -67,13 +69,14 @@ export function entryNode(e: Entry, id: string, cx: TranscriptContext): JSX.Elem
   const cached = built[kNode]
   const media = cx.media ?? false
   const hostLocal = cx.hostLocal ?? false
+  const hour12 = cx.hour12 ?? false
 
-  if (cached?.rev === rev && cached.cwd === cx.cwd && cached.media === media && cached.hostLocal === hostLocal && cached.foldRev === foldRev && cached.toolsHidden === !!cx.toolsHidden && cached.rewindKey === rewindKey) {
+  if (cached?.rev === rev && cached.hour12 === hour12 && cached.cwd === cx.cwd && cached.media === media && cached.hostLocal === hostLocal && cached.foldRev === foldRev && cached.toolsHidden === !!cx.toolsHidden && cached.rewindKey === rewindKey) {
     return cached.node
   }
 
   const node = buildEntry(e, id, cx)
-  built[kNode] = { node, rev, cwd: cx.cwd, media, hostLocal, foldRev, toolsHidden: !!cx.toolsHidden, rewindKey }
+  built[kNode] = { node, rev, hour12, cwd: cx.cwd, media, hostLocal, foldRev, toolsHidden: !!cx.toolsHidden, rewindKey }
 
   return node
 }
@@ -169,8 +172,8 @@ function userNode(e: UserEntry, cx: TranscriptContext): JSX.Element {
         <text
           key="time"
           role="omp.user.time"
-          spans={[{ s: 'dim mono', t: at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]}
-          title={at.toLocaleString()}
+          spans={[{ s: 'dim mono', t: at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: cx.hour12 ?? false }) }]}
+          title={at.toLocaleString([], { hour12: cx.hour12 ?? false })}
         />
         <text key="copy" onClick={() => cx.copy(e.text)} role="omp.user.tool" text="Copy" title="Copy message" />
         <text key="rewind" onClick={disabled ? undefined : () => cx.rewind?.(e)} role="omp.user.tool" spans={disabled ? [{ s: 'dim', t: 'Rewind (unavailable)' }] : undefined} text={disabled ? undefined : 'Rewind'} title={disabled ?? 'Rewind to this message'} />
