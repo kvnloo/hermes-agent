@@ -388,6 +388,8 @@ def _settings_set(rid, params):
                 _settings_session(params, session)
                 _settings_save(key, value, raw)
                 canonical = _settings_fields(require_readable_config_before_write(), schema)[key]["value"]
+        if key == "display.table_charts":
+            _emit("table_chart.policy", params["session_id"], {"mode": canonical})
         return _ok(rid, {"key": key, "value": canonical, "confirm_required": False, "confirm_message": ""})
     except LookupError as exc:
         return _err(rid, 4001, str(exc))

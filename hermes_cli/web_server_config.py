@@ -160,6 +160,7 @@ _SCHEMA_OVERRIDES: Dict[str, Dict[str, Any]] = {
         "OpenAI transcription model", "whisper-1", "gpt-4o-mini-transcribe", "gpt-4o-transcribe", "gpt-transcribe"
     ),
     "stt.elevenlabs.model_id": _select("ElevenLabs Scribe model", "scribe_v2", "scribe_v1"),
+    "display.table_charts": _select("Automatic Tern table charts: off, local always, or smart (sends tables to auxiliary model; at most 8 plans/session)", "off", "always", "smart"),
     "display.skin": _select("CLI visual theme", "default", "ares", "mono", "slate"),
     "dashboard.theme": _select(
         "Web dashboard visual theme", "default", "midnight", "ember", "mono", "cyberpunk", "rose"

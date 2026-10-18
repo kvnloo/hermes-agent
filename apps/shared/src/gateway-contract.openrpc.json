@@ -4633,6 +4633,42 @@
       }
     },
     {
+      "name": "table_chart.plan",
+      "summary": "",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/TableChartPlanParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/TableChartPlanResult"
+        }
+      }
+    },
+    {
+      "name": "table_chart.policy",
+      "summary": "",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/SessionParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/TableChartPolicy"
+        }
+      }
+    },
+    {
       "name": "terminal.resize",
       "summary": "Record the client's column width for server-side rendering.",
       "params": [
@@ -39310,6 +39346,96 @@
         "title": "SystemBatteryResult",
         "type": "object"
       },
+      "TableChartPlanParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "source": {
+            "maxLength": 8192,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "source"
+        ],
+        "title": "TableChartPlanParams",
+        "type": "object"
+      },
+      "TableChartPlanResult": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "bar",
+              "line",
+              "none"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "TableChartPlanResult",
+        "type": "object"
+      },
+      "TableChartPolicy": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "enum": [
+              "off",
+              "always",
+              "smart"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "TableChartPolicy",
+        "type": "object"
+      },
+      "TableChartPolicyPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "enum": [
+              "off",
+              "always",
+              "smart"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "TableChartPolicyPayload",
+        "type": "object"
+      },
       "TaskIdResult": {
         "additionalProperties": false,
         "description": "The side agent runs detached; its answer lands on the parent session as an event carrying\nthis ``task_id``.",
@@ -43953,6 +44079,18 @@
           "name": "payload",
           "schema": {
             "$ref": "#/components/schemas/SubagentEventPayload"
+          }
+        }
+      ]
+    },
+    {
+      "name": "table_chart.policy",
+      "summary": "",
+      "params": [
+        {
+          "name": "payload",
+          "schema": {
+            "$ref": "#/components/schemas/TableChartPolicyPayload"
           }
         }
       ]

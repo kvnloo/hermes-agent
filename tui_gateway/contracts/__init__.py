@@ -24,6 +24,7 @@ from . import (  # noqa: F401
     prompt_voice,
     server_requests,
     sessions,
+    table_charts,
     tools_commands,
     tools_mcp_plugins,
 )

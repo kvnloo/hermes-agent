@@ -188,6 +188,7 @@ _LONG_HANDLERS = frozenset({
     "session.tree", "session.rename", "session.resume", "session.save", "session.fork", "session.workspace.move", "shell.exec", "skills.manage", "slash.exec",
     "command.dispatch",  # /goal draft invokes the auxiliary model; never block the RPC reader
     "shared_metrics.set",  # consent reconcile waits on the metrics store's write lock
+    "table_chart.plan", "table_chart.policy",  # optional bounded auxiliary planning and profile config read
     "settings.get", "settings.set",  # schema discovery, config I/O and consent-store reconciliation
 })
 
@@ -3665,7 +3666,7 @@ from . import (  # noqa: E402
     methods_session_control as _methods_session_control, methods_subagents as _methods_subagents,
     methods_agent_hub as _methods_agent_hub,
     methods_btw as _methods_btw,
-    methods_jobs as _methods_jobs, methods_session_fork as _methods_session_fork,
+    methods_table_charts as _methods_table_charts, methods_jobs as _methods_jobs, methods_session_fork as _methods_session_fork,
     methods_session_tree as _methods_session_tree, methods_plan as _methods_plan,
     methods_lsp as _methods_lsp,
     methods_browser_blocks as _methods_browser_blocks,
@@ -3684,7 +3685,7 @@ for _m in (
     _methods_config_set, _methods_complete, _methods_tools, _methods_profiles, _methods_images,
     _methods_settings, _methods_lsp, _methods_btw, _methods_operations,
     _methods_bot_relay, _prompt_turn, _billing_view, _methods_projects, _methods_session_foreign,
-    _methods_plan, _methods_session_tree, _methods_session_fork, _methods_session_control, _methods_subagents, _methods_agent_hub, _methods_jobs, _methods_browser_blocks, _methods_vault, _methods_free_tier, _methods_connectors,
+    _methods_plan, _methods_session_tree, _methods_session_fork, _methods_session_control, _methods_subagents, _methods_agent_hub, _methods_table_charts, _methods_jobs, _methods_browser_blocks, _methods_vault, _methods_free_tier, _methods_connectors,
     _methods_connectors_account, _methods_display, _methods_display_watch, _methods_onboarding,
     _methods_i18n, _methods_shared_metrics):
     _m.register(sys.modules[__name__])

@@ -63,6 +63,7 @@ import { openRewind, rewindDisabledReason } from './rewind.js'
 import { SPLASH_ROLE } from './splash/index.js'
 import { LaunchSplash, pickSplashDesign, splashInsets, splashSetting, splashTickMs } from './splash/launch.js'
 import { SurfaceProtocol, SurfaceView } from './surface-protocol.js'
+import { appTableCharts } from './table-charts.js'
 import { TodoHud } from './todo-hud.js'
 import { ToolPresentation } from './tool-presentation.js'
 import { Transcript } from './transcript.js'
@@ -101,6 +102,7 @@ export class App implements OverlayHost {
   readonly busyInput = new BusyInput(this)
   readonly bindings = new BindingPreferences(this)
   readonly vimPreference = new VimPreference(this)
+  readonly tableCharts = appTableCharts(this)
   readonly attachments: Attachments
   readonly mediaDelivery: MediaDelivery
   readonly overlays: Overlay[] = []
@@ -226,6 +228,7 @@ export class App implements OverlayHost {
       this.attachments.clear()
       this.dictation.reset()
       this.sid = null
+      this.tableCharts.session('')
       this.todoHud.adopt(null)
       this.jobs.adopt(null)
       this.btw.adopt(null)
@@ -836,6 +839,7 @@ export class App implements OverlayHost {
   }
 
   quit(code = 0) {
+    this.tableCharts.close()
     this.#quitting = true
     this.#splash?.dismiss()
     this.mediaDelivery.clear(true)
@@ -1353,6 +1357,7 @@ export class App implements OverlayHost {
     this.sid = r.session_id
     void this.bindings.refresh()
     void this.vimPreference.refresh()
+    this.tableCharts.session(r.session_id)
     void this.busyInput.refresh()
     this.storedSid = r.info?.stored_session_id || r.stored_session_id || null
     this.todoHud.adopt(this.storedSid ?? r.session_id)
@@ -1414,6 +1419,11 @@ export class App implements OverlayHost {
         this.#splash?.ready()
         // A reconnect's ready reattaches the shown session; only a sessionless app bootstraps.
         void (this.storedSid ? this.#reattach(this.storedSid) : this.#bootstrap())
+
+        break
+
+      case 'table_chart.policy':
+        this.tableCharts.configure(ev.payload?.mode ?? 'off')
 
         break
 
@@ -1893,6 +1903,7 @@ export class App implements OverlayHost {
     const backend = info?.version && info.version !== 'unknown' ? `v${info.version}` : ''
 
     const cx = {
+      charts: this.tableCharts,
       copy: (text: string) => copyToClipboard(text),
       cwd: info?.cwd ?? '',
       media: this.#tern.caps.kinds.includes('media'),
