@@ -20,6 +20,7 @@ App-level bindings live in `src/actions.ts`. The same registry supplies grouped
 | app | app.clarify.toggle | alt+h | Hide / show the waiting clarification (preserve answers) |
 | app | app.stt.toggle | alt+v | Toggle microphone dictation (review before sending) |
 | app | app.live.toggle | alt+shift+v | Live voice (explicit consent; automatic spoken turns) |
+| app | app.stt.hold.info | alt+shift+space | Push-to-talk availability (Mic / Alt+V fallback) |
 | app | app.model.select | alt+m | Select model |
 | app | app.model.selectTemporary | alt+p | Select model for this session only |
 | app | app.model.cycleForward | ctrl+p | Cycle to the next recent model |

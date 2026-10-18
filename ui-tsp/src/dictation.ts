@@ -7,6 +7,11 @@ import type { AnyGatewayEvent } from '@tui/gatewayTypes.js'
 
 import type { App } from './app.js'
 
+// SDK 0.1.0 exposes presses only: it collapses CSI-u press/repeat/release
+// into the same Key and negotiates kitty flag 1 (not event types). Never
+// arm a hold from repeats, feature-name guesses or a simulated release timer.
+export const DICTATION_HOLD_UNAVAILABLE = 'Hold-to-talk unavailable: this Tern SDK does not expose reliable key-down/key-up events. Use Mic / Alt+V to start and finish review-only dictation; Esc discards.'
+
 interface Capture {
   id: string
   sid: string
@@ -38,6 +43,14 @@ export class Dictation {
 
     return labels[this.state]
   }
+
+  /** An unavailable gesture is informational, never microphone activation. */
+  explainHold() {
+    this.app.transcript.notice(DICTATION_HOLD_UNAVAILABLE, 'warning')
+    this.app.changed()
+  }
+
+  get holdHint(): string { return DICTATION_HOLD_UNAVAILABLE }
 
   toggle() {
     if (this.blocked) {

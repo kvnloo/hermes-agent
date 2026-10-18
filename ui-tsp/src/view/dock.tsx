@@ -318,6 +318,7 @@ function composerNode(cx: DockContext): JSX.Element {
         </status>
         {cx.jobs > 0 ? <text key="jobs" onClick={cx.onJobs} role="omp.composer.jobs" text={`${cx.jobs} ${cx.jobs === 1 ? 'job' : 'jobs'}`} /> : null}
         {cx.dictation ? <text key="mic" onClick={cx.onDictation} role="omp.composer.mic" text={cx.dictation.state === 'recording' ? 'Finish dictation' : 'Mic'} title={`${cx.dictation.label} · ${actionHint('app.stt.toggle', cx.actions)}`} /> : null}
+        <text key="hold-info" onClick={() => cx.dictation?.explainHold()} role="omp.composer.mic.hold-unavailable" text="Hold-to-talk unavailable" title={cx.dictation?.holdHint} tone="muted" />
         <text key="help" role="omp.composer.hint" text={cx.approval ? 'Enter deny and steer' : cx.busy ? `Enter ${cx.busyMode === 'steer' ? 'steer' : 'queue'} · ${actionHint('app.message.alternate', cx.actions) || '(unbound)'} ${cx.busyMode === 'steer' ? 'queue' : 'steer'}` : `${actionHint('app.help', cx.actions) || '/help'} help`} tone="muted" wrap="none" />
         <row align="center" gap="xs" key="settings" onClick={cx.onSettings} role="omp.composer.settings" title="Open Hermes settings">
           <icon key="icon" name="settings" />
