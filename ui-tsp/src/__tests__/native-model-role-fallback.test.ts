@@ -133,8 +133,10 @@ describe('native model-role/fallback/provider management', () => {
           expect(action.props.tag).toBe('button')
           expect(action.props.aria || action.props.text).toBeTruthy()
         }
+
         expect(nodes(surface).find(node => node.kind === 'list')?.props.aria).toBe('Model management entries')
       }
+
       await click(surface, 'Close')
       expect(app.overlays).toHaveLength(0)
       expect([app.composer.text, app.composer.cursor]).toEqual(['untouched hub draft', 3])
