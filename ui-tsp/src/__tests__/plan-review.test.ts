@@ -157,7 +157,7 @@ describe('read-only plan review', () => {
       expect(
         nodes('layer')
           .filter(n => /^section-\d+$/.test(String(n.props.key)))
-          .map(n => n.children[0]?.props.text)
+          .map(n => flatten(n.children).find(child => child.props.key === 'label')?.props.text)
       ).toEqual(['Implementation plan', '  Build', '  Verify'])
       expect(body(nodes)).toBe('Plan introduction.\n\n# Implementation plan\n\nGoal.\n\n')
       const scroll = vi.spyOn(surface, 'scroll')

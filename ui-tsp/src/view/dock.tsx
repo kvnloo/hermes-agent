@@ -13,6 +13,7 @@ import type { LiveVoice } from '../live-voice.js'
 import type { Todo } from '../model.js'
 import type { ReportNotice } from '../reports.js'
 
+import { ActionButton } from './action-button.js'
 import { composerAttachments } from './attachments.js'
 import { age, compact } from './time.js'
 import { checklistNode } from './tools.js'
@@ -90,7 +91,7 @@ export function dockNodes(cx: DockContext): JSX.Element[] {
     const done = cx.todos.filter(todo => todo.status === 'completed').length
     const active = cx.todos.find(todo => todo.status === 'in_progress')
     nodes.push(
-      <text
+      <ActionButton
         key="plan-summary"
         onClick={cx.onTodoToggle}
         role="omp.todo.summary"
@@ -120,7 +121,8 @@ export function dockNodes(cx: DockContext): JSX.Element[] {
           <row align="center" gap="xs" key={`note.${note.serial}`} role="omp.dispatch">
             <icon key="glyph" name="info" />
             <text grow={1} key="text" role="omp.dispatch.message" text={note.text} />
-            <text
+            <ActionButton
+              aria="Dismiss notice"
               key="dismiss"
               onClick={() => cx.onDismiss(note.key)}
               role="omp.dispatch.dismiss"
@@ -137,9 +139,9 @@ export function dockNodes(cx: DockContext): JSX.Element[] {
     nodes.push(
       <row align="center" gap="xs" key={`report.${report.id}`} role="omp.report.notice">
         <text key="label" text={`${report.label} ·`} tone={report.failed ? 'error' : 'muted'} />
-        <text key="view" onClick={() => cx.onReportView?.(report.id)} role="omp.report.view" text="View" title={`View report: ${report.title}`} />
+        <ActionButton key="view" onClick={() => cx.onReportView?.(report.id)} role="omp.report.view" text="View" title={`View report: ${report.title}`} />
         <spacer grow={1} key="fill" />
-        <text key="dismiss" onClick={() => cx.onReportDismiss?.(report.id)} role="omp.dispatch.dismiss" text="×" title="Dismiss report" />
+        <ActionButton key="dismiss" onClick={() => cx.onReportDismiss?.(report.id)} role="omp.dispatch.dismiss" text="×" title="Dismiss report" />
       </row>
     )
   }
@@ -154,10 +156,10 @@ export function dockNodes(cx: DockContext): JSX.Element[] {
             {i === 0 && cx.queued.length > 1 ? (
               <badge key="count" role="omp.queue.count" text={`${cx.queued.length}`} />
             ) : null}
-            <row align="center" gap="xs" key="edit" onClick={cx.onQueueEdit} role="omp.queue.edit" title={`Edit  ${actionHint('app.message.dequeue', cx.actions)}`}>
+            <ActionButton align="center" gap="xs" key="edit" onClick={cx.onQueueEdit} role="omp.queue.edit" title={`Edit  ${actionHint('app.message.dequeue', cx.actions)}`}>
               <kbd key="k" keys={actionHint('app.message.dequeue', cx.actions).split('+').filter(Boolean)} />
               <text key="t" text="Edit" />
-            </row>
+            </ActionButton>
           </row>
         ))}
       </col>
@@ -192,10 +194,10 @@ function workingNode(cx: DockContext): JSX.Element {
       <text key="sep" role="omp.working.sep" text="·" />
       <elapsed age={age(busy.since, busy.startedAt, cx.now)} format="short" key="elapsed" />
       <row grow={1} key="fill" />
-      <row align="center" gap="xs" key="stop" onClick={cx.onInterrupt} role="omp.working.stop" title={`Stop  ${actionHint('app.interrupt', cx.actions)}`}>
+      <ActionButton align="center" gap="xs" key="stop" onClick={cx.onInterrupt} role="omp.working.stop" title={`Stop  ${actionHint('app.interrupt', cx.actions)}`}>
         <kbd key="k" keys={actionHint('app.interrupt', cx.actions).split('+').filter(Boolean)} />
         <text key="t" text="Stop" />
-      </row>
+      </ActionButton>
     </row>
   )
 }
@@ -228,9 +230,9 @@ function composerNode(cx: DockContext): JSX.Element {
     <col key="composer" role="omp.editor">
       {share === undefined ? null : (
         <meter
+          aria="Context window usage"
           key="context"
           label={`${Math.round(share * 100)}%`}
-          onClick={cx.onContext}
           role="omp.composer.context"
           style="bar"
           thresholds={{ bad: 0.85, warn: 0.6 }}
@@ -266,8 +268,9 @@ function composerNode(cx: DockContext): JSX.Element {
       </row>
       <row align="center" gap="sm" key="bar" role="omp.composer.bar">
         {composer.vim.enabled ? <text key="vim" role="omp.composer.vim" text={`${composer.vim.mode.toUpperCase()}${composer.vim.pending ? ` ${composer.vim.pending}` : ''}`} /> : null}
+        {share === undefined ? null : <ActionButton aria="Show context window" key="context-details" onClick={cx.onContext} role="omp.composer.context.action" text="Context" title={actionHint('app.context', cx.actions)} />}
         {cx.model ? (
-          <row
+          <ActionButton
             align="center"
             gap="xs"
             key="model"
@@ -278,10 +281,10 @@ function composerNode(cx: DockContext): JSX.Element {
             <icon key="icon" name="model" />
             <text key="name" spans={[{ t: cx.model }]} wrap="none" />
             <icon key="chev" name="chev" />
-          </row>
+          </ActionButton>
         ) : null}
         {cx.effort ? (
-          <row
+          <ActionButton
             align="center"
             gap="xs"
             key="effort"
@@ -291,7 +294,7 @@ function composerNode(cx: DockContext): JSX.Element {
           >
             <effort key="glyph" level={effortLabel(cx.effort)} />
             <text key="level" text={effortLabel(cx.effort)} wrap="none" />
-          </row>
+          </ActionButton>
         ) : null}
         {cx.profile ? <text key="profile" role="omp.composer.profile" text={cx.profile} title={`Owning Hermes profile: ${cx.profile}`} wrap="none" /> : null}
         <status grow={1} key="extras" role="omp.composer.extras" transparent>
@@ -316,14 +319,14 @@ function composerNode(cx: DockContext): JSX.Element {
             />
           ) : null}
         </status>
-        {cx.jobs > 0 ? <text key="jobs" onClick={cx.onJobs} role="omp.composer.jobs" text={`${cx.jobs} ${cx.jobs === 1 ? 'job' : 'jobs'}`} /> : null}
-        {cx.dictation ? <text key="mic" onClick={cx.onDictation} role="omp.composer.mic" text={cx.dictation.state === 'recording' ? 'Finish dictation' : 'Mic'} title={`${cx.dictation.label} · ${actionHint('app.stt.toggle', cx.actions)}`} /> : null}
-        <text key="hold-info" onClick={() => cx.dictation?.explainHold()} role="omp.composer.mic.hold-unavailable" text="Hold-to-talk unavailable" title={cx.dictation?.holdHint} tone="muted" />
+        {cx.jobs > 0 ? <ActionButton aria="Background jobs" key="jobs" onClick={cx.onJobs} role="omp.composer.jobs" text={`${cx.jobs} ${cx.jobs === 1 ? 'job' : 'jobs'}`} /> : null}
+        {cx.dictation ? <ActionButton key="mic" onClick={cx.onDictation} role="omp.composer.mic" text={cx.dictation.state === 'recording' ? 'Finish dictation' : 'Mic'} title={`${cx.dictation.label} · ${actionHint('app.stt.toggle', cx.actions)}`} /> : null}
+        <ActionButton key="hold-info" onClick={() => cx.dictation?.explainHold()} role="omp.composer.mic.hold-unavailable" text="Hold-to-talk unavailable" title={cx.dictation?.holdHint} tone="muted" />
         <text key="help" role="omp.composer.hint" text={cx.approval ? 'Enter deny and steer' : cx.busy ? `Enter ${cx.busyMode === 'steer' ? 'steer' : 'queue'} · ${actionHint('app.message.alternate', cx.actions) || '(unbound)'} ${cx.busyMode === 'steer' ? 'queue' : 'steer'}` : `${actionHint('app.help', cx.actions) || '/help'} help`} tone="muted" wrap="none" />
-        <row align="center" gap="xs" key="settings" onClick={cx.onSettings} role="omp.composer.settings" title="Open Hermes settings">
+        <ActionButton align="center" gap="xs" key="settings" onClick={cx.onSettings} role="omp.composer.settings" title="Open Hermes settings">
           <icon key="icon" name="settings" />
           <text key="label" text="Settings" />
-        </row>
+        </ActionButton>
         {cx.cost ? (
           <text
             key="usage"
@@ -334,7 +337,7 @@ function composerNode(cx: DockContext): JSX.Element {
           />
         ) : null}
         {voiceSendDisabled(cx) ?? (cx.busy ? (
-          <text
+          <ActionButton
             key="stop"
             onClick={cx.onInterrupt}
             role="omp.composer.stop"
@@ -343,7 +346,7 @@ function composerNode(cx: DockContext): JSX.Element {
             tone="error"
           />
         ) : (
-          <kbd key="send" keys={['enter']} onClick={cx.onSubmit} role="omp.composer.send" title="Send  ⏎" />
+          <ActionButton disabled={!cx.ready} key="send" keys={['enter']} onClick={cx.onSubmit} role="omp.composer.send" title="Send  ⏎" />
         ))}
       </row>
     </col>

@@ -252,6 +252,26 @@ export class NativeControl {
     await this.#committedSnapshot(budget)
   }
 
+  /** Focus or pointer activation with the same exact AX/DOM ownership checks as click. */
+  async button(name: string, intent: 'focus' | 'pointer'): Promise<void> {
+    if (/Confirm exact change|Switch anyway|Allow|Grant|Sign in|Restart to update/.test(name)) throw new EngineError('NOT_ACTIONABLE', 'This suite never grants or confirms consequential actions.', { retryable:false })
+    const budget = this.#budget()
+    const fresh = await this.snapshot(budget)
+    const matches = fresh.nodes.filter(node => node.role === 'button' && node.name === name && !node.states?.hidden && !node.states?.disabled)
+    if (matches.length !== 1) throw new EngineError('NOT_ACTIONABLE', `Expected one visible enabled button: ${name}`, { retryable:false })
+    const node = matches[0]!
+    const ax = flatten([fresh.ax]).find(candidate => `ax:${candidate.id}` === node.ref.id)!
+    const action = intent === 'focus' ? 'focus' : 'click'
+    if (!ax.actions?.includes(action)) throw new EngineError('NOT_ACTIONABLE', `Button lacks native ${action}: ${name}`, { retryable:false })
+    const owner = axOwnerDump(ax, fresh.dump, fresh.tree, true)
+    await appendFile(join(this.manifest.proof,'native-actions.jsonl'), JSON.stringify({time:Date.now(), name, intent, nth:owner.nth})+'\n', {mode:0o600})
+    await this.#dispatch(intent === 'focus' ? `a11y focus ${owner.nth}` : `click ${owner.nth}`, budget)
+    const after = await this.#committedSnapshot(budget)
+    if (intent === 'focus' && !after.nodes.some(candidate => candidate.ref.id === node.ref.id && candidate.states?.focused)) {
+      throw new EngineError('ACTION_MAY_HAVE_COMMITTED', `Native focus was not observed: ${name}`, { retryable:false })
+    }
+  }
+
   async key(key: Key, context?: OperationContext): Promise<void> {
     const parsed = parseKey(key)
     if (!parsed || parsed.modifiers.length) throw new EngineError('UNSUPPORTED_CAPABILITY', 'Modifier keys are intentionally unsupported: Tern0.6 Linux control translates Ctrl into Meta.', { retryable:false })
@@ -266,7 +286,7 @@ export class NativeControl {
   }
 
   // Keep Ctrl out: Tern 0.6 Linux control translates it into Meta.
-  async shortcut(chord: 'alt+m' | 'alt+,' | 'f1' | 'alt+c' | 'alt+shift+p'): Promise<void> {
+  async shortcut(chord: 'alt+m' | 'alt+,' | 'f1' | 'alt+c' | 'alt+shift+p' | 'alt+shift+b'): Promise<void> {
     const budget = this.#budget()
     await this.snapshot(budget)
     await appendFile(join(this.manifest.proof,'native-actions.jsonl'), JSON.stringify({ time:Date.now(), action:'key', chord })+'\n', {mode:0o600})

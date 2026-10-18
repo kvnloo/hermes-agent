@@ -5,6 +5,7 @@ import type { App } from '../app.js'
 import { focusBrowserBlock } from '../browser-blocks.js'
 import { Composer } from '../composer.js'
 import type { Overlay } from '../overlay.js'
+import { ActionButton } from '../view/action-button.js'
 
 /** No polling or mirrored ownership store: reload only on open or confirmed release. */
 export function openBrowserBlocks(app: App): void {
@@ -92,6 +93,7 @@ export function openBrowserBlocks(app: App): void {
   const overlay: Overlay = {
     key: 'browser-blocks',
     modal: true,
+    focus: id => frameTarget ? `${id}.body.target-${frameTarget}.frame-form.frame-path` : null,
     node: id => (
       <overlay
         anchor="center"
@@ -122,7 +124,8 @@ export function openBrowserBlocks(app: App): void {
                 wrap="word"
               />
               <row gap="sm" key="actions">
-                <row
+                <ActionButton
+                  disabled={busy || (!block.owned && (!block.available || Boolean(app.busy)))}
                   key="choose"
                   onClick={() => void act(block, 'choose')}
                   role="omp.btn"
@@ -142,19 +145,21 @@ export function openBrowserBlocks(app: App): void {
                               : 'Hand over to agent'
                     }
                   />
-                </row>
+                </ActionButton>
                 {block.owned ? (
-                  <row
+                  <ActionButton
+                    disabled={busy || Boolean(app.busy)}
                     key="release"
                     onClick={() => void act(block, 'release')}
                     role="omp.btn"
                     title={`Release block ${block.target_id}`}
                   >
                     <text key="label" text={app.busy ? 'Wait for turn to finish' : 'Release / close owned block'} />
-                  </row>
+                  </ActionButton>
                 ) : null}
                 {block.owned ? (
-                  <row
+                  <ActionButton
+                    disabled={busy || Boolean(app.busy)}
                     key="frame"
                     onClick={() => {
                       if (live() && !busy && !app.busy) {
@@ -167,7 +172,7 @@ export function openBrowserBlocks(app: App): void {
                     title={`Select evaluation frame for block ${block.target_id}`}
                   >
                     <text key="label" text="Evaluation frame…" />
-                  </row>
+                  </ActionButton>
                 ) : null}
               </row>
               {frameTarget === block.target_id ? (
@@ -178,6 +183,7 @@ export function openBrowserBlocks(app: App): void {
                     wrap="word"
                   />
                   <input
+                    aria="Evaluation frame path"
                     cursor={frame.cursor}
                     key="frame-path"
                     onEdit={event => {
@@ -189,20 +195,34 @@ export function openBrowserBlocks(app: App): void {
                     role="omp.ask.input"
                     text={frame.text}
                   />
-                  <row key="apply-frame" onClick={() => void act(block, 'frame')} role="omp.btn">
+                  <ActionButton key="apply-frame" onClick={() => void act(block, 'frame')} role="omp.btn">
                     <text key="label" text="Verify and select frame" />
-                  </row>
+                  </ActionButton>
                 </col>
               ) : null}
             </col>
           ))}
-          <row key="close" onClick={() => app.close(overlay)} role="omp.btn">
+          <ActionButton key="close" onClick={() => app.close(overlay)} role="omp.btn">
             <text key="label" text="Close" />
-          </row>
+          </ActionButton>
         </col>
       </overlay>
     ),
     onKey: key => {
+      if (frameTarget) {
+        if (key.name === 'escape') {
+          frameTarget = undefined
+        } else if (frame.key(key) === 'submit') {
+          const block = blocks.find(candidate => candidate.target_id === frameTarget)
+
+          if (block) { void act(block, 'frame') }
+        }
+
+        app.changed()
+
+        return true
+      }
+
       if (browserBlocksKeyAction(key) === 'close') {
         app.close(overlay)
       }

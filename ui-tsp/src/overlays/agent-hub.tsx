@@ -5,6 +5,7 @@ import { jobsKeyAction, matchesAction, REPORT_ACTIONS } from '../actions.js'
 import type { App } from '../app.js'
 import { Composer } from '../composer.js'
 import type { Overlay } from '../overlay.js'
+import { ActionButton } from '../view/action-button.js'
 
 interface Selection {
   childSessionId?: string
@@ -222,8 +223,8 @@ export class AgentHubSheet implements Overlay {
       <overlay anchor="center" head="Agents · owned hub" key={id.slice('layer.'.length)} modal role={this.initial ? 'omp.overlay.agent-inspector' : 'omp.overlay.agent-hub'} size="lg">
         <col gap="md" key="body">
           <row gap="sm" key="actions">
-            <text key="refresh" onClick={() => void this.#read()} role="omp.btn" text="Refresh" />
-            <text key="close" onClick={() => this.app.close(this)} role="omp.btn" text="Close  escape" />
+            <ActionButton key="refresh" onClick={() => void this.#read()} role="omp.btn" text="Refresh" />
+            <ActionButton key="close" onClick={() => this.app.close(this)} role="omp.btn" text="Close  escape" />
           </row>
           {this.#error ? <text key="error" text={this.#error} tone="error" /> : null}
           {this.#reading && !this.#agents.length ? <text key="loading" text="Loading agents…" /> : null}
@@ -236,8 +237,8 @@ export class AgentHubSheet implements Overlay {
             {row?.last_tool ? <text key="activity" role="omp.agent.activity" text={`Last started tool: ${row.last_tool}`} /> : null}
             <text key="capabilities" text={`Supported actions: ${row?.actions.send ? 'send steering' : 'send unavailable'} · ${row?.actions.stop ? 'stop' : 'stop unavailable'} · ${row?.actions.transcript ? 'paged transcript (read-only)' : 'transcript unavailable'}`} tone="muted" />
             <row gap="sm" key="pages">
-              {this.#offset > 0 ? <text key="previous" onClick={() => this.#pageTo(Math.max(0, this.#offset - 50))} role="omp.btn" text="Previous page" /> : null}
-              {page?.next_offset != null ? <text key="next" onClick={() => this.#pageTo(page.next_offset!)} role="omp.btn" text="Next page" /> : null}
+              {this.#offset > 0 ? <ActionButton key="previous" onClick={() => this.#pageTo(Math.max(0, this.#offset - 50))} role="omp.btn" text="Previous page" /> : null}
+              {page?.next_offset != null ? <ActionButton key="next" onClick={() => this.#pageTo(page.next_offset!)} role="omp.btn" text="Next page" /> : null}
             </row>
             {row?.actions.send ? <input cursor={this.#draft.cursor} key="message" onEdit={ev => {
               if (this.app.owns(this) && this.#current()) {
@@ -246,8 +247,8 @@ export class AgentHubSheet implements Overlay {
               }
             }} placeholder="Steer this child (queued, not a restart)" role="omp.agent.input" text={this.#draft.text} /> : null}
             <row gap="sm" key="controls">
-              {row?.actions.send ? <text key="send" onClick={() => void this.#control(false)} role="omp.btn" text={this.#busy ? 'Working…' : 'Send steering'} /> : null}
-              {row?.actions.stop ? <text key="stop" onClick={() => void this.#control(true)} role="omp.btn" text="Stop agent" tone="error" /> : null}
+              {row?.actions.send ? <ActionButton key="send" onClick={() => void this.#control(false)} role="omp.btn" text={this.#busy ? 'Working…' : 'Send steering'} /> : null}
+              {row?.actions.stop ? <ActionButton key="stop" onClick={() => void this.#control(true)} role="omp.btn" text="Stop agent" tone="error" /> : null}
             </row>
             {this.#notice ? <text key="notice" text={this.#notice} /> : null}
             <col gap="sm" key="transcript" role="omp.agent.transcript">

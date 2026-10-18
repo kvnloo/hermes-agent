@@ -11,6 +11,7 @@ import type { MediaPreview } from '../media-delivery.js'
 import type { Block, Entry, NoticeEntry, TurnEntry, UserEntry } from '../model.js'
 import { settledTool } from '../tool-presentation.js'
 
+import { ActionButton } from './action-button.js'
 import { attachmentNodes } from './attachments.js'
 import type { TableCharts } from './table-charts.js'
 import { age, compact, duration } from './time.js'
@@ -185,8 +186,8 @@ function userNode(e: UserEntry, cx: TranscriptContext): JSX.Element {
           spans={[{ s: 'dim mono', t: at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: cx.hour12 ?? false }) }]}
           title={at.toLocaleString([], { hour12: cx.hour12 ?? false })}
         />
-        <text key="copy" onClick={() => cx.copy(e.text)} role="omp.user.tool" text="Copy" title="Copy message" />
-        <text key="rewind" onClick={disabled ? undefined : () => cx.rewind?.(e)} role="omp.user.tool" spans={disabled ? [{ s: 'dim', t: 'Rewind (unavailable)' }] : undefined} text={disabled ? undefined : 'Rewind'} title={disabled ?? 'Rewind to this message'} />
+        <ActionButton key="copy" onClick={() => cx.copy(e.text)} role="omp.user.tool" text="Copy" title="Copy message" />
+        <ActionButton key="rewind" onClick={disabled ? undefined : () => cx.rewind?.(e)} role="omp.user.tool" spans={disabled ? [{ s: 'dim', t: 'Rewind (unavailable)' }] : undefined} text={disabled ? undefined : 'Rewind'} title={disabled ?? 'Rewind to this message'} />
       </row>
       <md key="body">{e.text}</md>
       {e.attachments?.length ? attachmentNodes(e.attachments, cx.media ?? false, cx.attachmentHostLocal ?? cx.hostLocal ?? true, cx.mediaPreview, cx.gatewayRemote) : null}
@@ -227,7 +228,7 @@ function turnTail(turn: TurnEntry, id: string, cx: TranscriptContext): JSX.Eleme
         />,
         turn.errorHint ? <md key="hint">{turn.errorHint}</md> : null,
         turn.retryable && cx.retry && cx.canRetry?.(turn.id) ? (
-          <text key="retry" onClick={() => cx.retry?.(turn.id)} role="omp.error.retry" text="Retry" title="Retry this failed text-only prompt" />
+          <ActionButton key="retry" onClick={() => cx.retry?.(turn.id)} role="omp.error.retry" text="Retry" title="Retry this failed text-only prompt" />
         ) : null
       ])
     )
@@ -248,7 +249,7 @@ function turnTail(turn: TurnEntry, id: string, cx: TranscriptContext): JSX.Eleme
   if (!live && answerText(turn)) {
     children.push(
       <row align="center" gap="xs" key="answer-actions" role="omp.turn.actions">
-        <text
+        <ActionButton
           key="copy"
           onClick={() => copyAnswer(turn, cx.copy, () => cx.onCopyError?.())}
           role="omp.turn.copy"

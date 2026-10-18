@@ -6,6 +6,7 @@ import { effectiveActions } from '../actions.js'
 import type { App } from '../app.js'
 import { Composer } from '../composer.js'
 import type { Overlay } from '../overlay.js'
+import { ActionButton } from '../view/action-button.js'
 
 import { openModelPicker } from './models.js'
 import { moveSelection, rank } from './search.js'
@@ -760,7 +761,7 @@ class Settings implements Overlay {
   }
 
   #button(key: string, text: string, onClick: () => void): JSX.Element {
-    return <row key={key} onClick={onClick} role="omp.btn" title={text}><text key="label" text={text} /></row>
+    return <ActionButton key={key} onClick={onClick} role="omp.btn" title={text}><text key="label" text={text} /></ActionButton>
   }
 
   onKey(key: Key): boolean {

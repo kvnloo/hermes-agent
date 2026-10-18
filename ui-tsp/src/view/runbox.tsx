@@ -6,6 +6,7 @@ import type { JSX } from '@stencil-hq/tern'
 import { displayOptional, displayText } from '../display-text.js'
 import type { ToolCall } from '../model.js'
 
+import { ActionButton } from './action-button.js'
 import { duration } from './time.js'
 
 export type RunState = 'running' | 'ok' | 'exit' | 'timeout' | 'cancelled' | 'background' | 'error' | 'unknown'
@@ -244,7 +245,7 @@ export function runBox(input: RunBoxInput): JSX.Element {
           <text key="facts" role="omp.run.facts" spans={[{ s: 'muted', t: displayText(facts.join(' · ')) }]} wrap="word" />
         ) : null}
         {input.truncated && input.onToggle ? (
-          <text
+          <ActionButton
             key="toggle"
             onClick={input.onToggle}
             role="omp.run.toggle"

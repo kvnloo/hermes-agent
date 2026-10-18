@@ -9,6 +9,7 @@ import { actionGroups } from '../actions.js'
 import type { App } from '../app.js'
 import { FORK_COMMANDS } from '../fork-session.js'
 import type { Overlay } from '../overlay.js'
+import { ActionButton } from '../view/action-button.js'
 
 import { LSP_COMMANDS } from './lsp.js'
 import { TREE_COMMANDS } from './sessions.js'
@@ -22,7 +23,7 @@ const HOTKEYS: { group: string; rows: [string[], string][] }[] = [
     group: 'Editing',
     rows: [
       [['enter'], 'Send message'],
-      [['shift+enter', 'alt+enter'], 'New line'],
+      [['shift+enter', 'alt+enter'], 'New line (Alt+Enter steers / queues while busy)'],
       [['up', 'down'], 'Move between lines / browse history'],
       [['tab'], 'Accept the completion'],
       [['alt+left', 'alt+right', 'alt+b', 'alt+f'], 'Move by word'],
@@ -67,6 +68,7 @@ export async function openHelp(app: App) {
     node: id => (
       <overlay anchor="center" head="Commands and shortcuts" key={id.slice('layer.'.length)} modal role="omp.overlay.hotkeys" size="lg">
         <col gap="lg" key="body">
+          <text key="host-keys" text="Host key ownership: Tern and its active preset may intercept shortcuts before Hermes. Use the paired buttons or slash commands when a chord is reserved; configure Hermes bindings in Settings. Shift+Tab cycles effort, not native button focus. Escape belongs to the top question/sheet before interrupting a turn." wrap="word" />
           {[...HOTKEYS, ...actionGroups(app.bindings.actions)].map(({ group, rows }) => (
             <section head={group} key={`keys-${group}`} role="omp.hotkeys.group">
               <table
@@ -108,7 +110,7 @@ export async function openHelp(app: App) {
           ))}
           <row align="center" gap="sm" key="actions" role="omp.actions">
             <spacer grow={1} key="fill" />
-            <row
+            <ActionButton
               align="center"
               gap="xs"
               key="close"
@@ -118,7 +120,7 @@ export async function openHelp(app: App) {
             >
               <text key="label" text="Close" />
               <kbd key="keys" keys={['escape']} />
-            </row>
+            </ActionButton>
           </row>
         </col>
       </overlay>

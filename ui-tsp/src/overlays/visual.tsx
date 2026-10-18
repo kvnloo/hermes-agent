@@ -1,6 +1,8 @@
 // A session-local entry point to an existing OpenUI candidate. Tern's file
 // route opens the separately installed Luau block; this sheet grants nothing.
+
 import type { Overlay, OverlayHost } from '../overlay.js'
+import { ActionButton } from '../view/action-button.js'
 import { type PreparedVisual, readPreparedVisual, visualScope, type VisualSession } from '../visuals.js'
 
 interface VisualHost extends OverlayHost, VisualSession {
@@ -77,10 +79,10 @@ export async function openVisual(app: VisualHost, path: string, load: LoadVisual
             ) : (
               <text key="loading" text="Checking prepared visual…" />
             )}
-            <row key="close" onClick={close} role="omp.btn" title="Close  escape">
+            <ActionButton key="close" onClick={close} role="omp.btn" title="Close  escape">
               <text key="label" text="Close" />
               <kbd key="key" keys={['escape']} />
-            </row>
+            </ActionButton>
           </col>
         </overlay>
       )
