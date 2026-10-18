@@ -114,7 +114,10 @@ export class LaunchSplash {
   readonly #now: () => number
   readonly #tokens: SplashPalette
   #surface: SplashSurface | undefined
-  #timer: unknown
+  #timer: { handle: unknown } | undefined
+  #deadline: ReturnType<typeof setTimeout> | undefined
+  #reduce = false
+  #visible = true
   #startedAt = 0
   #exitAt: number | null = null
   #ready = false
@@ -147,18 +150,27 @@ export class LaunchSplash {
     }
 
     this.#startedAt = this.#now()
-    this.#timer = (this.#options.setInterval ?? setInterval)(() => this.tick(), this.#options.tickMs ?? SPLASH_TICK_MS)
     this.tick()
+    this.#schedule()
   }
 
   /** Startup work is finished: play out the intro, then leave. */
   ready() {
     this.#ready = true
+
+    if (this.#paused) {
+      this.tick()
+      this.#schedule()
+    }
   }
 
   /** Any key: leave now. */
   skip() {
     this.#skipped = true
+
+    if (this.#paused) {
+      this.tick()
+    }
   }
 
   /** A modal needs the pane immediately, without spending a key or waiting for a dissolve. */
@@ -168,7 +180,22 @@ export class LaunchSplash {
     }
   }
 
-  /** The program palette changed (a skin was chosen, or dropped): the next frame is drawn in it. */
+  /** Pane-local policy: suspend frames, not the boot deadline or readiness handoff. */
+  environment(options: { reduce?: boolean; visible?: boolean }) {
+    const reduce = options.reduce ?? this.#reduce
+    const visible = options.visible ?? this.#visible
+
+    if (!this.active || (reduce === this.#reduce && visible === this.#visible)) {
+      return
+    }
+
+    this.#reduce = reduce
+    this.#visible = visible
+    this.tick()
+    this.#schedule()
+  }
+
+  /** The program palette changed (a skin was chosen, or dropped): Tern recolours even a static frame. */
   palette(palette: Palette) {
     if (this.active) {
       this.#surface!.palette(palette)
@@ -182,7 +209,7 @@ export class LaunchSplash {
 
     return renderSplashFrame({
       design: this.design,
-      elapsedMs: t - this.#startedAt,
+      elapsedMs: this.#reduce ? SPLASH_INTRO_MS : t - this.#startedAt,
       exitMs: this.#exitAt === null ? undefined : t - this.#exitAt,
       height: rows,
       palette: this.#tokens,
@@ -207,16 +234,53 @@ export class LaunchSplash {
       this.#exitAt = t
     }
 
-    if (this.#surface!.closed || (this.#exitAt !== null && t - this.#exitAt >= SPLASH_EXIT_MS)) {
+    if (this.#surface!.closed || (this.#exitAt !== null && (this.#paused || t - this.#exitAt >= SPLASH_EXIT_MS))) {
       return this.#finish()
     }
 
-    this.#surface!.render(splashNode(this.frame()))
+    if (this.#visible) {
+      this.#surface!.render(splashNode(this.frame()))
+    }
+  }
+
+  get #paused(): boolean {
+    return this.#reduce || !this.#visible
+  }
+
+  #stop() {
+    if (this.#timer) {
+      ;(this.#options.clearInterval ?? (h => clearInterval(h as NodeJS.Timeout)))(this.#timer.handle)
+      this.#timer = undefined
+    }
+
+    clearTimeout(this.#deadline)
+    this.#deadline = undefined
+  }
+
+  #schedule() {
+    this.#stop()
+
+    if (!this.active) {
+      return
+    }
+
+    if (this.#paused) {
+      // One lifecycle wake-up replaces the frame pump; hidden time still counts.
+      const deadline = this.#startedAt + (this.#ready ? SPLASH_INTRO_MS : SPLASH_MAX_MS)
+      this.#deadline = setTimeout(() => {
+        this.#deadline = undefined
+        this.tick()
+      }, Math.max(0, deadline - this.#now()))
+    } else {
+      this.#timer = {
+        handle: (this.#options.setInterval ?? setInterval)(() => this.tick(), this.#options.tickMs ?? SPLASH_TICK_MS)
+      }
+    }
   }
 
   #finish() {
     this.#done = true
-    ;(this.#options.clearInterval ?? (h => clearInterval(h as NodeJS.Timeout)))(this.#timer)
+    this.#stop()
 
     if (!this.#surface!.closed) {
       void this.#surface!.close({ keep: false })
