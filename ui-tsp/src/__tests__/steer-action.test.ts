@@ -82,6 +82,10 @@ async function withApp(options: Options, run: (fixture: {
       return { jobs: [] }
     }
 
+    if (method === 'table_chart.policy') {
+      return { mode: 'off' }
+    }
+
     calls.push({ method, params })
 
     if (method === 'session.steer') {

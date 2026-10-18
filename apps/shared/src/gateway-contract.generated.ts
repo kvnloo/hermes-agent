@@ -3975,6 +3975,17 @@ export interface LlmOneshotParams {
 export interface LlmOneshotResult {
   text: string
 }
+export interface TableChartPolicy {
+  mode: 'off' | 'always' | 'smart'
+}
+export interface TableChartPlanParams {
+  session_id: string
+  profile?: string | null
+  source: string
+}
+export interface TableChartPlanResult {
+  kind: 'bar' | 'line' | 'none'
+}
 export interface SystemBatteryParams {
   profile?: string | null
 }
@@ -5355,6 +5366,9 @@ export type ChangeSignalPayload = Record<string, unknown>
 export interface JobsChangedPayload {
   job_id: string
 }
+export interface TableChartPolicyPayload {
+  mode: 'off' | 'always' | 'smart'
+}
 export type ConnectorErrorReason = 'INVALID_PARAMS' | 'NOT_OWNER' | 'UNSUPPORTED_RUNTIME' | 'CONNECTOR_REQUEST_FAILED' | 'INVALID_CONNECTOR_RESPONSE' | 'UNKNOWN_TARGET' | 'LINK_STILL_VALID' | 'REISSUE_REFUSED' | 'UNKNOWN_OPERATION' | 'INVALID_ANSWER' | 'NEEDS_NOUS_AUTH' | 'CONNECTOR_NOT_FOUND' | 'TOOLS_UNAVAILABLE' | 'CONNECTORS_UNAVAILABLE' | 'CATALOG_UNAVAILABLE' | 'ACCOUNTS_UNAVAILABLE' | 'CONNECTION_NOT_FOUND' | 'POLICY_UNAVAILABLE' | 'POLICY_CONFLICT' | 'FORBIDDEN_SCOPE' | 'ORG_REQUIRED' | 'ORG_ACCESS_DENIED' | 'INVALID_POLICY'
 
 // ── Client→server methods ──
@@ -5866,6 +5880,8 @@ export interface RpcMethods {
   'subscription.upgrade': { params: SubscriptionUpgradeParams; result: SubscriptionUpgradeResult }
   /** Host battery for the status bar; always resolves, ``available: false`` when unreadable. */
   'system.battery': { params: SystemBatteryParams; result: SystemBatteryResult }
+  'table_chart.plan': { params: TableChartPlanParams; result: TableChartPlanResult }
+  'table_chart.policy': { params: SessionParams; result: TableChartPolicy }
   /** Record the client's column width for server-side rendering. */
   'terminal.resize': { params: TerminalResizeParams; result: TerminalResizeResult }
   /** Persist a toolset / MCP enable-disable change and rebuild the session agent so it takes effect now. */
@@ -6175,6 +6191,8 @@ export const RPC_METHODS = [
   'subscription.state',
   'subscription.upgrade',
   'system.battery',
+  'table_chart.plan',
+  'table_chart.policy',
   'terminal.resize',
   'tools.configure',
   'tools.list',
@@ -6382,6 +6400,7 @@ export interface BackendGatewayEventMap {
   'subagent.thinking': SubagentEventPayload
   /** A child called a tool. */
   'subagent.tool': SubagentEventPayload
+  'table_chart.policy': TableChartPolicyPayload
   /** An agent-owned background process closed. */
   'terminal.close': TerminalClosePayload
   /** Legacy thinking-text chunk (thinking_callback). */
@@ -6479,6 +6498,7 @@ export const GATEWAY_EVENT_TYPES = [
   'subagent.start',
   'subagent.thinking',
   'subagent.tool',
+  'table_chart.policy',
   'terminal.close',
   'thinking.delta',
   'tip.show',

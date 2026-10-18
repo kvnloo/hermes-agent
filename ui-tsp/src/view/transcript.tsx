@@ -11,12 +11,14 @@ import type { Block, Entry, NoticeEntry, TurnEntry, UserEntry } from '../model.j
 import { settledTool } from '../tool-presentation.js'
 
 import { attachmentNodes } from './attachments.js'
+import type { TableCharts } from './table-charts.js'
 import { age, compact, duration } from './time.js'
 import { toolNode } from './tools.js'
 import { type WelcomeContext, welcomeNode } from './welcome.js'
 
 /** What entry views need from the app. */
 export interface TranscriptContext {
+  charts?: TableCharts
   /** Absolute cwd reported by the owning Hermes session. */
   cwd: string
   /** The negotiated node kind, not an assumed SDK feature. */
@@ -45,7 +47,7 @@ const projections = new WeakMap<Node, JSX.Element[]>()
 
 /** An entry carrying its last built node and the revision it was built at. */
 interface Built {
-  [kNode]?: { rev: number; cwd: string; media: boolean; hostLocal: boolean; foldRev: number; toolsHidden: boolean; rewindKey: string; node: JSX.Element }
+  [kNode]?: { rev: number; cwd: string; media: boolean; hostLocal: boolean; foldRev: number; chartRev: number; toolsHidden: boolean; rewindKey: string; node: JSX.Element }
 }
 
 /**
@@ -64,16 +66,17 @@ export function entryNode(e: Entry, id: string, cx: TranscriptContext): JSX.Elem
   const rev = e.kind === 'turn' ? e.rev : 0
   const foldRev = e.kind === 'turn' ? (cx.foldRevision?.(e.id) ?? 0) : 0
   const rewindKey = e.kind === 'user' ? `${e.rowId}:${cx.rewindDisabledReason?.(e) ?? ''}` : ''
+  const chartRev = cx.charts?.revision ?? 0
   const cached = built[kNode]
   const media = cx.media ?? false
   const hostLocal = cx.hostLocal ?? false
 
-  if (cached?.rev === rev && cached.cwd === cx.cwd && cached.media === media && cached.hostLocal === hostLocal && cached.foldRev === foldRev && cached.toolsHidden === !!cx.toolsHidden && cached.rewindKey === rewindKey) {
+  if (cached?.rev === rev && cached.chartRev === chartRev && cached.cwd === cx.cwd && cached.media === media && cached.hostLocal === hostLocal && cached.foldRev === foldRev && cached.toolsHidden === !!cx.toolsHidden && cached.rewindKey === rewindKey) {
     return cached.node
   }
 
   const node = buildEntry(e, id, cx)
-  built[kNode] = { node, rev, cwd: cx.cwd, media, hostLocal, foldRev, toolsHidden: !!cx.toolsHidden, rewindKey }
+  built[kNode] = { node, rev, chartRev, cwd: cx.cwd, media, hostLocal, foldRev, toolsHidden: !!cx.toolsHidden, rewindKey }
 
   return node
 }
@@ -105,7 +108,7 @@ export function projectedEntryNodes(e: Entry, id: string, cx: TranscriptContext)
 
   for (const block of e.blocks) {
     if (block.kind !== 'tool') {
-      content.push(blockNode(block, `main.${key}.${block.id}`, e.status === 'live' && block === lastText, cx, e.id))
+      content.push(blockNode(block, `main.${key}.${block.id}`, e.status === 'live' && block === lastText, cx, e.id, e.status !== 'live'))
 
       continue
     }
@@ -184,7 +187,7 @@ function userNode(e: UserEntry, cx: TranscriptContext): JSX.Element {
 function turnNode(turn: TurnEntry, id: string, cx: TranscriptContext): JSX.Element {
   const live = turn.status === 'live'
   const lastText = turn.blocks.findLast(b => b.kind === 'text')
-  const children = turn.blocks.map(b => blockNode(b, `${id}.${b.id}`, live && b === lastText, cx, turn.id))
+  const children = turn.blocks.map(b => blockNode(b, `${id}.${b.id}`, live && b === lastText, cx, turn.id, !live))
 
   return (
     <col key={turn.id} role="omp.assistant">
@@ -249,7 +252,7 @@ function turnTail(turn: TurnEntry, id: string, cx: TranscriptContext): JSX.Eleme
   return children
 }
 
-function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptContext, turnId: string): JSX.Element {
+function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptContext, turnId: string, settled = true): JSX.Element {
   switch (b.kind) {
     case 'steering':
       return (
@@ -262,7 +265,7 @@ function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptConte
     case 'text':
       return (
         <md key={b.id} stream={streaming || undefined}>
-          {streaming ? b.text : rewriteLocalMarkdownLinks(b.text, cx.cwd)}
+          {streaming ? b.text : rewriteLocalMarkdownLinks(cx.charts?.markdown(b.text, settled) ?? b.text, cx.cwd)}
         </md>
       )
 
