@@ -16,6 +16,7 @@ from . import (  # noqa: F401
     i18n,
     jobs,
     liveness,
+    model_hub,
     plans,
     lsp,
     operations,

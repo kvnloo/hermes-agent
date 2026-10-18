@@ -2131,6 +2131,42 @@
       }
     },
     {
+      "name": "model.hub.get",
+      "summary": "Safe provider inventory, supported-operation metadata and profile auxiliary/fallback assignments.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/ModelHubParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/ModelHubGetResult"
+        }
+      }
+    },
+    {
+      "name": "model.hub.set",
+      "summary": "Revision-bound profile role set/clear, scoped auxiliary reset or bounded ordered fallback replacement.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/ModelHubSetParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/ModelHubSetResult"
+        }
+      }
+    },
+    {
       "name": "model.options",
       "summary": "Provider/model inventory for the picker, layered over the session's live provider when given.",
       "params": [
@@ -21309,6 +21345,204 @@
         "title": "ModelDisconnectResult",
         "type": "object"
       },
+      "ModelHubGetResult": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/ModelRole"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "fallbacks": {
+            "items": {
+              "$ref": "#/components/schemas/ModelRoute"
+            },
+            "title": "Fallbacks",
+            "type": "array"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ModelOptionProvider"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "operations": {
+            "$ref": "#/components/schemas/ModelHubOperations"
+          }
+        },
+        "required": [
+          "profile",
+          "revision",
+          "roles",
+          "fallbacks",
+          "providers",
+          "operations"
+        ],
+        "title": "ModelHubGetResult",
+        "type": "object"
+      },
+      "ModelHubOperations": {
+        "additionalProperties": false,
+        "properties": {
+          "role_scopes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Role Scopes",
+            "type": "array"
+          },
+          "fallback_scopes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fallback Scopes",
+            "type": "array"
+          },
+          "max_fallbacks": {
+            "default": 8,
+            "title": "Max Fallbacks",
+            "type": "integer"
+          },
+          "native_login": {
+            "default": false,
+            "title": "Native Login",
+            "type": "boolean"
+          },
+          "login_hint": {
+            "default": "Use Hermes model setup in a terminal; this inventory never accepts login secrets.",
+            "title": "Login Hint",
+            "type": "string"
+          },
+          "writable": {
+            "title": "Writable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "writable"
+        ],
+        "title": "ModelHubOperations",
+        "type": "object"
+      },
+      "ModelHubParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "title": "ModelHubParams",
+        "type": "object"
+      },
+      "ModelHubSetParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "string"
+          },
+          "scope": {
+            "const": "profile",
+            "title": "Scope",
+            "type": "string"
+          },
+          "operation": {
+            "enum": [
+              "role",
+              "fallbacks",
+              "reset_roles"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Role"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelRoute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "fallbacks": {
+            "items": {
+              "$ref": "#/components/schemas/ModelRoute"
+            },
+            "title": "Fallbacks",
+            "type": "array"
+          },
+          "confirmed": {
+            "default": false,
+            "title": "Confirmed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "session_id",
+          "profile",
+          "revision",
+          "scope",
+          "operation"
+        ],
+        "title": "ModelHubSetParams",
+        "type": "object"
+      },
+      "ModelHubSetResult": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_required": {
+            "title": "Confirm Required",
+            "type": "boolean"
+          },
+          "confirm_message": {
+            "default": "",
+            "title": "Confirm Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm_required"
+        ],
+        "title": "ModelHubSetResult",
+        "type": "object"
+      },
       "ModelOptionProvider": {
         "additionalProperties": true,
         "description": "One ``hermes_cli/inventory.py::build_models_payload`` provider row (the union of every field\nthe builder sets; ``pricing_pending`` / ``free_tier_pending`` mark the cached-only path).",
@@ -21616,6 +21850,11 @@
             "default": null,
             "title": "Session Id"
           },
+          "safe_inventory": {
+            "default": false,
+            "title": "Safe Inventory",
+            "type": "boolean"
+          },
           "explicit_only": {
             "default": false,
             "title": "Explicit Only",
@@ -21654,6 +21893,30 @@
             "default": "",
             "title": "Provider",
             "type": "string"
+          },
+          "pending_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pending Model"
+          },
+          "pending_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pending Provider"
           }
         },
         "required": [
@@ -21733,6 +21996,61 @@
           "free"
         ],
         "title": "ModelPricing",
+        "type": "object"
+      },
+      "ModelRole": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "scope": {
+            "const": "profile",
+            "default": "profile",
+            "title": "Scope",
+            "type": "string"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelRoute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "ModelRole",
+        "type": "object"
+      },
+      "ModelRoute": {
+        "additionalProperties": false,
+        "properties": {
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "model"
+        ],
+        "title": "ModelRoute",
         "type": "object"
       },
       "ModelSaveKeyParams": {

@@ -896,6 +896,7 @@ export interface SharedMetricsDesktopDailyResult {
 export interface ModelOptionsParams {
   profile?: string | null
   session_id?: string | null
+  safe_inventory?: boolean
   explicit_only?: boolean
   include_unconfigured?: boolean
   refresh?: boolean
@@ -904,6 +905,8 @@ export interface ModelOptionsResult {
   providers: ModelOptionProvider[]
   model?: string
   provider?: string
+  pending_model?: string | null
+  pending_provider?: string | null
 }
 /** One ``hermes_cli/inventory.py::build_models_payload`` provider row (the union of every field the builder sets; ``pricing_pending`` / ``free_tier_pending`` mark the cached-only path). */
 export interface ModelOptionProvider {
@@ -2043,6 +2046,50 @@ export interface ClientCapabilitiesParams {
 export interface ClientCapabilitiesResult {
   server_requests: string[]
   declines_not_shown?: boolean
+}
+export interface ModelHubParams {
+  session_id: string
+}
+export interface ModelHubGetResult {
+  profile: string
+  revision: string
+  roles: ModelRole[]
+  fallbacks: ModelRoute[]
+  providers: ModelOptionProvider[]
+  operations: ModelHubOperations
+}
+export interface ModelRole {
+  id: string
+  label: string
+  scope?: 'profile'
+  route?: ModelRoute | null
+}
+export interface ModelRoute {
+  provider: string
+  model: string
+}
+export interface ModelHubOperations {
+  role_scopes?: string[]
+  fallback_scopes?: string[]
+  max_fallbacks?: number
+  native_login?: boolean
+  login_hint?: string
+  writable: boolean
+}
+export interface ModelHubSetParams {
+  session_id: string
+  profile: string
+  revision: string
+  scope: 'profile'
+  operation: 'role' | 'fallbacks' | 'reset_roles'
+  role?: string | null
+  route?: ModelRoute | null
+  fallbacks?: ModelRoute[]
+  confirmed?: boolean
+}
+export interface ModelHubSetResult {
+  confirm_required: boolean
+  confirm_message?: string
 }
 export interface PlanStatusResult {
   enabled: boolean
@@ -5605,6 +5652,10 @@ export interface RpcMethods {
   'message.react': { params: MessageReactParams; result: MessageReactResult }
   /** Remove every credential (env keys and OAuth state) for a provider. */
   'model.disconnect': { params: ModelDisconnectParams; result: ModelDisconnectResult }
+  /** Safe provider inventory, supported-operation metadata and profile auxiliary/fallback assignments. */
+  'model.hub.get': { params: ModelHubParams; result: ModelHubGetResult }
+  /** Revision-bound profile role set/clear, scoped auxiliary reset or bounded ordered fallback replacement. */
+  'model.hub.set': { params: ModelHubSetParams; result: ModelHubSetResult }
   /** Provider/model inventory for the picker, layered over the session's live provider when given. */
   'model.options': { params: ModelOptionsParams; result: ModelOptionsResult }
   /** Save an API key for a provider and return its refreshed inventory row. */
@@ -6047,6 +6098,8 @@ export const RPC_METHODS = [
   'mcp.servers.test',
   'message.react',
   'model.disconnect',
+  'model.hub.get',
+  'model.hub.set',
   'model.options',
   'model.save_key',
   'onboarding.ensure_setup_profile',
