@@ -2419,6 +2419,96 @@
       }
     },
     {
+      "name": "plan.annotate",
+      "summary": "",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/PlanAnnotateParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/PlanStatusResult"
+        }
+      }
+    },
+    {
+      "name": "plan.decide",
+      "summary": "",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/PlanDecideParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/PlanStatusResult"
+        }
+      }
+    },
+    {
+      "name": "plan.edit",
+      "summary": "",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/PlanEditParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/PlanStatusResult"
+        }
+      }
+    },
+    {
+      "name": "plan.mode",
+      "summary": "",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/PlanModeParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/PlanStatusResult"
+        }
+      }
+    },
+    {
+      "name": "plan.status",
+      "summary": "",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/SessionParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/PlanStatusResult"
+        }
+      }
+    },
+    {
       "name": "plugins.list",
       "summary": "Loaded plugin manager entries (legacy flat view); the Plugins Hub uses plugins.manage list.",
       "params": [
@@ -22538,6 +22628,280 @@
           "pong"
         ],
         "title": "PingResult",
+        "type": "object"
+      },
+      "PlanAnnotateParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "plan_id": {
+            "minLength": 1,
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "section": {
+            "minimum": 0,
+            "title": "Section",
+            "type": "integer"
+          },
+          "text": {
+            "maxLength": 16000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "plan_id",
+          "revision",
+          "section",
+          "text"
+        ],
+        "title": "PlanAnnotateParams",
+        "type": "object"
+      },
+      "PlanAnnotation": {
+        "additionalProperties": false,
+        "properties": {
+          "section": {
+            "minimum": 0,
+            "title": "Section",
+            "type": "integer"
+          },
+          "text": {
+            "maxLength": 16000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "section",
+          "text"
+        ],
+        "title": "PlanAnnotation",
+        "type": "object"
+      },
+      "PlanDecideParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "plan_id": {
+            "minLength": 1,
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "intent": {
+            "enum": [
+              "approve",
+              "refine"
+            ],
+            "title": "Intent",
+            "type": "string"
+          },
+          "feedback": {
+            "default": "",
+            "maxLength": 16000,
+            "title": "Feedback",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "plan_id",
+          "revision",
+          "intent"
+        ],
+        "title": "PlanDecideParams",
+        "type": "object"
+      },
+      "PlanEditParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "plan_id": {
+            "minLength": 1,
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "text": {
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "plan_id",
+          "revision",
+          "text"
+        ],
+        "title": "PlanEditParams",
+        "type": "object"
+      },
+      "PlanModeParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "session_id",
+          "enabled"
+        ],
+        "title": "PlanModeParams",
+        "type": "object"
+      },
+      "PlanRevision": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "annotations": {
+            "items": {
+              "$ref": "#/components/schemas/PlanAnnotation"
+            },
+            "title": "Annotations",
+            "type": "array"
+          },
+          "decision": {
+            "enum": [
+              "pending",
+              "approved",
+              "refined"
+            ],
+            "title": "Decision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "text",
+          "annotations",
+          "decision"
+        ],
+        "title": "PlanRevision",
+        "type": "object"
+      },
+      "PlanStatusResult": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "generating": {
+            "title": "Generating",
+            "type": "boolean"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanRevision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "generating",
+          "plan"
+        ],
+        "title": "PlanStatusResult",
         "type": "object"
       },
       "PluginActivation": {

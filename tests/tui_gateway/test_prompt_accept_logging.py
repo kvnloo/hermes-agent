@@ -83,6 +83,30 @@ def turn_env(turn_stubs, monkeypatch):
 def _records(caplog, needle):
     return [r for r in caplog.records if needle in r.getMessage()]
 
+@pytest.mark.parametrize("outcome", ["complete", "interrupted", "failed", "empty"])
+def test_planning_turn_lifecycle_captures_only_completed_revision(turn_env, outcome):
+    from tui_gateway.plan_review import plan_state, plan_snapshot
+
+    result = {"final_response": "" if outcome == "empty" else "# Actual plan\nReviewed bytes"}
+    if outcome == "interrupted":
+        result["interrupted"] = True
+    if outcome == "failed":
+        result["failed"] = True
+    agent = types.SimpleNamespace(
+        session_id="plan-agent", run_conversation=lambda *a, **k: result, clear_interrupt=lambda: None)
+    session = _session(agent=agent, running=True)
+    plan_state(session)["enabled"] = True
+    server._run_prompt_submit("plan-rid", "plan-ui", session, "Plan only")
+    snapshot = plan_snapshot(session)
+    assert snapshot["enabled"] and not snapshot["generating"]
+    assert agent._plan_mode
+    if outcome == "complete":
+        assert snapshot["plan"]["text"] == result["final_response"]
+        assert snapshot["plan"]["decision"] == "pending"
+    else:
+        assert snapshot["plan"] is None
+
+
 SECRETISH_PROMPT = "please rotate QDRANT_API_KEY=hunter2-super-secret now"
 
 def test_accepted_and_finished_records_on_success(turn_env, caplog):

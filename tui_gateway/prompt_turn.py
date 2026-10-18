@@ -689,6 +689,7 @@ def _prepare_turn_input(sid: str, session: dict, st: _TurnRun, text: Any, images
     _sync_bot_capabilities(sid, session)  # Bot Chat: adopt Settings->Capabilities edits
     _adopt_out_of_band_turns(session)
     st.agent = agent = session["agent"]
+    agent._plan_mode = session.get("plan_review", {}).get("enabled", False)
     # Snapshot after the model sync: a deferred switch's history mutation belongs to this turn.
     with session["history_lock"]:
         st.history = list(session["history"])
@@ -727,6 +728,8 @@ def _prepare_turn_input(sid: str, session: dict, st: _TurnRun, text: Any, images
     from tools.tts_streaming import SPEECH_INTERRUPTED_NOTE, take_speech_interrupted
     if take_speech_interrupted():
         run_message = _prepend_note(run_message, SPEECH_INTERRUPTED_NOTE)
+    from .plan_review import plan_turn_note
+    run_message = _prepend_note(run_message, plan_turn_note(session))
     run_message = _prepend_note(run_message, _pending_reaction_notes(session))
     return prompt, _prepend_note(run_message, _hud_surface_note(session)), cols, streamer
 
@@ -799,6 +802,8 @@ def _invoke_agent(
     try:
         from agent.notification_presentation import notification_turn, event_presentation_muted
         with notification_turn(agent, muted=event_presentation_muted("message.delta", sid), session_id=sid):
+            if getattr(agent, "_plan_mode", False) and str(getattr(agent, "base_url", "")).startswith("acp://"):
+                raise RuntimeError("Plan enforcement is unavailable for provider-owned tool execution")
             st.result = agent.run_conversation(run_message, **st.run_kwargs)
     finally:
         # Stop AND join before anything emits: a tick surviving past message.complete would
@@ -1128,6 +1133,8 @@ def _run_prompt_submit(
     if admitted is None:
         return False
     images, agent = admitted
+    from .plan_review import begin_plan_generation
+    begin_plan_generation(session, agent)
     from gateway.warning_notifications import diagnostic_turn_muted
     from agent.notification_presentation import notification_config_snapshot
     with _session_profile_runtime_scope(session):
@@ -1179,6 +1186,8 @@ def _run_prompt_submit(
             status_note = _absorb_turn_result(
                 sid, session, st, text, display_kind, display_metadata)
             payload, raw, status = _complete_turn_payload(session, st, status_note, cols)
+            from .plan_review import finish_plan_generation
+            finish_plan_generation(session, raw, status, st.result)
             _emit("message.complete", sid, payload)
             goal_followup = _goal_followup_after_turn(sid, session, st.result, status, raw)
             if status == "complete":
@@ -1187,8 +1196,12 @@ def _run_prompt_submit(
             # structured control snapshot now so the Desktop card never paints the pre-judge turn count.
             _publish_session_control_snapshot(sid, session, only_if_present=True)
         except Exception as e:
+            from .plan_review import finish_plan_generation
+            finish_plan_generation(session, "", "error")
             _recover_turn_exception(sid, session, st, e)
         finally:
+            from .plan_review import finish_plan_generation
+            finish_plan_generation(session, "", "interrupted")
             _release_turn_scopes(sid, session, st)
             try:  # a raising settle step must not skip the trim / HERMES_HOME reset
                 _current_runtime_session_record.reset(runtime_session_token)

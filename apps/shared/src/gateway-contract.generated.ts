@@ -1952,6 +1952,50 @@ export interface ClientCapabilitiesResult {
   server_requests: string[]
   declines_not_shown?: boolean
 }
+export interface PlanStatusResult {
+  enabled: boolean
+  generating: boolean
+  plan: PlanRevision | null
+}
+export interface PlanRevision {
+  id: string
+  revision: number
+  text: string
+  annotations: PlanAnnotation[]
+  decision: 'pending' | 'approved' | 'refined'
+}
+export interface PlanAnnotation {
+  section: number
+  text: string
+}
+export interface PlanModeParams {
+  session_id: string
+  profile?: string | null
+  enabled: boolean
+}
+export interface PlanEditParams {
+  session_id: string
+  profile?: string | null
+  plan_id: string
+  revision: number
+  text: string
+}
+export interface PlanAnnotateParams {
+  session_id: string
+  profile?: string | null
+  plan_id: string
+  revision: number
+  section: number
+  text: string
+}
+export interface PlanDecideParams {
+  session_id: string
+  profile?: string | null
+  plan_id: string
+  revision: number
+  intent: 'approve' | 'refine'
+  feedback?: string
+}
 /** ``word`` is the token under the cursor (``@`` prefix = context reference); ``cwd`` / ``session_id`` pick the directory the listing resolves against. */
 export interface CompletePathParams {
   profile?: string | null
@@ -5352,6 +5396,11 @@ export interface RpcMethods {
   'pet.thumb': { params: PetThumbParams; result: PetThumbResult }
   /** Cheapest liveness probe; answered on the WS reader thread even while every agent is mid-turn. */
   ping: { params: PingParams; result: PingResult }
+  'plan.annotate': { params: PlanAnnotateParams; result: PlanStatusResult }
+  'plan.decide': { params: PlanDecideParams; result: PlanStatusResult }
+  'plan.edit': { params: PlanEditParams; result: PlanStatusResult }
+  'plan.mode': { params: PlanModeParams; result: PlanStatusResult }
+  'plan.status': { params: SessionParams; result: PlanStatusResult }
   /** Loaded plugin manager entries (legacy flat view); the Plugins Hub uses plugins.manage list. */
   'plugins.list': { params: PluginsListParams; result: PluginsListResult }
   /** Plugins Hub backend: list installed plugins, toggle, git-install, re-pin a catalog install, or remove a user install. */
@@ -5751,6 +5800,11 @@ export const RPC_METHODS = [
   'pet.select',
   'pet.thumb',
   'ping',
+  'plan.annotate',
+  'plan.decide',
+  'plan.edit',
+  'plan.mode',
+  'plan.status',
   'plugins.list',
   'plugins.manage',
   'preview.restart',
