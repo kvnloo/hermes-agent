@@ -23,6 +23,8 @@ export class Completion {
   selected = 0
   /** Where an accepted row's text replaces the input. */
   #replaceFrom = 0
+  #replaceTo = 0
+  #snapshot: { cursor: number; sid: string | null; text: string } = { cursor: 0, sid: null, text: '' }
   /** The text before the caret the items answer. */
   #for = ''
   /** The text before the caret last queried (scheduled, in flight or answered); null until the first update. */
@@ -50,7 +52,7 @@ export class Completion {
     const row = this.items[this.selected]
     const composer = this.#composer
 
-    if (!row || !composer || composer.cursor !== composer.text.length) {
+    if (!row || !composer || !this.#current() || composer.cursor !== composer.text.length) {
       return ''
     }
 
@@ -64,15 +66,21 @@ export class Completion {
     this.#composer = composer
     const before = composer.text.slice(0, composer.cursor)
 
-    if (before === this.#asked) {
+    const snapshot = { cursor: composer.cursor, sid: this.#sid(), text: composer.text }
+    const asked = JSON.stringify(snapshot)
+
+    if (asked === this.#asked) {
       return
     }
 
-    this.#asked = before
+    this.#asked = asked
     const gen = ++this.#gen
     clearTimeout(this.#timer)
     this.#timer = undefined
-    const request = before.includes('\n') ? null : completionRequestForInput(before)
+    // The gateway accepts a command line or one path word, never a multiline draft.
+    const lineStart = before.lastIndexOf('\n') + 1
+    const context = before.slice(lineStart)
+    const request = completionRequestForInput(context)
 
     if (!request) {
       this.dismiss()
@@ -82,7 +90,11 @@ export class Completion {
 
     this.#timer = setTimeout(() => {
       this.#timer = undefined
-      const sid = this.#sid()
+      const sid = snapshot.sid
+
+      if (gen !== this.#gen || this.#sid() !== sid) {
+        return
+      }
 
       const params =
         request.method === 'complete.slash' && sid ? { ...request.params, session_id: sid } : request.params
@@ -90,15 +102,20 @@ export class Completion {
       this.#gw
         .request<{ items?: CompletionItem[]; replace_from?: number | null }>(request.method, params)
         .then(r => {
-          if (gen !== this.#gen || composer.text.slice(0, composer.cursor) !== before) {
+          if (
+            gen !== this.#gen ||
+            composer.text !== snapshot.text ||
+            composer.cursor !== snapshot.cursor ||
+            this.#sid() !== sid
+          ) {
             return
           }
 
           const items = r?.items ?? []
 
-          if (request.method === 'complete.slash' && !request.skillsOnly && /^\/\S*$/.test(before)) {
+          if (request.method === 'complete.slash' && !request.skillsOnly && /^\/\S*$/.test(context)) {
             for (const [text, meta] of [...SETTINGS_COMMANDS, ...FORK_COMMANDS, ...TREE_COMMANDS]) {
-              if (text.startsWith(before) && !items.some(item => item.text === text)) {
+              if (text.startsWith(context) && !items.some(item => item.text === text)) {
                 items.push({ display: text, kind: 'command', meta, text })
               }
             }
@@ -108,12 +125,18 @@ export class Completion {
             request.method === 'complete.slash' && request.skillsOnly ? items.filter(i => i.kind === 'skill') : items
           this.selected = 0
           this.#for = before
+          this.#snapshot = snapshot
+          // Gateway offsets are Python code points; Composer/TSP offsets are UTF-16.
           this.#replaceFrom =
-            request.method === 'complete.slash' && !request.skillsOnly ? (r?.replace_from ?? 1) : request.replaceFrom
+            lineStart +
+            (request.method === 'complete.slash' && !request.skillsOnly
+              ? [...context].slice(0, r?.replace_from ?? 1).join('').length
+              : request.replaceFrom)
+          this.#replaceTo = composer.cursor + (composer.text.slice(composer.cursor).match(/^\S*/u)?.[0].length ?? 0)
           this.#host.changed()
         })
         .catch(() => {
-          if (gen === this.#gen) {
+          if (gen === this.#gen && this.#sid() === sid) {
             this.dismiss()
           }
         })
@@ -162,11 +185,12 @@ export class Completion {
         return this.#accept(applyCompletion(this.#for, this.items[this.selected]?.text ?? '', this.#replaceFrom))
       case 'enter': {
         // A list answering older text (keys outran the render) must not rewrite what was typed since.
-        if (key.shift || key.alt || composer.text.slice(0, composer.cursor) !== this.#for) {
+        if (key.shift || key.alt || !this.#current()) {
           return false
         }
 
-        const next = completionToApplyOnSubmit(this.#for, this.items[this.selected]?.text, this.#replaceFrom)
+        const current = this.#for + composer.text.slice(composer.cursor, this.#replaceTo)
+        const next = completionToApplyOnSubmit(current, this.items[this.selected]?.text, this.#replaceFrom)
 
         if (next === null) {
           this.dismiss()
@@ -228,15 +252,23 @@ export class Completion {
     }
   }
 
-  /** Replaces the text before the caret with `before`; false when the items answer older text than the live one. */
+  #current(): boolean {
+    return (
+      this.#composer?.text === this.#snapshot.text &&
+      this.#composer.cursor === this.#snapshot.cursor &&
+      this.#sid() === this.#snapshot.sid
+    )
+  }
+
+  /** Replace only the active token, including its suffix when the caret is inside it. */
   #accept(before: string): boolean {
     const composer = this.#composer
 
-    if (!composer || composer.text.slice(0, composer.cursor) !== this.#for) {
+    if (!composer || !this.#current()) {
       return false
     }
 
-    composer.splice(0, composer.cursor, before)
+    composer.splice(this.#replaceFrom, this.#replaceTo, before.slice(this.#replaceFrom))
     this.dismiss()
     this.update(composer)
 
