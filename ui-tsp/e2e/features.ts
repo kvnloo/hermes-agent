@@ -197,6 +197,10 @@ async function lspDiagnostics() {
     for (const [index,result] of outputs.entries()) {
       await replay('tool.start',{name:'lsp',tool_id:`semantic-${index}`,args:{operation:result.kind}})
       await replay('tool.complete',{name:'lsp',tool_id:`semantic-${index}`,result:{lsp_result:result}})
+      if (index===1) {
+        await until(()=>native.rendered(),ns=>[...ns.values()].some(n=>n.p?.role==='omp.tool.symbols'),'symbol tree before hover')
+        await sizes()
+      }
     }
     await replay('message.complete',{status:'complete',text:''})
     const rendered = await until(()=>native.rendered(),ns=>[...ns.values()].some(n=>n.p?.role==='omp.tool.lsp.unavailable'),'semantic results')
@@ -209,7 +213,7 @@ async function lspDiagnostics() {
     assert(tree)
     assert.deepEqual((tree.p?.nodes as {id:string;children:{id:string}[]}[]).map(n=>[n.id,n.children[0]?.id]),[['parent','child']])
     assert([...rendered.values()].some(n=>n.p?.role==='omp.tool.symbol.location' && String(n.p.text).startsWith(child.name)))
-    await sizes()
+    await capture('semantic-final')
   },true)
 }
 
