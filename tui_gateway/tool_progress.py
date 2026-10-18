@@ -311,6 +311,9 @@ def _prepare_tool_result_metadata(sid: str, tool_call_id: str, name: str, args: 
     session = _sessions.get(sid)
     snapshot = session.setdefault("edit_snapshots", {}).pop(tool_call_id, None) if session is not None else None
     metadata = {}
+    if name == "execute_code":
+        from .eval_display import eval_metadata
+        metadata.update(eval_metadata(result))
     with contextlib.suppress(Exception):
         from agent.display import render_edit_diff_with_delta
         rendered: list[str] = []
@@ -481,7 +484,13 @@ def _progress_subagent(sid: str, name: str, preview, kw, event_type):
 
 # event_type -> (handler, requires): `requires` names the arg that must be truthy for the row to be
 # emitted at all ("name" / "preview" / None).
+def _progress_eval(sid, name, preview, kw):
+    from .eval_display import emit_eval_update
+    emit_eval_update(sid, kw.get("eval_update"), _emit)
+
+
 _PROGRESS_HANDLERS = {
+    "eval.update": (_progress_eval, None),
     "tool.output_risk": (_progress_output_risk, "name"), "reasoning.available": (_progress_reasoning, "preview"),
     "moa.reference": (_progress_moa_reference, "name"),
     # Answer-only drops MoA content (references, progress/phase lines that land in the reasoning

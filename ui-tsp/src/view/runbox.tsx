@@ -14,6 +14,10 @@ export interface RunBoxInput {
   command: string
   cwd?: string
   output?: string
+  /** Structured output built from exact spans of the visible literal output. */
+  renderOutput?: (visible: string) => JSX.Element[]
+  statusNodes?: JSX.Element[]
+  runKey?: string
   error?: string
   language?: string
   state: RunState
@@ -33,6 +37,7 @@ export interface RunBoxInput {
   /** The backend explicitly spilled its output capture (which retains head and tail). */
   captureTruncated?: boolean
   captureFacts?: string[]
+  captureNote?: string
 }
 
 const RUN_WORD: Record<RunState, string> = {
@@ -181,7 +186,7 @@ export function runFootFacts(input: RunBoxInput): string[] {
   }
 
   if (input.captureTruncated) {
-    facts.push('capture truncated: head + tail retained')
+    facts.push(input.captureNote ?? 'capture truncated: head + tail retained')
   }
 
   return [...facts, ...(input.captureFacts ?? [])]
@@ -203,7 +208,7 @@ export function runBox(input: RunBoxInput): JSX.Element {
     : input.output
 
   return (
-    <col gap="none" key="run" role="omp.run" tone={tone}>
+    <col gap="none" key={input.runKey ?? 'run'} role="omp.run" tone={tone}>
       <row align="start" gap="xs" key="input" role="omp.run.input">
         <icon aria="Input" key="prompt" name="arrow-left" role="omp.run.prompt" />
         <code key="code" lang={input.language ?? 'bash'} numbers={false} text={displayText(input.command)} wrap />
@@ -214,7 +219,7 @@ export function runBox(input: RunBoxInput): JSX.Element {
           <icon aria="Output" key="prompt" name="arrow-right" role="omp.run.prompt" />
           <col gap="none" key="outputs" role="omp.run.outputs">
             {input.output ? (
-              <code key="output" lang="text" numbers={false} role="omp.run.output" text={displayOptional(output)} wrap />
+              input.renderOutput ? input.renderOutput(output ?? '') : <code key="output" lang="text" numbers={false} role="omp.run.output" text={displayOptional(output)} wrap />
             ) : null}
             {input.error ? (
               <text
@@ -227,6 +232,7 @@ export function runBox(input: RunBoxInput): JSX.Element {
           </col>
         </row>
       ) : null}
+      {input.statusNodes}
       <row align="center" gap="sm" key="foot" role="omp.run.foot" wrap>
         <text key="state" role="omp.run.state" spans={[{ s: tone, t: word }]} />
         {facts.length ? (

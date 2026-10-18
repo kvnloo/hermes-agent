@@ -27,7 +27,9 @@ _TERMINAL_BLOCKED_PARAMS = {"background", "pty", "notify", "notify_on_complete",
 
 def _default_dispatch(task_id):
     from model_tools import handle_function_call
-    return lambda tool_name, tool_args: handle_function_call(tool_name, tool_args, task_id=task_id)
+    from tools.code_execution_display import nested_dispatch
+    return lambda tool_name, tool_args: nested_dispatch(
+        tool_name, tool_args, lambda: handle_function_call(tool_name, tool_args, task_id=task_id))
 
 
 def _private_dirs_cmd(root: str, *subdirs: str) -> str:

@@ -2,7 +2,7 @@
 // events (see transcript.ts), never pre-rendered text. Views (view/*.tsx)
 // derive TSP nodes from these.
 
-import type { SubagentEventPayload, Usage } from '@hermes/shared/gateway-events'
+import type { EvalDisplay, SubagentEventPayload, Usage } from '@hermes/shared/gateway-events'
 
 import type { SubmittedImage } from './attachments.js'
 
@@ -66,6 +66,8 @@ export interface ToolCall {
   summary?: string
   resultText?: string
   result?: unknown
+  eval?: EvalDisplay
+  evalRevision?: number
   /** A unified diff of the files the call changed. */
   diff?: string
   todos?: Todo[]

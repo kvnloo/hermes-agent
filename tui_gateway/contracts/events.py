@@ -23,6 +23,9 @@ from .base import JsonValue, Payload, WireEnum
 from .common import MessageReaction, SessionLiveInfo, SubagentStatus, ToolLabel, ToolLabelKind, Usage
 from .config_free_tier_control import SessionControlSnapshot
 from .registry import event
+from .eval import EvalDisplay, EvalUpdatePayload
+
+event("eval.update", EvalUpdatePayload, doc="Observed execute_code cell / nested-work snapshot, stable call and cell IDs.")
 
 
 class OpenPayload(Payload):
@@ -288,6 +291,8 @@ class ToolCompletePayload(Payload):
     summary: str | None = None
     result_text: str | None = None
     inline_diff: str | None = None
+    eval_display: EvalDisplay | None = None
+    eval_revision: int | None = None
     todos: list[JsonValue] | None = None
     revision: int | None = None
     labels: list[ToolLabel] | None = None

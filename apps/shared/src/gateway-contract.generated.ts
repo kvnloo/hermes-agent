@@ -4692,6 +4692,36 @@ export interface DisplayInstallDonePayload {
   code: number
   status: DisplayStatus
 }
+export interface EvalUpdatePayload {
+  tool_id: string
+  cell: EvalCell
+  revision: number
+}
+export interface EvalCell {
+  id: string
+  code: string
+  language?: string
+  status: 'pending' | 'running' | 'done' | 'error' | 'cancelled' | 'timeout' | 'background'
+  output?: string
+  error?: string | null
+  events?: EvalWork[]
+  views?: EvalView[]
+}
+export interface EvalWork {
+  id: string
+  tool: string
+  status: 'running' | 'done' | 'error' | 'cancelled' | 'timeout' | 'background'
+  parent_id?: string | null
+  preview?: string
+}
+export interface EvalView {
+  id: string
+  kind: 'table' | 'json' | 'markdown'
+  start: number
+  printed: string
+  columns?: string[]
+  rows?: string[][]
+}
 /** ``tui_gateway/entry.py`` (stdio) / ``tui_gateway/ws.py`` (WebSocket) first frame. */
 export interface GatewayReadyPayload {
   skin: SkinPayload
@@ -4837,9 +4867,15 @@ export interface ToolCompletePayload {
   summary?: string | null
   result_text?: string | null
   inline_diff?: string | null
+  eval_display?: EvalDisplay | null
+  eval_revision?: number | null
   todos?: unknown[] | null
   revision?: number | null
   labels?: ToolLabel[] | null
+}
+export interface EvalDisplay {
+  version?: 1
+  cells: EvalCell[]
 }
 /** ``agent_callbacks`` tool_gen_callback. */
 export interface ToolGeneratingPayload {
@@ -5966,6 +6002,8 @@ export interface BackendGatewayEventMap {
   'display.status': DisplayStatusPayload
   /** A session-level failure outside a turn (agent init, model switch, compression, resume). */
   error: ErrorPayload
+  /** Observed execute_code cell / nested-work snapshot, stable call and cell IDs. */
+  'eval.update': EvalUpdatePayload
   /** First frame of a connection: the resolved skin, the change-event capability and the replay epoch. */
   'gateway.ready': GatewayReadyPayload
   /** Owned process started or exited; invalidate the jobs snapshot. */
@@ -6106,6 +6144,7 @@ export const GATEWAY_EVENT_TYPES = [
   'display.lease',
   'display.status',
   'error',
+  'eval.update',
   'gateway.ready',
   'jobs.changed',
   'layout.apply',

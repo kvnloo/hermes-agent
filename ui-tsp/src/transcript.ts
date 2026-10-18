@@ -3,6 +3,7 @@
 // reasoning, text and tool events land in its blocks in arrival order.
 
 import type {
+  EvalUpdatePayload,
   InflightTurn,
   MessageCompletePayload,
   SubagentEventPayload,
@@ -13,6 +14,7 @@ import type {
 } from '@hermes/shared/gateway-events'
 
 import type { SubmittedImage } from './attachments.js'
+import { evalCell, evalDisplay } from './eval.js'
 import type { Block, Entry, NoticeEntry, Todo, ToolCall, TurnEntry, UserEntry } from './model.js'
 
 type ToolBlock = Extract<Block, { kind: 'tool' }>
@@ -212,6 +214,30 @@ export class Transcript {
     const { call, turn } = found
     call.finishedAt = at
     completeTool(call, p, at - call.startedAt)
+    this.#touch(turn)
+  }
+
+  /** Snapshots update their exact call, including retained older turns, without opening a turn. */
+  evalUpdate(p: EvalUpdatePayload) {
+    const found = this.#tool(p.tool_id)
+    const cell = evalCell(p.cell)
+
+    if (!found || found.call.name !== 'execute_code' || !cell ||
+      !Number.isSafeInteger(p.revision) || p.revision <= (found.call.evalRevision ?? -1)) { return }
+
+    const { call, turn } = found
+    const previous = call.eval?.cells.find(c => c.id === cell.id)
+
+    // Completion wins even if a delayed in-flight snapshot has a newer envelope.
+    if ((call.status !== 'running' || (previous && previous.status !== 'running' && previous.status !== 'pending')) &&
+      (cell.status === 'running' || cell.status === 'pending')) { return }
+
+    const cells = [...(call.eval?.cells ?? [])]
+    const index = cells.findIndex(c => c.id === cell.id)
+
+    if (index < 0) { cells.push(cell) } else { cells[index] = cell }
+    call.eval = { version: 1, cells }
+    call.evalRevision = p.revision
     this.#touch(turn)
   }
 
@@ -549,6 +575,8 @@ function historyCompletion(m: TranscriptMessage, call: ToolCall, result: unknown
     tool_id: call.id,
     name: call.name,
     result,
+    eval_display: evalDisplay(metadata?.eval_display),
+    eval_revision: typeof metadata?.eval_revision === 'number' ? metadata.eval_revision : undefined,
     duration_s: typeof m.duration_s === 'number' ? m.duration_s : undefined,
     summary: typeof m.summary === 'string' ? m.summary : undefined,
     result_text: typeof m.result_text === 'string' ? m.result_text : undefined,
@@ -574,6 +602,20 @@ function completeTool(call: ToolCall, p: ToolCompletePayload, elapsed?: number) 
   call.summary = p.summary ?? undefined
   call.resultText = p.result_text ?? (typeof p.result === 'string' && !result ? p.result : undefined)
   call.result = p.result
+
+  if (call.name === 'execute_code') {
+    const incoming = evalDisplay(p.eval_display ?? result?.eval_display)
+    const revision = p.eval_revision ?? result?.eval_revision
+
+    if (incoming && (typeof revision !== 'number' || revision >= (call.evalRevision ?? -1))) {
+      call.eval = incoming
+    }
+
+    if (typeof revision === 'number' && Number.isSafeInteger(revision)) {
+      call.evalRevision = Math.max(call.evalRevision ?? -1, revision)
+    }
+  }
+
   call.diff = p.inline_diff ?? undefined
 
   if (p.args) {

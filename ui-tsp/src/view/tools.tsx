@@ -13,6 +13,7 @@ import { record } from '../transcript.js'
 
 import { browserBlockCard } from './browser-blocks.js'
 import { changedFiles, editFiles, fileDiffs } from './edit-results.js'
+import { evalRuns, evalRunState } from './eval.js'
 import { lspDiagnostics } from './lsp-diagnostics.js'
 import { outputLineCount, runBox, type RunBoxInput, runElapsed, runState, type RunState } from './runbox.js'
 import { age, compact, duration } from './time.js'
@@ -107,7 +108,10 @@ export function toolNode(
   hostLocal = true
 ): JSX.Element {
   const card = browserBlockCard(cardOf(call, now, cwd, media, { collapsed: collapsedOverride, onToggle }, onInspect, hostLocal), call, focusBrowser)
-  const runOutcome = card.name === 'bash' || card.name === 'eval' ? runState(call, record(call.result)) : undefined
+
+  const runOutcome = card.name === 'eval' ? evalRunState(call) ?? runState(call, record(call.result))
+    : card.name === 'bash' ? runState(call, record(call.result)) : undefined
+
   const status = call.status === 'unknown' ? 'unknown' : runOutcome ? RUN_STATUS[runOutcome] : (card.status ?? call.status)
   const running = status === 'running'
   const artifacts = outputArtifacts(record(call.result), cwd)
@@ -896,7 +900,7 @@ function evalCard(
   const output = str(result?.output) ?? str(result?.stdout) ?? call.resultText
   const error = str(result?.error) ?? str(result?.stderr)
   const outLines = outputLineCount(output ?? '')
-  const fold = outLines > EVAL_PREVIEW_LINES
+  const fold = outLines > EVAL_PREVIEW_LINES || Boolean(call.eval?.cells.some(cell => outputLineCount(cell.output ?? '') > EVAL_PREVIEW_LINES))
   const state = runState(call, result)
 
   return {
@@ -907,7 +911,8 @@ function evalCard(
       ...(state === 'cancelled' ? [{ text: 'cancelled', tone: 'muted' }] : []),
       ...(presentation.collapsed === false ? [] : (moreBadge(outLines, EVAL_PREVIEW_LINES) ?? []))
     ],
-    body: [
+    meta: call.eval && call.eval.cells.length > 1 ? [`${call.eval.cells.length} cells`] : undefined,
+    body: evalRuns(call, output, presentation) ?? [
       runBox({
         ...presentation,
         command: code,
