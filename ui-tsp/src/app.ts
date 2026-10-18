@@ -343,7 +343,7 @@ export class App implements OverlayHost {
     }
 
     // Inspection results must not cover an approval/clarification waiting for input.
-    const prompt = ['report', 'agent-inspector', 'plan'].includes(overlay.key) ? this.overlays.findIndex(o => o.key.startsWith('prompt:')) : -1
+    const prompt = ['report', 'agent-inspector', 'agent-hub', 'plan'].includes(overlay.key) ? this.overlays.findIndex(o => o.key.startsWith('prompt:')) : -1
     this.overlays.splice(prompt < 0 ? this.overlays.length : prompt, 0, overlay)
     this.#overlayIds.set(overlay, `${overlay.placement ?? 'layer'}.${overlay.key}:${++this.#overlaySerial}`)
 
@@ -484,7 +484,7 @@ export class App implements OverlayHost {
     const clear = APP_ACTIONS.find(action => action.id === 'app.clear')!
 
     if (matchesAction(clear, key)) {
-      return top?.key === 'settings' || top?.key === 'report' || top?.key === 'plan' || top?.key === 'history'
+      return top?.key === 'settings' || top?.key === 'agent-hub' || top?.key === 'agent-inspector' || top?.key === 'report' || top?.key === 'plan' || top?.key === 'history'
         ? top.onKey(key)
         : clear.run(this)
     }
@@ -1861,7 +1861,7 @@ export class App implements OverlayHost {
         orb: this.#orb?.props(),
         onContext: () => void this.slash('/usage'),
         onEdit: ev => {
-          if (['report', 'agent-inspector', 'plan'].includes(this.overlays.at(-1)?.key ?? '')) {
+          if (['report', 'agent-inspector', 'agent-hub', 'plan'].includes(this.overlays.at(-1)?.key ?? '')) {
             return
           }
 
@@ -1883,7 +1883,7 @@ export class App implements OverlayHost {
         },
         onQueueEdit: () => this.dequeue(),
         onSend: ev => {
-          if (['report', 'agent-inspector', 'plan'].includes(this.overlays.at(-1)?.key ?? '')) {
+          if (['report', 'agent-inspector', 'agent-hub', 'plan'].includes(this.overlays.at(-1)?.key ?? '')) {
             return
           }
 
@@ -1891,7 +1891,7 @@ export class App implements OverlayHost {
           this.changed()
         },
         onSubmit: () => {
-          if (['report', 'agent-inspector', 'plan'].includes(this.overlays.at(-1)?.key ?? '')) {
+          if (['report', 'agent-inspector', 'agent-hub', 'plan'].includes(this.overlays.at(-1)?.key ?? '')) {
             return
           }
 
@@ -1899,7 +1899,7 @@ export class App implements OverlayHost {
           this.changed()
         },
         onUndo: () => {
-          if (['report', 'agent-inspector', 'plan'].includes(this.overlays.at(-1)?.key ?? '')) {
+          if (['report', 'agent-inspector', 'agent-hub', 'plan'].includes(this.overlays.at(-1)?.key ?? '')) {
             return
           }
 

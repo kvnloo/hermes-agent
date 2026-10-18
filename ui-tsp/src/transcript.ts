@@ -325,6 +325,7 @@ export class Transcript {
     }
 
     agent.last = p
+    agent.childSessionId = p.child_session_id ?? agent.childSessionId
 
     if (type === 'subagent.tool' || ((type === 'subagent.progress' || type === 'subagent.thinking') && p.text)) {
       (agent.activity ??= []).push({

@@ -312,7 +312,11 @@ def _build_child_agent(
     # Sidebar marker: subagent sessions stay out of session pickers even when a
     # parent delete orphans them (mirrors /branch's ``_branched_from``).
     if parent_sid and getattr(child, "_session_init_model_config", None) is not None:
-        child._session_init_model_config["_delegate_from"] = parent_sid
+        child._session_init_model_config.update({
+            "_delegate_from": parent_sid, "_subagent_id": subagent_id,
+            "_parent_subagent_id": parent_subagent_id, "_delegate_goal": goal,
+            "_delegate_role": effective_role,
+        })
     # Shared pool lets children rotate credentials on rate limits.
     child_pool = _resolve_child_credential_pool(
         rt["provider"], parent_agent, rt["base_url"], effective_requested_provider=rt.get("requested_provider"),

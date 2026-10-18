@@ -29,6 +29,7 @@ export interface Subagent {
   /** Worker name from Hermes, when the event sends one. */
   label?: string
   index: number
+  childSessionId?: string
   /** Exact parent agent identity from Hermes, not an inferred task order. */
   parentId?: string
   status: 'cancelled' | 'done' | 'failed' | 'queued' | 'running'

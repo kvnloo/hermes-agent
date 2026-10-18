@@ -41,11 +41,12 @@ def _jobs_list(rid, params):
             state = "cancelled" if proc.completion_reason == "killed" else "completed" if proc.exit_code == 0 else "failed"
         jobs.append({"id": proc.id, "kind": "process", "title": proc.command[:200],
                      "state": state, "started": proc.started_at, "owner_session_id": sid,
-                     "parent_id": None})
+                     "parent_id": None, "can_cancel": not proc.exited})
     for record in _owned_subagent_records(sid, transport, owner):
         jobs.append({"id": record["subagent_id"], "kind": "subagent", "title": record.get("goal") or "Subagent",
                      "state": record.get("status") or "running", "started": record.get("started_at") or 0,
-                     "owner_session_id": sid, "parent_id": record.get("parent_id")})
+                     "owner_session_id": sid, "parent_id": record.get("parent_id"),
+                     "can_cancel": _hub_row(record, owned=True)["actions"]["stop"]})
     return _ok(rid, {"jobs": jobs})
 
 

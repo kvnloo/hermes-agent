@@ -3662,6 +3662,7 @@ from . import (  # noqa: E402
     methods_tools as _methods_tools, prompt_turn as _prompt_turn, billing_view as _billing_view,
     methods_projects as _methods_projects, methods_session_foreign as _methods_session_foreign,
     methods_session_control as _methods_session_control, methods_subagents as _methods_subagents,
+    methods_agent_hub as _methods_agent_hub,
     methods_jobs as _methods_jobs, methods_session_fork as _methods_session_fork,
     methods_session_tree as _methods_session_tree,
     methods_browser_blocks as _methods_browser_blocks,
@@ -3680,7 +3681,7 @@ for _m in (
     _methods_config_set, _methods_complete, _methods_tools, _methods_profiles, _methods_images,
     _methods_settings,
     _methods_bot_relay, _prompt_turn, _billing_view, _methods_projects, _methods_session_foreign,
-    _methods_session_tree, _methods_session_fork, _methods_session_control, _methods_subagents, _methods_jobs, _methods_browser_blocks, _methods_vault, _methods_free_tier, _methods_connectors,
+    _methods_session_tree, _methods_session_fork, _methods_session_control, _methods_subagents, _methods_agent_hub, _methods_jobs, _methods_browser_blocks, _methods_vault, _methods_free_tier, _methods_connectors,
     _methods_connectors_account, _methods_display, _methods_display_watch, _methods_onboarding,
     _methods_i18n, _methods_shared_metrics):
     _m.register(sys.modules[__name__])

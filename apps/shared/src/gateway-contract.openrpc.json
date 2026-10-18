@@ -4147,6 +4147,24 @@
       }
     },
     {
+      "name": "subagent.hub",
+      "summary": "Live and persisted descendant roster, with explicit supported actions.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/SessionParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/AgentHubResult"
+        }
+      }
+    },
+    {
       "name": "subagent.interrupt",
       "summary": "Hard-interrupt one owned child; ``found`` is false when it already finished.",
       "params": [
@@ -4183,6 +4201,24 @@
       }
     },
     {
+      "name": "subagent.message",
+      "summary": "Queue steering to an exact owned live child, never revive a completed child. Queued is not delivered.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/AgentMessageParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/AgentControlResult"
+        }
+      }
+    },
+    {
       "name": "subagent.steer",
       "summary": "Queue steering text into a live delegated child owned by this session.",
       "params": [
@@ -4201,6 +4237,24 @@
       }
     },
     {
+      "name": "subagent.stop",
+      "summary": "Cooperatively request cancellation; acknowledgement is not terminal truth.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/AgentControlParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/AgentControlResult"
+        }
+      }
+    },
+    {
       "name": "subagent.tail",
       "summary": "Last 16KB of an owned child's live transcript.",
       "params": [
@@ -4215,6 +4269,24 @@
         "name": "result",
         "schema": {
           "$ref": "#/components/schemas/SubagentTailResult"
+        }
+      }
+    },
+    {
+      "name": "subagent.transcript",
+      "summary": "Read a canonical page of an owned descendant's full stored transcript, also while running.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/AgentTranscriptParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/AgentTranscriptResult"
         }
       }
     },
@@ -4936,6 +5008,237 @@
         "title": "ActiveSubagent",
         "type": "object"
       },
+      "AgentActions": {
+        "additionalProperties": false,
+        "properties": {
+          "send": {
+            "title": "Send",
+            "type": "boolean"
+          },
+          "stop": {
+            "title": "Stop",
+            "type": "boolean"
+          },
+          "transcript": {
+            "title": "Transcript",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "send",
+          "stop",
+          "transcript"
+        ],
+        "title": "AgentActions",
+        "type": "object"
+      },
+      "AgentControlParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "subagent_id": {
+            "minLength": 1,
+            "title": "Subagent Id",
+            "type": "string"
+          },
+          "child_session_id": {
+            "minLength": 1,
+            "title": "Child Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "subagent_id",
+          "child_session_id"
+        ],
+        "title": "AgentControlParams",
+        "type": "object"
+      },
+      "AgentControlResult": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "queued",
+              "cancel_requested",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "AgentControlResult",
+        "type": "object"
+      },
+      "AgentHubResult": {
+        "additionalProperties": false,
+        "properties": {
+          "agents": {
+            "items": {
+              "$ref": "#/components/schemas/AgentHubRow"
+            },
+            "title": "Agents",
+            "type": "array"
+          }
+        },
+        "required": [
+          "agents"
+        ],
+        "title": "AgentHubResult",
+        "type": "object"
+      },
+      "AgentHubRow": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "subagent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Subagent Id"
+          },
+          "child_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Child Session Id"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Id"
+          },
+          "goal": {
+            "title": "Goal",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Model"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "last_tool": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Tool"
+          },
+          "actions": {
+            "$ref": "#/components/schemas/AgentActions"
+          }
+        },
+        "required": [
+          "id",
+          "goal",
+          "status",
+          "actions"
+        ],
+        "title": "AgentHubRow",
+        "type": "object"
+      },
+      "AgentMessageParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "subagent_id": {
+            "minLength": 1,
+            "title": "Subagent Id",
+            "type": "string"
+          },
+          "child_session_id": {
+            "minLength": 1,
+            "title": "Child Session Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 32000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "subagent_id",
+          "child_session_id",
+          "text"
+        ],
+        "title": "AgentMessageParams",
+        "type": "object"
+      },
       "AgentPluginRow": {
         "additionalProperties": false,
         "description": "``methods_tools._plugin_rows`` + ``plugins_cmd_catalog.catalog_row_fields`` provenance.",
@@ -5125,6 +5428,91 @@
           "uptime"
         ],
         "title": "AgentProcessRow",
+        "type": "object"
+      },
+      "AgentTranscriptParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "child_session_id": {
+            "minLength": 1,
+            "title": "Child Session Id",
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 50,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "child_session_id"
+        ],
+        "title": "AgentTranscriptParams",
+        "type": "object"
+      },
+      "AgentTranscriptResult": {
+        "additionalProperties": false,
+        "properties": {
+          "child_session_id": {
+            "title": "Child Session Id",
+            "type": "string"
+          },
+          "messages": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Next Offset"
+          },
+          "available": {
+            "default": false,
+            "title": "Available",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "child_session_id",
+          "messages"
+        ],
+        "title": "AgentTranscriptResult",
         "type": "object"
       },
       "AgentsListParams": {
@@ -17379,6 +17767,11 @@
             ],
             "default": null,
             "title": "Parent Id"
+          },
+          "can_cancel": {
+            "default": false,
+            "title": "Can Cancel",
+            "type": "boolean"
           }
         },
         "required": [

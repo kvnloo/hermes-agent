@@ -3,6 +3,59 @@
 // tests/tui_gateway/contracts/test_generated.py fails when this file is stale.
 /* eslint-disable */
 // ── Types ──
+/** Any method addressed at one live session. */
+export interface SessionParams {
+  session_id: string
+  profile?: string | null
+}
+export interface AgentHubResult {
+  agents: AgentHubRow[]
+}
+export interface AgentHubRow {
+  id: string
+  subagent_id?: string | null
+  child_session_id?: string | null
+  parent_id?: string | null
+  goal: string
+  model?: string | null
+  status: string
+  last_tool?: string | null
+  actions: AgentActions
+}
+export interface AgentActions {
+  send: boolean
+  stop: boolean
+  transcript: boolean
+}
+export interface AgentTranscriptParams {
+  session_id: string
+  profile?: string | null
+  child_session_id: string
+  offset?: number
+  limit?: number
+}
+export interface AgentTranscriptResult {
+  child_session_id: string
+  messages: Record<string, unknown>[]
+  next_offset?: number | null
+  available?: boolean
+}
+export interface AgentMessageParams {
+  session_id: string
+  profile?: string | null
+  subagent_id: string
+  child_session_id: string
+  text: string
+}
+export interface AgentControlResult {
+  status: 'queued' | 'cancel_requested' | 'rejected'
+}
+export interface AgentControlParams {
+  session_id: string
+  profile?: string | null
+  subagent_id: string
+  child_session_id: string
+}
 /** Any method the desktop may route to a named profile (``requestGatewayForProfile`` adds ``profile``). */
 export interface ProfileParams {
   profile?: string | null
@@ -329,11 +382,6 @@ export interface HandoffRequestResult {
   session_key: string
   platform: string
   home_name: string
-}
-/** Any method addressed at one live session. */
-export interface SessionParams {
-  session_id: string
-  profile?: string | null
 }
 /** ``state`` is pending | running | completed | failed, or '' when nothing was requested. */
 export interface HandoffStateResult {
@@ -1916,6 +1964,7 @@ export interface JobSnapshot {
   started: number
   owner_session_id: string
   parent_id?: string | null
+  can_cancel?: boolean
 }
 export interface JobsTailParams {
   session_id: string
@@ -5596,14 +5645,22 @@ export interface RpcMethods {
   'spawn_tree.load': { params: SpawnTreeLoadParams; result: SpawnTreeLoadResult }
   /** Persist a finished delegation tree snapshot under the session's spawn-trees dir. */
   'spawn_tree.save': { params: SpawnTreeSaveParams; result: SpawnTreeSaveResult }
+  /** Live and persisted descendant roster, with explicit supported actions. */
+  'subagent.hub': { params: SessionParams; result: AgentHubResult }
   /** Hard-interrupt one owned child; ``found`` is false when it already finished. */
   'subagent.interrupt': { params: SubagentIdParams; result: SubagentInterruptResult }
   /** Live children owned by this session (other sessions' children never leak). */
   'subagent.list': { params: SessionParams; result: SubagentListResult }
+  /** Queue steering to an exact owned live child, never revive a completed child. Queued is not delivered. */
+  'subagent.message': { params: AgentMessageParams; result: AgentControlResult }
   /** Queue steering text into a live delegated child owned by this session. */
   'subagent.steer': { params: SubagentSteerParams; result: SubagentSteerResult }
+  /** Cooperatively request cancellation; acknowledgement is not terminal truth. */
+  'subagent.stop': { params: AgentControlParams; result: AgentControlResult }
   /** Last 16KB of an owned child's live transcript. */
   'subagent.tail': { params: SubagentIdParams; result: SubagentTailResult }
+  /** Read a canonical page of an owned descendant's full stored transcript, also while running. */
+  'subagent.transcript': { params: AgentTranscriptParams; result: AgentTranscriptResult }
   /** Schedule a downgrade / same-price change or a period-end cancellation. */
   'subscription.change': { params: SubscriptionChangeParams; result: BillingPendingChangeResult }
   /** Chargeless quote of what a plan change would do (billing:manage). */
@@ -5899,10 +5956,14 @@ export const RPC_METHODS = [
   'spawn_tree.list',
   'spawn_tree.load',
   'spawn_tree.save',
+  'subagent.hub',
   'subagent.interrupt',
   'subagent.list',
+  'subagent.message',
   'subagent.steer',
+  'subagent.stop',
   'subagent.tail',
+  'subagent.transcript',
   'subscription.change',
   'subscription.preview',
   'subscription.resume',

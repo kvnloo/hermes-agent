@@ -24,6 +24,7 @@ class JobSnapshot(Result):
     started: float
     owner_session_id: str
     parent_id: str | None = None
+    can_cancel: bool = False
 
 
 class JobsListResult(Result):
