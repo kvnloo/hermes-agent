@@ -34,6 +34,7 @@ must fit the platform limit. Receipt directories are never auto-pruned.
 |---|---|---|
 | `smoke` | launch, welcome, actual gateway session, unsent composer edit, `/exit`, idle-shell readback, 500 ms late-byte audit | Real frontend + real gateway; no prompt submission |
 | `settings` | `/settings`, canonical-schema equality, Session navigation, profile search, edit/Escape, byte-identical cancellation, reopened readback | Real gateway; no fixture replies |
+| `lsp-diagnostics` | grouped diagnostic disclosure plus typed cross-file references, stable nested symbol tree, full long-label locations and hover at measured widths | Explicit notification/result fixtures; no real semantic-server success claim |
 | `file-links` | read tool's exact session-relative href, modifier click, exact file-block path | Explicit notification fixture, actual README bytes, actual Tern click/file block |
 | `answer-copy` | native Copy action, exact answer-only OSC52 bytes, attempted host Paste roundtrip | Explicit notification fixture; read-only stdout observation; never seed expected clipboard text |
 | `todo-hud` | exact done/total/current summary, native expand/collapse, full checklist | Explicit `todo.updated` notification fixture |

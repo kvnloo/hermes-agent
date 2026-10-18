@@ -182,6 +182,41 @@ async function lspDiagnostics() {
     await until(()=>native.snapshot(),snap=>snap.nodes.some(n=>n.name==='LSP fixture diagnostic 0' && !n.states?.hidden),'visible expanded diagnostic')
     await capture('expanded')
   },true)
+  await step('typed references, nested symbols and hover from labelled semantic result replay',async()=>{
+    const span = {start:{line:2,col:3},end:{line:4,col:5}}
+    const base = {path:`${manifest.root}/README.md`,server:'explicit-fixture-server',position_encoding:'utf-16'}
+    const location = {path:base.path,range:span}
+    const child = {id:'child',name:'Nested semantic symbol with a deliberately long retained label '.repeat(4),kind:6,location,selection:span,children:[]}
+    const outputs = [
+      {...base,kind:'references',locations:[location,{path:`${manifest.root}/AGENTS.md`,range:span}]},
+      {...base,kind:'symbols',symbols:[{...child,id:'parent',name:'Outer',children:[child]}]},
+      {...base,kind:'hover',range:span,contents:[{format:'markdown',text:'**Semantic hover fixture**',language:null}]},
+      {...base,kind:'unavailable',operation:'references',message:'Fixture server operation unavailable; not checked-clean'}
+    ]
+    await replay('message.start')
+    for (const [index,result] of outputs.entries()) {
+      await replay('tool.start',{name:'lsp',tool_id:`semantic-${index}`,args:{operation:result.kind}})
+      await replay('tool.complete',{name:'lsp',tool_id:`semantic-${index}`,result:{lsp_result:result}})
+      if (index===1) {
+        await until(()=>native.rendered(),ns=>[...ns.values()].some(n=>n.p?.role==='omp.tool.symbols'),'symbol tree before hover')
+        await sizes()
+      }
+    }
+    await replay('message.complete',{status:'complete',text:''})
+    const expectedLinks = [`file://${manifest.root}/README.md#L2-L4`,`file://${manifest.root}/AGENTS.md#L2-L4`]
+    const rendered = await until(()=>native.rendered(),ns=>{
+      const refs = [...ns.values()].filter(n=>n.p?.role==='omp.tool.reference')
+      return [...ns.values()].some(n=>n.p?.role==='omp.tool.lsp.unavailable') && refs.length===2 && refs.every((n,i)=>n.p?.href===expectedLinks[i])
+    },'semantic results after real session.info confirms the local backend')
+    const refs = [...rendered.values()].filter(n=>n.p?.role==='omp.tool.reference')
+    assert.equal(refs.length,2)
+    assert.deepEqual(refs.map(n=>n.p?.href),expectedLinks)
+    const tree = [...rendered.values()].find(n=>n.p?.role==='omp.tool.symbols')
+    assert(tree)
+    assert.deepEqual((tree.p?.nodes as {id:string;children:{id:string}[]}[]).map(n=>[n.id,n.children[0]?.id]),[['parent','child']])
+    assert([...rendered.values()].some(n=>n.p?.role==='omp.tool.symbol.location' && String(n.p.text).startsWith(child.name)))
+    await capture('semantic-final')
+  },true)
 }
 
 async function answerCopy() {

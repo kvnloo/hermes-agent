@@ -2045,6 +2045,72 @@ export interface PlanDecideParams {
   intent: 'approve' | 'refine'
   feedback?: string
 }
+export interface LspQueryParams {
+  session_id: string
+  profile?: string | null
+  operation: 'references' | 'symbols' | 'hover'
+  path: string
+  line?: number
+  col?: number
+}
+export interface LspQueryResult {
+  lsp_result: LspReferences | LspSymbols | LspHover | LspFailure
+}
+export interface LspReferences {
+  path: string
+  server: string | null
+  position_encoding?: 'utf-16'
+  kind: 'references'
+  locations: LspLocation[]
+}
+export interface LspLocation {
+  path: string
+  range: LspRange
+}
+export interface LspRange {
+  start: LspPosition
+  end: LspPosition
+}
+export interface LspPosition {
+  line: number
+  col: number
+}
+export interface LspSymbols {
+  path: string
+  server: string | null
+  position_encoding?: 'utf-16'
+  kind: 'symbols'
+  symbols: LspSymbol[]
+}
+export interface LspSymbol {
+  id: string
+  name: string
+  kind: number
+  location: LspLocation
+  selection: LspRange
+  children: LspSymbol[]
+}
+export interface LspHover {
+  path: string
+  server: string | null
+  position_encoding?: 'utf-16'
+  kind: 'hover'
+  contents: LspHoverContent[]
+  range: LspRange | null
+}
+export interface LspHoverContent {
+  format: 'markdown' | 'plaintext' | 'code'
+  text: string
+  language?: string | null
+}
+export interface LspFailure {
+  path: string
+  server: string | null
+  position_encoding?: 'utf-16'
+  kind: 'unavailable' | 'error'
+  operation: 'references' | 'symbols' | 'hover'
+  message: string
+}
 /** ``word`` is the token under the cursor (``@`` prefix = context reference); ``cwd`` / ``session_id`` pick the directory the listing resolves against. */
 export interface CompletePathParams {
   profile?: string | null
@@ -5427,6 +5493,8 @@ export interface RpcMethods {
   'learning.frames': { params: LearningFramesParams; result: LearningFramesResult }
   /** Stateless one-shot LLM completion (titles, ideas) on the session's or the task backend. */
   'llm.oneshot': { params: LlmOneshotParams; result: LlmOneshotResult }
+  /** Read-only references, document symbols or hover from the session-local Hermes LSP service; never a model call. */
+  'lsp.query': { params: LspQueryParams; result: LspQueryResult }
   /** Curated MCP presets with per-profile installed/enabled state and the env keys each needs. */
   'mcp.catalog': { params: ProfileParams; result: McpCatalogResult }
   /** Add a server to the profile's config from a catalog preset and/or an explicit config. */
@@ -5874,6 +5942,7 @@ export const RPC_METHODS = [
   'learning.edit',
   'learning.frames',
   'llm.oneshot',
+  'lsp.query',
   'mcp.catalog',
   'mcp.servers.add',
   'mcp.servers.list',

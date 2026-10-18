@@ -10,6 +10,7 @@ import { cycleModel } from './model-cycle.js'
 import { openAgentHub } from './overlays/agent-hub.js'
 import { openHelp } from './overlays/help.js'
 import { openHistorySearch } from './overlays/history.js'
+import { openLsp } from './overlays/lsp.js'
 import { openModelPicker, switchModel } from './overlays/models.js'
 import { confirmOverlay } from './overlays/prompts.js'
 import { openSessionPicker } from './overlays/sessions.js'
@@ -31,6 +32,7 @@ const COMMANDS: readonly LocalCommand[] = [
   { name: 'tree', run: app => openSessionPicker(app, true) },
   { name: 'agents', run: (app, arg) => arg ? false : openAgentHub(app) },
   { name: 'history-search', run: openHistorySearch },
+  { name: 'lsp', run: openLsp },
   { name: 'editor', run: app => app.editExternal() },
   { name: 'model-next', run: app => cycleModel(app, 1) },
   { name: 'model-prev', run: app => cycleModel(app, -1) },

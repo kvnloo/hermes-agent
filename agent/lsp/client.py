@@ -459,6 +459,12 @@ class LSPClient:
         if not self._connection_is_open():
             raise LSPProtocolError(f"cannot send {method!r}: server connection closed")
 
+    async def semantic_query(self, method: str, params: Any) -> Any:
+        """Read-only semantic endpoints; never accept arbitrary LSP commands/edits."""
+        if method not in {"textDocument/references", "textDocument/documentSymbol", "textDocument/hover"}:
+            raise ValueError("Unsupported semantic LSP method")
+        return await self._send_request_with_retry(method, params, timeout=DIAGNOSTICS_REQUEST_TIMEOUT)
+
     async def _send_request(self, method: str, params: Any) -> Any:
         self._require_open(method)
         req_id, self._next_id = self._next_id, self._next_id + 1
