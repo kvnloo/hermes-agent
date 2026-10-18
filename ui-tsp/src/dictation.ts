@@ -50,7 +50,7 @@ export class Dictation {
 
     const sid = this.app.sid
 
-    if (!sid || this.app.overlays.some(o => o.modal)) {
+    if (!sid || this.app.liveVoice.blocked || this.app.overlays.some(o => o.modal)) {
       return
     }
 

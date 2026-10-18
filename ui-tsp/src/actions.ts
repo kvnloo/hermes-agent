@@ -53,7 +53,9 @@ export const APP_ACTIONS: readonly Action[] = [
     extraModifiers: true,
     when: always,
     run: app => {
-      if (app.dictation.blocked) {
+      if (app.liveVoice.blocked) {
+        void app.liveVoice.control('stop')
+      } else if (app.dictation.blocked) {
         void app.dictation.stop(true)
       } else if (app.busy) {
         app.interrupt()
@@ -142,6 +144,14 @@ export const APP_ACTIONS: readonly Action[] = [
     keys: ['alt+v'],
     when: ctx => !ctx.overlayOpen && !ctx.completionOpen,
     run: app => app.dictation.toggle()
+  },
+  {
+    id: 'app.live.toggle',
+    title: 'Live voice (explicit consent; automatic spoken turns)',
+    group: 'Control',
+    keys: ['alt+shift+v'],
+    when: ctx => !ctx.overlayOpen && !ctx.completionOpen,
+    run: app => app.liveVoice.toggle()
   },
   {
     id: 'app.model.select',

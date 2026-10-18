@@ -183,7 +183,7 @@ _LONG_HANDLERS = frozenset({
     "profiles.list", "profiles.set_asset", "bot_relay.roster.sync", "bot_relay.outbox.drain",
     "bot_relay.deliver", "bot_relay.reply", "image.generate", "projects.discover_repos",
     "projects.record_repos", "projects.for_cwd", "projects.tree", "projects.project_sessions",
-    "setup.runtime_check", "setup.status", "free_tier.provision", "voice.toggle", "voice.record", "voice.dictate.start", "voice.dictate.stop", "voice.tts", "wake.start",
+    "setup.runtime_check", "setup.status", "free_tier.provision", "voice.toggle", "voice.record", "voice.dictate.start", "voice.dictate.stop", "voice.live.start", "voice.live.control", "voice.tts", "wake.start",
     "wake.status", "session.active_list", "session.branch", "session.compress", "session.list",
     "session.tree", "session.rename", "session.resume", "session.save", "session.fork", "session.workspace.move", "shell.exec", "skills.manage", "slash.exec",
     "command.dispatch",  # /goal draft invokes the auxiliary model; never block the RPC reader
@@ -702,7 +702,7 @@ def _emit(event: str, sid: str, payload: dict | None = None) -> bool:
     from agent.notification_presentation import event_presentation_muted
     if event_presentation_muted(event, sid):
         return False
-    return write_json(_event_frame(event, sid, payload))
+    return _emit_with_live_voice(event, sid, payload)
 
 
 from tui_gateway import server_requests as _server_requests  # noqa: E402

@@ -3213,6 +3213,20 @@ export interface DictateStopParams {
   capture_id: string
   cancel?: boolean
 }
+export interface LiveVoiceStartParams {
+  session_id: string
+  live_id: string
+  consent: boolean
+}
+export interface LiveVoiceResult {
+  live_id: string
+}
+export interface LiveVoiceControlParams {
+  session_id: string
+  live_id: string
+  action: 'stop' | 'mute' | 'interrupt'
+  muted?: boolean
+}
 /** ``surface`` names the caller ("tui" | "gui"); ``persist`` is the explicit gesture that also flips ``wake_word.enabled`` on; ``client_capture`` asks for PCM streamed via wake.feed. */
 export interface WakeStartParams {
   surface?: string | null
@@ -5345,6 +5359,14 @@ export interface DictationPayload {
   final?: boolean
   error?: string | null
 }
+export interface LiveVoicePayload {
+  live_id: string
+  phase: 'idle' | 'starting' | 'listening' | 'transcribing' | 'thinking' | 'speaking' | 'interrupted' | 'muted' | 'stopping' | 'error'
+  muted?: boolean
+  user_text?: string | null
+  assistant_text?: string | null
+  error?: string | null
+}
 /** ``methods_voice._vr_on_status``; states come from the recorder (idle / listening / transcribing …). */
 export interface VoiceStatusPayload {
   state: string
@@ -5943,6 +5965,10 @@ export interface RpcMethods {
   'voice.dictate.start': { params: DictateStartParams; result: DictateResult }
   /** Finish dictation, or cancel and discard all audio and hypotheses. */
   'voice.dictate.stop': { params: DictateStopParams; result: DictateResult }
+  /** Control the exact live voice lease: stop, mute or interrupt. */
+  'voice.live.control': { params: LiveVoiceControlParams; result: LiveVoiceResult }
+  /** Explicit consent to live microphone, automatic spoken turns and configured TTS. */
+  'voice.live.start': { params: LiveVoiceStartParams; result: LiveVoiceResult }
   /** VAD-bounded push-to-talk; the transcript arrives as a voice.transcript event. */
   'voice.record': { params: VoiceRecordParams; result: VoiceRecordResult }
   /** /voice parity: report, flip voice mode on/off, or toggle speech output. */
@@ -6239,6 +6265,8 @@ export const RPC_METHODS = [
   'verification.status',
   'voice.dictate.start',
   'voice.dictate.stop',
+  'voice.live.control',
+  'voice.live.start',
   'voice.record',
   'voice.toggle',
   'voice.tts',
@@ -6453,6 +6481,8 @@ export interface BackendGatewayEventMap {
   'voice.dictation': DictationPayload
   /** Barge-in: the spoken interjection interrupted the turn; no payload. */
   'voice.interrupted': Record<string, never>
+  /** Exact-lease live conversation phase; never a dictation draft. */
+  'voice.live': LiveVoicePayload
   /** Voice recorder state changed. */
   'voice.status': VoiceStatusPayload
   /** A voice capture produced text (or a stop phrase / silence limit). */
@@ -6540,6 +6570,7 @@ export const GATEWAY_EVENT_TYPES = [
   'tool.start',
   'voice.dictation',
   'voice.interrupted',
+  'voice.live',
   'voice.status',
   'voice.transcript',
   'wake.detected'

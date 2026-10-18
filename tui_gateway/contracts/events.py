@@ -704,6 +704,18 @@ event("voice.dictation", DictationPayload,
       doc="Replaceable partial hypotheses and one final review-only dictation transcript.")
 
 
+class LiveVoicePayload(Payload):
+    live_id: str
+    phase: Literal["idle", "starting", "listening", "transcribing", "thinking", "speaking", "interrupted", "muted", "stopping", "error"]
+    muted: bool = False
+    user_text: str | None = None
+    assistant_text: str | None = None
+    error: str | None = None
+
+
+event("voice.live", LiveVoicePayload, doc="Exact-lease live conversation phase; never a dictation draft.")
+
+
 class WakeDetectedPayload(Payload):
     """``methods_voice`` wake detector ``_on_detect``."""
 

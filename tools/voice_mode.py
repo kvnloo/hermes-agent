@@ -367,12 +367,16 @@ def _get_beep_volume() -> float:
     return volume
 
 
-def _sd_play_blocking(sd, audio, sample_rate: int, *, timeout: float, blocksize: int = 0) -> None:
+def _sd_play_blocking(sd, audio, sample_rate: int, *, timeout: float, blocksize: int = 0, stop_event=None) -> None:
     """``sd.play`` then poll until idle or *timeout* (``sd.wait()`` has no timeout and
     hangs forever if the device stalls)."""
+    if stop_event is not None and stop_event.is_set():
+        return
     sd.play(audio, samplerate=sample_rate, blocksize=blocksize)
     deadline = time.monotonic() + timeout
     while sd.get_stream() and sd.get_stream().active and time.monotonic() < deadline:
+        if stop_event is not None and stop_event.is_set():
+            break
         time.sleep(0.01)
     sd.stop()
 
@@ -1024,18 +1028,18 @@ def _wsl_powershell_tts_available() -> bool:
     return bool(is_wsl() and shutil.which("powershell.exe") and shutil.which("ffmpeg"))
 
 
-def play_audio_file(file_path: str) -> bool:
+def play_audio_file(file_path: str, *, stop_event=None) -> bool:
     """Play an audio file; True on success. WAV via ``sounddevice.play()`` when allowed,
     else system players: afplay (macOS), WSL2 PowerShell bridge, ffplay, aplay (Linux).
     Interruptible via ``stop_playback()``."""
     mark_audio_output_active(True)  # ref-count real speaker output for the whole call
     try:
-        return _play_audio_file_impl(file_path)
+        return _play_audio_file_impl(file_path, stop_event=stop_event) if stop_event is not None else _play_audio_file_impl(file_path)
     finally:
         mark_audio_output_active(False)
 
 
-def _play_wav_via_sounddevice(file_path: str) -> bool:
+def _play_wav_via_sounddevice(file_path: str, *, stop_event=None) -> bool:
     """Play a WAV through sounddevice; False when unavailable/failed (caller falls through)."""
     try:
         sd, np = _import_audio()
@@ -1055,8 +1059,9 @@ def _play_wav_via_sounddevice(file_path: str) -> bool:
                 np.zeros(int(0.1 * sample_rate), dtype=np.int16), audio_float.astype(np.int16),
                 np.zeros(int(0.05 * sample_rate), dtype=np.int16)])
             blocksize = 4096
+        options = {"stop_event": stop_event} if stop_event is not None else {}
         _sd_play_blocking(sd, audio_data, sample_rate,
-                          timeout=len(audio_data) / sample_rate + 2.0, blocksize=blocksize)
+                          timeout=len(audio_data) / sample_rate + 2.0, blocksize=blocksize, **options)
         return True
     except (ImportError, OSError):
         return False
@@ -1110,16 +1115,20 @@ def _system_player_candidates(file_path: str) -> List[List[str]]:
     return players
 
 
-def _run_system_player(cmd: List[str]) -> bool:
+def _run_system_player(cmd: List[str], *, stop_event=None) -> bool:
     """Run one player to completion (interruptible via stop_playback)."""
     proc = None
     try:
         # Sibling of the TTS/STT credential scrub: players must not inherit tokens/keys.
         # See #56332, #70342.
         from tools.environments.local import hermes_subprocess_env
+        if stop_event is not None and stop_event.is_set():
+            return False
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
                                 env=hermes_subprocess_env(inherit_credentials=False))
         _set_active_playback(proc)
+        if stop_event is not None and stop_event.is_set():
+            proc.terminate()
         proc.wait(timeout=300)
         rc = proc.returncode
         if rc == 0:
@@ -1138,15 +1147,20 @@ def _run_system_player(cmd: List[str]) -> bool:
     return False
 
 
-def _play_audio_file_impl(file_path: str) -> bool:
+def _play_audio_file_impl(file_path: str, *, stop_event=None) -> bool:
+    if stop_event is not None and stop_event.is_set():
+        return False
+    options = {"stop_event": stop_event} if stop_event is not None else {}
     if not os.path.isfile(file_path):
         logger.warning("Audio file not found: %s", file_path)
         return False
     # macOS skips sounddevice output (TCC media-library prompt); afplay handles all formats.
-    if file_path.endswith(".wav") and _sounddevice_output_allowed() and _play_wav_via_sounddevice(file_path):
+    if file_path.endswith(".wav") and _sounddevice_output_allowed() and _play_wav_via_sounddevice(file_path, **options):
         return True
     for cmd in _system_player_candidates(file_path):
-        if shutil.which(cmd[0]) and _run_system_player(cmd):
+        if stop_event is not None and stop_event.is_set():
+            return False
+        if shutil.which(cmd[0]) and _run_system_player(cmd, **options):
             return True
     logger.warning("No audio player available for %s", file_path)
     return False
@@ -1333,12 +1347,14 @@ def _vad_log(msg: str) -> None:
             print(f"[voice-vad] {msg}", file=sys.stderr, flush=True)
 
 
-def _capture_until_quiet(stream, np, block: int, pre_roll, *, endpoint_blocks: int, max_blocks: int) -> str:
+def _capture_until_quiet(stream, np, block: int, pre_roll, *, endpoint_blocks: int, max_blocks: int, should_stop=None) -> Optional[str]:
     """After a trip, read until *endpoint_blocks* of quiet (or *max_blocks*) and write
     pre-roll + capture to a WAV. Playback was cut by the trigger, so silence endpointing works."""
     frames: List[Any] = list(pre_roll)
     quiet = 0
     for _ in range(max_blocks):
+        if should_stop is not None and should_stop():
+            return None
         data, _ = stream.read(block)
         frames.append(data.copy())
         quiet = quiet + 1 if _rms(np, data) < SILENCE_RMS_THRESHOLD else 0
@@ -1427,6 +1443,7 @@ def full_duplex_listen(
     on_trigger: Optional[Callable[[str], None]] = None, multiplier: Optional[float] = None,
     sustained_ms: int = 300, calibration_ms: int = 450, grace_ms: int = 500, pre_roll_ms: int = 1200,
     endpoint_silence_ms: int = 1250, max_utterance_ms: int = 30_000,
+    on_stream: Optional[Callable[[Any], None]] = None, strict: bool = False,
 ) -> Optional[str]:
     """Listen across an ENTIRE agent turn; return the captured interruption WAV path.
 
@@ -1442,6 +1459,8 @@ def full_duplex_listen(
     try:
         sd, np = _import_audio()
     except (ImportError, OSError):
+        if strict:
+            raise
         return None
     block = int(SAMPLE_RATE * 0.03)  # 30ms blocks
     endpoint_blocks = max(1, endpoint_silence_ms // 30)
@@ -1452,6 +1471,8 @@ def full_duplex_listen(
     pre_roll: deque = deque(maxlen=max(1, pre_roll_ms // 30))
     try:
         with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype="int16", blocksize=block) as stream:
+            if on_stream is not None:
+                on_stream(stream)
             while not should_stop():
                 data, _ = stream.read(block)
                 pre_roll.append(data.copy())
@@ -1465,9 +1486,11 @@ def full_duplex_listen(
                     except Exception as e:
                         logger.debug("full-duplex trigger callback failed: %s", e)
                 return _capture_until_quiet(stream, np, block, pre_roll, endpoint_blocks=endpoint_blocks,
-                                            max_blocks=max(1, max_utterance_ms // 30))
+                                            max_blocks=max(1, max_utterance_ms // 30), should_stop=should_stop)
     except Exception as e:
         logger.debug("Full-duplex listener failed: %s", e)
+        if strict:
+            raise
     return None
 
 

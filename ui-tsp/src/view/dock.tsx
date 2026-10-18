@@ -9,12 +9,19 @@ import type { Attachment } from '../attachments.js'
 import type { Dispatch } from '../attention.js'
 import type { Composer } from '../composer.js'
 import type { Dictation } from '../dictation.js'
+import type { LiveVoice } from '../live-voice.js'
 import type { Todo } from '../model.js'
 import type { ReportNotice } from '../reports.js'
 
 import { composerAttachments } from './attachments.js'
 import { age, compact } from './time.js'
 import { checklistNode } from './tools.js'
+
+function voiceSendDisabled(cx: DockContext) {
+  const reason = cx.liveVoice?.blocked ? 'live voice active' : cx.dictation?.blocked ? 'dictation active' : ''
+
+  return reason ? <text key="send-disabled" role="omp.composer.send.disabled" text={`Send disabled: ${reason}`} tone="muted" /> : null
+}
 
 /** What the dock shows. */
 export interface DockContext {
@@ -25,6 +32,7 @@ export interface DockContext {
   onAttachmentRemove?(id: string): void
   onAttachmentRetry?(id: string): void
   dictation?: Dictation
+  liveVoice?: LiveVoice
   onDictation?(): void
   approval?: JSX.Element
   approvalQueued?: number
@@ -231,6 +239,7 @@ function composerNode(cx: DockContext): JSX.Element {
           value={share}
         />
       )}
+      {cx.liveVoice?.view()}
       {composerAttachments(cx.attachments ?? [], id => cx.onAttachmentRemove?.(id), id => cx.onAttachmentRetry?.(id))}
       {cx.dictation && cx.dictation.state !== 'idle' ? (
         <col key="dictation" role={`omp.composer.mic.${cx.dictation.state}`}>
@@ -323,9 +332,7 @@ function composerNode(cx: DockContext): JSX.Element {
             wrap="none"
           />
         ) : null}
-        {cx.dictation?.blocked ? (
-          <text key="send-disabled" role="omp.composer.send.disabled" text="Send disabled: dictation active" tone="muted" />
-        ) : cx.busy ? (
+        {voiceSendDisabled(cx) ?? (cx.busy ? (
           <text
             key="stop"
             onClick={cx.onInterrupt}
@@ -336,7 +343,7 @@ function composerNode(cx: DockContext): JSX.Element {
           />
         ) : (
           <kbd key="send" keys={['enter']} onClick={cx.onSubmit} role="omp.composer.send" title="Send  ⏎" />
-        )}
+        ))}
       </row>
     </col>
   )

@@ -1,7 +1,4 @@
-// The app: one inline Tern surface (role `omp.session`, so Tern's chat styles
-// apply) over one tui_gateway session. Gateway events fold into the
-// transcript. Keys go to the top overlay or the composer. A state change
-// marks the view dirty. Tern draws the frame. The next ack flushes the newest view.
+// One omp.session surface over a gateway session; keys stay with their input owner.
 
 import type {
   ClarifyLockResult,
@@ -31,7 +28,7 @@ import { BindingPreferences } from './binding-preferences.js'
 import { focusBrowserBlock } from './browser-blocks.js'
 import { BtwReports } from './btw.js'
 import { BusyInput } from './busy-input.js'
-import { copyToClipboard } from './clipboard.js'
+import { copyPrompt, copyToClipboard } from './clipboard.js'
 import { localCommand } from './commands.js'
 import { Composer } from './composer.js'
 import { Dictation } from './dictation.js'
@@ -39,6 +36,7 @@ import { editExternal } from './external-editor.js'
 import { type Busy, busyFrom, ownsEvent, Switches } from './flow.js'
 import { FramePump } from './frame.js'
 import { HostLifecycle } from './host-lifecycle.js'
+import { LiveVoice } from './live-voice.js'
 import { MediaDelivery, type MediaPath, ternSharesFrontendHost } from './media-delivery.js'
 import { ModelRecents } from './model-recents.js'
 import type { UserEntry } from './model.js'
@@ -99,6 +97,7 @@ export class App implements OverlayHost {
   readonly composer = new Composer()
   readonly modelRecents = new ModelRecents()
   readonly dictation = new Dictation(this)
+  readonly liveVoice = new LiveVoice(this)
   readonly busyInput = new BusyInput(this)
   readonly bindings = new BindingPreferences(this)
   readonly vimPreference = new VimPreference(this)
@@ -227,6 +226,7 @@ export class App implements OverlayHost {
       // The runtime session died with the process: prompts queue until the next gateway.ready reattaches.
       this.attachments.clear()
       this.dictation.reset()
+      this.liveVoice.disconnect()
       this.sid = null
       this.tableCharts.session('')
       this.todoHud.adopt(null)
@@ -573,7 +573,7 @@ export class App implements OverlayHost {
 
     const escape = this.bindings.actions.find(action => action.id === 'app.interrupt')!
 
-    if (this.dictation.blocked && matchesAction(escape, key)) {
+    if (this.liveVoice.captureBlocked && matchesAction(escape, key)) {
       return escape.run(this)
     }
 
@@ -642,21 +642,7 @@ export class App implements OverlayHost {
   }
 
   /** Copy the draft literally, without submitting it or disturbing the caret. */
-  copyPrompt(currentLine = false) {
-    const { text, cursor } = this.composer
-    const start = text.lastIndexOf('\n', cursor - 1) + 1
-    const end = text.indexOf('\n', cursor)
-
-    try {
-      copyToClipboard(currentLine ? text.slice(start, end < 0 ? undefined : end) : text)
-      // OSC52 has no acknowledgement; don't claim the terminal accepted it.
-      this.transcript.notice('Composer text sent to the terminal clipboard (OSC 52).')
-    } catch {
-      this.transcript.notice('Could not copy the composer text to the clipboard.', 'warning')
-    }
-
-    this.changed()
-  }
+  copyPrompt(currentLine = false) { copyPrompt(this, currentLine) }
 
   /** Use Hermes's existing display command, not an independent UI preference.
    * Display show/hide is profile-scoped in the gateway, unlike effort levels.
@@ -811,6 +797,10 @@ export class App implements OverlayHost {
   }
 
   ctrlC() {
+    if (this.liveVoice.blocked) { void this.liveVoice.control('stop');
+
+ return }
+
     if (this.dictation.blocked) {
       void this.dictation.stop(true)
 
@@ -846,6 +836,7 @@ export class App implements OverlayHost {
     this.attachments.clear()
     this.changed()
     void this.dictation.stop(true)
+    void this.liveVoice.control('stop')
 
     for (const overlay of [...this.overlays]) {
       this.close(overlay)
@@ -876,7 +867,7 @@ export class App implements OverlayHost {
 
     return !this.#quitting && this.sid !== null && !this.#switches.pending &&
       !this.#submittingApproval &&
-      !this.rewinding && !this.dictation.blocked && !this.attachments.blocked &&
+      !this.rewinding && !this.dictation.blocked && !this.liveVoice.blocked && !this.attachments.blocked &&
       (!owner?.modal || isApprovalPrompt(owner)) && (!approval || this.owns(approval)) &&
       (!owner || !isClarifyPrompt(owner) || owner.hidden)
   }
@@ -1241,6 +1232,7 @@ export class App implements OverlayHost {
       return
     }
 
+    void this.liveVoice.control('stop')
     const token = this.#switches.begin()
     this.changed()
 
@@ -1310,6 +1302,7 @@ export class App implements OverlayHost {
 
   /** Resumes and adopts stored session `id`; undefined when a later switch superseded this one. */
   async #resume(id: string): Promise<CreateResult | undefined> {
+    void this.liveVoice.control('stop')
     const token = this.#switches.begin()
     this.changed()
 
@@ -1403,6 +1396,8 @@ export class App implements OverlayHost {
   // ── Gateway ────────────────────────────────────────────────────────
 
   #onGatewayEvent(ev: AnyGatewayEvent) {
+    this.liveVoice.event(ev)
+
     // Another session's traffic (one being closed, or left by a switch) never reaches this transcript.
     if (!ownsEvent(this.sid, ev)) {
       return
@@ -2014,6 +2009,7 @@ export class App implements OverlayHost {
         onAttachmentRemove: id => void this.attachments.remove(id),
         onAttachmentRetry: id => this.attachments.retry(id),
         dictation: this.dictation,
+        liveVoice: this.liveVoice,
         onDictation: () => this.dictation.toggle(),
         context: max > 0 ? { max, used } : undefined,
         cost: usage?.cost_usd ?? undefined,
