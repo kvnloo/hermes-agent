@@ -36,6 +36,7 @@ import { FramePump } from './frame.js'
 import { HostLifecycle } from './host-lifecycle.js'
 import { ModelRecents } from './model-recents.js'
 import type { UserEntry } from './model.js'
+import { openOperationalSheet } from './operations.js'
 import { OrbActivity, ThinkingOrb } from './orb.js'
 import type { Overlay, OverlayHost } from './overlay.js'
 import { openAgentInspector } from './overlays/agent-inspector.js'
@@ -50,7 +51,7 @@ import { openSettings } from './overlays/settings.js'
 import type { SheetHost } from './overlays/sheet.js'
 import { programPaletteOf } from './palette.js'
 import { latestPlan } from './plan.js'
-import { isReportCommand, type Report, type ReportNotice } from './reports.js'
+import { isOperationalCommand, isReportCommand, type Report, type ReportNotice } from './reports.js'
 import { Retention } from './retention.js'
 import { openRewind, rewindDisabledReason } from './rewind.js'
 import { SPLASH_ROLE } from './splash/index.js'
@@ -998,6 +999,12 @@ export class App implements OverlayHost {
     }
 
     const sid = this.sid
+
+    if (isOperationalCommand(name)) {
+      await openOperationalSheet(this, name, arg, copyToClipboard)
+
+      return
+    }
 
     try {
       const r = await this.#gw.request<{ output?: string; warning?: string; type?: string; message?: string }>(

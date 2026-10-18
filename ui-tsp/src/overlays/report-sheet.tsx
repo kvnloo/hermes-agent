@@ -17,6 +17,17 @@ export function openReportSheet(host: ReportHost, report: Report) {
     modal: true,
     node: id => (
       <Sheet id={id} role="omp.overlay.report" title={report.title}>
+        {report.status ? (
+          <text
+            key="state"
+            role="omp.report.state"
+            text={report.status}
+            tone={report.status === 'unavailable' ? 'error' : undefined}
+          />
+        ) : null}
+        {report.scope ? (
+          <text key="scope" role="omp.report.scope" text={`Hermes profile: ${report.scope} · Read only`} wrap="word" />
+        ) : null}
         <md key="markdown" role="omp.report.body">
           {report.text}
         </md>
@@ -61,4 +72,6 @@ export function openReportSheet(host: ReportHost, report: Report) {
   }
 
   host.open(sheet)
+
+  return sheet
 }

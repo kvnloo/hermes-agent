@@ -224,6 +224,33 @@ async function todoHud() {
 }
 async function shortcuts() {
   const before = await native.configBytes()
+  await step('MCP and SSH operational sheets read the real scoped Hermes API without mutations', async()=>{
+    for (const [commandText, view] of [['/mcp list','mcp-list'],['/mcp status','mcp-status'],['/mcp tools','mcp-tools'],['/ssh list','ssh-list']]) {
+      await command(commandText!)
+      await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.role === 'omp.report.state' && n.p.text === 'ready'), `ready ${view}`)
+      const wire = await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='request' && w.body.method==='operations.report' && record(w.body.params).view===view), `real ${view} request`)
+      const request = wire.findLast(w=>w.dir==='request' && w.body.method==='operations.report' && record(w.body.params).view===view)!.body
+      assert.deepEqual(request.params,{session_id:sid,view})
+      const replies = await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='delivered' && w.body.id===request.id), `real ${view} reply`)
+      const reply = replies.find(w=>w.dir==='delivered' && w.body.id===request.id)!.body
+      assert(!reply.error, JSON.stringify(reply))
+      const result = record(reply.result)
+      assert.equal(result.read_only,true)
+      assert.equal(result.state,'ready')
+      assert(Array.isArray(result.rows))
+      assert([...(await native.rendered()).values()].some(n=>n.p?.text===`Hermes profile: ${result.scope} · Read only`))
+      await capture(String(view))
+      await native.key('Escape')
+      await until(()=>native.rendered(), ns=>![...ns.values()].some(n=>n.p?.role==='omp.overlay.report'), 'operational sheet closed')
+    }
+    const calls = (await native.wire()).filter(w=>w.dir==='request' && ['operations.report','slash.exec'].includes(String(w.body.method))).length
+    await command('/ssh add unsupported-fixture')
+    await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.role==='omp.report.state' && n.p.text==='unsupported'), 'explicit unsupported SSH management')
+    assert.equal((await native.wire()).filter(w=>w.dir==='request' && ['operations.report','slash.exec'].includes(String(w.body.method))).length,calls)
+    await native.key('Escape')
+    await until(()=>native.rendered(), ns=>![...ns.values()].some(n=>n.p?.role==='omp.overlay.report'), 'unsupported management closed')
+    assert.equal(await native.configBytes(),before)
+  })
   await step('Alt+M opens model picker without changing the model', async()=>{
     await native.shortcut('alt+m')
     await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.k === 'picker' && n.p?.title === 'Models'), 'model picker from Alt+M')

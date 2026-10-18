@@ -1952,6 +1952,24 @@ export interface ClientCapabilitiesResult {
   server_requests: string[]
   declines_not_shown?: boolean
 }
+export interface OperationalReportParams {
+  session_id: string
+  view: OperationalView
+}
+export type OperationalView = 'mcp-list' | 'mcp-status' | 'mcp-tools' | 'mcp-catalog' | 'ssh-list'
+export interface OperationalReportResult {
+  view: OperationalView
+  scope: string
+  state: OperationalReportState
+  read_only: true
+  rows: OperationalReportRow[]
+  message: string
+}
+export type OperationalReportState = 'ready' | 'unavailable'
+export interface OperationalReportRow {
+  name: string
+  details: string[]
+}
 /** ``word`` is the token under the cursor (``@`` prefix = context reference); ``cwd`` / ``session_id`` pick the directory the listing resolves against. */
 export interface CompletePathParams {
   profile?: string | null
@@ -5316,6 +5334,8 @@ export interface RpcMethods {
   'onboarding.ensure_setup_profile': { params: Params; result: OnboardingEnsureSetupProfileResult }
   /** Restore the setup profile to its created state in place (soul, memories, skills, sessions). */
   'onboarding.reset_setup_profile': { params: Params; result: OnboardingResetSetupProfileResult }
+  /** Read only cached MCP/config/catalog or this session profile's SSH terminal target. Never connects, reloads, authenticates, executes SSH, or mutates settings. */
+  'operations.report': { params: OperationalReportParams; result: OperationalReportResult }
   /** Spill a large paste to a file and hand back the inline placeholder. */
   'paste.collapse': { params: PasteCollapseParams; result: PasteCollapseResult }
   /** Render a PDF's pages to PNG and queue them as images for the next turn. */
@@ -5733,6 +5753,7 @@ export const RPC_METHODS = [
   'model.save_key',
   'onboarding.ensure_setup_profile',
   'onboarding.reset_setup_profile',
+  'operations.report',
   'paste.collapse',
   'pdf.attach',
   'pet.cancel',
