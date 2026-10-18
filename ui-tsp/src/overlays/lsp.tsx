@@ -3,6 +3,7 @@ import type { LspQueryParams, LspQueryResult } from '@hermes/shared/gateway-even
 import { matchesAction, REPORT_ACTIONS } from '../actions.js'
 import type { App } from '../app.js'
 import type { Overlay } from '../overlay.js'
+import { ActionButton } from '../view/action-button.js'
 import { lspResult } from '../view/lsp-diagnostics.js'
 
 export const LSP_COMMANDS: [string, string][] = [
@@ -42,7 +43,7 @@ export async function openLsp(app: App, arg: string) {
             : response ? lspResult(response.lsp_result, app.info?.cwd ?? '', !app.gw.attached && app.info?.terminal_backend === 'local') ??
               <text key="invalid" text="Unsupported LSP result; no semantic view available." wrap="word" />
               : <text key="loading" role="omp.tool.context" text="Waiting for language server…" wrap="word" />}
-          <text key="close" onClick={() => { closed = true; app.close(sheet) }} role="omp.btn" text="Close  escape" />
+          <ActionButton key="close" onClick={() => { closed = true; app.close(sheet) }} role="omp.btn" text="Close  escape" />
         </col>
       </overlay>
     ),

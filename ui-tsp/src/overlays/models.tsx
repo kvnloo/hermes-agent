@@ -10,6 +10,7 @@ import { providerDisplayNames } from '@tui/domain/providers.js'
 
 import type { App } from '../app.js'
 import type { Overlay } from '../overlay.js'
+import { ActionButton } from '../view/action-button.js'
 
 import { confirmOverlay } from './prompts.js'
 import { editQuery, hitRuns, moveSelection, rank } from './search.js'
@@ -259,9 +260,9 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean } = {
           <overlay anchor="center" head="Models" key={id.slice('layer.'.length)} modal size="md">
             <col gap="md" key="body">
               <text key="expired" text="This model picker belongs to a previous live session. Close it and open Models in the current session." wrap="word" />
-              <row key="close" onClick={() => app.close(overlay)} role="omp.btn" title="Close">
+              <ActionButton key="close" onClick={() => app.close(overlay)} role="omp.btn" title="Close">
                 <text key="label" text="Close" />
-              </row>
+              </ActionButton>
             </col>
           </overlay>
         )

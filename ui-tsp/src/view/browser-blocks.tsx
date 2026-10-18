@@ -1,8 +1,11 @@
 // Browser-only presentation; compatible with the result adapter registry.
+
 import type { JSX } from '@stencil-hq/tern'
 
 import type { ToolCall } from '../model.js'
 import { record } from '../transcript.js'
+
+import { ActionButton } from './action-button.js'
 
 interface BrowserCard {
   target?: string
@@ -40,9 +43,9 @@ export function browserBlockCard<T extends BrowserCard>(card: T, call: ToolCall,
     body: [
       ...(focus
         ? [
-            <row key="browser-focus" onClick={() => focus(id)} role="omp.btn" title={`Focus Tern block ${id}`}>
+            <ActionButton key="browser-focus" onClick={() => focus(id)} role="omp.btn" title={`Focus Tern block ${id}`}>
               <text key="label" text="Focus browser block" />
-            </row>
+            </ActionButton>
           ]
         : []),
       ...card.body

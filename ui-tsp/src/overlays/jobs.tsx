@@ -1,10 +1,12 @@
 // Presentation snapshots only. The gateway remains the owner of jobs and output.
+
 import type { JobsCancelResult, JobsListResult, JobSnapshot, JobsTailResult } from '@hermes/shared/gateway-events'
 import type { JSX, Key } from '@stencil-hq/tern'
 
 import { jobsKeyAction } from '../actions.js'
 import type { App } from '../app.js'
 import type { Overlay } from '../overlay.js'
+import { ActionButton } from '../view/action-button.js'
 
 import { openAgentHub } from './agent-hub.js'
 import { agentSelectionForJob, openAgentInspector } from './agent-inspector.js'
@@ -320,15 +322,15 @@ export class JobsSheet implements Overlay {
               {selected ? <text key="owner" text={`${selected.id} · owner ${selected.owner_session_id} · started ${selected.started ? new Date(selected.started * 1000).toISOString() : 'unknown'}`} tone="muted" /> : null}
               {this.#tail && this.#tail.job_id === selected?.id ? <code key="output" text={this.#tail.text || (this.#tail.available ? 'No output yet.' : 'Live output unavailable.')} /> : null}
               {this.#tail?.truncated ? <text key="truncated" text="Showing the last 100 lines (up to 16 KiB)." tone="muted" /> : null}
-              {selected && inspectable ? <text key="inspect" onClick={() => this.#inspect(selected)} role="omp.btn" text="Inspect agent" /> : null}
+              {selected && inspectable ? <ActionButton key="inspect" onClick={() => this.#inspect(selected)} role="omp.btn" text="Inspect agent" /> : null}
               {selected && selected.can_cancel && running(selected) && selected.owner_session_id === this.app.sid ? (
-                <text key="cancel" onClick={() => this.#askCancel(selected)} role="omp.btn" text={this.#cancelling ? 'Cancelling…' : 'Cancel job'} tone="error" />
+                <ActionButton key="cancel" onClick={() => this.#askCancel(selected)} role="omp.btn" text={this.#cancelling ? 'Cancelling…' : 'Cancel job'} tone="error" />
               ) : null}
             </col>
           </row>
           <row gap="sm" key="actions">
-            <text key="refresh" onClick={() => this.#invalidate()} role="omp.btn" text="Refresh" />
-            <text key="close" onClick={() => this.app.close(this)} role="omp.btn" text="Close" />
+            <ActionButton key="refresh" onClick={() => this.#invalidate()} role="omp.btn" text="Refresh" />
+            <ActionButton key="close" onClick={() => this.app.close(this)} role="omp.btn" text="Close" />
           </row>
         </col>
       </overlay>

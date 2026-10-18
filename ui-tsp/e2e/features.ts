@@ -53,6 +53,19 @@ async function command(text: string) {
   await native.key('Enter')
 }
 async function capture(label: string) {
+  if (journey === 'a11y') {
+    const snapshot = await native.snapshot()
+    const buttons = flatten([snapshot.ax]).filter(node => node.role === 'Button')
+    assert(buttons.length > 0, `${label}: no native buttons`)
+    for (const button of buttons) {
+      assert(button.name?.trim(), `${label}: unnamed native button ${button.id}`)
+      if (!button.states?.includes('disabled')) {
+        assert(button.states?.includes('focusable'), `${label}: button not focusable: ${button.name}`)
+        assert(button.actions?.includes('click') && button.actions.includes('focus'), `${label}: missing paired AX actions: ${button.name}`)
+      }
+    }
+    await appendFile(join(manifest.proof, 'a11y-inventory.jsonl'), JSON.stringify({label,evidenceClass,buttons})+'\n')
+  }
   await native.evidence(`${journey}-${label}`)
 }
 async function sizes() {
@@ -395,7 +408,7 @@ async function shortcuts() {
     await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.role === 'omp.ask.input' && n.p.text === 'Add a failure test'), 'refinement field owns typing')
     await until(async()=>{
       const snapshot = await native.snapshot()
-      const field = snapshot.nodes.find(n=>n.role === 'textbox' && n.name === 'How should the plan change?')?.rect
+      const field = snapshot.nodes.find(n=>n.role === 'textbox' && n.name === 'Plan refinement')?.rect
       const decision = snapshot.nodes.find(n=>n.name === 'Send refinement enter')?.rect
       return Boolean(field && decision && field.height >= 20 && field.y > 0 && field.y + field.height <= decision.y && decision.y + decision.height <= snapshot.viewport.height)
     }, Boolean, 'refinement field fully visible above the decision bar')
@@ -623,6 +636,7 @@ async function agentInspector() {
 }
 
 async function agentHub() {
+  const wireStart = (await native.wire()).length
   await step('real gateway reads an explicitly seeded owned child transcript, with no invented control authority', async () => {
     const wire = await native.wire()
     const ids = new Set(wire.filter(w => w.dir === 'request' && w.body.method === 'session.create').map(w => w.body.id))
@@ -657,7 +671,7 @@ db.close()
     await until(() => native.rendered(), ns => ![...ns.values()].some(n => n.p?.role === 'omp.overlay.agent-hub'), 'hub closed')
     await native.type('Hub unsent draft')
     await until(() => native.rendered(), ns => ns.get('dock.composer.line.input')?.p?.text === 'Hub unsent draft', 'parent composer restored')
-    assert(!(await native.wire()).some(w => w.dir === 'request' && ['prompt.submit', 'subagent.message', 'subagent.stop', 'slash.exec'].includes(w.body.method ?? '')))
+    assert(!(await native.wire()).slice(wireStart).some(w => w.dir === 'request' && ['prompt.submit', 'subagent.message', 'subagent.stop', 'slash.exec'].includes(w.body.method ?? '')))
     await capture('closed')
   }, true)
 }
@@ -739,7 +753,7 @@ async function hostLifecycle() {
   }, true)
   await step('native Settings holds Carly input without consuming a human draft', async () => {
     await native.type('Human draft survives host queue')
-    await tap('Open Hermes settings', 'group')
+    await tap('Open Hermes settings', 'button')
     await until(() => native.rendered(), ns => ns.get('dock.composer.line.input')?.p?.sendable === false, 'modal sendable false')
     await hostCheck('queued-ask', `cx.agents:ask(${manifest.pane}, 'Queued host prompt, held by Settings'); return 'queued'`)
     await delay(250)
@@ -816,6 +830,88 @@ finally:
   }, true)
 }
 
+async function a11y() {
+  const audit = capture
+  const restored = async (draft: string, cursor: unknown) => {
+    await until(() => native.snapshot(), snapshot => snapshot.nodes.some(node => node.role === 'textbox' && node.states?.focused), 'actual native composer focus restored')
+    const p = (await native.rendered()).get('dock.composer.line.input')?.p
+    assert.equal(p?.text, draft)
+    assert.equal(p?.cursor, cursor)
+    assert.equal(typeof cursor, 'number')
+    const at = Number(cursor)
+    await native.type('x')
+    await until(() => native.rendered(), ns => ns.get('dock.composer.line.input')?.p?.text === draft.slice(0,at)+'x'+draft.slice(at), 'restored caret accepts native typing at exact offset')
+    await native.key('Backspace')
+    await until(() => native.rendered(), ns => {
+      const input = ns.get('dock.composer.line.input')?.p
+      return input?.text === draft && input.cursor === cursor
+    }, 'restored probe removed without a submission')
+  }
+  await step('native button focus + Space opens Settings; pointer Close restores exact draft/caret', async () => {
+    await native.type('Accessibility unsent draft')
+    await native.key('ArrowLeft')
+    const nodes = await until(() => native.rendered(), ns => ns.get('dock.composer.line.input')?.p?.cursor === 'Accessibility unsent draft'.length-1, 'moved draft caret')
+    const before = structuredClone(nodes.get('dock.composer.line.input')!.p!)
+    await audit('dock')
+    await native.button('Open Hermes settings', 'focus')
+    await native.key('Space')
+    await until(() => native.prefs(), Boolean, 'Settings via native focused button')
+    await audit('settings')
+    await native.button('Close settings', 'pointer')
+    await until(() => native.prefs(), prefs => !prefs, 'pointer close')
+    await restored(String(before.text), before.cursor)
+    await native.button('Open Hermes settings', 'pointer')
+    await until(() => native.prefs(), Boolean, 'Settings via pointer')
+    await native.key('Escape')
+    await until(() => native.prefs(), prefs => !prefs, 'keyboard close')
+    await restored(String(before.text), before.cursor)
+    // Clear only after the exact preservation assertion, without submitting.
+    await native.key('End')
+    for (let i=0;i<String(before.text).length;i++) await native.key('Backspace')
+    await until(() => native.rendered(), ns => ns.get('dock.composer.line.input')?.p?.text === '', 'cleared probe')
+  })
+  for (const [cmd, role] of [['/model','picker'],['/jobs','omp.overlay.jobs'],['/browser','omp.overlay.browser'],['/plan','omp.overlay.plan'],['/help','omp.overlay.hotkeys']] as const) {
+    await step(`${cmd}: real AX names, actionable kinds and keyboard cancellation`, async () => {
+      if (cmd === '/browser') await native.shortcut('alt+shift+b')
+      else await command(cmd)
+      await until(() => native.rendered(), ns => [...ns.values()].some(node => role === 'picker' ? node.k === role : node.p?.role === role), `opened ${cmd}`)
+      await audit(cmd.slice(1))
+      await sizes()
+      await native.key('Escape')
+      await until(() => native.rendered(), ns => ![...ns.values()].some(node => role === 'picker' ? node.k === role : node.p?.role === role), `closed ${cmd}`)
+      await restored('', 0)
+    })
+  }
+  await step('completed card and dock report actions retain native labels and focus', async () => {
+    await fixtureTurn()
+    await replay('background.complete', {task_id:'a11y-report',text:'Explicit accessibility report fixture.'})
+    await until(() => native.rendered(), ns => [...ns.values()].some(node => node.p?.role === 'omp.report.view'), 'report notice')
+    await audit('cards-and-notices')
+    await native.button('View report: Background task', 'focus')
+    await native.key('Space')
+    await until(() => native.rendered(), ns => [...ns.values()].some(node => node.p?.role === 'omp.overlay.report'), 'keyboard report action')
+    await audit('report')
+    await native.key('Escape')
+    await until(() => native.rendered(), ns => ![...ns.values()].some(node => node.p?.role === 'omp.overlay.report'), 'report closed')
+    await restored('', 0)
+    await native.button('Dismiss report', 'pointer')
+    await until(() => native.rendered(), ns => ![...ns.values()].some(node => node.p?.role === 'omp.report.view'), 'notice dismissed')
+  }, true)
+  await shortcuts()
+  await native.key('End')
+  const draft = String((await native.rendered()).get('dock.composer.line.input')?.p?.text ?? '')
+  for (let i=0;i<draft.length;i++) await native.key('Backspace')
+  await until(() => native.rendered(), ns => ns.get('dock.composer.line.input')?.p?.text === '', 'clear shortcut preservation probe')
+  await agentInspector()
+  await audit('agent-card')
+  await native.key('End')
+  for (let i=0;i<'Inspector unsent draft'.length;i++) await native.key('Backspace')
+  await until(() => native.rendered(), ns => ns.get('dock.composer.line.input')?.p?.text === '', 'clear inspector probe')
+  await agentHub()
+  await audit('agent-hub-restored')
+  assert(!(await native.wire()).some(row => row.dir === 'denied' || (row.dir === 'request' && ['prompt.submit','settings.set','model.set','browser.adopt','browser.release','plan.approve','subagent.message','subagent.stop'].includes(row.body.method ?? ''))))
+}
+
 async function smoke() {
   await step('launch welcome and real session without a model call',async()=>{
     assert(flatten((await native.snapshot()).tree).some(n=>(n.text ?? '').toLowerCase().includes('hermes')))
@@ -836,7 +932,7 @@ try {
   const wire = await until(()=>native.wire(), rows=>rows.some(w=>w.dir==='delivered' && w.body.result && typeof w.body.result==='object' && !Array.isArray(w.body.result) && 'session_id' in w.body.result), 'real session creation')
   const ids = new Set(wire.filter(w=>w.dir==='request' && w.body.method==='session.create').map(w=>w.body.id))
   sid = String(record(wire.findLast(w=>w.dir==='delivered' && ids.has(w.body.id) && w.body.result)?.body.result).session_id)
-  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes,media,'written-artifacts':writtenArtifacts,'agent-inspector':agentInspector,'agent-hub':agentHub,retention,'host-lifecycle':hostLifecycle,'session-tree':sessionTree}
+  const journeys:Record<string,()=>Promise<void>> = {settings,'lsp-diagnostics':lspDiagnostics,'file-links':fileLinks,'answer-copy':answerCopy,'todo-hud':todoHud,shortcuts,smoke,openui,'run-box':runBoxes,media,'written-artifacts':writtenArtifacts,'agent-inspector':agentInspector,'agent-hub':agentHub,retention,'host-lifecycle':hostLifecycle,'session-tree':sessionTree,a11y}
   assert(journeys[journey],`Unknown journey: ${journey}`)
   await journeys[journey]!()
 } catch (error) { console.error(error); process.exitCode=1 }

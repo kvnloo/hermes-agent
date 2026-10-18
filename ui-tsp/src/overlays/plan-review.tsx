@@ -5,6 +5,7 @@ import { Composer } from '../composer.js'
 import { editTextExternal } from '../external-editor.js'
 import type { Overlay } from '../overlay.js'
 import { type Plan, type PlanStatus, reviewPlanText } from '../plan.js'
+import { ActionButton } from '../view/action-button.js'
 
 import { Sheet, type SheetHost } from './sheet.js'
 
@@ -157,7 +158,7 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
             wrap="word"
           />
           {status ? (
-            <row
+            <ActionButton
               key="mode"
               onClick={() => {
                 const enabled = !status?.enabled
@@ -166,7 +167,7 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
               role="omp.btn"
             >
               <text key="label" text={status.enabled ? 'Disable plan mode' : 'Enable plan mode'} />
-            </row>
+            </ActionButton>
           ) : null}
           {error ? <text key="error" text={error} tone="danger" wrap="word" /> : null}
           {pending ? <text key="pending" text="Waiting for plan operation…" /> : null}
@@ -182,7 +183,7 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
             ))}
           {status?.enabled && status.plan?.decision === 'pending' && !refining ? (
             <row gap="sm" key="tools" role="omp.plan.tools">
-              <row
+              <ActionButton
                 key="annotate"
                 onClick={() => {
                   editing = 'annotation'
@@ -194,8 +195,8 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
                 role="omp.btn"
               >
                 <text key="label" text="Annotate section" />
-              </row>
-              <row
+              </ActionButton>
+              <ActionButton
                 key="edit-plan"
                 onClick={() => {
                   editing = 'plan'
@@ -206,8 +207,8 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
                 role="omp.btn"
               >
                 <text key="label" text="Edit plan" />
-              </row>
-              <row
+              </ActionButton>
+              <ActionButton
                 key="external-editor"
                 onClick={() => {
                   const revision = renderedTarget
@@ -230,7 +231,7 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
                 role="omp.btn"
               >
                 <text key="label" text="Edit in $EDITOR" />
-              </row>
+              </ActionButton>
             </row>
           ) : null}
           {plan && !refining ? (
@@ -240,14 +241,14 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
                 text={`Section ${selected + 1}/${plan.sections.length} · Up/Down jumps sections · Page Up/Down scrolls`}
               />
               {plan.sections.map((section, index) => (
-                <row
+                <ActionButton
                   key={`section-${index}`}
                   onClick={() => choose(index)}
                   role="omp.btn"
                   tone={selected === index ? 'accent' : undefined}
                 >
                   <text key="label" text={`${'  '.repeat(section.level - 1)}${section.title}`} />
-                </row>
+                </ActionButton>
               ))}
             </col>
           ) : null}
@@ -266,6 +267,7 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
           )}
           {plan && refining ? (
             <input
+              aria={editing === 'annotation' ? 'Section annotation' : editing === 'plan' ? 'Plan revision' : 'Plan refinement'}
               cursor={note.cursor}
               key="note"
               onEdit={ev => {
@@ -283,7 +285,7 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
           ) : null}
           <row align="center" gap="sm" key="actions" role="omp.actions">
             {refining ? (
-              <row
+              <ActionButton
                 key="review"
                 onClick={() => {
                   refining = false
@@ -293,18 +295,18 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
                 title="Back to plan"
               >
                 <text key="label" text="Back to plan" />
-              </row>
+              </ActionButton>
             ) : null}
             {plan && (!status?.plan || (status.enabled && status.plan.decision === 'pending')) && !refining ? (
-              <row key="approve" onClick={() => commands.approve(renderedTarget)} role="omp.btn" title="Approve  alt+a">
+              <ActionButton key="approve" onClick={() => commands.approve(renderedTarget)} role="omp.btn" title="Approve  alt+a">
                 <text
                   key="label"
                   text={status?.plan ? 'Approve exact revision (no automatic execution)' : 'Continue (ordinary prompt)'}
                 />
-              </row>
+              </ActionButton>
             ) : null}
             {plan && (!status?.plan || (status.enabled && status.plan.decision === 'pending')) ? (
-              <row
+              <ActionButton
                 key="refine"
                 onClick={() => (refining ? sendNote(renderedTarget) : refine())}
                 role="omp.btn"
@@ -314,12 +316,12 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
                   key="label"
                   text={refining ? (editing === 'refine' ? 'Send refinement' : 'Save revision') : 'Refine'}
                 />
-              </row>
+              </ActionButton>
             ) : null}
             <spacer grow={1} key="fill" />
-            <row key="close" onClick={commands.close} role="omp.btn" title="Close  escape">
+            <ActionButton key="close" onClick={commands.close} role="omp.btn" title="Close  escape">
               <text key="label" text="Close" />
-            </row>
+            </ActionButton>
           </row>
         </Sheet>
       )

@@ -10,6 +10,7 @@ import { actionHint } from '../actions.js'
 import { Composer } from '../composer.js'
 import { maskedOffset, maskOf, unmaskEdit } from '../mask.js'
 import type { Overlay, OverlayHost } from '../overlay.js'
+import { ActionButton } from '../view/action-button.js'
 
 import { approvalPrompt, type PromptHost } from './approval.js'
 import { clarifyNoteOf, ClarifyNotes, clarifyTimer } from './clarify-notes.js'
@@ -43,7 +44,7 @@ function actionsRow(buttons: Button[]): JSX.Element {
     <row align="center" gap="sm" key="actions" role="omp.actions">
       <spacer grow={1} key="fill" />
       {buttons.map(b => (
-        <row
+        <ActionButton
           align="center"
           gap="xs"
           key={b.key}
@@ -54,7 +55,7 @@ function actionsRow(buttons: Button[]): JSX.Element {
         >
           <text key="label" text={b.label} />
           <kbd key="keys" keys={b.keys} />
-        </row>
+        </ActionButton>
       ))}
     </row>
   )
@@ -641,7 +642,7 @@ function clarifyNode(id: string, cx: ClarifyView): JSX.Element {
           tone="pending"
         />
         <text key="timer" role="omp.ask.timer" text={clarifyTimer(req.params.deadline_at)} />
-        <text key="show" onClick={overlay.toggle} role="omp.btn" text={`Show question${toggleHint ? ` · ${toggleHint}` : ''}`} />
+        <ActionButton key="show" onClick={overlay.toggle} role="omp.btn" text={`Show question${toggleHint ? ` · ${toggleHint}` : ''}`} />
       </col>
     )
   }
@@ -800,6 +801,7 @@ function maskedOverlay(host: OverlayHost, req: ServerRequest): Overlay {
           {str(p.command) ? <code key="command" lang="bash" text={str(p.command)} /> : null}
           {fields.map((f, i) => (
             <input
+              aria={f.label}
               cursor={f.masked ? maskedOffset(f.value.text, f.value.cursor) : f.value.cursor}
               key={f.id}
               onEdit={ev => {

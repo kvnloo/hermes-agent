@@ -13,6 +13,7 @@ import type { Subagent, Todo, ToolCall } from '../model.js'
 import { confirmedWriteArtifact, readMedia, writtenArtifactNode } from '../read-media.js'
 import { record } from '../transcript.js'
 
+import { ActionButton } from './action-button.js'
 import { browserBlockCard } from './browser-blocks.js'
 import { changedFiles, editFiles, fileDiffs } from './edit-results.js'
 import { evalRuns, evalRunState } from './eval.js'
@@ -135,7 +136,7 @@ export function toolNode(
   const collapsed = collapsedOverride ?? card.folded
 
   if (onToggle && body.length && card.loadOutput) {
-    body.unshift(<text key="load-output" onClick={onToggle} role="omp.tool.load"
+    body.unshift(<ActionButton key="load-output" onClick={onToggle} role="omp.tool.load"
       text={collapsed ? 'Show all returned output' : 'Show less output'} />)
   }
 
@@ -838,6 +839,7 @@ function agentNode(a: Subagent, now: number, children: JSX.Element[] = [], onIns
           : undefined
       }
     >
+      {onInspect ? <ActionButton aria={`Inspect agent ${a.label ?? a.index + 1}`} key="inspect" onClick={() => onInspect(a.id)} role="omp.agent.inspect" text="Inspect agent" /> : null}
       {a.summary ? <md key="o">{displayMarkdown(a.summary, '')}</md> : null}
       {children}
     </agent>

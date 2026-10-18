@@ -2,6 +2,7 @@ import { BTW_ACTIONS, matchesAction, REPORT_ACTIONS } from '../actions.js'
 import type { BtwReports } from '../btw.js'
 import { copyToClipboard } from '../clipboard.js'
 import type { Overlay } from '../overlay.js'
+import { ActionButton } from '../view/action-button.js'
 
 import { Sheet } from './sheet.js'
 
@@ -67,11 +68,11 @@ export function openBtwSheet(model: BtwReports): Overlay {
         />
         <row key="panes" role="omp.btw.body">
           <col key="history" role="omp.btw.history">
-            <row key="new" onClick={() => choose(null)} role="omp.btn">
+            <ActionButton key="new" onClick={() => choose(null)} role="omp.btn">
               <text key="label" text="New side question" />
-            </row>
+            </ActionButton>
             {model.threads.map(thread => (
-              <row
+              <ActionButton
                 key={thread.id}
                 onClick={() => choose(thread.id)}
                 role="omp.btn"
@@ -82,7 +83,7 @@ export function openBtwSheet(model: BtwReports): Overlay {
                   text={`${thread.turns[0]?.question ?? 'Side question'} · ${thread.turns.at(-1)?.state ?? 'pending'}`}
                   wrap="word"
                 />
-              </row>
+              </ActionButton>
             ))}
           </col>
           <col grow={1} key="reader" role="omp.btw.reader">
@@ -137,20 +138,20 @@ export function openBtwSheet(model: BtwReports): Overlay {
         />
         {message ? <text key="notice" role="omp.report.notice" text={message} wrap="word" /> : null}
         <row gap="sm" key="actions" role="omp.actions">
-          <row key="send" onClick={commands.send} role="omp.btn">
+          <ActionButton key="send" onClick={commands.send} role="omp.btn">
             <text key="label" text="Send side question" />
-          </row>
+          </ActionButton>
           {model.thread?.turns.at(-1)?.state === 'running' ? (
-            <row key="cancel" onClick={commands.cancel} role="omp.btn">
+            <ActionButton key="cancel" onClick={commands.cancel} role="omp.btn">
               <text key="label" text="Stop side turn" />
-            </row>
+            </ActionButton>
           ) : null}
-          <row key="copy" onClick={copy} role="omp.btn">
+          <ActionButton key="copy" onClick={copy} role="omp.btn">
             <text key="label" text="Copy" />
-          </row>
-          <row key="close" onClick={commands.close} role="omp.btn">
+          </ActionButton>
+          <ActionButton key="close" onClick={commands.close} role="omp.btn">
             <text key="label" text="Return to main draft" />
-          </row>
+          </ActionButton>
         </row>
       </Sheet>
     ),

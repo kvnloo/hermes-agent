@@ -1,10 +1,12 @@
 // Dock approvals share App's overlay generations, but never take the composer's caret.
+
 import type { ClarifyLockResult, ClarifyNote } from '@hermes/shared/gateway-events'
 import type { ServerRequest } from '@hermes/shared/json-rpc-channel'
 
 import { type Action, approvalActionForKey } from '../actions.js'
 import type { Attachments } from '../attachments.js'
 import type { Overlay, OverlayHost } from '../overlay.js'
+import { ActionButton } from '../view/action-button.js'
 
 export interface PromptHost extends OverlayHost {
   readonly bindings?: { readonly actions: readonly Action[] }
@@ -128,6 +130,7 @@ export function approvalPrompt(host: PromptHost, req: ServerRequest): ApprovalPr
             />
           ) : null}
           <list
+            aria="Approval choices"
             key="options"
             onActivate={ev => {
               const choice = choices.find(c => `${id}.body.options.${c.id}` === ev.item)
@@ -157,14 +160,14 @@ export function approvalPrompt(host: PromptHost, req: ServerRequest): ApprovalPr
             ))}
           </list>
           <row gap="sm" key="actions" role="omp.actions">
-            <text
+            <ActionButton
               key="deny"
               onClick={() => void overlay.answer('deny')}
               role="omp.btn"
               text="Deny"
               title="Deny · escape (empty draft)"
             />
-            <text
+            <ActionButton
               key="choose"
               onClick={() => void overlay.answer(choices[selected]?.id ?? 'deny')}
               role="omp.btn"

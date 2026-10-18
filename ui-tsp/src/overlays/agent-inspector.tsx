@@ -2,6 +2,7 @@ import { matchesAction, REPORT_ACTIONS } from '../actions.js'
 import type { App } from '../app.js'
 import type { Subagent } from '../model.js'
 import type { Overlay } from '../overlay.js'
+import { ActionButton } from '../view/action-button.js'
 import { age, duration } from '../view/time.js'
 
 import { openAgentHub } from './agent-hub.js'
@@ -105,7 +106,7 @@ export function openAgentInspector(app: App, selection: AgentSelection) {
               {agent && !agent.activity?.length ? <text key="empty" text="No tool calls or notes received yet." tone="muted" /> : null}
               {agent?.summary ? <md key="summary" role="omp.agent.summary">{agent.summary}</md> : null}
             </col>
-            <text key="close" onClick={() => app.close(sheet)} role="omp.btn" text="Close  escape" />
+            <ActionButton key="close" onClick={() => app.close(sheet)} role="omp.btn" text="Close  escape" />
           </col>
         </overlay>
       )

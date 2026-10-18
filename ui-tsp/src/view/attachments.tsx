@@ -3,6 +3,8 @@ import { type JSX, node } from '@stencil-hq/tern'
 import type { Attachment, SubmittedImage } from '../attachments.js'
 import { mediaNode } from '../tern-media.js'
 
+import { ActionButton } from './action-button.js'
+
 /** Shared vocabulary for composer attachments and immutable submitted user chips. */
 export function attachmentNodes(images: readonly SubmittedImage[], native: boolean): JSX.Element {
   return (
@@ -30,8 +32,8 @@ export function composerAttachments(images: readonly Attachment[], remove: (id: 
         <row align="center" gap="xs" key={image.id} role="omp.composer.attachment" title={image.status === 'failed' ? image.error : image.mime}>
           <badge key="name" text={`${image.name} · ${image.bytes} B · ${image.status}`} tone={image.status === 'failed' ? 'error' : image.status === 'pending' ? 'pending' : 'success'} />
           {image.status === 'failed' ? <text key="error" text={image.error} tone="error" /> : null}
-          {image.status === 'failed' ? <text key="retry" onClick={() => retry(image.id)} text="Retry" title="Retry attachment" /> : null}
-          <text key="remove" onClick={() => remove(image.id)} text="×" title={`Remove ${image.name}`} />
+          {image.status === 'failed' ? <ActionButton key="retry" onClick={() => retry(image.id)} text="Retry" title="Retry attachment" /> : null}
+          <ActionButton key="remove" onClick={() => remove(image.id)} text="×" title={`Remove ${image.name}`} />
         </row>
       ))}
     </row>

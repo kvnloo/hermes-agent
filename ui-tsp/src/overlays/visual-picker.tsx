@@ -1,9 +1,11 @@
 // Reuse the current overlay owner and #464's validator. No watcher, global
 // index, generated-code execution or automatic artifact opening is involved.
+
 import { basename } from 'node:path'
 
 import type { Entry } from '../model.js'
 import type { Overlay, OverlayHost } from '../overlay.js'
+import { ActionButton } from '../view/action-button.js'
 import { recentVisualCandidates, type VisualCandidate } from '../visual-discovery.js'
 import { type PreparedVisual, readPreparedVisual, visualScope, type VisualSession } from '../visuals.js'
 
@@ -80,10 +82,10 @@ export async function openVisualPicker(
               />
               <text key="hint" text="Select a candidate to validate and preview. Up/Down, Enter; Escape closes." />
               {candidates.map((candidate, index) => (
-                <row key={`candidate-${index}`} onClick={() => choose(candidate)} role="omp.btn" title={candidate.path}>
+                <ActionButton key={`candidate-${index}`} onClick={() => choose(candidate)} role="omp.btn" title={candidate.path}>
                   <text key="name" text={`${index === selected ? '› ' : ''}${basename(candidate.path)}`} />
                   <text key="identity" text={candidate.id.slice(0, 12)} />
-                </row>
+                </ActionButton>
               ))}
               <text
                 key="limits"
@@ -92,10 +94,10 @@ export async function openVisualPicker(
               <text key="scope" text={scope} />
             </col>
           )}
-          <row key="close" onClick={close} role="omp.btn" title="Close  escape">
+          <ActionButton key="close" onClick={close} role="omp.btn" title="Close  escape">
             <text key="label" text="Close" />
             <kbd key="key" keys={['escape']} />
-          </row>
+          </ActionButton>
         </col>
       </overlay>
     ),

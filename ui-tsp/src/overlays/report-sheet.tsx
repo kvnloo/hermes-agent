@@ -1,6 +1,7 @@
 import { matchesAction, REPORT_ACTIONS } from '../actions.js'
 import type { Overlay } from '../overlay.js'
 import type { Report } from '../reports.js'
+import { ActionButton } from '../view/action-button.js'
 
 import { Sheet, type SheetHost } from './sheet.js'
 
@@ -33,7 +34,7 @@ export function openReportSheet(host: ReportHost, report: Report) {
         </md>
         {message ? <text key="notice" role="omp.report.notice" text={message} wrap="word" /> : null}
         <row align="center" gap="sm" key="actions" role="omp.actions">
-          <row
+          <ActionButton
             key="copy"
             onClick={() => {
               try {
@@ -49,12 +50,12 @@ export function openReportSheet(host: ReportHost, report: Report) {
             title="Copy report"
           >
             <text key="label" text="Copy" />
-          </row>
+          </ActionButton>
           <spacer grow={1} key="fill" />
-          <row key="close" onClick={() => host.close(sheet)} role="omp.btn" title="Close  escape">
+          <ActionButton key="close" onClick={() => host.close(sheet)} role="omp.btn" title="Close  escape">
             <text key="label" text="Close" />
             <kbd key="keys" keys={REPORT_ACTIONS[0]!.keys} />
-          </row>
+          </ActionButton>
         </row>
       </Sheet>
     ),
