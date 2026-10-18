@@ -309,6 +309,31 @@ export const APP_ACTIONS: readonly Action[] = [
   }
 ]
 
+/** Composer-local defaults, deliberately separate from globally active app chords. */
+export const VIM_ACTIONS = [
+  { id: 'escape', keys: ['escape'] },
+  { id: 'h', keys: ['h', 'left', 'backspace'] },
+  { id: 'j', keys: ['j', 'down'] },
+  { id: 'k', keys: ['k', 'up'] },
+  { id: 'l', keys: ['l', 'right', 'space'] },
+  { id: '0', keys: ['0', 'home'] },
+  { id: '^', keys: ['shift+6'] },
+  { id: '$', keys: ['shift+4', 'end'] },
+  ...['w', 'b', 'e', 'g', 'i', 'a', 'o', 'v', 'd', 'c', 'y', 'x', 'r', 'u', 'p'].map(id => ({ id, keys: [id] })),
+  ...['g', 'i', 'a', 'o', 'v', 'd', 'c', 'p'].map(id => ({ id: id.toUpperCase(), keys: [`shift+${id}`] })),
+  ...['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(id => ({ id, keys: [id] })),
+  { id: 'redo', keys: ['ctrl+r'] }
+] as const
+
+export function vimActionForKey(key: Key): string | undefined {
+  // Legacy terminal input reports punctuation directly rather than a shifted number.
+  const punctuation = key.text === '^' || key.text === '$'
+
+  if (punctuation && !key.ctrl && !key.alt && !key.meta) { return key.text }
+
+  return VIM_ACTIONS.find(binding => matchesAction(binding, key))?.id
+}
+
 type ApprovalAction =
   { kind: 'move'; delta: number } | { kind: 'choose' } | { kind: 'deny' } | { kind: 'digit'; index: number }
 

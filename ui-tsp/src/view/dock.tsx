@@ -239,10 +239,12 @@ function composerNode(cx: DockContext): JSX.Element {
       <row align="start" gap="sm" key="line" role="omp.composer.line">
         {cx.orb ? <image key="orb" {...cx.orb} role="hermes.agent.orb" /> : null}
         <editor
-          cursor={composer.cursor}
+          anchor={composer.vim.selection.anchor}
+          cursor={composer.vim.selection.cursor}
           ghost={cx.ghost || undefined}
           key="input"
           maxLines={18}
+          mode={composer.vim.nativeMode}
           onEdit={cx.onEdit}
           onSend={cx.onSend}
           onUndo={cx.onUndo}
@@ -252,6 +254,7 @@ function composerNode(cx: DockContext): JSX.Element {
         />
       </row>
       <row align="center" gap="sm" key="bar" role="omp.composer.bar">
+        {composer.vim.enabled ? <text key="vim" role="omp.composer.vim" text={`${composer.vim.mode.toUpperCase()}${composer.vim.pending ? ` ${composer.vim.pending}` : ''}`} /> : null}
         {cx.model ? (
           <row
             align="center"

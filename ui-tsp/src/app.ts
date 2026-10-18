@@ -65,6 +65,7 @@ import { Transcript } from './transcript.js'
 import { dockNodes } from './view/dock.js'
 import { projectedEntryNodes } from './view/transcript.js'
 import { randomTip, type WelcomeContext } from './view/welcome.js'
+import { VimPreference } from './vim-preference.js'
 
 /** The composer's `editor` node id (dock → composer → line → input). */
 export const INPUT_ID = 'dock.composer.line.input'
@@ -94,6 +95,7 @@ export class App implements OverlayHost {
   readonly modelRecents = new ModelRecents()
   readonly dictation = new Dictation(this)
   readonly busyInput = new BusyInput(this)
+  readonly vimPreference = new VimPreference(this)
   readonly attachments: Attachments
   readonly overlays: Overlay[] = []
   /** Presentation-only collapse overrides, scoped by transcript turn and tool identity. */
@@ -373,6 +375,7 @@ export class App implements OverlayHost {
       this.#approvalIds.delete(overlay.key)
 
       if (overlay.key === 'settings') {
+        void this.vimPreference.refresh()
         void this.busyInput.refresh()
       }
 
@@ -535,6 +538,8 @@ export class App implements OverlayHost {
     if (this.#completion.onKey(key)) {
       return
     }
+
+    if (this.composer.vim.key(key)) { return }
 
     const ctx: ActionContext = {
       composerEmpty: !this.composer.text,
@@ -1267,6 +1272,7 @@ export class App implements OverlayHost {
     }
 
     this.sid = r.session_id
+    void this.vimPreference.refresh()
     void this.busyInput.refresh()
     this.storedSid = r.info?.stored_session_id || r.stored_session_id || null
     this.todoHud.adopt(this.storedSid ?? r.session_id)
@@ -1920,6 +1926,8 @@ export class App implements OverlayHost {
             return
           }
 
+          if (this.composer.vim.enabled) { return }
+
           if (ev.len === this.composer.text.length && ev.text && this.#pasteImage(ev.text)) {
             this.composer.edit({ ...ev, text: '', cursor: ev.from })
           } else {
@@ -1942,6 +1950,8 @@ export class App implements OverlayHost {
             return
           }
 
+          if (this.composer.vim.enabled) { return }
+
           void this.#submitDraft(ev.text, approval ?? null)
           this.changed()
         },
@@ -1957,6 +1967,8 @@ export class App implements OverlayHost {
           if (['report', 'agent-inspector', 'agent-hub', 'plan'].includes(this.overlays.at(-1)?.key ?? '')) {
             return
           }
+
+          if (this.composer.vim.enabled) { return }
 
           this.composer.undo()
           this.changed()

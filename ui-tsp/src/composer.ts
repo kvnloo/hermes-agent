@@ -5,6 +5,8 @@
 import type { Key } from '@stencil-hq/tern'
 import { append as appendHistory, load as loadHistory } from '@tui/lib/history.js'
 
+import { VimComposer } from './vim.js'
+
 /** What a key asked the app to do beyond editing. */
 export type ComposerAction = 'submit' | null
 
@@ -20,6 +22,7 @@ const WORD = /[\p{L}\p{N}_]/u
 
 /** The prompt editor: text, caret, undo/redo, prompt history and kill ring, driven by keys and native edits. */
 export class Composer {
+  readonly vim = new VimComposer(this)
   text = ''
   cursor = 0
   /** Bumped on every change, so the app knows to render. */
@@ -47,6 +50,7 @@ export class Composer {
     this.#browse = -1
     this.text = ''
     this.cursor = 0
+    this.vim.reset()
     this.#changed()
 
     return text
@@ -73,7 +77,7 @@ export class Composer {
 
   /** A TSP `edit` event; ignored when the text changed since Tern saw it. */
   edit(ev: { from: number; to: number; text: string; cursor: number; len: number }) {
-    if (ev.len !== this.text.length) {
+    if (this.vim.enabled || ev.len !== this.text.length) {
       return
     }
 
@@ -116,6 +120,11 @@ export class Composer {
     this.#lastEdit = 0
     this.#changed()
   }
+
+  /** Modal transitions explicitly end a typing burst even without a cursor move. */
+  undoBoundary() { this.#lastEdit = 0 }
+
+  move(to: number) { return this.#move(boundaryAt(this.text, clamp(to, this.text.length))) }
 
   /** Handles one editing key; false when the key isn't the composer's. */
   key(key: Key): ComposerAction | boolean {
@@ -387,19 +396,19 @@ function clamp(n: number, max: number): number {
   return Math.max(0, Math.min(max, n))
 }
 
-function lineStart(text: string, at: number): number {
+export function lineStart(text: string, at: number): number {
   // lastIndexOf clamps a negative start to 0, so it would find a newline at 0 from offset 0.
   return at <= 0 ? 0 : text.lastIndexOf('\n', at - 1) + 1
 }
 
-function lineEnd(text: string, at: number): number {
+export function lineEnd(text: string, at: number): number {
   const i = text.indexOf('\n', at)
 
   return i < 0 ? text.length : i
 }
 
 /** `at` when it is a grapheme boundary of `text`, else the boundary before it. */
-function boundaryAt(text: string, at: number): number {
+export function boundaryAt(text: string, at: number): number {
   if (at >= text.length) {
     return text.length
   }
@@ -417,7 +426,7 @@ function boundaryAt(text: string, at: number): number {
   return floor
 }
 
-function prevGrapheme(text: string, at: number): number {
+export function prevGrapheme(text: string, at: number): number {
   let prev = 0
 
   for (const { index } of graphemes.segment(text)) {
@@ -431,7 +440,7 @@ function prevGrapheme(text: string, at: number): number {
   return prev
 }
 
-function nextGrapheme(text: string, at: number): number {
+export function nextGrapheme(text: string, at: number): number {
   for (const { index, segment } of graphemes.segment(text)) {
     if (index >= at) {
       return index + segment.length
