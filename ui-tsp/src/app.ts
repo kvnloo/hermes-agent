@@ -643,6 +643,22 @@ export class App implements OverlayHost {
   }
 
   #onTernEvent(ev: TspEvent) {
+    // Splash events must reach its owner before the inline surface address filter.
+    if (ev.ev === 'gone' && ev.ids.includes('splash')) {
+      this.#splash?.dismiss()
+    }
+
+    if (!('sf' in ev) || !ev.sf || ev.sf === this.#surface.id || ev.sf === 'splash') {
+      if (ev.ev === 'motion') {
+        this.#splash?.environment({ reduce: ev.reduce })
+      }
+
+      if ((ev.ev === 'visible' || ev.ev === 'resize') && ev.visible !== undefined) {
+        this.#splash?.environment({ visible: ev.visible })
+      }
+      // Theme events need no new cells: splash CSS and spans resolve native tokens live.
+    }
+
     this.#protocol.event(ev)
 
     if ('sf' in ev && ev.sf && ev.sf !== this.#surface.id) {
@@ -746,6 +762,7 @@ export class App implements OverlayHost {
 
   quit(code = 0) {
     this.#quitting = true
+    this.#splash?.dismiss()
     this.changed()
     void this.dictation.stop(true)
 
@@ -1605,9 +1622,12 @@ export class App implements OverlayHost {
       design: pickSplashDesign(setting.design),
       onDone: () => {
         this.#splash = undefined
-        // The caret was the composer's all along; say so again now that it shows.
-        this.#surface.focus(this.#focus ?? null)
-        this.changed()
+
+        if (!this.#quitting) {
+          // The caret was the composer's all along; say so again now that it shows.
+          this.#surface.focus(this.#focus ?? null)
+          this.changed()
+        }
       },
       open: () => this.#tern.open({ id: 'splash', mode: 'screen', role: SPLASH_ROLE, title: 'hermes' }),
       size: () => splashInsets(this.#tern.caps.cols, process.stdout.rows ?? 24),
