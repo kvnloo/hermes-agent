@@ -11,7 +11,7 @@ import { confirmedWriteArtifact, readMedia, writtenArtifactNode } from '../read-
 import { record } from '../transcript.js'
 
 import { browserBlockCard } from './browser-blocks.js'
-import { lspDiagnostics } from './lsp-diagnostics.js'
+import { lspDiagnostics, lspResult } from './lsp-diagnostics.js'
 import { outputLineCount, runBox, type RunBoxInput, runElapsed, runState, type RunState } from './runbox.js'
 import { age, compact, duration } from './time.js'
 import { browserCard, visionCard } from './tool-adapters.js'
@@ -33,7 +33,7 @@ export interface Card {
   folded?: boolean
   preview?: { lines: number } | { tail: number }
   /** Overrides the derived status (a task stays running while its agents work). */
-  status?: 'running'
+  status?: 'running' | 'error'
   /** Overrides the call's own duration (a background task lasts until its agents finish). */
   took?: number
   body: JSX.Element[]
@@ -175,6 +175,12 @@ const secretAdapter: CardAdapter = () => ({ body: [], frame: 'inline', name: 'se
 const browserAdapter: CardAdapter = ({ call, result, cwd }) => browserCard(call, result, cwd, genericBody(call))
 
 const CARD_ADAPTERS: Record<string, CardAdapter> = {
+  lsp: input => {
+    const body = lspResult(input.result?.lsp_result, input.cwd, input.hostLocal)
+
+    return body ? { name: 'lsp', title: 'LSP', body, folded: false,
+      status: input.call.status === 'done' && record(input.result?.lsp_result)?.kind === 'error' ? 'error' : undefined } : genericCard(input)
+  },
   terminal: shellAdapter,
   bash: shellAdapter,
   shell: shellAdapter,

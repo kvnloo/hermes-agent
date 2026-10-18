@@ -343,7 +343,7 @@ export class App implements OverlayHost {
     }
 
     // Inspection results must not cover an approval/clarification waiting for input.
-    const prompt = ['report', 'agent-inspector', 'plan'].includes(overlay.key) ? this.overlays.findIndex(o => o.key.startsWith('prompt:')) : -1
+    const prompt = ['report', 'agent-inspector', 'plan', 'lsp'].includes(overlay.key) ? this.overlays.findIndex(o => o.key.startsWith('prompt:')) : -1
     this.overlays.splice(prompt < 0 ? this.overlays.length : prompt, 0, overlay)
     this.#overlayIds.set(overlay, `${overlay.placement ?? 'layer'}.${overlay.key}:${++this.#overlaySerial}`)
 
