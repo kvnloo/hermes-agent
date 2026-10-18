@@ -126,6 +126,14 @@ export const APP_ACTIONS: readonly Action[] = [
     run: app => app.dequeue()
   },
   {
+    id: 'app.clarify.toggle',
+    title: 'Hide / show the waiting clarification (preserve answers)',
+    group: 'Control',
+    keys: ['alt+h'],
+    when: always,
+    run: app => app.toggleClarify()
+  },
+  {
     id: 'app.stt.toggle',
     title: 'Toggle microphone dictation (review before sending)',
     group: 'Control',

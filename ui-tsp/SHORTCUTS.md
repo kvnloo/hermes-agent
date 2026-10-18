@@ -15,6 +15,7 @@ App-level bindings live in `src/actions.ts`. The same registry supplies grouped
 | Alt+C | Context window (`/context`) |
 | Alt+U | Usage (`/usage`) |
 | Alt+A | Agents (`/agents`) |
+| Alt+H | Hide / show the oldest waiting clarification; secret/approval prompts retain priority |
 | Alt+S | Session picker |
 | Alt+T / Alt+Shift+S | Session / branch tree and search (`/tree`) |
 | Alt+Shift+F | `/fork`: copy the conversation into a new Tern pane (idle session) |
@@ -47,6 +48,26 @@ Prefer Alt+, for Hermes settings when the host takes Ctrl+,; use Alt+/ if F1 is
 owned by the host/OS. `/settings` and `/help` are always available as text.
 Bindings are tested using a connected real SDK peer and parsed terminal key
 bytes, not a complete native-window/preset matrix.
+
+## Clarifications
+
+Clarifications live in the dock, oldest first. Alt+H (or Hide/Show) keeps the
+current question, selections, free text and notes intact while returning the
+caret to the main draft. A compact waiting summary stays visible. Approval
+requests and modal secret prompts preempt ask input; stale handlers cannot
+answer a replaced, cancelled or foreign-session request.
+
+Next locks an early answer in Hermes, so accepted answers and optional notes
+survive timeout/cancel/reconnect. Skip records null; Cancel all leaves unanswered
+questions unanswered. The gateway supplies one absolute UTC deadline (null is
+unlimited); the frontend displays it without an idle countdown or expiry timer.
+Only `request.cancel` withdraws an expired request.
+
+Notes/images appear only when the request advertises support. Paste an image
+path or data URL into the ask to stage a workspace **reference**, not automatic
+vision input and not an attachment to the next user prompt. Failed/pending image
+staging blocks answers until retry/removal. Closing an ask discards its UI draft;
+staged workspace files are durable references and are not deleted on dismissal.
 
 ## Forking
 

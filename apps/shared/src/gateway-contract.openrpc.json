@@ -8855,6 +8855,17 @@
             "default": "",
             "title": "Answer"
           },
+          "note": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClarifyNote"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
           "profile": {
             "anyOf": [
               {
@@ -8911,6 +8922,25 @@
         ],
         "title": "ClarifyLockStatus",
         "type": "string"
+      },
+      "ClarifyNote": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "default": "",
+            "title": "Text",
+            "type": "string"
+          },
+          "image_paths": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Image Paths",
+            "type": "array"
+          }
+        },
+        "title": "ClarifyNote",
+        "type": "object"
       },
       "ClarifyQuestion": {
         "additionalProperties": false,
@@ -8987,6 +9017,44 @@
             ],
             "default": null,
             "title": "Answers"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/ClarifyNote"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notes"
+          },
+          "supports_notes": {
+            "default": false,
+            "title": "Supports Notes",
+            "type": "boolean"
+          },
+          "supports_image_refs": {
+            "default": false,
+            "title": "Supports Image Refs",
+            "type": "boolean"
+          },
+          "deadline_at": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Deadline At"
           }
         },
         "required": [
@@ -9021,6 +9089,21 @@
             ],
             "default": null,
             "title": "Answers"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/ClarifyNote"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notes"
           }
         },
         "title": "ClarifyResult",

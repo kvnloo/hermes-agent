@@ -1,13 +1,17 @@
 // Dock approvals share App's overlay generations, but never take the composer's caret.
+import type { ClarifyLockResult, ClarifyNote } from '@hermes/shared/gateway-events'
 import type { ServerRequest } from '@hermes/shared/json-rpc-channel'
 
 import { approvalActionForKey } from '../actions.js'
+import type { Attachments } from '../attachments.js'
 import type { Overlay, OverlayHost } from '../overlay.js'
 
 export interface PromptHost extends OverlayHost {
   owns(overlay: Overlay): boolean
   notice(message: string): void
   confirmDenial(id: string): Promise<void>
+  promptAttachments?(): Attachments
+  lockClarify?(request: string, question: string, answer: string | null, note?: ClarifyNote): Promise<ClarifyLockResult>
 }
 
 export interface ApprovalPrompt extends Overlay {

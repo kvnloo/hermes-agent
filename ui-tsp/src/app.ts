@@ -4,6 +4,8 @@
 // marks the view dirty. Tern draws the frame. The next ack flushes the newest view.
 
 import type {
+  ClarifyLockResult,
+  ClarifyNote,
   ConfigGetResult,
   ConfigSetResult,
   PromptSubmitResult,
@@ -47,7 +49,7 @@ import { Completion } from './overlays/completion.js'
 import { JobsSheet } from './overlays/jobs.js'
 import { openModelPicker } from './overlays/models.js'
 import { openPlanReview } from './overlays/plan-review.js'
-import { promptOverlay } from './overlays/prompts.js'
+import { isClarifyPrompt, promptOverlay } from './overlays/prompts.js'
 import { openReportSheet } from './overlays/report-sheet.js'
 import { openSettings } from './overlays/settings.js'
 import type { SheetHost } from './overlays/sheet.js'
@@ -315,12 +317,14 @@ export class App implements OverlayHost {
         }
       }
 
-      // Session queues handler calls. Ownership must still hold when the call runs.
+      // Session queues handler calls. Ownership and question must still match.
+      const revision = owner.inputRevision
+
       return () => {
         if (
           surface === this.#surface &&
           !surface.closed &&
-          this.owns(owner) &&
+          this.owns(owner) && owner.inputRevision === revision &&
           this.#overlayIds.get(owner) === rootId
         ) {
           return handler()
@@ -382,11 +386,29 @@ export class App implements OverlayHost {
 
   /** One input owner: the top floating overlay, otherwise the oldest dock approval. */
   #inputOwner(): Overlay | undefined {
-    return this.overlays.findLast(o => o.placement !== 'dock') ?? this.overlays.find(isApprovalPrompt)
+    return this.overlays.findLast(o => o.placement !== 'dock') ?? this.overlays.find(isApprovalPrompt) ?? this.overlays.find(isClarifyPrompt)
   }
 
   owns(overlay: Overlay): boolean {
     return !this.#surface.closed && this.#inputOwner() === overlay && this.#overlayIds.has(overlay)
+  }
+
+  toggleClarify() {
+    const owner = this.#inputOwner()
+
+    if (owner && isClarifyPrompt(owner)) {
+      owner.toggle()
+    }
+  }
+
+  promptAttachments(): Attachments {
+    return new Attachments(this.#gw, () => this.changed(), message => this.notice(message), true)
+  }
+
+  lockClarify(request_id: string, question_id: string, answer: string | null, note?: ClarifyNote) {
+    return this.#gw.request<ClarifyLockResult>('clarify.lock', {
+      request_id, question_id, answer, ...(note ? { note } : {})
+    })
   }
 
   async confirmDenial(id: string): Promise<void> {
@@ -514,7 +536,13 @@ export class App implements OverlayHost {
         : clear.run(this)
     }
 
-    if (top && (top.placement !== 'dock' || !this.composer.text) && top.onKey(key)) {
+    const clarifyToggle = APP_ACTIONS.find(action => action.id === 'app.clarify.toggle')!
+
+    if (top && isClarifyPrompt(top) && matchesAction(clarifyToggle, key)) {
+      return clarifyToggle.run(this)
+    }
+
+    if (top && (isClarifyPrompt(top) || top.placement !== 'dock' || !this.composer.text) && top.onKey(key)) {
       return
     }
 
@@ -821,7 +849,8 @@ export class App implements OverlayHost {
     return !this.#quitting && this.sid !== null && !this.#switches.pending &&
       !this.#submittingApproval &&
       !this.rewinding && !this.dictation.blocked && !this.attachments.blocked &&
-      (!owner?.modal || isApprovalPrompt(owner)) && (!approval || this.owns(approval))
+      (!owner?.modal || isApprovalPrompt(owner)) && (!approval || this.owns(approval)) &&
+      (!owner || !isClarifyPrompt(owner) || owner.hidden)
   }
 
   /** Keyboard Enter and native send share the request-bound deny → submit transaction. */
@@ -1870,10 +1899,12 @@ export class App implements OverlayHost {
     this.#layerOwners.clear()
     const approvals = this.overlays.filter(isApprovalPrompt)
     const approval = approvals[0]
-    const approvalId = approval ? this.#overlayIds.get(approval)! : ''
+    const asks = this.overlays.filter(isClarifyPrompt)
+    const dockPrompt = approval ?? asks[0]
+    const promptId = dockPrompt ? this.#overlayIds.get(dockPrompt)! : ''
 
-    if (approval) {
-      this.#layerOwners.set(approvalId, approval)
+    if (dockPrompt) {
+      this.#layerOwners.set(promptId, dockPrompt)
     }
 
     const retained = this.#retention?.render(this.transcript, cx, approvals.length > 0)
@@ -1885,8 +1916,8 @@ export class App implements OverlayHost {
 
     paint({
       dock: dockNodes({
-        approval: approval?.node(approvalId),
-        approvalQueued: approvals.length - 1,
+        approval: dockPrompt?.node(promptId),
+        approvalQueued: approvals.length + asks.length - 1,
         branch: info?.branch ?? '',
         jobs: this.jobs.count,
         onJobs: () => this.jobs.show(),

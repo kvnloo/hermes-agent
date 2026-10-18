@@ -1415,7 +1415,8 @@ def _clarify_block(sid: str, questions: list[dict]) -> dict:
     from tui_gateway import server_requests
     wire = [{"qid": e["qid"], "question": e["question"], "choices": e["choices"], "multi_select": bool(e["multi_select"])}
             for e in questions]
-    result = server_requests.send("clarify", sid, {"questions": wire}, timeout=_clarify_timeout_seconds(),
+    result = server_requests.send("clarify", sid, {"questions": wire, "supports_notes": True,
+                                                 "supports_image_refs": True}, timeout=_clarify_timeout_seconds(),
                                   qids=[e["qid"] for e in questions])
     return result or {"answers": {}, "outcome": "undelivered"}
 

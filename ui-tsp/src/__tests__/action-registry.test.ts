@@ -156,6 +156,7 @@ const slashShortcuts = [
 const newChords = [
   ...shortcuts.map(([name, bytes]) => [name, bytes]),
   ...slashShortcuts.map(([name, bytes]) => [name, bytes]),
+  ['alt+h', chord('h', 3)],
   ['ctrl+t', chord('t', 5)],
   ['alt+shift+c', chord('c', 4)]
 ]

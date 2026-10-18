@@ -12,6 +12,7 @@ from pydantic import Field
 from .base import JsonValue, Params, Result, WireEnum
 from .common import OpenModel, PendingApproval, SessionParams
 from .registry import method
+from .server_requests import ClarifyNote
 
 # ── prompt.submit ─────────────────────────────────────────────────────────────────────────────
 
@@ -254,6 +255,7 @@ class ClarifyLockParams(Params):
     request_id: str
     question_id: str
     answer: JsonValue = ""  # non-string answers are JSON-encoded server-side
+    note: ClarifyNote | None = None
     profile: str | None = None
 
 

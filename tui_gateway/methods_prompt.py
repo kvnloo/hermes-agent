@@ -1167,11 +1167,18 @@ def _(rid, params: dict) -> dict:
     answer = params.get("answer", "")
     if answer is not None and not isinstance(answer, str):
         answer = json.dumps(answer, ensure_ascii=False)
-    if (proxied := _lock_compute_host_clarify(rid, request_id, question_id, answer)) is not None:
+    from tui_gateway.contracts.prompt_voice import ClarifyLockParams
+    from pydantic import ValidationError
+    try:
+        parsed = ClarifyLockParams.model_validate(params)
+    except ValidationError as exc:
+        return _err(rid, 4002, str(exc))
+    note = parsed.note.model_dump() if parsed.note is not None else None
+    if (proxied := _lock_compute_host_clarify(rid, request_id, question_id, answer, note)) is not None:
         return proxied
     from tui_gateway import server_requests
     try:
-        remaining = server_requests.lock_answer(request_id, question_id, answer)
+        remaining = server_requests.lock_answer(request_id, question_id, answer, note)
     except ValueError as e:
         return _err(rid, 4002, str(e))
     if remaining is None:
