@@ -481,6 +481,38 @@ export interface BrowserTargetResult {
   url: string
   in_tern: boolean
 }
+export interface BtwListResult {
+  threads: BtwThread[]
+}
+export interface BtwThread {
+  id: string
+  revision: number
+  turns: BtwTurn[]
+}
+export interface BtwTurn {
+  id: string
+  question: string
+  answer: string
+  state: BtwState
+  error?: string | null
+}
+export type BtwState = 'running' | 'answered' | 'error' | 'cancelled'
+export interface BtwSubmitParams {
+  session_id: string
+  profile?: string | null
+  text: string
+  thread_id?: string | null
+}
+export interface BtwSubmitResult {
+  thread: BtwThread
+  turn_id: string
+}
+export interface BtwCancelParams {
+  session_id: string
+  profile?: string | null
+  thread_id: string
+  turn_id: string
+}
 /** ``key`` selects one getter from ``_CONFIG_GETTERS``; ``cwd`` feeds the ``project`` getter, ``session_id`` lets ``reasoning`` / ``fast`` answer with the session's live pin. */
 export interface ConfigGetParams {
   profile?: string | null
@@ -4636,6 +4668,9 @@ export interface DisplayInstallSudoParams {
   session_id: string
   profile_key: string
 }
+export interface BtwUpdatePayload {
+  thread: BtwThread
+}
 /** ``methods_connectors._connection_update``: one target transition (``target``/``from``/``to``/ ``actor``) or the settlement (none of those), with the full snapshot. */
 export interface ConnectionUpdatePayload {
   op_id: string
@@ -5126,6 +5161,12 @@ export interface RpcMethods {
   'browser.focus': { params: BrowserBlockParams; result: BrowserTargetResult }
   /** Inspect, attach to, or drop the CDP browser the tools use, or switch Browser Use mode (``use``, applies to new sessions); ``messages`` narrate a connect. */
   'browser.manage': { params: BrowserManageParams; result: BrowserManageResult }
+  /** Cancel only the exact running side turn, returning canonical readback. */
+  'btw.cancel': { params: BtwCancelParams; result: BtwSubmitResult }
+  /** Read all side threads owned by this conversation, without main transcript entries. */
+  'btw.list': { params: SessionParams; result: BtwListResult }
+  /** Start a side question or continue an exact owned thread; streams btw.update snapshots. */
+  'btw.submit': { params: BtwSubmitParams; result: BtwSubmitResult }
   /** Lock one answer of a batch clarify request (editable until every question is locked). */
   'clarify.lock': { params: ClarifyLockParams; result: ClarifyLockResult }
   /** Run ``hermes <argv>`` non-interactively and capture its output; ``blocked`` explains a refusal. */
@@ -5638,6 +5679,9 @@ export const RPC_METHODS = [
   'browser.controller.result',
   'browser.focus',
   'browser.manage',
+  'btw.cancel',
+  'btw.list',
+  'btw.submit',
   'clarify.lock',
   'cli.exec',
   'client.capabilities',
@@ -5950,6 +5994,8 @@ export interface BackendGatewayEventMap {
   'browser.progress': BrowserProgressPayload
   /** A /btw side question was answered. */
   'btw.complete': SideAgentCompletePayload
+  /** Canonical side-thread snapshot after a streamed delta or state change. */
+  'btw.update': BtwUpdatePayload
   /** A connection operation opened on this session; the desktop renders its card. */
   'connection.request': ConnectionRequestPayload
   /** One transition or the settlement of an open connection operation. */
@@ -6098,6 +6144,7 @@ export const GATEWAY_EVENT_TYPES = [
   'browser.controller.command',
   'browser.progress',
   'btw.complete',
+  'btw.update',
   'connection.request',
   'connection.update',
   'cron.changed',

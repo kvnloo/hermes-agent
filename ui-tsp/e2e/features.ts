@@ -290,6 +290,25 @@ async function shortcuts() {
     assert.deepEqual(closed.get('dock.composer.line.input')?.p, before)
     assert(![...closed.values()].some(n=>n.p?.role === 'omp.custom'))
   }, true)
+  await step('BTW history and reader scroll independently; selected draft stays outside main', async()=>{
+    const text = ['BTW first marker', ...Array.from({length:100}, (_,i)=>`BTW paragraph ${i}`), 'BTW last marker'].join('\n\n')
+    const before = (await native.rendered()).get('dock.composer.line.input')?.p
+    await replay('btw.update', {thread:{id:'btw-scroll-fixture',revision:1,turns:[{id:'turn-scroll-fixture',question:'BTW scroll question',answer:text,state:'answered',error:null}]}})
+    await tap('View report: /btw')
+    await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.p?.role === 'omp.btw.answer' && n.p.text === text), 'typed side thread reader')
+    await capture('btw-start')
+    await native.key('End')
+    const end = await until(async()=>{
+      const snapshot = await native.snapshot()
+      return {rect:flatten(snapshot.tree).find(n=>n.text === 'BTW last marker')?.rect, height:snapshot.viewport.height}
+    }, value=>Boolean(value.rect && value.rect[1] > 0 && value.rect[1]+value.rect[3] <= value.height), 'BTW last paragraph scrolled into viewport')
+    await writeFile(join(manifest.proof,'btw-scroll.json'), JSON.stringify(end))
+    await capture('btw-end')
+    await native.key('Escape')
+    const closed = await until(()=>native.rendered(), ns=>![...ns.values()].some(n=>n.p?.role === 'omp.overlay.report'), 'BTW closed')
+    assert.deepEqual(closed.get('dock.composer.line.input')?.p, before)
+    assert(![...closed.values()].some(n=>n.p?.role === 'omp.custom'))
+  }, true)
   await step('plan review ToC, section scrolling, refine field and cancel preserve the draft', async()=>{
     const before = (await native.rendered()).get('dock.composer.line.input')?.p
     const text = ['# Implementation plan', 'Goal fixture.', '## Build', ...Array.from({length:80}, (_,i)=>`Plan paragraph ${i}`), 'Plan final marker', '## Verify', 'Run the tests.'].join('\n\n')

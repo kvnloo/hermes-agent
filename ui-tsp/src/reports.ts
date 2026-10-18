@@ -23,7 +23,6 @@ const noArgument = (arg: string) => !arg
 const REPORT_COMMANDS: readonly ReportCommand[] = [
   { name: 'usage', accepts: anyArgument },
   { name: 'context', accepts: anyArgument },
-  { name: 'btw', accepts: anyArgument },
   { name: 'history', accepts: anyArgument },
   { name: 'tools', accepts: anyArgument },
   { name: 'help', accepts: anyArgument },

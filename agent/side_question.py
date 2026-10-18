@@ -99,7 +99,7 @@ def _side_question_task_config() -> Dict[str, Any]:
     return task if isinstance(task, dict) else {}
 
 
-def _answer_via_fork(parent_agent: Any, question: str, history: Optional[List[Dict[str, Any]]]) -> str:
+def _answer_via_fork(parent_agent: Any, question: str, history: Optional[List[Dict[str, Any]]], *, stream_callback=None) -> str:
     """Answer via a cache-parity fork of ``parent_agent`` on the calling thread.
 
     An empty thread-scoped tool whitelist denies every tool call at dispatch: ``tools[]``
@@ -118,7 +118,8 @@ def _answer_via_fork(parent_agent: Any, question: str, history: Optional[List[Di
             "Tools are disabled here — answer directly from the conversation context."))
         snapshot = trim_snapshot_for_fork(history)
         result = fork.run_conversation(user_message=f"{_FORK_PROMPT}\n\nSide question: {question}",
-                                       conversation_history=_digest_history(snapshot) if routed else snapshot)
+                                       conversation_history=_digest_history(snapshot) if routed else snapshot,
+                                       **({"stream_callback": stream_callback} if stream_callback else {}))
         answer = (result or {}).get("final_response", "") or ""
         if not answer and result and result.get("error"):
             raise RuntimeError(str(result["error"]))
@@ -148,7 +149,7 @@ def _answer_via_oneshot(question: str, history: Optional[List[Dict[str, Any]]], 
 def answer_side_question(
     question: str, history: Optional[List[Dict[str, Any]]], *, parent_agent: Any = None,
     main_runtime: Optional[Dict[str, Any]] = None, max_tokens: int = 2048, temperature: Optional[float] = 0.3,
-    timeout: float = 180.0,
+    timeout: float = 180.0, stream_callback=None, cancelled=None,
 ) -> str:
     """Fork when ``parent_agent`` is live, else (or on empty answer / failure) the one-shot
     digest. Raises on failure — callers surface the error on their own UI."""
@@ -158,12 +159,17 @@ def answer_side_question(
 
     if parent_agent is not None:
         try:
-            answer = _answer_via_fork(parent_agent, question, history)
+            answer = _answer_via_fork(parent_agent, question, history,
+                                      **({"stream_callback": stream_callback} if stream_callback else {}))
+            if cancelled and cancelled():
+                return ""
             if answer:
                 return answer
             logger.warning("/btw fork returned an empty answer; falling back to one-shot")
         except Exception:
             logger.warning("/btw cache-parity fork failed; falling back to one-shot", exc_info=True)
 
+    if cancelled and cancelled():
+        return ""
     return _answer_via_oneshot(question, history, main_runtime=main_runtime, max_tokens=max_tokens,
                                temperature=temperature, timeout=timeout)
