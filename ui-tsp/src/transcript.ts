@@ -6,6 +6,7 @@ import type {
   EvalUpdatePayload,
   InflightTurn,
   MessageCompletePayload,
+  ReasoningPresentation,
   SubagentEventPayload,
   ToolCompletePayload,
   ToolOutputDeltaPayload,
@@ -40,6 +41,7 @@ export class Transcript {
   #sessionUsage: Usage | undefined
   /** The streaming turn: set by start, cleared by complete, clear and load (notices may land after it). */
   #live: TurnEntry | undefined
+  #presentationKey = ''
 
   /** Sets the running usage turns count from (a resumed session's totals). */
   usageBase(usage: Usage | undefined) {
@@ -101,6 +103,7 @@ export class Transcript {
     const turn: TurnEntry = { blocks: [], id: this.id('t'), kind: 'turn', rev: 0, startedAt: at, status: 'live' }
     this.push(turn)
     this.#live = turn
+    this.#presentationKey = ''
 
     return turn
   }
@@ -127,8 +130,24 @@ export class Transcript {
    * Hermes also relays each response's visible text through `reasoning.available`, so text the
    * turn already shows is not a thought either.
    */
-  reasoningBlock(text: string, at = Date.now()) {
+  reasoningBlock(text: string, at = Date.now(), presentation?: ReasoningPresentation[] | null) {
     const turn = this.start(at)
+
+    if (presentation?.some(part => part.narration)) {
+      const key = JSON.stringify(presentation)
+
+      if (key === this.#presentationKey) { return }
+      this.#presentationKey = key
+      const boundary = turn.blocks.findLastIndex(b => b.kind === 'tool') + 1
+      const first = turn.blocks.findIndex((b, i) => i >= boundary && b.kind === 'thinking')
+      const offset = first < 0 ? boundary : first
+      turn.blocks = turn.blocks.filter((b, i) => i < boundary || b.kind !== 'thinking')
+      turn.blocks.splice(offset, 0, ...presentation.map(part => this.#reasoningPart(part, at)))
+      this.#touch(turn)
+
+      return
+    }
+
     const incoming = text.trim()
 
     if (!incoming || turn.blocks.some(b => b.kind === 'thinking' || (b.kind === 'text' && b.text.includes(incoming)))) {
@@ -137,6 +156,12 @@ export class Transcript {
 
     turn.blocks.push({ endedAt: at, id: this.id('k'), kind: 'thinking', startedAt: at, text })
     this.#touch(turn)
+  }
+
+  #reasoningPart(part: ReasoningPresentation, at: number): Block {
+    return part.narration
+      ? { id: this.id('x'), kind: 'text', text: part.text, narration: true }
+      : { endedAt: at, id: this.id('k'), kind: 'thinking', startedAt: at, text: part.text }
   }
 
   text(text: string, at = Date.now()) {
@@ -148,7 +173,7 @@ export class Transcript {
     this.#endThinking(turn, at)
     const last = turn.blocks.at(-1)
 
-    if (last?.kind === 'text') {
+    if (last?.kind === 'text' && !last.narration) {
       last.text += text
     } else {
       turn.blocks.push({ id: this.id('x'), kind: 'text', text })
@@ -178,6 +203,8 @@ export class Transcript {
     if (turn.blocks.some(b => b.kind === 'tool' && b.call.id === p.tool_id)) {
       return
     }
+
+    this.#presentationKey = ''
 
     const call: ToolCall = {
       args: p.args ?? {},
@@ -377,7 +404,7 @@ export class Transcript {
     if (final.trim() && tail.trim() !== final.trim() && !(p.status === 'error' && !p.partial)) {
       const last = turn.blocks.at(-1)
 
-      if (last?.kind === 'text') {
+      if (last?.kind === 'text' && !last.narration) {
         last.text = final
       } else {
         turn.blocks.push({ id: this.id('x'), kind: 'text', text: final })
@@ -465,7 +492,9 @@ export class Transcript {
       }
 
       if (m.role === 'assistant') {
-        if (m.reasoning?.trim()) {
+        if (m.reasoning_presentation?.length) {
+          turn.blocks.push(...m.reasoning_presentation.map(part => this.#reasoningPart(part, at)))
+        } else if (m.reasoning?.trim()) {
           turn.blocks.push({ endedAt: at, id: this.id('k'), kind: 'thinking', startedAt: at, text: m.reasoning })
         }
 
@@ -611,7 +640,7 @@ function trailingText(turn: TurnEntry): string {
     // A tool call or an interim seal (an empty text block) starts a new response.
     if (b.kind === 'tool' || (b.kind === 'text' && !b.text)) {
       out = ''
-    } else if (b.kind === 'text') {
+    } else if (b.kind === 'text' && !b.narration) {
       out += b.text
     }
   }

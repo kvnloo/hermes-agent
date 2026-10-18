@@ -155,6 +155,11 @@ class ToolLabel(Payload):
     preview: str = ""
 
 
+class ReasoningPresentation(Payload):
+    text: str
+    narration: bool
+
+
 class TranscriptMessage(OpenModel):
     """One transcript row as the gateway PROJECTS it for renderers (``session_history._project_history``):
     ``text``, display-only ``timestamp`` / ``display_kind`` / ``display_metadata``, the durable ``row_id``
@@ -174,6 +179,7 @@ class TranscriptMessage(OpenModel):
     args: dict[str, JsonValue] | None = None
     labels: list[ToolLabel] | None = None
     reasoning: str | None = None
+    reasoning_presentation: list[ReasoningPresentation] | None = None
 
 
 class SubagentStatus(WireEnum):

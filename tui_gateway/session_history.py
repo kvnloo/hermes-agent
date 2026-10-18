@@ -359,7 +359,10 @@ def _history_to_messages(history: list[dict], *, profile_home=None, image_urls: 
         if invocation:
             msg.update(text=invocation, display_kind="skill_invocation")
         if role == "assistant":
+            from agent.narration import reasoning_presentation
             msg.update((key, m[key]) for key in _HISTORY_ASSISTANT_DETAIL_KEYS if m.get(key) is not None)
+            if presentation := reasoning_presentation(m):
+                msg["reasoning_presentation"] = presentation
         # Display-only timeline metadata (model switches, delegation events).
         display_kind = m.get("display_kind") or _legacy_display_kind(role, content_text)
         if display_kind:

@@ -1602,6 +1602,12 @@ def _assistant_reasoning_text(agent, assistant_message) -> Optional[str]:
     if reasoning_text and agent.reasoning_callback and not agent.stream_delta_callback and not agent._stream_callback:
         with contextlib.suppress(Exception):
             agent.reasoning_callback(reasoning_text)
+    from agent.narration import reasoning_presentation
+    presentation = reasoning_presentation(assistant_message)
+    if presentation and getattr(agent, "tool_progress_callback", None):
+        with contextlib.suppress(Exception):
+            agent.tool_progress_callback("reasoning.available", "_thinking", reasoning_text or "", None,
+                                         presentation=presentation)
     return _sanitize_surrogates(reasoning_text) if reasoning_text else reasoning_text
 
 

@@ -3338,6 +3338,7 @@ export interface TranscriptMessage {
   args?: Record<string, unknown> | null
   labels?: ToolLabel[] | null
   reasoning?: string | null
+  reasoning_presentation?: ReasoningPresentation[] | null
   [key: string]: unknown
 }
 /** ``tools.tool_labels.ToolLabel`` — what one call executed through the tool_search bridge is, in words. Clients render ``text`` (or ``app``/``action`` in their own columns) and never parse the tool name themselves. */
@@ -3352,6 +3353,10 @@ export interface ToolLabel {
 }
 /** Which surface one inner call of a bridged ``tool_call`` runs on. */
 export type ToolLabelKind = 'connector' | 'mcp' | 'tool'
+export interface ReasoningPresentation {
+  text: string
+  narration: boolean
+}
 export interface SessionBranchStoredParams {
   profile?: string | null
   parent_session_id: string
@@ -5030,6 +5035,7 @@ export interface StreamDeltaPayload {
   text: string
   rendered?: string | null
   verbose?: boolean | null
+  presentation?: ReasoningPresentation[] | null
 }
 /** ``prompt_turn._interim_assistant_cb`` / ``agent_callbacks`` interim_assistant_callback. */
 export interface MessageInterimPayload {

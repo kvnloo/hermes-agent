@@ -1456,7 +1456,7 @@ export class App implements OverlayHost {
         break
 
       case 'reasoning.available':
-        t.reasoningBlock(ev.payload?.text ?? '')
+        t.reasoningBlock(ev.payload?.text ?? '', Date.now(), ev.payload?.presentation)
 
         break
 

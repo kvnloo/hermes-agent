@@ -20,7 +20,7 @@ from typing import Literal
 from pydantic import Field
 
 from .base import JsonValue, Payload, WireEnum
-from .common import MessageReaction, SessionLiveInfo, SubagentStatus, ToolLabel, ToolLabelKind, Usage
+from .common import ReasoningPresentation, MessageReaction, SessionLiveInfo, SubagentStatus, ToolLabel, ToolLabelKind, Usage
 from .config_free_tier_control import SessionControlSnapshot
 from .registry import event
 from .eval import EvalDisplay, EvalUpdatePayload
@@ -121,6 +121,7 @@ class StreamDeltaPayload(Payload):
     text: str
     rendered: str | None = None
     verbose: bool | None = None
+    presentation: list[ReasoningPresentation] | None = None
 
 
 event("message.delta", StreamDeltaPayload, doc="One streamed chunk of the assistant reply.")
