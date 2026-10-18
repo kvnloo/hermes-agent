@@ -393,9 +393,14 @@ def _progress_output_risk(sid, name, preview, kw):
 
 
 def _progress_reasoning(sid, name, preview, kw):
-    if not _session_show_reasoning(sid):
+    presentation = kw.get("presentation")
+    visible = _session_show_reasoning(sid)
+    if not visible and not presentation:
         return
-    _emit("reasoning.available", sid, {"text": str(preview), **({"verbose": True} if _session_verbose(sid) else {})})
+    payload = {"text": str(preview) if visible else "", **({"verbose": True} if _session_verbose(sid) else {})}
+    if presentation:
+        payload["presentation"] = [part for part in presentation if visible or part["narration"]]
+    _emit("reasoning.available", sid, payload)
 
 
 def _progress_moa_reference(sid, name, preview, kw):

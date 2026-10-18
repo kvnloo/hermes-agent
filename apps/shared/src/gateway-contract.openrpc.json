@@ -29374,6 +29374,25 @@
         "title": "ReadRangeRequestParams",
         "type": "object"
       },
+      "ReasoningPresentation": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "narration": {
+            "title": "Narration",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "text",
+          "narration"
+        ],
+        "title": "ReasoningPresentation",
+        "type": "object"
+      },
       "RecordRepoItem": {
         "additionalProperties": false,
         "properties": {
@@ -37661,6 +37680,21 @@
             ],
             "default": null,
             "title": "Verbose"
+          },
+          "presentation": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ReasoningPresentation"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Presentation"
           }
         },
         "required": [
@@ -40312,6 +40346,21 @@
             ],
             "default": null,
             "title": "Reasoning"
+          },
+          "reasoning_presentation": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ReasoningPresentation"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reasoning Presentation"
           }
         },
         "required": [
