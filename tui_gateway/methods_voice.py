@@ -29,11 +29,20 @@ def _dictation_mic_guard(handler):
     """Serialize other mic intents against dictation's explicit capture lease."""
     def guarded(rid, params):
         from tui_gateway.dictation import manager
-        with manager.lock:
+        from tui_gateway.live_voice import manager as live_voice
+        with manager.lock, live_voice.lock:
+            if live_voice.active is not None:
+                return _err(rid, 4019, "Audio devices are owned by live voice; stop it first")
             if manager.active is not None:
                 return _err(rid, 4019, "Microphone is busy with dictation; finish or cancel it first")
             return handler(rid, params)
     return guarded
+
+
+def _emit_with_live_voice(event, sid, payload):
+    from tui_gateway.live_voice import manager
+    manager.event(event, sid, payload)
+    return write_json(_event_frame(event, sid, payload))
 
 
 def _voice_emit(event: str, payload: dict | None = None) -> None:
@@ -806,7 +815,10 @@ def _dictate_start(rid, params: dict) -> dict:
     if not capture_id.strip():
         return _err(rid, 4000, "capture_id required")
     try:
-        with manager.lock, _sessions_lock:
+        from tui_gateway.live_voice import manager as live_voice
+        with manager.lock, live_voice.lock, _sessions_lock:
+            if live_voice.active is not None:
+                return _err(rid, 4019, "Stop live voice before dictating")
             if _voice_mode_enabled() or _wake_owner_snapshot()[0] is not None:
                 return _err(rid, 4019, "Turn off voice chat / wake listening before dictating")
             if _sessions.get(sid) is not session:
@@ -833,7 +845,63 @@ def _dictate_stop(rid, params: dict) -> dict:
     return _ok(rid, {"capture_id": params["capture_id"]})
 
 
+@method("voice.live.start")
+@_registry.profile_scoped
+def _live_start(rid, params: dict) -> dict:
+    from tui_gateway.dictation import manager as dictation
+    from tui_gateway.live_voice import manager
+    session, err = _sess_nowait(params, rid)
+    if err:
+        return err
+    transport = _caller_transport()
+    if not params["consent"] or not params["live_id"].strip():
+        return _err(rid, 4000, "Live voice requires explicit microphone and automatic-send consent")
+    if session.get("transport", _stdio_transport) is not transport:
+        return _err(rid, 4001, "session is owned by another client")
+    sid = params["session_id"]
+
+    def submit(text):
+        # A delayed STT result must not reattach a departed client or resurrect a session.
+        with _sessions_lock:
+            if (_sessions.get(sid) is not session or _transport_is_dead(transport)
+                    or session.get("transport", _stdio_transport) is not transport):
+                return _err(None, 4001, "Live voice session closed")
+        token = bind_transport(transport)
+        try:
+            return _methods["prompt.submit"](None, {
+                "session_id": sid, "text": text, "surface": "voice-live", "image_paths": [], "queued": True})
+        finally:
+            reset_transport(token)
+    try:
+        with dictation.lock, manager.lock, _sessions_lock:
+            if dictation.active is not None or _voice_mode_enabled() or _wake_owner_snapshot()[0] is not None or _fd_tts_pending():
+                return _err(rid, 4019, "Finish dictation, legacy voice, wake listening and playback first")
+            if _sessions.get(sid) is not session:
+                return _err(rid, 4001, "session closed before live voice started")
+            manager.start(params["live_id"], sid, session, transport,
+                          lambda payload: _emit("voice.live", sid, payload), submit)
+    except RuntimeError as exc:
+        return _err(rid, 4019, str(exc))
+    return _ok(rid, {"live_id": params["live_id"]})
+
+
+@method("voice.live.control")
+@_registry.profile_scoped
+def _live_control(rid, params: dict) -> dict:
+    from tui_gateway.live_voice import manager
+    session, err = _sess_nowait(params, rid)
+    if err:
+        return err
+    try:
+        manager.control(params["live_id"], session, _caller_transport(),
+                        params["action"], params.get("muted", False))
+    except RuntimeError as exc:
+        return _err(rid, 4019, str(exc))
+    return _ok(rid, {"live_id": params["live_id"]})
+
+
 @method("voice.tts")
+@_dictation_mic_guard
 def _(rid, params: dict) -> dict:
     text = params.get("text", "")
     if not text:

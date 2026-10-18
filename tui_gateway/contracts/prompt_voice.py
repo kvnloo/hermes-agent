@@ -7,6 +7,8 @@ and voice / wake-word control (``methods_voice.py``).
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import Field
 
 from .base import JsonValue, Params, Result, WireEnum
@@ -421,6 +423,29 @@ method("voice.dictate.start", params=DictateStartParams, result=DictateResult,
        doc="Explicitly capture local microphone audio for a review-only draft.")
 method("voice.dictate.stop", params=DictateStopParams, result=DictateResult,
        doc="Finish dictation, or cancel and discard all audio and hypotheses.")
+
+
+class LiveVoiceStartParams(Params):
+    session_id: str
+    live_id: str
+    consent: bool
+
+
+class LiveVoiceControlParams(Params):
+    session_id: str
+    live_id: str
+    action: Literal["stop", "mute", "interrupt"]
+    muted: bool = False
+
+
+class LiveVoiceResult(Result):
+    live_id: str
+
+
+method("voice.live.start", params=LiveVoiceStartParams, result=LiveVoiceResult,
+       doc="Explicit consent to live microphone, automatic spoken turns and configured TTS.")
+method("voice.live.control", params=LiveVoiceControlParams, result=LiveVoiceResult,
+       doc="Control the exact live voice lease: stop, mute or interrupt.")
 
 
 # ── wake word ─────────────────────────────────────────────────────────────────────────────────

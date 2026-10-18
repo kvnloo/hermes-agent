@@ -4903,6 +4903,42 @@
       }
     },
     {
+      "name": "voice.live.control",
+      "summary": "Control the exact live voice lease: stop, mute or interrupt.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/LiveVoiceControlParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/LiveVoiceResult"
+        }
+      }
+    },
+    {
+      "name": "voice.live.start",
+      "summary": "Explicit consent to live microphone, automatic spoken turns and configured TTS.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/LiveVoiceStartParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/LiveVoiceResult"
+        }
+      }
+    },
+    {
       "name": "voice.record",
       "summary": "VAD-bounded push-to-talk; the transcript arrives as a voice.transcript event.",
       "params": [
@@ -18960,6 +18996,150 @@
         ],
         "title": "LiveSessionStatus",
         "type": "string"
+      },
+      "LiveVoiceControlParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "live_id": {
+            "title": "Live Id",
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "stop",
+              "mute",
+              "interrupt"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "muted": {
+            "default": false,
+            "title": "Muted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "session_id",
+          "live_id",
+          "action"
+        ],
+        "title": "LiveVoiceControlParams",
+        "type": "object"
+      },
+      "LiveVoicePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "live_id": {
+            "title": "Live Id",
+            "type": "string"
+          },
+          "phase": {
+            "enum": [
+              "idle",
+              "starting",
+              "listening",
+              "transcribing",
+              "thinking",
+              "speaking",
+              "interrupted",
+              "muted",
+              "stopping",
+              "error"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "muted": {
+            "default": false,
+            "title": "Muted",
+            "type": "boolean"
+          },
+          "user_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "User Text"
+          },
+          "assistant_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Assistant Text"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          }
+        },
+        "required": [
+          "live_id",
+          "phase"
+        ],
+        "title": "LiveVoicePayload",
+        "type": "object"
+      },
+      "LiveVoiceResult": {
+        "additionalProperties": false,
+        "properties": {
+          "live_id": {
+            "title": "Live Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "live_id"
+        ],
+        "title": "LiveVoiceResult",
+        "type": "object"
+      },
+      "LiveVoiceStartParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "live_id": {
+            "title": "Live Id",
+            "type": "string"
+          },
+          "consent": {
+            "title": "Consent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "session_id",
+          "live_id",
+          "consent"
+        ],
+        "title": "LiveVoiceStartParams",
+        "type": "object"
       },
       "LlmOneshotParams": {
         "additionalProperties": false,
@@ -43863,6 +44043,18 @@
           "schema": {
             "type": "object",
             "additionalProperties": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "voice.live",
+      "summary": "Exact-lease live conversation phase; never a dictation draft.",
+      "params": [
+        {
+          "name": "payload",
+          "schema": {
+            "$ref": "#/components/schemas/LiveVoicePayload"
           }
         }
       ]

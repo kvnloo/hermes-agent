@@ -519,6 +519,8 @@ def _teardown_session(session: dict | None, *, end_reason: str = "tui_close") ->
         return
     from tui_gateway.dictation import manager
     manager.release(session=session)
+    from tui_gateway.live_voice import manager as live_voice
+    live_voice.release(session=session)
     _finalize_session(session, end_reason=end_reason)
     _announce_session_reclaimed(session, end_reason)
     with contextlib.suppress(Exception):
@@ -1004,6 +1006,8 @@ def _close_sessions_for_transport(transport, *, end_reason: str = "ws_disconnect
     close_on_disconnect / park-sentinel path, so a single-client disconnect behaves exactly as it always has."""
     from tui_gateway.dictation import manager
     manager.release(transport=transport)
+    from tui_gateway.live_voice import manager as live_voice
+    live_voice.release(transport=transport)
     clientless = _detach_transport_from_sessions(transport)
     reaped = detached = 0
     for sid, session in clientless:
