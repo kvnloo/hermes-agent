@@ -134,6 +134,14 @@ export const APP_ACTIONS: readonly Action[] = [
     run: app => app.dictation.toggle()
   },
   {
+    id: 'app.stt.hold.info',
+    title: 'Push-to-talk availability (Mic / Alt+V fallback)',
+    group: 'Control',
+    keys: ['alt+shift+space'],
+    when: ctx => !ctx.overlayOpen && !ctx.completionOpen,
+    run: app => app.dictation.explainHold()
+  },
+  {
     id: 'app.model.select',
     title: 'Select model',
     group: 'Navigation',
