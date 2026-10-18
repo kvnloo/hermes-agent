@@ -49,7 +49,7 @@ import { openReportSheet } from './overlays/report-sheet.js'
 import { openSettings } from './overlays/settings.js'
 import type { SheetHost } from './overlays/sheet.js'
 import { programPaletteOf } from './palette.js'
-import { latestPlan } from './plan.js'
+import { latestPlan, type PlanStatus, reviewPlanText } from './plan.js'
 import { isReportCommand, type Report, type ReportNotice } from './reports.js'
 import { Retention } from './retention.js'
 import { openRewind, rewindDisabledReason } from './rewind.js'
@@ -419,18 +419,38 @@ export class App implements OverlayHost {
     openReportSheet({ ...this.#sheetHost(), copy: copyToClipboard }, report)
   }
 
-  reviewPlan() {
+  #planRequest = 0
+
+  async reviewPlan() {
     const sid = this.sid
+    const request = ++this.#planRequest
+    const candidate = latestPlan(this.transcript.entries)
+    let status: PlanStatus | undefined
+
+    try {
+      status = await this.#gw.request<PlanStatus>('plan.status', { session_id: sid })
+    } catch {
+      // Older gateways keep the explicitly non-authoritative Markdown review MVP.
+    }
+
+    if (this.sid !== sid || request !== this.#planRequest || !sid) { return }
     openPlanReview({
       ...this.#sheetHost(),
-      owns: overlay => this.owns(overlay) && this.sid === sid,
+      sessionId: sid,
+      request: (method, params) => {
+        if (this.sid !== sid) { return Promise.reject(new Error('Session changed')) }
+
+        return this.#gw.request(method, { ...params })
+      },
+      owns: overlay => this.owns(overlay) && this.sid === sid &&
+        (status?.plan !== undefined && status?.plan !== null || latestPlan(this.transcript.entries)?.text === candidate?.text),
       submit: text => {
         if (this.sid === sid) {
           this.#submit(text)
           this.changed()
         }
       }
-    }, latestPlan(this.transcript.entries))
+    }, status?.plan ? reviewPlanText(status.plan.text) : status?.enabled || status?.generating ? undefined : candidate, status)
   }
 
   #sheetHost(): SheetHost {

@@ -1,9 +1,18 @@
+import type { PlanStatusResult } from '@hermes/shared/gateway-events'
+
 import type { Entry } from './model.js'
 
 export interface PlanSection {
   title: string
   level: number
   text: string
+}
+
+export type PlanStatus = PlanStatusResult
+
+/** Backend plans need not use Markdown headings. */
+export function reviewPlanText(text: string): Plan {
+  return parsePlan(text) ?? { text, preamble: '', sections: [{ title: 'Plan', level: 1, text }] }
 }
 
 export interface Plan {
