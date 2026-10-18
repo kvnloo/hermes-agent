@@ -572,9 +572,14 @@ async function agentInspector() {
     await replay('subagent.start', agent)
     await replay('subagent.tool', {...agent,tool_name:'read',tool_preview:'alpha.ts',tool_count:1})
     await until(()=>native.rendered(), ns=>[...ns.values()].some(n=>n.k==='agent' && n.p?.task===agent.goal), 'native agent row')
-    await native.type('Inspector unsent draft')
+    const draft = 'Inspector unsent draft'
+    await native.type(draft)
     await native.key('ArrowLeft')
-    const before = record((await native.rendered()).get('dock.composer.line.input')?.p)
+    const draftNodes = await until(()=>native.rendered(), ns=>{
+      const composer = ns.get('dock.composer.line.input')?.p
+      return composer?.text===draft && composer.cursor===draft.length-1
+    }, 'composer acknowledges the moved caret before inspector opens')
+    const before = record(draftNodes.get('dock.composer.line.input')?.p)
     await writeFile(join(manifest.proof,'inspector-draft-before.json'),JSON.stringify(before))
     const snapshot = await native.snapshot()
     const targets = flatten(snapshot.tree).filter(n=>n.title==='Inspect agent (read-only)')
