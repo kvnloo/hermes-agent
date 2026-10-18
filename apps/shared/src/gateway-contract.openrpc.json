@@ -1789,6 +1789,24 @@
       }
     },
     {
+      "name": "lsp.query",
+      "summary": "Read-only references, document symbols or hover from the session-local Hermes LSP service; never a model call.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/LspQueryParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/LspQueryResult"
+        }
+      }
+    },
+    {
       "name": "mcp.catalog",
       "summary": "Curated MCP presets with per-profile installed/enabled state and the env keys each needs.",
       "params": [
@@ -18066,6 +18084,424 @@
           "deferred_by_goal"
         ],
         "title": "LoopSnapshot",
+        "type": "object"
+      },
+      "LspFailure": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "server": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Server"
+          },
+          "position_encoding": {
+            "const": "utf-16",
+            "default": "utf-16",
+            "title": "Position Encoding",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "unavailable",
+              "error"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "operation": {
+            "enum": [
+              "references",
+              "symbols",
+              "hover"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "server",
+          "kind",
+          "operation",
+          "message"
+        ],
+        "title": "LspFailure",
+        "type": "object"
+      },
+      "LspHover": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "server": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Server"
+          },
+          "position_encoding": {
+            "const": "utf-16",
+            "default": "utf-16",
+            "title": "Position Encoding",
+            "type": "string"
+          },
+          "kind": {
+            "const": "hover",
+            "title": "Kind",
+            "type": "string"
+          },
+          "contents": {
+            "items": {
+              "$ref": "#/components/schemas/LspHoverContent"
+            },
+            "title": "Contents",
+            "type": "array"
+          },
+          "range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LspRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "path",
+          "server",
+          "kind",
+          "contents",
+          "range"
+        ],
+        "title": "LspHover",
+        "type": "object"
+      },
+      "LspHoverContent": {
+        "additionalProperties": false,
+        "properties": {
+          "format": {
+            "enum": [
+              "markdown",
+              "plaintext",
+              "code"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Language"
+          }
+        },
+        "required": [
+          "format",
+          "text"
+        ],
+        "title": "LspHoverContent",
+        "type": "object"
+      },
+      "LspLocation": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "range": {
+            "$ref": "#/components/schemas/LspRange"
+          }
+        },
+        "required": [
+          "path",
+          "range"
+        ],
+        "title": "LspLocation",
+        "type": "object"
+      },
+      "LspPosition": {
+        "additionalProperties": false,
+        "properties": {
+          "line": {
+            "minimum": 1,
+            "title": "Line",
+            "type": "integer"
+          },
+          "col": {
+            "minimum": 1,
+            "title": "Col",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "line",
+          "col"
+        ],
+        "title": "LspPosition",
+        "type": "object"
+      },
+      "LspQueryParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "operation": {
+            "enum": [
+              "references",
+              "symbols",
+              "hover"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "path": {
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          },
+          "line": {
+            "default": 1,
+            "minimum": 1,
+            "title": "Line",
+            "type": "integer"
+          },
+          "col": {
+            "default": 1,
+            "minimum": 1,
+            "title": "Col",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "operation",
+          "path"
+        ],
+        "title": "LspQueryParams",
+        "type": "object"
+      },
+      "LspQueryResult": {
+        "additionalProperties": false,
+        "properties": {
+          "lsp_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LspReferences"
+              },
+              {
+                "$ref": "#/components/schemas/LspSymbols"
+              },
+              {
+                "$ref": "#/components/schemas/LspHover"
+              },
+              {
+                "$ref": "#/components/schemas/LspFailure"
+              }
+            ],
+            "title": "Lsp Result"
+          }
+        },
+        "required": [
+          "lsp_result"
+        ],
+        "title": "LspQueryResult",
+        "type": "object"
+      },
+      "LspRange": {
+        "additionalProperties": false,
+        "properties": {
+          "start": {
+            "$ref": "#/components/schemas/LspPosition"
+          },
+          "end": {
+            "$ref": "#/components/schemas/LspPosition"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "LspRange",
+        "type": "object"
+      },
+      "LspReferences": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "server": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Server"
+          },
+          "position_encoding": {
+            "const": "utf-16",
+            "default": "utf-16",
+            "title": "Position Encoding",
+            "type": "string"
+          },
+          "kind": {
+            "const": "references",
+            "title": "Kind",
+            "type": "string"
+          },
+          "locations": {
+            "items": {
+              "$ref": "#/components/schemas/LspLocation"
+            },
+            "title": "Locations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "path",
+          "server",
+          "kind",
+          "locations"
+        ],
+        "title": "LspReferences",
+        "type": "object"
+      },
+      "LspSymbol": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "integer"
+          },
+          "location": {
+            "$ref": "#/components/schemas/LspLocation"
+          },
+          "selection": {
+            "$ref": "#/components/schemas/LspRange"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/LspSymbol"
+            },
+            "title": "Children",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "location",
+          "selection",
+          "children"
+        ],
+        "title": "LspSymbol",
+        "type": "object"
+      },
+      "LspSymbols": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "server": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Server"
+          },
+          "position_encoding": {
+            "const": "utf-16",
+            "default": "utf-16",
+            "title": "Position Encoding",
+            "type": "string"
+          },
+          "kind": {
+            "const": "symbols",
+            "title": "Kind",
+            "type": "string"
+          },
+          "symbols": {
+            "items": {
+              "$ref": "#/components/schemas/LspSymbol"
+            },
+            "title": "Symbols",
+            "type": "array"
+          }
+        },
+        "required": [
+          "path",
+          "server",
+          "kind",
+          "symbols"
+        ],
+        "title": "LspSymbols",
         "type": "object"
       },
       "McpCatalogEntry": {

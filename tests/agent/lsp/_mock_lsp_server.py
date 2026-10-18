@@ -154,6 +154,28 @@ def main():
                 return 0
             continue
 
+        if script.startswith("semantic") and msg.get("method") in {"textDocument/references", "textDocument/documentSymbol", "textDocument/hover"}:
+            params = msg["params"]
+            if log := os.environ.get("MOCK_LSP_QUERY_LOG"):
+                with open(log, "a", encoding="utf-8") as stream:
+                    stream.write(json.dumps(msg) + "\n")
+            uri = params["textDocument"]["uri"]
+            span = {"start": {"line": 1, "character": 2}, "end": {"line": 3, "character": 4}}
+            values = {
+                "textDocument/references": [{"uri": uri, "range": span}, {"uri": uri.replace("a.py", "b.py"), "range": span}],
+                "textDocument/documentSymbol": [{"name": "Outer", "kind": 5, "range": span, "selectionRange": span,
+                                                "children": [{"name": "child", "kind": 6, "range": span, "selectionRange": span}]}],
+                "textDocument/hover": {"contents": {"kind": "markdown", "value": "**actual mock-server protocol reply**"}, "range": span},
+            }
+            if script == "semantic_error":
+                write_message({"jsonrpc": "2.0", "id": msg["id"], "error": {"code": -32603, "message": "index failed"}})
+            elif script == "semantic_bad":
+                write_message({"jsonrpc": "2.0", "id": msg["id"], "result": False})
+            else:
+                value = None if script == "semantic_empty" else values[msg["method"]]
+                write_message({"jsonrpc": "2.0", "id": msg["id"], "result": value})
+            continue
+
         if msg.get("method") == "initialized":
             continue
 
