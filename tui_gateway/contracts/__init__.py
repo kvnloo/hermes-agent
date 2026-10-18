@@ -5,6 +5,7 @@ from . import (  # noqa: F401
     agent_hub,
     billing_delegation_pets,
     browser_blocks,
+    btw,
     common,
     config_free_tier_control,
     connectors,

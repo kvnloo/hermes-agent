@@ -65,6 +65,10 @@ async function withApp(run: (fixture: Fixture) => Promise<void>) {
   const gw = new GatewayClient()
 
   const request = vi.spyOn(gw, 'request').mockImplementation(async method => {
+    if (method === 'btw.list') {
+      return { threads: [] }
+    }
+
     if (method === 'slash.exec') {
       return { output: '# Report\n\nExact **Markdown** body.\n' }
     }

@@ -26,7 +26,9 @@ import { type ActionContext, actionForKey, APP_ACTIONS, matchesAction } from './
 import { Attachments, eventImageSource, pastedImageSource, type SubmittedImage } from './attachments.js'
 import { Dispatches } from './attention.js'
 import { focusBrowserBlock } from './browser-blocks.js'
+import { BtwReports } from './btw.js'
 import { BusyInput } from './busy-input.js'
+import { copyToClipboard } from './clipboard.js'
 import { localCommand } from './commands.js'
 import { Composer } from './composer.js'
 import { Dictation } from './dictation.js'
@@ -86,6 +88,7 @@ export class App implements OverlayHost {
   readonly dispatches = new Dispatches()
   readonly todoHud = new TodoHud()
   readonly jobs = new JobsSheet(this)
+  readonly btw = new BtwReports(this)
   readonly composer = new Composer()
   readonly modelRecents = new ModelRecents()
   readonly dictation = new Dictation(this)
@@ -215,6 +218,7 @@ export class App implements OverlayHost {
       this.sid = null
       this.todoHud.adopt(null)
       this.jobs.adopt(null)
+      this.btw.adopt(null)
       this.busy = null
       this.transcript.interrupt()
       this.dispatches.reset()
@@ -1019,6 +1023,12 @@ export class App implements OverlayHost {
 
     const sid = this.sid
 
+    if (name.toLowerCase() === 'btw') {
+      await this.btw.show(arg)
+
+      return
+    }
+
     try {
       const r = await this.#gw.request<{ output?: string; warning?: string; type?: string; message?: string }>(
         'slash.exec',
@@ -1234,6 +1244,7 @@ export class App implements OverlayHost {
       this.#dropPrompts(() => true)
       this.dispatches.reset()
       this.#reports.clear()
+      this.btw.adopt(this.sid)
 
       for (const overlay of [...this.overlays]) {
         if (overlay.key === 'report' || overlay.key === 'plan' || overlay.key === 'sessions' || overlay.key === 'session-tree') {
@@ -1503,6 +1514,14 @@ export class App implements OverlayHost {
 
       case 'gateway.protocol_error':
         t.notice(`Protocol error from the agent backend: ${ev.payload?.preview ?? ''}`, 'error')
+
+        break
+
+      case 'btw.update':
+        if (ev.payload?.thread) {
+          this.btw.adopt(this.sid)
+          this.btw.update(ev.payload.thread, true)
+        }
 
         break
 
@@ -1850,8 +1869,16 @@ export class App implements OverlayHost {
           this.changed()
         },
         dispatches,
-        reports: [...this.#reports.values()],
+        reports: [...this.#reports.values(), ...this.btw.notices],
         onReportView: id => {
+          if (id.startsWith('btw:')) {
+            if (this.btw.notices.some(notice => notice.id === id)) {
+              void this.btw.show('', id.slice('btw:'.length))
+            }
+
+            return
+          }
+
           const report = this.#reports.get(id)
 
           if (report) {
@@ -1859,6 +1886,7 @@ export class App implements OverlayHost {
           }
         },
         onReportDismiss: id => {
+          this.btw.dismiss(id)
           this.#reports.delete(id)
           this.changed()
         },
@@ -1968,9 +1996,4 @@ function shortPath(path: string): string {
   const home = process.env.HOME
 
   return home && path.startsWith(home) ? `~${path.slice(home.length)}` : path
-}
-
-/** Copies through OSC 52, which Tern (and most terminals) honor. */
-function copyToClipboard(text: string) {
-  process.stdout.write(`\x1b]52;c;${Buffer.from(text).toString('base64')}\x07`)
 }
