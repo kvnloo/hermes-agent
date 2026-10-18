@@ -78,6 +78,10 @@ async function withApp(options: Options, run: (fixture: {
       return { items: [] }
     }
 
+    if (method === 'settings.get') {
+      return { fields: {}, profile: 'fixture' }
+    }
+
     if (method === 'jobs.list') {
       return { jobs: [] }
     }
@@ -166,7 +170,7 @@ describe('explicit busy steer vs follow-up', () => {
       expect(app.queue).toEqual(['Next task'])
       expect(app.composer.text).toBe('')
       expect(calls).toEqual([])
-      expect(nodes(surface).find(n => n.props.role === 'omp.composer.hint')?.props.text).toContain('Enter queue · Alt+Enter steer')
+      expect(nodes(surface).find(n => n.props.role === 'omp.composer.hint')?.props.text).toContain('Enter queue · alt+enter steer')
     })
   })
 
@@ -217,7 +221,7 @@ describe('explicit busy steer vs follow-up', () => {
       await press(altEnter)
       expect(app.queue).toEqual(['Later task'])
       expect(calls).toHaveLength(1)
-      expect(nodes(surface).find(n => n.props.role === 'omp.composer.hint')?.props.text).toContain('Enter steer · Alt+Enter queue')
+      expect(nodes(surface).find(n => n.props.role === 'omp.composer.hint')?.props.text).toContain('Enter steer · alt+enter queue')
     })
   })
 
