@@ -2203,6 +2203,24 @@
       }
     },
     {
+      "name": "operations.report",
+      "summary": "Read only cached MCP/config/catalog or this session profile's SSH terminal target. Never connects, reloads, authenticates, executes SSH, or mutates settings.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/OperationalReportParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/OperationalReportResult"
+        }
+      }
+    },
+    {
       "name": "paste.collapse",
       "summary": "Spill a large paste to a file and hand back the inline placeholder.",
       "params": [
@@ -22019,6 +22037,106 @@
         ],
         "title": "OpenRequestEntry",
         "type": "object"
+      },
+      "OperationalReportParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "view": {
+            "$ref": "#/components/schemas/OperationalView"
+          }
+        },
+        "required": [
+          "session_id",
+          "view"
+        ],
+        "title": "OperationalReportParams",
+        "type": "object"
+      },
+      "OperationalReportResult": {
+        "additionalProperties": false,
+        "properties": {
+          "view": {
+            "$ref": "#/components/schemas/OperationalView"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/OperationalReportState"
+          },
+          "read_only": {
+            "const": true,
+            "title": "Read Only",
+            "type": "boolean"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/OperationalReportRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "view",
+          "scope",
+          "state",
+          "read_only",
+          "rows",
+          "message"
+        ],
+        "title": "OperationalReportResult",
+        "type": "object"
+      },
+      "OperationalReportRow": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "details": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Details",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "details"
+        ],
+        "title": "OperationalReportRow",
+        "type": "object"
+      },
+      "OperationalReportState": {
+        "enum": [
+          "ready",
+          "unavailable"
+        ],
+        "title": "OperationalReportState",
+        "type": "string"
+      },
+      "OperationalView": {
+        "enum": [
+          "mcp-list",
+          "mcp-status",
+          "mcp-tools",
+          "mcp-catalog",
+          "ssh-list"
+        ],
+        "title": "OperationalView",
+        "type": "string"
       },
       "OptionalProjectResult": {
         "additionalProperties": false,
