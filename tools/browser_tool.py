@@ -772,7 +772,7 @@ def browser_navigate(url: str, task_id: Optional[str] = None) -> str:
     result = _session._run_browser_command(nav_session_key, "open", [url],
                                   timeout=_get_open_command_timeout(first_open=is_first_nav))
     if not result.get("success"):
-        return _dumps(_err(result.get("error", "Navigation failed")))
+        return _failed_response(result, "Navigation failed")
 
     data = result.get("data", {})
     title = data.get("title", "")
@@ -856,6 +856,8 @@ def _json_with_fallback(response: Dict[str, Any], result: Dict[str, Any], **kw) 
     """``json.dumps`` of ``response`` with the Lightpanda fallback metadata copied from ``result``."""
     if result.get("tern_target"):
         response["tern_target"] = result["tern_target"]
+    if result.get("error_kind"):
+        response["error_kind"] = result["error_kind"]
     return _dumps(_lp._copy_fallback_warning(response, result), **kw)
 
 
@@ -917,6 +919,8 @@ def browser_type(ref: str, text: str, task_id: Optional[str] = None) -> str:
         response = {"success": True, "typed": display_text, "element": ref}
     else:
         response = _err(result.get("error", f"Failed to type into {ref}"))
+        if result.get("error_kind"):
+            response["error_kind"] = result["error_kind"]
     if result.get("tern_target"):
         response["tern_target"] = result["tern_target"]
     return _dumps(redact_browser_typed_text_for_display(_lp._copy_fallback_warning(response, result), text))
@@ -1003,7 +1007,7 @@ def browser_console(clear: bool = False, expression: Optional[str] = None, task_
 
     from tools.browser_tern import get_provider
     if get_provider() is not None:
-        return _dumps(_err("Console log buffering is not supported by the Tern adapter; expression evaluation is available"))
+        return _dumps(_err("Console log buffering is not supported by the Tern adapter; expression evaluation is available", error_kind="unsupported"))
     clear_args = ["--clear"] if clear else []
     console_result = _session._run_browser_command(effective_task_id, "console", clear_args)
     errors_result = _session._run_browser_command(effective_task_id, "errors", clear_args)
@@ -1079,6 +1083,8 @@ def _eval_supervisor_fast_path(effective_task_id: str, expression: str) -> Optio
 def _eval_failure_response(result: Dict[str, Any]) -> str:
     """Tool JSON for a failed ``agent-browser eval``, with actionable rewrites of known errors."""
     err = result.get("error", "eval failed")
+    if result.get("error_kind"):
+        return _json_with_fallback(_err(err), result)
     if any(hint in err.lower() for hint in ("unknown command", "not supported", "not found", "no such command")):
         err = f"JavaScript evaluation is not supported by this browser backend. {err}"
     elif "reference chain is too long" in err.lower():

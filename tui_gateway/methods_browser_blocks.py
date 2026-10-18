@@ -14,6 +14,10 @@ def _browser_block_intent(rid, params, intent):
     if owner is None or not owner.get("session_key"):
         return _err(rid, 4001, "session not found or not owned by this transport")
     try:
+        from .contracts.browser_blocks import BrowserBlockParams, BrowserFrameParams
+        from .contracts.common import SessionParams
+        models = {"blocks": SessionParams, "frame": BrowserFrameParams}
+        models.get(intent, BrowserBlockParams).model_validate(params)
         if intent != "blocks":
             block_id(params.get("target_id"))
         provider = get_provider()
@@ -27,9 +31,11 @@ def _browser_block_intent(rid, params, intent):
         if _current_session_steer_authority(sid)[1] is not owner:
             return _err(rid, 4001, "session authority changed before browser intent")
         # Handover while a model tool is executing can retarget its next command.
-        if intent == "adopt" and owner.get("running"):
-            return _err(rid, 4015, "Wait for the current turn before handing over a browser block")
-        operations = {"adopt": provider.adopt_by_user, "focus": provider.focus}
+        if intent in {"adopt", "frame", "release"} and owner.get("running"):
+            return _err(rid, 4015, "Wait for the current turn before changing browser ownership or frame")
+        operations = {"adopt": provider.adopt_by_user, "focus": provider.focus,
+                      "release": lambda task, target: provider.release_by_user(task, target),
+                      "frame": lambda task, target: provider.select_frame(task, target, params["frame"])}
         result = operations[intent](task, params["target_id"])
         return _ok(rid, result)
     except (RuntimeError, ValueError, OSError, SubprocessError) as error:
@@ -52,6 +58,18 @@ def _browser_adopt(rid, params):
 @_registry.profile_scoped
 def _browser_focus(rid, params):
     return _browser_block_intent(rid, params, "focus")
+
+
+@method("browser.frame")
+@_registry.profile_scoped
+def _browser_frame(rid, params):
+    return _browser_block_intent(rid, params, "frame")
+
+
+@method("browser.release")
+@_registry.profile_scoped
+def _browser_release(rid, params):
+    return _browser_block_intent(rid, params, "release")
 
 
 def register(server):

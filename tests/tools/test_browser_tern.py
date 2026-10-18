@@ -203,6 +203,10 @@ def test_cli_uses_exact_window_and_scrubbed_environment(native, monkeypatch):
         answer = fake(json.loads(argv[2]))
         return SimpleNamespace(returncode=0, stdout=json.dumps({"ok": answer}))
     monkeypatch.setattr(tern.subprocess, "run", run)
+    def popen(argv, **kwargs):
+        result = run(argv, **kwargs)
+        return SimpleNamespace(returncode=result.returncode, communicate=lambda **kw: (result.stdout, ""))
+    monkeypatch.setattr(tern.subprocess, "Popen", popen)
     provider = tern.get_provider()
     assert provider.listing("agent")[0]["target_id"] == "7"
     assert provider.command("agent", "open", ["https://example.net/"])["tern_target"]["target_id"] == "8"
