@@ -17,12 +17,14 @@ export interface ActionContext {
   queued: boolean
   overlayOpen: boolean
   completionOpen: boolean
+  approval?: boolean
 }
 
 export interface Action {
   id: string
   title: string
   group: string
+  scope?: 'approval'
   keys: readonly string[]
   /** Preserve the permissive modifiers of the original app shortcuts. */
   extraModifiers?: boolean
@@ -32,7 +34,7 @@ export interface Action {
 
 const always = () => true
 
-// TODO: load user-configurable bindings here, keeping dispatch and help in sync.
+// Defaults are immutable. Each session projects its effective profile bindings.
 export const APP_ACTIONS: readonly Action[] = [
   {
     id: 'app.clear',
@@ -298,6 +300,31 @@ export const APP_ACTIONS: readonly Action[] = [
     run: app => app.copyPrompt()
   },
   {
+    id: 'app.retry',
+    title: 'Retry the latest retryable text-only failure (idle, empty prompt)',
+    group: 'Control',
+    keys: ['f5', 'alt+r'],
+    when: ctx => ctx.composerEmpty && !ctx.busy && !ctx.overlayOpen,
+    run: app => app.retryLatest()
+  },
+  {
+    id: 'app.approval.approve',
+    title: 'Allow a pending tool once (empty prompt, approval owns input)',
+    group: 'Approval',
+    scope: 'approval',
+    keys: ['ctrl+enter', 'ctrl+q'],
+    when: ctx => ctx.approval === true && ctx.composerEmpty,
+    run: app => app.approvePending()
+  },
+  {
+    id: 'app.clipboard.copyLine',
+    title: 'Copy the current composer line',
+    group: 'Control',
+    keys: ['alt+shift+l'],
+    when: always,
+    run: app => app.copyPrompt(true)
+  },
+  {
     id: 'app.help',
     title: 'Commands and shortcuts',
     group: 'Navigation',
@@ -404,16 +431,16 @@ export function matchesAction(action: Pick<Action, 'keys' | 'extraModifiers'>, k
 }
 
 /** First enabled action wins, only after overlay and completion ownership. */
-export function actionForKey(key: Key, ctx: ActionContext): Action | undefined {
-  return APP_ACTIONS.find(action => matchesAction(action, key) && action.when(ctx))
+export function actionForKey(key: Key, ctx: ActionContext, actions = APP_ACTIONS): Action | undefined {
+  return actions.find(action => matchesAction(action, key) && action.when(ctx))
 }
 
-export function actionGroups(): { group: string; rows: [readonly string[], string][] }[] {
+export function actionGroups(actions = APP_ACTIONS): { group: string; rows: [readonly string[], string][] }[] {
   const groups = new Map<string, [readonly string[], string][]>()
 
-  for (const action of APP_ACTIONS) {
+  for (const action of actions) {
     const rows = groups.get(action.group) ?? []
-    rows.push([action.keys, action.title])
+    rows.push([action.keys.length ? action.keys : ['(unbound)'], action.title])
     groups.set(action.group, rows)
   }
 
@@ -421,4 +448,123 @@ export function actionGroups(): { group: string; rows: [readonly string[], strin
 }
 
 /** The compact composer hint is sourced from the same binding as the sheet. */
-export const HELP_HINT = `${APP_ACTIONS.find(action => action.id === 'app.help')?.keys[0]} help`
+export function actionHint(id: string, actions = APP_ACTIONS): string {
+  return actions.find(action => action.id === id)?.keys[0] ?? ''
+}
+
+export const HELP_HINT = `${actionHint('app.help')} help`
+
+const MODIFIERS = ['ctrl', 'alt', 'shift', 'meta'] as const
+
+const ALIASES: Readonly<Record<string, string>> = {
+  control: 'ctrl', option: 'alt', cmd: 'meta', command: 'meta', super: 'meta',
+  esc: 'escape', return: 'enter', arrowup: 'up', arrowdown: 'down',
+  arrowleft: 'left', arrowright: 'right', pageup: 'page_up', pagedown: 'page_down'
+}
+
+/** Canonical spelling also prevents alias/order collisions and hidden host chords. */
+export function normalizeChord(raw: string): string {
+  const parts = raw.toLowerCase().split('+').map(part => part.trim()).map(part => ALIASES[part] ?? part)
+  const name = parts.pop() ?? ''
+
+  if (!/^(?:[a-z0-9,./;`'[\]\\=-]|f(?:[1-9]|1[0-9]|2[0-4])|enter|escape|tab|space|backspace|delete|home|end|up|down|left|right|page_up|page_down)$/.test(name) ||
+      parts.some(part => !MODIFIERS.some(mod => mod === part)) || new Set(parts).size !== parts.length) {
+    throw new Error(`Invalid key chord: ${raw}`)
+  }
+
+  if (parts.includes('meta') || (parts.includes('ctrl') && parts.includes('shift') && ['c', 'v'].includes(name)) ||
+      (parts.includes('alt') && ['f4', 'tab'].includes(name))) {
+    throw new Error(`Host-reserved key chord: ${raw}`)
+  }
+
+  return [...MODIFIERS.filter(mod => parts.includes(mod)), name].join('+')
+}
+
+// These are editor ownership exclusions, not another app shortcut/hint registry.
+const EDITOR_KEYS = new Set(['enter', 'shift+enter', 'tab', 'up', 'down', 'left', 'right',
+  'home', 'end', 'backspace', 'delete', 'ctrl+a', 'ctrl+e', 'ctrl+u', 'ctrl+k', 'ctrl+w',
+  'ctrl+y', 'ctrl+z', 'ctrl+shift+z', 'alt+b', 'alt+f', 'alt+d', 'alt+left', 'alt+right', 'alt+backspace'])
+
+/** Atomic resolution: an invalid map never installs a partially rebound keyboard. */
+export function effectiveActions(raw: unknown): readonly Action[] {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error('Tern keybindings must be an object keyed by action id.')
+  }
+
+  const overrides = new Map<string, readonly string[]>()
+
+  for (const [id, value] of Object.entries(raw)) {
+    const action = APP_ACTIONS.find(item => item.id === id)
+
+    if (!action) {
+      throw new Error(`Unknown Tern action: ${id}`)
+    }
+
+    if (value === null) {
+      continue
+    }
+
+    const keys: unknown[] = typeof value === 'string' ? [value] : Array.isArray(value) ? value : [value]
+
+    const normalized = keys.map(key => {
+      if (typeof key !== 'string') {
+        throw new Error(`Bindings for ${id} must be strings.`)
+      }
+
+      const chord = normalizeChord(key)
+
+      const parts = chord.split('+')
+      const name = parts.at(-1)!
+      const typing = (name.length === 1 || name === 'space') && !parts.includes('ctrl') && !parts.includes('alt')
+
+      if ((EDITOR_KEYS.has(chord) || typing || (action.scope === 'approval' && chord === 'escape')) && !action.keys.includes(chord)) {
+        throw new Error(`Composer-owned key chord: ${chord}`)
+      }
+
+      return chord
+    })
+
+    overrides.set(id, normalized)
+  }
+
+  const actions = APP_ACTIONS.map(action => overrides.has(action.id)
+    ? { ...action, extraModifiers: false, keys: overrides.get(action.id)! } : action)
+
+  const used = new Map<string, string>()
+
+  for (const action of actions) {
+    for (const key of action.keys) {
+      const identity = `${action.scope ?? 'app'}:${key}`
+      const previous = used.get(identity)
+
+      if (previous) {
+        throw new Error(`Duplicate chord ${key}: ${previous} and ${action.id} (${action.scope ?? 'app'} context).`)
+      }
+
+      used.set(identity, action.id)
+    }
+  }
+
+  // Rebound keys must not alias a permissive legacy binding (e.g. Ctrl+Shift+D).
+  for (const action of actions.filter(item => overrides.has(item.id))) {
+    for (const chord of action.keys) {
+      const parts = chord.split('+')
+
+      const key: Key = { name: parts.pop()!, ctrl: parts.includes('ctrl'), alt: parts.includes('alt'),
+        shift: parts.includes('shift'), meta: false }
+
+      const collision = actions.find(other => other.id !== action.id && (other.scope === action.scope || [other.id, action.id].some(id => ['app.clear', 'app.interrupt.owned'].includes(id))) && matchesAction(other, key))
+
+      if (collision) {
+        throw new Error(`Overlapping chord ${chord}: ${action.id} and ${collision.id}.`)
+      }
+    }
+  }
+
+  return actions
+}
+
+export function shortcutsMarkdown(actions = APP_ACTIONS): string {
+  return ['| Context | Action id | Chords | Intent |', '| --- | --- | --- | --- |',
+    ...actions.map(action => `| ${action.scope ?? 'app'} | ${action.id} | ${action.keys.join(' / ') || '(unbound)'} | ${action.title} |`)].join('\n')
+}

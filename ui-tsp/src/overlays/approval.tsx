@@ -12,6 +12,7 @@ export interface PromptHost extends OverlayHost {
 
 export interface ApprovalPrompt extends Overlay {
   readonly placement: 'dock'
+  approve(): void
   answer(choice: string): Promise<boolean>
   denyAndConfirm(): Promise<boolean>
 }
@@ -101,6 +102,7 @@ export function approvalPrompt(host: PromptHost, req: ServerRequest): ApprovalPr
   const overlay: ApprovalPrompt = {
     key: `prompt:${req.id}`,
     placement: 'dock',
+    approve: () => { if (allowed.has('once')) { void overlay.answer('once') } },
     answer: choice => respond(() => req.respond({ choice })),
     // Ordinary choices retain the response-frame path. Transactions need the
     // existing acknowledged proxy: the channel swallows respond() send failures.

@@ -7,6 +7,8 @@
   "scripts": {
     "build": "node ../scripts/build/tsp.mjs",
     "bundle": "node scripts/build.mjs",
+    "shortcuts:generate": "node scripts/generate-shortcuts.mjs",
+    "shortcuts:check": "node scripts/generate-shortcuts.mjs --check",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "bench:frame": "node bench/run.mjs",

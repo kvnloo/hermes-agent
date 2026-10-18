@@ -4,7 +4,7 @@
 
 import type { EditEvent, ImageProps, JSX, SendEvent } from '@stencil-hq/tern'
 
-import { HELP_HINT } from '../actions.js'
+import { type Action, actionHint } from '../actions.js'
 import type { Attachment } from '../attachments.js'
 import type { Dispatch } from '../attention.js'
 import type { Composer } from '../composer.js'
@@ -18,6 +18,8 @@ import { checklistNode } from './tools.js'
 
 /** What the dock shows. */
 export interface DockContext {
+  actions?: readonly Action[]
+  profile?: string
   composer: Composer
   attachments?: readonly Attachment[]
   onAttachmentRemove?(id: string): void
@@ -144,8 +146,8 @@ export function dockNodes(cx: DockContext): JSX.Element[] {
             {i === 0 && cx.queued.length > 1 ? (
               <badge key="count" role="omp.queue.count" text={`${cx.queued.length}`} />
             ) : null}
-            <row align="center" gap="xs" key="edit" onClick={cx.onQueueEdit} role="omp.queue.edit" title="Edit  ⌥↑">
-              <kbd key="k" keys={['alt', 'up']} />
+            <row align="center" gap="xs" key="edit" onClick={cx.onQueueEdit} role="omp.queue.edit" title={`Edit  ${actionHint('app.message.dequeue', cx.actions)}`}>
+              <kbd key="k" keys={actionHint('app.message.dequeue', cx.actions).split('+').filter(Boolean)} />
               <text key="t" text="Edit" />
             </row>
           </row>
@@ -182,8 +184,8 @@ function workingNode(cx: DockContext): JSX.Element {
       <text key="sep" role="omp.working.sep" text="·" />
       <elapsed age={age(busy.since, busy.startedAt, cx.now)} format="short" key="elapsed" />
       <row grow={1} key="fill" />
-      <row align="center" gap="xs" key="stop" onClick={cx.onInterrupt} role="omp.working.stop" title="Stop  esc">
-        <kbd key="k" keys={['esc']} />
+      <row align="center" gap="xs" key="stop" onClick={cx.onInterrupt} role="omp.working.stop" title={`Stop  ${actionHint('app.interrupt', cx.actions)}`}>
+        <kbd key="k" keys={actionHint('app.interrupt', cx.actions).split('+').filter(Boolean)} />
         <text key="t" text="Stop" />
       </row>
     </row>
@@ -273,12 +275,13 @@ function composerNode(cx: DockContext): JSX.Element {
             key="effort"
             onClick={cx.onEffort}
             role="omp.composer.effort"
-            title={`Reasoning effort: ${effortLabel(cx.effort)} · click to cycle  ⇧⇥`}
+            title={`Reasoning effort: ${effortLabel(cx.effort)} · click to cycle  ${actionHint('app.thinking.cycle', cx.actions)}`}
           >
             <effort key="glyph" level={effortLabel(cx.effort)} />
             <text key="level" text={effortLabel(cx.effort)} wrap="none" />
           </row>
         ) : null}
+        {cx.profile ? <text key="profile" role="omp.composer.profile" text={cx.profile} title={`Owning Hermes profile: ${cx.profile}`} wrap="none" /> : null}
         <status grow={1} key="extras" role="omp.composer.extras" transparent>
           {cx.cwd ? (
             <seg
@@ -302,8 +305,8 @@ function composerNode(cx: DockContext): JSX.Element {
           ) : null}
         </status>
         {cx.jobs > 0 ? <text key="jobs" onClick={cx.onJobs} role="omp.composer.jobs" text={`${cx.jobs} ${cx.jobs === 1 ? 'job' : 'jobs'}`} /> : null}
-        {cx.dictation ? <text key="mic" onClick={cx.onDictation} role="omp.composer.mic" text={cx.dictation.state === 'recording' ? 'Finish dictation' : 'Mic'} title={`${cx.dictation.label} · Alt+V`} /> : null}
-        <text key="help" role="omp.composer.hint" text={cx.approval ? 'Enter deny and steer' : cx.busy ? `Enter ${cx.busyMode === 'steer' ? 'steer' : 'queue'} · Alt+Enter ${cx.busyMode === 'steer' ? 'queue' : 'steer'}` : HELP_HINT} tone="muted" wrap="none" />
+        {cx.dictation ? <text key="mic" onClick={cx.onDictation} role="omp.composer.mic" text={cx.dictation.state === 'recording' ? 'Finish dictation' : 'Mic'} title={`${cx.dictation.label} · ${actionHint('app.stt.toggle', cx.actions)}`} /> : null}
+        <text key="help" role="omp.composer.hint" text={cx.approval ? 'Enter deny and steer' : cx.busy ? `Enter ${cx.busyMode === 'steer' ? 'steer' : 'queue'} · ${actionHint('app.message.alternate', cx.actions) || '(unbound)'} ${cx.busyMode === 'steer' ? 'queue' : 'steer'}` : `${actionHint('app.help', cx.actions) || '/help'} help`} tone="muted" wrap="none" />
         <row align="center" gap="xs" key="settings" onClick={cx.onSettings} role="omp.composer.settings" title="Open Hermes settings">
           <icon key="icon" name="settings" />
           <text key="label" text="Settings" />
@@ -325,7 +328,7 @@ function composerNode(cx: DockContext): JSX.Element {
             onClick={cx.onInterrupt}
             role="omp.composer.stop"
             text="Stop"
-            title="Stop  esc"
+            title={`Stop  ${actionHint('app.interrupt', cx.actions)}`}
             tone="error"
           />
         ) : (
