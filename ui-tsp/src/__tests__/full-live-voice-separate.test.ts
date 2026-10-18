@@ -172,18 +172,18 @@ describe('separate opt-in live voice', () => {
       app.composer.set('private draft')
       await event({ phase: 'listening' })
       expect(calls.some(c => c.method.startsWith('voice.'))).toBe(false)
-      expect(role('omp.live.toggle')).toBeTruthy()
+      expect(role('omp.live.toggle')).toBeUndefined()
     })
   })
   it('requires consent, supports cancel, and keeps Mic separate', async () => {
     await withApp(async ({ app, calls, click, role, press }) => {
       app.composer.set('keep draft')
-      await click('omp.live.toggle')
+      await press('\x1b[118;4u')
       expect(role('omp.live.consent')).toBeTruthy()
       expect(calls.some(c => c.method.startsWith('voice.live'))).toBe(false)
       await click('omp.live.cancel')
-      expect(role('omp.live.idle')).toBeTruthy()
-      await click('omp.live.toggle')
+      expect(role('omp.live.idle')).toBeUndefined()
+      await press('\x1b[118;4u')
       await click('omp.live.start')
       expect(calls.find(c => c.method === 'voice.live.start')?.params).toMatchObject({
         consent: true,
@@ -195,8 +195,8 @@ describe('separate opt-in live voice', () => {
     })
   })
   it('renders phase, mute, barge-in, assistant transcript and TTS completion', async () => {
-    await withApp(async ({ calls, click, event, role, app }) => {
-      await click('omp.live.toggle')
+    await withApp(async ({ calls, click, event, role, app, press }) => {
+      await press('\x1b[118;4u')
       await click('omp.live.start')
 
       for (const phase of ['listening', 'transcribing', 'thinking', 'speaking', 'interrupted'] as const) {
@@ -221,7 +221,7 @@ describe('separate opt-in live voice', () => {
   it('blocks all draft Send paths without automatically submitting the draft', async () => {
     await withApp(async ({ app, calls, click, send, press, event, role }) => {
       app.composer.set('unsent draft', 3)
-      await click('omp.live.toggle')
+      await press('\x1b[118;4u')
       await click('omp.live.start')
       await event({ phase: 'thinking', user_text: 'A spoken turn' })
       await send('native send')
@@ -235,8 +235,8 @@ describe('separate opt-in live voice', () => {
   })
   it('shows permission/start failure and requires explicit retry', async () => {
     const gate = Promise.withResolvers<unknown>()
-    await withApp(async ({ click, role, calls }) => {
-      await click('omp.live.toggle')
+    await withApp(async ({ click, role, calls, press }) => {
+      await press('\x1b[118;4u')
       await click('omp.live.start')
       gate.reject(new Error('Microphone permission denied'))
       await tick()
@@ -247,8 +247,8 @@ describe('separate opt-in live voice', () => {
     }, gate.promise)
   })
   it('keeps TTS/backend errors visible after audio release', async () => {
-    await withApp(async ({ click, event, role, app }) => {
-      await click('omp.live.toggle')
+    await withApp(async ({ click, event, role, app, press }) => {
+      await press('\x1b[118;4u')
       await click('omp.live.start')
       await event({ phase: 'error', error: 'Configured TTS unavailable' })
       await event({ phase: 'idle' })
@@ -259,7 +259,7 @@ describe('separate opt-in live voice', () => {
   it('serializes stop behind startup; retains lease until idle', async () => {
     const gate = Promise.withResolvers<unknown>()
     await withApp(async ({ click, calls, event, app, press }) => {
-      await click('omp.live.toggle')
+      await press('\x1b[118;4u')
       await click('omp.live.start')
       await press('\x1b[27u')
       expect(calls.filter(c => c.method === 'voice.live.control')).toHaveLength(0)
@@ -273,8 +273,8 @@ describe('separate opt-in live voice', () => {
     }, gate.promise)
   })
   it('ignores foreign leases and releases old session on switch', async () => {
-    await withApp(async ({ app, click, calls, event }) => {
-      await click('omp.live.toggle')
+    await withApp(async ({ app, click, calls, event, press }) => {
+      await press('\x1b[118;4u')
       await click('omp.live.start')
       await event({ live_id: 'foreign', phase: 'speaking', assistant_text: 'wrong' })
       expect(app.liveVoice.assistant).toBe('')

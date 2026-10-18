@@ -289,7 +289,7 @@ describe('optional Vim composer state machine', () => {
           .get(surface)
           ?.regions[1]?.children.flatMap(node => node.children)
           .find(node => node.props.role === 'omp.composer.bar')
-          ?.children.find(node => node.props.role === 'omp.composer.vim')?.props.text
+          ?.children.flatMap(node => node.children).find(node => node.props.role === 'omp.composer.vim')?.props.text
       ).toBe('NORMAL d')
       await press(esc)
       await press('vhr界')

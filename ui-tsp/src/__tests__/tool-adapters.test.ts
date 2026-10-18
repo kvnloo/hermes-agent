@@ -114,7 +114,9 @@ describe('tool adapter registry', () => {
     ], nodes => {
       expect(tool(nodes, 'read').props).toMatchObject({ target: 'x.ts', preview: { lines: 3 } })
       expect(nodes.find(node => node.kind === 'code' && node.props.numbers)?.props).toMatchObject({ path: 'x.ts', text: 'const x = 1' })
-      expect(tool(nodes, 'bash').props).toMatchObject({ target: 'pwd', status: 'done', collapsible: false })
+      expect(tool(nodes, 'bash').props).toMatchObject({ status: 'done', collapsible: false })
+      expect(tool(nodes, 'bash').props.target).toBeUndefined()
+      expect(nodes.filter(n => n.kind === 'code' && n.props.text === 'pwd')).toHaveLength(1)
       expect(tool(nodes, 'edit').props.meta).toEqual(['+1 −1'])
       expect(tool(nodes, 'web_search').props.meta).toEqual(['1 source'])
     })

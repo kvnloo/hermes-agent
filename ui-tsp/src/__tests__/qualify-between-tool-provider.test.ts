@@ -64,6 +64,25 @@ function descendants(view: View | undefined) {
 }
 
 describe('qualified provider narration', () => {
+  it('paints no whitespace-only thought, live or settled, but retains visible reasoning around tools', async () => {
+    await mounted(async (_app, send, view) => {
+      await send('message.start')
+      await send('reasoning.delta', { text: ' \n\t ' })
+      expect(descendants(view()).some(n => String(n.props.role).startsWith('omp.thinking'))).toBe(false)
+      await send('tool.start', { tool_id: 'empty-thought-tool', name: 'read_file' })
+      await send('tool.complete', { tool_id: 'empty-thought-tool', name: 'read_file', result: { content: 'visible output' } })
+      await send('message.complete', { status: 'complete', text: 'Visible answer.' })
+      expect(descendants(view()).some(n => String(n.props.role).startsWith('omp.thinking'))).toBe(false)
+      expect(descendants(view()).some(n => n.kind === 'md' && n.props.text === 'Visible answer.')).toBe(true)
+      await send('message.start')
+      await send('reasoning.delta', { text: 'Visible reasoning.' })
+      expect(descendants(view()).filter(n => n.props.role === 'omp.thinking.live')).toHaveLength(1)
+      await send('message.complete', { status: 'complete', text: 'Second answer.' })
+      expect(descendants(view()).filter(n => n.props.role === 'omp.thinking')).toHaveLength(1)
+      expect(descendants(view()).some(n => n.kind === 'md' && n.props.text === 'Visible reasoning.')).toBe(true)
+    })
+  })
+
   it('renders qualified prose before and after tools as answer text, while thoughts stay folded', async () => {
     await mounted(async (app, send, view) => {
       await send('message.start')

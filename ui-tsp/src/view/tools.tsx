@@ -351,8 +351,7 @@ function bashCard(
     lang: 'bash',
     name: 'bash',
     preview: { tail: BASH_PREVIEW_TAIL },
-    target: str(call.args.command) ?? call.context,
-    targetKind: 'command',
+    // The run body owns the complete, wrapped command; a native target repeats it.
     title: 'Bash'
   }
 }

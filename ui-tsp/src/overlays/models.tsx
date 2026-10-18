@@ -293,7 +293,7 @@ export function openModelPicker(app: App, options: { sessionOnly?: boolean; onCh
 
       const scopes: PickerScope[] = [
         { count: rows.length, icon: 'list', id: ALL, label: 'All models' },
-        ...providers.map(({ provider, name }) => ({
+        ...providers.toSorted((a, b) => Number(a.provider.authenticated === false) - Number(b.provider.authenticated === false)).map(({ provider, name }) => ({
           count: provider.models?.length ?? 0,
           dot: provider.warning ? ('warning' as const) : undefined,
           group: provider.authenticated === false ? 'Locked providers' : 'Providers',

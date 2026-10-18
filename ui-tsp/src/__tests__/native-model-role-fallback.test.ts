@@ -117,6 +117,22 @@ afterAll(() => {
 })
 
 describe('native model-role/fallback/provider management', () => {
+  it('paints stable authenticated scopes before locked scopes for an interleaved inventory', async () => {
+    await withApp({}, async (app, surface, gw) => {
+      const inventory = [providers[4]!, providers[0]!, providers[5]!, providers[1]!, providers[2]!, providers[3]!]
+      vi.mocked(gw.request).mockResolvedValueOnce({ model: 'one', provider: 'pool-only', providers: inventory })
+      openModelPicker(app)
+      await rendered()
+      const picker = nodes(surface).find(node => node.kind === 'picker')!
+      expect(picker.props.scopes).toMatchObject([
+        { id: 'all' },
+        ...['pool-only', 'oauth', 'api-key', 'custom:lab'].map(slug => ({ id: `provider:${slug}`, group: 'Providers' })),
+        ...['locked', 'empty'].map(slug => ({ id: `provider:${slug}`, group: 'Locked providers' }))
+      ])
+      expect(inventory.map(p => p.slug)).toEqual(['locked', 'pool-only', 'empty', 'oauth', 'api-key', 'custom:lab'])
+    })
+  })
+
   it('names all hub page actions and Close as native buttons, preserving draft on pointer close', async () => {
     await withApp({}, async (app, surface, gw) => {
       app.composer.set('untouched hub draft', 3)

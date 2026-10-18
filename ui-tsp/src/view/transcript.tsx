@@ -119,7 +119,9 @@ export function projectedEntryNodes(e: Entry, id: string, cx: TranscriptContext)
 
   for (const block of e.blocks) {
     if (block.kind !== 'tool') {
-      content.push(blockNode(block, `main.${key}.${block.id}`, e.status === 'live' && block === lastText, cx, e.id, e.status !== 'live'))
+      const rendered = blockNode(block, `main.${key}.${block.id}`, e.status === 'live' && block === lastText, cx, e.id, e.status !== 'live')
+
+      if (rendered) { content.push(rendered) }
 
       continue
     }
@@ -263,7 +265,7 @@ function turnTail(turn: TurnEntry, id: string, cx: TranscriptContext): JSX.Eleme
   return children
 }
 
-function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptContext, turnId: string, settled = true): JSX.Element {
+function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptContext, turnId: string, settled = true): JSX.Element | null {
   switch (b.kind) {
     case 'steering':
       return (
@@ -289,7 +291,9 @@ function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptConte
   }
 }
 
-function thinkingNode(b: Extract<Block, { kind: 'thinking' }>, id: string, cx: TranscriptContext): JSX.Element {
+function thinkingNode(b: Extract<Block, { kind: 'thinking' }>, id: string, cx: TranscriptContext): JSX.Element | null {
+  if (!b.text.trim()) { return null }
+
   const head = `${id}.head`
 
   if (b.endedAt === undefined) {

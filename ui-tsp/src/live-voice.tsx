@@ -144,6 +144,8 @@ export class LiveVoice {
   }
 
   view() {
+    if (this.phase === 'idle' && !this.#lease) { return null }
+
     return (
       <col key="live-voice" role={`omp.live.${this.phase}`}>
         <ActionButton

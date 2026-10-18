@@ -177,17 +177,13 @@ describe('push-to-talk capability gate', () => {
     expect(decoded[2]).toEqual(decoded[0])
   })
 
-  it('shows unsupported hold mode and retains Mic / Alt+V without opening audio', async () => {
-    await withApp(async ({ app, calls, click, role, press }) => {
-      expect(role('omp.composer.mic.hold-unavailable')?.props.title).toContain('key-down/key-up')
-      await click('omp.composer.mic.hold-unavailable')
-      expect(
-        app.transcript.entries.filter(entry => entry.kind === 'notice' && entry.text.includes('key-down/key-up'))
-      ).toHaveLength(1)
+  it('keeps unsupported hold mode out of the dock; explicit shortcut explains it without opening audio', async () => {
+    await withApp(async ({ app, calls, role, press }) => {
+      expect(role('omp.composer.mic.hold-unavailable')).toBeUndefined()
       await press('\x1b[32;4u')
       expect(
         app.transcript.entries.filter(entry => entry.kind === 'notice' && entry.text.includes('key-down/key-up'))
-      ).toHaveLength(2)
+      ).toHaveLength(1)
       expect(calls.some(c => c.method.startsWith('voice.'))).toBe(false)
       expect(role('omp.composer.mic')).toBeTruthy()
     })

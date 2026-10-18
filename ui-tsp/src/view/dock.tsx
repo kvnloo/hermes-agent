@@ -267,42 +267,52 @@ function composerNode(cx: DockContext): JSX.Element {
         />
       </row>
       <row align="center" gap="sm" key="bar" role="omp.composer.bar">
-        {composer.vim.enabled ? <text key="vim" role="omp.composer.vim" text={`${composer.vim.mode.toUpperCase()}${composer.vim.pending ? ` ${composer.vim.pending}` : ''}`} /> : null}
-        {share === undefined ? null : <ActionButton aria="Show context window" key="context-details" onClick={cx.onContext} role="omp.composer.context.action" text="Context" title={actionHint('app.context', cx.actions)} />}
-        {cx.model ? (
-          <ActionButton
-            align="center"
-            gap="xs"
-            key="model"
-            onClick={cx.onModel}
-            role="omp.composer.model"
-            title={`Model: ${cx.model} · click to switch`}
-          >
-            <icon key="icon" name="model" />
-            <text key="name" spans={[{ t: cx.model }]} wrap="none" />
-            <icon key="chev" name="chev" />
-          </ActionButton>
-        ) : null}
-        {cx.effort ? (
-          <ActionButton
-            align="center"
-            gap="xs"
-            key="effort"
-            onClick={cx.onEffort}
-            role="omp.composer.effort"
-            title={`Reasoning effort: ${effortLabel(cx.effort)} · click to cycle  ${actionHint('app.thinking.cycle', cx.actions)}`}
-          >
-            <effort key="glyph" level={effortLabel(cx.effort)} />
-            <text key="level" text={effortLabel(cx.effort)} wrap="none" />
-          </ActionButton>
-        ) : null}
-        {cx.profile ? <text key="profile" role="omp.composer.profile" text={cx.profile} title={`Owning Hermes profile: ${cx.profile}`} wrap="none" /> : null}
-        <status grow={1} key="extras" role="omp.composer.extras" transparent>
+        {/* Native status measures whole segments; larger priorities survive. A zero
+            flex basis/minimum lets it shrink before any button is squeezed. */}
+        <status basis={0} grow={1} key="hints" min={{ w: 0 }} role="omp.composer.extras" transparent>
+          {composer.vim.enabled ? <seg key="vim" priority={110} role="omp.composer.vim" text={`${composer.vim.mode.toUpperCase()}${composer.vim.pending ? ` ${composer.vim.pending}` : ''}`} /> : null}
+          {share === undefined ? null : (
+            <seg key="context-details" priority={70}>
+              <ActionButton aria="Show context window" key="action" onClick={cx.onContext} role="omp.composer.context.action" text="Context" title={actionHint('app.context', cx.actions)} />
+            </seg>
+          )}
+          {cx.model ? (
+            <seg key="model" priority={100}>
+              <ActionButton
+                align="center"
+                gap="xs"
+                key="model"
+                onClick={cx.onModel}
+                role="omp.composer.model"
+                title={`Model: ${cx.model} · click to switch`}
+              >
+                <icon key="icon" name="model" />
+                <text key="name" spans={[{ t: cx.model }]} wrap="none" />
+                <icon key="chev" name="chev" />
+              </ActionButton>
+            </seg>
+          ) : null}
+          {cx.effort ? (
+            <seg key="effort" priority={50}>
+              <ActionButton
+                align="center"
+                gap="xs"
+                key="effort"
+                onClick={cx.onEffort}
+                role="omp.composer.effort"
+                title={`Reasoning effort: ${effortLabel(cx.effort)} · click to cycle  ${actionHint('app.thinking.cycle', cx.actions)}`}
+              >
+                <effort key="glyph" level={effortLabel(cx.effort)} />
+                <text key="level" text={effortLabel(cx.effort)} wrap="none" />
+              </ActionButton>
+            </seg>
+          ) : null}
+          {cx.profile ? <seg key="profile" priority={30} role="omp.composer.profile" text={cx.profile} title={`Owning Hermes profile: ${cx.profile}`} /> : null}
           {cx.cwd ? (
             <seg
               icon="folder"
               key="cwd"
-              priority={5}
+              priority={20}
               role="omp.composer.fact"
               spans={pathSpans(cx.cwd)}
               title={cx.cwd}
@@ -312,30 +322,39 @@ function composerNode(cx: DockContext): JSX.Element {
             <seg
               icon="git-branch"
               key="git"
-              priority={4}
+              priority={10}
               role="omp.composer.fact"
               spans={[{ s: 'statusLineGitClean', t: cx.branch }]}
               title={`Branch ${cx.branch}`}
             />
           ) : null}
+          {cx.jobs > 0 ? (
+            <seg key="jobs" priority={80}>
+              <ActionButton aria="Background jobs" key="action" onClick={cx.onJobs} role="omp.composer.jobs" text={`${cx.jobs} ${cx.jobs === 1 ? 'job' : 'jobs'}`} />
+            </seg>
+          ) : null}
+          {cx.dictation ? (
+            <seg key="mic" priority={60}>
+              <ActionButton key="action" onClick={cx.onDictation} role="omp.composer.mic" text={cx.dictation.state === 'recording' ? 'Finish dictation' : 'Mic'} title={`${cx.dictation.label} · ${actionHint('app.stt.toggle', cx.actions)}`} />
+            </seg>
+          ) : null}
+          <seg key="help" priority={0} role="omp.composer.hint" text={cx.approval ? 'Enter deny and steer' : cx.busy ? `Enter ${cx.busyMode === 'steer' ? 'steer' : 'queue'} · ${actionHint('app.message.alternate', cx.actions) || '(unbound)'} ${cx.busyMode === 'steer' ? 'queue' : 'steer'}` : `${actionHint('app.help', cx.actions) || '/help'} help`} tone="muted" />
+          <seg key="settings" priority={90}>
+            <ActionButton align="center" gap="xs" key="action" onClick={cx.onSettings} role="omp.composer.settings" title="Open Hermes settings">
+              <icon key="icon" name="settings" />
+              <text key="label" text="Settings" wrap="none" />
+            </ActionButton>
+          </seg>
+          {cx.cost ? (
+            <seg
+              key="usage"
+              priority={40}
+              role="omp.composer.usage"
+              text={`$${cx.cost.toFixed(2)}`}
+              title="Session cost"
+            />
+          ) : null}
         </status>
-        {cx.jobs > 0 ? <ActionButton aria="Background jobs" key="jobs" onClick={cx.onJobs} role="omp.composer.jobs" text={`${cx.jobs} ${cx.jobs === 1 ? 'job' : 'jobs'}`} /> : null}
-        {cx.dictation ? <ActionButton key="mic" onClick={cx.onDictation} role="omp.composer.mic" text={cx.dictation.state === 'recording' ? 'Finish dictation' : 'Mic'} title={`${cx.dictation.label} · ${actionHint('app.stt.toggle', cx.actions)}`} /> : null}
-        <ActionButton key="hold-info" onClick={() => cx.dictation?.explainHold()} role="omp.composer.mic.hold-unavailable" text="Hold-to-talk unavailable" title={cx.dictation?.holdHint} tone="muted" />
-        <text key="help" role="omp.composer.hint" text={cx.approval ? 'Enter deny and steer' : cx.busy ? `Enter ${cx.busyMode === 'steer' ? 'steer' : 'queue'} · ${actionHint('app.message.alternate', cx.actions) || '(unbound)'} ${cx.busyMode === 'steer' ? 'queue' : 'steer'}` : `${actionHint('app.help', cx.actions) || '/help'} help`} tone="muted" wrap="none" />
-        <ActionButton align="center" gap="xs" key="settings" onClick={cx.onSettings} role="omp.composer.settings" title="Open Hermes settings">
-          <icon key="icon" name="settings" />
-          <text key="label" text="Settings" />
-        </ActionButton>
-        {cx.cost ? (
-          <text
-            key="usage"
-            role="omp.composer.usage"
-            text={`$${cx.cost.toFixed(2)}`}
-            title="Session cost"
-            wrap="none"
-          />
-        ) : null}
         {voiceSendDisabled(cx) ?? (cx.busy ? (
           <ActionButton
             key="stop"
