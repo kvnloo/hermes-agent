@@ -298,7 +298,9 @@ describe('long-session retention (App and real SDK)', () => {
         app.changed()
         await settle()
         expect(wire.ops.slice(before).filter(op => op[0] === 'add')).toHaveLength(0)
-        expect(wire.nodes.has('main.retention-load')).toBe(true)
+        expect(wire.nodes.get('main.retention-load')).toMatchObject({
+          k: 'el', p: { tag: 'button', aria: 'Load older history', actions: { click: 'click' } }
+        })
 
         const action = surface.dispatch({
           ev: 'action',

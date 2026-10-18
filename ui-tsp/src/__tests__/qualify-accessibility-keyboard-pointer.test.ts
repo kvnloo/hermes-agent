@@ -120,7 +120,7 @@ afterAll(() => {
 describe('T19 accessibility and input ownership (SDK peer, not native-window certification)', () => {
   it('emits named host buttons for dock actions and sheet actions without changing OMP roles', async () => {
     await withApp(async ({ app, nodes, click }) => {
-      for (const role of ['omp.composer.model', 'omp.composer.effort', 'omp.composer.mic', 'omp.composer.settings', 'omp.composer.send']) {
+      for (const role of ['omp.composer.model', 'omp.composer.effort', 'omp.composer.mic', 'omp.composer.settings', 'omp.composer.send', 'omp.composer.mic.hold-unavailable', 'omp.live.toggle']) {
         button(nodes(), role)
       }
 

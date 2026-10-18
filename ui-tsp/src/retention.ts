@@ -310,7 +310,9 @@ export class Retention {
       if (missing) {
         const load = new Tree(
           LOAD_ID,
-          node('text', {
+          node('el', {
+            tag: 'button',
+            aria: 'Load older history',
             key: 'retention-load',
             role: 'omp.history.load',
             text: 'Load older history · Ctrl+Home',

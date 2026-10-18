@@ -82,6 +82,8 @@ async function withApp(options: Options, run: (app: App, nodes: () => Tree[], cl
   async function click(text: string) {
     const target = nodes().find(n => typeof n.props.text === 'string' && n.props.text.includes(text))
     expect(target, `Missing action ${text}`).toBeDefined()
+    expect(target!.kind).toBe('el')
+    expect(target!.props.tag).toBe('button')
     const action = surface.dispatch({ ev: 'action', act: 'click', sf: 'hermes', id: target!.id, raw: {} })
     expect(action).toBeTypeOf('function')
     await action!()
@@ -223,7 +225,7 @@ describe('attachments/media across hosts', () => {
       await app.mediaDelivery.load(first)
 
       for (let i = 1; i <= MEDIA_CACHE_ENTRIES; i++) { await app.mediaDelivery.load(source(String(i))) }
-      expect(app.mediaDelivery.preview(first).kind).toBe('text')
+      expect(app.mediaDelivery.preview(first)).toMatchObject({ kind: 'el', props: { tag: 'button', text: 'Load image preview' } })
       expect(app.mediaDelivery.preview(source(String(MEDIA_CACHE_ENTRIES))).kind).toBe('image')
 
       for (let i = MEDIA_CACHE_ENTRIES + 1; i < MEDIA_CONNECTION_BLOBS; i++) { await app.mediaDelivery.load(source(String(i))) }

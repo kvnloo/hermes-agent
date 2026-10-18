@@ -131,6 +131,9 @@ async function withApp(
       click: async name => {
         const node = role(name)
         expect(node).toBeTruthy()
+        expect(node!.kind).toBe('el')
+        expect(node!.props.tag).toBe('button')
+        expect(node!.props.text).toBeTruthy()
         await dispatch({ act: 'click', ev: 'action', id: node!.id, raw: {}, sf: 'hermes' })
       },
       send: text => dispatch({ ev: 'send', id: INPUT_ID, raw: {}, sf: 'hermes', text } as TspEvent)

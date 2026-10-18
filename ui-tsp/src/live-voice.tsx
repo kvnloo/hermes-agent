@@ -5,6 +5,7 @@ import type { LiveVoicePayload } from '@hermes/shared/gateway-events'
 import type { AnyGatewayEvent } from '@tui/gatewayTypes.js'
 
 import type { App } from './app.js'
+import { ActionButton } from './view/action-button.js'
 
 interface Lease {
   id: string
@@ -145,7 +146,7 @@ export class LiveVoice {
   view() {
     return (
       <col key="live-voice" role={`omp.live.${this.phase}`}>
-        <text
+        <ActionButton
           key="toggle"
           onClick={() => this.toggle()}
           role="omp.live.toggle"
@@ -157,13 +158,13 @@ export class LiveVoice {
               key="notice"
               text="Live voice opens the gateway machine’s microphone and speaker. Spoken turns are sent automatically and replies spoken through your configured Hermes STT/TTS providers. Your draft is not sent. Device permission is required. Use Mic / Alt+V for review-only dictation instead."
             />
-            <text
+            <ActionButton
               key="start"
               onClick={() => this.start()}
               role="omp.live.start"
               text="Allow microphone + automatic spoken turns"
             />
-            <text key="cancel" onClick={() => void this.control('stop')} role="omp.live.cancel" text="Cancel" />
+            <ActionButton key="cancel" onClick={() => void this.control('stop')} role="omp.live.cancel" text="Cancel" />
           </col>
         ) : null}
         {this.#lease ? (
@@ -173,13 +174,13 @@ export class LiveVoice {
               role="omp.live.phase"
               text={`Live voice: ${this.phase}${this.muted ? ' · microphone muted' : ''} · draft Send disabled`}
             />
-            <text
+            <ActionButton
               key="mute"
               onClick={() => void this.control('mute')}
               role="omp.live.mute"
               text={this.muted ? 'Unmute' : 'Mute'}
             />
-            <text
+            <ActionButton
               key="interrupt"
               onClick={() => void this.control('interrupt')}
               role="omp.live.interrupt"

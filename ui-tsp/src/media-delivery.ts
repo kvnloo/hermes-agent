@@ -6,6 +6,7 @@ import { node, type Node, type Session } from '@stencil-hq/tern'
 import type { GatewayClient } from '@tui/gatewayClient.js'
 
 import { imageMime } from './attachments.js'
+import { ActionButton } from './view/action-button.js'
 
 export const MEDIA_MAX_BYTES = 16 * 1024 * 1024
 export const MEDIA_CACHE_ENTRIES = 32
@@ -109,7 +110,7 @@ export class MediaDelivery {
     const session = this.session()
     const epoch = this.#epoch
 
-    return node('text', { key: 'media', role: 'omp.media.notice', text, wrap: 'word',
+    return ActionButton({ key: 'media', role: 'omp.media.notice', text, wrap: 'word',
       ...(!this.#closed && supported && !exhausted && cached?.status !== 'loading' ? { onClick: () => { if (session === this.session() && epoch === this.#epoch) { return this.load(source) } } } : {}) })
   }
 
