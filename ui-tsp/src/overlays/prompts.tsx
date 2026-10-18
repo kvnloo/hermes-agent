@@ -6,6 +6,7 @@ import type { ClarifyResult } from '@hermes/shared/gateway-events'
 import type { ServerRequest } from '@hermes/shared/json-rpc-channel'
 import type { JSX, Key } from '@stencil-hq/tern'
 
+import { actionHint } from '../actions.js'
 import { Composer } from '../composer.js'
 import { maskedOffset, maskOf, unmaskEdit } from '../mask.js'
 import type { Overlay, OverlayHost } from '../overlay.js'
@@ -629,6 +630,7 @@ function clarifyNode(id: string, cx: ClarifyView): JSX.Element {
 
   const freeText = !q.choices.length
   const last = questions.every((other, i) => i === step || other.qid in answers)
+  const toggleHint = actionHint('app.clarify.toggle', host.bindings?.actions)
 
   if (hidden) {
     return (
@@ -639,7 +641,7 @@ function clarifyNode(id: string, cx: ClarifyView): JSX.Element {
           tone="pending"
         />
         <text key="timer" role="omp.ask.timer" text={clarifyTimer(req.params.deadline_at)} />
-        <text key="show" onClick={overlay.toggle} role="omp.btn" text="Show question · Alt+H" />
+        <text key="show" onClick={overlay.toggle} role="omp.btn" text={`Show question${toggleHint ? ` · ${toggleHint}` : ''}`} />
       </col>
     )
   }
@@ -717,7 +719,7 @@ function clarifyNode(id: string, cx: ClarifyView): JSX.Element {
         ) : null}
         {notes[step]?.node()}
         {actionsRow([
-          { hint: 'Alt+H', key: 'hide', keys: ['alt', 'h'], label: 'Hide', onClick: overlay.toggle },
+          { hint: toggleHint, key: 'hide', keys: toggleHint.split('+').filter(Boolean), label: 'Hide', onClick: overlay.toggle },
           { hint: '', key: 'cancel', keys: [], label: 'Cancel all', onClick: () => finish({}) },
           { hint: 'escape', key: 'skip', keys: ['escape'], label: 'Skip', onClick: () => commit(null) },
           {

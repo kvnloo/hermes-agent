@@ -829,6 +829,8 @@ DEFAULT_CONFIG = {
         # calls: ...]` lines; False shows them inline.
         "resume_skip_tool_only": True,
         "busy_input_mode": "interrupt",  # interrupt | queue | steer
+        "tern_keybindings": {},  # action id -> chord(s); [] disables, null resets
+        "tern_profile_identity": False,  # optional owning-profile tag in Tern
         # steer mode: false hides only the "Steered into current run" bubble; steering itself still
         # happens.
         "busy_steer_ack_enabled": True,

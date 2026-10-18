@@ -2,11 +2,12 @@
 import type { ClarifyLockResult, ClarifyNote } from '@hermes/shared/gateway-events'
 import type { ServerRequest } from '@hermes/shared/json-rpc-channel'
 
-import { approvalActionForKey } from '../actions.js'
+import { type Action, approvalActionForKey } from '../actions.js'
 import type { Attachments } from '../attachments.js'
 import type { Overlay, OverlayHost } from '../overlay.js'
 
 export interface PromptHost extends OverlayHost {
+  readonly bindings?: { readonly actions: readonly Action[] }
   owns(overlay: Overlay): boolean
   notice(message: string): void
   confirmDenial(id: string): Promise<void>
@@ -16,6 +17,7 @@ export interface PromptHost extends OverlayHost {
 
 export interface ApprovalPrompt extends Overlay {
   readonly placement: 'dock'
+  approve(): void
   answer(choice: string): Promise<boolean>
   denyAndConfirm(): Promise<boolean>
 }
@@ -105,6 +107,7 @@ export function approvalPrompt(host: PromptHost, req: ServerRequest): ApprovalPr
   const overlay: ApprovalPrompt = {
     key: `prompt:${req.id}`,
     placement: 'dock',
+    approve: () => { if (allowed.has('once')) { void overlay.answer('once') } },
     answer: choice => respond(() => req.respond({ choice })),
     // Ordinary choices retain the response-frame path. Transactions need the
     // existing acknowledged proxy: the channel swallows respond() send failures.

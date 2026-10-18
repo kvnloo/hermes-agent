@@ -24,9 +24,10 @@ import { writeActiveSessionFile } from '@tui/lib/activeSessionFile.js'
 
 import logo from '../assets/logo.png'
 
-import { type ActionContext, actionForKey, APP_ACTIONS, matchesAction } from './actions.js'
+import { type ActionContext, actionForKey, matchesAction } from './actions.js'
 import { Attachments, eventImageSource, pastedImageSource, type SubmittedImage } from './attachments.js'
 import { Dispatches } from './attention.js'
+import { BindingPreferences } from './binding-preferences.js'
 import { focusBrowserBlock } from './browser-blocks.js'
 import { BtwReports } from './btw.js'
 import { BusyInput } from './busy-input.js'
@@ -96,6 +97,7 @@ export class App implements OverlayHost {
   readonly modelRecents = new ModelRecents()
   readonly dictation = new Dictation(this)
   readonly busyInput = new BusyInput(this)
+  readonly bindings = new BindingPreferences(this)
   readonly attachments: Attachments
   readonly overlays: Overlay[] = []
   /** Presentation-only collapse overrides, scoped by transcript turn and tool identity. */
@@ -519,7 +521,7 @@ export class App implements OverlayHost {
       return this.#splash.skip()
     }
 
-    const stop = APP_ACTIONS.find(action => action.id === 'app.interrupt.owned')!
+    const stop = this.bindings.actions.find(action => action.id === 'app.interrupt.owned')!
 
     if (matchesAction(stop, key)) {
       return stop.run(this)
@@ -528,18 +530,24 @@ export class App implements OverlayHost {
     const top = this.#inputOwner()
 
     // Settings owns cancellation; reports must never clear the hidden draft.
-    const clear = APP_ACTIONS.find(action => action.id === 'app.clear')!
+    const clear = this.bindings.actions.find(action => action.id === 'app.clear')!
 
-    if (matchesAction(clear, key)) {
+    if (matchesAction(clear, key) && (!top || (key.ctrl && key.name === 'c'))) {
       return top?.key === 'settings' || top?.key === 'agent-hub' || top?.key === 'agent-inspector' || top?.key === 'report' || top?.key === 'plan' || top?.key === 'history'
         ? top.onKey(key)
         : clear.run(this)
     }
 
-    const clarifyToggle = APP_ACTIONS.find(action => action.id === 'app.clarify.toggle')!
+    const clarifyToggle = this.bindings.actions.find(action => action.id === 'app.clarify.toggle')!
 
     if (top && isClarifyPrompt(top) && matchesAction(clarifyToggle, key)) {
       return clarifyToggle.run(this)
+    }
+
+    const approve = this.bindings.actions.find(action => action.id === 'app.approval.approve')!
+
+    if (top && isApprovalPrompt(top) && !this.composer.text && matchesAction(approve, key)) {
+      return approve.run(this)
     }
 
     if (top && (isClarifyPrompt(top) || top.placement !== 'dock' || !this.composer.text) && top.onKey(key)) {
@@ -554,7 +562,7 @@ export class App implements OverlayHost {
       return
     }
 
-    const escape = APP_ACTIONS.find(action => action.id === 'app.interrupt')!
+    const escape = this.bindings.actions.find(action => action.id === 'app.interrupt')!
 
     if (this.dictation.blocked && matchesAction(escape, key)) {
       return escape.run(this)
@@ -572,7 +580,7 @@ export class App implements OverlayHost {
       completionOpen: this.#completion.open
     }
 
-    const shortcut = actionForKey(key, ctx)
+    const shortcut = actionForKey(key, ctx, this.bindings.actions)
 
     if (shortcut) {
       return shortcut.run(this)
@@ -623,9 +631,13 @@ export class App implements OverlayHost {
   }
 
   /** Copy the draft literally, without submitting it or disturbing the caret. */
-  copyPrompt() {
+  copyPrompt(currentLine = false) {
+    const { text, cursor } = this.composer
+    const start = text.lastIndexOf('\n', cursor - 1) + 1
+    const end = text.indexOf('\n', cursor)
+
     try {
-      copyToClipboard(this.composer.text)
+      copyToClipboard(currentLine ? text.slice(start, end < 0 ? undefined : end) : text)
       // OSC52 has no acknowledgement; don't claim the terminal accepted it.
       this.transcript.notice('Composer text sent to the terminal clipboard (OSC 52).')
     } catch {
@@ -1031,6 +1043,18 @@ export class App implements OverlayHost {
     return latest?.kind === 'turn' && latest.id === turnId && latest.retryable === true && latest.status === 'error'
   }
 
+  retryLatest() {
+    const latest = this.transcript.entries.findLast(entry => entry.kind === 'turn')
+
+    if (latest) { this.retryFailed(latest.id) }
+  }
+
+  approvePending() {
+    const owner = this.#inputOwner()
+
+    if (owner && isApprovalPrompt(owner) && !this.composer.text && this.owns(owner)) { owner.approve() }
+  }
+
   retryFailed(turnId: string) {
     if (!this.canRetry(turnId)) {
       return
@@ -1313,6 +1337,7 @@ export class App implements OverlayHost {
     }
 
     this.sid = r.session_id
+    void this.bindings.refresh()
     void this.busyInput.refresh()
     this.storedSid = r.info?.stored_session_id || r.stored_session_id || null
     this.todoHud.adopt(this.storedSid ?? r.session_id)
@@ -1916,6 +1941,8 @@ export class App implements OverlayHost {
 
     paint({
       dock: dockNodes({
+        actions: this.bindings.actions,
+        profile: this.bindings.profile,
         approval: dockPrompt?.node(promptId),
         approvalQueued: approvals.length + asks.length - 1,
         branch: info?.branch ?? '',

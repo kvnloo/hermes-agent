@@ -165,6 +165,8 @@ _SCHEMA_OVERRIDES: Dict[str, Dict[str, Any]] = {
         "Web dashboard visual theme", "default", "midnight", "ember", "mono", "cyberpunk", "rose"
     ),
     "display.resume_display": _select("How resumed sessions display history", "minimal", "full", "off"),
+    "display.tern_keybindings": {"type": "object", "description": "Tern action id to chord(s). Empty object resets all; [] disables an action; null resets it."},
+    "display.tern_profile_identity": {"type": "boolean", "description": "Show the session's owning Hermes profile in Tern's status bar."},
     "display.busy_input_mode": _select("Input behavior while agent is running", "interrupt", "queue", "steer"),
     "approvals.mode": _select("Dangerous command approval mode", "manual", "smart", "off"),
     "context.engine": _select("Context management engine", "default", "custom"),

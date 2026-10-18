@@ -67,7 +67,7 @@ export async function openHelp(app: App) {
     node: id => (
       <overlay anchor="center" head="Commands and shortcuts" key={id.slice('layer.'.length)} modal role="omp.overlay.hotkeys" size="lg">
         <col gap="lg" key="body">
-          {[...HOTKEYS, ...actionGroups()].map(({ group, rows }) => (
+          {[...HOTKEYS, ...actionGroups(app.bindings.actions)].map(({ group, rows }) => (
             <section head={group} key={`keys-${group}`} role="omp.hotkeys.group">
               <table
                 cols={[

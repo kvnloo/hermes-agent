@@ -62,6 +62,40 @@ def homes(tmp_path, monkeypatch):
     return launch, worker
 
 
+def test_tern_preferences_follow_the_owning_profile_and_reset_structured_overrides(homes):
+    launch, worker = homes
+    launch_before = (launch / "config.yaml").read_bytes()
+    before_env = (worker / ".env").read_bytes()
+    fields = result(rpc("settings.get", session_id="worker"))["fields"]
+    assert fields["display.tern_keybindings"]["value"] == {}
+    assert fields["display.tern_profile_identity"]["value"] is False
+    bindings = {"app.help": ["alt+h"], "app.retry": []}
+    for key, value in (("display.tern_keybindings", bindings), ("display.tern_profile_identity", True)):
+        result(rpc("settings.set", session_id="worker", profile="worker", key=key, value=value))
+        read = result(rpc("settings.get", session_id="worker"))
+        assert read["profile"] == "worker"
+        assert read["fields"][key]["value"] == value
+    assert saved(worker)["display"]["tern_keybindings"] == bindings
+    assert saved(worker)["display"]["tern_profile_identity"] is True
+    result(rpc("settings.set", session_id="worker", key="display.tern_keybindings", value={}))
+    assert saved(worker)["display"].get("tern_keybindings", {}) == {}
+    assert result(rpc("settings.get", session_id="worker"))["fields"]["display.tern_keybindings"]["value"] == {}
+    assert result(rpc("settings.get", session_id="launch"))["fields"]["display.tern_profile_identity"]["value"] is False
+    assert (launch / "config.yaml").read_bytes() == launch_before
+    assert (worker / ".env").read_bytes() == before_env
+
+
+@pytest.mark.parametrize(("key", "value"), [
+    ("display.tern_keybindings", []), ("display.tern_keybindings", "alt+h"),
+    ("display.tern_profile_identity", "true"), ("display.tern_profile_identity", None),
+])
+def test_invalid_tern_preference_types_never_write(homes, key, value):
+    launch, _ = homes
+    before = (launch / "config.yaml").read_bytes()
+    assert rpc("settings.set", session_id="launch", key=key, value=value)["error"]["code"] == 4002
+    assert (launch / "config.yaml").read_bytes() == before
+
+
 def test_sparse_save_and_reversion_preserve_unrelated_raw_values(homes):
     launch, _ = homes
     seed(launch, {"model": {"default": "fixture-model", "provider": "custom", "api_key": "${TEST_ROUTE_KEY}"},

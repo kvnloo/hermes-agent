@@ -4,37 +4,79 @@ App-level bindings live in `src/actions.ts`. The same registry supplies grouped
 `/help` rows and the compact `f1 help` composer hint; editor keys remain in
 `composer.ts`, and sheets keep their own local keys.
 
-| Chord | Action |
-| --- | --- |
-| Alt+M | Model picker |
-| Alt+P | Session-only model picker (no profile-default control) |
-| Ctrl+P / Ctrl+Shift+P | Next / previous session-recent model (`/model-next`, `/model-prev`) |
-| Ctrl+R | Search prompt history; Enter fills, never sends (`/history-search`) |
-| Ctrl+G | Round-trip the draft through an external editor (`/editor`) |
-| Alt+, / Ctrl+, | Hermes settings (`/settings` still works) |
-| Alt+C | Context window (`/context`) |
-| Alt+U | Usage (`/usage`) |
-| Alt+A | Agents (`/agents`) |
-| Alt+H | Hide / show the oldest waiting clarification; secret/approval prompts retain priority |
-| Alt+S | Session picker |
-| Alt+T / Alt+Shift+S | Session / branch tree and search (`/tree`) |
-| Alt+Shift+F | `/fork`: copy the conversation into a new Tern pane (idle session) |
-| Ctrl+T | Toggle `/reasoning show` / `/reasoning hide` using backend readback |
-| Alt+Shift+C | Copy the literal composer text via OSC 52, with a notice |
-| F1 / Alt+/ | Commands and grouped shortcut help |
-| Shift+Tab | Cycle session reasoning effort (unchanged) |
-| Ctrl+O | Expand / collapse every tool's detail, only with an empty composer and no overlay/completion |
-| Ctrl+Shift+O | Show / hide successful settled tool activity (same input ownership guards) |
-| Alt+Up | Recall the oldest queued prompt (unchanged) |
-| Escape | Close completion first; otherwise interrupt if busy (unchanged) |
-| Ctrl+D | Quit on an empty prompt; otherwise composer forward-delete (unchanged) |
-| Ctrl+C | Clear draft / interrupt / double-press exit; Settings owns cancellation (unchanged) |
-| Ctrl+Shift+X | Explicit agent interrupt: preserve the draft, even under a modal |
+<!-- generated-bindings:start -->
+| Context | Action id | Chords | Intent |
+| --- | --- | --- | --- |
+| app | app.clear | ctrl+c | Clear the draft / interrupt / exit (twice) |
+| app | app.interrupt | escape | Close completion / interrupt the agent |
+| app | app.interrupt.owned | ctrl+shift+x | Interrupt the agent (preserve draft, including under a modal) |
+| app | app.exit | ctrl+d | Exit (empty prompt; otherwise delete forward) |
+| app | app.thinking.cycle | shift+tab | Cycle the reasoning effort |
+| app | app.thinking.toggle | ctrl+t | Toggle reasoning display (profile setting) |
+| app | app.tools.expand | ctrl+o | Expand / collapse all tool detail (empty prompt) |
+| app | app.tools.toggleVisibility | ctrl+shift+o | Show / hide settled tool activity (empty prompt) |
+| app | app.message.alternate | alt+enter | Steer while busy (queue instead when busy mode is steer) |
+| app | app.message.dequeue | alt+up | Edit the oldest queued prompt |
+| app | app.clarify.toggle | alt+h | Hide / show the waiting clarification (preserve answers) |
+| app | app.stt.toggle | alt+v | Toggle microphone dictation (review before sending) |
+| app | app.model.select | alt+m | Select model |
+| app | app.model.selectTemporary | alt+p | Select model for this session only |
+| app | app.model.cycleForward | ctrl+p | Cycle to the next recent model |
+| app | app.model.cycleBackward | ctrl+shift+p | Cycle to the previous recent model |
+| app | app.history.search | ctrl+r | Search prompt history (fill draft, never send) |
+| app | app.editor.external | ctrl+g | Edit the draft in an external editor |
+| app | app.settings | alt+, / ctrl+, | Open Hermes settings |
+| app | app.context | alt+c | Show context window |
+| app | app.usage | alt+u | Show usage |
+| app | app.plan.review | alt+shift+p | Review the latest plan |
+| app | app.jobs | alt+j | Show background jobs |
+| app | app.browser.blocks | alt+shift+b | Show / hand over Tern browser blocks |
+| app | app.agents.hub | alt+a | Show agents |
+| app | app.session.resume | alt+s | Open session picker |
+| app | app.tree | alt+t | Browse the copied-session branch tree |
+| app | app.tree.search | alt+shift+s | Search saved sessions and branch paths |
+| app | app.session.fork | alt+shift+f | /fork [message-id]: fork into a new Tern pane |
+| app | app.history.older | ctrl+home | Load and scroll to older retained history |
+| app | app.clipboard.copyPrompt | alt+shift+c | Copy composer text |
+| app | app.retry | f5 / alt+r | Retry the latest retryable text-only failure (idle, empty prompt) |
+| approval | app.approval.approve | ctrl+enter / ctrl+q | Allow a pending tool once (empty prompt, approval owns input) |
+| app | app.clipboard.copyLine | alt+shift+l | Copy the current composer line |
+| app | app.help | f1 / alt+/ | Commands and shortcuts |
+<!-- generated-bindings:end -->
 
 Routing remains splash → explicit owned interrupt → Ctrl+C special handling → top overlay → modal guard →
 completion → action registry → composer. New chords require exact modifiers.
 Legacy app chords retain their permissive modifier behavior. Unbound Alt letters
 cannot type into the composer; Alt+B/F/D still perform readline word editing.
+
+## Profile configuration
+
+In the owning Hermes profile's `config.yaml` (or native Settings → Display):
+
+```yaml
+display:
+  tern_keybindings:
+    app.help: [alt+h]
+    app.retry: []  # disable; null resets one action, {} resets all
+  tern_profile_identity: true  # default false
+```
+
+Use `hermes config set display.tern_profile_identity true` for the optional tag.
+Bindings load through session-scoped `settings.get` on adoption and confirmed Settings
+readback, not a new environment variable or a cwd-derived profile. Reopen Settings to
+load external edits; there is no idle polling. Native Settings validates before saving.
+An invalid manually edited map leaves the last valid bindings (defaults on a new
+session) and shows a warning. Use the field's default action to reset it.
+Chord aliases/order are normalized. Duplicate and overlapping legacy-modifier chords,
+host-reserved Meta/Cmd/Super, Ctrl+Shift+C/V, Alt+F4/Tab, and composer-owned editing
+keys are rejected. Approval has its own context; its allow-once chord requires the
+approval to own input and an empty composer. It cannot approve behind a modal.
+The profile tag comes only from the owning gateway response and disappears immediately
+on session replacement until that profile's preference is confirmed.
+
+The table above is generated by `npm run shortcuts:generate`; check with
+`npm run shortcuts:check`. Runtime help and dock hints use the effective registry,
+including disabled/rebound actions; this document records the defaults.
 
 ## Terminal ownership
 
@@ -48,26 +90,6 @@ Prefer Alt+, for Hermes settings when the host takes Ctrl+,; use Alt+/ if F1 is
 owned by the host/OS. `/settings` and `/help` are always available as text.
 Bindings are tested using a connected real SDK peer and parsed terminal key
 bytes, not a complete native-window/preset matrix.
-
-## Clarifications
-
-Clarifications live in the dock, oldest first. Alt+H (or Hide/Show) keeps the
-current question, selections, free text and notes intact while returning the
-caret to the main draft. A compact waiting summary stays visible. Approval
-requests and modal secret prompts preempt ask input; stale handlers cannot
-answer a replaced, cancelled or foreign-session request.
-
-Next locks an early answer in Hermes, so accepted answers and optional notes
-survive timeout/cancel/reconnect. Skip records null; Cancel all leaves unanswered
-questions unanswered. The gateway supplies one absolute UTC deadline (null is
-unlimited); the frontend displays it without an idle countdown or expiry timer.
-Only `request.cancel` withdraws an expired request.
-
-Notes/images appear only when the request advertises support. Paste an image
-path or data URL into the ask to stage a workspace **reference**, not automatic
-vision input and not an attachment to the next user prompt. Failed/pending image
-staging blocks answers until retry/removal. Closing an ask discards its UI draft;
-staged workspace files are durable references and are not deleted on dismissal.
 
 ## Forking
 
@@ -150,7 +172,7 @@ child’s newer row IDs. Compression continuation links are labelled separately.
   `$EDITOR` (or `vi`). A private temporary file is deleted after readback.
   A changed draft/session is never overwritten; its editor result is shown separately.
 - OMP plan-mode toggling (Alt+Shift+P) is not implemented here.
-- User-configurable bindings remain a single TODO at the registry boundary.
+- Bindings override app actions only; native composer editing and sheet-local navigation remain owned locally.
 - OSC 52 has no acknowledgement; the notice reports the clipboard request, not
   guaranteed terminal acceptance.
 

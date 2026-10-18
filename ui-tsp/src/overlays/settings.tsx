@@ -2,6 +2,7 @@ import type { SettingsField, SettingsGetResult, SettingsSetResult } from '@herme
 import type { ActionEvent, ChangeEvent, JSX, Key, PrefsControl, PrefsProps, PrefsRow, SelectEvent } from '@stencil-hq/tern'
 import { jsonEqual as equal } from '@stencil-hq/tern'
 
+import { effectiveActions } from '../actions.js'
 import type { App } from '../app.js'
 import { Composer } from '../composer.js'
 import type { Overlay } from '../overlay.js'
@@ -250,6 +251,10 @@ class Settings implements Overlay {
     try {
       const value = parse(field, input)
 
+      if (key === 'display.tern_keybindings') {
+        effectiveActions(value)
+      }
+
       if (!this.#readback.has(key)) {
         this.#errors.delete(key)
       }
@@ -379,6 +384,12 @@ class Settings implements Overlay {
     }
 
     this.#fields = next
+
+    try {
+      this.#app.bindings.accept(result, this.#sid)
+    } catch (error) {
+      this.#message = `Tern bindings not applied: ${error instanceof Error ? error.message : String(error)}. Repair the bindings field or use its default.`
+    }
 
     for (const [key, edit] of this.#readback) {
       if (!this.#fields[key]) {
