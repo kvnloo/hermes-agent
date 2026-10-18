@@ -160,6 +160,13 @@ def _register(req: ServerRequest) -> None:
     _write(req.frame())
 
 
+def _batch_result(req: ServerRequest, outcome: str) -> dict:
+    result = {"answers": dict(req.locked), "outcome": outcome}
+    if req.params.get("notes"):
+        result["notes"] = dict(req.params["notes"])
+    return result
+
+
 def send(method: str, sid: str, params: dict, *, timeout: float | None,
          qids: list[str] | None = None) -> dict | None:
     """Send one request and block for the response ``result`` (a dict).
@@ -172,6 +179,9 @@ def send(method: str, sid: str, params: dict, *, timeout: float | None,
     if _unanswerable(method, sid):
         return None
     req = ServerRequest(sid, method, params, qids=qids)
+    if method == "clarify":
+        # The wait owns expiry. Replays carry the original deadline, never a fresh timeout.
+        req.params["deadline_at"] = (time.time() + timeout) * 1000 if timeout is not None else None
     _register(req)
     try:
         req.event.wait(timeout)
@@ -189,13 +199,13 @@ def send(method: str, sid: str, params: dict, *, timeout: float | None,
         # response frame can land after the deadline expires and before this removal, and
         # settlement (resolve_response / lock_answer / cancel) already popped it (#112548).
         timed_out = _open.pop(req.id, None) is req
-        answered, result, locked = req.answered, req.result, dict(req.locked)
+        answered, result = req.answered, req.result
     if answered:
         return result
     if timed_out:
         _emit_cancel(req, "timeout")
         if req.qids is not None:
-            return {"answers": locked, "outcome": "timed_out"}
+            return _batch_result(req, "timed_out")
     return None
 
 
@@ -266,6 +276,22 @@ def resolve_response(frame: dict, transport: Any = None) -> bool:
             # another process; say so — a dropped answer used to vanish without a trace.
             logger.debug("server request %s: response dropped, request no longer open", rid)
             return False
+        if req.method == "clarify" and "error" not in frame:
+            from pydantic import ValidationError
+            from tui_gateway.contracts.server_requests import ClarifyResult
+            try:
+                result = ClarifyResult.model_validate(frame.get("result") or {}).model_dump(exclude_unset=True)
+            except ValidationError:
+                return False
+            qids = {question["qid"] for question in req.params["questions"]}
+            notes = result.get("notes") or {}
+            if not set(result.get("answers") or {}) <= qids or not set(notes) <= qids:
+                return False
+            if notes and not req.params.get("supports_notes"):
+                return False
+            if any(note.get("image_paths") for note in notes.values()) and not req.params.get("supports_image_refs"):
+                return False
+            frame = {**frame, "result": result}
         # Removing the request and committing its outcome are one settlement.
         # ``cancel()`` also settles under this lock, so the first side to get
         # here wins instead of a later cancellation overwriting a response.
@@ -283,9 +309,12 @@ def resolve_response(frame: dict, transport: Any = None) -> bool:
                 merged = dict(req.locked)
                 if isinstance(answers, dict):
                     merged.update(answers)
+                notes = {**(req.params.get("notes") or {}), **(req.result.get("notes") or {})}
                 req.result = {**req.result, "answers": merged, "outcome": "submitted"}
+                if notes:
+                    req.result["notes"] = notes
             elif req.qids:
-                req.result = {"answers": dict(req.locked), "outcome": "cancelled"}
+                req.result = _batch_result(req, "cancelled")
             req.answered = True
     if req.on_result is not None:
         req.on_result(req.result)
@@ -293,7 +322,7 @@ def resolve_response(frame: dict, transport: Any = None) -> bool:
     return True
 
 
-def lock_answer(request_id: str, question_id: str, answer: str | None) -> list[str] | None:
+def lock_answer(request_id: str, question_id: str, answer: str | None, note: dict | None = None) -> list[str] | None:
     """Lock one batch-clarify answer (update-in-place; ``None`` = skipped). Returns the question ids
     still unanswered; the last lock resolves the request with the full ``{"answers"}`` set. ``None``
     when no open batch has that id (expired or foreign); ``ValueError`` for an unknown question id."""
@@ -303,10 +332,16 @@ def lock_answer(request_id: str, question_id: str, answer: str | None) -> list[s
             return None
         if question_id not in req.qids:
             raise ValueError(f"unknown question_id {question_id!r}")
+        if note is not None:
+            from tui_gateway.contracts.server_requests import ClarifyNote
+            note = ClarifyNote.model_validate(note).model_dump()
+            if not req.params.get("supports_notes") or (note["image_paths"] and not req.params.get("supports_image_refs")):
+                raise ValueError("request does not support these notes")
+            req.params.setdefault("notes", {})[question_id] = note
         req.locked[question_id] = answer
         remaining = [qid for qid in req.qids if qid not in req.locked]
         if not remaining:
-            req.result, req.answered = {"answers": dict(req.locked), "outcome": "submitted"}, True
+            req.result, req.answered = _batch_result(req, "submitted"), True
             _open.pop(request_id, None)
     if not remaining:
         req.event.set()
@@ -323,7 +358,7 @@ def cancel(sid: str | None = None, reason: str = "interrupted") -> int:
         for req in targets:
             _open.pop(req.id, None)
             if req.qids is not None:
-                req.result, req.answered = {"answers": dict(req.locked), "outcome": "cancelled"}, True
+                req.result, req.answered = _batch_result(req, "cancelled"), True
             else:
                 req.result, req.answered = None, False
     for req in targets:

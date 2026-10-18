@@ -511,6 +511,19 @@ def test_compute_host_open_request_survives_activation_and_proxies_locks_and_res
         assert supervisor.responses == [(sid, {"lock": {"request_id": "srq-host", "question_id": "q0", "answer": "a"}}, 15.0)]
         assert server._live_session_payload(sid, session)["open_requests"][0]["params"]["answers"] == {"q0": "a"}
 
+        note = {"text": "why", "image_paths": ["/workspace/note.png"]}
+        invalid = server.handle_request({"id": "bad-note", "method": "clarify.lock",
+                                         "params": {"request_id": "srq-host", "question_id": "q0",
+                                                    "answer": "a", "note": {"image_paths": [123]}}})
+        assert "error" in invalid
+        assert len(supervisor.responses) == 1
+        saved = server.handle_request({"id": "note-q0", "method": "clarify.lock",
+                                       "params": {"request_id": "srq-host", "question_id": "q0",
+                                                  "answer": "a", "note": note}})
+        assert saved["result"]["status"] == "ok"
+        assert supervisor.responses[-1][1]["lock"]["note"] == note
+        assert server._live_session_payload(sid, session)["open_requests"][0]["params"]["notes"] == {"q0": note}
+
         # The client's response frame (cancel-all) is relayed to the child and clears the mirror.
         assert server.dispatch({"jsonrpc": "2.0", "id": "srq-host", "result": {}}) is None
         assert supervisor.responses[-1] == (sid, {"frame": {"jsonrpc": "2.0", "id": "srq-host", "result": {}}}, 15.0)
@@ -21563,7 +21576,7 @@ def test_clarify_callback_uses_configured_timeout(monkeypatch):
     assert result == reply
     assert captured["method"] == "clarify" and captured["sid"] == "sid-1"
     assert captured["timeout"] == 42
-    assert captured["params"] == {"questions": questions}
+    assert captured["params"] == {"questions": questions, "supports_notes": True, "supports_image_refs": True}
     assert captured["qids"] == ["q0"]
 
 

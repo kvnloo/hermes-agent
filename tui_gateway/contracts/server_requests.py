@@ -36,11 +36,21 @@ class ClarifyQuestion(Params):
     multi_select: bool = False
 
 
+class ClarifyNote(Params):
+    text: str = ""
+    image_paths: list[str] = Field(default_factory=list)
+
+
 class ClarifyRequestParams(ServerRequestParams):
     """``answers`` rides only on a reconnect replay (locks the server already accepted; null = skipped)."""
 
     questions: list[ClarifyQuestion]
     answers: dict[str, str | None] | None = None
+    notes: dict[str, ClarifyNote] | None = None
+    supports_notes: bool = False
+    supports_image_refs: bool = False
+    # Unix milliseconds; null explicitly means no deadline. Absent on older peers.
+    deadline_at: float | None = Field(default=None, ge=0)
 
 
 class ClarifyResult(Result):
@@ -48,6 +58,7 @@ class ClarifyResult(Result):
     without ``answers`` is cancel-all."""
 
     answers: dict[str, str | None] | None = None
+    notes: dict[str, ClarifyNote] | None = None
 
 
 server_request("clarify", params=ClarifyRequestParams, result=ClarifyResult,

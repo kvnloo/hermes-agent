@@ -100,8 +100,14 @@ def _result(normalized: List[dict], reply: dict) -> str:
     responses = []
     for entry in normalized:
         status, value = _response_status(entry["qid"], answers, entry["multi_select"])
-        responses.append({"question": entry["question"], "choices_offered": entry["choices_offered"],
-                          "status": status, "user_response": value})
+        response = {"question": entry["question"], "choices_offered": entry["choices_offered"],
+                    "status": status, "user_response": value}
+        note = (reply.get("notes") or {}).get(entry["qid"])
+        if isinstance(note, dict):
+            # References only: no eager file reads or provider-specific vision embedding.
+            response["note"] = note.get("text", "")
+            response["image_paths"] = note.get("image_paths", [])
+        responses.append(response)
     result: Dict[str, object] = {"responses": responses, "outcome": reply["outcome"]}
     if reply.get("notice"):
         result["notice"] = str(reply["notice"])

@@ -2924,7 +2924,12 @@ export interface ClarifyLockParams {
   request_id: string
   question_id: string
   answer?: unknown
+  note?: ClarifyNote | null
   profile?: string | null
+}
+export interface ClarifyNote {
+  text?: string
+  image_paths?: string[]
 }
 /** ``remaining`` lists the qids still unanswered; the lock that empties it resolves the request. ``expired``: the wait already ended (timeout / cancel) — not an error. */
 export interface ClarifyLockResult {
@@ -4606,6 +4611,10 @@ export interface ClarifyRequestParams {
   session_id: string
   questions: ClarifyQuestion[]
   answers?: Record<string, string | null> | null
+  notes?: Record<string, ClarifyNote> | null
+  supports_notes?: boolean
+  supports_image_refs?: boolean
+  deadline_at?: number | null
 }
 export interface ClarifyQuestion {
   qid: string
@@ -4616,6 +4625,7 @@ export interface ClarifyQuestion {
 /** ``{answers}`` for the whole set (early locks go through the ``clarify.lock`` RPC); a response without ``answers`` is cancel-all. */
 export interface ClarifyResult {
   answers?: Record<string, string | null> | null
+  notes?: Record<string, ClarifyNote> | null
 }
 /** ``tui_gateway/server.py::_approval_request_payload`` — the command is redacted server-side. */
 export interface ApprovalRequestParams {

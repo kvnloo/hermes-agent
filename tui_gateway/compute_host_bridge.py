@@ -194,7 +194,8 @@ def _relay_compute_host_response(frame: dict) -> bool:
     return True
 
 
-def _lock_compute_host_clarify(rid: str, request_id: str, question_id: str, answer: str | None) -> dict | None:
+def _lock_compute_host_clarify(rid: str, request_id: str, question_id: str, answer: str | None,
+                               note: dict | None = None) -> dict | None:
     """Proxy a batch-clarify lock into the child that owns the request; keeps the parent mirror's locked
     answers current for reconnect snapshots. None when the request is not host-owned."""
     located = _compute_host_request_session(request_id)
@@ -203,7 +204,8 @@ def _lock_compute_host_clarify(rid: str, request_id: str, question_id: str, answ
     sid, session = located
     try:
         ack = _get_compute_host_supervisor().respond(
-            sid, {"lock": {"request_id": request_id, "question_id": question_id, "answer": answer}})
+            sid, {"lock": {"request_id": request_id, "question_id": question_id, "answer": answer,
+                           **({"note": note} if note is not None else {})}})
     except Exception as exc:
         return _err(rid, 5019, f"compute-host clarify lock failed: {exc}")
     if ack.get("type") == "respond.error":
@@ -222,6 +224,8 @@ def _lock_compute_host_clarify(rid: str, request_id: str, question_id: str, answ
                 session.pop("_compute_host_open_request", None)
             else:
                 mirrored["params"]["answers"] = {**(mirrored["params"].get("answers") or {}), question_id: answer}
+                if note is not None:
+                    mirrored["params"]["notes"] = {**(mirrored["params"].get("notes") or {}), question_id: note}
     return _ok(rid, result)
 
 
