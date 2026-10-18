@@ -63,12 +63,11 @@ describe('tool cards', () => {
     expect(card.props).toMatchObject({
       badges: [{ text: '2 more lines', tone: 'muted' }],
       frame: 'inline',
-      lang: 'typescript',
       name: 'read',
       preview: { lines: 3 },
       title: 'Read'
     })
-    expect(body instanceof Node && body.props.lang).toBe('typescript')
+    expect(body instanceof Node && body.props.path).toBe('src/index.ts')
   })
 
   it('folds a long write and keeps the syntax language', () => {
@@ -96,7 +95,7 @@ describe('tool cards', () => {
       preview: { lines: 8 },
       title: 'Write'
     })
-    expect(node(card.children[0]).props.lang).toBe('typescript')
+    expect(node(card.children[0]).props.path).toBe('src/new.ts')
   })
 
   it('keeps a failed shell failed, folded, and exited', () => {
@@ -183,6 +182,6 @@ describe('tool cards', () => {
       title: 'Edit'
     })
     expect(card.props.preview).toBeUndefined()
-    expect(node(card.children[0]).props.lang).toBe('typescript')
+    expect(node(card.children[0]).props.path).toBe('src/index.ts')
   })
 })

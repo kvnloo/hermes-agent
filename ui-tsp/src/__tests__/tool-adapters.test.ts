@@ -112,8 +112,8 @@ describe('tool adapter registry', () => {
       { name: 'patch', args: { path: 'x.ts' }, result: { diff: '@@ -1 +1 @@\n-a\n+b' } },
       { name: 'web_search', args: { query: 'tern' }, result: { data: { web: [{ title: 'Tern', url: 'https://example.org/' }] } } }
     ], nodes => {
-      expect(tool(nodes, 'read').props).toMatchObject({ target: 'x.ts', lang: 'typescript', preview: { lines: 3 } })
-      expect(nodes.find(node => node.kind === 'code' && node.props.numbers)?.props.text).toBe('const x = 1')
+      expect(tool(nodes, 'read').props).toMatchObject({ target: 'x.ts', preview: { lines: 3 } })
+      expect(nodes.find(node => node.kind === 'code' && node.props.numbers)?.props).toMatchObject({ path: 'x.ts', text: 'const x = 1' })
       expect(tool(nodes, 'bash').props).toMatchObject({ target: 'pwd', status: 'done', collapsible: false })
       expect(tool(nodes, 'edit').props.meta).toEqual(['+1 −1'])
       expect(tool(nodes, 'web_search').props.meta).toEqual(['1 source'])
