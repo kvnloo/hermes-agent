@@ -363,6 +363,17 @@ export const REPORT_ACTIONS: readonly ReportAction[] = [
   { keys: ['end'], intent: { kind: 'scroll', to: 'end' } }
 ]
 
+/** Side-thread bindings; pane scrolling never moves the main conversation. */
+export const BTW_ACTIONS = [
+  { keys: ['escape'], action: 'close' },
+  { keys: ['tab'], action: 'focus' },
+  { keys: ['ctrl+n'], action: 'next' },
+  { keys: ['ctrl+p'], action: 'previous' },
+  { keys: ['alt+enter'], action: 'send' },
+  { keys: ['ctrl+x'], action: 'cancel' },
+  { keys: ['alt+c'], action: 'copy' }
+] as const
+
 /** Plan-local commands; editing keys remain owned by its private note editor. */
 export const PLAN_ACTIONS = [
   { keys: ['escape'], action: 'close' },

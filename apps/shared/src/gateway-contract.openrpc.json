@@ -385,6 +385,60 @@
       }
     },
     {
+      "name": "btw.cancel",
+      "summary": "Cancel only the exact running side turn, returning canonical readback.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/BtwCancelParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/BtwSubmitResult"
+        }
+      }
+    },
+    {
+      "name": "btw.list",
+      "summary": "Read all side threads owned by this conversation, without main transcript entries.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/SessionParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/BtwListResult"
+        }
+      }
+    },
+    {
+      "name": "btw.submit",
+      "summary": "Start a side question or continue an exact owned thread; streams btw.update snapshots.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/BtwSubmitParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/BtwSubmitResult"
+        }
+      }
+    },
+    {
       "name": "clarify.lock",
       "summary": "Lock one answer of a batch clarify request (editable until every question is locked).",
       "params": [
@@ -7889,6 +7943,210 @@
           "in_tern"
         ],
         "title": "BrowserTargetResult",
+        "type": "object"
+      },
+      "BtwCancelParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "thread_id": {
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "turn_id": {
+            "title": "Turn Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "thread_id",
+          "turn_id"
+        ],
+        "title": "BtwCancelParams",
+        "type": "object"
+      },
+      "BtwListResult": {
+        "additionalProperties": false,
+        "properties": {
+          "threads": {
+            "items": {
+              "$ref": "#/components/schemas/BtwThread"
+            },
+            "title": "Threads",
+            "type": "array"
+          }
+        },
+        "required": [
+          "threads"
+        ],
+        "title": "BtwListResult",
+        "type": "object"
+      },
+      "BtwState": {
+        "enum": [
+          "running",
+          "answered",
+          "error",
+          "cancelled"
+        ],
+        "title": "BtwState",
+        "type": "string"
+      },
+      "BtwSubmitParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "thread_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Thread Id"
+          }
+        },
+        "required": [
+          "session_id",
+          "text"
+        ],
+        "title": "BtwSubmitParams",
+        "type": "object"
+      },
+      "BtwSubmitResult": {
+        "additionalProperties": false,
+        "properties": {
+          "thread": {
+            "$ref": "#/components/schemas/BtwThread"
+          },
+          "turn_id": {
+            "title": "Turn Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread",
+          "turn_id"
+        ],
+        "title": "BtwSubmitResult",
+        "type": "object"
+      },
+      "BtwThread": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/BtwTurn"
+            },
+            "title": "Turns",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "turns"
+        ],
+        "title": "BtwThread",
+        "type": "object"
+      },
+      "BtwTurn": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/BtwState"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "answer",
+          "state"
+        ],
+        "title": "BtwTurn",
+        "type": "object"
+      },
+      "BtwUpdatePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "thread": {
+            "$ref": "#/components/schemas/BtwThread"
+          }
+        },
+        "required": [
+          "thread"
+        ],
+        "title": "BtwUpdatePayload",
         "type": "object"
       },
       "CapabilityEntry": {
@@ -41024,6 +41282,18 @@
           "name": "payload",
           "schema": {
             "$ref": "#/components/schemas/SideAgentCompletePayload"
+          }
+        }
+      ]
+    },
+    {
+      "name": "btw.update",
+      "summary": "Canonical side-thread snapshot after a streamed delta or state change.",
+      "params": [
+        {
+          "name": "payload",
+          "schema": {
+            "$ref": "#/components/schemas/BtwUpdatePayload"
           }
         }
       ]

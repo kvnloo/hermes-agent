@@ -4,6 +4,7 @@ module is listed here so the generator and the runtime see the same catalog."""
 from . import (  # noqa: F401
     billing_delegation_pets,
     browser_blocks,
+    btw,
     common,
     config_free_tier_control,
     connectors,
