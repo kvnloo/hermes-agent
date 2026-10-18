@@ -1,5 +1,6 @@
 // Composer-only upload projection. Hermes owns staging; confirmed paths are its attachment identities.
-import { existsSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { constants, existsSync } from 'node:fs'
 import { open } from 'node:fs/promises'
 import { basename, extname, isAbsolute } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -8,11 +9,14 @@ import type { AttachedImageResult, FileAttachResult, ImageDetachResult } from '@
 import type { JsonObject } from '@stencil-hq/tern'
 import type { GatewayClient } from '@tui/gatewayClient.js'
 
+import { readImageBytes } from './media-delivery.js'
+
 const MAX_BYTES = 20 * 1024 * 1024
 
 interface ImageFileSource {
   path: string
   name: string
+  host?: 'frontend' | 'gateway' | 'tern'
 }
 
 interface ImageDataSource {
@@ -30,6 +34,7 @@ interface AttachmentBase {
   source: ImageSource
   session: string
   generation: number
+  fingerprint?: string
 }
 
 export type Attachment = AttachmentBase & (
@@ -44,6 +49,23 @@ export interface SubmittedImage {
   path: string
   mime: string
   bytes: number
+}
+
+/** Gateway's persisted @image directives keep their original durable path identity on resume. */
+export function resumedImages(text: string): { text: string; images: SubmittedImage[] } {
+  const lines = text.split('\n')
+  const images: SubmittedImage[] = []
+
+  while (lines.length) {
+    const match = /^@image:(?:`([^`]+)`|"([^"]+)"|'([^']+)'|(\S+))$/.exec(lines.at(-1) ?? '')
+    const path = match?.slice(1).find(Boolean)
+
+    if (!path || !isAbsolute(path)) { break }
+    images.unshift({ id: path, path, name: basename(path), mime: '', bytes: 0 })
+    lines.pop()
+  }
+
+  return { text: lines.join('\n').trimEnd(), images }
 }
 
 /** Extensions never establish image-ness, including a misleading .png filename. */
@@ -101,7 +123,9 @@ export function eventImageSource(raw: JsonObject): ImageSource | undefined {
   }
 
   if (typeof raw.path === 'string') {
-    return pastedImageSource(raw.path, false)
+    const source = pastedImageSource(raw.path, false)
+
+    return source && 'path' in source ? { ...source, host: 'tern' } : source
   }
 
   const data = typeof raw.data === 'string' ? raw.data : undefined
@@ -119,18 +143,25 @@ export class Attachments {
   #serial = 0
   #generation = 0
   #removing = new Set<string>()
+  #inflight = new Set<Attachment>()
 
-  constructor(readonly gw: GatewayClient, readonly changed: () => void, readonly notice: (message: string) => void, readonly referenceOnly = false) {}
+  constructor(readonly gw: GatewayClient, readonly changed: () => void, readonly notice: (message: string) => void, readonly referenceOnly = false, readonly ternLocal: () => boolean = () => true) {}
 
   get blocked(): boolean {
     return this.#removing.size > 0 || this.items.some(item => item.status !== 'attached')
   }
 
   add(source: ImageSource, session: string): Promise<void> {
-    const duplicate = this.items.some(item => item.session === session && (
-      ('path' in source && 'path' in item.source && source.path === item.source.path) ||
-      ('data' in source && 'data' in item.source && source.data === item.source.data)
-    ))
+    const retained = [...new Set([...this.items, ...this.#inflight])].reduce((size, item) => size + ('data' in item.source ? item.source.data.length : 0), 0)
+
+    if (this.items.length >= 8 || this.#inflight.size >= 8 || ('data' in source && retained + source.data.length > Math.ceil(MAX_BYTES * 2 / 3) * 4)) {
+      this.notice('Composer attachment budget reached (8 images / 40 MiB). Remove an image first.')
+
+      return Promise.resolve()
+    }
+
+    const fingerprint = createHash('sha256').update('data' in source ? source.data : `${source.host}:${source.path}`).digest('hex')
+    const duplicate = this.items.some(item => item.session === session && item.fingerprint === fingerprint)
 
     if (duplicate) {
       this.notice(`${source.name} is already in the composer. Retry its chip if it failed.`)
@@ -138,7 +169,7 @@ export class Attachments {
       return Promise.resolve()
     }
 
-    const item: Attachment = { id: `a${++this.#serial}`, name: source.name, mime: '', bytes: 0, source, session, generation: this.#generation, status: 'pending' }
+    const item: Attachment = { id: `a${++this.#serial}`, name: source.name, mime: '', bytes: 0, source, session, generation: this.#generation, fingerprint, status: 'pending' }
     this.items.push(item)
     this.changed()
 
@@ -146,13 +177,27 @@ export class Attachments {
   }
 
   async #attach(item: Attachment): Promise<void> {
+    if (this.#inflight.size >= 8) {
+      const index = this.items.indexOf(item)
+
+      if (index >= 0) { this.items[index] = { ...item, status: 'failed', error: 'Attachment uploads are busy; retry after they finish.' } }
+      this.changed()
+
+      return
+    }
+
+    this.#inflight.add(item)
+
     try {
       const source = item.source
       let data: Buffer
       let localPath = 'path' in source ? source.path : undefined
 
       if ('path' in source) {
-        const file = await open(source.path, 'r')
+        if (source.host === 'gateway') { throw new Error('Gateway attachment is stale; remove it and attach the original again.') }
+
+        if (source.host === 'tern' && !this.ternLocal()) { throw new Error('Dropped path belongs to the Tern host. Paste image bytes across SSH instead.') }
+        const file = await open(source.path, constants.O_RDONLY | constants.O_NONBLOCK | (constants.O_NOFOLLOW ?? 0))
 
         try {
           const stat = await file.stat()
@@ -167,8 +212,8 @@ export class Attachments {
           item.bytes = stat.size
 
           // The path RPC rejects unknown suffixes. Upload verified bytes under their real format instead.
-          if (!['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.tif', '.tiff'].includes(extname(source.path).toLowerCase())) {
-            data = await file.readFile()
+          if (this.gw.attached || !['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.tif', '.tiff'].includes(extname(source.path).toLowerCase())) {
+            data = await readImageBytes(source.path, MAX_BYTES)
             localPath = undefined
           }
         } finally {
@@ -189,6 +234,19 @@ export class Attachments {
 
       if (!mime) {
         throw new Error('Not a supported image (magic bytes did not match).')
+      }
+
+      if ('data' in source) {
+        const declared = /^data:([^;]+);/.exec(source.data)?.[1]
+
+        if (declared && declared !== mime) { throw new Error('Image MIME does not match magic bytes.') }
+      }
+
+      const suffixMimes: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp', '.tif': 'image/tiff', '.tiff': 'image/tiff' }
+
+      if (localPath && suffixMimes[extname(localPath).toLowerCase()] !== mime) {
+        data = await readImageBytes(localPath, MAX_BYTES)
+        localPath = undefined
       }
 
       item.mime = mime
@@ -214,7 +272,7 @@ export class Attachments {
         throw new Error(('message' in result && result.message) || 'Gateway did not confirm an attachment path.')
       }
 
-      const attached: Attachment = { ...item, status: 'attached', path: result.path }
+      const attached: Attachment = { ...item, source: { path: result.path, name: item.name, host: 'gateway' }, status: 'attached', path: result.path }
       const index = this.items.indexOf(item)
 
       if (index < 0) {
@@ -228,6 +286,8 @@ export class Attachments {
       if (index >= 0) {
         this.items[index] = { ...item, status: 'failed', error: error instanceof Error ? error.message : String(error) }
       }
+    } finally {
+      this.#inflight.delete(item)
     }
 
     this.changed()
@@ -321,7 +381,7 @@ export class Attachments {
   restore(images: readonly SubmittedImage[], session: string): void {
     for (const image of images) {
       if (!this.items.some(item => item.status === 'attached' && item.path === image.path && item.session === session)) {
-        this.items.push({ ...image, id: `a${++this.#serial}`, source: { path: image.path, name: image.name }, session, generation: this.#generation, status: 'attached' })
+        this.items.push({ ...image, id: `a${++this.#serial}`, source: { path: image.path, name: image.name, host: 'gateway' }, session, generation: this.#generation, status: 'attached' })
       }
     }
 

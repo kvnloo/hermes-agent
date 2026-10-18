@@ -80,6 +80,21 @@ method("prompt.submit", params=PromptSubmitParams, result=PromptSubmitResult,
        doc="Send a user turn to a live session; busy sessions queue / steer / redirect instead of refusing.")
 
 
+class MediaImageParams(SessionParams):
+    path: str = Field(min_length=1, max_length=4096)
+    tool_call_id: str | None = Field(default=None, min_length=1, max_length=256)
+
+
+class MediaImageResult(Result):
+    content_base64: str
+    mime: str
+    bytes: int = Field(ge=1, le=16 * 1024 * 1024)
+
+
+method("media.image", params=MediaImageParams, result=MediaImageResult,
+       doc="Read one bounded staged/persisted attachment or completed tool image for SDK blob upload.")
+
+
 # ── attachments ───────────────────────────────────────────────────────────────────────────────
 
 

@@ -51,7 +51,7 @@ async function withReads(media: boolean, reads: ReadResult[], check: (nodes: Tre
 
   const app = new App(tern, gw, 'test')
   app.sid = 'media-session'
-  app.info = { cwd: '/project' }
+  app.info = { cwd: '/project', terminal_backend: 'local' }
   acknowledgeFrames(tern)
   const running = app.run()
   const surface = tern.surfaces[0]!

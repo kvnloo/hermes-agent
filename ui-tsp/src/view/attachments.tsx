@@ -1,16 +1,19 @@
 import { type JSX, node } from '@stencil-hq/tern'
 
 import type { Attachment, SubmittedImage } from '../attachments.js'
+import type { MediaPreview } from '../media-delivery.js'
 import { mediaNode } from '../tern-media.js'
 
 /** Shared vocabulary for composer attachments and immutable submitted user chips. */
-export function attachmentNodes(images: readonly SubmittedImage[], native: boolean): JSX.Element {
+export function attachmentNodes(images: readonly SubmittedImage[], native: boolean, hostLocal = true, preview?: MediaPreview, gatewayRemote = false): JSX.Element {
   return (
     <row gap="sm" key="attachments" role="omp.user.attachments" wrap>
       {images.map(image => (
         <col gap="xs" key={image.id} role="omp.attachment">
           <badge key="name" text={image.name} title={image.path} />
-          {thumbnail(image.path, image.name, native)}
+          {hostLocal ? thumbnail(image.path, image.name, native) : preview
+            ? preview({ kind: 'path', host: gatewayRemote ? 'gateway' : 'frontend', id: image.id, path: image.path, mime: image.mime || undefined }, native)
+            : <text key="unavailable" text="Remote image preview unavailable" />}
         </col>
       ))}
     </row>

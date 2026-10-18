@@ -93,5 +93,27 @@ def _(rid, params: dict) -> dict:
                      **({"image_data": data_url} if data_url else {})})
 
 
+@method("media.image")
+@_registry.profile_scoped
+def _(rid, params: dict) -> dict:
+    from pydantic import ValidationError
+    from tui_gateway.contracts.prompt_voice import MediaImageParams
+    from tui_gateway.media_delivery import read_session_image
+    try:
+        validated = MediaImageParams.model_validate(params)
+    except ValidationError as exc:
+        return _err(rid, 4000, str(exc))
+    _, session = _current_session_steer_authority(validated.session_id)
+    if session is None:
+        return _err(rid, 4001, "session not found or not owned by this transport")
+    try:
+        result = read_session_image(session, validated.path, validated.tool_call_id)
+        if _current_session_steer_authority(validated.session_id)[1] is not session:
+            return _err(rid, 4001, "session authority changed during image read")
+        return _ok(rid, result)
+    except (OSError, ValueError) as exc:
+        return _err(rid, 4016, str(exc))
+
+
 def register(server) -> None:
     bind_module(globals(), server, skip=("_",))
