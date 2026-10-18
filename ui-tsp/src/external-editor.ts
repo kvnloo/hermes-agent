@@ -11,9 +11,9 @@ export type DraftOpener = (file: string) => void | Promise<void>
 export const openDraftFile: DraftOpener = file => {
   const inTern = Boolean(process.env.TERN_WINDOW_KEY)
 
-  const argv = inTern ? ['tern', 'open', '--wait', file] : [
-    ...(process.env.VISUAL || process.env.EDITOR || 'vi').trim().split(/\s+/), file
-  ]
+  const argv = inTern
+    ? ['tern', 'open', '--wait', file]
+    : [...(process.env.VISUAL || process.env.EDITOR || 'vi').trim().split(/\s+/), file]
 
   const raw = process.stdin.isRaw
 
@@ -35,6 +35,21 @@ export const openDraftFile: DraftOpener = file => {
     if (!inTern && process.stdin.isTTY) {
       process.stdin.setRawMode(raw)
     }
+  }
+}
+
+/** Private file round-trip shared by composer and revision-bound plan editing. */
+export async function editTextExternal(initial: string, opener: DraftOpener = openDraftFile): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), 'hermes-plan-'))
+
+  try {
+    const file = join(dir, 'plan.md')
+    await writeFile(file, initial, { mode: 0o600 })
+    await opener(file)
+
+    return await readFile(file, 'utf8')
+  } finally {
+    await rm(dir, { recursive: true, force: true })
   }
 }
 

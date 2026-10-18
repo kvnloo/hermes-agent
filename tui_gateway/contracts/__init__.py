@@ -15,6 +15,7 @@ from . import (  # noqa: F401
     i18n,
     jobs,
     liveness,
+    plans,
     profiles_vault_complete_foreign_subagents,
     projects_pets,
     prompt_voice,

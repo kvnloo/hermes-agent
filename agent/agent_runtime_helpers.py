@@ -2604,8 +2604,10 @@ def invoke_tool(agent, function_name: str, function_args: dict, effective_task_i
             _tool_middleware_trace = _tool_request_mw.trace
     except Exception as _mw_err:
         logger.debug("tool_request middleware error: %s", _mw_err)
-    block_message: Optional[str] = None
-    if not pre_tool_block_checked:
+    from agent.plan_mode import plan_tool_block
+
+    block_message: Optional[str] = plan_tool_block(agent, function_name)
+    if block_message is None and not pre_tool_block_checked:
         block_message, function_args = _pre_tool_block_message(
             agent, function_name, function_args, effective_task_id, tool_call_id, _tool_middleware_trace
         )

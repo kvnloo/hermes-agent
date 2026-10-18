@@ -743,6 +743,8 @@ def _(rid, params: dict) -> dict:
         # `/work fix it` sends nine literal chars.
         text = _expand_skill_invocation_for_replay(text, str(session.get("session_key") or ""))
     turn_isolation = _session_uses_compute_host(session, _load_dashboard_process_isolation_config())
+    if turn_isolation and session.get("plan_review", {}).get("enabled"):
+        return _err(rid, 4094, "Plan enforcement is unavailable for isolated compute")
     if internal_hosted_submit and turn_isolation:
         return _err(rid, 4121, "hosted room turns do not support isolated compute workers yet")
     # Re-bind to the current transport: streaming must stay on the active websocket even
