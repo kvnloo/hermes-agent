@@ -36,6 +36,7 @@ import { editExternal } from './external-editor.js'
 import { type Busy, busyFrom, ownsEvent, Switches } from './flow.js'
 import { FramePump } from './frame.js'
 import { HostLifecycle } from './host-lifecycle.js'
+import { MediaDelivery, type MediaPath, ternSharesFrontendHost } from './media-delivery.js'
 import { ModelRecents } from './model-recents.js'
 import type { UserEntry } from './model.js'
 import { openOperationalSheet } from './operations.js'
@@ -95,6 +96,7 @@ export class App implements OverlayHost {
   readonly dictation = new Dictation(this)
   readonly busyInput = new BusyInput(this)
   readonly attachments: Attachments
+  readonly mediaDelivery: MediaDelivery
   readonly overlays: Overlay[] = []
   /** Presentation-only collapse overrides, scoped by transcript turn and tool identity. */
   readonly #tools = new ToolPresentation()
@@ -155,13 +157,14 @@ export class App implements OverlayHost {
     this.#hostLifecycle = new HostLifecycle(writeHost)
     this.#tern = tern
     this.#gw = gw
+    this.mediaDelivery = new MediaDelivery(tern, gw, () => this.sid, () => this.changed())
     this.attachments = new Attachments(gw, () => {
       this.changed()
 
       if (this.#startupAttachmentPending && !this.#startupImage) {
         this.#drainQueue()
       }
-    }, message => this.notice(message))
+    }, message => this.notice(message), () => ternSharesFrontendHost())
     this.#completion = new Completion(this, gw, () => this.sid)
     this.#welcome = {
       tip: randomTip(process.env.HERMES_PYTHON_SRC_ROOT ?? ''),
@@ -656,7 +659,9 @@ export class App implements OverlayHost {
   }
 
   #pasteImage(text: string): boolean {
-    const source = pastedImageSource(text)
+    const source = pastedImageSource(text, ternSharesFrontendHost())
+
+    if (source && 'path' in source) { source.host = 'tern' }
 
     if (!source || !this.sid || this.#switches.pending) {
       return false
@@ -771,6 +776,8 @@ export class App implements OverlayHost {
 
   quit(code = 0) {
     this.#quitting = true
+    this.mediaDelivery.clear(true)
+    this.attachments.clear()
     this.changed()
     void this.dictation.stop(true)
 
@@ -1245,6 +1252,8 @@ export class App implements OverlayHost {
   }
 
   #adopt(r: CreateResult) {
+    this.mediaDelivery.clear()
+
     if (this.sid !== r.session_id) {
       void this.dictation.stop(true)
       this.dictation.reset()
@@ -1807,7 +1816,12 @@ export class App implements OverlayHost {
       copy: (text: string) => copyToClipboard(text),
       cwd: info?.cwd ?? '',
       media: this.#tern.caps.kinds.includes('media'),
-      hostLocal: !this.#gw.attached && info?.terminal_backend === 'local',
+      hostLocal: ternSharesFrontendHost() && !this.#gw.attached && info?.terminal_backend === 'local',
+      attachmentHostLocal: ternSharesFrontendHost() && !this.#gw.attached,
+      gatewayRemote: this.#gw.attached,
+      mediaHost: info?.terminal_backend && info.terminal_backend !== 'local' ? 'compute' as const : this.#gw.attached ? 'gateway' as const : 'frontend' as const,
+      mediaPreview: (source: MediaPath) => this.mediaDelivery.preview(source),
+      mediaRevision: this.mediaDelivery.revision,
       focusBrowser: (id: string) => void focusBrowserBlock(this, id),
       onCopyError: () => {
         this.transcript.notice('Could not copy the answer to the clipboard.', 'warning')

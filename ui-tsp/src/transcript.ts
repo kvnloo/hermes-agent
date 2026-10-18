@@ -14,7 +14,7 @@ import type {
   Usage
 } from '@hermes/shared/gateway-events'
 
-import type { SubmittedImage } from './attachments.js'
+import { resumedImages, type SubmittedImage } from './attachments.js'
 import { evalCell, evalDisplay } from './eval.js'
 import type { Block, Entry, NoticeEntry, Todo, ToolCall, TurnEntry, UserEntry } from './model.js'
 
@@ -444,7 +444,8 @@ export class Transcript {
 
       if (m.role === 'user') {
         turn = undefined
-        this.entries.push({ at, id: this.id('u'), kind: 'user', rowId: m.row_id ?? undefined, text })
+        const restored = resumedImages(text)
+        this.entries.push({ at, id: this.id('u'), kind: 'user', rowId: m.row_id ?? undefined, text: restored.text, attachments: restored.images })
 
         continue
       }

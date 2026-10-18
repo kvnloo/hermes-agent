@@ -2095,6 +2095,24 @@
       }
     },
     {
+      "name": "media.image",
+      "summary": "Read one bounded staged/persisted attachment or completed tool image for SDK blob upload.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/MediaImageParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/MediaImageResult"
+        }
+      }
+    },
+    {
       "name": "message.react",
       "summary": "Set/clear one author's emoji reaction on a message; returns the row's full reaction list.",
       "params": [
@@ -20624,6 +20642,79 @@
           "oauth_needed"
         ],
         "title": "McpServersTestResult",
+        "type": "object"
+      },
+      "MediaImageParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          },
+          "tool_call_id": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tool Call Id"
+          }
+        },
+        "required": [
+          "session_id",
+          "path"
+        ],
+        "title": "MediaImageParams",
+        "type": "object"
+      },
+      "MediaImageResult": {
+        "additionalProperties": false,
+        "properties": {
+          "content_base64": {
+            "title": "Content Base64",
+            "type": "string"
+          },
+          "mime": {
+            "title": "Mime",
+            "type": "string"
+          },
+          "bytes": {
+            "maximum": 16777216,
+            "minimum": 1,
+            "title": "Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "content_base64",
+          "mime",
+          "bytes"
+        ],
+        "title": "MediaImageResult",
         "type": "object"
       },
       "MessageCompletePayload": {

@@ -1,5 +1,5 @@
-// Read-result media is path-backed. Tern loads the file; the frontend neither
-// reads bytes nor invents blob ids (only Session.blob may address blobs).
+// Tern loads confirmed local paths; cross-host images use SDK-owned blobs.
+// Compute-host paths and non-image remote media remain explicitly unsupported.
 import { createHash } from 'node:crypto'
 import { extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { node, type Node } from '@stencil-hq/tern'
 
 import { fileHref } from './links.js'
+import type { MediaPreview } from './media-delivery.js'
 import type { ToolCall } from './model.js'
 import { mediaNode } from './tern-media.js'
 import { record } from './transcript.js'
@@ -124,7 +125,7 @@ const mimes: Record<string, RegExp> = {
 }
 
 /** Unknown extensions and contradictory reported MIME types stay ordinary file links. */
-export function readMedia(path: string, cwd: string, reportedMime: string | undefined, native: boolean): Node | undefined {
+export function readMedia(path: string, cwd: string, reportedMime: string | undefined, native: boolean, hostLocal = true, preview?: MediaPreview, host: 'frontend' | 'gateway' | 'compute' = 'frontend', toolCallId?: string): Node | undefined {
   const family = families.get(extname(path).slice(1).toLowerCase())
   const mime = reportedMime?.split(';')[0]?.trim().toLowerCase()
   const href = fileHref(path, cwd)
@@ -135,6 +136,12 @@ export function readMedia(path: string, cwd: string, reportedMime: string | unde
 
   // The pane's cwd can differ from the gateway session's cwd after resume.
   const absolute = fileURLToPath(href)
+
+  if (!hostLocal) {
+    return family === 'image' && preview
+      ? preview({ kind: 'path', host, id: toolCallId ?? absolute, path: absolute, mime: reportedMime, toolCallId }, native)
+      : node('text', { key: 'media', role: 'omp.media.notice', text: `Remote ${family} preview unavailable; no host-local path or negotiated blob support.` })
+  }
 
   if (native) {
     return mediaNode({ path: absolute })

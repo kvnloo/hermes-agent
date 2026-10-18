@@ -4,6 +4,7 @@ import { type JSX } from '@stencil-hq/tern'
 
 import { displayText } from '../display-text.js'
 import { displayMarkdown, fileHref } from '../links.js'
+import type { MediaPreview } from '../media-delivery.js'
 import type { ToolCall } from '../model.js'
 import { readMedia } from '../read-media.js'
 import { record } from '../transcript.js'
@@ -42,7 +43,10 @@ export function browserCard(
   call: ToolCall,
   result: Record<string, unknown> | undefined,
   cwd: string,
-  fallback: JSX.Element[]
+  fallback: JSX.Element[],
+  hostLocal = true,
+  mediaPreview?: MediaPreview,
+  mediaHost?: 'frontend' | 'gateway' | 'compute'
 ): Card {
   const url = str(result?.url) ?? str(call.args.url)
   const title = str(result?.title)
@@ -50,7 +54,7 @@ export function browserCard(
   const path = str(result?.screenshot_path) ?? str(meta?.screenshot_path)
 
   const image =
-    path && call.status === 'done' && result?.success !== false ? readMedia(path, cwd, undefined, false) : undefined
+    path && call.status === 'done' && result?.success !== false ? readMedia(path, cwd, undefined, false, hostLocal, mediaPreview, mediaHost, call.id) : undefined
 
   const action = call.name
     .replace(/^browser_?/, '')

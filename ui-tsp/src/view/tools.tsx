@@ -7,6 +7,7 @@ import { type JSX, node } from '@stencil-hq/tern'
 
 import { displayOptional, displayText } from '../display-text.js'
 import { displayMarkdown, fileHref } from '../links.js'
+import type { MediaPreview } from '../media-delivery.js'
 import type { Subagent, Todo, ToolCall } from '../model.js'
 import { confirmedWriteArtifact, readMedia, writtenArtifactNode } from '../read-media.js'
 import { record } from '../transcript.js'
@@ -105,9 +106,11 @@ export function toolNode(
   media = false,
   onInspect?: (callId: string, agentId: string) => void,
   focusBrowser?: (id: string) => void,
-  hostLocal = true
+  hostLocal = true,
+  mediaPreview?: MediaPreview,
+  mediaHost: 'frontend' | 'gateway' | 'compute' = 'frontend'
 ): JSX.Element {
-  const card = browserBlockCard(cardOf(call, now, cwd, media, { collapsed: collapsedOverride, onToggle }, onInspect, hostLocal), call, focusBrowser)
+  const card = browserBlockCard(cardOf(call, now, cwd, media, { collapsed: collapsedOverride, onToggle }, onInspect, hostLocal, mediaPreview, mediaHost), call, focusBrowser)
 
   const runOutcome = card.name === 'eval' ? evalRunState(call) ?? runState(call, record(call.result))
     : card.name === 'bash' ? runState(call, record(call.result)) : undefined
@@ -176,6 +179,8 @@ interface AdapterInput {
   cwd: string
   media: boolean
   hostLocal: boolean
+  mediaPreview?: MediaPreview
+  mediaHost?: 'frontend' | 'gateway' | 'compute'
   presentation: Pick<RunBoxInput, 'collapsed' | 'onToggle'>
   onInspect?: (callId: string, agentId: string) => void
 }
@@ -183,10 +188,10 @@ interface AdapterInput {
 type CardAdapter = (input: AdapterInput) => Card
 
 const shellAdapter: CardAdapter = ({ call, result, presentation }) => bashCard(call, result, presentation)
-const readAdapter: CardAdapter = ({ call, result, cwd, media }) => readCard(call, result, cwd, media)
+const readAdapter: CardAdapter = ({ call, result, cwd, media, hostLocal, mediaPreview, mediaHost }) => readCard(call, result, cwd, media, hostLocal, mediaPreview, mediaHost)
 const editAdapter: CardAdapter = ({ call, result, cwd, media, hostLocal }) => editCard(call, result, cwd, media, hostLocal)
 const secretAdapter: CardAdapter = () => ({ body: [], frame: 'inline', name: 'secret', title: 'Secret' })
-const browserAdapter: CardAdapter = ({ call, result, cwd }) => browserCard(call, result, cwd, genericBody(call))
+const browserAdapter: CardAdapter = ({ call, result, cwd, hostLocal, mediaPreview, mediaHost }) => browserCard(call, result, cwd, genericBody(call), hostLocal, mediaPreview, mediaHost)
 
 const CARD_ADAPTERS: Record<string, CardAdapter> = {
   lsp: input => {
@@ -274,13 +279,15 @@ function cardOf(
   media: boolean,
   presentation: Pick<RunBoxInput, 'collapsed' | 'onToggle'> = {},
   onInspect?: (callId: string, agentId: string) => void,
-  hostLocal = false
+  hostLocal = false,
+  mediaPreview?: MediaPreview,
+  mediaHost?: 'frontend' | 'gateway' | 'compute'
 ): Card {
   // Own-property lookup keeps tool names like `constructor` on the honest fallback.
   const registered = Object.hasOwn(CARD_ADAPTERS, call.name) ? CARD_ADAPTERS[call.name] : undefined
   const adapter = registered ?? (call.name.startsWith('browser') ? browserAdapter : genericCard)
 
-  return adapter({ call, result: record(call.result), now, cwd, media, hostLocal, presentation, onInspect })
+  return adapter({ call, result: record(call.result), now, cwd, media, hostLocal, mediaPreview, mediaHost, presentation, onInspect })
 }
 
 function genericCard({ call }: Pick<AdapterInput, 'call'>): Card {
@@ -346,11 +353,11 @@ function bashCard(
   }
 }
 
-function readCard(call: ToolCall, result: Record<string, unknown> | undefined, cwd: string, media: boolean): Card {
+function readCard(call: ToolCall, result: Record<string, unknown> | undefined, cwd: string, media: boolean, hostLocal: boolean, mediaPreview?: MediaPreview, mediaHost?: 'frontend' | 'gateway' | 'compute'): Card {
   const path = str(call.args.path) ?? str(call.args.file_path) ?? call.context
 
-  const preview = call.status === 'done'
-    ? readMedia(path, cwd, str(result?.mime) ?? str(result?.mime_type) ?? str(result?.mimetype), media)
+  const preview = call.status === 'done' && !result?.error && result?.success !== false
+    ? readMedia(path, cwd, str(result?.mime) ?? str(result?.mime_type) ?? str(result?.mimetype), media, hostLocal, mediaPreview, mediaHost, call.id)
     : undefined
 
   const content = str(result?.content)
@@ -385,7 +392,7 @@ function readCard(call: ToolCall, result: Record<string, unknown> | undefined, c
     ],
     folded: !preview,
     frame: 'inline',
-    href: fileHref(path, cwd, { line, endLine }),
+    href: !hostLocal && preview ? undefined : fileHref(path, cwd, { line, endLine }),
     lang: langOf(path),
     meta,
     name: 'read',

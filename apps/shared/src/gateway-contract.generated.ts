@@ -2974,6 +2974,17 @@ export interface PromptSubmitResult {
   turn_isolation?: boolean | null
 }
 export type PromptSubmitStatus = 'streaming' | 'queued' | 'steered' | 'redirected'
+export interface MediaImageParams {
+  session_id: string
+  profile?: string | null
+  path: string
+  tool_call_id?: string | null
+}
+export interface MediaImageResult {
+  content_base64: string
+  mime: string
+  bytes: number
+}
 export interface ClipboardPasteParams {
   session_id: string
   profile?: string | null
@@ -5591,6 +5602,8 @@ export interface RpcMethods {
   'mcp.servers.status': { params: ProfileParams; result: McpServersStatusResult }
   /** Connect, list tools, disconnect — an OAuth server with no token on disk is reported as not ok. */
   'mcp.servers.test': { params: McpServerNameParams; result: McpServersTestResult }
+  /** Read one bounded staged/persisted attachment or completed tool image for SDK blob upload. */
+  'media.image': { params: MediaImageParams; result: MediaImageResult }
   /** Set/clear one author's emoji reaction on a message; returns the row's full reaction list. */
   'message.react': { params: MessageReactParams; result: MessageReactResult }
   /** Remove every credential (env keys and OAuth state) for a provider. */
@@ -6035,6 +6048,7 @@ export const RPC_METHODS = [
   'mcp.servers.set_api_key',
   'mcp.servers.status',
   'mcp.servers.test',
+  'media.image',
   'message.react',
   'model.disconnect',
   'model.options',

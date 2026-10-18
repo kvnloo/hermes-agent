@@ -7,6 +7,7 @@ import { type JSX, Node, node } from '@stencil-hq/tern'
 
 import { answerText, copyAnswer } from '../answer-actions.js'
 import { rewriteLocalMarkdownLinks } from '../links.js'
+import type { MediaPreview } from '../media-delivery.js'
 import type { Block, Entry, NoticeEntry, TurnEntry, UserEntry } from '../model.js'
 import { settledTool } from '../tool-presentation.js'
 
@@ -23,6 +24,11 @@ export interface TranscriptContext {
   media?: boolean
   /** Confirmed local gateway transport AND local session terminal backend. */
   hostLocal?: boolean
+  attachmentHostLocal?: boolean
+  gatewayRemote?: boolean
+  mediaHost?: 'frontend' | 'gateway' | 'compute'
+  mediaPreview?: MediaPreview
+  mediaRevision?: number
   focusBrowser?(id: string): void
   now: number
   welcome: WelcomeContext
@@ -45,7 +51,7 @@ const projections = new WeakMap<Node, JSX.Element[]>()
 
 /** An entry carrying its last built node and the revision it was built at. */
 interface Built {
-  [kNode]?: { rev: number; cwd: string; media: boolean; hostLocal: boolean; foldRev: number; toolsHidden: boolean; rewindKey: string; node: JSX.Element }
+  [kNode]?: { rev: number; cwd: string; media: boolean; hostLocal: boolean; foldRev: number; mediaKey: string; toolsHidden: boolean; rewindKey: string; node: JSX.Element }
 }
 
 /**
@@ -67,13 +73,14 @@ export function entryNode(e: Entry, id: string, cx: TranscriptContext): JSX.Elem
   const cached = built[kNode]
   const media = cx.media ?? false
   const hostLocal = cx.hostLocal ?? false
+  const mediaKey = `${cx.mediaRevision}:${cx.attachmentHostLocal}:${cx.gatewayRemote}:${cx.mediaHost}`
 
-  if (cached?.rev === rev && cached.cwd === cx.cwd && cached.media === media && cached.hostLocal === hostLocal && cached.foldRev === foldRev && cached.toolsHidden === !!cx.toolsHidden && cached.rewindKey === rewindKey) {
+  if (cached?.rev === rev && cached.cwd === cx.cwd && cached.media === media && cached.hostLocal === hostLocal && cached.mediaKey === mediaKey && cached.foldRev === foldRev && cached.toolsHidden === !!cx.toolsHidden && cached.rewindKey === rewindKey) {
     return cached.node
   }
 
   const node = buildEntry(e, id, cx)
-  built[kNode] = { node, rev, cwd: cx.cwd, media, hostLocal, foldRev, toolsHidden: !!cx.toolsHidden, rewindKey }
+  built[kNode] = { node, rev, cwd: cx.cwd, media, hostLocal, mediaKey, foldRev, toolsHidden: !!cx.toolsHidden, rewindKey }
 
   return node
 }
@@ -176,7 +183,7 @@ function userNode(e: UserEntry, cx: TranscriptContext): JSX.Element {
         <text key="rewind" onClick={disabled ? undefined : () => cx.rewind?.(e)} role="omp.user.tool" spans={disabled ? [{ s: 'dim', t: 'Rewind (unavailable)' }] : undefined} text={disabled ? undefined : 'Rewind'} title={disabled ?? 'Rewind to this message'} />
       </row>
       <md key="body">{e.text}</md>
-      {e.attachments?.length ? attachmentNodes(e.attachments, cx.media ?? false) : null}
+      {e.attachments?.length ? attachmentNodes(e.attachments, cx.media ?? false, cx.attachmentHostLocal ?? cx.hostLocal ?? true, cx.mediaPreview, cx.gatewayRemote) : null}
     </card>
   )
 }
@@ -268,7 +275,7 @@ function blockNode(b: Block, id: string, streaming: boolean, cx: TranscriptConte
 
     case 'tool':
       return toolNode(b.call, cx.now, cx.cwd, cx.toolCollapsed?.(turnId, b.call.id),
-        cx.toggleTool ? () => cx.toggleTool?.(turnId, b.call.id) : undefined, cx.media, cx.inspectAgent, cx.focusBrowser, cx.hostLocal ?? false)
+        cx.toggleTool ? () => cx.toggleTool?.(turnId, b.call.id) : undefined, cx.media, cx.inspectAgent, cx.focusBrowser, cx.hostLocal ?? false, cx.mediaPreview, cx.mediaHost)
 
     case 'thinking':
       return thinkingNode(b, id, cx)
