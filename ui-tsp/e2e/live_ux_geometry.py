@@ -75,6 +75,20 @@ def dock_checks(nodes, label):
     return [n['text'] for n in hints]
 
 
+def working_checks(nodes, label):
+    """omp's working row: painted spinner, then elapsed, then the shimmering intent, left to right."""
+    shimmer = next((n for n in nodes if has_class(n, 'sf-shimmer')), None)
+    row = next((n for n in nodes if any(c is shimmer for c in n.get('children', []))), None) if shimmer else None
+    kids = flat(row.get('children', [])) if row else []
+    spinner = next((n for n in kids if has_class(n, 'sf-spinner')), None)
+    elapsed = next((n for n in kids if has_class(n, 'sf-elapsed')), None)
+    ordered = (shimmer is not None and spinner is not None and elapsed is not None
+               and spinner['rect'][2] > 0 and spinner['rect'][3] > 0
+               and spinner['rect'][0] < elapsed['rect'][0] < shimmer['rect'][0])
+    check(label+': working row paints omp spinner, elapsed, intent in order', ordered,
+          classes=[n.get('class', '') for n in kids][:12])
+
+
 try:
     r.command([node, r.root/'ui-tsp/e2e/live-ux.build.mjs', *(['--baseline'] if a.baseline else [])],
               r.root, r.base_env, r.out/'build-fixture.log')
@@ -108,6 +122,7 @@ try:
         r.ctl(lane, 'wait 200')
         nodes, row['busyShot'] = capture(f'{cols}-busy')
         dock_checks(nodes, f'{cols}-busy')
+        working_checks(nodes, f'{cols}-busy')
         mode_file.write_text('idle')
         time.sleep(.3)
         r.ctl(lane, 'key alt+m', True)

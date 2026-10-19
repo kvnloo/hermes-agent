@@ -183,7 +183,12 @@ function workingNode(cx: DockContext): JSX.Element {
   const busy = cx.busy!
 
   return (
+    // Same order as omp's describeWorkingRow: spinner, elapsed, divider, intent.
+    // The orb is an extra; this spinner is the indicator every Tern client draws.
     <row align="center" gap="sm" key="working" role="omp.working">
+      <spinner key="spinner" style="starburst" tone="accent" />
+      <elapsed age={age(busy.since, busy.startedAt, cx.now)} format="short" key="elapsed" />
+      <text key="sep" role="omp.working.sep" text="·" />
       <shimmer
         key="label"
         mode="classic"
@@ -191,8 +196,6 @@ function workingNode(cx: DockContext): JSX.Element {
         role="omp.working.label"
         spans={[{ s: 'muted', t: busy.label }]}
       />
-      <text key="sep" role="omp.working.sep" text="·" />
-      <elapsed age={age(busy.since, busy.startedAt, cx.now)} format="short" key="elapsed" />
       <row grow={1} key="fill" />
       <ActionButton align="center" gap="xs" key="stop" onClick={cx.onInterrupt} role="omp.working.stop" title={`Stop  ${actionHint('app.interrupt', cx.actions)}`}>
         <kbd key="k" keys={actionHint('app.interrupt', cx.actions).split('+').filter(Boolean)} />
