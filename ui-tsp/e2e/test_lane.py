@@ -17,8 +17,45 @@ assert spec is not None and spec.loader is not None
 lane=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(lane)
 
+fallback_spec=importlib.util.spec_from_file_location('tern_ink_fallback',HERE/'ink_fallback.py')
+assert fallback_spec is not None and fallback_spec.loader is not None
+fallback=importlib.util.module_from_spec(fallback_spec)
+fallback_spec.loader.exec_module(fallback)
+
 
 class LaneTests(unittest.TestCase):
+    def test_fallback_marker_inventory_is_explicit_and_unprivileged(self):
+        cases=fallback.selector_cases()
+        names=[name for name,_,_ in cases]
+        self.assertEqual(len(names),len(set(names)))
+        self.assertTrue({'ssh-marker-only','tmux-marker-only','screen-marker-only',
+                         'zellij-marker-only','explicit-ssh-probe','explicit-opt-out'} <= set(names))
+        for name,hints,expected in cases:
+            with self.subTest(name=name):
+                self.assertIs(type(expected),bool)
+                self.assertNotIn('HOME',hints)
+                self.assertNotIn('TERN_CONFIG_DIR',hints)
+                self.assertNotIn('TERN_DAEMON_SOCKET',hints)
+                self.assertNotIn('HERMES_HOME',hints)
+                self.assertNotIn('OPENAI_API_KEY',hints)
+
+    def test_non_tty_probe_uses_no_terminal_and_preserves_exit(self):
+        with tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as temporary:
+            root=Path(temporary)
+            output=root/'non-tty.out'
+            code='import os,sys; print(int(sys.stdin.isatty()),int(sys.stdout.isatty())); sys.exit(75)'
+            result=fallback.run_non_tty([sys.executable,'-c',code],os.environ.copy(),root,output)
+            self.assertEqual(result['exit'],75)
+            self.assertEqual(result['evidenceClass'],'real-non-tty-process')
+            self.assertEqual(output.read_text().strip(),'0 0')
+
+    def test_non_tty_probe_does_not_wait_forever_on_hung_child(self):
+        with tempfile.TemporaryDirectory(dir=os.environ['TMPDIR']) as temporary:
+            root=Path(temporary)
+            with self.assertRaises(subprocess.TimeoutExpired):
+                fallback.run_non_tty([sys.executable,'-c','import time; time.sleep(60)'],
+                                     os.environ.copy(),root,root/'hang.out',timeout=.1)
+
     def test_gate_accepts_only_explicit_open_states(self):
         for applies,signed_in in [(False,False),(True,True)]:
             self.assertTrue(lane.gate_open({'gate':dict(phase='off',error=None,applies=applies,signed_in=signed_in)}))
