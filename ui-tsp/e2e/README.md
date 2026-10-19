@@ -44,7 +44,7 @@ must fit the platform limit. Receipt directories are never auto-pruned.
 | `written-artifacts` | confirmed SVG/Mermaid figures before retained source; failed SVG stays source-only with visible error | Actual source files plus explicitly labelled completion fixtures; attached-gateway paths are not claimed host-local |
 | `agent-hub` | `/agents`, canonical owned roster and full transcript page, real Next page RPC, unsupported controls absent, restored composer | Explicit SQLite child fixture in the isolated home; real gateway responses, no model turns or control intents |
 | `agent-inspector` | real agent-row click, scoped live tools/notes, long-log scrolling, final status, exact draft/cursor restoration | Explicit `subagent.*` notification fixtures; no model turn or control RPCs |
-| `ink-fallback` | actual frontend exits 75 without handshake, real `_launch_tui` runs actual Ink, painted PTY and clean exit | Real non-Tern PTY; only prebuilt-entry resolution overridden, no subprocess/UI/exit mocked |
+| `ink-fallback` | exact exit 75 without handshake from a real PTY **and** non-TTY child; marker-only SSH/multiplexer PTY probes; production selector decision matrix; actual `_launch_tui` → painted Ink and clean exit | Real local PTY and non-TTY processes; marker strings are fixtures, **not** SSH/tmux/screen/zellij sessions |
 
 The preserved **ten-case native Settings suite** runs after the short Settings
 journey when an actual ordinary isolated Tern window is available. It is serial,
@@ -60,6 +60,27 @@ real gateway replies. Fixtures never call an LLM. `observe-stdout.mjs` records
 OSC52 bytes and forwards writes and callbacks unchanged; a verified OSC52 sequence
 is not proof of the host clipboard's contents. If Paste produces no text, that
 readback step and the journey are **blocked**, not green or a proven Hermes bug.
+
+## T23 fallback qualification boundary
+
+`ink-fallback` exercises the real compiled `ui-tsp` entry and actual Ink
+launcher with private `HERMES_HOME` and no provider calls. It also checks the
+production Tern selector against explicit environment combinations, including
+`HERMES_TERN` override/opt-out, TERM_PROGRAM, SSH and multiplexing hints.
+Each no-TSP attempt must exit **75**. Non-TTY output, selector decisions and
+per-marker PTY bytes are saved alongside `result.json`.
+
+**Marker cases are not real transport qualification.** An `SSH_CONNECTION`,
+`TMUX`, `STY` or `ZELLIJ` fixture only verifies branch selection and
+fail-closed behavior when TSP does not answer. It cannot prove an actual
+SSH/multiplexer forwards APC frames. For final T23 acceptance, run
+`HERMES_TERN=1 hermes --tui` in a **real remote SSH PTY**, and repeat under
+the installed tmux/screen/zellij clients. Capture the selected frontend,
+whether TSP responds, exit-75 → Ink if unsupported, clean shell return, and
+no detached children. Label those receipts separately; absent tests remain
+**not run**, not passed. Real signed-in native-window qualification is still
+blocked until the isolated Tern account gate is open; do not reuse an ambient
+daemon or authentication.
 
 ## Isolation and gate handling
 
@@ -133,6 +154,8 @@ inside its private proof project. Seven behavioral checks cover fail-closed gate
 states, owned-vs-peer cleanup, transparent stdout/callback forwarding, zero/late
 post-exit byte audits and rejection of unknown journey names before startup. An eighth
 check verifies exact read-only `/context` forwarding and refuses other slash payloads.
+Additional tests check the marker inventory, a real non-TTY child and a bounded
+timeout. They do not certify live SSH, multiplexing, or native-window access.
 
 Authorship: the thirteen original harness commits and four-file WIP snapshot
 are cherry-picked intact from `feat/tern-native-e2e`/its preserved WIP branch.
