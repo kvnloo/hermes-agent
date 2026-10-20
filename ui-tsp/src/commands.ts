@@ -14,9 +14,9 @@ import { openLsp } from './overlays/lsp.js'
 import { openModelHub } from './overlays/model-hub.js'
 import { openModelPicker, switchModel } from './overlays/models.js'
 import { confirmOverlay } from './overlays/prompts.js'
+import { openReferenceDashboard } from './overlays/reference-dashboard.js'
 import { openSessionPicker } from './overlays/sessions.js'
 import { openSettings } from './overlays/settings.js'
-import { openReferenceDashboard } from './overlays/reference-dashboard.js'
 import { openVisualPicker } from './overlays/visual-picker.js'
 
 /** A client-side slash command. */
