@@ -297,7 +297,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
         if (opts.fallbackToFront) {
           composerActions.prependQueue(item, destination)
         } else {
-          composerActions.enqueue(item.text, item.display, destination, undefined, item.expand)
+          composerActions.enqueue(item.text, item.display, destination, item.attachments, item.expand)
         }
       }
 
