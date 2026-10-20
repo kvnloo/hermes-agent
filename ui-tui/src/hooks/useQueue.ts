@@ -29,6 +29,9 @@ export interface QueueItem {
   // busy re-queue passes that same expand with the collapsed display; an item
   // that omits expand drains with an identity expand.
   expand?: QueueExpand
+  // Persisted with the pending-input journal. A closure over composer tokens is not
+  // JSON-serializable, so cold recovery reconstructs the expansion from this snapshot.
+  expansionSnapshot?: Array<{ label: string; value: string }>
   queued?: boolean
   createdAt?: number
   submissionId?: string
