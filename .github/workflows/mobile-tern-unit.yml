@@ -7,7 +7,7 @@ on:
     branches: [feat/tern-omp-parity]
     paths:
       - 'ui-tsp/**'
-      - 'ui-tui/src/**'
+      - 'ui-tui/**'
       - 'apps/shared/**'
       - 'package.json'
       - 'package-lock.json'
