@@ -33,6 +33,8 @@ interface RetainedEntry {
 /** No terminal reload/scroll event exists in SDK 0.1; reload is an explicit intent. */
 export class Retention {
   readonly #entries = new Map<string, RetainedEntry>()
+  /** Native action target roots; avoids scanning every retained turn for a click. */
+  readonly #owners = new Map<string, RetainedEntry>()
   readonly #hot = new Set<RetainedEntry>()
   #structure = -1
   #context = ''
@@ -129,8 +131,7 @@ export class Retention {
       return
     }
 
-    const target = event.id
-    const item = [...this.#entries.values()].find(item => item.ids.some(id => target === id || target.startsWith(id + '.')))
+    const item = this.#ownerOf(event.id)
 
     if (!item || item.evicted || !this.#cx) {
       return
@@ -175,6 +176,8 @@ export class Retention {
         }
 
         for (const part of item.ids) {
+          this.#owners.delete(part)
+
           if (!item.gone.has(part)) { ops.push(['del', part]) }
         }
 
@@ -291,7 +294,10 @@ export class Retention {
         }
       }
 
+      for (const id of item.ids) { this.#owners.delete(id) }
       item.ids = trees.map(tree => tree.id)
+
+      for (const id of item.ids) { this.#owners.set(id, item) }
       item.gone.clear()
       item.trees = trees
       item.settled = settle
@@ -339,6 +345,23 @@ export class Retention {
   }
 
   #boundary = 0
+
+  /** Resolve the deepest emitted native root, even when a tool id contains dots. */
+  #ownerOf(target: string): RetainedEntry | undefined {
+    let prefix = target
+
+    while (prefix.startsWith('main.')) {
+      const owner = this.#owners.get(prefix)
+
+      if (owner) { return owner }
+      const dot = prefix.lastIndexOf('.')
+
+      if (dot <= 'main'.length) { return undefined }
+      prefix = prefix.slice(0, dot)
+    }
+
+    return undefined
+  }
 
   #nextResident(index: number): string | null {
     const entries = this.#transcript?.entries ?? []
