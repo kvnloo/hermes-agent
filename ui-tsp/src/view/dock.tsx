@@ -270,12 +270,13 @@ function composerNode(cx: DockContext): JSX.Element {
         />
       </row>
       <row align="center" gap="sm" key="bar" role="omp.composer.bar">
-        {/* Native status measures whole segments; larger priorities survive. A zero
-            flex basis/minimum lets it shrink before any button is squeezed. */}
+        {/* Context/Settings must survive phone widths. The host retains at least
+            the highest-priority segment, even if it is wider than the row, so
+            the unbounded model name must never be that last survivor. */}
         <status basis={0} grow={1} key="hints" min={{ w: 0 }} role="omp.composer.extras" transparent>
           {composer.vim.enabled ? <seg key="vim" priority={110} role="omp.composer.vim" text={`${composer.vim.mode.toUpperCase()}${composer.vim.pending ? ` ${composer.vim.pending}` : ''}`} /> : null}
           {share === undefined ? null : (
-            <seg key="context-details" priority={70}>
+            <seg key="context-details" priority={115}>
               <ActionButton aria="Show context window" key="action" onClick={cx.onContext} role="omp.composer.context.action" text="Context" title={actionHint('app.context', cx.actions)} />
             </seg>
           )}
@@ -342,7 +343,7 @@ function composerNode(cx: DockContext): JSX.Element {
             </seg>
           ) : null}
           <seg key="help" priority={0} role="omp.composer.hint" text={cx.approval ? 'Enter deny and steer' : cx.busy ? `Enter ${cx.busyMode === 'steer' ? 'steer' : 'queue'} · ${actionHint('app.message.alternate', cx.actions) || '(unbound)'} ${cx.busyMode === 'steer' ? 'queue' : 'steer'}` : `${actionHint('app.help', cx.actions) || '/help'} help`} tone="muted" />
-          <seg key="settings" priority={90}>
+          <seg key="settings" priority={120}>
             <ActionButton align="center" gap="xs" key="action" onClick={cx.onSettings} role="omp.composer.settings" title="Open Hermes settings">
               <icon key="icon" name="settings" />
               <text key="label" text="Settings" wrap="none" />

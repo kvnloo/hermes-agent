@@ -127,9 +127,12 @@ def main():
         command = 'env -i '+shlex.join([f'{k}={v}' for k,v in env.items()])+ ' '+shlex.join([node, str(r.root/'ui-tsp/dist/entry.js')])
         r.ctl(lane, 'run '+json.dumps(command), True)
         wait_for(lambda: any('Ask Hermes' in n.get('text', '') for n in tree()), 'real frontend ready')
-        with sqlite3.connect(f'file:{home / "state.db"}?mode=ro', uri=True) as c:
-            sessions = c.execute('select id,model from sessions').fetchall()
-        check('private canonical session uses exact free model', len(sessions) == 1 and sessions[0][1] == a.model, sessions=sessions)
+        # session.create is lazy: neither state.db nor its session row is promised
+        # until the first prompt. Verify the live model before sending, then wait
+        # for the canonical launch-home store rather than opening it prematurely.
+        wait_for(lambda: any(n.get('title', '').startswith(f'Model: {a.model} ·') for n in tree()),
+                 'live session uses exact free model')
+        check('live session advertises exact free model before first prompt', True, model=a.model)
         nonce = 'TERN_JOURNEY_'+str(int(time.time()))
         submit(f'Use terminal exactly once to run python3 -c "import time; time.sleep(20); print(\'{nonce}\')" with timeout 30. Then reply exactly {nonce}_DONE. No other tools.')
         wait_for(lambda: any(has_class(n, 'sf-spinner') for n in tree()), 'real busy spinner', seconds=120)
@@ -141,6 +144,10 @@ def main():
             check(label+': real busy spinner has visible geometry', spinner is not None and all(v > 0 for v in spinner['rect'][2:]),
                   spinner=spinner.get('rect') if spinner else None)
         wait_for(lambda: any(role == 'tool' and nonce in (text or '') for role,text,_ in messages()), 'real terminal result', seconds=150)
+        with sqlite3.connect(f'file:{home / "state.db"}?mode=ro', uri=True) as c:
+            sessions = c.execute('select id,model from sessions').fetchall()
+        check('private canonical session uses exact free model', len(sessions) == 1 and sessions[0][1] == a.model,
+              sessions=sessions, database=str(home/'state.db'))
         wait_for(lambda: any(role == 'assistant' and nonce+'_DONE' in (text or '') for role,text,_ in messages()), 'canonical assistant settlement', seconds=150)
         wait_for(lambda: not any(has_class(n, 'sf-spinner') for n in tree()), 'busy indicator settles')
         nodes = shot('settled')

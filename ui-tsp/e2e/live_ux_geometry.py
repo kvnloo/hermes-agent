@@ -92,7 +92,10 @@ def working_checks(nodes, label):
     check(label+': working row paints omp spinner, elapsed, intent in order', ordered,
           classes=[n.get('class', '') for n in kids][:12])
     dock = next((n for n in nodes if has_class(n, 'sf-dock')), None)
-    stop = next((n for n in kids if n.get('tag') == 'button' and n.get('title', '').startswith('Stop')), None)
+    # Tern projects omp.working.stop into the composer's native Stop button.
+    # It is a dock sibling, not a child of the spinner/elapsed/intent row.
+    stop = next((n for n in flat([dock]) if n.get('tag') == 'button'
+                 and n.get('title', '').startswith('Stop')), None) if dock else None
     def inside(node):
         if node is None or dock is None:
             return False
