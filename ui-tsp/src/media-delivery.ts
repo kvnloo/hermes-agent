@@ -60,7 +60,9 @@ export async function readImageBytes(path: string, maxBytes = MEDIA_MAX_BYTES): 
       size += bytesRead
     }
 
-    if (size > stat.size || size > maxBytes) { throw new Error('Image changed while reading; retry.') }
+    // A concurrent in-place truncation must not upload a valid header with a missing tail.
+    // Growth was already rejected above by the sentinel byte / size cap.
+    if (size !== stat.size || size > maxBytes) { throw new Error('Image changed while reading; retry.') }
 
     return data.subarray(0, size)
   } finally {
