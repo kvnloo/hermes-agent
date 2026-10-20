@@ -11,6 +11,7 @@ import type { GatewayClient } from '@tui/gatewayClient.js'
 import type { Composer } from '../composer.js'
 import { FORK_COMMANDS } from '../fork-session.js'
 import type { OverlayHost } from '../overlay.js'
+import { REFERENCE_COMMANDS } from '../reference-commands.js'
 
 import { LSP_COMMANDS } from './lsp.js'
 import { TREE_COMMANDS } from './sessions.js'
@@ -115,7 +116,7 @@ export class Completion {
           const items = r?.items ?? []
 
           if (request.method === 'complete.slash' && !request.skillsOnly && /^\/\S*$/.test(context)) {
-            for (const [text, meta] of [...SETTINGS_COMMANDS, ...FORK_COMMANDS, ...TREE_COMMANDS, ...LSP_COMMANDS]) {
+            for (const [text, meta] of [...SETTINGS_COMMANDS, ...FORK_COMMANDS, ...TREE_COMMANDS, ...LSP_COMMANDS, ...REFERENCE_COMMANDS]) {
               if (text.startsWith(context) && !items.some(item => item.text === text)) {
                 items.push({ display: text, kind: 'command', meta, text })
               }

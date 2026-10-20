@@ -14,6 +14,7 @@ import { openLsp } from './overlays/lsp.js'
 import { openModelHub } from './overlays/model-hub.js'
 import { openModelPicker, switchModel } from './overlays/models.js'
 import { confirmOverlay } from './overlays/prompts.js'
+import { openReferenceDashboard } from './overlays/reference-dashboard.js'
 import { openSessionPicker } from './overlays/sessions.js'
 import { openSettings } from './overlays/settings.js'
 import { openVisualPicker } from './overlays/visual-picker.js'
@@ -185,6 +186,15 @@ const COMMANDS: readonly LocalCommand[] = [
   {
     name: 'visual',
     run: (app, arg) => openVisualPicker(app, arg)
+  },
+  {
+    name: 'map',
+    run: (app, query) => { openReferenceDashboard(app, 'map', query) }
+  },
+  {
+    name: 'machine',
+    aliases: ['host-health'],
+    run: app => { openReferenceDashboard(app, 'machine') }
   },
   {
     // `/help <command>` is the backend's detailed usage.

@@ -1,0 +1,42 @@
+name: Tern reference dashboard checks
+
+on:
+  push:
+    branches:
+      - feat/tern-reference-dashboards
+    paths:
+      - 'ui-tsp/**'
+      - '.github/workflows/tern-reference-dashboards.yml'
+  pull_request:
+    paths:
+      - 'ui-tsp/**'
+      - '.github/workflows/tern-reference-dashboards.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.0'
+          cache: npm
+      - name: Install pinned root workspace dependencies
+        run: npm ci
+      - name: Typecheck native Tern frontend
+        run: npm --prefix ui-tsp run typecheck
+      - name: Unit test both reference dashboards
+        run: npm --prefix ui-tsp test -- src/__tests__/reference-dashboards.test.ts
+      - name: Lint native Tern frontend
+        run: npm --prefix ui-tsp run lint
+      - name: Snapshot collector is a read-only JSON producer
+        run: |
+          node ui-tsp/scripts/machine-snapshot.mjs > "$RUNNER_TEMP/machine.json"
+          node -e "const fs=require('fs');let d=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));if(d.schema!==1||!Array.isArray(d.updates)||!Array.isArray(d.problems)||!Array.isArray(d.events)) process.exit(1)" "$RUNNER_TEMP/machine.json"
