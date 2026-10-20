@@ -288,6 +288,31 @@ describe('submissionCore.submitPrompt — busy re-queue keeps paste display', ()
     expect(enqueue).toHaveBeenCalledWith('!echo pwned', '[paste]', expect.anything(), undefined, expand)
   })
 
+  it('retains image attachments if a legacy gateway rejects a prompt as busy', async () => {
+    const attachments = [{ path: '/tmp/image.webp', mime: 'image/webp' }]
+    const enqueue = vi.fn()
+    const gw = {
+      request: vi.fn().mockRejectedValue(new Error('session busy'))
+    } as unknown as GatewayClient
+
+    submitPrompt(
+      'describe this image',
+      makeDeps(gw, { enqueue }),
+      true,
+      'describe this image',
+      { skipDetectDrop: true, attachments }
+    )
+
+    await vi.waitFor(() => expect(enqueue).toHaveBeenCalledTimes(1))
+    expect(enqueue).toHaveBeenCalledWith(
+      'describe this image',
+      'describe this image',
+      expect.anything(),
+      attachments,
+      expect.any(Function)
+    )
+  })
+
   it.each([
     { payload: '!echo secret-from-paste', display: '[[ pasted shell log ]]' },
     { payload: 'text {!echo secret-from-paste}', display: '[[ pasted interpolation log ]]' }
