@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -8,7 +8,7 @@ import { afterEach, describe, it } from 'vitest'
 
 import type { Overlay } from '../overlay.js'
 import { openReferenceDashboard } from '../overlays/reference-dashboard.js'
-import { graphEdges, graphMatches, parseGraph, parseMachine, readGraph, readMachine, type Snapshot } from '../reference-dashboards.js'
+import { type CodeGraph, graphEdges, graphMatches, parseGraph, parseMachine, readGraph, readMachine, type Snapshot } from '../reference-dashboards.js'
 
 const temp: string[] = []
 const project = () => {
@@ -129,7 +129,7 @@ describe('HANCORE-inspired machine report is snapshot-only', () => {
 describe('reference sheets stay native and session-scoped', () => {
   it('renders a map inspection and preserves draft, keyboard selection, and close', async () => {
     const app = host()
-    const map = parseGraph(fixture) as Snapshot<import('../reference-dashboards.js').CodeGraph>
+    const map = parseGraph(fixture) as Snapshot<CodeGraph>
     const overlay = openReferenceDashboard(app, 'map', '', {
       map: async () => map, machine: async () => parseMachine(machine)
     })
@@ -158,7 +158,7 @@ describe('reference sheets stay native and session-scoped', () => {
   })
   it('drops a late read on close and does not reopen a different session', async () => {
     const app = host()
-    const pending = Promise.withResolvers<Snapshot<import('../reference-dashboards.js').CodeGraph>>()
+    const pending = Promise.withResolvers<Snapshot<CodeGraph>>()
     const overlay = openReferenceDashboard(app, 'map', '', {
       map: () => pending.promise, machine: async () => parseMachine(machine)
     })
