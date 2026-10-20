@@ -6,12 +6,13 @@ import { spawnSync } from 'node:child_process'
 import { statfsSync } from 'node:fs'
 import os from 'node:os'
 
-const journal = process.argv.includes('--journal')
-if (process.argv.some(arg => arg !== '--journal' && arg !== '--help' && arg !== '-h')) {
+const args = process.argv.slice(2)
+const journal = args.includes('--journal')
+if (args.some(arg => arg !== '--journal' && arg !== '--help' && arg !== '-h')) {
   process.stderr.write('Usage: node machine-snapshot.mjs [--journal]\n')
   process.exit(2)
 }
-if (process.argv.includes('--help') || process.argv.includes('-h')) {
+if (args.includes('--help') || args.includes('-h')) {
   process.stdout.write('Read-only JSON to stdout. Use --journal to aggregate your accessible error journal without exporting messages. No sudo, upgrades or network.\n')
   process.exit(0)
 }
