@@ -96,8 +96,14 @@ def main():
                       platform_toolsets=dict(cli=['terminal'], tui=['terminal']),
                       terminal=dict(backend='local', cwd=str(lane)),
                       delegation=dict(provider='openrouter', model=a.model, max_concurrent_children=1),
-                      auxiliary={name: dict(provider='openrouter', model=a.model) for name in
-                                 ['vision', 'compression', 'session_naming', 'flush_memories', 'skills', 'curator']},
+                      auxiliary=dict(free_only=True, openrouter_model=a.model, transient_retries=0,
+                                     title_generation=dict(enabled=False, model_upgrade_enabled=False),
+                                     background_review=dict(enabled=False),
+                                     **{name: dict(provider='openrouter', model=a.model) for name in
+                                        ['vision', 'compression', 'skills_hub', 'approval', 'review', 'mcp',
+                                         'memory_query_rewrite', 'tts_audio_tags', 'triage_specifier',
+                                         'kanban_decomposer', 'profile_describer', 'goal_judge', 'curator',
+                                         'monitor', 'moa_reference', 'moa_aggregator']}),
                       fallback_model=None, fallback_models=[], compression=dict(enabled=False),
                       display=dict(skin='mono', show_reasoning=False), plugins=dict(enabled=[]), mcp_servers={},
                       auth=dict(adopt_external_logins=False), approvals=dict(mode='off'),
