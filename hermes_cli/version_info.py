@@ -232,20 +232,7 @@ def _git_version_info(repo_dir: Path, *, include_untracked: bool = False) -> Ver
         dirty = False
 
     tags = _run_git(repo_dir, "tag", "--merged", "HEAD", "--list", "v[0-9]*")
-    releases = [
-        tag[1:]
-        for tag in (tags or "").splitlines()
-        if STABLE_TAG_RE.fullmatch(tag)
-    ]
-    base_version = (
-        max(releases, key=lambda value: tuple(int(part) for part in value.split(".")))
-        if releases else "unknown"
-    )
-    distance = _parse_nonnegative(
-        _run_git(repo_dir, "rev-list", "--count", f"v{base_version}..HEAD")
-    ) if releases else None
-    if not releases:
-        base_version, distance = _calver_release_version(repo_dir) or ("unknown", None)
+    base_version, distance = _git_base_version(repo_dir, tags)
     short_commit = _run_git(repo_dir, "rev-parse", "--short=7", "HEAD")
     if base_version == "unknown" and short_commit:
         display_version = f"git.{short_commit}{'.dirty' if dirty else ''}"
@@ -257,15 +244,62 @@ def _git_version_info(repo_dir: Path, *, include_untracked: bool = False) -> Ver
     )
 
 
+def _git_base_version(repo_dir: Path, tags: str | None = None) -> tuple[str, int | None]:
+    """The newest stable release tag reachable from HEAD (else the CalVer release) and the distance.
+
+    Reads tags only: no working-tree scan, so it stays cheap on large or slow checkouts.
+    """
+    if tags is None:
+        tags = _run_git(repo_dir, "tag", "--merged", "HEAD", "--list", "v[0-9]*")
+    releases = [
+        tag[1:]
+        for tag in (tags or "").splitlines()
+        if STABLE_TAG_RE.fullmatch(tag)
+    ]
+    if releases:
+        base_version = max(releases, key=lambda value: tuple(int(part) for part in value.split(".")))
+        distance = _parse_nonnegative(_run_git(repo_dir, "rev-list", "--count", f"v{base_version}..HEAD"))
+        return base_version, distance
+    return _calver_release_version(repo_dir) or ("unknown", None)
+
+
 # --- Cache + public API -----------------------------------------------------
 
 _cached_version_info: VersionInfo | None = None
+_cached_base_version: str | None = None
 
 
 def _reset_version_info_cache() -> None:
     """Test-only cache reset."""
-    global _cached_version_info
+    global _cached_version_info, _cached_base_version
     _cached_version_info = None
+    _cached_base_version = None
+
+
+def get_base_version() -> str:
+    """The release base version alone: all a User-Agent or client tag needs.
+
+    Same resolution policy as :func:`get_version_info` (install stamp, live git, unknown) and
+    the same value as its ``base_version``, but without the working-tree ``git status`` behind
+    ``dirty``. That scan costs seconds on large checkouts on slow filesystems, and modules that
+    build a User-Agent at import time paid it on every startup.
+    """
+    global _cached_base_version
+    if _cached_version_info is not None:
+        return _cached_version_info.base_version
+    if _cached_base_version is not None:
+        return _cached_base_version
+    try:
+        info = _stamp_version_info()
+    except RuntimeError:
+        info = None
+    if info is not None:
+        base = info.base_version
+    else:
+        repo_dir = _resolve_repo_dir()
+        base = _git_base_version(repo_dir)[0] if repo_dir is not None else "unknown"
+    _cached_base_version = base
+    return base
 
 
 def get_version_info() -> VersionInfo:
@@ -313,9 +347,10 @@ def get_code_identity(refresh: bool = False) -> dict:
     it to re-read identity after swapping the checkout out from under the
     running process.
     """
-    global _cached_version_info
+    global _cached_version_info, _cached_base_version
     if refresh:
         _cached_version_info = None
+        _cached_base_version = None
     info = get_version_info()
     return {
         "sha": info.commit,
