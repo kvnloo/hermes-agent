@@ -16,8 +16,8 @@ import { openModelPicker, switchModel } from './overlays/models.js'
 import { confirmOverlay } from './overlays/prompts.js'
 import { openSessionPicker } from './overlays/sessions.js'
 import { openSettings } from './overlays/settings.js'
-import { openVisualPicker } from './overlays/visual-picker.js'
 import { openReferenceDashboard } from './overlays/reference-dashboard.js'
+import { openVisualPicker } from './overlays/visual-picker.js'
 
 /** A client-side slash command. */
 export interface LocalCommand {
