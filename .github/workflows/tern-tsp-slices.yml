@@ -1,0 +1,44 @@
+name: Tern frontend checks
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [feat/tern-omp-parity]
+    paths:
+      - 'ui-tsp/**'
+      - 'ui-tui/src/**'
+      - 'apps/shared/**'
+      - 'package*.json'
+      - '.github/workflows/tern-tsp-slices.yml'
+  push:
+    branches: [fix/tern-working-spinner]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tern-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Tern typecheck, tests, lint, bundle
+    if: github.repository == 'kvnloo/hermes-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 26.7.0
+          cache: npm
+      - name: Install locked frontend dependencies (no lifecycle scripts)
+        run: npm ci --workspace ui-tsp --workspace ui-tui --workspace apps/shared --include-workspace-root --ignore-scripts
+      - run: npm run typecheck --workspace ui-tsp
+      - run: npm test --workspace ui-tsp -- --maxWorkers=2
+      - run: npm run lint --workspace ui-tsp
+      - run: npm run bundle --workspace ui-tsp
+      - name: Check test-runner syntax
+        run: python3 -m py_compile ui-tsp/e2e/live_ux_geometry.py ui-tsp/e2e/real_turn_journey.py
+      # Native Tern is not installed on hosted runners. These checks do not
+      # certify pixels, real model turns, signed-in windows or mobile devices.

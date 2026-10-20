@@ -119,6 +119,42 @@ Exit codes: **0** all requested gates pass; **1** a failure; **2** no failures b
 one or more blocked gates. `--help` is side-effect free. A blocked native run is
 not release acceptance, even if its independent headless journeys pass.
 
+## Mobile geometry and real-turn release gate
+
+`live_ux_geometry.py` now includes exact 390×844 and 412×915 pixel-sized phone
+simulations plus measured 80/100/180-column panes. It checks the working-row
+spinner, elapsed/intent order, visible Stop geometry and footer containment.
+Use `--baseline --baseline-ref <exact-base-sha>` for a negative control without
+checking out or editing baseline product sources. Expected-red is evidence,
+not a successful release gate.
+
+The separate opt-in `real_turn_journey.py` runs the real frontend and gateway,
+submits two real free-model turns, observes busy pixels across phone/desktop
+sizes, and checks actual terminal output and canonical SQLite messages before
+clean exit. It refuses non-`:free` models; credentials are symlinked from the
+explicitly authorized dotenv target, never copied. It creates settings from
+scratch with terminal-only tools, no delegation, no paid fallback and telemetry
+off. No account credentials or ambient Tern socket are inherited.
+
+```sh
+# On the development host; check free -g has >=4 GiB available first.
+# Queue ONE bounded heavy batch, not parallel builders or independent nested locks.
+flock --close --wait 1800 "$TMPDIR/heavy.lock" nice -n 10 \
+  timeout 480 python3 ui-tsp/e2e/live_ux_geometry.py "$TARGET" --receipts "$RECEIPTS/geometry"
+flock --close --wait 1800 "$TMPDIR/heavy.lock" nice -n 10 \
+  timeout 600 python3 ui-tsp/e2e/real_turn_journey.py "$TARGET" \
+  --receipts "$RECEIPTS/real" --python "$HERMES_TEST_PYTHON" \
+  --env-file "$HERMES_HOME/.env" --allow-free-model-turns
+```
+
+The lock wait is bounded separately from execution; do not treat an empty log
+while queued as a product timeout. Inspect all captured PNGs and paired native
+trees. These are **tern-serve** receipts: a phone-sized viewport is not touch,
+software-keyboard, safe-area, physical phone, or signed-in native-client proof.
+Retain blocked cases separately and qualify the owner device before saying the
+mobile client is fixed. Hosted `Tern frontend checks` runs unit/type/lint/bundle
+gates only; it deliberately makes no native paint/model-turn claim.
+
 ## Harness checks
 
 ```sh
