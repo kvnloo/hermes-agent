@@ -191,8 +191,8 @@ def _send_imap_id(imap: "imaplib.IMAP4") -> None:
         return
     try:
         try:
-            from hermes_cli.version_info import get_version_info
-            version = get_version_info().base_version
+            from hermes_cli.version_info import get_base_version
+            version = get_base_version()
         except Exception:  # noqa: BLE001 — keep ID best-effort if import fails
             version = "0"
         imap.xatom("ID", f'("name" "hermes-agent" "version" "{version}" '
