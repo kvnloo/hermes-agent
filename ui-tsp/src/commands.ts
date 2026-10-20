@@ -17,6 +17,7 @@ import { confirmOverlay } from './overlays/prompts.js'
 import { openSessionPicker } from './overlays/sessions.js'
 import { openSettings } from './overlays/settings.js'
 import { openVisualPicker } from './overlays/visual-picker.js'
+import { openReferenceDashboard } from './overlays/reference-dashboard.js'
 
 /** A client-side slash command. */
 export interface LocalCommand {
@@ -185,6 +186,15 @@ const COMMANDS: readonly LocalCommand[] = [
   {
     name: 'visual',
     run: (app, arg) => openVisualPicker(app, arg)
+  },
+  {
+    name: 'map',
+    run: (app, query) => { openReferenceDashboard(app, 'map', query) }
+  },
+  {
+    name: 'machine',
+    aliases: ['host-health'],
+    run: app => { openReferenceDashboard(app, 'machine') }
   },
   {
     // `/help <command>` is the backend's detailed usage.
