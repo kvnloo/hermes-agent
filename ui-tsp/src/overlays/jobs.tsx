@@ -19,6 +19,27 @@ const STATE_EVENTS = new Set([
 const OUTPUT_EVENTS = new Set(['agent.terminal.output', 'subagent.progress', 'subagent.tool', 'subagent.thinking'])
 const running = (job: JobSnapshot) => job.state === 'running' || job.state === 'queued' || job.state === 'pending'
 
+// Colour confirms only the backend's actual job state; never estimate progress.
+function jobStateTone(state: JobSnapshot['state']) {
+  if (state === 'failed') {
+    return 'error'
+  }
+
+  if (state === 'completed') {
+    return 'success'
+  }
+
+  if (state === 'queued' || state === 'pending') {
+    return 'warning'
+  }
+
+  if (state === 'cancelled') {
+    return 'muted'
+  }
+
+  return undefined
+}
+
 /** Master/detail sheet plus its event-fed dock snapshot. No idle polling. */
 export class JobsSheet implements Overlay {
   readonly key = 'jobs'
@@ -318,7 +339,12 @@ export class JobsSheet implements Overlay {
               ))}
             </list>
             <col gap="sm" grow={2} key="detail" role="omp.jobs.detail">
-              {selected ? <text key="title" text={`${selected.title} · ${selected.state}`} /> : <text key="empty" text="No background jobs in this session." />}
+              {selected ? (
+                <row align="center" gap="xs" key="title-row">
+                  <text key="title" text={selected.title} />
+                  <badge key="state" role="omp.jobs.state" text={selected.state} tone={jobStateTone(selected.state)} />
+                </row>
+              ) : <text key="empty" text="No background jobs in this session." />}
               {selected ? <text key="owner" text={`${selected.id} · owner ${selected.owner_session_id} · started ${selected.started ? new Date(selected.started * 1000).toISOString() : 'unknown'}`} tone="muted" /> : null}
               {this.#tail && this.#tail.job_id === selected?.id ? <code key="output" text={this.#tail.text || (this.#tail.available ? 'No output yet.' : 'Live output unavailable.')} /> : null}
               {this.#tail?.truncated ? <text key="truncated" text="Showing the last 100 lines (up to 16 KiB)." tone="muted" /> : null}

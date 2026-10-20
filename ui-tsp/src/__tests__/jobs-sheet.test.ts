@@ -253,4 +253,29 @@ describe('background jobs sheet', () => {
       expect(h.app.jobs.count).toBe(1)
     })
   })
+  it('shows truthful status tones for queued, failed, completed and cancelled jobs', async () => {
+    const cases = [
+      { id: 'queued', state: 'queued', tone: 'warning' },
+      { id: 'pending', state: 'pending', tone: 'warning' },
+      { id: 'failed', state: 'failed', tone: 'error' },
+      { id: 'completed', state: 'completed', tone: 'success' },
+      { id: 'cancelled', state: 'cancelled', tone: 'muted' },
+      { id: 'running', state: 'running', tone: undefined }
+    ] as const
+
+    await withApp({ jobs: cases.map(({ id, state }) => job(id, { state })) }, async h => {
+      h.app.jobs.show()
+      await rendered()
+
+      for (const { id, state, tone } of cases) {
+        await h.select(id)
+        const status = h.nodes().find(node => node.props.role === 'omp.jobs.state')
+        expect(status?.props.text).toBe(state)
+        expect(status?.props.tone).toBe(tone)
+      }
+
+      expect(h.app.jobs.count).toBe(3)
+      expect(h.requests.some(request => request.method === 'jobs.cancel')).toBe(false)
+    })
+  })
 })
