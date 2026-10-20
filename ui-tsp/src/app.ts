@@ -525,8 +525,9 @@ export class App implements OverlayHost {
       return
     }
 
-    // Any key skips the launch splash, and is spent doing so.
-    if (this.#splash?.active) {
+    // The first key skips the launch splash, and is spent doing so. Once the splash is
+    // leaving (skipped or dissolving), keys type: a fast burst must not vanish into the dissolve.
+    if (this.#splash?.active && !this.#splash.leaving) {
       return this.#splash.skip()
     }
 

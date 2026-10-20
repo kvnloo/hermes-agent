@@ -137,6 +137,11 @@ export class LaunchSplash {
     return this.#surface !== undefined && !this.#done
   }
 
+  /** Skipped or dissolving: the hand-off is decided, so keys belong to the session again. */
+  get leaving(): boolean {
+    return this.active && (this.#skipped || this.#exitAt !== null)
+  }
+
   start() {
     if (this.#surface || this.#done) {
       return

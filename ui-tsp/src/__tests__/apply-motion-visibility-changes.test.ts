@@ -194,6 +194,33 @@ describe('running launch splash environment', () => {
     })
   })
 
+  it('spends only the skip key: typing during the exit dissolve reaches the composer', async () => {
+    await withApp(async ({ app, press, splash }) => {
+      await vi.advanceTimersByTimeAsync(400)
+      await press('x')
+      await vi.advanceTimersByTimeAsync(SPLASH_TICK_MS)
+      // A burst typed right after the skip key lands while the splash still dissolves.
+      expect(splash.closed).toBe(false)
+      await press('y')
+      await press('z')
+      expect(app.composer.text).toBe('yz')
+      await vi.advanceTimersByTimeAsync(SPLASH_EXIT_MS + SPLASH_TICK_MS)
+      expect(splash.closed).toBe(true)
+      expect(app.composer.text).toBe('yz')
+    })
+  })
+
+  it('keeps keys typed while a ready splash plays its own exit dissolve', async () => {
+    await withApp(async ({ app, gw, press, splash }) => {
+      gw.emit('event', { type: 'gateway.ready', payload: {} })
+      await vi.advanceTimersByTimeAsync(SPLASH_INTRO_MS + SPLASH_TICK_MS)
+      expect(splash.closed).toBe(false)
+      await press('h')
+      await press('i')
+      expect(app.composer.text).toBe('hi')
+    })
+  })
+
   it.each([
     { ev: 'visible', sf: 'splash', visible: false },
     { ev: 'motion', reduce: true }
