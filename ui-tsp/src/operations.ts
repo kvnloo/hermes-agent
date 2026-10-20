@@ -1,6 +1,7 @@
 import type { OperationalReportResult } from '@hermes/shared/gateway-events'
 
 import type { App } from './app.js'
+import { displayText } from './display-text.js'
 import { openReportSheet } from './overlays/report-sheet.js'
 import { operationalView, type Report } from './reports.js'
 
@@ -8,7 +9,7 @@ type OperationalHost = Pick<App, 'sid' | 'gw' | 'overlays' | 'open' | 'close' | 
 
 /** Display backend data as literal Markdown, not server-supplied links or headings. */
 function literal(text: string): string {
-  return text.replace(/([\\`*_{}[\]()#+.!|<>~-])/g, '\\$1').replace(/\r?\n/g, ' ')
+  return displayText(text).replace(/[\t\r\n]+/g, ' ').replace(/([\\`*_{}[\]()#+.!|<>~-])/g, '\\$1')
 }
 
 export function operationalText(result: OperationalReportResult): string {
