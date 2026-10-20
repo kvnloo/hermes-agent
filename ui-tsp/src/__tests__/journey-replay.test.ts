@@ -93,6 +93,7 @@ describe('RFC #510 14-step synthetic native journey', () => {
       calls.push({ method, params })
       if (method === 'prompt.submit') { return { status: 'accepted' } }
       if (method === 'complete.slash') { return { items: [] } }
+      if (method === 'commands.catalog') { return { pairs: [] } }
       if (method === 'config.get') { return { value: 'queue' } }
       if (method === 'jobs.list') { return { jobs: [] } }
       if (method === 'model.options') {
@@ -132,6 +133,7 @@ describe('RFC #510 14-step synthetic native journey', () => {
     const submitCount = () => calls.filter(call => call.method === 'prompt.submit').length
 
     try {
+      app.changed()
       await painted()
 
       for (const stage of journey.steps) {
