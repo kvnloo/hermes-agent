@@ -66,7 +66,7 @@ export interface MachineSnapshot {
 }
 const str = (v: unknown, max = 160) =>
   (typeof v === 'string' || typeof v === 'number' ? String(v) : '')
-    .replace(/[\x00-\x1f\x7f]/g, ' ')
+    .replace(/\p{Cc}/gu, ' ')
     .trim().slice(0, max)
 const obj = (v: unknown): Record<string, unknown> | null =>
   v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : null
