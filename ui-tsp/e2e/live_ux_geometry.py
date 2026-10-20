@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 import shutil
+import signal
 import sys
 import time
 from types import SimpleNamespace
@@ -102,6 +103,13 @@ def working_checks(nodes, label):
           spinner=spinner.get('rect') if spinner else None, stop=stop.get('rect') if stop else None,
           dock=dock.get('rect') if dock else None)
 
+
+def interrupted(signum, frame):
+    raise InterruptedError(f'render gate interrupted by signal {signum}')
+
+
+signal.signal(signal.SIGTERM, interrupted)
+signal.signal(signal.SIGINT, interrupted)
 
 try:
     r.command([node, r.root/'ui-tsp/e2e/live-ux.build.mjs', *(['--baseline'] if a.baseline else []),

@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shlex
 import shutil
+import signal
 import sqlite3
 import sys
 import time
@@ -83,6 +84,12 @@ def main():
         r.ctl(lane, 'type '+json.dumps(text, ensure_ascii=False), True)
         wait_for(lambda: any(text in n.get('text', '') for n in tree()), 'native composer draft admission')
         r.ctl(lane, 'key enter', True)
+
+    def interrupted(signum, frame):
+        raise InterruptedError(f'real-turn gate interrupted by signal {signum}')
+
+    signal.signal(signal.SIGTERM, interrupted)
+    signal.signal(signal.SIGINT, interrupted)
 
     try:
         r.command([node, r.root/'ui-tsp/scripts/build.mjs'], r.root, r.base_env, r.out/'build.log', timeout=120)
