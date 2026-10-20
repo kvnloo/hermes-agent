@@ -436,6 +436,45 @@ describe('long-session retention (App and real SDK)', () => {
     })
   })
 
+  it('routes native action descendants through their emitted roots in a long session', async () => {
+    await withApp(app => { history(app, 240) }, async (app, surface) => {
+      const output: string[] = []
+      const write = vi.spyOn(process.stdout, 'write').mockImplementation(bytes => {
+        output.push(String(bytes))
+
+        return true
+      })
+
+      try {
+        for (const index of [0, 9, 100, 239]) {
+          const action = surface.dispatch({
+            ev: 'action', sf: 'hermes', id: `main.turn\${index}.answer-actions.copy`,
+            act: 'click', raw: {}
+          })
+          expect(action, `missing \${index} action`).toBeTypeOf('function')
+          await action?.()
+          expect(output).toContain(`\x1b]52;c;\${Buffer.from(`Answer \${index}`).toString('base64')}\x07`)
+        }
+
+        // Not a child of an emitted root. "turn23" must not steal sibling actions.
+        expect(surface.dispatch({
+          ev: 'action', sf: 'hermes', id: 'main.turn23extra.answer-actions.copy',
+          act: 'click', raw: {}
+        })).toBeUndefined()
+
+        app.transcript.clear()
+        app.changed()
+        await settle()
+        expect(surface.dispatch({
+          ev: 'action', sf: 'hermes', id: 'main.turn100.answer-actions.copy',
+          act: 'click', raw: {}
+        })).toBeUndefined()
+      } finally {
+        write.mockRestore()
+      }
+    })
+  })
+
   it('forgets evicted removed entries on clear without targeting unknown nodes', async () => {
     await withApp(app => { history(app) }, async (app, _surface, wire, input) => {
       wire.remove('main.turn0')
