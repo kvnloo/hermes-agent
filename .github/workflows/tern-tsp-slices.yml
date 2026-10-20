@@ -1,6 +1,7 @@
 name: Tern frontend checks
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [feat/tern-omp-parity]
     paths:
@@ -8,7 +9,7 @@ on:
       - 'ui-tui/src/**'
       - 'apps/shared/**'
       - 'package*.json'
-      - '.github/workflows/tern-frontend.yml'
+      - '.github/workflows/tern-tsp-slices.yml'
   push:
     branches: [fix/tern-working-spinner]
 
