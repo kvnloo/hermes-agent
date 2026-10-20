@@ -9,6 +9,7 @@ import { actionGroups } from '../actions.js'
 import type { App } from '../app.js'
 import { FORK_COMMANDS } from '../fork-session.js'
 import type { Overlay } from '../overlay.js'
+import { REFERENCE_COMMANDS } from '../reference-commands.js'
 import { ActionButton } from '../view/action-button.js'
 
 import { LSP_COMMANDS } from './lsp.js'
@@ -55,6 +56,7 @@ export async function openHelp(app: App) {
     { name: 'Native Settings', pairs: SETTINGS_COMMANDS },
     { name: 'Native LSP', pairs: LSP_COMMANDS },
     { name: 'Native session', pairs: [...FORK_COMMANDS, ...TREE_COMMANDS] },
+    { name: 'Native dashboards', pairs: REFERENCE_COMMANDS },
     ...(catalog.categories?.length ? catalog.categories : [{ name: 'Commands', pairs: catalog.pairs ?? [] }])
       .map(category => ({
         ...category,
