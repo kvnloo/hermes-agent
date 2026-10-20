@@ -4,8 +4,7 @@ import type { Key } from '@stencil-hq/tern'
 
 import type { Overlay, OverlayHost } from '../overlay.js'
 import {
-  graphEdges, graphMatches, readGraph, readMachine,
-  type CodeGraph, type MachineSnapshot, type Snapshot
+  type CodeGraph, graphEdges, graphMatches, type MachineSnapshot, readGraph, readMachine, type Snapshot
 } from '../reference-dashboards.js'
 import { ActionButton } from '../view/action-button.js'
 
@@ -168,7 +167,7 @@ export function openReferenceDashboard(
             {machine ? (
               <col gap="sm" key="machine">
                 <text key="stamp" text={`${limited(machine.machine || 'Unnamed host')} · ${limited(machine.os || 'OS unknown')} · captured ${machine.capturedAt} · NOT LIVE`} />
-                <kv key="metrics" items={[
+                <kv items={[
                   { k: '01 PENDING', v: machine.updatesChecked ? `${machine.updates.length} packages` : 'not scanned' },
                   { k: '02 PROBLEMS', v: machine.problemsChecked ? `${machine.problems.length} subjects` : 'not scanned' },
                   { k: '03 HIGH RISK', v: `${high} flagged / ${unclassified} unclassified` },
@@ -176,7 +175,7 @@ export function openReferenceDashboard(
                   { k: '05 DISK USED', v: machine.diskPercent === null ? 'not measured' : `${Math.round(machine.diskPercent)}%` },
                   { k: '06 DISK FREE', v: machine.availableGiB === null ? 'not measured' : `${machine.availableGiB.toFixed(1)} GiB` },
                   { k: 'PACKAGES INSTALLED', v: count(machine.installedPackages) }
-                ]} />
+                ]} key="metrics" />
                 <text key="eye" text={`  ◌ ── ◉ [${'█'.repeat(Math.min(16, high))}${'▒'.repeat(Math.min(16, medium))}${'·'.repeat(Math.min(16, unclassified)) || 'not assessed'}] ◉ ── ◌`} />
                 <text key="risk" text={severity} tone={high ? 'warning' : undefined} />
                 <text key="updates-head" text="UPDATES · package / old → new · risk (top 10)" />
