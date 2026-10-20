@@ -399,7 +399,7 @@ export function submitPrompt(
           // by losing the visible surface on another busy rejection.
           const visibleText = displayOverride || displayText
 
-          deps.enqueue(submitText, visibleText, destination, undefined, deps.expand)
+          deps.enqueue(submitText, visibleText, destination, opts.attachments, deps.expand)
 
           if (!focused()) {
             return
