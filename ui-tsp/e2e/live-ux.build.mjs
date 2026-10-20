@@ -3,7 +3,9 @@ import { execFileSync } from 'node:child_process'
 import { resolve, relative, dirname } from 'node:path'
 import { build } from 'esbuild'
 
-const base = '84fb40cf59117fd4b5a48fc91b69ca431cad1224'
+const refIndex = process.argv.indexOf('--baseline-ref')
+const base = refIndex < 0 ? '84fb40cf59117fd4b5a48fc91b69ca431cad1224' : process.argv[refIndex + 1]
+if (!base || base.startsWith('-')) throw new Error('Missing --baseline-ref revision')
 const files = new Set([
   'ui-tsp/src/live-voice.tsx', 'ui-tsp/src/view/dock.tsx',
   'ui-tsp/src/view/action-button.tsx', 'ui-tsp/src/view/tools.tsx',
