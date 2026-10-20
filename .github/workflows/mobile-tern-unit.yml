@@ -32,7 +32,6 @@ jobs:
     env:
       CI: 'true'
       HERMES_TUI_SPLASH: '0'
-      HERMES_HOME: ${{ runner.temp }}/hermes-tsp-unit
       OPENUI_TELEMETRY_DISABLED: '1'
       DO_NOT_TRACK: '1'
     steps:
@@ -53,12 +52,15 @@ jobs:
       - name: Typecheck native frontend against real shared contracts
         run: |
           set -euo pipefail
-          mkdir -p "$HERMES_HOME"
           npm run typecheck --workspace ui-tsp
 
       # Do not use continue-on-error, tee without pipefail, or `|| true`.
       # A failing Vitest assertion must fail this exact PR job.
       - name: Run all synthetic TSP unit tests
+        env:
+          HERMES_HOME: ${{ runner.temp }}/hermes-tsp-unit-home
+          HERMES_RUNTIME_DIR: ${{ runner.temp }}/hermes-tsp-unit-runtime
         run: |
           set -euo pipefail
+          install -d -m 700 "$HERMES_HOME" "$HERMES_RUNTIME_DIR"
           npm run test --workspace ui-tsp
