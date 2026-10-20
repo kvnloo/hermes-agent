@@ -1,0 +1,75 @@
+name: Mobile Tern unit
+
+# Synthetic TSP/Frontend checks only. Native signed-in Tern, provider and
+# Ink/SSH/multiplexer acceptance remain separate Hermes-owned gates.
+on:
+  pull_request:
+    branches: [feat/tern-omp-parity]
+    paths:
+      - 'ui-tsp/**'
+      - 'ui-tui/**'
+      - 'apps/shared/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'pm/**'
+      - 'scripts/ci/setup_toolchain.py'
+      - '.github/actions/setup-pm/**'
+      - '.github/workflows/mobile-tern-unit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-tern-unit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  unit:
+    name: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+      HERMES_TUI_SPLASH: '0'
+      OPENUI_TELEMETRY_DISABLED: '1'
+      DO_NOT_TRACK: '1'
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact source commit before checks
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo "Verified source commit: $EXPECTED_SHA"
+
+      - name: Set up pinned Node and npm
+        uses: ./.github/actions/setup-pm
+        with:
+          toolchain: node
+
+      # npm workspaces must be installed from the root. Running npm ci in
+      # ui-tsp would omit its file:../apps/shared types and the TUI aliases.
+      - name: Install locked root workspaces without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Typecheck native frontend against real shared contracts
+        run: |
+          set -euo pipefail
+          npm run typecheck --workspace ui-tsp
+
+      # Do not use continue-on-error, tee without pipefail, or `|| true`.
+      # A failing Vitest assertion must fail this exact PR job.
+      - name: Run all synthetic TSP unit tests
+        env:
+          HERMES_HOME: ${{ runner.temp }}/hermes-tsp-unit-home
+          HERMES_RUNTIME_DIR: ${{ runner.temp }}/hermes-tsp-unit-runtime
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HERMES_HOME" "$HERMES_RUNTIME_DIR"
+          npm run test --workspace ui-tsp
