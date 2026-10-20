@@ -1,6 +1,7 @@
+import { describe, expect, it, vi } from 'vitest'
+
 import type { App } from '../app.js'
 import { BusyInput } from '../busy-input.js'
-import { describe, expect, it, vi } from 'vitest'
 
 interface DeferredRead {
   method: string
