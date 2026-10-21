@@ -31,6 +31,7 @@ const views = new WeakMap<Surface, View>()
 interface Fixture {
   read(session: string): Promise<SettingsGetResult>
   write(key: string, value: unknown, confirmed: boolean, session: string): Promise<unknown>
+  reasoning?: (value: unknown, session: string) => void
 }
 
 function field(type: string, value: unknown, extra: Partial<SettingsField> = {}): SettingsField {
@@ -108,6 +109,16 @@ async function withApp(fixture: Fixture, run: (app: App, surface: Surface, press
       return fixture.write(p.key, p.value, p.confirmed === true, p.session_id)
     }
 
+    if (method === 'config.set') {
+      fixture.reasoning?.(p.value, p.session_id)
+
+      return { value: p.value }
+    }
+
+    if (method === 'config.get') {
+      return { value: 'medium' }
+    }
+
     if (method === 'complete.slash') {
       return { items: [] }
     }
@@ -156,6 +167,60 @@ afterAll(() => {
 })
 
 describe('native Settings', () => {
+  it('applies confirmed Show Reasoning changes through the live reasoning command owner', async () => {
+    const stored = { 'display.show_reasoning': field('boolean', true) }
+    const reasoning = vi.fn()
+    await withApp({
+      read: async () => profile(stored),
+      reasoning,
+      write: async (key, value) => {
+        stored['display.show_reasoning'].value = value
+
+        return { key, value }
+      }
+    }, async (app, surface) => {
+      openSettings(app)
+      await rendered()
+      await change(surface, 'display.show_reasoning', false)()
+      await rendered()
+      await rendered()
+      expect(row(surface, 'display.show_reasoning').control).toMatchObject({ k: 'switch', on: false })
+      expect(reasoning).toHaveBeenLastCalledWith('hide', 'session-1')
+      await change(surface, 'display.show_reasoning', true)()
+      await rendered()
+      await rendered()
+      expect(reasoning).toHaveBeenLastCalledWith('show', 'session-1')
+    })
+  })
+
+  it('retries a failed live reasoning update from canonical profile readback', async () => {
+    const stored = { 'display.show_reasoning': field('boolean', true) }
+    const reasoning = vi.fn().mockImplementationOnce(() => {throw new Error('live update unavailable')})
+    await withApp({
+      read: async () => profile(stored),
+      reasoning,
+      write: async (key, value) => {
+        stored['display.show_reasoning'].value = value
+
+        return { key, value }
+      }
+    }, async (app, surface) => {
+      openSettings(app)
+      await rendered()
+      await change(surface, 'display.show_reasoning', false)()
+      await rendered()
+      await rendered()
+      expect(row(surface, 'display.show_reasoning').warning).toBe('live update unavailable')
+      await click(surface, 'retry')()
+      await rendered()
+      await rendered()
+      expect(reasoning).toHaveBeenCalledTimes(2)
+      expect(reasoning).toHaveBeenLastCalledWith('hide', 'session-1')
+      expect(row(surface, 'display.show_reasoning').control).toMatchObject({ k: 'switch', on: false })
+      expect(row(surface, 'display.show_reasoning').warning).toBeUndefined()
+    })
+  })
+
   it('coalesces duplicate commits, serializes new edits, and shows canonical profile values', async () => {
     const stored = { limit: field('number', 10), enabled: field('boolean', false) }
     const gate = Promise.withResolvers<void>()

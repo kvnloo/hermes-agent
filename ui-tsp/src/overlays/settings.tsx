@@ -220,6 +220,9 @@ class Settings implements Overlay {
       }
 
       this.#profile = result.profile
+      await this.#applyReasoning(result)
+
+      if (!this.#live()) {return}
       this.#reconcile(result)
       this.#state = 'ready'
       const pages = Object.values(this.#fields).map(field => `profile.${field.category}`)
@@ -354,6 +357,9 @@ class Settings implements Overlay {
           throw new Error('The saved field is absent from the profile readback.')
         }
 
+        await this.#applyReasoning(current)
+
+        if (!this.#live()) {return}
         this.#reconcile(current, edit.key)
 
         this.#message = `Profile value confirmed: ${edit.key}.`
@@ -373,6 +379,17 @@ class Settings implements Overlay {
         this.#app.changed()
         void this.#flush()
       }
+    }
+  }
+
+  async #applyReasoning(result: SettingsGetResult) {
+    const key = 'display.show_reasoning'
+    const value = result.fields[key]?.value
+
+    // The profile write alone leaves the gateway's active-session visibility unchanged.
+    // Keep readback pending on failure so Reload can retry the live update.
+    if (this.#readback.has(key) && typeof value === 'boolean') {
+      await this.#app.setReasoning(value ? 'show' : 'hide', undefined, this.#sid)
     }
   }
 
