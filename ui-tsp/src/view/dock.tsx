@@ -36,6 +36,7 @@ export interface DockContext {
   liveVoice?: LiveVoice
   onDictation?(): void
   approval?: JSX.Element
+  promptKind?: 'approval' | 'clarify'
   approvalQueued?: number
   /** The `editor` node's full id, for the caret overlay and focus. */
   inputId: string
@@ -338,7 +339,7 @@ function composerNode(cx: DockContext): JSX.Element {
               <ActionButton key="action" onClick={cx.onDictation} role="omp.composer.mic" text={cx.dictation.state === 'recording' ? 'Finish dictation' : 'Mic'} title={`${cx.dictation.label} · ${actionHint('app.stt.toggle', cx.actions)}`} />
             </seg>
           ) : null}
-          <seg key="help" priority={0} role="omp.composer.hint" text={cx.approval ? 'Enter deny and steer' : cx.busy ? `Enter ${cx.busyMode === 'steer' ? 'steer' : 'queue'} · ${actionHint('app.message.alternate', cx.actions) || '(unbound)'} ${cx.busyMode === 'steer' ? 'queue' : 'steer'}` : `${actionHint('app.help', cx.actions) || '/help'} help`} tone="muted" />
+          <seg key="help" priority={0} role="omp.composer.hint" text={cx.promptKind === 'clarify' ? `Answer question · ${actionHint('app.clarify.toggle', cx.actions) || '(unbound)'} show/hide` : cx.approval ? 'Enter deny and steer' : cx.busy ? `Enter ${cx.busyMode === 'steer' ? 'steer' : 'queue'} · ${actionHint('app.message.alternate', cx.actions) || '(unbound)'} ${cx.busyMode === 'steer' ? 'queue' : 'steer'}` : `${actionHint('app.help', cx.actions) || '/help'} help`} tone="muted" />
           <seg key="settings" priority={90}>
             <ActionButton align="center" gap="xs" key="action" onClick={cx.onSettings} role="omp.composer.settings" title="Open Hermes settings">
               <icon key="icon" name="settings" />

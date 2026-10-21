@@ -536,6 +536,14 @@ export class App implements OverlayHost {
       return stop.run(this)
     }
 
+    // Capture cancellation preempts prompt/Vim/completion ownership: a visible
+    // “Esc discards” promise must never skip a question and leave audio running.
+    const escape = this.bindings.actions.find(action => action.id === 'app.interrupt')!
+
+    if ((this.dictation.blocked || this.liveVoice.captureBlocked) && matchesAction(escape, key)) {
+      return escape.run(this)
+    }
+
     const top = this.#inputOwner()
 
     // Settings owns cancellation; reports must never clear the hidden draft.
@@ -569,12 +577,6 @@ export class App implements OverlayHost {
 
     if (key.name === 'paste' && key.text && this.#pasteImage(key.text)) {
       return
-    }
-
-    const escape = this.bindings.actions.find(action => action.id === 'app.interrupt')!
-
-    if (this.liveVoice.captureBlocked && matchesAction(escape, key)) {
-      return escape.run(this)
     }
 
     if (this.#completion.onKey(key)) {
@@ -1970,6 +1972,7 @@ export class App implements OverlayHost {
         actions: this.bindings.actions,
         profile: this.bindings.profile,
         approval: dockPrompt?.node(promptId),
+        promptKind: dockPrompt ? (isApprovalPrompt(dockPrompt) ? 'approval' : 'clarify') : undefined,
         approvalQueued: approvals.length + asks.length - 1,
         branch: info?.branch ?? '',
         jobs: this.jobs.count,

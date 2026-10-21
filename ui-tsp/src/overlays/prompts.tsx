@@ -67,13 +67,16 @@ function optionList(
   options: Option[],
   selected: number,
   select: (i: number) => void,
-  pick: (i: number) => void
+  pick: (i: number) => void,
+  question: string
 ): JSX.Element {
   const at = (item: string) => options.findIndex(o => `${id}.${o.id}` === item)
 
   return (
     <list
+      aria={`Answer choices: ${question}`}
       key={listKey}
+      max={{ lines: 6 }}
       onActivate={ev => {
         const i = at(ev.item)
 
@@ -687,7 +690,8 @@ function clarifyNode(id: string, cx: ClarifyView): JSX.Element {
                 d.typing = i >= q.choices.length
                 host.changed()
               },
-              activate
+              activate,
+              q.question
             )}
         {freeText || d.typing ? (
           <input

@@ -122,7 +122,7 @@ export function approvalPrompt(host: PromptHost, req: ServerRequest): ApprovalPr
             role="omp.ask.question"
             text={answering ? 'Sending approval response…' : 'Allow this command?'}
           />
-          {str(p.command) ? <code key="command" lang="bash" text={str(p.command)} /> : null}
+          {str(p.command) ? <code key="command" lang="bash" text={str(p.command)} wrap /> : null}
           {str(p.description) || smartDenied ? (
             <md
               key="why"
@@ -132,6 +132,9 @@ export function approvalPrompt(host: PromptHost, req: ServerRequest): ApprovalPr
           <list
             aria="Approval choices"
             key="options"
+            // The native list scrolls the selected item into this bounded viewport;
+            // command and warning stay outside it, visible before every decision.
+            max={{ lines: 4 }}
             onActivate={ev => {
               const choice = choices.find(c => `${id}.body.options.${c.id}` === ev.item)
 
