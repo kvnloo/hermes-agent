@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import shutil
 import sys
+import time
 from types import SimpleNamespace
 from lane import Runner, gate_open
 
@@ -13,6 +14,7 @@ p.add_argument('worktree', type=Path)
 p.add_argument('--document', type=Path)
 p.add_argument('--receipts', type=Path, required=True)
 p.add_argument('--capture', action='store_true')
+p.add_argument('--baseline', action='store_true')
 a = p.parse_args()
 node_command = shutil.which('node')
 assert node_command is not None
@@ -51,7 +53,15 @@ try:
     document = json.loads(r.document.read_text())
     fixture_root = lane/'crates/plugins/fixtures'
     fixture_root.mkdir(parents=True)
-    (fixture_root/'hermes-openui').symlink_to(r.root/'ui-tsp/experiments/openui-preview/tern', target_is_directory=True)
+    plugin = r.root/'ui-tsp/experiments/openui-preview/tern'
+    if a.baseline:
+        baseline_plugin = lane/'baseline-plugin'
+        shutil.copytree(plugin, baseline_plugin)
+        source = r.command(['git', 'show', '724b2aaec5:ui-tsp/experiments/openui-preview/tern/host.luau'],
+            r.root, r.base_env, lane/'baseline-source.log')
+        (baseline_plugin/'host.luau').write_text(source.stdout)
+        plugin = baseline_plugin
+    (fixture_root/'hermes-openui').symlink_to(plugin, target_is_directory=True)
     r.ctl(lane, 'plugins fixtures')
     r.ctl(lane, 'file open '+json.dumps(r.notice['path']), True)
     r.ctl(lane, 'plugins expect '+json.dumps(document['title'][:64]))
@@ -72,6 +82,30 @@ try:
             result['measurements'].append(dict(viewport=[width,height],mode=mode,cells=len(cells),outside=len(outside),map=maps[0]['rect']))
             r.ctl(lane, f'shot dense-{width}-{mode}')
             assert not outside, f'{len(outside)}/{len(cells)} cells overflow the map'
+    # The root can be contained even when a drilled singleton has zero height.
+    if not a.document:
+        for cols, rows in [(80, 28), (100, 30), (160, 44)]:
+            width, height = cols * 9 + 24, rows * 19 + 100
+            for _ in range(70):
+                r.ctl(lane, f'resize {width} {height}')
+                state = r.ctl(lane, 'state')
+                pane = next(p for p in state['panes'] if p['id'] == state['focused']['id'])
+                dc, dr = cols - pane['cols'], rows - pane['rows']
+                if not dc and not dr:
+                    break
+                width += dc * 8 if abs(dc) > 1 else dc
+                height += dr * 17 if abs(dr) > 1 else dr
+            assert (pane['cols'], pane['rows']) == (cols, rows), pane
+            r.ctl(lane, 'click '+json.dumps(surface+' [data-role="hermes.openui.code"]'), True)
+            time.sleep(.5)
+            r.ctl(lane, 'click '+json.dumps(surface+' [data-role="hermes.openui.child.n0"]'), True)
+            time.sleep(.5)
+            cells = r.ctl(lane, f'dump {surface} .nv-cell')['elements']
+            r.ctl(lane, f'shot singleton-{cols}x{rows}')
+            result['measurements'].append(dict(size=[cols, rows], singleton=cells))
+            assert len(cells) == 1 and cells[0]['rect'][2] > 0 and cells[0]['rect'][3] > 0, cells
+            r.ctl(lane, 'click '+json.dumps(surface+' [data-role="hermes.openui.back"]'), True)
+            time.sleep(.5)
     if a.capture:
         r.ctl(lane, 'key 1', True)
         r.ctl(lane, 'wait 100')

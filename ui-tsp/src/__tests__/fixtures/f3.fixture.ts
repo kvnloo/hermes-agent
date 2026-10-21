@@ -21,6 +21,8 @@ gw.request = async <T>(method: string, params?: Record<string, unknown>): Promis
       app.changed()
     }, 150)
   }
+  if (method === 'request.answer') { return { status: 'ok' } as T }
+
   if (method === 'image.attach') { return { attached: true, path: params?.path, bytes: 68 } as T }
 
   const value = method === 'plan.status' ? plan : method === 'commands.catalog' ? { categories: [{ name: 'Final commands', pairs: [['/f3-last-command', 'F3_HELP_END_MARKER']] }] } : method === 'settings.get' ? {
@@ -53,8 +55,12 @@ const timer = setInterval(() => {
   if (mode === 'help') { void app.slash('/help') }
 
   if (mode === 'settings') { void app.slash('/settings') }
+
   if (mode === 'images') { app.composer.set(''); app.attachments.clear() }
+
   if (mode === 'denial') {
+    app.composer.set('')
+    app.attachments.clear()
     app.transcript.clear()
     app.transcript.start(1)
     app.transcript.text('F3 earlier tool work')

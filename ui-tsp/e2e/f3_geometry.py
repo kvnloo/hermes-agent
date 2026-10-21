@@ -105,7 +105,7 @@ try:
         r.ctl(lane, 'key enter', True)
         nodes = capture(label+'-deny-steer')
         steering = next(n for n in nodes if n.get('text') == 'F3_STEERING_MESSAGE')
-        answer = next(n for n in nodes if n.get('text') == 'F3_DENIED_SAFELY')
+        answer = next(n for n in nodes if 'F3_DENIED_SAFELY' in n.get('text', ''))
         check(label+': settled denial chronology', steering['rect'][1] < answer['rect'][1], steering=steering['rect'], answer=answer['rect'])
         mode('images')
         import base64
@@ -117,7 +117,7 @@ try:
         r.ctl(lane, f'drop {x+w/2} {y+h/2} file '+json.dumps(str(paths[0]))+' file '+json.dumps(str(paths[1])), True)
         nodes = capture(label+'-two-images')
         chips = [n.get('text','') for n in nodes if 'image.png' in n.get('text','')]
-        check(label+': two attached image chips', any('first image.png' in t for t in chips) and any('second image.png' in t for t in chips) and any('Remove' in n.get('text','') for n in nodes), text=chips)
+        check(label+': two attached image chips', any('first image.png' in t for t in chips) and any('second image.png' in t for t in chips) and sum('68 B · attached' in t for t in chips) == 2, text=chips)
         mode('idle')
     failed = [c['name'] for c in checks if not c['passed']]
     status = 'expected-red' if a.baseline and failed else 'fail' if failed else 'pass'
