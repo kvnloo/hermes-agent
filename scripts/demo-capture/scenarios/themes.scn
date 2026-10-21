@@ -1,0 +1,17 @@
+# One splash design held on screen while Tern's own themes change under it,
+# ending on the Hermes theme. Record about 9 seconds.
+run "{state}/splash.sh kerykeion 120"
+wait 3200
+theme dark "titanium"
+wait 800
+theme dark "dark-dracula"
+wait 800
+theme dark "dark-tokyo-night"
+wait 800
+theme dark "dark-gruvbox"
+wait 800
+theme dark "dark-rose-pine"
+wait 800
+theme dark "dark-nord"
+wait 800
+theme dark "hermes"

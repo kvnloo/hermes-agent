@@ -1,0 +1,105 @@
+name: OpenUI native preview experiment
+on:
+  push:
+    branches: [feat/tern-openui-v2, exp/tern-openui-preview, exp/tern-openui-capture-guards, exp/tern-openui-frontend, exp/tern-openui-discovery]
+    paths:
+      - ui-tsp/experiments/openui-preview/**
+      - ui-tsp/experiments/openui-generation/**
+      - ui-tsp/src/**
+      - .github/workflows/openui-preview-experiment.yml
+permissions:
+  contents: read
+concurrency:
+  group: openui-preview-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  contracts:
+    if: github.repository == 'kvnloo/hermes-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      OPENUI_TELEMETRY_DISABLED: '1'
+      DO_NOT_TRACK: '1'
+    defaults:
+      run:
+        working-directory: ui-tsp/experiments/openui-preview
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.16.0'
+      - name: Install the unchanged generation dependency lock with scripts disabled
+        working-directory: ui-tsp/experiments/openui-generation
+        run: npm ci --ignore-scripts --no-audit --no-fund --workspaces=false
+      - name: Existing real OpenUI generation tests
+        working-directory: ui-tsp/experiments/openui-generation
+        run: npm test
+      - name: Host, transport and lifecycle contracts
+        run: npm test
+      - name: Real OpenUI to preview-bundle integration
+        run: node --test test/integration.mjs
+      - name: Install Lua only for explicitly labelled mock-host checks
+        run: sudo apt-get update -qq && sudo apt-get install -y lua5.4
+      - name: Renderer logic (not live Luau or Tern)
+        run: lua5.4 test/renderer.lua tern/host.luau
+      - name: CLI preparation and missing-runtime failure boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$(mktemp -d)"
+          bundle="$(node cli.mjs prepare ../openui-generation/fixtures/explorer.openui fixtures/repository.json ci:branch "$out/bundles")"
+          repeat="$(node cli.mjs prepare ../openui-generation/fixtures/explorer.openui fixtures/repository.json ci:branch "$out/bundles")"
+          test "$bundle" = "$repeat"
+          node cli.mjs prepare ../openui-generation/fixtures/explorer.openui fixtures/repository.json ci:branch "$out/bundles" --json > "$out/candidate.json"
+          node --input-type=module - "$out/candidate.json" "$bundle" <<'JS'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const [notice, path] = process.argv.slice(2);
+          const bundle = JSON.parse(readFileSync(path, 'utf8'));
+          assert.deepEqual(JSON.parse(readFileSync(notice, 'utf8')), {
+            kind: 'hermes.visual.candidate', version: 1, id: bundle.id, path, scope: bundle.selection.scope
+          });
+          JS
+          if node cli.mjs capture "$bundle" "$out/absent-control.sock" "$out/shots" --allow-control-input; then
+            echo 'Missing Tern/control endpoint must never report success' >&2
+            exit 1
+          fi
+          grep -q 'capture-failed' "$out"/shots/capture-*.json
+      - name: No rewritten tracked inputs
+        run: git diff --exit-code
+  frontend:
+    if: github.repository == 'kvnloo/hermes-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      OPENUI_TELEMETRY_DISABLED: '1'
+      DO_NOT_TRACK: '1'
+    defaults:
+      run:
+        working-directory: ui-tsp
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          # Bundles npm 11.19.0; npm 10.9.8 crashes in Arborist edgesOut here.
+          node-version: '26.7.0'
+      - name: Install the existing frontend package versions without scripts or manifest changes
+        run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false --workspaces=false
+      - name: Typecheck the new frontend modules against the real Tern SDK
+        run: >-
+          npx --no-install tsc --ignoreConfig --types node --noEmit --target ES2024 --lib ES2024
+          --module nodenext --moduleResolution nodenext --jsx react-jsx
+          --jsxImportSource @stencil-hq/tern --strict --noUncheckedIndexedAccess
+          --esModuleInterop --skipLibCheck
+          src/visuals.ts src/overlays/visual.tsx src/visual-discovery.ts src/overlays/visual-picker.tsx
+          src/__tests__/visuals.test.ts src/__tests__/visual-overlay.test.ts
+          src/__tests__/visual-bundle.test.ts
+          src/__tests__/visual-discovery.test.ts src/__tests__/visual-picker.test.ts
+      - name: Native component and real bundle integration tests
+        run: npm test -- src/__tests__/visuals.test.ts src/__tests__/visual-overlay.test.ts src/__tests__/visual-bundle.test.ts src/__tests__/visual-discovery.test.ts src/__tests__/visual-picker.test.ts
+      - name: No rewritten tracked inputs
+        run: git diff --exit-code

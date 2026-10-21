@@ -1,0 +1,58 @@
+{
+  "serial_suite": "ui-tsp/e2e/native-settings.e2e.ts remains the 10-test serial suite; explorers must not share its pane",
+  "mcp": {
+    "config": "e2e.bugbash.config.ts",
+    "target": "isolated-tern",
+    "max_sessions_per_server": 1,
+    "servers": 6,
+    "bin": "/mnt/zer0models/hermes-wt/e2e/packages/e2e/dist/cli/bin.js",
+    "launch": ["node", "<e2e-0.16.0-bin>", "mcp", "--config", "e2e.bugbash.config.ts", "--target", "isolated-tern", "--max-sessions", "1"],
+    "fixed_tools": ["open_session", "tools", "call", "close_session"],
+    "grammar": ["observe", "tap", "type", "press", "locate"],
+    "project_tools": [
+      "native_schema",
+      "native_settings",
+      "native_prefs",
+      "native_wire",
+      "native_config_bytes",
+      "native_hold",
+      "native_release",
+      "native_evidence",
+      "native_corrupt_inert",
+      "native_restore_inert"
+    ],
+    "never": ["screenshot", "tap_at", "hover_at", "type_at", "press_at", "select_at", "e2e explore", "e2e login"]
+  },
+  "charters": [
+    {
+      "slug": "nav-search-schema-readonly",
+      "goal": "Starting at the isolated Hermes Settings sheet, visit every visible page once, search by exact field key, and read native_schema plus native_settings. Report only observe/locate/schema evidence. Do not toggle, save, confirm, or type a secret. Empty search must not appear on native_wire as settings.set. Escape clears query.",
+      "tools": ["observe", "locate", "tap", "type", "press", "native_schema", "native_settings", "native_prefs", "native_wire"]
+    },
+    {
+      "slug": "scalar-persist-revert",
+      "goal": "Exercise only scalars: display.show_reasoning, agent.max_turns, display.resume_display, agent.environment_hint. Confirm with native_settings and native_config_bytes. Restore before close. Cancel if a confirm sheet appears.",
+      "tools": ["observe", "locate", "tap", "type", "press", "native_settings", "native_config_bytes", "native_prefs"]
+    },
+    {
+      "slug": "collections-json-errors-unset",
+      "goal": "Edit only toolsets and agent.reasoning_overrides. Invalid JSON must warn with zero settings.set on native_wire. Valid list/object persist then Use default or Unset. Do not touch execution/privacy/provider keys.",
+      "tools": ["observe", "locate", "tap", "type", "press", "native_settings", "native_wire", "native_config_bytes"]
+    },
+    {
+      "slug": "risky-private-picker-cancel",
+      "goal": "Open session.model picker Models, confirm no global action, Escape to restore owner. Attempt terminal.backend docker, auth.adopt_external_logins, model, telemetry.shared_metrics.send and tap Cancel (default) only. native_wire must show zero confirmed true and zero denied if you stayed Cancel-only.",
+      "tools": ["observe", "locate", "tap", "press", "native_wire", "native_config_bytes", "native_prefs"]
+    },
+    {
+      "slug": "held-async-draft-caret",
+      "goal": "Type a unicode draft, move caret, open and close Settings. Use native_hold/native_release around settings.set on display.show_reasoning to prove rapid reversion and replacement owners. native_wire held then delivered. Do not prompt.submit.",
+      "tools": ["observe", "locate", "tap", "type", "press", "native_hold", "native_release", "native_wire", "native_prefs", "native_evidence"]
+    },
+    {
+      "slug": "corruption-retry-newsession-isolation",
+      "goal": "native_corrupt_inert then open Settings, expect Retry, native_restore_inert, Retry succeeds. Use visible /new only if on screen, check Thinking effort and Session lead. Do not write foreign profiles. native_restore_inert before close.",
+      "tools": ["observe", "locate", "tap", "type", "press", "native_corrupt_inert", "native_restore_inert", "native_config_bytes", "native_settings", "native_wire"]
+    }
+  ]
+}

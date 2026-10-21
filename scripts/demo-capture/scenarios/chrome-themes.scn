@@ -1,0 +1,22 @@
+# A finished Hermes turn, then Tern's themes changing under it: the chrome
+# wears whatever theme the window has. Streaming preset; record about 55 seconds.
+#   capture.sh chrome-themes 55 chrome-themes "What does this project do? Read the code and answer in two sentences."
+run "{state}/hermes.sh 0"
+wait 5000
+type "{arg}"
+wait 700
+key enter
+wait 36000
+theme dark "titanium"
+wait 1300
+theme dark "dark-dracula"
+wait 1300
+theme dark "dark-tokyo-night"
+wait 1300
+theme dark "dark-gruvbox"
+wait 1300
+theme dark "dark-rose-pine"
+wait 1300
+theme dark "dark-nord"
+wait 1300
+theme dark "hermes"
