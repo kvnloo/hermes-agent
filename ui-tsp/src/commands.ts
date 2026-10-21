@@ -5,6 +5,7 @@
 import type { ConfigGetResult } from '@hermes/shared/gateway-events'
 
 import type { App } from './app.js'
+import { canonicalCommand, CLASSIC_COMMANDS } from './classic-commands.js'
 import { forkSession } from './fork-session.js'
 import { cycleModel } from './model-cycle.js'
 import { openAgentHub } from './overlays/agent-hub.js'
@@ -36,13 +37,34 @@ const COMMANDS: readonly LocalCommand[] = [
   { name: 'history-search', run: openHistorySearch },
   { name: 'lsp', run: openLsp },
   { name: 'editor', run: app => app.editExternal() },
+  { name: 'resume', run: (app, arg) => arg ? app.resume(arg) : openSessionPicker(app) },
+  {
+    name: 'branch',
+    run: async (app, arg) => {
+      if (!app.sid || app.busy) {
+        app.transcript.notice('Wait for the current turn before branching.', 'warning')
+
+        return
+      }
+
+      const sid = app.sid
+      const result = await app.gw.request<{ session_id: string }>('session.fork', { session_id: sid })
+      const title = arg.replace(/(?:^|\s)--here(?=\s|$)/g, ' ').trim()
+
+      if (title) {
+        await app.gw.request('session.rename', { session_key: result.session_id, title })
+      }
+
+      if (app.sid === sid) { await app.resume(result.session_id) }
+    }
+  },
   { name: 'model-next', run: app => cycleModel(app, 1) },
   { name: 'model-prev', run: app => cycleModel(app, -1) },
   {
-    name: 'fork',
+    name: 'fork-message',
     run: (app, arg) => {
       if (arg && (!/^[1-9][0-9]*$/.test(arg) || !Number.isSafeInteger(Number(arg)))) {
-        app.transcript.notice('Usage: /fork [durable-message-id]', 'warning')
+        app.transcript.notice('Usage: /fork-message [durable-message-id]', 'warning')
 
         return
       }
@@ -51,21 +73,36 @@ const COMMANDS: readonly LocalCommand[] = [
     }
   },
   {
-    aliases: ['exit', 'q'],
     name: 'quit',
-    run: app => app.quit()
+    run: async (app, arg) => {
+      if (arg && !['--delete', '-d'].includes(arg.toLowerCase())) {
+        app.transcript.notice('Usage: /quit [--delete]', 'warning')
+
+        return
+      }
+
+      if (arg && app.sid && app.storedSid) {
+        await app.gw.request('session.close', { session_id: app.sid })
+        await app.gw.request('session.delete', { session_id: app.storedSid, ...(app.info?.profile ? { profile: app.info.profile } : {}) })
+      }
+
+      app.quit()
+    }
   },
   {
-    aliases: ['reset'],
     name: 'new',
-    run: app => app.newSession()
+    run: async (app, arg) => {
+      const previous = app.sid
+      await app.newSession()
+
+      if (arg && app.sid && app.sid !== previous) {
+        await app.gw.request('session.title', { session_id: app.sid, title: arg })
+      }
+    }
   },
   {
     name: 'clear',
-    run: app => {
-      app.transcript.clear()
-      app.transcript.push({ id: app.transcript.id('w'), kind: 'welcome' })
-    }
+    run: app => app.newSession()
   },
   {
     name: 'model',
@@ -149,14 +186,14 @@ const COMMANDS: readonly LocalCommand[] = [
     }
   },
   {
-    aliases: ['resume', 'session', 'switch'],
+    aliases: ['session', 'switch'],
     name: 'sessions',
     run: (app, arg) => {
-      if (!arg) {
+      if (!arg || ['list', 'ls', 'browse'].includes(arg.toLowerCase())) {
         return openSessionPicker(app)
       }
 
-      return arg === 'new' ? app.newSession() : app.resume(arg)
+      return app.resume(arg)
     }
   },
   {
@@ -193,7 +230,35 @@ const COMMANDS: readonly LocalCommand[] = [
   }
 ]
 
+/** Native extensions only. Classic descriptions/aliases are generated, not re-authored. */
+const NATIVE_DESCRIPTIONS: Record<string, string> = {
+  models: 'Open the model and provider hub',
+  tree: 'Browse the session branch tree',
+  'history-search': 'Search conversation history',
+  lsp: 'Inspect language-server symbols, references and hover',
+  editor: 'Edit the current composer draft in an external editor (does not send)',
+  'model-next': 'Switch to the next favorite model',
+  'model-prev': 'Switch to the previous favorite model',
+  'fork-message': 'Fork into a new pane at an optional durable message id',
+  settings: 'Open profile defaults and live session settings',
+  jobs: 'Inspect background jobs',
+  visual: 'Open the visual artifact picker'
+}
+
+export function localCompletions(): { text: string; display: string; meta: string; kind: 'command' }[] {
+  return COMMANDS.flatMap(command => {
+    const classic = CLASSIC_COMMANDS.find(item => item.name === command.name)
+    const description = classic?.description ?? NATIVE_DESCRIPTIONS[command.name]!
+
+    return [command.name, ...(classic?.aliases ?? command.aliases ?? [])].map(name => ({
+      text: `/${name}`, display: `/${name}`, meta: description, kind: 'command' as const
+    }))
+  })
+}
+
 /** The client-side command `name` (without the slash) answers to, if any. */
 export function localCommand(name: string): LocalCommand | undefined {
-  return COMMANDS.find(c => c.name === name || c.aliases?.includes(name))
+  const canonical = canonicalCommand(name)
+
+  return COMMANDS.find(c => c.name === canonical || c.aliases?.includes(canonical))
 }

@@ -83,7 +83,7 @@ describe('Completion', () => {
     await vi.runAllTimersAsync()
     pending[0]?.reject(new Error('late'))
     await vi.runAllTimersAsync()
-    expect(completion.items.map(i => i.text)).toEqual(['/help'])
+    expect(completion.items.map(i => i.text)).toEqual(['/help', '/heartbeat'])
   })
 
   it('Tab on a list answering older text leaves the newer text alone', async () => {

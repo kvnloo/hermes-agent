@@ -219,7 +219,7 @@ describe('app action registry', () => {
       expect(root?.props.head).toBe(hub ? 'Agents · owned hub' : `/${command}`)
 
       if (!hub) {
-        expect(root?.children[0]?.children[0]?.props.text).toBe('Gateway command output')
+        expect(root?.children[0]?.children[0]?.props.spans).toEqual([{ s: 'mono', t: 'Gateway command output' }])
       }
 
       expect(app.composer.text).toBe('unfinished prompt')

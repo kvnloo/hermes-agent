@@ -312,7 +312,7 @@ export const APP_ACTIONS: readonly Action[] = [
   },
   {
     id: 'app.session.fork',
-    title: '/fork [message-id]: fork into a new Tern pane',
+    title: '/fork-message [message-id]: fork into a new Tern pane',
     group: 'Session',
     keys: ['alt+shift+f'],
     when: ctx => !ctx.busy,

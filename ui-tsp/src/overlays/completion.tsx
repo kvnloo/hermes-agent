@@ -8,13 +8,11 @@ import type { JSX, Key } from '@stencil-hq/tern'
 import { applyCompletion, completionRequestForInput, completionToApplyOnSubmit } from '@tui/domain/slash.js'
 import type { GatewayClient } from '@tui/gatewayClient.js'
 
+import { CLASSIC_COMMANDS } from '../classic-commands.js'
+import { localCompletions } from '../commands.js'
 import type { Composer } from '../composer.js'
-import { FORK_COMMANDS } from '../fork-session.js'
 import type { OverlayHost } from '../overlay.js'
 
-import { LSP_COMMANDS } from './lsp.js'
-import { TREE_COMMANDS } from './sessions.js'
-import { SETTINGS_COMMANDS } from './settings.js'
 
 const DEBOUNCE_MS = 60
 
@@ -81,7 +79,9 @@ export class Completion {
     // The gateway accepts a command line or one path word, never a multiline draft.
     const lineStart = before.lastIndexOf('\n') + 1
     const context = before.slice(lineStart)
-    const request = completionRequestForInput(context)
+    const request = context.toLowerCase() === '/model'
+      ? { method: 'complete.slash' as const, params: { text: context }, replaceFrom: 1 }
+      : completionRequestForInput(context)
 
     if (!request) {
       this.dismiss()
@@ -115,11 +115,19 @@ export class Completion {
           const items = r?.items ?? []
 
           if (request.method === 'complete.slash' && !request.skillsOnly && /^\/\S*$/.test(context)) {
-            for (const [text, meta] of [...SETTINGS_COMMANDS, ...FORK_COMMANDS, ...TREE_COMMANDS, ...LSP_COMMANDS]) {
-              if (text.startsWith(context) && !items.some(item => item.text === text)) {
-                items.push({ display: text, kind: 'command', meta, text })
+            const catalog = CLASSIC_COMMANDS.filter(command => !command.gateway_only).flatMap(command =>
+              [command.name, ...command.aliases].map(name => ({
+                text: `/${name}`, display: `/${name}`, kind: 'command' as const, meta: command.description
+              })))
+
+            for (const item of [...catalog, ...localCompletions()]) {
+              if (item.text.startsWith(context.toLowerCase()) && !items.some(existing => existing.text === item.text)) {
+                items.push(item)
               }
             }
+
+            // Exact commands outrank fuzzy description matches, including native extensions.
+            items.sort((left, right) => Number(right.text.toLowerCase() === context.toLowerCase()) - Number(left.text.toLowerCase() === context.toLowerCase()))
           }
 
           this.items =

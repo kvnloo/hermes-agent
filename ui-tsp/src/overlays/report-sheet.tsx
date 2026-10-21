@@ -29,9 +29,11 @@ export function openReportSheet(host: ReportHost, report: Report) {
         {report.scope ? (
           <text key="scope" role="omp.report.scope" text={`Hermes profile: ${report.scope} · Read only`} wrap="word" />
         ) : null}
-        <md key="markdown" role="omp.report.body">
-          {report.text}
-        </md>
+        {report.format === 'plain' ? (
+          <text key="markdown" role="omp.report.body" spans={[{ s: 'mono', t: report.text }]} wrap="none" />
+        ) : (
+          <md key="markdown" role="omp.report.body">{report.text}</md>
+        )}
         {message ? <text key="notice" role="omp.report.notice" text={message} wrap="word" /> : null}
         <row align="center" gap="sm" key="actions" role="omp.actions">
           <ActionButton

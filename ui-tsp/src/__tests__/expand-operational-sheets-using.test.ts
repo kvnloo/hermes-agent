@@ -155,13 +155,31 @@ function report(view: OperationalView = 'mcp-list'): OperationalReportResult {
   }
 }
 
-const body = (nodes: Fixture['nodes']) =>
-  String(nodes('layer').find(node => node.props.role === 'omp.report.body')?.props.text ?? '')
+const body = (nodes: Fixture['nodes']) => {
+  const props = nodes('layer').find(node => node.props.role === 'omp.report.body')?.props
+
+  return String(props?.text ?? (props?.spans as { t: string }[] | undefined)?.map(span => span.t).join('') ?? '')
+}
 
 const status = (nodes: Fixture['nodes']) =>
   nodes('layer').find(node => node.props.role === 'omp.report.state')?.props.text
 
 describe('Hermes operational report sheets', () => {
+  it('renders inventory punctuation literally without invoking the Markdown/math renderer', async () => {
+    await withApp(async f => {
+      const inventory = report()
+      inventory.rows = [{ name: 'ctx', details: ['Environment configured (values withheld)', 'Literal [brackets], *stars*, and \\(not math\\)'] }]
+      f.request.mockResolvedValueOnce(inventory)
+      await f.app.slash('/mcp list')
+      await rendered()
+      const target = f.nodes('layer').find(node => node.props.role === 'omp.report.body')!
+      expect(target.kind).toBe('text')
+      expect(body(f.nodes)).toContain('Environment configured (values withheld)')
+      expect(body(f.nodes)).toContain('Literal [brackets], *stars*')
+      expect(f.nodes('layer').some(node => node.kind === 'md')).toBe(false)
+    })
+  })
+
   it.each([
     ['/mcp', 'mcp-list'],
     ['/mcp list', 'mcp-list'],
@@ -239,8 +257,8 @@ describe('Hermes operational report sheets', () => {
       f.request.mockResolvedValueOnce(long)
       await f.app.slash('/mcp tools')
       await rendered()
-      expect(body(f.nodes)).toContain('server\\-0')
-      expect(body(f.nodes)).toContain('server\\-299')
+      expect(body(f.nodes)).toContain('server-0')
+      expect(body(f.nodes)).toContain('server-299')
       const scroll = vi.spyOn(f.surface, 'scroll')
       await f.press('\x1b[6~')
       expect(scroll).toHaveBeenLastCalledWith(`${sheet(f.nodes)!.id}.body.markdown`, 'page-down')

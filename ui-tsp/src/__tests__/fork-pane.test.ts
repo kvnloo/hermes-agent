@@ -110,7 +110,7 @@ describe('fork into a different Tern pane', () => {
     await withApp(async ({ app, calls, launcher, view, press }) => {
       app.composer.set('original draft', 4)
       const originalInfo = app.info
-      const forking = app.slash('/fork')
+      const forking = app.slash('/fork-message')
       expect(calls).toContainEqual({ method: 'session.fork', params: { session_id: 'runtime-parent' } })
       expect(launcher).not.toHaveBeenCalled()
       result.resolve({ session_id: 'stored-child', parent: 'stored-parent', profile: 'owning-profile', message_count: 8 })
@@ -129,7 +129,7 @@ describe('fork into a different Tern pane', () => {
 
   it('outside Tern shows the stored id and resume hint without invoking a launcher', async () => {
     await withApp(async ({ app, launcher, view, press }) => {
-      await app.slash('/fork')
+      await app.slash('/fork-message')
       await press('')
       expect(launcher).not.toHaveBeenCalled()
       expect(JSON.stringify(view())).toContain('Forked session stored-child')
@@ -147,14 +147,14 @@ describe('fork into a different Tern pane', () => {
 
   it('a targeted fork sends only the exact durable id, not transcript text or an ordinal', async () => {
     await withApp(async ({ app, calls }) => {
-      await app.slash('/fork 123')
+      await app.slash('/fork-message 123')
       expect(calls).toContainEqual({ method: 'session.fork', params: { session_id: 'runtime-parent', target_message_id: 123 } })
     })
   })
 
   it.each(['0', '-1', '1.5', '1e3', '123 extra', '9007199254740992'])('invalid target %s never forks', async target => {
     await withApp(async ({ app, calls, launcher }) => {
-      await app.slash(`/fork ${target}`)
+      await app.slash(`/fork-message ${target}`)
       expect(calls.some(call => call.method === 'session.fork')).toBe(false)
       expect(launcher).not.toHaveBeenCalled()
     })
@@ -163,7 +163,7 @@ describe('fork into a different Tern pane', () => {
   it('launcher failure retains the durable child and recovery hint, never repeats the RPC', async () => {
     await withApp(async ({ app, calls, launcher, view, press }) => {
       launcher.mockRejectedValueOnce(new Error('fake split failure'))
-      await app.slash('/fork')
+      await app.slash('/fork-message')
       await press('')
       expect(calls.filter(call => call.method === 'session.fork')).toHaveLength(1)
       expect(JSON.stringify(view())).toContain('Fork saved, but the Tern pane could not open: fake split failure')
@@ -173,7 +173,7 @@ describe('fork into a different Tern pane', () => {
 
   it('an RPC failure does not launch or report an invented session id', async () => {
     await withApp(async ({ app, launcher, view, press }) => {
-      await app.slash('/fork')
+      await app.slash('/fork-message')
       await press('')
       expect(launcher).not.toHaveBeenCalled()
       expect(JSON.stringify(view())).toContain('fake database unavailable')
@@ -184,8 +184,8 @@ describe('fork into a different Tern pane', () => {
   it('coalesces repeated fork requests while one is pending', async () => {
     const result = Promise.withResolvers<unknown>()
     await withApp(async ({ app, calls, launcher }) => {
-      const first = app.slash('/fork')
-      await app.slash('/fork')
+      const first = app.slash('/fork-message')
+      await app.slash('/fork-message')
       expect(calls.filter(call => call.method === 'session.fork')).toHaveLength(1)
       result.resolve({ session_id: 'stored-child', parent: 'stored-parent', profile: 'owning-profile', message_count: 8 })
       await first
@@ -196,7 +196,7 @@ describe('fork into a different Tern pane', () => {
   it('never opens a pane for a replaced session, but preserves the already-created child hint', async () => {
     const result = Promise.withResolvers<unknown>()
     await withApp(async ({ app, launcher, view, press }) => {
-      const first = app.slash('/fork')
+      const first = app.slash('/fork-message')
       app.sid = 'another-runtime'
       result.resolve({ session_id: 'stored-child', parent: 'stored-parent', profile: 'owning-profile', message_count: 8 })
       await first
@@ -209,7 +209,7 @@ describe('fork into a different Tern pane', () => {
 
   it('profile text is a single literal argv entry, never shell syntax', async () => {
     await withApp(async ({ app, launcher }) => {
-      await app.slash('/fork')
+      await app.slash('/fork-message')
       expect(launcher).toHaveBeenCalledExactlyOnceWith(['hermes', '--resume', 'stored-child', '-p', 'profile ; $(do-not-run)'])
     }, { profile: 'profile ; $(do-not-run)' })
   })
@@ -217,7 +217,7 @@ describe('fork into a different Tern pane', () => {
   it('busy session refuses a fork without hiding the running state', async () => {
     await withApp(async ({ app, calls, launcher }) => {
       app.busy = { label: 'Working', since: {}, startedAt: Date.now() }
-      await app.slash('/fork')
+      await app.slash('/fork-message')
       expect(app.busy?.label).toBe('Working')
       expect(calls.some(call => call.method === 'session.fork')).toBe(false)
       expect(launcher).not.toHaveBeenCalled()
