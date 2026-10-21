@@ -169,7 +169,7 @@ function buildEntry(e: Exclude<Entry, { kind: 'welcome' }>, id: string, cx: Tran
     case 'panel':
       return (
         <card collapsible head={[{ s: 'strong', t: e.title }]} key={e.id} role="omp.custom" tone="neutral">
-          <md key="body">{e.text}</md>
+          {e.format === 'plain' ? <text key="body" spans={[{ s: 'mono', t: e.text }]} wrap="none" /> : <md key="body">{e.text}</md>}
         </card>
       )
   }

@@ -29,6 +29,7 @@ import { focusBrowserBlock } from './browser-blocks.js'
 import { BtwReports } from './btw.js'
 import { BusyInput } from './busy-input.js'
 import { copyPrompt, copyToClipboard } from './clipboard.js'
+import { canonicalCommand } from './classic-commands.js'
 import { localCommand } from './commands.js'
 import { Composer } from './composer.js'
 import { Dictation } from './dictation.js'
@@ -1077,7 +1078,8 @@ export class App implements OverlayHost {
       return
     }
 
-    const [name = '', ...rest] = text.slice(1).split(/\s+/)
+    const [token = '', ...rest] = text.slice(1).split(/\s+/)
+    const name = canonicalCommand(token)
     const arg = rest.join(' ')
     const local = localCommand(name)
 
@@ -1127,14 +1129,14 @@ export class App implements OverlayHost {
       }
 
       if (r?.type === 'send' && r.message) {
-        this.#send(r.message)
+        this.#send(r.message, { queued: name === 'queue' })
       } else if (r?.output?.trim()) {
         const title = `/${name}${arg ? ` ${arg}` : ''}`
 
         if (isReportCommand(name, arg)) {
-          this.report({ title, text: r.output })
+          this.report({ title, text: r.output, format: 'plain' })
         } else {
-          this.transcript.panel(title, r.output)
+          this.transcript.panel(title, r.output, 'plain')
         }
       }
 

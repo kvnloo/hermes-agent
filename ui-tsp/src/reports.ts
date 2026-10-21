@@ -6,6 +6,7 @@ import type { OperationalView } from '@hermes/shared/gateway-events'
 export interface Report {
   title: string
   text: string
+  format?: 'plain' | 'markdown'
   status?: 'loading' | 'ready' | 'unavailable' | 'unsupported'
   scope?: string
 }
@@ -29,6 +30,7 @@ const REPORT_COMMANDS: readonly ReportCommand[] = [
   { name: 'context', accepts: anyArgument },
   { name: 'history', accepts: anyArgument },
   { name: 'tools', accepts: anyArgument },
+  { name: 'skills', accepts: anyArgument },
   { name: 'help', accepts: anyArgument },
   { name: 'status', accepts: noArgument },
   { name: 'mcp', accepts: arg => operationalView('mcp', arg) !== undefined },

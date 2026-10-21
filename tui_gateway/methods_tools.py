@@ -751,7 +751,8 @@ def _dispatch_skill(rid, params, session, name, arg):
 
 
 def _cmd_queue(rid, params, session, name, arg):
-    return _ok(rid, {"type": "send", "message": arg}) if arg else _err(rid, 4004, "usage: /queue <prompt>")
+    from .slash_queue import execute_queue
+    return execute_queue(rid, session, arg)
 
 
 def _prompt_builtin(module: str, fn: str, kw: str = ""):
@@ -1121,8 +1122,9 @@ def _(rid, params: dict) -> dict:
     # Skill/bundle and _PENDING_INPUT_COMMANDS must NOT reach the slash worker. Plugin
     # commands also bypass it but return normal slash.exec output (TUI keeps the pager path).
     parts = cmd.lstrip("/").split(maxsplit=1)
-    base = (parts[0] if parts else "").lower()
+    base = _resolve_name((parts[0] if parts else "").lower())
     arg = parts[1] if len(parts) > 1 else ""
+    cmd = base + (f" {arg}" if arg else "")
     sid = params.get("session_id", "")
     live_output = _live_slash_command_output(sid, session, base, arg)
     if live_output is not None:

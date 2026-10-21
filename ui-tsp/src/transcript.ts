@@ -88,8 +88,8 @@ export class Transcript {
     this.push({ id: this.id('n'), kind: 'notice', text, tone })
   }
 
-  panel(title: string, text: string) {
-    this.push({ id: this.id('p'), kind: 'panel', text, title })
+  panel(title: string, text: string, format?: 'plain' | 'markdown') {
+    this.push({ id: this.id('p'), kind: 'panel', text, title, ...(format ? { format } : {}) })
   }
 
   /** Opens a live turn unless one is already streaming. */

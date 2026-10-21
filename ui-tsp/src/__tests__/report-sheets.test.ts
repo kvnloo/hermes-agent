@@ -130,16 +130,20 @@ function sheet(nodes: Fixture['nodes']) {
 }
 
 describe('native report sheets', () => {
-  it('/usage opens Markdown in the sheet and adds no transcript entry', async () => {
+  it.each(['/usage', '/context', '/skills', '/tools'])('%s preserves CLI output as literal monospace rows in the sheet', async command => {
     await withApp(async ({ app, nodes, request }) => {
       const before = [...app.transcript.entries]
-      await app.slash('/usage')
+      await app.slash(command)
       await rendered()
-      expect(sheet(nodes)?.props.head).toBe('/usage')
-      expect(nodes('layer').find(node => node.kind === 'md')?.props.text).toBe('# Report\n\nExact **Markdown** body.\n')
+      expect(sheet(nodes)?.props.head).toBe(command)
+      const body = nodes('layer').find(node => node.props.role === 'omp.report.body')!
+      expect(body.kind).toBe('text')
+      expect(body.props.spans).toEqual([{ s: 'mono', t: '# Report\n\nExact **Markdown** body.\n' }])
+      expect(body.props.wrap).toBe('none')
+      expect(nodes('layer').some(node => node.kind === 'md')).toBe(false)
       expect(app.transcript.entries).toEqual(before)
       expect(nodes('main').some(node => node.props.role === 'omp.custom')).toBe(false)
-      expect(request).toHaveBeenCalledWith('slash.exec', { command: 'usage', session_id: 'session-1' })
+      expect(request).toHaveBeenCalledWith('slash.exec', { command: command.slice(1), session_id: 'session-1' })
     })
   })
 

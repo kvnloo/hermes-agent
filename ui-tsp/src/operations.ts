@@ -6,11 +6,6 @@ import { operationalView, type Report } from './reports.js'
 
 type OperationalHost = Pick<App, 'sid' | 'gw' | 'overlays' | 'open' | 'close' | 'changed' | 'scrollOverlay'>
 
-/** Display backend data as literal Markdown, not server-supplied links or headings. */
-function literal(text: string): string {
-  return text.replace(/([\\`*_{}[\]()#+.!|<>~-])/g, '\\$1').replace(/\r?\n/g, ' ')
-}
-
 export function operationalText(result: OperationalReportResult): string {
   const empty =
     result.view === 'ssh-list'
@@ -20,9 +15,9 @@ export function operationalText(result: OperationalReportResult): string {
         : 'No MCP servers configured in this Hermes profile.'
 
   return [
-    literal(result.message),
+    result.message,
     ...result.rows.map(
-      row => `## ${literal(row.name)}\n\n${row.details.map(detail => `- ${literal(detail)}`).join('\n')}`
+      row => `${row.name}\n${row.details.map(detail => `  • ${detail}`).join('\n')}`
     ),
     ...(result.state === 'ready' && !result.rows.length ? [empty] : [])
   ].join('\n\n')
@@ -64,7 +59,7 @@ export async function openOperationalSheet(
       scroll: (overlay, to) => host.scrollOverlay(overlay, 'body.markdown', to),
       copy
     },
-    report
+    Object.assign(report, { format: 'plain' as const })
   )
 
   if (!view) {

@@ -137,6 +137,7 @@ export interface NoticeEntry {
 /** Output of a slash command, shown as Markdown. */
 export interface PanelEntry {
   kind: 'panel'
+  format?: 'plain' | 'markdown'
   id: string
   title: string
   text: string

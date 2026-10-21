@@ -4,7 +4,7 @@ import type { App } from './app.js'
 import { launchPane } from './pane-launcher.js'
 
 export const FORK_COMMANDS: [string, string][] = [
-  ['/fork', 'Fork this conversation into a new pane; optional durable message id (inclusive)']
+  ['/fork-message', 'Fork this conversation into a new pane; optional durable message id (inclusive)']
 ]
 
 const pending = new WeakSet<App>()
