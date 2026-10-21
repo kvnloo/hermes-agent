@@ -127,7 +127,7 @@ export const APP_ACTIONS: readonly Action[] = [
     group: 'Control',
     keys: ['alt+up'],
     extraModifiers: true,
-    when: ctx => ctx.queued,
+    when: always,
     run: app => app.dequeue()
   },
   {

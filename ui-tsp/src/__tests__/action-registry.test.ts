@@ -178,6 +178,16 @@ afterAll(() => {
 })
 
 describe('app action registry', () => {
+  it('consumes Alt+Up with an empty queue without recalling sent history', async () => {
+    await withApp(async ({ app, press }) => {
+      app.composer.take('already sent prompt')
+      await press('\x1b[1;3A')
+      expect(app.composer.text).toBe('')
+      await press('\x1b[A')
+      expect(app.composer.text).toBe('already sent prompt')
+    })
+  })
+
   it.each(shortcuts)('%s opens the %s sheet without changing the draft', async (_name, bytes, overlay) => {
     await withApp(async ({ app, gw, surface, press }) => {
       app.composer.set('draft kept', 3)
