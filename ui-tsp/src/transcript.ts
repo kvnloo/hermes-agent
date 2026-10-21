@@ -78,6 +78,19 @@ export class Transcript {
     return entry
   }
 
+  /** A user correction splits the active turn at its arrival, not at final settlement. */
+  boundaryUser(text: string, at = Date.now(), attachments: readonly SubmittedImage[] = []): UserEntry {
+    if (this.#live) {
+      this.#endThinking(this.#live, at)
+      this.#live.status = 'done'
+      this.#live.endedAt = at
+      this.#touch(this.#live)
+      this.#live = undefined
+    }
+
+    return this.user(text, at, attachments)
+  }
+
   /** Accepted corrections belong to the original turn, even if its RPC settles after completion. */
   steer(text: string, turn: TurnEntry) {
     turn.blocks.push({ id: this.id('s'), kind: 'steering', text })

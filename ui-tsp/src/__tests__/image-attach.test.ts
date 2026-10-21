@@ -126,6 +126,26 @@ function labels(f: Fixture, region = 'dock') {
   return f.nodes(region).map(n => n.props.text).filter(t => typeof t === 'string').join('\n')
 }
 
+it('a two-file quoted drop renders two attachment chips and sends both paths, never literal draft text', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'hermes-two-drop-'))
+  const paths = [join(dir, 'first image.png'), join(dir, 'second image.png')]
+  paths.forEach(path => writeFileSync(path, png))
+  let serial = 0
+
+  try {
+    await withApp(async () => ({ attached: true, path: `/confirmed/${++serial}.png`, bytes: png.length }), async f => {
+      await f.paste(paths.map(path => `'${path}'`).join(' '))
+
+      for (let i = 0; i < 30 && f.app.attachments.items.some(item => item.status === 'pending'); i++) { await new Promise(resolve => setTimeout(resolve, 5)); await settle() }
+      expect(labels(f)).toContain('first image.png')
+      expect(labels(f)).toContain('second image.png')
+      expect(f.app.composer.text).toBe('')
+      await f.send('Describe both')
+      expect(f.request).toHaveBeenCalledWith('prompt.submit', { session_id: 'image-session', text: 'Describe both', image_paths: ['/confirmed/1.png', '/confirmed/2.png'] })
+    })
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
 const confirm = async (): Promise<AttachedImageResult> => ({ attached: true, path: '/confirmed/pasted.png', bytes: png.length })
 const pastePng = (f: Fixture) => f.event({ ev: 'paste', data: png.toString('base64'), mime: 'image/png', name: 'Clipboard shot' })
 

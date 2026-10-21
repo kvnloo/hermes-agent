@@ -5,7 +5,7 @@
 import type { CommandsCatalogResult } from '@hermes/shared/gateway-events'
 import type { Key, SpanData } from '@stencil-hq/tern'
 
-import { actionGroups } from '../actions.js'
+import { actionGroups, matchesAction, REPORT_ACTIONS } from '../actions.js'
 import type { App } from '../app.js'
 import { FORK_COMMANDS } from '../fork-session.js'
 import type { Overlay } from '../overlay.js'
@@ -25,7 +25,7 @@ const HOTKEYS: { group: string; rows: [string[], string][] }[] = [
       [['enter'], 'Send message'],
       [['shift+enter', 'alt+enter'], 'New line (Alt+Enter steers / queues while busy)'],
       [['up', 'down'], 'Move between lines / browse history'],
-      [['tab'], 'Accept the completion'],
+      [['tab', 'f6'], 'Accept completion / traverse card and composer actions'],
       [['alt+left', 'alt+right', 'alt+b', 'alt+f'], 'Move by word'],
       [['ctrl+a', 'ctrl+e'], 'Start / end of line'],
       [['ctrl+w', 'alt+backspace'], 'Delete word backwards'],
@@ -68,7 +68,7 @@ export async function openHelp(app: App) {
     node: id => (
       <overlay anchor="center" head="Commands and shortcuts" key={id.slice('layer.'.length)} modal role="omp.overlay.hotkeys" size="lg">
         <col gap="lg" key="body">
-          <text key="host-keys" text="Host key ownership: Tern and its active preset may intercept shortcuts before Hermes. Use the paired buttons or slash commands when a chord is reserved; configure Hermes bindings in Settings. Shift+Tab cycles effort, not native button focus. Escape belongs to the top question/sheet before interrupting a turn." wrap="word" />
+          <text key="host-keys" text="Host key ownership: Tern and its active preset may intercept shortcuts before Hermes. Use the paired buttons or slash commands when a chord is reserved; configure Hermes bindings in Settings. Tab accepts completions; otherwise opens Keyboard actions. F6 opens sheet/card/composer actions; Tab/Shift+Tab or arrows traverse, Enter activates, Escape returns. Shift+Tab in the composer still cycles effort. Escape belongs to the top question/sheet before interrupting a turn." wrap="word" />
           {[...HOTKEYS, ...actionGroups(app.bindings.actions)].map(({ group, rows }) => (
             <section head={group} key={`keys-${group}`} role="omp.hotkeys.group">
               <table
@@ -128,6 +128,10 @@ export async function openHelp(app: App) {
     onKey: (k: Key) => {
       if (k.name === 'escape' || k.name === 'enter' || k.name === 'q') {
         app.close(overlay)
+      } else {
+        const intent = REPORT_ACTIONS.find(action => matchesAction(action, k))?.intent
+
+        if (intent?.kind === 'scroll') { app.scrollOverlay(overlay, 'body', intent.to) }
       }
 
       return true

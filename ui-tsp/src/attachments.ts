@@ -116,6 +116,33 @@ export function pastedImageSource(text: string, mustExist = true): ImageSource |
   return isAbsolute(path) && (!mustExist || existsSync(path)) && !/[\r\n\0]/.test(path) ? { path, name: basename(path) } : undefined
 }
 
+/** Parse a terminal multi-file drop without evaluating shell syntax. All-or-none preserves ordinary prose. */
+export function pastedImageSources(text: string, mustExist = true): ImageSource[] {
+  const single = pastedImageSource(text, mustExist)
+
+  if (single && (mustExist || 'data' in single || !/[\s"']/.test(text.trim()))) { return [single] }
+  const paths: string[] = []
+  let token = ''
+  let quote = ''
+  let escaped = false
+
+  for (const char of text.trim()) {
+    if (escaped) { token += char; escaped = false }
+    else if (char === '\\' && quote !== "'") { escaped = true }
+    else if (quote) { if (char === quote) { quote = '' } else { token += char } }
+    else if (char === '"' || char === "'") { quote = char }
+    else if (/\s/.test(char)) { if (token) { paths.push(token); token = '' } }
+    else { token += char }
+  }
+
+  if (escaped || quote) { return [] }
+
+  if (token) { paths.push(token) }
+  const sources = paths.map(path => pastedImageSource(path, mustExist))
+
+  return sources.length && sources.every(source => source !== undefined) ? sources : []
+}
+
 /** Newer peers' events remain `unknown` in SDK 0.1.0: validate the raw boundary. */
 export function eventImageSource(raw: JsonObject): ImageSource | undefined {
   if (raw.ev !== 'paste' && raw.ev !== 'drop') {

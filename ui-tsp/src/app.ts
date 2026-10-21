@@ -22,7 +22,7 @@ import { writeActiveSessionFile } from '@tui/lib/activeSessionFile.js'
 import logo from '../assets/logo.png'
 
 import { type ActionContext, actionForKey, matchesAction } from './actions.js'
-import { Attachments, eventImageSource, pastedImageSource, type SubmittedImage } from './attachments.js'
+import { Attachments, eventImageSource, pastedImageSources, type SubmittedImage } from './attachments.js'
 import { Dispatches } from './attention.js'
 import { BindingPreferences } from './binding-preferences.js'
 import { focusBrowserBlock } from './browser-blocks.js'
@@ -47,6 +47,7 @@ import { openAgentInspector } from './overlays/agent-inspector.js'
 import { type ApprovalPrompt, isApprovalPrompt } from './overlays/approval.js'
 import { Completion } from './overlays/completion.js'
 import { JobsSheet } from './overlays/jobs.js'
+import { openKeyboardActions, renderedActions } from './overlays/keyboard-actions.js'
 import { openModelPicker } from './overlays/models.js'
 import { openPlanReview } from './overlays/plan-review.js'
 import { isClarifyPrompt, promptOverlay } from './overlays/prompts.js'
@@ -559,6 +560,12 @@ export class App implements OverlayHost {
       return approve.run(this)
     }
 
+    const navigation = this.bindings.actions.find(action => action.id === 'app.keyboard.actions')!
+
+    if (key.name !== 'tab' && top?.key !== 'keyboard-actions' && matchesAction(navigation, key)) {
+      return navigation.run(this)
+    }
+
     if (top && (isClarifyPrompt(top) || top.placement !== 'dock' || !this.composer.text) && top.onKey(key)) {
       return
     }
@@ -604,6 +611,19 @@ export class App implements OverlayHost {
     if (action === 'submit') {
       void this.#submitDraft()
     }
+  }
+
+  keyboardActions(): void {
+    const owner = this.#inputOwner()
+    const root = owner ? this.#overlayIds.get(owner) : undefined
+
+    const actions = renderedActions([...this.#surfaceView.trees, ...(owner ? [] : this.#retention?.actionTrees() ?? [])])
+      .filter(action => !root || action.id.startsWith(root + '.'))
+
+    openKeyboardActions(this, actions, id => {
+      this.#surface.dispatch({ ev: 'action', sf: this.#surface.id, id, act: 'click', raw: {} })?.()
+      this.changed()
+    })
   }
 
   /** A terminal $EDITOR needs the grid; native Tern file blocks do not. */
@@ -693,15 +713,16 @@ export class App implements OverlayHost {
   }
 
   #pasteImage(text: string): boolean {
-    const source = pastedImageSource(text, ternSharesFrontendHost())
+    const sources = pastedImageSources(text, ternSharesFrontendHost())
 
-    if (source && 'path' in source) { source.host = 'tern' }
-
-    if (!source || !this.sid || this.#switches.pending) {
+    if (!sources.length || !this.sid || this.#switches.pending) {
       return false
     }
 
-    void this.attachments.add(source, this.sid)
+    for (const source of sources) {
+      if ('path' in source) { source.host = 'tern' }
+      void this.attachments.add(source, this.sid)
+    }
 
     return true
   }
@@ -935,7 +956,7 @@ export class App implements OverlayHost {
 
         // prompt.submit is the normal user-message path. Unlike our local queue,
         // an unqueued submission lets the gateway steer a running tool turn.
-        this.#send(raw.trim(), { images: this.attachments.take(sid) })
+        this.#send(raw.trim(), { images: this.attachments.take(sid), continuation: true })
       }
     } finally {
       this.#submittingApproval = false
@@ -976,7 +997,7 @@ export class App implements OverlayHost {
   }
 
   /** Sends `text` now; `queued` marks a drained queue entry (the gateway must queue it, never steer with it). */
-  #send(text: string, { queued = false, images = [] }: { queued?: boolean; images?: SubmittedImage[] } = {}) {
+  #send(text: string, { queued = false, images = [], continuation = false }: { queued?: boolean; images?: SubmittedImage[]; continuation?: boolean } = {}) {
     // A session switch in flight: the prompt belongs to the session it adopts.
     if (!this.sid || this.#switches.pending) {
       this.queue.unshift(text)
@@ -994,7 +1015,7 @@ export class App implements OverlayHost {
     const submitted = { sid: this.sid, text, replayable: !this.#startupAttachmentPending && !images.length }
     this.#lastSubmitted = submitted
     this.#startupAttachmentPending = false
-    const entry = this.transcript.user(text, Date.now(), images)
+    const entry = continuation ? this.transcript.boundaryUser(text, Date.now(), images) : this.transcript.user(text, Date.now(), images)
     this.#startBusy('Working…')
     this.#gw
       .request<PromptSubmitResult>('prompt.submit', {

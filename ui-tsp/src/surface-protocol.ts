@@ -48,6 +48,8 @@ export class SurfaceView {
     }
   }
 
+  get trees(): readonly Tree[] { return this.#view.regions.flatMap(tree => tree ? [tree] : []) }
+
   dispatch(event: TspEvent) {
     return this.#dispatch?.dispatch(event)
   }

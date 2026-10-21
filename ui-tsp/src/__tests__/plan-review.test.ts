@@ -144,6 +144,45 @@ const body = (nodes: Fixture['nodes']) => nodes('layer').find(node => node.props
 const sheet = (nodes: Fixture['nodes']) => nodes('layer').find(node => node.props.role === 'omp.overlay.plan')
 
 describe('read-only plan review', () => {
+  it('Tab traverses actual rendered actions with a native selected picker and dispatches Settings', async () => {
+    await withApp(async ({ app, nodes, press, request }) => {
+      seed(app)
+      app.composer.set('preserve keyboard draft', 5)
+      request.mockImplementation(async method => method === 'settings.get' ? { fields: {}, profile: 'fixture' } : { items: [] })
+      app.changed()
+      await rendered()
+      await press('\t')
+      const picker = () => nodes('layer').find(n => n.kind === 'picker' && n.props.title === 'Keyboard actions')!
+      expect(picker()).toBeDefined()
+      const items = picker().props.items as { id: string; label: string }[]
+      expect(items.some(item => item.label.includes('Copy answer'))).toBe(true)
+      const settings = items.find(item => /settings/i.test(item.label))!
+      expect(settings).toBeDefined()
+
+      for (let i = 0; i < items.length && picker().props.selected !== settings.id; i++) { await press('\t') }
+      expect(picker().props.selected).toBe(settings.id)
+      await press('\r')
+      expect(nodes('layer').some(n => n.kind === 'prefs')).toBe(true)
+      expect(app.composer.text).toBe('preserve keyboard draft')
+      expect(app.composer.cursor).toBe(5)
+    })
+  })
+
+  it('Help routes scroll keys to its actual sheet body without leaking edits', async () => {
+    await withApp(async ({ app, press, surface, request }) => {
+      request.mockResolvedValue({ pairs: [['/late', 'Late command']] })
+      app.composer.set('preserved')
+      await app.slash('/help')
+      await rendered()
+      const scroll = vi.spyOn(surface, 'scroll')
+      await press('\x1b[6~')
+      expect(scroll).toHaveBeenLastCalledWith(expect.stringMatching(/\.body$/), 'page-down')
+      await press('\x1b[F')
+      expect(scroll).toHaveBeenLastCalledWith(expect.stringMatching(/\.body$/), 'end')
+      expect(app.composer.text).toBe('preserved')
+    })
+  })
+
   it('/plan builds the ToC from the latest completed assistant heading-structured message and jumps sections', async () => {
     await withApp(async ({ app, nodes, press, surface, click, request }) => {
       seed(app)
