@@ -38,7 +38,8 @@ def capture(label):
     for listing in lists:
         selected = [n for n in flat([listing]) if n.get('role') == 'ListBoxOption' and 'selected' in n.get('states', [])]
         _, y, _, h = listing['bounds']
-        check(label+': selected option fully inside scrollport', bool(selected) and all(n['bounds'][1] >= y-.5 and n['bounds'][1]+n['bounds'][3] <= y+h+.5 for n in selected), selected=selected, viewport=listing['bounds'])
+        # AX option bounds include the native one-pixel selection border.
+        check(label+': selected option fully inside scrollport', bool(selected) and all(n['bounds'][1] >= y-1.1 and n['bounds'][1]+n['bounds'][3] <= y+h+1.1 for n in selected), selected=selected, viewport=listing['bounds'])
     r.ctl(lane, 'shot '+label)
     return flat(tree['tree'])
 
