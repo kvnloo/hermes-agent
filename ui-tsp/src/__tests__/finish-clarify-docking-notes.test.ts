@@ -85,6 +85,10 @@ async function withApp(
   const gw = new GatewayClient()
   const answers: unknown[] = []
   vi.spyOn(gw, 'request').mockImplementation(async (method, params) => {
+    if (method === 'voice.dictate.start' || method === 'voice.dictate.stop') {
+      return {}
+    }
+
     if (method === 'complete.slash') {
       return { items: [] }
     }
@@ -191,6 +195,52 @@ afterAll(() => {
 })
 
 describe('clarify dock ownership, notes and deadlines', () => {
+  it('first Escape discards dictation before clarification, including Vim and late final events', async () => {
+    await withApp(async ({ app, gw, surface, ask, press, answers }) => {
+      app.composer.vim.setEnabled(true)
+      app.composer.set('keep draft', 4)
+      app.dictation.toggle()
+      await press()
+      const start = vi.mocked(gw.request).mock.calls.find(([method]) => method === 'voice.dictate.start')![1]!
+      const captureId = start.capture_id
+      gw.emit('event', { type: 'voice.dictation', session_id: 's1', payload: {
+        capture_id: captureId, state: 'recording', text: 'partial only'
+      } })
+      ask('during-capture')
+      await press()
+      expect(target(surface, 'status').props.text).toContain('Recording')
+      await press('\x1b[27u')
+      expect(gw.request).toHaveBeenCalledWith('voice.dictate.stop', {
+        session_id: 's1', capture_id: captureId, cancel: true
+      })
+      expect(answers).toEqual([])
+      expect(target(surface, 'question').props.text).toBe('Which?')
+      expect(nodes(surface).some(n => String(n.props.role).startsWith('omp.composer.mic.recording'))).toBe(false)
+      gw.emit('event', { type: 'voice.dictation', session_id: 's1', payload: {
+        capture_id: captureId, state: 'idle', final: true, text: 'must be discarded'
+      } })
+      await press()
+      expect(app.composer.text).toBe('keep draft')
+      expect(app.composer.cursor).toBe(4)
+      expect(app.composer.vim.mode).toBe('insert')
+      await press('\x1b[27u')
+      expect(answers).toEqual([{ id: 'during-capture', result: { answers: { q0: null } } }])
+    })
+  })
+
+  it('renders question-named answer list and clarification-specific hint, visible and hidden', async () => {
+    await withApp(async ({ surface, ask, press }) => {
+      ask('named-list')
+      await press()
+      expect(nodes(surface).find(n => n.kind === 'list')?.props.aria).toBe('Answer choices: Which?')
+      const hint = () => nodes(surface).find(n => n.props.role === 'omp.composer.hint')?.props.text
+      expect(hint()).toBe('Answer question · alt+h show/hide')
+      await press(altH)
+      expect(hint()).toBe('Answer question · alt+h show/hide')
+      expect(target(surface, 'waiting').props.text).toContain('Clarification waiting')
+    })
+  })
+
   it('docks nonmodally, hides/shows with registered Alt+H and preserves draft, choice and free text', async () => {
     await withApp(async ({ app, surface, ask, press, edit, answers }) => {
       app.composer.set('main draft', 4)
