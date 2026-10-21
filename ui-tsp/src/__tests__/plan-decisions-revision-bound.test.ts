@@ -200,6 +200,34 @@ const planCalls = (f: Awaited<ReturnType<typeof mount>>, method: string) =>
   f.request.mock.calls.filter(([m]) => m === method)
 
 describe('revision-bound plan decisions', () => {
+  it('renders bounded multiline plan editing and keeps feedback independent from other editors', async () => {
+    await withApp(async f => {
+      await f.open()
+      await f.click('edit-plan')()
+      await paint()
+      const editor = f.nodes().find(n => n.props.key === 'note')!
+      expect(editor.kind).toBe('editor')
+      expect(editor.props.maxLines).toBe(10)
+      expect(editor.props.text).toContain('\n## Verify')
+      await f.click('review')()
+      await paint()
+      await f.click('refine')()
+      await paint()
+      expect(f.nodes().find(n => n.props.key === 'note')?.props.text).toBe('')
+      await f.edit('private feedback')
+      await f.click('review')()
+      await paint()
+      await f.click('annotate')()
+      await paint()
+      await f.edit('section-only note')
+      await f.click('refine')()
+      await paint()
+      await f.click('refine')()
+      await paint()
+      expect(f.nodes().find(n => n.props.key === 'note')?.props.text).toBe('private feedback')
+    })
+  })
+
   it('uses a private external-editor file and removes it after success or cancellation', async () => {
     const { readFile, stat, writeFile } = await import('node:fs/promises')
     let file = ''

@@ -108,4 +108,11 @@ test("restart resets transient navigation and cannot restore an approval", funct
     setup(); local s = def.init({}, {"/fixture.hvisual.json"}, {mode = "churn", approved = true})
     eq(s.mode, "code"); eq(s.current.id, "repo"); eq(s.approved, nil); eq(def.save, nil)
 end)
+test("single child map does not inherit the tile zero flex basis", function()
+    local s = setup()
+    def.event(s, {ev = "action", act = "drill", value = "tests"}, {})
+    local map = def.view(s, {}).main.c[4]
+    assert(string.find(map.p.class, "nv-map", 1, true))
+    eq(map.p.basis, nil)
+end)
 print(count .. " renderer-logic checks passed (Lua 5.4 + stub Tern; not live Luau/Tern)")

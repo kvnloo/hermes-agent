@@ -165,7 +165,7 @@ tern.block.define("reply", {
             top[i] = {label = item.label, value = item.churn, title = item.label .. ": " .. item.churn .. " churn"}
         end
         local map = tiles(state, 1, #state.items, 0)
-        map.p = map.p or {}; map.p.grow = 0; map.p.class = (map.p.class or "") .. " nv-map"
+        map.p = map.p or {}; map.p.grow = 0; map.p.basis = nil; map.p.class = (map.p.class or "") .. " nv-map"
         local selected = state.items[state.selected]
         state.cached = {main = ui.col({
             ui.text(state.bundle.artifact.document.title .. " — " .. state.current.label),

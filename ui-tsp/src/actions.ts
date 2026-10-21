@@ -37,6 +37,8 @@ const always = () => true
 
 // Defaults are immutable. Each session projects its effective profile bindings.
 export const APP_ACTIONS: readonly Action[] = [
+  { id: 'app.keyboard.actions', title: 'Keyboard traversal of rendered card / composer actions', group: 'Navigation',
+    keys: ['f6', 'tab'], when: ctx => !ctx.completionOpen, run: app => app.keyboardActions() },
   {
     id: 'app.clear',
     title: 'Clear the draft / interrupt / exit (twice)',
@@ -459,6 +461,13 @@ export const BTW_ACTIONS = [
   { keys: ['alt+enter'], action: 'send' },
   { keys: ['ctrl+x'], action: 'cancel' },
   { keys: ['alt+c'], action: 'copy' }
+] as const
+
+export const KEYBOARD_ACTIONS = [
+  { keys: ['escape'], action: 'close' },
+  { keys: ['enter', 'space'], action: 'activate' },
+  { keys: ['tab', 'down', 'f6'], action: 'next' },
+  { keys: ['shift+tab', 'up', 'shift+f6'], action: 'previous' }
 ] as const
 
 /** Plan-local commands; editing keys remain owned by its private note editor. */

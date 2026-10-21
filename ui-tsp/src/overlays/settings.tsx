@@ -728,10 +728,13 @@ class Settings implements Overlay {
         pages={[
           { group: 'Live state', icon: 'session', id: SESSION_PAGE, label: 'Session' },
           ...categories.map(category => ({
-            changed: Object.values(this.#fields).filter(field => field.category === category && !equal(field.value, field.default)).length,
             group: 'Profile defaults',
             id: `profile.${category}`,
-            label: category.replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+            label: category.replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) + (() => {
+              const count = Object.values(this.#fields).filter(field => field.category === category && !equal(field.value, field.default)).length
+
+              return count ? ` (${count} changed)` : ''
+            })()
           }))
         ]}
         query={this.#searching ? this.#search.text : undefined}

@@ -158,6 +158,13 @@ export class Retention {
     }
   }
 
+  actionTrees(): Tree[] {
+    if (!this.#cx) { return [] }
+
+    return [...this.#entries.values()].filter(item => !item.evicted).sort((a, b) => a.index - b.index).flatMap(item =>
+      projectedEntryNodes(item.entry, `main.${item.entry.id}`, this.#cx!).flatMap(element => element instanceof Node ? [new Tree(`main.${element.props.key}`, element)] : []))
+  }
+
   /** Called once per permitted App build; returned ops share Surface's ACK queue. */
   render(transcript: Transcript, cx: TranscriptContext, hold: boolean): Op[] {
     this.#cx = cx

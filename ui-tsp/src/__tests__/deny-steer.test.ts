@@ -193,6 +193,24 @@ afterAll(() => {
 })
 
 describe('non-blocking approvals with deny-and-steer', () => {
+  it('renders denial steering before the answer it caused after message settlement', async () => {
+    await withApp(async ({ app, request, send, surface }) => {
+      app.transcript.start(1)
+      app.transcript.text('Earlier work')
+      app.busy = { label: 'Waiting', since: {}, startedAt: 1 }
+      request('chronology')
+      await send('Do not delete it; reply denied safely.')
+      app.transcript.text('denied safely.')
+      app.transcript.complete({ text: 'denied safely.', status: 'complete' })
+      app.changed()
+      await rendered()
+      await rendered()
+      const texts = nodes(surface).filter(n => n.kind === 'md').map(n => n.props.text)
+      expect(texts.indexOf('Do not delete it; reply denied safely.')).toBeLessThan(texts.indexOf('denied safely.'))
+      expect(texts.filter(text => text === 'Do not delete it; reply denied safely.')).toHaveLength(1)
+    })
+  })
+
   it('allows once with 1 on an empty draft, answering the exact request in the dock', async () => {
     await withApp(async ({ app, request, press, surface, calls, focus }) => {
       request('first')

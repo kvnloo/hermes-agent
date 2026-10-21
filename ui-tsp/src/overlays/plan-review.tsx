@@ -66,7 +66,8 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
     }
   }
 
-  const note = new Composer()
+  const drafts = { refine: new Composer(), annotation: new Composer(), plan: new Composer() }
+  const note = () => drafts[editing]
 
   const choose = (index: number) => {
     if (!plan?.sections[index]) {
@@ -99,14 +100,14 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
       return
     }
 
-    const text = note.text.trim()
+    const text = note().text.trim()
 
     if (revision) {
       if (editing === 'annotation') {
         void transact(() => host.request('plan.annotate', { ...revision, section: annotationSection, text }))
       } else if (editing === 'plan') {
         if (text) {
-          void transact(() => host.request('plan.edit', { ...revision, text: note.text }))
+          void transact(() => host.request('plan.edit', { ...revision, text: note().text }))
         }
       } else if (text || status?.plan?.annotations.length) {
         void transact(() => host.request('plan.decide', { ...revision, intent: 'refine', feedback: text }), true)
@@ -188,7 +189,7 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
                 onClick={() => {
                   editing = 'annotation'
                   annotationSection = selected
-                  note.set(status?.plan?.annotations.find(annotation => annotation.section === selected)?.text ?? '')
+                  note().set(status?.plan?.annotations.find(annotation => annotation.section === selected)?.text ?? '')
                   refining = true
                   host.changed()
                 }}
@@ -200,7 +201,7 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
                 key="edit-plan"
                 onClick={() => {
                   editing = 'plan'
-                  note.set(plan?.text ?? '')
+                  note().set(plan?.text ?? '')
                   refining = true
                   host.changed()
                 }}
@@ -255,7 +256,7 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
           {refining ? (
             <text
               key="refine-hint"
-              text={`${editing === 'annotation' ? 'Annotate the selected section.' : editing === 'plan' ? 'Edit the full plan; saving creates a new revision and clears section notes.' : 'Describe what should change in the plan.'} Your original composer draft is preserved.`}
+              text={`${editing === 'plan' ? 'Shift+Enter inserts a line; Enter saves. ' : ''}${editing === 'annotation' ? 'Annotate the selected section.' : editing === 'plan' ? 'Edit the full plan; saving creates a new revision and clears section notes.' : 'Describe what should change in the plan.'} Your original composer draft is preserved.`}
               wrap="word"
             />
           ) : (
@@ -266,21 +267,22 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
             </md>
           )}
           {plan && refining ? (
-            <input
+            <editor
               aria={editing === 'annotation' ? 'Section annotation' : editing === 'plan' ? 'Plan revision' : 'Plan refinement'}
-              cursor={note.cursor}
+              cursor={note().cursor}
               key="note"
+              maxLines={editing === 'plan' ? 10 : 4}
               onEdit={ev => {
-                note.edit(ev)
+                note().edit(ev)
                 host.changed()
               }}
               onUndo={() => {
-                note.undo()
+                note().undo()
                 host.changed()
               }}
               placeholder="How should the plan change?"
               role="omp.ask.input"
-              text={note.text}
+              text={note().text}
             />
           ) : null}
           <row align="center" gap="sm" key="actions" role="omp.actions">
@@ -331,7 +333,7 @@ export function openPlanReview(host: PlanHost, plan: Plan | undefined, status: P
 
       if (refining && action !== 'close') {
         // Only note submission can decide from the editor; Alt+A must not approve by accident.
-        if (note.key(key) === 'submit') {
+        if (note().key(key) === 'submit') {
           sendNote()
         }
       } else if (action) {

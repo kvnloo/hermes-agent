@@ -156,6 +156,22 @@ afterAll(() => {
 })
 
 describe('native Settings', () => {
+  it('renders distinct category names with change counts in their labels', async () => {
+    const stored = {
+      theme: field('boolean', true, { category: 'display', default: false }),
+      memory: field('boolean', true, { category: 'memory', default: false })
+    }
+
+    await withApp({ read: async () => profile(stored), write: async () => ({}) }, async (app, surface) => {
+      openSettings(app)
+      await rendered()
+      const pages = prefs(surface).props.pages as { id: string; label: string }[]
+      expect(pages.filter(page => page.id.startsWith('profile.')).map(page => page.label)).toEqual([
+        'Display (1 changed)', 'Memory (1 changed)'
+      ])
+    })
+  })
+
   it('coalesces duplicate commits, serializes new edits, and shows canonical profile values', async () => {
     const stored = { limit: field('number', 10), enabled: field('boolean', false) }
     const gate = Promise.withResolvers<void>()
