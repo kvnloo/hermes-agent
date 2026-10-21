@@ -189,7 +189,7 @@ const COMMANDS: readonly LocalCommand[] = [
     aliases: ['session', 'switch'],
     name: 'sessions',
     run: (app, arg) => {
-      if (!arg) {
+      if (!arg || ['list', 'ls', 'browse'].includes(arg.toLowerCase())) {
         return openSessionPicker(app)
       }
 

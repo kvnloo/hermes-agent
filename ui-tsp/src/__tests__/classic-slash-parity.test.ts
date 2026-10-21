@@ -40,6 +40,16 @@ describe('classic slash registry parity', () => {
     } finally { vi.useRealTimers() }
   })
 
+  it.each(names.filter(({ name, command }) => !command.gateway_only && !localCommand(name) && !['btw', 'mcp', 'ssh'].includes(command.name)))(
+    '/$name reaches the gateway when it has no native owner', async ({ name }) => {
+      const app = new App(new Session(new EventEmitter(), { write() {} }, { exitHooks: false, record: '' }), new GatewayClient(), 'test')
+      app.sid = 'sid'
+      const request = vi.spyOn(app.gw, 'request').mockResolvedValue({ output: '' })
+      await app.slash(`/${name}`)
+      expect(request).toHaveBeenCalledWith('slash.exec', { command: name, session_id: 'sid' })
+    }
+  )
+
   it.each(localCompletions())('$text is discoverable and has a dispatch owner and description', item => {
     expect(localCommand(item.text.slice(1))).toBeDefined()
     expect(item.meta).toBeTruthy()

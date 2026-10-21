@@ -38,7 +38,7 @@ App-level bindings live in `src/actions.ts`. The same registry supplies grouped
 | app | app.session.resume | alt+s | Open session picker |
 | app | app.tree | alt+t | Browse the copied-session branch tree |
 | app | app.tree.search | alt+shift+s | Search saved sessions and branch paths |
-| app | app.session.fork | alt+shift+f | /fork [message-id]: fork into a new Tern pane |
+| app | app.session.fork | alt+shift+f | /fork-message [message-id]: fork into a new Tern pane |
 | app | app.history.older | ctrl+home | Load and scroll to older retained history |
 | app | app.clipboard.copyPrompt | alt+shift+c | Copy composer text |
 | app | app.retry | f5 / alt+r | Retry the latest retryable text-only failure (idle, empty prompt) |
@@ -96,8 +96,9 @@ bytes, not a complete native-window/preset matrix.
 
 ## Forking
 
-`/fork` creates a durable child through `session.fork` and opens a pane with
-literal argv `hermes --resume <new-id> -p <owning-profile>`. `/fork <message-id>`
+`/fork` is the classic alias for `/branch` and switches this pane to the child.
+`/fork-message` creates a durable child through `session.fork` and opens a pane with
+literal argv `hermes --resume <new-id> -p <owning-profile>`. `/fork-message <message-id>`
 copies through that durable user/assistant message (inclusive). The gateway owns
 all transcript copying and profile resolution; the original pane/session stays
 unchanged. Outside Tern, or if pane launch fails, a notice retains the new id and

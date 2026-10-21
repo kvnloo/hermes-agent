@@ -17,6 +17,7 @@ a = p.parse_args()
 r = Runner(SimpleNamespace(worktree=a.worktree, receipts=a.receipts, node=Path(shutil.which('node')), python=Path(sys.executable)))
 lane = r.out/'tern-serve-slash-parity'
 result = dict(evidenceClass='tern-serve+deterministic-gateway-fixture', baseline=a.baseline, captures=[], checks=[])
+completed = False
 def flat(items):
     return [n for item in items for n in [item, *flat(item.get('children', []))]]
 def capture(label):
@@ -32,7 +33,7 @@ def command(text):
     time.sleep(.55)
     r.ctl(lane, 'wait 200')
 try:
-    r.command([r.node, r.root/'ui-tsp/e2e/slash-parity.build.mjs'], r.root, r.base_env, r.out/'build.log')
+    r.command([r.node, r.root/'ui-tsp/e2e/slash-parity.build.mjs', *(['--baseline'] if a.baseline else [])], r.root, r.base_env, r.out/'build.log')
     assert gate_open(r.isolation(lane, 'tern-serve'))
     mode = lane/'command.txt'
     mode.write_text('')
@@ -55,6 +56,7 @@ try:
             if dr: height += dr*20 if abs(dr)>1 else (1 if dr>0 else -1)
         assert (pane['cols'],pane['rows'])==(cols,rows), pane
         result.setdefault('geometry',[]).append(pane)
+        command('fixture:seed')
         for name in ['skills','usage','context','mcp list','complete:/jobs','complete:/editor']:
             command(name if name.startswith('complete:') else '/'+name)
             label=f'{cols}x{rows}-'+name.replace(' ','-').replace(':/','-')
@@ -76,12 +78,14 @@ try:
     command('/q list')
     nodes=capture('q-list-after')
     check('q list does not quit', any('No queued prompts.' in n.get('text','') for n in nodes))
+    completed = True
 finally:
     if (lane/'isolation.json').exists():
         shots=Path(json.loads((lane/'isolation.json').read_text())['shots'])
         if shots.exists(): shutil.copytree(shots,lane/'shots',dirs_exist_ok=True)
     if hasattr(r,'children'): r.stop(lane)
-    result['status']='expected-red' if a.baseline else 'pass' if all(c['passed'] for c in result['checks']) else 'fail'
+    result['status'] = ('expected-red' if a.baseline and any(not c['passed'] for c in result['checks'])
+                        else 'pass' if completed and all(c['passed'] for c in result['checks']) else 'fail')
     (r.out/'summary.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps(dict(receipt=str(r.out),**result),indent=2))
 if not a.baseline: assert result['status']=='pass'

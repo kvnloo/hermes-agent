@@ -47,7 +47,12 @@ const timer = setInterval(async () => {
   if (next === previous) { return }
   previous = next
   for (const overlay of [...app.overlays]) { app.close(overlay) }
-  if (next.startsWith('complete:')) {
+  if (next === 'fixture:seed') {
+    generation = 1
+    app.sid = 'fixture-1'
+    app.transcript.clear()
+    app.composer.set('')
+  } else if (next.startsWith('complete:')) {
     app.composer.set(next.slice(9))
   } else {
     app.composer.set('')
