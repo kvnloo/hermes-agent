@@ -1108,7 +1108,10 @@ class LocalEnvironment(BaseEnvironment):
         # before the command (including the login snapshot) can fork work. Do not
         # put the gateway itself in the workload slice or silently bypass failure.
         admission = Path.home() / '.local/bin/agent-tool-run'
-        if sys.platform.startswith('linux') and admission.is_file():
+        scope_policy = Path.home() / '.config/systemd/user/hermes-worker-.scope.d/50-agent-envelope.conf'
+        if sys.platform.startswith('linux') and (admission.is_file() or scope_policy.is_file()):
+            if not admission.is_file():
+                raise RuntimeError('host workload admission is required but agent-tool-run is missing; refusing local execution')
             args = [str(admission), '--', *args]
         self._recover_cwd()
         proc = subprocess.Popen(
