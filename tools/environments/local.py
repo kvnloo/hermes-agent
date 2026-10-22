@@ -1104,6 +1104,12 @@ class LocalEnvironment(BaseEnvironment):
         if login:
             cmd_string = _prepend_shell_init(cmd_string, _resolve_shell_init_files())
         args = [bash, *(["-l"] if login else []), "-c", cmd_string]
+        # Host-owned admission is opt-in by an installed executable, and runs
+        # before the command (including the login snapshot) can fork work. Do not
+        # put the gateway itself in the workload slice or silently bypass failure.
+        admission = Path.home() / '.local/bin/agent-tool-run'
+        if sys.platform.startswith('linux') and admission.is_file():
+            args = [str(admission), '--', *args]
         self._recover_cwd()
         proc = subprocess.Popen(
             args, text=True, env=_make_run_env(self.env), encoding="utf-8", errors="replace",
