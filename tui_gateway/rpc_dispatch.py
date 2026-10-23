@@ -75,10 +75,17 @@ def dispatch(req: dict, transport: Optional[Transport] = None) -> dict | None:
         session_snapshot = None
         if plugin_call or (normalized[1] == "gateway.capabilities"
                            and normalized[2].get("session_id") is not None):
-            from tui_gateway.plugin_methods import authorize_session
-            session_snapshot, problem = authorize_session(normalized[0], normalized[2])
-            if problem is not None:
-                return problem
+            # This cheap capture runs on the reader; defer importing plugin modules,
+            # discovery and callback work until after the pool submission.
+            params = normalized[2]
+            if "profile" in params:
+                return _err(normalized[0], 4001, "profile selection is not authorized for plugin RPCs")
+            sid = params.get("session_id")
+            if not isinstance(sid, str) or not sid:
+                return _err(normalized[0], 4001, "attached session_id required")
+            session_snapshot = _current_session_steer_authority(sid)[1]
+            if session_snapshot is None:
+                return _err(normalized[0], 4001, "session is detached, foreign or replaced")
         from hermes_cli.backend_retirement import retirement
 
         # Reserve BEFORE enqueueing: a queued handler has accepted work even though no worker runs yet.
