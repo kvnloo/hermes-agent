@@ -115,16 +115,12 @@ describe('stripGeneratedImageEchoes', () => {
       'Keep /tmp/cat.png.bak; omit .'
     )
     expect(
-      stripGeneratedImageEchoes('Download https://cdn.example/cat.png?download=1', [
-        'https://cdn.example/cat.png'
-      ])
+      stripGeneratedImageEchoes('Download https://cdn.example/cat.png?download=1', ['https://cdn.example/cat.png'])
     ).toBe('Download https://cdn.example/cat.png?download=1')
   })
 
   it('strips colon-prefixed and typographically quoted echoes but keeps Markdown destinations', () => {
-    expect(stripGeneratedImageEchoes('Image:/tmp/cat.png; and “/tmp/cat.png”', ['/tmp/cat.png'])).toBe(
-      'Image:; and “”'
-    )
+    expect(stripGeneratedImageEchoes('Image:/tmp/cat.png; and “/tmp/cat.png”', ['/tmp/cat.png'])).toBe('Image:; and “”')
     expect(stripGeneratedImageEchoes('Open [cat](/tmp/cat.png) instead', ['/tmp/cat.png'])).toBe(
       'Open [cat](/tmp/cat.png) instead'
     )
