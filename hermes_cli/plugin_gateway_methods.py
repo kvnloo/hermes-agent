@@ -12,7 +12,7 @@ from pydantic import BaseModel
 # Three or more dotted segments: the first belongs to the registering plugin and
 # the rest name its own surface. Never normalize a caller-controlled method name.
 _SEGMENT = r"[a-z][a-z0-9_-]*"
-_METHOD = re.compile(rf"{_SEGMENT}(?:\\.{_SEGMENT}){{2,}}\\Z")
+_METHOD = re.compile(rf"{_SEGMENT}(?:\.{_SEGMENT}){{2,}}\Z")
 
 
 @dataclass(frozen=True)
