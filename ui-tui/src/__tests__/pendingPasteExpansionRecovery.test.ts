@@ -75,3 +75,29 @@ it('an image token remains only an attachment placeholder, not transcript text',
   const { restored } = roundTrip(display, tokens)
   expect(restored.expand!(display)).toBe('inspect now')
 })
+
+it('cold recovery expands later paste tokens when visible interpolation consumes an earlier label', () => {
+  const consumed = '[[ pasted text [1 line] ]]'
+  const retained = '[[ pasted text [2 lines] ]]'
+  const display = `query {!echo ${consumed}} then ${retained}`
+  const tokens: ComposerToken[] = [
+    { kind: 'paste', label: consumed, text: 'not part of the interpolated result' },
+    { kind: 'paste', label: retained, text: 'SECOND PAYLOAD' }
+  ]
+  const { restored } = roundTrip(display, tokens)
+  const resolved = `query DONE then ${retained}`
+  expect(restored.expand!(resolved)).toBe('query DONE then SECOND PAYLOAD')
+  expect(restored.expand!(resolved)).toBe('query DONE then SECOND PAYLOAD')
+})
+
+it('cold recovery removes remaining image placeholders after earlier tokens are interpolated away', () => {
+  const consumed = '[[ pasted text [1 line] ]]'
+  const image = '[[ image 1 ]]'
+  const display = `query {!echo ${consumed}} then ${image}`
+  const tokens: ComposerToken[] = [
+    { kind: 'paste', label: consumed, text: 'not part of the interpolated result' },
+    { kind: 'image', index: 1, label: image, path: '/tmp/attachment.png', mime: 'image/png' }
+  ]
+  const { restored } = roundTrip(display, tokens)
+  expect(restored.expand!(`query DONE then ${image}`)).toBe('query DONE then')
+})

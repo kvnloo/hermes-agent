@@ -66,13 +66,20 @@ function validExpansionSnapshot(value: unknown): value is ExpansionSnapshot {
  */
 function expandFromSnapshot(snapshot: ExpansionSnapshot): (value: string) => string {
   return value => {
-    let index = 0
+    // Interpolation can consume earlier tokens. Match surviving labels by identity
+    // and consume repeated labels in their original order.
+    const remainingByLabel = new Map<string, string[]>()
+    for (const { label, value: payload } of snapshot) {
+      const values = remainingByLabel.get(label)
+      if (values) values.push(payload)
+      else remainingByLabel.set(label, [payload])
+    }
+
     return value.replace(new RegExp(`[ \\t]?(?:${PASTE_SNIPPET_RE.source})`, 'g'), match => {
       const label = match.trimStart()
-      const replacement = snapshot[index]
-      if (!replacement || replacement.label !== label) return match
-      index++
-      return replacement.value ? match.slice(0, match.length - label.length) + replacement.value : ''
+      const payload = remainingByLabel.get(label)?.shift()
+      if (payload === undefined) return match
+      return payload ? match.slice(0, match.length - label.length) + payload : ''
     }).trim()
   }
 }
