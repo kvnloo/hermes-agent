@@ -371,11 +371,10 @@ async def test_overflow_finalize_prevents_redispatch_under_reply_to_off(adapter)
     assert await adapter._should_backfill_discord_message(user_message) is False
 
 
-
 @pytest.mark.asyncio
 async def test_overflow_ledger_remains_opt_in(adapter, monkeypatch):
     _seed_source_message(adapter)
-    channel, edits = _wire(adapter)
+    _wire(adapter)
     monkeypatch.setenv("DISCORD_MISSED_MESSAGE_BACKFILL", "false")
 
     result = await adapter.edit_message(
