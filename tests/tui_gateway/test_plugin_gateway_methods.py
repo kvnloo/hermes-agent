@@ -226,3 +226,40 @@ def test_capabilities_only_describe_callers_profile(runtime, tmp_path, monkeypat
     assert call(server, first, secondary_name, session_id="one")["error"]["code"] == -32601
     assert call(server, first, secondary_name, session_id="two")["error"]["code"] == 4001
     assert call(server, second, secondary_name, session_id="two")["result"] == {"from": "work"}
+
+
+def test_real_fixture_plugin_discoverable_and_callable_over_dispatch(runtime, tmp_path, monkeypatch):
+    """No injected dispatcher functions: load actual fixture via PluginManager discovery."""
+    import hermes_yaml as yaml
+
+    server, plugins, manager = runtime
+    home = tmp_path / ".hermes"
+    plugin_dir = home / "plugins" / "hermes-tern"
+    plugin_dir.mkdir(parents=True)
+    (plugin_dir / "plugin.yaml").write_text(
+        yaml.safe_dump({"name": "hermes-tern", "version": "1.0.0", "description": "gateway fixture"}),
+        encoding="utf-8",
+    )
+    (plugin_dir / "__init__.py").write_text(
+        "def handle(request, params):\n"
+        "    request.assert_attached()\n"
+        "    return {'profile': request.profile, 'session': request.session_id}\n"
+        "def register(ctx):\n"
+        "    ctx.register_gateway_method('hermes-tern.browser.blocks', handle)\n",
+        encoding="utf-8",
+    )
+    (home / "config.yaml").write_text(
+        yaml.safe_dump({"plugins": {"enabled": ["hermes-tern"]}}), encoding="utf-8",
+    )
+    monkeypatch.setattr(plugins, "get_bundled_plugins_dir", lambda: tmp_path / "empty-bundled")
+    monkeypatch.setattr(plugins.PluginManager, "_scan_entry_points", lambda self: [])
+    manager.discover_and_load()
+    assert manager._plugins["hermes-tern"].enabled
+    peer = Peer()
+    attach(server, "real", peer)
+    assert call(server, peer, "gateway.capabilities", session_id="real")["result"]["plugin_methods"] == [NAME]
+    assert call(server, peer, NAME, session_id="real")["result"] == {
+        "profile": "default", "session": "real",
+    }
+    manager.unload("hermes-tern")
+    assert call(server, peer, NAME, session_id="real")["error"]["code"] == -32601
