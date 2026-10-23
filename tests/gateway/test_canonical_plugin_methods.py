@@ -105,7 +105,7 @@ async def test_default_native_client_discovers_and_calls_real_fixture_plugin(nat
         "def echo(request, params):\n"
         "    request.assert_attached()\n"
         "    return {'profile': request.profile, 'session': request.session_id,\n"
-        "            'value': params['value'], 'worker': threading.current_thread().name}\n"
+        "            'value': params['value'], 'worker': threading.get_ident()}\n"
         "def register(ctx):\n"
         "    ctx.register_gateway_method('hermes-tern.surface.echo', echo, schema=EchoParams)\n",
         encoding="utf-8",
@@ -132,7 +132,7 @@ async def test_default_native_client_discovers_and_calls_real_fixture_plugin(nat
         assert result["result"]["profile"] == "default", result
         assert result["result"]["session"] == "owned"
         assert result["result"]["value"] == 7
-        assert result["result"]["worker"].startswith("asyncio_")
+        assert result["result"]["worker"] != threading.get_ident()
         bad = await request(viewer, NAME, {"session_id": "owned", "value": "seven"})
         assert bad["error"]["code"] == -32602
         assert (await request(viewer, NAME, {"session_id": "owned", "value": 7, "extra": 1}))["error"]["code"] == -32602
@@ -278,3 +278,34 @@ async def test_canonical_same_name_isolated_by_owner_profile(native):
         await first_view.close()
         await second_view.close()
         second_db.close()
+
+
+@pytest.mark.asyncio
+async def test_canonical_execution_generation_change_revokes_inflight_method(native):
+    """A live session reused for a later execution cannot accept an older callback."""
+    entered, release = threading.Event(), threading.Event()
+
+    def slow(ctx, params):
+        entered.set()
+        assert release.wait(10), "test failed to release plugin worker"
+        ctx.assert_attached()
+        return {"changed": True}
+
+    install(native, slow)
+    viewer = connect(native.authority)
+    try:
+        await resume(viewer)
+        task = asyncio.create_task(request(viewer, NAME, {"session_id": "owned"}))
+        try:
+            await async_wait_until(entered.is_set, timeout=10, what="plugin generation admission")
+            # Model a new live runtime generation in the same DB row while the
+            # previously admitted handler is off-loop. The subscription did not move.
+            native.db._execute_write(lambda conn: conn.execute(
+                "UPDATE sessions SET runtime_generation=runtime_generation+1 WHERE id=?",
+                ("owned",),
+            ))
+        finally:
+            release.set()
+        assert (await task)["error"]["code"] == 4001
+    finally:
+        await viewer.close()
