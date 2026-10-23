@@ -1908,8 +1908,12 @@ export type PingParams = Record<string, never>
 export interface PingResult {
   pong: boolean
 }
+export interface GatewayCapabilitiesParams {
+  session_id?: string | null
+}
 export interface GatewayCapabilitiesResult {
   per_session_exclusive_submit: boolean
+  plugin_methods: string[]
 }
 export interface ClientCapabilitiesParams {
   server_requests?: boolean
@@ -6048,8 +6052,8 @@ export interface RpcMethods {
   'free_tier.provision': { params: ProfileParams; result: FreeTierProvisionResult }
   /** Pure read of the focused profile's free-tier identity state (no network, no side effects). */
   'free_tier.status': { params: ProfileParams; result: FreeTierStatusResult }
-  /** What THIS build enforces (a client withholds a feature unless advertised). */
-  'gateway.capabilities': { params: PingParams; result: GatewayCapabilitiesResult }
+  /** Build capabilities and live plugin RPC method names for the attached session's profile. */
+  'gateway.capabilities': { params: GatewayCapabilitiesParams; result: GatewayCapabilitiesResult }
   /** Resolve one exact pending approval raised by a local or peer room member. */
   'groups.approve': { params: GroupsApproveParams; result: GroupsApproveResult }
   /** Describe the hosted-room protocol implemented by this gateway. */

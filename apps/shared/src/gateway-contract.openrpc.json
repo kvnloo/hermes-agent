@@ -1106,12 +1106,12 @@
     },
     {
       "name": "gateway.capabilities",
-      "summary": "What THIS build enforces (a client withholds a feature unless advertised).",
+      "summary": "Build capabilities and live plugin RPC method names for the attached session's profile.",
       "params": [
         {
           "name": "params",
           "schema": {
-            "$ref": "#/components/schemas/PingParams"
+            "$ref": "#/components/schemas/GatewayCapabilitiesParams"
           }
         }
       ],
@@ -18625,16 +18625,43 @@
         "title": "FreeTierStatusResult",
         "type": "object"
       },
+      "GatewayCapabilitiesParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Session Id"
+          }
+        },
+        "title": "GatewayCapabilitiesParams",
+        "type": "object"
+      },
       "GatewayCapabilitiesResult": {
         "additionalProperties": false,
         "properties": {
           "per_session_exclusive_submit": {
             "title": "Per Session Exclusive Submit",
             "type": "boolean"
+          },
+          "plugin_methods": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Plugin Methods",
+            "type": "array"
           }
         },
         "required": [
-          "per_session_exclusive_submit"
+          "per_session_exclusive_submit",
+          "plugin_methods"
         ],
         "title": "GatewayCapabilitiesResult",
         "type": "object"
