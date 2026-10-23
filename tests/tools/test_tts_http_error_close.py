@@ -41,7 +41,10 @@ class _ErrorStreamingResponse:
 
 @pytest.fixture(autouse=True)
 def _clean_tts_env(monkeypatch):
-    for key in ("XAI_API_KEY", "XAI_BASE_URL", "HERMES_XAI_BASE_URL", "MINIMAX_API_KEY", "MINIMAX_CN_API_KEY", "MINIMAX_GROUP_ID"):
+    for key in (
+        "XAI_API_KEY", "XAI_BASE_URL", "HERMES_XAI_BASE_URL",
+        "MINIMAX_API_KEY", "MINIMAX_CN_API_KEY", "MINIMAX_GROUP_ID",
+    ):
         monkeypatch.delenv(key, raising=False)
 
 
