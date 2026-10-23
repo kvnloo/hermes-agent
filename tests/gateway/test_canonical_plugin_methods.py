@@ -642,6 +642,8 @@ async def test_scope_owner_loop_cannot_block_queued_real_ws_publication(native, 
                 lease.close()
             with pytest.raises(GatewayScopeError, match="asyncio.to_thread"):
                 lease.assert_current()
+            with pytest.raises(GatewayScopeError, match="asyncio.to_thread"):
+                lease.assert_caller(contexts[-1])
             with pytest.raises(RuntimeError, match="asyncio.to_thread"):
                 contexts[-1].assert_attached()
             assert not lease.cancellation.is_set()
@@ -942,3 +944,241 @@ async def test_scope_real_ws_rewind_after_valid_worker_read_cannot_publish_stale
         allow_publication.set()
         monkeypatch.setattr(native.db, "get_session", original_get_session)
         await viewer.close()
+
+
+# A stored job ID is only a selector; a current registered invocation and its
+# transport origin (never just the SID/profile) grant control authority.
+CALLER_CONTROL = "hermes-tern.surface.control"
+OTHER_CONTROL = "other-plugin.surface.control"
+
+
+@pytest.mark.asyncio
+async def test_scope_assert_caller_two_live_native_peers_same_profile_and_sid(native):
+    from dataclasses import replace
+
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    leases, initial_contexts, attempted, effects = [], [], [], []
+
+    def start(request_context, params):
+        initial_contexts.append(request_context)
+        leases.append(request_context.capture_scope())
+        return {"job_id": "selected-not-authorized"}
+
+    def control(request_context, params):
+        attempted.append(request_context)
+        leases[0].assert_caller(request_context)
+        effects.append(params["action"])
+        return {"changes": len(effects)}
+
+    install(native, start)
+    install(native, control, name=CALLER_CONTROL)
+    install(native, control, name=OTHER_CONTROL)
+    peer_a = connect(native.authority, subject="first")
+    peer_b = connect(native.authority, subject="second")
+    try:
+        await resume(peer_a)
+        await resume(peer_b)
+        assert (await request(peer_a, NAME, {"session_id": "owned"}))["result"] == {
+            "job_id": "selected-not-authorized"}
+        lease = leases[0]
+
+        # Both peers are simultaneously attached, control-capable, same SID
+        # and the same served profile. Both have valid assert_attached.
+        assert peer_a.subscriptions["owned"] != peer_b.subscriptions["owned"]
+        bad = await request(peer_b, CALLER_CONTROL, {
+            "session_id": "owned", "job_id": "selected-not-authorized", "action": "wrong-peer"})
+        assert bad["error"]["code"] == -32000
+        assert effects == []
+        assert await asyncio.to_thread(lease.assert_current) is None
+
+        # Different registration belonging to the same plugin is valid.
+        good = await request(peer_a, CALLER_CONTROL, {
+            "session_id": "owned", "action": "once"})
+        assert good["result"] == {"changes": 1}
+        assert effects == ["once"]
+
+        # A distinct currently registered plugin cannot spend that lease.
+        bad_plugin = await request(peer_a, OTHER_CONTROL, {
+            "session_id": "owned", "action": "foreign-plugin"})
+        assert bad_plugin["error"]["code"] == -32000
+        assert effects == ["once"]
+
+        # Dataclass equality (including a copied private origin) is not proof.
+        manufactured = replace(attempted[1])
+        assert manufactured == attempted[1]
+        with pytest.raises(GatewayScopeError, match="not authorized"):
+            await asyncio.to_thread(lease.assert_caller, manufactured)
+        with pytest.raises(GatewayScopeError, match="not authorized"):
+            await asyncio.to_thread(lease.assert_caller, initial_contexts[0])
+        with pytest.raises(GatewayScopeError, match="not authorized"):
+            await asyncio.to_thread(lease.assert_caller, attempted[1])
+        assert effects == ["once"]
+    finally:
+        await peer_a.close()
+        await peer_b.close()
+
+
+@pytest.mark.parametrize("revocation", [
+    "detach_reattach", "generation", "real_rewind", "unload_reload",
+    "close", "cancellation", "epoch",
+])
+@pytest.mark.asyncio
+async def test_scope_assert_caller_native_lifecycle_fences(native, revocation):
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    leases, effects = [], []
+
+    def start(request_context, params):
+        leases.append(request_context.capture_scope())
+        return {"accepted": True}
+
+    def control(request_context, params):
+        leases[-1].assert_caller(request_context)
+        effects.append(True)
+        return {"changed": True}
+
+    install(native, start)
+    install(native, control, name=CALLER_CONTROL)
+    viewer = connect(native.authority)
+    try:
+        subscription = await resume(viewer)
+        assert (await request(viewer, NAME, {"session_id": "owned"}))["result"] == {
+            "accepted": True}
+        lease = leases[0]
+
+        if revocation == "detach_reattach":
+            reply = await request(viewer, "session.detach", {
+                "session_id": "owned", "subscription_id": subscription})
+            assert reply["result"]["detached"]
+            await resume(viewer)
+        elif revocation == "generation":
+            native.db._execute_write(lambda conn: conn.execute(
+                "UPDATE sessions SET runtime_generation=runtime_generation+1 WHERE id=?",
+                ("owned",),
+            ))
+        elif revocation == "real_rewind":
+            native.runner._evict_cached_agent = lambda route: None
+            target_id = await asyncio.to_thread(
+                native.db.append_message, "owned", "user", "rewind target")
+            snapshot = await asyncio.to_thread(native.db.get_session, "owned")
+            reply = await request(viewer, "session.mutate", {
+                "session_id": "owned", "request_id": "scoped-control-rewind",
+                "expected_revision": snapshot["runtime_revision"],
+                "expected_generation": snapshot["runtime_generation"],
+                "operation": "rewind", "payload": {"target_message_id": target_id},
+            })
+            assert "result" in reply, reply
+            assert reply["result"]["execution_generation"] == snapshot["runtime_generation"] + 1
+        elif revocation == "unload_reload":
+            assert native.manager.unload("hermes-tern")
+            install(native, control, name=CALLER_CONTROL)
+        elif revocation == "close":
+            await asyncio.to_thread(lease.close)
+        elif revocation == "cancellation":
+            lease.cancellation.set()
+        elif revocation == "epoch":
+            native.authority.epoch += 1
+
+        answer = await request(viewer, CALLER_CONTROL, {
+            "session_id": "owned", "action": "must-not-run"})
+        assert answer["error"]["code"] in (4001, -32000), answer
+        assert effects == []
+        with pytest.raises(GatewayScopeError):
+            await asyncio.to_thread(lease.assert_current)
+    finally:
+        await viewer.close()
+
+
+@pytest.mark.asyncio
+async def test_scope_assert_caller_canonical_owner_loop_fast_rejects_while_registry_locked(native):
+    from hermes_cli import plugin_gateway_methods as gateway_methods
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    leases, contexts = [], []
+    entered, release = threading.Event(), threading.Event()
+
+    def start(request_context, params):
+        leases.append(request_context.capture_scope())
+        contexts.append(request_context)
+        return {"accepted": True}
+
+    install(native, start)
+    viewer = connect(native.authority)
+    lock_holder = None
+    try:
+        await resume(viewer)
+        assert (await request(viewer, NAME, {"session_id": "owned"}))["result"] == {
+            "accepted": True}
+
+        def hold_registry():
+            with gateway_methods._caller_lock:
+                entered.set()
+                assert release.wait(5), "release registry lock"
+
+        lock_holder = threading.Thread(target=hold_registry, daemon=True)
+        lock_holder.start()
+        await async_wait_until(entered.is_set, timeout=5, what="held plugin caller registry")
+        with pytest.raises(GatewayScopeError, match="asyncio.to_thread"):
+            leases[0].assert_caller(contexts[0])
+    finally:
+        release.set()
+        if lock_holder is not None:
+            await asyncio.to_thread(lock_holder.join, 5)
+            assert not lock_holder.is_alive()
+        await viewer.close()
+
+
+
+@pytest.mark.asyncio
+async def test_scope_assert_caller_native_other_profile_same_sid_is_not_original(native):
+    from gateway.run import _profile_runtime_scope
+
+    leases, effects = [], []
+
+    def start(request_context, params):
+        leases.append(request_context.capture_scope())
+        return {"accepted": True}
+
+    def control(request_context, params):
+        leases[0].assert_caller(request_context)
+        effects.append(True)
+        return {"changed": True}
+
+    install(native, start)
+    install(native, control, name=CALLER_CONTROL)
+    beta_home = native.home / "profiles" / "beta"
+    beta_home.mkdir(parents=True)
+    (beta_home / "config.yaml").write_text("{}\n", encoding="utf-8")
+    beta_db = SessionDB(db_path=beta_home / "state.db")
+    beta_db.create_session("owned", source="test")
+    native.runner.config.multiplex_profiles = True
+    beta_authority = SessionAuthority(
+        native.runner, profile_id=str(beta_home), instance_id="instance",
+        db=beta_db, epoch=begin_runtime_epoch(beta_db, instance_id="instance"),
+    )
+    beta_authority.sessions["owned"] = LiveSession(None, "beta-route")
+    with _profile_runtime_scope(beta_home):
+        beta_manager = native.plugins.get_plugin_manager()
+        assert beta_manager is not native.manager
+        native.plugins.PluginContext(
+            native.plugins.PluginManifest(name="hermes-tern"), beta_manager,
+        ).register_gateway_method(CALLER_CONTROL, control)
+
+    original = connect(native.authority)
+    other_profile = connect(beta_authority)
+    try:
+        await resume(original)
+        await resume(other_profile)
+        assert (await request(original, NAME, {"session_id": "owned"}))["result"] == {
+            "accepted": True}
+        bad = await request(other_profile, CALLER_CONTROL, {"session_id": "owned"})
+        assert bad["error"]["code"] == -32000
+        assert effects == []
+        assert (await request(original, CALLER_CONTROL, {"session_id": "owned"}))["result"] == {
+            "changed": True}
+        assert effects == [True]
+    finally:
+        await original.close()
+        await other_profile.close()
+        beta_db.close()

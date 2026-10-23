@@ -2558,9 +2558,40 @@ the send and revokes the lease, without claiming publication.
 `close()` is idempotent and waits for an in-flight publish to
 finish, so successful final-completion delivery cannot be silently withdrawn.
 
-`lease.publish(...)`, `lease.assert_current()` and `lease.close()` are
+#### Authorize later start/control RPCs from the original caller
+
+`lease.assert_current()` is the separate public liveness check for asynchronous
+background work **without an active control request**. A stored job ID is only a
+selector for a server-owned lease; it never authorizes a new control action.
+
+A **registered synchronous handler** for a later start/control method must call
+`lease.assert_caller(request)` on its current `GatewayRequestContext` **before
+any job side effect**. This succeeds for a different registered method of the
+**same plugin** on the **original live connection and subscription**, with the
+original profile, session and runtime-generation binding. The two method names
+need not match. The assertion refuses a different concurrently attached peer
+even when both peers have the same session ID, profile and control capability.
+
+The caller is enrolled only while its actual registered invocation is active.
+Detached/reattached peers (including a legacy fanout peer reattached to the
+same record), completed/reconstructed contexts, another plugin's callback,
+unloaded/re-registered methods, generation changes, cancelled/closed leases,
+and foreign profiles fail closed with a secret-safe `GatewayScopeError`.
+Dataclass equality, copied private fields, a cancellation Event, nonce, job
+ID or client-supplied token **cannot** authorize a call. This is a server-side
+connection/subscription/registration check and adds **no** JSON-RPC argument.
+
+`assert_caller` may block on live authority/DB/registry checks, so it must run
+on a worker. On a WebSocket transport's owner loop it raises immediately
+**before** any lock/check; async callers use
+`await asyncio.to_thread(lease.assert_caller, current_request)`
+**while that request's registered handler is still active**. Do not save a
+request context after its handler returns. Use `assert_current()` on the
+background thread when there is no current handler.
+
+`lease.publish(...)`, `lease.assert_current()`, `lease.assert_caller(request)` and `lease.close()` are
 **blocking worker-thread operations**. On the original WebSocket owner loop,
-all three raise `GatewayScopeError` **before** RPC-settlement waits, authority
+all four raise `GatewayScopeError` **before** RPC-settlement waits, authority
 DB reads or delivery-lock acquisition. An owner-loop `close()` rejection does
 **not** revoke or drain the lease; off-loop `close()` preserves the
 in-flight-send drain and revocation fence. From an async owner-loop callback,

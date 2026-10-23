@@ -219,6 +219,18 @@ class FanoutTransport:
         with self._lock:
             return any(peer.attached and peer.transport is transport for peer in self._peers)
 
+    def attachment_witness(self, transport: Transport) -> tuple[object, int] | None:
+        """Internal live peer/generation snapshot for registered gateway authority.
+
+        Detach/reattach increments the peer's generation even when the same
+        socket and session record survive. Never serialize this value.
+        """
+        with self._lock:
+            for peer in self._peers:
+                if peer.attached and peer.transport is transport:
+                    return peer, peer.generation
+        return None
+
     def transports(self) -> list[Transport]:
         with self._lock:
             return [peer.transport for peer in self._peers if peer.attached]

@@ -11,7 +11,8 @@ import threading
 
 from hermes_cli.backend_retirement import retirement
 from hermes_cli.plugin_gateway_methods import (
-    GatewayMethodFailure, GatewayRequestContext, invoke_gateway_method, registered_gateway_methods,
+    GatewayCallerBinding, GatewayMethodFailure, GatewayRequestContext,
+    invoke_gateway_method, registered_gateway_methods,
 )
 from hermes_cli.plugin_gateway_scopes import GatewayScopeAdmission, deliver_legacy
 from tui_gateway.transport import current_transport
@@ -59,6 +60,7 @@ def dispatch_plugin_method(rid, name: str, params: dict) -> dict:
     """Run a registered handler with profile + transport preserved by the RPC pool."""
     from hermes_constants import profile_name_for_home
     from tui_gateway import server
+    from tui_gateway.transport import FanoutTransport
 
     session, problem = authorize_session(rid, params)
     if problem is not None:
@@ -71,6 +73,21 @@ def dispatch_plugin_method(rid, name: str, params: dict) -> dict:
     active = threading.Event()
     active.set()
     succeeded = False
+    # The fanout membership alone is insufficient: the same peer can detach
+    # and reattach to the same record. Pin its real per-attachment generation.
+    slot = session.get("transport")
+    attachment = slot.attachment_witness(transport) if isinstance(slot, FanoutTransport) else None
+    if isinstance(slot, FanoutTransport) and attachment is None:
+        return server._err(rid, 4001, "session is no longer attached")
+    generation = (session.get("session_key"), session.get("execution_generation"),
+                  session.get("runtime_generation"))
+    profile = (profile_name_for_home(profile_home or server._hermes_home)
+               or server._current_profile_name())
+    binding = GatewayCallerBinding(
+        connection=None, actor=None, transport=transport, session=session,
+        subscription=None, attachment=attachment, session_id=sid,
+        profile=profile, generation=generation, epoch=None, profile_home=profile_home,
+    )
 
     def attached() -> bool:
         # A captured legacy scope cannot survive process drain/retirement, even
@@ -79,9 +96,18 @@ def dispatch_plugin_method(rid, name: str, params: dict) -> dict:
             if not admitted or transport is None or getattr(transport, "closed", False):
                 return False
             with server._sessions_lock:
-                return (server._sessions.get(sid) is session
-                        and session.get("profile_home") == profile_home
-                        and server._session_transport_contains(session, transport))
+                if (server._sessions.get(sid) is not session
+                        or session.get("profile_home") != profile_home
+                        or (session.get("session_key"), session.get("execution_generation"),
+                            session.get("runtime_generation")) != generation
+                        or session.get("transport") is not slot
+                        or not server._session_transport_contains(session, transport)):
+                    return False
+                if attachment is not None:
+                    current = slot.attachment_witness(transport)
+                    return (current is not None and current[0] is attachment[0]
+                            and current[1] == attachment[1])
+                return True
 
     def deliver(frame, current):
         # Hold the real backend retirement permit through the transport send,
@@ -89,24 +115,23 @@ def dispatch_plugin_method(rid, name: str, params: dict) -> dict:
         with retirement.work() as admitted:
             return admitted and deliver_legacy(transport, frame, current)
 
-    def capture(plugin_id, registered):
+    def capture(plugin_id, registered, caller_binding):
         if not active.is_set() or not attached():
             raise PermissionError("gateway scope capture is unavailable")
         return admission.capture(
             plugin_id=plugin_id, session_id=sid,
-            owner_loop=owner_loop,
-            profile=profile_name_for_home(profile_home or server._hermes_home)
-                    or server._current_profile_name(),
+            owner_loop=owner_loop, caller_binding=caller_binding,
+            profile=profile,
             current=lambda: attached() and registered(),
             deliver=deliver,
         )
 
     context = GatewayRequestContext(
         session_id=sid,
-        profile=profile_name_for_home(profile_home or server._hermes_home)
-                or server._current_profile_name(),
+        profile=profile,
         _attached=lambda: active.is_set() and attached(),
         _capture_scope=capture, _owner_loop=owner_loop,
+        _caller_binding=binding,
     )
     try:
         with server._session_profile_runtime_scope({"profile_home": profile_home}):

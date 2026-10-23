@@ -14,7 +14,7 @@ import threading
 from gateway.session_authorities import owner_scope, require_serving, served_profile_name
 from gateway.session_contract import SessionRef
 from hermes_cli.plugin_gateway_methods import (
-    GatewayMethodFailure, GatewayRequestContext, invoke_gateway_method,
+    GatewayCallerBinding, GatewayMethodFailure, GatewayRequestContext, invoke_gateway_method,
     looks_like_plugin_method, registered_gateway_methods,
 )
 from hermes_cli.plugin_gateway_scopes import GatewayScopeAdmission, deliver_on_owner_loop
@@ -92,12 +92,19 @@ def _context(
     # request-active fence, keeping the original actor, subscription and runtime.
     profile = served_profile_name(authority.profile_id)
 
-    def capture(plugin_id, registered):
+    binding = GatewayCallerBinding(
+        connection=connection, actor=actor, transport=transport, session=live,
+        subscription=subscription, attachment=None, session_id=sid,
+        profile=profile, generation=generation, epoch=epoch,
+        profile_home=authority.profile_id,
+    )
+
+    def capture(plugin_id, registered, caller_binding):
         if not active.is_set() or not attached():
             raise PermissionError("gateway scope capture is unavailable")
         return admission.capture(
             plugin_id=plugin_id, session_id=sid, profile=profile,
-            owner_loop=loop,
+            owner_loop=loop, caller_binding=caller_binding,
             current=lambda: attached() and registered(),
             deliver=lambda frame, current: deliver_on_owner_loop(
                 transport, loop, frame, current,
@@ -109,7 +116,7 @@ def _context(
     return GatewayRequestContext(
         session_id=sid, profile=profile,
         _attached=lambda: active.is_set() and attached(), _owner_loop=loop,
-        _capture_scope=capture,
+        _capture_scope=capture, _caller_binding=binding,
     )
 
 

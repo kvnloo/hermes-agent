@@ -644,6 +644,8 @@ async def test_legacy_scope_owner_loop_rejects_during_real_ws_send(runtime, outc
             lease.close()
         with pytest.raises(GatewayScopeError, match="asyncio.to_thread"):
             lease.assert_current()
+        with pytest.raises(GatewayScopeError, match="asyncio.to_thread"):
+            lease.assert_caller(contexts[-1])
         with pytest.raises(RuntimeError, match="asyncio.to_thread"):
             contexts[-1].assert_attached()
         with pytest.raises(RuntimeError, match="asyncio.to_thread"):
@@ -803,3 +805,151 @@ async def test_scoped_ws_in_memory_guard_failure_revokes_without_sending():
     assert lease.cancellation.is_set()
     assert socket.frames == []
     assert not transport.closed
+
+
+LEGACY_CONTROL = "hermes-tern.browser.control"
+
+
+def test_scope_assert_caller_real_legacy_stdio_two_attached_peers_and_reattach(runtime):
+    """Real registered stdio dispatch and FanoutTransport attachment generations."""
+    import json
+
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+    from tui_gateway.transport import FanoutTransport, StdioTransport
+
+    class FrameStream:
+        def __init__(self):
+            self.frames = queue.Queue()
+
+        def write(self, line):
+            self.frames.put(json.loads(line))
+            return len(line)
+
+        def flush(self):
+            pass
+
+    server, plugins, manager = runtime
+    stream_a, stream_b = FrameStream(), FrameStream()
+    peer_a = StdioTransport(lambda: stream_a, threading.Lock())
+    peer_b = StdioTransport(lambda: stream_b, threading.Lock())
+    fanout = FanoutTransport(peer_a, peer_b)
+    attach(server, "same", fanout)
+    leases, contexts, effects = [], [], []
+
+    def start(request_context, params):
+        contexts.append(request_context)
+        leases.append(request_context.capture_scope())
+        return {"job_id": "hint"}
+
+    def control(request_context, params):
+        leases[-1].assert_caller(request_context)
+        effects.append(params["action"])
+        return {"count": len(effects)}
+
+    install(plugins, manager, start)
+    plugins.PluginContext(
+        plugins.PluginManifest(name="hermes-tern"), manager,
+    ).register_gateway_method(LEGACY_CONTROL, control)
+
+    def dispatch(peer, stream, name, rid, **params):
+        assert server.dispatch({
+            "id": rid, "method": name,
+            "params": {"session_id": "same", **params},
+        }, peer) is None
+        return stream.frames.get(timeout=5)
+
+    assert dispatch(peer_a, stream_a, NAME, 1)["result"] == {"job_id": "hint"}
+    assert fanout.contains(peer_a) and fanout.contains(peer_b)
+    bad = dispatch(peer_b, stream_b, LEGACY_CONTROL, 2, action="wrong")
+    assert bad["error"]["code"] == -32000
+    assert effects == []
+    assert dispatch(peer_a, stream_a, LEGACY_CONTROL, 3, action="once")["result"] == {
+        "count": 1}
+    assert effects == ["once"]
+    with pytest.raises(GatewayScopeError):
+        leases[0].assert_caller(contexts[0])  # completed request is not live
+
+    # Original peer rejoins the very same record, SID and socket, but its
+    # FanoutTransport subscription generation has changed.
+    assert fanout.detach(peer_a)
+    assert fanout.attach(peer_a)
+    bad = dispatch(peer_a, stream_a, LEGACY_CONTROL, 4, action="stale-sub")
+    assert bad["error"]["code"] == -32000
+    assert effects == ["once"]
+    with pytest.raises(GatewayScopeError):
+        leases[0].assert_current()
+
+    assert dispatch(peer_a, stream_a, NAME, 5)["result"] == {"job_id": "hint"}
+    previous = leases[-1]
+    assert manager.unload("hermes-tern")
+    plugins.PluginContext(
+        plugins.PluginManifest(name="hermes-tern"), manager,
+    ).register_gateway_method(LEGACY_CONTROL, control)
+    assert dispatch(peer_a, stream_a, LEGACY_CONTROL, 6, action="reloaded")["error"]["code"] == -32000
+    with pytest.raises(GatewayScopeError):
+        previous.assert_current()
+    assert effects == ["once"]
+
+
+@pytest.mark.asyncio
+async def test_scope_assert_caller_real_legacy_websocket_same_sid_different_peer(runtime):
+    """Production legacy WS dispatcher binds caller, not shared session slot."""
+    import asyncio
+    import json
+
+    from tests.waiting import async_wait_until
+    from tui_gateway.transport import FanoutTransport
+    from tui_gateway.ws import WSTransport
+
+    class Socket:
+        def __init__(self):
+            self.frames = []
+
+        async def send_text(self, line):
+            self.frames.append(json.loads(line))
+
+    server, plugins, manager = runtime
+    sock_a, sock_b = Socket(), Socket()
+    loop = asyncio.get_running_loop()
+    peer_a = WSTransport(sock_a, loop)
+    peer_b = WSTransport(sock_b, loop)
+    fanout = FanoutTransport(peer_a, peer_b)
+    attach(server, "same", fanout)
+    leases, effects = [], []
+
+    def start(request_context, params):
+        leases.append(request_context.capture_scope())
+        return {"job_id": "hint"}
+
+    def control(request_context, params):
+        leases[-1].assert_caller(request_context)
+        effects.append(params["action"])
+        return {"count": len(effects)}
+
+    install(plugins, manager, start)
+    plugins.PluginContext(
+        plugins.PluginManifest(name="hermes-tern"), manager,
+    ).register_gateway_method(LEGACY_CONTROL, control)
+
+    async def dispatch(peer, socket, name, rid, **params):
+        before = len(socket.frames)
+        assert server.dispatch({
+            "id": rid, "method": name,
+            "params": {"session_id": "same", **params},
+        }, peer) is None
+        await async_wait_until(
+            lambda: len(socket.frames) > before, timeout=5, what="legacy WS registered RPC")
+        return socket.frames[-1]
+
+    assert (await dispatch(peer_a, sock_a, NAME, 1))["result"] == {"job_id": "hint"}
+    assert fanout.contains(peer_a) and fanout.contains(peer_b)
+    assert (await dispatch(peer_b, sock_b, LEGACY_CONTROL, 2,
+                           action="wrong"))["error"]["code"] == -32000
+    assert effects == []
+    assert (await dispatch(peer_a, sock_a, LEGACY_CONTROL, 3,
+                           action="once"))["result"] == {"count": 1}
+    assert effects == ["once"]
+    peer_a.close()
+    assert (await dispatch(peer_b, sock_b, LEGACY_CONTROL, 4,
+                           action="wrong-again"))["error"]["code"] == -32000
+    assert effects == ["once"]

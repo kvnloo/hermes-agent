@@ -12,7 +12,10 @@ import sqlite3
 import threading
 from typing import Any, Callable
 
-from hermes_cli.plugin_gateway_methods import _is_transport_owner_loop, looks_like_plugin_method
+from hermes_cli.plugin_gateway_methods import (
+    GatewayCallerBinding, GatewayRequestContext, _is_transport_owner_loop,
+    _registered_caller_matches, looks_like_plugin_method,
+)
 
 
 class GatewayScopeError(RuntimeError):
@@ -65,6 +68,7 @@ class GatewayScopeAdmission:
         current: Callable[[], bool],
         deliver: Callable[[dict[str, Any], Callable[[], bool]], bool],
         owner_loop: asyncio.AbstractEventLoop | None = None,
+        caller_binding: GatewayCallerBinding | None = None,
     ) -> GatewayScopeLease:
         with self._lock:
             if self._state != "pending":
@@ -73,6 +77,7 @@ class GatewayScopeAdmission:
                 plugin_id=plugin_id, session_id=session_id, profile=profile,
                 admission=self, current=current, deliver=deliver,
                 handler_thread=threading.get_ident(), owner_loop=owner_loop,
+                caller_binding=caller_binding,
             )
             self._leases.append(lease)
             return lease
@@ -107,7 +112,9 @@ class GatewayScopeLease:
         deliver: Callable[[dict[str, Any], Callable[[], bool]], bool],
         handler_thread: int,
         owner_loop: asyncio.AbstractEventLoop | None = None,
+        caller_binding: GatewayCallerBinding | None = None,
     ) -> None:
+        self._caller_binding = caller_binding
         self._handler_thread = handler_thread
         self._owner_loop = owner_loop
         self._plugin_id = plugin_id
@@ -140,6 +147,8 @@ class GatewayScopeLease:
         if _is_transport_owner_loop(self._owner_loop):
             usage = ("await asyncio.to_thread(lease.publish, event_name, payload)"
                      if operation == "publish" else
+                     "await asyncio.to_thread(lease.assert_caller, current_request)"
+                     if operation == "assert_caller" else
                      f"await asyncio.to_thread(lease.{operation})")
             raise GatewayScopeError(
                 f"scoped {operation} requires a worker thread; use {usage}"
@@ -149,6 +158,27 @@ class GatewayScopeLease:
         self._require_worker_thread("assert_current")
         if not self._is_current():
             raise GatewayScopeError("gateway scope is no longer authorized")
+
+    def assert_caller(self, current_request: GatewayRequestContext) -> None:
+        """Authorize this *live* plugin control RPC from the original attached peer.
+
+        Unlike assert_current(), this requires an independently registered,
+        still-running same-plugin invocation. A session ID, stored job ID or
+        reconstructed request cannot carry connection authority. Invoke on a
+        worker, e.g. `await asyncio.to_thread(lease.assert_caller, request)`.
+        """
+        # Must happen before the first admission/registry/DB/transport lock.
+        self._require_worker_thread("assert_caller")
+        if self._caller_binding is None or not self._is_current():
+            raise GatewayScopeError("gateway caller is not authorized")
+        try:
+            allowed = _registered_caller_matches(
+                current_request, self._caller_binding, self._plugin_id,
+            )
+        except Exception as exc:
+            raise GatewayScopeError("gateway caller is not authorized") from exc
+        if not allowed:
+            raise GatewayScopeError("gateway caller is not authorized")
 
     def publish(self, event_name: str, payload: dict[str, Any]) -> bool:
         """Deliver one owned JSON-object event to the original peer only."""

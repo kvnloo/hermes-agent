@@ -41,6 +41,9 @@ class GatewayRequestContext:
     _owner_loop: asyncio.AbstractEventLoop | None = field(
         default=None, repr=False, compare=False,
     )
+    _caller_binding: GatewayCallerBinding | None = field(
+        default=None, repr=False, compare=False,
+    )
 
     def capture_scope(self):
         """Capture a durable publisher only inside its authorized registered handler."""
@@ -65,6 +68,82 @@ class GatewayRequestContext:
             )
         if not self._attached():
             raise PermissionError("gateway session detached or replaced")
+
+
+@dataclass(frozen=True, eq=False)
+class GatewayCallerBinding:
+    """Server-only original transport/subscription/epoch witness, never a client token.
+
+    Transport and actor identities are compared with `is`, not dataclass equality.
+    Legacy fanout also pins the actual peer object and its attach generation.
+    Neither matching SID/profile nor a plugin-provided request is sufficient.
+    """
+
+    connection: object | None
+    actor: object | None
+    transport: object
+    session: object
+    subscription: object | None
+    attachment: tuple[object, int] | None
+    session_id: str
+    profile: str
+    generation: object
+    epoch: object | None
+    profile_home: object | None
+
+    def matches(self, other: GatewayCallerBinding) -> bool:
+        if type(other) is not GatewayCallerBinding:
+            return False
+        attached = (self.attachment is None and other.attachment is None) or (
+            self.attachment is not None and other.attachment is not None
+            and self.attachment[0] is other.attachment[0]
+            and self.attachment[1] == other.attachment[1]
+        )
+        return (self.connection is other.connection and self.actor is other.actor
+                and self.transport is other.transport and self.session is other.session
+                and self.subscription == other.subscription and attached
+                and self.session_id == other.session_id and self.profile == other.profile
+                and self.generation == other.generation and self.epoch == other.epoch
+                and self.profile_home == other.profile_home)
+
+
+@dataclass(eq=False)
+class _LiveGatewayCaller:
+    context: GatewayRequestContext
+    binding: GatewayCallerBinding
+    plugin_id: str
+    registered: Callable[[], bool]
+
+
+# Only the actual registered handler's context is enrolled, and only while it is
+# executing.  The integer key is never accepted alone: its object identity is
+# checked as well, so a replaced dataclass or an expired/reused id is powerless.
+_caller_lock = threading.Lock()
+_live_callers: dict[int, _LiveGatewayCaller] = {}
+
+
+def _registered_caller_matches(
+    request: GatewayRequestContext, original: GatewayCallerBinding, plugin_id: str,
+) -> bool:
+    """Check a current invocation and its independently attested transport origin."""
+    if type(request) is not GatewayRequestContext:
+        return False
+    with _caller_lock:
+        candidate = _live_callers.get(id(request))
+        if (candidate is None or candidate.context is not request
+                or candidate.plugin_id != plugin_id
+                or not original.matches(candidate.binding)):
+            return False
+    # Do not hold our registry lock across attachment/DB/retirement checks.
+    # The candidate checks its own trusted peer, session and registration.
+    try:
+        request.assert_attached()
+        if not candidate.registered():
+            return False
+    except (PermissionError, RuntimeError, OSError, ValueError):
+        return False
+    with _caller_lock:
+        return _live_callers.get(id(request)) is candidate
 
 
 @dataclass(frozen=True)
@@ -169,7 +248,9 @@ def invoke_gateway_method(name: str, request: GatewayRequestContext, params: dic
             context.assert_attached()
             if request._capture_scope is None:
                 raise PermissionError("gateway scope capture is unavailable")
-            return request._capture_scope(entry.plugin_id, registered)
+            if request._caller_binding is None:
+                raise PermissionError("gateway scope caller authority is unavailable")
+            return request._capture_scope(entry.plugin_id, registered, request._caller_binding)
 
         context = replace(
             request, _attached=lambda: request._attached() and registered(),
@@ -188,11 +269,21 @@ def invoke_gateway_method(name: str, request: GatewayRequestContext, params: dic
                 raise GatewayMethodFailure(-32602, f"invalid plugin params: {fields}") from exc
 
         context.assert_attached()
+        # Only this real invocation is admitted. It disappears at handler return,
+        # irrespective of RPC success, cancellation, or subsequent reuse of SID.
+        if request._caller_binding is not None:
+            caller = _LiveGatewayCaller(context, request._caller_binding, entry.plugin_id, registered)
+            with _caller_lock:
+                _live_callers[id(context)] = caller
         running = True
         try:
             result = entry.handler(context, validated)
         finally:
             running = False
+            if request._caller_binding is not None:
+                with _caller_lock:
+                    if _live_callers.get(id(context)) is caller:
+                        del _live_callers[id(context)]
         context.assert_attached()
         if not isinstance(result, dict):
             raise TypeError("gateway method result must be a JSON object")
