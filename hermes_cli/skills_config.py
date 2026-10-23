@@ -16,16 +16,6 @@ def get_disabled_skills(config: dict, platform: Optional[str] = None) -> Set[str
     return disabled_skill_names_from(config.get("skills"), platform)
 
 
-def allowlist_hidden_skills(config: dict, names: Iterable[str], platform: Optional[str] = None) -> Set[str]:
-    """Of *names*, those ``skills.enabled`` / ``platform_enabled`` or an ``external_dirs`` filter hides.
-    A ``skills.disabled`` toggle cannot change them, so a UI must neither persist them as disabled
-    (that would outlive a later allowlist edit) nor report them as enabled."""
-    from agent.skill_utils import skill_visibility_from
-    skills_cfg = config.get("skills") if isinstance(config.get("skills"), dict) else {}
-    rules = skill_visibility_from({**skills_cfg, "disabled": [], "platform_disabled": {}}, platform)
-    return {name for name in names if rules.hides(name)}
-
-
 def _enabled_patterns(config: dict, platform: Optional[str] = None) -> Optional[Set[str]]:
     """Configured allowlist patterns for this scope; ``None`` means allowlist mode is off.
 
@@ -67,7 +57,8 @@ def toggle_skill_selection(
     override is the only lossless representation.
 
     ``external_dirs`` filters are intentionally not rewritten by a switch: they describe ownership of
-    a whole directory, so changing them from a per-skill toggle would be surprising.
+    a whole directory, so changing them from a per-skill toggle would be surprising. Disabling
+    an already-hidden skill is a no-op, including a retried disable after removing an allowlist entry.
     """
     from copy import deepcopy
     from agent.skill_utils import ESSENTIAL_SKILLS, skill_visibility_from
@@ -78,6 +69,15 @@ def toggle_skill_selection(
         raise ValueError("skill name is required")
     if not enabled and name in ESSENTIAL_SKILLS:
         raise ValueError(f"Skill '{name}' is essential to Hermes and cannot be disabled.")
+
+    # A stale UI/retried PUT must not turn *derived* hidden state (allowlist,
+    # platform or external-directory policy) into a permanent deny entry.
+    # Return before making a copy or saving anything; an explicit deny already
+    # in place is equally idempotent.
+    if not enabled:
+        hidden = skill_visibility_from(config.get("skills"), platform).hidden_reason(name)
+        if hidden is not None:
+            return "allowlist" if hidden == "not_enabled" else "denylist"
 
     working = deepcopy(config)
     skills_cfg = working.setdefault("skills", {})

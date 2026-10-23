@@ -353,18 +353,21 @@ def _(rid, params: dict) -> dict:
     if err is not None:
         return err
     with _hermes_home_scope(profile_dir):
-        from agent.skill_utils import iter_skill_index_files, skill_visibility_from
+        from agent.skill_utils import skill_visibility_from
         from hermes_cli.config import load_config
         from hermes_cli.skills_config import managed_locked_skills
+        from tools.skills_tool import _find_all_skills
         cfg = load_config() or {}
         visibility = skill_visibility_from(cfg.get("skills"))
-        skills_root = profile_dir / "skills"
-        skill_mds = list(iter_skill_index_files(skills_root, "SKILL.md")) if skills_root.is_dir() else []
-        locked = managed_locked_skills(md.parent.name for md in skill_mds)
+        # Use the *same* runtime/frontmatter identity and discovery source as
+        # profiles.configure. Directory names can differ from SKILL.md's name;
+        # mixing them turned an unchanged editor checklist into an allowlist grant.
+        skills = _find_all_skills(skip_disabled=True)
+        locked = managed_locked_skills(s["name"] for s in skills)
         installed = [
-            {"name": md.parent.name, "enabled": not visibility.hides(md.parent.name, md),
-             "locked": md.parent.name in locked}
-            for md in skill_mds]
+            {"name": s["name"], "enabled": not visibility.hides(s["name"]),
+             "locked": s["name"] in locked}
+            for s in skills]
         toolsets_out, pinned_set = _describe_toolsets(cfg)
         soul_path = profile_dir / "SOUL.md"
         soul = _try(lambda: soul_path.read_text(encoding="utf-8", errors="replace") if soul_path.is_file() else "", "")

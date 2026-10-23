@@ -102,6 +102,114 @@ class TestToggleSkillSelection:
         mock_save.assert_not_called()
 
 
+    @patch("hermes_cli.skills_config.save_config")
+    def test_already_hidden_disable_and_retry_never_create_deny_entries(self, mock_save):
+        from hermes_cli.skills_config import toggle_skill_selection
+
+        config = {"skills": {"enabled": ["git"], "disabled": []}}
+        assert toggle_skill_selection(config, "notes", False) == "allowlist"
+        assert config == {"skills": {"enabled": ["git"], "disabled": []}}
+        mock_save.assert_not_called()
+
+        config["skills"]["enabled"].append("notes")
+        assert toggle_skill_selection(config, "notes", False) == "allowlist"
+        assert config["skills"]["enabled"] == ["git"]
+        mock_save.reset_mock()
+        assert toggle_skill_selection(config, "notes", False) == "allowlist"
+        assert config["skills"]["disabled"] == []
+        mock_save.assert_not_called()
+
+    @patch("hermes_cli.skills_config.save_config")
+    def test_platform_allowlist_disable_and_retry_do_not_write_platform_deny(self, mock_save):
+        from hermes_cli.skills_config import toggle_skill_selection
+
+        config = {"skills": {
+            "enabled": ["git", "notes"],
+            "disabled": [],
+            "platform_enabled": {"telegram": ["notes"]},
+            "platform_disabled": {"telegram": []},
+        }}
+        assert toggle_skill_selection(config, "notes", False, platform="telegram") == "allowlist"
+        assert config["skills"]["enabled"] == ["git", "notes"]
+        assert config["skills"]["platform_enabled"]["telegram"] == []
+        assert config["skills"]["platform_disabled"]["telegram"] == []
+        mock_save.reset_mock()
+        assert toggle_skill_selection(config, "notes", False, platform="telegram") == "allowlist"
+        assert config["skills"]["platform_disabled"]["telegram"] == []
+        mock_save.assert_not_called()
+
+        assert toggle_skill_selection(config, "notes", True, platform="telegram") == "allowlist"
+        assert config["skills"]["platform_enabled"]["telegram"] == ["notes"]
+        assert config["skills"]["disabled"] == []
+        mock_save.assert_called_once_with(config)
+
+    @patch("hermes_cli.skills_config.save_config")
+    def test_platform_cannot_enable_globally_disabled_skill(self, mock_save):
+        from hermes_cli.skills_config import toggle_skill_selection
+
+        config = {"skills": {"disabled": ["notes"], "platform_enabled": {"telegram": []}}}
+        with pytest.raises(ValueError, match="globally"):
+            toggle_skill_selection(config, "notes", True, platform="telegram")
+        assert config["skills"]["platform_enabled"]["telegram"] == []
+        mock_save.assert_not_called()
+
+    @patch("hermes_cli.skills_config.save_config")
+    def test_external_dirs_filtered_enable_refused_without_partial_write(self, mock_save, tmp_path, monkeypatch):
+        from copy import deepcopy
+        import hermes_yaml as yaml
+        from agent.skill_utils import _external_dirs_cache_clear
+        from hermes_cli.skills_config import toggle_skill_selection
+
+        home, shared = tmp_path / "home", tmp_path / "external"
+        home.mkdir()
+        skill = shared / "filtered-dir"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text(
+            "---\\nname: filtered-front\\ndescription: Filtered skill\\n---\\nBody\\n",
+            encoding="utf-8")
+        config = {"skills": {
+            "enabled": ["git"], "disabled": [],
+            "external_dirs": [{"path": str(shared), "exclude": ["filtered-dir"]}],
+        }}
+        (home / "config.yaml").write_text(yaml.safe_dump(config), encoding="utf-8")
+        monkeypatch.setenv("HERMES_HOME", str(home))
+        _external_dirs_cache_clear()
+        before = deepcopy(config)
+        with pytest.raises(ValueError, match="skills.external_dirs"):
+            toggle_skill_selection(config, "filtered-front", True)
+        assert config == before
+        mock_save.assert_not_called()
+
+        # The excluded copy is already off: do not save a derived disabled entry.
+        assert toggle_skill_selection(config, "filtered-front", False) == "denylist"
+        assert config == before
+        mock_save.assert_not_called()
+
+    @patch("hermes_cli.skills_config.save_config")
+    def test_skills_command_real_save_entrypoint_and_noop_retry(self, mock_save, monkeypatch):
+        import hermes_cli.curses_ui as curses_ui
+        import hermes_cli.skills_config as sc
+
+        config = {"skills": {"enabled": ["git", "notes"], "disabled": []}}
+        monkeypatch.setattr(sc, "load_config", lambda: config)
+        monkeypatch.setattr(sc, "_list_all_skills", lambda: [
+            {"name": "notes", "category": "writing", "description": "Notes"}
+        ])
+        monkeypatch.setattr(sc, "_select_platform", lambda: None)
+        monkeypatch.setattr("builtins.input", lambda prompt="": "1")
+        selections = iter([set(), set()])
+        monkeypatch.setattr(curses_ui, "curses_checklist", lambda *a, **kw: next(selections))
+
+        sc.skills_command()  # visible -> off; removes allowlist entry
+        assert config["skills"] == {"enabled": ["git"], "disabled": []}
+        mock_save.assert_called_once_with(config)
+        mock_save.reset_mock()
+
+        sc.skills_command()  # already off -> no write
+        assert config["skills"] == {"enabled": ["git"], "disabled": []}
+        mock_save.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # _is_skill_disabled
 # ---------------------------------------------------------------------------

@@ -108,6 +108,27 @@ class TestProfileScopedSkills:
         assert cfg["skills"]["disabled"] == []
 
 
+    def test_retried_dashboard_disable_does_not_write_derived_allowlist_state(
+        self, client, isolated_profiles
+    ):
+        worker = isolated_profiles["worker_alpha"]
+        cfg_path = worker / "config.yaml"
+        cfg_path.write_text(
+            "skills:\\n  enabled: [dashboard-skill]\\n  disabled: []\\n", encoding="utf-8"
+        )
+        before = cfg_path.read_bytes()
+
+        # worker-skill was never allowed. The live PUT route accepts stale/retried
+        # disables but must not add a permanent skills.disabled entry.
+        for _ in range(2):
+            resp = client.put(
+                "/api/skills/toggle",
+                json={"name": "worker-skill", "enabled": False, "profile": "worker_alpha"},
+            )
+            assert resp.status_code == 200, resp.text
+            assert cfg_path.read_bytes() == before
+            assert _load_cfg(worker)["skills"]["disabled"] == []
+
     def test_scope_restores_module_globals(self, client, isolated_profiles):
         """The SKILLS_DIR swap is per-request; the module global must be
         restored even after a scoped call (cron-style locked swap)."""

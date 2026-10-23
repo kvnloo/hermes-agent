@@ -58,7 +58,7 @@ def _surfaces(home, monkeypatch, *, flush=True):
     # An administrator's managed-scope pin wins over the user: a pinned denylist locks every toggle,
     # a pinned allowlist locks the skills it leaves out.
     ("[]", "disabled: [github-pr]", set(BUNDLED.values())),
-    ("[]", "enabled: [git, notes, axolotl]", {"github-pr"}),
+    ("[]", "enabled: [git, notes, axolotl]", {"github-pr", "hermes-agent"}),
 ])
 def test_every_surface_agrees_on_disabled_skills(disabled, managed, locked, tmp_path, monkeypatch):
     home = tmp_path / "home"
