@@ -167,9 +167,21 @@ class GatewayScopeLease:
         reconstructed request cannot carry connection authority. Invoke on a
         worker, e.g. `await asyncio.to_thread(lease.assert_caller, request)`.
         """
-        # Must happen before the first admission/registry/DB/transport lock.
+        # Check BOTH transport owner loops before any admission, DB, registry
+        # or transport wait. A foreign request may originate on another loop.
         self._require_worker_thread("assert_caller")
-        if self._caller_binding is None or not self._is_current():
+        if (isinstance(current_request, GatewayRequestContext)
+                and _is_transport_owner_loop(current_request._owner_loop)):
+            raise GatewayScopeError(
+                "scoped assert_caller requires a worker thread; "
+                "use await asyncio.to_thread(lease.assert_caller, current_request)"
+            )
+        # Capture is provisional until the originating RPC succeeds. Control
+        # must not spend a lease while its start method is pending or after it
+        # failed/cancelled, even if the original peer is still attached.
+        if (self._caller_binding is None
+                or not self._admission.await_grant(self._handler_thread)
+                or not self._is_current()):
             raise GatewayScopeError("gateway caller is not authorized")
         try:
             allowed = _registered_caller_matches(

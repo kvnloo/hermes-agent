@@ -1184,3 +1184,50 @@ async def test_scope_assert_caller_native_other_profile_same_sid_is_not_original
         await original.close()
         await other_profile.close()
         beta_db.close()
+
+
+@pytest.mark.parametrize("start_fails", [False, True])
+@pytest.mark.asyncio
+async def test_scope_assert_caller_requires_original_rpc_grant(native, start_fails):
+    """Real canonical dispatcher must not authorize a still-pending start RPC."""
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    leases, effects = [], []
+
+    def start(current_request, params):
+        lease = current_request.capture_scope()
+        leases.append(lease)
+        # This is the genuine active registered start handler on the genuine
+        # connection. The same caller is still NOT granted a durable lease:
+        # a failed or unfinished RPC must never authorize control effects.
+        with pytest.raises(GatewayScopeError, match="not authorized"):
+            lease.assert_caller(current_request)
+        if start_fails:
+            raise RuntimeError("secret from failed start")
+        return {"accepted": True}
+
+    def control(current_request, params):
+        leases[0].assert_caller(current_request)
+        effects.append(1)
+        return {"changes": len(effects)}
+
+    install(native, start)
+    install(native, control, name=CALLER_CONTROL)
+    viewer = connect(native.authority)
+    try:
+        await resume(viewer)
+        start_reply = await request(viewer, NAME, {"session_id": "owned"})
+        if start_fails:
+            assert start_reply["error"]["code"] == -32000
+            assert "secret" not in str(start_reply)
+            assert leases[0].cancellation.is_set()
+            assert (await request(viewer, CALLER_CONTROL, {
+                "session_id": "owned"}))["error"]["code"] == -32000
+            assert effects == []
+        else:
+            assert start_reply["result"] == {"accepted": True}
+            assert (await request(viewer, CALLER_CONTROL, {
+                "session_id": "owned"}))["result"] == {"changes": 1}
+            assert effects == [1]
+    finally:
+        await viewer.close()

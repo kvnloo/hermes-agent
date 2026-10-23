@@ -2571,6 +2571,12 @@ any job side effect**. This succeeds for a different registered method of the
 original profile, session and runtime-generation binding. The two method names
 need not match. The assertion refuses a different concurrently attached peer
 even when both peers have the same session ID, profile and control capability.
+The **original start RPC must have completed successfully**: a lease captured
+inside an active start handler is still provisional, and cannot authorize even
+its own handler's control until admission is granted. A later worker may await
+original RPC settlement; failed or cancelled admission never grants control.
+The check rejects either the original or the current control request's
+transport owner loop **before** such a wait or any authority/registry lock.
 
 The caller is enrolled only while its actual registered invocation is active.
 Detached/reattached peers (including a legacy fanout peer reattached to the
