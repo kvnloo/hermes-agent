@@ -891,6 +891,229 @@ def test_scope_assert_caller_real_legacy_stdio_two_attached_peers_and_reattach(r
     assert effects == ["once"]
 
 
+def test_scoped_tee_original_stdio_primary_only_after_second_peer_joins(runtime):
+    """Production registered dispatch: the sidecar sees ordinary replies, not leased events."""
+    import json
+
+    from tui_gateway.transport import StdioTransport, TeeTransport
+
+    class FrameStream:
+        def __init__(self):
+            self.frames = queue.Queue()
+
+        def write(self, line):
+            self.frames.put(json.loads(line))
+            return len(line)
+
+        def flush(self):
+            pass
+
+    server, plugin_module, manager = runtime
+    stream, sidecar, foreign = FrameStream(), Peer(), Peer()
+    primary = StdioTransport(lambda: stream, threading.Lock())
+    original = TeeTransport(primary, sidecar)
+    attach(server, "shared", original)
+    scopes, effects = [], []
+
+    def start(request, params):
+        scopes.append(request.capture_scope())
+        return {"job_id": "selector-only"}
+
+    def control(request, params):
+        scopes[0].assert_caller(request)
+        effects.append(params["action"])
+        return {"count": len(effects)}
+
+    install(plugin_module, manager, start)
+    plugin_module.PluginContext(
+        plugin_module.PluginManifest(name="hermes-tern"), manager,
+    ).register_gateway_method(LEGACY_CONTROL, control)
+
+    def original_rpc(name, rid, **params):
+        assert server.dispatch({
+            "id": rid, "method": name,
+            "params": {"session_id": "shared", **params},
+        }, original) is None
+        reply = stream.frames.get(timeout=5)
+        # Ordinary replies retain their existing dashboard mirroring.
+        assert sidecar.receive() == reply
+        return reply
+
+    assert original_rpc(NAME, 1)["result"] == {"job_id": "selector-only"}
+    lease = scopes[0]  # successfully admitted originating RPC
+    session = server._sessions["shared"]
+    assert server._attach_session_transport(session, foreign)
+    assert server._session_transport_contains(session, original)
+    assert server._session_transport_contains(session, foreign)
+
+    refused = call(server, foreign, LEGACY_CONTROL, rid=2,
+                   session_id="shared", action="foreign")
+    assert refused["error"]["code"] == -32000
+    assert effects == []
+    assert original_rpc(LEGACY_CONTROL, 3, action="original")["result"] == {"count": 1}
+    assert effects == ["original"]  # same lease: B denied, original A accepted
+    assert lease.publish("hermes-tern.btw.complete", {"done": True})
+    event = stream.frames.get(timeout=5)
+    assert event["params"]["type"] == "plugin.event"
+    assert event["params"]["payload"]["event_name"] == "hermes-tern.btw.complete"
+    assert event["params"]["payload"]["data"] == {"done": True}
+    assert stream.frames.empty()  # exactly one original-primary frame
+    assert sidecar.frames.empty()  # no scoped event copied into the sidecar
+    assert foreign.frames.empty()
+
+    ordinary = {"jsonrpc": "2.0", "method": "event",
+                "params": {"type": "ordinary", "payload": {"ok": True}}}
+    assert original.write(ordinary)
+    assert stream.frames.get(timeout=5) == ordinary
+    assert sidecar.receive() == ordinary
+    assert foreign.frames.empty()
+
+
+def test_scoped_tee_rejoin_during_queued_primary_write_revokes_stale_event(runtime):
+    """The real stdio write lock fences a detached/rejoined original Tee peer."""
+    import json
+
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeDeliveryError
+    from tui_gateway.transport import StdioTransport, TeeTransport
+
+    class FrameStream:
+        def __init__(self):
+            self.frames = queue.Queue()
+
+        def write(self, line):
+            self.frames.put(json.loads(line))
+            return len(line)
+
+        def flush(self):
+            pass
+
+    class AttemptLock:
+        def __init__(self):
+            self._lock = threading.Lock()
+            self.attempted = threading.Event()
+
+        def acquire(self):
+            return self._lock.acquire()
+
+        def release(self):
+            self._lock.release()
+
+        def __enter__(self):
+            self.attempted.set()
+            self._lock.acquire()
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            self._lock.release()
+
+    server, plugin_module, manager = runtime
+    stream, sidecar, foreign = FrameStream(), Peer(), Peer()
+    lock = AttemptLock()
+    original = TeeTransport(StdioTransport(lambda: stream, lock), sidecar)
+    attach(server, "shared", original)
+    leases = []
+    install(plugin_module, manager,
+            lambda ctx, params: leases.append(ctx.capture_scope()) or {"ok": True})
+    assert server.dispatch({
+        "id": 1, "method": NAME, "params": {"session_id": "shared"},
+    }, original) is None
+    assert stream.frames.get(timeout=5)["result"] == {"ok": True}
+    assert sidecar.receive()["result"] == {"ok": True}
+    session = server._sessions["shared"]
+    assert server._attach_session_transport(session, foreign)
+    lock.attempted.clear()
+
+    outcomes = queue.Queue()
+
+    def publish():
+        try:
+            outcomes.put(leases[0].publish("hermes-tern.btw.complete", {"done": True}))
+        except Exception as exc:
+            outcomes.put(exc)
+
+    lock.acquire()
+    try:
+        worker = threading.Thread(target=publish, daemon=True)
+        worker.start()
+        assert lock.attempted.wait(5), "scoped event never reached primary output lock"
+        assert outcomes.empty()
+        assert server._detach_session_transport(session, original)
+        assert server._attach_session_transport(session, original)
+        assert server._session_transport_contains(session, original)
+    finally:
+        lock.release()
+
+    worker.join(5)
+    assert not worker.is_alive(), "queued scoped event must not deadlock"
+    assert isinstance(outcomes.get_nowait(), GatewayScopeDeliveryError)
+    assert leases[0].cancellation.is_set()
+    assert stream.frames.empty()
+    assert sidecar.frames.empty()
+    assert foreign.frames.empty()
+
+    # Rejoining permits a NEW admission, never revives the revoked old lease.
+    assert server.dispatch({
+        "id": 2, "method": NAME, "params": {"session_id": "shared"},
+    }, original) is None
+    assert stream.frames.get(timeout=5)["result"] == {"ok": True}
+    assert sidecar.receive()["result"] == {"ok": True}
+    assert leases[1].publish("hermes-tern.btw.complete", {"fresh": True})
+    assert stream.frames.get(timeout=5)["params"]["payload"]["data"] == {"fresh": True}
+    assert stream.frames.empty() and sidecar.frames.empty()
+
+
+@pytest.mark.asyncio
+async def test_scoped_tee_ws_primary_is_unsupported_and_owner_loop_fails_fast(runtime):
+    """A WS-primary composite cannot bypass loop refusal or fan a scoped event out."""
+    import asyncio
+    import json
+
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeDeliveryError, GatewayScopeError
+    from tests.waiting import async_wait_until
+    from tui_gateway.transport import TeeTransport
+    from tui_gateway.ws import WSTransport
+
+    class Socket:
+        def __init__(self):
+            self.frames = []
+
+        async def send_text(self, line):
+            self.frames.append(json.loads(line))
+
+    server, plugin_module, manager = runtime
+    socket, sidecar = Socket(), Peer()
+    ws = WSTransport(socket, asyncio.get_running_loop())
+    original = TeeTransport(ws, sidecar)
+    attach(server, "shared", original)
+    leases = []
+    install(plugin_module, manager,
+            lambda ctx, params: leases.append(ctx.capture_scope()) or {"ok": True})
+    assert server.dispatch({
+        "id": 1, "method": NAME, "params": {"session_id": "shared"},
+    }, original) is None
+    await async_wait_until(
+        lambda: len(socket.frames) == 1, timeout=5, what="original WS Tee RPC reply")
+    assert socket.frames[0]["result"] == {"ok": True}
+    assert sidecar.receive()["result"] == {"ok": True}
+    lease = leases[0]
+
+    # _loop is derived from the original WS primary: refuse BEFORE any
+    # settlement/DB/output wait on the owning loop.
+    with pytest.raises(GatewayScopeError, match="worker thread"):
+        lease.publish("hermes-tern.btw.complete", {"done": True})
+    with pytest.raises(GatewayScopeError, match="worker thread"):
+        lease.assert_current()
+    with pytest.raises(GatewayScopeError, match="worker thread"):
+        lease.close()
+    assert not lease.cancellation.is_set()
+
+    with pytest.raises(GatewayScopeDeliveryError, match="delivery rejected"):
+        await asyncio.to_thread(lease.publish, "hermes-tern.btw.complete", {"done": True})
+    assert lease.cancellation.is_set()
+    assert len(socket.frames) == 1
+    assert sidecar.frames.empty()
+
+
 @pytest.mark.asyncio
 async def test_scope_assert_caller_real_legacy_websocket_same_sid_different_peer(runtime):
     """Production legacy WS dispatcher binds caller, not shared session slot."""
