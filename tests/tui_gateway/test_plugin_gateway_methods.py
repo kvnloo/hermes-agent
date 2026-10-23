@@ -448,3 +448,23 @@ def test_legacy_scope_registration_capture_only_during_handler(runtime):
     with pytest.raises(PermissionError, match="active registered handler"):
         stored[0].capture_scope()
     assert peer.frames.empty()
+
+
+
+def test_legacy_scope_revoked_by_backend_retirement(runtime, monkeypatch):
+    """Registered legacy lease cannot publish after its backend closes admission."""
+    from hermes_cli.backend_retirement import retirement
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    server, plugins, manager = runtime
+    peer = Peer()
+    attach(server, "owned", peer)
+    captured = []
+    install(plugins, manager, lambda ctx, params: captured.append(ctx.capture_scope()) or {"ok": True})
+    assert call(server, peer, NAME, session_id="owned")["result"] == {"ok": True}
+    lease = captured[-1]
+    monkeypatch.setattr(retirement, "acquire", lambda: False)
+    with pytest.raises(GatewayScopeError):
+        lease.publish("hermes-tern.btw.complete", {"done": True})
+    assert lease.cancellation.is_set()
+    assert peer.frames.empty()

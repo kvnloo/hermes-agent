@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import threading
 
+from hermes_cli.backend_retirement import retirement
 from hermes_cli.plugin_gateway_methods import (
     GatewayMethodFailure, GatewayRequestContext, invoke_gateway_method, registered_gateway_methods,
 )
@@ -71,14 +72,21 @@ def dispatch_plugin_method(rid, name: str, params: dict) -> dict:
     succeeded = False
 
     def attached() -> bool:
-        # These are the original record and RPC peer, not a current viewer
-        # discovered again by public session_id from an unbound worker.
-        if transport is None or getattr(transport, "closed", False):
-            return False
-        with server._sessions_lock:
-            return (server._sessions.get(sid) is session
-                    and session.get("profile_home") == profile_home
-                    and server._session_transport_contains(session, transport))
+        # A captured legacy scope cannot survive process drain/retirement, even
+        # when its original session and socket remain temporarily attached.
+        with retirement.work() as admitted:
+            if not admitted or transport is None or getattr(transport, "closed", False):
+                return False
+            with server._sessions_lock:
+                return (server._sessions.get(sid) is session
+                        and session.get("profile_home") == profile_home
+                        and server._session_transport_contains(session, transport))
+
+    def deliver(frame, current):
+        # Hold the real backend retirement permit through the transport send,
+        # not only at scheduling time (no check/use gap).
+        with retirement.work() as admitted:
+            return admitted and deliver_legacy(transport, frame, current)
 
     def capture(plugin_id, registered):
         if not active.is_set() or not attached():
@@ -88,7 +96,7 @@ def dispatch_plugin_method(rid, name: str, params: dict) -> dict:
             profile=profile_name_for_home(profile_home or server._hermes_home)
                     or server._current_profile_name(),
             current=lambda: attached() and registered(),
-            deliver=lambda frame, current: deliver_legacy(transport, frame, current),
+            deliver=deliver,
         )
 
     context = GatewayRequestContext(
