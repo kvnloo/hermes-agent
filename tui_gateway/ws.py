@@ -9,11 +9,12 @@ import asyncio
 import contextlib
 import concurrent.futures
 import json
+import inspect
 import logging
 import socket
 import threading
 import time
-from typing import Any, Callable
+from typing import Any, Awaitable, Callable
 
 from tui_gateway import server
 from agent.message_sanitization import _sanitize_surrogates
@@ -221,7 +222,9 @@ class WSTransport:
         """``write_async`` for an ordered batch: buffered tokens, then *frames*, in one send batch."""
         return await self.write_many_if_current_async(frames, None)
 
-    async def write_many_if_current_async(self, frames: list[dict], is_current: Callable[[], bool] | None) -> bool:
+    async def write_many_if_current_async(
+        self, frames: list[dict], is_current: Callable[[], bool | Awaitable[bool]] | None,
+    ) -> bool:
         """Recheck the batch's owner at each send without gating other producers' buffered tokens."""
         if self._closed:
             return False
@@ -232,8 +235,10 @@ class WSTransport:
         await self._safe_send_many(batch, is_current=is_current, unguarded_prefix=unguarded_prefix)
         return not self._closed
 
-    async def _safe_send_many(self, lines: list[str], *, is_current: Callable[[], bool] | None = None,
-                              unguarded_prefix: int = 0) -> None:
+    async def _safe_send_many(
+        self, lines: list[str], *, is_current: Callable[[], bool | Awaitable[bool]] | None = None,
+        unguarded_prefix: int = 0,
+    ) -> None:
         """Send one indivisible batch of pre-serialized frames in wire order."""
         async with self._send_lock:
             if self._closed:
@@ -241,8 +246,15 @@ class WSTransport:
             for index, line in enumerate(lines):
                 if self._closed:
                     return
-                if is_current is not None and index >= unguarded_prefix and not is_current():
-                    return
+                if is_current is not None and index >= unguarded_prefix:
+                    # Scope generation checks can read SQLite (including token
+                    # writer draining). Await the off-loop check while holding
+                    # this real output lock, not on the WS owner loop.
+                    allowed = is_current()
+                    if inspect.isawaitable(allowed):
+                        allowed = await allowed
+                    if not allowed:
+                        return
                 payload = _sanitize_ws_text(line)
                 try:
                     await asyncio.wait_for(self._ws.send_text(payload), timeout=_WS_SEND_DEADLINE_S)

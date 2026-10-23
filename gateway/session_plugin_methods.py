@@ -66,7 +66,8 @@ def _context(
         raise GatewayMethodFailure(4001, "session is no longer attached")
     generation, epoch = row["runtime_generation"], authority.epoch
 
-    def attached() -> bool:
+    def attached_in_memory() -> bool:
+        """Cheap loop-safe ownership fence (no DB or token-counter flushing)."""
         if (connection._closed
                 or getattr(transport, "closed", False)
                 or getattr(authority, "retiring", False) or getattr(authority, "retired", False)
@@ -78,6 +79,11 @@ def _context(
                 or authority.sessions.get(sid) is not live
                 or live.subscribers.get(subscription) is not actor
                 or live.superseded):
+            return False
+        return True
+
+    def attached() -> bool:
+        if not attached_in_memory():
             return False
         current = authority.db.get_session(sid)
         return current is not None and current["runtime_generation"] == generation
@@ -94,6 +100,7 @@ def _context(
             current=lambda: attached() and registered(),
             deliver=lambda frame, current: deliver_on_owner_loop(
                 transport, loop, frame, current,
+                current_on_loop=lambda: attached_in_memory() and registered(),
             ),
         )
 

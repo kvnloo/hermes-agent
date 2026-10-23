@@ -509,9 +509,9 @@ async def test_scope_failed_and_cancelled_rpc_never_leave_valid_publishers(nativ
         await viewer.close()
 
 
-@pytest.mark.parametrize("replacement", [False, True])
+@pytest.mark.parametrize("revocation", ["detach", "reuse", "unload", "generation"])
 @pytest.mark.asyncio
-async def test_scope_queued_send_rechecks_at_original_ws_write_after_detach(native, replacement):
+async def test_scope_queued_send_rechecks_at_original_ws_write_after_detach(native, revocation):
     """Use the real WSTransport send lock, not an event-publisher test double."""
     import json
 
@@ -531,6 +531,14 @@ async def test_scope_queued_send_rechecks_at_original_ws_write_after_detach(nati
 
     sock = BlockedSocket()
     transport = WSTransport(sock, asyncio.get_running_loop())
+    queued = asyncio.Event()
+    original_guarded_send = transport.write_many_if_current_async
+
+    async def observed_guarded_send(frames, guard):
+        queued.set()
+        return await original_guarded_send(frames, guard)
+
+    transport.write_many_if_current_async = observed_guarded_send
     leases = []
     install(native, lambda request, params: leases.append(request.capture_scope()) or {"ok": True})
     viewer = connect(native.authority, transport=transport)
@@ -544,15 +552,22 @@ async def test_scope_queued_send_rechecks_at_original_ws_write_after_detach(nati
             lease.publish, "hermes-tern.btw.complete", {"done": True},
         ))
         try:
-            # Wait for the publisher to schedule behind the real send lock.
-            await asyncio.sleep(0.02)
-            assert (await request(viewer, "session.detach", {
-                "session_id": "owned", "subscription_id": token,
-            }))["result"]["detached"]
-            if replacement:
-                # The old queued frame must not re-target a new subscription
-                # on the same authenticated connection and public session ID.
-                await resume(viewer)
+            # Observe scheduling inside the real transport, not a timing guess.
+            await asyncio.wait_for(queued.wait(), timeout=5)
+            if revocation in ("detach", "reuse"):
+                assert (await request(viewer, "session.detach", {
+                    "session_id": "owned", "subscription_id": token,
+                }))["result"]["detached"]
+                if revocation == "reuse":
+                    # Same public ID and connection still cannot regain authority.
+                    await resume(viewer)
+            elif revocation == "unload":
+                native.manager.unload("hermes-tern")
+            else:
+                native.db._execute_write(lambda conn: conn.execute(
+                    "UPDATE sessions SET runtime_generation=runtime_generation+1 WHERE id=?",
+                    ("owned",),
+                ))
         finally:
             sock.release.set()
         assert await blocking
@@ -576,6 +591,15 @@ async def test_scope_started_before_rpc_settles_only_publishes_after_success(nat
 
     def handler(request, params):
         lease = request.capture_scope()
+        settled_wait = lease._admission._settled.wait
+
+        def require_rpc_settlement(timeout=None):
+            # A scope has no independent 60-second deadline: cancellation or
+            # handler completion is the only admission decision.
+            assert timeout is None
+            return settled_wait(timeout)
+
+        lease._admission._settled.wait = require_rpc_settlement
 
         def worker():
             try:
@@ -617,6 +641,129 @@ async def test_scope_started_before_rpc_settles_only_publishes_after_success(nat
         await asyncio.to_thread(workers[-1].join, 5)
         assert outcome == [True, False]
         assert len(viewer.transport.frames) == 1
+
+        entered.clear()
+        release.clear()
+        cancelled = asyncio.create_task(request(viewer, NAME, {"session_id": "owned"}))
+        await async_wait_until(entered.is_set, timeout=10, what="cancelled pre-return publisher")
+        assert len(viewer.transport.frames) == 1
+        cancelled.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await cancelled
+        await asyncio.to_thread(workers[-1].join, 5)
+        assert not workers[-1].is_alive()
+        assert outcome == [True, False, False]
+        assert len(viewer.transport.frames) == 1
     finally:
         release.set()
+        await viewer.close()
+
+
+@pytest.mark.parametrize("revocation", ["none", "detach", "unload", "generation"])
+@pytest.mark.asyncio
+async def test_scope_canonical_ws_token_accounting_never_blocks_owner_loop(native, monkeypatch, revocation):
+    """Registered canonical RPC and real WS lock, even when get_session flushes slowly."""
+    import json
+
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeDeliveryError
+    from tui_gateway.ws import WSTransport
+
+    class Socket:
+        def __init__(self):
+            self.frames = []
+
+        async def send_text(self, line):
+            self.frames.append(json.loads(line))
+
+    loop_thread = threading.get_ident()
+    enabled, in_flush, finish_flush = threading.Event(), threading.Event(), threading.Event()
+    flush_threads = []
+    original_flush = native.db.flush_token_counts
+
+    def slow_accounting(*args, **kwargs):
+        if enabled.is_set():
+            flush_threads.append(threading.get_ident())
+            # First check is on the publishing worker. Second is the final
+            # guard after acquiring the real WSTransport output lock.
+            if len(flush_threads) == 2 and threading.get_ident() != loop_thread:
+                in_flush.set()
+                assert finish_flush.wait(5), "release the simulated token-accounting writer"
+        return original_flush(*args, **kwargs)
+
+    monkeypatch.setattr(native.db, "flush_token_counts", slow_accounting)
+    socket = Socket()
+    transport = WSTransport(socket, asyncio.get_running_loop())
+    leases = []
+    install(native, lambda request, params: leases.append(request.capture_scope()) or {"ok": True})
+    viewer = connect(native.authority, transport=transport)
+    try:
+        token = await resume(viewer)
+        assert "result" in await request(viewer, NAME, {"session_id": "owned"})
+        enabled.set()
+        publishing = asyncio.create_task(asyncio.to_thread(
+            leases[-1].publish, "hermes-tern.btw.complete", {"done": True},
+        ))
+        try:
+            await async_wait_until(in_flush.is_set, timeout=5, what="off-loop token flush under WS send lock")
+            # The owner loop must be able to service a real canonical core RPC
+            # while the authoritative generation check waits on token accounting.
+            assert (await asyncio.wait_for(request(viewer, "ping"), timeout=2))["result"] == {"pong": True}
+            if revocation == "detach":
+                assert (await request(viewer, "session.detach", {
+                    "session_id": "owned", "subscription_id": token,
+                }))["result"]["detached"]
+            elif revocation == "unload":
+                native.manager.unload("hermes-tern")
+            elif revocation == "generation":
+                native.db._execute_write(lambda conn: conn.execute(
+                    "UPDATE sessions SET runtime_generation=runtime_generation+1 WHERE id=?",
+                    ("owned",),
+                ))
+        finally:
+            finish_flush.set()
+        if revocation == "none":
+            assert await asyncio.wait_for(publishing, timeout=5)
+            assert len(socket.frames) == 1
+            assert socket.frames[0]["params"]["payload"]["event_name"] == "hermes-tern.btw.complete"
+        else:
+            with pytest.raises(GatewayScopeDeliveryError):
+                await asyncio.wait_for(publishing, timeout=5)
+            assert not any(f.get("params", {}).get("type") == "plugin.event" for f in socket.frames)
+        assert len(flush_threads) >= 2
+        assert all(t != loop_thread for t in flush_threads[:2])
+    finally:
+        enabled.clear()
+        finish_flush.set()
+        await viewer.close()
+
+
+@pytest.mark.asyncio
+async def test_scope_canonical_ws_accepts_large_deep_finite_json(native):
+    """Scope policy follows the real WS serializer, not an invented 256KiB/64-depth cap."""
+    import json
+
+    from tui_gateway.ws import WSTransport
+
+    class Socket:
+        def __init__(self):
+            self.frames = []
+
+        async def send_text(self, line):
+            self.frames.append(json.loads(line))
+
+    socket = Socket()
+    viewer = connect(native.authority, transport=WSTransport(socket, asyncio.get_running_loop()))
+    leases = []
+    install(native, lambda request, params: leases.append(request.capture_scope()) or {"ok": True})
+    try:
+        await resume(viewer)
+        assert "result" in await request(viewer, NAME, {"session_id": "owned"})
+        nested = {"leaf": True}
+        for _ in range(72):
+            nested = {"child": nested}
+        payload = {"body": "x" * (300 * 1024), "deep": nested}
+        assert await asyncio.to_thread(leases[-1].publish, "hermes-tern.btw.complete", payload)
+        assert len(socket.frames) == 1
+        assert socket.frames[0]["params"]["payload"]["data"] == payload
+    finally:
         await viewer.close()

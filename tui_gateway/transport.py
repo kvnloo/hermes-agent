@@ -106,10 +106,23 @@ class StdioTransport:
         self._lock = lock
 
     def write(self, obj: dict) -> bool:
-        """Return ``True`` on success, ``False`` ONLY when the peer is gone (see :func:`_raise_unless_peer_gone`)."""
-        # Serialization is OUTSIDE the lock so a large payload can't block other threads' frames.
-        line = serialize_frame(obj, "stdio", logger) + "\n"
+        """Return True on success; False only when the peer is gone."""
+        # Serialization is outside the lock, including for conditional writes.
+        return self._write_line(serialize_frame(obj, "stdio", logger) + "\n")
+
+    def write_if_current(self, obj: dict, is_current: Callable[[], bool]) -> bool:
+        """Publish only if the original owner still holds authority at output time.
+
+        The guard runs *inside* the actual stdio output lock, after any earlier
+        writer has released it. A queued scoped frame therefore cannot escape
+        after detach, session reuse or plugin-registration retirement.
+        """
+        return self._write_line(serialize_frame(obj, "stdio", logger) + "\n", is_current)
+
+    def _write_line(self, line: str, is_current: Callable[[], bool] | None = None) -> bool:
         with self._lock:
+            if is_current is not None and not is_current():
+                return False
             stream = self._stream_getter()
             try:
                 stream.write(line)
@@ -117,7 +130,7 @@ class StdioTransport:
                 _raise_unless_peer_gone(e, "write")
                 return False
             # A flush that *raises* peer-gone means the dispatcher should exit cleanly; one that *hangs*
-            # on a half-closed pipe holds the lock until it returns — ``_DISABLE_FLUSH`` skips it entirely.
+            # on a half-closed pipe holds the lock until it returns — _DISABLE_FLUSH skips it entirely.
             if not _DISABLE_FLUSH:
                 try:
                     stream.flush()

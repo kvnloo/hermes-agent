@@ -2500,8 +2500,11 @@ Import `GatewayScopeError` and `GatewayScopeDeliveryError` from
 `hermes_cli.plugin_gateway_scopes`. The event name must have the **registering
 plugin's** exact dotted namespace (e.g. `my-plugin.export.progress`);
 foreign/plugin-unowned names, core events such as `message.complete`, invalid
-JSON, non-object payloads, NaN, coerced map keys and objects over 256 KiB are
-rejected. Server-verified identity is **not** read from the supplied payload.
+JSON, non-object payloads, NaN and coerced map keys are rejected. Scopes do
+**not** impose a separate event byte-size or nesting-depth limit; the existing
+gateway JSON serializer and transport/backpressure policy govern actual sends
+(and may reject a frame). Server-verified identity is **not** read from the
+supplied payload.
 
 Every delivered notification retains the normal JSON-RPC event wrapper with
 `params.type: "plugin.event"` and `params.session_id` equal to the original
@@ -2515,8 +2518,10 @@ replacement viewer. A second subscriber receives none.
 
 Publish only after the registered handler returns: a worker launched early
 will await successful RPC settlement before its first send, while the handler
-thread itself cannot publish a provisional event. A failed/cancelled RPC
-invalidates all captured publishers without emitting a provisional notification.
+thread itself cannot publish a provisional event. The lease does not start its
+own 60-second deadline; pending sends resolve with the real RPC result or
+cancellation. A failed/cancelled RPC invalidates all captured publishers
+without emitting a provisional notification.
 
 `lease.publish(...)` returns `True` only when the pinned transport acknowledges
 its write (or a WS send is completed under the owner loop's guarded send lock).
@@ -2525,9 +2530,13 @@ or fails and a `GatewayScopeError` if the lease is no longer authorized.
 This is a transport acknowledgement, **not** proof that the UI consumed the
 event; clients needing exactly-once application acknowledgement must supply
 their own plugin-level protocol. The canonical publisher verifies authority
-**before scheduling and again at actual owner-loop send** so a queued event
-cannot target a detached or replaced viewer. Do not assume a scheduling call
-means delivery. `close()` is idempotent and waits for an in-flight publish to
+**before scheduling and again inside the real WebSocket output lock** so a queued
+event cannot target a detached or replaced viewer. Its final generation check
+may flush token accounting, so it executes off the WebSocket owner loop while
+the lock remains held. Legacy stdio rechecks inside its actual output lock as
+well, even when publication was queued before detach, session reuse or
+registration unload. Do not assume a scheduling call means
+delivery. `close()` is idempotent and waits for an in-flight publish to
 finish, so successful final-completion delivery cannot be silently withdrawn.
 
 The lease is revoked on failed/cancelled originating RPC, explicit close,

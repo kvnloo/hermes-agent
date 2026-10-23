@@ -468,3 +468,107 @@ def test_legacy_scope_revoked_by_backend_retirement(runtime, monkeypatch):
         lease.publish("hermes-tern.btw.complete", {"done": True})
     assert lease.cancellation.is_set()
     assert peer.frames.empty()
+
+
+@pytest.mark.parametrize("revocation", ["detach", "reuse", "unload"])
+def test_legacy_scope_real_stdio_output_lock_fences_queued_publication(runtime, monkeypatch, revocation):
+    """Registered legacy dispatch + real StdioTransport, never a fake delivery callback."""
+    import json
+
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeDeliveryError
+    from tui_gateway.transport import StdioTransport
+
+    class FrameStream:
+        def __init__(self):
+            self.frames = queue.Queue()
+
+        def write(self, line):
+            self.frames.put(json.loads(line))
+            return len(line)
+
+        def flush(self):
+            pass
+
+    server, plugins, manager = runtime
+    stream, lock = FrameStream(), threading.Lock()
+    stdio = StdioTransport(lambda: stream, lock)
+    attach(server, "owned", stdio)
+    scopes = []
+    install(plugins, manager, lambda ctx, params: scopes.append(ctx.capture_scope()) or {"accepted": True})
+
+    # Exercise the registered legacy dispatcher and consume its actual stdio RPC reply.
+    assert server.dispatch({"id": 42, "method": NAME, "params": {"session_id": "owned"}}, stdio) is None
+    assert stream.frames.get(timeout=5)["result"] == {"accepted": True}
+    lease = scopes[-1]
+
+    entered = threading.Event()
+    original_guarded_write = StdioTransport.write_if_current
+
+    def observed_guarded_write(self, frame, current):
+        entered.set()
+        return original_guarded_write(self, frame, current)
+
+    monkeypatch.setattr(StdioTransport, "write_if_current", observed_guarded_write)
+    outcomes = queue.Queue()
+    lock.acquire()
+    try:
+        def publish():
+            try:
+                outcomes.put(lease.publish("hermes-tern.btw.complete", {"done": True}))
+            except Exception as exc:
+                outcomes.put(exc)
+
+        worker = threading.Thread(target=publish, daemon=True)
+        worker.start()
+        assert entered.wait(5), "publisher never reached real stdio output lock"
+        assert outcomes.empty()  # queued behind the true output lock
+        if revocation == "detach":
+            server._sessions.pop("owned")
+        elif revocation == "reuse":
+            attach(server, "owned", stdio)  # identical ID and peer, different live record
+        else:
+            manager.unload("hermes-tern")  # original registration is retired
+    finally:
+        lock.release()
+
+    worker.join(5)
+    assert not worker.is_alive()
+    assert isinstance(outcomes.get_nowait(), GatewayScopeDeliveryError)
+    assert stream.frames.empty()  # no escaped plugin.event after revocation
+    assert lease.cancellation.is_set()
+
+
+def test_legacy_scope_real_stdio_accepts_large_deep_finite_json(runtime):
+    """Use the same JSON serializer/output lock as ordinary legacy gateway frames."""
+    import json
+
+    from tui_gateway.transport import StdioTransport
+
+    class FrameStream:
+        def __init__(self):
+            self.frames = queue.Queue()
+
+        def write(self, line):
+            self.frames.put(json.loads(line))
+            return len(line)
+
+        def flush(self):
+            pass
+
+    server, plugins, manager = runtime
+    stream = FrameStream()
+    stdio = StdioTransport(lambda: stream, threading.Lock())
+    attach(server, "owned", stdio)
+    leases = []
+    install(plugins, manager, lambda ctx, params: leases.append(ctx.capture_scope()) or {"accepted": True})
+    assert server.dispatch({"id": 42, "method": NAME, "params": {"session_id": "owned"}}, stdio) is None
+    assert stream.frames.get(timeout=5)["result"] == {"accepted": True}
+
+    nested = {"leaf": True}
+    for _ in range(72):
+        nested = {"child": nested}
+    payload = {"body": "x" * (300 * 1024), "deep": nested}
+    assert leases[-1].publish("hermes-tern.btw.complete", payload)
+    frame = stream.frames.get(timeout=5)
+    assert frame["params"]["type"] == "plugin.event"
+    assert frame["params"]["payload"]["data"] == payload

@@ -22,18 +22,16 @@ class GatewayScopeDeliveryError(GatewayScopeError):
     """The original transport did not acknowledge delivery."""
 
 
-def _json_value(value: Any, *, depth: int = 0) -> bool:
+def _json_value(value: Any) -> bool:
     """Only genuine JSON; json.dumps alone coerces keys/tuples and allows NaN."""
-    if depth > 64:
-        return False
     if value is None or type(value) in (str, int, bool):
         return True
     if type(value) is float:
         return math.isfinite(value)
     if type(value) is list:
-        return all(_json_value(item, depth=depth + 1) for item in value)
+        return all(_json_value(item) for item in value)
     if type(value) is dict:
-        return all(type(key) is str and _json_value(item, depth=depth + 1)
+        return all(type(key) is str and _json_value(item)
                    for key, item in value.items())
     return False
 
@@ -56,7 +54,7 @@ class GatewayScopeAdmission:
         # Never send a provisional event for a handler that might fail.
         if threading.get_ident() == handler_thread and not self._settled.is_set():
             return False
-        if not self._settled.wait(timeout=60):
+        if not self._settled.wait():
             return False
         with self._lock:
             return self._state == "granted"
@@ -140,13 +138,14 @@ class GatewayScopeLease:
         if not (looks_like_plugin_method(event_name)
                 and event_name.startswith(f"{self._plugin_id}.")):
             raise GatewayScopeError("event name must belong to the registering plugin")
-        if type(payload) is not dict or not _json_value(payload):
+        try:
+            valid_json = type(payload) is dict and _json_value(payload)
+        except RecursionError:
+            valid_json = False
+        if not valid_json:
             raise GatewayScopeError("plugin event payload must be a finite JSON object")
         try:
-            encoded = json.dumps(payload, allow_nan=False, ensure_ascii=False)
-            if len(encoded.encode("utf-8")) > 256 * 1024:
-                raise GatewayScopeError("plugin event payload exceeds 256 KiB")
-            data = json.loads(encoded)
+            data = json.loads(json.dumps(payload, allow_nan=False, ensure_ascii=False))
         except (TypeError, ValueError, UnicodeError, RecursionError) as exc:
             raise GatewayScopeError("plugin event payload is not valid JSON") from exc
         frame = {"jsonrpc": "2.0", "method": "event", "params": {
@@ -179,27 +178,43 @@ class GatewayScopeLease:
             self.cancellation.set()
 
 
-async def _send_on_owner_loop(transport, frame: dict, current: Callable[[], bool]) -> bool:
-    """Check again at actual WS send after queued frames and send-lock waits."""
-    if not current():
-        return False
+async def _send_on_owner_loop(
+    transport, frame: dict, current: Callable[[], bool],
+    current_on_loop: Callable[[], bool] | None = None,
+) -> bool:
+    """Fence in the real WS send lock; blocking authority checks run on workers.
+
+    In particular, DB.get_session drains token accounting and can wait several
+    seconds. Never invoke that check on the connection's event loop.
+    """
     guarded_send = getattr(transport, "write_many_if_current_async", None)
     if callable(guarded_send):
         checked = False
 
-        def guard() -> bool:
+        async def guard() -> bool:
             nonlocal checked
-            checked = current()
+            checked = bool(await asyncio.to_thread(current))
+            # While the DB check was yielding to a worker, detach/unload
+            # might have run on the owner loop. Recheck cheap live ownership
+            # immediately before send, still inside the real output lock.
+            if checked and current_on_loop is not None:
+                try:
+                    checked = bool(current_on_loop())
+                except Exception:
+                    checked = False
             return checked
 
         sent = await guarded_send([frame], guard)
         return bool(checked and sent)
-    return bool(current() and transport.write(frame))
+    # Non-WS test/adapter peers have no asynchronous send lock. Both the
+    # authority check and their write still run off the owning event loop.
+    return bool(await asyncio.to_thread(lambda: current() and transport.write(frame)))
 
 
 def deliver_on_owner_loop(
     transport, loop: asyncio.AbstractEventLoop, frame: dict,
     current: Callable[[], bool],
+    current_on_loop: Callable[[], bool] | None = None,
 ) -> bool:
     """No session fanout or replacement viewer lookup."""
     try:
@@ -209,7 +224,7 @@ def deliver_on_owner_loop(
     if running is loop:
         raise GatewayScopeDeliveryError("scoped publish requires a worker thread")
     future = asyncio.run_coroutine_threadsafe(
-        _send_on_owner_loop(transport, frame, current), loop,
+        _send_on_owner_loop(transport, frame, current, current_on_loop), loop,
     )
     return bool(future.result())
 
@@ -221,4 +236,7 @@ def deliver_legacy(
     loop = getattr(transport, "_loop", None)
     if loop is not None:
         return deliver_on_owner_loop(transport, loop, frame, current)
+    guarded_write = getattr(transport, "write_if_current", None)
+    if callable(guarded_write):
+        return bool(guarded_write(frame, current))
     return bool(current() and transport.write(frame))
