@@ -471,7 +471,7 @@ def test_legacy_scope_revoked_by_backend_retirement(runtime, monkeypatch):
 
 
 @pytest.mark.parametrize("revocation", ["detach", "reuse", "unload"])
-def test_legacy_scope_real_stdio_output_lock_fences_queued_publication(runtime, monkeypatch, revocation):
+def test_legacy_scope_real_stdio_output_lock_fences_queued_publication(runtime, revocation):
     """Registered legacy dispatch + real StdioTransport, never a fake delivery callback."""
     import json
 
@@ -489,8 +489,29 @@ def test_legacy_scope_real_stdio_output_lock_fences_queued_publication(runtime, 
         def flush(self):
             pass
 
+    class AttemptLock:
+        """Expose the attempt to enter the real StdioTransport output lock."""
+
+        def __init__(self):
+            self._lock = threading.Lock()
+            self.attempted = threading.Event()
+
+        def acquire(self):
+            return self._lock.acquire()
+
+        def release(self):
+            self._lock.release()
+
+        def __enter__(self):
+            self.attempted.set()
+            self._lock.acquire()
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            self._lock.release()
+
     server, plugins, manager = runtime
-    stream, lock = FrameStream(), threading.Lock()
+    stream, lock = FrameStream(), AttemptLock()
     stdio = StdioTransport(lambda: stream, lock)
     attach(server, "owned", stdio)
     scopes = []
@@ -500,15 +521,7 @@ def test_legacy_scope_real_stdio_output_lock_fences_queued_publication(runtime, 
     assert server.dispatch({"id": 42, "method": NAME, "params": {"session_id": "owned"}}, stdio) is None
     assert stream.frames.get(timeout=5)["result"] == {"accepted": True}
     lease = scopes[-1]
-
-    entered = threading.Event()
-    original_guarded_write = StdioTransport.write_if_current
-
-    def observed_guarded_write(self, frame, current):
-        entered.set()
-        return original_guarded_write(self, frame, current)
-
-    monkeypatch.setattr(StdioTransport, "write_if_current", observed_guarded_write)
+    lock.attempted.clear()  # exclude the RPC reply's earlier output-lock acquisition
     outcomes = queue.Queue()
     lock.acquire()
     try:
@@ -520,7 +533,7 @@ def test_legacy_scope_real_stdio_output_lock_fences_queued_publication(runtime, 
 
         worker = threading.Thread(target=publish, daemon=True)
         worker.start()
-        assert entered.wait(5), "publisher never reached real stdio output lock"
+        assert lock.attempted.wait(5), "publisher never attempted the held stdio output lock"
         assert outcomes.empty()  # queued behind the true output lock
         if revocation == "detach":
             server._sessions.pop("owned")

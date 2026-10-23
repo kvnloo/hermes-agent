@@ -2534,9 +2534,17 @@ This is a transport acknowledgement, **not** proof that the UI consumed the
 event; clients needing exactly-once application acknowledgement must supply
 their own plugin-level protocol. The canonical publisher verifies authority
 **before scheduling and again inside the real WebSocket output lock** so a queued
-event cannot target a detached or replaced viewer. Its final generation check
-may flush token accounting, so it executes off the WebSocket owner loop while
-the lock remains held. Legacy stdio rechecks inside its actual output lock as
+event cannot target a detached or replaced viewer. A valid preliminary
+worker generation read alone does not admit a frame: canonical publication holds
+the original live session's **existing mutation gate** over a fresh persisted-
+generation check and the **actual guarded WS write**. Genuine rewind, reset,
+compression and FIFO-claim commits use the same gate. If a generation-changing
+commit wins, the stale frame is refused; if the frame wins, the commit waits
+until the send is acknowledged. This also covers rewind when the same live
+object and subscription remain mapped. The generation checks may flush token
+accounting, so they execute off the WS owner loop; the native asyncio gate
+is awaited without blocking that loop's thread. Legacy stdio rechecks inside
+its actual output lock as
 well, even when publication was queued before detach, session reuse or
 registration unload. Do not assume a scheduling call means
 delivery. `close()` is idempotent and waits for an in-flight publish to

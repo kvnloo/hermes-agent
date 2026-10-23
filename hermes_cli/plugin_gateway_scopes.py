@@ -197,6 +197,7 @@ class GatewayScopeLease:
 async def _send_on_owner_loop(
     transport, frame: dict, current: Callable[[], bool],
     current_on_loop: Callable[[], bool] | None = None,
+    generation_gate: asyncio.Lock | None = None,
 ) -> bool:
     """Fence in the real WS send lock; blocking authority checks run on workers.
 
@@ -220,10 +221,22 @@ async def _send_on_owner_loop(
                     checked = False
             return checked
 
-        sent = await guarded_send([frame], guard)
+        if generation_gate is not None:
+            # A valid worker read can race a rewind before the send. The
+            # second, final read under the native mutation gate authorizes it.
+            # Rewind/reset/compress and FIFO claims hold that same gate.
+            if not await asyncio.to_thread(current):
+                return False
+            async with generation_gate:
+                sent = await guarded_send([frame], guard)
+        else:
+            sent = await guarded_send([frame], guard)
         return bool(checked and sent)
-    # Non-WS test/adapter peers have no asynchronous send lock. Both the
-    # authority check and their write still run off the owning event loop.
+    # Non-WS adapters have no async output lock: cover their final authority
+    # check and original write with the same native generation gate.
+    if generation_gate is not None:
+        async with generation_gate:
+            return bool(await asyncio.to_thread(lambda: current() and transport.write(frame)))
     return bool(await asyncio.to_thread(lambda: current() and transport.write(frame)))
 
 
@@ -231,6 +244,7 @@ def deliver_on_owner_loop(
     transport, loop: asyncio.AbstractEventLoop, frame: dict,
     current: Callable[[], bool],
     current_on_loop: Callable[[], bool] | None = None,
+    generation_gate: asyncio.Lock | None = None,
 ) -> bool:
     """No session fanout or replacement viewer lookup."""
     try:
@@ -240,7 +254,7 @@ def deliver_on_owner_loop(
     if running is loop:
         raise GatewayScopeDeliveryError("scoped publish requires a worker thread")
     future = asyncio.run_coroutine_threadsafe(
-        _send_on_owner_loop(transport, frame, current, current_on_loop), loop,
+        _send_on_owner_loop(transport, frame, current, current_on_loop, generation_gate), loop,
     )
     return bool(future.result())
 

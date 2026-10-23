@@ -102,6 +102,7 @@ def _context(
             deliver=lambda frame, current: deliver_on_owner_loop(
                 transport, loop, frame, current,
                 current_on_loop=lambda: attached_in_memory() and registered(),
+                generation_gate=live.mutation_lock,
             ),
         )
 

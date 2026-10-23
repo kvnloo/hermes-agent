@@ -769,8 +769,9 @@ async def test_scope_canonical_ws_token_accounting_never_blocks_owner_loop(nativ
     def slow_accounting(*args, **kwargs):
         if enabled.is_set():
             flush_threads.append(threading.get_ident())
-            # First check is on the publishing worker. Second is the final
-            # guard after acquiring the real WSTransport output lock.
+            # First read is in the publishing worker; second is the
+            # pre-admission check. The final generation read still executes
+            # off-loop under the live writer gate and real WS output lock.
             if len(flush_threads) == 2 and threading.get_ident() != loop_thread:
                 in_flush.set()
                 assert finish_flush.wait(5), "release the simulated token-accounting writer"
@@ -852,4 +853,92 @@ async def test_scope_canonical_ws_accepts_large_deep_finite_json(native):
         assert len(socket.frames) == 1
         assert socket.frames[0]["params"]["payload"]["data"] == payload
     finally:
+        await viewer.close()
+
+@pytest.mark.asyncio
+async def test_scope_real_ws_rewind_after_valid_worker_read_cannot_publish_stale_frame(native, monkeypatch):
+    """Genuine rewind after worker validation must veto the final registered WS send.
+
+    The same mapped LiveSession, actor and subscription survive the receipt.
+    Without a generation-writer-gated second read the stale plugin.event escapes.
+    """
+    import json
+
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeDeliveryError
+    from tui_gateway.ws import WSTransport
+
+    class Socket:
+        def __init__(self):
+            self.frames = []
+
+        async def send_text(self, line):
+            self.frames.append(json.loads(line))
+
+    socket = Socket()
+    transport = WSTransport(socket, asyncio.get_running_loop())
+    leases = []
+    install(native, lambda ctx, params: leases.append(ctx.capture_scope()) or {"ok": True})
+    viewer = connect(native.authority, transport=transport)
+    old_read = threading.Event()
+    allow_publication = threading.Event()
+    reading_lock = threading.Lock()
+    worker_reads = 0
+    original_get_session = native.db.get_session
+    owner_thread = threading.get_ident()
+    native.runner._evict_cached_agent = lambda route: None
+
+    try:
+        await resume(viewer)
+        target_id = await asyncio.to_thread(native.db.append_message, "owned", "user", "rewind target")
+        snapshot = await asyncio.to_thread(original_get_session, "owned")
+        old_generation = snapshot["runtime_generation"]
+        live = native.authority.sessions["owned"]
+        subscription = viewer.subscriptions["owned"]
+        assert "result" in await request(viewer, NAME, {"session_id": "owned"})
+
+        def observed_get_session(sid):
+            nonlocal worker_reads
+            row = original_get_session(sid)
+            if sid == "owned" and threading.get_ident() != owner_thread:
+                with reading_lock:
+                    worker_reads += 1
+                    count = worker_reads
+                if count == 2:
+                    # Read completed with the OLD valid generation, but no
+                    # final scoped frame has been admitted to the output yet.
+                    assert row is not None and row["runtime_generation"] == old_generation
+                    old_read.set()
+                    assert allow_publication.wait(10), "rewind must commit before publication resumes"
+            return row
+
+        monkeypatch.setattr(native.db, "get_session", observed_get_session)
+        publishing = asyncio.create_task(asyncio.to_thread(
+            leases[0].publish, "hermes-tern.btw.complete", {"done": True},
+        ))
+        try:
+            await async_wait_until(old_read.is_set, timeout=5, what="old valid generation read")
+            # This is the real authority's session.mutate receipt transaction,
+            # not a test-only SQL increment or a substituted delivery callback.
+            reply = await asyncio.wait_for(request(viewer, "session.mutate", {
+                "session_id": "owned", "request_id": "rewind-during-scoped-send",
+                "expected_revision": snapshot["runtime_revision"],
+                "expected_generation": old_generation, "operation": "rewind",
+                "payload": {"target_message_id": target_id},
+            }), timeout=5)
+            assert "result" in reply, reply
+            assert reply["result"]["execution_generation"] == old_generation + 1
+            assert native.authority.sessions["owned"] is live
+            assert viewer.subscriptions["owned"] == subscription
+        finally:
+            allow_publication.set()
+
+        with pytest.raises(GatewayScopeDeliveryError):
+            await asyncio.wait_for(publishing, timeout=5)
+        assert not any(frame.get("params", {}).get("type") == "plugin.event"
+                       for frame in socket.frames)
+        assert worker_reads >= 3  # guarded final read after the rewind committed
+        assert leases[0].cancellation.is_set()
+    finally:
+        allow_publication.set()
+        monkeypatch.setattr(native.db, "get_session", original_get_session)
         await viewer.close()
