@@ -98,12 +98,12 @@ def _write_probe(home: Path, *, fail: bool = False) -> None:
         encoding="utf-8",
     )
     (plugin_dir / "__init__.py").write_text(
-        "def handler(request, params):\\n"
-        "    request.assert_attached()\\n"
-        "    return {'from': 'fixture', 'profile': request.profile}\\n"
-        "def register(ctx):\\n"
-        "    ctx.register_gateway_method('hermes-tern.browser.blocks', handler)\\n"
-        + ("    raise RuntimeError('fixture failed after registration')\\n" if fail else ""),
+        "def handler(request, params):\n"
+        "    request.assert_attached()\n"
+        "    return {'from': 'fixture', 'profile': request.profile}\n"
+        "def register(ctx):\n"
+        "    ctx.register_gateway_method('hermes-tern.browser.blocks', handler)\n"
+        + ("    raise RuntimeError('fixture failed after registration')\n" if fail else ""),
         encoding="utf-8",
     )
     (home / "config.yaml").write_text(
