@@ -454,7 +454,11 @@ class SessionManager:
         except Exception:
             logger.debug("Failed to query DB for ACP session %s", session_id, exc_info=True)
             return None
-        if row is None or row.get("source") != "acp":
+        if row is None:
+            return None
+        if row.get("source") != "acp":
+            logger.warning("Session %s is not ACP-owned; use the gateway-backed ACP adapter to attach "
+                           "without creating a second execution owner", session_id)
             return None
 
         # A previous adapter process stamped the row ended at its stdio
