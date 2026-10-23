@@ -1048,17 +1048,19 @@ async def test_scope_assert_caller_native_lifecycle_fences(native, revocation):
             "accepted": True}
         lease = leases[0]
 
-        if revocation == "detach_reattach":
+        async def detach_and_reattach():
             reply = await request(viewer, "session.detach", {
                 "session_id": "owned", "subscription_id": subscription})
             assert reply["result"]["detached"]
             await resume(viewer)
-        elif revocation == "generation":
+
+        async def change_generation():
             native.db._execute_write(lambda conn: conn.execute(
                 "UPDATE sessions SET runtime_generation=runtime_generation+1 WHERE id=?",
                 ("owned",),
             ))
-        elif revocation == "real_rewind":
+
+        async def rewind_via_session_mutate():
             native.runner._evict_cached_agent = lambda route: None
             target_id = await asyncio.to_thread(
                 native.db.append_message, "owned", "user", "rewind target")
@@ -1071,15 +1073,32 @@ async def test_scope_assert_caller_native_lifecycle_fences(native, revocation):
             })
             assert "result" in reply, reply
             assert reply["result"]["execution_generation"] == snapshot["runtime_generation"] + 1
-        elif revocation == "unload_reload":
+
+        async def unload_and_reload():
             assert native.manager.unload("hermes-tern")
             install(native, control, name=CALLER_CONTROL)
-        elif revocation == "close":
+
+        async def close_lease():
             await asyncio.to_thread(lease.close)
-        elif revocation == "cancellation":
+
+        async def cancel_lease():
             lease.cancellation.set()
-        elif revocation == "epoch":
+
+        async def change_epoch():
             native.authority.epoch += 1
+
+        # Run the real lifecycle action selected by each parameter. Each row
+        # leaves the original captured lease under the same denial assertions.
+        revocations = {
+            "detach_reattach": detach_and_reattach,
+            "generation": change_generation,
+            "real_rewind": rewind_via_session_mutate,
+            "unload_reload": unload_and_reload,
+            "close": close_lease,
+            "cancellation": cancel_lease,
+            "epoch": change_epoch,
+        }
+        await revocations[revocation]()
 
         answer = await request(viewer, CALLER_CONTROL, {
             "session_id": "owned", "action": "must-not-run"})
