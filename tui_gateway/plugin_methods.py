@@ -65,6 +65,7 @@ def dispatch_plugin_method(rid, name: str, params: dict) -> dict:
         return problem
     sid = params["session_id"]
     transport = current_transport()
+    owner_loop = getattr(transport, "_loop", None)
     profile_home = session.get("profile_home")
     admission = GatewayScopeAdmission()
     active = threading.Event()
@@ -93,6 +94,7 @@ def dispatch_plugin_method(rid, name: str, params: dict) -> dict:
             raise PermissionError("gateway scope capture is unavailable")
         return admission.capture(
             plugin_id=plugin_id, session_id=sid,
+            owner_loop=owner_loop,
             profile=profile_name_for_home(profile_home or server._hermes_home)
                     or server._current_profile_name(),
             current=lambda: attached() and registered(),
@@ -104,7 +106,7 @@ def dispatch_plugin_method(rid, name: str, params: dict) -> dict:
         profile=profile_name_for_home(profile_home or server._hermes_home)
                 or server._current_profile_name(),
         _attached=lambda: active.is_set() and attached(),
-        _capture_scope=capture,
+        _capture_scope=capture, _owner_loop=owner_loop,
     )
     try:
         with server._session_profile_runtime_scope({"profile_home": profile_home}):

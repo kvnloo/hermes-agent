@@ -11,7 +11,7 @@ import math
 import threading
 from typing import Any, Callable
 
-from hermes_cli.plugin_gateway_methods import looks_like_plugin_method
+from hermes_cli.plugin_gateway_methods import _is_transport_owner_loop, looks_like_plugin_method
 
 
 class GatewayScopeError(RuntimeError):
@@ -63,6 +63,7 @@ class GatewayScopeAdmission:
         self, *, plugin_id: str, session_id: str, profile: str,
         current: Callable[[], bool],
         deliver: Callable[[dict[str, Any], Callable[[], bool]], bool],
+        owner_loop: asyncio.AbstractEventLoop | None = None,
     ) -> GatewayScopeLease:
         with self._lock:
             if self._state != "pending":
@@ -70,7 +71,7 @@ class GatewayScopeAdmission:
             lease = GatewayScopeLease(
                 plugin_id=plugin_id, session_id=session_id, profile=profile,
                 admission=self, current=current, deliver=deliver,
-                handler_thread=threading.get_ident(),
+                handler_thread=threading.get_ident(), owner_loop=owner_loop,
             )
             self._leases.append(lease)
             return lease
@@ -96,6 +97,7 @@ class GatewayScopeLease:
     publish returns True after the original transport acknowledges a send, not
     after a client processes it. Rejection raises a secret-safe exception.
     close waits for the in-flight final publish, then revokes idempotently.
+    Blocking operations reject the transport owner loop before taking locks.
     """
 
     def __init__(
@@ -103,8 +105,10 @@ class GatewayScopeLease:
         admission: GatewayScopeAdmission, current: Callable[[], bool],
         deliver: Callable[[dict[str, Any], Callable[[], bool]], bool],
         handler_thread: int,
+        owner_loop: asyncio.AbstractEventLoop | None = None,
     ) -> None:
         self._handler_thread = handler_thread
+        self._owner_loop = owner_loop
         self._plugin_id = plugin_id
         self._session_id = session_id
         self._profile = profile
@@ -129,12 +133,23 @@ class GatewayScopeLease:
             self.cancellation.set()
         return valid
 
+    def _require_worker_thread(self, operation: str) -> None:
+        if _is_transport_owner_loop(self._owner_loop):
+            usage = ("await asyncio.to_thread(lease.publish, event_name, payload)"
+                     if operation == "publish" else
+                     f"await asyncio.to_thread(lease.{operation})")
+            raise GatewayScopeError(
+                f"scoped {operation} requires a worker thread; use {usage}"
+            )
+
     def assert_current(self) -> None:
+        self._require_worker_thread("assert_current")
         if not self._is_current():
             raise GatewayScopeError("gateway scope is no longer authorized")
 
     def publish(self, event_name: str, payload: dict[str, Any]) -> bool:
         """Deliver one owned JSON-object event to the original peer only."""
+        self._require_worker_thread("publish")
         if not (looks_like_plugin_method(event_name)
                 and event_name.startswith(f"{self._plugin_id}.")):
             raise GatewayScopeError("event name must belong to the registering plugin")
@@ -172,7 +187,8 @@ class GatewayScopeLease:
             return True
 
     def close(self) -> None:
-        """Revoke after any currently admitted publish completes."""
+        """Worker-only drain and revocation; never block the transport owner loop."""
+        self._require_worker_thread("close")
         with self._publish_lock:
             self._revoked = True
             self.cancellation.set()

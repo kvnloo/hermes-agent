@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import re
 import threading
@@ -17,6 +18,16 @@ _SEGMENT = r"[a-z][a-z0-9_-]*"
 _METHOD = re.compile(rf"{_SEGMENT}(?:\.{_SEGMENT}){{2,}}\Z")
 
 
+def _is_transport_owner_loop(loop: asyncio.AbstractEventLoop | None) -> bool:
+    """Identify unsupported blocking calls without consulting transport or DB locks."""
+    if loop is None:
+        return False
+    try:
+        return asyncio.get_running_loop() is loop
+    except RuntimeError:
+        return False
+
+
 @dataclass(frozen=True)
 class GatewayRequestContext:
     """Server-authorized snapshot, not a bearer token or a mutable session/transport."""
@@ -25,6 +36,9 @@ class GatewayRequestContext:
     profile: str
     _attached: Callable[[], bool] = field(repr=False, compare=False)
     _capture_scope: Callable[[], Any] | None = field(
+        default=None, repr=False, compare=False,
+    )
+    _owner_loop: asyncio.AbstractEventLoop | None = field(
         default=None, repr=False, compare=False,
     )
 
@@ -36,7 +50,12 @@ class GatewayRequestContext:
         return self._capture_scope()
 
     def assert_attached(self) -> None:
-        """Recheck the live session generation and caller transport before a side effect."""
+        """Recheck authority from a worker, never blocking the transport owner loop."""
+        if _is_transport_owner_loop(self._owner_loop):
+            raise RuntimeError(
+                "gateway request authority check requires a worker thread; "
+                "use await asyncio.to_thread(request.assert_attached)"
+            )
         if not self._attached():
             raise PermissionError("gateway session detached or replaced")
 

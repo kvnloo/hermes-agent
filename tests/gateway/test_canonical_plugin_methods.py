@@ -336,9 +336,9 @@ async def test_scope_publishes_post_return_progress_completion_to_original_nativ
         assert (await request(viewer, NAME, {"session_id": "owned"}))["result"] == {"started": True}
         lease, rpc_context = captured[0]
         with pytest.raises(PermissionError):
-            rpc_context.assert_attached()  # the RPC itself is not durable
+            await asyncio.to_thread(rpc_context.assert_attached)  # the RPC itself is not durable
         with pytest.raises(PermissionError):
-            rpc_context.capture_scope()  # no capture after handler return
+            await asyncio.to_thread(rpc_context.capture_scope)  # no capture after handler return
         assert await asyncio.to_thread(lease.publish, "hermes-tern.btw.progress", {"count": 1})
         assert await asyncio.to_thread(lease.publish, "hermes-tern.btw.complete", {"done": True})
         assert [f["params"]["payload"]["event_name"] for f in viewer.transport.frames] == [
@@ -353,11 +353,11 @@ async def test_scope_publishes_post_return_progress_completion_to_original_nativ
             "plugin": "hermes-tern", "event_name": "hermes-tern.btw.progress",
             "profile": "default", "data": {"count": 1},
         }
-        lease.close()
-        lease.close()
+        await asyncio.to_thread(lease.close)
+        await asyncio.to_thread(lease.close)
         assert lease.cancellation.is_set()
         with pytest.raises(GatewayScopeError):
-            lease.publish("hermes-tern.btw.complete", {"done": True})
+            await asyncio.to_thread(lease.publish, "hermes-tern.btw.complete", {"done": True})
         assert len(viewer.transport.frames) == 2  # close cannot retract a sent final frame
     finally:
         await viewer.close()
@@ -378,11 +378,11 @@ async def test_scope_rejects_foreign_names_core_spoofing_and_malformed_payload(n
         for name in ("message.complete", "gateway.ready", "other.btw.complete",
                      "hermes-tern..complete", "hermes-tern.btw.Complete"):
             with pytest.raises(GatewayScopeError, match="event name"):
-                lease.publish(name, {"v": 1})
+                await asyncio.to_thread(lease.publish, name, {"v": 1})
         for payload in (None, [], {"v": float("nan")}, {"v": {1: "coerced"}},
                         {"v": object()}, {"v": (1, 2)}):
             with pytest.raises(GatewayScopeError, match="JSON"):
-                lease.publish("hermes-tern.btw.update", payload)
+                await asyncio.to_thread(lease.publish, "hermes-tern.btw.update", payload)
         assert viewer.transport.frames == []
         assert await asyncio.to_thread(lease.publish, "hermes-tern.btw.complete", {})
     finally:
@@ -407,7 +407,7 @@ async def test_scope_loses_original_subscription_connection_and_registration(nat
         }))["result"]["detached"]
         await resume(viewer)
         with pytest.raises(GatewayScopeError):
-            lease.assert_current()
+            await asyncio.to_thread(lease.assert_current)
         assert viewer.transport.frames == peer.transport.frames == []
 
         assert "result" in await request(viewer, NAME, {"session_id": "owned"})
@@ -415,7 +415,7 @@ async def test_scope_loses_original_subscription_connection_and_registration(nat
         native.manager.unload("hermes-tern")
         install(native, lambda request, params: {"replacement": True})
         with pytest.raises(GatewayScopeError):
-            old.assert_current()
+            await asyncio.to_thread(old.assert_current)
 
         # Closing a connection revokes only its own remaining lease.
         native.manager.unload("hermes-tern")
@@ -424,7 +424,7 @@ async def test_scope_loses_original_subscription_connection_and_registration(nat
         owned = leases[-1]
         await viewer.close()
         with pytest.raises(GatewayScopeError):
-            owned.assert_current()
+            await asyncio.to_thread(owned.assert_current)
         assert peer.transport.frames == []
     finally:
         await viewer.close()
@@ -446,7 +446,7 @@ async def test_scope_epoch_and_persisted_runtime_generation_revoke_not_new_turn(
         assert await asyncio.to_thread(lease.publish, "hermes-tern.btw.update", {"turn": 2})
         native.authority.epoch += 1
         with pytest.raises(GatewayScopeError):
-            lease.assert_current()
+            await asyncio.to_thread(lease.assert_current)
         native.authority.epoch -= 1
 
         assert "result" in await request(viewer, NAME, {"session_id": "owned"})
@@ -456,7 +456,7 @@ async def test_scope_epoch_and_persisted_runtime_generation_revoke_not_new_turn(
             ("owned",),
         ))
         with pytest.raises(GatewayScopeError):
-            lease.assert_current()
+            await asyncio.to_thread(lease.assert_current)
         assert len(viewer.transport.frames) == 1
     finally:
         await viewer.close()
@@ -481,7 +481,7 @@ async def test_scope_failed_and_cancelled_rpc_never_leave_valid_publishers(nativ
         assert "sensitive" not in str(answer)
         assert leases[-1].cancellation.is_set()
         with pytest.raises(GatewayScopeError):
-            leases[-1].assert_current()
+            await asyncio.to_thread(leases[-1].assert_current)
         native.manager.unload("hermes-tern")
 
         entered, release = threading.Event(), threading.Event()
@@ -503,7 +503,7 @@ async def test_scope_failed_and_cancelled_rpc_never_leave_valid_publishers(nativ
             release.set()
         assert leases[-1].cancellation.is_set()
         with pytest.raises(GatewayScopeError):
-            leases[-1].assert_current()
+            await asyncio.to_thread(leases[-1].assert_current)
         assert viewer.transport.frames == []
     finally:
         await viewer.close()
@@ -578,6 +578,92 @@ async def test_scope_queued_send_rechecks_at_original_ws_write_after_detach(nati
     finally:
         await viewer.close()
 
+
+
+
+@pytest.mark.parametrize("outcome", ["delivered", "unloaded"])
+@pytest.mark.asyncio
+async def test_scope_owner_loop_cannot_block_queued_real_ws_publication(native, monkeypatch, outcome):
+    """A worker owns the lease lock while the real WS send lock is held on its owner loop."""
+    import json
+
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeDeliveryError, GatewayScopeError
+    from tui_gateway.ws import WSTransport
+
+    class Socket:
+        def __init__(self):
+            self.frames = []
+
+        async def send_text(self, line):
+            self.frames.append(json.loads(line))
+
+    socket = Socket()
+    loop = asyncio.get_running_loop()
+    owner_thread = threading.get_ident()
+    transport = WSTransport(socket, loop)
+    queued = asyncio.Event()
+    original_send = transport.write_many_if_current_async
+
+    async def observed_send(frames, guard):
+        queued.set()
+        return await original_send(frames, guard)
+
+    transport.write_many_if_current_async = observed_send
+    leases, contexts = [], []
+
+    def handler(request, params):
+        contexts.append(request)
+        leases.append(request.capture_scope())
+        return {"ok": True}
+
+    install(native, handler)
+    viewer = connect(native.authority, transport=transport)
+    original_get_session = native.db.get_session
+
+    def checked_get_session(*args, **kwargs):
+        assert threading.get_ident() != owner_thread, "authority DB read on WS owner loop"
+        return original_get_session(*args, **kwargs)
+
+    try:
+        await resume(viewer)
+        assert (await request(viewer, NAME, {"session_id": "owned"}))["result"] == {"ok": True}
+        lease = leases[-1]
+        monkeypatch.setattr(native.db, "get_session", checked_get_session)
+        async with transport._send_lock:
+            publishing = asyncio.create_task(asyncio.to_thread(
+                lease.publish, "hermes-tern.btw.complete", {"done": True},
+            ))
+            # Reaching the real WS guard proves the worker is waiting under
+            # _publish_lock for THIS loop to complete the actual guarded send.
+            await asyncio.wait_for(queued.wait(), timeout=5)
+            with pytest.raises(GatewayScopeError, match="asyncio.to_thread"):
+                lease.publish("hermes-tern.btw.update", {"count": 2})
+            with pytest.raises(GatewayScopeError, match="asyncio.to_thread"):
+                lease.close()
+            with pytest.raises(GatewayScopeError, match="asyncio.to_thread"):
+                lease.assert_current()
+            with pytest.raises(RuntimeError, match="asyncio.to_thread"):
+                contexts[-1].assert_attached()
+            assert not lease.cancellation.is_set()
+            if outcome == "unloaded":
+                native.manager.unload("hermes-tern")
+        if outcome == "delivered":
+            assert await asyncio.wait_for(publishing, timeout=5)
+            assert len(socket.frames) == 1
+            assert socket.frames[0]["params"]["payload"]["event_name"] == "hermes-tern.btw.complete"
+        else:
+            with pytest.raises(GatewayScopeDeliveryError):
+                await asyncio.wait_for(publishing, timeout=5)
+            assert not socket.frames
+        # A worker close retains synchronous drain/revoke semantics in both cases.
+        await asyncio.to_thread(lease.close)
+        await asyncio.to_thread(lease.close)
+        assert lease.cancellation.is_set()
+        with pytest.raises(GatewayScopeError):
+            await asyncio.to_thread(lease.assert_current)
+    finally:
+        monkeypatch.setattr(native.db, "get_session", original_get_session)
+        await viewer.close()
 
 
 @pytest.mark.asyncio

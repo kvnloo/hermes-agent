@@ -97,6 +97,7 @@ def _context(
             raise PermissionError("gateway scope capture is unavailable")
         return admission.capture(
             plugin_id=plugin_id, session_id=sid, profile=profile,
+            owner_loop=loop,
             current=lambda: attached() and registered(),
             deliver=lambda frame, current: deliver_on_owner_loop(
                 transport, loop, frame, current,
@@ -106,7 +107,7 @@ def _context(
 
     return GatewayRequestContext(
         session_id=sid, profile=profile,
-        _attached=lambda: active.is_set() and attached(),
+        _attached=lambda: active.is_set() and attached(), _owner_loop=loop,
         _capture_scope=capture,
     )
 

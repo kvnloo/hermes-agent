@@ -572,3 +572,77 @@ def test_legacy_scope_real_stdio_accepts_large_deep_finite_json(runtime):
     frame = stream.frames.get(timeout=5)
     assert frame["params"]["type"] == "plugin.event"
     assert frame["params"]["payload"]["data"] == payload
+
+
+@pytest.mark.parametrize("outcome", ["delivered", "unloaded"])
+@pytest.mark.asyncio
+async def test_legacy_scope_owner_loop_rejects_during_real_ws_send(runtime, outcome):
+    """Legacy dispatch must carry the original WSTransport loop into captured scopes."""
+    import asyncio
+    import json
+
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeDeliveryError, GatewayScopeError
+    from tests.waiting import async_wait_until
+    from tui_gateway.ws import WSTransport
+
+    class Socket:
+        def __init__(self):
+            self.frames = []
+
+        async def send_text(self, line):
+            self.frames.append(json.loads(line))
+
+    server, plugins, manager = runtime
+    socket = Socket()
+    transport = WSTransport(socket, asyncio.get_running_loop())
+    queued = asyncio.Event()
+    original_send = transport.write_many_if_current_async
+
+    async def observed_send(frames, guard):
+        queued.set()
+        return await original_send(frames, guard)
+
+    transport.write_many_if_current_async = observed_send
+    attach(server, "owned", transport)
+    leases, contexts = [], []
+
+    def handler(request, params):
+        contexts.append(request)
+        leases.append(request.capture_scope())
+        return {"ok": True}
+
+    install(plugins, manager, handler)
+    assert server.dispatch({"id": 42, "method": NAME, "params": {"session_id": "owned"}}, transport) is None
+    await async_wait_until(lambda: len(socket.frames) == 1, timeout=5, what="legacy WS RPC reply")
+    assert socket.frames[0]["result"] == {"ok": True}
+    lease = leases[-1]
+
+    async with transport._send_lock:
+        publishing = asyncio.create_task(asyncio.to_thread(
+            lease.publish, "hermes-tern.btw.complete", {"done": True},
+        ))
+        await asyncio.wait_for(queued.wait(), timeout=5)
+        with pytest.raises(GatewayScopeError, match="asyncio.to_thread"):
+            lease.publish("hermes-tern.btw.update", {"count": 2})
+        with pytest.raises(GatewayScopeError, match="asyncio.to_thread"):
+            lease.close()
+        with pytest.raises(GatewayScopeError, match="asyncio.to_thread"):
+            lease.assert_current()
+        with pytest.raises(RuntimeError, match="asyncio.to_thread"):
+            contexts[-1].assert_attached()
+        assert not lease.cancellation.is_set()
+        if outcome == "unloaded":
+            manager.unload("hermes-tern")
+
+    if outcome == "delivered":
+        assert await asyncio.wait_for(publishing, timeout=5)
+        assert len(socket.frames) == 2
+        assert socket.frames[1]["params"]["payload"]["event_name"] == "hermes-tern.btw.complete"
+    else:
+        with pytest.raises(GatewayScopeDeliveryError):
+            await asyncio.wait_for(publishing, timeout=5)
+        assert len(socket.frames) == 1
+    await asyncio.to_thread(lease.close)
+    assert lease.cancellation.is_set()
+    with pytest.raises(GatewayScopeError):
+        await asyncio.to_thread(lease.assert_current)

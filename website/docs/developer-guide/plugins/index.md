@@ -2458,6 +2458,9 @@ it checks the original actor, transport, session, registration and generation
 and becomes invalid after RPC completion. Call it before handler side effects.
 Legacy callbacks use the TUI RPC pool with the caller's bound transport;
 canonical callbacks execute off-loop under the authority's profile scope.
+`request.assert_attached()` can perform blocking authority reads: for a WebSocket
+caller it rejects invocation on the owning asyncio loop. Keep it in the RPC
+worker or use `await asyncio.to_thread(request.assert_attached)` from async code.
 
 ### Background work: captured, caller-bound gateway scopes
 
@@ -2538,6 +2541,18 @@ well, even when publication was queued before detach, session reuse or
 registration unload. Do not assume a scheduling call means
 delivery. `close()` is idempotent and waits for an in-flight publish to
 finish, so successful final-completion delivery cannot be silently withdrawn.
+
+`lease.publish(...)`, `lease.assert_current()` and `lease.close()` are
+**blocking worker-thread operations**. On the original WebSocket owner loop,
+all three raise `GatewayScopeError` **before** RPC-settlement waits, authority
+DB reads or delivery-lock acquisition. An owner-loop `close()` rejection does
+**not** revoke or drain the lease; off-loop `close()` preserves the
+in-flight-send drain and revocation fence. From an async owner-loop callback,
+use `await asyncio.to_thread(lease.publish, event_name, payload)`,
+`await asyncio.to_thread(lease.assert_current)`, and
+`await asyncio.to_thread(lease.close)`. The same rule applies to canonical
+and legacy WS transports; stdio callers without an owner loop retain the
+synchronous worker API. Never infer completion from an unawaited task.
 
 The lease is revoked on failed/cancelled originating RPC, explicit close,
 original connection close, detach, subscription replacement, runtime
