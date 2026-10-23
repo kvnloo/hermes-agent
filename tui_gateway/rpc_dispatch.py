@@ -69,7 +69,8 @@ def dispatch(req: dict, transport: Optional[Transport] = None) -> dict | None:
             return normalized
         # Plugin callbacks are always potentially slow; never run them on stdin / WS
         # reader. Their public session id is only a hint, not transport authority.
-        plugin_call = normalized[1].count(".") >= 2
+        from hermes_cli.plugin_gateway_methods import looks_like_plugin_method
+        plugin_call = normalized[1] not in _methods and looks_like_plugin_method(normalized[1])
         if not plugin_call and normalized[1] not in _LONG_HANDLERS:
             return handle_request(req)
         session_snapshot = None

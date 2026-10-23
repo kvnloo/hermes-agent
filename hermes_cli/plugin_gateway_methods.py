@@ -67,3 +67,77 @@ def validate_gateway_registration(
     ):
         raise TypeError("gateway schema must be a Pydantic BaseModel class with extra='forbid'")
     return GatewayMethod(name=name, plugin_id=plugin_id, handler=handler, schema=schema)
+
+class GatewayMethodFailure(Exception):
+    """A secret-safe JSON-RPC failure shared by the legacy and canonical transports."""
+
+    def __init__(self, code: int, message: str):
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
+def registered_gateway_methods() -> list[str]:
+    """Discover only the current profile manager's live registrations."""
+    from hermes_cli.plugins import discover_plugins, get_plugin_manager
+
+    discover_plugins()
+    return sorted(get_plugin_manager()._gateway_methods)
+
+
+def invoke_gateway_method(name: str, request: GatewayRequestContext, params: dict) -> dict:
+    """Call one profile-owned synchronous handler without rebinding its module globals.
+
+    Both transports provide their own attachment/actor fence in *request*. A
+    disposable registration adds another fence for in-flight unload/reload.
+    """
+    import json
+    import logging
+    from dataclasses import replace
+
+    from pydantic import ValidationError
+
+    from hermes_cli.plugins import discover_plugins, get_plugin_manager
+
+    try:
+        request.assert_attached()
+        discover_plugins()
+        request.assert_attached()
+        manager = get_plugin_manager()
+        entry = manager._gateway_methods.get(name)
+        if entry is None:
+            raise GatewayMethodFailure(-32601, f"unknown method: {name}")
+
+        # A callback's own assert_attached also refuses a registration retired
+        # during execution, before it performs any further side effect.
+        context = replace(
+            request, _attached=lambda: (
+                request._attached() and manager._gateway_methods.get(name) is entry
+            ),
+        )
+        if entry.schema is None:
+            validated = dict(params)
+        else:
+            try:
+                validated = entry.schema.model_validate(params, strict=True).model_dump(mode="json")
+            except ValidationError as exc:
+                fields = ", ".join(
+                    f"{'.'.join(map(str, item['loc'])) or 'params'}: {item['type']}"
+                    for item in exc.errors(include_input=False, include_url=False)
+                )
+                raise GatewayMethodFailure(-32602, f"invalid plugin params: {fields}") from exc
+
+        context.assert_attached()
+        result = entry.handler(context, validated)
+        context.assert_attached()
+        if not isinstance(result, dict):
+            raise TypeError("gateway method result must be a JSON object")
+        json.dumps(result, allow_nan=False)
+        return result
+    except GatewayMethodFailure:
+        raise
+    except PermissionError as exc:
+        raise GatewayMethodFailure(4001, "session is no longer attached") from exc
+    except Exception as exc:
+        logging.getLogger(__name__).exception("plugin gateway method failed: %s", name)
+        raise GatewayMethodFailure(-32000, "plugin gateway method failed") from exc
