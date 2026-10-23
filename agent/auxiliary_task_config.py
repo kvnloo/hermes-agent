@@ -13,41 +13,76 @@ from typing import Any, Dict
 logger = logging.getLogger(__name__)
 
 
+class AuthoritativeAuxiliaryTask(str):
+    """A normal task name whose non-route policy remains active but whose route does not inherit.
+
+    ``str`` compatibility is intentional: timeout, concurrency, progress and fallback policy still
+    see an ordinary ``"compression"`` task. Only :func:`_get_auxiliary_task_config` notices the
+    marker and removes destination fields from the returned config. This lets a one-shot fallback
+    name a complete main route without threading a new flag through every auxiliary-call layer.
+    """
+
+    __slots__ = ()
+    route_authoritative = True
+
+
+def authoritative_auxiliary_task(task: str | None) -> str:
+    """Return *task* marked as a complete route override, preserving ordinary string behavior."""
+    if isinstance(task, AuthoritativeAuxiliaryTask):
+        return task
+    return AuthoritativeAuxiliaryTask(str(task or ""))
+
+
 def _get_auxiliary_task_config(task: str, _seen: frozenset = frozenset()) -> dict[str, Any]:
     """Config dict for auxiliary.<task>, or {} when unavailable. Plugin-registered tasks get their
     declared defaults layered under user config (user wins); built-in defaults live in DEFAULT_CONFIG.
     A task registered with ``inherit_from`` is resolved here, at read time, over the base task's
     effective config, so it follows the base's current settings (and the active profile's config)
-    until the user pins a route on the task itself. ``_seen`` guards re-registration cycles."""
+    until the user pins a route on the task itself. ``_seen`` guards re-registration cycles.
+
+    An :class:`AuthoritativeAuxiliaryTask` keeps non-route policy such as timeout, concurrency,
+    progress bounds, ``extra_body`` and fallback chains, but strips every field that can choose or
+    shape the destination. Intentional empty fields on the explicit route therefore cannot inherit
+    from the route that just failed (#113322, #130895).
+    """
     if not task:
         return {}
+
+    authoritative = bool(getattr(task, "route_authoritative", False))
+    task_key = str(task)
+
+    def _finalize(config: dict[str, Any]) -> dict[str, Any]:
+        if not authoritative:
+            return config
+        return {key: value for key, value in config.items() if key not in _AUX_ROUTE_KEYS}
+
     try:
         from hermes_cli.config import load_config_readonly
         config = load_config_readonly()
     except ImportError:
         return {}
     aux = config.get("auxiliary", {}) if isinstance(config, dict) else {}
-    task_config = aux.get(task, {}) if isinstance(aux, dict) else {}
+    task_config = aux.get(task_key, {}) if isinstance(aux, dict) else {}
     if not isinstance(task_config, dict):
         task_config = {}
     try:
         from hermes_cli.plugins import get_plugin_auxiliary_tasks
         for _entry in get_plugin_auxiliary_tasks():
-            if _entry.get("key") == task:
+            if _entry.get("key") == task_key:
                 _defaults = _entry.get("defaults") or {}
                 if isinstance(_defaults, dict):
                     _inherit = _entry.get("inherit_from")
-                    if _inherit and task in _seen:
+                    if _inherit and task_key in _seen:
                         logger.warning("Auxiliary task %r has a circular inherit_from chain — "
-                                       "ignoring inheritance", task)
-                    if not _inherit or task in _seen:
-                        return {**_defaults, **task_config}
-                    base = _get_auxiliary_task_config(_inherit, _seen | {task})
-                    return _layer_over_inherited({**base, **_defaults}, task_config)
+                                       "ignoring inheritance", task_key)
+                    if not _inherit or task_key in _seen:
+                        return _finalize({**_defaults, **task_config})
+                    base = _get_auxiliary_task_config(_inherit, _seen | {task_key})
+                    return _finalize(_layer_over_inherited({**base, **_defaults}, task_config))
                 break
     except Exception:  # health: allow BLE001 -- plugin discovery must never break aux config reads
-        logger.debug("plugin auxiliary task lookup failed for %r", task, exc_info=True)
-    return task_config
+        logger.debug("plugin auxiliary task lookup failed for %r", task_key, exc_info=True)
+    return _finalize(task_config)
 
 
 # The fields that together pick WHERE a call goes. They travel as one unit: a provider pinned on an
