@@ -2523,6 +2523,17 @@ The default client preserves this typed envelope; it never reinterprets
 **only the original connection/subscription**, not session fanout or a
 replacement viewer. A second subscriber receives none.
 
+When the original legacy request uses the TUI's optional dashboard sidecar,
+its `TeeTransport` wraps the real Ink `StdioTransport` primary. A scoped
+`plugin.event` is written **once to that original primary only**, under its
+stdio output lock and final attachment check; it is **never mirrored** to the
+sidecar, even after another session peer joins. Ordinary non-scoped Tee
+output, including normal RPC responses, still mirrors as before. A Tee with
+a non-stdio primary cannot deliver scoped events and explicitly fails closed;
+a WS-primary Tee still rejects blocking scope operations on its owner loop
+before any waits. This composite refusal does not affect direct WS scopes,
+which retain their actual guarded send lock.
+
 Publish only after the registered handler returns: a worker launched early
 will await successful RPC settlement before its first send, while the handler
 thread itself cannot publish a provisional event. The lease does not start its
