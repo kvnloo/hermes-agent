@@ -667,6 +667,26 @@ class PluginContext:
         return self._register_entry("command", clean, self._manager._plugin_commands, entry,
                                     "Plugin %s registered command: /%s", clean)
 
+    @_serialized_replacement
+    def register_gateway_method(
+        self, name: str, handler: Callable, *, schema: type | None = None,
+    ) -> PluginRegistration:
+        """Register an owned TUI/desktop JSON-RPC method; callback(request, params) -> dict.
+
+        The server authorizes a live session transport and binds the owning profile before
+        invoking a synchronous callback on its RPC pool. The optional schema is a strict
+        Pydantic request model (extra='forbid'). No core method catalog is modified.
+        """
+        from hermes_cli.plugin_gateway_methods import validate_gateway_registration
+
+        entry = validate_gateway_registration(self.plugin_id, name, handler, schema)
+        if name in self._manager._gateway_methods:
+            raise ValueError(f"gateway method {name!r} is already registered")
+        return self._register_entry(
+            "gateway_method", name, self._manager._gateway_methods, entry,
+            "Plugin %s registered gateway method: %s", name,
+        )
+
     def dispatch_tool(self, tool_name: str, args: dict, **kwargs) -> str:
         """Dispatch a tool call through the registry with the parent agent (when available)
         resolved automatically; returns the handler's JSON string. ``kwargs`` forward to dispatch."""
@@ -1181,6 +1201,7 @@ class PluginManager(PluginLoaderMixin, PluginDispatchMixin, PluginLedgerMixin):
         self._plugin_platform_names: set[str] = set()
         self._cli_commands: dict[str, dict] = {}
         self._plugin_commands: dict[str, dict] = {}
+        self._gateway_methods: dict[str, Any] = {}  # profile-local, ledger-owned RPC callbacks
         self._system_prompt_sections: dict[str, PluginSystemPromptSection] = {}
         self._plugin_skills: dict[str, dict[str, Any]] = {}
         self._automation_blueprints: dict[str, Any] = {}  # "<plugin>:<key>" -> AutomationBlueprint
