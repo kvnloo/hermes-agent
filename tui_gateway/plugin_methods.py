@@ -7,10 +7,13 @@ module globals: method_ctx.bind_module must never rebind them.
 from __future__ import annotations
 
 import logging
+import threading
 
 from hermes_cli.plugin_gateway_methods import (
     GatewayMethodFailure, GatewayRequestContext, invoke_gateway_method, registered_gateway_methods,
 )
+from hermes_cli.plugin_gateway_scopes import GatewayScopeAdmission, deliver_legacy
+from tui_gateway.transport import current_transport
 
 logger = logging.getLogger(__name__)
 
@@ -60,21 +63,53 @@ def dispatch_plugin_method(rid, name: str, params: dict) -> dict:
     if problem is not None:
         return problem
     sid = params["session_id"]
+    transport = current_transport()
+    profile_home = session.get("profile_home")
+    admission = GatewayScopeAdmission()
+    active = threading.Event()
+    active.set()
+    succeeded = False
 
     def attached() -> bool:
-        return server._current_session_steer_authority(sid)[1] is session
+        # These are the original record and RPC peer, not a current viewer
+        # discovered again by public session_id from an unbound worker.
+        if transport is None or getattr(transport, "closed", False):
+            return False
+        with server._sessions_lock:
+            return (server._sessions.get(sid) is session
+                    and session.get("profile_home") == profile_home
+                    and server._session_transport_contains(session, transport))
+
+    def capture(plugin_id, registered):
+        if not active.is_set() or not attached():
+            raise PermissionError("gateway scope capture is unavailable")
+        return admission.capture(
+            plugin_id=plugin_id, session_id=sid,
+            profile=profile_name_for_home(profile_home or server._hermes_home)
+                    or server._current_profile_name(),
+            current=lambda: attached() and registered(),
+            deliver=lambda frame, current: deliver_legacy(transport, frame, current),
+        )
 
     context = GatewayRequestContext(
         session_id=sid,
-        profile=profile_name_for_home(session.get("profile_home") or server._hermes_home)
+        profile=profile_name_for_home(profile_home or server._hermes_home)
                 or server._current_profile_name(),
-        _attached=attached,
+        _attached=lambda: active.is_set() and attached(),
+        _capture_scope=capture,
     )
     try:
-        with server._session_profile_runtime_scope({"profile_home": session.get("profile_home")}):
-            return server._ok(rid, invoke_gateway_method(name, context, params))
+        with server._session_profile_runtime_scope({"profile_home": profile_home}):
+            result = invoke_gateway_method(name, context, params)
+        admission.grant()
+        succeeded = True
+        return server._ok(rid, result)
     except GatewayMethodFailure as exc:
         return server._err(rid, exc.code, exc.message)
     except Exception:
         logger.exception("plugin gateway method failed: %s", name)
         return server._err(rid, -32000, "plugin gateway method failed")
+    finally:
+        if not succeeded:
+            admission.revoke()
+        active.clear()

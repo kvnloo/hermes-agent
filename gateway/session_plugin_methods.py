@@ -17,6 +17,7 @@ from hermes_cli.plugin_gateway_methods import (
     GatewayMethodFailure, GatewayRequestContext, invoke_gateway_method,
     looks_like_plugin_method, registered_gateway_methods,
 )
+from hermes_cli.plugin_gateway_scopes import GatewayScopeAdmission, deliver_on_owner_loop
 from hermes_state_runtime import RuntimeStoreError
 
 logger = logging.getLogger(__name__)
@@ -35,7 +36,10 @@ def is_plugin_request(method, core_handlers) -> bool:
             and method not in GROUP_METHODS and method not in core_handlers())
 
 
-def _context(connection, params: dict, active: threading.Event) -> GatewayRequestContext:
+def _context(
+    connection, params: dict, active: threading.Event,
+    admission: GatewayScopeAdmission, loop: asyncio.AbstractEventLoop,
+) -> GatewayRequestContext:
     """Freeze the caller's actual subscription, live object and DB generation."""
     sid = params.get("session_id")
     if not isinstance(sid, str) or not sid:
@@ -63,7 +67,7 @@ def _context(connection, params: dict, active: threading.Event) -> GatewayReques
     generation, epoch = row["runtime_generation"], authority.epoch
 
     def attached() -> bool:
-        if (not active.is_set() or connection._closed
+        if (connection._closed
                 or getattr(transport, "closed", False)
                 or getattr(authority, "retiring", False) or getattr(authority, "retired", False)
                 or getattr(authority.runner, "_draining", False)
@@ -78,12 +82,32 @@ def _context(connection, params: dict, active: threading.Event) -> GatewayReques
         current = authority.db.get_session(sid)
         return current is not None and current["runtime_generation"] == generation
 
+    # The RPC context stays request-bound; only a captured lease drops the
+    # request-active fence, keeping the original actor, subscription and runtime.
+    profile = served_profile_name(authority.profile_id)
+
+    def capture(plugin_id, registered):
+        if not active.is_set() or not attached():
+            raise PermissionError("gateway scope capture is unavailable")
+        return admission.capture(
+            plugin_id=plugin_id, session_id=sid, profile=profile,
+            current=lambda: attached() and registered(),
+            deliver=lambda frame, current: deliver_on_owner_loop(
+                transport, loop, frame, current,
+            ),
+        )
+
     return GatewayRequestContext(
-        session_id=sid, profile=served_profile_name(authority.profile_id), _attached=attached,
+        session_id=sid, profile=profile,
+        _attached=lambda: active.is_set() and attached(),
+        _capture_scope=capture,
     )
 
 
-def _execute(connection, method: str, params: dict, active: threading.Event) -> dict:
+def _execute(
+    connection, method: str, params: dict, active: threading.Event,
+    admission: GatewayScopeAdmission, loop: asyncio.AbstractEventLoop,
+) -> dict:
     """Do discovery, validation, callbacks and scope-bound checks off the owner loop."""
     if "profile" in params:
         raise GatewayMethodFailure(4001, "profile selection is not authorized for plugin RPCs")
@@ -96,7 +120,7 @@ def _execute(connection, method: str, params: dict, active: threading.Event) -> 
                 "plugin_methods": []}
 
     with owner_scope(connection.authority):
-        context = _context(connection, params, active)
+        context = _context(connection, params, active, admission, loop)
         context.assert_attached()
         if method == "gateway.capabilities":
             methods = registered_gateway_methods()
@@ -110,8 +134,15 @@ async def dispatch_plugin_request(connection, rid, method: str, params: dict) ->
     """One canonical JSON-RPC reply through the authenticated authority connection."""
     active = threading.Event()
     active.set()
+    admission = GatewayScopeAdmission()
+    succeeded = False
+    loop = asyncio.get_running_loop()
     try:
-        result = await asyncio.to_thread(_execute, connection, method, params, active)
+        result = await asyncio.to_thread(
+            _execute, connection, method, params, active, admission, loop,
+        )
+        admission.grant()
+        succeeded = True
         return {"jsonrpc": "2.0", "id": rid, "result": result}
     except GatewayMethodFailure as exc:
         return {"jsonrpc": "2.0", "id": rid, "error": {
@@ -126,5 +157,8 @@ async def dispatch_plugin_request(connection, rid, method: str, params: dict) ->
         return {"jsonrpc": "2.0", "id": rid, "error": {
             "code": -32000, "message": "plugin gateway method failed"}}
     finally:
-        # A cancelled socket request cannot leave an orphaned worker authorized.
+        # Failed/cancelled admission invalidates every captured publisher. A
+        # normal return revokes only this request's assert_attached, not leases.
+        if not succeeded:
+            admission.revoke()
         active.clear()

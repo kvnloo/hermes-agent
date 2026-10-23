@@ -2453,16 +2453,95 @@ validation, callback invocation and disposable ownership ledger:
 
 
 `request.session_id` and `request.profile` are **server-resolved** identity
-hints, not capabilities. The only enforcement operation on the request context
-is `request.assert_attached()`, which rechecks the bound transport against the
-live session and its generation. Call it immediately before any side effect in
-a long-running handler; do not retain the context for later background work.
-The gateway also checks attachment and registration identity again before
-replying. Legacy callbacks run in the TUI RPC worker pool with the caller's
-transport `ContextVar`; canonical callbacks run off-loop in the authority's
-profile scope. Do not spin off unbound threads or manage session/transport
-ownership yourself. This context is not a token that grants additional access;
-for capability-gated operations use the server-side actor, not context hints.
+hints, not capabilities. `request.assert_attached()` remains **request-bound**:
+it checks the original actor, transport, session, registration and generation
+and becomes invalid after RPC completion. Call it before handler side effects.
+Legacy callbacks use the TUI RPC pool with the caller's bound transport;
+canonical callbacks execute off-loop under the authority's profile scope.
+
+### Background work: captured, caller-bound gateway scopes
+
+A synchronous, **registered** gateway handler may call
+`request.capture_scope()` during its own invocation, then pass the opaque
+`GatewayScopeLease` to background workers. The handler still returns an
+ordinary JSON-RPC object immediately. It cannot capture later or from a
+different thread, and the client cannot supply a profile, session, actor,
+subscription, generation or lease ID to mint one. Do not retain the request
+context after return: only the captured lease may outlive the RPC.
+
+```python
+from threading import Thread
+from hermes_cli.plugin_gateway_scopes import GatewayScopeError, GatewayScopeDeliveryError
+
+def start_export(request, params):
+    lease = request.capture_scope()
+
+    def work():
+        try:
+            if lease.cancellation.is_set():
+                return
+            lease.assert_current()
+            lease.publish("my-plugin.export.progress", {"completed": 1})
+            # Complete the plugin's own work; check lease authority before
+            # irreversible session-affecting actions.
+            lease.assert_current()
+            lease.publish("my-plugin.export.complete", {"done": True})
+        except (GatewayScopeError, GatewayScopeDeliveryError):
+            # The original caller is gone or the transport refused delivery.
+            pass
+        finally:
+            lease.close()
+
+    Thread(target=work, daemon=True).start()
+    return {"accepted": True}
+```
+
+Import `GatewayScopeError` and `GatewayScopeDeliveryError` from
+`hermes_cli.plugin_gateway_scopes`. The event name must have the **registering
+plugin's** exact dotted namespace (e.g. `my-plugin.export.progress`);
+foreign/plugin-unowned names, core events such as `message.complete`, invalid
+JSON, non-object payloads, NaN, coerced map keys and objects over 256 KiB are
+rejected. Server-verified identity is **not** read from the supplied payload.
+
+Every delivered notification retains the normal JSON-RPC event wrapper with
+`params.type: "plugin.event"` and `params.session_id` equal to the original
+attached session. Its `payload` is exactly
+`{"plugin": "my-plugin", "event_name": "my-plugin.export.progress",
+"profile": "<server-derived-profile>", "data": {"completed": 1}}`.
+The default client preserves this typed envelope; it never reinterprets
+`data.type` or `event_name` as a core event type. All notifications go to
+**only the original connection/subscription**, not session fanout or a
+replacement viewer. A second subscriber receives none.
+
+Publish only after the registered handler returns: a worker launched early
+will await successful RPC settlement before its first send, while the handler
+thread itself cannot publish a provisional event. A failed/cancelled RPC
+invalidates all captured publishers without emitting a provisional notification.
+
+`lease.publish(...)` returns `True` only when the pinned transport acknowledges
+its write (or a WS send is completed under the owner loop's guarded send lock).
+It raises a secret-safe `GatewayScopeDeliveryError` if that write is rejected
+or fails and a `GatewayScopeError` if the lease is no longer authorized.
+This is a transport acknowledgement, **not** proof that the UI consumed the
+event; clients needing exactly-once application acknowledgement must supply
+their own plugin-level protocol. The canonical publisher verifies authority
+**before scheduling and again at actual owner-loop send** so a queued event
+cannot target a detached or replaced viewer. Do not assume a scheduling call
+means delivery. `close()` is idempotent and waits for an in-flight publish to
+finish, so successful final-completion delivery cannot be silently withdrawn.
+
+The lease is revoked on failed/cancelled originating RPC, explicit close,
+original connection close, detach, subscription replacement, runtime
+generation or authority epoch change, retirement/drain, profile/session
+replacement, or plugin unload/registration replacement. Its
+`cancellation` is a `threading.Event` signalled on close/admission failure
+and once a revoked publisher is checked. Workers should check
+`lease.cancellation.is_set()` and call `lease.assert_current()` at safe
+boundaries. A **new conversation turn alone is not a runtime generation
+change**; background work can continue normally across turns.
+
+No new plugin-specific feature methods, broadcast transport, sidecar
+authority, idle timers, persistent tokens, or runtime dependency are created.
 
 Clients call **`gateway.capabilities`** with
 `{"session_id": "<the already attached live runtime session id>"}` and read
@@ -2482,7 +2561,7 @@ from canonical sockets.
 
 The typed `gateway.capabilities` parameters/result come from
 `tui_gateway/contracts/liveness.py`. To sync TypeScript and OpenRPC after
-changing the Python contract, run `python scripts/gen_gateway_contracts.py`
+changing the Python contract, run `scripts/run-in-hermes-env python3 scripts/gen_gateway_contracts.py`
 inside the repository's Hermes Python environment (the script's shebang uses
 `scripts/run-in-hermes-env`). Commit only the generated
 `apps/shared/src/gateway-contract.generated.ts` and

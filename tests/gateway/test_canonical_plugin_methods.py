@@ -27,10 +27,15 @@ BETA_NAME = "beta-plugin.surface.echo"
 
 
 class Transport:
-    closed = False
+    def __init__(self):
+        self.closed = False
+        self.frames = []
 
-    def write(self, _frame):
-        return not self.closed
+    def write(self, frame):
+        if self.closed:
+            return False
+        self.frames.append(frame)
+        return True
 
 
 @pytest.fixture
@@ -308,4 +313,310 @@ async def test_canonical_execution_generation_change_revokes_inflight_method(nat
             release.set()
         assert (await task)["error"]["code"] == 4001
     finally:
+        await viewer.close()
+
+
+@pytest.mark.asyncio
+async def test_scope_publishes_post_return_progress_completion_to_original_native_viewer(native):
+    """Actual AuthorityConnection/router/transport output, not a fake publish callback."""
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    captured = []
+
+    def handler(request, params):
+        captured.append((request.capture_scope(), request))
+        return {"started": True}
+
+    install(native, handler)
+    viewer = connect(native.authority)
+    second = connect(native.authority, subject="second")
+    try:
+        await resume(viewer)
+        await resume(second)
+        assert (await request(viewer, NAME, {"session_id": "owned"}))["result"] == {"started": True}
+        lease, rpc_context = captured[0]
+        with pytest.raises(PermissionError):
+            rpc_context.assert_attached()  # the RPC itself is not durable
+        with pytest.raises(PermissionError):
+            rpc_context.capture_scope()  # no capture after handler return
+        assert await asyncio.to_thread(lease.publish, "hermes-tern.btw.progress", {"count": 1})
+        assert await asyncio.to_thread(lease.publish, "hermes-tern.btw.complete", {"done": True})
+        assert [f["params"]["payload"]["event_name"] for f in viewer.transport.frames] == [
+            "hermes-tern.btw.progress", "hermes-tern.btw.complete",
+        ]
+        assert second.transport.frames == []
+        first = viewer.transport.frames[0]
+        assert first["method"] == "event"
+        assert first["params"]["type"] == "plugin.event"
+        assert first["params"]["session_id"] == "owned"
+        assert first["params"]["payload"] == {
+            "plugin": "hermes-tern", "event_name": "hermes-tern.btw.progress",
+            "profile": "default", "data": {"count": 1},
+        }
+        lease.close()
+        lease.close()
+        assert lease.cancellation.is_set()
+        with pytest.raises(GatewayScopeError):
+            lease.publish("hermes-tern.btw.complete", {"done": True})
+        assert len(viewer.transport.frames) == 2  # close cannot retract a sent final frame
+    finally:
+        await viewer.close()
+        await second.close()
+
+
+@pytest.mark.asyncio
+async def test_scope_rejects_foreign_names_core_spoofing_and_malformed_payload(native):
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    leases = []
+    install(native, lambda request, params: leases.append(request.capture_scope()) or {"ok": True})
+    viewer = connect(native.authority)
+    try:
+        await resume(viewer)
+        assert "result" in await request(viewer, NAME, {"session_id": "owned"})
+        lease = leases[0]
+        for name in ("message.complete", "gateway.ready", "other.btw.complete",
+                     "hermes-tern..complete", "hermes-tern.btw.Complete"):
+            with pytest.raises(GatewayScopeError, match="event name"):
+                lease.publish(name, {"v": 1})
+        for payload in (None, [], {"v": float("nan")}, {"v": {1: "coerced"}},
+                        {"v": object()}, {"v": (1, 2)}):
+            with pytest.raises(GatewayScopeError, match="JSON"):
+                lease.publish("hermes-tern.btw.update", payload)
+        assert viewer.transport.frames == []
+        assert await asyncio.to_thread(lease.publish, "hermes-tern.btw.complete", {})
+    finally:
+        await viewer.close()
+
+
+@pytest.mark.asyncio
+async def test_scope_loses_original_subscription_connection_and_registration(native):
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    leases = []
+    install(native, lambda request, params: leases.append(request.capture_scope()) or {"ok": True})
+    viewer = connect(native.authority)
+    peer = connect(native.authority, subject="peer")
+    try:
+        token = await resume(viewer)
+        await resume(peer)
+        assert "result" in await request(viewer, NAME, {"session_id": "owned"})
+        lease = leases[-1]
+        assert (await request(viewer, "session.detach", {
+            "session_id": "owned", "subscription_id": token,
+        }))["result"]["detached"]
+        await resume(viewer)
+        with pytest.raises(GatewayScopeError):
+            lease.assert_current()
+        assert viewer.transport.frames == peer.transport.frames == []
+
+        assert "result" in await request(viewer, NAME, {"session_id": "owned"})
+        old = leases[-1]
+        native.manager.unload("hermes-tern")
+        install(native, lambda request, params: {"replacement": True})
+        with pytest.raises(GatewayScopeError):
+            old.assert_current()
+
+        # Closing a connection revokes only its own remaining lease.
+        native.manager.unload("hermes-tern")
+        install(native, lambda request, params: leases.append(request.capture_scope()) or {"ok": True})
+        assert "result" in await request(viewer, NAME, {"session_id": "owned"})
+        owned = leases[-1]
+        await viewer.close()
+        with pytest.raises(GatewayScopeError):
+            owned.assert_current()
+        assert peer.transport.frames == []
+    finally:
+        await viewer.close()
+        await peer.close()
+
+
+@pytest.mark.asyncio
+async def test_scope_epoch_and_persisted_runtime_generation_revoke_not_new_turn(native):
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    leases = []
+    install(native, lambda request, params: leases.append(request.capture_scope()) or {"ok": True})
+    viewer = connect(native.authority)
+    try:
+        await resume(viewer)
+        assert "result" in await request(viewer, NAME, {"session_id": "owned"})
+        lease = leases[-1]
+        # A conversation turn is not a runtime lifetime change.
+        assert await asyncio.to_thread(lease.publish, "hermes-tern.btw.update", {"turn": 2})
+        native.authority.epoch += 1
+        with pytest.raises(GatewayScopeError):
+            lease.assert_current()
+        native.authority.epoch -= 1
+
+        assert "result" in await request(viewer, NAME, {"session_id": "owned"})
+        lease = leases[-1]
+        native.db._execute_write(lambda conn: conn.execute(
+            "UPDATE sessions SET runtime_generation=runtime_generation+1 WHERE id=?",
+            ("owned",),
+        ))
+        with pytest.raises(GatewayScopeError):
+            lease.assert_current()
+        assert len(viewer.transport.frames) == 1
+    finally:
+        await viewer.close()
+
+
+@pytest.mark.asyncio
+async def test_scope_failed_and_cancelled_rpc_never_leave_valid_publishers(native):
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    leases = []
+
+    def failing(request, params):
+        leases.append(request.capture_scope())
+        raise RuntimeError("sensitive secret")
+
+    install(native, failing)
+    viewer = connect(native.authority)
+    try:
+        await resume(viewer)
+        answer = await request(viewer, NAME, {"session_id": "owned"})
+        assert answer["error"]["code"] == -32000
+        assert "sensitive" not in str(answer)
+        assert leases[-1].cancellation.is_set()
+        with pytest.raises(GatewayScopeError):
+            leases[-1].assert_current()
+        native.manager.unload("hermes-tern")
+
+        entered, release = threading.Event(), threading.Event()
+
+        def cancelled(request, params):
+            leases.append(request.capture_scope())
+            entered.set()
+            release.wait(10)
+            return {"ok": True}
+
+        install(native, cancelled)
+        pending = asyncio.create_task(request(viewer, NAME, {"session_id": "owned"}))
+        try:
+            await async_wait_until(entered.is_set, timeout=10, what="captured cancellation scope")
+            pending.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await pending
+        finally:
+            release.set()
+        assert leases[-1].cancellation.is_set()
+        with pytest.raises(GatewayScopeError):
+            leases[-1].assert_current()
+        assert viewer.transport.frames == []
+    finally:
+        await viewer.close()
+
+
+@pytest.mark.parametrize("replacement", [False, True])
+@pytest.mark.asyncio
+async def test_scope_queued_send_rechecks_at_original_ws_write_after_detach(native, replacement):
+    """Use the real WSTransport send lock, not an event-publisher test double."""
+    import json
+
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeDeliveryError
+    from tui_gateway.ws import WSTransport
+
+    class BlockedSocket:
+        def __init__(self):
+            self.entered = asyncio.Event()
+            self.release = asyncio.Event()
+            self.frames = []
+
+        async def send_text(self, line):
+            self.entered.set()
+            await self.release.wait()
+            self.frames.append(json.loads(line))
+
+    sock = BlockedSocket()
+    transport = WSTransport(sock, asyncio.get_running_loop())
+    leases = []
+    install(native, lambda request, params: leases.append(request.capture_scope()) or {"ok": True})
+    viewer = connect(native.authority, transport=transport)
+    try:
+        token = await resume(viewer)
+        assert "result" in await request(viewer, NAME, {"session_id": "owned"})
+        lease = leases[-1]
+        blocking = asyncio.create_task(transport.write_async({"jsonrpc": "2.0", "id": 9, "result": {}}))
+        await asyncio.wait_for(sock.entered.wait(), timeout=5)
+        publishing = asyncio.create_task(asyncio.to_thread(
+            lease.publish, "hermes-tern.btw.complete", {"done": True},
+        ))
+        try:
+            # Wait for the publisher to schedule behind the real send lock.
+            await asyncio.sleep(0.02)
+            assert (await request(viewer, "session.detach", {
+                "session_id": "owned", "subscription_id": token,
+            }))["result"]["detached"]
+            if replacement:
+                # The old queued frame must not re-target a new subscription
+                # on the same authenticated connection and public session ID.
+                await resume(viewer)
+        finally:
+            sock.release.set()
+        assert await blocking
+        with pytest.raises(GatewayScopeDeliveryError):
+            await publishing
+        assert not any(f.get("params", {}).get("type") == "plugin.event" for f in sock.frames)
+        assert lease.cancellation.is_set()
+    finally:
+        await viewer.close()
+
+
+
+@pytest.mark.asyncio
+async def test_scope_started_before_rpc_settles_only_publishes_after_success(native):
+    """Background thread starts during sync handler, never emits provisional events."""
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    entered, release = threading.Event(), threading.Event()
+    workers = []
+    outcome = []
+
+    def handler(request, params):
+        lease = request.capture_scope()
+
+        def worker():
+            try:
+                outcome.append(lease.publish("hermes-tern.btw.complete", {"done": True}))
+            except GatewayScopeError:
+                outcome.append(False)
+            finally:
+                lease.close()
+
+        work = threading.Thread(target=worker, daemon=True)
+        work.start()
+        workers.append(work)
+        entered.set()
+        assert release.wait(10)
+        if params.get("fail"):
+            raise RuntimeError("private failure")
+        return {"accepted": True}
+
+    install(native, handler)
+    viewer = connect(native.authority)
+    try:
+        await resume(viewer)
+        first = asyncio.create_task(request(viewer, NAME, {"session_id": "owned"}))
+        await async_wait_until(entered.is_set, timeout=10, what="pre-return publisher")
+        assert viewer.transport.frames == []  # cannot send while admission is pending
+        release.set()
+        assert (await first)["result"] == {"accepted": True}
+        await asyncio.to_thread(workers[-1].join, 5)
+        assert outcome == [True]
+        assert len(viewer.transport.frames) == 1
+
+        entered.clear()
+        release.clear()
+        second = asyncio.create_task(request(viewer, NAME, {"session_id": "owned", "fail": True}))
+        await async_wait_until(entered.is_set, timeout=10, what="failed pre-return publisher")
+        assert len(viewer.transport.frames) == 1
+        release.set()
+        assert (await second)["error"]["code"] == -32000
+        await asyncio.to_thread(workers[-1].join, 5)
+        assert outcome == [True, False]
+        assert len(viewer.transport.frames) == 1
+    finally:
+        release.set()
         await viewer.close()

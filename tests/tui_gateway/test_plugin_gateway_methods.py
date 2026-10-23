@@ -326,3 +326,125 @@ def test_actual_sessionless_and_session_dotted_core_dispatch(runtime):
                     session_id="core", last_seen=0)
     assert attached["id"] == 2
     assert "result" in attached, attached
+
+
+
+def test_legacy_scope_post_return_progress_complete_original_transport_only(runtime):
+    """Actual legacy JSON-RPC dispatcher and original peer transport."""
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    server, plugins, manager = runtime
+    first, other = Peer(), Peer()
+    attach(server, "owned", first)
+    attach(server, "different", other)
+    captured = []
+
+    def handler(ctx, params):
+        captured.append((ctx.capture_scope(), ctx))
+        return {"accepted": True}
+
+    install(plugins, manager, handler)
+    assert call(server, first, NAME, session_id="owned")["result"] == {"accepted": True}
+    lease, request = captured[0]
+    with pytest.raises(PermissionError):
+        request.capture_scope()
+    assert lease.publish("hermes-tern.btw.progress", {"count": 1})
+    assert lease.publish("hermes-tern.btw.complete", {"done": True})
+    frames = [first.receive(), first.receive()]
+    assert [f["params"]["payload"]["event_name"] for f in frames] == [
+        "hermes-tern.btw.progress", "hermes-tern.btw.complete",
+    ]
+    assert frames[0]["params"]["type"] == "plugin.event"
+    assert frames[0]["params"]["payload"] == {
+        "plugin": "hermes-tern", "event_name": "hermes-tern.btw.progress",
+        "profile": "default", "data": {"count": 1},
+    }
+    assert other.frames.empty()
+    lease.close()
+    lease.close()
+    assert lease.cancellation.is_set()
+    with pytest.raises(GatewayScopeError):
+        lease.assert_current()
+
+
+def test_legacy_scope_rejects_spoofing_and_revokes_after_reuse_or_unload(runtime):
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    server, plugins, manager = runtime
+    peer = Peer()
+    attach(server, "owned", peer)
+    leases = []
+    install(plugins, manager, lambda ctx, params: leases.append(ctx.capture_scope()) or {"ok": True})
+    assert call(server, peer, NAME, session_id="owned")["result"] == {"ok": True}
+    lease = leases[-1]
+    for name in ("session.info", "message.complete", "other.surface.update",
+                 "hermes-tern.btw.Update"):
+        with pytest.raises(GatewayScopeError):
+            lease.publish(name, {})
+    for invalid in ([], None, {"nested": {"set": {1, 2}}}, {"value": float("inf")}):
+        with pytest.raises(GatewayScopeError):
+            lease.publish("hermes-tern.btw.update", invalid)
+    assert peer.frames.empty()
+
+    attach(server, "owned", peer)  # same public ID and same peer, new live record
+    with pytest.raises(GatewayScopeError):
+        lease.assert_current()
+    assert call(server, peer, NAME, session_id="owned")["result"] == {"ok": True}
+    replacement = leases[-1]
+    manager.unload("hermes-tern")
+    install(plugins, manager, lambda ctx, params: {"new": True})
+    with pytest.raises(GatewayScopeError):
+        replacement.assert_current()
+    assert peer.frames.empty()
+
+
+def test_legacy_scope_fails_on_original_peer_loss_and_failed_rpc(runtime):
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeDeliveryError, GatewayScopeError
+
+    server, plugins, manager = runtime
+    peer = Peer()
+    attach(server, "owned", peer)
+    leases = []
+    install(plugins, manager, lambda ctx, params: leases.append(ctx.capture_scope()) or {"ok": True})
+    assert call(server, peer, NAME, session_id="owned")["result"] == {"ok": True}
+    # Transport admission can fail without a closed flag; this is an
+    # observable send failure, never a swallowed queued notification.
+    peer.write = lambda _frame: False
+    with pytest.raises(GatewayScopeDeliveryError):
+        leases[-1].publish("hermes-tern.btw.update", {"v": 1})
+    peer.close()
+    with pytest.raises(GatewayScopeError):
+        leases[-1].assert_current()
+
+    manager.unload("hermes-tern")
+    second = Peer()
+    attach(server, "owned", second)
+
+    def failing(ctx, params):
+        leases.append(ctx.capture_scope())
+        raise RuntimeError("do not disclose private value")
+
+    install(plugins, manager, failing)
+    reply = call(server, second, NAME, session_id="owned")
+    assert reply["error"]["code"] == -32000
+    assert "private value" not in str(reply)
+    assert leases[-1].cancellation.is_set()
+    with pytest.raises(GatewayScopeError):
+        leases[-1].assert_current()
+
+
+def test_legacy_scope_registration_capture_only_during_handler(runtime):
+    server, plugins, manager = runtime
+    peer = Peer()
+    attach(server, "owned", peer)
+    stored = []
+
+    def handler(ctx, params):
+        stored.append(ctx)
+        return {"ok": True}
+
+    install(plugins, manager, handler)
+    assert call(server, peer, NAME, session_id="owned")["result"] == {"ok": True}
+    with pytest.raises(PermissionError, match="active registered handler"):
+        stored[0].capture_scope()
+    assert peer.frames.empty()

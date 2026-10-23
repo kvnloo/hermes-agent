@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 import re
+import threading
 from dataclasses import dataclass, field
 from functools import partial
 from typing import Any, Callable
@@ -23,6 +24,16 @@ class GatewayRequestContext:
     session_id: str
     profile: str
     _attached: Callable[[], bool] = field(repr=False, compare=False)
+    _capture_scope: Callable[[], Any] | None = field(
+        default=None, repr=False, compare=False,
+    )
+
+    def capture_scope(self):
+        """Capture a durable publisher only inside its authorized registered handler."""
+        self.assert_attached()
+        if self._capture_scope is None:
+            raise PermissionError("gateway scope capture is unavailable")
+        return self._capture_scope()
 
     def assert_attached(self) -> None:
         """Recheck the live session generation and caller transport before a side effect."""
@@ -118,10 +129,25 @@ def invoke_gateway_method(name: str, request: GatewayRequestContext, params: dic
 
         # A callback's own assert_attached also refuses a registration retired
         # during execution, before it performs any further side effect.
+        # Reuse this exact registration identity even if another plugin registers
+        # the same name after unload. A leaked request cannot mint a scope later.
+        running = False
+        handler_thread = threading.get_ident()
+
+        def registered() -> bool:
+            return manager._gateway_methods.get(name) is entry
+
+        def capture():
+            if not running or threading.get_ident() != handler_thread:
+                raise PermissionError("gateway scope capture requires an active registered handler")
+            context.assert_attached()
+            if request._capture_scope is None:
+                raise PermissionError("gateway scope capture is unavailable")
+            return request._capture_scope(entry.plugin_id, registered)
+
         context = replace(
-            request, _attached=lambda: (
-                request._attached() and manager._gateway_methods.get(name) is entry
-            ),
+            request, _attached=lambda: request._attached() and registered(),
+            _capture_scope=capture,
         )
         if entry.schema is None:
             validated = dict(params)
@@ -136,7 +162,11 @@ def invoke_gateway_method(name: str, request: GatewayRequestContext, params: dic
                 raise GatewayMethodFailure(-32602, f"invalid plugin params: {fields}") from exc
 
         context.assert_attached()
-        result = entry.handler(context, validated)
+        running = True
+        try:
+            result = entry.handler(context, validated)
+        finally:
+            running = False
         context.assert_attached()
         if not isinstance(result, dict):
             raise TypeError("gateway method result must be a JSON object")
