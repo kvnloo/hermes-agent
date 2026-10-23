@@ -139,6 +139,7 @@ def test_host_snapshot_check_still_vetoes_a_durably_current_snapshot(db):
     assert _contents(result) == before
     assert _live(db) == before
 
+
 def test_unpersisted_history_with_no_active_durable_rows_still_compacts(tmp_path):
     # SessionDB reports 0 (not None) for a real session with no active rows.
     # An unsaved in-memory transcript must not be rejected by the post-lease guard.
@@ -156,7 +157,10 @@ def test_unpersisted_history_with_no_active_durable_rows_still_compacts(tmp_path
         result, _system_prompt = _compress(holder, unsaved)
 
         assert summarized == [[f"unsaved {i}" for i in range(8)]]
-        expected = ["[CONTEXT COMPACTION] summary by unsaved holder", "recent reply by unsaved holder"]
+        expected = [
+            "[CONTEXT COMPACTION] summary by unsaved holder",
+            "recent reply by unsaved holder",
+        ]
         assert _contents(result)[:2] == expected
         assert _live(empty_db)[:2] == expected
         assert empty_db.get_active_message_watermark(SESSION_ID) > 0
