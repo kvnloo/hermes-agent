@@ -306,7 +306,15 @@ def deliver_on_owner_loop(
 def deliver_legacy(
     transport, frame: dict, current: Callable[[], bool],
 ) -> bool:
-    """Pinned legacy peer: WS uses its owner loop; stdio writes synchronously."""
+    """Pinned original peer: native WS, stdio, or supported stdio-primary Tee."""
+    from tui_gateway.transport import TeeTransport
+
+    # A Tee is a request-local wrapper, not a recipient list for a lease.
+    # Never call Tee.write(): that would mirror a private scoped event into
+    # the dashboard sidecar. The Tee's guarded method deliberately rejects
+    # unsupported primary kinds instead of falling back to a broadcast.
+    if isinstance(transport, TeeTransport):
+        return transport.write_if_current(frame, current)
     loop = getattr(transport, "_loop", None)
     if loop is not None:
         return deliver_on_owner_loop(transport, loop, frame, current)
