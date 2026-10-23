@@ -1,0 +1,126 @@
+name: Avrea factory verification
+'on':
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: Use Avrea or an identical-scope GitHub-hosted control
+        type: choice
+        options:
+        - avrea
+        - github
+        default: avrea
+        required: true
+      suite:
+        description: Full named suite; no file filtering or reduced assertions
+        type: choice
+        options:
+        - linux-python
+        - windows-platforms
+        default: linux-python
+        required: true
+permissions:
+  contents: read
+jobs:
+  linux-python:
+    name: Complete Linux Python unit suite
+    runs-on: ${{ inputs.provider == 'avrea' && 'avrea-ubuntu-latest-32-vcpu' || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      with:
+        ref: ${{ github.sha }}
+        persist-credentials: false
+    - name: Install ripgrep (prebuilt binary)
+      run: "set -euo pipefail\nRG_VERSION=15.1.0\nRG_SHA256=1c9297be4a084eea7ecaedf93eb03d058d6faae29bbc57ecdaf5063921491599\n\
+        RG_TARBALL=ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl.tar.gz\ncurl -sSfL --retry 3 --retry-delay 5 -o \"$RG_TARBALL\"\
+        \ \\\n  \"https://github.com/BurntSushi/ripgrep/releases/download/${RG_VERSION}/${RG_TARBALL}\"\necho \"${RG_SHA256}\
+        \  ${RG_TARBALL}\" | sha256sum -c -\ntar -xzf \"$RG_TARBALL\"\nsudo mv \"ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl/rg\"\
+        \ /usr/local/bin/rg\nrm -rf \"$RG_TARBALL\" \"ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl\"\nrg --version\n"
+    - name: Set up locked Python and test dependencies
+      uses: ./.github/actions/setup-pm
+      with:
+        extras: '["all", "anthropic", "bedrock", "mistral", "fal", "modal", "daytona", "parallel-web"]'
+        test-environment: 'true'
+        prune-python-cache: true
+    - name: Check SQLite runs WAL
+      run: '"$HERMES_PYTHON" -c "import sqlite3, sys, hermes_state_wal as w; v = w.is_sqlite_wal_reset_vulnerable(); print(f''Python
+        {sys.version.split()[0]}, SQLite {sqlite3.sqlite_version}, WAL-reset vulnerable: {v}''); sys.exit(1 if v else 0)"
+
+        '
+    - name: Restore per-file duration cache
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+      with:
+        path: test_durations.json
+        key: test-durations-never-exact
+        restore-keys: 'test-durations-
+
+          '
+    - name: Run tests
+      run: 'scripts/run_tests.sh
+
+        '
+      env:
+        HERMES_TEST_SLICE: ''
+        HERMES_TEST_WORKERS: 32
+        HERMES_TEST_FILE_TIMEOUT: 600
+        OPENROUTER_API_KEY: ''
+        OPENAI_API_KEY: ''
+        NOUS_API_KEY: ''
+    - name: Save per-file duration cache (main only)
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && hashFiles('test_durations.json') != ''
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+      with:
+        path: test_durations.json
+        key: test-durations-${{ github.run_id }}-${{ matrix.slice }}
+    - name: Check the checkout is clean
+      uses: ./.github/actions/check-clean-worktree
+    if: inputs.suite == 'linux-python'
+  windows-platforms:
+    name: Complete Windows platform unit suite
+    runs-on: ${{ inputs.provider == 'avrea' && 'avrea-windows-2025-8-vcpu' || 'windows-latest' }}
+    timeout-minutes: 60
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+      with:
+        ref: ${{ github.sha }}
+        persist-credentials: false
+    - name: Set up native ARM64 build dependencies
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      uses: ./.github/actions/setup-windows-build-deps
+    - name: Set up locked Python and test dependencies
+      uses: ./.github/actions/setup-pm
+      with:
+        packages: git,ripgrep
+        extras: '["all", "telegram", "anthropic", "mistral", "fal", "modal", "daytona", "parallel-web"]'
+        test-environment: 'true'
+        prune-python-cache: true
+    - name: Run windows tests
+      shell: bash
+      run: "set -uo pipefail\n\nLIST=\"${RUNNER_TEMP:-.}/selected-tests.txt\"\n\n# Process substitution would hide the helper's\
+        \ exit status, so write\n# to a file and check it explicitly.\nif ! python scripts/ci/list_os_marked_tests.py \\\n\
+        \       \"windows\" > \"$LIST\"; then\n  echo \"::error::could not enumerate windows test files\"\n  exit 1\nfi\n\
+        if [ ! -s \"$LIST\" ]; then\n  echo \"::error::empty windows file list\"\n  exit 1\nfi\n\necho \"selected file(s)\
+        \ for windows:\"\ncat \"$LIST\"\n\n# Desktop-update hand-off integration tests spawn the real\n# windows.ps1; deselect\
+        \ them unless the PR touched that surface\n# (see the workflow_call input). ``--ignore-glob`` keeps the file\n# list\
+        \ above intact, so a renamed test file still trips the\n# zero-tests guard rather than silently vanishing.\n# (bash\
+        \ 3.2 on the macOS runner: an empty array under ``set -u`` is\n# an unbound-variable error, hence the ``${arr[@]+...}``\
+        \ idiom.)\nEXTRA_ARGS=()\nif [ \"true\" != \"true\" ]; then\n  echo \"desktop_updater lane off: skipping tests/scripts/desktop_update/test_desktop_update_windows_*.py\"\
+        \n  EXTRA_ARGS+=(--ignore-glob='*test_desktop_update_windows_*.py')\nfi\n\n# ``tr -d '\\r'``: on Windows the helper's\
+        \ redirected stdout gains\n# CRLF line endings; a stray \\r would corrupt the path. The list\n# uses the native path-list\
+        \ separator consumed by --files.\n#\n# Any non-zero exit propagates red: real test failures, or the\n# runner's own\
+        \ zero-run guard (every file filtered to empty by\n# ``-m`` \u2014 \"must never pass without running its OS's tests\"\
+        ).\nSEPARATOR=\"$(python -c 'import os, sys; sys.stdout.write(os.pathsep)')\"\nFILES=\"$(tr -d '\\r' < \"$LIST\" |\
+        \ paste -sd \"$SEPARATOR\" -)\"\nscripts/run_tests.sh --files \"$FILES\" -- \\\n  ${EXTRA_ARGS[@]+\"${EXTRA_ARGS[@]}\"\
+        } \\\n  -m \"platforms and not integration\" \\\n  -v --tb=short\n"
+      env:
+        HERMES_TEST_WORKERS: '8'
+        HERMES_TEST_SLICE: ''
+        OPENROUTER_API_KEY: ''
+        OPENAI_API_KEY: ''
+        NOUS_API_KEY: ''
+        HERMES_TEST_FILE_TIMEOUT: '600'
+    - name: Check the checkout is clean
+      uses: ./.github/actions/check-clean-worktree
+    if: inputs.suite == 'windows-platforms'

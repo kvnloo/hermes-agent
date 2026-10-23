@@ -1037,3 +1037,20 @@ test(tools): add unit tests for file_operations
 ## License
 
 By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+
+## Downstream Avrea verification
+
+The downstream `ci/avrea-factory-20261023` branch routes heavy x64 Linux jobs to
+`avrea-ubuntu-latest-32-vcpu` and x64 Windows jobs to
+`avrea-windows-2025-8-vcpu`. Required ARM and macOS coverage remains unchanged.
+Blacksmith-specific checkout and Docker actions in converted workflows use
+their portable official equivalents.
+
+Dispatch `avrea-factory.yml` on that branch with `suite=linux-python` for the
+complete discovered Linux Python unit suite, or `suite=windows-platforms` for
+the complete Windows platform unit suite, including desktop-updater tests.
+Neither benchmark includes unrelated release or integration lanes. Select
+`provider=github` for the same-head, same-command control, then run
+`provider=avrea` twice on the unchanged commit. Compare job and test-step
+durations separately; the first and second runs are not proof of cache
+misses and hits unless their setup logs confirm those states.

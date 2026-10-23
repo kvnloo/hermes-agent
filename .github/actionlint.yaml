@@ -15,3 +15,6 @@ self-hosted-runner:
     - blacksmith-32vcpu-windows-2025
     # GitHub larger runners still used by matrices not yet migrated.
     - windows-latest-32-arm-core
+    - avrea-ubuntu-latest-2-vcpu
+    - avrea-ubuntu-latest-32-vcpu
+    - avrea-windows-2025-8-vcpu

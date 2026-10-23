@@ -11,6 +11,7 @@ name: Catalog tests
 # by existing.
 
 on:
+  workflow_dispatch:
   workflow_call:
     inputs:
       commit:
@@ -28,11 +29,11 @@ concurrency:
 jobs:
   catalog-tests:
     name: Catalog tests
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: avrea-ubuntu-latest-2-vcpu
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: useblacksmith/checkout@25227e61ff9dafe400e22fa487b673eac4e4409a  # v1
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
         with:
           ref: ${{ inputs.commit }}
           persist-credentials: false
