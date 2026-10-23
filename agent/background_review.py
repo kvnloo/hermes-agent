@@ -937,7 +937,7 @@ def _fork_init_kwargs(agent: Any, rt: dict[str, Any], routed: bool, max_iteratio
 
 
 # Above any live registry generation: _publish_tool_snapshot refuses an older-generation rebuild,
-# so the compaction-boundary refresh_agent_mcp_tools(content_aware=True) cannot rebuild the fork's
+# so the compaction-boundary refresh_agent_mcp_tools() cannot rebuild the fork's
 # tools[] from the live registry and drop the inherited provider/plugin tools (#103579).
 _FROZEN_TOOL_SNAPSHOT_GENERATION = 2_147_483_647
 
