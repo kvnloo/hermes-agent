@@ -367,6 +367,23 @@ class TeeTransport:
         self._primary = primary
         self._secondaries = secondaries
 
+    @property
+    def _loop(self):
+        # Scope admission must recognize the ORIGINAL primary's owner loop
+        # before it can wait on RPC settlement or acquire any authority locks.
+        return getattr(self._primary, "_loop", None)
+
+    def write_if_current(self, obj: dict, is_current: Callable[[], bool]) -> bool:
+        """Write a scoped frame to the original stdio primary, never a sidecar.
+
+        This uses the actual StdioTransport output lock and its final current
+        guard. Other composite primaries are unsupported and fail closed;
+        normal write() still mirrors to every configured secondary.
+        """
+        if not isinstance(self._primary, StdioTransport):
+            return False
+        return self._primary.write_if_current(obj, is_current)
+
     def write(self, obj: dict) -> bool:
         # Primary first so a slow sidecar (WS publisher) never delays Ink/stdio.
         ok = self._primary.write(obj)
