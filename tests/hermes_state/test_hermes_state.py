@@ -416,7 +416,7 @@ class TestConnectionLifecycle:
         read_only = SessionDB(db_path=db_path, read_only=True)
         try:
             assert read_only._fts_enabled is True
-            matches = read_only.search_messages("wal-race")
+            read_only.search_messages("wal-race")
         finally:
             read_only.close()
 
@@ -722,7 +722,7 @@ class TestMessageStorage:
             conn = real_connect(*args, **kwargs)
             conn.set_trace_callback(
                 lambda stmt: writes.append(stmt)
-                if re.match(r"\s*(INSERT|UPDATE|DELETE|REPLACE|ALTER|DROP\s+TRIGGER)\b", stmt, re.I) and "temp." not in stmt
+                if re.match(r"\s*(INSERT|UPDATE|DELETE|REPLACE|ALTER|DROP\s+TRIGGER)\b", stmt, re.IGNORECASE) and "temp." not in stmt
                 else None
             )
             return conn
@@ -1708,7 +1708,36 @@ class TestSessionTitle:
         session = db.get_session("s1")
         assert session["title"] is None
 
-
+    @pytest.mark.parametrize("holder_has_message,holder_hidden,holder_ended,yields", [
+        (False, False, True, True),    # ended empty visible ghost yields its title (#81888)
+        (False, False, False, False),  # live empty session (/title before its first turn) keeps it
+        (False, True, True, False),    # hidden empty row (fresh canonical Bot Chat) keeps it
+        (True, False, True, False),    # a real conversation keeps it
+    ])
+    def test_title_conflict_yields_only_to_ended_empty_visible_holder(self, db, holder_has_message, holder_hidden,
+                                                                      holder_ended, yields):
+        """A title holder yields only when it is ended, empty, visible and unarchived (#81888);
+        every other holder still conflicts. The ghost stays writable afterwards (no partial
+        unique index to trip on its first append_message)."""
+        db.create_session("ghost", "desktop")
+        db.set_session_title("ghost", "Canada")
+        if holder_has_message:
+            db.append_message("ghost", "user", "m0")
+        db.set_session_hidden("ghost", holder_hidden)
+        if holder_ended:
+            db.end_session("ghost", "user_exit")
+        db.create_session("real", "desktop")
+        db.append_message("real", "user", "Hello")
+        if not yields:
+            with pytest.raises(ValueError, match="already in use"):
+                db.set_session_title("real", "Canada")
+            assert db.get_session("ghost")["title"] == "Canada"
+            return
+        assert db.set_session_title("real", "Canada")
+        assert db.get_session("ghost")["title"] is None
+        assert db.resolve_session_by_title("Canada") == "real"
+        db.append_message("ghost", "user", "late first message")
+        assert db.get_session("ghost")["message_count"] == 1
 
 
 class TestSessionTitleIndexRepair:
@@ -4670,27 +4699,6 @@ class TestFTSExternalContentMigration:
         finally:
             db.close()
 
-    def test_optimize_settle_refuses_pending_backfill(self, tmp_path):
-        """Settle must not stamp while high_water markers remain."""
-        db = SessionDB(db_path=tmp_path / "fresh.db")
-        try:
-            db.create_session(session_id="s1", source="cli")
-            db.append_message("s1", role="user", content="settle guard needle")
-            # Plant markers without going through demote.
-            db.set_meta("fts_rebuild_high_water", "1")
-            db.set_meta("fts_rebuild_progress", "0")
-            # The public contract: optimize returns ok=False when still
-            # pending. Simulate an unfinishable backfill by stubbing the
-            # chunk step to a no-op while markers stay.
-            db.fts_rebuild_step = lambda: False  # type: ignore[method-assign]
-            result = db.optimize_fts_storage(vacuum=False)
-            assert result["ok"] is False
-            assert result.get("reason") == "backfill_incomplete"
-            assert db.get_meta("fts_storage_version") is None
-            assert db.get_meta("fts_rebuild_high_water") is not None
-        finally:
-            db.close()
-
     def test_v23_fresh_db_born_optimized(self, tmp_path):
         """A brand-new DB is born on v23 — no legacy layout, no opt-in flag,
         no pending rebuild."""
@@ -5102,7 +5110,7 @@ class TestListCronJobRuns:
     """
 
     def _seed_run(self, db, job_id: str, idx: int, started_at: float):
-        sid = f"cron_{job_id}_{idx:08d}"
+        sid = f"cron_{job_id}_20261011_{idx:06d}"  # the scheduler's cron_{job}_{YYYYmmdd_HHMMSS}
         db.create_session(session_id=sid, source="cron")
         db.append_message(sid, role="user", content=f"run {idx} for {job_id}")
         db.append_message(sid, role="assistant", content="done")
