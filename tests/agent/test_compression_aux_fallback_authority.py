@@ -14,7 +14,7 @@ from agent.auxiliary_task_config import (
     _get_auxiliary_task_config,
     authoritative_auxiliary_task,
 )
-from agent.context_compressor import ContextCompressor
+from agent.context_compressor import ContextCompressor, _pinned_summary_call_kwargs, pin_summary_route
 from agent.context_compressor_summary import SummaryDispatchMixin
 
 
@@ -151,22 +151,28 @@ def test_truncated_aux_summary_retries_on_complete_main_route():
         ) == ("openrouter", "main-model", None, "main-key", None)
 
 
-def test_authoritative_pinned_route_does_not_leak_marker_to_call_llm():
+def test_stalled_summary_pin_replaces_main_route_without_leaking_its_key():
+    # Exercise the real pin producer. It only forwards the documented route fields.
     compressor = SimpleNamespace(summary_model="", _summary_model_fallen_back=False)
-    call_kwargs = {"task": "compression", "messages": []}
+    pinned = {
+        "provider": "custom",
+        "model": "fallback-model",
+        "base_url": "https://fallback.invalid/v1",
+        "timeout": 19,
+    }
+    call_kwargs = {
+        "task": "compression",
+        "messages": [],
+        "provider": "openrouter",
+        "model": "main-model",
+        "base_url": "https://main.invalid/v1",
+        "api_key": "main-key",
+        "api_mode": "chat_completions",
+    }
 
-    SummaryDispatchMixin._apply_summary_route(
-        compressor,
-        call_kwargs,
-        {
-            "provider": "openrouter",
-            "model": "main-model",
-            "api_key": "main-key",
-            "authoritative": True,
-        },
-    )
+    with pin_summary_route(pinned):
+        SummaryDispatchMixin._apply_summary_route(compressor, call_kwargs, _pinned_summary_call_kwargs())
 
-    assert isinstance(call_kwargs["task"], AuthoritativeAuxiliaryTask)
-    assert call_kwargs["provider"] == "openrouter"
-    assert call_kwargs["model"] == "main-model"
-    assert "authoritative" not in call_kwargs
+    assert call_kwargs == {"task": "compression", "messages": [], **pinned}
+    assert "api_key" not in call_kwargs
+    assert "api_mode" not in call_kwargs

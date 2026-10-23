@@ -42,16 +42,10 @@ class SummaryDispatchMixin:
         credential, wire-mode or reasoning fields from the route that just failed (#113322, #130895).
         """
         if pinned:
-            route = dict(pinned)
-            authoritative = route.pop("authoritative", False) is True
             # Clear first: a keyless pin (local server) resolves its own credential, never the main one.
             for key in ("provider", "model", "base_url", "api_key", "api_mode"):
                 call_kwargs.pop(key, None)
-            call_kwargs.update(route)
-            if authoritative:
-                from agent.auxiliary_task_config import authoritative_auxiliary_task
-
-                call_kwargs["task"] = authoritative_auxiliary_task(call_kwargs.get("task") or "compression")
+            call_kwargs.update(pinned)
             return
         if self.summary_model:
             call_kwargs["model"] = self.summary_model
