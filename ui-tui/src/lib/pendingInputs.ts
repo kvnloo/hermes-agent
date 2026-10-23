@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import {
   closeSync,
   existsSync,
@@ -16,6 +17,7 @@ import { join } from 'node:path'
 import type { SubmissionDestination } from '../app/submissionDestination.js'
 import type { QueueItem } from '../hooks/useQueue.js'
 import { t } from '../i18n/runtime.js'
+import { PASTE_SNIPPET_RE } from '../protocol/paste.js'
 
 const directory = (home?: string) =>
   join(home ?? process.env.HERMES_HOME ?? join(homedir(), '.hermes'), 'tui-pending-inputs')
@@ -23,6 +25,75 @@ const directory = (home?: string) =>
 const recordName = /^[0-9a-f-]{36}\.json$/
 const successors = new Map<string, SubmissionDestination>()
 export let pendingInputRevision = 0
+
+type ExpansionSnapshot = NonNullable<QueueItem['expansionSnapshot']>
+
+/** Freeze the token-only transform before the composer is cleared. Unlike a
+ * function closure, these exact replacements survive an fsync/rename journal
+ * and can be applied repeatedly after cold recovery or another busy retry.
+ */
+function snapshotExpansion(item: QueueItem): ExpansionSnapshot | undefined {
+  if (item.expansionSnapshot) {
+    return item.expansionSnapshot
+  }
+  if (!item.expand) {
+    return undefined
+  }
+
+  const labels = item.display.match(PASTE_SNIPPET_RE) ?? []
+  if (!labels.length) {
+    return undefined
+  }
+
+  return labels.map(label => {
+    // expandTokens() trims its whole result. A private wrapper keeps leading
+    // and trailing whitespace *inside* the paste intact when capturing it.
+    const left = `__hermes_queue_${randomUUID()}_left__`
+    const right = `__hermes_queue_${randomUUID()}_right__`
+    const expanded = item.expand!(left + label + right)
+    const value = expanded.startsWith(left) && expanded.endsWith(right)
+      ? expanded.slice(left.length, -right.length)
+      : label
+
+    return { label, value }
+  })
+}
+
+function validExpansionSnapshot(value: unknown): value is ExpansionSnapshot {
+  return Array.isArray(value) && value.every(
+    (entry: unknown) => entry !== null && typeof entry === 'object' &&
+      typeof (entry as { label?: unknown }).label === 'string' &&
+      typeof (entry as { value?: unknown }).value === 'string'
+  )
+}
+
+/** Reconstruct the same paste/image-token expansion; no shell commands run here.
+ * A new index is used per invocation, so a retry cannot consume the mapping.
+ */
+function expandFromSnapshot(snapshot: ExpansionSnapshot): (value: string) => string {
+  return value => {
+    // Interpolation can consume earlier tokens. Match surviving labels by identity
+    // and consume repeated labels in their original order.
+    const remainingByLabel = new Map<string, string[]>()
+    for (const { label, value: payload } of snapshot) {
+      const values = remainingByLabel.get(label)
+      if (values) {
+        values.push(payload)
+      } else {
+        remainingByLabel.set(label, [payload])
+      }
+    }
+
+    return value.replace(new RegExp(`[ \\t]?(?:${PASTE_SNIPPET_RE.source})`, 'g'), match => {
+      const label = match.trimStart()
+      const payload = remainingByLabel.get(label)?.shift()
+      if (payload === undefined) {
+        return match
+      }
+      return payload ? match.slice(0, match.length - label.length) + payload : ''
+    }).trim()
+  }
+}
 
 export const pendingDestinationKey = (destination: SubmissionDestination) =>
   JSON.stringify([destination.profileHome, destination.profile, destination.sid])
@@ -95,7 +166,12 @@ export function savePendingInput(item: QueueItem): void {
   const path = join(dir, `${item.submissionId}.json`)
   const temporary = `${path}.${process.pid}.tmp`
   const ownerDestination = pendingInputOwner(item.ownerDestination ?? item.destination)
-  const { submissionId, display, text, preparedText, attachments, controlMethod, executionGeneration, inFlight, failed, createdAt, queued, legacyAttempted } = item
+  const durableExpansion = snapshotExpansion(item)
+  if (durableExpansion) {
+    item.expansionSnapshot = durableExpansion
+    item.expand = expandFromSnapshot(durableExpansion)
+  }
+  const { submissionId, display, text, expansionSnapshot, preparedText, attachments, controlMethod, executionGeneration, inFlight, failed, createdAt, queued, legacyAttempted } = item
   const destination = inFlight || failed ? item.destination : ownerDestination
   writeFileSync(
     temporary,
@@ -105,6 +181,7 @@ export function savePendingInput(item: QueueItem): void {
       ownerDestination,
       display,
       text,
+      expansionSnapshot,
       preparedText,
       attachments,
       controlMethod,
@@ -163,7 +240,8 @@ export function loadPendingInputs(destination: SubmissionDestination, durableRes
       if (
         record.submissionId + '.json' !== name ||
         typeof record.text !== 'string' ||
-        typeof record.display !== 'string'
+        typeof record.display !== 'string' ||
+        (record.expansionSnapshot !== undefined && !validExpansionSnapshot(record.expansionSnapshot))
       ) {
         throw new Error(t('canonical.queue.invalidRecord', name))
       }
@@ -179,7 +257,12 @@ export function loadPendingInputs(destination: SubmissionDestination, durableRes
         return []
       }
 
-      return [{ ...record, inFlight: false, failed: Boolean(record.attempted) }]
+      return [{
+        ...record,
+        ...(record.expansionSnapshot ? { expand: expandFromSnapshot(record.expansionSnapshot) } : {}),
+        inFlight: false,
+        failed: Boolean(record.attempted)
+      }]
     })
     .sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0))
 }
