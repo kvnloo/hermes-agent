@@ -165,7 +165,7 @@ class TestToggleSkillSelection:
         skill = shared / "filtered-dir"
         skill.mkdir(parents=True)
         (skill / "SKILL.md").write_text(
-            "---\\nname: filtered-front\\ndescription: Filtered skill\\n---\\nBody\\n",
+            "---\nname: filtered-front\ndescription: Filtered skill\n---\nBody\n",
             encoding="utf-8")
         config = {"skills": {
             "enabled": ["git"], "disabled": [],

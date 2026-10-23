@@ -84,7 +84,7 @@ def _disabled_in_snapshot() -> list[str]:
 def test_profile_editor_frontmatter_identity_hidden_noop_save(profile_dir):
     _write_skill(profile_dir, "dir-name-x", frontmatter_name="front-name-x")
     config_path = profile_dir / "config.yaml"
-    config_path.write_text("skills:\\n  enabled: [git]\\n  disabled: []\\n", encoding="utf-8")
+    config_path.write_text("skills:\n  enabled: [git]\n  disabled: []\n", encoding="utf-8")
 
     snapshot = _call("profiles.describe", {})["skills"]
     assert {"name": "front-name-x", "enabled": False, "locked": False} in snapshot
@@ -107,7 +107,7 @@ def test_profile_editor_can_disable_allowed_frontmatter_alias(
     _write_skill(profile_dir, "dir-name-x", frontmatter_name="front-name-x")
     config_path = profile_dir / "config.yaml"
     config_path.write_text(
-        f"skills:\\n  enabled: [{allow_name}]\\n  disabled: []\\n", encoding="utf-8"
+        f"skills:\n  enabled: [{allow_name}]\n  disabled: []\n", encoding="utf-8"
     )
     snapshot = _call("profiles.describe", {})["skills"]
     assert any(s["name"] == "front-name-x" and s["enabled"] for s in snapshot)
@@ -126,7 +126,7 @@ def test_profile_editor_external_dirs_filter_noop_save(profile_dir):
     filtered = shared / "filtered-dir"
     filtered.mkdir(parents=True)
     (filtered / "SKILL.md").write_text(
-        "---\\nname: filtered-front\\ndescription: external\\n---\\nBody\\n", encoding="utf-8"
+        "---\nname: filtered-front\ndescription: external\n---\nBody\n", encoding="utf-8"
     )
     config_path = profile_dir / "config.yaml"
     config_path.write_text(yaml.safe_dump({"skills": {

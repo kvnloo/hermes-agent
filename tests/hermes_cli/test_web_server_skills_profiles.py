@@ -114,7 +114,7 @@ class TestProfileScopedSkills:
         worker = isolated_profiles["worker_alpha"]
         cfg_path = worker / "config.yaml"
         cfg_path.write_text(
-            "skills:\\n  enabled: [dashboard-skill]\\n  disabled: []\\n", encoding="utf-8"
+            "skills:\n  enabled: [dashboard-skill]\n  disabled: []\n", encoding="utf-8"
         )
         before = cfg_path.read_bytes()
 
