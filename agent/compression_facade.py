@@ -120,6 +120,65 @@ def _sync_persisted_markers(target_messages, source_messages) -> None:
             _stamp_scoped_twins(target_messages, source_message)
 
 
+def _compression_snapshot_is_current(agent, messages, host_check=None) -> bool:
+    """Post-lease durable held-history validation composed with a caller check.
+
+    ``compress_context`` invokes this callback after acquiring the compression
+    lease and before any memory checkpoint or summary-model work. A previous
+    in-place compression may already have archived the row ids held by this
+    in-memory snapshot; the lease prevents a concurrent compactor, but cannot
+    make that stale generation current again.
+    """
+    if callable(host_check) and not host_check():
+        return False
+
+    session_db = getattr(agent, "_session_db", None)
+    if session_db is None:
+        compressor = getattr(agent, "context_compressor", None)
+        try:
+            session_db = vars(compressor).get("_session_db")
+        except TypeError:
+            session_db = getattr(compressor, "_session_db", None)
+    session_id = getattr(agent, "session_id", None)
+    watermark_of = getattr(session_db, "get_active_message_watermark", None)
+    if not session_id or not callable(watermark_of):
+        return True
+
+    from agent.context_compressor import StaleHeldHistory
+    from agent.conversation_compression import (
+        _session_was_rotated_by_compression,
+        held_archive_watermark,
+    )
+
+    try:
+        # A rotated parent is owned by the recovery path immediately after this
+        # callback; let it adopt the live child instead of classifying the old
+        # parent snapshot as an in-place stale generation.
+        if _session_was_rotated_by_compression(session_db, session_id):
+            return True
+        watermark = watermark_of(session_id)
+        if watermark is None:
+            return True
+        held_archive_watermark(
+            session_db, session_id, watermark, messages, stale_raises=True,
+        )
+    except StaleHeldHistory as exc:
+        logger.info(
+            "Compression snapshot is stale after lease acquisition; preserving "
+            "the current durable generation unchanged (session=%s): %s",
+            session_id, exc,
+        )
+        return False
+    except Exception:
+        logger.warning(
+            "Compression snapshot validation failed after lease acquisition; "
+            "preserving durable history unchanged (session=%s)",
+            session_id, exc_info=True,
+        )
+        return False
+    return True
+
+
 def _run_under_progress_timeout(
     agent, run, messages, system_message, *, active_fence, registration, fence_registration_lock,
     idle_timeout, total_ceiling, approx_tokens=None,
@@ -277,12 +336,19 @@ class CompressionFacadeMixin:
                 self._active_compression_commit_fence = active_fence
 
             def _run(fence=None, target_messages=None, same_turn_fallback_recovery=False):
+                compression_messages = target_messages if target_messages is not None else messages
+                durable_snapshot_check = functools.partial(
+                    _compression_snapshot_is_current,
+                    self,
+                    compression_messages,
+                    snapshot_is_current,
+                )
                 return compress_context(
-                    self, target_messages if target_messages is not None else messages, system_message,
+                    self, compression_messages, system_message,
                     approx_tokens=approx_tokens, task_id=task_id, focus_topic=focus_topic, force=force,
                     bypass_cooldown=bypass_cooldown or same_turn_fallback_recovery,
                     defer_context_engine_notification=(defer_context_engine_notification), commit_fence=fence,
-                    verbatim_tail=verbatim_tail, trigger=trigger, snapshot_is_current=snapshot_is_current,
+                    verbatim_tail=verbatim_tail, trigger=trigger, snapshot_is_current=durable_snapshot_check,
                 )
 
             # Callers that already own a progress-aware wait (gateway session
