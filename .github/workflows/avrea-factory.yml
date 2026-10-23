@@ -18,6 +18,11 @@ name: Avrea factory verification
         - windows-platforms
         default: linux-python
         required: true
+  push:
+    branches:
+    - ci/avrea-factory-20261023
+    paths:
+    - .github/workflows/avrea-factory.yml
 permissions:
   contents: read
 jobs:
@@ -75,7 +80,7 @@ jobs:
         key: test-durations-${{ github.run_id }}-${{ matrix.slice }}
     - name: Check the checkout is clean
       uses: ./.github/actions/check-clean-worktree
-    if: inputs.suite == 'linux-python'
+    if: inputs.suite != 'windows-platforms'
   windows-platforms:
     name: Complete Windows platform unit suite
     runs-on: ${{ inputs.provider == 'avrea' && 'avrea-windows-2025-8-vcpu' || 'windows-latest' }}
