@@ -116,7 +116,7 @@ def dispatch_plugin_method(rid, name: str, params: dict) -> dict:
             return admitted and deliver_legacy(transport, frame, current)
 
     def capture(plugin_id, registered, caller_binding):
-        if not active.is_set() or not attached():
+        if caller_binding is not binding or not active.is_set() or not attached():
             raise PermissionError("gateway scope capture is unavailable")
         return admission.capture(
             plugin_id=plugin_id, session_id=sid,

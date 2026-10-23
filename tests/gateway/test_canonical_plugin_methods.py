@@ -1041,6 +1041,7 @@ async def test_scope_assert_caller_native_lifecycle_fences(native, revocation):
     install(native, start)
     install(native, control, name=CALLER_CONTROL)
     viewer = connect(native.authority)
+    original_epoch = native.authority.epoch
     try:
         subscription = await resume(viewer)
         assert (await request(viewer, NAME, {"session_id": "owned"}))["result"] == {
@@ -1087,6 +1088,7 @@ async def test_scope_assert_caller_native_lifecycle_fences(native, revocation):
         with pytest.raises(GatewayScopeError):
             await asyncio.to_thread(lease.assert_current)
     finally:
+        native.authority.epoch = original_epoch
         await viewer.close()
 
 
