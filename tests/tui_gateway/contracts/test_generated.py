@@ -77,6 +77,9 @@ def emitted_event_names() -> set[str]:
     names.update(_SETUP_READY.findall(_read(REPO / "hermes_cli" / "free_tier_bootstrap.py")))
     names.update(_FREE_TIER_CHALLENGE.findall(_read(REPO / "hermes_cli" / "anon_challenge.py")))
     names.update(_LOCAL_VIEWER_PUBLISH.findall(_read(REPO / "gateway" / "local_viewer_events.py")))
+    # Scoped plugin events are emitted by the generic lease helper, not the
+    # legacy _emit/session-broadcast function (which would leak recipients).
+    names.update(_LITERAL_FRAME.findall(_read(REPO / "hermes_cli" / "plugin_gateway_scopes.py")))
     return names
 
 

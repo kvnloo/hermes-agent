@@ -1106,12 +1106,12 @@
     },
     {
       "name": "gateway.capabilities",
-      "summary": "What THIS build enforces (a client withholds a feature unless advertised).",
+      "summary": "Build capabilities and live plugin RPC method names for the attached session's profile.",
       "params": [
         {
           "name": "params",
           "schema": {
-            "$ref": "#/components/schemas/PingParams"
+            "$ref": "#/components/schemas/GatewayCapabilitiesParams"
           }
         }
       ],
@@ -18625,16 +18625,43 @@
         "title": "FreeTierStatusResult",
         "type": "object"
       },
+      "GatewayCapabilitiesParams": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Session Id"
+          }
+        },
+        "title": "GatewayCapabilitiesParams",
+        "type": "object"
+      },
       "GatewayCapabilitiesResult": {
         "additionalProperties": false,
         "properties": {
           "per_session_exclusive_submit": {
             "title": "Per Session Exclusive Submit",
             "type": "boolean"
+          },
+          "plugin_methods": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Plugin Methods",
+            "type": "array"
           }
         },
         "required": [
-          "per_session_exclusive_submit"
+          "per_session_exclusive_submit",
+          "plugin_methods"
         ],
         "title": "GatewayCapabilitiesResult",
         "type": "object"
@@ -27152,6 +27179,37 @@
         ],
         "title": "PluginCatalogLookupStatus",
         "type": "string"
+      },
+      "PluginEventPayload": {
+        "additionalProperties": false,
+        "description": "hermes_cli.plugin_gateway_scopes.GatewayScopeLease.publish: owner-stamped event.",
+        "properties": {
+          "plugin": {
+            "title": "Plugin",
+            "type": "string"
+          },
+          "event_name": {
+            "title": "Event Name",
+            "type": "string"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          }
+        },
+        "required": [
+          "plugin",
+          "event_name",
+          "profile",
+          "data"
+        ],
+        "title": "PluginEventPayload",
+        "type": "object"
       },
       "PluginLiveNow": {
         "additionalProperties": false,
@@ -48436,6 +48494,18 @@
           "name": "payload",
           "schema": {
             "$ref": "#/components/schemas/ChangeSignalPayload"
+          }
+        }
+      ]
+    },
+    {
+      "name": "plugin.event",
+      "summary": "An authorized plugin event delivered only to the original subscribed caller.",
+      "params": [
+        {
+          "name": "payload",
+          "schema": {
+            "$ref": "#/components/schemas/PluginEventPayload"
           }
         }
       ]

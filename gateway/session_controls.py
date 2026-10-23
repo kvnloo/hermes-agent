@@ -107,6 +107,7 @@ class AuthorityConnection:
     def __init__(self, authority, transport, identity, *, operator=False):
         self.authority = authority
         self.transport = transport
+        self._closed = False
         capabilities = frozenset({'session:read', 'session:submit', 'session:control',
                                   'session:approve', 'session:respond'})
         if identity:
@@ -248,6 +249,12 @@ class AuthorityConnection:
             _log_refusal(getattr(self.actor, 'profile_id', None), method, exc)
             return {'jsonrpc': '2.0', 'id': rid, 'error': {
                 'code': 4001, 'message': exc.reason, 'data': _refusal_data(exc)}}
+        # Dynamic plugins use this canonical actor, not a legacy fallback.
+        # Keep the plugin imports off the common two-segment core RPC path.
+        if method == 'gateway.capabilities' or (isinstance(method, str) and method.count('.') >= 2):
+            from gateway.session_plugin_methods import is_plugin_request, dispatch_plugin_request
+            if is_plugin_request(method, self.handlers):
+                return await dispatch_plugin_request(self, rid, method, params)
         profile = params.get('profile')
         if isinstance(profile, str) and profile:
             try:
@@ -782,6 +789,7 @@ class AuthorityConnection:
             params["prompt_id"], {"answer": params["answer"]}, kind="clarify")
 
     async def close(self):
+        self._closed = True
         for sibling in self._siblings.values():
             await sibling.close()
         self._siblings.clear()

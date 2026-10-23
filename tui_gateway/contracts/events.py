@@ -815,6 +815,21 @@ event("pet.generate.progress", PetGenerateProgressPayload, doc="Pet base-draft g
 event("pet.hatch.progress", PetHatchProgressPayload, doc="Pet hatch (row drawing) progress.")
 
 
+# ── generic, caller-bound plugin notifications ─────────────────────────────────────────────
+
+class PluginEventPayload(Payload):
+    """hermes_cli.plugin_gateway_scopes.GatewayScopeLease.publish: owner-stamped event."""
+
+    plugin: str
+    event_name: str
+    profile: str
+    data: dict[str, JsonValue]
+
+
+event("plugin.event", PluginEventPayload,
+      doc="An authorized plugin event delivered only to the original subscribed caller.")
+
+
 # ── change watcher signals (payload is {} today) ─────────────────────────────────────────────
 
 

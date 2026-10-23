@@ -2387,3 +2387,275 @@ def handler(args, **kwargs):
 # Good — model knows exactly when and how
 "description": "Evaluate a mathematical expression. Use for arithmetic, trig, logarithms. Supports: +, -, *, /, **, sqrt, sin, cos, log, pi, e."
 ```
+
+
+## Profile-bound TUI and canonical gateway JSON-RPC methods
+
+A trusted **in-process** plugin can expose its own methods to TUI/Desktop clients
+without adding them to the static core RPC catalog. Plugin-host isolation rejects
+this API, because an isolated callback has no in-process session/transport authority.
+
+```python
+from pydantic import BaseModel, ConfigDict
+
+class EchoParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: str
+    message: str
+
+def echo(request, params):
+    request.assert_attached()
+    return {"text": params["message"], "profile": request.profile}
+
+def register(ctx):
+    ctx.register_gateway_method("my-plugin.surface.echo", echo, schema=EchoParams)
+```
+
+`ctx.register_gateway_method(name, handler, *, schema=None)` returns a disposable
+`PluginRegistration`. The exact handler signature is **synchronous**
+`handler(request: GatewayRequestContext, params: dict) -> dict`. Coroutine/async
+handlers are refused. The result must be a JSON-serializable object, not an RPC
+envelope. Registration raises for invalid names, duplicate claims, non-callables,
+core collisions or invalid schemas. The method name must be lower-case and fully
+qualified within the registering plugin's exact registry key, with at least two
+dotted suffix segments (for example `my-plugin.surface.echo`). Names are never
+normalized or silently reassigned. Two distinct profiles can independently
+register the same qualified name.
+
+The optional `schema` is a **Pydantic v2 `BaseModel` class** configured with
+`extra="forbid"`. The gateway calls `schema.model_validate(params, strict=True)`
+and hands the handler the JSON-mode dump; bad or unknown arguments return
+JSON-RPC `-32602`. With `schema=None`, `params` is the ordinary JSON-RPC
+object and no additional field validation is performed. Include `session_id` in
+your schema when the handler accepts one. Every method requires a nonempty
+`session_id` **and** a live transport attached to that exact in-memory session;
+a supplied session id or `profile` string alone never grants authority.
+`profile` is reserved, not accepted in plugin requests.
+
+Both real transports use the same profile-owned registration, Pydantic schema
+validation, callback invocation and disposable ownership ledger:
+- **Legacy TUI/stdio:** the caller's live transport must own the exact session
+  record, pinned before enqueuing work on the TUI RPC pool. Registered core
+  methods (including `mcp.servers.list`, `session.foreign.list`,
+  `pet.info.meta` and `vault.source.set`) retain their core handlers,
+  parameters, profile routing and long-handler classification regardless of
+  how many dots are in the name.
+- **Canonical `hermes-gateway-v1`:** the authenticated
+  `AuthorityConnection` must have `session:control` **and** an actual live
+  subscription for that session. `session:read` alone, an operator-only grant,
+  a client-provided `session_id`/`profile`, or a sibling profile's socket
+  cannot call or discover plugin methods. The authority pins its profile,
+  transport identity, subscription lease, live session object, runtime epoch
+  and execution generation, rechecking these through the callback and before
+  replying. Drain/retire, detach, replace, unload and disconnect revoke that
+  lease. Plugin callbacks run in `asyncio.to_thread` under
+  `gateway.session_authorities.owner_scope`; no legacy session is created.
+
+
+`request.session_id` and `request.profile` are **server-resolved** identity
+hints, not capabilities. `request.assert_attached()` remains **request-bound**:
+it checks the original actor, transport, session, registration and generation
+and becomes invalid after RPC completion. Call it before handler side effects.
+Legacy callbacks use the TUI RPC pool with the caller's bound transport;
+canonical callbacks execute off-loop under the authority's profile scope.
+`request.assert_attached()` can perform blocking authority reads: for a WebSocket
+caller it rejects invocation on the owning asyncio loop. Keep it in the RPC
+worker or use `await asyncio.to_thread(request.assert_attached)` from async code.
+
+### Background work: captured, caller-bound gateway scopes
+
+A synchronous, **registered** gateway handler may call
+`request.capture_scope()` during its own invocation, then pass the opaque
+`GatewayScopeLease` to background workers. The handler still returns an
+ordinary JSON-RPC object immediately. It cannot capture later or from a
+different thread, and the client cannot supply a profile, session, actor,
+subscription, generation or lease ID to mint one. Do not retain the request
+context after return: only the captured lease may outlive the RPC. A stored
+request's after-return capture fails with "active registered handler" even
+when its original peer is still attached: the invocation ended, not the
+connection. During an active handler, capture independently checks original
+attachment and registration.
+
+```python
+from threading import Thread
+from hermes_cli.plugin_gateway_scopes import GatewayScopeError, GatewayScopeDeliveryError
+
+def start_export(request, params):
+    lease = request.capture_scope()
+
+    def work():
+        try:
+            if lease.cancellation.is_set():
+                return
+            lease.assert_current()
+            lease.publish("my-plugin.export.progress", {"completed": 1})
+            # Complete the plugin's own work; check lease authority before
+            # irreversible session-affecting actions.
+            lease.assert_current()
+            lease.publish("my-plugin.export.complete", {"done": True})
+        except (GatewayScopeError, GatewayScopeDeliveryError):
+            # The original caller is gone or the transport refused delivery.
+            pass
+        finally:
+            lease.close()
+
+    Thread(target=work, daemon=True).start()
+    return {"accepted": True}
+```
+
+Import `GatewayScopeError` and `GatewayScopeDeliveryError` from
+`hermes_cli.plugin_gateway_scopes`. The event name must have the **registering
+plugin's** exact dotted namespace (e.g. `my-plugin.export.progress`);
+foreign/plugin-unowned names, core events such as `message.complete`, invalid
+JSON, non-object payloads, NaN and coerced map keys are rejected. Scopes do
+**not** impose a separate event byte-size or nesting-depth limit; the existing
+gateway JSON serializer and transport/backpressure policy govern actual sends
+(and may reject a frame). Server-verified identity is **not** read from the
+supplied payload.
+
+Every delivered notification retains the normal JSON-RPC event wrapper with
+`params.type: "plugin.event"` and `params.session_id` equal to the original
+attached session. Its `payload` is exactly
+`{"plugin": "my-plugin", "event_name": "my-plugin.export.progress",
+"profile": "<server-derived-profile>", "data": {"completed": 1}}`.
+The default client preserves this typed envelope; it never reinterprets
+`data.type` or `event_name` as a core event type. All notifications go to
+**only the original connection/subscription**, not session fanout or a
+replacement viewer. A second subscriber receives none.
+
+When the original legacy request uses the TUI's optional dashboard sidecar,
+its `TeeTransport` wraps the real Ink `StdioTransport` primary. A scoped
+`plugin.event` is written **once to that original primary only**, under its
+stdio output lock and final attachment check; it is **never mirrored** to the
+sidecar, even after another session peer joins. Ordinary non-scoped Tee
+output, including normal RPC responses, still mirrors as before. A Tee with
+a non-stdio primary cannot deliver scoped events and explicitly fails closed;
+a WS-primary Tee still rejects blocking scope operations on its owner loop
+before any waits. This composite refusal does not affect direct WS scopes,
+which retain their actual guarded send lock.
+
+Publish only after the registered handler returns: a worker launched early
+will await successful RPC settlement before its first send, while the handler
+thread itself cannot publish a provisional event. The lease does not start its
+own 60-second deadline; pending sends resolve with the real RPC result or
+cancellation. A failed/cancelled RPC invalidates all captured publishers
+without emitting a provisional notification.
+
+`lease.publish(...)` returns `True` only when the pinned transport acknowledges
+its write (or a WS send is completed under the owner loop's guarded send lock).
+It raises a secret-safe `GatewayScopeDeliveryError` if that write is rejected
+or fails and a `GatewayScopeError` if the lease is no longer authorized.
+This is a transport acknowledgement, **not** proof that the UI consumed the
+event; clients needing exactly-once application acknowledgement must supply
+their own plugin-level protocol. The canonical publisher verifies authority
+**before scheduling and again inside the real WebSocket output lock** so a queued
+event cannot target a detached or replaced viewer. A valid preliminary
+worker generation read alone does not admit a frame: canonical publication holds
+the original live session's **existing mutation gate** over a fresh persisted-
+generation check and the **actual guarded WS write**. Genuine rewind, reset,
+compression and FIFO-claim commits use the same gate. If a generation-changing
+commit wins, the stale frame is refused; if the frame wins, the commit waits
+until the send is acknowledged. This also covers rewind when the same live
+object and subscription remain mapped. The generation checks may flush token
+accounting, so they execute off the WS owner loop; the native asyncio gate
+is awaited without blocking that loop's thread. Legacy stdio rechecks inside
+its actual output lock as
+well, even when publication was queued before detach, session reuse or
+registration unload. Do not assume a scheduling call means
+delivery. A stdio write/flush failure rejects delivery if the peer is
+gone; other host I/O errors reach the same secret-safe scoped delivery-error
+boundary. An unexpected in-memory WS owner-guard exception also aborts
+the send and revokes the lease, without claiming publication.
+`close()` is idempotent and waits for an in-flight publish to
+finish, so successful final-completion delivery cannot be silently withdrawn.
+
+#### Authorize later start/control RPCs from the original caller
+
+`lease.assert_current()` is the separate public liveness check for asynchronous
+background work **without an active control request**. A stored job ID is only a
+selector for a server-owned lease; it never authorizes a new control action.
+
+A **registered synchronous handler** for a later start/control method must call
+`lease.assert_caller(request)` on its current `GatewayRequestContext` **before
+any job side effect**. This succeeds for a different registered method of the
+**same plugin** on the **original live connection and subscription**, with the
+original profile, session and runtime-generation binding. The two method names
+need not match. The assertion refuses a different concurrently attached peer
+even when both peers have the same session ID, profile and control capability.
+The **original start RPC must have completed successfully**: a lease captured
+inside an active start handler is still provisional, and cannot authorize even
+its own handler's control until admission is granted. A later worker may await
+original RPC settlement; failed or cancelled admission never grants control.
+The check rejects either the original or the current control request's
+transport owner loop **before** such a wait or any authority/registry lock.
+
+The caller is enrolled only while its actual registered invocation is active.
+Detached/reattached peers (including a legacy fanout peer reattached to the
+same record), completed/reconstructed contexts, another plugin's callback,
+unloaded/re-registered methods, generation changes, cancelled/closed leases,
+and foreign profiles fail closed with a secret-safe `GatewayScopeError`.
+Dataclass equality, copied private fields, a cancellation Event, nonce, job
+ID or client-supplied token **cannot** authorize a call. This is a server-side
+connection/subscription/registration check and adds **no** JSON-RPC argument.
+
+`assert_caller` may block on live authority/DB/registry checks, so it must run
+on a worker. On a WebSocket transport's owner loop it raises immediately
+**before** any lock/check; async callers use
+`await asyncio.to_thread(lease.assert_caller, current_request)`
+**while that request's registered handler is still active**. Do not save a
+request context after its handler returns. Use `assert_current()` on the
+background thread when there is no current handler.
+
+`lease.publish(...)`, `lease.assert_current()`, `lease.assert_caller(request)` and `lease.close()` are
+**blocking worker-thread operations**. On the original WebSocket owner loop,
+all four raise `GatewayScopeError` **before** RPC-settlement waits, authority
+DB reads or delivery-lock acquisition. An owner-loop `close()` rejection does
+**not** revoke or drain the lease; off-loop `close()` preserves the
+in-flight-send drain and revocation fence. From an async owner-loop callback,
+use `await asyncio.to_thread(lease.publish, event_name, payload)`,
+`await asyncio.to_thread(lease.assert_current)`, and
+`await asyncio.to_thread(lease.close)`. The same rule applies to canonical
+and legacy WS transports; stdio callers without an owner loop retain the
+synchronous worker API. Never infer completion from an unawaited task.
+
+The lease is revoked on failed/cancelled originating RPC, explicit close,
+original connection close, detach, subscription replacement, runtime
+generation or authority epoch change, retirement/drain, profile/session
+replacement, or plugin unload/registration replacement. Its
+`cancellation` is a `threading.Event` signalled on close/admission failure
+and once a revoked publisher is checked. Workers should check
+`lease.cancellation.is_set()` and call `lease.assert_current()` at safe
+boundaries. A **new conversation turn alone is not a runtime generation
+change**; background work can continue normally across turns.
+
+No new plugin-specific feature methods, broadcast transport, sidecar
+authority, idle timers, persistent tokens, or runtime dependency are created.
+
+Clients call **`gateway.capabilities`** with
+`{"session_id": "<the already attached live runtime session id>"}` and read
+`result.plugin_methods: string[]`. A sessionless probe returns an empty list.
+This reports **only methods currently registered in that caller session's
+profile** when that transport is authorized to invoke them, never schemas,
+credentials or other profiles' entries. On canonical sockets an attached
+read-only actor gets `4001`, not callable plugin method names. Discovery
+does not expose unregistered names. A detached, foreign or reused session
+returns `4001`; a removed/unknown plugin method returns `-32601`; plugin
+failure or a nonserializable result returns `-32000`. Unload, disable, failed
+load rollback, replacement and force re-discovery dispose methods through the
+normal plugin ownership ledger. Dynamic names are **not** inserted into
+`tui_gateway.server._methods`, and no static core method contract is generated
+for a plugin name. There is no feature-specific policy and no legacy fallback
+from canonical sockets.
+
+The typed `gateway.capabilities` parameters/result come from
+`tui_gateway/contracts/liveness.py`. To sync TypeScript and OpenRPC after
+changing the Python contract, run `scripts/run-in-hermes-env python3 scripts/gen_gateway_contracts.py`
+inside the repository's Hermes Python environment (the script's shebang uses
+`scripts/run-in-hermes-env`). Commit only the generated
+`apps/shared/src/gateway-contract.generated.ts` and
+`apps/shared/src/gateway-contract.openrpc.json`; never hand-edit them.
+
+Gateway RPC callbacks have the same trust posture as plugin tools. Keep
+feature-specific implementation, permissions and presentation in the standalone
+plugin; this generic seam does not add browser, plan, media, table or voice
+policies to Hermes core.

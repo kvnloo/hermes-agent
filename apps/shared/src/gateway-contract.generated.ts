@@ -1908,8 +1908,12 @@ export type PingParams = Record<string, never>
 export interface PingResult {
   pong: boolean
 }
+export interface GatewayCapabilitiesParams {
+  session_id?: string | null
+}
 export interface GatewayCapabilitiesResult {
   per_session_exclusive_submit: boolean
+  plugin_methods: string[]
 }
 export interface ClientCapabilitiesParams {
   server_requests?: boolean
@@ -5920,6 +5924,13 @@ export interface PetHatchProgressPayload {
   total?: string | null
   [key: string]: unknown
 }
+/** hermes_cli.plugin_gateway_scopes.GatewayScopeLease.publish: owner-stamped event. */
+export interface PluginEventPayload {
+  plugin: string
+  event_name: string
+  profile: string
+  data: Record<string, unknown>
+}
 /** ``change_watcher._CHANGE_WATCHES`` payload fn — ``{}`` for every watch except pet.changed. */
 export type ChangeSignalPayload = Record<string, unknown>
 export type ConnectorErrorReason = 'INVALID_PARAMS' | 'NOT_OWNER' | 'UNSUPPORTED_RUNTIME' | 'CONNECTOR_REQUEST_FAILED' | 'INVALID_CONNECTOR_RESPONSE' | 'UNKNOWN_TARGET' | 'LINK_STILL_VALID' | 'REISSUE_REFUSED' | 'UNKNOWN_OPERATION' | 'INVALID_ANSWER' | 'NEEDS_NOUS_AUTH' | 'CONNECTOR_NOT_FOUND' | 'TOOLS_UNAVAILABLE' | 'CONNECTORS_UNAVAILABLE' | 'CATALOG_UNAVAILABLE' | 'ACCOUNTS_UNAVAILABLE' | 'CONNECTION_NOT_FOUND' | 'POLICY_UNAVAILABLE' | 'POLICY_CONFLICT' | 'FORBIDDEN_SCOPE' | 'ORG_REQUIRED' | 'ORG_ACCESS_DENIED' | 'INVALID_POLICY' | 'ALIAS_TAKEN'
@@ -6048,8 +6059,8 @@ export interface RpcMethods {
   'free_tier.provision': { params: ProfileParams; result: FreeTierProvisionResult }
   /** Pure read of the focused profile's free-tier identity state (no network, no side effects). */
   'free_tier.status': { params: ProfileParams; result: FreeTierStatusResult }
-  /** What THIS build enforces (a client withholds a feature unless advertised). */
-  'gateway.capabilities': { params: PingParams; result: GatewayCapabilitiesResult }
+  /** Build capabilities and live plugin RPC method names for the attached session's profile. */
+  'gateway.capabilities': { params: GatewayCapabilitiesParams; result: GatewayCapabilitiesResult }
   /** Resolve one exact pending approval raised by a local or peer room member. */
   'groups.approve': { params: GroupsApproveParams; result: GroupsApproveResult }
   /** Describe the hosted-room protocol implemented by this gateway. */
@@ -6967,6 +6978,8 @@ export interface BackendGatewayEventMap {
   'pet.hatch.progress': PetHatchProgressPayload
   /** gateway_state.json moved; refetch platform status. */
   'platforms.changed': ChangeSignalPayload
+  /** An authorized plugin event delivered only to the original subscribed caller. */
+  'plugin.event': PluginEventPayload
   /** Close the preview pane or one tab. */
   'preview.close': PreviewClosePayload
   /** Open a URL / file in the desktop preview pane. */
@@ -7089,6 +7102,7 @@ export const GATEWAY_EVENT_TYPES = [
   'pet.generate.progress',
   'pet.hatch.progress',
   'platforms.changed',
+  'plugin.event',
   'preview.close',
   'preview.open',
   'preview.restart.complete',

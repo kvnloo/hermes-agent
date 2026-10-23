@@ -29,6 +29,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple, Uni
 from hermes_constants import get_hermes_home, get_process_hermes_home, hermes_home_key
 from registration_lifecycle import replacement_coordinator
 from utils import env_var_enabled
+from hermes_cli import plugins_dispatch
 from hermes_cli.config import load_config_readonly
 from hermes_cli.middleware import VALID_MIDDLEWARE
 from hermes_cli.plugin_capabilities import plugin_capability_granted
@@ -667,6 +668,26 @@ class PluginContext:
         return self._register_entry("command", clean, self._manager._plugin_commands, entry,
                                     "Plugin %s registered command: /%s", clean)
 
+    @_serialized_replacement
+    def register_gateway_method(
+        self, name: str, handler: Callable, *, schema: type | None = None,
+    ) -> PluginRegistration:
+        """Register an owned TUI/desktop JSON-RPC method; callback(request, params) -> dict.
+
+        The server authorizes a live session transport and binds the owning profile before
+        invoking a synchronous callback on its RPC pool. The optional schema is a strict
+        Pydantic request model (extra='forbid'). No core method catalog is modified.
+        """
+        from hermes_cli.plugin_gateway_methods import validate_gateway_registration
+
+        entry = validate_gateway_registration(self.plugin_id, name, handler, schema)
+        if name in self._manager._gateway_methods:
+            raise ValueError(f"gateway method {name!r} is already registered")
+        return self._register_entry(
+            "gateway_method", name, self._manager._gateway_methods, entry,
+            "Plugin %s registered gateway method: %s", name,
+        )
+
     def dispatch_tool(self, tool_name: str, args: dict, **kwargs) -> str:
         """Dispatch a tool call through the registry with the parent agent (when available)
         resolved automatically; returns the handler's JSON string. ``kwargs`` forward to dispatch."""
@@ -1181,6 +1202,7 @@ class PluginManager(PluginLoaderMixin, PluginDispatchMixin, PluginLedgerMixin):
         self._plugin_platform_names: set[str] = set()
         self._cli_commands: dict[str, dict] = {}
         self._plugin_commands: dict[str, dict] = {}
+        self._gateway_methods: dict[str, Any] = {}  # profile-local, ledger-owned RPC callbacks
         self._system_prompt_sections: dict[str, PluginSystemPromptSection] = {}
         self._plugin_skills: dict[str, dict[str, Any]] = {}
         self._automation_blueprints: dict[str, Any] = {}  # "<plugin>:<key>" -> AutomationBlueprint
@@ -2052,40 +2074,8 @@ def resolve_pre_tool_block(
     tool_name: str, args: Optional[dict[str, Any]], **hook_kwargs: Any
 ) -> Optional[str]:
     """Resolve the pre_tool_call directive to a final block message (or ``None`` to proceed),
-    running the human-approval gate for ``approve``. See :func:`_resolve_block_from_details`."""
+    running the human-approval gate for ``approve``. See :func:`hermes_cli.plugins_dispatch._resolve_block_from_details`."""
     return _dispatch_pre_tool_call_hooks(tool_name, args, **hook_kwargs)[0]
-
-
-def _resolve_block_from_details(
-    details: _PreToolCallDirective, tool_name: str, *, turn_id: str = "", tool_call_id: str = "",
-    session_id: str = "",
-) -> Optional[str]:
-    """The ONE place for the fail-closed approval logic: ``block`` blocks with its message; an
-    ``approve`` whose gate errors, denies, or times out is blocked; anything else proceeds."""
-    if details.action == "block":
-        return details.message
-    if details.action != "approve":
-        return None
-    try:
-        from tools.approval import request_tool_approval
-        from tools.approval_context import reset_current_observability_context, set_current_observability_context
-        approval_tokens = None
-        with suppress(Exception):
-            approval_tokens = set_current_observability_context(
-                turn_id=turn_id, tool_call_id=tool_call_id, session_id=session_id)
-        try:
-            result = request_tool_approval(tool_name, details.message or "", rule_key=details.rule_key or tool_name)
-        finally:
-            if approval_tokens is not None:
-                with suppress(Exception):
-                    reset_current_observability_context(approval_tokens)
-    except Exception:
-        # Fail-closed: if the gate itself errors, block rather than silently execute an action a
-        # plugin flagged for approval.
-        return f"BLOCKED: plugin approval gate failed for {tool_name}"
-    if not result.get("approved"):
-        return str(result.get("message") or f"BLOCKED: plugin approval required for {tool_name}")
-    return None
 
 
 def _dispatch_pre_tool_call_hooks(
@@ -2094,7 +2084,7 @@ def _dispatch_pre_tool_call_hooks(
     """Invoke ``pre_tool_call`` hooks once; return ``(block_message, modified_args)`` — the resolved
     block/approve message (``None`` to proceed) and merged ``modify`` args (``None`` if none)."""
     details = _get_pre_tool_call_directive_details(tool_name, args, **hook_kwargs)
-    block_msg = _resolve_block_from_details(
+    block_msg = plugins_dispatch._resolve_block_from_details(
         details, tool_name, **{k: hook_kwargs.get(k, "") for k in ("turn_id", "tool_call_id", "session_id")})
     return (block_msg, details.modified_args)
 
