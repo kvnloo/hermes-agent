@@ -64,7 +64,7 @@ def _drop_session_tools(agent, new_defs: list, new_names: set) -> tuple:
 
 def _publish_tool_snapshot(
     agent, new_defs: list, new_names: set, *, snapshot_generation: int,
-    staged_engine_names: set, content_aware: bool, prefix_registered: Optional[set]) -> Optional[set]:
+    staged_engine_names: set, prefix_registered: Optional[set]) -> Optional[set]:
     """Single atomic read-diff-publish under ``_agent_tools_lock`` so ``added`` matches what
     was published and a stale (older-generation) rebuild can't overwrite a newer one. Returns
     the added names, or None when nothing was published (unchanged, or a newer snapshot won)."""
@@ -81,9 +81,8 @@ def _publish_tool_snapshot(
         new_defs, new_names = _drop_session_tools(agent, new_defs, new_names)
         # Record the generation even when unchanged so an in-flight older caller can't clobber.
         agent._tool_snapshot_generation = max(published_gen, snapshot_generation)
-        # Same name set and unchanged bytes: nothing to publish. content_aware
-        # (explicit reload, compaction) also diffs serialized schema bytes.
-        if new_names == current and not (content_aware and _tool_defs_content_changed(agent, new_defs)):
+        # Names alone are insufficient: explicit reload can change the schema under a stable name.
+        if new_names == current and not _tool_defs_content_changed(agent, new_defs):
             return None
         agent.tools = new_defs
         agent.valid_tool_names = new_names
@@ -97,7 +96,7 @@ def _publish_tool_snapshot(
 
 def refresh_agent_mcp_tools(
     agent, *, enabled_override=None, disabled_override=None, quiet_mode: bool = True,
-    content_aware: bool = False, preserve_prefix: bool = False) -> set:
+    preserve_prefix: bool = False) -> set:
     """Re-derive an already-built agent's tool snapshot from the live registry; returns the
     newly-added tool names (empty when unchanged). The agent snapshots ``agent.tools`` at build
     time, so servers that connect later (slow OAuth, ``/reload-mcp``) are invisible until
@@ -136,13 +135,9 @@ def refresh_agent_mcp_tools(
             prefix_registered = {entry.name for entry in registry.get_all_entries()}
         except Exception:
             pass  # fail open to the plain rebuild
-    else:
-        # Explicit reload and pre-first-turn rebuild. A same-name description
-        # change has to publish; between-turns refresh keeps preserve_prefix.
-        content_aware = True
     added = _publish_tool_snapshot(
         agent, new_defs, new_names, snapshot_generation=snapshot_generation,
-        staged_engine_names=staged_engine_names, content_aware=content_aware, prefix_registered=prefix_registered)
+        staged_engine_names=staged_engine_names, prefix_registered=prefix_registered)
     if added is None:
         return set()
     persist_agent_tool_names(agent)  # re-pin so a rebuild after agent-cache eviction restores this order

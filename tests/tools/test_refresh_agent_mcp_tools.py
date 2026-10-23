@@ -577,7 +577,6 @@ def test_authorized_message_agent_survives_every_snapshot_rebuild(
         else:
             _mcp_agent.refresh_agent_mcp_tools(
                 agent,
-                content_aware=rebuild == "compaction",
                 preserve_prefix=rebuild == "between_turns",
             )
 
@@ -605,7 +604,7 @@ def test_snapshot_rebuild_never_grants_message_agent_to_unauthorized_sessions(
     _serve(monkeypatch, [_tool("read_file")])
 
     for _ in range(2):
-        _mcp_agent.refresh_agent_mcp_tools(agent, content_aware=True)
+        _mcp_agent.refresh_agent_mcp_tools(agent)
         assert _message_agent_schema_count(agent) == 0
         assert "message_agent" not in agent.valid_tool_names
         _assert_tool_snapshot_coherent(agent)

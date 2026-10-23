@@ -732,7 +732,7 @@ def _refresh_bot_chat_tools(agent) -> None:
         from tui_gateway.server import _load_disabled_toolsets, _load_enabled_toolsets
         refresh_agent_mcp_tools(
             agent, enabled_override=_load_enabled_toolsets(platform),
-            disabled_override=_load_disabled_toolsets(), quiet_mode=True, content_aware=True)
+            disabled_override=_load_disabled_toolsets(), quiet_mode=True)
     except Exception as exc:
         logger.warning("Bot Chat capability refresh kept the previous tools for session %s: %s",
                        agent.session_id, exc)

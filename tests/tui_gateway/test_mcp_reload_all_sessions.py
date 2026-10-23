@@ -7,14 +7,17 @@ the id is absent or unknown, while still answering ``reloaded``).
 
 from __future__ import annotations
 
+import json
 import threading
 from types import SimpleNamespace
 
 import pytest
 
 import hermes_constants
+import model_tools
 from agent.secret_scope import current_secret_scope
 from tools import mcp_tool_agent as _mcp_agent
+from tools.mcp_tool_agent import refresh_agent_mcp_tools as _real_refresh_agent_mcp_tools
 from tools import mcp_tool_discovery as _mcp_discovery
 from tools import mcp_tool_lifecycle as _mcp_lifecycle
 import tui_gateway.server as srv
@@ -60,6 +63,41 @@ def test_reload_from_one_session_refreshes_every_live_agent(reload_env):
 
     assert resp["result"]["status"] == "reloaded"
     assert sorted(reload_env.refreshed) == ["agent-A", "agent-B"]
+
+
+def test_reload_publishes_same_name_schemas_to_sibling_sessions(reload_env, monkeypatch):
+    """Real gateway reload replaces edited schemas in both cached sessions.
+
+    A normal live-session refresh first keeps their individually sent bytes intact;
+    the confirmed reload intentionally invalidates that prefix for every sibling.
+    """
+    def _schema(description):
+        return {"type": "function", "function": {
+            "name": "read_file", "description": description,
+            "parameters": {"type": "object", "properties": {}},
+        }}
+
+    a = srv._sessions["A"]["agent"]
+    b = srv._sessions["B"]["agent"]
+    a.tools = [_schema("schema sent to session A")]
+    b.tools = [_schema("schema sent to session B")]
+    a.valid_tool_names = b.valid_tool_names = {"read_file"}
+    before = (json.dumps(a.tools), json.dumps(b.tools))
+    updated_schema = _schema("newly discovered schema v2")
+
+    # Exercise the real refresh publisher through both production gateway paths.
+    monkeypatch.setattr(_mcp_agent, "refresh_agent_mcp_tools", _real_refresh_agent_mcp_tools)
+    monkeypatch.setattr(model_tools, "get_tool_definitions", lambda **_kw: [updated_schema])
+
+    srv._refresh_live_sessions(preserve_prefix=True)
+    assert (json.dumps(a.tools), json.dumps(b.tools)) == before
+
+    resp = srv._methods["reload.mcp"](1, {"session_id": "A", "confirm": True})
+
+    assert resp["result"]["status"] == "reloaded"
+    assert a.tools == [updated_schema]
+    assert b.tools == [updated_schema]
+    assert a.valid_tool_names == b.valid_tool_names == {"read_file"}
 
 
 def test_reload_without_session_id_still_refreshes_live_agents(reload_env):
