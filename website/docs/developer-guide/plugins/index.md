@@ -2387,3 +2387,75 @@ def handler(args, **kwargs):
 # Good — model knows exactly when and how
 "description": "Evaluate a mathematical expression. Use for arithmetic, trig, logarithms. Supports: +, -, *, /, **, sqrt, sin, cos, log, pi, e."
 ```
+
+
+## Profile-bound TUI gateway JSON-RPC methods
+
+A trusted **in-process** plugin can expose its own methods to TUI/Desktop clients
+without adding them to the static core RPC catalog. Plugin-host isolation rejects
+this API, because an isolated callback has no in-process session/transport authority.
+
+```python
+from pydantic import BaseModel, ConfigDict
+
+class EchoParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: str
+    message: str
+
+def echo(request, params):
+    request.assert_attached()
+    return {"text": params["message"], "profile": request.profile}
+
+def register(ctx):
+    ctx.register_gateway_method("my-plugin.surface.echo", echo, schema=EchoParams)
+```
+
+`ctx.register_gateway_method(name, handler, *, schema=None)` returns a disposable
+`PluginRegistration`. The exact handler signature is **synchronous**
+`handler(request: GatewayRequestContext, params: dict) -> dict`. Coroutine/async
+handlers are refused. The result must be a JSON-serializable object, not an RPC
+envelope. Registration raises for invalid names, duplicate claims, non-callables,
+core collisions or invalid schemas. The method name must be lower-case and fully
+qualified within the registering plugin's exact registry key, with at least two
+dotted suffix segments (for example `my-plugin.surface.echo`). Names are never
+normalized or silently reassigned. Two distinct profiles can independently
+register the same qualified name.
+
+The optional `schema` is a **Pydantic v2 `BaseModel` class** configured with
+`extra="forbid"`. The gateway calls `schema.model_validate(params, strict=True)`
+and hands the handler the JSON-mode dump; bad or unknown arguments return
+JSON-RPC `-32602`. With `schema=None`, `params` is the ordinary JSON-RPC
+object and no additional field validation is performed. Include `session_id` in
+your schema when the handler accepts one. Every method requires a nonempty
+`session_id` **and** a live transport attached to that exact in-memory session;
+a supplied session id or `profile` string alone never grants authority.
+`profile` is reserved, not accepted in plugin requests.
+
+`request.session_id` and `request.profile` are **server-resolved** identity
+hints, not capabilities. The only enforcement operation on the request context
+is `request.assert_attached()`, which rechecks the bound transport against the
+live session and its generation. Call it immediately before any side effect in
+a long-running handler; do not retain the context for later background work.
+The gateway also checks attachment again before replying. Callbacks execute
+in the RPC worker pool under the session's profile/secret/terminal scope,
+with the caller's transport `ContextVar` preserved; do not spin off unbound
+threads or manage session/transport ownership yourself.
+
+Clients call **`gateway.capabilities`** with
+`{"session_id": "<the already attached live runtime session id>"}` and read
+`result.plugin_methods: string[]`. A sessionless probe returns an empty list.
+This reports **only methods currently registered in that caller session's
+profile**, never schemas, credentials or other profiles' entries. Discovery
+does not expose unregistered names. A detached, foreign or reused session
+returns `4001`; a removed/unknown plugin method returns `-32601`; plugin
+failure or a nonserializable result returns `-32000`. Unload, disable, failed
+load rollback, replacement and force re-discovery dispose methods through the
+normal plugin ownership ledger. Dynamic names are **not** inserted into
+`tui_gateway.server._methods`, and no static core method contract is generated
+for a plugin name.
+
+Gateway RPC callbacks have the same trust posture as plugin tools. Keep
+feature-specific implementation, permissions and presentation in the standalone
+plugin; this generic seam does not add browser, plan, media, table or voice
+policies to Hermes core.
