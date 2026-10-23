@@ -65,7 +65,7 @@ def test_script_named_by_interpreter_script_is_still_read(tmp_path):
     ("#!/usr/bin/env python3\n", True),
     ("#!/usr/bin/python3 -u\n", True),
     ("#! /usr/bin/env PYTHONPATH=. -S node --flag\n", True),
-    ("#!/bin/bash\n", False),
+    ("#!/usr/bin/env bash\n", False),
     ("#!/usr/bin/env sh\n", False),
     ("#!/usr/bin/env\n", False),
     ("#!\n", False),
