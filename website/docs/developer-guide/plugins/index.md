@@ -2470,7 +2470,11 @@ A synchronous, **registered** gateway handler may call
 ordinary JSON-RPC object immediately. It cannot capture later or from a
 different thread, and the client cannot supply a profile, session, actor,
 subscription, generation or lease ID to mint one. Do not retain the request
-context after return: only the captured lease may outlive the RPC.
+context after return: only the captured lease may outlive the RPC. A stored
+request's after-return capture fails with "active registered handler" even
+when its original peer is still attached: the invocation ended, not the
+connection. During an active handler, capture independently checks original
+attachment and registration.
 
 ```python
 from threading import Thread
@@ -2547,7 +2551,11 @@ is awaited without blocking that loop's thread. Legacy stdio rechecks inside
 its actual output lock as
 well, even when publication was queued before detach, session reuse or
 registration unload. Do not assume a scheduling call means
-delivery. `close()` is idempotent and waits for an in-flight publish to
+delivery. A stdio write/flush failure rejects delivery if the peer is
+gone; other host I/O errors reach the same secret-safe scoped delivery-error
+boundary. An unexpected in-memory WS owner-guard exception also aborts
+the send and revokes the lease, without claiming publication.
+`close()` is idempotent and waits for an in-flight publish to
 finish, so successful final-completion delivery cannot be silently withdrawn.
 
 `lease.publish(...)`, `lease.assert_current()` and `lease.close()` are

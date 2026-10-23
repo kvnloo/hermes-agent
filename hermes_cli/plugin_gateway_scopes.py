@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import json
 import math
+import sqlite3
 import threading
 from typing import Any, Callable
 
@@ -126,7 +127,9 @@ class GatewayScopeLease:
             return False
         try:
             valid = bool(self._current())
-        except Exception:
+        except (sqlite3.Error, OSError, RuntimeError, ValueError):
+            # DB/runtime refusal or shutdown revokes authority. Unexpected
+            # programming failures must not silently resemble a clean detach.
             valid = False
         if not valid:
             self._revoked = True
@@ -215,10 +218,9 @@ async def _send_on_owner_loop(
             # might have run on the owner loop. Recheck cheap live ownership
             # immediately before send, still inside the real output lock.
             if checked and current_on_loop is not None:
-                try:
-                    checked = bool(current_on_loop())
-                except Exception:
-                    checked = False
+                # An unexpected error aborts the guarded send and reaches the
+                # publisher's secret-safe delivery-error/revocation boundary.
+                checked = bool(current_on_loop())
             return checked
 
         if generation_gate is not None:

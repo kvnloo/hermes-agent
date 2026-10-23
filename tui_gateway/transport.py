@@ -126,7 +126,7 @@ class StdioTransport:
             stream = self._stream_getter()
             try:
                 stream.write(line)
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 _raise_unless_peer_gone(e, "write")
                 return False
             # A flush that *raises* peer-gone means the dispatcher should exit cleanly; one that *hangs*
@@ -134,7 +134,7 @@ class StdioTransport:
             if not _DISABLE_FLUSH:
                 try:
                     stream.flush()
-                except Exception as e:
+                except (OSError, ValueError) as e:
                     _raise_unless_peer_gone(e, "flush")
                     return False
         return True

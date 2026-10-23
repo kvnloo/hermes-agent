@@ -44,7 +44,14 @@ class GatewayRequestContext:
 
     def capture_scope(self):
         """Capture a durable publisher only inside its authorized registered handler."""
-        self.assert_attached()
+        # The registered handler's capture callback checks invocation lifetime
+        # and thread before rechecking attachment and registration. Do not
+        # mistake a completed invocation for a detached connection.
+        if _is_transport_owner_loop(self._owner_loop):
+            raise RuntimeError(
+                "gateway scope capture requires a worker thread; "
+                "use await asyncio.to_thread(request.capture_scope)"
+            )
         if self._capture_scope is None:
             raise PermissionError("gateway scope capture is unavailable")
         return self._capture_scope()

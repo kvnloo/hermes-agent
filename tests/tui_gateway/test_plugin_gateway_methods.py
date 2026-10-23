@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import errno
 import queue
+import sqlite3
 import threading
 from functools import partial
 from pathlib import Path
@@ -447,6 +449,7 @@ def test_legacy_scope_registration_capture_only_during_handler(runtime):
     assert call(server, peer, NAME, session_id="owned")["result"] == {"ok": True}
     with pytest.raises(PermissionError, match="active registered handler"):
         stored[0].capture_scope()
+    assert server._sessions["owned"]["transport"] is peer
     assert peer.frames.empty()
 
 
@@ -643,6 +646,8 @@ async def test_legacy_scope_owner_loop_rejects_during_real_ws_send(runtime, outc
             lease.assert_current()
         with pytest.raises(RuntimeError, match="asyncio.to_thread"):
             contexts[-1].assert_attached()
+        with pytest.raises(RuntimeError, match="asyncio.to_thread"):
+            contexts[-1].capture_scope()
         assert not lease.cancellation.is_set()
         if outcome == "unloaded":
             manager.unload("hermes-tern")
@@ -659,3 +664,142 @@ async def test_legacy_scope_owner_loop_rejects_during_real_ws_send(runtime, outc
     assert lease.cancellation.is_set()
     with pytest.raises(GatewayScopeError):
         await asyncio.to_thread(lease.assert_current)
+
+@pytest.mark.parametrize("revocation", ["detach", "unload"])
+def test_legacy_capture_during_handler_checks_real_ownership(runtime, revocation):
+    server, plugins, manager = runtime
+    peer = Peer()
+    attach(server, "owned", peer)
+
+    def handler(request, params):
+        if revocation == "detach":
+            server._sessions.pop("owned")
+        else:
+            manager.unload("hermes-tern")
+        with pytest.raises(PermissionError, match="gateway session detached or replaced"):
+            request.capture_scope()
+        return {"unreachable": True}
+
+    install(plugins, manager, handler)
+    assert call(server, peer, NAME, session_id="owned")["error"]["code"] == 4001
+    assert peer.frames.empty()
+
+
+@pytest.mark.parametrize("failure", [
+    sqlite3.ProgrammingError("database already closed"),
+    OSError(errno.EIO, "state store unavailable"),
+    RuntimeError("backend retirement"),
+    ValueError("runtime store refused"),
+])
+def test_scope_authority_read_failures_revoke_without_delivery(runtime, failure):
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    server, plugins, manager = runtime
+    peer = Peer()
+    attach(server, "owned", peer)
+    leases = []
+    install(plugins, manager, lambda ctx, params: leases.append(ctx.capture_scope()) or {"ok": True})
+    assert call(server, peer, NAME, session_id="owned")["result"] == {"ok": True}
+    lease = leases[0]
+
+    def failed_authority_read():
+        raise failure
+
+    lease._current = failed_authority_read
+    with pytest.raises(GatewayScopeError, match="no longer authorized"):
+        lease.assert_current()
+    assert lease.cancellation.is_set()
+    assert peer.frames.empty()
+
+
+@pytest.mark.parametrize("phase", ["write", "flush"])
+@pytest.mark.parametrize("failure, peer_gone", [
+    (BrokenPipeError("original peer closed"), True),
+    (ValueError("I/O operation on closed file"), True),
+    (OSError(errno.ENOSPC, "secret-io-fault"), False),
+    (RuntimeError("secret-io-fault"), False),
+])
+def test_legacy_scope_stdio_write_flush_failures_revoke(runtime, phase, failure, peer_gone, monkeypatch):
+    import json
+
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeDeliveryError
+    from tui_gateway import transport as transport_module
+    from tui_gateway.transport import StdioTransport
+
+    monkeypatch.setattr(transport_module, "_DISABLE_FLUSH", False)
+
+    class FailingStream:
+        def __init__(self):
+            self.frames = queue.Queue()
+            self.failure = None
+
+        def write(self, line):
+            if self.failure is not None and phase == "write":
+                raise self.failure
+            self.frames.put(json.loads(line))
+            return len(line)
+
+        def flush(self):
+            if self.failure is not None and phase == "flush":
+                raise self.failure
+
+    server, plugins, manager = runtime
+    stream = FailingStream()
+    transport = StdioTransport(lambda: stream, threading.Lock())
+    attach(server, "owned", transport)
+    leases = []
+    install(plugins, manager, lambda ctx, params: leases.append(ctx.capture_scope()) or {"ok": True})
+    assert server.dispatch({"id": 42, "method": NAME, "params": {"session_id": "owned"}}, transport) is None
+    assert stream.frames.get(timeout=5)["result"] == {"ok": True}
+
+    stream.failure = failure
+    with pytest.raises(GatewayScopeDeliveryError) as err:
+        leases[0].publish("hermes-tern.btw.complete", {"done": True})
+    assert "secret-io-fault" not in str(err.value)
+    assert leases[0].cancellation.is_set()
+    # Peer-gone is a clean False; host I/O/programming faults propagate.
+    if peer_gone:
+        assert transport.write({"jsonrpc": "2.0", "id": 17, "result": {}}) is False
+    else:
+        with pytest.raises(type(failure)):
+            transport.write({"jsonrpc": "2.0", "id": 17, "result": {}})
+
+
+@pytest.mark.asyncio
+async def test_scoped_ws_in_memory_guard_failure_revokes_without_sending():
+    import asyncio
+
+    from hermes_cli.plugin_gateway_scopes import (
+        GatewayScopeAdmission, GatewayScopeDeliveryError, deliver_on_owner_loop,
+    )
+    from tui_gateway.ws import WSTransport
+
+    class Socket:
+        def __init__(self):
+            self.frames = []
+
+        async def send_text(self, line):
+            self.frames.append(line)
+
+    socket = Socket()
+    loop = asyncio.get_running_loop()
+    transport = WSTransport(socket, loop)
+    admission = GatewayScopeAdmission()
+
+    def failed_owner_check():
+        raise RuntimeError("secret-guard-failure")
+
+    lease = admission.capture(
+        plugin_id="hermes-tern", session_id="owned", profile="default",
+        current=lambda: True, owner_loop=loop,
+        deliver=lambda frame, current: deliver_on_owner_loop(
+            transport, loop, frame, current, current_on_loop=failed_owner_check,
+        ),
+    )
+    admission.grant()
+    with pytest.raises(GatewayScopeDeliveryError) as err:
+        await asyncio.to_thread(lease.publish, "hermes-tern.btw.complete", {"done": True})
+    assert "secret-guard-failure" not in str(err.value)
+    assert lease.cancellation.is_set()
+    assert socket.frames == []
+    assert not transport.closed
