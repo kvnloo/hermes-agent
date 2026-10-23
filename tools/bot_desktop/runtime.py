@@ -480,7 +480,10 @@ def restore_geometry(profile_home: Optional[str] = None) -> bool:
         full_env = {**os.environ, **env}
 
         def xrandr(*args: str) -> subprocess.CompletedProcess:
-            return subprocess.run(["xrandr", *args], env=full_env, capture_output=True, text=True, timeout=5)
+            return subprocess.run(
+                ["xrandr", *args], env=full_env, capture_output=True, text=True,
+                encoding="utf-8", errors="replace", timeout=5,
+            )
 
         query = xrandr("-q")
         current = re.search(r"current (\d+) x (\d+)", query.stdout or "")
