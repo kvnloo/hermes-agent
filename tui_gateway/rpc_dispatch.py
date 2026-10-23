@@ -20,6 +20,14 @@ def _handle_admitted_request(req: dict) -> dict | None:
         return normalized
     rid, method, params = normalized
     if not (fn := _methods.get(method)):
+        from hermes_cli.plugin_gateway_methods import looks_like_plugin_method
+        if looks_like_plugin_method(method):
+            from tui_gateway.plugin_methods import dispatch_plugin_method
+            token = _current_rpc_method.set(method)
+            try:
+                return dispatch_plugin_method(rid, method, params)
+            finally:
+                _current_rpc_method.reset(token)
         return _err(rid, -32601, f"unknown method: {method} — the client and the Hermes backend are out of sync "
                     "(different versions); run `hermes update` and restart both")
     # Test doubles register straight into ``_methods`` without a contract; every production
@@ -59,8 +67,18 @@ def dispatch(req: dict, transport: Optional[Transport] = None) -> dict | None:
         normalized = _normalize_request(req)
         if isinstance(normalized, dict):
             return normalized
-        if normalized[1] not in _LONG_HANDLERS:
+        # Plugin callbacks are always potentially slow; never run them on stdin / WS
+        # reader. Their public session id is only a hint, not transport authority.
+        plugin_call = normalized[1].count(".") >= 2
+        if not plugin_call and normalized[1] not in _LONG_HANDLERS:
             return handle_request(req)
+        session_snapshot = None
+        if plugin_call or (normalized[1] == "gateway.capabilities"
+                           and normalized[2].get("session_id") is not None):
+            from tui_gateway.plugin_methods import authorize_session
+            session_snapshot, problem = authorize_session(normalized[0], normalized[2])
+            if problem is not None:
+                return problem
         from hermes_cli.backend_retirement import retirement
 
         # Reserve BEFORE enqueueing: a queued handler has accepted work even though no worker runs yet.
@@ -68,6 +86,10 @@ def dispatch(req: dict, transport: Optional[Transport] = None) -> dict | None:
             return _err(req.get("id"), 5035, "backend is retiring; reconnect to continue")
         try:
             ctx = contextvars.copy_context()  # the pool worker must see the bound transport
+            if session_snapshot is not None:
+                # Pin the exact in-memory generation before enqueue. A reused session_id
+                # or detached transport cannot regain authority while queued.
+                ctx.run(_current_runtime_session_record.set, session_snapshot)
             owner = normalized[2].get("owner")
             if normalized[1] in _CONNECTOR_RPC_METHODS and isinstance(owner, dict) and owner.get("type") == "session":
                 ctx.run(_capture_connector_rpc_owner, normalized[2])
