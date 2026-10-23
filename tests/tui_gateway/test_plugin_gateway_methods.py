@@ -275,15 +275,17 @@ def test_dotted_registered_core_methods_keep_normal_dispatch(runtime, monkeypatc
     peer = Peer()
     assert name in server._methods
     observed = []
+    production_handler = server._methods[name]
 
     def core(rid, params):
         observed.append(dict(params))
-        return server._ok(rid, {"core": name})
+        return production_handler(rid, params)
 
     monkeypatch.setitem(server._methods, name, core)
-    # No attachment, including for the profile-scoped config and vault verbs.
+    # The actual handler still runs: do not fake a result that would violate
+    # the typed core contract in HERMES_TEST_ISOLATION=1.
     result = call(server, peer, name, profile="default")
-    assert result["result"] == {"core": name}
+    assert result["id"] == 1
     assert observed == [{"profile": "default"}]
 
 

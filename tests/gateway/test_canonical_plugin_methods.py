@@ -129,13 +129,10 @@ async def test_default_native_client_discovers_and_calls_real_fixture_plugin(nat
         assert (await request(viewer, "ping"))["result"] == {"pong": True}
         assert (await request(viewer, "gateway.capabilities", {"session_id": "owned"}))["result"]["plugin_methods"] == [NAME]
         result = await request(viewer, NAME, {"session_id": "owned", "value": 7})
-        assert result["result"] == {"profile": "default", "session": "owned",
-                                     "value": 7, "worker": "asyncio_0"} or (
-            result.get("result", {}).get("profile") == "default"
-            and result["result"]["session"] == "owned"
-            and result["result"]["value"] == 7
-            and result["result"]["worker"].startswith("asyncio_")
-        ), result
+        assert result["result"]["profile"] == "default", result
+        assert result["result"]["session"] == "owned"
+        assert result["result"]["value"] == 7
+        assert result["result"]["worker"].startswith("asyncio_")
         bad = await request(viewer, NAME, {"session_id": "owned", "value": "seven"})
         assert bad["error"]["code"] == -32602
         assert (await request(viewer, NAME, {"session_id": "owned", "value": 7, "extra": 1}))["error"]["code"] == -32602

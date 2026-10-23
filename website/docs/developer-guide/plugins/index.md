@@ -2389,7 +2389,7 @@ def handler(args, **kwargs):
 ```
 
 
-## Profile-bound TUI gateway JSON-RPC methods
+## Profile-bound TUI and canonical gateway JSON-RPC methods
 
 A trusted **in-process** plugin can expose its own methods to TUI/Desktop clients
 without adding them to the static core RPC catalog. Plugin-host isolation rejects
@@ -2432,28 +2432,61 @@ your schema when the handler accepts one. Every method requires a nonempty
 a supplied session id or `profile` string alone never grants authority.
 `profile` is reserved, not accepted in plugin requests.
 
+Both real transports use the same profile-owned registration, Pydantic schema
+validation, callback invocation and disposable ownership ledger:
+- **Legacy TUI/stdio:** the caller's live transport must own the exact session
+  record, pinned before enqueuing work on the TUI RPC pool. Registered core
+  methods (including `mcp.servers.list`, `session.foreign.list`,
+  `pet.info.meta` and `vault.source.set`) retain their core handlers,
+  parameters, profile routing and long-handler classification regardless of
+  how many dots are in the name.
+- **Canonical `hermes-gateway-v1`:** the authenticated
+  `AuthorityConnection` must have `session:control` **and** an actual live
+  subscription for that session. `session:read` alone, an operator-only grant,
+  a client-provided `session_id`/`profile`, or a sibling profile's socket
+  cannot call or discover plugin methods. The authority pins its profile,
+  transport identity, subscription lease, live session object, runtime epoch
+  and execution generation, rechecking these through the callback and before
+  replying. Drain/retire, detach, replace, unload and disconnect revoke that
+  lease. Plugin callbacks run in `asyncio.to_thread` under
+  `gateway.session_authorities.owner_scope`; no legacy session is created.
+
+
 `request.session_id` and `request.profile` are **server-resolved** identity
 hints, not capabilities. The only enforcement operation on the request context
 is `request.assert_attached()`, which rechecks the bound transport against the
 live session and its generation. Call it immediately before any side effect in
 a long-running handler; do not retain the context for later background work.
-The gateway also checks attachment again before replying. Callbacks execute
-in the RPC worker pool under the session's profile/secret/terminal scope,
-with the caller's transport `ContextVar` preserved; do not spin off unbound
-threads or manage session/transport ownership yourself.
+The gateway also checks attachment and registration identity again before
+replying. Legacy callbacks run in the TUI RPC worker pool with the caller's
+transport `ContextVar`; canonical callbacks run off-loop in the authority's
+profile scope. Do not spin off unbound threads or manage session/transport
+ownership yourself. This context is not a token that grants additional access;
+for capability-gated operations use the server-side actor, not context hints.
 
 Clients call **`gateway.capabilities`** with
 `{"session_id": "<the already attached live runtime session id>"}` and read
 `result.plugin_methods: string[]`. A sessionless probe returns an empty list.
 This reports **only methods currently registered in that caller session's
-profile**, never schemas, credentials or other profiles' entries. Discovery
+profile** when that transport is authorized to invoke them, never schemas,
+credentials or other profiles' entries. On canonical sockets an attached
+read-only actor gets `4001`, not callable plugin method names. Discovery
 does not expose unregistered names. A detached, foreign or reused session
 returns `4001`; a removed/unknown plugin method returns `-32601`; plugin
 failure or a nonserializable result returns `-32000`. Unload, disable, failed
 load rollback, replacement and force re-discovery dispose methods through the
 normal plugin ownership ledger. Dynamic names are **not** inserted into
 `tui_gateway.server._methods`, and no static core method contract is generated
-for a plugin name.
+for a plugin name. There is no feature-specific policy and no legacy fallback
+from canonical sockets.
+
+The typed `gateway.capabilities` parameters/result come from
+`tui_gateway/contracts/liveness.py`. To sync TypeScript and OpenRPC after
+changing the Python contract, run `python scripts/gen_gateway_contracts.py`
+inside the repository's Hermes Python environment (the script's shebang uses
+`scripts/run-in-hermes-env`). Commit only the generated
+`apps/shared/src/gateway-contract.generated.ts` and
+`apps/shared/src/gateway-contract.openrpc.json`; never hand-edit them.
 
 Gateway RPC callbacks have the same trust posture as plugin tools. Keep
 feature-specific implementation, permissions and presentation in the standalone
