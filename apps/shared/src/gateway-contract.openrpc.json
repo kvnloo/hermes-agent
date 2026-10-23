@@ -27180,6 +27180,37 @@
         "title": "PluginCatalogLookupStatus",
         "type": "string"
       },
+      "PluginEventPayload": {
+        "additionalProperties": false,
+        "description": "hermes_cli.plugin_gateway_scopes.GatewayScopeLease.publish: owner-stamped event.",
+        "properties": {
+          "plugin": {
+            "title": "Plugin",
+            "type": "string"
+          },
+          "event_name": {
+            "title": "Event Name",
+            "type": "string"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          }
+        },
+        "required": [
+          "plugin",
+          "event_name",
+          "profile",
+          "data"
+        ],
+        "title": "PluginEventPayload",
+        "type": "object"
+      },
       "PluginLiveNow": {
         "additionalProperties": false,
         "properties": {
@@ -48463,6 +48494,18 @@
           "name": "payload",
           "schema": {
             "$ref": "#/components/schemas/ChangeSignalPayload"
+          }
+        }
+      ]
+    },
+    {
+      "name": "plugin.event",
+      "summary": "An authorized plugin event delivered only to the original subscribed caller.",
+      "params": [
+        {
+          "name": "payload",
+          "schema": {
+            "$ref": "#/components/schemas/PluginEventPayload"
           }
         }
       ]
