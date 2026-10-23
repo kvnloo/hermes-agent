@@ -60,7 +60,6 @@ def dispatch_plugin_method(rid, name: str, params: dict) -> dict:
     """Run a registered handler with profile + transport preserved by the RPC pool."""
     from hermes_constants import profile_name_for_home
     from tui_gateway import server
-    from tui_gateway.transport import FanoutTransport
 
     session, problem = authorize_session(rid, params)
     if problem is not None:
@@ -73,11 +72,11 @@ def dispatch_plugin_method(rid, name: str, params: dict) -> dict:
     active = threading.Event()
     active.set()
     succeeded = False
-    # The fanout membership alone is insufficient: the same peer can detach
-    # and reattach to the same record. Pin its real per-attachment generation.
-    slot = session.get("transport")
-    attachment = slot.attachment_witness(transport) if isinstance(slot, FanoutTransport) else None
-    if isinstance(slot, FanoutTransport) and attachment is None:
+    # Pin the real membership lifetime, including before direct-to-fanout
+    # promotion, rather than accepting SID/profile or socket equality.
+    with server._sessions_lock:
+        attachment = server._plugin_gateway_attachment(session, transport)
+    if attachment is None:
         return server._err(rid, 4001, "session is no longer attached")
     generation = (session.get("session_key"), session.get("execution_generation"),
                   session.get("runtime_generation"))
@@ -100,14 +99,11 @@ def dispatch_plugin_method(rid, name: str, params: dict) -> dict:
                         or session.get("profile_home") != profile_home
                         or (session.get("session_key"), session.get("execution_generation"),
                             session.get("runtime_generation")) != generation
-                        or session.get("transport") is not slot
                         or not server._session_transport_contains(session, transport)):
                     return False
-                if attachment is not None:
-                    current = slot.attachment_witness(transport)
-                    return (current is not None and current[0] is attachment[0]
-                            and current[1] == attachment[1])
-                return True
+                current = server._plugin_gateway_attachment(session, transport)
+                return (current is not None and current[0] is attachment[0]
+                        and current[1] == attachment[1])
 
     def deliver(frame, current):
         # Hold the real backend retirement permit through the transport send,

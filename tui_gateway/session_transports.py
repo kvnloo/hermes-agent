@@ -25,6 +25,32 @@ def _session_transport_contains(session: dict | None, transport) -> bool:
         isinstance(existing, FanoutTransport) and existing.contains(transport))
 
 
+def _plugin_gateway_attachment(session: dict | None, transport):
+    """Pin a server-held attachment lifetime across direct-to-fanout promotion.
+
+    Validate real membership and its fanout generation on every access. Neither
+    a public SID nor the opaque witness is a client-supplied authorization.
+    """
+    with _session_transport_lock:
+        if not _session_transport_contains(session, transport):
+            return None
+        slot = session["transport"]
+        witness = (slot.attachment_witness(transport)
+                   if isinstance(slot, FanoutTransport) else (transport, 0))
+        if witness is None:
+            return None
+        records = session.setdefault("_plugin_gateway_attachments", [])
+        for record in list(records):
+            if record[0] is transport:
+                if record[2] is witness[0] and record[3] == witness[1]:
+                    return record[1], 0
+                records.remove(record)
+                break
+        lifetime = object()
+        records.append([transport, lifetime, witness[0], witness[1]])
+        return lifetime, 0
+
+
 def _session_live_transports(session: dict | None) -> list:
     existing = (session or {}).get("transport")
     peers = existing.transports() if isinstance(existing, FanoutTransport) else [existing]
@@ -117,7 +143,14 @@ def _attach_session_transport(session: dict | None, transport) -> bool:
             return existing.contains(transport)
         _warn_foreign_login(session, transport)
         if _transport_is_live_peer(existing):
-            session["transport"] = FanoutTransport(existing, transport)
+            fanout = FanoutTransport(existing, transport)
+            session["transport"] = fanout
+            # Joining a second peer must not revoke an unchanged first peer.
+            for record in session.get("_plugin_gateway_attachments") or []:
+                if record[0] is existing:
+                    witness = fanout.attachment_witness(existing)
+                    if witness is not None:
+                        record[2], record[3] = witness
         else:
             session["transport"] = transport
         return True
@@ -129,6 +162,9 @@ def _detach_session_transport(session: dict | None, transport) -> bool:
         return False
     with _session_transport_lock:
         (session.get("viewers") or {}).pop(transport, None)
+        records = session.get("_plugin_gateway_attachments")
+        if records is not None:
+            records[:] = [record for record in records if record[0] is not transport]
         existing = session.get("transport")
         if isinstance(existing, FanoutTransport):
             existing.detach(transport)

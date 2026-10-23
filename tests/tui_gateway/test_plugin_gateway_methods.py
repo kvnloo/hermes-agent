@@ -953,3 +953,48 @@ async def test_scope_assert_caller_real_legacy_websocket_same_sid_different_peer
     assert (await dispatch(peer_b, sock_b, LEGACY_CONTROL, 4,
                            action="wrong-again"))["error"]["code"] == -32000
     assert effects == ["once"]
+
+
+def test_scope_assert_caller_original_direct_peer_survives_join_but_not_detach(runtime):
+    """Real legacy dispatch: preserve live original, reject a detached/rejoined peer."""
+    from hermes_cli.plugin_gateway_scopes import GatewayScopeError
+
+    server, plugins, manager = runtime
+    first, second = Peer(), Peer()
+    attach(server, "shared", first)
+    session = server._sessions["shared"]
+    leases, effects = [], []
+
+    def start(ctx, params):
+        leases.append(ctx.capture_scope())
+        return {"started": True}
+
+    def control(ctx, params):
+        try:
+            leases[0].assert_caller(ctx)
+        except GatewayScopeError:
+            return {"allowed": False}
+        effects.append(ctx.session_id)
+        return {"allowed": True}
+
+    install(plugins, manager, start)
+    plugins.PluginContext(
+        plugins.PluginManifest(name="hermes-tern"), manager,
+    ).register_gateway_method(LEGACY_CONTROL, control)
+    assert call(server, first, NAME, session_id="shared")["result"] == {"started": True}
+    assert server._attach_session_transport(session, second)
+    assert server._session_transport_contains(session, first)
+    assert server._session_transport_contains(session, second)
+    assert call(server, second, LEGACY_CONTROL,
+                session_id="shared")["result"] == {"allowed": False}
+    assert call(server, first, LEGACY_CONTROL,
+                session_id="shared")["result"] == {"allowed": True}
+    assert effects == ["shared"]
+
+    assert server._detach_session_transport(session, first)
+    assert server._attach_session_transport(session, first)
+    assert call(server, first, LEGACY_CONTROL,
+                session_id="shared")["result"] == {"allowed": False}
+    assert effects == ["shared"]
+    with pytest.raises(GatewayScopeError):
+        leases[0].assert_current()
