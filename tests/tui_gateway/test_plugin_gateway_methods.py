@@ -263,3 +263,40 @@ def test_real_fixture_plugin_discoverable_and_callable_over_dispatch(runtime, tm
     }
     manager.unload("hermes-tern")
     assert call(server, peer, NAME, session_id="real")["error"]["code"] == -32601
+
+
+@pytest.mark.parametrize("name", [
+    "mcp.servers.list", "mcp.servers.status", "pet.info.meta",
+    "session.foreign.list", "vault.source.set",
+])
+def test_dotted_registered_core_methods_keep_normal_dispatch(runtime, monkeypatch, name):
+    """#636 P1: dots alone never turn a registered core verb into a plugin RPC."""
+    server, _, _ = runtime
+    peer = Peer()
+    assert name in server._methods
+    observed = []
+
+    def core(rid, params):
+        observed.append(dict(params))
+        return server._ok(rid, {"core": name})
+
+    monkeypatch.setitem(server._methods, name, core)
+    # No attachment, including for the profile-scoped config and vault verbs.
+    result = call(server, peer, name, profile="default")
+    assert result["result"] == {"core": name}
+    assert observed == [{"profile": "default"}]
+
+
+def test_actual_sessionless_and_session_dotted_core_dispatch(runtime):
+    """Call the production handlers through dispatch, not handle_request or a shape predicate."""
+    server, _, _ = runtime
+    peer = Peer()
+    sessionless = call(server, peer, "session.foreign.list")
+    assert sessionless["id"] == 1
+    assert sessionless.get("error", {}).get("code") not in {4001, -32601}, sessionless
+
+    attach(server, "core", peer)
+    attached = call(server, peer, "session.events.since", rid=2,
+                    session_id="core", last_seen=0)
+    assert attached["id"] == 2
+    assert "result" in attached, attached
