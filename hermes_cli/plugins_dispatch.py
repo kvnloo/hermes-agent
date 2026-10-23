@@ -16,10 +16,14 @@ import re
 import threading
 import time
 import types
+from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Mapping, Optional, Set, Union
 
 from hermes_cli.middleware import OBSERVER_SCHEMA_VERSION
+
+if TYPE_CHECKING:
+    from hermes_cli.plugins import _PreToolCallDirective
 
 logger = logging.getLogger("hermes_cli.plugins")
 
@@ -65,6 +69,38 @@ _HOOK_TIMEOUT_SUPPRESSION_SECONDS = 60.0
 # Live workers a hung callback may accumulate before it is skipped outright (#105223 / #98382).
 _HOOK_MAX_ABANDONED_WORKERS = 3
 _PRE_TOOL_CALL_TIMEOUT_BLOCK_MESSAGE = "pre_tool_call plugin callback timed out or is still running"
+
+
+def _resolve_block_from_details(
+    details: _PreToolCallDirective, tool_name: str, *, turn_id: str = "", tool_call_id: str = "",
+    session_id: str = "",
+) -> Optional[str]:
+    """The ONE place for the fail-closed approval logic: ``block`` blocks with its message; an
+    ``approve`` whose gate errors, denies, or times out is blocked; anything else proceeds."""
+    if details.action == "block":
+        return details.message
+    if details.action != "approve":
+        return None
+    try:
+        from tools.approval import request_tool_approval
+        from tools.approval_context import reset_current_observability_context, set_current_observability_context
+        approval_tokens = None
+        with suppress(Exception):
+            approval_tokens = set_current_observability_context(
+                turn_id=turn_id, tool_call_id=tool_call_id, session_id=session_id)
+        try:
+            result = request_tool_approval(tool_name, details.message or "", rule_key=details.rule_key or tool_name)
+        finally:
+            if approval_tokens is not None:
+                with suppress(Exception):
+                    reset_current_observability_context(approval_tokens)
+    except Exception:
+        # Fail-closed: if the gate itself errors, block rather than silently execute an action a
+        # plugin flagged for approval.
+        return f"BLOCKED: plugin approval gate failed for {tool_name}"
+    if not result.get("approved"):
+        return str(result.get("message") or f"BLOCKED: plugin approval required for {tool_name}")
+    return None
 
 
 def _policy_error_block_directive(hook_name: str, cb: Callable, exc: BaseException) -> dict[str, str]:

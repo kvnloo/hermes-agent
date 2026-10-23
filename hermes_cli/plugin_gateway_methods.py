@@ -5,6 +5,7 @@ from __future__ import annotations
 import inspect
 import re
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Any, Callable
 
 from pydantic import BaseModel
@@ -53,9 +54,16 @@ def validate_gateway_registration(
     from tui_gateway.contracts.registry import METHODS, CANONICAL_METHODS
     if name in METHODS or name in CANONICAL_METHODS:
         raise ValueError(f"gateway method {name!r} collides with a core method")
-    if (not callable(handler) or inspect.iscoroutinefunction(handler)
-            or inspect.isasyncgenfunction(handler)
-            or inspect.iscoroutinefunction(getattr(handler, "__call__", None))):
+    if not callable(handler):
+        raise TypeError("gateway handler must be a synchronous callable")
+    # functools.partial can hide an async callable object's implementation
+    # from inspect.iscoroutinefunction() / inspect.isasyncgenfunction().
+    target = handler
+    while isinstance(target, partial):
+        target = target.func
+    call_impl = type(target).__call__
+    if (inspect.iscoroutinefunction(target) or inspect.isasyncgenfunction(target)
+            or inspect.iscoroutinefunction(call_impl) or inspect.isasyncgenfunction(call_impl)):
         raise TypeError("gateway handler must be a synchronous callable")
     try:
         inspect.signature(handler).bind(object(), {})

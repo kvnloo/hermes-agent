@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import queue
 import threading
+from functools import partial
 from pathlib import Path
 
 import pytest
 from pydantic import BaseModel, ConfigDict
+
+from hermes_cli import plugins
 
 
 NAME = "hermes-tern.browser.blocks"
@@ -39,7 +42,6 @@ class StrictParams(BaseModel):
 
 @pytest.fixture
 def runtime(tmp_path, monkeypatch):
-    import hermes_cli.plugins as plugins
     from tui_gateway import server
 
     home = tmp_path / ".hermes"
@@ -72,6 +74,28 @@ def attach(server, sid, transport, *, profile_home=None):
 def call(server, transport, method, rid=1, **params):
     response = server.dispatch({"jsonrpc": "2.0", "id": rid, "method": method, "params": params}, transport)
     return transport.receive() if response is None else response
+
+
+def test_reject_async_callable_objects_and_generators(runtime):
+    """Only synchronous callbacks may enter the profile's gateway method registry."""
+    _, _, manager = runtime
+
+    class AsyncCallable:
+        async def __call__(self, request, params):
+            return {"unexpected": True}
+
+    class AsyncGeneratorCallable:
+        async def __call__(self, request, params):
+            yield {"unexpected": True}
+
+    async def async_generator(request, params):
+        yield {"unexpected": True}
+
+    for handler in (AsyncCallable(), AsyncGeneratorCallable(), async_generator,
+                    partial(AsyncCallable()), partial(AsyncGeneratorCallable())):
+        with pytest.raises(TypeError, match="synchronous"):
+            install(plugins, manager, handler)
+    assert not manager._gateway_methods
 
 
 def test_registered_method_capability_and_unload(runtime):

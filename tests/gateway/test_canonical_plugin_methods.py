@@ -13,6 +13,8 @@ import threading
 
 import pytest
 
+from hermes_cli import plugins
+
 from gateway.session_authority import LiveSession, SessionAuthority
 from hermes_state import SessionDB
 from hermes_state_runtime import begin_runtime_epoch
@@ -33,8 +35,6 @@ class Transport:
 
 @pytest.fixture
 def native(tmp_path, monkeypatch):
-    import hermes_cli.plugins as plugins
-
     home = tmp_path / ".hermes"
     home.mkdir()
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
