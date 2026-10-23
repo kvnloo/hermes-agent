@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import re
+import sqlite3
 import threading
 from dataclasses import dataclass, field
 from functools import partial
@@ -35,7 +36,7 @@ class GatewayRequestContext:
     session_id: str
     profile: str
     _attached: Callable[[], bool] = field(repr=False, compare=False)
-    _capture_scope: Callable[[], Any] | None = field(
+    _capture_scope: Callable[[str, Callable[[], bool], GatewayCallerBinding], Any] | None = field(
         default=None, repr=False, compare=False,
     )
     _owner_loop: asyncio.AbstractEventLoop | None = field(
@@ -140,7 +141,7 @@ def _registered_caller_matches(
         request.assert_attached()
         if not candidate.registered():
             return False
-    except (PermissionError, RuntimeError, OSError, ValueError):
+    except (sqlite3.Error, OSError, RuntimeError, ValueError):
         return False
     with _caller_lock:
         return _live_callers.get(id(request)) is candidate

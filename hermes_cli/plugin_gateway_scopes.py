@@ -175,7 +175,7 @@ class GatewayScopeLease:
             allowed = _registered_caller_matches(
                 current_request, self._caller_binding, self._plugin_id,
             )
-        except Exception as exc:
+        except (sqlite3.Error, OSError, RuntimeError, ValueError) as exc:
             raise GatewayScopeError("gateway caller is not authorized") from exc
         if not allowed:
             raise GatewayScopeError("gateway caller is not authorized")
