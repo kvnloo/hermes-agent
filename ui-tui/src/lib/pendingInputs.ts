@@ -33,11 +33,17 @@ type ExpansionSnapshot = NonNullable<QueueItem['expansionSnapshot']>
  * and can be applied repeatedly after cold recovery or another busy retry.
  */
 function snapshotExpansion(item: QueueItem): ExpansionSnapshot | undefined {
-  if (item.expansionSnapshot) return item.expansionSnapshot
-  if (!item.expand) return undefined
+  if (item.expansionSnapshot) {
+    return item.expansionSnapshot
+  }
+  if (!item.expand) {
+    return undefined
+  }
 
   const labels = item.display.match(PASTE_SNIPPET_RE) ?? []
-  if (!labels.length) return undefined
+  if (!labels.length) {
+    return undefined
+  }
 
   return labels.map(label => {
     // expandTokens() trims its whole result. A private wrapper keeps leading
@@ -71,14 +77,19 @@ function expandFromSnapshot(snapshot: ExpansionSnapshot): (value: string) => str
     const remainingByLabel = new Map<string, string[]>()
     for (const { label, value: payload } of snapshot) {
       const values = remainingByLabel.get(label)
-      if (values) values.push(payload)
-      else remainingByLabel.set(label, [payload])
+      if (values) {
+        values.push(payload)
+      } else {
+        remainingByLabel.set(label, [payload])
+      }
     }
 
     return value.replace(new RegExp(`[ \\t]?(?:${PASTE_SNIPPET_RE.source})`, 'g'), match => {
       const label = match.trimStart()
       const payload = remainingByLabel.get(label)?.shift()
-      if (payload === undefined) return match
+      if (payload === undefined) {
+        return match
+      }
       return payload ? match.slice(0, match.length - label.length) + payload : ''
     }).trim()
   }
