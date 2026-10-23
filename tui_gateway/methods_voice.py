@@ -444,7 +444,12 @@ def _(rid, params: dict) -> dict:
     """What THIS BUILD enforces (a client withholds unless advertised), sourced from the enforcing
     module, never config: a believed-but-absent capability is worse."""
     from hermes_cli.active_sessions import PER_SESSION_EXCLUSIVE_SUBMIT
-    return _ok(rid, {"per_session_exclusive_submit": bool(PER_SESSION_EXCLUSIVE_SUBMIT)})
+    from tui_gateway.plugin_methods import list_plugin_methods
+    methods, problem = list_plugin_methods(rid, params)
+    if problem is not None:
+        return problem
+    return _ok(rid, {"per_session_exclusive_submit": bool(PER_SESSION_EXCLUSIVE_SUBMIT),
+                     "plugin_methods": methods})
 
 
 @method("client.capabilities")
