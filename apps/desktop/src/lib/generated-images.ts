@@ -131,10 +131,15 @@ export function stripGeneratedImageEchoes(text: string, sources: readonly string
       new RegExp(String.raw`\[[^\]\n]*\]\(\s*#media:${regexEscape(encodeURIComponent(source))}\s*\)`, 'gi'),
       ''
     )
-    // Bare occurrence of the source path/URL. `(`/`)` are excluded from the
-    // boundary classes so a path inside a markdown link destination
-    // (`[label](/tmp/a.png)`) is not corrupted into `[label]()`.
-    next = next.replace(new RegExp(String.raw`(^|[\s[{])<?${escaped}>?(?=$|[\s\]}.,!?])`, 'g'), '$1')
+    // Bare prose echoes include quoted and colon-delimited paths; never
+    // corrupt Markdown link destinations or strip a prefix of `.bak`/`?q=`.
+    next = next.replace(
+      new RegExp(
+        String.raw`(^|[\s\[{"':;“‘])<?${escaped}>?(?=$|[\s\]}.,!?:;'"”’])(?!\.[\p{L}\p{N}_/-]|\?[\p{L}\p{N}_])`,
+        'gu'
+      ),
+      '$1'
+    )
   }
 
   return next
