@@ -1,0 +1,330 @@
+# fleet job 20261023-015557-b5eb node=mbp cmd=env FLEET_BUILD_JDK= FLEET_GRADLE_ARGS= bash -c 'cd "$1" && shift
+case ${FLEET_BUILD_JDK:-} in
+  17) [ -n "${JAVA17_HOME:-}" ] || { echo "fleet-build: no JDK 17 on $(hostname)" >&2; exit 3; }; export JAVA_HOME=$JAVA17_HOME ;;
+  21) [ -n "${JAVA21_HOME:-}" ] || { echo "fleet-build: no JDK 21 on $(hostname)" >&2; exit 3; }; export JAVA_HOME=$JAVA21_HOME ;;
+esac
+[ -n "${JAVA_HOME:-}" ] && export PATH=$JAVA_HOME/bin:$PATH
+case $1 in
+  ./gradlew|gradlew|gradle)
+    g=$1; shift
+    # FLEET_GRADLE_ARGS is word-split on purpose; "\ " keeps a space inside one flag.
+    eval "set -- $FLEET_GRADLE_ARGS \"\$@\""
+    set -- "$g" "$@"
+    echo "fleet-build: $*" >&2 ;;
+esac
+exec "$@"' fleet-build . bash -lc 'python3 run_study.py --only consent-combination'
++ git init /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/main
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: will change to "main" in Git 3.0. To configure the initial branch name
+hint: to use in all of your new repositories, which will suppress this warning,
+hint: call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+hint:
+hint: Disable this message with "git config set advice.defaultBranchName false"
+Initialized empty Git repository in /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/main/.git/
+
++ git fetch --no-tags --depth=1 https://github.com/NousResearch/hermes-agent.git fab9b01c915a3118cc8daa6cc1b18c15b3f982d0
+From https://github.com/NousResearch/hermes-agent
+ * branch              fab9b01c915a3118cc8daa6cc1b18c15b3f982d0 -> FETCH_HEAD
+
++ git checkout --detach FETCH_HEAD
+HEAD is now at fab9b01c test(desktop-e2e): the reconnect Stop-settle check records its own timeline
+
++ git init /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/read
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: will change to "main" in Git 3.0. To configure the initial branch name
+hint: to use in all of your new repositories, which will suppress this warning,
+hint: call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+hint:
+hint: Disable this message with "git config set advice.defaultBranchName false"
+Initialized empty Git repository in /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/read/.git/
+
++ git fetch --no-tags --depth=1 https://github.com/NousResearch/hermes-agent.git af16e3ab16eed2492552c325ad1777533a8b7004
+From https://github.com/NousResearch/hermes-agent
+ * branch              af16e3ab16eed2492552c325ad1777533a8b7004 -> FETCH_HEAD
+
++ git checkout --detach FETCH_HEAD
+HEAD is now at af16e3ab fix(memory): restore the read action (the 14-line reversal of 56ee8a5cc6)
+
++ git init /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/chain
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: will change to "main" in Git 3.0. To configure the initial branch name
+hint: to use in all of your new repositories, which will suppress this warning,
+hint: call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+hint:
+hint: Disable this message with "git config set advice.defaultBranchName false"
+Initialized empty Git repository in /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/chain/.git/
+
++ git fetch --no-tags --depth=1 https://github.com/NousResearch/hermes-agent.git 2c1941aac46efac3b35605d99a8628e75a91c670
+From https://github.com/NousResearch/hermes-agent
+ * branch              2c1941aac46efac3b35605d99a8628e75a91c670 -> FETCH_HEAD
+
++ git checkout --detach FETCH_HEAD
+HEAD is now at 2c1941aa fix(memory): tolerate an uncapped chain-doc limit in the patch path
+
++ git init /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/governance
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: will change to "main" in Git 3.0. To configure the initial branch name
+hint: to use in all of your new repositories, which will suppress this warning,
+hint: call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+hint:
+hint: Disable this message with "git config set advice.defaultBranchName false"
+Initialized empty Git repository in /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/governance/.git/
+
++ git fetch --no-tags --depth=1 https://github.com/NousResearch/hermes-agent.git 5b31ccb7d56ad614da63588ef876584b9f95dd3f
+From https://github.com/NousResearch/hermes-agent
+ * branch              5b31ccb7d56ad614da63588ef876584b9f95dd3f -> FETCH_HEAD
+
++ git checkout --detach FETCH_HEAD
+HEAD is now at 5b31ccb7 fix(tools): read-back flags only when the new content does not explain the surviving old_text (#140848 review)
+
++ git init /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/preservation
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: will change to "main" in Git 3.0. To configure the initial branch name
+hint: to use in all of your new repositories, which will suppress this warning,
+hint: call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+hint:
+hint: Disable this message with "git config set advice.defaultBranchName false"
+Initialized empty Git repository in /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/preservation/.git/
+
++ git fetch --no-tags --depth=1 https://github.com/NousResearch/hermes-agent.git e543544aca215bf7ea838444b6df58bdbbd3e38c
+From https://github.com/NousResearch/hermes-agent
+ * branch              e543544aca215bf7ea838444b6df58bdbbd3e38c -> FETCH_HEAD
+
++ git checkout --detach FETCH_HEAD
+HEAD is now at e543544a test(memory): dream cycle edge cases — empty, all-noise, dedup (copycat panel)
+
++ git init /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/staging
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: will change to "main" in Git 3.0. To configure the initial branch name
+hint: to use in all of your new repositories, which will suppress this warning,
+hint: call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+hint:
+hint: Disable this message with "git config set advice.defaultBranchName false"
+Initialized empty Git repository in /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/staging/.git/
+
++ git fetch --no-tags --depth=1 https://github.com/NousResearch/hermes-agent.git f678f4c7e5d994f03d8759fe0e950d3407ccca7e
+From https://github.com/NousResearch/hermes-agent
+ * branch              f678f4c7e5d994f03d8759fe0e950d3407ccca7e -> FETCH_HEAD
+
++ git checkout --detach FETCH_HEAD
+HEAD is now at f678f4c7 Merge remote-tracking branch 'upstream/main' into fix/background-review-consent-116788
+
++ git init /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/nosave
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: will change to "main" in Git 3.0. To configure the initial branch name
+hint: to use in all of your new repositories, which will suppress this warning,
+hint: call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+hint:
+hint: Disable this message with "git config set advice.defaultBranchName false"
+Initialized empty Git repository in /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/nosave/.git/
+
++ git fetch --no-tags --depth=1 https://github.com/NousResearch/hermes-agent.git 96dc75192a82b6c5645a89c2eb894fba97ad2bbd
+From https://github.com/NousResearch/hermes-agent
+ * branch              96dc75192a82b6c5645a89c2eb894fba97ad2bbd -> FETCH_HEAD
+
++ git checkout --detach FETCH_HEAD
+HEAD is now at 96dc7519 fix(memory): stage unattended adds that self-report a no-save request
+
++ /usr/bin/python3 -m venv /home/agentjob/jobs/20261023-015557-b5eb/src/venv
+
++ /home/agentjob/jobs/20261023-015557-b5eb/src/venv/bin/python -m pip install -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt
+Collecting annotated-types==0.8.0 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 1))
+  Using cached annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+Collecting anyio==4.15.1 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 2))
+  Using cached anyio-4.15.1-py3-none-any.whl.metadata (4.7 kB)
+Collecting certifi==2026.10.19 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 3))
+  Using cached certifi-2026.10.19-py3-none-any.whl.metadata (2.5 kB)
+Collecting charset-normalizer==3.5.2 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 4))
+  Using cached charset_normalizer-3.5.2-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (46 kB)
+Collecting distro==1.9.0 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 5))
+  Using cached distro-1.9.0-py3-none-any.whl.metadata (6.8 kB)
+Collecting h11==0.16.0 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 6))
+  Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting httpcore==1.0.9 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 7))
+  Using cached httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting httpx==0.28.1 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 8))
+  Using cached httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting idna==3.20 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 9))
+  Using cached idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+Collecting Jinja2==3.1.6 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 10))
+  Using cached jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Collecting jiter==0.17.0 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 11))
+  Using cached jiter-0.17.0-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (5.2 kB)
+Collecting markdown-it-py==4.2.0 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 12))
+  Using cached markdown_it_py-4.2.0-py3-none-any.whl.metadata (7.4 kB)
+Collecting MarkupSafe==3.0.4 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 13))
+  Using cached markupsafe-3.0.4-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+Collecting mdurl==0.1.2 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 14))
+  Using cached mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+Collecting openai==2.24.0 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 15))
+  Using cached openai-2.24.0-py3-none-any.whl.metadata (29 kB)
+Collecting pydantic==2.14.1 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 16))
+  Using cached pydantic-2.14.1-py3-none-any.whl.metadata (133 kB)
+Collecting pydantic_core==2.50.1 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 17))
+  Using cached pydantic_core-2.50.1-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.5 kB)
+Collecting Pygments==2.21.0 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 18))
+  Using cached pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting python-dotenv==1.2.1 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 19))
+  Using cached python_dotenv-1.2.1-py3-none-any.whl.metadata (25 kB)
+Collecting PyYAML==6.0.3 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 20))
+  Using cached pyyaml-6.0.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting regex==2026.9.29 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 21))
+  Using cached regex-2026.9.29-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+Collecting requests==2.32.5 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 22))
+  Using cached requests-2.32.5-py3-none-any.whl.metadata (4.9 kB)
+Collecting rich==14.2.0 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 23))
+  Using cached rich-14.2.0-py3-none-any.whl.metadata (18 kB)
+Collecting ruamel.yaml==0.18.16 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 24))
+  Using cached ruamel.yaml-0.18.16-py3-none-any.whl.metadata (25 kB)
+Collecting sniffio==1.3.1 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 25))
+  Using cached sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+Collecting tenacity==9.1.2 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 26))
+  Using cached tenacity-9.1.2-py3-none-any.whl.metadata (1.2 kB)
+Collecting tiktoken==0.12.0 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 27))
+  Using cached tiktoken-0.12.0-cp314-cp314-manylinux_2_28_x86_64.whl.metadata (6.7 kB)
+Collecting tqdm==4.70.1 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 28))
+  Using cached tqdm-4.70.1-py3-none-any.whl.metadata (57 kB)
+Collecting typing-inspection==0.4.4 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 29))
+  Using cached typing_inspection-0.4.4-py3-none-any.whl.metadata (2.6 kB)
+Collecting typing_extensions==4.16.0 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 30))
+  Using cached typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting urllib3==2.8.0 (from -r /home/agentjob/jobs/20261023-015557-b5eb/src/requirements.txt (line 31))
+  Using cached urllib3-2.8.0-py3-none-any.whl.metadata (7.4 kB)
+Using cached annotated_types-0.8.0-py3-none-any.whl (13 kB)
+Using cached anyio-4.15.1-py3-none-any.whl (132 kB)
+Using cached certifi-2026.10.19-py3-none-any.whl (136 kB)
+Using cached charset_normalizer-3.5.2-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (255 kB)
+Using cached distro-1.9.0-py3-none-any.whl (20 kB)
+Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+Using cached httpcore-1.0.9-py3-none-any.whl (78 kB)
+Using cached httpx-0.28.1-py3-none-any.whl (73 kB)
+Using cached idna-3.20-py3-none-any.whl (69 kB)
+Using cached jinja2-3.1.6-py3-none-any.whl (134 kB)
+Using cached jiter-0.17.0-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (345 kB)
+Using cached markdown_it_py-4.2.0-py3-none-any.whl (91 kB)
+Using cached mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+Using cached markupsafe-3.0.4-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (23 kB)
+Using cached openai-2.24.0-py3-none-any.whl (1.1 MB)
+Using cached pydantic-2.14.1-py3-none-any.whl (488 kB)
+Using cached typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Using cached pydantic_core-2.50.1-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.2 MB)
+Using cached pygments-2.21.0-py3-none-any.whl (1.3 MB)
+Using cached python_dotenv-1.2.1-py3-none-any.whl (21 kB)
+Using cached pyyaml-6.0.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (794 kB)
+Using cached regex-2026.9.29-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+Using cached requests-2.32.5-py3-none-any.whl (64 kB)
+Using cached urllib3-2.8.0-py3-none-any.whl (135 kB)
+Using cached rich-14.2.0-py3-none-any.whl (243 kB)
+Using cached ruamel.yaml-0.18.16-py3-none-any.whl (119 kB)
+Using cached sniffio-1.3.1-py3-none-any.whl (10 kB)
+Using cached tenacity-9.1.2-py3-none-any.whl (28 kB)
+Using cached tiktoken-0.12.0-cp314-cp314-manylinux_2_28_x86_64.whl (1.2 MB)
+Using cached tqdm-4.70.1-py3-none-any.whl (80 kB)
+Using cached typing_inspection-0.4.4-py3-none-any.whl (14 kB)
+Installing collected packages: urllib3, typing_extensions, tqdm, tenacity, sniffio, ruamel.yaml, regex, PyYAML, python-dotenv, Pygments, mdurl, MarkupSafe, jiter, idna, h11, distro, charset-normalizer, certifi, annotated-types, typing-inspection, requests, pydantic_core, markdown-it-py, Jinja2, httpcore, anyio, tiktoken, rich, pydantic, httpx, openai
+
+Successfully installed Jinja2-3.1.6 MarkupSafe-3.0.4 PyYAML-6.0.3 Pygments-2.21.0 annotated-types-0.8.0 anyio-4.15.1 certifi-2026.10.19 charset-normalizer-3.5.2 distro-1.9.0 h11-0.16.0 httpcore-1.0.9 httpx-0.28.1 idna-3.20 jiter-0.17.0 markdown-it-py-4.2.0 mdurl-0.1.2 openai-2.24.0 pydantic-2.14.1 pydantic_core-2.50.1 python-dotenv-1.2.1 regex-2026.9.29 requests-2.32.5 rich-14.2.0 ruamel.yaml-0.18.16 sniffio-1.3.1 tenacity-9.1.2 tiktoken-0.12.0 tqdm-4.70.1 typing-inspection-0.4.4 typing_extensions-4.16.0 urllib3-2.8.0
+
+[notice] A new release of pip is available: 26.2.1 -> 26.2.2
+[notice] To update, run: /home/agentjob/jobs/20261023-015557-b5eb/src/venv/bin/python -m pip install --upgrade pip
+
++ /home/agentjob/jobs/20261023-015557-b5eb/src/venv/bin/python -m pip freeze
+annotated-types==0.8.0
+anyio==4.15.1
+certifi==2026.10.19
+charset-normalizer==3.5.2
+distro==1.9.0
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.20
+Jinja2==3.1.6
+jiter==0.17.0
+markdown-it-py==4.2.0
+MarkupSafe==3.0.4
+mdurl==0.1.2
+openai==2.24.0
+pydantic==2.14.1
+pydantic_core==2.50.1
+Pygments==2.21.0
+python-dotenv==1.2.1
+PyYAML==6.0.3
+regex==2026.9.29
+requests==2.32.5
+rich==14.2.0
+ruamel.yaml==0.18.16
+sniffio==1.3.1
+tenacity==9.1.2
+tiktoken==0.12.0
+tqdm==4.70.1
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+urllib3==2.8.0
+
++ git clone --no-hardlinks --no-checkout /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/main /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/combination
+Cloning into '/home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/combination'...
+
++ git checkout --detach fab9b01c915a3118cc8daa6cc1b18c15b3f982d0
+HEAD is now at fab9b01c test(desktop-e2e): the reconnect Stop-settle check records its own timeline
+
++ git config user.name RFC Synthetic Study
+
++ git config user.email rfc-study@example.invalid
+
++ git fetch --no-tags --update-shallow /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/staging f678f4c7e5d994f03d8759fe0e950d3407ccca7e
+From /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/staging
+ * branch              f678f4c7e5d994f03d8759fe0e950d3407ccca7e -> FETCH_HEAD
+
++ git fetch --no-tags --update-shallow /home/agentjob/jobs/20261023-015557-b5eb/src/checkouts/nosave 96dc75192a82b6c5645a89c2eb894fba97ad2bbd
+fatal: shallow file has changed since we read it
+
+# exit 0

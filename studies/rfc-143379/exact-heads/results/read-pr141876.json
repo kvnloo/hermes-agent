@@ -1,0 +1,1077 @@
+{
+  "harness": "read_dispatch",
+  "authored_execution_status": "NOT RUN BY AUTHOR",
+  "checkout": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/read",
+  "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+  "scenarios": [
+    {
+      "scenario": "simple_read_memory",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "unmodified",
+      "acceptance": "GREEN",
+      "checks": {
+        "read_success": true,
+        "deduped_disk_entries": true,
+        "cache_refreshed": true,
+        "usage_correct": true,
+        "target_correct": true,
+        "disk_bytes_unchanged": true,
+        "disk_mtime_unchanged": true,
+        "prompt_snapshot_frozen": true
+      },
+      "result": {
+        "success": true,
+        "target": "memory",
+        "entries": [
+          "Synthetic alpha.",
+          "Synthetic beta."
+        ],
+        "usage": "0% — 34/50,000 chars"
+      }
+    },
+    {
+      "scenario": "simple_read_user",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "unmodified",
+      "acceptance": "GREEN",
+      "checks": {
+        "read_success": true,
+        "deduped_disk_entries": true,
+        "cache_refreshed": true,
+        "usage_correct": true,
+        "target_correct": true,
+        "disk_bytes_unchanged": true,
+        "disk_mtime_unchanged": true,
+        "prompt_snapshot_frozen": true
+      },
+      "result": {
+        "success": true,
+        "target": "user",
+        "entries": [
+          "Synthetic alpha.",
+          "Synthetic beta."
+        ],
+        "usage": "0% — 34/50,000 chars"
+      }
+    },
+    {
+      "scenario": "missing_file_read",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "unmodified",
+      "acceptance": "GREEN",
+      "checks": {
+        "missing_file_is_empty_success": true,
+        "cache_empty": true,
+        "read_does_not_create_memory_file": true
+      },
+      "result": {
+        "success": true,
+        "target": "memory",
+        "entries": [],
+        "usage": "0% — 0/50,000 chars"
+      }
+    },
+    {
+      "scenario": "batch_read_schema_vs_runtime",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "checks": {
+        "schema_matches_runtime": false,
+        "standalone_read_only_contract": false,
+        "no_partial_commit": true,
+        "cache_preserved_on_rejection": true
+      },
+      "single_action_enum": [
+        "add",
+        "patch",
+        "remove",
+        "read"
+      ],
+      "batch_action_enum": [
+        "add",
+        "patch",
+        "remove",
+        "read"
+      ],
+      "batch_read_schema_advertised": true,
+      "batch_read_runtime_success": false,
+      "operations": [
+        {
+          "action": "read"
+        }
+      ],
+      "result": {
+        "success": false,
+        "error": "Operation 1 (read): unknown action. Use add, patch, or remove. No operations were applied (batch is all-or-nothing).",
+        "usage": "24/50,000"
+      }
+    },
+    {
+      "scenario": "mixed_batch_read_atomic_rejection",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "checks": {
+        "schema_matches_runtime": false,
+        "standalone_read_only_contract": false,
+        "no_partial_commit": true,
+        "cache_preserved_on_rejection": true
+      },
+      "single_action_enum": [
+        "add",
+        "patch",
+        "remove",
+        "read"
+      ],
+      "batch_action_enum": [
+        "add",
+        "patch",
+        "remove",
+        "read"
+      ],
+      "batch_read_schema_advertised": true,
+      "batch_read_runtime_success": false,
+      "operations": [
+        {
+          "action": "add",
+          "content": "Synthetic batch candidate."
+        },
+        {
+          "action": "read"
+        }
+      ],
+      "result": {
+        "success": false,
+        "error": "Operation 2 (read): unknown action. Use add, patch, or remove. No operations were applied (batch is all-or-nothing).",
+        "usage": "24/50,000"
+      }
+    },
+    {
+      "scenario": "read_with_write_operations",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "checks": {
+        "ambiguous_request_rejected": false,
+        "no_ignored_write_or_disk_change": true
+      },
+      "request": {
+        "action": "read",
+        "operations": [
+          {
+            "action": "add",
+            "content": "Synthetic ignored candidate."
+          }
+        ]
+      },
+      "result": {
+        "success": true,
+        "target": "memory",
+        "entries": [
+          "Synthetic baseline fact."
+        ],
+        "usage": "0% — 24/50,000 chars"
+      }
+    },
+    {
+      "scenario": "read_with_empty_operations",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "checks": {
+        "ambiguous_request_rejected": false,
+        "no_ignored_write_or_disk_change": true
+      },
+      "request": {
+        "action": "read",
+        "operations": []
+      },
+      "result": {
+        "success": true,
+        "target": "memory",
+        "entries": [
+          "Synthetic baseline fact."
+        ],
+        "usage": "0% — 24/50,000 chars"
+      }
+    },
+    {
+      "scenario": "read_invalid_utf8_preserves_cache_and_disk",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "unmodified",
+      "acceptance": "GREEN",
+      "checks": {
+        "read_failed": true,
+        "actual_checked_read_reports_failure": true,
+        "cache_value_preserved": true,
+        "cache_identity_preserved": true,
+        "no_cache_publish": true,
+        "no_native_write": true,
+        "disk_bytes_preserved": true,
+        "disk_mtime_preserved": true,
+        "snapshot_preserved": true
+      },
+      "result": {
+        "success": false,
+        "error": "Refusing to write MEMORY.md: the file exists on disk but could not be read right now (temporarily locked by another program, a permission change, invalid/corrupt text encoding, or a filesystem error). Treating an unreadable file as empty and saving would wipe existing memory, so the write is refused. Nothing was changed — retry in a moment."
+      },
+      "fault_injection": "real invalid UTF-8 bytes",
+      "raw_reads": [
+        {
+          "path": "/home/agentjob/jobs/20261023-014926-8dfc/tmp/hermes-read-dispatch-1f29nn1p/unmodified/failed-utf8/memories/MEMORY.md",
+          "read_ok": false
+        }
+      ],
+      "cache_sets": [],
+      "writes": []
+    },
+    {
+      "scenario": "read_oserror_preserves_cache_and_disk",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "unmodified",
+      "acceptance": "GREEN",
+      "checks": {
+        "read_failed": true,
+        "actual_checked_read_reports_failure": true,
+        "cache_value_preserved": true,
+        "cache_identity_preserved": true,
+        "no_cache_publish": true,
+        "no_native_write": true,
+        "disk_bytes_preserved": true,
+        "disk_mtime_preserved": true,
+        "snapshot_preserved": true
+      },
+      "result": {
+        "success": false,
+        "error": "Refusing to write MEMORY.md: the file exists on disk but could not be read right now (temporarily locked by another program, a permission change, invalid/corrupt text encoding, or a filesystem error). Treating an unreadable file as empty and saving would wipe existing memory, so the write is refused. Nothing was changed — retry in a moment."
+      },
+      "fault_injection": "Path.read_text PermissionError (actual _read_raw_checked retained)",
+      "raw_reads": [
+        {
+          "path": "/home/agentjob/jobs/20261023-014926-8dfc/tmp/hermes-read-dispatch-1f29nn1p/unmodified/failed-permission/memories/MEMORY.md",
+          "read_ok": false
+        }
+      ],
+      "cache_sets": [],
+      "writes": []
+    },
+    {
+      "scenario": "write_then_read",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "unmodified",
+      "acceptance": "GREEN",
+      "checks": {
+        "write_applied": true,
+        "read_sees_write": true,
+        "disk_contains_write": true,
+        "cache_contains_write": true,
+        "snapshot_remains_frozen": true
+      },
+      "write_result": {
+        "success": true,
+        "done": true,
+        "target": "memory",
+        "usage": "0% — 58/50,000 chars",
+        "entry_count": 2,
+        "message": "Entry added.",
+        "note": "Write saved. This update is complete — do not repeat it."
+      },
+      "read_result": {
+        "success": true,
+        "target": "memory",
+        "entries": [
+          "Synthetic baseline fact.",
+          "Synthetic afternoon preference."
+        ],
+        "usage": "0% — 58/50,000 chars"
+      }
+    },
+    {
+      "scenario": "deterministic_same_store_stale_cache_race",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "checks": {
+        "threads_finished_without_errors": true,
+        "both_public_calls_succeeded": true,
+        "actual_reader_snapshot_observed": true,
+        "disk_survival_not_freshness": true,
+        "cache_fresh_after_join": false,
+        "snapshot_remains_frozen": true,
+        "next_read_repairs_cache": true,
+        "writer_committed_before_stale_reader_publish": true
+      },
+      "findings": [
+        "Disk survived, but the same store's cache was overwritten by the stale read after writer commit."
+      ],
+      "upstream_mutation_lock_present": false,
+      "actual_lock_type": null,
+      "lock_provenance": "upstream checkout",
+      "lock_probe": {},
+      "before_reader_release": {
+        "writer_done": true,
+        "cache": [
+          "Synthetic baseline fact.",
+          "Synthetic concurrent writer fact."
+        ],
+        "disk": "Synthetic baseline fact.\n§\nSynthetic concurrent writer fact."
+      },
+      "expected": [
+        "Synthetic baseline fact.",
+        "Synthetic concurrent writer fact."
+      ],
+      "disk_entries": [
+        "Synthetic baseline fact.",
+        "Synthetic concurrent writer fact."
+      ],
+      "cache_entries_before_repair": [
+        "Synthetic baseline fact."
+      ],
+      "cache_fresh_before_repair": false,
+      "results": {
+        "writer": {
+          "success": true,
+          "done": true,
+          "target": "memory",
+          "usage": "0% — 60/50,000 chars",
+          "entry_count": 2,
+          "message": "Entry added.",
+          "note": "Write saved. This update is complete — do not repeat it."
+        },
+        "reader": {
+          "success": true,
+          "target": "memory",
+          "entries": [
+            "Synthetic baseline fact."
+          ],
+          "usage": "0% — 24/50,000 chars"
+        }
+      },
+      "errors": {},
+      "trace": [
+        {
+          "sequence": 0,
+          "thread": "race-reader",
+          "event": "actual_read_returned",
+          "raw": "Synthetic baseline fact.",
+          "read_ok": true
+        },
+        {
+          "sequence": 1,
+          "thread": "race-reader",
+          "event": "before_reader_actual_set_entries",
+          "entries": [
+            "Synthetic baseline fact."
+          ]
+        },
+        {
+          "sequence": 2,
+          "thread": "race-writer",
+          "event": "writer_entered_actual_mutation_wrapper"
+        },
+        {
+          "sequence": 3,
+          "thread": "race-writer",
+          "event": "actual_read_returned",
+          "raw": "Synthetic baseline fact.",
+          "read_ok": true
+        },
+        {
+          "sequence": 4,
+          "thread": "race-writer",
+          "event": "actual_set_entries_returned",
+          "entries": [
+            "Synthetic baseline fact."
+          ]
+        },
+        {
+          "sequence": 5,
+          "thread": "race-writer",
+          "event": "actual_set_entries_returned",
+          "entries": [
+            "Synthetic baseline fact.",
+            "Synthetic concurrent writer fact."
+          ]
+        },
+        {
+          "sequence": 6,
+          "thread": "race-writer",
+          "event": "writer_public_call_returned"
+        },
+        {
+          "sequence": 7,
+          "thread": "MainThread",
+          "event": "main_releases_reader",
+          "writer_done": true
+        },
+        {
+          "sequence": 8,
+          "thread": "race-reader",
+          "event": "actual_set_entries_returned",
+          "entries": [
+            "Synthetic baseline fact."
+          ]
+        }
+      ],
+      "repair_result": {
+        "success": true,
+        "target": "memory",
+        "entries": [
+          "Synthetic baseline fact.",
+          "Synthetic concurrent writer fact."
+        ],
+        "usage": "0% — 60/50,000 chars"
+      }
+    },
+    {
+      "scenario": "concurrent_survival_and_cache_freshness_separate",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "unmodified",
+      "acceptance": "GREEN",
+      "checks": {
+        "all_calls_completed_successfully": true,
+        "disk_no_missing_or_extra_entries": true,
+        "cache_fresh_after_join_separate_invariant": true
+      },
+      "disk_entries": [
+        "Synthetic baseline fact.",
+        "Synthetic worker 0 entry 0.",
+        "Synthetic worker 1 entry 0.",
+        "Synthetic worker 0 entry 1.",
+        "Synthetic worker 1 entry 1.",
+        "Synthetic worker 0 entry 2.",
+        "Synthetic worker 1 entry 2.",
+        "Synthetic worker 0 entry 3.",
+        "Synthetic worker 1 entry 3.",
+        "Synthetic worker 0 entry 4.",
+        "Synthetic worker 1 entry 4.",
+        "Synthetic worker 0 entry 5.",
+        "Synthetic worker 1 entry 5."
+      ],
+      "cache_entries": [
+        "Synthetic baseline fact.",
+        "Synthetic worker 0 entry 0.",
+        "Synthetic worker 1 entry 0.",
+        "Synthetic worker 0 entry 1.",
+        "Synthetic worker 1 entry 1.",
+        "Synthetic worker 0 entry 2.",
+        "Synthetic worker 1 entry 2.",
+        "Synthetic worker 0 entry 3.",
+        "Synthetic worker 1 entry 3.",
+        "Synthetic worker 0 entry 4.",
+        "Synthetic worker 1 entry 4.",
+        "Synthetic worker 0 entry 5.",
+        "Synthetic worker 1 entry 5."
+      ],
+      "errors": [],
+      "disk_survived": true,
+      "cache_fresh": true,
+      "caveat": "Finite survival probe is not a cache-freshness proof; event-controlled race is the deterministic falsifier."
+    },
+    {
+      "scenario": "simple_read_memory",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "patched_control",
+      "acceptance": "GREEN",
+      "checks": {
+        "read_success": true,
+        "deduped_disk_entries": true,
+        "cache_refreshed": true,
+        "usage_correct": true,
+        "target_correct": true,
+        "disk_bytes_unchanged": true,
+        "disk_mtime_unchanged": true,
+        "prompt_snapshot_frozen": true
+      },
+      "result": {
+        "success": true,
+        "target": "memory",
+        "entries": [
+          "Synthetic alpha.",
+          "Synthetic beta."
+        ],
+        "usage": "0% — 34/50,000 chars"
+      }
+    },
+    {
+      "scenario": "simple_read_user",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "patched_control",
+      "acceptance": "GREEN",
+      "checks": {
+        "read_success": true,
+        "deduped_disk_entries": true,
+        "cache_refreshed": true,
+        "usage_correct": true,
+        "target_correct": true,
+        "disk_bytes_unchanged": true,
+        "disk_mtime_unchanged": true,
+        "prompt_snapshot_frozen": true
+      },
+      "result": {
+        "success": true,
+        "target": "user",
+        "entries": [
+          "Synthetic alpha.",
+          "Synthetic beta."
+        ],
+        "usage": "0% — 34/50,000 chars"
+      }
+    },
+    {
+      "scenario": "missing_file_read",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "patched_control",
+      "acceptance": "GREEN",
+      "checks": {
+        "missing_file_is_empty_success": true,
+        "cache_empty": true,
+        "read_does_not_create_memory_file": true
+      },
+      "result": {
+        "success": true,
+        "target": "memory",
+        "entries": [],
+        "usage": "0% — 0/50,000 chars"
+      }
+    },
+    {
+      "scenario": "batch_read_schema_vs_runtime",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "patched_control",
+      "acceptance": "GREEN",
+      "checks": {
+        "schema_matches_runtime": true,
+        "standalone_read_only_contract": true,
+        "no_partial_commit": true,
+        "cache_preserved_on_rejection": true
+      },
+      "single_action_enum": [
+        "add",
+        "patch",
+        "remove",
+        "read"
+      ],
+      "batch_action_enum": [
+        "add",
+        "patch",
+        "remove"
+      ],
+      "batch_read_schema_advertised": false,
+      "batch_read_runtime_success": false,
+      "operations": [
+        {
+          "action": "read"
+        }
+      ],
+      "result": {
+        "success": false,
+        "error": "Operation 1 (read): unknown action. Use add, patch, or remove. No operations were applied (batch is all-or-nothing).",
+        "usage": "24/50,000"
+      }
+    },
+    {
+      "scenario": "mixed_batch_read_atomic_rejection",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "patched_control",
+      "acceptance": "GREEN",
+      "checks": {
+        "schema_matches_runtime": true,
+        "standalone_read_only_contract": true,
+        "no_partial_commit": true,
+        "cache_preserved_on_rejection": true
+      },
+      "single_action_enum": [
+        "add",
+        "patch",
+        "remove",
+        "read"
+      ],
+      "batch_action_enum": [
+        "add",
+        "patch",
+        "remove"
+      ],
+      "batch_read_schema_advertised": false,
+      "batch_read_runtime_success": false,
+      "operations": [
+        {
+          "action": "add",
+          "content": "Synthetic batch candidate."
+        },
+        {
+          "action": "read"
+        }
+      ],
+      "result": {
+        "success": false,
+        "error": "Operation 2 (read): unknown action. Use add, patch, or remove. No operations were applied (batch is all-or-nothing).",
+        "usage": "24/50,000"
+      }
+    },
+    {
+      "scenario": "read_with_write_operations",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "patched_control",
+      "acceptance": "GREEN",
+      "checks": {
+        "ambiguous_request_rejected": true,
+        "no_ignored_write_or_disk_change": true
+      },
+      "request": {
+        "action": "read",
+        "operations": [
+          {
+            "action": "add",
+            "content": "Synthetic ignored candidate."
+          }
+        ]
+      },
+      "result": {
+        "error": "'read' is standalone-only; omit 'operations' and make writes in a separate call.",
+        "success": false
+      }
+    },
+    {
+      "scenario": "read_with_empty_operations",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "patched_control",
+      "acceptance": "GREEN",
+      "checks": {
+        "ambiguous_request_rejected": true,
+        "no_ignored_write_or_disk_change": true
+      },
+      "request": {
+        "action": "read",
+        "operations": []
+      },
+      "result": {
+        "error": "'read' is standalone-only; omit 'operations' and make writes in a separate call.",
+        "success": false
+      }
+    },
+    {
+      "scenario": "read_invalid_utf8_preserves_cache_and_disk",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "patched_control",
+      "acceptance": "GREEN",
+      "checks": {
+        "read_failed": true,
+        "actual_checked_read_reports_failure": true,
+        "cache_value_preserved": true,
+        "cache_identity_preserved": true,
+        "no_cache_publish": true,
+        "no_native_write": true,
+        "disk_bytes_preserved": true,
+        "disk_mtime_preserved": true,
+        "snapshot_preserved": true
+      },
+      "result": {
+        "success": false,
+        "error": "Refusing to write MEMORY.md: the file exists on disk but could not be read right now (temporarily locked by another program, a permission change, invalid/corrupt text encoding, or a filesystem error). Treating an unreadable file as empty and saving would wipe existing memory, so the write is refused. Nothing was changed — retry in a moment."
+      },
+      "fault_injection": "real invalid UTF-8 bytes",
+      "raw_reads": [
+        {
+          "path": "/home/agentjob/jobs/20261023-014926-8dfc/tmp/hermes-read-dispatch-1f29nn1p/patched_control/failed-utf8/memories/MEMORY.md",
+          "read_ok": false
+        }
+      ],
+      "cache_sets": [],
+      "writes": []
+    },
+    {
+      "scenario": "read_oserror_preserves_cache_and_disk",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "patched_control",
+      "acceptance": "GREEN",
+      "checks": {
+        "read_failed": true,
+        "actual_checked_read_reports_failure": true,
+        "cache_value_preserved": true,
+        "cache_identity_preserved": true,
+        "no_cache_publish": true,
+        "no_native_write": true,
+        "disk_bytes_preserved": true,
+        "disk_mtime_preserved": true,
+        "snapshot_preserved": true
+      },
+      "result": {
+        "success": false,
+        "error": "Refusing to write MEMORY.md: the file exists on disk but could not be read right now (temporarily locked by another program, a permission change, invalid/corrupt text encoding, or a filesystem error). Treating an unreadable file as empty and saving would wipe existing memory, so the write is refused. Nothing was changed — retry in a moment."
+      },
+      "fault_injection": "Path.read_text PermissionError (actual _read_raw_checked retained)",
+      "raw_reads": [
+        {
+          "path": "/home/agentjob/jobs/20261023-014926-8dfc/tmp/hermes-read-dispatch-1f29nn1p/patched_control/failed-permission/memories/MEMORY.md",
+          "read_ok": false
+        }
+      ],
+      "cache_sets": [],
+      "writes": []
+    },
+    {
+      "scenario": "write_then_read",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "patched_control",
+      "acceptance": "GREEN",
+      "checks": {
+        "write_applied": true,
+        "read_sees_write": true,
+        "disk_contains_write": true,
+        "cache_contains_write": true,
+        "snapshot_remains_frozen": true
+      },
+      "write_result": {
+        "success": true,
+        "done": true,
+        "target": "memory",
+        "usage": "0% — 58/50,000 chars",
+        "entry_count": 2,
+        "message": "Entry added.",
+        "note": "Write saved. This update is complete — do not repeat it."
+      },
+      "read_result": {
+        "success": true,
+        "target": "memory",
+        "entries": [
+          "Synthetic baseline fact.",
+          "Synthetic afternoon preference."
+        ],
+        "usage": "0% — 58/50,000 chars"
+      }
+    },
+    {
+      "scenario": "deterministic_same_store_stale_cache_race",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "patched_control",
+      "acceptance": "GREEN",
+      "checks": {
+        "threads_finished_without_errors": true,
+        "both_public_calls_succeeded": true,
+        "actual_reader_snapshot_observed": true,
+        "disk_survival_not_freshness": true,
+        "cache_fresh_after_join": true,
+        "snapshot_remains_frozen": true,
+        "next_read_repairs_cache": true,
+        "actual_shared_lock_excludes_writer": true,
+        "writer_not_committed_before_reader_release": true
+      },
+      "findings": [],
+      "upstream_mutation_lock_present": false,
+      "actual_lock_type": "RLock",
+      "lock_provenance": "proposed PATCHED control",
+      "lock_probe": {
+        "writer_nonblocking_acquire": false
+      },
+      "before_reader_release": {
+        "writer_done": false,
+        "cache": [
+          "Synthetic baseline fact."
+        ],
+        "disk": "Synthetic baseline fact."
+      },
+      "expected": [
+        "Synthetic baseline fact.",
+        "Synthetic concurrent writer fact."
+      ],
+      "disk_entries": [
+        "Synthetic baseline fact.",
+        "Synthetic concurrent writer fact."
+      ],
+      "cache_entries_before_repair": [
+        "Synthetic baseline fact.",
+        "Synthetic concurrent writer fact."
+      ],
+      "cache_fresh_before_repair": true,
+      "results": {
+        "reader": {
+          "success": true,
+          "target": "memory",
+          "entries": [
+            "Synthetic baseline fact."
+          ],
+          "usage": "0% — 24/50,000 chars"
+        },
+        "writer": {
+          "success": true,
+          "done": true,
+          "target": "memory",
+          "usage": "0% — 60/50,000 chars",
+          "entry_count": 2,
+          "message": "Entry added.",
+          "note": "Write saved. This update is complete — do not repeat it."
+        }
+      },
+      "errors": {},
+      "trace": [
+        {
+          "sequence": 0,
+          "thread": "race-reader",
+          "event": "actual_read_returned",
+          "raw": "Synthetic baseline fact.",
+          "read_ok": true
+        },
+        {
+          "sequence": 1,
+          "thread": "race-reader",
+          "event": "before_reader_actual_set_entries",
+          "entries": [
+            "Synthetic baseline fact."
+          ]
+        },
+        {
+          "sequence": 2,
+          "thread": "race-writer",
+          "event": "writer_entered_actual_mutation_wrapper"
+        },
+        {
+          "sequence": 3,
+          "thread": "MainThread",
+          "event": "main_releases_reader",
+          "writer_done": false
+        },
+        {
+          "sequence": 4,
+          "thread": "race-reader",
+          "event": "actual_set_entries_returned",
+          "entries": [
+            "Synthetic baseline fact."
+          ]
+        },
+        {
+          "sequence": 5,
+          "thread": "race-writer",
+          "event": "actual_read_returned",
+          "raw": "Synthetic baseline fact.",
+          "read_ok": true
+        },
+        {
+          "sequence": 6,
+          "thread": "race-writer",
+          "event": "actual_set_entries_returned",
+          "entries": [
+            "Synthetic baseline fact."
+          ]
+        },
+        {
+          "sequence": 7,
+          "thread": "race-writer",
+          "event": "actual_set_entries_returned",
+          "entries": [
+            "Synthetic baseline fact.",
+            "Synthetic concurrent writer fact."
+          ]
+        },
+        {
+          "sequence": 8,
+          "thread": "race-writer",
+          "event": "writer_public_call_returned"
+        }
+      ],
+      "repair_result": {
+        "success": true,
+        "target": "memory",
+        "entries": [
+          "Synthetic baseline fact.",
+          "Synthetic concurrent writer fact."
+        ],
+        "usage": "0% — 60/50,000 chars"
+      }
+    },
+    {
+      "scenario": "concurrent_survival_and_cache_freshness_separate",
+      "head": "af16e3ab16eed2492552c325ad1777533a8b7004",
+      "mode": "patched_control",
+      "acceptance": "GREEN",
+      "checks": {
+        "all_calls_completed_successfully": true,
+        "disk_no_missing_or_extra_entries": true,
+        "cache_fresh_after_join_separate_invariant": true
+      },
+      "disk_entries": [
+        "Synthetic baseline fact.",
+        "Synthetic worker 0 entry 0.",
+        "Synthetic worker 1 entry 0.",
+        "Synthetic worker 0 entry 1.",
+        "Synthetic worker 1 entry 1.",
+        "Synthetic worker 0 entry 2.",
+        "Synthetic worker 1 entry 2.",
+        "Synthetic worker 0 entry 3.",
+        "Synthetic worker 1 entry 3.",
+        "Synthetic worker 0 entry 4.",
+        "Synthetic worker 1 entry 4.",
+        "Synthetic worker 0 entry 5.",
+        "Synthetic worker 1 entry 5."
+      ],
+      "cache_entries": [
+        "Synthetic baseline fact.",
+        "Synthetic worker 0 entry 0.",
+        "Synthetic worker 1 entry 0.",
+        "Synthetic worker 0 entry 1.",
+        "Synthetic worker 1 entry 1.",
+        "Synthetic worker 0 entry 2.",
+        "Synthetic worker 1 entry 2.",
+        "Synthetic worker 0 entry 3.",
+        "Synthetic worker 1 entry 3.",
+        "Synthetic worker 0 entry 4.",
+        "Synthetic worker 1 entry 4.",
+        "Synthetic worker 0 entry 5.",
+        "Synthetic worker 1 entry 5."
+      ],
+      "errors": [],
+      "disk_survived": true,
+      "cache_fresh": true,
+      "caveat": "Finite survival probe is not a cache-freshness proof; event-controlled race is the deterministic falsifier."
+    }
+  ],
+  "blockers": [],
+  "native_neighboring_tests_suggested_not_run": [
+    {
+      "path": "tests/tools/test_memory_tool.py",
+      "neighbors": [
+        "TestMemoryToolDispatcher",
+        "TestMemoryBatch",
+        "TestUnreadableFileDoesNotWipeMemory",
+        "TestMemoryStoreSnapshot",
+        "TestMemoryFileLockPermissions",
+        "TestBomToleranceInMemoryFiles"
+      ],
+      "add_cases": [
+        "standalone read refreshes cache, reports usage, leaves bytes and prompt snapshot unchanged",
+        "batch action enum agrees with actual apply_batch; read is standalone-only",
+        "action=read plus operations is explicitly refused, never silently ignores operations",
+        "invalid UTF-8 and injected PermissionError preserve existing cache and disk on read",
+        "event-controlled read snapshot / writer commit / cache publication interleaving",
+        "shared _mutation_lock excludes writer until read publishes; file lock remains real",
+        "concurrent writers survive on disk; cache freshness is a distinct assertion"
+      ]
+    },
+    {
+      "path": "tests/tools/test_memory_tool_schema.py",
+      "neighbors": [
+        "test_memory_schema_has_no_forbidden_top_level_combinators"
+      ],
+      "add_cases": [
+        "read advertised in single action enum, absent from mutating batch enum"
+      ]
+    },
+    {
+      "path": "tests/tools/test_memory_target_contract.py",
+      "add_cases": [
+        "read still observes disabled/invalid target contract at dispatcher boundary"
+      ]
+    }
+  ],
+  "expected_heads": {
+    "af16e3ab16eed2492552c325ad1777533a8b7004": "PR #141876",
+    "fab9b01c915a3118cc8daa6cc1b18c15b3f982d0": "main control",
+    "5b31ccb7d56ad614da63588ef876584b9f95dd3f": "PR #139606"
+  },
+  "external_providers": "forbidden",
+  "isolation": {
+    "HERMES_HOME_set_before_production_imports": true,
+    "HOME_and_XDG_synthetic": true,
+    "native_algorithms_replaced": false,
+    "network_blocked": true,
+    "temporary_root_removed_on_exit": true
+  },
+  "head_label": "PR #141876",
+  "source_files": {
+    "tools/memory_tool.py": {
+      "sha256": "cb289cc19df8c6cb06ae78734c5e353bbfd02ada99a3b37e4a2b675cecd3cc5f",
+      "matches_HEAD": true
+    },
+    "tools/memory_tool_store.py": {
+      "sha256": "684dd0895f370944219f6132eb25321cd6aed5326330a0962df2f1ccaa918a51",
+      "matches_HEAD": true
+    }
+  },
+  "production_functions": {
+    "memory_tool": {
+      "present": true,
+      "module": "tools.memory_tool",
+      "qualname": "memory_tool",
+      "file": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/read/tools/memory_tool.py",
+      "line": 222,
+      "source_sha256": "3f67d4f651bc585e747ffda595660fcb58ca3d6a3a8a0688d15758b84776a3a6",
+      "source": "def memory_tool(action: str | None = None, target: str = \"memory\", content: str | None = None, old_text: str | None = None,\n                new_text: str | None = None, operations: Optional[list[dict[str, Any]]] = None,\n                store: Optional[MemoryStore] = None) -> str:\n    \"\"\"Tool entry point; returns a JSON string. Single op (action + content/old_text)\n    or batch (``operations``, atomic against the final budget). ``new_text``\n    aliases ``content``.\"\"\"\n    if store is None:\n        return tool_error(\"Memory is not available. It may be disabled in config or this environment.\", success=False)\n    token = FAILURE_CLASS.set(\"other\")\n    try:\n        outcome, result = _memory_tool(action, target, content, old_text, new_text, operations, store)\n        failure_class = \"none\" if outcome == \"success\" else FAILURE_CLASS.get()\n    finally:\n        FAILURE_CLASS.reset(token)\n    from hermes_cli.observability.shared_metrics_loop import record_builtin_memory_call\n    record_builtin_memory_call(action, operations, outcome=outcome, failure_class=failure_class)\n    return result\n"
+    },
+    "_memory_tool": {
+      "present": true,
+      "module": "tools.memory_tool",
+      "qualname": "_memory_tool",
+      "file": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/read/tools/memory_tool.py",
+      "line": 250,
+      "source_sha256": "b827aa1f02d2e609259752f8225f56b6eea524933c249f39159dbf1e6c7fc2ec",
+      "source": "def _memory_tool(action, target, content, old_text, new_text, operations, store) -> tuple[str, str]:\n    \"\"\"``(outcome, result_json)``: ``rejected`` when refused or held before touching the store.\"\"\"\n    # An omitted optional string can arrive as \"\" (#90468): let the new_text alias fill it.\n    if not content and new_text:\n        content = new_text\n    target_error = _memory_target_error(store, target, operations)\n    if target_error is not None:\n        return \"rejected\", json.dumps(target_error)\n    if action == \"read\":\n        return _applied(store.read(target))\n    if operations:\n        if not isinstance(operations, list):\n            return _invalid(\"operations must be a list of {action, content?, old_text?} objects.\")\n        if any(isinstance(op, dict) and op.get(\"action\") == \"replace\" for op in operations):\n            return _invalid(_REPLACE_REMOVED)\n        denied = _background_delete_gate(store, action, operations, target)\n        if denied is not None:\n            return \"rejected\", denied\n        # Approval gate: stages (background/gateway) or prompts inline (CLI); off by default.\n        gate_result = _apply_write_gate(store, \"batch\", target, None, None, operations)\n        if gate_result is not None:\n            return \"rejected\", gate_result\n        return _applied(store.apply_batch(target, operations))\n    # Reject calls that provide neither action (single-op) nor operations\n    # (batch).  Without this guard the dispatch falls through to the generic\n    # \"Unknown action 'None'\" error, which gives the model no signal about\n    # *why* the call was malformed and can trigger repeated retries. (#64291)\n    if not action and not operations:\n        return _invalid(\n            \"Missing required parameter: provide 'action' (add/patch/remove) \"\n            \"or 'operations' (batch list). Got neither.\"\n        )\n    if action == \"replace\":\n        return _invalid(_REPLACE_REMOVED)\n    if action not in _STORE_ACTIONS:\n        return _invalid(f\"Unknown action '{action}'. Use: add, patch, remove\")\n    invalid = (_validate_single_op(store, action, target, content, old_text)\n               or _background_delete_gate(store, action, None, target, content, old_text)\n               or _apply_write_gate(store, action, target, content, old_text))\n    if invalid is not None:\n        return \"rejected\", invalid\n    return _applied(_STORE_ACTIONS[action][0](store, target, content, old_text))\n"
+    },
+    "MemoryStore.read": {
+      "present": true,
+      "module": "tools.memory_tool_store",
+      "qualname": "MemoryStore.read",
+      "file": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/read/tools/memory_tool_store.py",
+      "line": 369,
+      "source_sha256": "e3bd9ffd10d183182666bd9b79e7c54d888c632bc456209d5fc173d6d9e84eac",
+      "source": "    def read(self, target: str) -> dict[str, Any]:\n        \"\"\"Entries of *target* as stored on disk (read-only: no gate, no drift guard, no write).\"\"\"\n        path = self._path_for(target)\n        raw, read_ok = self._read_raw_checked(path)\n        if not read_ok:\n            return _read_failed_error(path)\n        entries = list(dict.fromkeys(self._parse_entries(raw)))\n        self._set_entries(target, entries)\n        return {\n            \"success\": True, \"target\": target, \"entries\": entries,\n            \"usage\": self._usage_pct(target, self._char_count(target))}\n"
+    },
+    "MemoryStore._mutate": {
+      "present": true,
+      "module": "tools.memory_tool_store",
+      "qualname": "MemoryStore._mutate",
+      "file": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/read/tools/memory_tool_store.py",
+      "line": 338,
+      "source_sha256": "ebc3cd428b9b94496a93fae117996a3398ddfb8a52a1c6fffcd47b3a34b3e98c",
+      "source": "    def _mutate(self, target: str, mutate, *, skip_drift: bool = False) -> dict[str, Any]:\n        \"\"\"Lock, re-read from disk, run ``mutate(entries, limit)`` -> ``(new_entries, message)``\n        or an error dict, then persist and return the success response. The reload aborts\n        on an existing-but-unreadable file (even append-only ``add`` rewrites the whole\n        file) and, unless *skip_drift*, on external drift (flushing would discard\n        un-roundtrippable content). Drift check and parse use the SAME raw snapshot —\n        a failed second read used to count as \"no drift\". The closure may return a\n        third value, a dict merged into the success payload (``_error``'s ``**extra``\n        convention) — e.g. the full text a replace overwrote (#117952). ANY dict the closure\n        returns is passed through verbatim and nothing is persisted: error dicts, or the\n        success payload of a read-only closure (``resolve_entry``, ``resolve_batch_entries``).\"\"\"\n        path = self._path_for(target)\n        with self._file_lock(path):\n            raw, read_ok = self._read_raw_checked(path)\n            if not read_ok:\n                return _read_failed_error(path)\n            bak = None if skip_drift else self._detect_external_drift(target, raw)\n            self._set_entries(target, list(dict.fromkeys(self._parse_entries(raw))))\n            if bak:\n                return _drift_error(path, bak)\n            result = mutate(self._entries_for(target), self._char_limit(target))\n            if isinstance(result, dict):\n                return result\n            self._set_entries(target, result[0])\n            from hermes_constants import mkdir_under_hermes_home\n\n            mkdir_under_hermes_home(path.parent)\n            self._write_file(path, result[0])\n            extra_fields = result[2] if len(result) > 2 else {}\n            return self._success_response(target, result[1], **extra_fields)\n"
+    },
+    "MemoryStore._read_raw_checked": {
+      "present": true,
+      "module": "tools.memory_tool_store",
+      "qualname": "MemoryStore._read_raw_checked",
+      "file": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/read/tools/memory_tool_store.py",
+      "line": 658,
+      "source_sha256": "e1361d4a3e3e2b2ad02633db4e7835eaf4e2bb0aa5523d67b96e18ef38eb9359",
+      "source": "    @staticmethod\n    def _read_raw_checked(path: Path) -> tuple[str, bool]:\n        \"\"\"``(raw, read_ok)``; ``read_ok`` is False ONLY when the file EXISTS but can't be\n        read. Decoding stays STRICT (``errors=\"replace\"`` would hand callers a lossy view\n        a save then persists); ``utf-8-sig`` strips a Notepad BOM off the first entry.\"\"\"\n        if not path.exists():\n            return \"\", True\n        try:\n            # utf-8-sig strips a leading UTF-8 BOM (Notepad-edited memory files on Windows) and is\n            # byte-identical to utf-8 otherwise. Plain utf-8 kept U+FEFF glued to the first entry,\n            # corrupting matching/dedup for that entry forever (#10878 / PR #10888). Decode errors stay\n            # STRICT on purpose: errors=\"replace\" would hand read-modify-write callers a lossy view that a\n            # subsequent save persists over the real bytes — the wipe class documented above. Undecodable\n            # bytes must surface as read_ok=False.\n            return path.read_text(encoding=\"utf-8-sig\"), True\n        except (OSError, UnicodeDecodeError):\n            return \"\", False\n"
+    },
+    "MemoryStore._set_entries": {
+      "present": true,
+      "module": "tools.memory_tool_store",
+      "qualname": "MemoryStore._set_entries",
+      "file": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/read/tools/memory_tool_store.py",
+      "line": 306,
+      "source_sha256": "54aecabee9d2047b6c98e2567b5507147431a3dc1d52b75592888ec815d9b844",
+      "source": "    def _set_entries(self, target: str, entries: list[str]):\n        setattr(self, \"user_entries\" if target == \"user\" else \"memory_entries\", entries)\n"
+    },
+    "MemoryStore._file_lock": {
+      "present": true,
+      "module": "tools.memory_tool_store",
+      "qualname": "MemoryStore._file_lock",
+      "file": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/read/tools/memory_tool_store.py",
+      "line": 255,
+      "source_sha256": "a369caf71b914cb1dd82ffac5b49c95f9f7c55f4ec4129b67a8365c500ce8312",
+      "source": "    @staticmethod\n    @contextmanager\n    def _file_lock(path: Path):\n        \"\"\"Exclusive lock on a separate .lock file so the memory file itself can\n        still be atomically replaced.\"\"\"\n        from tools import memory_tool as _mt  # fcntl/msvcrt live (and are patched) there\n        fcntl, msvcrt = _mt.fcntl, _mt.msvcrt\n        lock_path = path.with_suffix(path.suffix + \".lock\")\n        from hermes_constants import mkdir_under_hermes_home\n\n        mkdir_under_hermes_home(lock_path.parent)\n        if fcntl is None and msvcrt is None:\n            yield\n            return\n        flags = os.O_RDWR | os.O_CREAT\n        if hasattr(os, \"O_NOFOLLOW\"):\n            flags |= os.O_NOFOLLOW\n        raw_fd = os.open(lock_path, flags, 0o600)\n        try:\n            # The creation mode is filtered through the process umask and does\n            # not repair a lock left loose by an older Hermes process. Tighten\n            # the opened inode before acquiring the lock so both cases are\n            # owner-only. Operating on the fd avoids a path-swap window.\n            if hasattr(os, \"fchmod\"):\n                os.fchmod(raw_fd, 0o600)\n            fd = os.fdopen(raw_fd, \"r+\", encoding=\"utf-8\")\n        except Exception:\n            os.close(raw_fd)\n            raise\n        with fd:\n            def _flock(unlock: bool):\n                if fcntl:\n                    fcntl.flock(fd, fcntl.LOCK_UN if unlock else fcntl.LOCK_EX)\n                else:\n                    fd.seek(0)\n                    msvcrt.locking(fd.fileno(), msvcrt.LK_UNLCK if unlock else msvcrt.LK_LOCK, 1)\n            _flock(False)\n            try:\n                yield\n            finally:\n                with suppress(OSError):\n                    _flock(True)\n"
+    }
+  },
+  "upstream_lock_inspection": {
+    "_mutation_lock_present": false,
+    "_mutation_lock_type": "NoneType",
+    "_file_lock_present": true,
+    "finding": "Do not attribute proposed _mutation_lock to upstream; inspected pinned source uses _file_lock in _mutate."
+  },
+  "patched_control": {
+    "mode": "PATCHED_INSTRUMENTED_CONTROL",
+    "native_read_and_mutate_delegated": true,
+    "lock": "per-store threading.RLock _mutation_lock plus actual upstream _file_lock",
+    "read_dispatch": "standalone-only; action=read plus operations rejected",
+    "source_patch": "read_dispatch.patch",
+    "source_patch_applied": false
+  },
+  "summary": {
+    "GREEN": 19,
+    "RED": 5,
+    "BLOCKED": 0,
+    "expected_red_findings_do_not_abort": true,
+    "runtime_errors_remain_findings": true
+  }
+}
