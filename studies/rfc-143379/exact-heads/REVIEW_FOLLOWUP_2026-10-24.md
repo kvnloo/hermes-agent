@@ -36,13 +36,13 @@ python3 harness/long_gate.py /absolute/actual-real-recall-scores.json \
   --output results/long-gate-2026-10-24.json
 ~~~
 
-Receipt format: metadata with the booleans/identifiers enumerated in REQUIRED, plus k=10; max_cycle: integer >300; rows of objects with ratio, cycle, probes, baseline_correct, k_correct, probe_set_id. Counts must be from the same paired probe population. This evaluator trusts submitted metadata and cannot authenticate experiment provenance by itself.
+Receipt format: metadata with five literal true booleans (FLAGS), four nonempty string IDs (IDENTITIES), plus k=10; max_cycle: integer >300; rows of objects with ratio, cycle, probes, baseline_correct, k_correct, probe_set_id. Counts must be from the same paired probe population. This evaluator trusts submitted metadata and cannot authenticate experiment provenance by itself.
 
 Our existing 150/300/600 boundary traces are valuable but use a deterministic summary substitute. They cannot certify this real-compressor gate; the original RFC author's probe, scope fix, fixture and exact K-recency patch are still needed. **Result today: BLOCKED / NOT CERTIFIED.**
 
 ### Test receipts
 
-On the sandbox's isolated Python environment, the new diagnostics completed **6/6 offline unit tests** (source-import and synthetic Git merge conflict fixtures; score-gate PASS, FAIL and BLOCKED behavior). These tests validate our tooling, **not** Hermes's actual mergeability or a new recitation result. No MBP/fleet job, original 300-cycle suite, or upstream integration run was executed in this update.
+On the sandbox's isolated Python environment, the new diagnostics completed **7/7 offline unit tests** (source-import and synthetic Git merge conflict fixtures; score-gate PASS, FAIL and BLOCKED behavior). These tests validate our tooling, **not** Hermes's actual mergeability or a new recitation result. No MBP/fleet job, original 300-cycle suite, or upstream integration run was executed in this update.
 
 ~~~sh
 (cd harness && python3 -m unittest -v test_review_followup test_long_gate)
