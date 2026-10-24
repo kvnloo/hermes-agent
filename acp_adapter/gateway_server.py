@@ -347,13 +347,16 @@ class GatewayACPAgent(GatewayReplyMixin, acp.Agent):
         if session_id != held_id:
             self._aliases[held_id] = session_id
         info = await self._attach_info(client, session_id)
-        if self._moved(info, cwd):
+        # Importing another surface's conversation is a viewer attach, not a Move to project or
+        # an editor-tools rebind. In particular, both mutations would refuse a mid-turn TUI attach.
+        shared = info.get("source", "acp") != "acp"
+        if not shared and self._moved(info, cwd):
             info = await self._move_workspace(client, session_id, cwd)
-        if "cwd" not in info and self._conn:
+        if (shared or "cwd" not in info) and self._conn:
             await self._conn.session_update(session_id=held_id, update=acp.update_agent_message_text(
-                "Attached to the gateway's existing session policy; editor cwd is not applied.\n"))
+                "Attached to the gateway's existing session policy; editor cwd and MCP servers are not applied.\n"))
         resume_params = {}
-        if mcp_servers:
+        if mcp_servers and not shared:
             # A non-empty list is the editor's selection. An empty one (load always carries a list)
             # keeps the session's servers, as fork does: a second editor without MCP config must not
             # strip the first one's tools. An owner without editor MCP bound none.

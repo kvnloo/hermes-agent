@@ -8,12 +8,31 @@ from acp_adapter.session import (
 )
 
 
-def read_catalog_rows(path):
+def read_catalog_rows(path, *, include_gateway=False):
+    """The in-process owner sees only ACP rows; the gateway viewer can attach other surfaces."""
     path = Path(path)
     if not path.exists():
         return {}
+    from hermes_state_sessions import INTERNAL_LISTING_SOURCES
     with SessionDB(db_path=path, read_only=True) as db:
-        return {str(row["id"]): dict(row) for row in db.list_sessions_rich(source="acp", limit=1000)}
+        rows = db.list_sessions_rich(
+            source=None if include_gateway else "acp",
+            exclude_sources=[*INTERNAL_LISTING_SOURCES, "api_server", "subagent"],
+            order_by_last_active=True, limit=1000)
+        return {str(row["id"]): dict(row) for row in rows
+                if not include_gateway or _gateway_attachable_source(row)}
+
+
+def _gateway_attachable_source(row):
+    # Tern/Dash use canonical local sessions, not distinct storage source labels. Do not offer
+    # API/worker transcripts whose execution owner is not the profile gateway.
+    from hermes_state_local_migration import LEGACY_LOCAL_SOURCES
+    from hermes_state_sessions import INTERNAL_LISTING_SOURCES
+    from gateway.session_route_recovery import _messaging_platform
+    source = row["source"]
+    if source in (LEGACY_LOCAL_SOURCES | {"local"}) - set(INTERNAL_LISTING_SOURCES):
+        return row.get("created_source") not in INTERNAL_LISTING_SOURCES
+    return bool(row.get("session_key") and _messaging_platform(source) is not None)
 
 
 def _local_owners(db):
@@ -62,7 +81,7 @@ def catalog_sessions(path, cwd=None):
     normalized = _normalize_cwd_for_compare(cwd) if cwd else None
     owners = read_local_owners(path)
     results = {}
-    for sid, row in read_catalog_rows(path).items():
+    for sid, row in read_catalog_rows(path, include_gateway=True).items():
         # The listing projects a compressed chat's tip; the editor must hold the logical id.
         sid = row.get("_lineage_root_id") or sid
         sid = owners.get(sid, sid)
