@@ -12,14 +12,16 @@ import json
 from pathlib import Path
 
 RATIOS = (4, 8)
-REQUIRED = ("probe_scope_fixed", "real_paraphrase", "real_compressor",
-            "model_graded_recall", "pruning_as_production", "baseline_head",
-            "bench_source_sha", "fixture_sha", "seed_registry")
+FLAGS = ("probe_scope_fixed", "real_paraphrase", "real_compressor",
+         "model_graded_recall", "pruning_as_production")
+IDENTITIES = ("baseline_head", "bench_source_sha", "fixture_sha", "seed_registry")
 
 
 def evaluate(data: dict) -> dict:
     meta = data.get("metadata") or {}
-    absent = [key for key in REQUIRED if not meta.get(key)]
+    absent = [key for key in FLAGS if meta.get(key) is not True]
+    absent.extend(key for key in IDENTITIES if not isinstance(meta.get(key), str)
+                  or not meta.get(key).strip())
     if meta.get("k") != 10:
         absent.append("fixed_K10")
     if absent:
@@ -41,8 +43,8 @@ def evaluate(data: dict) -> dict:
         if (ratio, cycle) in seen:
             return {"status": "BLOCKED", "reason": "duplicate point", "point": [ratio, cycle]}
         if (not isinstance(total, int) or isinstance(total, bool) or total <= 0
-                or not isinstance(base, int) or not isinstance(k, int)
-                or not 0 <= base <= total or not 0 <= k <= total or not identity):
+                or type(base) is not int or type(k) is not int
+                or not 0 <= base <= total or not 0 <= k <= total or not isinstance(identity, str) or not identity.strip()):
             return {"status": "BLOCKED", "reason": "invalid counts or unpaired probe identity"}
         seen[(ratio, cycle)] = {"delta_pp": round(100 * (k - base) / total, 8),
                                 "probes": total, "probe_set_id": identity}
