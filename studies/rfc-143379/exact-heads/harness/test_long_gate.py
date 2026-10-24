@@ -1,10 +1,11 @@
 """Synthetic score-receipt gate arithmetic; not native Hermes verification."""
 import unittest
-from long_gate import REQUIRED, evaluate
+from long_gate import FLAGS, IDENTITIES, evaluate
 
 
 def example():
-    return {"metadata": {**{key: True for key in REQUIRED}, "k": 10},
+    return {"metadata": {**{key: True for key in FLAGS},
+                         **{key: f"pinned-{key}" for key in IDENTITIES}, "k": 10},
             "max_cycle": 301,
             "rows": [{"ratio": ratio, "cycle": cycle, "probes": 100,
                       "baseline_correct": 20, "k_correct": 20,
@@ -29,6 +30,11 @@ class LongGateTests(unittest.TestCase):
     def test_mocked_paraphrase_is_blocked(self):
         data = example()
         data["metadata"]["real_paraphrase"] = False
+        self.assertEqual(evaluate(data)["status"], "BLOCKED")
+
+    def test_string_false_is_not_truthy_permission(self):
+        data = example()
+        data["metadata"]["real_compressor"] = "false"
         self.assertEqual(evaluate(data)["status"], "BLOCKED")
 
     def test_incomplete_300_cycle_only_is_blocked(self):
