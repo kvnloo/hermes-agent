@@ -37,3 +37,9 @@ Setup downloads exact Git commits and pinned public Python dependencies. Every m
 | #116846 | 96dc75192a82b6c5645a89c2eb894fba97ad2bbd |
 
 See the report and `results/` for exercised commands and measurements. No upstream comments, reviews, merges, releases, or live-profile changes are authorized by this package.
+
+## October 24 peer-review follow-up
+
+See [REVIEW_FOLLOWUP_2026-10-24.md](REVIEW_FOLLOWUP_2026-10-24.md) for the stale-onboarding-import versus actual memory-dispatch distinction, the exact-head merge-conflict matrix, and the deliberately fail-closed 300+ cycle K=10 evidence gate.
+
+Offline harness tests: `(cd harness && python3 -m unittest -v test_review_followup test_long_gate)` (7/7 in a synthetic Git/score environment). These are **not** new actual Hermes-head or model-compression measurements. The existing MBP exact-head receipts in REPORT.md are unchanged. No upstream write.
