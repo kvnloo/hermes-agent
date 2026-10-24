@@ -1,4 +1,23 @@
-"""Incremental sandbox log reads for ProcessRegistry's non-local poller."""
+"""Incremental sandbox log reads and env-backed temp-dir resolution for ProcessRegistry."""
+
+import logging
+import tempfile
+from typing import Any
+
+logger = logging.getLogger("tools.process_registry")
+
+
+def env_temp_dir(env: Any) -> str:
+    """Return the writable sandbox temp dir for env-backed background tasks."""
+    get_temp_dir = getattr(env, "get_temp_dir", None)
+    if callable(get_temp_dir):
+        try:
+            temp_dir = get_temp_dir()
+            if isinstance(temp_dir, str) and temp_dir.startswith("/"):
+                return temp_dir.rstrip("/") or "/"
+        except Exception as exc:
+            logger.debug("Could not resolve environment temp dir: %s", exc, exc_info=True)
+    return tempfile.gettempdir()
 
 
 def log_delta_command(quoted_log_path: str, offset: int) -> str:
