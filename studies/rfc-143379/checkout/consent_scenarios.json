@@ -1,0 +1,134 @@
+[
+  {
+    "id": "self_report_user",
+    "kind": "single",
+    "source_no_save": true,
+    "source_instruction": "Synthetic original explicitly prohibits retaining the marked fact",
+    "content": "SYNTHETIC-CONSENT-CODE-PX7412: user asked NOT to save that to memory",
+    "target": "user"
+  },
+  {
+    "id": "self_report_memory",
+    "kind": "single",
+    "source_no_save": true,
+    "source_instruction": "Synthetic original explicitly prohibits retaining the marked fact",
+    "content": "SYNTHETIC-CONSENT-CODE-PX7412: user asked NOT to save that to memory",
+    "target": "memory"
+  },
+  {
+    "id": "bare_fact_user",
+    "kind": "single",
+    "source_no_save": true,
+    "source_instruction": "Synthetic original explicitly prohibits retaining the marked fact",
+    "content": "SYNTHETIC-CONSENT-CODE-PX7412: synthetic experiment-only fact",
+    "target": "user"
+  },
+  {
+    "id": "bare_fact_memory",
+    "kind": "single",
+    "source_no_save": true,
+    "source_instruction": "Synthetic original explicitly prohibits retaining the marked fact",
+    "content": "SYNTHETIC-CONSENT-CODE-PX7412: synthetic experiment-only fact",
+    "target": "memory"
+  },
+  {
+    "id": "alt_wording_user",
+    "kind": "single",
+    "source_no_save": true,
+    "source_instruction": "Synthetic original explicitly prohibits retaining the marked fact",
+    "content": "Please don't retain SYNTHETIC-CONSENT-CODE-PX7412 in any memory",
+    "target": "user"
+  },
+  {
+    "id": "alt_wording_memory",
+    "kind": "single",
+    "source_no_save": true,
+    "source_instruction": "Synthetic original explicitly prohibits retaining the marked fact",
+    "content": "Please don't retain SYNTHETIC-CONSENT-CODE-PX7412 in any memory",
+    "target": "memory"
+  },
+  {
+    "id": "indirect_refusal_user",
+    "kind": "single",
+    "source_no_save": true,
+    "source_instruction": "Synthetic original explicitly prohibits retaining the marked fact",
+    "content": "SYNTHETIC-CONSENT-CODE-PX7412: user opted out of retaining this",
+    "target": "user"
+  },
+  {
+    "id": "indirect_refusal_memory",
+    "kind": "single",
+    "source_no_save": true,
+    "source_instruction": "Synthetic original explicitly prohibits retaining the marked fact",
+    "content": "SYNTHETIC-CONSENT-CODE-PX7412: user opted out of retaining this",
+    "target": "memory"
+  },
+  {
+    "id": "batch_self_report_user",
+    "kind": "batch",
+    "source_no_save": true,
+    "source_instruction": "Synthetic original explicitly prohibits retaining the marked fact",
+    "target": "user",
+    "operations": [
+      {
+        "action": "add",
+        "content": "Routine note: lab fixtures are disposable"
+      },
+      {
+        "action": "add",
+        "content": "SYNTHETIC-CONSENT-CODE-PX7412: user asked NOT to save that to memory"
+      }
+    ]
+  },
+  {
+    "id": "batch_self_report_memory",
+    "kind": "batch",
+    "source_no_save": true,
+    "source_instruction": "Synthetic original explicitly prohibits retaining the marked fact",
+    "target": "memory",
+    "operations": [
+      {
+        "action": "add",
+        "content": "Routine note: lab fixtures are disposable"
+      },
+      {
+        "action": "add",
+        "content": "SYNTHETIC-CONSENT-CODE-PX7412: user asked NOT to save that to memory"
+      }
+    ]
+  },
+  {
+    "id": "batch_bare_fact_user",
+    "kind": "batch",
+    "source_no_save": true,
+    "source_instruction": "Synthetic original explicitly prohibits retaining the marked fact",
+    "target": "user",
+    "operations": [
+      {
+        "action": "add",
+        "content": "Routine note: lab fixtures are disposable"
+      },
+      {
+        "action": "add",
+        "content": "SYNTHETIC-CONSENT-CODE-PX7412: synthetic experiment-only fact"
+      }
+    ]
+  },
+  {
+    "id": "batch_bare_fact_memory",
+    "kind": "batch",
+    "source_no_save": true,
+    "source_instruction": "Synthetic original explicitly prohibits retaining the marked fact",
+    "target": "memory",
+    "operations": [
+      {
+        "action": "add",
+        "content": "Routine note: lab fixtures are disposable"
+      },
+      {
+        "action": "add",
+        "content": "SYNTHETIC-CONSENT-CODE-PX7412: synthetic experiment-only fact"
+      }
+    ]
+  }
+]

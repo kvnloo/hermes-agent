@@ -1,0 +1,5 @@
+main opted-out scenarios 12 still persisted 12 outcomes {'apply': 12} pending 0
+PR-116834 opted-out scenarios 12 still persisted 12 outcomes {'stage': 6, 'apply': 6} pending 6
+PR-116846 opted-out scenarios 12 still persisted 12 outcomes {'stage': 4, 'apply': 8} pending 4
+LOCAL-combination opted-out scenarios 12 still persisted 12 outcomes {'stage': 8, 'apply': 4} pending 8
+results /mnt/data/hermes_consent_lab/results.csv
