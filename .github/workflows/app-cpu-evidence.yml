@@ -18,11 +18,6 @@ name: Avrea factory verification
         - windows-platforms
         default: linux-python
         required: true
-  push:
-    branches:
-    - ci/avrea-factory-20261023
-    paths:
-    - .github/workflows/avrea-factory.yml
 permissions:
   contents: read
 jobs:

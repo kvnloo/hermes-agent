@@ -1046,7 +1046,7 @@ The downstream `ci/avrea-factory-20261023` branch routes heavy x64 Linux jobs to
 Blacksmith-specific checkout and Docker actions in converted workflows use
 their portable official equivalents.
 
-Dispatch `avrea-factory.yml` on that branch with `suite=linux-python` for the
+Dispatch `app-cpu-evidence.yml` on that branch with `suite=linux-python` for the
 complete discovered Linux Python unit suite, or `suite=windows-platforms` for
 the complete Windows platform unit suite, including desktop-updater tests.
 Neither benchmark includes unrelated release or integration lanes. Select
