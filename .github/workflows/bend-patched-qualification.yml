@@ -1,0 +1,106 @@
+name: Bend patched translator qualification
+
+on:
+  push:
+    branches:
+      - exp/bend-hermes-verify
+    paths:
+      - "evals/bend_adapter_upstream_regressions.py"
+      - "evals/bend_patched_wrapper.sh"
+      - "evals/bend_patched_corpus.py"
+      - ".github/workflows/bend-patched-qualification.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-patched:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: kvnloo/bend
+          ref: 17db447a8b8c17b51517de42b35d3216e563f40f
+          path: patched-bend
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: bendlang/bend
+          ref: 018751270e800bc222a93dad7f257083ee53a5f7
+          path: base-bend
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.13"
+
+      - name: Install Lean 4.34.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          ELAN_COMMIT=0e36a07b9bbcc5381fa6250df109f9a4f94d7bac
+          curl -sSfL --retry 3 \
+            "https://raw.githubusercontent.com/leanprover/elan/${ELAN_COMMIT}/elan-init.sh" \
+            -o /tmp/elan-init.sh
+          sh /tmp/elan-init.sh -y --default-toolchain leanprover/lean4:v4.34.0
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Install pinned Bun 1.3.14
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL=https://github.com/oven-sh/bun/releases/download/bun-v1.3.14/bun-linux-x64.zip
+          SHA=951ee2aee855f08595aeec6225226a298d3fea83a3dcd6465c09cbccdf7e848f
+          curl -sSfL --retry 3 --retry-delay 2 "$URL" -o /tmp/bun.zip
+          echo "$SHA  /tmp/bun.zip" | sha256sum -c -
+          unzip -q /tmp/bun.zip -d /tmp/bun-release
+          BUN_BIN=$(find /tmp/bun-release -type f -name bun -perm -u+x | head -n 1)
+          test -n "$BUN_BIN"
+          echo "BUN_BIN=$BUN_BIN" >> "$GITHUB_ENV"
+          echo "BEND_PATCHED_MAIN=$GITHUB_WORKSPACE/patched-bend/bend2/main.ts" >> "$GITHUB_ENV"
+
+      - name: Stage patched Bend candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/patched-bend-dist/bin /tmp/patched-bend-dist/bend2
+          cp evals/bend_patched_wrapper.sh /tmp/patched-bend-dist/bin/bend
+          chmod +x /tmp/patched-bend-dist/bin/bend
+          cp patched-bend/bend2/bendtt.lean /tmp/patched-bend-dist/bend2/bendtt.lean
+          /tmp/patched-bend-dist/bin/bend version
+
+      - name: Run source-to-BendTT semantic oracle
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.elan/bin:$PATH"
+          python3 evals/bend_adapter_upstream_regressions.py \
+            --bend patched-main=/tmp/patched-bend-dist/bin/bend \
+            --repeats 25 \
+            --output /tmp/bend-patched-qualification.json
+
+      - name: Differential proof corpus against unpatched base
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.elan/bin:$PATH"
+          python3 evals/bend_patched_corpus.py \
+            --bun "$BUN_BIN" \
+            --base-root "$GITHUB_WORKSPACE/base-bend" \
+            --patched-root "$GITHUB_WORKSPACE/patched-bend" \
+            --repeats 2 \
+            --output /tmp/bend-patched-corpus.json
+
+      - name: Upload patched qualification receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bend-patched-qualification
+          path: |
+            /tmp/bend-patched-qualification.json
+            /tmp/bend-patched-corpus.json
+          if-no-files-found: warn
+          retention-days: 14
