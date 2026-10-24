@@ -56,10 +56,11 @@ class RateLimitState:
 
     @property
     def has_data(self) -> bool:
-        return self.captured_at > 0 and any(
-            bucket.limit > 0 for bucket in (
-                self.requests_min, self.requests_hour, self.tokens_min, self.tokens_hour,
-            )
+        return self.captured_at > 0 and (
+            self.requests_min.limit > 0
+            or self.requests_hour.limit > 0
+            or self.tokens_min.limit > 0
+            or self.tokens_hour.limit > 0
         )
 
     @property
