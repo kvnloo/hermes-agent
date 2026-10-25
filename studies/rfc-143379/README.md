@@ -68,6 +68,37 @@ The script checks exact commit SHAs, fetches `refs/pull/<number>/head` if the ob
 
 `#141876`: read dispatch and read/add interleaving. `#116673`: those plus reference/unlink interleaving and exploratory response-size contract. `#139606`: advertised read action vs store availability. `#140008`: the PR's actual `tests/tools/test_dream_cycle.py` suite. `#116834` and `#116846`: all 12 consent cases, checking **both memory and pending JSON**. The runner does not claim tests across independently unmerged PRs constitute proof of their combined behavior.
 
+## Current-head delta and Avrea verification (2026-10-25)
+
+The historical matrix stays pinned to the six SHAs in the table above.
+Finn763's #116673 has moved to `ffc651bd11982eb5b4e1412f1b4b4c34d91cd42d`.
+Test that exact new head separately without erasing the baseline:
+
+```bash
+RFC_116673_SHA=ffc651bd11982eb5b4e1412f1b4b4c34d91cd42d \
+  bash studies/rfc-143379/checkout/run_exact_heads.sh \
+  /absolute/path/to/hermes-checkout /tmp/rfc-143379-latest-chain 116673
+```
+
+Additional **real-module** exploratory probes in `checkout/test_real_checkout.py`
+check read freshness without prompt-cache mutation, UTF-8 BOM/Unicode,
+undecodable disk preservation, and orphan-document read/write policy
+(7 parametrized cases across four test functions). These tests may be RED
+on experimental heads; a nonzero result is a diagnostic, not a production
+incident. `read`/chain-doc capability gates are skips on heads that do
+not implement those features; skip count must be reported.
+
+`.github/workflows/rfc-143379-avrea.yml` is a fork-only,
+branch-restricted GitHub Actions execution path using Avrea runners.
+It runs the unfiltered Linux Python suite in two exact-SHA shards with
+`scripts/run_tests.sh`, then runs the independent historical and
+latest-chain PR-head probes. A run/checkout with no matching source SHA,
+no runner, or missing artifacts is **NOT RUN**; green isolated tests
+are not a substitute for the full CI suite or 300+ cycle real-model
+compression qualification. Logs/manifests are retained as short-lived
+GitHub Actions artifacts and should be linked to their run ID before
+updating any upstream evidence claims.
+
 ## The 7.30% / 3.65% answer (critical distinction)
 
 **These are observed counts of uniformly sampled probe indices in a deterministic toy exact-ID availability simulation, not observed model recall and not measured compressor fidelity.** `bench.py` generates `n` independent synthetic 80-bit `sha-...` strings from `random.Random(10000 * n + 100 * ratio + seed)`, then draws **80 indices with replacement** via `rng.randrange(n)` from each seeded stream. `seed` is exactly each integer in `[0, 24]`; each `(n, ratio)` has **25 seeds × 80 probes = 2,000 draws**. A synthetic `summary_only` retains no identifier; a fixed window retains the last `min(10, floor(n/ratio))` exact identifiers. The toy "4× compression" ratio affects only the **exact-entry budget cap**, `floor(n / 4)` (37 or 75 here). It does **not** run a compressor, tokenize texts, summarize with a model, or compress bytes.
