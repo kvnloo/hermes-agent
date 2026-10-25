@@ -26,6 +26,16 @@ sha_by_pr=(
  f678f4c7e5d994f03d8759fe0e950d3407ccca7e
  96dc75192a82b6c5645a89c2eb894fba97ad2bbd
 )
+# To compare a subsequently rebased chain-document head while retaining
+# the original six frozen SHAs, set RFC_116673_SHA to an exact 40-digit SHA.
+# The manifest records the override; no branch-name/head substitution occurs.
+if [[ -n "${RFC_116673_SHA:-}" ]]; then
+  if [[ ! "${RFC_116673_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+    echo "RFC_116673_SHA must be an exact 40-character lowercase SHA" >&2
+    exit 2
+  fi
+  sha_by_pr[1]="${RFC_116673_SHA}"
+fi
 selector_by_pr=(
  'read_dispatch_contract or read_concurrency_snapshot'
  'read_dispatch_contract or read_concurrency_snapshot or chain_doc_reference_race or chain_doc_read_response_budget_candidate'
