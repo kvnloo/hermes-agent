@@ -99,7 +99,10 @@ remains unavailable, label this a *different experiment*, not an RFC replication
   separate capture, retrieval, model-input injection, supported answer,
   abstention, and replay. No new canonical memory DB or approval authority.
 
-**Evidence status at creation:** ABAB source and its offline evaluator tests
-are provided; an actual upstream-head ABAB trace is not yet certified by
-these files. GitHub Actions or an isolated fleet runner must attach an
-executed SHA + receipt before changing that status. No origin-facing action.
+**Executed receipt (2026-10-25):** [A/B/A/B exact-head result](RESULTS-20261025.md)
+and [hosted job #40242534278](https://github.com/kvnloo/oss-factory/actions/runs/40242534278).
+Actual imported Hermes MemoryStore: native A1/A2 stale, instrumented stateless
+B1/B2 fresh; all four writer-before-reader-release orders verified.
+This certifies only the native stale-cache **mechanism**, not the full suite,
+model correctness, independent-process behavior, or long-session compaction.
+No origin-facing action.
