@@ -210,7 +210,7 @@ def test_read_handles_utf8_bom_without_rewriting(memory_env, target, filename):
     store, root = memory_env
     if not hasattr(store, "read"):
         pytest.skip("No read action in this exact head")
-    original = b"\\xef\\xbb\\xbf" + "synthetic café ☃ source".encode("utf-8")
+    original = bytes.fromhex("efbbbf") + "synthetic café ☃ source".encode("utf-8")
     path = root / filename
     path.write_bytes(original)
     result = store.read(target)
@@ -226,7 +226,7 @@ def test_read_corrupt_utf8_keeps_disk_untouched(memory_env, target, filename):
     if not hasattr(store, "read"):
         pytest.skip("No read action in this exact head")
     path = root / filename
-    corrupted = b"synthetic valid prefix\\n\\xff invalid UTF8"
+    corrupted = b"synthetic valid prefix" + bytes.fromhex("0aff") + b" invalid UTF8"
     path.write_bytes(corrupted)
     read_result = store.read(target)
     assert read_result["success"] is False
