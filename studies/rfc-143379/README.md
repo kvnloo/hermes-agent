@@ -70,6 +70,17 @@ The script checks exact commit SHAs, fetches `refs/pull/<number>/head` if the ob
 
 ## Current-head delta and Avrea verification (2026-10-25)
 
+Companion **actual-head, native MBP/fleet evidence** already exists on
+[`study/rfc-143379-exact-heads`](https://github.com/kvnloo/hermes-agent/tree/study/rfc-143379-exact-heads/studies/rfc-143379/exact-heads).
+That branch records 7/12 native read assertions on #141876 versus 12/12
+with an instrumented control, chain-document response measurements up to
+1 MiB, 150/300/600-cycle deterministic compressor-boundary checks, and
+production-module consent experiments. It **did not run the full upstream
+suite or a real compressor/model**, and the historical 300-cycle RFC
+K-recency result remains unreplicated. Keep that source-backed evidence
+distinct from this PR's prospective Avrea CI receipts; don't duplicate
+its raw data without a reason.
+
 The historical matrix stays pinned to the six SHAs in the table above.
 Finn763's #116673 has moved to `ffc651bd11982eb5b4e1412f1b4b4c34d91cd42d`.
 Test that exact new head separately without erasing the baseline:
