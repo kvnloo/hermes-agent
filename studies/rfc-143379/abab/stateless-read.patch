@@ -1,0 +1,16 @@
+diff --git a/tools/memory_tool_store.py b/tools/memory_tool_store.py
+--- a/tools/memory_tool_store.py
++++ b/tools/memory_tool_store.py
+@@ -369,11 +369,10 @@ class MemoryStore:
+     def read(self, target: str) -> dict[str, Any]:
+         """Entries of *target* as stored on disk (read-only: no gate, no drift guard, no write)."""
+         path = self._path_for(target)
+         raw, read_ok = self._read_raw_checked(path)
+         if not read_ok:
+             return _read_failed_error(path)
+         entries = list(dict.fromkeys(self._parse_entries(raw)))
+-        self._set_entries(target, entries)
+         return {
+             "success": True, "target": target, "entries": entries,
+-            "usage": self._usage_pct(target, self._char_count(target))}
++            "usage": self._usage_pct(target, len(ENTRY_DELIMITER.join(entries)))}
