@@ -1,0 +1,152 @@
+name: RFC 143379 Avrea verification
+
+# Scope: this downstream study branch only. Source code in upstream
+# repositories and default branches is never modified by this workflow.
+on:
+  push:
+    branches:
+      - study/rfc-143379-homework
+    paths:
+      - "studies/rfc-143379/**"
+      - ".github/workflows/rfc-143379-avrea.yml"
+      - ".github/actionlint.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rfc143379-avrea-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-python:
+    name: Full Linux Python suite (${{ matrix.slice }}/2)
+    runs-on: avrea-ubuntu-latest-32-vcpu
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        slice: [1, 2]
+    steps:
+      - name: Checkout exact study commit
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Pin verification to executed tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          printf 'requested_sha=%s\nexecuted_sha=%s\n' "${{ github.sha }}" "$actual"
+          test "$actual" = "${{ github.sha }}"
+      - name: Install ripgrep for native test paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          RG_VERSION=15.1.0
+          RG_SHA256=1c9297be4a084eea7ecaedf93eb03d058d6aae29bbc57ecdaf5063921491599
+          RG_TARBALL=ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl.tar.gz
+          curl -sSfL --retry 3 --retry-delay 5 -o "$RG_TARBALL" "https://github.com/BurntSushi/ripgrep/releases/download/${RG_VERSION}/${RG_TARBALL}"
+          echo "${RG_SHA256}  ${RG_TARBALL}" | sha256sum -c -
+          tar -xzf "$RG_TARBALL"
+          sudo mv "ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl/rg" /usr/local/bin/rg
+          rm -rf "$RG_TARBALL" "ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl"
+      - name: Set up locked Hermes Python and test dependencies
+        uses: ./.github/actions/setup-pm
+        with:
+          extras: '["all", "anthropic", "bedrock", "mistral", "fal", "modal", "daytona", "parallel-web"]'
+          test-environment: 'true'
+          prune-python-cache: true
+      - name: Require WAL-capable SQLite
+        run: |
+          "$HERMES_PYTHON" -c "import sqlite3, hermes_state_wal as w; print('SQLite', sqlite3.sqlite_version); assert not w.is_sqlite_wal_reset_vulnerable()"
+      - name: Execute complete canonical Linux unit suite
+        shell: bash
+        run: |
+          set -o pipefail
+          scripts/run_tests.sh 2>&1 | tee "$RUNNER_TEMP/full-python-${{ matrix.slice }}.log"
+        env:
+          HERMES_TEST_SLICE: ${{ matrix.slice }}/2
+          HERMES_TEST_WORKERS: "32"
+          HERMES_TEST_FILE_TIMEOUT: "600"
+          HERMES_TEST_FILE_RETRIES: "0"
+          OPENROUTER_API_KEY: ""
+          OPENAI_API_KEY: ""
+          NOUS_API_KEY: ""
+      - name: Upload suite receipt, including failures
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rfc143379-full-python-slice-${{ matrix.slice }}
+          path: ${{ runner.temp }}/full-python-${{ matrix.slice }}.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  exact-head-diagnostics:
+    name: Historical and current upstream head diagnostics
+    runs-on: avrea-ubuntu-latest-16-vcpu
+    timeout-minutes: 50
+    steps:
+      - name: Checkout exact study commit
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify source commit and install locked test runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          printf 'study_sha=%s\n' "${{ github.sha }}"
+      - name: Set up locked Hermes Python and test dependencies
+        uses: ./.github/actions/setup-pm
+        with:
+          extras: '["all", "anthropic", "bedrock", "mistral", "fal", "modal", "daytona", "parallel-web"]'
+          test-environment: 'true'
+          prune-python-cache: true
+      - name: Run six historical exact-head probes
+        shell: bash
+        run: |
+          bash studies/rfc-143379/checkout/run_exact_heads.sh "$GITHUB_WORKSPACE" "$RUNNER_TEMP/historical" all
+      - name: Run Finn763's newly rebased exact head
+        shell: bash
+        env:
+          RFC_116673_SHA: ffc651bd11982eb5b4e1412f1b4b4c34d91cd42d
+        run: |
+          bash studies/rfc-143379/checkout/run_exact_heads.sh "$GITHUB_WORKSPACE" "$RUNNER_TEMP/latest-chain" 116673
+      - name: Publish manifest and fail honestly on diagnostic gaps
+        shell: bash
+        run: |
+          set -euo pipefail
+          for manifest in "$RUNNER_TEMP/historical/manifest.tsv" "$RUNNER_TEMP/latest-chain/manifest.tsv"; do
+            echo "::group::$manifest"
+            cat "$manifest"
+            echo "::endgroup::"
+          done
+          python3 - "$RUNNER_TEMP/historical/manifest.tsv" "$RUNNER_TEMP/latest-chain/manifest.tsv" <<'PY'
+          import csv, pathlib, sys
+          gaps = []
+          for filename in sys.argv[1:]:
+              path = pathlib.Path(filename)
+              with path.open(newline="", encoding="utf-8") as f:
+                  rows = list(csv.DictReader(f, delimiter="\t"))
+              expected = 6 if path.parent.name == "historical" else 1
+              if len(rows) != expected:
+                  gaps.append(f"{path}: expected {expected} heads, got {len(rows)}")
+              gaps.extend(f"{path}: PR #{row['pr']} {row['sha']} exit={row['exit_code']}"
+                          for row in rows if row["exit_code"] != "0")
+          if gaps:
+              print("DIAGNOSTIC RED/INVALID: " + "; ".join(gaps))
+              sys.exit(1)
+          print("Every selected exact-head diagnostic returned exit 0 (inspect assertions/skips).")
+          PY
+      - name: Upload all head manifests and logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rfc143379-exact-head-diagnostics
+          path: |
+            ${{ runner.temp }}/historical/
+            ${{ runner.temp }}/latest-chain/
+          if-no-files-found: warn
+          retention-days: 7
