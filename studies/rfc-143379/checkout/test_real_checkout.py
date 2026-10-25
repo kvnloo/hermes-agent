@@ -176,3 +176,79 @@ def test_no_save_never_lands_in_memory_or_pending(memory_env, consent_cases, cas
     persisted = [str(p.relative_to(root)) for p in root.rglob("*") if p.is_file()
                  and MARKER in p.read_text(encoding="utf-8", errors="replace")]
     assert not persisted, f"{case['id']}: forbidden marker persisted in {persisted}; result={result.get('staged', False)}"
+
+
+# Extra source-backed contracts: execute against real MemoryStore imports.
+# These are diagnostic probes on exact PR heads, not a model or compressor eval.
+
+
+@pytest.mark.parametrize("target, filename", [("memory", "MEMORY.md"), ("user", "USER.md")])
+def test_read_reflects_external_edit_without_mutating_frozen_prompt(memory_env, target, filename):
+    """An explicit read may see a newer disk revision; it may not rewrite the
+    mid-conversation prompt snapshot or normalize the file as a side effect."""
+    store, root = memory_env
+    if not hasattr(store, "read"):
+        pytest.skip("No read action in this exact head")
+    assert store.add(target, "initial synthetic fact")["success"]
+    store.load_from_disk()
+    frozen = store.format_for_system_prompt(target)
+    assert "initial synthetic fact" in (frozen or "")
+    path = root / filename
+    updated = "externally updated résumé ☃ — source-ID:abc123"
+    path.write_text(updated, encoding="utf-8")
+    before = path.read_bytes()
+    result = store.read(target)
+    assert result["success"] is True
+    assert result["entries"] == [updated]
+    assert path.read_bytes() == before
+    assert store.format_for_system_prompt(target) == frozen
+
+
+@pytest.mark.parametrize("target, filename", [("memory", "MEMORY.md"), ("user", "USER.md")])
+def test_read_handles_utf8_bom_without_rewriting(memory_env, target, filename):
+    """BOM removal is a decoding convenience, never permission to rewrite."""
+    store, root = memory_env
+    if not hasattr(store, "read"):
+        pytest.skip("No read action in this exact head")
+    original = b"\\xef\\xbb\\xbf" + "synthetic café ☃ source".encode("utf-8")
+    path = root / filename
+    path.write_bytes(original)
+    result = store.read(target)
+    assert result["success"] is True
+    assert result["entries"] == ["synthetic café ☃ source"]
+    assert path.read_bytes() == original
+
+
+@pytest.mark.parametrize("target, filename", [("memory", "MEMORY.md"), ("user", "USER.md")])
+def test_read_corrupt_utf8_keeps_disk_untouched(memory_env, target, filename):
+    """Neither read nor subsequent read-modify-write may clobber undecodable bytes."""
+    store, root = memory_env
+    if not hasattr(store, "read"):
+        pytest.skip("No read action in this exact head")
+    path = root / filename
+    corrupted = b"synthetic valid prefix\\n\\xff invalid UTF8"
+    path.write_bytes(corrupted)
+    read_result = store.read(target)
+    assert read_result["success"] is False
+    assert path.read_bytes() == corrupted
+    add_result = store.add(target, "new fact must not replace invalid source")
+    assert add_result["success"] is False
+    assert path.read_bytes() == corrupted
+
+
+def test_chain_doc_orphan_remains_readable_but_not_writable(memory_env):
+    """Unlinking a chain document must not destroy the original on disk,
+    and must remove authorization for further document writes."""
+    store, root = memory_env
+    if not hasattr(store, "orphan_doc_names") or not hasattr(store, "read"):
+        pytest.skip("No chain-document support in this exact head")
+    assert store.add("memory", "See @doc:rfc-orphan-contract")["success"]
+    assert store.add("doc:rfc-orphan-contract", "synthetic original for recovery")["success"]
+    assert store.remove("memory", "See @doc:rfc-orphan-contract")["success"]
+    assert "rfc-orphan-contract" in store.orphan_doc_names()
+    result = store.read("doc:rfc-orphan-contract")
+    assert result["success"] is True
+    assert "synthetic original for recovery" in result["entries"]
+    refused = store.add("doc:rfc-orphan-contract", "new unlinked content")
+    assert refused["success"] is False
+    assert (root / "docs" / "rfc-orphan-contract.md").exists()
