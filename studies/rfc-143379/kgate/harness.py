@@ -175,7 +175,7 @@ def run(manifest_path, out, checkpoints=CHECKPOINTS):
                             ta["retained_K_tokens"], tb["retained_K_tokens"], ta["summary_tokens"],
                             tb["summary_tokens"], ta["token_budget"], ",".join(f"K{k}" for k in order),
                             "deterministic_boundary", "NO_MODEL", sha256((SCORER + inspect.getsource(exact_present)).encode()).hexdigest(),
-                            trajectory, "native-compress-phase1;legacy-tail", "none"))
+                            trajectory, "native-compress-phase1;legacy-tail", "none", 0))
                 with (out / "paired.jsonl").open("a") as paired_file:
                     paired_file.write("".join(json.dumps(r.to_dict(), sort_keys=True) + "\n"
                                               for r in rows[batch_start:]))

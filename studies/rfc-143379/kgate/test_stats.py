@@ -2,6 +2,7 @@
 from dataclasses import asdict, replace
 import math
 import unittest
+from typing import cast
 
 from stats import (BINS, PairedRow, Probe, cluster_plan, digest, evaluate,
                    paired_counts, sample_size, seed_cluster_bootstrap, simultaneous_lcb)
@@ -14,7 +15,7 @@ def fixture(y10=1, y0=0):
                       digest([asdict(p) for p in probes]), 10, 0, 10, 20, 100,
                       "K0,K10" if p.session_seed == 1 else "K10,K0",
                       "model_exact_recitation", "test-model", "b" * 64, "c" * 64,
-                      "native", "real") for c, r in BINS for p in probes]
+                      "native", "real", 0) for c, r in BINS for p in probes]
     return probes, rows
 
 
@@ -59,6 +60,15 @@ class StatisticsTests(unittest.TestCase):
             replace(rows[0], ratio_actual=float("nan"))
         with self.assertRaises(ValueError):
             replace(rows[0], y10=True)
+
+    def test_missing_prohibited_outcome_is_not_assumed_clean(self):
+        probes, rows = fixture()
+        fields = rows[0].to_dict()
+        del fields["prohibited_regressions"]
+        with self.assertRaises(TypeError):
+            PairedRow.from_dict(fields)
+        result = evaluate(rows, probes, approved=cast(bool, "yes"))
+        self.assertIn("proposal_not_approved", result["reasons"])
 
     def test_whole_cluster_resampling(self):
         _, rows = fixture()

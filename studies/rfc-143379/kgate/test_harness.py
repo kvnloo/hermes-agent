@@ -33,6 +33,20 @@ def test_frozen_manifest_rejects_drift(tmp_path):
         load_manifest(bad)
 
 
+@pytest.mark.parametrize("ratio", [4, 6, 8])
+def test_native_budget_and_ratio_settle_without_probe_selection(ratio):
+    cc = verify_pin()
+    arms = {}
+    for k in (0, 10):
+        _, trace = run_arm(cc, 10, ratio, k, [], (10, 12))
+        arms[k] = trace[-1]
+        assert abs(trace[-1]["ratio_actual"] / ratio - 1) <= .05
+        assert trace[-1]["retained_K_tokens"] + trace[-1]["summary_tokens"] <= trace[-1]["token_budget"]
+    assert arms[0]["token_budget"] == arms[10]["token_budget"]
+    assert arms[0]["source_digest"] == arms[10]["source_digest"]
+    assert abs(arms[0]["ratio_actual"] / arms[10]["ratio_actual"] - 1) <= .05
+
+
 def test_real_repeated_boundary_is_reproducible():
     cc = verify_pin()
     _, probes = load_manifest(Path(__file__).with_name("frozen-manifest.json"))

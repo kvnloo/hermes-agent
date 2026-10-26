@@ -70,7 +70,7 @@ class PairedRow:
     trajectory_digest: str
     pruning: str
     paraphrase: str
-    prohibited_regressions: int = 0
+    prohibited_regressions: int
 
     def __post_init__(self):
         if any(type(y) is not int or y not in (0, 1) for y in (self.y10, self.y0)):
@@ -186,7 +186,7 @@ def evaluate(rows, manifest, *, approved=False, epsilon=.02, alpha=.05,
     """
     rows, manifest = list(rows), list(manifest)
     reasons = []
-    if not approved:
+    if approved is not True:
         reasons.append("proposal_not_approved")
     if epsilon < 0 or not 0 < alpha < 1 or not 0 <= rho <= 1:
         raise ValueError("invalid gate policy")
