@@ -1,0 +1,33 @@
+{
+  "schema": "rfc143379.runner-selftest.v1",
+  "date_utc": "2026-10-26",
+  "scope": "Offline receipt-runner self-tests, with actual subprocess/file/git execution and synthetic JUnit. Not a Hermes-runtime or model test.",
+  "base_commit": "a18fe04e480e9c924f16cb6dfbce8a0c4bcc910b",
+  "tested_commit": "cd2aeff2f88cf47216ac397fdaa5b459402f1b8f",
+  "base_runner_git_blob": "cb3057806dcc2f46db8abb2391acfaaffa71faaf",
+  "repaired_runner_git_blob": "2494ecb41246a7e1b0afa105b36c8e9ba1cafa29",
+  "test_file_git_blob": "c17b66b73ab40b940ea1a6ff4878fc416a6b183e",
+  "repaired_runner_sha256": "6beb81eeeecac9aa135f4dfd9b17b95818da2c5c9ee72f2140fc1737049372b0",
+  "test_file_sha256": "7843bf33da9cb86b2f1dd4b2e65b845d23ebfc6590e5e159db6bdde75fccf2ca",
+  "environment": {"kind": "chatgpt_sandbox", "os": "Linux x86_64", "python": "3.13.5", "git": "2.47.3", "cpu_quota_cores": 4, "memory_limit_bytes": 4294967296},
+  "baseline": {"tests": 14, "passed": 5, "failures": 8, "errors": 1, "exit_code": 1, "log_sha256": "d2eb1d528771c9a3bbcbec5968c51008afe99427d24eb61582a64c6e26c203f9"},
+  "repaired": {"tests": 14, "passed": 14, "failures": 0, "errors": 0, "exit_code": 0, "log_sha256": "64073dd51163d48e8176e50d19843db5426aaea5ba21498f388e2c252c58d6e2"},
+  "regressions": [
+    "stale successful XML reused after a reportless run",
+    "child failure hidden by an incorrect green summary",
+    "297 summary count supported by only one actual testcase",
+    "nonempty summary with no testcase records",
+    "duplicate testcase identities counted as extra coverage",
+    "malformed XML crashed instead of recording a failed result",
+    "manifest aliases counted the same file twice",
+    "test-file symlink escaped the candidate checkout",
+    "an existing output receipt was overwritten"
+  ],
+  "preserved_controls": ["fresh genuine report passes", "missing report fails", "failed testcase fails", "skipped testcase fails", "path traversal rejected"],
+  "reproduce": "python3 -m unittest discover -s studies/rfc-143379/checkout -p test_fixed_substrate_runner.py -v",
+  "syntax": "python3 -m py_compile studies/rfc-143379/checkout/run_fixed_substrate.py studies/rfc-143379/checkout/test_fixed_substrate_runner.py",
+  "limits": {"author_fixed_substrate": "NOT RUN", "author_297_battery": "NOT RUN", "real_model": "NOT RUN", "real_compressor": "NOT RUN", "private_logs": "NOT RECEIVED", "hosted_selftest": "NOT RUN"},
+  "evidence_correction": "Earlier smoke-test claims had no retained execution receipt in this work item. This source-hashed RED/GREEN record supersedes them; it does not validate the earlier claims.",
+  "remaining_inputs": ["collaborator's exact repaired commit", "author-selected memory test manifest"],
+  "publication": "Downstream only; no upstream changes, merges, or private-log publication."
+}
