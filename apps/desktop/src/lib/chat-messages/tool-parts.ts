@@ -387,47 +387,26 @@ export interface SettledClarifyProjection {
 }
 
 /**
- * Find the message that owns a tool call, by its stable call id, anywhere in
- * the transcript — not just in the currently-streaming bubble.
+ * Find the message that owns a tool event within its accepted turn.
  *
- * Interim commentary and turn settles seal the streaming bubble and drop the
- * stream id while a long-running tool is still executing. When the completion
- * finally arrives it must reconcile with the part that already exists (and,
- * sealed with `completedAt` but no `result`, renders as "Result unavailable"),
- * instead of seeding a fresh bubble with a duplicate row (#113035).
+ * Tool IDs repeat across turns. The hook records the IDs of messages that
+ * actually received a tool event in this accepted turn and preserves that
+ * ownership across interim and settle. A newer-sequence duplicate completion
+ * may update an already-result-bearing part only inside this turn's fence.
+ * A fresh accepted turn rotates the fence instead of globally deduplicating
+ * by call ID, result text, or sequence.
  *
- * Only an UNRESOLVED part (never completed: no `result` key, sealed or not)
- * can own an event. Tool call ids are not unique across turns — llama.cpp
- * emits one constant id for every call and Hermes' own deterministic ids
- * repeat — so a part that already carries its completion is a finished call
- * from an earlier turn, not the owner of the new one. Routing to it would
- * draw the new call over the old row and leave the live turn empty.
- *
- * The `phase` splits the sealed-without-result case (a part `sealOpenToolParts`
- * closed with `completedAt` but no `result` because the `tool.complete` was
- * lost to a degraded websocket):
- *
- * • a `complete`-phase event is the call's own result arriving after settle
- *   (#113035), so a sealed-no-result part is always its reconciled owner no
- *   matter whether the owning turn has settled;
- * • a `running`-phase event on a sealed-no-result part is a NEW call reusing
- *   the id. Only re-arm it when the owning message is itself still in flight
- *   (`pending` or `interim`) — the interim-boundary / mid-turn-user-message
- *   paths that re-arm a sealed part seal the bubble IN PLACE and mark that
- *   same message `interim`, so the evidence lives on the candidate row, not on
- *   a session-wide `interimBoundaryPending` bit that can belong to a different
- *   bubble. A sealed-no-result part on a settled prior turn (`pending` and
- *   `interim` both false) is history, so the new call seeds its own bubble
- *   instead of clobbering the prior turn's row.
- *
- * Newest-first among unresolved parts: interim boundaries append bubbles, so
- * the owner of an in-flight call is the most recent message that carries the
- * id without a result.
+ * A resumed turn with no witnessed owner fence keeps the existing unresolved
+ * late-completion lookup (#113035). Running events never revive completed
+ * parts; sealed-no-result parts re-arm only with per-message pending/interim
+ * evidence. Stop and optimistic settle do not universally set interim.
+ * unresolvedOnly prevents duplicate completions from re-offering side effects.
  */
 export function toolCallOwnerMessageId(
   messages: ChatMessage[],
   payload: GatewayEventPayload | undefined,
-  phase: 'running' | 'complete'
+  phase: 'running' | 'complete',
+  options: { ownerMessageIds?: readonly string[]; unresolvedOnly?: boolean } = {}
 ): string | null {
   const stableId = toolId(payload)
 
@@ -435,24 +414,30 @@ export function toolCallOwnerMessageId(
     return null
   }
 
+  const { ownerMessageIds, unresolvedOnly = false } = options
+
   for (let messageIndex = messages.length - 1; messageIndex >= 0; messageIndex -= 1) {
     const message = messages[messageIndex]
 
+    if (ownerMessageIds !== undefined && !ownerMessageIds.includes(message.id)) {
+      continue
+    }
+
     for (const part of message.parts) {
-      if (part.type !== 'tool-call' || part.toolCallId !== stableId || Object.hasOwn(part, 'result')) {
+      if (part.type !== 'tool-call' || part.toolCallId !== stableId) {
         continue
       }
 
-      // A sealed-without-result part is a reconciled owner for a late
-      // COMPLETION (#113035: the call's own result arriving after settle) no
-      // matter whether the turn has settled. A RUNNING event on a sealed
-      // part is a NEW call reusing the id; only re-arm it when the owner is
-      // still in flight — the interim-boundary / mid-turn-user-message paths
-      // that re-arm a sealed part mark the owning message itself `interim`,
-      // so this is per-row evidence. A sealed part on a settled prior turn
-      // (`pending`/`interim` both false) is history, not the new call's owner;
-      // a session-wide boundary bit is deliberately not consulted, since it
-      // can be raised by a different bubble than the candidate row.
+      // A completed part can only own another completion if this message was
+      // witnessed in the current accepted turn. It is never a running owner.
+      if (Object.hasOwn(part, 'result')) {
+        if (phase !== 'complete' || ownerMessageIds === undefined || unresolvedOnly) {
+          continue
+        }
+      }
+
+      // A sealed-no-result row is still eligible for its late completion,
+      // but a running replay cannot revive a settled historical command.
       if (phase === 'running' && part.completedAt !== undefined && !(message.pending || message.interim)) {
         continue
       }
