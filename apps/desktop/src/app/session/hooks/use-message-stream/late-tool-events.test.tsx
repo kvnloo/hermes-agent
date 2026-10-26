@@ -425,4 +425,56 @@ describe('tool events for a part that already exists on a sealed message', () =>
     expect(stream.state(SID).streamId).toBeNull()
   })
 
+  it('rotates owners after an optimistic new send even if the previous turn was live', () => {
+    sequencedEvent(SID, 'message.start', 600)
+    sequencedEvent(SID, 'tool.start', 601, {
+      args: { command: 'old command' },
+      name: 'terminal',
+      tool_id: 'call_resume'
+    })
+    sequencedEvent(SID, 'tool.complete', 602, {
+      name: 'terminal',
+      result: 'identical result',
+      tool_id: 'call_resume'
+    })
+
+    // Submit optimistically seals the former bubble and appends a user row
+    // before message.start confirms the next accepted turn.
+    act(() => {
+      const state = stream.state(SID)
+
+      stream.states.set(SID, {
+        ...state,
+        messages: [
+          ...finalizeInterruptedMessages(state.messages, state.streamId, 603),
+          {
+            id: 'user-resumed',
+            role: 'user',
+            parts: [{ type: 'text', text: 'Run the new command' }],
+            timestamp: 604
+          }
+        ],
+        streamId: null,
+        interrupted: false,
+        sawAssistantPayload: false,
+        awaitingResponse: true
+      })
+    })
+
+    sequencedEvent(SID, 'message.start', 605)
+    sequencedEvent(SID, 'tool.complete', 606, {
+      name: 'terminal',
+      result: 'identical result',
+      tool_id: 'call_resume'
+    })
+
+    const rows = toolRows('call_resume')
+    expect(rows).toHaveLength(2)
+    expect(rows[0].part).toMatchObject({
+      args: { command: 'old command' },
+      result: 'identical result'
+    })
+    expect(rows[1].part).toMatchObject({ result: 'identical result', toolCallId: 'call_resume' })
+    expect(rows[1].messageIndex).toBeGreaterThan(rows[0].messageIndex)
+  })
 })
