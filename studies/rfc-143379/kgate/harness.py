@@ -43,7 +43,10 @@ def verify_pin():
 def new_rounds(seed, cycle):
     messages = []
     for slot in range(1, SLOTS_PER_CYCLE + 1):
-        messages += [{"role": "user", "content": f"Inspect synthetic record {cycle}/{slot}."},
+        # Fixed non-target interference creates enough compressible middle for
+        # an 8x request without changing the ten-round tail or frozen targets.
+        padding = " Context filler for the synthetic workload." * 32 if slot <= 30 else ""
+        messages += [{"role": "user", "content": f"Inspect synthetic record {cycle}/{slot}." + padding},
                      {"role": "assistant", "content": source(seed, cycle, slot)}]
     # Exercise the real deterministic tool-result pruning path each generation.
     # The target literals are not in this tool payload or its call arguments.
@@ -68,19 +71,29 @@ def run_arm(cc, seed, ratio, k, probes, checkpoints=CHECKPOINTS):
     checkpoints_out = {}
     generation_calls = 0
     target_total = 900  # identical total post-boundary budget in both arms
+    scaffold_tokens = 70
+    raw_summary_tokens = 0
 
     def summarizer(prompt, started):
-        nonlocal generation_calls
+        nonlocal generation_calls, raw_summary_tokens
         generation_calls += 1
         telemetry = compressor._active_compression_telemetry
         tail = telemetry["protected_tail_tokens"] or 0
         head = telemetry["protected_head_tokens"] or 0
         # Fixed total output budget: K10 consumes room otherwise available to the
         # summary. A constant, literal-free replacement is intentionally lossy.
-        budget = max(30, target_total - tail - head - 70)
+        budget = max(30, target_total - tail - head - scaffold_tokens)
         text = "## Goal\nContinue the synthetic study.\n## Progress\nEarlier observations were processed.\n"
-        while estimate_tokens_rough(text + "Background observation recorded.\n") < budget:
-            text += "Background observation recorded.\n"
+        unit = "Background observation recorded.\n"
+        low, high = 0, max(1, budget)
+        while low < high:
+            middle = (low + high + 1) // 2
+            if estimate_tokens_rough(text + unit * middle) < budget:
+                low = middle
+            else:
+                high = middle - 1
+        text += unit * low
+        raw_summary_tokens = estimate_tokens_rough(text)
         return text
 
     with patch.object(compressor, "_call_summary_llm", side_effect=summarizer):
@@ -103,8 +116,13 @@ def run_arm(cc, seed, ratio, k, probes, checkpoints=CHECKPOINTS):
                 raise AssertionError("unexpected fallback; replaced summarizer must run")
             messages = result
             after = estimate_messages_tokens_rough(messages)
-            summary = sum(estimate_tokens_rough(m.get("content") or "") for m in messages
-                          if cc.is_compaction_summary_message(m))
+            tail = telemetry["protected_tail_tokens"] or 0
+            head = telemetry["protected_head_tokens"] or 0
+            # Price native prefix/scaffold and merge overhead, not target hits.
+            # This deterministic budget controller settles before checkpoints;
+            # every transient mismatch remains in the complete per-cycle trace.
+            scaffold_tokens = max(0, after - tail - head - raw_summary_tokens)
+            summary = max(0, after - tail - head)
             trace.append({"cycle": cycle, "source_digest": raw_digest,
                           "tokens_before": before, "tokens_after": after,
                           "ratio_actual": before / after, "token_budget": target_total,

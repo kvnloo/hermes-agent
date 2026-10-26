@@ -82,8 +82,14 @@ and K is not ten tokens. Both use a one-token discretionary tail budget; realize
 native tail size is recorded. Legacy-tail mode isolates recency from lean mode's
 extra deterministic verbatim-user section. Native tool pruning remains on.
 A common fixed output-budget function is registered from the synthetic source
-workload and requested ratio; the larger K tail consumes summary space.
-Native floors can prevent that budget/ratio being attained; all mismatches stay
+workload and requested ratio; the larger K tail consumes summary space. Fixed
+non-target padding in the oldest 30 rounds makes room for an 8× request. A
+deterministic controller measures native prefix/scaffold overhead after each
+boundary and reserves it at the next one, without looking at target outcomes.
+Summary-token accounting is the post-boundary residual after native head/tail
+tokens, so merged summary carriers do not double-count tail text. All transient
+ratios are retained in the trace. Native floors can still prevent a requested
+budget/ratio being attained; all mismatches stay
 in the output and the proposal gate refuses certification. No post-hoc ratio
 filtering or guaranteed K0-zero assumption like the earlier toy benchmark.
 
