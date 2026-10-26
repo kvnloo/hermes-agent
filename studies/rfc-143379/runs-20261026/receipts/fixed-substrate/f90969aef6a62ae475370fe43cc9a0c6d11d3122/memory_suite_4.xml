@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="1.309" timestamp="2026-10-26T06:55:44.696032+00:00" hostname="lab-host"><testcase classname="tests.tools.test_memory_tool_import_fallback" name="test_memory_tool_imports_without_fcntl" time="1.148" /></testsuite></testsuites>
