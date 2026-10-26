@@ -1,0 +1,49 @@
+name: RFC 143379 receipt contract (synthetic offline)
+
+# Isolated downstream PR-only regression; never runs Hermes or models.
+on:
+  pull_request:
+    branches:
+      - study/rfc-143379-homework
+    paths:
+      - "studies/rfc-143379/receipt_contract/**"
+      - ".github/workflows/rfc-143379-receipt-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  receipt-consumer-synthetic:
+    name: Validate receipt-consumer synthetic controls
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact PR head, not mutable base
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Assert and display executed commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          observed="$(git rev-parse HEAD)"
+          echo "runner_head=$observed"
+          echo "event_head=${{ github.event.pull_request.head.sha }}"
+          test "$observed" = "${{ github.event.pull_request.head.sha }}"
+      - name: Run stdlib synthetic consumer regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 --version
+          python3 -m unittest discover \
+            -s studies/rfc-143379/receipt_contract \
+            -p 'test_*.py' -v 2>&1 | tee "$RUNNER_TEMP/receipt-contract-unittest.log"
+      - name: Retain synthetic unittest stdout for exact-head review
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rfc143379-receipt-consumer-synthetic
+          path: ${{ runner.temp }}/receipt-contract-unittest.log
+          if-no-files-found: warn
+          retention-days: 7
