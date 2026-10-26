@@ -49,14 +49,32 @@ def sha256(path: Path) -> str:
 
 
 def counts(path: Path) -> dict[str, int]:
+    """Require actual, uniquely named cases and consistent pytest counters."""
     result = dict.fromkeys(("tests", "failures", "errors", "skipped"), 0)
     if not path.exists():
         return result
     root = ET.parse(path).getroot()
-    suites = [root] if root.tag == "testsuite" else root.findall("testsuite")
+    if root.tag not in {"testsuite", "testsuites"}:
+        raise ValueError("Unsupported JUnit root")
+    suites = [root] if root.tag == "testsuite" else list(root)
+    seen: set[tuple[str, str]] = set()
     for suite in suites:
-        for key in result:
-            result[key] += int(suite.get(key, "0"))
+        if suite.tag != "testsuite" or suite.find("testsuite") is not None:
+            raise ValueError("Expected flat pytest suites")
+        cases = suite.findall("testcase")
+        actual = {"tests": len(cases), **{
+            key: sum(case.find(tag) is not None for case in cases)
+            for key, tag in (("failures", "failure"), ("errors", "error"), ("skipped", "skipped"))
+        }}
+        for case in cases:
+            identity = (case.get("classname", ""), case.get("name", ""))
+            if not identity[1] or identity in seen:
+                raise ValueError("Missing or duplicate testcase identity")
+            seen.add(identity)
+        for key, value in actual.items():
+            if int(suite.get(key, "-1")) != value:
+                raise ValueError(f"JUnit {key} counter disagrees with testcase records")
+            result[key] += value
     return result
 
 
@@ -65,6 +83,8 @@ def suite_paths(manifest: Path | None) -> tuple[list[str], str]:
         return NEIGHBORS, "neighboring_only"
     paths = [line.strip() for line in manifest.read_text(encoding="utf-8").splitlines()
              if line.strip() and not line.lstrip().startswith("#")]
+    for path in paths:
+        validate_path(path)
     if not paths or len(paths) != len(set(paths)):
         raise ValueError("Suite manifest must contain nonempty unique test paths")
     return paths, "declared"
@@ -72,7 +92,8 @@ def suite_paths(manifest: Path | None) -> tuple[list[str], str]:
 
 def validate_path(path: str) -> None:
     parts = Path(path).parts
-    if not path.startswith("tests/") or ".." in parts or Path(path).is_absolute():
+    if (not path.startswith("tests/") or not path.endswith(".py") or ".." in parts
+            or "\\" in path or Path(path).is_absolute() or Path(path).as_posix() != path):
         raise ValueError(f"Unsafe test path: {path}")
 
 
@@ -83,7 +104,12 @@ def run_one(checkout: Path, out: Path, env: dict[str, str], label: str,
     junit = out / f"{label}.xml"
     row = {"label": label, "category": category, "path": test_path,
            "log": log.name, "junit": junit.name, "selector": selector}
-    if not (checkout / test_path).is_file():
+    # A prior invocation's successful XML must never qualify this process.
+    junit.unlink(missing_ok=True)
+    if not (checkout / test_path).resolve().is_relative_to(checkout.resolve()):
+        log.write_text("Test path escapes the candidate checkout\n", encoding="utf-8")
+        row["exit_code"] = "UNSAFE_PATH"
+    elif not (checkout / test_path).is_file():
         log.write_text("Test file missing at exact candidate commit\n", encoding="utf-8")
         row["exit_code"] = "MISSING"
     else:
@@ -99,7 +125,11 @@ def run_one(checkout: Path, out: Path, env: dict[str, str], label: str,
                 row["exit_code"] = proc.returncode
             except subprocess.TimeoutExpired:
                 row["exit_code"] = "TIMEOUT"
-    row.update(counts(junit))
+    try:
+        row.update(counts(junit))
+    except (ET.ParseError, ValueError, OSError) as exc:
+        row.update(dict.fromkeys(("tests", "failures", "errors", "skipped"), 0))
+        row["report_error"] = f"{type(exc).__name__}: {exc}"
     row["passed"] = (row["exit_code"] == 0 and row["tests"] > 0
                      and row["failures"] == row["errors"] == row["skipped"] == 0)
     return row
@@ -130,7 +160,10 @@ def main() -> int:
     for path in memory_paths:
         validate_path(path)
     out = args.output.resolve()
-    out.mkdir(parents=True, exist_ok=True)
+    try:
+        out.mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        parser.error("Output directory already exists; choose a fresh path to preserve prior evidence")
     with tempfile.TemporaryDirectory(prefix="hermes-rfc143379-fixed-") as temp:
         root = Path(temp)
         checkout = root / "candidate"
@@ -170,6 +203,8 @@ def main() -> int:
     receipt = {
         "schema": "rfc143379.shared-falsifiers.v1", "candidate_sha": args.fixed_sha,
         "probe_sha256": sha256(probe), "scenarios_sha256": sha256(scenarios),
+        "runner_sha256": sha256(Path(__file__)),
+        "suite_manifest_sha256": sha256(args.suite_manifest) if args.suite_manifest else None,
         "unchanged_probe": True, "tracked_source_dirty": tracked_dirty,
         "suite_kind": suite_kind, "memory_test_count": battery_count,
         "required_probes_green": required_green,
