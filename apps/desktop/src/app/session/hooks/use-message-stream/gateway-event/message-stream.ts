@@ -132,6 +132,10 @@ export function handleMessageStreamEvent(ctx: GatewayEventContext): boolean {
         // Backend accepted the turn — the no-payload settle gate below may
         // now treat a running=false heartbeat as a real turn end.
         turnLive: true,
+        // Only a newly accepted turn rotates tool attribution. Repeated
+        // message.start frames for an already-live turn preserve its owners;
+        // interim and settle also keep them for delayed completions.
+        toolTurnOwnerMessageIds: state.turnLive ? state.toolTurnOwnerMessageIds : [],
         // Keep the submit-time seed (submit.ts seedOptimistic) — resetting
         // here would hide the submit→accept round trip from the timer.
         // Backend-originated turns (queue drain elsewhere, goal follow-up)
