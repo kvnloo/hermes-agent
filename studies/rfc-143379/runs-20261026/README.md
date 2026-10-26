@@ -79,6 +79,12 @@ still reach the model verbatim through a write-failure response? It also pins ma
 | no-match hint does not echo blocked text | **RED** (`closest_entries`) | **RED** | PASS | **RED** | PASS |
 | ambiguous-match list (batch path) | PASS | PASS | PASS | PASS | PASS |
 | main contract: one-item overflow returns live entries | PASS | **RED** | **RED** | PASS | PASS |
+| v3: legacy single-op `patch` no-match | **RED** (`closest_entries`, `current_entries`) | not run | **RED** (`closest_entries`) | not run | PASS |
+| v3: legacy single-op `remove` ambiguous | **RED** (`matches`) | not run | **RED** (`matches`) | not run | PASS |
+
+Probe versions: v2 (rows 1-5) sha256 `5e6f41ae…`, receipts in `receipts/blocked-echo/`.
+v3 (all rows; the committed file) sha256 `af535107…`, receipts in `receipts/blocked-echo-v3/`, run on main, f90969aef6 and the candidate only.
+The two v3 rows test predictions from the ChatGPT source review `RFC143379-READFIX-REVIEW-01` (fork comment 6410184456). That review called these two paths OPEN on f90969aef6, and execution confirms both.
 
 Memory-path suite (`tests/tools/test_memory*.py` + `tests/agent/test_*memory*.py`, 30 files):
 main 354/354, candidate 354/354.
@@ -86,9 +92,10 @@ main 354/354, candidate 354/354.
 Findings:
 
 1. xngg1021's and jfugalde's leak claims are **confirmed by execution on current upstream main**. They are not only a property of the restore PR. A poisoned entry is withheld from the system prompt, but it comes back verbatim in `current_entries` (over-budget add) and in `closest_entries` (no-match), both of which go to the model.
-2. The hardened read closes both leaks, but it does so by dropping `current_entries` entirely. That **contradicts main's newer maintainer contract** `07af2357ec`, which deliberately restored the echo for one-item adds. The same conflict appears as the merge conflicts in R2.
-3. The two properties are compatible. A ~40-line study candidate (`receipts/blocked-echo/candidate.patch`) runs the echoed lists through the same strict threat scan. It keeps the maintainer contract (clean entries unchanged), closes both leaks and keeps all 354 memory-path tests green. This is a downstream existence proof, not a proposed upstream patch. The removal path for a blocked entry (model versus human) is still the open design question jfugalde raised.
-4. The ambiguous-match `matches` list in `_locate` echoes raw text in source. Through the advertised `operations[]` path, the batch walker formats its own message, so the vector did not reproduce there. The legacy single-op path was not probed. That is noted, not claimed.
+2. The hardened read closes the batch-path leaks, but **not** the legacy single-op `patch` no-match or ambiguous `matches` paths. It also closes the over-budget leak by dropping `current_entries` entirely. That **contradicts main's newer maintainer contract** `07af2357ec`, which deliberately restored the echo for one-item adds. The same conflict appears as the merge conflicts in R2.
+3. The two properties are compatible. A ~40-line study candidate (`receipts/blocked-echo/candidate.patch`) runs the echoed lists through the same strict threat scan. It keeps the maintainer contract (clean entries unchanged), closes all four measured leak vectors and keeps all 354 memory-path tests green. This is a downstream existence proof, not a proposed upstream patch. The removal path for a blocked entry (model versus human) is still the open design question jfugalde raised.
+4. Through the advertised `operations[]` path, the batch walker formats its own ambiguity message, so that row passes everywhere. The raw `matches` list is reachable through the legacy single-op path (v3 row).
+5. Not covered here: successful-mutation echoes (`removed_entry`, `replaced_entry`, and similar) and the already-`[BLOCKED:`-prefixed passthrough. The source review flagged both. They are design questions (audit versus model-facing payload), not probed.
 
 ## Not run
 
