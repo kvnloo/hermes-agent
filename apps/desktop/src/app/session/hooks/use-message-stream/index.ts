@@ -95,6 +95,7 @@ export function useMessageStream({
       seed: () => ChatMessagePart[],
       opts: {
         pending?: (message: ChatMessage) => boolean
+        trackToolOwner?: boolean
         // Resolve the message an event should mutate by payload identity
         // rather than by the current stream position. A late `tool.complete`
         // that crosses an interim/settle boundary must attach to the bubble
@@ -115,6 +116,13 @@ export function useMessageStream({
 
           const reconciledId = opts.eventTarget?.(state) ?? null
           const streamId = reconciledId ?? state.streamId ?? nextStreamMessageId('assistant-stream')
+          const toolOwnerUpdate = opts.trackToolOwner
+            ? {
+                toolTurnOwnerMessageIds: state.toolTurnOwnerMessageIds?.includes(streamId)
+                  ? state.toolTurnOwnerMessageIds
+                  : [...(state.toolTurnOwnerMessageIds ?? []), streamId]
+              }
+            : {}
           // The event landed on a bubble that is NOT the live stream (sealed
           // by interim commentary, a mid-turn user message, or turn settle).
           // It is a patch to history: the bubble keeps its own pending bit
@@ -152,11 +160,12 @@ export function useMessageStream({
             // Later deltas must not append into the bubble the late event
             // just updated, and a late event from an earlier phase must not
             // clear the wait state of the turn now in flight.
-            return { ...state, messages: nextMessages }
+            return { ...state, ...toolOwnerUpdate, messages: nextMessages }
           }
 
           return {
             ...state,
+            ...toolOwnerUpdate,
             messages: nextMessages,
             streamId,
             sawAssistantPayload: true,
@@ -508,19 +517,13 @@ export function useMessageStream({
         () => upsertToolPart([], payload, phase, occurredAt),
         {
           pending: m => phase !== 'complete' || (m.pending ?? false),
-          // A tool event belongs to the bubble that owns the call, not to
-          // whatever is streaming now. Long tools (browser scrapes run
-          // minutes) outlive the boundary that seals their bubble (interim
-          // commentary, a message typed mid-turn, turn settle): without this
-          // lookup a completion seeds a new bubble with a duplicate row while
-          // the sealed one keeps reading "Result unavailable", and a running
-          // event for the same id seeds a second live row with its own timer
-          // under the user's message (#113035). Both phases route by id, but
-          // a running-phase event only re-arms a sealed-no-result part on a
-          // still-in-flight owner — a settled prior turn's sealed part is
-          // history, so a new turn reusing the id seeds its own row instead
-          // of clobbering the prior turn's command.
-          eventTarget: state => toolCallOwnerMessageId(state.messages, payload, phase)
+          trackToolOwner: true,
+          // Long tools can outlive an interim/settle boundary. Keep the owner
+          // message witnessed in this accepted turn so a repeated completion
+          // updates its original sealed row, without adopting same-ID history
+          // from a different accepted turn (#113035, #140397).
+          eventTarget: state =>
+            toolCallOwnerMessageId(state.messages, payload, phase, { ownerMessageIds: state.toolTurnOwnerMessageIds })
         },
         occurredAt
       )

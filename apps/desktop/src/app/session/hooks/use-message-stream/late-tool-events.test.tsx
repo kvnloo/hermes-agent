@@ -15,6 +15,22 @@ import { type MessageStreamHarness, renderMessageStream } from './test-harness'
 const SID = 'late-tool-events-session'
 
 let stream: MessageStreamHarness
+let sequence = 0
+
+const sequencedEvent = (
+  sessionId: string,
+  type: GatewayEventName,
+  timestamp: number,
+  payload: Record<string, unknown> = {}
+) =>
+  act(() =>
+    stream.handleEvent({
+      payload: { ...payload, timestamp },
+      seq: ++sequence,
+      session_id: sessionId,
+      type
+    })
+  )
 
 const event = (type: GatewayEventName, timestamp: number, payload: Record<string, unknown> = {}) =>
   act(() => stream.handleEvent({ payload: { ...payload, timestamp }, session_id: SID, type }))
@@ -28,6 +44,7 @@ const toolRows = (toolCallId: string) =>
 
 describe('tool events for a part that already exists on a sealed message', () => {
   beforeEach(() => {
+    sequence = 0
     stream = renderMessageStream(SID)
   })
 
@@ -270,6 +287,194 @@ describe('tool events for a part that already exists on a sealed message', () =>
       args: { command: 'echo replacement' },
       result: 'replacement result'
     })
+    expect(rows[1].messageIndex).toBeGreaterThan(rows[0].messageIndex)
+  })
+
+  it('keeps the original tool row for a newer-sequence duplicate completion after interim', () => {
+    sequencedEvent(SID, 'message.start', 100)
+    sequencedEvent(SID, 'tool.start', 101, {
+      args: { url: 'https://example.test' },
+      name: 'browser',
+      tool_id: 'call_page'
+    })
+    sequencedEvent(SID, 'message.interim', 102, { text: 'Reading the page.' })
+    sequencedEvent(SID, 'tool.complete', 103, {
+      name: 'browser',
+      result: 'page output',
+      tool_id: 'call_page'
+    })
+    const original = toolRows('call_page')
+    expect(original).toHaveLength(1)
+    expect(stream.state(SID).streamId).toBeNull()
+
+    // The later sequence is not a new accepted turn or tool occurrence.
+    sequencedEvent(SID, 'tool.complete', 104, {
+      name: 'browser',
+      result: 'page output',
+      tool_id: 'call_page'
+    })
+    const rows = toolRows('call_page')
+    expect(rows).toHaveLength(1)
+    expect(rows[0].messageIndex).toBe(original[0].messageIndex)
+    expect(rows[0].part).toMatchObject({
+      args: { url: 'https://example.test' },
+      result: 'page output',
+      toolCallId: 'call_page'
+    })
+    expect(stream.state(SID).streamId).toBeNull()
+  })
+
+  it('keeps identical results separate when a new accepted turn loses tool.start', () => {
+    sequencedEvent(SID, 'message.start', 200)
+    sequencedEvent(SID, 'tool.start', 201, {
+      args: { command: 'first' },
+      name: 'terminal',
+      tool_id: 'call_same'
+    })
+    sequencedEvent(SID, 'tool.complete', 202, {
+      name: 'terminal',
+      result: 'identical',
+      tool_id: 'call_same'
+    })
+    sequencedEvent(SID, 'message.complete', 203, { text: 'First done.' })
+
+    sequencedEvent(SID, 'message.start', 300)
+    sequencedEvent(SID, 'tool.complete', 301, {
+      name: 'terminal',
+      result: 'identical',
+      tool_id: 'call_same'
+    })
+    const rows = toolRows('call_same')
+    expect(rows).toHaveLength(2)
+    expect(rows[0].part).toMatchObject({ args: { command: 'first' }, result: 'identical' })
+    expect(rows[1].part).toMatchObject({ result: 'identical', toolCallId: 'call_same' })
+    expect(rows[1].messageIndex).toBeGreaterThan(rows[0].messageIndex)
+  })
+
+  it('keeps completed owners after settle until the next accepted turn', () => {
+    sequencedEvent(SID, 'message.start', 400)
+    sequencedEvent(SID, 'tool.start', 401, {
+      args: { command: 'done' },
+      name: 'terminal',
+      tool_id: 'call_settled_repeat'
+    })
+    sequencedEvent(SID, 'tool.complete', 402, {
+      name: 'terminal',
+      result: 'finished',
+      tool_id: 'call_settled_repeat'
+    })
+    sequencedEvent(SID, 'message.complete', 403, { text: 'Finished.' })
+    sequencedEvent(SID, 'tool.complete', 404, {
+      name: 'terminal',
+      result: 'finished',
+      tool_id: 'call_settled_repeat'
+    })
+
+    const rows = toolRows('call_settled_repeat')
+    expect(rows).toHaveLength(1)
+    expect(rows[0].part).toMatchObject({ args: { command: 'done' }, result: 'finished' })
+    expect(stream.state(SID).streamId).toBeNull()
+  })
+
+  it('isolates repeated tool IDs across interleaved sessions', () => {
+    const other = 'other-late-tool-session'
+    sequencedEvent(SID, 'message.start', 500)
+    sequencedEvent(SID, 'tool.start', 501, {
+      args: { command: 'first session' },
+      name: 'terminal',
+      tool_id: 'call_shared'
+    })
+    sequencedEvent(SID, 'message.interim', 502, { text: 'Working.' })
+    sequencedEvent(other, 'message.start', 503)
+    sequencedEvent(other, 'tool.start', 504, {
+      args: { command: 'second session' },
+      name: 'terminal',
+      tool_id: 'call_shared'
+    })
+    sequencedEvent(SID, 'tool.complete', 505, {
+      name: 'terminal',
+      result: 'first result',
+      tool_id: 'call_shared'
+    })
+    sequencedEvent(other, 'tool.complete', 506, {
+      name: 'terminal',
+      result: 'second result',
+      tool_id: 'call_shared'
+    })
+    sequencedEvent(SID, 'tool.complete', 507, {
+      name: 'terminal',
+      result: 'first result',
+      tool_id: 'call_shared'
+    })
+
+    const firstRows = toolRows('call_shared')
+    const otherRows = stream
+      .state(other)
+      .messages.flatMap(message => message.parts.filter(part => part.type === 'tool-call'))
+
+    expect(firstRows).toHaveLength(1)
+    expect(firstRows[0].part).toMatchObject({
+      args: { command: 'first session' },
+      result: 'first result'
+    })
+    expect(otherRows).toHaveLength(1)
+    expect(otherRows[0]).toMatchObject({
+      args: { command: 'second session' },
+      result: 'second result'
+    })
+    expect(stream.state(SID).streamId).toBeNull()
+  })
+
+  it('rotates owners after an optimistic new send even if the previous turn was live', () => {
+    sequencedEvent(SID, 'message.start', 600)
+    sequencedEvent(SID, 'tool.start', 601, {
+      args: { command: 'old command' },
+      name: 'terminal',
+      tool_id: 'call_resume'
+    })
+    sequencedEvent(SID, 'tool.complete', 602, {
+      name: 'terminal',
+      result: 'identical result',
+      tool_id: 'call_resume'
+    })
+
+    // Submit optimistically seals the former bubble and appends a user row
+    // before message.start confirms the next accepted turn.
+    act(() => {
+      const state = stream.state(SID)
+
+      stream.states.set(SID, {
+        ...state,
+        messages: [
+          ...finalizeInterruptedMessages(state.messages, state.streamId, 603),
+          {
+            id: 'user-resumed',
+            role: 'user',
+            parts: [{ type: 'text', text: 'Run the new command' }],
+            timestamp: 604
+          }
+        ],
+        streamId: null,
+        interrupted: false,
+        sawAssistantPayload: false,
+        awaitingResponse: true
+      })
+    })
+
+    sequencedEvent(SID, 'message.start', 605)
+    sequencedEvent(SID, 'tool.complete', 606, {
+      name: 'terminal',
+      result: 'identical result',
+      tool_id: 'call_resume'
+    })
+
+    const rows = toolRows('call_resume')
+    expect(rows).toHaveLength(2)
+    expect(rows[0].part).toMatchObject({
+      args: { command: 'old command' },
+      result: 'identical result'
+    })
+    expect(rows[1].part).toMatchObject({ result: 'identical result', toolCallId: 'call_resume' })
     expect(rows[1].messageIndex).toBeGreaterThan(rows[0].messageIndex)
   })
 })

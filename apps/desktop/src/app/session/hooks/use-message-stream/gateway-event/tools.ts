@@ -75,15 +75,18 @@ export function handleToolEvent(ctx: GatewayEventContext): boolean {
 
       const state = $sessionStates.get()[sessionId]
 
-      // Read before the upsert seals the part: only a completion that resolves
-      // a still-pending call is a fresh production; a duplicate or replayed
-      // completion may never re-offer a dismissed target. This call site only
-      // ever handles `tool.complete`, so the phase is always 'complete' — the
-      // running-phase restriction in `toolCallOwnerMessageId` is never
-      // evaluated here, and the #113035 late completion classification is
-      // unchanged.
+      // Read before upsert: an unresolved call is a fresh production,
+      // while a result-bearing owner is a repeated completion and must not
+      // re-offer dismissed previews. Use the same accepted-turn fence as the
+      // row update, but deliberately exclude already-completed owners here.
       const pendingProduction =
-        !event.replayed && Boolean(toolCallOwnerMessageId(state?.messages ?? [], payload, 'complete'))
+        !event.replayed &&
+        Boolean(
+          toolCallOwnerMessageId(state?.messages ?? [], payload, 'complete', {
+            ownerMessageIds: state?.toolTurnOwnerMessageIds,
+            unresolvedOnly: true
+          })
+        )
 
       upsertToolCall(sessionId, toTodoPayload(payload) ?? payload, 'complete', event.type, occurredAt)
 

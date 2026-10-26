@@ -132,6 +132,12 @@ export function handleMessageStreamEvent(ctx: GatewayEventContext): boolean {
         // Backend accepted the turn — the no-payload settle gate below may
         // now treat a running=false heartbeat as a real turn end.
         turnLive: true,
+        // A fresh optimistic user send can arrive while the previous turn
+        // still says turnLive. Its newly appended user row marks the new
+        // accepted turn; a duplicate start within the same live turn keeps
+        // witnessed tool owners for delayed completions.
+        toolTurnOwnerMessageIds:
+          state.turnLive && state.messages.at(-1)?.role !== 'user' ? state.toolTurnOwnerMessageIds : [],
         // Keep the submit-time seed (submit.ts seedOptimistic) — resetting
         // here would hide the submit→accept round trip from the timer.
         // Backend-originated turns (queue drain elsewhere, goal follow-up)
