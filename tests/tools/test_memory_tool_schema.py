@@ -39,7 +39,8 @@ def test_each_memory_field_is_advertised_once_and_legacy_shapes_still_write(tmp_
     """The schema advertises one shape (target + operations[]) with no alias; the handler still
     accepts the top-level single-op shape and the new_text alias models and transcripts send."""
     params = MEMORY_SCHEMA["parameters"]
-    assert set(params["properties"]) == {"target", "operations"}
+    assert set(params["properties"]) == {"target", "operations", "action", "doc"}
+    assert params["properties"]["action"]["enum"] == ["read"]
     assert "new_text" not in json.dumps(params)
 
     monkeypatch.setattr("tools.memory_tool.get_memory_dir", lambda: tmp_path)
