@@ -35,7 +35,8 @@ class Probe:
     eligible: bool = True
 
     def __post_init__(self):
-        if type(self.session_seed) is not int or self.source_cycle < 1:
+        if (type(self.session_seed) is not int or type(self.source_cycle) is not int
+                or self.source_cycle < 1):
             raise ValueError("invalid seed/source cycle")
         if not all((self.probe_id, self.source_scope, self.target_literal)):
             raise ValueError("empty source identity")
@@ -74,8 +75,13 @@ class PairedRow:
     def __post_init__(self):
         if any(type(y) is not int or y not in (0, 1) for y in (self.y10, self.y0)):
             raise ValueError("paired outcomes must be binary integers")
-        if self.cycle < self.probe.source_cycle or self.ratio_target not in RATIOS:
+        if (type(self.cycle) is not int or self.cycle < self.probe.source_cycle
+                or type(self.ratio_target) is not int or self.ratio_target not in RATIOS):
             raise ValueError("ineligible cycle/ratio")
+        if self.measurement not in {"model_exact_recitation", "deterministic_boundary"}:
+            raise ValueError("unknown measurement kind")
+        if not all(isinstance(s, str) and s for s in (self.model, self.pruning, self.paraphrase)):
+            raise ValueError("explicit model and controls required")
         for x in (self.ratio_actual, self.ratio_actual0):
             if not math.isfinite(x) or x <= 0:
                 raise ValueError("invalid realized ratio")
@@ -193,6 +199,8 @@ def evaluate(rows, manifest, *, approved=False, epsilon=.02, alpha=.05,
     grouped = defaultdict(list)
     seen = set()
     protocol = set()
+    run_metadata = defaultdict(set)
+    seed_trajectories = defaultdict(set)
     for row in rows:
         key = (row.probe.session_seed, row.probe.probe_id)
         pair_key = (*key, row.cycle, row.ratio_target)
@@ -206,6 +214,10 @@ def evaluate(rows, manifest, *, approved=False, epsilon=.02, alpha=.05,
         if row.paraphrase != "real" or not row.pruning:
             reasons.append("unqualified_controls")
         protocol.add((row.model, row.scorer_digest, row.pruning, row.paraphrase))
+        run_metadata[(row.probe.session_seed, row.cycle, row.ratio_target)].add((
+            row.ratio_actual, row.ratio_actual0, row.token_budget, row.arm_order,
+            row.retained_K_tokens, row.retained_K0_tokens, row.summary_tokens, row.summary0_tokens))
+        seed_trajectories[row.probe.session_seed].add(row.trajectory_digest)
         if max(abs(row.ratio_actual / row.ratio_target - 1),
                abs(row.ratio_actual0 / row.ratio_target - 1),
                abs(row.ratio_actual / row.ratio_actual0 - 1)) > ratio_tolerance:
@@ -219,6 +231,12 @@ def evaluate(rows, manifest, *, approved=False, epsilon=.02, alpha=.05,
         grouped[cell].append(row)
     if len(protocol) != 1:
         reasons.append("protocol_drift_or_empty")
+    if any(len(values) != 1 for values in run_metadata.values()):
+        reasons.append("checkpoint_metadata_drift")
+    if any(len(values) != 1 for values in seed_trajectories.values()):
+        reasons.append("trajectory_drift")
+    if {r.arm_order for r in rows} != {"K0,K10", "K10,K0"}:
+        reasons.append("arm_order_not_counterbalanced")
     if any(row.prohibited_regressions for row in rows):
         return {"status": "FAIL", "proposal_only": True, "reasons": ["prohibited_regression"], "cells": []}
     cells = []

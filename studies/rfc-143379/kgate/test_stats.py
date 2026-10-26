@@ -110,7 +110,10 @@ class StatisticsTests(unittest.TestCase):
                  [replace(rows[0], manifest_digest="d" * 64), *rows[1:]],
                  [replace(rows[0], measurement="deterministic_boundary"), *rows[1:]],
                  [replace(rows[0], model="other"), *rows[1:]],
-                 [replace(rows[0], summary_tokens=200), *rows[1:]]]
+                 [replace(rows[0], summary_tokens=200), *rows[1:]],
+                 [replace(rows[0], trajectory_digest="d" * 64), *rows[1:]],
+                 [replace(rows[0], token_budget=101), *rows[1:]],
+                 [replace(r, arm_order="K0,K10") for r in rows]]
         for case in cases:
             self.assertEqual(self.gate(case, probes)["status"], "INSUFFICIENT")
 

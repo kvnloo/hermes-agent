@@ -36,8 +36,8 @@ All links/line numbers refer to the pin, not this study's older base:
 - `agent/context_compressor.py:2018-2022`: generic fallback preserves up to two
   argument values; that is not a memory reload instruction.
 - `agent/context_compressor_prune.py:28-75`: real proactive entry point and skill safety rule.
-- `tools/memory_tool.py:249-251`: tool signature has no `doc` argument.
-- `tools/memory_tool.py:315-316`: unsupported action rejection (see source pin
+- `tools/memory_tool.py:222-224`: tool signature has no `doc` argument.
+- `tools/memory_tool.py:282-283`: unsupported action rejection (see source pin
   and runtime dispatch assertion; the receipt does not rely on a source grep).
 
 Read the source at

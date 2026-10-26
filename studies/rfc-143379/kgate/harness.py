@@ -8,6 +8,7 @@ and actual compression ratios are measured. No post-hoc cohort/ratio dropping.
 import argparse
 from contextlib import ExitStack
 from hashlib import sha256
+import inspect
 import json
 import os
 from pathlib import Path
@@ -84,11 +85,13 @@ def run_arm(cc, seed, ratio, k, probes, checkpoints=CHECKPOINTS):
 
     with patch.object(compressor, "_call_summary_llm", side_effect=summarizer):
         for cycle in range(1, max(checkpoints) + 1):
-            messages.extend(new_rounds(seed, cycle))
+            raw_rounds = new_rounds(seed, cycle)
+            raw_digest = digest(raw_rounds)
+            messages.extend(raw_rounds)
             before = estimate_messages_tokens_rough(messages)
             # Budget declared before either arm runs; same function of the frozen
             # source workload, not arm-specific input or observed outcomes.
-            source_tokens = estimate_messages_tokens_rough(new_rounds(seed, cycle))
+            source_tokens = estimate_messages_tokens_rough(raw_rounds)
             target_total = max(100, int(source_tokens / (ratio - 1)))
             calls_before = generation_calls
             previous_count = compressor.compression_count
@@ -102,7 +105,8 @@ def run_arm(cc, seed, ratio, k, probes, checkpoints=CHECKPOINTS):
             after = estimate_messages_tokens_rough(messages)
             summary = sum(estimate_tokens_rough(m.get("content") or "") for m in messages
                           if cc.is_compaction_summary_message(m))
-            trace.append({"cycle": cycle, "tokens_before": before, "tokens_after": after,
+            trace.append({"cycle": cycle, "source_digest": raw_digest,
+                          "tokens_before": before, "tokens_after": after,
                           "ratio_actual": before / after, "token_budget": target_total,
                           "retained_K_tokens": telemetry["protected_tail_tokens"],
                           "summary_tokens": summary, "summary_calls": generation_calls,
@@ -121,6 +125,8 @@ def run(manifest_path, out, checkpoints=CHECKPOINTS):
     out.mkdir(parents=True, exist_ok=True)
     rows = []
     traces = []
+    for name in ("paired.jsonl", "trace.jsonl", "progress.jsonl"):
+        (out / name).write_text("")
     with ExitStack() as stack:
         stack.enter_context(patch.object(socket.socket, "connect", no_network))
         stack.enter_context(patch.object(socket, "create_connection", no_network))
@@ -130,11 +136,17 @@ def run(manifest_path, out, checkpoints=CHECKPOINTS):
             for ratio in payload["ratios_requested"]:
                 order = (0, 10) if seed % 2 == 0 else (10, 0)
                 arms = {}
-                trajectory = digest({"seed": seed, "source": "manifest.source:v1",
-                                     "slots": SLOTS_PER_CYCLE, "checkpoints": list(checkpoints)})
+                arm_sources = {}
                 for k in order:
                     arms[k], trace = run_arm(cc, seed, ratio, k, subset, checkpoints)
-                    traces.extend({"session_seed": seed, "ratio_target": ratio, "k": k, **t} for t in trace)
+                    batch = [{"session_seed": seed, "ratio_target": ratio, "k": k, **t} for t in trace]
+                    traces.extend(batch)
+                    with (out / "trace.jsonl").open("a") as trace_file:
+                        trace_file.write("".join(json.dumps(t, sort_keys=True) + "\n" for t in batch))
+                    arm_sources[k] = [t["source_digest"] for t in trace]
+                assert arm_sources[0] == arm_sources[10], "unpaired source trajectory"
+                trajectory = digest(arm_sources[0])
+                batch_start = len(rows)
                 for cycle in checkpoints:
                     a, b = arms[10][cycle], arms[0][cycle]
                     ta, tb = a["trace"], b["trace"]
@@ -144,13 +156,17 @@ def run(manifest_path, out, checkpoints=CHECKPOINTS):
                             a["scores"][probe.probe_id], b["scores"][probe.probe_id], payload["probes_digest"],
                             ta["retained_K_tokens"], tb["retained_K_tokens"], ta["summary_tokens"],
                             tb["summary_tokens"], ta["token_budget"], ",".join(f"K{k}" for k in order),
-                            "deterministic_boundary", "NO_MODEL", sha256(SCORER.encode()).hexdigest(),
+                            "deterministic_boundary", "NO_MODEL", sha256((SCORER + inspect.getsource(exact_present)).encode()).hexdigest(),
                             trajectory, "native-compress-phase1;legacy-tail", "none"))
+                with (out / "paired.jsonl").open("a") as paired_file:
+                    paired_file.write("".join(json.dumps(r.to_dict(), sort_keys=True) + "\n"
+                                              for r in rows[batch_start:]))
                 # Append batch receipts so a later failure cannot erase progress.
                 with (out / "progress.jsonl").open("a") as progress:
                     progress.write(json.dumps({"seed": seed, "ratio": ratio, "completed": list(checkpoints)}) + "\n")
+    assert len(rows) == len(probes) * len(checkpoints) * len(payload["ratios_requested"])
     for name, records in (("paired.jsonl", [r.to_dict() for r in rows]), ("trace.jsonl", traces)):
-        (out / name).write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in records))
+        assert [json.loads(line) for line in (out / name).read_text().splitlines()] == records
     report = {"measurement": "deterministic boundary measurement, NOT model recall",
               "main_sha": MAIN_SHA, "manifest_digest": payload["probes_digest"],
               "rows": len(rows), "trace_rows": len(traces),
