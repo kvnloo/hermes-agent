@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type * as KanbanApi from './api'
 import { updateAttention } from './api'
-import { AttentionControls, BoardAnnouncer, KanbanPageShell, useBoardAttentionAnnouncements, useKanbanPageAnnouncements } from './board'
+import { AttentionControls, BoardAnnouncer, KanbanPageShell, useBoardAttentionAnnouncements } from './board'
 import { formatLocalDateTime, parseLocalDateTime } from './datetime-local'
 import type { AttentionReceipt, KanbanTask } from './types'
 
@@ -145,39 +145,35 @@ describe('attention lifecycle controls', () => {
 
   it('keeps the page-shell host outside a replaced interactive board', () => {
     const { rerender } = render(
-      <KanbanPageShell>
-        <div data-testid="board-mount">board one</div>
-      </KanbanPageShell>
+      <QueryClientProvider client={new QueryClient()}>
+        <KanbanPageShell><div data-testid="board-mount">board one</div></KanbanPageShell>
+      </QueryClientProvider>
     )
 
     const hostNode = screen.getByRole('status')
 
     expect(hostNode.closest('[data-kanban-interactive-root]')).toBeNull()
     rerender(
-      <KanbanPageShell>
-        <div data-testid="board-mount">board two</div>
-      </KanbanPageShell>
+      <QueryClientProvider client={new QueryClient()}>
+        <KanbanPageShell><div data-testid="board-mount">board two</div></KanbanPageShell>
+      </QueryClientProvider>
     )
     expect(screen.getByRole('status')).toBe(hostNode)
     expect(screen.getByTestId('board-mount').textContent).toBe('board two')
   })
 
-  it('announces a stale modal action after the interactive board is reconciled away', async () => {
-    updateAttentionMock.mockRejectedValueOnce(new Error('409 stale attention revision'))
+  it('keeps ownership after the action control unmounts before a real deferred rejection', async () => {
+    let reject!: (error: Error) => void
+    updateAttentionMock.mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail }))
 
     function ReplaceableBoard() {
-      const attention = useKanbanPageAnnouncements()
       const [visible, setVisible] = useState(true)
 
       return visible ? (
-        <AttentionControls
-          nextAttemptId={attention.nextAttemptId}
-          onAnnouncement={announcement => {
-            attention.announce(announcement)
-            setVisible(false)
-          }}
-          task={{ ...baseTask, attention: receipt('active', 3) }}
-        />
+        <div>
+          <AttentionControls task={{ ...baseTask, attention: receipt('active', 3) }} />
+          <button onClick={() => setVisible(false)} type="button">Force card unmount</button>
+        </div>
       ) : <div data-testid="reconciled-board">Authoritative board</div>
     }
 
@@ -189,10 +185,10 @@ describe('attention lifecycle controls', () => {
 
     const hostNode = screen.getByRole('status')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Snooze…' }))
-    fireEvent.click(screen.getByRole('button', { name: '1 hr' }))
-
-    await waitFor(() => expect(screen.getByTestId('reconciled-board')).toBeTruthy())
+    fireEvent.click(screen.getByRole('button', { name: 'Settle' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Force card unmount' }))
+    expect(screen.getByTestId('reconciled-board')).toBeTruthy()
+    reject(new Error('409: {"detail":"stale attention revision"}'))
     expect(screen.getByRole('status')).toBe(hostNode)
     await waitFor(() => expect(hostNode.textContent).toBe('This task changed elsewhere. Your action was not applied.'))
     expect(hostNode.closest('[inert], [aria-hidden="true"]')).toBeNull()
@@ -225,7 +221,7 @@ describe('attention lifecycle controls', () => {
     fireEvent.change(screen.getByLabelText('Exact local date and time'), { target: { value: '2030-01-02T09:15' } })
     fireEvent.click(screen.getByRole('button', { name: 'Snooze' }))
     await waitFor(() => expect(updateAttentionMock).toHaveBeenCalledWith('task-safe', 'snooze', 7, 1_893_597_300))
-    expect(screen.getByRole('status').textContent).toBe('Task snoozed')
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Task snoozed'))
   })
 })
 
