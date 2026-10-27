@@ -37,6 +37,14 @@ SKIPS: list[str] = []
 _REGISTERED: list = []
 
 
+def _pin_disposable_kanban_env(home: str) -> None:
+    """Remove inherited board selectors and pin all writes under *home*."""
+    for key in list(os.environ):
+        if key.upper().startswith("HERMES_KANBAN_"):
+            del os.environ[key]
+    os.environ["HERMES_KANBAN_DB"] = str(Path(home) / "kanban.db")
+
+
 def scenario(name):
     """Decorator: run `fn` in its own HERMES_HOME, collect failures.
 
@@ -46,6 +54,7 @@ def scenario(name):
     def wrap(fn):
         def run():
             home = tempfile.mkdtemp(prefix=f"hermes_atyp_{name}_")
+            _pin_disposable_kanban_env(home)
             os.environ["HERMES_HOME"] = home
             os.environ["HOME"] = home
             for m in list(sys.modules.keys()):

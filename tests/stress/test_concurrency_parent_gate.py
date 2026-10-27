@@ -35,6 +35,10 @@ WORKERS_RUN_DURATION_S = 8
 
 def run() -> int:
     home = tempfile.mkdtemp(prefix="hermes_parent_gate_stress_")
+    for key in list(os.environ):
+        if key.upper().startswith("HERMES_KANBAN_"):
+            del os.environ[key]
+    os.environ["HERMES_KANBAN_DB"] = str(Path(home) / "kanban.db")
     os.environ["HERMES_HOME"] = home
     os.environ["HOME"] = home
 

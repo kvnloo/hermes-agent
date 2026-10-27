@@ -122,6 +122,10 @@ def reclaimer_loop(hermes_home: str, result_file: str) -> None:
 
 def main():
     home = tempfile.mkdtemp(prefix="hermes_reclaim_race_")
+    for key in list(os.environ):
+        if key.upper().startswith("HERMES_KANBAN_"):
+            del os.environ[key]
+    os.environ["HERMES_KANBAN_DB"] = str(Path(home) / "kanban.db")
     os.environ["HERMES_HOME"] = home
     os.environ["HOME"] = home
     sys.path.insert(0, WT)
