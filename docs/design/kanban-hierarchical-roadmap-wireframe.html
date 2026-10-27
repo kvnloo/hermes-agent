@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hermes Kanban Roadmap wireframe</title>
+<style>
+:root{color-scheme:dark;--bg:#07140f;--panel:#0c1d16;--line:#365044;--cream:#f2e5bd;--text:#eef3ed;--muted:#93a79c;--green:#55d98b;--amber:#f2bd5a;--red:#ef766f;--blue:#70a8ff}*{box-sizing:border-box}body{margin:0;background:#020907;color:var(--text);font:14px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace}.frame{width:min(1280px,100%);min-height:760px;margin:auto;background:var(--bg);border:1px solid var(--line)}button{font:inherit;color:inherit;background:transparent;border:1px solid var(--line);min-height:40px;padding:0 12px;border-radius:0}.primary{background:var(--cream);color:#142018;border-color:var(--cream);font-weight:800}.top{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}.crumb{display:flex;align-items:center;gap:7px;min-width:0;flex:1}.crumb span{white-space:nowrap}.dim{color:var(--muted)}.switch{display:flex}.switch button{border-right:0}.switch button:last-child{border-right:1px solid var(--line)}.switch .on{background:#244235;color:var(--cream)}main{padding:14px 16px}.summary{display:grid;grid-template-columns:.8fr 1fr 1.6fr 1fr 1.2fr;border:1px solid var(--line)}.metric{min-height:100px;padding:12px;border-right:1px solid var(--line)}.metric:last-child{border:0}.eyebrow{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.12em}.big{font-size:25px;font-weight:850;margin-top:7px}.red{color:var(--red)}.amber{color:var(--amber)}.green{color:var(--green)}.path{font-size:12px;margin-top:9px;color:var(--cream)}.rail{margin-top:12px;border:1px solid var(--line);padding:13px}.levels{display:flex;align-items:flex-start;margin-top:12px}.level{position:relative;flex:1;border-top:3px solid var(--line);padding-top:10px}.level.done{border-color:var(--green)}.level.current{border-color:var(--amber)}.level:before{content:"";position:absolute;top:-7px;left:0;width:11px;height:11px;background:var(--line)}.level.done:before{background:var(--green)}.level.current:before{background:var(--amber)}.level small{display:block;color:var(--muted);margin-top:3px}.head{display:flex;align-items:end;justify-content:space-between;margin:18px 0 8px}.rows{border:1px solid var(--line)}.row{display:grid;grid-template-columns:1.8fr .7fr .6fr 1.4fr .65fr;align-items:center;min-height:68px;border-bottom:1px solid var(--line);padding:8px 12px}.row:last-child{border:0}.row>div:not(:first-child){padding-left:12px}.name{font-weight:800}.badge{display:inline-block;margin-left:7px;border:1px solid var(--line);padding:2px 5px;font-size:10px;color:var(--muted)}.bar{height:5px;background:#20342b;margin-top:7px}.bar i{display:block;height:100%;background:var(--green)}.marker{border:1px solid currentColor;padding:3px 6px;font-size:11px}.foot{display:flex;justify-content:space-between;gap:12px;margin-top:11px;color:var(--muted);font-size:11px}.mobile-note{display:none}
+@media(max-width:700px){.frame{min-height:100vh;border:0}.top{display:grid;grid-template-columns:1fr auto;padding:10px}.crumb span:not(:last-child),.crumb b{display:none}.crumb:before{content:"SCOPE";font-size:10px;color:var(--muted);margin-right:7px}.switch{grid-column:1/3}.switch button{flex:1}.top>.primary{position:absolute;right:10px;top:10px}.top>.primary{display:none}main{padding:10px}.summary{grid-template-columns:1fr 1fr}.metric{min-height:92px;border-bottom:1px solid var(--line)}.metric:nth-child(even){border-right:0}.metric:nth-child(3),.metric:nth-child(5){grid-column:1/3;border-right:0}.levels{display:block}.level{border-top:0;border-left:3px solid var(--line);padding:3px 0 12px 13px}.level:before{top:4px;left:-7px}.rows{border:0;display:grid;gap:8px}.row{display:grid;grid-template-columns:1fr auto;border:1px solid var(--line);padding:11px}.row>div:not(:first-child){padding:5px 0 0}.row .health{grid-column:1}.row .gate{grid-column:2;grid-row:1}.row .decision{grid-column:1/3}.head{margin-top:14px}.desktop-only{display:none}.mobile-note{display:block;color:var(--muted);font-size:11px}.foot{display:block}.foot span{display:block;margin-top:4px}}
+</style>
+</head>
+<body>
+<div class="frame">
+<header class="top">
+  <div class="crumb"><b>ALL</b><span class="dim">/</span><span>ZER0</span><span class="dim">/</span><span>PRODUCTS</span><span class="dim">/</span><span>TEMPLE GUARD</span><span class="dim">/</span><span>DELIVERY</span></div>
+  <div class="switch" aria-label="View"><button>BOARD</button><button class="on">ROADMAP</button></div>
+  <button class="primary">+ NEW TASK</button>
+</header>
+<main>
+  <section class="summary" aria-label="Roadmap summary">
+    <div class="metric"><div class="eyebrow">Status</div><div class="big amber">AT RISK</div><div class="dim">1 trust gate</div></div>
+    <div class="metric"><div class="eyebrow">Momentum · 14d</div><div class="big">18.7</div><div class="dim">5 verified outcomes · decay 14d</div></div>
+    <div class="metric"><div class="eyebrow">Quest chain</div><div class="path">ENERGY BLADE → PERF SOAK → REVIEW → PLAYTEST</div><div class="dim">4 nodes · 11 remaining weight</div></div>
+    <div class="metric"><div class="eyebrow">Boss gate</div><div class="big red">01</div><div class="dim">Captain playtest approval</div></div>
+    <div class="metric"><div class="eyebrow">Next decision</div><div style="margin-top:9px">Accept exact sealed playtest pack?</div><div class="dim">Keel authority · not implied</div></div>
+  </section>
+
+  <section class="rail">
+    <div class="eyebrow">Progression · Keel evidence</div>
+    <div class="levels">
+      <div class="level done"><b>FOUNDATION</b><small>8/8 invariants</small></div>
+      <div class="level done"><b>PLAYABLE</b><small>6/6 evidence</small></div>
+      <div class="level current"><b>COMPETITIVE</b><small>3/5 · current</small></div>
+      <div class="level"><b>RELEASE</b><small>locked</small></div>
+    </div>
+  </section>
+
+  <div class="head"><div><div class="eyebrow">Child scopes</div><strong>3 workstreams</strong></div><span class="mobile-note">Tap scope for supporting board tasks</span><span class="dim desktop-only">STATUS · MOMENTUM · HEALTH · GATE</span></div>
+  <section class="rows">
+    <article class="row">
+      <div><span class="name">RUNTIME COMBAT</span><span class="badge">PRODUCT</span><div class="bar"><i style="width:78%"></i></div></div>
+      <div class="green health">ACTIVE</div><div>9.2</div><div class="decision">Input latency soak → independent review</div><div class="gate"><span class="marker amber">WATCH</span></div>
+    </article>
+    <article class="row">
+      <div><span class="name">GUARD ASSET</span><span class="badge">EXPERIMENT</span><div class="bar"><i style="width:62%"></i></div></div>
+      <div class="amber health">GATED</div><div>6.5</div><div class="decision">Physical blade evidence incomplete</div><div class="gate"><span class="marker red">GATE 1</span></div>
+    </article>
+    <article class="row">
+      <div><span class="name">ARENA UX</span><span class="badge">PROJECT</span><div class="bar"><i style="width:100%"></i></div></div>
+      <div class="green health">HEALTHY</div><div>3.0</div><div class="decision">Verified · zero regression</div><div class="gate"><span class="marker green">PROOF</span></div>
+    </article>
+  </section>
+  <div class="foot"><span>Projection only · task/run truth: Kanban · maturity authority: Keel</span><span>Fresh 18s ago · 4 boards · event ids sealed in response</span></div>
+</main>
+</div>
+</body>
+</html>

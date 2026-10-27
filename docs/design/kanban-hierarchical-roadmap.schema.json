@@ -1,0 +1,324 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermes-agent.nousresearch.com/schemas/kanban-roadmap-v1.json",
+  "title": "Hermes Kanban Roadmap Projection v1",
+  "description": "Deterministic read projection over authorized Kanban and Keel evidence. This payload has no mutation authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "scope",
+    "window",
+    "generated_at",
+    "freshness",
+    "status",
+    "momentum",
+    "health",
+    "quest_chain",
+    "boss_gates",
+    "progression",
+    "achievements",
+    "children",
+    "warnings"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "scope": { "$ref": "#/$defs/scope" },
+    "window": { "$ref": "#/$defs/window" },
+    "generated_at": { "type": "integer", "minimum": 0 },
+    "freshness": { "$ref": "#/$defs/freshness" },
+    "status": {
+      "type": "string",
+      "enum": ["blocked", "at_risk", "active", "complete", "empty", "unknown"]
+    },
+    "momentum": { "$ref": "#/$defs/momentum" },
+    "health": { "$ref": "#/$defs/health" },
+    "quest_chain": { "$ref": "#/$defs/questChain" },
+    "boss_gates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/gate" }
+    },
+    "progression": { "$ref": "#/$defs/progression" },
+    "achievements": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/achievement" }
+    },
+    "status_counts": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "next_decision": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["label", "source_refs"],
+          "properties": {
+            "label": { "type": "string", "minLength": 1 },
+            "source_refs": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+          }
+        }
+      ]
+    },
+    "children": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/childSummary" }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/warning" }
+    }
+  },
+  "$defs": {
+    "entityKind": {
+      "type": "string",
+      "enum": ["company", "portfolio", "workstream", "project", "epic", "sprint", "board"]
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "slug", "name", "archived"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^e_[0-9a-f]{8,}$" },
+        "kind": { "$ref": "#/$defs/entityKind" },
+        "subtype": { "type": ["string", "null"], "enum": ["client", "product", "experiment", null] },
+        "parent_id": { "type": ["string", "null"] },
+        "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "description": { "type": ["string", "null"] },
+        "external_ref": { "type": ["string", "null"] },
+        "archived": { "type": "boolean" },
+        "updated_at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "name", "state", "breadcrumb"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": {
+          "type": "string",
+          "enum": ["all", "unscoped", "legacy_tenant", "company", "portfolio", "workstream", "project", "epic", "sprint", "board"]
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "state": { "type": "string", "enum": ["resolved", "synthetic", "unresolved"] },
+        "breadcrumb": { "type": "array", "items": { "$ref": "#/$defs/entity" } }
+      }
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "start", "end", "timezone"],
+      "properties": {
+        "label": { "type": "string", "pattern": "^[1-9][0-9]*[dhw]$" },
+        "start": { "type": "integer", "minimum": 0 },
+        "end": { "type": "integer", "minimum": 0 },
+        "timezone": { "type": "string", "minLength": 1 }
+      }
+    },
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "max_age_seconds", "boards"],
+      "properties": {
+        "state": { "type": "string", "enum": ["fresh", "stale", "partial"] },
+        "max_age_seconds": { "type": "integer", "minimum": 0 },
+        "boards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["slug", "state", "latest_event_id"],
+            "properties": {
+              "slug": { "type": "string" },
+              "state": { "type": "string", "enum": ["ok", "failed", "unauthorized"] },
+              "latest_event_id": { "type": ["integer", "null"], "minimum": 0 },
+              "error_code": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "momentum": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "half_life_days", "formula", "components"],
+      "properties": {
+        "score": { "type": "number" },
+        "half_life_days": { "type": "number", "exclusiveMinimum": 0 },
+        "formula": { "const": "sum(weight * 0.5^(age_days/half_life_days))" },
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["task_id", "revision", "kind", "occurred_at", "age_days", "weight", "decayed_value", "evidence_refs"],
+            "properties": {
+              "task_id": { "type": "string" },
+              "revision": { "type": "string" },
+              "kind": {
+                "type": "string",
+                "enum": ["reviewed_completion", "verified_completion", "accepted_gate", "quality_achievement", "rework", "reverted_gate"]
+              },
+              "occurred_at": { "type": "integer", "minimum": 0 },
+              "age_days": { "type": "number", "minimum": 0 },
+              "weight": { "type": "number", "enum": [5, 3, 2, -2, -3] },
+              "decayed_value": { "type": "number" },
+              "evidence_refs": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+            }
+          }
+        }
+      }
+    },
+    "health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "flow", "wip", "blocked_age", "rework_rate", "quality_rate", "stale_runs", "thresholds"],
+      "properties": {
+        "state": { "type": "string", "enum": ["healthy", "watch", "at_risk", "empty", "unknown"] },
+        "flow": {
+          "type": "object",
+          "required": ["median_cycle_seconds", "completed_count"],
+          "properties": {
+            "median_cycle_seconds": { "type": ["number", "null"], "minimum": 0 },
+            "completed_count": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "wip": {
+          "type": "object",
+          "required": ["count", "limit"],
+          "properties": {
+            "count": { "type": "integer", "minimum": 0 },
+            "limit": { "type": ["integer", "null"], "minimum": 1 }
+          },
+          "additionalProperties": false
+        },
+        "blocked_age": {
+          "type": "object",
+          "required": ["oldest_seconds", "median_seconds"],
+          "properties": {
+            "oldest_seconds": { "type": ["number", "null"], "minimum": 0 },
+            "median_seconds": { "type": ["number", "null"], "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "rework_rate": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "quality_rate": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "stale_runs": { "type": "integer", "minimum": 0 },
+        "thresholds": { "type": "object", "additionalProperties": { "type": ["number", "integer", "null"] } }
+      }
+    },
+    "questChain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "algorithm", "task_ids", "remaining_weight"],
+      "properties": {
+        "state": { "type": "string", "enum": ["available", "empty", "invalid_graph", "partial"] },
+        "algorithm": { "const": "longest_weighted_remaining_dag_path_v1" },
+        "task_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "remaining_weight": { "type": "number", "minimum": 0 },
+        "cycle_task_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "label", "authority", "state", "evidence_refs"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string", "enum": ["needs_input", "capability", "keel"] },
+        "label": { "type": "string", "minLength": 1 },
+        "authority": { "type": "string", "enum": ["human", "external", "keel"] },
+        "state": { "type": "string", "enum": ["blocked", "pending", "failed"] },
+        "task_ids": { "type": "array", "items": { "type": "string" } },
+        "evidence_refs": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "progression": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "state", "current_level", "levels", "evaluated_at"],
+      "properties": {
+        "authority": { "const": "keel" },
+        "state": { "type": "string", "enum": ["available", "unavailable", "unknown", "partial"] },
+        "current_level": { "type": ["string", "null"] },
+        "evaluated_at": { "type": ["integer", "null"], "minimum": 0 },
+        "levels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "state", "evidence_refs"],
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string" },
+              "state": { "type": "string", "enum": ["complete", "current", "locked", "failed", "unknown"] },
+              "evidence_refs": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "achievement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["definition_id", "definition_version", "state", "evaluator", "evaluated_at", "evidence_refs"],
+      "properties": {
+        "definition_id": { "type": "string", "enum": ["independent-review", "rollback-proven", "zero-regression"] },
+        "definition_version": { "type": "integer", "minimum": 1 },
+        "state": { "type": "string", "enum": ["earned", "locked", "unknown"] },
+        "evaluator": { "type": "string", "enum": ["kanban", "keel"] },
+        "evaluated_at": { "type": "integer", "minimum": 0 },
+        "evidence_refs": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "childSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "status", "momentum_score", "health_state", "task_count", "gate_count"],
+      "properties": {
+        "scope": { "$ref": "#/$defs/scope" },
+        "status": { "type": "string", "enum": ["blocked", "at_risk", "active", "complete", "empty", "unknown"] },
+        "momentum_score": { "type": "number" },
+        "health_state": { "type": "string", "enum": ["healthy", "watch", "at_risk", "empty", "unknown"] },
+        "task_count": { "type": "integer", "minimum": 0 },
+        "gate_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "warning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "scope"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": ["partial_board_read", "scope_unresolved", "keel_unavailable", "invalid_graph", "stale_projection", "legacy_fallback"]
+        },
+        "message": { "type": "string" },
+        "scope": { "type": "string" }
+      }
+    }
+  },
+  "x-hermes-entity-parent-kinds": {
+    "company": [],
+    "portfolio": ["company"],
+    "workstream": ["company", "portfolio"],
+    "project": ["company", "portfolio", "workstream"],
+    "epic": ["project"],
+    "sprint": ["project", "epic"],
+    "board": ["company", "portfolio", "workstream", "project", "epic", "sprint"]
+  },
+  "x-hermes-authority": {
+    "task_run_dependency_review": "kanban",
+    "maturity_and_gate_acceptance": "keel",
+    "roadmap": "projection_only"
+  },
+  "x-hermes-narrative": {
+    "enabled_by_default": false,
+    "mutation_authority": false,
+    "required_provenance": ["generated_at", "provider", "model", "prompt_contract_version", "input_projection_hash", "window"]
+  }
+}
