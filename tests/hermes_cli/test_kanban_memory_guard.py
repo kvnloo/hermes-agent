@@ -35,6 +35,12 @@ def kanban_home(tmp_path, monkeypatch):
     return home
 
 
+@pytest.fixture(autouse=True)
+def storage_reserve_ok(monkeypatch):
+    """Memory tests are independent of the host's live storage pressure."""
+    monkeypatch.setattr(kb, "_storage_pressure_level", lambda path="/workspace": "ok")
+
+
 GIB = 1024 * 1024  # KiB per GiB
 
 
