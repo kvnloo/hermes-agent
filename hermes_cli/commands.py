@@ -174,6 +174,15 @@ COMMAND_REGISTRY: list[CommandDef] = [
                args_hint="[text | remove N | clear]", busy_policy="dispatch"),
     CommandDef("status", "Show session, model, token, and context info", "Session",
                busy_policy="dispatch"),
+    CommandDef("chat", "Show or set destination attention mode", "Session",
+               gateway_only=True, aliases=("pm", "manager", "brainstorm", "copilot"),
+               args_hint="[pm|brainstorm|copilot] [focus ...]",
+               busy_policy="dispatch", busy_handler="attention"),
+    CommandDef("orchestration", "Show or request system execution policy", "Session",
+               gateway_only=True, args_hint="[focused|frozen|fully-autonomous]",
+               busy_policy="dispatch", busy_handler="attention"),
+    CommandDef("unfocus", "Clear the conversation focus set", "Session",
+               gateway_only=True, busy_policy="dispatch", busy_handler="attention"),
     CommandDef("egress", "Show Docker egress proxy status", "Session",
                args_hint="[status]", subcommands=("status",),
                busy_policy="dispatch", busy_handler="egress",
@@ -220,9 +229,10 @@ COMMAND_REGISTRY: list[CommandDef] = [
                "Configuration", cli_only=True,
                gateway_config_gate="display.tool_progress_command",
                busy_policy="dispatch"),
-    CommandDef("focus", "Toggle focus view — show only your prompt and the final response",
-               "Configuration", cli_only=True, args_hint="[on|off|status]",
-               subcommands=("on", "off", "status")),
+    CommandDef("focus", "Set gateway focus or toggle CLI focus view",
+               "Configuration", args_hint="[task-id|product ...]",
+               subcommands=("on", "off", "status"), busy_policy="dispatch",
+               busy_handler="attention"),
     CommandDef("footer", "Toggle gateway runtime-metadata footer on final replies",
                "Configuration", args_hint="[on|off|status]",
                subcommands=("on", "off", "status"), busy_policy="dispatch"),
@@ -1277,7 +1287,11 @@ _SLACK_PRIORITY_ALIASES = ("btw", "bg")
 #     native slash.
 #   - pause: global emergency stop; reached via /hermes pause [off] on
 #     Slack. Added at the 50-cap — a native slot would clamp /platform.
-_SLACK_VIA_HERMES_ONLY = frozenset({"topup", "moa", "debug", "egress", "init", "version", "diff", "update", "heartbeat", "refine", "pause"})
+_SLACK_VIA_HERMES_ONLY = frozenset({
+    "topup", "moa", "debug", "egress", "init", "version", "diff", "update",
+    "heartbeat", "refine", "pause", "mode", "pm", "manager", "brainstorm",
+    "copilot", "focus", "unfocus", "chat", "orchestration",
+})
 
 
 def _sanitize_slack_name(raw: str) -> str:
