@@ -1,0 +1,3001 @@
+{
+  "counts": {
+    "both_missing": 165,
+    "dangling": 165,
+    "links": 278,
+    "missing_child": 0,
+    "missing_parent": 0,
+    "tasks": 160
+  },
+  "edges": [
+    {
+      "child": null,
+      "child_id": "t_93ff8d39",
+      "parent": null,
+      "parent_id": "t_020e9422",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_d302884c",
+      "parent": null,
+      "parent_id": "t_038be7f4",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_0ac56509",
+      "parent": null,
+      "parent_id": "t_03c7da05",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_865bad0a",
+      "parent": null,
+      "parent_id": "t_04032337",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_95dfe859",
+      "parent": null,
+      "parent_id": "t_0407543f",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aa62402d",
+      "parent": null,
+      "parent_id": "t_060944fa",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_994d61ec",
+      "parent": null,
+      "parent_id": "t_07a52e57",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_9f8f695f",
+      "parent": null,
+      "parent_id": "t_09ff8bfe",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_c69bf3a1",
+      "parent": null,
+      "parent_id": "t_0ac56509",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_72294ce7",
+      "parent": null,
+      "parent_id": "t_0af67b33",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_060944fa",
+      "parent": null,
+      "parent_id": "t_0bb55798",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_2e12c370",
+      "parent": null,
+      "parent_id": "t_0bb55798",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_3b6ac7a1",
+      "parent": null,
+      "parent_id": "t_0bb55798",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_74c56400",
+      "parent": null,
+      "parent_id": "t_0bb55798",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_822dd40f",
+      "parent": null,
+      "parent_id": "t_0bb55798",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_94aa7fa9",
+      "parent": null,
+      "parent_id": "t_0bb55798",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aa62402d",
+      "parent": null,
+      "parent_id": "t_0bb55798",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_b001feb8",
+      "parent": null,
+      "parent_id": "t_0bb55798",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_b0d54a15",
+      "parent": null,
+      "parent_id": "t_0bb55798",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_bd0d431b",
+      "parent": null,
+      "parent_id": "t_0bb55798",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_ee7494c5",
+      "parent": null,
+      "parent_id": "t_0bb55798",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_f93b1704",
+      "parent": null,
+      "parent_id": "t_0bb55798",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_fd01ac9a",
+      "parent": null,
+      "parent_id": "t_0bb55798",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_64e596fa",
+      "parent": null,
+      "parent_id": "t_143d2406",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_76cd0fdb",
+      "parent": null,
+      "parent_id": "t_17b5757e",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_d62182b4",
+      "parent": null,
+      "parent_id": "t_198de577",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_4a9c85a4",
+      "parent": null,
+      "parent_id": "t_1bf0bd85",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_c92ea301",
+      "parent": null,
+      "parent_id": "t_1bf0bd85",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_344e7186",
+      "parent": null,
+      "parent_id": "t_1d878273",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_e5406f00",
+      "parent": null,
+      "parent_id": "t_1f864a5a",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_b0d54a15",
+      "parent": null,
+      "parent_id": "t_28a8c942",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_653635a9",
+      "parent": null,
+      "parent_id": "t_294ea1ab",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aa62402d",
+      "parent": null,
+      "parent_id": "t_2e12c370",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_39bb66dc",
+      "parent": null,
+      "parent_id": "t_316fe5c5",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_5c3d615e",
+      "parent": null,
+      "parent_id": "t_316fe5c5",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_fc38bff3",
+      "parent": null,
+      "parent_id": "t_316fe5c5",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_a9f17226",
+      "parent": null,
+      "parent_id": "t_32c0799f",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_5c3d615e",
+      "parent": null,
+      "parent_id": "t_39bb66dc",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_fc38bff3",
+      "parent": null,
+      "parent_id": "t_39bb66dc",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_f52a2bff",
+      "parent": null,
+      "parent_id": "t_3a18226d",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_9f8f695f",
+      "parent": null,
+      "parent_id": "t_3a3a68d3",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_28a8c942",
+      "parent": null,
+      "parent_id": "t_3b6ac7a1",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_63866ca7",
+      "parent": null,
+      "parent_id": "t_3b6ac7a1",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_bdd872d4",
+      "parent": null,
+      "parent_id": "t_3b8ecb00",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_de466b63",
+      "parent": null,
+      "parent_id": "t_3da30cb5",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_fc0d6ed8",
+      "parent": null,
+      "parent_id": "t_3da30cb5",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_6bae2df0",
+      "parent": null,
+      "parent_id": "t_43b70b1f",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_a0062520",
+      "parent": null,
+      "parent_id": "t_43e2ee4f",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_ec3f9f50",
+      "parent": null,
+      "parent_id": "t_45b99df9",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_cb8ee77c",
+      "parent": null,
+      "parent_id": "t_48eae151",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_69118d5d",
+      "parent": null,
+      "parent_id": "t_4a9c85a4",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_03c7da05",
+      "parent": null,
+      "parent_id": "t_4bd24553",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_e441e77e",
+      "parent": null,
+      "parent_id": "t_4c95c45a",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_038be7f4",
+      "parent": null,
+      "parent_id": "t_543fd3ed",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_f8ff812a",
+      "parent": null,
+      "parent_id": "t_543fd3ed",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_653635a9",
+      "parent": null,
+      "parent_id": "t_55966a8d",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_a0bb1fd7",
+      "parent": null,
+      "parent_id": "t_57f3c660",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_0407543f",
+      "parent": null,
+      "parent_id": "t_5a8ca981",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_1d878273",
+      "parent": null,
+      "parent_id": "t_5c3d615e",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_9f8f695f",
+      "parent": null,
+      "parent_id": "t_5dbf70cb",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_b4391477",
+      "parent": null,
+      "parent_id": "t_60e85ec5",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_b0d54a15",
+      "parent": null,
+      "parent_id": "t_63866ca7",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_c71a99da",
+      "parent": null,
+      "parent_id": "t_63866ca7",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_8d379df2",
+      "parent": null,
+      "parent_id": "t_6483ad3e",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_4c95c45a",
+      "parent": null,
+      "parent_id": "t_64e596fa",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aad93dea",
+      "parent": null,
+      "parent_id": "t_650ff5a4",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_cdc8a72c",
+      "parent": null,
+      "parent_id": "t_650ff5a4",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_2ca6b897",
+      "parent": null,
+      "parent_id": "t_653635a9",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_344e7186",
+      "parent": null,
+      "parent_id": "t_653635a9",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_3da30cb5",
+      "parent": null,
+      "parent_id": "t_653635a9",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_45b99df9",
+      "parent": null,
+      "parent_id": "t_653635a9",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aad93dea",
+      "parent": null,
+      "parent_id": "t_653635a9",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_fc0d6ed8",
+      "parent": null,
+      "parent_id": "t_653635a9",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_04a67993",
+      "parent": null,
+      "parent_id": "t_65596f9f",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_d73216d9",
+      "parent": null,
+      "parent_id": "t_65596f9f",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_af76e04a",
+      "parent": null,
+      "parent_id": "t_6bae2df0",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_7b084ccc",
+      "parent": null,
+      "parent_id": "t_6e9bf110",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_b0d54a15",
+      "parent": null,
+      "parent_id": "t_700f843a",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_401ffc7d",
+      "parent": null,
+      "parent_id": "t_72294ce7",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_83991e68",
+      "parent": null,
+      "parent_id": "t_7432ab2d",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aa62402d",
+      "parent": null,
+      "parent_id": "t_74c56400",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_04032337",
+      "parent": null,
+      "parent_id": "t_76cd0fdb",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_74ff9158",
+      "parent": null,
+      "parent_id": "t_7a562d91",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_b11523ef",
+      "parent": null,
+      "parent_id": "t_7b781285",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_8aee0a41",
+      "parent": null,
+      "parent_id": "t_7da58d22",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_abf6b6ab",
+      "parent": null,
+      "parent_id": "t_7e69a38f",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_c389bc1d",
+      "parent": null,
+      "parent_id": "t_7fa9142e",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aa62402d",
+      "parent": null,
+      "parent_id": "t_822dd40f",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_be20d6ea",
+      "parent": null,
+      "parent_id": "t_865bad0a",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_d03fed63",
+      "parent": null,
+      "parent_id": "t_894610bb",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_17b5757e",
+      "parent": null,
+      "parent_id": "t_8aee0a41",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_f64828dc",
+      "parent": null,
+      "parent_id": "t_8c206bf1",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_894610bb",
+      "parent": null,
+      "parent_id": "t_8c76b22a",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_700f843a",
+      "parent": null,
+      "parent_id": "t_8df22021",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_e53102ad",
+      "parent": null,
+      "parent_id": "t_8df22021",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_ec2951f0",
+      "parent": null,
+      "parent_id": "t_912db980",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_98661560",
+      "parent": null,
+      "parent_id": "t_93ff8d39",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aa62402d",
+      "parent": null,
+      "parent_id": "t_94aa7fa9",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_9ad644b0",
+      "parent": null,
+      "parent_id": "t_95dfe859",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_a9ea0808",
+      "parent": null,
+      "parent_id": "t_98661560",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_401ffc7d",
+      "parent": null,
+      "parent_id": "t_992958ee",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_a2da5d22",
+      "parent": null,
+      "parent_id": "t_9966a8c5",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_60e85ec5",
+      "parent": null,
+      "parent_id": "t_9ad644b0",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_0d9d18ff",
+      "parent": null,
+      "parent_id": "t_9bba6ec7",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_6b1787e3",
+      "parent": null,
+      "parent_id": "t_9bba6ec7",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_e141bdd7",
+      "parent": null,
+      "parent_id": "t_9d0e1a44",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_ef6f2065",
+      "parent": null,
+      "parent_id": "t_9e404328",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_7b781285",
+      "parent": null,
+      "parent_id": "t_a0bb1fd7",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_a21131e6",
+      "parent": null,
+      "parent_id": "t_a18c3871",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_b0d54a15",
+      "parent": null,
+      "parent_id": "t_a2da5d22",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_6483ad3e",
+      "parent": null,
+      "parent_id": "t_a676edae",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_7a562d91",
+      "parent": null,
+      "parent_id": "t_a8c65c18",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_a9a97699",
+      "parent": null,
+      "parent_id": "t_a8c65c18",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_74ff9158",
+      "parent": null,
+      "parent_id": "t_a9a97699",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aca3a63a",
+      "parent": null,
+      "parent_id": "t_a9ea0808",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_9d8ff84d",
+      "parent": null,
+      "parent_id": "t_a9f17226",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_28a8c942",
+      "parent": null,
+      "parent_id": "t_aa62402d",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_63866ca7",
+      "parent": null,
+      "parent_id": "t_aa62402d",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_80c5ebaa",
+      "parent": null,
+      "parent_id": "t_aad93dea",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_a18c3871",
+      "parent": null,
+      "parent_id": "t_abf6b6ab",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aa362077",
+      "parent": null,
+      "parent_id": "t_abf6b6ab",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aa62402d",
+      "parent": null,
+      "parent_id": "t_b001feb8",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_d49e9a9f",
+      "parent": null,
+      "parent_id": "t_b11523ef",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_8df22021",
+      "parent": null,
+      "parent_id": "t_b3b69de5",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_b0d54a15",
+      "parent": null,
+      "parent_id": "t_b3b69de5",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_71a2c3a2",
+      "parent": null,
+      "parent_id": "t_b4391477",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aa62402d",
+      "parent": null,
+      "parent_id": "t_bd0d431b",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_32c0799f",
+      "parent": null,
+      "parent_id": "t_bdd872d4",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_9e404328",
+      "parent": null,
+      "parent_id": "t_c31d1382",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_b3b69de5",
+      "parent": null,
+      "parent_id": "t_c71a99da",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_7b9a39e3",
+      "parent": null,
+      "parent_id": "t_cb8ee77c",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aad93dea",
+      "parent": null,
+      "parent_id": "t_cdc8a72c",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_020e9422",
+      "parent": null,
+      "parent_id": "t_d302884c",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_2ca6b897",
+      "parent": null,
+      "parent_id": "t_d302884c",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_3b8ecb00",
+      "parent": null,
+      "parent_id": "t_d49e9a9f",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_e477ebf9",
+      "parent": null,
+      "parent_id": "t_d62182b4",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_038be7f4",
+      "parent": null,
+      "parent_id": "t_da75f570",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_543fd3ed",
+      "parent": null,
+      "parent_id": "t_da75f570",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_235ade89",
+      "parent": null,
+      "parent_id": "t_db2e6a35",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_09ff8bfe",
+      "parent": null,
+      "parent_id": "t_e141bdd7",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_3a3a68d3",
+      "parent": null,
+      "parent_id": "t_e141bdd7",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_5dbf70cb",
+      "parent": null,
+      "parent_id": "t_e141bdd7",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_7da58d22",
+      "parent": null,
+      "parent_id": "t_e441e77e",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_fbce6e26",
+      "parent": null,
+      "parent_id": "t_e477ebf9",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_07a52e57",
+      "parent": null,
+      "parent_id": "t_e53102ad",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_b0d54a15",
+      "parent": null,
+      "parent_id": "t_e53102ad",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_653635a9",
+      "parent": null,
+      "parent_id": "t_e73d7498",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_1f864a5a",
+      "parent": null,
+      "parent_id": "t_e7739fc3",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_3b98ca39",
+      "parent": null,
+      "parent_id": "t_ea40d0cb",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_8c76b22a",
+      "parent": null,
+      "parent_id": "t_ea40d0cb",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aa62402d",
+      "parent": null,
+      "parent_id": "t_ee7494c5",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_43e2ee4f",
+      "parent": null,
+      "parent_id": "t_ef6f2065",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_f556db83",
+      "parent": null,
+      "parent_id": "t_f43259a9",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_48eae151",
+      "parent": null,
+      "parent_id": "t_f52a2bff",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_c92ea301",
+      "parent": null,
+      "parent_id": "t_f556db83",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_1a5c2439",
+      "parent": null,
+      "parent_id": "t_f64828dc",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_f6f697cd",
+      "parent": null,
+      "parent_id": "t_f64828dc",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_1a5c2439",
+      "parent": null,
+      "parent_id": "t_f6f697cd",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aa62402d",
+      "parent": null,
+      "parent_id": "t_f93b1704",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_653635a9",
+      "parent": null,
+      "parent_id": "t_f9a5ab99",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_3a18226d",
+      "parent": null,
+      "parent_id": "t_fbce6e26",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_61775bad",
+      "parent": null,
+      "parent_id": "t_fc0d6ed8",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_5c3d615e",
+      "parent": null,
+      "parent_id": "t_fc38bff3",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_72d2a46f",
+      "parent": null,
+      "parent_id": "t_fc38bff3",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    },
+    {
+      "child": null,
+      "child_id": "t_aa62402d",
+      "parent": null,
+      "parent_id": "t_fd01ac9a",
+      "proposal": {
+        "action": "retain",
+        "confidence": "low",
+        "executed": false,
+        "rationale": "Endpoint absence is proven in this snapshot, but origin and intended dependency are not; retain pending owner review."
+      },
+      "provenance": {
+        "classification": "UNKNOWN",
+        "cross_board_or_legacy_evidence": null
+      },
+      "structural_class": "both_missing"
+    }
+  ],
+  "kind": "no-write-production-kanban-edge-reconciliation",
+  "logical_sentinel": {
+    "after": {
+      "sha256": "8e6342809d35331c2bb8f91c159d84fbf61550a09e3843a459d9f454659f330b",
+      "tables": [
+        {
+          "name": "attention_idempotency",
+          "rows": 0
+        },
+        {
+          "name": "attention_receipts",
+          "rows": 10
+        },
+        {
+          "name": "kanban_notify_subs",
+          "rows": 319
+        },
+        {
+          "name": "task_attachments",
+          "rows": 232
+        },
+        {
+          "name": "task_comments",
+          "rows": 332
+        },
+        {
+          "name": "task_events",
+          "rows": 1632
+        },
+        {
+          "name": "task_links",
+          "rows": 278
+        },
+        {
+          "name": "task_runs",
+          "rows": 429
+        },
+        {
+          "name": "tasks",
+          "rows": 160
+        }
+      ]
+    },
+    "before": {
+      "sha256": "8e6342809d35331c2bb8f91c159d84fbf61550a09e3843a459d9f454659f330b",
+      "tables": [
+        {
+          "name": "attention_idempotency",
+          "rows": 0
+        },
+        {
+          "name": "attention_receipts",
+          "rows": 10
+        },
+        {
+          "name": "kanban_notify_subs",
+          "rows": 319
+        },
+        {
+          "name": "task_attachments",
+          "rows": 232
+        },
+        {
+          "name": "task_comments",
+          "rows": 332
+        },
+        {
+          "name": "task_events",
+          "rows": 1632
+        },
+        {
+          "name": "task_links",
+          "rows": 278
+        },
+        {
+          "name": "task_runs",
+          "rows": 429
+        },
+        {
+          "name": "tasks",
+          "rows": 160
+        }
+      ]
+    },
+    "equal": true,
+    "external_after": {
+      "sha256": "8e6342809d35331c2bb8f91c159d84fbf61550a09e3843a459d9f454659f330b",
+      "tables": [
+        {
+          "name": "attention_idempotency",
+          "rows": 0
+        },
+        {
+          "name": "attention_receipts",
+          "rows": 10
+        },
+        {
+          "name": "kanban_notify_subs",
+          "rows": 319
+        },
+        {
+          "name": "task_attachments",
+          "rows": 232
+        },
+        {
+          "name": "task_comments",
+          "rows": 332
+        },
+        {
+          "name": "task_events",
+          "rows": 1632
+        },
+        {
+          "name": "task_links",
+          "rows": 278
+        },
+        {
+          "name": "task_runs",
+          "rows": 429
+        },
+        {
+          "name": "tasks",
+          "rows": 160
+        }
+      ]
+    },
+    "external_equal": true,
+    "scope": "all non-internal SQLite schema objects and all values in all user tables"
+  },
+  "observed_at": "2026-08-18T15:12:47.797540+00:00",
+  "policy": {
+    "default_when_provenance_absent": {
+      "action": "retain",
+      "confidence": "low",
+      "provenance": "UNKNOWN"
+    },
+    "future_migration_requirements": [
+      "separate Captain-approved card",
+      "backup",
+      "rollback",
+      "independent verifier"
+    ],
+    "migration_authority": false,
+    "proposals_only": true
+  },
+  "query": "SELECT\n  l.parent_id,\n  l.child_id,\n  CASE\n    WHEN p.id IS NULL AND c.id IS NULL THEN 'both_missing'\n    WHEN p.id IS NULL THEN 'missing_parent'\n    WHEN c.id IS NULL THEN 'missing_child'\n  END AS structural_class,\n  p.id, p.status, p.assignee, p.tenant, p.created_at, p.completed_at,\n  c.id, c.status, c.assignee, c.tenant, c.created_at, c.completed_at\nFROM task_links AS l\nLEFT JOIN tasks AS p ON p.id = l.parent_id\nLEFT JOIN tasks AS c ON c.id = l.child_id\nWHERE p.id IS NULL OR c.id IS NULL\nORDER BY l.parent_id, l.child_id",
+  "query_sha256": "42913b70cd1320d4724d370a0ca2ca143c36e441207e250bea165c07bdc13610",
+  "redaction": {
+    "excluded": [
+      "tasks.body",
+      "tasks.result",
+      "task_comments",
+      "event payloads",
+      "credentials",
+      "secrets"
+    ],
+    "surviving_endpoint_fields": [
+      "id",
+      "status",
+      "assignee",
+      "tenant",
+      "created_at",
+      "completed_at"
+    ]
+  },
+  "reproduction_command": "python scripts/kanban_edge_reconciliation.py --db /workspace/hermes-home/kanban/boards/zer0-company/kanban.db --json /workspace/zer0/oss/hermes-agent/.worktrees/t_8d9f6cb0/artifacts/kanban-edge-reconciliation.json --markdown /workspace/zer0/oss/hermes-agent/.worktrees/t_8d9f6cb0/artifacts/kanban-edge-reconciliation.md --seals /workspace/zer0/oss/hermes-agent/.worktrees/t_8d9f6cb0/artifacts/kanban-edge-reconciliation.sha256.json",
+  "schema_version": 1,
+  "source": {
+    "canonical_path": "/workspace/hermes-home/kanban/boards/zer0-company/kanban.db",
+    "device": 66307,
+    "file_hash_equal": true,
+    "inode": 413083864,
+    "input_file_sha256": "c1a3113d806c1e1f25cc3aa8f1d258f88a55cab9791d7da30c881e4878d6ebd3",
+    "mtime_ns_after": 1787065964723296348,
+    "mtime_ns_before": 1787065964723296348,
+    "open_mode": "SQLite URI mode=ro",
+    "output_file_sha256": "c1a3113d806c1e1f25cc3aa8f1d258f88a55cab9791d7da30c881e4878d6ebd3",
+    "query_only": true,
+    "schema_version": 32,
+    "size_after": 2101248,
+    "size_before": 2101248,
+    "supplied_path": "/home/kvn/.hermes/kanban/boards/zer0-company/kanban.db",
+    "user_version": 0
+  }
+}
