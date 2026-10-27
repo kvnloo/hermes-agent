@@ -36,6 +36,7 @@ the port.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import sqlite3
@@ -54,6 +55,121 @@ from hermes_cli import kanban_diagnostics as kd
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+_ROADMAP_CONTRACT_VERSION = 1
+_ROADMAP_SCOPE_ORDER = {
+    name: index
+    for index, name in enumerate(
+        ("company", "portfolio", "workstream", "project", "epic", "sprint", "board")
+    )
+}
+
+
+def _roadmap_catalog_path() -> Path:
+    """Optional operator-authored catalog. Its absence leaves Kanban unchanged."""
+    return kanban_db.boards_root() / "roadmap.v1.json"
+
+
+def _load_roadmap_catalog() -> tuple[Optional[dict], list[str]]:
+    path = _roadmap_catalog_path()
+    if not path.exists():
+        return None, []
+    try:
+        raw = path.read_bytes()
+        catalog = json.loads(raw)
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, [f"scope catalog unavailable: {exc}"]
+    if not isinstance(catalog, dict):
+        return None, ["scope catalog root must be an object"]
+    if catalog.get("version") != _ROADMAP_CONTRACT_VERSION:
+        return None, ["scope catalog version is unsupported"]
+    scopes = catalog.get("scopes")
+    if not isinstance(scopes, list):
+        return None, ["scope catalog scopes must be a list"]
+    by_id: dict[str, dict] = {}
+    warnings: list[str] = []
+    for scope in scopes:
+        if not isinstance(scope, dict):
+            warnings.append("scope catalog contains an invalid scope")
+            continue
+        scope_id = scope.get("id")
+        name = scope.get("name")
+        scope_type = scope.get("type")
+        parent_id = scope.get("parent_id")
+        board_slugs = scope.get("board_slugs")
+        task_ids = scope.get("task_ids")
+        if not isinstance(scope_id, str) or not scope_id:
+            warnings.append("scope catalog contains an invalid scope id")
+        elif not isinstance(name, str) or not name:
+            warnings.append(f"invalid scope name for {scope_id}")
+        elif parent_id is not None and not isinstance(parent_id, str):
+            warnings.append(f"invalid parent id for {scope_id}")
+        elif board_slugs is not None and (
+            not isinstance(board_slugs, list)
+            or any(not isinstance(slug, str) or not slug for slug in board_slugs)
+        ):
+            warnings.append(f"invalid board slugs for {scope_id}")
+        elif task_ids is not None and (
+            not isinstance(task_ids, list)
+            or any(not isinstance(task_id, str) or not task_id for task_id in task_ids)
+        ):
+            warnings.append(f"invalid task ids for {scope_id}")
+        elif scope_id in by_id:
+            warnings.append(f"duplicate scope id: {scope_id}")
+        elif scope_type not in _ROADMAP_SCOPE_ORDER:
+            warnings.append(f"invalid scope type for {scope_id}")
+        else:
+            by_id[scope_id] = scope
+    for scope_id, scope in by_id.items():
+        parent_id = scope.get("parent_id")
+        if parent_id is None:
+            continue
+        parent = by_id.get(parent_id)
+        if parent is None:
+            warnings.append(f"dangling parent for {scope_id}")
+        elif _ROADMAP_SCOPE_ORDER[parent["type"]] >= _ROADMAP_SCOPE_ORDER[scope["type"]]:
+            warnings.append(f"invalid parent order for {scope_id}")
+    for start in by_id:
+        seen: set[str] = set()
+        current: Optional[str] = start
+        while current in by_id:
+            if current in seen:
+                warnings.append(f"scope cycle includes {start}")
+                break
+            seen.add(current)
+            current = by_id[current].get("parent_id")
+    catalog["source_revision"] = hashlib.sha256(raw).hexdigest()
+    return catalog, sorted(set(warnings))
+
+
+def _critical_path(task_rows: list[sqlite3.Row], links: list[sqlite3.Row]) -> dict:
+    """Return a deterministic longest dependency chain, or fail closed on cycles."""
+    tasks = {row["id"]: row for row in task_rows}
+    children: dict[str, list[str]] = {task_id: [] for task_id in tasks}
+    incoming: dict[str, int] = {task_id: 0 for task_id in tasks}
+    for link in links:
+        parent, child = link["parent_id"], link["child_id"]
+        if parent in tasks and child in tasks:
+            children[parent].append(child)
+            incoming[child] += 1
+    queue = sorted(task_id for task_id, count in incoming.items() if count == 0)
+    paths = {task_id: [task_id] for task_id in queue}
+    visited = 0
+    while queue:
+        task_id = queue.pop(0)
+        visited += 1
+        for child in sorted(children[task_id]):
+            candidate = paths[task_id] + [child]
+            if child not in paths or (len(candidate), candidate) > (len(paths[child]), paths[child]):
+                paths[child] = candidate
+            incoming[child] -= 1
+            if incoming[child] == 0:
+                queue.append(child)
+                queue.sort()
+    if visited != len(tasks):
+        return {"state": "cycle", "task_ids": []}
+    longest = max(paths.values(), key=lambda path: (len(path), path), default=[])
+    return {"state": "ok", "task_ids": longest}
 
 
 # ---------------------------------------------------------------------------
@@ -507,6 +623,151 @@ def get_board(
             "assignees": assignees,
             "latest_event_id": int(latest_event_id),
             "now": int(time.time()),
+        }
+    finally:
+        conn.close()
+
+
+@router.get("/roadmap")
+def get_roadmap(
+    board: Optional[str] = Query(None, description="Authorized Kanban board slug"),
+):
+    """Return the optional read-only hierarchy projection for one board."""
+    board = _resolve_board(board)
+    effective_board = board or kanban_db.get_current_board()
+    catalog, warnings = _load_roadmap_catalog()
+    now = int(time.time())
+    if catalog is None:
+        return {
+            "contract_version": _ROADMAP_CONTRACT_VERSION,
+            "capability": False,
+            "board": effective_board,
+            "state": "unavailable" if warnings else "absent",
+            "source_revision": None,
+            "freshness": {"observed_at": now, "latest_event_id": 0},
+            "warnings": warnings,
+            "scopes": [],
+        }
+
+    all_scopes = {
+        scope["id"]: scope
+        for scope in catalog["scopes"]
+        if isinstance(scope, dict) and isinstance(scope.get("id"), str)
+    }
+    direct = {
+        scope_id
+        for scope_id, scope in all_scopes.items()
+        if effective_board in (scope.get("board_slugs") or [])
+    }
+    visible = set(direct)
+    for scope_id in list(direct):
+        current = all_scopes.get(scope_id, {}).get("parent_id")
+        while current in all_scopes and current not in visible:
+            visible.add(current)
+            current = all_scopes[current].get("parent_id")
+
+    conn = _conn(board=board)
+    try:
+        tasks = conn.execute(
+            "SELECT id, title, status, created_at, completed_at FROM tasks "
+            "WHERE status != 'archived' ORDER BY id"
+        ).fetchall()
+        links = conn.execute(
+            "SELECT parent_id, child_id FROM task_links ORDER BY parent_id, child_id"
+        ).fetchall()
+        latest_event_id = int(conn.execute(
+            "SELECT COALESCE(MAX(id), 0) AS m FROM task_events"
+        ).fetchone()["m"])
+        if warnings:
+            return {
+                "contract_version": _ROADMAP_CONTRACT_VERSION,
+                "capability": True,
+                "board": effective_board,
+                "state": "invalid",
+                "source_revision": catalog["source_revision"],
+                "freshness": {"observed_at": now, "latest_event_id": latest_event_id},
+                "warnings": warnings,
+                "scopes": [],
+            }
+        completed_events = conn.execute(
+            "SELECT id, task_id FROM task_events WHERE kind = 'completed' ORDER BY id"
+        ).fetchall()
+
+        task_by_id = {task["id"]: task for task in tasks}
+        child_scopes: dict[str, list[str]] = {scope_id: [] for scope_id in visible}
+        for scope_id in visible:
+            parent_id = all_scopes[scope_id].get("parent_id")
+            if parent_id in child_scopes:
+                child_scopes[parent_id].append(scope_id)
+
+        scope_task_ids: dict[str, set[str]] = {}
+
+        def tasks_for_scope(scope_id: str) -> set[str]:
+            cached = scope_task_ids.get(scope_id)
+            if cached is not None:
+                return cached
+            source = all_scopes[scope_id]
+            explicit = source.get("task_ids")
+            if explicit is None and scope_id in direct:
+                result = set(task_by_id)
+            else:
+                result = {
+                    task_id for task_id in (explicit or [])
+                    if isinstance(task_id, str) and task_id in task_by_id
+                }
+            for child_id in child_scopes[scope_id]:
+                result.update(tasks_for_scope(child_id))
+            scope_task_ids[scope_id] = result
+            return result
+
+        def make_rollup(task_ids: set[str]) -> dict:
+            scoped_tasks = [task_by_id[task_id] for task_id in sorted(task_ids)]
+            statuses: dict[str, int] = {}
+            for task in scoped_tasks:
+                statuses[task["status"]] = statuses.get(task["status"], 0) + 1
+            outcome_event_ids = [
+                event["id"] for event in completed_events if event["task_id"] in task_ids
+            ]
+            return {
+                "task_count": len(scoped_tasks),
+                "status_counts": dict(sorted(statuses.items())),
+                "blocker_task_ids": [
+                    task["id"] for task in scoped_tasks if task["status"] == "blocked"
+                ],
+                "critical_path": _critical_path(scoped_tasks, links),
+                "verified_outcomes": len(outcome_event_ids),
+                "outcome_event_ids": outcome_event_ids,
+                # Activity volume is deliberately not a score.
+                "volume_score": 0,
+            }
+        scopes = []
+        for scope_id in sorted(
+            visible,
+            key=lambda item: (_ROADMAP_SCOPE_ORDER.get(all_scopes[item].get("type"), 99), item),
+        ):
+            source = all_scopes[scope_id]
+            scopes.append({
+                "id": scope_id,
+                "type": source.get("type"),
+                "name": source.get("name") or scope_id,
+                "parent_id": source.get("parent_id") if source.get("parent_id") in visible else None,
+                "board_bound": scope_id in direct,
+                "rollup": make_rollup(tasks_for_scope(scope_id)),
+                "provenance": {
+                    "board": effective_board,
+                    "latest_event_id": latest_event_id,
+                    "source_revision": catalog["source_revision"],
+                },
+            })
+        return {
+            "contract_version": _ROADMAP_CONTRACT_VERSION,
+            "capability": True,
+            "board": effective_board,
+            "state": "empty" if not scopes else "ready",
+            "source_revision": catalog["source_revision"],
+            "freshness": {"observed_at": now, "latest_event_id": latest_event_id},
+            "warnings": warnings,
+            "scopes": scopes,
         }
     finally:
         conn.close()
