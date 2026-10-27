@@ -29,10 +29,13 @@ Usage::
 
 import logging
 import os
+import re
 import shlex
 import shutil
 import subprocess
 import tempfile
+import time
+from collections import Counter
 from pathlib import Path
 from typing import Optional, Dict, Any
 from urllib.parse import urljoin
@@ -1086,24 +1089,79 @@ def _looks_like_cuda_lib_error(exc: BaseException) -> bool:
     return any(marker in msg for marker in _CUDA_LIB_ERROR_MARKERS)
 
 
+_TRANSCRIPT_TOKEN_RE = re.compile(r"[\w']+", re.UNICODE)
+
+
+def _validate_conversational_transcript(transcript: str) -> Dict[str, Any]:
+    """Reject decoder loops without flattening legitimate short emphasis."""
+    tokens = [token.casefold() for token in _TRANSCRIPT_TOKEN_RE.findall(transcript)]
+    if not tokens:
+        return {"accepted": False, "reason": "empty"}
+    if len(tokens) < 20:
+        return {"accepted": True, "reason": None}
+
+    counts = Counter(tokens)
+    dominant_ratio = counts.most_common(1)[0][1] / len(tokens)
+    unique_ratio = len(counts) / len(tokens)
+    longest_run = run = 1
+    for previous, current in zip(tokens, tokens[1:]):
+        run = run + 1 if current == previous else 1
+        longest_run = max(longest_run, run)
+
+    if longest_run >= 12 or (dominant_ratio >= 0.72 and unique_ratio <= 0.15):
+        return {"accepted": False, "reason": "repetitive_low_information"}
+    return {"accepted": True, "reason": None}
+
+
+def _merge_conversational_segments(segments) -> str:
+    """Merge adjacent Whisper segments, removing only strong timed overlap."""
+    merged: list[str] = []
+    previous_end = None
+    for segment in segments:
+        words = str(getattr(segment, "text", "")).strip().split()
+        if not words:
+            continue
+        start = getattr(segment, "start", None)
+        temporal_overlap = (
+            previous_end is not None and start is not None and float(start) <= float(previous_end) + 0.15
+        )
+        overlap = 0
+        if temporal_overlap and merged:
+            for size in range(min(len(merged), len(words)), 2, -1):
+                left = [word.casefold().strip(".,!?") for word in merged[-size:]]
+                right = [word.casefold().strip(".,!?") for word in words[:size]]
+                if left == right:
+                    overlap = size
+                    break
+        merged.extend(words[overlap:])
+        previous_end = getattr(segment, "end", previous_end)
+    return " ".join(merged)
+
+
 def _load_local_whisper_model(model_name: str):
-    """Load faster-whisper with graceful CUDA → CPU fallback.
+    """Load faster-whisper on an explicit, configuration-selected runtime.
 
-    faster-whisper's ``device="auto"`` picks CUDA when the ctranslate2 wheel
-    ships CUDA shared libs, even on hosts where the NVIDIA runtime
-    (``libcublas.so.12`` / ``libcudnn*``) isn't installed — common on WSL2
-    without CUDA-on-WSL, headless servers, and CPU-only developer machines.
-    On those hosts the load itself sometimes succeeds and the dlopen failure
-    only surfaces at first ``transcribe()`` call.
-
-    We try ``auto`` first (fast CUDA path when it works), and on any CUDA
-    library load failure fall back to CPU + int8.
+    ``stt.local.device`` and ``compute_type`` are never left to ctranslate2's
+    ambiguous ``auto`` choice.  The production-safe default is CPU/int8, which
+    avoids discovering a broken CUDA install during the first conversation
+    inference.  Users who explicitly select CUDA retain the guarded CPU retry.
     """
     from faster_whisper import WhisperModel
+
+    local_config = (_load_stt_config().get("local") or {})
+    requested_device = str(local_config.get("device") or "cpu").strip().lower()
+    requested_compute = str(
+        local_config.get("compute_type") or ("int8" if requested_device == "cpu" else "float16")
+    ).strip().lower()
+    device = requested_device if requested_device in {"cpu", "cuda"} else "cpu"
+    compute_type = requested_compute if requested_compute != "auto" else ("int8" if device == "cpu" else "float16")
+
     try:
-        return WhisperModel(model_name, device="auto", compute_type="auto")
+        model = WhisperModel(model_name, device=device, compute_type=compute_type)
+        logger.info("faster-whisper runtime selected: device=%s compute_type=%s", device, compute_type)
+        return model
     except Exception as exc:
-        if not _looks_like_cuda_lib_error(exc):
+        if device != "cuda" or not _looks_like_cuda_lib_error(exc):
             raise
         logger.warning(
             "faster-whisper CUDA load failed (%s) — falling back to CPU (int8). "
@@ -1134,13 +1192,24 @@ def _transcribe_local(file_path: str, model_name: str) -> Dict[str, Any]:
             or os.getenv(LOCAL_STT_LANGUAGE_ENV)
             or None
         )
-        transcribe_kwargs = {"beam_size": 5}
+        transcribe_kwargs = {
+            "beam_size": 5,
+            "condition_on_previous_text": False,
+            "vad_filter": True,
+            "vad_parameters": {
+                "threshold": 0.5,
+                "min_speech_duration_ms": 250,
+                "min_silence_duration_ms": 650,
+                "speech_pad_ms": 200,
+            },
+        }
         if _forced_lang:
             transcribe_kwargs["language"] = _forced_lang
 
         try:
+            inference_started = time.monotonic()
             segments, info = _local_model.transcribe(file_path, **transcribe_kwargs)
-            transcript = " ".join(segment.text.strip() for segment in segments)
+            transcript = _merge_conversational_segments(segments)
         except Exception as exc:
             # CUDA runtime libs sometimes only fail at dlopen-on-first-use,
             # AFTER the model loaded successfully.  Evict the broken cached
@@ -1159,15 +1228,38 @@ def _transcribe_local(file_path: str, model_name: str) -> Dict[str, Any]:
             from faster_whisper import WhisperModel
             _local_model = WhisperModel(model_name, device="cpu", compute_type="int8")
             _local_model_name = model_name
+            inference_started = time.monotonic()
             segments, info = _local_model.transcribe(file_path, **transcribe_kwargs)
-            transcript = " ".join(segment.text.strip() for segment in segments)
+            transcript = _merge_conversational_segments(segments)
+
+        inference_ms = (time.monotonic() - inference_started) * 1000
+        validation = _validate_conversational_transcript(transcript)
+        if not validation["accepted"]:
+            logger.warning(
+                "Rejected local STT transcript (%s, tokens=%d)",
+                validation["reason"],
+                len(transcript.split()),
+            )
+            return {
+                "success": True,
+                "transcript": "",
+                "provider": "local",
+                "filtered": True,
+                "rejection_reason": validation["reason"],
+                "latency_ms": {"stt_inference": round(inference_ms, 1)},
+            }
 
         logger.info(
             "Transcribed %s via local whisper (%s, lang=%s, %.1fs audio)",
             Path(file_path).name, model_name, info.language, info.duration,
         )
 
-        return {"success": True, "transcript": transcript, "provider": "local"}
+        return {
+            "success": True,
+            "transcript": transcript,
+            "provider": "local",
+            "latency_ms": {"stt_inference": round(inference_ms, 1)},
+        }
 
     except Exception as e:
         logger.error("Local transcription failed: %s", e, exc_info=True)

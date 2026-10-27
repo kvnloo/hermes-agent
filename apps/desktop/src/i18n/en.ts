@@ -152,6 +152,9 @@ export const en: Translations = {
       noMicrophone: 'No microphone was found.',
       noSpeechDetected: 'No speech detected',
       playbackFailed: 'Voice playback failed',
+      modelFailed: 'The model did not return a response',
+      submissionFailed: 'Could not submit the voice turn',
+      synthesisFailed: 'Speech synthesis failed',
       recordingFailed: 'Voice recording failed',
       transcriptionFailed: 'Voice transcription failed',
       transcriptionUnavailable: 'Voice transcription is not available yet.',
@@ -1642,6 +1645,36 @@ export const en: Translations = {
   },
 
   composer: {
+    voicePreferences: {
+      title: 'Voice preferences',
+      description: 'Saved for this profile and applied to the next synthesized reply.',
+      provider: 'Provider',
+      voice: 'Voice',
+      visualizer: 'Visualizer',
+      loading: 'Loading voice preferences…',
+      loadFailed: 'Could not load voice preferences',
+      save: 'Save voice',
+      saveFailed: 'Could not save voice preferences',
+      saved: 'Voice preferences saved',
+      nextTurn: 'The new voice applies on the next reply.',
+      preview: 'Preview voice',
+      previewing: 'Previewing…',
+      previewFailed: 'Voice preview failed',
+      previewPhrase: 'Hello from Hermes. This is your selected voice.',
+      latency: 'Voice stage latency',
+      providers: { edge: 'Edge', elevenlabs: 'ElevenLabs', openai: 'OpenAI' },
+      visualizers: { pill: 'Pill', orb: 'Orb', waveform: 'Waveform', minimal: 'Minimal' },
+      errorStages: {
+        stt: 'Transcription failed',
+        submission: 'Submission failed',
+        model: 'Model response failed',
+        tts: 'Speech synthesis failed',
+        playback: 'Audio playback failed'
+      },
+      latencyStages: {
+        captureMs: 'Capture', sttMs: 'STT', submissionMs: 'Submit', modelMs: 'Model', ttsMs: 'TTS', playbackMs: 'Playback'
+      }
+    },
     message: 'Message',
     wakingProfile: profile => `Waking up ${profile}…`,
     placeholderStarting: 'Starting Hermes...',

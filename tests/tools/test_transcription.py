@@ -152,6 +152,77 @@ class TestTranscribeLocal:
         assert result["success"] is True
         assert result["transcript"] == "Hello world"
 
+    def test_conversation_decoding_uses_vad_without_previous_text_conditioning(self, tmp_path):
+        audio_file = tmp_path / "test.ogg"
+        audio_file.write_bytes(b"fake audio")
+        segment = SimpleNamespace(text="Hello", start=0.0, end=0.8)
+        info = SimpleNamespace(language="en", duration=1.0)
+        model = MagicMock()
+        model.transcribe.return_value = ([segment], info)
+
+        with patch("tools.transcription_tools._HAS_FASTER_WHISPER", True), \
+             patch.dict("sys.modules", {"faster_whisper": _fake_faster_whisper_module(model)}), \
+             patch("tools.transcription_tools._load_stt_config", return_value={"local": {"language": "en"}}), \
+             patch("tools.transcription_tools._local_model", None), \
+             patch("tools.transcription_tools._local_model_name", None):
+            from tools.transcription_tools import _transcribe_local
+            result = _transcribe_local(str(audio_file), "base")
+
+        assert result["success"] is True
+        kwargs = model.transcribe.call_args.kwargs
+        assert kwargs["condition_on_previous_text"] is False
+        assert kwargs["vad_filter"] is True
+        assert kwargs["vad_parameters"]["min_speech_duration_ms"] >= 200
+        assert kwargs["vad_parameters"]["min_silence_duration_ms"] <= 800
+
+    def test_rejects_arbitrary_extreme_repetition_but_keeps_emphasis(self):
+        from tools.transcription_tools import _validate_conversational_transcript
+
+        rejected = _validate_conversational_transcript("banana " * 100)
+        emphasized = _validate_conversational_transcript("No no no, please don't do that again")
+
+        assert rejected["accepted"] is False
+        assert rejected["reason"] == "repetitive_low_information"
+        assert emphasized["accepted"] is True
+
+    def test_merges_only_strong_adjacent_segment_overlap(self):
+        from tools.transcription_tools import _merge_conversational_segments
+
+        segments = [
+            SimpleNamespace(text="We should deploy the service now", start=0.0, end=2.0),
+            SimpleNamespace(text="deploy the service now and verify health", start=1.7, end=3.5),
+            SimpleNamespace(text="very very important", start=3.6, end=4.5),
+        ]
+
+        assert _merge_conversational_segments(segments) == (
+            "We should deploy the service now and verify health very very important"
+        )
+
+    def test_local_compute_defaults_to_safe_cpu_int8_before_inference(self):
+        whisper = MagicMock()
+        module = SimpleNamespace(WhisperModel=whisper)
+
+        with patch.dict("sys.modules", {"faster_whisper": module}), \
+             patch("tools.transcription_tools._load_stt_config", return_value={"local": {}}):
+            from tools.transcription_tools import _load_local_whisper_model
+            _load_local_whisper_model("base")
+
+        whisper.assert_called_once_with("base", device="cpu", compute_type="int8")
+
+    def test_local_compute_honors_explicit_device_and_compute_type(self):
+        whisper = MagicMock()
+        module = SimpleNamespace(WhisperModel=whisper)
+
+        with patch.dict("sys.modules", {"faster_whisper": module}), \
+             patch(
+                 "tools.transcription_tools._load_stt_config",
+                 return_value={"local": {"device": "cuda", "compute_type": "float16"}},
+             ):
+            from tools.transcription_tools import _load_local_whisper_model
+            _load_local_whisper_model("small")
+
+        whisper.assert_called_once_with("small", device="cuda", compute_type="float16")
+
     def test_not_installed(self):
         with patch("tools.transcription_tools._HAS_FASTER_WHISPER", False):
             from tools.transcription_tools import _transcribe_local

@@ -11368,7 +11368,7 @@ class HermesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             return
         self._voice_tts_done.clear()
         try:
-            from tools.tts_tool import text_to_speech_tool
+            from tools.tts_tool import require_tts_success, text_to_speech_tool
             from tools.voice_mode import play_audio_file
 
             # Strip markdown and non-speech content for cleaner TTS
@@ -11395,7 +11395,8 @@ class HermesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 f"tts_{time.strftime('%Y%m%d_%H%M%S')}.mp3",
             )
 
-            text_to_speech_tool(text=tts_text, output_path=mp3_path)
+            result_json = text_to_speech_tool(text=tts_text, output_path=mp3_path)
+            require_tts_success(result_json)
 
             # Play the MP3 directly (the TTS tool returns OGG path but MP3 still exists)
             if os.path.isfile(mp3_path) and os.path.getsize(mp3_path) > 0:

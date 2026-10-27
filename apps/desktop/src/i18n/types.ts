@@ -192,6 +192,9 @@ export interface Translations {
       noMicrophone: string
       noSpeechDetected: string
       playbackFailed: string
+      modelFailed: string
+      submissionFailed: string
+      synthesisFailed: string
       recordingFailed: string
       transcriptionFailed: string
       transcriptionUnavailable: string
@@ -1367,6 +1370,28 @@ export interface Translations {
   }
 
   composer: {
+    voicePreferences: {
+      title: string
+      description: string
+      provider: string
+      voice: string
+      visualizer: string
+      loading: string
+      loadFailed: string
+      save: string
+      saveFailed: string
+      saved: string
+      nextTurn: string
+      preview: string
+      previewing: string
+      previewFailed: string
+      previewPhrase: string
+      latency: string
+      providers: Record<'edge' | 'elevenlabs' | 'openai', string>
+      visualizers: Record<'pill' | 'orb' | 'waveform' | 'minimal', string>
+      errorStages: Record<'stt' | 'submission' | 'model' | 'tts' | 'playback', string>
+      latencyStages: Record<'captureMs' | 'sttMs' | 'submissionMs' | 'modelMs' | 'ttsMs' | 'playbackMs', string>
+    }
     message: string
     wakingProfile: (profile: string) => string
     placeholderStarting: string

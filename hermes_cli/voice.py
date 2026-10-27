@@ -779,7 +779,7 @@ def speak_text(text: str) -> None:
     _debug(f"speak_text: TTS begin (paused_recording={paused_recording})")
 
     try:
-        from tools.tts_tool import text_to_speech_tool
+        from tools.tts_tool import require_tts_success, text_to_speech_tool
 
         tts_text = text[:4000] if len(text) > 4000 else text
         tts_text = re.sub(r'```[\s\S]*?```', ' ', tts_text)             # fenced code blocks
@@ -807,7 +807,8 @@ def speak_text(text: str) -> None:
         )
 
         _debug(f"speak_text: synthesizing {len(tts_text)} chars -> {mp3_path}")
-        text_to_speech_tool(text=tts_text, output_path=mp3_path)
+        result_json = text_to_speech_tool(text=tts_text, output_path=mp3_path)
+        require_tts_success(result_json)
 
         if os.path.isfile(mp3_path) and os.path.getsize(mp3_path) > 0:
             _debug(f"speak_text: playing {mp3_path} ({os.path.getsize(mp3_path)} bytes)")

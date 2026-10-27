@@ -3745,6 +3745,8 @@ async def transcribe_audio_upload(payload: AudioTranscriptionRequest):
 
 class TTSSpeakRequest(BaseModel):
     text: str
+    provider: Optional[str] = None
+    voice: Optional[str] = None
 
 
 def _elevenlabs_voice_label(voice: Dict[str, Any]) -> str:
@@ -3857,10 +3859,26 @@ async def speak_text(payload: TTSSpeakRequest):
     if not text:
         raise HTTPException(status_code=400, detail="Text is required")
 
+    preview_override = None
+    if payload.provider is not None or payload.voice is not None:
+        provider = (payload.provider or "").strip().lower()
+        voice = (payload.voice or "").strip()
+        voice_key = {"edge": "voice", "elevenlabs": "voice_id", "openai": "voice"}.get(provider)
+        if voice_key is None or not voice or len(voice) > 128 or not re.fullmatch(r"[A-Za-z0-9._:-]+", voice):
+            raise HTTPException(status_code=400, detail="Invalid preview provider or voice")
+        preview_override = {"provider": provider, provider: {voice_key: voice}}
+
     try:
         from tools.tts_tool import text_to_speech_tool
-        loop = asyncio.get_running_loop()
-        result_json = await loop.run_in_executor(None, text_to_speech_tool, text)
+        synthesis_started = time.monotonic()
+        result_json = await asyncio.wait_for(
+            asyncio.to_thread(text_to_speech_tool, text, _config_override=preview_override),
+            timeout=35.0,
+        )
+        synthesis_ms = (time.monotonic() - synthesis_started) * 1000
+    except asyncio.TimeoutError:
+        _log.error("Desktop voice TTS exceeded synthesis deadline")
+        raise HTTPException(status_code=504, detail="Speech synthesis timed out. Retry or choose another voice.")
     except Exception as exc:
         _log.exception("Desktop voice TTS failed")
         raise HTTPException(status_code=500, detail=f"Speech synthesis failed: {exc}")
@@ -3906,6 +3924,7 @@ async def speak_text(payload: TTSSpeakRequest):
         "data_url": f"data:{mime_type};base64,{encoded}",
         "mime_type": mime_type,
         "provider": result.get("provider"),
+        "latency_ms": {"tts_synthesis": round(synthesis_ms, 1)},
     }
 
 

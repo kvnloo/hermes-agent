@@ -289,6 +289,18 @@ class TestSpeakTextGuards:
         # Should simply return None without raising.
         assert speak_text(text) is None
 
+    def test_structured_tts_failure_is_not_treated_as_missing_audio(self):
+        from tools.tts_tool import require_tts_success
+
+        with pytest.raises(RuntimeError, match="provider unavailable"):
+            require_tts_success('{"success": false, "error": "provider unavailable"}')
+
+    def test_structured_tts_success_returns_payload(self):
+        from tools.tts_tool import require_tts_success
+
+        payload = require_tts_success('{"success": true, "file_path": "/tmp/voice.mp3"}')
+        assert payload["file_path"] == "/tmp/voice.mp3"
+
 
 class TestContinuousAPI:
     """Continuous (VAD) mode API — CLI-parity loop entry points."""

@@ -1827,3 +1827,68 @@ text-* variant utilities. */ .btn-arc {
     opacity: 0.4;
   }
 }
+
+/* Voice conversation presence — theme-token-only, original geometry. */
+.voice-visualizer {
+  --voice-color: var(--ui-accent, var(--theme-primary));
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ui-text-secondary);
+}
+
+.voice-visualizer--error { --voice-color: var(--ui-danger, var(--destructive)); }
+.voice-visualizer__label {
+  color: var(--ui-text-primary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.voice-visualizer__orb {
+  position: relative;
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--voice-color) 16%, transparent);
+  box-shadow: 0 0 calc(0.2rem + var(--voice-level) * 0.65rem) color-mix(in srgb, var(--voice-color) 35%, transparent);
+  transform: scale(calc(0.88 + var(--voice-level) * 0.12));
+  transition: transform 100ms ease-out, box-shadow 100ms ease-out;
+}
+.voice-visualizer__orb-core {
+  width: 58%;
+  height: 58%;
+  border-radius: inherit;
+  background: var(--voice-color);
+  opacity: 0.9;
+}
+.voice-visualizer--thinking .voice-visualizer__orb,
+.voice-visualizer--transcribing .voice-visualizer__orb { animation: voice-orbit 1.2s ease-in-out infinite alternate; }
+.voice-visualizer__bars { display: inline-flex; height: 1.25rem; align-items: center; gap: 0.125rem; }
+.voice-visualizer__bar {
+  width: 0.125rem;
+  height: calc(var(--voice-bar) * 100%);
+  min-height: 0.2rem;
+  border-radius: 9999px;
+  background: var(--voice-color);
+  transition: height 80ms ease-out;
+}
+.voice-visualizer__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: var(--voice-color);
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--voice-color) 14%, transparent);
+}
+@keyframes voice-orbit {
+  from { transform: scale(0.9); opacity: 0.72; }
+  to { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .voice-visualizer *, .voice-visualizer *::before, .voice-visualizer *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

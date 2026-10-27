@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { KbdCombo } from '@/components/ui/kbd'
@@ -8,9 +10,11 @@ import { AudioLines, iconSize, Layers3, Loader2, Square, SteeringWheel, Volume2,
 import { formatCombo } from '@/lib/keybinds/combo'
 import { cn } from '@/lib/utils'
 
-import type { ConversationStatus } from './hooks/use-voice-conversation'
+import type { ConversationStatus, VoiceConversationError, VoiceStageLatency } from './hooks/use-voice-conversation'
 import { ModelPill } from './model-pill'
 import type { ChatBarState, VoiceStatus } from './types'
+import { VoicePreferencesPopover } from './voice-preferences-popover'
+import { VoiceVisualizer, type VoiceVisualizerVariant } from './voice-visualizer'
 
 export const ICON_BTN = 'size-(--composer-control-size) shrink-0 rounded-md'
 export const GHOST_ICON_BTN = cn(
@@ -29,10 +33,13 @@ export const PRIMARY_ICON_BTN = cn(
 
 interface ConversationProps {
   active: boolean
+  error: VoiceConversationError | null
+  latency: VoiceStageLatency
   level: number
   muted: boolean
   status: ConversationStatus
   onEnd: () => void
+  onRetry: () => void
   onStart: () => void
   onStopTurn: () => void
   onToggleMute: () => void
@@ -150,20 +157,23 @@ export function ComposerControls({
   )
 }
 
-function ConversationPill({
+export function ConversationPill({
   disabled,
+  error,
+  latency,
   level,
   muted,
   onEnd,
+  onRetry,
   onStopTurn,
   onToggleMute,
   status
 }: ConversationProps & { disabled: boolean }) {
   const { t } = useI18n()
   const c = t.composer
+  const [variant, setVariant] = useState<VoiceVisualizerVariant>('orb')
   const speaking = status === 'speaking'
   const listening = status === 'listening' && !muted
-
   const label =
     status === 'speaking'
       ? c.speaking
@@ -171,12 +181,20 @@ function ConversationPill({
         ? c.transcribing
         : status === 'thinking'
           ? c.thinking
-          : muted
-            ? c.muted
-            : c.listening
+          : status === 'error'
+            ? c.voicePreferences.errorStages[error?.stage ?? 'model']
+            : muted
+              ? c.muted
+              : c.listening
+  const latencyText = Object.entries(latency)
+    .map(([stage, ms]) =>
+      `${c.voicePreferences.latencyStages[stage as keyof typeof c.voicePreferences.latencyStages]} ${Math.round(ms)}ms`
+    )
+    .join(' · ')
 
   return (
     <div className="ml-auto flex shrink-0 items-center gap-(--composer-control-gap)">
+      <VoicePreferencesPopover onVariantChange={setVariant} status={status} />
       <Tip label={muted ? c.unmuteMic : c.muteMic}>
         <Button
           aria-label={muted ? c.unmuteMic : c.muteMic}
@@ -211,6 +229,17 @@ function ConversationPill({
           <span>{c.stopShort}</span>
         </Button>
       )}
+      <VoiceVisualizer label={label} level={level} status={status} variant={variant} />
+      {error && (
+        <Button aria-label={t.common.retry} onClick={onRetry} size="sm" type="button" variant="outline">
+          {t.common.retry}
+        </Button>
+      )}
+      {latencyText && (
+        <span aria-label={c.voicePreferences.latency} className="hidden text-[10px] text-muted-foreground xl:inline">
+          {latencyText}
+        </span>
+      )}
       <Button
         aria-label={c.endConversation}
         className="h-(--composer-control-size) gap-1.5 rounded-full bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
@@ -222,40 +251,10 @@ function ConversationPill({
         title={c.endConversation}
         type="button"
       >
-        <ConversationIndicator level={level} listening={listening} speaking={speaking} />
+        {speaking ? <Loader2 className={cn('animate-spin', iconSize.xs)} /> : null}
         <span>{c.endShort}</span>
       </Button>
-      <span className="sr-only" role="status">
-        {label}
-      </span>
     </div>
-  )
-}
-
-function ConversationIndicator({
-  level,
-  listening,
-  speaking
-}: {
-  level: number
-  listening: boolean
-  speaking: boolean
-}) {
-  if (speaking) {
-    return <Loader2 className={cn('animate-spin', iconSize.xs)} />
-  }
-
-  const bars = [0.55, 0.85, 1, 0.85, 0.55]
-  const normalized = Math.max(0, Math.min(level, 1))
-
-  return (
-    <span aria-hidden="true" className="flex h-3 items-center gap-0.5">
-      {bars.map((weight, index) => {
-        const height = listening ? 0.3 + Math.min(0.7, normalized * weight) : 0.3
-
-        return <span className="w-0.5 rounded-full bg-current" key={index} style={{ height: `${height * 100}%` }} />
-      })}
-    </span>
   )
 }
 

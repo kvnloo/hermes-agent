@@ -1643,7 +1643,7 @@ class TestWebServerEndpoints:
         audio_file = tmp_path / "speech.mp3"
         audio_file.write_bytes(b"ID3fake-audio-bytes")
 
-        def fake_tts(text):
+        def fake_tts(text, **_kwargs):
             return json.dumps({
                 "success": True,
                 "file_path": str(audio_file),
@@ -1661,6 +1661,37 @@ class TestWebServerEndpoints:
         assert body["provider"] == "test"
         # The handler streams the bytes back and removes the temp file.
         assert not audio_file.exists()
+
+    def test_speak_text_preview_uses_allowlisted_candidate_without_credentials(self, monkeypatch, tmp_path):
+        import tools.tts_tool as tts_tool
+
+        audio_file = tmp_path / "preview.mp3"
+        audio_file.write_bytes(b"ID3preview")
+        received = {}
+
+        def fake_tts(text, **kwargs):
+            received.update({"text": text, **kwargs})
+            return json.dumps({"success": True, "file_path": str(audio_file), "provider": "openai"})
+
+        monkeypatch.setattr(tts_tool, "text_to_speech_tool", fake_tts)
+
+        resp = self.client.post(
+            "/api/audio/speak",
+            json={"text": "candidate", "provider": "openai", "voice": "nova"},
+        )
+
+        assert resp.status_code == 200
+        assert received == {
+            "text": "candidate",
+            "_config_override": {"provider": "openai", "openai": {"voice": "nova"}},
+        }
+        assert "api_key" not in json.dumps(received).lower()
+
+        rejected = self.client.post(
+            "/api/audio/speak",
+            json={"text": "candidate", "provider": "custom", "voice": "$(secret)"},
+        )
+        assert rejected.status_code == 400
 
     def test_speak_text_requires_nonempty_text(self):
         resp = self.client.post("/api/audio/speak", json={"text": "   "})
