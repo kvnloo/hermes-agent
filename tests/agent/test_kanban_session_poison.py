@@ -144,6 +144,59 @@ def test_signature_normalizes_ids_numbers_and_posix_temp_paths():
 
 
 @pytest.mark.parametrize(
+    ("id_label", "uuid_value", "other_value"),
+    [
+        pytest.param(
+            "request_id=", "550e8400-e29b-41d4-a716-446655440000", "req-1928",
+            id="request-uuid-versus-opaque",
+        ),
+        pytest.param(
+            "trace-id: ", "550e8400-e29b-41d4-a716-446655440000", "0xabcdef0123456789",
+            id="trace-uuid-versus-hex",
+        ),
+        pytest.param(
+            "session id ", "550e8400-e29b-41d4-a716-446655440000", "run.438",
+            id="session-uuid-versus-dotted",
+        ),
+        pytest.param(
+            "tool-call_id#", "550e8400-e29b-41d4-a716-446655440000", "call-876",
+            id="tool-call-uuid-versus-opaque",
+        ),
+    ],
+)
+def test_labelled_ids_are_invariant_across_identifier_formats(id_label, uuid_value, other_value):
+    first = _failed(error=f"ReadTimeout: {id_label}{uuid_value} exceeded 15 seconds")
+    second = _failed(error=f"ReadTimeout: {id_label}{other_value} exceeded 90 seconds")
+    signature = failure_signature(first)
+    assert signature is not None
+    assert signature == failure_signature(second)
+    assert "|readtimeout|" in signature
+    assert signature.count("<id>") == 1
+    assert uuid_value not in signature and other_value not in signature
+    assert classify_failure([first, second]).action == "fresh_session"
+
+
+def test_unlabelled_uuid_and_hex_identifiers_normalize_to_same_signature():
+    first = _failed(error="ReadTimeout: operation 550e8400-e29b-41d4-a716-446655440000 failed")
+    second = _failed(error="ReadTimeout: operation abcdef0123456789 failed")
+    signature = failure_signature(first)
+    assert signature == failure_signature(second)
+    assert signature is not None and "|readtimeout|" in signature
+    assert classify_failure([first, second]).action == "fresh_session"
+
+
+def test_seed_deduplicates_cross_format_identifier_signatures():
+    uuid_turn = _failed(error="ReadTimeout: request_id=550e8400-e29b-41d4-a716-446655440000 failed")
+    short_turn = _failed(error="ReadTimeout: request_id=req-88 failed")
+    signature = failure_signature(uuid_turn)
+    assert signature is not None and signature == failure_signature(short_turn)
+    seed = fresh_session_seed("Complete the kanban task", [uuid_turn, short_turn], max_chars=900)
+    assert seed.count(f"- {signature}") == 1
+    assert "kanban_complete" in seed and "kanban_block" in seed
+    assert "550e8400" not in seed and "req-88" not in seed
+
+
+@pytest.mark.parametrize(
     ("first_location", "second_location"),
     [
         pytest.param(

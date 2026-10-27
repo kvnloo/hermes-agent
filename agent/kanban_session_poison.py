@@ -97,8 +97,10 @@ def _scrub_volatile(value: str) -> str:
     value = _URL.sub("<url>", value)
     value = _EMAIL.sub("<email>", value)
     value = _PATH.sub("<path>", value)
-    value = _UUID.sub("<id>", value)
+    # Scrub labelled IDs first: otherwise a UUID leaves its label behind,
+    # while an opaque value does not, splitting the same failure signature.
     value = _NAMED_ID.sub("<id>", value)
+    value = _UUID.sub("<id>", value)
     value = _LONG_HEX_ID.sub("<id>", value)
     value = _IP.sub("<ip>", value)
     return value
