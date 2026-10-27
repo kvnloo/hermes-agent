@@ -94,10 +94,15 @@ async function editor(screen:Screen,native:NativeControl,key:string,text:string)
 }
 
 async function saved(native:NativeControl,key:string,value:Json,options?:{absent:true}): Promise<void> {
-  await expect.poll(async () => leaf(await native.config(),key)).toEqual(options?.absent ? undefined : value)
+  const field = (await native.settings()).fields[key]!
+  await expect.poll(async () => {
+    const raw = leaf(await native.config(),key)
+    // Sparse YAML may omit a default, but must never retain a superseded value.
+    return options?.absent ? raw === undefined
+      : isDeepStrictEqual(raw,value) || (raw === undefined && isDeepStrictEqual(value,field.default))
+  }).toBe(true)
   await expect.poll(async () => (await native.settings()).fields[key]?.value).toEqual(value)
   await expect.poll(() => native.fieldVisible(key)).toBe(true)
-  const field = (await native.settings()).fields[key]!
   const unsetScalar = value === null && (field.type === 'boolean' || field.type === 'number')
   const expected = unsetScalar ? '' : field.type === 'boolean' ? value === true
     : field.type === 'number' ? (typeof value === 'number' ? value : undefined)
@@ -192,7 +197,13 @@ test.describe('real native profile settings (no turns, confirmations or provider
       const row = prefs.p.sections?.flatMap(s => s.rows).find(r => r.id === key)
       expect(row?.changed).toBe(!isDeepStrictEqual(field.value,field.default))
       const control = row!.control
-      if ((field.type === 'boolean' || field.type === 'number') && typeof field.value === 'string') {
+      const presentationType = field.type === 'select' ? 'string' : field.type
+      const mixedDomain = field.accepted_types?.some(type => type !== presentationType)
+        || (Boolean(field.accepted_values?.length) && presentationType !== 'string')
+      if (mixedDomain) {
+        expect(control.k).toBe('text')
+        expect(control.value).toBe(field.value === null ? '' : typeof field.value === 'string' ? field.value : JSON.stringify(field.value))
+      } else if ((field.type === 'boolean' || field.type === 'number') && typeof field.value === 'string') {
         expect(control.k).toBe('text')
         expect(control.value).toBe(field.value)
       } else if ((field.type === 'boolean' || field.type === 'number') && field.value === null) {
@@ -268,8 +279,6 @@ test.describe('real native profile settings (no turns, confirmations or provider
       await selectField(native,key)
       await tapAction(screen,native,'Use default for selected field')
       await saved(native,key,baseline.fields[key]!.default)
-      // Explicit object {} reversion must delete its prior entry, not deep-merge it.
-      expect(leaf(await native.config(),key)).toEqual(baseline.fields[key]!.default)
       if (JSON.stringify(baseline.fields[key]!.value) !== JSON.stringify(baseline.fields[key]!.default)) {
         await editor(screen,native,key,typeof baseline.fields[key]!.value === 'string' ? String(baseline.fields[key]!.value) : JSON.stringify(baseline.fields[key]!.value))
         await saved(native,key,baseline.fields[key]!.value)
@@ -301,10 +310,9 @@ test.describe('real native profile settings (no turns, confirmations or provider
       await saved(native,select,baseline.fields[select]!.value)
     }
     const raw = await native.config()
-    expect(raw.e2e_preserve).toEqual(initialConfig.e2e_preserve)
-    expect(raw.model).toEqual(initialConfig.model)
-    expect(raw.auth).toEqual(initialConfig.auth)
-    expect(Object.keys(raw).length).toBeLessThan(Object.keys(baseline.fields).length)
+    // Reverting authored changes must not materialize unrelated defaults or alter untouched settings.
+    // The explicitly committed toolset default may remain present in sparse YAML.
+    expect({...raw,toolsets:undefined}).toEqual({...initialConfig,toolsets:undefined})
     await native.evidence('sparse-reversion')
   })
 
@@ -459,6 +467,10 @@ test.describe('real native profile settings (no turns, confirmations or provider
       await screen.getByRole('button','Increase agent.max_turns',{exact:true}).tap()
       const pending = await requestAfter(native,offset2,'settings.set','agent.max_turns')
       await expect.poll(async () => (await native.wire()).some(w => w.dir === 'held' && w.body.id === pending.body.id)).toBe(true)
+      await search(native,key)
+      await screen.getByRole('switch',key,{exact:true}).tap()
+      await expect(screen.getByRole('switch',key,{exact:true})).toBeChecked({checked:!original})
+      expect((await native.wire()).slice(offset2).filter(w => w.dir === 'request' && w.body.method === 'settings.set').map(w => w.body.params?.key)).toEqual(['agent.max_turns'])
       await close(screen,native)
       await screen.getByText('Open Hermes settings',{exact:true}).tap()
       await expect.poll(async () => { const id = (await native.prefs())?.id; return typeof id === 'string' && id !== old }).toBe(true)
@@ -469,10 +481,15 @@ test.describe('real native profile settings (no turns, confirmations or provider
       await deliveredAfterRelease(native,pending)
       await search(native,'agent.max_turns')
       await saved(native,'agent.max_turns',next)
+      expect((await native.wire()).slice(offset2).filter(w => w.dir === 'request' && w.body.method === 'settings.set').map(w => w.body.params?.key)).toEqual(['agent.max_turns',key])
       expect((await native.prefs())!.id).toBe(replacement)
       await native.evidence('replacement-owner-readback')
       await screen.getByRole('button','Decrease agent.max_turns',{exact:true}).tap()
       await saved(native,'agent.max_turns',baseline.fields['agent.max_turns']!.value)
+      await search(native,key)
+      await saved(native,key,!original)
+      await screen.getByRole('switch',key,{exact:true}).tap()
+      await saved(native,key,original)
     } finally { await native.release() }
   })
 

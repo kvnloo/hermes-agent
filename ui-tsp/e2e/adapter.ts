@@ -61,7 +61,7 @@ function axOwnerDump(ax: Ax, dump: Dump[], tree: Tree[], visibleOnly: boolean): 
 export class NativeControl {
   readonly manifest: Manifest
   #sequence = 0
-  #readers = new Map<string,{ offset:number; carry:string; decoder:StringDecoder; rows:unknown[] }>()
+  #readers = new Map<string,{ offset:number; carry:string; decoder:StringDecoder; bytes:Buffer; rows:unknown[] }>()
   #nodes = new Map<string,TspNode>()
   #acks = new Map<string,number>()
   #scanned = 0
@@ -276,24 +276,20 @@ export class NativeControl {
     if (budget) preflight(budget)
     let reader = this.#readers.get(path)
     if (!reader) {
-      reader = {offset:0,carry:'',decoder:new StringDecoder('utf8'),rows:[]}
+      reader = {offset:0,carry:'',decoder:new StringDecoder('utf8'),bytes:Buffer.allocUnsafe(64 * 1024),rows:[]}
       this.#readers.set(path,reader)
     }
     const file = await open(path,'r')
     try {
       const {size} = await file.stat()
       if (size < reader.offset) throw new Error('A private proof record was truncated during the live attempt.')
-      if (size > reader.offset) {
-        const bytes = Buffer.allocUnsafe(size-reader.offset)
-        let count = 0
-        while (count < bytes.length) {
-          if (budget && expired(budget)) throw new EngineError('OPERATION_TIMEOUT','Native record read exceeded its budget.',{ retryable:false })
-          const {bytesRead} = await file.read(bytes,count,bytes.length-count,reader.offset+count)
-          if (!bytesRead) break
-          count += bytesRead
-        }
-        reader.offset += count
-        const lines = (reader.carry+reader.decoder.write(bytes.subarray(0,count))).split('\n')
+      const bytes = reader.bytes
+      while (reader.offset < size) {
+        if (budget && expired(budget)) throw new EngineError('OPERATION_TIMEOUT','Native record read exceeded its budget.',{ retryable:false })
+        const {bytesRead} = await file.read(bytes,0,Math.min(bytes.length,size-reader.offset),reader.offset)
+        if (!bytesRead) break
+        reader.offset += bytesRead
+        const lines = (reader.carry+reader.decoder.write(bytes.subarray(0,bytesRead))).split('\n')
         reader.carry = lines.pop() ?? ''
         for (const line of lines) if (line) reader.rows.push(JSON.parse(line) as unknown)
       }
@@ -302,7 +298,6 @@ export class NativeControl {
   }
 
   async wire(context?: OperationContext): Promise<Wire[]> { return await this.#records(this.manifest.record, this.#budget(context)) as Wire[] }
-  async frames(context?: OperationContext): Promise<TspFrame[]> { return await this.#records(this.manifest.tsp, this.#budget(context)) as TspFrame[] }
 
   async rendered(context?: OperationContext): Promise<Map<string,TspNode>> {
     const budget = this.#budget(context)
@@ -312,6 +307,11 @@ export class NativeControl {
     const frames = await this.#records(this.manifest.tsp, budget) as TspFrame[]
     for (;this.#scanned<frames.length;this.#scanned++) {
       const frame = frames[this.#scanned]!
+      if (frame.dir === 'out' && frame.verb === 'o' && frame.body.id === 'hermes') {
+        nodes.clear()
+        this.#acks.clear()
+        this.#applied = this.#scanned + 1
+      }
       if (frame.dir === 'in' && frame.body.ev === 'ack' && frame.body.sf && frame.body.s !== undefined) this.#acks.set(frame.body.sf,frame.body.s)
     }
     for (;this.#applied<frames.length;this.#applied++) {
@@ -341,6 +341,11 @@ export class NativeControl {
           }
         }
       }
+    }
+    if (this.#applied) {
+      frames.splice(0,this.#applied)
+      this.#scanned -= this.#applied
+      this.#applied = 0
     }
     return nodes
   }
@@ -434,7 +439,7 @@ export function nativeControlEngine(native: NativeControl): EngineHandle {
     keyboard:{ type:(text,_options,context) => native.type(text, context), press:(key,context) => native.key(key, context) },
     fixtures:{ native:context => context.fixture('native',new NativeControl(native.manifest).bind(() => context.operation()),{
       key:{kind:'resource',label:key => key},type:{kind:'resource',label:text => text},
-      snapshot:{kind:'resource'},wire:{kind:'resource'},frames:{kind:'resource'},rendered:{kind:'resource'},
+      snapshot:{kind:'resource'},wire:{kind:'resource'},rendered:{kind:'resource'},
       prefs:{kind:'resource'},settings:{kind:'resource'},config:{kind:'resource'},configBytes:{kind:'resource'},
       fieldVisible:{kind:'resource',label:label => label},
       reveal:{kind:'resource',label:name => name},

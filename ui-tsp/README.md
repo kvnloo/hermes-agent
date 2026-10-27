@@ -104,6 +104,8 @@ or `applies === true && signed_in === true`. The latter is the actual authentica
 Pixel evidence stays `*.pending.png` until a post-capture state check confirms the
 same owned pane and nonce launcher with no account gate; only then is the accepted
 PNG/JSON pair published. Rejected pending images are diagnostics, not native proof.
+Native TSP replay starts a new acknowledgement epoch when the frontend opens the `hermes` surface. An earlier frontend's acknowledgements cannot authorize a replacement stream's frames.
+Proof records remain append-only. The reader decodes them in reusable 64-KiB chunks and releases applied replay rows while retaining live nodes and unapplied frames; a long run does not require a single V8 string containing the entire trace.
 Zero-budget and cancelled operations stop before target resolution or dispatch.
 
 Before launch, the parent reads fresh control state and verifies the printed
