@@ -6,19 +6,19 @@
     },
     "canonical_sentinel_before": {
       "path": "/home/kvn/.hermes/kanban/boards/zer0-company/kanban.db",
-      "sha256": "b247788ecf6b7d1fcf3dc1c4df99a20239d6bf68f42de2b9ddff069a150eccaf",
-      "size": 3387392
+      "sha256": "5e30fde7d445d63fd539634bc9cd34a74a4337ff5e2d5748437c58d35af9acde",
+      "size": 3440640
     },
     "commit": "27a452edfa475de1b7ec72f09ac481bbb0190164",
-    "db": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/matrix/kanban/boards/hold-drag-review/kanban.db",
-    "home": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/matrix",
-    "pid": 1411503,
-    "port": 35843,
-    "readiness_timeout": 60,
+    "db": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/full-matrix-home/kanban/boards/hold-drag-review/kanban.db",
+    "home": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/full-matrix-home",
+    "pid": 1449016,
+    "port": 25529,
+    "readiness_timeout": 120,
     "start_command": "python tests/kanban_hold_harness/start.py",
-    "stderr": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/matrix/dashboard.stderr.log",
-    "stdout": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/matrix/dashboard.stdout.log",
-    "url": "http://127.0.0.1:35843/kanban"
+    "stderr": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/full-matrix-home/dashboard.stderr.log",
+    "stdout": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/full-matrix-home/dashboard.stdout.log",
+    "url": "http://127.0.0.1:25529/kanban"
   },
   "results": [
     {
@@ -33,7 +33,7 @@
           73.9375
         ]
       },
-      "measured199": 199.09999999776483,
+      "measured199": 199.19999999925494,
       "measured200": 200.19999999925494
     },
     {
@@ -48,7 +48,7 @@
           73.9375
         ]
       },
-      "measured199": 199.09999999776483,
+      "measured199": 199.19999999925494,
       "measured200": 200.19999999925494
     },
     {
@@ -79,7 +79,7 @@
         ]
       },
       "measured199": 199.30000000074506,
-      "measured200": 200.09999999776483
+      "measured200": 200.30000000074506
     },
     {
       "width": 1280,
@@ -94,7 +94,7 @@
         ]
       },
       "measured199": 199.09999999776483,
-      "measured200": 200.19999999925494
+      "measured200": 200.30000000074506
     }
   ]
 }
