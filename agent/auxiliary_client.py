@@ -8239,6 +8239,122 @@ def _contains_profile_reasoning_fields(value: Any) -> bool:
     return False
 
 
+def _sanitize_chat_completion_messages(messages: list, model: Optional[str] = None) -> list:
+    """Strip Hermes-internal message keys before chat-completions wire send.
+
+    MoA / auxiliary ``call_llm`` previously forwarded session messages
+    verbatim, so Groq (strict extra-field 400) rejected ``timestamp`` and
+    ``_db_persisted``. Reuse ChatCompletionsTransport.convert_messages — the
+    same sanitizer the main agent loop already uses.
+    """
+    if not messages:
+        return messages
+    try:
+        from agent.transports.chat_completions import ChatCompletionsTransport
+
+        return ChatCompletionsTransport().convert_messages(messages, model=model)
+    except Exception:
+        logger.debug("auxiliary convert_messages sanitizer failed; sending originals", exc_info=True)
+        return messages
+
+
+_GROQ_TPM_REQUESTED_LIMIT_RE = re.compile(
+    r"Requested\s+(\d+)\s*(?:tokens?)?.*?Limit(?:ed)?(?:\s+is|\s*[:=])?\s*(\d+)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _is_groq_route(provider: Optional[str], base_url: Optional[str] = None) -> bool:
+    if str(provider or "").strip().lower() == "groq":
+        return True
+    return base_url_host_matches(str(base_url or ""), "api.groq.com")
+
+
+def _parse_groq_tpm_ceiling(exc: Exception) -> Optional[Tuple[int, int]]:
+    """Return (requested, limit) when Groq rejects a per-request TPM ceiling."""
+    text = str(exc or "")
+    match = _GROQ_TPM_REQUESTED_LIMIT_RE.search(text)
+    if not match:
+        body = getattr(exc, "body", None) or getattr(exc, "response", None)
+        if body is not None:
+            match = _GROQ_TPM_REQUESTED_LIMIT_RE.search(str(body))
+    if not match:
+        return None
+    requested, limit = int(match.group(1)), int(match.group(2))
+    if requested > 0 and limit > 0 and requested > limit:
+        return requested, limit
+    return None
+
+
+def _is_groq_tpm_ceiling_error(
+    exc: Exception,
+    provider: Optional[str] = None,
+    base_url: Optional[str] = None,
+) -> bool:
+    if _parse_groq_tpm_ceiling(exc) is not None:
+        return True
+    if not _is_groq_route(provider, base_url):
+        return False
+    status = getattr(exc, "status_code", None)
+    if status is None:
+        resp = getattr(exc, "response", None)
+        status = getattr(resp, "status_code", None)
+    return status == 413
+
+
+def _trim_messages_to_tpm_limit(
+    messages: list,
+    limit: int,
+    requested: Optional[int] = None,
+) -> list:
+    """Drop oldest non-system frames until the rough token estimate fits Groq TPM."""
+    if not messages or limit <= 0:
+        return messages
+    from agent.model_metadata import estimate_messages_tokens_rough
+
+    target = max(int(limit * 0.9), 1)
+    trimmed = list(messages)
+    estimate = requested or estimate_messages_tokens_rough(trimmed)
+    # Keep index 0 (usually system) and the last user/assistant turn.
+    while estimate > target and len(trimmed) > 2:
+        drop_at = 1 if isinstance(trimmed[0], dict) and trimmed[0].get("role") == "system" else 0
+        if drop_at >= len(trimmed) - 1:
+            break
+        trimmed.pop(drop_at)
+        while (
+            len(trimmed) > 2
+            and isinstance(trimmed[drop_at], dict)
+            and trimmed[drop_at].get("role") == "assistant"
+        ):
+            trimmed.pop(drop_at)
+        estimate = estimate_messages_tokens_rough(trimmed)
+    return trimmed
+
+
+def _maybe_trim_kwargs_for_groq_tpm(
+    kwargs: Dict[str, Any],
+    exc: Exception,
+    provider: Optional[str] = None,
+    base_url: Optional[str] = None,
+) -> bool:
+    """Mutate kwargs.messages to fit Groq per-request TPM. True if trimmed."""
+    if not _is_groq_tpm_ceiling_error(exc, provider, base_url):
+        return False
+    parsed = _parse_groq_tpm_ceiling(exc)
+    limit = parsed[1] if parsed else 8000
+    requested = parsed[0] if parsed else None
+    msgs = kwargs.get("messages") or []
+    trimmed = _trim_messages_to_tpm_limit(msgs, limit, requested)
+    if trimmed is msgs or trimmed == msgs:
+        return False
+    logger.info(
+        "Groq TPM ceiling: Requested=%s Limit=%s; trimming %d -> %d messages and retrying same provider",
+        requested, limit, len(msgs), len(trimmed),
+    )
+    kwargs["messages"] = trimmed
+    return True
+
+
 def _build_call_kwargs(
     provider: str,
     model: str,
@@ -8255,7 +8371,7 @@ def _build_call_kwargs(
     """Build kwargs for .chat.completions.create() with model/provider adjustments."""
     kwargs: Dict[str, Any] = {
         "model": model,
-        "messages": messages,
+        "messages": _sanitize_chat_completion_messages(messages, model=model),
         "timeout": timeout,
     }
 
@@ -8464,6 +8580,34 @@ def _build_call_kwargs(
             or _is_anthropic_compat_endpoint(provider_norm, effective_base)
         ):
             kwargs["_reasoning_config"] = dict(reasoning_config)
+
+    provider_norm = str(provider or "").strip().lower()
+    host = ""
+    try:
+        host = (urlparse(str(base_url or "").strip()).hostname or "").lower()
+    except Exception:
+        host = ""
+    # Groq/Cerebras OpenAI-compat schemas reject extra_body.reasoning
+    # (HTTP 400 "property 'reasoning' is unsupported").
+    if (
+        provider_norm in {"groq", "cerebras"}
+        or "groq.com" in host
+        or "cerebras.ai" in host
+    ):
+        extra = kwargs.get("extra_body")
+        if isinstance(extra, dict) and "reasoning" in extra:
+            extra = dict(extra)
+            extra.pop("reasoning", None)
+            if extra:
+                kwargs["extra_body"] = extra
+            else:
+                kwargs.pop("extra_body", None)
+        kwargs.pop("reasoning", None)
+    if _is_groq_route(provider, base_url):
+        before = kwargs.get("messages") or []
+        after = _trim_messages_to_tpm_limit(before, 8000)
+        if after != before:
+            kwargs["messages"] = after
 
     return kwargs
 
@@ -9229,22 +9373,32 @@ def _call_llm_impl(
         kwargs["stream"] = True
         if stream_options:
             kwargs["stream_options"] = stream_options
-        if task == "moa_aggregator" and isinstance(client, CodexAuxiliaryClient):
-            # CodexAuxiliaryClient (openai-codex, xai-oauth, and any other
-            # Responses-shim provider) consumes the provider stream internally
-            # and returns a completed response object. Routing that nested
-            # MoA stream through Relay's generic managed stream makes the
-            # manager iterate the completed SimpleNamespace itself (#55933).
-            # Return the provider call directly; the MoA facade converts a
-            # completed response into a one-chunk delta iterator at its
-            # boundary.
-            return client.chat.completions.create(**kwargs)
-        return _relay_sync_stream(
-            client,
-            kwargs,
-            provider=request_provider,
-            api_mode=resolved_api_mode,
-        )
+        def _open_aux_stream(stream_kwargs):
+            if task == "moa_aggregator" and isinstance(client, CodexAuxiliaryClient):
+                # CodexAuxiliaryClient (openai-codex, xai-oauth, and any other
+                # Responses-shim provider) consumes the provider stream internally
+                # and returns a completed response object. Routing that nested
+                # MoA stream through Relay's generic managed stream makes the
+                # manager iterate the completed SimpleNamespace itself (#55933).
+                # Return the provider call directly; the MoA facade converts a
+                # completed response into a one-chunk delta iterator at its
+                # boundary.
+                return client.chat.completions.create(**stream_kwargs)
+            return _relay_sync_stream(
+                client,
+                stream_kwargs,
+                provider=request_provider,
+                api_mode=resolved_api_mode,
+            )
+
+        try:
+            return _open_aux_stream(kwargs)
+        except Exception as stream_err:
+            if _maybe_trim_kwargs_for_groq_tpm(
+                kwargs, stream_err, request_provider, _base_info or resolved_base_url
+            ):
+                return _open_aux_stream(kwargs)
+            raise
 
     # Handle unsupported temperature, max_tokens vs max_completion_tokens retry,
     # then payment fallback.
@@ -9370,6 +9524,24 @@ def _call_llm_impl(
                 kwargs = retry_kwargs
 
         err_str = str(first_err)
+        if _maybe_trim_kwargs_for_groq_tpm(
+            kwargs, first_err, request_provider, _base_info or resolved_base_url
+        ):
+            try:
+                return _validate_llm_response(
+                    _relay_sync_completion(
+                        client,
+                        kwargs,
+                        provider=request_provider,
+                        api_mode=resolved_api_mode,
+                    ),
+                    task,
+                    provider=request_provider,
+                    base_url=_base_info,
+                )
+            except Exception as tpm_retry_err:
+                first_err = tpm_retry_err
+                err_str = str(first_err)
         # ZAI vision models (glm-4v-flash etc.) return error code 1210
         # ("API 调用参数有误") when max_tokens is passed on multimodal
         # calls.  The error message does NOT contain "max_tokens" so the
@@ -9653,6 +9825,13 @@ def _call_llm_impl(
             or _is_model_incompatible_error(first_err)
             or _is_invalid_aux_response_error(first_err)
         )
+        if _is_groq_tpm_ceiling_error(
+            first_err, request_provider, _base_info or resolved_base_url
+        ):
+            # Per-request Groq TPM is a size ceiling, not a capacity outage.
+            # Trim+retry already ran; never silently fall back to another provider.
+            should_fallback = False
+            is_capacity_error = False
         if should_fallback and (is_auto or is_capacity_error):
             if _is_auth_error(first_err):
                 reason = "auth error"
@@ -10082,6 +10261,24 @@ async def _async_call_llm_impl(
                 kwargs = retry_kwargs
 
         err_str = str(first_err)
+        if _maybe_trim_kwargs_for_groq_tpm(
+            kwargs, first_err, request_provider, _client_base or resolved_base_url
+        ):
+            try:
+                return _validate_llm_response(
+                    await _relay_async_completion(
+                        client,
+                        kwargs,
+                        provider=request_provider,
+                        api_mode=resolved_api_mode,
+                    ),
+                    task,
+                    provider=request_provider,
+                    base_url=_client_base,
+                )
+            except Exception as tpm_retry_err:
+                first_err = tpm_retry_err
+                err_str = str(first_err)
         # ZAI vision models (glm-4v-flash etc.) return error code 1210
         # ("API 调用参数有误") when max_tokens is passed on multimodal
         # calls.  The error message does NOT contain "max_tokens" so the
@@ -10321,6 +10518,11 @@ async def _async_call_llm_impl(
             or _is_model_incompatible_error(first_err)
             or _is_invalid_aux_response_error(first_err)
         )
+        if _is_groq_tpm_ceiling_error(
+            first_err, request_provider, _client_base or resolved_base_url
+        ):
+            should_fallback = False
+            is_capacity_error = False
         if should_fallback and (is_auto or is_capacity_error):
             if _is_auth_error(first_err):
                 reason = "auth error"

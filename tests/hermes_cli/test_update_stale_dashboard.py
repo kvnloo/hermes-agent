@@ -324,6 +324,31 @@ class TestSupervisedBackendRestart:
         # Supervised restart succeeded — no manual hint.
         assert "when you're ready" not in out
 
+    def test_desktop_backend_inside_wayland_session_never_restarts_compositor(self):
+        """A Desktop child inherits UWSM's cgroup; that is containment, not ownership."""
+        live = self._live()
+
+        def fake_kill(pid, sig):
+            if sig == 0:
+                raise ProcessLookupError
+
+        with patch.object(live, "_restart_managed_dashboard_service", return_value=False), \
+             patch.object(live, "_find_stale_dashboard_pids", return_value=[4321]), \
+             patch.object(live, "_get_pid_cgroup_path",
+                          return_value="/session.slice/wayland-wm@hyprland.desktop.service"), \
+             patch.object(live, "_get_systemd_service_for_pid",
+                          return_value="wayland-wm@hyprland.desktop.service"), \
+             patch.object(live, "_dashboard_cmdline_for_pid",
+                          return_value=["hermes", "serve", "--port", "0"]), \
+             patch.object(live, "_try_restart_systemd_service") as restart, \
+             patch.object(live, "_respawn_dashboard_processes", return_value=[]) as respawn, \
+             patch("os.kill", side_effect=fake_kill), \
+             patch("time.sleep"):
+            _kill_stale_dashboard_processes(restart_managed=True)
+
+        restart.assert_not_called()
+        respawn.assert_called_once_with([["hermes", "serve", "--port", "0"]])
+
 
 class TestManualBackendRespawn:
     """Manually-started dashboards/serves have their argv captured before the

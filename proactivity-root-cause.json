@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "taskId": "t_5a0020a4",
+  "auditDate": "2026-08-18",
+  "productionMutation": false,
+  "verdict": {
+    "primaryCause": "active_company_freeze",
+    "splitBrain": true,
+    "summary": "Firstmate intake suppression is compliant with the still-active NARROWED_LEVEL_0 company freeze, while unrelated workers continue because the freeze receipt is not enforced at Kanban mutation/dispatch boundaries."
+  },
+  "live": {
+    "freeze": {
+      "active": true,
+      "state": "NARROWED_LEVEL_0",
+      "receipt": "/workspace/zer0/portfolios/chief-of-staff/COMPANY-CODE-FREEZE.json",
+      "releaseReceiptFound": false,
+      "denies": ["worker_dispatch", "automatic_task_replenishment", "kanban_sync_writes", "unrelated_product_mutation"]
+    },
+    "gateway": {
+      "service": "hermes-gateway.service",
+      "active": true,
+      "dispatcherEmbedded": true,
+      "standaloneDispatcherUnit": false,
+      "deployedCommit": "c94454a20980da6fb7e73c92771279447a3253db",
+      "freezeGateConfigured": false
+    },
+    "orchestration": {
+      "persistedState": null,
+      "deployed": false,
+      "proposalCommit": "490157d7d1eb042f515cb0f8422c44fa630f8dad",
+      "focusedIsSchedulerControl": false,
+      "defect": "Proposed command hard-codes 'no system freeze' and reads no canonical receipt."
+    },
+    "chat": {
+      "persistedState": null,
+      "deployed": false,
+      "executionSuppression": false,
+      "semantics": "presentation_and_notification_coalescing_only"
+    }
+  },
+  "rankedRootCauses": [
+    {"rank": 1, "code": "ACTIVE_FREEZE", "classification": "intentional_governance", "causal": true},
+    {"rank": 2, "code": "FREEZE_NOT_BOUND_TO_KANBAN", "classification": "defect", "causal": true},
+    {"rank": 3, "code": "ORCHESTRATION_FALSE_STATUS", "classification": "defect_unactivated", "causal": false},
+    {"rank": 4, "code": "MONITOR_CAPACITY", "classification": "operational_amplifier", "causal": false},
+    {"rank": 5, "code": "CANONICAL_FIXTURE_CONTAMINATION", "classification": "defect", "causal": false},
+    {"rank": 6, "code": "TASK_LOCAL_FAILURES", "classification": "expected_fail_closed_and_routing_defects", "causal": false}
+  ],
+  "namedIncidents": {
+    "t_27027ed9": "claimed_in_8_seconds_then_blocked_for_exact_source_and_sam3d_access_then_triaged_by_block_recurrence",
+    "bounty": "iteration_budget_1_of_1_timeouts_dependency_misuse_and_stale_heartbeat_reclaim",
+    "pitchtwin": "default_profile_spawned_without_repo_tools_then_blocked; downstream_correctly_dependency_gated",
+    "syntheticE2E": "17_nonspawnable_ready_fixtures_on_canonical_board"
+  },
+  "canaries": {
+    "proposalTests": {"command": "scripts/run_tests.sh tests/gateway/test_conversation_modes.py tests/gateway/test_kanban_attention.py tests/hermes_cli/test_commands.py -q", "passed": 75, "failed": 0},
+    "liveActivation": "absent",
+    "intakeClassifier": "not_implemented",
+    "productionBoardMutated": false,
+    "note": "No fabricated create_task canary was used because it would test Kanban, not Firstmate message classification."
+  },
+  "minimalCorrection": [
+    "canonical_freeze_policy_resolver",
+    "core_create_promote_claim_spawn_gate_with_durable_denial_receipts",
+    "orchestration_read_only_projection_of_resolver",
+    "keep_chat_presentation_only",
+    "isolate_e2e_boards_and_reject_fixture_profiles_on_production"
+  ],
+  "recommendedOperatingModel": "After an explicit Captain replacement receipt, allow proactive local reversible work in scoped Keel/Hermes/CardTwin/PitchTwin lanes while retaining human gates for root, secrets, publication/deployment, accounts, and payments."
+}

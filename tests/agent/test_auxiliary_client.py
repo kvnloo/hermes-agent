@@ -4612,3 +4612,71 @@ class TestFastModelTier:
             _FAST_MODEL_TASKS
         )
         assert not overlap
+
+
+class TestGroqMoAWireSanitizerAndTpm:
+    def test_build_call_kwargs_strips_timestamp_and_db_persisted(self):
+        from agent.auxiliary_client import _build_call_kwargs
+
+        original = [
+            {
+                "role": "user",
+                "content": "hi",
+                "timestamp": 1781976577.0,
+                "_db_persisted": True,
+            }
+        ]
+        kwargs = _build_call_kwargs(
+            provider="groq",
+            model="openai/gpt-oss-120b",
+            messages=original,
+            base_url="https://api.groq.com/openai/v1",
+            task="moa_aggregator",
+        )
+        wire = kwargs["messages"][0]
+        assert "timestamp" not in wire
+        assert "_db_persisted" not in wire
+        assert wire["content"] == "hi"
+        assert original[0]["timestamp"] == 1781976577.0
+        assert original[0]["_db_persisted"] is True
+
+    def test_parse_groq_tpm_requested_over_limit(self):
+        from agent.auxiliary_client import _parse_groq_tpm_ceiling
+
+        err = Exception("Requested 15000 tokens exceeds Limit 8000")
+        assert _parse_groq_tpm_ceiling(err) == (15000, 8000)
+
+    def test_trim_drops_oldest_to_fit_tpm(self):
+        from agent.auxiliary_client import _trim_messages_to_tpm_limit
+
+        msgs = [{"role": "system", "content": "sys"}] + [
+            {"role": "user" if i % 2 == 0 else "assistant", "content": "x" * 200}
+            for i in range(20)
+        ]
+        trimmed = _trim_messages_to_tpm_limit(msgs, limit=50, requested=5000)
+        assert trimmed[0]["role"] == "system"
+        assert len(trimmed) < len(msgs)
+        assert trimmed[-1]["content"] == msgs[-1]["content"]
+
+    def test_tpm_trim_does_not_count_as_fallback(self):
+        from agent.auxiliary_client import _is_groq_tpm_ceiling_error
+
+        class E(Exception):
+            status_code = 413
+
+        err = E("Requested 9000 tokens Limit 8000")
+        assert _is_groq_tpm_ceiling_error(err, "groq", "https://api.groq.com/openai/v1")
+
+    def test_strips_extra_body_reasoning_for_groq(self):
+        from agent.auxiliary_client import _build_call_kwargs
+
+        kwargs = _build_call_kwargs(
+            provider="groq",
+            model="openai/gpt-oss-120b",
+            messages=[{"role": "user", "content": "hi"}],
+            extra_body={"reasoning": {"enabled": True, "effort": "medium"}},
+            base_url="https://api.groq.com/openai/v1",
+            task="moa_aggregator",
+        )
+        extra = kwargs.get("extra_body") or {}
+        assert "reasoning" not in extra

@@ -35,7 +35,7 @@ set -u
 
 INSTALL_ROOT="" BRANCH="main" DESKTOP_PID=0 RELAUNCH_TARGET=""
 RELAUNCH_CWD="" SANDBOX_FALLBACK=0 RELAUNCH_ARGS=()
-NO_UI=0 NO_MARKER_CLEANUP=0 SELF_TEST_UI=0 SELF_TEST_GATE=0
+NO_UI=0 NO_MARKER_CLEANUP=0 SELF_TEST_UI=0 SELF_TEST_GATE=0 SELF_TEST_PROMOTE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --install-root) INSTALL_ROOT="$2"; shift 2 ;;
@@ -48,6 +48,7 @@ while [ $# -gt 0 ]; do
     --no-marker-cleanup) NO_MARKER_CLEANUP=1; shift ;;
     --self-test-ui) SELF_TEST_UI=1; shift ;;
     --self-test-gate) SELF_TEST_GATE=1; shift ;;
+    --self-test-promote) SELF_TEST_PROMOTE=1; shift ;;
     --) shift; RELAUNCH_ARGS=("$@"); shift $# ;;
     *) echo "unknown arg: $1" >&2; exit 64 ;;
   esac
@@ -68,6 +69,29 @@ FINAL_MSG="update did not complete"
 DONE_NOTE=""  # set when the update succeeded but the app will NOT reopen itself
 
 log() { echo "$(date +%Y-%m-%dT%H:%M:%S%z) $1" | tee -a "$LOG" 2>/dev/null; }
+
+# Atomic replacement bypasses inherited ownership/ACLs. Re-copy generated UI
+# trees through a host-created sibling before promotion so sandbox-owned build
+# output cannot strand the runtime user. Owners are deliberately not preserved;
+# group/other are never made writable.
+promote_ui_output() {
+  local uid gid rel src stage old
+  uid="$(stat -c %u "$INSTALL_ROOT" 2>/dev/null || stat -f %u "$INSTALL_ROOT")" || return 1
+  gid="$(stat -c %g "$INSTALL_ROOT" 2>/dev/null || stat -f %g "$INSTALL_ROOT")" || return 1
+  [ "$(id -u):$(id -g)" = "$uid:$gid" ] || return 1
+  for rel in dist release; do
+    src="$INSTALL_ROOT/apps/desktop/$rel"; [ -d "$src" ] || continue
+    stage="$src.hermes-host-staging"; old="$src.hermes-host-old"
+    rm -rf -- "$stage" "$old" || return 1
+    mkdir -m 755 "$stage" || return 1
+    cp -R "$src/." "$stage/" || { rm -rf -- "$stage"; return 1; }
+    chmod -R u+rwX,go+rX,go-w "$stage" || { rm -rf -- "$stage"; return 1; }
+    mv "$src" "$old" || return 1
+    if ! mv "$stage" "$src"; then mv "$old" "$src" 2>/dev/null || true; return 1; fi
+    rm -rf -- "$old" || return 1
+  done
+  log "promoted Desktop output as runtime owner $uid:$gid"
+}
 
 # ── shim ────────────────────────────────────────────────────────────────────
 json_escape() { # minimal JSON string escape: \ " and control whitespace
@@ -356,6 +380,12 @@ if [ "$SELF_TEST_GATE" -eq 1 ]; then
   exit 0
 fi
 
+if [ "$SELF_TEST_PROMOTE" -eq 1 ]; then
+  trap - EXIT
+  promote_ui_output
+  exit $?
+fi
+
 if [ "$SELF_TEST_UI" -eq 1 ]; then
   start_ui
   log "SELF-TEST: shim simulation (no update will run)"
@@ -421,6 +451,11 @@ if [ "$CODE" -eq 0 ] && printf '%s' "$OUT" | grep -q "Desktop build failed"; the
     FINAL_CODE=6 FINAL_MSG="Code and dependencies updated, but the Desktop app rebuild failed - you are running the previous build. Run hermes desktop --force-build from a terminal to retry."
     exit 6
   }
+fi
+
+if [ "$CODE" -eq 0 ] && ! promote_ui_output; then
+  FINAL_CODE=6 FINAL_MSG="Code updated, but the Desktop UI could not be installed with safe runtime ownership. Run the update again."
+  exit 6
 fi
 
 if [ "$CODE" -eq 0 ]; then FINAL_CODE=0 FINAL_MSG="Update complete."

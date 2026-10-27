@@ -177,6 +177,10 @@ MAX_ITERATIONS_SUMMARY_REQUEST = (
     "Please provide a final response summarizing what you've found and accomplished so far, "
     "without calling any more tools."
 )
+# Internal graph-continuation wakes are persisted as user-role rows so they can
+# resume the owning agent, but they are not operator-authored turns.  The tag is
+# byte-stable across locale catalogs.
+_KANBAN_WAKE_NOTIFICATION_PREFIX = "[kanban] "
 
 
 def _fresh_compaction_message_copy(msg: Dict[str, Any]) -> Dict[str, Any]:
@@ -4619,6 +4623,8 @@ This compaction should PRIORITISE preserving all information related to the focu
             _LENGTH_CONTINUATION_OUTPUT_LIMIT,
         } or text.startswith(
             TODO_INJECTION_HEADER + "\n"
+        ) or text.startswith(
+            _KANBAN_WAKE_NOTIFICATION_PREFIX
         ) or text.startswith(
             _LENGTH_CONTINUATION_DROPPED_TOOLS_PREFIX
         )
