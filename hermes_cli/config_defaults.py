@@ -2366,6 +2366,18 @@ DEFAULT_CONFIG = {
     # each claimable ready task. One dispatcher per profile is sufficient;
     # running more than one on the same kanban.db will race for claims.
     "kanban": {
+        # Focused governance trust bootstrap is intentionally non-active.
+        # The startup loader ignores paths/hashes from config and workers;
+        # this declaration records the only currently supported posture.
+        "orchestration_policy": {
+            "mode": "governance_only",
+            "activation_supported": False,
+            # Declaration only: these are not selectable loader inputs.  The
+            # launcher supplies the descriptor and the production factory
+            # selects the closed provider internally.
+            "bootstrap_transport": "inherited_sealed_descriptor",
+            "key_provider": "keel_secret_service",
+        },
         # Auto-subscribe the originating gateway/TUI session to task
         # completion + block events when ``kanban_create`` is called from
         # inside a session that has a persistent delivery channel. The
