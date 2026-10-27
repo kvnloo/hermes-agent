@@ -50,6 +50,7 @@ import {
   useQueryClient,
   useValue
 } from '@hermes/plugin-sdk'
+import { atom } from 'nanostores'
 import {
   createContext,
   type CSSProperties,
@@ -88,7 +89,7 @@ import { TaskDrawer } from './drawer'
 import { EMPTY_OVERRIDE, ModelOverrideField, overrideCreateFields, type TaskModelOverride } from './model-override'
 import { OrchestrationPanel } from './orchestration'
 import { useKanbanViewportGeometry } from './responsive'
-import { columnMeta, type KanbanBoard, type KanbanTask, type TaskEstimate } from './types'
+import { type AttentionReceipt, columnMeta, type KanbanBoard, type KanbanTask, type TaskEstimate } from './types'
 import {
   $newTaskLane,
   ago,
@@ -97,6 +98,7 @@ import {
   Avatar,
   columnHelp,
   columnLabel,
+  errDetail,
   errText,
   FIELD_LABEL,
   isLockedTarget,
@@ -255,6 +257,9 @@ export interface AttentionAnnouncement {
 type AttentionActionKind = 'settle' | 'snooze' | 'wake'
 type NextAttentionAttemptId = (taskId: string, kind: AttentionActionKind) => string
 let detachedAttentionAttempt = 0
+let boardAttentionAttempt = 0
+const $boardAttentionAnnouncement = atom<null | { announcement: AttentionAnnouncement; board: string }>(null)
+const $attentionReconciliations = atom<Record<string, AttentionReceipt>>({})
 
 const nextDetachedAttentionAttemptId: NextAttentionAttemptId = (taskId, kind) => {
   detachedAttentionAttempt += 1
@@ -263,25 +268,37 @@ const nextDetachedAttentionAttemptId: NextAttentionAttemptId = (taskId, kind) =>
 }
 
 export function useBoardAttentionAnnouncements() {
-  const [announcement, setAnnouncement] = useState<AttentionAnnouncement | null>(null)
-  const attempt = useRef(0)
+  const board = useValue($boardSlug)
+  const published = useValue($boardAttentionAnnouncement)
   const focusTarget = useRef<HTMLElement>(null)
 
   const nextAttemptId: NextAttentionAttemptId = useCallback((taskId, kind) => {
-    attempt.current += 1
+    boardAttentionAttempt += 1
 
-    return `${taskId}:${kind}:board:${attempt.current}`
+    return `${taskId}:${kind}:board:${boardAttentionAttempt}`
   }, [])
 
   const announce = useCallback((next: AttentionAnnouncement) => {
-    setAnnouncement(current => current?.attemptId === next.attemptId ? current : next)
+    const current = $boardAttentionAnnouncement.get()
+
+    if (current?.announcement.attemptId !== next.attemptId || current.board !== $boardSlug.get()) {
+      $boardAttentionAnnouncement.set({ announcement: next, board: $boardSlug.get() })
+    }
 
     if (next.stale) {
-      window.requestAnimationFrame(() => focusTarget.current?.focus())
+      window.requestAnimationFrame(() => {
+        const target = focusTarget.current ?? document.querySelector<HTMLElement>('[data-kanban-focus-target]')
+        target?.focus()
+      })
     }
   }, [])
 
-  return { announce, announcement, focusTarget, nextAttemptId }
+  return {
+    announce,
+    announcement: published?.board === board ? published.announcement : null,
+    focusTarget,
+    nextAttemptId
+  }
 }
 
 export function KanbanAnnouncementHost({ announcement }: { announcement: AttentionAnnouncement | null }) {
@@ -364,10 +381,24 @@ export function AttentionControls({
   const qc = useQueryClient()
   const [custom, setCustom] = useState('')
   const [localAnnouncement, setLocalAnnouncement] = useState<AttentionAnnouncement | null>(null)
+  const [localReceipt, setLocalReceipt] = useState<AttentionReceipt | null>(null)
   const [snoozeOpen, setSnoozeOpen] = useState(false)
   const snoozeTrigger = useRef<HTMLButtonElement>(null)
-  const receipt = task.attention ?? { state: 'active' as const, revision: 0 }
+  const reconciliations = useValue($attentionReconciliations)
+  const taskReceipt = task.attention ?? { state: 'active' as const, revision: 0 }
+  const reconciled = reconciliations[task.id]
+  const receipt = [taskReceipt, reconciled, localReceipt]
+    .filter((value): value is AttentionReceipt => value != null)
+    .reduce((latest, value) => value.revision >= latest.revision ? value : latest)
   const announce = onAnnouncement ?? setLocalAnnouncement
+
+  useEffect(() => {
+    if (reconciled && taskReceipt.revision >= reconciled.revision) {
+      const next = { ...$attentionReconciliations.get() }
+      delete next[task.id]
+      $attentionReconciliations.set(next)
+    }
+  }, [reconciled, task.id, taskReceipt.revision])
 
   const closeSnooze = () => {
     setSnoozeOpen(false)
@@ -378,14 +409,33 @@ export function AttentionControls({
   const action = useMutation({
     mutationFn: ({ kind, wakeAt }: ActionAttempt) => updateAttention(task.id, kind, receipt.revision, wakeAt),
     onError: (error, variables) => {
+      const errorDetail = errDetail(error)
       const detail = errText(error)
       const message = /stale|conflict|\b409\b/i.test(detail) ? STALE_ATTENTION_ANNOUNCEMENT : detail
       announce({ attemptId: variables.attemptId, message, stale: message === STALE_ATTENTION_ANNOUNCEMENT })
       host.notify({ kind: 'error', message })
-      void qc.invalidateQueries({ queryKey: ['kanban', 'board'] })
+      const authoritative = errorDetail && typeof errorDetail === 'object' && 'attention' in errorDetail
+        ? errorDetail.attention as AttentionReceipt
+        : null
+
+      if (authoritative) {
+        setLocalReceipt(authoritative)
+        $attentionReconciliations.set({ ...$attentionReconciliations.get(), [task.id]: authoritative })
+        qc.setQueriesData<KanbanBoard>({ queryKey: ['kanban', 'board'] }, current => current && ({
+          ...current,
+          columns: current.columns.map(column => ({
+            ...column,
+            tasks: column.tasks.map(item => item.id === task.id ? { ...item, attention: authoritative } : item)
+          }))
+        }))
+      } else {
+        void qc.invalidateQueries({ queryKey: ['kanban', 'board'] })
+      }
+
       void qc.invalidateQueries({ queryKey: ['kanban', 'task'] })
     },
     onSuccess: (result, variables) => {
+      setLocalReceipt(result.attention)
       host.notify({
         kind: 'success',
         message:
@@ -581,7 +631,7 @@ function Card({
         </ContextMenuItem>
         <ContextMenuItem onSelect={() => onToggleSelect(task.id)}>
           <Codicon name={selected ? 'close' : 'check-all'} size="0.85rem" />
-          {selected ? k.deselect : k.select}
+          {selected ? k.deselect : k.select('Ctrl/⌘')}
         </ContextMenuItem>
         <ContextMenuSeparator />
         {columns

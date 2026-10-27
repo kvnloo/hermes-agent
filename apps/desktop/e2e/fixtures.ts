@@ -27,7 +27,7 @@ import * as path from 'node:path'
 
 import { _electron, type ElectronApplication, type Page } from '@playwright/test'
 
-import { startMockServer, type MockServerOptions } from './mock-server'
+import { type MockServerOptions, startMockServer } from './mock-server'
 import { installErrorBannerGuard } from './test'
 
 const DESKTOP_ROOT = path.resolve(import.meta.dirname, '..')
@@ -287,10 +287,15 @@ export function findElectron(): string {
   // In dev mode, we use the `electron` binary directly (not the packaged app).
   // The dev:electron script in package.json does exactly this: `electron .`
   // after building. We replicate that here.
-  const localElectron = path.join(REPO_ROOT, 'node_modules', 'electron', 'dist', 'electron')
+  const localElectrons = [
+    path.join(REPO_ROOT, 'node_modules', 'electron', 'dist', 'electron'),
+    path.join(DESKTOP_ROOT, 'node_modules', 'electron', 'dist', 'electron'),
+  ]
 
-  if (fs.existsSync(localElectron)) {
-    return localElectron
+  for (const localElectron of localElectrons) {
+    if (fs.existsSync(localElectron)) {
+      return localElectron
+    }
   }
 
   // Fall back to PATH
@@ -329,6 +334,8 @@ export async function launchDesktop(
       DESKTOP_ROOT, // `electron .` — the `.` is the desktop package dir
       '--disable-gpu',
       '--no-sandbox',
+      ...(env.WAYLAND_DISPLAY && !env.DISPLAY ? ['--ozone-platform=wayland'] : []),
+      ...(env.HERMES_DESKTOP_E2E_HEADLESS === '1' ? ['--headless'] : []),
     ],
     env,
     cwd: DESKTOP_ROOT,
@@ -355,6 +362,7 @@ export interface MockBackendFixture {
 }
 
 export interface MockBackendOptions {
+  mockServer?: MockServerOptions
   /**
    * Optional YAML lines to inject under the `display:` section of the
    * generated config.yaml. Used by the interim-message e2e test to toggle
@@ -374,10 +382,6 @@ export interface MockBackendOptions {
  *   3. Launch the desktop app
  *   4. Return handles for test interaction
  */
-export interface MockBackendOptions {
-  mockServer?: MockServerOptions
-}
-
 export async function setupMockBackend(options: MockBackendOptions = {}): Promise<MockBackendFixture> {
   // 1. Start mock server
   const mock = await startMockServer(options.mockServer)

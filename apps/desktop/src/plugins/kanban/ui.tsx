@@ -56,19 +56,33 @@ export const shortId = (id?: null | string) => (id ?? '').replace(/^t_/, '').sli
 
 // The electron REST bridge throws `Error("409: {\"detail\":\"…\"}")`; pull out
 // the human-readable detail for a toast.
-export function errText(err: unknown): string {
+export function errDetail(err: unknown): unknown {
   const raw = err instanceof Error ? err.message : String(err)
   const brace = raw.indexOf('{')
 
   if (brace !== -1) {
     try {
-      return (JSON.parse(raw.slice(brace)) as { detail?: string }).detail ?? raw
+      return (JSON.parse(raw.slice(brace)) as { detail?: unknown }).detail
     } catch {
       // Not JSON — fall through to the raw message.
     }
   }
 
   return raw
+}
+
+export function errText(err: unknown): string {
+  const detail = errDetail(err)
+
+  if (typeof detail === 'string') {
+    return detail
+  }
+
+  if (detail && typeof detail === 'object' && 'message' in detail && typeof detail.message === 'string') {
+    return detail.message
+  }
+
+  return String(detail)
 }
 
 /** Backend timestamps are epoch SECONDS; the canonical formatter takes ms. */

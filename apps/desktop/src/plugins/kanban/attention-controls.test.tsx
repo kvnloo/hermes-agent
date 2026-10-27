@@ -9,6 +9,7 @@ import { updateAttention } from './api'
 import { AttentionControls, BoardAnnouncer, KanbanPageShell, useBoardAttentionAnnouncements, useKanbanPageAnnouncements } from './board'
 import { formatLocalDateTime, parseLocalDateTime } from './datetime-local'
 import type { AttentionReceipt, KanbanTask } from './types'
+import { errText } from './ui'
 
 vi.mock('./api', async importOriginal => {
   const actual = await importOriginal<typeof KanbanApi>()
@@ -36,6 +37,10 @@ beforeEach(() => {
 })
 
 describe('attention lifecycle controls', () => {
+  it('extracts a message from structured conflict details', () => {
+    expect(errText(new Error(`409: ${JSON.stringify({ detail: { attention: receipt('settled', 5), current_revision: 5, message: 'stale attention revision' } })}`))).toBe('stale attention revision')
+  })
+
   it('locks duplicate actions and announces stale conflicts', async () => {
     let reject!: (reason: Error) => void
     updateAttentionMock.mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail }))
