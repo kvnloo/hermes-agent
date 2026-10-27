@@ -143,6 +143,54 @@ def test_signature_normalizes_ids_numbers_and_posix_temp_paths():
     assert classify_failure([earlier, later]).action == "fresh_session"
 
 
+@pytest.mark.parametrize(
+    ("first_location", "second_location"),
+    [
+        pytest.param(
+            "/tmp/run-1928/SocketError.log", "/tmp/run-9765/RequestFailure.log",
+            id="posix-path",
+        ),
+        pytest.param(
+            r"C:\scratch\SocketError.log", r"C:\scratch\RequestFailure.log",
+            id="windows-path",
+        ),
+        pytest.param(
+            "https://example.invalid/SocketError?id=1928",
+            "https://example.invalid/RequestFailure?id=9765",
+            id="url",
+        ),
+        pytest.param(
+            "SocketError@example.invalid", "RequestFailure@example.invalid",
+            id="email",
+        ),
+    ],
+)
+def test_exception_looking_locations_cannot_change_inferred_class(
+    first_location, second_location,
+):
+    first = _failed(error=f"gateway rejected value at {first_location} after 15 seconds")
+    second = _failed(error=f"gateway rejected value at {second_location} after 90 seconds")
+    signature = failure_signature(first)
+    assert signature is not None
+    assert signature == failure_signature(second)
+    assert "|unclassified|" in signature
+    assert classify_failure([first, second]).action == "fresh_session"
+
+
+def test_inferred_class_ignores_path_before_real_exception():
+    result = _failed(error="at /tmp/run-123/SocketError.py: provider.ReadTimeout: disconnected")
+    signature = failure_signature(result)
+    assert signature is not None
+    assert "|readtimeout|" in signature
+    assert "|socketerror|" not in signature
+
+
+@pytest.mark.parametrize("threshold", [True, False, 2.0, 2.5, "2", None])
+def test_repeat_threshold_rejects_noninteger_values(threshold):
+    with pytest.raises(ValueError, match="repetition_threshold"):
+        classify_failure([_failed()], repetition_threshold=threshold)
+
+
 def test_signature_prefers_structured_exception_class():
     result = _failed(error="connection lost", error_class="provider.exceptions.ReadTimeout")
     assert "|readtimeout|" in failure_signature(result)

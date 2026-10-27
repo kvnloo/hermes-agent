@@ -92,8 +92,8 @@ def _first_error_line(result: Mapping[str, Any]) -> str:
     return lines[0] if lines else ""
 
 
-def _normalize_line(value: str, *, limit: int) -> str:
-    """Keep failure *kind*, never variable ids, addresses, paths or numbers."""
+def _scrub_volatile(value: str) -> str:
+    """Erase variable paths and IDs before inferring an exception class."""
     value = _URL.sub("<url>", value)
     value = _EMAIL.sub("<email>", value)
     value = _PATH.sub("<path>", value)
@@ -101,6 +101,12 @@ def _normalize_line(value: str, *, limit: int) -> str:
     value = _NAMED_ID.sub("<id>", value)
     value = _LONG_HEX_ID.sub("<id>", value)
     value = _IP.sub("<ip>", value)
+    return value
+
+
+def _normalize_line(value: str, *, limit: int) -> str:
+    """Keep failure *kind*, never variable ids, addresses, paths or numbers."""
+    value = _scrub_volatile(value)
     value = _DIGITS.sub("#", value)
     value = _SPACE.sub(" ", value).strip(" \t.:;,").casefold()
     return value[:limit] or "unspecified"
@@ -111,7 +117,7 @@ def _error_class(result: Mapping[str, Any], first_line: str) -> str:
         value = result.get(key)
         if isinstance(value, str) and value.strip():
             return _normalize_line(value.rsplit(".", 1)[-1], limit=48)
-    match = _EXCEPTION_NAME.search(first_line)
+    match = _EXCEPTION_NAME.search(_scrub_volatile(first_line))
     return _normalize_line(match.group(1).rsplit(".", 1)[-1], limit=48) if match else "unclassified"
 
 
@@ -139,7 +145,7 @@ def classify_failure(
     consecutive-signature detection. A success breaks a repetition streak.
     The optional threshold is a config.yaml-driven policy value, not an env var.
     """
-    if isinstance(repetition_threshold, bool) or repetition_threshold < 2:
+    if not isinstance(repetition_threshold, int) or repetition_threshold < 2:
         raise ValueError("repetition_threshold must be an integer >= 2")
     if not results:
         return RecoveryDecision("stop", "no_settled_failure", None)
