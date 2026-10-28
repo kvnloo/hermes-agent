@@ -700,9 +700,16 @@ def get_subprocess_home(env: dict[str, str] | None = None) -> str | None:
     """
     env = env or {}
     profile_home = _profile_home_path(env)
-    from tools.terminal_scope import terminal_env
+    from tools.terminal_scope import get_terminal_scope, terminal_env
 
-    mode = str(terminal_env("TERMINAL_HOME_MODE", "auto")).strip().lower() or "auto"
+    # A bound scope is authoritative (omitted key -> default, never ambient env; a
+    # refusal scope raises). Without one, preserve the explicit-env-then-process-env
+    # precedence the unscoped resolver always had: a curated child env passed by the
+    # caller must win over the launch process's ambient TERMINAL_HOME_MODE.
+    if get_terminal_scope() is None:
+        mode = _env_get(env, "TERMINAL_HOME_MODE", "auto").lower() or "auto"
+    else:
+        mode = str(terminal_env("TERMINAL_HOME_MODE", "auto")).strip().lower() or "auto"
     mode = _HOME_MODE_ALIASES.get(mode, mode)
 
     if mode == "profile":

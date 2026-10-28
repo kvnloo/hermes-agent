@@ -368,6 +368,51 @@ class TestGetSubprocessHomeScopeMode:
         monkeypatch.setenv("TERMINAL_HOME_MODE", "auto")
         assert get_subprocess_home() is None
 
+    def test_no_scope_explicit_env_profile_overrides_ambient_auto(self, tmp_path, monkeypatch):
+        """Without a scope bound, an explicit ``env`` passed to ``get_subprocess_home``
+        wins over the launch process's ambient ``TERMINAL_HOME_MODE``. A curated child env
+        requesting ``profile`` must resolve to the profile home even when the process env
+        says ``auto`` (#101242 unscoped explicit-env precedence contract)."""
+        self._host(monkeypatch)
+        monkeypatch.setenv("TERMINAL_HOME_MODE", "auto")
+        profile_dir, profile_home, real_home = self._make_profile(tmp_path, monkeypatch)
+
+        from hermes_constants import get_subprocess_home
+
+        assert get_subprocess_home({"TERMINAL_HOME_MODE": "profile"}) == str(profile_home)
+
+    def test_no_scope_explicit_env_auto_overrides_ambient_profile(self, tmp_path, monkeypatch):
+        """The inverse: without a scope bound, an explicit ``env`` requesting ``auto``
+        must win over the ambient process ``profile`` mode — a child env the caller built
+        must not inherit the launch process's terminal policy through ``os.environ``."""
+        self._host(monkeypatch)
+        monkeypatch.setenv("TERMINAL_HOME_MODE", "profile")
+        profile_dir, profile_home, real_home = self._make_profile(tmp_path, monkeypatch)
+
+        from hermes_constants import get_subprocess_home
+
+        assert get_subprocess_home({"TERMINAL_HOME_MODE": "auto"}) is None
+
+    def test_unscoped_build_subprocess_env_uses_base_home_mode(self, tmp_path, monkeypatch):
+        """The production spawn seam ``build_subprocess_env`` preserves the unscoped
+        explicit-env precedence: a ``base`` env carrying ``TERMINAL_HOME_MODE=profile``
+        drives the subprocess HOME to the profile home even when the launch process env
+        says ``auto``. This is the path ``tools/environments/local.py`` calls for every
+        child spawn when no profile scope is bound (#101242)."""
+        self._host(monkeypatch)
+        monkeypatch.setenv("TERMINAL_HOME_MODE", "auto")
+        profile_dir, profile_home, real_home = self._make_profile(tmp_path, monkeypatch)
+        monkeypatch.setenv("PATH", "/usr/bin:/bin")
+
+        from tools.environments.local import build_subprocess_env
+
+        env = build_subprocess_env(
+            base={"HOME": str(real_home), "HERMES_HOME": str(profile_dir),
+                  "TERMINAL_HOME_MODE": "profile", "PATH": "/usr/bin:/bin"},
+            scrub_secrets=False, inherit_profile_home=True,
+        )
+        assert env["HOME"] == str(profile_home)
+
 
 # ---------------------------------------------------------------------------
 # Python process HOME unchanged
