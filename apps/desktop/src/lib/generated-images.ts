@@ -131,16 +131,41 @@ export function stripGeneratedImageEchoes(text: string, sources: readonly string
       new RegExp(String.raw`\[[^\]\n]*\]\(\s*#media:${regexEscape(encodeURIComponent(source))}\s*\)`, 'gi'),
       ''
     )
-    // Bare prose echoes include quoted and colon-delimited paths; never
-    // corrupt Markdown link destinations or strip a prefix of `.bak`/`?q=`.
-    next = next.replace(
+  }
+
+  // Bare prose echoes include quoted and colon-delimited paths; never corrupt
+  // Markdown link destinations or strip a prefix of `.bak`/`?q=`. Before the
+  // boundary-aware strip, protect two legitimate Markdown constructs that those
+  // boundaries would otherwise eat into: inline/fenced code spans (a path
+  // restated inside `code` is code, not prose) and reference-link definitions
+  // (`[label]: <dest>` / `[label]: dest "title"`), so a colon-delimited echo
+  // does not delete a reference destination. The guards are private-use-delimited
+  // tokens that no source path can contain, so the strip leaves them untouched.
+  const guards: string[] = []
+
+  let masked = next
+    .replace(/```[\s\S]*?```|``[^`]*``|`[^`\n]*`/g, match => `\uE000${guards.push(match) - 1}\uE000`)
+    .replace(
+      /^[ \t]{0,3}\[[^\]\n]*\]:[ \t]*(?:<[^\n>]*>|[^\s\n]+)(?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'|\([^)\n]*\)))?[ \t]*$/gm,
+      match => `\uE000${guards.push(match) - 1}\uE000`
+    )
+
+  for (const source of unique([...sources])) {
+    const escaped = regexEscape(source)
+    // Boundary classes open/close quoted, colon/semicolon, and CJK/guillemet/
+    // dash-delimited echoes; `(`/`)` and `<`/`>` are excluded so a path inside
+    // a Markdown link destination (`[label](/tmp/a.png)`) is not corrupted into
+    // `[label]()`. The lookahead stops a prefix over-match on `.bak`/`?q=`.
+    masked = masked.replace(
       new RegExp(
-        String.raw`(^|[\s\[{"':;“‘])<?${escaped}>?(?=$|[\s\]}.,!?:;'"”’])(?!\.[\p{L}\p{N}_/-]|\?[\p{L}\p{N}_])`,
+        String.raw`(^|[\s\[{"':;\u201C\u2018\u00AB\u2039\u300C\u300E\u3008\u300A\u2013\u2014])<?${escaped}>?(?=$|[\s\]}.,!?:;'"\u201D\u2019\u00BB\u203A\u300D\u300F\u3009\u300B\u2013\u2014])(?!\.[\p{L}\p{N}_/-]|\?[\p{L}\p{N}_])`,
         'gu'
       ),
       '$1'
     )
   }
+
+  next = masked.replace(/\uE000(\d+)\uE000/g, (_, i) => guards[Number(i)] ?? '')
 
   return next
 }

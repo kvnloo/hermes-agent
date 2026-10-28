@@ -125,6 +125,44 @@ describe('stripGeneratedImageEchoes', () => {
       'Open [cat](/tmp/cat.png) instead'
     )
   })
+
+  it('preserves quoted generated-image paths inside inline and fenced Markdown code', () => {
+    // A path restated inside a code span is code, not prose: the quoted bare
+    // boundaries (`"`, `'`) must not eat into backtick-delimited content.
+    expect(stripGeneratedImageEchoes('`"image.png"`', ['image.png'])).toBe('`"image.png"`')
+    expect(stripGeneratedImageEchoes('Path is `/tmp/cat.png` here.', ['/tmp/cat.png'])).toBe(
+      'Path is `/tmp/cat.png` here.'
+    )
+    // Fenced code blocks are protected too.
+    expect(stripGeneratedImageEchoes('```\n"/tmp/cat.png"\n```', ['/tmp/cat.png'])).toBe('```\n"/tmp/cat.png"\n```')
+  })
+
+  it('preserves Markdown reference-link destinations with no whitespace after colon', () => {
+    // `[label]: <dest>` and `[label]:<dest>` are legitimate reference definitions;
+    // a colon-delimited bare echo must not delete the destination.
+    expect(stripGeneratedImageEchoes('[pic]:<image.png>', ['image.png'])).toBe('[pic]:<image.png>')
+    expect(stripGeneratedImageEchoes('[pic]: <image.png>', ['image.png'])).toBe('[pic]: <image.png>')
+    expect(stripGeneratedImageEchoes('[ref]: /tmp/cat.png "alt"', ['/tmp/cat.png'])).toBe('[ref]: /tmp/cat.png "alt"')
+  })
+
+  it('strips bare generated-image echoes beside CJK quotes, guillemets, and em dashes', () => {
+    // Typographic delimiters the PR body claimed but the original classes missed.
+    expect(stripGeneratedImageEchoes('「image.png」', ['image.png'])).toBe('「」')
+    expect(stripGeneratedImageEchoes('«image.png»', ['image.png'])).toBe('«»')
+    expect(stripGeneratedImageEchoes('see image.png—done', ['image.png'])).toBe('see —done')
+    expect(stripGeneratedImageEchoes('saved /tmp/cat.png—enjoy', ['/tmp/cat.png'])).toBe('saved —enjoy')
+  })
+
+  it('keeps inline and reference Markdown destinations intact beside a separate standalone echo', () => {
+    // A standalone bare echo on the same line as an inline link destination, or on
+    // a line after a reference definition, strips the echo but keeps the Markdown.
+    expect(stripGeneratedImageEchoes('See [the proof](/tmp/cat.png) and /tmp/cat.png.', ['/tmp/cat.png'])).toBe(
+      'See [the proof](/tmp/cat.png) and .'
+    )
+    expect(stripGeneratedImageEchoes('[ref]: /tmp/cat.png\nRestated: /tmp/cat.png', ['/tmp/cat.png'])).toBe(
+      '[ref]: /tmp/cat.png\nRestated: '
+    )
+  })
 })
 
 describe('generatedImageEchoSources', () => {
@@ -254,6 +292,36 @@ describe('dedupeGeneratedImageEchoesInParts', () => {
       { text: 'Saved to "" — enjoy!', type: 'text' },
       {
         result: { host_image: '/tmp/cat.png', image: '/tmp/cat.png', success: true },
+        toolName: 'image_generate',
+        type: 'tool-call'
+      }
+    ])
+  })
+
+  it('strips a Unicode-delimited agent-visible bare echo while retaining the completed image tool part', () => {
+    expect(
+      dedupeGeneratedImageEchoesInParts([
+        { text: 'Restated 「/root/.hermes/cache/images/cat.png」 — done.', type: 'text' },
+        {
+          result: {
+            agent_visible_image: '/root/.hermes/cache/images/cat.png',
+            host_image: '/host/cat.png',
+            image: '/host/cat.png',
+            success: true
+          },
+          toolName: 'image_generate',
+          type: 'tool-call'
+        }
+      ])
+    ).toEqual([
+      { text: 'Restated 「」 — done.', type: 'text' },
+      {
+        result: {
+          agent_visible_image: '/root/.hermes/cache/images/cat.png',
+          host_image: '/host/cat.png',
+          image: '/host/cat.png',
+          success: true
+        },
         toolName: 'image_generate',
         type: 'tool-call'
       }
