@@ -451,6 +451,9 @@ class GoalState:
     contract: GoalContract = field(default_factory=GoalContract)
     # /goal gate add <cmd>: ALL must pass before the judge may declare done.
     gates: list[GoalGate] = field(default_factory=list)
+    policy: str = ""
+    policy_checks: list[str] = field(default_factory=list)
+    policy_workflow_digest: str = ""
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), ensure_ascii=False)
@@ -473,6 +476,9 @@ class GoalState:
             waiting_on_session=(str(data["waiting_on_session"]) if data.get("waiting_on_session") else None),
             waiting_reason=data.get("waiting_reason"),
             contract=GoalContract.from_dict(data.get("contract")),
+            policy=str(data.get("policy") or ""),
+            policy_checks=[str(c) for c in data.get("policy_checks", [])],
+            policy_workflow_digest=str(data.get("policy_workflow_digest") or ""),
             gates=[
                 GoalGate.from_dict(g) for g in (data.get("gates") or [])
                 if isinstance(g, dict) and str(g.get("command") or "").strip()
@@ -1095,6 +1101,8 @@ class GoalManager:
     """
 
     def __init__(self, session_id: str, *, default_max_turns: int = DEFAULT_MAX_TURNS):
+        from hermes_constants import hermes_home_key
+        self._profile_home = hermes_home_key()
         self.session_id = session_id
         self.default_max_turns = int(default_max_turns or DEFAULT_MAX_TURNS)
         self._state: Optional[GoalState] = load_goal(session_id)
@@ -1488,6 +1496,11 @@ class GoalManager:
         state = self._state
         if state is None or state.status != "active":
             return _decision(state.status if state else None, False, None, "inactive", "no active goal", "")
+
+        if state.policy:
+            from hermes_cli.goal_policy import evaluate_policy
+            return evaluate_policy(self, last_response, background_processes=background_processes,
+                                   active_delegations=active_delegations)
 
         # Parked on a live process or an unexpired deadline: quiesce without burning a turn.
         if self.is_waiting():

@@ -937,6 +937,8 @@ class PluginContext:
             "middleware", kind, callback, self._manager._middleware, VALID_MIDDLEWARE
         )
 
+    from hermes_cli.goal_policy import register_goal_policy, arm_goal
+
     def _track_callback(
         self, kind: str, key: str, callback: Callable, mapping: dict[str, list[Callable]],
         valid: set[str],
@@ -1177,6 +1179,7 @@ class PluginManager(PluginLoaderMixin, PluginDispatchMixin, PluginLedgerMixin):
         # Fallback hooks registered by a memory provider before general discovery.
         self._memory_hook_registrations: dict[tuple[str, str], list[PluginRegistration]] = {}
         self._middleware: dict[str, list[Callable]] = {}
+        self._goal_policies: dict[str, Any] = {}
         self._plugin_tool_names: set[str] = set()
         self._plugin_platform_names: set[str] = set()
         self._cli_commands: dict[str, dict] = {}

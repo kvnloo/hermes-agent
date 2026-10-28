@@ -739,6 +739,8 @@ class CLILoopsMixin:
         via ``/goal resume``. Empty-response skip mirrors ``gateway/run.py``."""
         from cli import _DIM, _RST, _cprint, _looks_like_slash_command
         mgr = self._get_goal_manager()
+        from hermes_cli.goal_policy import refresh_after_tool_arm
+        refresh_after_tool_arm(mgr)
         if mgr is None or not mgr.is_active():
             return
 
