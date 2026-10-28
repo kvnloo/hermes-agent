@@ -158,19 +158,34 @@ async def test_preflight_overflow_finalize_records_ledger(adapter):
 
 
 # --------------------------------------------------------------------------- #
-# Reactive 50035 overflow — pre-flight passed, Discord still rejected
+# Reactive 50035 overflow — pre-flight fit, Discord still rejected, multi-chunk
 # --------------------------------------------------------------------------- #
 
 
 @pytest.mark.asyncio
 async def test_reactive_overflow_finalize_records_ledger(adapter):
     _seed_source_message(adapter)
+    # Content is > MAX so the split produces multiple chunks, but format_message
+    # is stubbed to return a short value on the pre-flight call so the edit
+    # reaches Discord and raises a reactive 50035 instead of taking the
+    # pre-flight overflow path.
+    big = "u" * (MAX + 500)
+    format_calls = []
+
+    def format_side_effect(content):
+        format_calls.append(content)
+        if len(format_calls) == 1:
+            return "u" * 1500
+        return content
+
+    adapter.format_message = format_side_effect
+
     edits = []
-    calls = []
+    edit_calls = []
 
     def edit_effect(*, content):
-        calls.append(content)
-        if len(calls) == 1:
+        edit_calls.append(content)
+        if len(edit_calls) == 1:
             raise _OVERFLOW_ERROR
         edits.append(content)
 
@@ -186,26 +201,28 @@ async def test_reactive_overflow_finalize_records_ledger(adapter):
     adapter._client.fetch_channel = AsyncMock(return_value=channel)
 
     result = await adapter.edit_message(
-        "555", "42", "u" * 1500, finalize=True,
+        "555", "42", big, finalize=True,
         metadata={"reply_to_message_id": "91", "notify": True},
     )
     assert result.success is True
+    assert result.continuation_message_ids, "expected the reactive split to produce continuations"
     assert adapter._discord_message_is_persistently_complete("91") is True
     assert adapter._discord_recovery_cursor("555") == "91"
 
 
 # --------------------------------------------------------------------------- #
-# Partial-overflow success — still mark ledger to prevent duplicate re-dispatch
+# Partial-overflow failure — do NOT mark the ledger; the consumer sends the
+# missing tail and records completion only after the tail is delivered.
 # --------------------------------------------------------------------------- #
 
 
 @pytest.mark.asyncio
-async def test_partial_overflow_finalize_records_ledger(adapter):
+async def test_partial_overflow_does_not_advance_ledger(adapter):
     _seed_source_message(adapter)
 
     # channel.send always raises so a continuation chunk fails both the
     # reference and the no-reference retry → _edit_overflow_split returns
-    # success=True with a partial_overflow raw_response.
+    # success=False with a partial_overflow raw_response + delivered_prefix.
     def send_always_fail(content, reference=None):
         raise RuntimeError("connection reset")
 
@@ -215,11 +232,13 @@ async def test_partial_overflow_finalize_records_ledger(adapter):
         "555", "42", big, finalize=True,
         metadata={"reply_to_message_id": "91", "notify": True},
     )
-    assert result.success is True, "partial overflow reports success by design"
+    assert result.success is False, "partial overflow must report failure so the tail is retried"
     assert result.raw_response.get("partial_overflow") is True
-    # The user saw chunk 1 in place — a duplicate re-dispatch would re-send it.
-    assert adapter._discord_message_is_persistently_complete("91") is True
-    assert adapter._discord_recovery_cursor("555") == "91"
+    # The visible prefix (chunk 1) is preserved so the consumer sends only the tail.
+    assert result.raw_response.get("delivered_prefix")
+    # The ledger must NOT advance — the tail is still undelivered.
+    assert adapter._discord_message_is_persistently_complete("91") is False
+    assert adapter._discord_recovery_cursor("555") is None
 
 
 # --------------------------------------------------------------------------- #
@@ -303,18 +322,32 @@ async def test_overflow_finalize_without_reply_to_skips_ledger(adapter):
 async def test_overflow_finalize_offloads_ledger_write(adapter, monkeypatch):
     _seed_source_message(adapter)
     channel, edits = _wire(adapter)
-    import time
+    import threading
+
+    record_started = threading.Event()
+    record_release = threading.Event()
 
     def slow_record(**_kwargs):
-        time.sleep(0.1)
+        record_started.set()
+        record_release.wait(timeout=5)
 
     monkeypatch.setattr(adapter, "_record_discord_response", slow_record)
     sending = asyncio.create_task(adapter.edit_message(
         "555", "42", "q" * (MAX + 4000), finalize=True,
         metadata={"reply_to_message_id": "91", "notify": True},
     ))
-    await asyncio.sleep(0.01)
+    # Yield to the event loop so edit_message reaches the asyncio.to_thread
+    # call and the ledger worker starts inside its thread.
+    for _ in range(50):
+        if record_started.is_set():
+            break
+        await asyncio.sleep(0)
+    assert record_started.is_set(), "ledger worker did not start"
+    # The worker thread is blocked on record_release, so the offloaded
+    # asyncio.to_thread await keeps edit_message suspended — the task cannot
+    # complete while the record is in flight off the event loop.
     assert sending.done() is False, "edit_message must stay non-blocking while the ledger write is offloaded"
+    record_release.set()
     assert (await sending).success is True
 
 

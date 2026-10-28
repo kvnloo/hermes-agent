@@ -3337,8 +3337,10 @@ class DiscordAdapter(DiscordMediaMixin, BasePlatformAdapter):
     ) -> SendResult:
         """Deliver an oversized final edit: edit ``message_id`` with chunk 1, send chunks 2..N as
         replies to the previous. Returns ``message_id=<last-id>`` + ``continuation_message_ids``.
-        A continuation failure still reports success plus ``partial_overflow`` so the consumer
-        delivers the tail; only a first-chunk edit failure returns ``success=False``."""
+        A first-chunk edit failure returns ``success=False`` (nothing was delivered). A
+        continuation failure returns ``success=False`` with ``raw_response.partial_overflow`` and
+        ``delivered_prefix`` so the consumer's failure arm sends only the missing tail and the
+        ledger stays un-advanced until the tail lands."""
         formatted = self.format_message(content)
         chunks = self._cap_split_chunks(self.truncate_message(formatted, self.MAX_MESSAGE_LENGTH))
         if len(chunks) <= 1:
@@ -3382,13 +3384,14 @@ class DiscordAdapter(DiscordMediaMixin, BasePlatformAdapter):
                     )
                     last_id = continuation_ids[-1] if continuation_ids else message_id
                     return SendResult(
-                        success=True,
+                        success=False,
                         message_id=last_id,
                         continuation_message_ids=tuple(continuation_ids),
                         raw_response={
                             "partial_overflow": True, "delivered_chunks": delivered,
                             "total_chunks": len(chunks), "last_message_id": last_id,
                             "continuation_message_ids": tuple(continuation_ids),
+                            "delivered_prefix": "".join(chunks[:delivered]),
                         },
                     )
             new_id = str(sent.id)
