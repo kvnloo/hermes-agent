@@ -364,7 +364,7 @@ class GoalGate:
         return cls(
             command=str(data.get("command") or ""),
             timeout_seconds=int(data.get("timeout_seconds") or DEFAULT_GATE_TIMEOUT_SECONDS),
-            max_retries=int(data.get("max_retries") or DEFAULT_GATE_MAX_RETRIES),
+            max_retries=int(data["max_retries"] if data.get("max_retries") is not None else DEFAULT_GATE_MAX_RETRIES),
             attempts=int(data.get("attempts") or 0),
             last_exit_code=(int(data["last_exit_code"]) if data.get("last_exit_code") is not None else None),
             last_output_tail=str(data.get("last_output_tail") or ""),

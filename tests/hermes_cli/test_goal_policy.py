@@ -204,6 +204,18 @@ def test_unsafe_policy_decisions_are_rejected(armed, monkeypatch, action):
     assert result["verdict"] == "policy_error"
 
 
+def test_zero_retry_cap_arms_without_widening(armed):
+    ctx, _, _, manager = armed
+    gate = GoalGate(manager.state.gates[0].command, max_retries=0)
+    with scoped_current_session_id("zero-retries"):
+        receipt = ctx.arm_goal("No repair attempts", max_turns=2, gates=[gate])
+    assert receipt["armed"]
+    stored = load_goal("zero-retries")
+    assert stored is not None
+    assert stored.status == "active"
+    assert stored.gates[0].max_retries == 0
+
+
 def test_gate_retry_budget_is_authoritative(armed, monkeypatch):
     *_, manager = armed
     manager.add_gate(f"{shlex.quote(sys.executable)} -c 'raise SystemExit(4)'", max_retries=1)
