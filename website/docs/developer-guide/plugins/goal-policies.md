@@ -40,7 +40,7 @@ Arming never resumes, replaces, clears, or refills a goal. Users retain native g
 
 Optional `policy`, `policy_checks`, and `policy_workflow_digest` fields extend the existing goal JSON. Rows without these fields keep default behavior. A missing consumer pauses its opted-in goal instead of silently completing it.
 
-Every configured acceptance command must remain registered. Every current gate must return zero before completion. The adapter retains native gate timeouts and retry budgets. Added natural-language subgoals prevent completion until an operator supplies an explicit acceptance mapping in a new mission. A command that returns zero without checking the intended outcome is not a sound acceptance check.
+Every configured acceptance command must remain registered. Every current gate must return zero before completion. The adapter retains native gate timeouts and retry budgets. For opted-in policies, an unfinished check consumes a repair retry only when the judge reports DONE: ordinary progress or BLOCKED is not a failed completion attempt, and WAIT remains available while acceptance is unfinished. The native turn cap still bounds unfinished work. Added natural-language subgoals prevent completion until an operator supplies an explicit acceptance mapping in a new mission. A command that returns zero without checking the intended outcome is not a sound acceptance check.
 
 State readback before and after evaluation rejects user controls changed during a blocking workflow load, gate, or judge call. This is not a database transaction spanning evaluation and downstream admission. Native admission and interrupt semantics still own final scheduling.
 

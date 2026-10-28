@@ -125,7 +125,7 @@ def _observed_wake(manager, directive, background_processes) -> str | None:
     return None
 
 
-def _run_checks(state) -> tuple[bool, str, bool]:
+def _run_checks(state, *, completion_attempt: bool) -> tuple[bool, str, bool]:
     from hermes_cli.goals import _gate_workspace, run_gate
     if not state.policy_checks or any(cmd not in [g.command for g in state.gates] for cmd in state.policy_checks):
         return False, "Registered acceptance checks are missing. Restore them before completion.", False
@@ -139,7 +139,10 @@ def _run_checks(state) -> tuple[bool, str, bool]:
     for gate in state.gates:
         passed, code, output = run_gate(gate, cwd=cwd)
         gate.last_exit_code, gate.last_output_tail = code, output
-        gate.attempts = 0 if passed else gate.attempts + 1
+        if passed:
+            gate.attempts = 0
+        elif completion_attempt:
+            gate.attempts += 1
         if not passed:
             failures.append(f"$ {gate.command}\nExit {code}\n{output}")
             exhausted |= gate.attempts > gate.max_retries
@@ -177,12 +180,14 @@ def _observe(manager, state, last_response, background_processes, active_delegat
     policy = _policy(state.policy)
     workflow, digest = _workflow(policy)
     loaded = state.policy_workflow_digest == digest
-    checks, evidence, exhausted = _run_checks(state) if loaded else (False, "", False)
     verdict, reason, parse, directive, transport = (
         judge_goal(state.goal, last_response, subgoals=state.subgoals or None,
                    contract=state.contract if state.has_contract() else None,
                    background_processes=background_processes, active_delegations=active_delegations)
-        if loaded and checks else ("continue", evidence or "workflow required", False, None, False)
+        if loaded else ("continue", "workflow required", False, None, False)
+    )
+    checks, evidence, exhausted = (
+        _run_checks(state, completion_attempt=verdict == "done") if loaded else (False, "", False)
     )
     state.last_verdict, state.last_reason = verdict, reason
     state.consecutive_parse_failures = state.consecutive_parse_failures + 1 if parse else 0

@@ -247,6 +247,43 @@ def test_real_pid_wait_registers_and_releases(armed, monkeypatch):
             child.stdin.close()
 
 
+@pytest.mark.parametrize("verdict", ["continue", "blocked"])
+def test_unfinished_acceptance_does_not_consume_repair_retries(armed, monkeypatch, verdict):
+    *_, manager = armed
+    manager.add_gate(f"{shlex.quote(sys.executable)} -c 'raise SystemExit(4)'", max_retries=1)
+    judge(monkeypatch, verdict)
+    for _ in range(4):
+        assert manager.evaluate_after_turn("Still working on the original goal")["should_continue"]
+    stored = load_goal("mission")
+    assert stored is not None
+    assert stored.gates[-1].attempts == 0
+    assert stored.gates[-1].last_exit_code == 4
+
+
+def test_unfinished_acceptance_can_register_owned_wait(armed, monkeypatch):
+    import subprocess
+    *_, manager = armed
+    manager.add_gate(f"{shlex.quote(sys.executable)} -c 'raise SystemExit(4)'", max_retries=1)
+    child = subprocess.Popen([sys.executable, "-c", "import sys; sys.stdin.read()"], stdin=subprocess.PIPE)
+    try:
+        judge(monkeypatch, "wait", {"pid": child.pid})
+        processes = [{"pid": child.pid, "owner_task_id": manager.session_id, "status": "running"}]
+        result = manager.evaluate_after_turn("Waiting for owned work", background_processes=processes)
+        assert result["verdict"] == "wait"
+        stored = load_goal("mission")
+        assert stored is not None
+        assert stored.waiting_on_pid == child.pid
+        assert stored.gates[-1].attempts == 0
+        child.communicate(timeout=10)
+        assert not GoalManager("mission").is_waiting()
+    finally:
+        if child.poll() is None:
+            child.kill()
+            child.wait(timeout=10)
+        if child.stdin and not child.stdin.closed:
+            child.stdin.close()
+
+
 def test_legacy_state_and_default_blocked_unchanged(monkeypatch):
     from hermes_cli.goals import GoalState
     assert GoalState.from_json(json.dumps({"goal": "legacy"})).policy == ""
