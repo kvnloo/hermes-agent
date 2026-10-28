@@ -70,9 +70,20 @@ class ProcessCompletionQueueMixin:
         Foreign sessions' events are drained to a keep-list and re-put
         unchanged; the ``Queue`` is thread-safe, and ``self._lock`` (acquired
         here) is what serialises this swap against the reader's enqueue inside
-        ``_move_to_finished``."""
+        ``_move_to_finished``.
+
+        A corrected event is enqueued only when this session's stale
+        ``completion`` was actually found and dropped: a consumer that already
+        drained it (the TUI's ``queue.get`` does not take ``self._lock``) has
+        already shown the stale ``exited`` payload, and a second event would
+        duplicate the completion rather than correct the displayed one. With no
+        stale event to swap, the durable ``save_completed_result`` re-stamp is
+        the only correction the kill path can still make — fixing the live
+        payload for an already-consumed event needs the consumer to respect a
+        per-session kill gate (outside this queue helper)."""
         with self._lock:
             keep: list = []
+            dropped_stale = False
             while True:
                 try:
                     evt = self.completion_queue.get_nowait()
@@ -83,8 +94,15 @@ class ProcessCompletionQueueMixin:
                 # other session's completion verbatim. The reader's stale
                 # event predates the kill stamp on the session, so rebuild it.
                 if evt.get("type") == "completion" and evt.get("session_id") == session.id:
+                    dropped_stale = True
                     continue
                 keep.append(evt)
             for evt in keep:
                 self.completion_queue.put(evt)
-            self._enqueue_completion_notification(session)
+            # Only enqueue a corrected event when the stale one was still on the
+            # queue. If a consumer already drained it, a second event would
+            # duplicate the completion (the TUI dedups by session, so the
+            # corrected payload would be silently dropped and the stale
+            # ``exited`` text would stay visible).
+            if dropped_stale:
+                self._enqueue_completion_notification(session)
