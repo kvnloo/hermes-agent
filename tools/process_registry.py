@@ -14,7 +14,6 @@ import shlex
 import signal
 import stat
 import subprocess
-import tempfile
 import threading
 import time
 import uuid
@@ -38,7 +37,7 @@ from tools.process_registry_checkpoint import ProcessCheckpointMixin
 from tools.process_registry_output_log import ProcessOutputLogMixin, open_output_log, record_exit_command, worker_output_log
 from tools.process_registry_termination import ProcessTerminationMixin
 from tools.process_registry_results import load_completed_results, save_completed_result
-from tools.process_registry_env_log import log_delta_command
+from tools.process_registry_env_log import env_temp_dir, log_delta_command
 from tools.process_registry_wsl import _is_wsl_launcher_command
 
 logger = logging.getLogger(__name__)
@@ -570,6 +569,7 @@ class ProcessSession:
     persist_on_release: bool = False           # opt out of agent-lifecycle cleanup (release()/turn-abandon kill
                                                 # sweeps), per terminal(background=true, persist_on_release=true) (#41225)
     output_log: str = ""                        # file the process writes to (worker spawns; no pipe to lose)
+    worker_pid_path: str = ""                   # sandbox-only: file holding the nohup'd worker PID (spawn_via_env)
     # Watcher/notification routing (persisted for crash recovery)
     watcher_platform: str = ""
     watcher_chat_id: str = ""
@@ -1093,19 +1093,6 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
             wsl_chain=_is_wsl_launcher_command(command),
             started_at=time.time(), **extra)
 
-    @staticmethod
-    def _env_temp_dir(env: Any) -> str:
-        """Return the writable sandbox temp dir for env-backed background tasks."""
-        get_temp_dir = getattr(env, "get_temp_dir", None)
-        if callable(get_temp_dir):
-            try:
-                temp_dir = get_temp_dir()
-                if isinstance(temp_dir, str) and temp_dir.startswith("/"):
-                    return temp_dir.rstrip("/") or "/"
-            except Exception as exc:
-                logger.debug("Could not resolve environment temp dir: %s", exc)
-        return tempfile.gettempdir()
-
     def _scope_argv(self, session: ProcessSession, safe_command: str, unit_suffix: str, label: str) -> list[str]:
         """Login-shell argv for *safe_command* (parity with LocalEnvironment: rc files
         sourced, user tools on PATH), wrapped in a transient systemd scope when we are
@@ -1283,13 +1270,19 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
         agent-lifecycle kill sweeps (#41225)."""
         session = self._new_session(command, task_id, owner_task_id, session_key, cwd, env_ref=env, pid_scope="sandbox",
                                     persist_on_release=persist_on_release)
-        temp_dir = self._env_temp_dir(env)
+        temp_dir = env_temp_dir(env)
         log_path, pid_path, exit_path = (f"{temp_dir}/hermes_bg_{session.id}.{ext}" for ext in ("log", "pid", "exit"))
+        worker_pid_path = f"{temp_dir}/hermes_bg_{session.id}.worker_pid"
+        session.worker_pid_path = worker_pid_path
         q = shlex.quote
+        # The wrapper subshell (``( ... ) &``) is session.pid; the real worker is
+        # backgrounded inside it and its PID captured to worker_pid_path so kill_process
+        # can tree-kill the worker (not just SIGTERM the wrapper, which leaks the worker).
         bg_command = (
             f"mkdir -p {q(temp_dir)} && "
-            f"( nohup bash -lc {q(command)} > {q(log_path)} 2>&1; "
-            f"rc=$?; printf '%s\\n' \"$rc\" > {q(exit_path)} ) & "
+            f"( nohup bash -lc {q(command)} > {q(log_path)} 2>&1 & "
+            f"WPID=$!; echo \"$WPID\" > {q(worker_pid_path)}; "
+            f"wait \"$WPID\"; rc=$?; printf '%s\\n' \"$rc\" > {q(exit_path)} ) & "
             f"echo $! > {q(pid_path)} && cat {q(pid_path)}")
         result = env.execute(bg_command, cwd=cwd or "", timeout=timeout, rewrite_compound_background=False)
         output = result.get("output", "").strip()
@@ -2247,7 +2240,14 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
             # leaves Git Bash descendants behind.
             self._terminate_host_pid(session.process.pid, session.host_start_time)
         elif session.env_ref and session.pid:
+            # Tree-kill the nohup'd worker (worker_pid_path) before reaping the wrapper.
+            # A worker that survives (or a stale/recycled PID we refused to touch) must not
+            # publish a `killed` receipt: report the survivors like the host path and keep
+            # the session listed and killable.
+            worker_survivors = self._terminate_env_worker(session.env_ref, session)
             session.env_ref.execute(f"kill {session.pid} 2>/dev/null", timeout=5)
+            if worker_survivors:
+                return self._env_kill_incomplete_result(session, worker_survivors)
         elif session.detached and session.pid_scope == "host" and session.pid:
             # Same fate as poll/list: a gone or reused PID means our process is
             # gone — never tree-kill the stranger — but a live PID with an

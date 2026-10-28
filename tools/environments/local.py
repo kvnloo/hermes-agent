@@ -42,10 +42,11 @@ logger = logging.getLogger(__name__)
 TERMINAL_TEMP_MAX_IDLE_HOURS = 24
 _terminal_temp_prune_lock = threading.Lock()
 _terminal_temp_pruned_once = False
-# Background artifacts come in triplets (hermes_bg_<id>.log/.pid/.exit). A live
-# server's .pid never changes mtime while its .log does, so age is judged per
-# GROUP (newest mtime sharing a stem) to keep pid/exit files of live sessions.
-_BG_GROUP_RE = re.compile(r"^(hermes_bg_[A-Za-z0-9_-]+)\.(log|pid|exit)$")
+# Background artifacts come in groups (hermes_bg_<id>.log/.pid/.exit, plus a
+# .worker_pid for sandbox-backed sessions). A live server's .pid/.worker_pid
+# never changes mtime while its .log does, so age is judged per GROUP (newest
+# mtime sharing a stem) to keep pid/exit/worker_pid files of live sessions.
+_BG_GROUP_RE = re.compile(r"^(hermes_bg_[A-Za-z0-9_-]+)\.(log|pid|exit|worker_pid)$")
 
 
 def _default_terminal_temp_dir() -> Path | None:
@@ -85,8 +86,11 @@ def cleanup_terminal_temp_cache(max_age_hours: float = TERMINAL_TEMP_MAX_IDLE_HO
 
     def group_touched(stem: str) -> bool:
         # Re-stat every member right before each delete: the snapshot above is a candidate
-        # list, and a session that writes its .log after it must keep the whole group.
-        for sfx in ("log", "pid", "exit"):
+        # list, and a session that writes its .log (or its .worker_pid) after it must keep
+        # the whole group. A sandbox-backed session writes its .worker_pid when the wrapper
+        # spawns the nohup'd worker — a re-stat that misses it could prune the group while
+        # the worker is still starting up, so the kill path loses the PID it needs.
+        for sfx in ("log", "pid", "exit", "worker_pid"):
             try:
                 if (root / f"{stem}.{sfx}").stat().st_mtime >= cutoff:
                     return True
