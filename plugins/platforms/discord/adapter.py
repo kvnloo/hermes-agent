@@ -3451,8 +3451,21 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
             # Pre-flight oversize: final edits split-and-deliver; streaming edits truncate in place.
             if len(formatted) > self.MAX_MESSAGE_LENGTH:
                 if finalize:
-                    return await self._edit_overflow_split(channel, msg, message_id, content)
-                formatted = self.truncate_message(formatted, self.MAX_MESSAGE_LENGTH)[0]
+                    overflow_result = await self._edit_overflow_split(
+                        channel, msg, message_id, content,
+                    )
+                    if overflow_result.success:
+                        await asyncio.to_thread(
+                            self._record_discord_response,
+                            reply_to=(metadata or {}).get("reply_to_message_id"),
+                            result=overflow_result,
+                            content=content,
+                            final=True,
+                        )
+                    return overflow_result
+                formatted = self.truncate_message(
+                    formatted, self.MAX_MESSAGE_LENGTH,
+                )[0]
                 _saturated_preview = True
                 # Saturated-preview dedup: past the cap every edit is the same text; skip until finalize.
                 # Re-sending it is a visual no-op that still counts against Discord's edit rate limit — skip
@@ -3470,8 +3483,22 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
                 # Reactive split: format_message inflation can exceed 2,000 (50035) even after pre-flight.
                 if self._is_length_overflow_error(edit_err):
                     if finalize:
-                        return await self._edit_overflow_split(channel, msg, message_id, content)
-                    truncated = self.truncate_message(formatted, self.MAX_MESSAGE_LENGTH)[0]
+                        overflow_result = await self._edit_overflow_split(
+                            channel, msg, message_id, content,
+                        )
+                        if overflow_result.success:
+                            await asyncio.to_thread(
+                                self._record_discord_response,
+                                reply_to=(metadata or {}).get("reply_to_message_id"),
+                                result=overflow_result,
+                                content=content,
+                                final=True,
+                            )
+                        return overflow_result
+                    # Mid-stream: truncate and retry in place (no split).
+                    truncated = self.truncate_message(
+                        formatted, self.MAX_MESSAGE_LENGTH,
+                    )[0]
                     if self._last_overflow_preview.get(_preview_key) == truncated:
                         # Saturated-preview dedup (see pre-flight path above).
                         return SendResult(success=True, message_id=message_id)
@@ -3509,8 +3536,10 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
     ) -> SendResult:
         """Deliver an oversized final edit: edit ``message_id`` with chunk 1, send chunks 2..N as
         replies to the previous. Returns ``message_id=<last-id>`` + ``continuation_message_ids``.
-        A continuation failure still reports success plus ``partial_overflow`` so the consumer
-        delivers the tail; only a first-chunk edit failure returns ``success=False``."""
+        A first-chunk edit failure returns ``success=False`` (nothing was delivered). A
+        continuation failure returns ``success=False`` with ``raw_response.partial_overflow`` and
+        ``delivered_prefix`` so the consumer's failure arm sends only the missing tail and the
+        ledger stays un-advanced until the tail lands."""
         formatted = self.format_message(content)
         chunks = self._cap_split_chunks(self.truncate_message(formatted, self.MAX_MESSAGE_LENGTH))
         if len(chunks) <= 1:
@@ -3554,13 +3583,14 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
                     )
                     last_id = continuation_ids[-1] if continuation_ids else message_id
                     return SendResult(
-                        success=True,
+                        success=False,
                         message_id=last_id,
                         continuation_message_ids=tuple(continuation_ids),
                         raw_response={
                             "partial_overflow": True, "delivered_chunks": delivered,
                             "total_chunks": len(chunks), "last_message_id": last_id,
                             "continuation_message_ids": tuple(continuation_ids),
+                            "delivered_prefix": "".join(chunks[:delivered]),
                         },
                     )
             new_id = str(sent.id)
