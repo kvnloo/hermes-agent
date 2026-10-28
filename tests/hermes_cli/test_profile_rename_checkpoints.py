@@ -224,10 +224,23 @@ def test_retry_after_skipped_step6_recovers_via_reparenting(profile_env, tmp_pat
         assert str(new_note) in new_ledger
 
         # End-to-end smoke: safe-restore plans resolve for both pre-rename and post-rename tips.
+        # The post-rename tip matches the working tree, so nothing is restorable; the pre-rename
+        # tip classifies the user-authored note as restorable (not skipped) because its current
+        # content still matches the agent-write ledger.
         plan_post = manager._safe_restore_plan(str(new_workdir), reparented_tip)
         assert plan_post["success"] is True
+        assert plan_post["restore"] == [] and plan_post["skipped"] == []
         plan_pre = manager._safe_restore_plan(str(new_workdir), c1)
         assert plan_pre["success"] is True
+        assert "note.txt" in plan_pre["restore"]
+        assert plan_pre["skipped"] == []
+
+        # Actual safe restore to the pre-rename tip reverts the user-authored note to its
+        # pre-rename content, proving the re-parented history is reachable and restorable from
+        # the new identity — not just that the plan reported success.
+        restore_result = manager.restore(str(new_workdir), c1, safe=True)
+        assert restore_result["success"] is True
+        assert new_note.read_text(encoding="utf-8") == "v1\n"
 
         # Idempotent retry: nothing left to rekey, still succeeds (errors == 0).
         assert migrate_profile_identity("oldname", "newname") is True
