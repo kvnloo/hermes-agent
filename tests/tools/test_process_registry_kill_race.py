@@ -12,7 +12,6 @@ import queue
 import signal
 import subprocess
 import threading
-import time
 
 import pytest
 from unittest.mock import patch
@@ -221,6 +220,49 @@ class TestKillProcessLiveQueue:
                  if e.get("session_id") == target.id and e.get("completion_reason") == "exited"]
         assert stale == []
 
+    def test_replace_stale_completion_notification_no_duplicate_when_already_drained(self, registry):
+        """A consumer that already drained the stale ``exited`` event (the TUI's
+        ``queue.get`` does not take ``self._lock``) must NOT receive a second,
+        corrected event: the TUI dedups by session and would silently drop the
+        ``killed`` payload, leaving the stale ``exited`` text visible. With no
+        stale event on the queue to swap, the kill path's only correction is the
+        durable ``save_completed_result`` re-stamp; the queue helper enqueues
+        nothing, so the drained surface is not doubled.
+        """
+        target = _make_session(sid="proc_swap_drained", command="sleep 999")
+        target.notify_on_complete = True
+        target.completion_reason = "killed"
+        target.termination_source = "kill_all"
+        target.exit_code = -15
+        target.exited = True
+
+        # The stale 'exited' event the reader enqueued has already been drained
+        # by a consumer (queue is empty for this session); foreign events may
+        # remain and must be preserved verbatim.
+        foreign = _make_session(sid="proc_swap_foreign2", command="echo hi")
+        foreign.notify_on_complete = True
+        registry.completion_queue.put({
+            "type": "completion", "session_id": foreign.id,
+            "session_key": "foreign2", "task_id": "t2",
+            "owner_task_id": "t2", "command": "echo hi",
+            "completion_reason": "exited", "termination_source": "", "exit_code": 0,
+            "output": "hi", "started_at": 0,
+        })
+
+        registry._replace_stale_completion_notification(target)
+
+        queued = list(registry.completion_queue.queue)
+        # No target completion is re-enqueued: the stale event was already
+        # consumed, so a corrected one would be a duplicate the TUI drops.
+        target_events = [e for e in queued if e.get("session_id") == target.id]
+        assert target_events == [], (
+            "a corrected event was enqueued with no stale event to swap (duplicate): "
+            f"{target_events}")
+        # The foreign completion is preserved untouched.
+        foreign_kept = [e for e in queued if e.get("session_id") == foreign.id]
+        assert len(foreign_kept) == 1
+        assert foreign_kept[0]["completion_reason"] == "exited"
+
     def test_kill_live_queue_when_kill_wins_race_uses_kill_stamp(self, registry):
         """Complement to the reader-wins test: if the kill path's stamping runs
         *before* the reader finalises, the reader's ``_move_to_finished`` is
@@ -345,25 +387,23 @@ class TestKillProcessLiveQueue:
         try:
             registry.kill_all(task_id="t1", source="kill_all", consume_output=False)
 
-            # Wait for the reader to finalise AND for the kill path to swap the
-            # stale event (if the reader won the race). 5s is ample: SIGTERM
-            # graced-processes die in <<1s on POSIX.
-            deadline = time.monotonic() + 8.0
+            # kill_all is synchronous: the reader's enqueue (reader-wins race) and
+            # the kill path's swap both complete before it returns. Wait for the
+            # reader thread to finish, then drain the queue. The blocking
+            # ``get(timeout=...)`` is an event-driven wait on the queue, not a
+            # fixed sleep (HX013): SIGTERM-graced processes die in <<1s on POSIX.
+            assert done.wait(timeout=8.0), "reader thread never finalised"
             queued = []
-            while time.monotonic() < deadline:
+            while True:
                 try:
                     e = registry.completion_queue.get_nowait()
                 except queue.Empty:
-                    if done.is_set() and registry.completion_queue.empty():
-                        break
-                    time.sleep(0.02)
-                    continue
+                    break
                 if e.get("type") == "completion" and e.get("session_id") == s.id:
                     queued.append(e)
                 else:
                     # Keep any other event (none expected here) for hygiene.
                     registry.completion_queue.put(e)
-            assert done.wait(timeout=2.0), "reader thread never finalised"
             assert queued, "reader never enqueued a completion in time"
             assert queued[0]["completion_reason"] == "killed", (
                 f"expected 'killed', got {queued[0]['completion_reason']!r} "
