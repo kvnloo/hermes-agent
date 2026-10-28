@@ -1,6 +1,8 @@
 """Tests for the WeCom callback-mode adapter."""
 
 import asyncio
+import hmac
+from urllib.parse import urlencode
 from xml.etree import ElementTree as ET
 
 import pytest
@@ -8,7 +10,7 @@ import pytest
 from gateway.config import PlatformConfig
 from plugins.platforms.wecom import callback_adapter as _callback_mod
 from plugins.platforms.wecom.callback_adapter import WecomCallbackAdapter
-from plugins.platforms.wecom.wecom_crypto import SignatureError, WXBizMsgCrypt
+from plugins.platforms.wecom.wecom_crypto import WXBizMsgCrypt
 
 # ``_build_event`` parses inbound XML with defusedxml, which ships with the
 # ``wecom`` extra (and transitively with ``youtube``, hence ``[all]`` in CI). A
@@ -80,27 +82,41 @@ class TestWecomSignatureVerification:
         app = _app()
         return WXBizMsgCrypt(app["token"], app["encoding_aes_key"], app["corp_id"])
 
-    def test_tampered_signature_raises_signature_error(self):
-        """A single-byte change to msg_signature must raise SignatureError."""
-        crypt = self._crypt()
-        parts = self._encrypt_and_parse(crypt)
-        valid = parts["msg_signature"]
-        tampered = valid[:-1] + ("0" if valid[-1] != "0" else "1")
-        with pytest.raises(SignatureError):
-            crypt.decrypt(tampered, parts["timestamp"], parts["nonce"], parts["encrypt"])
+    def test_valid_signature_requires_constant_time_bytes_comparison(self, monkeypatch):
+        """Valid signatures must verify via ``hmac.compare_digest`` on encoded bytes.
 
-    def test_non_ascii_signature_raises_signature_error_not_type_error(self):
-        """A non-ASCII msg_signature must raise SignatureError (bytes-compare fail-closed).
-
-        ``hmac.compare_digest`` raises ``TypeError`` on a non-ASCII ``str``; the
-        implementation compares ``.encode()``d bytes so a hostile query value
-        fails closed with a clean ``SignatureError`` rather than propagating a
-        ``TypeError`` (which would surface as a logged 500).
+        The inbound ``msg_signature`` is an attacker-controlled query parameter on
+        a public, unauthenticated endpoint, so the verifier must compare the
+        expected signature to it with ``hmac.compare_digest`` on ``bytes``
+        operands — never a plain string ``!=`` (timing oracle). This is the
+        security invariant: a successful verification has to route through
+        ``hmac.compare_digest`` with two ``bytes`` arguments. On the insecure
+        base (string ``!=``) ``hmac.compare_digest`` is never called, so the
+        spy records zero calls and this assertion fails red.
         """
         crypt = self._crypt()
         parts = self._encrypt_and_parse(crypt)
-        with pytest.raises(SignatureError):
-            crypt.decrypt("\u00e9" * 40, parts["timestamp"], parts["nonce"], parts["encrypt"])
+
+        calls = []
+        real_compare_digest = hmac.compare_digest
+
+        def _spy(left, right):
+            calls.append((left, right))
+            return real_compare_digest(left, right)
+
+        monkeypatch.setattr(hmac, "compare_digest", _spy)
+
+        decrypted = crypt.decrypt(
+            parts["msg_signature"], parts["timestamp"], parts["nonce"], parts["encrypt"]
+        )
+
+        assert b"<Content>hello</Content>" in decrypted
+        assert len(calls) == 1, "verification must go through hmac.compare_digest"
+        left, right = calls[0]
+        assert isinstance(left, bytes) and isinstance(right, bytes), (
+            "compare_digest must receive bytes operands, not str"
+        )
+        assert left == right, "a valid signature must compare equal"
 
 
 class TestWecomCallbackEventConstruction:
@@ -257,6 +273,103 @@ class TestWecomCallbackBodySizeLimit:
         oversized = b"<xml>" + b"A" * (_MAX_BODY + 1) + b"</xml>"
         response = await adapter._handle_callback(self._request(oversized))
         assert response.status == 413
+
+
+class TestWecomCallbackHTTP:
+    """GET (``_handle_verify``) and POST (``_handle_callback``) signature boundaries.
+
+    The inbound ``msg_signature`` is an attacker-controlled query parameter on a
+    public, unauthenticated endpoint. Both handlers must route signature failures
+    through ``WXBizMsgCrypt.decrypt`` (constant-time compare) and return a clean
+    4xx — 403 for GET verify, 400 for POST callback — never a 500 or an
+    ``logger.exception`` traceback. The valid control proves the 4xx is the
+    signature, not the request shape.
+    """
+
+    @staticmethod
+    def _encrypted_parts(plaintext="<xml><Content>hello</Content></xml>"):
+        app = _app()
+        crypt = WXBizMsgCrypt(app["token"], app["encoding_aes_key"], app["corp_id"])
+        xml = crypt.encrypt(plaintext, nonce="nonce123", timestamp="123456")
+        root = ET.fromstring(xml)
+        return {
+            "msg_signature": root.findtext("MsgSignature", default=""),
+            "timestamp": root.findtext("TimeStamp", default=""),
+            "nonce": root.findtext("Nonce", default=""),
+            "encrypt": root.findtext("Encrypt", default=""),
+        }
+
+    @staticmethod
+    def _make_request(method, query, body=b""):
+        from unittest.mock import Mock
+
+        from aiohttp import StreamReader
+        from aiohttp.test_utils import make_mocked_request
+
+        protocol = Mock(_reading_paused=False)
+        reader = StreamReader(protocol=protocol, limit=2 ** 20)
+        if body:
+            reader.feed_data(body)
+        reader.feed_eof()
+        path = "/wecom/callback?" + urlencode(query)
+        return make_mocked_request(method, path, payload=reader)
+
+    @staticmethod
+    def _signature_for(kind, valid):
+        if kind == "valid":
+            return valid
+        if kind == "tampered":
+            return valid[:-1] + ("0" if valid[-1] != "0" else "1")
+        # non_ascii: a hostile query value that decodes to non-ASCII str
+        return "\u00e9" * 40
+
+    @pytest.mark.parametrize(
+        "method,kind,status",
+        [
+            ("GET", "valid", 200),
+            ("GET", "tampered", 403),
+            ("GET", "non_ascii", 403),
+            ("POST", "valid", 200),
+            ("POST", "tampered", 400),
+            ("POST", "non_ascii", 400),
+        ],
+    )
+    @requires_defusedxml
+    @pytest.mark.asyncio
+    async def test_signature_failure_at_get_and_post_boundaries(
+        self, method, kind, status, caplog
+    ):
+        import logging
+
+        parts = self._encrypted_parts()
+        query = {
+            "msg_signature": self._signature_for(kind, parts["msg_signature"]),
+            "timestamp": parts["timestamp"],
+            "nonce": parts["nonce"],
+            "echostr": parts["encrypt"],
+        }
+        body = ("<xml><Encrypt>%s</Encrypt></xml>" % parts["encrypt"]).encode("utf-8")
+        request = self._make_request(method, query, body if method == "POST" else b"")
+        adapter = WecomCallbackAdapter(_config())
+
+        with caplog.at_level(
+            logging.ERROR, logger="plugins.platforms.wecom.callback_adapter"
+        ):
+            if method == "GET":
+                response = await adapter._handle_verify(request)
+            else:
+                response = await adapter._handle_callback(request)
+
+        assert response.status == status, (method, kind, response.status, response.text)
+        # Signature failures must stay on the silent WeComCryptoError path — no
+        # 500 and no exception traceback logged for tampered/non-ASCII values.
+        if kind != "valid":
+            assert not any(r.levelno >= logging.ERROR for r in caplog.records), (
+                method,
+                kind,
+                [r.getMessage() for r in caplog.records],
+            )
+
 
 @pytest.mark.asyncio
 async def test_oversized_cron_output_is_split_under_the_2048_byte_text_limit():
