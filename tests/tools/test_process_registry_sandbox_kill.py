@@ -150,12 +150,19 @@ class TestKillProcessSandbox:
         cmds = [c for c, _ in env.commands]
         # 1) read the worker pid from its file
         assert any(c.startswith("cat ") and ".worker_pid" in c for c in cmds)
-        # 2) SIGTERM the worker + direct children, then SIGKILL survivors
-        tree_kill = [c for c in cmds if "pkill -P 99" in c and "kill 99" in c]
+        # 2) parent-first tree-kill of the worker: SIGTERM the worker (99) before
+        # its descendants, snapshot the recursive descendants BEFORE signalling
+        # (pgrep -P, not the old children-first pkill -P), then SIGKILL the worker
+        # and any survivor, then verify liveness so a survivor is reported.
+        tree_kill = [c for c in cmds if "kill 99" in c]
         assert tree_kill, f"expected a worker tree-kill command, got {cmds}"
-        assert "pkill -9 -P 99" in tree_kill[0]
-        assert "kill -9 99" in tree_kill[0]
-        assert "sleep 0.5" in tree_kill[0]
+        assert "kill 99 2>/dev/null" in tree_kill[0]      # SIGTERM the worker first
+        assert "kill -9 99 2>/dev/null" in tree_kill[0]   # then SIGKILL the worker
+        assert "sleep 0.5" in tree_kill[0]                # grace between TERM and KILL
+        assert "pgrep -P" in tree_kill[0]                # recursive descendant snapshot
+        # The worker is signalled before its descendants: no ``pkill`` (which
+        # signals children ahead of the parent) remains.
+        assert "pkill" not in tree_kill[0]
         # 3) then reap the wrapper subshell
         assert "kill 4242 2>/dev/null" in cmds
         # The worker tree-kill must run before the wrapper kill.
@@ -210,6 +217,50 @@ class TestKillProcessSandbox:
         cmds = [c for c, _ in env.commands]
         assert "kill 4242 2>/dev/null" in cmds
         assert not any("pkill" in c for c in cmds)
+
+    def test_zero_worker_pid_never_signals_process_group(self, registry):
+        # PID 0 has process-group semantics for kill(2) — interpolating it into a
+        # kill command would signal the whole group the calling process belongs
+        # to. A worker_pid file that reads "0" (corrupt/edge) must be rejected
+        # and the wrapper kill used instead, with no worker tree-kill issued.
+        env = _FakeSandboxEnv(cat_output="0\n")
+        s = self._sandbox_session(
+            registry, "proc_zero", "/tmp/hermes_bg_proc_zero.worker_pid"
+        )
+        s.env_ref = env
+        with patch.object(registry, "_write_checkpoint"):
+            result = registry.kill_process(s.id)
+        assert result["status"] == "killed"
+        cmds = [c for c, _ in env.commands]
+        # A PID of 0 must never reach a kill/pgrep command: no signal is aimed
+        # at process group 0 or at the sandbox's own session.
+        assert not any("kill 0" in c or "pgrep -P 0" in c or "kill -0 0" in c for c in cmds)
+        assert not any("kill -9 0" in c for c in cmds)
+        # The wrapper is still reaped.
+        assert "kill 4242 2>/dev/null" in cmds
+
+    def test_backend_kill_failure_keeps_retryable_session(self, registry):
+        # If the sandbox backend raises while tree-killing the worker (transport
+        # error, dead sandbox mid-kill), the worker's liveness is unknown — the
+        # kill must NOT publish a `killed` receipt and must keep the session
+        # running so a later kill can retry. The wrapper kill still runs.
+        env = _FakeSandboxEnv(cat_output="99\n", execute_raises_on=("sleep 0.5",))
+        s = self._sandbox_session(
+            registry, "proc_kfail", "/tmp/hermes_bg_proc_kfail.worker_pid"
+        )
+        s.env_ref = env
+        with patch.object(registry, "_write_checkpoint"):
+            result = registry.kill_process(s.id)
+        # The cat read succeeds (returns 99); the tree-kill command (which
+        # contains "sleep 0.5") raises, so the worker is reported as a survivor.
+        assert result["status"] == "error"
+        assert "incomplete" in result["error"].lower()
+        assert result["survivors"] == [99]
+        assert result["process_running"] is True
+        # The session stays listed and killable.
+        assert s.id in registry._running
+        cmds = [c for c, _ in env.commands]
+        assert "kill 4242 2>/dev/null" in cmds
 
 
 class _RealBashEnv:
@@ -273,6 +324,7 @@ def _read_env_pid(env, path, attempts=60, delay=0.1):
     return None
 
 
+@pytest.mark.platforms("posix")
 @pytest.mark.skipif(not shutil.which("bash"), reason="needs a POSIX bash")
 class TestSandboxKillEndToEnd:
     """Spawn a real worker through the actual spawn_via_env bg_command and
@@ -296,6 +348,7 @@ class TestSandboxKillEndToEnd:
     def test_kill_terminates_real_worker(self, registry, tmp_path):
         env = _RealBashEnv(str(tmp_path))
         session = self._spawn(registry, env, "sleep 120")
+        worker_pid = None
         try:
             assert session.pid is not None
             worker_pid = _read_env_pid(env, session.worker_pid_path)
@@ -312,13 +365,15 @@ class TestSandboxKillEndToEnd:
                 "worker survived kill_process — the sandbox kill leaked it"
         finally:
             try:
-                env.execute(f"kill -9 {worker_pid} 2>/dev/null", timeout=5)
+                if worker_pid:
+                    env.execute(f"kill -9 {worker_pid} 2>/dev/null", timeout=5)
             except Exception:
                 pass
 
     def test_kill_terminates_real_worker_and_its_child(self, registry, tmp_path):
-        # A worker that spawns its own child: ``pkill -P <worker>`` must reap
-        # the direct child too, not only the worker itself.
+        # A worker that spawns its own child: the recursive descendant snapshot
+        # (pgrep -P walk) must reap the child too, not only the worker itself,
+        # even though the child is signalled AFTER the worker (parent-first).
         env = _RealBashEnv(str(tmp_path))
         session = self._spawn(registry, env, "sleep 120 & wait")
         worker_pid = None
@@ -354,6 +409,56 @@ class TestSandboxKillEndToEnd:
             assert result["status"] == "killed"
             assert not self._alive(env, worker_pid), "worker leaked"
             assert not self._alive(env, child_pid), "worker's child leaked"
+        finally:
+            try:
+                if worker_pid:
+                    env.execute(
+                        f"pkill -9 -P {worker_pid} 2>/dev/null; "
+                        f"kill -9 {worker_pid} 2>/dev/null",
+                        timeout=5,
+                    )
+            except Exception:
+                pass
+
+    def test_kill_terminates_sigterm_ignoring_grandchild(self, registry, tmp_path):
+        # A grandchild that ignores SIGTERM and is reparented before the SIGKILL
+        # pass must still be reaped: the recursive descendant snapshot taken
+        # BEFORE signalling (pgrep -P walk) captures it, so the SIGKILL loop
+        # reaches it even after the worker exits and the grandchild is orphaned.
+        # ``trap '' TERM; sleep 300 & sleep 200 & wait`` backgrounds two children;
+        # the trap on the worker blocks its own SIGTERM so it survives the grace,
+        # but the grandchild ``sleep 200`` is a direct child of the worker and is
+        # snapshotted + SIGKILLed regardless.
+        env = _RealBashEnv(str(tmp_path))
+        session = self._spawn(registry, env, "trap '' TERM; sleep 300 & wait")
+        worker_pid = None
+        grandchild_pid = None
+        try:
+            assert session.pid is not None
+            worker_pid = _read_env_pid(env, session.worker_pid_path)
+            assert worker_pid is not None
+            assert self._alive(env, worker_pid)
+            # The worker (trap '' TERM) backgrounds sleep 300; its child is the
+            # backgrounded sleep. Poll until a LIVE direct child is found.
+            for _ in range(60):
+                cout = env.execute(
+                    f"pgrep -P {worker_pid} -x sleep 2>/dev/null | head -n1",
+                    timeout=5,
+                )
+                cand = cout["output"].strip().splitlines()
+                cand = cand[0] if cand else ""
+                if cand.isdigit() and self._alive(env, int(cand)):
+                    grandchild_pid = int(cand)
+                    break
+                time.sleep(0.1)
+            assert grandchild_pid is not None, "worker should have a live child to reap"
+
+            with patch.object(registry, "_write_checkpoint"):
+                result = registry.kill_process(session.id)
+
+            assert result["status"] == "killed"
+            assert not self._alive(env, worker_pid), "worker leaked"
+            assert not self._alive(env, grandchild_pid), "worker's grandchild leaked"
         finally:
             try:
                 if worker_pid:

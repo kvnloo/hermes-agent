@@ -86,8 +86,11 @@ def cleanup_terminal_temp_cache(max_age_hours: float = TERMINAL_TEMP_MAX_IDLE_HO
 
     def group_touched(stem: str) -> bool:
         # Re-stat every member right before each delete: the snapshot above is a candidate
-        # list, and a session that writes its .log after it must keep the whole group.
-        for sfx in ("log", "pid", "exit"):
+        # list, and a session that writes its .log (or its .worker_pid) after it must keep
+        # the whole group. A sandbox-backed session writes its .worker_pid when the wrapper
+        # spawns the nohup'd worker — a re-stat that misses it could prune the group while
+        # the worker is still starting up, so the kill path loses the PID it needs.
+        for sfx in ("log", "pid", "exit", "worker_pid"):
             try:
                 if (root / f"{stem}.{sfx}").stat().st_mtime >= cutoff:
                     return True

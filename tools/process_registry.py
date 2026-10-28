@@ -2251,8 +2251,13 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
             self._terminate_host_pid(session.process.pid, session.host_start_time)
         elif session.env_ref and session.pid:
             # Tree-kill the nohup'd worker (worker_pid_path) before reaping the wrapper.
-            self._terminate_env_worker(session.env_ref, session)
+            # A worker that survives (or a stale/recycled PID we refused to touch) must not
+            # publish a `killed` receipt: report the survivors like the host path and keep
+            # the session listed and killable.
+            worker_survivors = self._terminate_env_worker(session.env_ref, session)
             session.env_ref.execute(f"kill {session.pid} 2>/dev/null", timeout=5)
+            if worker_survivors:
+                return self._env_kill_incomplete_result(session, worker_survivors)
         elif session.detached and session.pid_scope == "host" and session.pid:
             # Same fate as poll/list: a gone or reused PID means our process is
             # gone — never tree-kill the stranger — but a live PID with an
