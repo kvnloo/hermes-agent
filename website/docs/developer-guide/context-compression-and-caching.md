@@ -7,6 +7,13 @@ Source files: `agent/context_engine.py` (ABC), `agent/context_compressor.py` (de
 `agent/prompt_caching.py`, `gateway/run_turn.py` (session hygiene), `agent/compression_facade.py` (search for `_compress_context`)
 
 
+HTTP 413 normally enters payload compression. A structured
+`rate_limit_exceeded` code takes precedence, including Groq's tokens-per-minute
+quota rejection. It uses the existing rate-limit recovery and reset-window
+metadata instead of compression, so quota exhaustion does not trigger the
+compression-exhaustion session reset. Other 413 responses retain payload
+compression.
+
 ## Bedrock context window cache
 
 Bedrock context resolution in `agent/model_metadata.py` uses this precedence:

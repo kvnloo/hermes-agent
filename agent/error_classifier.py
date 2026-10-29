@@ -1210,13 +1210,20 @@ def _classify_image_tool_422(c: _Ctx) -> Verdict:
     return _first_match(c.msg, _IMAGE_TOOL_RULES) or _V_FORMAT_ERROR
 
 
+def _status_413(c: _Ctx) -> Verdict:
+    # Groq reports TPM quota failures as 413, not a byte-size rejection.
+    if c.code == "rate_limit_exceeded":
+        return _status_429(c)
+    return _V_PAYLOAD_TOO_LARGE
+
+
 # 401 not retryable on its own: rotation/refresh run before the retryability
 # check, then the client-error abort path (fallback first) is correct. 408 is
 # retry-safe (RFC 9110 §15.5.9; proxies emit it when generation outruns the
 # read window). Unlisted 4xx → format_error, 5xx → server_error.
 _STATUS_HANDLERS: Dict[int, Callable[[_Ctx], Verdict]] = {
     400: _classify_400, 401: lambda c: _V_AUTH_ROTATE, 402: lambda c: _classify_402(c.msg, dict),
-    403: _status_403, 404: _status_404, 408: lambda c: _V_TIMEOUT, 413: lambda c: _V_PAYLOAD_TOO_LARGE,
+    403: _status_403, 404: _status_404, 408: lambda c: _V_TIMEOUT, 413: _status_413,
     422: lambda c: _classify_image_tool_422(c),
     429: _status_429, 500: _status_5xx, 502: _status_5xx,
     503: lambda c: _first_match(c.msg, _OVERFLOW_AS_5XX_RULES) or _V_OVERLOADED,

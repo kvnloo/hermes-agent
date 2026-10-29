@@ -1,6 +1,7 @@
 """Tests for agent.error_classifier — structured API error classification."""
 
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
 
@@ -768,6 +769,43 @@ class TestClassifyApiError:
     def test_413_payload_too_large(self):
         e = MockAPIError("Request Entity Too Large", status_code=413)
         result = classify_api_error(e)
+        assert result.reason == FailoverReason.payload_too_large
+        assert result.should_compress is True
+
+    @pytest.mark.parametrize("retry_after", [None, 60])
+    def test_413_groq_tpm_quota_does_not_compress(self, retry_after):
+        message = (
+            "Request too large for model `openai/gpt-oss-120b` in organization "
+            "`test-org` service tier `on_demand` on tokens per minute (TPM): "
+            "Limit 8000, Requested 13400, please reduce your message size and try again. "
+            "Need more tokens? Upgrade to Dev Tier today at "
+            "https://console.groq.com/settings/billing"
+        )
+        error = {"message": message, "type": "tokens", "code": "rate_limit_exceeded"}
+        if retry_after is not None:
+            error["retry_after"] = retry_after
+        with patch("agent.error_classifier.time.time", return_value=1000):
+            result = classify_api_error(
+                MockAPIError(message, status_code=413, body={"error": error}),
+                provider="groq", model="openai/gpt-oss-120b",
+                approx_tokens=14920, num_messages=100,
+            )
+        assert result.reason == FailoverReason.rate_limit
+        assert result.status_code == 413
+        assert result.should_compress is False
+        assert result.should_rotate_credential is True
+        assert result.should_fallback is True
+        assert result.message == message
+        if retry_after is not None:
+            assert result.error_context["reset_at"] == 1060
+
+    def test_413_structured_payload_rejection_still_compresses(self):
+        result = classify_api_error(
+            MockAPIError("Request too large", status_code=413, body={
+                "error": {"message": "Request too large", "code": "request_too_large"},
+            }),
+            provider="groq", model="openai/gpt-oss-120b",
+        )
         assert result.reason == FailoverReason.payload_too_large
         assert result.should_compress is True
 
