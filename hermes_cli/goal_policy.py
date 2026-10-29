@@ -6,6 +6,8 @@ from hashlib import sha256
 import time
 from typing import TYPE_CHECKING, Literal, Protocol, runtime_checkable
 
+from hermes_cli.goals import GoalManager, GoalState
+
 if TYPE_CHECKING:
     from hermes_cli.goals import GoalGate
 
@@ -69,11 +71,44 @@ def _workflow(policy: GoalPolicy) -> tuple[str, str]:
     return text, sha256(text.encode()).hexdigest()
 
 
+class _GoalProposal(GoalManager):
+    """Reuse native transitions without publishing their intermediate states."""
+
+    def __init__(self, manager):
+        self._profile_home = manager._profile_home
+        self.session_id = manager.session_id
+        self.default_max_turns = manager.default_max_turns
+        self._state = GoalState.from_json(manager.state.to_json())
+
+    def _save(self):
+        return self._state
+
+
+def _commit_goal(session_id: str, expected: str | None, state: GoalState) -> bool:
+    from agent.estop import is_engaged
+    from hermes_cli.goals import _get_session_db, _meta_key
+
+    db = _get_session_db()
+    if db is None:
+        raise RuntimeError("goal database unavailable; transition not committed")
+    key, replacement = _meta_key(session_id), state.to_json()
+
+    def commit(conn):
+        row = conn.execute("SELECT value FROM state_meta WHERE key = ?", (key,)).fetchone()
+        current = GoalState.from_json(row[0]).to_json() if row is not None else None
+        if current != expected or is_engaged():
+            return False
+        db.set_meta(key, replacement, cursor=conn.cursor())
+        return True
+
+    return db._execute_write(commit)
+
+
 def arm_goal(ctx, goal: str, *, max_turns: int, gates: list[GoalGate]) -> dict:
     from agent.estop import is_engaged
     from gateway.session_context import _SESSION_ID
     from hermes_constants import hermes_home_key
-    from hermes_cli.goals import GoalGate, GoalManager, GoalState, load_goal, save_goal
+    from hermes_cli.goals import GoalGate, load_goal
 
     sid = _SESSION_ID.get()
     if not isinstance(sid, str) or not sid:
@@ -99,7 +134,8 @@ def arm_goal(ctx, goal: str, *, max_turns: int, gates: list[GoalGate]) -> dict:
     state = GoalState(goal=goal.strip(), max_turns=max_turns, gates=gates, created_at=time.time(),
                       policy=ctx.plugin_id, policy_checks=[g.command for g in gates],
                       policy_workflow_digest=digest)
-    save_goal(sid, state)
+    if not _commit_goal(sid, None, state):
+        raise PermissionError("goal authority changed before arming committed")
     stored = load_goal(sid)
     if stored is None or stored.to_json() != state.to_json():
         raise RuntimeError("goal did not persist; continuation is not armed")
@@ -207,7 +243,7 @@ def _observe(manager, state, last_response, background_processes, active_delegat
 def evaluate_policy(manager, last_response, *, background_processes=None, active_delegations=0):
     from agent.estop import is_engaged
     from hermes_constants import hermes_home_key
-    from hermes_cli.goals import GoalState, _decision, load_goal
+    from hermes_cli.goals import _decision, load_goal
 
     original = manager.state.to_json()
     if manager._profile_home != hermes_home_key():
@@ -217,15 +253,26 @@ def evaluate_policy(manager, last_response, *, background_processes=None, active
         manager._state = stored
         return _decision(stored.status if stored else None, False, None, "superseded",
                          "goal changed before evaluation", "Goal evaluation superseded by user control.")
-    state = GoalState.from_json(original)
     if is_engaged():
-        return _decision(state.status, False, None, "paused", "emergency stop", "Emergency stop is engaged.")
+        return _decision(manager.state.status, False, None, "paused", "emergency stop", "Emergency stop is engaged.")
+    proposal = _GoalProposal(manager)
+    decision = _evaluate_proposal(proposal, last_response, background_processes, active_delegations)
+    if not _commit_goal(manager.session_id, original, proposal.state):
+        current = load_goal(manager.session_id)
+        manager._state = current
+        return _decision(current.status if current else None, False, None, "superseded",
+                         "goal controls changed during evaluation", "Goal evaluation superseded by user control.")
+    manager._state = proposal.state
+    decision["goal_revision"] = sha256(proposal.state.to_json().encode()).hexdigest()
+    return decision
+
+
+def _evaluate_proposal(manager, last_response, background_processes, active_delegations):
+    state = manager.state
     if state.turns_used >= state.max_turns:
         return manager._budget_pause(manager.state, "continue", "turn budget exhausted")
     if manager.is_waiting():
         return manager._waiting_decision(manager.state)
-    original = manager.state.to_json()
-    state = GoalState.from_json(original)
     state.turns_used += 1
     state.last_turn_at = time.time()
     try:
@@ -234,12 +281,6 @@ def evaluate_policy(manager, last_response, *, background_processes=None, active
         failure = f"goal policy unavailable: {type(exc).__name__}: {exc}"
         evaluation = _Evaluation(GoalPolicyDecision("replan"), failure=failure)
 
-    current = load_goal(manager.session_id)
-    if current is None or current.to_json() != original or is_engaged():
-        manager._state = current
-        return _decision(current.status if current else None, False, None, "superseded",
-                         "goal controls changed during evaluation", "Goal evaluation superseded by user control.")
-    manager._state = state
     if evaluation.failure:
         return manager._pause_decision(evaluation.failure, "policy_error", evaluation.failure, evaluation.failure)
     return _apply_evaluation(manager, evaluation, active_delegations)

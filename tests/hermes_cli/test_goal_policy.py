@@ -284,6 +284,60 @@ def test_unfinished_acceptance_can_register_owned_wait(armed, monkeypatch):
             child.stdin.close()
 
 
+@pytest.mark.parametrize("control", ["pause", "clear"])
+@pytest.mark.parametrize("verdict", ["continue", "done", "wait"])
+def test_user_control_at_commit_boundary_wins(armed, monkeypatch, control, verdict):
+    from hermes_cli.goals import _get_session_db
+
+    *_, manager = armed
+    judge(monkeypatch, verdict, {"seconds": 600} if verdict == "wait" else None)
+    db = _get_session_db()
+    assert db is not None
+    write = db._execute_write
+    intercepted = False
+
+    def controlled_write(operation, *args, **kwargs):
+        nonlocal intercepted
+        if not intercepted:
+            intercepted = True
+            getattr(GoalManager("mission"), control)()
+        return write(operation, *args, **kwargs)
+
+    monkeypatch.setattr(db, "_execute_write", controlled_write)
+    result = manager.evaluate_after_turn("Current turn ended")
+    assert intercepted
+    assert not result["should_continue"]
+    stored = load_goal("mission")
+    assert stored is not None
+    assert stored.status == {"pause": "paused", "clear": "cleared"}[control]
+    assert stored.turns_used == 0
+
+
+def test_two_armers_cannot_replace_each_other(armed, monkeypatch):
+    from hermes_cli.goals import _get_session_db
+
+    ctx, _, _, manager = armed
+    db = _get_session_db()
+    assert db is not None
+    write = db._execute_write
+    intercepted = False
+
+    def competing_write(operation, *args, **kwargs):
+        nonlocal intercepted
+        if not intercepted:
+            intercepted = True
+            ctx.arm_goal("Winning mission", max_turns=2, gates=manager.state.gates)
+        return write(operation, *args, **kwargs)
+
+    monkeypatch.setattr(db, "_execute_write", competing_write)
+    with scoped_current_session_id("concurrent-arm"), pytest.raises((ValueError, PermissionError)):
+        ctx.arm_goal("Stale mission", max_turns=8, gates=manager.state.gates)
+    stored = load_goal("concurrent-arm")
+    assert stored is not None
+    assert stored.goal == "Winning mission"
+    assert stored.max_turns == 2
+
+
 def test_legacy_state_and_default_blocked_unchanged(monkeypatch):
     from hermes_cli.goals import GoalState
     assert GoalState.from_json(json.dumps({"goal": "legacy"})).policy == ""
