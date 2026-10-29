@@ -331,6 +331,10 @@ class GatewayGoalsMixin:
         if not decision.get("should_continue") or not prompt or source is None:
             return
         if getattr(source, "platform", None) == Platform.LOCAL:
+            if revision := decision.get("goal_revision"):
+                from gateway.goal_continuation import admit_policy_continuation
+                await admit_policy_continuation(self, source, mgr.session_id, prompt, revision)
+                return
             # A local session's adapter FIFO has no reader: its turns are authority admissions.
             # Commit the continuation there, as main's TUI chained it after the turn.
             from gateway.session_automation import admit_route_wake

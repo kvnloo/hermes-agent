@@ -105,6 +105,37 @@ def test_workflow_load_is_required_not_self_asserted(armed, monkeypatch):
     assert manager.evaluate_after_turn("done")["status"] == "paused"
 
 
+def test_unchanged_workflow_is_not_repeated(armed, monkeypatch):
+    _, policy, _, manager = armed
+    judge(monkeypatch)
+    for _ in range(2):
+        prompt = manager.evaluate_after_turn("unfinished")["continuation_prompt"]
+        assert policy.prepare() not in prompt
+        assert manager.state.policy_workflow_digest in prompt
+
+
+def test_changed_workflow_is_loaded_once(armed, monkeypatch):
+    _, policy, _, manager = armed
+    judge(monkeypatch)
+    monkeypatch.setattr(policy, "prepare", lambda: "Changed instructions for the same workflow.")
+    first = manager.evaluate_after_turn("unfinished")
+    assert first["verdict"] == "load_workflow"
+    assert policy.prepare() in first["continuation_prompt"]
+    assert policy.prepare() not in manager.evaluate_after_turn("unfinished")["continuation_prompt"]
+
+
+def test_compression_requires_workflow_reload(armed, monkeypatch):
+    from hermes_cli.goals import migrate_goal_to_session
+    _, policy, _, manager = armed
+    judge(monkeypatch)
+    assert migrate_goal_to_session(manager.session_id, "compressed", reason="compression")
+    resumed = GoalManager("compressed")
+    first = resumed.evaluate_after_turn("Earlier instructions were compressed")
+    assert first["verdict"] == "load_workflow"
+    assert policy.prepare() in first["continuation_prompt"]
+    assert policy.prepare() not in resumed.evaluate_after_turn("unfinished")["continuation_prompt"]
+
+
 @pytest.mark.parametrize("action", ["pause", "clear"])
 def test_user_controls_survive_reload(armed, monkeypatch, action):
     *_, manager = armed

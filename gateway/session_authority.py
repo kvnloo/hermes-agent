@@ -1064,10 +1064,18 @@ class SessionAuthority:
             live.rescan = False  # a _schedule from here on may not be visible to this claim's read
             # The row these checks validated, never whichever is first when the write runs: a
             # cancellation commits from a worker thread and can advance the FIFO at any point.
-            row = await tracked_write(self, partial(claim_session_input, self.db, epoch=self.epoch,
-                                                    session_id=ref.session_id, _guard=self._admission_gate(),
-                                                    head=first['admission_id'] if first is not None else None),
-                                      then=partial(self._stamp_claim, ref, live))
+            from gateway.goal_continuation import GoalSuperseded, continuation_guard
+            goal_guard = continuation_guard(first['payload']) if first is not None else None
+            try:
+                row = await tracked_write(self, partial(claim_session_input, self.db, epoch=self.epoch,
+                                                        session_id=ref.session_id, _guard=self._admission_gate(goal_guard),
+                                                        head=first['admission_id'] if first is not None else None),
+                                          then=partial(self._stamp_claim, ref, live))
+            except GoalSuperseded:
+                from gateway.session_runtime_workers import track_mutation
+                await asyncio.shield(track_mutation(
+                    self, self._commit_cancel(ref, first['admission_id'], self._receipt(first))))
+                return False, first
             # Input scheduled while this claim's transaction ran may postdate its read: re-read
             # instead of letting the drain exit idle over a committed admission.
             return (False if row is None and live.rescan else row), first

@@ -702,6 +702,8 @@ def migrate_goal_to_session(old_session_id: str, new_session_id: str, *, reason:
         # Don't clobber a goal already set on the child (e.g. a resumed lineage).
         if load_goal(new_session_id) is not None:
             return False
+        # A compressed transcript may no longer contain the delivered workflow.
+        state.policy_workflow_digest = ""
         save_goal(new_session_id, state)
         # Archive the parent's row so it isn't double-counted as active.
         clear_goal(old_session_id)
@@ -1205,6 +1207,8 @@ class GoalManager:
         self._state.status = "active"
         self._state.paused_reason = None
         self._state.clear_wait()   # resuming starts fresh
+        if self._state.policy:
+            self._state.policy_workflow_digest = ""
         if reset_budget:
             self._state.turns_used = 0
         return self._save()

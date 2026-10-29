@@ -300,11 +300,14 @@ def _apply_evaluation(manager, evaluation: _Evaluation, active_delegations: int)
         if parked is not None and manager.is_waiting():
             return parked
         result = GoalPolicyDecision("replan", "Wake source is no longer pending.")
+    workflow = (f"Required workflow, loaded by the host:\n{evaluation.workflow}\n\n"
+                if state.policy_workflow_digest != evaluation.digest else
+                f"Continue with workflow {state.policy}: {evaluation.digest} (unchanged).\n\n")
     state.policy_workflow_digest = evaluation.digest
     manager._save()
     prompt = (f"[Goal policy: {result.action}]\nOriginal goal: {state.goal}\n"
               f"{state.contract.render_block()}\n{result.message}\n{reason}\n{evaluation.evidence}\n\n"
-              f"Required workflow, loaded by the host:\n{evaluation.workflow}\n\n"
+              f"{workflow}"
               "Continue only within existing permissions and resource budgets. "
               "Reconsider the whole original goal, not only the blocked item. "
               "An exhausted plan is not completion. Do not bypass user controls.")

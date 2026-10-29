@@ -306,7 +306,8 @@ def automation_display_metadata(metadata):
 # proof at execution from the target the pre-claim check validated, and the turn's resolver reads it.
 _AUTOMATION_METADATA = frozenset({'gateway_session_key', 'gateway_session_id', 'automation_identities',
     'turn_author', 'notification_origin', 'original_trigger_message_id', 'notification_category',
-    'display_kind', 'display_text', 'gateway_proven_session_id', 'gateway_completion_ids', 'heartbeat_tick'})
+    'display_kind', 'display_text', 'gateway_proven_session_id', 'gateway_completion_ids', 'heartbeat_tick',
+    'goal_continuation'})
 
 
 def admission_display(payload):
@@ -345,6 +346,7 @@ def snapshot_automation(authority, adapter, event, identity):
     if (not event.internal or event.message_type != MessageType.TEXT or event.is_command()
             or not isinstance(event.text, str) or not identity
             or event.media_urls or event.prompt_response or event.source.platform == Platform.API_SERVER
+            or ('goal_continuation' in event.metadata and event.source.platform != Platform.LOCAL)
             or set(event.metadata) - _AUTOMATION_METADATA):
         raise RuntimeStoreError('invalid_params')
     notification = (automation_notification_metadata(event.metadata) | automation_display_metadata(event.metadata)
@@ -412,6 +414,8 @@ def snapshot_local_automation(authority, adapter, event, identity, entry):
         raise RuntimeStoreError('permission_denied')
     descriptor = {'identity': identity, 'owner': ref.session_id,
                   'route': entry.session_key, 'target': entry.session_id}
+    if 'goal_continuation' in event.metadata:
+        descriptor['goal_continuation'] = deepcopy(event.metadata['goal_continuation'])
     descriptor.update(automation_notification_metadata(event.metadata))
     descriptor.update(automation_display_metadata(event.metadata))
     descriptor.update(_tick_metadata(event.metadata))
@@ -478,10 +482,20 @@ async def admit_automation(authority, adapter, event, identity, replaces=None):
             if replaced:  # the guard ran in the committed write; an exact replay runs no guard
                 authority._settle_cancelled(ref, replaces)
             return admitted(row)
+    from gateway.goal_continuation import continuation_guard
+    goal_guard = continuation_guard(payload)
+    replace_guard = replaces and _replace_queued(replaces, ref.session_id, replaced)
+
+    def authorize(conn):
+        if goal_guard is not None:
+            goal_guard(conn)
+        if replace_guard:
+            replace_guard(conn)
+
     return await tracked_write(authority, partial(
         admit_session_input, authority.db, epoch=authority.epoch, principal_id='automation:' + entry.session_key,
         session_id=ref.session_id, request_id=identity, payload=deepcopy(payload),
-        _authorize_write=authority._admission_gate(replaces and _replace_queued(replaces, ref.session_id, replaced))),
+        _authorize_write=authority._admission_gate(authorize)),
         then=admitted, ordered=True, after=partial(authority._schedule_admitted, ref))
 
 
@@ -663,11 +677,17 @@ async def admit_route_wake(runner, adapter, source, text, producer, metadata=Non
     if authority is None or entry is None:
         return False
     import uuid
-    identity = json.dumps([producer, key, uuid.uuid4().hex], separators=(',', ':'))
+    token = (metadata or {}).get('goal_continuation')
+    identity = json.dumps([producer, key, token['revision'] if token else uuid.uuid4().hex], separators=(',', ':'))
     if source.platform == Platform.LOCAL:
         # A local route has no messaging provenance to borrow: its wake rides local_automation_v1 on
         # the live session's own source object (``snapshot_local_automation`` checks identity).
         live = authority.sessions.get(source.chat_id)
+        if live is None and token:
+            from gateway.session_local_recovery import restore_local_session
+            ref = restore_local_session(authority, source.chat_id)
+            live = authority.sessions[ref.session_id]
+            adapter = runner._adapter_for_source(live.source)
         if live is None or live.route != key:
             return False
         event = MessageEvent(text=text, message_type=MessageType.TEXT, source=live.source, internal=True,
