@@ -12,7 +12,7 @@ import json
 import logging
 import shutil
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from tools import checkpoint_manager as cm
 from tools import checkpoint_maintenance as maintenance
@@ -40,9 +40,19 @@ def _rekey_project(store: Path, meta: dict, old_workdir: Path, new_workdir: Path
     already populated, possibly with checkpoints taken under the new name since. Those must win:
     the new ref is only created when absent, and only when the surviving old tip is one of its
     ancestors do we drop the old identity and fold the old ledger under the new one. A new ref
-    that does not descend from the old tip is a different project's history, so fail closed rather
-    than overwrite either side. The old metadata goes last because it keeps the project visible to
-    the retry; the per-project git index is a rebuildable cache and is discarded.
+    that does NOT descend from the old tip is re-parented only when its root commit is parentless
+    — the skipped-step-6 signature, where ``CheckpointManager._take`` seeded it with
+    ``parent=None`` because the first pass left ``new_ref`` absent (rename step 6 was skipped, or
+    its ``update-ref new_ref -> old_tip`` failed). A non-parentless chain that does not descend
+    from ``old_tip`` is a divergent history this rename did not author, so fail closed rather than
+    graft it (#112973 retry design). Re-parenting rebuilds each commit with its original tree,
+    subject and author/committer dates (mirroring ``checkpoint_pruning._rewrite``) onto
+    ``old_tip``, then compare-and-swaps ``new_ref`` against the tip observed before re-parenting so
+    a checkpoint published under the new name since the scan is not silently overwritten; on CAS
+    failure refs/metadata are left untouched for retry. If the ``update-ref`` that re-seeds
+    ``new_ref`` fails after metadata/ledger were written, roll those back so a retry re-sees the
+    pre-rekey state. The old metadata goes last because it keeps the project visible to the retry;
+    the per-project git index is a rebuildable cache and is discarded.
     """
     old_hash, new_hash = meta["_hash"], cm._project_hash(str(new_workdir))
     old_ref, new_ref = cm._ref_name(old_hash), cm._ref_name(new_hash)
@@ -52,14 +62,68 @@ def _rekey_project(store: Path, meta: dict, old_workdir: Path, new_workdir: Path
         ok, _, _ = cm._run_git(["merge-base", "--is-ancestor", old_tip, new_tip], store, str(new_workdir),
                                allowed_returncodes={1})
         if not ok:
-            raise OSError(f"target identity already exists: {new_ref} does not descend from {old_ref}")
+            # Re-parent only the skipped-step-6 signature: a post-rename chain whose root commit
+            # is parentless (``_take`` seeded it with ``parent=None`` because the first pass left
+            # ``new_ref`` absent). A non-parentless root that does not descend from ``old_tip`` is
+            # a divergent history this rename did not author — fail closed rather than graft it.
+            # No prior writes have happened yet in this call, so on failure the caller
+            # (migrate_profile_checkpoint_projects) just warns and a retry re-attempts cleanly.
+            # ``new_tip`` is refreshed so the ``if not new_tip`` re-seed below is skipped and the
+            # existing fold/delete proceeds.
+            new_chain = cm._git_out(["rev-list", "--reverse", new_ref], store, str(new_workdir)).split()
+            if not new_chain:
+                raise OSError(f"could not re-parent {new_ref} onto {old_ref}: empty chain")
+            root_parents = cm._git_out(["log", "--format=%P", "-1", new_chain[0]],
+                                       store, str(new_workdir)).strip()
+            if root_parents:
+                raise OSError(
+                    f"target identity already exists: {new_ref} does not descend from {old_ref}"
+                )
+            reparented_tip: Optional[str] = None
+            next_parent: Optional[str] = old_tip
+            for sha in new_chain:
+                meta_line = cm._git_out(["log", "-1", "--format=%T%x00%aI%x00%cI%x00%s", sha],
+                                        store, str(new_workdir))
+                fields = meta_line.split("\x00", 3)
+                if len(fields) != 4:
+                    reparented_tip = None
+                    break
+                tree_sha, author_date, committer_date, msg = fields
+                if not tree_sha:
+                    reparented_tip = None
+                    break
+                msg = msg or "checkpoint"
+                ok2, out2, _ = cm._run_git(
+                    ["commit-tree", tree_sha, *(["-p", next_parent] if next_parent is not None else []),
+                     "-m", msg, "--no-gpg-sign"],
+                    store, str(new_workdir),
+                    extra_env={"GIT_AUTHOR_DATE": author_date, "GIT_COMMITTER_DATE": committer_date})
+                if not ok2 or not out2.strip():
+                    reparented_tip = None
+                    break
+                next_parent = out2.strip()
+                reparented_tip = next_parent
+            if not reparented_tip:
+                raise OSError(f"could not re-parent {new_ref} onto {old_ref}")
+            # Compare-and-swap against the tip observed before re-parenting: a checkpoint published
+            # under the new name since the scan must not be silently overwritten. On CAS failure no
+            # writes have happened yet, so leave refs/metadata untouched for retry.
+            ok, _, err = cm._run_git(["update-ref", new_ref, reparented_tip, new_tip],
+                                     store, str(new_workdir))
+            if not ok:
+                raise OSError(f"could not re-parent {new_ref} onto {old_ref}: {err}")
+            new_tip = reparented_tip
     meta_path = cm._project_meta_path(store, new_hash)
-    if not meta_path.exists():
+    new_meta_existed_before = meta_path.exists()
+    if not new_meta_existed_before:
         new_meta = {k: v for k, v in meta.items() if k != "_hash"}
         new_meta.update({"workdir": str(new_workdir), **cm._volume_evidence(new_workdir)})
         meta_path.parent.mkdir(parents=True, exist_ok=True)
         meta_path.write_text(json.dumps(new_meta), encoding="utf-8")
     old_ledger_path = cm._ledger_path(store, old_hash)
+    new_ledger_path = cm._ledger_path(store, new_hash)
+    new_ledger_existed_before = new_ledger_path.exists()
+    new_ledger_before = cm._load_ledger(store, new_hash) if new_ledger_existed_before else {}
     if old_ledger_path.exists():
         ledger = _rebase_ledger_paths(cm._load_ledger(store, old_hash), old_workdir, new_workdir)
         ledger.update(cm._load_ledger(store, new_hash))  # writes under the new name are newer
@@ -68,6 +132,15 @@ def _rekey_project(store: Path, meta: dict, old_workdir: Path, new_workdir: Path
         if not new_tip:
             ok, _, err = cm._run_git(["update-ref", new_ref, old_tip], store, str(new_workdir))
             if not ok:
+                # Roll back the meta/ledger writes done earlier in this call so the next retry
+                # re-sees the pre-rekey state and can re-seed ``new_ref`` from ``old_tip`` cleanly.
+                if not new_meta_existed_before:
+                    cm._unlink_quiet(meta_path)
+                if old_ledger_path.exists():
+                    if new_ledger_existed_before:
+                        cm._save_ledger(store, new_hash, new_ledger_before)
+                    else:
+                        cm._unlink_quiet(new_ledger_path)
                 raise OSError(f"could not create {new_ref}: {err}")
         if not maintenance._delete_ref(store, old_ref):
             raise OSError(f"could not delete {old_ref}")
