@@ -1,7 +1,7 @@
 """A parked /goal resumes from the idle hook once its barrier lifts, without waiting for another turn."""
+import importlib
 import queue
 import time
-from unittest.mock import patch
 
 import pytest
 
@@ -30,17 +30,21 @@ class _Cli(CLILoopsMixin):
 
 
 def test_idle_hook_queues_the_continuation_when_a_timed_barrier_has_elapsed(hermes_home):
+    import_started = time.monotonic()
+    importlib.import_module("cli")
+    print(f"cli_import_seconds={time.monotonic() - import_started:.3f}")
     mgr = goals.GoalManager(session_id="resume-idle")
     mgr.set("finish the thing")
-    mgr.wait_for_seconds(1, reason="cooldown")
     cli = _Cli(mgr)
-    with patch("cli._cprint"), patch("cli._DIM", ""), patch("cli._RST", ""):
-        cli._maybe_resume_parked_goal()
-        assert cli._pending_input.empty()            # still parked
-        mgr.state.waiting_until = time.time() - 1
-        mgr._save()
-        cli._last_goal_barrier_check = 0.0
-        cli._maybe_resume_parked_goal()
+    mgr.wait_for_seconds(30, reason="cooldown")
+    assert mgr.state is not None
+    assert time.time() < mgr.state.waiting_until, "test setup consumed the wait deadline"
+    cli._maybe_resume_parked_goal()
+    assert cli._pending_input.empty()
+    mgr.state.waiting_until = time.time() - 1
+    mgr._save()
+    cli._last_goal_barrier_check = 0.0
+    cli._maybe_resume_parked_goal()
     assert not cli._pending_input.empty()            # continuation queued
     assert "finish the thing" in cli._pending_input.get()
     assert mgr.state.waiting_until == 0.0            # barrier cleared

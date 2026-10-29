@@ -53,6 +53,18 @@ def test_local_session_owner_adds_a_goal_gate(tmp_path):
     try:
         with daemon(root, home, env, barrier=False) as (proc, desc):
             asyncio.run(probe(desc))
+            import os
+            import psutil
+
+            observed = {"test_pid": os.getpid(), "daemon_pid": proc.pid, "replies": out}
+            try:
+                process = psutil.Process(proc.pid)
+                observed["daemon"] = process.as_dict(attrs=["pid", "ppid", "create_time", "status"])
+                observed["parents"] = [parent.as_dict(attrs=["pid", "ppid", "create_time"])
+                                       for parent in process.parents()]
+            except psutil.Error as exc:
+                observed["process_error"] = str(exc)
+            (home / "gate-processes.json").write_text(json.dumps(observed, indent=2))
             proc.send_signal(signal.SIGINT)
             proc.wait(timeout=20)
     finally:
