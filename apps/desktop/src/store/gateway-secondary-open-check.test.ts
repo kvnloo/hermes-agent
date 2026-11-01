@@ -113,6 +113,30 @@ describe('secondary activation requires an open socket, not just a connection de
     expect($gateway.get()).toBe(publishedPrimary)
   })
 
+  it('runs the destructive commit only after a still-owned socket opens, before publishing it', async () => {
+    const primary = makePrimary()
+    setPrimaryGateway(primary as never, 'default')
+    await ensureGatewayForProfile('default')
+    const publishedPrimary = $gateway.get()
+    installAgentDesktop()
+
+    const beforePublish = vi.fn(() => {
+      expect(isActivePrimary()).toBe(true)
+      expect($gateway.get()).toBe(publishedPrimary)
+      return true
+    })
+
+    gatewayMocks.connect.mockRejectedValueOnce(new Error('ECONNRESET'))
+    expect(await ensureGatewayForAgent('homelab', 'research', { beforePublish })).toBe(false)
+    expect(beforePublish).not.toHaveBeenCalled()
+    expect($gateway.get()).toBe(publishedPrimary)
+
+    expect(await ensureGatewayForAgent('homelab', 'research', { beforePublish })).toBe(true)
+    expect(beforePublish).toHaveBeenCalledTimes(1)
+    expect(isActivePrimary()).toBe(false)
+    expect($gateway.get()).not.toBe(publishedPrimary)
+  })
+
   it('ensureGatewayForAgent: a successful dial still activates and publishes normally', async () => {
     const primary = makePrimary()
     setPrimaryGateway(primary as never, 'default')

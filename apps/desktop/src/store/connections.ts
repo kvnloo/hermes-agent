@@ -455,12 +455,15 @@ export async function selectConnection(connectionId: string, options: SelectConn
   pendingTarget = targetKey
   $pendingConnectionId.set(connectionId)
 
-  // Runs inside the activation's serialized section, synchronously right
-  // before the target is published, so the center is already a fresh draft on
-  // the target when route effects first see it (#93937). A superseded pick
-  // declines here: no draft, no activation, so the user never flips through it.
-  const beforeActivate = () => {
-    if (revision !== switchRevision) {
+  // The serialized-turn claim is non-destructive. The target may still drop
+  // between the warm open and the actual activation.
+  const beforeActivate = () => revision === switchRevision
+
+  // The gateway calls this only for a still-live target, immediately before
+  // publishing it. Unbind the old runtime before the new route can be observed
+  // (#93937); a failed activation never touches the open conversation.
+  const beforePublish = () => {
+    if (revision !== switchRevision || activation.signal.aborted) {
       return false
     }
 
@@ -519,7 +522,11 @@ export async function selectConnection(connectionId: string, options: SelectConn
 
     try {
       await withTimeout(
-        ensureGatewayAgent(connectionId, targetProfile, { beforeActivate, signal: activation.signal }),
+        ensureGatewayAgent(connectionId, targetProfile, {
+          beforeActivate,
+          beforePublish,
+          signal: activation.signal
+        }),
         SOURCE_SWITCH_DIAL_TIMEOUT_MS,
         timeoutMessage,
         error => activation.abort(error)

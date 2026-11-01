@@ -802,17 +802,15 @@ export async function openGatewayAgent(connectionId: string, profile: string): P
 // Only a null connectionId falls through to the legacy profile path. Explicit
 // `local` is a registry identity and must use the genuinely-local route.
 //
-// `beforeActivate` is the commit hook of the two-phase source switch
-// (store/connections selectConnection). It runs INSIDE the serialized
-// section, synchronously right before the socket is activated — i.e. after
-// every earlier switch has published and before this one does — so the caller
-// can sever the previous backend's session bindings at exactly that point
-// (#93937). Returning false declines: nothing is activated or published, the
-// mutex is released. That is how a switch superseded while queued behind
-// another one steps aside without a destructive wipe. Not consulted on the
-// null-connectionId profile fallthrough.
+// `beforeActivate` claims the serialized turn, letting superseded picks
+// decline without activating anything. `beforePublish` is the destructive
+// commit hook: the gateway invokes it ONLY after verifying the target socket
+// and registry entry are still live, synchronously before applying the new
+// route (#93937). A late failed activation must not clear the open chat.
+// Neither hook is consulted on the null-connectionId profile fallthrough.
 export interface EnsureGatewayAgentOptions {
   beforeActivate?: () => boolean
+  beforePublish?: () => boolean
   /** Revokes this caller's right to activate or publish after async work. */
   signal?: AbortSignal
 }
@@ -848,7 +846,7 @@ function releaseWhenAborted(promise: Promise<void>, signal?: AbortSignal): Promi
 export async function ensureGatewayAgent(
   connectionId: null | string,
   profile: string,
-  { beforeActivate, signal }: EnsureGatewayAgentOptions = {}
+  { beforeActivate, beforePublish, signal }: EnsureGatewayAgentOptions = {}
 ): Promise<void> {
   const target = normalizeProfileKey(profile)
   const connection = (connectionId ?? '').trim() || null
@@ -882,9 +880,10 @@ export async function ensureGatewayAgent(
 
     // Descriptor resolves concurrently with the dial, same as the profile
     // path, so no await sits between the activation and the publication.
-    const activation = signal
-      ? ensureGatewayForAgent(connection, target, { signal })
-      : ensureGatewayForAgent(connection, target)
+    const activation =
+      signal || beforePublish
+        ? ensureGatewayForAgent(connection, target, { signal, beforePublish })
+        : ensureGatewayForAgent(connection, target)
 
     const [descriptor, activated] = await Promise.all([resolveConnectionForAgent(connection, target), activation])
 
