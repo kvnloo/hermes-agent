@@ -1813,6 +1813,40 @@ export async function openGatewayForAgent(
   }
 }
 
+/** Keep the old workspace until the target is ready and the commit is accepted. */
+function readyToPublish(ready: boolean, beforePublish?: () => boolean): boolean {
+  return ready && (!beforePublish || beforePublish())
+}
+
+async function activatePrimaryRegistryProfile(
+  profile: string,
+  signal?: AbortSignal,
+  beforePublish?: () => boolean
+): Promise<boolean> {
+  if (signal?.aborted) {
+    return false
+  }
+
+  if (!beforePublish) {
+    await ensureGatewayForProfile(profile)
+    return !signal?.aborted
+  }
+
+  let committed = false
+  await ensureGatewayForProfile(profile, {
+    beforePublish: () => {
+      if (signal?.aborted) {
+        return false
+      }
+
+      committed = beforePublish()
+      return committed
+    }
+  })
+
+  return committed && !signal?.aborted
+}
+
 export async function ensureGatewayForAgent(
   connectionId: null | string,
   profile: string,
@@ -1821,27 +1855,7 @@ export async function ensureGatewayForAgent(
   const scope = registryBackendScopeKey(connectionId, profile)
 
   if (scope === normKey(profile) || isPrimaryRegistryRoute(connectionId, profile)) {
-    if (signal?.aborted) {
-      return false
-    }
-
-    // The primary/profile path can publish through several routes of its
-    // own. Keep the destructive commit hook behind the same ready gate.
-    let committed = beforePublish === undefined
-    await (beforePublish
-      ? ensureGatewayForProfile(profile, {
-          beforePublish: () => {
-            if (signal?.aborted) {
-              return false
-            }
-
-            committed = beforePublish()
-            return committed
-          }
-        })
-      : ensureGatewayForProfile(profile))
-
-    return committed && !signal?.aborted
+    return activatePrimaryRegistryProfile(profile, signal, beforePublish)
   }
 
   const activationEpoch = beginGatewayActivation()
@@ -1849,7 +1863,7 @@ export async function ensureGatewayForAgent(
   if (await ridesPrimaryBackend(connectionId, profile)) {
     // A retained primary can be open while the foreground still points at a
     // different source. Reusing its socket must also move the active route.
-    if (!isOpen(g.primaryGateway) || signal?.aborted || (beforePublish && !beforePublish())) {
+    if (!readyToPublish(isOpen(g.primaryGateway) && !signal?.aborted, beforePublish)) {
       return false
     }
 
@@ -1909,7 +1923,7 @@ export async function ensureGatewayForAgent(
 
   // A failed/dropped socket or retired registry entry must never discard the
   // chat still in front. There is no await between the commit and applyActive.
-  if (!ready || signal?.aborted || (beforePublish && !beforePublish())) {
+  if (!readyToPublish(ready && !signal?.aborted, beforePublish)) {
     return false
   }
 
@@ -1932,7 +1946,7 @@ export async function ensureGatewayForProfile(
   const activationEpoch = beginGatewayActivation()
 
   if (key === g.primaryProfile) {
-    if (beforePublish && (!isOpen(g.primaryGateway) || !beforePublish())) {
+    if (beforePublish && !readyToPublish(isOpen(g.primaryGateway), beforePublish)) {
       return
     }
 
@@ -1947,7 +1961,7 @@ export async function ensureGatewayForProfile(
   // descriptor — $activeGatewayProfile still moves to `key`, so request
   // scoping and profile-aware surfaces behave identically.
   if (await sharedPrimaryRoute(key)) {
-    if (beforePublish && (!isOpen(g.primaryGateway) || !beforePublish())) {
+    if (beforePublish && !readyToPublish(isOpen(g.primaryGateway), beforePublish)) {
       return
     }
 
@@ -1999,7 +2013,7 @@ export async function ensureGatewayForProfile(
     entry.wantOpen &&
     g.secondaries.get(key) === entry &&
     isOpen(entry.gateway) &&
-    (!beforePublish || (Boolean(entry.connection) && beforePublish())) &&
+    (!beforePublish || readyToPublish(Boolean(entry.connection), beforePublish)) &&
     applyActive(key, activationEpoch) &&
     entry.connection
   ) {
