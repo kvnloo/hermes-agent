@@ -1,3 +1,4 @@
+// health: allow FILE_LINES -- keep the late-failure guard at the existing socket activation/publication seam (#147681/#93937); moving it to UI code would permit a stale chat to be cleared before activation.
 import {
   type ConnectionState,
   type GatewayEvent,
