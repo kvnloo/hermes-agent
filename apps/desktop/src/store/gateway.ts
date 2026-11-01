@@ -1815,7 +1815,7 @@ export async function openGatewayForAgent(
 export async function ensureGatewayForAgent(
   connectionId: null | string,
   profile: string,
-  { signal }: { signal?: AbortSignal } = {}
+  { signal, beforePublish }: { signal?: AbortSignal; beforePublish?: () => boolean } = {}
 ): Promise<boolean> {
   const scope = registryBackendScopeKey(connectionId, profile)
 
@@ -1824,9 +1824,23 @@ export async function ensureGatewayForAgent(
       return false
     }
 
-    await ensureGatewayForProfile(profile)
+    // The primary/profile path can publish through several routes of its
+    // own. Keep the destructive commit hook behind the same ready gate.
+    let committed = beforePublish === undefined
+    await (beforePublish
+      ? ensureGatewayForProfile(profile, {
+          beforePublish: () => {
+            if (signal?.aborted) {
+              return false
+            }
 
-    return !signal?.aborted
+            committed = beforePublish()
+            return committed
+          }
+        })
+      : ensureGatewayForProfile(profile))
+
+    return committed && !signal?.aborted
   }
 
   const activationEpoch = beginGatewayActivation()
@@ -1834,7 +1848,11 @@ export async function ensureGatewayForAgent(
   if (await ridesPrimaryBackend(connectionId, profile)) {
     // A retained primary can be open while the foreground still points at a
     // different source. Reusing its socket must also move the active route.
-    return Boolean(isOpen(g.primaryGateway) && !signal?.aborted && applyActive(g.primaryProfile, activationEpoch))
+    if (!isOpen(g.primaryGateway) || signal?.aborted || (beforePublish && !beforePublish())) {
+      return false
+    }
+
+    return applyActive(g.primaryProfile, activationEpoch)
   }
 
   if (!window.hermesDesktop?.getConnectionFor) {
@@ -1882,12 +1900,19 @@ export async function ensureGatewayForAgent(
   // failure (caught above, left for scheduleReconnect) must not count as a
   // successful activation just because a connection descriptor exists
   // (issue #92265).
-  const activated =
+  const ready =
     entry.wantOpen &&
     g.secondaries.get(scope) === entry &&
     Boolean(entry.connection) &&
-    isOpen(entry.gateway) &&
-    applyActive(scope, activationEpoch)
+    isOpen(entry.gateway)
+
+  // A failed/dropped socket or retired registry entry must never discard the
+  // chat still in front. There is no await between the commit and applyActive.
+  if (!ready || signal?.aborted || (beforePublish && !beforePublish())) {
+    return false
+  }
+
+  const activated = applyActive(scope, activationEpoch)
 
   if (activated && entry.connection) {
     publishActiveConnection(entry.connection)
@@ -1898,11 +1923,18 @@ export async function ensureGatewayForAgent(
 
 // Make `profile` the active gateway, lazily opening its socket if needed. The
 // primary is a no-op fast path. Background sockets are never closed here.
-export async function ensureGatewayForProfile(profile: string): Promise<void> {
+export async function ensureGatewayForProfile(
+  profile: string,
+  { beforePublish }: { beforePublish?: () => boolean } = {}
+): Promise<void> {
   const key = normKey(profile)
   const activationEpoch = beginGatewayActivation()
 
   if (key === g.primaryProfile) {
+    if (beforePublish && (!isOpen(g.primaryGateway) || !beforePublish())) {
+      return
+    }
+
     applyActive(key, activationEpoch)
 
     return
@@ -1914,6 +1946,10 @@ export async function ensureGatewayForProfile(profile: string): Promise<void> {
   // descriptor — $activeGatewayProfile still moves to `key`, so request
   // scoping and profile-aware surfaces behave identically.
   if (await sharedPrimaryRoute(key)) {
+    if (beforePublish && (!isOpen(g.primaryGateway) || !beforePublish())) {
+      return
+    }
+
     applyActive(g.primaryProfile, activationEpoch)
 
     return
@@ -1962,6 +1998,7 @@ export async function ensureGatewayForProfile(profile: string): Promise<void> {
     entry.wantOpen &&
     g.secondaries.get(key) === entry &&
     isOpen(entry.gateway) &&
+    (!beforePublish || (Boolean(entry.connection) && beforePublish())) &&
     applyActive(key, activationEpoch) &&
     entry.connection
   ) {
