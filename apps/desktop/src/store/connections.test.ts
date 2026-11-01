@@ -22,9 +22,11 @@ const $connection = atom<null | {
 // The runtime session id minted by the CURRENT backend — the binding a pick
 // must drop before the next gateway is published (#93937).
 const $activeSessionId = atom<null | string>(null)
+const $selectedStoredSessionId = atom<null | string>(null)
 
 interface ActivationOptions {
   beforeActivate?: () => boolean
+  beforePublish?: () => boolean
   signal?: AbortSignal
 }
 
@@ -40,9 +42,9 @@ const exitProjectScope = vi.fn()
 vi.mock('@/store/session', () => ({
   $connection,
   $activeSessionId,
-  $selectedStoredSessionId: atom(null),
+  $selectedStoredSessionId,
   setActiveSessionId: (id: null | string) => $activeSessionId.set(id),
-  setSelectedStoredSessionId: vi.fn()
+  setSelectedStoredSessionId: (id: null | string) => $selectedStoredSessionId.set(id)
 }))
 vi.mock('@/store/project-scope', () => ({ exitProjectScope }))
 vi.mock('@/store/gateway-switch', () => ({ supersedeGatewaySwitch: vi.fn() }))
@@ -96,10 +98,14 @@ beforeEach(() => {
   $newChatProfile.set(null)
   $showAllProfiles.set(false)
   ensureGatewayAgent.mockReset()
-  // Mirrors the real door: beforeActivate runs right before the activation
-  // publishes, and a declined hook publishes nothing.
+  // The first hook claims the serialized turn; only a live target calls the
+  // destructive hook, immediately before publishing its route.
   ensureGatewayAgent.mockImplementation(async (connectionId, profile, options) => {
     if (options?.beforeActivate && !options.beforeActivate()) {
+      return
+    }
+
+    if (options?.beforePublish && !options.beforePublish()) {
       return
     }
 
@@ -119,6 +125,7 @@ beforeEach(() => {
   requestFreshSession.mockClear()
   exitProjectScope.mockClear()
   $activeSessionId.set(null)
+  $selectedStoredSessionId.set(null)
   list.mockClear()
   setLastUsed.mockClear()
   api.mockReset()
@@ -420,24 +427,42 @@ describe('selectConnection', () => {
     expect(published).toEqual([{ activeSessionId: null, connectionId: 'homelab', drafted: 1 }])
   })
 
-  it('a failed activation leaves the gateway in front usable and points the draft back at it', async () => {
-    setConnectionsRegistry(registry)
-    $connection.set({ connectionId: 'local', mode: 'local' })
-    // The pick reached its turn (draft rehomed), then the dial failed.
-    ensureGatewayAgent.mockImplementationOnce(async (_connectionId, _profile, options) => {
-      options?.beforeActivate?.()
+  it.each(['throws', 'withdraws'] as const)(
+    'a warm gateway that %s after the turn grant preserves the open chat and project',
+    async failure => {
+      setConnectionsRegistry(registry)
+      const previous = { connectionId: 'local', mode: 'local' as const }
+      $connection.set(previous)
+      $activeSessionId.set('local-runtime')
+      $selectedStoredSessionId.set('local-stored')
+      $showAllProfiles.set(true)
+      $newChatProfile.set('research')
 
-      throw new Error('offline')
-    })
+      // The serialized turn was granted, but the target fails or is retired
+      // before the gateway can publish it. Neither path may invoke the commit.
+      ensureGatewayAgent.mockImplementationOnce(async (_connectionId, _profile, options) => {
+        expect(options?.beforeActivate?.()).toBe(true)
 
-    await expect(selectConnection('homelab')).rejects.toThrow('offline')
+        if (failure === 'throws') {
+          throw new Error('offline')
+        }
+      })
 
-    expect($connection.get()?.connectionId).toBe('local')
-    expect($newChatProfile.get()).toBe('default')
-    expect(requestFreshSession).toHaveBeenCalledTimes(2)
-    expect(setLastUsed).not.toHaveBeenCalled()
-    expect($pendingConnectionId.get()).toBeNull()
-  })
+      await expect(selectConnection('homelab')).rejects.toThrow(
+        failure === 'throws' ? 'offline' : 'did not become active'
+      )
+
+      expect($connection.get()).toBe(previous)
+      expect($activeSessionId.get()).toBe('local-runtime')
+      expect($selectedStoredSessionId.get()).toBe('local-stored')
+      expect($showAllProfiles.get()).toBe(true)
+      expect($newChatProfile.get()).toBe('research')
+      expect(requestFreshSession).not.toHaveBeenCalled()
+      expect(exitProjectScope).not.toHaveBeenCalled()
+      expect(setLastUsed).not.toHaveBeenCalled()
+      expect($pendingConnectionId.get()).toBeNull()
+    }
+  )
 
   it('a pick superseded while queued neither drafts nor activates', async () => {
     // Both activations sit behind an in-flight profile/agent activation (the
@@ -451,6 +476,10 @@ describe('selectConnection', () => {
       await mutex.promise
 
       if (options?.beforeActivate && !options.beforeActivate()) {
+        return
+      }
+
+      if (options?.beforePublish && !options.beforePublish()) {
         return
       }
 
@@ -494,8 +523,14 @@ describe('selectConnection', () => {
 
       setConnectionsRegistry(registry)
       $connection.set({ connectionId: 'local', mode: 'local' })
-      ensureGatewayAgent.mockImplementationOnce(async (connectionId, profile) => {
+      ensureGatewayAgent.mockImplementationOnce(async (connectionId, profile, options) => {
         await dial.promise
+        if (options?.beforeActivate && !options.beforeActivate()) {
+          return
+        }
+        if (options?.beforePublish && !options.beforePublish()) {
+          return
+        }
         $connection.set({ connectionId: connectionId ?? undefined, mode: 'remote', profile, registryScoped: true })
       })
 
@@ -580,6 +615,7 @@ describe('selectConnection', () => {
       // The socket activates and publishes; only a trailing descriptor resync stalls.
       ensureGatewayAgent.mockImplementationOnce((connectionId, _profile, options) => {
         options?.beforeActivate?.()
+        options?.beforePublish?.()
         $connection.set({
           connectionId: connectionId ?? undefined,
           mode: 'remote',
