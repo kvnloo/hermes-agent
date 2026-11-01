@@ -81,7 +81,10 @@ export const $pendingConnectionId = atom<null | string>(null)
 $lastProfileByConnection.subscribe(value => {
   persistStringRecord(LAST_PROFILE_STORAGE_KEY, value)
   // Main boots the primary before this window exists, so it keeps a copy.
-  void window.hermesDesktop?.profile?.rememberConnections?.(value)?.catch(() => undefined)
+  // Node-based consumers can import this store without an Electron window.
+  if (typeof window !== 'undefined') {
+    void window.hermesDesktop?.profile?.rememberConnections?.(value)?.catch(() => undefined)
+  }
 })
 
 const $activeConnectionProfile = computed(
