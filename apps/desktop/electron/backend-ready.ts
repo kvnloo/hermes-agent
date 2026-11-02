@@ -110,7 +110,7 @@ function waitForDashboardPort(
 
     function completionDeadline() {
       return completionInProgress
-        ? Math.min(startedAt + SOURCE_COMPLETION_MAX_TOTAL_MS, now() + SOURCE_COMPLETION_GRACE_MS)
+        ? now() + SOURCE_COMPLETION_GRACE_MS
         : null
     }
 
