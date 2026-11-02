@@ -17,7 +17,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { test } from 'vitest'
+import { test, vi } from 'vitest'
 
 import {
   DEFAULT_PORT_ANNOUNCE_TIMEOUT_MS,
@@ -341,26 +341,54 @@ test('a completion banner re-arms the deadline past the original timeout', async
   assert.equal(await p, 4455)
 })
 
-test(
-  'a stalled completion banner is capped, not waited out forever',
-  async () => {
-    // The banner says a repair is in progress but nothing ever resolves: the
-    // wait must still fail (bounded), and the message must carry that the
-    // completion was in progress — truthful and actionable instead of a bare
-    // 90s timeout that hides a multi-minute repair. The 5-minute grace is
-    // wall-clock, so this holds the wait past it with a long test budget.
+test('a stalled completion banner is capped, not waited out forever', async () => {
+  vi.useFakeTimers()
+
+  try {
+    // Keep the injected clock in step with the fake scheduler. Production still
+    // uses realNow(); advancing timers alone would leave that clock behind.
     const child = makeFakeChild()
-    const wait = waitForDashboardPort(child, 20)
-    wait.catch(() => {}) // mark handled; the assertion below re-awaits
+    const wait = waitForDashboardPort(child, 20, undefined, undefined, { now: () => Date.now() })
+    let settled = false
+    wait.catch(() => {
+      settled = true
+    })
 
     child.stdout.emit('data', 'hermes: finishing an interrupted source update...\n')
+    await vi.advanceTimersByTimeAsync(5 * 60_000 - 1)
+    assert.equal(settled, false, 'banner must extend the original timeout through the grace')
+    await vi.advanceTimersByTimeAsync(1)
+    assert.equal(settled, true, 'a stalled banner must time out at the grace')
     await assert.rejects(
       wait,
       /Timed out waiting for Hermes backend port announcement .* while an update completion was in progress/
     )
-  },
-  6 * 60_000
-)
+
+    // Repeated banners re-arm the grace but must never exceed the total cap.
+    const repeatingChild = makeFakeChild()
+    const repeatingWait = waitForDashboardPort(repeatingChild, 20, undefined, undefined, { now: () => Date.now() })
+    let repeatingSettled = false
+    repeatingWait.catch(() => {
+      repeatingSettled = true
+    })
+    repeatingChild.stdout.emit('data', 'hermes: finishing an interrupted source update...\n')
+    for (let i = 0; i < 7; i++) {
+      await vi.advanceTimersByTimeAsync(4 * 60_000)
+      assert.equal(repeatingSettled, false, 'repeated banners should re-arm until the total cap')
+      repeatingChild.stdout.emit('data', 'hermes: finishing an interrupted source update...\n')
+    }
+    await vi.advanceTimersByTimeAsync(2 * 60_000 - 1)
+    assert.equal(repeatingSettled, false, 'wait should remain pending just before the total cap')
+    await vi.advanceTimersByTimeAsync(1)
+    assert.equal(repeatingSettled, true, 'the total cap must bound repeated banners')
+    await assert.rejects(
+      repeatingWait,
+      /Timed out waiting for Hermes backend port announcement .* while an update completion was in progress/
+    )
+  } finally {
+    vi.useRealTimers()
+  }
+})
 
 test('a banner already in the spawn-time tail also re-arms', async () => {
   // The dormant bufferedOutput gap (#60323): the banner was flushed before the
