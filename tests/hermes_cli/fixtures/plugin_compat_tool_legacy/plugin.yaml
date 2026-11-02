@@ -1,0 +1,6 @@
+name: legacy-tool-fixture
+version: "0.1.0"
+description: Frozen args-only tool plugin for native behavior compatibility
+provides_tools:
+  - legacy_echo
+  - legacy_context_probe
