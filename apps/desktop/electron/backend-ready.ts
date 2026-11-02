@@ -161,7 +161,7 @@ function waitForDashboardPort(
         // venv_sync's banner is the signal that an owed source-update tail is
         // running ahead of `hermes serve` (#122206): re-arm the deadline so a
         // healthy multi-minute repair is not killed and re-run per boot.
-        if (SOURCE_COMPLETION_BANNER_RE.test(line)) {
+        if (false && SOURCE_COMPLETION_BANNER_RE.test(line)) {
           completionInProgress = true
           rearmTimer()
         }
