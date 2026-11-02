@@ -5,6 +5,7 @@ session stay keyed by the logical (root) id. The picker and an editor-held tip i
 on that logical id before the first ``session.info``, never on the tip's (absent) policy.
 """
 import asyncio
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -62,8 +63,11 @@ async def test_compressed_acp_chat_lists_and_reopens_under_its_logical_id(tmp_pa
             compression_lock_holder='fixture')
         db.release_compression_lock(ref.session_id, 'fixture')
 
+        # The authority's own database, not tmp_path: a module that bound its home before this
+        # test's HERMES_HOME monkeypatch keeps the authority on that earlier home.
+        home = Path(db.db_path).parent
         agent = GatewayACPAgent()
-        agent._home = tmp_path
+        agent._home = home
         agent._gateway, agent._conn = _Bridge(connection), _Editor()
         listed = [row.session_id for row in (await agent.list_sessions(cwd=str(tmp_path))).sessions]
         assert listed == [ref.session_id], 'the picker must offer the logical id, not the physical tip'
@@ -73,7 +77,7 @@ async def test_compressed_acp_chat_lists_and_reopens_under_its_logical_id(tmp_pa
         # An editor that saved the tip id before this fix still reopens the same conversation,
         # and every update it sees stays addressed to the id it holds.
         held = GatewayACPAgent()
-        held._home = tmp_path
+        held._home = home
         held._gateway, held._conn = _Bridge(connection), _Editor()
         await held.load_session(cwd=str(tmp_path), session_id='compressed-tip', mcp_servers=[])
         assert list(held._snapshots) == [ref.session_id]
