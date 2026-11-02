@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import uuid
 from typing import Any, Callable, Dict, List, Optional
 
@@ -189,12 +190,27 @@ def _tool_result_failed(result: Optional[str], tool_name: str | None = None) -> 
 # --- tool-call titles -------------------------------------------------------
 
 
+# Editor-supplied MCP servers register as ``editor_<sanitized name>_<8-hex session tag>``
+# (gateway/session_local_mcp.py); the tag only keeps sessions' connections apart.
+_EDITOR_MCP_TOOL = re.compile(r"^mcp__editor_(?P<server>[A-Za-z0-9_]+?)_[0-9a-f]{8}__(?P<tool>.+)$")
+
+
+def editor_facing_tool_name(tool_name: str) -> str:
+    """Report an editor-supplied MCP tool under the editor's own server name.
+
+    The editor gave Hermes that server (e.g. ``t3-code``) and recognizes its calls by name, so
+    ``mcp__editor_t3_code_3390f1d3__html_render`` goes back as ``mcp__t3_code__html_render``."""
+    match = _EDITOR_MCP_TOOL.match(tool_name)
+    return f"mcp__{match['server']}__{match['tool']}" if match else tool_name
+
+
 def build_tool_title(tool_name: str, args: Args) -> str:
     """``<tool_name>: <preview>`` using the same per-tool preview (and argument redaction) as
     every other Hermes surface, so ACP clients never show a different summary than the CLI/TUI;
     bare tool name when the arguments yield no preview."""
     preview = build_tool_preview(tool_name, args, max_len=80)
-    return f"{tool_name}: {preview}" if preview else tool_name
+    name = editor_facing_tool_name(tool_name)
+    return f"{name}: {preview}" if preview else name
 
 
 # --- completion formatters; all share the signature (tool_name, result, args) --
@@ -789,7 +805,7 @@ def build_tool_start(tool_call_id: str, tool_name: str, arguments: Args, *, edit
         return _build_tool_start(tool_call_id, tool_name, arguments, edit_diff=edit_diff)
     except Exception as exc:
         logger.debug("ACP tool-start render failed for %r: %s", tool_name, exc)
-        safe_name = tool_name if isinstance(tool_name, str) and tool_name else "tool"
+        safe_name = editor_facing_tool_name(tool_name) if isinstance(tool_name, str) and tool_name else "tool"
         return acp.start_tool_call(tool_call_id, safe_name, kind=get_tool_kind(safe_name), content=None, locations=[])
 
 

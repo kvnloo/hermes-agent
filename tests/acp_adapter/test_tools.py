@@ -251,3 +251,21 @@ class TestExtractLocations:
         args = {"command": "echo hi"}
         locs = extract_locations(args)
         assert locs == []
+
+
+class TestEditorMcpToolNames:
+    def test_editor_supplied_server_is_reported_under_the_editors_name(self):
+        start = build_tool_start("tc-editor", "mcp__editor_t3_code_3390f1d3__html_render", {})
+        assert start.title == "mcp__t3_code__html_render"
+
+    def test_preview_follows_the_editor_facing_name(self):
+        title = build_tool_title("mcp__editor_github_0a1b2c3d__search_issues", {"query": "focus"})
+        assert title.startswith("mcp__github__search_issues")
+
+    @pytest.mark.parametrize("tool_name", [
+        "mcp__github__search_issues",  # the user's own configured server keeps its name
+        "mcp__editor_3f2a9c0d1e2b3a4c5d6e_0__html_render",  # legacy manifests carry no server name
+        "terminal",
+    ])
+    def test_other_tool_names_are_unchanged(self, tool_name):
+        assert build_tool_start("tc-other", tool_name, {}).title.split(":")[0] == tool_name
