@@ -38,11 +38,10 @@ const SOURCE_COMPLETION_GRACE_MS = 5 * 60_000
 const SOURCE_COMPLETION_MAX_TOTAL_MS = 30 * 60_000
 
 /**
- * The source-completion grace resolves against the REAL clock, not the faked
- * one: vitest's advanceTimersByTimeAsync advances Date.now() with the timers,
- * so a `Date.now() + GRACE` deadline re-computed each tick stays GRACE away
- * forever and the cap never fires under tests. The real clock also matches
- * production semantics — the grace measures wall-clock repair time.
+ * The production grace measures elapsed repair time on the real monotonic clock.
+ * It is NOT Date.now(): vitest's fake timers advance Date.now() together with the
+ * timers, so a `Date.now() + GRACE` deadline re-computed each tick would stay GRACE
+ * away forever. Tests that need to drive the grace inject `options.now` instead.
  */
 function realNow() {
   return Number(process.hrtime.bigint() / 1_000_000n)
@@ -85,8 +84,11 @@ function waitForDashboardPort(
   child,
   timeoutMs = resolvePortAnnounceTimeoutMs(),
   describeOutputTail = () => '',
-  bufferedOutput: () => string = () => ''
+  bufferedOutput: () => string = () => '',
+  options: { now?: () => number } = {}
 ) {
+  const now = options.now ?? realNow
+
   return new Promise((resolve, reject) => {
     // Seed the line buffer with any output the spawn-time tail already
     // consumed (#60323): main.ts attaches its output tail at spawn, then
@@ -102,13 +104,13 @@ function waitForDashboardPort(
     // (venv_sync banners) before `hermes serve` starts. While that repair is
     // visibly in progress the 90s deadline is re-armed, up to the total cap,
     // instead of killing a healthy repair mid-run.
-    const startedAt = realNow()
+    const startedAt = now()
     let completionInProgress = false
     let timer
 
     function completionDeadline() {
       return completionInProgress
-        ? Math.min(startedAt + SOURCE_COMPLETION_MAX_TOTAL_MS, realNow() + SOURCE_COMPLETION_GRACE_MS)
+        ? Math.min(startedAt + SOURCE_COMPLETION_MAX_TOTAL_MS, now() + SOURCE_COMPLETION_GRACE_MS)
         : null
     }
 
@@ -124,7 +126,7 @@ function waitForDashboardPort(
             )
           )
         },
-        Math.max(0, (deadline ?? startedAt + timeoutMs) - realNow())
+        Math.max(0, (deadline ?? startedAt + timeoutMs) - now())
       )
     }
 
