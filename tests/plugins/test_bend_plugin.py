@@ -384,6 +384,44 @@ def test_run_process_timeout_reaps_process_group(monkeypatch):
     assert caught.value.stderr == "partial-err"
 
 
+def test_run_process_non_posix_uses_subprocess_run(monkeypatch):
+    """The Windows path never touches POSIX-only process-group signals."""
+    expected = core.subprocess.CompletedProcess(["bend"], 0, "ok", "")
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+        return expected
+
+    def unexpected_popen(*_args, **_kwargs):
+        pytest.fail("non-POSIX must not start a POSIX process group")
+
+    monkeypatch.setattr(core, "os", SimpleNamespace(name="nt"))
+    monkeypatch.setattr(core.subprocess, "run", fake_run)
+    monkeypatch.setattr(core.subprocess, "Popen", unexpected_popen)
+
+    actual = core.run_process(
+        ["bend", "PROOF.bend", "--verdict"],
+        cwd="fake-workdir",
+        env={"BEND_NO_TELEMETRY": "1"},
+        timeout=0.01,
+    )
+    assert actual is expected
+    assert calls == [
+        (
+            ["bend", "PROOF.bend", "--verdict"],
+            {
+                "cwd": "fake-workdir",
+                "env": {"BEND_NO_TELEMETRY": "1"},
+                "capture_output": True,
+                "text": True,
+                "timeout": 0.01,
+                "check": False,
+            },
+        )
+    ]
+
+
 def test_detects_bend_binary_mutation_during_verdict(tmp_path):
     _proof(tmp_path)
     fake_root = tmp_path / "bend-dist"
