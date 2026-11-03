@@ -151,6 +151,10 @@ async def test_dashboard_bulk_deletes_under_the_live_owner_are_applied_by_the_ow
         store.db.create_session(sid, 'cli')
         store.db.end_session(sid, 'user_exit')
     store.db.append_message('picked', 'user', 'hand-picked for bulk delete')
+    # An old, still-open session matches the prune filter but must not be deleted.
+    store.db.create_session('open-cron', 'cron')
+    store.db.append_message('open-cron', 'user', 'still open')
+    _aged(store.db, 'open-cron', 200, ended=False)
 
     @asynccontextmanager
     async def owner_socket(*_args, **_kwargs):
@@ -181,12 +185,13 @@ async def test_dashboard_bulk_deletes_under_the_live_owner_are_applied_by_the_ow
 
     assert await routes.delete_empty_sessions_endpoint(request, None) == {'ok': True, 'deleted': 2}
     pruned = await routes.prune_sessions_endpoint(SessionPrune(source='cron', older_than_days=90), request)
-    assert pruned == {'ok': True, 'removed': 1, 'skipped_open': 0}
+    assert pruned == {'ok': True, 'removed': 1, 'skipped_open': 1}
     picked = await routes.bulk_delete_sessions_endpoint(BulkDeleteSessions(ids=['picked', 'gone']), request)
     assert picked == {'ok': True, 'deleted': 1, 'skipped_active': []}
     db = store.db
     assert db.get_session('empty-1') is None and db.get_session('empty-2') is None
     assert db.get_session('old-cron') is None and db.get_session('picked') is None
+    assert db.get_session('open-cron') is not None  # skipped open history remains intact
     assert db.get_session('old-cli') is not None and db.get_session('fresh-cli') is not None
     # The owner retired what it deleted from its own memory (routes, live sessions).
     assert set(store.retired) == {'empty-1', 'empty-2', 'old-cron', 'picked'}
