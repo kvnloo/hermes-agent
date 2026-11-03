@@ -68,6 +68,26 @@ describe('openui-v2 Desktop fence', () => {
     ).toEqual({ kind: 'invalid', reason: 'series' })
   })
 
+  it.each(['StackedBar', 'StackedArea', 'LineChart'] as const)(
+    'keeps %s refs distinct, rejects mismatched values and restores the source view',
+    async type => {
+      const code = [
+        'root = Board("Series", "", [chart])',
+        `chart = ${type}("Breakdown", "runs", ["Mon", "Tue"], [{name: "A", values: [2, 3]}])`
+      ].join('\n')
+      expect(inspectOpenUiBoard(code)).toEqual({ kind: 'ready' })
+      expect(inspectOpenUiBoard(code.replace('[2, 3]', '[2]'))).toEqual({ kind: 'invalid', reason: 'series' })
+
+      render(embedded(code))
+      const showSource = await screen.findByRole('button', { name: 'Show source' })
+      expect(screen.getByRole('heading', { name: 'Breakdown' })).toBeTruthy()
+      fireEvent.click(showSource)
+      expect(screen.getByTestId('original-fence').textContent).toBe(code)
+      fireEvent.click(screen.getByRole('button', { name: 'Show board' }))
+      expect(screen.getByRole('heading', { name: 'Breakdown' })).toBeTruthy()
+    }
+  )
+
   it('supports stat, bar, stacked bar, line and table without actions', async () => {
     const code = [
       'root = Board("Metrics", "Read-only", [s, b, k, l, t])',
