@@ -625,6 +625,75 @@ class TestNestedCallsDoNotOutliveTheCell(unittest.TestCase):
             server.close()
         self.assertEqual(len(requests), 1, requests)
 
+    def test_rpc_socket_timeout_closes_without_replay_but_idle_reconnects(self):
+        """Timeouts are not stale idle sockets: only disconnects get the one retry."""
+        import socket
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        from tools.code_execution_tool import generate_hermes_tools_module
+
+        def new_stub():
+            namespace = {}
+            exec(generate_hermes_tools_module(["web_search"]), namespace)
+            return namespace
+
+        # The request may already have reached the host at any of these stages.
+        # Neither persistent nor one-shot clients may replay on a socket timeout.
+        for persistent in (False, True):
+            for stage in ("connect", "sendall", "recv"):
+                with self.subTest(persistent=persistent, timeout_stage=stage), patch.dict(
+                    os.environ,
+                    {"HERMES_RPC_SOCKET": "tcp://127.0.0.1:12345",
+                     "HERMES_RPC_PERSISTENT": "1" if persistent else "0"},
+                ):
+                    stub = new_stub()
+                    connection = Mock()
+                    getattr(connection, stage).side_effect = socket.timeout("test timeout")
+                    factory = Mock(return_value=connection)
+                    stub["socket"] = SimpleNamespace(
+                        socket=factory, AF_INET=socket.AF_INET,
+                        SOCK_STREAM=socket.SOCK_STREAM, timeout=socket.timeout,
+                    )
+                    with self.assertRaisesRegex(socket.timeout, "test timeout"):
+                        stub["web_search"](query="q")
+                    self.assertEqual(factory.call_count, 1)
+                    connection.close.assert_called_once()
+                    self.assertIsNone(stub["_sock"])
+
+        # A persistent kernel may legitimately retain a connection past the
+        # server's idle timeout; a broken pipe or EOF gets exactly one retry.
+        for failure in ("broken-pipe", "eof"):
+            with self.subTest(idle_failure=failure), patch.dict(
+                os.environ,
+                {"HERMES_RPC_SOCKET": "tcp://127.0.0.1:12345",
+                 "HERMES_RPC_PERSISTENT": "1"},
+            ):
+                stub = new_stub()
+                stale, fresh = Mock(), Mock()
+                if failure == "broken-pipe":
+                    stale.sendall.side_effect = BrokenPipeError("idle disconnect")
+                else:
+                    stale.recv.return_value = b""
+                fresh.recv.return_value = b'{"output":"ok"}\n'
+                available = iter((stale, fresh))
+                connected = []
+
+                def connect():
+                    connection = next(available)
+                    connected.append(connection)
+                    stub["_sock"] = connection
+                    return connection
+
+                stub["_connect"] = connect
+                self.assertEqual(stub["web_search"](query="q"), {"output": "ok"})
+                self.assertEqual(connected, [stale, fresh])
+                stale.close.assert_called_once()
+                stale.sendall.assert_called_once()
+                fresh.sendall.assert_called_once()
+                fresh.close.assert_not_called()
+                self.assertIs(stub["_sock"], fresh)
+
 
 class TestBackgroundIdleReaper(unittest.TestCase):
     """#117169: the idle sweep must not depend on the next kernel acquire — a host
