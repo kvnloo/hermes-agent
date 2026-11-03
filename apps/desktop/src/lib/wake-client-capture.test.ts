@@ -136,6 +136,38 @@ describe('startClientWakeCapture (issue #119089)', () => {
     expect(handle.active).toBe(true)
   })
 
+  it('preserves silent 80 ms frames around speech in the wake.feed PCM timeline', async () => {
+    const onError = vi.fn()
+    const request = vi.fn(async () => ({ fed: true }))
+    const handle = await start({ onError, request, silenceFramesThreshold: 20 })
+    handles.push(handle)
+
+    // With 48 kHz callbacks resampled to 16 kHz, these five 4096-sample
+    // chunks contain five complete 1280-sample frames. Silent frames must
+    // occupy their original positions, not be spliced away before detection.
+    for (const samples of [silentFrame(), silentFrame(), toneFrame(), silentFrame(), silentFrame()]) {
+      processor().emit(samples)
+    }
+
+    await flush()
+    const pcm = Buffer.concat(
+      request.mock.calls.map(call => {
+        const [method, params] = call as unknown as [string, { pcm: string; sample_rate: number }]
+        expect(method).toBe('wake.feed')
+        expect(params.sample_rate).toBe(16_000)
+
+        return Buffer.from(params.pcm, 'base64')
+      })
+    )
+
+    expect(pcm).toHaveLength(5 * 1280 * 2)
+    expect(pcm.subarray(0, 1280 * 2).every(byte => byte === 0)).toBe(true)
+    expect(pcm.readInt16LE(3 * 1280 * 2)).toBeGreaterThan(0)
+    expect(pcm.subarray(-1280 * 2).every(byte => byte === 0)).toBe(true)
+    expect(handle.active).toBe(true)
+    expect(onError).not.toHaveBeenCalled()
+  })
+
   it('reports sustained digital silence instead of staying deaf forever', async () => {
     const onError = vi.fn()
     const handle = await start({ onError, silenceFramesThreshold: 10 })

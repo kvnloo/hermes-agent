@@ -362,10 +362,11 @@ export async function startClientWakeCapture(options: ClientWakeCaptureOptions):
           return
         }
 
-        continue
+      } else {
+        silentFrames = 0
       }
 
-      silentFrames = 0
+      // openWakeWord consumes a continuous PCM window, including quiet gaps.
       enqueueFrame(new Float32Array(frame))
     }
 
