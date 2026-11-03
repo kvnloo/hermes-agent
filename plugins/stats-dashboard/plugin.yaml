@@ -1,0 +1,5 @@
+name: stats-dashboard
+version: 0.1.0
+description: "/stats opens omp's trace dashboard (omp stats) over this profile's Hermes sessions: tool spans, subagents, usage and cost per session."
+author: "Kevin Rajan (kvnloo)"
+kind: standalone
