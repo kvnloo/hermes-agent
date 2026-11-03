@@ -368,11 +368,13 @@ def _named_row_id(value) -> Optional[int]:
     ``UPDATE ... WHERE id IN (...)``. Callers that name rows for a compaction commit must therefore
     skip it instead of raising ``int(None)`` — one unnameable row used to roll back the whole commit
     and silently discard the compression result (#143402). A TEXT/REAL cell in that column (SQLite
-    dynamic typing) is coerced, since the id is only ever compared against integer bounds.
+    dynamic typing) is coerced only when integral: 1.5 is not row id 1.
     """
+    if isinstance(value, float) and not value.is_integer():
+        return None
     try:
         row_id = int(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None
     return row_id if row_id > 0 else None
 
