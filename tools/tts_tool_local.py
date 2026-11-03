@@ -160,16 +160,23 @@ def _generate_piper_tts(text: str, output_path: str, tts_config: dict[str, Any])
         except ImportError:
             logger.warning("[Piper] SynthesisConfig not available in this piper-tts version — advanced knobs ignored")
     wav_path = _wav_sidecar_path(output_path)
-    with wave.open(wav_path, "wb") as wav_file:
-        if syn_config is not None:
-            voice.synthesize_wav(text, wav_file, syn_config=syn_config)
-        else:
-            voice.synthesize_wav(text, wav_file)
-        synthesized_any = wav_file.getnframes() > 0
-        if not synthesized_any:
-            wav_file.setnchannels(1)
-            wav_file.setsampwidth(2)
-            wav_file.setframerate(22050)
+    try:
+        with wave.open(wav_path, "wb") as wav_file:
+            try:
+                if syn_config is not None:
+                    voice.synthesize_wav(text, wav_file, syn_config=syn_config)
+                else:
+                    voice.synthesize_wav(text, wav_file)
+            finally:
+                # Ensure close() cannot replace a pre-first-chunk synthesis error.
+                synthesized_any = wav_file.getnframes() > 0
+                if not synthesized_any:
+                    wav_file.setnchannels(1)
+                    wav_file.setsampwidth(2)
+                    wav_file.setframerate(22050)
+    except Exception:
+        _remove_quietly(wav_path)
+        raise
     if not synthesized_any:
         _remove_quietly(wav_path)
         return output_path

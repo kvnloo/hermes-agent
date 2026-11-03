@@ -227,6 +227,28 @@ class TestTextToSpeechToolWithPiper:
         assert not out_file.with_suffix(".wav").exists()
 
 
+    def test_synthesis_error_before_first_chunk_is_not_masked(self, tmp_path, monkeypatch):
+        class _FailingPiperVoice(_StubPiperVoice):
+            def synthesize_wav(self, text, wav_file, syn_config=None):
+                raise ModuleNotFoundError("No module named 'unicode_rbnf'")
+
+        model = tmp_path / f"{DEFAULT_PIPER_VOICE}.onnx"
+        model.write_bytes(b"model")
+        (tmp_path / f"{DEFAULT_PIPER_VOICE}.onnx.json").write_text("{}")
+        monkeypatch.setattr(tts_tool, "_import_piper", lambda: _FailingPiperVoice)
+        cfg = {"provider": "piper", "piper": {"voice": str(model)}}
+        monkeypatch.setattr(tts_tool, "_load_tts_config", lambda: cfg)
+
+        out_file = tmp_path / "failed.mp3"
+        data = json.loads(text_to_speech_tool(text="hello", output_path=str(out_file)))
+
+        assert data["success"] is False, data
+        assert "unicode_rbnf" in data["error"]
+        assert "channels not specified" not in data["error"]
+        assert not out_file.exists()
+        assert not out_file.with_suffix(".wav").exists()
+
+
 # ---------------------------------------------------------------------------
 # check_tts_requirements
 # ---------------------------------------------------------------------------
