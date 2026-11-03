@@ -95,8 +95,7 @@ function installDesktop(): void {
       port: connectionId === 'source-a' ? 6161 : 6262,
       profile,
       token: `${connectionId}-token`
-    })),
-    touchBackend: vi.fn(async () => undefined)
+    }))
   }
 }
 
@@ -522,7 +521,7 @@ describe('requestForSessionProfile', () => {
     expect(secondaryGateways).toHaveLength(2)
   })
 
-  it('releases a retained turn when its owning socket closes without a terminal event', async () => {
+  it('retains a disconnected turn until its route is explicitly closed', async () => {
     const primary = makePrimary()
     setPrimaryGateway(primary as never, 'default')
     installDesktop()
@@ -535,6 +534,9 @@ describe('requestForSessionProfile', () => {
     expect(secondaryGateways[0].close).not.toHaveBeenCalled()
 
     secondaryGateways[0].emitState('closed')
+    expect(secondaryGateways[0].close).not.toHaveBeenCalled()
+
+    closeSecondaryGateways()
     expect(secondaryGateways[0].close).toHaveBeenCalledOnce()
   })
 
