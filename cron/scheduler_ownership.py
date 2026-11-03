@@ -18,11 +18,12 @@ Every probe failure answers "no": ownership claims are certainties, never guesse
 
 from __future__ import annotations
 
+import logging
 import threading
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
-from hermes_constants import get_hermes_home, hermes_home_key
+from hermes_constants import get_hermes_home, get_process_hermes_home, hermes_home_key
 
 # Home key -> home path for every profile this process ticks, republished each ticker cycle so a
 # profile created or tombstoned mid-run is reflected without a restart.
@@ -31,6 +32,8 @@ _ticked_homes: dict[str, Path] = {}
 # gone by the time its store state is dropped, and a symlinked cron/ resolves elsewhere.
 _ticked_stores: dict[str, str] = {}
 _ticked_lock = threading.Lock()
+_pending_plugin_evictions: dict[str, Path] = {}
+logger = logging.getLogger(__name__)
 
 
 def register_ticked_homes(homes) -> None:
@@ -48,8 +51,15 @@ def register_ticked_homes(homes) -> None:
         key = hermes_home_key(path)
         resolved[key] = path
         stores[key] = store_key(path)
+    launch_key = hermes_home_key(get_process_hermes_home())
     with _ticked_lock:
         departed = set(_ticked_homes) - set(resolved)
+        for key in departed:
+            if key != launch_key:
+                _pending_plugin_evictions[key] = _ticked_homes[key]
+        for key in resolved:
+            _pending_plugin_evictions.pop(key, None)
+        pending = dict(_pending_plugin_evictions)
         # A store another still-ticked profile reaches (cron/ symlinked to one place) keeps its state.
         departed_stores = {_ticked_stores[k] for k in departed if k in _ticked_stores} - set(stores.values())
         _ticked_homes.clear()
@@ -61,6 +71,20 @@ def register_ticked_homes(homes) -> None:
         from cron.scheduler import discard_parallel_pools
         discard_parallel_pools(departed)
         forget_stores(departed_stores)
+    if pending:
+        from cron.scheduler import has_inflight_for_home
+        from hermes_cli.plugins import unload_plugin_manager_for_home
+        for key, home in pending.items():
+            if has_inflight_for_home(home):
+                continue
+            try:
+                unload_plugin_manager_for_home(home)
+            except Exception:
+                logger.warning("Could not unload plugins for departed home %s", home, exc_info=True)
+                continue
+            with _ticked_lock:
+                if key not in _ticked_homes:
+                    _pending_plugin_evictions.pop(key, None)
 
 
 def ticked_homes() -> dict:

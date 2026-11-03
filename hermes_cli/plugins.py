@@ -1648,6 +1648,27 @@ def get_plugin_manager() -> PluginManager:
     return manager
 
 
+def unload_plugin_manager_for_home(home: Path | str) -> bool:
+    """Release a departed home's plugins after cron has stopped using them."""
+    global _plugin_manager
+    key = Path(home).expanduser().resolve()
+    with _plugin_managers_lock:
+        manager = _plugin_managers_by_home.get(key)
+        if manager is None:
+            return False
+        _clear_plugin_submodules(manager)
+        manager.unload()
+        # A permanent eviction must also release the persistent handles which
+        # unload-all retains for a subsequent force re-discovery.
+        for registration in tuple(manager._persistent_carryover):
+            registration.dispose()
+        manager._persistent_carryover.clear()
+        _plugin_managers_by_home.pop(key, None)
+        if _plugin_manager is manager:
+            _plugin_manager = None
+    return True
+
+
 def _reset_plugin_managers_for_tests() -> None:
     """Test-only: drop every cached manager and its submodules for a fully clean slate."""
     global _plugin_manager, _published_gateway_message_injector, _published_tui_message_injector
