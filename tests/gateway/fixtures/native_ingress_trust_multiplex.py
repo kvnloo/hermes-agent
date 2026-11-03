@@ -2,6 +2,7 @@
 import asyncio
 from copy import deepcopy
 import json
+from tests.waiting import async_wait_until
 
 
 async def multiplex_probe(runner, authority, primary, state, mode, peer):
@@ -51,23 +52,18 @@ async def multiplex_probe(runner, authority, primary, state, mode, peer):
         rejected = {}
         if mode == 'recover':
             # Each mutation is fixture-owned; restoration precedes the positive control.
-            for case in ('removed-adapter', 'ambiguous-adapter', 'removed-home', 'ambiguous-route',
-                         'removed-route', 'changed-credential', 'revoked-sender'):
+            mutations = {
+                'removed-adapter': lambda: setattr(runner, '_profile_adapters', {}),
+                'ambiguous-adapter': lambda: runner._profile_adapters.update(alias={Platform.TELEGRAM: adapter}),
+                'removed-home': lambda: setattr(runner.config, '_runtime_profile_homes', [('default', state)]),
+                'ambiguous-route': lambda: setattr(runner.config, 'profile_routes', [route, route]),
+                'removed-route': lambda: setattr(runner.config, 'profile_routes', []),
+                'changed-credential': lambda: setattr(adapter.config, 'token', 'new-connector'),
+                'revoked-sender': lambda: (transport / '.env').write_text('TELEGRAM_ALLOWED_USERS=revoked\n'),
+            }
+            for case, mutate in mutations.items():
                 old_token = adapter.config.token
-                if case == 'removed-adapter':
-                    runner._profile_adapters = {}
-                elif case == 'ambiguous-adapter':
-                    runner._profile_adapters['alias'] = {Platform.TELEGRAM: adapter}
-                elif case == 'removed-home':
-                    runner.config._runtime_profile_homes = [('default', state)]
-                elif case == 'ambiguous-route':
-                    runner.config.profile_routes = [route, route]
-                elif case == 'removed-route':
-                    runner.config.profile_routes = []
-                elif case == 'changed-credential':
-                    adapter.config.token = 'new-connector'
-                elif case == 'revoked-sender':
-                    (transport / '.env').write_text('TELEGRAM_ALLOWED_USERS=revoked\n')
+                mutate()
                 result = await authority.recover_native_sessions([(sid, source, adapter)])
                 assert result[sid] != 'ready', (case, result)
                 assert rows(sid) == before, (case, rows(sid))
@@ -90,10 +86,10 @@ async def multiplex_probe(runner, authority, primary, state, mode, peer):
 
     event = MessageEvent(text='MULTIPLEX_NATIVE', source=source, message_id='mux-1')
     await adapter.handle_message(event)
-    async with asyncio.timeout(15):
-        while adapter._active_sessions:
-            await asyncio.sleep(0.01)
+    await async_wait_until(lambda: not adapter._active_sessions, timeout=15, what='the adapter to finish its session')
     entry = runner.session_store.get_or_create_session(source)
+    # The FIFO-drained turn's route records the receiving bot, so a restored session answers through it.
+    assert entry.transport_profile == 'transport', entry
     committed = rows(entry.session_id)
     assert committed and committed[0]['outcome'] == 'completed', (committed, adapter.deliveries)
     provenance = committed[0]['payload']['native_text_v1']['provenance']
@@ -105,9 +101,7 @@ async def multiplex_probe(runner, authority, primary, state, mode, peer):
     denied = MessageEvent(text='WRONG_TRANSPORT_SENDER', message_id='deny', source=adapter.build_source(
         chat_id='mux-chat', chat_type='dm', user_id='runtime-only'))
     await adapter.handle_message(denied)
-    async with asyncio.timeout(10):
-        while adapter._active_sessions:
-            await asyncio.sleep(0.01)
+    await async_wait_until(lambda: not adapter._active_sessions, timeout=10, what='the adapter to finish its session')
     assert rows(entry.session_id) == committed
     if mode == 'multiplex':
         sessions_before = set(authority.sessions)
@@ -115,9 +109,7 @@ async def multiplex_probe(runner, authority, primary, state, mode, peer):
                                                          profile='transport', chat_id='unowned-runtime', bot_profile='transport'))
         unowned = adapter.build_source(chat_id='unowned-runtime', chat_type='dm', user_id='fixture-user')
         await adapter.handle_message(MessageEvent(text='NO_SECONDARY_DB_OWNER', source=unowned, message_id='unowned'))
-        async with asyncio.timeout(10):
-            while adapter._active_sessions:
-                await asyncio.sleep(0.01)
+        await async_wait_until(lambda: not adapter._active_sessions, timeout=10, what='the adapter to finish its session')
         assert set(authority.sessions) == sessions_before, 'launch DB impersonated secondary runtime'
         runner.config.profile_routes = [route]
         await adapter.handle_message(MessageEvent(text='BLOCK_FIFO', source=source, message_id='busy-1'))
@@ -125,17 +117,20 @@ async def multiplex_probe(runner, authority, primary, state, mode, peer):
         queued = MessageEvent(text='MULTIPLEX_QUEUED', source=source, message_id='busy-2')
         task = asyncio.create_task(adapter.handle_message(queued))
         try:
-            async with asyncio.timeout(3):
-                while not any(row['request_id'] == 'busy-2' for row in rows(entry.session_id)):
-                    await asyncio.sleep(0.01)
+            # A durable FIFO row, not an adapter-local queue: the bound is wall-clock only (the
+            # admission commits on the owner's writer, which a loaded runner can delay), like the
+            # model-gate and drain waits above.
+            await async_wait_until(lambda: any(row['request_id'] == 'busy-2' for row in rows(entry.session_id)),
+                                   timeout=10, what='the queued busy-2 FIFO row')
             assert not adapter._pending_messages, 'callback wrapper restored adapter-local queue'
             (state / '.env').write_text('TELEGRAM_ALLOWED_USERS=runtime-only\nOPENAI_API_KEY=runtime-fresh-key\n')
         finally:
             peer.release.set()
             await task
-            async with asyncio.timeout(10):
-                while adapter._active_sessions:
-                    await asyncio.sleep(0.01)
+            await async_wait_until(lambda: not adapter._active_sessions, timeout=10, what='the adapter to finish its session')
+            # The busy receive returned at commit; the queued turn finishes on the FIFO drain.
+            if authority.sessions[entry.session_id].task is not None:
+                await asyncio.wait_for(authority.sessions[entry.session_id].task, 10)
         assert all(row['outcome'] == 'completed' for row in rows(entry.session_id))
         assert worker_scopes == [(str(state), 'runtime-fixture-key')] * 2 + [(str(state), 'runtime-fresh-key')], worker_scopes
     if mode == 'capture':

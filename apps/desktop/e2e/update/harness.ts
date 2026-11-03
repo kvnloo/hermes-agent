@@ -20,6 +20,7 @@ import * as path from 'node:path'
 import { _electron, type ElectronApplication, expect, type Page } from '@playwright/test'
 
 import { type CoreSandbox, type ProcInfo, providerConfigYaml, sandboxProcesses } from '../core/harness'
+import { processesRunningFrom } from '../core/process-census'
 import { type ScriptedProvider, startScriptedProvider } from '../core/provider'
 
 import { gatedOn, KNOWN } from './gates'
@@ -201,6 +202,8 @@ export function appEnv(facts: InstallFacts, extra: Record<string, string> = {}):
     ...displayEnv(),
     HERMES_DESKTOP_USER_DATA_DIR: userDataDir(facts),
     HERMES_DESKTOP_SKIP_QUIT_CONFIRM: '1',
+    // Never repoint the user's OS hermes:// handler (HKCU on Windows) at a test checkout.
+    HERMES_DESKTOP_SKIP_PROTOCOL_REGISTRATION: '1',
     HERMES_DESKTOP_CDP_PORT: 'off',
     ...extra
   }
@@ -208,7 +211,11 @@ export function appEnv(facts: InstallFacts, extra: Record<string, string> = {}):
 
 /** A user who configured a custom OpenAI-compatible endpoint (the scripted provider). */
 export function configureProvider(facts: InstallFacts, providerUrl: string): void {
-  fs.writeFileSync(path.join(facts.hermesHome, 'config.yaml'), providerConfigYaml(providerUrl))
+  const config = path.join(facts.hermesHome, 'config.yaml')
+  // Keep the seed's top-level `update:` block (the install's `--set-channel main` record): the
+  // specs publish commits on main, never a release, so the stable default would offer nothing.
+  const update = /^update:\n(?:[ \t].*\n?)*/m.exec(readText(config))?.[0] ?? ''
+  fs.writeFileSync(config, providerConfigYaml(providerUrl, update.endsWith('\n') || !update ? update : `${update}\n`))
   fs.writeFileSync(path.join(facts.hermesHome, '.env'), 'MOCK_API_KEY=update-e2e-key\n')
 }
 
@@ -249,8 +256,15 @@ export async function launchInstalledApp(facts: InstallFacts, env: Record<string
 
 // ─── Observation ───────────────────────────────────────────────────────
 
+/**
+ * Processes carrying this install's HERMES_HOME, plus every process of its packaged app:
+ * Electron 44 zeroes the app's /proc environ, so only the executable path names those.
+ */
 export function installProcesses(facts: InstallFacts): ProcInfo[] {
-  return sandboxProcesses({ hermesHome: facts.hermesHome } as CoreSandbox)
+  const census = sandboxProcesses({ hermesHome: facts.hermesHome } as CoreSandbox)
+  const known = new Set(census.map(proc => proc.pid))
+
+  return [...census, ...processesRunningFrom(releaseDir(facts)).filter(proc => !known.has(proc.pid))]
 }
 
 function exeOf(pid: number): string {
@@ -261,13 +275,16 @@ function exeOf(pid: number): string {
   }
 }
 
-/** Live Desktop main processes of this install (the packaged exe, not its zygote/renderer/gpu children). */
+/**
+ * Live Desktop main processes of this install (the packaged exe, not its zygote/renderer/gpu
+ * children). A child between fork and exec still shows the main's exe and argv, so a candidate
+ * whose parent is itself a candidate is that child, not a second app.
+ */
 export function desktopMainProcesses(facts: InstallFacts): ProcInfo[] {
-  const exe = fs.realpathSync(path.dirname(packagedExe(facts)))
+  const candidates = processesRunningFrom(releaseDir(facts)).filter(proc => !/--type=/.test(proc.cmdline))
+  const pids = new Set(candidates.map(proc => proc.pid))
 
-  return installProcesses(facts).filter(
-    proc => exeOf(proc.pid).startsWith(exe + path.sep) && !/--type=/.test(proc.cmdline)
-  )
+  return candidates.filter(proc => !pids.has(proc.ppid))
 }
 
 /** The `hermes serve` backend(s) of this install (children of the backend excluded). */
@@ -498,7 +515,8 @@ export function isAlive(pid: number): boolean {
   try {
     process.kill(pid, 0)
 
-    return !/^\S+ \(.*\) Z /.test(readText(`/proc/${pid}/stat`))
+    // Zombie check needs procfs; elsewhere a signalable pid is alive.
+    return !fs.existsSync(`/proc/${pid}/stat`) || !/^\S+ \(.*\) Z /.test(readText(`/proc/${pid}/stat`))
   } catch {
     return false
   }

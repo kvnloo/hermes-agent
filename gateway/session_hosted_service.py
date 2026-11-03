@@ -1,11 +1,13 @@
 """Authority-bound hosted service; no legacy session server is constructed."""
 import asyncio
+import hashlib
 from contextlib import nullcontext
 from pathlib import Path
 
 from gateway.session_contract import Principal
-from gateway.session_authorities import active_authority, all_authorities, owner_scope
+from gateway.session_authorities import active_authority, all_authorities, owner_scope, serving_authorities
 from gateway.session_hosted_controls import HostedControls
+from gateway.owner_identity import same_owner
 from hermes_state_runtime import RuntimeStoreError, _epoch
 from tui_gateway.hosted_room_service import HostedRoomService
 
@@ -24,30 +26,20 @@ class CanonicalHostedRoomService(HostedControls, HostedRoomService):
         return self
 
     def profile_homes(self):
-        from gateway.run import _load_gateway_config
-        from gateway.hosted_rooms_common import IDENTIFIER_RE
-        from gateway.session_authorities import served_profile_name
-        home = Path(self.authority.profile_id)
-        own = served_profile_name(home)
-        # The coordinator's own threads do not inherit the caller's ContextVars.
-        with owner_scope(self.authority):
-            configured = _load_gateway_config().get('hosted_rooms', {}).get('profiles', {})
-        result = {own: home}
-        if not isinstance(configured, dict):
-            raise RuntimeStoreError('invalid_params')
-        for name, value in configured.items():
-            if not isinstance(name, str) or not isinstance(value, str):
-                raise RuntimeStoreError('invalid_params')
-            target = Path(value)
-            if not IDENTIFIER_RE.fullmatch(name) or not target.is_absolute() or target != target.resolve():
-                raise RuntimeStoreError('invalid_params')
-            if name == own and target != home:
-                raise RuntimeStoreError('permission_denied')
-            result[name] = target
-        return result
+        from gateway.session_hosted_members import member_roster
+        return member_roster(self.authority)[0]
 
     def local_profiles(self):
         return tuple(self.profile_homes())
+
+    def room_profiles(self, room):
+        """A saved room keeps every local member it seated: unserving one bot must not stop the
+        others. That member's own turns still fail (``_resolve_member_transport`` and ``attest``
+        need a live home), and a new group cannot seat it (``local_profiles``)."""
+        seated = {m.get('profile') for m in room.get('members') or ()
+                  if isinstance(m, dict) and isinstance(m.get('profile'), str)
+                  and (m.get('target') or {}).get('kind', 'local') == 'local'}
+        return tuple(sorted(set(self.local_profiles()) | seated))
 
     def attest(self, selector, operation, params):
         from dataclasses import asdict
@@ -73,7 +65,9 @@ class CanonicalHostedRoomService(HostedControls, HostedRoomService):
                        and t['payload'].get('target_member_id', t['payload']['target_profile']) == member
                        and t['payload']['target_profile'] == profile
                        and (operation == 'execute' or (
-                           t['payload']['prompt'] == params.get('prompt')
+                           (hashlib.sha256(t['payload']['prompt'].encode('utf-8')).hexdigest()
+                            == params['prompt_sha256'] if 'prompt_sha256' in params
+                            else t['payload']['prompt'] == params.get('prompt'))
                            and t['payload'].get('attachments', []) == (params.get('attachments') or [])))]
             if len(matches) != 1:
                 raise RuntimeStoreError('permission_denied')
@@ -100,7 +94,9 @@ class CanonicalHostedRoomService(HostedControls, HostedRoomService):
     def _turn_lock(self, profile):
         return nullcontext()
 
-    def authorize_room(self, actor_subject, room_id, *, create=False):
+    def authorize_room(self, actor_subject, room_id, *, create=False, conn=None):
+        """Check (or, with ``create``, claim) room ownership. A ``conn`` runs the claim inside
+        the caller's room-creation transaction, so owner and room commit or roll back together."""
         from gateway.hosted_rooms_common import IDENTIFIER_RE
         if (not isinstance(actor_subject, str) or not actor_subject
                 or not isinstance(room_id, str) or len(room_id) > 128
@@ -118,10 +114,10 @@ class CanonicalHostedRoomService(HostedControls, HostedRoomService):
                 if historical is None:
                     conn.execute('INSERT INTO state_meta(key,value) VALUES(?,?)', (key, actor_subject))
                     return True
-            if row is None or row[0] != actor_subject:
+            if row is None or not same_owner(row[0], actor_subject):
                 raise RuntimeStoreError('permission_denied')
             return True
-        return self.authority.db._execute_write(write)
+        return write(conn) if conn is not None else self.authority.db._execute_write(write)
 
     def _owner(self, room_id):
         with self.authority.db._read_ctx() as conn:
@@ -149,28 +145,59 @@ class CanonicalHostedRoomService(HostedControls, HostedRoomService):
                     source_home=self.authority.profile_id, room_id=binding.room_id,
                     member_id=member, profile=profile)
                 return self.member_rpcs[key]
-            def authorize(operation, identity, generation):
-                self.authorize_room(owner, binding.room_id)
-                room = self._room(binding.room_id)
+            def authorized(conn, operation, identity, generation):
+                # Admission checks must share the FIFO writer's snapshot. Opening
+                # another transaction here would reintroduce the revocation race.
+                from gateway.hosted_rooms import _room_from_row
+                from gateway.hosted_room_driver import _task_from_row
+                _epoch(conn, self.authority.epoch)
+                owned = conn.execute('SELECT value FROM state_meta WHERE key=?',
+                                     (_OWNER + binding.room_id,)).fetchone()
+                if owned is None or owned[0] != owner:
+                    return False
+                stored = conn.execute('SELECT * FROM hosted_rooms WHERE room_id=?',
+                                      (binding.room_id,)).fetchone()
+                if stored is None or stored['disbanded_at'] is not None:
+                    return False
+                room = _room_from_row(stored)
                 if (room['authority_gateway_id'], room['authority_epoch']) != (binding.gateway_id, binding.authority_epoch):
                     return False
                 members = room['members']
-                if not any(m.get('member_id') == member and m.get('profile') == profile for m in members):
+                if not any(m.get('member_id') == member and m.get('profile') == profile
+                           and (m.get('target') is None or (
+                               isinstance(m.get('target'), dict)
+                               and m['target'].get('kind', 'local') == 'local'))
+                           for m in members):
                     return False
                 if self.profile_homes().get(profile) != home:
                     return False
                 if identity is not None:
-                    from gateway.hosted_room_driver import list_tasks
-                    return any(t['identity'] == identity and t['execution_generation'] == generation
-                               and t['payload'].get('target_profile') == profile
-                               and t['status'] in {'running', 'stopping'}
-                               for t in list_tasks(self.db_path, room_id=binding.room_id))
+                    stored = conn.execute('SELECT * FROM hosted_room_driver_tasks WHERE room_id=? AND task_id=?',
+                                          (binding.room_id, identity.task_id)).fetchone()
+                    if stored is None:
+                        return False
+                    current = _task_from_row(stored)
+                    return (current['identity'] == identity and current['execution_generation'] == generation
+                            and current['payload'].get('target_profile') == profile
+                            and current['payload'].get('target_member_id', profile) == member
+                            and current['status'] in ({'running'} if operation in {'submit', 'execute'}
+                                                       else {'running', 'stopping'}))
+                return True
+            def authorize(operation, identity, generation):
+                with self.authority.db._read_ctx() as conn:
+                    return authorized(conn, operation, identity, generation)
+            def authorize_write(conn, identity, generation):
+                # Raise to refuse rather than return False: a guard that only returns False
+                # is ignored wherever the admission hook signals refusal by raising.
+                if not authorized(conn, 'submit', identity, generation):
+                    raise RuntimeStoreError('permission_denied')
                 return True
             principal = Principal(owner, self.authority.profile_id,
                 frozenset({'session:create', 'session:read', 'session:submit', 'session:control', 'session:approve'}),
                 'hosted:' + binding.room_id + ':' + member)
             self.member_rpcs[key] = HostedRoomAuthorityRPC(self.authority, self.loop,
-                room_id=binding.room_id, member_id=member, profile=profile, principal=principal, authorize=authorize)
+                room_id=binding.room_id, member_id=member, profile=profile, principal=principal, authorize=authorize,
+                authorize_write=authorize_write)
         return self.member_rpcs[key]
 
     def check_admission(self, ref, row):
@@ -187,7 +214,7 @@ class CanonicalHostedRoomService(HostedControls, HostedRoomService):
             if type(generation) is not int or generation < 1:
                 raise ValueError('invalid generation')
             owner = self._owner(identity.room_id)
-            if owner != row['principal_id']:
+            if not same_owner(owner, row['principal_id']):
                 raise ValueError('foreign owner')
             room = self._room(identity.room_id)
             task = next(t for t in list_tasks(self.db_path, room_id=identity.room_id)
@@ -214,7 +241,7 @@ async def ensure_hosted_service(runner):
     active = active_authority(runner)
     if active is None:
         raise RuntimeStoreError('profile_mismatch')
-    for authority in all_authorities(runner):
+    for authority in serving_authorities(runner):
         await _ensure_hosted_service(runner, authority)
     start_ready_hosted_services(runner)
     return active.hosted_room_service
@@ -225,6 +252,8 @@ async def _ensure_hosted_service(runner, authority):
         service = getattr(authority, 'hosted_room_service', None)
         if service is None:
             loop = asyncio.get_running_loop()
+            from gateway.hosted_rooms_gateway_import import import_standalone_rooms
+            await asyncio.to_thread(import_standalone_rooms, Path(authority.db.db_path), runtime_epoch=authority.epoch)
             service = await asyncio.to_thread(CanonicalHostedRoomService, authority, loop)
             authority.hosted_room_service = service
         if not getattr(service, '_transport_installed', False):
@@ -239,12 +268,14 @@ def start_ready_hosted_services(runner):
     if (getattr(runner, 'session_runtime_descriptor', {}).get('state') != 'ready'
             or getattr(runner, '_draining', False)):
         return
-    services = [getattr(authority, 'hosted_room_service', None) for authority in all_authorities(runner)]
+    services = [getattr(authority, 'hosted_room_service', None) for authority in serving_authorities(runner)]
     if any(service is None or not getattr(service, '_transport_installed', False) for service in services):
         return
     for service in services:
         # start() only releases its thread; preparation and disk access happened above.
         service.start()
+    from gateway.hosted_rooms_gateway_import import import_after_ready
+    import_after_ready(serving_authorities(runner))
 
 
 async def stop_hosted_service(runner, timeout=5):

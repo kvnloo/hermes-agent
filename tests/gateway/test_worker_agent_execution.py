@@ -72,13 +72,14 @@ def test_real_agent_worker_persists_context_usage_and_releases_lease(tmp_path, p
             result = subprocess.run([sys.executable, str(root / 'tests/gateway/fixtures/agent_persistence_worker.py')],
                 cwd=root, env=env, input=json.dumps({'home': str(home), 'url': url, 'session_id': sid,
                                                    'receipt': str(receipt), 'probe_constructors': probe_constructors}) + '\n',
-                text=True, capture_output=True, timeout=60)
+                text=True, capture_output=True, timeout=60, check=False)
             assert result.returncode == 0, result.stdout + result.stderr
             proof = json.loads(receipt.read_text())
             assert not proof['failed'], proof
             assert 'RECOVERY_ACK_WORKER_INFERENCE' in proof['result'], proof
             if probe_constructors:
-                assert proof['refusals']['child'] == 'worker_child_registration_required', proof['refusals']
+                # A child is reserved by the owner under this execution, never opened on SQLite (#141793).
+                assert proof['refusals']['child'] == 'opened:ChildSessionStore', proof['refusals']
                 assert proof['refusals']['cron'] == 'worker_cron_registration_required', proof['refusals']
                 assert proof['refusals']['ledger'] == 'worker_delegation_ledger_unavailable', proof['refusals']
                 success, doc, final_response, error = proof['refusals']['script_result']

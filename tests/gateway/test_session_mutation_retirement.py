@@ -41,12 +41,16 @@ def test_native_delete_exact_retry_survives_owner_restart(tmp_path):
         assert retry.status_code == 200 and retry.json() == receipt, retry.text
         changed = client.delete(path, params=params | {'expected_revision': 99}, headers=headers(ticket(home, descriptor)))
         assert changed.status_code == 409 and 'admission_conflict' in changed.text
+        # Without this principal's exact receipt, a delete of the gone id is main's idempotent
+        # ``already_absent`` (Desktop ghost-row contract, #48641): never the receipt, never a write.
+        absent = {'ok': True, 'already_absent': True}
         fresh = client.delete(path, params=params | {'request_id': 'different'}, headers=headers(ticket(home, descriptor)))
-        assert fresh.status_code != 200
-        foreign = client.delete(path, params=params, headers={'Authorization': 'Bearer normal-http-owner'})
-        assert foreign.status_code != 200
+        assert fresh.status_code == 200 and fresh.json() == absent, fresh.text
+        # The dashboard login is the owner, so its exact retry replays the owner's receipt.
+        login = client.delete(path, params=params, headers={'Authorization': 'Bearer normal-http-owner'})
+        assert login.status_code == 200 and login.json() == receipt, login.text
     print(json.dumps({'native_delete_restart': receipt, 'changed_retry': changed.json(),
-                      'fresh_request_status': fresh.status_code, 'foreign_status': foreign.status_code}))
+                      'fresh_request_status': fresh.status_code, 'login_status': login.status_code}))
 
 
 def test_route_retirement_rolls_back_with_receipt_and_rejects_stale_mirror(tmp_path):

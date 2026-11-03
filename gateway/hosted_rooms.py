@@ -14,7 +14,7 @@ import sqlite3
 from contextlib import closing
 from functools import partial
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from gateway.hosted_rooms_common import (
     DbPath, bounded_int, canonical_json, clock as _now, compact_json, connect, fenced_update as _fenced_update,
@@ -149,7 +149,7 @@ _SCHEMA_DDL = (
 # (table, required columns) parsed from the DDL, in the order _schema_is_current probes them.
 _REQUIRED_COLUMNS = tuple(
     (re.search(r"EXISTS (\w+)", ddl).group(1),
-     frozenset(re.findall(r"^\s*(\w+) (?:TEXT|INTEGER|REAL)\b", ddl.split("(", 1)[1], re.M))) for ddl in _SCHEMA_DDL)
+     frozenset(re.findall(r"^\s*(\w+) (?:TEXT|INTEGER|REAL)\b", ddl.split("(", 1)[1], re.MULTILINE))) for ddl in _SCHEMA_DDL)
 _REMOTE_RUN_SCHEMA_COLUMNS = _REQUIRED_COLUMNS[4][1]
 
 # --- SQL fragments (statement text must stay byte-stable after whitespace normalisation) ---
@@ -863,15 +863,21 @@ def _adopt_legacy_room(
 
 
 def create_room(
-    db_path: DbPath, *, room_id: Any, name: Any, members: Any, authority_gateway_id: Any, now: float | None = None
+    db_path: DbPath, *, room_id: Any, name: Any, members: Any, authority_gateway_id: Any, now: float | None = None,
+    admit: Callable[[sqlite3.Connection], Any] | None = None,
 ) -> dict[str, Any]:
-    """Create a room, or return the identical existing room idempotently."""
+    """Create a room, or return the identical existing room idempotently.
+
+    ``admit(conn)`` runs first inside the write transaction (after payload validation), so a
+    caller's side effect such as an owner claim commits only together with this create."""
     room_id = _room_id(room_id)
     name = _validate_room_name(name)
     normalized_members, members_json = _validate_members(members)
     authority_gateway_id = _actor_id(authority_gateway_id, "authority_gateway_id")
     now = _now(now)
     with _transaction(db_path, immediate=True) as conn:
+        if admit is not None:
+            admit(conn)
         if _is_retired(conn, room_id):
             raise RoomConflictError("room_id belongs to a disbanded room")
         existing = conn.execute(_SELECT_ROOM_WITH_BYTES, (room_id,)).fetchone()
@@ -950,9 +956,10 @@ def rename_room(db_path: DbPath, *, room_id: Any, event_id: Any, name: Any, now:
 def append_event(
     db_path: DbPath, *, room_id: Any, event_id: Any, kind: Any, actor: Any, payload: Any,
     authority_gateway_id: Any = None, authority_epoch: Any = None, now: float | None = None,
-    expected_latest_seq: int | None = None) -> dict[str, Any]:
+    expected_latest_seq: int | None = None, control_reserve: bool = False) -> dict[str, Any]:
     """Append one immutable event and allocate its per-room sequence atomically; repeating an ``event_id``
-    with identical content returns the original, different content fails closed."""
+    with identical content returns the original, different content fails closed. ``control_reserve`` lets a
+    bounded gateway notice use the control headroom, so a room whose log is full can still say why."""
     room_id = _room_id(room_id)
     event_id = _event_id(event_id)
     if expected_latest_seq is not None:
@@ -987,7 +994,7 @@ def append_event(
                                        manifest=json.loads(payload_json).get("attachments", []), now=now)
         event_bytes = _insert_event(
             conn, room, room_id, seq, event_id, kind, actor_json, authority_epoch, payload_json, now,
-            allow_control=kind in _CONTROL_EVENT_KINDS)
+            allow_control=kind in _CONTROL_EVENT_KINDS or (control_reserve and normalized_actor["kind"] == "gateway"))
         _fenced_update(conn, """UPDATE hosted_rooms SET next_seq=?, event_bytes=event_bytes+?, updated_at=?
                 WHERE room_id=? AND next_seq=?""", (seq + 1, event_bytes, now, room_id, seq),
             RuntimeError("hosted room sequence advance lost its write fence"))
@@ -1204,14 +1211,3 @@ def read_events(
         if not fits(events):
             raise HostedRoomError("hosted room event exceeds replay page limit")
     return build_page(events)
-
-
-# ---- BEGIN PLUGIN-COMPAT (revert-scheduled; see COMPAT_MANIFEST.md) ----
-# Names external plugins imported from this module before the Sep 2026 decomposition.
-# Internal code MUST NOT use these (scripts/check_compat_pointers.py fails CI if it does).
-# The whole block is removed by reverting the commit that added it.
-from typing import Iterator  # noqa: F401,E402
-from typing import NoReturn  # noqa: F401,E402
-from contextlib import contextmanager  # noqa: F401,E402
-import time  # noqa: F401,E402
-# ---- END PLUGIN-COMPAT ----

@@ -1,27 +1,10 @@
 """API source restoration cannot mint a parallel native conversation."""
-from types import SimpleNamespace
 
 import pytest
 
-from gateway.config import Platform, GatewayConfig
-from gateway.session import SessionStore
-from gateway.session_authority import SessionAuthority
+from gateway.config import Platform
 from gateway.session_contract import Principal, SessionRef, Submission
-from hermes_state import SessionDB
-from hermes_state_runtime import RuntimeStoreError, begin_runtime_epoch
-
-
-@pytest.fixture
-def owner(tmp_path):
-    db = SessionDB(tmp_path / 'state.db')
-    store = SessionStore(config=GatewayConfig(), sessions_dir=tmp_path / 'sessions')
-    store._db = db  # production: the routing store and the authority share the profile's state.db
-    runner = SimpleNamespace(_draining=False, session_store=store)
-    authority = SessionAuthority(runner, profile_id='default', instance_id='first', db=db,
-                                 epoch=begin_runtime_epoch(db, instance_id='first'))
-    runner.session_authority = authority
-    yield authority
-    db.close()
+from hermes_state_runtime import RuntimeStoreError
 
 
 def test_private_api_binding_restores_exact_route(owner):
@@ -41,6 +24,24 @@ def test_private_api_binding_restores_exact_route(owner):
     with pytest.raises(RuntimeStoreError, match='permission_denied'):
         bind_api_session(owner, 'foreign-native')
     assert 'foreign-native' not in owner.sessions
+
+
+def test_private_api_binding_adopts_matching_legacy_declared_key(owner):
+    """Regression for #139835: a pre-binding API row stores the caller's declared key."""
+    from gateway.session_api import bind_api_session, declared_api_session
+
+    session_id = 'legacy-api-session'
+    declared_key = 'webui:legacy-api-session'
+    owner.db.create_session(session_id, source='api_server')
+    owner.db.record_gateway_session_peer(session_id, source='api_server', session_key=declared_key)
+
+    ref = bind_api_session(owner, session_id, declared_key=declared_key)
+
+    row = owner.db.get_session(session_id)
+    assert row['session_key'] == owner.sessions[ref.session_id].route
+    assert declared_api_session(owner.db, declared_key) == session_id
+    with pytest.raises(RuntimeStoreError, match='admission_conflict'):
+        bind_api_session(owner, 'other-api-session', declared_key=declared_key)
 
 
 @pytest.mark.asyncio

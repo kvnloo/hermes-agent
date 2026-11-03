@@ -1,6 +1,7 @@
 """Resolving an unknown admission must also retire its physical worker assignment."""
 from contextlib import closing
 import os
+from pathlib import Path
 import subprocess
 import sys
 from types import SimpleNamespace
@@ -8,12 +9,13 @@ from types import SimpleNamespace
 import psutil
 import pytest
 
+from hermes_cli.process_identity import worker_birth
 from hermes_state import SessionDB
 import hermes_state_runtime as rt
 
 
 def hello(process):
-    return {'type': 'hello', 'pid': process.pid, 'birth': psutil.Process(process.pid).create_time(),
+    return {'type': 'hello', 'pid': process.pid, 'birth': worker_birth(psutil.Process(process.pid)),
             'ancestors': [os.getpid()]}
 
 
@@ -32,7 +34,7 @@ def _local_reset(db, epoch, logical, child):
     source = SessionSource(platform=Platform.LOCAL, chat_id=sid, user_id='human', chat_type='dm')
     now = _now()
     entry = SessionEntry('local:' + sid, sid, now, now, origin=source, platform=Platform.LOCAL)
-    policy = build_policy({'source': 'cli', 'cwd': '/', 'model': 'm', 'toolsets': []},
+    policy = build_policy({'source': 'cli', 'cwd': str(Path(db.db_path).parent), 'model': 'm', 'toolsets': []},
                           {'platform_toolsets': {'cli': []}}, private_secrets={})
     commit_local_session(db, epoch=epoch, receipt={
         'profile_id': 'profile', 'principal_id': 'human', 'request_id': 'r', 'session_id': sid,

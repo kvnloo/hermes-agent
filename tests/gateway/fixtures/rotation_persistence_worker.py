@@ -6,8 +6,16 @@ import sys
 
 import psutil
 
+from hermes_cli.process_identity import worker_birth
 from agent.runtime_session_store import RuntimeSessionStore, WorkerRPC
 from tests.gateway.fixtures.agent_persistence_worker import writable_fds
+
+
+def _publish(path, text):
+    """Create the receipt by rename: the parent polls for EXISTENCE, then reads it at once."""
+    tmp = Path(str(path) + '.tmp')
+    tmp.write_text(text)
+    os.replace(tmp, path)
 
 
 def main():
@@ -19,7 +27,7 @@ def main():
                      if event == 'sqlite3.connect' and 'state.db' in str(args[0]) else None)
     rpc = WorkerRPC(home)
     scope = dict(profile_id=str(home), session_id=command['session_id'], execution_id='compression-worker',
-                 generation=0, pid=os.getpid(), birth=psutil.Process().create_time(), secret='private-compression-worker')
+                 generation=0, pid=os.getpid(), birth=worker_birth(psutil.Process()), secret='private-compression-worker')
     registered = rpc('worker.register', **scope, kind='compute')
     scope['epoch'] = registered['owner_epoch']
     store = RuntimeSessionStore(rpc, scope, home / 'worker-outboxes' / 'compression-worker')
@@ -38,7 +46,7 @@ def main():
         store.update_system_prompt(scope['session_id'], 'BYTE_STABLE_PREFIX')
         agent._session_db_created = True
         before = agent.session_id
-        compressed, prompt = agent._compress_context(messages, 'BYTE_STABLE_PREFIX', force=True, approx_tokens=30000)
+        compressed, _prompt = agent._compress_context(messages, 'BYTE_STABLE_PREFIX', force=True, approx_tokens=30000)
         assert len(compressed) < len(messages), (len(compressed), len(messages), [
             dict(operation=e['operation'], keys=[list(m) for m in e['payload'].get('messages', [])])
             for e in store.journal['pending']])
@@ -49,14 +57,14 @@ def main():
         assert agent.tools == frozen_tools
         restart_proof = {}
         if command.get('restart'):
-            Path(command['ready']).write_text(json.dumps(dict(session_id=agent.session_id, epoch=store.scope['epoch'])))
+            _publish(command['ready'], json.dumps(dict(session_id=agent.session_id, epoch=store.scope['epoch'])))
             assert sys.stdin.readline().strip() == 'outage'
             try:
                 store.touch_session_activity(agent.session_id, description='surviving rotated worker')
                 raise AssertionError('owner outage accepted a mutation')
             except Exception:
                 assert len(store.journal['pending']) == 1
-            Path(command['outage']).write_text('pending')
+            _publish(command['outage'], 'pending')
             assert sys.stdin.readline().strip() == 'adopt'
             try:
                 store.retry_pending()
@@ -73,7 +81,7 @@ def main():
         assert not result.get('failed'), result
         history = store.get_messages_as_conversation(agent.session_id, include_row_ids=True)
         store.finish()
-        Path(command['receipt']).write_text(json.dumps(dict(before=before, after=agent.session_id,
+        _publish(command['receipt'], json.dumps(dict(before=before, after=agent.session_id,
             history=history, compressed_count=len(compressed), input_count=len(messages), opens=opens,
             fds=writable_fds(), negatives={}, result=result['final_response'], restart=restart_proof)))
     finally:

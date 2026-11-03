@@ -45,7 +45,7 @@ after = path.read_bytes() if path.exists() else None
 assert after == before, 'launch reader created or mutated state.db'
 '''.replace('POPULATED', repr(populated))
     result = subprocess.run([sys.executable, "-c", code], cwd=repo, env=env,
-                            stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=30)
+                            stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=30, check=False)
     assert result.returncode == 0, result.stdout + result.stderr
     assert 'Error generating insights:' not in result.stdout
     if populated:
@@ -53,4 +53,5 @@ assert after == before, 'launch reader created or mutated state.db'
         assert 'Resume this session with:' in result.stdout
         assert 'Reader fixture' in result.stdout
     else:
-        assert 'No sessions found in the last 30 days (source: tui).' in result.stdout
+        # No store yet: both entry points print main's localized empty notice and create nothing.
+        assert result.stdout.count('No session data yet.') == 2

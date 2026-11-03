@@ -50,7 +50,9 @@ def canonical_bot(tmp_path, monkeypatch):
         'auxiliary': {'title_generation': {'enabled': False}},
         'platform_toolsets': {'gui': []}, 'terminal': {'cwd': str(home)},
     }))
-    env = child_env() | dict(HOME=str(user), USERPROFILE=str(user), HERMES_HOME=str(home),
+    child_user = user / 'daemon'
+    child_user.mkdir()
+    env = child_env() | dict(HOME=str(child_user), USERPROFILE=str(child_user), HERMES_HOME=str(home),
         PYTHONPATH=str(root), OPENAI_API_KEY='loopback-only', OPENAI_BASE_URL=base,
         PYTHONUNBUFFERED='1')
 
@@ -103,8 +105,13 @@ def test_cron_tracks_real_canonical_receipt(canonical_bot, phase):
     assert len(before) == 1 and before[0]['status'] == 'queued', (initial, before)
     admission_id = before[0]['admission_id']
     if phase == 'settled':
+        from tools.bot_live_delivery import read_delivery_result
+        key = job['_bot_chat_delivery_receipts']['bot-chat:(own)']['delivery_id']
         bot.model.release.set()
         wait_for(lambda: owned_rows()[0]['status'] == 'terminal')
+        # The owner republishes the receipt cron reads from an async refresh AFTER the row commits;
+        # until then cron correctly reports "claimed ... do not resend". Sync on the published receipt.
+        wait_for(lambda: (read_delivery_result(bot.home, key) or {}).get('status') == 'settled')
         observed = _deliver_to_bot_chat(job, content, '')
     else:
         observed = initial

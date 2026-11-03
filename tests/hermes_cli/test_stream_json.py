@@ -68,6 +68,8 @@ def _run_stream_json_chat(monkeypatch, capsys, run_turn, credentials_ok=True):
                 return {"session_create": {"sources": ["cli"], "parameters": ["cwd", "model", "request_id", "source"]}}
             if method == "session.create":
                 return {"stored_session_id": "session-123", "info": {"model": "test-model"}}
+            if method == "prompt.receipt":  # the settled result the exit code is judged from
+                return {"status": "terminal", "result": {"completed": True, "final_response": "hello"}}
             assert method == "prompt.submit"
             self.emit("message.complete", {**run_turn(self), "admission_id": "adm-1"})
             return {"admission_id": "adm-1"}
@@ -80,6 +82,8 @@ def _run_stream_json_chat(monkeypatch, capsys, run_turn, credentials_ok=True):
     monkeypatch.setattr(gateway_chat_startup, "ensure_launch_provider", lambda _args: credentials_ok)
     monkeypatch.setattr(cli_entry, "_resolve_use_tui", lambda _args: pytest.fail("TUI resolution consulted"))
     monkeypatch.setattr(cli_entry, "_confirm_startup_expensive_model_override", lambda _a: None)
+    monkeypatch.setattr(cli_entry, "_warn_retired_xai_models", lambda: None)
+    monkeypatch.setattr("hermes_cli.quiet_single_query.continue_quiet_notify_completions", lambda *_a, **_k: None)
 
     parser, _, _ = build_top_level_parser()
     args = parser.parse_args(["chat", "-q", "hello", "--format", "stream-json"])

@@ -271,7 +271,7 @@ def _tool_names(body: dict[str, Any]) -> set[str]:
     return {(t.get("function") or {}).get("name") or t.get("name") for t in body.get("tools") or []}
 
 
-_CATALOG_LINE = re.compile(r"^- ([A-Za-z0-9_.:-]+): ", re.M)
+_CATALOG_LINE = re.compile(r"^- ([A-Za-z0-9_.:-]+): ", re.MULTILINE)
 
 
 def offered_tool_names(body: dict[str, Any]) -> set[str]:
@@ -472,7 +472,7 @@ def stop_profile_gateway(ph: ParityHome, timeout: float = STOP_TIMEOUT) -> bool:
     """
     proc = subprocess.run(
         hermes_argv("gateway", "stop"), cwd=ph.project, env=ph.env(), capture_output=True, text=True,
-        timeout=timeout, stdin=subprocess.DEVNULL,
+        timeout=timeout, stdin=subprocess.DEVNULL, check=False
     )
     assert proc.returncode == 0, f"hermes gateway stop exited {proc.returncode}: {proc.stderr[-2000:]}"
     return "Stopped gateway" in proc.stdout

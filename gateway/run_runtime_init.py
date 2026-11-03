@@ -1,6 +1,10 @@
 """Writable runner initialization, separate from process ownership."""
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger("gateway.run")  # log-record parity with gateway/run.py
+
 class GatewayRuntimeInitMixin:
     def _init_runtime_settings(self) -> None:
         """Load ephemeral per-call config (prefill, reasoning, busy modes, timeouts, routing)."""
@@ -51,6 +55,7 @@ class GatewayRuntimeInitMixin:
         self._exit_reason: Optional[str] = None
         self._exit_code: Optional[int] = None
         self._profile_failed_platforms: Dict[str, Dict[Platform, asyncio.Task]] = {}
+        self._profile_bot_platforms: Dict[str, set[Platform]] = {}
         self._systemd_watchdog = None
         # External (NAS-driven) drain, distinct from one-way ``_draining``: set while ``.drain_request.json``
         # exists — NEW turns refused, process stays up, removing the marker reverts to ``running``.
@@ -111,13 +116,13 @@ class GatewayRuntimeInitMixin:
         self._platform_lock_takeover_on_start = False
         # Capped LRU of live SessionSources for fallback routing (shutdown notices, synthetic events) when
         # the persisted origin is missing and _parse_session_key can't recover thread_id.
-        self._session_sources: "OrderedDict[str, SessionSource]" = OrderedDict()
+        self._session_sources: OrderedDict[str, SessionSource] = OrderedDict()
         self._session_sources_max = 512
         # Lifecycle-scoped completion dedup: closes queue/watcher races inside one gateway without claiming
         # exactly-once across a crash; durable replay state stays owned by tools.async_delegation.
         self._completion_delivery_lock = threading.Lock()
         self._completion_deliveries_inflight: set[tuple[str, str, object]] = set()
-        self._completion_deliveries_delivered: "OrderedDict[tuple[str, str, object], None]" = OrderedDict()
+        self._completion_deliveries_delivered: OrderedDict[tuple[str, str, object], None] = OrderedDict()
         self._completion_delivery_retention = 2048
         # Agent-triggered terminal completions from one conversation often land in the same scheduler
         # tick; hold them briefly so the agent gets one synthetic turn instead of one per process.
@@ -133,7 +138,7 @@ class GatewayRuntimeInitMixin:
         from gateway.run import (Any, Dict, Optional, OrderedDict, Platform, threading)
         # AIAgent per session preserves prompt caching (fresh agent per message ~10x cost on Anthropic).
         # Value: (AIAgent, config_signature); LRU cap in _enforce_agent_cache_cap, TTL in expiry watcher.
-        self._agent_cache: "OrderedDict[str, tuple]" = OrderedDict()
+        self._agent_cache: OrderedDict[str, tuple] = OrderedDict()
         self._agent_cache_lock = threading.Lock()
         # Launch-time identity of the profile that owns ``self.adapters``; ``_authorization_adapter``
         # compares against this rather than the per-turn ``_active_profile_name()``. A multiplex
@@ -156,42 +161,9 @@ class GatewayRuntimeInitMixin:
         import itertools
         self._slash_confirm_counter = itertools.count(1)
 
-    def _init_startup_checks(self) -> None:
-        """Ensure tirith is installed and warn when manual approvals have no automated assessor."""
-        from gateway.run import (_best_effort, cfg_get, logger)
-        def _ensure_tirith() -> None:
-            from tools.tirith_security import ensure_installed
-            ensure_installed(log_failures=False)  # downloads if needed; fail-open at scan time
-
-        _best_effort(_ensure_tirith)
-
-        # Manual approvals with no automated assessor (tirith off AND no auxiliary.approval) fail closed
-        # on unattended gateways — surface it so operators knowingly enable one.
-        try:
-            from hermes_cli.config import load_config as _load_full_config
-            # Startup heads-up (#30882): a gateway in manual approval mode with no automated risk assessor
-            # (tirith disabled AND no auxiliary.approval model) can only gate dangerous commands /
-            # execute_code scripts via live in-chat approval.
-            _appr_cfg = _load_full_config()
-            _appr_mode = str(
-                cfg_get(_appr_cfg, "approvals", "mode", default="manual") or "manual"
-            ).strip().lower()
-            _tirith_on = bool(cfg_get(_appr_cfg, "security", "tirith_enabled", default=True))
-            _aux_approval = cfg_get(_appr_cfg, "auxiliary", "approval", default=None)
-            if _appr_mode == "manual" and not _tirith_on and not _aux_approval:
-                logger.warning(
-                    "Gateway approvals.mode=manual with no automated risk "
-                    "assessor (security.tirith_enabled is false and "
-                    "auxiliary.approval is unset): dangerous commands and "
-                    "execute_code scripts will BLOCK until a human approves "
-                    "them in chat. Enable security.tirith_enabled or configure "
-                    "auxiliary.approval for unattended operation.")
-        except Exception:
-            logger.debug("approvals.mode startup check skipped", exc_info=True)
-
     def _init_session_db(self) -> None:
         """Open the session DB for the active scope and run opportunistic state.db / checkpoint maintenance."""
-        from gateway.run import (Any, Dict, Path, _SESSION_DB_UNPINNED, _housekeeping_chore, _housekeeping_state_db_maintenance, _launch_sessions_dir, logger, threading)
+        from gateway.run import (Any, Dict, Path, _SESSION_DB_UNPINNED, _housekeeping_chore, _housekeeping_state_db_maintenance, _launch_sessions_dir, threading)
         # Session DB is a property caching one AsyncSessionDB per path (a handle bound here would pin the
         # root home under multiplex); priming here keeps startup diagnostics at init.
         # Initialize session database for session_search tool support. Same frozen-handle class of bug as
@@ -208,7 +180,7 @@ class GatewayRuntimeInitMixin:
             self._open_session_db_for_active_scope(raise_on_error=True)
         except Exception as e:
             # WARNING (not DEBUG) so it lands in errors.log; else an NFS HERMES_HOME silently loses /resume etc.
-            logger.warning("SQLite session store not available: %s", e)
+            logger.warning("SQLite session store not available: %s", e, exc_info=True)
             self._session_db_init_error = str(e)  # surfaced on the home channel(s) once connected
 
         # Opportunistic state.db maintenance (prune + optional VACUUM), at most once per min_interval_hours.
@@ -241,13 +213,13 @@ class GatewayRuntimeInitMixin:
         from gateway.pairing import PairingStore
         from gateway.hooks import ProfileHookRegistries
         self.pairing_store = PairingStore()
-        self.pairing_stores: Dict[str, "PairingStore"] = {}
+        self.pairing_stores: Dict[str, PairingStore] = {}
         # One HookRegistry per served profile home, resolved from the active scope at emit time.
         self.hooks = ProfileHookRegistries()
         # Per-chat voice reply mode: "off" | "voice_only" | "all"
         self._voice_mode: Dict[str, str] = self._load_voice_modes()
-        # Per-(guild,user) transcript dedup: the voice/STT pipeline can emit one utterance twice.
-        self._recent_voice_transcripts: Dict[tuple[int, int], List[tuple[float, str]]] = {}
+        # Per-(bot, guild, text channel, user) transcript dedup: voice/STT can emit one utterance twice.
+        self._recent_voice_transcripts: Dict[tuple, List[tuple[float, str]]] = {}
         # Background tasks kept referenced so they are not garbage-collected mid-execution.
         self._background_tasks: set = set()
         # Event-loop liveness heartbeat: rewritten every 30s while the loop dispatches; supervisors use

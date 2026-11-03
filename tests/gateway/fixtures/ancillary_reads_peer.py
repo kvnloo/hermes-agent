@@ -113,9 +113,9 @@ async def probe(mode):
                     for task, route in [(sid, live.route), ('foreign', live.route), (sid, 'wrong-route')]:
                         processes.append(process_registry.spawn_local(command, cwd=str(home), task_id=task,
                                                                       owner_task_id=task, session_key=route))
-                    async with asyncio.timeout(10):
-                        while any('PROCESS_OWNED' not in p.output_buffer for p in processes):
-                            await asyncio.sleep(.02)
+                    from tests.waiting import async_wait_until
+                    await async_wait_until(lambda: all('PROCESS_OWNED' in p.output_buffer for p in processes),
+                                           timeout=10, what='every owned process printed PROCESS_OWNED')
                     process_result = await rpc(ws, 'process.list', session_id=sid)
                     rows = process_result.get('result', {}).get('processes')
                     assert rows and [p['session_id'] for p in rows] == [processes[0].id], process_result
@@ -144,6 +144,11 @@ async def probe(mode):
                         entry.session_id = 'replacement-conversation'
                     rejected = await rpc(ws, 'subagent.list', session_id=sid)
                     assert rejected.get('error', {}).get('message') == 'stale_generation', rejected
+                    # The control card is this session's own persisted state, keyed by its id: it
+                    # stays readable after its chat moved on (a messaging /new), as before the
+                    # shared gateway; only the live owner objects above are fenced.
+                    moved = await rpc(ws, 'session.control.read', session_id=sid)
+                    assert 'result' in moved and set(moved['result']['control']) >= {'goal', 'loop', 'heartbeat'}, moved
                     with runner.session_store._lock:
                         entry.session_id = sid
                     # Identical durable session IDs cannot transfer old-object read authority.

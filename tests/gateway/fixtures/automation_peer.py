@@ -13,6 +13,7 @@ import time
 
 import websockets
 from tests.gateway.test_normal_runtime_boot import control
+from tests.waiting import async_wait_until
 from local_recovery_probe import websocket, rpc
 
 
@@ -55,6 +56,21 @@ class Model(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
 
+async def _identify_until_ready(home, seconds):
+    """Last ``identify`` descriptor once the daemon reports ready, or when ``seconds`` elapse."""
+    desc = {}
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        try:
+            desc = await asyncio.to_thread(control, home, 'identify')
+            if desc.get('state') == 'ready':
+                break
+        except (OSError, ValueError):
+            pass
+        await asyncio.sleep(.05)
+    return desc
+
+
 async def probe(root, base, mode):
     home, user = base / 'state', base / 'user'
     home.mkdir(); user.mkdir()
@@ -88,9 +104,7 @@ async def probe(root, base, mode):
             return [dict(r) for r in db.execute('SELECT * FROM session_admissions ORDER BY seq')]
 
     async def wait_for(predicate, seconds=35):
-        async with asyncio.timeout(seconds):
-            while not predicate():
-                await asyncio.sleep(.03)
+        await async_wait_until(predicate, timeout=seconds)
 
     proc = None
     try:
@@ -109,20 +123,11 @@ async def probe(root, base, mode):
                 GATEWAY_RELAY_PLATFORMS='telegram', GATEWAY_RELAY_BOT_IDS='{"telegram":"fixture-bot"}',
                 GATEWAY_RELAY_ID='fixture-gateway', GATEWAY_RELAY_SECRET='fixture-secret')
             with (home / 'daemon.log').open('w+') as log:
-                proc = subprocess.Popen([sys.executable, '-m', 'gateway.run'], cwd=root, env=env,
+                proc = subprocess.Popen([sys.executable, '-m', 'gateway.run'], cwd=root, env=env,  # noqa: ASYNC220 -- Popen returns immediately; the test drives the child through its handle
                     stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
                 try:
                     ws = await asyncio.wait_for(ready.get(), 35)
-                    desc = {}
-                    deadline = time.monotonic() + 35
-                    while time.monotonic() < deadline:
-                        try:
-                            desc = await asyncio.to_thread(control, home, 'identify')
-                            if desc.get('state') == 'ready':
-                                break
-                        except (OSError, ValueError):
-                            pass
-                        await asyncio.sleep(.05)
+                    desc = await _identify_until_ready(home, 35)
                     assert desc.get('state') == 'ready', desc
                     async def send(identity, text):
                         await ws.send(json.dumps({'type': 'inbound', 'event': {'text': text,
@@ -144,7 +149,11 @@ async def probe(root, base, mode):
                     await wait_for(lambda: any(r['request_id'] == 'human-follower' for r in rows()))
                     model.gate.touch()
                     # Real cadence: process polls every five seconds; heartbeat interval is one minute.
-                    await asyncio.sleep(8 if mode == 'terminal' else 70)
+                    # Poll for the producer's commit instead of sleeping out the whole bound.
+                    deadline = time.monotonic() + (8 if mode == 'terminal' else 70)
+                    while (time.monotonic() < deadline
+                           and not any(r['principal_id'].startswith('automation:') for r in rows())):
+                        await asyncio.sleep(.1)
                     ledger = rows()
                     automatic = [r for r in ledger if r['principal_id'].startswith('automation:')]
                     assert automatic, {'failure': 'producer ACK bypassed canonical durable FIFO', 'ledger': ledger,

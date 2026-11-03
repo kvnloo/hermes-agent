@@ -1,7 +1,7 @@
 """Execution-scoped worker operations on the ordinary authenticated authority.
 
-Only explicit local compute registrations are enabled. Cron/child claims need
-producer-specific validation before their consumers can use this transport.
+Only explicit local compute registrations are enabled here. A delegated child is reserved by
+the owner on its parent's receipt stream (gateway/session_worker_child.py), never registered.
 """
 import asyncio
 import hmac
@@ -30,7 +30,8 @@ def _claim(connection, ref, params):
         raise RuntimeStoreError('invalid_params')
     try:
         process = psutil.Process(pid)
-        if (process.create_time() != birth or not process.is_running()
+        from hermes_cli.process_identity import worker_birth
+        if (worker_birth(process) != birth or not process.is_running()
                 or process.status() == psutil.STATUS_ZOMBIE
                 or process.username() != psutil.Process().username()):
             raise RuntimeStoreError('permission_denied')
@@ -62,18 +63,26 @@ def _verify(connection, ref, params, claim):
 
 
 async def worker_request(connection, ref, params, *, operation):
+    from gateway.session_authorities import require_serving
+    require_serving(connection.authority)  # adopt/persist would write with the released epoch
     if operation == "persist" and isinstance(params.get("operation"), str) and params["operation"].startswith("delegation."):
         from gateway.session_worker_delegation import worker_delegation_request
         return await worker_delegation_request(connection, ref, params)
+    if operation == "persist" and params.get("operation") == "child.reserve":
+        from gateway.session_worker_child import worker_child_request
+        return await worker_child_request(connection, ref, params)
     extra = {'register': {'kind'}, 'adopt': set(), 'persist': {'epoch', 'sequence', 'operation', 'payload'}}[operation]
     if set(params) != _SCOPE | extra:
         raise RuntimeStoreError('invalid_params')
     claim = _claim(connection, ref, params)
     authority = connection.authority
-    authority._require_admission_open()
+    if operation == 'register':
+        authority._require_admission_open()
     scope = {key: params[key] for key in ('execution_id', 'session_id', 'generation')}
     if operation == 'register':
-        authority.authorize(connection.actor, ref, 'session:control')
+        # Only a worker-adoption ticket (what a launched worker carries): an interactive client
+        # must not park a 'registered' row that nothing reaps (the FIFO would pause until restart).
+        authority.authorize(connection.actor, ref, 'worker:adopt')
         if params['kind'] != 'compute':
             raise RuntimeStoreError('unsupported_producer')
         return await asyncio.to_thread(register_worker_execution, authority.db, epoch=authority.epoch,
@@ -84,5 +93,9 @@ async def worker_request(connection, ref, params, *, operation):
     if operation == 'adopt':
         return await asyncio.to_thread(adopt_worker_execution, authority.db, epoch=authority.epoch,
                                        **scope, adoption_secret=claim)
-    return await asyncio.to_thread(mutate_worker_execution, authority.db, epoch=params['epoch'],
+    result = await asyncio.to_thread(mutate_worker_execution, authority.db, epoch=params['epoch'],
         **scope, sequence=params['sequence'], operation=params['operation'], payload=params['payload'])
+    if params['operation'] == 'execution.finish':
+        # Queued input parked behind this worker; nothing else would restart its FIFO.
+        authority.wake_after_worker(params['session_id'])
+    return result

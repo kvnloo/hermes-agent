@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Iterable
+from typing import Iterator
 from typing import Mapping
 from typing import Optional
 from typing import TYPE_CHECKING
@@ -34,10 +35,6 @@ if TYPE_CHECKING:
 # After this many consecutive non-success attempts on a task/profile the
 # dispatcher parks the task in ``blocked`` with a reason — prevents retry storms.
 DEFAULT_FAILURE_LIMIT = 2
-
-# Worker log files larger than this at spawn time are rotated.
-DEFAULT_LOG_ROTATE_BYTES = 2 * 1024 * 1024   # 2 MiB
-DEFAULT_LOG_BACKUP_COUNT = 1
 
 # Keep a little wall-clock budget for the worker to observe a terminal timeout
 # and make a terminal board call (kanban_block/kanban_complete/kanban_request_review)
@@ -154,7 +151,7 @@ class DispatchResult:
     Reclaim/promotion bookkeeping still ran; deferred tasks stay queued."""
 
 
-def describe_suppression(results: Iterable[Optional["DispatchResult"]]) -> str:
+def describe_suppression(results: Iterable[Optional[DispatchResult]]) -> str:
     """One line naming why the tick(s) held ready work back, or ``""``.
 
     ``active_pr=1, recent_success=2, rate_limited=1, skipped_locked=1,
@@ -193,12 +190,12 @@ def describe_suppression(results: Iterable[Optional["DispatchResult"]]) -> str:
 # leaves in its own log (``KANBAN_WORKER_EXIT_TRAILER``).
 _RECENT_WORKER_EXIT_TTL_SECONDS = 600
 _RECENT_WORKER_EXITS_MAX = 4096
-_recent_worker_exits: "dict[int, tuple[int, float]]" = {}
+_recent_worker_exits: dict[int, tuple[int, float]] = {}
 
 # Windows has no ``waitpid(-1)``: a child's exit code is only recoverable
 # through a live handle, so ``_default_spawn`` parks each worker's ``Popen``
 # here (Windows only) and ``reap_worker_zombies`` polls it. Entry: ``pid -> Popen``.
-_live_worker_procs: "dict[int, subprocess.Popen]" = {}
+_live_worker_procs: dict[int, subprocess.Popen] = {}
 
 
 def _wait_status_from_returncode(returncode: int) -> int:
@@ -223,7 +220,7 @@ def _record_worker_exit(pid: int, raw_status: int) -> None:
             _recent_worker_exits.pop(_pid, None)
 
 
-def _classify_worker_exit(pid: int) -> "tuple[str, Optional[int]]":
+def _classify_worker_exit(pid: int) -> tuple[str, Optional[int]]:
     """``(kind, code)`` for a reaped worker PID: ``clean_exit`` (rc 0 while
     still ``running`` = protocol violation), ``rate_limited``
     (``KANBAN_RATE_LIMIT_EXIT_CODE``, never counts as a failure),
@@ -246,7 +243,7 @@ def _classify_worker_exit(pid: int) -> "tuple[str, Optional[int]]":
     return ("unknown", None)
 
 
-def _exit_code_kind(code: int) -> "tuple[str, int]":
+def _exit_code_kind(code: int) -> tuple[str, int]:
     """``(kind, code)`` for a worker's exit code, however it was observed."""
     if code == 0:
         return ("clean_exit", 0)
@@ -278,12 +275,12 @@ def _worker_log_exit_code(task_id: str, board: Optional[str] = None) -> Optional
     return int(matches[-1]) if matches else None
 
 
-def reap_worker_zombies() -> "list[int]":
+def reap_worker_zombies() -> list[int]:
     """Reap exited workers without blocking; returns reaped PIDs. POSIX reaps
     every child via ``waitpid(-1)``; Windows polls the ``Popen`` handles
     parked by ``_default_spawn`` (the only way to learn a child's exit code
     there), so the rate-limit sentinel exit is classified on both hosts."""
-    reaped: "list[int]" = []
+    reaped: list[int] = []
     if _kb._IS_WINDOWS:
         for pid, proc in list(_live_worker_procs.items()):
             returncode = proc.poll()
@@ -482,12 +479,10 @@ def _terminate_reclaimed_worker(
     info["termination_attempted"] = True
     try:
         kill(int(pid), signal.SIGTERM)
-    except ProcessLookupError:
-        # Already gone = successful termination. Leaving terminated=False would
-        # make the reclaim guard misread a dead worker as alive and defer forever.
-        info["terminated"] = True
-        return info
     except OSError:
+        # Already gone = successful termination (Windows reports an absent pid as a bare OSError, not
+        # ProcessLookupError). Leaving terminated=False would make the reclaim defer forever.
+        info["terminated"] = not _worker_alive(pid, started_at)
         return info
 
     if _poll_worker_exit(pid, started_at):
@@ -667,16 +662,16 @@ def enforce_max_runtime(conn: sqlite3.Connection, *, signal_fn=None) -> list[str
         "  AND COALESCE(r.started_at, t.started_at) IS NOT NULL "
         "  AND t.worker_pid IS NOT NULL"
     ).fetchall()
-    from hermes_cli.kanban_owner_recovery import owner_reclaim_paused
+    from hermes_cli.kanban_owner_recovery import owner_reclaim_blocked, owner_reclaim_blocked_after_kill
     for row in rows:
-        if owner_reclaim_paused(conn, row["id"]):
+        if owner_reclaim_blocked(conn, row["id"]):
             continue
         lock = row["claim_lock"] or ""
         if not lock.startswith(host_prefix):
             continue
         # Runtime is per attempt: ``tasks.started_at`` records the FIRST start,
         # so retries must be measured from the active task_runs row.
-        elapsed = now - int(row["active_started_at"])
+        elapsed = now - (_kb._to_epoch(row["active_started_at"]) or now)  # unreadable clock: never kill
         limit = int(row["max_runtime_seconds"])
         if elapsed < limit:
             continue
@@ -705,6 +700,10 @@ def enforce_max_runtime(conn: sqlite3.Connection, *, signal_fn=None) -> list[str
 
         error = f"elapsed {int(elapsed)}s > limit {limit}s"
         with _kb.write_txn(conn):
+            # Again under the write lock, after the kill wait: an interpreter that bound
+            # meanwhile is invisible to the pid/claim CAS below. Host-local by the filter above.
+            if owner_reclaim_blocked_after_kill(conn, tid, signalled=True):
+                continue
             retry_status = _kb._retry_status_for_run(conn, tid)
             cur = conn.execute(
                 "UPDATE tasks SET status = ?, claim_lock = NULL, "
@@ -778,18 +777,18 @@ def detect_stale_running(
         "WHERE t.status = 'running'"
     ).fetchall()
 
-    from hermes_cli.kanban_owner_recovery import owner_reclaim_paused
+    from hermes_cli.kanban_owner_recovery import owner_reclaim_blocked, owner_reclaim_blocked_after_kill
     for row in rows:
-        if owner_reclaim_paused(conn, row["id"]):
+        if owner_reclaim_blocked(conn, row["id"]):
             continue
         if row["active_started_at"] is None:
             continue
-        elapsed = now - int(row["active_started_at"])
+        elapsed = now - (_kb._to_epoch(row["active_started_at"]) or now)  # unreadable clock: never reclaim
         if elapsed < stale_timeout_seconds:
             continue
 
-        last_hb = row["last_heartbeat_at"]
-        hb_age = (now - int(last_hb)) if last_hb is not None else None
+        last_hb = _kb._to_epoch(row["last_heartbeat_at"])
+        hb_age = (now - last_hb) if last_hb is not None else None
         if hb_age is not None and hb_age < _STALE_HEARTBEAT_GAP_SECONDS:
             continue
 
@@ -810,6 +809,9 @@ def detect_stale_running(
             continue
 
         with _kb.write_txn(conn):
+            # Again under the write lock, after the termination wait (see enforce_max_runtime).
+            if owner_reclaim_blocked_after_kill(conn, tid, signalled=bool(termination.get("termination_attempted"))):
+                continue
             retry_status = _kb._retry_status_for_run(conn, tid)
             cur = conn.execute(
                 "UPDATE tasks SET status = ?, claim_lock = NULL, "
@@ -865,9 +867,9 @@ def reconcile_orphaned_running(conn: sqlite3.Connection) -> list[str]:
         "WHERE status = 'running' "
         "  AND (claim_lock IS NULL OR claim_expires IS NULL)"
     ).fetchall()
-    from hermes_cli.kanban_owner_recovery import owner_reclaim_paused
+    from hermes_cli.kanban_owner_recovery import owner_reclaim_blocked
     for row in rows:
-        if owner_reclaim_paused(conn, row["id"]):
+        if owner_reclaim_blocked(conn, row["id"]):
             continue
         tid = row["id"]
         pid = row["worker_pid"]
@@ -879,6 +881,8 @@ def reconcile_orphaned_running(conn: sqlite3.Connection) -> list[str]:
             )
             continue
         with _kb.write_txn(conn):
+            if owner_reclaim_blocked(conn, tid):
+                continue
             cur = conn.execute(
                 "UPDATE tasks SET status = 'ready', claim_lock = NULL, "
                 "claim_expires = NULL, worker_pid = NULL, worker_started_at = NULL, "
@@ -892,7 +896,7 @@ def reconcile_orphaned_running(conn: sqlite3.Connection) -> list[str]:
             payload = {
                 "reason": "orphaned_running",
                 "claim_lock": row["claim_lock"],
-                "claim_expires": _kb._opt_int(row["claim_expires"]),
+                "claim_expires": _kb._to_epoch(row["claim_expires"]),
                 "worker_pid": int(pid) if pid else None,
                 "now": now,
             }
@@ -956,16 +960,16 @@ def _protocol_violation_streak(conn: sqlite3.Connection, task_id: str) -> int:
         outcome = row["outcome"] or ""
         if outcome == "rate_limited":
             continue
+        head = (row["error"] or "").partition(WORKER_OUTPUT_SEP)[0]  # never the worker's own words
         if outcome == "crashed" and (
-            _kb._json_dict(row["metadata"]).get("protocol_violation")
-            or "protocol violation" in (row["error"] or "")
-        ):
+                _kb._json_dict(row["metadata"]).get("protocol_violation") or "protocol violation" in head):
             streak += 1
             continue
         break
     return streak
 
 
+WORKER_OUTPUT_SEP = " Worker's last output: "  # dead-worker error text: our words, then the worker's
 _PROTOCOL_VIOLATION_ERROR = (
     # Worker subprocess returned 0 but its task is still ``running`` in the DB — it exited without calling
     # ``kanban_complete`` / ``kanban_block`` / ``kanban_request_review``. Overwhelmingly the work itself succeeded and only the
@@ -983,10 +987,19 @@ _PROTOCOL_VIOLATION_ERROR = (
 )
 
 
-_EXIT_SUMMARY_MARKER = "Resume this session with:"
 # Rich panel/rule chrome around the rendered response, and the CLI's own preamble lines.
 _LOG_CHROME = re.compile(r"[─━═╭╮╰╯│┃┌┐└┘]+|☤\s*Hermes")
-_LOG_NOISE_PREFIXES = ("session_id:", "Query:", "Initializing agent")
+
+
+def _exit_summary_marker() -> str:
+    """The CLI exit-summary header (``cli_session_mixin.show_exit_summary``), in the active language."""
+    from agent.i18n import t
+    return t("cli.session.exit_resume_hint")
+
+
+def _log_noise_prefixes() -> tuple[str, ...]:
+    from agent.i18n import t
+    return ("session_id:", "Query:", t("cli.chat.initializing_agent"))
 
 
 def _worker_final_output(task_id: str, board: Optional[str] = None) -> str:
@@ -1011,13 +1024,13 @@ def _worker_final_output(task_id: str, board: Optional[str] = None) -> str:
     if not raw:
         return ""
     raw = _EXIT_TRAILER_RE.sub("", raw)
-    cut = raw.rfind(_EXIT_SUMMARY_MARKER)
+    cut = raw.rfind(_exit_summary_marker())
     if cut != -1:
         raw = raw[:cut]
     lines = []
     for ln in raw.splitlines():
         ln = _LOG_CHROME.sub("", ln).strip()
-        if ln and not ln.startswith(_LOG_NOISE_PREFIXES):
+        if ln and not ln.startswith(_log_noise_prefixes()):
             lines.append(ln)
     return " ".join(lines)[-400:]
 
@@ -1058,7 +1071,7 @@ def _classify_dead_worker(
     if task_id and not dead.rate_limited:
         worker_output = _worker_final_output(task_id, board=board)
         if worker_output:
-            dead.error_text += f" Worker's last output: {worker_output!r}"
+            dead.error_text += f"{WORKER_OUTPUT_SEP}{worker_output!r}"
             dead.event_payload["worker_output"] = worker_output
     return dead
 
@@ -1158,33 +1171,28 @@ def _reclaim_dead_workers(conn: sqlite3.Connection, board: Optional[str] = None)
             "WHERE status = 'running' AND worker_pid IS NOT NULL"
         ).fetchall()
         host_prefix = _kb._host_prefix()
-        from hermes_cli.kanban_owner_recovery import bound_interpreter_gone, owner_reclaim_paused
+        from hermes_cli.kanban_owner_recovery import apply_attempt_note, managed_run_exit_code, owner_reclaim_blocked
         for row in rows:
             lock = row["claim_lock"] or ""
             if not lock.startswith(host_prefix):
                 continue
             # Launch-window grace so a freshly-spawned worker isn't reclaimed
             # before its PID is visible on /proc.
-            started_at = _kb._row_get(row, "started_at")
+            started_at = _kb._to_epoch(_kb._row_get(row, "started_at"))
             if started_at is not None and time.time() - started_at < _kb._resolve_crash_grace_seconds():
                 continue
             if _worker_alive(row["worker_pid"], _kb._row_get(row, "worker_started_at")):
                 continue
-            # An ambiguous owner receipt holds the card while the attempt may still run; once the
-            # interpreter the owner bound to this run is dead nothing can, and it is a crash.
-            if owner_reclaim_paused(conn, row["id"]) and not bound_interpreter_gone(conn, row["id"]):
+            # An ambiguous receipt holds the card while the attempt may still run; once nothing
+            # can be executing it (a dead bound interpreter, or a run that never bound one): crash.
+            if owner_reclaim_blocked(conn, row["id"], crash_sweep=True):
                 continue
 
             pid = int(row["worker_pid"])
-            # Managed interpreters are children of the authority, not this dispatcher.
-            # Their exact-run result survives a dispatcher restart and cannot be reaped here.
-            run = conn.execute(
-                "SELECT e.payload FROM task_events e JOIN tasks t ON t.current_run_id=e.run_id "
-                "WHERE t.id=? AND e.task_id=t.id AND e.kind='worker_result' ORDER BY e.id DESC LIMIT 1",
-                (row["id"],)).fetchone()
-            result = _kb._json_dict(run["payload"]) if run else {}
-            exit_code = result.get("exit_code") if result.get("claim_lock") == row["claim_lock"] and result.get("pid") == pid else None
+            # A managed run's authority-recorded exit (its bound interpreter's, under this claim).
+            exit_code = managed_run_exit_code(conn, row["id"], pid, row["claim_lock"])
             dead = _classify_dead_worker(pid, row["claim_lock"], exit_code, task_id=row["id"], board=board)
+            apply_attempt_note(conn, row["id"], pid, dead)
             retry_status = _kb._retry_status_for_run(conn, row["id"])
             dead.event_payload["retry_status"] = retry_status
             cur = conn.execute(
@@ -1366,7 +1374,7 @@ def _record_task_failure(
     error: str,
     *,
     outcome: str,
-    failure_limit: int = None,
+    failure_limit: int | None = None,
     force_trip: bool = False,
     release_claim: bool = False,
     end_run: bool = False,
@@ -1589,16 +1597,16 @@ def check_respawn_guard(
     ).fetchone()
     if latest_run is not None and latest_run["outcome"] == "spawn_failed":
         if rl_cooldown > 0 and _kb._json_dict(latest_run["metadata"]).get("infrastructure"):
-            ended_at = latest_run["ended_at"]
-            if ended_at is not None and (now - int(ended_at)) < rl_cooldown:
+            ended_at = _kb._to_epoch(latest_run["ended_at"])
+            if ended_at is not None and (now - ended_at) < rl_cooldown:
                 return "infrastructure_cooldown"
     if latest_run is not None and latest_run["outcome"] == "rate_limited":
         if rl_cooldown <= 0:
             # Cooldown disabled — respawn immediately, skipping blocker_auth so
             # the stamped rate-limit text doesn't re-trap the task.
             return None
-        ended_at = latest_run["ended_at"]
-        if ended_at is not None and (now - int(ended_at)) < rl_cooldown:
+        ended_at = _kb._to_epoch(latest_run["ended_at"])
+        if ended_at is not None and (now - ended_at) < rl_cooldown:
             return "rate_limit_cooldown"
         # Cooldown elapsed — return early so blocker_auth doesn't catch the
         # stamped rate-limit text; this path intentionally retries forever
@@ -1623,24 +1631,11 @@ def check_respawn_guard(
     #    AFTER that success (done→ready drag, re-promotion, unblock, reclaim) is
     #    a deliberate "run it again" — otherwise a manual done→ready would sit
     #    silently held until the window elapses.
-    cutoff = now - _RESPAWN_GUARD_SUCCESS_WINDOW
-    recent_completed = conn.execute(
-        "SELECT ended_at FROM task_runs "
-        "WHERE task_id = ? AND outcome = 'completed' AND ended_at >= ? "
-        "ORDER BY ended_at DESC LIMIT 1",
-        (task_id, cutoff),
-    ).fetchone()
-    if recent_completed:
-        completed_at = int(recent_completed["ended_at"] or 0)
-        requeued_after = conn.execute(
-            "SELECT 1 FROM task_events "
-            "WHERE task_id = ? AND created_at >= ? "
-            "AND kind IN ('status', 'promoted', 'unblocked', 'reclaimed') "
-            "LIMIT 1",
-            (task_id, completed_at),
-        ).fetchone()
-        if not requeued_after:
-            return "recent_success"
+    success = max((t for t, _ in _rows_since(
+        conn, "task_runs", task_id, now - _RESPAWN_GUARD_SUCCESS_WINDOW, "AND outcome = 'completed'")), default=None)
+    if success is not None and not any(_rows_since(
+            conn, "task_events", task_id, success, "AND kind IN ('status', 'promoted', 'unblocked', 'reclaimed')")):
+        return "recent_success"
 
     # 4. GitHub PR URL in a recent comment — prior worker already opened a PR.
     #    Exception: a handoff AFTER the newest PR comment (operator reassign,
@@ -1648,27 +1643,36 @@ def check_respawn_guard(
     #    now work on THAT PR — a closer or the implementer finishing it, not a
     #    duplicate implementation (#111910). A crash/reclaim is not a handoff,
     #    so the worker that opened the PR is still not re-spawned against it.
-    pr_cutoff = now - _RESPAWN_GUARD_PR_WINDOW
-    for c in conn.execute(
-        "SELECT body, created_at FROM task_comments "
-        "WHERE task_id = ? AND created_at >= ? ORDER BY created_at DESC",
-        (task_id, pr_cutoff),
-    ).fetchall():
-        body = _kb._lossy_text(c["body"])
-        if not (body and _RESPAWN_GUARD_PR_URL_RE.search(body)):
-            continue
-        events = conn.execute(
-            # Strictly after: a same-second tie stays guarded (fail closed).
-            "SELECT kind, payload FROM task_events "
-            "WHERE task_id = ? AND created_at > ? "
-            "AND kind IN ('assigned', 'changes_requested', 'review_reopened')",
-            (task_id, int(c["created_at"] or 0)),
-        ).fetchall()
-        if any(_is_handoff_event(e["kind"], e["payload"]) for e in events):
+    pr_times = [t for t, c in _rows_since(conn, "task_comments", task_id, now - _RESPAWN_GUARD_PR_WINDOW,
+                                          cols=", body", unreadable=now)  # duplicate-PR risk: fail closed
+                if _RESPAWN_GUARD_PR_URL_RE.search(_kb._lossy_text(c["body"]) or "")]
+    if pr_times:
+        # Strictly after: a same-second tie stays guarded (fail closed).
+        if any(_is_handoff_event(e["kind"], e["payload"]) for _, e in _rows_since(
+                conn, "task_events", task_id, max(pr_times),
+                "AND kind IN ('assigned', 'changes_requested', 'review_reopened')", cols=", kind, payload", strict=True)):
             return None
         return "active_pr"
 
     return None
+
+
+_GUARD_TIME_COLS = {"task_runs": "ended_at", "task_events": "created_at", "task_comments": "created_at"}
+
+
+def _rows_since(conn: sqlite3.Connection, table: str, task_id: str, since: int, where: str = "", *,
+                cols: str = "", strict: bool = False, unreadable: Optional[int] = None) -> Iterator[tuple[int, Any]]:
+    """``(epoch, row)`` for ``task_id``'s ``table`` rows timed at/after ``since`` (after, if ``strict``).
+    SQLite sorts TEXT above every INTEGER, so the indexed range also returns every text stamp (written
+    outside the mutators, #97455); those are decided on their parsed epoch. An unreadable time is
+    dropped (never guards or lifts) unless the caller substitutes ``unreadable``."""
+    col = _GUARD_TIME_COLS[table]
+    sql = f"SELECT {col}{cols} FROM {table} WHERE task_id = ? {where} AND {col} {'>' if strict else '>='} ?"
+    for row in conn.execute(sql, (task_id, since)):
+        t = _kb._to_epoch(row[0])
+        t = unreadable if t is None else t
+        if t is not None and (t > since if strict else t >= since):
+            yield t, row
 
 
 def _is_handoff_event(kind: str, payload: Optional[str]) -> bool:
@@ -2049,7 +2053,7 @@ def _dispatch_lane_task(
     conn: sqlite3.Connection,
     row: sqlite3.Row,
     assignee: str,
-    result: "DispatchResult",
+    result: DispatchResult,
     *,
     lane: str,
     dry_run: bool,
@@ -2072,6 +2076,19 @@ def _dispatch_lane_task(
     profile_exists = _profile_exists_fn()
     if profile_exists is not None and not profile_exists(assignee):
         result.skipped_nonspawnable.append(task_id)
+        # Per-task diagnostic so ``show``/``tail`` name the missing profile instead of leaving
+        # the card in ``ready`` with zero board evidence (#122422). Unlike a respawn guard the
+        # condition never expires on its own, so write it once: a repeat only when something
+        # else happened on the card since (reassign, comment) — not one row per tick forever,
+        # and not one row per foreign home per tick on a shared board (#101015).
+        if not dry_run:
+            with _kb.write_txn(conn):
+                last = conn.execute(
+                    "SELECT kind, payload FROM task_events WHERE task_id = ? "
+                    "ORDER BY created_at DESC, id DESC LIMIT 1", (task_id,)).fetchone()
+                if (last is None or last["kind"] != "skipped_nonspawnable"
+                        or last["payload"] != _kb._json_or_null({"assignee": assignee})):
+                    _kb._append_event(conn, task_id, "skipped_nonspawnable", {"assignee": assignee})
         return False
     # Per-profile cap: one profile's local model / API quota / browser pool
     # must not be overwhelmed by a fan-out even with global headroom.
@@ -2447,58 +2464,6 @@ def _positive_int(value: Any, default: int, *, minimum: int = 1) -> int:
     return parsed if parsed >= minimum else default
 
 
-def worker_log_rotation_config(kanban_cfg: Optional[dict] = None) -> tuple[int, int]:
-    """Return ``(rotate_bytes, backup_count)`` for worker log rotation.
-    Defaults: rotate at 2 MiB, keep one backup (``.log.1``); both overridable
-    from ``config.yaml``.
-    """
-    if kanban_cfg is None:
-        try:
-            from hermes_cli.config import load_config
-
-            kanban_cfg = (load_config().get("kanban") or {})
-        except Exception:
-            kanban_cfg = {}
-    kanban_cfg = kanban_cfg or {}
-    max_bytes = _positive_int(kanban_cfg.get("worker_log_rotate_bytes"), DEFAULT_LOG_ROTATE_BYTES, minimum=1)
-    backup_count = _positive_int(kanban_cfg.get("worker_log_backup_count"), DEFAULT_LOG_BACKUP_COUNT, minimum=0)
-    return max_bytes, backup_count
-
-
-def _rotated_log_path(log_path: Path, generation: int) -> Path:
-    return log_path.with_suffix(log_path.suffix + f".{generation}")
-
-
-def _rotate_worker_log(
-    log_path: Path,
-    max_bytes: int,
-    backup_count: int = DEFAULT_LOG_BACKUP_COUNT,
-) -> None:
-    """Rotate ``<log>`` when it exceeds ``max_bytes``: ``<log>`` → ``<log>.1``,
-    older generations shift up to ``backup_count``.
-    """
-    try:
-        if not log_path.exists() or log_path.stat().st_size <= max_bytes:
-            return
-        backup_count = _positive_int(backup_count, DEFAULT_LOG_BACKUP_COUNT, minimum=0)
-        if backup_count == 0:
-            log_path.unlink()
-            return
-        oldest = _rotated_log_path(log_path, backup_count)
-        with contextlib.suppress(OSError):
-            if oldest.exists():
-                oldest.unlink()
-        for generation in range(backup_count - 1, 0, -1):
-            src = _rotated_log_path(log_path, generation)
-            if not src.exists():
-                continue
-            with contextlib.suppress(OSError):
-                src.rename(_rotated_log_path(log_path, generation + 1))
-        log_path.rename(_rotated_log_path(log_path, 1))
-    except OSError:
-        pass
-
-
 def _module_hermes_argv() -> list[str]:
     """Interpreter-bound Hermes CLI invocation (``hermes_cli.main`` is the
     console-script target — there is no top-level ``hermes`` package)."""
@@ -2743,8 +2708,8 @@ def _open_worker_log(task: Task, board: Optional[str]):
     log_dir = _kb.worker_logs_dir(board=board)
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / f"{task.id}.log"
-    rotate_bytes, backup_count = worker_log_rotation_config()
-    _rotate_worker_log(log_path, rotate_bytes, backup_count)
+    from hermes_cli.kanban_worker_log import rotate_worker_log, worker_log_rotation_config
+    rotate_worker_log(log_path, *worker_log_rotation_config())
     return open(log_path, "ab")
 
 
@@ -2910,14 +2875,14 @@ def _default_spawn(task: Task, workspace: str, *, board: Optional[str] = None) -
     env = systemd_user_bus_env(env)
     log_f = _open_worker_log(task, board)
     try:
-        proc = subprocess.Popen(  # noqa: S603 -- argv is a fixed list built above
+        proc = subprocess.Popen(
             cmd,
             cwd=workspace if os.path.isdir(workspace) else None,
             stdin=subprocess.DEVNULL,
             stdout=log_f,
             stderr=subprocess.STDOUT,
             env=env,
-            start_new_session=True,
+            start_new_session=True,  # detached-spawn: ok — restart-safe kanban worker, must survive the dispatcher
             creationflags=subprocess.CREATE_NO_WINDOW if _kb._IS_WINDOWS else 0,
         )
     except FileNotFoundError:
@@ -2994,6 +2959,6 @@ def run_daemon(
 
 # Late-bound origin namespace (see module docstring); imported LAST so this
 # module is fully populated before ``kanban_db`` imports from it.
-from hermes_cli import kanban_db as _kb  # noqa: E402
-from hermes_cli import kanban_db_connect as _kbc  # noqa: E402
-from hermes_cli import kanban_db_workspace as _kbw  # noqa: E402
+from hermes_cli import kanban_db as _kb
+from hermes_cli import kanban_db_connect as _kbc
+from hermes_cli import kanban_db_workspace as _kbw

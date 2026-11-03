@@ -7,7 +7,11 @@ import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
 import type { SubmissionDestination } from '../app/submissionDestination.js'
+import { sessionCwd } from '../app/uiStore.js'
 import type { GatewayClient } from '../gatewayClient.js'
+import { t } from '../i18n/runtime.js'
+
+import { pythonHelperPath } from './pythonHelpers.js'
 
 export interface ImageAttachment { path: string; mime: string }
 export interface StagedImage extends ImageAttachment { name: string; remainder?: string }
@@ -31,11 +35,11 @@ function imageFormat(bytes: Buffer): { mime: string; ext: string } {
     return { mime: 'image/webp', ext: '.webp' }
   }
 
-  throw new Error('Unsupported image: expected PNG, JPEG, GIF, or WebP bytes')
+  throw new Error(t('canonical.images.unsupported'))
 }
 
 // Match an existing whole path first, so unquoted filenames with spaces survive.
-async function resolveImagePath(raw: string): Promise<{ path: string; remainder: string }> {
+async function resolveImagePath(raw: string, base: string): Promise<{ path: string; remainder: string }> {
   const value = raw.trim()
   const quoted = /^(["'])(.*?)\1(?:\s+([\s\S]*))?$/.exec(value)
 
@@ -50,14 +54,14 @@ async function resolveImagePath(raw: string): Promise<{ path: string; remainder:
     if (path.startsWith('file://')) { path = fileURLToPath(path) }
 
     if (path.startsWith('~/')) { path = join(homedir(), path.slice(2)) }
-    path = resolve(path)
+    path = resolve(base, path)
 
     try {
       const info = await stat(path)
 
       if (!info.isFile()) { continue }
 
-      if (info.size > MAX_IMAGE_BYTES) { throw new Error('Image exceeds 20 MiB upload limit') }
+      if (info.size > MAX_IMAGE_BYTES) { throw new Error(t('canonical.images.tooLarge')) }
 
       return { path, remainder: remainder! }
     } catch (error) {
@@ -65,7 +69,7 @@ async function resolveImagePath(raw: string): Promise<{ path: string; remainder:
     }
   }
 
-  throw new Error(`Image not found: ${value}`)
+  throw new Error(t('canonical.images.notFound', value))
 }
 
 async function extractClipboardImage(path: string): Promise<boolean> {
@@ -74,8 +78,8 @@ async function extractClipboardImage(path: string): Promise<boolean> {
   const python = process.env.HERMES_PYTHON?.trim() || process.env.PYTHON?.trim() ||
     (process.platform === 'win32' ? 'python' : 'python3')
 
-  const { stdout } = await promisify(execFile)(python, [join(root, 'ui-tui/scripts/clipboard_image.py'), path],
-    { cwd: root, env: { ...process.env, PYTHONPATH: root }, timeout: 15_000, windowsHide: true })
+  const { stdout } = await promisify(execFile)(python, [pythonHelperPath('clipboard_image.py', root), path],
+    { cwd: root, env: { ...process.env, PYTHONPATH: root, HERMES_PYTHON_SRC_ROOT: root }, timeout: 15_000, windowsHide: true })
 
   return stdout.trim() === 'true'
 }
@@ -95,21 +99,24 @@ export async function stageClipboardImage(
 }
 
 export async function stageImagePath(raw: string, gw: GatewayClient, destination: SubmissionDestination): Promise<StagedImage> {
-  const source = await resolveImagePath(raw)
+  // Explicit URL attachments may target another machine, even a loopback SSH
+  // tunnel. Only discovery-owned local connections share our profile filesystem.
+  const remote = Boolean(process.env.HERMES_TUI_GATEWAY_URL?.trim())
+  // A remote session's folder names the owner's filesystem; the bytes are read here.
+  const base = (remote ? process.env.HERMES_CWD : sessionCwd()) || process.cwd()
+  const source = await resolveImagePath(raw, base)
   const bytes = await readFile(source.path)
 
-  if (bytes.length > MAX_IMAGE_BYTES) { throw new Error('Image exceeds 20 MiB upload limit') }
+  if (bytes.length > MAX_IMAGE_BYTES) { throw new Error(t('canonical.images.tooLarge')) }
   const { mime, ext } = imageFormat(bytes)
   const name = basename(source.path)
 
-  // Explicit URL attachments may target another machine, even a loopback SSH
-  // tunnel. Only discovery-owned local connections share our profile filesystem.
-  if (process.env.HERMES_TUI_GATEWAY_URL?.trim()) {
+  if (remote) {
     const result = await gw.request<{ path?: string }>('image.attach_bytes', {
       session_id: destination.sid, filename: `${randomUUID()}${ext}`, content_base64: bytes.toString('base64')
     })
 
-    if (!result?.path) { throw new Error('Image upload did not return an owner path') }
+    if (!result?.path) { throw new Error(t('canonical.images.noOwnerPath')) }
 
     return { path: result.path, mime, name, remainder: source.remainder }
   }

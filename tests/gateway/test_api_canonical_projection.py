@@ -11,8 +11,7 @@ from gateway.platforms import api_server as _api_server
 from gateway.platforms.api_server_runs import _RunLaunch, _execute_run
 from gateway.session_api_turn import admit_api_turn
 from gateway.session_ingress import execute_admission
-from tests.gateway.test_api_cutover_contract import api  # noqa: F401
-from tests.gateway.test_api_source_binding import owner  # noqa: F401
+from tests.waiting import async_wait_until
 
 PNG = base64.b64encode(b'\x89PNG\r\n\x1a\n' + b'\x00' * 64).decode()
 
@@ -30,8 +29,7 @@ def _launch(api, admitted, run_id='run_test'):
     api._run_streams[run_id] = queue
     api._run_statuses[run_id] = {}
     launch = _RunLaunch(api, run_id, queue, admitted[1].session_id, None, False, 'hello', [], False,
-                        agent_kwargs={}, request_profile=None, browser_control_principal=None,
-                        browser_control_transport_family=None, admission=admitted)
+                        agent_kwargs={}, request_profile=None, admission=admitted)
     return launch, queue
 
 
@@ -88,7 +86,7 @@ async def test_initialization_failure_is_a_failed_receipt_not_completed(api, own
 async def test_run_sse_carries_controls_tool_payloads_and_authoritative_cancellation(api, owner):
     from tools import clarify_gateway
     admitted = admit_api_turn(api, session_id='sse', user_message='hello', conversation_history=[])
-    _, ref, row = admitted
+    _, ref, _row = admitted
     launch, queue = _launch(api, admitted)
     tool_payloads = []
 
@@ -128,6 +126,16 @@ def _wrap(api, run_id, loop, sink):
     return callback
 
 
+def _wired_agent(turn):
+    """The agent's tool sinks as TurnRunner wires them for an API admission."""
+    from gateway.session_api_turn import wire_api_observers
+    agent = SimpleNamespace(tool_progress_callback=None, status_callback=None, interim_assistant_callback=None,
+                            tool_start_callback=turn.combined_tool_start_callback,
+                            tool_complete_callback=turn.combined_tool_complete_callback)
+    wire_api_observers(agent, turn._approval_owner, False)
+    return agent
+
+
 @pytest.mark.asyncio
 async def test_responses_streaming_projects_real_tool_arguments_and_results(api, owner):
     from gateway.session_api_turn import observe_api_turn
@@ -138,12 +146,77 @@ async def test_responses_streaming_projects_real_tool_arguments_and_results(api,
     async def handle(event):
         from gateway.session_results import execution_result
         turn = _turn_runner(owner, ref)
+        progress_cb = _wired_agent(turn).tool_progress_callback
+        if progress_cb:  # the executor fires it only when wired
+            progress_cb('tool.completed', 'read_file', None, None, is_error=False)
         turn.combined_tool_complete_callback('call-9', 'read_file', {'path': 'a.txt'}, 'file body')
         execution_result.get()['result'] = {'final_response': 'ok'}
         return 'ok'
     owner.runner._handle_message = handle
-    await observe_api_turn(admitted, tool_complete_callback=lambda *a: seen.append(a))
-    assert seen == [('call-9', 'read_file', {'path': 'a.txt'}, 'file body')]
+    progress = []  # Responses also passes a progress sink; it must not get the tools a second time
+    await observe_api_turn(admitted, tool_complete_callback=lambda *a: seen.append(a),
+                           tool_progress_callback=lambda *a, **kw: progress.append(a))
+    assert seen == [('call-9', 'read_file', {'path': 'a.txt'}, 'file body')] and progress == []
+
+
+async def _session_stream_tool_frames(api, owner, produce):
+    """POST /api/sessions/{id}/chat/stream under the authority -> its tool.* (event, data) frames."""
+    import json
+
+    async def handle(event):
+        from gateway.session_results import execution_result
+        produce(_turn_runner(owner, SimpleNamespace(session_id=event.source.chat_id)))
+        execution_result.get()['result'] = {'final_response': 'done', 'messages': []}
+        return 'done'
+    owner.runner._handle_message = handle
+    api._api_key = 'request-scope-key-long-enough'
+    owner.db.create_session('stream-tools', source='api_server')
+    app = web.Application()
+    app.router.add_post('/api/sessions/{session_id}/chat/stream', api._handle_session_chat_stream)
+    async with TestClient(TestServer(app)) as client:
+        response = await client.post('/api/sessions/stream-tools/chat/stream', json={'message': 'run tools'},
+                                     headers={'Authorization': 'Bearer ' + api._api_key})
+        text = await response.text()
+    assert 'event: run.completed' in text, text
+    frames = [dict(line.split(': ', 1) for line in block.splitlines() if ': ' in line) for block in text.split('\n\n')]
+    return [(f['event'], json.loads(f['data'])) for f in frames if f.get('event', '').startswith('tool.')]
+
+
+@pytest.mark.asyncio
+async def test_session_chat_stream_carries_the_producers_tool_verdict_and_preview(api, owner):
+    """A Codex command that exits 1 with no output is tool.failed (its result text is only "[exit 1]"),
+    and the start frame keeps Codex's own 120-character preview, as the direct progress path does."""
+    from agent.codex_runtime import make_codex_app_server_event_bridge
+
+    def produce(turn):
+        bridge = make_codex_app_server_event_bridge(_wired_agent(turn))
+        for item in ({'type': 'commandExecution', 'id': 'x1', 'command': 'echo ' + 'x' * 500, 'exitCode': 1,
+                      'aggregatedOutput': ''},
+                     {'type': 'commandExecution', 'id': 'x2', 'command': 'true', 'exitCode': 0, 'aggregatedOutput': 'ok'}):
+            bridge({'method': 'item/started', 'params': {'item': item}})
+            bridge({'method': 'item/completed', 'params': {'item': item}})
+    frames = await _session_stream_tool_frames(api, owner, produce)
+    names, preview = [name for name, _ in frames], frames[0][1]['preview'] if frames else ''
+    assert (names, len(preview)) == (['tool.started', 'tool.failed', 'tool.started', 'tool.completed'], 120)
+
+
+@pytest.mark.asyncio
+async def test_session_chat_stream_keeps_a_bounded_worker_failure(api, owner):
+    """A managed worker bounds a large failing terminal result into an envelope with no exit_code;
+    the stream reports the frame's own verdict, tool.failed."""
+    import json
+    from agent.managed_worker import tool_frame
+    from gateway.run_turn_progress import publish_worker_tool_event
+
+    def produce(turn):
+        authority, session_id, generation = turn._approval_owner
+        args, result = {'command': 'make'}, json.dumps({'output': 'x' * 70000, 'exit_code': 1})
+        publish_worker_tool_event(authority, session_id, generation, {'type': 'tool.start', **tool_frame('w1', 'terminal', args)})
+        publish_worker_tool_event(authority, session_id, generation,
+                                  {'type': 'tool.complete', **tool_frame('w1', 'terminal', args, result)})
+    frames = await _session_stream_tool_frames(api, owner, produce)
+    assert [name for name, _ in frames] == ['tool.started', 'tool.failed'], frames
+    assert frames[0][1]['preview'] == 'make', frames
 
 
 @pytest.mark.asyncio
@@ -230,8 +303,8 @@ async def test_room_grant_answers_the_clarify_prompt_its_run_raised(api, owner, 
     headers = {'Authorization': f'HermesRoom {grant}'}
     admitted = admit_api_turn(api, session_id='room-clarify', request_id='run_room', user_message='hello',
                               conversation_history=[])
-    _, ref, row = admitted
-    launch, queue = _launch(api, admitted, run_id='run_room')
+    _, ref, _row = admitted
+    launch, _queue = _launch(api, admitted, run_id='run_room')
     scope_request = SimpleNamespace(headers=headers, path='/v1/runs/run_room/clarify', method='POST')
     api._run_owners['run_room'] = api._run_idempotency_scope(scope_request)
 
@@ -245,9 +318,8 @@ async def test_room_grant_answers_the_clarify_prompt_its_run_raised(api, owner, 
         return entry.response
     owner.runner._handle_message = handle
     run = asyncio.ensure_future(_execute_run(api, launch, _api_server=_api_server))
-    async with asyncio.timeout(10):
-        while not (run_projection(api, 'run_room') or {}).get('pending_controls'):
-            await asyncio.sleep(0.02)
+    await async_wait_until(lambda: (run_projection(api, 'run_room') or {}).get('pending_controls'),
+                           timeout=10, what='the clarify prompt projected on the run')
     prompt = run_projection(api, 'run_room')['pending_controls'][0]
     body = {'request_id': prompt['prompt_id'], 'execution_generation': prompt['execution_generation'], 'answer': 'b'}
     app = web.Application()
@@ -262,3 +334,70 @@ async def test_room_grant_answers_the_clarify_prompt_its_run_raised(api, owner, 
         denied = await client.post('/v1/runs/run_room/clarify', json=body, headers=headers)
         assert denied.status == 403
         assert (await denied.json())['error']['code'] == 'room_reauthorization_required'
+
+
+def test_run_status_reports_waiting_for_approval_while_a_prompt_is_pending(api, owner):
+    """GET /v1/runs/{id} said `running` while an approval was pending; the documented run state
+    (and main's in-memory run store) is `waiting_for_approval`, which UIs key their prompt on."""
+    from gateway.platforms.api_server_authority_runs import run_projection
+    from hermes_state_runtime import claim_session_input
+    _, ref, _ = admit_api_turn(api, session_id='approval-status', request_id='run_wait', user_message='hello',
+                               conversation_history=[])
+    row = claim_session_input(owner.db, epoch=owner.epoch, session_id=ref.session_id)
+    assert run_projection(api, 'run_wait')['status'] == 'running'
+    live = owner.sessions[ref.session_id]
+    owner.register_approval(ref.session_id, row['generation'], live.route, {'request_id': 'approve-me', 'command': 'x'})
+    live.controls.remote_responders['approve-me'] = lambda *answer: None
+    projected = run_projection(api, 'run_wait')
+    assert [p['prompt_id'] for p in projected['pending_controls']] == ['approve-me']
+    assert projected['status'] == 'waiting_for_approval'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('path,body,marker', [
+    ('/v1/chat/completions', {'messages': [{'role': 'user', 'content': 'hi'}], 'stream': True},
+     '"reasoning_content": "THINKING"'),
+    ('/v1/responses', {'input': 'hi', 'stream': True}, 'response.reasoning_summary_text.delta'),
+])
+async def test_canonical_sse_projects_the_turn_reasoning(api, owner, path, body, marker):
+    """Chat and Responses SSE under the authority get the agent's reasoning, like the direct
+    path: the real per-turn wiring hands the admission's observers the reasoning callback."""
+    from gateway.run_turn_runner import TurnRunner
+    from gateway.session_api_turn import api_execution
+
+    async def handle(event):
+        from gateway.session_results import execution_result
+        sid = event.source.chat_id
+        turn = _turn_runner(owner, SimpleNamespace(session_id=sid))
+        agent = SimpleNamespace(reasoning_callback=None)  # AIAgent's own default
+        holder = SimpleNamespace(
+            _ctx=SimpleNamespace(
+                progress_callback=None, native_tool_start_callback=None, voice_ack_callback=None,
+                _voice_ack_guild=[None], voice_turn=False, _native_slack_task_cards=False,
+                native_tool_complete_callback=None, _step_callback_sync=None,
+                _hooks_ref=SimpleNamespace(loaded_hooks=[]), _status_callback_sync=None, _event_callback_sync=None,
+                _status_adapter=None, session_key='', user_config={}, source=event.source,
+                mute_notification_reply=False, _thinking_enabled=False, agent_holder=[None], tools_holder=[None],
+                process_task_id=None, process_baseline=None, run_generation=0),
+            _approval_owner=turn._approval_owner, combined_tool_start_callback=None,
+            combined_tool_complete_callback=None,
+            _runner=SimpleNamespace(_service_tier=None, _consume_pending_turn_sidecar_notes=lambda key: []),
+            _make_bg_review_callbacks=lambda: (lambda message: None, lambda: None),
+            _merge_turn_request_overrides=TurnRunner._merge_turn_request_overrides,
+            _clarify_callback_sync=None, _notice_callback_sync=None,
+            _attach_session_title_callback=lambda agent, ctx: None)
+        assert api_execution.get() is not None
+        TurnRunner._wire_turn_agent_callbacks(holder, agent, {}, None, None, None, False)
+        if agent.reasoning_callback:  # AIAgent._fire_reasoning_delta calls it only when wired
+            agent.reasoning_callback('THINKING')
+        execution_result.get()['result'] = {'final_response': 'ANSWER', 'messages': []}
+        return 'ANSWER'
+    owner.runner._handle_message = handle
+    owner.adopt_agent = lambda *args: None
+    app = web.Application()
+    app.router.add_post(path, getattr(api, '_handle_chat_completions' if 'chat' in path else '_handle_responses'))
+    async with TestClient(TestServer(app)) as client:
+        response = await client.post(path, json=body)
+        text = await response.text()
+    assert response.status == 200, text
+    assert marker in text and 'THINKING' in text, text

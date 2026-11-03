@@ -10,7 +10,8 @@ import threading
 
 import aiohttp
 
-from tests.gateway.fixtures.local_recovery_probe import daemon, Model
+from tests.gateway.fixtures.local_recovery_probe import child_env, daemon, Model
+from tests.waiting import async_wait_until
 
 
 def test_api_crash_queue_and_identified_result_retry(tmp_path):
@@ -28,7 +29,7 @@ def test_api_crash_queue_and_identified_result_retry(tmp_path):
            'gateway': {'platforms': {'api_server': {'enabled': True, 'port': port, 'host': '127.0.0.1'}}, 'multiplex_profiles': False},
            'auxiliary': {'title_generation': {'enabled': False}}, 'terminal': {'cwd': str(home)}}
     (home / 'config.yaml').write_text(json.dumps(cfg))
-    env = {k: os.environ[k] for k in ('PATH', 'LANG', 'TZ', 'TIRITH_ENABLED') if k in os.environ}
+    env = {**child_env(), **{k: os.environ[k] for k in ('TIRITH_ENABLED',) if k in os.environ}}
     env.update(HOME=str(user), USERPROFILE=str(user), HERMES_HOME=str(home), PYTHONPATH=str(root),
                OPENAI_API_KEY='loopback-only', OPENAI_BASE_URL=base, API_SERVER_KEY='ordinary-daemon-owned-secret',
                API_SERVER_ENABLED='true', API_SERVER_PORT=str(port), PYTHONUNBUFFERED='1')
@@ -77,9 +78,8 @@ def test_api_crash_queue_and_identified_result_retry(tmp_path):
 
     async def restarted():
         async with aiohttp.ClientSession(headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as client:
-            async with asyncio.timeout(20):
-                while rows()[runs['safe']] != 'terminal':
-                    await asyncio.sleep(.05)
+            await async_wait_until(lambda: rows()[runs['safe']] == 'terminal', timeout=20, interval=.05,
+                                   what='the recovered safe run to settle')
             assert rows()[runs['started']] == 'unknown' and rows()[runs['follower']] == 'queued', rows()
             async with client.post(url + '/chat/completions',
                 json={'messages': [{'role': 'user', 'content': 'BLOCK_STARTED'}]},

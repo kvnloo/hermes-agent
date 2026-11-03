@@ -47,7 +47,21 @@ The server issues `session:operator` only at these existing trusted boundaries:
 - Native interactive bootstrap ticket redemption (not worker-adoption tickets).
 - The dashboard WebSocket upgrade gate, including authenticated dashboard login tickets,
   the process-lifetime internal credential for server-spawned PTY clients, and the verified
-  legacy session token when that authentication path is enabled.
+  legacy session token when that authentication path is enabled. With `webapp.enabled`, that
+  session token is the browser-hosted Desktop's credential: the gateway keeps it in its home so
+  Webapp tabs survive a restart, hands it out only through a one-use link minted for a same-user
+  control-socket peer, and replaces it on `hermes webapp --sign-out` and whenever the Webapp's
+  listener fails to start, since its port then belongs to someone else. Behind the sign-in gate a
+  Webapp login is bound to that token by the `hermes_webapp_signin_<gateway>` cookie (HMAC-SHA256 of
+  `webapp-sign-in` keyed with the token), so replacing it ends those logins too; sign-out closes
+  every socket the token or a bound login opened, Bot Desktop viewers included. The Webapp's listener
+  names every sign-in cookie it sets that way (`hermes_session_at_<gateway>` and the rest; `<gateway>`
+  comes from a digest of the gateway home), so two gateways' Webapps on one hostname keep their own
+  logins, whatever their sign-in providers, and leave the standalone dashboard's cookies alone. The provider tokens
+  such a login keeps in its cookies never work there on their own: the Webapp's listener accepts a
+  bearer token or a socket's `?token=`, and renews a refresh token, only when it gave that token to a
+  native app's RFC 8252 sign-in (digests kept in `webapp/native-sign-in-tokens.json` in the gateway home until they
+  expire), so native apps stay signed in across a sign-out and a restart.
 - The HTTP mutation gate, after a verified dashboard Session, native HTTP owner grant,
   or permitted legacy session token has been accepted.
 
@@ -60,16 +74,28 @@ restriction rather than treating every accepted dashboard credential as an opera
 
 Cross-subject local submissions carry a private, server-written profile/session/principal
 binding for queued execution and recovery. It is not exposed in model requests or public
-session snapshots. This change does not expose the gateway listener remotely or implement
-OpenAI API-to-local session affinity; those remain separate integration paths.
+session snapshots. This change does not implement OpenAI API-to-local session affinity. The gateway
+listener stays on loopback unless `webapp.host` binds a wildcard address. The Webapp's listener engages
+the dashboard sign-in gate on a wildcard bind or when `webapp.public_url` is set, on any bind, and
+one-use launch links are then off. `dashboard.public_url` never applies to the Webapp's listener; the
+gateway's private listener for native clients reads it as main does, so hosted sign-in on that
+listener keeps working.
 
 ## Deliberately limited compatibility
 
-- `source` accepts `cli` (default), `tui`, or `gui`. These select the existing agent
-  platforms `cli`, `tui`, and `desktop`, respectively. The native local routing identity
-  remains server-owned `Platform.LOCAL`; source never grants messaging/native trust.
-  Default TUI selection folds in `project`; GUI folds in `project` and `desktop_ui`.
-  GUI policy is independent of `HERMES_DESKTOP` and of the attaching viewer's identity.
+- `source` accepts `cli` (default), `tui`, `gui`, `acp`, `tool` and `oneshot`
+  (`gateway.session_policy.SURFACES`). They select the agent platforms `cli`, `tui`,
+  `desktop`, `acp`, `cli` and `cli`; `tool` (third-party integrations) and `oneshot`
+  (finite `chat -q` / `-z` runs) keep their own stored label so human pickers hide them.
+  The native local routing identity remains server-owned `Platform.LOCAL`; source never
+  grants messaging/native trust. Default TUI selection folds in `project`; GUI folds in
+  the client-surface toolsets (`project`, `desktop_ui`, `catalog`). GUI policy is
+  independent of `HERMES_DESKTOP` and of the attaching viewer's identity. Without explicit
+  `toolsets`, the gateway applies the coding posture (`agent.coding_context: focus` in a
+  code workspace, `agent/coding_context.py`) from the `cwd` a `session.create` names,
+  decided once at creation; clients never send it as a pick. Only `session.create` applies
+  it, never for `source: tool`: Kanban workers, cron jobs, A2A, hosted rooms and migrated
+  legacy rows keep the profile's toolsets.
 - Optional flat creation fields: `cwd` (existing absolute gateway-local directory),
   `model` (nonempty model identifier on the daemon's configured provider), and `toolsets`
   (explicit array of established toolset names, including an empty array). Unknown or
@@ -77,21 +103,31 @@ OpenAI API-to-local session affinity; those remain separate integration paths.
   override the default surface additions; CLI/TUI cannot explicitly request `desktop_ui`.
   `cwd`, model selection, source and effective toolsets are captured at creation; attach
   cannot change them. A conflicting repeat `request_id` returns `invalid_params`.
-- Provider/base URL overrides, reasoning/service-tier, skills, cwd worktree creation,
-  seeded history, profile switching, YOLO, and other launch options still return
-  `invalid_params`. Provider credentials/routing and reasoning/service-tier defaults still
-  use the existing gateway resolution lifecycle; this is not full launch-option parity.
-  No supported launch field mutates daemon-wide configuration or process environment.
+- Further frozen launch fields (`CREATE_FIELDS`): `provider`, `base_url` (http(s), no
+  credentials/query/fragment), `api_key` (held in the owner's memory, never persisted),
+  `reasoning`, `max_turns`, `skills` (rendered once into the frozen prompt; refused with a
+  bypass launch), the booleans `yolo`, `checkpoints`, `accept_hooks`, `pass_session_id`,
+  `ignore_rules`, `safe_mode`, `ignore_user_config` (safe mode implies ignore-user-config
+  and runs turns in an isolated worker), `editor` (ACP only), plus `title` (resolve-or-create)
+  and `hidden`. A malformed value returns `invalid_params`. Any other field, cwd worktree
+  creation, seeded history, profile switching and service-tier selection still return
+  `invalid_params`. No supported launch field mutates daemon-wide configuration or process
+  environment.
 - Fresh creation requires a server-authenticated identity with `session:create`, supplied
   by the gated dashboard or native bootstrap path. The verified legacy `?token=` route
   stamps a session-token identity and also supports creation. Callers cannot provide an
   identity in RPC parameters, and operator scope does not promote resume-only capabilities
   to `session:create`.
-- `session.list({limit})` returns authorized **live** authority sessions (`scope: "live"`),
-  not the full historical session picker. `session.info({session_id})` is a lightweight,
+- `session.list({limit})` returns authorized **live** authority sessions (`scope: "live"`).
+  The native TUI picker also requests `session.list({limit, scope: "stored"})` for pre-authority
+  CLI/TUI/GUI history. This read-only feed uses the native legacy-resume ownership checks,
+  excludes hidden/archived/internal and foreign-owned rows, and never adopts a session merely
+  by listing it. Explicit resume performs adoption; the default live feed is unchanged.
+  `session.info({session_id})` is a lightweight,
   authorized view of source, current model, lazy-agent status, and profile ID.
 - `ping({})` returns `{pong: true}`. `runtime.describe({})` exposes only authority identity,
-  epoch, and the narrow implemented creation contract. It does not claim full runtime
+  epoch, capabilities, and the creation contract (`session_create.sources` and
+  `session_create.parameters`, which clients check before sending a launch option). It does not claim full runtime
   protocol readiness, reveal credentials/paths, start an agent, or renew a turn lease.
 - Cold restart restores valid private local policies and server-owned routes before execution.
   Creation receipts remain bound to their authenticated creating principal and profile;

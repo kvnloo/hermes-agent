@@ -18,9 +18,11 @@ from types import SimpleNamespace
 import psutil
 import pytest
 
+from hermes_cli.process_identity import worker_birth
 from hermes_state import SessionDB
 from hermes_state_runtime import admit_session_input, begin_runtime_epoch, claim_session_input
 from tests.gateway.fixtures.local_recovery_probe import child_env, daemon, rpc, websocket
+from tests.waiting import async_wait_until
 
 LAUNCHER = ('import subprocess, sys\n'
             'child = subprocess.Popen([sys.executable, "-c", "import sys; sys.stdin.read()"], stdin=sys.stdin)\n'
@@ -30,7 +32,7 @@ LAUNCHER = ('import subprocess, sys\n'
 
 def _hello(pid):
     proc = psutil.Process(pid)
-    return {'type': 'hello', 'pid': pid, 'birth': proc.create_time(),
+    return {'type': 'hello', 'pid': pid, 'birth': worker_birth(proc),
             'ancestors': [p.pid for p in proc.parents()[:4]]}
 
 
@@ -62,7 +64,7 @@ def test_owner_binds_reservation_to_verified_descendant_of_the_handle_only(tmp_p
                 reserve_admission_worker(authority, hello=_hello(os.getpid()), **kwargs)
             assert db._read_one('SELECT COUNT(*) FROM worker_executions')[0] == 0
             scope = reserve_admission_worker(authority, hello=_hello(real), **kwargs)
-            assert (scope['pid'], scope['birth']) == (real, psutil.Process(real).create_time())
+            assert (scope['pid'], scope['birth']) == (real, worker_birth(psutil.Process(real)))
             assert scope['pid'] != launcher.pid
     finally:
         # The real interpreter first, while it is still the launcher's child: killing the launcher
@@ -123,9 +125,9 @@ def test_managed_worker_completes_through_interpreter_trampoline(tmp_path):
             sid = created['result']['session_id']
             submitted = await rpc(ws, 'prompt.submit', session_id=sid, input_id='tramp-input', text='TRAMPOLINE_PROBE')
             assert 'result' in submitted, submitted
-            async with asyncio.timeout(90):
-                while query('SELECT status FROM session_admissions WHERE request_id=?', ('tramp-input',)) in ([('queued',)], [('started',)]):
-                    await asyncio.sleep(.05)
+            await async_wait_until(
+                lambda: query('SELECT status FROM session_admissions WHERE request_id=?', ('tramp-input',))
+                not in ([('queued',)], [('started',)]), timeout=90, interval=.05, what='the trampoline admission to leave queued/started')
             evidence = {'admissions': query('SELECT request_id,status FROM session_admissions'),
                         'workers': query('SELECT execution_id,status FROM worker_executions'),
                         'launches': launches.read_text(encoding='utf-8') if launches.exists() else None,
@@ -142,9 +144,7 @@ def test_managed_worker_completes_through_interpreter_trampoline(tmp_path):
             def leftovers():
                 return [(p.pid, p.cmdline()) for p in psutil.Process(owner.pid).children(recursive=True)
                         if p.is_running() and p.status() != psutil.STATUS_ZOMBIE]
-            async with asyncio.timeout(15):
-                while leftovers():
-                    await asyncio.sleep(.1)
+            await async_wait_until(lambda: not leftovers(), timeout=15, interval=.1, what='the launcher chain to be reaped')
             assert leftovers() == []
             print(json.dumps({'owner_pid': owner.pid, 'launcher_pid': workers[0]['launcher'], 'worker_pid': workers[0]['child']}))
 

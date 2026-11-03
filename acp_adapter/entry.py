@@ -11,7 +11,7 @@ Usage::
 # IMPORTANT: hermes_bootstrap must be the very first import — UTF-8 stdio
 # on Windows.  No-op on POSIX.  See hermes_bootstrap.py for full rationale.
 try:
-    import hermes_bootstrap  # noqa: F401
+    import hermes_bootstrap
 except ModuleNotFoundError as exc:
     # Partial ``hermes update`` (git-reset landed, ``uv pip install -e .`` did not).
     if exc.name != "hermes_bootstrap":
@@ -98,7 +98,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--setup", action="store_true",
                         help="Run interactive Hermes provider/model setup for ACP terminal auth")
     parser.add_argument("--setup-browser", action="store_true",
-                        help="Prepare PM's pinned browser tools and Chromium.")
+                        help="Prepare PM's pinned Chromium for browser_exec.")
     parser.add_argument("--yes", "-y", action="store_true", dest="assume_yes",
                         help="Accept setup prompts.")
     return parser.parse_args(argv)
@@ -111,8 +111,8 @@ def _print_version() -> None:
 
 
 def _run_check() -> None:
-    import acp  # noqa: F401
-    from acp_adapter.server import HermesACPAgent  # noqa: F401
+    import acp
+    from acp_adapter.server import HermesACPAgent
 
     print("Hermes ACP check OK")
 
@@ -132,7 +132,7 @@ def _run_setup() -> None:
     if not sys.stdin.isatty():
         return
     try:
-        reply = input("\nInstall browser tools? Downloads the pinned browser and "
+        reply = input("\nInstall browser tools? Downloads the pinned "
                       "Chromium through PM. [y/N] ").strip().lower()
     except (EOFError, KeyboardInterrupt):
         return
@@ -141,11 +141,11 @@ def _run_setup() -> None:
 
 
 def _run_setup_browser(assume_yes: bool = False) -> int:
-    """The setup command is an explicit request for PM's browser closure."""
+    """The setup command is an explicit request for PM's Chromium (browser_exec's local browser)."""
     import pm
 
     try:
-        pm.ensure("agent-browser", explicit=True)
+        pm.ensure("chromium", explicit=True)
     except (pm.InstallError, OSError) as exc:
         print(f"Browser setup failed: {exc}", file=sys.stderr)
         return 1
@@ -216,8 +216,9 @@ def main(argv: list[str] | None = None) -> None:
     except Exception:
         logger.exception("ACP agent crashed")
         sys.exit(1)
-    # No ended_at stamp here (#118216 is the in-process adapter's): sessions are daemon-owned and
-    # may have other viewers or background work, so the daemon's reset lifecycle ends them.
+    # No ended_at stamp here: sessions are daemon-owned and may have other viewers or queued work.
+    # The owner ends an ACP session when its last viewer detaches with an idle FIFO, and at gateway
+    # stop (gateway/session_acp_lifecycle.py, #118216).
 
 
 if __name__ == "__main__":

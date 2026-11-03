@@ -8,6 +8,7 @@ import {
   STREAM_TYPING_BATCH_MS
 } from '../config/timing.js'
 import type { SessionInterruptResponse } from '../gatewayTypes.js'
+import { t } from '../i18n/runtime.js'
 import { appendToolShelfMessage, isToolShelfMessage } from '../lib/liveProgress.js'
 import { hasReasoningTag, splitReasoning } from '../lib/reasoning.js'
 import { rpcErrorMessage } from '../lib/rpc.js'
@@ -123,6 +124,13 @@ const finalTail = (finalText: string, segments: Msg[]) => {
 
   return tail
 }
+
+// Whether the streamed tail is a segment of its own: only when the gateway's final text does not
+// already carry it — otherwise the tail IS the answer and flushing would move the tool shelf/trail
+// under it. Never without a final text (`rawText` is then the buffer, #16391), nor when a
+// transform_llm_output plugin rewrote the reply: the tail is the raw text the rewrite replaces.
+const keepsStreamedTail = (tail: string, completionText: null | string | undefined, transformed?: boolean | null) =>
+  Boolean(tail && completionText != null && !transformed && !completionText.includes(tail))
 
 const interruptedText = (partial: string) => (partial ? `${partial}\n\n*[interrupted]*` : '*[interrupted]*')
 
@@ -390,7 +398,7 @@ class TurnController {
         }
       } catch (error) {
         if (isActiveTurn()) {
-          sys(`interrupt failed: ${rpcErrorMessage(error)}`)
+          sys(t('canonical.submit.interruptFailed', rpcErrorMessage(error)))
         }
 
         return
@@ -434,7 +442,7 @@ class TurnController {
       appendMessage({ role: 'assistant', text, ...(tools.length && { tools }) })
       this.sealedInterrupt = { partial, text }
     } else {
-      sys('interrupted')
+      sys(t('session.turn.interrupted'))
       this.sealedInterrupt = { partial: '', text: null }
     }
 
@@ -442,7 +450,7 @@ class TurnController {
 
     if (opts.keepBusy) {
       // `idle()` already cleared busy; re-assert it so the drain waits for settle.
-      patchUiState({ busy: true, status: 'interrupting…' })
+      patchUiState({ busy: true, status: t('session.status.interrupting') })
 
       return
     }
@@ -682,13 +690,8 @@ class TurnController {
     const rawText = (completionText ?? this.bufRef).trimStart()
 
     // Text still in `this.bufRef` streamed after the last segment flush; `idle()`
-    // below would wipe it (#61520). Flush it as a segment only when the
-    // gateway's final text does not already carry it — otherwise the tail IS
-    // the answer and flushing would move the tool shelf/trail under it. Skipped
-    // when `completionText` is absent: `rawText` is then the buffer (#16391).
-    const tail = this.bufRef.trim()
-
-    if (tail && completionText != null && !completionText.includes(tail)) {
+    // below would wipe it (#61520).
+    if (keepsStreamedTail(this.bufRef.trim(), completionText, payload.response_transformed)) {
       this.flushStreamingSegment()
     }
 
@@ -790,7 +793,7 @@ class TurnController {
     return { finalMessages, finalText, interruptedReply, wasInterrupted }
   }
 
-  recordMessageDelta({ text }: { rendered?: string | null; text?: string }) {
+  recordMessageDelta({ text }: { rendered?: string | null; text?: string | null }) {
     if (this.interrupted || !text) {
       return
     }

@@ -1,4 +1,4 @@
-import { isMissingRestEndpoint } from '@/lib/gateway-rpc'
+import { isMissingRestEndpoint, isUnroutedRestPath } from '@/lib/gateway-rpc'
 import { maybeBackfillLegacySessionOwners } from '@/lib/legacy-session-owner-backfill'
 import { stampRowsWithOwningConnection } from '@/lib/session-owner-stamp'
 import { pageHonorsLatestOrder, recordTranscriptTail } from '@/store/transcript-tail'
@@ -10,7 +10,7 @@ import type {
   SessionSearchResponse
 } from '@/types/hermes'
 
-import { createSessionMutationClient, type SessionMutationSnapshot } from '../../../shared/src/session-http-mutations'
+import { createSessionMutationClient, type SessionMutationIdentity, type SessionMutationSnapshot } from '../../../shared/src/session-http-mutations'
 
 import {
   ambientOwnerConnectionId,
@@ -20,7 +20,8 @@ import {
   getApiRequestProfile,
   hermesApi,
   type ProfileScope,
-  profileScoped
+  profileScoped,
+  sessionReadOwnerPin
 } from './client'
 
 const SESSION_LIST_REQUEST_TIMEOUT_MS = 60_000
@@ -140,7 +141,8 @@ export async function listAllProfileSessions(
   archived: 'exclude' | 'include' | 'only' = 'exclude',
   order: 'created' | 'recent' = 'recent',
   profile: 'all' | (string & {}) = 'all',
-  filter: SessionSourceFilter = {}
+  filter: SessionSourceFilter = {},
+  offset = 0
 ): Promise<PaginatedSessions> {
   const sourceParam = filter.source ? `&source=${encodeURIComponent(filter.source)}` : ''
 
@@ -151,7 +153,7 @@ export async function listAllProfileSessions(
   const result = await hermesApi<PaginatedSessions>({
     ...profileScoped(),
     path:
-      `/api/profiles/sessions?limit=${limit}&offset=0&min_messages=${Math.max(0, minMessages)}` +
+      `/api/profiles/sessions?limit=${limit}&offset=${Math.max(0, offset)}&min_messages=${Math.max(0, minMessages)}` +
       `&archived=${archived}&order=${order}&profile=${encodeURIComponent(profile)}${sourceParam}${excludeParam}`,
     timeoutMs: SESSION_LIST_REQUEST_TIMEOUT_MS
   })
@@ -159,7 +161,7 @@ export async function listAllProfileSessions(
   return {
     ...result,
     sessions: pageWindow(stampActiveConnectionOwner(result.sessions), limit),
-    offset: 0
+    offset: Math.max(0, offset)
   }
 }
 
@@ -231,18 +233,19 @@ export interface SidebarSessionsRequest {
 // The batched /sidebar endpoint shipped later than the per-slice route, so a
 // newer desktop can meet an older backend that 404s it ("No such API
 // endpoint"). Endpoint-missing is a capability signal, not a transient
-// failure: remember it (per renderer lifetime — a runtime home change reloads
-// the window and re-probes) and serve every subsequent refresh straight from
-// the three proven per-slice calls instead of re-probing a known-dead route
-// once per turn/broadcast.
-let sidebarBatchEndpointMissing = false
+// failure: remember it and serve every subsequent refresh straight from the
+// three proven per-slice calls instead of re-probing a known-dead route once
+// per turn/broadcast. It is a fact about ONE backend, so it is keyed by the
+// connection the request rode: a gateway pick re-scopes requests in place
+// (no reload, no list wipe), and the next gateway may well have the route.
+// Keyed at request time, a late 404 from the gateway just left still lands on
+// that gateway, not on the one now in front.
+const sidebarBatchEndpointMissing = new Set<string>()
 
-// Capability flags are per-backend facts. A hard re-home reloads the window
-// (module state resets naturally), but a soft gateway switch re-dials in
-// place — the next backend may well have the batched route, so the switch
-// paths call this to re-probe rather than leak the old backend's capability.
+// A Settings apply can re-point a connection id at a different backend, so it
+// forgets every remembered capability and re-probes.
 export function resetSidebarBatchCapability() {
-  sidebarBatchEndpointMissing = false
+  sidebarBatchEndpointMissing.clear()
 }
 
 // Compatibility fallback: reassemble the three sidebar slices from the
@@ -308,7 +311,9 @@ export function scanSessionPullRequests(
 }
 
 export async function listSidebarSessions(req: SidebarSessionsRequest): Promise<SidebarSessionsResponse> {
-  if (sidebarBatchEndpointMissing) {
+  const capabilityKey = getApiRequestConnection() ?? ''
+
+  if (sidebarBatchEndpointMissing.has(capabilityKey)) {
     return listSidebarSessionsLegacy(req)
   }
 
@@ -343,7 +348,7 @@ export async function listSidebarSessions(req: SidebarSessionsRequest): Promise<
     }
 
     // Older backend without the batched route (desktop/runtime version skew).
-    sidebarBatchEndpointMissing = true
+    sidebarBatchEndpointMissing.add(capabilityKey)
 
     return listSidebarSessionsLegacy(req)
   }
@@ -372,6 +377,27 @@ export async function listSidebarSessions(req: SidebarSessionsRequest): Promise<
 
 const runSessionMutation = createSessionMutationClient()
 
+class MissingMutationSnapshotRoute extends Error {}
+
+/** Run one fenced session edit. The fencing protocol is a backend capability: an older
+ *  standalone runtime has no snapshot route and keeps its base write. Only that route-level
+ *  verdict on the read, before any write was attempted, selects it; a session/profile 404,
+ *  refusal, conflict, timeout or failed write keeps the canonical CAS path and its retained
+ *  identity. */
+export function mutateSessionFenced<T>(key: string, read: () => Promise<SessionMutationSnapshot>,
+  send: (identity: Partial<SessionMutationIdentity>) => Promise<T>): Promise<T> {
+  return runSessionMutation(key, () => read().catch(error => {
+    // The prepared read is shared by equal concurrent edits; its verdict must
+    // travel with that rejection, rather than one caller's local closure.
+    if (isUnroutedRestPath(error)) { throw new MissingMutationSnapshotRoute(String(error), { cause: error }) }
+    throw error
+  }), send).catch(error => {
+    if (!(error instanceof MissingMutationSnapshotRoute)) { throw error }
+
+    return send({})
+  })
+}
+
 function mutateSessionHttp<T>(id: string, method: 'PATCH' | 'DELETE', payload: Record<string, unknown>, profile?: ProfileScope): Promise<T> {
   // Null is the window's v1 route (its primary, local or remote); defaulting it to
   // the registry's 'local' source would pin a remote primary's edits to this machine.
@@ -381,24 +407,24 @@ function mutateSessionHttp<T>(id: string, method: 'PATCH' | 'DELETE', payload: R
   const suffix = query.size ? `?${query}` : ''
   const key = JSON.stringify([scope, id, method, payload])
 
-  return runSessionMutation(key,
-    () => hermesApi<SessionMutationSnapshot>({ ...scope, path: `${path}/mutation-snapshot${suffix}` }),
-    identity => {
-      if (method === 'DELETE') {
-        const params = new URLSearchParams(query)
+  const send = (identity: Partial<SessionMutationIdentity>) => {
+    if (method === 'DELETE') {
+      const params = new URLSearchParams(query)
 
-        for (const [name, value] of Object.entries(identity)) { params.set(name, String(value)) }
+      for (const [name, value] of Object.entries(identity)) { params.set(name, String(value)) }
 
-        return hermesApi<T>({ ...scope, path: `${path}?${params}`, method })
-      }
+      return hermesApi<T>({ ...scope, path: params.size ? `${path}?${params}` : path, method })
+    }
 
-      return hermesApi<T>({ ...scope, path, method,
-        body: { ...payload, ...identity, ...(scope.profile ? { profile: scope.profile } : {}) } })
-    })
+    return hermesApi<T>({ ...scope, path, method,
+      body: { ...payload, ...identity, ...(scope.profile ? { profile: scope.profile } : {}) } })
+  }
+
+  return mutateSessionFenced(key, () => hermesApi<SessionMutationSnapshot>({ ...scope, path: `${path}/mutation-snapshot${suffix}` }), send)
 }
 
 export function setSessionArchived(id: string, archived: boolean, profile?: string | null): Promise<{ ok: boolean }> {
-  return mutateSessionHttp(id, 'PATCH', { archived }, sessionWriteProfile(profile))
+  return mutateSessionHttp(id, 'PATCH', { archived, ...(archived ? { pinned: false } : {}) }, sessionWriteProfile(profile))
 }
 
 export function setSessionPinnedRemote(id: string, pinned: boolean, profile?: string | null): Promise<{ ok: boolean }> {
@@ -409,9 +435,17 @@ export function setSessionUnreadRemote(id: string, unread: boolean, profile?: st
   return mutateSessionHttp(id, 'PATCH', { unread }, sessionWriteProfile(profile))
 }
 
-export function searchSessions(query: string): Promise<SessionSearchResponse> {
+// Full-text search over one profile's sessions. Pass the profile the caller is
+// showing: an unscoped request lands on the primary backend, which searches
+// its launch profile's state.db whatever profile the sidebar is on. `null`
+// asks the primary on purpose; omitted follows the ambient request profile.
+export function searchSessions(query: string, profile?: null | string): Promise<SessionSearchResponse> {
+  const scope = profileScoped(profile)
+  const suffix = scope.profile ? `&profile=${encodeURIComponent(scope.profile)}` : ''
+
   return hermesApi<SessionSearchResponse>({
-    path: `/api/sessions/search?q=${encodeURIComponent(query)}`
+    ...scope,
+    path: `/api/sessions/search?q=${encodeURIComponent(query)}${suffix}`
   })
 }
 
@@ -420,10 +454,14 @@ export function searchSessions(query: string): Promise<SessionSearchResponse> {
 // 404s when the id isn't on that profile — so a cheap by-id lookup replaces the
 // cross-profile list scan when locating an unknown id's owner.
 export function getSession(id: string, profile?: ProfileScope): Promise<SessionInfo> {
-  const suffix = sessionScopeQuery(profile)
+  // Pin the read to the session's OWNER connection (#125372): the ambient dial
+  // 404s on the wrong backend whenever two connections expose a same-named
+  // profile.
+  const scope = { ...sessionScoped(profile), ...sessionReadOwnerPin(id, profile) }
+  const suffix = scope.profile ? `?profile=${encodeURIComponent(scope.profile)}` : ''
 
   return hermesApi<SessionInfo>({
-    ...sessionScoped(profile),
+    ...scope,
     path: `/api/sessions/${encodeURIComponent(id)}${suffix}`
   })
 }
@@ -440,7 +478,8 @@ export function getSessionMessages(
 ): Promise<SessionMessagesResponse> {
   const query = new URLSearchParams()
 
-  const sessionScope = sessionScoped(profile)
+  // Owner connection pin (#125372) — see getSession.
+  const sessionScope = { ...sessionScoped(profile), ...sessionReadOwnerPin(id, profile) }
 
   if (sessionScope.profile) {
     query.set('profile', sessionScope.profile)
@@ -489,7 +528,7 @@ export function getLatestSessionMessages(
   // (ambient, profile string, or explicit pin). Otherwise refreshes create
   // duplicate tail entries and "Show earlier" cannot resolve the loaded tail.
   // Capture before awaiting: the active gateway may change during the read.
-  const route = { ...connectionScoped(), ...sessionScoped(profile) }
+  const route = { ...connectionScoped(), ...sessionScoped(profile), ...sessionReadOwnerPin(id, profile) }
   // Only the lookup key is normalized — backfill replays `route` verbatim.
   const ambientConnectionId = route.connectionId || ambientOwnerConnectionId()
   const ambientProfile = getApiRequestProfile() || 'default'

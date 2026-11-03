@@ -10,7 +10,8 @@ import time
 import psutil
 import pytest
 
-from tests.acp_adapter.test_gateway_sessions import daemon, editor, viewer, model_peer, control  # noqa: F401
+from tests.acp_adapter.test_gateway_sessions import editor, viewer
+from tests.gateway.test_normal_runtime_boot import control
 
 
 @pytest.mark.platforms("linux")
@@ -57,7 +58,7 @@ async def test_cold_acp_load_retains_policy_and_executes_after_daemon_restart(da
     config['platform_toolsets'] = {'acp': ['terminal']}
     (home / 'config.yaml').write_text(json.dumps(config))
     with (tmp_path / 'restart.log').open('w') as log:
-        process = subprocess.Popen([sys.executable, '-m', 'gateway.run'], cwd=root, env=env,
+        process = subprocess.Popen([sys.executable, '-m', 'gateway.run'], cwd=root, env=env,  # noqa: ASYNC220 -- Popen returns immediately; the test drives the child through its handle
             stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
         try:
             deadline = time.monotonic() + 40

@@ -95,7 +95,13 @@ def main():
                                    admission_id=value['admission_id'], execution_generation=value['execution_generation'])
                 assert 'result' in result, result
             return answer['result']
+    # A dispatcher iterating a slug under a HERMES_KANBAN_DB pin resolves through the pin (the
+    # gateway's embedded dispatcher does the same); an unfenced explicit board= would bypass it.
+    pinned = kb.pin_first_board_resolution()
+    pinned.__enter__()
     try:
+        # Board identity is board.json (#43243): create it explicitly; under the pin its DB is board_path.
+        kb.create_board('owned')
         with closing(connect(board='owned')) as conn:
             tid = kb.create_task(conn, title='RECOVERY_TASK', assignee='assigned' if mode == 'cross_profile' else 'default',
                                  workspace_kind='dir', workspace_path=str(workspace), goal_mode=True, goal_max_turns=2)
@@ -111,7 +117,6 @@ def main():
                               db=str(board_path.resolve()))
                 wait_for(lambda: peer.blocked.is_set() or any(p.poll() is not None for p in clients))
                 assert peer.blocked.is_set(), 'Owner failed to discover dispatcher board'
-                active = kb.get_task(conn, tid)
                 first = admission()
                 receipt.update(session_id=first['target_session_id'], run_id=task.current_run_id, claim_lock=task.claim_lock)
                 if mode == 'restart':
@@ -128,12 +133,17 @@ def main():
                     wait_for(lambda: admission()['status'] == 'terminal')
                     wait_for(lambda: kb.get_task(conn, tid).status == 'done')
                     assert asyncio.run(retry(desc, params))['session_id'] == first['target_session_id']
+                    # The worker reads its terminal receipt from this owner: one still polling when the
+                    # owner stops redials, and the redial starts a replacement owner (a client's own start).
+                    wait_for(lambda: all(p.poll() is not None for p in clients))
             if mode == 'restart':
                 cfg['model']['default'] = 'changed-default'
                 (owner / 'config.yaml').write_text(json.dumps(cfg))
                 with daemon(root, owner, env, barrier=False) as (proc, desc):
                     answer = asyncio.run(retry(desc, params))
-                    assert answer['receipt']['status'] == 'unknown', answer
+                    # #134889 KB-8: nobody waits on a card attempt, so the lost turn settles
+                    # interrupted at boot (never replayed) instead of pausing the card session.
+                    assert (answer['receipt']['status'], answer['receipt']['outcome']) == ('terminal', 'interrupted'), answer
                     assert answer['session_id'] == first['target_session_id']
                     with closing(sqlite3.connect((owner / 'state.db').as_uri() + '?mode=ro', uri=True)) as db:
                         frozen = json.loads(db.execute('SELECT value FROM state_meta WHERE key=?',
@@ -166,6 +176,7 @@ def main():
             assert not writes, writes
             receipt['client_canonical_writable_opens'] = len(writes)
     finally:
+        pinned.__exit__(None, None, None)
         peer.release.set()
         for child in clients:
             if child.poll() is None:

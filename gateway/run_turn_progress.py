@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-import json
 import logging
 import queue
 import re
@@ -13,20 +12,34 @@ from contextlib import suppress
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from agent.i18n import t
 from agent.interrupt_compat import _accepts_keyword
 from agent.replay_cleanup import strip_stale_dangerous_confirmations
 from gateway.config import Platform
 from gateway.media_repair import repair_explicit_computer_use_media_paths
 from gateway.platforms.base import BasePlatformAdapter
+from gateway.platforms.helpers import typing_metadata_for_turn
 from gateway.turn_context import TurnContext
 from hermes_cli.config import cfg_get
 from utils import is_truthy_value
 
 if TYPE_CHECKING:  # string annotations only; never imported at runtime (cycle)
-    from gateway.run import GatewayRunner  # noqa: F401
+    from gateway.run import GatewayRunner
+    from gateway.run_turn_runner import TurnRunner
 
 # Log-record parity with the origin module.
 logger = logging.getLogger("gateway.run")
+
+
+def _append_progress_repeat_count(message: str, occurrences: int) -> str:
+    """Put a repeat counter after a closing code fence on its own line: ```` ``` (×N) ```` is not a
+    valid closing fence, so Telegram/Markdown renderers would leave the block open."""
+    suffix = f"(×{occurrences})"
+    body = message.rstrip("\r\n")
+    if re.search(r"(?:^|\n)[ \t]*```[ \t]*\r?\Z", body):
+        line_end = "\r\n" if message.endswith("\r\n") else "\n"
+        return f"{body}{line_end}{suffix}"
+    return f"{message} {suffix}"
 
 
 def _tool_lifecycle_payload(call_id, tool_name, args) -> dict:
@@ -35,11 +48,58 @@ def _tool_lifecycle_payload(call_id, tool_name, args) -> dict:
     from agent.display import build_tool_preview, tool_labels_for_call
     name = str(tool_name or "tool")
     args = args if isinstance(args, dict) else {}
+    from gateway.session_tool_events import bounded_args
     payload = {"tool_id": str(call_id or ""), "name": name, "context": build_tool_preview(name, args, max_len=80) or "",
-               "tool_call_id": str(call_id or ""), "tool_name": name, "args": args}
+               "tool_call_id": str(call_id or ""), "tool_name": name, "args": bounded_args(args)}
     if labels := [label.as_payload() for label in tool_labels_for_call(name, args)]:
         payload["labels"] = labels
     return payload
+
+
+def _tool_complete_payload(call_id, tool_name, args, result, *, is_error=None, verbose=False) -> dict:
+    """``tool.complete`` as every viewer reads it: the start contract plus the executor's verdict and
+    the result (ACP renders paths/output and failure from it), and ``result_text`` under /verbose."""
+    from gateway.session_tool_events import bounded_result
+    if is_error is None:
+        from agent.display import _detect_tool_failure
+        is_error = _detect_tool_failure(tool_name, result)[0]
+    payload = {**_tool_lifecycle_payload(call_id, tool_name, args), "is_error": bool(is_error),
+               "result": bounded_result(result, is_error)}
+    if verbose:
+        from tui_gateway.tool_progress import _tool_result_text
+        payload["result_text"] = _tool_result_text(result)
+    return payload
+
+
+def publish_worker_tool_event(authority, session_id, generation, frame) -> bool:
+    """A managed worker's tool frame, published exactly as an in-process turn publishes its own
+    (the shared viewer stream and this admission's API observers). False for any other frame."""
+    kind = frame.get("type")
+    fields = {"type", "tool_call_id", "name", "args"} | ({"result", "is_error"} if kind == "tool.complete" else set())
+    if (kind not in ("tool.start", "tool.complete") or set(frame) != fields
+            or not isinstance(frame["tool_call_id"], str) or not isinstance(frame["name"], str)
+            or not isinstance(frame["args"], dict)
+            or (kind == "tool.complete" and (not isinstance(frame["result"], str) or type(frame["is_error"]) is not bool))):
+        return False
+    call_id, name, args, result = frame["tool_call_id"], frame["name"], frame["args"], frame.get("result")
+    if kind == "tool.start":
+        payload = _tool_lifecycle_payload(call_id, name, args)
+    else:
+        verbose = getattr(authority.sessions[session_id], "tool_progress_mode", None) == "verbose"
+        payload = _tool_complete_payload(call_id, name, args, result, is_error=frame["is_error"], verbose=verbose)
+    authority.publish_execution(session_id, generation, kind, payload)
+    from gateway.session_api_turn import publish_api_tool_event, publish_api_tool_progress
+    publish_api_tool_event(authority, session_id, generation, kind, call_id, name, args, result)
+    # A worker sends no progress events: progress-only observers get the executor's preview of its
+    # args and the frame's own verdict, taken before the result was bounded.
+    if kind == "tool.start":
+        from agent.display import build_tool_preview
+        publish_api_tool_progress(authority, session_id, generation, "tool.started", name,
+                                  build_tool_preview(name, args), args)
+    else:
+        publish_api_tool_progress(authority, session_id, generation, "tool.completed", name, None, None,
+                                  is_error=frame["is_error"], result=result)
+    return True
 
 
 class GatewayTurnProgressMixin:
@@ -85,9 +145,16 @@ class GatewayTurnProgressMixin:
 
     # ── progress_callback (agent thread → progress queue) ───────────────────────────────────
 
-    def progress_callback(self, event_type: str, tool_name: str = None, preview: str = None, args: dict = None, **kwargs):
+    def progress_callback(self, event_type: str, tool_name: str | None = None, preview: str | None = None, args: dict | None = None, **kwargs):
         """Callback invoked by agent on tool lifecycle events."""
         ctx = self._ctx
+        if local_viewer_turn(self):
+            try:
+                from gateway import local_viewer_events
+                local_viewer_events.publish_progress(self, event_type, tool_name, preview, kwargs)
+            except Exception:
+                # Best-effort: a viewer frame never blocks the failure notice below, but a lost one is logged.
+                logger.debug("Local viewer progress publish failed for %s", event_type, exc_info=True)
         # Failed subagent → one clean user-facing notice, handled FIRST, before every progress-queue
         # gate: platforms with tool_progress off must still hear about a dead delegation.
         if event_type == "subagent.complete":
@@ -110,7 +177,7 @@ class GatewayTurnProgressMixin:
         if event_type == "_thinking" or tool_name == "_thinking":
             thinking_text = (preview if tool_name == "_thinking" else tool_name) if ctx._thinking_enabled else None
             if thinking_text:
-                ctx.progress_queue.put(f"💬 {thinking_text}")
+                ctx.progress_queue.put(t("gateway.progress.thinking_prefix", text=thinking_text))
             return
         # Native task cards consume the ID-bearing tool_start/tool_complete callbacks instead;
         # name-correlated text events would duplicate cards and mispair concurrent same-tool calls.
@@ -125,7 +192,7 @@ class GatewayTurnProgressMixin:
             or event_type != "tool.started"
             # The adapter's send_clarify IS the user-facing rendering (interactive buttons or the
             # numbered-text fallback), so a progress bubble is pure duplication — and in verbose mode it
-            # dumps the raw tool-call args JSON ({"question": ..., "choices": [...]}) into the chat. Because
+            # dumps the raw tool-call args JSON into the chat. Because
             # the progress queue drains on a background task, that raw JSON typically lands right underneath
             # the rendered prompt (#52374).
             or tool_name == "clarify"
@@ -212,7 +279,7 @@ class GatewayTurnProgressMixin:
         ):
             return None, None
         cmd_full = args["command"].rstrip()
-        header = "" if self._ctx.last_was_terminal_block[0] else f"{emoji} {tool_name}\n"
+        header = "" if self._ctx.last_was_terminal_block[0] else t("gateway.progress.tool_head", emoji=emoji, tool=tool_name) + "\n"
         cap = self._preview_cap()
         lines = cmd_full.splitlines()
         cmd_short = lines[0] if lines else cmd_full
@@ -237,22 +304,21 @@ class GatewayTurnProgressMixin:
         ctx.last_was_terminal_block[0] = code is not None
         if verbose:
             if code is None and args:
-                from agent.display import get_tool_preview_max_len
-                pl = get_tool_preview_max_len()
-                args_str = json.dumps(args, ensure_ascii=False, default=str)
+                from agent.display import get_tool_preview_max_len, verbose_tool_args_text
                 # tool_preview_length 0 (default) = no truncation in verbose mode; the user asked
                 # for full detail and platform message-length limits handle the rest.
-                if pl > 0 and len(args_str) > pl:
-                    args_str = args_str[:pl - 3] + "..."
-                code = f"{emoji} {tool_name}({list(args.keys())})\n{args_str}"
+                args_str = verbose_tool_args_text(args, get_tool_preview_max_len(),
+                                                  getattr(adapter, "supports_code_blocks", False))
+                code = t("gateway.progress.tool_verbose", emoji=emoji, tool=tool_name, keys=list(args.keys()), args=args_str)
             elif code is None:
-                code = f"{emoji} {tool_name}: \"{preview}\"" if preview else f"{emoji} {tool_name}..."
+                code = (t("gateway.progress.tool_preview", emoji=emoji, tool=tool_name, preview=preview) if preview
+                        else t("gateway.progress.tool_pending", emoji=emoji, tool=tool_name))
             ctx.progress_queue.put(code)
             return None
         if code is not None:
             return code
         if not preview:
-            return f"{emoji} {tool_name}..."
+            return t("gateway.progress.tool_pending", emoji=emoji, tool=tool_name)
         from agent.display import get_tool_verb, prepare_tool_preview, tool_verb_connector, verb_drops_preview
         prepared = prepare_tool_preview(tool_name, args, fallback=preview, max_len=self._preview_cap())
         preview = adapter.format_tool_preview(prepared) if adapter is not None else prepared.text
@@ -260,7 +326,7 @@ class GatewayTurnProgressMixin:
         # by prefixing the verb onto the computed preview, so the command/url/query is kept.
         verb = get_tool_verb(tool_name)
         if not verb:
-            return f"{emoji} {tool_name}: \"{preview}\""
+            return t("gateway.progress.tool_preview", emoji=emoji, tool=tool_name, preview=preview)
         return f"{emoji} {verb}" if verb_drops_preview(tool_name) else f"{emoji} {verb}{tool_verb_connector(tool_name)}{preview}"
 
     def _progress_emit(self, msg: str) -> None:
@@ -272,7 +338,7 @@ class GatewayTurnProgressMixin:
         if msg == ctx.last_progress_msg[0]:
             ctx.repeat_count[0] += 1
             if native:
-                sc.on_tool_progress(f"{msg} (×{ctx.repeat_count[0] + 1})")
+                sc.on_tool_progress(_append_progress_repeat_count(msg, ctx.repeat_count[0] + 1))
             else:
                 ctx.progress_queue.put(("__dedup__", msg, ctx.repeat_count[0]))
             return
@@ -288,8 +354,8 @@ class GatewayTurnProgressMixin:
     class _TaskCardState:
         """Task-card rail state for ``_send_native_task_card_progress``."""
         adapter: Any
-        tasks: Dict[str, Dict[str, str]] = dataclasses.field(default_factory=dict)
-        task_order: List[str] = dataclasses.field(default_factory=list)
+        tasks: dict[str, dict[str, str]] = dataclasses.field(default_factory=dict)
+        task_order: list[str] = dataclasses.field(default_factory=list)
         fallback_msg_id: Optional[str] = None
         native_failed: bool = False
         # TERMINAL for the turn, distinct from native_failed: no later publication
@@ -306,15 +372,18 @@ class GatewayTurnProgressMixin:
             text = re.sub(r"\s+", " ", str(value or "")).strip()
             return text if len(text) <= limit else text[: limit - 3].rstrip() + "..."
 
-        def visible_tasks(self) -> List[Dict[str, str]]:
+        def visible_tasks(self) -> list[dict[str, str]]:
             return [self.tasks[task_id] for task_id in self.task_order[-8:]]
 
         def fallback_text(self) -> str:
-            labels = {"in_progress": "running", "complete": "complete", "error": "error"}
-            lines = [f"- {t['title']} - {labels.get(t['status'], t['status'])}" for t in self.visible_tasks()]
-            return "Hermes is working\n" + "\n".join(lines)
+            labels = {"in_progress": t("gateway.progress.task_status_running"),
+                      "complete": t("gateway.progress.task_status_complete"),
+                      "error": t("gateway.progress.task_status_error")}
+            lines = [t("gateway.progress.task_line", title=task["title"], status=labels.get(task["status"], task["status"]))
+                     for task in self.visible_tasks()]
+            return t("gateway.progress.task_card_title") + "\n" + "\n".join(lines)
 
-        def _upsert(self, call_id: str, title: str) -> Dict[str, str]:
+        def _upsert(self, call_id: str, title: str) -> dict[str, str]:
             if call_id not in self.tasks:
                 self.task_order.append(call_id)
             self.tasks[call_id] = {"id": call_id, "title": self._compact(title), "status": "in_progress"}
@@ -389,7 +458,7 @@ class GatewayTurnProgressMixin:
                 return
         if not st.native_failed:
             result = await st.adapter.send_native_task_card_progress(
-                chat_id=ctx.source.chat_id, tasks=st.visible_tasks(), title="Hermes is working",
+                chat_id=ctx.source.chat_id, tasks=st.visible_tasks(), title=t("gateway.progress.task_card_title"),
                 reply_to=ctx._progress_reply_to, metadata=ctx._progress_metadata, fallback_text=st.fallback_text(),
             )
             if getattr(result, "success", False):
@@ -504,12 +573,12 @@ class GatewayTurnProgressMixin:
         _PROGRESS_TEXT_LIMIT: int
         _edit_accepts_metadata: bool
 
-    def _progress_edit_state(self, adapter) -> "TurnRunner._ProgressEditState":
+    def _progress_edit_state(self, adapter) -> TurnRunner._ProgressEditState:
         ctx = self._ctx
         len_fn = adapter.message_len_fn if isinstance(adapter, BasePlatformAdapter) else len
         try:
             raw_limit = int(getattr(adapter, "MAX_MESSAGE_LENGTH", 4000) or 4000)
-        except Exception:
+        except Exception:  # health: allow BLE001 -- moved unchanged from run_turn_runner.py (main has the same handler): a plugin adapter's odd MAX_MESSAGE_LENGTH falls back to 4000
             raw_limit = 4000
         # Per-chat resolution (relay adapter fronting N platforms): cap and length unit follow the
         # chat's underlying platform; native adapters return their scalar/property unchanged.
@@ -607,7 +676,7 @@ class GatewayTurnProgressMixin:
             _, base_msg, count = raw
             if not st.progress_lines:
                 return base_msg
-            st.progress_lines[-1] = f"{base_msg} (×{count + 1})"
+            st.progress_lines[-1] = _append_progress_repeat_count(base_msg, count + 1)
             return st.progress_lines[-1]
         st.progress_lines.append(raw)
         return raw
@@ -640,7 +709,9 @@ class GatewayTurnProgressMixin:
         ctx = self._ctx
         await asyncio.sleep(0.3)
         if ctx._run_still_current():
-            await st.adapter.send_typing(ctx.source.chat_id, metadata=ctx._progress_metadata)
+            # On this turn's own message, as its refresh: the chat's latest may be a newer one.
+            await st.adapter.send_typing(ctx.source.chat_id, metadata=typing_metadata_for_turn(
+                st.adapter, ctx.source.chat_id, ctx.event_message_id, ctx._progress_metadata))
 
     async def _progress_send_or_edit(self, st, msg) -> bool:
         """Deliver this tick's bubble. Returns False on a transient edit failure (retry next tick).
@@ -731,7 +802,8 @@ class GatewayTurnProgressMixin:
         if ctx._voice_ack_fired[0] or ctx._voice_ack_guild[0] is None or not ctx._run_still_current():
             return
         ctx._voice_ack_fired[0] = True
-        adapter = self._runner.adapters.get(Platform.DISCORD)
+        # The bot whose call the guild was resolved on (#139345), not the default profile's.
+        adapter = self._runner._delivery_adapter_for(ctx.source)
         if adapter is None or not hasattr(adapter, "play_ack_in_voice"):
             return
         try:
@@ -777,6 +849,9 @@ class GatewayTurnProgressMixin:
 
     def combined_tool_start_callback(self, call_id, tool_name, args):
         """Compose the voice ack + native task-card start consumers."""
+        if local_viewer_turn(self):
+            from gateway import local_viewer_events
+            local_viewer_events.note_tool_start(self, call_id, tool_name, args)
         self._publish_execution("tool.start", _tool_lifecycle_payload(call_id, tool_name, args))
         self._publish_api_tool("tool.start", call_id, tool_name, args)
         if self._ctx._voice_ack_guild[0] is not None:
@@ -787,16 +862,22 @@ class GatewayTurnProgressMixin:
     def combined_tool_complete_callback(self, call_id, tool_name, args, result):
         from agent.display import _detect_tool_failure
         is_error, _ = _detect_tool_failure(tool_name, result)
-        payload = {**_tool_lifecycle_payload(call_id, tool_name, args), "is_error": bool(is_error),
-                   "result": result if isinstance(result, str) else str(result)}
         owner = self._approval_owner
         live = owner[0].sessions.get(owner[1]) if owner is not None else None
         # A session's /verbose (gateway/session_busy_controls.py) ships the Result block text.
-        if live is not None and (getattr(live, "tool_progress_mode", None) or self._ctx.progress_mode) == "verbose":
-            from tui_gateway.tool_progress import _tool_result_text
-            payload["result_text"] = _tool_result_text(result)
+        verbose = live is not None and (getattr(live, "tool_progress_mode", None) or self._ctx.progress_mode) == "verbose"
+        payload = _tool_complete_payload(call_id, tool_name, args, result, is_error=is_error, verbose=verbose)
+        if local_viewer_turn(self):
+            from gateway import local_viewer_events
+            payload.update(local_viewer_events.complete_fields(self, call_id, tool_name, args, result))
         self._publish_execution("tool.complete", payload)
+        if local_viewer_turn(self) and isinstance(payload.get("todos"), list):
+            # Task state is application data, not tool chrome: the full snapshot, as the TUI gateway emits it.
+            self._publish_execution("todo.updated", {"todos": payload["todos"], "revision": payload.get("revision", 0)})
         self._publish_api_tool("tool.complete", call_id, tool_name, args, result)
+        if local_viewer_turn(self):
+            from gateway import local_viewer_events
+            local_viewer_events.publish_control_if_changed(self)
         if self._ctx._native_slack_task_cards:
             self.native_tool_complete_callback(call_id, tool_name, args, result)
 
@@ -807,6 +888,11 @@ class GatewayTurnProgressMixin:
         if not ctx._run_still_current():
             return
         self._publish_execution("agent.step", {"iteration": iteration})
+        if iteration > 1 and local_viewer_turn(self):
+            # Each step after the first follows a finished API call: main's CLI repainted its status
+            # bar from the agent's counters right then (the last call is covered at turn end).
+            from gateway.session_usage import publish_usage
+            publish_usage(self, ctx.agent_holder[0])
         if not ctx._hooks_ref.loaded_hooks:
             return
         # prev_tools may be list[str] or list[dict] with "name"/"result" keys. Normalise so
@@ -828,6 +914,22 @@ class GatewayTurnProgressMixin:
         except Exception as e:
             logger.debug("event_callback hook error: %s", e)
 
+    def _local_notice_callback_sync(self, notice) -> None:
+        """``AgentNotice`` -> ``notification.show`` for local viewers (the TUI's payload)."""
+        from gateway.warning_notifications import is_diagnostic_notice, render_notification
+        ctx = self._ctx
+        if ctx.mute_notification_reply or not self._status_live() or not str(notice.text or "").strip():
+            return
+        render_notification(lambda: self._publish_execution("notification.show", {
+            "text": str(notice.text).strip(), "level": notice.level, "kind": notice.kind,
+            "ttl_ms": notice.ttl_ms, "key": notice.key, "id": notice.id}),
+            platform=ctx.source.platform, user_config=ctx.user_config, diagnostic=is_diagnostic_notice(notice))
+
+    def _local_notice_clear_callback_sync(self, key) -> None:
+        """Recovery -> ``notification.clear`` for local viewers (main's TUI payload)."""
+        if key and self._status_live():
+            self._publish_execution("notification.clear", {"key": str(key)})
+
     def _status_live(self) -> bool:
         """Status adapter present and this run is still the current generation."""
         return bool(self._ctx._status_adapter) and self._ctx._run_still_current()
@@ -848,8 +950,20 @@ class GatewayTurnProgressMixin:
                 "Gateway auto-title failure suppressed (not user-visible): %s: %s", task, exc,
             )
             session_id = getattr(agent, "session_id", None)
-            source = ctx.source
+            if local_viewer_turn(self):
+                # Main's CLI repainted its status-bar title when the auto-title landed.
+                authority, canonical_id, _generation = self._approval_owner
+
+                def republish(title, title_source):
+                    from gateway.session_contract import SessionRef
+                    from gateway.session_local import local_session_info
+                    ref = SessionRef(getattr(authority, "profile_id", ""), canonical_id)
+                    authority.sessions[canonical_id].event_stream.publish(
+                        canonical_id, local_session_info(authority, ref), event_type="session.info")
+                agent._on_session_title = republish
+                return
             runner = self._runner
+            source = runner._recover_discord_auto_thread_source(ctx.source, ctx.session_key)
             # Both lanes spend a rate-limited platform call per title, so they use the model's title
             # only (TitleCallback); renaming twice burns Discord's 2-per-10-min budget on a throwaway.
             # Relay Discord predicate is shape-only: whether the connector auto-threaded our reply is
@@ -882,6 +996,10 @@ class GatewayTurnProgressMixin:
             )
             return
         def present():
+            if local_viewer_turn(self):
+                self._publish_execution("status.update", {"kind": _viewer_status_kind(event_type, prepared),
+                                                          "text": prepared})
+                return
             fut = self._schedule(
                 _send_or_update_status_coro(ctx._status_adapter, ctx._status_chat_id, event_type, prepared, ctx._status_thread_metadata),
                 f"status_callback ({event_type}) scheduling error",
@@ -890,3 +1008,18 @@ class GatewayTurnProgressMixin:
                 fut.add_done_callback(self._track_future_cleanup_id)
         render_notification(present, platform=ctx.source.platform, user_config=ctx.user_config,
                             diagnostic=is_warning_status(event_type, message))
+
+
+def local_viewer_turn(runner) -> bool:
+    """A local route's viewers read the canonical event stream; ``LocalSessionAdapter.send``
+    publishes nothing, so status and notices go to that stream instead. So does a conversation its
+    chat moved past (gateway/session_detached.py): it delivers through that same adapter."""
+    source = getattr(runner._ctx, "source", None) if getattr(runner, "_approval_owner", None) is not None else None
+    from gateway.session_detached import detached_route_of
+    return getattr(source, "platform", None) == Platform.LOCAL or detached_route_of(source) is not None
+
+
+def _viewer_status_kind(kind, text):
+    """The TUI's ``status.update`` kind: auto-compaction progress is re-tagged ``compacting``."""
+    from agent.conversation_compression import is_compaction_progress_status
+    return "compacting" if kind == "lifecycle" and is_compaction_progress_status(text) else str(kind)

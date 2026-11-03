@@ -12,7 +12,7 @@ async def test_forwarded_identity_survives_reconnect_without_policy_override(tmp
     from gateway.config import GatewayConfig
     from gateway.session import SessionStore
     from gateway.session_authority import initialize_session_authority
-    import gateway.run as run
+    from gateway import run
     from gateway.session_policy import build_policy
     from hermes_state_runtime import RuntimeStoreError
 
@@ -67,7 +67,7 @@ async def test_forwarding_does_not_merge_lossy_context_or_peer_identity(tmp_path
     from gateway.config import GatewayConfig
     from gateway.session import SessionStore
     from gateway.session_authority import initialize_session_authority
-    import gateway.run as run
+    from gateway import run
 
     monkeypatch.setenv('HERMES_HOME', str(tmp_path))
     monkeypatch.setattr(run, '_load_gateway_config', lambda: {'model': {'default': 'fixture'}, 'platform_toolsets': {'cli': []}})
@@ -96,8 +96,12 @@ async def test_forwarding_does_not_merge_lossy_context_or_peer_identity(tmp_path
     db.set_session_title('legacy', 'a2a-dev-old-context')
     legacy = await conn.dispatch({'id': 3, 'method': 'a2a.forward', 'params': dict(
         agent='dev', tenant='team', peer='alice', context_id='old/context', input_id='first', text='hello')})
-    assert legacy['error']['message'] == 'runtime_coordination_required'
+    # A colliding pre-authority title is neither adopted nor a permanent refusal: the exact
+    # identity gets its own session and the old row keeps its title and history.
+    assert 'result' in legacy, legacy
+    assert legacy['result']['session_id'] not in {'legacy', *ids}
     assert db.get_session('legacy')['title'] == 'a2a-dev-old-context'
+    assert db.get_messages('legacy') == []
     denied = AuthorityConnection(authority, SimpleNamespace(write=lambda frame: None),
         {'user_id': 'reader', 'capabilities': ['session:read']})
     result = await denied.dispatch({'id': 1, 'method': 'a2a.forward', 'params': dict(
@@ -119,7 +123,7 @@ async def test_forwarded_turns_are_authored_by_the_peer_for_memory_attribution(t
     from gateway.session_ingress import row_turn_author
     from agent.turn_author import a2a_key
     from hermes_state_runtime import list_session_admissions
-    import gateway.run as run
+    from gateway import run
 
     monkeypatch.setenv('HERMES_HOME', str(tmp_path))
     monkeypatch.setattr(run, '_load_gateway_config', lambda: {'model': {'default': 'fixture'}, 'platform_toolsets': {'cli': []}})
@@ -153,3 +157,45 @@ async def test_forwarded_turns_are_authored_by_the_peer_for_memory_attribution(t
     assert row_turn_author(None, row) is None
     await conn.close()
     authority.db.close()
+
+
+@pytest.mark.asyncio
+async def test_forward_wakes_on_the_completion_frame_instead_of_a_fixed_100ms_poll(tmp_path, monkeypatch):
+    """A forwarded turn is observed through its subscribed completion frame; the exact durable
+    receipt is re-read on a backed-off safety tick, not ten authority RPCs a second for the turn."""
+    import asyncio
+    import time
+    from websockets.asyncio.server import serve
+    from hermes_cli import gateway_client
+    from hermes_cli import gateway_runtime
+    from gateway.session_a2a import forward_to_owner
+
+    calls = []
+
+    async def owner(ws):
+        async for raw in ws:
+            request = json.loads(raw)
+            calls.append(time.monotonic())
+            done = time.monotonic() - calls[0] >= 1.0
+            await ws.send(json.dumps({'jsonrpc': '2.0', 'id': request['id'], 'result': {
+                'status': 'terminal' if done else 'queued', 'admission_id': 'adm', 'outcome': 'completed'}}))
+            if len(calls) == 1:
+                async def complete():
+                    await asyncio.sleep(1.0)  # health: allow HX013 -- the fake turn's 1 s length is the window the RPC-count bound is measured over
+                    await ws.send(json.dumps({'jsonrpc': '2.0', 'method': 'event', 'params': {
+                        'type': 'message.complete', 'session_id': 's', 'payload': {'admission_id': 'adm'}}}))
+                asyncio.ensure_future(complete())
+
+    async with serve(owner, '127.0.0.1', 0, subprotocols=['hermes-gateway-v1']) as server:
+        port = server.sockets[0].getsockname()[1]
+        endpoint = SimpleNamespace(api_origin=f'http://127.0.0.1:{port}')
+        monkeypatch.setattr(gateway_runtime, 'ensure_gateway_runtime',
+                            lambda home: SimpleNamespace(state='ready', endpoint=endpoint, reason_code=None))
+        monkeypatch.setattr(gateway_client, '_session_ticket', lambda home, ep: 'fixture')
+        started = time.monotonic()
+        receipt = await forward_to_owner(tmp_path, agent='dev', tenant='', peer='alice', context_id='ctx',
+                                         input_id='i1', text='hello', timeout=10)
+        elapsed = time.monotonic() - started
+    assert receipt['status'] == 'terminal'
+    assert elapsed < 1.6, elapsed  # woken by the frame, not a late tick
+    assert len(calls) <= 5, f'{len(calls)} a2a.forward RPCs for a 1 s turn'

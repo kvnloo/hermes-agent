@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 import threading
+import time
 
 from tests.gateway.fixtures.local_recovery_probe import daemon, websocket, rpc
 
@@ -58,6 +59,20 @@ def _is_summary_round(body):
     return last['role'] == 'user' and 'maximum number of tool-calling iterations' in str(last.get('content', ''))
 
 
+def _settled_bytes(path, budget=10.0):
+    """Windows releases a killed daemon's byte-range locks asynchronously (msvcrt.locking -> EACCES
+    on read); wait for the release, bounded, so the leak scan still reads every file."""
+    import time
+    deadline = time.monotonic() + budget
+    while True:
+        try:
+            return path.read_bytes()
+        except PermissionError:
+            if os.name != 'nt' or time.monotonic() > deadline:
+                raise PermissionError(f'leak scan cannot read {path}') from None
+            time.sleep(.1)
+
+
 def probe(tmp_path):
     root = Path(__file__).resolve().parents[3]
     home, user = tmp_path / 'state', tmp_path / 'user'
@@ -92,10 +107,15 @@ def probe(tmp_path):
                         base_url=origin + '/' + side + '/v1', reasoning='high' if side == 'left' else 'low',
                         max_turns=1 if side == 'left' else 3, ignore_rules=side == 'left', toolsets='terminal')
         result = subprocess.run([sys.executable, '-c', 'import cli; cli.main(**' + repr(args) + ')'],
-            cwd=cwd, env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=70)
-        assert result.returncode == 0, result.stdout + result.stderr
+            cwd=cwd, env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=70, check=False)
+        # A budget run stops at --max-turns with the work unfinished: `chat -Q` exits 1 (documented
+        # contract, same as the in-process CLI), never 0.
+        assert result.returncode == (1 if budget else 0), result.stdout + result.stderr
         if not resume:
-            sessions[side] = re.search(r'Session: (\S+)', result.stderr).group(1)
+            # Main's `-q -Q` exit line (cli_single_query): `session_id: <sid>` on stderr.
+            found = re.search(r'^session_id: (\S+)$', result.stderr, re.MULTILINE)
+            assert found, result.stderr
+            sessions[side] = found.group(1)
         return result.stdout
 
     async def unauthorized(desc):
@@ -119,12 +139,13 @@ def probe(tmp_path):
                 result = await rpc(ws, 'prompt.submit', session_id=sid, input_id='restart-' + side, text='NEVER_INFER')
                 assert 'result' in result, result
                 admission = result['result']['admission_id']
-                async with asyncio.timeout(20):
-                    while True:
-                        result = await rpc(ws, 'prompt.receipt', session_id=sid, admission_id=admission)
-                        if result['result']['status'] == 'terminal':
-                            break
-                        await asyncio.sleep(.05)
+                deadline = time.monotonic() + 20
+                while True:
+                    result = await rpc(ws, 'prompt.receipt', session_id=sid, admission_id=admission)
+                    if result['result']['status'] == 'terminal':
+                        break
+                    assert time.monotonic() < deadline, result
+                    await asyncio.sleep(.05)
                 events = await rpc(ws, 'session.events.since', session_id=sid, last_sequence=0, replay_epoch=replay_epoch)
                 assert 'launch_credentials_unavailable' in json.dumps(events), events
 
@@ -140,11 +161,11 @@ def probe(tmp_path):
             config.write_text(json.dumps(cfg))
             for side in keys:
                 assert 'LAUNCH_POLICY_OK' in cli(side, sessions[side])
-            for side in keys:
+            for side, key in keys.items():
                 captured = [x for x in peer.requests if x['body']['model'] == 'gpt-5-' + side]
                 assert len(captured) == 2, captured
                 assert all(x['path'] == '/' + side + '/v1/chat/completions' for x in captured)
-                assert all(x['auth'] == 'Bearer ' + keys[side] for x in captured)
+                assert all(x['auth'] == 'Bearer ' + key for x in captured)
                 bodies = [x['body'] for x in captured]
                 assert all(b.get('reasoning_effort') == ('high' if side == 'left' else 'low') for b in bodies), bodies
                 systems = [[m for m in b['messages'] if m['role'] in {'system', 'developer'}] for b in bodies]
@@ -168,7 +189,7 @@ def probe(tmp_path):
         backups = home / 'backups' / 'config'  # copies of config.yaml itself (#109463), not a daemon leak
         for path in home.rglob('*'):
             if path.is_file() and backups not in path.parents \
-                    and any(key.encode() in path.read_bytes() for key in keys.values()):
+                    and any(key.encode() in _settled_bytes(path) for key in keys.values()):
                 leaks.append(str(path.relative_to(home)))
         assert not leaks, leaks
         return {'pids': pids, 'requests': count, 'concurrent_policies': True, 'auth_endpoint_model_reasoning': True,

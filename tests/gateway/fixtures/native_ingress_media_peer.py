@@ -10,6 +10,7 @@ import threading
 import traceback
 
 from shared_authority_peer import ModelPeer
+from tests.waiting import wait_until
 
 
 async def probe(mode, peer):
@@ -88,6 +89,9 @@ async def probe(mode, peer):
             assert not event._gateway_accepted
         finally:
             digest_dir.unlink()
+        # Capture only admits (the owner is killed below with media-1 still queued and the second
+        # row claimed here). Admission commits off-loop, so a drain would otherwise run first.
+        authority._schedule = lambda ref: None
         receipt = await authority.admit_native(event)
         assert event._gateway_accepted
         saved = rows(receipt.ref.session_id)[0]
@@ -110,9 +114,13 @@ async def probe(mode, peer):
         assert claim_session_input(authority.db, epoch=authority.epoch, session_id=unknown.ref.session_id)
         evidence = dict(sid=receipt.ref.session_id, saved=saved, unknown_sid=unknown.ref.session_id,
                         retained=str(retained), unknown=rows(unknown.ref.session_id))
-        (state / 'accepted.json').write_text(json.dumps(evidence))
-        threading.Event().wait(60)
-        raise AssertionError('parent failed to kill owner')
+        # Published by rename: the parent SIGKILLs this process the moment the file exists.
+        (state / 'accepted.tmp').write_text(json.dumps(evidence))
+        os.replace(state / 'accepted.tmp', state / 'accepted.json')
+        # Hang until the parent's SIGKILL lands; a parent that exits instead orphans us (reparent).
+        parent = os.getppid()
+        wait_until(lambda: os.getppid() != parent, timeout=60, interval=.05, what='the parent to kill this owner')
+        raise AssertionError('parent exited without killing owner')
 
     if mode == 'recover':
         before = json.loads((state / 'accepted.json').read_text())
@@ -209,13 +217,17 @@ async def probe(mode, peer):
         assert captured.message_type == kind and captured.media_types == [mime]
         assert captured.media_text_inlined == [False]
         assert Path(captured.media_urls[0]).read_bytes() == b'owned-media-' + kind.value.encode()
+    # An uncached remote URL is dropped with a note; the message text is still admitted.
+    remote = restore_native(snapshot_native(runner, replace(
+        event, media_urls=['https://example.invalid/not-captured'], media_types=['image/png'])))
+    assert remote.text.startswith('context\n') and 'image/png' in remote.text, remote.text
+    assert remote.media_urls == [] and remote.media_types == []
     denied = []
     cases = [replace(event, metadata={key: True}) for key in
              ('internal', 'whatsapp_from_owner', 'gateway_session_id', '_authorization_profile_home', 'arbitrary')]
     cases += [replace(event, source=replace(source, role_authorized=True)),
               replace(event, source=replace(source, delivered_via_upstream_relay=True)),
               replace(event, internal=True), replace(event, prompt_response={'prompt_id': 'forged'}),
-              replace(event, media_urls=['https://example.invalid/not-captured']),
               replace(event, channel_prompt={'untyped': True})]
     foreign_home = replace(source)
     foreign_home._authorization_profile_home = state / 'foreign-home'

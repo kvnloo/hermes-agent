@@ -200,9 +200,12 @@ def maybe_require_edit_approval(tool_name: str, arguments: dict[str, Any]) -> st
 def build_acp_edit_tool_call(proposal: EditProposal):
     """Build the ToolCallUpdate payload for ACP request_permission."""
     import acp
+    from agent.redact import redact_approval_display
 
+    # The title is display text; the diff keeps the raw path the client opens.
     return acp.update_tool_call(
-        f"edit-approval-{next(_PERMISSION_REQUEST_IDS)}", title=f"Approve edit: {proposal.path}", kind="edit",
+        f"edit-approval-{next(_PERMISSION_REQUEST_IDS)}", title=f"Approve edit: {redact_approval_display(proposal.path)}",
+        kind="edit",
         status="pending",
         content=[acp.tool_diff_content(path=proposal.path, old_text=proposal.old_text, new_text=proposal.new_text)],
         raw_input={"tool": proposal.tool_name, "arguments": proposal.arguments},
@@ -239,19 +242,3 @@ def make_acp_edit_approval_requester(
         return getattr(outcome, "outcome", None) == "selected" and getattr(outcome, "option_id", None) == "allow_once"
 
     return _requester
-
-
-# ---- BEGIN PLUGIN-COMPAT (revert-scheduled; see COMPAT_MANIFEST.md) ----
-# Names external plugins imported from this module before the Sep 2026 decomposition.
-# Internal code MUST NOT use these (scripts/check_compat_pointers.py fails CI if it does).
-# The whole block is removed by reverting the commit that added it.
-from concurrent.futures import TimeoutError as FutureTimeout  # noqa: F401,E402
-
-def clear_edit_approval_requester() -> None:
-    """Clear the current requester; primarily used by tests."""
-
-    _EDIT_APPROVAL_REQUESTER.set(None)
-
-def get_edit_approval_requester() -> EditApprovalRequester | None:
-    return _EDIT_APPROVAL_REQUESTER.get()
-# ---- END PLUGIN-COMPAT ----

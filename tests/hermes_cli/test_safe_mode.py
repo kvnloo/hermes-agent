@@ -11,7 +11,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
-import pty
 import re
 import select
 import sqlite3
@@ -23,6 +22,7 @@ import time
 import pytest
 
 from tests.gateway.fixtures.local_recovery_probe import daemon, rpc, websocket
+from tests.waiting import async_wait_until
 
 
 class Model(BaseHTTPRequestHandler):
@@ -56,6 +56,7 @@ class Model(BaseHTTPRequestHandler):
 
 def _pty_cli(argv, cwd, env, timeout=90):
     """Real PTY launch: stdin/stdout/stderr are a terminal, like a user's shell."""
+    import pty  # POSIX-only; the module must still collect on Windows
     master, slave = pty.openpty()
     proc = subprocess.Popen(argv, cwd=cwd, env=env, stdin=slave, stdout=slave, stderr=slave, close_fds=True)
     os.close(slave)
@@ -158,7 +159,10 @@ def test_canonical_safe_launch_is_frozen_policy_executed_in_isolated_worker(tmp_
             return db.execute(sql, args).fetchall()
 
     def records():
-        return [json.loads(line) for line in audit.read_text(encoding='utf-8').splitlines()]
+        # The owner and its children keep appending while we read, and on ext4/tmpfs a read can
+        # land mid-append. A record's newline is the last byte written, so only newline-terminated
+        # lines are finished records; an unterminated tail is an append still in flight.
+        return [json.loads(line) for line in audit.read_text(encoding='utf-8').split('\n')[:-1]]
 
     def worker_pids(owner_pid):
         return sorted({r['pid'] for r in records() if r['kind'] == 'start' and r['ppid'] == owner_pid
@@ -175,9 +179,9 @@ def test_canonical_safe_launch_is_frozen_policy_executed_in_isolated_worker(tmp_
             sid = created['result']['session_id']
             submitted = await rpc(ws, 'prompt.submit', session_id=sid, input_id='ordinary-input', text='ORDINARY_PROBE')
             assert 'result' in submitted, submitted
-            async with asyncio.timeout(60):
-                while query('SELECT status FROM session_admissions WHERE request_id=?', ('ordinary-input',)) != [('terminal',)]:
-                    await asyncio.sleep(.05)
+            await async_wait_until(
+                lambda: query('SELECT status FROM session_admissions WHERE request_id=?', ('ordinary-input',)) == [('terminal',)],
+                timeout=60, interval=.05, what='the ordinary turn to settle')
             return sid
 
     def safe_cli(request_tag, *flags):
@@ -204,7 +208,7 @@ def test_canonical_safe_launch_is_frozen_policy_executed_in_isolated_worker(tmp_
             assert any('/plugins/' in p for p in owner_opens) and any(p.endswith('config.yaml') for p in owner_opens)
 
             # Canonical safe launch through the real CLI on a real PTY.
-            safe_sid, output = safe_cli('one', '--safe-mode')
+            safe_sid, _output = safe_cli('one', '--safe-mode')
             assert query('SELECT status FROM session_admissions WHERE target_session_id=?', (safe_sid,)) == [('terminal',)]
             assert query('SELECT status FROM worker_executions WHERE session_id=?', (safe_sid,)) == [('terminal',)]
             policy = json.loads(query('SELECT value FROM state_meta WHERE key=?', ('gateway.local_policy.v1:' + safe_sid,))[0][0])['policy']
@@ -241,7 +245,7 @@ def test_canonical_safe_launch_is_frozen_policy_executed_in_isolated_worker(tmp_
 
             # Config-only keeps plugin discovery (the gate is safe_mode), yet reads no profile YAML.
             (home / 'config.yaml').write_text(json.dumps(config), encoding='utf-8')
-            config_sid, _ = safe_cli('three', '--ignore-user-config')
+            _config_sid, _ = safe_cli('three', '--ignore-user-config')
             config_worker = [p for p in worker_pids(owner.pid) if p not in workers][-1]
             config_opens = [r['path'] for r in records() if r['kind'] == 'open' and r['pid'] == config_worker]
             assert any('/plugins/' in p for p in config_opens), 'config-only must still discover plugins'

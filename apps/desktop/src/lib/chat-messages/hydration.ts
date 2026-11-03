@@ -3,6 +3,7 @@ import { skillInvocationText } from '@hermes/shared'
 import { formatRefValue } from '@/components/assistant-ui/directive-text'
 import { splitLeadingAttachmentRefs } from '@/components/assistant-ui/reference-kinds'
 import { extractImageRefs } from '@/lib/embedded-images'
+import { parseErrorSurface } from '@/lib/error-surface'
 import { dedupeGeneratedImageEchoesInParts } from '@/lib/generated-images'
 import { isTodoToolName } from '@/lib/todos'
 import type { MessageReaction, SessionMessage } from '@/types/hermes'
@@ -12,6 +13,7 @@ import {
   chatMessageText,
   dedupeRepeatedTextInParts,
   reasoningPart,
+  reasoningTextFromDetails,
   renderMediaTags,
   textPart
 } from './parts'
@@ -171,8 +173,7 @@ function transcriptContent(
 
 /**
  * Backend-authored transcript notices. The gateway persists these itself and no
- * view "sent" them, so they render as system rows but are not authored
- * transcript content (see `ChatMessage.systemNotice`).
+ * view "sent" them, so they render as system rows.
  */
 const NOTICE_DISPLAY_KINDS = [
   'model_switch',
@@ -204,6 +205,29 @@ function parseDisplayMetadata(metadata: SessionMessage['display_metadata']): nul
   return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null
 }
 
+// A micro-compaction merge (`display_metadata.model_only`) is the model's copy of prompts whose originals
+// the history shows: the owner's resume snapshot keeps it as an undo target, and it is never painted.
+function isPainted(message: SessionMessage): boolean {
+  return parseDisplayMetadata(message.display_metadata)?.model_only !== true
+}
+
+// `agent/conversation_loop.py::_failed_turn_display_metadata`: the failed turn's error card,
+// kept on its boundary row so a reopened session shows it after the live frame is gone.
+function failedTurnError(
+  metadata: SessionMessage['display_metadata']
+): null | Pick<ChatMessage, 'error' | 'errorSurface'> {
+  const parsed = parseDisplayMetadata(metadata)
+  const errorSurface = parseErrorSurface(parsed?.error_surface)
+
+  if (!errorSurface) {
+    return null
+  }
+
+  const error = typeof parsed?.error === 'string' && parsed.error.trim() ? parsed.error : errorSurface.code
+
+  return { error, errorSurface }
+}
+
 function timelineTaskCount(metadata: SessionMessage['display_metadata']): number | undefined {
   const count = parseDisplayMetadata(metadata)?.task_count
 
@@ -214,6 +238,26 @@ function timelineDisplayText(metadata: SessionMessage['display_metadata']): stri
   const text = parseDisplayMetadata(metadata)?.display_text
 
   return typeof text === 'string' && text.trim() ? text : undefined
+}
+
+function messageInterrupted(metadata: SessionMessage['display_metadata']): boolean {
+  return parseDisplayMetadata(metadata)?.interrupted === true
+}
+
+/** An assistant row read into the tool bubble before it. A reply stopped after a
+ *  tool round folds in here, and its row still says the reply was stopped. */
+function foldIntoToolBubble(
+  bubble: ChatMessage,
+  message: SessionMessage,
+  parts: ChatMessagePart[],
+  durableComplete: boolean | undefined
+): void {
+  bubble.parts = [...bubble.parts, ...parts]
+  bubble.durableComplete = durableComplete
+
+  if (messageInterrupted(message.display_metadata)) {
+    bubble.interrupted = true
+  }
 }
 
 function messageReactions(metadata: SessionMessage['display_metadata']): MessageReaction[] {
@@ -395,7 +439,26 @@ export function toChatMessages(messages: SessionMessage[]): ChatMessage[] {
     clearPendingTools()
   }
 
-  messages.forEach((message, index) => {
+  // The empty row closing a turn stopped during its tool run draws nothing, but it is
+  // the turn's last stored row and the one that says it was stopped: the mark goes on
+  // the bubble that row closes, as a folded reply's does (foldIntoToolBubble).
+  const lendStoppedMark = (message: SessionMessage, index: number) => {
+    if (!messageInterrupted(message.display_metadata)) {
+      return
+    }
+
+    flushPendingTools(index)
+    const bubble = activeAssistantIndex === null ? undefined : result[activeAssistantIndex]
+
+    if (bubble?.role === 'assistant') {
+      bubble.interrupted = true
+    }
+  }
+
+  // `index` stays the stored row position (it keys tool-part and message ids), so skipped merges shift nothing.
+  const painted = messages.flatMap((message, index) => (isPainted(message) ? [{ index, message }] : []))
+
+  painted.forEach(({ message, index }) => {
     if (message.role === 'assistant') {
       nearestAssistant = message
     } else if (message.role === 'user' || message.role === 'system') {
@@ -469,9 +532,7 @@ export function toChatMessages(messages: SessionMessage[]): ChatMessage[] {
     const commentary = codexText?.commentary ?? []
 
     const rawReasoning =
-      message.reasoning ||
-      message.reasoning_content ||
-      (typeof message.reasoning_details === 'string' ? message.reasoning_details : '')
+      message.reasoning || message.reasoning_content || reasoningTextFromDetails(message.reasoning_details)
 
     const reasoning = message.display_reasoning !== undefined ? message.display_reasoning : rawReasoning
 
@@ -516,7 +577,9 @@ export function toChatMessages(messages: SessionMessage[]): ChatMessage[] {
     }
 
     if (!parts.length && !extractedAttachmentRefs?.length) {
-      if (message.role !== 'assistant') {
+      if (message.role === 'assistant') {
+        lendStoppedMark(message, index)
+      } else {
         flushPendingTools(index)
         activeAssistantIndex = null
       }
@@ -537,7 +600,9 @@ export function toChatMessages(messages: SessionMessage[]): ChatMessage[] {
 
     let pendingAbsorbedRows = 0
 
-    if (message.role === 'assistant') {
+    // A machine notice stored as an assistant row (the failed-turn boundary) is
+    // Hermes speaking: it must not join the tool-call reply it follows.
+    if (displayRole === 'assistant') {
       if (pendingToolParts.length) {
         if (!appendPartsToActiveAssistant(pendingToolParts, message.timestamp ?? pendingToolTimestamp)) {
           parts.unshift(...pendingToolParts)
@@ -556,8 +621,7 @@ export function toChatMessages(messages: SessionMessage[]): ChatMessage[] {
       const activeHasToolCall = Boolean(activeAssistant?.parts.some(part => part.type === 'tool-call'))
 
       if (activeAssistant && (currentHasToolCall || activeHasToolCall)) {
-        activeAssistant.parts = [...activeAssistant.parts, ...parts]
-        activeAssistant.durableComplete = durableComplete
+        foldIntoToolBubble(activeAssistant, message, parts, durableComplete)
         activeAssistant.timestamp = earliestTimestamp(
           activeAssistant.timestamp,
           message.timestamp,
@@ -569,6 +633,21 @@ export function toChatMessages(messages: SessionMessage[]): ChatMessage[] {
       }
     } else {
       flushPendingTools(index)
+    }
+
+    const failure = message.display_kind === 'failed_turn' ? failedTurnError(message.display_metadata) : null
+
+    if (failure) {
+      // Stands for no backend row of its own; the boundary row below counts itself.
+      result.push({
+        id: `${message.timestamp || Date.now()}-${index}-failed-turn-error`,
+        role: 'assistant',
+        parts: [],
+        pending: false,
+        serverRowSpan: 0,
+        ...failure,
+        ...(message.timestamp ? { timestamp: message.timestamp } : {})
+      })
     }
 
     const reactions = messageReactions(message.display_metadata)
@@ -584,11 +663,11 @@ export function toChatMessages(messages: SessionMessage[]): ChatMessage[] {
         ? { asyncResult: asyncResultBody(displayContentForMessage(message.role, message.content || content)) }
         : {}),
       ...(message.display_kind === 'process_complete' ? { asyncResultKind: 'process' as const } : {}),
-      ...(isMachineNotice(message.display_kind) ? { systemNotice: true } : {}),
       timestamp: earliestTimestamp(message.timestamp, ...parts.map(part => part.timestamp)),
       ...(rowId !== undefined ? { rowId } : {}),
       ...(pendingAbsorbedRows > 0 ? { serverRowSpan: pendingAbsorbedRows + 1 } : {}),
       ...(reactions.length ? { reactions } : {}),
+      ...(message.role === 'assistant' && messageInterrupted(message.display_metadata) ? { interrupted: true } : {}),
       ...(extractedAttachmentRefs ? { attachmentRefs: extractedAttachmentRefs } : {})
     })
 
@@ -604,7 +683,8 @@ export function toChatMessages(messages: SessionMessage[]): ChatMessage[] {
 
   return withUniqueToolCallIds(
     withoutGeneratedImageEchoes.filter(
-      m => chatMessageText(m).trim() || m.parts.some(part => part.type !== 'text') || m.attachmentRefs?.length
+      m =>
+        chatMessageText(m).trim() || m.parts.some(part => part.type !== 'text') || m.attachmentRefs?.length || m.error
     )
   )
 }

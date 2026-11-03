@@ -9,6 +9,7 @@ import threading
 import traceback
 
 from tests.gateway.fixtures.shared_authority_peer import ModelPeer
+from tests.waiting import async_wait_until
 
 
 async def probe(peer, creator):
@@ -134,14 +135,13 @@ async def probe(peer, creator):
             assert await rpc(viewer, 'prompt.submit', **followup) == accepted
             rows = list_session_admissions(authority.db, session_id=sid, pending_only=False)
             assert len(rows) == 2, rows
+            # Hermes is single-user: the dashboard login is the machine owner, so both surfaces'
+            # admissions carry the owner's own OS subject and neither is an operator hand-off.
             assert rows[0]['principal_id'] == original_owner, rows
-            assert rows[1]['principal_id'] != original_owner, rows
-            assert rows[1]['payload']['local_operator_v1'] == {
-                'profile_id': authority.profile_id, 'session_id': sid,
-                'principal_id': rows[1]['principal_id']}
+            assert rows[1]['principal_id'] == original_owner, rows
+            assert all('local_operator_v1' not in row['payload'] for row in rows), rows
             attribution = [row['principal_id'] for row in rows]
-            assert any(subject.startswith('uid:') for subject in attribution), attribution
-            assert len(set(attribution)) == 2
+            assert all(subject.startswith('uid:') for subject in attribution), attribution
             await owner.close()
             await viewer.close()
             # No connected viewer owns this accepted work. A new surface sees the same queue.
@@ -149,12 +149,10 @@ async def probe(peer, creator):
             assert (await rpc(viewer, 'session.resume', session_id=sid))['stored_session_id'] == sid
             assert await rpc(viewer, 'prompt.submit', **followup) == accepted
             peer.release.set()
-            async with asyncio.timeout(45):
-                while True:
-                    rows = list_session_admissions(authority.db, session_id=sid, pending_only=False)
-                    if len(rows) == 2 and all(row['status'] == 'terminal' for row in rows):
-                        break
-                    await asyncio.sleep(.05)
+            def settled():
+                rows = list_session_admissions(authority.db, session_id=sid, pending_only=False)
+                return rows if len(rows) == 2 and all(row['status'] == 'terminal' for row in rows) else None
+            rows = await async_wait_until(settled, timeout=45, what='both admissions terminal')
             assert [row['principal_id'] for row in rows] == attribution
             assert local_receipt(authority.db, sid)['principal_id'] == original_owner
             messages = authority.db.get_messages_as_conversation(sid)
@@ -176,7 +174,7 @@ async def probe(peer, creator):
             assert 'LOCAL_ACK_WS_SHARED' in json.dumps(snapshot['messages'])
             assert 'local_operator_v1' not in json.dumps([initial, attached, accepted, replay, snapshot])
             (home / 'operator-receipt.json').write_text(json.dumps(dict(
-                creator=creator, model_requests=len(peer.requests), distinct_attribution=True,
+                creator=creator, model_requests=len(peer.requests), owner_attribution=True,
                 disconnect_survived=True, negative_boundaries=True)))
     finally:
         peer.release.set()

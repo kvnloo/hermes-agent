@@ -66,14 +66,14 @@ def test_worker_binds_bypass_policy_before_runtime_imports(tmp_path, mode):
     script.write_text(f'''
 import json, os, sys, threading
 sys.path.insert(0, {str(root)!r})
-from agent.managed_worker import bind_bypass_policy
+from agent.managed_worker import bind_worker_policy
 home = os.environ['HERMES_HOME']
 frame = {{'safe_mode': {mode == 'safe'!r}, 'ignore_user_config': True,
          'policy': {{'config_json': json.dumps({{'model': {{'default': 'safe-fixture', 'provider': 'custom'}},
                     'plugins': {{'enabled': ['sentinel']}}, 'agent': {{'max_turns': 7}}}})}}}}
 opened = []
 sys.addaudithook(lambda event, args: opened.append(str(args[0])) if event == 'open' and home in str(args[0]) else None)
-bind_bypass_policy(frame)
+bind_worker_policy(frame)
 from hermes_cli.config import load_config, read_raw_config
 from hermes_cli.plugins import discover_plugins, get_plugin_manager
 discover_plugins()
@@ -86,10 +86,11 @@ print(json.dumps({{'max_turns': cfg['agent']['max_turns'], 'raw_model': raw['mod
     'opened': opened, 'plugins': sorted(get_plugin_manager()._plugins),
     'executed': os.path.exists(os.path.join(home, 'plugin-executed'))}}))
 ''', encoding='utf-8')
-    env = {k: os.environ[k] for k in ('PATH', 'LANG', 'TZ', 'TIRITH_ENABLED') if k in os.environ}
-    env.update(HOME=str(tmp_path), HERMES_HOME=str(home), PYTHONPATH=str(root))
+    from tests.gateway.fixtures.local_recovery_probe import child_env
+    env = {**child_env(), **{k: os.environ[k] for k in ('TIRITH_ENABLED',) if k in os.environ}}
+    env.update(HOME=str(tmp_path), USERPROFILE=str(tmp_path), HERMES_HOME=str(home), PYTHONPATH=str(root))
     result = subprocess.run([sys.executable, str(script)], cwd=root, env=env, stdin=subprocess.DEVNULL,
-                            capture_output=True, text=True, timeout=90)
+                            capture_output=True, text=True, timeout=90, check=False)
     assert result.returncode == 0, result.stdout + result.stderr
     receipt = json.loads(result.stdout.strip().splitlines()[-1])
     assert receipt['max_turns'] == 7 and receipt['helper'] == 7

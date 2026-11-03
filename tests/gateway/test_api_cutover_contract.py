@@ -4,22 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from gateway.config import Platform, PlatformConfig
-from gateway.platforms.api_server import APIServerAdapter
 from gateway.session_api_turn import admit_api_turn, api_execution
-from tests.gateway.test_api_source_binding import owner
-
-
-@pytest.fixture
-def api(owner, tmp_path, monkeypatch):
-    monkeypatch.setenv('HERMES_HOME', str(tmp_path))
-    adapter = APIServerAdapter(PlatformConfig(enabled=True))
-    adapter.gateway_runner = owner.runner
-    adapter._session_db = owner.db
-    owner.runner._adapter_for_source = lambda source: adapter
-    yield adapter
-    adapter._response_store.close()
-    adapter._run_idempotency_store.close()
 
 
 def test_declared_key_is_durable_and_cannot_rebind(api, owner):
@@ -64,7 +49,6 @@ async def test_structured_content_bypasses_text_parser_without_losing_parts(api,
         return 'ok'
     owner.runner._handle_message = handle
     assert await execute_admission(owner, ref, row) == 'ok'
-
 
 
 def test_api_author_is_admission_scoped_not_session_identity(api, owner):
@@ -124,3 +108,71 @@ def test_persisted_owner_scope_is_private_strict_and_legacy_safe(api, owner):
         api, session_id='legacy-ownerless', active_run_id='run_legacy_ownerless',
         user_message='old', conversation_history=[])
     assert not owns_api_run(api, 'run_legacy_ownerless', scope)
+
+
+@pytest.mark.parametrize('queued_follower', [False, True], ids=['next-request', 'queued-follower'])
+def test_compressed_api_conversation_keeps_its_root_queue_and_follows_the_tip(api, owner, queued_follower):
+    """``compression.in_place=false`` moves the routing entry to the compression child; the API
+    binding stays on the root, which remains the FIFO identity. The next request on the same
+    declared conversation (and a follower already queued behind the compressing turn) must keep
+    admitting/executing on the root instead of failing ``admission_conflict``."""
+    from gateway.session_api_turn import check_api_turn
+    from hermes_state_runtime import claim_session_input, list_session_admissions
+
+    def admit(request_id):
+        return admit_api_turn(api, request_id=request_id, gateway_session_key='compressed',
+                              bind_declared_conversation=True, user_message=request_id, conversation_history=[])
+    _, ref, first = admit('first')
+    if queued_follower:
+        follower = admit('follower')[2]
+    claim_session_input(owner.db, epoch=owner.epoch, session_id=ref.session_id)
+    owner.db.append_message(ref.session_id, 'user', 'first')
+    child = ref.session_id + '-child'
+    owner.db.publish_compression_child(parent_session_id=ref.session_id, child_session_id=child,
+                                       source='api_server', messages=[{'role': 'user', 'content': 'summary'}],
+                                       require_compression_lease=False)
+    route = owner.sessions[ref.session_id].route
+    assert owner.runner.session_store.advance_compression_session(route, ref.session_id, child) is not None
+    if queued_follower:
+        check_api_turn(owner, ref, follower['payload'])
+    else:
+        _, again, row = admit('second')
+        assert again == ref and row['target_session_id'] == ref.session_id
+    assert owner.runner.session_store.peek_session_id(route) == child
+    assert {r['target_session_id'] for r in list_session_admissions(owner.db, session_id=ref.session_id,
+                                                                     pending_only=False)} == {ref.session_id}
+    assert first['target_session_id'] == ref.session_id
+
+
+@pytest.mark.asyncio
+async def test_a_turn_queued_with_browser_control_recovers_and_runs_without_it(api, owner, monkeypatch):
+    """Admissions queued before browser-extension control was removed carry ``browser_control`` in their
+    stored payload. After the upgrade, startup recovery accepts them and they run; the key reaches nothing."""
+    from gateway.session_api_turn import recover_api_turns
+    from gateway.session_ingress import execute_admission
+    from gateway.session_results import execution_result
+    from hermes_state_runtime import list_session_admissions
+    _, ref, row = admit_api_turn(api, session_id='legacy-browser-control', request_id='queued-turn',
+                                 user_message='hello', conversation_history=[])
+    stored = json.loads(json.dumps(row['payload']))
+    stored['api_turn_v1']['browser_control'] = {'principal': 'principal:default:abc', 'transport_family': 'local-api'}
+    owner.db._execute_write(lambda conn: conn.execute(
+        'UPDATE session_admissions SET payload_json=? WHERE admission_id=?', (json.dumps(stored), row['admission_id'])))
+    owner.sessions.clear()  # the upgraded gateway knows the session only from its store
+    scheduled = []
+    monkeypatch.setattr(owner, '_schedule', lambda ref: scheduled.append(ref.session_id))
+    recover_api_turns(api)
+    assert scheduled == [ref.session_id]
+
+    [legacy] = list_session_admissions(owner.db, session_id=ref.session_id)
+    assert 'browser_control' in legacy['payload']['api_turn_v1']
+    seen = []
+
+    async def handle(event):
+        seen.append((event.text, dict(api_execution.get())))
+        execution_result.get()['result'] = {'final_response': 'ok'}
+        return 'ok'
+    owner.runner._handle_message = handle
+    assert await execute_admission(owner, ref, legacy) == 'ok'
+    [(text, execution)] = seen
+    assert text == 'hello' and 'browser_control' not in execution

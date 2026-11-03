@@ -175,7 +175,7 @@ async def test_start_gateway_replace_aborts_when_force_killed_pid_still_alive(
     monkeypatch.setattr("gateway.status.get_running_pid", lambda: 42)
     monkeypatch.setattr("gateway.status.remove_pid_file", _mock_remove_pid_file)
     monkeypatch.setattr(
-        "gateway.status.release_all_scoped_locks",
+        "gateway.status_scoped_locks.release_all_scoped_locks",
         _mock_release_all_scoped_locks,
     )
     monkeypatch.setattr(
@@ -300,7 +300,7 @@ async def test_start_gateway_replace_writes_takeover_marker_before_sigterm(
         "gateway.status._get_process_start_time", lambda pid: 0 if pid == 42 else None
     )
     monkeypatch.setattr(
-        "gateway.status.release_all_scoped_locks",
+        "gateway.status_scoped_locks.release_all_scoped_locks",
         lambda **kwargs: 0,
     )
     monkeypatch.setattr("gateway.status.write_takeover_marker", record_write_marker)
@@ -351,6 +351,21 @@ async def test_start_gateway_replace_clears_marker_on_permission_denied(
         raise PermissionError("simulated EPERM")
 
     monkeypatch.setattr("gateway.status.get_running_pid", lambda: 42)
+    # Ownership guard (#89315): a bound same-home record for target pid 42, so the replace flow
+    # actually reaches the SIGTERM (and its EPERM) instead of refusing on unprovable ownership.
+    monkeypatch.setattr(
+        "gateway.status._read_pid_record",
+        lambda path=None: {
+            "pid": 42,
+            "kind": "hermes-gateway",
+            "argv": ["python", "-m", "hermes_cli.main", "gateway", "run"],
+            "start_time": 0,
+            "hermes_home": str(tmp_path),
+        },
+    )
+    monkeypatch.setattr(
+        "gateway.status._get_process_start_time", lambda pid: 0 if pid == 42 else None
+    )
     monkeypatch.setattr("gateway.status.write_takeover_marker", write_marker)
     monkeypatch.setattr("gateway.status.terminate_pid", raise_permission)
     monkeypatch.setattr("gateway.run.os.getpid", lambda: 100)
@@ -390,6 +405,8 @@ async def test_runner_degrades_gracefully_when_all_adapters_missing(monkeypatch,
     # Simulate _create_adapter returning None for ALL platforms (missing library /
     # missing credentials — no connection attempt ever made).
     monkeypatch.setattr(runner, "_create_adapter", lambda platform, cfg: None)
+    # ...because no plugin registered them, so the reconnect watcher may still heal them.
+    monkeypatch.setattr("gateway.platform_registry.platform_registry.is_registered", lambda name: False)
 
     import logging
     with caplog.at_level(logging.WARNING):
@@ -399,9 +416,14 @@ async def test_runner_degrades_gracefully_when_all_adapters_missing(monkeypatch,
     assert ok is True
     assert runner.should_exit_cleanly is False
     assert runner.adapters == {}
-    # Runtime state must remain "running", not "startup_failed".
+    # Cron still runs; missing enabled platforms are flagged and queued for the reconnect watcher.
     state = read_runtime_status()
     assert state["gateway_state"] == "running"
+    assert set(runner._failed_platforms) == {Platform.TELEGRAM, Platform.DISCORD}
+    for platform in ("telegram", "discord"):
+        assert state["platforms"][platform]["state"] == "retrying"
+        assert state["platforms"][platform]["error_code"] == "adapter_unavailable"
+        assert state["platforms"][platform]["needs_attention"] is True
     # A warning must be emitted explaining why no platforms connected.
     assert any(
         "No adapter could be created" in record.message

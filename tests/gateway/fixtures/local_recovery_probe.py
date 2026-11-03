@@ -14,6 +14,7 @@ import time
 
 from websockets.asyncio.client import connect
 from tests.gateway.test_normal_runtime_boot import control
+from tests.waiting import async_wait_until
 
 
 class Model(BaseHTTPRequestHandler):
@@ -63,14 +64,27 @@ async def rpc(ws, method, **params):
                 return reply
 
 
-def websocket(home, desc):
+def websocket(home, desc, **kw):
     grant = control(home, 'session-ticket', {'profile_id': str(home), 'instance_id': desc['instance_id'], 'purpose': 'interactive'})
     return connect(desc['api_origin'].replace('http:', 'ws:') + '/api/ws',
-                   subprotocols=['hermes-gateway-v1', 'hermes-gateway-ticket.' + grant['ticket']])
+                   subprotocols=['hermes-gateway-v1', 'hermes-gateway-ticket.' + grant['ticket']], **kw)
+
+
+def seed_offline_models_dev(home):
+    """A fresh HERMES_HOME has no models.dev cache, so the daemon's first session.create (tool
+    availability -> vision check -> provider lookup) downloads the public registry in the foreground,
+    and a slow network outlasts rpc()'s deadline. A fresh on-disk cache is served without a request.
+    One unknown provider keeps lookups as empty as an unreachable registry; a test's own seed wins.
+    The cache is per profile home, so multiplexed profiles made before boot get one too."""
+    home = Path(home)
+    for cache in [home / 'models_dev_cache.json', *(p / 'models_dev_cache.json' for p in home.glob('profiles/*') if p.is_dir())]:
+        if not cache.exists():
+            cache.write_text(json.dumps({'hermes-test-offline': {'id': 'hermes-test-offline', 'env': [], 'models': {}}}))
 
 
 @contextmanager
 def daemon(root, home, env, *, barrier, fixture='local_recovery_daemon.py'):
+    seed_offline_models_dev(env.get('HERMES_HOME', home))
     command = [sys.executable, str(root / 'tests/gateway/fixtures' / fixture)] if barrier else [sys.executable, '-m', 'gateway.run']
     with (home / ('first.log' if barrier else 'restart.log')).open('w+') as log:
         proc = subprocess.Popen(command, cwd=root, env=env, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
@@ -125,9 +139,7 @@ def probe(tmp_path):
                 sessions[name] = result['result']['session_id']
             warm = await rpc(ws, 'prompt.submit', session_id=sessions['safe'], input_id='warm', text='WARM_HISTORY')
             assert warm['result']['status'] == 'queued', warm
-            async with asyncio.timeout(30):
-                while rows().get('warm') != 'terminal':
-                    await asyncio.sleep(.02)
+            await async_wait_until(lambda: rows().get('warm') == 'terminal', timeout=30, what='warm turn terminal')
             await rpc(ws, 'prompt.submit', session_id=sessions['unknown'], input_id='started', text='BLOCK_STARTED')
             assert await asyncio.to_thread(peer.blocked.wait, 20)
             await rpc(ws, 'prompt.submit', session_id=sessions['unknown'], input_id='follower', text='NEVER_REPLAY')
@@ -136,17 +148,14 @@ def probe(tmp_path):
             # The daemon stops itself immediately after this admission commits.
             await ws.send(json.dumps({'id': 'kill-boundary', 'method': 'prompt.submit', 'params': {
                 'session_id': sessions['safe'], 'input_id': 'safe', 'text': 'RECOVER_QUEUED'}}))
-            async with asyncio.timeout(20):
-                while rows().get('safe') != 'queued':
-                    await asyncio.sleep(.02)
+            await async_wait_until(lambda: rows().get('safe') == 'queued', timeout=20, what='safe admission queued')
             assert rows()['foreign'] == 'queued', rows()
             proc.kill()
             await asyncio.to_thread(proc.wait, 10)
     async def second(desc):
         async with websocket(home, desc) as ws:
-            async with asyncio.timeout(35):
-                while rows().get('safe') != 'terminal':
-                    await asyncio.sleep(.05)
+            await async_wait_until(lambda: rows().get('safe') == 'terminal', timeout=35, interval=.05,
+                                   what='recovered safe admission terminal')
             result = await rpc(ws, 'session.resume', session_id=sessions['safe'])
             assert 'result' in result, result
             history = json.dumps(result['result']['messages'])

@@ -4,10 +4,10 @@ from dataclasses import replace
 import json
 import os
 from pathlib import Path
-import threading
 
 from gateway.platforms.event import MessageEvent
 from hermes_state_runtime import list_session_admissions
+from tests.waiting import async_wait_until, wait_until
 
 
 def rows(authority, sid):
@@ -54,22 +54,31 @@ async def prepare_crash(runner, adapter, source, peer):
     sid = authority.register(source).session_id
     follower = asyncio.create_task(adapter.handle_message(MessageEvent(
         text='UNKNOWN_FOLLOWER', source=source, message_id='unknown-follower')))
-    async with asyncio.timeout(5):
-        while not any(r['request_id'] == 'unknown-follower' for r in rows(authority, sid)):
-            await asyncio.sleep(0.01)
-    assert not follower.done()
-    # Production trusted ingress commits synchronously before its first execution
-    # yield. Freeze THIS scheduling boundary, not a claim/storage predicate.
+    await async_wait_until(lambda: any(r['request_id'] == 'unknown-follower' for r in rows(authority, sid)),
+                           timeout=5, what='unknown-follower committed')
+    # The receive coroutine is released at durable commit (serial IRC/Signal loops keep
+    # reading); the follower itself stays queued behind the started head until the crash.
+    await asyncio.wait_for(follower, 5)
+    assert [r['status'] for r in rows(authority, sid) if r['request_id'] == 'unknown-follower'] == ['queued']
+    # Trusted ingress commits before it schedules execution. Freeze THIS scheduling boundary,
+    # not a claim/storage predicate: the owner dies with the safe row committed and unclaimed.
     safe_source = replace(source, chat_id='recover-chat', thread_id='recover-thread')
+    authority._schedule = lambda ref: None
     accepted = await authority.admit_native(MessageEvent(text='RECOVER_EXACTLY_ONCE', source=safe_source,
                                                   message_id='crash-queued', reply_to_message_id='quote-7'))
     evidence = {'blocked_sid': sid, 'safe_sid': accepted.ref.session_id,
                 'blocked': rows(authority, sid), 'safe': rows(authority, accepted.ref.session_id)}
     assert evidence['safe'][-1]['status'] == 'queued'
     assert any(r['status'] == 'started' for r in evidence['blocked'])
-    Path(os.environ['HERMES_HOME'], 'crash-ready.json').write_text(json.dumps(evidence))
-    threading.Event().wait(60)
-    raise AssertionError('parent did not kill the actual owner')
+    # Published by rename: the parent SIGKILLs this process the moment the file EXISTS, so a plain
+    # write_text (create+truncate, then write) could be killed between the two and leave an empty file.
+    ready = Path(os.environ['HERMES_HOME'], 'crash-ready.json')
+    ready.with_suffix('.tmp').write_text(json.dumps(evidence))
+    os.replace(ready.with_suffix('.tmp'), ready)
+    # Hold the loop frozen until the parent's SIGKILL; end early if the parent itself went away.
+    parent = os.getppid()
+    wait_until(lambda: os.getppid() != parent, timeout=60, interval=.05, what='the parent to SIGKILL this owner')
+    raise AssertionError('parent exited without killing the actual owner')
 
 
 async def recover_probe(runner, adapter, source, peer):

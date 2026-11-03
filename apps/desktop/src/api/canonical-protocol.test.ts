@@ -1,6 +1,56 @@
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 
 import { CanonicalDesktopProtocol } from './canonical-protocol'
+
+test('sibling routes survive every rebuilt control and compression follow-up', async () => {
+  const protocol = new CanonicalDesktopProtocol()
+  protocol.result('session.resume', { session_id: 's', profile: 'sibling' }, {
+    session_id: 's', revision: 4, execution_generation: 9,
+    prompts: [{ kind: 'approval', prompt_id: 'p', execution_generation: 9 }],
+    pending: [{ admission_id: 'lost', status: 'unknown', execution_generation: 3 }]
+  })
+
+  const requests: Array<[string, Record<string, unknown>]> = [
+    ['session.title', { title: 'title' }], ['session.archive', { archived: true }],
+    ['session.branch', {}], ['session.branch_stored', { parent_session_id: 's' }],
+    ['session.compress', {}], ['slash.exec', { command: 'model new-model' }],
+    ['approval.respond', { request_id: 'p', choice: 'once' }],
+    ['prompt.resolve_unknown', { admission_id: 'lost' }]
+  ]
+
+  for (const [method, params] of requests) {
+    expect(protocol.prepare(method, { session_id: 's', profile: 'sibling', ...params })).toMatchObject({ profile: 'sibling' })
+  }
+
+  const calls: unknown[] = []
+  const params = protocol.prepare('session.compress', { session_id: 's', profile: 'sibling' })
+  await protocol.settle('session.compress', params, { message_count: 1 }, async (method, followUp) => {
+    calls.push([method, followUp])
+
+    return { messages: [], info: {} }
+  })
+  expect(calls).toEqual([['session.resume', { session_id: 's', profile: 'sibling' }]])
+})
+
+test('slash compress refreshes its transcript on the owner route and previews stay read-only', async () => {
+  const protocol = new CanonicalDesktopProtocol()
+  protocol.result('session.resume', { profile: 'sibling' }, { session_id: 's', revision: 1, execution_generation: 2 })
+  const prepared = protocol.prepare('slash.exec', { session_id: 's', profile: 'sibling', command: 'compress' })
+  const calls: unknown[] = []
+
+  const followUp = async (method: string, params: Record<string, unknown>) => {
+    calls.push([method, params])
+
+    return { messages: [{ role: 'assistant', content: 'retained' }], info: {} }
+  }
+
+  const result = protocol.result('slash.exec', prepared, { session_id: 's', revision: 2, message_count: 1 })
+  expect(await protocol.settle('slash.exec', prepared, result, followUp)).toMatchObject({ type: 'exec', messages: [{ content: 'retained' }] })
+  expect(calls).toEqual([['session.resume', { session_id: 's', profile: 'sibling' }]])
+  const preview = protocol.result('slash.exec', prepared, { session_id: 's', status: 'preview', lines: ['report'] })
+  await protocol.settle('slash.exec', prepared, preview, followUp)
+  expect(calls).toHaveLength(1)
+})
 
 test('corrections preserve intent and fence the observed session generation', () => {
   const protocol = new CanonicalDesktopProtocol()
@@ -35,17 +85,30 @@ test('metadata writes retain the original CAS revision and request identity unti
   expect(protocol.prepare('session.archive', { session_id: 's', archived: true })).toMatchObject({ expected_revision: 8, operation: 'archive', payload: { archived: true } })
 })
 
-test('canonical create retries retain identity and reject unsupported explicit intent', () => {
+test('canonical create retries retain identity', () => {
   const protocol = new CanonicalDesktopProtocol()
   const params = { source: 'desktop', profile: 'default', cols: 96, fast: false, cwd: '/tmp' }
   const first = protocol.prepare('session.create', params)
   expect(first).toMatchObject({ source: 'gui', cwd: '/tmp', request_id: expect.any(String) })
   expect(protocol.prepare('session.create', { ...params })).toEqual(first)
-  expect(first).not.toHaveProperty('profile')
-  expect(() => protocol.prepare('session.create', { ...params, fast: true })).toThrow('fast')
-  expect(() => protocol.prepare('session.create', { ...params, provider: 'custom' })).toThrow('provider')
+  // RT-26: the picked profile rides the create, `default` included (a named launch profile would own it otherwise).
+  expect(first).toHaveProperty('profile', 'default')
+  expect(protocol.prepare('session.create', { ...params, fast: true })).toMatchObject({ service_tier: 'priority' })
+  const manual = protocol.prepare('session.create', { ...params, model: 'gpt-5', provider: 'custom' })
+  expect(manual).toMatchObject({ model: 'gpt-5', provider: 'custom' })
+  expect(protocol.prepare('session.create', { ...params, model: 'gpt-5', provider: 'custom' })).toEqual(manual)
   protocol.result('session.create', first, { session_id: 'canonical', stored_session_id: 'canonical' })
   expect(protocol.prepare('session.create', params).request_id).not.toBe(first.request_id)
+})
+
+// TUI-26: a bare stop phrase typed into a LOCAL voice chat (turned on by another viewer) ends the
+// chat on the owner and admits nothing; the owner answers `{voice_stopped: true}`.
+test('a voice_stopped prompt.submit reply is a settled no-admission receipt, never a mismatch', () => {
+  const protocol = new CanonicalDesktopProtocol()
+  const params = protocol.prepare('prompt.submit', { session_id: 's', text: 'stop' })
+  const receipt = protocol.result('prompt.submit', params, { voice_stopped: true, extra: 'dropped' })
+  expect(receipt).toEqual({ voice_stopped: true, session_id: 's', submission_id: params.submission_id })
+  expect(() => protocol.result('prompt.submit', params, { voice_stopped: false })).toThrow('destination')
 })
 
 test('canonical receipts preserve admission identity and replay restores fenced controls', () => {
@@ -158,4 +221,56 @@ test('the dedicated compress action becomes a fenced canonical mutation and sett
   const untouched = { session_id: 's', ok: true }
   expect(await protocol.settle('session.title', { session_id: 's' }, untouched, fakeRequest)).toBe(untouched)
   expect(calls).toHaveLength(1)
+})
+
+test('the composer model picker travels as the canonical model mutation, not an unsupported config.set', () => {
+  const protocol = new CanonicalDesktopProtocol()
+  protocol.result('session.resume', { session_id: 's' }, { session_id: 's', revision: 3, execution_generation: 2 })
+
+  for (const value of ['gpt-5 --provider openrouter', 'gpt-5 --provider openrouter --session']) {
+    const pick = protocol.prepare('config.set', { session_id: 's', key: 'model', value })
+    expect(protocol.wire('config.set', pick)).toBe('session.mutate')
+    expect(pick).toEqual({ session_id: 's', request_id: expect.any(String), expected_revision: 3, expected_generation: 2, operation: 'model', payload: { model: 'gpt-5', provider: 'openrouter' } })
+    expect(protocol.result('config.set', pick, { session_id: 's', revision: 4, operation: 'model', model: 'gpt-5', provider: 'openrouter' })).toMatchObject({ ok: true, model: 'gpt-5' })
+    protocol.result('session.resume', { session_id: 's' }, { session_id: 's', revision: 3, execution_generation: 2 })
+  }
+
+  // Other preferences, and model flags the mutation has no field for, keep their own route.
+  expect(protocol.wire('config.set', protocol.prepare('config.set', { session_id: 's', key: 'busy', value: 'queue' }))).toBe('config.set')
+  expect(protocol.wire('config.set', protocol.prepare('config.set', { session_id: 's', key: 'model', value: 'gpt-5 --global' }))).toBe('config.set')
+})
+
+test('a message-level branch carries its durable boundary row; a whole-chat branch copies everything', () => {
+  const protocol = new CanonicalDesktopProtocol()
+  protocol.result('session.resume', { session_id: 's' }, { session_id: 's', revision: 3, execution_generation: 1 })
+  const selected = protocol.prepare('session.branch', { session_id: 's', idempotency_key: 'k', count: 2, through_message_id: 41 })
+  expect(protocol.wire('session.branch', selected)).toBe('session.mutate')
+  expect(selected).toMatchObject({ operation: 'branch', payload: { through_message_id: 41 } })
+  // A lost-response retry presents the identical mutation (the boundary is part of its identity).
+  expect(protocol.prepare('session.branch', { session_id: 's', idempotency_key: 'k', count: 2, through_message_id: 41 })).toEqual(selected)
+  // A selected message with no durable row yet must never fall back to a whole-history copy.
+  expect(() => protocol.prepare('session.branch', { session_id: 's', count: 2 })).toThrow(/not saved yet/)
+  expect(protocol.prepare('session.branch', { session_id: 's' })).toMatchObject({ payload: {} })
+})
+
+test('mints v4 create, submit and mutation ids where crypto.randomUUID is absent (plain-HTTP LAN origin)', () => {
+  const V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+  vi.stubGlobal('crypto', { getRandomValues: crypto.getRandomValues.bind(crypto) })
+
+  try {
+    const protocol = new CanonicalDesktopProtocol()
+    protocol.result('session.resume', { profile: 'default', session_id: 's' }, { session_id: 's', revision: 2, execution_generation: 3 })
+
+    const cases: Array<[string, Record<string, unknown>, string]> = [
+      ['session.create', { profile: 'default', source: 'desktop' }, 'request_id'],
+      ['prompt.submit', { profile: 'default', session_id: 's', text: 'hi' }, 'submission_id'],
+      ['session.title', { profile: 'default', session_id: 's', title: 't' }, 'request_id']
+    ]
+
+    for (const [method, params, key] of cases) {
+      expect(JSON.stringify(protocol.prepare(method, params)).match(new RegExp(`"${key}":"([^"]+)"`))?.[1]).toMatch(V4)
+    }
+  } finally {
+    vi.unstubAllGlobals()
+  }
 })

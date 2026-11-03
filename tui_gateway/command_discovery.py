@@ -52,10 +52,13 @@ def _skill_usage_lookup():
 _SLASH_COMPLETION_LIMIT = 30
 
 
-def _rank_slash_completions(items: list[dict], usage, origin_of, *, browsing: bool, score_of=None) -> list[dict]:
+def _rank_slash_completions(items: list[dict], usage, origin_of, *, browsing: bool, score_of=None,
+                            registry_command_names: frozenset[str] | None = None) -> list[dict]:
     """Registry commands keep their order; only skills reorder: fuzzy ``score_of`` first, then most-used, then
     A-Z. The limit is spent PER KIND (a flat cut on a large install offered no skill at all). ``browsing``
-    (bare ``/``) drops never-used bundled skills as noise; a typed query is SEARCHING — nothing pruned, only reordered."""
+    (bare ``/``) drops never-used bundled skills as noise; a typed query is SEARCHING — nothing pruned, only reordered.
+    While browsing, only names in ``registry_command_names`` (default ``GATEWAY_KNOWN_COMMANDS``) skip the cap:
+    plugin-registered commands are also ``kind != "skill"`` but unbounded, so they stay capped like skills."""
     def name_of(item: dict) -> str:
         return str(item.get("text", "")).strip().lstrip("/").lower()
     commands = [item for item in items if item.get("kind") != "skill"]
@@ -64,7 +67,16 @@ def _rank_slash_completions(items: list[dict], usage, origin_of, *, browsing: bo
         skills = [item for item in skills if origin_of(name_of(item)) != "bundled" or usage(name_of(item)) > 0]
     skills.sort(key=lambda item: (
         *(() if score_of is None else (score_of(item),)), -usage(name_of(item)), name_of(item)))
-    return commands[:_SLASH_COMPLETION_LIMIT] + skills[:_SLASH_COMPLETION_LIMIT]
+    if browsing:
+        if registry_command_names is None:
+            from hermes_cli.commands import GATEWAY_KNOWN_COMMANDS
+            registry_command_names = GATEWAY_KNOWN_COMMANDS
+        fixed = [c for c in commands if name_of(c) in registry_command_names]
+        other = [c for c in commands if name_of(c) not in registry_command_names]
+        ranked_commands = fixed + other[:_SLASH_COMPLETION_LIMIT]
+    else:
+        ranked_commands = commands[:_SLASH_COMPLETION_LIMIT]
+    return ranked_commands + skills[:_SLASH_COMPLETION_LIMIT]
 
 
 _DETAILS_SECTIONS = ("thinking", "tools", "subagents", "activity")
@@ -118,6 +130,7 @@ class _Catalog:
         self.canon: dict[str, str] = {}
         self.commands: dict[str, dict[str, str | None]] = {}
         self.cat_map: dict[str, list[list[str]]] = {}  # insertion order = category order
+        self.plugin_commands: dict[str, str] = {}  # every plugin command, also those a display row hides
 
     def add(self, key: str, desc: str, cat: str) -> None:
         self.canon[key.lower()] = key
@@ -161,9 +174,12 @@ def _catalog_plugin_commands(cat: _Catalog, module_loader) -> None:
         cat.cat_map.setdefault("Plugin commands", [])
     for pname, info in sorted(plugin_cmds.items()):
         key = f"/{pname}"
-        if not isinstance(info, dict) or key.lower() in cat.canon:
+        if not isinstance(info, dict):
             continue
-        cat.add(key, str(info.get("description") or "Plugin command"), "Plugin commands")
+        cat.plugin_commands[pname] = str(info.get("description") or "Plugin command")
+        if key.lower() in cat.canon:
+            continue
+        cat.add(key, cat.plugin_commands[pname], "Plugin commands")
         mode = info.get("argument_mode")
         if mode not in {"options", "text", "mixed"}:
             mode = "text" if str(info.get("args_hint") or "").strip() else None
@@ -176,50 +192,62 @@ def _catalog_skills(cat: _Catalog, skills: dict[str, dict], module_loader) -> st
     ``agent.skill_commands`` guard), ``""`` when none."""
     usage, origin_of = _skill_usage_lookup()
     sc = module_loader("agent.skill_commands")
-    for k, info in sorted(sc.scan_skill_commands().items()):
+    for k, info in sorted(sc.get_interactive_skill_commands().items()):
         cat.pairs.append([k, str(info.get("description", "Skill"))])
         name = str(info.get("name") or k.lstrip("/"))
         skills[k] = {"usage": usage(name), "origin": origin_of(name)}
     collision_note = getattr(sc, "skill_command_collision_note", None)
     if collision_note is None:
         return ""
-    names = sorted(s["name"] for s in module_loader("tools.skills_tool")._find_all_skills())
+    names = sorted(s["name"] for s in module_loader("tools.skills_tool").find_all_skills())
     return "; ".join(filter(None, map(collision_note, names)))
 
 
 def command_catalog(load_cfg=None, module_loader=import_module, scope=None) -> dict:
     """Registry-backed slash metadata, categorized, no aliases. Discovery failures land in ``warning``
     (skills' message wins, then quick commands', then plugins'); only with no failure does it carry
-    the built-in-name collision notice for skills that have no ``/<name>`` (empty when none). ``scope``
-    is a context manager binding the calling session's profile home and workspace around skill
-    discovery so project-local skills register for the repo the session is actually in (#114359)."""
+    the built-in-name collision notice for skills that have no ``/<name>`` (empty when none). A plugin
+    discovery failure is also ``plugin_discovery_error`` (empty when it worked), so a client can tell
+    "no plugin commands" from "plugin commands unknown" without parsing ``warning``. Quick
+    command, plugin command and skill discovery are all home-keyed, so ``scope`` (a context manager
+    binding the calling session's profile home and workspace) wraps every loader: project-local skills
+    register for the repo the session is actually in (#114359), and a profile-routed palette never
+    lists the launch profile's quick/plugin commands. A scope that cannot bind (unknown profile)
+    raises out of here — the caller maps it to 4064 like ``complete.slash`` (#124651)."""
     if load_cfg is None:
         from hermes_cli.config import load_config_readonly
         load_cfg = load_config_readonly
     cat = _Catalog()
     _catalog_registry(cat, module_loader)
-    warning = ""
-    try:
-        _catalog_quick_commands(cat, load_cfg)
-    except Exception as e:
-        warning = f"quick_commands discovery unavailable: {e}"
-    try:
-        _catalog_plugin_commands(cat, module_loader)
-    except Exception as e:
-        warning = warning or f"plugin command discovery unavailable: {e}"
+    warning = plugin_error = ""
     skills: dict[str, dict] = {}
-    try:
-        with scope if scope is not None else contextlib.nullcontext():
+    # Each loader is a degrade boundary: user config, third-party plugin registration and skill
+    # files can raise anything, and one failing source must never blank the whole palette.
+    with scope if scope is not None else contextlib.nullcontext():
+        try:
+            _catalog_quick_commands(cat, load_cfg)
+        except Exception as e:
+            logger.debug("quick_commands discovery failed", exc_info=True)
+            warning = f"quick_commands discovery unavailable: {e}"
+        try:
+            _catalog_plugin_commands(cat, module_loader)
+        except Exception as e:
+            logger.debug("plugin command discovery failed", exc_info=True)
+            plugin_error = str(e) or type(e).__name__
+            warning = warning or f"plugin command discovery unavailable: {e}"
+        try:
             collision_note = _catalog_skills(cat, skills, module_loader)  # always runs: skills must list even when a loader failed
-        warning = warning or collision_note
-    except Exception as e:
-        warning = f"skill discovery unavailable: {e}"
+            warning = warning or collision_note
+        except Exception as e:
+            logger.debug("skill discovery failed", exc_info=True)
+            warning = f"skill discovery unavailable: {e}"
     return {
         "pairs": cat.pairs, "sub": {k: v[:] for k, v in module_loader("hermes_cli.commands").SUBCOMMANDS.items()},
         "canon": cat.canon,
         "commands": cat.commands,
         "categories": [{"name": c, "pairs": rows} for c, rows in cat.cat_map.items()],
-        "skills": skills, "skill_count": len(skills), "warning": warning}
+        "skills": skills, "skill_count": len(skills), "warning": warning, "plugin_discovery_error": plugin_error,
+        "plugin_commands": cat.plugin_commands}
 
 
 def slash_completions(text: str = "", scope=None) -> dict:
@@ -231,10 +259,10 @@ def slash_completions(text: str = "", scope=None) -> dict:
     from hermes_cli.commands_completion import SlashCommandCompleter
     from prompt_toolkit.document import Document
     from prompt_toolkit.formatted_text import to_plain_text
-    from agent.skill_commands import get_skill_commands
+    from agent.skill_commands import get_interactive_skill_commands
     from agent.skill_bundles import get_skill_bundles
     with scope if scope is not None else contextlib.nullcontext():
-        skill_commands, skill_bundles = dict(get_skill_commands()), dict(get_skill_bundles())
+        skill_commands, skill_bundles = dict(get_interactive_skill_commands()), dict(get_skill_bundles())
     completer = SlashCommandCompleter(
         skill_commands_provider=lambda: skill_commands, skill_bundles_provider=lambda: skill_bundles)
     # `kind` reaches the TUI as data (from the providers, not sniffed from ⚡/▣ glyphs):
@@ -272,5 +300,3 @@ def slash_completions(text: str = "", scope=None) -> dict:
     if (details_items := _details_completions(text)) is not None:
         return {"items": details_items, "replace_from": text.rfind(" ") + 1 if " " in text else len(text)}
     return {"items": items, "replace_from": text.rfind(" ") + 1 if " " in text else 1}
-
-

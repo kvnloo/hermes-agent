@@ -34,23 +34,6 @@ def control(home, verb, params=None):
     return reply['result']
 
 
-@pytest.fixture
-def model_peer():
-    from http.server import ThreadingHTTPServer
-    import threading
-    from tests.gateway.fixtures.shared_authority_peer import ModelPeer
-    server = ThreadingHTTPServer(('127.0.0.1', 0), ModelPeer)
-    server.requests, server.metadata_requests = [], []
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    try:
-        yield server
-    finally:
-        server.shutdown()
-        server.server_close()
-        thread.join(timeout=5)
-
-
 async def handshake(home, descriptor):
     url = descriptor['api_origin'].replace('http:', 'ws:') + '/api/ws'
     with pytest.raises(InvalidStatus):
@@ -97,25 +80,27 @@ async def handshake(home, descriptor):
     fresh = control(home, 'session-ticket', binding)
     async with connect(url, subprotocols=['hermes-gateway-v1',
                                         'hermes-gateway-ticket.' + fresh['ticket']]) as viewer:
-        async with asyncio.timeout(25):
-            while True:
-                snapshot = await rpc(viewer, 'session.resume', session_id=sid)
-                if 'LOCAL_ACK_WS_SHARED' in json.dumps(snapshot.get('messages', [])):
-                    break
-                await asyncio.sleep(.05)
+        deadline = time.monotonic() + 25
+        while True:
+            snapshot = await rpc(viewer, 'session.resume', session_id=sid)
+            if 'LOCAL_ACK_WS_SHARED' in json.dumps(snapshot.get('messages', [])):
+                break
+            assert time.monotonic() < deadline, snapshot
+            await asyncio.sleep(.05)
         assert snapshot['stored_session_id'] == sid
         # Transcript persistence precedes terminal publication; await the actual
         # replay receipt rather than assuming a persisted reply means settlement.
-        async with asyncio.timeout(25):
-            while True:
-                replay = await rpc(viewer, 'session.events.since', session_id=sid,
-                                   replay_epoch=initial['replay_epoch'],
-                                   last_sequence=initial['last_sequence'])
-                assert not replay['snapshot_required'], replay
-                completed = [event for event in replay['events'] if event['type'] == 'message.complete']
-                if completed:
-                    break
-                await asyncio.sleep(.05)
+        deadline = time.monotonic() + 25
+        while True:
+            replay = await rpc(viewer, 'session.events.since', session_id=sid,
+                               replay_epoch=initial['replay_epoch'],
+                               last_sequence=initial['last_sequence'])
+            assert not replay['snapshot_required'], replay
+            completed = [event for event in replay['events'] if event['type'] == 'message.complete']
+            if completed:
+                break
+            assert time.monotonic() < deadline, replay
+            await asyncio.sleep(.05)
         assert len(completed) == 1, replay
         assert 'LOCAL_ACK_WS_SHARED' in completed[0]['payload']['text'], replay
         snapshot = await rpc(viewer, 'session.resume', session_id=sid)

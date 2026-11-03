@@ -22,7 +22,7 @@ def run_worker(tmp_path, body, mode="safe"):
     result = subprocess.run(
         [sys.executable, str(script)], env=env,
         cwd=root, stdin=subprocess.DEVNULL,
-        capture_output=True, text=True, timeout=45,
+        capture_output=True, text=True, timeout=45, check=False
     )
     assert result.returncode == 0, result.stdout + result.stderr
     return json.loads(result.stdout.strip().splitlines()[-1])
@@ -132,7 +132,7 @@ def test_safe_worker_never_discovers_or_invokes_customizations(tmp_path, mode):
             _bind_safe_worker_policy(safe_mode=mode == "safe", ignore_user_config=True, config={"plugins": {"enabled": ["sentinel"]}})
         reads = []
         def audit(event, args):
-            if event == "open" and "/plugins/" in str(args[0]) and args[1] != "w":
+            if event == "open" and "plugins" in Path(str(args[0])).parts and args[1] != "w":
                 reads.append(str(args[0]))
         sys.addaudithook(audit)
         import providers

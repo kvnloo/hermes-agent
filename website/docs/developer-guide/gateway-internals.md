@@ -22,13 +22,22 @@ hosted-room driver still uses legacy TUI session handlers; the canonical surface
 therefore reports `driver: false` and does not advertise send, retry, approval,
 or peer-grant operations. It never imports that driver to execute a group turn.
 
-`profiles.list` requires `session:read` and returns only the authenticated
-profile, including its display metadata and avatar presence. `include_sessions`
-defaults to true: previews are limited to that actor's canonical local bindings,
-and `canonical_session` resolves the exact hidden `Bot Chat` title, not the most
-recent conversation. Discovery does not create, restore, or unarchive sessions,
-open sibling profile databases, or run inference. Cross-profile discovery requires
-a separately authenticated connection to the relevant owner.
+`profiles.list` requires `session:read` and returns the authenticated profile
+first, with its display metadata and avatar presence, then the served siblings and
+hosted-room destinations as discovery metadata. `include_sessions` defaults to
+true: `canonical_session` resolves the exact `Bot Chat` title, not the most recent
+conversation, and `last_session` is the newest visible local conversation (a hidden
+row never wins). Both count only local chats the actor owns or reads as an operator:
+minted `local-*` chats, and pre-upgrade chats adopted under their durable binding
+(they keep their old id). A sibling's row carries the same fields only when this
+connection already routes session verbs to it (a host-scoped grant: the Desktop's
+shared socket, the dashboard), read from that sibling's own authority with this
+connection's subject and capabilities. A profile-bound ticket gets metadata alone,
+and so does a sibling that is retiring, listed under a name that routes elsewhere,
+or whose store doesn't answer; a sibling still starting is not listed yet. Rows are
+reused while a profile's store has not moved. Discovery does not create, restore,
+or unarchive sessions, open a database handle of its own or reopen one an unserve
+closed, or run inference.
 
 ## Canonical ancillary reads
 
@@ -76,7 +85,9 @@ the follower runs exactly once. The generation must be the one stamped on the un
 row (visible in the resume/`session.info` projection), so a stale or already-resolved
 row is refused with `stale_generation`. Desktop shows such a row in the queue panel as
 "Turn lost during restart" with a **Discard** button; the gateway CLI exposes it as
-`/discard <admission_id>`. The lost input stays in the transcript for the user to resend.
+`/discard <admission_id>`. The lost input stays in the transcript for the user to resend; the
+discard closes it with a Hermes notice (like a failed turn), so it is never merged into the
+follower's model request.
 
 A messaging user (Telegram, Discord, ...) whose session is paused this way is told once per
 pause episode, through the adapter's ordinary reply path, that the conversation is paused and
@@ -146,9 +157,12 @@ message through their normal identified `prompt.submit`; resolution is not an
 admission ACK. The authority's durable FIFO owns retries and execution, and skill
 content remains a user message without changing the cached system prefix.
 
-Other commands return `unsupported_command`: shell quick commands, plugin execution,
-bundles, configuration/runtime changes, lifecycle commands, and approval/secret
-slash shortcuts are not exposed. Existing generation-bound approval and interrupt
+`type: exec` quick commands and plugin slash commands require `session:control` and run
+through the messaging gateway's own quick/plugin dispatch (slash access policy,
+sanitized-env exec with a 30 s cap and redacted output, plugin session env).
+
+Other commands return `unsupported_command`: bundles, configuration/runtime changes,
+lifecycle commands, and approval/secret slash shortcuts are not exposed. Existing generation-bound approval and interrupt
 RPCs remain separate. Catalog discovery is broader than this reviewed execution set.
 
 ## Shared authority busy input and corrections
@@ -214,8 +228,22 @@ the original result without incrementing the revision again; reusing its ID with
 different contents returns `admission_conflict`. A competing edit with a stale
 revision returns `revision_conflict`. Draining rejects new mutations and fresh
 session registration before routing or transcript creation. These edits
-do not interrupt a running turn. This RPC does not yet migrate legacy direct
-writers, expose arbitrary SQL, or implement reset, delete, or rewind.
+do not interrupt a running turn. Canonical reset, delete, rewind, model, branch,
+and compression operations use the same receipt boundary. `branch` accepts an optional
+`title` and `through_message_id` (the row id of the last message to keep; tool results
+answering an assistant boundary come with it); without it the whole active transcript is
+copied. A request disconnect
+does not cancel its owner-held mutation: the commit, live projection and queue
+wakeup finish together, and profile retirement joins that work before releasing
+the store. An exact old receipt cannot evict a newer running agent.
+
+Canonical wire models live in `tui_gateway/contracts/canonical*.py` and generate
+`CanonicalRpcMethods` plus the OpenRPC `x-canonical-methods` catalog, separately
+from the standalone protocol. Both parameters and successful results are checked.
+
+ACP and finite CLI viewers detach with an explicit recovery notice if an accepted
+input becomes blocked behind an unknown execution. The accepted input remains
+queued: resolve the lost turn before continuing, rather than resending it.
 
 ## Private native HTTP authentication
 
@@ -254,6 +282,19 @@ require an explicit own-profile query. All-profile project/transcript aggregatio
 profile creation/import/activation, and profile rename/delete are not granted by
 this primary-profile credential. Native clients must not rewrite `all` to `current`
 or borrow the primary grant to hide a cross-profile failure.
+
+Creating a profile from native Desktop uses a separate, same-user
+`purpose: "native-profile-create"` grant carrying only `profiles:create`. It is
+accepted exclusively by `POST /api/profiles`; it does not authorize profile reads,
+import, activation, rename, deletion, or WebSocket access. The existing create
+handler validates the name and clone options. Optional `soul` content is written
+inside the staged profile before publication, so creation does not need a follow-up
+write or a running new-profile gateway; `soul_set` confirms it was applied. Older
+remote backends retain the separate, explicitly profile-scoped SOUL update.
+Desktop mints this grant per create
+request, never sends it to the renderer, and still uses ordinary profile-bound
+grants for subsequent requests. The same expiry, one-use, daemon, socket-peer and
+Origin checks apply. Ordinary `native-http` grants still receive 403 on creation.
 
 The native HTTP integration is covered by real ordinary-daemon/control-socket/TCP
 probes in `tests/gateway/test_native_http_auth.py`, alongside gated OAuth/cookie and
@@ -323,6 +364,77 @@ reset the choice with `hermes config set gateway.service_install_choice null`.
 Setup orchestration lives in `hermes_cli/gateway_setup_service.py`. Its
 `ensure_gateway_service` helper is not a general runtime discovery or auto-start API:
 ordinary calls never reinstall a missing service based only on stored preference.
+
+## `hermes gateway ensure`
+
+Clients (Desktop, `hermes chat`, the TUI) discover or start the profile's session
+runtime with `hermes gateway ensure --json --timeout 60`; the summary is in the
+[CLI reference](../reference/cli-commands.md#local-runtime-discovery-and-startup).
+
+The timeout is a finite, positive total deadline in seconds (default `60`, enough for a
+cold daemon boot on a loaded host). An
+existing reservation or starting owner is waited for, not replaced. When absence
+is established, an existing service takes precedence; an unmanaged process is
+requested only when no service is found. This command never installs or rewrites
+service definitions, enables linger, elevates privileges, or clears update fences.
+Ambiguous or inaccessible ownership fails closed.
+
+Before requesting a service start, `ensure` checks its canonical profile directory
+and execution account, not just its unit/task name. Linux uses the manager's
+loaded command and environment (including effective drop-ins), macOS checks the
+loaded launchd job rather than assuming the on-disk plist is current, and Windows
+queries the actual task XML, principal, and installed launcher.
+
+- `profile_mismatch`: the installed service selects a different home or profile.
+  Inspect the selected service's `HERMES_HOME` and command-line profile selector;
+  use the matching profile or explicitly repair the service configuration.
+- `service_account_mismatch`: the service belongs to another account. Run the
+  client as that account, or explicitly configure a service for the intended user.
+- `service_identity_unverified`: the manager did not expose enough identity data,
+  or the definition uses unsupported dynamic configuration. Inspect it with
+  `systemctl [--user] show <unit> --all`, `launchctl print <domain>/<label>`, or
+  `schtasks /Query /TN <task> /XML`. Linux environment files, PAM/dynamic users,
+  start-time hooks and alternate root filesystems require operator review;
+  arbitrary shell launchers and modified Windows launcher scripts are not
+  interpreted by `ensure`. Restore an explicit supported definition through an
+  intentional service-management operation before retrying.
+
+These refusals do not start a service, rewrite configuration, or launch an
+unmanaged replacement. Standard explicitly bound default and custom-root installs
+remain eligible; a successful start request still must pass live readiness checks.
+
+On POSIX, local bootstrap checks the profile directory before it trusts the
+control socket inside it. Newly reserved homes are created with mode `0700`;
+existing permissions are never changed by `ensure`. The home keeps the operator's
+mode (a symlinked `~/.hermes`, `HERMES_HOME_MODE` `0701`/`0750`, or a `0755`
+home all work): read and search bits grant nothing against the owner-only (`0600`)
+socket. Only write access another user could use to swap the socket is refused
+with `inaccessible / unsafe_control_permissions`: world-write always, and
+group-write unless the group is the owner's private group (the umask-`002`
+user-private-group default) with no other members and no access ACL. The socket,
+its pointer file and the fallback socket directory stay strictly owner-only.
+Remove the extra write bit (`chmod o-w,g-w`) before retrying local attachment.
+
+| Exit code | Meaning |
+|-----------|---------|
+| `0` | Compatible session runtime ready. |
+| `2` | Invalid invocation, including invalid timeout or unknown arguments. |
+| `3` | Incompatible runtime protocol or capabilities. |
+| `4` | Authorization or profile mismatch. |
+| `5` | Deadline reached; startup may still be pending. |
+| `6` | Runtime draining or update in progress. |
+| `7` | Inaccessible runtime, conflicting supervisor, or startup failure. |
+
+A service start command or process creation is not a readiness acknowledgement.
+A gateway that has not exposed the session-authority capability can remain
+`starting` until the deadline even while its messaging adapters work. Do not treat
+exit `5` as permission to replace that owner. On Windows, a Startup-folder-only
+installation requires login rather than an unmanaged fallback; failure to detach
+from a parent job is reported instead of retried with weaker process isolation.
+
+Service persistence is separately opt-in during setup. Imports and noninteractive
+setup do not install a missing service based on an imported preference. See
+[optional service installation](#optional-service-installation).
 
 ## Architecture Overview
 
@@ -442,14 +554,15 @@ Unlike the CLI (which uses `load_cli_config()` with hardcoded defaults), the gat
 
 ## Platform Adapters
 
-Most messaging platforms ship as plugin adapters under `plugins/platforms/<name>/adapter.py`; a few legacy adapters still live directly in `gateway/platforms/`. All extend `BasePlatformAdapter` from `gateway/platforms/base.py`:
+Every messaging platform ships as a plugin adapter under `plugins/platforms/<name>/`; `gateway/platforms/` keeps the base class and the HTTP ingress adapters (`api_server`, `webhook`, `msgraph_webhook`). All extend `BasePlatformAdapter` from `gateway/platforms/base.py`:
 
 ```text
 plugins/platforms/                  # plugin-packaged adapters (one dir each)
 ├── telegram/adapter.py     # Telegram Bot API (long polling or webhook)
 ├── discord/adapter.py      # Discord bot via discord.py
 ├── slack/adapter.py        # Slack Socket Mode
-├── whatsapp/adapter.py     # WhatsApp Business Cloud API
+├── whatsapp/adapter.py     # WhatsApp via the local Baileys bridge
+├── whatsapp_cloud/adapter.py # WhatsApp Business Cloud API
 ├── matrix/adapter.py       # Matrix via mautrix (optional E2EE)
 ├── mattermost/adapter.py   # Mattermost WebSocket API
 ├── email/adapter.py        # Email via IMAP/SMTP
@@ -459,17 +572,16 @@ plugins/platforms/                  # plugin-packaged adapters (one dir each)
 ├── wecom/adapter.py        # WeCom (WeChat Work) callback
 ├── line/adapter.py         # LINE Messaging API
 ├── teams/adapter.py        # Microsoft Teams
+├── signal/adapter.py       # Signal via signal-cli HTTP daemon (SSE + JSON-RPC)
 ├── irc/adapter.py          # IRC (canonical scoped-lock example)
-├── homeassistant/adapter.py # Home Assistant conversation integration
+├── bluebubbles/adapter.py  # Apple iMessage via BlueBubbles macOS server
+├── weixin/adapter.py       # Weixin (personal WeChat) via iLink Bot API
+├── qqbot/                  # QQ Bot (Tencent QQ) via Official API v2
+├── yuanbao/adapter.py      # Yuanbao (Tencent) DM/group WebSocket
 └── …                       # google_chat, ntfy, photon, raft, simplex, …
 
-gateway/platforms/                  # core base + legacy direct adapters
+gateway/platforms/                  # core base + HTTP ingress adapters
 ├── base.py              # BasePlatformAdapter — shared logic for all platforms
-├── signal.py            # Signal via signal-cli REST API
-├── weixin.py            # Weixin (personal WeChat) via iLink Bot API
-├── bluebubbles.py       # Apple iMessage via BlueBubbles macOS server
-├── qqbot/               # QQ Bot (Tencent QQ) via Official API v2 (sub-package)
-├── yuanbao.py           # Yuanbao (Tencent) DM/group adapter
 ├── msgraph_webhook.py   # Microsoft Graph change-notification webhook (Teams, Outlook, etc.)
 ├── webhook.py           # Inbound/outbound webhook adapter
 └── api_server.py        # REST API server adapter
@@ -570,6 +682,77 @@ The gateway runs as a long-lived process, managed via:
 - PID file at `~/.hermes/gateway.pid` — profile-scoped process tracking
 
 **Profile-scoped vs global**: `start_gateway()` uses profile-scoped PID files. Standalone (one gateway per profile), `hermes -p x gateway stop` stops only that profile's gateway. Under multiplexing there is ONE gateway process per host, owned by whichever profile launched it (`gateway/host_rendezvous.py` publishes its PID, home and served set; `gateway/host_attach.py` is the attach/rescan/refuse decision every lifecycle verb goes through): `hermes gateway stop` on the owner takes every served profile down, and `hermes -p x gateway stop` for a served secondary refuses with exit 78 (it has no gateway of its own). A second `gateway run` for a served profile attaches and exits 0 — under a service supervisor it exits 75 (EX_TEMPFAIL) instead, so the redundant unit is RETRIED rather than parked: "someone else serves me right now" is a runtime observation that ends when that process does, and 78 (which systemd, s6 and launchd all treat as permanent) would strand the profile. ATTACH requires a live `identify` answer from the owner; a rendezvous record with nothing answering behind it proves an owner exists but never that it serves you, so it yields a transient refusal (exit 75), never an attach. An owner that answers `multiplex: False` to the rescan is another profile's *standalone* gateway, not a multiplexer that excluded you: the verb starts this profile's own gateway beside it (the one-process-per-profile topology), it does not refuse — refusing there exited 78 and parked every launchd unit but the first to claim the host lock. `hermes gateway stop --all` uses global `ps aux` scanning to kill all gateway processes (used during updates). Liveness is decided by `gateway.status.live_gateway_pid_for_home` (PID + start-time fingerprint), never bare PID existence.
+
+## Background process notifications
+
+`terminal(background=true, notify_on_complete=true)` starts a gateway watcher that detects
+completion and triggers a new agent turn. Verbosity: `display.background_process_notifications`
+(or `HERMES_BACKGROUND_NOTIFICATIONS`): `concise` (default; one line, failures append an output
+tail), `all` (running updates + final raw output), `result` (final raw output only), `error`
+(final raw output only on non-zero exit), `off`.
+
+The watcher is armed on the gateway loop at registration time (`terminal_tool_background.py::
+_register_completion_watcher` → `run_notifications.py::arm_process_watcher`); `pending_watchers`
+is only the fallback for processes registered before the gateway serves (checkpoint recovery) or
+while it stops, drained at startup and post-turn. Agent-notify watchers send no user-facing
+receipt (the agent's next turn is the report) unless the launching turn is still running at exit
+— then the injection only queues a follow-up, so the concise receipt goes out immediately.
+
+The idle completion watcher also drains `watch_match` / `watch_disabled`; no user follow-up is
+required. Notify-off drains these without waking. Transport failures are retried; unavailable
+durable completion owners/transports do not spend delivery attempts. Profile-namespaced process
+events keep their owning adapter, including raw progress/final notices. Adapter acceptance is
+at-least-once admission, not proof that a model turn or final outbound reply completed. API-server
+async completions remain durable delivery rows, never autonomous new model turns. Require the
+`admit_internal_event` receipt for completion/watch injection: a handler returning None is not
+acceptance. Refused admission refunds every claimed batch sibling without spending an attempt;
+actual delivery errors keep their bounded retry policy. Recognized raw API routes resolve after
+persisted messaging origins and defer quietly when unavailable; malformed routes still warn.
+
+Completions that land while the session is busy fold into ONE queued turn
+(`session_automation.py::_admit_folded_completion`): a completion whose route already has a
+completion waiting at the very end of the FIFO replaces it with a combined admission (both texts,
+every producer identity, a "N background process results" header), cancelling the waiting row in
+the same transaction. Only the tail folds, so a prompt queued after a completion keeps its place
+between them; a waiting row claimed first leaves the new completion to queue alone.
+
+Cron execution has its own session. Eligible continuable deliveries may mirror or seed the
+reply-facing conversation: origin, origin-less home fallback, user-written bare-platform home,
+or opted-in explicit targets. `all` expansions do not gain home mirror eligibility. Mirrored
+briefs are labelled user turns appended at a turn boundary, preserving role alternation
+(`cron/AGENTS.md`).
+
+## `/login` (off-turn, paired DM only)
+
+`/login` is registered in `hermes_cli/commands.py` with `busy_policy="dispatch"` and
+`desktop="settings"`, listed in `run_busy.py::_PLAIN_COMMANDS`, and handled by
+`GatewayLoginCommandsMixin` (`gateway/slash_commands_login.py`). It refuses outside a paired DM:
+`chat_type in {"dm","private"}`, a truthy `chat_id`, and a platform whose `"dm"` really is a paired
+conversation — ntfy, raft and a2a all report `chat_type="dm"` for a broadcast topic, a channel and
+an agent peer, so posting a sign-in link and code there would publish them.
+
+**It binds the whole install.** The sign-in writes the singleton `providers.nous`, so whoever
+approves the code owns this gateway's inference and connectors for every chat it serves. Slash
+gating is opt-in (`gateway/slash_access.py`): with no `allow_admin_from` set, every user allowed to
+DM the bot can run it. Operators of shared gateways must set it.
+
+The handler returns its ack at once and drains `anon_auth.run_sign_in` on a **private single-worker
+executor** (`_login_executor`), never the shared 10-thread gateway pool — the token poll can last
+the code's full expiry, and a live worker in the shared pool makes shutdown skip the SessionDB
+close/checkpoint. One attempt per process, stamped with the identity that started it: the same
+identity's second `/login` cancels the first (the loser ends with the cancelled copy pushed into its
+own chat); a different identity is refused. `task.cancel()` cannot interrupt a blocking poll inside
+a worker thread, so shutdown and the replacement both work through `attempt.cancelled`, which the
+token poll checks on a ≤1 s tick and once more before the save. A cancelled attempt saves nothing.
+A shutdown-cancelled attempt pushes nothing — the task is dying and its adapters may already be
+gone. The completion copy carries what the free tier's handoff moved.
+
+On completion the handler **evicts** every cached agent still on `nous/welcome` and clears any
+session model override pinned to it. It does not switch agents in place and does not write a model
+override: `settle_after_upgrade` already moved `model.default`/`model.base_url` in the config, every
+turn re-resolves the config and the credentials, and `_agent_config_signature` already forces a
+rebuild when the route changes — so an in-place swap buys no cache warmth and an override would pin
+an expiring access token that nothing refreshes.
 
 ## Multiplexed profiles
 

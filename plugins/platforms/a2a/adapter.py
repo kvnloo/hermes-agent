@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import re
+import socket
 import threading
 import time
 import urllib.parse
@@ -120,6 +121,23 @@ def _profile_home(profile: str) -> Optional[str]:
     return None
 
 
+class _ThreadingHTTPServerV6(ThreadingHTTPServer):
+    """IPv6 listener. ``V6ONLY=0`` makes the ``::`` wildcard dual-stack (IPv4 peers arrive as
+    ``::ffff:a.b.c.d``), so one socket serves IPv6-only private networks and IPv4 alike."""
+
+    address_family = socket.AF_INET6
+
+    def server_bind(self):
+        with contextlib.suppress(OSError, AttributeError):  # no IPV6_V6ONLY: the bind stays v6-only
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        super().server_bind()
+
+
+def _http_server_class(host: str) -> type:
+    """``ThreadingHTTPServer`` is AF_INET only, so an IPv6 bind (``::1``, ``::``) needs the v6 family."""
+    return _ThreadingHTTPServerV6 if ":" in host else ThreadingHTTPServer
+
+
 def _daemon_thread(target, name: str) -> threading.Thread:
     t = threading.Thread(target=target, name=name, daemon=True)
     t.start()
@@ -136,10 +154,24 @@ class A2ARequestHandler(BaseHTTPRequestHandler):
     """HTTP handler for the A2A JSON-RPC surface; all state lives on ``self.server.adapter``."""
 
     @property
-    def adapter(self) -> "A2AAdapter":
+    def adapter(self) -> A2AAdapter:
         return self.server.adapter  # type: ignore[attr-defined]
 
-    def log_message(self, format, *args):  # noqa: A002,N802
+    def parse_request(self) -> bool:
+        """Without a token, refuse any request whose ``Host`` is not a loopback name, before a route
+        runs: a page on a hostname re-resolved to 127.0.0.1 (DNS rebinding) is same-origin to this
+        listener and could otherwise read its served-agent list and Agent Card."""
+        if not super().parse_request():
+            return False
+        adapter = self.adapter
+        if adapter._security_context.localhost_only() and not security.is_loopback_host_header(
+                self.headers.get("Host"), adapter._public_url):
+            self._error(403, None, protocol.ERR_UNAUTHORIZED,
+                        "Host must be a loopback name or the A2A_PUBLIC_URL host (no A2A token configured)")
+            return False
+        return True
+
+    def log_message(self, format, *args):
         logger.debug("A2A http: " + format, *args)  # silence the default stderr access log
 
     def _json(self, code: int, payload: dict):
@@ -154,7 +186,9 @@ class A2ARequestHandler(BaseHTTPRequestHandler):
         self._json(http_code, _err(req_id, code, message))
 
     def _client_ip(self) -> str:
-        return self.client_address[0] if self.client_address else ""
+        """The peer's address; an IPv4 peer of a dual-stack ``::`` bind keeps its plain IPv4 identity."""
+        ip = self.client_address[0] if self.client_address else ""
+        return ip.removeprefix("::ffff:") if ip.startswith("::ffff:") and "." in ip else ip
 
     def _request_public_url(self) -> str:
         """A2A_PUBLIC_URL > X-Forwarded-Host / Host (scheme from X-Forwarded-Proto) > "" (bind host).
@@ -173,7 +207,7 @@ class A2ARequestHandler(BaseHTTPRequestHandler):
         scheme = (self.headers.get("X-Forwarded-Proto", "") or "http").split(",")[0].strip()
         return f"{scheme}://{host}/" if host else ""
 
-    def do_GET(self):  # noqa: N802
+    def do_GET(self):
         adapter = self.adapter
         route = adapter._route_for_path(self.path)
         agent = route["agent"]
@@ -192,12 +226,14 @@ class A2ARequestHandler(BaseHTTPRequestHandler):
             payload["served_agents"] = adapter._served_agent_summary(public_url=public_url)
         self._json(200, payload)
 
-    def do_POST(self):  # noqa: N802
+    def do_POST(self):
         adapter = self.adapter
         # Identity comes from the credential (or the socket in localhost-only mode) — never the body.
         identity = adapter._security_context.authenticate(self.headers.get("Authorization"), self._client_ip())
         if identity is None:
             return self._error(401, None, protocol.ERR_UNAUTHORIZED, "unauthorized")
+        if adapter._security_context.localhost_only() and (refusal := security.browser_post_refusal(self.headers)):
+            return self._error(403, None, protocol.ERR_UNAUTHORIZED, refusal)
         try:
             length = int(self.headers.get("Content-Length", 0))
             if length > _MAX_BODY:
@@ -270,12 +306,12 @@ class A2AAdapter(BasePlatformAdapter):
         self.tasks, self._turns, self._rate_limiter = protocol.TaskStore(), protocol.TurnTracker(), protocol.RateLimiter()
         # Pending reply futures: task_id -> (context_id, Future). _pending_order keeps per-context
         # FIFO so adapter.send() — which only knows the context — resolves the oldest task.
-        self._pending: Dict[str, tuple[str, Future]] = {}
-        self._pending_order: Dict[str, deque[str]] = {}
+        self._pending: dict[str, tuple[str, Future]] = {}
+        self._pending_order: dict[str, deque[str]] = {}
         # Request ownership outlives reply Futures and also covers synchronous profile forwards.
         self._active_tasks: set[str] = set()
         # Admission ids this process already forwarded; a resend of one is a retry, not a new turn.
-        self._forwarded_inputs: "OrderedDict[str, None]" = OrderedDict()
+        self._forwarded_inputs: OrderedDict[str, None] = OrderedDict()
         self._pending_lock = threading.Lock()
 
     @property
@@ -296,7 +332,7 @@ class A2AAdapter(BasePlatformAdapter):
         # Capture the gateway loop so the HTTP thread can marshal events via run_coroutine_threadsafe.
         self._loop = asyncio.get_running_loop()
         try:
-            self._httpd = ThreadingHTTPServer((self.host, self.port), A2ARequestHandler)
+            self._httpd = _http_server_class(self.host)((self.host, self.port), A2ARequestHandler)
         except OSError as e:
             logger.error("A2A: could not bind %s:%s — %s", self.host, self.port, e)
             self._set_fatal_error("bind_failed", f"A2A bind failed: {e}", retryable=True)
@@ -309,6 +345,10 @@ class A2AAdapter(BasePlatformAdapter):
         self._mark_connected()
         logger.info("A2A: serving Agent Card + JSON-RPC on http://%s:%s (%s) as %r; %d routed agent(s)", self.host, self.port,
                     "localhost-only" if self._security_context.localhost_only() else "REMOTE (bearer auth)", self.agent_name, len(self._agents))
+        sec = self._security_context
+        if sec.dispatch_fails_closed():
+            logger.error("A2A: exposed on non-loopback bind %s with no A2A_TRUSTED_PEERS; every dispatch will be refused (403). "
+                         "Set A2A_TRUSTED_PEERS, or A2A_ALLOW_ALL_USERS=true for a trusted network.", self.host)
         self._wire_plugin_handlers(None)  # plugin-registered native handlers
         return True
 
@@ -400,7 +440,8 @@ class A2AAdapter(BasePlatformAdapter):
         return agents
 
     def _base_url(self, public_url: Optional[str]) -> str:
-        return (public_url or "").strip() or f"http://{self.host}:{self.port}/"
+        host = f"[{self.host}]" if ":" in self.host else self.host  # IPv6 literal
+        return (public_url or "").strip() or f"http://{host}:{self.port}/"
 
     def _served_agent_summary(self, public_url: Optional[str] = None) -> list[dict]:
         base = self._base_url(public_url)
@@ -478,6 +519,11 @@ class A2AAdapter(BasePlatformAdapter):
                 self._forwarded_inputs.popitem(last=False)
         return seen
 
+    def _forget_forwarded_input(self, input_id: Optional[str]) -> None:
+        """Drop a fresh id a pre-admission guard refused, so its resend is refused again."""
+        with self._pending_lock:
+            self._forwarded_inputs.pop(input_id, None)
+
     def _pop_pending(self, task_id: str) -> None:
         with self._pending_lock:
             self._active_tasks.discard(task_id)
@@ -527,12 +573,18 @@ class A2AAdapter(BasePlatformAdapter):
         # A retry after a timeout must find its accepted work, not queue a second turn.
         input_id = ("a2a-msg:" + hashlib.sha256(f"{context_id}\0{message_id}".encode()).hexdigest()
                     if message_id else None)
-        retry = input_id is not None and self._note_forwarded_input(input_id)
+        # The process LRU answers concurrent resends atomically; the durable context log answers
+        # one whose id the LRU evicted or a restart forgot.
+        retry = input_id is not None and (self._note_forwarded_input(input_id)
+                                          or protocol.logged_input(context_id, input_id))
         task_id = protocol.new_task_id()
         # The owner answers a resend from the accepted admission; it is not another turn of the loop.
         turn = 0 if retry else self._turns.track(context_id)
         max_turns = protocol.max_pingpong_turns()
-        rec = self.tasks.create(task_id, context_id, peer, *self._scope_for_agent(agent))
+        rec = self.tasks.create(task_id, context_id, peer, *self._scope_for_agent(agent),
+                                input_id=(input_id or task_id) if forwarded else "")
+        if not retry and (turn > max_turns or not text):
+            self._forget_forwarded_input(input_id)
         if turn > max_turns:
             protocol.metrics.anti_loop_triggers += 1
             logger.warning("A2A: anti-loop triggered for context %s (turn %d > %d)", context_id, turn, max_turns)
@@ -543,7 +595,7 @@ class A2AAdapter(BasePlatformAdapter):
         framed = security.wrap_inbound(peer, text)
         security.audit("inbound", peer, task_id, text)
         if not retry:
-            protocol.persist_message(context_id, "user", text, task_id)
+            protocol.persist_message(context_id, "user", text, task_id, input_id=input_id or "")
             protocol.metrics.inbound_total += 1
         self._register_inline_push(task_id, params, agent=agent)
         if forwarded:
@@ -587,6 +639,8 @@ class A2AAdapter(BasePlatformAdapter):
         except TimeoutError:
             return "[profile reply unverified; accepted work was not cancelled]", protocol.STATE_FAILED
         except Exception as exc:
+            # Boundary for a network peer: the full error stays in the local log, the reply is redacted.
+            logger.warning("A2A: dispatch to profile %r unverified", profile, exc_info=True)
             return security.redact_outbound(f"Profile dispatch unverified: {exc}"), protocol.STATE_FAILED
         result = receipt.get('result') or {}
         completed = receipt.get('outcome') == 'completed' and not result.get('failed')
@@ -800,7 +854,7 @@ class A2AAdapter(BasePlatformAdapter):
             headers["X-A2A-Signature"] = signature
         try:
             req = urllib.request.Request(callback_url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
-            with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+            with urllib.request.urlopen(req, timeout=10) as resp:
                 status = resp.status
         except Exception as e:
             return fail("failed: %s", e)
@@ -809,7 +863,7 @@ class A2AAdapter(BasePlatformAdapter):
         protocol.metrics.push_sent += 1
         logger.debug("A2A: push notification sent for task %s", task_id)
 
-    async def send(self, chat_id: str, content: str, reply_to: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None):
+    async def send(self, chat_id: str, content: str, reply_to: Optional[str] = None, metadata: Optional[dict[str, Any]] = None):
         """Fulfil the oldest pending reply Future for this context (``chat_id`` = A2A context id).
         Only sends carrying ``metadata['notify']`` (the base adapter's final-reply marker) satisfy
         the caller; progress/status/preview sends must not."""
@@ -822,7 +876,7 @@ class A2AAdapter(BasePlatformAdapter):
     async def send_typing(self, chat_id: str, metadata=None) -> None:
         return None
 
-    async def get_chat_info(self, chat_id: str) -> Dict[str, Any]:
+    async def get_chat_info(self, chat_id: str) -> dict[str, Any]:
         return {"name": f"a2a:{chat_id}", "type": "dm"}
 
     async def on_processing_complete(self, event: MessageEvent, outcome: ProcessingOutcome) -> None:

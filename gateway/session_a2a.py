@@ -2,13 +2,16 @@
 import asyncio
 from contextvars import ContextVar
 from dataclasses import asdict, replace
+from functools import partial
 import hashlib
 import json
+import logging
 from pathlib import Path
 
 from gateway.session_contract import SessionRef, Submission
 from hermes_state_runtime import RuntimeStoreError
 
+logger = logging.getLogger(__name__)
 _forward_identity = ContextVar('a2a_forward_identity', default=None)
 
 
@@ -45,15 +48,33 @@ def forward_author(policy):
 
 
 def storage_source(db, source, session_id, fallback):
-    """Retain the owner's native label when its transport refreshes peer metadata."""
+    """Retain the owner's creation label when its LOCAL transport refreshes peer metadata."""
     from gateway.config import Platform
-    if source.platform != Platform.LOCAL or not str(source.chat_id).startswith('local-'):
+    if source.platform != Platform.LOCAL:
         return fallback
+    if not str(source.chat_id).startswith('local-'):
+        # An adopted pre-authority row keeps its historical id as the route (session_local_migration).
+        from hermes_state_local_migration import LEGACY_PREFIX
+        with db._read_ctx() as conn:
+            if conn.execute('SELECT 1 FROM state_meta WHERE key=?', (LEGACY_PREFIX + str(source.chat_id),)).fetchone() is None:
+                return fallback
     from hermes_state_local import local_receipt
     receipt = local_receipt(db, source.chat_id)
     if session_id not in receipt.get('lineage', [receipt['session_id']]):
         raise RuntimeStoreError('admission_conflict')
-    return 'a2a' if receipt['policy']['source'] == 'a2a' else fallback
+    # Producer labels (a2a, cron, kanban, bot_room, ``--source tool``, finite ``oneshot`` runs) survive the
+    # refresh: pickers filter on them (kanban/tool/oneshot hidden, cron in its own section). Interactive
+    # surfaces keep the transport's ``local``, outside the state-owned stale-open sweeps keyed on cli/tui/acp.
+    label = receipt['policy']['source']
+    # An adopted pre-authority row (main's cli/tui/gui history) keeps the label main wrote: its
+    # ``sessions list --source``, ``-c`` and stale-open sweeps key on it, as they did before the upgrade.
+    # That is the adopted row's own label, which adoption never rewrites: the policy's creation source
+    # folds main's ``desktop`` into ``gui``, so a Desktop chat (a Bot Chat) was re-sourced on its first turn.
+    if 'legacy_session_id' in receipt:
+        root = db.get_session(receipt['legacy_session_id'])
+        return (root or {}).get('source') or label
+    from gateway.session_policy import STORED_AS_LOCAL
+    return fallback if label in STORED_AS_LOCAL else label
 
 
 async def forward(connection, params):
@@ -71,9 +92,21 @@ async def forward(connection, params):
     identity = [params[k] for k in ('agent', 'tenant', 'peer', 'context_id')]
     key = 'a2a:' + hashlib.sha256(json.dumps(identity, separators=(',', ':')).encode()).hexdigest()
     from gateway.session_local_recovery import local_identity, restore_local_session
-    from gateway.session_local import create_local_session
-    from hermes_state_local import local_receipt
-    sid = local_identity(authority.profile_id, actor.subject, key)
+    from gateway.session_local import stage_local_session
+    from gateway.session_runtime_workers import tracked_write
+    from hermes_state_local import commit_local_session, local_receipt
+    from hermes_state_mutation_retirement import first_generation
+    from hermes_state_terminal import identity_key
+    # A context whose session the user deleted continues on its next generation (the deleted id
+    # stays retired). An exact retry of an input the deleted session took stays on it and is
+    # refused there, never run again.
+    base = key
+    request_id = lambda n: base if n == 0 else f'{base}:{n}'
+    pinned = lambda conn, sid: conn.execute('SELECT 1 FROM state_meta WHERE key=?', (
+        identity_key(actor.subject, sid, params['input_id']),)).fetchone() is not None
+    generation, sid = first_generation(
+        authority.db, lambda n: local_identity(authority.profile_id, actor.subject, request_id(n)), pinned=pinned)
+    key = request_id(generation)
     authority._require_admission_open()
     if authority.db.get_session(sid) is not None:
         receipt = local_receipt(authority.db, sid)
@@ -81,17 +114,25 @@ async def forward(connection, params):
             raise RuntimeStoreError('admission_conflict')
         ref = restore_local_session(authority, sid)
     else:
-        # Historical titles discarded peer identity and collapsed context characters.
-        # Never silently adopt somebody else's history or create a replacement for it.
+        # Historical `a2a-{agent}-{slug}` titles discarded peer/tenant identity and collapsed
+        # context characters, and those `hermes chat --source a2a` rows stored no origin, so a
+        # titled row never proves it belongs to this exact conversation. Never adopt or retitle
+        # it (that would hand one peer another's history), and never refuse every peer whose
+        # slug collides: start this identity's own canonical session and leave the old row be.
         from plugins.platforms.a2a.adapter import _safe_context_slug
-        legacy = authority.db.get_session_by_title(f'a2a-{params["agent"]}-{_safe_context_slug(params["context_id"])}')
+        title = f'a2a-{params["agent"]}-{_safe_context_slug(params["context_id"])}'
+        legacy = authority.db.get_session_by_title(title)
         if legacy is not None:
-            raise RuntimeStoreError('runtime_coordination_required')
+            logger.warning('A2A: pre-authority session %s titled %r has no peer identity; '
+                           'forwarding into a new session instead of adopting it', legacy['id'], title)
         token = _forward_identity.set(identity)
         try:
-            ref = create_local_session(authority, actor, {'source': 'a2a', 'request_id': key})
+            ref = stage_local_session(authority, actor, {'source': 'a2a', 'request_id': key})
         finally:
             _forward_identity.reset(token)
+        if isinstance(ref, dict):  # the creation commit runs off the owner loop (N90); a duplicate converges
+            await tracked_write(authority, partial(commit_local_session, authority.db, epoch=authority.epoch, receipt=ref))
+            ref = restore_local_session(authority, ref['session_id'])
     if ref.session_id not in connection.subscriptions:
         await connection.resume(ref, {})
     receipt = await authority.submit(actor, Submission(params['input_id'], ref, {'text': params['text']}, 'queue'))
@@ -103,33 +144,47 @@ async def forward(connection, params):
 
 async def forward_to_owner(home, *, agent, tenant, peer, context_id, input_id, text, timeout):
     """Transport-only caller; a timeout never cancels or re-identifies accepted work."""
-    from hermes_cli.gateway_client import GatewayClient, GatewayClientError, _session_ticket
+    from hermes_cli.gateway_client import (GATEWAY_WS_PROTOCOL, GatewayClient, GatewayClientError,
+        _session_ticket, gateway_ws_target)
     from hermes_cli.gateway_runtime import ensure_gateway_runtime
     from websockets.asyncio.client import connect
-    home = Path(home).resolve()
+    home = await asyncio.to_thread(Path(home).resolve)
     async with asyncio.timeout(timeout):
         ready = await asyncio.to_thread(ensure_gateway_runtime, home)
         if ready.state != 'ready' or ready.endpoint is None:
             raise GatewayClientError(f'gateway_{ready.state}:{ready.reason_code or "not_ready"}')
         ticket = await asyncio.to_thread(_session_ticket, home, ready.endpoint)
-        url = ready.endpoint.api_origin.replace('https:', 'wss:').replace('http:', 'ws:') + '/api/ws'
-        protocols = ['hermes-gateway-v1', 'hermes-gateway-ticket.' + ticket]
+        url, protocols = gateway_ws_target(ready.endpoint, ticket)
         # Loopback authority dial: never through HTTP(S)_PROXY (websockets>=14 honours it by default).
         async with connect(url, subprotocols=protocols, open_timeout=10, max_size=8 * 1024 * 1024,
                            proxy=None) as ws:
-            if ws.subprotocol != protocols[0]:
+            if ws.subprotocol != GATEWAY_WS_PROTOCOL:
                 raise GatewayClientError('gateway_protocol_mismatch')
             async with GatewayClient(ws) as client:
                 params = dict(agent=agent, tenant=tenant, peer=peer, context_id=context_id, input_id=input_id, text=text)
+                backoff = .25
                 while True:
                     receipt = await client.rpc('a2a.forward', **params)
                     if receipt['status'] == 'unknown':
                         raise GatewayClientError('unknown_execution')
                     if receipt['status'] == 'terminal':
                         return receipt
-                    # Consume projections while polling the exact durable input receipt.
-                    while not client.events.empty():
-                        event = client.events.get_nowait()
-                        if isinstance(event, Exception):
-                            raise event
-                    await asyncio.sleep(.1)
+                    # The forward subscribed this socket to the session: wait for the admission's
+                    # completion frame, re-reading the exact durable receipt on a backed-off
+                    # safety tick (a frame lost to a replay gap) instead of a fixed 100 ms poll.
+                    try:
+                        async with asyncio.timeout(backoff):
+                            await _completion(client, receipt['admission_id'])
+                    except TimeoutError:
+                        backoff = min(backoff * 2, 5.0)
+
+
+async def _completion(client, admission_id):
+    """Consume projections until this admission's completion frame; a transport error raises."""
+    while True:
+        event = await client.events.get()
+        if isinstance(event, Exception):
+            raise event
+        frame = event.get('params') or {}
+        if frame.get('type') == 'message.complete' and (frame.get('payload') or {}).get('admission_id') == admission_id:
+            return

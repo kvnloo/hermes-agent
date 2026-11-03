@@ -1,4 +1,4 @@
-"""Real native bootstrap and dashboard login share one canonical worker, not identities."""
+"""Real native bootstrap and dashboard login share one canonical worker as one owner identity."""
 import json
 import os
 from pathlib import Path
@@ -21,11 +21,11 @@ def test_operator_cross_surface_real_auth_fifo_and_attribution(tmp_path, creator
                PYTHONPATH=str(root), PYTHONUNBUFFERED='1')
     result = subprocess.run(
         [sys.executable, str(root / 'tests/gateway/fixtures/operator_cross_surface_peer.py'), creator],
-        cwd=root, env=env, capture_output=True, text=True, timeout=150)
+        cwd=root, env=env, capture_output=True, text=True, timeout=150, check=False)
     assert result.returncode == 0, result.stdout + result.stderr
     receipt = json.loads((home / 'operator-receipt.json').read_text())
     assert receipt['creator'] == creator
     assert receipt['model_requests'] == 2
-    assert receipt['distinct_attribution'] is True
+    assert receipt['owner_attribution'] is True
     assert receipt['disconnect_survived'] is True
     assert receipt['negative_boundaries'] is True

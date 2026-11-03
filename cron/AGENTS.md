@@ -13,7 +13,9 @@ schedule via the `cronjob` tool; users via `hermes cron list|add|edit|pause|resu
 injected into the prompt; `no_agent=True` makes the script the whole job; always a FILE under
 `HERMES_HOME/scripts/`, never a command line — `script='echo hi'` is refused at creation), `context_from` (chain job
 A's last output into job B's prompt), `workdir` (run with that directory's `AGENTS.md`/`CLAUDE.md`
-loaded), multi-platform delivery.
+loaded), `timezone` (pin the cron expression's wall clock to an IANA zone; absent = the profile's
+zone), `grace_minutes` (override the catch-up window; `0` = never catch up, cron only),
+multi-platform delivery.
 
 Hardening invariants — each guards a real failure; don't weaken without answering for it:
 - **Inactivity watchdog** on cron agent sessions (`_cron_inactivity_seconds()`): default 600s idle,
@@ -21,7 +23,18 @@ Hardening invariants — each guards a real failure; don't weaken without answer
   session is hard-interrupted so it cannot monopolise the scheduler, while a long-but-active job
   is never cut off. Attached scripts (pre-run or `no_agent`) are bounded separately by the script
   timeout (`_DEFAULT_SCRIPT_TIMEOUT`, 3600s).
-- Catch-up window = half the period, clamped to 120s–2h; 120s grace for missed one-shots.
+- Catch-up window = half the period, clamped to 120s–2h, or the job's `grace_minutes` when set
+  (`0` = never catch up — a real value, never "unset": `0 == False`); 120s grace for missed
+  one-shots.
+- **A pinned `timezone` owns the whole path, not just the compute.** `compute_next_run` resolves
+  *job pin → profile zone*, and every `next_run_at` write site must pass the pin (`cron/jobs.py`
+  call sites, `quota_hold.plan_hold`, `unreachable_retry.will_retry`, `extra_fire.settle`); one missed site is a burst
+  re-run or a skipped slot. `_evaluate_due_job` normalizes the stored instant into the JOB's zone
+  and **skips `_repair_timezone_shifted_cron`** for pinned jobs — that repair is for jobs that
+  follow the profile zone, and on a pinned job its wall-clock predicate reads a due occurrence as
+  future and re-anchors past it (job silently never fires). Knobs live in `cron/jobs_time.py`;
+  `timezone`/`grace_minutes` must stay in `job_definition.JOB_DEFINITION_FIELDS` or a profile
+  distribution strips them.
 - Every recurring occurrence is accounted for: `tick()` advances `next_run_at` BEFORE dispatch
   (at-most-once across a mid-run crash) and stamps `pending_slot` in the same save; a scan that
   finds the stamp with a dead owner restores the instant ONCE (`cron/occurrences.py`), the
@@ -77,6 +90,20 @@ Hardening invariants — each guards a real failure; don't weaken without answer
   fail-closed instead of that profile's live adapters. The gate compares the liveness PID against
   `os.getpid()` — this process holds the launch `gateway.pid` AND publishes every served profile
   in `served_profiles`, so a bare liveness answer would stand cron down host-wide.
+- **The restart-safe external worker boots itself.** `_launch_external_cron_worker` pins the
+  checkout — and, on a PM install, the committed generation's `site-packages` — on the child's
+  `PYTHONPATH` and marks it `_HERMES_CRON_WORKER_BOOT`; the child's package entry
+  (`cron/__init__.py` → `cron/worker_bootstrap.py`, ahead of the `cron.jobs` import — `-m
+  cron.scheduler` runs the package first) then runs PM's `activate_dependencies`, which
+  leases the committed generation for the worker's lifetime, runs its `.pth` files and
+  activates it before the first third-party import. A failed activation is fatal: the worker
+  exits before its ownership ack (a reported dispatch failure) rather than run on an unleased
+  generation the collector may delete. The gateway never re-runs the boot — `hermes_bootstrap`
+  already did at its own launch (#122222). The worker's `__main__` imports `hermes_bootstrap`
+  (`finish_worker_boot`) and runs `run_agent`'s interrupted-pull recovery before it reads the
+  payload, and only then drops the marker: a source-update relaunch (`-I`, no `PYTHONPATH`) or a
+  post-restore re-exec must replay the whole worker, never land after the ack with the payload
+  gone and no dependency boot.
 - Cron sessions pass `skip_memory=True`; memory providers intentionally do not run during cron.
 - Cron execution has its own session. Eligible continuable deliveries may mirror or seed the
   reply-facing conversation: origin, origin-less home fallback, user-written bare-platform home,
@@ -99,7 +126,8 @@ zero outside a kanban task (footprint ladder rung 3).
   reopen-review, block, unblock, archive, tail`, plus `watch, stats, runs, log, assignees, heartbeat,
   notify-*, dispatch, daemon, gc`. Argparse alias dispatch must accept both `list` and `ls` (root).
 - **Toolset:** `tools/kanban_tools.py` — `kanban_show, kanban_complete, kanban_request_review,
-  kanban_request_changes, kanban_block, kanban_heartbeat, kanban_comment, kanban_create, kanban_link,
+  kanban_request_changes, kanban_block, kanban_schedule, kanban_heartbeat, kanban_comment,
+  kanban_create, kanban_link,
   kanban_attach, kanban_attach_url, kanban_attachments`; platforms whose saved selection enables
   `kanban` (`hermes tools enable kanban --platform <p>`; default-off, in `CONFIGURABLE_TOOLSETS`) get
   the full set plus `kanban_list`/`kanban_unblock` for board routing. The check_fn reads the schema

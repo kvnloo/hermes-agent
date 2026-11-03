@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any, Iterator, Mapping, Optional
 
 from tools.bot_mode_probe import _default_home, _hermes_root, alias_forms
-from utils import atomic_json_write
+from utils import atomic_json_write, unlink_files_older_than
 
 logger = logging.getLogger(__name__)
 
@@ -41,10 +41,11 @@ LOCKS_DIR = "locks"
 # Config fallbacks (real knobs: ``bot_mode.turn_wait_seconds`` / ``bot_mode.envelope_ttl_seconds``).
 TURN_WAIT_SECONDS_FALLBACK = 120
 DEFAULT_ENVELOPE_TTL_SECONDS = 900  # older envelopes are refused at drain with 'queued_expired'
-# Per-attempt turn timeout and attempt ceiling for bot_relay.deliver (tui_gateway/methods_bot_relay.py).
+# Per-attempt turn budget and attempt ceiling of one relayed delivery: the owner admits the turn and, when it
+# settles failed with a transient error, ONE retry under a derived identity (``gateway.session_bot._maybe_retry``).
 TURN_ATTEMPT_TIMEOUT_SECONDS = 600
-TURN_MAX_ATTEMPTS = 2  # first attempt + the policy-gated re-run
-# Mirrors RELAY_DELIVER_TIMEOUT_MS in apps/desktop/src/plugins/hermes-bots/relay.ts; both test suites pin it.
+TURN_MAX_ATTEMPTS = 2  # first admission + the owner's one transient-failure retry (gateway.session_bot)
+# Mirrors RELAY_DELIVER_TIMEOUT_MS in apps/desktop/src/plugins/hermes-bots/relay-budget.ts; both test suites pin it.
 DESKTOP_DELIVER_SETTLEMENT_MARGIN_SECONDS = 180
 DESKTOP_DELIVER_TIMEOUT_SECONDS = (
     TURN_WAIT_SECONDS_FALLBACK + TURN_ATTEMPT_TIMEOUT_SECONDS * TURN_MAX_ATTEMPTS + DESKTOP_DELIVER_SETTLEMENT_MARGIN_SECONDS
@@ -194,7 +195,7 @@ def _title_slug(row: dict) -> str:
     return slug if slug in alias_forms(title) else ""
 
 
-def remote_target_forms(roster: list[dict], local_taken: "set[str] | frozenset[str]" = frozenset()) -> list[str]:
+def remote_target_forms(roster: list[dict], local_taken: set[str] | frozenset[str] = frozenset()) -> list[str]:
     """One unambiguous target string per row, shortest first: the bare handle when no other remote
     row and no LOCAL profile (``local_taken``: this gateway's handles and friendly-name slugs) answers
     to it; else the title slug under the same test (a remote ``default`` titled "CoS Bot" is
@@ -224,7 +225,7 @@ _SENDER_STAMP_RE = re.compile(r"^(Message from 🤖 .+? \(@)([A-Za-z0-9_-]+)(\):
 
 
 def qualify_sender_stamp(message: str, from_handle: Any, from_connection: Any, roster: list[dict],
-                         local_taken: "set[str] | frozenset[str]" = frozenset()) -> str:
+                         local_taken: set[str] | frozenset[str] = frozenset()) -> str:
     """Rewrite a relayed DM's ``Message from 🤖 <name> (@<handle>):`` stamp so the handle is the
     form THIS gateway can reply to: the sender's row in the local relay roster as
     ``remote_target_forms`` renders it, else ``handle@connection``. A relayed ``@hermes`` is another
@@ -334,7 +335,7 @@ def claim_pending_envelopes(root: Path | str) -> list[dict]:
     _sweep_stale(base)
     ttl = _envelope_ttl_seconds()
     now = time.time()
-    out: list[dict] = []
+    out: list[tuple[tuple[float, str], dict]] = []
     # Oldest first: the Desktop delivers each target's claimed envelopes in the order this list
     # gives them, so a sender's two DMs to one agent arrive in the order they were sent. Sorting
     # by filename ordered them by ``uuid4().hex`` — at random.
@@ -344,18 +345,21 @@ def claim_pending_envelopes(root: Path | str) -> list[dict]:
                 path.unlink()
             continue
         claimed = base / CLAIMED_DIR / path.name
+        order = _queued_at(path)
         with contextlib.suppress(OSError, ValueError):
-            os.replace(path, claimed)  # atomic claim
+            os.replace(path, claimed)  # atomic claim; the rename keeps the enqueue mtime
             envelope = json.loads(claimed.read_text(encoding="utf-8-sig"))
             if not isinstance(envelope, dict):
                 raise ValueError(f"expected a JSON object, got {type(envelope).__name__}")
-            out.append(envelope)
-    seen = {row["id"] for row in out}
+            out.append((order, envelope))
+    seen = {row["id"] for _order, row in out}
+    # One enqueue-ordered list: a claimed-but-unanswered DM (Desktop reconnected before its reply)
+    # is OLDER than mail queued since, so appending replays after fresh rows reversed them.
     out.extend(_replay_unanswered(root, base, seen, now))
-    return out
+    return [envelope for _order, envelope in sorted(out, key=lambda item: item[0])]
 
 
-def _replay_unanswered(root: Path | str, base: Path, seen: set, now: float) -> list[dict]:
+def _replay_unanswered(root: Path | str, base: Path, seen: set, now: float) -> list[tuple[tuple[float, str], dict]]:
     """``claimed/`` canonical envelopes whose reply has not landed yet, replayed on EVERY drain.
 
     A drained envelope is not "delivered": its stable id is handed out again until the target's
@@ -365,9 +369,10 @@ def _replay_unanswered(root: Path | str, base: Path, seen: set, now: float) -> l
     authority, which admits one turn per id and answers a retry with the existing record — never a
     second turn. Once ``created_at + REPLY_WAIT_SECONDS`` passes with no reply the waiter is gone
     (or about to be): a ``delivery_timeout`` reply is written so it learns, and the envelope is
-    never handed out again.
+    never handed out again. Each envelope comes back with its ``_queued_at`` enqueue key so the
+    drain can merge it with fresh outbox rows in send order.
     """
-    out: list[dict] = []
+    out: list[tuple[tuple[float, str], dict]] = []
     for path in sorted((base / CLAIMED_DIR).glob("*.json"), key=_queued_at):
         if (base / REPLIES_DIR / path.name).exists():
             continue
@@ -375,18 +380,38 @@ def _replay_unanswered(root: Path | str, base: Path, seen: set, now: float) -> l
             envelope = json.loads(path.read_text(encoding="utf-8-sig"))
             if not isinstance(envelope, dict):
                 raise ValueError(f"expected a JSON object, got {type(envelope).__name__}")
-            if envelope.get("canonical_delivery_v1") is not True or envelope.get("id") in seen:
+            if envelope.get("id") in seen:
                 continue
             env_id = str(envelope.get("id") or "")
             label = f"@{envelope.get('target_handle') or '?'} on {envelope.get('target_connection') or '?'}"
+            if envelope.get("canonical_delivery_v1") is not True:
+                _settle_pre_upgrade_claim(root, path, env_id, label, now)
+                continue
             created = float(envelope.get("created_at") or path.stat().st_mtime)
             if now - created > REPLY_WAIT_SECONDS:
                 write_reply(root, env_id, reason="delivery_timeout", error=(
                     f"no reply from {label} within {REPLY_WAIT_SECONDS}s of sending — the Desktop picked "
                     "the message up but never reported a delivery. It will not be retried; resend if it matters."))
                 continue
-            out.append(envelope)
+            out.append((_queued_at(path), envelope))
     return out
+
+
+def _settle_pre_upgrade_claim(root: Path | str, path: Path, env_id: str, label: str, now: float) -> None:
+    """A ``claimed/`` envelope from before canonical delivery (no ``canonical_delivery_v1``) is never
+    replayed: its old lane ran a CLI turn the authority has no record of, so re-admitting the id could
+    run the DM twice. Left alone, though, its sender's waiter watched a reply that never came. Once the
+    old drain's own re-offer point passes (``REOFFER_AFTER_SECONDS`` after its claim — the claim mtime
+    — by which time a live delivery has posted the Desktop's timeout reply) the outcome is settled as
+    ``unknown``: the waiter resolves, the envelope is never offered again, and nothing auto-resends."""
+    from tools.bot_failure_reasons import UNKNOWN
+
+    if now - path.stat().st_mtime < REOFFER_AFTER_SECONDS:
+        return
+    write_reply(root, env_id, reason=UNKNOWN, error=(
+        f"the message to {label} was picked up before this gateway was upgraded and its delivery was "
+        "never reported — it may or may not have been delivered. It will not be retried; check with "
+        "the recipient before resending."))
 
 
 def write_reply(root: Path | str, envelope_id: str, *, reply: str = "", error: str = "", reason: str = "") -> Path:
@@ -415,21 +440,9 @@ def write_reply(root: Path | str, envelope_id: str, *, reply: str = "", error: s
     return path
 
 
-def unlink_files_older_than(directory: Path, pattern: str, cutoff: float) -> int:
-    """Unlink regular files matching ``pattern`` with mtime before ``cutoff``; returns count. Never raises."""
-    removed = 0
-    with contextlib.suppress(OSError):
-        for path in directory.glob(pattern):
-            with contextlib.suppress(OSError):
-                if path.is_file() and path.stat().st_mtime < cutoff:
-                    path.unlink()
-                    removed += 1
-    return removed
-
-
 def _sweep_stale(base: Path, *, now: float | None = None) -> int:
-    cutoff = (time.time() if now is None else now) - STALE_AFTER_SECONDS
-    return sum(unlink_files_older_than(base / sub, "*.json", cutoff) for sub in (CLAIMED_DIR, REPLIES_DIR, OUTBOX_DIR))
+    return sum(unlink_files_older_than(base / sub, "*.json", STALE_AFTER_SECONDS, now=now)
+               for sub in (CLAIMED_DIR, REPLIES_DIR, OUTBOX_DIR))
 
 
 def cleanup_bot_relay_artifacts(max_age_hours: float | None = None) -> int:
@@ -516,7 +529,7 @@ def delivery_turn_author(from_profile: Any, from_handle: Any, from_connection: A
             "is_bot": True}
 
 
-def _delivery_child_session_env_names() -> "tuple[str, ...]":
+def _delivery_child_session_env_names() -> tuple[str, ...]:
     """Session-bound env names to strip from a delivery child, from ``gateway.session_context``.
 
     Synced with the session binding surface as vars are added; deliberately NOT a
@@ -540,7 +553,7 @@ def relaying_principal_author(principal: str) -> dict:
     return {"id": bot_author_id("relay", str(principal or "").strip()), "name": "relayed teammate", "is_bot": True}
 
 
-def delivery_env(author: Optional[dict], profile_home: "str | Path | None" = None) -> dict[str, str]:
+def delivery_env(author: Optional[dict], profile_home: str | Path | None = None) -> dict[str, str]:
     """Environment for one delivery turn's ``hermes -p <profile>`` child. The dispatcher's own
     HERMES_TURN_AUTHOR is dropped first so a delivery without an author never inherits the author of the turn
     that sent it. Dispatcher session identity (the canonical ``gateway.session_context`` session env names) is
@@ -549,11 +562,23 @@ def delivery_env(author: Optional[dict], profile_home: "str | Path | None" = Non
     profile's Bot Chat turn, so it starts from THAT profile's env (``served_profile_child_env``: launch
     profile ``.env`` / TERMINAL_* residue dropped, target secrets overlaid), never the multiplexer's raw
     ``os.environ``; ``-p`` alone only pinned HERMES_HOME. ``profile_home`` is the target's home when the
-    caller knows it (relay RPC, roster); otherwise the active override."""
+    caller knows it (relay RPC, roster); otherwise the active override, and under multiplex the launch
+    home."""
+    from agent.secret_scope import current_secret_scope, is_multiplex_active
     from agent.turn_author import TURN_AUTHOR_ENV, turn_author_env
+    from hermes_constants import get_hermes_home_override, get_routing_process_hermes_home
     from tools.environments.local import served_profile_child_env
 
-    env = served_profile_child_env(base=os.environ, target_home=profile_home, inherit_credentials=True)
+    # ``_profile_home`` answers None for the launch profile by design and a relay RPC binds no scope,
+    # so under multiplex an empty target means the launch profile, not "unknown" (the fail-closed
+    # raise; cf. the slash-worker spawn, #115427). An explicit target beats an override or bound scope
+    # inside ``served_profile_child_env``, so fill it only when both are absent; a single-profile host
+    # keeps its pass-through env.
+    target_home = profile_home
+    if (not target_home and is_multiplex_active() and not get_hermes_home_override()
+            and current_secret_scope() is None):
+        target_home = get_routing_process_hermes_home()
+    env = served_profile_child_env(base=os.environ, target_home=target_home, inherit_credentials=True)
     env.pop(TURN_AUTHOR_ENV, None)
     for name in _delivery_child_session_env_names():
         env.pop(name, None)
@@ -588,7 +613,7 @@ class TurnBusyError(RuntimeError):
     def __init__(self, profile: str, waited_seconds: float):
         self.profile, self.waited_seconds = profile, waited_seconds
         super().__init__(f"target_busy: another delivery turn is already running for profile '{profile}' — "
-                         f"queued behind it for ~{int(round(waited_seconds))}s without it finishing. "
+                         f"queued behind it for ~{round(waited_seconds)}s without it finishing. "
                          "The message was NOT delivered; retry shortly.")
 
 

@@ -189,88 +189,39 @@ def worker_history(db, conn, sid, payload):
     view.authorize(sid, target)
     ids = view._resume_lineage_ids(target) if payload['include_ancestors'] else [target]
     active = db._active_clause(payload['include_inactive'], payload['include_compacted'])
-    rows = conn.execute(f'SELECT {db._CONVERSATION_ROW_COLUMNS} FROM messages '
+    display = payload['include_compacted'] and not payload['include_inactive']
+    rows = conn.execute(f'SELECT {"session_id, compacted, display_order, " if display else ""}{db._CONVERSATION_ROW_COLUMNS} FROM messages '
                         f'WHERE session_id IN ({",".join("?" for _ in ids)}){active} ORDER BY id', ids).fetchall()
+    if display:  # the owner's display reads' rule: a message whose newest copy was removed stays hidden
+        from hermes_state_messages import SessionMessagesMixin
+        rows = SessionMessagesMixin._with_removed_identities(view, rows, ids)
     if payload['include_compacted']:
-        rows = db._dedupe_display_generations(rows)
+        rows = db._dedupe_display_generations(rows, drop_removed=display)
     return {'messages': db._rows_to_conversation(rows, session_id=target,
         include_ancestors=payload['include_ancestors'], repair_alternation=payload['repair_alternation'],
         include_row_ids=payload['include_row_ids'])}
 
 
 
-from hermes_state_common import _COMPRESSION_LOCK_ROW_SQL, is_automatic_end_reason, _placeholders
-from hermes_state_messages import _ARCHIVE_ACTIVE_SQL, _SET_COUNTERS_SQL
-from hermes_state_errors import CompressionSessionBusyError, SessionCompressionInProgressError
-_LOCK_ROW_SQL = _COMPRESSION_LOCK_ROW_SQL
 
 
-def archive_on_connection(db, conn, session_id: str, compacted_messages: List[Dict[str, Any]], model_config_patch: Optional[Dict[str, Any]]=None, watermark: Optional[int]=None, lock_holder: Optional[str]=None, tail_count: int=0, carried_messages: Optional[List[Dict[str, Any]]]=None, covered_ids: Optional[List[int]]=None, unresolved_held: Optional[List[Dict[str, Any]]]=None):
-    if lock_holder is not None:
-        lock_row = conn.execute(_COMPRESSION_LOCK_ROW_SQL, (session_id,)).fetchone()
-        if lock_row is None or lock_row['holder'] != lock_holder or float(lock_row['expires_at']) <= time.time():
-            raise SessionCompressionInProgressError(f'Compression lease for {session_id!r} lost before commit; refusing to publish a stale compaction')
-    patch = model_config_patch is not None
-    patched_model_config = db._merge_model_config_json(conn, session_id, model_config_patch, on_missing='raise') if patch else None
-    # Same held-row coverage rule as SessionDB.archive_and_compact: when the compressor named the
-    # rows it held, archive exactly those and clone the rest instead of trusting the watermark.
-    proved = db._proved_coverage(conn, session_id, covered_ids, unresolved_held)
-    if proved is not None:
-        return db._archive_named_rows(conn, session_id, compacted_messages, proved, tail_count=tail_count,
-            carried_messages=carried_messages, patched_model_config=patched_model_config, patch=patch)
-    tail_ids, tail_tool_calls = ([], 0) if watermark is None else db._tail_rows_after_watermark(conn, 'SELECT id, tool_calls FROM messages WHERE session_id = ? AND active = 1 AND id > ? ORDER BY id', (session_id, int(watermark)))
-    # Same rewind set as SessionDB.archive_and_compact: carried originals (#118900), then the tail.
-    rewind_ids: list[int] = db._resolve_carried_row_ids(conn, session_id, carried_messages or [])
-    if tail_count > 0:
-        bound = watermark is not None
-        rewind_ids += [int(row['id']) for row in conn.execute(f"SELECT id FROM messages WHERE session_id = ? AND active = 1{(' AND id <= ?' if bound else '')} ORDER BY id DESC LIMIT ?", (session_id, *((int(watermark),) if bound else ()), int(tail_count))).fetchall()]
-    rewind_ids += tail_ids
-    rewind_ids = list(dict.fromkeys(rewind_ids))
-    if rewind_ids:
-        placeholders = _placeholders(rewind_ids)
-        conn.execute(f'UPDATE messages SET active = 0, compacted = 0 WHERE session_id = ? AND id IN ({placeholders})', [session_id, *rewind_ids])
-        conn.execute(f'{_ARCHIVE_ACTIVE_SQL} AND id NOT IN ({placeholders})', [session_id, *rewind_ids])
-    else:
-        conn.execute(_ARCHIVE_ACTIVE_SQL, (session_id,))
-    inserted, tool_calls_total = db._insert_message_rows(conn, session_id, compacted_messages)
-    if tail_ids:
-        db._clone_message_rows(conn, tail_ids)
-        inserted += len(tail_ids)
-        tool_calls_total += tail_tool_calls
-    conn.execute(f"{_SET_COUNTERS_SQL}{(', model_config = ?' if patch else '')} WHERE id = ?", (inserted, tool_calls_total, *((patched_model_config,) if patch else ()), session_id))
-    return inserted
+def archive_on_connection(db, conn, session_id: str, compacted_messages: list[dict[str, Any]], model_config_patch: Optional[dict[str, Any]]=None, watermark: Optional[int]=None, lock_holder: Optional[str]=None, tail_count: int=0, carried_messages: Optional[list[dict[str, Any]]]=None, covered_ids: Optional[list[int]]=None, unresolved_held: Optional[list[dict[str, Any]]]=None, held_for_cas: Optional[list[dict[str, Any]]]=None):
+    # The owner's in-place compaction body, on this receipt's connection: one implementation, so
+    # main's coverage/merge/timestamp/display-order fixes reach worker and mutation verbs too.
+    return db._archive_and_compact_on_conn(conn, session_id, compacted_messages,
+        model_config_patch=model_config_patch, watermark=watermark, lock_holder=lock_holder,
+        tail_count=tail_count, carried_messages=carried_messages, covered_ids=covered_ids,
+        unresolved_held=unresolved_held, held_for_cas=held_for_cas)
 
-def publish_on_connection(db, conn, *, parent_session_id: str, child_session_id: str, source: str, messages: List[Dict[str, Any]], model: str=None, model_config: Dict[str, Any]=None, system_prompt: str=None, cwd: str=None, profile_name: str=None, compression_lock_holder: str=None, require_compression_lease: bool=True, require_lease_refresh: bool=False, lease_ttl_seconds: float=300.0, watermark: Optional[int]=None, watermark_ceiling: Optional[int]=None):
-    if require_lease_refresh and compression_lock_holder:
-        conn.execute('UPDATE compression_locks SET expires_at = ? WHERE session_id = ? AND holder = ?', (time.time() + lease_ttl_seconds, parent_session_id, compression_lock_holder))
-    lock_row = conn.execute(_LOCK_ROW_SQL, (parent_session_id,)).fetchone()
-    if require_compression_lease and (lock_row is None or not compression_lock_holder or lock_row['holder'] != compression_lock_holder or (float(lock_row['expires_at']) <= time.time())):
-        raise CompressionSessionBusyError(f'Compression lease lost before publication: {parent_session_id}')
-    parent = conn.execute('SELECT ended_at, end_reason, cwd, git_branch, git_repo_root,\n                          user_id, session_key, chat_id, chat_type,\n                          thread_id, display_name, origin_json, profile_name, tool_names\n                   FROM sessions WHERE id = ?', (parent_session_id,)).fetchone()
-    if parent is None:
-        raise RuntimeError(f'Compression parent not found: {parent_session_id}')
-    if parent['ended_at'] is not None:
-        if not is_automatic_end_reason(parent['end_reason']):
-            raise RuntimeError(f'Compression parent already ended: {parent_session_id}')
-        conn.execute('UPDATE sessions SET ended_at = NULL, end_reason = NULL WHERE id = ?', (parent_session_id,))
-    if not messages:
-        raise RuntimeError('Compression child handoff must not be empty')
-    db._publish_child_session_row(conn, parent, parent_session_id=parent_session_id, child_session_id=child_session_id, source=source, model=model, model_config=model_config, system_prompt=system_prompt, cwd=cwd, profile_name=profile_name)
-    total_messages, total_tool_calls = db._insert_message_rows(conn, child_session_id, messages)
-    if watermark is not None:
-        bounded = watermark_ceiling is not None
-        tail_ids, tail_tool_calls = db._tail_rows_after_watermark(conn, f"SELECT id, tool_calls FROM messages WHERE session_id = ? AND active = 1 AND id > ?{(' AND id <= ?' if bounded else '')} ORDER BY id", [parent_session_id, int(watermark), *([int(watermark_ceiling)] if bounded else [])])
-        if tail_ids:
-            db._clone_message_rows(conn, tail_ids, session_id=child_session_id)
-            total_messages += len(tail_ids)
-            total_tool_calls += tail_tool_calls
-    conn.execute('UPDATE sessions SET message_count = ?, tool_call_count = ? WHERE id = ?', (total_messages, total_tool_calls, child_session_id))
-    updated = conn.execute("UPDATE sessions SET ended_at = ?, end_reason = 'compression' WHERE id = ? AND ended_at IS NULL", (time.time(), parent_session_id))
-    if updated.rowcount != 1:
-        raise RuntimeError(f'Compression parent changed during publication: {parent_session_id}')
-    from hermes_state_local_lineage import advance_local_target
-    advance_local_target(conn, parent_session_id, child_session_id)
-
+def publish_on_connection(db, conn, *, parent_session_id: str, child_session_id: str, source: str, messages: list[dict[str, Any]], model: str | None=None, model_config: dict[str, Any] | None=None, system_prompt: str | None=None, cwd: str | None=None, profile_name: str | None=None, compression_lock_holder: str | None=None, require_compression_lease: bool=True, require_lease_refresh: bool=False, lease_ttl_seconds: float=300.0, watermark: Optional[int]=None, watermark_ceiling: Optional[int]=None):
+    # The owner's rotation body (lease, closure, child row, timestamps, tail clone, local target,
+    # auto-archive lift) on this receipt's connection, so the two paths cannot drift.
+    db._publish_compression_child_on_conn(conn, parent_session_id=parent_session_id,
+        child_session_id=child_session_id, source=source, messages=messages, model=model,
+        model_config=model_config, system_prompt=system_prompt, cwd=cwd, profile_name=profile_name,
+        compression_lock_holder=compression_lock_holder, require_compression_lease=require_compression_lease,
+        require_lease_refresh=require_lease_refresh, lease_ttl_seconds=lease_ttl_seconds,
+        watermark=watermark, watermark_ceiling=watermark_ceiling)
 
 def worker_watermark(db, conn, sid, payload):
     _fields(payload, ())
@@ -279,11 +230,11 @@ def worker_watermark(db, conn, sid, payload):
 
 
 def _handoff_messages(conn, sid, messages):
-    from hermes_state_runtime import _MESSAGE_FIELDS
+    from hermes_state_runtime import HANDOFF_MESSAGE_FIELDS
     if not isinstance(messages, list) or len(messages) > 1000:
         raise RuntimeStoreError('invalid_params')
     for msg in messages:
-        if not isinstance(msg, dict) or set(msg) - _MESSAGE_FIELDS - {'_compressed_summary_has_user_turn'} or msg.get('role') not in ('user', 'assistant', 'system', 'tool'):
+        if not isinstance(msg, dict) or set(msg) - HANDOFF_MESSAGE_FIELDS or msg.get('role') not in ('user', 'assistant', 'system', 'tool'):
             raise RuntimeStoreError('invalid_params')
         if '_row_id' in msg and not conn.execute('SELECT 1 FROM messages WHERE session_id=? AND id=?',
                                                  (sid, msg['_row_id'])).fetchone():
@@ -300,7 +251,7 @@ def _watermarks(payload):
 def worker_archive(db, conn, sid, payload):
     from hermes_state_worker_context import SIDECAR_KEYS
     _fields(payload, ('messages', 'model_config_patch', 'watermark', 'lock_holder', 'tail_count'),
-            optional=('carried_messages', 'covered_ids', 'unresolved_held'))
+            optional=('carried_messages', 'covered_ids', 'unresolved_held', 'held_for_cas'))
     _handoff_messages(conn, sid, payload['messages'])
     carried = payload.get('carried_messages') or []
     if not isinstance(carried, list) or any(not isinstance(m, dict) for m in carried):
@@ -313,6 +264,12 @@ def worker_archive(db, conn, sid, payload):
     if unresolved is not None and (not isinstance(unresolved, list)
                                    or any(not isinstance(m, dict) for m in unresolved)):
         raise RuntimeStoreError('invalid_params')
+    # The lease-less CAS fence (#124102): dicts projected to the closed handoff fields plus the
+    # persistence marker the owner's compare reads; validated like the other held-row payloads.
+    cas = payload.get('held_for_cas')
+    if cas is not None and (not isinstance(cas, list)
+                            or any(not isinstance(m, dict) for m in cas)):
+        raise RuntimeStoreError('invalid_params')
     _watermarks(payload)
     # Micro-compaction and proactive prune archive in place without a lease, like the owner path.
     if payload['lock_holder'] is not None:
@@ -324,8 +281,9 @@ def worker_archive(db, conn, sid, payload):
         raise RuntimeStoreError('invalid_params')
     value = archive_on_connection(db, conn, sid, payload['messages'], model_config_patch=patch,
         watermark=payload['watermark'], lock_holder=payload['lock_holder'], tail_count=payload['tail_count'],
-        carried_messages=carried, covered_ids=covered, unresolved_held=unresolved)
-    return {'value': value, 'row_ids': [message['_row_id'] for message in payload['messages']]}
+        carried_messages=carried, covered_ids=covered, unresolved_held=unresolved, held_for_cas=cas)
+    from hermes_state_runtime import row_annotations
+    return {'value': value, 'annotations': row_annotations(payload['messages'])}
 
 
 def _migrate_worker_automation(db, conn, parent, child):
@@ -392,8 +350,9 @@ def worker_publish(db, conn, sid, payload):
                  "WHERE json_extract(lineage_json,'$[#-1]')=? AND generation=? AND owner_epoch=? "
                  "AND status IN ('started','unknown')",
                  (child, sid, worker['generation'], worker['owner_epoch']))
+    from hermes_state_runtime import row_annotations
     return {'value': None, 'worker_assignment': {'parent': sid, 'session_id': child},
-            'row_ids': [message['_row_id'] for message in payload['messages']]}
+            'annotations': row_annotations(payload['messages'])}
 
 
 def worker_receipt_assignment(conn, execution_id, session_id, generation, sequence, digest):
@@ -420,7 +379,7 @@ def worker_claim_origin(db, params):
 
 def worker_retry_target(db, params):
     """Transport verification accepts old targets only for exact publication replay."""
-    from gateway.session_admission import admission_fingerprint
+    from hermes_state_keys import admission_fingerprint
     if params.get('operation') != 'compression.publish':
         return params['session_id']
     digest = admission_fingerprint(canonical_target=params['session_id'],
@@ -431,7 +390,7 @@ def worker_retry_target(db, params):
     return row['session_id']
 
 
-from hermes_state_common import _ENDED_ROW_SQL, _ended_by_compression
+from hermes_state_common import _COMPRESSION_LOCK_ROW_SQL as _LOCK_ROW_SQL, _ENDED_ROW_SQL, _ended_by_compression
 
 def reopen_on_connection(db, conn, session_id):
     if not _ended_by_compression(conn.execute(_ENDED_ROW_SQL, (session_id,)).fetchone()):

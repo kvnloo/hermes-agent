@@ -1,5 +1,6 @@
 """Native room controls retain the service protocol and authenticated ownership."""
 import asyncio
+import json
 from types import SimpleNamespace
 
 from gateway.session_controls import AuthorityConnection
@@ -14,25 +15,30 @@ class RoomService:
         self.calls = []
         self.runtime = SimpleNamespace(status=lambda: {'running': True, 'stopping': False})
 
-    def authorize_room(self, actor_subject, room_id, *, create=False):
+    def authorize_room(self, actor_subject, room_id, *, create=False, conn=None):
         if actor_subject != self.owner or room_id != 'owned':
             raise RuntimeStoreError('permission_denied')
 
-    def create_room(self, *, room_id, name, members):
+    def create_room(self, *, room_id, name, members, admit=None):
         from gateway.hosted_rooms import create_room, local_authority_gateway_id
         self.calls.append(('create', room_id))
         return create_room(self.db_path, room_id=room_id, name=name, members=members,
-                           authority_gateway_id=local_authority_gateway_id())
+                           authority_gateway_id=local_authority_gateway_id(), admit=admit)
 
     def status(self, room_id):
-        return {'room_id': room_id, 'pending_actions': [{'kind': 'retry', 'task_id': 'task'}]}
+        return {'running': True, 'working': False, 'blocked': True, 'counts': {}, 'peer_routes': [],
+                'pending_actions': [{'kind': 'retry', 'task_id': 'task'}]}
 
     def revoke_room_routes(self, room_id):
         self.calls.append(('revoke', room_id))
 
     def send(self, *, room_id, event_id, payload):
+        from gateway.hosted_rooms import append_event, room_state
         self.calls.append(('send', room_id, event_id, payload))
-        return {'event_id': event_id, 'payload': payload}
+        room = room_state(self.db_path, room_id=room_id)
+        return append_event(self.db_path, room_id=room_id, event_id=event_id, kind='message.user',
+                            actor={'kind': 'user', 'id': 'desktop'}, payload=payload,
+                            authority_gateway_id=room['authority_gateway_id'], authority_epoch=room['authority_epoch'])
 
     def stop_room(self, room_id, *, cancel_id, require_acknowledged=False):
         self.calls.append(('stop', room_id, cancel_id, require_acknowledged))
@@ -56,6 +62,9 @@ class RoomService:
 
 def test_execution_controls_preserve_native_wire_and_exact_task_identity(tmp_path, monkeypatch):
     monkeypatch.setenv('HERMES_HOME', str(tmp_path))
+    # The control boundary validates the roster before any service sees it: helper is a destination.
+    helper = (tmp_path / 'profiles' / 'helper').resolve()
+    (tmp_path / 'config.yaml').write_text(json.dumps({'hosted_rooms': {'profiles': {'helper': str(helper)}}}))
     with SessionDB(tmp_path / 'state.db') as db:
         authority = SimpleNamespace(profile_id=str(tmp_path), instance_id='owner', db=db, events={})
         connection = AuthorityConnection(authority, object(), {'user_id': 'alice'})

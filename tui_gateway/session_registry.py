@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from .method_ctx import bind_module
 
 def _wait_agent(session: dict, rid: str, timeout: float = 30.0) -> dict | None:
@@ -70,7 +72,7 @@ def _wait_agent_for_prompt(session: dict, rid: str, sid: str) -> dict | None:
     return _err(rid, 5032, err) if (err := session.get("agent_error")) else None
 
 
-def _bind_build_profile_scopes(profile_home: "str | None") -> "_TurnScopes | None":
+def _bind_build_profile_scopes(profile_home: str | None) -> _TurnScopes | None:
     """Bind a session profile's HERMES_HOME / secret / terminal scopes for an agent build. ``None`` is the
     launch profile: its own launch-env secret scope (live env while single-profile, frozen once
     multiplexing is active — a hosted-room turn for a default member otherwise died at build with
@@ -88,7 +90,7 @@ def _bind_build_profile_scopes(profile_home: "str | None") -> "_TurnScopes | Non
     return scopes
 
 
-def _release_build_profile_scopes(scopes: "_TurnScopes | None") -> None:
+def _release_build_profile_scopes(scopes: _TurnScopes | None) -> None:
     with contextlib.suppress(Exception):
         _release_profile_runtime_scope_tokens(scopes)
 
@@ -132,9 +134,14 @@ def _wire_session_agent(sid: str, key: str, agent) -> bool:
 
 
 def _start_session_services(sid: str, key: str, current: dict) -> None:
-    """Start the notification poller and fire the session-reset boundary hook."""
+    """Start the notification poller (exactly one live per session) and fire the session-reset boundary hook."""
     with _sessions_lock:
         if (rec := _sessions.get(sid)) is not None:
+            # An agent rebuild re-enters here for the SAME session: stop the previous poller before
+            # replacing its stop event, or the orphaned old loop keeps draining the process-global
+            # completion queue (and close can only signal the newest event) — #138806.
+            if (old_stop := rec.get("_notif_stop")) is not None:
+                old_stop.set()
             rec["_notif_stop"] = _start_notification_poller(sid, rec)
     _notify_session_boundary("on_session_reset", key, _session_source(current))
 
@@ -152,17 +159,24 @@ def _await_resume_history(sid: str, current: dict) -> bool:
         return _sessions.get(sid) is current
 
 
-def _attach_built_agent(current: dict, agent) -> None:
-    """Attach a freshly built agent to its live record (session DB row deferred to first run_conversation())."""
+def _attach_built_agent(sid: str, current: dict, agent) -> bool:
+    """Attach a freshly built agent to its live record (session DB row deferred to first run_conversation()).
+    False when ``session.close`` popped this record mid-build: teardown saw ``agent=None`` and closed
+    nothing, so the caller owns closing the orphan (#49852)."""
     # Bot Mode gate hint: the DB title lands post-first-turn but the system prompt builds at turn START.
     if _title_hint := str(current.get("pending_title") or "").strip():
         agent._session_title_hint = _title_hint
-    current["agent"] = agent
+    # Under the same lock session.close takes to pop the record: no window between "still live" and "attached".
+    with _sessions_lock:
+        if _sessions.get(sid) is not current:
+            return False
+        current["agent"] = agent
     # A workspace move can land while construction is still in flight.
     _register_session_cwd(current)
     _session_todo_state(current)
     # Baseline for the per-turn config sync (profile home override still active).
     current["config_model_seen"] = _config_model_target()
+    return True
 
 
 def _announce_built_agent(sid: str, key: str, current: dict, agent) -> None:
@@ -184,8 +198,8 @@ def _finish_agent_build(sid: str, key: str, current: dict, *, notify_registered:
     """Release build scopes and settle ownership of the late notify registration + dedicated db handle."""
     if scopes is not None:
         _release_build_profile_scopes(scopes)
-    # Reaped mid-build: _attach_worker closed the worker; only a late notify registration can still
-    # leak (session.close unregistered before _build registered).
+    # Reaped after the agent was attached: _attach_worker closed the worker; only a late notify
+    # registration can still leak (session.close unregistered before _build registered).
     with _sessions_lock:
         replaced = _sessions.get(sid) is not current
     if replaced and notify_registered:
@@ -208,7 +222,8 @@ def _start_agent_build(sid: str, session: dict) -> None:
         return
     # A lazy watch session spectating an in-flight child must stay lazy so the subagent live-mirror keeps
     # flowing (it bails once agent is set); incidental RPCs via _sess() would upgrade it mid-stream.
-    if session.get("lazy") and _child_run_active(str(session.get("session_key") or "")):
+    if session.get("lazy") and _child_run_active(
+            str(session.get("session_key") or ""), session.get("profile_home") or None):
         return
     with session.setdefault("agent_build_lock", threading.Lock()):
         if ready.is_set() or session.get("agent_build_started"):
@@ -250,14 +265,31 @@ def _start_agent_build(sid: str, session: dict) -> None:
                 agent = _make_agent(sid, key, **_deferred_build_agent_kwargs(current, session_db))
             finally:
                 _clear_session_context(tokens)
-            _attach_built_agent(current, agent)
+            # Attach atomically against session teardown: ``session.close`` may have popped this
+            # session while the expensive build was in flight, in which case teardown could not close
+            # an agent that did not exist yet. Release the orphan immediately and do not keep wiring
+            # workers/callbacks for a dead session (#49852).
+            if not _attach_built_agent(sid, current, agent):
+                # Same contract as the replaced-before-attach exit above: a turn admitted against
+                # this record must refuse with the real reason rather than a generic missing agent.
+                current["agent_error"] = AGENT_BUILD_ABANDONED
+                with contextlib.suppress(Exception):
+                    if hasattr(agent, "close"):
+                        agent.close()
+                return
             # No eager slash-worker pre-warm (slash.exec spawns on demand): each worker forks the full stdio
             # MCP fleet, and live-transport sessions are never reaped, so fleets would accumulate.
             notify_registered = _wire_session_agent(sid, key, agent)
             _announce_built_agent(sid, key, current, agent)
-        except Exception as e:
+        except (Exception, ConfigBackendUnavailable) as e:  # health: allow BLE001 -- reported as agent_error + error event
+            from agent.auxiliary_unavailable import ProviderNotConfiguredError
             current["agent_error"] = str(e)
-            _emit("error", sid, {"message": agent_init_failed_message(e)})
+            # A client can route "no provider is set up" to its setup flow instead of a dead-end
+            # error toast — but only if it can tell. The sentence is for the reader, the code is
+            # for the client; older clients keep matching the text.
+            _emit("error", sid, {
+                "message": agent_init_failed_message(e),
+                **({"code": "provider_not_configured"} if isinstance(e, ProviderNotConfiguredError) else {})})
         finally:
             _finish_agent_build(
                 sid, key, current, notify_registered=notify_registered, scopes=scopes, session_db=session_db)
@@ -332,8 +364,61 @@ def _init_session(
     _schedule_mcp_late_refresh(sid, agent)
 
 
+_AUTO_PRUNE_NOTIFIED: dict[str, float] = {}
+
+
+def _maybe_notify_auto_prune(sid: str, profile_home: str | None) -> None:
+    """Low disk + auto-prune never decided: a sticky notice (TUI status line / Desktop toast) per
+    profile per snooze window, on session create and cold resume. The cheap gate runs inline;
+    the DB estimate runs off-thread."""
+    from hermes_cli import prune_advisor
+    from hermes_constants import get_hermes_home
+    home = Path(profile_home) if profile_home else get_hermes_home()
+    if not prune_advisor.notice_due(home, _AUTO_PRUNE_NOTIFIED):
+        return
+    _AUTO_PRUNE_NOTIFIED[str(home)] = time.time()
+
+    def _work() -> None:
+        advice = prune_advisor.advise(home)
+        if advice is not None and prune_advisor.should_ask(home) is not None:  # not answered meanwhile
+            _emit("notification.show", sid, prune_advisor.notice_payload(advice))
+        else:
+            _AUTO_PRUNE_NOTIFIED.pop(str(home), None)
+
+    from agent.memory_provider import spawn_context_thread
+    spawn_context_thread(_work, name="auto-prune-advice").start()
+
+
 def _new_session_key() -> str:
     return new_session_id()
+
+
+# Server-minted session keys are ``%Y%m%d_%H%M%S_`` + 6 hex chars (see
+# ``_new_session_key``). session.resume uses this shape as the fail-closed gate
+# for materializing a row for a minted-but-never-persisted key: only keys the
+# server itself could have produced qualify — arbitrary strings and 8-hex
+# runtime session ids (``uuid4().hex[:8]``) are rejected.
+_MINTED_SESSION_KEY_RE = re.compile(r"^\d{8}_\d{6}_[0-9a-f]{6}$")
+
+
+def _is_server_minted_key(value: str | None) -> bool:
+    return bool(value and _MINTED_SESSION_KEY_RE.fullmatch(value))
+
+
+def _any_live_session_claims_key(target: str) -> bool:
+    """True if any live registry record claims this stored key (any profile).
+
+    Fail-closed gate for minted-key materialization: a key claimed by a live
+    session — even one scoped to a different profile — is owned, so an
+    unscoped resume must not mint a phantom row in the launch store (#93296
+    cross-profile rule: routing guesses are forbidden).
+    """
+    for record in list(_sessions.values()):
+        if not isinstance(record, dict):
+            continue
+        if str(record.get("session_key") or "") == target:
+            return True
+    return False
 
 
 def _with_checkpoints(session, fn):
@@ -356,12 +441,14 @@ def _resolve_checkpoint_hash(mgr, cwd: str, ref: str) -> str:
 
 def _lazy_resume_info(cwd: str, *, model: str = "", provider: str = "", profile: str | None = None) -> dict:
     """session.info for a not-yet-built session (session.create's shape); tools/skills land with the deferred build."""
+    if not model:
+        model, default_provider = _session_default_route({"profile_home": _profile_home(profile)})
+        provider = provider or default_provider
     return {
         "cwd": cwd, "branch": git_probe.branch(cwd), "project": _project_info_for_cwd(cwd),
-        "model": model or _session_default_model({"profile_home": _profile_home(profile)}),
+        **_lazy_info_route({"profile_home": _profile_home(profile)}, {"model": model, "provider": provider} if model else {}),
         "tools": {}, "skills": {}, "lazy": True,
         "desktop_contract": DESKTOP_BACKEND_CONTRACT, "profile_name": _response_profile_name(profile),
-        **({"provider": provider} if provider else {}),
     }
 
 
@@ -460,6 +547,7 @@ def _schedule_agent_build(sid: str, delay: float = 0.05) -> None:
     def _run():
         if (session := _sessions.get(sid)) is not None:
             _start_agent_build(sid, session)
+            _maybe_notify_auto_prune(sid, session.get("profile_home"))
     timer = threading.Timer(delay, _run)
     timer.daemon = True
     timer.start()
@@ -501,7 +589,14 @@ def _schedule_resume_hydration(sid: str, stored_id: str, db, *, close_db: bool =
             if session is None:
                 return
             _emit("session.resume_progress", sid, {"phase": "history", "status": "loading"})
-            db.reopen_session(stored_id)
+            # Read-only mount (#85303): hydration is a read; an ended row stays ended —
+            # the first real turn (prompt.submit) reopens it. But a restart discarded the
+            # busy-queue, so retire never-drained accept rows (#125577) before the read —
+            # with #128508 the reopen (and its retire) no longer runs on this path.
+            # Best-effort like the resume guard: a handle without the method skips it.
+            retire = getattr(db, "retire_undrained_queue_rows", None)
+            if callable(retire):
+                retire(stored_id)
             raw_history, display_history, prefix = _load_resume_transcript(
                 db, stored_id, model_history_only=model_history_only)
             # Display keeps the full transcript; the model-fed history uses the
@@ -522,7 +617,7 @@ def _schedule_resume_hydration(sid: str, stored_id: str, db, *, close_db: bool =
                   {"message_count": session["resume_message_count"], "phase": "history", "status": "complete"})
             _maybe_schedule_auto_continue(sid, session, stored_id)
             _start_agent_build(sid, session)
-        except Exception as exc:
+        except (Exception, ConfigBackendUnavailable) as exc:  # health: allow BLE001 -- reported as the resume failure
             if _sessions.get(sid) is not session:
                 return
             message = resume_failed_message(exc)
@@ -621,25 +716,55 @@ def _fallback_session_info(session: dict) -> dict:
     cwd = _session_cwd(session)
     return {
         "cwd": cwd, "branch": git_probe.branch(cwd), "project": _project_info_for_cwd(cwd), "lazy": True,
-        "model": _session_default_model(session), "skills": {}, "tools": {}, "desktop_contract": DESKTOP_BACKEND_CONTRACT,
+        **_lazy_info_route(session, {}), "skills": {}, "tools": {}, "desktop_contract": DESKTOP_BACKEND_CONTRACT,
     }
+
+
+def _durable_ids(msg) -> set:
+    """A row's durable identities: its ``message_uid`` (and the uids a merged turn absorbed), else ``_row_id``."""
+    if not isinstance(msg, dict):
+        return set()
+    from agent.message_metadata import ABSORBED_MESSAGE_UIDS, MESSAGE_UID
+    ids = {("uid", uid) for uid in [msg.get(MESSAGE_UID), *(msg.get(ABSORBED_MESSAGE_UIDS) or ())] if isinstance(uid, str) and uid}
+    row_id = msg.get("_row_id")
+    return ids | ({("row", row_id)} if isinstance(row_id, int) and not isinstance(row_id, bool) else set())
+
+
+def _legacy_display_anchor(display: list[dict], memory: list[dict]) -> int:
+    """Align an identity-free model prefix without consuming later repeated turns."""
+    prefix = [(msg.get('role'), _coerce_message_text(msg.get('content'))) for msg in display]
+    cursor = 0
+    for index, msg in enumerate(memory):
+        if not isinstance(msg, dict):
+            continue
+        value = (msg.get('role'), _coerce_message_text(msg.get('content')))
+        if value not in prefix[cursor:]:
+            continue  # live-only row (persist override, injected note): never exhausts the display prefix
+        cursor = prefix.index(value, cursor) + 1  # verification candidates may be absent from the model projection
+        if cursor == len(prefix):
+            return index
+    return -1
 
 
 def _reconcile_display_with_live(db_display: list[dict], in_memory: list[dict]) -> list[dict]:
     """Merge the persisted DISPLAY lineage with the in-memory live history: ``db_display`` is verbatim and
     candidate-inclusive (verification rows the model history collapses out) but can lag by a flush;
     ``in_memory`` is the recency authority but the collapsed *model* projection. Keep the DB display as base,
-    append only the in-memory tail past the last DB row's ``(role, text)`` anchor — the verification answer
-    survives a warm switch AND a not-yet-flushed live turn is kept."""
+    append only the in-memory tail past the live copy of the last DB row — the verification answer survives a
+    warm switch AND a not-yet-flushed live turn is kept. The anchor is the row's durable identity: matching on
+    ``(role, text)`` picked the LAST equal text, so a repeated message ("ok" again) hid the unflushed turn.
+    Identity-free projections align their ordered prefix; conflicting durable IDs never match by text."""
     if not db_display:
         return in_memory
     if not in_memory:
         return db_display
 
-    def _key(msg: dict) -> tuple:
-        return (msg.get("role"), _coerce_message_text(msg.get("content")))
-    anchor = _key(db_display[-1])
-    last_shared = max((idx for idx, msg in enumerate(in_memory) if isinstance(msg, dict) and _key(msg) == anchor), default=-1)
+    anchor_ids = _durable_ids(db_display[-1])
+    last_shared = max((idx for idx, msg in enumerate(in_memory) if _durable_ids(msg) & anchor_ids), default=-1)
+    if last_shared == -1:
+        if anchor_ids and any(_durable_ids(msg) for msg in in_memory):
+            return db_display
+        last_shared = _legacy_display_anchor(db_display, in_memory)
     if last_shared == -1:
         return db_display  # DB tail not in memory (DB ahead, or diverged) — trust it over duplicating
     return list(db_display) + list(in_memory[last_shared + 1 :])

@@ -36,12 +36,13 @@ def _session_has_live_transport(session: dict | None, *, excluding=None) -> bool
 
 
 def _transport_auth_user_id(transport) -> str | None:
-    """``<provider>:<user id>`` the WS-upgrade credential authenticated for ``transport``, or None for the legacy
-    token, stdio and the PTY child's server-internal credential. The prefix keeps a basic-auth ``alice`` and an
-    OIDC ``alice`` apart."""
-    identity = getattr(transport, "auth_identity", None)
-    if _methods_browser_control._is_authenticated_identity(identity):
-        return f"{str(identity['provider']).strip()}:{str(identity['user_id']).strip()}"
+    """The owner a row created over ``transport`` belongs to: the host owner's OS subject for any WS-upgrade
+    login (a signed-in Webapp or dashboard tab is the machine owner, gateway.owner_identity), so native Desktop
+    and the TUI resume it; None for the legacy token, stdio and the PTY child's server-internal credential."""
+    from gateway.session_identity import is_authenticated_identity
+    if is_authenticated_identity(getattr(transport, "auth_identity", None)):
+        from gateway.owner_identity import host_owner_subject
+        return host_owner_subject()
     return None
 
 
@@ -65,6 +66,15 @@ def _session_client_answers_requests(sid: str) -> bool:
     from tui_gateway.ws import WSTransport
     clients = [peer for peer in _session_live_transports(_sessions.get(sid)) if isinstance(peer, WSTransport)]
     return not clients or any(server_requests.answers_requests(peer) for peer in clients)
+
+
+def _session_answering_clients(sid: str) -> list:
+    """The live WebSocket clients attached to *sid* that advertised answering server→client requests:
+    the windows whose unanimous "not shown here" settles a window-owned request (server_requests.py)."""
+    from tui_gateway import server_requests
+    from tui_gateway.ws import WSTransport
+    return [peer for peer in _session_live_transports(_sessions.get(sid))
+            if isinstance(peer, WSTransport) and server_requests.answers_requests(peer)]
 
 
 def _warn_foreign_login(session: dict, transport) -> None:
