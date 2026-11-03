@@ -18,7 +18,7 @@ import sys
 import pytest
 import hermes_yaml as yaml
 
-from tests.pm._fixtures import _wheel, isolated_python as isolated_python
+from tests.pm._fixtures import _wheel, isolated_python as isolated_python  # noqa: PLC0414 -- the self-alias is load-bearing: it suppresses F811 for the pytest fixture parameter shadowing this import
 
 
 def worker_command(worker: Path, uv: str, python: str, *, prelude: str = "", runtime_python: str | None = None) -> list[str]:
@@ -36,7 +36,7 @@ def git(repo: Path, *args: str) -> str:
     env = {k: v for k, v in os.environ.items() if k not in {"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"}}
     env.update(GIT_AUTHOR_NAME="fixture", GIT_AUTHOR_EMAIL="fixture@example.invalid",
                GIT_COMMITTER_NAME="fixture", GIT_COMMITTER_EMAIL="fixture@example.invalid")
-    result = subprocess.run(["git", *args], cwd=repo, env=env, capture_output=True, text=True, timeout=30)
+    result = subprocess.run(["git", *args], cwd=repo, env=env, capture_output=True, text=True, timeout=30, check=False)
     assert result.returncode == 0, result.stderr
     return result.stdout.strip()
 
@@ -110,8 +110,51 @@ class PluginWorld:
             f"assert plugin.register(None) == ({pin!r}, {pin!r})"
         )
         result = subprocess.run([str(python), "-I", "-B", "-c", code], cwd=self.root,
-                                capture_output=True, text=True, timeout=30)
+                                capture_output=True, text=True, timeout=30, check=False)
         assert result.returncode == 0, result.stderr
+
+
+def publish_plugins(world: PluginWorld, plugins: dict[str, list[str]]) -> Path:
+    """Enable exactly ``plugins`` (name → declared requirements) and publish the generation PM
+    builds for them. Each plugin imports its requirements, leaves an ``imported`` marker, and
+    ``request(specs)`` asks ``install_specs`` for more on its own behalf."""
+    from pm import client
+
+    for name, requirements in plugins.items():
+        plugin = world.home / "plugins" / name
+        if plugin.is_dir():
+            continue
+        plugin.mkdir(parents=True)
+        (plugin / "plugin.yaml").write_text(yaml.safe_dump(
+            {"name": name, "version": "1.0", "python_dependencies": requirements}), encoding="utf-8")
+        modules = [spec.split("=")[0].split("<")[0].split(">")[0].replace("-", "_") for spec in requirements]
+        (plugin / "__init__.py").write_text(
+            "".join(f"import {module}\n" for module in modules)
+            + "from pathlib import Path\nPath(__file__).with_name('imported').touch()\n"
+            "def register(ctx):\n    pass\n"
+            "def request(specs):\n    from tools.lazy_deps import install_specs\n    return install_specs(specs)\n",
+            encoding="utf-8")
+    (world.home / "config.yaml").write_text(yaml.safe_dump(
+        {"plugins": {"enabled": sorted(plugins), "disabled": []}}), encoding="utf-8")
+    client.sync_venv(explicit=True)
+    return world.selected()
+
+
+@pytest.fixture
+def boot(plugin_world, monkeypatch):
+    """``boot(environment)``: this test process imports from ``environment`` the way a Hermes process
+    booted on it does. Adoption rewrites sys.path and PATH (monkeypatch restores both); modules
+    imported from the world are forgotten afterwards, so a later test imports its own."""
+    from pm.environments import site_packages, venv_bin_dir
+
+    def run_from(environment: Path) -> None:
+        monkeypatch.setenv("PATH", os.pathsep.join([str(venv_bin_dir(environment)), os.defpath]))
+        monkeypatch.syspath_prepend(str(site_packages(environment)))
+
+    yield run_from
+    for name, module in list(sys.modules.items()):
+        if str(getattr(module, "__file__", None) or "").startswith(str(plugin_world.root)):
+            del sys.modules[name]
 
 
 @pytest.fixture
@@ -149,6 +192,6 @@ def plugin_world(tmp_path, monkeypatch, isolated_python):
         'dependencies=["plugin-core-dep==1.0"]\n[tool.uv]\npackage=false\nno-index=true\n'
         f'find-links=[{json.dumps(wheels.as_posix())}]\n', encoding="utf-8")
     result = subprocess.run([uv, "lock", "--python", sys.executable], cwd=world.core,
-                            capture_output=True, text=True, timeout=60)
+                            capture_output=True, text=True, timeout=60, check=False)
     assert result.returncode == 0, result.stderr
     return world
