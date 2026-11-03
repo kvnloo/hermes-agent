@@ -94,6 +94,19 @@ interface ModeOptionCopy {
 export interface Translations extends NoticeTranslations {
   /** Shared-metrics consent: first-run dialog + Settings › Safety toggles. */
   sharedMetrics: SharedMetricsTranslations
+  openui: {
+    label: string
+    readOnly: string
+    receiving: string
+    showSource: string
+    showBoard: string
+    incomplete: string
+    invalid: string
+    oversized: string
+    readOnlyError: string
+    rows: string
+    series: string
+  }
   appTour: AppTourTranslations
   firstRun: FirstRunCopy
   externalOpenFailed: ExternalOpenFailedCopy
