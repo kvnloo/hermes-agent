@@ -21,7 +21,11 @@ export function IdleMount({ children, timeout = 2000 }: { children: ReactNode; t
 
     const id = requestIdleCallback(() => setReady(true), { timeout })
 
-    return () => cancelIdleCallback(id)
+    return () => {
+      if (typeof cancelIdleCallback === 'function') {
+        cancelIdleCallback(id)
+      }
+    }
   }, [ready, timeout])
 
   return ready ? <>{children}</> : null

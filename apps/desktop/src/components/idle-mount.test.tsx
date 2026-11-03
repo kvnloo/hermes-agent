@@ -47,4 +47,17 @@ describe('IdleMount', () => {
 
     expect(screen.getByText('child')).toBeTruthy()
   })
+
+  it('unmounts when requestIdleCallback exists but cancelIdleCallback does not', () => {
+    vi.stubGlobal('requestIdleCallback', vi.fn(() => 11))
+    vi.stubGlobal('cancelIdleCallback', undefined)
+
+    const view = render(
+      <IdleMount>
+        <span>child</span>
+      </IdleMount>
+    )
+
+    expect(() => view.unmount()).not.toThrow()
+  })
 })
