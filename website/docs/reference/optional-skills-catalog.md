@@ -211,6 +211,7 @@ hermes skills uninstall <skill-name>
 | [**live-dashboard**](../user-guide/skills/optional/productivity/productivity-live-dashboard.md) | Build self-updating dashboards from live sources. |
 | [**memento-flashcards**](../user-guide/skills/optional/productivity/productivity-memento-flashcards.md) | Spaced-repetition flashcards: create, review, quiz, export. |
 | [**notion**](../user-guide/skills/optional/productivity/productivity-notion.md) | Notion API + ntn CLI: pages, databases, markdown, Workers. |
+| [**openui-boards**](../user-guide/skills/optional/productivity/productivity-openui-boards.md) | Present facts as compact, read-only visual reports. |
 | [**property-listings**](../user-guide/skills/optional/productivity/productivity-property-listings.md) | Present property and rental listings as desktop cards. |
 | [**shop**](../user-guide/skills/optional/productivity/productivity-shop.md) | Shop catalog search, checkout, order tracking, returns. |
 | [**shopify**](../user-guide/skills/optional/productivity/productivity-shopify.md) | Query Shopify Admin/Storefront GraphQL APIs via curl. |
