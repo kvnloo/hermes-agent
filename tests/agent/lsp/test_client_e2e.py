@@ -8,6 +8,7 @@ pyright/gopls/etc. to be installed in CI.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import sys
 from pathlib import Path
@@ -152,7 +153,7 @@ async def test_cancelled_start_terminates_spawned_server(tmp_path: Path):
     assert client._proc is None
 
 
-@pytest.mark.linux_only
+@pytest.mark.platforms("linux")
 @pytest.mark.asyncio
 async def test_cancelled_start_hard_kills_sigterm_ignoring_descendant(tmp_path: Path):
     """A launcher exiting on SIGTERM must not let an ignoring server child escape cleanup."""
@@ -185,8 +186,10 @@ async def test_cancelled_start_hard_kills_sigterm_ignoring_descendant(tmp_path: 
         if not start.done():
             start.cancel()
             await asyncio.gather(start, return_exceptions=True)
-        if child is not None and child.is_running():
-            child.kill()
+        if child is not None:
+            # The descendant can exit between a liveness check and the signal; killing a gone process is fine.
+            with contextlib.suppress(psutil.NoSuchProcess):
+                child.kill()
 
 
 @pytest.mark.asyncio
