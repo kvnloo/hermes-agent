@@ -233,6 +233,13 @@ class ToolEntry:
     execution_timeout: float | None = None
 
 
+@dataclass(eq=False, slots=True)
+class _SchemaExtenderRegistration:
+    scope: Optional[str]
+    callback: Callable[[dict], Optional[dict]]
+    warned: bool = False
+
+
 class _PluginOverridePolicy:
     """Identity-bearing authorization record for one plugin generation."""
 
@@ -478,9 +485,8 @@ class ToolRegistry:
         self._lock = threading.RLock()
         # Bumped on every mutation; get_tool_definitions memoizes against it.
         self._generation: int = 0
-        # Tool name -> [(profile scope, extender)]; keyed by name so a tool registering later still gets it.
-        self._schema_extenders: dict[str, list[tuple[Optional[str], Callable]]] = {}
-        self._schema_extender_warned: set[Callable] = set()
+        # A registration owns its warning state and removal identity, not its callback.
+        self._schema_extenders: dict[str, list[_SchemaExtenderRegistration]] = {}
 
     @staticmethod
     def current_scope_key() -> str:
@@ -898,7 +904,7 @@ class ToolRegistry:
         registry change, a config.yaml stat change or a profile/toolset switch, so an extender whose
         output depends on other state goes stale until then. Argument coercion
         (``tools/arg_coercion.py``) still reads the static schema."""
-        item = (normalize_scope(scope), extender)
+        item = _SchemaExtenderRegistration(normalize_scope(scope), extender)
         with self._lock:
             self._schema_extenders.setdefault(name, []).append(item)
             self._generation += 1
@@ -918,15 +924,16 @@ class ToolRegistry:
         or returns a non-dict is skipped (warned once) and the schema stays as it was."""
         scope = self.current_scope_key()
         with self._lock:
-            extenders = [fn for s, fn in self._schema_extenders.get(name, ()) if s in (None, scope)]
-        for extender in extenders:
+            extenders = [item for item in self._schema_extenders.get(name, ())
+                         if item.scope in (None, scope)]
+        for item in extenders:
             try:
-                extended = extender(copy.deepcopy(schema))
+                extended = item.callback(copy.deepcopy(schema))
                 if extended is not None and (not isinstance(extended, dict) or extended.get("name") != name):
                     raise ValueError("extender must return the schema dict with an unchanged 'name'")
             except Exception:  # health: allow BLE001 -- plugin code; a broken extender must not drop the tool
-                if extender not in self._schema_extender_warned:
-                    self._schema_extender_warned.add(extender)
+                if not item.warned:
+                    item.warned = True
                     logger.warning("schema extender for tool %s failed; skipping it", name, exc_info=True)
                 continue
             if extended is not None:

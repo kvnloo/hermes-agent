@@ -66,3 +66,32 @@ def test_failing_or_renaming_extender_is_skipped_and_later_ones_still_run():
     finally:
         manager.unload("extend_schema_faulty_plugin")
         registry.deregister(name)
+
+def test_unhashable_failing_extender_does_not_drop_tool_definition(caplog):
+    """A callable object with no hash must fail open, leaving later extenders active."""
+    name = "extend_schema_unhashable"
+    plugin_id = "extend_schema_unhashable_plugin"
+    manager = PluginManager(scope_key=registry.current_scope_key())
+    ctx = _context(manager, plugin_id)
+
+    class FailingUnhashable:
+        __hash__ = None
+
+        def __call__(self, schema):
+            raise RuntimeError("bad plugin callback")
+
+    registry.register(
+        name=name, toolset="extend_schema_core",
+        schema={"name": name, "description": "static", "parameters": {"type": "object"}},
+        handler=lambda args, **kw: "ok",
+    )
+    try:
+        ctx.extend_tool_schema(name, FailingUnhashable())
+        ctx.extend_tool_schema(name, lambda schema: {**schema, "description": "recovered"})
+
+        assert _function_schema(name)["description"] == "recovered"
+        assert _function_schema(name)["description"] == "recovered"
+        assert caplog.text.count(f"schema extender for tool {name} failed; skipping it") == 1
+    finally:
+        manager.unload(plugin_id)
+        registry.deregister(name)
