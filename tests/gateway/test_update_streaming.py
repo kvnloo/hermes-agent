@@ -367,7 +367,7 @@ class TestCmdUpdateGatewayMode:
         monkeypatch.setattr(main, "_run_pre_update_backup", lambda args: None)
         monkeypatch.setattr(main, "_pause_windows_gateways_for_update", lambda: None)
         monkeypatch.setattr("hermes_cli.update_inventory.collect_runtime_inventory", lambda: None)
-        monkeypatch.setattr(update_cmd, "_prepare_git_command", lambda: (False, ["git"], False))
+        monkeypatch.setattr(update_cmd, "_prepare_git_command", lambda **_: (False, ["git"], False))
         monkeypatch.setattr(update_cmd, "run_completion", lambda request: {"exit_code": 0, "receipt": None})
         # The tmp checkout is not the venv's owning install; without this the
         # owning-install redirect re-runs pytest's argv in a child and exits 2.
