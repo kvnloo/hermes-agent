@@ -507,14 +507,15 @@ class MemoryStore:
         """Entries of *target* as stored on disk (read-only: no gate, no drift guard, no write).
         Reading the anchor also reports the chain docs it references, with sizes."""
         path = self._path_for(target)
-        raw, read_ok = self._read_raw_checked(path)
+        with self._file_lock(path):
+            raw, read_ok = self._read_raw_checked(path)
         if not read_ok:
             return _read_failed_error(path)
         entries = list(dict.fromkeys(self._parse_entries(raw)))
-        self._set_entries(target, entries)
+        # A read snapshot must not replace the writer-owned live cache.
         response: dict[str, Any] = {
             "success": True, "target": target, "entries": entries,
-            "usage": self._usage_pct(target, self._char_count(target))}
+            "usage": self._usage_pct(target, len(ENTRY_DELIMITER.join(entries)))}
         if target == "memory":
             response["chain_docs"] = [self.doc_stats(n) for n in chain_doc_names(entries)]
             if orphans := self.orphan_doc_names():
