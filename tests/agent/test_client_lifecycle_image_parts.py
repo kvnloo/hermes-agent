@@ -63,3 +63,24 @@ def test_non_list_messages_field_returns_false():
     # A dict-valued "messages" field is not scanned (only list fields are).
     api_kwargs = {"messages": {"type": "image_url"}}
     assert ClientLifecycleMixin._api_kwargs_have_image_parts(api_kwargs) is False
+
+@pytest.mark.parametrize("field", ["messages", "input"])
+def test_nested_type_metadata_is_not_a_real_image(field):
+    """A tool-result descriptor's structured type must not request Copilot vision."""
+    tool_result = {
+        "type": "tool_result",
+        "content": {
+            "descriptor": {"type": {"type": "input_image"}},
+            "nullable": {"type": ["string", "null"]},
+        },
+    }
+    request = {field: [tool_result]}
+
+    assert ClientLifecycleMixin._api_kwargs_have_image_parts(request) is False
+
+    # Keep detecting genuine images elsewhere in the same structured result.
+    tool_result["content"]["actual_image"] = {
+        "type": "input_image",
+        "image_url": "data:image/png;base64,YQ==",
+    }
+    assert ClientLifecycleMixin._api_kwargs_have_image_parts(request) is True

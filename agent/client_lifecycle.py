@@ -338,8 +338,9 @@ class ClientLifecycleMixin:
         def _contains_image(value: Any) -> bool:
             if isinstance(value, dict):
                 _part_type = value.get("type")
+                # A structured "type" is metadata, not a container of image parts.
                 return (isinstance(_part_type, str) and _part_type in {"image_url", "input_image"}) or any(
-                    _contains_image(v) for v in value.values()
+                    _contains_image(v) for key, v in value.items() if key != "type"
                 )
             return isinstance(value, list) and any(_contains_image(v) for v in value)
         return any(
