@@ -672,11 +672,13 @@ def _evict_old_screenshots(result: list[dict[str, Any]]) -> None:
                     )
                 )
             elif msg.get("role") == "user" and _block_type(block) == "image":
+                # The merged user turn may contain older tool results before a fresh upload.
+                # Place this carrier where its newest image actually occurs.
+                if not direct_images:
+                    carriers.append((content, direct_images))
                 direct_images.append((block, _image_source_data(block)))
             elif _block_type(block) == "image":
                 reserved.append((block, _image_source_data(block)))
-        if direct_images:
-            carriers.append((content, direct_images))
     many_image_safe = images_all_within_many_image_limit(
         [
             *(data for _, data in reserved),
