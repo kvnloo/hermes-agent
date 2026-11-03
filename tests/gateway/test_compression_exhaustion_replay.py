@@ -176,17 +176,18 @@ async def test_streamed_telegram_partial_is_not_requeued_after_async_reset(monke
     runner._evict_cached_agent = lambda _key: None
     runner._clear_conversation_scope = lambda *_args, **_kwargs: None
     runner._sync_telegram_topic_binding = lambda *_args, **_kwargs: None
-    # Exercise the actual async reset path rather than pre-seeding a reset marker.
-    monkeypatch.setattr("gateway.session_authorities.active_authority", lambda _runner: None)
-    reset = AsyncMock(return_value=replace(entry, session_id="fresh-session"))
-    runner.async_session_store.reset_session = reset
+    # The async reset/rehome helper dispatches to the session store. Mock that
+    # backing operation, as in the neighboring handler-level reset test.
+    reset = runner.session_store.reset_session
+    reset.return_value = replace(entry, session_id="fresh-session")
+
+    streamed_results = []
 
     async def failed_streamed_turn(**_kwargs):
         consumer = GatewayStreamConsumer(
             adapter, event.source.chat_id, StreamConsumerConfig(cursor=""),
         )
         await consumer._send_or_edit("I have started checking your calendar")
-        adapter.send.assert_awaited_once()
         result = {
             "failed": True, "compression_exhausted": True, "messages": [],
             "final_response": "context exhausted",
@@ -197,14 +198,19 @@ async def test_streamed_telegram_partial_is_not_requeued_after_async_reset(monke
                 session_key=entry.session_key,
             ),
         )
-        assert result["stream_visible_output"] is True
-        assert not result.get("already_sent")
+        streamed_results.append(result)
         return result
 
-    runner._run_agent = failed_streamed_turn
+    runner._run_agent = AsyncMock(side_effect=failed_streamed_turn)
     response = await runner._handle_message_with_agent(event, _source(), entry.session_key, 1)
 
-    reset.assert_awaited_once_with(entry.session_key)
+    # Assertions outside the handler must not be swallowed by its error-reply guard.
+    runner._run_agent.assert_awaited_once()
+    adapter.send.assert_awaited_once()
+    assert len(streamed_results) == 1
+    assert streamed_results[0]["stream_visible_output"] is True
+    assert not streamed_results[0].get("already_sent")
+    reset.assert_called_once_with(entry.session_key)
     assert adapter._pending_messages == {}
     assert not getattr(event, "_gateway_compression_replay_attempted", False)
     assert response is not None
