@@ -193,3 +193,53 @@ def test_chain_doc_patch_works_against_the_uncapped_limit(store):
 
     assert result["success"] is True, result
     assert _call(store, action="read", target="memory", doc=DOC)["entries"] == ["second note"]
+
+
+def test_doc_reader_and_writer_keep_latest_live_state(store, monkeypatch):
+    """A paused read must not roll the live chain doc back after a committed add."""
+    from threading import Event, Thread, current_thread
+
+    assert store.add("memory", ANCHOR_REF)["success"]
+    assert store.add(f"doc:{DOC}", "initial")["success"]
+    captured, release, written = Event(), Event(), Event()
+    read_raw = store._read_raw_checked
+    results = {}
+
+    def paused(path):
+        snapshot = read_raw(path)
+        if current_thread().name == "doc-reader" and path.name == f"{DOC}.md":
+            captured.set()
+            assert release.wait(8)
+        return snapshot
+
+    monkeypatch.setattr(store, "_read_raw_checked", paused)
+
+    def read_doc():
+        results["read"] = store.read(f"doc:{DOC}")
+
+    def write_doc():
+        try:
+            results["write"] = store.add(f"doc:{DOC}", "latest")
+        finally:
+            written.set()
+
+    reader = Thread(name="doc-reader", target=read_doc)
+    writer = Thread(name="doc-writer", target=write_doc)
+    reader.start()
+    try:
+        assert captured.wait(8)
+        writer.start()
+        # On the unlocked carrier the writer finishes while the old read is
+        # paused; with the real reader lock it waits until we release the read.
+        written.wait(3)
+    finally:
+        release.set()
+    reader.join(8)
+    if writer.ident is not None:
+        writer.join(8)
+
+    assert not reader.is_alive() and not writer.is_alive()
+    assert results["read"]["success"] and results["write"]["success"]
+    assert results["read"]["entries"] == ["initial"]
+    assert store._entries_for(f"doc:{DOC}") == ["initial", "latest"]
+    assert _call(store, action="read", target="memory", doc=DOC)["entries"] == ["initial", "latest"]
