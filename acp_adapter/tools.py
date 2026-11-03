@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import uuid
 from typing import Any, Callable, Dict, List, Optional
 
@@ -11,6 +12,7 @@ import acp
 from acp.schema import ToolCallLocation, ToolCallProgress, ToolCallStart, ToolKind
 
 from agent.display import build_tool_preview
+from tools.mcp_tool_schema import MCP_TOOL_NAME_PREFIX
 
 logger = logging.getLogger(__name__)
 
@@ -808,10 +810,53 @@ def _build_tool_start(tool_call_id: str, tool_name: str, arguments: Args, *, edi
     else:  # unknown tool with arguments: echo them as content and raw_input
         content = [_text(_args_json(arguments))]
         raw_input = arguments
-    return acp.start_tool_call(
+    start = acp.start_tool_call(
         tool_call_id, build_tool_title(tool_name, arguments), kind=get_tool_kind(tool_name),
         content=content, locations=extract_locations(arguments), raw_input=raw_input,
     )
+    start.field_meta = _mcp_meta(tool_name)
+    return start
+
+
+# A server an editor lent to this session is registered as ``editor_<name>_<tag>``
+# (gateway/session_local_mcp.py ``_server_names``).
+_EDITOR_SERVER_RE = re.compile(r"^editor_(?P<name>.+)_[0-9a-f]{8}$")
+
+
+def _mcp_meta(tool_name: str) -> Optional[dict]:
+    """``_meta`` naming an MCP tool's server and tool, the editor's own server name for a lent server.
+
+    ACP has no typed MCP calls, so clients read ``_meta.serverId``/``toolName``. Without it T3 parses the
+    title, sees ``editor_t3_code_<tag>``, and does not treat its own tools (``html_render``) as its own."""
+    if not tool_name.startswith(MCP_TOOL_NAME_PREFIX):
+        return None
+    server, sep, tool = tool_name[len(MCP_TOOL_NAME_PREFIX):].partition("__")
+    if not (server and sep and tool):
+        return None
+    lent = _EDITOR_SERVER_RE.match(server)
+    return {"serverId": lent["name"] if lent else server, "toolName": tool}
+
+
+# rawOutput copy of an MCP result; past this the client gets the markdown summary only.
+_MCP_RAW_OUTPUT_LIMIT = 256_000
+
+
+def _mcp_raw_output(tool_name: str, result: Optional[str]) -> Optional[dict]:
+    """An MCP tool's own result shape, ``{"content": [text], "structuredContent"?}``, for ``rawOutput``.
+
+    Hermes' MCP handler wraps the server's text as ``{"result": text, "structuredContent"?: {...}}``;
+    the display text above is a markdown summary of that wrapper. ACP clients read structured results
+    from ``rawOutput`` (T3 mounts ``html_render`` boards and MCP apps from it), so MCP tools forward
+    the server's payload there. Errors, non-MCP tools and oversized results keep the old shape."""
+    if not tool_name.startswith(MCP_TOOL_NAME_PREFIX) or not result or len(result) > _MCP_RAW_OUTPUT_LIMIT:
+        return None
+    data = _json_loads_maybe(result)
+    if not isinstance(data, dict) or not isinstance(data.get("result"), str) or data.get("error") is not None:
+        return None
+    raw: dict[str, Any] = {"content": [{"type": "text", "text": data["result"]}]}
+    if isinstance(data.get("structuredContent"), dict):
+        raw["structuredContent"] = data["structuredContent"]
+    return raw
 
 
 def build_tool_complete(
@@ -827,11 +872,14 @@ def build_tool_complete(
     else:
         content = _build_tool_complete_content(tool_name, result, function_args=function_args, snapshot=snapshot)
     structured = isinstance(_json_loads_maybe(result), (dict, list))
-    return acp.update_tool_call(
+    mcp_raw = _mcp_raw_output(tool_name, result)
+    update = acp.update_tool_call(
         tool_call_id, kind=get_tool_kind(tool_name),
         status="failed" if is_error or _tool_result_failed(result, tool_name) else "completed", content=content,
-        raw_output=None if tool_name in _POLISHED_TOOLS or structured else result,
+        raw_output=mcp_raw if mcp_raw is not None else None if tool_name in _POLISHED_TOOLS or structured else result,
     )
+    update.field_meta = _mcp_meta(tool_name)
+    return update
 
 
 def build_tool_abandoned(tool_call_id: str, tool_name: str) -> ToolCallProgress:

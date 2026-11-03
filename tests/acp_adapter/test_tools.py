@@ -1,6 +1,8 @@
 """Tests for acp_adapter.tools — tool kind mapping and ACP content building."""
 
 
+import json
+
 import pytest
 
 from acp_adapter.edit_approval import EditProposal
@@ -224,6 +226,39 @@ class TestBuildToolComplete:
         assert "Recall should render as a readable summary" in text
         assert "{\"results\"" not in text
         assert result.raw_output is None
+
+    def test_build_tool_complete_forwards_an_mcp_servers_own_result_as_raw_output(self):
+        # What T3's html_render returns through Hermes' MCP handler: the display stays a summary, and
+        # rawOutput carries the server's text so the client can mount the board.
+        inner = '{"htmlRender":{"attachmentId":"t-1-html","title":"/stats","height":1100}}'
+        result = build_tool_complete(
+            "tc-render", "mcp__editor_t3_code_b9248901__html_render", json.dumps({"result": inner}),
+        )
+        assert result.raw_output == {"content": [{"type": "text", "text": inner}]}
+        assert "htmlRender" in result.content[0].content.text
+        structured = build_tool_complete(
+            "tc-app", "mcp__srv__tool", json.dumps({"result": "ok", "structuredContent": {"n": 1}}),
+        )
+        assert structured.raw_output == {"content": [{"type": "text", "text": "ok"}], "structuredContent": {"n": 1}}
+
+    @pytest.mark.parametrize("tool_name,payload", [
+        ("mcp__srv__tool", '{"error": "MCP tool returned an error"}'),
+        ("mcp__srv__tool", '{"result": {"not": "text"}}'),
+        ("memory_archive_search", '{"result": "x"}'),
+    ])
+    def test_build_tool_complete_keeps_errors_and_non_mcp_results_out_of_raw_output(self, tool_name, payload):
+        assert build_tool_complete("tc", tool_name, payload).raw_output is None
+
+    def test_mcp_calls_name_their_server_and_an_editor_lent_server_by_the_editors_name(self):
+        # T3 recognises its own tools (and mounts html_render boards) by _meta.serverId = t3_code.
+        start = build_tool_start("tc", "mcp__editor_t3_code_b9248901__html_render", {"html": "<p>x</p>"})
+        assert start.field_meta == {"serverId": "t3_code", "toolName": "html_render"}
+        done = build_tool_complete("tc", "mcp__editor_t3_code_b9248901__html_render", '{"result": "{}"}')
+        assert done.field_meta == {"serverId": "t3_code", "toolName": "html_render"}
+        assert build_tool_start("tc", "mcp__github__create_issue", {}).field_meta == {
+            "serverId": "github", "toolName": "create_issue"}
+        assert build_tool_start("tc", "terminal", {"command": "ls"}).field_meta is None
+        assert "_meta" not in build_tool_complete("tc", "terminal", "ok").model_dump(by_alias=True, exclude_none=True)
 
 
 
