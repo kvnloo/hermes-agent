@@ -685,6 +685,8 @@ def atomic_roundtrip_yaml_save(path: str | Path, new_state: dict, *,
                 _set_rt_entry(dst, None, _rt_value(value))
         while len(dst) > len(src):
             _delete_rt_entry(dst, len(dst) - 1, parent)
+        if not dst:
+            dst.fa.set_flow_style()  # an empty block list after an inline key comment is invalid YAML
 
     def _merge_item(dst, key, value) -> None:
         current = dst[key]

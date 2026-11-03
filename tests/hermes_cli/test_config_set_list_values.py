@@ -174,3 +174,32 @@ def test_bare_string_into_list_slot_absent_from_defaults_is_refused(user_home, c
             set_config_value(key, "a,b")
         assert "must be a list" in capsys.readouterr().err
     assert read_raw_config() in (None, {})
+
+def test_empty_list_with_inline_key_comment_keeps_following_keys(user_home):
+    """Regression for NousResearch/hermes-agent#148524, reported by leehopper."""
+    import re
+
+    import hermes_yaml as yaml
+    from hermes_cli.config import set_config_value
+
+    path = user_home / "config.yaml"
+    path.write_text(
+        "kanban:\n"
+        "  dispatch_profiles:     # some comment\n"
+        "    - mordecai\n"
+        "  dispatch_in_gateway: true\n"
+        "  dispatch_interval_seconds: 60\n",
+        encoding="utf-8",
+    )
+
+    set_config_value("kanban.dispatch_profiles", "[]")
+
+    text = path.read_text(encoding="utf-8")
+    assert yaml.safe_load(text) == {
+        "kanban": {
+            "dispatch_profiles": [],
+            "dispatch_in_gateway": True,
+            "dispatch_interval_seconds": 60,
+        },
+    }
+    assert re.search(r"(?m)^  dispatch_profiles: \[\][ \t]+# some comment$", text)
