@@ -400,6 +400,12 @@ On timeout or error, the approval bridge denies the request. The wait is
 `approvals.timeout` from `config.yaml` (default 300 s), the same knob the CLI and
 gateway prompts use — raise it if your editor keeps approval cards open longer.
 
+Large file-edit approvals show bounded previews of the old and new text and tool
+arguments. A **preview truncated** label identifies an incomplete preview; approving
+still authorizes the full proposed edit, not just the displayed portion. Denying
+leaves the file unchanged. This also keeps a pending approval small enough to
+restore when the editor reconnects.
+
 ### Session-scoped edit auto-approval
 
 ACP exposes a third tier between *allow once* and *allow always*: **Allow for session**. Picking it from the editor's permission prompt records the approval inside the current ACP session only — every subsequent matching command in that session goes through without prompting, but a new ACP session (or restarting the editor) resets the slate and re-prompts the first time.
