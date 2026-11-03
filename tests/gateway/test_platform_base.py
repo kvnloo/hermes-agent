@@ -463,6 +463,20 @@ class TestUniversalMediaEgress:
         assert os.path.realpath(media[0][0]) == os.path.realpath(report)
         assert "MEDIA:" not in cleaned
 
+    def test_unknown_media_before_known_media_keeps_validated_file(self, tmp_path, monkeypatch):
+        """One known-extension regex span must not suppress an earlier distinct MEDIA tag."""
+        root = tmp_path / "output"
+        root.mkdir()
+        log = root / "build.log"
+        photo = root / "shot.png"
+        log.write_text("build complete", encoding="utf-8")
+        photo.write_bytes(b"PNG")
+        self._patch_allow_root(monkeypatch, root)
+
+        media, _ = BasePlatformAdapter.extract_media(f"MEDIA:{log} MEDIA:{photo}")
+        delivered = BasePlatformAdapter.filter_media_delivery_paths(media)
+        assert (str(log.resolve()), False) in delivered
+
 
 class TestMediaDeliveryPathValidation:
     def _patch_roots(self, monkeypatch, *roots):
