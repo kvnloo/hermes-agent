@@ -28,6 +28,18 @@ import { zhUpdateChannel } from './zh_update_channel'
 
 export const zhOverrides = {
   openui: {
+    openApp: "在{app}中打开",
+    bestPrice: "最低价格",
+    noMessages: "没有匹配的邮件。",
+    previousStep: "上一步",
+    nextStep: "下一步",
+    checksPassed: "所有检查均已通过",
+    conflictCount: "{count} 个冲突",
+    seats: "座位",
+    drive: "驾车",
+    walk: "步行",
+    transit: "公交",
+    bike: "骑行",
     label: "OpenUI 图表板",
     readOnly: "只读",
     receiving: "接收中",

@@ -1,9 +1,11 @@
 import { createParser } from '@openuidev/lang-core'
 import { createLibrary, defineComponent, Renderer } from '@openuidev/react-lang'
 import { z } from 'zod/v4'
+import { appCardProblem, appCardSchemas, isAppCardType } from './openui-app-card-model'
+import { RideOptions, MailList, Route, PullRequest } from './openui-app-cards'
 
 // Ported from the T3 Code OpenUI experiment. The small, read-only Desktop
-// catalog deliberately excludes treemaps, heatmaps, app cards and actions.
+// catalog excludes treemaps, heatmaps and actions; app cards stay read-only.
 const LIMITS = {
   bytes: 65_536,
   panels: 8,
@@ -305,7 +307,7 @@ const Board = defineComponent({
   props: z.object({
     title,
     summary,
-    panels: z.array(z.union([Stat.ref, BarChart.ref, StackedBar.ref, StackedArea.ref, LineChart.ref, Table.ref]))
+    panels: z.array(z.union([Stat.ref, BarChart.ref, StackedBar.ref, StackedArea.ref, LineChart.ref, Table.ref, RideOptions.ref, MailList.ref, Route.ref, PullRequest.ref]))
       .min(1).max(LIMITS.panels)
   }),
   component: ({ props, renderNode }) => (
@@ -322,7 +324,7 @@ const Board = defineComponent({
 // No Query, Mutation, functions, registered actions or user-defined state.
 // Generated content cannot send messages, follow links or call tools.
 const library = createLibrary({
-  components: [Board, Stat, BarChart, StackedBar, StackedArea, LineChart, Table],
+  components: [Board, Stat, BarChart, StackedBar, StackedArea, LineChart, Table, RideOptions, MailList, Route, PullRequest],
   root: 'Board'
 })
 const parser = createParser(library.toJSONSchema(), library.root)
@@ -332,7 +334,8 @@ const panelSchemas = {
   StackedBar: stackedBarProps,
   StackedArea: stackedAreaProps,
   LineChart: lineChartProps,
-  Table: tableProps
+  Table: tableProps,
+  ...appCardSchemas
 } as const
 
 type PanelType = keyof typeof panelSchemas
@@ -376,6 +379,9 @@ export function inspectOpenUiBoard(code: string): OpenUiStatus {
       const validated = panelSchemas[panelType].safeParse(panel.props)
 
       if (!validated.success) {
+        return { kind: 'invalid', reason: 'invalid' }
+      }
+      if (isAppCardType(panelType) && appCardProblem({ typeName: panelType, props: validated.data })) {
         return { kind: 'invalid', reason: 'invalid' }
       }
       if (panelType === 'Table') {

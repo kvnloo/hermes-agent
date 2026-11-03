@@ -29,6 +29,18 @@ import { jaUpdateChannel } from './ja_update_channel'
 
 export const jaOverrides = {
   openui: {
+    openApp: "{app}で開く",
+    bestPrice: "最安値",
+    noMessages: "一致するメールはありません。",
+    previousStep: "前の手順",
+    nextStep: "次の手順",
+    checksPassed: "すべてのチェックに合格",
+    conflictCount: "{count} 件の競合",
+    seats: "座席",
+    drive: "車",
+    walk: "徒歩",
+    transit: "公共交通機関",
+    bike: "自転車",
     label: "OpenUI ボード",
     readOnly: "読み取り専用",
     receiving: "受信中",
