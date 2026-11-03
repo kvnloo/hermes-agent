@@ -51,8 +51,6 @@ fallback_model:
 | OpenRouter | `openrouter` | `OPENROUTER_API_KEY` |
 | Nous Portal | `nous` | `hermes setup --portal`（全新安装）或 `hermes auth add nous`（OAuth） |
 | OpenAI Codex | `openai-codex` | `hermes model` → **ChatGPT or Codex Subscription**（ChatGPT OAuth） |
-| GitHub Copilot | `copilot` | `COPILOT_GITHUB_TOKEN`、`GH_TOKEN` 或 `GITHUB_TOKEN` |
-| GitHub Copilot ACP | `copilot-acp` | 外部进程（编辑器集成） |
 | Anthropic | `anthropic` | `ANTHROPIC_API_KEY` 或 Claude Code 凭据 |
 | z.ai / GLM | `zai` | `GLM_API_KEY` |
 | Kimi / Moonshot | `kimi-coding` | `KIMI_API_KEY` |
@@ -158,7 +156,7 @@ fallback_model:
 ```yaml
 fallback_model:
   provider: openai-codex
-  model: gpt-5.3-codex
+  model: gpt-5.4
 ```
 
 ### 备用适用范围
@@ -262,7 +260,7 @@ fallback_model:
 
 ### 辅助任务的提供商选项
 
-以下选项仅适用于 `auxiliary:`、`compression:` 和 `fallback_model:` 配置——`"main"` **不是**顶层 `model.provider` 的有效值。对于自定义端点，请在 `model:` 部分使用 `provider: custom`（参见 [AI 提供商](/integrations/providers)）。
+以下选项仅适用于 `auxiliary:`、`compression:` 和 `fallback_model:` 配置——`"main"` **不是**顶层 `model.provider` 的有效值。对于自定义端点，请在 `model:` 部分使用 `provider: custom`（参见 [AI 提供商](../../integrations/providers.md)）。
 
 | 提供商 | 说明 | 要求 |
 |----------|-------------|-------------|
@@ -369,7 +367,7 @@ delegation:
   # api_key: "local-key"
 ```
 
-完整配置详情参见[子 Agent 委派](/user-guide/features/delegation)。
+完整配置详情参见[子 Agent 委派](./delegation.md)。
 
 ---
 
@@ -387,7 +385,7 @@ cronjob(
 )
 ```
 
-完整配置详情参见[定时任务（Cron）](/user-guide/features/cron)。
+完整配置详情参见[定时任务（Cron）](./cron.md)。
 
 ---
 
