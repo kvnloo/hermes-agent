@@ -181,13 +181,14 @@ async def test_streamed_telegram_partial_is_not_requeued_after_async_reset(monke
     reset = runner.session_store.reset_session
     reset.return_value = replace(entry, session_id="fresh-session")
 
+    partial_text = "I have started checking your calendar"
     streamed_results = []
 
     async def failed_streamed_turn(**_kwargs):
         consumer = GatewayStreamConsumer(
             adapter, event.source.chat_id, StreamConsumerConfig(cursor=""),
         )
-        await consumer._send_or_edit("I have started checking your calendar")
+        await consumer._send_or_edit(partial_text)
         result = {
             "failed": True, "compression_exhausted": True, "messages": [],
             "final_response": "context exhausted",
@@ -206,7 +207,14 @@ async def test_streamed_telegram_partial_is_not_requeued_after_async_reset(monke
 
     # Assertions outside the handler must not be swallowed by its error-reply guard.
     runner._run_agent.assert_awaited_once()
-    adapter.send.assert_awaited_once()
+    # First-contact setup may send an unrelated no-home-channel notice.
+    # Count only the partial itself, across positional and keyword send styles.
+    partial_sends = [
+        sent for sent in adapter.send.await_args_list
+        if sent.kwargs.get("content", sent.args[1] if len(sent.args) > 1 else None) == partial_text
+    ]
+    assert len(partial_sends) == 1
+    assert partial_sends[0].kwargs["chat_id"] == event.source.chat_id
     assert len(streamed_results) == 1
     assert streamed_results[0]["stream_visible_output"] is True
     assert not streamed_results[0].get("already_sent")
