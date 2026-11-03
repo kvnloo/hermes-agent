@@ -28,7 +28,7 @@ from typing import Any, Dict, Optional
 
 from hermes_constants import get_hermes_home
 from utils import atomic_json_write, base_url_hostname
-from agent.secret_scope import get_secret as _get_secret
+from agent.secret_scope import UnscopedSecretError, get_secret as _get_secret
 
 logger = logging.getLogger(__name__)
 
@@ -345,8 +345,12 @@ def _read_claude_code_credentials_from_keychain() -> Optional[dict[str, Any]]:
 def claude_code_credentials_path() -> Path:
     """Claude Code's shared OAuth file; every profile reads/writes this same path. Honours ``CLAUDE_CONFIG_DIR``
     like the Claude CLI itself (blank = unset, as in ``hermes_cli.foreign_sessions``). The supported opt-out of
-    borrowing the login is ``auth.adopt_external_logins: false`` in config.yaml."""
-    override = os.environ.get("CLAUDE_CONFIG_DIR", "").strip()
+    borrowing the login is ``auth.adopt_external_logins: false`` in config.yaml. A profile's ``.env`` can set it, so
+    one multiplexed gateway serves profiles signed in to different Claude accounts."""
+    try:
+        override = (_get_secret("CLAUDE_CONFIG_DIR", "") or "").strip()
+    except UnscopedSecretError:
+        override = os.environ.get("CLAUDE_CONFIG_DIR", "").strip()
     root = Path(override).expanduser() if override else Path.home() / ".claude"
     return root / ".credentials.json"
 
