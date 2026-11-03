@@ -11,6 +11,7 @@ import os
 import re
 import threading
 import time
+import unicodedata
 import weakref
 from contextlib import suppress
 from typing import Any, Callable, Optional
@@ -501,7 +502,7 @@ def _request_title(messages: list, *, timeout: Optional[float], main_runtime: di
 
 def _cjk_char_count(text: str) -> int:
     """Characters written with CJK scripts or their punctuation in ``text``."""
-    return sum(1 for ch in text if any(lo <= ch <= hi for lo, hi in _CJK_RANGES))
+    return sum(1 for ch in unicodedata.normalize("NFC", text) if any(lo <= ch <= hi for lo, hi in _CJK_RANGES))
 
 
 def _is_answer_shaped(title: str) -> bool:
