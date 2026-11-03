@@ -252,12 +252,28 @@ class _Ctx:
     def __init__(self, settings=None):
         self.settings = settings or {}
         self.commands = {}
+        self.tools = {}
+        self.hooks = {}
+        self.references = []
+        self.skills = {}
 
     def get_config(self, key, default=None):
         return self.settings.get(key, default)
 
     def register_command(self, name, handler, **kwargs):
         self.commands[name] = handler
+
+    def register_tool(self, name, toolset, schema, handler, **kwargs):
+        self.tools[name] = (schema, handler)
+
+    def register_hook(self, name, callback, **kwargs):
+        self.hooks[name] = callback
+
+    def register_context_reference(self, provider):
+        self.references.append(provider)
+
+    def register_skill(self, name, path, description=""):
+        self.skills[name] = path
 
 
 @pytest.fixture

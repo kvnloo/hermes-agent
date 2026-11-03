@@ -57,3 +57,23 @@ Limits, all because Hermes does not record the data:
   estimate, as it does for its own subscription usage.
 - A subagent lane is placed from the child's own activity. Hermes does not link a
   `delegate_task` call to the child session it started.
+
+## Asking the agent about a trace
+
+The plugin also gives the agent two tools and a skill (`stats-dashboard:trace-query`):
+
+- `trace_query` takes the user's question (or a `trace-query.v0` plan), session (`current`,
+  `latest`, `last 2`, an id), layers and focus ids. It runs against the same `omp stats` server
+  and returns a bounded analysis (a few KB: summary, tools with p50/p95, longest spans, failures,
+  idle gaps, per-track cost, every row with its span id) plus `render.handle`.
+- Passing that handle as `html` to an `html_render`/`html_preview` tool shows an interactive
+  board of trace cards over the same data slice; a `pre_tool_call` hook swaps the handle for
+  the document, so the model never carries the HTML.
+- On the board the user clicks spans, tool rows or error groups, brushes the timeline, pins,
+  and presses **Copy for chat**. The reference (`@trace:v0;s=<session>;k=…;ids=…;r=<ms>-<ms>`)
+  pasted into the next message is expanded before the model reads it; `trace_resolve`
+  expands one on request.
+
+The board is built from a template at `$HERMES_HOME/omp-stats/stats-inline.html` (setting
+`inline_template` overrides the path). Without it `trace_query` still answers and says how to
+build the template.
