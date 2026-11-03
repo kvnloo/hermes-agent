@@ -524,9 +524,17 @@ class WebhookAdapter(BasePlatformAdapter):
 
     @staticmethod
     def _profile_scope(profile: Optional[str]):
-        """Runtime scope for a resolved ``/p/<profile>/`` prefix; bare routes get a no-op."""
+        """Bind the owner of a webhook route, including bare default routes under multiplex.
+
+        A bare route belongs to the default profile. When the process serves multiple profiles,
+        even its default route needs the gateway's full runtime scope: otherwise a route-script
+        child env with a skill passthrough raises UnscopedSecretError before spawning.
+        """
         if not profile or not isinstance(profile, str):
-            return nullcontext()
+            from agent.secret_scope import is_multiplex_active
+            if not is_multiplex_active():
+                return nullcontext()
+            profile = "default"
         from gateway.run import _profile_runtime_scope
         from hermes_cli.profiles import get_profile_dir
         return _profile_runtime_scope(get_profile_dir(profile))
