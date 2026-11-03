@@ -1,9 +1,24 @@
 import { createParser } from '@openuidev/lang-core'
 import { createLibrary, defineComponent, Renderer } from '@openuidev/react-lang'
 import { z } from 'zod/v4'
+import { useMemo, useState } from 'react'
 
-// Ported from the T3 Code OpenUI experiment. The small, read-only Desktop
-// catalog deliberately excludes treemaps, heatmaps, app cards and actions.
+import { Button } from '@/components/ui/button'
+import { useI18n } from '@/i18n/context'
+
+import {
+  buildTreemap,
+  findTreemapNode,
+  fitTreemapLabel,
+  heatmapDensity,
+  layoutTreemap,
+  shade,
+  validHeatmapCounts,
+  validTreemapPaths,
+  type TreemapNode
+} from './openui-chart-layout'
+
+// Ported from the T3 Code OpenUI experiment. Read-only panels have no actions or tools.
 const LIMITS = {
   bytes: 65_536,
   panels: 8,
@@ -299,13 +314,187 @@ const Table = defineComponent({
   )
 })
 
+
+const treemapProps = z.object({
+  title,
+  sizeLabel: label,
+  colorLabel: label,
+  rows: z.array(z.object({
+    path: z.string().min(1).max(500),
+    size: value,
+    color: value
+  })).min(1).max(500)
+})
+
+const heatmapProps = z.object({
+  title,
+  unit,
+  rows: z.array(label).min(1).max(31),
+  columns: z.array(label).min(1).max(48),
+  counts: z.array(z.array(value).max(48)).max(31)
+})
+
+function nodeReadout(node: TreemapNode, props: z.infer<typeof treemapProps>): string {
+  const size = (node.path || props.title) + ' · ' + formatCount(node.size) + ' ' + props.sizeLabel
+  return props.sizeLabel === props.colorLabel && node.size === node.color
+    ? size : size + ' · ' + formatCount(node.color) + ' ' + props.colorLabel
+}
+
+function TreemapPanel({ props }: { props: z.infer<typeof treemapProps> }) {
+  const { t } = useI18n()
+  const root = useMemo(() => buildTreemap(props.rows), [props.rows])
+  const [path, setPath] = useState('')
+  const [selected, setSelected] = useState<string | null>(null)
+  const folder = findTreemapNode(root, path)
+  const tiles = useMemo(() => layoutTreemap(folder, 600, 260), [folder])
+  const maxColor = Math.max(0, ...folder.children.map(child => child.color))
+  const shown = selected === null ? folder : findTreemapNode(root, selected)
+
+  return (
+    <section aria-label={props.title} className="min-w-0 space-y-2">
+      <h4 className="text-sm font-semibold">{props.title}</h4>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button disabled={folder === root} onClick={() => {
+          setPath(folder.parent?.path ?? '')
+          setSelected(null)
+        }} size="sm" type="button" variant="text">
+          {t.common.back}
+        </Button>
+        <span className="text-xs text-muted-foreground" title={folder.path}>{folder.path || props.title}</span>
+      </div>
+      <svg aria-label={props.title + ' treemap'} className="block h-auto w-full" role="group" viewBox="0 0 600 260">
+        {tiles.map(tile => {
+          const intensity = shade(tile.node.color, maxColor)
+          const isFolder = tile.node.children.length > 0
+          const readout = nodeReadout(tile.node, props)
+          const activate = () => {
+            if (isFolder) {
+              setPath(tile.node.path)
+              setSelected(null)
+            } else {
+              setSelected(tile.node.path)
+            }
+          }
+          return (
+            <g aria-label={readout} className="cursor-pointer focus-visible:outline focus-visible:outline-2" key={tile.node.path}
+              onClick={activate} onKeyDown={event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  activate()
+                }
+              }} role="button" tabIndex={0}>
+              <title>{readout}</title>
+              <rect fill="var(--theme-primary)" fillOpacity={0.13 + 0.85 * intensity} height={tile.height}
+                stroke={selected === tile.node.path ? 'var(--ui-text-primary)' : 'var(--ui-stroke-tertiary)'}
+                strokeWidth={selected === tile.node.path ? 3 : 1.5}
+                width={tile.width} x={tile.x} y={tile.y} />
+              {tile.width > 90 && tile.height > 44 ? (
+                <>
+                  <text fill="var(--ui-text-primary)" fontSize={16} fontWeight={600} pointerEvents="none"
+                    x={tile.x + 8} y={tile.y + 22}>
+                    {fitTreemapLabel(tile.node.name + (isFolder ? '/' : ''), tile.width - 16, 9)}
+                  </text>
+                  <text fill="var(--ui-text-primary)" fontSize={14} pointerEvents="none" x={tile.x + 8} y={tile.y + 42}>
+                    {fitTreemapLabel(formatCount(tile.node.size) + ' ' + props.sizeLabel, tile.width - 16, 8)}
+                  </text>
+                </>
+              ) : tile.width > 40 && tile.height > 24 ? (
+                <text fill="var(--ui-text-primary)" fontSize={12} fontWeight={600} pointerEvents="none"
+                  x={tile.x + 4} y={tile.y + 16}>
+                  {fitTreemapLabel(tile.node.name + (isFolder ? '/' : ''), tile.width - 8, 7)}
+                </text>
+              ) : null}
+            </g>
+          )
+        })}
+      </svg>
+      <p className="text-xs text-muted-foreground">
+        {props.sizeLabel} · 0 — {formatCount(maxColor)} {props.colorLabel}
+      </p>
+      <p aria-live="polite" className="min-h-8 bg-muted/40 p-2 text-xs break-words">{nodeReadout(shown, props)}</p>
+    </section>
+  )
+}
+
+function HeatmapPanel({ props }: { props: z.infer<typeof heatmapProps> }) {
+  const max = useMemo(() => Math.max(0, ...props.counts.flat()), [props.counts])
+  const [cell, setCell] = useState<readonly [number, number]>([0, 0])
+  const selected: readonly [number, number] =
+    cell[0] < props.rows.length && cell[1] < props.columns.length ? cell : [0, 0]
+  const { dense, labelEvery } = heatmapDensity(props.columns.length)
+  const readout = (row: number, column: number) =>
+    props.rows[row] + ' · ' + props.columns[column] + ' · ' +
+    formatCount(props.counts[row]![column]!) + (props.unit ? ' ' + props.unit : '')
+
+  return (
+    <section aria-label={props.title} className="min-w-0 space-y-2">
+      <h4 className="text-sm font-semibold">{props.title}</h4>
+      <div aria-label={props.title + ' heatmap'} className="max-h-96 max-w-full overflow-auto" role="region" tabIndex={0}>
+        <div className={dense ? 'grid gap-0.5 text-xs' : 'grid gap-1 text-xs'}
+          role="group"
+          style={{
+            gridTemplateColumns: '3rem repeat(' + props.columns.length + ', minmax(0, 1fr))',
+            minWidth: dense ? Math.max(520, 48 + props.columns.length * 16) : 320
+          }}>
+          <span aria-hidden />
+          {props.columns.map((column, index) => (
+            <span className={dense ? 'overflow-visible whitespace-nowrap text-muted-foreground' : 'truncate text-center text-muted-foreground'}
+              key={index} title={column}>
+              {index % labelEvery === 0 ? column : null}
+            </span>
+          ))}
+          {props.rows.map((row, rowIndex) => [
+            <span className="truncate self-center" key={'label-' + rowIndex} title={row}>{row}</span>,
+            ...props.columns.map((column, columnIndex) => {
+              const cellValue = props.counts[rowIndex]![columnIndex]!
+              const intensity = shade(cellValue, max)
+              const active = selected[0] === rowIndex && selected[1] === columnIndex
+              return (
+                <button aria-label={readout(rowIndex, columnIndex)} aria-pressed={active}
+                  className={(dense ? 'min-h-6 rounded-sm' : 'min-h-10 rounded font-semibold') +
+                    ' min-w-0 text-xs text-foreground focus-visible:outline focus-visible:outline-2' +
+                    (active ? ' ring-2 ring-primary ring-inset' : '')}
+                  key={rowIndex + '-' + columnIndex}
+                  onClick={() => setCell([rowIndex, columnIndex])}
+                  style={{ backgroundColor: 'color-mix(in srgb, var(--theme-primary) ' +
+                    Math.round(12 + intensity * 76) + '%, var(--ui-bg-quaternary))' }}
+                  type="button">
+                  {dense ? null : formatCount(cellValue)}
+                </button>
+              )
+            })
+          ])}
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">0 — {formatCount(max)} {props.unit}</p>
+      <p aria-live="polite" className="min-h-8 bg-muted/40 p-2 text-xs break-words">
+        {readout(selected[0], selected[1])}
+      </p>
+    </section>
+  )
+}
+
+const Treemap = defineComponent({
+  name: 'Treemap',
+  description: 'Nested size-proportional file rectangles; select folders to drill in.',
+  props: treemapProps,
+  component: TreemapPanel
+})
+
+const Heatmap = defineComponent({
+  name: 'Heatmap',
+  description: 'Read-only counts with one count for each row and column pair.',
+  props: heatmapProps,
+  component: HeatmapPanel
+})
+
 const Board = defineComponent({
   name: 'Board',
   description: 'Read-only chart board with a title, a summary and up to eight panels.',
   props: z.object({
     title,
     summary,
-    panels: z.array(z.union([Stat.ref, BarChart.ref, StackedBar.ref, StackedArea.ref, LineChart.ref, Table.ref]))
+    panels: z.array(z.union([Stat.ref, BarChart.ref, StackedBar.ref, StackedArea.ref, LineChart.ref, Table.ref, Treemap.ref, Heatmap.ref]))
       .min(1).max(LIMITS.panels)
   }),
   component: ({ props, renderNode }) => (
@@ -322,7 +511,7 @@ const Board = defineComponent({
 // No Query, Mutation, functions, registered actions or user-defined state.
 // Generated content cannot send messages, follow links or call tools.
 const library = createLibrary({
-  components: [Board, Stat, BarChart, StackedBar, StackedArea, LineChart, Table],
+  components: [Board, Stat, BarChart, StackedBar, StackedArea, LineChart, Table, Treemap, Heatmap],
   root: 'Board'
 })
 const parser = createParser(library.toJSONSchema(), library.root)
@@ -332,7 +521,9 @@ const panelSchemas = {
   StackedBar: stackedBarProps,
   StackedArea: stackedAreaProps,
   LineChart: lineChartProps,
-  Table: tableProps
+  Table: tableProps,
+  Treemap: treemapProps,
+  Heatmap: heatmapProps
 } as const
 
 type PanelType = keyof typeof panelSchemas
@@ -377,6 +568,15 @@ export function inspectOpenUiBoard(code: string): OpenUiStatus {
 
       if (!validated.success) {
         return { kind: 'invalid', reason: 'invalid' }
+      }
+      if (panelType === 'Treemap' && !validTreemapPaths((validated.data as z.infer<typeof treemapProps>).rows)) {
+        return { kind: 'invalid', reason: 'invalid' }
+      }
+      if (panelType === 'Heatmap') {
+        const heatmap = validated.data as z.infer<typeof heatmapProps>
+        if (!validHeatmapCounts(heatmap.rows, heatmap.columns, heatmap.counts)) {
+          return { kind: 'invalid', reason: 'invalid' }
+        }
       }
       if (panelType === 'Table') {
         const table = validated.data as z.infer<typeof tableProps>
