@@ -82,13 +82,13 @@ describe('openui-v2 app cards', () => {
     expect(inspectOpenUiBoard(pr.replace('"ready"', '"conflict"')).kind).toBe('invalid')
     expect(inspectOpenUiBoard(pr.replace('"ready"', '"merged"').replace(', 0)', ', 2)')).kind).toBe('invalid')
     expect(inspectOpenUiBoard(pr.replace('"pass"', '"running"')).kind).toBe('invalid')
-    const wrong = pr.replace(', 0)', ', 0, "https://github.com/example/repo/pull/129")')
+    const wrong = pr.replace(', 0)', ', 0, [], "https://github.com/example/repo/pull/129")')
     expect(inspectOpenUiBoard(wrong).kind).toBe('invalid')
     expect(appCardProblem({ typeName: 'PullRequest', props: { state: 'invalid' } })).not.toBeNull()
   })
 
   it('accepts a matching direct GitHub PR link and keeps chart panels in the same board', async () => {
-    const withUrl = pr.replace(', 0)', ', 0, "https://github.com/kvnloo/hermes-agent/pull/128")')
+    const withUrl = pr.replace(', 0)', ', 0, [], "https://github.com/kvnloo/hermes-agent/pull/128")')
     expect(inspectOpenUiBoard(withUrl)).toEqual({ kind: 'ready' })
     const mixed = ride.replace('[rides])', '[rides, spend])') +
       '\nspend = BarChart("Ride spend", "USD", [{label: "Uber", value: 120}])'
