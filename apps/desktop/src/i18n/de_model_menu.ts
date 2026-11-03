@@ -10,6 +10,13 @@ export const deModelMenu = {
   removeFavorite: 'Aus Favoriten entfernen',
   favoriteShortcut: '⇧ Klick',
   fast: 'Schnell',
+  turboDescriptions: {
+    turbo: 'Automatische Modellauswahl',
+    'free-quality': 'Kostenlose Route für Antwortqualität',
+    'free-reasoning': 'Kostenlose Route für Denkaufgaben',
+    'free-verify': 'Kostenlose Route zur Überprüfung',
+    'free-longctx': 'Kostenlose Route für lange Kontexte'
+  },
   free: 'kostenlos',
   cacheRead: 'Cache-Lesung',
   priceTitle: (input: string, output: string, cache: string) =>

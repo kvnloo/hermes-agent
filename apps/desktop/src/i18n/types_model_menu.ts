@@ -11,6 +11,13 @@ export interface ModelMenuTranslations {
   removeFavorite: string
   favoriteShortcut: string
   fast: string
+  turboDescriptions: {
+    turbo: string
+    'free-quality': string
+    'free-reasoning': string
+    'free-verify': string
+    'free-longctx': string
+  }
   free: string
   cacheRead: string
   priceTitle: (input: string, output: string, cache: string) => string
