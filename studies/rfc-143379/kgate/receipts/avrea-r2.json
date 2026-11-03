@@ -1,0 +1,139 @@
+{
+  "study_sha": "9e00c1f728e02a82a04df80c8832774365da4119",
+  "main_sha": "e82bf01eec9bb58848209b07f0bc7d8895a39f9b",
+  "avrea_run_url": "https://github.com/kvnloo/fleet-runner/actions/runs/40293977816",
+  "measurement": "deterministic boundary measurement, NOT model recall",
+  "test_results": {
+    "study-tests.xml": {
+      "passed": 22,
+      "skipped": 1
+    },
+    "upstream-ghost-tests.xml": {
+      "passed": 12
+    }
+  },
+  "demote_gap": {
+    "main_sha": "e82bf01eec9bb58848209b07f0bc7d8895a39f9b",
+    "verdict": "PARTIAL",
+    "mechanism_verdict": "CONFIRMED",
+    "reason": "Missing memory reload marker confirmed on injected historical read; current main has no memory read/doc API.",
+    "memory_read_dispatch": "unsupported",
+    "doc_read": "SKIPPED: unsupported on pinned main",
+    "outcomes": {
+      "tail_demote": {
+        "skill_stub": "[skill_view output demoted at compaction \u2014 15,314 chars preserved in session history. Recover with session_search(query=..., session_id='synthetic-session')] [SKILL_PRUNED: content lost in compression; reload with skill_view(name='study-skill')]",
+        "memory_stub": "[memory output demoted at compaction \u2014 20,734 chars preserved in session history. Recover with session_search(query=..., session_id='synthetic-session')]",
+        "skill_reload_marker": true,
+        "memory_reload_marker": false
+      },
+      "proactive_prune": {
+        "skill_stub": "[skill_view] name=study-skill (15,314 chars) [SKILL_PRUNED: content lost in compression; reload with skill_view(name='study-skill')]\n\n## Skill Safety Rule\nA skill placeholder containing `[SKILL_PRUNED]` lost its content in context compression and is inaccessible \u2014 reload it with skill_view(name='...') before acting on anything that depends on it. After reloading, ignore any remaining `[SKILL_PRUNED]` markers for that same skill; they are historical artifacts of earlier compactions.",
+        "memory_stub": "[memory] read on memory",
+        "skill_reload_marker": true,
+        "memory_reload_marker": false
+      }
+    }
+  },
+  "harness": {
+    "rows": 72,
+    "unique_pairs": 72,
+    "trace_rows": 7200,
+    "successful_compressions": 7200,
+    "gate_status": "INSUFFICIENT",
+    "gate_reasons": [
+      "missing_or_underpowered_bin",
+      "not_model_recall",
+      "proposal_not_approved",
+      "unqualified_controls"
+    ],
+    "cells": [
+      {
+        "cycle": 300,
+        "ratio_target": 4,
+        "n": 12,
+        "hits10": 4,
+        "hits0": 2,
+        "ratio_actual10": 4.0013995801259625,
+        "ratio_actual0": 4.004904250350304,
+        "retained_tokens10": 440,
+        "retained_tokens0": 72
+      },
+      {
+        "cycle": 300,
+        "ratio_target": 6,
+        "n": 12,
+        "hits10": 4,
+        "hits0": 2,
+        "ratio_actual10": 6.006614785992218,
+        "ratio_actual0": 6.016374269005848,
+        "retained_tokens10": 440,
+        "retained_tokens0": 72
+      },
+      {
+        "cycle": 300,
+        "ratio_target": 8,
+        "n": 12,
+        "hits10": 4,
+        "hits0": 2,
+        "ratio_actual10": 8.027307482250137,
+        "ratio_actual0": 8.015812431842965,
+        "retained_tokens10": 440,
+        "retained_tokens0": 72
+      },
+      {
+        "cycle": 600,
+        "ratio_target": 4,
+        "n": 12,
+        "hits10": 0,
+        "hits0": 0,
+        "ratio_actual10": 4.0013995801259625,
+        "ratio_actual0": 4.004904250350304,
+        "retained_tokens10": 440,
+        "retained_tokens0": 72
+      },
+      {
+        "cycle": 600,
+        "ratio_target": 6,
+        "n": 12,
+        "hits10": 0,
+        "hits0": 0,
+        "ratio_actual10": 6.006614785992218,
+        "ratio_actual0": 6.016374269005848,
+        "retained_tokens10": 440,
+        "retained_tokens0": 72
+      },
+      {
+        "cycle": 600,
+        "ratio_target": 8,
+        "n": 12,
+        "hits10": 0,
+        "hits0": 0,
+        "ratio_actual10": 8.027307482250137,
+        "ratio_actual0": 8.015812431842965,
+        "retained_tokens10": 440,
+        "retained_tokens0": 72
+      }
+    ]
+  },
+  "artifact_sha256": {
+    "paired.jsonl": "bed809157727bb4c956cc90cdb3cde27896a63079ad516c3c1836ba2789f7976",
+    "trace.jsonl": "a57e86eb3519d9bda0a31d5e0313222e9cee24ed234a0565245b3cc44f387384",
+    "manifest.json": "148c9548e465f162ee9f313b41aa515d706bbd2c53edb4ad413a55cc9581a320",
+    "demote-gap.json": "1cb242eb60b1870fb9d4a987b2a65acd2c64559676bd5b177a6235c657b5ee82",
+    "harness-report.json": "786c94cb0165c94dd9d31a3b22cf2a27663c3f5d108bc73c0f0cda59ee3d45d7",
+    "study-tests.xml": "f5983b7485bbbe24e6b3343ac7659f063a231b58ecad435c9a0e8edf0fbe85f9",
+    "upstream-ghost-tests.xml": "dbab8db6653c027e72681e70b6046f98c42397bbc5b731a2bc136e62c3310191"
+  },
+  "pilot": {
+    "run_url": "https://github.com/kvnloo/fleet-runner/actions/runs/40293227352",
+    "study_sha": "25a49da80efe40d7d4e0b9c42cb249b838944337",
+    "status": "boundary executed; requested ratios and native scaffold budget NOT matched; retained as pilot only"
+  },
+  "not_run": [
+    "real model recall or paraphrase",
+    "powered 18-bin model cohort",
+    "full Hermes suite",
+    "unshipped memory doc read",
+    "original RFC hard-gate certification"
+  ]
+}

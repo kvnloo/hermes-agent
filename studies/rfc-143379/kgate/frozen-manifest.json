@@ -1,0 +1,149 @@
+{
+  "schema": "rfc143379-paired-manifest-v1",
+  "measurement": "deterministic_boundary",
+  "cycles_are": "completed compress() generations, each fed 40 conversational rounds",
+  "checkpoints": [
+    300,
+    600
+  ],
+  "ratios_requested": [
+    4,
+    6,
+    8
+  ],
+  "probes": [
+    {
+      "session_seed": 10,
+      "probe_id": "cycle-1-slot-20",
+      "source_cycle": 1,
+      "source_digest": "d5a1db07a228a6fdc048b4ce34552d1aab6edb0a714ba539b836764938693141",
+      "source_scope": "synthetic:rfc143379:v1",
+      "target_literal": "rfc-id-f192e421663f3acea48c",
+      "source_access": "available",
+      "stratum": "historical",
+      "eligible": true
+    },
+    {
+      "session_seed": 10,
+      "probe_id": "cycle-50-slot-20",
+      "source_cycle": 50,
+      "source_digest": "f24e0d35367acdeb46e018cf088758b0742e0a3f0065c27ccafe5d96b5147cb1",
+      "source_scope": "synthetic:rfc143379:v1",
+      "target_literal": "rfc-id-f8bb8e5a1f2c46f00fa5",
+      "source_access": "available",
+      "stratum": "historical",
+      "eligible": true
+    },
+    {
+      "session_seed": 10,
+      "probe_id": "cycle-150-slot-20",
+      "source_cycle": 150,
+      "source_digest": "c34279c26605f0e571e5cd7bff52ae32c93bd838a9a6648162b7868817a19290",
+      "source_scope": "synthetic:rfc143379:v1",
+      "target_literal": "rfc-id-6369992366f3c100ab8c",
+      "source_access": "available",
+      "stratum": "historical",
+      "eligible": true
+    },
+    {
+      "session_seed": 10,
+      "probe_id": "cycle-290-slot-20",
+      "source_cycle": 290,
+      "source_digest": "de5c54fa491b0a78b828ddd3fc28c4458fc5ba3ff5e64ce155bddd6806c40092",
+      "source_scope": "synthetic:rfc143379:v1",
+      "target_literal": "rfc-id-257607fac53957b77970",
+      "source_access": "available",
+      "stratum": "historical",
+      "eligible": true
+    },
+    {
+      "session_seed": 10,
+      "probe_id": "cycle-300-slot-31",
+      "source_cycle": 300,
+      "source_digest": "0526faa96a95ecd25e34cf2b344adb20d658e3f10777daa7f15b368fe76e1021",
+      "source_scope": "synthetic:rfc143379:v1",
+      "target_literal": "rfc-id-39c235553298261c032b",
+      "source_access": "available",
+      "stratum": "recent-at-300",
+      "eligible": true
+    },
+    {
+      "session_seed": 10,
+      "probe_id": "cycle-300-slot-40",
+      "source_cycle": 300,
+      "source_digest": "b3bfeccaa5b8f9ad506a63c7033440c52dd2e41759c07e77be1da930a8cb3f0f",
+      "source_scope": "synthetic:rfc143379:v1",
+      "target_literal": "rfc-id-c7121bcdfb6de1d4d25f",
+      "source_access": "available",
+      "stratum": "recent-at-300",
+      "eligible": true
+    },
+    {
+      "session_seed": 11,
+      "probe_id": "cycle-1-slot-20",
+      "source_cycle": 1,
+      "source_digest": "18d25282b32fd54c592b04af6430df82521d9c8de74b2f22930ac03e645b427a",
+      "source_scope": "synthetic:rfc143379:v1",
+      "target_literal": "rfc-id-e792bb9f443011365b2b",
+      "source_access": "available",
+      "stratum": "historical",
+      "eligible": true
+    },
+    {
+      "session_seed": 11,
+      "probe_id": "cycle-50-slot-20",
+      "source_cycle": 50,
+      "source_digest": "cd72a7df7f60ef1dc035d44489e44de3747750ed4e4c69d0588d791124e68e6c",
+      "source_scope": "synthetic:rfc143379:v1",
+      "target_literal": "rfc-id-f14dcedb886412dbf14b",
+      "source_access": "available",
+      "stratum": "historical",
+      "eligible": true
+    },
+    {
+      "session_seed": 11,
+      "probe_id": "cycle-150-slot-20",
+      "source_cycle": 150,
+      "source_digest": "1418bfb2312f6730258011d3de4b314189da3bb45e6955aa6b3de925cf58ac76",
+      "source_scope": "synthetic:rfc143379:v1",
+      "target_literal": "rfc-id-ebec30919c8b09a930f6",
+      "source_access": "available",
+      "stratum": "historical",
+      "eligible": true
+    },
+    {
+      "session_seed": 11,
+      "probe_id": "cycle-290-slot-20",
+      "source_cycle": 290,
+      "source_digest": "8bfd5cc0cb0e49d76e4af33982202d9c433ba24c2bce72d46ed480a286d4aaa6",
+      "source_scope": "synthetic:rfc143379:v1",
+      "target_literal": "rfc-id-106a80b340fb3f60d356",
+      "source_access": "available",
+      "stratum": "historical",
+      "eligible": true
+    },
+    {
+      "session_seed": 11,
+      "probe_id": "cycle-300-slot-31",
+      "source_cycle": 300,
+      "source_digest": "06999f5e6e0ca2e6bc03e9b74df3f2d0f8007a81e1f8c993670bdbdb3a855eee",
+      "source_scope": "synthetic:rfc143379:v1",
+      "target_literal": "rfc-id-0dc90784d5e756823c30",
+      "source_access": "available",
+      "stratum": "recent-at-300",
+      "eligible": true
+    },
+    {
+      "session_seed": 11,
+      "probe_id": "cycle-300-slot-40",
+      "source_cycle": 300,
+      "source_digest": "8e487e062a0c4edbede6ab8f3becdbd85ee9083dad10103542c75ba1b58f9ad3",
+      "source_scope": "synthetic:rfc143379:v1",
+      "target_literal": "rfc-id-d8b7ed1e369ca8094a83",
+      "source_access": "available",
+      "stratum": "recent-at-300",
+      "eligible": true
+    }
+  ],
+  "probes_digest": "16f22d453129db81c932287ad3fa7e2bac94ec515507b06db3cde355133140bf"
+}
