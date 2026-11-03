@@ -166,3 +166,14 @@ async def test_a_terminal_receipt_finishes_the_reply_like_message_complete():
     assert chunks[1].message_id and chunks[1].message_id != chunks[2].message_id
     closed = [u for u in sent if u.session_update == 'tool_call_update']
     assert [(u.tool_call_id, u.status) for u in closed] == [('c1', 'failed')]
+
+
+@pytest.mark.asyncio
+async def test_gateway_transformed_final_opens_a_new_message_instead_of_replaying_stream():
+    """A deep plugin rewrite must not append the full final to the already-streamed ACP id (#141919)."""
+    editor = agent()
+    await project(editor, 'message.delta', {'text': 'api key SECRET-123'})
+    await project(editor, 'message.complete', {'text': 'api key [REDACTED]', 'outcome': 'completed'})
+    chunks = [u for u in updates(editor) if u.session_update == 'agent_message_chunk']
+    assert [u.content.text for u in chunks] == ['api key SECRET-123', 'api key [REDACTED]']
+    assert chunks[0].message_id != chunks[1].message_id

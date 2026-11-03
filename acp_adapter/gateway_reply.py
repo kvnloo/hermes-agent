@@ -47,8 +47,11 @@ class GatewayReplyMixin:
         """Show the settled reply's unseen remainder, then end the turn: its reply's id closes, and a tool
         call it left open (blocked by a guard, an approval denied) ends ``failed``, as the in-process agent
         flushed them at turn end. Shared by ``message.complete`` and a retry's terminal receipt."""
-        remainder = self._final_remainder(aid, payload)
+        remainder, fresh_message = self._final_remainder(aid, payload)
         if remainder and self._conn:
+            if fresh_message:
+                # A deep rewrite cannot append to the already-streamed messageId.
+                self._end_message(sid)
             await self._conn.session_update(session_id=editor_id, update=self._chunk(sid, remainder))
         self._end_message(sid)
         await self._flush_open_tools(sid, editor_id, aid)
@@ -98,7 +101,7 @@ class GatewayReplyMixin:
             self._segments.setdefault(aid, []).append(streamed)
 
     def _final_remainder(self, aid, payload):
-        """The part of the settled reply the editor has not been shown yet (exactly-once text)."""
+        """Return the unseen text and whether it requires a new append-only messageId."""
         from agent.conversation_loop import INTERRUPT_WAITING_FOR_MODEL_PREFIX
 
         text = _text(payload)
@@ -108,25 +111,29 @@ class GatewayReplyMixin:
         # Local interrupt status is metadata; ACP carries it in stop_reason.
         if not text or (payload.get("outcome") == "cancelled"
                         and text.startswith(INTERRUPT_WAITING_FOR_MODEL_PREFIX)):
-            return ""
+            return "", False
         segments = {s.strip() for s in shown}
         if payload.get("response_reused") is True and (
                 text.strip() in segments | {streamed.strip()} if cut is not None or payload.get("receipt")
                 else (streamed or shown)):
             # The owner names the final as a reply already painted (never inferred from text); after a
             # replay gap or from a receipt, only when this editor showed all of it.
-            return ""
+            return "", False
         if cut is not None:  # a replay gap stopped its live text: the rest once, or marked in full
             from hermes_cli.gateway_replay_gap import owed_reply
             # An interim after the gap closed the cut segment and may already have shown the whole reply.
-            return "" if not cut and text.strip() in segments else owed_reply(cut, text)
+            if not cut and text.strip() in segments:
+                return "", False
+            return owed_reply(cut, text), False
         if text.startswith(streamed):
             remainder = text[len(streamed):]
             # An unstreamed final the owner already published as an interim segment.
-            return "" if not streamed and text.strip() in {s.strip() for s in shown} else remainder
+            if not streamed and text.strip() in {s.strip() for s in shown}:
+                return "", False
+            return remainder, False
         if text.strip() == streamed.strip():
-            return ""
-        return "\n\n" + text
+            return "", False
+        return text, True
 
     async def _close_card(self, editor_id, tool_call, options, response):
         """The editor shows a permission request's ``tool_call`` as a pending bubble; once it is answered,
