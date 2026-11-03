@@ -207,6 +207,9 @@ def connect_exhausted_notice(error: BaseException, *, attempts: int, base_url: A
     names the host, the attempt count and the serialized request size so a body-size limit is
     distinguishable from an outage without reading agent.log."""
     from urllib.parse import urlparse
+    from agent.stream_max_lifetime import StreamLifetimeExceeded
+    if isinstance(error, StreamLifetimeExceeded):  # the stream DID open; the opt-in cap cut every attempt
+        return f"❌ {error} ({attempts} attempt{'s' if attempts != 1 else ''})"
     request = _failed_request(error)
     host = urlparse(str(getattr(request, "url", None) or base_url or "")).hostname or "the endpoint"
     size = _request_body_bytes(request)
@@ -230,11 +233,11 @@ def buffer_connect_exhausted_notice(agent: Any, error: BaseException, *, attempt
 
 __all__ = [
     "STREAM_DIAG_HEADERS",
-    "connect_exhausted_notice",
     "buffer_connect_exhausted_notice",
-    "stream_diag_init",
-    "stream_diag_capture_response",
+    "connect_exhausted_notice",
+    "emit_stream_drop",
     "flatten_exception_chain",
     "log_stream_retry",
-    "emit_stream_drop",
+    "stream_diag_capture_response",
+    "stream_diag_init",
 ]

@@ -131,7 +131,7 @@ def _default_input_samplerate(sd) -> int:
         info = sd.query_devices(None, "input")
         rate = info.get("default_samplerate") if isinstance(info, dict) else getattr(info, "default_samplerate", None)
         if isinstance(rate, (int, float)) and rate > 0:
-            return int(round(rate))
+            return round(rate)
     return SAMPLE_RATE
 
 
@@ -371,9 +371,9 @@ def _sd_play_blocking(sd, audio, sample_rate: int, *, timeout: float, blocksize:
     """``sd.play`` then poll until idle or *timeout* (``sd.wait()`` has no timeout and
     hangs forever if the device stalls)."""
     sd.play(audio, samplerate=sample_rate, blocksize=blocksize)
-    deadline = time.monotonic() + timeout
-    while sd.get_stream() and sd.get_stream().active and time.monotonic() < deadline:
-        time.sleep(0.01)
+    from agent.deadline import poll_until
+
+    poll_until(lambda: not (sd.get_stream() and sd.get_stream().active), timeout, 0.01)
     sd.stop()
 
 
@@ -448,7 +448,7 @@ def thinking_sound_enabled() -> bool:
         return True
 
 
-def _synth_thinking_blip(np, frequency: float) -> "Any":
+def _synth_thinking_blip(np, frequency: float) -> Any:
     """One soft 'blub': short sine with a downward glide and a click-free envelope."""
     duration = 0.16
     n = int(SAMPLE_RATE * duration)
@@ -1187,7 +1187,7 @@ def listen_for_speech(
     # from the opening TTS passage, but later louder passages exceed the
     # stale floor and false-trigger.  The rolling window keeps the floor
     # current so only genuinely louder-than-playback speech trips the VAD.
-    floor_window: "deque[float]" = deque(maxlen=max(calib_blocks, 100))  # ~3s rolling
+    floor_window: deque[float] = deque(maxlen=max(calib_blocks, 100))  # ~3s rolling
     pre_roll: deque = deque(maxlen=max(1, pre_roll_ms // 30))
     consecutive = 0
     min_floor = 0.0  # baseline from initial calibration; floor never drops below this
@@ -1337,7 +1337,7 @@ class _BargeDetector:
 
     def __init__(self, np, *, mult: float, calib_blocks: int, trip_blocks: int, grace_blocks: int) -> None:
         self._np, self.mult, self.calib_blocks, self.grace_blocks = np, mult, calib_blocks, grace_blocks
-        self.trip_needed = max(1, int(round(trip_blocks * 0.8)))
+        self.trip_needed = max(1, round(trip_blocks * 0.8))
         self.ambient: deque = deque(maxlen=100)  # ~3s of quiet-phase RMS
         self.recent_above: deque = deque(maxlen=trip_blocks)
         self.quiet_floor = float(SILENCE_RMS_THRESHOLD)
@@ -1541,15 +1541,9 @@ def check_voice_requirements() -> dict[str, Any]:
 # ── Temp file cleanup ──
 def cleanup_temp_recordings(max_age_seconds: int = 3600) -> int:
     """Remove ``recording_*.wav`` temp files older than *max_age_seconds*; returns the count."""
-    if not os.path.isdir(_TEMP_DIR):
-        return 0
-    deleted, now = 0, time.time()
-    for entry in os.scandir(_TEMP_DIR):
-        if entry.is_file() and entry.name.startswith("recording_") and entry.name.endswith(".wav"):
-            with suppress(OSError):
-                if now - entry.stat().st_mtime > max_age_seconds:
-                    os.unlink(entry.path)
-                    deleted += 1
+    from utils import unlink_files_older_than
+
+    deleted = unlink_files_older_than(_TEMP_DIR, "recording_*.wav", max_age_seconds)
     if deleted:
         logger.debug("Cleaned up %d old voice recordings", deleted)
     return deleted
