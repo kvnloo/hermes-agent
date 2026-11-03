@@ -62,8 +62,19 @@ _AUTOMATIC_SESSION_END_REASONS = frozenset({"ws_orphan_reap", "ws_disconnect", "
 
 def _lease_metadata(live_session_id: str) -> dict:
     """Writer identity for a lease: ``live_session_id`` is half of ``_is_same_writer``. Bot Chat delivery is
-    admitted by the session authority (gateway/session_bot), never gated on a lease flag."""
-    return {"live_session_id": live_session_id}
+    admitted by the session authority (gateway/session_bot), never gated on a lease flag. A transfer replaces the
+    whole metadata, so the cooperative-attach origin is built here for claims and transfers alike."""
+    metadata = {"live_session_id": live_session_id}
+    # A stdio TUI has no bound HTTP origin. Discovery failures must not
+    # block the exclusive lease that prevents a double-writer.
+    try:
+        from hermes_cli.session_attach_runtime import advertised_shared_runtime_origin
+        origin = advertised_shared_runtime_origin()
+    except (ImportError, SystemExit):
+        origin = None
+    if origin:
+        metadata["shared_runtime_url"] = origin
+    return metadata
 
 
 def _claim_active_session_slot(
@@ -71,19 +82,9 @@ def _claim_active_session_slot(
 ) -> tuple[Any, str | None]:
     try:
         from hermes_cli.active_sessions import try_acquire_active_session
-        metadata = _lease_metadata(live_session_id)
-        # A stdio TUI has no bound HTTP origin. Discovery failures must not
-        # block the exclusive lease that prevents a double-writer.
-        try:
-            from hermes_cli.session_attach_runtime import advertised_shared_runtime_origin
-            origin = advertised_shared_runtime_origin()
-        except (ImportError, SystemExit):
-            origin = None
-        if origin:
-            metadata["shared_runtime_url"] = origin
         return try_acquire_active_session(
             session_id=session_key, surface=surface, config=_load_cfg(), registry_home=profile_home,
-            metadata=metadata,
+            metadata=_lease_metadata(live_session_id),
             track_liveness=str(surface or "").strip().lower() == "desktop")
     except Exception as exc:
         logger.warning("Failed to claim active session slot: %s", exc)

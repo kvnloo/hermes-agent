@@ -236,3 +236,28 @@ def test_dashboard_refuses_a_proof_keyed_on_a_foreign_lease(tmp_path):
             lease.release()
     finally:
         _restore_runtime(web_server, previous)
+
+
+def test_dashboard_owner_stays_attachable_after_its_lease_moves_to_a_new_session_id(tmp_path, monkeypatch):
+    """Compression rotation and reconnect takeover transfer the lease; the transfer rewrites its metadata."""
+    from hermes_cli.shared_session_attach import discover_attach_url
+    from hermes_cli.web_server_chat import _build_gateway_ws_url
+
+    web_server, previous = _bind_loopback_runtime()
+    try:
+        lease, refusal = server._claim_active_session_slot(
+            "live-chat", live_session_id="live", surface="desktop", profile_home=tmp_path,
+        )
+        assert refusal is None
+        try:
+            session = {"active_session_lease": lease, "profile_home": str(tmp_path), "source": "desktop"}
+            assert server._transfer_active_session_slot("live", session, new_session_id="rotated-chat") is True
+            entry = active_session_registry_snapshot(tmp_path)[0]
+            assert (entry["session_id"], entry["lease_id"]) == ("rotated-chat", lease.lease_id)
+            assert entry["metadata"]["shared_runtime_url"] == "http://127.0.0.1:8234"
+            _route_client_into_dashboard(monkeypatch, web_server, "http://127.0.0.1:8234")
+            assert discover_attach_url("rotated-chat", registry_home=tmp_path) == _build_gateway_ws_url()
+        finally:
+            lease.release()
+    finally:
+        _restore_runtime(web_server, previous)
