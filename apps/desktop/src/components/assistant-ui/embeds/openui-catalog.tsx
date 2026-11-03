@@ -29,12 +29,17 @@ const seriesItem = z.object({
   name: label,
   values: z.array(value).min(1).max(LIMITS.categories)
 })
-const seriesProps = z.object({
+// OpenUI tags component schemas by identity: shared Zod objects alias refs.
+// Give each series chart its own top-level schema, keeping the same constraints.
+const createSeriesProps = () => z.object({
   title,
   unit,
   categories: z.array(label).min(2).max(LIMITS.categories),
   series: z.array(seriesItem).min(1).max(LIMITS.series)
 })
+const stackedBarProps = createSeriesProps()
+const stackedAreaProps = createSeriesProps()
+const lineChartProps = createSeriesProps()
 const tableProps = z.object({
   title,
   columns: z.array(label).min(1).max(12),
@@ -158,7 +163,7 @@ const BarChart = defineComponent({
 const StackedBar = defineComponent({
   name: 'StackedBar',
   description: 'Non-negative series stacked across equally sized categories.',
-  props: seriesProps,
+  props: stackedBarProps,
   component: ({ props }) => {
     const totals = props.categories.map((_, i) =>
       props.series.reduce((sum, entry) => sum + (entry.values[i] ?? 0), 0)
@@ -216,7 +221,7 @@ function polygonPoints(lower: number[], upper: number[], max: number) {
 const StackedArea = defineComponent({
   name: 'StackedArea',
   description: 'Original catalog-v2 stacked area, with one raw value per category per series.',
-  props: seriesProps,
+  props: stackedAreaProps,
   component: ({ props }) => {
     const stack = stackedBands(props.series, props.categories.length)
     return (
@@ -237,7 +242,7 @@ const StackedArea = defineComponent({
 const LineChart = defineComponent({
   name: 'LineChart',
   description: 'Line series with one non-negative raw value per category.',
-  props: seriesProps,
+  props: lineChartProps,
   component: ({ props }) => {
     const max = Math.max(1, ...props.series.flatMap(entry => entry.values))
     return (
@@ -324,9 +329,9 @@ const parser = createParser(library.toJSONSchema(), library.root)
 const panelSchemas = {
   Stat: metricProps,
   BarChart: barProps,
-  StackedBar: seriesProps,
-  StackedArea: seriesProps,
-  LineChart: seriesProps,
+  StackedBar: stackedBarProps,
+  StackedArea: stackedAreaProps,
+  LineChart: lineChartProps,
   Table: tableProps
 } as const
 
@@ -380,7 +385,7 @@ export function inspectOpenUiBoard(code: string): OpenUiStatus {
         }
       }
       if (panelType === 'StackedBar' || panelType === 'StackedArea' || panelType === 'LineChart') {
-        const chart = validated.data as z.infer<typeof seriesProps>
+        const chart = validated.data as z.infer<typeof stackedBarProps>
         if (chart.series.some(entry => entry.values.length !== chart.categories.length)) {
           return { kind: 'invalid', reason: 'series' }
         }
