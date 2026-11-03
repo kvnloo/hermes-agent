@@ -1034,7 +1034,7 @@ class WeixinAdapter(OwnAccessPolicyMixin, BasePlatformAdapter):
                         errmsg = resp.get("errmsg") or resp.get("msg")
                         if _is_session_expired(resp, ret, errcode) and not retried_without_token and context_token:
                             retried_without_token, context_token = True, None
-                            self._token_store._cache.pop(self._token_store._key(self._account_id, chat_id), None)
+                            # Retry locally without revoking a token refreshed by a newer inbound.
                             logger.warning("[%s] session expired for %s; retrying without context_token", self.name, _safe_id(chat_id))
                             continue
                         if _is_stale_session_ret(ret, errcode, errmsg):
@@ -1348,7 +1348,7 @@ class WeixinAdapter(OwnAccessPolicyMixin, BasePlatformAdapter):
                 # token also covers the remaining item lists (caption, then media) and bounds this loop.
                 if _is_session_expired(resp, ret, errcode) and context_token:
                     context_token = None
-                    self._token_store._cache.pop(self._token_store._key(self._account_id, chat_id), None)
+                    # Retry locally without revoking a token refreshed by a newer inbound.
                     logger.warning("[%s] session expired for %s; re-sending media without context_token", self.name, _safe_id(chat_id))
                     continue
                 errmsg = resp.get("errmsg") or resp.get("msg")

@@ -449,3 +449,54 @@ class TestWeixinHeldOutboundLedgerCoordination:
 
         exc = weixin._session_not_ready_error(-2, None, "prepare failed")
         assert classify_send_error(exc) not in ("rate_limited", "transient")
+
+
+@pytest.mark.parametrize("delivery", ["text", "media"])
+def test_prepare_failed_preserves_inbound_refreshed_context_token(tmp_path, delivery):
+    """Regression for #147821: an in-flight refusal must not erase a newer inbound token."""
+    chat_id = "wxid_test123"
+    adapter = _make_adapter()
+    adapter._session = object()
+    adapter._send_session = adapter._session
+    adapter._base_url = "https://weixin.example.com"
+    adapter._send_chunk_retries = 0
+
+    async def scenario():
+        await adapter._token_store.set(adapter._account_id, chat_id, "old-token")
+        sent_tokens = []
+
+        async def refuse_after_inbound(_session, **kwargs):
+            sent_tokens.append(kwargs["context_token"])
+            if len(sent_tokens) == 1:
+                # A fresh inbound can arrive while iLink rejects an older send.
+                await adapter._token_store.set(adapter._account_id, chat_id, "fresh-token")
+            return {"ret": -2, "errmsg": "prepare failed"}
+
+        if delivery == "text":
+            with patch("plugins.platforms.weixin.adapter._send_message", new=refuse_after_inbound):
+                result = await adapter.send(chat_id, "undelivered answer")
+            assert result.success and result.raw_response["queued"] is True
+        else:
+            document = tmp_path / "reply.pdf"
+            document.write_bytes(b"%PDF-1.4")
+            with (
+                patch("plugins.platforms.weixin.adapter._get_upload_url",
+                      new=AsyncMock(return_value={"upload_full_url": "https://cdn.example/upload"})),
+                patch("plugins.platforms.weixin.adapter._upload_ciphertext",
+                      new=AsyncMock(return_value="enc-q")),
+                patch("plugins.platforms.weixin.adapter._send_items", new=refuse_after_inbound),
+            ):
+                result = await adapter.send_document(chat_id, str(document))
+            assert not result.success and "session not ready" in (result.error or "")
+
+        assert sent_tokens == ["old-token", None]
+        assert adapter._token_store.get(adapter._account_id, chat_id) == "fresh-token"
+
+        # A subsequent reply starts with the freshest peer token, not None.
+        with patch("plugins.platforms.weixin.adapter._send_message",
+                   new=AsyncMock(return_value={"ret": 0})) as send_message:
+            next_reply = await adapter.send(chat_id, "next reply")
+        assert next_reply.success
+        assert send_message.await_args.kwargs["context_token"] == "fresh-token"
+
+    asyncio.run(scenario())
