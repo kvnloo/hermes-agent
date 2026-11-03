@@ -1267,6 +1267,35 @@ class TestPerUserAttachmentRouting:
             sender_email="don@agilicus.com"
         )
 
+    @pytest.mark.asyncio
+    async def test_stored_token_key_matches_send_lookup(
+        self, adapter, tmp_path, monkeypatch
+    ):
+        """#75492: OAuth exchange and file sending must use the same email key."""
+        from plugins.platforms.google_chat import oauth
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        adapter._create_message = AsyncMock()
+        envelope = _make_chat_envelope(
+            text="/setup-files test-code", sender_email="Alice@Example.com"
+        )
+        payload = envelope["chat"]["messagePayload"]
+
+        # Keep the real dispatch and setup handler, but do not call Google.
+        with patch.object(oauth, "exchange_auth_code") as exchange, patch.object(
+            oauth, "load_user_credentials", return_value=None
+        ):
+            await adapter._dispatch_message(payload["message"], payload)
+
+        send_key = adapter._last_sender_by_chat["spaces/S"]
+        assert send_key == "alice@example.com"
+        exchange.assert_called_once_with("test-code", send_key)
+        assert oauth._token_path(send_key) == (
+            tmp_path / "google_chat_user_tokens" / "alice@example.com.json"
+        )
+        assert oauth._token_path(send_key) != oauth._token_path("users/12345")
+        adapter.handle_message.assert_not_awaited()
+
 
 # ===========================================================================
 # Persistent thread-count store (restart-safe side-thread heuristic)
