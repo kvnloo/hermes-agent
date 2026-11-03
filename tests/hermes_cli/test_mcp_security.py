@@ -145,7 +145,7 @@ def test_validator_allows_env_wrapped_legit_server():
 
 
 def test_explicit_registration_skips_dangerous_entry_before_connect(monkeypatch):
-    import tools.mcp_tool as mcp_tool
+    from tools import mcp_tool
     from tools import mcp_tool_discovery as _mcp_discovery
     from tools import mcp_tool_loop as _mcp_loop
 
