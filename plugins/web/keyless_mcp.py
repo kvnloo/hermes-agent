@@ -290,7 +290,8 @@ def _exa_page_was_cut(text: str, max_characters: int) -> bool:
     """Whether the page body (after the ``# Title`` / ``URL:`` header block) filled ``max_characters``,
     meaning Exa stopped there and the rest of the page was never sent."""
     body = text.split("\n\n", 1)[-1]
-    return len(body.encode("utf-16-le")) // 2 >= max_characters - _EXA_CUT_SLACK
+    # An escaped lone surrogate in an MCP JSON string still occupies one UTF-16 unit.
+    return len(body.encode("utf-16-le", errors="surrogatepass")) // 2 >= max_characters - _EXA_CUT_SLACK
 
 
 def exa_extract_keyless(urls: list[str]) -> list[dict[str, Any]]:

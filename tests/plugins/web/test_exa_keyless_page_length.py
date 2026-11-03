@@ -77,3 +77,11 @@ def test_page_exa_cut_is_flagged_to_the_model(keyless_exa_extract, monkeypatch):
     assert content.startswith("[Exa returned only the first 5,000 characters of this page;")
     assert "[TRUNCATED]" in content
     assert "MARKER_PAGE_END" not in content
+
+def test_exa_unpaired_surrogate_does_not_abort_extraction(monkeypatch):
+    """An MCP JSON string may contain an escaped lone surrogate; extraction must survive it."""
+    url = "https://t.test/page"
+    body = "# Fixture\nURL: https://t.test/page\n\nbefore " + chr(0xD800) + " after"
+    monkeypatch.setattr(keyless_mcp, "mcp_call", lambda *_args: body)
+    out = keyless_mcp.exa_extract_keyless([url])
+    assert out[0]["content"] == body
