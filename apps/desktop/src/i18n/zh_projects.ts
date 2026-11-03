@@ -33,6 +33,7 @@ export const zhProjects: NonNullable<TranslationOverrides['sidebar']>['projects'
   movedTo: name => `已移动到 ${name}`,
   moveFailed: '无法移动会话',
   moveNoFolder: '该项目没有可移入的文件夹',
+  moveBusy: '请先停止正在运行的回合，再移动该聊天',
   moveNoProjects: '没有其他项目',
   reveal: '在文件夹中显示',
   copyPath: '复制路径',
@@ -68,8 +69,7 @@ export const zhProjects: NonNullable<TranslationOverrides['sidebar']>['projects'
   noBranches: '未找到分支',
   removeWorktree: '移除工作树',
   removeWorktreeFailed: '无法移除工作树（存在未提交更改？）',
-  removeWorktreeConfirm:
-    '从 git 中移除（删除工作树目录，但保留分支），或仅从侧边栏隐藏该泳道并将工作树保留在磁盘上。',
+  removeWorktreeConfirm: '从 git 中移除（删除工作树目录，但保留分支），或仅从侧边栏隐藏该泳道并将工作树保留在磁盘上。',
   removeWorktreeDirty: '此工作树有未提交的更改。强制移除（丢弃这些更改），或仅隐藏泳道并保留在磁盘上。',
   forceRemove: '强制移除',
   enter: label => `打开 ${label}`,
