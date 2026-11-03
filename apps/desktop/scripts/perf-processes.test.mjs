@@ -45,8 +45,32 @@ describe('diffProcessCpu', () => {
   })
 
   it('a sample snapshot never invents pids when Chromium omits them', async () => {
-    // sampleProcessCpu maps rows; without a transport it must return [] rather
-    // than throw, so the scenario can report "unavailable" instead of guessing.
+    // sampleProcessCpu maps rows; without a transport it must return []
+    // rather than throw, so the scenario can report "unavailable" instead of guessing.
     await expect(sampleProcessCpu({}, {})).resolves.toEqual([])
+  })
+
+  it('preserves GPU CPU-time from a nonempty CDP snapshot and excludes other rows', async () => {
+    const sent = []
+    const cdp = {
+      send: async method => {
+        sent.push(method)
+        return {
+          processInfo: [
+            { type: 'browser', processId: 101, cpuTime: 8 },
+            { type: 'GPU', cpuTime: 1.5 },
+            { type: 'renderer', cpuTime: 2.25 },
+            { type: 'other', cpuTime: 99 }
+          ]
+        }
+      }
+    }
+
+    await expect(sampleProcessCpu(cdp)).resolves.toEqual([
+      { pid: 101, label: 'main', cpu: 8 },
+      { pid: null, label: 'gpu', cpu: 1.5 },
+      { pid: null, label: 'renderer', cpu: 2.25 }
+    ])
+    expect(sent).toEqual(['SystemInfo.getProcessInfo'])
   })
 })
