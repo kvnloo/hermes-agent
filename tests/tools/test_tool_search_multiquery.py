@@ -516,6 +516,7 @@ class TestBatchedDescribe:
     def test_mcp_schema_refs_are_safe_in_describe_results(self):
         """Gemini proxies must not parse described MCP refs as functionResponse parts."""
         from tools.mcp_tool_schema import _normalize_mcp_input_schema
+        from tools.registry import registry
         from tools.tool_search import ToolSearchConfig, dispatch_tool_describe
 
         # FastMCP/Pydantic may supply draft-07 definitions. Normalization must
@@ -528,7 +529,16 @@ class TestBatchedDescribe:
         })
         tool_def = _td("mcp__oxide__terminals_open", "Open a terminal")
         tool_def["function"]["parameters"] = schema
-        plain = _td("mcp__oxide__ping", 'Literal "$ref": in text is not a schema key')
+        registry.register(
+            name="mcp__oxide__terminals_open",
+            handler=lambda args, **kw: json.dumps({"ok": True}),
+            schema=tool_def,
+            toolset="mcp-oxide",
+        )
+        plain = _register(
+            "mcp__oxide__ping", "mcp-oxide",
+            'Literal "$ref": in text is not a schema key',
+        )
 
         raw = dispatch_tool_describe(
             {"names": ["mcp__oxide__terminals_open", "mcp__oxide__ping"]},
