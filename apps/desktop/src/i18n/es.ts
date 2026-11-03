@@ -35,6 +35,18 @@ export const esOverrides = {
     missing: "Este chat de grupo ya no existe."
   },
   openui: {
+    openApp: "Abrir en {app}",
+    bestPrice: "Más barato",
+    noMessages: "No hay mensajes coincidentes.",
+    previousStep: "Paso anterior",
+    nextStep: "Paso siguiente",
+    checksPassed: "Todas las comprobaciones aprobadas",
+    conflictCount: "{count} conflictos",
+    seats: "asientos",
+    drive: "En coche",
+    walk: "A pie",
+    transit: "Transporte público",
+    bike: "En bicicleta",
     label: "Panel OpenUI",
     readOnly: "Solo lectura",
     receiving: "Recibiendo",

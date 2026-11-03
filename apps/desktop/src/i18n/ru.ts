@@ -33,6 +33,18 @@ export const ruOverrides = {
     missing: "Этот групповой чат больше не существует."
   },
   openui: {
+    openApp: "Открыть в {app}",
+    bestPrice: "Самый дешёвый",
+    noMessages: "Совпадающих писем нет.",
+    previousStep: "Предыдущий шаг",
+    nextStep: "Следующий шаг",
+    checksPassed: "Все проверки пройдены",
+    conflictCount: "Конфликты: {count}",
+    seats: "мест",
+    drive: "На машине",
+    walk: "Пешком",
+    transit: "Общественный транспорт",
+    bike: "На велосипеде",
     label: "Панель OpenUI",
     readOnly: "Только чтение",
     receiving: "Получение",

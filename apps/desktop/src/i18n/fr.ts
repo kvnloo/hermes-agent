@@ -35,6 +35,18 @@ export const frOverrides = {
     missing: "Cette discussion de groupe n’existe plus."
   },
   openui: {
+    openApp: "Ouvrir dans {app}",
+    bestPrice: "Le moins cher",
+    noMessages: "Aucun message correspondant.",
+    previousStep: "Étape précédente",
+    nextStep: "Étape suivante",
+    checksPassed: "Toutes les vérifications ont réussi",
+    conflictCount: "{count} conflits",
+    seats: "places",
+    drive: "Voiture",
+    walk: "À pied",
+    transit: "Transports",
+    bike: "Vélo",
     label: "Tableau OpenUI",
     readOnly: "Lecture seule",
     receiving: "Réception",

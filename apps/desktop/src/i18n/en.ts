@@ -36,6 +36,18 @@ import type { Translations } from './types'
 
 export const en: Translations = {
   openui: {
+    openApp: "Open in {app}",
+    bestPrice: "Cheapest",
+    noMessages: "No messages matched.",
+    previousStep: "Previous step",
+    nextStep: "Next step",
+    checksPassed: "All checks have passed",
+    conflictCount: "{count} conflicts",
+    seats: "seats",
+    drive: "Driving",
+    walk: "Walking",
+    transit: "Transit",
+    bike: "Cycling",
     label: "OpenUI board",
     readOnly: "Read-only",
     receiving: "Receiving",

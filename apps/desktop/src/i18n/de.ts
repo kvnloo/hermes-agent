@@ -35,6 +35,18 @@ export const deOverrides = {
     missing: "Dieser Gruppenchat existiert nicht mehr."
   },
   openui: {
+    openApp: "In {app} öffnen",
+    bestPrice: "Günstigster Preis",
+    noMessages: "Keine passenden Nachrichten.",
+    previousStep: "Vorheriger Schritt",
+    nextStep: "Nächster Schritt",
+    checksPassed: "Alle Prüfungen bestanden",
+    conflictCount: "{count} Konflikte",
+    seats: "Plätze",
+    drive: "Auto",
+    walk: "Zu Fuß",
+    transit: "ÖPNV",
+    bike: "Fahrrad",
     label: "OpenUI-Diagrammtafel",
     readOnly: "Nur lesen",
     receiving: "Wird empfangen",

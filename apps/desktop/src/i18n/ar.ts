@@ -19,6 +19,18 @@ export const arOverrides = {
     missing: "لم تعد محادثة المجموعة هذه موجودة."
   },
   openui: {
+    openApp: "افتح في {app}",
+    bestPrice: "الأرخص",
+    noMessages: "لا توجد رسائل مطابقة.",
+    previousStep: "الخطوة السابقة",
+    nextStep: "الخطوة التالية",
+    checksPassed: "اجتازت جميع الفحوصات",
+    conflictCount: "{count} تعارضات",
+    seats: "مقاعد",
+    drive: "القيادة",
+    walk: "المشي",
+    transit: "النقل العام",
+    bike: "الدراجة",
     label: "لوحة OpenUI",
     readOnly: "للقراءة فقط",
     receiving: "جارٍ الاستلام",

@@ -20,6 +20,18 @@ export const zhHantOverrides = {
     missing: "此群組聊天已不存在。"
   },
   openui: {
+    openApp: "在{app}中開啟",
+    bestPrice: "最低價格",
+    noMessages: "沒有符合的郵件。",
+    previousStep: "上一步",
+    nextStep: "下一步",
+    checksPassed: "所有檢查皆已通過",
+    conflictCount: "{count} 個衝突",
+    seats: "座位",
+    drive: "開車",
+    walk: "步行",
+    transit: "大眾運輸",
+    bike: "騎車",
     label: "OpenUI 圖表板",
     readOnly: "唯讀",
     receiving: "接收中",
