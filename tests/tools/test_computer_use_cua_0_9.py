@@ -312,3 +312,48 @@ def test_persistent_focus_has_a_separate_approval_scope(monkeypatch):
     assert seen == ["click", "bring_to_front"]
     assert result["error"].startswith("BLOCKED: User denied")
     assert result["action"] == "bring_to_front"
+
+# ---------------------------------------------------------------------------
+# Ended-session revival and snapshot token validity
+# ---------------------------------------------------------------------------
+
+def test_token_call_is_not_replayed_after_revival():
+    """An ended cua-driver session retires its snapshot tokens, even after revival."""
+    from tools.computer_use.cua_backend_session import _CuaDriverSession
+
+    ended = {
+        "data": "session hermes-label has ended; call start_session to begin a new session",
+        "images": [], "structuredContent": None, "isError": True,
+    }
+    ok = {"data": "ok", "images": [], "structuredContent": None, "isError": False}
+
+    class Bridge:
+        def __init__(self):
+            self.calls = []
+            self.effects = [ended, ok, ok]
+
+        def run(self, value, timeout=None):
+            self.calls.append(value)
+            return self.effects.pop(0)
+
+    bridge = Bridge()
+    session = _CuaDriverSession.__new__(_CuaDriverSession)
+    session._bridge = bridge
+    session._started = True
+    session._timeout_suspect = False
+    session._declared_session_id = "hermes-label"
+    session._call_tool_async = lambda name, args: ("call", name, args)
+    reset = MagicMock()
+    session.set_transport_reset_callback(reset)
+
+    args = {"pid": 1, "element_token": "s00000001:2", "session": "hermes-label"}
+    result = session.call_tool("click", args)
+
+    assert bridge.calls == [
+        ("call", "click", args),
+        ("call", "start_session", {"session": "hermes-label"}),
+    ]
+    assert result["isError"] is True
+    assert result["structuredContent"]["code"] == "element_token_session_ended"
+    assert "capture" in result["data"].lower()
+    reset.assert_called_once_with()
