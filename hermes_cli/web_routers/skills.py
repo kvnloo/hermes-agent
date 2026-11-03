@@ -377,8 +377,12 @@ async def get_skills(profile: Optional[str] = None):
 
 @router.put("/api/skills/toggle")
 async def toggle_skill(body: SkillToggle, profile: Optional[str] = None):
-    from hermes_cli.skills_config import (
-        allowlist_hidden_skills, get_disabled_skills, managed_locked_skills, save_disabled_skills)
+    from copy import deepcopy
+
+    from agent.skill_utils import ESSENTIAL_SKILLS, _allowlist, skill_visibility_from
+    from hermes_cli import managed_scope
+    from hermes_cli.config import save_config
+    from hermes_cli.skills_config import get_disabled_skills, managed_locked_skills
 
     def _run():
         with config_write_scope(body.profile or profile):
@@ -386,17 +390,41 @@ async def toggle_skill(body: SkillToggle, profile: Optional[str] = None):
             if managed_locked_skills([body.name]):
                 raise HTTPException(status_code=409, detail=(
                     f"Skill '{body.name}' is managed by your administrator (managed scope) and cannot be changed."))
-            if body.enabled and allowlist_hidden_skills(config, [body.name]):
-                # Removing it from skills.disabled would change nothing: say so instead of reporting success.
-                raise HTTPException(status_code=409, detail=(
-                    f"Skill '{body.name}' is outside skills.enabled (or an external_dirs filter) in "
-                    "config.yaml; add it there to enable it."))
-            disabled = get_disabled_skills(config)
+            if not body.enabled and body.name in ESSENTIAL_SKILLS:
+                raise HTTPException(status_code=409, detail=f"Skill '{body.name}' is essential and cannot be disabled.")
+
+            proposed = deepcopy(config)
+            skills_cfg = proposed.get("skills")
+            if not isinstance(skills_cfg, dict):
+                skills_cfg = {}
+                proposed["skills"] = skills_cfg
+            disabled = get_disabled_skills(proposed)
+            reason = skill_visibility_from(skills_cfg).hidden_reason(body.name)
+            patterns = _allowlist(skills_cfg.get("enabled"))
+
             if body.enabled:
-                disabled.discard(body.name)
-            else:
-                disabled.add(body.name)
-            save_disabled_skills(config, disabled)
+                if body.name in disabled:
+                    disabled.remove(body.name)
+                    skills_cfg["disabled"] = sorted(disabled)
+                reason = skill_visibility_from(skills_cfg).hidden_reason(body.name)
+                if reason == "not_enabled":
+                    if patterns is None or managed_scope.is_key_managed("skills.enabled"):
+                        raise HTTPException(status_code=409, detail="Cannot edit this skills.enabled allowlist.")
+                    skills_cfg["enabled"] = sorted(set(patterns) | {body.name})
+                    reason = skill_visibility_from(skills_cfg).hidden_reason(body.name)
+                if reason is not None:
+                    raise HTTPException(status_code=409, detail=(
+                        f"Skill '{body.name}' is excluded by skills.external_dirs; edit its directory filter."))
+            elif reason is None:
+                # Remove only a literal allowlist choice. Keep broader patterns untouched.
+                if patterns is not None and body.name in patterns and not managed_scope.is_key_managed("skills.enabled"):
+                    skills_cfg["enabled"] = sorted(set(patterns) - {body.name})
+                if not skill_visibility_from(skills_cfg).hides(body.name):
+                    skills_cfg["disabled"] = sorted(disabled | {body.name})
+
+            # A stale OFF request for an allowlist-hidden skill must not grow skills.disabled.
+            if proposed != config:
+                save_config(proposed)
         return {"ok": True, "name": body.name, "enabled": body.enabled}
 
     return await asyncio.to_thread(_run)
