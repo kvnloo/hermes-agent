@@ -89,11 +89,12 @@ function RideOptionsCard({ props }: { props: Ride }) {
   const { t } = useI18n()
   const candidate = brandForServer(props.app)
   const brand = candidate === 'uber' || candidate === 'lyft' ? candidate : null
+  const appName = brand ? BRANDS[brand].name : props.app
   const best = cheapestRide(props.options)
   const [selected, setSelected] = useState(() => Math.max(0, props.options.findIndex(o => o.name === best)))
   const chosen = props.options[Math.min(selected, props.options.length - 1)]!
   return (
-    <CardFrame brand={brand} title={props.app + ' ride options, ' + props.pickup + ' to ' + props.dropoff}>
+    <CardFrame brand={brand} title={appName + ' ride options, ' + props.pickup + ' to ' + props.dropoff}>
       <header className="flex items-center gap-3 px-4 py-3">
         <BrandMark brand={brand} fallback={props.app} />
         <div className="min-w-0 flex-1">
