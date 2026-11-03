@@ -156,3 +156,55 @@ def test_unknown_stream_delivery_evidence_fails_closed(evidence):
         _runner(adapter), _event(), "key", result, "request", [],
     ) is False
     assert adapter._pending_messages == {}
+
+@pytest.mark.asyncio
+async def test_streamed_telegram_partial_is_not_requeued_after_async_reset(monkeypatch, tmp_path):
+    """A visible Telegram partial forbids replay even after an awaited fresh reset."""
+    from dataclasses import replace
+    from gateway.platforms.base import SendResult
+    from gateway.stream_consumer import GatewayStreamConsumer, StreamConsumerConfig
+    from tests.gateway.test_duplicate_user_message import _bootstrap, _event as inbound, _source
+
+    runner = _bootstrap(monkeypatch, tmp_path)
+    event = inbound()
+    entry = runner.session_store.get_or_create_session.return_value
+    adapter = MagicMock()
+    adapter._pending_messages = {}
+    adapter.send = AsyncMock(return_value=SendResult(success=True, message_id="visible-partial"))
+    runner._delivery_adapter_for = lambda _source: adapter
+    runner._hmwa_defer_exhaustion_reset = lambda *_args: False
+    runner._evict_cached_agent = lambda _key: None
+    runner._clear_conversation_scope = lambda *_args, **_kwargs: None
+    runner._sync_telegram_topic_binding = lambda *_args, **_kwargs: None
+    # Exercise the actual async reset path rather than pre-seeding a reset marker.
+    monkeypatch.setattr("gateway.session_authorities.active_authority", lambda _runner: None)
+    reset = AsyncMock(return_value=replace(entry, session_id="fresh-session"))
+    runner.async_session_store.reset_session = reset
+
+    async def failed_streamed_turn(**_kwargs):
+        consumer = GatewayStreamConsumer(
+            adapter, event.source.chat_id, StreamConsumerConfig(cursor=""),
+        )
+        await consumer._send_or_edit("I have started checking your calendar")
+        adapter.send.assert_awaited_once()
+        result = {
+            "failed": True, "compression_exhausted": True, "messages": [],
+            "final_response": "context exhausted",
+        }
+        await runner._run_agent_mark_streamed_delivery(
+            result, SimpleNamespace(
+                stream_consumer_holder=[consumer], source=event.source,
+                session_key=entry.session_key,
+            ),
+        )
+        assert result["stream_visible_output"] is True
+        assert not result.get("already_sent")
+        return result
+
+    runner._run_agent = failed_streamed_turn
+    response = await runner._handle_message_with_agent(event, _source(), entry.session_key, 1)
+
+    reset.assert_awaited_once_with(entry.session_key)
+    assert adapter._pending_messages == {}
+    assert not getattr(event, "_gateway_compression_replay_attempted", False)
+    assert response is not None
