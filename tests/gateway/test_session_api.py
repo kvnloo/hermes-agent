@@ -135,6 +135,29 @@ async def test_get_session_projects_delegate_provenance_without_model_config(
 
 
 @pytest.mark.asyncio
+async def test_reset_provenance_ignores_blank_or_non_id_markers(adapter, session_db):
+    """A reset flag needs a usable session-id marker, not a truthy config value."""
+    session_db.create_session("parent", "desktop")
+    for session_id, marker in (("blank-reset", "  "), ("invalid-reset", ["parent"])):
+        session_db.create_session(
+            session_id, "desktop", parent_session_id="parent",
+            model_config={"_reset_from": marker, "api_key": "must-not-leak"},
+        )
+
+    app = _create_session_app(adapter)
+    async with TestClient(TestServer(app)) as cli:
+        for session_id in ("blank-reset", "invalid-reset"):
+            response = await cli.get(f"/api/sessions/{session_id}")
+            assert response.status == 200
+            child = (await response.json())["session"]
+            assert child["parent_session_id"] == "parent"
+            assert child["is_reset_child"] is False
+            assert "_reset_from" not in child
+            assert "model_config" not in child
+            assert "must-not-leak" not in str(child)
+
+
+@pytest.mark.asyncio
 async def test_session_messages_default_to_latest_bounded_page(adapter, session_db):
     session_id = session_db.create_session("bounded-messages", "api_server")
     session_db.replace_messages(

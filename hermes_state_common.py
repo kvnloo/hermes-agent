@@ -263,9 +263,10 @@ def session_provenance_flags(model_config: Any) -> dict[str, Any]:
         except (TypeError, ValueError):
             model_config = None
     config = model_config if isinstance(model_config, dict) else {}
+    reset_from = config.get("_reset_from")
     flags: dict[str, Any] = {
         "is_internal_child": config.get("_delegate_from") is not None,
-        "is_reset_child": bool(config.get("_reset_from"))}
+        "is_reset_child": isinstance(reset_from, str) and bool(reset_from.strip())}
     for key in ("_reset_from", "_branched_from"):
         value = config.get(key)
         if isinstance(value, str) and value.strip():
