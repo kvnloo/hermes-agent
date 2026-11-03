@@ -398,7 +398,7 @@ def test_external_consumer_importing_bootstrap_does_not_relaunch(tmp_path, monke
     )
 
     env = dict(os.environ)
-    env["PYTHONPATH"] = f"{str(Path(__file__).resolve().parents[2])};{env.get('PYTHONPATH', '')}"
+    env["PYTHONPATH"] = os.pathsep.join(filter(None, [str(Path(__file__).resolve().parents[2]), env.get("PYTHONPATH", "")]))
     res = subprocess.run(
         [sys.executable, str(consumer_script), str(root)],
         cwd=str(external_app),
@@ -411,3 +411,39 @@ def test_external_consumer_importing_bootstrap_does_not_relaunch(tmp_path, monke
     assert "consumer_success" in res.stdout
 
 
+def test_external_worker_keeps_consumed_stdin_on_bootstrap_import(tmp_path, monkeypatch):
+    """A foreign worker importing Hermes after reading a request must not relaunch (#122160)."""
+    _self_checkout(tmp_path, monkeypatch)
+    external_app = tmp_path / "foreign_worker"
+    external_app.mkdir()
+    api = external_app / "api"
+    api.mkdir()
+    (api / "__init__.py").write_text("marker = 'still_here'\n", encoding="utf-8")
+
+    worker = external_app / "worker.py"
+    worker.write_text(
+        "import sys\n"
+        "payload = sys.stdin.readline().strip()\n"
+        "from hermes_cli import venv_sync\n"
+        "calls = []\n"
+        "def track_prepare(*args, **kwargs):\n"
+        "    calls.append(1)\n"
+        "    return None\n"
+        "venv_sync.prepare_launch = track_prepare\n"
+        "import hermes_bootstrap\n"
+        "from api import marker\n"
+        "assert not calls, 'a foreign worker must not prepare a Hermes launch'\n"
+        "print(f'{payload}:{marker}')\n",
+        encoding="utf-8",
+    )
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(
+        filter(None, [str(Path(__file__).resolve().parents[2]), env.get("PYTHONPATH", "")])
+    )
+    result = subprocess.run(
+        [sys.executable, str(worker)],
+        cwd=external_app, input="request-42\n", env=env,
+        capture_output=True, text=True, timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "request-42:still_here" in result.stdout.splitlines()
