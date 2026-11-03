@@ -925,7 +925,14 @@ class TestBrowserExec:
         assert result["output"].strip() == 'got:print("hi")'
         assert "session" not in result
 
-    def test_harness_ipc_timeout_is_20_seconds(self, tmp_path, monkeypatch):
+    @pytest.mark.parametrize("code", [
+        "from browser_harness import helpers; print(helpers.cdp('Runtime.evaluate'))",
+        ('"""Valid browser script."""\n'
+         'from __future__ import annotations\n'
+         'from browser_harness import helpers\n'
+         "print(helpers.cdp('Page.navigate', url='about:blank'))\n"),
+    ])
+    def test_harness_ipc_timeout_is_20_seconds(self, tmp_path, monkeypatch, code):
         cli = tmp_path / "fake-browser-use"
         cli.write_text(
             "#!/usr/bin/env python3\n"
@@ -947,9 +954,7 @@ class TestBrowserExec:
         cli.chmod(cli.stat().st_mode | stat.S_IXUSR)
         monkeypatch.setattr(bu_cli, "_find_cli", lambda: [str(cli)])
         monkeypatch.setattr(bu_cli, "_read_browser_cfg", lambda: {"ipc_response_timeout_seconds": 20})
-        raw = bu_cli.browser_exec(
-            "from browser_harness import helpers; print(helpers.cdp('Runtime.evaluate'))"
-        )
+        raw = bu_cli.browser_exec(code)
         result = json.loads(raw) if isinstance(raw, str) else raw
         assert result["success"] is True
         assert result["output"].strip() == "20.0"

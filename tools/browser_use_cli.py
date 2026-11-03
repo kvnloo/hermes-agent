@@ -113,6 +113,35 @@ del _hermes_configure_ipc_timeout
 """
 
 
+def _code_with_ipc_timeout(code: str, seconds: int) -> str:
+    """Keep module docstrings and future imports ahead of injected setup code."""
+    import ast
+
+    preamble = _ipc_response_timeout_preamble(seconds)
+    try:
+        nodes = ast.parse(code).body
+    except SyntaxError:
+        return preamble + code
+
+    count = 0
+    if (nodes and isinstance(nodes[0], ast.Expr)
+            and isinstance(nodes[0].value, ast.Constant)
+            and isinstance(nodes[0].value.value, str)):
+        count = 1
+    while (count < len(nodes) and isinstance(nodes[count], ast.ImportFrom)
+           and nodes[count].module == "__future__"):
+        count += 1
+    if count == 0:
+        return preamble + code
+
+    lines = code.splitlines(keepends=True)
+    offset = nodes[count - 1].end_lineno
+    front = "".join(lines[:offset])
+    if not front.endswith(("\n", "\r")):
+        front += "\n"
+    return front + preamble + "".join(lines[offset:])
+
+
 def _configured_ipc_response_timeout() -> Optional[int]:
     raw = _read_browser_cfg().get("ipc_response_timeout_seconds")
     if raw is None:
@@ -654,7 +683,7 @@ def browser_exec(code: str, session: str = "", timeout_s: int = _DEFAULT_TIMEOUT
         code = _OWN_TAB_PREAMBLE + code
     ipc_timeout = _configured_ipc_response_timeout()
     if ipc_timeout is not None:
-        code = _ipc_response_timeout_preamble(ipc_timeout) + code
+        code = _code_with_ipc_timeout(code, ipc_timeout)
 
     workspace = _workspace_dir(task_id)
     if workspace:
