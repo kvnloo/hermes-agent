@@ -19,7 +19,7 @@ from tools.mcp_tool_content import (
     _MCP_HARD_RESULT_CAP_CHARS, _cache_mcp_audio_block, _cache_mcp_image_block,
     _render_mcp_dropped_block_notice, _render_mcp_resource_block, _strip_reserved_meta_keys,
     _truncate_mcp_text_result)
-from tools.mcp_tool_errors import _is_auth_error, _is_session_expired_error
+from tools.mcp_tool_errors import _is_auth_error, _is_session_expired_error, _mcp_401_call_witness
 
 logger = logging.getLogger("tools.mcp_tool")
 _MISSING = object()
@@ -203,15 +203,12 @@ def _handle_auth_error_and_retry(server_name: str, exc: BaseException, retry_cal
     return _strike(server_name, msg.format(s=server_name), needs_reauth=True, server=server_name)
 
 
-def _swallowed_401(server_name: str, window_s: float = 30.0) -> bool:
-    """True (once) when the owned httpx client recorded a 401 on this server within *window_s* — the
-    mcp >= 2.0 Streamable HTTP client reports it only as a generic INTERNAL_ERROR, so the status is
-    recovered from the transport hook (:func:`~tools.mcp_tool_errors._make_unauthorized_recorder`)."""
-    srv = _lookup_reconnectable_server(server_name)
-    at = getattr(srv, "_unauthorized_at", 0.0)
-    if not isinstance(at, (int, float)) or not at or time.monotonic() - at > window_s:
+def _swallowed_401(_server_name: str) -> bool:
+    """Consume only the 401 observed by this dispatch's HTTP POST, never another call's."""
+    witness = _mcp_401_call_witness.get()
+    if witness is None or not witness[0]:
         return False
-    srv._unauthorized_at = 0.0
+    witness[0] = False
     return True
 
 
@@ -341,28 +338,39 @@ def _handle_stdio_child_exited_and_retry(server_name: str, exc: Exception, retry
 
 def _dispatch(server_name: str, server: Any, op: str, call, tool_timeout: float, recoverers,
               on_final_failure: Callable[[BaseException], None], record_outcome: bool = False) -> str:
-    """Mark the call started on *server* (doubles may lack ``mark_tool_call``), run coroutine function *call*
-    on the MCP loop and, on failure, walk ``recoverers`` (``(server_name, exc, retry_call, op) -> Optional[str]``,
-    None = not its kind; order matters). Unrecovered exceptions go through ``on_final_failure`` and become the
-    generic call-failed error. ``record_outcome`` applies breaker bookkeeping to the FIRST attempt only."""
+    """Run one RPC with per-call HTTP auth evidence, then its recovery ladder."""
     if callable(getattr(server, "mark_tool_call", None)):
         server.mark_tool_call()
 
-    def call_once():
-        return _loop._run_on_mcp_loop(call, timeout=tool_timeout)
+    witness = [False]
 
+    async def call_scoped():
+        # The SDK preserves this Context when handing each outbound request to its POST task.
+        token = _mcp_401_call_witness.set(witness)
+        try:
+            return await call()
+        finally:
+            _mcp_401_call_witness.reset(token)
+
+    def call_once():
+        return _loop._run_on_mcp_loop(call_scoped, timeout=tool_timeout)
+
+    token = _mcp_401_call_witness.set(witness)
     try:
-        result = call_once()
-        return _record_call_outcome(server_name, result) if record_outcome else result
-    except InterruptedError:
-        return tool_error("MCP call interrupted: user sent a new message")
-    except Exception as exc:
-        for recover in recoverers:
-            recovered = recover(server_name, exc, call_once, op)
-            if recovered is not None:
-                return recovered
-        on_final_failure(exc)
-        return tool_error(_sanitize_error(f"MCP call failed: {type(exc).__name__}: {_exc_str(exc)}"))
+        try:
+            result = call_once()
+            return _record_call_outcome(server_name, result) if record_outcome else result
+        except InterruptedError:
+            return tool_error("MCP call interrupted: user sent a new message")
+        except Exception as exc:
+            for recover in recoverers:
+                recovered = recover(server_name, exc, call_once, op)
+                if recovered is not None:
+                    return recovered
+            on_final_failure(exc)
+            return tool_error(_sanitize_error(f"MCP call failed: {type(exc).__name__}: {_exc_str(exc)}"))
+    finally:
+        _mcp_401_call_witness.reset(token)
 
 
 @asynccontextmanager

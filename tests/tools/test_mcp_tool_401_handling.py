@@ -148,11 +148,9 @@ def test_anonymous_server_401_asks_for_sign_in_not_reauth(monkeypatch, tmp_path)
 
 
 def test_swallowed_401_from_transport_hook_is_treated_as_auth_error(monkeypatch, tmp_path):
-    """mcp >= 2.0 Streamable HTTP folds a 401 on tools/call into a generic INTERNAL_ERROR MCPError. The owned
-    httpx client's hook records the 401 on the server task; the auth recoverer consumes it exactly once."""
-    import time
+    """A 401 on this call's POST is consumed once; unrelated calls remain generic."""
     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-    from tools.mcp_tool_handlers import _handle_auth_error_and_retry
+    from tools.mcp_tool_handlers import _dispatch, _handle_auth_error_and_retry
     from tools.mcp_tool_errors import _make_unauthorized_recorder
     from tools.mcp_oauth_manager import get_manager, reset_manager_for_tests
     from mcp.shared.exceptions import MCPError
@@ -170,19 +168,89 @@ def test_swallowed_401_from_transport_hook_is_treated_as_auth_error(monkeypatch,
     server.name = "anon"
     server._config = {"url": "https://hyper3d.example/mcp"}
     server._auth_type = ""
-    server._unauthorized_at = 0.0
-    generic = MCPError(INTERNAL_ERROR, "Server returned an error response")
+    hook = _make_unauthorized_recorder(server)
+
+    async def _generic_failure():
+        raise MCPError(INTERNAL_ERROR, "Server returned an error response")
+
+    async def _unauthorized_failure():
+        await hook(MagicMock(status_code=401, request=MagicMock(method="POST")))
+        await _generic_failure()
+
+    def _dispatch_failure(call):
+        return json.loads(_dispatch(
+            "anon", server, "tools/call", call, 10.0, (_handle_auth_error_and_retry,), lambda exc: None))
+
     try:
         mcp_tool._servers["anon"] = server
-        # No 401 observed on the wire: the generic error is NOT an auth error.
-        assert _handle_auth_error_and_retry("anon", generic, lambda: None, "call") is None
-        # The transport hook saw a 401 -> the same generic error becomes the sign-in error, once.
-        asyncio.run(_make_unauthorized_recorder(server)(MagicMock(status_code=401)))
-        assert server._unauthorized_at > 0 and time.monotonic() - server._unauthorized_at < 5
-        parsed = json.loads(_handle_auth_error_and_retry("anon", generic, lambda: None, "call"))
-        assert parsed["needs_reauth"] is True and "anonymously" in parsed["error"]
-        assert server._unauthorized_at == 0.0
-        assert _handle_auth_error_and_retry("anon", generic, lambda: None, "call") is None
+        assert "needs_reauth" not in _dispatch_failure(_generic_failure)
+        auth = _dispatch_failure(_unauthorized_failure)
+        assert auth["needs_reauth"] is True and "anonymously" in auth["error"]
+        assert "needs_reauth" not in _dispatch_failure(_generic_failure)
+    finally:
+        mcp_tool._servers.pop("anon", None)
+        mcp_tool._server_error_counts.pop("anon", None)
+
+
+def test_concurrent_call_time_401_does_not_relabel_other_call_500(monkeypatch, tmp_path):
+    """A's HTTP 401 must not label B's HTTP 500 as auth, even when B fails first."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+    from tools.mcp_tool_handlers import _dispatch, _handle_auth_error_and_retry
+    from tools.mcp_tool_errors import _make_unauthorized_recorder
+    from tools.mcp_oauth_manager import get_manager, reset_manager_for_tests
+    from mcp.shared.exceptions import MCPError
+    from mcp.types import INTERNAL_ERROR
+    from tools import mcp_tool
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    reset_manager_for_tests()
+
+    async def _h401(name, token=None):
+        return False
+    monkeypatch.setattr(get_manager(), "handle_401", _h401)
+    _mcp_loop._ensure_mcp_loop()
+
+    server = MagicMock()
+    server.name = "anon"
+    server._config = {"url": "https://hyper3d.example/mcp"}
+    server._auth_type = ""
+    server._unauthorized_at = 0.0  # Make the regression red against the original server-global recorder.
+    hook = _make_unauthorized_recorder(server)
+    a_401_recorded, b_classified = Event(), Event()
+
+    async def _a():
+        await hook(MagicMock(status_code=401, request=MagicMock(method="POST")))
+        a_401_recorded.set()
+        assert await asyncio.to_thread(b_classified.wait, 10), "B never reached error recovery"
+        raise MCPError(INTERNAL_ERROR, "Server returned an error response")
+
+    async def _b():
+        assert await asyncio.to_thread(a_401_recorded.wait, 10), "A never received its HTTP 401"
+        await hook(MagicMock(status_code=500, request=MagicMock(method="POST")))
+        raise MCPError(INTERNAL_ERROR, "Server returned an error response")
+
+    def _recover_b(*args):
+        try:
+            return _handle_auth_error_and_retry(*args)
+        finally:
+            b_classified.set()
+
+    def _dispatch_call(fn, recover):
+        return _dispatch("anon", server, "tools/call", fn, 15.0, (recover,), lambda exc: None)
+
+    try:
+        mcp_tool._servers["anon"] = server
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            future_a = pool.submit(_dispatch_call, _a, _handle_auth_error_and_retry)
+            future_b = pool.submit(_dispatch_call, _b, _recover_b)
+            b_result = json.loads(future_b.result(timeout=15))
+            a_result = json.loads(future_a.result(timeout=15))
+
+        assert "needs_reauth" not in b_result
+        assert "MCP call failed" in b_result["error"]
+        assert a_result["needs_reauth"] is True
+        assert "anonymously" in a_result["error"]
     finally:
         mcp_tool._servers.pop("anon", None)
         mcp_tool._server_error_counts.pop("anon", None)

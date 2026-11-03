@@ -10,11 +10,16 @@ import logging
 import time
 import os
 import re
+from contextvars import ContextVar
 from typing import Any, List, Optional
 from urllib.parse import urlparse
 from tools.mcp_tool_common import _sanitize_error, _core
 
 logger = logging.getLogger("tools.mcp_tool")
+
+# The MCP SDK carries each sender's Context into its HTTP POST task. The mutable
+# witness follows one dispatched call, not a server-wide clock or another call.
+_mcp_401_call_witness: ContextVar[list[bool] | None] = ContextVar("mcp_401_call_witness", default=None)
 
 # Stateless (2026-07-28) servers reject a legacy ``initialize`` with this or plain method-not-found.
 _JSONRPC_UNSUPPORTED_PROTOCOL_VERSION = -32022
@@ -213,15 +218,13 @@ def _apply_identity_header(server_name: str, config: dict, headers: dict) -> dic
     return headers
 
 
-def _make_unauthorized_recorder(server):
-    """httpx response hook for an anonymously connected Streamable HTTP server: the mcp >= 2.0 client
-    folds a non-2xx ``tools/call`` into a generic INTERNAL_ERROR ("Server returned an error response"),
-    losing the status — so a server that serves initialize/tools/list without auth but 401s on
-    tools/call (the MCP runtime auth challenge, kimi-code#3846) surfaced as a plain tool error. Record
-    the 401 on the server task; the auth recoverer consumes it (:func:`~tools.mcp_tool_handlers._swallowed_401`)."""
+def _make_unauthorized_recorder(_server):
+    """Record only a call-scoped HTTP 401. Background GETs and other calls cannot
+    turn an unrelated generic MCP failure into an OAuth error."""
     async def _record_401(response):
-        if response.status_code == 401:
-            server._unauthorized_at = time.monotonic()
+        witness = _mcp_401_call_witness.get()
+        if witness is not None and response.status_code == 401 and response.request.method == "POST":
+            witness[0] = True
     return _record_401
 
 
