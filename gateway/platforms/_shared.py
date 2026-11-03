@@ -105,18 +105,27 @@ def decode_json_list_literal(raw):
 
 def extra_or_secret(extra: Optional[dict], key: str, env: str, default: Any = "",
                     *, blank_is_unset: bool = True) -> Any:
-    """``config.extra[key]`` when set, else the scoped env var ``env`` (else ``default``).
+    """The ONE per-profile setting reader: explicit env ``env`` → the profile's YAML
+    ``config.extra[key]`` → ``default``.
 
-    ``extra`` is the per-profile truth under multiplexing (the YAML→env bridge is skipped for a
-    secondary profile), so it is consulted first; the env read goes through ``get_scoped_secret``.
-    An explicit ``False``/``0`` in YAML is always a real value (``require_mention: false`` must not
-    fall through to the env default). A blank string is unset by default; readers whose YAML key
-    means "clear it" (``allowed_channels: ""`` = no whitelist, not "use the env CSV") pass
+    The env rung is the owning profile's, read through ``get_scoped_secret``: a secondary
+    multiplex profile sees its own ``.env`` and a miss falls to ITS YAML, never to the launch
+    process's ``os.environ`` (which holds the default profile's bridged values); single-profile
+    and default-profile installs read ``os.environ`` there, keeping the documented env-over-YAML
+    contract (an explicit ``DISCORD_ALLOW_MENTION_EVERYONE=false`` beats ``everyone: true``,
+    #108440; ``TELEGRAM_REACTIONS=true`` beats the stock ``reactions: false``, #109032). A blank
+    env value is unset. An explicit ``False``/``0`` in YAML is a real value (``require_mention:
+    false`` must not fall to ``default``). A blank YAML string is unset by default; readers whose
+    YAML key means "clear it" (``allowed_channels: "" `` = no whitelist) pass
     ``blank_is_unset=False`` so only a missing/``None`` key falls through.
     """
+    if env:
+        env_value = get_scoped_secret(env, None)
+        if env_value is not None and str(env_value).strip():
+            return env_value
     value = (extra or {}).get(key)
     if value is None or (blank_is_unset and isinstance(value, str) and not value.strip()):
-        return get_scoped_secret(env, default)
+        return default
     return value
 
 
@@ -233,9 +242,19 @@ def env_is_connected(*names: str) -> Callable[[Any], bool]:
     return is_connected
 
 
+def config_connected_extra(*keys: str) -> Callable[[Any], bool]:
+    """``PlatformEntry.config_connected_fn``: connected when the merged PlatformConfig carries a
+    token/api_key or every ``extra`` key (no env fallback; that is ``is_connected``'s job)."""
+
+    def config_connected(config: Any) -> bool:
+        return bool(config.token or config.api_key) or all(config.extra.get(k) for k in keys)
+
+    return config_connected
+
+
 def coerce_port(value: Any, default: int) -> int:
-    """``int(value)`` or ``default`` when unparseable."""
+    """``int(value)`` or ``default`` when unparseable (incl. non-finite YAML like ``.inf``)."""
     try:
         return int(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return default
