@@ -10,7 +10,17 @@ import { cn } from '@/lib/utils'
 import { openWorktreeDialog } from '@/store/coding-status'
 import { copyPath, revealPath } from '@/store/projects'
 
-import { SidebarRowLead } from '../chrome'
+import {
+  SIDEBAR_LEAD_ICON_SIZE,
+  SidebarRowBody,
+  SidebarRowLabel,
+  SidebarRowLead,
+  SidebarRowLeadGlyph,
+  SidebarRowShell
+} from '../chrome'
+
+import { projectOwnerRoute } from './gateway-project-rows'
+import type { SidebarProjectTree } from './workspace-groups'
 
 // Branch/worktree labels routinely share a long prefix (`bb/coding-context-…`),
 // so plain end-truncation (`truncate`) hides exactly the suffix that tells two
@@ -57,6 +67,38 @@ export function WorkspaceAddButton({
         <Codicon name="add" size="0.75rem" />
       </button>
     </Tip>
+  )
+}
+
+// Row-shaped "show more" — the ellipsis lead + a labeled link, the same shape
+// as the Back row — for project lists that can run long (expanded overview
+// rows, entered lanes, entered Home). A labeled row, not the icon-only glyph
+// below, because it's the only way to reach the rest of a project's sessions
+// and a hover-only tooltip read as "there are only five" (#83157, #93878).
+export function WorkspaceShowMoreRow({
+  disabled,
+  label,
+  onClick
+}: {
+  disabled?: boolean
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <SidebarRowShell>
+      <SidebarRowBody
+        className="group/more w-full text-(--ui-text-tertiary) hover:text-foreground"
+        disabled={disabled}
+        onClick={onClick}
+      >
+        <SidebarRowLead>
+          <SidebarRowLeadGlyph>
+            <Codicon name="ellipsis" size={SIDEBAR_LEAD_ICON_SIZE} />
+          </SidebarRowLeadGlyph>
+        </SidebarRowLead>
+        <SidebarRowLabel className="text-xs underline-offset-4 group-hover/more:underline">{label}</SidebarRowLabel>
+      </SidebarRowBody>
+    </SidebarRowShell>
   )
 }
 
@@ -176,7 +218,11 @@ export function WorkspaceContextMenu({
 // inside it. Naming is explicit — no auto-generated `hermes/work-<ts>` trees.
 // The base branch defaults to the remote default (origin/HEAD); the user can
 // pick any local or remote-tracking branch via a filterable combobox.
-export function StartWorkButton({ repoPath }: { repoPath: string }) {
+export function StartWorkButton({
+  project
+}: {
+  project: Pick<SidebarProjectTree, 'connectionId' | 'path' | 'profile'>
+}) {
   const { t } = useI18n()
   const p = t.sidebar.projects
 
@@ -187,7 +233,8 @@ export function StartWorkButton({ repoPath }: { repoPath: string }) {
         className="grid size-4 shrink-0 place-items-center rounded-sm bg-transparent text-(--ui-text-quaternary) opacity-0 transition-opacity hover:bg-(--ui-control-hover-background) hover:text-foreground group-hover/section:opacity-100 focus-visible:opacity-100"
         // Publish the intent. The one WorktreeDialog in the sidebar renders it.
         // This button pins its own repo, so it targets this section.
-        onClick={() => void openWorktreeDialog({ repoPath })}
+        // Another gateway's project: the worktree is cut on that machine.
+        onClick={() => void openWorktreeDialog({ owner: projectOwnerRoute(project), repoPath: project.path ?? '' })}
         type="button"
       >
         <Codicon name="git-branch" size="0.75rem" />
