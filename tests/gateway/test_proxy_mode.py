@@ -98,6 +98,13 @@ class TestGetProxyUrl:
         with patch("gateway.run._load_gateway_config", return_value={}):
             assert runner._get_proxy_url() is None
 
+    def test_profile_gateway_status_does_not_crash_proxy_resolution(self, monkeypatch):
+        """A profile status scalar is not a proxy endpoint (issue #148585)."""
+        monkeypatch.delenv("GATEWAY_PROXY_URL", raising=False)
+        runner = _make_runner()
+        with patch("gateway.run._load_gateway_config", return_value={"gateway": "running"}):
+            assert runner._get_proxy_url() is None
+
     def test_reads_from_config_yaml(self, monkeypatch):
         monkeypatch.delenv("GATEWAY_PROXY_URL", raising=False)
         runner = _make_runner()

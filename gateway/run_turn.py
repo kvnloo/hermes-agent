@@ -572,7 +572,9 @@ class GatewayTurnMixin(GatewayBackgroundMixin, GatewayTurnPrepareMixin, GatewayT
         except UnscopedSecretError:
             url = os.getenv("GATEWAY_PROXY_URL", "").strip()
         if not url:
-            url = ((_load_gateway_config().get("gateway") or {}).get("proxy_url") or "").strip()
+            gateway_section = _load_gateway_config().get("gateway")
+            if isinstance(gateway_section, dict):
+                url = (gateway_section.get("proxy_url") or "").strip()
         return url.rstrip("/") if url else None
 
     def _build_stream_consumer_config(
