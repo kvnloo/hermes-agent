@@ -240,7 +240,12 @@ def _discover_bare(service_pids: set[int]) -> tuple[list[dict], list[str]]:
                 else "its Hermes home could not be proved"
             notices.append(f"  ↷ gateway PID {pid} keeps running until after the update ({why})")
             continue
-        bare.append({"pid": pid, "argv": list(argv), "home": str(home), "ct": get_process_start_time(pid)})
+        cwd = None
+        with suppress(Exception):  # a denied/gone process still has enough argv + home to be replayed
+            import psutil  # type: ignore
+            cwd = psutil.Process(pid).cwd()
+        bare.append({"pid": pid, "argv": list(argv), "cwd": cwd,
+                     "home": str(home), "ct": get_process_start_time(pid)})
     return bare, notices
 
 
@@ -539,10 +544,17 @@ def _relaunch_bare(entry: dict) -> int:
     logs = Path(entry["home"]) / "logs"
     logs.mkdir(parents=True, exist_ok=True)
     env = _replay_env(entry["home"])
+    install_root = str(Path(__file__).resolve().parent.parent)
+    launch_cwd = entry.get("cwd")
+    if not launch_cwd or not Path(launch_cwd).is_dir():
+        launch_cwd = install_root
+    # Desktop's original launcher supplied this import path; _replay_env intentionally does not.
+    env["PYTHONPATH"] = os.pathsep.join(filter(None, (install_root, env.get("PYTHONPATH"))))
     for leaked in ("INVOCATION_ID", "JOURNAL_STREAM", "HERMES_UPDATE_PAUSED", "_HERMES_GATEWAY"):
         env.pop(leaked, None)
     with open(logs / "gateway-update-resume.log", "ab") as log:
-        proc = subprocess.Popen(list(entry["argv"]), env=env, stdin=subprocess.DEVNULL, stdout=log,
+        proc = subprocess.Popen(list(entry["argv"]), cwd=launch_cwd, env=env,
+                                stdin=subprocess.DEVNULL, stdout=log,
                                 # detached-spawn: ok — resumes the paused gateway after an update; it must outlive the updater
                                 stderr=subprocess.STDOUT, start_new_session=True, close_fds=True)
     deadline = time.monotonic() + _READY_TIMEOUT_S
