@@ -1,6 +1,7 @@
 'use client'
 
 import { defineComponent } from '@openuidev/react-lang'
+import { z } from 'zod/v4'
 import { useState, type CSSProperties, type ReactNode } from 'react'
 import { useI18n } from '@/i18n/context'
 import { useIsDark } from './use-is-dark'
@@ -11,10 +12,10 @@ import {
 } from './openui-app-card-model'
 import { OCTICONS, type OcticonName } from './openui-octicons'
 
-type Ride = typeof appCardSchemas.RideOptions._output
-type Mail = typeof appCardSchemas.MailList._output
-type RouteData = typeof appCardSchemas.Route._output
-type Pull = typeof appCardSchemas.PullRequest._output
+type Ride = z.infer<typeof appCardSchemas.RideOptions>
+type Mail = z.infer<typeof appCardSchemas.MailList>
+type RouteData = z.infer<typeof appCardSchemas.Route>
+type Pull = z.infer<typeof appCardSchemas.PullRequest>
 
 function Icon({ name, color }: { name: OcticonName; color?: string }) {
   return (
