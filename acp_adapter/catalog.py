@@ -13,9 +13,12 @@ def read_catalog_rows(path, *, include_gateway=False):
     path = Path(path)
     if not path.exists():
         return {}
+    from hermes_cli.gateway_session_store import SurfaceLabelReader
     from hermes_state_sessions import INTERNAL_LISTING_SOURCES
+    # The owner stores an editor thread as ``local`` with ``created_source='acp'``; the surface
+    # reader matches both labels in SQL, before the LIMIT.
     with SessionDB(db_path=path, read_only=True) as db:
-        rows = db.list_sessions_rich(
+        rows = SurfaceLabelReader(db).list_sessions_rich(
             source=None if include_gateway else "acp",
             exclude_sources=[*INTERNAL_LISTING_SOURCES, "api_server", "subagent"],
             order_by_last_active=True, limit=1000)
