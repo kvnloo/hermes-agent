@@ -288,7 +288,8 @@ export async function ensureDefaultWorkspaceCwd(
   const remembered = getRememberedWorkspaceCwd()
 
   if ($connection.get()?.mode === 'remote') {
-    seedLiveCwd(remoteDefault ?? remembered)
+    // The explicit Desktop default wins over a stale pick or backend profile default.
+    seedLiveCwd(configured || (remoteDefault ?? remembered))
 
     return
   }

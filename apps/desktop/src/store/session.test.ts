@@ -34,6 +34,7 @@ import {
   getConfiguredDefaultProjectDir,
   getRememberedRoute,
   getRememberedSessionId,
+  getRememberedWorkspaceCwd,
   getSessionOwnerHint,
   hydrateSessionOwnerHints,
   knownSessionOwner,
@@ -659,6 +660,24 @@ describe('workspaceCwdForNewSession', () => {
     await seeding
 
     expect($currentCwd.get()).toBe('')
+  })
+
+  it('uses the configured default on the first remote draft despite remembered and backend cwd (#148245)', async () => {
+    $connection.set({ baseUrl: 'http://backend-a', mode: 'remote' } as never)
+    setCurrentCwd('/remote/remembered')
+
+    const sanitizeWorkspaceCwd = vi.fn(async (cwd: string) => ({ cwd }))
+    ;(window as { hermesDesktop?: unknown }).hermesDesktop = {
+      sanitizeWorkspaceCwd,
+      settings: { getDefaultProjectDir: vi.fn(async () => ({ dir: '/remote/configured' })) }
+    }
+
+    await ensureDefaultWorkspaceCwd(() => true, '/remote/profile-default')
+
+    expect($currentCwd.get()).toBe('/remote/configured')
+    expect(getRememberedWorkspaceCwd()).toBe('/remote/remembered')
+    // Remote paths belong to the gateway, not the local Electron filesystem.
+    expect(sanitizeWorkspaceCwd).not.toHaveBeenCalled()
   })
 
   it('prefers the configured default over the sticky remembered workspace', () => {
