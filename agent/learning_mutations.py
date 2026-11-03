@@ -98,6 +98,7 @@ def _mutate_memory(node_id: str, replacement: str | None) -> dict[str, Any]:
 
     def _apply(entries, limit):
         from tools.memory_tool import ENTRY_DELIMITER
+        from tools.memory_tool_store import _error
 
         _, chunks, local = _locate_memory(node_id)
         text = chunks[local].strip()
@@ -106,11 +107,10 @@ def _mutate_memory(node_id: str, replacement: str | None) -> dict[str, Any]:
         idx = entries.index(text)
         new_entries = entries[:idx] + ([] if replacement is None else [replacement]) + entries[idx + 1:]
         # Same cap the memory tool enforces on replace (never on remove: deleting is how a file
-        # already over its total gets back under it). An over-limit entry reads as external drift
-        # to every later mutation, so the tool's own remove/replace refuse until hand-fixed.
+        # already over its total gets back under it).
         if replacement is not None and (total := len(ENTRY_DELIMITER.join(new_entries))) > limit:
-            return {"success": False,
-                    "error": f"Replacement would put memory at {total:,}/{limit:,} chars. Shorten the new content."}
+            return _error(f"Replacement would put memory at {total:,}/{limit:,} chars. Shorten the new content.",
+                          "over_budget")
         return new_entries, message
 
     result = load_on_disk_store()._mutate(_STORE_TARGETS[source], _apply)
@@ -156,7 +156,7 @@ def _skill_detail(node_id: str) -> dict[str, Any]:
     skill_md = Path(found["path"]) / "SKILL.md"
     if not skill_md.exists():
         return {"ok": False, "message": f"SKILL.md missing for '{node_id}'"}
-    return {"ok": True, "kind": "skill", "id": node_id, "label": node_id, "content": skill_md.read_text(encoding="utf-8")}
+    return {"ok": True, "kind": "skill", "id": node_id, "label": node_id, "content": skill_md.read_text(encoding="utf-8-sig")}
 
 
 # ── Delete ──────────────────────────────────────────────────────────────────
