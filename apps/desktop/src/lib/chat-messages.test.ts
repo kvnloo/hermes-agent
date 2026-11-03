@@ -570,6 +570,21 @@ describe('toChatMessages', () => {
     ])
   })
 
+  it('shows bot-chat cron deliveries as notices, not user-authored bubbles (#147573)', () => {
+    // zack010718's persisted bot-chat delivery has a user role but a machine-only display kind.
+    const cronFrame =
+      '[Cronjob "Morning Brief" output — scheduled job, not the user. Review it, act on anything that needs action, and summarize for the chat.]\n\nBrief ready.'
+
+    const messages = toChatMessages([
+      { role: 'user', content: cronFrame, display_kind: 'internal_notification', timestamp: 1 },
+      // The identical text authored by a person is still their own message.
+      { role: 'user', content: cronFrame, timestamp: 2 }
+    ])
+
+    expect(messages.map(message => message.role)).toEqual(['system', 'user'])
+    expect(messages.map(chatMessageText)).toEqual([cronFrame, cronFrame])
+  })
+
   it('preserves opaque internal-notification content that resembles user attachment context', () => {
     const content = '[SYSTEM: Background process finished]\n\n--- Attached Context ---\n\n@file:diagnostics.log'
 
