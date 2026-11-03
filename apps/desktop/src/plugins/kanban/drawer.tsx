@@ -33,7 +33,8 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
-  useValue
+  useValue,
+  writeClipboardText
 } from '@hermes/plugin-sdk'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 
@@ -232,7 +233,15 @@ function WorkspaceValue({ kind, path }: { kind: null | string | undefined; path:
 /** The dashboard's diagnostics panel: severity-toned, plain-English, with the
  *  backend's structured recovery actions as buttons. `reassign` is skipped —
  *  the Assignee control in the meta table IS that action, inline. */
-function Diagnostics({ items, onReclaim, onUnblock }: { items: Diagnostic[]; onReclaim: () => void; onUnblock: () => void }) {
+function Diagnostics({
+  items,
+  onReclaim,
+  onUnblock
+}: {
+  items: Diagnostic[]
+  onReclaim: () => void
+  onUnblock: () => void
+}) {
   const k = useKanban()
 
   const act = (action: DiagnosticAction) => {
@@ -241,7 +250,7 @@ function Diagnostics({ items, onReclaim, onUnblock }: { items: Diagnostic[]; onR
     } else if (action.kind === 'unblock') {
       onUnblock()
     } else if (action.kind === 'cli_hint') {
-      void navigator.clipboard.writeText(String(action.payload?.command ?? action.label))
+      void writeClipboardText(String(action.payload?.command ?? action.label))
       host.notify({ kind: 'info', message: k.commandCopied })
     }
   }
@@ -250,7 +259,10 @@ function Diagnostics({ items, onReclaim, onUnblock }: { items: Diagnostic[]; onR
     <div className="flex flex-col gap-2">
       {items.map(diag => {
         const tone = SEVERITY_TONE[diag.severity]
-        const actions = diag.actions.filter(action => action.kind === 'reclaim' || action.kind === 'unblock' || action.kind === 'cli_hint')
+
+        const actions = diag.actions.filter(
+          action => action.kind === 'reclaim' || action.kind === 'unblock' || action.kind === 'cli_hint'
+        )
 
         return (
           <Callout
@@ -985,7 +997,7 @@ export function TaskDrawer({
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
                       onSelect={() => {
-                        void navigator.clipboard.writeText(task.id)
+                        void writeClipboardText(task.id)
                         host.notify({ kind: 'info', message: k.copiedId(task.id) })
                       }}
                     >
@@ -994,7 +1006,7 @@ export function TaskDrawer({
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={() => {
-                        void navigator.clipboard.writeText(task.title || task.id)
+                        void writeClipboardText(task.title || task.id)
                         host.notify({ kind: 'info', message: k.copiedTitle })
                       }}
                     >
@@ -1050,7 +1062,12 @@ export function TaskDrawer({
                       <Diagnostics
                         items={task.diagnostics}
                         onReclaim={() => void mutate(() => reclaimTask(task.id))()}
-                        onUnblock={() => void mutate(() => patchTask(task.id, { status: 'ready' }), () => host.notify({ kind: 'success', message: k.unblockedMessage(shortId(task.id)) }))()}
+                        onUnblock={() =>
+                          void mutate(
+                            () => patchTask(task.id, { status: 'ready' }),
+                            () => host.notify({ kind: 'success', message: k.unblockedMessage(shortId(task.id)) })
+                          )()
+                        }
                       />
                     </Section>
                   )}
