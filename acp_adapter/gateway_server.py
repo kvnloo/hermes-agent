@@ -16,6 +16,7 @@ from acp.schema import (
 
 from hermes_cli.gateway_client import GatewayClientError, connect_gateway
 from hermes_constants import get_hermes_home
+from acp_adapter.gateway_background import GatewayBackgroundMixin
 from acp_adapter.gateway_reply import GatewayReplyMixin, _text
 from acp_adapter.session import _translate_acp_cwd, _normalize_cwd_for_compare
 
@@ -64,7 +65,7 @@ def _tools_changed_notice(payload):
     return f"Editor MCP tools changed (servers: {servers}); the new tool list applies from the next turn.\n"
 
 
-class GatewayACPAgent(GatewayReplyMixin, acp.Agent):
+class GatewayACPAgent(GatewayReplyMixin, GatewayBackgroundMixin, acp.Agent):
     def __init__(self):
         self._conn = None
         self._gateway = None
@@ -964,6 +965,9 @@ class GatewayACPAgent(GatewayReplyMixin, acp.Agent):
         aid = event.get("admission_id")
         if kind in {"session.info", "session.updated", "session.usage", "session.tools_changed"}:
             await self._project_session_state(kind, sid, editor_id, payload, event)
+            return
+        if kind == "agent.terminal.output":
+            self._background_output(sid, payload)
             return
         if await self._gap_guard(kind, sid, aid):
             return

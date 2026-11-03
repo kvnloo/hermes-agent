@@ -42,6 +42,8 @@ class GatewayReplyMixin:
             await self._conn.session_update(session_id=editor_id, update=build_tool_complete(
                 call_id, name, result=result if isinstance(result, str) else None, function_args=args,
                 is_error=payload.get("is_error") is True))
+        if payload.get("is_error") is not True:
+            await self._background_started(sid, editor_id, call_id, name, args, result)
 
     async def _finish_reply(self, sid, editor_id, aid, payload):
         """Show the settled reply's unseen remainder, then end the turn: its reply's id closes, and a tool
