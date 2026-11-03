@@ -85,6 +85,22 @@ class TestMinimaxM31AdaptiveEffort:
             base_url="https://api.minimax.io/anthropic",
         )
 
+    def test_china_anthropic_endpoint_forwards_native_effort(self):
+        """The CN M Plan route must not reduce M3.1 effort to a manual token budget."""
+        from agent.anthropic_adapter import build_anthropic_kwargs
+
+        kwargs = build_anthropic_kwargs(
+            model="MiniMax-M3.1-Flash",
+            messages=[{"role": "user", "content": "hello"}],
+            tools=None,
+            max_tokens=4096,
+            reasoning_config={"enabled": True, "effort": "low"},
+            base_url="https://api.minimaxi.com/anthropic",
+        )
+        assert kwargs["output_config"] == {"effort": "low"}
+        assert kwargs["thinking"]["type"] == "adaptive"
+        assert "budget_tokens" not in kwargs["thinking"]
+
     def test_m31_sends_the_requested_effort(self):
         for model in self.M31:
             for effort in ("low", "medium", "high", "xhigh", "max"):
