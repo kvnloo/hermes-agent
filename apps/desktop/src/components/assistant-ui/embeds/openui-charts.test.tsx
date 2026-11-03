@@ -125,15 +125,17 @@ describe('OpenUI dense heatmap board', () => {
   it('never fills missing cells or rows with fabricated zero values', async () => {
     const malformed = heatmapCode(24, true)
     expect(inspectOpenUiBoard(malformed)).toEqual({ kind: 'invalid', reason: 'invalid' })
-    const wrongRows = heatmapCode(48).replace('[[0,', '[[0,')
-      .replace('],[' + '3,', '],[' + '3,')
     // A separate one-row count grid must not be accepted for two labels.
     const oneRow = [
       'root = Board("Activity", "", [activity])',
       'activity = Heatmap("Hourly usage", "turns", ["Mon", "Tue"], ["00:00"], [[0]])'
     ].join('\n')
     expect(inspectOpenUiBoard(oneRow)).toEqual({ kind: 'invalid', reason: 'invalid' })
-    expect(inspectOpenUiBoard(wrongRows)).toEqual({ kind: 'ready' })
+    const extraCell = [
+      'root = Board("Activity", "", [activity])',
+      'activity = Heatmap("Hourly usage", "turns", ["Mon"], ["00:00"], [[0, 1]])'
+    ].join('\n')
+    expect(inspectOpenUiBoard(extraCell)).toEqual({ kind: 'invalid', reason: 'invalid' })
     render(embedded(malformed))
     await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
     expect(screen.getByTestId('original-chart-source').textContent).toBe(malformed)
