@@ -151,6 +151,38 @@ describe('PreviewPane console state', () => {
     expect(rendered.queryByRole('textbox', { name: 'Address' })).toBeNull()
   })
 
+  // #119360: the pop-out webview is not a system-browser login fallback.
+  it('hands a live login preview to the OS browser only on click, even when pop-out is available', async () => {
+    const openExternal = vi.fn(async () => undefined)
+    const openBrowserWindow = vi.fn(async () => ({ ok: true }))
+    vi.stubGlobal('window', {
+      ...window,
+      hermesDesktop: {
+        ...window.hermesDesktop,
+        openExternal,
+        openBrowserWindow
+      }
+    })
+
+    const url = 'https://example.com/login'
+    let rendered!: ReturnType<typeof render>
+    await act(async () => {
+      rendered = render(
+        <PreviewPane tabId={`url:${url}`} target={{ kind: 'url', label: 'Login', source: url, url }} />
+      )
+    })
+
+    expect(rendered.getByRole('button', { name: 'Pop out' })).toBeTruthy()
+    const handoff = rendered.getByRole('button', { name: 'Open in browser' })
+    expect(openExternal).not.toHaveBeenCalled()
+    expect(openBrowserWindow).not.toHaveBeenCalled()
+
+    fireEvent.click(handoff)
+
+    expect(openExternal).toHaveBeenCalledExactlyOnceWith(url)
+    expect(openBrowserWindow).not.toHaveBeenCalled()
+  })
+
   it('does not offer the URL-only pop-out action for a local HTML file', async () => {
     vi.stubGlobal('window', {
       ...window,
