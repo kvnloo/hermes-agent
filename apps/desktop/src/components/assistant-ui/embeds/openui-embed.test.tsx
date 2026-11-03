@@ -26,16 +26,16 @@ describe('openui-v2 Desktop fence', () => {
     )
     expect(screen.getByTestId('original-fence').textContent).toBe(SOURCE_FENCE)
     rerender(embedded(SOURCE_FENCE))
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Turns by model' })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Turns by model', level: 3 })).toBeTruthy())
   })
 
   it('renders a real lab board, its panel and raw values while streaming', async () => {
     expect(inspectOpenUiBoard(SOURCE_FENCE)).toEqual({ kind: 'ready' })
     render(embedded(SOURCE_FENCE, true))
     await waitFor(() => expect(screen.getByRole('img', { name: 'Turns by model, stacked values' })).toBeTruthy())
-    expect(screen.getByRole('heading', { name: 'Turns by model' })).toBeTruthy()
-    expect(screen.getByText('Codex')).toBeTruthy()
-    expect(screen.getByText('Claude')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Turns by model', level: 3 })).toBeTruthy()
+    expect(screen.getAllByText('Codex')).toBeTruthy()
+    expect(screen.getAllByText('Claude')).toBeTruthy()
     expect(screen.getByRole('region', { name: 'Turns by model values' }).textContent).toContain('10')
   })
 
@@ -45,7 +45,7 @@ describe('openui-v2 Desktop fence', () => {
     fireEvent.click(button)
     expect(screen.getByTestId('original-fence').textContent).toBe(SOURCE_FENCE)
     fireEvent.click(screen.getByRole('button', { name: 'Show board' }))
-    expect(screen.getByRole('heading', { name: 'Turns by model' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Turns by model', level: 3 })).toBeTruthy()
   })
 
   it('keeps malformed table source visible with a notice', async () => {

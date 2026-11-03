@@ -34,6 +34,19 @@ export const jaOverrides = {
     lookupFailed: "ゲートウェイでこのグループを検索できませんでした。もう一度お試しください。",
     missing: "このグループチャットはもう存在しません。"
   },
+  openui: {
+    label: "OpenUI ボード",
+    readOnly: "読み取り専用",
+    receiving: "受信中",
+    showSource: "ソースを表示",
+    showBoard: "ボードを表示",
+    incomplete: "ボードは未完成です。元のソースを表示します。",
+    invalid: "ボードが無効か、未対応のパネルです。元のソースを表示します。",
+    oversized: "ボードが 64 KiB を超えています。元のソースを表示します。",
+    readOnlyError: "ツール、変更、生成された状態は使えません。元のソースを表示します。",
+    rows: "表の行と列の数が一致しません。元のソースを表示します。",
+    series: "各系列にはカテゴリーごとに値が必要です。元のソースを表示します。"
+  },
   catalog: jaCatalog,
   connectors: jaConnectors.connectors,
   externalOpenFailed: {

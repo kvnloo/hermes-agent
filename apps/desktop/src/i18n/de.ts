@@ -34,6 +34,19 @@ export const deOverrides = {
     lookupFailed: "Diese Gruppe konnte auf dem Gateway nicht gefunden werden. Versuche es erneut.",
     missing: "Dieser Gruppenchat existiert nicht mehr."
   },
+  openui: {
+    label: "OpenUI-Diagrammtafel",
+    readOnly: "Nur lesen",
+    receiving: "Wird empfangen",
+    showSource: "Quelltext zeigen",
+    showBoard: "Tafel zeigen",
+    incomplete: "Die Tafel ist unvollständig. Quelltext wird angezeigt.",
+    invalid: "Tafel ungültig oder Panel nicht unterstützt. Quelltext wird angezeigt.",
+    oversized: "Tafel überschreitet 64 KiB. Quelltext wird angezeigt.",
+    readOnlyError: "Werkzeuge, Änderungen und Zustand sind nicht zulässig. Quelltext wird angezeigt.",
+    rows: "Tabellenzeilen müssen zur Spaltenzahl passen. Quelltext wird angezeigt.",
+    series: "Jede Reihe braucht einen Wert pro Kategorie. Quelltext wird angezeigt."
+  },
   sharedMetrics: deSharedMetrics,
   firstRun: deFirstRun,
   intro: introDe,

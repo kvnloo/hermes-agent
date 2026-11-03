@@ -73,7 +73,7 @@ function Legend({ series }: { series: SeriesEntry[] }) {
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
       {series.map((entry, index) => (
         <span className="inline-flex items-center gap-1.5" key={index}>
-          <span aria-hidden className={\`inline-block size-2 rounded-sm bg-current \${SERIES_TONE[index]}\`} />
+          <span aria-hidden className={`inline-block size-2 rounded-sm bg-current \${SERIES_TONE[index]}`} />
           {entry.name}
         </span>
       ))}
@@ -83,7 +83,7 @@ function Legend({ series }: { series: SeriesEntry[] }) {
 
 function SeriesValues({ props }: { props: SeriesData }) {
   return (
-    <div className="overflow-x-auto" role="region" aria-label={\`\${props.title} values\`} tabIndex={0}>
+    <div className="overflow-x-auto" role="region" aria-label={`\${props.title} values`} tabIndex={0}>
       <table className="w-full border-collapse text-left text-xs tabular-nums">
         <thead>
           <tr>
@@ -142,8 +142,8 @@ const BarChart = defineComponent({
           {props.bars.map((bar, i) => (
             <li className="grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)_auto] items-center gap-2" key={i}>
               <span className="truncate" title={bar.label}>{bar.label}</span>
-              <span aria-label={\`\${bar.label}: \${formatCount(bar.value)} \${props.unit}\`} className="h-2 overflow-hidden rounded-sm bg-muted" role="meter" aria-valuemin={0} aria-valuemax={max} aria-valuenow={bar.value}>
-                <span className="block h-full bg-primary" style={{ width: \`\${(bar.value / max) * 100}%\` }} />
+              <span aria-label={`\${bar.label}: \${formatCount(bar.value)} \${props.unit}`} className="h-2 overflow-hidden rounded-sm bg-muted" role="meter" aria-valuemin={0} aria-valuemax={max} aria-valuenow={bar.value}>
+                <span className="block h-full bg-primary" style={{ width: `\${(bar.value / max) * 100}%` }} />
               </span>
               <span className="text-right font-medium tabular-nums">{formatCount(bar.value)}</span>
             </li>
@@ -161,7 +161,7 @@ const StackedBar = defineComponent({
   props: seriesProps,
   component: ({ props }) => {
     const totals = props.categories.map((_, i) =>
-      props.series.reduce((sum, entry) => sum + entry.values[i], 0)
+      props.series.reduce((sum, entry) => sum + (entry.values[i] ?? 0), 0)
     )
     const max = Math.max(1, ...totals)
     return (
@@ -172,17 +172,17 @@ const StackedBar = defineComponent({
           {props.categories.map((category, index) => (
             <li className="grid grid-cols-[minmax(0,6rem)_minmax(0,1fr)_auto] items-center gap-2" key={index}>
               <span className="truncate" title={category}>{category}</span>
-              <span aria-label={\`\${category}: \${formatCount(totals[index])} \${props.unit}\`} className="flex h-3 overflow-hidden rounded-sm bg-muted" role="img">
+              <span aria-label={`\${category}: \${formatCount(totals[index] ?? 0)} \${props.unit}`} className="flex h-3 overflow-hidden rounded-sm bg-muted" role="img">
                 {props.series.map((entry, i) => (
                   <span
                     aria-hidden
-                    className={\`block h-full shrink-0 bg-current \${SERIES_TONE[i]}\`}
+                    className={`block h-full shrink-0 bg-current \${SERIES_TONE[i]}`}
                     key={i}
-                    style={{ width: \`\${(entry.values[index] / max) * 100}%\` }}
+                    style={{ width: `\${((entry.values[index] ?? 0) / max) * 100}%` }}
                   />
                 ))}
               </span>
-              <span className="text-right font-medium tabular-nums">{formatCount(totals[index])}</span>
+              <span className="text-right font-medium tabular-nums">{formatCount(totals[index] ?? 0)}</span>
             </li>
           ))}
         </ul>
@@ -196,7 +196,7 @@ function stackedBands(series: SeriesEntry[], count: number) {
   const totals = Array.from({ length: count }, () => 0)
   const bands = series.map(entry => {
     const lower = [...totals]
-    entry.values.forEach((number, i) => { totals[i] += number })
+    entry.values.forEach((number, i) => { totals[i] = (totals[i] ?? 0) + number })
     return { lower, upper: [...totals] }
   })
   return { bands, max: Math.max(1, ...totals) }
@@ -208,8 +208,8 @@ function polygonPoints(lower: number[], upper: number[], max: number) {
   const x = (i: number) => (i * width) / (upper.length - 1)
   const y = (n: number) => height - (n / max) * height
   return [
-    ...upper.map((n, i) => \`\${x(i)},\${y(n)}\`),
-    ...lower.map((n, i) => \`\${x(i)},\${y(n)}\`).reverse()
+    ...upper.map((n, i) => `\${x(i)},\${y(n)}`),
+    ...lower.map((n, i) => `\${x(i)},\${y(n)}`).reverse()
   ].join(' ')
 }
 
@@ -223,7 +223,7 @@ const StackedArea = defineComponent({
       <section aria-label={props.title} className="space-y-2">
         <h4 className="text-sm font-semibold">{props.title}</h4>
         <Legend series={props.series} />
-        <svg aria-label={\`\${props.title}, stacked values\`} className="h-40 w-full" preserveAspectRatio="none" role="img" viewBox="0 0 560 180">
+        <svg aria-label={`\${props.title}, stacked values`} className="h-40 w-full" preserveAspectRatio="none" role="img" viewBox="0 0 560 180">
           {stack.bands.map((band, i) => (
             <polygon className={SERIES_TONE[i]} fill="currentColor" key={i} points={polygonPoints(band.lower, band.upper, stack.max)} />
           ))}
@@ -244,13 +244,13 @@ const LineChart = defineComponent({
       <section aria-label={props.title} className="space-y-2">
         <h4 className="text-sm font-semibold">{props.title}</h4>
         <Legend series={props.series} />
-        <svg aria-label={\`\${props.title}, line chart\`} className="h-40 w-full" preserveAspectRatio="none" role="img" viewBox="0 0 560 180">
+        <svg aria-label={`\${props.title}, line chart`} className="h-40 w-full" preserveAspectRatio="none" role="img" viewBox="0 0 560 180">
           {props.series.map((entry, i) => (
             <polyline
               className={SERIES_TONE[i]}
               fill="none"
               key={i}
-              points={entry.values.map((n, j) => \`\${(j * 560) / (entry.values.length - 1)},\${180 - (n / max) * 180}\`).join(' ')}
+              points={entry.values.map((n, j) => `\${(j * 560) / (entry.values.length - 1)},\${180 - (n / max) * 180}`).join(' ')}
               stroke="currentColor"
               strokeWidth={2}
               vectorEffect="non-scaling-stroke"
@@ -270,7 +270,7 @@ const Table = defineComponent({
   component: ({ props }) => (
     <section aria-label={props.title} className="space-y-2">
       <h4 className="text-sm font-semibold">{props.title}</h4>
-      <div aria-label={\`\${props.title} table\`} className="max-h-80 overflow-auto" role="region" tabIndex={0}>
+      <div aria-label={`\${props.title} table`} className="max-h-80 overflow-auto" role="region" tabIndex={0}>
         <table className="w-full border-collapse text-left text-xs">
           <thead>
             <tr>
@@ -332,7 +332,7 @@ const panelSchemas = {
 
 type PanelType = keyof typeof panelSchemas
 
-export type OpenUiIssue = 'incomplete' | 'invalid' | 'oversized' | 'readOnly' | 'series' | 'rows'
+export type OpenUiIssue = 'incomplete' | 'invalid' | 'oversized' | 'readOnlyError' | 'series' | 'rows'
 export type OpenUiStatus = { kind: 'ready' } | { kind: 'invalid' | 'incomplete'; reason: OpenUiIssue }
 
 const isRecord = (item: unknown): item is Record<string, unknown> =>
@@ -347,7 +347,7 @@ export function inspectOpenUiBoard(code: string): OpenUiStatus {
     const parsed = parser.parse(code)
 
     if (parsed.queryStatements.length || parsed.mutationStatements.length || Object.keys(parsed.stateDeclarations).length) {
-      return { kind: 'invalid', reason: 'readOnly' }
+      return { kind: 'invalid', reason: 'readOnlyError' }
     }
     if (parsed.meta.incomplete || parsed.meta.unresolved.length || !parsed.root) {
       return { kind: 'incomplete', reason: 'incomplete' }

@@ -33,6 +33,19 @@ export const zhOverrides = {
     lookupFailed: "无法在网关上查找此群组，请重试。",
     missing: "此群聊已不存在。"
   },
+  openui: {
+    label: "OpenUI 图表板",
+    readOnly: "只读",
+    receiving: "接收中",
+    showSource: "显示源码",
+    showBoard: "显示图表板",
+    incomplete: "图表板尚未完成，显示原始源码。",
+    invalid: "图表板无效或包含不支持的面板，显示原始源码。",
+    oversized: "图表板超过 64 KiB，显示原始源码。",
+    readOnlyError: "不允许工具、修改或生成状态，显示原始源码。",
+    rows: "表格行数值必须与列数一致，显示原始源码。",
+    series: "每个系列需为每个类别提供数值，显示原始源码。"
+  },
   catalog: zhCatalog,
   externalOpenFailed: {
     title: '无法打开此链接',

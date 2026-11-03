@@ -34,6 +34,19 @@ export const esOverrides = {
     lookupFailed: "No se pudo encontrar este grupo en la pasarela. Inténtalo de nuevo.",
     missing: "Este chat de grupo ya no existe."
   },
+  openui: {
+    label: "Panel OpenUI",
+    readOnly: "Solo lectura",
+    receiving: "Recibiendo",
+    showSource: "Mostrar código",
+    showBoard: "Mostrar panel",
+    incomplete: "Panel incompleto. Se muestra el código original.",
+    invalid: "Panel no válido o tipo no compatible. Se muestra el código original.",
+    oversized: "El panel supera 64 KiB. Se muestra el código original.",
+    readOnlyError: "No se permiten herramientas, cambios ni estado generado. Se muestra el código original.",
+    rows: "Las filas deben coincidir con las columnas. Se muestra el código original.",
+    series: "Cada serie debe tener un valor por categoría. Se muestra el código original."
+  },
   sharedMetrics: esSharedMetrics,
   firstRun: esFirstRun,
   intro: introEs,

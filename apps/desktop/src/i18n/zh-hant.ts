@@ -19,6 +19,19 @@ export const zhHantOverrides = {
     lookupFailed: "無法在閘道上查找此群組，請重試。",
     missing: "此群組聊天已不存在。"
   },
+  openui: {
+    label: "OpenUI 圖表板",
+    readOnly: "唯讀",
+    receiving: "接收中",
+    showSource: "顯示原始碼",
+    showBoard: "顯示圖表板",
+    incomplete: "圖表板尚未完成，顯示原始碼。",
+    invalid: "圖表板無效或包含不支援的面板，顯示原始碼。",
+    oversized: "圖表板超過 64 KiB，顯示原始碼。",
+    readOnlyError: "不允許工具、修改或產生狀態，顯示原始碼。",
+    rows: "表格每列的儲存格數必須與欄數相符，顯示原始碼。",
+    series: "每個序列都需要每個類別的數值，顯示原始碼。"
+  },
 
   catalog: {
     add: '新增',
