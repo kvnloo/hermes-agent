@@ -10,8 +10,8 @@ from types import SimpleNamespace
 import pytest
 
 import pm
-import pm.client as client
-import pm.extras as extras
+from pm import client
+from pm import extras
 
 
 # ---- per-extra platform gates ([tool.hermes.extras-platforms]) ----
@@ -72,6 +72,7 @@ def test_declared_extra_gates_match_dependency_selection():
         ("linux", "Linux", "x86_64"), ("linux", "Linux", "aarch64"),
         ("darwin", "Darwin", "x86_64"), ("darwin", "Darwin", "arm64"),
         ("win32", "Windows", "AMD64"), ("win32", "Windows", "ARM64"),
+        ("android", "Android", "aarch64"),
     ]
     for system, platform_system, machine in targets:
         for python in ("3.12", "3.13", "3.14"):
@@ -126,7 +127,6 @@ def test_available_missing_module():
 
 
 @pytest.mark.parametrize(("extra", "module"), [
-    ("hindsight", "hindsight_client"),
     ("teams", "microsoft_teams.apps"),
 ])
 def test_available_counts_sys_modules_fakes(monkeypatch, extra, module):
@@ -230,6 +230,7 @@ def test_legacy_selection_carries_extras_the_main_era_venv_lazily_installed(monk
     (site / "google").mkdir()
     (site / "google" / "auth").mkdir()
     (site / "exa_py.cpython-311-x86_64-linux-gnu.so").write_bytes(b"")
+    (site / "hindsight_client").mkdir()
 
     selection = extras.legacy_selection(tmp_path)
 
@@ -237,6 +238,7 @@ def test_legacy_selection_carries_extras_the_main_era_venv_lazily_installed(monk
     assert {"fal", "telegram", "vertex", "exa"} <= set(selection)
     assert "messaging" not in selection
     assert "piper" not in selection
+    assert "hindsight" not in selection  # Catalog plugin owns this dependency, not a core extra.
     assert extras.legacy_selection(tmp_path / "no-venv") == ["all"]
 
 

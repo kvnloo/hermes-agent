@@ -6,6 +6,12 @@ description: "Install Hermes Agent on Android from its signed Termux APT reposit
 
 # Hermes on Android with Termux
 
+:::danger Termux is currently broken
+The Termux package does not work right now. A fix is in progress and will
+ship soon. Until then, the steps below may fail or install a package that
+does not run.
+:::
+
 The Termux package runs Hermes on **aarch64 (arm64-v8a)** Android devices.
 Two APT channels are published under
 `https://hermes-assets.nousresearch.com/releases/termux/<channel>`:
@@ -136,8 +142,10 @@ Battery optimization exemptions and `termux-wake-lock` can help, but do not guar
 The package does not include the `nemo-relay` exporter. Its vendored build
 toolchain does not support this target.
 
-The package does not include Electron, local Chromium, or desktop computer-use
-tools. A local Docker daemon is not part of the Termux environment. Remote
+The package does not include Electron, a bundled Chromium, or desktop
+computer-use tools. The browser tool launches a system `chromium` when one is on
+`PATH` (`pkg install chromium`, where your repository provides it); without one,
+browsing is unavailable and the browser tool says so. A local Docker daemon is not part of the Termux environment. Remote
 services have their own requirements and connectivity limits.
 
 Phone-native Termux:API microphone and clipboard adapters are not provided by
