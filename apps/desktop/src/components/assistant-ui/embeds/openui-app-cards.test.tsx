@@ -50,6 +50,16 @@ describe('openui-v2 app cards', () => {
     expect(container.querySelector('iframe, form, script, [data-action]')).toBeNull()
   })
 
+  it.each([
+    { connector: 'lyft', appName: 'Lyft' },
+    { connector: 'bolt', appName: 'bolt' }
+  ])('uses the correct accessible ride region name for $connector', async ({ connector, appName }) => {
+    render(embed(ride.replace('"uber"', '"' + connector + '"')))
+    expect(await screen.findByRole('region', {
+      name: appName + ' ride options, Ferry Building to SFO Terminal 2'
+    })).toBeTruthy()
+  })
+
   it('changes only local selection and opens the ride app on explicit click', async () => {
     const { container } = render(embed(ride))
     const comfort = await screen.findByRole('button', { name: /Comfort, 6 min/ })
