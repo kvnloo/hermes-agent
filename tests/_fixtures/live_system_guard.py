@@ -106,9 +106,9 @@ def _live_system_guard(request, monkeypatch):
             seen.add(cur)
             try:
                 with open(f"/proc/{cur}/stat") as f:
-                    fields = f.read().split()
-                # ppid is field 4 (1-indexed) in /proc/<pid>/stat
-                ppid = int(fields[3])
+                    stat = f.read()
+                # The parenthesized comm field may contain whitespace.
+                ppid = int(stat.rsplit(")", 1)[1].split()[1])
             except (OSError, ValueError, IndexError):
                 return False
             if ppid == root:
