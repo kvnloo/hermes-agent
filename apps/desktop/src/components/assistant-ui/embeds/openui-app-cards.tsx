@@ -53,7 +53,7 @@ function CardFrame({
       aria-label={title}
       role="region"
       data-app-card-brand={brand ?? 'unknown'}
-      className="my-2 min-w-0 overflow-hidden rounded-lg border border-(--ui-stroke-tertiary) bg-muted/20 text-foreground"
+      className="min-w-0 overflow-hidden rounded-lg border border-(--ui-stroke-tertiary) bg-muted/20 text-foreground"
       style={style}
     >
       {children}
@@ -101,7 +101,6 @@ function RideOptionsCard({ props }: { props: Ride }) {
           <p className="truncate text-sm font-semibold">{props.dropoff}</p>
           <p className="truncate text-xs" style={{ color: 'var(--ac-muted, currentColor)' }}>{props.pickup}</p>
         </div>
-        <span className="text-xs" style={{ color: 'var(--ac-muted, currentColor)' }}>{t.openui.readOnly}</span>
       </header>
       <div className="px-2 pb-2">
         {props.options.map((option, i) => (
@@ -181,7 +180,7 @@ function RouteMap({ props }: { props: RouteData }) {
   const end = route.points[route.points.length - 1]!
   return (
     <svg role="img" aria-label={props.origin + ' to ' + props.destination}
-      viewBox={'0 0 ' + MAP_WIDTH + ' ' + MAP_HEIGHT} className="block h-auto w-full"
+      viewBox={'0 0 ' + MAP_WIDTH + ' ' + MAP_HEIGHT} className="block h-auto max-h-56 w-full"
       style={{ background: 'var(--ac-alt)' }}>
       <path d={route.d} fill="none" stroke="var(--ac-outline)" strokeWidth={7} strokeLinejoin="round" strokeLinecap="round" />
       <path d={route.d} fill="none" stroke="var(--ac-accent)" strokeWidth={4} strokeLinejoin="round" strokeLinecap="round" />

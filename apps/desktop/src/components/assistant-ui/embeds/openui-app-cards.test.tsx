@@ -115,6 +115,36 @@ describe('openui-v2 app cards', () => {
     expect(screen.getByText('Invoice #4512')).toBeTruthy()
   })
 
+  it('streams complete statements as cards with placeholders, never raw source or half a card', async () => {
+    const board = [
+      'root = Board("Before you go", "Mail, PR and a ride.", [mail, pr, rides])',
+      mail.split('\n')[1],
+      pr.split('\n')[1],
+      ride.split('\n')[1]
+    ].join('\n')
+    const stream = (code: string) =>
+      <RichCodeBlock language="openui-v2" code={code} streaming fallback={<pre data-testid="fence">{code}</pre>} />
+    // First line still arriving: nothing parseable yet, so a quiet status, not the source.
+    const first = render(stream(board.slice(0, 30)))
+    expect(first.queryByTestId('fence')).toBeNull()
+    expect(await first.findByRole('status')).toBeTruthy()
+    cleanup()
+    // Root line plus mail done, PR line half written.
+    const cut = board.indexOf('Refresh sessions')
+    const { container } = render(stream(board.slice(0, cut)))
+    await waitFor(() => expect(container.querySelector('[data-app-card-brand="gmail"]')).toBeTruthy())
+    expect(screen.queryByTestId('fence')).toBeNull()
+    expect(container.querySelector('[data-app-card-brand="github"]')).toBeNull()
+    expect(container.querySelectorAll('[data-openui-pending]').length).toBe(2)
+    expect(screen.getByRole('heading', { name: 'Before you go' })).toBeTruthy()
+    cleanup()
+    // The Markdown repair can close the open fence with a newline after the half line.
+    const repaired = render(stream(board.slice(0, cut) + '\n'))
+    await waitFor(() => expect(repaired.container.querySelector('[data-app-card-brand="gmail"]')).toBeTruthy())
+    expect(repaired.container.querySelector('[data-app-card-brand="github"]')).toBeNull()
+    expect(repaired.container.querySelectorAll('[data-openui-pending]').length).toBe(2)
+  })
+
   it('projects only provided route coordinates and never fabricates missing geometry', () => {
     expect(projectRoutePath([], 400, 180).points).toEqual([])
     const geometry = projectRoutePath([[37.77, -122.41], [37.8, -122.4]], 400, 180)
