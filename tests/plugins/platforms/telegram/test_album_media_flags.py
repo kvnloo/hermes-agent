@@ -53,3 +53,25 @@ def test_zip_and_two_inlined_markdown_documents_keep_their_flags(tmp_path):
     assert album.media_types == types
     assert album.media_filenames == names
     assert album.media_text_inlined == [False, True, True]
+
+
+def test_photo_then_named_document_keeps_parallel_metadata(tmp_path):
+    """A nameless photo must not shift a following document's per-file metadata."""
+    adapter = SimpleNamespace(_merge_caption=TelegramAdapter._merge_caption)
+    pending = {}
+    photo_path = str(tmp_path / "photo.jpg")
+    document_path = str(tmp_path / "report.pdf")
+    photo = MessageEvent(text="", media_urls=[photo_path], media_types=["image/jpeg"])
+    document = MessageEvent(text="", media_urls=[document_path],
+                            media_types=["application/pdf"], media_text_inlined=[False],
+                            media_filenames=["report.pdf"])
+
+    TelegramAdapter._merge_into_pending(adapter, pending, "album", photo)
+    TelegramAdapter._merge_into_pending(adapter, pending, "album", document)
+
+    album = pending["album"]
+    assert album.media_urls == [photo_path, document_path]
+    assert album.media_types == ["image/jpeg", "application/pdf"]
+    assert album.media_text_inlined == [None, False]
+    assert album.media_filenames == ["", "report.pdf"]
+    assert _media_clause(album) is None
