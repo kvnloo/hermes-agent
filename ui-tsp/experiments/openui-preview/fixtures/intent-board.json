@@ -1,0 +1,249 @@
+{
+ "version": 1,
+ "title": "Intent → contract → proof → intelligence",
+ "intent": {
+  "revision": 3,
+  "sourceHash": "d79b95ab528b45e21387f2d9706e6b0f295cf004637e6daf737b4714f1f23608",
+  "sentences": [
+   {
+    "text": "when im using hermes in t3code app, it doesn't show work as ongoing even if subagents are still working.",
+    "role": "task"
+   },
+   {
+    "text": "like the ui ux is misleading",
+    "role": "context"
+   }
+  ]
+ },
+ "contract": {
+  "approval": "pending",
+  "contractHash": "f072a99a0b6c1d99dfdd027e6a03fbea527e1cac96f3c6f06c0c38ba47673c5b",
+  "preconditions": [
+   {
+    "label": "fleet-build",
+    "state": "pass"
+   },
+   {
+    "label": "pingdotgg/t3code#24610",
+    "state": "pass"
+   },
+   {
+    "label": "NousResearch/hermes-agent#130898",
+    "state": "pass"
+   }
+  ],
+  "acceptance": {
+   "receipt": "missing",
+   "clauses": [
+    ".working_while_running == true",
+    ".settled_after_exit == true",
+    ".dev_server_left_idle == true",
+    "(.thread_id|type==\"string\")"
+   ]
+  },
+  "facts": [
+   {
+    "text": "T3 already ships the awaited model; Hermes is the unsupported provider.",
+    "label": "observed"
+   },
+   {
+    "text": "The data exists in Hermes; the ACP projection drops it.",
+    "label": "observed"
+   },
+   {
+    "text": "The observed failure was a background job, not subagents.",
+    "label": "observed"
+   },
+   {
+    "text": "Upstream already has the Hermes design (#130898) and the T3 ACP hooks; only the live-path wiring is missing.",
+    "label": "observed"
+   },
+   {
+    "text": "Owner rule: CPU-heavy verification runs off the host via fleet-build.",
+    "label": "claimed"
+   }
+  ]
+ },
+ "work": {
+  "slices": [
+   {
+    "id": "H1",
+    "title": "port #130898 background reports to the gateway path",
+    "where": "fork/hermes-agent",
+    "state": "built"
+   },
+   {
+    "id": "T1",
+    "title": "acpRegistry Hermes flavor",
+    "where": "fork/t3code",
+    "state": "not-started"
+   },
+   {
+    "id": "P1",
+    "title": "real-turn proof",
+    "where": "after H1 → T1",
+    "state": "blocked"
+   }
+  ]
+ },
+ "intel": {
+  "decisions": {
+   "rows": 28157,
+   "last": "2026-10-28T21:47Z",
+   "execution": [
+    {
+     "label": "orchestration",
+     "value": 16967
+    },
+    {
+     "label": "log_only",
+     "value": 6229
+    },
+    {
+     "label": "live",
+     "value": 4934
+    },
+    {
+     "label": "unknown",
+     "value": 23
+    },
+    {
+     "label": "canary",
+     "value": 2
+    },
+    {
+     "label": "shadow",
+     "value": 2
+    }
+   ],
+   "providers": [
+    {
+     "label": "groq / openai/gpt-oss-20b",
+     "value": 4434
+    },
+    {
+     "label": "groq / unrecorded model",
+     "value": 4411
+    },
+    {
+     "label": "kerdoios_plan / unrecorded model",
+     "value": 4148
+    },
+    {
+     "label": "xai-oauth / grok-4.7",
+     "value": 488
+    },
+    {
+     "label": "openai-codex / gpt-6.1-sol",
+     "value": 403
+    },
+    {
+     "label": "cerebras / qwen-coder",
+     "value": 246
+    },
+    {
+     "label": "openrouter / unrecorded model",
+     "value": 195
+    },
+    {
+     "label": "openrouter / nvidia/nemotron-3-super-120b-a12b:free",
+     "value": 194
+    }
+   ],
+   "status": [
+    {
+     "label": "started",
+     "value": 6448
+    },
+    {
+     "label": "completed",
+     "value": 6361
+    },
+    {
+     "label": "none",
+     "value": 6256
+    },
+    {
+     "label": "rejected",
+     "value": 5343
+    },
+    {
+     "label": "delivered_to_hook",
+     "value": 1547
+    },
+    {
+     "label": "acquired",
+     "value": 1055
+    },
+    {
+     "label": "released",
+     "value": 1054
+    },
+    {
+     "label": "failed",
+     "value": 62
+    }
+   ]
+  },
+  "value": {
+   "estimatedAvoided": 107971,
+   "pairedRows": 224,
+   "reportedSaved": 87471,
+   "verifiedTasks": 0
+  },
+  "context": {
+   "episodes": 4440,
+   "imported": 96,
+   "predictions": 30303,
+   "judged": 8149,
+   "hit": 1227,
+   "top1": [
+    {
+     "label": "stay",
+     "value": 25449
+    },
+    {
+     "label": "switch_app",
+     "value": 4449
+    },
+    {
+     "label": "resume_previous",
+     "value": 287
+    },
+    {
+     "label": "switch_workspace",
+     "value": 78
+    },
+    {
+     "label": "harness",
+     "value": 39
+    }
+   ]
+  },
+  "health": {
+   "ok": false,
+   "backends": [
+    {
+     "id": "decider_2b",
+     "ready": false,
+     "local": true
+    },
+    {
+     "id": "jev_typesafe",
+     "ready": true,
+     "local": false
+    },
+    {
+     "id": "laya_421m",
+     "ready": false,
+     "local": true
+    },
+    {
+     "id": "nanojev",
+     "ready": true,
+     "local": true
+    }
+   ]
+  }
+ }
+}

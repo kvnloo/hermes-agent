@@ -43,7 +43,7 @@ jobs:
       - name: Install Lua only for explicitly labelled mock-host checks
         run: sudo apt-get update -qq && sudo apt-get install -y lua5.4
       - name: Renderer logic (not live Luau or Tern)
-        run: lua5.4 test/renderer.lua tern/host.luau
+        run: lua5.4 test/renderer.lua tern/host.luau && lua5.4 test/intent-renderer.lua tern/host.luau
       - name: CLI preparation and missing-runtime failure boundary
         shell: bash
         run: |
