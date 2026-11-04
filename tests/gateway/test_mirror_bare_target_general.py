@@ -84,6 +84,27 @@ def test_threaded_chat_without_general_refuses_instead_of_guessing(wired):
     assert wired.get_messages("sess-other") == []
 
 
+
+def test_bare_target_uses_flat_parent_not_newer_topic(wired):
+    """Without thread 1, a flat parent must receive the mirror instead of a later topic."""
+    wired.create_session(
+        "sess-flat", "telegram", user_id="u1",
+        session_key=f"agent:main:telegram:group:{CHAT}:u1",
+        chat_id=CHAT, chat_type="group",
+    )
+    _thread_session(wired, "sess-newer", "95")
+    # Make newest-started ordering deterministic: the old broad scan picks this topic.
+    wired._write_sql(
+        "UPDATE sessions SET started_at = started_at + 60 WHERE id = ?",
+        ("sess-newer",),
+    )
+
+    assert _find_session_id("telegram", CHAT, user_id="u1") == "sess-flat"
+    assert mirror_to_session("telegram", CHAT, "flat parent ask", source_label="cli", user_id="u1")
+    assert [m["content"] for m in wired.get_messages("sess-flat")] == ["flat parent ask"]
+    assert wired.get_messages("sess-newer") == []
+
+
 def test_flat_chat_still_resolves(wired):
     """Control: DMs / non-threaded chats (no thread_id at all) keep resolving."""
     wired.create_session("sess-dm", "telegram", user_id="u1",
