@@ -151,12 +151,13 @@ _HASH_PREFIX_HEX_RE = re.compile(
 _HEX_RUN_RE = re.compile(r"(?<![0-9a-fA-F])[0-9a-fA-F]{7,64}(?![0-9a-fA-F])")
 _IDENTIFIER_TOKEN_RE = re.compile(r"[A-Za-z0-9_./~@-]+")
 # Calendar dates a voice should read out: ISO ("2026-11-16", "2026/06/02") and the day-first /
-# dotted forms most locales write ("16/11", "17/11/2026", "16-11-2026", "16.11.2026"). Only
+# month-first and dotted forms ("16/11", "17/11/2026", "12/31", "16.11.2026"). Only
 # year-first was recognised, so every day-first date fell through to the path/ID rules and was
 # silenced (#148906).
 _DATE_TOKEN_RE = re.compile(
     r"(?:\d{4}[-/]\d{1,2}(?:[-/]\d{1,2})?"
-    r"|(?:0?[1-9]|[12]\d|3[01])[./-](?:0?[1-9]|1[0-2])(?:[./-](?:\d{2}|\d{4}))?)")
+    r"|(?:0?[1-9]|[12]\d|3[01])[./-](?:0?[1-9]|1[0-2])(?:[./-](?:\d{2}|\d{4}))?"
+    r"|(?:0?[1-9]|1[0-2])[./-](?:0?[1-9]|[12]\d|3[01])(?:[./-](?:\d{2}|\d{4}))?)")
 
 
 def _is_dense_identifier(token: str) -> bool:
