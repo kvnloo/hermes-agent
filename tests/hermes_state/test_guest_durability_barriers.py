@@ -77,7 +77,7 @@ def test_guest_barriers_cache_config_per_home_and_file_revision(monkeypatch, tmp
     config_b = tmp_path / "profile-b" / "config.yaml"
     for path, value in ((config_a, "FULL"), (config_b, "FULL")):
         path.parent.mkdir()
-        path.write_text(f"database:\\n  synchronous: {value}\\n")
+        path.write_text(f"database:\n  synchronous: {value}\n")
 
     active_path = [config_a]
     loads = []
@@ -104,7 +104,7 @@ def test_guest_barriers_cache_config_per_home_and_file_revision(monkeypatch, tmp
         assert [worker.submit(open_guest).result() for _ in range(20)] == [2] * 20
         assert loads == [config_a]  # Red on main: 20 reads instead of one.
 
-        config_a.write_text("database:\\n  synchronous: EXTRA\\n")  # New size invalidates the signature.
+        config_a.write_text("database:\n  synchronous: EXTRA\n")  # New size invalidates the signature.
         assert worker.submit(open_guest).result() == 3
         assert loads == [config_a, config_a]
 
