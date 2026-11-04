@@ -322,10 +322,16 @@ class GatewayACPAgent(GatewayReplyMixin, acp.Agent):
         from acp_adapter.gateway_session_meta import available_commands_update
         await asyncio.sleep(0)  # after the session reply: the editor routes updates by a known id
         try:
-            plugin_commands = await self._session_plugin_commands(session_id)
-            await self._conn.session_update(session_id=editor_id, update=available_commands_update(plugin_commands))
+            await self._conn.session_update(session_id=editor_id,
+                                            update=available_commands_update(self._plugin_commands.get(session_id)))
             await self._project_usage(session_id, editor_id,
                                       await (await self._client()).rpc("session.stats", session_id=session_id))
+            # Plugin commands come last, so the built-in menu and context indicator never wait on the catalog.
+            known = self._plugin_commands.get(session_id)
+            plugin_commands = await self._session_plugin_commands(session_id)
+            if plugin_commands and plugin_commands != known:
+                await self._conn.session_update(session_id=editor_id,
+                                                update=available_commands_update(plugin_commands))
         except Exception:
             # Boundary: a detached editor or a refused read is not the attach's failure.
             logger.debug("ACP post-attach notices for %s not delivered", session_id, exc_info=True)
