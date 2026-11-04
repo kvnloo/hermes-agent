@@ -795,8 +795,11 @@ def plugin_present(plugin: str, home: Path) -> bool:
 
 
 def _unfinished_catalog_install(home: Path, feature: LeftCoreFeature) -> bool:
-    """A catalog tree was published but its enable decision was interrupted."""
-    if not plugin_present(feature.plugin, home) or any(_plugin_lists(home, feature.plugin)):
+    """A catalog tree was published but its enable decision was interrupted.
+
+    Provider plugins may load implicitly without a plugins.enabled entry.
+    """
+    if feature.providers or not plugin_present(feature.plugin, home) or any(_plugin_lists(home, feature.plugin)):
         return False
     from hermes_cli.plugins_cmd_catalog import catalog_install_record
     from hermes_constants import reset_hermes_home_override, set_hermes_home_override
