@@ -67,6 +67,7 @@ def test_guest_barriers_survive_config_failure(monkeypatch, tmp_path):
     finally:
         conn.close()
 
+
 def test_guest_barriers_cache_config_per_home_and_file_revision(monkeypatch, tmp_path):
     """DbExecutor-style opens must not expand every config ref on every connection."""
     from concurrent.futures import ThreadPoolExecutor
@@ -76,14 +77,15 @@ def test_guest_barriers_cache_config_per_home_and_file_revision(monkeypatch, tmp
     config_b = tmp_path / "profile-b" / "config.yaml"
     for path, value in ((config_a, "FULL"), (config_b, "FULL")):
         path.parent.mkdir()
-        path.write_text(value)
+        path.write_text(f"database:\\n  synchronous: {value}\\n")
 
     active_path = [config_a]
     loads = []
 
     def load_config():
         loads.append(active_path[0])
-        return {"database": {"synchronous": active_path[0].read_text()}}
+        value = active_path[0].read_text().split("synchronous:", 1)[1].strip()
+        return {"database": {"synchronous": value}}
 
     monkeypatch.setattr(config_mod, "get_config_path", lambda: active_path[0])
     monkeypatch.setattr(config_mod, "load_config_readonly", load_config)
@@ -102,7 +104,7 @@ def test_guest_barriers_cache_config_per_home_and_file_revision(monkeypatch, tmp
         assert [worker.submit(open_guest).result() for _ in range(20)] == [2] * 20
         assert loads == [config_a]  # Red on main: 20 reads instead of one.
 
-        config_a.write_text("EXTRA")  # Changed size invalidates the file signature.
+        config_a.write_text("database:\\n  synchronous: EXTRA\\n")  # New size invalidates the signature.
         assert worker.submit(open_guest).result() == 3
         assert loads == [config_a, config_a]
 
@@ -113,6 +115,7 @@ def test_guest_barriers_cache_config_per_home_and_file_revision(monkeypatch, tmp
         active_path[0] = config_a
         assert worker.submit(open_guest).result() == 3
         assert loads == [config_a, config_a, config_b]
+
 
 def test_guest_barriers_cache_unset_synchronous_and_detect_new_config(monkeypatch, tmp_path):
     import hermes_cli.config as config_mod
