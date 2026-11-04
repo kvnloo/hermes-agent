@@ -825,8 +825,22 @@ const CJK_RE = /[\u3000-\u303f\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufa
 function escapeCjkProseDollars(text: string): string {
   let out = ''
   let copiedThrough = 0
+  // CJK spans can cross inline code, but the backticked dollars stay literal.
+  const codeSpans = [...text.matchAll(INLINE_CODE_SPLIT_RE)].map(match => ({
+    start: match.index,
+    end: match.index + match[0].length
+  }))
+  let codeSpanIndex = 0
 
   for (let cursor = 0; cursor < text.length; cursor += 1) {
+    while (codeSpanIndex < codeSpans.length && codeSpans[codeSpanIndex].end <= cursor) {
+      codeSpanIndex += 1
+    }
+
+    if (codeSpans[codeSpanIndex] && codeSpans[codeSpanIndex].start <= cursor) {
+      continue
+    }
+
     if (text[cursor] !== '$' || text[cursor - 1] === '$' || isEscapedAt(text, cursor)) {
       continue
     }
@@ -969,7 +983,13 @@ function normalizeProseMath(text: string): string {
   // a source of the hugging form: a multi-line `\[…\]` comes out of it as
   // `$$\begin{aligned}…\end{aligned}$$`. Running afterwards catches both the
   // hugging math the model emitted and the hugging math the rewrite produced.
-  const normalized = splitHuggingDisplayMath(normalizeMathDelimiters(normalizeDisplayMathForMarkdown(text)))
+  const displayNormalized = normalizeDisplayMathForMarkdown(text)
+  const normalized = splitHuggingDisplayMath(
+    displayNormalized
+      .split(INLINE_CODE_SPLIT_RE)
+      .map(segment => (segment.startsWith('`') ? segment : normalizeMathDelimiters(segment)))
+      .join('')
+  )
   const cjkEscaped = escapeCjkProseDollars(normalized)
 
   // Keep the CJK pass's cross-span context, but never insert currency

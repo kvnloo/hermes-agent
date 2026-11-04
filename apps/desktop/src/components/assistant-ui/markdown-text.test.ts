@@ -624,6 +624,16 @@ describe('preprocessMarkdown', () => {
     expect(output).toContain('`$connection`')
   })
 
+  it('leaves inline-code dollars untouched when a CJK span starts inside code (#148859)', () => {
+    expect(preprocessMarkdown('`$a` 中文 $b')).toContain('`$a`')
+  })
+
+  it('does not rewrite math delimiters inside inline code (#148859)', () => {
+    const input = 'Use `\\(x\\)` to open inline math'
+
+    expect(preprocessMarkdown(input)).toBe(input)
+  })
+
   it('escapes the opening dollar when both identifiers are bare in CJK prose (#103546)', () => {
     const output = preprocessMarkdown('搜 $connection 的所有写者，再搜 $session 的读者')
 
