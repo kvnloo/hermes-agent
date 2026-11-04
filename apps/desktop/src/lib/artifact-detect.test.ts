@@ -84,6 +84,7 @@ describe('detectArtifact', () => {
     // (or any renderer-owned language) would otherwise be stolen by the code
     // card and never render as its own component.
     expect(detectArtifact('listing', longCode(200))).toBeNull()
+    expect(detectArtifact('openui-v2', longCode(200))).toBeNull()
   })
 })
 

@@ -12,6 +12,7 @@ import type { RichFenceProps } from './types'
 const LAZY_FENCE: Record<string, LazyExoticComponent<ComponentType<RichFenceProps>>> = {
   listing: lazy(() => import('./listing-embed')),
   mermaid: lazy(() => import('./mermaid-embed')),
+  'openui-v2': lazy(() => import('./openui-embed')),
   svg: lazy(() => import('./svg-embed'))
 }
 
@@ -34,7 +35,7 @@ export function RichCodeBlock({ code, fallback, language, streaming }: RichCodeB
   return (
     <RichBoundary fallback={fallback} resetKey={code}>
       <Suspense fallback={fallback}>
-        <Renderer code={code} streaming={streaming} />
+        <Renderer code={code} source={fallback} streaming={streaming} />
       </Suspense>
     </RichBoundary>
   )
