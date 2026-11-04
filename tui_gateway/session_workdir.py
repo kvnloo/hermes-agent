@@ -449,10 +449,16 @@ def _ensure_session_db_row(session: dict, session_id: str | None = None, db=None
             # deliberately absent) — that keeps the pinned best-effort contract and stays True. See #98924.
             return _db_error is None
         row_model, model_config = _workdir_row_model_config(session)
+        parent_id = session.get("parent_session_id")
+        # Before turn-end re-anchoring, session_key is the compression parent of a new live id.
+        if session_id and (session_key := session.get("session_key")) and session_id != session_key:
+            # Only link a parent present in the SAME store; the agent DB may differ from the UI store.
+            if db.get_session(session_key) is not None:
+                parent_id = session_key
         try:
             db.create_session(
                 key, source=_session_source(session), model=row_model, model_config=model_config or None,
-                parent_session_id=session.get("parent_session_id") or None, cwd=_persisted_session_cwd(session),
+                parent_session_id=parent_id or None, cwd=_persisted_session_cwd(session),
                 # The login this session was opened under, in the same ``<provider>:<id>`` form the agent is
                 # built with — the row is the only place the identity reaches the store, and the upsert can't
                 # add it later (user_id is set at insert). None (no password provider, legacy token, stdio)

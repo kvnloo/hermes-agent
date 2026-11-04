@@ -138,3 +138,30 @@ def test_model_switch_marker_survives_a_closed_parent_session(tmp_path, monkeypa
             assert srv._is_model_switch_marker(session["history"][-1])
         finally:
             srv._sessions.pop(created["result"]["session_id"], None)
+
+
+def test_model_switch_marker_before_child_first_turn_keeps_compression_lineage(tmp_path, monkeypatch):
+    """The first switch marker in a rotated child must be discoverable when resuming its parent."""
+    with SessionDB(tmp_path / "state.db") as db:
+        sid, session = _new_session(tmp_path, monkeypatch, db)
+        try:
+            assert srv._ensure_session_db_row(session) is not False
+            parent = session["session_key"]
+            db.append_message(parent, "user", content="context before compression")
+            db.end_session(parent, "compression")
+            child = f"{parent}-new-continuation"
+            assert db.get_session(child) is None
+            session["agent"] = _RotatedAgent(db, child)
+
+            srv._append_model_switch_marker(session, model="qwen3", provider="local")
+
+            child_row = db.get_session(child)
+            assert child_row is not None
+            assert child_row["parent_session_id"] == parent
+            assert session["history"][-1].get("_row_id")
+            replay = db.get_messages_as_conversation(parent, include_ancestors=True)
+            assert any(m.get("content") == "context before compression" for m in replay)
+            assert any(str(m.get("content") or "").startswith(srv._MODEL_SWITCH_MARKER_PREFIX)
+                       for m in replay), "resume must find the first marker under the continuation"
+        finally:
+            srv._sessions.pop(sid, None)
