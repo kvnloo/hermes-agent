@@ -1,5 +1,6 @@
 import { createParser } from '@openuidev/lang-core'
 import { createLibrary, defineComponent, Renderer } from '@openuidev/react-lang'
+import { createContext, useContext, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { z } from 'zod/v4'
 import { appCardProblem, appCardSchemas, isAppCardType } from './openui-app-card-model'
 import { RideOptions, MailList, Route, PullRequest } from './openui-app-cards'
@@ -88,9 +89,11 @@ function Legend({ series }: { series: SeriesEntry[] }) {
   )
 }
 
+// The chart already shows these numbers; the table stays for screen readers
+// instead of repeating every value under every chart.
 function SeriesValues({ props }: { props: SeriesData }) {
   return (
-    <div className="overflow-x-auto" role="region" aria-label={`${props.title} values`} tabIndex={0}>
+    <div className="sr-only" role="region" aria-label={`${props.title} values`}>
       <table className="w-full border-collapse text-left text-xs tabular-nums">
         <thead>
           <tr>
@@ -124,7 +127,7 @@ const Stat = defineComponent({
   component: ({ props }) => (
     <section aria-label={props.title} className="space-y-2">
       <h4 className="text-sm font-semibold">{props.title}</h4>
-      <dl className="grid grid-cols-2 gap-x-5 gap-y-3 sm:grid-cols-3">
+      <dl className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-x-5 gap-y-3">
         {props.metrics.map((metric, i) => (
           <div className="min-w-0 border-t border-(--ui-stroke-tertiary) pt-2" key={i}>
             <dt className="text-xs text-muted-foreground">{metric.label}</dt>
@@ -199,6 +202,21 @@ const StackedBar = defineComponent({
   }
 })
 
+// Category labels under an edge-to-edge chart, with the value at each point when
+// there is a single series, since the full value table is screen-reader only.
+function CategoryAxis({ categories, values }: { categories: string[]; values?: number[] }) {
+  return (
+    <div aria-hidden="true" className="flex justify-between text-[0.6875rem] leading-tight tabular-nums text-muted-foreground">
+      {categories.map((category, i) => (
+        <span className={i === 0 ? 'text-left' : i === categories.length - 1 ? 'text-right' : 'text-center'} key={i}>
+          {values ? <span className="block font-medium text-foreground">{values[i]}</span> : null}
+          {category}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function stackedBands(series: SeriesEntry[], count: number) {
   const totals = Array.from({ length: count }, () => 0)
   const bands = series.map(entry => {
@@ -230,11 +248,12 @@ const StackedArea = defineComponent({
       <section aria-label={props.title} className="space-y-2">
         <h4 className="text-sm font-semibold">{props.title}</h4>
         <Legend series={props.series} />
-        <svg aria-label={`${props.title}, stacked values`} className="h-40 w-full" preserveAspectRatio="none" role="img" viewBox="0 0 560 180">
+        <svg aria-label={`${props.title}, stacked values`} className="h-28 w-full" preserveAspectRatio="none" role="img" viewBox="0 0 560 180">
           {stack.bands.map((band, i) => (
             <polygon className={SERIES_TONE[i]} fill="currentColor" key={i} points={polygonPoints(band.lower, band.upper, stack.max)} />
           ))}
         </svg>
+        <CategoryAxis categories={props.categories} />
         <SeriesValues props={props} />
       </section>
     )
@@ -251,7 +270,7 @@ const LineChart = defineComponent({
       <section aria-label={props.title} className="space-y-2">
         <h4 className="text-sm font-semibold">{props.title}</h4>
         <Legend series={props.series} />
-        <svg aria-label={`${props.title}, line chart`} className="h-40 w-full" preserveAspectRatio="none" role="img" viewBox="0 0 560 180">
+        <svg aria-label={`${props.title}, line chart`} className="h-28 w-full" preserveAspectRatio="none" role="img" viewBox="0 0 560 180">
           {props.series.map((entry, i) => (
             <polyline
               className={SERIES_TONE[i]}
@@ -264,6 +283,7 @@ const LineChart = defineComponent({
             />
           ))}
         </svg>
+        <CategoryAxis categories={props.categories} values={props.series.length === 1 ? props.series[0]?.values : undefined} />
         <SeriesValues props={props} />
       </section>
     )
@@ -301,6 +321,82 @@ const Table = defineComponent({
   )
 })
 
+// Panels that need a full row (a Stat strip) or two columns (charts) on a
+// wide board; app cards take one column so four of them sit side by side.
+const FULL_ROW = new Set(['Stat'])
+const APP_CARD = new Set(['RideOptions', 'MailList', 'Route', 'PullRequest'])
+const panelSpan = (typeName: string) =>
+  FULL_ROW.has(typeName) ? 'col-span-full' : APP_CARD.has(typeName) ? '' : '@6xl:col-span-2'
+
+// Streamed boards render each statement as it completes; the embed passes how
+// many panels are still on their way so the grid keeps their place.
+const PendingPanels = createContext({ pending: 0, animate: false })
+
+const reducedMotion = () =>
+  typeof window !== 'undefined' && (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
+
+// Fades a panel in once, when it first mounts; later re-renders while the
+// rest of the board streams leave it alone.
+function Reveal({ index, className, children }: { index: number; className: string; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  // Only panels that arrive while the reply streams animate; a finished board
+  // (history, or the remount when the message settles) appears as is.
+  const { animate } = useContext(PendingPanels)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!animate || !el || reducedMotion() || typeof el.animate !== 'function') return
+    el.animate(
+      [{ opacity: 0, transform: 'translateY(10px) scale(0.985)' }, { opacity: 1, transform: 'none' }],
+      { duration: 420, delay: Math.min(index, 3) * 70, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'both' }
+    )
+  }, [])
+  return <div className={'min-w-0 ' + className} data-openui-panel="" ref={ref}>{children}</div>
+}
+
+function PanelSkeleton() {
+  return (
+    <div aria-hidden="true" className="min-w-0 overflow-hidden rounded-lg border border-(--ui-stroke-tertiary) bg-muted/20 p-3" data-openui-pending="">
+      <div className="flex items-center gap-2">
+        <span className="size-7 shrink-0 animate-pulse rounded-md bg-muted motion-reduce:animate-none" />
+        <span className="h-3 w-2/5 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+      </div>
+      <div className="mt-3 space-y-2">
+        <span className="block h-2.5 w-full animate-pulse rounded bg-muted/70 motion-reduce:animate-none" />
+        <span className="block h-2.5 w-4/5 animate-pulse rounded bg-muted/70 motion-reduce:animate-none" />
+        <span className="block h-2.5 w-3/5 animate-pulse rounded bg-muted/70 motion-reduce:animate-none" />
+      </div>
+    </div>
+  )
+}
+
+function BoardView({ title, summary, panels, renderNode }: {
+  title: string
+  summary: string
+  panels: unknown[]
+  renderNode: (node: unknown) => ReactNode
+}) {
+  const { pending } = useContext(PendingPanels)
+  return (
+    <section aria-label={title} className="not-prose @container min-w-0 space-y-3 p-3 text-foreground">
+      <header className="space-y-0.5">
+        <h3 className="text-base font-semibold">{title}</h3>
+        {summary && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{summary}</p>}
+      </header>
+      <div className="grid grid-cols-1 items-start gap-3 @2xl:grid-cols-2 @6xl:grid-cols-4">
+        {panels.map((panel, i) => {
+          const typeName = isRecord(panel) && typeof panel.typeName === 'string' ? panel.typeName : ''
+          return (
+            <Reveal className={panelSpan(typeName)} index={i} key={i}>
+              {renderNode(panel)}
+            </Reveal>
+          )
+        })}
+        {Array.from({ length: pending }, (_, i) => <PanelSkeleton key={'pending-' + i} />)}
+      </div>
+    </section>
+  )
+}
+
 const Board = defineComponent({
   name: 'Board',
   description: 'Read-only chart board with a title, a summary and up to eight panels.',
@@ -311,13 +407,8 @@ const Board = defineComponent({
       .min(1).max(LIMITS.panels)
   }),
   component: ({ props, renderNode }) => (
-    <section aria-label={props.title} className="not-prose min-w-0 space-y-5 p-3 text-foreground">
-      <header className="space-y-1">
-        <h3 className="text-base font-semibold">{props.title}</h3>
-        {props.summary && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{props.summary}</p>}
-      </header>
-      {renderNode(props.panels)}
-    </section>
+    <BoardView panels={props.panels as unknown[]} renderNode={renderNode as (node: unknown) => ReactNode}
+      summary={props.summary} title={props.title} />
   )
 })
 
@@ -403,6 +494,50 @@ export function inspectOpenUiBoard(code: string): OpenUiStatus {
   }
 }
 
-export function OpenUiBoard({ code, streaming }: { code: string; streaming?: boolean }) {
-  return <Renderer isStreaming={Boolean(streaming)} library={library} response={code} />
+export function OpenUiBoard({ code, streaming, pending = 0 }: { code: string; streaming?: boolean; pending?: number }) {
+  return (
+    <PendingPanels.Provider value={{ pending, animate: Boolean(streaming) }}>
+      <Renderer isStreaming={Boolean(streaming)} library={library} response={code} />
+    </PendingPanels.Provider>
+  )
+}
+
+export type OpenUiPreview = { kind: 'none' } | { kind: 'board'; code: string; pending: number }
+
+// While a fence streams, show the statements that are already complete (one
+// statement per line) instead of the raw source: the board header first, then
+// each panel as its line lands. A half-written line is never rendered, so a
+// card never shows a partial list. Panels named by the root but not yet
+// defined become placeholders.
+export function previewStreamingBoard(code: string): OpenUiPreview {
+  // A streamed fence can arrive with a trailing newline that the Markdown
+  // repair adds when it closes the open fence, so a newline does not prove
+  // the line before it is finished. Keep the last line only when it parses as
+  // complete on its own; otherwise drop it until more arrives.
+  const body = code.trimEnd()
+  const cut = body.lastIndexOf('\n')
+  let complete = body
+  try {
+    if (parser.parse(body).meta.incomplete) complete = cut > 0 ? body.slice(0, cut) : ''
+  } catch {
+    complete = cut > 0 ? body.slice(0, cut) : ''
+  }
+  if (!complete) return { kind: 'none' }
+  if (new TextEncoder().encode(complete).byteLength > LIMITS.bytes) return { kind: 'none' }
+  try {
+    const parsed = parser.parse(complete)
+    if (parsed.queryStatements.length || parsed.mutationStatements.length || Object.keys(parsed.stateDeclarations).length) {
+      return { kind: 'none' }
+    }
+    const root = parsed.root
+    if (!root || root.typeName !== 'Board' || !isRecord(root.props) || typeof root.props.title !== 'string') {
+      return { kind: 'none' }
+    }
+    const panels = Array.isArray(root.props.panels) ? root.props.panels : []
+    const named = complete.split('\n')[0]?.match(/\[([^\]]*)\]\s*\)\s*$/)?.[1]
+    const total = named ? named.split(',').filter(name => name.trim()).length : panels.length
+    return { kind: 'board', code: complete, pending: Math.max(0, Math.min(LIMITS.panels, total) - panels.length) }
+  } catch {
+    return { kind: 'none' }
+  }
 }
