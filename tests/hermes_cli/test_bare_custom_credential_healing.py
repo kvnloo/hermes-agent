@@ -11,7 +11,7 @@ route-key and runtime-metadata seams already heal it.
 import pytest
 
 from hermes_cli.auth_constants import AuthError
-from hermes_cli.runtime_provider import resolve_runtime_provider
+from hermes_cli.runtime_provider import frozen_runtime_config, resolve_runtime_provider
 
 
 PROVIDER_CONFIG = {
@@ -101,3 +101,29 @@ def test_bare_custom_prefers_the_serving_entry_on_the_configured_endpoint(monkey
 
     assert runtime.get("base_url") == "http://other.test/v1"
     assert runtime.get("api_key") == "other-key-123"
+
+def test_frozen_custom_pick_resolves_mapped_model_not_default(monkeypatch):
+    """A frozen bare-custom pick must use its target model's owner, not the profile default."""
+    frozen = {
+        "model": {"default": "profile-model", "provider": "profile-route"},
+        "providers": {
+            "profile-route": {
+                "base_url": "https://profile.example.test/v1",
+                "models": {"profile-model": {}},
+                "key_env": "HERMES_TEST_PROFILE_KEY",
+            },
+            "picked-route": {
+                "base_url": "https://picked.example.test/v1",
+                "models": {"picked-model": {}},
+                "key_env": "HERMES_TEST_PICKED_KEY",
+            },
+        },
+    }
+    monkeypatch.setenv("HERMES_TEST_PROFILE_KEY", "profile-key")
+    monkeypatch.setenv("HERMES_TEST_PICKED_KEY", "picked-key")
+
+    with frozen_runtime_config(frozen):
+        runtime = resolve_runtime_provider(requested="custom", target_model="picked-model")
+
+    assert runtime["base_url"] == "https://picked.example.test/v1"
+    assert runtime["api_key"] == "picked-key"
