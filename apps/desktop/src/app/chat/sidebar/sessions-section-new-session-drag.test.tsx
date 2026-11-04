@@ -337,6 +337,108 @@ describe('entered project live ownership (#134012)', () => {
   })
 })
 
+describe('shared Git root with incomplete project owners (#148928)', () => {
+  it.each([
+    { branch: 'main', withOwnedRow: false },
+    { branch: 'main', withOwnedRow: true },
+    { branch: 'feature/test', withOwnedRow: true }
+  ])('never places a foreign $branch row when owned row is $withOwnedRow', ({ branch, withOwnedRow }) => {
+    workspaceOpen.value = true
+    const own = makeCwdSession('/work/shared/alpha', {
+      git_branch: 'main',
+      git_repo_root: '/work/shared',
+      id: 'alpha-session'
+    })
+    const foreign = makeCwdSession('/work/shared/beta', {
+      git_branch: branch,
+      git_repo_root: '/work/shared',
+      id: 'beta-session'
+    })
+    const alpha = project({
+      id: 'p_alpha',
+      path: '/work/shared/alpha',
+      sessionCount: withOwnedRow ? 1 : 0,
+      sessionIds: withOwnedRow ? [own.id] : [],
+      repos: [
+        {
+          id: '/work/shared',
+          label: 'shared',
+          path: '/work/shared',
+          sessionCount: withOwnedRow ? 1 : 0,
+          groups: withOwnedRow
+            ? [group({ id: '/work/shared::branch::main', isMain: true, label: 'main', path: '/work/shared', sessions: [own] })]
+            : []
+        }
+      ]
+    })
+    // Both projects are registered; the overview hasn't hydrated beta's sessionIds.
+    const beta = project({ id: 'p_beta', path: '/work/shared/beta', sessionIds: [] })
+    $projectTree.set([alpha, beta])
+    const live = withOwnedRow ? [own, foreign] : [foreign]
+
+    render(
+      <EnteredProjectContent
+        liveSessions={live}
+        project={alpha}
+        renderRows={rows => (
+          <>
+            {rows.map(row => (
+              <div key={row.id}>{row.id}</div>
+            ))}
+          </>
+        )}
+      />
+    )
+
+    if (withOwnedRow) {
+      expect(screen.getByText(own.id)).toBeTruthy()
+    }
+    expect(screen.queryByText(foreign.id)).toBeNull()
+
+    // The first overlay must enforce the same boundary as the leaf overlay.
+    const outer = overlayLiveLanes(alpha, live, new Set(), projectOwnerBySessionId([alpha, beta]))
+    expect(outer.repos.flatMap(repo => repo.groups.flatMap(lane => lane.sessions.map(row => row.id)))).not.toContain(foreign.id)
+  })
+
+  it('retains an unclaimed session in a known out-of-tree worktree lane', () => {
+    workspaceOpen.value = true
+    const worktree = makeCwdSession('/work/alpha-wt', {
+      git_branch: 'feature/test',
+      git_repo_root: '/work/shared',
+      id: 'alpha-worktree'
+    })
+    const alpha = project({
+      id: 'p_alpha',
+      path: '/work/shared/alpha',
+      repos: [
+        {
+          id: '/work/shared',
+          label: 'shared',
+          path: '/work/shared',
+          sessionCount: 0,
+          groups: [group({ id: '/work/alpha-wt', label: 'feature/test', path: '/work/alpha-wt' })]
+        }
+      ]
+    })
+    $projectTree.set([alpha])
+
+    render(
+      <EnteredProjectContent
+        liveSessions={[worktree]}
+        project={alpha}
+        renderRows={rows => (
+          <>
+            {rows.map(row => (
+              <div key={row.id}>{row.id}</div>
+            ))}
+          </>
+        )}
+      />
+    )
+    expect(screen.getByText(worktree.id)).toBeTruthy()
+  })
+})
+
 describe('Show all sessions', () => {
   const sessions = Array.from({ length: 6 }, (_, index) => ({ id: `session-${index + 1}` }) as SessionInfo)
 

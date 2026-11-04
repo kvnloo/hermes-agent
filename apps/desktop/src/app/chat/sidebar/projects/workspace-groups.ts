@@ -896,17 +896,41 @@ export function excludeProjectSessions(
   }
 }
 
-/** Preserve backend ownership at every overlay boundary, including the leaf render overlay.
- * Unclaimed rows keep the existing optimistic path-placement behavior. */
+/**
+ * Preserve backend ownership at both overlay boundaries. A shared Git repo
+ * root is not project membership: an ownerless row must match this project's
+ * folder or one of its own distinct (possibly out-of-tree) worktree lanes.
+ */
 export function liveSessionsForProject(
-  project: Pick<SidebarProjectTree, 'id'>,
+  project: Pick<SidebarProjectTree, 'id' | 'path' | 'repos'>,
   live: SessionInfo[],
   authoritativeOwners: ReadonlyMap<string, string> = NO_OWNERS
 ): SessionInfo[] {
+  const projectPath = (project.path || '').trim()
+
   return live.filter(session => {
     const owner = ownerOf(authoritativeOwners, session)
 
-    return !owner || owner === project.id
+    if (owner) {
+      return owner === project.id
+    }
+
+    if (!projectPath) {
+      return true
+    }
+
+    const path = (session.cwd || session.git_repo_root || '').trim()
+
+    return (
+      isPathUnder(projectPath, path) ||
+      project.repos.some(repo =>
+        repo.groups.some(lane => {
+          const lanePath = (lane.path || '').trim()
+
+          return lanePath !== '' && !isPathUnder(lanePath, projectPath) && isPathUnder(lanePath, path)
+        })
+      )
+    )
   })
 }
 
