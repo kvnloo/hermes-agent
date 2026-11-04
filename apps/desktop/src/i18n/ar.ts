@@ -13,6 +13,19 @@ import { arSettings } from './ar_settings'
 import { defineLocale, type TranslationOverrides } from './define-locale'
 
 export const arOverrides = {
+  openui: {
+    label: "لوحة OpenUI",
+    readOnly: "للقراءة فقط",
+    receiving: "جارٍ الاستلام",
+    showSource: "عرض المصدر",
+    showBoard: "عرض اللوحة",
+    incomplete: "اللوحة غير مكتملة. يُعرض المصدر الأصلي.",
+    invalid: "اللوحة غير صالحة أو تحتوي على مكوّن غير مدعوم. يُعرض المصدر الأصلي.",
+    oversized: "تتجاوز اللوحة 64 كيلوبايت. يُعرض المصدر الأصلي.",
+    readOnlyError: "الأدوات والتعديلات والحالة المُنشأة غير مسموحة. يُعرض المصدر الأصلي.",
+    rows: "يجب أن يتطابق عدد الخلايا مع عدد الأعمدة. يُعرض المصدر الأصلي.",
+    series: "تحتاج كل سلسلة إلى قيمة لكل فئة. يُعرض المصدر الأصلي."
+  },
 
   catalog: {
     add: 'إضافة',
