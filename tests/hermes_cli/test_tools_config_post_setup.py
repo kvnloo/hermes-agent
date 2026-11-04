@@ -139,3 +139,37 @@ def test_post_setup_still_reports_ready_when_libraries_resolve(tmp_path, capsys)
 
     output = capsys.readouterr().out
     assert "Chromium ready" in output and str(binary) in output
+
+@pytest.mark.platforms("linux")
+@pytest.mark.parametrize("missing,expected_exit", [(["libnspr4.so"], 1), ([], 0)])
+def test_chromium_post_setup_command_does_not_succeed_when_libraries_are_missing(
+    tmp_path, capsys, missing, expected_exit,
+):
+    """The UI-facing command must not declare success after reporting unusable Chromium."""
+    from types import SimpleNamespace
+
+    from hermes_cli import browser_runtime
+    from hermes_cli.tools_config_post_setup import run_post_setup_command
+
+    binary = tmp_path / "chrome"
+    binary.write_bytes(b"")
+    with (
+        patch("hermes_cli.tools_config_post_setup.valid_post_setup_keys", return_value={"chromium"}),
+        patch("tools.browser_use_cli._find_cli", return_value=["harness"]),
+        patch("hermes_cli.browser_runtime.chromium_executable", return_value=str(binary)),
+        patch.object(browser_runtime, "missing_shared_libraries", return_value=missing),
+        patch.object(browser_runtime, "install_dependency_lines",
+                     return_value=["Install missing system libraries with: apt-get install libnspr4"]),
+        patch("hermes_constants.is_termux", return_value=False),
+        patch("hermes_platform.host.runtime.is_termux", return_value=False),
+    ):
+        result = run_post_setup_command(SimpleNamespace(post_setup_key="chromium"))
+
+    output = capsys.readouterr().out
+    assert result == expected_exit
+    if missing:
+        assert "Chromium cannot start: missing system libraries (libnspr4.so)" in output
+        assert "Post-setup 'chromium' complete" not in output
+    else:
+        assert "Chromium ready" in output
+        assert "Post-setup 'chromium' complete" in output

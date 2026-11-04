@@ -51,7 +51,7 @@ def _post_setup_lightpanda() -> None:
             _print_info("    Lightpanda has no native Windows build; run Hermes under WSL2.")
 
 
-def _post_setup_chromium() -> None:
+def _post_setup_chromium() -> bool:
     """Local Browser row: browser_exec launches pm's Chromium. Termux (system Chromium) and the Hermes
     Docker image (its baked build) own their payloads, so a miss there is a hint, never a download."""
     import pm
@@ -67,18 +67,18 @@ def _post_setup_chromium() -> None:
         except (RuntimeError, OSError) as exc:  # pm.InstallError, a download or worker failure
             _print_warning(f"    Chromium install failed: {exc}")
             _info_lines("Retry with: hermes tools post-setup chromium")
-            return
+            return False
     found = chromium_executable()
     if found is None:
         _print_warning(f"    {chromium_missing_hint()}")
-        return
+        return False
     # An installed binary is not a usable one: a standalone Chrome download carries none of the
     # host-owned libraries, so "ready" for a binary the loader cannot start is the reported bug (#148660).
     missing = [] if is_termux() else missing_shared_libraries(found)
     if missing:
         _print_warning(f"    Chromium cannot start: missing system libraries ({', '.join(missing)})")
         _info_lines(*install_dependency_lines())
-        return
+        return False
     _print_success(f"    Chromium ready: {found}")
 
     # OS libraries are host-owned. Never download another package manager to install them.
@@ -86,6 +86,7 @@ def _post_setup_chromium() -> None:
         _info_lines("Chromium also needs system libraries supplied by your distribution.")
         _info_lines(*install_dependency_lines())
 
+    return True
 
 # The hook key is the UI provider identifier; extra names belong to pyproject.toml.
 def _python_hook(module, extra, label, installing, on_install=(), always=()) -> dict:
@@ -253,7 +254,7 @@ _POST_SETUP_HOOKS: dict = {
 
 def _run_post_setup(post_setup_key: str):
     """Run post-setup hooks for tools that need extra installation steps."""
-    _POST_SETUP_HOOKS.get(post_setup_key, lambda: None)()
+    return _POST_SETUP_HOOKS.get(post_setup_key, lambda: None)()
 
 
 def valid_post_setup_keys() -> set[str]:
@@ -289,9 +290,12 @@ def run_post_setup_command(args) -> int:
         return 2
     _print_info(f"Running post-setup hook: {key}")
     try:
-        _run_post_setup(key)
+        status = _run_post_setup(key)
     except Exception as exc:  # pragma: no cover — defensive
         _print_error(f"Post-setup failed: {exc}")
+        return 1
+    if status is False:
+        _print_warning(f"Post-setup '{key}' incomplete")
         return 1
     _print_success(f"Post-setup '{key}' complete")
     return 0
