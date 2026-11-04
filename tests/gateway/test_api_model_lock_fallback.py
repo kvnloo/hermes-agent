@@ -84,3 +84,56 @@ def test_locked_turn_served_by_another_runtime_settles_failed(api):
         api_execution.reset(token)
     assert result['failed'] is True and result['completed'] is False and result['final_response'] == ''
     assert 'confirmed model lock runtime mismatch' in result['error']
+
+
+@pytest.mark.platforms("linux")
+def test_named_custom_provider_session_stream_confirmed_lock(tmp_path):
+    """Regression for #148601: a named provider resolves to the 'custom' runtime class."""
+    root = Path(__file__).resolve().parents[2]
+    home, user = tmp_path / 'state', tmp_path / 'user'
+    home.mkdir(mode=0o700)
+    user.mkdir()
+    primary = _serve(Primary)
+    purl = f'http://127.0.0.1:{primary.server_port}/v1'
+    with socket.socket() as sock:
+        sock.bind(('127.0.0.1', 0))
+        api_port = sock.getsockname()[1]
+    config = {
+        'model': {'provider': 'my-gateway', 'default': 'model-a'},
+        'providers': {'my-gateway': {'base_url': purl, 'key_env': 'MY_GATEWAY_KEY'}},
+        'gateway': {'multiplex_profiles': False, 'platforms': {
+            'api_server': {'enabled': True, 'port': api_port, 'host': '127.0.0.1'}}},
+        'auxiliary': {'title_generation': {'enabled': False}},
+        'terminal': {'cwd': str(home)},
+        'platform_toolsets': {'api_server': []},
+    }
+    (home / 'config.yaml').write_text(json.dumps(config))
+    (home / '.env').write_text('MY_GATEWAY_KEY=loopback-only\n')
+    env = {**child_env(), **{k: os.environ[k] for k in ('TIRITH_ENABLED',) if k in os.environ}}
+    env.update(HOME=str(user), USERPROFILE=str(user), HERMES_HOME=str(home), PYTHONPATH=str(root),
+               MY_GATEWAY_KEY='loopback-only', API_SERVER_KEY='lock-owned-secret',
+               API_SERVER_ENABLED='true', API_SERVER_PORT=str(api_port), PYTHONUNBUFFERED='1')
+
+    async def exercise():
+        headers = {'Authorization': 'Bearer lock-owned-secret'}
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=90)) as client:
+            base = f'http://127.0.0.1:{api_port}/api/sessions'
+            async with client.post(base, json={'id': 'locked', 'title': 'Locked'}, headers=headers) as response:
+                assert response.status in (200, 201), await response.text()
+            async with client.post(f'{base}/locked/chat/stream', headers=headers, json={
+                    'message': 'hi', 'provider': 'my-gateway', 'model': 'model-b',
+                    'require_model_lock': True}) as response:
+                assert response.status == 200, await response.text()
+                return await response.text()
+
+    try:
+        with daemon(root, home, env, barrier=False):
+            body = asyncio.run(exercise())
+    finally:
+        primary.shutdown()
+        primary.server_close()
+
+    assert any(request.get('model') == 'model-b' for request in primary.requests), body
+    assert 'PRIMARY_OK' in body, body
+    assert 'event: run.completed' in body, body
+    assert 'event: run.failed' not in body, body
