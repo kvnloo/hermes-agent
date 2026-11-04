@@ -129,6 +129,26 @@ class TestStemming:
             _stem.cache_clear()
 
 
+    def test_catalog_import_survives_missing_snowballstemmer(self, monkeypatch):
+        """Regression for #147946: catalog import must work without the dependency."""
+        import importlib.util
+        import sys
+
+        from tools import tool_search_catalog
+
+        spec = importlib.util.spec_from_file_location(
+            "_tool_search_catalog_missing_snowball", tool_search_catalog.__file__
+        )
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        with monkeypatch.context() as patch:
+            patch.setitem(sys.modules, spec.name, module)
+            patch.setitem(sys.modules, "snowballstemmer", None)
+            spec.loader.exec_module(module)
+            assert module._HAS_SNOWBALL is False
+            assert module._tokenize("running") == ["running"]
+
+
     def test_parallel_tokenize_search_and_dispatch_are_deterministic(self, issue_defs):
         from tools.tool_search import (
             ToolSearchConfig,
