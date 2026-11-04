@@ -38,6 +38,22 @@ describe('Desktop opened while an update runs', () => {
     expect(isTimeoutError(await parkEndsWithoutBackend.catch(err => err))).toBe(true)
   })
 
+  it('keeps the boot alive while main waits for a first-run setup choice', async () => {
+    const backend = new Promise<string>(resolve => {
+      setTimeout(() => resolve('connected'), 40)
+    })
+
+    await expect(
+      awaitBackendPastUpdateWait({
+        isCancelled: () => false,
+        isParkedForUpdate: () => isUpdateParkBootPhase('bootstrap.choice'),
+        message: 'Timed out connecting to Hermes backend',
+        pending: backend,
+        timeoutMs: 5
+      })
+    ).resolves.toBe('connected')
+  })
+
   it('stops extending once the park outlasts a caller-set cap', async () => {
     const wedged = awaitBackendPastUpdateWait({
       isCancelled: () => false,

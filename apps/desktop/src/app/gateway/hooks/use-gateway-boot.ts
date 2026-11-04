@@ -265,10 +265,16 @@ export async function connectInitialGateway({
  * Boot phases main publishes while it parks a launch behind an update
  * (waitForUpdateToFinish in electron/main.ts): the live-update wait, and the
  * blocked screen of a hold (R8 D3, electron/update-hold-wiring.ts).
+ * The first-run setup gate also parks the backend at `bootstrap.choice` until
+ * the user chooses local installation or a remote connection.
  */
-const UPDATE_PARK_BOOT_PHASES: ReadonlySet<string> = new Set(['backend.update-wait', 'backend.update-held'])
+const UPDATE_PARK_BOOT_PHASES: ReadonlySet<string> = new Set([
+  'backend.update-wait',
+  'backend.update-held',
+  'bootstrap.choice'
+])
 
-/** Main is holding the backend start behind an update. Exported for tests. */
+/** Main is waiting for an update or first-run choice. Exported for tests. */
 export function isUpdateParkBootPhase(phase: string | null | undefined): boolean {
   return typeof phase === 'string' && UPDATE_PARK_BOOT_PHASES.has(phase)
 }
