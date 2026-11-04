@@ -1049,7 +1049,8 @@ def _install_one(home: Path, feature: LeftCoreFeature, *, install: Callable[[str
             unfinished = _unfinished_catalog_install(home, feature)
             if not unfinished and (plugin_present(feature.plugin, home) or
                                    _marked(_read_config(home), _INSTALLED_KEY, feature)):
-                return False
+                # Another process completed it; update's grouped loop must advance to the next home.
+                return plugin_present(feature.plugin, home)
             result = install(feature.plugin)
             if result.get("ok"):
                 from providers import refresh_bound_home

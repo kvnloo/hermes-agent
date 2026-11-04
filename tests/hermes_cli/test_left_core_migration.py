@@ -536,7 +536,7 @@ def test_left_core_cross_process_install_rechecks_after_lock(tmp_path):
     outcomes = {role: (installed, notices) for role, installed, notices in
                 (results.get(timeout=5), results.get(timeout=5))}
     assert outcomes["first"][0] == ["homeassistant"]
-    assert outcomes["second"] == ([], [])
+    assert outcomes["second"] == (["homeassistant"], [])
 
 
 @pytest.mark.parametrize("marked", [False, True])
