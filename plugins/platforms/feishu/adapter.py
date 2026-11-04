@@ -235,7 +235,7 @@ _DEFAULT_WEBHOOK_PATH = "/feishu/webhook"
 # TTL, rate-limit and webhook security constants
 # ---------------------------------------------------------------------------
 
-_FEISHU_DEDUP_TTL_SECONDS = 24 * 60 * 60          # 24 hours — matches openclaw
+_FEISHU_DEDUP_TTL_SECONDS = 0  # No age expiry: Feishu can redeliver days later; cache remains size-bounded.
 _FEISHU_SENDER_NAME_TTL_SECONDS = 10 * 60          # 10 minutes sender-name cache
 _FEISHU_WEBHOOK_MAX_BODY_BYTES = 1 * 1024 * 1024   # 1 MB body limit
 _FEISHU_WEBHOOK_RATE_WINDOW_SECONDS = 60            # sliding window for rate limiter
@@ -4624,8 +4624,8 @@ class FeishuAdapter(BasePlatformAdapter):
                     continue
         else:
             return
-        # Filter out TTL-expired entries (entries saved with ts=0.0 are treated as immortal
-        # for one migration cycle to avoid nuking old data on first upgrade).
+        # Keep delivered IDs until bounded-size eviction. A nonzero TTL is still supported
+        # for compatibility; legacy entries with ts=0.0 remain valid.
         valid: Dict[str, float] = {
             msg_id: ts for msg_id, ts in entries.items()
             if ts == 0.0 or ttl <= 0 or now - ts < ttl
@@ -4639,7 +4639,7 @@ class FeishuAdapter(BasePlatformAdapter):
         try:
             self._dedup_state_path.parent.mkdir(parents=True, exist_ok=True)
             recent = self._seen_message_order[-self._dedup_cache_size:]
-            # Save as {msg_id: timestamp} so TTL filtering works across restarts.
+            # Preserve timestamps to keep the newest IDs when loading the bounded cache.
             payload = {"message_ids": {k: self._seen_message_ids[k] for k in recent if k in self._seen_message_ids}}
             atomic_json_write(self._dedup_state_path, payload, indent=None)
         except OSError:
@@ -4652,7 +4652,7 @@ class FeishuAdapter(BasePlatformAdapter):
             seen_at = self._seen_message_ids.get(message_id)
             if seen_at is not None and (ttl <= 0 or now - seen_at < ttl):
                 return True
-            # Record with current wall-clock timestamp so TTL works across restarts.
+            # Wall-clock timestamps preserve recency order across restarts.
             self._seen_message_ids[message_id] = now
             self._seen_message_order.append(message_id)
             while len(self._seen_message_order) > self._dedup_cache_size:

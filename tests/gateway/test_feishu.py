@@ -1626,6 +1626,42 @@ class TestDedupTTL(unittest.TestCase):
 
 
     @patch.dict(os.environ, {}, clear=True)
+    def test_redelivery_after_34_hours_without_create_time_is_not_dispatched(self):
+        """#148698: an aged retry must not interrupt a new message's turn."""
+        from gateway.config import PlatformConfig
+        from plugins.platforms.feishu.adapter import FeishuAdapter
+
+        with tempfile.TemporaryDirectory() as temp_home:
+            with patch.dict(os.environ, {"HERMES_HOME": temp_home}, clear=True):
+                # Simulate an accepted message persisted before a long outage.
+                (Path(temp_home) / "feishu_seen_message_ids.json").write_text(
+                    json.dumps({"message_ids": {"om_delayed_retry": time.time() - 34 * 3600}}),
+                    encoding="utf-8",
+                )
+                adapter = FeishuAdapter(PlatformConfig())
+                adapter._admit = Mock(return_value=None)
+                adapter._process_inbound_message = AsyncMock()
+                sender = SimpleNamespace(sender_id=SimpleNamespace(open_id="ou_user"))
+                retry = SimpleNamespace(event=SimpleNamespace(
+                    message=SimpleNamespace(message_id="om_delayed_retry", create_time=None),
+                    sender=sender,
+                ))
+                fresh = SimpleNamespace(event=SimpleNamespace(
+                    message=SimpleNamespace(message_id="om_new", create_time=None),
+                    sender=sender,
+                ))
+
+                with patch.object(adapter, "_persist_seen_message_ids"):
+                    asyncio.run(adapter._handle_message_event_data(retry))
+                    asyncio.run(adapter._handle_message_event_data(fresh))
+
+                adapter._process_inbound_message.assert_awaited_once()
+                self.assertEqual(
+                    adapter._process_inbound_message.await_args.kwargs["message_id"],
+                    "om_new",
+                )
+
+    @patch.dict(os.environ, {}, clear=True)
     def test_load_tolerates_malformed_timestamp_values(self):
         """Regression #13632 — a non-numeric timestamp in the persisted
         dedup state must not crash adapter startup.  The bad key is
