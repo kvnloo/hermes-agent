@@ -114,3 +114,34 @@ def test_guest_barriers_cache_config_per_home_and_file_revision(monkeypatch, tmp
         assert worker.submit(open_guest).result() == 3
         assert loads == [config_a, config_a, config_b]
 
+def test_guest_barriers_cache_unset_synchronous_and_detect_new_config(monkeypatch, tmp_path):
+    import hermes_cli.config as config_mod
+
+    config_path = tmp_path / "new-profile" / "config.yaml"
+    loads = []
+
+    def load_config():
+        loads.append(config_path)
+        return {"database": {"synchronous": "EXTRA"}} if config_path.exists() else {"database": {}}
+
+    monkeypatch.setattr(config_mod, "get_config_path", lambda: config_path)
+    monkeypatch.setattr(config_mod, "load_config_readonly", load_config)
+
+    for _ in range(20):
+        conn = sqlite3.connect(tmp_path / "state.db")
+        try:
+            apply_durability_barriers(conn)
+        finally:
+            conn.close()
+    assert loads == [config_path]  # No config file or database key: still one load.
+
+    config_path.parent.mkdir()
+    config_path.write_text("database:\n  synchronous: EXTRA\n")
+    conn = sqlite3.connect(tmp_path / "state.db")
+    try:
+        apply_durability_barriers(conn)
+        assert conn.execute("PRAGMA synchronous").fetchone()[0] == 3
+    finally:
+        conn.close()
+    assert loads == [config_path, config_path]
+
