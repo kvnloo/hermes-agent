@@ -28,6 +28,31 @@ import { defineLocale, type TranslationOverrides } from './define-locale'
 import { introDe } from './intro-de'
 
 export const deOverrides = {
+  openui: {
+    openApp: "In {app} öffnen",
+    bestPrice: "Günstigster Preis",
+    noMessages: "Keine passenden Nachrichten.",
+    previousStep: "Vorheriger Schritt",
+    nextStep: "Nächster Schritt",
+    checksPassed: "Alle Prüfungen bestanden",
+    conflictCount: "{count} Konflikte",
+    seats: "Plätze",
+    drive: "Auto",
+    walk: "Zu Fuß",
+    transit: "ÖPNV",
+    bike: "Fahrrad",
+    label: "OpenUI-Diagrammtafel",
+    readOnly: "Nur lesen",
+    receiving: "Wird empfangen",
+    showSource: "Quelltext zeigen",
+    showBoard: "Tafel zeigen",
+    incomplete: "Die Tafel ist unvollständig. Quelltext wird angezeigt.",
+    invalid: "Tafel ungültig oder Panel nicht unterstützt. Quelltext wird angezeigt.",
+    oversized: "Tafel überschreitet 64 KiB. Quelltext wird angezeigt.",
+    readOnlyError: "Werkzeuge, Änderungen und Zustand sind nicht zulässig. Quelltext wird angezeigt.",
+    rows: "Tabellenzeilen müssen zur Spaltenzahl passen. Quelltext wird angezeigt.",
+    series: "Jede Reihe braucht einen Wert pro Kategorie. Quelltext wird angezeigt."
+  },
   sharedMetrics: deSharedMetrics,
   firstRun: deFirstRun,
   intro: introDe,

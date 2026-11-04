@@ -28,6 +28,31 @@ import { frUpdateChannel } from './fr_update_channel'
 import { introFr } from './intro-fr'
 
 export const frOverrides = {
+  openui: {
+    openApp: "Ouvrir dans {app}",
+    bestPrice: "Le moins cher",
+    noMessages: "Aucun message correspondant.",
+    previousStep: "Étape précédente",
+    nextStep: "Étape suivante",
+    checksPassed: "Toutes les vérifications ont réussi",
+    conflictCount: "{count} conflits",
+    seats: "places",
+    drive: "Voiture",
+    walk: "À pied",
+    transit: "Transports",
+    bike: "Vélo",
+    label: "Tableau OpenUI",
+    readOnly: "Lecture seule",
+    receiving: "Réception",
+    showSource: "Afficher la source",
+    showBoard: "Afficher le tableau",
+    incomplete: "Tableau incomplet. Source originale affichée.",
+    invalid: "Tableau invalide ou panneau non pris en charge. Source originale affichée.",
+    oversized: "Le tableau dépasse 64 Kio. Source originale affichée.",
+    readOnlyError: "Outils, mutations et état généré interdits. Source originale affichée.",
+    rows: "Chaque ligne doit correspondre au nombre de colonnes. Source originale affichée.",
+    series: "Chaque série nécessite une valeur par catégorie. Source originale affichée."
+  },
   sharedMetrics: frSharedMetrics,
   firstRun: frFirstRun,
   intro: introFr,
