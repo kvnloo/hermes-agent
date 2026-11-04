@@ -144,3 +144,13 @@ def test_a_plain_pip_install_keeps_the_python_package_guidance(tmp_path, monkeyp
     out = capsys.readouterr().out
     assert "came from a Python package" in out
     assert "Nix store" not in out
+
+def test_installed_launcher_forwards_close_preview(tmp_path, monkeypatch):
+    """Nix's installed launcher must receive the fullscreen preview escape."""
+    root = _site_packages_install(tmp_path, steward="nix")
+    app_dir = _app_dir(tmp_path)
+
+    code, launches = _run(monkeypatch, _args(close_preview=True), root=root, app_dir=app_dir)
+
+    assert code == 0
+    assert launches == [[str(app_dir / "hermes-desktop"), "--close-preview"]]

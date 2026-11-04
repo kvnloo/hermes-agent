@@ -1686,7 +1686,7 @@ def _installed_desktop_launcher() -> Optional[Path]:
     return Path(found) if found else None
 
 
-def _launch_installed_desktop_app() -> bool:
+def _launch_installed_desktop_app(*, close_preview: bool = False) -> bool:
     """Launch a separately installed ``hermes-desktop`` app, if one is on PATH.
 
     Returns True only when a launcher exists and a detached launch was
@@ -1697,7 +1697,7 @@ def _launch_installed_desktop_app() -> bool:
         return False
     from hermes_cli.bundled_app import launch_detached
 
-    pid = launch_detached([str(executable)])
+    pid = launch_detached([str(executable), *(["--close-preview"] if close_preview else [])])
     print(f"→ Launched the installed Hermes Desktop app: {executable} (pid {pid})")
     return True
 
@@ -1751,7 +1751,7 @@ def cmd_gui(args: argparse.Namespace):
         # A build flag asks for an artifact this tree cannot produce, so it must
         # stay an error; every other run hands over to the app that exists.
         wants_build = any(getattr(args, name, False) for name in ("source", "build_only", "force_build"))
-        if packaged_install and not wants_build and _launch_installed_desktop_app():
+        if packaged_install and not wants_build and _launch_installed_desktop_app(close_preview=getattr(args, "close_preview", False)):
             sys.exit(0)
         print(f"Desktop GUI source not found at: {desktop_dir}")
         if steward == "nix":
