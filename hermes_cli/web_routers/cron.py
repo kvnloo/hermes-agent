@@ -75,8 +75,14 @@ def _normalize_dashboard_cron_updates(updates: dict[str, Any], profile_home: Pat
     if "context_from" in normalized:
         normalized["context_from"] = _cron_string_list(normalized["context_from"])
     if "enabled_toolsets" in normalized:
+        raw_toolsets = normalized["enabled_toolsets"]
+        if raw_toolsets is not None and not isinstance(raw_toolsets, (str, list, tuple)):
+            raise HTTPException(
+                status_code=400,
+                detail="enabled_toolsets must be a list, delimited string, or null",
+            )
         # [] is the zero-tool allowlist, not a clear — only context_from's [] collapses to null.
-        normalized["enabled_toolsets"] = _cron_string_list(normalized["enabled_toolsets"], keep_empty=True)
+        normalized["enabled_toolsets"] = _cron_string_list(raw_toolsets, keep_empty=True)
     return normalized
 
 

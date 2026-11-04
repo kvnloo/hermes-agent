@@ -1637,3 +1637,27 @@ def test_dashboard_create_keeps_an_explicit_empty_toolset_list(isolated_profiles
         profile="worker_alpha")
 
     assert job["enabled_toolsets"] == []
+
+
+@pytest.mark.asyncio
+async def test_dashboard_invalid_toolsets_cannot_widen_allowlist(isolated_profiles):
+    """Invalid field shapes must fail, not silently replace a restricted list with None."""
+    job = _web_server_cron._call_cron_for_profile(
+        "worker_alpha", "create_job", name="web-only job",
+        prompt="format text", schedule="every 1h", enabled_toolsets=["web"])
+
+    with pytest.raises(HTTPException) as exc:
+        await _rt_cron.update_cron_job(
+            job["id"],
+            _web_models.CronJobUpdate(updates={
+                "prompt": "edited text",
+                "enabled_toolsets": {"unexpected": "web"},
+            }),
+            profile="worker_alpha",
+        )
+
+    assert exc.value.status_code == 400
+    assert "enabled_toolsets" in str(exc.value.detail)
+    stored = _web_server_cron._call_cron_for_profile("worker_alpha", "get_job", job["id"])
+    assert stored["enabled_toolsets"] == ["web"]
+    assert stored["prompt"] == "format text"
