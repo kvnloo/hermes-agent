@@ -508,7 +508,8 @@ def _result(authority, record):
     return {k: v for k, v in dict(status=status, delivery_id=record['delivery_id'],
         profile_home=record['profile_home'], session_id=record['session_id'],
         admission_id=record['admission_id'], message=record['message'], reply=reply,
-        retry_admission_id=retry_id, error=error, reason=reason).items() if v is not None}
+        retry_admission_id=retry_id, error=error, reason=reason,
+        superseded_by=record.get('superseded_by') if status == 'cancelled' else None).items() if v is not None}
 
 
 def _failure(authority, admission_id):
@@ -952,12 +953,39 @@ async def _held_by_another_writer(home, key, exc):
     return held
 
 
+def _superseded_queued(authority, root, session_id, author):
+    """The sender's earlier DMs to this Bot Chat that are still waiting in the FIFO, oldest first.
+
+    Bot DMs queue for hours behind a busy owner; when they finally run, the owner relays status that
+    newer DMs from the same sender already replaced. Only rows still ``queued`` qualify: a started
+    or finished delivery is never touched. Producer reports without an author never supersede."""
+    sender = (author or {}).get('id')
+    if not sender:
+        return []
+    found = []
+    for path, record in _scan_records(root):
+        if (record.get('session_id') != session_id or not record.get('admission_id')
+                or (record.get('author') or {}).get('id') != sender or record.get('superseded_by')):
+            continue
+        row = get_session_admission(authority.db, admission_id=record['admission_id'])
+        if row is not None and row['status'] == 'queued':
+            found.append((row['seq'], path, record))
+    return [(path, record) for _seq, path, record in sorted(found, key=lambda item: item[0])]
+
+
+def _superseded_note(count):
+    return f"({count} older update{'s' if count != 1 else ''} superseded)"
+
+
 async def _admit(authority, actor, home, root, key, message, ref, live, entry, author=None, legacy=None,
                  notification_category='result'):
     from gateway.session_automation import automation_notification_metadata
     notification = automation_notification_metadata({'notification_category': notification_category})
     path = root / f'{key}.json'
-    event = MessageEvent(text=message, source=live.source, internal=True,
+    superseded = _superseded_queued(authority, root, ref.session_id, author) if legacy is None else []
+    count = sum(1 + int(old.get('supersedes_count', 0)) for _p, old in superseded)
+    text = f"{message}\n\n{_superseded_note(count)}" if superseded else message
+    event = MessageEvent(text=text, source=live.source, internal=True,
         message_id='bot:' + key, metadata={'gateway_session_key': live.route,
                                          'gateway_session_id': entry.session_id})
     event.metadata.update(notification)
@@ -972,13 +1000,27 @@ async def _admit(authority, actor, home, root, key, message, ref, live, entry, a
         record['operator'] = True  # admitted on operator access: its one retry keeps it (``_maybe_retry``)
     if author is not None:
         record['author'] = dict(author)
+    if superseded:
+        record['supersedes_count'] = count
     # Preserve a foreign cancellation or claim that won after our legacy scan.
     if not await write_receipt(home, record, expect=(legacy or {}).get('status')):
         if legacy is not None:
             return None
         raise RuntimeStoreError('admission_conflict')
+    adapter = authority.runner._adapter_for_source(live.source)
     try:
-        receipt = await authority.admit_automation(authority.runner._adapter_for_source(live.source), event, 'bot:' + key)
+        try:
+            replaces = {'replaces': [old['admission_id'] for _p, old in superseded]} if superseded else {}
+            receipt = await authority.admit_automation(adapter, event, 'bot:' + key, **replaces)
+        except RuntimeStoreError as exc:
+            # An older DM started meanwhile: it runs, so this one is delivered whole, superseding nothing.
+            if not superseded or exc.reason != 'stale_generation' or _admission_at(authority, ref.session_id, 'bot:' + key):
+                raise
+            superseded = []
+            record.pop('supersedes_count', None)
+            event.text = message
+            await write_receipt(home, record)
+            receipt = await authority.admit_automation(adapter, event, 'bot:' + key)
     except RuntimeStoreError as exc:
         if _admission_at(authority, ref.session_id, 'bot:' + key) is not None:
             raise  # committed after all: the pin stays the explicit unknown record
@@ -992,6 +1034,11 @@ async def _admit(authority, actor, home, root, key, message, ref, live, entry, a
             await refuse_pin(home, key)
         raise
     record.update(status='canonical', admission_id=receipt.admission_id)
+    for _old_path, old in superseded:
+        old.update(superseded_by=key)
+        old.update(_result(authority, old))
+        await write_receipt(home, old)
+        remember_receipt(authority, home, old)
     record.update(_result(authority, record))
     if record['status'] in {'queued', 'claimed'}:
         _watch_reply(authority, home, key, receipt.admission_id)
