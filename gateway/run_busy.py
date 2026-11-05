@@ -812,9 +812,12 @@ class GatewayBusySessionMixin:
         if turn.agent is not running_agent:
             return None
         if turn.event is not None and turn.event is not event:
-            turn.event.absorb_reply_expected(event)
-            if turn.event.reply_expected is None and follow_up_is_addressed(event):
-                turn.event.reply_expected = True  # the adapter left a DM's flag unset (#149679)
+            # A bot peer or internal event cannot create a human reply obligation, even if an
+            # adapter marked it reply_expected=True (#137027).
+            if not event.internal and not getattr(event.source, "is_bot", False):
+                turn.event.absorb_reply_expected(event)
+                if turn.event.reply_expected is None and follow_up_is_addressed(event):
+                    turn.event.reply_expected = True  # the adapter left a DM's flag unset (#149679)
             if turn.ctx is not None:
                 turn.ctx.reply_expected = turn.event.reply_expected
         return turn

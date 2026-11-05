@@ -100,6 +100,14 @@ def test_bot_peer_follow_up_never_creates_a_reply_obligation():
     assert turn_event.reply_expected is None
 
 
+def test_addressed_bot_peer_does_not_claim_a_human_reply_obligation():
+    # Even an explicit address flag on a bot-authored steer must keep the peer-silence exemption.
+    peer = _follow_up("status?", chat_type="group", is_bot=True, reply_expected=True)
+    turn_event, ctx = _fold(peer, _notice())
+    assert turn_event.reply_expected is None
+    assert ctx.reply_expected is None
+
+
 def test_internal_follow_up_never_creates_a_reply_obligation():
     internal = MessageEvent(text="[tick]", internal=True, source=_source("dm"))
     turn_event, _ = _fold(internal, _notice())
