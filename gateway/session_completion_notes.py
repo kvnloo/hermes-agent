@@ -26,6 +26,18 @@ def _producer(identity):
         return None
 
 
+def _hosted_bot_chat(authority, session_id):
+    """True for the profile's canonical Bot Chat (or its compression tip). Nobody views a bot's chat:
+    peers deliver into it and leave, so its own delegations and processes must wake it as a turn,
+    or the bot idles until the next DM (R26). Fails closed to the note."""
+    try:
+        from tools.bot_mode_probe import BOT_CHAT_TITLE
+        row = authority.db.get_session_by_title(BOT_CHAT_TITLE)
+        return row is not None and session_id in {row['id'], authority.db.get_compression_tip(row['id'])}
+    except Exception:
+        return False
+
+
 def noted_completion(row):
     """*row* is a local completion admission: a note when it runs with no viewer attached."""
     descriptor = (row or {}).get('payload', {}).get('local_automation_v1')
@@ -40,7 +52,7 @@ async def note_if_unviewed(authority, ref, row):
         return None
     from gateway.session_runtime_workers import tracked_write
     live = authority.sessions.get(ref.session_id)
-    if live is None or live.subscribers:
+    if live is None or live.subscribers or _hosted_bot_chat(authority, ref.session_id):
         # The claim left a closed row closed for a note; the turn reopens it as any first turn does.
         from gateway.session_local_recovery import reopen_local_session
         await tracked_write(authority, partial(reopen_local_session, authority, ref))
