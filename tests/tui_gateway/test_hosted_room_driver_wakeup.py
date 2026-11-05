@@ -54,3 +54,27 @@ def test_rescheduled_exit_does_not_remark_sibling_rooms(tmp_path: Path):
     assert runtime._wake.is_set()
     assert BINDING_A.room_id not in runtime._rooms_needing_reschedule
     assert BINDING_B.room_id not in runtime._rooms_needing_reschedule
+
+
+def test_two_overlapping_room_exits_do_not_keep_each_other_hot(tmp_path: Path) -> None:
+    """A single external wake must not turn staggered room exits into a ping-pong."""
+    runtime = _runtime(tmp_path)
+    bindings = (BINDING_A, BINDING_B)
+    owner = threading.current_thread()
+    runtime._room_threads.update({binding.room_id: owner for binding in bindings})
+    visits: list[str] = []
+    runtime._process_room = lambda binding: visits.append(binding.room_id)
+
+    # Both rooms are busy when a single external wake asks for one follow-up.
+    runtime.wakeup()
+    for index in range(6):
+        binding = bindings[index % len(bindings)]
+        if binding.room_id not in runtime._rooms_needing_reschedule:
+            break
+        runtime._run_room_once(binding)
+        # Model the supervisor refilling the free slot while the sibling stays busy.
+        runtime._room_threads[binding.room_id] = owner
+
+    # On unfixed main, each exit re-marks the sibling and all six passes run.
+    assert visits == [BINDING_A.room_id, BINDING_B.room_id]
+    assert not runtime._rooms_needing_reschedule
