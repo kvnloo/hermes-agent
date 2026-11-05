@@ -106,7 +106,17 @@ def main():
             for name in ("progress", "download_progress"):
                 if name in request["callbacks"]:
                     arguments[name] = lambda *args, name=name: callback(name, *args)
-            result = implementation(**arguments)
+            if operation == "venv_is_current" and not arguments.get("extras") and arguments["plugins"] is None:
+                from pm import probe_cache
+
+                repo = Path(context["repo"])
+                probe_key = probe_cache.key(repo, Path(context["lockfile"]), os.environ)
+                with probe_cache.recording() as read_set:
+                    result = implementation(**arguments)
+                if result is True:
+                    probe_cache.remember(repo, probe_key, read_set)
+            else:
+                result = implementation(**arguments)
             if request["operation"] == "ensure":
                 result = None  # Runner is reconstructed from the caller's base env.
             if isinstance(result, Path):

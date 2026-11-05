@@ -369,6 +369,12 @@ def venv_is_current(*, extras: list[str] | None = None, plugins: Members | Candi
     if is_runtime() and (project_root is None or Path(project_root).resolve() == paths.repo_root().resolve()):
         from pm.install import venv_is_current as direct
         return direct(extras=extras, plugins=plugins, project_root=project_root)
+    if not extras and plugins is None:
+        from pm import probe_cache
+
+        root = Path(project_root).absolute() if project_root is not None else paths.repo_root()
+        if probe_cache.known_current(root, probe_cache.key(root, paths.lockfile_path(), runtime_environment())):
+            return True
     try:
         return bool(_request("venv_is_current", {"extras": extras, "plugins": plugin_inputs.encode(plugins)},
                              project_root=project_root))
