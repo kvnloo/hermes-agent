@@ -175,6 +175,7 @@ def validate_tool_calls(
     # error and never execute. Ids are unique here: _uniquify_tool_call_ids
     # ran above.
     invalid_json_by_id: dict[str, str] = {}
+    extra_data_ids: set[str] = set()
     for tc in tool_calls:
         args = tc.function.arguments
         if isinstance(args, (dict, list)):
@@ -191,16 +192,22 @@ def validate_tool_calls(
             # A mixed-batch invalid-name call never executes (error result later);
             # don't let its broken args trigger the whole-turn JSON retry.
             if not (_mixed_invalid_batch and tc.function.name not in valid_names):
-                invalid_json_by_id[coalesce_tool_call_id(tc)] = str(e)
+                call_id = coalesce_tool_call_id(tc)
+                invalid_json_by_id[call_id] = str(e)
+                if e.msg == "Extra data":
+                    extra_data_ids.add(call_id)
 
     if invalid_json_by_id:
         # Routers may rewrite finish_reason "length" → "tool_calls", hiding
         # truncation; args not ending in } or ] (stripped) were cut off
         # mid-stream. Keyed by id so a complete same-name sibling is not
-        # false-positived into the truncated set.
+        # false-positived into the truncated set. A complete JSON value
+        # followed by junk is invalid ("Extra data"), not cut off.
         _truncated = any(
             not (tc.function.arguments or "").rstrip().endswith(("}", "]"))
-            for tc in tool_calls if coalesce_tool_call_id(tc) in invalid_json_by_id
+            for tc in tool_calls
+            if coalesce_tool_call_id(tc) in invalid_json_by_id
+            and coalesce_tool_call_id(tc) not in extra_data_ids
         )
         if _truncated:
             agent._vprint(

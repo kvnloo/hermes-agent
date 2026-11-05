@@ -324,3 +324,19 @@ def test_broken_call_keeps_its_error_when_ids_are_rewritten_after_validation(age
     assert not any(i.startswith("chatcmpl-tool-") for i in emitted)
     assert _tool_result_ids(msgs) == emitted
     assert sum("Invalid JSON" in _tool_result_content(msgs, i) for i in emitted) == 1
+
+def test_complete_json_with_trailing_data_does_not_abort_valid_sibling(agent_env):
+    """A complete JSON value plus junk is invalid, not evidence of truncation."""
+    agent, handler, dispatched = agent_env
+    handler.response_queue.append(_batch_tc_resp([("todo", "{} trailing"), ("todo", "{}")]))
+    handler.response_queue.append(_text_resp("done"))
+
+    result = agent.run_conversation("track work", conversation_history=[], task_id="t")
+
+    assert result.get("completed", False)
+    assert dispatched == [("todo", "{}")]
+    msgs = result.get("messages")
+    assert "Extra data" in _tool_result_content(msgs, "call_0")
+    assert "Invalid JSON" not in _tool_result_content(msgs, "call_1")
+    assert _tool_result_ids(msgs) == _assistant_tool_call_ids(msgs)
+
