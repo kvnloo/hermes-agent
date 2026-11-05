@@ -428,7 +428,7 @@ class TestBridgeDispatch:
         """On Anthropic OAuth the prompt calls ``session_search`` ``chat_history_lookup``; the model
         then names the alias inside ``tool_call``/``tool_describe`` arguments, which the transport's
         top-level reversal never sees. Both bridges must resolve it to the registered tool."""
-        import model_tools  # noqa: F401  # registers the built-in tools
+        import model_tools  # Registers the built-in tools.
         from tools.tool_search import dispatch_tool_describe, resolve_underlying_call
         name, args, err = resolve_underlying_call(
             {"calls": [{"name": "chat_history_lookup", "arguments": {"query": "x"}}]})

@@ -12,7 +12,7 @@ import pytest
 
 @pytest.mark.parametrize("batch", [False, True])
 def test_nested_history_alias_reads_the_session_store(tmp_path, batch):
-    import model_tools  # noqa: F401
+    import model_tools
     from agent.inline_tool_executors import INLINE_TOOL_EXECUTORS, InlineToolContext
     from agent.tool_executor import _parse_tool_call
     from hermes_state import SessionDB
@@ -47,7 +47,7 @@ def test_nested_history_alias_reads_the_session_store(tmp_path, batch):
 
 
 def test_nested_history_alias_does_not_bypass_session_scope():
-    import model_tools  # noqa: F401
+    import model_tools
     from agent.tool_executor import _parse_tool_call
 
     agent = SimpleNamespace(enabled_toolsets=[], disabled_toolsets=[])
