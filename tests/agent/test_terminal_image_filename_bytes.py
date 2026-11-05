@@ -21,3 +21,17 @@ def test_kitty_preview_accepts_non_utf8_filename(tmp_path, filename):
     assert preview.transmit and preview.placeholder
     again = render_inline_image(path, mode="kitty", max_cols=20, max_rows=8)
     assert again is not None and again.color == preview.color
+
+
+@pytest.mark.platforms("posix")
+def test_kitty_preview_accepts_non_utf8_parent_directory(tmp_path):
+    parent = tmp_path / os.fsdecode(b"album-\xff")
+    parent.mkdir()
+    path = parent / "photo.png"
+    Image.new("RGB", (40, 20), "red").save(path)
+
+    for mode in ("unicode", "iterm"):
+        assert render_inline_image(path, mode=mode, max_cols=20, max_rows=8) is not None
+    preview = render_inline_image(path, mode="kitty", max_cols=20, max_rows=8)
+    assert preview is not None
+    assert preview.transmit and preview.placeholder
