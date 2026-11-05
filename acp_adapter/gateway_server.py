@@ -74,6 +74,8 @@ class GatewayACPAgent(GatewayReplyMixin, acp.Agent):
         from hermes_cli.gateway_runtime import gateway_profile_home
         self._home = gateway_profile_home(get_hermes_home())
         self._snapshots = {}
+        # session -> HostBlockFilter: client guidance blocks (T3 Code) already sent this connection.
+        self._host_blocks = {}
         self._event_task = None
         self._terminals = {}
         self._streamed = {}
@@ -780,6 +782,9 @@ class GatewayACPAgent(GatewayReplyMixin, acp.Agent):
             # The retry resends what the owner may already hold: the staged content and input_id are
             # reused, never prepared (a remote image fetched) a second time.
             return retained
+        # Filter after the retry check: the fingerprint stays on the raw prompt so a retry still matches.
+        from acp_adapter.host_blocks import HostBlockFilter
+        content = self._host_blocks.setdefault(session_id, HostBlockFilter()).filter_content(content, session_id)
         # The editor's Stop during staging (a remote image download) is held like one during the
         # submit itself, and the prompt then ends without being sent.
         self._submitting.add(session_id)

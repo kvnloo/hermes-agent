@@ -21,6 +21,8 @@ from datetime import datetime, timezone, UTC
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from acp_adapter.host_blocks import HostBlockFilter
+
 logger = logging.getLogger(__name__)
 
 
@@ -151,6 +153,8 @@ class SessionState:
     # Per-session allocator for ACP assistant messageIds (lazily created by
     # the server so streamed chunks group into distinct assistant replies).
     message_ids: Any = None
+    # Client guidance blocks (T3 Code's runtime/instructions) already delivered this session.
+    host_blocks: HostBlockFilter = field(default_factory=HostBlockFilter)
 
 
 class SessionManager:
