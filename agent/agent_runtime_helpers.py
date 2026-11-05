@@ -3623,7 +3623,22 @@ def _duration_string_seconds(text: str) -> Optional[float]:
     return sum(float(n) * _DURATION_UNIT_SECONDS[u] for n, u in parts)
 
 
+# Anthropic subscription (OAuth) limits: epoch seconds of the binding window's reset. A plain
+# subscription 429 carries no Retry-After, so without these the failed turn could not say
+# "Limit resets at HH:MM" (oss-factory #314: interactive profiles fail closed, no fallback).
+_UNIFIED_RESET_HEADERS = (
+    "anthropic-ratelimit-unified-reset",
+    "anthropic-ratelimit-unified-5h-reset", "anthropic-ratelimit-unified-7d-reset",
+)
+
+
 def _set_reset_from_vendor_headers(context: dict[str, Any], headers: Any) -> None:
+    for name in _UNIFIED_RESET_HEADERS:
+        value = headers.get(name)
+        absolute = _parse_absolute_timestamp(value.strip()) if isinstance(value, str) and value.strip() else None
+        if absolute is not None and absolute > time.time():
+            context["reset_at"] = absolute
+            return
     for name in _VENDOR_RESET_HEADERS:
         value = headers.get(name)
         if not isinstance(value, str) or not value.strip():
