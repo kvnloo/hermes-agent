@@ -649,9 +649,10 @@ def archive_skill(skill_name: str) -> tuple[bool, str]:
     skill_dir = _find_skill_dir(skill_name)
     if skill_dir is None and _find_external_skill_dir(skill_name) is not None:
         return False, _external_read_only_message(skill_name)
-    from tools.skill_lock import is_locked_skill
-    locked = locked_skill_names()  # keyed by directory name; rows carry the frontmatter name
-    if locked and is_locked_skill(skill_name, locked):
+    # The curator finds the target by SKILL.md frontmatter, while the generic skill-lock
+    # resolver prefers directory names. Guard the directory we will actually move.
+    locked = locked_skill_names()
+    if skill_dir is not None and skill_dir.name in locked:
         return False, (f"skill '{skill_name}' is locked by the user; unlock it with "
                        f"`hermes curator unlock {skill_name}` to archive it")
     if not is_curation_eligible(skill_name, skill_dir):

@@ -378,10 +378,11 @@ def _cmd_prune(args) -> int:
         (r["name"], idle) for r in skill_usage.curated_report()
         if not (r.get("pinned") or r.get("state") == skill_usage.STATE_ARCHIVED)
         and (idle := _idle_days(r)) is not None and idle >= days]
-    locked = skill_usage.locked_skill_names()
+    locked = set(skill_usage.locked_skill_names())
     if locked:
-        from tools.skill_lock import is_locked_skill
-        skipped = [name for name, _ in candidates if is_locked_skill(name, locked)]
+        # Match the directory that archive_skill will relocate, not a namesake directory.
+        skipped = [name for name, _ in candidates
+                   if (target := skill_usage._find_skill_dir(name)) is not None and target.name in locked]
         if skipped:
             candidates = [c for c in candidates if c[0] not in set(skipped)]
             print(f"curator: skipping {len(skipped)} locked skill(s): {', '.join(skipped)}")

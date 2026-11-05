@@ -163,3 +163,45 @@ def test_prune_reports_nothing_to_prune_when_every_candidate_is_locked(lock_env)
     assert (env["skills"] / "frozen-helper" / "SKILL.md").is_file()
     sidecar = json.loads((env["skills"] / ".usage.json").read_text(encoding="utf-8"))
     assert sidecar["frozen-helper"]["locked"] is True
+
+
+def test_archive_and_prune_lock_the_resolved_skill_not_a_namesake(lock_env):
+    """A frontmatter name can collide with a different skill's directory name.
+
+    Curator archive resolves the frontmatter name, but the general lock resolver
+    prefers a directory match. The lock must guard the directory actually moved.
+    """
+    env = lock_env
+    usage = env["usage"]
+    skills = env["skills"]
+    sealed = _make_skill(skills, "sealed-helper")
+    (sealed / "SKILL.md").write_text(
+        "---\\nname: visible-helper\\ndescription: x\\n---\\n# visible\\n".replace("\\n", "\n"),
+        encoding="utf-8",
+    )
+    namesake = _make_skill(skills, "visible-helper")
+    (namesake / "SKILL.md").write_text(
+        "---\\nname: unrelated-helper\\ndescription: x\\n---\\n# unrelated\\n".replace("\\n", "\n"),
+        encoding="utf-8",
+    )
+    usage.record_created("visible-helper", agent_created=True)
+    data = usage.load_usage()
+    data["visible-helper"]["last_used_at"] = "2020-01-01T00:00:00+00:00"
+    assert usage.save_usage(data)
+    assert usage.set_locked("sealed-helper", True)
+
+    from tools.skill_manager_tool import _find_skill
+
+    assert usage._find_skill_dir("visible-helper") == sealed
+    assert _find_skill("visible-helper")["path"] == namesake
+
+    ok, message = usage.archive_skill("visible-helper")
+    assert ok is False, message
+    assert "locked" in message
+    assert sealed.is_dir()
+
+    code, output = _run(env["cli"], "prune", "--days", "1", "--yes")
+    assert code == 0, output
+    assert "skipping 1 locked skill" in output
+    assert sealed.is_dir() and namesake.is_dir()
+    assert not (skills / ".archive" / "visible-helper").exists()
