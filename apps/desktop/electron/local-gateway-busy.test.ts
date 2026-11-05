@@ -7,7 +7,7 @@ import { expect, test, vi } from 'vitest'
 import { type GatewayEndpoint, isStaleLocalGatewayError, mintLocalGatewayTicket, redialLocalGateway } from './local-gateway'
 import { shortSocketTmpDir } from './local-gateway.test-helpers'
 
-async function ticketOwner(stallFirst = false) {
+async function ticketOwner(stallFirst: boolean | 'partial' = false) {
   const home = await shortSocketTmpDir('gw-busy-')
   let requests = 0
   let connections = 0
@@ -30,7 +30,11 @@ async function ticketOwner(stallFirst = false) {
       requests++
       received()
 
-      if (stallFirst && requests === 1) { return }
+      if (stallFirst && requests === 1) {
+        // A live server may send a prefix then stall before the newline-delimited reply completes.
+        if (stallFirst === 'partial') { socket.write('{"protocol":1,"id":1,') }
+        return
+      }
       socket.end(JSON.stringify({ protocol: 1, id: request.id, ok: true,
         result: { profile_id: home, instance_id: 'alive', ticket: 'test-ticket' } }) + '\n')
     })
@@ -111,6 +115,36 @@ test.skipIf(process.platform === 'win32')('a missing control socket still forget
     })
   } finally {
     await fs.rm(deadHome, { recursive: true, force: true })
+    await owner.close()
+  }
+})
+
+test.skipIf(process.platform === 'win32')('a partial ticket reply from a live owner does not invalidate its endpoint', async () => {
+  const owner = await ticketOwner('partial')
+  let ensures = 0
+  let forgets = 0
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+
+  try {
+    const result = redialLocalGateway({
+      ensure: async () => { ensures++; return owner.endpoint },
+      forget: () => { forgets++ },
+      use: endpoint => mintLocalGatewayTicket(endpoint, 'native-http')
+    }).then(ticket => ({ ticket, error: null }), error => ({ ticket: null, error }))
+
+    await owner.firstRequest
+    await vi.advanceTimersByTimeAsync(5001)
+    const outcome = await result
+    expect(outcome.ticket).toBeNull()
+    expect(outcome.error).toMatchObject({ name: 'GatewayTicketTimeoutError' })
+    expect(isStaleLocalGatewayError(outcome.error)).toBe(false)
+    expect({ ensures, forgets, requests: owner.requests() }).toEqual({
+      ensures: 1, forgets: 0, requests: 1
+    })
+    await owner.firstDisconnect
+    await expect(mintLocalGatewayTicket(owner.endpoint, 'native-http')).resolves.toBe('test-ticket')
+  } finally {
+    vi.useRealTimers()
     await owner.close()
   }
 })
