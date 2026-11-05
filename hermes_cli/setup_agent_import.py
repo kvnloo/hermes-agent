@@ -214,7 +214,9 @@ def _dry_run_import(source: ImportSource, hermes_home: Path, extra_args: tuple[s
         print_warning(f"--dry-run writes nothing, so it cannot enable the '{PLUGIN}' plugin it needs. "
                       f"Enable it with: hermes plugins enable {PLUGIN}, then re-run with --dry-run.")
         return 1
-    return 1 if _import_child(source, hermes_home, extra_args, from_setup=False, allow_update=False) else 0
+    # A direct caller can set dry_run=True without forwarding CLI flags.
+    safe_args = extra_args if "--dry-run" in extra_args else (*extra_args, "--dry-run")
+    return 1 if _import_child(source, hermes_home, safe_args, from_setup=False, allow_update=False) else 0
 
 
 def migrate_from_agents(hermes_home: Path, source_name: str = "", extra_args: tuple[str, ...] = (),

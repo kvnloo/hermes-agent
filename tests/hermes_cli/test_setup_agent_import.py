@@ -230,6 +230,26 @@ def test_dry_run_previews_through_the_child_when_the_plugin_is_ready(homes):
                       str(_hermes_home))]
 
 
+def test_dry_run_api_flag_guards_child_even_without_cli_flag(homes, monkeypatch):
+    """A direct dry_run=True call must not launch an applying --yes child."""
+    _user_home, hermes_home, _calls, _answers = homes
+    _installed_but_disabled(hermes_home, enabled=True)
+    before = _tree(hermes_home)
+    child_args = []
+
+    def import_child(argv, env, check=False):
+        args = argv[argv.index("hermes_cli.main") + 1:]
+        child_args.append(args)
+        if "--dry-run" not in args:
+            (hermes_home / "config.yaml").write_text("imported: true\\n", encoding="utf-8")
+        return subprocess.CompletedProcess(argv, 0)
+
+    monkeypatch.setattr(step.subprocess, "run", import_child)
+    assert step.migrate_from_agents(hermes_home, "openbot", ("--yes",), dry_run=True) == 0
+    assert child_args == [["--profile", "default", "import-agent", "openbot", "--yes", "--dry-run"]]
+    assert _tree(hermes_home) == before
+
+
 def test_dry_run_does_not_update_an_outdated_plugin(homes, monkeypatch, capsys):
     """The exit-2 retry exists because an old plugin refuses the flag; updating it is a write, so a
     dry run hands the user the command instead."""
