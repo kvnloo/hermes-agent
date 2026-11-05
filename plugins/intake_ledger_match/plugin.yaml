@@ -1,0 +1,10 @@
+name: intake_ledger_match
+version: 0.1.0
+description: Match owner messages to the local ayo ledger without changing LLM calls.
+manifest_version: 2
+api_version: 1
+license: MIT
+tags: [intake, ledger, local]
+provides_hooks:
+  - pre_llm_call
+  - on_session_end
