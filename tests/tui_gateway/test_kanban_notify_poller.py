@@ -408,3 +408,33 @@ class TestReviewHandoffReachesTheOriginSession:
         assert "PR ready: x" in first[0], "the worker's summary must ride the receipt"
         # Claimed exactly once — the cursor must advance past the event.
         assert _collect_kanban_notifications(_session()) == []
+
+    def test_changes_requested_after_review_reaches_origin_once(self):
+        """A reviewer correction must reach the same TUI subscription once."""
+        tid = _create_subscribed_task()
+        with kbc.connect_closing() as conn:
+            implementer_run = kb.claim_task(conn, tid)
+            assert implementer_run is not None
+            assert kb.request_review(
+                conn, tid, reviewer="reviewer", summary="ready",
+                expected_run_id=implementer_run.current_run_id,
+            )
+        assert len(_collect_kanban_notifications(_session())) == 1
+        cursor_after_review = _sub_rows(tid)[0]["last_event_id"]
+
+        with kbc.connect_closing() as conn:
+            reviewer_run = kb.claim_review_task(conn, tid)
+            assert reviewer_run is not None
+            ok, _ = kb.request_changes(
+                conn, tid, reason="add regression coverage",
+                expected_run_id=reviewer_run.current_run_id,
+            )
+            assert ok
+
+        notices = _collect_kanban_notifications(_session())
+        assert len(notices) == 1
+        assert tid in notices[0]
+        assert "changes requested" in notices[0]
+        assert "add regression coverage" in notices[0]
+        assert _sub_rows(tid)[0]["last_event_id"] > cursor_after_review
+        assert _collect_kanban_notifications(_session()) == []
