@@ -78,6 +78,29 @@ def _ping_pong(runner, turns: int, chat_id: str = GROUP_CHAT) -> list:
 # --- authz integration -----------------------------------------------------
 
 
+def test_matrix_declared_bot_uses_allow_bots_and_is_counted(monkeypatch, runner, settings):
+    """An explicitly declared Matrix peer must enter through ALLOW_BOTS and still be metered."""
+    peer = SessionSource(
+        platform=Platform.MATRIX, chat_id="!room:example.org", chat_type="group",
+        user_id="@peer:example.org", user_name="Peer", is_bot=True,
+    )
+    monkeypatch.setenv("MATRIX_ALLOWED_USERS", "@human:example.org")
+    monkeypatch.delenv("MATRIX_ALLOW_ALL_USERS", raising=False)
+    settings["value"] = BotLoopGuardSettings(max_events=2, window_seconds=60, cooldown_seconds=60)
+
+    # A declared bot is not exempt from the platform's explicit admission policy.
+    monkeypatch.setenv("MATRIX_ALLOW_BOTS", "none")
+    assert _inbound(runner, peer) is False
+    assert runner._bot_loop_guard.tracked_conversations == 0
+
+    # The opt-in grants admission, but the per-room budget still stops a bot loop.
+    monkeypatch.setenv("MATRIX_ALLOW_BOTS", "all")
+    assert [_inbound(runner, peer) for _ in range(3)] == [True, True, False]
+    assert runner._is_user_authorized(peer) is False
+
+
+
+
 def test_one_inbound_is_counted_once_however_often_the_verdict_is_asked(monkeypatch, runner):
     """The Telegram adapter, the ingress gate and the busy path all ask the verdict for one message."""
     _incident_config(monkeypatch)
