@@ -216,6 +216,11 @@ _HARDLINE_ALLOW = [
     "halt=1",
     "shutdown=1",
     "set -e\nhalt() { printf x; }\necho ok",
+    # A Python keyword inside an interpreter heredoc is data, not a host shutdown.
+    # The command-start projection can insert a newline before "halt=True".
+    # Regression from JACKCHENPANG on #132444; keep real halt invocations blocked.
+    "ssh example-host 'python3 -' <<'PY'\\nimport pylink\\nj.reset(halt=True)\\nPY",
+    "ssh example-host 'python3 -' <<'PY'\\nj.reset(\\n    halt=True\\n)\\nPY",
 ]
 
 
