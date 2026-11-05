@@ -90,8 +90,9 @@ README, entry owner); `--hermes-src` (default the pinned
 `/mnt/zer0models/worktrees/hermes-src-22063fc`, matching `frontend/hermes-src.lock`)
 supplies the `tui_gateway` the frontend spawns and the `ui-tui` sources the bundle
 inlines. The runner links `.hermes-src`, rebuilds `frontend/dist/entry.js`, and
-records `bundle-reproducible.json` (the plugin commits its bundle, so an exact-SHA
-rebuild must match). The plugin is installed into the private `HERMES_HOME` as a
+records `bundle-reproducible.json`. Journeys always run the bundle rebuilt from the
+target's source. Main's bundle workflow commits `dist`, and PRs carry source only,
+so the file is `true` on main/base and `false` on a source-changing PR head by design. The plugin is installed into the private `HERMES_HOME` as a
 directory plugin and enabled. `openui` and `ink-fallback` are hermes-agent-tree
 journeys and are reported `not-applicable`.
 
