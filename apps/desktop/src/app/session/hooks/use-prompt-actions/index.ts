@@ -202,7 +202,10 @@ export async function uploadComposerAttachment(
       // attach reply carries none (it queued the image in the session itself) and its
       // prompt.submit refuses the key, so the absence keeps `attachments` off the wire (#148682).
       return {
-        ...(result.mime ? { ...attachment, mime: result.mime } : attachment),
+        ...attachment,
+        // Re-staged chips may carry a prior canonical owner's MIME. Only this reply decides
+        // whether submit declares the image; a legacy reply must clear the stale MIME.
+        mime: result.mime,
         attachedSessionId: liveSessionId,
         label: attachedPath ? pathLabel(attachedPath) : attachment.label,
         path: attachedPath,
