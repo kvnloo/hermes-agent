@@ -412,6 +412,32 @@ class TestReanchorAbsorbedSyntheticEvent:
         assert row_carries_user_message({"role": "user", "content": ["blocks"]}, ["blocks"]) is False
 
 
+    def test_todo_fold_preserves_synthetic_completion_anchor(self):
+        """A live todo snapshot must not reanchor a rewritten event onto an older ask."""
+        from types import SimpleNamespace
+
+        from agent.conversation_compression import _fold_todo_snapshot
+        from agent.turn_context_compaction import _reanchor
+
+        event = "[ASYNC DELEGATION COMPLETE — repro]\nResult: background task finished."
+        snapshot = "[Your active task list was preserved across context compression]\n- [ ] ship"
+        store = SimpleNamespace(format_for_injection=lambda: snapshot, has_items=lambda: True)
+        messages = [
+            {"role": "user", "content": "Publish the completed changes."},
+            {"role": "assistant", "content": "Waiting for the background result."},
+            {"role": "user", "content": event, "display_kind": "internal_notification"},
+        ]
+
+        _fold_todo_snapshot(SimpleNamespace(_todo_store=store), messages)
+        assert len(messages) == 3
+        assert messages[2]["content"].startswith(event)
+        assert snapshot in messages[2]["content"]
+
+        agent = SimpleNamespace(_persist_user_message_idx=2)
+        assert _reanchor(agent, messages, event) == 2
+        assert agent._persist_user_message_idx == 2
+
+
 class TestRetryableUserText:
     def test_losslessly_flattens_text_only_parts(self):
         assert retryable_user_text(
