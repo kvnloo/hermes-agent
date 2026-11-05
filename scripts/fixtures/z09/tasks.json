@@ -1,0 +1,58 @@
+[
+  {
+    "id": "hook-contract-read",
+    "question": "Identify the rewrite return codes, timeout, and terminal command mutation in the installed hook.",
+    "command": "cat rtk_plugin.py",
+    "required": ["ACCEPTED_REWRITE_RETURN_CODES = {0, 3}", "EXPECTED_PASSTHROUGH_RETURN_CODES = {1, 2}", "timeout=2", "args[\"command\"] = rewritten"],
+    "expected_exit": 0,
+    "source": "installed rtk-rewrite/__init__.py:12-13,54,73"
+  },
+  {
+    "id": "hook-contract-search",
+    "question": "Find the exact hook guard and timeout evidence with line-numbered search.",
+    "command": "rg -n 'ACCEPTED_REWRITE_RETURN_CODES|EXPECTED_PASSTHROUGH_RETURN_CODES|timeout=|args\\[\"command\"\\]' rtk_plugin.py",
+    "required": ["12:ACCEPTED_REWRITE_RETURN_CODES = {0, 3}", "13:EXPECTED_PASSTHROUGH_RETURN_CODES = {1, 2}", "54:", "timeout=2", "73:", "args[\"command\"] = rewritten"],
+    "expected_exit": 0,
+    "source": "installed rtk-rewrite/__init__.py:12-13,54,73"
+  },
+  {
+    "id": "benchmark-contract-read",
+    "question": "Identify the benchmark token fallback, RTK pipe execution, Headroom mode selection, and evidence truncation.",
+    "command": "cat bench.py",
+    "required": ["len(s) // 4", "[\"rtk\", \"pipe\", \"-f\", filt]", "mode=os.environ.get(\"HR_MODE\") or None", "p.stdout[:3000]", "c[:3000]"],
+    "expected_exit": 0,
+    "source": "owner bench.py:18,66,70,77,80"
+  },
+  {
+    "id": "benchmark-mode-search",
+    "question": "Recover the exact offline switch and runtime mode selection from the existing benchmark.",
+    "command": "rg -n 'HEADROOM_OFFLINE|HR_MODE|protect_recent|rtk_out|hr_out' bench.py",
+    "required": ["9:os.environ[\"HEADROOM_OFFLINE\"] = \"1\"", "77:", "protect_recent=0", "mode=os.environ.get(\"HR_MODE\") or None"],
+    "expected_exit": 0,
+    "source": "owner bench.py:9,77"
+  },
+  {
+    "id": "catalog-pin-read",
+    "question": "Recover the catalog source pin, install release, and tool/hook declarations without confusing them with the installed RTK version.",
+    "command": "cat catalog.yaml",
+    "required": ["sha: 4c5f8a5abdfd7980cba5ef02df86b8efe52c00d6", "v0.49.0", "provides_tools: []", "pre_tool_call"],
+    "expected_exit": 0,
+    "source": "Hermes HEAD plugin-catalog/rtk-rewrite.yaml:3,14,22,24"
+  },
+  {
+    "id": "passthrough-negative-control",
+    "question": "Preserve an unsupported command unchanged.",
+    "command": "printf 'Z09-PASSTHROUGH\\n'",
+    "required": ["Z09-PASSTHROUGH"],
+    "expected_exit": 0,
+    "source": "Explicit synthetic control, excluded from representativeness claims"
+  },
+  {
+    "id": "no-match-negative-control",
+    "question": "Preserve ripgrep's no-match exit status.",
+    "command": "rg -n Z09_NOT_PRESENT rtk_plugin.py",
+    "required": [],
+    "expected_exit": 1,
+    "source": "Explicit synthetic control, excluded from representativeness claims"
+  }
+]
