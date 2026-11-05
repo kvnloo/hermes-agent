@@ -1,0 +1,213 @@
+{
+  "basis": "Human-curated contracts derived from historical Run 004; not a fresh review of current PRs.",
+  "packets": [
+    {
+      "change_id": "PR-102199",
+      "title": "refuse foreign owned git tree before mutation",
+      "provenance": {
+        "authors": [
+          "fangliquanflq"
+        ],
+        "source": "https://github.com/NousResearch/hermes-agent/pull/102199",
+        "contract_basis": "https://github.com/kvnloo/hermes-agent/blob/c09ff344d3a5b4b3bb7c57a9acaf0f5dbced5392/experiments/change_ir/runs/004-concurrent-collisions.md"
+      },
+      "operations": [
+        {
+          "id": "OP-refuse-foreign-owned-git-tree-before-mutation",
+          "description": "both edit hermes_cli/update_cmd.py; both perform bounded POSIX ownership scan of repo/.git object paths; both refuse before backup/git mutation; both emit actionable chown guidance; PR #102320 triage explicitly calls #102258 competing; PR #102199 review describes pre-update preflight",
+          "collision_contract": {
+            "family": "root-ownership",
+            "boundary": "updater-git-tree-preflight",
+            "outcome": "safe-non-root-update",
+            "policy": "refuse-before-mutation",
+            "invariants": [
+              "bounded-posix-ownership-scan",
+              "no-git-mutation-before-refusal",
+              "actionable-owner-guidance"
+            ],
+            "evidence": [
+              "https://github.com/NousResearch/hermes-agent/pull/102199",
+              "https://github.com/kvnloo/hermes-agent/blob/c09ff344d3a5b4b3bb7c57a9acaf0f5dbced5392/experiments/change_ir/runs/004-concurrent-collisions.md",
+              "both edit hermes_cli/update_cmd.py",
+              "both perform bounded POSIX ownership scan of repo/.git object paths",
+              "both refuse before backup/git mutation",
+              "both emit actionable chown guidance",
+              "PR #102320 triage explicitly calls #102258 competing; PR #102199 review describes pre-update preflight"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "change_id": "PR-102320",
+      "title": "refuse foreign owned git tree before mutation",
+      "provenance": {
+        "authors": [
+          "aniruddhaadak80"
+        ],
+        "source": "https://github.com/NousResearch/hermes-agent/pull/102320",
+        "contract_basis": "https://github.com/kvnloo/hermes-agent/blob/c09ff344d3a5b4b3bb7c57a9acaf0f5dbced5392/experiments/change_ir/runs/004-concurrent-collisions.md"
+      },
+      "operations": [
+        {
+          "id": "OP-refuse-foreign-owned-git-tree-before-mutation",
+          "description": "both edit hermes_cli/update_cmd.py; both perform bounded POSIX ownership scan of repo/.git object paths; both refuse before backup/git mutation; both emit actionable chown guidance; PR #102320 triage explicitly calls #102258 competing; PR #102199 review describes pre-update preflight",
+          "collision_contract": {
+            "family": "root-ownership",
+            "boundary": "updater-git-tree-preflight",
+            "outcome": "safe-non-root-update",
+            "policy": "refuse-before-mutation",
+            "invariants": [
+              "bounded-posix-ownership-scan",
+              "no-git-mutation-before-refusal",
+              "actionable-owner-guidance"
+            ],
+            "evidence": [
+              "https://github.com/NousResearch/hermes-agent/pull/102320",
+              "https://github.com/kvnloo/hermes-agent/blob/c09ff344d3a5b4b3bb7c57a9acaf0f5dbced5392/experiments/change_ir/runs/004-concurrent-collisions.md",
+              "both edit hermes_cli/update_cmd.py",
+              "both perform bounded POSIX ownership scan of repo/.git object paths",
+              "both refuse before backup/git mutation",
+              "both emit actionable chown guidance",
+              "PR #102320 triage explicitly calls #102258 competing; PR #102199 review describes pre-update preflight"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "change_id": "PR-102258",
+      "title": "repair install ownership",
+      "provenance": {
+        "authors": [
+          "Sahilvishnaliya"
+        ],
+        "source": "https://github.com/NousResearch/hermes-agent/pull/102258",
+        "contract_basis": "https://github.com/kvnloo/hermes-agent/blob/c09ff344d3a5b4b3bb7c57a9acaf0f5dbced5392/experiments/change_ir/runs/004-concurrent-collisions.md"
+      },
+      "operations": [
+        {
+          "id": "OP-repair-install-ownership",
+          "description": "same updater ownership class and update_cmd.py surface; repair/chown policy rather than refuse-only policy; review explicitly says compose with/credit #102199 and declare merge order",
+          "collision_contract": {
+            "family": "root-ownership",
+            "boundary": "updater-git-tree-preflight",
+            "outcome": "safe-non-root-update",
+            "policy": "repair-ownership",
+            "invariants": [
+              "repair-install-ownership-before-and-after-update"
+            ],
+            "evidence": [
+              "https://github.com/NousResearch/hermes-agent/pull/102258",
+              "https://github.com/kvnloo/hermes-agent/blob/c09ff344d3a5b4b3bb7c57a9acaf0f5dbced5392/experiments/change_ir/runs/004-concurrent-collisions.md",
+              "same updater ownership class and update_cmd.py surface",
+              "repair/chown policy rather than refuse-only policy",
+              "review explicitly says compose with/credit #102199 and declare merge order"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "change_id": "PR-102208",
+      "title": "permission error remediation message",
+      "provenance": {
+        "authors": [
+          "Sahilvishnaliya"
+        ],
+        "source": "https://github.com/NousResearch/hermes-agent/pull/102208",
+        "contract_basis": "https://github.com/kvnloo/hermes-agent/blob/c09ff344d3a5b4b3bb7c57a9acaf0f5dbced5392/experiments/change_ir/runs/004-concurrent-collisions.md"
+      },
+      "operations": [
+        {
+          "id": "OP-permission-error-remediation-message",
+          "description": "post-failure UX hint on git stash permission error; review explicitly says complements #102199 pre-update preflight",
+          "collision_contract": {
+            "family": "root-ownership",
+            "boundary": "git-stash-failure-ux",
+            "outcome": "actionable-permission-error",
+            "policy": "explain-remediation",
+            "invariants": [
+              "post-failure-owner-guidance"
+            ],
+            "evidence": [
+              "https://github.com/NousResearch/hermes-agent/pull/102208",
+              "https://github.com/kvnloo/hermes-agent/blob/c09ff344d3a5b4b3bb7c57a9acaf0f5dbced5392/experiments/change_ir/runs/004-concurrent-collisions.md",
+              "post-failure UX hint on git stash permission error",
+              "review explicitly says complements #102199 pre-update preflight"
+            ],
+            "complements": [
+              "updater-git-tree-preflight"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "change_id": "PR-105608",
+      "title": "planned stop marker owner handoff",
+      "provenance": {
+        "authors": [
+          "RickyYii"
+        ],
+        "source": "https://github.com/NousResearch/hermes-agent/pull/105608",
+        "contract_basis": "https://github.com/kvnloo/hermes-agent/blob/c09ff344d3a5b4b3bb7c57a9acaf0f5dbced5392/experiments/change_ir/runs/004-concurrent-collisions.md"
+      },
+      "operations": [
+        {
+          "id": "OP-planned-stop-marker-owner-handoff",
+          "description": "gateway/status.py rather than updater; root-written .gateway-planned-stop.json fresh-file ownership; review on #102258 explicitly calls #91212 adjacent and not solved by updater-tree repair",
+          "collision_contract": {
+            "family": "root-ownership",
+            "boundary": "gateway-marker-writer",
+            "outcome": "user-owned-planned-stop-marker",
+            "policy": "handoff-file-owner",
+            "invariants": [
+              "fresh-marker-owned-by-install-user"
+            ],
+            "evidence": [
+              "https://github.com/NousResearch/hermes-agent/pull/105608",
+              "https://github.com/kvnloo/hermes-agent/blob/c09ff344d3a5b4b3bb7c57a9acaf0f5dbced5392/experiments/change_ir/runs/004-concurrent-collisions.md",
+              "gateway/status.py rather than updater",
+              "root-written .gateway-planned-stop.json fresh-file ownership",
+              "review on #102258 explicitly calls #91212 adjacent and not solved by updater-tree repair"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "change_id": "PR-128970",
+      "title": "refuse root context update on user install",
+      "provenance": {
+        "authors": [
+          "dskwe"
+        ],
+        "source": "https://github.com/NousResearch/hermes-agent/pull/128970",
+        "contract_basis": "https://github.com/kvnloo/hermes-agent/blob/c09ff344d3a5b4b3bb7c57a9acaf0f5dbced5392/experiments/change_ir/runs/004-concurrent-collisions.md"
+      },
+      "operations": [
+        {
+          "id": "OP-refuse-root-context-update-on-user-install",
+          "description": "update_contract.py admission guard; prevents privileged update context from mutating a user-owned install; different lifecycle boundary from stale .git ownership preflight",
+          "collision_contract": {
+            "family": "root-ownership",
+            "boundary": "updater-context-admission",
+            "outcome": "reject-privileged-user-install-update",
+            "policy": "reject-privileged-context",
+            "invariants": [
+              "no-user-install-mutation-from-root-context"
+            ],
+            "evidence": [
+              "https://github.com/NousResearch/hermes-agent/pull/128970",
+              "https://github.com/kvnloo/hermes-agent/blob/c09ff344d3a5b4b3bb7c57a9acaf0f5dbced5392/experiments/change_ir/runs/004-concurrent-collisions.md",
+              "update_contract.py admission guard",
+              "prevents privileged update context from mutating a user-owned install",
+              "different lifecycle boundary from stale .git ownership preflight"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

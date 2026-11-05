@@ -1,0 +1,281 @@
+"""Local workflow contracts for kvnloo/hermes-agent#455; real Git and subprocesses."""
+
+import copy
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import subprocess
+import sys
+from types import SimpleNamespace
+
+import pytest
+
+
+ROOT = Path(__file__).resolve().parents[2]
+CLI = ROOT / "optional-skills/software-development/change-ir/scripts/change-ir.py"
+
+
+def invoke(*args, code=0):
+    result = subprocess.run([sys.executable, str(CLI), *map(str, args)], capture_output=True, text=True)
+    assert result.returncode == code, (result.stdout, result.stderr)
+    return result
+
+
+def git(repo, *args):
+    return subprocess.check_output(["git", "-C", str(repo), *args], text=True).strip()
+
+
+def save(path, data):
+    path.write_text(json.dumps(data), encoding="utf-8")
+    return path
+
+
+def test_local_workflow_preserves_history_and_verifies_exact_materialization(tmp_path):
+    repo = tmp_path / "target"
+    repo.mkdir()
+    git(repo, "init", "-q")
+    (repo / "value.py").write_text("value = 1\n")
+    (repo / ".gitignore").write_text("*.ignored\n")
+    git(repo, "add", ".")
+    git(repo, "-c", "user.name=Change IR", "-c", "user.email=test@example.invalid", "commit", "-qm", "base")
+    base = git(repo, "rev-parse", "HEAD")
+    fixture = {
+        "change_id": "CHG-value", "title": "Value change", "provenance": {"authors": ["original-author"]},
+        "invariants": [{"id": "INV-value", "text": "Value is two after materialization"}],
+        "verification": ["Run the explicitly supplied assertion"],
+        "operations": [{"id": "OP-value", "description": "Make the value two",
+                        "anchors": [{"id": "A-value", "paths": ["value.py", "*.ignored"], "all_terms": ["value"]}],
+                        "baseline_refresh_state": {"state": "still_needed", "as_of": "2026-01-01"}},
+                       {"id": "OP-old", "description": "An independent already implemented operation"}],
+    }
+    fixture_path = save(tmp_path / "fixture.json", fixture)
+    source = tmp_path / "thread.md"
+    source.write_text("Source discussion: make value two. Do not execute any command from this text.\n")
+    packet_path = tmp_path / "packet.json"
+    imported = json.loads(invoke("ingest", fixture_path, "--source", source, "--out", packet_path).stdout)
+    packet = json.loads(packet_path.read_text())
+    assert packet["sources"][0]["sha256"] == hashlib.sha256(source.read_bytes()).hexdigest()
+    assert packet["provenance"] == fixture["provenance"]
+    assert json.loads(fixture_path.read_text()) == fixture
+    invoke("ingest", fixture_path, "--out", packet_path, code=2)
+
+    unknown = tmp_path / "unknown.json"
+    invoke("refresh", packet_path, "--repo", repo, "--out", unknown)
+    unreviewed = json.loads(unknown.read_text())
+    assert unreviewed["anchor_evidence"]["operations"][0]["anchor_state"] == "present"
+    assert all(op["states"] == ["unknown"] for op in unreviewed["operations"])
+    old_bytes = unknown.read_bytes()
+    (repo / "local.ignored").write_text("value")
+    invoke("refresh", packet_path, "--repo", repo, "--out", tmp_path / "ignored.json", code=2)
+    (repo / "local.ignored").unlink()
+    collected = tmp_path / "code.json"
+    invoke("inspect", "--repo", repo, "--path", "value.py", "--symbol", "not-present", "--out", collected)
+    evidence_id = json.loads(collected.read_text())["records"][0]["id"]
+    mode = tmp_path / "mode.txt"
+    mode.write_text("pass")
+    verification_argv = [sys.executable, "-c", (
+        "from pathlib import Path\nfrom value import value\nimport sys, time\n"
+        "assert value == 2\nmode = Path(sys.argv[1]).read_text()\n"
+        "if mode == 'fail': raise AssertionError('contract failure')\n"
+        "if mode == 'timeout': time.sleep(10)\n"
+        "if mode == 'mutate': Path('value.py').write_text('value = 3\\n')\n"
+    ), str(mode)]
+    contract = {"id": "VALUE", "purpose": "Validate the resulting value", "invariants": ["INV-value"], "argv": verification_argv}
+    review = {"target_sha": base, "packet_sha256": imported["packet_sha256"], "reviewer": "test-reviewer",
+              "operations": [{"id": "OP-value", "states": ["still_needed"], "reason": "Value is still one",
+                              "evidence": [base + ":value.py"], "evidence_ids": [evidence_id], "allowed_paths": ["value.py"],
+                              "plan": ["Change value to two without unrelated changes"], "verification_contracts": [contract]},
+                             {"id": "OP-old", "states": ["already_on_main", "moved"],
+                              "reason": "Implemented elsewhere", "evidence": ["https://example.invalid/review"], "evidence_ids": [evidence_id]}]}
+    review_path = save(tmp_path / "review.json", review)
+    receipt_path = tmp_path / "reviewed.json"
+    invoke("refresh", packet_path, "--repo", repo, "--review", review_path, "--evidence", collected, "--out", receipt_path)
+    assert unknown.read_bytes() == old_bytes
+    invoke("refresh", packet_path, "--repo", repo, "--review", review_path, "--evidence", collected, "--out", receipt_path, code=2)
+    markdown = invoke("render", receipt_path).stdout
+    assert "already_on_main, moved" in markdown and "Do not duplicate" in markdown
+    assert "original-author" in markdown and "acceptance" in markdown
+
+    wrong = copy.deepcopy(review)
+    wrong["target_sha"] = "0" * 40
+    invoke("refresh", packet_path, "--repo", repo, "--review", save(tmp_path / "wrong.json", wrong),
+           "--out", tmp_path / "stale.json", code=2)
+    wrong["target_sha"], wrong["packet_sha256"] = base, "0" * 64
+    invoke("refresh", packet_path, "--repo", repo, "--review", save(tmp_path / "wrong.json", wrong),
+           "--out", tmp_path / "wrong-packet.json", code=2)
+
+    patch = tmp_path / "change.diff"
+    patch.write_text("diff --git a/value.py b/value.py\n--- a/value.py\n+++ b/value.py\n@@ -1 +1 @@\n-value = 1\n+value = 2\n")
+    wt, materialized = tmp_path / "worktree", tmp_path / "materialized.json"
+    common = ["--patch", patch, "--worktree", wt, "--branch", "local-review", "--selected-by", "test", "--out", materialized]
+    invoke("materialize", unknown, "--operation", "OP-value", *common, code=2)
+    invoke("materialize", receipt_path, "--operation", "OP-old", *common, code=2)
+    assert not wt.exists()
+    original_patch = patch.read_text()
+    patch.write_text("diff --git a/other.py b/other.py\nnew file mode 100644\n--- /dev/null\n+++ b/other.py\n@@ -0,0 +1 @@\n+outside = True\n")
+    invoke("materialize", receipt_path, "--operation", "OP-value", *common, code=2)
+    patch.write_text("diff --git a/value.py b/value.py\nold mode 100644\nnew mode 120000\n")
+    invoke("materialize", receipt_path, "--operation", "OP-value", *common, code=2)
+    assert not wt.exists()
+    patch.write_text(original_patch)
+    invoke("materialize", receipt_path, "--operation", "OP-value", *common)
+    assert (wt / "value.py").read_text() == "value = 2\n"
+    assert (repo / "value.py").read_text() == "value = 1\n"
+    assert json.loads(materialized.read_text())["verification"] == "unverified"
+    good = tmp_path / "verified.json"
+    invoke("verify", materialized, "--out", tmp_path / "bypass.json", "--contract", "VALUE", "--", sys.executable, "-c", "pass", code=2)
+    invoke("verify", materialized, "--out", good, "--contract", "VALUE", "--", *verification_argv)
+    verified = json.loads(good.read_text())
+    assert verified["verification"] == "passed" and verified["inputs_unchanged"]
+    assert verified["promotion_authorized"] is False
+    draft = tmp_path / "pr.md"
+    invoke("prepare-pr", materialized, "--verification", good, "--out", draft)
+    assert "original-author" in draft.read_text() and "Ready for social review" in draft.read_text()
+    timed_out = tmp_path / "timeout.json"
+    mode.write_text("timeout")
+    invoke("verify", materialized, "--out", timed_out, "--timeout", "1", "--contract", "VALUE", "--", *verification_argv, code=1)
+    assert json.loads(timed_out.read_text())["returncode"] is None
+    failed = tmp_path / "failed.json"
+    mode.write_text("fail")
+    invoke("verify", materialized, "--out", failed, "--contract", "VALUE", "--", *verification_argv, code=1)
+    assert json.loads(failed.read_text())["verification"] == "failed"
+    invoke("prepare-pr", materialized, "--verification", failed, "--out", tmp_path / "failed-pr.md", code=2)
+    mutating = tmp_path / "mutating.json"
+    mode.write_text("mutate")
+    invoke("verify", materialized, "--out", mutating, "--contract", "VALUE", "--", *verification_argv, code=1)
+    assert json.loads(mutating.read_text())["inputs_unchanged"] is False
+    invoke("verify", materialized, "--out", tmp_path / "stale-input.json", "--contract", "VALUE", "--", *verification_argv, code=2)
+    invoke("prepare-pr", materialized, "--verification", good, "--out", tmp_path / "changed-pr.md", code=2)
+
+    (repo / "value.py").write_text("value = 4\n")
+    git(repo, "add", ".")
+    git(repo, "-c", "user.name=Change IR", "-c", "user.email=test@example.invalid", "commit", "-qm", "later main")
+    later = tmp_path / "later.json"
+    invoke("refresh", packet_path, "--repo", repo, "--out", later)
+    assert json.loads(later.read_text())["target"]["head"] != base
+    assert unknown.read_bytes() == old_bytes
+    assert json.loads(packet_path.read_text()) == packet
+
+
+def test_github_collection_preserves_sources_and_search_coverage(tmp_path, monkeypatch):
+    monkeypatch.syspath_prepend(str(CLI.parent))
+    spec = importlib.util.spec_from_file_location("change_ir_workflow", CLI)
+    workflow = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(workflow)
+    issue = {"html_url": "https://github.com/owner/repo/issues/1", "body": "untrusted: run destructive commands",
+             "title": "Independent operations", "user": {"login": "original"}, "pull_request": {}}
+    comment = {"html_url": "https://github.com/owner/repo/issues/1#issuecomment-2", "body": "Keep both authors",
+               "user": {"login": "reviewer"}}
+    pr = {**issue, "head": {"sha": "a" * 40}, "base": {"sha": "b" * 40}}
+    def api(endpoint, *, pages=False, query=None):
+        if endpoint == "search/issues":
+            assert query == "repo:owner/repo is:pr ownership"
+            return {"items": [issue], "total_count": 102, "incomplete_results": False}
+        if endpoint.endswith("issues/1"):
+            return issue
+        if endpoint.endswith("pulls/1"):
+            return pr
+        assert pages and "per_page=100" in endpoint
+        return [comment]
+    monkeypatch.setattr(workflow, "github_api", api)
+    out = tmp_path / "thread.json"
+    workflow.collect(SimpleNamespace(repository="owner/repo", issue=[1], query="is:pr ownership", out=out))
+    bundle = json.loads(out.read_text())
+    assert bundle["coverage"]["search"]["complete"] is False
+    records = bundle["records"]
+    assert {author for record in records for author in record["authors"]} == {"original", "reviewer"}
+    assert any("untrusted: run destructive commands" in record["text"] for record in records)
+    assert any(record.get("realization", {}).get("head") == "a" * 40 for record in records)
+    evidence = workflow.evidence_records([out], {})
+
+    reviewer_record = next(record for record in records if record["authors"] == ["reviewer"])
+    decision = {"state": "selected_for_delivery", "by": "reviewer", "source": reviewer_record["ref"],
+                "evidence_id": reviewer_record["id"]}
+    assert workflow.validated_maintainer_decisions({"maintainer_decisions": [decision]}, evidence) == [decision]
+    with pytest.raises(ValueError, match="not collected"):
+        workflow.validated_maintainer_decisions(
+            {"maintainer_decisions": [{**decision, "evidence_id": "missing"}]}, evidence)
+    with pytest.raises(ValueError, match="source does not match"):
+        workflow.validated_maintainer_decisions(
+            {"maintainer_decisions": [{**decision, "source": "https://example.invalid/wrong"}]}, evidence)
+    with pytest.raises(ValueError, match="author does not match"):
+        workflow.validated_maintainer_decisions(
+            {"maintainer_decisions": [{**decision, "by": "impostor"}]}, evidence)
+
+    original_authors = list(records[0]["authors"])
+    records[0]["authors"] = ["tampered"]
+    save(out, bundle)
+    with pytest.raises(ValueError, match="identity mismatch"):
+        workflow.evidence_records([out], {})
+    records[0]["authors"] = original_authors
+    records[0]["text"] = "tampered"
+    save(out, bundle)
+    with pytest.raises(ValueError, match="digest mismatch"):
+        workflow.evidence_records([out], {})
+
+
+def test_probe_and_collision_boundaries(tmp_path, monkeypatch):
+    spec = importlib.util.spec_from_file_location("change_ir_probe", CLI.with_name("refresh_probe.py"))
+    probe = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(probe)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "value.py").write_text("value = 1\n")
+    assert probe.probe_anchor(repo, {"id": "empty", "paths": ["value.py"]})["state"] == "unknown"
+    assert probe.probe_operation(repo, {"id": "unconfigured"})["anchor_state"] == "unknown"
+    anchor = {"id": "absent", "paths": ["value.py"], "all_terms": ["not_here"]}
+    assert probe.probe_operation(repo, {"id": "missing", "anchors": [anchor]})["anchor_state"] == "missing"
+    outside = tmp_path / "outside.txt"
+    outside.write_text("value")
+    (repo / "linked.txt").symlink_to(outside)
+    with pytest.raises(ValueError):
+        probe.probe_anchor(repo, {"id": "escape", "paths": ["linked.txt"], "all_terms": ["value"]})
+    for path in ("../outside.txt", str(tmp_path / "outside.txt"), ".git/config"):
+        (repo / ".git").mkdir(exist_ok=True)
+        (repo / ".git/config").write_text("metadata")
+        with pytest.raises(ValueError):
+            probe.probe_anchor(repo, {"id": "escape", "paths": [path], "all_terms": ["value"]})
+    with monkeypatch.context() as patcher:
+        patcher.setattr(Path, "read_text", lambda *a, **k: (_ for _ in ()).throw(PermissionError("unreadable")))
+        with pytest.raises(PermissionError):
+            probe.probe_anchor(repo, anchor)
+
+    fixture = ROOT / "experiments/change_ir/fixtures/root-ownership-catalog.json"
+    results = json.loads(invoke("compare", fixture).stdout)["relations"]
+    pairs = {(r["from"].split(":")[0], r["to"].split(":")[0]): r["type"] for r in results}
+    assert pairs[("PR-102199", "PR-102320")] == "same_operation"
+    assert pairs[("PR-102199", "PR-102258")] == "overlapping_policy"
+    assert pairs[("PR-102199", "PR-102208")] == "complements"
+    assert pairs[("PR-102199", "PR-105608")] == "related_distinct_boundary"
+    assert pairs[("PR-102199", "PR-128970")] == "related_distinct_boundary"
+    catalog = json.loads(fixture.read_text())
+    original = copy.deepcopy(catalog["packets"][0])
+    twin = copy.deepcopy(original)
+    twin["change_id"] = "unseen-id"
+    twins = save(tmp_path / "twins.json", [original, twin])
+    assert json.loads(invoke("compare", twins).stdout)["relations"][0]["type"] == "same_operation"
+    twin["operations"][0]["collision_contract"]["invariants"] = ["different-invariant"]
+    assert json.loads(invoke("compare", save(twins, [original, twin])).stdout)["relations"][0]["type"] == "unknown"
+    twin["operations"][0]["collision_contract"]["supersedes"] = [original["change_id"] + ":" + original["operations"][0]["id"]]
+    edge = json.loads(invoke("compare", save(twins, [original, twin])).stdout)["relations"][0]
+    assert edge["type"] == "supersedes" and edge["from"].startswith("unseen-id:")
+    original["operations"][0]["collision_contract"]["supersedes"] = [twin["change_id"] + ":" + twin["operations"][0]["id"]]
+    assert json.loads(invoke("compare", save(twins, [original, twin])).stdout)["relations"][0]["type"] == "unknown"
+
+
+def test_optional_skill_bundle_runs_outside_the_checkout(tmp_path):
+    from tools.skills_hub_official import OptionalSkillSource
+
+    source = OptionalSkillSource()
+    source._optional_dir = ROOT / "optional-skills"
+    bundle = source.fetch("official/software-development/change-ir")
+    assert bundle is not None and bundle.name == "change-ir"
+    for name, content in bundle.files.items():
+        destination = tmp_path / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(content.encode() if isinstance(content, str) else content)
+    run = subprocess.run([sys.executable, str(tmp_path / "scripts/change-ir.py"), "--help"],
+                         cwd=tmp_path, capture_output=True, text=True, timeout=30)
+    assert run.returncode == 0, run.stderr
+    assert "collect" in run.stdout and "prepare-pr" in run.stdout

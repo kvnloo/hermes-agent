@@ -265,6 +265,7 @@ hermes skills uninstall <skill-name>
 | Skill | Description |
 |-------|-------------|
 | [**ast-grep**](../user-guide/skills/optional/software-development/software-development-ast-grep.md) | AST-aware structural code search and rewrite via ast-grep. |
+| [**change-ir**](../user-guide/skills/optional/software-development/software-development-change-ir.md) | Refresh stale changes and detect competing work. |
 | [**code-wiki**](../user-guide/skills/optional/software-development/software-development-code-wiki.md) | Generate wiki docs + Mermaid diagrams for any codebase. |
 | [**grill-me**](../user-guide/skills/optional/software-development/software-development-grill-me.md) | Adversarial plan interview before implementation. |
 | [**hermes-agent-skill-authoring**](../user-guide/skills/optional/software-development/software-development-hermes-agent-skill-authoring.md) | Author in-repo SKILL.md files: frontmatter and structure. |
