@@ -820,6 +820,14 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
         user_text = _extract_text(prompt).strip()
         user_content = _content_blocks_to_openai_user_content(prompt)
         text_only_prompt = all(isinstance(block, TextContentBlock) for block in prompt)
+        # Filter once (it records what it keeps), then derive the text view from the result.
+        filtered = state.host_blocks.filter_content(user_content, getattr(state.agent, "session_id", None))
+        if filtered != user_content:
+            user_content = filtered
+            if isinstance(user_content, str):
+                user_text = user_content.strip()
+            else:
+                user_text = "\n".join(p["text"] for p in user_content if p.get("type") == "text").strip()
         if not user_text and not (isinstance(user_content, list) and user_content):
             return PromptResponse(stop_reason="end_turn")
 
