@@ -831,6 +831,21 @@ describe('picking an effort on another model', () => {
     expect(applyPreset).not.toHaveBeenCalled()
     expect(closeMenu).not.toHaveBeenCalled()
   })
+
+  it('leaves the menu open when an effort-triggered model switch rejects', async () => {
+    const applyPreset = vi.fn()
+    const select = vi.fn(async () => {
+      throw new Error('gateway rejected model selection')
+    })
+
+    renderMenu(other, { applyPreset, effortPickSelects: true, select })
+    await pickHighOnGeminiPro()
+    await act(async () => {})
+
+    expect(select).toHaveBeenCalledWith('gemini-3.1-pro', 'google')
+    expect(applyPreset).not.toHaveBeenCalled()
+    expect(closeMenu).not.toHaveBeenCalled()
+  })
 })
 
 describe('the catalog renders per-model pricing', () => {

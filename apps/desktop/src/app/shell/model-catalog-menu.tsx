@@ -1225,7 +1225,10 @@ function ModelFamilyRow({
 
           // A pick that selects the model closes the menu like a row click, so the list cannot reflow under the pointer.
           if (!isCurrent && patch.effort !== undefined && controller.effortPickSelects) {
-            void Promise.resolve(onSelect(family, provider, patch.effort)).then(ok => ok !== false && closeMenu())
+            // A rejected model switch must not close the menu or leak an unhandled promise rejection.
+            void Promise.resolve(onSelect(family, provider, patch.effort))
+              .then(ok => ok !== false && closeMenu())
+              .catch(() => false)
           }
         }}
         provider={provider.slug}
