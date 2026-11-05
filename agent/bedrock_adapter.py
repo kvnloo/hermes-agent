@@ -1182,6 +1182,8 @@ BEDROCK_CONTEXT_LENGTHS: Dict[str, int] = {
         "anthropic.claude-3-5-sonnet", "anthropic.claude-3-5-haiku", "anthropic.claude-3-opus", "anthropic.claude-3-sonnet",
         "anthropic.claude-3-haiku",
     ), 200_000),
+    # Kimi K3: an opaque Bedrock length error must not reduce its 1M window to 128K.
+    "moonshotai.kimi-k3": 1_000_000,
     # Amazon Nova
     **dict.fromkeys(("amazon.nova-pro", "amazon.nova-lite"), 300_000), "amazon.nova-micro": 128_000,
     # Meta Llama / Mistral / DeepSeek
