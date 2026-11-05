@@ -58,7 +58,6 @@ import { $connectionsRegistry } from '@/store/connection-registry-state'
 import { watchDeadSessionPrune } from '@/store/dead-session-prune'
 import { $interfaceMode, $showsAdvancedChrome, setModeContext, toggleSimpleMode } from '@/store/interface-mode'
 import {
-  $fileBrowserOpen,
   $sidebarOpen,
   FILE_BROWSER_DEFAULT_WIDTH,
   FILE_BROWSER_MAX_WIDTH,
@@ -118,6 +117,7 @@ import { $workspaceIsPage, WORKSPACE_PAGE_HEADER_AREA } from '../routes'
 import { Butterbar } from '../shell/butterbar'
 import { TermsButterbar } from '../shell/terms-butterbar'
 
+import { $filesPaneVisible } from './files-workspace-visibility'
 import { BASIC_TREE, DEFAULT_TREE, registerLayoutPresets } from './layout-presets'
 import { bindLayoutSides } from './layout-sides'
 import { FilesPane, LogsPane, ReviewPaneContent } from './panes'
@@ -573,8 +573,8 @@ bindLayoutSides()
 // collapse and the chat absorbs the width; picking a project brings them
 // back. The terminal is NOT workspace-gated: unlike the old shell (where it
 // rode the rail's row and vanished with it), its zone stands on its own.
-// FilesPane reads the focused session's resolved workspace. A profile's
-// remembered/current CWD can be empty while that session still has a valid cwd.
+// Files visibility and Review's workspace gate both follow the focused session,
+// not the profile's remembered/current CWD (which can be stale or empty).
 const $hasWorkspace = computed($focusedWorkspaceCwd, cwd => Boolean(cwd.trim()))
 
 // The tree pane's own presence tracks ⌘J directly, not just the column's
@@ -589,7 +589,7 @@ const $hasWorkspace = computed($focusedWorkspaceCwd, cwd => Boolean(cwd.trim()))
 // is about.
 bindPaneVisibility(
   'files',
-  computed([$hasWorkspace, $fileBrowserOpen], (workspace, open) => workspace && open),
+  $filesPaneVisible,
   () => setFileBrowserOpen(false),
   () => setFileBrowserOpen(true)
 )
