@@ -131,10 +131,17 @@ def skills_hub_http_session() -> Iterator[None]:
 
 def _skills_hub_http_get(url: str, **kwargs: Any) -> httpx.Response:
     """GET through the active resolution pool, or preserve one-shot behavior."""
-    client = _skills_hub_http_client.get()
-    if client is not None:
-        return client.get(url, **kwargs)
-    return httpx.get(url, **kwargs)
+    from tools.url_safety import SSRFConnectionBlocked
+
+    try:
+        client = _skills_hub_http_client.get()
+        if client is not None:
+            return client.get(url, **kwargs)
+        return httpx.get(url, **kwargs)
+    except SSRFConnectionBlocked:
+        # GitHub, skills.sh and other adapters use this pool, not _guarded_http_get.
+        _skills_hub_fetch_blocked_reason.set("url_safety")
+        raise
 
 
 def _ssrf_safe_http_get(url: str, *, timeout: int = _DEFAULT_HTTP_TIMEOUT,
