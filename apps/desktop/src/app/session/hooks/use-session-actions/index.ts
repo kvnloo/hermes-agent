@@ -1280,7 +1280,7 @@ export function useSessionActions({
       // before the selection listener homes focus) so the tile is gone the same tick
       // the route takes over; the warm cache/runtime binding survives for main to reuse.
       if ($sessionTiles.get().some(t => t.storedSessionId === storedSessionId)) {
-        closeSessionTile(storedSessionId)
+        closeSessionTile(storedSessionId, { preserveRuntime: true })
       }
 
       // Optimistically clear any prior resume-failure latch for this session:

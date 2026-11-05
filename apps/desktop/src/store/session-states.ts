@@ -2480,7 +2480,7 @@ export function reuseBlankDraftTile(
 const closedTilesByProfile: Record<string, SessionTile[]> = {}
 const closedStack = (): SessionTile[] => (closedTilesByProfile[visibleTileScope] ??= [])
 
-export function closeSessionTile(storedSessionId: string) {
+export function closeSessionTile(storedSessionId: string, options?: { preserveRuntime?: boolean }) {
   const tile = $sessionTiles.get().find(t => t.storedSessionId === storedSessionId)
 
   if (tile) {
@@ -2520,7 +2520,8 @@ export function closeSessionTile(storedSessionId: string) {
   // left alone (the confirm copy promises it keeps streaming and reopens from
   // the sidebar); the stored row stays resumable either way. Fire-and-forget:
   // the close must never block the tab's own dismissal. (#48997)
-  if (runtimeId && !(state?.busy || state?.needsInput || state?.awaitingResponse)) {
+  // Re-homing a tile into MAIN is a view transfer, not a session boundary.
+  if (!options?.preserveRuntime && runtimeId && !(state?.busy || state?.needsInput || state?.awaitingResponse)) {
     void sessionTileDelegate()?.closeSessionRuntime?.(runtimeId)
   }
 }

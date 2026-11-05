@@ -30,6 +30,7 @@ import {
   blankDraftTile,
   clearAllSessionStates,
   closeAllOpenSessionTiles,
+  closeSessionTile,
   focusedSessionNeedsRoute,
   focusedSessionWorkspaceScope,
   focusOpenSession,
@@ -703,6 +704,32 @@ describe('closeAllOpenSessionTiles persists Bot Mode Close All (#94137)', () => 
     )
     closeAllOpenSessionTiles('workspace')
     expect($sessionTiles.get().map(tile => tile.storedSessionId)).toEqual(['keep'])
+  })
+})
+
+describe('tab close and tile-to-main handoff (#149232)', () => {
+  afterEach(() => {
+    $layoutTree.set(null)
+    $sessionTiles.set([])
+    setSessionTileDelegate({} as SessionTileDelegate)
+  })
+
+  it('closes an abandoned idle runtime, but not one the main chat is adopting', () => {
+    const closeSessionRuntime = vi.fn(async () => undefined)
+    setSessionTileDelegate({ closeSessionRuntime } as unknown as SessionTileDelegate)
+
+    $sessionTiles.set([{ runtimeId: 'runtime-main', storedSessionId: 'stored-main' }])
+    closeSessionTile('stored-main', { preserveRuntime: true })
+
+    expect($sessionTiles.get()).toEqual([])
+    expect(closeSessionRuntime).not.toHaveBeenCalled()
+
+    $sessionTiles.set([{ runtimeId: 'runtime-tab', storedSessionId: 'stored-tab' }])
+    closeSessionTile('stored-tab')
+
+    expect($sessionTiles.get()).toEqual([])
+    expect(closeSessionRuntime).toHaveBeenCalledTimes(1)
+    expect(closeSessionRuntime).toHaveBeenCalledWith('runtime-tab')
   })
 })
 
