@@ -9,6 +9,7 @@ import pytest
     ("unchanged", "cron_skipped"),
     ("source_error", "cron_preflight_failed"),
     ("wake_false", "cron_skipped"),
+    ("quiet_stdout", "cron_skipped"),  # regression: NousResearch/hermes-agent#145314
     ("preflight", "cron_preflight_failed"),
 ])
 def test_pre_agent_exit_ends_session_and_preserves_retry(tmp_path, monkeypatch, gate, reason):
@@ -33,6 +34,9 @@ def test_pre_agent_exit_ends_session_and_preserves_retry(tmp_path, monkeypatch, 
     elif gate == "wake_false":
         job["script"] = "wake.py"
         (scripts / "wake.py").write_text('print(\'{"wakeAgent": false}\')', encoding="utf-8")
+    elif gate == "quiet_stdout":
+        job["script"] = "quiet.py"
+        (scripts / "quiet.py").write_text("", encoding="utf-8")
     else:
         monkeypatch.setattr(scheduler, "_resolve_cron_agent_setup", lambda *args:
                             scheduler._CronAgentSetup(blocked=(False, "blocked", "", "preflight refused")))
