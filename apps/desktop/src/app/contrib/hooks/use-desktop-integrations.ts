@@ -140,6 +140,11 @@ export function useDesktopIntegrations({
       // The switch first clears the outgoing runtime and navigates to a safe
       // draft. Never interpret its old URL as a route on the new backend.
       if (restoreAfterSwitchRef.current && locationPathname !== NEW_CHAT_ROUTE) {
+        // The switch's fresh-draft wipe may leave /:sid unchanged. Clear that
+        // stale route before restoring the target backend's remembered chat.
+        if (routedSessionId) {
+          navigate(NEW_CHAT_ROUTE, { replace: true })
+        }
         return
       }
       // Only cold-start navigation at the default route is replaceable; a deep

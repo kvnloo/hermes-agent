@@ -261,6 +261,70 @@ describe('useDesktopIntegrations', () => {
       }
     })
 
+    it('does not strand a stale session URL after the new connection is active', () => {
+      const local = {
+        baseUrl: 'http://127.0.0.1:8000',
+        connectionId: 'local',
+        mode: 'local',
+        profile: 'default'
+      } as unknown as HermesConnection
+      const remote = {
+        baseUrl: 'https://homelab.example:8443',
+        connectionId: 'homelab',
+        mode: 'remote',
+        profile: 'default'
+      } as unknown as HermesConnection
+
+      try {
+        setConnection(remote)
+        setRememberedRoute('/remote-session', 'default')
+        setConnection(local)
+
+        const result = render({
+          profileReady: true,
+          locationPathname: '/local-session',
+          routedSessionId: 'local-session',
+          sessions: [session({ id: 'local-session', profile: 'default' })]
+        })
+        navigate.mockClear()
+
+        act(() => {
+          setConnection(remote)
+          $connectionContextRestore.set({ connectionId: 'homelab', profile: 'default', sequence: 41 })
+        })
+
+        // The gateway wipe leaves the old URL in place. The new backend has
+        // answered with a different existing chat, so no send can use the old route.
+        result.rerender({
+          activeProfile: 'default',
+          locationPathname: '/local-session',
+          profileReady: true,
+          resumeExhaustedSessionId: null,
+          resumeLastSession: true,
+          routedSessionId: 'local-session',
+          sessions: [session({ id: 'remote-session', profile: 'default' })]
+        })
+        expect(navigate).toHaveBeenCalledWith('/', { replace: true })
+        navigate.mockClear()
+
+        result.rerender({
+          activeProfile: 'default',
+          locationPathname: '/',
+          profileReady: true,
+          resumeExhaustedSessionId: null,
+          resumeLastSession: true,
+          routedSessionId: null,
+          sessions: [session({ id: 'remote-session', profile: 'default' })]
+        })
+        expect(navigate).toHaveBeenCalledWith('/remote-session', { replace: true })
+      } finally {
+        act(() => {
+          $connectionContextRestore.set(null)
+          setConnection(local)
+        })
+      }
+    })
+
     it('does NOT restore before profileReady is true', () => {
       // Set remembered state, but profileReady=false.
       window.localStorage.setItem('hermes.desktop.lastRoute.profile.default', '/remembered-session')
