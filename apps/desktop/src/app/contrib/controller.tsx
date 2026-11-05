@@ -83,7 +83,6 @@ import {
 } from '@/store/review'
 import {
   $cronSessions,
-  $currentCwd,
   $messagingSessions,
   $selectedStoredSessionId,
   $sessions,
@@ -92,7 +91,7 @@ import {
   sessionMatchesStoredId
 } from '@/store/session'
 import { watchSessionPins } from '@/store/session-pin-sync'
-import { $botChatScopes } from '@/store/session-states'
+import { $botChatScopes, $focusedWorkspaceCwd } from '@/store/session-states'
 import { watchUnreadWriteGuard } from '@/store/session-unread-remote'
 import { $statusbarVisible } from '@/store/statusbar-prefs'
 import { isBrowserWindow, isHudWindow } from '@/store/windows'
@@ -574,7 +573,9 @@ bindLayoutSides()
 // collapse and the chat absorbs the width; picking a project brings them
 // back. The terminal is NOT workspace-gated: unlike the old shell (where it
 // rode the rail's row and vanished with it), its zone stands on its own.
-const $hasWorkspace = computed($currentCwd, cwd => Boolean(cwd.trim()))
+// FilesPane reads the focused session's resolved workspace. A profile's
+// remembered/current CWD can be empty while that session still has a valid cwd.
+const $hasWorkspace = computed($focusedWorkspaceCwd, cwd => Boolean(cwd.trim()))
 
 // The tree pane's own presence tracks ⌘J directly, not just the column's
 // collapse — otherwise a pane revealed into that shared column would drag the
