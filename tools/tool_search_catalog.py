@@ -70,6 +70,20 @@ def _registry_entry(name: str) -> Any:
         return None
 
 
+def resolve_wire_alias(name: str) -> str:
+    """Registered name for a tool the model cited by its Anthropic OAuth wire alias.
+
+    On OAuth the prompt prose calls ``session_search`` ``chat_history_lookup``, so the model
+    passes that alias as a *string argument* to the bridge (``tool_call`` / ``tool_describe``),
+    where normalize_response's top-level name reversal never reaches. A registered tool under
+    the alias still wins, mirroring the transport's resolution order."""
+    if _registry_entry(name) is not None:
+        return name
+    from agent.anthropic_adapter import _OAUTH_TOOL_NAME_REVERSE_ALIASES  # late: heavy import
+    original = _OAUTH_TOOL_NAME_REVERSE_ALIASES.get(name)
+    return original if original and _registry_entry(original) is not None else name
+
+
 def _registry_toolset(name: str) -> Optional[str]:
     """Toolset of a registered tool; None when unregistered or malformed (no str toolset)."""
     toolset = getattr(_registry_entry(name), "toolset", None)
