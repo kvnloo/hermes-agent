@@ -42,14 +42,18 @@ def request_editor_edit(proposal):
     with approval._lock:
         notify = approval._gateway_notify_cbs.get(route)
     if notify is None:
-        return False
+        return 'no_viewer'
     # Each diff is a one-use consent, never a command-pattern or session grant.
     data = {'command': f'Edit {proposal.path}', 'description': 'Approve proposed file change',
             'pattern_key': 'editor-' + uuid.uuid4().hex,
             'allow_session': False, 'allow_permanent': False, 'edit': asdict(proposal)}
     data['pattern_keys'] = [data['pattern_key']]
     decision = _await_gateway_decision(route, notify, data, surface='acp')
-    return decision.get('resolved') and decision.get('choice') == 'once'
+    if decision.get('notify_failed'):
+        return 'no_viewer'
+    if not decision.get('resolved'):
+        return 'timeout'
+    return decision.get('choice') == 'once'
 
 
 def _policy_requester(policy):
