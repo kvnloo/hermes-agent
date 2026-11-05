@@ -611,6 +611,40 @@ function heldRowIndex(messages: ChatMessage[], held: ChatMessage): number {
 }
 
 /**
+ * A rowId-less optimistic user row may hydrate under a different id.
+ * Only match it by user-turn ordinal when the entire visible user sequence
+ * still agrees; a compacted window cannot safely resolve this anchor.
+ */
+function hydratedOptimisticNoticeAnchorIndex(
+  merged: ChatMessage[],
+  currentMessages: ChatMessage[],
+  anchorId: string
+): number {
+  const anchor = currentMessages.find(message => message.id === anchorId)
+
+  if (!anchor || anchor.role !== 'user' || anchor.hidden || anchor.rowId !== undefined) {
+    return -1
+  }
+
+  const visibleUsers = (messages: ChatMessage[]) =>
+    messages.filter(message => message.role === 'user' && !message.hidden)
+
+  const currentUsers = visibleUsers(currentMessages)
+  const hydratedUsers = visibleUsers(merged)
+
+  if (
+    currentUsers.length !== hydratedUsers.length ||
+    !currentUsers.every((message, index) => userTurnMatch(hydratedUsers[index], message))
+  ) {
+    return -1
+  }
+
+  const ordinal = currentUsers.indexOf(anchor)
+
+  return ordinal === -1 ? -1 : merged.indexOf(hydratedUsers[ordinal])
+}
+
+/**
  * Re-graft client-local `system` notices (see `isLocalSystemNotice`):
  * refreshes rebuild from stored rows, which never carry them, so the notice
  * vanished on the next refresh (#126422). An explicitly anchored /btw answer
@@ -638,20 +672,31 @@ export function preserveLocalSystemNotices(nextMessages: ChatMessage[], currentM
   for (const message of currentMessages) {
     if (missing(message)) {
       if (message.noticeAfterId) {
-        const at = merged.findIndex(
+        const directAt = merged.findIndex(
           row =>
             row.id === message.noticeAfterId ||
             (message.noticeAfterRowId !== undefined && row.rowId === message.noticeAfterRowId)
         )
+        const at =
+          directAt >= 0
+            ? directAt
+            : hydratedOptimisticNoticeAnchorIndex(merged, currentMessages, message.noticeAfterId)
 
         if (at >= 0) {
           const previous = anchoredTailIds.get(message.noticeAfterId)
           const previousAt = previous ? merged.findIndex(row => row.id === previous) : -1
 
-          merged.splice((previousAt >= 0 ? previousAt : at) + 1, 0, ...pending.slice(orphaned), message)
+          const anchoredNotice =
+            directAt >= 0
+              ? message
+              : {
+                  ...message,
+                  noticeAfterId: merged[at].id,
+                  noticeAfterRowId: merged[at].rowId
+                }
+
+          merged.splice((previousAt >= 0 ? previousAt : at) + 1, 0, anchoredNotice)
           anchoredTailIds.set(message.noticeAfterId, message.id)
-          pending = []
-          orphaned = 0
         }
 
         continue

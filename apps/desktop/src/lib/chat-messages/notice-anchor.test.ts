@@ -55,3 +55,60 @@ it('drops a /btw answer instead of moving it into a later turn after compaction 
 
   expect(preserveLocalSystemNotices(page, liveWithLaterTurn(newReply))).toEqual(page)
 })
+
+it('keeps a waiting generic notice before its next held row when /btw anchors earlier (#149380)', () => {
+  const source = row('source', 'assistant', 'answer before aside', 11)
+  const middle = row('middle', 'user', 'later question', 12)
+  const last = row('last', 'assistant', 'later answer', 13)
+  const generic: ChatMessage = {
+    id: 'background-complete',
+    role: 'system',
+    parts: [textPart('background finished')]
+  }
+  const anchored: ChatMessage = {
+    ...notice,
+    id: 'btw-complete-anchored',
+    noticeAfterId: source.id,
+    noticeAfterRowId: source.rowId
+  }
+
+  const page = [source, middle, last]
+  const current = [source, middle, generic, anchored, last]
+  const result = preserveLocalSystemNotices(page, current)
+
+  expect(result.map(message => message.id)).toEqual([
+    'source',
+    'btw-complete-anchored',
+    'middle',
+    'background-complete',
+    'last'
+  ])
+})
+
+it('reanchors a /btw answer on a hydrated optimistic user row without a rowId (#149380)', () => {
+  const optimistic: ChatMessage = {
+    id: 'optimistic-next',
+    role: 'user',
+    parts: [textPart('next question')]
+  }
+  const hydrated = row('hydrated-next', 'user', 'next question', 3)
+  const anchored: ChatMessage = {
+    ...notice,
+    id: 'btw-complete-optimistic',
+    noticeAfterId: optimistic.id,
+    noticeAfterRowId: undefined
+  }
+
+  const page = [...older, hydrated]
+  const result = preserveLocalSystemNotices(page, [...older, optimistic, anchored])
+
+  expect(result.map(message => message.id)).toEqual([
+    'old-question',
+    'old-reply',
+    'hydrated-next',
+    'btw-complete-optimistic'
+  ])
+  expect(result.at(-1)?.noticeAfterId).toBe('hydrated-next')
+  expect(result.at(-1)?.noticeAfterRowId).toBe(3)
+  expect(preserveLocalSystemNotices(page, result)).toEqual(result)
+})
