@@ -1171,7 +1171,7 @@ class SessionSearchMixin:
                 logger.debug(operational_debug, exc_info=True)
             return None
         except sqlite3.DatabaseError as exc:
-            if not self._recover_fts_match_error(exc):
+            if fail_open is None or not self._recover_fts_match_error(exc):
                 raise
             logger.warning(
                 "%s FTS search hit a corruption error (%s); detached FTS and falling back to canonical LIKE.",

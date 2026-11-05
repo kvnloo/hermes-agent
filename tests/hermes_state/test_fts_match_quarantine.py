@@ -69,3 +69,49 @@ def test_bare_corrupt_trigram_match_checks_canonical_integrity(tmp_path, monkeyp
     finally:
         db.close()
         reset_storage_state(db.db_path)
+
+def test_latin_trigram_retry_without_fail_open_raises_without_detaching_fts(tmp_path, monkeypatch):
+    """Latin substring fallback did not opt into FTS fail-open (#149585)."""
+    db = SessionDB(db_path=tmp_path / "state.db")
+    try:
+        if not db._fts_enabled or not db._trigram_available:
+            pytest.skip("FTS5 trigram is unavailable in this SQLite runtime")
+        db.create_session("s1", source="cli")
+        db.append_message("s1", "user", "prefixhermesneedlesuffix")
+        # unicode61 misses the substring, then this route calls _match_rows
+        # without fail_open; unlike the explicit CJK route it must propagate.
+        db._fts_cjk_available = False
+        original_read_ctx = db._read_ctx
+        failed_matches = []
+
+        class CorruptTrigramConnection:
+            def __init__(self, conn):
+                self.conn = conn
+
+            def execute(self, sql, *args, **kwargs):
+                if "messages_fts_trigram MATCH" in sql:
+                    failed_matches.append(sql)
+                    error = sqlite3.DatabaseError("database disk image is malformed")
+                    error.sqlite_errorcode = sqlite3.SQLITE_CORRUPT
+                    raise error
+                return self.conn.execute(sql, *args, **kwargs)
+
+            def __getattr__(self, name):
+                return getattr(self.conn, name)
+
+        @contextmanager
+        def broken_trigram_read(*args, **kwargs):
+            with original_read_ctx(*args, **kwargs) as conn:
+                yield CorruptTrigramConnection(conn)
+
+        monkeypatch.setattr(db, "_read_ctx", broken_trigram_read)
+        with pytest.raises(sqlite3.DatabaseError, match="malformed"):
+            db.search_messages("hermesneedle")
+        assert failed_matches, "must exercise the Latin trigram fallback"
+        assert db._fts_stale is False, "no fail-open must not detach FTS triggers"
+        assert db._fts_enabled is True
+        assert storage_state(db.db_path) == STORAGE_OK
+        db.append_message("s1", "user", "canonical writes remain available")
+    finally:
+        db.close()
+        reset_storage_state(db.db_path)
