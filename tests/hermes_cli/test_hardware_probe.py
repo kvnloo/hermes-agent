@@ -165,3 +165,18 @@ def test_shared_query_distinct_model_names_are_both_kept(monkeypatch):
     query = hardware._cached_nvidia_gpu_query()
     assert query["gpu_name"] == "NVIDIA RTX 3090 + NVIDIA RTX 4060"
     assert query["gpu_util_percent"] == 2  # mean(5, 0) rounds down
+
+def test_shared_query_na_utilization_preserves_full_vram_budget(monkeypatch):
+    # Unavailable utilization on a healthy card must not shrink usable VRAM.
+    stdout = (
+        _ROW.format(i=0, total=24576, free=24000, used=576, util=5)
+        + _ROW.format(i=1, total=24576, free=23800, used=776, util="N/A")
+    )
+    _fake_smi(monkeypatch, stdout)
+    vram = hardware._nvidia_vram()
+    assert vram is not None
+    assert vram[:2] == (49152 << 20, 47800 << 20)
+    query = hardware._cached_nvidia_gpu_query()
+    assert query is not None
+    assert query["used_bytes"] == 1352 << 20
+    assert query["gpu_util_percent"] == 5
