@@ -1797,12 +1797,9 @@ def _load_show_reasoning() -> bool:
 
 
 def _load_memory_notifications() -> str:
-    """``display.memory_notifications`` (``off`` / ``on`` default / ``verbose``; bool normalized) — gates the
-    "💾 Self-improvement review" summary (gateway/CLI parity)."""
-    raw = _display_cfg().get("memory_notifications")
-    if isinstance(raw, bool):
-        return "on" if raw else "off"
-    return str(raw).lower() if raw else "on"
+    """Resolve the background-review notice for this TUI or Desktop surface."""
+    from gateway.display_config import resolve_memory_notifications
+    return resolve_memory_notifications(_load_cfg(), _resolve_session_platform())
 
 
 _TOOL_PROGRESS_MODES = frozenset({"off", "new", "all", "verbose"})

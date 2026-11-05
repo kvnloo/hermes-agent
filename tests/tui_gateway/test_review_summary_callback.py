@@ -141,3 +141,19 @@ def test_load_memory_notifications_normalization(server, monkeypatch, raw, expec
     monkeypatch.setattr(server, "_load_cfg", lambda: {"display": display})
     assert server._load_memory_notifications() == expected
 
+@pytest.mark.parametrize("surface", ["tui", "desktop"])
+def test_load_memory_notifications_respects_surface_override(server, monkeypatch, surface):
+    """A suppressed surface must not mute a sibling sharing the same profile."""
+    config = {
+        "display": {
+            "memory_notifications": "on",
+            "platforms": {surface: {"memory_notifications": False}},
+        }
+    }
+    monkeypatch.setattr(server, "_load_cfg", lambda: config)
+    monkeypatch.setattr(server, "_resolve_session_platform", lambda: surface)
+    assert server._load_memory_notifications() == "off"
+
+    sibling = "desktop" if surface == "tui" else "tui"
+    monkeypatch.setattr(server, "_resolve_session_platform", lambda: sibling)
+    assert server._load_memory_notifications() == "on"
