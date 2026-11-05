@@ -398,7 +398,7 @@ def _model_flow_named_custom(config, provider_info):
         model.pop("base_url", None)
         model.pop("api_key", None)
     else:
-        model["provider"] = "custom"
+        model["provider"] = custom_provider_slug(name)
         model["base_url"] = _custom_provider_base_url_config_value(provider_info, base_url)
         if config_api_key:
             model["api_key"] = config_api_key
