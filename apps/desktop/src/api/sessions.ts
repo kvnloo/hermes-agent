@@ -674,11 +674,39 @@ export function getOlderSessionMessages(
  * instead and add structural overhead: the limit is a memory backstop, not an
  * exact byte contract.
  */
+/**
+ * Include complete tool arguments in the transcript load guard without
+ * serializing the potentially large nested payload to a second JSON string.
+ */
+function approximateToolArgsChars(value: unknown): number {
+  if (typeof value === 'string') {
+    return value.length
+  }
+
+  if (Array.isArray(value)) {
+    return value.reduce((count: number, part: unknown) => count + approximateToolArgsChars(part) + 1, 2)
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.entries(value).reduce(
+      (count, [name, part]) => count + name.length + approximateToolArgsChars(part) + 4,
+      2
+    )
+  }
+
+  return 8
+}
+
 function approximateMessageJsonChars(messages: SessionMessage[]): number {
   let chars = 2 // the array brackets
 
   for (const message of messages) {
     chars += 96 // ids, role, timestamp, keys and punctuation
+
+    // Tool rows can have almost no display content but megabytes of full args.
+    if (message.args !== undefined) {
+      chars += approximateToolArgsChars(message.args)
+    }
 
     const { content } = message
 

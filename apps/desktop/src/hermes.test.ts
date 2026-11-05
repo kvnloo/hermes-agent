@@ -612,6 +612,19 @@ describe('Hermes REST helpers', () => {
     )
   })
 
+  it('counts full tool arguments before adopting a legacy complete transcript', async () => {
+    // Tool-heavy sessions can persist full arguments separately from their
+    // empty/short display content. The safe-load guard must cover those bytes.
+    api.mockResolvedValueOnce({
+      session_id: 'session-1',
+      messages: [{ id: 1, role: 'tool', content: '', args: { command: 'x'.repeat(8_192) } }]
+    })
+
+    await expect(getAllSessionMessages('session-1', null, { maxJsonChars: 512 })).rejects.toThrow(
+      'Desktop safe-load limit'
+    )
+  })
+
   it('bounds blocking TTS synthesis timeouts by text length', () => {
     expect(audioSpeakRequestTimeoutMs('short message')).toBe(AUDIO_SPEAK_MIN_REQUEST_TIMEOUT_MS)
     expect(audioSpeakRequestTimeoutMs('x'.repeat(8_000))).toBeGreaterThan(AUDIO_SPEAK_MIN_REQUEST_TIMEOUT_MS)
