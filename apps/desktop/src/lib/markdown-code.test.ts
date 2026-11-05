@@ -45,6 +45,16 @@ describe('isLikelyProseCodeBlock', () => {
     expect(isLikelyProseCodeBlock('ts', 'const value = { bunny: true };\nreturn value')).toBe(false)
   })
 
+  // swarthyplacebo's #141521 PowerShell repro; gfpyc's #77258 fixes the classifier.
+  it('keeps PowerShell command fences copyable instead of prose (#141521)', () => {
+    const cmdlets = ['Write-Host "$desktop $pngPath"', 'Get-Date'].join('\n')
+
+    for (const tag of ['powershell', 'ps1', 'pwsh', 'ps', 'shell', 'console', 'PowerShell']) {
+      expect(isLikelyProseCodeBlock(tag, cmdlets)).toBe(false)
+    }
+  })
+
+
   it('keeps an SSH config block fenced (regression: rendered as flat prose)', () => {
     const ssh = ['Host 192.168.0.159', '    HostName 192.168.0.159', '    User teknium', '    Port 22'].join('\n')
 
