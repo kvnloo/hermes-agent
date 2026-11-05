@@ -29,6 +29,19 @@ def test_requested_tier_reads_the_wire_shape(overrides, expected):
     assert fast_mode.requested_service_tier(_agent(overrides)) == expected
 
 
+def test_extra_body_tier_takes_precedence_for_audit(caplog):
+    """extra_body merges last on the wire; it must also win in the usage report."""
+    agent = _agent({
+        "service_tier": "ultrafast",
+        "extra_body": {"service_tier": "flex"},
+    })
+    with caplog.at_level(logging.WARNING, logger="agent.fast_mode"):
+        fast_mode.record_served_service_tier(agent, SimpleNamespace(service_tier="flex"))
+    assert agent._last_requested_service_tier == "flex"
+    assert agent._last_served_service_tier == "flex"
+    assert not caplog.records
+
+
 def test_downgrade_is_recorded_and_warned(caplog):
     agent = _agent({"service_tier": "ultrafast"})
     with caplog.at_level(logging.DEBUG, logger="agent.fast_mode"):

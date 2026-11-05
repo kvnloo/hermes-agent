@@ -116,10 +116,10 @@ def requested_service_tier(agent: Any) -> str | None:
     """The ``service_tier`` this agent puts on the wire now: top-level (OpenAI Responses /
     chat, the shape ``/fast`` sends) or inside ``extra_body`` (custom providers)."""
     overrides = effective_request_overrides(agent)
-    tier = overrides.get("service_tier")
+    extra_body = overrides.get("extra_body")
+    tier = extra_body.get("service_tier") if isinstance(extra_body, dict) else None
     if tier is None:
-        extra_body = overrides.get("extra_body")
-        tier = extra_body.get("service_tier") if isinstance(extra_body, dict) else None
+        tier = overrides.get("service_tier")
     return tier if isinstance(tier, str) and tier.strip() else None
 
 
