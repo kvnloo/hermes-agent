@@ -11,12 +11,14 @@ import {
   $currentModel,
   $currentProvider,
   $currentUsage,
+  $sessions,
   setCurrentBranch,
   setCurrentCwd,
   setCurrentModel,
   setCurrentProvider,
   setCurrentUsage,
   setSelectedStoredSessionId,
+  setSessions,
   workspaceCwdBelongsToSelectedSession
 } from '@/store/session'
 import type { SessionInfo, SessionResumeResult } from '@/types/hermes'
@@ -40,7 +42,8 @@ import {
   selectBranchMessages,
   sessionMatchesStoredId,
   sessionShouldHaveTranscript,
-  toBranchMessages
+  toBranchMessages,
+  upsertOptimisticSession
 } from './utils'
 
 const msg = (id: string, role: ChatMessage['role'], text: string, extra: Partial<ChatMessage> = {}): ChatMessage =>
@@ -2339,5 +2342,30 @@ describe('applyStoredSessionPreviewRuntimeInfo does not persist the preview', ()
     // …but nothing was persisted: the composer's sticky selection survives.
     expect(localStorage.getItem('hermes.desktop.composer.model')).toBe('user-pick')
     expect(localStorage.getItem('hermes.desktop.composer.provider')).toBe('anthropic')
+  })
+})
+
+describe('upsertOptimisticSession listed rows', () => {
+  afterEach(() => setSessions([]))
+
+  it('preserves a pinned lineage row and stats when sending through its stored id', () => {
+    const listed = session({
+      _lineage_root_id: 'topic-root',
+      id: 'compressed-tip',
+      pinned: true,
+      title: 'My pinned topic',
+      preview: 'Old prompt',
+      message_count: 48,
+      input_tokens: 12345,
+      output_tokens: 2345,
+      tool_call_count: 9,
+      last_active: 100,
+      is_active: false
+    })
+
+    setSessions([listed])
+    upsertOptimisticSession({ session_id: 'compressed-tip' }, 'topic-root', null, 'New prompt', null, 101)
+
+    expect($sessions.get()).toEqual([{ ...listed, is_active: true, last_active: 101, preview: 'New prompt' }])
   })
 })
