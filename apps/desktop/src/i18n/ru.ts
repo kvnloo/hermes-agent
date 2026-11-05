@@ -26,6 +26,31 @@ import { ruThemePicker } from './ru_theme_picker'
 import { ruUpdateChannel } from './ru_update_channel'
 
 export const ruOverrides = {
+  openui: {
+    openApp: "Открыть в {app}",
+    bestPrice: "Самый дешёвый",
+    noMessages: "Совпадающих писем нет.",
+    previousStep: "Предыдущий шаг",
+    nextStep: "Следующий шаг",
+    checksPassed: "Все проверки пройдены",
+    conflictCount: "Конфликты: {count}",
+    seats: "мест",
+    drive: "На машине",
+    walk: "Пешком",
+    transit: "Общественный транспорт",
+    bike: "На велосипеде",
+    label: "Панель OpenUI",
+    readOnly: "Только чтение",
+    receiving: "Получение",
+    showSource: "Показать исходник",
+    showBoard: "Показать панель",
+    incomplete: "Панель не завершена. Показан исходный код.",
+    invalid: "Панель некорректна или не поддерживается. Показан исходный код.",
+    oversized: "Панель превышает 64 КиБ. Показан исходный код.",
+    readOnlyError: "Инструменты, изменения и состояние запрещены. Показан исходный код.",
+    rows: "Число ячеек в строке должно совпадать с числом столбцов. Показан исходный код.",
+    series: "Каждой категории нужно значение в каждом ряду. Показан исходный код."
+  },
   catalog: ruCatalog,
   connectors: ruConnectors.connectors,
   sharedMetrics: ruSharedMetrics,

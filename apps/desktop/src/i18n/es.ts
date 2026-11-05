@@ -28,6 +28,31 @@ import { esUpdateChannel } from './es_update_channel'
 import { introEs } from './intro-es'
 
 export const esOverrides = {
+  openui: {
+    openApp: "Abrir en {app}",
+    bestPrice: "Más barato",
+    noMessages: "No hay mensajes coincidentes.",
+    previousStep: "Paso anterior",
+    nextStep: "Paso siguiente",
+    checksPassed: "Todas las comprobaciones aprobadas",
+    conflictCount: "{count} conflictos",
+    seats: "asientos",
+    drive: "En coche",
+    walk: "A pie",
+    transit: "Transporte público",
+    bike: "En bicicleta",
+    label: "Panel OpenUI",
+    readOnly: "Solo lectura",
+    receiving: "Recibiendo",
+    showSource: "Mostrar código",
+    showBoard: "Mostrar panel",
+    incomplete: "Panel incompleto. Se muestra el código original.",
+    invalid: "Panel no válido o tipo no compatible. Se muestra el código original.",
+    oversized: "El panel supera 64 KiB. Se muestra el código original.",
+    readOnlyError: "No se permiten herramientas, cambios ni estado generado. Se muestra el código original.",
+    rows: "Las filas deben coincidir con las columnas. Se muestra el código original.",
+    series: "Cada serie debe tener un valor por categoría. Se muestra el código original."
+  },
   sharedMetrics: esSharedMetrics,
   firstRun: esFirstRun,
   intro: introEs,

@@ -34,6 +34,31 @@ import { enUpdateChannel } from './en_update_channel'
 import type { Translations } from './types'
 
 export const en: Translations = {
+  openui: {
+    openApp: "Open in {app}",
+    bestPrice: "Cheapest",
+    noMessages: "No messages matched.",
+    previousStep: "Previous step",
+    nextStep: "Next step",
+    checksPassed: "All checks have passed",
+    conflictCount: "{count} conflicts",
+    seats: "seats",
+    drive: "Driving",
+    walk: "Walking",
+    transit: "Transit",
+    bike: "Cycling",
+    label: "OpenUI board",
+    readOnly: "Read-only",
+    receiving: "Receiving",
+    showSource: "Show source",
+    showBoard: "Show board",
+    incomplete: "Board is incomplete. Original source shown.",
+    invalid: "Board is invalid or uses an unsupported panel. Original source shown.",
+    oversized: "Board exceeds the 64 KiB limit. Original source shown.",
+    readOnlyError: "Tools, mutations and generated state are not allowed. Original source shown.",
+    rows: "Table rows must match the column count. Original source shown.",
+    series: "Every series must have one value per category. Original source shown."
+  },
   externalOpenFailed: enExternalOpenFailed,
   sharedMetrics: enSharedMetrics,
   appTour: enAppTour,

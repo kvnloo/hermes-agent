@@ -48,6 +48,9 @@ const NON_ARTIFACT_LANGUAGES = new Set([
   'markdown',
   'md',
   'mermaid',
+  // openui-v2 boards are rendered by the rich-fence registry; a board with app
+  // cards and a route path easily passes CODE_MIN_CHARS.
+  'openui-v2',
   'output',
   'patch',
   'plain',

@@ -100,6 +100,8 @@
     "@nanostores/react": "1.1.0",
     "@novnc/novnc": "1.7.0",
     "@nous-research/ui": "0.19.1",
+    "@openuidev/lang-core": "1.0.2",
+    "@openuidev/react-lang": "1.0.2",
     "@simple-git/argv-parser": "2.0.1",
     "@streamdown/code": "1.1.1",
     "@streamdown/math": "1.0.3",
@@ -162,7 +164,8 @@
     "vfile": "6.0.3",
     "web-haptics": "0.0.6",
     "yaml": "2.9.1",
-    "ws": "^8.22.0"
+    "ws": "^8.22.0",
+    "zod": "4.6.5"
   },
   "optionalDependencies": {
     "get-windows": "9.3.0"

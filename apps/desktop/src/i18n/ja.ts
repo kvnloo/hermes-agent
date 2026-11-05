@@ -28,6 +28,31 @@ import { jaThemePicker } from './ja_theme_picker'
 import { jaUpdateChannel } from './ja_update_channel'
 
 export const jaOverrides = {
+  openui: {
+    openApp: "{app}で開く",
+    bestPrice: "最安値",
+    noMessages: "一致するメールはありません。",
+    previousStep: "前の手順",
+    nextStep: "次の手順",
+    checksPassed: "すべてのチェックに合格",
+    conflictCount: "{count} 件の競合",
+    seats: "座席",
+    drive: "車",
+    walk: "徒歩",
+    transit: "公共交通機関",
+    bike: "自転車",
+    label: "OpenUI ボード",
+    readOnly: "読み取り専用",
+    receiving: "受信中",
+    showSource: "ソースを表示",
+    showBoard: "ボードを表示",
+    incomplete: "ボードは未完成です。元のソースを表示します。",
+    invalid: "ボードが無効か、未対応のパネルです。元のソースを表示します。",
+    oversized: "ボードが 64 KiB を超えています。元のソースを表示します。",
+    readOnlyError: "ツール、変更、生成された状態は使えません。元のソースを表示します。",
+    rows: "表の行と列の数が一致しません。元のソースを表示します。",
+    series: "各系列にはカテゴリーごとに値が必要です。元のソースを表示します。"
+  },
   catalog: jaCatalog,
   connectors: jaConnectors.connectors,
   externalOpenFailed: {

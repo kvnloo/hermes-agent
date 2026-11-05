@@ -14,6 +14,31 @@ import { zhHantFirstRun } from './zh-hant_first_run'
 import { zhHantSettings } from './zh-hant_settings'
 
 export const zhHantOverrides = {
+  openui: {
+    openApp: "在{app}中開啟",
+    bestPrice: "最低價格",
+    noMessages: "沒有符合的郵件。",
+    previousStep: "上一步",
+    nextStep: "下一步",
+    checksPassed: "所有檢查皆已通過",
+    conflictCount: "{count} 個衝突",
+    seats: "座位",
+    drive: "開車",
+    walk: "步行",
+    transit: "大眾運輸",
+    bike: "騎車",
+    label: "OpenUI 圖表板",
+    readOnly: "唯讀",
+    receiving: "接收中",
+    showSource: "顯示原始碼",
+    showBoard: "顯示圖表板",
+    incomplete: "圖表板尚未完成，顯示原始碼。",
+    invalid: "圖表板無效或包含不支援的面板，顯示原始碼。",
+    oversized: "圖表板超過 64 KiB，顯示原始碼。",
+    readOnlyError: "不允許工具、修改或產生狀態，顯示原始碼。",
+    rows: "表格每列的儲存格數必須與欄數相符，顯示原始碼。",
+    series: "每個序列都需要每個類別的數值，顯示原始碼。"
+  },
 
   catalog: {
     add: '新增',

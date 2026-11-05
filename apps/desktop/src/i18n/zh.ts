@@ -27,6 +27,31 @@ import { zhThemePicker } from './zh_theme_picker'
 import { zhUpdateChannel } from './zh_update_channel'
 
 export const zhOverrides = {
+  openui: {
+    openApp: "在{app}中打开",
+    bestPrice: "最低价格",
+    noMessages: "没有匹配的邮件。",
+    previousStep: "上一步",
+    nextStep: "下一步",
+    checksPassed: "所有检查均已通过",
+    conflictCount: "{count} 个冲突",
+    seats: "座位",
+    drive: "驾车",
+    walk: "步行",
+    transit: "公交",
+    bike: "骑行",
+    label: "OpenUI 图表板",
+    readOnly: "只读",
+    receiving: "接收中",
+    showSource: "显示源码",
+    showBoard: "显示图表板",
+    incomplete: "图表板尚未完成，显示原始源码。",
+    invalid: "图表板无效或包含不支持的面板，显示原始源码。",
+    oversized: "图表板超过 64 KiB，显示原始源码。",
+    readOnlyError: "不允许工具、修改或生成状态，显示原始源码。",
+    rows: "表格行数值必须与列数一致，显示原始源码。",
+    series: "每个系列需为每个类别提供数值，显示原始源码。"
+  },
   catalog: zhCatalog,
   externalOpenFailed: {
     title: '无法打开此链接',
