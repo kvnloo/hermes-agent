@@ -34,6 +34,9 @@ def prepared_response(agent, text):
 
 def prepare_response(agent, text):
     """Opted-in gates must see output transforms, not a draft later replaced by a plugin."""
+    # Interrupted turns must keep their raw text, like the stock final-response path.
+    if getattr(agent, "_interrupt_requested", False):
+        return text
     if not defers_text_delivery():
         return text
     from agent.turn_finalizer import _append_file_mutation_footer, apply_llm_output_transform

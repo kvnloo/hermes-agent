@@ -174,3 +174,49 @@ def test_reworked_candidate_is_transformed_and_gated_as_delivered(monkeypatch):
     assert seen == ["[draft]", "[fixed]"]
     assert second.final_response == "[fixed]"
     assert messages[-1]["content"] == "[fixed]"
+
+
+def test_classifier_signature_rework_preserves_interrupted_raw_reply(monkeypatch):
+    """#149714: a plugin can reject a classifier turn, not valid CJK; interrupts stay raw."""
+    manager = plugins.PluginManager()
+    monkeypatch.setattr(plugins, "get_plugin_manager", lambda: manager)
+    seen = []
+
+    def classify(final_response, **_):
+        seen.append(final_response)
+        if "<ds_safety>" in final_response:
+            return {"action": "block", "message": "Please answer without classifier metadata."}
+        return None
+
+    manager._hooks["before_turn_end"] = [classify]
+    manager._hooks["transform_llm_output"] = [
+        lambda response_text, **_: f"rendered:{response_text}"
+    ]
+
+    a = agent()
+    a._file_mutation_footer = None
+    history = [{"role": "user", "content": "Answer the question"}]
+    first = finish(a, "<ds_safety>classification only</ds_safety>", history)
+    assert first.action == "continue"
+    a._flush_messages_to_session_db.assert_not_called()
+
+    second = finish(a, "这是一个完整的中文回答。", history)
+    assert second.action == "break"
+    assert second.final_response == "rendered:这是一个完整的中文回答。"
+    assert seen == [
+        "rendered:<ds_safety>classification only</ds_safety>",
+        "rendered:这是一个完整的中文回答。",
+    ]
+    assert all("<ds_safety>" not in (m.get("content") or "")
+               for m in history if not m.get("_turn_end_synthetic"))
+
+    interrupted = agent()
+    interrupted._file_mutation_footer = None
+    interrupted._interrupt_requested = True
+    stopped = finish(
+        interrupted, "<ds_safety>interrupted</ds_safety>",
+        [{"role": "user", "content": "Stop"}],
+    )
+    assert stopped.action == "break"
+    assert stopped.final_response == "<ds_safety>interrupted</ds_safety>"
+    assert len(seen) == 2
