@@ -17,6 +17,7 @@ from typing import Any, Callable, Collection, Dict, List, Optional, Tuple
 
 from agent.skill_commands import describe_skill_invocation
 from hermes_state_errors import is_malformed_db_error
+from hermes_state_health import note_storage_error
 from hermes_state_common import (
     FTS_CJK_STALE_KEY, FTS_SQL, FTS_STALE_KEY, FTS_STORAGE_VERSION, FTS_TOOL_CONTENT_PREFIX_CHARS,
     FTS_TRIGRAM_EXCLUDED_SOURCES, FTS_TRIGRAM_SQL,
@@ -1134,6 +1135,27 @@ class SessionSearchMixin:
         )
         return sql, params
 
+    def _recover_fts_match_error(self, exc: sqlite3.DatabaseError) -> bool:
+        """A known FTS MATCH may emit bare SQLITE_CORRUPT for a damaged derived index.
+        Only allow detachment when canonical tables pass table-scoped integrity checks;
+        otherwise preserve the global structural quarantine.
+        """
+        bare_corrupt = getattr(exc, "sqlite_errorcode", None) == sqlite3.SQLITE_CORRUPT
+        canonical_ok = False
+        if bare_corrupt:
+            try:
+                canonical_ok = all(
+                    [row[0] for row in self._read_all(f"PRAGMA integrity_check('{table}')")] == ["ok"]
+                    for table in ("messages", "sessions", "state_meta")
+                )
+            except sqlite3.DatabaseError:
+                pass
+        if self._enter_fts_fail_open(exc, verified_bare_fts=canonical_ok):
+            return True
+        if not self._is_fts_write_corruption_error(exc) and not canonical_ok:
+            note_storage_error(self.db_path, exc)
+        return False
+
     def _match_rows(self, table: str, match_query: str, order_by_sql: str, *, fail_open: Optional[str] = None,
                     operational_debug: Optional[str] = None, **kwargs) -> Optional[list[dict[str, Any]]]:
         """Run one MATCH against *table*; ``None`` when the query cannot execute (tokenizer /
@@ -1143,13 +1165,13 @@ class SessionSearchMixin:
         search never runs the unbounded rebuild. Other ``DatabaseError``s propagate."""
         sql, params = self._fts_match_sql(table, match_query, order_by_sql, **kwargs)
         try:
-            return [dict(row) for row in self._read_all(sql, params)]
+            return [dict(row) for row in self._read_all(sql, params, fts_match=True)]
         except sqlite3.OperationalError:
             if operational_debug:
                 logger.debug(operational_debug, exc_info=True)
             return None
         except sqlite3.DatabaseError as exc:
-            if fail_open is None or not self._enter_fts_fail_open(exc):
+            if fail_open is None or not self._recover_fts_match_error(exc):
                 raise
             logger.warning(
                 "%s FTS search hit a corruption error (%s); detached FTS and falling back to canonical LIKE.",
@@ -1159,7 +1181,7 @@ class SessionSearchMixin:
     def _like_rows(self, where: list[str], params: list, *, order_by: str, limit_sql: str) -> list[dict[str, Any]]:
         """Canonical-table LIKE scan; ``params[0]`` is the snippet anchor term."""
         sql = _search_select_sql(_LIKE_SNIPPET_SQL, "messages m", where, order_by, limit_sql)
-        return [dict(row) for row in self._read_all(sql, params)]
+        return [dict(row) for row in self._read_all(sql, params, fts_match=True)]
 
     @staticmethod
     def _compile_like_boolean_query(query: str) -> tuple[str, list[Any], Optional[str]]:
@@ -1323,7 +1345,7 @@ class SessionSearchMixin:
         else:
             sql, params = self._fts_match_sql("messages_fts", query, **route)
             try:
-                matches = [dict(row) for row in self._read_all(sql, params)]
+                matches = [dict(row) for row in self._read_all(sql, params, fts_match=True)]
             except sqlite3.OperationalError:
                 return []  # FTS5 syntax error despite sanitization
             except sqlite3.DatabaseError as exc:
@@ -1333,7 +1355,7 @@ class SessionSearchMixin:
                 # MATCH read, the same class the write path handles (#66296). OperationalError (query
                 # syntax) is a subclass caught above; this arm is the corruption parent. The existing
                 # stale-open/repair paths retain rebuild ownership.
-                if not self._enter_fts_fail_open(exc):
+                if not self._recover_fts_match_error(exc):
                     raise
                 matches = self._search_messages_like_fallback(query, limit=limit, offset=offset, sort=sort, **filters)
 
