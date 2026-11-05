@@ -80,6 +80,36 @@ def test_env_kill_stops_writer_and_children(tmp_path, ignore_term):
             session._reader_thread.join(timeout=12)
 
 
+
+@pytest.mark.platforms("posix")
+@pytest.mark.live_system_guard_bypass
+def test_env_kill_records_terminated_command_exit(tmp_path):
+    """A killed remote command must leave its signal exit receipt (#125003)."""
+    registry = ProcessRegistry()
+    env = BashEnvironment(tmp_path)
+    started = tmp_path / "started"
+    command = f"printf ready > {shlex.quote(str(started))}; sleep 120 & wait"
+    with patch.object(registry, "_write_checkpoint"):
+        session = registry.spawn_via_env(env, command)
+        processes = []
+        try:
+            wait_until(started.exists, what="background command started")
+            root = psutil.Process(session.pid)
+            processes = [root, *root.children(recursive=True)]
+            result = registry.kill_process(session.id)
+            assert result["status"] == "killed", result
+
+            exit_file = tmp_path / f"hermes_bg_{session.id}.exit"
+            wait_until(exit_file.exists, what="terminated command exit receipt")
+            assert exit_file.read_text().strip() == "143"
+        finally:
+            for proc in reversed(processes):
+                if _alive(proc):
+                    proc.kill()
+            session.exited = True
+            session._reader_thread.join(timeout=12)
+
+
 @pytest.mark.platforms("posix")
 def test_env_kill_after_exit_preserves_result(tmp_path):
     registry = ProcessRegistry()
