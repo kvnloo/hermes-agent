@@ -999,9 +999,9 @@ class TestBuildSkillsSystemPromptConditional:
             skill_dir = tmp_path / "skills" / "mcp" / name
             skill_dir.mkdir(parents=True)
             (skill_dir / "SKILL.md").write_text(
-                f"---\\nname: {name}\\ndescription: {name} skill\\n"
-                "metadata:\\n  hermes:\\n"
-                f"    {condition}: [iris]\\n---\\n# Skill\\n",
+                f"---\nname: {name}\ndescription: {name} skill\n"
+                "metadata:\n  hermes:\n"
+                f"    {condition}: [iris]\n---\n# Skill\n",
                 encoding="utf-8",
             )
 
