@@ -103,6 +103,9 @@ def make_new_tab(new_tab: Callable[..., Any], cdp: Callable[..., Any],
             # The tab exists either way; a provider that rejects activation leaves it in the background.
             except (RuntimeError, OSError) as e:
                 _log.warning("new_tab: Target.activateTarget failed, tab left in background: %s", e)
+        if tid:
+            # A bare new_tab() otherwise leaves browser_exec with empty stdout, inviting retries.
+            print(f"new_tab: created target {tid}")
         return tid
     return new_tab_in_front
 
@@ -143,7 +146,7 @@ def install(helpers: Any, activate: str = ACTIVATE_NEVER) -> None:
     if _is_harness_helper(helpers.capture_screenshot):
         helpers.capture_screenshot = make_capture_screenshot(helpers.cdp, helpers.current_tab,
                                                              activate_hidden=check)
-    if activate != ACTIVATE_NEVER and _is_harness_helper(helpers.new_tab):
+    if _is_harness_helper(helpers.new_tab):
         helpers.new_tab = make_new_tab(helpers.new_tab, helpers.cdp, activate=check)
 
 

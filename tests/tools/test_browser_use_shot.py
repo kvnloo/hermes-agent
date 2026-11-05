@@ -153,6 +153,16 @@ def test_new_tab_is_brought_to_front_only_on_a_cloud_browser(run_exec, cloud):
     assert activations == ([{"method": "Target.activateTarget", "timeout": 5.0, "targetId": "T2"}] if cloud else [])
 
 
+def test_unprinted_new_tab_reports_the_created_target_on_shared_cdp(run_exec):
+    """Regression for #149440: a successful bare new_tab() must not return empty stdout."""
+    result, _, calls = run_exec(True, cloud=False, code="new_tab()")
+
+    assert result.get("success") is True, result.get("stderr") or result
+    assert "new_tab: created target T2" in result.get("output", ""), result
+    assert sum(c["method"] == "Target.createTarget" for c in calls) == 1
+    assert not any(c["method"] == "Target.activateTarget" for c in calls)
+
+
 def test_cloud_new_tab_survives_a_provider_rejecting_activation(run_exec):
     result, _, calls = run_exec(False, cloud=True, code="print('TAB', new_tab())")
 
