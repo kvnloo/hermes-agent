@@ -17,19 +17,20 @@ from hermes_state_common import (
 _log = logging.getLogger("hermes_cli.web_server")
 
 _DESCENDANTS_SQL = f"""
-            WITH RECURSIVE descendants(id, parent_session_id, started_at) AS (
-                SELECT id, parent_session_id, started_at FROM sessions WHERE id = ?
+            WITH RECURSIVE descendants(id, parent_session_id, started_at, source) AS (
+                SELECT id, parent_session_id, started_at, source FROM sessions WHERE id = ?
                 UNION
-                SELECT s.id, s.parent_session_id, s.started_at
+                SELECT s.id, s.parent_session_id, s.started_at, s.source
                 FROM sessions s
                 JOIN descendants d ON s.parent_session_id = d.id
-                -- Continuation edges only (same predicate as the session list's chain CTE): a subagent run,
-                -- a /branch fork, a /new reset child or a tool-owned row is its own conversation, and resuming
-                -- INTO one parks the user's chat in a row the sidebar never lists (#115092).
+                -- Dashboard resume never follows a subagent, even if the owner-reserved
+                -- child has no _delegate_from creation marker (#149237). Branch/reset/tool
+                -- children remain independent; inherited foreign markers do not sever continuations.
                 WHERE {_continuation_child_edge_sql('s', 's.parent_session_id')}
+                  AND COALESCE(s.source, '') != 'subagent'
                   AND NOT ({_legacy_reset_child_sql('s', _RESET_END_REASONS_SQL)})
             )
-            SELECT id, parent_session_id, started_at FROM descendants
+            SELECT id, parent_session_id, started_at, source FROM descendants
             """
 
 
@@ -45,7 +46,7 @@ def _session_latest_descendant(session_id: str, db):
 
     conn = getattr(db, "_conn", None)
     if conn is not None:
-        keys = ("id", "parent_session_id", "started_at")
+        keys = ("id", "parent_session_id", "started_at", "source")
         rows = [dict(zip(keys, row)) for row in conn.execute(_DESCENDANTS_SQL, (sid,)).fetchall()]
     else:
         rows = db.list_sessions_rich(limit=10000, offset=0, compact_rows=True)
@@ -54,7 +55,7 @@ def _session_latest_descendant(session_id: str, db):
     for row in rows:
         rid = row.get("id")
         parent = row.get("parent_session_id")
-        if rid and parent:
+        if rid and parent and (row.get("source") or "") not in ("tool", "subagent"):
             children.setdefault(parent, []).append(row)
 
     def started(row):

@@ -169,3 +169,37 @@ def test_legacy_reset_repair_ignores_foreign_fork_marker(tmp_path):
         model_config = json.loads(child["model_config"])
         assert model_config["_branched_from"] == "older-parent"
         assert model_config["_reset_from"] == "reset-parent"
+
+
+@pytest.mark.parametrize("list_only", [False, True])
+def test_latest_descendant_skips_unmarked_subagent_children(tmp_path, list_only):
+    """Batch delegate_task rows have source=subagent but no _delegate_from (#149237)."""
+    with closing(SessionDB(tmp_path / "state.db")) as db:
+        db.create_session("parent", source="tui")
+        db.append_message("parent", "user", "run a batch")
+        db.create_session("batch-a", source="subagent", parent_session_id="parent")
+        db.create_session("batch-b", source="subagent", parent_session_id="parent")
+        db.end_session("parent", "ws_orphan_reap")
+
+        target = db
+        if list_only:
+            # Exercise the no-connection fallback using the same real SQLite rows.
+            class ListOnlySessionView:
+                def resolve_session_id(self, sid):
+                    return db.resolve_session_id(sid)
+
+                def get_session(self, sid):
+                    return db.get_session(sid)
+
+                def list_sessions_rich(self, **_kwargs):
+                    columns = ("id", "parent_session_id", "started_at", "source")
+                    return [
+                        dict(zip(columns, row))
+                        for row in db._conn.execute(
+                            "SELECT id, parent_session_id, started_at, source FROM sessions"
+                        )
+                    ]
+
+            target = ListOnlySessionView()
+
+        assert _session_latest_descendant("parent", target) == ("parent", ["parent"])
