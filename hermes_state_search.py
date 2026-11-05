@@ -1171,17 +1171,17 @@ class SessionSearchMixin:
                 logger.debug(operational_debug, exc_info=True)
             return None
         except sqlite3.DatabaseError as exc:
-            if fail_open is None or not self._recover_fts_match_error(exc):
+            if not self._recover_fts_match_error(exc):
                 raise
             logger.warning(
                 "%s FTS search hit a corruption error (%s); detached FTS and falling back to canonical LIKE.",
-                fail_open, exc)
+                fail_open or table, exc)
             return None
 
     def _like_rows(self, where: list[str], params: list, *, order_by: str, limit_sql: str) -> list[dict[str, Any]]:
         """Canonical-table LIKE scan; ``params[0]`` is the snippet anchor term."""
         sql = _search_select_sql(_LIKE_SNIPPET_SQL, "messages m", where, order_by, limit_sql)
-        return [dict(row) for row in self._read_all(sql, params, fts_match=True)]
+        return [dict(row) for row in self._read_all(sql, params)]
 
     @staticmethod
     def _compile_like_boolean_query(query: str) -> tuple[str, list[Any], Optional[str]]:

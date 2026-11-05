@@ -5,11 +5,12 @@ from contextlib import contextmanager
 
 import pytest
 
-from hermes_state import SessionDB
-from hermes_state_health import STORAGE_OK, reset_storage_state, storage_state
+from hermes_state import SessionDB, StateDbCorruptError
+from hermes_state_health import STORAGE_CORRUPT, STORAGE_OK, reset_storage_state, storage_state
 
 
-def test_bare_corrupt_on_trigram_match_keeps_canonical_writes_alive(tmp_path, monkeypatch):
+@pytest.mark.parametrize("canonical_ok", [True, False])
+def test_bare_corrupt_trigram_match_checks_canonical_integrity(tmp_path, monkeypatch, canonical_ok):
     db = SessionDB(db_path=tmp_path / "state.db")
     try:
         if not db._fts_enabled or not db._trigram_available:
@@ -31,6 +32,8 @@ def test_bare_corrupt_on_trigram_match_keeps_canonical_writes_alive(tmp_path, mo
                     error = sqlite3.DatabaseError("database disk image is malformed")
                     error.sqlite_errorcode = sqlite3.SQLITE_CORRUPT
                     raise error
+                if not canonical_ok and sql == "PRAGMA integrity_check('messages')":
+                    return self.conn.execute("SELECT 'corrupt canonical table'")
                 return self.conn.execute(sql, *args, **kwargs)
 
             def __getattr__(self, name):
@@ -42,8 +45,17 @@ def test_bare_corrupt_on_trigram_match_keeps_canonical_writes_alive(tmp_path, mo
                 yield TrigramErrorConnection(conn)
 
         monkeypatch.setattr(db, "_read_ctx", corrupt_fts_read)
-        matches = db.search_messages("中文测试")
+        if not canonical_ok:
+            with pytest.raises(sqlite3.DatabaseError, match="malformed"):
+                db.search_messages("中文测试")
+            assert failed_matches
+            assert storage_state(db.db_path) == STORAGE_CORRUPT
+            assert db._fts_stale is False
+            with pytest.raises(StateDbCorruptError):
+                db.append_message("s1", "user", "must not write after structural damage")
+            return
 
+        matches = db.search_messages("中文测试")
         assert failed_matches, "must reach the real trigram MATCH"
         assert matches, "search should fall back to canonical LIKE"
         assert storage_state(db.db_path) == STORAGE_OK
