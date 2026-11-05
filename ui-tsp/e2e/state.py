@@ -15,8 +15,9 @@ os.environ["HERMES_HOME"] = str(home)
 os.environ["HOME"] = str(proof / "host-home")
 os.environ["XDG_CONFIG_HOME"] = str(proof / "host-home" / ".config")
 os.environ["XDG_CACHE_HOME"] = str(proof / "host-home" / ".cache")
-os.environ["HERMES_PYTHON_SRC_ROOT"] = manifest["root"]
-sys.path.insert(0, manifest["root"])
+src = manifest.get("srcRoot") or manifest["root"]
+os.environ["HERMES_PYTHON_SRC_ROOT"] = src
+sys.path.insert(0, src)
 config = yaml.safe_load((home / "config.yaml").read_text())
 if not isinstance(config, dict):
     raise SystemExit("The real fixture config is not a mapping")

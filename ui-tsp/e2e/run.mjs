@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFile, spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { access, chmod, copyFile, mkdir, readFile, realpath, symlink, writeFile } from 'node:fs/promises'
+import { access, appendFile, chmod, copyFile, mkdir, readFile, realpath, symlink, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
@@ -13,7 +13,7 @@ const exec = promisify(execFile)
 const source = dirname(fileURLToPath(import.meta.url))
 const { values, positionals } = parseArgs({
   allowPositionals: true,
-  options: Object.fromEntries(['entry', 'root', 'control', 'pane', 'proof-dir', 'python', 'framework-root'].map(name => [name, { type: 'string' }]))
+  options: Object.fromEntries(['entry', 'root', 'src-root', 'plugin', 'control', 'pane', 'proof-dir', 'python', 'framework-root'].map(name => [name, { type: 'string' }]))
 })
 const mode = positionals[0]
 if (!['prepare', 'run'].includes(mode) || positionals.length !== 1) throw new Error('Use prepare or run, with --entry --root --control --pane --proof-dir --python [--framework-root].')
@@ -26,6 +26,11 @@ try {
   if (error.code !== 'ENOENT') throw error
 }
 const entry = await realpath(values.entry)
+// Plugin layout (hermes-tern): --root is the plugin checkout under test (cwd, entry owner) and
+// --src-root the Hermes source whose tui_gateway the frontend spawns. Hermes layout: both are root.
+const srcRoot = values['src-root'] ? await realpath(values['src-root']) : root
+const plugin = values.plugin ?? null
+if (plugin !== null && !/^[a-z0-9][a-z0-9-]*$/.test(plugin)) throw new Error('--plugin must be a plugin manifest name')
 // Keep the venv executable spelling: realpath would bypass its pyvenv.cfg.
 const python = resolve(values.python)
 await access(python)
@@ -45,13 +50,13 @@ await access(bin)
 await mkdir(proof, { recursive: true, mode: 0o700 })
 const canonicalProof = await realpath(proof)
 if (canonicalProof !== proof) throw new Error('Proof directory must not resolve through a symlink.')
-if (![root, source, framework].every(path => relative(path, proof).startsWith('..'))) throw new Error('Proof output must remain outside source checkouts.')
+if (![root, srcRoot, source, framework].every(path => relative(path, proof).startsWith('..'))) throw new Error('Proof output must remain outside source checkouts.')
 await chmod(proof, 0o700)
 const manifestPath = join(proof, 'manifest.json')
 const ownerPath = join(proof, 'owner.json')
 const token = randomUUID()
 const manifest = {
-  root, entry, python, control, pane, proof,
+  root, srcRoot, plugin, entry, python, control, pane, proof,
   home: join(proof, 'hermes-home'),
   record: join(proof, 'gateway.jsonl'),
   tsp: join(proof, 'tsp.jsonl'),
@@ -133,6 +138,12 @@ if (mode === 'prepare') {
   // This is the real application's inert launch config, not a response fixture.
   await writeFile(join(manifest.home, 'config.yaml'), `model:\n  default: native-settings-e2e\n  provider: custom\n  base_url: http://127.0.0.1:9/v1\n  api_key: inert-e2e-not-a-credential\nagent:\n  reasoning_effort: low\n  max_turns: 7\n  environment_hint: e2e-initial-hint\ndisplay:\n  show_reasoning: false\n  skin: mono\n  resume_display: minimal\nterminal:\n  backend: local\nauth:\n  adopt_external_logins: false\napprovals:\n  mode: manual\ntelemetry:\n  shared_metrics:\n    enabled: false\n    send: false\nlogging:\n  level: ERROR\ne2e_preserve:\n  marker: native-settings-isolated\n  template: '\${E2E_UNRESOLVED_TEMPLATE}'\n`, { mode: 0o600 })
   await writeFile(join(manifest.home, '.native-settings-e2e'), 'isolated inert fixture; no turns or grants\n', { mode: 0o600 })
+  if (manifest.plugin) {
+    // Install the plugin under test exactly as `hermes plugins install` places a directory plugin.
+    await mkdir(join(manifest.home, 'plugins'), { mode: 0o700 })
+    await symlink(root, join(manifest.home, 'plugins', manifest.plugin), 'dir')
+    await appendFile(join(manifest.home, 'config.yaml'), `plugins:\n  enabled:\n  - ${manifest.plugin}\n`)
+  }
   await mkdir(join(proof, 'managed-empty'), { mode: 0o700 })
   const foreign = join(proof, 'host-home/.hermes/profiles/foreign')
   await mkdir(foreign, { recursive: true, mode: 0o700 })
@@ -155,7 +166,7 @@ const env = {
   HERMES_HOME:m.home,
   HERMES_MANAGED_DIR:${JSON.stringify(join(proof, 'managed-empty'))},
   HERMES_PYTHON:${JSON.stringify(join(proof, 'gateway.mjs'))},
-  HERMES_PYTHON_SRC_ROOT:m.root,
+  HERMES_PYTHON_SRC_ROOT:m.srcRoot,
   HERMES_TUI_CWD:m.root,
   TERN_TSP_RECORD:m.tsp,
   XDG_RUNTIME_DIR:m.runtime,

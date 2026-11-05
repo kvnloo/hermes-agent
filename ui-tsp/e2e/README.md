@@ -81,6 +81,33 @@ Cleanup terminates supervised process groups and exact-owned-scope detached
 processes only. It records exits/escalations. It never uses executable-name
 `pkill`, and it never deletes another client's state.
 
+## Plugin layout (hermes-tern and forks)
+
+`scripts/dev/tern-e2e.sh <plugin-checkout>` detects a Tern plugin checkout
+(`plugin.yaml` + `frontend/scripts/build.mjs`) and switches layout (`--layout
+auto|hermes|plugin`). The plugin checkout stays the project under test (cwd,
+README, entry owner); `--hermes-src` (default the pinned
+`/mnt/zer0models/worktrees/hermes-src-22063fc`, matching `frontend/hermes-src.lock`)
+supplies the `tui_gateway` the frontend spawns and the `ui-tui` sources the bundle
+inlines. The runner links `.hermes-src`, rebuilds `frontend/dist/entry.js`, and
+records `bundle-reproducible.json` (the plugin commits its bundle, so an exact-SHA
+rebuild must match). The plugin is installed into the private `HERMES_HOME` as a
+directory plugin and enabled. `openui` and `ink-fallback` are hermes-agent-tree
+journeys and are reported `not-applicable`.
+
+Hermes 22063fc's frontend attaches to a shared WebSocket gateway instead of stdio
+JSON-RPC. The gateway shim recognizes the attach grant, starts one detached
+recording proxy per upstream (same owned environment, so the owned-scope cleanup
+still reaches it), rewrites only the grant URL and strips
+`Sec-WebSocket-Extensions` so frames stay readable. Every frame passes the same
+request policy and response hold as the stdio path; admitted frames are forwarded
+byte for byte. The plugin frontend's per-session `config.set show_reasoning` is
+forwarded (one session, a display word); the gateway decides it.
+
+Qualify a plugin PR against its base, journey by journey: a PR passes when every
+journey that passes on the base passes on the PR. Journeys that fail on the base
+too are harness gaps for the plugin frontend, not PR results.
+
 ## Receipts and sizes
 
 Default output:

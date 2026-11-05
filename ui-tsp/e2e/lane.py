@@ -16,6 +16,15 @@ import time
 
 SOURCE = Path(__file__).resolve().parent
 JOURNEYS = ('smoke', 'settings', 'file-links', 'answer-copy', 'todo-hud', 'shortcuts', 'ink-fallback', 'openui')
+# Journeys bound to hermes-agent paths (ui-tsp/experiments, the Ink launcher); not part of a plugin bundle.
+HERMES_ONLY = ('ink-fallback', 'openui')
+
+
+def detect_layout(root):
+    """'hermes' = hermes-agent checkout (ui-tsp/); 'plugin' = Tern plugin checkout (plugin.yaml + frontend/)."""
+    if (root/'ui-tsp/scripts/build.mjs').is_file(): return 'hermes'
+    if (root/'plugin.yaml').is_file() and (root/'frontend').is_dir() and (root/'frontend/scripts/build.mjs').is_file(): return 'plugin'
+    raise SystemExit(f'{root}: neither a hermes-agent ui-tsp checkout nor a Tern plugin checkout')
 
 
 def dump(path, value):
@@ -34,6 +43,16 @@ class Runner:
     def __init__(self, args):
         self.args = args
         self.root = args.worktree.resolve(strict=True)
+        self.layout = args.layout if args.layout != 'auto' else detect_layout(self.root)
+        if self.layout == 'plugin':
+            self.src_root = args.hermes_src.resolve(strict=True)
+            if not (self.src_root/'tui_gateway').is_dir(): raise SystemExit(f'--hermes-src {self.src_root} has no tui_gateway/')
+            self.entry = self.root/'frontend/dist/entry.js'
+            self.build = [self.root/'frontend/scripts/build.mjs']
+            import yaml
+            self.plugin = yaml.safe_load((self.root/'plugin.yaml').read_text())['name']
+        else:
+            self.src_root, self.entry, self.build, self.plugin = self.root, self.root/'ui-tsp/dist/entry.js', [self.root/'ui-tsp/scripts/build.mjs'], None
         self.head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.root, text=True).strip()
         self.out = args.receipts / f'{dt.datetime.now(dt.timezone.utc):%Y%m%dT%H%M%SZ}-{self.head[:10]}'
         self.out.mkdir(parents=True, mode=0o700, exist_ok=False)
@@ -50,6 +69,9 @@ class Runner:
              harness_head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=SOURCE,text=True).strip(),
              harness_dirty=subprocess.check_output(['git','status','--porcelain'],cwd=SOURCE,text=True),
              dirty=subprocess.check_output(['git','status','--porcelain'],cwd=self.root,text=True),
+             layout=self.layout, plugin=self.plugin, hermes_src=str(self.src_root),
+             hermes_src_head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=self.src_root,text=True).strip(),
+             hermes_src_dirty=subprocess.check_output(['git','status','--porcelain','--untracked-files=no'],cwd=self.src_root,text=True),
              command=sys.argv, model_calls_allowed=False, scratch=str(self.scratch)))
 
     def command(self, argv, directory, env, log, timeout=60, check=True):
@@ -171,7 +193,8 @@ class Runner:
 
     def prepare(self,lane):
         proof=lane/'proof'
-        args=[self.node,SOURCE/'run.mjs','prepare','--root',self.root,'--entry',self.root/'ui-tsp/dist/entry.js',
+        args=[self.node,SOURCE/'run.mjs','prepare','--root',self.root,'--src-root',self.src_root,'--entry',self.entry,
+              *(['--plugin',self.plugin] if self.plugin else []),
               '--control',str(self.port),'--pane','0','--proof-dir',proof,'--python',self.python,'--framework-root',self.args.framework]
         self.command(args,lane,self.env,lane/'prepare.log')
         m=json.loads((proof/'manifest.json').read_text())
@@ -203,7 +226,8 @@ class Runner:
             result.update(status='blocked' if any(s['status']=='blocked' for s in steps['results']) else 'pass',steps=steps)
             if journey=='settings' and mode=='native-window':
                 self.ctl(lane,'key escape',True)
-                suite_args=[self.node,SOURCE/'run.mjs','run','--root',self.root,'--entry',m['entry'],
+                suite_args=[self.node,SOURCE/'run.mjs','run','--root',self.root,'--src-root',self.src_root,'--entry',m['entry'],
+                    *(['--plugin',self.plugin] if self.plugin else []),
                     '--control',str(self.port),'--pane',m['pane'],'--proof-dir',m['proof'],'--python',self.python,'--framework-root',self.args.framework]
                 self.command(suite_args,lane,self.env,lane/'full-settings.log',timeout=7200)
                 result['full_settings_suite']='all ten original serial cases executed; framework report retained'
@@ -245,8 +269,19 @@ class Runner:
         return result
 
     def run(self):
-        self.command([self.node,self.root/'ui-tsp/scripts/build.mjs'],self.root,self.base_env,self.out/'build.log',timeout=120)
+        if self.layout=='plugin':
+            # The plugin bundle inlines ui-tui from the Hermes checkout `.hermes-src` points at.
+            self.command([self.node,self.root/'frontend/scripts/hermes-src.mjs'],self.root,dict(self.base_env,HERMES_SRC=str(self.src_root)),self.out/'hermes-src.log')
+        self.command([self.node,*self.build],self.root,self.base_env,self.out/'build.log',timeout=300)
+        if self.layout=='plugin':
+            # dist/entry.js is committed in the plugin: an exact-SHA rebuild must reproduce it.
+            drift=subprocess.run(['git','diff','--stat','--','frontend/dist'],cwd=self.root,capture_output=True,text=True).stdout
+            dump(self.out/'bundle-reproducible.json',dict(reproducible=drift=='',diff=drift))
         requested=self.args.journeys
+        if self.layout=='plugin':
+            for journey in [j for j in requested if j in HERMES_ONLY]:
+                self.results.append(dict(journey=journey,status='not-applicable',reason='hermes-agent-tree journey; plugin layout has no ui-tsp/experiments or Ink launcher'))
+            requested=[j for j in requested if j not in HERMES_ONLY]
         native=[j for j in requested if j!='ink-fallback']
         if native:
             first=self.feature(native[0],'native-window')
@@ -283,6 +318,9 @@ def main():
     p.add_argument('--framework',type=Path,default=Path('/mnt/zer0models/hermes-wt/e2e'))
     p.add_argument('--sway',default='/home/kvn/.local/opt/sway-nested/bin/sway')
     p.add_argument('--sway-lib',default='/home/kvn/.local/opt/sway-nested/lib')
+    p.add_argument('--layout',choices=('auto','hermes','plugin'),default='auto')
+    p.add_argument('--hermes-src',type=Path,default=Path('/mnt/zer0models/worktrees/hermes-src-22063fc'),
+                   help='plugin layout: Hermes source whose tui_gateway the plugin frontend spawns')
     args=p.parse_args()
     if not args.journeys: args.journeys=list(JOURNEYS)
     return Runner(args).run()
