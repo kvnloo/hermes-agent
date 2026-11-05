@@ -132,6 +132,56 @@ it('late model or compression replies cannot replace a newer execution snapshot'
   }
 })
 
+it('manual /compress refuses /rewind immediately and permits it after completion (#149517)', async () => {
+  resetOverlayState()
+  const { ctx, request, slash } = harness()
+  let finishCompress!: (result: unknown) => void
+
+  request.mockImplementation(async (method: string, params: any) => {
+    if (method === 'session.resume') {
+      return {
+        session_id: 'owner',
+        revision: 8,
+        execution_generation: 4,
+        info,
+        messages: [
+          { role: 'user', row_id: 11, content: 'prompt' },
+          { role: 'assistant', row_id: 12, content: 'reply' }
+        ]
+      } as any
+    }
+
+    if (method === 'session.mutate' && params.operation === 'compress') {
+      return new Promise(resolve => {
+        finishCompress = resolve
+      })
+    }
+
+    return {} as any
+  })
+
+  slash('/compress')
+  await flush()
+  expect(getUiState()).toMatchObject({ busy: false, compacting: true, status: 'compacting' })
+  const resumesBefore = request.mock.calls.filter(([method]) => method === 'session.resume').length
+  expect(resumesBefore).toBe(1)
+
+  slash('/rewind')
+  await flush()
+  expect(request.mock.calls.filter(([method]) => method === 'session.resume')).toHaveLength(resumesBefore)
+  expect(getOverlayState().rewind).toBeNull()
+  expect(ctx.transcript.sys).toHaveBeenCalledWith(expect.stringContaining('a /compress is running'))
+
+  finishCompress({ status: 'noop', summary: { noop: true, headline: 'No changes' } })
+  await flush()
+  expect(getUiState()).toMatchObject({ compacting: false, status: 'ready' })
+
+  slash('/rewind')
+  await flush()
+  expect(request.mock.calls.filter(([method]) => method === 'session.resume')).toHaveLength(resumesBefore + 1)
+  expect(getOverlayState().rewind?.targets[0]?.rowId).toBe(11)
+})
+
 it('busy mode is session scoped and steering includes the observed execution generation', async () => {
   patchUiState({ busy: true })
   const { request, slash } = harness()

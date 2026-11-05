@@ -407,10 +407,22 @@ export async function runCanonicalSessionControl(
   confirm?: string
 ) {
   const gw = ctx.gateway.gw
+  let ownedCompress = false
 
   try {
     if (!ctx.sid) {
       throw new Error(t('slashCmd.core.status.noActiveSession'))
+    }
+
+    if (operation === 'compress') {
+      if (getUiState().compacting) {
+        return ctx.transcript.sys(t('slashCmd.core.busy.compressing', 'compress'))
+      }
+
+      // A manual /compress is not an agent turn; track its pending owner mutation locally.
+      // Refuse /rewind before a second session.resume can wait behind that mutation.
+      ownedCompress = true
+      patchUiState({ compacting: true, status: t('status.compacting') })
     }
 
     const mutation = await mutateCanonicalSession(gw, ctx.sid, operation, arg, ctx.stale, confirm)
@@ -446,5 +458,16 @@ export async function runCanonicalSessionControl(
     }
   } catch (error) {
     ctx.guardedErr(error)
+  } finally {
+    if (ownedCompress && getUiState().sid === ctx.sid) {
+      patchUiState(state => ({
+        ...state,
+        compacting: false,
+        status:
+          state.status === t('status.compacting')
+            ? t(state.busy ? 'status.running' : 'status.ready')
+            : state.status
+      }))
+    }
   }
 }

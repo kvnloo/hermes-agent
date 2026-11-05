@@ -110,6 +110,10 @@ export function openRewindPicker(ctx: SlashRunCtx) {
     return ctx.transcript.sys(t('slashCmd.core.rewind.unsupported'))
   }
 
+  if (getUiState().compacting) {
+    return ctx.transcript.sys(t('slashCmd.core.busy.compressing', 'rewind'))
+  }
+
   if (ctx.ui.busy) {
     return ctx.transcript.sys(t('slashCmd.core.busy.replying', 'rewind'))
   }
