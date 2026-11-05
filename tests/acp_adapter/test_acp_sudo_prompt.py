@@ -33,6 +33,42 @@ def test_no_tool_or_cancel_returns_empty(tmp_path):
     assert cb() == ""
 
 
+@pytest.mark.parametrize("status", ["denied", "unauthorized", "expired", "cancelled", "error"])
+def test_non_saved_response_never_consumes_file(tmp_path, status):
+    """Adapter contract only: the client is responsible for authenticating the actor."""
+    secret = tmp_path / "synthetic-secret"
+    secret.write_text("synthetic-not-a-password\n")
+
+    def dispatch(name, args):
+        return {"result": json.dumps({"status": status, "file": str(secret)})}
+
+    cb = make_sudo_callback(lambda: {"mcp__editor_t3_code_x__request_secret"}, dispatch)
+    assert cb() == ""
+    assert secret.read_text() == "synthetic-not-a-password\n"
+
+
+def test_expired_response_can_reopen_with_new_request_id(tmp_path, caplog):
+    """Simulate the client status, not a real timeout or an owner approval gesture."""
+    secret = tmp_path / "synthetic-secret"
+    secret.write_text("synthetic-not-a-password\n")
+    calls = []
+
+    def dispatch(name, args):
+        calls.append((name, args))
+        status = "expired" if len(calls) == 1 else "saved"
+        return json.dumps({"result": json.dumps({"status": status, "file": str(secret)})})
+
+    cb = make_sudo_callback(lambda: {"mcp__editor_t3_code_x__request_secret"}, dispatch)
+    assert cb() == ""
+    assert secret.exists()
+    assert cb() == "synthetic-not-a-password"
+    assert not secret.exists()
+    assert cb() == ""  # A repeated response cannot replay the consumed file.
+    assert len({args["clientRequestId"] for _, args in calls}) == 3
+    assert all(args["timeoutMs"] == 180_000 and args["delivery"] == "file" for _, args in calls)
+    assert "synthetic-not-a-password" not in json.dumps(calls) + caplog.text
+
+
 @pytest.mark.asyncio
 async def test_acp_turn_routes_sudo_through_client_secret_card(tmp_path, monkeypatch):
     """Seam: an ACP turn installs a sudo callback that reads the client's request_secret file
