@@ -613,11 +613,10 @@ function heldRowIndex(messages: ChatMessage[], held: ChatMessage): number {
 /**
  * Re-graft client-local `system` notices (see `isLocalSystemNotice`):
  * refreshes rebuild from stored rows, which never carry them, so the notice
- * vanished on the next refresh (#126422). A notice keeps its place in front of
- * the next row the refreshed transcript still holds, so a /btw answer that
- * landed mid-turn survives the steer that puts later rows below it. Trailing
- * notices go at the end; one whose later rows the refresh no longer holds at
- * all (compaction, rewind) goes with them. Idempotent by id and text.
+ * vanished on the next refresh (#126422). An explicitly anchored /btw answer
+ * stays after its source row, or is dropped if compaction removed that row.
+ * Other notices keep their place before the next held row (or at the tail).
+ * Idempotent by id and text.
  */
 export function preserveLocalSystemNotices(nextMessages: ChatMessage[], currentMessages: ChatMessage[]): ChatMessage[] {
   const nextIds = new Set(nextMessages.map(message => message.id))
@@ -631,12 +630,33 @@ export function preserveLocalSystemNotices(nextMessages: ChatMessage[], currentM
   }
 
   const merged = [...nextMessages]
+  const anchoredTailIds = new Map<string, string>()
   let pending: ChatMessage[] = []
   // Leading part of `pending` already followed by a row the refresh dropped.
   let orphaned = 0
 
   for (const message of currentMessages) {
     if (missing(message)) {
+      if (message.noticeAfterId) {
+        const at = merged.findIndex(
+          row =>
+            row.id === message.noticeAfterId ||
+            (message.noticeAfterRowId !== undefined && row.rowId === message.noticeAfterRowId)
+        )
+
+        if (at >= 0) {
+          const previous = anchoredTailIds.get(message.noticeAfterId)
+          const previousAt = previous ? merged.findIndex(row => row.id === previous) : -1
+
+          merged.splice((previousAt >= 0 ? previousAt : at) + 1, 0, ...pending.slice(orphaned), message)
+          anchoredTailIds.set(message.noticeAfterId, message.id)
+          pending = []
+          orphaned = 0
+        }
+
+        continue
+      }
+
       pending.push(message)
 
       continue
