@@ -1387,6 +1387,21 @@ def _primary_quota_reopened_early(agent, primary_provider, primary_model, matche
         return False
 
 
+def _announce_pinned_fallback(agent, primary_model: str, remaining_s) -> None:
+    """Say, on every turn the session stays pinned to a fallback, which model is really answering
+    and until when (oss-factory #314). Without it the UI kept the primary's label while another
+    model family ran for hours. Best-effort: a notification surface must never fail the turn."""
+    fb_model = str(getattr(agent, "model", "") or "unknown")
+    fb_provider = str(getattr(agent, "provider", "") or "unknown")
+    if remaining_s is not None and remaining_s > 0:
+        until = time.strftime("%H:%M", time.localtime(time.time() + remaining_s))
+        why = f"until {until} ({primary_model or 'primary'} rate-limited)"
+    else:
+        why = f"while {primary_model or 'the primary'} stays unavailable"
+    with contextlib.suppress(Exception):
+        agent._emit_diagnostic_status(f"⚠️ On fallback {fb_model} via {fb_provider} {why}.")
+
+
 def restore_primary_runtime(agent) -> bool:
     """Restore the primary runtime at the start of a new turn so fallback stays turn-scoped
     (long-lived CLI agents and the gateway's cached agents)."""
@@ -1421,11 +1436,13 @@ def restore_primary_runtime(agent) -> bool:
     if _primary_quota_reopened_early(agent, primary_provider, primary_model, _matches_primary, _load_primary_pool):
         agent._rate_limited_until = 0
     if getattr(agent, "_rate_limited_until", 0) > time.monotonic():
+        _announce_pinned_fallback(agent, primary_model, agent._rate_limited_until - time.monotonic())
         return False  # primary still in rate-limit cooldown, stay on fallback
     blocked, prefetched_pool, prefetched = _primary_reset_gate_blocks(
         agent, rt, primary_provider, primary_runtime_base_url, _matches_primary, _load_primary_pool
     )
     if blocked:
+        _announce_pinned_fallback(agent, primary_model, None)
         return False
     agent._restore_wait_logged = False
     fallback_route = getattr(agent, "_provider_fallback_route", None)

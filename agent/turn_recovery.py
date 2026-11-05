@@ -1935,12 +1935,15 @@ def route_classified_error(
             if agent._try_activate_fallback(reason=classified.reason, reset_at=reset_at):
                 return _fallback_break()
 
-    # A 401/403 surviving credential refresh means a broken credential or endpoint:
-    # escalate to the fallback chain once; False -> terminal handling. A verdict that opts out
-    # (a missing CLI login no other provider can fix, #132337) fails closed instead.
+    # A 401/403 surviving credential refresh means a broken credential or endpoint: a config
+    # bug, not an outage. Fail the turn instead of silently running another model (oss-factory
+    # #316: 343 oneshot jobs asked for Opus, got 401 on every call and ran entirely on the
+    # fallback). Opt back in per agent with ``_fallback_on_auth_error = True``; a verdict that
+    # opts out (a missing CLI login no other provider can fix, #132337) still fails closed.
     if (
         classified.is_auth
         and classified.should_fallback
+        and getattr(agent, "_fallback_on_auth_error", False)
         and not _retry.auth_failover_attempted
         and agent._fallback_index < len(agent._fallback_chain)
     ):
