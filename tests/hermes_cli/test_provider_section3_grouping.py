@@ -22,7 +22,7 @@ from hermes_cli.model_switch import (
 )
 
 
-def _custom(monkeypatch, custom_providers):
+def _custom(monkeypatch, custom_providers, **picker_kw):
     """Run the picker with a minimal stub for network probes."""
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda *a, **k: {})
     monkeypatch.setattr(providers_mod, "HERMES_OVERLAYS", {})
@@ -31,6 +31,7 @@ def _custom(monkeypatch, custom_providers):
         user_providers={},
         custom_providers=custom_providers,
         max_models=50,
+        **picker_kw,
     )
 
 
@@ -131,6 +132,36 @@ def test_no_credentials_recorded_keeps_custom_row(monkeypatch):
     user_rows = [p for p in rows if p.get("source") == "user-config"]
     assert len(user_rows) == 1
     assert "my-dashscope-unset-key" in user_rows[0]["slug"]
+
+
+def test_redirected_builtin_does_not_hide_named_custom_even_with_shared_key(monkeypatch):
+    """seaavey #149233: an Anthropic env override cannot claim SRouter's catalog.
+
+    The credential matches the built-in on purpose: credential-aware dedup
+    alone still drops the custom row despite the unrelated static model list.
+    """
+    proxy_url = "https://router.example.invalid/v1"
+    proxy_model = "rv/zai-org/GLM-5.3-Flash"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-router-test")
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", proxy_url)
+    rows = _custom(
+        monkeypatch,
+        [{
+            "name": "SRouter",
+            "base_url": proxy_url,
+            "key_env": "ANTHROPIC_API_KEY",
+            "models": [proxy_model],
+            "discover_models": False,
+        }],
+        current_provider="custom",
+        current_base_url=proxy_url,
+        current_model=proxy_model,
+    )
+    assert any(row["slug"] == "anthropic" for row in rows)
+    named = [row for row in rows if row["slug"] == "custom:srouter"]
+    assert len(named) == 1
+    assert named[0]["models"] == [proxy_model]
+    assert named[0]["is_current"]
 
 
 class TestFormatModelForDisplay:

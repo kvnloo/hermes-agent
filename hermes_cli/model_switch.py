@@ -2161,11 +2161,10 @@ def list_authenticated_providers(
         return str(url or "").strip().rstrip("/").lower()
 
     def _record_builtin_endpoint(slug: str) -> None:
-        """Record the effective base URL + credential identities for a built-in row.
+        """Record native built-in endpoint identities for picker dedup.
 
-        Prefers the live env-override (e.g. DASHSCOPE_BASE_URL) over the
-        static inference_base_url so the dedup matches what a user typing
-        that URL into custom_providers would actually hit.
+        An env override to a foreign endpoint cannot represent the built-in's
+        static catalog, so it must not shadow a named custom provider row.
         """
         try:
             from hermes_cli.auth import PROVIDER_REGISTRY as _reg
@@ -2174,12 +2173,12 @@ def list_authenticated_providers(
         pcfg = _reg.get(slug)
         if not pcfg:
             return
-        url = ""
-        if getattr(pcfg, "base_url_env_var", ""):
-            url = os.environ.get(pcfg.base_url_env_var, "") or ""
-        if not url:
-            url = getattr(pcfg, "inference_base_url", "") or ""
-        normed = _norm_url(url)
+        native_url = getattr(pcfg, "inference_base_url", "") or ""
+        env_var = getattr(pcfg, "base_url_env_var", "") or ""
+        env_url = (os.environ.get(env_var, "") if env_var else "").strip()
+        if env_url and _norm_url(env_url) != _norm_url(native_url):
+            return  # A redirected built-in cannot speak for the custom gateway's catalog.
+        normed = _norm_url(env_url or native_url)
         if not normed:
             return
         creds = _builtin_endpoints.setdefault(normed, set())
