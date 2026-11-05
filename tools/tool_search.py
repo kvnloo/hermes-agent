@@ -22,7 +22,7 @@ from toolsets import CLIENT_SURFACE_TOOLSETS, TOOLSET_SESSION_PLATFORMS
 from tools.tool_search_catalog import (
     BRIDGE_TOOL_NAMES, CHARS_PER_TOKEN, TOOL_CALL_NAME, TOOL_DESCRIBE_NAME, TOOL_SEARCH_NAME,
     CatalogEntry, _fn, _listing_group_label, _registry_entry, _registry_toolset,
-    build_catalog, build_catalog_listing_with_form, search_catalog)
+    build_catalog, build_catalog_listing_with_form, resolve_wire_alias, search_catalog)
 from tools.tool_search_validation import (
     local_batch_error, normalize_tool_call_entries, not_deferrable_error, session_unavailable_error,
     unavailable_in_session_reason, validate_deferred_call_args)
@@ -511,7 +511,7 @@ def dispatch_tool_describe(args: dict[str, Any], *, current_tool_defs: list[dict
     errors: dict[str, str] = {}
     session_names = session_tool_names(current_tool_defs)
     for name in names:
-        fn = by_name.get(name)
+        fn = by_name.get(resolve_wire_alias(name))  # keyed by the name the model asked for
         remote_fn = remote_schemas.get(name)
         if fn is not None:
             tools[name] = {"description": fn.get("description", ""),
