@@ -382,6 +382,39 @@ class TestMediaGroups:
         assert len(event.media_text_inlined) in (0, len(event.media_urls))
 
 
+
+    @pytest.mark.parametrize("document_first", [True, False], ids=["document-first", "photo-first"])
+    def test_mixed_album_preserves_filenames_at_admission(self, adapter, document_first):
+        """Merging a document and photo must not misalign an original filename."""
+        from gateway.session_envelope import _media_clause
+
+        document = MessageEvent(
+            text="Read both",
+            message_type=MessageType.DOCUMENT,
+            media_urls=["/tmp/report.pdf"],
+            media_types=["application/pdf"],
+            media_text_inlined=[False],
+            media_filenames=["report.pdf"],
+        )
+        photo = MessageEvent(
+            text="",
+            message_type=MessageType.PHOTO,
+            media_urls=["/tmp/photo.jpg"],
+            media_types=["image/jpeg"],
+        )
+        items = [document, photo] if document_first else [photo, document]
+        pending = {}
+        for item in items:
+            adapter._merge_into_pending(pending, "album", item)
+
+        merged = pending["album"]
+        assert merged.media_urls == (["/tmp/report.pdf", "/tmp/photo.jpg"] if document_first
+                                     else ["/tmp/photo.jpg", "/tmp/report.pdf"])
+        assert merged.media_text_inlined == ([False, None] if document_first else [None, False])
+        assert merged.media_filenames == (["report.pdf", ""] if document_first else ["", "report.pdf"])
+        assert _media_clause(merged) is None
+
+
 # ---------------------------------------------------------------------------
 # TestSendVoice — outbound audio delivery
 # ---------------------------------------------------------------------------
