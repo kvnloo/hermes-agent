@@ -51,6 +51,13 @@ def test_new_id_uses_max_not_count_and_is_idempotent(ledger):
     assert update_ledger(ledger, 'm2', 'Track penguin migration')['action'] == 'duplicate'
 
 
+def test_new_row_can_be_rendered_by_existing_ayo_renderer(ledger):
+    update_ledger(ledger, 'new-renderable', 'Track penguin migration across Antarctica')
+    row = rows(ledger)[-1]
+    # render_ledger.py indexes these fields on every row, including new intake asks.
+    assert (row['check'], row['evidence'], row['note']) == ('', '', '')
+
+
 def test_lexical_embedding_match_and_abstention(ledger):
     value = rows(ledger)
     assert match('Fix broken glass background opacity settings', value)[0] == 'R01'

@@ -91,7 +91,7 @@ def match(text: str, rows: list[dict]) -> tuple[str | None, float]:
 
 def short_ask(text: str) -> str:
     text = re.sub(r'\s+', ' ', text).strip()
-    text = re.sub(r'^(?:please |pls |can (?:you|u) |could you )+', '', text, flags=re.I)
+    text = re.sub(r'^(?:please |pls |can (?:you|u) |could you )+', '', text, flags=re.IGNORECASE)
     return text[:177].rstrip() + '...' if len(text) > 180 else text
 
 
@@ -135,6 +135,7 @@ def update_ledger(path: Path, message_id: str, text: str, *, lock_timeout: float
             numbers = [int(row['id'][1:]) for row in rows if re.fullmatch(r'I\d+', row['id'])]
             row_id = f'I{max(numbers, default=0) + 1:03d}'
             rows.append({'id': row_id, 'owner': 'ayo', 'status': 'open', 'ask': short_ask(text),
+                         'check': '', 'evidence': '', 'note': '',
                          'source_msg_id': message_id, 'mentions': [message_id]})
             action = 'new'
         else:

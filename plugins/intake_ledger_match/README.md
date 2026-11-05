@@ -23,7 +23,7 @@ The default ledger is Kevin's existing intent-analyzer `ayo-ledger.json`. CLI, T
 
 All cooperating writers must acquire `<ledger>.lock` with `flock(LOCK_EX)`. The plugin reads the ledger only after acquiring that stable sidecar. It deduplicates message IDs, allocates new IDs, and preserves unrelated row fields inside the same transaction. It fsyncs a same-directory temporary file, replaces the ledger atomically, and fsyncs the directory. The existing ledger file must exist and pass schema checks. Invalid input is not replaced. The worker abandons a lock attempt after five seconds.
 
-The plugin also checks for changes by non-locking writers before replacement. This detects many conflicts but cannot make non-cooperating writers safe. Existing `render_ledger.py` does not honor this lock. That separate writer needs the same lock protocol before concurrent updates have a complete guarantee.
+The plugin also checks for changes by non-locking writers before replacement. This detects many conflicts but cannot make non-cooperating writers safe. The operation's `render_ledger.py` now reads and writes under `ledger_journal.LOCK`, the same `ayo-ledger.json.lock` sidecar. New rows include empty `check`, `evidence`, and `note` fields because that renderer indexes them directly. `scripts/verify_intake_ledger_writers.py OPERATION_COPY` tests both writers on a temporary ledger using copies of the real renderer and journal.
 
 ## Logs and lifecycle
 
@@ -42,3 +42,9 @@ python3 scripts/replay_intake_ledger_match.py replay-labels.json replay-ledger.j
 The operation folder contains frozen labels, source line numbers, both replay attempts, installation hashes, and exact fleet commands. The labels were not changed after scoring. The matcher was tuned on this coverage set, so its score is not a held-out estimate.
 
 The offline smoke uses a host stand-in and must not be represented as a live Hermes turn. No gateway restart or public action is part of installation.
+
+## Live activation
+
+The CLI can attach to an existing gateway. That process caches its plugin registry, so copying files and editing `plugins.enabled` does not activate this hook there. A metadata listing is not a successful call to `register()`. Hermes's `hermes_cli.plugins_activation.reload_running_gateway()` sends the existing `reload-plugins` control verb for the selected profile without restarting the gateway. After installation, invoke that helper under the intake home and check its returned activation records. Do not restart services if the control verb is unavailable.
+
+Run a fresh `hermes -p intake chat --oneshot -q "A17b hook verification. Reply only pong."` through the installed runtime. `chat --oneshot` is a boolean flag and needs `-q` for the message. Confirm `loaded` and `ledger_updated` in `intake/logs/ledger-match.log`, then read the indicated row and message ID from the live ledger. A successful model response alone does not prove that the hook ran.
