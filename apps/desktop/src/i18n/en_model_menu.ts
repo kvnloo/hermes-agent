@@ -12,6 +12,13 @@ export const enModelMenu: Translations['shell']['modelMenu'] = {
   removeFavorite: 'Remove from favorites',
   favoriteShortcut: '⇧ Click',
   fast: 'Fast',
+  turboDescriptions: {
+    turbo: 'Automatic model routing',
+    'free-quality': 'Free route prioritizing answer quality',
+    'free-reasoning': 'Free route for reasoning tasks',
+    'free-verify': 'Free route for verification tasks',
+    'free-longctx': 'Free route for long-context tasks'
+  },
   free: 'free',
   cacheRead: 'cached read',
   priceTitle: (input: string, output: string, cache: string) =>
