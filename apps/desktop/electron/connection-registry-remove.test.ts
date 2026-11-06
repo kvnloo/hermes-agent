@@ -159,3 +159,26 @@ it('does not overwrite a subsequent registry edit while removal finishes', async
     'new-ssh'
   ])
 })
+
+it('keeps a rotated SSH key on a surviving same-host connection after deleting the legacy route', async () => {
+  const state = fixture('ssh')
+  const rotatedKey = '/offline/rotated-key'
+  const registry: ConnectionRegistry = {
+    ...state.registry,
+    connections: state.registry.connections.map(connection =>
+      connection.id === 'saved-ssh'
+        ? { ...connection, host: 'old.example.invalid', keyPath: rotatedKey }
+        : connection
+    )
+  }
+  state.writers.writeRegistry(registry)
+
+  await removeSavedConnection('old-gateway', registry, state.config, state.writers)
+
+  const restarted = state.coldRead()
+  expect(restarted.changed).toBe(false)
+  expect(restarted.registry.connections.map(connection => connection.id)).toEqual(['local', 'saved-ssh'])
+  expect(restarted.registry.connections.find(connection => connection.id === 'saved-ssh')?.keyPath).toBe(rotatedKey)
+  expect(restarted.registry.primary).toBe('saved-ssh')
+  expect(state.readConfig().mode).toBe('local')
+})

@@ -17,12 +17,15 @@ export async function removeSavedConnection(
   // Use the reader's identity policy: clear only a global legacy route that
   // this deletion would cause it to re-import. An unrelated removal, a route
   // still represented by another entry, and pre-existing drift stay untouched.
-  const before = reconcileRegistryDrift(registry, config).registry
-  const after = reconcileRegistryDrift(nextRegistry, config).registry
+  const before = reconcileRegistryDrift(registry, config)
+  const after = reconcileRegistryDrift(nextRegistry, config)
 
+  // A saved SSH route can have a same-host peer with a different key.
+  // Deleting the active route must not let drift repair overwrite that peer.
+  const wouldRewriteSshPeer = config.mode === 'ssh' && !before.changed && after.changed
   if (
-    before.connections.length === registry.connections.length &&
-    after.connections.length > nextRegistry.connections.length
+    before.registry.connections.length === registry.connections.length &&
+    (after.registry.connections.length > nextRegistry.connections.length || wouldRewriteSshPeer)
   ) {
     await applyConnectionConfigAtomically({
       previousConfig: config,
