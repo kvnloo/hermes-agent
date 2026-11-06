@@ -33,6 +33,7 @@ import {
   resolveNewSessionCwd,
   scanAndRecordRepos,
   startWorkInRepo,
+  setProjectAppearance,
   updateProject
 } from './projects'
 import {
@@ -660,6 +661,26 @@ describe('explicit-profile writes while viewing all profiles', () => {
     )
     expect($activeGatewayProfile.get()).toBe('default')
     expect($profileScope.get()).toBe(ALL_PROFILES)
+  })
+
+  it('routes foreign project appearance to its declaring profile, not the live profile', async () => {
+    const request = vi.fn().mockResolvedValue({})
+    activeGateway.mockReturnValue({ connectionState: 'open', request } as never)
+    const foreign = {
+      ...$projectTree.get()[0]!,
+      isAuto: false,
+      profiles: ['coder'],
+      profileIds: { coder: project.id }
+    } as SidebarProjectTree
+
+    await expect(
+      setProjectAppearance(foreign, { icon: 'rocket' }, { id: project.id, profile: 'coder' })
+    ).resolves.toBe(false)
+    expect(request).toHaveBeenCalledWith(
+      'projects.update',
+      expect.objectContaining({ id: project.id, icon: 'rocket', profile: 'coder' })
+    )
+    expect($activeGatewayProfile.get()).toBe('default')
   })
 })
 

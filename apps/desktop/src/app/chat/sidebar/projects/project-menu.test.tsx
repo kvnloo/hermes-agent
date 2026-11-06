@@ -372,4 +372,22 @@ describe('ProjectMenu single-owner rows', () => {
 
     expect(store.openProjectRename).toHaveBeenCalledWith({ id: 'p1', name: 'Test D', profile: 'worker' })
   })
+
+  it('routes a foreign single-owner Appearance change by the row owner', async () => {
+    const foreign = {
+      ...project,
+      profiles: ['default'],
+      profileIds: { default: 'p1' }
+    } as SidebarProjectTree
+    $activeGatewayProfile.set('worker')
+
+    render(<ProjectMenu isActive={false} project={foreign} />)
+    openTriggerMenu(screen.getByRole('button', { name: 'Actions' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Appearance' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'rocket' }))
+
+    expect(store.setProjectAppearance).toHaveBeenCalledWith(
+      foreign, { icon: 'rocket' }, { id: 'p1', profile: 'default' }
+    )
+  })
 })

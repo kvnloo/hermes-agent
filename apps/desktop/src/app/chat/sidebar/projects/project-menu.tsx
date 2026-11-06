@@ -249,7 +249,7 @@ function useProjectActions({
     />
   )
 
-  return { confirmDialog, dangerItem, identityItems, pathItems, profilePicker }
+  return { confirmDialog, dangerItem, identityItems, ownerless, pathItems, profilePicker, writeTarget }
 }
 
 // Per-project actions. The kebab keeps its row-anchored Appearance popover; the
@@ -281,7 +281,7 @@ export function ProjectMenu({
   // when the panes are flipped (sidebar on the right).
   const panesFlipped = useStore($panesFlipped)
 
-  const { confirmDialog, dangerItem, identityItems, pathItems, profilePicker } = useProjectActions({
+  const { confirmDialog, dangerItem, identityItems, ownerless, pathItems, profilePicker, writeTarget } = useProjectActions({
     isActive,
     onExitScope,
     project,
@@ -292,7 +292,7 @@ export function ProjectMenu({
   // materialized on its first change (its id then changes), so close the picker
   // on adopt to stop a second write double-creating from a now-stale node.
   const applyAppearance = async (patch: { color?: null | string; icon?: null | string }) => {
-    if (await setProjectAppearance(project, patch)) {
+    if (await setProjectAppearance(project, patch, writeTarget())) {
       setAppearanceOpen(false)
     }
   }
@@ -359,7 +359,7 @@ export function ProjectMenu({
           ) : (
             <>
               {identityItems.slice(0, 1).map(item => renderActionItem(DROPDOWN_KIT, item))}
-              {appearanceItem}
+              {!ownerless && appearanceItem}
               {identityItems.slice(1).map(item => renderActionItem(DROPDOWN_KIT, item))}
               <DropdownMenuSeparator />
             </>
@@ -410,17 +410,17 @@ export function ProjectContextMenu({
   const { t } = useI18n()
   const p = t.sidebar.projects
 
-  const { confirmDialog, dangerItem, identityItems, pathItems, profilePicker } = useProjectActions({
+  const { confirmDialog, dangerItem, identityItems, ownerless, pathItems, profilePicker, writeTarget } = useProjectActions({
     isActive,
     onExitScope,
     project,
     scoped
   })
 
-  const canTheme = !project.isAuto || Boolean(project.path)
+  const canTheme = project.isAuto ? Boolean(project.path) : !ownerless
 
   const applyAppearance = (patch: { color?: null | string; icon?: null | string }) => {
-    void setProjectAppearance(project, patch)
+    void setProjectAppearance(project, patch, writeTarget())
   }
 
   const items = (kit: MenuKit) => (

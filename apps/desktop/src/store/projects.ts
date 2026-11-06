@@ -1131,10 +1131,11 @@ export async function updateProject(
 // (the node's id changes on adopt, and a second stale write would double-create).
 export async function setProjectAppearance(
   project: Pick<SidebarProjectTree, 'color' | 'icon' | 'id' | 'isAuto' | 'label' | 'path'>,
-  patch: { color?: null | string; icon?: null | string }
+  patch: { color?: null | string; icon?: null | string },
+  target?: { id: string; profile?: string }
 ): Promise<boolean> {
   if (!project.isAuto) {
-    await updateProject(project.id, patch)
+    await updateProject(target?.id ?? project.id, patch, target?.profile)
 
     return false
   }
