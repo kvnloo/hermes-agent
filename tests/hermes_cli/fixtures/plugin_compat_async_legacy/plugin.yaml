@@ -1,0 +1,5 @@
+name: async-legacy-contract-fixture
+version: "0.1.0"
+description: Frozen async plugin fixture for native behavior compatibility
+provides_hooks:
+  - on_session_start
