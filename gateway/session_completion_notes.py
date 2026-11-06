@@ -67,9 +67,18 @@ async def note_if_unviewed(authority, ref, row):
     metadata.update({key: descriptor[key] for key in ('display_text', 'notification_category') if key in descriptor})
     target = _physical_target(authority, ref.session_id)
     # Keyed by its admission: a claim is never replayed, and this keeps a write retry exact.
-    await tracked_write(authority, partial(
-        authority.db.append_completion_note, target, row['admission_id'], row['payload']['text'],
-        descriptor.get('display_kind', 'internal_notification'), metadata))
+    from hermes_state_errors import SessionTurnLeaseLostError
+    try:
+        await tracked_write(authority, partial(
+            authority.db.append_completion_note, target, row['admission_id'], row['payload']['text'],
+            descriptor.get('display_kind', 'internal_notification'), metadata))
+    except SessionTurnLeaseLostError:
+        if _producer(descriptor['identity']) not in _NOTED_PRODUCERS:
+            raise  # An already-finished cron result must not start a model turn.
+        # Another process owns the transcript. Run the claimed completion through the
+        # ordinary turn path instead of settling it as a failed admission.
+        await reopen_for_turn(authority, ref)
+        return None
     refresh = getattr(authority.runner, '_refresh_agent_cache_message_count', None)
     if refresh is not None:  # the owner's own row: a cached agent stays, as after a turn's writes
         await refresh(live.route, target)
