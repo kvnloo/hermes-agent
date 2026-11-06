@@ -86,8 +86,9 @@ const isRouteOwner = (owner: unknown): owner is SessionRpcOwnerRoute =>
  *   5. undefined → the caller runs the cross-profile probe, and fails closed
  *      if that misses too.
  *
- * An EXACT durable route (1–3 tagged, or 4) always outranks a bare profile
- * name; only a genuinely unknown owner falls through.
+ * A tile route stays authoritative; a live event corroborated by a tagged
+ * row overrides a conflicting persisted hint. Otherwise exact durable routes
+ * outrank bare profile names and only unknown owners fall through.
  *
  * The hint outranks the row because the row is presentation state that can
  * be stamped from the AMBIENT profile (an optimistic row minted while
@@ -114,11 +115,28 @@ export function resolveSessionRpcOwner(args: {
   const fromRow = sessionRowOwner(routingSessionId)
   const rowOwner = typeof fromRow === 'string' ? fromRow.trim() || undefined : (fromRow ?? undefined)
 
-  const durable = tileOwnerRoute(routingSessionId) ?? sessionOwnerHint(routingSessionId) ?? rowOwner
+  const tile = tileOwnerRoute(routingSessionId)
+  const hint = sessionOwnerHint(routingSessionId)
+  const durable = tile ?? hint ?? rowOwner
+  const event = eventOwner?.(routingSessionId)
+
+  // A live runtime event and a connection-tagged row independently prove the
+  // same owner. A stale SSH hint cannot override both after a reconnect.
+  // Preserve explicit tile routes and the ordinary hint-first fallback.
+  if (
+    !tile &&
+    isRouteOwner(hint) &&
+    isRouteOwner(rowOwner) &&
+    isRouteOwner(event) &&
+    rowOwner.connectionId === event.connectionId &&
+    rowOwner.profile === event.profile
+  ) {
+    return event
+  }
 
   if (isRouteOwner(durable)) {
     return durable
   }
 
-  return eventOwner?.(routingSessionId) ?? durable
+  return event ?? durable
 }
