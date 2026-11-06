@@ -667,7 +667,7 @@ export function useComposerState({ gw, submitRef, sys }: UseComposerStateOptions
       attachImagePath,
       clearIn,
       clearInIfCurrent,
-      stage:
+      stage,
       dequeue,
       enqueue,
       handleTextPaste,
