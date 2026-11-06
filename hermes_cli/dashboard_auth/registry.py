@@ -52,31 +52,6 @@ def get_provider(name: str, *, scope: Optional[str] = None) -> Optional[Dashboar
         return _merged(scope).get(name)
 
 
-def snapshot_registration(
-    name: str, *, scope: Optional[str] = None) -> Optional[DashboardAuthProvider]:
-    with _lock:
-        scope = normalize_scope(scope)
-        return _target(scope, create=False).get(name)
-
-
-def restore_registration(
-    name: str, current: DashboardAuthProvider, previous: Optional[DashboardAuthProvider],
-    *, scope: Optional[str] = None) -> bool:
-    """Restore a host-owned provider registration if it is still current."""
-    with _lock:
-        scope = normalize_scope(scope)
-        target = _target(scope, create=True)
-        if target.get(name) is not current:
-            return False
-        if previous is None:
-            target.pop(name, None)
-        else:
-            target[name] = previous
-        if scope is not None and not target:
-            _scoped_providers.pop(scope, None)
-    return True
-
-
 def list_providers(*, scope: Optional[str] = None) -> list[DashboardAuthProvider]:
     """All registered providers, in registration order."""
     with _lock:
