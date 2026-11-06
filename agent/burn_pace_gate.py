@@ -96,7 +96,12 @@ def classify(lane: str, reading) -> tuple[str, str, str, str]:
     if used is None:
         return STALE, AT_CAP, UNKNOWN, f"lane {lane} missing from burn-pace"
     u = AT_CAP if used >= USED_STOP else UNDER
-    pace = UNKNOWN if ratio is None else (HOT if ratio >= RATIO_STOP else COOL)
+    rate, hours = row.get("observed_pct_per_h"), row.get("hours_to_reset")
+    if rate is not None and hours is not None:
+        # HOT = at the observed burn rate this row runs out before its weekly reset.
+        pace = HOT if used + rate * hours >= USED_STOP else COOL
+    else:
+        pace = UNKNOWN if ratio is None else (HOT if ratio >= RATIO_STOP else COOL)
     return FRESH, u, pace, f"lane {lane} {used}% used (resets in {row.get('hours_to_reset')}h), pace {ratio}"
 
 
@@ -107,9 +112,17 @@ def verdict(lane: str, reading) -> tuple[bool, float, str]:
     return admit_cls(fresh, used, pace), ratio if ratio is not None else 0.0, why
 
 
+def _override_file_active() -> bool:
+    """Owner override without a restart: ~/.config/burn-gate/override holding a future epoch."""
+    try:
+        return float((_paths()[1].parent / "override").read_text().split()[0]) > time.time()
+    except (OSError, ValueError, IndexError):
+        return False
+
+
 def admit(provider: str, entries: list) -> list:
     """Filter and order *entries* (PooledCredential-like, with .label) for *provider*."""
-    if not entries or os.environ.get("HERMES_BURN_GATE_OVERRIDE") == "1":
+    if not entries or os.environ.get("HERMES_BURN_GATE_OVERRIDE") == "1" or _override_file_active():
         return entries
     lanes, reading = _load()
     mapping = lanes.get(provider) if isinstance(lanes, dict) else None

@@ -55,4 +55,9 @@ def test_classify_maps_readings_into_law_domain():
     assert g.classify("b", rd)[:3] == (g.FRESH, g.UNDER, g.COOL)
     assert g.classify("c", rd)[:3] == (g.FRESH, g.UNDER, g.HOT)
     assert g.classify("zz", rd)[0] == g.STALE
+    # projected exhaustion before reset is HOT even under 1.5x (claude2 on 2026-11-05: 44% + 0.645%/h * 99.8h)
+    rd["lanes"]["d"] = {"weekly_used_pct": 44.0, "pace_ratio": 1.15, "observed_pct_per_h": 0.645, "hours_to_reset": 99.8}
+    rd["lanes"]["e"] = {"weekly_used_pct": 12.0, "pace_ratio": 0.85, "observed_pct_per_h": 0.514, "hours_to_reset": 144.7}
+    assert g.classify("d", rd)[2] == g.HOT
+    assert g.classify("e", rd)[2] == g.COOL
     assert g.classify("b", {"at": "2020-01-01T00:00:00+00:00", "lanes": rd["lanes"]})[0] == g.STALE
