@@ -2140,6 +2140,21 @@ class TestLoadHermesIndex:
 # ---------------------------------------------------------------------------
 
 class TestReferencedSupportPaths:
+    @pytest.mark.parametrize(
+        ("markdown", "expected"),
+        [
+            ("See scripts/eval.ts:8 for the loop.", {"scripts/eval.ts"}),
+            ("See `scripts/eval.ts:8:20` for the loop.", {"scripts/eval.ts"}),
+            ("See [guide](references/guide.md:12).", {"references/guide.md"}),
+            ("See `scripts/eval.ts:8?raw=1#L9`.", {"scripts/eval.ts"}),
+            ("See `scripts/a.py:payload`.", None),
+            ("See `scripts/a.py:8:payload`.", None),
+            ("See `scripts/../../etc/passwd:8`.", None),
+        ],
+    )
+    def test_file_line_citations_keep_bundle_paths_safe(self, markdown, expected):
+        assert _referenced_support_paths(markdown) == expected
+
     def test_ignores_globs_placeholders_and_truncated_tokens(self):
         md = (
             "Load `references/type-*.md` before drawing, and "
