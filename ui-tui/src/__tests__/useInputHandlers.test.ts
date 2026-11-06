@@ -117,7 +117,7 @@ describe('plain Ctrl+C — modified chords leave drafts and overlays intact', ()
     { name: 'Ctrl+Super+C', modifiers: { super: true } }
   ])('$name is not the TUI cancel/clear/interrupt command', ({ modifiers }) => {
     expect(isPlainCtrlC({ ...controlOnly, ...modifiers }, 'c')).toBe(false)
-    expect(isPlainCtrlC({ ...controlOnly, ...extra }, 'C')).toBe(false)
+    expect(isPlainCtrlC({ ...controlOnly, ...modifiers }, 'C')).toBe(false)
   })
 })
 
