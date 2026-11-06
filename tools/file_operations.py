@@ -569,7 +569,8 @@ class ShellFileOperations(LintMixin, SearchMixin, FileOperations):
     def _atomic_write(self, path: str, content: str) -> ExecuteResult:
         """Write ``content`` atomically: stdin → temp file in the SAME directory →
         ``mv -f`` (same-FS rename; cross-device ``mv`` is copy+unlink, NOT atomic).
-        ``mkdir -p`` folded in. Hard-linked targets are written in place to preserve\n        shared inodes, and read-only targets are refused before creating the temp file.
+        ``mkdir -p`` folded in. Hard-linked targets are written in place to preserve
+        shared inodes, and read-only targets are refused before creating the temp file.
 
         Symlink targets are resolved first (replacing the link would orphan the
         target) and the temp dir recomputed from the RESOLVED target. Existing
