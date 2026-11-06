@@ -319,7 +319,7 @@ async def test_no_agent_usage_counts_tool_messages_and_keeps_persisted_prompt_fl
         {"role": "user", "content": "calculate"},
         {"role": "assistant", "content": None,
          "tool_calls": [{"id": "call_1", "type": "function",
-                         "function": {"name": "calculator", "arguments": "{\\"x\\":1}"}}]},
+                         "function": {"name": "calculator", "arguments": '{"x":1}'}}]},
         {"role": "tool", "tool_call_id": "call_1", "content": "2"},
         {"role": "assistant", "content": "2"},
     ]
