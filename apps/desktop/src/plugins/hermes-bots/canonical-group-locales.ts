@@ -15,6 +15,8 @@ export interface CanonicalGroupMessages {
   driverUnavailable: string
   invalidLogCursor: string
   allowOnce: string
+  allowSession: string
+  alwaysAllow: string
   deny: string
   discardUnknown: string
   discardWarning: string
@@ -133,6 +135,8 @@ export const CANONICAL_GROUP_LOCALES = {
     driverUnavailable: 'Group driver unavailable. Update or reconnect the owning gateway.',
     invalidLogCursor: 'Invalid room log cursor',
     allowOnce: 'Allow once',
+    allowSession: 'Allow this session',
+    alwaysAllow: 'Always allow',
     deny: 'Deny',
     discardUnknown: 'Discard unknown work',
     discardWarning: 'Side effects may already have occurred. Discarding does not undo them.',
@@ -249,6 +253,8 @@ export const CANONICAL_GROUP_LOCALES = {
     driverUnavailable: 'グループの実行機能を利用できません。管理元のゲートウェイを更新するか、再接続してください。',
     invalidLogCursor: 'ルームのログカーソルが無効です',
     allowOnce: '今回のみ許可',
+    allowSession: 'このセッションで許可',
+    alwaysAllow: '常に許可',
     deny: '拒否',
     discardUnknown: '結果不明の処理を破棄',
     discardWarning: 'すでに変更が行われている可能性があります。破棄しても元には戻りません。',
@@ -365,6 +371,8 @@ export const CANONICAL_GROUP_LOCALES = {
     driverUnavailable: '群组运行程序不可用。请更新或重新连接所属网关。',
     invalidLogCursor: '群组日志游标无效',
     allowOnce: '仅允许一次',
+    allowSession: '允许本会话',
+    alwaysAllow: '始终允许',
     deny: '拒绝',
     discardUnknown: '丢弃结果未知的任务',
     discardWarning: '可能已产生实际影响。丢弃任务不会撤销这些影响。',
@@ -481,6 +489,8 @@ export const CANONICAL_GROUP_LOCALES = {
     driverUnavailable: '群組執行程式無法使用。請更新或重新連線至所屬閘道。',
     invalidLogCursor: '群組記錄游標無效',
     allowOnce: '僅允許一次',
+    allowSession: '允許本工作階段',
+    alwaysAllow: '一律允許',
     deny: '拒絕',
     discardUnknown: '捨棄結果不明的工作',
     discardWarning: '可能已產生實際影響。捨棄工作不會復原這些影響。',
@@ -597,6 +607,8 @@ export const CANONICAL_GROUP_LOCALES = {
     driverUnavailable: 'مشغّل المجموعة غير متاح. حدّث البوابة المالكة أو أعد الاتصال بها.',
     invalidLogCursor: 'مؤشر سجل الغرفة غير صالح',
     allowOnce: 'السماح مرة واحدة',
+    allowSession: 'السماح لهذه الجلسة',
+    alwaysAllow: 'السماح دائمًا',
     deny: 'رفض',
     discardUnknown: 'تجاهل العمل ذي النتيجة المجهولة',
     discardWarning: 'قد تكون تغييرات قد حدثت بالفعل. تجاهل العمل لا يتراجع عنها.',
@@ -714,6 +726,8 @@ export const CANONICAL_GROUP_LOCALES = {
       'Исполнитель группы недоступен. Обновите шлюз, которому принадлежит группа, или подключитесь к нему заново.',
     invalidLogCursor: 'Недопустимый курсор журнала комнаты',
     allowOnce: 'Разрешить один раз',
+    allowSession: 'Разрешить в этой сессии',
+    alwaysAllow: 'Разрешать всегда',
     deny: 'Отклонить',
     discardUnknown: 'Отбросить работу с неизвестным результатом',
     discardWarning: 'Изменения могли уже произойти. Отмена работы не отменяет эти изменения.',
@@ -833,6 +847,8 @@ export const CANONICAL_GROUP_LOCALES = {
       'Pilote de groupe indisponible. Mettez à jour ou reconnectez la passerelle propriétaire.',
     invalidLogCursor: 'Curseur de journal de salon invalide',
     allowOnce: 'Autoriser une fois',
+    allowSession: 'Autoriser pour cette session',
+    alwaysAllow: 'Toujours autoriser',
     deny: 'Refuser',
     discardUnknown: 'Abandonner le travail au résultat inconnu',
     discardWarning: 'Des effets de bord ont peut-être déjà eu lieu. Abandonner ne les annule pas.',
@@ -951,6 +967,8 @@ export const CANONICAL_GROUP_LOCALES = {
       'Gruppentreiber nicht verfügbar. Aktualisieren Sie das zuständige Gateway oder verbinden Sie es neu.',
     invalidLogCursor: 'Ungültiger Raumprotokoll-Cursor',
     allowOnce: 'Einmal erlauben',
+    allowSession: 'Für diese Sitzung erlauben',
+    alwaysAllow: 'Immer erlauben',
     deny: 'Ablehnen',
     discardUnknown: 'Arbeit mit unbekanntem Ergebnis verwerfen',
     discardWarning: 'Nebenwirkungen können bereits eingetreten sein. Verwerfen macht sie nicht rückgängig.',
@@ -1070,6 +1088,8 @@ export const CANONICAL_GROUP_LOCALES = {
       'Controlador de grupo no disponible. Actualiza o vuelve a conectar la pasarela propietaria.',
     invalidLogCursor: 'Cursor de registro de sala no válido',
     allowOnce: 'Permitir una vez',
+    allowSession: 'Permitir en esta sesión',
+    alwaysAllow: 'Permitir siempre',
     deny: 'Denegar',
     discardUnknown: 'Descartar trabajo con resultado desconocido',
     discardWarning: 'Puede que ya se hayan producido efectos secundarios. Descartar no los deshace.',

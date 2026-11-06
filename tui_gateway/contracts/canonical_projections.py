@@ -62,7 +62,7 @@ class CanonicalRoomAttemptParams(RoomParams):
 
 
 class CanonicalRoomApproveParams(CanonicalRoomAttemptParams):
-    choice: Literal['once', 'deny']
+    choice: Literal['once', 'session', 'always', 'deny']
     request_id: str
 
 

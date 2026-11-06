@@ -953,7 +953,7 @@ def test_local_pending_approval_requires_exact_task_generation_and_request(
 
     action = service.status("room-1")["pending_actions"][0]
     assert action["member_id"] == "ops"
-    assert action["approval"]["choices"] == ["once", "deny"]
+    assert action["approval"]["choices"] == ["once", "always", "deny"]
     with pytest.raises(RuntimeError, match="no longer pending"):
         service.approve_room_task(
             "room-1",

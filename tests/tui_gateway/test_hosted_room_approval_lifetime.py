@@ -35,6 +35,35 @@ def pending_approval(tmp_path):
     return service, task, lease
 
 
+@pytest.mark.parametrize("choice", ["session", "always"])
+def test_room_approval_forwards_only_offered_persistent_choices(pending_approval, choice):
+    service, task, _lease = pending_approval
+    service.rpc = rpc = _FakeRPC()
+    kwargs = {
+        "member_id": "ops",
+        "task_id": task["identity"].task_id,
+        "execution_generation": task["execution_generation"],
+        "request_id": "approval",
+    }
+
+    # An old or smart-denied prompt must not gain persistent consent via RPC.
+    with pytest.raises(RuntimeError, match="not offered"):
+        service.approve_room_task("room", choice=choice, **kwargs)
+    assert rpc.approvals == []
+
+    service.runtime._report_pending_action(task, session_id="ops-session", info={"pending_approval": {
+        "request_id": "approval", "command": "echo example",
+        "choices": ["once", "session", "always", "deny"],
+    }})
+    assert service.status("room")["pending_actions"][0]["approval"]["choices"] == [
+        "once", "session", "always", "deny",
+    ]
+    assert service.approve_room_task("room", choice=choice, **kwargs) == {"resolved": 1}
+    assert rpc.approvals == [{
+        "session_id": "ops-session", "request_id": "approval", "choice": choice,
+    }]
+
+
 def test_stop_withdraws_cached_approval_before_and_after_acknowledgement(pending_approval):
     service, task, _lease = pending_approval
     db = service.db_path
