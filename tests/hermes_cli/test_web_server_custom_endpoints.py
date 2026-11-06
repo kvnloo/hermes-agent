@@ -58,3 +58,26 @@ class TestCustomEndpointSave:
         assert entry["base_url"] == "http://192.168.3.89:18075/v1"
         assert "api" not in entry, f"stale legacy api survived the save: {entry}"
         assert "url" not in entry, f"stale legacy url survived the save: {entry}"
+
+    @pytest.mark.parametrize("legacy_field", ("api", "url"))
+    def test_list_shows_effective_legacy_url_before_save(self, legacy_field):
+        """An unsaved mixed-key entry must display the URL the runtime routes to."""
+        from hermes_cli.config import get_config_path
+
+        legacy_url = "http://127.0.0.1:18080/v1"
+        saved_url = "http://127.0.0.1:18075/v1"
+        get_config_path().write_text(
+            "providers:\n"
+            "  strata:\n"
+            "    name: strata\n"
+            f"    {legacy_field}: {legacy_url}\n"
+            f"    base_url: {saved_url}\n"
+            "    model: test-model\n",
+            encoding="utf-8",
+        )
+
+        response = self.client.get("/api/providers/custom-endpoints")
+        assert response.status_code == 200, response.text
+        endpoints = [row for row in response.json()["endpoints"] if row["id"] == "strata"]
+        assert len(endpoints) == 1
+        assert endpoints[0]["base_url"] == legacy_url

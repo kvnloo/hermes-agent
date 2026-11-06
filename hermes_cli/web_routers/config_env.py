@@ -493,7 +493,8 @@ def _custom_endpoint_response(cfg: dict[str, Any]) -> dict[str, Any]:
         for provider_id, raw_entry in providers.items():
             if not isinstance(raw_entry, dict):
                 continue
-            base_url = str(raw_entry.get("base_url") or raw_entry.get("url") or raw_entry.get("api") or "").strip()
+            # Until an edit drops legacy keys, display the URL the runtime actually uses.
+            base_url = str(raw_entry.get("api") or raw_entry.get("url") or raw_entry.get("base_url") or "").strip()
             if not base_url:
                 continue
             endpoint_id = str(provider_id)
