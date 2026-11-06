@@ -182,19 +182,38 @@ def _denied(message: str) -> str:
     return json.dumps({"error": message}, ensure_ascii=False)
 
 
+def _approvals_switched_off() -> bool:
+    """The operator's "do not ask me" sources, which every other Hermes gate already honours.
+
+    ``approvals.mode: off`` (the Desktop toggle writes it) and a session ``/yolo`` skip the
+    recoverable approval layer on the dangerous-command, plugin-rule, SSH-config and
+    execute_code gates. The edit gate was the one surface that still parked a prompt: a session
+    whose approvals are off waited the full ``approvals.timeout`` per edit, then heard the edit
+    was "denied" although nobody had refused it, and edited through terminal instead
+    (kvnloo/oss-factory#320 — 90 blocked edits/week, 5.5 agent-hours stalled, 17 Mtok re-sent).
+    """
+    from tools.approval import is_approval_bypass_active
+    try:
+        return is_approval_bypass_active()
+    except Exception:
+        logger.debug("ACP edit approval bypass check failed", exc_info=True)
+        return False
+
+
 def maybe_require_edit_approval(tool_name: str, arguments: dict[str, Any]) -> str | None:
     """Run ACP edit approval if bound.
 
     Returns a JSON tool-error string when the edit must be blocked, otherwise
     ``None`` so dispatch can continue.  Requester exceptions deny by default."""
     requester = _EDIT_APPROVAL_REQUESTER.get()
-    if requester is None:
+    if requester is None or _approvals_switched_off():
         return None
     try:
         proposal = build_edit_proposal(tool_name, arguments)
     except Exception as exc:
         logger.warning("Could not build ACP edit approval proposal for %s: %s", tool_name, exc)
-        return _denied(f"Edit approval denied: could not prepare diff ({exc})")
+        return _denied(f"Edit not attempted: the approval diff could not be prepared ({exc}). "
+                       "Re-read the file and retry with its exact current text.")
     if proposal is None:
         return None
     try:
