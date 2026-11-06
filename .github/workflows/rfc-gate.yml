@@ -1,0 +1,31 @@
+name: rfc-gate
+# GitOps gate for a stacked-RFC branch (rfc/<tag>): the branch is a throwaway union of the stack's open PR heads on
+# upstream main. It must be green before that RFC's wave posts upstream. Fork-only; no third-party actions (the fork
+# allows local actions only), so checkout and setup are plain shell.
+on:
+  push:
+    branches: ["rfc/**"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: checkout
+        run: |
+          git init -q . && git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}"
+          git fetch -q --depth 1 origin "$GITHUB_SHA" && git checkout -q FETCH_HEAD
+      - name: env
+        run: |
+          python3 -m pip install -q uv
+          uv python install 3.13
+          uv sync -q --frozen --python 3.13 --group dev --group test --extra acp
+      - name: stack tests
+        run: |
+          echo "stack: ${GITHUB_REF_NAME#rfc/}"; cat .github/rfc-gate/tests.txt
+          HERMES_PYTHON=.venv/bin/python HERMES_TEST_FILE_RETRIES=0 scripts/run_tests.sh $(grep -v '^#' .github/rfc-gate/tests.txt)
+      - name: code health vs main
+        run: |
+          git fetch -q --depth 50 https://github.com/NousResearch/hermes-agent.git main && .venv/bin/python -m scripts.code_health --base FETCH_HEAD

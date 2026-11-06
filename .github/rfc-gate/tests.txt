@@ -1,0 +1,9 @@
+# rfc/agent-behavior
+tests/agent/test_memory_provider_unavailable_warning.py
+tests/agent/test_memory_provider.py
+tests/tools/test_computer_use_cua038_compat.py
+tests/tools/test_computer_use_element_token_contract.py
+tests/tools/test_computer_use.py
+tests/hermes_cli/test_apply_profile_override.py
+tests/hermes_cli/test_kanban_cli_exit_status.py
+tests/hermes_cli/test_kanban_cli.py
