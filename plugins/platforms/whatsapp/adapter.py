@@ -9,6 +9,7 @@ import platform
 import re
 import signal
 import subprocess
+import time
 from contextlib import suppress
 from functools import wraps
 from pathlib import Path
@@ -23,6 +24,8 @@ from hermes_cli.process_identity import release_process_group_once_empty, spawn_
 from hermes_constants import (find_node_executable, get_hermes_dir, with_hermes_node_path)
 
 _IS_WINDOWS = platform.system() == "Windows"
+# A bridge from a previous gateway process cannot prove inbound delivery through /health.
+_ADAPTER_MODULE_STARTED = time.monotonic()
 
 
 def _wenv(name: str, default: str = "") -> str:
@@ -550,6 +553,12 @@ class WhatsAppAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
             bridge_status = data.get("status", "unknown")
             if bridge_status != "connected":
                 print(f"[{self.name}] Bridge found but not connected (status: {bridge_status}), restarting")
+                return False
+            # The current bridge always reports uptime. A bridge older than this Python process
+            # may still serve green /health after its inbound pipeline freezes (#150337).
+            uptime = data.get("uptime")
+            if isinstance(uptime, (int, float)) and uptime > time.monotonic() - _ADAPTER_MODULE_STARTED + 1:
+                print(f"[{self.name}] Bridge predates gateway (uptime: {uptime:.0f}s), restarting")
                 return False
             running_hash, disk_hash = data.get("scriptHash", ""), _file_content_hash(bridge_path)
             if running_hash and disk_hash and running_hash == disk_hash and bool(data.get("sendReadReceipts", False)) == self._send_read_receipts:
