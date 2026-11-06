@@ -67,23 +67,44 @@ def _load():
     return val
 
 
-def verdict(lane: str, reading) -> tuple[bool, float, str]:
-    """(allowed, pace_ratio_for_sorting, reason)."""
+# Finite classes proven in bend/burn_pace (MODEL.bend admit/route, LAWS.bend). The numeric
+# readings are classified here; the decision itself is admit_cls, which must match the law
+# table exactly (tests/agent/test_burn_pace_law_parity.py runs Bend's TABLE.bend against it).
+FRESH, STALE = "fresh", "stale"
+UNDER, AT_CAP = "under", "at_cap"
+COOL, UNKNOWN, HOT = "cool", "unknown", "hot"
+
+
+def admit_cls(fresh: str, used: str, pace: str) -> bool:
+    return fresh == FRESH and used == UNDER and pace in (COOL, UNKNOWN)
+
+
+def route_cls(any_admitted: bool) -> str:
+    return "paid" if any_admitted else "free"
+
+
+def classify(lane: str, reading) -> tuple[str, str, str, str]:
+    """(fresh, used, pace, reason) for *lane* in *reading*."""
     try:
         age = time.time() - datetime.fromisoformat(reading["at"]).timestamp()
     except (TypeError, KeyError, ValueError):
-        return False, 0.0, "no burn-pace reading"
+        return STALE, AT_CAP, UNKNOWN, "no burn-pace reading"
     if age > STALE_S:
-        return False, 0.0, f"burn-pace reading {int(age // 60)} min old"
+        return STALE, AT_CAP, UNKNOWN, f"burn-pace reading {int(age // 60)} min old"
     row = (reading.get("lanes") or {}).get(lane) or {}
     used, ratio = row.get("weekly_used_pct"), row.get("pace_ratio")
     if used is None:
-        return False, 0.0, f"lane {lane} missing from burn-pace"
-    if used >= USED_STOP:
-        return False, 0.0, f"lane {lane} weekly {used}% used, resets in {row.get('hours_to_reset')}h"
-    if ratio is not None and ratio >= RATIO_STOP:
-        return False, 0.0, f"lane {lane} pace {ratio}x sustainable"
-    return True, ratio if ratio is not None else 0.0, f"lane {lane} {used}% used, pace {ratio}"
+        return STALE, AT_CAP, UNKNOWN, f"lane {lane} missing from burn-pace"
+    u = AT_CAP if used >= USED_STOP else UNDER
+    pace = UNKNOWN if ratio is None else (HOT if ratio >= RATIO_STOP else COOL)
+    return FRESH, u, pace, f"lane {lane} {used}% used (resets in {row.get('hours_to_reset')}h), pace {ratio}"
+
+
+def verdict(lane: str, reading) -> tuple[bool, float, str]:
+    """(allowed, pace_ratio_for_sorting, reason)."""
+    fresh, used, pace, why = classify(lane, reading)
+    ratio = ((reading or {}).get("lanes") or {}).get(lane, {}).get("pace_ratio") if fresh == FRESH else None
+    return admit_cls(fresh, used, pace), ratio if ratio is not None else 0.0, why
 
 
 def admit(provider: str, entries: list) -> list:

@@ -1,0 +1,61 @@
+# burn_pace: may one subscription pool row serve the next request, and where does the
+# turn go when no row may? Operational twin: agent/burn_pace_gate.py (classify + admit_cls),
+# called from CredentialPool._available_entries on every selection. tests/agent/
+# test_burn_pace_law_parity.py runs every row of these finite domains through the twin.
+# Reading burn-pace samples and mapping labels to lanes happen in the twin, not here.
+import Base
+
+# The latest burn-pace reading is at most STALE_S old.
+type Fresh is Data:
+  FFresh{}
+  FStale{}
+
+# Weekly window below USED_STOP (95%) or at/over it.
+type Used is Data:
+  UUnder{}
+  UAtCap{}
+
+# Pace ratio below RATIO_STOP (1.5), unreported, or at/over it.
+type Pace is Data:
+  PCool{}
+  PUnknown{}
+  PHot{}
+
+# Where the turn goes: a paid subscription row, or the free lane (fallback_providers).
+type Route is Data:
+  RPaid{}
+  RFree{}
+
+def pace_ok(p: Pace) -> Bool:
+  match p:
+    case PCool{}:
+      True{}
+    case PUnknown{}:
+      True{}
+    case PHot{}:
+      False{}
+
+def admit(f: Fresh, u: Used, p: Pace) -> Bool:
+  match f:
+    case FFresh{}:
+      match u:
+        case UUnder{}:
+          pace_ok(p)
+        case UAtCap{}:
+          False{}
+    case FStale{}:
+      False{}
+
+def route(any_admitted: Bool) -> Route:
+  match any_admitted:
+    case True{}:
+      RPaid{}
+    case False{}:
+      RFree{}
+
+def is_paid(r: Route) -> Bool:
+  match r:
+    case RPaid{}:
+      True{}
+    case RFree{}:
+      False{}
