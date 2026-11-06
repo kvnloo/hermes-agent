@@ -306,6 +306,7 @@ class TestUsageContextBreakdown:
         # Zero-token category is dropped, not rendered.
         assert "Conversation" not in result
 
+
 @pytest.mark.asyncio
 async def test_no_agent_usage_counts_tool_messages_and_keeps_persisted_prompt_floor(monkeypatch):
     """#4223: fallback /usage must count tool and tool-call-only entries, not just text."""
