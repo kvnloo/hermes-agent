@@ -183,29 +183,55 @@ class TestResolveOutputFormat:
 
 
 # ---------------------------------------------------------------------------
-# Sync invariant: registry's built-in list vs dispatcher's built-in list
+# Single owner: registry and command-provider dispatch share one reserved set
 # ---------------------------------------------------------------------------
 
+_OWNER_IMPORT_SCRIPT = r'''
+import json, sys
+from agent.tts_reserved_names import BUILTIN_TTS_PROVIDERS
+from agent import tts_registry
+from agent.tts_provider import TTSProvider
 
-class TestBuiltinSync:
-    """``_BUILTIN_NAMES`` in agent/tts_registry.py is duplicated from
-    ``BUILTIN_TTS_PROVIDERS`` in tools/tts_tool.py (importing directly
-    would create a circular dependency). This test fails loudly if the
-    two lists drift — a new built-in added to tts_tool.py MUST also be
-    added to tts_registry.py's _BUILTIN_NAMES or the registry will
-    accept a name the dispatcher will silently route to the wrong
-    handler.
-    """
+class P(TTSProvider):
+    def __init__(self, name):
+        self._name = name
+    @property
+    def name(self):
+        return self._name
+    def synthesize(self, text, output_path, **kw):
+        return output_path
 
-    def test_registry_builtins_match_dispatcher_builtins(self):
-        from tools.tts_tool import BUILTIN_TTS_PROVIDERS
+reserved = sorted(BUILTIN_TTS_PROVIDERS)[0]
+tts_registry.register_provider(P(f"  {reserved.upper()} "))
+tts_registry.register_provider(P("acme-owner-probe"))
+heavy = ("tools", "gateway", "hermes_cli", "openai", "elevenlabs", "edge_tts", "mistralai", "google.genai")
+print(json.dumps({
+    "reserved_kept": tts_registry.get_provider(reserved) is None,
+    "plugin_registered": tts_registry.get_provider("acme-owner-probe") is not None,
+    "heavy": sorted(m for m in sys.modules if any(m == h or m.startswith(h + ".") for h in heavy)),
+}))
+'''
 
-        assert tts_registry._BUILTIN_NAMES == BUILTIN_TTS_PROVIDERS, (
-            "agent.tts_registry._BUILTIN_NAMES and "
-            "tools.tts_tool.BUILTIN_TTS_PROVIDERS have drifted!\n"
-            f"  Registry only: {sorted(tts_registry._BUILTIN_NAMES - BUILTIN_TTS_PROVIDERS)}\n"
-            f"  Dispatcher only: {sorted(BUILTIN_TTS_PROVIDERS - tts_registry._BUILTIN_NAMES)}\n"
-            "Add the missing names to whichever list is incomplete. "
-            "These two lists exist as a circular-import workaround and "
-            "MUST be kept in sync manually."
-        )
+
+class TestReservedNameOwner:
+    def test_owner_import_is_light_and_drives_registry(self):
+        """The reserved-name owner and the registry import without the TTS tool,
+        gateway, app config or SDKs, and a reserved name still loses to the
+        built-in while an arbitrary plugin name registers."""
+        import json
+        import os
+        import subprocess
+        import sys
+
+        result = subprocess.run([sys.executable, "-c", _OWNER_IMPORT_SCRIPT],
+                                env=dict(os.environ), text=True, capture_output=True, check=False)
+        assert result.returncode == 0, result.stderr
+        assert json.loads(result.stdout) == {
+            "reserved_kept": True, "plugin_registered": True, "heavy": []}
+
+    def test_registry_and_command_dispatch_share_the_owner(self):
+        from agent.tts_reserved_names import BUILTIN_TTS_PROVIDERS
+        from tools import tts_command_provider
+
+        assert tts_registry._BUILTIN_NAMES is BUILTIN_TTS_PROVIDERS
+        assert tts_command_provider.BUILTIN_TTS_PROVIDERS is BUILTIN_TTS_PROVIDERS
