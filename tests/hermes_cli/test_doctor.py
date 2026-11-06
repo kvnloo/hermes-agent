@@ -136,6 +136,32 @@ class TestDoctorToolAvailabilitySummary:
 
         assert [item["name"] for item in filtered] == ["web"]
 
+    def test_available_but_disabled_toolset_warns_with_enable_command(self, monkeypatch, capsys):
+        """Regression for Hermes #3174: runnable is not the same as CLI-enabled."""
+        monkeypatch.setattr(
+            doctor_tools, "_apply_doctor_tool_availability_overrides",
+            lambda available, unavailable: (available, unavailable),
+        )
+        monkeypatch.setattr(doctor_tools, "_enabled_cli_toolsets_for_doctor", lambda: {"terminal"})
+        monkeypatch.setattr(doctor_tools, "_warn_partially_stripped_toolsets", lambda _finding: None)
+        monkeypatch.setitem(sys.modules, "model_tools", types.SimpleNamespace(
+            check_tool_availability=lambda: (["terminal", "browser"], []),
+            TOOLSET_REQUIREMENTS={
+                "terminal": {"name": "Terminal"},
+                "browser": {"name": "Browser"},
+            },
+        ))
+
+        doctor_tools._check_tool_availability(False)
+        lines = capsys.readouterr().out.splitlines()
+        terminal_row = next(line for line in lines if "Terminal" in line)
+        browser_row = next(line for line in lines if "Browser" in line)
+
+        assert "✓" in terminal_row
+        assert "⚠" in browser_row
+        assert "✓" not in browser_row
+        assert "hermes tools enable browser" in browser_row
+
     def test_image_gen_without_provider_reports_setup_hint_not_system_dependency(self, monkeypatch):
         """image_gen declares no single env var (FAL / managed Nous / plugin providers); an
         unconfigured backend is a setup problem and must say so, and it counts toward the
