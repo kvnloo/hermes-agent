@@ -143,21 +143,20 @@ class TestBuildToolStart:
 
 
 
-    def test_build_tool_start_for_browser_navigate(self):
-        """browser_navigate should emit a polished start event."""
-        args = {"url": "https://x.com"}
-        result = build_tool_start("tc-browser-start", "browser_navigate", args)
-        assert isinstance(result, ToolCallStart)
-        assert "https://x.com" in result.title
-        assert result.kind == "fetch"
-        assert "https://x.com" in result.content[0].content.text
-        assert result.raw_input is None
-
-
-
-
-
-
+    @pytest.mark.parametrize(
+        "tool_name, args",
+        [
+            ("browser_exec", {"code": "print('hello')"}),
+            ("browser_cdp", {"method": "Page.enable"}),
+            ("browser_dialog", {"action": "accept"}),
+            ("browser_vault", {"action": "list"}),
+        ],
+    )
+    def test_browser_tools_start_as_execute(self, tool_name, args):
+        event = build_tool_start("tc-browser-start", tool_name, args)
+        assert isinstance(event, ToolCallStart)
+        assert event.kind == "execute"
+        assert event.raw_input is None
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +165,27 @@ class TestBuildToolStart:
 
 
 class TestBuildToolComplete:
+    def test_browser_exec_completion_keeps_stdout_and_failure_details(self):
+        success = build_tool_complete(
+            "tc-browser", "browser_exec",
+            '{"success":true,"exit_code":0,"output":"Page title: Example","workspace":"/tmp/browser"}',
+        )
+        assert success.kind == "execute"
+        assert success.status == "completed"
+        assert "Page title: Example" in success.content[0].content.text
+        assert "Workspace: /tmp/browser" in success.content[0].content.text
+        assert "**output:**" not in success.content[0].content.text
+        assert success.raw_output is None
+
+        failure = build_tool_complete(
+            "tc-browser-failed", "browser_exec",
+            '{"success":false,"exit_code":1,"output":"Traceback","stderr":"SyntaxError: bad code"}',
+        )
+        assert failure.kind == "execute"
+        assert failure.status == "failed"
+        assert "Traceback" in failure.content[0].content.text
+        assert "SyntaxError: bad code" in failure.content[0].content.text
+
     def test_build_tool_complete_for_terminal(self):
         """Completed terminal call should include output text."""
         result = build_tool_complete("tc-2", "terminal", "total 42\ndrwxr-xr-x 2 root root 4096 ...")
