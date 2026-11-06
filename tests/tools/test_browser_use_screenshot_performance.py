@@ -45,3 +45,13 @@ def test_slash_heavy_output_does_not_block_screenshot_discovery(size):
         f"assert _find_screenshot('/' * {size}, time.time()) is None\n"
     )
     subprocess.run([sys.executable, "-c", code], check=True, timeout=10)
+
+
+def test_delimiter_heavy_output_does_not_rescan_each_slash():
+    # Delimiter-adjacent slashes defeat a start-boundary-only optimization.
+    # Run separately: the old quadratic regex holds the interpreter GIL.
+    code = (
+        "from tools.browser_use_cli import _find_screenshot\n"
+        "assert _find_screenshot('/:' * 100_000, since=0) is None\n"
+    )
+    subprocess.run([sys.executable, "-c", code], check=True, timeout=10)
