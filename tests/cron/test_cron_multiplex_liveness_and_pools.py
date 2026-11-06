@@ -13,6 +13,10 @@ Two invariants that a host-wide, process-lifetime view of cron state gets wrong:
 
 from __future__ import annotations
 
+import subprocess
+import sys
+
+import pytest
 import cron.scheduler as sched
 from hermes_constants import (
     hermes_home_key,
@@ -104,3 +108,73 @@ class TestPoolReaping:
         finally:
             register_ticked_homes([])
             sched._shutdown_parallel_pool()
+
+
+@pytest.mark.platforms("posix")
+def test_departed_foreign_home_unloads_plugins_after_its_job_finishes(tmp_path, monkeypatch):
+    """#148333: A may tick B, but cannot keep B's plugin lock once B owns cron again."""
+    from cron.scheduler_ownership import register_ticked_homes
+    from hermes_cli import plugins
+
+    home_a, home_b = _two_homes(tmp_path)
+    monkeypatch.setenv("HERMES_HOME", str(home_a))
+    bundled = tmp_path / "bundled"
+    bundled.mkdir()
+    monkeypatch.setenv("HERMES_BUNDLED_PLUGINS", str(bundled))
+    (home_b / "config.yaml").write_text("plugins:\n  enabled:\n  - holder\n", encoding="utf-8")
+    plugin_dir = home_b / "plugins" / "holder"
+    plugin_dir.mkdir(parents=True)
+    (plugin_dir / "plugin.yaml").write_text("name: holder\nversion: 1.0.0\n", encoding="utf-8")
+    (plugin_dir / "__init__.py").write_text(
+        "import fcntl, os\nfrom hermes_constants import get_hermes_home\n"
+        "def register(ctx):\n"
+        "    fd = os.open(get_hermes_home() / 'held.lock', os.O_CREAT | os.O_RDWR)\n"
+        "    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)\n"
+        "    ctx.on_unload(lambda: os.close(fd))\n",
+        encoding="utf-8",
+    )
+    probe = (
+        "import fcntl, os, sys\n"
+        "fd = os.open(sys.argv[1], os.O_RDWR)\n"
+        "try:\n    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB); print('free')\n"
+        "except BlockingIOError:\n    print('held')\n"
+        "os.close(fd)\n"
+    )
+
+    def lock_status():
+        return subprocess.run(
+            [sys.executable, "-c", probe, str(home_b / "held.lock")],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+
+    job_registered = False
+    plugins._reset_plugin_managers_for_tests()
+    try:
+        with _Scope(home_b):
+            plugins.discover_plugins()
+            manager_b = plugins.get_plugin_manager()
+        assert lock_status() == "held"
+        with _Scope(home_a):
+            manager_a = plugins.get_plugin_manager()
+        register_ticked_homes([home_a, home_b])
+        with _Scope(home_b):
+            job_registered = sched.try_register_running_job("still-running")
+        assert job_registered
+        register_ticked_homes([home_a])
+        assert lock_status() == "held", "an in-flight B job still owns its plugin"
+        with _Scope(home_b):
+            sched.release_running_job("still-running")
+        job_registered = False
+        register_ticked_homes([home_a])
+        assert lock_status() == "free", "A must release B's lock once B is no longer ticked"
+        assert home_b.resolve() not in plugins._plugin_managers_by_home
+        with _Scope(home_a):
+            assert plugins.get_plugin_manager() is manager_a
+        with _Scope(home_b):
+            assert plugins.get_plugin_manager() is not manager_b
+    finally:
+        if job_registered:
+            with _Scope(home_b):
+                sched.release_running_job("still-running")
+        register_ticked_homes([])
+        plugins._reset_plugin_managers_for_tests()
