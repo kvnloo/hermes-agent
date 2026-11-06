@@ -525,6 +525,56 @@ def _sanitize_message(
     return out_msg if strip_keys or remapped or copied_tool_calls is not None else None
 
 
+
+def _scrub_deepseek_image_sentinels(msg: dict[str, Any]) -> dict[str, Any] | None:
+    """Replace reserved image markers in wire text, not history or image URLs."""
+    def scrub(text: str) -> str:
+        return text.replace("<｜deepseek_image｜>", "[ds-image-token]").replace(
+            "<|deepseek_image|>", "[ds-image-token]"
+        )
+
+    updates: dict[str, Any] = {}
+    content = msg.get("content")
+    if isinstance(content, str):
+        cleaned = scrub(content)
+        if cleaned != content:
+            updates["content"] = cleaned
+    elif isinstance(content, list):
+        parts = None
+        for index, part in enumerate(content):
+            if isinstance(part, dict) and part.get("type") == "text" and isinstance(part.get("text"), str):
+                cleaned = scrub(part["text"])
+                if cleaned != part["text"]:
+                    if parts is None:
+                        parts = list(content)
+                    parts[index] = {**part, "text": cleaned}
+        if parts is not None:
+            updates["content"] = parts
+
+    for key in ("reasoning_content", "reasoning"):
+        value = msg.get(key)
+        if isinstance(value, str):
+            cleaned = scrub(value)
+            if cleaned != value:
+                updates[key] = cleaned
+
+    calls = msg.get("tool_calls")
+    if isinstance(calls, list):
+        wire_calls = None
+        for index, call in enumerate(calls):
+            fn = call.get("function") if isinstance(call, dict) else None
+            args = fn.get("arguments") if isinstance(fn, dict) else None
+            if isinstance(args, str):
+                cleaned = scrub(args)
+                if cleaned != args:
+                    if wire_calls is None:
+                        wire_calls = list(calls)
+                    wire_calls[index] = {**call, "function": {**fn, "arguments": cleaned}}
+        if wire_calls is not None:
+            updates["tool_calls"] = wire_calls
+
+    return {**msg, **updates} if updates else None
+
 class ChatCompletionsTransport(ProviderTransport):
     """Transport for api_mode='chat_completions'."""
 
@@ -551,12 +601,19 @@ class ChatCompletionsTransport(ProviderTransport):
             carriers = carriers | {"reasoning_details"}
         strip_reasoning = frozenset({"reasoning_content", "reasoning", "reasoning_details"}) - carriers
         mistral_ids = _route_requires_mistral_tool_ids(provider, kwargs.get("model"), kwargs.get("base_url"))
-        sanitized_pairs = [(m, _sanitize_message(m, strip_extra_content, strip_reasoning, native_type,
-                                                 mistral_tool_ids=mistral_ids))
-                           for m in messages]
-        if all(s is None for _, s in sanitized_pairs):
-            return messages
-        return [m if s is None else s for m, s in sanitized_pairs]
+        wire = []
+        changed = False
+        for message in messages:
+            sanitized = _sanitize_message(message, strip_extra_content, strip_reasoning, native_type,
+                                          mistral_tool_ids=mistral_ids)
+            outgoing = sanitized if sanitized is not None else message
+            scrubbed = _scrub_deepseek_image_sentinels(outgoing)
+            if scrubbed is not None:
+                outgoing = scrubbed
+            if outgoing is not message:
+                changed = True
+            wire.append(outgoing)
+        return wire if changed else messages
 
     def convert_tools(self, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Tools are already in OpenAI format — identity."""
