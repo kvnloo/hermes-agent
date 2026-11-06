@@ -55,7 +55,7 @@ def atomic_write(path: str, data: bytes) -> Optional[str]:
 
     Same contract as the shell script: a symlink target is written through (the link survives),
     parent directories are created, the temp file lives in the target's directory so the rename is
-    atomic, an existing target's mode is kept and a new one gets the umask default (``O_CREAT`` with
+    atomic (except for existing hard links, which are written through in place), an existing\n    target's permissions must allow writing, its mode is kept and a new one gets the umask default (``O_CREAT`` with
     0o666 applies the process umask itself), and the temp is removed on every failure.
 
     The temp holds its final mode before the first byte lands: an existing target's temp is created
@@ -66,7 +66,16 @@ def atomic_write(path: str, data: bytes) -> Optional[str]:
     try:
         os.makedirs(parent, exist_ok=True)
         try:
-            mode: Optional[int] = stat.S_IMODE(os.stat(target).st_mode)
+            target_stat = os.stat(target)
+            mode: Optional[int] = stat.S_IMODE(target_stat.st_mode)
+            # Atomic rename checks the directory, not the target file's permissions.
+            if not os.access(target, os.W_OK):
+                return f"Permission denied: {target}"
+            # Renaming a linked file would sever its other names from the new bytes.
+            if target_stat.st_nlink > 1:
+                with open(target, "wb") as fh:
+                    fh.write(data)
+                return None
         except FileNotFoundError:
             mode = None
         tmp = os.path.join(parent, f".hermes-tmp.{secrets.token_hex(6)}")
