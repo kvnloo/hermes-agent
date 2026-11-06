@@ -123,6 +123,34 @@ class TestStaleBridgeHandshake:
 
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("bridge_uptime,adopt", [(0.0, True), (23 * 3600.0, False)],
+                             ids=["same-generation", "previous-gateway-zombie"])
+    async def test_adoption_refuses_bridge_from_previous_gateway(self, tmp_path, bridge_uptime, adopt):
+        """#150337: green socket health cannot justify adopting an older gateway's orphan."""
+        from plugins.platforms.whatsapp.adapter import _file_content_hash
+
+        bridge_dir = _setup_bridge_dir(tmp_path)
+        adapter = _make_adapter(bridge_script=str(bridge_dir / "bridge.js"),
+                                session_path=tmp_path / "session")
+        health = {
+            "status": "connected",
+            "scriptHash": _file_content_hash(bridge_dir / "bridge.js"),
+            "sendReadReceipts": False,
+            "session": str(adapter._session_path),
+            "uptime": bridge_uptime,
+        }
+        with (
+            patch.object(adapter, "_probe_bridge_health", new_callable=AsyncMock, return_value=(True, health)),
+            patch.object(adapter, "_mark_connected") as connected,
+            patch.object(adapter, "_attach_to_bridge") as attach,
+            patch.object(adapter, "_wire_plugin_handlers"),
+        ):
+            assert await adapter._reuse_running_bridge(bridge_dir / "bridge.js") is adopt
+
+        assert connected.called is adopt
+        assert attach.called is adopt
+
+    @pytest.mark.asyncio
     async def test_restarts_bridge_when_read_receipt_config_changed(self, tmp_path):
         from plugins.platforms.whatsapp.adapter import _file_content_hash
 
