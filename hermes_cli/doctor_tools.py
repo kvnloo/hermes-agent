@@ -479,8 +479,9 @@ def _check_tool_availability(should_fix: bool, f: Finding) -> None:
     # Web is split into search/extract readiness rows so an explicitly
     # selected but unconfigured backend cannot look healthy.
     web_rows = []
+    web_available = "web" in available
     # See #78412.
-    if "web" in available or any(item.get("name") == "web" for item in unavailable):
+    if web_available or any(item.get("name") == "web" for item in unavailable):
         web_rows = _doctor_web_capability_rows()
         if web_rows:
             available = [tid for tid in available if tid != "web"]
@@ -493,7 +494,10 @@ def _check_tool_availability(should_fix: bool, f: Finding) -> None:
         else:
             check_ok(label, _doctor_tool_availability_detail(tid))
     for status, label, detail in web_rows:
-        (check_ok if status == "ok" else check_warn)(label, detail)
+        if web_available and enabled_cli_toolsets is not None and "web" not in enabled_cli_toolsets:
+            check_warn(label, "(available but disabled for CLI; run `hermes tools enable web`)")
+        else:
+            (check_ok if status == "ok" else check_warn)(label, detail)
     for item in unavailable:
         env_vars = item.get("missing_vars") or item.get("env_vars") or []
         detail = f"(missing {', '.join(env_vars)})" if env_vars else _TOOLSET_SETUP_HINTS.get(item["name"], "(system dependency not met)")
