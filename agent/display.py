@@ -1301,12 +1301,12 @@ class KawaiiSpinner:
             self.thread.join(timeout=0.5)
 
         is_tty = self._is_tty
-        if is_tty and self._print_fn is None:
+        if is_tty and self._print_fn is None and not self._is_patch_stdout_proxy():
             # Clear the spinner line with spaces instead of \033[K to avoid
             # garbled escape codes when prompt_toolkit's patch_stdout is active.
-            # Skip when a print_fn is configured: the animation never drew a
-            # \r line to clear (see _animate), and the blanks would otherwise
-            # be emitted through print_fn as a stray line of spaces.
+            # Skip when print_fn or StdoutProxy is in use: neither drew a
+            # \r line to clear (see _animate), and the blanks would add
+            # a stray output row under prompt_toolkit.
             blanks = ' ' * max(self.last_line_len + 5, 40)
             self._write(f"\r{blanks}\r", end='', flush=True)
         if final_message:

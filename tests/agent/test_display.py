@@ -348,6 +348,32 @@ def test_kawaii_spinner_skips_animation_when_print_fn_set(monkeypatch):
     assert any("done" in c for c in calls), "final completion message not through print_fn"
 
 
+def test_kawaii_spinner_proxy_stop_does_not_print_clear_row(monkeypatch):
+    """Stopping a proxy-backed spinner must not add a stray clear row."""
+    from agent.display import KawaiiSpinner
+
+    writes = []
+
+    class FakeTty:
+        def isatty(self):
+            return True
+
+        def write(self, text):
+            writes.append(text)
+
+        def flush(self):
+            pass
+
+    spinner = KawaiiSpinner("test task")
+    spinner._out = FakeTty()
+    # Simulate the prompt_toolkit StdoutProxy detection branch without a TUI.
+    monkeypatch.setattr(spinner, "_is_patch_stdout_proxy", lambda: True)
+
+    spinner.stop(final_message="done")
+
+    assert writes == ["  done\n"]
+
+
 def test_kawaii_spinner_animate_runs_when_no_print_fn(monkeypatch):
     """Without print_fn, the \r animation runs normally on a tty."""
     from agent.display import KawaiiSpinner
