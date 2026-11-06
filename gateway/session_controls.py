@@ -1,5 +1,7 @@
 """Authenticated WS projection of the gateway authority; no TUI execution fallback."""
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 import logging
 import re
 from dataclasses import asdict
@@ -15,6 +17,19 @@ from hermes_constants import profile_name_for_home
 from hermes_state_runtime import RuntimeStoreError
 
 logger = logging.getLogger(__name__)
+
+# Relay roster, outbox and reply writes fsync on disk. Keep them serialized and
+# off the gateway loop, without occupying asyncio's shared default executor.
+_relay_io_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="bot-relay-io")
+
+
+async def _relay_io(connection, operation, params):
+    from gateway.session_bot import relay_operation
+    # dispatch() installs the owner home in ContextVars; retain it in the I/O worker.
+    context = copy_context()
+    return await asyncio.get_running_loop().run_in_executor(
+        _relay_io_pool, context.run, relay_operation, connection, operation, params)
+
 
 
 # A refusal names the check that fired: the client prints ``field``/``detail`` beside the reason
@@ -403,16 +418,13 @@ class AuthorityConnection:
         return await rpc(self, 'cancel', params)
 
     async def bot_roster(self, ref, params):
-        from gateway.session_bot import relay_operation
-        return relay_operation(self, 'roster', params)
+        return await _relay_io(self, 'roster', params)
 
     async def bot_outbox(self, ref, params):
-        from gateway.session_bot import relay_operation
-        return relay_operation(self, 'outbox', params)
+        return await _relay_io(self, 'outbox', params)
 
     async def bot_reply(self, ref, params):
-        from gateway.session_bot import relay_operation
-        return relay_operation(self, 'reply', params)
+        return await _relay_io(self, 'reply', params)
 
     async def bot_deliver(self, ref, params):
         from gateway.session_bot import deliver
