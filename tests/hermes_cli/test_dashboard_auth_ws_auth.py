@@ -113,6 +113,49 @@ def _logged_in(client: TestClient) -> None:
 
 
 class TestWsTicketEndpoint:
+    def test_loopback_session_token_mints_gateway_ws_ticket(self, loopback_app, monkeypatch):
+        from hermes_cli.web_session_sockets import GATEWAY_SOCKET
+
+        monkeypatch.setattr(web_server.app.state, "ui_surface", "dashboard", raising=False)
+        response = loopback_app.post(
+            "/api/auth/ws-ticket",
+            headers={web_server._SESSION_HEADER_NAME: web_server._SESSION_TOKEN},
+        )
+        assert response.status_code == 200
+        assert response.json()["ttl_seconds"] == 30
+        ticket = response.json()["ticket"]
+        ws = _fake_ws(query={"ticket": ticket}, path="/api/ws")
+        assert _web_server_chat._ws_auth_reason(ws, socket=GATEWAY_SOCKET) == (None, "ticket")
+        assert ws._hermes_auth_identity == {
+            "user_id": "legacy-token-owner", "provider": "session-token",
+        }
+        assert _web_server_chat._ws_auth_reason(
+            _fake_ws(query={"ticket": ticket}, path="/api/ws"),
+            socket=GATEWAY_SOCKET,
+        )[0] == "ticket_invalid"
+
+    def test_loopback_ticket_needs_token_and_is_not_gated_login(
+            self, loopback_app, monkeypatch):
+        from hermes_cli.web_session_sockets import GATEWAY_SOCKET
+
+        monkeypatch.setattr(web_server.app.state, "ui_surface", "dashboard", raising=False)
+        assert loopback_app.post("/api/auth/ws-ticket").status_code == 401
+        assert loopback_app.post(
+            "/api/auth/ws-ticket",
+            headers={web_server._SESSION_HEADER_NAME: "wrong"},
+        ).status_code == 401
+
+        response = loopback_app.post(
+            "/api/auth/ws-ticket",
+            headers={web_server._SESSION_HEADER_NAME: web_server._SESSION_TOKEN},
+        )
+        assert response.status_code == 200
+        monkeypatch.setattr(web_server.app.state, "auth_required", True)
+        assert _web_server_chat._ws_auth_reason(
+            _fake_ws(query={"ticket": response.json()["ticket"]}, path="/api/ws"),
+            socket=GATEWAY_SOCKET,
+        )[0] == "ticket_invalid"
+
     def test_authenticated_session_can_mint(self, gated_app):
         _logged_in(gated_app)
         r = gated_app.post("/api/auth/ws-ticket", headers={"Origin": "https://fly-app.fly.dev"})
