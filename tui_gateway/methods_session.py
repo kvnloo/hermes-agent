@@ -689,7 +689,8 @@ class _Resume:
             retire(self.target)
         if self.omit_messages:
             return self.child_history(repair=True), []
-        return self.db.get_resume_conversations(self.target)
+        # Only the display copy needs the stored fence: replay remains sanitized.
+        return self.db.get_resume_conversations(self.target, display_raw_assistant=True)
 
     def display_prefix(self) -> list:
         """Ancestor display rows (model-fed history drops a dangling tool-call tail — display keeps it)."""
@@ -1993,7 +1994,8 @@ def _(rid, params: dict, session: dict) -> dict:
                     # stamp, so an unstamped read here silently strips the one durable address clients can
                     # use. See #87059.
                     history = db.get_messages_as_conversation(
-                        row_session, include_ancestors=True, include_row_ids=True)
+                        row_session, include_ancestors=True, include_row_ids=True,
+                        display_raw_assistant=True)
     return _ok(rid, {"count": len(history), "messages": _history_to_messages(history, profile_home=session.get("profile_home"))})
 
 

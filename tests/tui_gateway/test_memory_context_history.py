@@ -65,3 +65,18 @@ def test_desktop_session_history_hydration_drops_unterminated_fence(tmp_path):
     assert response["result"]["count"] == 1
     assert response["result"]["messages"][0]["role"] == "assistant"
     assert response["result"]["messages"][0]["text"] == "Completed answer.\n\n"
+
+
+def test_resume_display_scrubs_fence_without_changing_model_history(tmp_path):
+    raw = "Saved answer.\n\n<memory-context>\nsecret recall"
+    db = SessionDB(db_path=tmp_path / "state.db")
+    try:
+        db.create_session("stored-session", source="desktop")
+        db.append_message("stored-session", "assistant", raw)
+        model, display = db.get_resume_conversations("stored-session", display_raw_assistant=True)
+        assert len(model) == len(display) == 1
+        assert model[0]["content"] == db.get_messages_as_conversation("stored-session")[0]["content"]
+        assert display[0]["content"] == raw
+        assert _history_to_messages(display)[0]["text"] == "Saved answer.\n\n"
+    finally:
+        db.close()
