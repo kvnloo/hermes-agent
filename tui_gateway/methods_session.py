@@ -761,33 +761,24 @@ def _resume_adopt_stranded(ctx: _Resume) -> None:
         logger.exception("stranded-session adoption failed for %s", ctx.target)
 
 
-def _resume_materialize_minted(ctx: _Resume) -> None:
-    """Row for a minted-but-never-persisted key (#96793): adopt the id, not 4007.
+def _resume_unpersisted_draft(ctx: _Resume) -> dict:
+    """Recover a minted key after a restart without persisting an unsent draft.
 
-    ``session.create`` mints the stored key but intentionally writes no state.db row
-    until the first prompt (no "Untitled" litter). If the backend dies in that window,
-    the key exists client-side (pinned tile, stored id) but has no row anywhere — and
-    after a restart the in-memory live-lazy lookup above can't find it either, so the
-    resume 4007ed forever. When the target is a well-formed server-minted key, mint
-    the row here and let the normal resume path continue with empty history. Abandoned
-    drafts still leave no row: nothing is written until a client explicitly resumes
-    the exact key. ``create_session`` is an upsert, so a concurrently persisted row is
-    not clobbered (only its NULL model/source columns would fill in).
+    #96793 made a crashed gateway's unpersisted keys resumable, but writing a
+    row on every reconnect turns abandoned drafts into permanent Untitled chats
+    (#150338). Reattach in memory; the existing first-prompt persistence path
+    commits the row when the user actually sends something.
     """
-    try:
-        ctx.db.create_session(
-            ctx.target,
-            source=_resolve_session_source(_str_param(ctx.params, "source") or None),
-            model=_resolve_model(),
-            profile_name=profile_name_for_home(ctx.profile_home) or _response_profile_name(ctx.profile),
-        )
-        ctx.found = ctx.db.get_session(ctx.target)
-        logger.info(
-            "materialized session row for minted-but-unpersisted key %s (resume no longer 4007s)",
-            ctx.target,
-        )
-    except Exception:
-        logger.warning("failed to materialize session row for %s", ctx.target, exc_info=True)
+    ctx.profile_resume_cwd = _profile_default_cwd(ctx.profile_home)
+    sid, source, cwd = ctx.mint()
+    record = ctx.record(source, cwd, [])
+    if (live := _claim_or_reuse_live(sid, ctx.target, record, None)) is not None:
+        return _resume_live_unpersisted(ctx, *live)
+    _schedule_agent_build(sid)
+    _schedule_session_cap_enforcement()
+    return _resume_response(
+        ctx, sid, record, info=_lazy_resume_info(cwd, profile=ctx.profile),
+        messages=[], message_count=0, hydrating=False if ctx.defer_history else None)
 
 
 def _resume_locate(ctx: _Resume) -> dict | None:
@@ -811,7 +802,7 @@ def _resume_locate(ctx: _Resume) -> dict | None:
         _resume_adopt_stranded(ctx)
     if not ctx.found and not ctx.lazy and _is_server_minted_key(ctx.target) \
             and not _any_live_session_claims_key(ctx.target):
-        _resume_materialize_minted(ctx)
+        return _resume_unpersisted_draft(ctx)
     return None if ctx.found else _err(ctx.rid, 4007, "session not found")
 
 
