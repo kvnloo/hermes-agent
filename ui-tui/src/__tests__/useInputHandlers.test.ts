@@ -112,11 +112,11 @@ describe('plain Ctrl+C — modified chords leave drafts and overlays intact', ()
   })
 
   it.each([
-    ['Ctrl+Alt+C', { meta: true }],
-    ['Ctrl+Shift+C', { shift: true }],
-    ['Ctrl+Super+C', { super: true }]
-  ])('%s is not the TUI cancel/clear/interrupt command', (_name, extra) => {
-    expect(isPlainCtrlC({ ...controlOnly, ...extra }, 'c')).toBe(false)
+    { name: 'Ctrl+Alt+C', modifiers: { meta: true } },
+    { name: 'Ctrl+Shift+C', modifiers: { shift: true } },
+    { name: 'Ctrl+Super+C', modifiers: { super: true } }
+  ])('$name is not the TUI cancel/clear/interrupt command', ({ modifiers }) => {
+    expect(isPlainCtrlC({ ...controlOnly, ...modifiers }, 'c')).toBe(false)
     expect(isPlainCtrlC({ ...controlOnly, ...extra }, 'C')).toBe(false)
   })
 })
