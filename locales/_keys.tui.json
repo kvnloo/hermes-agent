@@ -468,6 +468,7 @@
   "hubs.agents.hint.listNavLive",
   "hubs.agents.hint.listNavReplay",
   "hubs.agents.hint.pause",
+  "hubs.agents.hint.processOnly",
   "hubs.agents.hint.resume",
   "hubs.agents.inheritModel",
   "hubs.agents.processes",
