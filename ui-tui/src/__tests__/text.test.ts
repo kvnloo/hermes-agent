@@ -5,6 +5,7 @@ import {
   boundedLiveRenderText,
   buildToolTrailLine,
   buildVerboseToolTrailLine,
+  compactPreview,
   edgePreview,
   estimateRows,
   isToolTrailResultLine,
@@ -15,6 +16,21 @@ import {
   splitToolDuration,
   thinkingPreview
 } from '../lib/text.js'
+
+describe('compactPreview in narrow TUI panels (port opencode#60287)', () => {
+  it('does not leak a long agent goal into an exhausted width budget', () => {
+    const goal = 'A very long delegated agent goal that must not take over the screen'
+
+    // The Agents overlay supplies width - 28 - depth * 2; narrow screens
+    // and nested agents can make this zero or negative.
+    expect(compactPreview(goal, -8)).toBe('')
+    expect(compactPreview(goal, 0)).toBe('')
+    expect(compactPreview(goal, 1)).toBe('…')
+    expect(compactPreview(goal, 2)).toBe('A…')
+    expect(compactPreview(goal, 3)).toBe('A …')
+    expect(compactPreview('ok', 3)).toBe('ok')
+  })
+})
 
 describe('isToolTrailResultLine', () => {
   it('detects completion markers', () => {
