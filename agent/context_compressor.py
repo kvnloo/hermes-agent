@@ -2244,19 +2244,10 @@ class ContextCompressor(
         self._max_summary_tokens = value
 
     def on_session_end(self, session_id: str, messages: list[dict[str, Any]]) -> None:
-        """Clear all per-session compaction state at a real session boundary.
-        Session end (CLI exit, gateway expiry, id rotation) — NOT /new or /reset. Every per-session
-        flag/counter can contaminate the next live session (suppressed compression, stale cooldowns,
-        misleading warnings), so the whole surface is reset here.
+        """Clear per-session compaction state at a real session end (not /new or /reset).
 
-        Session end (CLI exit, gateway expiry, session-id rotation) goes through this method rather than
-        ``on_session_reset()`` (/new, /reset). The original fix (#38788) only cleared ``_previous_summary``,
-        but the same cross-session contamination risk applies to every per-session variable that
-        ``on_session_reset()`` clears: stale ``_ineffective_compression_count`` can suppress compression in
-        a subsequent live session; ``_summary_failure_cooldown_until`` can block summary generation;
-        ``_last_compress_aborted`` can make callers think compression is still aborted;
-        ``_last_aux_model_failure_*`` can surface stale error warnings; ``_last_summary_dropped_count`` /
-        ``_last_summary_fallback_used`` can produce misleading user warnings.
+        CLI exit, gateway expiry, and id rotation must not leak stale cooldowns,
+        strikes, or warnings into the next session (#38788).
         """
         self._reset_session_compaction_state()
 
@@ -2331,6 +2322,11 @@ class ContextCompressor(
         self._load_fallback_probe_at()
         self._load_consecutive_overload_aborts()
         self._load_proactive_prune_rearm_tokens()
+        # A gateway hygiene helper is discarded after its committed summary.
+        self.compression_count = max(
+            self.compression_count,
+            self._durable_read("get_compaction_summary_count", "committed compactions", int, 0)[1] or 0,
+        )
 
     def on_session_start(self, session_id: str, **kwargs) -> None:
         """Bind session-scoped compression state for a new or resumed session."""
