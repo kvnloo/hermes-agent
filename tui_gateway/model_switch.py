@@ -177,48 +177,57 @@ def _restart_completed_failed_agent_build(sid: str, session: dict, failed_ready:
 
 
 def _pin_session_resume_runtime(session: dict, result, persist_global: bool) -> None:
-    """Point a lazy/deferred record's stale persisted runtime at the accepted switch (#68876).
+    """Durably pin an agent-less model pick before the next build or cold resume (#149870).
 
-    ``_deferred_build_agent_kwargs`` prefers ``resume_runtime_overrides`` over ``model_override``
-    whenever the overrides name a routable provider, so a resumed-not-yet-built session that the
-    user switches away from Anthropic (say) would still build Anthropic on the first prompt —
-    failing with "No <old provider> credentials found" while the composer shows the new pick.
-    The overrides are rewritten to the accepted pick, and the row's ``model_config`` JSON is
-    updated with the non-secret runtime identity (never ``api_key``) so a reopen between now and
-    the deferred build resolves the same provider. A global switch leaves the row alone: the
-    profile config owns it from here."""
+    Keep the accepted route in both model_config shapes: session_gateway_runtime
+    prioritizes gateway_runtime over the top-level provider. A failed write must
+    refuse config.set rather than acknowledge a memory-only model override.
+    """
     if persist_global:
         return
     model_override = {
         "model": result.new_model, "provider": result.target_provider or None,
         "base_url": result.base_url or None, "api_mode": result.api_mode or None}
-    session["model_override"] = {**model_override, "api_key": result.api_key}
     overrides = dict(session.get("resume_runtime_overrides") or {})
     overrides["model_override"] = model_override
     if result.target_provider:
         overrides["provider_override"] = result.target_provider
     else:
         overrides.pop("provider_override", None)
-    session["resume_runtime_overrides"] = overrides
     stored_key = str(session.get("resume_session_id") or session.get("session_key") or "").strip()
     if not stored_key:
-        return
+        raise ValueError("Cannot persist model switch without a session key")
     try:
         with _session_db(session) as db:
             if db is None:
-                return
-            row = db.get_session(stored_key) or {}
-            model_config = _parse_model_config(row.get("model_config"), quiet=True)
-            for key, value in (("model", result.new_model), ("provider", result.target_provider),
-                               ("base_url", result.base_url), ("api_mode", result.api_mode)):
-                if value:
-                    model_config[key] = value
-                else:
-                    model_config.pop(key, None)
-            if hasattr(db, "update_session_meta"):
-                db.update_session_meta(stored_key, json.dumps(model_config), result.new_model)
-    except Exception:
-        logger.debug("deferred model switch runtime persist failed", exc_info=True)
+                raise ValueError("session database unavailable")
+            if db.get_session(stored_key) is None:
+                if _ensure_session_db_row(session) is False or db.get_session(stored_key) is None:
+                    raise ValueError(f"session row unavailable: {stored_key}")
+            if hasattr(db, "update_session_model"):
+                db.update_session_model(
+                    stored_key, result.new_model, provider=result.target_provider or None,
+                    base_url=result.base_url or None, api_mode=result.api_mode or None)
+            elif hasattr(db, "update_session_meta"):
+                # Compatibility for stores without the route-aware writer.
+                row = db.get_session(stored_key) or {}
+                config = _parse_model_config(row.get("model_config"), quiet=True)
+                route = {"provider": result.target_provider, "base_url": result.base_url,
+                         "api_mode": result.api_mode}
+                for key, value in (("model", result.new_model), *route.items()):
+                    if value:
+                        config[key] = value
+                    else:
+                        config.pop(key, None)
+                config["gateway_runtime"] = {k: v for k, v in route.items() if v}
+                db.update_session_meta(stored_key, json.dumps(config), result.new_model)
+            else:
+                raise ValueError("session database cannot update model route")
+    except Exception as exc:
+        logger.warning("agent-less model switch persistence failed for %s", stored_key, exc_info=True)
+        raise ValueError(f"Could not persist model switch for {stored_key}") from exc
+    session["model_override"] = {**model_override, "api_key": result.api_key}
+    session["resume_runtime_overrides"] = overrides
 
 
 def _switch_request(raw_input: str, parsed_flags, persist_override) -> tuple[str, str, bool, bool, str]:
@@ -398,20 +407,34 @@ def _apply_model_switch(
     # Deliberately NOT written to process-global env (HERMES_MODEL & co.): the desktop hosts
     # every same-profile session in one process, so os.environ would leak the switch to all.
     if pin_session_override and isinstance(session, dict) and not one_turn:
-        session["model_override"] = {
-            "model": result.new_model, "provider": result.target_provider,
-            "base_url": result.base_url, "api_key": result.api_key, "api_mode": result.api_mode}
-        # A lazy/deferred record (no agent yet) restores its build from
-        # ``resume_runtime_overrides`` whenever they name a routable provider
-        # (_deferred_build_agent_kwargs) — the persisted PRE-switch runtime
-        # would win over the pick the user just made, and the first deferred
-        # build (or a later reopen) silently restores the provider they
-        # switched away from (#68876 cold-resume persistence gap). Rewrite the
-        # stale overrides to the accepted pick, same shape as
-        # _restart_completed_failed_agent_build, and persist the non-secret
-        # runtime identity so the stored row matches the composer.
-        if session.get("resume_session_id") and not session.get("agent"):
-            _pin_session_resume_runtime(session, result, persist_global)
+        if not agent and not persist_global:
+            # An accepted Desktop pick must carry both the persisted route and its pivot. On
+            # failure, do not leave a memory-only pin that a later build silently adopts.
+            prior_pin = session.get("model_override")
+            prior_resume = session.get("resume_runtime_overrides")
+            try:
+                _pin_session_resume_runtime(session, result, persist_global)
+                _append_model_switch_marker(session, model=result.new_model, provider=result.target_provider,
+                                            require_persist=True)
+            except Exception:
+                if prior_pin is None:
+                    session.pop("model_override", None)
+                else:
+                    session["model_override"] = prior_pin
+                if prior_resume is None:
+                    session.pop("resume_runtime_overrides", None)
+                else:
+                    session["resume_runtime_overrides"] = prior_resume
+                if records_composer_override:
+                    if had_composer_profile:
+                        session["composer_override_profile"] = previous_composer_profile
+                    else:
+                        session.pop("composer_override_profile", None)
+                raise
+        else:
+            session["model_override"] = {
+                "model": result.new_model, "provider": result.target_provider,
+                "base_url": result.base_url, "api_key": result.api_key, "api_mode": result.api_mode}
     if persist_global:
         from hermes_cli.model_switch import persist_model_selection
         persist_model_selection(result)

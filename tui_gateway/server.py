@@ -1812,7 +1812,8 @@ def _is_pivot_marker(entry: Any) -> bool:
     return _is_model_switch_marker(entry) or (isinstance(entry, dict) and entry.get("display_kind") == "personality_switch")
 
 
-def _append_model_switch_marker(session: dict | None, *, model: str, provider: str) -> None:
+def _append_model_switch_marker(session: dict | None, *, model: str, provider: str,
+                                require_persist: bool = False) -> None:
     """Record a real system-history pivot after a live model switch. Only the newest marker is kept (each
     switch strips prior ones, so N switches leave one marker, not N re-sent every API call; self-healing
     across resumes because the next switch collapses whatever a reload brought back).
@@ -1821,6 +1822,8 @@ def _append_model_switch_marker(session: dict | None, *, model: str, provider: s
     """
     session_key = str((session or {}).get("session_key") or "").strip()
     if not session_key:
+        if require_persist:
+            raise ValueError("Cannot persist model switch without a session key")
         return
     provider_part = f" via provider {provider}" if provider else ""
     marker = (
@@ -1831,6 +1834,8 @@ def _append_model_switch_marker(session: dict | None, *, model: str, provider: s
     entry: dict[str, Any] = {"role": "user", "content": marker, "display_kind": "model_switch"}
     with session.get("history_lock") or contextlib.nullcontext():
         history = session.setdefault("history", [])
+        previous_history = list(history) if require_persist else None
+        previous_version = session.get("history_version")
         history[:] = [h for h in history if not _is_model_switch_marker(h)]
         history.append(entry)
         session["history_version"] = int(session.get("history_version", 0)) + 1
@@ -1840,6 +1845,8 @@ def _append_model_switch_marker(session: dict | None, *, model: str, provider: s
         if db is None:
             _ensure_session_db_row(session)
         with (contextlib.nullcontext(db) if db is not None else _session_db(session)) as db:
+            if db is None and require_persist:
+                raise ValueError("session database unavailable")
             if db is not None:
                 from agent.context_compressor import _DB_PERSISTED_MARKER
                 # Same stale-key hazard as the submit row: this durable pivot must land in the session the
@@ -1854,12 +1861,20 @@ def _append_model_switch_marker(session: dict | None, *, model: str, provider: s
                     session_id=target, role="user", content=marker, display_kind="model_switch",
                     message_uid=stamp_message_uid(entry))
                 entry[_DB_PERSISTED_MARKER] = True
-    except Exception:
+    except Exception as exc:
         # warning, not debug: filing the pivot in the LIVE session (#123545) means this write can now hit
         # CompressionSessionClosedError on a closed parent, which the old session_key target could not.
         # Swallowed at debug, a model switch silently loses its durable notice — the next resume replays
         # without it and nothing lands in errors.log. Matches _persist_live_session_system_prompt above.
         logger.warning("failed to persist model switch marker", exc_info=True)
+        if require_persist:
+            with session.get("history_lock") or contextlib.nullcontext():
+                history[:] = previous_history
+                if previous_version is None:
+                    session.pop("history_version", None)
+                else:
+                    session["history_version"] = previous_version
+            raise ValueError("Could not persist model switch marker") from exc
 
 
 def _write_config_key(key_path: str, value):
