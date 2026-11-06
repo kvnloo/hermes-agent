@@ -11007,6 +11007,18 @@
             "default": null,
             "title": "Cwd"
           },
+          "terminal_backend": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Terminal Backend"
+          },
           "edit_approval_policy": {
             "anyOf": [
               {
