@@ -642,3 +642,37 @@ class TestTypingTurnLease:
         release_second.set()
         await asyncio.wait_for(adapter._session_tasks[session_key], timeout=1.0)
         assert second_events["completion_event"].is_set()
+
+@pytest.mark.asyncio
+async def test_telegram_silent_turn_pauses_refresh_at_agent_completion():
+    """#149948: a silent final has no delivery to pause typing during persistence."""
+    from types import SimpleNamespace
+
+    from gateway.run_turn import GatewayTurnMixin
+
+    adapter = _StubAdapter()
+    source = SessionSource(
+        platform=Platform.TELEGRAM,
+        chat_id="silence-chat",
+        chat_type="dm",
+        user_id="u1",
+    )
+    event = MessageEvent(
+        text="quiet turn", message_type=MessageType.TEXT,
+        source=source, message_id="silent-1",
+    )
+    runner = SimpleNamespace(
+        _delivery_adapter_for=lambda _source: adapter,
+        _event_thread_metadata=lambda _event, _source: {},
+    )
+
+    # The agent returned [SILENT], but response shaping and persistence can still await.
+    # The normal final-send typing pause never runs for this empty response.
+    await GatewayTurnMixin._hmwa_stop_typing_for_turn(runner, event, source)
+    assert source.chat_id in adapter._typing_paused, (
+        "silent completion must stop the live refresh before transcript persistence"
+    )
+
+    # Releasing the turn must not leak its pause into the next message.
+    await adapter._stop_typing_refresh(source.chat_id, None, stop_attempts=1)
+    assert source.chat_id not in adapter._typing_paused

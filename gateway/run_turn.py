@@ -198,13 +198,13 @@ class GatewayTurnMixin(GatewayTurnPrepareMixin, GatewayTurnHygieneMixin, Gateway
 
 
 
-
     async def _hmwa_stop_typing_for_turn(self, event, source):
-        """Stop the typing indicator (never raises). Slack AI status is scoped to a thread/
-        workspace, so preserve the routing metadata used by the response delivery path."""
+        """Stop typing on this turn's route; pause Telegram refresh before persistence."""
         with suppress(Exception):
             _typing_adapter = self._delivery_adapter_for(source)
             _kind = type(_typing_adapter)
+            if _typing_adapter and source.platform == Platform.TELEGRAM:
+                _typing_adapter.pause_typing_for_chat(source.chat_id)
             if _typing_adapter and callable(getattr(_kind, "_stop_typing_with_metadata", None)):
                 await _typing_adapter._stop_typing_with_metadata(source.chat_id, self._event_thread_metadata(event, source))
             elif _typing_adapter and callable(getattr(_kind, "stop_typing", None)):
