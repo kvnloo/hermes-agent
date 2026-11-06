@@ -1,0 +1,218 @@
+{
+  "pr": 116673,
+  "expected_head": "2c1941aac46efac3b35605d99a8628e75a91c670",
+  "execution": "actual checkout modules, synthetic temporary HERMES_HOME",
+  "candidate": {
+    "kind": "downstream helper, NOT upstream patch applied",
+    "file": "chain_page_candidate.py",
+    "sha256": "23e5c153934ffa334379230844b31fbdab600901021d3adeb3ad6e9d15ff28b8",
+    "contract": {
+      "payload_utf8_bytes_max": 4096,
+      "serialized_json_utf8_bytes_max": 4096,
+      "serializer": "ensure_ascii=False, compact separators",
+      "envelope_definition": "wire bytes minus serialized JSON content value bytes",
+      "offset_unit": "on-disk UTF-8 bytes",
+      "cursor_identity": "checkout SHA + absolute actual doc path + SHA-256 + byte length",
+      "io_cost": "full streaming hash per page; bounded response, not bounded total I/O"
+    }
+  },
+  "sources": [
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/blob/2c1941aac46efac3b35605d99a8628e75a91c670/tools/memory_tool.py",
+      "symbols": [
+        "memory_tool",
+        "_memory_tool",
+        "_resolve_target"
+      ]
+    },
+    {
+      "url": "https://github.com/NousResearch/hermes-agent/blob/2c1941aac46efac3b35605d99a8628e75a91c670/tools/memory_tool_store.py",
+      "symbols": [
+        "MemoryStore.read",
+        "MemoryStore._path_for",
+        "MemoryStore._mutate",
+        "MemoryStore._anchor_gate",
+        "MemoryStore._file_lock",
+        "MemoryStore._chain_line"
+      ]
+    }
+  ],
+  "measurements": [
+    {
+      "requested_doc_utf8_bytes": 4096,
+      "doc": "fixture-4096",
+      "upstream": {
+        "write_success": true,
+        "read_success": true,
+        "error": null,
+        "actual_doc_path": "/home/agentjob/jobs/20261023-014926-8dfc/tmp/hermes-chain-bounds-qbeejait/memories/docs/fixture-4096.md",
+        "actual_doc_utf8_bytes": 4096,
+        "actual_doc_sha256": "741320b83eeee92b89a73f0829c908556a3855a14af3d417d87317d04b666269",
+        "read_serialized_utf8_bytes": 5229,
+        "read_content_utf8_bytes": 4096,
+        "read_exact_entry": true,
+        "anchor_read_serialized_utf8_bytes": 349,
+        "anchor_read_error": null,
+        "anchor_prompt_utf8_bytes": 558,
+        "anchor_prompt_growth_bytes": 4,
+        "doc_contents_excluded_from_prompt": true,
+        "bounded_read_contract": "RED",
+        "expected_finding": "RED: full doc entries are returned without pagination"
+      },
+      "candidate": {
+        "status": "GREEN",
+        "page_count": 2,
+        "max_serialized_utf8_bytes": 4096,
+        "max_payload_utf8_bytes": 2742,
+        "max_envelope_utf8_bytes": 668,
+        "total_serialized_utf8_bytes": 6159,
+        "reconstructed_utf8_bytes": 4096,
+        "exact_byte_reconstruction": true,
+        "utf8_no_split_character": true,
+        "contiguous_byte_offsets": true,
+        "source_path_sha_hash_pinned": true,
+        "json_cursor_roundtrip_between_pages": true,
+        "errors": []
+      }
+    },
+    {
+      "requested_doc_utf8_bytes": 131072,
+      "doc": "fixture-131072",
+      "upstream": {
+        "write_success": true,
+        "read_success": true,
+        "error": null,
+        "actual_doc_path": "/home/agentjob/jobs/20261023-014926-8dfc/tmp/hermes-chain-bounds-qbeejait/memories/docs/fixture-131072.md",
+        "actual_doc_utf8_bytes": 131072,
+        "actual_doc_sha256": "f260d92e547c0a310ea88d39d67bc73f19b5a2d2195979b151be1949b0dd931c",
+        "read_serialized_utf8_bytes": 163952,
+        "read_content_utf8_bytes": 131072,
+        "read_exact_entry": true,
+        "anchor_read_serialized_utf8_bytes": 353,
+        "anchor_read_error": null,
+        "anchor_prompt_utf8_bytes": 563,
+        "anchor_prompt_growth_bytes": 9,
+        "doc_contents_excluded_from_prompt": true,
+        "bounded_read_contract": "RED",
+        "expected_finding": "RED: full doc entries are returned without pagination"
+      },
+      "candidate": {
+        "status": "GREEN",
+        "page_count": 48,
+        "max_serialized_utf8_bytes": 4096,
+        "max_payload_utf8_bytes": 2817,
+        "max_envelope_utf8_bytes": 685,
+        "total_serialized_utf8_bytes": 196384,
+        "reconstructed_utf8_bytes": 131072,
+        "exact_byte_reconstruction": true,
+        "utf8_no_split_character": true,
+        "contiguous_byte_offsets": true,
+        "source_path_sha_hash_pinned": true,
+        "json_cursor_roundtrip_between_pages": true,
+        "errors": []
+      }
+    },
+    {
+      "requested_doc_utf8_bytes": 1048576,
+      "doc": "fixture-1048576",
+      "upstream": {
+        "write_success": true,
+        "read_success": true,
+        "error": null,
+        "actual_doc_path": "/home/agentjob/jobs/20261023-014926-8dfc/tmp/hermes-chain-bounds-qbeejait/memories/docs/fixture-1048576.md",
+        "actual_doc_utf8_bytes": 1048576,
+        "actual_doc_sha256": "38c2a86ee0e397e337e228e38c9c92a0d2f8f821c09c9924477a5aa00196da79",
+        "read_serialized_utf8_bytes": 1310834,
+        "read_content_utf8_bytes": 1048576,
+        "read_exact_entry": true,
+        "anchor_read_serialized_utf8_bytes": 358,
+        "anchor_read_error": null,
+        "anchor_prompt_utf8_bytes": 569,
+        "anchor_prompt_growth_bytes": 15,
+        "doc_contents_excluded_from_prompt": true,
+        "bounded_read_contract": "RED",
+        "expected_finding": "RED: full doc entries are returned without pagination"
+      },
+      "candidate": {
+        "status": "GREEN",
+        "page_count": 385,
+        "max_serialized_utf8_bytes": 4096,
+        "max_payload_utf8_bytes": 2826,
+        "max_envelope_utf8_bytes": 692,
+        "total_serialized_utf8_bytes": 1576373,
+        "reconstructed_utf8_bytes": 1048576,
+        "exact_byte_reconstruction": true,
+        "utf8_no_split_character": true,
+        "contiguous_byte_offsets": true,
+        "source_path_sha_hash_pinned": true,
+        "json_cursor_roundtrip_between_pages": true,
+        "errors": []
+      }
+    }
+  ],
+  "blockers": [],
+  "head": "2c1941aac46efac3b35605d99a8628e75a91c670",
+  "source_sha256": {
+    "tools/memory_tool.py": "53504638d076d73db5fe11a9990dc76c95a332b49d62680bd326facaaf0681db",
+    "tools/memory_tool_store.py": "5c39ab463ab3b9d93985715b42102767df8db39868b52a66977bf1dc67fc7793"
+  },
+  "isolation": {
+    "temporary_home": "/home/agentjob/jobs/20261023-014926-8dfc/tmp/hermes-chain-bounds-qbeejait",
+    "actual_memory_directory": "/home/agentjob/jobs/20261023-014926-8dfc/tmp/hermes-chain-bounds-qbeejait/memories",
+    "config_write_approval": false,
+    "providers_called": false
+  },
+  "anchor": {
+    "content_utf8_bytes": 81,
+    "baseline_prompt_utf8_bytes": 554
+  },
+  "cursor_controls": {
+    "status": "GREEN",
+    "mutation_via_actual_api": true,
+    "resume_after_mutation": {
+      "success": false,
+      "error": "source_changed"
+    },
+    "restart_success": true,
+    "invalid_version": {
+      "success": false,
+      "error": "invalid_cursor"
+    },
+    "different_checkout_sha": {
+      "success": false,
+      "error": "source_changed"
+    },
+    "inside_utf8_character": {
+      "success": false,
+      "error": "invalid_utf8_or_offset"
+    }
+  },
+  "anchor_removal_race": {
+    "status": "RED",
+    "expected_finding": "RED: gate checks anchor before acquiring only the doc lock",
+    "schedule": "actual gate -> second actual API removes anchor -> first actual doc lock/write",
+    "scheduler_only_instrumentation": "instance _file_lock wrapper; actual gate/store/file locks/writes retained",
+    "anchor_removal_success": true,
+    "write_after_removal": {
+      "success": true,
+      "done": true,
+      "target": "doc:race",
+      "usage": "36 chars (chain doc — uncapped)",
+      "entry_count": 1,
+      "message": "Entry added.",
+      "note": "Write saved. This update is complete — do not repeat it."
+    },
+    "read_still_succeeds": true,
+    "orphan_reported": true,
+    "subsequent_write_refused": true,
+    "subsequent_write_error": "Chain doc 'race' exists at /home/agentjob/jobs/20261023-014926-8dfc/tmp/hermes-chain-bounds-qbeejait/memories/docs/race.md but MEMORY.md no longer references it, so writes are refused (reads still work). Re-link it with an entry naming '@doc:race', or delete the file if the doc is no longer wanted.",
+    "not_a_pagination_fix": "Candidate only bounds reads; it does not fix cross-file anchor/write atomicity."
+  },
+  "acceptance": {
+    "upstream_unbounded_red_reproduced": true,
+    "candidate_bounded_reconstruction_green": true,
+    "all_requested_sizes_measured": true
+  },
+  "status": "GREEN",
+  "temporary_fixture_removed_on_exit": true
+}

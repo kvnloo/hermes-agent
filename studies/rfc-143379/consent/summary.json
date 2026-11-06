@@ -1,0 +1,36 @@
+{
+  "test_date": "2026-10-23",
+  "test_count": 116,
+  "synthetic_only": true,
+  "github_writes": false,
+  "source_level_not_integration": true,
+  "main_sha": "fab9b01c915a3118cc8daa6cc1b18c15b3f982d0",
+  "pr_116834_sha": "f678f4c7e5d994f03d8759fe0e950d3407ccca7e",
+  "pr_116846_sha": "96dc75192a82b6c5645a89c2eb894fba97ad2bbd",
+  "results": {
+    "LOCAL-combination": {
+      "prohibited_scenarios": 12,
+      "violations": 12,
+      "pending_record_persisted": 8,
+      "memory_or_user_persisted": 4
+    },
+    "PR-116834": {
+      "prohibited_scenarios": 12,
+      "violations": 12,
+      "pending_record_persisted": 6,
+      "memory_or_user_persisted": 6
+    },
+    "PR-116846": {
+      "prohibited_scenarios": 12,
+      "violations": 12,
+      "pending_record_persisted": 4,
+      "memory_or_user_persisted": 8
+    },
+    "main": {
+      "prohibited_scenarios": 12,
+      "violations": 12,
+      "pending_record_persisted": 0,
+      "memory_or_user_persisted": 12
+    }
+  }
+}

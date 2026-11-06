@@ -1,0 +1,78 @@
+{
+  "label": "Downstream experiment instructions. Not executed by the worker.",
+  "execution_host": "Parent integration on the MBP only. Do not run these commands on the groot HDD.",
+  "inputs": {
+    "main": "fab9b01c915a3118cc8daa6cc1b18c15b3f982d0",
+    "pr_116834": "f678f4c7e5d994f03d8759fe0e950d3407ccca7e",
+    "pr_116846": "96dc75192a82b6c5645a89c2eb894fba97ad2bbd"
+  },
+  "prerequisites": [
+    "Use complete upstream source trees containing all three exact commit objects. Shallow history is allowed for the explicit ours-strategy semantic combination.",
+    "Copy all four harness files together. The helper import requires consent_gate.py beside consent.py.",
+    "Use the real checkout environment and dependencies for consent.py. The worker did not install or mock dependencies.",
+    "ROOT must be a new disposable directory on the MBP. HARNESS names the copied harness directory. SOURCE names the source clone. PYTHON names its real dependency environment.",
+    "Do not use or copy a live Hermes profile. Each harness worker creates its own isolated HOME and HERMES_HOME before imports."
+  ],
+  "source_acquisition_if_objects_missing": [
+    "git -C \"$SOURCE\" fetch --no-tags origin fab9b01c915a3118cc8daa6cc1b18c15b3f982d0 f678f4c7e5d994f03d8759fe0e950d3407ccca7e 96dc75192a82b6c5645a89c2eb894fba97ad2bbd",
+    "Do not infer upstream ancestry across shallow boundaries. The explicit ours-strategy native merges below record exact heads as parents without claiming a clean ancestry-based merge."
+  ],
+  "create_exact_head_worktrees": [
+    "mkdir -p \"$ROOT\"",
+    "git -C \"$SOURCE\" worktree add --detach \"$ROOT/main\" fab9b01c915a3118cc8daa6cc1b18c15b3f982d0",
+    "git -C \"$SOURCE\" worktree add --detach \"$ROOT/pr-116834\" f678f4c7e5d994f03d8759fe0e950d3407ccca7e",
+    "git -C \"$SOURCE\" worktree add --detach \"$ROOT/pr-116846\" 96dc75192a82b6c5645a89c2eb894fba97ad2bbd",
+    "git -C \"$SOURCE\" worktree add --detach \"$ROOT/combined\" fab9b01c915a3118cc8daa6cc1b18c15b3f982d0"
+  ],
+  "native_merge_procedure": [
+    "export GIT_AUTHOR_NAME='Downstream Consent Experiment' GIT_COMMITTER_NAME='Downstream Consent Experiment'",
+    "export GIT_AUTHOR_EMAIL='consent-harness@example.invalid' GIT_COMMITTER_EMAIL='consent-harness@example.invalid'",
+    "export GIT_AUTHOR_DATE='2026-10-23T00:00:00+00:00' GIT_COMMITTER_DATE='2026-10-23T00:00:00+00:00'",
+    "git -C \"$ROOT/combined\" -c core.hooksPath=/dev/null -c rerere.enabled=false merge -s ours --allow-unrelated-histories --no-ff --no-commit --no-gpg-sign f678f4c7e5d994f03d8759fe0e950d3407ccca7e",
+    "\"$PYTHON\" \"$HARNESS/consent_combination.py\" --checkout \"$ROOT/combined\" --phase target --output \"$ROOT/merge-target-receipt.json\"",
+    "git -C \"$ROOT/combined\" add -- agent/background_review.py tools/memory_tool.py tests/tools/test_memory_tool.py",
+    "git -C \"$ROOT/combined\" -c core.hooksPath=/dev/null -c commit.gpgSign=false commit --no-gpg-sign -m 'Merge exact PR 116834 with main-preserving consent resolution'",
+    "export GIT_AUTHOR_DATE='2026-10-23T00:00:01+00:00' GIT_COMMITTER_DATE='2026-10-23T00:00:01+00:00'",
+    "git -C \"$ROOT/combined\" -c core.hooksPath=/dev/null -c rerere.enabled=false merge -s ours --allow-unrelated-histories --no-ff --no-commit --no-gpg-sign 96dc75192a82b6c5645a89c2eb894fba97ad2bbd",
+    "\"$PYTHON\" \"$HARNESS/consent_combination.py\" --checkout \"$ROOT/combined\" --phase combined --output \"$ROOT/merge-combined-receipt.json\"",
+    "git -C \"$ROOT/combined\" add -- agent/background_review.py tools/memory_tool.py tests/tools/test_memory_tool.py tests/agent/test_review_prompt_consent.py",
+    "git -C \"$ROOT/combined\" -c core.hooksPath=/dev/null -c commit.gpgSign=false commit --no-gpg-sign -m 'Merge exact PR 116846 preserving target boundary and detector'"
+  ],
+  "conflict_contract": {
+    "allowed_resolution_paths": [
+      "agent/background_review.py",
+      "tools/memory_tool.py",
+      "tests/tools/test_memory_tool.py",
+      "tests/agent/test_review_prompt_consent.py"
+    ],
+    "unexpected_conflict": "Stop and report the exact conflicting path. Never choose an entire side for an unknown conflict.",
+    "resolver_behavior": "consent_combination.py requires the expected exact MERGE_HEAD. It uses AST declarations from pinned source objects. It materializes main plus the relevant consent delta only after all source anchors resolve.",
+    "main_preserved": "Keep current main patch/remove behavior, legacy staged replace replay, entry pinning, metrics, config behavior, validation, and all unrelated prompt code.",
+    "final_gate": "is_unattended_review AND (destructive_ops(payload) OR any add to target=user OR any add matched by the exact PR 116846 _consent_sensitive_add detector) => native staging.",
+    "target_not_replaced_by_detector": "An unattended target=user add must stage even if the refusal is omitted or paraphrased.",
+    "detector_not_limited_to_user": "A self-reporting target=memory add must stage too. The exact upstream regex is copied, not approximated.",
+    "batch": "Any hit stages the whole native batch. The production staging sink remains pending JSON.",
+    "prompts": "Use the exact shared PR 116846 _MEMORY_CONSENT_BLOCK in both main prompts. Do not overwrite unrelated main prompt changes.",
+    "regressions": "Keep main tests. Append the three exact PR 116834 target-boundary methods and exact PR 116846 consent regression class. Preserve its separate prompt test file.",
+    "honest_label": "The combined checkout uses native ours-strategy merges to retain the exact heads as ancestors, then applies deterministic downstream semantic resolutions. It is not a conflict-free upstream merge or an untouched upstream PR head.",
+    "candidate_gate": "Do not apply consent_gate.py to the production checkout. It is a separate caller-side candidate exercised by consent.py. No production host source mapping exists in this assignment."
+  },
+  "parent_one_pass_measurement_commands_not_executed_by_worker": [
+    "\"$PYTHON\" \"$HARNESS/consent.py\" --checkout \"$ROOT/main\" --output \"$ROOT/consent-main.json\"",
+    "\"$PYTHON\" \"$HARNESS/consent.py\" --checkout \"$ROOT/pr-116834\" --output \"$ROOT/consent-116834.json\"",
+    "\"$PYTHON\" \"$HARNESS/consent.py\" --checkout \"$ROOT/pr-116846\" --output \"$ROOT/consent-116846.json\"",
+    "\"$PYTHON\" \"$HARNESS/consent.py\" --checkout \"$ROOT/combined\" --output \"$ROOT/consent-combined.json\""
+  ],
+  "report_interpretation": [
+    "Each head report contains exactly 12 prohibited scenarios and one permitted operational control.",
+    "Each row has a production measurement and a candidate-helper contrast. Every measurement uses the real MemoryStore and memory_tool from that checkout.",
+    "The report records git HEAD, tree, parents, module hash, signature, provenance flags, response, stage/store call counts, and every persisted file.",
+    "The final file inspection occurs in the parent after each worker exits. It includes pending JSON, logs, SQLite bytes, HOME, caches, and temporary files.",
+    "GREEN for the issue's active-store boundary is weaker than GREEN for strict no-persistence. A prohibited pending JSON record is strict RED.",
+    "Expected RED findings do not abort the run. Exit 2 means an import/runtime/head/inspection blocker. Read the precise blocker instead of substituting a replica.",
+    "Production receives the exact real API arguments only. Synthetic source transcripts are not silently added to a production API that has no source parameter.",
+    "Candidate provenance comes from the synthetic host adapter. Model/tool text never creates trusted status. Tool-only source mappings fail closed.",
+    "The helper's trusted caller mapping is not a solved production integration. Its explicit report status remains CANDIDATE_ONLY_PRODUCTION_CALLER_MAPPING_BLOCKER.",
+    "The worker executed no tests, imports, builds, lint, formatters, merges, or harness runs. These are instructions for the parent integration pass."
+  ]
+}
