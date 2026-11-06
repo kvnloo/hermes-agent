@@ -40,6 +40,14 @@ def test_missing_turn_origin_is_bulk(pace):
     assert gate.admit("anthropic", [ENTRY], MODEL) == []
 
 
+@pytest.fixture
+def isolated_update_marker(tmp_path, monkeypatch):
+    # This worktree's Git directory can live inside the guarded production home.
+    from hermes_cli import _early_recovery
+
+    monkeypatch.setattr(_early_recovery, "interrupted_pull_marker", lambda root: tmp_path / "hermes-update-pull")
+
+
 def _policy(source):
     return SimpleNamespace(source=source, platform=source, kanban_json=None, request_json="{}") if source else None
 
@@ -114,7 +122,8 @@ def test_nested_bulk_work_and_exceptions_restore_the_human_scope(pace):
 
 
 @pytest.mark.asyncio
-async def test_real_cli_admission_reclassifies_each_submit_and_carries_scope_to_worker(pace, tmp_path, monkeypatch):
+async def test_real_cli_admission_reclassifies_each_submit_and_carries_scope_to_worker(
+        pace, tmp_path, monkeypatch, isolated_update_marker):
     from gateway.session_controls import AuthorityConnection
     from tests.gateway.test_surface_admission import _authority
 
@@ -156,7 +165,7 @@ def test_native_sender_snapshot_wins_over_live_session_source(pace):
     assert human_authored_input(None, row, source) is False
 
 
-def test_gateway_passes_origin_to_the_agent_for_this_turn_only():
+def test_gateway_passes_origin_to_the_agent_for_this_turn_only(isolated_update_marker):
     from tests.gateway.test_local_viewer_events_submit import _gateway_runner, _run_turn
 
     with human_turn_scope(True):
