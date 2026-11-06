@@ -196,6 +196,11 @@ describe('useDesktopIntegrations', () => {
           setConnection(remote)
           $connectionContextRestore.set({ connectionId: 'homelab', profile: 'default', sequence: 1 })
         })
+        // The old session URL must be replaced immediately, but the target chat
+        // must not be restored until the new backend's session list arrives.
+        expect(navigate).toHaveBeenCalledTimes(1)
+        expect(navigate).toHaveBeenCalledWith('/', { replace: true })
+        navigate.mockClear()
         result.rerender({
           activeProfile: 'default',
           locationPathname: '/',
@@ -233,6 +238,9 @@ describe('useDesktopIntegrations', () => {
           setConnection(local)
           $connectionContextRestore.set({ connectionId: 'local', profile: 'default', sequence: 2 })
         })
+        expect(navigate).toHaveBeenCalledTimes(1)
+        expect(navigate).toHaveBeenCalledWith('/', { replace: true })
+        navigate.mockClear()
         result.rerender({
           activeProfile: 'default',
           locationPathname: '/',
