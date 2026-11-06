@@ -917,7 +917,13 @@ def _delivery_main(args: list[str]) -> int:
 
 
 def _agent_home(agent: Any) -> str:
-    """The calling agent's OWN home (session-db derived), not ambient env."""
+    """Use the turn's bound profile home before the shared gateway session DB."""
+    with contextlib.suppress(Exception):
+        from hermes_constants import get_hermes_home_override
+
+        bound_home = get_hermes_home_override()
+        if bound_home:
+            return str(bound_home)
     with contextlib.suppress(Exception):
         db_path = getattr(getattr(agent, "_session_db", None), "db_path", None)
         if db_path:

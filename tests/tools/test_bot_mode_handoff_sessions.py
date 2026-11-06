@@ -84,6 +84,23 @@ def test_declared_title_gets_the_tool_and_becomes_the_delivery_target(tmp_path):
     assert bot_mode_dm.MESSAGE_AGENT_TOOL_NAME in agent.valid_tool_names
 
 
+def test_shared_gateway_db_uses_bound_profile_for_message_agent(tmp_path):
+    """A shared launch-home DB must not hide a named profile's handoff declaration."""
+    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+
+    profile = _profile_home(tmp_path, "marketing", handoff=[HANDOFF])
+    agent = _FakeAgent(profile, HANDOFF)
+    agent._session_db.db_path = str(tmp_path / ".hermes" / "state.db")
+    token = set_hermes_home_override(profile)
+    try:
+        assert bot_mode_dm.message_agent_authorized(agent) is True
+        assert bot_mode_dm.ensure_message_agent_tool(agent) is True
+        outcome = json.loads(bot_mode_dm.message_agent_tool(target="hermes", message="", agent=agent))
+        assert outcome["error"].startswith("message is required")
+    finally:
+        reset_hermes_home_override(token)
+
+
 def test_declaration_is_profile_scoped_and_never_leaks(tmp_path):
     declaring = _profile_home(tmp_path, "marketing", handoff=[HANDOFF])
     other = _profile_home(tmp_path, "engineering")
