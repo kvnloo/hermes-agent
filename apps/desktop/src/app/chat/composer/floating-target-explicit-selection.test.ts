@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { group, split } from '@/components/pane-shell/tree/model'
-import { $activeTreeGroup, $layoutTree, trackActiveTreeGroup } from '@/components/pane-shell/tree/store'
+import { $activeTreeGroup, $hoveredTreeGroup, $layoutTree, trackActiveTreeGroup } from '@/components/pane-shell/tree/store'
 import { $composerPopout, $composerPopoutGesturesEnabled } from '@/store/composer-popout'
 import { setFocusFollowsMouse } from '@/store/focus-follows-mouse'
 import { $currentCwd, $selectedStoredSessionId, $workspaceCwdOwner, setSessions } from '@/store/session'
@@ -146,5 +146,20 @@ describe.each([false, true])('explicit composer selection (floating=%s)', floati
     expect(document.activeElement).toBe(b.button)
     expect(getActiveComposer()).toBe('tile:B')
     expect($focusedStoredSessionId.get()).toBe('B')
+  })
+
+  it('allows hover highlight without changing the last click-selected pane group', () => {
+    const a = pane('A', 'ga')
+    const b = pane('B', 'gb')
+    clickEditor(b.editor)
+    expect($activeTreeGroup.get()).toBe('gb')
+
+    pointer(a.text, 'pointerover', 200)
+    pointer(a.text, 'pointermove', 201)
+
+    expect($hoveredTreeGroup.get()).toBe('ga')
+    expect($activeTreeGroup.get()).toBe('gb')
+    expect(getActiveComposer()).toBe('tile:B')
+    expect($focusedWorkspaceCwd.get()).toBe('/repo-B')
   })
 })
