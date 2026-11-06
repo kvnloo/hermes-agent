@@ -94,3 +94,23 @@ def test_both_child_env_lanes_apply_the_same_overlay(monkeypatch):
     foreground = _make_run_env({})
     background = ProcessRegistry._spawn_env({})
     assert {k: foreground.get(k) for k in _SCREEN} == {k: background.get(k) for k in _SCREEN}
+
+
+def test_background_screen_overlay_preserves_session_xdg_directories(monkeypatch):
+    """#150076/#131495: a Bot Screen display should not replace the terminal's XDG paths."""
+    from tools.process_registry import ProcessRegistry
+
+    session_xdg = {
+        "XDG_CONFIG_HOME": "/home/agent/.config",
+        "XDG_DATA_HOME": "/home/agent/.local/share",
+        "XDG_CACHE_HOME": "/home/agent/.cache",
+    }
+    screen_xdg = {
+        "XDG_CONFIG_HOME": "/run/hermes/bot-desktop/xdg/config",
+        "XDG_DATA_HOME": "/run/hermes/bot-desktop/xdg/data",
+        "XDG_CACHE_HOME": "/run/hermes/bot-desktop/xdg/cache",
+    }
+    _publish(monkeypatch, {**_SCREEN, **screen_xdg})
+    env = ProcessRegistry._spawn_env(session_xdg)
+    assert {key: env[key] for key in session_xdg} == session_xdg
+    assert {key: env[key] for key in _SCREEN} == _SCREEN

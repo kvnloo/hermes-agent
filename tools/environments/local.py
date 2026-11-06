@@ -783,11 +783,13 @@ def apply_bot_desktop_screen_env(env: dict) -> dict:
     activity stamp, so a plain ``ls`` must not keep the screen alive past idle_stop_minutes), and they win
     over the seat env the way an inline ``DISPLAY=:0 cmd`` prefix does for bash. Screen down, module
     missing, unreadable state dir → *env* passes through untouched. ``WAYLAND_DISPLAY`` is dropped because
-    the screen is X11: a leaked Wayland socket flips GTK/Chromium backends.
+    the screen is X11: a leaked Wayland socket flips GTK/Chromium backends. Keep the session's
+    XDG directories: Bot Desktop publishes private ones that belong only to the screen (#131495).
     """
     published = _published_bot_desktop_env()
     if published:
-        env.update(published)
+        env.update({key: published[key] for key in ("DISPLAY", "XAUTHORITY", "DBUS_SESSION_BUS_ADDRESS")
+                    if key in published})
         env.pop("WAYLAND_DISPLAY", None)
     return env
 
