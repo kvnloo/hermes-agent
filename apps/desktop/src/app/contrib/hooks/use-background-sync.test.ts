@@ -91,9 +91,10 @@ function makeRefresh(resolveSession: ActiveTranscriptRefreshDeps['resolveSession
 
   const { updateSessionState } = updateSessionStateRef
 
-  const refresh = () =>
+  const refresh = (allowBusyCatchUp = false) =>
     reconcileActiveTranscript({
       activeSessionIdRef,
+      allowBusyCatchUp,
       busyRef,
       requestSequenceRef,
       resolveSession,
@@ -116,7 +117,7 @@ function useSyncHarness({
   activeSessionId: string | null
   activeStoredSessionId: string | null
   gatewayState?: string
-  refreshActiveTranscript: () => Promise<void>
+  refreshActiveTranscript: (allowBusyCatchUp?: boolean) => Promise<void>
 }) {
   const updateSessionState: Parameters<typeof useBackgroundSync>[0]['updateSessionState'] = vi.fn(
     (sessionId, updater) => {
@@ -152,7 +153,7 @@ type SyncOptions = {
   gatewayState?: string
 }
 
-function renderSync(refreshActiveTranscript: () => Promise<void>, options: SyncOptions = {}) {
+function renderSync(refreshActiveTranscript: (allowBusyCatchUp?: boolean) => Promise<void>, options: SyncOptions = {}) {
   return renderHook(
     (props: SyncOptions) =>
       useSyncHarness({
@@ -1163,6 +1164,64 @@ describe('reconcileActiveTranscript', () => {
     const messages = fixture.states.get(ACTIVE_RUNTIME_ID)?.messages ?? []
     expect(messages.map(message => message.id)).toEqual(['1-0-user', 'assistant-error'])
     expect(messages.at(-1)?.error).toBe('local failure')
+  })
+
+  it('recovers two persisted foreground rows on reconnect while a later turn is busy (#148686)', async () => {
+    const fixture = makeRefresh()
+    const row = (id: number, role: 'user' | 'assistant', content: string) => ({
+      content,
+      id,
+      role,
+      timestamp: id
+    })
+    const previous = [row(1, 'user', 'earlier question'), row(2, 'assistant', 'earlier answer')]
+    const saved = [
+      ...previous,
+      row(3, 'user', 'question accepted during disconnect'),
+      row(4, 'assistant', 'answer saved during disconnect')
+    ]
+    const running = { ...fixture.state, busy: true, messages: toChatMessages(previous) }
+
+    fixture.states.set(ACTIVE_RUNTIME_ID, running)
+    publishSessionState(ACTIVE_RUNTIME_ID, running)
+    fixture.busyRef.current = true
+    $activeSessionId.set(ACTIVE_RUNTIME_ID)
+    $selectedStoredSessionId.set(ACTIVE_STORED_ID)
+    setBusy(true)
+    vi.mocked(getLatestSessionMessages).mockResolvedValue({
+      messages: saved,
+      session_id: ACTIVE_STORED_ID
+    } as never)
+
+    const hook = renderSync(fixture.refresh, { gatewayState: 'connecting' })
+    hook.rerender({ gatewayState: 'open' })
+
+    await waitFor(() =>
+      expect(fixture.states.get(ACTIVE_RUNTIME_ID)?.messages.map(message => message.rowId)).toEqual([1, 2, 3, 4])
+    )
+    expect(fixture.states.get(ACTIVE_RUNTIME_ID)?.busy).toBe(true)
+    expect(getLatestSessionMessages).toHaveBeenCalledTimes(1)
+  })
+
+  it('will not hydrate over a provisional stream even on a reconnect catch-up', async () => {
+    const fixture = makeRefresh()
+    const running = {
+      ...fixture.state,
+      busy: true,
+      messages: [
+        ...toChatMessages([{ content: 'earlier prompt', id: 1, role: 'user', timestamp: 1 }]),
+        { id: 'assistant-stream-live', pending: true, parts: [{ text: 'working', type: 'text' }], role: 'assistant' }
+      ] as ChatMessage[]
+    }
+
+    fixture.states.set(ACTIVE_RUNTIME_ID, running)
+    publishSessionState(ACTIVE_RUNTIME_ID, running)
+    fixture.busyRef.current = true
+
+    await fixture.refresh(true)
+
+    expect(getLatestSessionMessages).not.toHaveBeenCalled()
+    expect(fixture.states.get(ACTIVE_RUNTIME_ID)?.messages).toEqual(running.messages)
   })
 
   it('does not clobber a busy stream', async () => {
