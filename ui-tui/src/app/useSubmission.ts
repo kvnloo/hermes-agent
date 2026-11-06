@@ -405,11 +405,20 @@ export function useSubmission(opts: UseSubmissionOptions) {
             )
           }
         } else {
-          // Attachment commands capture the cleared composer's revision.
-          composerActions.clearIn()
+          // Branches can be refused (no history, stale generation, busy owner).
+          // Leave their draft and image chips untouched until the owner commits.
+          // Other slash commands keep their immediate-clear behavior.
+          const isBranch = parsed.name === 'branch' || parsed.name === 'fork'
+          if (!isBranch) { composerActions.clearIn() }
           // Image tokens are labels in the command; the descriptors and their
           // expander ride along so a skill/alias send still carries the image.
-          slashRef.current(slash.command, { attachments: submission.attachments, expand: expandTokens(submissionTokens) })
+          slashRef.current(slash.command, {
+            attachments: submission.attachments,
+            expand: expandTokens(submissionTokens),
+            ...(isBranch ? { onAccepted: () => {
+              if (isCurrentDestination(destination)) { composerActions.clearInIfCurrent(full) }
+            } } : {})
+          })
         }
 
         return
