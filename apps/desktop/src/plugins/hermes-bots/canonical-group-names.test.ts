@@ -60,3 +60,29 @@ it('does not read local profiles for a peer-only roster, including unknown futur
 
   expect(requestProfile).not.toHaveBeenCalled()
 })
+
+it('keeps legacy members distinct when their current visible names collide', async () => {
+  const legacyRoom: CanonicalRoom = {
+    room_id: 'legacy-collision', name: 'Team', members: [
+      { member_id: 'seat-a', profile: 'alpha', handle: 'alpha-handle', display_name: 'Stored A', target: { kind: 'local', profile: 'alpha' } },
+      { member_id: 'seat-b', profile: 'beta', handle: 'beta-handle', display_name: 'Stored B', target: { kind: 'local', profile: 'beta' } }
+    ]
+  }
+  requestProfile.mockResolvedValue({ profiles: [
+    { name: 'alpha', display_name: '同名' },
+    { name: 'beta', ui_meta: { 'hermes-bots': { title: '同名' } }, display_name: 'Other' }
+  ] })
+  const stored = structuredClone(legacyRoom)
+  const projected = await projectCanonicalGroupNames(route, legacyRoom)
+
+  expect(projected.members).toEqual(
+    legacyRoom.members.map(member => ({ ...member, display_name: '同名', current_display_name: '同名' }))
+  )
+  expect(projected.members[0].target).toBe(legacyRoom.members[0].target)
+  expect(projected.members[1].target).toBe(legacyRoom.members[1].target)
+  expect(legacyRoom).toEqual(stored)
+  expect(requestProfile).toHaveBeenCalledExactlyOnceWith(
+    { ...route, targetProfile: route.profile, mode: 'remote' },
+    'profiles.list', { profile: route.profile, include_sessions: false }
+  )
+})
