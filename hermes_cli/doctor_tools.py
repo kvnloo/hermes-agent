@@ -485,8 +485,13 @@ def _check_tool_availability(should_fix: bool, f: Finding) -> None:
         if web_rows:
             available = [tid for tid in available if tid != "web"]
             unavailable = [item for item in unavailable if item.get("name") != "web"]
+    enabled_cli_toolsets = _enabled_cli_toolsets_for_doctor()
     for tid in available:
-        check_ok(TOOLSET_REQUIREMENTS.get(tid, {}).get("name", tid), _doctor_tool_availability_detail(tid))
+        label = TOOLSET_REQUIREMENTS.get(tid, {}).get("name", tid)
+        if enabled_cli_toolsets is not None and tid not in enabled_cli_toolsets:
+            check_warn(label, f"(available but disabled for CLI; run `hermes tools enable {tid}`)")
+        else:
+            check_ok(label, _doctor_tool_availability_detail(tid))
     for status, label, detail in web_rows:
         (check_ok if status == "ok" else check_warn)(label, detail)
     for item in unavailable:
