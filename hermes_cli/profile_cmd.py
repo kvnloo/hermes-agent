@@ -300,12 +300,8 @@ def _profile_delete(args):
 
 
 def _describe_target_dir(name: str) -> Path:
-    """Profile dir for ``describe``: ``default`` maps to the CURRENT home (get_hermes_home),
-    everything else to its named directory."""
+    """Resolve ``default`` and named profiles by their canonical home, not the caller's."""
     from hermes_cli import profiles as _profiles_mod
-    if _profiles_mod.normalize_profile_name(name) == "default":
-        from hermes_constants import get_hermes_home as _hh
-        return Path(_hh())
     return _profiles_mod.get_profile_dir(name)
 
 
