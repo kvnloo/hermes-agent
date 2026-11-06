@@ -910,8 +910,8 @@ def _routed_client_kwargs(agent, fallback_model, _provider_timeout) -> Optional[
             bind_moa_runtime(agent, _fb["model"])
             return None
         agent.provider = agent.requested_provider = _fb["provider"]
-        agent.model = _fb_model or _fb["model"]
-        recompute_init_fallback_api_mode(agent, _fb_client, _fb)
+        agent.model, primary_model = _fb_model or _fb["model"], agent.model
+        recompute_init_fallback_api_mode(agent, _fb_client, _fb, primary_model)
         return _client_kwargs_from_routed(_fb_client, _provider_timeout)
     # A burned credential pool (#119533) is otherwise indistinguishable from missing config,
     # so name it even when no fallback entries are configured.

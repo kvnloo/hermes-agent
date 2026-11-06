@@ -292,3 +292,73 @@ def test_init_fallback_keeps_codex_responses_for_openai_codex():
         assert agent.model == "gpt-5.4-mini"
         assert agent._fallback_activated is True
         assert agent.api_mode == "codex_responses"
+
+def test_init_fallback_named_transport_uses_fallback_reasoning_override():
+    """#150086: construction failover honors the named transport and target effort."""
+    config = {
+        "agent": {
+            "reasoning_effort": "xhigh",
+            "reasoning_overrides": {"relay-model": "high"},
+        }
+    }
+    fallback = _mock_client(base_url="http://127.0.0.1:9/v1")
+
+    def fake_resolve(provider, **kwargs):
+        if provider != "myrelay":
+            return None, None  # no primary Codex credentials
+        assert kwargs["api_mode"] == "codex_responses"
+        return fallback, "relay-model"
+
+    with (
+        patch("hermes_cli.config.load_config_readonly", return_value=config),
+        patch("hermes_cli.runtime_provider._get_named_custom_provider",
+              return_value={"api_mode": "codex_responses"}),
+        patch("agent.auxiliary_client.resolve_provider_client", side_effect=fake_resolve),
+        patch("model_tools.get_tool_definitions", return_value=_make_tool_defs()),
+        patch("model_tools.check_toolset_requirements", return_value={}),
+        patch("agent.process_bootstrap.OpenAI", return_value=MagicMock()),
+    ):
+        agent = AIAgent(
+            model="gpt-5.4", provider="openai-codex",
+            fallback_model=[{"provider": "myrelay", "model": "relay-model"}],
+            reasoning_config={"enabled": True, "effort": "xhigh"},
+            quiet_mode=True, skip_context_files=True, skip_memory=True,
+        )
+
+    assert agent.provider == "myrelay"
+    assert agent.model == "relay-model"
+    assert agent.api_mode == "codex_responses"
+    assert agent.reasoning_config == {"enabled": True, "effort": "high"}
+
+
+def test_init_fallback_does_not_override_distinct_session_reasoning():
+    """A session-selected effort must not be replaced by a model config fallback."""
+    config = {
+        "agent": {
+            "reasoning_effort": "xhigh",
+            "reasoning_overrides": {"relay-model": "high"},
+        }
+    }
+    fallback = _mock_client(base_url="http://127.0.0.1:9/v1")
+
+    def fake_resolve(provider, **kwargs):
+        return (fallback, "relay-model") if provider == "myrelay" else (None, None)
+
+    with (
+        patch("hermes_cli.config.load_config_readonly", return_value=config),
+        patch("hermes_cli.runtime_provider._get_named_custom_provider",
+              return_value={"api_mode": "codex_responses"}),
+        patch("agent.auxiliary_client.resolve_provider_client", side_effect=fake_resolve),
+        patch("model_tools.get_tool_definitions", return_value=_make_tool_defs()),
+        patch("model_tools.check_toolset_requirements", return_value={}),
+        patch("agent.process_bootstrap.OpenAI", return_value=MagicMock()),
+    ):
+        agent = AIAgent(
+            model="gpt-5.4", provider="openai-codex",
+            fallback_model=[{"provider": "myrelay", "model": "relay-model"}],
+            reasoning_config={"enabled": True, "effort": "low"},
+            quiet_mode=True, skip_context_files=True, skip_memory=True,
+        )
+
+    assert agent.api_mode == "codex_responses"
+    assert agent.reasoning_config == {"enabled": True, "effort": "low"}

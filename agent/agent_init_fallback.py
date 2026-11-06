@@ -40,7 +40,9 @@ def _init_fallback_chain(agent, fallback_model):
             print(f"🔄 Fallback chain ({len(chain)} providers): " + " → ".join(labels))
 
 
-def recompute_init_fallback_api_mode(agent, fb_client, fallback_entry: dict[str, Any]) -> None:
+def recompute_init_fallback_api_mode(
+    agent, fb_client, fallback_entry: dict[str, Any], primary_model: str | None = None
+) -> None:
     """Give an init-time fallback its own api_mode instead of the unreachable primary's.
 
     A Nous primary configured with ``api_mode: codex_responses`` otherwise leaves a Copilot
@@ -70,3 +72,20 @@ def recompute_init_fallback_api_mode(agent, fb_client, fallback_entry: dict[str,
         return
     if hasattr(agent, "_transport_cache"):
         agent._transport_cache.clear()
+
+    if primary_model is None:
+        return
+    # Init-time fallback bypasses bind_route_entry(), which normally re-resolves the
+    # destination model's effort. Keep a distinct session-selected effort intact.
+    try:
+        from hermes_cli.config import load_config_readonly
+        from hermes_constants import resolve_reasoning_config
+
+        config = load_config_readonly() or {}
+        if (
+            agent.reasoning_config is None
+            or agent.reasoning_config == resolve_reasoning_config(config, primary_model)
+        ):
+            agent.reasoning_config = resolve_reasoning_config(config, agent.model)
+    except Exception:
+        logger.debug("Init-time fallback reasoning resolution failed for %s", agent.model, exc_info=True)
