@@ -195,6 +195,14 @@ export function useComposerState({ gw, submitRef, sys }: UseComposerStateOptions
     historyDraftRef.current = ''
   }, [historyDraftRef, setComposerTokens, setHistoryIdx, setInput, setInputBuf, setPasteSpan, setQueueEdit])
 
+  // A branch is asynchronous. Clear only its original draft after acceptance;
+  // typing while the mutation is pending must never be erased.
+  const clearInIfCurrent = useCallback((expected: string): boolean => {
+    if (inputRef.current !== expected) { return false }
+    clearIn()
+    return true
+  }, [clearIn])
+
   /**
    * Fold the expanded paste back into a chip; its payload is the text as
    * edited. A span that can't fold (another chip landed inside it) just stops
@@ -633,6 +641,7 @@ export function useComposerState({ gw, submitRef, sys }: UseComposerStateOptions
       attachClipboardImage,
       attachImagePath,
       clearIn,
+      clearInIfCurrent,
       collapsePaste,
       stage,
       dequeue,
@@ -657,6 +666,7 @@ export function useComposerState({ gw, submitRef, sys }: UseComposerStateOptions
       attachClipboardImage,
       attachImagePath,
       clearIn,
+      clearInIfCurrent,
       stage,
       dequeue,
       enqueue,
