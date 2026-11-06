@@ -9,6 +9,7 @@ mutate ``agent`` / ``messages`` / ``api_messages`` in place. Logger name stays
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import locale
 import math
@@ -40,6 +41,125 @@ from hermes_constants import display_hermes_home
 from utils import base_url_host_matches
 
 logger = logging.getLogger("agent.conversation_loop")
+
+
+
+def _image_part_data_url(part: Any) -> Optional[str]:
+    """Native inline image bytes, excluding remote URLs and other media."""
+    if not isinstance(part, dict):
+        return None
+    if part.get("type") == "image":
+        source = part.get("source")
+        if not isinstance(source, dict) or source.get("type") != "base64":
+            return None
+        mime = source.get("media_type") or "image/jpeg"
+        data = source.get("data")
+        if isinstance(mime, str) and mime.startswith("image/") and isinstance(data, str) and data:
+            return f"data:{mime};base64,{data}"
+        return None
+    if part.get("type") in ("image_url", "input_image"):
+        value = part.get("image_url")
+        if isinstance(value, dict):
+            value = value.get("url")
+        return value if isinstance(value, str) and value.startswith("data:image/") else None
+    return None
+
+
+def _image_recovery_route(agent: Any) -> tuple[str, str, str, str]:
+    """A recovery is only valid on the same session and provider endpoint/model."""
+    return (
+        str(getattr(agent, "session_id", "") or ""),
+        str(getattr(agent, "provider", "") or "").strip().lower(),
+        str(getattr(agent, "base_url", "") or ""),
+        str(getattr(agent, "model", "") or "").strip(),
+    )
+
+
+def _snapshot_image_part_urls(api_messages: Any) -> list[tuple[Optional[str], ...]]:
+    """Hold original URL references before copy-on-write shrink, without copying image bytes."""
+    if not isinstance(api_messages, list):
+        return []
+    return [
+        tuple(_image_part_data_url(part) for part in message["content"])
+        if isinstance(message, dict) and isinstance(message.get("content"), list) else ()
+        for message in api_messages
+    ]
+
+
+def _remember_shrunken_images(
+    agent: Any, before: list[tuple[Optional[str], ...]], api_messages: Any,
+) -> None:
+    """Remember only image replacements proven to repair a provider rejection.
+
+    Digest the original payload so retaining a recovery never retains a second giant
+    original alongside the full-quality image in canonical history.
+    """
+    route = _image_recovery_route(agent)
+    cache = getattr(agent, "_image_shrink_replays", None)
+    if not isinstance(cache, dict) or getattr(agent, "_image_shrink_replay_route", None) != route:
+        cache = {}
+    for old_parts, message in zip(before, api_messages):
+        content = message.get("content") if isinstance(message, dict) else None
+        if not isinstance(content, list):
+            continue
+        for old_url, part in zip(old_parts, content):
+            new_url = _image_part_data_url(part)
+            if old_url and new_url and old_url != new_url:
+                digest = hashlib.sha256(old_url.encode("utf-8")).digest()
+                cache[digest] = new_url
+                # One agent can recover multiple screenshots; bound the in-memory replicas.
+                if len(cache) > 8:
+                    cache.pop(next(iter(cache)))
+    if cache:
+        agent._image_shrink_replays = cache
+        agent._image_shrink_replay_route = route
+
+
+def _part_with_shrunken_image(part: dict, image_url: str) -> dict:
+    """Copy-on-write replacement: neither the part nor its nested source is modified."""
+    if part["type"] == "image":
+        source = part["source"]
+        return {
+            **part,
+            "source": {
+                **source,
+                "media_type": image_url[5:].split(";", 1)[0],
+                "data": image_url.partition(",")[2],
+            },
+        }
+    value = part["image_url"]
+    return {
+        **part,
+        "image_url": {**value, "url": image_url} if isinstance(value, dict) else image_url,
+    }
+
+
+def apply_recovered_image_shrinks(agent: Any, api_messages: Any) -> None:
+    """Replay successful shrink onto rebuilt wire copies, never persisted history."""
+    cache = getattr(agent, "_image_shrink_replays", None)
+    if not isinstance(cache, dict) or not cache or not isinstance(api_messages, list):
+        return
+    if getattr(agent, "_image_shrink_replay_route", None) != _image_recovery_route(agent):
+        # Switching model, endpoint or session restores originals for the new route.
+        agent._image_shrink_replays = {}
+        return
+    for message in api_messages:
+        if not isinstance(message, dict) or not isinstance(message.get("content"), list):
+            continue
+        content = message["content"]
+        rewritten = None
+        for index, part in enumerate(content):
+            original = _image_part_data_url(part)
+            if not original:
+                continue
+            recovered = cache.get(hashlib.sha256(original.encode("utf-8")).digest())
+            if not recovered:
+                continue
+            if rewritten is None:
+                rewritten = list(content)
+            rewritten[index] = _part_with_shrunken_image(part, recovered)
+        if rewritten is not None:
+            message["content"] = rewritten
 
 
 def _runtime_uses_ascii_encoding() -> bool:
@@ -703,12 +823,15 @@ def recover_after_classification(
     if recovered_with_pool:
         return True, recovered_with_pool
 
-    # Shrink oversized native image parts in-place and retry once.
+    # Shrink a request-local copy and retain only the successful wire replacement
+    # for later turns. Canonical history keeps the original full-resolution image.
     if classified.reason == FailoverReason.image_too_large and not _retry.image_shrink_retry_attempted:
         _retry.image_shrink_retry_attempted = True
+        original_images = _snapshot_image_part_urls(api_messages)
         if agent._try_shrink_image_parts_in_messages(
             api_messages, max_dimension=_image_error_max_dimension(api_error) or 8000
         ):
+            _remember_shrunken_images(agent, original_images, api_messages)
             _vlines(agent, "📐 Image(s) exceeded provider size limit — shrank and retrying...")
             return True, recovered_with_pool
         logger.info(
