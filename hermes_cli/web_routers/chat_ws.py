@@ -164,26 +164,31 @@ async def _close_unless_sidecar_allowed(ws: WebSocket) -> bool:
     Every refusal logs its reason the way :func:`_ws_gate` does — the close
     fires before ``accept()``, so the browser only ever sees a generic 1006
     and the log line is the only diagnostic (#138057)."""
+    from hermes_cli.web_server import app
+    # The gateway-hosted Webapp's pre-accept close is opaque to a browser.  Its
+    # diagnostic belongs in gateway.log, not just the dashboard's gui.log.
+    log = (logging.getLogger("gateway.webapp.ws")
+           if getattr(app.state, "ui_surface", None) == "webapp" else _log)
     path = ws.url.path
     peer = ws.client.host if ws.client else "?"
     if not _DASHBOARD_EMBEDDED_CHAT_ENABLED:
-        _log.info("%s refused: embedded chat disabled peer=%s", path, peer)
+        log.info("%s refused: embedded chat disabled peer=%s", path, peer)
         await ws.close(code=4403)
         return False
     auth_reason, cred = _ws_auth_reason(ws)
     if auth_reason is not None:
-        _log.warning("%s auth rejected reason=%s mode=%s cred=%s peer=%s",
+        log.warning("%s auth rejected reason=%s mode=%s cred=%s peer=%s",
                      path, auth_reason, _ws_auth_mode(), cred, peer)
         await ws.close(code=4401)
         return False
     host_origin_reason = _ws_host_origin_reason(ws)
     if host_origin_reason is not None:
-        _log.warning("%s refused: %s peer=%s", path, host_origin_reason, peer)
+        log.warning("%s refused: %s peer=%s", path, host_origin_reason, peer)
         await ws.close(code=4403)
         return False
     client_reason = _ws_client_reason(ws)
     if client_reason is not None:
-        _log.warning("%s refused: %s peer=%s", path, client_reason, peer)
+        log.warning("%s refused: %s peer=%s", path, client_reason, peer)
         await ws.close(code=4403)
         return False
     return True

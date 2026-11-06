@@ -109,3 +109,36 @@ def test_allowed_upgrade_logs_no_refusal(loopback_app, caplog):
     assert ws.closed == []
     assert "refused" not in caplog.text
     assert "auth rejected" not in caplog.text
+
+
+def test_lan_webapp_refusal_reaches_gateway_log(loopback_app, monkeypatch, caplog):
+    """A signed-in LAN page needs the exact /api/ws refusal in gateway.log (#150228).
+
+    Its HTTP Host and WebSocket Origin match, but a missing socket ticket must
+    still fail closed, with a reason routed to the gateway's own log component.
+    """
+    from hermes_logging import COMPONENT_PREFIXES, _ComponentFilter
+
+    monkeypatch.setattr(web_server.app.state, "ui_surface", "webapp", raising=False)
+    monkeypatch.setattr(web_server.app.state, "bound_host", "0.0.0.0")
+    monkeypatch.setattr(web_server.app.state, "auth_required", True)
+    ws = _RecordingWS(
+        path="/api/ws",
+        client_host="192.168.1.42",
+        headers={
+            "host": "192.168.1.10:9120",
+            "origin": "http://192.168.1.10:9120",
+        },
+    )
+
+    with caplog.at_level(logging.WARNING):
+        assert _run_guard(ws) is False
+
+    assert ws.closed == [4401]
+    gateway_filter = _ComponentFilter(COMPONENT_PREFIXES["gateway"])
+    assert any(
+        gateway_filter.filter(record)
+        and "/api/ws auth rejected reason=no_credential" in record.getMessage()
+        and "peer=192.168.1.42" in record.getMessage()
+        for record in caplog.records
+    )
