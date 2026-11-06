@@ -3069,6 +3069,30 @@ class TestCORS:
             assert "PATCH" in resp.headers.get("Access-Control-Allow-Methods", "")
 
     @pytest.mark.asyncio
+    async def test_session_patch_preflight_allows_browser_rename(self):
+        """Regression for derez-ai's #150279: PATCH session rename works from allowed origins."""
+        origin = "https://console.example"
+        adapter = _make_adapter(cors_origins=[origin])
+        app = _create_app(adapter)
+        async with TestClient(TestServer(app)) as cli:
+            resp = await cli.options(
+                "/api/sessions/session-123",
+                headers={
+                    "Origin": origin,
+                    "Access-Control-Request-Method": "PATCH",
+                    "Access-Control-Request-Headers": "content-type,authorization",
+                },
+            )
+            assert resp.status == 200
+            assert resp.headers.get("Access-Control-Allow-Origin") == origin
+            methods = {method.strip() for method in resp.headers["Access-Control-Allow-Methods"].split(",")}
+            assert "PATCH" in methods
+            allowed_headers = {
+                value.strip().lower() for value in resp.headers["Access-Control-Allow-Headers"].split(",")
+            }
+            assert {"content-type", "authorization"} <= allowed_headers
+
+    @pytest.mark.asyncio
     async def test_cors_allows_hermes_session_request_headers(self):
         """Browsers can preflight the documented X-Hermes-Session-* request headers."""
         adapter = _make_adapter(cors_origins=["http://localhost:3000"])
