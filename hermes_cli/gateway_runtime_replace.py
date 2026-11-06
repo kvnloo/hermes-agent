@@ -84,6 +84,12 @@ def _verified_owner(control: Path, payload: dict) -> tuple[int, Any] | str:
             return "owner_unverified"
     except (TypeError, ValueError):
         return "owner_unverified"
+    # A cron script can spawn a CLI as the gateway's GRANDCHILD: the old direct-parent
+    # guard above misses this and would terminate the gateway mid-job (#142520).
+    # Reuse the bounded, cross-platform ancestry walk already used by the updater.
+    from hermes_cli.update_lock import _is_ancestor_pid
+    if _is_ancestor_pid(pid):
+        return "owner_unverified"
     return pid, current
 
 
