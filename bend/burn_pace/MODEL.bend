@@ -21,6 +21,12 @@ type Pace is Data:
   PUnknown{}
   PHot{}
 
+# Who is asking: Kevin's own conversation on Opus in an owner profile, or anything else
+# (lane profiles, subagents, auxiliary calls, cron).
+type Who is Data:
+  WOwner{}
+  WBulk{}
+
 # Where the turn goes: a paid subscription row, or the free lane (fallback_providers).
 type Route is Data:
   RPaid{}
@@ -35,12 +41,19 @@ def pace_ok(p: Pace) -> Bool:
     case PHot{}:
       False{}
 
-def admit(f: Fresh, u: Used, p: Pace) -> Bool:
+def pace_ok_for(w: Who, p: Pace) -> Bool:
+  match w:
+    case WOwner{}:
+      True{}
+    case WBulk{}:
+      pace_ok(p)
+
+def admit(f: Fresh, u: Used, p: Pace, w: Who) -> Bool:
   match f:
     case FFresh{}:
       match u:
         case UUnder{}:
-          pace_ok(p)
+          pace_ok_for(w, p)
         case UAtCap{}:
           False{}
     case FStale{}:

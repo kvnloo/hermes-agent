@@ -1,34 +1,41 @@
-# Owner laws for burn_pace (Kevin, 2026-11-05: "respect pace by always automatically
-# adjusting usage of free tier models"). Universally quantified over MODEL's domains.
-# Not proven here: that the twin classifies readings correctly (parity test) or that the
-# running gateway loads the twin (deployment receipt).
+# Owner laws for burn_pace (Kevin, 2026-11-05: "respect pace by always automatically adjusting
+# usage of free tier models"; "i want to still talk to opus, just lower burn pace and get back on
+# track by using free subagents"). Universally quantified over MODEL's domains.
+# Not proven here: that the twin classifies readings and callers correctly (parity test) or that
+# the running gateway loads the twin (deployment receipt).
 import Base
 import ./MODEL.bend as M
 
-# A stale or missing reading never admits a paid row (fail closed).
+# A stale or missing reading never admits a paid row, for anyone (fail closed).
 law stale_never_admits:
   for u: M.Used
   for p: M.Pace
-  {M.admit(M.FStale{}, u, p) == False{} : Bool}
+  for w: M.Who
+  {M.admit(M.FStale{}, u, p, w) == False{} : Bool}
 
-# A row at its weekly cap never serves, whatever its pace.
+# A row at its weekly cap never serves, not even Kevin's own chat.
 law at_cap_never_admits:
   for f: M.Fresh
   for p: M.Pace
-  {M.admit(f, M.UAtCap{}, p) == False{} : Bool}
+  for w: M.Who
+  {M.admit(f, M.UAtCap{}, p, w) == False{} : Bool}
 
-# A row burning at or over 1.5x sustainable pace never serves.
-law hot_never_admits:
+# Bulk work (subagents, lanes, aux) never uses a row that is over pace.
+law hot_bulk_never_admits:
   for f: M.Fresh
   for u: M.Used
-  {M.admit(f, u, M.PHot{}) == False{} : Bool}
+  {M.admit(f, u, M.PHot{}, M.WBulk{}) == False{} : Bool}
 
-# Non-vacuity: a fresh, under-cap, cool or unreported row is admitted.
+# Kevin keeps Opus while a fresh row is under cap, even when it is over pace.
+law owner_keeps_opus_when_hot:
+  {M.admit(M.FFresh{}, M.UUnder{}, M.PHot{}, M.WOwner{}) == True{} : Bool}
+
+# Non-vacuity: fresh, under-cap, cool or unreported rows admit bulk work.
 law fresh_cool_admits:
-  {M.admit(M.FFresh{}, M.UUnder{}, M.PCool{}) == True{} : Bool}
+  {M.admit(M.FFresh{}, M.UUnder{}, M.PCool{}, M.WBulk{}) == True{} : Bool}
 
 law fresh_unknown_admits:
-  {M.admit(M.FFresh{}, M.UUnder{}, M.PUnknown{}) == True{} : Bool}
+  {M.admit(M.FFresh{}, M.UUnder{}, M.PUnknown{}, M.WBulk{}) == True{} : Bool}
 
 # When no paid row is admitted the turn goes to the free lane, never to a drained row.
 law none_admitted_routes_free:
@@ -37,8 +44,8 @@ law none_admitted_routes_free:
 law admitted_routes_paid:
   {M.route(True{}) == M.RPaid{} : M.Route}
 
-# Composition: a single hot row's turn routes free.
-law hot_row_routes_free:
+# Composition: bulk work on a hot row routes free.
+law hot_bulk_routes_free:
   for f: M.Fresh
   for u: M.Used
-  {M.route(M.admit(f, u, M.PHot{})) == M.RFree{} : M.Route}
+  {M.route(M.admit(f, u, M.PHot{}, M.WBulk{})) == M.RFree{} : M.Route}

@@ -18,7 +18,8 @@ ROOT = Path(__file__).resolve().parents[2] / "bend" / "burn_pace"
 BEND = shutil.which("bend") or str(Path.home() / ".bend/bin/bend")
 needs_bend = pytest.mark.skipif(not Path(BEND).exists(), reason="bend not installed")
 
-ORDER = [(f, u, p) for f in (g.FRESH, g.STALE) for u in (g.UNDER, g.AT_CAP) for p in (g.COOL, g.UNKNOWN, g.HOT)]
+ORDER = [(f, u, p, w) for f in (g.FRESH, g.STALE) for u in (g.UNDER, g.AT_CAP) for p in (g.COOL, g.UNKNOWN, g.HOT)
+         for w in (g.OWNER, g.BULK)]
 
 
 def _bend_table():
@@ -61,3 +62,14 @@ def test_classify_maps_readings_into_law_domain():
     assert g.classify("d", rd)[2] == g.HOT
     assert g.classify("e", rd)[2] == g.COOL
     assert g.classify("b", {"at": "2020-01-01T00:00:00+00:00", "lanes": rd["lanes"]})[0] == g.STALE
+
+
+def test_owner_is_only_opus_in_owner_profile(monkeypatch):
+    import hermes_cli.profiles as prof
+    lanes = {"owner_profiles": ["clean"]}
+    monkeypatch.setattr(prof, "current_profile_name", lambda default=None: "clean")
+    assert g.who_for("claude-opus-5-5", lanes) == g.OWNER
+    assert g.who_for("claude-haiku-5-5", lanes) == g.BULK
+    assert g.who_for(None, lanes) == g.BULK
+    monkeypatch.setattr(prof, "current_profile_name", lambda default=None: "ossfactory")
+    assert g.who_for("claude-opus-5-5", lanes) == g.BULK

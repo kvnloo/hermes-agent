@@ -75,7 +75,7 @@ class CredentialPoolModelCooldownMixin:
                 return True
             # burn-pace (bend/burn_pace): a row over pace is blocked on the env/borrowed path too,
             # so an empty pool never falls through to the same account's raw token.
-            return bool(mine) and not burn_pace_gate.admit(self.provider, mine)
+            return bool(mine) and not burn_pace_gate.admit(self.provider, mine, model)
 
     def _is_model_scoped_failure(
         self, status_code: Optional[int], model: Optional[str], failure_reason: Optional[str],

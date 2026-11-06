@@ -2112,7 +2112,7 @@ class CredentialPool(CredentialPoolAdminMixin, CredentialPoolModelCooldownMixin)
             self._entries = [e for e in self._entries if e.id not in pruned_ids]
         if cleared_any:
             self._persist(removed_ids=entries_to_prune)
-        return burn_pace_gate.admit(self.provider, available), pending_refresh
+        return burn_pace_gate.admit(self.provider, available, model), pending_refresh
 
     def _log_no_available_entries(self) -> None:
         """Emit the empty-pool INFO line at most once per throttle window."""

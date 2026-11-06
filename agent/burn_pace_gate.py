@@ -75,8 +75,24 @@ UNDER, AT_CAP = "under", "at_cap"
 COOL, UNKNOWN, HOT = "cool", "unknown", "hot"
 
 
-def admit_cls(fresh: str, used: str, pace: str) -> bool:
-    return fresh == FRESH and used == UNDER and pace in (COOL, UNKNOWN)
+OWNER, BULK = "owner", "bulk"
+
+
+def admit_cls(fresh: str, used: str, pace: str, who: str) -> bool:
+    return fresh == FRESH and used == UNDER and (who == OWNER or pace in (COOL, UNKNOWN))
+
+
+def who_for(model, lanes) -> str:
+    """OWNER only for Kevin's own conversation: an Opus request in an owner profile
+    (pool-lanes.json "owner_profiles"). Subagents, lanes, aux and cron are BULK."""
+    if not model or "opus" not in str(model).lower():
+        return BULK
+    try:
+        from hermes_cli.profiles import current_profile_name
+        profile = current_profile_name()
+    except Exception:
+        return BULK
+    return OWNER if profile in set(lanes.get("owner_profiles") or ()) else BULK
 
 
 def route_cls(any_admitted: bool) -> str:
@@ -105,11 +121,11 @@ def classify(lane: str, reading) -> tuple[str, str, str, str]:
     return FRESH, u, pace, f"lane {lane} {used}% used (resets in {row.get('hours_to_reset')}h), pace {ratio}"
 
 
-def verdict(lane: str, reading) -> tuple[bool, float, str]:
+def verdict(lane: str, reading, who: str = BULK) -> tuple[bool, float, str]:
     """(allowed, pace_ratio_for_sorting, reason)."""
     fresh, used, pace, why = classify(lane, reading)
     ratio = ((reading or {}).get("lanes") or {}).get(lane, {}).get("pace_ratio") if fresh == FRESH else None
-    return admit_cls(fresh, used, pace), ratio if ratio is not None else 0.0, why
+    return admit_cls(fresh, used, pace, who), ratio if ratio is not None else 0.0, f"{why} [{who}]"
 
 
 def _override_file_active() -> bool:
@@ -120,7 +136,7 @@ def _override_file_active() -> bool:
         return False
 
 
-def admit(provider: str, entries: list) -> list:
+def admit(provider: str, entries: list, model=None) -> list:
     """Filter and order *entries* (PooledCredential-like, with .label) for *provider*."""
     if not entries or os.environ.get("HERMES_BURN_GATE_OVERRIDE") == "1" or _override_file_active():
         return entries
@@ -128,13 +144,14 @@ def admit(provider: str, entries: list) -> list:
     mapping = lanes.get(provider) if isinstance(lanes, dict) else None
     if not mapping:
         return entries
+    who = who_for(model, lanes)
     kept, denied = [], []
     for idx, entry in enumerate(entries):
         lane = mapping.get(getattr(entry, "label", None) or "")
         if not lane:
             kept.append((1.0, idx, entry))
             continue
-        ok, ratio, why = verdict(lane, reading)
+        ok, ratio, why = verdict(lane, reading, who)
         if ok:
             kept.append((ratio, idx, entry))
         else:
