@@ -574,8 +574,20 @@ async def api_auth_me(request: Request):
 async def api_auth_ws_ticket(request: Request):
     """Mint a 30s single-use ticket for a WS upgrade (browsers cannot set
     ``Authorization`` on the upgrade); one ticket per WS."""
-    sess = _require_session(request)
     from hermes_cli.dashboard_auth.ws_tickets import TTL_SECONDS, mint_ticket
+    if not getattr(request.app.state, "auth_required", False):
+        # Reuse the Webapp's verified session-token identity and credential generation.
+        # A bare loopback IP is not permission to mint a WS capability.
+        from hermes_cli.web_routers.webapp import _ticket_principal, mint_socket_ticket
+        from hermes_cli.web_session_sockets import GATEWAY_SOCKET
+
+        identity, session_token = _ticket_principal(request)
+        ticket = mint_socket_ticket(identity, GATEWAY_SOCKET, session_token=session_token)
+        _audit(request, AuditEvent.WS_TICKET_MINTED,
+               provider=identity["provider"], user_id=identity["user_id"])
+        return {"ticket": ticket, "ttl_seconds": TTL_SECONDS}
+
+    sess = _require_session(request)
     # On the gateway's Webapp the ticket carries the login's sign-in binding, so the socket it opens
     # closes at sign-out (``hermes_cli.webapp_sign_in``).
     signed_in = webapp_sign_in.sign_in_of(request)
