@@ -36,7 +36,15 @@ class EditProposal:
     paths: tuple[str, ...] = ()
 
 
-EditApprovalRequester = Callable[[EditProposal], bool]
+# A requester answers True (approved), False (refused), or a key below when nobody answered. An
+# unanswered prompt is never reported as a refusal (kvnloo/oss-factory#320), and only ``True`` approves.
+_NOT_A_REFUSAL = "Nobody refused it: do not route around it via terminal; ask the user or retry later."
+EDIT_UNANSWERED = {
+    "timeout": f"Edit approval timed out with no answer; file was not modified. {_NOT_A_REFUSAL}",
+    "no_viewer": f"No client is attached to approve edits; file was not modified. {_NOT_A_REFUSAL}",
+}
+
+EditApprovalRequester = Callable[[EditProposal], bool | str]
 
 _EDIT_APPROVAL_REQUESTER: ContextVar[EditApprovalRequester | None] = ContextVar("ACP_EDIT_APPROVAL_REQUESTER", default=None)
 _PERMISSION_REQUEST_IDS = count(1)
@@ -190,11 +198,14 @@ def maybe_require_edit_approval(tool_name: str, arguments: dict[str, Any]) -> st
     if proposal is None:
         return None
     try:
-        approved = bool(requester(proposal))
+        verdict = requester(proposal)
     except Exception as exc:
         logger.warning("ACP edit approval requester failed: %s", exc)
-        approved = False
-    return None if approved else _denied("Edit approval denied by ACP client; file was not modified.")
+        verdict = False
+    if verdict is True:
+        return None
+    unanswered = EDIT_UNANSWERED.get(verdict) if isinstance(verdict, str) else None
+    return _denied(unanswered or "Edit approval denied by ACP client; file was not modified.")
 
 
 def build_acp_edit_tool_call(proposal: EditProposal):
@@ -219,7 +230,7 @@ def make_acp_edit_approval_requester(
 ) -> EditApprovalRequester:
     """Return a sync requester that bridges edit proposals to ACP permissions."""
 
-    def _requester(proposal: EditProposal) -> bool:
+    def _requester(proposal: EditProposal) -> bool | str:
         from acp.schema import PermissionOption
         from acp_adapter.permissions import await_permission, resolve_permission_timeout
 
@@ -232,12 +243,14 @@ def make_acp_edit_approval_requester(
             except Exception:
                 logger.debug("ACP edit auto-approval policy check failed", exc_info=True)
 
-        response, _timed_out = await_permission(
+        response, timed_out = await_permission(
             request_permission_fn, loop, session_id, tool_call=build_acp_edit_tool_call(proposal),
             options=[PermissionOption(option_id="allow_once", kind="allow_once", name="Allow edit"),
                      PermissionOption(option_id="deny", kind="reject_once", name="Deny")],
             timeout=resolve_permission_timeout(timeout), what="Edit approval request", send_update=send_update,
         )
+        if timed_out:
+            return "timeout"
         outcome = getattr(response, "outcome", None)
         return getattr(outcome, "outcome", None) == "selected" and getattr(outcome, "option_id", None) == "allow_once"
 
