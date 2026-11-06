@@ -163,6 +163,37 @@ class TestWriteFile:
         assert result.bytes_written == len(SIMPLE_CONTENT.encode())
         assert Path(path).read_text() == SIMPLE_CONTENT
 
+    @pytest.mark.parametrize("use_native", [True, False], ids=["native", "shell"])
+    def test_write_respects_hard_links_and_read_only_files(
+            self, ops, tmp_path, monkeypatch, use_native):
+        """Both file backends must preserve linked names and refuse unwritable targets."""
+        if os.name != "posix":
+            pytest.skip("POSIX hard-link and permission semantics")
+        monkeypatch.setattr(ops, "_native_read_enabled", lambda: use_native)
+
+        original = tmp_path / "linked.txt"
+        alias = tmp_path / "alias.txt"
+        original.write_text("before\n")
+        os.link(original, alias)
+
+        result = ops.write_file(str(original), "after\n")
+        assert result.error is None
+        assert original.read_text() == "after\n"
+        assert alias.read_text() == "after\n"
+        assert original.stat().st_ino == alias.stat().st_ino
+
+        locked = tmp_path / "locked.txt"
+        locked.write_text("untouched\n")
+        locked.chmod(0o444)
+        try:
+            # Root can legitimately write a 0444 file, as a normal open() would.
+            if not os.access(locked, os.W_OK):
+                result = ops.write_file(str(locked), "overwritten\n")
+                assert result.error is not None
+                assert locked.read_text() == "untouched\n"
+        finally:
+            locked.chmod(0o644)
+
 
 # ── patch_replace ────────────────────────────────────────────────────────
 
