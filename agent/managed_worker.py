@@ -402,6 +402,12 @@ def execute(frame, channel):
                       **run_worker_turns(agent, frame, history)}
             result['_turn_input_tokens'] = max(0, (getattr(agent, 'session_prompt_tokens', 0) or 0) - before[0])
             result['_turn_output_tokens'] = max(0, (getattr(agent, 'session_completion_tokens', 0) or 0) - before[1])
+            # This interpreter serves only one admission. A persistent execute_code kernel
+            # cannot serve the next worker, and may still own a SQLite write transaction.
+            # Drop its session-owned local/remote kernels before any final store write
+            # or the finish-pipe wait (the same cleanup as /new and session close).
+            from tools.approval import clear_session
+            clear_session(frame['route'])
             retire_agent(agent)
             agent = None
             # The auto-title thread bills through this store from a daemon thread; a title landing
