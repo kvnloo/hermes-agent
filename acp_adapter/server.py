@@ -808,7 +808,7 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
                 )
             except Exception as e:
                 logger.exception("Agent error in session %s", session_id)
-                return {"final_response": f"Error: {e}", "messages": state.history}
+                return {"final_response": f"Error: {e}", "messages": state.history, "failed": True}
 
     async def prompt(self, prompt: list[PromptBlock], session_id: str, **kwargs: Any) -> PromptResponse:
         """Run Hermes on the user's prompt and stream events back to the editor."""
@@ -998,6 +998,10 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
                 cached_read_tokens=result.get("cache_read_tokens"),
             )
         await self._send_usage_update(state)
+        if not cancelled and result.get("failed") is True:
+            # The agent already delivered the error as chat text; failing the RPC also
+            # lets ACP clients distinguish an unsuccessful turn from a completed one.
+            raise acp.RequestError(-32603, "Hermes turn failed")
         return PromptResponse(stop_reason="cancelled" if cancelled else "end_turn", usage=usage)
 
     async def _drain_queued_prompts(self, state: SessionState, session_id: str, conn: Any) -> None:
