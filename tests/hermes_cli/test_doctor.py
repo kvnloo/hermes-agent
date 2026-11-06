@@ -162,6 +162,31 @@ class TestDoctorToolAvailabilitySummary:
         assert "✓" not in browser_row
         assert "hermes tools enable browser" in browser_row
 
+    def test_available_web_provider_disabled_for_cli_warns(self, monkeypatch, capsys):
+        """The web capability split must respect CLI toolset enablement."""
+        monkeypatch.setattr(
+            doctor_tools, "_apply_doctor_tool_availability_overrides",
+            lambda available, unavailable: (available, unavailable),
+        )
+        monkeypatch.setattr(doctor_tools, "_enabled_cli_toolsets_for_doctor", lambda: set())
+        monkeypatch.setattr(doctor_tools, "_doctor_web_capability_rows", lambda: [
+            ("ok", "Web search", "(provider ready)"),
+        ])
+        monkeypatch.setattr(doctor_tools, "_warn_partially_stripped_toolsets", lambda _finding: None)
+        monkeypatch.setitem(sys.modules, "model_tools", types.SimpleNamespace(
+            check_tool_availability=lambda: (["web"], []),
+            TOOLSET_REQUIREMENTS={"web": {"name": "Web"}},
+        ))
+
+        doctor_tools._check_tool_availability(False)
+        web_row = next(
+            line for line in capsys.readouterr().out.splitlines()
+            if "Web search" in line
+        )
+        assert "⚠" in web_row
+        assert "✓" not in web_row
+        assert "hermes tools enable web" in web_row
+
     def test_image_gen_without_provider_reports_setup_hint_not_system_dependency(self, monkeypatch):
         """image_gen declares no single env var (FAL / managed Nous / plugin providers); an
         unconfigured backend is a setup problem and must say so, and it counts toward the
