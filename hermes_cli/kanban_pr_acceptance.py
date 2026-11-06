@@ -184,7 +184,9 @@ def collect_acceptance(contract: str, published_pr: str | None,
         if current["head"]["sha"] != sha or current["base"]["ref"] != branch or (current["state"] == "closed" and not current.get("merged")):
             receipt.update(classification="stale", detail="PR head/base changed while collecting evidence; retry.")
             return receipt
-        receipt["classification"] = next((x for x in outcomes if x != "success"), "missing" if not outcomes else "success")
+        # A failing required check outranks an earlier skipped dependent's infra receipt.
+        receipt["classification"] = ("failure" if "failure" in outcomes else
+            next((x for x in outcomes if x != "success"), "missing" if not outcomes else "success"))
         receipt["ok"] = receipt["classification"] == "success"
         return receipt
     except _GateAuthError as exc:
