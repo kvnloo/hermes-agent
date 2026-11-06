@@ -3149,7 +3149,7 @@ def looks_like_codex_intermediate_ack(
     # (#149942); fresh action announcements must still take the normal path.
     if (
         re.search(r"\b(?:i['’]ll|i will) report back (?:when|once|after)\b", assistant_text)
-        and re.search(r"\\b(?:already queued|still pending|still working)\b", assistant_text)
+        and re.search(r"\b(?:already queued|still pending|still working)\b", assistant_text)
     ):
         for earlier in messages[:current_user_idx]:
             if not (isinstance(earlier, dict) and earlier.get("role") == "tool"
