@@ -118,3 +118,30 @@ def test_recovered_ladder_does_not_warn(monkeypatch, caplog):
     assert agent.provider == "kimi"
     assert agent._fallback_activated
     assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
+
+def test_named_profile_keeps_base_url_when_key_comes_from_provider(monkeypatch):
+    """#149695: a profile endpoint must survive a router-supplied API key."""
+    from agent import agent_init
+
+    expected_url = "https://eu.openrouter.ai/api/v1"
+    calls = []
+
+    class _Client:
+        pass
+
+    def _resolve(provider, model=None, **kwargs):
+        calls.append((provider, model, kwargs))
+        return _Client(), model
+
+    monkeypatch.setattr("agent.auxiliary_client.resolve_provider_client", _resolve)
+    monkeypatch.setattr(
+        agent_init, "_client_kwargs_from_routed",
+        lambda client, timeout: {"api_key": "profile-key", "base_url": expected_url},
+    )
+    agent = _agent()
+    agent.base_url = expected_url
+    result = agent_init._routed_client_kwargs(agent, None, 60)
+    assert result["base_url"] == expected_url
+    assert calls == [("openrouter", agent.model, {
+        "raw_codex": True, "explicit_base_url": expected_url,
+    })]
