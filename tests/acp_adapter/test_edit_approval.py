@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import tempfile
 from pathlib import Path
@@ -91,6 +92,59 @@ def test_patch_replace_rejection_does_not_mutate(tmp_path):
     assert "error" in result
     assert "Edit approval denied" in result["error"]
     assert target.read_text(encoding="utf-8") == "alpha\nbeta\n"
+
+
+def _write_with(verdict, target):
+    set_edit_approval_requester(lambda _proposal: verdict)
+    return json.loads(handle_function_call("write_file", {"path": str(target), "content": "after\n"},
+                                           task_id="acp-edit-unanswered"))["error"]
+
+
+def test_unanswered_edit_is_never_reported_as_a_deny(tmp_path):
+    """kvnloo/oss-factory#320: a 300 s timeout or a missing viewer read "denied by ACP client", so the
+    agent routed around a prompt nobody saw. Each outcome now says what happened; none is a refusal.
+
+    The target is net-new: the stale-write guard refuses an unseen-file overwrite before the approval
+    verdict matters, so a pre-existing file would mask which outcome the requester actually returned."""
+    target = tmp_path / "sample.txt"
+
+    timed_out = _write_with("timeout", target)
+    no_viewer = _write_with("no_viewer", target)
+    refused = _write_with(False, target)
+
+    assert "timed out with no answer" in timed_out and "denied" not in timed_out
+    assert "no client is attached" in no_viewer.lower() and "denied" not in no_viewer
+    assert "terminal" in timed_out and "terminal" in no_viewer
+    assert "denied by ACP client" in refused
+    assert not target.exists()
+
+
+def test_acp_requester_reports_timeout_distinctly(monkeypatch):
+    from acp_adapter import permissions
+    from acp_adapter.edit_approval import make_acp_edit_approval_requester
+
+    monkeypatch.setattr(permissions, "await_permission", lambda *a, **k: (None, True))
+    requester = make_acp_edit_approval_requester(lambda *a, **k: None, loop=asyncio.new_event_loop(), session_id="s")
+    assert requester(EditProposal("write_file", "demo.txt", None, "x", {})) == "timeout"
+
+
+def test_gateway_editor_reports_no_viewer_and_timeout(monkeypatch):
+    import tools.approval_gateway_wait as wait_mod
+    from gateway import session_local_editor
+    from tools import approval
+
+    proposal = EditProposal("write_file", "demo.txt", None, "x", {})
+    monkeypatch.setattr("tools.approval_context.get_current_session_key", lambda: "route-320")
+    monkeypatch.delitem(approval._gateway_notify_cbs, "route-320", raising=False)
+    assert session_local_editor.request_editor_edit(proposal) == "no_viewer"
+
+    monkeypatch.setitem(approval._gateway_notify_cbs, "route-320", lambda data: None)
+    monkeypatch.setattr(wait_mod, "_await_gateway_decision",
+                        lambda *a, **k: {"resolved": False, "choice": None})
+    assert session_local_editor.request_editor_edit(proposal) == "timeout"
+    monkeypatch.setattr(wait_mod, "_await_gateway_decision",
+                        lambda *a, **k: {"resolved": True, "choice": "deny"})
+    assert session_local_editor.request_editor_edit(proposal) is False
 
 
 
