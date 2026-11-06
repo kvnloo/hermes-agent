@@ -539,7 +539,11 @@ def dispatch_tool_describe(args: dict[str, Any], *, current_tool_defs: list[dict
         result["errors"] = errors
     if hosted_failure:
         result["connectors"] = connectors_unavailable(hosted_failure, verb="described", names=undescribed)
-    return json.dumps(result, ensure_ascii=False)
+    # tool_describe returns schema data as a tool result, not as a callable
+    # declaration. Gemini-compatible proxies may parse that JSON into a
+    # functionResponse and misinterpret $ref keys as multimodal part pointers.
+    # Alias only the serialized keys: the registered MCP schema stays valid.
+    return json.dumps(result, ensure_ascii=False).replace('"$ref":', '"_ref":')
 
 
 def scoped_deferrable_names(tool_defs: list[dict[str, Any]]) -> frozenset[str]:
