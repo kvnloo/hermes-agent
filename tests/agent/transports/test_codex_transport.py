@@ -1698,6 +1698,18 @@ class TestCodexTransportXaiReasoningEffort:
         )
         assert kw["reasoning"] == {"effort": wire_effort}
 
+    @pytest.mark.parametrize("model", ("grok-4", "grok-code-fast-1"))
+    def test_unlisted_grok_omits_reasoning_effort(self, transport, model):
+        """Unlisted Grok models reject reasoning.effort even when configured."""
+        kw = transport.build_kwargs(
+            model=model,
+            messages=[{"role": "user", "content": "hi"}],
+            tools=[],
+            is_xai_responses=True,
+            reasoning_config={"effort": "low"},
+        )
+        assert "reasoning" not in kw
+
     def test_grok_46_preserves_xhigh(self, transport):
         kw = transport.build_kwargs(
             model="grok-4.6",
