@@ -55,7 +55,8 @@ def atomic_write(path: str, data: bytes) -> Optional[str]:
 
     Same contract as the shell script: a symlink target is written through (the link survives),
     parent directories are created, the temp file lives in the target's directory so the rename is
-    atomic (except for existing hard links, which are written through in place), an existing\n    target's permissions must allow writing, its mode is kept and a new one gets the umask default (``O_CREAT`` with
+    atomic (except for existing hard links, which are written through in place), an existing
+    target's permissions must allow writing, its mode is kept and a new one gets the umask default (``O_CREAT`` with
     0o666 applies the process umask itself), and the temp is removed on every failure.
 
     The temp holds its final mode before the first byte lands: an existing target's temp is created
