@@ -91,12 +91,12 @@ class A2ASecurityContext:
         parts = (auth_header or "").split(None, 1)
         if len(parts) != 2 or parts[0].lower() != "bearer":
             return None
-        # Compare as bytes: compare_digest raises TypeError on non-ASCII str, and the header is remote input.
-        presented = parts[1].strip().encode()
+        # Compare as bytes; malformed header text and surrogate-escaped env secrets must fail closed.
+        presented = parts[1].strip().encode("utf-8", "surrogatepass")
         for token, name in self.peer_tokens:
-            if hmac.compare_digest(presented, token.encode()):
+            if hmac.compare_digest(presented, token.encode("utf-8", "surrogatepass")):
                 return name
-        if self.bearer_token and hmac.compare_digest(presented, self.bearer_token.encode()):
+        if self.bearer_token and hmac.compare_digest(presented, self.bearer_token.encode("utf-8", "surrogatepass")):
             return f"ip:{client_ip or 'unknown'}"
         return None
 
