@@ -416,7 +416,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
             attachments: submission.attachments,
             expand: expandTokens(submissionTokens),
             ...(isBranch ? { onAccepted: () => {
-              if (isCurrentDestination(destination)) { composerActions.clearInIfCurrent(full) }
+              if (isCurrentDestination(destination)) { composerActions.clearInIfCurrent?.(full) }
             } } : {})
           })
         }
