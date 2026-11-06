@@ -1,0 +1,19 @@
+probe_sha256=5e6f41ae1e0c5a110c13a6e777b477b01ea580bc6012c2791e2a9835ddcb3d8e candidate_script_sha256=e3a076ec610ba2a437ae6454356b4bb091563ba975e676d546e494fe4151ab4a
+### 0107da5d2a362b1b0b29aff8ada3fd2d4437f88e head=0107da5d2a362b1b0b29aff8ada3fd2d4437f88e patched=no
+probe_exit=1
+suite_files=30
+suite_exit=0
+=== Summary: 30 files, 354 tests passed, 0 failed (100% complete) in 27.7s (20 workers) ===
+### af16e3ab16eed2492552c325ad1777533a8b7004 head=af16e3ab16eed2492552c325ad1777533a8b7004 patched=no
+probe_exit=1
+### f90969aef6a62ae475370fe43cc9a0c6d11d3122 head=f90969aef6a62ae475370fe43cc9a0c6d11d3122 patched=no
+probe_exit=1
+### ffc651bd11982eb5b4e1412f1b4b4c34d91cd42d head=ffc651bd11982eb5b4e1412f1b4b4c34d91cd42d patched=no
+probe_exit=1
+candidate applied
+### candidate head=0107da5d2a362b1b0b29aff8ada3fd2d4437f88e patched=yes
+probe_exit=0
+suite_files=30
+suite_exit=0
+=== Summary: 30 files, 354 tests passed, 0 failed (100% complete) in 24.6s (20 workers) ===
+PROBE2_DONE
