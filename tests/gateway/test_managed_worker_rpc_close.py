@@ -95,6 +95,11 @@ def test_finished_managed_turn_releases_kernel_wal_writer_before_result(tmp_path
     from tools.code_execution_tool import execute_code
     from tools.code_kernel import shutdown_all_kernels
 
+    # The test owns this local Python cell; approval policy is not the behavior under test.
+    # Keep the real persistent kernel and WAL writer so lifecycle cleanup is exercised.
+    monkeypatch.setattr("tools.approval.check_execute_code_guard",
+                        lambda *args, **kwargs: {"approved": True})
+
     monkeypatch.setenv("TERMINAL_ENV", "local")
     board = tmp_path / "board.db"
     with sqlite3.connect(board) as db:
