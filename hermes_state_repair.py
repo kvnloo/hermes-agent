@@ -17,6 +17,8 @@ import shutil
 import sqlite3
 import stat
 import time
+from functools import lru_cache
+from threading import Lock
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -625,6 +627,26 @@ def _reapply_durability_barriers(conn: sqlite3.Connection) -> bool:
         return False
 
 
+_GUEST_SYNCHRONOUS_CONFIG_LOCK = Lock()
+
+
+@lru_cache(maxsize=64)
+def _guest_synchronous_for_version(config_path: str, version: tuple | None):
+    """One config expansion per home and user/managed config signature."""
+    from hermes_cli.config import cfg_get, load_config_readonly  # local: avoids an import cycle
+    return cfg_get(load_config_readonly(), "database", "synchronous", default=None)
+
+
+def _guest_synchronous_config():
+    from hermes_cli.config import _load_config_cache_sig, get_config_path
+    path = get_config_path()
+    _, version = _load_config_cache_sig(path)
+    # The key includes the home, so multiplex profiles cannot reuse another profile's setting.
+    # The signature also distinguishes a newly created file from a missing one.
+    with _GUEST_SYNCHRONOUS_CONFIG_LOCK:
+        return _guest_synchronous_for_version(str(path), version)
+
+
 def apply_durability_barriers(conn: sqlite3.Connection) -> bool:
     """Durability barriers for guest users of ``state.db`` that must inherit its owner's journal mode. Also
     applies the configured ``database.synchronous`` level, a per-connection pragma that otherwise only
@@ -632,8 +654,7 @@ def apply_durability_barriers(conn: sqlite3.Connection) -> bool:
     from hermes_state_wal import _apply_synchronous_pragma
     ok = _reapply_durability_barriers(conn)
     with contextlib.suppress(Exception):
-        from hermes_cli.config import cfg_get, load_config_readonly  # local: avoids an import cycle
-        if (raw_synchronous := cfg_get(load_config_readonly(), "database", "synchronous", default=None)) is not None:
+        if (raw_synchronous := _guest_synchronous_config()) is not None:
             _apply_synchronous_pragma(conn, raw_synchronous, db_label="state.db (guest)")
     return ok
 
