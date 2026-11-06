@@ -154,15 +154,88 @@ class TestFallbackTransport:
 
     @pytest.mark.asyncio
     async def test_hostname_tried_last_when_ipv4_fails(self, monkeypatch):
-        """IPv6-only / seed-IP-blocked hosts still reach the hostname last."""
+        """DNS-provided literals follow failed seed IPs; Host/SNI stay unchanged."""
         calls = []
-        behavior = {"149.154.167.220": "timeout", "api.telegram.org": "ok"}
+        monkeypatch.setattr(tnet, "_resolve_proxy_url", lambda **kw: None)
+        monkeypatch.setattr(tnet.socket, "getaddrinfo", lambda *a, **kw: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("149.154.167.221", 443))
+        ])
+        behavior = {"149.154.167.220": "timeout", "149.154.167.221": "ok"}
         monkeypatch.setattr(tnet.httpx, "AsyncHTTPTransport", _fake_transport_factory(calls, behavior))
         transport = tnet.TelegramFallbackTransport(["149.154.167.220"])
         resp = await transport.handle_async_request(_telegram_request())
         assert resp.status_code == 200
+        assert [c["url_host"] for c in calls] == ["149.154.167.220", "149.154.167.221"]
+        assert calls[-1]["host_header"] == "api.telegram.org"
+        assert calls[-1]["sni_hostname"] == "api.telegram.org"
+        assert transport._sticky_ip == "149.154.167.221"
+
+    @pytest.mark.asyncio
+    async def test_blocked_hostname_dns_does_not_block_gateway_heartbeat(self, monkeypatch):
+        """A stuck OS resolver must not block an unrelated loop callback (#149381)."""
+        import asyncio
+        import threading
+
+        started, release = threading.Event(), threading.Event()
+        loop_thread = threading.get_ident()
+        resolver_threads = []
+        calls = []
+
+        def stalled_dns(host, port, *args, **kwargs):
+            resolver_threads.append(threading.get_ident())
+            started.set()
+            assert release.wait(timeout=3), "test did not release DNS worker"
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("149.154.167.221", port))]
+
+        monkeypatch.setattr(tnet, "_resolve_proxy_url", lambda **kw: None)
+        monkeypatch.setattr(tnet.socket, "getaddrinfo", stalled_dns)
+        monkeypatch.setattr(
+            tnet.httpx, "AsyncHTTPTransport",
+            _fake_transport_factory(calls, {"149.154.167.220": "timeout"}),
+        )
+        transport = tnet.TelegramFallbackTransport(["149.154.167.220"])
+        pending = asyncio.create_task(transport.handle_async_request(_telegram_request()))
+        try:
+            assert await asyncio.wait_for(asyncio.to_thread(started.wait, 1.5), timeout=2)
+            heartbeat = asyncio.Event()
+            asyncio.get_running_loop().call_soon(heartbeat.set)
+            await asyncio.wait_for(heartbeat.wait(), timeout=1)
+        finally:
+            release.set()
+        response = await pending
+        assert response.status_code == 200
+        assert resolver_threads and resolver_threads[0] != loop_thread
+        assert calls[-1]["url_host"] == "149.154.167.221"
+        assert calls[-1]["sni_hostname"] == "api.telegram.org"
+
+    @pytest.mark.asyncio
+    async def test_hostname_dns_handles_ipv6_and_disabled_seed_ips(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(tnet, "_resolve_proxy_url", lambda **kw: None)
+        monkeypatch.setattr(tnet.socket, "getaddrinfo", lambda *a, **kw: [
+            (socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("2001:67c:4e8:f004::9", 443, 0, 0))
+        ])
+        monkeypatch.setattr(tnet.httpx, "AsyncHTTPTransport", _fake_transport_factory(calls, {}))
+        transport = tnet.TelegramFallbackTransport([])
+        response = await transport.handle_async_request(_telegram_request())
+        assert response.status_code == 200
+        assert calls[0]["url_host"] == "2001:67c:4e8:f004::9"
+        assert calls[0]["host_header"] == "api.telegram.org"
+        assert calls[0]["sni_hostname"] == "api.telegram.org"
+
+    @pytest.mark.asyncio
+    async def test_hostname_through_proxy_keeps_original_authority(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(tnet, "_resolve_proxy_url", lambda **kw: "http://proxy.example:8080")
+        monkeypatch.setattr(tnet.socket, "getaddrinfo", lambda *a, **kw: pytest.fail("proxy must resolve"))
+        monkeypatch.setattr(
+            tnet.httpx, "AsyncHTTPTransport",
+            _fake_transport_factory(calls, {"149.154.167.220": "timeout"}),
+        )
+        transport = tnet.TelegramFallbackTransport(["149.154.167.220"])
+        response = await transport.handle_async_request(_telegram_request())
+        assert response.status_code == 200
         assert [c["url_host"] for c in calls] == ["149.154.167.220", "api.telegram.org"]
-        assert transport._sticky_ip is None
 
 class TestFallbackTransportPassthrough:
     """Requests that don't need fallback behavior."""
