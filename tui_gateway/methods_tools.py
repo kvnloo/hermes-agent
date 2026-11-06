@@ -1941,6 +1941,9 @@ def _(rid, params: dict) -> dict:
 @method("shell.exec")
 def _(rid, params: dict) -> dict:
     cmd = params.get("command", "")
+    raw_stdout = params.get("raw_stdout", False)
+    if not isinstance(raw_stdout, bool):
+        return _err(rid, 4004, "raw_stdout must be a boolean")
     if not cmd:
         return _err(rid, 4004, "empty command")
     try:
@@ -1959,7 +1962,11 @@ def _(rid, params: dict) -> dict:
         # Unlike the interactive CLI, this output crosses the RPC boundary and can be persisted
         # in the transcript. Redact before tailing so a credential crossing the slice boundary
         # cannot survive as two unmatched fragments.
-        stdout = redact(result.stdout or "", force=True, redact_url_credentials=True)[-4000:]
+        # Explicit opt-in keeps machine-parsed plugin stdout byte-identical (up to the tail cap).
+        stdout = result.stdout or ""
+        if not raw_stdout:
+            stdout = redact(stdout, force=True, redact_url_credentials=True)
+        stdout = stdout[-4000:]
         stderr = redact(result.stderr or "", force=True, redact_url_credentials=True)[-2000:]
         return _ok(rid, {"stdout": stdout, "stderr": stderr, "code": result.returncode})
 

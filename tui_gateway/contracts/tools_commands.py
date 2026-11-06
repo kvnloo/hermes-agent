@@ -158,6 +158,7 @@ method("process.kill", params=ProcessKillParams, result=ProcessKillResult,
 class ShellExecParams(Params):
     command: str
     profile: str | None = None
+    raw_stdout: bool = False
 
 
 class ShellExecResult(Result):
@@ -174,6 +175,7 @@ class CanonicalShellExecParams(Params):
     session_id: str
     command: str
     profile: str | None = None
+    raw_stdout: bool = False
 
 
 canonical_method("shell.exec", params=CanonicalShellExecParams, result=ShellExecResult,
