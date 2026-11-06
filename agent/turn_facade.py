@@ -30,6 +30,7 @@ class TurnFacadeMixin:
         relay_metadata: Optional[dict[str, Any]] = None,
         title_user_message: Optional[str]=None,
         prelude: Optional[Generator]=None,
+        *, human_authored: bool = False,
     ) -> dict[str, Any]:
         """Forwarder — see ``agent.conversation_loop.run_conversation``."""
         # A review shares this session_id for cache parity: fence review startup or interrupt
@@ -141,7 +142,9 @@ class TurnFacadeMixin:
 
             # Keep the ContextVar scope local (agent tokens may be observed from another thread).
             # A host that owns this thread (Hermes Console) may cancel the turn cross-thread.
-            with bind_subagent_parent(self), scoped_runtime_main({}), track_in_interrupt_scope(self):
+            from agent.turn_author import human_turn_scope
+            with (human_turn_scope(human_authored), bind_subagent_parent(self),
+                  scoped_runtime_main({}), track_in_interrupt_scope(self)):
                 try:
                     if lease is not None:
                         lease.start()

@@ -64,12 +64,16 @@ def test_classify_maps_readings_into_law_domain():
     assert g.classify("b", {"at": "2020-01-01T00:00:00+00:00", "lanes": rd["lanes"]})[0] == g.STALE
 
 
-def test_owner_is_only_opus_in_owner_profile(monkeypatch):
+def test_owner_is_only_human_opus_in_owner_profile(monkeypatch):
     import hermes_cli.profiles as prof
+    from agent.turn_author import human_turn_scope
+
     lanes = {"owner_profiles": ["clean"]}
     monkeypatch.setattr(prof, "current_profile_name", lambda default=None: "clean")
-    assert g.who_for("claude-opus-5-5", lanes) == g.OWNER
-    assert g.who_for("claude-haiku-5-5", lanes) == g.BULK
-    assert g.who_for(None, lanes) == g.BULK
-    monkeypatch.setattr(prof, "current_profile_name", lambda default=None: "ossfactory")
     assert g.who_for("claude-opus-5-5", lanes) == g.BULK
+    with human_turn_scope(True):
+        assert g.who_for("claude-opus-5-5", lanes) == g.OWNER
+        assert g.who_for("claude-haiku-5-5", lanes) == g.BULK
+        assert g.who_for(None, lanes) == g.BULK
+        monkeypatch.setattr(prof, "current_profile_name", lambda default=None: "ossfactory")
+        assert g.who_for("claude-opus-5-5", lanes) == g.BULK

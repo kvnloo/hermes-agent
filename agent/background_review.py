@@ -19,6 +19,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple
 from agent.i18n import t
 from agent.prompt_cache_scope import resolve_prompt_cache_scope_safe
 from agent.thread_scoped_output import thread_scoped_silence
+from agent.turn_author import human_turn_scope
 
 logger = logging.getLogger(__name__)
 
@@ -1216,6 +1217,7 @@ def _publish_review_summary(agent: Any, actions: list[str]) -> None:
             agent.background_review_callback(t("display.review.summary_callback", summary=summary))
 
 
+@human_turn_scope()
 def _run_review_in_thread(
     agent: Any, messages_snapshot: list[dict], prompt: str,
     task_cfg: Optional[dict[str, Any]] = None, review_run: Optional[_BackgroundReviewRun] = None,

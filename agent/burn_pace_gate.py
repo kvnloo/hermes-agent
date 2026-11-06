@@ -83,9 +83,10 @@ def admit_cls(fresh: str, used: str, pace: str, who: str) -> bool:
 
 
 def who_for(model, lanes) -> str:
-    """OWNER only for Kevin's own conversation: an Opus request in an owner profile
-    (pool-lanes.json "owner_profiles"). Subagents, lanes, aux and cron are BULK."""
-    if not model or "opus" not in str(model).lower():
+    """OWNER requires a human-authored Opus turn in an owner profile."""
+    from agent.turn_author import human_turn
+
+    if human_turn.get() is not True or not model or "opus" not in str(model).lower():
         return BULK
     try:
         from hermes_cli.profiles import current_profile_name

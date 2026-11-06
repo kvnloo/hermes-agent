@@ -238,6 +238,7 @@ def _build_child_agent(
     from run_agent import AIAgent
     from agent.delegation_context import delegated_child_context
     from tools.delegate_tool_routes import delegated_profile_scope
+    from agent.turn_author import human_turn_scope
     # Role is depth-derived: a child may delegate iff the kill switch is on and
     # depth budget remains below max_spawn_depth. The `role` arg is ignored.
     child_depth = getattr(parent_agent, "_delegate_depth", 0) + 1
@@ -270,7 +271,7 @@ def _build_child_agent(
         depth=max(0, child_depth - 1),  # 0 = first-level child for the UI
         model=model or getattr(parent_agent, "model", None), toolsets=child_toolsets, session_ref=child_session_ref,
     )
-    with delegated_profile_scope(profile_home):
+    with human_turn_scope(), delegated_profile_scope(profile_home):
         rt = _resolve_child_runtime(
             parent_agent, delegation_cfg, parent_api_key, model=model, override_provider=override_provider,
             override_base_url=override_base_url, override_api_key=override_api_key, override_api_mode=override_api_mode,

@@ -2562,8 +2562,10 @@ def _relay_aux_call_scope(args: tuple, kwargs: dict):
         "response_model": None,
         "api_mode": "chat_completions",
     })
+    from agent.turn_author import human_turn_scope
     try:
-        yield
+        with human_turn_scope():
+            yield
     except BaseException as exc:
         _fail_relay_auxiliary_call(exc)
         raise

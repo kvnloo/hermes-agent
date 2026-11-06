@@ -10,8 +10,11 @@ import json
 import os
 import socket
 import unicodedata
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any, Dict, Mapping, MutableMapping, Optional
 
+human_turn: ContextVar[bool] = ContextVar("human_turn", default=False)
 TURN_AUTHOR_ENV = "HERMES_TURN_AUTHOR"
 
 _MAX_FIELD_LEN = 200
@@ -19,6 +22,16 @@ _MAX_FIELD_LEN = 200
 
 _DROPPED_CATEGORIES = frozenset({"Cc", "Cs", "Cn", "Co"})
 _TRUTHY = frozenset({"true", "1", "yes"})
+
+
+@contextmanager
+def human_turn_scope(human_authored: bool = False):
+    """Only an admitted human input opts in; nested autonomous work must opt out."""
+    token = human_turn.set(human_authored is True)
+    try:
+        yield
+    finally:
+        human_turn.reset(token)
 
 
 def _clean_text(value: Any) -> Optional[str]:

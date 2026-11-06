@@ -965,6 +965,9 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
                 kwargs["turn_author"] = (api.get('turn_author') if api is not None else
                     admission_author.get() or {"id": ctx.source.user_id or None, "name": ctx.source.user_name or None,
                                                "is_bot": bool(getattr(ctx.source, "is_bot", False))})
+            if _accepts_keyword(agent.run_conversation, "human_authored"):
+                from agent.turn_author import human_turn
+                kwargs["human_authored"] = human_turn.get()
             if ctx.title_user_message is not None:
                 kwargs["title_user_message"] = ctx.title_user_message
             if persist_user_message_override is not None:
