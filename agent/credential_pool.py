@@ -23,6 +23,7 @@ from hermes_cli.config import load_env
 from agent.secret_scope import get_secret as _get_secret, get_secret_str
 from agent.retry_utils import reset_delay_from_message
 from hermes_cli.auth_plugin_providers import plugin_refresh_hook
+from agent import burn_pace_gate
 from agent.credential_pool_plugin import apply_plugin_refresh_result, plugin_row_is_expiring, recover_failed_plugin_refresh
 from agent.credential_persistence import (
     fingerprint_secret_value,
@@ -2111,7 +2112,7 @@ class CredentialPool(CredentialPoolAdminMixin, CredentialPoolModelCooldownMixin)
             self._entries = [e for e in self._entries if e.id not in pruned_ids]
         if cleared_any:
             self._persist(removed_ids=entries_to_prune)
-        return available, pending_refresh
+        return burn_pace_gate.admit(self.provider, available, model), pending_refresh
 
     def _log_no_available_entries(self) -> None:
         """Emit the empty-pool INFO line at most once per throttle window."""

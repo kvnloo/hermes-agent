@@ -67,11 +67,15 @@ class CredentialPoolModelCooldownMixin:
         selecting it from the pool (env / borrowed credentials). Tokens the
         pool does not know fail open: no row can attribute a cooldown to them.
         """
+        from agent import burn_pace_gate
+
         with self._lock:
-            return any(
-                entry.runtime_api_key == token and model_cooldown_until(entry, model) is not None
-                for entry in self._entries
-            )
+            mine = [entry for entry in self._entries if entry.runtime_api_key == token]
+            if any(model_cooldown_until(entry, model) is not None for entry in mine):
+                return True
+            # burn-pace (bend/burn_pace): a row over pace is blocked on the env/borrowed path too,
+            # so an empty pool never falls through to the same account's raw token.
+            return bool(mine) and not burn_pace_gate.admit(self.provider, mine, model)
 
     def _is_model_scoped_failure(
         self, status_code: Optional[int], model: Optional[str], failure_reason: Optional[str],
