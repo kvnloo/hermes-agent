@@ -708,14 +708,14 @@ def _run_quick_snapshots() -> Optional[str]:
     return snapshot_id
 
 
-def _run_full_backup() -> None:
+def _run_full_backup() -> Optional[Path]:
     """Zip HERMES_HOME under ``backups/`` (restorable via ``hermes import``). Never raises."""
     try:
         from hermes_cli.backup import create_pre_update_backup
     except Exception as exc:
         print(f"⚠ Pre-update backup: could not load backup module ({exc}); continuing update.")
         print()
-        return
+        return None
 
     try:
         _keep = _load_updates_cfg().get("backup_keep", 5)
@@ -730,13 +730,13 @@ def _run_full_backup() -> None:
         print(f"  ⚠ Backup failed: {exc}")
         print("  Continuing with update.")
         print()
-        return
+        return None
     elapsed = _time.monotonic() - t0
 
     if out_path is None:
         print("  ⚠ Backup skipped (no files found or write failed); continuing update.")
         print()
-        return
+        return None
 
     try:
         size_bytes = out_path.stat().st_size
@@ -755,6 +755,7 @@ def _run_full_backup() -> None:
     print(f"  Restore:  hermes import {out_path}")
     print("  Disable:  set updates.pre_update_backup: quick (or off) in config.yaml")
     print()
+    return out_path
 
 
 def _run_pre_update_backup(args) -> Optional[str]:
@@ -767,12 +768,14 @@ def _run_pre_update_backup(args) -> Optional[str]:
     Explicit user opt-out is honored fully. See #34600.
     """
     mode = _resolve_pre_update_backup_mode(args)
+    from hermes_cli.update_cmd import _record_pre_update_backup_outcome, _record_update_step
 
     if mode == "off":
         if getattr(args, "no_backup", False):
             print("◆ Pre-update backup: skipped (--no-backup)")
             print()
         # Config-level off is silent: the user opted out.
+        _record_pre_update_backup_outcome(args, None)
         return None
 
     snapshot_id = None
@@ -795,9 +798,16 @@ def _run_pre_update_backup(args) -> Optional[str]:
     if mode != "full":
         if snapshot_id:
             print()
+        _record_pre_update_backup_outcome(args, snapshot_id)
         return snapshot_id
 
-    _run_full_backup()
+    zip_path = _run_full_backup()
+    zip_ok = zip_path is not None
+    zip_detail = (f"path={zip_path}" if zip_ok else
+                  "no complete ZIP published (empty, failed or incomplete)")
+    _record_update_step("pre_update_full_backup", zip_ok, zip_detail)
+    _record_update_step("pre_update_backup", bool(snapshot_id) and zip_ok,
+                        f"snapshot={snapshot_id or 'failed'}; full_zip={zip_detail}")
     return snapshot_id
 
 
