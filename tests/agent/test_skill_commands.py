@@ -828,18 +828,27 @@ class TestStackedSkillCommands:
         assert instruction == "/not-a-skill /skill-c hello"
 
 
-    def test_split_caps_at_five_total(self, tmp_path):
-        from agent.skill_commands import split_stacked_skill_commands
+    def test_split_loads_every_leading_skill(self, tmp_path):
+        from agent.skill_commands import (
+            build_stacked_skill_invocation_message,
+            split_stacked_skill_commands,
+        )
         with patch("tools.skills_tool.SKILLS_DIR", tmp_path):
             for i in range(7):
                 _make_skill(tmp_path, f"stk-{i}")
             scan_skill_commands()
             rest = " ".join(f"/stk-{i}" for i in range(1, 7)) + " run"
             keys, instruction = split_stacked_skill_commands(rest)
-        # First skill was already consumed by the caller — split returns at
-        # most 4 extras so the total stays at 5.
-        assert len(keys) == 4
-        assert instruction.startswith("/stk-5")
+            result = build_stacked_skill_invocation_message(
+                ["/stk-0", *keys], instruction,
+            )
+        assert keys == [f"/stk-{i}" for i in range(1, 7)]
+        assert instruction == "run"
+        assert result is not None
+        message, loaded, missing = result
+        assert loaded == [f"stk-{i}" for i in range(7)]
+        assert missing == []
+        assert "run" in message
 
 
     def test_stacked_message_skips_missing_skills(self, tmp_path):
