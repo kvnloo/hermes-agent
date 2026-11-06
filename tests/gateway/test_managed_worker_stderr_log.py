@@ -140,3 +140,24 @@ def test_managed_worker_wiring_mirrors_stderr_into_the_card_log(tmp_path, monkey
     assert 'Traceback (most recent call last)' in text and 'RuntimeError: provider refused' in text
     assert SECRET not in text and 'QQQQQQQQQQ' not in text
     assert os.path.exists(tmp_path / 'logs' / 'managed-worker.log')
+
+
+def test_card_mirror_survives_private_log_write_failure(tmp_path, monkeypatch):
+    """A failed profile sink must not hide redacted progress from the Kanban card."""
+    from gateway import session_managed_worker_log as worker_log
+
+    profile_log = tmp_path / 'logs' / worker_log.LOG_NAME
+    card_log = _card_log(tmp_path)
+    card_log.write_text('Session: local-worker\n')
+    secret = 'opaque-assignment-secret-value'
+
+    def fail_profile_write(path, text):
+        raise OSError('profile log unavailable')
+
+    monkeypatch.setattr(worker_log, '_append', fail_profile_write)
+    stream = io.BytesIO(f'tool.start {secret}\ntool.done\n'.encode())
+    worker_log.drain_worker_stderr(stream, profile_log, 7, lambda: [secret], card_log)
+
+    assert card_log.read_text() == 'Session: local-worker\n[pid 7] tool.start ***\n[pid 7] tool.done\n'
+    assert not profile_log.exists()
+    assert stream.closed
