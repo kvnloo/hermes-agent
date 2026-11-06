@@ -569,7 +569,7 @@ class ShellFileOperations(LintMixin, SearchMixin, FileOperations):
     def _atomic_write(self, path: str, content: str) -> ExecuteResult:
         """Write ``content`` atomically: stdin → temp file in the SAME directory →
         ``mv -f`` (same-FS rename; cross-device ``mv`` is copy+unlink, NOT atomic).
-        ``mkdir -p`` folded in. Exit 0 = swap happened; non-zero = original intact.
+        ``mkdir -p`` folded in. Hard-linked targets are written in place to preserve\n        shared inodes, and read-only targets are refused before creating the temp file.
 
         Symlink targets are resolved first (replacing the link would orphan the
         target) and the temp dir recomputed from the RESOLVED target. Existing
@@ -609,6 +609,12 @@ class ShellFileOperations(LintMixin, SearchMixin, FileOperations):
             '[ -n "$rt" ] && { t="$rt"; d="$(dirname "$t")"; }; '
             "fi; "
             'mkdir -p "$d"; '
+            # Mirror native-write semantics: protect unwritable targets, and keep hard links intact.
+            'if [ -e "$t" ]; then '
+            '[ -w "$t" ] || { echo "Permission denied: $t" >&2; exit 1; }; '
+            'links="$(stat -c%h "$t" 2>/dev/null || stat -f%l "$t" 2>/dev/null || true)"; '
+            'if [ "${links:-0}" -gt 1 ] 2>/dev/null; then cat > "$t"; exit 0; fi; '
+            'fi; '
             'tmp="$(mktemp -p "$d" ' + tmpl + ' 2>/dev/null '
             '|| mktemp "$d/.hermes-tmp.$$.XXXXXX" 2>/dev/null '
             '|| { tmp="$d/.hermes-tmp.$$"; : > "$tmp" && echo "$tmp"; })"; '
