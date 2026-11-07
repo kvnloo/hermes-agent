@@ -1,3 +1,5 @@
+import shutil
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -29,6 +31,7 @@ def _stub_systemd_path_builders(monkeypatch):
     monkeypatch.setattr(gateway_cli, "_build_user_local_paths", lambda home, existing: [])
     monkeypatch.setattr(gateway_cli, "_build_wsl_interop_paths", lambda existing: [])
     monkeypatch.setattr(gateway_cli, "_append_node_dir_for_service", lambda *a, **k: None)
+    monkeypatch.setattr(gateway_cli, "_user_systemd_socket_ready", lambda: False)
 
 
 def _unit_path_dirs(unit: str) -> list[str]:
@@ -147,3 +150,26 @@ def test_systemd_wsl_path_keeps_curated_interop_only(monkeypatch, tmp_path, syst
     assert "/mnt/c/transient/bin" not in baked
     assert "/mnt/c/WINDOWS/System32" in baked
     assert "/home/alice/.local/share/mise/shims" in baked
+
+
+@pytest.mark.platforms("linux")
+def test_user_systemd_unit_resolves_manager_only_mise_cli(monkeypatch, tmp_path):
+    """A user unit must find a CLI present in systemd's PATH but absent from the installer shell."""
+    _stub_systemd_path_builders(monkeypatch)
+    mise_shims = tmp_path / "mise" / "shims"
+    mise_shims.mkdir(parents=True)
+    cli = mise_shims / "hermes_mise_probe"
+    cli.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    cli.chmod(0o755)
+    monkeypatch.setenv("PATH", "/usr/bin")
+    monkeypatch.setattr(gateway_cli, "_user_systemd_socket_ready", lambda: True)
+    calls = []
+
+    def manager_environment(args, **kwargs):
+        calls.append(args)
+        return SimpleNamespace(returncode=0, stdout=f"LANG=C\nPATH={mise_shims}:/usr/bin\n")
+
+    monkeypatch.setattr(gateway_cli, "_run_systemctl", manager_environment)
+    path_dirs = _unit_path_dirs(gateway_cli.generate_systemd_unit(system=False))
+    assert shutil.which(cli.name, path=":".join(path_dirs)) == str(cli)
+    assert calls == [["show-environment"]]

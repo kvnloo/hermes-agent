@@ -3301,9 +3301,9 @@ def generate_systemd_unit(system: bool = False, run_as_user: str | None = None) 
     path_entries.extend(_build_user_local_paths(user_home, path_entries))
     path_entries.extend(_build_wsl_interop_paths(path_entries))
     path_entries.extend(["/usr/local/sbin", "/usr/local/bin", "/usr/sbin", "/usr/bin", "/sbin", "/bin"])
-    # Preserve managed/FHS precedence while carrying tools from the installer shell.
+    from hermes_cli.gateway_user_path import manager_path
     wsl = is_wsl()
-    shell_paths = [p for p in os.environ.get("PATH", "").split(":")
+    shell_paths = [p for p in (os.environ.get("PATH", "") + (":" + manager_path() if not system else "")).split(":")
                    if p.strip() and not (wsl and p.startswith("/mnt/"))]
     sane_path = ":".join(dict.fromkeys(path_entries + shell_paths))
     # Environment= uses C escapes and expands % specifiers, even inside quotes.
