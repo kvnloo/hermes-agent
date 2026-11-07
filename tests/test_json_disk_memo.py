@@ -98,7 +98,7 @@ def test_shared_identity_and_guard_detects_nested_mutation(tmp_path):
 
     assert memo.read_json_disk_memo(path) == original
 
-ef test_rewrite_invalidates_file_version(tmp_path):
+def test_rewrite_invalidates_file_version(tmp_path):
     path = tmp_path / "catalog.json"
     path.write_text('{"version":1,"rows":[1]}', encoding="utf-8")
     assert memo.read_json_disk_memo(path)["version"] == 1

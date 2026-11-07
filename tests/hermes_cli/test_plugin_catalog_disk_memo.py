@@ -56,7 +56,7 @@ def test_parsing_catalog_entries_and_removals_does_not_mutate_cache(tmp_path, mo
         assert pc._stale_live_cache(cache) == raw
         assert memo.json_disk_memo_parse_count() == 1
 
-ef test_stale_expiry_drops_entries_but_keeps_removed(tmp_path):
+def test_stale_expiry_drops_entries_but_keeps_removed(tmp_path):
     cache = tmp_path / "plugin-catalog.json"
     raw = {"entries": [{"name": "expired"}], "removed": [{"name": "revoked"}]}
     cache.write_text(json.dumps(raw), encoding="utf-8")

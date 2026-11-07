@@ -25,14 +25,16 @@ class _ReadOnlyDict(dict):
     def _reject(self, *_args: Any, **_kwargs: Any) -> None:
         raise TypeError("shared JSON disk cache is read-only")
 
-    __setitem__ = __delitem__ = clear = pop = popitem = setdefault = update = __ior__ = _reject
+    __setitem__ = __delitem__ = __ior__ = _reject
+    clear = pop = popitem = setdefault = update = _reject
 
 
 class _ReadOnlyList(list):
     def _reject(self, *_args: Any, **_kwargs: Any) -> None:
         raise TypeError("shared JSON disk cache is read-only")
 
-    __setitem__ = __delitem__ = append = extend = insert = pop = remove = clear = reverse = sort = __iadd__ = __imul__ = _reject
+    __setitem__ = __delitem__ = __iadd__ = __imul__ = _reject
+    append = extend = insert = pop = remove = clear = reverse = sort = _reject
 
 
 def _freeze_json(value: Any) -> Any:
