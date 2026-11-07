@@ -5186,12 +5186,20 @@ class BasePlatformAdapter(ABC):
                                     human_delay=0,
                                 )
                             return
-                        await batch_sender(
+                        batch_result = await batch_sender(
                             chat_id=event.source.chat_id,
                             images=batch_images,
                             metadata=_final_thread_metadata,
                             human_delay=human_delay,
                         )
+                        # Overrides may reject a batch via SendResult without raising.
+                        # None remains the legacy handled/success contract.
+                        if batch_result is not None and not getattr(batch_result, "success", False):
+                            attachment_failures.add("image")
+                            logger.warning(
+                                "[%s] final_attachment_dispatch_failed: kind=image",
+                                delivery_adapter.name,
+                            )
                     except Exception:
                         attachment_failures.add("image")
                         logger.warning(

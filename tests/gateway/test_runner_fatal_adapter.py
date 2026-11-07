@@ -891,3 +891,58 @@ async def test_inflight_final_attachment_failure_notifies_through_replacement(
     assert old_adapter.native_attempts == []
     assert replacement.sent == ["complete final reply", notice]
     assert str(attachment) not in "\n".join(replacement.sent)
+
+
+
+@pytest.mark.asyncio
+async def test_reconnect_rejected_image_batch_notifies_on_current_adapter(
+    tmp_path, monkeypatch
+):
+    """A rejected native image batch must not silently lose its stripped attachment."""
+    runner = GatewayRunner(
+        GatewayConfig(
+            platforms={
+                Platform.DISCORD: PlatformConfig(enabled=True, token="token")
+            },
+            sessions_dir=tmp_path / "sessions",
+        )
+    )
+    old_adapter = _ReplacementDeliveryAdapter()
+    replacement = _ReplacementDeliveryAdapter()
+    old_adapter.gateway_runner = runner
+    replacement.gateway_runner = runner
+    _install_adapter_for_profile(runner, old_adapter, None)
+
+    attempted_batches = []
+
+    async def rejected_batch(chat_id, images, metadata=None, human_delay=0.0):
+        attempted_batches.append(images)
+        return SendResult(success=False, error="Not connected")
+
+    monkeypatch.setattr(replacement, "send_multiple_images", rejected_batch)
+    handler_started = asyncio.Event()
+    release_handler = asyncio.Event()
+
+    async def handler(_event):
+        handler_started.set()
+        await release_handler.wait()
+        return "complete final reply\n![chart](https://example.com/chart.png)"
+
+    old_adapter.set_message_handler(handler)
+    event = _replacement_event(None)
+    task = asyncio.create_task(
+        old_adapter._process_message_background(event, build_session_key(event.source))
+    )
+    await handler_started.wait()
+    await old_adapter.disconnect()
+    _replace_adapter_for_profile(runner, replacement, None)
+    release_handler.set()
+    await task
+
+    assert len(attempted_batches) == 1
+    assert attempted_batches[0][0][0] == "https://example.com/chart.png"
+    assert old_adapter.sent == []
+    assert replacement.sent == [
+        "complete final reply",
+        "⚠️ Couldn't deliver one or more attachments from the final response.",
+    ]
