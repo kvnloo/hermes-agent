@@ -145,6 +145,29 @@ class TestMigrationGuardIsHard:
         assert not [r for r in caplog.records if "mcp_servers" in r.message]
 
 
+    def test_partial_mcp_mapping_preserves_other_servers(self, seeded_home, caplog):
+        """Regression for NousResearch/hermes-agent#150692 (faresahmedbaianat-hash)."""
+        from hermes_cli.config import _persist_migration
+
+        servers = {
+            f"mcp-{i}": {"command": "npx", "args": [f"pkg-{i}"], "enabled": True}
+            for i in range(18)
+        }
+        (seeded_home / "config.yaml").write_text(
+            yaml.safe_dump({"mcp_servers": servers}), encoding="utf-8"
+        )
+        migrated = {"mcp_servers": {"mcp-0": {**servers["mcp-0"], "enabled": False}}}
+        with caplog.at_level(logging.WARNING, logger="hermes_cli.config"):
+            _persist_migration(migrated)
+
+        persisted = read_raw_config()["mcp_servers"]
+        assert set(persisted) == set(servers)
+        assert persisted["mcp-0"]["enabled"] is False
+        for name in set(servers) - {"mcp-0"}:
+            assert persisted[name] == servers[name]
+        assert any("omitted 17 MCP server" in record.message for record in caplog.records)
+
+
 class TestPostWriteInvariant:
     def test_tampered_write_raises_and_restores_pre_write_bytes(self, seeded_home, monkeypatch):
         import hermes_cli.config as config_module

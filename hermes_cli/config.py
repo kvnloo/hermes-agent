@@ -1329,7 +1329,21 @@ def _persist_migration(config: Dict[str, Any], removed_keys: Optional[Set[str]] 
     (e.g. a rename like custom_providers → providers). Any top-level user-data key present on
     disk but absent from the migrated config AND absent from ``removed_keys`` triggers the G1
     guard: it is re-preserved with a WARNING, so an accidental drop cannot go silently."""
-    save_config(config, removed_keys=removed_keys)
+    # An incomplete migration can supply an MCP section but omit sibling servers.
+    # The generic write guard protects root keys only, so protect this migration seam.
+    with _CONFIG_LOCK:
+        if "mcp_servers" in config and "mcp_servers" not in (removed_keys or ()):
+            existing = require_readable_config_before_write(get_config_path()).get("mcp_servers")
+            proposed = config["mcp_servers"]
+            if isinstance(existing, dict) and isinstance(proposed, dict):
+                omitted = existing.keys() - proposed.keys()
+                if omitted:
+                    log.warning(
+                        "migration omitted %d MCP server(s); preserving existing entries",
+                        len(omitted),
+                    )
+                    config = {**config, "mcp_servers": {**existing, **proposed}}
+        save_config(config, removed_keys=removed_keys)
 
 
 def _prompt_and_save_env(name: str, info: Dict[str, Any], prompt: str, results: Dict[str, Any]) -> bool:
