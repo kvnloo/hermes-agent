@@ -342,3 +342,29 @@ def test_no_in_dir_keeps_inherited_terminal_cwd_for_remote_backend(main_mod, mon
 
     assert os.environ["TERMINAL_CWD"] == "/remote/workspace"
     assert Path.cwd().resolve() == launch.resolve()
+
+
+def test_no_in_dir_write_file_targets_launch_directory(main_mod, monkeypatch, tmp_path):
+    """AnnGeliux's #136842: gateway-inherited cwd must not misplace a relative write."""
+    import json
+
+    from tools import terminal_tool
+    from tools.file_tools import write_file_tool
+
+    launch = tmp_path / "work"
+    decoy = tmp_path / "decoy"
+    launch.mkdir()
+    decoy.mkdir()
+    monkeypatch.chdir(launch)
+    monkeypatch.setenv("_HERMES_GATEWAY", "1")
+    monkeypatch.setenv("TERMINAL_ENV", "local")
+    monkeypatch.setenv("TERMINAL_CWD", str(decoy))
+    monkeypatch.setattr(terminal_tool, "_session_cwd", {})
+    monkeypatch.setattr(terminal_tool, "_task_env_overrides", {})
+
+    main_mod._apply_in_dir(_args(in_dir=None))
+    result = json.loads(write_file_tool("saludo.txt", "hola mundo"))
+
+    assert result.get("resolved_path") == str((launch / "saludo.txt").resolve()), result
+    assert (launch / "saludo.txt").read_text() == "hola mundo"
+    assert not (decoy / "saludo.txt").exists()
