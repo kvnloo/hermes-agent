@@ -3028,6 +3028,37 @@ def _format_async(evt) -> str:
     return text
 
 
+def test_model_not_found_notice_ignores_completed_batch_quoting_rejection(monkeypatch):
+    """#129450: successful children may discuss a rejected model without failing."""
+    evt = _make_delegation_batch_evt([
+        {
+            "task_index": 0,
+            "status": "completed",
+            "goal": "Audit delegation settings",
+            "summary": "Audit finished; no errors found.",
+        },
+        {
+            "task_index": 1,
+            "status": "completed",
+            "goal": "Review a sample provider error",
+            "summary": (
+                "Example: upstage/solar-pro-4 is not a valid model ID. "
+                "This is documentation, not the outcome of this task."
+            ),
+        },
+        {
+            "task_index": 2,
+            "status": "success",
+            "goal": "Summarize the audit",
+            "summary": "The audit completed successfully.",
+        },
+    ])
+    _patch_delegation_config(monkeypatch)
+    text = _format_async(evt)
+    assert "SUBAGENT MODEL REJECTED" not in text
+    assert "Every task in this batch failed" not in text
+
+
 def test_model_not_found_notice_single_failure_once(monkeypatch):
     evt = _make_delegation_batch_evt([
         {
