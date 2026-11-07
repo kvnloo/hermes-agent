@@ -50,7 +50,7 @@ class GatewayTurnPersistenceMixin:
         except Exception:
             return False
 
-    def _is_autonomous_webhook_silence(self, source, agent_result, response) -> bool:
+    def _is_autonomous_webhook_silence(self, source, agent_result, response, *, reply_expected=None) -> bool:
         """Allow successful bare silence markers from the autonomous webhook lane.
 
         Webhook requests are autonomous work triggers, not user-chat provenance:
@@ -60,6 +60,7 @@ class GatewayTurnPersistenceMixin:
         """
         return (
             source.platform == Platform.WEBHOOK
+            and reply_expected is not True
             and self._is_intentional_silence(agent_result, response)
         )
 
@@ -91,7 +92,7 @@ class GatewayTurnPersistenceMixin:
         _silence_kind = agent_result.get("queued_terminal_display_kind", persist_user_display_kind)
         _silence_reply_expected = agent_result.get("queued_terminal_reply_expected", reply_expected)
         _autonomous_webhook_silence = self._is_autonomous_webhook_silence(
-            source, agent_result, response,
+            source, agent_result, response, reply_expected=_silence_reply_expected,
         )
         if (
             _intentional_silence

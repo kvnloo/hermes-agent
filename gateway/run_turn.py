@@ -1825,6 +1825,7 @@ class GatewayTurnMixin(GatewayTurnPrepareMixin, GatewayTurnHygieneMixin, Gateway
                 silence_allowed(turn_ctx.persist_user_display_kind, turn_ctx.reply_expected)
                 or self._is_autonomous_webhook_silence(
                     turn_ctx.source, _delivery_result, first_response,
+                    reply_expected=turn_ctx.reply_expected,
                 )
             ):
                 logger.info(

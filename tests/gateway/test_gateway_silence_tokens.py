@@ -294,6 +294,35 @@ async def test_queued_webhook_turn_suppresses_a_bare_silence_marker():
 
 
 @pytest.mark.asyncio
+async def test_queued_webhook_addressed_turn_keeps_silence_warning():
+    """A queued turn explicitly owed to a user must not inherit the webhook silence exemption."""
+    runner = gateway_run.GatewayRunner(GatewayConfig())
+    runner._deliver_queued_first_response = AsyncMock()
+    turn_ctx = SimpleNamespace(
+        session_key="agent:main:webhook:group:-1001:12345",
+        stream_consumer_holder=[None],
+        mute_notification_reply=False,
+        persist_user_display_kind=None,
+        reply_expected=True,
+        source=_source(Platform.WEBHOOK),
+        _status_thread_metadata=None,
+        event_message_id=None,
+        inbound_message_id="msg-42",
+        run_generation=1,
+    )
+    result = {"final_response": "[SILENT]", "failed": False}
+
+    await runner._run_agent_deliver_first_response(turn_ctx, None, result, result, None)
+
+    # On the carrier head the webhook exception ignores reply_expected=True and drops this reply.
+    delivered_call = runner._deliver_queued_first_response.await_args
+    assert delivered_call is not None
+    delivered = delivered_call.args[0]
+    assert "silence marker" in delivered
+    assert not is_intentional_silence_response(delivered)
+
+
+@pytest.mark.asyncio
 async def test_queued_terminal_turn_owns_the_silence_verdict(monkeypatch, tmp_path):
     """The chain's LAST turn decides whether a bare marker may vanish, not the opener."""
     runner = _runner(monkeypatch, tmp_path)
