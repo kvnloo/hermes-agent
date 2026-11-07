@@ -108,19 +108,24 @@ describe('transcript tail cache', () => {
     window.localStorage.setItem('hermes.unrelated', 'u'.repeat(120_000))
 
     // Browser quotas vary. Reproduce the failure at a deterministic 9.5 MB.
-    const nativeSetItem = Storage.prototype.setItem
-    const quota = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    const quotaBytes = 9_500_000
+    const storedBytes = (store: Storage): number => {
       let used = 0
 
-      for (let index = 0; index < this.length; index++) {
-        const storedKey = this.key(index)!
-        used += 2 * (storedKey.length + (this.getItem(storedKey)?.length ?? 0))
+      for (let index = 0; index < store.length; index++) {
+        const storedKey = store.key(index)!
+        used += 2 * (storedKey.length + (store.getItem(storedKey)?.length ?? 0))
       }
 
+      return used
+    }
+    const nativeSetItem = Storage.prototype.setItem
+    const quota = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+      let used = storedBytes(this)
       const previous = this.getItem(key)
       if (previous !== null) used -= 2 * (key.length + previous.length)
 
-      if (used + 2 * (key.length + value.length) > 9_500_000) {
+      if (used + 2 * (key.length + value.length) > quotaBytes) {
         throw new DOMException('Storage quota exceeded', 'QuotaExceededError')
       }
 
@@ -144,6 +149,10 @@ describe('transcript tail cache', () => {
         text: 'r'.repeat(5_000)
       }))
       const rooms = JSON.stringify({ Team: { log } })
+
+      // A quota mock alone can silently allow this write. Prove that cold
+      // eviction actually reserves enough bytes for the durable room record.
+      expect(storedBytes(window.localStorage) + 2 * (key.length + rooms.length)).toBeLessThanOrEqual(quotaBytes)
       writeKey(key, rooms)
 
       expect(window.localStorage.getItem(key)).toBe(rooms)
