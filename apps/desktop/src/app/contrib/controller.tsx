@@ -8,6 +8,7 @@ import { PALETTE_AREA, type PaletteContribution, paletteToggle } from '@/app/com
 import { type StatusbarItem } from '@/app/shell/statusbar-controls'
 import { InlinePreviewDirective } from '@/components/assistant-ui/inline-preview-directive'
 import { IdleMount } from '@/components/idle-mount'
+import { PromptOverlays } from '@/components/prompt-overlays'
 import { $layoutEditMode, toggleLayoutEditMode } from '@/components/pane-shell/edit-mode'
 import { allPaneIds } from '@/components/pane-shell/tree/model'
 import { LayoutTreeRoot } from '@/components/pane-shell/tree/renderer'
@@ -817,6 +818,8 @@ export function ContribController() {
     >
       <ContribWiring>
         <AppContextMenu />
+        {/* Answer connection-owned Bot Screen sudo cards even without a chat mounted. */}
+        <PromptOverlays sessionId={null} />
         {/* App-owned answer to a plugin's ctx.preview.executeJavaScript. Plugins
             run in every window kind, so each shell mounts it. */}
         <PluginPreviewConsentDialog />
