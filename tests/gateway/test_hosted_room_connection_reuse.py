@@ -153,3 +153,23 @@ def test_wal_fallback_failure_does_not_cache_connection(tmp_path, monkeypatch):
     with closing(rooms._connect(path)) as conn:
         assert conn.execute("PRAGMA busy_timeout").fetchone()[0] == 10_000
     assert attempts >= 2
+
+def test_reused_connection_still_checks_wal_fallback(tmp_path, monkeypatch):
+    import hermes_state_wal
+
+    path = tmp_path / "state.db"
+    rooms.create_room(
+        path, room_id="room-1", name="Before", members=[],
+        authority_gateway_id="gateway-a", now=10)
+
+    def journal_changed(_conn, **_kwargs):
+        raise sqlite3.OperationalError("journal mode recheck failed")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(hermes_state_wal, "apply_wal_with_fallback", journal_changed)
+        with pytest.raises(sqlite3.OperationalError, match="journal mode recheck failed"):
+            rooms._connect(path)
+
+    # A failed recheck discards the idle handle; the next attempt must work.
+    with closing(rooms._connect(path)) as conn:
+        assert conn.execute("SELECT name FROM hosted_rooms WHERE room_id='room-1'").fetchone()[0] == "Before"
