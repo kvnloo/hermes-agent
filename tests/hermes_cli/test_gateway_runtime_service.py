@@ -19,6 +19,7 @@ import pytest
     ("env_file", "service_identity_unverified"), ("dynamic_user", "service_identity_unverified"),
     ("wrong_command", "service_identity_unverified"), ("command_profile", "profile_mismatch"),
     ("dropin_home", "profile_mismatch"), ("manager_home", "profile_mismatch"),
+    ("manager_ansi_c_unrelated", "deadline"), ("manager_ansi_c_wrong_home", "profile_mismatch"),
 ])
 def test_ensure_checks_effective_service_binding_before_start(tmp_path, monkeypatch, case, reason):
     from hermes_cli import gateway_runtime as runtime
@@ -80,6 +81,12 @@ def test_ensure_checks_effective_service_binding_before_start(tmp_path, monkeypa
     if case == "manager_home":
         props['Environment'] = 'HERMES_SUPERVISED_CHILD=1'
         manager_env = f'HERMES_HOME={tmp_path / "other"}\n'
+    if case in {"manager_ansi_c_unrelated", "manager_ansi_c_wrong_home"}:
+        # Quoting an unrelated manager variable must not skip service identity checks.
+        manager_env = r"MANPAGER=$'sh -c \'col -bx | bat -l man -p\''" + "\n"
+    if case == "manager_ansi_c_wrong_home":
+        props['Environment'] = 'HERMES_SUPERVISED_CHILD=1'
+        manager_env += f'HERMES_HOME={tmp_path / "other"}\n'
     if case == "default":
         # An older default install may rely on the user manager's HOME.
         props['Environment'] = 'HERMES_SUPERVISED_CHILD=1'
