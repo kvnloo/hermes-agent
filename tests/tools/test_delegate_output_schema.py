@@ -229,6 +229,30 @@ class TestRunSingleChildSchemaValidation:
         assert len(child.calls) == 1
         assert entry.get("schema_valid") is False
 
+    def test_failed_first_run_with_error_skips_schema_retry(self):
+        """Regression for #150420: a provider failure is not an answer to correct."""
+        from tools.delegate_tool_child_run import _validate_child_output_schema
+
+        failure_text = "API call failed after 3 retries: HTTP 429 rate limit"
+        child = _StubChild(['{"city": "Paris"}'])
+        child._delegate_output_schema = ADDRESS_SCHEMA
+        first = {
+            "final_response": failure_text,
+            "failed": True,
+            "completed": False,
+            "error": "HTTP 429",
+            "messages": [],
+            "api_calls": 3,
+        }
+
+        outcome = _validate_child_output_schema(child, first, 0, "child-1", None)
+
+        assert outcome.retries == 0
+        assert outcome.valid is False
+        assert child.calls == []
+        assert first["final_response"] == failure_text
+        assert first["api_calls"] == 3
+
     def test_schema_failure_returns_raw_text_with_schema_valid_false(self):
         """A final answer that still violates the contract after the bounded retry is NOT discarded: the
         child did the work (audits of 400-4100 s were written off over a stray fence or one missing
