@@ -4,8 +4,10 @@ Source and supported launch settings are frozen per route, never process env.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import shutil
 import uuid
 from contextlib import contextmanager
 
@@ -78,6 +80,31 @@ class LocalSessionAdapter(BasePlatformAdapter):
     async def send(self, chat_id, content, reply_to=None, metadata=None):
         # TurnRunner already publishes model/tool deltas and settlement exactly once.
         return SendResult(success=True, message_id=uuid.uuid4().hex)
+
+    def can_play_host_audio(self, chat_id):
+        """Only a locally attached TUI with a host player can hear owner-side audio.
+
+        A remote client's forwarded env is explicitly marked remote by session creation;
+        an older or env-less session is not evidence of co-location.
+        """
+        policy = self.policies.get(chat_id)
+        if (policy is None or policy.source != 'tui'
+                or policy.client_env_json is None or policy.client_env_remote):
+            return False
+        from tools.voice_mode import _system_player_candidates
+        return any(shutil.which(cmd[0]) for cmd in _system_player_candidates('speech.ogg'))
+
+    async def send_voice(self, chat_id, audio_path, caption=None, reply_to=None,
+                         metadata=None, **kwargs):
+        if self.can_play_host_audio(chat_id):
+            from tools.voice_mode import play_audio_file
+            try:
+                if await asyncio.to_thread(play_audio_file, audio_path):
+                    return SendResult(success=True, message_id=uuid.uuid4().hex)
+            except Exception:
+                logger.warning("Local TTS playback failed for %s", chat_id, exc_info=True)
+        return await super().send_voice(chat_id, audio_path, caption=caption, reply_to=reply_to,
+                                        metadata=metadata, **kwargs)
 
     async def edit_message(self, chat_id, message_id, content, *, finalize=False):
         return SendResult(success=True, message_id=message_id)
