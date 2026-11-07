@@ -612,7 +612,9 @@ class TeamsAdapter(BasePlatformAdapter):
         """Send ``activity`` through the cached ConversationReference, else ``App.send(fallback)``."""
         conv_ref = self._conv_refs.get(chat_id)
         if conv_ref:
-            result = await self._app.activity_sender.send(activity, conv_ref)
+            from microsoft_teams.apps.activity_send import send_or_update_activity
+
+            result = await send_or_update_activity(self._app.api, activity, conv_ref)
         else:
             result = await self._app.send(chat_id, fallback)
         self._remember_sent(result)
