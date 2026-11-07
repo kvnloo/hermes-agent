@@ -40,3 +40,71 @@ def broad_root_error(path: str) -> Optional[str]:
                     "task or project directory, or use "
                     "z0_file_search (indexed, per-repository) for repository-wide lookups.")
     return None
+
+
+_WRAPPERS = {"rtk", "sudo", "nice", "ionice", "timeout", "env", "command", "exec", "time", "nohup"}
+_MAX_SHALLOW_DEPTH = 3  # find -maxdepth / rg --max-depth at or under this only lists directories
+
+
+def _depth(tokens: list[str], flags: tuple[str, ...]) -> Optional[int]:
+    for i, tok in enumerate(tokens):
+        name, _, val = tok.partition("=")
+        if name in flags:
+            val = val or (tokens[i + 1] if i + 1 < len(tokens) else "")
+            return int(val) if val.isdigit() else None
+    return None
+
+
+def _walk_paths(tokens: list[str]) -> list[str]:
+    """Absolute path args of a whole-tree walk (find/du/grep -r/rg), [] when bounded."""
+    while tokens and (tokens[0] in _WRAPPERS or "=" in tokens[0] or tokens[0].startswith("-")
+                      or tokens[0].isdigit() or tokens[0][:-1].isdigit()):
+        tokens = tokens[1:]
+    if not tokens:
+        return []
+    prog, args = os.path.basename(tokens[0]), tokens[1:]
+    if prog == "find":
+        depth = _depth(args, ("-maxdepth",))
+    elif prog == "rg":
+        depth = _depth(args, ("--max-depth", "-d", "--maxdepth"))
+    elif prog in ("grep", "egrep", "fgrep"):
+        recursive = any(a in ("--recursive", "--dereference-recursive") or
+                        (a.startswith("-") and not a.startswith("--") and ("r" in a or "R" in a))
+                        for a in args)
+        depth = None if recursive else 0
+    elif prog == "du":
+        depth = None
+    else:
+        return []
+    if depth is not None and depth <= _MAX_SHALLOW_DEPTH:
+        return []
+    paths = (os.path.expanduser(os.path.expandvars(a)) for a in args)
+    return [p for p in paths if os.path.isabs(p)]
+
+
+def broad_walk_error(command: str) -> Optional[str]:
+    """Refusal message when a shell command walks a whole tree that is or contains a broad root.
+
+    Agents' ``find``/``du``/``grep -r``/``rg`` over ``~`` or a data-disk root read GiBs per
+    call, and the reaped child's reads land on the gateway's read_bytes. Shallow listings
+    (find -maxdepth <= 3, rg --max-depth <= 3) stay allowed. Unparseable input is not blocked.
+    """
+    import shlex
+    try:
+        lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()")
+        lexer.whitespace_split = True
+        tokens = list(lexer)
+    except ValueError:
+        return None
+    simple: list[str] = []
+    for tok in [*tokens, ";"]:
+        if tok and set(tok) <= set(";&|()"):
+            for path in _walk_paths(simple):
+                err = broad_root_error(path)
+                if err:
+                    return err.replace("Narrow `path`", "Narrow the walk (or use find -maxdepth "
+                                       f"{_MAX_SHALLOW_DEPTH} to list)")
+            simple = []
+        else:
+            simple.append(tok)
+    return None
