@@ -170,3 +170,39 @@ def test_genuine_answer_after_tool_round_is_not_nudged(loop_agent):
 
     assert loop_agent.client.chat.completions.create.call_count == 2
     assert result["final_response"] == answer
+
+
+@pytest.mark.parametrize(
+    ("reported_final", "should_continue"),
+    [
+        ("The inventory is still in progress. " * 12 + "I will now fix the defect.", True),
+        (
+            "All requested repository files were scanned for imports and API compatibility. "
+            "Both optional adapters now preserve the advertised schema names. "
+            "The boundary case used a read-only tool and did not change permissions. "
+            "Negative controls cover the already-fixed path and an empty result. "
+            "The invariant held through serialization and the final output was checked. "
+            "The defect is fixed, the notes are attached, and there is no remaining action.",
+            False,
+        ),
+    ],
+)
+def test_long_post_tool_report_respects_final_action(loop_agent, reported_final, should_continue):
+    """A >400-char post-tool report remains non-final only if its tail promises work."""
+    loop_agent._intent_ack_continuation = "auto"  # Only the normal stall guard is active.
+    assert 400 < len(reported_final) <= 600
+
+    responses = [_tool_round("c1"), _final(reported_final)]
+    if should_continue:
+        responses.append(_final("Fixed and tested."))
+    result = _run(loop_agent, responses)
+
+    assert loop_agent.client.chat.completions.create.call_count == (3 if should_continue else 2)
+    if should_continue:
+        assert _nudged_after(result, reported_final)
+        assert result["final_response"] == "Fixed and tested."
+    else:
+        assert result["final_response"] == reported_final
+        assert _CODEX_ACK_CONTINUATION_NUDGE not in [
+            msg.get("content") for msg in result["messages"]
+        ]
