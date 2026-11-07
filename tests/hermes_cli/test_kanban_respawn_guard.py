@@ -232,6 +232,60 @@ def test_respawn_guard_ignores_stale_stamp_after_later_run(kanban_home):
         assert kbd.check_respawn_guard(conn, never_ran) is None
 
 
+
+def test_respawn_guard_allows_ready_rework_after_stale_quota_stamp(kanban_home):
+    """Reviewer changes must not re-park a card on an older quota failure.
+
+    The original run is rate-limited; the retry succeeds, requests review,
+    and the reviewer hands the card back to its implementer for changes.
+    The stale stamp remains, but the latest run has no auth error.
+    """
+    stamp = "pid 1 exited rate-limited (quota wall) — requeued without counting a failure"
+    with kbc.connect() as conn:
+        tid = kb.create_task(conn, title="review rework", assignee="builder")
+        first = kb.claim_task(conn, tid)
+        assert first is not None
+        conn.execute(
+            "UPDATE task_runs SET outcome='rate_limited', status='rate_limited', "
+            "ended_at=?, error=? WHERE id=?",
+            (5_000_000, stamp, first.current_run_id),
+        )
+        conn.execute(
+            "UPDATE tasks SET status='ready', current_run_id=NULL, "
+            "claim_lock=NULL, claim_expires=NULL, worker_pid=NULL, "
+            "last_failure_error=? WHERE id=?",
+            (stamp, tid),
+        )
+        conn.commit()
+
+        retry = kb.claim_task(conn, tid)
+        assert retry is not None
+        assert kb.request_review(
+            conn, tid, summary="retry succeeded", reviewer="reviewer",
+            expected_run_id=retry.current_run_id,
+        )
+        review = kb.claim_review_task(conn, tid)
+        assert review is not None
+        assert kb.request_changes(
+            conn, tid, reason="revise", expected_run_id=review.current_run_id,
+        ) == (True, "builder")
+
+        task = conn.execute(
+            "SELECT status, assignee, last_failure_error FROM tasks WHERE id = ?",
+            (tid,),
+        ).fetchone()
+        assert (task["status"], task["assignee"], task["last_failure_error"]) == (
+            "ready", "builder", stamp,
+        )
+        latest = conn.execute(
+            "SELECT outcome, error FROM task_runs WHERE task_id = ? "
+            "AND ended_at IS NOT NULL ORDER BY ended_at DESC, id DESC LIMIT 1",
+            (tid,),
+        ).fetchone()
+        assert (latest["outcome"], latest["error"]) == ("changes_requested", None)
+        assert kbd.check_respawn_guard(conn, tid) is None
+
+
 def test_respawn_guard_cleared_stamp_lets_operator_retry(kanban_home):
     """``unblock_task`` NULLs ``last_failure_error`` — the operator's "retry".
 
