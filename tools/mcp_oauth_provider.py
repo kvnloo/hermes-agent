@@ -8,6 +8,7 @@ modules keep their own subclass (logger name, disk-watch hooks) on top of it.
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from typing import TYPE_CHECKING, Any
@@ -527,11 +528,18 @@ class HermesProviderMixin:
 
 
 async def _is_invalid_grant(response) -> bool:
-    """RFC 6749 §5.2 ``invalid_grant``: the refresh token itself is invalid, expired or revoked. A 429,
-    5xx, WAF 403 or ``invalid_client`` says nothing about the grant, so it must survive those."""
+    """Only a token endpoint's JSON OAuth error code proves that the grant was refused.
+
+    A WAF page or an invalid_client error *describing* an earlier invalid_grant
+    is not evidence that this refresh token is dead.
+    """
     if response.status_code not in (400, 401):
         return False
-    return re.search(rb"\binvalid_grant\b", await response.aread()) is not None
+    try:
+        payload = json.loads(await response.aread())
+    except ValueError:
+        return False
+    return isinstance(payload, dict) and payload.get("error") == "invalid_grant"
 
 
 def _metadata_issuer(context: Any) -> str | None:

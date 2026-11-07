@@ -616,6 +616,27 @@ async def test_refresh_failure_without_invalid_grant_keeps_disk_tokens(tmp_path,
 
 
 @pytest.mark.asyncio
+async def test_refresh_invalid_client_description_mentioning_invalid_grant_keeps_disk_tokens(
+    tmp_path, monkeypatch
+):
+    """An error_description is not an OAuth error code and must not revoke the stored grant."""
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    endpoint = "https://idp.example.com/oauth/token"
+    provider = _provider_with_token_endpoint(tmp_path, {}, endpoint, monkeypatch)
+    provider.context.current_tokens = _token("A1", "R1")
+    await provider.context.storage.set_tokens(_token("A1", "R1"))
+
+    response = _fake_response(
+        400,
+        endpoint,
+        b'{"error":"invalid_client","error_description":"Earlier invalid_grant on another session"}',
+    )
+    assert await provider._handle_refresh_response(response) is False
+    assert (tmp_path / "mcp-tokens" / "srv.json").exists()
+    assert (await provider.context.storage.get_tokens()).refresh_token == "R1"
+
+
+@pytest.mark.asyncio
 async def test_refresh_invalid_grant_keeps_newer_pair_written_by_peer(tmp_path, monkeypatch):
     """A peer's rotated pair is not adopted once its access token expired, but it is not ours to delete."""
     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
