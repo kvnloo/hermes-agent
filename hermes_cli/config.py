@@ -2337,17 +2337,40 @@ _FALLBACK_COMMENT = """
 """
 
 
-def _strip_managed_keys_for_save(config: dict[str, Any]) -> dict[str, Any]:
-    """Drop every leaf the managed layer pins (bulk safety net; single-key ``config set``
-    hard-rejects) and tell the user what was not saved."""
+def _strip_managed_keys_for_save(
+    config: dict[str, Any], raw_config: dict[str, Any],
+) -> dict[str, Any]:
+    """Ignore incoming changes to managed leaves, but retain the user's on-disk values.
+
+    Managed settings win when loading config, not by deleting the user's values on save.
+    Those values must reappear if the administrator later removes a managed key.
+    """
     managed_keys = managed_scope.managed_config_keys()
     if not managed_keys:
         return config
-    config, _stripped = _strip_dotted_keys(copy.deepcopy(config), managed_keys)
-    if _stripped:
+
+    config, stripped = _strip_dotted_keys(copy.deepcopy(config), managed_keys)
+    for dotted in managed_keys:
+        parts = dotted.split(".")
+        original = raw_config
+        for part in parts[:-1]:
+            if not isinstance(original, dict):
+                break
+            original = original.get(part)
+        if not isinstance(original, dict) or parts[-1] not in original:
+            continue
+
+        target = config
+        for part in parts[:-1]:
+            if not isinstance(target.get(part), dict):
+                target[part] = {}
+            target = target[part]
+        target[parts[-1]] = copy.deepcopy(original[parts[-1]])
+
+    if stripped:
         print(
-            f"Note: {len(_stripped)} managed setting(s) were not saved "
-            f"(managed by your administrator): {', '.join(sorted(_stripped))}", file=sys.stderr)
+            f"Note: {len(stripped)} managed setting(s) were not saved "
+            f"(managed by your administrator): {', '.join(sorted(stripped))}", file=sys.stderr)
     return config
 
 
@@ -2378,7 +2401,6 @@ def save_config(
 
         config_path = get_config_path()
         _refuse_failed_read(config_path, config)
-        config = _strip_managed_keys_for_save(config)
 
         ensure_hermes_home()
         # Explicit user paths come from the RAW dict BEFORE normalisation (which may inject
@@ -2402,6 +2424,7 @@ def save_config(
             effective_preserve_keys = _explicit_config_paths(_raw_for_paths) | set(preserve_keys or ())
             normalized = _strip_default_values(normalized, DEFAULT_CONFIG, preserve_keys=effective_preserve_keys)
 
+        normalized = _strip_managed_keys_for_save(normalized, _raw_for_paths)
         note_first_stamp(config_path.parent, _raw_for_paths, normalized)
         atomic_config_replace(config_path, normalized, extra_content_on_create=_commented_sections_for_save(normalized))
         _secure_file(config_path)
