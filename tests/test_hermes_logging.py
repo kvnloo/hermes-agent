@@ -79,6 +79,39 @@ def liveness_clock(monkeypatch):
     return advance
 
 
+def test_session_record_factory_resolves_each_home_once(tmp_path, monkeypatch):
+    """Log bursts avoid repeated realpath without mixing multiplexed profiles."""
+    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+
+    home_a = tmp_path / "profile-a"
+    home_b = tmp_path / "profile-b"
+    home_a.mkdir()
+    home_b.mkdir()
+    homes = [home_a, home_a, home_b, home_b, home_a]
+    expected = [str(home.resolve()) for home in homes]
+    original_resolve = Path.resolve
+    resolved = []
+
+    def count_resolve(self, *args, **kwargs):
+        if self in (home_a, home_b):
+            resolved.append(self)
+        return original_resolve(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", count_resolve)
+    logger = logging.getLogger("gateway.record-factory-home")
+    observed = []
+    for home in homes:
+        token = set_hermes_home_override(home)
+        try:
+            record = logger.makeRecord(logger.name, logging.WARNING, __file__, 1, "probe", (), None)
+            observed.append(record.hermes_home)
+        finally:
+            reset_hermes_home_override(token)
+
+    assert observed == expected
+    assert resolved == [home_a, home_b]
+
+
 @pytest.mark.parametrize("mode,component", [("cli", None), ("gateway", "gateway.log"), ("gui", "gui.log")])
 @pytest.mark.parametrize("configured,explicit,minimum", [(None, None, logging.INFO), ("DEBUG", "WARNING", logging.WARNING), ("DEBUG", None, logging.DEBUG)])
 def test_repeated_setup_routes_records_once(hermes_home, mode, component, configured, explicit, minimum):
