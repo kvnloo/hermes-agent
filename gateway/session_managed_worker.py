@@ -582,6 +582,17 @@ async def _settle_lost(authority, row, scope, recording):
         await tracked_write(authority, partial(lose_admission_worker, authority, row, scope))
 
 
+def _turn_scoped(env, session_id):
+    """The worker argv in its own scope beside the gateway (blocking: the scope probe may run), and
+    the env systemd-run needs to reach the user manager; the worker inherits only those two keys."""
+    from tools.process_registry import systemd_user_bus_env, turn_scope_argv
+    argv = turn_scope_argv([sys.executable, '-m', 'agent.managed_worker'], session_id)
+    if argv[0] != sys.executable:
+        bus = systemd_user_bus_env(env)
+        env = {**env, **{k: bus[k] for k in ('XDG_RUNTIME_DIR', 'DBUS_SESSION_BUS_ADDRESS') if k in bus}}
+    return argv, env
+
+
 async def _spawn_registered_worker(authority, ref, row):
     """Spawn the turn's child and register it for Stops: ``(worker, process)``, or None when the spawn was cancelled (the
     interrupted result is already recorded). The generation stays marked spawning until registration."""
@@ -593,7 +604,8 @@ async def _spawn_registered_worker(authority, ref, row):
         from gateway.session_worker_spawn import acquire_process
         from gateway.session_managed_worker_log import worker_log_path
         log_path = worker_log_path(authority.profile_id)
-        process = await acquire_process(subprocess.Popen, [sys.executable, '-m', 'agent.managed_worker'],
+        argv, env = await asyncio.to_thread(_turn_scoped, env, ref.session_id)
+        process = await acquire_process(subprocess.Popen, argv,
             cwd=cwd, stdin=subprocess.PIPE, env=env, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL if log_path is None else subprocess.PIPE, **WORKER_POPEN)
     except asyncio.CancelledError:
