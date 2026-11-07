@@ -7,6 +7,7 @@ import {
   composerHasDraft,
   dismissSensitivePrompt,
   handleIdleHotkeyExit,
+  isPlainCtrlC,
   resolveCtrlCComposerAction,
   resolveDoubleEscAction,
   shouldDetachEditedHistoryInput,
@@ -97,6 +98,26 @@ describe('resolveCtrlCComposerAction — draft wins over interrupt', () => {
 
   it('does not interrupt a busy session that has no sid yet', () => {
     expect(resolveCtrlCComposerAction({ busy: true, hasDraft: false, hasSession: false })).toBe('exit')
+  })
+})
+
+describe('plain Ctrl+C — modified chords leave drafts and overlays intact', () => {
+  const controlOnly = { ctrl: true, meta: false, shift: false, super: false }
+
+  it('matches plain Ctrl+C regardless of letter case, not unrelated keys', () => {
+    expect(isPlainCtrlC(controlOnly, 'c')).toBe(true)
+    expect(isPlainCtrlC(controlOnly, 'C')).toBe(true)
+    expect(isPlainCtrlC(controlOnly, 'x')).toBe(false)
+    expect(isPlainCtrlC({ ...controlOnly, ctrl: false }, 'c')).toBe(false)
+  })
+
+  it.each([
+    { name: 'Ctrl+Alt+C', modifiers: { meta: true } },
+    { name: 'Ctrl+Shift+C', modifiers: { shift: true } },
+    { name: 'Ctrl+Super+C', modifiers: { super: true } }
+  ])('$name is not the TUI cancel/clear/interrupt command', ({ modifiers }) => {
+    expect(isPlainCtrlC({ ...controlOnly, ...modifiers }, 'c')).toBe(false)
+    expect(isPlainCtrlC({ ...controlOnly, ...modifiers }, 'C')).toBe(false)
   })
 })
 
