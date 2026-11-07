@@ -79,3 +79,26 @@ def test_add_model_validation_uses_the_full_budget(monkeypatch):
 
     assert seen["timeout"] == CUSTOM_ENDPOINT_PROBE_TIMEOUT
     assert verdict["accepted"] is True
+
+
+def test_chat_picker_uses_full_budget_for_current_custom_endpoint(monkeypatch):
+    """Chat /model can discover a ~6s catalog instead of silently retaining the old model."""
+    from hermes_cli.model_switch_providers import list_picker_providers
+
+    seen = []
+
+    def _slow_catalog(_api_key, _api_url, _native_provider, _preserve, headers=None,
+                      timeout=5.0, api_mode=None, **_kw):
+        seen.append(timeout)
+        return ["new-on-router"] if timeout >= 5.9 else None
+
+    monkeypatch.setattr("hermes_cli.model_switch_providers._fetch_picker_live_models", _slow_catalog)
+    rows = list_picker_providers(
+        current_provider="custom", current_base_url="http://127.0.0.1:9999/v1",
+        current_model="kept-model", probe_custom_providers=False,
+        probe_current_custom_provider=True, non_blocking_catalogs=True,
+        fast_custom_probe=False,
+    )
+
+    assert seen == [CUSTOM_ENDPOINT_PROBE_TIMEOUT]
+    assert "new-on-router" in _custom_row(rows)["models"]

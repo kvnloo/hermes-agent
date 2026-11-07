@@ -466,6 +466,9 @@ class GatewayModelCommandsMixin:
             # in the background, and only the selected custom endpoint is probed live, so one
             # degraded provider can't stall the reply (#74003). Mirrors the GUI read path.
             non_blocking_catalogs=True, probe_custom_providers=False, probe_current_custom_provider=True,
+            # Give the selected custom endpoint time for slow /models discovery; all other
+            # configured endpoints remain cache-only so they cannot stall the picker.
+            fast_custom_probe=False,
         )
         adapter = self._delivery_adapter_for(ctx.source)
         if adapter is not None and getattr(type(adapter), "send_model_picker", None) is not None:

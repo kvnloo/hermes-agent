@@ -49,9 +49,11 @@ async def test_model_picker_reads_routed_profile_config(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(gateway_run, "_hermes_home", default_home)
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
-    monkeypatch.setattr(
-        "hermes_cli.model_switch_providers.list_picker_providers",
-        lambda **_kwargs: [
+    received_listing = {}
+
+    def _capture_listing(**kwargs):
+        received_listing.update(kwargs)
+        return [
             {
                 "slug": "secondary-provider",
                 "name": "Secondary Provider",
@@ -59,7 +61,10 @@ async def test_model_picker_reads_routed_profile_config(tmp_path, monkeypatch):
                 "models": ["secondary-model"],
                 "total_models": 1,
             }
-        ],
+        ]
+
+    monkeypatch.setattr(
+        "hermes_cli.model_switch_providers.list_picker_providers", _capture_listing,
     )
 
     runner = object.__new__(GatewayRunner)
@@ -79,3 +84,4 @@ async def test_model_picker_reads_routed_profile_config(tmp_path, monkeypatch):
     assert adapter.kwargs is not None
     assert adapter.kwargs["current_model"] == "secondary-model"
     assert adapter.kwargs["current_provider"] == "secondary-provider"
+    assert received_listing["fast_custom_probe"] is False
