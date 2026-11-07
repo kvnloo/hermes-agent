@@ -10,6 +10,7 @@ import atexit
 import os
 import sqlite3
 import threading
+import time
 import weakref
 from collections import OrderedDict
 from pathlib import Path
@@ -114,6 +115,18 @@ class _Pool:
         else:
             try:
                 entry.connection.execute(f"PRAGMA busy_timeout={int(busy_timeout_ms)}")
+                from hermes_state_wal import apply_wal_with_fallback
+
+                # Journal mode is configuration-sensitive; do not assume the
+                # previous lease's WAL/DELETE result is still valid.
+                for attempt in range(wal_lock_retries):
+                    try:
+                        apply_wal_with_fallback(entry.connection, db_label=db_label)
+                        break
+                    except sqlite3.OperationalError as exc:
+                        if str(exc).lower() != "database is locked" or attempt + 1 == wal_lock_retries:
+                            raise
+                        time.sleep(0.01 * (2**attempt))
                 if foreign_keys:
                     entry.connection.execute("PRAGMA foreign_keys=ON")
                 # Preserve cross-process schema readiness checks on each call.
