@@ -86,6 +86,49 @@ def test_ws_disconnect_reaps_flagged_session_and_closes_worker(monkeypatch):
 
 
 
+def test_ws_disconnect_preserves_flagged_session_with_live_delegate(monkeypatch):
+    """A dashboard sidecar disconnect must not kill its background child (#150756)."""
+    from unittest.mock import Mock
+    from tools import async_delegation as ad
+
+    closed = []
+    class FakeWorker:
+        def close(self):
+            closed.append(True)
+
+    interrupt = Mock()
+    monkeypatch.setattr(ad, "_records", {
+        "live-sidecar": {
+            "delegation_id": "live-sidecar",
+            "status": "running",
+            "session_key": "k",
+            "origin_ui_session_id": "flagged",
+            "interrupt_fn": interrupt,
+        },
+    })
+    server._sessions.clear()
+    try:
+        _run_disconnect(
+            monkeypatch,
+            lambda t: server._sessions.update(
+                flagged={
+                    "transport": t,
+                    "close_on_disconnect": True,
+                    "slash_worker": FakeWorker(),
+                    "session_key": "k",
+                    "_sid": "flagged",
+                    "source": "tool",
+                }
+            ),
+        )
+        assert "flagged" in server._sessions
+        assert server._sessions["flagged"]["transport"] is server._detached_ws_transport
+        assert closed == []
+        interrupt.assert_not_called()
+    finally:
+        server._sessions.clear()
+
+
 def test_ws_connection_registers_then_disconnect_unregisters_live_transport(monkeypatch):
     """A connected client must be tracked in the live-transport registry so a
     session-less global broadcast (skin.changed from the background watcher)

@@ -1107,7 +1107,9 @@ def _close_sessions_for_transport(transport, *, end_reason: str = "ws_disconnect
             with _session_transport_lock:
                 if _session_has_live_transport(current, excluding=transport):
                     continue
-            if current.get("close_on_disconnect"):
+            # A transport disconnect must not act like /stop for a detached delegate.
+            # Defer sidecar teardown to the usual orphan reaper until that work finishes.
+            if current.get("close_on_disconnect") and not _session_has_active_delegations(sid, current):
                 claimed_for_teardown = _pop_session_by_id(sid)
             else:
                 # Point at the drop sentinel (NOT real stdio) so _ws_session_is_orphaned recognizes it; standalone
