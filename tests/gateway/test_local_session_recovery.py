@@ -178,3 +178,61 @@ async def test_delete_retires_owner_receipts_and_never_resurrects_the_id(tmp_pat
         bind_api_session(authority, 'api-owner')
     assert authority.db.get_session(local.session_id) is None
     assert authority.db.get_session('api-owner') is None
+
+@pytest.mark.asyncio
+async def test_local_receipts_share_config_blob_across_creation_refresh_and_restart(tmp_path, monkeypatch):
+    """Regression for #150838: session count must not multiply frozen profile bytes."""
+    from gateway.config import GatewayConfig, Platform
+    from gateway.session import SessionStore
+    from gateway.session_authority import initialize_session_authority
+    from gateway.session_contract import SessionActor
+    from gateway.session_local import create_local_session
+    from gateway import run
+    from hermes_state_local import CONFIG_PREFIX, CONFIG_REF, POLICY_PREFIX, local_receipt
+    from hermes_state_mutation_prepared import commit_refreshed_policy, local_snapshot
+
+    profile = {'platform_toolsets': {'cli': []}, 'extra': {'large': 'x' * 16384}}
+    monkeypatch.setattr(run, '_load_gateway_config', lambda: profile)
+
+    def runner():
+        store = SessionStore(tmp_path / 'sessions', GatewayConfig())
+        return SimpleNamespace(session_store=store, _session_db=store._db,
+                               adapters={}, _draining=False)
+
+    first = runner()
+    authority = await initialize_session_authority(first, profile_id='fixture', instance_id='first')
+    actor = SessionActor('owner', 'fixture', frozenset({'session:create', 'session:read'}), 'socket')
+    params = {'source': 'gui', 'cwd': str(tmp_path), 'model': 'frozen', 'toolsets': []}
+    refs = [create_local_session(authority, actor, {**params, 'request_id': name})
+            for name in ('first', 'second')]
+    db = authority.db
+    original = local_receipt(db, refs[0].session_id)['policy']
+    assert original == local_receipt(db, refs[1].session_id)['policy']
+
+    with db._read_ctx() as conn:
+        stored = [json.loads(conn.execute('SELECT value FROM state_meta WHERE key=?',
+                  (POLICY_PREFIX + ref.session_id,)).fetchone()[0]) for ref in refs]
+        blobs = conn.execute('SELECT key,value FROM state_meta WHERE key GLOB ?',
+                             (CONFIG_PREFIX + '*',)).fetchall()
+        assert len(blobs) == 1
+        assert blobs[0][1] == original['config_json']
+        assert all(row['policy']['config_json'] == CONFIG_REF + blobs[0][0][len(CONFIG_PREFIX):]
+                   for row in stored)
+        assert local_snapshot(db, conn, refs[0].session_id)['receipt']['policy'] == original
+
+    # Policy edits must also store references without changing the other session's frozen config.
+    modified = dict(original, config_json=json.dumps({**json.loads(original['config_json']), 'new': True}))
+    commit_refreshed_policy(db, epoch=authority.epoch, session_id=refs[0].session_id,
+                            old=original, new=modified,
+                            generation=db.get_session(refs[0].session_id)['runtime_generation'])
+    assert local_receipt(db, refs[0].session_id)['policy'] == modified
+    assert local_receipt(db, refs[1].session_id)['policy'] == original
+    with db._read_ctx() as conn:
+        assert conn.execute('SELECT count(*) FROM state_meta WHERE key GLOB ?',
+                            (CONFIG_PREFIX + '*',)).fetchone()[0] == 2
+
+    second = runner()
+    cold = await initialize_session_authority(second, profile_id='fixture', instance_id='second')
+    assert all(ref.session_id in cold.sessions for ref in refs)
+    assert local_receipt(cold.db, refs[0].session_id)['policy'] == modified
+    assert local_receipt(cold.db, refs[1].session_id)['policy'] == original
