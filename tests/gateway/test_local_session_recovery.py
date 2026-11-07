@@ -182,7 +182,7 @@ async def test_delete_retires_owner_receipts_and_never_resurrects_the_id(tmp_pat
 @pytest.mark.asyncio
 async def test_local_receipts_share_config_blob_across_creation_refresh_and_restart(tmp_path, monkeypatch):
     """Regression for #150838: session count must not multiply frozen profile bytes."""
-    from gateway.config import GatewayConfig, Platform
+    from gateway.config import GatewayConfig
     from gateway.session import SessionStore
     from gateway.session_authority import initialize_session_authority
     from gateway.session_contract import SessionActor
