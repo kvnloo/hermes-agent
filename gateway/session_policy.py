@@ -466,9 +466,11 @@ def build_policy(params, config, *, private_secrets=None, profile_terminal=True,
     coding_posture = named and _in_coding_workspace(config, source, cwd)
     enabled = _resolve_toolsets(params, config, source, safe_mode, coding_posture, bypass=ignore_user_config)
     terminal = build_profile_terminal_scope(get_hermes_home()) if profile_terminal else default_terminal_scope()
-    # The client's launch folder is a path on THIS host: a remote or container backend keeps its own
-    # configured cwd unless the user picked this folder for the session.
-    if params.get('cwd_explicit') is True or terminal_uses_host_cwd(terminal):
+    # The client's implicit launch folder is a fallback, not an override of a routed profile's
+    # explicitly configured local terminal cwd. A deliberate session folder always wins.
+    if params.get('cwd_explicit') is True or (
+        terminal_uses_host_cwd(terminal) and not has_profile_local_terminal_cwd(terminal)
+    ):
         terminal['TERMINAL_CWD'] = cwd
     client_env = rules = None
     if 'client_env' in params:
@@ -500,6 +502,16 @@ def terminal_uses_host_cwd(terminal):
     backend = str(terminal.get('TERMINAL_ENV') or 'local').strip().lower()
     mounts = str(terminal.get('TERMINAL_DOCKER_MOUNT_CWD_TO_WORKSPACE') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
     return backend == 'local' or (backend == 'docker' and mounts)
+
+
+def has_profile_local_terminal_cwd(terminal):
+    """An explicit, existing named-profile local cwd already belongs to this terminal scope."""
+    backend = str(terminal.get('TERMINAL_ENV') or 'local').strip().lower()
+    if backend != 'local':
+        return False
+    from hermes_constants import get_hermes_home
+    configured = _profile_workspace_cwd(get_hermes_home())
+    return bool(configured and terminal.get('TERMINAL_CWD') == configured)
 
 
 def _profile_workspace_cwd(home):
