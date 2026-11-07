@@ -776,6 +776,46 @@ class TestForceStream:
         assert len(client.calls) == 1
 
 
+@pytest.mark.asyncio
+async def test_aux_structured_stream_error_is_not_empty_success():
+    """Both auxiliary aggregators must surface in-stream errors, not finish_reason='stop'."""
+    from agent.chat_completion_helpers import ProviderStreamError
+
+    cases = [
+        (SimpleNamespace(choices=None, error={
+            "type": "rate_limit_error", "message": "temporary limit", "status_code": 429,
+        }), 429, "rate_limit_error", "temporary limit"),
+        (SimpleNamespace(choices=[], error_type="invalid_request_error",
+                         error_message="bad input", status_code=400),
+         400, "invalid_request_error", "bad input"),
+        (SimpleNamespace(choices=[], model_extra={
+            "error": {"code": "503", "message": "upstream unavailable"},
+        }), 503, "503", "upstream unavailable"),
+        (SimpleNamespace(choices=[], error=SimpleNamespace(
+            type="authentication_error", message="invalid key", status_code=401,
+        )), 401, "authentication_error", "invalid key"),
+    ]
+
+    async def stream(items):
+        for item in items:
+            yield item
+
+    for chunk, status, code, message in cases:
+        with pytest.raises(ProviderStreamError) as sync_error:
+            _aggregate_chat_stream(iter([chunk]), model="test-model")
+        with pytest.raises(ProviderStreamError) as async_error:
+            await _aggregate_chat_stream_async(stream([chunk]), model="test-model")
+        for exc in (sync_error.value, async_error.value):
+            assert exc.status_code == status
+            assert exc.body["error"]["code"] == code
+            assert exc.body["error"]["message"] == message
+
+    usage = {"prompt_tokens": 3}
+    usage_chunk = SimpleNamespace(choices=[], usage=usage)
+    assert _aggregate_chat_stream(iter([usage_chunk])).usage == usage
+    assert (await _aggregate_chat_stream_async(stream([usage_chunk]))).usage == usage
+
+
 class TestAsyncStreamAggregation:
     @pytest.mark.asyncio
     async def test_async_stream_is_consumed_with_async_for(self):
