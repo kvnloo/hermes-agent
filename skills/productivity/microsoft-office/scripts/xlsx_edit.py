@@ -53,6 +53,8 @@ from openpyxl.utils import get_column_letter, range_boundaries
 from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
+from xlsx_hyperlinks import move_cells_with_hyperlinks
+
 
 def infer(text):
     if text.startswith("="):
@@ -176,19 +178,19 @@ def main(argv=None):
 
     for arg in args.insert_rows:
         idx, n = parse_idx(arg)
-        ws.insert_rows(idx, n)
+        move_cells_with_hyperlinks(ws, "rows", idx, n, delete=False)
         changes.append(f"insert_rows {idx}x{n}")
     for arg in args.delete_rows:
         idx, n = parse_idx(arg)
-        ws.delete_rows(idx, n)
+        move_cells_with_hyperlinks(ws, "rows", idx, n, delete=True)
         changes.append(f"delete_rows {idx}x{n}")
     for arg in args.insert_cols:
         idx, n = parse_idx(arg)
-        ws.insert_cols(idx, n)
+        move_cells_with_hyperlinks(ws, "cols", idx, n, delete=False)
         changes.append(f"insert_cols {idx}x{n}")
     for arg in args.delete_cols:
         idx, n = parse_idx(arg)
-        ws.delete_cols(idx, n)
+        move_cells_with_hyperlinks(ws, "cols", idx, n, delete=True)
         changes.append(f"delete_cols {idx}x{n}")
 
     for assignment in args.set:
