@@ -296,6 +296,35 @@ class TestNonApprovalCardAction:
         assert 'FORM {"q1_text": "荔湾区岭南湾畔C9栋503 严总"}' in event.text
 
     @pytest.mark.asyncio
+    async def test_card_action_preserves_union_id_for_group_session(self):
+        """A card click must use the same union identity as a normal group message."""
+        adapter = _make_adapter()
+        data = _make_card_action_data(
+            action_value={"selection": "yes"}, token="tok_union_session",
+        )
+        data.event.operator.union_id = "on_shared_user1"
+
+        with (
+            patch.object(
+                adapter, "_resolve_sender_name_from_api", new_callable=AsyncMock,
+                return_value="Dave",
+            ),
+            patch.object(
+                adapter, "get_chat_info", new_callable=AsyncMock,
+                return_value={"name": "Team", "type": "group"},
+            ),
+            patch.object(adapter, "_handle_message_with_guards", new_callable=AsyncMock) as mock_handle,
+        ):
+            await adapter._handle_card_action_event(data)
+
+        mock_handle.assert_called_once()
+        event = mock_handle.call_args.args[0]
+        assert event.text.startswith("card:button")
+        assert event.source.chat_type == "group"
+        assert event.source.user_id == "ou_user1"
+        assert event.source.user_id_alt == "on_shared_user1"
+
+    @pytest.mark.asyncio
     async def test_missing_open_message_id_has_no_reply_anchor(self):
         """Without context.open_message_id the event must not carry the action token (c-…) as anchor."""
         adapter = _make_adapter()

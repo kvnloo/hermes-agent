@@ -2491,7 +2491,9 @@ class FeishuAdapter(BasePlatformAdapter):
         card_message_id = str(getattr(context, "open_message_id", "") or "")
         await self._dispatch_synthetic_event(
             text=synthetic_text, message_type=MessageType.TEXT, chat_id=chat_id,
-            sender_id=SimpleNamespace(open_id=open_id, user_id=None, union_id=None), event_chat_type="",
+            sender_id=SimpleNamespace(
+                open_id=open_id, user_id=None, union_id=getattr(operator, "union_id", None),
+            ), event_chat_type="",
             raw_message=data, message_id=card_message_id,
         )
 
