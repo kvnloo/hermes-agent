@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping
@@ -134,10 +135,10 @@ class HostedRoomPolicyCheckpoint:
             2**63 - 2, MAX_THREAD_TRANSCRIPT_EVENTS * (self.max_active_events + MAX_ACTIVE_RETRY_RECEIPTS + 2))
 
     def _connect(self) -> sqlite3.Connection:
-        # Late import: a gateway that outlives an on-disk upgrade has the OLD sqlite_util cached.
-        from hermes_cli.sqlite_util import open_db
+        from gateway.hosted_room_connection_reuse import open_reused
 
-        return open_db(self.db_path, db_label="shared-state.db (room policy checkpoint)", busy_timeout_ms=10_000)
+        return open_reused(self.db_path, db_label="shared-state.db (room policy checkpoint)",
+                           busy_timeout_ms=10_000)
 
     def _transaction(self):
         from hermes_cli.sqlite_util import transaction
@@ -335,7 +336,7 @@ class HostedRoomPolicyCheckpoint:
             conn.execute("BEGIN IMMEDIATE")
             cursor = self._ensure_cursor_and_transcript(conn, room_id)
         if cursor > latest_seq:
-            with self._connect() as conn:
+            with closing(self._connect()) as lease, lease as conn:
                 room = conn.execute("SELECT next_seq FROM hosted_rooms WHERE room_id=?", (room_id,)).fetchone()
                 if room is None:
                     raise hosted_rooms.RoomNotFoundError("hosted room not found")
