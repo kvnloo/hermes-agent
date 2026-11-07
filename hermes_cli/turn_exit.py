@@ -45,13 +45,16 @@ def turn_exit_code(
 def credential_failure_flags(exc) -> dict:
     """``turn_exit_code`` credential kwargs for an exception raised before any turn result exists.
 
-    Same predicates as the one-shot CLI's ``_ensure_runtime_credentials``: a quota/rate-limit
-    ``AuthError`` is transient, only an explicit re-authentication requirement is terminal. The
-    cause chain is walked because agent construction wraps the resolver's error."""
+    A quota/rate-limit ``AuthError`` is transient; a missing configured provider or an
+    explicit re-authentication requirement is terminal. Walk causes because agent
+    construction can wrap the resolver's error."""
     from hermes_cli.auth import AuthError, is_rate_limited_auth_error
+    from agent.auxiliary_unavailable import ProviderNotConfiguredError
     seen = set()
     while exc is not None and id(exc) not in seen:
         seen.add(id(exc))
+        if isinstance(exc, ProviderNotConfiguredError):
+            return {"credentials_rate_limited": False, "credentials_terminal": True}
         if isinstance(exc, AuthError):
             return {"credentials_rate_limited": is_rate_limited_auth_error(exc),
                     "credentials_terminal": bool(exc.relogin_required)}
