@@ -78,3 +78,14 @@ def test_one_turn_switch_does_not_pin_route(monkeypatch, db):
     _desktop_switch(monkeypatch, db, "s1", "grok-4.7", XAI_OAUTH, snapshot={"model": "deepseek-v4.1-flash"})
 
     assert SessionDB.session_gateway_runtime(db.get_session("s1"))["provider"] == "opencode-go"
+
+
+def test_committed_switch_clears_old_endpoint_and_mode(monkeypatch, db):
+    """A provider change must not carry an old provider's URL or wire mode into resume."""
+    _gateway_turn(db, "s1", _agent(db, "deepseek-v4.1-flash", OPENCODE_GO))
+    _desktop_switch(monkeypatch, db, "s1", "claude-opus-5-5",
+                    {"provider": "anthropic", "base_url": None, "api_mode": None})
+
+    route = SessionDB.session_gateway_runtime(db.get_session("s1"))
+    assert route == {"provider": "anthropic"}
+    assert _resumed_route(db, "s1") == ("claude-opus-5-5", "anthropic")
