@@ -641,6 +641,10 @@ CREATE TABLE IF NOT EXISTS state_meta (
     key TEXT PRIMARY KEY,
     value TEXT
 );
+-- SQLite LIKE is ASCII-case-insensitive by default, while the PRIMARY KEY is BINARY.
+-- An explicit NOCASE companion index permits literal-prefix seeks without losing legacy matches.
+CREATE INDEX IF NOT EXISTS idx_state_meta_key_nocase
+    ON state_meta(key COLLATE NOCASE);
 
 CREATE TABLE IF NOT EXISTS gateway_routing (
     scope TEXT NOT NULL DEFAULT '',
