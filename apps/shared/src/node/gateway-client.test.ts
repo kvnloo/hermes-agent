@@ -124,3 +124,32 @@ it('puts the source and client options on the session.create frame', async () =>
   FakeSocket.instances = []
   expect(await createdFrame({ source: 'cli', client }, ['source', 'request_id'])).toEqual({ source: 'cli' })
 })
+
+it('logs an uncorrelated parse-error reply from the owner WebSocket', async () => {
+  vi.stubGlobal('WebSocket', FakeSocket)
+  const gw = new GatewayClient({ connect: async () => ({
+    url: 'ws://127.0.0.1:9/api/ws', protocols: [], profile_id: '/home/p', instance_id: 'owner'
+  }) })
+  const events: string[] = []
+
+  try {
+    gw.on('event', (event: { type: string }) => events.push(event.type))
+    gw.start()
+    gw.drain()
+    await vi.waitFor(() => expect(FakeSocket.instances).toHaveLength(1))
+    const socket = FakeSocket.instances[0]!
+
+    socket.open()
+    await vi.waitFor(() => expect(socket.sent.some(frame => frame.method === 'runtime.describe')).toBe(true))
+    socket.reply('runtime.describe', { session_create: { sources: ['tui'], parameters: ['request_id', 'source'] } })
+    await vi.waitFor(() => expect(events).toContain('gateway.ready'))
+
+    socket.emit('message', { data: JSON.stringify({
+      jsonrpc: '2.0', id: null, error: { code: -32700, message: 'parse error' }
+    }) })
+
+    expect(gw.getLogTail(20)).toContain('[protocol] error frame with no request id: -32700 parse error')
+  } finally {
+    gw.kill()
+  }
+})
