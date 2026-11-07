@@ -396,7 +396,7 @@ def _prompt_frame(authority, ref, row, worker, frame):
     return True
 
 
-def _worker_env(authority):
+def _worker_env(authority, scoped=False):
     """Child env for the OWNING profile under multiplex: its HERMES_HOME plus its ``.env``
     secrets over a scrubbed base, never the launch profile's process environment (the same
     rule MCP stdio children and shell hooks follow) — except for the launch profile's own
@@ -410,7 +410,9 @@ def _worker_env(authority):
         return None
     # Keyed on the worker's OWNING profile, not only the process-wide multiplex flag: a worker for
     # another profile must never inherit the launch environ even when that flag reads False.
-    routed = _is_routed_home(home)
+    # ``scoped``: a sandboxed worker (#342) gets its own profile's scope like a routed home, never the
+    # launch process's environ; its secrets resolve here, outside the boundary that hides their sources.
+    routed = scoped or _is_routed_home(home)
     if not routed and not is_multiplex_active():
         return None
     from agent.secret_scope import build_profile_secret_scope
@@ -582,18 +584,35 @@ async def _settle_lost(authority, row, scope, recording):
         await tracked_write(authority, partial(lose_admission_worker, authority, row, scope))
 
 
+def _sandbox_refusal(exc):
+    """A never-run turn: the profile asked for a boundary this host cannot build (``sandbox_unavailable``)."""
+    from agent.turn_failure_copy import stamp_failure
+    text = f'Refused: this profile runs sandboxed and {exc.detail}.'
+    return stamp_failure({'final_response': text, 'messages': [], 'api_calls': 0, 'tools': [],
+                          'failed': True, 'completed': False, 'error': text}, 'sandbox_unavailable', False)
+
+
 async def _spawn_registered_worker(authority, ref, row):
     """Spawn the turn's child and register it for Stops: ``(worker, process)``, or None when the spawn was cancelled (the
     interrupted result is already recorded). The generation stays marked spawning until registration."""
     spawning = _mark_spawning(authority, ref, row)
     generation = row.get('generation')
     try:
-        env = await asyncio.to_thread(_worker_env, authority)
+        from gateway.worker_sandbox import SandboxUnavailable, load_policy, wrap_worker
         cwd = (await asyncio.to_thread(Path(__file__).resolve)).parents[1]
+        try:  # the profile's own boundary (#342), re-read at each launch; off unless sandbox.yaml enables it
+            sandbox = await asyncio.to_thread(load_policy, authority.profile_id)
+            env = await asyncio.to_thread(_worker_env, authority, sandbox is not None)
+            argv, env = await asyncio.to_thread(wrap_worker, sandbox, [sys.executable, '-m', 'agent.managed_worker'],
+                                                env, cwd)
+        except SandboxUnavailable as exc:
+            spawning.pop(ref.session_id, None)
+            authority.pending_results[row['admission_id']] = {'result': _sandbox_refusal(exc), 'usage': {}}
+            return None
         from gateway.session_worker_spawn import acquire_process
         from gateway.session_managed_worker_log import worker_log_path
         log_path = worker_log_path(authority.profile_id)
-        process = await acquire_process(subprocess.Popen, [sys.executable, '-m', 'agent.managed_worker'],
+        process = await acquire_process(subprocess.Popen, argv,
             cwd=cwd, stdin=subprocess.PIPE, env=env, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL if log_path is None else subprocess.PIPE, **WORKER_POPEN)
     except asyncio.CancelledError:
