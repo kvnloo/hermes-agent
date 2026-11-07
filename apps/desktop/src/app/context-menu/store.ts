@@ -10,6 +10,9 @@ import type { ContextMenuDomTarget } from './target'
 export interface SpellcheckContext {
   misspelledWord: string
   suggestions: string[]
+  /** Native context-menu coordinates, present in Electron's forward. */
+  x?: number
+  y?: number
 }
 
 /** What the guest page reported for the click, straight off the webview's
@@ -95,15 +98,46 @@ function probeClipboard(opened: Extract<OpenContextMenu, { kind: 'terminal' }>):
     .catch(() => undefined)
 }
 
+// Chromium and the DOM can report the same gesture in either order.
+const EARLY_SPELLCHECK_MAX_MS = 500
+let earlySpellcheck: { payload: SpellcheckContext; receivedAt: number } | null = null
+
+function sameGesturePoint(payload: SpellcheckContext, x: number, y: number): boolean {
+  return (
+    (payload.x === undefined && payload.y === undefined) ||
+    (typeof payload.x === 'number' &&
+      typeof payload.y === 'number' &&
+      Math.abs(payload.x - x) <= 2 &&
+      Math.abs(payload.y - y) <= 2)
+  )
+}
+
 export function openDomContextMenu(x: number, y: number, target: ContextMenuDomTarget): void {
-  $contextMenu.set({ kind: 'dom', x, y, target, spellcheck: null })
+  const early = earlySpellcheck
+
+  earlySpellcheck = null
+  $contextMenu.set({
+    kind: 'dom',
+    x,
+    y,
+    target,
+    spellcheck:
+      target.editable &&
+      early &&
+      Date.now() - early.receivedAt <= EARLY_SPELLCHECK_MAX_MS &&
+      sameGesturePoint(early.payload, x, y)
+        ? early.payload
+        : null
+  })
 }
 
 export function openGuestContextMenu(x: number, y: number, params: GuestMenuParams, guest: GuestMenuHandle): void {
+  earlySpellcheck = null
   $contextMenu.set({ kind: 'guest', x, y, params, guest })
 }
 
 export function openTerminalContextMenu(x: number, y: number, terminal: TerminalMenuHandle): void {
+  earlySpellcheck = null
   const opened: OpenContextMenu = { kind: 'terminal', x, y, terminal, clipboardHasText: false }
 
   $contextMenu.set(opened)
@@ -114,6 +148,7 @@ export function openTerminalContextMenu(x: number, y: number, terminal: Terminal
 }
 
 export function closeContextMenu(): void {
+  earlySpellcheck = null
   $contextMenu.set(null)
 }
 
@@ -121,9 +156,27 @@ export function closeContextMenu(): void {
  *  when the menu already closed or the click was not in an editable — the
  *  forward always belongs to the gesture that opened the current menu. */
 export function augmentSpellcheck(payload: SpellcheckContext): void {
+  if (!payload.misspelledWord) {
+    return
+  }
+
   const open = $contextMenu.get()
 
-  if (!open || open.kind !== 'dom' || !open.target.editable || !payload.misspelledWord) {
+  if (!open) {
+    // Only native reports with a point can be attached to a later DOM gesture.
+    if (
+      typeof payload.x === 'number' &&
+      typeof payload.y === 'number' &&
+      Number.isFinite(payload.x) &&
+      Number.isFinite(payload.y)
+    ) {
+      earlySpellcheck = { payload, receivedAt: Date.now() }
+    }
+
+    return
+  }
+
+  if (open.kind !== 'dom' || !open.target.editable || !sameGesturePoint(payload, open.x, open.y)) {
     return
   }
 
