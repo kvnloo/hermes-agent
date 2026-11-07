@@ -1274,6 +1274,9 @@ def _classify_400(c: _Ctx) -> Verdict:
     verdict = _first_match(msg, _IMAGE_TOOL_RULES)
     if verdict is not None:
         return verdict
+    # LiteLLM proxies without a DB report invalid/missing keys as HTTP 400 (#150575).
+    if "no connected db" in msg or "no api key passed in" in msg:
+        return _V_AUTH_ROTATE
     # Codex ChatGPT-account model rejection: exact normalized text only, so arbitrary 400s never
     # rotate. Before request-validation, whose "not supported" wording would abort as format_error (#71970).
     if CODEX_ACCOUNT_MODEL_ENTITLEMENT_MARKER in msg:
