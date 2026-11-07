@@ -602,7 +602,8 @@ async def _spawn_registered_worker(authority, ref, row):
         cwd = (await asyncio.to_thread(Path(__file__).resolve)).parents[1]
         try:  # the profile's own boundary (#342), re-read at each launch; off unless sandbox.yaml enables it
             sandbox = await asyncio.to_thread(load_policy, authority.profile_id)
-            env = await asyncio.to_thread(_worker_env, authority, sandbox is not None)
+            env = await (asyncio.to_thread(_worker_env, authority, scoped=True) if sandbox is not None
+                         else asyncio.to_thread(_worker_env, authority))
             argv, env = await asyncio.to_thread(wrap_worker, sandbox, [sys.executable, '-m', 'agent.managed_worker'],
                                                 env, cwd)
         except SandboxUnavailable as exc:
