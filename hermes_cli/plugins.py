@@ -762,7 +762,8 @@ class PluginContext:
             # the global slot into every profile scope anyway, so skipping is a
             # provable no-op -- demote the per-boot warning to debug. The warning
             # is RETAINED for a genuinely first-time foreign-scope registration.
-            if get_provider(provider.name) is not None:
+            # A user plugin reusing an existing name is still a scope mistake.
+            if self.manifest.source == "bundled" and get_provider(provider.name) is not None:
                 logger.debug(
                     "Plugin '%s' re-registered dashboard-auth provider %r from profile "
                     "scope %s; launch scope %s already owns it -- skipping (no-op).",
