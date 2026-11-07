@@ -148,7 +148,8 @@ class WorkerRPC:
         from hermes_cli.gateway_runtime import control_home_for
         endpoint = self.endpoint
         descriptor = query_identify(control_home_for(self.home, endpoint), timeout=5)
-        if descriptor.get('pid') == os.getpid():
+        from gateway.worker_sandbox import owner_visible_pid
+        if descriptor.get('pid') == owner_visible_pid():
             raise WorkerPersistenceError('synchronous_self_rpc')
         ticket = _session_ticket(self.home, endpoint, purpose='worker-adoption')
         url, protocols = gateway_ws_target(endpoint, ticket)
@@ -201,7 +202,8 @@ class WorkerRPC:
                 raise
             if 'error' in response:
                 raise WorkerPersistenceError(response['error'].get('message', 'persistence_failed'))
-            if method in ('worker.register', 'worker.adopt') and params.get('pid') == os.getpid():
+            from gateway.worker_sandbox import owner_visible_pid
+            if method in ('worker.register', 'worker.adopt') and params.get('pid') == owner_visible_pid():
                 global _worker_process
                 _worker_process = True
             return response['result']

@@ -3,10 +3,10 @@
 Binding is private runtime wiring, not model tool surface or a storage fallback.
 Fresh executor/helper threads retain the registered interpreter's owner boundary.
 """
-import os
 import threading
 
 from agent.runtime_session_store import WorkerPersistenceError, call_off_event_loop, is_worker_process
+from gateway.worker_sandbox import owner_visible_pid
 
 _store = None
 _lock = threading.Lock()
@@ -14,7 +14,7 @@ _lock = threading.Lock()
 
 def bind_worker_delegation_store(store):
     global _store
-    if not is_worker_process() or store.scope['pid'] != os.getpid():
+    if not is_worker_process() or store.scope['pid'] != owner_visible_pid():
         raise WorkerPersistenceError('permission_denied')
     with _lock:
         if _store is not None and _store is not store:
@@ -26,7 +26,7 @@ def worker_ledger():
     if not is_worker_process():
         return None
     with _lock:
-        if _store is None or _store.scope['pid'] != os.getpid():
+        if _store is None or _store.scope['pid'] != owner_visible_pid():
             raise WorkerPersistenceError('worker_delegation_ledger_unbound')
         return WorkerDelegationLedger(_store)
 

@@ -107,11 +107,12 @@ def encode_frame(frame):
 
 
 def validate_bootstrap(frame):
+    from gateway.worker_sandbox import accept_owner_pid
     if set(frame) - {'attachments_v1'} != BOOTSTRAP_FIELDS or frame['version'] != 1:
         raise ValueError('invalid_managed_worker_bootstrap')
     scope = frame['scope']
     fields = {'profile_id', 'session_id', 'execution_id', 'generation', 'pid', 'birth', 'secret', 'epoch'}
-    if (not isinstance(scope, dict) or set(scope) != fields or scope['pid'] != os.getpid()
+    if (not isinstance(scope, dict) or set(scope) != fields or not accept_owner_pid(scope['pid'])
             or scope['profile_id'] != frame['home'] or not Path(frame['home']).is_absolute()
             or not isinstance(frame['policy'], dict)
             or any(not isinstance(frame[k], str) for k in ('text', 'route', 'user_id', 'chat_id'))
@@ -355,7 +356,9 @@ def execute(frame, channel):
     set_current_session_key(frame['route'])
     os.environ['HERMES_GATEWAY_SESSION'] = '1'
     from gateway.session_worker_construct import checkpoint_agent_kwargs, construct_kwargs, routing_agent_kwargs
+    from gateway.worker_sandbox import with_notice  # the boundary notice, when the owner sandboxed this worker (#342)
     construct = {'ephemeral_system_prompt': policy.skills_prompt, **construct_kwargs(frame)}
+    construct['ephemeral_system_prompt'] = with_notice(construct['ephemeral_system_prompt'])
     controls = WorkerControls(channel, frame['route'])
     register_gateway_notify(frame['route'], controls.approval)
     agent = None
@@ -384,7 +387,8 @@ def execute(frame, channel):
             if controls.stopped.is_set():
                 from agent.interrupt_compat import request_hard_interrupt
                 request_hard_interrupt(agent)
-            channel.send('ready', pid=os.getpid())
+            from gateway.worker_sandbox import owner_visible_pid
+            channel.send('ready', pid=owner_visible_pid())
             history = store.get_messages_as_conversation(scope['session_id'])
             from gateway.session_kanban import run_worker_turns
             if 'attachments_v1' in frame:

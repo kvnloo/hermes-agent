@@ -6,6 +6,7 @@ this returns. Public worker.register remains idle-only for unreserved callers.
 import os
 import secrets
 import subprocess
+import sys
 
 from gateway.session_admission import admission_fingerprint
 from gateway.owner_identity import same_owner
@@ -37,6 +38,7 @@ def verify_worker_identity(process, hello):
         handle = psutil.Process(process.pid)
         if handle.ppid() != os.getpid() or handle.status() == psutil.STATUS_ZOMBIE:
             raise RuntimeStoreError('permission_denied')
+        pid = _host_pid(handle, pid)
         worker = psutil.Process(pid)
         from hermes_cli.process_identity import worker_birth
         birth = worker_birth(worker)  # kernel start: stable across clock steps (#140580) and btime re-anchors
@@ -49,6 +51,24 @@ def verify_worker_identity(process, hello):
     if pid != process.pid and process.pid not in chain:
         raise RuntimeStoreError('permission_denied')
     return pid, birth
+
+
+def _host_pid(handle, pid):
+    """The host pid of a worker that reported *pid* from its own pid namespace (a sandboxed worker,
+    #342): the descendant of the handle whose innermost ``NSpid`` is *pid*. A worker in the owner's
+    namespace (every unsandboxed one) is returned unchanged; the checks after this still prove birth
+    and descent, so a forged pid finds no match and fails them."""
+    if not sys.platform.startswith('linux'):
+        return pid
+    for child in handle.children(recursive=True):
+        try:
+            with open(f'/proc/{child.pid}/status', encoding='ascii') as status:
+                ns_ids = next((line.split()[1:] for line in status if line.startswith('NSpid:')), [])
+        except OSError:
+            continue
+        if len(ns_ids) > 1 and ns_ids[-1] == str(pid):
+            return child.pid
+    return pid
 
 
 def owner_worker_subject():
