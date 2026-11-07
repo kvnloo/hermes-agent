@@ -174,3 +174,31 @@ class TestGitPushDeleteAndRefspec:
         name-internal ``+``)."""
         dangerous, _, _ = detect_dangerous_command(cmd)
         assert dangerous is False, cmd
+
+
+class TestGitPushQuotedGlobalOptionValues:
+    """Quoted git global-option operands must not hide a destructive push.
+
+    Regression for NousResearch/hermes-agent#150744, reported by michiomochi;
+    follow-up to moken627-hub's carrier PR #146311.
+    """
+
+    @pytest.mark.parametrize("cmd", [
+        'git -C "/tmp/work tree" push --force origin main',
+        "git -C '/tmp/work tree' push -f origin main",
+        'git --git-dir="/tmp/work tree/.git" push --force origin main',
+        'git --work-tree "/tmp/work tree" push -f origin main',
+        'git -c core.pager="cat -v" push --force origin main',
+    ])
+    def test_force_push_not_hidden_by_quoted_global_option(self, cmd):
+        dangerous, _, description = detect_dangerous_command(cmd)
+        assert dangerous is True, (cmd, description)
+        assert "force" in description.lower(), (cmd, description)
+
+    @pytest.mark.parametrize("cmd", [
+        'git -C "/tmp/work tree" push origin main',
+        'git --git-dir="/tmp/work tree/.git" status',
+        'git -c core.pager="cat -v" push origin main',
+    ])
+    def test_quoted_global_options_preserve_benign_commands(self, cmd):
+        assert detect_dangerous_command(cmd)[0] is False, cmd

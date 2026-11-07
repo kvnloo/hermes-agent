@@ -231,9 +231,15 @@ def detect_hardline_command(command: str) -> tuple:
 # ref with zero approval (public incident: PrimeIntellect-ai/prime-agent#2446, 62 branches dropped
 # by a mirror push). The option group is a fixed alternation that consumes exactly its own argument,
 # so it cannot swallow an arbitrary word and revive cross-token false positives.
+# A global option value is one shell word, including quoted fragments with spaces.
+# \S+ misparses -C "/path with spaces" and silently misses the following force push.
+_GIT_OPT_VALUE = r'''(?:"[^"\n]*"|'[^'\n]*'|[^\s;|&"'])+'''
 _GIT_PUSH = (
-    r'\bgit\b(?:\s+(?:-C\s+\S+|-c\s+\S+|--git-dir(?:=\S+|\s+\S+)'
-    r'|--work-tree(?:=\S+|\s+\S+)|--namespace=\S+|--exec-path(?:=\S+|\s+\S+)))*\s+push\b'
+    rf'\bgit\b(?:\s+(?:-C\s+{_GIT_OPT_VALUE}|-c\s+{_GIT_OPT_VALUE}'
+    rf'|--git-dir(?:={_GIT_OPT_VALUE}|\s+{_GIT_OPT_VALUE})'
+    rf'|--work-tree(?:={_GIT_OPT_VALUE}|\s+{_GIT_OPT_VALUE})'
+    rf'|--namespace={_GIT_OPT_VALUE}'
+    rf'|--exec-path(?:={_GIT_OPT_VALUE}|\s+{_GIT_OPT_VALUE})))*\s+push\b'
 )
 
 DANGEROUS_PATTERNS = [
