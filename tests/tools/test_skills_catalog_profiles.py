@@ -173,3 +173,48 @@ def test_catalog_cache_tracks_context_dependent_kanban_visibility(
     }
     context["kanban"] = False
     assert _listed_skills(_dispatch_skills_list(profile)) == {}
+
+def test_full_cache_refresh_and_new_profile_preserve_peer(
+    isolated_catalog, monkeypatch
+):
+    """A profile refresh or capacity miss must not flush unrelated warm catalogs."""
+    skills_tool, _skill_utils, tmp_path = isolated_catalog
+    from hermes_constants import get_hermes_home
+    from tools import skills_tool_catalog
+
+    monkeypatch.setattr(skills_tool, "_SKILLS_CACHE_MAX_ENTRIES", 2)
+    profile_a = tmp_path / "profiles" / "a"
+    profile_b = tmp_path / "profiles" / "b"
+    profile_c = tmp_path / "profiles" / "c"
+    _write_skill(profile_a, "research/a-one", "a-one", "profile A")
+    _write_skill(profile_b, "research/b-one", "b-one", "profile B")
+    _write_skill(profile_c, "research/c-one", "c-one", "profile C")
+
+    scans = {home.resolve(): 0 for home in (profile_a, profile_b, profile_c)}
+    original_read = skills_tool_catalog._read_catalog
+
+    def count_read(roots):
+        scans[get_hermes_home().resolve()] += 1
+        return original_read(roots)
+
+    monkeypatch.setattr(skills_tool_catalog, "_read_catalog", count_read)
+    assert _listed_skills(_dispatch_skills_list(profile_a)) == {"a-one": "profile A"}
+    assert _listed_skills(_dispatch_skills_list(profile_b)) == {"b-one": "profile B"}
+    assert len(skills_tool._SKILLS_CACHE) == 2
+
+    # A changes its catalog, but B's unchanged parsed records should stay warm.
+    _write_skill(profile_a, "research/a-two", "a-two", "profile A two")
+    assert _listed_skills(_dispatch_skills_list(profile_a)) == {
+        "a-one": "profile A", "a-two": "profile A two",
+    }
+    assert _listed_skills(_dispatch_skills_list(profile_b)) == {"b-one": "profile B"}
+    assert scans[profile_a.resolve()] == 2
+    assert scans[profile_b.resolve()] == 1
+
+    # A third key requires one eviction, not eviction of the whole cache.
+    assert _listed_skills(_dispatch_skills_list(profile_c)) == {"c-one": "profile C"}
+    assert _listed_skills(_dispatch_skills_list(profile_b)) == {"b-one": "profile B"}
+    assert scans == {
+        profile_a.resolve(): 2, profile_b.resolve(): 1, profile_c.resolve(): 1,
+    }
+    assert len(skills_tool._SKILLS_CACHE) == 2

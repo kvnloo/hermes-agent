@@ -251,8 +251,11 @@ def _skill_catalog(*, skip_disabled: bool = False, include_hidden: bool = False)
         records = _read_catalog(roots)
         # Keep the pre-read signature so a concurrent write is seen on the next lookup.
         with _SKILLS_CACHE_LOCK:
-            if len(_SKILLS_CACHE) >= _SKILLS_CACHE_MAX_ENTRIES:
-                clear_skills_cache()
+            if (cache_key not in _SKILLS_CACHE
+                    and len(_SKILLS_CACHE) >= _SKILLS_CACHE_MAX_ENTRIES
+                    and _SKILLS_CACHE):
+                # Retain other warm profiles: evict only the oldest cache slot.
+                _SKILLS_CACHE.pop(next(iter(_SKILLS_CACHE)))
             _SKILLS_CACHE[cache_key] = (signature, now, records)
     # Eligibility belongs to the current execution; only filesystem parsing is cached.
     return _select_catalog(records, disabled, include_hidden)
