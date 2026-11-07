@@ -774,3 +774,27 @@ class TestConfigRefusalGuidance:
         # the agent into an impossible retry loop; the supported path is the CLI.
         assert "hermes config set" in err
         assert "Edit ~/.hermes/config.yaml directly" not in err
+
+
+    def test_tool_refusal_requires_human_cli_and_platform_neutral_path(self, tmp_path, monkeypatch):
+        """A config write refusal must not invite agent-side CLI bypass or assume POSIX."""
+        import json
+
+        import tools.file_tools_write_guards as guards
+        from tools.file_tools import write_file_tool
+
+        config_path = tmp_path / "config.yaml"
+        monkeypatch.setattr(guards, "_hermes_config_resolved", str(config_path))
+        monkeypatch.setattr(guards, "_hermes_config_resolved_loaded", True)
+
+        result = json.loads(write_file_tool(str(config_path), "approvals:\n  mode: off\n"))
+        error = result.get("error", "")
+        assert "Refusing to write to Hermes config file" in error
+        assert "hermes config set" in error
+        assert "The user must run" in error
+        assert "outside agent tools" in error
+        assert "agents must not run" in error
+        assert "hermes config path" in error
+        assert "hermes config get" in error
+        assert "~/.hermes/config.yaml" not in error
+        assert not config_path.exists()
