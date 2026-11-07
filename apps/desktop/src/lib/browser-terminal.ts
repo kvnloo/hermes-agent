@@ -252,10 +252,7 @@ async function dialTerminal(state: TerminalState, context: DialContext): Promise
       }
     }
 
-    socket.onerror = () => {
-      if (!settled) {fail(new TerminalConnectionError('Host terminal WebSocket failed to connect'))}
-    }
-
+    // A browser fires error before close. Only the close event can carry the refusal reason/code.
     socket.onclose = event => {
       if (!current()) {return}
       settleOpen(state)
@@ -265,7 +262,12 @@ async function dialTerminal(state: TerminalState, context: DialContext): Promise
       if (signal === 'expired') {forget(state)}
 
       if (!handshakeComplete) {
-        fail(new TerminalConnectionError(event.reason || `Host terminal closed (${event.code})`, exited ? EXITED : signal))
+        fail(new TerminalConnectionError(
+          event.reason || (event.code === 1006
+            ? 'Host terminal WebSocket failed to connect. Check the selected gateway and its Webapp terminal access.'
+            : `Host terminal closed (${event.code})`),
+          exited ? EXITED : signal
+        ))
 
         return
       }
