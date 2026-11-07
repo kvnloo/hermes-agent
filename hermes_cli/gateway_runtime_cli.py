@@ -1,7 +1,9 @@
 """Machine-readable ensure boundary. No bootstrap credentials leave this command."""
 from dataclasses import asdict
 import json
+import math
 import sys
+import traceback
 from contextlib import redirect_stdout
 
 
@@ -18,10 +20,21 @@ def cmd_gateway_ensure(args) -> None:
     from hermes_constants import get_hermes_home
     from hermes_cli.gateway_runtime import ensure_gateway_runtime
 
+    # Only caller-controlled timeout syntax/range is an invalid invocation.
+    # A ValueError raised after dispatch is a launch failure, not a bad CLI argument.
+    try:
+        timeout = float(args.timeout)
+        if not math.isfinite(timeout) or timeout <= 0:
+            raise ValueError("timeout must be positive and finite")
+    except (ValueError, TypeError):
+        print(json.dumps({"state": "inaccessible", "reason_code": "invalid_invocation", "endpoint": None},
+                         separators=(",", ":"), sort_keys=True))
+        raise SystemExit(2)
+
     try:
         # Legacy imported utilities can print; protocol stdout belongs only to us.
         with redirect_stdout(sys.stderr):
-            result = ensure_gateway_runtime(get_hermes_home(), timeout=float(args.timeout))
+            result = ensure_gateway_runtime(get_hermes_home(), timeout=timeout)
         payload = asdict(result)
         if result.endpoint:
             payload["endpoint"]["capabilities"] = sorted(result.endpoint.capabilities)
@@ -32,6 +45,7 @@ def cmd_gateway_ensure(args) -> None:
         payload["client_code_sha"] = get_code_identity().get("sha")
         code = ensure_exit_code(result)
     except (ValueError, TypeError):
-        payload, code = {"state": "inaccessible", "reason_code": "invalid_invocation", "endpoint": None}, 2
+        traceback.print_exc(file=sys.stderr)
+        payload, code = {"state": "inaccessible", "reason_code": "launch_failed", "endpoint": None}, 7
     print(json.dumps(payload, separators=(",", ":"), sort_keys=True))
     raise SystemExit(code)
