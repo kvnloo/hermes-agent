@@ -1021,6 +1021,10 @@ class SessionSchemaMixin:
         if fts5_available:
             self._init_fts(cursor)
             self._stamp_settled_fts_layout(cursor)
+        # Separate from interactive-search FTS: media retention must index tool,
+        # cron, and delegate transcripts the interactive trigram index excludes.
+        from hermes_state_history_fts import ensure_history_fts
+        ensure_history_fts(cursor, enabled=fts5_available and self._trigram_tokenizer_available(cursor))
         self._conn.commit()
 
     def _stamp_settled_fts_layout(self, cursor: sqlite3.Cursor) -> None:

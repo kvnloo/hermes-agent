@@ -513,27 +513,80 @@ def collect_unheld_api_images(db):
         return 0
 
 
-def _history_mentions(conn, references, after_id=0):
-    """Candidate paths any transcript row (id > after_id) mentions raw or JSON-escaped, in ONE
-    messages pass. Rows are prefiltered in SQL on the literal text before each candidate's digest
-    directory, so only rows that could name a candidate reach Python's exact substring test."""
-    # Matched by the content-addressed tail ``<sha256>/<name>`` with either separator, so every
-    # spelling a note can carry (the host path, a sandbox backend's ``to_agent_visible_cache_path``)
-    # counts as a mention.
+def _history_mentions_scan(conn, references, after_id=0, *, blobs_only=False):
+    """Original exact full-scan oracle; also the fallback for unsupported FTS or BLOB rows."""
     needles = {}
     for reference in references:
         raw = reference['path']
         for tail in (reference['sha256'] + sep + Path(raw).name for sep in ('/', '\\')):
             needles[tail] = needles[json.dumps(tail)[1:-1]] = raw
     prefixes = sorted({reference['sha256'] for reference in references})
-    # The digests are ONE bound JSON array, never one ``instr`` term each: the statement's size
-    # must not grow with the candidate count (SQLite's expression-depth limit fails at ~1000 terms).
+    # One JSON parameter avoids SQLite's expression-depth limit for large batches.
     query = ('WITH digests(value) AS MATERIALIZED (SELECT value FROM json_each(?)) SELECT content FROM messages '
-             'WHERE EXISTS (SELECT 1 FROM digests WHERE instr(content, digests.value))' + (' AND id>?' if after_id else ''))
+             'WHERE EXISTS (SELECT 1 FROM digests WHERE instr(content, digests.value))'
+             + (" AND typeof(content)='blob'" if blobs_only else '')
+             + (' AND id>?' if after_id else ''))
     mentioned = set()
     for (content,) in conn.execute(query, (json.dumps(prefixes), *((after_id,) if after_id else ()))):
         text = content.decode('utf-8', 'replace') if isinstance(content, bytes) else str(content)
         mentioned.update(raw for needle, raw in needles.items() if needle in text)
+    return mentioned
+
+
+def _history_mentions(conn, references, after_id=0):
+    """Find exact raw/JSON-escaped media tails via a digest-selective trigram index.
+
+    FTS is only a candidate generator: confirm the same literal tails as the
+    original scan. Every role and session source is indexed, including copied
+    rows; BLOBs and non-SHA directory names retain their original scan path.
+    The caller owns the read snapshot and optional id watermark.
+    """
+    if not references:
+        return set()
+    from hermes_state_history_fts import HISTORY_FTS_READY_KEY
+    try:
+        ready = conn.execute("SELECT 1 FROM state_meta WHERE key=? AND value='1'",
+                             (HISTORY_FTS_READY_KEY,)).fetchone()
+    except sqlite3.DatabaseError:
+        return _history_mentions_scan(conn, references, after_id)
+    if ready is None:
+        return _history_mentions_scan(conn, references, after_id)
+
+    by_digest = {}
+    invalid = []
+    valid = []
+    for reference in references:
+        digest = reference['sha256']
+        if _SHA256_NAME.fullmatch(digest) is None:
+            invalid.append(reference)
+            continue
+        valid.append(reference)
+        needles = by_digest.setdefault(digest, {})
+        raw = reference['path']
+        for tail in (digest + sep + Path(raw).name for sep in ('/', '\\')):
+            needles[tail] = raw
+            needles[json.dumps(tail)[1:-1]] = raw
+
+    query = ("SELECT m.content FROM messages_history_fts "
+             "JOIN messages AS m ON m.id = messages_history_fts.rowid "
+             "WHERE messages_history_fts MATCH ?" + (" AND m.id>?" if after_id else ""))
+    mentioned = set()
+    try:
+        for digest, needles in by_digest.items():
+            for (content,) in conn.execute(
+                    query, ('"' + digest + '"', *((after_id,) if after_id else ()))):
+                text = content.decode('utf-8', 'replace') if isinstance(content, bytes) else str(content)
+                mentioned.update(raw for needle, raw in needles.items() if needle in text)
+        # The dedicated index intentionally skips non-TEXT values, while the
+        # original instr() can still inspect BLOBs. A sparse partial BLOB index
+        # keeps this fallback bounded to those exceptional rows.
+        if valid:
+            mentioned |= _history_mentions_scan(conn, valid, after_id, blobs_only=True)
+        if invalid:
+            mentioned |= _history_mentions_scan(conn, invalid, after_id)
+    except sqlite3.DatabaseError:
+        logger.warning("Media history FTS unavailable; using exact transcript scan", exc_info=True)
+        return _history_mentions_scan(conn, references, after_id)
     return mentioned
 
 
