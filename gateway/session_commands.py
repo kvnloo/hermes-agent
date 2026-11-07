@@ -107,9 +107,8 @@ _CONTROL_ARGUMENTS = {
 }
 
 
-# The setting forms a local session cannot deliver: `/voice tts` asks the owner to voice every reply,
-# and a local session's audio plays only in its client. Read like the handler reads it (no shlex): an
-# unbalanced quote in any other `/voice` argument still reaches the handler.
+# Without proven host playback, /voice tts must not synthesize undeliverable audio.
+# Read the argument like the handler (no shlex); other forms remain available.
 _REFUSED_ARGUMENTS = {
     'voice': lambda arg: arg.strip().lower() == 'tts',
 }
@@ -130,9 +129,9 @@ REFUSAL_HINTS = {
 }
 
 
-def command_verdict(name, arg=''):
+def command_verdict(name, arg='', *, local_tts=False):
     """``read`` / ``control`` / ``refused`` for a canonical registry command on a local session."""
-    if _REFUSED_ARGUMENTS.get(name, lambda _a: False)(arg):
+    if _REFUSED_ARGUMENTS.get(name, lambda _a: False)(arg) and not (name == 'voice' and local_tts):
         return 'refused'
     if name in _OWNER_COMMANDS:
         return 'read' if cron_read(_split(arg)) is not None else 'control'  # main's /cron handler shlex-splits
@@ -432,7 +431,10 @@ async def execute_command(connection, ref, params, *, dispatch=False):
     name, arg = await asyncio.to_thread(resolve)
     definition = resolve_command(name)
     canonical = definition.name if definition else name
-    verdict = command_verdict(canonical, arg) if definition else None
+    live = authority.sessions[ref.session_id]
+    adapter = authority.runner._adapter_for_source(live.source) if canonical == 'voice' else None
+    local_tts = bool(adapter and getattr(adapter, 'can_play_host_audio', lambda _id: False)(ref.session_id))
+    verdict = command_verdict(canonical, arg, local_tts=local_tts) if definition else None
 
     fired = []
 
@@ -452,7 +454,6 @@ async def execute_command(connection, ref, params, *, dispatch=False):
                   'session:approve' if canonical in _APPROVAL_COMMANDS else
                   'session:control' if definition or runner_command else 'session:submit')
     authority.authorize(actor, ref, capability)
-    live = authority.sessions[ref.session_id]
     if verdict == 'refused' or (verdict == 'control' and canonical in _OWNER_COMMANDS
                                 and ref.session_id in connection.subscriptions):
         raise RuntimeStoreError('unsupported_command', detail=REFUSAL_HINTS.get(canonical))
