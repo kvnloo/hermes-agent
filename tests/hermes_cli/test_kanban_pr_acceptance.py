@@ -245,7 +245,8 @@ def test_rules_forbidden_clean_merge_state_accepts(tmp_path, monkeypatch):
         "import json, os, sys\n"
         "endpoint = sys.argv[2]\n"
         "if '/rules/branches/' in endpoint:\n"
-        "    sys.stderr.write('HTTP 403\\n')\n"
+        "    sys.stderr.write('gh: Upgrade to GitHub Pro or make this repository "
+        "public to enable this feature. (HTTP 403)\\n')\n"
         "    sys.exit(1)\n"
         "sha = 'a' * 40\n"
         "if endpoint == 'graphql':\n"
@@ -274,3 +275,46 @@ def test_rules_forbidden_clean_merge_state_accepts(tmp_path, monkeypatch):
     assert blocked["ok"] is False
     assert blocked["classification"] == "blocked"
     assert "credential" not in (blocked.get("detail") or "").lower()
+@pytest.mark.parametrize(("http_status", "message"), [
+    (401, "Bad credentials"),
+    (403, "Resource not accessible by integration"),
+    (404, "Not Found"),
+])
+def test_rules_permission_error_cannot_use_clean_merge_fallback(monkeypatch, http_status, message):
+    """A readable PR with CLEAN merge state does not authorize a denied ruleset read."""
+    import subprocess
+    from hermes_cli import kanban_pr_acceptance as acceptance
+
+    sha = "a" * 40
+    requests = []
+
+    def fake_gh(command, **kwargs):
+        endpoint = command[2]
+        requests.append(endpoint)
+        if endpoint == "graphql":
+            payload = {"data": {"repository": {"pullRequest": {
+                "headRefOid": sha,
+                "baseRefName": "main",
+                "state": "OPEN",
+                "mergeStateStatus": "CLEAN",
+                "baseRef": {"branchProtectionRule": None},
+            }}}}
+        elif "/rules/branches/" in endpoint:
+            raise subprocess.CalledProcessError(
+                1, command, stderr=f"gh: {message} (HTTP {http_status})"
+            )
+        elif endpoint == "repos/acme/repo/pulls/7":
+            payload = {"head": {"sha": sha}, "base": {"ref": "main"}, "state": "open"}
+        else:
+            raise AssertionError(f"Unexpected API read: {endpoint}")
+        return subprocess.CompletedProcess(command, 0, stdout=json.dumps(payload))
+
+    monkeypatch.setattr(acceptance.subprocess, "run", fake_gh)
+    receipt = acceptance.collect_acceptance(
+        "acme/repo", "https://github.com/acme/repo/pull/7"
+    )
+    assert not receipt["ok"], receipt
+    assert receipt["classification"] == "auth"
+    assert f"HTTP {http_status}" in receipt["detail"]
+    assert receipt.get("fallback") is None
+    assert not any("/pulls/" in endpoint for endpoint in requests)

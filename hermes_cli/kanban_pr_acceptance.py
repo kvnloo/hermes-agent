@@ -18,6 +18,7 @@ from urllib.parse import quote
 
 _REPO = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 _PR = re.compile(r"https://github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/pull/([1-9][0-9]*)")
+_PLAN_LIMIT_403 = "Upgrade to GitHub Pro or make this repository public to enable this feature"
 
 
 def validate_contract(value: str | None) -> str:
@@ -45,10 +46,9 @@ def _api(endpoint: str, *, query: str | None = None, paginate: bool = False,
         # code + endpoint, never gh's stderr (credentials/host details).
         denied = re.search(r"HTTP (40[134])", exc.stderr or "")
         if denied:
-            # Rulesets are a plan feature. A collaborator who can read the PR
-            # still gets 401/403/404 on repos/.../rules/branches. That is an
-            # empty rules contribution, not an identity failure.
-            if soft_deny:
+            # Only an explicit GitHub plan-limit 403 makes rulesets unavailable.
+            # Other permission denials must stay auth failures.
+            if soft_deny and denied[1] == "403" and _PLAN_LIMIT_403 in (exc.stderr or ""):
                 return None
             raise _GateAuthError(f"HTTP {denied[1]} on {endpoint.split('?')[0]}") from None
         if exc.returncode == 4:  # gh's authentication-required exit: this profile has no login
