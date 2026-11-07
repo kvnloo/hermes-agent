@@ -6,7 +6,11 @@ natively with a bounded stdout read; the parser and every argument builder are
 shared, so the two transports must agree on results.
 """
 
+import contextlib
 import json
+import os
+import shlex
+import time
 
 import pytest
 
@@ -140,3 +144,95 @@ def test_local_search_runs_the_pinned_ripgrep_not_the_first_on_path(_local_env, 
                         lambda name: InstalledPackage(pinned.parent, "15", pinned) if name == "ripgrep" else None)
     ops = ShellFileOperations(_local_env, cwd=str(tmp_path))
     assert ops._resolve_command("rg") == str(pinned).replace("\\", "/")
+
+
+# --- parent-death coverage for the native rg lane -------------------------
+# `_run_rg_native` starts rg in its own session/group. On a graceful deadline or
+# /stop it kills the group itself, but a caller killed mid-wait (a worker reclaim
+# or a turn interrupt that SIGKILLs us) runs no Python cleanup: the #797
+# measurement watched such an rg reparent and read 2.34 GiB in 2 m. The group is
+# now handed to this process's owner-death supervisor (own_process_groups), so a
+# SIGKILL/OOM/crash of the caller reaps the search subprocess like MCP's stdio
+# children. This test spawns a fresh caller, kills it -9, and asserts the subprocess
+# it left behind is gone.
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
+def _gone_within(pid: int, timeout: float) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if not _pid_alive(pid):
+            return True
+        time.sleep(0.1)
+    return not _pid_alive(pid)
+
+
+@pytest.mark.live_system_guard_bypass
+def test_rg_child_dies_with_a_sigkilled_caller(tree, ops_factory, tmp_path):
+    """A caller SIGKILLed mid-wait must take the rg subprocess down with it (the
+    #797 orphan class). The group is owned by this process's owner-death
+    supervisor, so a worker reclaim / turn interrupt that kills us -9 still reaps
+    the search subprocess even though no Python cleanup ran."""
+    pytest.importorskip("psutil")
+    import signal
+    import subprocess
+    import sys
+
+    import tools as _tools_pkg
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(_tools_pkg.__file__)))
+    pid_file = tmp_path / "rg-child.pid"
+    # A fresh caller runs the REAL transport on a long sleep stand-in (rg would
+    # read nothing for 300 s), writes its own $$ then execs sleep, so the spawned
+    # child IS the sleeper and leads its own group; the fixed transport registers
+    # that group with ITS owner-death supervisor and then blocks in the wait.
+    script = f"echo $$ > {shlex.quote(str(pid_file))}; exec sleep 300"
+    child_argv = [
+        sys.executable, "-c",
+        "import sys\n"
+        "sys.path.insert(0, sys.argv[3])\n"
+        "from tools.environments.local import LocalEnvironment\n"
+        "from tools.file_operations import ShellFileOperations\n"
+        "ops = ShellFileOperations(LocalEnvironment(cwd=sys.argv[2]), cwd=sys.argv[2])\n"
+        "ops._run_rg_native(['sh', '-c', sys.argv[4]], 5, timeout=300)\n",
+        "_caller", str(tree), repo_root, shlex.quote(script),
+    ]
+    env = dict(os.environ)
+    env["PYTHONPATH"] = repo_root + os.pathsep + env.get("PYTHONPATH", "")
+    caller = subprocess.Popen(child_argv, cwd=repo_root, env=env,
+                              stdin=subprocess.DEVNULL,
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        deadline = time.monotonic() + 20
+        while time.monotonic() < deadline and not pid_file.exists():
+            time.sleep(0.05)
+        assert pid_file.exists(), "search subprocess never reported its pid"
+        child_pid = int(pid_file.read_text().strip())
+        assert _pid_alive(child_pid), f"search subprocess {child_pid} never started"
+        time.sleep(0.5)  # let the owner-death supervisor consume the register line
+        # SIGKILL the caller: no atexit / finally / interrupt handler runs.
+        caller.kill()
+        caller.wait(timeout=10)
+        assert caller.returncode == -int(signal.SIGKILL)
+        assert _gone_within(child_pid, timeout=15.0), (
+            f"search subprocess {child_pid} SURVIVED a SIGKILLed caller — the #797 "
+            f"2.3 GiB rg orphan class. Its group must be owned by the process's "
+            f"owner-death supervisor (own_process_groups) so it dies with the caller."
+        )
+    finally:
+        try:
+            if pid_file.exists():
+                os.kill(int(pid_file.read_text().strip()), signal.SIGKILL)
+        except (OSError, ValueError, ProcessLookupError):
+            pass
+        if caller.poll() is None:
+            caller.kill()
+            with contextlib.suppress(Exception):
+                caller.wait(timeout=5)
