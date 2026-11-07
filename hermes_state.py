@@ -92,6 +92,20 @@ logger = logging.getLogger(__name__)
 
 _MAX_SAFE_MESSAGES = 20_000  # resume/export guard default
 
+def _nocase_prefix_upper_bound(prefix: str) -> str | None:
+    """Exclusive prefix bound in SQLite's ASCII-only NOCASE collation.
+
+    SQLite NOCASE folds only ASCII a-z; Python str.upper()/casefold() would also
+    fold non-ASCII and make this bound incorrect for some stored keys.
+    """
+    folded = "".join(chr(ord(c) - 32) if "a" <= c <= "z" else c for c in prefix)
+    for pos in range(len(folded) - 1, -1, -1):
+        codepoint = ord(folded[pos])
+        if codepoint < 0x10FFFF:
+            return folded[:pos] + chr(codepoint + 1)
+    return None
+
+
 
 def _configured_transcript_limit(key: str, fallback: int = _MAX_SAFE_MESSAGES) -> int:
     """``sessions.<key>`` from config.yaml (lazy import: circular at load), else *fallback*; 0 disables."""
@@ -1708,13 +1722,26 @@ class SessionDB(
         return bool(rows)
 
     def list_meta_prefix(self, prefix: str) -> list[tuple[str, str]]:
-        """``[(key, value), ...]`` for state_meta keys starting with the literal
-        ``prefix`` (LIKE wildcards escaped) — e.g. ``loop:<session_id>`` rows."""
+        """Literal-prefix keys with the legacy SQLite LIKE ASCII case folding.
+
+        The BINARY primary key cannot serve that contract. Bound a NOCASE
+        companion-index seek, retain LIKE for exact wildcard/escape semantics,
+        and preserve the historical table-scan (rowid) result order.
+        """
         if not prefix:
             return []
-        rows = self._read_all(
-            "SELECT key, value FROM state_meta WHERE key LIKE ? ESCAPE '\\'", (_escape_like(prefix) + "%",),
-        )
+        pattern = _escape_like(prefix) + "%"
+        upper = _nocase_prefix_upper_bound(prefix)
+        # Existing read-only DBs can precede the additive schema migration.
+        index_hint = " INDEXED BY idx_state_meta_key_nocase" if not self.read_only else ""
+        sql = "SELECT key, value FROM state_meta" + index_hint + " WHERE key COLLATE NOCASE >= ?"
+        if upper is None:
+            params = (prefix, pattern)
+        else:
+            sql += " AND key COLLATE NOCASE < ?"
+            params = (prefix, upper, pattern)
+        sql += " AND key LIKE ? ESCAPE '\\' ORDER BY rowid"
+        rows = self._read_all(sql, params)
         return [(row[0], row[1]) for row in rows]
 
 
