@@ -138,3 +138,31 @@ def test_salvage_preserves_a_committed_local_session(tmp_path) -> None:
     with sqlite3.connect(str(tmp_path / "mapped.db")) as recovered:
         assert recovered.execute("SELECT id, title, source FROM sessions").fetchall() == [
             (session_id, "Local session to recover", "cli")]
+
+def test_salvage_preserves_canonical_local_model_usage(tmp_path) -> None:
+    """A local session's per-model usage row must not disappear in lost_and_found."""
+    with SessionDB(db_path=tmp_path / "state.db") as db:
+        db.create_session(LOCAL_ID, source="cron", model="usage-model", cwd=str(tmp_path))
+
+    with sqlite3.connect(str(tmp_path / "state.db")) as source:
+        source.execute(
+            "INSERT INTO session_model_usage "
+            "(session_id, model, task, api_call_count, input_tokens) "
+            "VALUES (?, ?, '', 2, 42)",
+            (LOCAL_ID, "usage-model"),
+        )
+        columns = _table_columns(source, "session_model_usage")
+        quoted = _quoted_columns(columns)[0]
+        rows = [tuple(row) for row in source.execute(
+            f"SELECT {quoted} FROM session_model_usage"
+        )]
+
+    assert len(rows) == 1
+    report = _map_as_salvage(tmp_path, columns, rows)
+    assert report["mapped"]["session_model_usage"] == 1
+    assert report["unmapped_rows"] == 0
+    with sqlite3.connect(str(tmp_path / "mapped.db")) as recovered:
+        assert recovered.execute(
+            "SELECT session_id, model, task, api_call_count, input_tokens "
+            "FROM session_model_usage"
+        ).fetchall() == [(LOCAL_ID, "usage-model", "", 2, 42)]
