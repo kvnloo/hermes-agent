@@ -70,6 +70,14 @@ def test_profile_helper_does_not_inherit_process_secret(monkeypatch):
     assert output == "unset|profile-value"
 
 
+def test_strict_shell_helper_gets_home_without_parent_home(tmp_path, monkeypatch):
+    monkeypatch.delenv("HOME", raising=False)
+    helper = _write_helper(tmp_path, 'set -eu\nprintf "CMDTEST_HOME=%s\\n" "$HOME"')
+    result = CommandSource().fetch({"enabled": True, "command": str(helper)}, tmp_path)
+    assert result.ok
+    assert result.secrets == {"CMDTEST_HOME": str(Path.home())}
+
+
 @pytest.fixture(autouse=True)
 def _clean_env(monkeypatch):
     """Each test starts with a clean source map, applied-home guard, and no
