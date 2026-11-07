@@ -62,7 +62,8 @@ def _build(n):
     rng = random.Random(1107)
     chars = ("a", "A", "%", "_", "\\", "/", "🧪", "é", "\U0010ffff")
     values = []
-    for i in range(n):
+    # Eight distinct edge-case keys are appended below (the duplicate is an UPSERT).
+    for i in range(n - 8):
         stem = "loop:" if i % 44 == 0 else "LOOP:" if i % 44 == 1 else "other:"
         key = stem + f"{i:07d}" + rng.choice(chars)
         values.append((key, str(i)))
