@@ -29,6 +29,17 @@ describe('classifyProbe', () => {
     expect(classifyProbe(result({ ok: false, error }))).toBe('error')
   })
 
+  it('keeps a named OAuth gateway timeout in the connectivity state', () => {
+    const error =
+      "Connecting to MCP server 'OAuth relay' timed out after 30s (bounded by connect_timeout; an OAuth login also by oauth.timeout)"
+    expect(classifyProbe(result({ ok: false, error }))).toBe('error')
+  })
+
+  it('recognizes invalid_grant when a refresh token has been revoked', () => {
+    const error = '{"error":"invalid_grant","error_description":"Token has been expired or revoked."}'
+    expect(classifyProbe(result({ ok: false, error }))).toBe('needs-auth')
+  })
+
   it('prefers the backend failure class over prose', () => {
     expect(classifyProbe(result({ ok: false, error: 'connection failed', error_kind: 'auth' }))).toBe('needs-auth')
     expect(classifyProbe(result({ ok: false, error: 'OAuth login timed out', error_kind: 'network' }))).toBe('error')

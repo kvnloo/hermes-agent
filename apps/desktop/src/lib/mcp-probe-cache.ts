@@ -7,7 +7,8 @@ import type { McpTestResult } from '@/hermes'
 // may re-probe what the other just learned.
 // ---------------------------------------------------------------------------
 
-export const NEEDS_AUTH_RE = /\b(401|unauthorized|forbidden|invalid[_ ]?token|authentication|oauth)\b/i
+export const NEEDS_AUTH_RE =
+  /\b(401|403|unauthorized|forbidden|invalid[_ ]?(?:token|grant)|authentication\s+(?:failed|required)|authorization\s+required)\b/i
 
 // Probe results outlive any component: each probe is a real connect/disconnect,
 // so re-entering the MCP page (or a background sweep) must not re-probe the
