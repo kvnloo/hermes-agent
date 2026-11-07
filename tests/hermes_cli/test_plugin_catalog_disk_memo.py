@@ -47,6 +47,7 @@ def test_parsing_catalog_entries_and_removals_does_not_mutate_cache(tmp_path, mo
     cache.write_text(json.dumps(raw), encoding="utf-8")
     monkeypatch.setattr(pc, "_live_cache_path", lambda: cache)
     monkeypatch.setattr(pc, "load_catalog", lambda *args, **kwargs: [])
+    monkeypatch.setattr(pc, "in_tree_catalog_time", lambda: None)
 
     with memo.guard_json_disk_memo_mutations():
         entries = pc.load_catalog_live()
@@ -55,6 +56,7 @@ def test_parsing_catalog_entries_and_removals_does_not_mutate_cache(tmp_path, mo
         assert [r.name for r in removed] == ["revoked"]
         assert pc._stale_live_cache(cache) == raw
         assert memo.json_disk_memo_parse_count() == 1
+
 
 def test_stale_expiry_drops_entries_but_keeps_removed(tmp_path):
     cache = tmp_path / "plugin-catalog.json"

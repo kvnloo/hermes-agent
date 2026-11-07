@@ -44,6 +44,7 @@ def test_valid_registry_is_shared_and_guard_rejects_mutation(cache_env):
         assert md._load_disk_cache() is guarded
     assert md._load_disk_cache() == original
 
+
 def test_disk_version_invalidation_on_rewrite(cache_env):
     md, cache, _etag = cache_env
     cache.write_text(json.dumps({"xai": {"models": {"old": {}}}}), encoding="utf-8")
@@ -77,6 +78,7 @@ def test_fetch_registry_provider_and_xai_curated_are_readonly(cache_env):
         assert raw["limit"]["context"] == 64000
         assert md._load_disk_cache() == registry
         assert memo.json_disk_memo_parse_count() == 1
+
 
 @pytest.mark.parametrize("bad_json", ["{", "{}", "[]"])
 def test_corrupt_or_empty_cache_still_quarantined_and_etag_cleared(cache_env, bad_json):
