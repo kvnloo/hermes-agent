@@ -44,3 +44,16 @@ def test_content_less_session_stays_reachable_for_maintenance(db):
     """Hidden from the listing, not removed: prune/archive still match it."""
     rows = db.list_sessions_rich(source=None, limit=50, min_message_count=0)
     assert any(row["id"] == "sess_ghost" for row in rows)
+
+
+def test_named_zero_message_cli_draft_survives_gateway_ghosts(db, capsys):
+    """Named drafts are intentional; zero-message CLI startup rows are not."""
+    db.create_session("sess_gateway_ghost", "cli")
+    db.create_session("sess_named_draft", "cli")
+    db.set_session_title("sess_named_draft", "Saved before first message")
+
+    out = _list(db, capsys, limit=2)
+    assert "sess_real" in out
+    assert "sess_named_draft" in out
+    assert "sess_gateway_ghost" not in out
+    assert "sess_ghost" not in out

@@ -27,3 +27,18 @@ def test_listing_rows_skip_content_less_sessions(db):
 
     ids = [row["id"] for row in _listing_rows(db, 20)]
     assert ids == ["sess_real"]
+
+
+def test_named_zero_message_cli_draft_stays_in_picker(db):
+    """A named draft survives, but restart's untitled CLI placeholder does not."""
+    from tui_gateway.methods_session import _listing_rows
+
+    db.create_session("sess_gateway_ghost", "cli")
+    db.create_session("sess_named_draft", "cli")
+    db.set_session_title("sess_named_draft", "Saved before first message")
+
+    ids = [row["id"] for row in _listing_rows(db, 20)]
+    assert "sess_real" in ids
+    assert "sess_named_draft" in ids
+    assert "sess_gateway_ghost" not in ids
+    assert "sess_ghost" not in ids

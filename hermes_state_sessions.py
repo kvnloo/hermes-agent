@@ -114,6 +114,7 @@ def _session_filter_where(
     session_key: str | None = None, exclude_sources: list[str] | None = None, cwd_prefix: str | None = None,
     min_message_count: int = 0, archived_only: bool = False, include_archived: bool = False,
     include_subagents: bool = False, local_created_sources: Sequence[str] | None = None,
+    include_named_drafts: bool = False,
 ) -> tuple[list[str], list[Any]]:
     """Shared ``sessions s`` WHERE builder so counts line up with listed rows. ``exclude_children``
     hides sub-agent runs and compression continuations but keeps branch/reset children
@@ -135,12 +136,17 @@ def _session_filter_where(
     # created before the marker existed.
     include_sources = [source] if source else list(sources or [])
     source_clause, source_params = _source_match_clause(include_sources, local_created_sources)
+    count_clause = "s.message_count >= ?"
+    if include_named_drafts:
+        # A named zero-message draft is intentional, unlike an untitled launch placeholder.
+        # Filter in SQL so ghosts cannot consume the page before LIMIT/OFFSET.
+        count_clause = "(s.message_count >= ? OR NULLIF(TRIM(s.title), '') IS NOT NULL)"
     for clause, values in (
         (source_clause, source_params),
         ("s.session_key = ?", [session_key] if session_key else []),
         (f"s.source NOT IN ({_session_ids_placeholders(exclude_sources or ())})", exclude_sources or []),
         (_cwd_prefix_clause(cwd_prefix) if cwd_prefix else ("", [])),
-        ("s.message_count >= ?", [min_message_count] if min_message_count > 0 else []),
+        (count_clause, [min_message_count] if min_message_count > 0 else []),
     ):
         if values:
             where.append(clause)
@@ -1350,6 +1356,7 @@ class SessionSessionsMixin:
         id_query: str | None = None, search_query: str | None = None, compact_rows: bool = False,
         include_pinned: bool = False, session_key: str | None = None, include_hidden: bool = False,
         include_subagents: bool = False, local_created_sources: Sequence[str] | None = None,
+        include_named_drafts: bool = False,
     ) -> list[dict[str, Any]]:
         """List sessions with preview and ``last_active`` in one query. ``order_by_last_active`` sorts
         by the chain TIP via a recursive CTE (the only path honouring ``id_query`` / ``search_query``);
@@ -1362,7 +1369,7 @@ class SessionSessionsMixin:
             exclude_children=not include_children, source=source, sources=sources, session_key=session_key,
             exclude_sources=exclude_sources, cwd_prefix=cwd_prefix, min_message_count=min_message_count,
             archived_only=archived_only, include_archived=include_archived, include_subagents=include_subagents,
-            local_created_sources=local_created_sources,
+            local_created_sources=local_created_sources, include_named_drafts=include_named_drafts,
         )
         # The archived-only view is the recovery surface for rows that dropped out of every
         # default list: a session that is archived AND hidden (Bot Mode marks its sessions

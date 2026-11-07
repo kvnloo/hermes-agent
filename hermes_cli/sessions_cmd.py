@@ -293,10 +293,10 @@ def _cmd_list(db, args):
     # (Hermes Console runs `hermes` as every new terminal's startup command) leaves one
     # behind per abandoned tab, so listing them floods the picker with unnamed entries.
     # They stay in the DB — resume, routing and `hermes sessions prune/archive
-    # --max-messages 0` still see them.
+    # --max-messages 0` still see them. An explicitly named draft remains listable.
     sessions = _surface_reader(db).list_sessions_rich(
         source=args.source, exclude_sources=_default_exclude(args), min_message_count=1,
-        limit=limit + 1 if limit > 0 else limit,
+        include_named_drafts=True, limit=limit + 1 if limit > 0 else limit,
     )
     truncated = limit > 0 and len(sessions) > limit
     sessions = sessions[:limit] if truncated else sessions

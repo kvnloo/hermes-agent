@@ -150,10 +150,12 @@ def _listing_rows(db, limit: int, **kwargs) -> list:
     pick. Clients that launch a TUI per tab (the Obsidian Hermes Console runs ``hermes`` as
     every new terminal's startup command) leave one such row per abandoned tab, and listing
     them filled this picker with unnamed entries. ``session.most_recent`` rides the same
-    helper, so auto-resume also stops landing on a ghost session.
+    helper, so auto-resume also stops landing on a ghost session. An explicitly
+    named zero-message draft is still selectable.
     """
     rows = db.list_sessions_rich(source=None, limit=limit, order_by_last_active=True,
-                                 compact_rows=True, min_message_count=1, **kwargs)
+                                 compact_rows=True, min_message_count=1,
+                                 include_named_drafts=True, **kwargs)
     return [row for row in rows if not _denied_source(row)]
 
 
