@@ -914,6 +914,13 @@ def _init_openai_client(agent, api_key, base_url, fallback_model, _provider_time
             if not agent.quiet_mode:
                 print(f"🤖 AI Agent initialized with MoA preset: {agent.model}")
             return
+    # An init-time fallback can change the wire after _build_client chose this builder.
+    if agent.api_mode == "anthropic_messages":
+        agent.base_url = client_kwargs.get("base_url") or agent.base_url
+        _init_anthropic_client(
+            agent, client_kwargs.get("api_key"), agent.base_url, _provider_timeout,
+        )
+        return
     from hermes_cli.providers import is_actual_route
     if is_actual_route(agent.provider, client_kwargs.get("base_url", "")):
         agent.api_mode = "chat_completions"
