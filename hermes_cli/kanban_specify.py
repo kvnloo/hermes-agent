@@ -250,15 +250,21 @@ def specify_task(
 
 
 def list_triage_ids(*, tenant: Optional[str] = None) -> list[str]:
-    """Return task ids currently in the triage column.
+    """List triage cards eligible for a bulk specification sweep.
 
-    ``tenant`` narrows the sweep; ``None`` returns every triage task.
+    A block-loop escalation waits for a human decision (#75444). The
+    ``specify --all`` sweep must not undo the decomposer's event-backed
+    exclusion by re-specifying and promoting that card instead.
     """
+    query = (
+        "SELECT id FROM tasks WHERE status = 'triage' AND NOT "
+        + kb._BLOCK_LOOP_ESCALATED_SQL
+    )
+    params: list[str] = []
+    if tenant is not None:
+        query += " AND tenant = ?"
+        params.append(tenant)
+    query += " ORDER BY priority DESC, created_at ASC"
     with kb.connect_closing() as conn:
-        tasks = kb.list_tasks(
-            conn,
-            status="triage",
-            tenant=tenant,
-            include_archived=False,
-        )
-    return [t.id for t in tasks]
+        rows = conn.execute(query, params).fetchall()
+    return [row["id"] for row in rows]

@@ -138,3 +138,39 @@ def test_cli_specify_tenant_filter(kanban_home, capsys):
         assert kb.get_task(conn, inside).status in {"todo", "ready"}
 
 
+@pytest.mark.parametrize("kind", [None, "needs_input"])
+def test_cli_specify_all_preserves_escalated_triage(kanban_home, capsys, kind):
+    """An untyped or typed block-loop escalation cannot be auto-specified.
+
+    Regression for #75444: the decompose feed already excludes these cards,
+    but `kanban specify --all` had its own unfiltered triage feed.
+    """
+    with kb.connect_closing() as conn:
+        held = kb.create_task(conn, title="await human approval")
+        assert kb.block_task(conn, held, reason="approval pending", kind=kind)
+        assert kb.unblock_task(conn, held)
+        assert kb.block_task(conn, held, reason="approval pending", kind=kind)
+        fresh = kb.create_task(conn, title="fresh idea", triage=True)
+        assert kb.get_task(conn, held).status == "triage"
+        assert kb.is_block_loop_escalated(conn, held)
+
+    p, call_llm = _patch_aux_client(
+        jsonlib.dumps({"title": "specified idea", "body": "ready to work"})
+    )
+    with p:
+        rc = _run_cli("specify", "--all", "--json")
+    assert rc == 0
+    rows = [
+        jsonlib.loads(line)
+        for line in capsys.readouterr().out.splitlines()
+        if line.strip()
+    ]
+    assert [row["task_id"] for row in rows] == [fresh]
+    call_llm.assert_called_once()
+
+    with kb.connect_closing() as conn:
+        assert kb.get_task(conn, fresh).status == "ready"
+        escalated = kb.get_task(conn, held)
+        assert escalated.status == "triage"
+        assert escalated.title == "await human approval"
+        assert kb.is_block_loop_escalated(conn, held)
