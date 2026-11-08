@@ -55,9 +55,9 @@ _MAX_REFERENCE_FILES = 60
 # (100k) is a safety stop, not a target — agent-authored skills grew to sit right under it.
 _BODY_SOFT_BUDGET_CHARS = 24_000
 # dangling-reference: tokens that mean a body reference names a SHAPE, not a single file — a glob
-# (`references/foo-*.md`), a `{placeholder}` template, a `...` elision. Every skill that documents a
-# naming convention cites one of these, so none of them can be a missing path.
-_REFERENCE_SHAPE_TOKENS = ("*", "{", "...")
+# (`references/foo-*.md`, `references/foo-?.md`, `references/foo-[12].md`), a `{placeholder}`
+# template or `...` elision. None of these denotes a single missing path.
+_REFERENCE_SHAPE_TOKENS = ("*", "?", "[", "{", "...")
 
 ERROR = "error"
 WARNING = "warning"
@@ -158,7 +158,7 @@ def _check_body(body: str, skill_dir: Optional[Path]) -> Iterator[LintFinding]:
     # elision — is exempt. The character class used to stop at `*`/`{`, so `references/foo-*.md` arrived
     # as the missing-looking prefix `references/foo-` and that exemption could never fire.
     seen: set[str] = set()
-    for match in re.finditer(r"(references|templates|assets)/[\w./*{}-]+", body):
+    for match in re.finditer(r"(references|templates|assets)/[\w./*?{}\[\]-]+", body):
         rel = match.group(0).rstrip(".")
         if rel in seen or rel.endswith("/") or any(tok in rel for tok in _REFERENCE_SHAPE_TOKENS):
             continue

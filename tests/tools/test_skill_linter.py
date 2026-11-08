@@ -156,6 +156,25 @@ def test_a_real_missing_reference_is_still_flagged_beside_a_glob(tmp_path):
     assert messages == ["body references 'references/missing.md' but that file does not exist in the skill directory."]
 
 
+
+def test_single_char_and_bracket_globs_are_not_dangling(tmp_path):
+    """Question-mark and bracket globs are naming shapes, not missing file paths."""
+    skill_dir = tmp_path / "my-skill"
+    (skill_dir / "references").mkdir(parents=True)
+    (skill_dir / "references" / "foo-1.md").write_text("x")
+    content = CLEAN + (
+        "\nSee `references/foo-?.md`, `references/foo-[12].md`, and "
+        "`references/missing.md`.\n"
+    )
+    messages = [
+        finding.message for finding in lint_content(content, skill_dir=skill_dir)
+        if finding.rule == "dangling-reference"
+    ]
+    assert messages == [
+        "body references 'references/missing.md' but that file does not exist in the skill directory."
+    ]
+
+
 def test_posix_primitive_without_platforms_warns(tmp_path):
     skill_dir = tmp_path / "my-skill"
     (skill_dir / "scripts").mkdir(parents=True)
