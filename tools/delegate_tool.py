@@ -178,6 +178,7 @@ def _build_child_agent(
     routing_cfg: Optional[Dict[str, Any]] = None,
     # Legacy; accepted for wire compat but ignored (capability is depth-derived).
     role: str = "leaf",
+    shared_system_prompt: Optional[str] = None,
 ):
     """Build (don't run) a child AIAgent on the main thread. override_* (from delegation config) replace parent
     inheritance so children can run on a different provider:model pair."""
@@ -200,10 +201,16 @@ def _build_child_agent(
     # as auxiliary.review.
     delegation_cfg = _load_config()
     child_toolsets, child_disabled_toolsets = _resolve_child_toolsets(parent_agent, toolsets, effective_role)
-    child_prompt = _build_child_system_prompt(
-        goal, context, workspace_path=_resolve_workspace_hint(parent_agent), role=effective_role,
-        max_spawn_depth=max_spawn, child_depth=child_depth,
-    )
+    if shared_system_prompt is None:
+        child_prompt = _build_child_system_prompt(
+            goal, context, workspace_path=_resolve_workspace_hint(parent_agent), role=effective_role,
+            max_spawn_depth=max_spawn, child_depth=child_depth,
+        )
+    else:
+        # The batch freezes workspace rules once; only task context differs per child.
+        child_prompt = shared_system_prompt
+        if context and context.strip():
+            child_prompt += f"\n\nCONTEXT:\n{context}"
     parent_api_key = getattr(parent_agent, "api_key", None)
     if (not parent_api_key) and hasattr(parent_agent, "_client_kwargs"):
         parent_api_key = parent_agent._client_kwargs.get("api_key")
@@ -376,6 +383,17 @@ def _build_children(
         "override_acp_args": creds.get("args"),
         "routing_cfg": routing_cfg,
     }
+    # Reading workspace context separately for each child can change the system prefix
+    # mid-batch (an AGENTS.md edit or a transient load failure). Freeze it once.
+    shared_system_prompt = None
+    if len(task_list) > 1:
+        child_depth = getattr(parent_agent, "_delegate_depth", 0) + 1
+        max_spawn = _get_max_spawn_depth()
+        role = "orchestrator" if _get_orchestrator_enabled() and child_depth < max_spawn else "leaf"
+        shared_system_prompt = _build_child_system_prompt(
+            "", None, workspace_path=_resolve_workspace_hint(parent_agent), role=role,
+            max_spawn_depth=max_spawn, child_depth=child_depth,
+        )
     children = []
     for i, t in enumerate(task_list):
         _task_schema = task_schemas[i] if i < len(task_schemas) else None
@@ -387,7 +405,8 @@ def _build_children(
                 task_index=i, goal=t["goal"], context=_child_context,
                 toolsets=None,  # always inherit the parent's toolsets
                 model=creds["model"], max_iterations=max_iterations, task_count=len(task_list),
-                parent_agent=parent_agent, role=_normalize_role(t.get("role") or top_role), **overrides,
+                parent_agent=parent_agent, role=_normalize_role(t.get("role") or top_role),
+                shared_system_prompt=shared_system_prompt, **overrides,
             )
         except ValueError as exc:
             return [], str(exc)
