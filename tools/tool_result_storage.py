@@ -321,8 +321,8 @@ def _pageable_text(content: str) -> str:
     not be used (#90426 for MCP envelopes; built-in tools such as terminal, execute_code,
     read_file and skill_view return JSON objects with the same problem).
 
-    Recognized by SHAPE, not by tool name: ``enforce_turn_budget`` persists under
-    ``_BUDGET_TOOL_NAME``, so a tool-name test would miss exactly the results it has to fix.
+    Recognized by SHAPE, not by tool name: aggregate spills normally use
+    ``_BUDGET_TOOL_NAME`` (except for rule-bearing tools), so a tool-name gate misses results.
     The MCP envelope (keys a subset of ``{"result", "structuredContent", "_meta"}``) unwraps
     ``result`` and appends its sibling members after the text, because they are the structured
     payloads ``_render_call_tool_result`` deliberately keeps for the model (#115430). Any other
@@ -590,8 +590,12 @@ def enforce_turn_budget(tool_messages: list[dict], env=None,
                 tool_messages[idx]["content"] = parts
                 logger.info("Budget enforcement: persisted a text part of tool result %s (%d chars)", tool_use_id, saved)
             continue
+        # Preserve rule-bearing tool identity when only the aggregate budget spills it.
+        # Otherwise a sub-threshold skill_view gets a generic notice (#151283).
+        name = tool_messages[idx].get("tool_name") or tool_messages[idx].get("name")
+        spill_name = name if name in RULE_BEARING_TOOLS else _BUDGET_TOOL_NAME
         replacement = maybe_persist_tool_result(
-            content=content, tool_name=_BUDGET_TOOL_NAME, tool_use_id=tool_use_id,
+            content=content, tool_name=spill_name, tool_use_id=tool_use_id,
             env=env, config=config, threshold=0)
         if replacement != content:
             total_size += len(replacement) - size

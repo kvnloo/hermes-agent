@@ -901,6 +901,24 @@ class TestRuleBearingSpill:
         assert "SKILL RULES INCOMPLETE" in result
         assert "Sections (page with read_file" not in result
 
+    def test_turn_budget_spill_of_skill_view_preserves_rule_warning(self):
+        """A skill below the per-result cap can still spill under aggregate turn pressure."""
+        skill = _skill_payload(sections=60, lines_per_section=20)
+        assert 10_000 < len(skill) < 100_000
+        messages = [
+            {"role": "tool", "name": "skill_view", "tool_name": "skill_view",
+             "tool_call_id": "tc_budget_skill", "content": skill},
+            {"role": "tool", "name": "terminal", "tool_name": "terminal",
+             "tool_call_id": "tc_budget_other", "content": "x" * 10_000},
+        ]
+
+        enforce_turn_budget(messages, env=None, config=BudgetConfig(turn_budget=20_000))
+
+        assert "SKILL RULES INCOMPLETE" in messages[0]["content"]
+        assert "Do NOT act on write operations" in messages[0]["content"]
+        assert "This tool result was too large" not in messages[0]["content"]
+        assert messages[1]["content"] == "x" * 10_000
+
     def test_skill_view_under_threshold_is_untouched(self):
         content = _skill_payload(sections=1, lines_per_section=1)
 
