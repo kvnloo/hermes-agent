@@ -70,7 +70,10 @@ _CONTAINER_GLOBAL_FLAGS = r'(?:-\S++(?:\s(?!-\S)\S++)?\s++)*'
 # `git --git-dir=<path> reset --hard`, `git -c key=val clean -fd`. Same grammar again — each option
 # takes at most ONE non-dash operand — so the git rules below match the SUBCOMMAND rather than the
 # literal `git <verb>` prefix, which no option-prefixed form ever has (#150744).
-_GIT_GLOBAL_FLAGS = r'(?:-\S++(?:\s++(?:"[^"]*"|\'[^\']*\'|(?!-\S)\S++))?\s++)*'
+# A joined quoted chunk is still one shell word (e.g. -C"/my repo with spaces" or
+# -c user.name='Ada Lovelace'); keep every alternative disjoint and possessive.
+_GIT_GLOBAL_WORD = r"""(?:[^\s"']|"[^"]*"|'[^']*')++"""
+_GIT_GLOBAL_FLAGS = rf"""(?:-{_GIT_GLOBAL_WORD}(?:\s++(?:"[^"]*"|'[^']*'|(?!-\S){_GIT_GLOBAL_WORD}))?\s++)*"""
 # macOS: /etc, /var, /tmp, /home are symlinks to /private/*, so /private/etc/sudoers would bypass a plain
 # "/etc/" check. Match both forms.
 _MACOS_PRIVATE_SYSTEM_PATH = r'/private/(?:etc|var|tmp|home)/'

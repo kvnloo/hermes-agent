@@ -27,6 +27,9 @@ BRANCH_FORCE_DELETE_LONG = "git branch force delete (long flags)"
     "command, description",
     [
         ("git -C /tmp/r push --force origin x", FORCE_PUSH),
+        ("git -C'/tmp/my repo with spaces' push --force origin x", FORCE_PUSH),
+        ('git --git-dir="/tmp/my repo with spaces/.git" push -f origin x', FORCE_PUSH_SHORT),
+        ("git -c user.name='Ada Lovelace Example' reset --hard HEAD~1", RESET_HARD),
         ("git -C /tmp/r push -f origin x", FORCE_PUSH_SHORT),
         ('git -C "/tmp/my repo" push --force origin x', FORCE_PUSH),
         ("git -C /tmp/r -c core.pager=cat push --force origin x", FORCE_PUSH),
@@ -50,6 +53,7 @@ def test_git_global_options_do_not_hide_the_subcommand(command, description):
     "command",
     [
         "git -C /tmp/r status",
+        "git -C'/tmp/my repo with spaces' status",
         "git -C /tmp/r log --oneline -5",
         "git -C /tmp/r push origin main",
         "git -C /tmp/r pull --ff-only",
