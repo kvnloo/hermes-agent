@@ -46,3 +46,10 @@ def test_repeated_db_schemes_without_query_scan_in_linear_time():
     t0 = time.perf_counter()
     redact_sensitive_text(text, force=True)
     assert time.perf_counter() - t0 < 0.5
+
+def test_db_query_in_json_does_not_mask_web_url_query_password():
+    db_url = "postgresql://db/app?password=DbSecretZq7x9LmP2kk"
+    web_url = "https://example.com/reset?password=MagicLinkZq7x9LmP2kk"
+    text = f'["{db_url}","{web_url}"]'
+    expected = f'["postgresql://db/app?password=***","{web_url}"]'
+    assert redact_sensitive_text(text) == expected
