@@ -145,3 +145,48 @@ async def test_a_refused_receipt_names_its_failing_check_in_the_log(tmp_path, mo
             restore_local_session(cold, ref.session_id)
     resumed = [r.getMessage() for r in caplog.records if ref.session_id in r.getMessage()]
     assert any(clause in message for message in resumed), resumed
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('row_present', [False, True])
+async def test_stale_frozen_entry_refusal_names_compared_identity_in_gateway_log(
+        tmp_path, monkeypatch, caplog, row_present):
+    """#151232: a frozen entry can name a different session generation than the requested sid."""
+    import logging
+    from gateway.session_contract import SessionActor
+    from gateway.session_local import create_local_session
+    from gateway.session_local_recovery import restore_local_session
+    from hermes_state_local import local_receipt
+    from hermes_state_runtime import RuntimeStoreError
+
+    served, db, secondary = await _served_authority(tmp_path, monkeypatch, 'first')
+    actor = SessionActor('owner', str(secondary), frozenset({'session:create', 'session:read'}), 'socket')
+    ref = create_local_session(served, actor, {
+        'request_id': 'stale-row', 'source': 'gui', 'cwd': str(tmp_path),
+        'model': 'frozen', 'toolsets': [],
+    })
+    receipt = local_receipt(db, ref.session_id)
+    frozen_sid = 'stale-generation'
+    if row_present:
+        db.create_session(frozen_sid, source='local', session_key='other:local:route',
+                          chat_id='other-chat', user_id='other-user', chat_type='dm')
+    _store_receipt(db, ref.session_id, _with_receipt_field(('entry', 'session_id'), frozen_sid))
+
+    with caplog.at_level(logging.WARNING, logger='gateway.session_local_recovery'):
+        with pytest.raises(RuntimeStoreError, match='storage_unavailable') as refused:
+            restore_local_session(served, ref.session_id)
+    assert frozen_sid not in str(refused.value), 'the client must receive only the bounded code'
+    warnings = [r.getMessage() for r in caplog.records if 'receipt refused:' in r.getMessage()
+                and ref.session_id in r.getMessage()]
+    assert len(warnings) == 1, warnings
+    detail = warnings[0]
+    assert 'stored identity mismatch' in detail
+    if row_present:
+        origin = receipt['entry']['origin']
+        expected = ("row key='other:local:route' chat_id='other-chat' user_id='other-user' "
+                    f"vs route={receipt['route']!r} chat_id={origin['chat_id']!r} "
+                    f"user_id={origin['user_id']!r}")
+        assert expected in detail
+    else:
+        assert f'no sessions row for {frozen_sid}' in detail
+        assert f"expected route {receipt['route']!r}" in detail
