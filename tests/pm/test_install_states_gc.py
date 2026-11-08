@@ -194,3 +194,29 @@ def test_state_used_while_another_orphan_is_removed_is_kept(tmp_path, monkeypatc
     monkeypatch.setattr(pm.install_states.shutil, "rmtree", remove_then_launch)
     assert collect_orphan_install_states(installs) == [deleted]
     assert (used / "environments" / "gen" / "venv").is_dir()
+
+
+@pytest.mark.platforms("posix")
+def test_orphan_gc_keeps_stale_root_state_referenced_by_hermes_launcher(tmp_path, monkeypatch):
+    """#151162: an exposed launcher is live even if the recorded checkout was removed."""
+    installs = tmp_path / "home" / "installs"
+    state = _state(installs, "aaaa", tmp_path / "home" / "cache" / "scratch" / "removed")
+    venv_launcher = state / "environments" / "gen" / "venv" / "bin" / "hermes"
+    venv_launcher.parent.mkdir(parents=True)
+    venv_launcher.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    venv_launcher.chmod(0o755)
+
+    external_bin = tmp_path / "usr" / "local" / "bin"
+    external_bin.mkdir(parents=True)
+    launcher = external_bin / "hermes"
+    launcher.symlink_to(venv_launcher)
+    monkeypatch.setenv("PATH", str(external_bin))
+
+    assert orphan_install_states(installs) == []
+    assert collect_orphan_install_states(installs) == []
+    assert launcher.exists() and venv_launcher.is_file()
+
+    launcher.unlink()
+    assert orphan_install_states(installs) == [state]
+    assert collect_orphan_install_states(installs) == [state]
+    assert not state.exists()
