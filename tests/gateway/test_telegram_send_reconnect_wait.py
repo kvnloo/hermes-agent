@@ -168,3 +168,31 @@ def test_replacement_lookup_returns_same_profile_replacement():
     secondary.gateway_runner = runner
 
     assert secondary._replacement_telegram_adapter() is replacement
+
+
+@pytest.mark.asyncio
+async def test_stale_secondary_send_does_not_use_live_primary_adapter():
+    """#143364: in-flight secondary progress must not leave through another bot."""
+    secondary = _make_adapter()
+    secondary._owner_profile = "yori"
+    secondary._bot = None
+    secondary._RECONNECT_WAIT_SECONDS = 0
+
+    primary = _make_adapter()
+    primary._bot = _connected_bot()
+    primary._owner_profile = None
+
+    class Runner:
+        adapters = {secondary.platform: primary}
+        _profile_adapters = {"yori": {}}
+
+        def _adapters_for_profile(self, profile):
+            return self._profile_adapters.get(profile, self.adapters)
+
+    secondary.gateway_runner = Runner()
+    result = await secondary.send("123", "private progress")
+
+    assert result.success is False
+    assert result.error == "Not connected"
+    assert result.retryable is True
+    primary._bot.send_message.assert_not_awaited()
