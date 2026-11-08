@@ -52,6 +52,7 @@ def test_settled_native_document_named_by_the_transcript_survives_settlement(tmp
     finally:
         db.close()
 
+
 def test_owner_pasted_image_survives_platform_media_age_sweep(tmp_path, monkeypatch):
     """A terminal desktop paste is still the owner's file after 25 hours (#150887)."""
     from gateway.platforms.base import get_image_cache_dir
