@@ -87,3 +87,24 @@ def test_musl_userland_gets_a_satisfiable_native_musl_closure(monkeypatch, tmp_p
             assert lock.artifacts(package.name, target), f"{package.name} has no {target} artifact"
     for name in ("python", "uv", "node"):
         assert "musl" in lock.artifacts(name, target)[0]["url"], name
+
+
+def test_glibc_bootstrap_ignores_secondary_musl_when_native_elf_is_unknown(monkeypatch, tmp_path):
+    """A secondary musl loader must not become the native PM target (#150951)."""
+    import sysconfig
+
+    from pm import store
+
+    (tmp_path / "ld-musl-x86_64.so.1").touch()
+    monkeypatch.setattr(store, "_native_linux_uses_musl", lambda: None)
+    monkeypatch.setattr(store, "_native_machine", lambda: "x86_64")
+    monkeypatch.setattr(store, "_is_bionic_libc", lambda: False)
+    monkeypatch.setattr(store, "Path", lambda path: tmp_path if path == "/lib" else Path(path))
+    monkeypatch.setattr(store.platform, "libc_ver", lambda: ("glibc", "2.43"))
+    original_config_var = sysconfig.get_config_var
+    monkeypatch.setattr(
+        sysconfig, "get_config_var",
+        lambda key: None if key in ("HOST_GNU_TYPE", "MULTIARCH") else original_config_var(key),
+    )
+
+    assert store.current_target() == "linux-x64"

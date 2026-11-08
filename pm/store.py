@@ -166,6 +166,9 @@ def _is_musl_libc() -> bool:
         value = str(sysconfig.get_config_var(key) or "").lower()
         if "musl" in value:
             return True
+    # A secondary musl cross-toolchain must not override known glibc.
+    if platform.libc_ver()[0].lower() == "glibc":
+        return False
     return any(Path("/lib").glob("ld-musl-*.so.1"))
 
 
