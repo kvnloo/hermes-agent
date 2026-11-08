@@ -552,7 +552,9 @@ import re as _re2
 import re as _re
 
 def _tests_rc_from_output(output: str) -> Optional[int]:
-    m = _re.search(r"TESTS_RC=(\d+)", output or "")
+    # Trust only the final, standalone status line from the command's own echo.
+    lines = (output or "").splitlines()
+    m = _re.fullmatch(r"TESTS_RC=(\d+)", lines[-1].strip()) if lines else None
     if m:
         try:
             return int(m.group(1))
@@ -606,7 +608,7 @@ def classify_verification_command(
     """
     if not command or not isinstance(command, str):
         return None
-    rc = _tests_rc_from_output(output)
+    rc = _tests_rc_from_output(output) if _strip_tests_rc_echo(command) != command else None
     effective_exit_code = rc if rc is not None else exit_code
     cmd = _strip_tests_rc_echo(command) if rc is not None else command
     facts, effective_cwd = _facts_for_command_cwd(cwd, cmd)
@@ -653,7 +655,7 @@ def record_terminal_result(
     """
     if not _ledger_enabled() or not command or not isinstance(command, str):
         return None
-    rc = _tests_rc_from_output(output)
+    rc = _tests_rc_from_output(output) if _strip_tests_rc_echo(command) != command else None
     effective_exit_code = rc if rc is not None else exit_code
     cmd = _strip_tests_rc_echo(command) if rc is not None else command
     facts, effective_cwd = _facts_for_command_cwd(cwd, cmd)
