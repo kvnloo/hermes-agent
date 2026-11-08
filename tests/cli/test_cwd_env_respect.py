@@ -110,3 +110,35 @@ class TestGatewayLazyImport:
         result = _resolve_cwd(tc, d, env)
         # Explicit config path is preserved; CLI bridges it to env
         assert result == "/home/user"
+
+def test_cli_child_of_gateway_exports_its_own_configured_cwd(tmp_path, monkeypatch):
+    """The gateway marker is inherited, not proof that this is a gateway process."""
+    import os
+    import sys
+
+    import yaml
+
+    home = tmp_path / "hermes-home"
+    home.mkdir()
+    chosen = tmp_path / "chosen-workspace"
+    chosen.mkdir()
+    inherited = tmp_path / "parent-workspace"
+    inherited.mkdir()
+    (home / "config.yaml").write_text(
+        yaml.safe_dump({"terminal": {"backend": "local", "cwd": str(chosen)}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.delenv("HERMES_IGNORE_USER_CONFIG", raising=False)
+
+    import cli
+
+    monkeypatch.setattr(cli, "_hermes_home", home)
+    monkeypatch.setenv("_HERMES_GATEWAY", "1")
+    monkeypatch.setenv("TERMINAL_CWD", str(inherited))
+    monkeypatch.delitem(sys.modules, "gateway.run", raising=False)
+
+    config = cli.load_cli_config()
+
+    assert config["terminal"]["cwd"] == str(chosen)
+    assert os.environ["TERMINAL_CWD"] == str(chosen)

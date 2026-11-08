@@ -617,10 +617,10 @@ def load_cli_config() -> Dict[str, Any]:
         "sudo_password": "SUDO_PASSWORD",
     }
     
-    # Bridge config → env vars for terminal_tool. TERMINAL_CWD is force-exported
-    # UNLESS we're inside a gateway process (detected by _HERMES_GATEWAY marker)
-    # where it was already set correctly by gateway/run.py's config bridge.
-    _is_gateway = os.environ.get("_HERMES_GATEWAY") == "1"
+    # A CLI spawned by the gateway inherits _HERMES_GATEWAY but must still
+    # export its own configured directory. Only the gateway process itself
+    # keeps TERMINAL_CWD from gateway/run.py's config bridge.
+    _is_gateway = "gateway.run" in sys.modules
     for config_key, env_var in env_mappings.items():
         if config_key in terminal_config:
             if env_var == "TERMINAL_CWD":
