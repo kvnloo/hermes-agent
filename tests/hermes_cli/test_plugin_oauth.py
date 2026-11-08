@@ -403,6 +403,30 @@ def test_partial_consent_saves_nothing_and_names_what_is_missing(idp):
     assert _auth("add") is True and _grant()["refresh_token"]
 
 
+def test_entra_non_echoed_scopes_preserve_refreshable_sign_in(idp, api):
+    """Regression for NousResearch/hermes-agent#151072: Entra echoes only resource scopes."""
+    allowed, _ = api
+    idp.granted_scope = "User.Read"
+    plugin = _plugin(oauth=[_entry(idp, client_secret_env="", scopes=[
+        "User.Read", "offline_access", "openid", "profile", "email",
+    ])])
+
+    assert _auth("add") is True
+    assert "offline_access" in idp.opened[-1]
+    assert _grant()["refresh_token"] in idp.refresh_tokens
+    _set_grant(expires_at_ms=0)
+    assert plugin.call("google", allowed.url).status == 200
+    assert _refreshes(idp) == 1
+
+
+def test_offline_access_without_refresh_token_saves_nothing(idp):
+    idp.token_answer = (200, {"access_token": "at-short-lived", "scope": "User.Read", "expires_in": 3600})
+    _plugin(oauth=[_entry(idp, client_secret_env="", scopes=["User.Read", "offline_access"])])
+    with pytest.raises(SystemExit, match="refresh_token"):
+        _auth("add")
+    assert not (_home() / "auth.json").exists() or _grant() is None
+
+
 def test_grant_belongs_to_one_profile(idp, api, monkeypatch, tmp_path):
     allowed, _ = api
     _signed_in(idp)

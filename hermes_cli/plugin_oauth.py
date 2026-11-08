@@ -307,10 +307,16 @@ def _token_error(key: str, status: int, payload: Mapping[str, Any]):
 
 
 def _require_granted_scopes(client: OAuthClient, payload: Mapping[str, Any], key: str) -> None:
+    # OIDC identity scopes need not appear in an access token's resource-scope list.
+    if "offline_access" in client.scopes and not str(payload.get("refresh_token") or "").strip():
+        raise _auth_error(key, "offline_access was requested but no refresh_token was issued; nothing was saved.",
+                          "oauth_scope_not_granted")
     granted = payload.get("scope")
     if not isinstance(granted, str) or not granted.strip():
-        return  # the IdP did not say which scopes it granted
-    missing = [scope for scope in client.scopes if scope not in granted.split()]
+        return  # the IdP did not say which resource scopes it granted
+    non_echoed = {"offline_access", "openid", "profile", "email"}
+    granted_scopes = set(granted.split())
+    missing = [scope for scope in client.scopes if scope not in non_echoed and scope not in granted_scopes]
     if missing:
         raise _auth_error(key, "not every permission was granted, so nothing was saved. Missing: "
                           + ", ".join(missing), "oauth_scope_not_granted")
