@@ -61,6 +61,7 @@ let bridgeGeneration = 0
 class TicketBridge {
   private child: ChildProcessWithoutNullStreams
   private pending = new Map<number, PendingTicket>()
+  private timedOut = new Set<number>()
   private sequence = 0
   private output = ''
   private idleTimer?: ReturnType<typeof setTimeout>
@@ -93,7 +94,13 @@ class TicketBridge {
 
  return }
 
-      const timer = setTimeout(() => this.dispose(), 10_000)
+      const timer = setTimeout(() => {
+        if (!this.pending.delete(id)) { return }
+        this.timedOut.add(id)
+        // A busy live owner is not a stale gateway: reject only this ticket.
+        reject(new Error('Hermes ticket helper request timed out'))
+        this.scheduleIdleDisposal()
+      }, 10_000)
       this.pending.set(id, { resolve, reject, timer })
       // Private stdin carries identity as data. EOF also retires the helper if Desktop exits.
       this.child.stdin.write(request)
@@ -101,6 +108,7 @@ class TicketBridge {
   }
 
   private receive(data: string): void {
+    if (this.closed) { return }
     this.output += data
 
     if (this.output.length > 65536) { this.dispose();
@@ -117,9 +125,13 @@ class TicketBridge {
         const reply = JSON.parse(line)
         const waiter = this.pending.get(reply.id)
 
-        if (!waiter) { this.dispose();
+        if (!waiter) {
+          // A late response for an expired ticket is valid, not a broken protocol.
+          if (this.timedOut.delete(reply.id)) { continue }
+          this.dispose()
 
- return }
+          return
+        }
 
         this.pending.delete(reply.id)
         clearTimeout(waiter.timer)
@@ -132,7 +144,13 @@ class TicketBridge {
  return }
     }
 
-    if (!this.pending.size) { this.idleTimer = setTimeout(() => this.dispose(), 30_000) }
+    this.scheduleIdleDisposal()
+  }
+
+  private scheduleIdleDisposal(): void {
+    if (this.pending.size) { return }
+    clearTimeout(this.idleTimer)
+    this.idleTimer = setTimeout(() => this.dispose(), 30_000)
   }
 
   dispose(): void {
@@ -148,6 +166,7 @@ class TicketBridge {
     }
 
     this.pending.clear()
+    this.timedOut.clear()
     this.child.kill('SIGKILL')
   }
 }
