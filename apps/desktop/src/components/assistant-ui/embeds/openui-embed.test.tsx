@@ -12,6 +12,7 @@ const SOURCE_FENCE = [
 ].join('\n')
 
 const source = (code: string) => <pre data-testid="original-fence"><code>{code}</code></pre>
+
 const embedded = (code: string, streaming = false) => (
   <RichCodeBlock code={code} fallback={source(code)} language="openui-v2" streaming={streaming} />
 )
@@ -21,9 +22,11 @@ afterEach(cleanup)
 describe('openui-v2 Desktop fence', () => {
   it('routes only the registered version through the lazy embed', async () => {
     expect(RICH_FENCE_LANGUAGES.has('openui-v2')).toBe(true)
+
     const { rerender } = render(
       <RichCodeBlock code={SOURCE_FENCE} fallback={source(SOURCE_FENCE)} language="openui-v3" />
     )
+
     expect(screen.getByTestId('original-fence').textContent).toBe(SOURCE_FENCE)
     rerender(embedded(SOURCE_FENCE))
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Turns by model', level: 3 })).toBeTruthy())
@@ -53,6 +56,7 @@ describe('openui-v2 Desktop fence', () => {
       'root = Board("Bad rows", "", [t])',
       't = Table("Runs", ["Suite", "Result"], [["Parser"]])'
     ].join('\n')
+
     expect(inspectOpenUiBoard(malformed)).toEqual({ kind: 'invalid', reason: 'rows' })
     render(embedded(malformed))
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('column'))
@@ -75,6 +79,7 @@ describe('openui-v2 Desktop fence', () => {
         'root = Board("Series", "", [chart])',
         `chart = ${type}("Breakdown", "runs", ["Mon", "Tue"], [{name: "A", values: [2, 3]}])`
       ].join('\n')
+
       expect(inspectOpenUiBoard(code)).toEqual({ kind: 'ready' })
       expect(inspectOpenUiBoard(code.replace('[2, 3]', '[2]'))).toEqual({ kind: 'invalid', reason: 'series' })
 
@@ -97,12 +102,15 @@ describe('openui-v2 Desktop fence', () => {
       'l = LineChart("Trend", "runs", ["Mon", "Tue"], [{name: "B", values: [3, 4]}])',
       't = Table("Results", ["Suite", "Result"], [["Parser", "pass"]])'
     ].join('\n')
+
     expect(inspectOpenUiBoard(code)).toEqual({ kind: 'ready' })
     const { container } = render(embedded(code))
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Metrics' })).toBeTruthy())
+
     for (const panel of ['Overview', 'Throughput', 'Workers', 'Trend', 'Results']) {
       expect(screen.getByRole('heading', { name: panel })).toBeTruthy()
     }
+
     expect(screen.getByText('pass')).toBeTruthy()
     expect(container.querySelector('a, [data-action], iframe')).toBeNull()
   })

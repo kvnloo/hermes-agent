@@ -95,28 +95,38 @@ export const isAppCardType = (s: string): s is AppCardType => Object.hasOwn(appC
 export function appCardProblem(panel: { typeName: string; props: unknown }): string | null {
   if (panel.typeName === 'RideOptions') {
     const ride = rideOptionsProps.safeParse(panel.props)
-    if (!ride.success) return 'Invalid ride options'
+
+    if (!ride.success) {return 'Invalid ride options'}
     const names = ride.data.options.map(option => option.name)
+
     return new Set(names).size === names.length ? null : 'Duplicate ride option'
   }
+
   if (panel.typeName === 'PullRequest') {
     const pr = pullRequestProps.safeParse(panel.props)
-    if (!pr.success) return 'Invalid pull request'
+
+    if (!pr.success) {return 'Invalid pull request'}
     const { state, checks, conflicts, url, number } = pr.data
-    if (state === 'conflict' && conflicts < 1) return 'Conflict count required'
-    if (!['open', 'conflict'].includes(state) && conflicts !== 0) return 'Inconsistent conflicts'
+
+    if (state === 'conflict' && conflicts < 1) {return 'Conflict count required'}
+
+    if (!['open', 'conflict'].includes(state) && conflicts !== 0) {return 'Inconsistent conflicts'}
+
     if (state === 'ready' && checks.some(c => c.status === 'fail' || c.status === 'running')) {
       return 'Checks have not passed'
     }
+
     if (url) {
       const parsed = new URL(url)
       const match = /^\/[^/]+\/[^/]+\/pull\/([1-9]\d*)\/?$/.exec(parsed.pathname)
+
       if (parsed.hostname !== 'github.com' || parsed.port || parsed.username || parsed.password ||
           parsed.search || parsed.hash || !match || Number(match[1]) !== number) {
         return 'Pull request URL does not match its number'
       }
     }
   }
+
   return null
 }
 
@@ -133,11 +143,17 @@ export const BRANDS: Readonly<Record<BrandId, { name: string; mark: string; colo
 export function brandForServer(server: string): BrandId | null {
   const key = server.replace(/^mcp__/, '').toLowerCase().replace(/[\s-]+/g, '_')
     .replace(/^editor_(.+?)_[0-9a-f]{8}$/, '$1').replace(/[^a-z0-9]/g, '')
-  if (['uber', 'uberrides'].includes(key)) return 'uber'
-  if (key === 'lyft') return 'lyft'
-  if (['gmail', 'googlegmail', 'gwsgmail', 'googlemail'].includes(key)) return 'gmail'
-  if (['googlemaps', 'gmaps', 'maps'].includes(key)) return 'google-maps'
-  if (['github', 'gh'].includes(key)) return 'github'
+
+  if (['uber', 'uberrides'].includes(key)) {return 'uber'}
+
+  if (key === 'lyft') {return 'lyft'}
+
+  if (['gmail', 'googlegmail', 'gwsgmail', 'googlemail'].includes(key)) {return 'gmail'}
+
+  if (['googlemaps', 'gmaps', 'maps'].includes(key)) {return 'google-maps'}
+
+  if (['github', 'gh'].includes(key)) {return 'github'}
+
   return null
 }
 
@@ -159,6 +175,7 @@ const google = {
     onPrimary: '#062e6f', accent: '#a8c7fa', success: '#6dd58c',
     danger: '#f2b8b5', warning: '#fdd663', radius: 16 }
 } as const
+
 const uber = {
   light: { surface: '#ffffff', surfaceAlt: '#f3f3f3', text: '#000000',
     muted: '#5e5e5e', outline: '#e8e8e8', primary: '#000000',
@@ -169,6 +186,7 @@ const uber = {
     onPrimary: '#000000', accent: '#5e8bdb', success: '#5c9d70',
     danger: '#de5b5d', warning: '#f6bc2f', radius: 12 }
 } as const
+
 const github = {
   light: { surface: '#ffffff', surfaceAlt: '#f6f8fa', text: '#1f2328',
     muted: '#59636e', outline: '#d1d9e0', primary: '#1f883d',
@@ -181,23 +199,30 @@ const github = {
 } as const
 
 export function cardPalette(brand: BrandId, dark: boolean): Palette {
-  if (brand === 'github') return github[dark ? 'dark' : 'light']
-  if (brand === 'gmail' || brand === 'google-maps') return google[dark ? 'dark' : 'light']
+  if (brand === 'github') {return github[dark ? 'dark' : 'light']}
+
+  if (brand === 'gmail' || brand === 'google-maps') {return google[dark ? 'dark' : 'light']}
+
   if (brand === 'lyft') {
     const base = uber[dark ? 'dark' : 'light']
+
     return { ...base, primary: '#ff00bf', onPrimary: '#ffffff',
       accent: dark ? '#ff5fd5' : '#ff00bf' }
   }
+
   return uber[dark ? 'dark' : 'light']
 }
 
 export function cheapestRide(options: ReadonlyArray<{ name: string; price: string }>): string | null {
   let best: { name: string; price: number } | null = null
+
   for (const option of options) {
     const price = Number(option.price.replace(/[^0-9.]/g, ''))
+
     if (Number.isFinite(price) && /[0-9]/.test(option.price) &&
-        (!best || price < best.price)) best = { name: option.name, price }
+        (!best || price < best.price)) {best = { name: option.name, price }}
   }
+
   return best?.name ?? null
 }
 
@@ -207,22 +232,28 @@ export function projectRoutePath(
   height: number,
   bounds?: readonly [number, number, number, number]
 ) {
-  if (!path.length) return { points: [] as [number, number][], d: '' }
+  if (!path.length) {return { points: [] as [number, number][], d: '' }}
   // Clamp to Web Mercator's defined latitude range; source values remain unchanged.
   const merc = (lat: number) => Math.log(Math.tan(Math.PI / 4 + Math.max(-85, Math.min(85, lat)) * Math.PI / 360))
   const xs = path.map(([, lon]) => lon * Math.PI / 180)
   const ys = path.map(([lat]) => merc(lat))
+
   const [x0, x1, y0, y1] = bounds
     ? [bounds[1] * Math.PI / 180, bounds[3] * Math.PI / 180, merc(bounds[0]), merc(bounds[2])]
     : [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]
+
   const inset = bounds ? 0 : 22
+
   const span = Math.max((x1 - x0) / (width - inset * 2),
     (y1 - y0) / (height - inset * 2)) || 1
+
   const cx = (x0 + x1) / 2
   const cy = (y0 + y1) / 2
+
   const points = xs.map((x, i): [number, number] => [
     Math.round(((x - cx) / span + width / 2) * 10) / 10,
     Math.round(((cy - ys[i]!) / span + height / 2) * 10) / 10
   ])
+
   return { points, d: 'M' + points.map(([x, y]) => x + ' ' + y).join(' L') }
 }

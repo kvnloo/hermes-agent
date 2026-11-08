@@ -1,9 +1,9 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
+import { appCardProblem, brandForServer, projectRoutePath } from './openui-app-card-model'
 import { inspectOpenUiBoard } from './openui-catalog'
 import { RichCodeBlock } from './registry'
-import { appCardProblem, brandForServer, projectRoutePath } from './openui-app-card-model'
 
 // Exact completed source fences from T3 Code experiments/openui-lab/app-cards.test.ts
 // at 3cf6d0c655d22e249398fb7ea36198bf73b4e63d.
@@ -11,21 +11,24 @@ const ride = [
   'root = Board("Ride to SFO", "UberX is the cheapest option.", [rides])',
   'rides = RideOptions("uber", "Ferry Building", "SFO Terminal 2", [{name: "UberX", minutes: 4, price: "$31.20", seats: 4}, {name: "Comfort", minutes: 6, price: "$38.90", seats: 4}, {name: "UberXL", minutes: 9, price: "$52.10", seats: 6}])'
 ].join('\n')
+
 const mail = [
   'root = Board("Invoices", "Two unread invoices from Acme.", [mail])',
   'mail = MailList("invoices from Acme", [{from: "Acme Billing", subject: "Invoice #4512", snippet: "Your October invoice is ready.", time: "9:41 AM", unread: true}, {from: "Acme Billing", subject: "Invoice #4498", snippet: "September invoice attached.", time: "Oct 2", unread: false}])'
 ].join('\n')
+
 const route = [
   'root = Board("To the Ferry Building", "About 18 minutes by car.", [route])',
   'route = Route("Home", "Ferry Building", "drive", 18, "6.2 mi", ["Head north on Valencia St", "Turn right onto Market St", "Arrive at Ferry Building"])'
 ].join('\n')
+
 const pr = [
   'root = Board("PR #128", "Status of the auth PR.", [pr])',
   'pr = PullRequest(128, "Refresh sessions in the auth middleware", "ready", "feat/session-refresh", "main", [{name: "Tests", status: "pass", detail: "vitest · 42 passed"}, {name: "Lint", status: "pass", detail: ""}, {name: "Types", status: "pass", detail: ""}], 0)'
 ].join('\n')
 
 const embed = (code: string) =>
-  <RichCodeBlock language="openui-v2" code={code} streaming={false} fallback={<pre data-testid="fence">{code}</pre>} />
+  <RichCodeBlock code={code} fallback={<pre data-testid="fence">{code}</pre>} language="openui-v2" streaming={false} />
 
 afterEach(cleanup)
 
@@ -43,10 +46,12 @@ describe('openui-v2 app cards', () => {
     expect(screen.getByText(value, { exact: false })).toBeTruthy()
     const links = Array.from(container.querySelectorAll('a'))
     expect(links.length).toBeGreaterThan(0)
+
     for (const link of links) {
       expect(link.getAttribute('href')).toMatch(/^https:\/\//)
       expect(link.getAttribute('rel')).toContain('noopener')
     }
+
     expect(container.querySelector('iframe, form, script, [data-action]')).toBeNull()
   })
 
@@ -100,8 +105,10 @@ describe('openui-v2 app cards', () => {
   it('accepts a matching direct GitHub PR link and keeps chart panels in the same board', async () => {
     const withUrl = pr.replace(', 0)', ', 0, [], "https://github.com/kvnloo/hermes-agent/pull/128")')
     expect(inspectOpenUiBoard(withUrl)).toEqual({ kind: 'ready' })
+
     const mixed = ride.replace('[rides])', '[rides, spend])') +
       '\nspend = BarChart("Ride spend", "USD", [{label: "Uber", value: 120}])'
+
     expect(inspectOpenUiBoard(mixed)).toEqual({ kind: 'ready' })
     const { container } = render(embed(withUrl))
     await waitFor(() => expect(container.querySelector('a[href="https://github.com/kvnloo/hermes-agent/pull/128"]')).toBeTruthy())
@@ -122,8 +129,10 @@ describe('openui-v2 app cards', () => {
       pr.split('\n')[1],
       ride.split('\n')[1]
     ].join('\n')
+
     const stream = (code: string) =>
-      <RichCodeBlock language="openui-v2" code={code} streaming fallback={<pre data-testid="fence">{code}</pre>} />
+      <RichCodeBlock code={code} fallback={<pre data-testid="fence">{code}</pre>} language="openui-v2" streaming />
+
     // First line still arriving: nothing parseable yet, so a quiet status, not the source.
     const first = render(stream(board.slice(0, 30)))
     expect(first.queryByTestId('fence')).toBeNull()

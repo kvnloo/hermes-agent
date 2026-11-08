@@ -14,6 +14,7 @@ export default function OpenUiEmbed({ code, source, streaming }: RichFenceProps)
   const { t } = useI18n()
   const [showSource, setShowSource] = useState(false)
   const status = useMemo(() => inspectOpenUiBoard(code), [code])
+
   // While the fence is still arriving, render its complete statements as a
   // board (with placeholders for panels still to come) instead of a wall of
   // source that later snaps into cards.
@@ -21,11 +22,13 @@ export default function OpenUiEmbed({ code, source, streaming }: RichFenceProps)
     () => (streaming && status.kind === 'incomplete' ? previewStreamingBoard(code) : { kind: 'none' as const }),
     [code, status.kind, streaming]
   )
+
   const original = source ?? (
     <pre className="max-h-96 overflow-auto p-3 text-xs whitespace-pre-wrap wrap-anywhere">
       <code>{code}</code>
     </pre>
   )
+
   const ready = status.kind === 'ready'
   const board = !ready && preview.kind === 'board' ? preview : null
   const previewing = board !== null
