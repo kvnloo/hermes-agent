@@ -140,12 +140,19 @@ def test_reconcile_counts_adopted_shared_connection_as_live(monkeypatch, tmp_pat
     from tools import mcp_tool_discovery as disc
 
     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-    monkeypatch.setattr(_config, "_load_mcp_config", lambda: {"x": {"url": "https://x/mcp"}})
+    from types import SimpleNamespace
+    from tools.mcp_tool_registration import _adopter_identity_digest
+
+    cfg = {"url": "https://x/mcp"}
+    monkeypatch.setattr(_config, "_load_mcp_config", lambda: {"x": cfg})
     monkeypatch.setattr(mcp_tool, "_mcp_registry_scope", lambda: "B")
     discovered: list = []
     monkeypatch.setattr(disc, "discover_mcp_tools", lambda *a, **k: discovered.append(1) or [])
     with mcp_tool._lock:
-        mcp_tool._servers[("A", "x")] = object()
+        mcp_tool._servers[("A", "x")] = SimpleNamespace(
+            session=object(), _config=cfg, _resolved_identity=_adopter_identity_digest("x", cfg),
+            _tools=[], tool_timeout=30, initialize_result=None,
+        )
         mcp_tool._server_scope_keys[("A", "x")] = "A"
         mcp_tool._server_tool_scopes[("A", "x")] = {"A", "B"}
     try:

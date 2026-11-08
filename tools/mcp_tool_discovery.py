@@ -673,6 +673,9 @@ def reconcile_mcp_servers_with_config() -> Dict[str, List[str]]:
         _lifecycle._reregister_orphaned_adopters()
     for key in lazy:
         _forget_lazy_server(key)
+    if adopted:
+        # Re-check adopted routes and credentials before counting borrowed connections as live.
+        _registration.register_connected_into_current_scope(servers)
     added = _awaiting_connect(wanted, scope)
     if added:
         discover_mcp_tools()

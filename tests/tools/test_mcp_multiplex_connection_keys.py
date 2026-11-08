@@ -290,6 +290,57 @@ def test_adopter_unload_removes_only_its_overlay_a_b_a(two_profiles, monkeypatch
     assert disc.get_mcp_status({"x": cfg})[0]["status"] == "connected"
 
 
+@pytest.mark.parametrize(
+    "changed",
+    [
+        {"url": "https://mcp.example/other", "headers": {"Authorization": "Bearer shared"}},
+        {"url": "https://mcp.example/x", "headers": {"Authorization": "Bearer rotated"}},
+    ],
+    ids=["route", "credentials"],
+)
+def test_reconcile_rehomes_adopter_after_route_edit(two_profiles, monkeypatch, changed):
+    """Regression for #151406: B's config edit revokes its share of A's connection."""
+    import tools.mcp_tool as core
+    from tools import mcp_tool_config as config_mod
+    from tools import mcp_tool_discovery as disc
+    from tools import mcp_tool_registration as reg
+    from tools.mcp_tool_scope import _resolve_server_key
+    from tools.registry import registry
+
+    original = {"url": "https://mcp.example/x", "headers": {"Authorization": "Bearer shared"}}
+    scope_a = two_profiles("a")
+    owner = _live_server("x", original)
+    disc._adopt_server("x", owner)
+    owner._registered_tool_names = reg._register_server_tools("x", owner, original)
+
+    scope_b = two_profiles("b")
+    assert reg.register_connected_into_current_scope({"x": dict(original)}) == 1
+    assert _resolve_server_key("x") == (scope_a, "x")
+    assert registry.get_tool_names_for_toolset("mcp-x") == ["mcp__x__t"]
+
+    monkeypatch.setattr(config_mod, "_load_mcp_config", lambda: {"x": dict(changed)})
+    connected = []
+
+    def fake_discover():
+        new = _live_server("x", changed)
+        disc._adopt_server("x", new)
+        new._registered_tool_names = reg._register_server_tools("x", new, changed)
+        connected.append(new)
+        return []
+
+    monkeypatch.setattr(disc, "discover_mcp_tools", fake_discover)
+    assert disc.reconcile_mcp_servers_with_config()["added"] == ["x"]
+    assert len(connected) == 1
+    assert core._servers[(scope_b, "x")] is connected[0]
+    assert _resolve_server_key("x") == (scope_b, "x")
+    assert scope_b not in core._server_tool_scopes[(scope_a, "x")]
+    assert registry.get_tool_names_for_toolset("mcp-x") == ["mcp__x__t"]
+
+    two_profiles("a")
+    assert core._servers[(scope_a, "x")] is owner
+    assert registry.get_tool_names_for_toolset("mcp-x") == ["mcp__x__t"]
+
+
 def test_owner_unload_rehomes_adopter_a_b_a(two_profiles, monkeypatch):
     """A removing its owned shared connection makes B its own owner; A stays unloaded."""
     import tools.mcp_tool as core
