@@ -10,6 +10,7 @@ did and returns a ``CompactionOutcome``. Predicates/estimators that tests patch 
 from __future__ import annotations
 
 import logging
+import math
 import time
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
@@ -157,7 +158,8 @@ def idle_reference_timestamp(messages: list[Any], current_turn_user_idx: Optiona
         if not isinstance(msg, dict):
             continue
         ts = msg.get("timestamp")
-        if isinstance(ts, bool) or not isinstance(ts, (int, float)) or ts <= 0:
+        if (isinstance(ts, bool) or not isinstance(ts, (int, float))
+                or ts <= 0 or not math.isfinite(ts)):
             continue
         if newest is None or ts > newest:
             newest = float(ts)

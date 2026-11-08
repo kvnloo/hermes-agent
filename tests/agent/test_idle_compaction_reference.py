@@ -98,6 +98,19 @@ def test_recent_transcript_does_not_fire_even_if_the_clock_is_stale(tmp_path: Pa
     agent.context_compressor.compress.assert_not_called()
 
 
+def test_nonfinite_timestamps_do_not_mask_a_real_idle_resume(tmp_path: Path) -> None:
+    """One corrupt transcript clock must not suppress compaction after a long idle."""
+    agent = _fresh(tmp_path, "IDLE_NONFINITE")
+    agent._touch_activity("starting new turn")  # gateway/lease watchdog clock is fresh
+    history = _timed_history(time.time() - 3600)
+    history[4]["timestamp"] = float("nan")
+    history[9]["timestamp"] = float("inf")
+
+    _run_prologue(agent, history)
+
+    agent.context_compressor.compress.assert_called_once()
+
+
 def test_untimestamped_transcript_falls_back_to_the_activity_clock(tmp_path: Path) -> None:
     agent = _fresh(tmp_path, "IDLE_FALLBACK")
     agent._last_activity_ts = time.time() - 3600
