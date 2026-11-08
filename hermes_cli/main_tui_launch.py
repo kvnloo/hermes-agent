@@ -101,28 +101,30 @@ def _print_tui_exit_summary(session_id: Optional[str], active_session_file: Opti
         for row in _branch_lineage(db, session):
             for k in tokens:
                 tokens[k] += int(row.get(f"{k}_tokens") or 0)
-    except Exception:
+
+        # Sessions live under the profile's HERMES_HOME — mirror cli_session_mixin::_print_exit_summary.
+        from hermes_cli.profiles import get_active_profile_name
+        active_profile = get_active_profile_name()
+        profile_flag = "" if active_profile in ("default", "custom") else f" -p {active_profile}"
+        print(f"\n{t('cli.session.exit_resume_hint')}\n  hermes --tui --resume {resume_id}{profile_flag}")
+        if title:
+            print(f'  hermes --tui -c "{title}"{profile_flag}')
+        print(f"\nSession:        {resume_id}")
+        if title:
+            print(f"Title:          {title}")
+        print(f"Messages:       {message_count}")
+        print(
+            "Tokens:         "
+            f"{sum(tokens.values())} (in {tokens['input']}, out {tokens['output']}, "
+            f"cache {tokens['cache_read'] + tokens['cache_write']}, reasoning {tokens['reasoning']})"
+        )
+    except (Exception, KeyboardInterrupt):
+        # Purely cosmetic exit epilogue — never let it crash the shell exit path
+        # (e.g. a Ctrl-C landing mid-parse while loading the i18n locale catalog).
         return
     finally:
         if db is not None:
             db.close()
-
-    # Sessions live under the profile's HERMES_HOME — mirror cli_session_mixin::_print_exit_summary.
-    from hermes_cli.profiles import get_active_profile_name
-    active_profile = get_active_profile_name()
-    profile_flag = "" if active_profile in ("default", "custom") else f" -p {active_profile}"
-    print(f"\n{t('cli.session.exit_resume_hint')}\n  hermes --tui --resume {resume_id}{profile_flag}")
-    if title:
-        print(f'  hermes --tui -c "{title}"{profile_flag}')
-    print(f"\nSession:        {resume_id}")
-    if title:
-        print(f"Title:          {title}")
-    print(f"Messages:       {message_count}")
-    print(
-        "Tokens:         "
-        f"{sum(tokens.values())} (in {tokens['input']}, out {tokens['output']}, "
-        f"cache {tokens['cache_read'] + tokens['cache_write']}, reasoning {tokens['reasoning']})"
-    )
 
 
 def _tui_need_rebuild(root: Path) -> bool:
