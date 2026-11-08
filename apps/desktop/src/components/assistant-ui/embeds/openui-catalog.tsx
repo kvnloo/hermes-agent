@@ -1,9 +1,12 @@
 import { createParser } from '@openuidev/lang-core'
 import { createLibrary, defineComponent, Renderer } from '@openuidev/react-lang'
-import { createContext, useContext, useLayoutEffect, useRef, type ReactNode } from 'react'
+import { createContext, type ReactNode, useContext, useLayoutEffect, useRef } from 'react'
 import { z } from 'zod/v4'
+
+import { EphemeralCards } from './ephemeral-cards'
+import { ephemeralCardsProblem, ephemeralCardsProps } from './ephemeral-cards-model'
 import { appCardProblem, appCardSchemas, isAppCardType } from './openui-app-card-model'
-import { RideOptions, MailList, Route, PullRequest } from './openui-app-cards'
+import { MailList, PullRequest, RideOptions, Route } from './openui-app-cards'
 
 // Ported from the T3 Code OpenUI experiment. The small, read-only Desktop
 // catalog excludes treemaps, heatmaps and actions; app cards stay read-only.
@@ -19,19 +22,23 @@ const summary = z.string().max(4_000)
 const label = z.string().min(1).max(100)
 const unit = z.string().max(40)
 const value = z.number().finite().min(0).max(1e12)
+
 const metricProps = z.object({
   title,
   metrics: z.array(z.object({ label, value: z.string().max(200) })).min(1).max(12)
 })
+
 const barProps = z.object({
   title,
   unit,
   bars: z.array(z.object({ label, value })).min(1).max(30)
 })
+
 const seriesItem = z.object({
   name: label,
   values: z.array(value).min(1).max(LIMITS.categories)
 })
+
 // OpenUI tags component schemas by identity: shared Zod objects alias refs.
 // Give each series chart its own top-level schema, keeping the same constraints.
 const createSeriesProps = () => z.object({
@@ -40,9 +47,11 @@ const createSeriesProps = () => z.object({
   categories: z.array(label).min(2).max(LIMITS.categories),
   series: z.array(seriesItem).min(1).max(LIMITS.series)
 })
+
 const stackedBarProps = createSeriesProps()
 const stackedAreaProps = createSeriesProps()
 const lineChartProps = createSeriesProps()
+
 const tableProps = z.object({
   title,
   columns: z.array(label).min(1).max(12),
@@ -93,7 +102,7 @@ function Legend({ series }: { series: SeriesEntry[] }) {
 // instead of repeating every value under every chart.
 function SeriesValues({ props }: { props: SeriesData }) {
   return (
-    <div className="sr-only" role="region" aria-label={`${props.title} values`}>
+    <div aria-label={`${props.title} values`} className="sr-only" role="region">
       <table className="w-full border-collapse text-left text-xs tabular-nums">
         <thead>
           <tr>
@@ -145,6 +154,7 @@ const BarChart = defineComponent({
   props: barProps,
   component: ({ props }) => {
     const max = Math.max(1, ...props.bars.map(bar => bar.value))
+
     return (
       <section aria-label={props.title} className="space-y-2">
         <h4 className="text-sm font-semibold">{props.title}</h4>
@@ -152,7 +162,7 @@ const BarChart = defineComponent({
           {props.bars.map((bar, i) => (
             <li className="grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)_auto] items-center gap-2" key={i}>
               <span className="truncate" title={bar.label}>{bar.label}</span>
-              <span aria-label={`${bar.label}: ${formatCount(bar.value)} ${props.unit}`} className="h-2 overflow-hidden rounded-sm bg-muted" role="meter" aria-valuemin={0} aria-valuemax={max} aria-valuenow={bar.value}>
+              <span aria-label={`${bar.label}: ${formatCount(bar.value)} ${props.unit}`} aria-valuemax={max} aria-valuemin={0} aria-valuenow={bar.value} className="h-2 overflow-hidden rounded-sm bg-muted" role="meter">
                 <span className="block h-full bg-primary" style={{ width: `${(bar.value / max) * 100}%` }} />
               </span>
               <span className="text-right font-medium tabular-nums">{formatCount(bar.value)}</span>
@@ -173,7 +183,9 @@ const StackedBar = defineComponent({
     const totals = props.categories.map((_, i) =>
       props.series.reduce((sum, entry) => sum + (entry.values[i] ?? 0), 0)
     )
+
     const max = Math.max(1, ...totals)
+
     return (
       <section aria-label={props.title} className="space-y-2">
         <h4 className="text-sm font-semibold">{props.title}</h4>
@@ -219,11 +231,14 @@ function CategoryAxis({ categories, values }: { categories: string[]; values?: n
 
 function stackedBands(series: SeriesEntry[], count: number) {
   const totals = Array.from({ length: count }, () => 0)
+
   const bands = series.map(entry => {
     const lower = [...totals]
     entry.values.forEach((number, i) => { totals[i] = (totals[i] ?? 0) + number })
+
     return { lower, upper: [...totals] }
   })
+
   return { bands, max: Math.max(1, ...totals) }
 }
 
@@ -232,6 +247,7 @@ function polygonPoints(lower: number[], upper: number[], max: number) {
   const height = 180
   const x = (i: number) => (i * width) / (upper.length - 1)
   const y = (n: number) => height - (n / max) * height
+
   return [
     ...upper.map((n, i) => `${x(i)},${y(n)}`),
     ...lower.map((n, i) => `${x(i)},${y(n)}`).reverse()
@@ -244,6 +260,7 @@ const StackedArea = defineComponent({
   props: stackedAreaProps,
   component: ({ props }) => {
     const stack = stackedBands(props.series, props.categories.length)
+
     return (
       <section aria-label={props.title} className="space-y-2">
         <h4 className="text-sm font-semibold">{props.title}</h4>
@@ -266,6 +283,7 @@ const LineChart = defineComponent({
   props: lineChartProps,
   component: ({ props }) => {
     const max = Math.max(1, ...props.series.flatMap(entry => entry.values))
+
     return (
       <section aria-label={props.title} className="space-y-2">
         <h4 className="text-sm font-semibold">{props.title}</h4>
@@ -323,8 +341,9 @@ const Table = defineComponent({
 
 // Panels that need a full row (a Stat strip) or two columns (charts) on a
 // wide board; app cards take one column so four of them sit side by side.
-const FULL_ROW = new Set(['Stat'])
+const FULL_ROW = new Set(['Stat', 'EphemeralCards'])
 const APP_CARD = new Set(['RideOptions', 'MailList', 'Route', 'PullRequest'])
+
 const panelSpan = (typeName: string) =>
   FULL_ROW.has(typeName) ? 'col-span-full' : APP_CARD.has(typeName) ? '' : '@6xl:col-span-2'
 
@@ -344,12 +363,14 @@ function Reveal({ index, className, children }: { index: number; className: stri
   const { animate } = useContext(PendingPanels)
   useLayoutEffect(() => {
     const el = ref.current
-    if (!animate || !el || reducedMotion() || typeof el.animate !== 'function') return
+
+    if (!animate || !el || reducedMotion() || typeof el.animate !== 'function') {return}
     el.animate(
       [{ opacity: 0, transform: 'translateY(10px) scale(0.985)' }, { opacity: 1, transform: 'none' }],
       { duration: 420, delay: Math.min(index, 3) * 70, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'both' }
     )
   }, [])
+
   return <div className={'min-w-0 ' + className} data-openui-panel="" ref={ref}>{children}</div>
 }
 
@@ -376,6 +397,7 @@ function BoardView({ title, summary, panels, renderNode }: {
   renderNode: (node: unknown) => ReactNode
 }) {
   const { pending } = useContext(PendingPanels)
+
   return (
     <section aria-label={title} className="not-prose @container min-w-0 space-y-3 p-3 text-foreground">
       <header className="space-y-0.5">
@@ -385,6 +407,7 @@ function BoardView({ title, summary, panels, renderNode }: {
       <div className="grid grid-cols-1 items-start gap-3 @2xl:grid-cols-2 @6xl:grid-cols-4">
         {panels.map((panel, i) => {
           const typeName = isRecord(panel) && typeof panel.typeName === 'string' ? panel.typeName : ''
+
           return (
             <Reveal className={panelSpan(typeName)} index={i} key={i}>
               {renderNode(panel)}
@@ -403,7 +426,7 @@ const Board = defineComponent({
   props: z.object({
     title,
     summary,
-    panels: z.array(z.union([Stat.ref, BarChart.ref, StackedBar.ref, StackedArea.ref, LineChart.ref, Table.ref, RideOptions.ref, MailList.ref, Route.ref, PullRequest.ref]))
+    panels: z.array(z.union([Stat.ref, BarChart.ref, StackedBar.ref, StackedArea.ref, LineChart.ref, Table.ref, RideOptions.ref, MailList.ref, Route.ref, PullRequest.ref, EphemeralCards.ref]))
       .min(1).max(LIMITS.panels)
   }),
   component: ({ props, renderNode }) => (
@@ -415,10 +438,12 @@ const Board = defineComponent({
 // No Query, Mutation, functions, registered actions or user-defined state.
 // Generated content cannot send messages, follow links or call tools.
 const library = createLibrary({
-  components: [Board, Stat, BarChart, StackedBar, StackedArea, LineChart, Table, RideOptions, MailList, Route, PullRequest],
+  components: [Board, Stat, BarChart, StackedBar, StackedArea, LineChart, Table, RideOptions, MailList, Route, PullRequest, EphemeralCards],
   root: 'Board'
 })
+
 const parser = createParser(library.toJSONSchema(), library.root)
+
 const panelSchemas = {
   Stat: metricProps,
   BarChart: barProps,
@@ -426,7 +451,8 @@ const panelSchemas = {
   StackedArea: stackedAreaProps,
   LineChart: lineChartProps,
   Table: tableProps,
-  ...appCardSchemas
+  ...appCardSchemas,
+  EphemeralCards: ephemeralCardsProps
 } as const
 
 type PanelType = keyof typeof panelSchemas
@@ -448,9 +474,11 @@ export function inspectOpenUiBoard(code: string): OpenUiStatus {
     if (parsed.queryStatements.length || parsed.mutationStatements.length || Object.keys(parsed.stateDeclarations).length) {
       return { kind: 'invalid', reason: 'readOnlyError' }
     }
+
     if (parsed.meta.incomplete || parsed.meta.unresolved.length || !parsed.root) {
       return { kind: 'incomplete', reason: 'incomplete' }
     }
+
     const root = parsed.root
     const props = root.props
 
@@ -466,28 +494,40 @@ export function inspectOpenUiBoard(code: string): OpenUiStatus {
           !Object.hasOwn(panelSchemas, panel.typeName)) {
         return { kind: 'invalid', reason: 'invalid' }
       }
+
       const panelType = panel.typeName as PanelType
       const validated = panelSchemas[panelType].safeParse(panel.props)
 
       if (!validated.success) {
         return { kind: 'invalid', reason: 'invalid' }
       }
+
       if (isAppCardType(panelType) && appCardProblem({ typeName: panelType, props: validated.data })) {
         return { kind: 'invalid', reason: 'invalid' }
       }
+
+      if (panelType === 'EphemeralCards' &&
+          ephemeralCardsProblem(validated.data as z.infer<typeof ephemeralCardsProps>)) {
+        return { kind: 'invalid', reason: 'invalid' }
+      }
+
       if (panelType === 'Table') {
         const table = validated.data as z.infer<typeof tableProps>
+
         if (table.rows.some(row => row.length !== table.columns.length)) {
           return { kind: 'invalid', reason: 'rows' }
         }
       }
+
       if (panelType === 'StackedBar' || panelType === 'StackedArea' || panelType === 'LineChart') {
         const chart = validated.data as z.infer<typeof stackedBarProps>
+
         if (chart.series.some(entry => entry.values.length !== chart.categories.length)) {
           return { kind: 'invalid', reason: 'series' }
         }
       }
     }
+
     return { kind: 'ready' }
   } catch {
     return { kind: 'invalid', reason: 'invalid' }
@@ -517,25 +557,34 @@ export function previewStreamingBoard(code: string): OpenUiPreview {
   const body = code.trimEnd()
   const cut = body.lastIndexOf('\n')
   let complete = body
+
   try {
-    if (parser.parse(body).meta.incomplete) complete = cut > 0 ? body.slice(0, cut) : ''
+    if (parser.parse(body).meta.incomplete) {complete = cut > 0 ? body.slice(0, cut) : ''}
   } catch {
     complete = cut > 0 ? body.slice(0, cut) : ''
   }
-  if (!complete) return { kind: 'none' }
-  if (new TextEncoder().encode(complete).byteLength > LIMITS.bytes) return { kind: 'none' }
+
+  if (!complete) {return { kind: 'none' }}
+
+  if (new TextEncoder().encode(complete).byteLength > LIMITS.bytes) {return { kind: 'none' }}
+
   try {
     const parsed = parser.parse(complete)
+
     if (parsed.queryStatements.length || parsed.mutationStatements.length || Object.keys(parsed.stateDeclarations).length) {
       return { kind: 'none' }
     }
+
     const root = parsed.root
+
     if (!root || root.typeName !== 'Board' || !isRecord(root.props) || typeof root.props.title !== 'string') {
       return { kind: 'none' }
     }
+
     const panels = Array.isArray(root.props.panels) ? root.props.panels : []
     const named = complete.split('\n')[0]?.match(/\[([^\]]*)\]\s*\)\s*$/)?.[1]
     const total = named ? named.split(',').filter(name => name.trim()).length : panels.length
+
     return { kind: 'board', code: complete, pending: Math.max(0, Math.min(LIMITS.panels, total) - panels.length) }
   } catch {
     return { kind: 'none' }

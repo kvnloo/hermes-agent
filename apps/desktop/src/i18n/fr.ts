@@ -57,7 +57,14 @@ export const frOverrides = {
     oversized: "Le tableau dépasse 64 Kio. Source originale affichée.",
     readOnlyError: "Outils, mutations et état généré interdits. Source originale affichée.",
     rows: "Chaque ligne doit correspondre au nombre de colonnes. Source originale affichée.",
-    series: "Chaque série nécessite une valeur par catégorie. Source originale affichée."
+    series: "Chaque série nécessite une valeur par catégorie. Source originale affichée.",
+    kitLoading: "Chargement des cartes ephemeral-ui…",
+    kitIdle: "Données d’exemple du kit ephemeral-ui. Vos choix restent dans la carte jusqu’à ce que vous les ajoutiez au chat.",
+    kitPicked: "Choisi : {what}",
+    kitAddToChat: "Ajouter au chat",
+    kitAdded: "Ajouté à la zone de saisie. Rien n’a été envoyé.",
+    kitNoComposer: "Aucune zone de saisie ouverte où l’ajouter.",
+    kitFailed: "Impossible de dessiner {kind} : {reason}"
   },
   sharedMetrics: frSharedMetrics,
   firstRun: frFirstRun,

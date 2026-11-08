@@ -57,7 +57,14 @@ export const jaOverrides = {
     oversized: "ボードが 64 KiB を超えています。元のソースを表示します。",
     readOnlyError: "ツール、変更、生成された状態は使えません。元のソースを表示します。",
     rows: "表の行と列の数が一致しません。元のソースを表示します。",
-    series: "各系列にはカテゴリーごとに値が必要です。元のソースを表示します。"
+    series: "各系列にはカテゴリーごとに値が必要です。元のソースを表示します。",
+    kitLoading: "ephemeral-ui カードを読み込み中…",
+    kitIdle: "ephemeral-ui キットのサンプルデータです。選択はチャットに追加するまでカード内にとどまります。",
+    kitPicked: "選択: {what}",
+    kitAddToChat: "チャットに追加",
+    kitAdded: "入力欄に追加しました。何も送信されていません。",
+    kitNoComposer: "追加先の入力欄が開いていません。",
+    kitFailed: "{kind} を描画できませんでした: {reason}"
   },
   catalog: jaCatalog,
   connectors: jaConnectors.connectors,

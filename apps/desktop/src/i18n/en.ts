@@ -58,7 +58,14 @@ export const en: Translations = {
     oversized: "Board exceeds the 64 KiB limit. Original source shown.",
     readOnlyError: "Tools, mutations and generated state are not allowed. Original source shown.",
     rows: "Table rows must match the column count. Original source shown.",
-    series: "Every series must have one value per category. Original source shown."
+    series: "Every series must have one value per category. Original source shown.",
+    kitLoading: "Loading ephemeral-ui cards…",
+    kitIdle: "Sample data from the ephemeral-ui kit. Picks stay in the card until you add them to chat.",
+    kitPicked: "Picked: {what}",
+    kitAddToChat: "Add to chat",
+    kitAdded: "Added to the composer. Nothing was sent.",
+    kitNoComposer: "No open composer to add this to.",
+    kitFailed: "{kind} could not be drawn: {reason}"
   },
   externalOpenFailed: enExternalOpenFailed,
   sharedMetrics: enSharedMetrics,

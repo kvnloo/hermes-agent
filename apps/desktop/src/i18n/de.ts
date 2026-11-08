@@ -57,7 +57,14 @@ export const deOverrides = {
     oversized: "Tafel überschreitet 64 KiB. Quelltext wird angezeigt.",
     readOnlyError: "Werkzeuge, Änderungen und Zustand sind nicht zulässig. Quelltext wird angezeigt.",
     rows: "Tabellenzeilen müssen zur Spaltenzahl passen. Quelltext wird angezeigt.",
-    series: "Jede Reihe braucht einen Wert pro Kategorie. Quelltext wird angezeigt."
+    series: "Jede Reihe braucht einen Wert pro Kategorie. Quelltext wird angezeigt.",
+    kitLoading: "ephemeral-ui-Karten werden geladen…",
+    kitIdle: "Beispieldaten aus dem ephemeral-ui-Kit. Auswahlen bleiben in der Karte, bis du sie zum Chat hinzufügst.",
+    kitPicked: "Ausgewählt: {what}",
+    kitAddToChat: "Zum Chat hinzufügen",
+    kitAdded: "Zum Eingabefeld hinzugefügt. Nichts wurde gesendet.",
+    kitNoComposer: "Kein offenes Eingabefeld zum Hinzufügen.",
+    kitFailed: "{kind} konnte nicht gezeichnet werden: {reason}"
   },
   sharedMetrics: deSharedMetrics,
   firstRun: deFirstRun,

@@ -57,7 +57,14 @@ export const esOverrides = {
     oversized: "El panel supera 64 KiB. Se muestra el código original.",
     readOnlyError: "No se permiten herramientas, cambios ni estado generado. Se muestra el código original.",
     rows: "Las filas deben coincidir con las columnas. Se muestra el código original.",
-    series: "Cada serie debe tener un valor por categoría. Se muestra el código original."
+    series: "Cada serie debe tener un valor por categoría. Se muestra el código original.",
+    kitLoading: "Cargando tarjetas de ephemeral-ui…",
+    kitIdle: "Datos de ejemplo del kit ephemeral-ui. Lo que elijas se queda en la tarjeta hasta que lo añadas al chat.",
+    kitPicked: "Elegido: {what}",
+    kitAddToChat: "Añadir al chat",
+    kitAdded: "Añadido al cuadro de mensaje. No se envió nada.",
+    kitNoComposer: "No hay un cuadro de mensaje abierto donde añadirlo.",
+    kitFailed: "No se pudo dibujar {kind}: {reason}"
   },
   sharedMetrics: esSharedMetrics,
   firstRun: esFirstRun,
