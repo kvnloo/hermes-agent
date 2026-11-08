@@ -131,6 +131,7 @@ def coerce_tool_args(tool_name: str, args: Dict[str, Any]) -> Dict[str, Any]:
                 and _array_items_type(prop_schema) in _SCALAR_ITEM_TYPES
             ):
                 inner = next(iter(value.values()))
+                inner = _normalize_json_strings_for_schema(inner, prop_schema)
                 args[key] = list(inner) if isinstance(inner, (list, tuple)) else [inner]
                 logger.info(
                     "coerce_tool_args: unwrapped single-key dict into list for %s.%s",

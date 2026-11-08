@@ -273,6 +273,13 @@ class TestCoerceToolArgsSingleKeyDictArray:
             result = coerce_tool_args("test_tool", {"ids": {"item": "markdown"}})
             assert result["ids"] == ["markdown"]
 
+    def test_json_encoded_list_inside_scalar_array_envelope(self):
+        """A JSON list inside a model's item envelope must not become one string element."""
+        schema = self._schema({"type": "integer"})
+        with patch("tools.arg_coercion.registry.get_schema", return_value=schema):
+            result = coerce_tool_args("test_tool", {"ids": {"item": "[14, 15]"}})
+        assert result["ids"] == [14, 15]
+
     def test_inner_list_not_double_wrapped(self):
         with patch("tools.arg_coercion.registry.get_schema", return_value=self._schema({"type": "integer"})):
             result = coerce_tool_args("test_tool", {"ids": {"item": [1, 2]}})
