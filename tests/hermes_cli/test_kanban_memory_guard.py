@@ -68,6 +68,24 @@ def test_derived_cap_fails_open_without_memtotal():
     assert kbd.derive_default_max_in_progress({"mem_total_kib": "1048576"}) is None
 
 
+@pytest.mark.parametrize(
+    ("host_kib", "cgroup_bytes", "expected"),
+    [
+        (8 * GIB, 1 * GIB * 1024, 2),
+        (8 * GIB, 2 * GIB * 1024, 4),
+        (8 * GIB, 16 * GIB * 1024, 8),
+        (0, 2 * GIB * 1024, 4),
+        (8 * GIB, None, 8),
+    ],
+)
+def test_derived_cap_uses_tighter_cgroup_limit(host_kib, cgroup_bytes, expected):
+    """A container's worker budget must not be derived from its host's RAM."""
+    sample = {"mem_total_kib": host_kib}
+    if cgroup_bytes is not None:
+        sample["cgroup_limit_bytes"] = cgroup_bytes
+    assert kbd.derive_default_max_in_progress(sample) == expected
+
+
 def test_resolve_max_in_progress_explicit_config_wins(monkeypatch):
     monkeypatch.setattr(
         kbd, "_system_memory_sample", lambda: {"mem_total_kib": 1 * GIB}
