@@ -6688,6 +6688,10 @@ def _build_call_kwargs(
     return merge_session_affinity_headers(kwargs, provider, base_url, _runtime_main_value("session_id") or None)
 
 
+class InvalidGoalJudgeResponse(RuntimeError):
+    """A goal-judge reply violated its verdict contract after a successful HTTP request."""
+
+
 def _validate_llm_response(
     response: Any, task: Optional[str] = None, provider: Optional[str] = None, base_url: Optional[str] = None,
 ) -> Any:
@@ -6737,6 +6741,19 @@ def _validate_llm_response(
         shim = RuntimeError(f"Auxiliary {task or 'call'}: provider returned a timeout shim instead of a completion")
         _note_relay_auxiliary_error(shim)
         raise shim
+    # Only configured goal-judge chains need verdict validation here: the existing
+    # auxiliary fallback ladder cannot recover a parse error raised after call_llm.
+    # With no chain, preserve the goal manager's normal three-strike policy.
+    if task == "goal_judge" and _get_auxiliary_task_config(task).get("fallback_chain"):
+        from hermes_cli.goals import _parse_judge_response
+        content = _message_field(response.choices[0].message, "content")
+        if not isinstance(content, str) or _parse_judge_response(content)[2]:
+            error = InvalidGoalJudgeResponse(
+                "Auxiliary goal_judge: LLM returned invalid response "
+                "(choices[0].message.content is not verdict JSON)"
+            )
+            _note_relay_auxiliary_error(error)
+            raise error
     # Retain the provider-reported model for terminal relay route attribution.
     context = _RELAY_AUX_CALL_CONTEXT.get()
     if context is not None:
