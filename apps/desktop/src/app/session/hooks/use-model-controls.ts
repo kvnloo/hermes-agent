@@ -321,7 +321,9 @@ export function useModelControls({
       }
 
       const restoreSnapshot = (snapshot: ModelPickSnapshot) => {
-        if (touchesPrimary) {
+        // The request may settle after navigation; do not overwrite the new
+        // primary session's composer, but still repair the original runtime.
+        if (touchesPrimary && $activeSessionId.get() === liveSessionId) {
           setCurrentModel(snapshot.model)
           setCurrentProvider(snapshot.provider)
           // The setters withdraw the wire stamp on a change; the old route's stamp is still true.
@@ -360,11 +362,7 @@ export function useModelControls({
       const pickToken = beginModelPick(liveSessionId, before, readSnapshot())
 
       // The snapshot to repaint after this pick failed to apply, or null to leave the paint alone.
-      const settleUnapplied = () => {
-        const repaint = settleModelPick(liveSessionId, pickToken, false)
-
-        return repaint && !(touchesPrimary && $activeSessionId.get() !== liveSessionId) ? repaint : null
-      }
+      const settleUnapplied = () => settleModelPick(liveSessionId, pickToken, false)
 
       // The PRIMARY profile's main agent lets the gateway decide persistence
       // (resolve_persist_behavior): session-only by default, persisted when
@@ -422,6 +420,11 @@ export function useModelControls({
           }
 
           restoreSnapshot(restored)
+          // A confirmation for a chat the user has left must not interrupt
+          // their new chat; its old optimistic paint has already been undone.
+          if (touchesPrimary && $activeSessionId.get() !== liveSessionId) {
+            return false
+          }
           let retryToken: null | number = null
           // ONE shared applier for guarded switches (#95293): the same
           // confirm flow the Bots editor routes through — never fork this
@@ -464,7 +467,7 @@ export function useModelControls({
             rollback: () => {
               const repaint = retryToken === null ? restored : settleModelPick(liveSessionId, retryToken, false)
 
-              if (repaint && !(touchesPrimary && $activeSessionId.get() !== liveSessionId)) {
+              if (repaint) {
                 restoreSnapshot(repaint)
               }
             }

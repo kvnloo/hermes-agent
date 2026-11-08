@@ -1059,4 +1059,63 @@ describe('useModelControls primary session paint (#142037)', () => {
     expect($currentProvider.get()).toBe('draft-route')
     expect($currentReasoningEffortWire.get()).toBe('low')
   })
+
+  it('restores a refused primary pick after navigation without changing the next chat (#142037)', async () => {
+    $activeSessionId.set('runtime-a')
+    setCurrentModel('model-a')
+    setCurrentProvider('route-a')
+    SessionStates.$sessionStates.set({
+      'runtime-a': { model: 'model-a', provider: 'route-a', reasoningEffortWire: 'high' },
+      'runtime-b': { model: 'model-b', provider: 'route-b', reasoningEffortWire: 'low' }
+    } as never)
+
+    tile.delegate = {
+      updateSession: (id: string, update: (state: Record<string, unknown>) => Record<string, unknown>) => {
+        const states = SessionStates.$sessionStates.get()
+        const next = update(states[id] as unknown as Record<string, unknown>)
+        SessionStates.$sessionStates.set({ ...states, [id]: next } as never)
+        return next
+      }
+    }
+
+    let rejectRequest!: (reason: Error) => void
+    const requestGateway = vi.fn(() => new Promise<never>((_resolve, reject) => {
+      rejectRequest = reject
+    }))
+    const queryClient = new QueryClient()
+    const { result } = renderHook(() => useModelControls({ queryClient, requestGateway }))
+
+    let pending!: Promise<boolean>
+    act(() => {
+      pending = result.current.selectModel({ model: 'unavailable', provider: 'wrong-route' })
+    })
+    expect(SessionStates.$sessionStates.get()['runtime-a']).toMatchObject({ model: 'unavailable' })
+
+    act(() => {
+      $activeSessionId.set('runtime-b')
+      setCurrentModel('model-b')
+      setCurrentProvider('route-b')
+    })
+
+    await act(async () => {
+      rejectRequest(new Error('model unavailable'))
+      await expect(pending).resolves.toBe(false)
+    })
+
+    expect(SessionStates.$sessionStates.get()['runtime-a']).toMatchObject({
+      model: 'model-a',
+      provider: 'route-a',
+      reasoningEffortWire: 'high'
+    })
+    expect(queryClient.getQueryData(modelOptionsQueryKey('default', 'runtime-a'))).toMatchObject({
+      model: 'model-a',
+      provider: 'route-a'
+    })
+    expect($currentModel.get()).toBe('model-b')
+    expect($currentProvider.get()).toBe('route-b')
+
+    act(() => { $activeSessionId.set('runtime-a') })
+    expect(PRIMARY_SESSION_VIEW.$model.get()).toBe('model-a')
+    expect(PRIMARY_SESSION_VIEW.$provider.get()).toBe('route-a')
+  })
 })
