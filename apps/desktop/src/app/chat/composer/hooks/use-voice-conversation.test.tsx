@@ -2,6 +2,7 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { BargeMonitorCallbacks } from '@/lib/voice-barge-in'
+import { notifyError } from '@/store/notifications'
 import { $voicePlayback } from '@/store/voice-playback'
 import { $autoSpeakReplies, $bargeInEnabled } from '@/store/voice-prefs'
 
@@ -236,6 +237,55 @@ describe('useVoiceConversation full-duplex barge-in', () => {
     })
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith('no, do it differently'))
+  })
+
+  it('re-arms listening when a barge-in transcription never settles', async () => {
+    const { hook, onSubmit, onTranscribeAudio } = renderConversation()
+
+    await act(async () => {
+      await hook.result.current.start()
+    })
+    await enterThinking(hook)
+    await waitFor(() => expect(monitorCalls.length).toBeGreaterThan(0))
+
+    const monitor = monitorCalls.at(-1)
+    const startsBefore = micHandle.start.mock.calls.length
+    onTranscribeAudio.mockImplementationOnce(() => new Promise<string>(() => undefined))
+
+    act(() => {
+      monitor?.onSpeech(false)
+    })
+    hook.rerender({ busy: false })
+
+    vi.useFakeTimers()
+    try {
+      await act(async () => {
+        monitor?.onUtterance?.(new Blob(['interruption'], { type: 'audio/webm' }))
+        for (let i = 0; i < 8; i += 1) {
+          await Promise.resolve()
+        }
+      })
+
+      expect(onTranscribeAudio).toHaveBeenCalledTimes(2)
+      expect((onTranscribeAudio.mock.calls[1] as unknown[])[2]).toEqual(expect.any(Number))
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000)
+        for (let i = 0; i < 8; i += 1) {
+          await Promise.resolve()
+        }
+      })
+
+      expect(notifyError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringMatching(/timed out/i) }),
+        'transcription failed'
+      )
+      expect(micHandle.start.mock.calls.length).toBeGreaterThan(startsBefore)
+      expect(hook.result.current.status).toBe('listening')
+      expect(onSubmit).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('does not interrupt when speech trips during playback (turn already done)', async () => {
