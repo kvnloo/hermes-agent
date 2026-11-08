@@ -451,7 +451,7 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
     # HERMES_KANBAN_TASK env var). Normal chat sessions never see
     # this block. Resolved once at __init__ (see _kanban_worker_guidance).
     _kanban_guidance = getattr(agent, "_kanban_worker_guidance", None)
-    if _kanban_guidance:
+    if _kanban_guidance and _effective_tools:
         tool_guidance.append(_kanban_guidance)
     elif _kanban_guidance is None and "kanban_show" in _effective_tools:
         # Fallback for code paths that bypass agent_init (rare).

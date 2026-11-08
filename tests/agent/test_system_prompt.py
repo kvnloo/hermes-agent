@@ -554,3 +554,20 @@ class TestToolUseEnforcementSuppress:
             _suppress_tools=False,
         )
         assert "# Execution discipline" in _stable_prompt(active)
+
+    def test_kanban_guidance_is_silent_when_tools_suppressed(self):
+        """An explicit worker brief cannot request tools the API omits (#79639)."""
+        guidance = "Use kanban_show and kanban_complete to finish the assigned card."
+        tools = ["kanban_show", "kanban_complete"]
+        suppressed = _make_agent(
+            valid_tool_names=tools,
+            _kanban_worker_guidance=guidance,
+            _suppress_tools=True,
+        )
+        active = _make_agent(
+            valid_tool_names=tools,
+            _kanban_worker_guidance=guidance,
+            _suppress_tools=False,
+        )
+        assert guidance not in _stable_prompt(suppressed)
+        assert guidance in _stable_prompt(active)
