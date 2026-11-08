@@ -10,11 +10,13 @@ import { expect, test, vi } from 'vitest'
 import {
   CREATE_NO_WINDOW,
   execGit,
+  hiddenGitSpawnSpec,
   killTimedGitChildren,
   NO_CONSOLE_GIT_SCRIPT,
   planNoConsoleGitSpawn,
   resolveNoConsolePython,
-  simpleGitBinary
+  simpleGitBinary,
+  windowsGitHost
 } from './no-console-git'
 
 const gitArgs = ['-c', 'windows.appendAtomically=false', 'merge-base', '--is-ancestor', 'origin/main', 'HEAD']
@@ -175,6 +177,30 @@ test('simple-git binary is the python host tuple on windows', () => {
     }),
     ['C:\\hermes\\venv\\Scripts\\python.exe', 'C:\\hermes\\no-console-git.py']
   )
+})
+
+test('a slow Windows Python git host is opt-out only, preserving the hidden default', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-direct-git-'))
+  const pythonBin = path.join(dir, 'python.exe')
+  fs.writeFileSync(pythonBin, '')
+
+  try {
+    vi.stubEnv('HERMES_DESKTOP_PYTHON', pythonBin)
+    vi.stubEnv('HERMES_DESKTOP_DIRECT_GIT', '')
+    assert.ok(windowsGitHost(true), 'default must retain the no-console host')
+
+    vi.stubEnv('HERMES_DESKTOP_DIRECT_GIT', '1')
+    assert.equal(windowsGitHost(true), null)
+    assert.equal(simpleGitBinary(gitBin, windowsGitHost(true)), gitBin)
+
+    const spec = hiddenGitSpawnSpec(gitBin, gitArgs, { isWindows: true })
+    assert.equal(spec.command, gitBin)
+    assert.deepEqual(spec.args, gitArgs)
+    assert.equal(spec.options.windowsHide, true)
+  } finally {
+    vi.unstubAllEnvs()
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('python resolver skips pythonw and the WindowsApps stub', () => {

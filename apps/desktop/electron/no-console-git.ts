@@ -134,6 +134,13 @@ export function windowsGitHost(isWindows = process.platform === 'win32'): NoCons
     return null
   }
 
+  // The host prevents console flashes in packaged Desktop (#96694), but
+  // python.exe startup can stall Electron's main thread for seconds (#151348).
+  // Opt out only when direct git is verified to stay hidden on this Windows host.
+  if (process.env.HERMES_DESKTOP_DIRECT_GIT === '1') {
+    return null
+  }
+
   const pythonBin = resolveNoConsolePython({ isWindows: true })
 
   if (!pythonBin) {
