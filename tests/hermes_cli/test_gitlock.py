@@ -33,6 +33,33 @@ from hermes_cli.gitlock import (
 )
 
 
+@pytest.mark.platforms("windows")
+@pytest.mark.parametrize(("process_name", "expected"), [("git.exe", True), ("notepad.exe", False)])
+def test_windows_git_guard_uses_psutil_without_tasklist(
+        monkeypatch: pytest.MonkeyPatch, process_name: str, expected: bool) -> None:
+    """Regression #150962: normal Windows stale-lock sweeps need no tasklist child."""
+    import psutil
+
+    from hermes_cli import gitlock
+
+    class FakeProcess:
+        def name(self) -> str:
+            return process_name
+
+    spawned = []
+
+    def fake_run(cmd, **kwargs):
+        spawned.append(cmd)
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="")
+
+    monkeypatch.setattr(psutil, "process_iter", lambda: iter((FakeProcess(),)))
+    monkeypatch.setattr(gitlock.subprocess, "run", fake_run)
+
+    assert gitlock._git_proc_running() is expected
+    assert spawned == []
+
+
+
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
     """A real, tiny git repo with two commits (no network)."""
