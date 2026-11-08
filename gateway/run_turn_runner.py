@@ -473,6 +473,13 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
         # A platform send can't be retracted; a local viewer withdraws the keyed notice.
         agent.notice_clear_callback = self._local_notice_clear_callback_sync if local_viewer_turn(self) else None
         agent.event_callback = ctx._event_callback_sync
+        if getattr(agent, "_fallback_activated", False):
+            primary = getattr(agent, "_primary_runtime", None) or {}
+            # The turn route still names the primary while its cached agent serves a
+            # fallback. Do not erase that fallback's bound effort on an unchanged turn.
+            if ("_fallback_bound_reasoning" in vars(agent)
+                    and reasoning_config == primary.get("reasoning_config")):
+                reasoning_config = agent.reasoning_config
         agent.reasoning_config, agent.service_tier = reasoning_config, runner._service_tier
         self._merge_turn_request_overrides(agent, turn_route)
         from gateway.session_surface import arm_surface_turn
