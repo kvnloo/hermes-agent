@@ -1466,9 +1466,15 @@ class SessionMessagesMixin:
             if not uid:
                 out.append(row)
                 continue
-            at = seen.get(uid)
+            # Pruning can preserve a tool result's full archived payload and its
+            # rewritten live stub under one uid. Only fold equivalent tool bodies;
+            # keep the original uid behavior for assistant and user generations.
+            key = ((uid, row["content"], row["tool_call_id"],
+                    row["tool_calls"], row["tool_name"])
+                   if row["role"] == "tool" else uid)
+            at = seen.get(key)
             if at is None:
-                seen[uid] = len(out)
+                seen[key] = len(out)
                 out.append(row)
             elif (row["active"], row["id"]) > (out[at]["active"], out[at]["id"]):
                 out[at] = row
