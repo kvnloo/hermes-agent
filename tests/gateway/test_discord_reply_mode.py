@@ -340,3 +340,52 @@ class TestVoiceReplyReference:
         await adapter.send_voice("12345", str(audio), reply_to="999")
 
         channel.fetch_message.assert_not_called()
+
+@pytest.mark.asyncio
+async def test_bot_quoted_media_keeps_new_user_voice_stt_eligible(reply_text_adapter):
+    """Bot-quoted audio is context, but a new user voice reply must still be STT input."""
+    from gateway.platforms.event import MessageType
+    from gateway.run import _event_media_is_stt_input
+
+    def voice(name):
+        att = MagicMock()
+        att.content_type = "audio/ogg"
+        att.filename = name
+        att.size = 100
+        att.is_voice_message = True
+        return att
+
+    async def collect(attachments):
+        return (
+            [f"/tmp/{att.filename}" for att in attachments],
+            [att.content_type for att in attachments],
+            [False] * len(attachments),
+            None,
+        )
+
+    reply_text_adapter._collect_attachment_media = AsyncMock(side_effect=collect)
+
+    async def deliver(author_id, own, quoted):
+        resolved = SimpleNamespace(
+            content="previous voice",
+            author=SimpleNamespace(id=author_id, bot=True),
+            attachments=quoted,
+        )
+        message = _make_message(reference=SimpleNamespace(message_id=555, resolved=resolved))
+        message.attachments = own
+        reply_text_adapter.handle_message.reset_mock()
+        await reply_text_adapter._handle_message(message)
+        return reply_text_adapter.handle_message.await_args.args[0]
+
+    both = await deliver(999, [voice("human.ogg")], [voice("bot.ogg")])
+    assert both.message_type == MessageType.VOICE
+    assert both.media_urls == ["/tmp/human.ogg", "/tmp/bot.ogg"]
+    assert _event_media_is_stt_input(both, 0)
+    assert not _event_media_is_stt_input(both, 1)
+
+    own_only = await deliver(999, [voice("new-human.ogg")], [])
+    assert _event_media_is_stt_input(own_only, 0)
+
+    other_bot = await deliver(777, [], [voice("other-bot.ogg")])
+    assert other_bot.message_type == MessageType.TEXT
+    assert not _event_media_is_stt_input(other_bot, 0)

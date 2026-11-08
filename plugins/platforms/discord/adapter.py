@@ -6213,15 +6213,15 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
             referenced_attachments = list(getattr(resolved_reference, "attachments", []) or [])
         # Media quoted from the BOT's own message is context, not user input: it must
         # not decide the event type or enter the user STT pipeline (#150824).
-        bot_referenced_attachments = [
-            att for att in referenced_attachments
-            if getattr(getattr(resolved_reference, "author", None), "bot", False)
-        ] if resolved_reference is not None else []
+        referenced_is_bot = bool(
+            resolved_reference is not None
+            and getattr(getattr(resolved_reference, "author", None), "bot", False)
+        )
+        bot_referenced_attachments = referenced_attachments if referenced_is_bot else []
         msg_type, user_attachments, bot_context_attachments = self._classify_reply_media(
             list(message.attachments) + snapshot_attachments, referenced_attachments,
             bot_referenced_attachments, normalized_content,
         )
-        all_attachments = user_attachments + bot_context_attachments
         effective_channel = auto_threaded_channel or message.channel
         if isinstance(message.channel, discord.DMChannel):
             chat_type = "dm"
@@ -6256,8 +6256,21 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
                 or self._derive_auto_thread_name(message.content or "")
             ) if auto_threaded_channel is not None else None,
         )
+        # The first batch is user input; any subsequent bot-quoted media is context.
+        # Keep the boundary in emitted URLs (not attachment counts: some files may be skipped).
         media_urls, media_types, media_text_inlined, pending_text_injection = await self._collect_attachment_media(
-            all_attachments)
+            user_attachments)
+        user_media_count = len(media_urls)
+        if bot_context_attachments:
+            quote_urls, quote_types, quote_inlined, quote_text = await self._collect_attachment_media(
+                bot_context_attachments)
+            media_urls.extend(quote_urls)
+            media_types.extend(quote_types)
+            media_text_inlined.extend(quote_inlined)
+            if quote_text:
+                pending_text_injection = (
+                    f"{pending_text_injection}\n\n{quote_text}" if pending_text_injection else quote_text
+                )
         event_text = normalized_content
         if pending_text_injection:
             event_text = f"{pending_text_injection}\n\n{event_text}" if event_text else pending_text_injection
@@ -6315,6 +6328,7 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
             media_text_inlined=media_text_inlined,
             reply_to_message_id=reply_to_id, reply_to_text=reply_to_text,
             reply_to_is_own_message=reply_to_is_own,
+            metadata={"quoted_bot_media_start": user_media_count} if referenced_is_bot else {},
             timestamp=message.created_at, auto_skill=_skills, channel_prompt=_channel_prompt,
             channel_context=_channel_context,
         )
