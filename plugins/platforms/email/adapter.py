@@ -492,6 +492,7 @@ class EmailAdapter(BasePlatformAdapter):
         self._seen_uids: set = set()
         self._seen_uids_max: int = 2000   # cap to prevent unbounded memory growth
         self._poll_task: Optional[asyncio.Task] = None
+        self._smtp_probe_error: Optional[str] = None
         self._last_fetch_failed, self._last_fetch_error = False, ""  # "checked, nothing new" vs "the check itself failed"
         # chat_id (sender email) -> last subject + message-id for threading
         # Track the last IMAP fetch attempt so the poll loop can distinguish "checked, nothing new" from
@@ -584,23 +585,24 @@ class EmailAdapter(BasePlatformAdapter):
                               f"IMAP connection to {self._imap_host}:{self._imap_port} failed: {e}", retryable=True)
 
     def _probe_smtp(self) -> bool:
-        """SMTP connect + login test. Sets a fatal error and returns False on failure."""
+        """Check outbound SMTP separately; a failed send path must not disable IMAP polling."""
         try:
             smtp = self._connect_smtp()
             try:
                 smtp.login(self._address, self._password)
             finally:
                 smtp.quit()
+            self._smtp_probe_error = None
             logger.info("[Email] SMTP connection test passed.")
             return True
         except smtplib.SMTPAuthenticationError as e:
-            # Typed auth failure (535 & friends) can never self-heal, so drop out of the reconnect queue — unambiguous, unlike IMAP4.error.
-            return self._fail("[Email] SMTP authentication failed: %s", e, "email_auth_error",
-                              f"SMTP authentication failed for {self._address}: {e}. Check EMAIL_PASSWORD (for Gmail/Outlook "
-                              "this must be an app password, not the account password).", retryable=False)
+            self._smtp_probe_error = f"SMTP authentication failed for {self._address}: {e}. Check EMAIL_PASSWORD."
+            logger.error("[Email] %s (IMAP receiving remains available)", self._smtp_probe_error)
+            return False
         except Exception as e:
-            return self._fail("[Email] SMTP connection failed: %s", e, "email_smtp_connect_error",
-                              f"SMTP connection to {self._smtp_host} failed: {e}", retryable=True)
+            self._smtp_probe_error = f"SMTP connection to {self._smtp_host} failed: {e}"
+            logger.warning("[Email] %s (IMAP receiving remains available)", self._smtp_probe_error)
+            return False
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
         """Connect to the IMAP server and start polling for new messages."""
@@ -610,8 +612,9 @@ class EmailAdapter(BasePlatformAdapter):
             message = f"Not configured — missing {', '.join(missing)}. Set it via `hermes gateway setup` (env) or platforms.email in config.yaml."
             # Non-retryable: a blank-but-present env var used to drive an indefinite retry loop that leaked until OOM.
             return self._fail("[Email] %s", message, "email_missing_configuration", message, retryable=False)
-        if not self._probe_imap(is_reconnect) or not self._probe_smtp():
+        if not self._probe_imap(is_reconnect):
             return False
+        self._probe_smtp()  # advisory: SMTP outages must not stop an otherwise healthy receiver
         if self._require_authenticated_sender and not self._authserv_id and self._address not in EmailAdapter._missing_pin_warned:
             EmailAdapter._missing_pin_warned.add(self._address)
             logger.warning("[Email] %s: %s.%s", self._address, _MISSING_AUTHSERV_REASON, _MISSING_AUTHSERV_HINT)
