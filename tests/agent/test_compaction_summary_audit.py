@@ -23,7 +23,7 @@ from agent.compaction_summary_audit import (
     audit_and_repair_summary,
     find_missing_identifiers,
 )
-from agent.context_compressor import ContextCompressor, _ANCHOR_PATTERNS
+from agent.context_compressor import ContextCompressor, _ANCHOR_PATTERNS, _redact_compaction_text
 
 _ALL_PATTERNS = [*_ANCHOR_PATTERNS, *EXTRA_AUDIT_PATTERNS]
 
@@ -65,6 +65,20 @@ def test_redaction_boundary_is_never_repaired_back():
     region = "use key sk-proj-abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGH now"
     missing = find_missing_identifiers(region, "no key here at all", _ALL_PATTERNS)
     assert not any(value.startswith("sk-proj-") for value in missing)
+
+
+def test_assignment_secret_is_not_restored_as_a_hex_identifier():
+    # A value without a vendor prefix is sensitive because of its assignment key.
+    credential = "0123456789abcdef0123456789abcdef"
+    release_id = "3f2b7c9a-1d4e-4f60-8a2b-6c6d5e4f3a1b"
+    region = f"API_KEY={credential}\\nrelease id {release_id}"
+    assert credential not in _redact_compaction_text(region)
+
+    repaired, telemetry = audit_and_repair_summary("Release complete.", region, _ALL_PATTERNS)
+
+    assert credential not in repaired
+    assert release_id in repaired
+    assert telemetry["audit_repaired"] >= 1
 
 
 def test_generate_summary_appends_repair_for_dropped_identifiers():

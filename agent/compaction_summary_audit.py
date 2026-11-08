@@ -67,7 +67,10 @@ def find_missing_identifiers(
     from agent.context_compressor import _redact_compaction_text
 
     missing: list[str] = []
-    for value, _freq in harvest_identifiers(region_text, patterns):
+    # Secret assignments can only be detected with their surrounding key.
+    # Harvest from the boundary-redacted region so repairs never revive them.
+    safe_region = _redact_compaction_text(region_text)
+    for value, _freq in harvest_identifiers(safe_region, patterns):
         if value in summary_text:
             continue
         if _redact_compaction_text(value) != value:
