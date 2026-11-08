@@ -261,6 +261,7 @@ class A2ARequestHandler(BaseHTTPRequestHandler):
             (lambda: route.get("error"), 400, protocol.ERR_INVALID_PARAMS, route.get("error")),
             (lambda: not adapter._rate_limiter.allow(identity), 429, protocol.ERR_RATE_LIMITED, "rate limit exceeded"),
             (lambda: not adapter._security_context.is_trusted_peer(identity), 403, protocol.ERR_UNTRUSTED_PEER, f"peer '{identity}' not trusted"),
+            (lambda: method == "GetExtendedAgentCard", 200, protocol.ERR_UNSUPPORTED_OPERATION, "extended agent card not supported"),
             (lambda: not handler_name, 200, protocol.ERR_METHOD_NOT_FOUND, f"method not found: {method}"),
         )
         for failed, http, code, msg in checks:

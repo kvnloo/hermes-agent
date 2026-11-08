@@ -1826,6 +1826,27 @@ class TestV1SpecRegressionFixes:
 
         asyncio.run(run())
 
+    def test_unavailable_extended_agent_card_is_unsupported_operation(self, monkeypatch):
+        """A server advertising no extended card must use the v1.0 UnsupportedOperationError."""
+        monkeypatch.delenv("A2A_BEARER_TOKEN", raising=False)
+        monkeypatch.delenv("A2A_PEER_TOKENS", raising=False)
+        adapter, base = _make_live_adapter(monkeypatch)
+
+        async def run():
+            assert await adapter.connect() is True
+            try:
+                card = await asyncio.to_thread(_get_json, base + "/.well-known/agent-card.json")
+                assert card["capabilities"]["extendedAgentCard"] is False
+                resp = await asyncio.to_thread(_post_json, base + "/", {
+                    "jsonrpc": "2.0", "id": "extended", "method": "GetExtendedAgentCard",
+                    "params": {},
+                }, {"A2A-Version": "1.0"})
+                assert resp["error"]["code"] == -32004
+            finally:
+                await adapter.disconnect()
+
+        asyncio.run(run())
+
     def test_remote_health_does_not_leak_served_agents_without_auth(self, monkeypatch):
         monkeypatch.setenv("A2A_BEARER_TOKEN", "secret")
         monkeypatch.delenv("A2A_PEER_TOKENS", raising=False)
