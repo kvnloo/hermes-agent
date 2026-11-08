@@ -57,7 +57,10 @@ def owning_install_root(project_root: Path) -> Path:
         stamped = (install / "inputs" / ".project-root").read_text(encoding="utf-8").strip()
     except OSError:
         return project_root
-    return Path(stamped) if stamped else project_root
+    if not stamped or install_key(Path(stamped)) != install.name:
+        # A stale stamp must not authorize pruning a different install.
+        return project_root
+    return Path(stamped)
 
 
 def runtime_facts_path(project_root: Path) -> Path:
