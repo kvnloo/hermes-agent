@@ -37,3 +37,26 @@ def test_fastapi_default_response_survives_lone_surrogate():
     assert response.status_code == 200
     assert response.json() == {"message": "Hello � 世界"}
     assert "世界".encode() in response.content
+
+
+def test_config_endpoint_preserves_yaml_escaped_surrogate_pair():
+    """Regression for NousResearch/hermes-agent#150918."""
+    from hermes_cli.config import get_config_path
+    from hermes_cli.web_server import _SESSION_HEADER_NAME, _SESSION_TOKEN, app
+
+    config_path = get_config_path()
+    config_path.write_text(
+        "agent:\n"
+        "  personalities:\n"
+        '    surfer: "Cowabunga! \\uD83E\\uDD19"\n'
+        '    hype: "Oops \\uD83E"\n',
+        encoding="utf-8",
+    )
+    response = TestClient(app).get(
+        "/api/config",
+        headers={_SESSION_HEADER_NAME: _SESSION_TOKEN},
+    )
+    assert response.status_code == 200
+    personalities = response.json()["agent"]["personalities"]
+    assert personalities["surfer"] == "Cowabunga! 🤙"
+    assert personalities["hype"] == "Oops �"

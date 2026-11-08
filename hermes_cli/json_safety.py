@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import json
-import re
 from typing import Any
 
 
-_SURROGATE_RE = re.compile(r"[\ud800-\udfff]")
 
 
 def dumps_utf8_safe(value: Any, **kwargs: Any) -> str:
@@ -23,5 +21,6 @@ def dumps_utf8_safe(value: Any, **kwargs: Any) -> str:
     try:
         serialized.encode("utf-8")
     except UnicodeEncodeError:
-        serialized = _SURROGATE_RE.sub("\ufffd", serialized)
+        # Recombine valid surrogate pairs; replace only truly unpaired halves.
+        serialized = serialized.encode("utf-16", "surrogatepass").decode("utf-16", "replace")
     return serialized
