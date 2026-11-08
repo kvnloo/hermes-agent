@@ -89,6 +89,30 @@ class TestAccumulatorWatch:
         # Buffered parts are untouched by the watch.
         assert acc.materialize()[0]["function"]["arguments"].startswith('{"path":"/tmp/a.md"')
 
+    def test_rotating_fragment_ids_do_not_hide_memory_argument_loop(self):
+        """Regression for #151401: argument fragments can each carry a new call id."""
+        acc = helpers._ToolCallAccumulator(watch_arguments=True)
+        acc.feed(_make_tool_call_delta(
+            index=0, tc_id="initial", name="memory",
+            arguments='{"target":"user","operations":[{"action":"patch","old_text":"',
+        ))
+        fragment = (
+            "Lieblingsessen: Wiener Schnitzel mit Erdäpfelsalat, dazu ein Almdudler."
+            r"\n§\n"
+            "Termine immer in der Zeitzone Europe/Vienna angeben, Datum TT.MM.JJJJ."
+            r"\n§\n"
+        )
+        for i in range(100):
+            acc.feed(_make_tool_call_delta(
+                index=0, tc_id=f"fragment-{i}", name=None, arguments=fragment * 4,
+            ))
+            if acc.runaway:
+                break
+        assert len(acc.acc) == 1
+        assert acc.runaway is not None
+        assert acc.runaway[0] == "memory"
+        assert acc.runaway[1] <= 50_000
+
     def test_ignores_large_varied_arguments(self):
         acc = helpers._ToolCallAccumulator(watch_arguments=True)
         self._feed(acc, '{"path":"/tmp/a.csv","content":"', tc_id="call_1")

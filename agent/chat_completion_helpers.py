@@ -2832,7 +2832,11 @@ class _ToolCallAccumulator:
             tc_id = str(tc_id)
 
         self._active_slot_by_idx.setdefault(raw_idx, raw_idx)
-        if delta_id and raw_idx in self._last_id_at_idx and delta_id != self._last_id_at_idx[raw_idx]:
+        if (delta_id and raw_idx in self._last_id_at_idx
+                and delta_id != self._last_id_at_idx[raw_idx]
+                # Some gateways rotate IDs on fragments of the same open call.
+                # A fragment without a name cannot start a new slot.
+                and getattr(getattr(tc_delta, "function", None), "name", None)):
             self._active_slot_by_idx[raw_idx] = max(self.acc, default=-1) + 1
         if delta_id:
             self._last_id_at_idx[raw_idx] = delta_id
