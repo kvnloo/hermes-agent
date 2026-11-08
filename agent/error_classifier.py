@@ -1205,7 +1205,14 @@ def _classify_400(c: _Ctx) -> Verdict:
     # Invalid API key reported as 400 (xAI ``invalid-argument``, Google ``INVALID_ARGUMENT`` +
     # ``API_KEY_INVALID``): the credential is bad, so rotate/fall back as a 401 would. Must precede
     # request-validation and the generic format_error tail, which neither rotate the pool nor name the key.
-    if any(p in msg for p in _400_AUTH_PATTERNS):
+    # Gemini's google.rpc.ErrorInfo reason may survive when the human-readable
+    # message does not (native adapter/proxy), so inspect the structured 400 body too.
+    gemini_details = _error_obj(c.body).get("details") if c.provider_slug == "gemini" else None
+    gemini_invalid_key = isinstance(gemini_details, list) and any(
+        isinstance(detail, dict) and detail.get("reason") == "API_KEY_INVALID"
+        for detail in gemini_details
+    )
+    if any(p in msg for p in _400_AUTH_PATTERNS) or gemini_invalid_key:
         return _V_AUTH_ROTATE
     # Before overflow: GPT-5's "Unsupported parameter: 'max_tokens'" contains it.
     if any(p in msg for p in _400_VALIDATION_PATTERNS) or code in _400_VALIDATION_CODES:

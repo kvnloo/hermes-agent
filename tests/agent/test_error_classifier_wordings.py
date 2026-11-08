@@ -1,9 +1,11 @@
 """Provider wordings that name a cause without the generic phrases the classifier keys on:
 invalid keys sent as HTTP 400, and context overflows phrased as input-length validation errors."""
 
+import httpx
 import pytest
 
 from agent.error_classifier import FailoverReason, classify_api_error
+from agent.gemini_native_adapter import gemini_http_error
 from tests.agent.test_error_classifier import MockAPIError
 
 
@@ -25,6 +27,28 @@ class TestInvalidKeyAs400:
         assert result.reason == FailoverReason.auth
         assert result.should_rotate_credential is True
         assert result.should_compress is False
+
+    def test_gemini_error_info_invalid_key_rotates_with_generic_message(self):
+        """Regression for #150942: a native ErrorInfo reason works without key wording."""
+        for reason, expected_reason, rotates in (
+            ("API_KEY_INVALID", FailoverReason.auth, True),
+            ("INVALID_ARGUMENT", FailoverReason.format_error, False),
+        ):
+            response = httpx.Response(
+                400,
+                json={"error": {
+                    "code": 400, "status": "INVALID_ARGUMENT", "message": "Bad Request",
+                    "details": [{
+                        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                        "reason": reason,
+                    }],
+                }},
+            )
+            error = gemini_http_error(response, key_guidance=False)
+            assert error.details["reason"] == reason
+            result = classify_api_error(error, provider="gemini")
+            assert result.reason == expected_reason
+            assert result.should_rotate_credential is rotates
 
     def test_unrelated_400_invalid_argument_stays_format_error(self):
         e = MockAPIError('Error code: 400 - {"code":"invalid-argument","error":"Unknown parameter: foo"}',
