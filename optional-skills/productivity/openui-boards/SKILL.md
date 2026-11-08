@@ -48,6 +48,7 @@ Use OpenUI's assignment syntax, **not** JSON, HTML, JSX, a Markdown table inside
 | `MailList` | `MailList(query, messages)` | 0–20 messages `{from, subject, snippet, time, unread, attachment?}`; `unread` is boolean. |
 | `Route` | `Route(origin, destination, mode, minutes, distance, steps, via?, path?, map?)` | `mode` is `"drive"`, `"walk"`, `"transit"` or `"bike"`; 0–20 steps. Optional source-returned road, geometry, basemap. |
 | `PullRequest` | `PullRequest(number, title, state, head, base, checks, conflicts, commits?)` | Positive integer PR number; 0–12 checks; integer conflicts 0–10,000; optional 0–12 commits. |
+| `EphemeralCards` | `EphemeralCards(title, cards)` | 1–12 cards `{kind, app?, input?, options?}` drawn by the [ephemeral-ui](https://github.com/kvnloo/ephemeral-ui) kit itself with its **sample data** (Hermes Desktop). `kind` is one of the kit's 50 card kinds (`inbox`, `thread`, `approve`, `slots`, `kanban`, `ci`, `merge`, `deploy`, `incident`, `ride`, `route`, `receipt`, `trace`, `trace-usage`, `intent-contract`, `infra-architecture`…); `app` is a kit catalog id (`gmail`, `github`, `uber`, `stripe`…) or omitted for the kind's default. Only `trace*` kinds take `input` (omp-stats JSON, at most 32 KiB). |
 
 **App-card field limits and types:**
 
@@ -55,6 +56,7 @@ Use OpenUI's assignment syntax, **not** JSON, HTML, JSX, a Markdown table inside
 - Mail `query` at most 200 characters. Each `snippet` at most 400; `subject`, `time` and optional `attachment` at most 200; `from` nonempty.
 - Route `origin` and `destination` nonempty, `distance` and optional `via` at most 200 characters, step labels nonempty at most 200. `path` is 2–600 `[latitude, longitude]` pairs (latitude −90 to 90, longitude −180 to 180). `map` is `{image, bounds}`: only a tool-provided HTTP(S) image URL (at most 2,000 characters) and `[south, west, north, east]` bounds. Never invent geometry or a basemap, or supply an action URL.
 - PR `state` is `"open"`, `"conflict"`, `"ready"`, `"merged"` or `"closed"`. Checks `{name, status, detail, started?, seconds?}` use `"pass"`, `"fail"`, `"running"` or `"skip"`; optional timing numbers range from 0 to 6,000,000 seconds. Commits `{title, sha, author, age, lane, branch?, conflict?}` require SHA length 4–12 and `lane` `"base"`, `"head"` or `"side"`; `conflict` optional boolean.
+- `EphemeralCards` show the kit's sample cards, never the user's data: use them when the user asks to see, try or demo those cards and say the data is sample data. A reader's pick inside a card stays local until they press **Add to chat**, which puts one bounded line in their composer; nothing is sent.
 - PR consistency: `state: "conflict"` requires conflicts above zero; `ready`, `merged` and `closed` require zero conflicts; `ready` cannot have failing or running checks. Never imply check results without evidence.
 
 ## Procedure
@@ -87,6 +89,15 @@ usage = StackedArea("Turns by model", "turns", ["Mon", "Tue", "Wed"], [{name: "C
 ```
 
 Markdown fallback: Wednesday has 16 turns; Claude leads Tuesday with 10.
+
+**ephemeral-ui kit cards (Hermes Desktop):**
+
+```openui-v2
+root = Board("Morning triage", "Sample data from the ephemeral-ui kit: mail, CI, an approval and a session trace.", [kit])
+kit = EphemeralCards("Triage cards", [{kind: "inbox", app: "gmail"}, {kind: "ci", app: "github"}, {kind: "approve"}, {kind: "trace-summary"}])
+```
+
+Markdown fallback: four ephemeral-ui sample cards (Gmail inbox, GitHub CI, an approval and a session trace summary); the data is the kit's sample data.
 
 ## Pitfalls
 

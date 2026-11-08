@@ -39,7 +39,7 @@ def test_source_demo_fences_are_complete_read_only_and_have_markdown_fallbacks()
     assert bundle is not None
     content = bundle.files["SKILL.md"].decode("utf-8")
     programs = FENCE_RE.findall(content)
-    assert len(programs) == 2
+    assert len(programs) == 3
     for program in programs:
         lines = program.splitlines()
         assert lines[0].startswith("root = Board(")
