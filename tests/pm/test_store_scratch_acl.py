@@ -48,6 +48,27 @@ def test_reset_runs_icacls_reset_on_windows(tmp_path, monkeypatch):
 
 
 @pytest.mark.platforms("windows")
+@pytest.mark.parametrize(
+    ("verbatim", "ordinary"),
+    [
+        (r"\\?\C:\Hermes\tools\.staging-1", r"C:\Hermes\tools\.staging-1"),
+        (
+            r"\\?\UNC\server\share\tools\.staging-1",
+            r"\\server\share\tools\.staging-1",
+        ),
+    ],
+)
+def test_reset_passes_native_store_path_to_icacls(verbatim, ordinary, monkeypatch):
+    """External icacls must never receive PM's internal verbatim spelling."""
+    recorder = _Recorder()
+    monkeypatch.setattr(store_module.subprocess, "run", recorder)
+
+    _reset_scratch_dacl(Path(verbatim))
+
+    assert recorder.calls[0][0][1] == ordinary
+
+
+@pytest.mark.platforms("windows")
 def test_reset_resolves_icacls_through_system_root(tmp_path, monkeypatch):
     recorder = _Recorder()
     system_root = tmp_path / "Windows"

@@ -307,9 +307,15 @@ def _icacls_argv(path: Path) -> list[str]:
     post-install context where PATH may not carry it."""
     windir = os.environ.get("SystemRoot", r"C:\Windows")
     icacls = Path(windir) / "System32" / "icacls.exe"
+    # PM paths may be verbatim (\\?\); process argv needs native spelling.
+    native_path = str(path)
+    if native_path.startswith("\\\\?\\UNC\\"):
+        native_path = "\\\\" + native_path[len("\\\\?\\UNC\\"):]
+    else:
+        native_path = native_path.removeprefix("\\\\?\\")
     return [
         str(icacls) if icacls.is_file() else "icacls",
-        str(path),
+        native_path,
         "/reset",
         "/C",
         "/Q",
