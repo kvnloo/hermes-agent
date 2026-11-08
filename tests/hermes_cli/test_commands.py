@@ -374,6 +374,15 @@ def test_hint_fallback_never_offers_the_command_own_name():
     assert offenders == []
 
 
+def test_model_completion_offers_reset_but_not_the_model_placeholder():
+    """Model names remain free text, while /model reset stays completable."""
+    from hermes_cli.commands import infer_argument_mode, resolve_command
+
+    completions = _completions(SlashCommandCompleter(), "/model ")
+    assert {item.text for item in completions} == {"reset"}
+    assert infer_argument_mode(resolve_command("model")) == "text"
+
+
 # ── Subcommand tab completion ───────────────────────────────────────────
 
 
