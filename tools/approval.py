@@ -694,11 +694,11 @@ DANGEROUS_PATTERNS = [
     (r'\bhermes\s+(?:-{1,2}\S+(?:\s+\S+)?\s+)*gateway\s+(stop|restart)\b', "stop/restart hermes gateway (kills running agents)"),
     (r'\bhermes\s+update\b', "hermes update (restarts gateway, kills running agents)"),
     # `~/.hermes/config.yaml` is already protected against direct shell writes
-    # above, but `hermes config set` is the documented front door to the same
+    # above, but `hermes config set/unset` are documented front doors to the same
     # security policy. Gate only approval/security keys so ordinary display or
     # UX config edits remain usable.
     (
-        rf'\bhermes\s+(?:-{{1,2}}\S+(?:\s+\S+)?\s+)*config\s+set\s+["\']?{_HERMES_SECURITY_CONFIG_KEY}["\']?(?:\s|$)',
+        rf'\bhermes\s+(?:-{{1,2}}\S+(?:\s+\S+)?\s+)*config\s+(?:set|unset)\s+["\']?{_HERMES_SECURITY_CONFIG_KEY}["\']?(?:\s|$)',
         _HERMES_SECURITY_CONFIG_APPROVAL_KEY,
     ),
     # Docker container lifecycle — any user with docker.sock mounted (a common

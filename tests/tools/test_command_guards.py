@@ -160,6 +160,22 @@ class TestTirithAllowDangerous:
         assert "security config" in cb.call_args.args[1].lower()
         assert cb.call_args.kwargs["allow_permanent"] is False
 
+    @patch(_TIRITH_PATCH, return_value=_tirith_result("allow"))
+    @patch("hermes_cli.config.load_config", return_value={"approvals": {"mode": "manual"}})
+    def test_security_config_cli_unset_prompts(self, mock_config, mock_tirith):
+        os.environ["HERMES_INTERACTIVE"] = "1"
+        cb = MagicMock(return_value="deny")
+        result = check_all_command_guards(
+            "hermes config unset approvals.deny",
+            "local",
+            approval_callback=cb,
+        )
+
+        assert result["approved"] is False
+        cb.assert_called_once()
+        assert "security config" in cb.call_args.args[1].lower()
+        assert cb.call_args.kwargs["allow_permanent"] is False
+
     @pytest.mark.parametrize("legacy_choice", ["session", "always"])
     def test_security_config_cli_approval_is_one_shot(
         self, monkeypatch, legacy_choice
