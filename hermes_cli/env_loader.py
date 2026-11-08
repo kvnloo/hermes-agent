@@ -175,6 +175,17 @@ def get_secret_source_values(hermes_home: str | os.PathLike) -> dict[str, str]:
     return dict(_SECRET_SOURCE_VALUES_BY_HOME.get(str(Path(hermes_home).resolve()), {}))
 
 
+def restore_authoritative_secret_source_values(hermes_home: str | os.PathLike) -> None:
+    """Reassert source-owned overrides after a standalone CLI re-reads its raw .env.
+
+    Only authoritative values win: gap-fill sources and preserve_existing names must
+    still follow the user's .env, just as they do in load_hermes_dotenv().
+    """
+    for name, value in _SECRET_SOURCE_RESTORE_BY_HOME.get(str(Path(hermes_home).resolve()), {}).items():
+        if os.environ.get(name) != value:
+            os.environ[name] = value
+
+
 def hydrate_profile_secret_sources(hermes_home: str | os.PathLike) -> dict[str, str]:
     """Resolve one profile's configured sources without mutating ``os.environ``: multiplex gateways route
     turns to profiles that never ran the process-global dotenv path, so resolve against a private mapping
@@ -732,10 +743,7 @@ def load_hermes_dotenv(
     # token) back over a value an external source resolved on an earlier call, and the source pass below is a
     # once-per-home no-op — so the clobber stuck for the life of the process (#74265). Re-assert only what the
     # source is authoritative for; managed scope, applied last with override=True, still wins on purpose.
-    if _SECRET_SOURCE_RESTORE_BY_HOME:
-        for name, value in _SECRET_SOURCE_RESTORE_BY_HOME.get(str(home_path.resolve()), {}).items():
-            if os.environ.get(name) != value:
-                os.environ[name] = value
+    restore_authoritative_secret_source_values(home_path)
 
     # The config backend is selected here — after the .env files, before the first config.yaml read
     # (``_apply_external_secret_sources`` reads ``secrets:``) — so an unavailable backend stops the

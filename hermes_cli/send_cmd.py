@@ -172,8 +172,12 @@ def _load_hermes_env() -> None:
         env_path = home / ".env"
         if env_path.exists():
             try:
-                from hermes_cli.env_loader import _load_dotenv_with_fallback
+                from hermes_cli.env_loader import (
+                    _load_dotenv_with_fallback,
+                    restore_authoritative_secret_source_values,
+                )
                 _load_dotenv_with_fallback(env_path, override=True)
+                restore_authoritative_secret_source_values(home)
             except Exception:
                 pass
 

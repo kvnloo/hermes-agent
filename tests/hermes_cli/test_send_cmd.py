@@ -287,6 +287,42 @@ def test_load_hermes_env_bridges_config_yaml_scalars(tmp_path, monkeypatch):
     assert os.environ.get("SOME_TOKEN") == "abc123"
     assert os.environ.get("TELEGRAM_HOME_CHANNEL") == "5550001111"
 
+
+def test_send_preserves_command_secret_after_profile_env_reload(tmp_path, monkeypatch):
+    """Regression for #151292: a cron sender must keep secrets.command over a profile .env reference."""
+    import os
+    from importlib import reload
+
+    from hermes_cli import env_loader
+    import hermes_cli.config as hermes_config
+
+    home = tmp_path / "profiles" / "reminders"
+    home.mkdir(parents=True)
+    (home / ".env").write_text("DISCORD_BOT_TOKEN=stale-reference\n", encoding="utf-8")
+    (home / "config.yaml").write_text(
+        "secrets:\n"
+        "  command:\n"
+        "    enabled: true\n"
+        "    override_existing: true\n"
+        "    command: helper-stub\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.delenv("DISCORD_BOT_TOKEN", raising=False)
+    monkeypatch.setattr(
+        "agent.secret_sources.command._run_helper",
+        lambda *_args, **_kwargs: "DISCORD_BOT_TOKEN=resolved-command-value\n",
+    )
+    reload(hermes_config)
+    env_loader.reset_secret_source_cache(home)
+    try:
+        env_loader.load_hermes_dotenv(hermes_home=home)
+        assert os.environ["DISCORD_BOT_TOKEN"] == "resolved-command-value"
+        send_cmd._load_hermes_env()
+        assert os.environ["DISCORD_BOT_TOKEN"] == "resolved-command-value"
+    finally:
+        env_loader.reset_secret_source_cache(home)
+
 def test_load_hermes_env_utf8_bom_preserves_first_key(tmp_path, monkeypatch):
     """A leading UTF-8 BOM must not mangle the first .env key name.
 
