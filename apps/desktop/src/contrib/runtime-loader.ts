@@ -897,7 +897,9 @@ async function scanDiskPlugins(reloadKnown = false): Promise<void> {
 
       // Listing order is filesystem order; sorted so duplicate-id ownership
       // (first loaded wins) is the same on every launch.
-      const folders = entries.filter(e => e.isDirectory).sort((a, b) => a.name.localeCompare(b.name))
+      const folders = entries
+        .filter(e => e.isDirectory && !e.name.startsWith('.') && !/\.bak\.\d+$/i.test(e.name))
+        .sort((a, b) => a.name.localeCompare(b.name))
 
       for (const dir of folders) {
         let file: string | null

@@ -537,7 +537,8 @@ async function reconcilePass(hermesHome: string, appRoot: string): Promise<Deskt
     const pluginsRoot = path.join(home, 'plugins')
 
     for (const name of await listDirs(pluginsRoot, true)) {
-      if (seen.has(name)) {
+      // A package backup is not an installable desktop half: never republish it beside the live copy.
+      if (seen.has(name) || name.startsWith('.') || /\.bak\.\d+$/i.test(name)) {
         continue
       }
 
