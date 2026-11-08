@@ -181,14 +181,18 @@ async def test_delete_retires_owner_receipts_and_never_resurrects_the_id(tmp_pat
 
 @pytest.mark.asyncio
 async def test_local_receipts_share_config_blob_across_creation_refresh_and_restart(tmp_path, monkeypatch):
-    """Regression for #150838: session count must not multiply frozen profile bytes."""
+    """Regression for #150838: N sessions persist only one frozen config body."""
     from gateway.config import GatewayConfig
     from gateway.session import SessionStore
     from gateway.session_authority import initialize_session_authority
     from gateway.session_contract import SessionActor
     from gateway.session_local import create_local_session
     from gateway import run
-    from hermes_state_local import CONFIG_PREFIX, CONFIG_REF, POLICY_PREFIX, local_receipt
+    from hermes_state_local import local_receipt
+    # Literal storage keys keep this regression runnable against pre-dedupe source.
+    POLICY_PREFIX = "gateway.local_policy.v1:"
+    CONFIG_PREFIX = "gateway.config.v1:"
+    CONFIG_REF = "sha256:"
     from hermes_state_mutation_prepared import commit_refreshed_policy, local_snapshot
 
     profile = {'platform_toolsets': {'cli': []}, 'extra': {'large': 'x' * 16384}}
@@ -204,18 +208,36 @@ async def test_local_receipts_share_config_blob_across_creation_refresh_and_rest
     actor = SessionActor('owner', 'fixture', frozenset({'session:create', 'session:read'}), 'socket')
     params = {'source': 'gui', 'cwd': str(tmp_path), 'model': 'frozen', 'toolsets': []}
     refs = [create_local_session(authority, actor, {**params, 'request_id': name})
-            for name in ('first', 'second')]
+            for name in ('first', 'second', 'third', 'fourth')]
     db = authority.db
     original = local_receipt(db, refs[0].session_id)['policy']
-    assert original == local_receipt(db, refs[1].session_id)['policy']
+    assert len({ref.session_id for ref in refs}) == len(refs)
+    assert all(local_receipt(db, ref.session_id)['policy'] == original for ref in refs[1:])
+    config_bytes = len(original['config_json'].encode('utf-8'))
+    assert config_bytes >= 8192, 'fixture must freeze a large profile config'
 
     with db._read_ctx() as conn:
+        # Query durable SQLite values directly. On the old source, each row embeds
+        # the full profile and N sessions cost at least N * config_bytes here.
+        persisted = conn.execute(
+            'SELECT key, value FROM state_meta WHERE key LIKE ?',
+            (POLICY_PREFIX + '%',)).fetchall()
+        assert len(persisted) == len(refs)
+        stored_config_bytes = conn.execute(
+            "SELECT SUM(LENGTH(json_extract(value, '$.policy.config_json'))) "
+            'FROM state_meta WHERE key LIKE ?', (POLICY_PREFIX + '%',)).fetchone()[0]
+        assert stored_config_bytes < config_bytes, (
+            f'{len(refs)} session receipts persisted {stored_config_bytes} config bytes; '
+            f'one inline config alone is {config_bytes} bytes')
         stored = [json.loads(conn.execute('SELECT value FROM state_meta WHERE key=?',
                   (POLICY_PREFIX + ref.session_id,)).fetchone()[0]) for ref in refs]
         blobs = conn.execute('SELECT key,value FROM state_meta WHERE key GLOB ?',
                              (CONFIG_PREFIX + '*',)).fetchall()
         assert len(blobs) == 1
         assert blobs[0][1] == original['config_json']
+        import hashlib
+        assert blobs[0][0] == CONFIG_PREFIX + hashlib.sha256(
+            original['config_json'].encode('utf-8')).hexdigest()
         assert all(row['policy']['config_json'] == CONFIG_REF + blobs[0][0][len(CONFIG_PREFIX):]
                    for row in stored)
         assert local_snapshot(db, conn, refs[0].session_id)['receipt']['policy'] == original
