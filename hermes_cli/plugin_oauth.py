@@ -92,10 +92,13 @@ def _hermes_owned_env(name: str) -> bool:
 
     # OPTIONAL_ENV_VARS also contains user platform declarations for the config UI.
     # Registration there does not make the plugin's own client credentials core-owned.
+    # An incomplete bundled scan cannot establish that an OAuth variable is unowned.
+    skipped: list[str] = []
     return (name in core_declared_env_names() or name in _EXTRA_ENV_KEYS or is_setup_hidden_env(name)
             or any(name in p.api_key_env_vars for p in PROVIDER_REGISTRY.values())
             or any(name in _declared_env_names(manifest)
-                   for _, manifest in _platform_plugin_manifests(source="bundled", strict=True)))
+                   for _, manifest in _platform_plugin_manifests(source="bundled", strict=True, skipped=skipped))
+            or bool(skipped))
 
 
 def _client_default_problems(entry: dict, where: str) -> list[str]:
