@@ -187,6 +187,63 @@ class TestCollectKanbanNotifications:
         assert tid in texts[0]
         spy_connect.assert_called_once()
 
+
+    def test_failed_board_does_not_erase_healthy_board_notifications(self, monkeypatch):
+        """Regression for #138836: one failing board must not discard another board's claims."""
+        import sqlite3
+        import threading
+        from tui_gateway import server
+
+        slugs = ("healthy-first", "broken-middle", "healthy-last")
+        tasks, cursors = {}, {}
+        for slug in slugs:
+            kb.create_board(slug)
+            conn = kbc.connect(board=slug)
+            try:
+                tid = kb.create_task(conn, title=slug, assignee="worker")
+                kbn.add_notify_sub(conn, task_id=tid, platform="tui", chat_id=SESSION_KEY)
+                cursors[slug] = kbn.list_notify_subs(conn, task_id=tid)[0]["last_event_id"]
+                assert kb.complete_task(conn, tid, summary=f"{slug} finished")
+                tasks[slug] = tid
+            finally:
+                conn.close()
+
+        # Fix board order without mocking the SQLite producer, subscription or cursor paths.
+        monkeypatch.setattr(kb, "list_boards", lambda **_: [{"slug": slug} for slug in slugs])
+        claim = kbn.claim_unseen_events_for_sub
+
+        def broken_claim(conn, **kwargs):
+            if kwargs["task_id"] == tasks["broken-middle"]:
+                raise sqlite3.OperationalError("middle board unavailable")
+            return claim(conn, **kwargs)
+
+        monkeypatch.setattr(kbn, "claim_unseen_events_for_sub", broken_claim)
+        emitted = []
+        monkeypatch.setattr(server, "_emit", lambda event, sid, payload=None: emitted.append(event))
+        session = {"session_key": SESSION_KEY, "history_lock": threading.RLock(),
+                   "agent": SimpleNamespace(), "running": True}
+        server._notif_poll_kanban_scoped("sid", session)
+
+        pending = session.get("_kanban_pending", [])
+        assert {slug for slug in ("healthy-first", "healthy-last")
+                if any(tasks[slug] in text for text in pending)} == {"healthy-first", "healthy-last"}
+        assert not any(tasks["broken-middle"] in text for text in pending)
+        assert emitted.count("status.update") == 2
+        for slug in slugs:
+            conn = kbc.connect(board=slug)
+            try:
+                cursor = kbn.list_notify_subs(conn, task_id=tasks[slug])[0]["last_event_id"]
+            finally:
+                conn.close()
+            assert (cursor > cursors[slug]) == (slug != "broken-middle")
+
+        # The skipped board remains claimable; consumed healthy notices do not replay.
+        monkeypatch.setattr(kbn, "claim_unseen_events_for_sub", claim)
+        server._notif_poll_kanban_scoped("sid", session)
+        assert emitted.count("status.update") == 3
+        for slug in slugs:
+            assert sum(tasks[slug] in text for text in session["_kanban_pending"]) == 1
+
     def test_no_session_key_is_a_noop(self):
         tid = _create_subscribed_task()
         _complete(tid)

@@ -496,7 +496,14 @@ def _collect_kanban_notifications(session: dict) -> list:
     unique = {}
     for slug, resolved in (_kb_board_key(_kb, board_meta) for board_meta in boards):
         unique.setdefault(resolved, slug)
-    return [t for slug in unique.values() for t in _kb_poll_board(_kb, slug, session_key)]
+    # An unreadable later board must not discard already-claimed notices from healthy boards.
+    texts = []
+    for slug in unique.values():
+        try:
+            texts.extend(_kb_poll_board(_kb, slug, session_key))
+        except Exception as exc:
+            _notif_log_failure(f"kanban notification collection failed for board {slug!r}", exc)
+    return texts
 
 
 def _notif_poll_kanban(sid: str, session: dict) -> None:
