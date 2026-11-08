@@ -243,3 +243,33 @@ class TestLeakedToolCallRecovery:
         assert _is_ephemeral_scaffolding(
             {"role": "user", "content": "nudge", "_dropped_toolcall_nudge": True}
         )
+
+    def test_valid_tool_call_rearms_leaked_call_retry_budget(self, loop_agent):
+        """A real tool round re-arms recovery even after three text leaks."""
+        from tests.agent.test_run_agent import _make_tool_defs, _mock_response, _mock_tool_call
+
+        loop_agent.tools = _make_tool_defs("web_search")
+        loop_agent.valid_tool_names = {"web_search"}
+        loop_agent.client.chat.completions.create.side_effect = [
+            _mock_response(content=LEAKED_SHELL, finish_reason="stop"),
+            _mock_response(content=LEAKED_SHELL, finish_reason="stop"),
+            _mock_response(content=LEAKED_SHELL, finish_reason="stop"),
+            _mock_response(
+                content="", finish_reason="tool_calls",
+                tool_calls=[_mock_tool_call(name="web_search", call_id="landed")],
+            ),
+            _mock_response(content=LEAKED_SHELL, finish_reason="stop"),
+            _mock_response(content="Done after recovery", finish_reason="stop"),
+        ]
+
+        with (
+            patch("model_tools.handle_function_call", return_value="search result") as execute,
+            patch.object(loop_agent, "_persist_session"),
+            patch.object(loop_agent, "_save_trajectory"),
+            patch.object(loop_agent, "_cleanup_task_resources"),
+        ):
+            result = loop_agent.run_conversation("check the files")
+
+        assert loop_agent.client.chat.completions.create.call_count == 6
+        execute.assert_called_once()
+        assert result["final_response"] == "Done after recovery"
