@@ -894,6 +894,30 @@ def gemini_http_error(
     )
 
 
+class _GeminiStreamIterator:
+    """Lazy stream exposing each hop's live response for socket-only cancellation."""
+
+    def __init__(self, client, model, url, request, timeout):
+        self.response = None
+        self.on_response_ready = None
+        self.is_cancelled = lambda: False
+        self._iterator = client._stream_completion(model, url, request, timeout, stream_handle=self)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self._iterator)
+
+    def close(self):
+        self._iterator.close()
+
+    def _publish_response(self, response):
+        self.response = response
+        if self.on_response_ready is not None:
+            self.on_response_ready(response)
+
+
 class GeminiNativeClient:
     """Minimal OpenAI-SDK-compatible facade (``client.chat.completions.create(**kwargs)``) over Gemini's native REST API."""
 
@@ -918,6 +942,7 @@ class GeminiNativeClient:
         # read=1200: Gemini 4 hops can think for minutes; Google asks for a >=20 min read timeout (its
         # stream limit), and a shorter one cuts long-decode hops off mid-think.
         self._http = http_client or httpx.Client(timeout=timeout or httpx.Timeout(connect=15.0, read=1200.0, write=30.0, pool=30.0))
+        self._client = self._http  # socket-abort pool discovery uses the OpenAI-compatible _client seam
 
     def close(self) -> None:
         self.is_closed = True
@@ -966,7 +991,7 @@ class GeminiNativeClient:
         model = bare_gemini_model_id(model)
         url = f"{self.base_url}/models/{model}:"
         if stream:
-            return self._stream_completion(model, f"{url}{self.STREAM_METHOD}?alt=sse", request, timeout)
+            return _GeminiStreamIterator(self, model, f"{url}{self.STREAM_METHOD}?alt=sse", request, timeout)
         hops = [self._generate(url + self.GENERATE_METHOD, request, timeout)]
         max_hops = long_decode_hops(request["generationConfig"].get("maxOutputTokens")) + 1
         # Long decode: same request + token, never the partial output. Past the ceiling the last hop's
@@ -986,7 +1011,8 @@ class GeminiNativeClient:
                 f"Invalid JSON from Gemini native API: {exc}", code="gemini_invalid_json", status_code=response.status_code, response=response,
             ) from exc
 
-    def _stream_completion(self, model: str, url: str, request: dict[str, Any], timeout: Any) -> Iterator[_GeminiStreamChunk]:
+    def _stream_completion(self, model: str, url: str, request: dict[str, Any], timeout: Any,
+                           stream_handle: Optional[_GeminiStreamIterator] = None) -> Iterator[_GeminiStreamChunk]:
         tool_call_indices: dict[str, dict[str, Any]] = {}  # shared across hops: they form one model turn
         hop_usage: list[dict[str, Any]] = []
         max_hops = long_decode_hops(request["generationConfig"].get("maxOutputTokens")) + 1
@@ -995,9 +1021,16 @@ class GeminiNativeClient:
         # The next hop, or a dropped stream, resends the request with it; ``sends`` bounds a stuck token.
         resume, sends = None, 0
         while True:
+            if stream_handle is not None and stream_handle.is_cancelled():
+                raise httpx.ReadError("Gemini stream cancelled")
             try:
                 headers = {**self._headers(), "Accept": "text/event-stream"}
-                with self._http.stream("POST", url, json=body, headers=headers, timeout=timeout) as response:
+                with self._http.stream("POST", url, json=body, headers=headers, timeout=timeout) as response, contextlib.ExitStack() as hop_cleanup:
+                    if stream_handle is not None:
+                        hop_cleanup.callback(stream_handle._publish_response, None)
+                        stream_handle._publish_response(response)
+                        if stream_handle.is_cancelled():
+                            raise httpx.ReadError("Gemini stream cancelled")
                     if response.status_code != 200:
                         raise self._http_error(response, read_streaming_error_body(response))
                     for event in _iter_sse_events(response):
@@ -1012,6 +1045,8 @@ class GeminiNativeClient:
                             resume, sends = token, 0 if token else sends
                         yield from chunks
             except httpx.HTTPError as exc:
+                if stream_handle is not None and stream_handle.is_cancelled():
+                    raise  # a forced socket shutdown must not start another billable hop
                 if not resume or sends >= _MAX_TOKEN_SENDS:  # nothing committed to resume from: retry from the start
                     raise GeminiAPIError(f"Gemini streaming request failed: {exc}", code="gemini_stream_error") from exc
                 logger.warning("Gemini stream dropped (%s); resuming from its last checkpoint", exc)

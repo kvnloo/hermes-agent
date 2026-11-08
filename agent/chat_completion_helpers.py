@@ -2955,21 +2955,30 @@ class _StreamingCall(StreamingWaitMonitor):
         return request_client.chat.completions.create(**stream_kwargs)
 
     def _chat_stream_created(self, raw_stream: Any) -> None:
-        response = self._attempt_stream_response = getattr(raw_stream, "response", None)
+        if hasattr(raw_stream, "on_response_ready"):
+            attempt = int(self.stream_attempt_state["current"])
+            raw_stream.on_response_ready = lambda response: (
+                self._chat_stream_response_ready(response)
+                if attempt == int(self.stream_attempt_state["current"]) else None)
+            raw_stream.is_cancelled = lambda: (
+                self._request_cancelled["value"] or self.agent._interrupt_requested
+                or not self._stream_attempt_is_active(attempt))
+        self._chat_stream_response_ready(getattr(raw_stream, "response", None))
+        self._writer_token = claim_stream_writer(self.agent)
+
+    def _chat_stream_response_ready(self, response: Any) -> None:
+        self._attempt_stream_response = response
+        if response is None:
+            return
         self.agent._capture_rate_limits(response)
         self.agent._capture_credits(response)
         self.agent._capture_nous_model_switch(response)
         self.agent._stream_diag_capture_response(self.clients.diag, response)
         self.agent._check_openrouter_cache_status(response)
-        self._writer_token = claim_stream_writer(self.agent)
         self._reabort_if_cancelled(response)
 
     def _reabort_if_cancelled(self, response: Any) -> None:
-        """Interrupt/stale abort that raced ``create()``: the one-shot pool sweep ran while
-        the connect/TLS window held no socket yet (``tcp_force_closed=0``), so nothing stopped
-        the request once it came up and the serve kept generating into a dropped consumer
-        (#98974). Response headers prove the socket exists now — shut it down (shutdown-only,
-        never a cross-thread close) so the worker unwinds as after a stale kill."""
+        """Re-abort a late-connected response when the attempt was cancelled (#98974)."""
         with self.stream_attempt_lock:
             current = int(self.stream_attempt_state["current"])
             cancelled = self._request_cancelled["value"] or current in self.stream_attempt_state["cancelled"]
@@ -3763,18 +3772,7 @@ class _StreamingCall(StreamingWaitMonitor):
             self._call_done.set()
 
     def _shutdown_stale_attempt_socket(self, response: Any) -> None:
-        """Best-effort ``shutdown()`` on the killed attempt's socket (monitor thread).
-
-        The pool sweep in ``close_once`` can miss a connection that is checked
-        out for the in-flight body read. ``shutdown(SHUT_RDWR)`` is FD-safe
-        from any thread — it wakes the owner's ``recv`` without releasing the
-        descriptor — so the worker unwinds and releases its own response on
-        the owner thread (``_call``'s ``except``/``finally``). Never
-        ``close()`` here: releasing a live TLS descriptor from a stranger
-        thread lets the kernel recycle it under the owner's SSL BIO, which is
-        exactly what the shutdown-only rule in ``_abort_request_slot_client``
-        forbids (it covers request-local clients too, #30858).
-        """
+        """Shut down only sockets; cross-thread response close risks FD reuse (#30858)."""
         if response is None or response is not self._attempt_stream_response:
             return
         try:
