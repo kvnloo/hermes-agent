@@ -344,3 +344,45 @@ def test_shell_invocations_still_recurse_into_references(tmp_path):
 
     assert guard(f"bash {forced}") is True
     assert guard(f"{shebanged}") is True
+
+
+@pytest.mark.platforms("posix")
+def test_executable_node_bundle_does_not_recurse(tmp_path):
+    """A chmod +x Node CLI must not exhaust reads on inert regex literals (#105758)."""
+    bundle = tmp_path / "ob"
+    bundle.write_text(_minified_node_bundle("#!/usr/bin/env node"), encoding="utf-8")
+    bundle.chmod(0o755)
+    reads: list[str] = []
+
+    def remote(path: str):
+        reads.append(path)
+        return None
+
+    assert guard(f"{bundle} --version", read_remote_script=remote) is False
+    assert reads == []
+
+
+@pytest.mark.platforms("posix")
+def test_forced_shell_upgrades_prior_literal_only_visit(tmp_path):
+    """The shell must walk a file even if it was previously direct-scanned."""
+    inner = tmp_path / "inner.sh"
+    inner.write_text("hermes gateway restart\n", encoding="utf-8")
+    carrier = tmp_path / "carrier"
+    carrier.write_text(f"bash {inner}\n", encoding="utf-8")
+    carrier.chmod(0o644)
+
+    assert guard(f"{carrier}; bash {carrier}") is True
+
+
+@pytest.mark.platforms("posix")
+def test_remote_unknown_executable_mode_keeps_nested_shell_guard(tmp_path):
+    """Missing local execute bits say nothing about a remote-only script."""
+    remote_dir = tmp_path / "remote-only"
+    outer = str(remote_dir / "carrier")
+    inner = str(remote_dir / "inner.sh")
+    source = {
+        outer: f"bash {inner}\n",
+        inner: "hermes gateway restart\n",
+    }
+
+    assert guard(outer, read_remote_script=source.get) is True

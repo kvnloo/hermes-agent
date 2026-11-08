@@ -779,6 +779,23 @@ def _iter_shell_command_payloads(command: str) -> Iterator[str]:
 _SHEBANG_POSIX_SHELL_RE = re.compile(r"\A#![^\n]*\b(?:%s)\b" % "|".join(sorted(_SHELL_EXECUTABLES)))
 
 
+_JS_RUNTIME_SHEBANG_RE = re.compile(
+    r"\A#![ \t]*/(?:[^/\s]+/)*"
+    r"(?:node(?:js)?|bun|deno|env[ \t]+(?:-S[ \t]+)?(?:node(?:js)?|bun|deno))"
+    r"(?=$|[ \t\r])"
+)
+
+
+def _has_js_runtime_shebang(text: str) -> bool:
+    """Recognize a bounded, unambiguous Node-family interpreter, not shell fallback."""
+    first_line = text.partition("\n")[0]
+    return (
+        len(first_line) <= 127
+        and "\x00" not in first_line
+        and _JS_RUNTIME_SHEBANG_RE.match(first_line) is not None
+    )
+
+
 def _is_posix_shell_source(text: str) -> bool:
     """True when *text* opens with a POSIX-shell shebang (``#!/bin/sh``, ``#!/usr/bin/env bash``, …).
 
@@ -923,7 +940,7 @@ def _read_script_for_scanning(script_path: str) -> str:
 # --- recursive walk ---------------------------------------------------------------------------
 
 def _contains_unsafe_gateway_action(
-    command: str, *, cwd: Optional[str], depth: int, visited: set[Path], budget: _LifecycleScanBudget,
+    command: str, *, cwd: Optional[str], depth: int, visited: dict[Path, bool], budget: _LifecycleScanBudget,
     read_remote_script: Optional[_ReadRemoteScriptFn] = None,
 ) -> bool:
     # Charge BEFORE _direct_lifecycle_scan: every scan in it tokenizes with shlex.
@@ -950,16 +967,19 @@ def _contains_unsafe_gateway_action(
             return True
         resolved = _resolve_lenient(script_path)
         if resolved in visited:
-            continue
-        if not budget.charge_path():
+            # A prior literal-only visit does not cover a later forced-shell execution.
+            if visited[resolved] or not forced_shell:
+                continue
+        elif not budget.charge_path():
             return _budget_exhausted("paths", depth)
-        visited.add(resolved)
+        visited[resolved] = False
         # Never read more than the walk can still afford to tokenize; a file larger than the
         # remainder fails closed exactly like an oversized one.
         script_text, unsafe = _read_referenced_script(script_path, max_bytes=budget.bytes_remaining)
         if unsafe:
             return True
-        if script_text is None and read_remote_script is not None:
+        remote_sourced = script_text is None and read_remote_script is not None
+        if remote_sourced:
             # Local path missing; the remote backend's output crosses the same trust boundary as a
             # local read — sanitize identically (binary skip + size fail-closed).
             if not budget.charge_remote_read():
@@ -978,10 +998,9 @@ def _contains_unsafe_gateway_action(
             # budget and fail closed on benign CLIs (#105758). The literal-command regex still
             # scans the text — only the recursive reference walk is gated, mirroring the entry
             # point's .py exemption (#77131, #78398).
-            if _is_locally_executable(resolved):
-                # An execute bit with no shell shebang is still shell-reachable — the POSIX
-                # ENOEXEC fallback interprets the file as shell source line by line — so a
-                # second-hop lifecycle command hidden in such a file stays inside the walk.
+            if (remote_sourced or _is_locally_executable(resolved)) and not _has_js_runtime_shebang(script_text):
+                # ENOEXEC may run a shebang-less executable as shell. Remote-only mode is
+                # unknown; retain recursion absent an unambiguous Node-family shebang.
                 pass
             elif not budget.charge_text(script_text):
                 return _budget_exhausted("text", depth)
@@ -990,6 +1009,7 @@ def _contains_unsafe_gateway_action(
             else:
                 return True
         # Relative references inside a script resolve against that script's directory, not the cwd.
+        visited[resolved] = True
         if recurse(script_text, _resolve_script_directory(str(resolved)) or cwd):
             return True
     return False
@@ -1012,7 +1032,7 @@ def contains_gateway_lifecycle_command_or_referenced_script(
     """
     try:
         return _contains_unsafe_gateway_action(
-            command, cwd=cwd, depth=0, visited=set(), budget=_LifecycleScanBudget(),
+            command, cwd=cwd, depth=0, visited={}, budget=_LifecycleScanBudget(),
             read_remote_script=read_remote_script,
         )
     except Exception:
