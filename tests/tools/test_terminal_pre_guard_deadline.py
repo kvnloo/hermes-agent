@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import time
+from threading import Event
 from types import SimpleNamespace
 
 import pytest
@@ -92,23 +93,24 @@ def test_pre_execution_guard_on_the_deadline_worker_sees_the_tool_threads_interr
 
 
 def test_wedged_guard_is_capped_by_the_max_even_for_a_long_command(monkeypatch, stubbed_pipeline):
-    """The guard budget is capped, not just floored: a 600s command must not hand a wedged
-    probe 600s of wall-clock (and one abandoned deadline thread) before failing closed."""
-    monkeypatch.setattr(terminal_module, "_PRE_EXEC_GUARD_MAX_TIMEOUT_S", 0.05)
+    """A 600s command must not inherit that deadline for a stalled pre-execution guard.
+
+    Install the cap with raising=False so this tests behavior, not whether the
+    new constant exists: on the uncapped base the probe finishes and executes.
+    """
+    monkeypatch.setattr(terminal_module, "_PRE_EXEC_GUARD_MAX_TIMEOUT_S", 0.05, raising=False)
     monkeypatch.setattr(terminal_module, "_plan_execution", lambda *_a, **_k: _plan(timeout=600))
 
-    def _wedged_probe(*_a, **_k):
-        time.sleep(1)
+    # The event simulates a stuck probe without a fixed sleep or a leaked worker.
+    release = Event()
+    monkeypatch.setattr(terminal_module, "_pre_exec_block", lambda *_a, **_k: release.wait(timeout=0.2))
+    try:
+        result = terminal_module.terminal_tool("echo ok")
+    finally:
+        release.set()
 
-    monkeypatch.setattr(terminal_module, "_pre_exec_block", _wedged_probe)
-
-    start = time.monotonic()
-    result = json.loads(terminal_module.terminal_tool("echo ok"))
-    elapsed = time.monotonic() - start
-
-    assert elapsed < 0.5, f"guard inherited the command timeout ({elapsed:.2f}s) instead of its cap"
-    assert result["status"] == "error"
-    assert stubbed_pipeline == []
+    assert stubbed_pipeline == [], "the stalled guard returned and executed the long command"
+    assert json.loads(result)["status"] == "error"
 
 
 def test_guard_default_max_stays_below_the_shortest_cron_command_deadline():
