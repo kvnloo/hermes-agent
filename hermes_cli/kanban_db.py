@@ -7116,7 +7116,7 @@ def clear_respawn_guard(
         )
         if newest_pr is not None:
             payload["cleared_through_comment_id"] = newest_pr[0]
-            payload["pr_url"] = newest_pr[2]
+            payload["pr_url"] = newest_pr[2][-1]
         _append_event(
             conn, task_id, "respawn_guard_cleared", payload or None,
         )
@@ -9416,16 +9416,16 @@ def _resolve_github_pr_state(url: str) -> Optional[str]:
 
 def _newest_pr_comment(
     conn: sqlite3.Connection, task_id: str, cutoff: int
-) -> "Optional[tuple[int, int, str]]":
-    """Newest comment in the window that carries a GitHub PR URL.
+) -> "Optional[tuple[int, int, tuple[str, ...]]]":
+    """Newest comment in the window that carries GitHub PR URLs.
 
-    Returns ``(comment_id, created_at, url)`` or ``None``. Only the most
-    recent PR can be duplicated by a re-spawn, so older links are ignored.
+    Returns ``(comment_id, created_at, urls)`` or ``None``. Only URLs in the
+    newest PR-bearing comment are relevant; older comments are ignored.
     ``comment_id`` is the ``task_comments`` rowid — a strictly monotonic
     insertion marker, which is what the guard orders on (``created_at`` has
     whole-second granularity and cannot order two rows in the same second).
     """
-    newest: "Optional[tuple[int, int, str]]" = None
+    newest: "Optional[tuple[int, int, tuple[str, ...]]]" = None
     for c in conn.execute(
         "SELECT id, body, created_at FROM task_comments "
         "WHERE task_id = ? AND created_at >= ? "
@@ -9435,9 +9435,9 @@ def _newest_pr_comment(
         body = c["body"]
         if not body:
             continue
-        m = _RESPAWN_GUARD_PR_URL_RE.search(body)
-        if m:
-            newest = (int(c["id"]), int(c["created_at"]), m.group(0))
+        urls = tuple(m.group(0) for m in _RESPAWN_GUARD_PR_URL_RE.finditer(body))
+        if urls:
+            newest = (int(c["id"]), int(c["created_at"]), urls)
     return newest
 
 
@@ -9715,7 +9715,7 @@ def check_respawn_guard(
     pr_cutoff = now - _RESPAWN_GUARD_PR_WINDOW
     newest_pr = _newest_pr_comment(conn, task_id, pr_cutoff)
     if newest_pr is not None:
-        newest_pr_id, newest_pr_ts, newest_pr_url = newest_pr
+        newest_pr_id, newest_pr_ts, newest_pr_urls = newest_pr
         # (b) never-run task → this PR is not ours. The guard exists to stop a
         #     *re*-spawn from duplicating a PR a previous worker opened; with
         #     no run history there is no previous worker, and the link is
@@ -9732,12 +9732,17 @@ def check_respawn_guard(
         resolver = pr_state_resolver
         if resolver is None and _resolve_pr_state_check_enabled():
             resolver = _resolve_github_pr_state
-        if resolver is not None and newest_pr_url:
-            try:
-                pr_state = resolver(newest_pr_url)
-            except Exception:
-                pr_state = None
-            if pr_state in _PR_INACTIVE_STATES:
+        if resolver is not None:
+            # A single handoff may link multiple PRs. A closed PR must not
+            # release the guard while another PR in that handoff stays open.
+            for pr_url in newest_pr_urls:
+                try:
+                    pr_state = resolver(pr_url)
+                except Exception:
+                    pr_state = None
+                if pr_state not in _PR_INACTIVE_STATES:
+                    break
+            else:
                 return None
         return "active_pr"
 

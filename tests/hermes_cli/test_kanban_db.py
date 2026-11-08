@@ -736,6 +736,29 @@ def test_respawn_guard_active_pr_stale_signal_before_pr_still_blocks(kanban_home
     assert reason == "active_pr"
 
 
+
+@pytest.mark.parametrize("closed_first", [True, False])
+def test_respawn_guard_active_pr_mixed_state_urls_in_one_comment(
+    kanban_home, closed_first,
+):
+    """A resolved PR in a handoff cannot hide another still-open PR."""
+    closed_url = "https://github.com/example/repo/pull/12"
+    open_url = "https://github.com/example/repo/pull/13"
+    urls = [closed_url, open_url]
+    if not closed_first:
+        urls.reverse()
+
+    with kb.connect() as conn:
+        task_id = kb.create_task(conn, title="mixed-pr-handoff", assignee="alice")
+        _add_prior_run(conn, task_id)
+        kb.add_comment(conn, task_id, "worker", "PRs: " + " ".join(urls))
+        reason = kb.check_respawn_guard(
+            conn, task_id,
+            pr_state_resolver=lambda url: "closed" if url == closed_url else "open",
+        )
+    assert reason == "active_pr"
+
+
 def test_respawn_guard_active_pr_closed_pr_not_guarded(kanban_home):
     """(c) A closed PR has nothing live to duplicate — guard steps aside."""
     with kb.connect() as conn:
