@@ -75,3 +75,38 @@ class TestSplitSlotUidDedupe:
         db._execute_write(lambda conn: conn.execute(
             "UPDATE messages SET message_uid = NULL WHERE session_id = ?", ("chat",)))
         assert len(_replies(db, "chat")) == 2
+
+    def test_pruned_tool_copy_retains_archived_full_output(self, tmp_path):
+        """Same uid is not sufficient to hide an intentionally rewritten payload."""
+        from pathlib import Path
+        db = SessionDB(Path(tmp_path) / "state.db")
+        db.create_session("chat", source="desktop")
+        original_id = db.append_message(
+            "chat", "tool", "full diagnostic output",
+            tool_call_id="call-1", tool_name="terminal", timestamp=1727000001.0)
+        uid = db._read_all(
+            "SELECT message_uid FROM messages WHERE id = ?", (original_id,))[0]["message_uid"]
+        assert uid
+
+        def prune(conn):
+            conn.execute(
+                "UPDATE messages SET active = 0, compacted = 1 WHERE id = ?", (original_id,))
+            cur = conn.execute(
+                "INSERT INTO messages (session_id, role, content, tool_call_id, tool_name,"
+                " timestamp, message_uid, active, compacted) VALUES"
+                " (?, 'tool', ?, ?, ?, ?, ?, 1, 0)",
+                ("chat", "pruned tool stub", "call-1", "terminal", 1727000001.0, uid))
+            return cur.lastrowid
+
+        copy_id = db._execute_write(prune)
+        slots = db._read_all(
+            "SELECT display_order FROM messages WHERE id IN (?, ?) ORDER BY id",
+            (original_id, copy_id))
+        assert len(slots) == 2 and slots[0]["display_order"] != slots[1]["display_order"]
+
+        shown = [m for m in db.get_messages("chat", include_compacted=True)
+                 if m["role"] == "tool"]
+        assert [(m["content"], m["active"]) for m in shown] == [
+            ("full diagnostic output", 0),
+            ("pruned tool stub", 1),
+        ]

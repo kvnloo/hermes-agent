@@ -1466,9 +1466,14 @@ class SessionMessagesMixin:
             if not uid:
                 out.append(row)
                 continue
-            at = seen.get(uid)
+            # Content-rewritten tool results retain an archived full body and a
+            # live pruned stub under one uid: those are distinct display rows.
+            # Timestamp can drift across cloned generations, so exclude it.
+            key = (uid, row["role"], row["content"], row["tool_call_id"],
+                   row["tool_calls"], row["tool_name"])
+            at = seen.get(key)
             if at is None:
-                seen[uid] = len(out)
+                seen[key] = len(out)
                 out.append(row)
             elif (row["active"], row["id"]) > (out[at]["active"], out[at]["id"]):
                 out[at] = row
