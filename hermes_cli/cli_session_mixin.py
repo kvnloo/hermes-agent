@@ -328,7 +328,7 @@ class CLISessionMixin:
             return query_session_listing(
                 self._session_db, source="cli", current_session_id=self.session_id,
                 include_all_sources=False, include_unnamed=True, limit=limit,
-                exclude_sources=sorted(AUTOMATION_SOURCES))
+                exclude_sources=sorted(AUTOMATION_SOURCES | {"oneshot"}))
         except Exception:
             return []
 

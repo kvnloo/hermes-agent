@@ -134,6 +134,27 @@ class TestSessionVisibilityPolicy:
         }.issubset(ids)
         assert ids.isdisjoint({f"automation_{source}" for source in AUTOMATION_SOURCES})
 
+    def test_classic_picker_hides_oneshot_without_hiding_desktop(self, db):
+        """A finite oneshot run is not a resumable conversation in the classic picker.
+
+        Regression for #59224: exercise the actual CLI mixin, not only the
+        shared query helper. Desktop/TUI/ACP stay visible; a titled one-shot
+        run must stay hidden even when newer than those conversations.
+        """
+        from types import SimpleNamespace
+        from hermes_cli.cli_session_mixin import CLISessionMixin
+
+        db.create_session("script_run", "oneshot")
+        db.set_session_title("script_run", "Finished noninteractive script")
+
+        picker = SimpleNamespace(_session_db=db, session_id="human_cli")
+        rows = CLISessionMixin._list_recent_sessions(picker, limit=50)
+        ids = {row["id"] for row in rows}
+
+        assert "script_run" not in ids
+        assert {"human_tui", "human_webui", "human_acp", "human_webhook"} <= ids
+        assert "human_cli" not in ids
+
     def test_gateway_lane_scope_is_not_widened(self, db):
         """Cross-source local discovery must not become gateway authority."""
         db.create_session(
