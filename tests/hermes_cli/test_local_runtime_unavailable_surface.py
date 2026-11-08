@@ -55,6 +55,40 @@ def test_runtime_check_leaves_other_failures_uncoded():
         "ok": False, "error": "No usable credentials found for openrouter."}
 
 
+
+def test_removed_provider_is_a_config_error_not_a_rejected_key():
+    """An invalid Desktop session pin needs a provider switch, not key replacement."""
+    from agent.error_surface import build_error_surface_from_result
+    from gateway.config import Platform
+    from gateway.run_turn_runner import _resolution_failure_reply
+    from hermes_cli.auth import AuthError
+
+    def failed_surface(exc):
+        reply, reason, retryable = _resolution_failure_reply(exc, Platform.LOCAL)
+        result = {"failed": True, "error": str(exc), "failure_reason": reason,
+                  "failure_retryable": retryable}
+        return reply, build_error_surface_from_result(result, provider=exc.provider)
+
+    retired = AuthError(
+        "Unknown provider 'sohuplus'. Check 'hermes model' for available providers.",
+        provider="sohuplus", code="invalid_provider",
+    )
+    reply, surface = failed_surface(retired)
+    assert surface["layer"] == "provider"
+    assert surface["code"] == "invalid_provider"
+    assert surface["retryable"] is False
+    assert surface["message"] == str(retired)
+    assert "auth_kind" not in surface and "api_key_env" not in surface
+    assert str(retired) in reply
+
+    # A real rejected API key still routes to the existing key-replacement action.
+    rejected = AuthError("API key rejected", provider="openrouter", code="invalid_api_key")
+    _, key_surface = failed_surface(rejected)
+    assert key_surface["layer"] == "auth"
+    assert key_surface["code"] == "auth_permanent"
+    assert key_surface["auth_kind"] == "api_key"
+
+
 @pytest.mark.parametrize("enabled", [False, True])
 def test_turn_failure_is_an_endpoint_failure_not_a_rejected_key(llamacpp_home, enabled):
     from agent.error_surface import build_error_surface_from_result
