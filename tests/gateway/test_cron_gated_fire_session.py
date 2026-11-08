@@ -22,7 +22,7 @@ def owner(tmp_path, monkeypatch):
     authority.db.close()
 
 
-async def _fire(owner, monkeypatch, run_job):
+async def _fire(owner, monkeypatch, run_job, *, error=None):
     job = jobs.create_job(prompt='check inbox', schedule='every 1h', deliver='local')['id']
     execution_id = executions.create_execution(job, source='test')['id']
     receipt = await session_cron.operation(
@@ -32,7 +32,11 @@ async def _fire(owner, monkeypatch, run_job):
     monkeypatch.setattr(scheduler, 'run_job', run_job)
     row = claim_session_input(owner.db, epoch=owner.epoch, session_id=sid)
     policy = local_adapter_map(owner)[Platform.LOCAL].policies[sid]
-    await session_cron.execute(owner, SessionRef(owner.profile_id, sid), row, policy)
+    if error is None:
+        await session_cron.execute(owner, SessionRef(owner.profile_id, sid), row, policy)
+    else:
+        with pytest.raises(RuntimeError, match=error):
+            await session_cron.execute(owner, SessionRef(owner.profile_id, sid), row, policy)
     return job, sid
 
 
@@ -42,6 +46,21 @@ async def test_a_gated_fire_leaves_no_visible_empty_session(owner, monkeypatch):
         return True, '', scheduler.SILENT_MARKER, None
 
     job, sid = await _fire(owner, monkeypatch, gated)
+
+    assert sid not in {s['id'] for s in owner.db.list_sessions_rich()}
+    session = owner.db.get_session(sid)
+    assert session['ended_at'] is not None
+    assert session['end_reason'] == session_cron.CRON_SKIPPED_END_REASON
+    assert [r['id'] for r in owner.db.list_cron_job_runs(job)] == [sid]
+
+
+@pytest.mark.asyncio
+async def test_a_pre_agent_exception_retires_the_empty_session(owner, monkeypatch):
+    def preflight_failure(job, **kwargs):
+        raise RuntimeError('monitor preparation failed')
+
+    job, sid = await _fire(owner, monkeypatch, preflight_failure,
+                           error='monitor preparation failed')
 
     assert sid not in {s['id'] for s in owner.db.list_sessions_rich()}
     session = owner.db.get_session(sid)

@@ -305,10 +305,14 @@ async def execute(authority, ref, row, policy):
     job = dict(data['cron_job'], execution_id=execution_id)
     token = bind_execution(authority, ref.session_id, job['id'], execution_id)
     try:
-        db_path = await asyncio.to_thread(Path(authority.db.db_path).resolve)
-        with _profile_runtime_scope(db_path.parent):
-            result = await asyncio.to_thread(_run_identified, run_job, job, execution_id,
-                                             extra_prompt=data['extra_prompt'], cancel_event=cancel)
+        try:
+            db_path = await asyncio.to_thread(Path(authority.db.db_path).resolve)
+            with _profile_runtime_scope(db_path.parent):
+                result = await asyncio.to_thread(_run_identified, run_job, job, execution_id,
+                                                 extra_prompt=data['extra_prompt'], cancel_event=cancel)
+        except Exception:
+            await _close_unopened_session(authority, ref.session_id)
+            raise
         await _close_unopened_session(authority, ref.session_id)
         # run_job stamps run-side verdicts on ITS job copy (quota hold, unreachable model); the
         # firing scheduler's bookkeeping reads them off its own dict, so they ride the result.
