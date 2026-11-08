@@ -42,7 +42,19 @@ export const zhHantOverrides = {
     oversized: "圖表板超過 64 KiB，顯示原始碼。",
     readOnlyError: "不允許工具、修改或產生狀態，顯示原始碼。",
     rows: "表格每列的儲存格數必須與欄數相符，顯示原始碼。",
-    series: "每個序列都需要每個類別的數值，顯示原始碼。"
+    series: "每個序列都需要每個類別的數值，顯示原始碼。",
+    kitLoading: "正在載入 ephemeral-ui 卡片…",
+    kitIdle: "來自 ephemeral-ui 套件的範例資料。只有加入聊天後,選擇才會傳給代理。",
+    kitPin: "釘選到輸入列",
+    kitPinned: "已釘選到輸入列",
+    kitUnpin: "取消釘選",
+    kitShow: "顯示卡片",
+    kitPinnedBar: "已釘選的卡片",
+    kitPicked: "已選擇：{what}",
+    kitAddToChat: "加入聊天",
+    kitAdded: "已加入輸入框。未傳送任何內容。",
+    kitNoComposer: "沒有可加入的開啟中輸入框。",
+    kitFailed: "無法繪製 {kind}：{reason}"
   },
 
   catalog: {

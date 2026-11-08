@@ -118,6 +118,18 @@ export interface Translations extends NoticeTranslations {
     readOnlyError: string
     rows: string
     series: string
+    kitLoading: string
+    kitIdle: string
+    kitPin: string
+    kitPinned: string
+    kitUnpin: string
+    kitShow: string
+    kitPinnedBar: string
+    kitPicked: string
+    kitAddToChat: string
+    kitAdded: string
+    kitNoComposer: string
+    kitFailed: string
   }
   appTour: AppTourTranslations
   firstRun: FirstRunCopy

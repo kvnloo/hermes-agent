@@ -13,6 +13,8 @@ import { useSessionView } from '@/app/chat/session-view'
 import { CatalogInstallTool } from '@/components/assistant-ui/catalog-install-tool'
 import { ClarifyTool } from '@/components/assistant-ui/clarify'
 import { ConnectorExecution, ConnectorTool } from '@/components/assistant-ui/connector-tool'
+import { matchEphemeralTool } from '@/components/assistant-ui/ephemeral/model'
+import { EphemeralToolCall } from '@/components/assistant-ui/ephemeral/tool-card'
 import { MarkdownText, MarkdownTextContent } from '@/components/assistant-ui/markdown-text'
 import { McpSetupTool } from '@/components/assistant-ui/mcp-setup-tool'
 import { SetupBeatTool } from '@/components/assistant-ui/setup-beat/setup-beat-tool'
@@ -186,7 +188,16 @@ const ChainToolFallback: FC<TimelineToolCallProps> = props => {
     return <ThemeToolPart {...props} />
   }
 
-  if (toolLabels(props.args).length > 0) {
+  // A call on a known app's MCP server grows that app's ephemeral-ui card under its row. The card
+  // is the point of the call, so it shows even when the tool feed is hidden.
+  const ephemeral = matchEphemeralTool(props.toolName)
+  const labelled = toolLabels(props.args).length > 0
+
+  if (ephemeral) {
+    return <EphemeralToolCall {...props} match={ephemeral} row={labelled ? <ConnectorExecution {...props} /> : undefined} />
+  }
+
+  if (labelled) {
     return <ConnectorExecution {...props} />
   }
 

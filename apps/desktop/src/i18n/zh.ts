@@ -56,7 +56,19 @@ export const zhOverrides = {
     oversized: "图表板超过 64 KiB，显示原始源码。",
     readOnlyError: "不允许工具、修改或生成状态，显示原始源码。",
     rows: "表格行数值必须与列数一致，显示原始源码。",
-    series: "每个系列需为每个类别提供数值，显示原始源码。"
+    series: "每个系列需为每个类别提供数值，显示原始源码。",
+    kitLoading: "正在加载 ephemeral-ui 卡片…",
+    kitIdle: "来自 ephemeral-ui 套件的示例数据。只有添加到聊天后,选择才会发送给智能体。",
+    kitPin: "固定到输入栏",
+    kitPinned: "已固定到输入栏",
+    kitUnpin: "取消固定",
+    kitShow: "显示卡片",
+    kitPinnedBar: "已固定的卡片",
+    kitPicked: "已选择：{what}",
+    kitAddToChat: "添加到聊天",
+    kitAdded: "已添加到输入框。未发送任何内容。",
+    kitNoComposer: "没有可添加的打开的输入框。",
+    kitFailed: "无法绘制 {kind}：{reason}"
   },
   catalog: zhCatalog,
   externalOpenFailed: {

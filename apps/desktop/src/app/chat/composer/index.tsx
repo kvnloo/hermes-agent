@@ -14,6 +14,7 @@ import { useTourMarker } from '@/app/chat/tour-marker'
 import type { GatewayRequester } from '@/app/contrib/types'
 import { useHudComposerDrag } from '@/app/hud/composer-drag'
 import { useBusyInputMode } from '@/app/session/hooks/use-busy-input-mode'
+import { EphemeralPinnedBar } from '@/components/assistant-ui/ephemeral/pinned-bar'
 import { composerFloatingStrip, composerInputBacking, composerSurfaceRing } from '@/components/chat/composer-dock'
 import { useSetupChatView } from '@/components/onboarding/first-run/assembly'
 import { OnboardingSkip } from '@/components/onboarding/skip-setup'
@@ -1494,6 +1495,7 @@ export function ChatBar({
                     additions beside the "+" menu and before the controls.
                     All four render nothing until something contributes. */}
                   <ContribSlot area={COMPOSER_AREAS.top} />
+                  <EphemeralPinnedBar sessionId={sessionId ?? null} />
                   <RestoredDraftNotice
                     freshDraft={activeQueueSessionKey === null}
                     onUndone={clearDraft}
