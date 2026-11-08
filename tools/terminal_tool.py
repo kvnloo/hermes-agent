@@ -1467,6 +1467,21 @@ def _handle_terminal(args, **kw):
     # `notify` wins. Background-only modifiers on a foreground call fail
     # with the corrected call instead of being silently ignored.
     notify = args.get("notify")
+    # Parse stringified false before checking foreground notification intent.
+    if isinstance(notify, str):
+        val = notify.strip()
+        low = val.lower()
+        if low in ("false", "0", "no", "off"):
+            notify = False
+        elif low in ("true", "1", "yes", "on"):
+            notify = True
+        elif val.startswith("[") and val.endswith("]"):
+            try:
+                parsed = json.loads(val)
+                if isinstance(parsed, list):
+                    notify = parsed
+            except Exception:
+                pass
     notify_on_complete = args.get("notify_on_complete", False)
     watch_patterns = args.get("watch_patterns")
     heartbeat = args.get("heartbeat") or 0
@@ -1496,20 +1511,6 @@ def _handle_terminal(args, **kw):
                 "terminal(command=..., background=true, persist_on_release=true)."
             )
     if notify is not None:
-        if isinstance(notify, str):
-            val = notify.strip()
-            low = val.lower()
-            if low in ("false", "0", "no", "off"):
-                notify = False
-            elif low in ("true", "1", "yes", "on"):
-                notify = True
-            elif val.startswith("[") and val.endswith("]"):
-                try:
-                    parsed = json.loads(val)
-                    if isinstance(parsed, list):
-                        notify = parsed
-                except Exception:
-                    pass
         if isinstance(notify, bool):
             notify_on_complete = notify
             watch_patterns = None

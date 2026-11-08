@@ -178,3 +178,30 @@ def test_handle_terminal_accepts_string_boolean_and_array_notify(monkeypatch):
     })
     assert "error" not in res
     assert captured["persist_on_release"] is True
+
+def test_foreground_string_false_notify_is_not_notification_intent(monkeypatch):
+    """Foreground notify="false" has no notification intent, even without dispatch coercion."""
+    forwarded = []
+
+    def mock_terminal_tool(**kwargs):
+        forwarded.append(kwargs)
+        return '{"output": "ok"}'
+
+    monkeypatch.setattr(terminal_tool, "terminal_tool", mock_terminal_tool)
+
+    response = terminal_tool._handle_terminal({
+        "command": "echo 1", "background": False, "notify": "false",
+    })
+    assert response == '{"output": "ok"}'
+    assert len(forwarded) == 1
+    assert forwarded[0]["background"] is False
+    assert forwarded[0]["notify_on_complete"] is False
+    assert forwarded[0]["watch_patterns"] is None
+
+    forwarded.clear()
+    refused = terminal_tool._handle_terminal({
+        "command": "echo 1", "background": False, "notify": "true",
+    })
+    assert "background commands" in str(refused)
+    assert forwarded == []
+
