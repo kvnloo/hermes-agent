@@ -27,6 +27,14 @@ def test_query_password_is_masked(text, expected):
     assert redact_sensitive_text(text) == expected
 
 
+@pytest.mark.parametrize("url", [
+    "postgresql+psycopg://db/app?user=app&password=Zq7x9LmP2kk",
+    "mysql+pymysql://db/app?user=app&password=Zq7x9LmP2kk",
+])
+def test_driver_qualified_db_url_query_password_is_masked(url):
+    assert redact_sensitive_text(url) == url.replace("password=Zq7x9LmP2kk", "password=***")
+
+
 @pytest.mark.parametrize("text", [
     "postgresql://db/app?user=app&password=${DB_PASSWORD}",
     "postgresql://db/app?user=app&password=",
