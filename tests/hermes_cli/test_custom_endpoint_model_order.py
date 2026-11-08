@@ -25,3 +25,22 @@ def test_picker_lists_configured_models_first(monkeypatch):
     row = next(row for row in rows if row["slug"] == "my-router")
     assert row["models"] == ["pinned", "catalog-1", "catalog-2"]
     assert row["total_models"] == 3
+
+
+def test_bare_custom_picker_keeps_current_model_first_after_discovery(monkeypatch):
+    """The active model must not be buried by a bare custom endpoint's live catalog."""
+    url = "http://127.0.0.1:9999/v1"
+    monkeypatch.setattr(
+        "hermes_cli.model_switch_providers._fetch_picker_live_models",
+        lambda *_args, **_kwargs: ["catalog-1", "catalog-2", "selected"],
+    )
+
+    rows = list_authenticated_providers(
+        current_provider="custom", current_base_url=url, current_model="selected",
+        user_providers={}, custom_providers=[], probe_custom_providers=False,
+        probe_current_custom_provider=True,
+    )
+
+    row = next(row for row in rows if row["slug"] == "custom" and row["source"] == "model-config")
+    assert row["models"] == ["selected", "catalog-1", "catalog-2"]
+    assert row["total_models"] == 3

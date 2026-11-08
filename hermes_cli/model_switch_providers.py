@@ -1104,7 +1104,7 @@ def _lap_bare_custom_row(b: _PickerBuild, custom_providers: list | None) -> None
             discovery_allowed=True,
             fast_custom_probe=b.resolved_fast_custom_probe)
         if discovered is not None:
-            models = discovered
+            models = _merge_live_models(models, discovered)
     except Exception:
         pass
     b.add_endpoint_row(
