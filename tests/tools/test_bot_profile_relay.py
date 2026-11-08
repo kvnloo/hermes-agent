@@ -1,11 +1,12 @@
-"""Relay discovery and mailbox ownership are profile scoped."""
+"""Named-profile relay behavior against the shared Desktop mailbox."""
 import json
 from types import SimpleNamespace
 
 from tools import bot_mode_dm, bot_mode_probe, bot_relay
 
 
-def test_named_sender_uses_own_remote_roster_and_outbox(tmp_path, monkeypatch):
+def test_named_sender_queues_in_install_root_when_profile_roster_disagrees(tmp_path, monkeypatch):
+    """The sender's private roster may differ, but the Desktop drains only the install root."""
     root = tmp_path / 'state'
     sender = root / 'profiles' / 'sender'
     sender.mkdir(parents=True)
@@ -19,12 +20,14 @@ def test_named_sender_uses_own_remote_roster_and_outbox(tmp_path, monkeypatch):
     commands = []
     monkeypatch.setattr(bot_mode_dm, '_spawn_delivery', lambda command, *a, **kw:
                         commands.append(command) or json.dumps({'status': 'sent'}))
+
     result = json.loads(bot_mode_dm.message_agent_tool('remote', 'hello', agent=agent))
     assert result['status'] == 'sent'
-    envelopes = bot_relay.claim_pending_envelopes(sender)
-    assert len(envelopes) == 1 and envelopes[0]['target_connection'] == 'own'
+    envelopes = bot_relay.claim_pending_envelopes(root)
+    assert len(envelopes) == 1 and envelopes[0]['target_connection'] == 'foreign'
     assert envelopes[0]['message'] == 'Message from 🤖 sender (@sender): hello'
-    assert bot_relay.claim_pending_envelopes(root) == []
+    assert bot_relay.claim_pending_envelopes(sender) == []
+    # Prompt discovery is separately profile-scoped; it cannot choose the mailbox.
     section = bot_mode_probe.get_bot_mode_protocol_section(sender, force_refresh=True)
     assert 'Owned remote' in section and 'Foreign remote' not in section
 
@@ -81,23 +84,19 @@ def test_root_fallback_covers_a_bare_target_too(tmp_path, monkeypatch):
     assert len(envelopes) == 1 and envelopes[0]['target_connection'] == 'homelab'
 
 
-def test_profile_local_relay_roster_still_wins(tmp_path, monkeypatch):
-    """A profile-local roster that resolves the target stays authoritative: the fallback must
-    never re-route a DM the sender's own folder can deliver (that is how the default relays a
-    named bot's DM as the default)."""
+def test_stale_profile_only_relay_target_does_not_queue_an_undrainable_dm(tmp_path, monkeypatch):
+    """A target removed from the shared roster cannot be revived by a stale local roster."""
     root = tmp_path / 'state'
     sender = root / 'profiles' / 'sender'
     sender.mkdir(parents=True)
     (sender / 'profile.yaml').write_text('ui_meta:\n  hermes-bots:\n    shape: cloud\n')
     bot_relay.write_remote_roster(sender, [dict(profile='remote', handle='remote', connection_id='own')])
-    bot_relay.write_remote_roster(root, [dict(profile='remote', handle='remote', connection_id='own'),
-                                         dict(profile='remote', handle='remote', connection_id='homelab')])
+    bot_relay.write_remote_roster(root, [dict(profile='remote', handle='remote', connection_id='homelab')])
     _spy_delivery(monkeypatch)
 
     result = json.loads(bot_mode_dm.message_agent_tool('remote@own', 'hello', agent=_sender_agent(sender)))
-    assert result.get('status') == 'sent', result
-    envelopes = bot_relay.claim_pending_envelopes(sender)
-    assert len(envelopes) == 1 and envelopes[0]['target_connection'] == 'own'
+    assert 'error' in result and 'No teammate named' in result['error'], result
+    assert bot_relay.claim_pending_envelopes(sender) == []
     assert bot_relay.claim_pending_envelopes(root) == []
 
 

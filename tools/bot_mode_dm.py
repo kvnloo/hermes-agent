@@ -377,21 +377,13 @@ def _try_relay_delivery(root: Path, raw_target: str, content: str, me: str, *,
             resolve_remote_target, waiter_command,
         )
 
-        # Resolution order: the sender's own relay folder first — when it resolves the target it is
-        # authoritative and stays the queue target (the default's folder would otherwise relay a
-        # named bot's DM as the default) — then the machine root, the only folder the Desktop drains.
-        # A named profile's home is <root>/profiles/<p>, which holds no roster at all, so without
-        # the fallback every cross-device DM reports "No teammate named ..." for a row the root lists.
-        candidates = [root]
-        if _hermes_root(root) != root:
-            candidates.append(_hermes_root(root))
-        for candidate in candidates:
-            roster = read_remote_roster(candidate)
-            match = resolve_remote_target(raw_target, roster) if roster else None
-            if match is not None:
-                root = candidate
-                break
-        else:
+        # Desktop's roster, outbox and reply waiter share one install-wide mailbox (#146035).
+        # A stale profile-local roster must not capture a delivery that Desktop can only drain
+        # from the install root; the envelope already records the named sender explicitly.
+        root = _hermes_root(root)
+        roster = read_remote_roster(root)
+        match = resolve_remote_target(raw_target, roster) if roster else None
+        if match is None:
             return None
         if match == "ambiguous":
             want = raw_target.strip().lstrip("@").partition("@")[0].lower()
