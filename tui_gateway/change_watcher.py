@@ -187,7 +187,7 @@ def _pet_changed_payload() -> dict:
     return {"enabled": False}
 
 
-# path -> (database/WAL mtime, session-table signature). The mtime guard keeps the
+# path -> ((file identity, database/WAL mtime), session-table signature). The mtime guard keeps the
 # normal 0.5 s watch pass stat-only; SQLite is read only after another process
 # actually commits (and for ``utils.RACY_MTIME_WINDOW_NS`` after it, see _settled_mtime).
 _sessions_db_sig_cache: dict[str, tuple[object, tuple | None]] = {}
@@ -239,14 +239,22 @@ def _session_db_content_sig(db_path: Path):
     sessions triggers keep; a store without them is digested over the sessions
     columns that drive Desktop projections (legacy stores use the subset they have).
     """
+    # A restored store can have the same mtime and list revision as the old file.
+    # Keep its identity in both the cache key and the change-event signature.
+    try:
+        stat = db_path.stat()
+        file_id = (stat.st_dev, stat.st_ino)
+    except OSError:
+        file_id = None
     mtime = _newest_mtime_ns((db_path, db_path.with_name(f"{db_path.name}-wal")))
+    stamp = (file_id, mtime)
     cache_key = str(db_path)
     cached = _sessions_db_sig_cache.get(cache_key)
 
-    if cached is not None and cached[0] == mtime:
+    if cached is not None and cached[0] == stamp:
         return cached[1]
     if not db_path.exists():
-        _sessions_db_sig_cache[cache_key] = (mtime, None)
+        _sessions_db_sig_cache[cache_key] = (stamp, None)
 
         return None
 
@@ -257,7 +265,11 @@ def _session_db_content_sig(db_path: Path):
 
         conn = _connect_tracked_db(read_only_db_uri(db_path), tracking_path=db_path,
                                    uri=True, timeout=0.05)
-        signature = _session_list_revision(conn) or _session_rows_digest(conn, mtime)
+        signature = _session_list_revision(conn)
+        if signature is not None:
+            signature = (*signature, file_id)
+        else:
+            signature = _session_rows_digest(conn, mtime)
     except Exception:
         # A busy/locked read after a good one keeps the last digest and leaves the cached mtime
         # stale so the next pass re-reads: digest -> mtime -> digest would broadcast twice.
@@ -268,7 +280,7 @@ def _session_db_content_sig(db_path: Path):
         if conn is not None:
             conn.close()
 
-    _sessions_db_sig_cache[cache_key] = (_settled_mtime(mtime), signature)
+    _sessions_db_sig_cache[cache_key] = ((file_id, _settled_mtime(mtime)), signature)
 
     return signature
 

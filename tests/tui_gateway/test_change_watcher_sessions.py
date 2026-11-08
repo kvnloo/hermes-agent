@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sqlite3
 import time
 
@@ -103,3 +104,33 @@ def test_sessions_signature_of_a_current_store_reads_no_session_rows(tmp_path, m
     assert after != before
     assert after[0][0] == "revision"
     assert digests == []
+
+
+def test_sessions_signature_detects_swapped_store_with_same_mtime_and_revision(tmp_path, monkeypatch):
+    """A restored state.db must notify Desktop even if its counter and mtime match (#146643)."""
+    from hermes_state import SessionDB
+
+    live, replacement = tmp_path / "live", tmp_path / "replacement"
+    for home, session_id in ((live, "old-session"), (replacement, "new-session")):
+        home.mkdir()
+        db = SessionDB(db_path=home / "state.db")
+        try:
+            db.create_session(session_id, source="cli")
+        finally:
+            db.close()
+        for suffix in ("-wal", "-shm"):
+            (home / f"state.db{suffix}").unlink(missing_ok=True)
+
+    stamp = 1_700_000_000_000_000_000
+    for home in (live, replacement):
+        os.utime(home / "state.db", ns=(stamp, stamp))
+
+    monkeypatch.setattr(server, "_watcher_home", lambda: live)
+    monkeypatch.setattr(server, "_served_profile_homes", [])
+    server._sessions_db_sig_cache.clear()
+    before = server._sessions_sig()
+    assert before[0][0] == "revision"
+
+    os.replace(replacement / "state.db", live / "state.db")
+    assert (live / "state.db").stat().st_mtime_ns == stamp
+    assert server._sessions_sig() != before
