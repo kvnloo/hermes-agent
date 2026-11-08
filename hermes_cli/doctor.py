@@ -321,11 +321,11 @@ def _safe_oauth_status_logged_in(status_fn) -> bool:
 
 
 def _oauth_auth_configured_for_doctor() -> bool:
-    """Return True when any supported OAuth provider has a local login.
+    """Accept a healthy OAuth login only for the selected provider.
 
-    This must stay side-effect-free: doctor is a read-only diagnostic command.
-    In particular, use the refresh-free Nous local snapshot and the refresh-free
-    Qwen local token-file snapshot instead of runtime credential resolvers.
+    With an unselected/automatic route, any supported OAuth login is usable.
+    Explicit providers must not be declared ready using another provider's
+    stored login. Only local status probes are used here.
     """
     try:
         from hermes_cli.auth import (
@@ -338,16 +338,26 @@ def _oauth_auth_configured_for_doctor() -> bool:
     except Exception:
         return False
 
-    return any(
-        _safe_oauth_status_logged_in(status)
-        for status in (
-            get_nous_auth_status_local,
-            get_codex_auth_status,
-            get_minimax_oauth_auth_status,
-            get_xai_oauth_auth_status,
-            get_qwen_auth_status_local,
-        )
-    )
+    probes = {
+        "nous": get_nous_auth_status_local,
+        "openai-codex": get_codex_auth_status,
+        "minimax-oauth": get_minimax_oauth_auth_status,
+        "xai-oauth": get_xai_oauth_auth_status,
+        "qwen-oauth": get_qwen_auth_status_local,
+    }
+    try:
+        from hermes_cli.config import read_user_config_raw
+
+        model_cfg = read_user_config_raw(HERMES_HOME / "config.yaml").get("model") or {}
+        provider = str(model_cfg.get("provider") or "").strip().lower()
+    except Exception:
+        # A malformed config is diagnosed in the separate model/config check.
+        provider = ""
+
+    if provider and provider not in {"auto", "moa"}:
+        probe = probes.get(provider)
+        return bool(probe and _safe_oauth_status_logged_in(probe))
+    return any(_safe_oauth_status_logged_in(probe) for probe in probes.values())
 
 
 def _has_healthy_oauth_fallback_for_apikey_provider(provider_label: str) -> bool:
