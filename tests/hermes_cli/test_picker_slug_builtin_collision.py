@@ -22,14 +22,14 @@ COLLIDING_KEY = "ai-gateway"  # a real built-in provider id in hermes_cli.auth.P
 ENDPOINT = "https://gateway.example.com/v1"
 
 
-def _rows(monkeypatch, user_providers):
+def _rows(monkeypatch, user_providers, *, current_provider="openrouter"):
     """Picker rows for *user_providers*, with every live catalog probe stubbed out."""
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", dict)
     monkeypatch.setattr(providers_mod, "HERMES_OVERLAYS", {})
     monkeypatch.setattr("hermes_cli.models.fetch_api_models", lambda *_a, **_kw: [])
     monkeypatch.setattr("hermes_cli.models.cached_fetch_api_models", lambda *_a, **_kw: None)
     return list_authenticated_providers(
-        current_provider="openrouter", current_base_url="", current_model="gpt-4o",
+        current_provider=current_provider, current_base_url="", current_model="gpt-4o",
         user_providers=user_providers, custom_providers=[], max_models=50,
         probe_custom_providers=False)
 
@@ -82,3 +82,12 @@ def test_non_colliding_key_keeps_the_bare_slug(monkeypatch):
                                              "key_cmd": "echo sk-test"}})
 
     assert _row(rows, "My Router")["slug"] == "my-router"
+
+
+def test_stale_bare_builtin_session_does_not_mark_custom_row_current(monkeypatch):
+    """A legacy bare pick still routes to the built-in, not the newly prefixed row."""
+    rows = _rows(monkeypatch, {COLLIDING_KEY: _entry()}, current_provider=COLLIDING_KEY)
+    row = _row(rows, "My Gateway")
+
+    assert row["slug"] == f"custom:{COLLIDING_KEY}"
+    assert row["is_current"] is False

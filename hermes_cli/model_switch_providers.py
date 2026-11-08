@@ -1048,7 +1048,11 @@ def _lap_user_provider_rows(b: _PickerBuild, user_providers: dict) -> None:
 
         ep_url_norm = _norm_url(api_url)
         ep_aliases = {str(alias).lower() for alias in grp["aliases"]}
-        is_current = b.endpoint_is_current(ep_name, ep_aliases, ep_url_norm)
+        # A stored bare built-in id still routes to the built-in, not this custom row.
+        current_aliases = ep_aliases
+        if ep_name.startswith("custom:"):
+            current_aliases = ep_aliases - {ep_name.removeprefix("custom:")}
+        is_current = b.endpoint_is_current(ep_name, current_aliases, ep_url_norm)
         discovered, native_catalog_empty, _ = b.discover_endpoint(
             grp["api_key"], api_url,
             ep_name if str(ep_name).strip().lower() in {"ollama", "custom:ollama"} else "custom",
