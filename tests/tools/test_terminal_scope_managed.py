@@ -122,6 +122,7 @@ def test_unreadable_env_fails_closed_without_a_pinned_backend(tmp_path, managed,
     with pytest.raises(TerminalPolicyUnavailable):
         build_profile_terminal_scope(home)
 
+
 @pytest.mark.parametrize("bypass_flag", ("safe_mode", "ignore_user_config"))
 def test_bypass_session_freezes_managed_terminal_scope(tmp_path, managed, monkeypatch, bypass_flag):
     """#150981: bypass user config, not the administrator's terminal backend."""

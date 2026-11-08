@@ -118,6 +118,7 @@ def default_terminal_scope() -> dict[str, str]:
             scope["TERMINAL_DOCKER_IMAGE_PINNED"] = "1"
     return scope
 
+
 def build_profile_terminal_scope(
     hermes_home: Any, *, env_overlay: Optional[dict[str, str]] = None) -> dict[str, str]:
     """Build the COMPLETE effective ``TERMINAL_*`` policy for a profile home.
