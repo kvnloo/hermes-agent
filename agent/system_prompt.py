@@ -727,9 +727,9 @@ def _join_tier(parts: List[Optional[str]]) -> str:
 def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) -> Dict[str, str]:
     """Assemble the system prompt as three ordered cache tiers: ``stable`` (identity,
     guidance and the coding brief), ``volatile`` (skills index, memory, user profile,
-    external memory block, session-scoped platform/posture blocks, timestamp line,
-    runtime environment hints) and ``context`` (caller ``system_message``, project
-    context files, workspace snapshot).  Tiers render in that order (stable, volatile,
+    external memory block and session-scoped platform/posture blocks) and
+    ``context`` (caller ``system_message``, project context files, workspace
+    snapshot, session-identity trailer and runtime environment hints).  Tiers render in that order (stable, volatile,
     context) so implicit longest-prefix caches keep the shared scaffold: per-platform
     and per-session blocks trail the prompt, so a new session on a different platform
     or chat reuses the stable+volatile prefix instead of re-prefilling from the first
@@ -783,13 +783,15 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
     # Plugin sections are confined to one coarse anchor in the volatile tail so
     # a resumed process can reconstruct the stable prefix without re-running plugins.
     volatile_parts.extend(_plugin_section_blocks(_frozen_plugin_prompt_sections(agent), "after_memory"))
-    volatile_parts.append(_timestamp_line(agent))
+    # The restored prompt's Model/Provider/Session ID lines must follow caller
+    # and project prose, which can themselves quote those field labels.
+    context_parts.append(_timestamp_line(agent))
     # Keep the renderer-owned runtime anchor after all user/plugin prose so quoted
     # host examples cannot shadow it during persisted-prompt validation.
     if environment_hints:
         # Embedder hints are prose too; reserve the delimiter for the renderer.
         environment_hints = environment_hints.replace(_pb.RUNTIME_ENVIRONMENT_HEADING, "> " + _pb.RUNTIME_ENVIRONMENT_HEADING)
-        volatile_parts.append(f"{_pb.RUNTIME_ENVIRONMENT_HEADING}\n\n{environment_hints}\n\n{_pb.RUNTIME_ENVIRONMENT_END}")
+        context_parts.append(f"{_pb.RUNTIME_ENVIRONMENT_HEADING}\n\n{environment_hints}\n\n{_pb.RUNTIME_ENVIRONMENT_END}")
     return {"stable": _join_tier(stable_parts), "context": _join_tier(context_parts), "volatile": _join_tier(volatile_parts)}
 
 
@@ -798,7 +800,7 @@ def build_system_prompt(agent: Any, system_message: Optional[str] = None) -> str
     only rebuilt after compression.  Tiers are ordered stable -> volatile ->
     context so implicit longest-prefix caches keep the unchanged scaffold: the
     per-session context tier (caller system message, project files, workspace
-    snapshot) is the tail, the most session-specific block."""
+    snapshot, then trusted identity and runtime boundary) is the tail."""
     parts = build_system_prompt_parts(agent, system_message=system_message)
     agent._cached_system_prompt_static = parts["stable"]
     # Surface context-file truncation warnings in chat, not only in logs.
