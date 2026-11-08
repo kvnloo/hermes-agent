@@ -423,6 +423,36 @@ def test_cron_create_failure_returns_nonzero(monkeypatch, capsys):
     assert "Failed to create job: boom" in out
 
 
+
+def test_cron_create_partial_registration_warns_without_claiming_creation_failed(
+    tmp_cron_dir, monkeypatch, capsys
+):
+    """#150973: a registration failure leaves an actual saved job behind."""
+    from cron import scheduler_provider
+
+    class UnavailableScheduler:
+        def register_job(self, job):
+            raise RuntimeError("Chronos registration unavailable")
+
+    monkeypatch.setattr(
+        scheduler_provider, "resolve_cron_scheduler", lambda: UnavailableScheduler()
+    )
+    rc = cron_cli.cron_create(SimpleNamespace(
+        schedule="every 1h", prompt="Report status", name="Saved report",
+        deliver="local",
+    ))
+
+    saved = list_jobs()
+    output = capsys.readouterr().out
+    assert len(saved) == 1
+    assert saved[0]["name"] == "Saved report"
+    assert rc == 1  # External registration failed; the saved job must not be duplicated.
+    assert "Warning: Saved cron job 'Saved report'" in output
+    assert "don't re-create it" in output
+    assert "Failed to create job" not in output
+    assert "RuntimeError" not in output
+
+
 class TestCronRunBackgroundDispatch:
     """`hermes cron run` must not report 'failed' when the run was dispatched
     to the background delegation worker.

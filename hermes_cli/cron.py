@@ -820,7 +820,10 @@ def cron_create(args):
         **_job_api_kwargs(args))
     if not result.get("success"):
         message = result.get("user_message") or result.get("error", "unknown error")
-        print(color(f"Failed to create job: {message}", Colors.RED))
+        if result.get("job_saved"):
+            print(color(f"Warning: {message}", Colors.YELLOW))
+        else:
+            print(color(f"Failed to create job: {message}", Colors.RED))
         return 1
     print(color(f"Created job: {result['job_id']}", Colors.GREEN))
     print(f"  Name: {result['name']}\n  Schedule: {result['schedule']}")
