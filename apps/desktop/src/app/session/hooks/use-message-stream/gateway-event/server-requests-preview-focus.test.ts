@@ -230,6 +230,30 @@ it('lets only the retained foreground conversation drive its requester-owned bro
   expect(backB).toHaveBeenCalledTimes(1)
 })
 
+it('declines a stale successful pop-out reply after focus changes (#133421)', async () => {
+  const backA = page('stored-a')
+  bridge.live.mockReturnValue(false)
+  let finish!: (result: unknown) => void
+  bridge.act.mockImplementation(
+    () =>
+      new Promise(resolve => {
+        finish = resolve
+      })
+  )
+
+  focus('workspace')
+  const pending = deliver('rt-a')
+  expect(bridge.act).toHaveBeenCalledTimes(1)
+
+  // The pop-out reports success after the user switches to another chat.
+  focus('session-tile:stored-b')
+  finish({ acted: 'back', success: true })
+
+  await vi.waitFor(() => expect(pending.decline).toHaveBeenCalledTimes(1))
+  expect(pending.respond).not.toHaveBeenCalled()
+  expect(backA).not.toHaveBeenCalled()
+})
+
 it('revalidates foreground eligibility on replay and before delayed local browser execution', async () => {
   const backA = page('stored-a')
   const backB = page('stored-b')

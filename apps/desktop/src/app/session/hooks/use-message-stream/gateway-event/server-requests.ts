@@ -660,13 +660,14 @@ const previewAct: Handler = ({ deps, isActiveSession, request, sessionId }) => {
       if (!hasLivePreviewSurface(owner)) {
         const remote = await requestPopoutPreviewAct(action, owner)
 
-        if (remote) {
-          answerValue(request, remote)
-
+        // Pop-out replies can arrive after a different conversation takes focus.
+        if (declineIfFocusChanged()) {
           return
         }
 
-        if (declineIfFocusChanged()) {
+        if (remote) {
+          answerValue(request, remote)
+
           return
         }
       }
