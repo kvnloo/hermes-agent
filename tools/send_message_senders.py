@@ -108,7 +108,6 @@ def _is_telegram_thread_not_found(error: Exception) -> bool:
 def _telegram_bot(token, base_url=None, proxy_var=None, target_hosts=None):
     """Bot honouring TELEGRAM_PROXY (or custom proxy_var/base_url); falls back to a direct connection."""
     from telegram import Bot
-    from os import environ as _env
     from gateway.platforms.base import resolve_proxy_url
     from telegram.request import HTTPXRequest
 
@@ -126,7 +125,7 @@ def _telegram_bot(token, base_url=None, proxy_var=None, target_hosts=None):
             kwargs["base_file_url"] = base_url
         if req:
             kwargs["request"] = req
-            kwargs["get_updates_request"] = req
+            kwargs["get_updates_request"] = HTTPXRequest(proxy=proxy)
         return Bot(token=token, **kwargs)
     except Exception as proxy_err:
         logger.warning("send_message: failed to attach proxy (%s), falling back to direct connection", proxy_err)

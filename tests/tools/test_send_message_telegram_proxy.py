@@ -109,6 +109,39 @@ class TestSendTelegramStandaloneProxy:
         # And the bot was actually used to send.
         bot.send_message.assert_awaited_once()
 
+    def test_custom_endpoint_proxy_uses_independent_request_clients(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A custom Bot API route must not share API and getUpdates request state."""
+        from tools.send_message_senders import _telegram_bot
+
+        proxy_url = "socks5://127.0.0.1:1080"
+        bot_factory = MagicMock()
+        request_factory = MagicMock(side_effect=lambda **kw: MagicMock(_kw=kw))
+        _install_telegram_mock_with_request(monkeypatch, bot_factory, request_factory)
+        resolve_proxy = MagicMock(return_value=proxy_url)
+        monkeypatch.setattr("gateway.platforms.base.resolve_proxy_url", resolve_proxy)
+
+        _telegram_bot(
+            "tok",
+            base_url="https://botapi.example.com/bot",
+            proxy_var="CUSTOM_BOT_PROXY",
+            target_hosts=["botapi.example.com"],
+        )
+
+        resolve_proxy.assert_called_once_with(
+            "CUSTOM_BOT_PROXY", target_hosts=["botapi.example.com"]
+        )
+        bot_factory.assert_called_once()
+        kwargs = bot_factory.call_args.kwargs
+        assert kwargs["base_url"] == "https://botapi.example.com/bot"
+        assert kwargs["request"] is not kwargs["get_updates_request"]
+        assert request_factory.call_count == 2
+        assert all(
+            call.kwargs["proxy"] == proxy_url
+            for call in request_factory.call_args_list
+        )
+
     def test_no_proxy_env_uses_plain_bot(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
