@@ -184,12 +184,13 @@ class GatewayPluginInjectionMixin:
         if live is not None and live.route == session_key:
             return authority
         if authority is not None and live is None:
-            from gateway.session_local_recovery import owned_receipt
+            from gateway.session_local_recovery import restorable_receipt
+            from hermes_state_runtime import RuntimeStoreError
             try:
-                _receipt, _source, route, _entry = owned_receipt(authority, source.chat_id)
-                if route == session_key:
+                receipt, _entry = restorable_receipt(authority, source.chat_id)
+                if receipt["route"] == session_key:
                     return authority
-            except (KeyError, TypeError, ValueError, AttributeError):
+            except (KeyError, TypeError, ValueError, AttributeError, RuntimeStoreError):
                 logger.debug("Plugin message injection receipt refused: plugin=%s session=%s",
                              plugin_id, session_key, exc_info=True)
         logger.warning("Plugin message injection refused: plugin=%s session=%s is not a live local session of the "

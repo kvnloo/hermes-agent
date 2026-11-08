@@ -157,7 +157,7 @@ def test_retired_injection_preserves_profile_isolation_across_a_b_a(tmp_path):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("damage", ["missing", "malformed", "profile", "route", "suspended"])
+@pytest.mark.parametrize("damage", ["missing", "malformed", "profile", "route", "suspended", "policy"])
 async def test_invalid_stored_identity_is_refused_without_restoring(tmp_path, monkeypatch, damage):
     from hermes_state_local import POLICY_PREFIX, local_receipt
     from tests.gateway.test_local_closed_retirement import _close, _create, _owner
@@ -176,6 +176,8 @@ async def test_invalid_stored_identity_is_refused_without_restoring(tmp_path, mo
             receipt["profile_id"] = str(tmp_path / "other-profile")
         elif damage == "route":
             receipt["route"] += ":wrong"
+        elif damage == "policy":
+            receipt["policy"]["cwd"] = "relative/path"
         meta_key = POLICY_PREFIX + ref.session_id
         if damage == "suspended":
             assert runner.session_store.suspend_session(key)
