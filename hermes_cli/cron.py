@@ -357,7 +357,7 @@ def cron_runs(job_id: Optional[str] = None, limit: int = 20):
 
 
 _INCIDENT_STATE_COLORS = {"detected": Colors.RED, "alerted": Colors.YELLOW, "resolved": Colors.GREEN,
-                          "closed": Colors.DIM}
+                          "orphaned": Colors.DIM, "closed": Colors.DIM}
 
 
 def cron_incidents(args) -> int:

@@ -2,7 +2,7 @@
 
 The executions ledger records every attempt; this module groups the *failures* into incidents keyed
 by ``(job_id, error signature)`` so the same job failing with the same error does not re-ping the
-operator every run once acknowledged. Lifecycle: ``detected`` → ``alerted`` → ``closed``. The same
+operator every run once acknowledged. Lifecycle: ``detected`` → ``alerted``; recovery marks ``resolved``, job stops mark ``orphaned``, and operator ack marks ``closed``. The same
 job + same normalized error resolves to the SAME incident id, so a closed incident stays closed
 until the error text changes and mints a new one. ``alerted`` means a failure ping actually reached
 the operator (``alerted_at`` = when the latest one did; the scheduler withholds repeats until
@@ -27,9 +27,9 @@ from hermes_time import now as _hermes_now
 # Optional test override (mirrors ``cron.executions.EXECUTIONS_FILE``).
 EXECUTIONS_FILE: Optional[Path] = None
 
-# ``resolved``: the job ran OK after the failure (auto); ``closed``: the operator acked the signature
-# and wants it silent. Only ``closed`` is terminal; a repeat of a resolved error re-opens it.
-INCIDENT_STATES = ("detected", "alerted", "resolved", "closed")
+# ``resolved``: recovered; ``orphaned``: job removed/disabled (no recovery claimed).
+# ``closed``: operator ack (permanently silent); resolved/orphaned signatures re-open on failure.
+INCIDENT_STATES = ("detected", "alerted", "resolved", "orphaned", "closed")
 _FAILURE_TYPE_ORDER = (
     ("rate_limit", (r"\b429\b", "rate limit", "usage limit", "quota")),
     ("timeout", ("timeout", "timed out")),
@@ -160,8 +160,8 @@ def upsert_incident(
     """Record (or refresh) the incident for ``job_id`` + ``error``; returns ``(incident_id,
     is_new)``. An existing row for the signature refreshes
     ``last_seen_at``/``error``/``output_file`` and keeps its state — a ``closed`` incident stays
-    closed, while a ``resolved`` one (job recovered, then broke the same way again) re-opens as
-    ``detected`` so the operator is alerted once more. A changed error text mints a new incident."""
+    closed, while ``resolved``/``orphaned`` (recovery or job stop) re-open as ``detected`` on a new
+    failure. A changed error text mints a new incident."""
     job_id = str(job_id or "")
     sig = _error_signature(job_id, error)
     stored_error = _redact_error(error)
@@ -175,13 +175,13 @@ def upsert_incident(
             "SELECT id, state FROM cron_incidents WHERE id=?", (incident_id,)
         ).fetchone()
         if row is not None:
-            reopen = row["state"] == "resolved"
+            reopen = row["state"] in ("resolved", "orphaned")
             conn.execute(
                 """UPDATE cron_incidents
                    SET last_seen_at=?, error=?, output_file=?,
-                       state=CASE WHEN state='resolved' THEN 'detected' ELSE state END,
-                       alerted_at=CASE WHEN state='resolved' THEN NULL ELSE alerted_at END,
-                       closed_at=CASE WHEN state='resolved' THEN NULL ELSE closed_at END
+                       state=CASE WHEN state IN ('resolved', 'orphaned') THEN 'detected' ELSE state END,
+                       alerted_at=CASE WHEN state IN ('resolved', 'orphaned') THEN NULL ELSE alerted_at END,
+                       closed_at=CASE WHEN state IN ('resolved', 'orphaned') THEN NULL ELSE closed_at END
                    WHERE id=?""",
                 (now, stored_error, output_file, incident_id),
             )
@@ -198,8 +198,8 @@ def upsert_incident(
 
 
 def set_incident_state(incident_id: str, state: str) -> bool:
-    """Transition an incident's lifecycle state; return whether it changed. ``closed`` is terminal
-    for that signature (re-open happens by a changed error minting a NEW incident). Unknown states
+    """Transition an incident's lifecycle state; return whether it changed. ``closed`` and
+    ``orphaned`` reject late updates; ``orphaned`` can re-open on a new run. Unknown states
     are rejected (no-op, ``False``). ``alerted`` also stamps ``alerted_at`` — every time, so the
     cooldown reminder (see ``cron.scheduler._upsert_incident_for_failure``) restarts its window."""
     if state not in INCIDENT_STATES:
@@ -209,7 +209,7 @@ def set_incident_state(incident_id: str, state: str) -> bool:
         row = conn.execute(
             "SELECT state FROM cron_incidents WHERE id=?", (incident_id,)
         ).fetchone()
-        if row is None or row["state"] == "closed":
+        if row is None or row["state"] in ("closed", "orphaned"):
             return False
         if state == "alerted":
             conn.execute(
@@ -235,7 +235,7 @@ def set_incident_state(incident_id: str, state: str) -> bool:
 
 
 def ack_incident(incident_id: str) -> bool:
-    """Acknowledge (close) an incident; ``False`` when missing or already closed."""
+    """Acknowledge an open incident; ``False`` when missing or already terminal."""
     return set_incident_state(incident_id, "closed")
 
 
@@ -251,6 +251,21 @@ def close_incidents_for_recovered_job(job_id: str) -> int:
     with _transaction() as conn:
         cursor = conn.execute(
             """UPDATE cron_incidents SET state='resolved', closed_at=?
+               WHERE job_id=? AND state IN ('detected', 'alerted')""",
+            (now, str(job_id or "")),
+        )
+        return int(cursor.rowcount or 0)
+
+
+def orphan_incidents_for_unrunnable_job(job_id: str) -> int:
+    """Retire open incidents without claiming job recovery or an operator ack.
+
+    Keep their diagnostic rows. A later failure after resume can re-open the signature.
+    """
+    now = _hermes_now().isoformat()
+    with _transaction() as conn:
+        cursor = conn.execute(
+            """UPDATE cron_incidents SET state='orphaned', closed_at=?
                WHERE job_id=? AND state IN ('detected', 'alerted')""",
             (now, str(job_id or "")),
         )

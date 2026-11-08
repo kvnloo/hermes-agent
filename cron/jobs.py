@@ -36,6 +36,7 @@ from cron.constants import CLAIM_TTL_INACTIVITY_HEADROOM, FIRE_CLAIM_SKEW_SECOND
 from cron.env_settings import cron_env_setting
 from cron.jobs_invariants import _validate_job_mode_invariants, validate_schedule_knobs
 from cron.jobs_model_pin import _main_model_pin
+from cron.jobs_incidents import retire_job_incidents
 from cron import jobs_time
 from cron.scheduler_ownership import _claim_owner_is_dead
 from cron import extra_fire, store_health
@@ -2145,15 +2146,11 @@ def update_job(job_id: str, updates: dict[str, Any]) -> Optional[dict[str, Any]]
             jobs_time.prune_inherited_knobs(updated)
         if "schedule" in updates:
             _apply_schedule_update(updated, updates, job_id)
-            # next_run_at now follows the new schedule; a stale quota_hold_until would only shield
-            # the record from the stale-error re-arm while no longer describing where it is
-            # parked. The next fire re-parks (with a fresh notice) if the window is still closed.
+            # A new schedule invalidates the old quota hold; the next fire can re-park.
             from cron.quota_hold import clear_state as _clear_quota_hold
             _clear_quota_hold(updated)
         elif "timezone" in updates and updated.get("state") != "paused":
-            # The instant on file was computed in the OLD zone; leaving it would make the new
-            # zone fire it at the wrong wall clock (or skip it). Only overwrite when the new
-            # zone can compute one (a past one-shot keeps its recorded instant).
+            # Recompute in the new zone; preserve a past one-shot if no instant computes.
             recomputed = compute_next_run(
                 updated["schedule"], timezone=updated.get("timezone"))
             if recomputed is not None:
@@ -2166,6 +2163,8 @@ def update_job(job_id: str, updates: dict[str, Any]) -> Optional[dict[str, Any]]
         _reject_terminal_activation(job, updated, job_id)
         jobs[i] = updated
         save_jobs(jobs)
+        if updated.get("state") == "paused" or not updated.get("enabled", True):
+            retire_job_incidents(updated["id"])
         return _normalize_job_record(updated)
 
     return _with_job(job_id, apply)
@@ -2319,6 +2318,7 @@ def remove_job(job_id: str) -> bool:
         # Resolve BEFORE saving so a legacy unsafe ID fails closed without a half-applied removal.
         job_output_dir = _job_output_dir(canonical_id)
         save_jobs(jobs, removed_ids={canonical_id})
+        retire_job_incidents(canonical_id)
         marker = _self_removal_delivery.get()
         if marker is not None and marker.job_id == canonical_id:
             marker.removed = True

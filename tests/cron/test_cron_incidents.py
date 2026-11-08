@@ -8,6 +8,8 @@ from datetime import timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from cron import incidents
@@ -230,6 +232,48 @@ def test_acked_signature_stays_closed_on_refresh(monkeypatch, tmp_path):
     assert same_id == inc_id
     assert is_new is False
     assert inc.get_incident(inc_id)["state"] == "closed"
+
+
+@pytest.mark.parametrize("action", ("remove", "pause", "disable"))
+def test_stopping_job_orphans_incidents_without_forging_ack(monkeypatch, tmp_path, action):
+    """Regression for #151385: a stopped job must not leave live incident alerts."""
+    inc = _point_db(monkeypatch, tmp_path)
+    job = _job()
+    with cron_jobs.use_cron_store(tmp_path):
+        cron_jobs.save_jobs([job])
+        alerted, _ = inc.upsert_incident(job["id"], "provider 503")
+        detected, _ = inc.upsert_incident(job["id"], "script exited 1")
+        unrelated, _ = inc.upsert_incident("another-job", "unrelated")
+        assert inc.set_incident_state(alerted, "alerted")
+
+        if action == "remove":
+            assert cron_jobs.remove_job(job["id"])
+            assert cron_jobs.get_job(job["id"]) is None
+        elif action == "pause":
+            assert cron_jobs.pause_job(job["id"]) is not None
+        else:
+            assert cron_jobs.update_job(job["id"], {"enabled": False}) is not None
+
+        for incident_id, error in ((alerted, "provider 503"), (detected, "script exited 1")):
+            row = inc.get_incident(incident_id)
+            assert row["state"] == "orphaned"
+            assert row["error"] == error
+            assert row["closed_at"] and row["acked_at"] is None
+        assert inc.get_incident(unrelated)["state"] == "detected"
+        assert inc.count_incidents("orphaned") == 2
+
+        # A queued failure delivery must not turn a retired incident live again.
+        sched._mark_incident_alerted(alerted)
+        assert inc.get_incident(alerted)["state"] == "orphaned"
+
+        if action != "remove":
+            if action == "pause":
+                assert cron_jobs.resume_job(job["id"]) is not None
+            else:
+                assert cron_jobs.update_job(job["id"], {"enabled": True}) is not None
+            same_id, reopened = inc.upsert_incident(job["id"], "provider 503")
+            assert same_id == alerted and reopened
+            assert inc.get_incident(alerted)["state"] == "detected"
 
 
 # ── Missing DB / lazy schema ───────────────────────────────────────────────
