@@ -153,6 +153,21 @@ def test_gpt_5_6_floor_reaches_non_stream_and_stream_resolvers(monkeypatch, tmp_
     assert _cloud_stale_timeout(900.0, {"model": "gpt-5.6-sol", "input": "small"}) == 900.0
 
 
+def test_opus_5_5_buffered_thinking_stream_gets_600s_floor():
+    """An Opus 5.5 proxy can send SSE comments but no SDK deltas for >240s (#151280)."""
+    from agent.chat_completion_helpers import _cloud_stale_timeout
+    from agent.reasoning_timeouts import get_reasoning_stale_timeout_floor as floor
+
+    model = "anthropic/claude-opus-5-5"
+    assert floor(model) == 600.0
+    assert _cloud_stale_timeout(180.0, {
+        "model": model, "messages": [{"role": "user", "content": "hi"}],
+    }) == 600.0
+    # Do not silently lengthen every Opus 5.x or Sonnet 5.x request.
+    assert floor("anthropic/claude-opus-5-4") == 240.0
+    assert floor("anthropic/claude-sonnet-5-5") == 180.0
+
+
 def test_explicit_provider_stale_timeout_wins_over_context_tier_and_reasoning_floor(monkeypatch, tmp_path):
     """``providers.<id>.stale_timeout_seconds`` must be able to SHORTEN patience (#115024):
     a 60s explicit value on a >50k-token request for a reasoning model stays 60s, while the

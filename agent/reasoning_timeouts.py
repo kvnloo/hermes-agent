@@ -17,6 +17,9 @@ from typing import Optional
 # floor_seconds -> slugs. Order irrelevant — longest slug wins at match time.
 _REASONING_STALE_TIMEOUT_FLOORS: dict[int, tuple[str, ...]] = {
     600: (
+        # Opus 5.5 via OpenAI-compatible proxies may buffer thinking for >240s
+        # while sending only SSE comments (#151280); keep that live attempt bounded.
+        "claude-opus-5-5",
         # NVIDIA Nemotron behind hosted NIM: documented 60-180s upstream idle kill.
         "nemotron-3-ultra", "nemotron-3-super", "nemotron-3.5-super-vl",
         # DeepSeek R1 / V4 (reasoning_content streamed before final content).
