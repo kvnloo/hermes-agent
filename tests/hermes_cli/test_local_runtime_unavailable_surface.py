@@ -55,7 +55,6 @@ def test_runtime_check_leaves_other_failures_uncoded():
         "ok": False, "error": "No usable credentials found for openrouter."}
 
 
-
 def test_removed_provider_is_a_config_error_not_a_rejected_key():
     """An invalid Desktop session pin needs a provider switch, not key replacement."""
     from agent.error_surface import build_error_surface_from_result
