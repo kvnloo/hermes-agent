@@ -25,6 +25,9 @@ import {
 
 type ToolCallProps = ToolCallMessagePartProps & { completedAt?: number; timestamp?: number }
 
+/** A call that returned this recently still grows a live card even if the turn already ended. */
+const FRESH_MS = 30_000
+
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 /**
@@ -56,12 +59,15 @@ export const EphemeralToolCall: FC<ToolCallProps & { match: EphemeralMatch; row?
 
   const settled = props.result !== undefined && !toolCallFailed(props)
 
-  // A card is born when its call returns. A finished turn seen for the first time is history: receipt.
+  // A card is born when its call returns: live while the turn runs or just after (the last step can
+  // land with the final reply), a receipt when the call is history.
+  const completedAt = props.completedAt
   useEffect(() => {
     if (settled) {
-      noteEphemeralCard(id, match, sessionId, running)
+      const fresh = typeof completedAt === 'number' && Date.now() - completedAt * 1000 < FRESH_MS
+      noteEphemeralCard(id, match, sessionId, running || fresh)
     }
-  }, [id, match, running, sessionId, settled])
+  }, [completedAt, id, match, running, sessionId, settled])
 
   // The tool's usual row (the connector row when the gateway labelled the call).
   const toolRow = row ?? <ToolFallback {...props} />

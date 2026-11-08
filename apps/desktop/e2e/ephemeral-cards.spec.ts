@@ -73,11 +73,13 @@ test.describe('ephemeral-ui cards from MCP tool calls', () => {
       ['slots', 'Google Calendar card'],
       ['ci', 'GitHub card']
     ] as const) {
-      await expect.poll(() => phase(page, kind), { timeout: 90_000, message: `${kind} card` }).not.toBe('')
-      const frame = page.locator(`[data-ephemeral-call="${kind}"] iframe[title="${title}"]`)
+      // Born live: the card grows while the turn is still running, never straight into a receipt.
+      await expect.poll(() => phase(page, kind), { timeout: 90_000, message: `${kind} card` }).toBe('live')
+      await expect(page.locator(`[data-ephemeral-call="${kind}"] iframe[title="${title}"][sandbox="allow-scripts"]`)).toHaveCount(1, {
+        timeout: 15_000
+      })
 
       if (kind === 'slots') {
-        await expect(frame).toHaveAttribute('sandbox', 'allow-scripts')
         // Pin the calendar card while it is live: it collapses into an input-bar chip.
         await page.locator('[data-ephemeral-call="slots"]').getByRole('button', { name: 'Pin to input bar' }).click()
         await expect(page.locator('[data-slot="ephemeral-pins"] [data-ephemeral-pin="slots"]')).toBeVisible()
