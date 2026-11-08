@@ -4663,31 +4663,27 @@ _RESPAWN_GUARD_PR_URL_RE = re.compile(
 # upstream/reference PRs as investigation evidence; those links must not wedge
 # a ready task behind ``active_pr``.
 _RESPAWN_GUARD_TASK_PR_HINT_RE = re.compile(
-    r"""
+    rf"""
     (?:
         \b(?:pr|pull\s+request)\s*(?:created|opened|submitted|filed)\b
       | \b(?:created|opened|submitted|filed)\s+(?:a\s+)?(?:pr|pull\s+request)\b
-      | \b(?:created|opened|submitted|filed)\s+https?://github\.com/
+      | \b(?:created|opened|submitted|filed)\b
       | \b(?:created_pr|opened_pr|submitted_pr|task_pr)\b
     )
+    [\s:="'-]*
+    {_RESPAWN_GUARD_PR_URL_RE.pattern}
     """,
     re.IGNORECASE | re.VERBOSE,
 )
 
 
 def _comment_indicates_task_owned_pr(body: str) -> bool:
-    """Return True when ``body`` says this task opened/created a GitHub PR.
+    """Only a PR URL directly attached to a task-ownership hint guards.
 
-    The respawn guard prevents duplicate PR spam after a worker opens a PR.
-    It should not trigger on upstream, related, or evidence links that merely
-    mention someone else's PR.
+    An unrelated upstream URL later in the same handoff is not evidence
+    that this task owns that PR.
     """
-    return bool(
-        body
-        and _RESPAWN_GUARD_PR_URL_RE.search(body)
-        and _RESPAWN_GUARD_TASK_PR_HINT_RE.search(body)
-    )
-
+    return bool(body and _RESPAWN_GUARD_TASK_PR_HINT_RE.search(body))
 
 @dataclass
 class DispatchResult:

@@ -1541,6 +1541,19 @@ def test_respawn_guard_upstream_pr_reference_not_guarded(kanban_home):
     assert reason is None
 
 
+def test_respawn_guard_mixed_handoff_upstream_pr_not_guarded(kanban_home):
+    """Opening prose for another PR must not claim the linked upstream PR."""
+    with kb.connect() as conn:
+        t = kb.create_task(conn, title="mixed-handoff", assignee="alice")
+        kb.add_comment(
+            conn, t, "worker",
+            "Opened a PR for investigation; upstream reference: "
+            "https://github.com/acme/project/pull/42",
+        )
+        reason = kb.check_respawn_guard(conn, t)
+    assert reason is None
+
+
 def test_respawn_guard_related_pr_reference_not_guarded(kanban_home):
     """Related/reference PR links should not be mistaken for task-owned PRs."""
     with kb.connect() as conn:
