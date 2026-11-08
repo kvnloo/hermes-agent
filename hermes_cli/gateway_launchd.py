@@ -690,7 +690,7 @@ def launchd_start():
         _gw()._prepare_service_launcher()
         plist_path.write_text(new_plist, encoding="utf-8")
         if _launchd_bootstrap_and_kickstart(plist_path, label):
-            _launchd_ok("✓ Service started")
+            _verify_launchd_started(label)
         return
 
     _gw().refresh_launchd_plist_if_needed()
@@ -703,6 +703,17 @@ def launchd_start():
         print("↻ launchd job was unloaded; reloading service definition")
         if not _launchd_bootstrap_and_kickstart(plist_path, label):
             return
+    _verify_launchd_started(label)
+
+
+def _verify_launchd_started(label: str) -> None:
+    """A successful launchctl kickstart does not prove the gateway booted (#125375)."""
+    # An old detached-fallback marker must not bypass the supervised-PID probe.
+    _gw()._clear_launchd_unsupported_marker()
+    if not _gw().wait_for_launchd_gateway_supervision(label=label):
+        print(f"✗ launchd accepted {label}, but no gateway process is supervised")
+        print("  Check gateway.error.log and retry from the owning checkout launcher.")
+        sys.exit(1)
     _launchd_ok("✓ Service started")
 
 
