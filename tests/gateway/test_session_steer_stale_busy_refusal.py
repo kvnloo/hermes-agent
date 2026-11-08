@@ -95,6 +95,7 @@ async def test_a_redirect_between_model_requests_joins_the_live_turn_as_a_steer(
                                                'execution_generation': generation}, verb='redirect')
 
         assert reply['status'] == 'queued', reply
+        assert reply['disposition'] == 'steer', reply
         assert agent._drain_pending_steer() == 'join this turn'
         release.set()
         await asyncio.wait_for(authority.sessions['s'].task, 5)

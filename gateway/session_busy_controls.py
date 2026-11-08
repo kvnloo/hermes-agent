@@ -219,6 +219,10 @@ async def correct(connection, ref, params, *, verb):
         accepted = correct_live_turn(agent, verb, params['text'])
         if accepted == 'steer':
             verb = 'steer'
-        return {'status': ({'steer': 'queued', 'redirect': 'redirected'}[verb] if accepted else 'rejected'),
-                'text': params['text'], 'execution_generation': generation,
-                'authority_epoch': authority.epoch}
+        reply = {'status': ({'steer': 'queued', 'redirect': 'redirected'}[verb] if accepted else 'rejected'),
+                 'text': params['text'], 'execution_generation': generation,
+                 'authority_epoch': authority.epoch}
+        if accepted == 'steer':
+            # This is admission to the running turn's steer slot, not proof of model consumption.
+            reply['disposition'] = 'steer'
+        return reply
