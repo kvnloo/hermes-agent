@@ -193,9 +193,16 @@ class GatewayAdapterLifecycleMixin(GatewaySecondaryReconnectMixin):
 
     async def _connect_adapter_bounded(self, adapter, platform, *, is_reconnect: bool, initial: bool) -> bool:
         timeout = self._platform_connect_timeout_secs(platform, initial=initial)
+        reconnect_kwargs = (
+            {"is_reconnect": is_reconnect}
+            if BasePlatformAdapter._accepts_kwarg(
+                adapter.connect, "is_reconnect", var_kw=True, unknown=False
+            )
+            else {}
+        )
         if timeout <= 0:
-            return await adapter.connect(is_reconnect=is_reconnect)
-        task = asyncio.ensure_future(adapter.connect(is_reconnect=is_reconnect))
+            return await adapter.connect(**reconnect_kwargs)
+        task = asyncio.ensure_future(adapter.connect(**reconnect_kwargs))
         if await self._wait_or_detach(task, timeout):
             return bool(await task)
         raise TimeoutError(f"{platform.value} connect timed out after {timeout:g}s")

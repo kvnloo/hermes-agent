@@ -82,6 +82,27 @@ def _make_runner():
     return runner
 
 
+class TestKeetLegacyConnect:
+    @pytest.mark.asyncio
+    async def test_bare_connect_works_on_timed_and_untimed_paths(self):
+        """Keet-style connect() cannot accept the gateway's is_reconnect keyword."""
+        class BareConnectAdapter(StubAdapter):
+            async def connect(self):
+                self.connect_calls.append(True)
+                return True
+
+        runner = _make_runner()
+        adapter = BareConnectAdapter()
+        assert await runner._connect_adapter_with_timeout(
+            adapter, Platform.TELEGRAM, is_reconnect=True
+        ) is True
+        with patch.object(runner, "_platform_connect_timeout_secs", return_value=0):
+            assert await runner._connect_adapter_with_timeout(
+                adapter, Platform.TELEGRAM, is_reconnect=True
+            ) is True
+        assert adapter.connect_calls == [True, True]
+
+
 # --- Startup queueing ---
 
 class TestStartupPlatformIsolation:

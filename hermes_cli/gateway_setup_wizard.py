@@ -338,6 +338,29 @@ def _configure_platform(platform: dict) -> None:
     if fn is None:
         fn = _builtin_setup_fn(platform["key"])
     if fn is not None:
+        if entry is not None and fn is entry.setup_fn:
+            from inspect import Parameter, signature
+            try:
+                config_param = signature(fn).parameters.get("config")
+            except (TypeError, ValueError):
+                config_param = None
+            if config_param is not None and config_param.default is Parameter.empty:
+                # Legacy Keet-style setup_fn(config); zero-arg plugins stay unchanged.
+                from gateway.config import PlatformConfig
+                from gateway.config_loader import merge_platform_sections, read_yaml_layers
+                from hermes_constants import get_hermes_home
+
+                yaml_cfg = read_yaml_layers(get_hermes_home())
+                yaml_cfg = yaml_cfg if isinstance(yaml_cfg, dict) else {}
+                gateway_cfg = yaml_cfg.get("gateway")
+                gateway_cfg = gateway_cfg if isinstance(gateway_cfg, dict) else {}
+                block = merge_platform_sections(yaml_cfg, gateway_cfg, {}).get(platform["key"], {})
+                config = PlatformConfig.from_dict(block if isinstance(block, dict) else {})
+                if config_param.kind is Parameter.POSITIONAL_ONLY:
+                    fn(config)
+                else:
+                    fn(config=config)
+                return
         fn()
         return
     if platform.get("vars"):

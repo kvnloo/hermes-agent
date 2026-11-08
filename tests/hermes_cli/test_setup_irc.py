@@ -118,6 +118,32 @@ class TestIRCInteractiveSetup:
         assert "IRC setup complete!" in out
 
 
+    def test_configure_platform_passes_keets_legacy_config(self, monkeypatch, tmp_path):
+        """A plugin with setup_fn(config) gets its merged PlatformConfig, not TypeError."""
+        import hermes_cli.gateway as gateway_mod
+        from gateway.config import PlatformConfig
+
+        (tmp_path / "config.yaml").write_text(
+            "gateway:\n  platforms:\n    irc:\n      enabled: true\n      token: test-irc\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        seen = []
+
+        def fake_setup(config):
+            seen.append(config)
+
+        plat = _register_irc_platform(setup_fn=fake_setup)
+        try:
+            gateway_mod._configure_platform(plat)
+        finally:
+            _unregister_irc_platform()
+
+        assert len(seen) == 1
+        assert isinstance(seen[0], PlatformConfig)
+        assert seen[0].enabled is True
+        assert seen[0].token == "test-irc"
+
     def test_configure_platform_fallback_when_no_setup_fn(self, monkeypatch, capsys):
         """A plugin with no setup_fn falls back to env-var instructions."""
         import hermes_cli.gateway as gateway_mod
