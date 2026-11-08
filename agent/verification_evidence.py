@@ -582,6 +582,9 @@ def _facts_for_command_cwd(cwd, command):
     for cand in _candidate_project_dirs(command):
         try:
             p = Path(cand).expanduser()
+            if not p.is_absolute():
+                p = Path(cwd or ".").resolve() / p
+            p = p.resolve()
             if p.is_dir():
                 f = _project_facts(p)
                 if f:
