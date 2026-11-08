@@ -352,7 +352,7 @@ def _summarize_cron_failure_for_delivery(job: dict, error: str | None) -> str:
     #
     # Falling through leaves the generic cleaner below to report what actually
     # happened, naming the script. No new message text is needed.
-    provider_reachable = not job.get("no_agent")
+    provider_reachable = not job.get("no_agent") and not lower.startswith("script exited with code")
 
     # Script execution happens outside the LLM/provider path (also for
     # agent-backed jobs that run a context script). Check the script runner's

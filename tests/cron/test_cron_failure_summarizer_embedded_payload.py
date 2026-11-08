@@ -71,6 +71,20 @@ def test_embedded_timeout_wording_not_labeled_provider_timeout():
     assert "provider timeout" not in msg.lower()
 
 
+def test_monitor_script_http_403_is_not_a_model_provider_failure():
+    """A source script's GitHub 403 is not the model provider's authentication failure."""
+    job = {"id": "source-watch", "name": "source-watch", "no_agent": False,
+           "monitor_script": "probe.sh"}
+    error = (
+        "Script exited with code 1: "
+        "gh: API rate limit exceeded for demo-user. (HTTP 403)"
+    )
+    message = _summarize_cron_failure_for_delivery(job, error)
+    assert "Script exited with code 1" in message
+    assert "gh: API rate limit exceeded" in message
+    assert "provider" not in message.lower()
+
+
 def test_first_line_provider_auth_still_classifies():
     job = {"name": "daily-digest", "no_agent": False}
     msg = _summarize_cron_failure_for_delivery(job, "HTTP 401 authentication failed")
