@@ -389,6 +389,29 @@ class TestRunDebugShare:
         assert "--- full desktop.log ---" in desktop_paste
 
 
+    def test_failed_public_upload_suggests_private_nous_share(self, capsys):
+        """After both public paste sinks fail, offer the independent Nous support route."""
+        from hermes_cli.debug import run_debug_share
+
+        args = MagicMock()
+        args.local = False
+        args.nous = False
+        args.no_redact = False
+        with (
+            patch("hermes_cli.debug._confirm_upload", return_value=True),
+            patch("hermes_cli.debug.build_debug_share",
+                  side_effect=RuntimeError("paste.rs: HTTP 400; dpaste.com: TLS error")),
+        ):
+            with pytest.raises(SystemExit) as exc_info:
+                run_debug_share(args)
+
+        assert exc_info.value.code == 1
+        output = capsys.readouterr()
+        assert "Upload failed" in output.err
+        assert "hermes debug share --nous" in output.out
+        assert "hermes debug share --local" in output.out
+
+
 
 
 # ---------------------------------------------------------------------------
