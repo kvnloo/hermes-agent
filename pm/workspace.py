@@ -120,9 +120,9 @@ def _find_member_root(start_dir: Path) -> Path:
 
 
 @functools.lru_cache(maxsize=1024)
-def _member_ignore_rules(dir_str: str) -> tuple[tuple[re.Pattern, bool, bool, Path], ...]:
+def _member_ignore_rules(dir_str: str, root_str: str | None = None) -> tuple[tuple[re.Pattern, bool, bool, Path], ...]:
     dir_path = Path(dir_str)
-    root = _find_member_root(dir_path)
+    root = Path(root_str) if root_str is not None else _find_member_root(dir_path)
     chain = []
     curr = dir_path
     while True:
@@ -177,10 +177,10 @@ def _member_ignore_rules(dir_str: str) -> tuple[tuple[re.Pattern, bool, bool, Pa
     return tuple(all_rules)
 
 
-def _member_ignored(directory, names):
+def _member_ignored(directory, names, *, member_root: Path | None = None):
     dir_path = Path(directory)
     dir_str = str(dir_path.resolve())
-    rules = _member_ignore_rules(dir_str)
+    rules = _member_ignore_rules(dir_str, str(member_root.resolve()) if member_root is not None else None)
 
     ignored = set()
     for name in names:
@@ -242,8 +242,8 @@ def members_stamp(plugin_dirs) -> str:
             h.update(b"\0")
         if (entry / "pyproject.toml").is_file():
             for directory, dirs, files in os.walk(entry):
-                dirs[:] = sorted(set(dirs) - set(_member_ignored(directory, dirs)))
-                for name in sorted(set(files) - set(_member_ignored(directory, files))):
+                dirs[:] = sorted(set(dirs) - set(_member_ignored(directory, dirs, member_root=entry)))
+                for name in sorted(set(files) - set(_member_ignored(directory, files, member_root=entry))):
                     path = Path(directory) / name
                     h.update(path.relative_to(entry).as_posix().encode())
                     h.update(b"\0")
@@ -441,7 +441,7 @@ def _workspace_member(plugin_dir: Path, root: Path, *, identity: Path) -> Path:
     if pyproject is not None:
         member = root / "plugin-sources" / key
         shutil.copytree(plugin_dir, member, symlinks=True,
-                        ignore=_member_ignored)
+                        ignore=functools.partial(_member_ignored, member_root=plugin_dir))
         document = tomllib.loads(pyproject.read_text(encoding="utf-8-sig"))
         # uv identifies a workspace member by [project].name, so the same virtual
         # plugin enabled in two profiles would declare one name twice and fail

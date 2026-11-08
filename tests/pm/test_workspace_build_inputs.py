@@ -304,3 +304,37 @@ def test_member_stamp_and_workspace_ignore_runtime_and_gitignored_files(tmp_path
     # Changing actual build input MUST change the stamp
     (plugin / "code.py").write_text("def run(): return 42\n", encoding="utf-8")
     assert workspace.members_stamp([plugin]) != baseline_stamp
+
+
+def test_nested_pyproject_keeps_member_root_ignore_rules(tmp_path):
+    """#122349: nested package metadata must not discard a plugin's root ignore rules."""
+    plugin = tmp_path / "stateful-plugin"
+    nested = plugin / "subproject"
+    nested.mkdir(parents=True)
+    (plugin / "pyproject.toml").write_text(
+        '[project]\nname="stateful-plugin"\nversion="0.1"\nrequires-python=">=3.11"\n'
+        'dependencies=["packaging>=24,<25"]\n', encoding="utf-8",
+    )
+    (plugin / ".gitignore").write_text("/subproject/runtime.json\n", encoding="utf-8")
+    (nested / "pyproject.toml").write_text(
+        '[project]\nname="nested"\nversion="1"\n', encoding="utf-8",
+    )
+    source = nested / "module.py"
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+
+    before = workspace.members_stamp([plugin])
+    runtime = nested / "runtime.json"
+    runtime.write_text('{"tick": 1}\n', encoding="utf-8")
+    assert workspace.members_stamp([plugin]) == before
+
+    stage = tmp_path / "stage"
+    stage.mkdir()
+    copied = workspace._workspace_member(plugin, stage, identity=plugin)
+    assert (copied / "subproject/module.py").read_text(encoding="utf-8") == "VALUE = 1\n"
+    assert not (copied / "subproject/runtime.json").exists()
+
+    runtime.write_text('{"tick": 2}\n', encoding="utf-8")
+    assert workspace.members_stamp([plugin]) == before
+    source.write_text("VALUE = 2\n", encoding="utf-8")
+    assert workspace.members_stamp([plugin]) != before
+
