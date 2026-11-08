@@ -209,6 +209,15 @@ describe('isLikelyProseFence', () => {
     expect(isLikelyProseFence('text', CHINESE_NUMBERED)).toBe(false)
     expect(isLikelyProseFence('prompt', CHINESE_NUMBERED)).toBe(false)
   })
+
+  it('keeps known language fences with metadata tails without changing pseudo-tag prose', () => {
+    const prose = ['alpha beta gamma', 'delta epsilon zeta', 'eta theta iota'].join('\n')
+    const yaml = ['items:', '  - first', '  - second'].join('\n')
+
+    expect(isLikelyProseFence('text title=sample.txt', prose)).toBe(false)
+    expect(isLikelyProseFence('yaml title=config.yaml', yaml)).toBe(false)
+    expect(isLikelyProseFence('heads more words', prose)).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------
