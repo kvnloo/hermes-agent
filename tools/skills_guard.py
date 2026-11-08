@@ -589,6 +589,9 @@ _COMMAND_SEGMENT_END_RE = re.compile(r'\|\||(?<![>&])&(?!>)|[|;()]|`|\$\(')
 # Stdout discarded to /dev/null. The ``2>`` form is excluded on purpose: it hides stderr only, so the
 # value still prints.
 _STDOUT_TO_NULL_RE = re.compile(r'(?:^|[\s;|&(])(?:1|&)?>>?\s*[\'"]?/dev/null')
+# Only one stdout redirect may qualify: another redirect can override /dev/null.
+# A stderr-only redirect such as 2>&1 is not a stdout redirect.
+_STDOUT_REDIRECT_RE = re.compile(r'(?<![\d>])(?:&?>{1,2}|1>{1,2}|1?>&\d)')
 _REDIRECTION_RE = re.compile(r'\d?&?>>?\s*[\'"]?[^\s;|&<>]+[\'"]?|\d?>&\d')
 
 
@@ -599,7 +602,7 @@ def _suppressed_named_printenv(line: str) -> bool:
         rest = line[invocation.end():]
         boundary = _COMMAND_SEGMENT_END_RE.search(rest)
         segment = rest[:boundary.start()] if boundary else rest
-        if not _STDOUT_TO_NULL_RE.search(segment):
+        if not _STDOUT_TO_NULL_RE.search(segment) or len(_STDOUT_REDIRECT_RE.findall(segment)) != 1:
             return False
         if not any(not word.startswith("-") for word in _REDIRECTION_RE.sub(" ", segment).split()):
             return False

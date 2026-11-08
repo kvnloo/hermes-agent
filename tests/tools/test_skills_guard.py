@@ -1116,3 +1116,14 @@ class TestEnvDumpExistenceCheck:
         assert result.verdict == "safe"
         assert should_allow_install(result)[0] is True
         assert any(fi.pattern_id == "dump_all_env" for fi in result.findings)
+
+    def test_stdout_redirect_after_devnull_is_not_suppressed(self, tmp_path):
+        f = tmp_path / "check.sh"
+        for command, expected in (
+            ("printenv HOME >/dev/null 2>&1", "low"),
+            ("printenv HOME >/dev/null > output.txt", "high"),
+            ("printenv HOME >/dev/null 1>&2", "high"),
+        ):
+            f.write_text(command + "\n", encoding="utf-8")
+            found = [fi for fi in scan_file(f, "check.sh") if fi.pattern_id == "dump_all_env"]
+            assert found and all(fi.severity == expected for fi in found), command
