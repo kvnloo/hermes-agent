@@ -126,6 +126,23 @@ def test_tool_progress_off_keeps_only_essential_tool_rows(monkeypatch):
     assert failed[0][2]["result"]["error"] == "disk full"
 
 
+def test_hook_block_reason_reaches_nonverbose_tui_without_a_start(monkeypatch):
+    """A blocked hook has no start callback; the completion must still explain the guard."""
+    events = _capture(monkeypatch)
+    _session(monkeypatch, "hook-blocked", show_reasoning=False, tool_progress="off")
+
+    server._on_tool_complete(
+        "hook-blocked", "call-blocked", "terminal", {"command": "echo forbidden"},
+        json.dumps({"error": "blocked by policy: command forbidden"}),
+    )
+
+    completed = [payload for kind, _, payload in events
+                 if kind == "tool.complete" and payload.get("tool_id") == "call-blocked"]
+    assert len(completed) == 1
+    assert completed[0]["summary"] == "blocked by policy: command forbidden"
+    assert "result_text" not in completed[0]  # ordinary TUI mode, not verbose
+
+
 def test_tool_progress_off_does_not_surface_a_refused_skill_write(monkeypatch):
     """Answer-only mode forwards failures the user must see; a skill write the agent re-plans is not one."""
     events = _capture(monkeypatch)

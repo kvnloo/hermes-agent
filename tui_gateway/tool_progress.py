@@ -108,6 +108,13 @@ def _tool_summary(name: str, result: str, duration_s: float | None) -> str | Non
     warning = str(data.get("fallback_warning") or "").strip()
     if warning:
         return f"{warning}{suffix}"
+    # A hook block completes without a TUI tool.start; non-verbose clients only display
+    # the summary, not the raw result. Keep the guard's reason visible and redacted.
+    error = data.get("error")
+    if isinstance(error, str) and error.strip():
+        visible_error = _redact_tui_verbose_text(error.strip())
+        if visible_error:
+            return f"{visible_error[:240]}{'…' if len(visible_error) > 240 else ''}{suffix}"
     entry = _SUMMARY_COUNTERS.get(name)
     n = entry[0](data) if entry else None
     return f"{entry[1]} {n} {entry[2] if n == 1 else entry[3]}{suffix}" if n is not None else None
