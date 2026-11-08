@@ -211,13 +211,19 @@ def check_systemd_timing_alignment(
         return None  # Not running under systemd (or at least not directly)
     # /proc/self/cgroup: "0::/user.slice/.../hermes-gateway.service"
     unit_name: Optional[str] = None
+    prefer_system_scope = False
     with contextlib.suppress(OSError), open("/proc/self/cgroup", encoding="utf-8") as fh:
         for line in fh:
             parts = reversed(line.strip().split("/"))
             unit_name = next((p for p in parts if p.endswith(".service")), None)
             if unit_name:
+                # A same-name user unit may be loaded even when this process belongs to systemd.
+                prefer_system_scope = "/user.slice/" not in line
                 break
-    if (timeout_us := _systemd_timeout_stop_us(unit_name) if unit_name else None) is None:
+    if not unit_name:
+        return None
+    timeout_us = _systemd_timeout_stop_us(unit_name, prefer_system_scope=prefer_system_scope)
+    if timeout_us is None:
         return None
     timeout_stop_sec = timeout_us / 1_000_000.0
     expected = float(resolve_systemd_timeout_stop_sec(drain_timeout, cron_drain_timeout))
@@ -226,7 +232,7 @@ def check_systemd_timing_alignment(
             "mismatch": timeout_stop_sec < expected}
 
 
-def _systemd_timeout_stop_us(unit_name: str) -> Optional[int]:
+def _systemd_timeout_stop_us(unit_name: str, *, prefer_system_scope: bool = False) -> Optional[int]:
     """``TimeoutStopUSec`` of ``unit_name`` in microseconds; ``--user`` first (hermes' usual).
 
     A ``--user`` query against *any* unit name succeeds (``returncode == 0``) whenever the
@@ -237,7 +243,7 @@ def _systemd_timeout_stop_us(unit_name: str) -> Optional[int]:
     default, not this unit's real value. Only trust a result whose ``LoadState`` isn't
     ``not-found``; otherwise fall through to the next attempt (plain/system ``systemctl``).
     """
-    for flag in (["--user"], []):
+    for flag in (([], ["--user"]) if prefer_system_scope else (["--user"], [])):
         try:
             result = subprocess.run(
                 ["systemctl", *flag, "show", unit_name,

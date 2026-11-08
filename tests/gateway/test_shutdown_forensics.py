@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import signal
@@ -218,6 +219,27 @@ class TestSystemdTimeoutStopUs:
             ),
         )
         assert sf._systemd_timeout_stop_us("totally-made-up-unit-xyz123.service") is None
+
+    def test_running_system_unit_overrides_loaded_user_name_collision(self, monkeypatch):
+        """A loaded but non-running user unit must not mask the running system unit."""
+        monkeypatch.setenv("INVOCATION_ID", "system-gateway")
+        monkeypatch.setattr(
+            sf, "open",
+            lambda *_args, **_kwargs: io.StringIO("0::/system.slice/hermes-gateway.service\n"),
+            raising=False,
+        )
+        monkeypatch.setattr(
+            sf.subprocess, "run",
+            self._fake_run(
+                user_props={"LoadState": "loaded", "TimeoutStopUSec": "1min 30s"},
+                system_props={"LoadState": "loaded", "TimeoutStopUSec": "3min 30s"},
+            ),
+        )
+        alignment = sf.check_systemd_timing_alignment(180, 30)
+        assert alignment is not None
+        assert alignment["timeout_stop_sec"] == 210.0
+        assert alignment["mismatch"] is False
+
 
 # ---------------------------------------------------------------------------
 # check_systemd_timing_alignment
