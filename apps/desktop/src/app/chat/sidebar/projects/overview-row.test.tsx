@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -172,6 +172,42 @@ describe('ProjectOverviewRow', () => {
     expect(screen.getByRole('button', { name: 'Show all 5 sessions' })).toBeTruthy()
   })
 
+  it('drops a pending Show all response after collapse and reopen', async () => {
+    workspaceOpen.value = true
+    const five = Array.from({ length: 5 }, (_, index) => session(`s${index + 1}`, 500 - index))
+    const busy = { ...project, sessionCount: 5 } as SidebarProjectTree
+    let finishFetch!: (tree: SidebarProjectTree) => void
+    projectsStore.fetchProjectSessions.mockImplementation(
+      () =>
+        new Promise<null | SidebarProjectTree>(resolve => {
+          finishFetch = resolve
+        })
+    )
+
+    const row = () => (
+      <ProjectOverviewRow
+        previewSessions={five.slice(0, 3)}
+        project={busy}
+        renderRows={items => <div data-testid="rows">{items.map(item => item.id).join(',')}</div>}
+      />
+    )
+    const view = render(row())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show all 5 sessions' }))
+    expect(projectsStore.fetchProjectSessions).toHaveBeenCalledTimes(1)
+
+    workspaceOpen.value = false
+    view.rerender(row())
+    workspaceOpen.value = true
+    view.rerender(row())
+
+    await act(async () => {
+      finishFetch({ ...busy, repos: [{ groups: [{ sessions: five }] }] } as unknown as SidebarProjectTree)
+    })
+
+    expect(screen.getByTestId('rows').textContent).toBe('s1,s2,s3')
+    expect(screen.getByRole('button', { name: 'Show all 5 sessions' })).toBeTruthy()
+  })
   // The hydrated lanes are the raw backend payload: pinned, filtered-out and
   // just-deleted sessions must go through the same exclusion the previews did,
   // and N must not promise rows the view hides.
