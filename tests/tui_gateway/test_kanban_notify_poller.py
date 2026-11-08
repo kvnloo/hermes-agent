@@ -140,6 +140,32 @@ class TestCollectKanbanNotifications:
         assert len(rows) == 1
         assert rows[0]["last_event_id"] > pre_cursor
 
+    def test_request_review_wakes_origin_tui_session_once(self):
+        """#151134: real review handoffs must wake the subscribed TUI chat exactly once."""
+        tid = _create_subscribed_task()
+        before = _sub_rows(tid)[0]["last_event_id"]
+        conn = kbc.connect()
+        try:
+            assert kb.request_review(
+                conn, tid, reviewer="reviewer", summary="ready to inspect"
+            )
+            assert kb.get_task(conn, tid).status == "review"
+        finally:
+            conn.close()
+
+        # Another TUI tab may not consume the origin's pending review event.
+        assert _collect_kanban_notifications(_session("another-tui-chat")) == []
+        delivered = _collect_kanban_notifications(_session())
+        assert len(delivered) == 1
+        assert tid in delivered[0]
+        assert "ready for review" in delivered[0]
+        assert "ready to inspect" in delivered[0]
+        assert _collect_kanban_notifications(_session()) == []
+
+        subs = _sub_rows(tid)
+        assert len(subs) == 1  # review is reversible; keep the subscription
+        assert subs[0]["last_event_id"] > before
+
     def test_block_loop_detected_escalation_reaches_tui_subscriber(self):
         """#82597: a re-blocked card's ``block_loop_detected`` escalation must reach the
         Desktop/TUI subscriber too — the gateway notifier claims it (TERMINAL_KINDS),
