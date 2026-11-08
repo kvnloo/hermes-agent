@@ -171,3 +171,20 @@ class TestPinnedJobStoresHealedIdentity:
         assert job["provider"] is None
         locked = jobs.update_job(job["id"], {"pinned": True})
         assert locked["provider"] == CANONICAL
+
+
+def test_shared_url_pins_selected_named_provider_not_first_match(monkeypatch, tmp_path):
+    """Same endpoint, different provider keys/credentials: preserve the selected identity."""
+    config = {
+        "model": {"default": "hermes-smart-stack", "provider": CANONICAL},
+        "providers": {
+            "other-route": {"base_url": BASE_URL, "api_key": "sk-other"},
+            PROVIDER_KEY: {"base_url": BASE_URL, "api_key": "sk-omniroute"},
+        },
+    }
+    monkeypatch.setattr(rp, "load_config", lambda *a, **k: config)
+    monkeypatch.setattr("hermes_cli.config.load_config", lambda *a, **k: config)
+    monkeypatch.setattr(rp, "_get_model_config", lambda: config["model"])
+
+    provider, _model = _pin(monkeypatch, tmp_path, _named_custom_runtime(BASE_URL, CANONICAL))
+    assert provider == CANONICAL

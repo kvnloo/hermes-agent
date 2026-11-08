@@ -1589,10 +1589,25 @@ def _main_model_pin() -> Tuple[Optional[str], Optional[str]]:
             with contextlib.suppress(Exception):
                 from hermes_cli.runtime_provider import canonical_custom_identity
 
-                provider = canonical_custom_identity(
-                    base_url=str(runtime.get("base_url") or ""),
-                    config_provider=str(runtime.get("requested_provider") or ""),
-                ) or provider
+                # Prefer the actual named entry: two providers may share a URL but use
+                # different credentials. URL-first recovery would pin the first entry.
+                from hermes_cli.runtime_provider import _get_named_custom_provider
+                from hermes_cli.runtime_provider_custom import (
+                    _normalize_base_url_for_match, custom_provider_slug,
+                )
+                requested = str(runtime.get("requested_provider") or "").strip()
+                entry = _get_named_custom_provider(requested) if requested else None
+                if entry and (
+                    _normalize_base_url_for_match(entry.get("base_url"))
+                    == _normalize_base_url_for_match(runtime.get("base_url"))
+                ):
+                    provider = custom_provider_slug(
+                        str(entry.get("name") or ""), str(entry.get("provider_key") or ""))
+                else:
+                    provider = canonical_custom_identity(
+                        base_url=str(runtime.get("base_url") or ""),
+                        config_provider=requested,
+                    ) or provider
     return (provider.lower() if provider else None), model
 
 
