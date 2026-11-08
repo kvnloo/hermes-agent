@@ -2,6 +2,8 @@ import { EventEmitter } from 'node:events'
 
 import { createClient, type Message, Variant } from 'dbus-native'
 
+import { PRODUCT_IDENTITY } from './product-identity'
+
 const SERVICE = 'org.freedesktop.Notifications'
 const PATH = '/org/freedesktop/Notifications'
 const DBUS = 'org.freedesktop.DBus'
@@ -125,6 +127,7 @@ export function createLinuxNotifications() {
 
   function create(options: NotificationOptions) {
     const notification = new EventEmitter()
+    let activationToken: string | undefined
     let delivered: { state: Connection; owner: string; id: number } | undefined
     let finished = false
     const abort = new AbortController()
@@ -258,7 +261,7 @@ export function createLinuxNotifications() {
                 actions,
                 {
                   urgency: new Variant('y', 1),
-                  'desktop-entry': new Variant('s', 'hermes'),
+                  'desktop-entry': new Variant('s', PRODUCT_IDENTITY.appId),
                   'suppress-sound': new Variant('b', options.silent)
                 },
                 -1
@@ -284,15 +287,23 @@ export function createLinuxNotifications() {
               state.live.set(`${owner}:${id}`, {
                 owner,
                 receive: (member, value) => {
+                  if (member === 'ActivationToken') {
+                    if (typeof value === 'string' && value) {
+                      activationToken = value
+                    }
+
+                    return
+                  }
+
                   if (
                     member === 'ActionInvoked' &&
                     typeof value === 'string' &&
                     actions.some((key, index) => index % 2 === 0 && key === value)
                   ) {
                     if (value === 'default') {
-                      notification.emit('click')
+                      notification.emit('click', activationToken)
                     } else if (/^\d+$/.test(value) && Number(value) < options.actions.length) {
-                      notification.emit('action', { actionIndex: Number(value) })
+                      notification.emit('action', { actionIndex: Number(value), activationToken })
                     } else {
                       return
                     }

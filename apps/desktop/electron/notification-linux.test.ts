@@ -6,8 +6,14 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 import type { HermesNotification } from './notification-types'
 
-const host = vi.hoisted(() => ({ handle: vi.fn(), fromWebContents: vi.fn(), createClient: vi.fn() }))
+const host = vi.hoisted(() => ({
+  handle: vi.fn(),
+  fromWebContents: vi.fn(),
+  createClient: vi.fn(),
+  setActivationToken: vi.fn()
+}))
 vi.mock('electron', () => ({
+  app: { setActivationToken: host.setActivationToken },
   BrowserWindow: { fromWebContents: host.fromWebContents },
   ipcMain: { handle: host.handle },
   Notification: class extends EventEmitter {
@@ -29,6 +35,7 @@ vi.mock('dbus-native', () => ({
 }))
 
 import { registerNativeNotifications } from './notification-ipc'
+import { PRODUCT_IDENTITY } from './product-identity'
 
 function setup(alreadyRunning = false) {
   host.handle.mockClear()
@@ -212,10 +219,76 @@ beforeEach(() => {
   host.handle.mockReset()
   host.fromWebContents.mockReset()
   host.createClient.mockReset()
+  host.setActivationToken.mockReset()
 })
 afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllEnvs()
+})
+
+
+it('passes the KDE activation token for the clicked notification before focusing its window', async () => {
+  const h = setup(true)
+  expect(await h.notify({ tag: 'first', focusSessionId: 'session-a' })).toBe(true)
+  const firstId = h.lastId()
+  expect(await h.notify({ tag: 'second', focusSessionId: 'session-b' })).toBe(true)
+  const secondId = h.lastId()
+
+  const hints = h.calls.find(call => call.member === 'Notify')?.body?.[6] as Record<
+    string,
+    { signature: string; value: string }
+  >
+  expect(hints['desktop-entry']).toEqual({ signature: 's', value: PRODUCT_IDENTITY.appId })
+
+  // A different daemon's token cannot authorize this notification.
+  h.signal('ActivationToken', [firstId, 'spoofed'], ':1.666')
+  h.signal('ActivationToken', [secondId, 'second-token'])
+  h.signal('ActivationToken', [firstId, 'first-token'])
+  h.signal('ActionInvoked', [firstId, 'default'])
+  expect(host.setActivationToken).toHaveBeenCalledWith('first-token')
+  expect(host.setActivationToken.mock.invocationCallOrder[0]).toBeLessThan(h.focusWindow.mock.invocationCallOrder[0])
+  expect(h.source.webContents.send).toHaveBeenCalledWith('hermes:focus-session', 'session-a')
+
+  h.signal('ActionInvoked', [secondId, 'default'])
+  expect(host.setActivationToken.mock.calls).toEqual([['first-token'], ['second-token']])
+  expect(h.source.webContents.send).toHaveBeenCalledWith('hermes:focus-session', 'session-b')
+  h.connection.emit('close')
+})
+
+it('uses action activation tokens only when the action actually focuses the window', async () => {
+  const h = setup(true)
+  expect(
+    await h.notify({
+      kind: 'approval',
+      sessionId: 'runtime',
+      actions: [{ id: 'allow', text: 'Allow' }]
+    })
+  ).toBe(true)
+  const approvalId = h.lastId()
+  h.signal('ActivationToken', [approvalId, 'approval-token'])
+  h.signal('ActionInvoked', [approvalId, '0'])
+  expect(h.focusWindow).not.toHaveBeenCalled()
+  expect(host.setActivationToken).not.toHaveBeenCalled()
+
+  expect(
+    await h.notify({
+      tag: 'plugin',
+      kind: 'plugin',
+      notifyId: 'plugin-notify',
+      activate: '/plugin',
+      actions: [{ id: 'open', text: 'Open' }]
+    })
+  ).toBe(true)
+  const pluginId = h.lastId()
+  h.signal('ActivationToken', [pluginId, 'plugin-token'])
+  h.signal('ActionInvoked', [pluginId, '0'])
+  expect(host.setActivationToken).toHaveBeenCalledWith('plugin-token')
+  expect(host.setActivationToken.mock.invocationCallOrder[0]).toBeLessThan(h.focusWindow.mock.invocationCallOrder[0])
+  expect(h.source.webContents.send).toHaveBeenCalledWith(
+    'hermes:notification-activate',
+    expect.objectContaining({ actionId: 'open', activate: '/plugin' })
+  )
+  h.connection.emit('close')
 })
 
 it('bounds failed delivery without dropping older callbacks, and retries only on a later request', async () => {

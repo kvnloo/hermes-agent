@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, Notification } from 'electron'
+import { app, BrowserWindow, ipcMain, Notification } from 'electron'
 
 import { createEventDeduper } from './event-dedupe'
 import { resolveNotificationAction } from './notification-actions'
@@ -39,6 +39,11 @@ export function registerNativeNotifications({
   const isDuplicateNotification = createEventDeduper(dedupeIntervalMs)
   const deliveries = new Map<string, Promise<boolean>>()
   const linux = platform === 'linux' ? createLinuxNotifications() : undefined
+  const useActivationToken = (token: unknown) => {
+    if (linux && typeof token === 'string' && token) {
+      app.setActivationToken(token)
+    }
+  }
   const notifications = createNotificationRegistry({ releaseOnClose: Boolean(linux) })
 
   ipcMain.handle('hermes:notify', async (event, payload: HermesNotification) => {
@@ -70,13 +75,14 @@ export function registerNativeNotifications({
 
     const notification = linux ? linux.create(options) : new Notification(options)
 
-    notification.on('click', () => {
+    notification.on('click', (activationToken: unknown) => {
       const window = targetWindow()
 
       if (!window || window.isDestroyed()) {
         return
       }
 
+      useActivationToken(activationToken)
       focusWindow(window)
 
       const focusSessionId = payload?.focusSessionId || payload?.sessionId
@@ -115,6 +121,10 @@ export function registerNativeNotifications({
         window.webContents.send('hermes:notification-action', { sessionId: payload.sessionId, actionId: action.id })
 
         return
+      }
+
+      if (actionEvent && typeof actionEvent === 'object' && 'activationToken' in actionEvent) {
+        useActivationToken(actionEvent.activationToken)
       }
 
       focusWindow(window)
