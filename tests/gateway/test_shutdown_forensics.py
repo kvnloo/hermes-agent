@@ -219,6 +219,21 @@ class TestSystemdTimeoutStopUs:
         )
         assert sf._systemd_timeout_stop_us("totally-made-up-unit-xyz123.service") is None
 
+    @pytest.mark.parametrize("load_state", ["masked", "bad-setting", "error", None])
+    def test_non_loaded_user_default_does_not_shadow_system_unit(self, monkeypatch, load_state):
+        """Non-loaded user managers can answer rc=0 with a plausible default timeout."""
+        user_props = {"TimeoutStopUSec": "10s"}
+        if load_state is not None:
+            user_props["LoadState"] = load_state
+        monkeypatch.setattr(
+            sf.subprocess, "run",
+            self._fake_run(
+                user_props=user_props,
+                system_props={"LoadState": "loaded", "TimeoutStopUSec": "3min 30s"},
+            ),
+        )
+        assert sf._systemd_timeout_stop_us("hermes-gateway.service") == 210 * 1_000_000
+
 # ---------------------------------------------------------------------------
 # check_systemd_timing_alignment
 # ---------------------------------------------------------------------------

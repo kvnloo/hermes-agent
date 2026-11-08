@@ -234,8 +234,8 @@ def _systemd_timeout_stop_us(unit_name: str) -> Optional[int]:
     enable-linger``) — even for a unit that instance has never heard of. systemd synthesizes
     generic ``Default*`` properties (``DefaultTimeoutStopUSec``, commonly 90s) for that
     not-found unit object, so the call looks like a hit but is actually the manager's global
-    default, not this unit's real value. Only trust a result whose ``LoadState`` isn't
-    ``not-found``; otherwise fall through to the next attempt (plain/system ``systemctl``).
+    default, not this unit's real value. Trust only ``LoadState=loaded``; other states
+    (or a missing property) are undeterminable, so try the next manager.
     """
     for flag in (["--user"], []):
         try:
@@ -251,8 +251,8 @@ def _systemd_timeout_stop_us(unit_name: str) -> Optional[int]:
             continue
         # Output: two "Key=Value" lines, e.g. "LoadState=loaded" / "TimeoutStopUSec=1min 30s".
         props = dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
-        if props.get("LoadState") == "not-found":
-            continue  # synthesized manager defaults for a unit this instance doesn't actually have
+        if props.get("LoadState") != "loaded":
+            continue  # non-loaded units expose manager defaults, not their own timeout
         value = props.get("TimeoutStopUSec", "").strip()
         if value:
             timeout_us = int(value) if value.isdigit() else parse_systemd_duration_to_us(value)
