@@ -90,6 +90,7 @@ async def worker_request(connection, ref, params, *, operation):
     if 'worker:adopt' not in connection.actor.capabilities:
         raise RuntimeStoreError('permission_denied')
     await asyncio.to_thread(_verify, connection, ref, params, claim)
+    require_serving(authority)  # verification may outlive authority retirement
     if operation == 'adopt':
         return await asyncio.to_thread(adopt_worker_execution, authority.db, epoch=authority.epoch,
                                        **scope, adoption_secret=claim)
