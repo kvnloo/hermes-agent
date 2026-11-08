@@ -16,7 +16,10 @@ a single quote to the login shell.
 from __future__ import annotations
 
 import base64
+import os
 import re
+import shutil
+import subprocess
 
 import pytest
 
@@ -58,3 +61,25 @@ def test_keeps_stdin_free_when_requested() -> None:
     assert "mktemp" in with_stdin
     assert "mktemp" not in without_stdin
     assert "bash" in without_stdin
+
+
+@pytest.mark.skipif(os.name == "nt", reason="requires POSIX symlinks")
+def test_stdinless_carrier_fails_when_decoder_missing(tmp_path) -> None:
+    """A missing base64 executable must not make remote setup falsely succeed."""
+    bash = shutil.which("bash")
+    assert bash is not None
+    bin_dir = tmp_path / "remote-bin"
+    bin_dir.mkdir()
+    (bin_dir / "bash").symlink_to(bash)
+
+    # Simulate an SSH host with bash but neither base64 -d nor base64 -D.
+    result = subprocess.run(
+        [bash, "-c", _remote_script("printf must-run", keep_stdin=False)],
+        env={"PATH": str(bin_dir)},
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert result.stdout == ""

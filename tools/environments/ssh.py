@@ -59,7 +59,8 @@ def _remote_script(payload: str, login: bool = False, keep_stdin: bool = True) -
     shell = "bash -l" if login else "bash"
     if not keep_stdin:
         # Nothing to read from stdin (probes, mkdir, echo $HOME): skip the temp file.
-        return f"printf %s {b64} | {_B64_DECODE} | {shell}"
+        # Without pipefail, a missing decoder feeds empty input to bash and reports success.
+        return f"set -o pipefail; printf %s {b64} | {_B64_DECODE} | {shell}"
     return _REMOTE_SCRIPT_TMPL.format(b64=b64, shell=shell)
 
 
