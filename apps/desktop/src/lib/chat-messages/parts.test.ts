@@ -17,6 +17,13 @@ describe('renderMediaTags with interior spaces', () => {
     expect(mediaTagValues(`ready\nMEDIA:${SPACED}\nMEDIA:/tmp/a.png`)).toEqual([SPACED, '/tmp/a.png'])
   })
 
+  it('keeps a hash-bearing MEDIA path intact and renders an audio link', () => {
+    const path = '/home/hermes/Music/track #07.mp3'
+
+    expect(mediaTagValues(`MEDIA:${path}`)).toEqual([path])
+    expect(renderMediaTags(`MEDIA:${path}`)).toBe(`[Audio: track #07.mp3](#media:${encodeURIComponent(path)})`)
+  })
+
   it('settles on the complete path when the stream splits inside it', () => {
     const chunks = ['ready\nMEDIA:/tmp/AI', ' Brain/re', 'port.pdf', '\nall done']
     let parts = appendAssistantTextPart([], chunks[0])
