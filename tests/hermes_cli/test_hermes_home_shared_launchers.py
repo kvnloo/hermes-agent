@@ -143,6 +143,37 @@ def test_live_legacy_checkout_venv_launcher_is_replaced(tmp_path, monkeypatch, d
     assert stale_python.is_file(), "publication must not delete the old environment"
 
 
+
+@pytest.mark.platforms("posix")
+def test_legacy_checkout_venv_symlink_launcher_is_replaced(tmp_path, monkeypatch):
+    """A live symlinked venv Python must not masquerade as a foreign-home store."""
+    home, managed_python = _make_home(tmp_path, "default")
+    repo = _make_repo(tmp_path)
+    _isolate(tmp_path, monkeypatch, home)
+
+    shared_python = tmp_path / "system-python3"
+    shared_python.touch()
+    stale_python = repo / ".venv" / "bin" / "python3"
+    stale_python.parent.mkdir(parents=True)
+    stale_python.symlink_to(shared_python)
+    local = repo / ".hermes" / "bin"
+    local.mkdir(parents=True)
+    launcher = local / "hermes"
+    launcher.write_text(
+        f"#!/bin/sh\nexec {stale_python} -I -c 'pass' \"$@\"\n",
+        encoding="utf-8",
+    )
+    assert _launchers._launcher_python(launcher) == stale_python
+    assert stale_python.is_file() and stale_python.resolve() == shared_python
+
+    written = _launchers.ensure_install_launchers(repo, local)
+
+    assert len(written) == len(_launchers.ENTRY_POINTS)
+    assert _launchers._launcher_python(launcher) == managed_python
+    assert stale_python.is_symlink(), "publication must not alter the old venv"
+
+
+
 def _write_dead_exe(target: Path, missing_python: Path) -> None:
     """distlib-shaped launcher: loader stub, '#!<python> -I' shebang, zip."""
     import io
