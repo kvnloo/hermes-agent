@@ -49,6 +49,17 @@ def test_pre_block_texts_strips_tags_and_dedupsable():
     assert blocks[0] == blocks[1]  # copy-buffer markup duplicates the visible block
 
 
+
+def test_pre_block_texts_preserves_literal_entity_spellings():
+    """One HTML decode is needed; a second one changes the extracted code."""
+    code = "print('&lt;node&gt;')  # this is a literal HTML entity spelling"
+    html = f"<pre>{code.replace('&', '&amp;')}</pre>"
+
+    assert firecrawl_provider._pre_block_texts(html) == [code]
+    recovered = firecrawl_provider._salvage_dropped_pre_blocks(html, EMPTY_FENCE_MD)
+    assert code in recovered
+
+
 def test_salvage_appends_dropped_blocks_without_dupes():
     out = firecrawl_provider._salvage_dropped_pre_blocks(HTML, EMPTY_FENCE_MD)
     assert "Salvaged <pre> block(s)" in out

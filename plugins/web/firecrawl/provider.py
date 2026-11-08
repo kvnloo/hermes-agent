@@ -299,7 +299,6 @@ def _pre_block_texts(html: str) -> list[str]:
     code. Blocks skip<script> / <style> never appear inside <pre> legally.
     """
     from html.parser import HTMLParser
-    from html import unescape
 
     class _PreCollector(HTMLParser):
         def __init__(self):
@@ -316,7 +315,7 @@ def _pre_block_texts(html: str) -> list[str]:
         def handle_endtag(self, tag):
             if tag == "pre" and self._depth > 0:
                 self._depth -= 1
-                self.blocks.append(unescape("".join(self._buf)).strip())
+                self.blocks.append("".join(self._buf).strip())
 
         def handle_data(self, data):
             if self._depth > 0:
