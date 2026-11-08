@@ -7297,6 +7297,7 @@ def register(ctx) -> None:
         # Out-of-process cron delivery via REST, else ``deliver=discord`` jobs fail with "No live adapter".
         standalone_sender_fn=_standalone_send,
         max_message_length=2000,
+        audio_upload_max_bytes=10 * 1024 * 1024,  # TTS audio packing limit
         emoji="🎮",
         allow_update_command=True,
         platform_hint=PLATFORM_HINT,

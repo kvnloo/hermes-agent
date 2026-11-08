@@ -122,21 +122,29 @@ class AudioDeliveryProfile:
         return max(1, int(self.max_file_bytes * self.safety_ratio))
 
 
-_PLATFORM_AUDIO_DEFAULTS: dict[str, dict[str, Any]] = {
-    "discord": {"max_file_bytes": 10 * 1024 * 1024, "safety_ratio": 0.85},
-    "telegram": {"max_file_bytes": 50 * 1024 * 1024, "safety_ratio": 0.85},
-    "default": {"max_file_bytes": 10 * 1024 * 1024, "safety_ratio": 0.85}}
+# Generic upload limit for a destination that declares none; a platform plugin declares its own
+# with ``PlatformEntry.audio_upload_max_bytes`` (Discord, Telegram).
+_DEFAULT_AUDIO_DELIVERY: dict[str, Any] = {"max_file_bytes": 10 * 1024 * 1024, "safety_ratio": 0.85}
+
+
+def _registered_upload_max_bytes(platform: str) -> Optional[int]:
+    """The platform's registered ``audio_upload_max_bytes``, None when undeclared or invalid.
+    ``get`` imports at most this one platform's plugin module: no adapter, no dependency install."""
+    from gateway.platform_registry import platform_registry
+    return _positive_int(getattr(platform_registry.get(platform), "audio_upload_max_bytes", None))
 
 
 def _resolve_audio_delivery_profile(
     platform: Optional[str], tts_config: Optional[dict[str, Any]] = None) -> AudioDeliveryProfile:
-    """Resolve upload constraints, including optional ``tts.delivery_profiles`` overrides."""
+    """Upload constraints: ``tts.delivery_profiles.<platform>`` > the platform registration's
+    ``audio_upload_max_bytes`` > the generic default; an invalid value falls back to the generic one."""
     key = (platform or "default").lower().strip() or "default"
-    defaults = dict(_PLATFORM_AUDIO_DEFAULTS.get(key) or _PLATFORM_AUDIO_DEFAULTS["default"])
+    defaults = dict(_DEFAULT_AUDIO_DELIVERY)
+    defaults["max_file_bytes"] = _registered_upload_max_bytes(key) or defaults["max_file_bytes"]
     overrides = _section(_section(tts_config, "delivery_profiles"), key)
     defaults.update({k: v for k, v in overrides.items() if v is not None})
     max_file_bytes = (_positive_int(defaults.get("max_file_bytes"))
-                      or _PLATFORM_AUDIO_DEFAULTS["default"]["max_file_bytes"])
+                      or _DEFAULT_AUDIO_DELIVERY["max_file_bytes"])
     safety_ratio = defaults.get("safety_ratio", 0.85)
     if (isinstance(safety_ratio, bool) or not isinstance(safety_ratio, (int, float))
             or not 0 < safety_ratio <= 1):
