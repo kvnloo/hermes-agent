@@ -1251,6 +1251,33 @@ def _restart_one_systemd_gateway_unit(
         return
     _repair_unit_without_fatal_exit_park(svc_name, scope)
 
+    # A non-root updater may have sudo rights to restart, but not to rewrite /etc.
+    # Never restart the old Python launcher after pulling a new dependency runtime.
+    if scope == "system" and _needs_sudo(scope):
+        from hermes_cli.gateway import get_service_name, systemd_unit_is_current
+        if svc_name == get_service_name():
+            launch_home = os.environ.get("HERMES_HOME")
+            try:
+                try:
+                    current = systemd_unit_is_current(system=True)
+                except (OSError, RuntimeError, ValueError) as exc:
+                    logger.warning("Cannot verify system unit %s: %s", svc_name, exc)
+                    current = False
+            finally:
+                if launch_home is None:
+                    os.environ.pop("HERMES_HOME", None)
+                else:
+                    os.environ["HERMES_HOME"] = launch_home
+            if not current:
+                failed_or_stale_units.append(svc_name)
+                print(
+                    f"  ⚠ {svc_name}: system unit is outdated or unreadable. "
+                    "A non-root update cannot refresh it; restart skipped.\n"
+                    "    Repair: run `hermes gateway restart --system` as root from the "
+                    "updated install with the gateway's HERMES_HOME."
+                )
+                return
+
     # None ⇒ no non-interactive privilege path; avoid manage-units verbs
     # entirely or polkit prompts inside the captured subprocess.
     _manage_cmd = _resolve_manage_cmd(_manage_cmd_cache, scope, scope_cmd, svc_name)
