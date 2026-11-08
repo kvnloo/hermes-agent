@@ -81,3 +81,18 @@ def test_right_still_moves_the_cursor_inside_the_draft(cli):
         await _until(lambda: editor.buffer.cursor_position == len("okay le"))
         assert editor.text == "okay let"
     _drive(cli, script)
+
+def test_ctrl_e_does_not_expand_history_in_secret_prompt(cli):
+    """Native accept keys must not insert command history into secret input."""
+    async def script(pipe, editor):
+        cli._secret_state = {"reason": "fixture secret prompt"}
+        pipe.send_text("okay let")
+        await _until(lambda: editor.buffer.suggestion is not None)
+        assert editor.buffer.suggestion.text == "'s continue with our setup"
+
+        processed = asyncio.Event()
+        cli._app.key_processor.after_key_press += lambda _: processed.set()
+        pipe.send_text("\x05")  # Ctrl+E must not accept an old command here.
+        await asyncio.wait_for(processed.wait(), 3)
+        assert editor.text == "okay let"
+    _drive(cli, script)
