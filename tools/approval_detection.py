@@ -1632,6 +1632,13 @@ _KILL_NUMERIC_PID_RE = re.compile(
     r"(?:\s+-[^\s]+(?:\s+[^\s]+)?)?\s+\d+")
 
 
+_KILL_ZERO_SIGNAL_PROBE_RE = re.compile(
+    r"\bkill\s+-(?:0|[sn]\s+0)\s+\d+(?:\s+\d+)*"
+    r"(?=\s*(?:$|[;&|\n]|[0-9]*>))",
+    re.IGNORECASE,
+)
+
+
 def _kill_targets_own_process(command: str) -> bool:
     """kill <numeric-pid> 且任一目标 PID 是 Hermes 自身或父进程 → True。
 
@@ -1639,6 +1646,8 @@ def _kill_targets_own_process(command: str) -> bool:
     （保持上游 test_safe_kill_pid_not_flagged），自身/父进程 PID
     拦截（自终止守卫的裸 PID 缺口，#74078 Part 1）。
     """
+    # Signal 0 checks liveness; discard only that invocation, not a later real kill.
+    command = _KILL_ZERO_SIGNAL_PROBE_RE.sub("", command)
     if not _KILL_NUMERIC_PID_RE.search(command.lower()):
         return False
     own = _self_pid_set()
