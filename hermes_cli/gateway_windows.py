@@ -434,9 +434,10 @@ def _build_gateway_vbs_script(python_path: str, working_dir: str, hermes_home: s
     lines = [
         f"' {_TASK_DESCRIPTION}",
         "Option Explicit",
-        "Dim sh, env, existing_pp, exit_code",
+        "Dim sh, env, existing_pp, exit_code, fso",
         'Set sh = CreateObject("WScript.Shell")',
         'Set env = sh.Environment("PROCESS")',
+        'Set fso = CreateObject("Scripting.FileSystemObject")',
         f"env.Item({q('HERMES_HOME')}) = {q(hermes_home)}",
         *[f"env.Item({q(k)}) = {q(v)}" for k, v in _GATEWAY_ENV],
         f"env.Item({q('VIRTUAL_ENV')}) = {q(_preserve_hermes_home_path(venv_dir))}",
@@ -453,8 +454,12 @@ def _build_gateway_vbs_script(python_path: str, working_dir: str, hermes_home: s
         # an action's nonzero exit (measured on Windows 11), so this loop is what restarts an abnormal
         # exit. A clean exit is a planned stop or a handoff, and 78 a permanent refusal: neither retries.
         "Do",
-        f"  exit_code = sh.Run({q(command_line)}, 0, True)",
-        f"  If exit_code = 0 Or exit_code = {GATEWAY_FATAL_CONFIG_EXIT_CODE} Then Exit Do",
+        # WshShell.Run may return 0 for a missing executable (#91097). Do not mistake a
+        # temporarily absent interpreter during update for an intentional clean stop.
+        f"  If fso.FileExists({q(python_exe_path)}) Then",
+        f"    exit_code = sh.Run({q(command_line)}, 0, True)",
+        f"    If exit_code = 0 Or exit_code = {GATEWAY_FATAL_CONFIG_EXIT_CODE} Then Exit Do",
+        "  End If",
         f"  WScript.Sleep {_LAUNCHER_RESTART_DELAY_MS}",
         "Loop",
         "WScript.Quit 0",

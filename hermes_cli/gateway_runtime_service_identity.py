@@ -330,13 +330,17 @@ def _vbs_identity(script: str) -> tuple[str, list[str]]:
         _unverified()
     # A launcher from an earlier release (async, no restart loop) stays this vendor's own template until
     # the update regenerates it, so both grammars verify; each is matched whole.
-    waits = lines[2:3] == ["Dim sh, env, existing_pp, exit_code"]
-    fixed = ["Option Explicit", "Dim sh, env, existing_pp, exit_code" if waits else "Dim sh, env, existing_pp",
+    guarded = lines[2:3] == ["Dim sh, env, existing_pp, exit_code, fso"]
+    waits = guarded or lines[2:3] == ["Dim sh, env, existing_pp, exit_code"]
+    fixed = ["Option Explicit", "Dim sh, env, existing_pp, exit_code, fso" if guarded else
+             "Dim sh, env, existing_pp, exit_code" if waits else "Dim sh, env, existing_pp",
              'Set sh = CreateObject("WScript.Shell")', 'Set env = sh.Environment("PROCESS")']
     if lines[1:5] != fixed:
         _unverified()
+    if guarded and lines[5:6] != ['Set fso = CreateObject("Scripting.FileSystemObject")']:
+        _unverified()
     env = {}
-    index = 5
+    index = 6 if guarded else 5
     while index < len(lines):
         match = re.fullmatch(r'env.Item\("([A-Z_]+)"\) = (' + literal + ')', lines[index])
         if not match:
@@ -346,13 +350,21 @@ def _vbs_identity(script: str) -> tuple[str, list[str]]:
         env[match[1]] = match[2][1:-1].replace('""', '"')
         index += 1
     tail = lines[index:]
-    if len(tail) != (13 if waits else 8) or tail[:2] != ['existing_pp = env.Item("PYTHONPATH")', 'If Len(existing_pp) > 0 Then'] or tail[3] != 'Else' or tail[5] != 'End If':
+    if len(tail) != (15 if guarded else 13 if waits else 8) or tail[:2] != ['existing_pp = env.Item("PYTHONPATH")', 'If Len(existing_pp) > 0 Then'] or tail[3] != 'Else' or tail[5] != 'End If':
         _unverified()
     if not re.fullmatch(r'  env.Item\("PYTHONPATH"\) = ' + literal + r' & existing_pp', tail[2]) or not re.fullmatch(r'  env.Item\("PYTHONPATH"\) = ' + literal, tail[4]):
         _unverified()
     if not re.fullmatch(r'sh.CurrentDirectory = ' + literal, tail[6]):
         _unverified()
-    if waits:
+    guard = None
+    if guarded:
+        guard = re.fullmatch(r'  If fso\.FileExists\((' + literal + r')\) Then', tail[8])
+        run = re.fullmatch(r'    exit_code = sh\.Run\((' + literal + r'), 0, True\)', tail[9])
+        if (tail[7] != "Do" or not guard or tail[10] != "    If exit_code = 0 Or exit_code = 78 Then Exit Do"
+                or tail[11] != "  End If" or not re.fullmatch(r"  WScript\.Sleep \d+", tail[12])
+                or tail[13:] != ["Loop", "WScript.Quit 0"]):
+            _unverified()
+    elif waits:
         run = re.fullmatch(r'  exit_code = sh\.Run\((' + literal + r'), 0, True\)', tail[8])
         if (tail[7] != "Do" or tail[9] != "  If exit_code = 0 Or exit_code = 78 Then Exit Do"
                 or not re.fullmatch(r"  WScript\.Sleep \d+", tail[10]) or tail[11:] != ["Loop", "WScript.Quit 0"]):
@@ -366,6 +378,8 @@ def _vbs_identity(script: str) -> tuple[str, list[str]]:
         _unverified()
     # The template uses list2cmdline, with no embedded executable quote escapes.
     argv = [part.strip('"') for part in shlex.split(command, posix=False)]
+    if guarded and guard[1][1:-1].replace('""', '"') != argv[0]:
+        _unverified()
     return env.get("HERMES_HOME", ""), argv
 
 
