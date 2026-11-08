@@ -741,7 +741,7 @@ def _submit_to_ledger_owner(rid, sid, session, text, params, refusal) -> dict:
             why = "an image cannot join its queue, so it was removed from this message"
     else:
         try:
-            receipt = owner_forward.forward_prompt(sid, session, text)
+            receipt = owner_forward.forward_prompt(sid, session, text, submission_id=params.get("submission_id"))
         except owner_forward.OwnerNotRunning:
             return not_owned  # no gateway runs the ledger's work: it will not end on its own
         except owner_forward.OwnerUnconfirmed:
@@ -881,6 +881,12 @@ def _submit_to_isolated_host(
 
 @method("prompt.submit")
 def _(rid, params: dict) -> dict:
+    from tui_gateway import prompt_submission_id
+    with prompt_submission_id.serialize_submission(params.get("session_id"), params.get("submission_id")):
+        return _submit_with_id_claim(rid, params)
+
+
+def _submit_with_id_claim(rid, params: dict) -> dict:
     from hermes_cli.input_sanitize import sanitize_user_prompt_text
     sid = params.get("session_id", "")
     raw_text = params.get("text", "")
@@ -926,7 +932,8 @@ def _(rid, params: dict) -> dict:
     if (limit_message := _ensure_active_session_slot(sid, session)) is not None:
         # Refused HERE — before the busy queue, db row and agent build — so a refusal
         # leaves the session untouched.  The reason travels as machine-readable data.
-        return _slot_refusal(rid, sid, session, text, params, limit_message, internal_hosted_submit)
+        return _remembered_reply(
+            params, _slot_refusal(rid, sid, session, text, params, limit_message, internal_hosted_submit))
     # Rewritten every submit: a session alternates app window / HUD / live voice; a stale value misinforms.
     session["client_surface"] = params.get("surface") if params.get("surface") in _CLIENT_SURFACES else ""
     # Live-voice delegations carry the recent spoken transcript for the MODEL INPUT only (the persisted

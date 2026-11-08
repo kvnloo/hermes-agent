@@ -136,6 +136,40 @@ def test_desktop_prompt_during_a_gateway_turn_runs_after_it_in_the_owner_fifo(mo
         db.close()
 
 
+def test_same_legacy_submission_id_is_one_gateway_admission_after_local_receipt_loss(monkeypatch, tmp_path):
+    """A lost local acceptance must not mint a second owner FIFO row on retry."""
+    from tui_gateway import prompt_submission_id
+
+    db = SessionDB(db_path=tmp_path / "state.db")
+    sid, key, turns, _emitted = _legacy(monkeypatch, db)
+    try:
+        db.create_session(key, "test")
+        epoch = begin_runtime_epoch(db, instance_id="gateway")
+        admit_session_input(db, epoch=epoch, principal_id="bot", session_id=key,
+                            request_id="dm-1", payload={"text": "busy"})
+        claim_session_input(db, epoch=epoch, session_id=key)
+        _owner(monkeypatch, db, key, epoch)
+
+        params = {"session_id": sid, "text": "identical bytes", "submission_id": "retry-1"}
+        first = server.handle_request({"id": "first", "method": "prompt.submit", "params": params})
+        assert first["result"]["status"] == "queued", first
+
+        # Emulate losing the sidecar's receipt while its owner and the WebSocket stay healthy.
+        # Canonical admission still has to recognize the original caller's stable ID.
+        prompt_submission_id._answers.clear()
+        retried = server.handle_request({"id": "retry", "method": "prompt.submit", "params": params})
+        assert retried["result"]["admission_id"] == first["result"]["admission_id"], retried
+        rows = list_session_admissions(db, session_id=key)
+        assert len(rows) == 2, rows
+        assert rows[1]["request_id"] == "retry-1"
+        assert rows[1]["payload"]["text"] == "identical bytes"
+        assert turns == [], "the legacy sidecar must never start an agent for owner-forwarded work"
+    finally:
+        prompt_submission_id._answers.clear()
+        server._sessions.pop(sid, None)
+        db.close()
+
+
 def test_outcome_unknown_work_is_still_refused_and_never_forwarded(monkeypatch, tmp_path):
     """Only Discard resolves an ``unknown`` admission: a prompt is never queued past it."""
     db = SessionDB(db_path=tmp_path / "state.db")

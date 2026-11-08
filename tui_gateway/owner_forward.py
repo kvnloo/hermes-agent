@@ -118,11 +118,13 @@ def _payload_for(event_type: str, payload: Any) -> dict | None:
 
 
 class _Relay:
-    def __init__(self, sid: str, session: dict, key: str, home: Path, endpoint, text: str, emit):
+    def __init__(self, sid: str, session: dict, key: str, home: Path, endpoint, text: str, emit,
+                 submission_id: str | None = None):
         self.sid, self.session, self.key, self.home, self.text, self.emit = sid, session, key, home, text, emit
         self.endpoint, self.listed = endpoint, None
         self.admitted: Future = Future()
-        self.request_id = "desktop-forward-" + uuid.uuid4().hex
+        self.request_id = (submission_id if isinstance(submission_id, str) and submission_id
+                           else "desktop-forward-" + uuid.uuid4().hex)
 
     def run(self) -> None:
         try:
@@ -216,7 +218,8 @@ class _Relay:
                 self.emit("message.complete", self.sid, {"text": ""})
 
 
-def forward_prompt(sid: str, session: dict, text: str, *, emit=None, home: Path | None = None) -> dict:
+def forward_prompt(sid: str, session: dict, text: str, *, emit=None, home: Path | None = None,
+                   submission_id: str | None = None) -> dict:
     """Admit ``text`` into the owner's FIFO for this session; the owner's receipt.
 
     Raises ``OwnerNotRunning`` when no gateway serves the home, ``OwnerUnavailable`` (or the
@@ -227,7 +230,8 @@ def forward_prompt(sid: str, session: dict, text: str, *, emit=None, home: Path 
     if not key:
         raise OwnerUnavailable("the chat has no stored session yet")
     home = Path(home or session.get("profile_home") or server._hermes_home).resolve()
-    relay = _Relay(sid, session, key, home, discover_owner(home), text, emit or server._emit)
+    relay = _Relay(sid, session, key, home, discover_owner(home), text, emit or server._emit,
+                   submission_id=submission_id)
     from agent.memory_provider import spawn_context_thread
     spawn_context_thread(relay.run, name=f"owner-forward-{key[:24]}").start()
     try:

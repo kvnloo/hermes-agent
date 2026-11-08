@@ -19,6 +19,7 @@ from __future__ import annotations
 import threading
 import time
 from collections import OrderedDict
+from contextlib import contextmanager
 
 #: How long an accepted submit keeps answering retries of its own id. Mirrors
 #: ``server._IDEMPOTENCY_KEY_TTL`` (5 min): longer than any realistic reconnect, short enough that
@@ -30,12 +31,44 @@ _MAX_ENTRIES = 256
 
 _lock = threading.Lock()
 _answers: OrderedDict[tuple[str, str], tuple[dict, float]] = OrderedDict()
+_inflight: dict[tuple[str, str], list] = {}
 
 
 def _key(session_id: str, submission_id: str) -> tuple[str, str]:
     # The key is the PAIR: two sessions may legitimately carry the same client id (a client that
     # mints ids per conversation, or a copied draft), and each must run its own turn.
     return (session_id, submission_id)
+
+
+@contextmanager
+def serialize_submission(session_id: object, submission_id: object):
+    """Keep replay lookup and acceptance under one per-(session, submission) lock.
+
+    The first handler can still be admitting when a second WS request arrives.
+    Serializing just this identity makes the second request see its accepted
+    receipt, without blocking other sessions or independent user messages.
+    """
+    if not isinstance(session_id, str) or not isinstance(submission_id, str) or not submission_id.strip():
+        yield  # The handler keeps its existing invalid-parameter response.
+        return
+
+    key = _key(session_id, submission_id)
+    with _lock:
+        entry = _inflight.get(key)
+        if entry is None:
+            entry = [threading.Lock(), 0]
+            _inflight[key] = entry
+        entry[1] += 1
+        gate = entry[0]
+    gate.acquire()
+    try:
+        yield
+    finally:
+        gate.release()
+        with _lock:
+            entry[1] -= 1
+            if not entry[1]:
+                del _inflight[key]
 
 
 def replay(session_id: str, submission_id: str) -> dict | None:

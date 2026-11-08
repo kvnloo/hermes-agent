@@ -107,6 +107,54 @@ def test_resend_with_the_same_submission_id_answers_the_first_turn(monkeypatch, 
         server._sessions.pop(sid, None)
 
 
+def test_two_overlapping_submits_with_one_id_run_only_one_turn(monkeypatch, tmp_path):
+    """A healthy socket can issue a replay before the first ACK is remembered."""
+    real_thread = threading.Thread  # _env substitutes only the agent's worker thread.
+    _env(monkeypatch, tmp_path)
+    sid, agent = _new_session(monkeypatch)
+    entered_remember = threading.Event()
+    allow_remember = threading.Event()
+    original = server._remembered_reply
+
+    def hold_first_acceptance(params, reply):
+        if params.get("submission_id") == "overlap-1" and not entered_remember.is_set():
+            entered_remember.set()
+            if not allow_remember.wait(8):
+                raise AssertionError("first acceptance never released")
+        return original(params, reply)
+
+    monkeypatch.setattr(server, "_remembered_reply", hold_first_acceptance)
+    replies, errors = [], []
+
+    def send():
+        try:
+            replies.append(_submit(sid, "identical bytes", "overlap-1"))
+        except BaseException as exc:
+            errors.append(exc)
+
+    first = real_thread(target=send, daemon=True)
+    second = real_thread(target=send, daemon=True)
+    try:
+        first.start()
+        assert entered_remember.wait(8), "first submit never reached acceptance"
+        second.start()
+        # On the unfixed PR the second request races past replay() and completes
+        # here; with the gate it waits until the first receipt is remembered.
+        second.join(timeout=2)
+    finally:
+        allow_remember.set()
+        first.join(timeout=8)
+        if second.ident is not None:
+            second.join(timeout=8)
+        server._sessions.pop(sid, None)
+
+    assert not first.is_alive() and not second.is_alive(), "a submit handler stalled"
+    assert errors == [], errors
+    assert len(replies) == 2 and all("result" in reply for reply in replies), replies
+    assert sum(reply["result"].get("duplicate") is True for reply in replies) == 1
+    assert agent.turns == ["identical bytes"], "a repeated admission must never start a second turn"
+
+
 def test_a_new_submission_id_is_a_new_turn(monkeypatch, tmp_path):
     _env(monkeypatch, tmp_path)
     sid, agent = _new_session(monkeypatch)
