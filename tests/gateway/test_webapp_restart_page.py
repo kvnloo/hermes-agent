@@ -92,12 +92,13 @@ async def test_everything_else_keeps_the_json_refusal(method, path, headers):
     assert '"error":"gateway_not_ready"' in body and reached == []
 
 
-def _webapp(monkeypatch, tmp_path, *, stale):
+def _webapp(monkeypatch, tmp_path, *, stale, built=True):
     from hermes_cli import web_server as server
     from hermes_cli.web_server_dashboard import mount_spa
     from hermes_cli.webapp import STALE_MARKER
 
-    (tmp_path / "index.html").write_text("<!doctype html><html><head></head><body>app</body></html>")
+    if built:
+        (tmp_path / "index.html").write_text("<!doctype html><html><head></head><body>app</body></html>")
     if stale:
         (tmp_path / STALE_MARKER).write_text("x")
     app = FastAPI()
@@ -117,6 +118,24 @@ def test_a_page_load_of_a_bundle_the_update_could_not_rebuild_gets_the_rebuild_p
     assert "hermes webapp" in page.text and page.headers["x-hermes-restart-page"] == "not_rebuilt"
     api = client.get("/", headers={"accept": "application/json"})
     assert api.status_code == 503 and api.json() == {"error": NOT_REBUILT}
+
+
+@pytest.mark.parametrize("path", ["/", "/sessions/abc"])
+def test_missing_bundle_browser_page_and_json_client(monkeypatch, tmp_path, path):
+    client = _webapp(monkeypatch, tmp_path, stale=False, built=False)
+    page = client.get(path, headers=PAGE_LOAD)
+    assert page.status_code == 503 and page.headers["content-type"].startswith("text/html")
+    assert "Hermes web app is not built" in page.text and "hermes webapp" in page.text
+    assert page.headers["x-hermes-restart-page"] == "not_built"
+    assert "no-store" in page.headers["cache-control"]
+
+    api = client.get(path, headers={"accept": "application/json"})
+    assert api.status_code == 404 and api.json() == {"error": "The Webapp is not built. Run: hermes webapp"}
+
+    # A fresh build becomes available on the same listener without a restart.
+    (tmp_path / "index.html").write_text("<!doctype html><html><head></head><body>app</body></html>")
+    ready = client.get(path, headers=PAGE_LOAD)
+    assert ready.status_code == 200 and "<body>app</body>" in ready.text
 
 
 def test_a_current_bundle_is_served_as_before(monkeypatch, tmp_path):

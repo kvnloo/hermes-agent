@@ -176,6 +176,10 @@ def mount_spa(application: FastAPI):
             webapp = getattr(application.state, "ui_surface", "dashboard") == "webapp"
             missing = ("The Webapp is not built. Run: hermes webapp" if webapp
                        else "Frontend not built. Run: cd web && npm run build")
+            if webapp:
+                from gateway.webapp_restart_page import document_refusal
+                return (document_refusal(request.scope, "not_built")
+                        or JSONResponse({"error": missing}, status_code=404))
             return JSONResponse({"error": missing}, status_code=404)
         if getattr(application.state, "ui_surface", "dashboard") == "webapp":
             # A bundle `hermes update` could not rebuild was built for the code before the update:

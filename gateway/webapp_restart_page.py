@@ -1,9 +1,7 @@
 """The page a browser gets for a Webapp document request the gateway cannot serve yet.
 
-Two refusals answer 503: ``gateway/run_api.py`` while the gateway drains for a restart or
-``hermes update``, and ``_serve_index`` while the Webapp bundle is stale after a failed rebuild. API
-callers get the JSON body; a browser's page load gets a page that says what is happening and reloads
-once the app answers again.
+A browser gets a page when the gateway is restarting or the Webapp bundle is missing or
+stale. API callers retain their JSON errors. The page reloads when the app answers again.
 """
 from __future__ import annotations
 
@@ -23,6 +21,9 @@ _COPY = {
     "not_rebuilt": ("Hermes was updated, but its web app was not rebuilt",
                     "Run <code>hermes webapp</code> on the machine running Hermes. This page reloads by "
                     "itself once the web app is rebuilt."),
+    "not_built": ("Hermes web app is not built",
+                  "Run <code>hermes webapp</code> on the machine running Hermes to build it. "
+                  "This page reloads by itself once the bundle is available."),
 }
 _KIND_HEADER = "X-Hermes-Restart-Page"
 _NO_STORE = "no-store, no-cache, must-revalidate"  # the Cache-Control value web_server_dashboard sends
