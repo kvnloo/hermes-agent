@@ -9,6 +9,9 @@ category: memory
 requires_hermes: ">=0.23.0"
 version: "1.6.0"
 platforms: [linux]
+attested_binaries:
+  - bin/physis-core
+  - bin/replant
 readme: true
 image: https://raw.githubusercontent.com/ilPez00/hermes-physis/07f1fce97edc35ba7342e5d7f06c069ac00e1652/assets/banner.png
 capabilities:
