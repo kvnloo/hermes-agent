@@ -891,3 +891,25 @@ def test_rich_message_filter_leaves_media_messages_to_the_media_handler():
     assert rich_filter.filter(SimpleNamespace(text=None, effective_attachment=None, api_kwargs=rich)) is True
     assert rich_filter.filter(SimpleNamespace(text=None, photo=photo, effective_attachment=photo,
                                               api_kwargs=rich)) is False
+
+def test_rich_only_inbound_links_keep_hidden_targets():
+    """A link label in a rich-only message must not hide the destination from the agent."""
+    from types import MappingProxyType
+
+    from plugins.platforms.telegram.telegram_entities import expand_link_entities, rich_message_text
+
+    message = SimpleNamespace(
+        text=None, caption=None,
+        api_kwargs=MappingProxyType({"rich_message": MappingProxyType({"blocks": [
+            {"type": "paragraph", "text": [
+                "See ", {"type": "link", "text": "release notes", "url": "https://example.org/releases"},
+                " and ", {"type": "text_link", "text": "API", "url": "https://example.org/api"},
+                " (", {"type": "link", "text": "https://example.org/changelog",
+                       "url": "https://example.org/changelog"}, ")",
+            ]},
+        ]})}),
+    )
+    expected = ("See release notes (https://example.org/releases) and "
+                "API (https://example.org/api) (https://example.org/changelog)")
+    assert rich_message_text(message) == expected
+    assert expand_link_entities(message) == expected

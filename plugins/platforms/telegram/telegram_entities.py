@@ -32,7 +32,16 @@ def _rich_inline(value: Any, depth: int = 0, skip_code: bool = False) -> str:
             return " "
         for key in ("text", "children"):
             if value.get(key) is not None:
-                return _rich_inline(value[key], depth + 1, skip_code)
+                text = _rich_inline(value[key], depth + 1, skip_code)
+                if not skip_code and value.get("type") in ("link", "text_link"):
+                    url = value.get("url")
+                    if isinstance(url, str):
+                        url = url.strip()
+                        if url and not text:
+                            return url
+                        if url and text.strip() != url and not text.endswith(f" ({url})"):
+                            return f"{text} ({url})"
+                return text
         return str(value.get("url") or "")
     return ""
 
