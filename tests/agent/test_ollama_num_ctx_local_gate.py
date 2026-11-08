@@ -55,6 +55,17 @@ class TestOllamaNumCtxLocalGate:
         _configure_ollama_num_ctx(agent, {"ollama_num_ctx": 65536}, None)
         assert agent._ollama_num_ctx == 65536
 
+    def test_remote_ollama_provider_keeps_configured_window(self):
+        """An explicit Ollama route remains valid behind public DNS."""
+        agent = _make_agent("https://ollama.example.net/v1")
+        agent.provider = "ollama"
+        agent.model = "gemma3:27b"
+        _configure_ollama_num_ctx(agent, {"ollama_num_ctx": 65536}, None)
+        assert agent._ollama_num_ctx == 65536
+        _clamp_compressor_to_ollama_num_ctx(agent)
+        agent.context_compressor.update_model.assert_called_once()
+        assert agent.context_compressor.update_model.call_args.kwargs["context_length"] == 65536
+
     def test_hosted_compressor_window_not_clamped(self):
         agent = _make_agent("https://api.x.ai/v1/")
         _configure_ollama_num_ctx(agent, {"ollama_num_ctx": 65536}, None)
