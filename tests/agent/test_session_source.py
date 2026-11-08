@@ -1,7 +1,9 @@
+from types import SimpleNamespace
+
 import pytest
 
 from gateway.session_context import _UNSET, _VAR_MAP, clear_session_vars, set_session_vars
-from agent.session_source import session_source_for
+from agent.session_source import is_attended, session_source_for
 
 
 @pytest.fixture(autouse=True)
@@ -66,3 +68,16 @@ def test_oneshot_keeps_explicit_source_flag(monkeypatch, explicit):
     monkeypatch.setenv("HERMES_SINGLE_QUERY_SESSION", "1")
 
     assert session_source_for("cli") == explicit
+
+
+def test_desktop_gui_turn_is_attended_but_oneshot_child_is_not(monkeypatch):
+    """The Desktop GUI is watched; a -q child inheriting its label is not."""
+    monkeypatch.setenv("HERMES_SESSION_SOURCE", "gui")
+    monkeypatch.delenv("HERMES_SINGLE_QUERY_SESSION", raising=False)
+    monkeypatch.delenv("HERMES_SESSION_SOURCE_EXPLICIT", raising=False)
+
+    assert is_attended(SimpleNamespace(platform="gui"))
+
+    monkeypatch.setenv("HERMES_SINGLE_QUERY_SESSION", "1")
+    assert session_source_for("cli") == "oneshot"
+    assert not is_attended(SimpleNamespace(platform="cli"))
