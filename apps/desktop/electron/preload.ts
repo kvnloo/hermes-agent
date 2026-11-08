@@ -128,7 +128,7 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
   // swaps views and flips posture over set-mode.
   pluginOverlay: {
     open: request => ipcRenderer.invoke('hermes:plugin-overlay:open', request),
-    close: () => ipcRenderer.invoke('hermes:plugin-overlay:close'),
+    close: pluginId => ipcRenderer.invoke('hermes:plugin-overlay:close', pluginId),
     // Overlay → main: TRANSIENT live drag/resize bounds — main snaps the
     // window, never persists. reportBounds is the durable writer.
     setBounds: bounds => ipcRenderer.send('hermes:plugin-overlay:set-bounds', { bounds }),

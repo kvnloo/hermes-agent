@@ -147,7 +147,7 @@ declare global {
           bounds?: PluginOverlayBounds
           screen?: boolean
         }) => Promise<{ ok: boolean }>
-        close: () => Promise<{ ok: boolean }>
+        close: (pluginId?: string) => Promise<{ ok: boolean }>
         /** TRANSIENT live drag/resize — main snaps, never persists. */
         setBounds: (bounds: PluginOverlayBounds) => void
         /** DURABLE bounds at drag/resize end — main snaps + persists. */

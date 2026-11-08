@@ -153,10 +153,15 @@ export function registerPluginOverlayIpc({
     }
   })
 
-  ipcMain.handle('hermes:plugin-overlay:close', async event => {
-    // Main renderer (ctx.os.closeOverlay) OR the overlay itself (pop-in
-    // button) may close. Any other sender is refused.
-    if (!mainOwns(event) && !overlayOwns(event)) {
+  ipcMain.handle('hermes:plugin-overlay:close', async (event, pluginId?: string) => {
+    // The main renderer hosts multiple plugins. A scoped SDK call may only
+    // close the current caller's overlay, not one another plugin opened.
+    if (mainOwns(event)) {
+      if (!pluginId || pluginId !== getOverlayPluginId()) {
+        return { ok: false }
+      }
+    } else if (!overlayOwns(event)) {
+      // The overlay window's own pop-in control needs no plugin id.
       return { ok: false }
     }
 

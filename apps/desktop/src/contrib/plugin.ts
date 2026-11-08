@@ -224,7 +224,7 @@ function createPluginOs(pluginId: string): PluginOs {
       }),
     closeOverlay: () =>
       attempt(async bridge => {
-        const res = await bridge.pluginOverlay?.close()
+        const res = await bridge.pluginOverlay?.close(pluginId)
 
         return res?.ok === true
       })
