@@ -73,6 +73,29 @@ def _retention_seconds(data_root: Path) -> float | None:
     return days * 86400 if isinstance(days, (int, float)) and days > 0 else None
 
 
+def _has_exposed_hermes_symlink(state: Path) -> bool:
+    """A PATH-visible Hermes launcher must not become dangling when GC runs.
+
+    Inspect only launcher symlinks, not arbitrary PATH files or process command lines.
+    A caller can run GC from a different checkout while this launcher still boots
+    from the recorded-root-stale state.
+    """
+    try:
+        target = state.resolve()
+    except (OSError, RuntimeError):
+        return True  # Unresolved state identity is not evidence that deletion is safe.
+    names = ("hermes", "hermes.exe", "hermes.cmd") if os.name == "nt" else ("hermes",)
+    for directory in os.get_exec_path():
+        for name in names:
+            launcher = Path(directory) / name
+            try:
+                if launcher.is_symlink() and launcher.resolve().is_relative_to(target):
+                    return True
+            except (OSError, RuntimeError):
+                continue
+    return False
+
+
 def _is_orphan(state: Path, data_root: Path, retention: float | None) -> bool:
     record = state / "inputs" / ".project-root"
     if not state.is_dir() or not record.is_file():
@@ -82,6 +105,8 @@ def _is_orphan(state: Path, data_root: Path, retention: float | None) -> bool:
     except OSError:
         return False
     if not root or Path(root).exists():
+        return False
+    if _has_exposed_hermes_symlink(state):
         return False
     return _provably_deleted(Path(root), data_root) or (
         retention is not None and time.time() - _last_used(state) > retention)
