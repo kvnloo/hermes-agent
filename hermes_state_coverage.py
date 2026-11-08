@@ -23,13 +23,14 @@ class SessionCoverageMixin:
         """Resolve byte-identical carried-forward live dicts to their ACTIVE durable originals.
 
         _row_id is authoritative when the message carries it and the stored identity still matches.
-        Resume surfaces that intentionally omit row ids fall back to a UNIQUE
-        (role/content/tool identity, timestamp) match. Ambiguous or timestamp-less fallbacks are left
-        as compacted history rather than risking a false rewind classification.
+        An id-less carried row resolves by its unique durable message_uid and stored
+        role/content/tool identity. Legacy rows without a uid fall back to a UNIQUE
+        (role/content/tool identity, timestamp) match. Ambiguous matches remain
+        compacted history rather than rewinding an unrelated occurrence.
         """
         if not carried_messages:
             return []
-        carried: list[tuple[tuple[Any, ...], Any, Any]] = []
+        carried: list[tuple[tuple[Any, ...], Any, Any, Optional[str]]] = []
         for message in carried_messages:
             if not isinstance(message, dict):
                 continue
@@ -39,14 +40,17 @@ class SessionCoverageMixin:
             row_id = message.get("_row_id")
             if not (isinstance(row_id, int) and not isinstance(row_id, bool) and row_id > 0):
                 row_id = None
-            carried.append((identity, row_id, message.get("timestamp")))
+            uid = message.get("message_uid")
+            carried.append((identity, row_id, message.get("timestamp"),
+                            uid if isinstance(uid, str) and uid else None))
 
         def _index(ids: Optional[list[int]]):
             by_id: dict[int, tuple[Any, ...]] = {}
             by_key: dict[tuple[Any, ...], list[int]] = {}
+            by_uid: dict[str, list[int]] = {}
             narrow = f" AND id IN ({_placeholders(ids)})" if ids else ""
             for row in conn.execute(
-                "SELECT id, role, content, tool_call_id, tool_calls, timestamp FROM messages "
+                "SELECT id, role, content, tool_call_id, tool_calls, timestamp, message_uid FROM messages "
                 f"WHERE session_id = ? AND active = 1{narrow} ORDER BY id",
                 (session_id, *(ids or ())),
             ).fetchall():
@@ -54,22 +58,29 @@ class SessionCoverageMixin:
                 by_id[rid] = self._row_identity(
                     row["role"], self._decode_content(row["content"]), row["tool_call_id"],
                     _parse_tool_calls(row["tool_calls"]))
+                if row["message_uid"]:
+                    by_uid.setdefault(row["message_uid"], []).append(rid)
                 ts = coerce_epoch(row["timestamp"], field="message timestamp")
                 if ts is not None:
                     by_key.setdefault((*by_id[rid], ts), []).append(rid)
-            return by_id, by_key
+            return by_id, by_key, by_uid
 
         # The common micro pass carries dicts that all hold a matching _row_id, so the identity
         # check only needs those rows; a full active-row scan is reserved for the fallbacks.
-        row_ids = [row_id for _, row_id, _ in carried if row_id is not None]
-        by_id, by_key = _index(row_ids if len(row_ids) == len(carried) else None)
-        if len(row_ids) == len(carried) and any(by_id.get(rid) != ident for ident, rid, _ in carried):
-            by_id, by_key = _index(None)
+        row_ids = [row_id for _, row_id, _, _ in carried if row_id is not None]
+        by_id, by_key, by_uid = _index(row_ids if len(row_ids) == len(carried) else None)
+        if len(row_ids) == len(carried) and any(by_id.get(rid) != ident for ident, rid, _, _ in carried):
+            by_id, by_key, by_uid = _index(None)
 
         resolved: list[int] = []
-        for identity, row_id, raw_timestamp in carried:
+        for identity, row_id, raw_timestamp, uid in carried:
             if row_id is not None and by_id.get(row_id) == identity:
                 resolved.append(row_id)
+                continue
+            if uid is not None:
+                matches = by_uid.get(uid, [])
+                if len(matches) == 1 and by_id[matches[0]] == identity:
+                    resolved.append(matches[0])
                 continue
             timestamp = coerce_epoch(raw_timestamp, field="message timestamp")
             if timestamp is None:
