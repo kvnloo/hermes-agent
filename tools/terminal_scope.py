@@ -102,14 +102,21 @@ def _apply_terminal_mapping(scope: dict[str, str], mapping: dict[str, Any]) -> N
 
 
 def default_terminal_scope() -> dict[str, str]:
-    """Code-default ``TERMINAL_*`` policy: what a profile-bypassing session freezes instead of
-    reading ``.env``/``config.yaml``. Total like the profile projection, minus the profile."""
+    """Code defaults plus managed terminal pins for sessions bypassing the user profile.
+
+    Skip user .env/config.yaml; administrator-managed terminal settings still apply.
+    """
+    from hermes_cli import managed_scope
     from hermes_cli.config_defaults import DEFAULT_CONFIG
 
     scope: dict[str, str] = {}
     _apply_terminal_mapping(scope, {**_TOOL_LEVEL_DEFAULTS, **(DEFAULT_CONFIG.get("terminal") or {})})
+    managed_terminal = managed_scope.apply_managed_overlay({}).get("terminal")
+    if isinstance(managed_terminal, dict):
+        _apply_terminal_mapping(scope, managed_terminal)
+        if managed_terminal.get("docker_image") is not None:
+            scope["TERMINAL_DOCKER_IMAGE_PINNED"] = "1"
     return scope
-
 
 def build_profile_terminal_scope(
     hermes_home: Any, *, env_overlay: Optional[dict[str, str]] = None) -> dict[str, str]:

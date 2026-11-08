@@ -121,3 +121,34 @@ def test_unreadable_env_fails_closed_without_a_pinned_backend(tmp_path, managed,
 
     with pytest.raises(TerminalPolicyUnavailable):
         build_profile_terminal_scope(home)
+
+@pytest.mark.parametrize("bypass_flag", ("safe_mode", "ignore_user_config"))
+def test_bypass_session_freezes_managed_terminal_scope(tmp_path, managed, monkeypatch, bypass_flag):
+    """#150981: bypass user config, not the administrator's terminal backend."""
+    from gateway.session_policy import build_policy
+
+    _write_managed(
+        managed,
+        "terminal:\n  backend: docker\n  timeout: 65\n  docker_image: admin/image:1\n",
+    )
+    monkeypatch.setenv("TERMINAL_ENV", "ssh")
+    policy = build_policy(
+        {"source": "oneshot", "cwd": str(tmp_path), bypass_flag: True},
+        {"terminal": {"backend": "local", "timeout": 999}},
+        profile_terminal=False,
+    )
+    terminal = json.loads(policy.terminal_json)
+    assert terminal["TERMINAL_ENV"] == "docker"
+    assert terminal["TERMINAL_TIMEOUT"] == "65"
+    assert terminal["TERMINAL_DOCKER_IMAGE"] == "admin/image:1"
+    assert terminal["TERMINAL_DOCKER_IMAGE_PINNED"] == "1"
+    assert os.environ["TERMINAL_ENV"] == "ssh"
+
+
+@pytest.mark.parametrize("managed_yaml", ("terminal:\n  backend:\n", "terminal: [malformed\n"))
+def test_bypass_scope_falls_back_when_managed_backend_is_not_valid(managed, managed_yaml):
+    """Null or malformed managed YAML does not invent a backend."""
+    from tools.terminal_scope import default_terminal_scope
+
+    _write_managed(managed, managed_yaml)
+    assert default_terminal_scope()["TERMINAL_ENV"] == "local"
