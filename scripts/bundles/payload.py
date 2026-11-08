@@ -48,6 +48,24 @@ def snapshot(repo: Path, ref: str, destination: Path, exclude: tuple[str, ...] =
             source.extractall(destination, filter="data")
 
 
+def snapshot_native_payload(repo: Path, ref: str, destination: Path) -> None:
+    """Stage the sealed source and its WhatsApp runtime bridge from one revision.
+
+    Build-only scripts stay excluded; the bridge is needed by the bundled
+    WhatsApp setup wizard and adapter, including in read-only MSIX payloads.
+    """
+    snapshot(repo, ref, destination, exclude=INERT_SNAPSHOT_DIRS)
+    with tempfile.TemporaryDirectory(prefix="hermes-bridge-") as temp:
+        archive = Path(temp) / "bridge.tar"
+        subprocess.run(
+            ["git", "archive", "--format=tar", "--output", str(archive), ref,
+             "--", "scripts/whatsapp-bridge"],
+            cwd=repo.resolve(), check=True,
+        )
+        with tarfile.open(archive) as source:
+            source.extractall(destination.resolve(), filter="data")
+
+
 def _payload_file(root: Path, relative: str) -> Path:
     path = root / relative
     if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):

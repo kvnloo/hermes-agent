@@ -68,3 +68,34 @@ def test_both_launchers_keep_active_home_and_call_declared_function(tmp_path, ta
                             env={**os.environ, "HERMES_HOME": str(tmp_path / "custom/profiles/memory")}, capture_output=True, text=True, check=False)
     assert result.returncode == 7, result.stderr
     assert json.loads(result.stdout) == [str(tmp_path / "custom/profiles/memory"), ["two words", "$(nope)", ""]]
+
+
+def test_native_payload_carries_whatsapp_bridge_at_committed_revision(tmp_path):
+    """Regression for #150811: MSIX payloads must include the runtime bridge."""
+    from scripts.bundles.payload import snapshot_native_payload
+
+    checkout = tmp_path / "checkout"
+    fixtures = {
+        "scripts/whatsapp-bridge/bridge.js": "committed bridge\\n",
+        "scripts/build/node-deps.mjs": "build-only\\n",
+        "plugins/config_backends/remote/vendor/conformance/config-resolution/case.json": "{}\\n",
+    }
+    for relative, content in fixtures.items():
+        path = checkout / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    subprocess.run(["git", "-C", str(checkout), "init", "-q"], check=True)
+    subprocess.run(["git", "-C", str(checkout), "add", "."], check=True)
+    subprocess.run(
+        ["git", "-C", str(checkout), "-c", "user.name=Hermes tests",
+         "-c", "user.email=hermes-tests@example.invalid", "commit", "-qm", "seed"],
+        check=True,
+    )
+    (checkout / "scripts/whatsapp-bridge/bridge.js").write_text("dirty checkout", encoding="utf-8")
+
+    payload = tmp_path / "payload" / "hermes-agent"
+    snapshot_native_payload(checkout, "HEAD", payload)
+
+    assert (payload / "scripts/whatsapp-bridge/bridge.js").read_text() == "committed bridge\\n"
+    assert (payload / "plugins/config_backends/remote/vendor/conformance/config-resolution/case.json").read_text() == "{}\\n"
+    assert not (payload / "scripts/build/node-deps.mjs").exists()

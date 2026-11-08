@@ -184,12 +184,12 @@ def _prepare_native(*, out: Path, ref: str, source: Path, cache: Path,
     store_dir = out / "tools"
     store_dir.mkdir(parents=True, exist_ok=True)
     repo_dir = out / "hermes-agent"
-    from scripts.bundles.payload import INERT_SNAPSHOT_DIRS, snapshot
+    from scripts.bundles.payload import snapshot_native_payload
     revision = subprocess.check_output(
         ["git", "rev-parse", "--verify", f"{ref}^{{commit}}"], cwd=source,
         text=True, encoding="utf-8").strip()
     with _phase(f"staging repo snapshot ({ref})"):
-        snapshot(source, revision, repo_dir, exclude=INERT_SNAPSHOT_DIRS)
+        snapshot_native_payload(source, revision, repo_dir)
     # PM's provider code reads its adjacent lock. Never combine that tool graph
     # with a revision selecting different pins.
     if (repo_dir / "pm/lock.json").read_bytes() != paths.lockfile_path().read_bytes():
