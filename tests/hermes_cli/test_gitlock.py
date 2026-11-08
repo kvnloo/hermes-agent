@@ -59,7 +59,6 @@ def test_windows_git_guard_uses_psutil_without_tasklist(
     assert spawned == []
 
 
-
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
     """A real, tiny git repo with two commits (no network)."""
