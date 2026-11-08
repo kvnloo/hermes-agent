@@ -91,6 +91,16 @@ class TestDatabaseClientCredentials:
     def test_quote_inside_unquoted_password_masked(self, text, expected):
         assert redact_sensitive_text(text, force=True) == expected
 
+    @pytest.mark.parametrize("text, expected", [
+        ("Server=db;User Id=sa;Password=don't leak me;Database=x",
+         "Server=db;User Id=sa;Password=***;Database=x"),
+        ("host=db user=app password=ab',secret dbname=x",
+         "host=db user=app password=*** dbname=x"),
+    ])
+    def test_quote_followed_by_delimiter_character_is_fully_masked(self, text, expected):
+        # A quote inside an unquoted password is not its surrounding string's closer.
+        assert redact_sensitive_text(text, force=True) == expected
+
     def test_braced_odbc_password_masked_in_a_file_read(self):
         # ``cat`` output is read as code, where ``{pw}`` is a template; an ODBC brace is a literal.
         out = redact_terminal_output("Server=db;UID=app;PWD={Zq7x;LmP2};Database=core",

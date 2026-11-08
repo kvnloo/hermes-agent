@@ -56,7 +56,7 @@ def _closes_wrapper(line: str, j: int) -> bool:
     return j + 1 >= len(line) or line[j + 1] in _WRAPPER_CLOSE_FOLLOWERS
 
 
-def _kv_value_end(line: str, i: int, semicolon: bool) -> int:
+def _kv_value_end(line: str, i: int, semicolon: bool, wrapper_quote: str = "") -> int:
     """End index of the value starting at ``line[i]``; the scan never backtracks."""
     n = len(line)
     if i >= n:
@@ -84,7 +84,7 @@ def _kv_value_end(line: str, i: int, semicolon: bool) -> int:
                 j += 1
             return n
         j = i
-        while j < n and line[j] not in ";\r\n" and not (line[j] in "\"'" and _closes_wrapper(line, j)):
+        while j < n and line[j] not in ";\r\n" and not (line[j] == wrapper_quote and _closes_wrapper(line, j)):
             j += 1
         while j > i and line[j - 1] in " \t":  # trailing padding stays visible
             j -= 1
@@ -106,22 +106,26 @@ def _kv_value_end(line: str, i: int, semicolon: bool) -> int:
             j += 2
             continue
         # A closing quote is the shell quoting that wraps the conninfo.
-        if line[j] in " \t\r\n" or (line[j] in "\"'" and _closes_wrapper(line, j)):
+        if line[j] in " \t\r\n" or (line[j] == wrapper_quote and _closes_wrapper(line, j)):
             break
         j += 1
     return min(j, n)
 
 
 def _redact_kv_connection_line(line: str, code_file: bool) -> str:
-    if not _KV_CONNSTR_GATE_RE.search(line) or not _KV_CONNSTR_COMPANION_RE.search(line):
+    companion = _KV_CONNSTR_COMPANION_RE.search(line)
+    if not _KV_CONNSTR_GATE_RE.search(line) or companion is None:
         return line
+    # Only the quote enclosing the entire conninfo can terminate an unquoted value.
+    prefix = line[:companion.start()].rstrip()
+    wrapper_quote = prefix[-1] if prefix and prefix[-1] in "\"'" else ""
     semicolon = _KV_SEMICOLON_FIELD_RE.search(line) is not None
     out, pos = [], 0
     for m in _KV_CONNSTR_PW_RE.finditer(line):
         if m.start() < pos:  # inside a value already masked
             continue
         vstart = m.end()
-        vend = _kv_value_end(line, vstart, semicolon)
+        vend = _kv_value_end(line, vstart, semicolon, wrapper_quote)
         value = line[vstart:vend]
         # ``the pwd= flag``: space after ``=`` but not before it is prose, not an empty value followed
         # by the next word. Padding on both sides (``password = x``) is still a conninfo field.
