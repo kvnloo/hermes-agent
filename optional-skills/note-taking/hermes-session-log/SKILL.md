@@ -53,7 +53,7 @@ as a legacy backfill for sessions absent from the database.
    vault = `$OBSIDIAN_VAULT_PATH` or `~/Documents/Obsidian Vault`;
    `state.db` auto-detected from `$HERMES_HOME`, `~/.hermes` or
    `%LOCALAPPDATA%\hermes` (Windows).
-3. Manual export: `python <skill>/scripts/export_hermes_sessions.py`
+3. Manual export: `python <skill>/scripts/archive_hermes_sessions.py`
    (`--full` re-exports everything). The script is idempotent: only changed
    sessions are rewritten, and a no-op run prints nothing (cron watchdog).
 

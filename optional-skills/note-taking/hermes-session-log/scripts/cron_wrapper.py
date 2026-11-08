@@ -39,7 +39,7 @@ def _candidate_skill_dirs():
 def main() -> None:
     script = None
     for d in _candidate_skill_dirs():
-        cand = d / "scripts" / "export_hermes_sessions.py"
+        cand = d / "scripts" / "archive_hermes_sessions.py"
         if cand.is_file():
             script = cand
             break

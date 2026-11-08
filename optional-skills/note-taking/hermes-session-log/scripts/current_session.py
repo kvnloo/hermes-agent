@@ -85,7 +85,7 @@ def main() -> None:
         print(f"\n== {r['id'][:24]}… ({r['source']}, {live}, {r['message_count']} msgs, cwd {r['cwd']})")
         print(f"   title: {r['title']}")
         print(f"   first user message: {first_user}")
-        print(f"   note: {note if note else '(not exported yet — run export_hermes_sessions.py)'}")
+        print(f"   note: {note if note else '(not exported yet — run archive_hermes_sessions.py)'}")
         if note:
             print(f"   raw:  {Path(str(note)).with_suffix('.jsonl')}")
     print("\nYours is the session whose first user message belongs to this conversation.")
