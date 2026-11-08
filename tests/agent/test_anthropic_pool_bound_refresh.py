@@ -220,3 +220,26 @@ def test_non_native_routes_are_unchanged(pool, provider, base):
     assert agent._try_refresh_anthropic_client_credentials() is False
     assert agent.api_key == agent._anthropic_api_key == BOUND
     agent._anthropic_client.close()
+
+def test_429_rotation_stays_on_the_wire_when_env_prefers_exhausted_account(
+    pool, wire, no_refresh_post, monkeypatch,
+):
+    """An env token must not undo an actual pool rotation before native dispatch."""
+    first = pool.select()
+    assert first.id == "first"
+    agent = _agent(pool, "first")
+    rotated = pool.mark_exhausted_and_rotate(
+        status_code=429, credential_id=first.id, api_key_hint=first.runtime_api_key,
+        error_context={"reason": "usage_limit_reached"}, model=agent.model,
+    )
+    assert rotated is not None and rotated.id == "second"
+    assert agent._swap_credential(rotated) is True
+
+    # The global resolver still ranks the spent account first on every request.
+    monkeypatch.setenv("ANTHROPIC_TOKEN", OTHER)
+    _send(agent)
+
+    assert wire[0].headers["Authorization"] == f"Bearer {BOUND}"
+    assert agent.api_key == agent._anthropic_api_key == BOUND
+    assert agent._credential_pool_entry_id == pool.current().id == "second"
+    no_refresh_post.assert_not_called()
