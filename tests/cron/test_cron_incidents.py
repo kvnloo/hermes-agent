@@ -381,6 +381,22 @@ def test_timestamp_mask_covers_iso_forms_without_merging_distinct_failures(monke
     assert mount_id != sum_id, "different failures on the same clock value stay distinct"
 
 
+def test_python_logging_asctime_milliseconds_keep_ack_stable(monkeypatch, tmp_path):
+    """Python logging's default comma-millisecond clock must not defeat an incident ack."""
+    inc = _point_db(monkeypatch, tmp_path)
+    first_error = "script exited with code 1 stdout: 2026-09-07 02:00:03,005 ERROR: drive not mounted"
+    next_error = "script exited with code 1 stdout: 2026-09-14 02:00:03,987 ERROR: drive not mounted"
+
+    first_id, is_new = inc.upsert_incident("backup-job", first_error)
+    assert is_new
+    assert inc.ack_incident(first_id)
+
+    next_id, is_new = inc.upsert_incident("backup-job", next_error)
+    assert (next_id, is_new) == (first_id, False)
+    assert inc.get_incident(first_id)["state"] == "closed"
+    assert inc.get_incident(first_id)["error"] == next_error
+
+
 def test_mark_incident_alerted_sets_state_never_resurrects(monkeypatch, tmp_path):
     """The post-delivery 'alerted' transition records that a ping went out,
     and is a no-op on a closed (acked) incident — it can never resurrect one."""

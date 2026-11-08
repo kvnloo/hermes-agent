@@ -50,7 +50,7 @@ _DURATION_RE = re.compile(
 # ("[2026-09-07 02:00:03] error: ..."), so a full date+time is masked the same way. A BARE date is
 # deliberately kept: it can name which backup set, certificate or billing period failed.
 _TIMESTAMP_RE = re.compile(
-    r"\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?(?![0-9A-Za-z])",
+    r"\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:[.,]\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?(?![0-9A-Za-z])",
     re.IGNORECASE,
 )
 
