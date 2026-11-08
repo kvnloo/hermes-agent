@@ -91,6 +91,12 @@ class HomeIOGuard:
             # and replacement destinations under the home guarded.
             if not destructive and any(absolute == os.path.join(root, "manifest.json") for root in roots):
                 return
+            # store_root() probes the parent install stamp during default-layout discovery.
+            # Its existence is metadata; never exempt reading or mutating home state.
+            if metadata and not destructive and any(
+                absolute == os.path.join(root, "install-stamp.json") for root in roots
+            ):
+                return
             # ``shutil.which`` stats/accesses ``<PATH entry>/<name>``. A developer shell puts
             # PM's tool store (~/.hermes/tools/...) on PATH; probing an executable there is
             # command lookup, not reading Hermes state. CI has no such entries.
