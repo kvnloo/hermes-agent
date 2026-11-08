@@ -43,9 +43,11 @@ def _release_date() -> str:
         pass
     try:
         import json
+        from os import environ
         from pathlib import Path
 
-        stamp = json.loads((Path(__file__).resolve().parents[1] / "install-stamp.json").read_text(encoding="utf-8-sig"))
+        install_root = Path(environ.get("HERMES_INSTALL_ROOT") or Path(__file__).resolve().parents[1])
+        stamp = json.loads((install_root / "install-stamp.json").read_text(encoding="utf-8-sig"))
         commit_date = stamp.get("commitDate")
         if isinstance(commit_date, int):
             return _release_date_from_commit(commit_date)
