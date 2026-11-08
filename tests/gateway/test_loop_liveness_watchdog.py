@@ -438,3 +438,61 @@ def test_first_missed_probe_logs_loop_stack_without_exiting():
     assert warning.call_count == 1  # logged once per stall streak, not per probe
     assert "stalled_loop_body" in warning.call_args.args[2]
     hard_exit.assert_not_called()
+def test_loop_liveness_death_snapshots_cancelling_tasks_without_locals():
+    """Regression for #137838: retain task context without affecting exit 75."""
+    from types import SimpleNamespace
+
+    frame = SimpleNamespace(
+        f_code=SimpleNamespace(co_filename="worker.py", co_name="waiting"),
+        f_lineno=42, f_locals={"api_key": "do-not-log"},
+    )
+    pending = []
+    for index in range(40):
+        task = MagicMock()
+        task.get_name.return_value = f"pending-{index}"
+        task.cancelling.return_value = 0
+        task.get_stack.return_value = []
+        pending.append(task)
+    cancelling = MagicMock()
+    cancelling.get_name.return_value = "cancelling-task"
+    cancelling.cancelling.return_value = 2
+    cancelling.get_stack.return_value = [frame]
+    loop = MagicMock(spec=asyncio.AbstractEventLoop)
+    loop._ready = [object(), object()]
+    done, ready, ref, exits = threading.Event(), threading.Event(), {}, []
+
+    def fake_exit(code: int) -> None:
+        assert ready.wait(timeout=5.0)
+        exits.append(code)
+        ref["handle"].stop()
+        done.set()
+
+    with (
+        patch("gateway.shutdown_watchdog.asyncio.all_tasks", return_value=set(pending + [cancelling])),
+        patch("gateway.shutdown_watchdog._write_watchdog_dump") as dump,
+        patch("gateway.shutdown_watchdog._mark_exited_quietly") as mark,
+        patch("gateway.shutdown_watchdog._hard_exit", side_effect=fake_exit),
+    ):
+        ref["handle"] = handle = start_loop_liveness_watchdog(
+            loop, probe_interval=0.01, probe_timeout=0.01, max_strikes=1,
+        )
+        assert handle is not None
+        ready.set()
+        assert done.wait(timeout=5.0)
+        handle.join(timeout=5.0)
+
+    assert not handle.is_alive()
+    assert exits == [75]
+    mark.assert_called_once_with(75, "loop_liveness_watchdog")
+    snapshot = dump.call_args.kwargs["snapshot"]
+    assert snapshot["loop_tasks"]["ready_queue_len"] == 2
+    assert snapshot["loop_tasks"]["task_count"] == 41
+    assert snapshot["loop_tasks"]["truncated"] == 1
+    assert len(snapshot["loop_tasks"]["tasks"]) == 40
+    assert snapshot["loop_tasks"]["tasks"][0] == {
+        "name": "cancelling-task",
+        "cancelling": 2,
+        "frames": ["worker.py:42:waiting"],
+    }
+    assert "do-not-log" not in str(snapshot)
+    assert snapshot["missed_probe_wait_s"] >= 0.0

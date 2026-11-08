@@ -85,6 +85,48 @@ def _arm_loop_floor_timer(
     return _LoopFloorTimerHandle(loop, iv if iv > 0 else DEFAULT_LOOP_FLOOR_TIMER_INTERVAL_S)
 
 
+def _describe_loop_tasks(loop: asyncio.AbstractEventLoop) -> dict[str, Any]:
+    """Best-effort, non-atomic task snapshot from the watchdog thread; never read locals."""
+    report: dict[str, Any] = {"ready_queue_len": None, "task_count": None, "tasks": []}
+    try:
+        report["ready_queue_len"] = len(loop._ready)
+    except Exception:
+        pass  # uvloop and a concurrently changing loop may not expose this queue.
+    try:
+        tasks = list(asyncio.all_tasks(loop))
+    except Exception:
+        report["error"] = "task_enumeration_failed"
+        return report
+
+    def cancellations(task: Any) -> int:
+        try:
+            return max(0, int(task.cancelling()))
+        except Exception:
+            return 0
+
+    # Name tasks currently being cancelled before the bounded truncation.
+    tasks.sort(key=cancellations, reverse=True)
+    report["task_count"] = len(tasks)
+    report["truncated"] = max(0, len(tasks) - 40)
+    for task in tasks[:40]:
+        entry: dict[str, Any] = {
+            "name": "<unavailable>", "cancelling": cancellations(task), "frames": [],
+        }
+        try:
+            entry["name"] = task.get_name()
+        except Exception:
+            pass
+        try:
+            for frame in task.get_stack(limit=6):
+                entry["frames"].append(
+                    f"{frame.f_code.co_filename}:{frame.f_lineno}:{frame.f_code.co_name}"
+                )
+        except Exception:
+            entry["frames"] = ["<unavailable>"]
+        report["tasks"].append(entry)
+    return report
+
+
 def start_loop_liveness_watchdog(
     loop: asyncio.AbstractEventLoop, *, probe_interval: float = DEFAULT_LOOP_WATCHDOG_INTERVAL_S,
     probe_timeout: float = DEFAULT_LOOP_WATCHDOG_TIMEOUT_S,
@@ -107,7 +149,8 @@ def start_loop_liveness_watchdog(
             except Exception:
                 logger.debug("Failed to schedule gateway loop liveness probe", exc_info=True)
                 return
-            deadline = time.monotonic() + probe_timeout
+            probe_started = time.monotonic()
+            deadline = probe_started + probe_timeout
             while not stop_event.is_set():  # poll so a stop() mid-wait is honoured within ~50ms
                 remaining = deadline - time.monotonic()
                 if remaining <= 0 or probe_event.wait(timeout=min(remaining, 0.05)):
@@ -137,9 +180,17 @@ def start_loop_liveness_watchdog(
                     strikes, exit_code)
             # File + stderr: a console-less launcher (Windows .vbs login item) discards stderr, so a
             # liveness death used to leave no stack anywhere (#120356, #91097).
+            snapshot = {
+                "strikes": strikes, "probe_interval_s": probe_interval,
+                "missed_probe_wait_s": max(0.0, time.monotonic() - probe_started),
+            }
+            try:
+                snapshot["loop_tasks"] = _describe_loop_tasks(loop)
+            except Exception:
+                snapshot["loop_tasks"] = {"error": "task_snapshot_failed"}
             _write_watchdog_dump(
                 get_shutdown_watchdog_dump_path(), delay_s=probe_timeout * strikes,
-                snapshot={"strikes": strikes, "probe_interval_s": probe_interval},
+                snapshot=snapshot,
                 event="loop_liveness_watchdog_fired",
                 loop_thread_id=getattr(loop, "_thread_id", None))
             if stop_event.is_set():
