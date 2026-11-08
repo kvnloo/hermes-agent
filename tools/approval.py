@@ -130,10 +130,15 @@ def register_gateway_notify(session_key: str, cb) -> None:
         _gateway_notify_cbs[session_key] = cb
 
 
-def unregister_gateway_notify(session_key: str) -> None:
+def unregister_gateway_notify(session_key: str, cb=None) -> None:
     """Withdraw foreground waits when the turn ends. Dispatch-owned background
-    waits survive until their worker ends or the session is cleared."""
+    waits survive until their worker ends or the session is cleared.
+
+    A delayed predecessor turn must not withdraw a successor's notifier or waits.
+    """
     with _lock:
+        if cb is not None and _gateway_notify_cbs.get(session_key) is not cb:
+            return
         _gateway_notify_cbs.pop(session_key, None)
         queue = _gateway_queues.get(session_key, [])
         for entry in list(queue):

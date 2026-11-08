@@ -886,7 +886,8 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
         session_key = ctx.session_key or ""
         token = set_current_session_key(session_key)
         from gateway.run_turn_runner_approval_transport import approval_transport
-        register_gateway_notify(session_key, approval_transport(self))
+        notifier = approval_transport(self)
+        register_gateway_notify(session_key, notifier)
         try:
             api_message = _wrap_current_message_with_observed_context(self._native_image_run_message(), observed_group_context)
             kwargs = {"conversation_history": agent_history, "task_id": ctx.session_id}
@@ -947,7 +948,7 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
                 _settle_api_runtime_lock(agent, result, captured)
             return result
         finally:
-            unregister_gateway_notify(session_key)
+            unregister_gateway_notify(session_key, notifier)
             # Cancel pending clarify entries so blocked agent threads don't hang past the end of the
             # run (interrupt, completion, gateway shutdown). Idempotent.
             with suppress(Exception):
