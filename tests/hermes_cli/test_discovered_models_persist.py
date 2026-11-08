@@ -104,6 +104,37 @@ class TestProvidersDictShape:
         assert (temp_home / "config.yaml").read_bytes() == before
 
 
+    def test_live_picker_probe_persists_profile_provider_catalog(self, temp_home, monkeypatch):
+        """A live section-3 probe must update config, not just the in-memory picker row."""
+        from hermes_cli.model_switch_providers import _PickerBuild, _lap_user_provider_rows
+
+        provider = {
+            "name": "Agnes", "base_url": "https://agnes.invalid/v1",
+            "api_mode": "chat_completions", "models_discovered": True,
+            "models": {"agnes-2.0-flash": {}},
+        }
+        _write_config(temp_home, {"providers": {"agnes": provider}, "agent": {"max_turns": 7}})
+
+        def live_probe(*_args, **kwargs):
+            assert kwargs["probe_live"] is True
+            return ["agnes-2.5-flash"], False
+
+        monkeypatch.setattr(
+            "hermes_cli.model_switch_providers._discover_endpoint_models", live_probe)
+        picker = _PickerBuild(
+            current_provider="", current_base_url="", current_model="",
+            max_models=None, for_picker=True, force_fresh_nous_tier=False,
+            probe_custom_providers=True, probe_current_custom_provider=False,
+            refresh=True, excluded=set(), curated={},
+        )
+        _lap_user_provider_rows(picker, {"agnes": provider})
+
+        assert picker.results[0]["models"] == ["agnes-2.5-flash"]
+        saved = _read_config(temp_home)
+        assert list(saved["providers"]["agnes"]["models"]) == ["agnes-2.5-flash"]
+        assert saved["agent"] == {"max_turns": 7}
+
+
 class TestCustomProvidersListShape:
     """The pre-existing shape must keep working (no regression)."""
 
