@@ -47,3 +47,29 @@ def test_setup_refreshes_stale_dependencies_but_keeps_matching_install(
     monkeypatch.setattr(setup.subprocess, "run", install)
     assert setup._whatsapp_install_bridge(tmp_path)
     assert bool(calls) is refresh
+
+
+def test_setup_refreshes_when_transitive_lock_pin_changes(tmp_path):
+    """A same-version direct package can contain an outdated transitive dependency."""
+    from hermes_cli.main_platform_setup import _whatsapp_bridge_dependencies_current
+
+    direct = "node_modules/@whiskeysockets/baileys"
+    transitive = "node_modules/protobufjs"
+    (tmp_path / direct).mkdir(parents=True)
+    (tmp_path / direct / "package.json").write_text("{}", encoding="utf-8")
+    wanted = {
+        "packages": {
+            "": {"dependencies": {"@whiskeysockets/baileys": "7"}},
+            direct: {"version": "7", "integrity": "sha512-direct"},
+            transitive: {"version": "2", "integrity": "sha512-new"},
+        },
+    }
+    installed = {"packages": {
+        direct: wanted["packages"][direct],
+        transitive: {"version": "1", "integrity": "sha512-old"},
+    }}
+    (tmp_path / "package-lock.json").write_text(json.dumps(wanted), encoding="utf-8")
+    (tmp_path / "node_modules" / ".package-lock.json").write_text(
+        json.dumps(installed), encoding="utf-8",
+    )
+    assert not _whatsapp_bridge_dependencies_current(tmp_path)

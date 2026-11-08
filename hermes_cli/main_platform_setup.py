@@ -104,11 +104,14 @@ def _whatsapp_bridge_dependencies_current(bridge_dir) -> bool:
         dependencies = packages[""]["dependencies"]
         for name in dependencies:
             key = "node_modules/" + name
-            expected = packages[key]
-            present = actual.get(key, {})
-            if any(present.get(field) != expected.get(field) for field in ("version", "integrity")):
+            if key not in actual or not (bridge_dir / key / "package.json").is_file():
                 return False
-            if not (bridge_dir / key / "package.json").is_file():
+        # The hidden lock omits optional platform packages; inspect all installed transitive pins.
+        for key, present in actual.items():
+            if not key.startswith("node_modules/"):
+                continue
+            expected = packages.get(key)
+            if expected is None or any(present.get(field) != expected.get(field) for field in ("version", "integrity")):
                 return False
     except (OSError, ValueError, KeyError, TypeError, AttributeError):
         return False
