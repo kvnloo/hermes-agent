@@ -533,7 +533,8 @@ def _dedup_stub_or_block(task_data: dict, dedup_key: tuple, path: str) -> str:
 
 def _record_successful_read(task_data: dict, task_id: str, path: str, resolved_str: str,
                             offset: int, limit: int, dedup_key: tuple, *, partial: bool,
-                            redacted: bool = False, end_line: int | None = None,
+                            redacted: bool = False, truncated_lines: bool = False,
+                            char_budget_truncated: bool = False, end_line: int | None = None,
                             total_lines=None, version_before=None, snapshot=None) -> int:
     """Bookkeeping after a real (non-stub) read; returns the consecutive-read count.
 
@@ -582,8 +583,22 @@ def _record_successful_read(task_data: dict, task_id: str, path: str, resolved_s
             task_data["dedup_generation_reads"].discard(dedup_key)
         _cap_read_tracker_data(task_data)
 
+    reason = None
+    if not complete:
+        if not stable:
+            reason = "unstable read snapshot"
+        elif count >= 4:
+            reason = "repeated read limit"
+        elif truncated_lines:
+            reason = "truncated lines"
+        elif redacted:
+            reason = "redacted content"
+        elif char_budget_truncated:
+            reason = "character budget truncation"
+        else:
+            reason = "offset/limit pagination"
     try:
-        file_state.record_read(task_id, resolved_str, partial=not complete)
+        file_state.record_read(task_id, resolved_str, partial=not complete, reason=reason)
     except Exception:
         logger.debug("file_state.record_read failed", exc_info=True)
 
@@ -736,6 +751,8 @@ def read_file_tool(path: str, offset: int = 1, limit: int = DEFAULT_READ_LIMIT, 
         count = _record_successful_read(task_data, task_id, path, resolved_str, offset, limit,
                                         dedup_key, partial=(offset > 1) or bool(result_dict.get("truncated")),
                                         redacted=redacted or bool(result_dict.get("truncated_lines")),
+                                        truncated_lines=bool(result_dict.get("truncated_lines")),
+                                        char_budget_truncated=result_dict.get("truncated_by") == "bytes",
                                         end_line=end_line, total_lines=total_lines,
                                         version_before=version_before,
                                         snapshot=getattr(result, "_snapshot", None))
