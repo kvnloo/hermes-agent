@@ -1,37 +1,38 @@
-from unittest.mock import call, patch
+"""An owned WhatsApp bridge must stay in the gateway's Windows job.
 
+Regression for #68128 and the bridge owner-death contract of #127047.
+"""
+
+from unittest.mock import patch
+
+import pytest
+
+from hermes_cli._subprocess_compat import (
+    windows_detach_flags,
+    windows_detach_flags_without_breakaway,
+)
 from plugins.platforms.whatsapp import adapter
 
 
-def test_bridge_spawn_retries_without_breakaway_after_access_denied():
-    denied = PermissionError(5, "Access is denied")
-    denied.winerror = 5
+@pytest.mark.platforms("windows")
+def test_bridge_spawn_stays_in_gateway_job_even_when_breakaway_is_allowed():
+    argv = ["node", "bridge.js"]
+    log = object()
+    env = {"HERMES_HOME": "test-home"}
     process = object()
 
-    with patch.object(adapter, "_IS_WINDOWS", True), \
-         patch.object(adapter, "windows_detach_flags", return_value=0x1000), \
-         patch.object(adapter, "windows_detach_flags_without_breakaway", return_value=0x0800), \
-         patch.object(adapter, "spawn_owned", side_effect=[denied, process]) as spawn:
-        result = adapter._spawn_bridge_process(["node", "bridge.js"], None, {})
+    with patch.object(adapter, "spawn_owned", return_value=process) as spawn:
+        assert adapter._spawn_bridge_process(argv, log, env) is process
 
-    assert result is process
-    assert spawn.call_args_list == [
-        call(
-            ["node", "bridge.js"],
-            purpose="whatsapp-bridge",
-            stdin=adapter.subprocess.DEVNULL,
-            stdout=None,
-            stderr=None,
-            env={},
-            creationflags=0x1000,
-        ),
-        call(
-            ["node", "bridge.js"],
-            purpose="whatsapp-bridge",
-            stdin=adapter.subprocess.DEVNULL,
-            stdout=None,
-            stderr=None,
-            env={},
-            creationflags=0x0800,
-        ),
-    ]
+    expected = windows_detach_flags_without_breakaway()
+    assert windows_detach_flags() & 0x01000000  # CREATE_BREAKAWAY_FROM_JOB
+    assert expected & 0x01000000 == 0
+    spawn.assert_called_once_with(
+        argv,
+        purpose="whatsapp-bridge",
+        stdin=adapter.subprocess.DEVNULL,
+        stdout=log,
+        stderr=log,
+        env=env,
+        creationflags=expected,
+    )
