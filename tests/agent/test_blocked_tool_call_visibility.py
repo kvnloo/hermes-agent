@@ -6,13 +6,9 @@ from "a guard stopped it" (#151276). These tests drive the real executor paths â
 is called directly â€” and pin the events the surfaces consume, on both the sequential and the
 concurrent route.
 
-Two boundaries are deliberate and asserted here:
-
-* ``tool_start_callback`` is NOT fired for a blocked call: ``tests/agent/test_run_agent.py::
-  test_sequential_blocked_tool_skips_checkpoints_and_callbacks`` pins that (the same test also pins
-  that no checkpoint is taken, which this change keeps).
-* a guardrail/scope block keeps emitting nothing at all, as its own suite pins
-  (``test_config_enabled_hard_stop_blocks_repeated_exact_failure_before_execution``).
+Blocked calls open both progress-only and call-id-keyed UI rows without taking a
+checkpoint. Guardrail/scope blocks still emit no lifecycle events, as pinned by
+``test_config_enabled_hard_stop_blocks_repeated_exact_failure_before_execution``.
 """
 
 import json
@@ -109,6 +105,7 @@ def test_a_hook_blocked_call_opens_and_closes_a_row_with_the_hook_message():
     started = _events(seen, "tool.started")
     completed = _events(seen, "tool.completed")
     assert [a[1] for a, _ in started] == ["web_search"]
+    assert [a[:2] for a, _ in seen["start"]] == [("c-blocked", "web_search")]
     assert len(completed) == 1
     assert completed[0][1]["is_error"] is True
     # The row carries the hook's own message, so the surface can say WHY the call did not run.
@@ -119,8 +116,8 @@ def test_a_hook_blocked_call_opens_and_closes_a_row_with_the_hook_message():
     assert len([m for m in messages if m["role"] == "tool"]) == 1
 
 
-def test_a_hook_blocked_call_fires_no_start_callback_and_no_checkpoint():
-    """The row comes from the progress lane only: the pinned "no start callback, no snapshot" rule."""
+def test_a_hook_blocked_call_emits_ui_start_without_checkpoint():
+    """A blocked call still opens a TUI/Desktop row, but never snapshots or executes the tool."""
     agent = _make_agent("web_search")
     seen = _record(agent)
     agent._checkpoint_mgr.enabled = True
@@ -128,7 +125,7 @@ def test_a_hook_blocked_call_fires_no_start_callback_and_no_checkpoint():
 
     _blocked_sequential(agent, _mock_tool_call("web_search", json.dumps({"query": "x"}), "c-nocheck"))
 
-    assert seen["start"] == []
+    assert [a[:2] for a, _ in seen["start"]] == [("c-nocheck", "web_search")]
     agent._checkpoint_mgr.ensure_checkpoint.assert_not_called()
 
 
@@ -208,7 +205,10 @@ def test_a_blocked_call_in_a_concurrent_batch_keeps_its_own_row():
     ):
         agent._execute_tool_calls(assistant, messages, "task-1")
 
-    assert [a[:2] for a, _ in seen["start"]] == [("c-ok", "web_search")]
+    assert len(seen["start"]) == 2
+    assert {a[:2] for a, _ in seen["start"]} == {
+        ("c-ok", "web_search"), ("c-blocked", "web_search"),
+    }
     assert [a[:2] for a, _ in seen["complete"]] == [("c-ok", "web_search"), ("c-blocked", "web_search")]
     completed = _events(seen, "tool.completed")
     assert len(completed) == 2
