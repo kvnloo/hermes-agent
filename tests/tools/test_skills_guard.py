@@ -431,6 +431,23 @@ class TestFalsePositiveReductions:
         assert scan_file(policy, "policy.md") == []
 
     @pytest.mark.parametrize(
+        "line",
+        [
+            "You shouldn't read ~/.hermes/.env.",
+            "Operators mustn't read ~/.hermes/.env.",
+            "There is no need to read ~/.hermes/.env.",
+        ],
+    )
+    def test_sensitive_path_prohibitions_are_not_exfiltration(self, tmp_path, line):
+        policy = tmp_path / "policy.md"
+        policy.write_text(line + "\n")
+
+        assert not any(
+            finding.pattern_id == "hermes_env_access"
+            for finding in scan_file(policy, "policy.md")
+        )
+
+    @pytest.mark.parametrize(
         ("line", "pattern_id"),
         [
             ("cat ~/.hermes/.env", "hermes_env_access"),

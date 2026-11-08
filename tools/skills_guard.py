@@ -98,7 +98,11 @@ class ScanResult:
 # Threat patterns — (regex, pattern_id, severity, category, description)
 # ---------------------------------------------------------------------------
 
-_NON_NEGATED_ACTION = r"(?<!not )(?<!not ever )(?<!not be )(?<!never )(?<!never be )(?<!don't )(?<!cannot )(?<!can't )"
+_NON_NEGATED_ACTION = (
+    r"(?<!not )(?<!not ever )(?<!not be )(?<!never )(?<!never be )"
+    r"(?<!don't )(?<!shouldn't )(?<!mustn't )(?<!no need to )"
+    r"(?<!cannot )(?<!can't )"
+)
 _HERMES_ENV_PATH = r"(?:\$HOME/\.hermes/\.env|\~/\.hermes/\.env)"
 _AGENT_CONFIG_PATH = r"(?:AGENTS\.md|CLAUDE\.md|\.cursorrules|\.clinerules)"
 _HERMES_CONFIG_PATH = r"(?:(?:\$HOME/|~/)?\.hermes/(?:config\.yaml|SOUL\.md))"
