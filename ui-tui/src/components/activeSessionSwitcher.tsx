@@ -387,7 +387,7 @@ export function ActiveSessionSwitcher({
           includeHistory
             ? gw.request<SessionListResult>('session.list', {
                 limit: 200,
-                ...(canonicalList ? { scope: 'stored' } : {})
+                ...(canonicalList ? { scope: 'stored', picker: true } : {})
               })
             : Promise.resolve(null)
         ])

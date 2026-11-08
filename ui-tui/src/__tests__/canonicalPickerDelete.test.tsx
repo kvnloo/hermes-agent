@@ -74,7 +74,7 @@ function mount(
   })
 
   const deleteStored = async () => {
-    await vi.waitFor(() => expect(request).toHaveBeenCalledWith('session.list', { limit: 200, scope: 'stored' }))
+    await vi.waitFor(() => expect(request).toHaveBeenCalledWith('session.list', { limit: 200, scope: 'stored', picker: true }))
     instance.rerender(element)
     await vi.waitFor(() => expect(out.text).toContain('Retained old conversation'))
     stdin.write('\u001B[B')

@@ -7,8 +7,8 @@ import { expect, it, vi } from 'vitest'
 import { ActiveSessionSwitcher } from '../components/activeSessionSwitcher.js'
 import { DEFAULT_THEME } from '../theme.js'
 
-it('renders and resumes stored history alongside live canonical sessions', async () => {
-  const request = vi.fn(async (_method: string, params: { scope?: string }) => ({
+it('renders untitled stored history from its preview and resumes it alongside live canonical sessions', async () => {
+  const request = vi.fn(async (_method: string, params: { scope?: string; picker?: boolean }) => ({
     scope: params.scope ?? 'live',
     sessions:
       params.scope === 'stored'
@@ -16,7 +16,8 @@ it('renders and resumes stored history alongside live canonical sessions', async
             {
               id: 'old',
               session_id: 'old',
-              title: 'Retained old conversation',
+              title: '',
+              ...(params.picker ? { preview: 'First message preview from history' } : {}),
               source: 'cli',
               started_at: 1,
               message_count: 2
@@ -60,9 +61,9 @@ it('renders and resumes stored history alongside live canonical sessions', async
     patchConsole: false
   })
   try {
-    await vi.waitFor(() => expect(request).toHaveBeenCalledWith('session.list', { limit: 200, scope: 'stored' }))
+    await vi.waitFor(() => expect(request).toHaveBeenCalledWith('session.list', { limit: 200, scope: 'stored', picker: true }))
     instance.rerender(element)
-    await vi.waitFor(() => expect(output).toContain('Retained old conversation'))
+    await vi.waitFor(() => expect(output).toContain('First message preview from history'))
     expect(output).toContain('Current conversation')
     stdin.write('\u001B[B')
     await vi.waitFor(() => {
