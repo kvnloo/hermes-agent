@@ -438,7 +438,10 @@ class GatewaySessionCommandsMixin:
         owned = self._retry_owned_store(session_entry.session_id)
         try:
             pinned = owned and await asyncio.to_thread(owned.get_active_message_ids, session_entry.session_id)
-            history = await self.async_session_store.load_transcript(session_entry.session_id)
+            # Retry the last physical user row, not a replay-repaired merge of a
+            # synthetic notification/marker and the following human message.
+            history = await self.async_session_store.load_transcript(
+                session_entry.session_id, repair_alternation=False)
         except TranscriptReadError:
             return history_unreadable()
         except Exception:
