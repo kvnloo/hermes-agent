@@ -217,6 +217,15 @@ class TestRetryClassifier:
 
         assert _is_retryable_telegram_fetch_error(httpx.PoolTimeout("no slots")) is False
 
+    def test_wrapped_pool_timeout_is_not_retryable(self):
+        """PTB wraps a pool timeout as TimedOut; an exhausted pool must not be retried."""
+        import httpx
+
+        from plugins.platforms.telegram.adapter import _is_retryable_telegram_fetch_error
+
+        exc = _timed_out(httpx.PoolTimeout("no slots"))
+        assert _is_retryable_telegram_fetch_error(exc) is False
+
     def test_unrelated_error_is_not_retryable(self):
         from plugins.platforms.telegram.adapter import _is_retryable_telegram_fetch_error
 

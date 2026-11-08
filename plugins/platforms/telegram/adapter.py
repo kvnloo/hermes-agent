@@ -66,6 +66,7 @@ def _is_retryable_telegram_fetch_error(exc: BaseException) -> bool:
     seen: set[int] = set()
     cur: BaseException | None = exc
     depth = 0
+    retryable = False
     while cur is not None and depth < 12:
         ident = id(cur)
         if ident in seen:
@@ -75,7 +76,7 @@ def _is_retryable_telegram_fetch_error(exc: BaseException) -> bool:
         if isinstance(cur, BadRequest):
             return False
         if isinstance(cur, NetworkError):
-            return True
+            retryable = True
         # httpx errors that PTB did not wrap (a bare ``httpx.ReadTimeout`` from the transport).
         name = type(cur).__name__
         if name in {
@@ -86,9 +87,9 @@ def _is_retryable_telegram_fetch_error(exc: BaseException) -> bool:
             # pool would just stall again.
             if name == "PoolTimeout":
                 return False
-            return True
+            retryable = True
         cur = cur.__cause__ or cur.__context__
-    return False
+    return retryable
 
 
 async def _fetch_telegram_file(source: Any, what: str) -> tuple[Any, bytes]:
