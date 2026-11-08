@@ -154,6 +154,16 @@ class A2ARequestHandler(BaseHTTPRequestHandler):
     def adapter(self) -> "A2AAdapter":
         return self.server.adapter  # type: ignore[attr-defined]
 
+    def handle(self):
+        """Scope every HTTP request and disconnect to the adapter's owning profile."""
+        from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+
+        token = set_hermes_home_override(self.adapter._profile_home)
+        try:
+            return super().handle()
+        finally:
+            reset_hermes_home_override(token)
+
     def log_message(self, format, *args):  # noqa: A002,N802
         logger.debug("A2A http: " + format, *args)  # silence the default stderr access log
 

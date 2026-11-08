@@ -402,3 +402,59 @@ def test_concurrent_first_contacts_correlate_real_child_sessions(tmp_path, monke
             assert readback.returncode == 0, readback.stderr
             assert f"[user] {peer}" in readback.stdout
             assert "No persisted conversation" in readback.stdout
+
+
+def test_http_handler_scopes_each_multiplex_request_and_resets_on_error(tmp_path, monkeypatch):
+    """Worker threads must not inherit the launch home, even on disconnect."""
+    from http.server import BaseHTTPRequestHandler
+    from hermes_constants import get_hermes_home
+    from plugins.platforms.a2a.adapter import A2ARequestHandler
+
+    launch, a, b = (tmp_path / name for name in ("launch", "a", "b"))
+    for home in (launch, a, b):
+        home.mkdir()
+    monkeypatch.setenv("HERMES_HOME", str(launch))
+    monkeypatch.delenv("A2A_PORT", raising=False)
+    monkeypatch.delenv("A2A_PEER_TOKENS", raising=False)
+
+    def make_adapter(home):
+        token = set_hermes_home_override(home)
+        try:
+            return A2AAdapter(SimpleNamespace(extra={}))
+        finally:
+            reset_hermes_home_override(token)
+
+    adapters = {home: make_adapter(home) for home in (a, b)}
+    barrier = threading.Barrier(2)
+    seen, restored, failures, disconnects = {}, {}, [], []
+
+    def handle_connection(handler):
+        barrier.wait(timeout=10)
+        seen[handler.adapter._profile_home] = get_hermes_home()
+        if handler.adapter is adapters[b]:
+            raise ConnectionError("simulated client disconnect")
+
+    monkeypatch.setattr(BaseHTTPRequestHandler, "handle", handle_connection)
+
+    def serve(home):
+        handler = object.__new__(A2ARequestHandler)
+        handler.server = SimpleNamespace(adapter=adapters[home])
+        try:
+            handler.handle()
+        except ConnectionError:
+            disconnects.append(home)
+        except BaseException as exc:
+            failures.append(exc)
+        finally:
+            restored[home] = get_hermes_home()
+
+    threads = [threading.Thread(target=serve, args=(home,)) for home in (a, b)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10)
+        assert not thread.is_alive()
+    assert not failures, failures
+    assert disconnects == [b]
+    assert seen == {a: a, b: b}
+    assert restored == {a: launch, b: launch}
