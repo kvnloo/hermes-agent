@@ -43,7 +43,8 @@ def _store_facts(db, session_ids):
     the receipt, so no receipt is parsed in Python. A malformed or non-local receipt reads as no target,
     as ``_local_target`` does. The second read follows the receipt's key — a rotation re-points it under
     the chat's logical id (``advance_local_target`` uses ``parent.chat_id``), which for a plain local
-    session is its own id."""
+    session is its own id. The indexed reset-successor lookup also handles messaging resets,
+    whose lineage has no local receipt."""
     from hermes_state_local import POLICY_PREFIX
     ids = json.dumps(list(session_ids))
     with db._read_ctx() as conn:
@@ -53,7 +54,10 @@ def _store_facts(db, session_ids):
             "(SELECT t.ended_at FROM state_meta m JOIN sessions t ON t.id = CASE WHEN json_valid(m.value) "
             "THEN json_extract(m.value, '$.entry.session_id') END WHERE m.key = ? || s.id) AS target_ended_at, "
             "(SELECT CASE WHEN json_valid(m.value) THEN json_extract(m.value, '$.entry.session_id') END "
-            "FROM state_meta m WHERE m.key = ? || COALESCE(NULLIF(s.chat_id, ''), s.id)) AS receipt_target_id "
+            "FROM state_meta m WHERE m.key = ? || COALESCE(NULLIF(s.chat_id, ''), s.id)) AS receipt_target_id, "
+            "(SELECT 1 FROM sessions child WHERE child.parent_session_id = s.id "
+            "AND CASE WHEN json_valid(child.model_config) "
+            "THEN json_extract(child.model_config, '$._reset_from') END = s.id) AS reset_successor "
             "FROM sessions s WHERE s.id IN (SELECT value FROM json_each(?))",
             (POLICY_PREFIX, POLICY_PREFIX, ids)).fetchall()
         pending = conn.execute(
@@ -110,7 +114,8 @@ async def live_entries(authority, actor) -> list[LiveEntry]:
                 continue  # retired during the read, or its row was deleted (``_handle``'s not_found)
             if row.get('ended_at') is not None and (
                     row.get('end_reason') == 'compression'
-                    or row.get('receipt_target_id') not in (None, sid)):
+                    or row.get('receipt_target_id') not in (None, sid)
+                    or (row.get('end_reason') == 'session_reset' and row.get('reset_successor'))):
                 # The conversation continues in another session. A rotation — compression, or a
                 # ``session_reset`` / ``/new`` boundary — closes the parent, re-points the receipt
                 # (and the route) at the child and leaves this mount standing, so an unfiltered

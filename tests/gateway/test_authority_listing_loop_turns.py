@@ -143,6 +143,25 @@ async def test_a_compression_parent_without_a_local_receipt_still_leaves_the_fee
     assert parent not in ids and live_tail in ids, method
 
 
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('method', ['session.list', 'session.active_list'])
+async def test_a_messaging_reset_without_a_receipt_leaves_the_live_feed(owner, method):
+    """A messaging /new has a reset child but no local receipt. An old mounted session must
+    not remain a live picker target where model switches hit session_superseded (#143767)."""
+    import json
+    parent, live_tail = owner.sids[0], owner.sids[1]
+    # Match the gateway's non-local reset: a _reset_from child, not a POLICY_PREFIX receipt.
+    with owner.db._lock:
+        owner.db._conn.execute(
+            'UPDATE sessions SET parent_session_id=?, model_config=? WHERE id=?',
+            (parent, json.dumps({'_reset_from': parent}), live_tail))
+        owner.db._conn.execute(
+            'UPDATE sessions SET started_at=9e9 WHERE id IN (?,?)', (parent, live_tail))
+    owner.db.end_session(parent, 'session_reset')
+    ids = {row['id'] for row in await owner.listing(method)}
+    assert parent not in ids and live_tail in ids, method
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize('method', ['session.list', 'session.active_list'])
 async def test_an_ended_session_with_no_successor_stays_listed(owner, method):
