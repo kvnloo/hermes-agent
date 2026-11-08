@@ -515,6 +515,7 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
   probePluginRepo: payload => ipcRenderer.invoke('hermes:plugin:probe', payload),
   installDesktopPlugin: payload => ipcRenderer.invoke('hermes:plugin:installDesktop', payload),
   removeDesktopPlugin: payload => ipcRenderer.invoke('hermes:plugin:removeDesktop', payload),
+  getWindowState: () => ipcRenderer.invoke('hermes:window-state:get'),
   onWindowStateChanged: callback => {
     const listener = (_event, payload) => callback(payload)
     ipcRenderer.on('hermes:window-state-changed', listener)

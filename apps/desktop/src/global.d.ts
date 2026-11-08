@@ -556,6 +556,7 @@ declare global {
       /** Delete a STANDALONE desktop plugin folder (`<desktop-plugins root>/<name>`);
        *  Electron re-checks containment and refuses unified-package halves. */
       removeDesktopPlugin?: (payload: { name: string }) => Promise<{ ok: boolean; path?: string; error?: string }>
+      getWindowState?: () => Promise<HermesWindowState | null>
       onWindowStateChanged?: (callback: (payload: HermesWindowState) => void) => () => void
       onFocusSession?: (callback: (sessionId: string) => void) => () => void
       onNotificationAction?: (callback: (payload: { actionId: string; sessionId?: string }) => void) => () => void

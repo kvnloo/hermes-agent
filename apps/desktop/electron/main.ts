@@ -6514,6 +6514,13 @@ function getWindowState(win = mainWindow) {
   }
 }
 
+// Query the caller's own live window: a secondary window may begin minimized
+// before it can receive any push-only window-state-changed notification.
+ipcMain.handle('hermes:window-state:get', event => {
+  const senderWindow = BrowserWindow.fromWebContents(event.sender)
+  return senderWindow && !senderWindow.isDestroyed() ? getWindowState(senderWindow) : null
+})
+
 function sendBackendExit(payload) {
   // Intentional soft re-home (gateway mode apply) kills the child on purpose —
   // don't surface the "backend stopped" error toast / boot-failure path.

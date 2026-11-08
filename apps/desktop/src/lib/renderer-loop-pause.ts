@@ -17,8 +17,23 @@ type WindowStateSubscribe = (callback: (payload: WindowStatePayload) => void) =>
 
 let windowHidden = false
 let subscribedBridge: WindowStateSubscribe | undefined
+let bridgeGeneration = 0
 let offBridge: (() => void) | undefined
 const windowStateListeners = new Set<() => void>()
+
+function setWindowHidden(payload: WindowStatePayload): void {
+  const next = payload.isMinimized === true || payload.isVisible === false
+
+  if (windowHidden === next) {
+    return
+  }
+
+  windowHidden = next
+
+  for (const notify of [...windowStateListeners]) {
+    notify()
+  }
+}
 
 function subscribeWindowHidden(listener: () => void): () => void {
   const bridge = window.hermesDesktop?.onWindowStateChanged as WindowStateSubscribe | undefined
@@ -27,20 +42,26 @@ function subscribeWindowHidden(listener: () => void): () => void {
   if (bridge !== subscribedBridge) {
     offBridge?.()
     subscribedBridge = bridge
+    const generation = ++bridgeGeneration
     windowHidden = false
+    let receivedPush = false
     offBridge = bridge?.(payload => {
-      const next = payload?.isMinimized === true || payload?.isVisible === false
-
-      if (windowHidden === next) {
-        return
-      }
-
-      windowHidden = next
-
-      for (const notify of [...windowStateListeners]) {
-        notify()
-      }
+      receivedPush = true
+      setWindowHidden(payload)
     })
+
+    // A new secondary window may already be minimized before its first event.
+    // Subscribe before pulling so a newer push always wins over a stale reply.
+    const getWindowState = window.hermesDesktop?.getWindowState
+    if (getWindowState) {
+      void getWindowState()
+        .then(payload => {
+          if (payload && generation === bridgeGeneration && !receivedPush) {
+            setWindowHidden(payload)
+          }
+        })
+        .catch(() => undefined)
+    }
   }
 
   windowStateListeners.add(listener)
@@ -52,6 +73,7 @@ function subscribeWindowHidden(listener: () => void): () => void {
       offBridge?.()
       offBridge = undefined
       subscribedBridge = undefined
+      bridgeGeneration++
       windowHidden = false
     }
   }

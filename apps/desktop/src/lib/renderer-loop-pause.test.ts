@@ -39,10 +39,11 @@ describe('createRendererLoopPauseController', () => {
     vi.unstubAllGlobals()
   })
 
-  function stubWindowStateBridge() {
+  function stubWindowStateBridge(initialState?: { isMinimized?: boolean; isVisible?: boolean } | Promise<{ isMinimized?: boolean; isVisible?: boolean }>) {
     const listeners = new Set<(payload: { isMinimized?: boolean; isVisible?: boolean }) => void>()
 
     vi.stubGlobal('hermesDesktop', {
+      ...(initialState ? { getWindowState: () => Promise.resolve(initialState) } : {}),
       onWindowStateChanged: (callback: (payload: { isMinimized?: boolean; isVisible?: boolean }) => void) => {
         listeners.add(callback)
 
@@ -56,6 +57,37 @@ describe('createRendererLoopPauseController', () => {
       }
     }
   }
+
+  it('seeds a secondary window that was already minimized before its first state event', async () => {
+    const emit = stubWindowStateBridge({ isMinimized: true, isVisible: false })
+    const onChange = vi.fn()
+    const controller = createRendererLoopPauseController(onChange)
+
+    // On the carrier head this remains false: the push-only bridge never emits.
+    await vi.waitFor(() => expect(controller.isPaused()).toBe(true))
+    expect(onChange).toHaveBeenCalledTimes(1)
+
+    emit({ isMinimized: false, isVisible: true })
+    expect(controller.isPaused()).toBe(false)
+    controller.dispose()
+  })
+
+  it('does not overwrite a newer state event with an older initial snapshot', async () => {
+    let resolveSnapshot!: (state: { isMinimized?: boolean; isVisible?: boolean }) => void
+    const snapshot = new Promise<{ isMinimized?: boolean; isVisible?: boolean }>(resolve => {
+      resolveSnapshot = resolve
+    })
+    const emit = stubWindowStateBridge(snapshot)
+    const controller = createRendererLoopPauseController(() => undefined)
+
+    emit({ isMinimized: false, isVisible: true })
+    resolveSnapshot({ isMinimized: true, isVisible: false })
+    await snapshot
+    await Promise.resolve()
+
+    expect(controller.isPaused()).toBe(false)
+    controller.dispose()
+  })
 
   it('starts paused when created after the window was hidden', () => {
     const emit = stubWindowStateBridge()
