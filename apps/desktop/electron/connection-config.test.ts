@@ -574,6 +574,37 @@ for (const route of ROUTES) {
   })
 }
 
+test('#151133: a standalone local profile dials its own gateway, not the default multiplexer', async () => {
+  // RED on base: case 6 sends a separately owned profile to the primary socket.
+  // That socket cannot serve demo and rejects its session.create with profile_mismatch.
+  assert.deepEqual(
+    resolveProfileBackendRoute('demo', { primaryProfile: 'default', standaloneProfile: true }),
+    { backend: 'pool', descriptorProfile: null, scopePath: false }
+  )
+
+  // The named profile's real YAML flag feeds the route; the parser is intentionally
+  // checked after the base-RED routing assertion, not imported at module load.
+  const { explicitlyStandaloneProfile } = await import('./connection-config')
+  assert.equal(explicitlyStandaloneProfile('gateway:\n  standalone: true\n'), true)
+
+  // No opt-out: the same profile stays on the shared gateway.
+  assert.equal(explicitlyStandaloneProfile('gateway:\n  standalone: false\n'), false)
+  assert.deepEqual(
+    resolveProfileBackendRoute('demo', { primaryProfile: 'default', standaloneProfile: false }),
+    { backend: 'primary', descriptorProfile: 'demo', scopePath: true }
+  )
+
+  // A per-profile remote still owns its backend regardless of the local flag.
+  assert.equal(
+    resolveProfileBackendRoute('demo', {
+      primaryProfile: 'default',
+      profileRemoteOverride: true,
+      standaloneProfile: true
+    }).backend,
+    'pool'
+  )
+})
+
 test('resolveProfileBackendRoute only tags a descriptor when the backend is shared', () => {
   // A pooled backend is already scoped to its profile, so tagging it would
   // imply a second scope the caller must reconcile. Only the shared

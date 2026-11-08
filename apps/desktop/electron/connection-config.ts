@@ -34,9 +34,37 @@
 //     (POST /api/auth/ws-ticket), so the session is still LIVE even with no
 //     AT cookie. A liveness check that looked only at the AT cookie would
 //     force a needless full re-login every ~15 min — hence cookiesHaveLiveSession.
+import { parse as parseYaml } from 'yaml'
+
 import { readStatusCode } from './api-transport'
 import { sharesHostBackend } from './host-backend-singleton'
 import { profileCollectionRoute, profileRouteSuffix } from './profile-routes'
+
+/**
+ * #151133: the gateway's temporary standalone opt-out belongs to the named
+ * profile's config, not Desktop's global connection settings. Never redirect
+ * that profile's chat to the host multiplexer: it does not serve this home.
+ */
+export function explicitlyStandaloneProfile(configYaml: string): boolean {
+  try {
+    const config: unknown = parseYaml(configYaml)
+    if (!config || typeof config !== 'object' || Array.isArray(config)) {
+      return false
+    }
+
+    const gateway = (config as { gateway?: unknown }).gateway
+    if (!gateway || typeof gateway !== 'object' || Array.isArray(gateway)) {
+      return false
+    }
+
+    const flag = (gateway as { standalone?: unknown }).standalone
+
+    return flag === true || (typeof flag === 'string' && /^(true|yes|on|1)$/i.test(flag.trim())) ||
+      (typeof flag === 'number' && flag !== 0)
+  } catch {
+    return false
+  }
+}
 
 const AT_COOKIE_VARIANTS = ['__Host-hermes_session_at', '__Secure-hermes_session_at', 'hermes_session_at']
 const RT_COOKIE_VARIANTS = ['__Host-hermes_session_rt', '__Secure-hermes_session_rt', 'hermes_session_rt']
@@ -638,6 +666,8 @@ export interface ProfileRouteOptions {
   ownEntry?: boolean
   /** `HERMES_DESKTOP_ISOLATED_BACKEND=1`: opt out of the host singleton. */
   isolatedBackend?: boolean
+  /** Named profile runs its own canonical local gateway (`gateway.standalone: true`). */
+  standaloneProfile?: boolean
   requestMethod?: null | string
   requestPath?: null | string
 }
@@ -907,6 +937,13 @@ function resolveProfileBackendRoute(profile, opts: ProfileRouteOptions = {}): Pr
 
     // A stored local profile must not be redirected into the remote primary,
     // even when its REST endpoint supports profile scoping.
+    return { backend: 'pool', descriptorProfile: null, scopePath: false }
+  }
+
+  // A standalone named profile has its own canonical gateway. The shared host
+  // cannot accept its session.create {profile} (profile_mismatch, #151133).
+  // Route to the existing per-profile `gateway ensure` attachment instead.
+  if (opts.standaloneProfile) {
     return { backend: 'pool', descriptorProfile: null, scopePath: false }
   }
 

@@ -165,6 +165,7 @@ import {
   pathForRegistryBackendRequest,
   pathWithGlobalRemoteProfile,
   profileHasRemoteConnection,
+  explicitlyStandaloneProfile,
   profileRemoteOverride,
   type ProfileRouteOptions,
   profileSshOverride,
@@ -10227,6 +10228,37 @@ function primaryProfileKey() {
   return primaryProfilePin.resolve(readActiveDesktopProfile)
 }
 
+// `gateway.standalone: true` is a per-profile opt-out from the
+// host multiplexer. Cache by config signature (same contract as the CLI) so
+// hot chat paths do not re-parse YAML on every request.
+const standaloneLocalConfigs = new Map<string, { mtimeMs: number; size: number; value: boolean }>()
+
+function isStandaloneLocalProfile(profile: string): boolean {
+  if (profile === 'default' || !/^[a-z0-9][a-z0-9_-]{0,63}$/.test(profile)) {
+    return false
+  }
+
+  const configPath = path.join(HERMES_HOME, 'profiles', profile, 'config.yaml')
+
+  try {
+    const { mtimeMs, size } = fs.statSync(configPath)
+    const cached = standaloneLocalConfigs.get(configPath)
+
+    if (cached && cached.mtimeMs === mtimeMs && cached.size === size) {
+      return cached.value
+    }
+
+    const value = explicitlyStandaloneProfile(fs.readFileSync(configPath, 'utf8'))
+    standaloneLocalConfigs.set(configPath, { mtimeMs, size, value })
+
+    return value
+  } catch {
+    standaloneLocalConfigs.delete(configPath)
+
+    return false
+  }
+}
+
 // Options describing the current connection setup for `resolveProfileBackendRoute`.
 function profileRouteOptions(
   profile: string | null | undefined,
@@ -10252,6 +10284,8 @@ function profileRouteOptions(
     // A stored per-profile entry (local or remote) — pins this profile to
     // its own backend; absent entries inherit the primary's remote.
     ownEntry: Boolean((config.profiles || {})[key]),
+    // The host multiplexer never serves an explicitly standalone profile.
+    standaloneProfile: !urlOverride && !sshOverride && isStandaloneLocalProfile(key),
     isolatedBackend: ISOLATED_BACKEND,
     requestMethod: request?.method,
     requestPath: request?.path
