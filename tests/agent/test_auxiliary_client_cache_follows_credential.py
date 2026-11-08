@@ -218,3 +218,59 @@ def test_cached_pool_client_is_reused_while_its_key_is_unchanged(isolated_home, 
     reused, sent = _two_key_pool_calls(lambda rows, _i: rows, **route)
     assert reused
     assert sent == ["tok-k0", "tok-k0"]
+
+
+def test_cached_codex_uses_healthy_sibling_when_peeked_oauth_cannot_refresh(
+    isolated_home, no_side_lookups, monkeypatch,
+):
+    """An expired peeked login must not mask a healthy sibling behind a cached client."""
+    provider = "openai-codex"
+    rows = [
+        PooledCredential(
+            provider, f"k{i}", f"k{i}", "oauth", i, "manual", f"tok-k{i}",
+            refresh_token=f"rt-k{i}", request_count=5 if i == 0 else 0,
+        )
+        for i in range(2)
+    ]
+    expiry = {"k0": False}
+    monkeypatch.setattr(
+        CredentialPool, "_entry_needs_refresh",
+        lambda self, entry: entry.id == "k0" and expiry["k0"],
+    )
+    # Simulate an OAuth refresh failure without contacting the provider.
+    monkeypatch.setattr(
+        CredentialPool, "_refresh_entry",
+        lambda self, entry, *, force, failed_key=None: None,
+    )
+    sent = []
+
+    def handler(request):
+        sent.append(request.headers["authorization"].removeprefix("Bearer "))
+        return _completion(request)
+
+    transport = httpx.MockTransport(handler)
+    with patch("agent.credential_pool.get_pool_strategy", return_value="least_used"), \
+         patch.object(aux, "load_pool", side_effect=lambda _p: CredentialPool(
+             provider, [replace(row) for row in rows],
+         )), \
+         patch.object(aux, "_openai_http_client_kwargs", side_effect=lambda *_a, **_k: {
+             "http_client": httpx.Client(transport=transport),
+         }):
+        def request_token():
+            client, model = aux._get_cached_client("codex", OR_MODEL)
+            assert client is not None
+            client.chat.completions.create(model=model, messages=[{"role": "user", "content": "hi"}])
+            return client
+
+        initial = request_token()
+        # Rotation must invalidate the client even if select() initially prefers k1.
+        rows[0] = replace(rows[0], access_token="tok-k0-new")
+        refreshed = request_token()
+        assert refreshed is not initial
+
+        # peek() still sees k0. Failed refresh must switch to k1, not a stale client.
+        expiry["k0"] = True
+        fallback = request_token()
+        assert fallback is not refreshed
+
+    assert sent == ["tok-k0", "tok-k0-new", "tok-k1"]

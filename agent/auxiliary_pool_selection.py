@@ -20,15 +20,26 @@ class PoolSelection(NamedTuple):
 
 
 def _aux_pool_selection(provider: str, model: Optional[str] = None) -> PoolSelection:
-    """``(pool, entry)`` behind an auxiliary client: ONE non-mutating peek that the cache key digests
-    and the client build sends, so the two never name different credentials. Loaded under the
-    canonical provider (``codex`` is ``openai-codex``), entry-scoped for a pinned ``custom:<name>``,
-    peeked against ``model``'s cooldowns.
+    """Return the model-eligible pool entry shared by the cache key and client build.
+
+    A peek does not refresh OAuth tokens. Validate it before keying the client and use a
+    healthy sibling when its refresh fails, including for canonicalized provider aliases.
     """
-    from agent.auxiliary_client import _load_pool_with_credentials, _normalize_aux_provider, _peek_pool_entry
+    from agent.auxiliary_client import (
+        _load_pool_with_credentials, _normalize_aux_provider, _normalize_resolved_model, _peek_pool_entry,
+    )
     normalized = _normalize_aux_provider(provider)
     pool = pool_for_aux_provider(provider, normalized, lambda key: _load_pool_with_credentials(key, " (peek)"))
-    return PoolSelection(pool, _peek_pool_entry(normalized, pool, model) if pool is not None else None)
+    if pool is None:
+        return PoolSelection(None, None)
+    wire_model = _normalize_resolved_model(model, normalized) if model else None
+    entry = _peek_pool_entry(normalized, pool, model)
+    # A peek never refreshes OAuth. Validate it before hashing the key so a failed
+    # refresh chooses a usable sibling instead of caching under the expired entry.
+    entry = pool.reclaim(entry.id, model=wire_model) if entry is not None else None
+    if entry is None:
+        entry = pool.select(model=wire_model)
+    return PoolSelection(pool, entry)
 
 
 def _take_pool_selection(selection: PoolSelection, provider: str, model: Optional[str]) -> Any:
