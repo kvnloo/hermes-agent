@@ -146,3 +146,34 @@ def test_network_fetch_env_disables_prompts_and_lazy_fetch(monkeypatch, tmp_path
     assert seen["stdin"] is subprocess.DEVNULL
     if sys.platform != "win32":
         assert seen["process_group"] == 0
+
+
+def test_interrupted_network_git_reaps_children(monkeypatch, tmp_path):
+    """Ctrl-C must reap a network fetch's children, not only watchdog timeouts (#124794)."""
+    from hermes_cli import _subprocess_compat
+
+    monkeypatch.setattr(update_cmd, "_m", lambda: MagicMock(PROJECT_ROOT=str(tmp_path)))
+
+    class InterruptedGit:
+        args = ["git", "fetch", "origin", "main"]
+        returncode = None
+
+        def __init__(self):
+            self.waits = []
+
+        def communicate(self, timeout=None):
+            self.waits.append(timeout)
+            if len(self.waits) == 1:
+                raise KeyboardInterrupt
+            return "", ""
+
+    child = InterruptedGit()
+    monkeypatch.setattr(update_cmd.subprocess, "Popen", lambda *args, **kwargs: child)
+    reaped = []
+    monkeypatch.setattr(_subprocess_compat, "kill_process_tree", lambda proc: reaped.append(proc))
+
+    with pytest.raises(KeyboardInterrupt):
+        update_cmd._git_run(["git"], ["fetch", "origin", "main"], cwd=tmp_path, network=True)
+
+    assert reaped == [child], "the interrupted fetch tree must be killed before re-raising"
+    assert child.waits == [update_cmd.NETWORK_GIT_TIMEOUT_SECONDS, 5]

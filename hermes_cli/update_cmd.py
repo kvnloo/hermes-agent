@@ -243,6 +243,14 @@ def _run_network_git(git_cmd, args, cwd, *, check: bool):
         if check:
             raise subprocess.CalledProcessError(124, proc.args, output="", stderr=stderr)
         return subprocess.CompletedProcess(proc.args, 124, stdout="", stderr=stderr)
+    except BaseException:
+        # A cancelled fetch must not orphan its transport or promisor children.
+        kill_process_tree(proc)
+        try:
+            proc.communicate(timeout=5)
+        except Exception:
+            pass
+        raise
     if check and proc.returncode != 0:
         raise subprocess.CalledProcessError(proc.returncode, proc.args, output=stdout, stderr=stderr)
     return subprocess.CompletedProcess(proc.args, proc.returncode, stdout or "", stderr or "")
