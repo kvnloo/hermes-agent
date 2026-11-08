@@ -1,10 +1,10 @@
-"""A failed update lookup is not a current result or permission to apply."""
+"""Regression for #151164: retain failed pins while applying resolved siblings."""
 import importlib
 from argparse import Namespace
 
 import pytest
 
-from pm import cli, paths, registry
+from pm import cli, paths, receipt, registry
 from pm.lock import Lockfile
 from pm.package import Package
 from pm.store import current_target
@@ -48,16 +48,43 @@ def prepare(tmp_path, monkeypatch, packages):
 
 @pytest.mark.parametrize("check", [True, False])
 @pytest.mark.parametrize("mixed", [True, False])
-def test_failed_resolution_stops_every_apply_path(tmp_path, monkeypatch, capsys, check, mixed):
+def test_failed_resolution_only_applies_successful_siblings(
+    tmp_path, monkeypatch, capsys, check, mixed,
+):
     failed = UpdateFixture("failed-lookup", TimeoutError("fixture index unavailable"))
     healthy = UpdateFixture("healthy-lookup", ["2.0"])
     packages = [failed, healthy] if mixed else [failed]
     lock = prepare(tmp_path, monkeypatch, packages)
     before = lock.path.read_bytes()
-    args = Namespace(names=[p.name for p in packages], target=None, skip_target=[], check=check, uv=True, pnpm=True, termux=False)
+    installed = []
+    if mixed and not check:
+        monkeypatch.setattr(cli, "_pin_artifacts", lambda package, decision, current: current)
+        monkeypatch.setattr(cli, "_install_names", lambda names: installed.extend(names) or 0)
+
+        def sync():
+            token = receipt.begin("sync")
+            receipt.finalize("ok", 0, token=token)
+            return True
+
+        monkeypatch.setattr(cli, "_sync_venv_step", sync)
+    args = Namespace(names=[p.name for p in packages], target=None, skip_target=[],
+                     check=check, uv=True, pnpm=True, termux=False)
     assert cli.cmd_update(args) == 1
-    assert "fixture index unavailable" in capsys.readouterr().out
-    assert lock.path.read_bytes() == before
+    output = capsys.readouterr().out
+    assert "fixture index unavailable" in output
+    assert Lockfile(lock.path).version("failed-lookup") == "1.0"
+    if mixed and not check:
+        assert Lockfile(lock.path).version("healthy-lookup") == "2.0"
+        assert installed == ["healthy-lookup"]
+        assert "applying resolved packages" in output
+        assert "dependency lock refresh skipped" in output
+        latest = receipt.latest()
+        assert latest is not None
+        assert (latest["kind"], latest["outcome"], latest["exit_code"]) == ("update", "failed", 1)
+        assert [step["name"] for step in latest["steps"]] == ["resolve failed-lookup"]
+    else:
+        assert lock.path.read_bytes() == before
+        assert installed == []
     assert not (tmp_path / "tools").exists()
     if mixed:
         assert healthy.lookups == 1

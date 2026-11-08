@@ -788,8 +788,11 @@ def cmd_update(args) -> int:
     for d in resolved:
         _report_update(d, width)
     if failures:
-        print(f"pm update: resolution failed for {', '.join(failures)}; no changes applied")
-        return 1
+        print(f"pm update: resolution failed for {', '.join(failures)}")
+        if args.check or not changed:
+            print("pm update: no changes applied")
+            return 1
+        print("pm update: applying resolved packages; failed packages retain their pins")
     if args.check:
         if args.uv:
             print("uv deps: would run `uv lock --upgrade` + venv sync")
@@ -797,7 +800,21 @@ def cmd_update(args) -> int:
             print("pnpm deps: would run `pnpm update --recursive --lockfile-only --no-save`")
         return 1 if changed else 0
 
-    if _apply_pins(changed, lockfile):
+    pin_rc = _apply_pins(changed, lockfile)
+    if failures:
+        # A successful sync just wrote an 'ok' receipt. The overall update
+        # must not hide skipped package resolutions from pm status / desktop.
+        if not pin_rc:
+            from pm import receipt
+
+            token = receipt.begin("update")
+            for name in failures:
+                receipt.record_step(f"resolve {name}", False, "latest-version lookup failed")
+            receipt.finalize("failed", 1, token=token)
+        if args.uv or args.pnpm:
+            print("pm update: dependency lock refresh skipped after resolution failures")
+        return 1
+    if pin_rc:
         return 1
     if args.uv and _refresh_uv_lock():
         return 1
