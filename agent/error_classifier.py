@@ -1132,6 +1132,11 @@ def _status_403(c: _Ctx) -> Verdict:
     # 403 and on established block/challenge markers; any other 403 stays auth.
     if any(p in c.msg for p in _UPSTREAM_BLOCKED_PATTERNS):
         return _V_UPSTREAM_BLOCKED
+    # OpenRouter's edge can return a flat security-policy envelope without an
+    # OpenRouter API error object. It rejected the request, not the API key.
+    if (c.provider_slug == "openrouter" and c.body.get("success") is False
+            and c.body.get("error") == "Access denied by security policy."):
+        return _V_UPSTREAM_BLOCKED
     return _V_AUTH_FALLBACK
 
 
