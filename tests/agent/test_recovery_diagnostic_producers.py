@@ -112,3 +112,21 @@ def test_retry_buffer_classification_survives_terminal_flush(policy, shape, monk
     agent.printed.clear()
     agent._emit_status("ordinary compaction progress")
     assert agent.printed == ["ordinary compaction progress"]
+
+def test_anthropic_401_diagnostics_follow_acp_stderr_sink(monkeypatch, capsys):
+    """Regression for #151241: auth diagnostics never corrupt ACP JSON-RPC stdout."""
+    from acp_adapter.session import _acp_stderr_print
+    from agent.turn_recovery import _print_anthropic_401_diagnostics
+
+    monkeypatch.setattr("gateway.warning_notifications.warning_notifications_enabled",
+                        lambda *_args, **_kwargs: True)
+    agent = Agent()
+    agent.platform = "acp"
+    agent._print_fn = _acp_stderr_print
+
+    _print_anthropic_401_diagnostics(agent, "sk-ant-fixture-token")
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "Anthropic 401" in captured.err
+    assert "Auth method: x-api-key" in captured.err
