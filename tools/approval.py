@@ -29,7 +29,7 @@ from tools.approval_context import (
     get_current_session_key,
 )
 from tools.approval_detection import (
-    _approval_key_aliases, _check_sudo_stdin_guard, detect_content_rule_keys, detect_dangerous_command,
+    _OSASCRIPT_NO_SAVE_DESCRIPTION, _approval_key_aliases, _check_sudo_stdin_guard, detect_content_rule_keys, detect_dangerous_command,
     detect_hardline_command,
 )
 from tools.approval_floors import (
@@ -886,7 +886,7 @@ def _human_decision(spec: _GateSpec, *, command: str, description: str,
     from agent.redact import redact_approval_display
 
     smart_denied = False
-    if smart:
+    if smart and _OSASCRIPT_NO_SAVE_DESCRIPTION not in pattern_keys:
         result, smart_denied = _smart_gate(spec, command, description, pattern_key, pattern_keys,
                                            session_key, human_present=is_cli or is_gateway or is_ask)
         if result is not None:

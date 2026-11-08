@@ -1866,6 +1866,29 @@ def _quoted_text_is_executed(variant: str, pattern_re: "re.Pattern[str] | _PipeR
     return False
 
 
+_OSASCRIPT_NO_SAVE_DESCRIPTION = "AppleScript closes or quits a document without saving"
+
+
+def _osascript_no_save_command(command: str) -> bool:
+    """Flag explicit no-save document commands reaching an osascript executable.
+
+    This guards the reported accidental data loss, not arbitrary script execution.
+    Restrict the check to command-position executables so quoted shell prose is inert.
+    """
+    if "osascript" not in command.lower():
+        return False
+    for variant in _command_detection_variants(command):
+        for start, _, word in _iter_shell_command_word_spans(variant):
+            name = os.path.basename(_deobfuscate_shell_word_for_detection(word)).lower()
+            if name != "osascript":
+                continue
+            invocation = _shell_command_segment(variant, start)
+            if re.search(r"\b(?:close|quit)\b[^\n]*\b(?:saving\s+no|without\s+saving)\b",
+                         invocation, re.IGNORECASE):
+                return True
+    return False
+
+
 def _iter_dangerous_descriptions(command: str, only: frozenset[str] | None = None):
     """Yield the description (= pattern key) of every dangerous match, in detection order; may repeat.
     *only* restricts the scan to those pattern rules and skips the parser-limit, execution-flag and
@@ -1876,6 +1899,8 @@ def _iter_dangerous_descriptions(command: str, only: frozenset[str] | None = Non
         return
     if _is_verification_artifact_cleanup(command):
         return
+    if only is None and _osascript_no_save_command(command):
+        yield _OSASCRIPT_NO_SAVE_DESCRIPTION
     patterns = DANGEROUS_PATTERNS_COMPILED if only is None else [
         (pattern_re, description) for pattern_re, description in DANGEROUS_PATTERNS_COMPILED if description in only
     ]
