@@ -157,9 +157,11 @@ class BotLoopGuard:
             events.append(now)
             return True, "ok"
 
-    def chain_admit(self, conversation: Hashable, sender: str, text: str, *, is_bot: bool) -> tuple[bool, str]:
+    def chain_admit(self, conversation: Hashable, sender: str, text: str, *, is_bot: bool,
+                    explicitly_addressed: bool = False, is_reply: bool = False) -> tuple[bool, str]:
         """Apply the chain rules to one admitted inbound message. Returns ``(allowed, state)``; state is
-        ``disabled``, ``human`` (chain reset), ``ok``, ``max_hops``, ``duplicate`` or ``reply_to_reply``."""
+        ``disabled``, ``human`` (chain reset), ``ok``, ``max_hops``, ``duplicate`` or ``reply_to_reply``.
+        An explicitly addressed top-level message is a fresh ask, not an answer to our reply."""
         settings = self._settings()
         if not settings.enabled:
             return True, "disabled"
@@ -176,7 +178,8 @@ class BotLoopGuard:
             ask = (sender, hashlib.sha256(" ".join(str(text or "").split()).encode()).hexdigest())
             if ask in chain.asks:
                 return False, "duplicate"
-            if not settings.bot_replies_expect_reply and chain.replied_to == sender:
+            if (not settings.bot_replies_expect_reply and chain.replied_to == sender
+                    and not (explicitly_addressed and not is_reply)):
                 return False, "reply_to_reply"
             if chain.hops >= settings.max_hops:
                 return False, "max_hops"

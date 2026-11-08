@@ -6,6 +6,7 @@ produced an outbound one (runtime notices included) and nothing counted the exch
 """
 
 import json
+from itertools import count
 from types import SimpleNamespace
 
 import pytest
@@ -49,6 +50,46 @@ def test_a_bot_answering_this_bots_reply_starts_no_turn_by_default(clock):
     assert guard.chain_admit(CHAT, PEER, "thanks!", is_bot=True) == (False, "reply_to_reply")
     # Another bot in the same chat is a new ask, not a reply to our reply.
     assert guard.chain_admit(CHAT, "other_bot", "hello", is_bot=True) == (True, "ok")
+
+
+
+@pytest.mark.asyncio
+async def test_fresh_discord_bot_mention_after_delivered_reply_starts_a_new_ask(clock):
+    """A new direct ask is admitted, while replies, duplicates and excessive hops remain guarded."""
+    from gateway.platforms.base import MessageEvent
+    from gateway.run import GatewayRunner
+
+    runner = object.__new__(GatewayRunner)
+    runner._scale_to_zero_note_real_inbound = lambda: None
+
+    async def _passthrough(event, source):
+        return event
+
+    runner._hm_pre_gateway_dispatch_hook = _passthrough
+    runner._is_user_authorized_for_source = lambda source, **kw: True
+    runner._bot_loop_guard = _guard(clock, max_hops=2)
+    runner._adapter_profile_for_source = lambda source: ""
+    ids = count(1)
+
+    def _event(text, *, addressed, reply_to=None):
+        source = SessionSource(
+            platform=Platform.DISCORD, chat_id=CHAT, chat_type="group", user_id=PEER, is_bot=True)
+        return MessageEvent(
+            text=text, message_id=str(next(ids)), source=source, reply_expected=addressed,
+            reply_to_message_id=reply_to)
+
+    first = _event("please do X", addressed=True)
+    assert await runner._hm_admit_event(first) is not None
+    runner._note_bot_reply(first.source)
+
+    # Even an inline mention in a reply to our answer is not an independent ask.
+    assert await runner._hm_admit_event(_event("thanks", addressed=True, reply_to="our-answer")) is None
+    assert await runner._hm_admit_event(_event("thanks", addressed=None)) is None
+
+    # A different, top-level explicit mention from the same peer must start a turn.
+    assert await runner._hm_admit_event(_event("update: do Y", addressed=True)) is not None
+    assert await runner._hm_admit_event(_event("update: do Y", addressed=True)) is None
+    assert await runner._hm_admit_event(_event("third task", addressed=True)) is None
 
 
 def test_a_second_ask_before_any_reply_is_not_a_reply(clock):

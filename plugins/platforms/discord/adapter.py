@@ -6103,6 +6103,8 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
             if snapshot_text_parts and not raw_content:
                 raw_content = "\n".join(snapshot_text_parts)
                 normalized_content = raw_content
+        # Capture before normalization removes the inline mention from message.content.
+        inline_self_mention = self._self_is_raw_mentioned(message)
         if self._self_is_explicitly_mentioned(message):
             mention_prefix = True
             if self._client.user:
@@ -6281,6 +6283,7 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
             reply_to_message_id=reply_to_id, reply_to_text=reply_to_text,
             timestamp=message.created_at, auto_skill=_skills, channel_prompt=_channel_prompt,
             channel_context=_channel_context,
+            reply_expected=True if inline_self_mention else None,
         )
         if (
             getattr(getattr(message, "author", None), "bot", False)
