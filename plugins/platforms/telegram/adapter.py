@@ -6929,7 +6929,7 @@ class TelegramAdapter(TelegramHeldInboundMixin, TelegramTopicRoutingMixin, BaseP
                     photo_file_ids.append(file_id)
                     text_parts.append("[изображение]")
             else:
-                text_parts.append(f"[блок: {btype}]")
+                text_parts.append(self._flatten_rich_blocks([block]).strip() or f"[блок: {btype}]")
         event.text = "\n".join(text_parts)
         event = self._apply_telegram_group_observe_attribution(event)
         cached_paths: list = []

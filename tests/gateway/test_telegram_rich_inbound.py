@@ -178,6 +178,29 @@ async def test_rich_handler_delivers_rendered_event(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_rich_handler_preserves_heading_and_list_text(monkeypatch):
+    """Rich headings and list items must reach the agent, not placeholder labels (#63485)."""
+    delivered = []
+    adapter = _handler_adapter(monkeypatch, delivered)
+    adapter._rich_message_sidecar["123456:53316"] = {
+        "blocks": [
+            {"type": "heading", "size": 1, "text": "Deployment checklist"},
+            {"type": "list", "items": [
+                {"label": "1.", "blocks": [{"type": "paragraph", "text": "Restart gateway"}]},
+                {"label": "2.", "blocks": [{"type": "paragraph", "text": "Confirm replies"}]},
+            ]},
+        ],
+    }
+    context = SimpleNamespace(bot=SimpleNamespace(get_file=AsyncMock()))
+
+    await adapter._handle_rich_message(_rich_update(), context)
+
+    assert len(delivered) == 1
+    assert delivered[0].text == "Deployment checklist\n1. Restart gateway\n2. Confirm replies"
+    context.bot.get_file.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_rich_handler_without_sidecar_is_noop(monkeypatch):
     delivered = []
     adapter = _handler_adapter(monkeypatch, delivered)
