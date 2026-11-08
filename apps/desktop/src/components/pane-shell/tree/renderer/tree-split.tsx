@@ -663,12 +663,22 @@ export function TreeSplit({
     return side !== null && collapsedSides.has(side)
   }
 
+  // A rail can hold a non-collapsible pane (e.g. preview) in a mixed
+  // stack. At narrow widths the whole root-row rail belongs to the
+  // overlay, regardless of each tenant's collapsible flag. Main stays.
+  const narrowRailColumn = (i: number) =>
+    narrow &&
+    rootRow === true &&
+    horizontal &&
+    !editMode &&
+    !allPaneIds(node.children[i]).some(id => paneChrome(paneFor(id)).placement === 'main')
+
   // One pass per child: collapse/minimize state, resolved fixed track, clamps,
   // and narrow-unmount flag. fixedTrackSize + subtreeGone each re-walk the
   // subtree, so resolve them ONCE here instead of per read below.
   const tracks = node.children.map((child, i) => {
     const minimized = isMinimized(child)
-    const collapsed = isCollapsed(child) || sideGone(i)
+    const collapsed = isCollapsed(child) || sideGone(i) || narrowRailColumn(i)
     const track = minimized || collapsed ? null : fixedTrackSize(child, axis, trackCtx)
     const sizing = minimized || collapsed ? null : sizingFor(child, track)
     // Narrow-collapse UNMOUNTS (the edge overlay owns the live instance) — but
