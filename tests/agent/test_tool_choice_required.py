@@ -198,6 +198,20 @@ def _run(agent, message="install it"):
         return agent.run_conversation(message)
 
 
+def test_saved_record_recheck_discloses_missing_tool_use():
+    """A tool-shaped `respond` is not evidence of a fresh record read (HypeLaser #150933)."""
+    agent = _agent()
+    agent._tool_use_enforcement = True
+    agent.client.chat.completions.create.return_value = _response(
+        tool_calls=[_call(RESPOND_TOOL_NAME, '{"message": "amber / 2026-11-01"}')])
+    result = _run(agent, "Check the saved record again and give the latest colour and date.")
+    assert result["final_response"].startswith(
+        "No tool was executed in this turn; the following reply is unverified."
+    )
+    assert "amber / 2026-11-01" in result["final_response"]
+    assert agent.client.chat.completions.create.call_count == 1
+
+
 def test_turn_ends_with_respond_message_as_final_response():
     agent = _agent()
     agent.client.chat.completions.create.return_value = _response(

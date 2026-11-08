@@ -126,9 +126,26 @@ def normalize_model_response(
     """Normalize ``response`` into ``assistant_message`` (str content, never dict/list) and run
     the post-response hooks and continuation guards, in the original order."""
     assistant_message = normalize_response_for_agent(agent, response)
+    # "required" can be satisfied by respond itself, without reading or writing anything.
+    # With explicit tool-use enforcement, disclose that a respond-only answer has no
+    # current-turn tool evidence; do not silently turn a stale record into a verified reply.
+    from agent.agent_runtime_helpers import tool_results_this_turn
+    from agent.tool_choice import RESPOND_TOOL_NAME, tool_choice_required
+    unverified_respond = (
+        getattr(agent, "_tool_use_enforcement", "auto") is True
+        and tool_choice_required(agent)
+        and not tool_results_this_turn(messages)
+        and bool(assistant_message.tool_calls)
+        and all(getattr(call, "name", None) == RESPOND_TOOL_NAME for call in assistant_message.tool_calls)
+    )
     # agent.tool_choice: required — a respond-only reply becomes the turn's plain-text answer
     # (finish_reason "stop"); before the capture below so the dropped-tool-call retry never sees it.
     unwrap_respond_call(assistant_message)
+    if unverified_respond:
+        assistant_message.content = (
+            "No tool was executed in this turn; the following reply is unverified.\n\n"
+            + (assistant_message.content or "")
+        )
     finish_reason = assistant_message.finish_reason
 
     def _verdict(action: str, result: Optional[dict[str, Any]] = None) -> ResponseIntakeVerdict:
