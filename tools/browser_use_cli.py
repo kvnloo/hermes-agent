@@ -256,7 +256,11 @@ def reap_orphaned_browser_use_runtimes() -> int:
     for owner_dir in _browser_use_runtime_base().glob("hermes-bu-*/*"):
         if not owner_dir.name.isdigit() or _pid_exists(int(owner_dir.name)):
             continue
-        for runtime in [p for p in owner_dir.iterdir() if p.is_dir()]:
+        try:
+            runtimes = [p for p in owner_dir.iterdir() if p.is_dir()]
+        except FileNotFoundError:
+            continue  # another Hermes reaper already removed this owner
+        for runtime in runtimes:
             if (runtime / "bu.sock").exists() or (runtime / "bu.pid").exists() or (runtime / "bu.port").exists():
                 env = _harness_interpreter_env(served_profile_child_env())
                 env["BH_RUNTIME_DIR"] = env["BH_TMP_DIR"] = str(runtime)

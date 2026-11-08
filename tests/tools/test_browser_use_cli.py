@@ -1095,6 +1095,41 @@ class TestBrowserUseManagedLifecycle:
         assert (runtimes["live"] / "bu.pid").exists()
 
 
+    @pytest.mark.platforms("posix")
+    def test_orphan_reap_continues_if_another_janitor_removes_owner_dir(self, tmp_path, monkeypatch):
+        """Concurrent reapers can remove an owner directory between glob and iterdir."""
+        profile = tmp_path / "hermes-bu-0123456789ab"
+        gone = profile / "900001"
+        other = profile / "900002"
+        gone.mkdir(parents=True)
+        runtime = other / "research"
+        runtime.mkdir(parents=True)
+        (runtime / "bu.pid").write_text("4242", encoding="utf-8")
+
+        monkeypatch.setattr(bu_cli, "_browser_use_runtime_base", lambda: tmp_path)
+        monkeypatch.setattr(bu_cli, "_find_cli", lambda: ["browser-use"])
+        monkeypatch.setattr("tools.browser_tool_lifecycle._pid_exists", lambda _pid: False)
+        stopped = []
+        monkeypatch.setattr(
+            bu_cli, "_stop_browser_use_state",
+            lambda state: stopped.append(state["env"]["BH_RUNTIME_DIR"]) or True,
+        )
+
+        original_iterdir = type(tmp_path).iterdir
+
+        def concurrent_remove(path):
+            if path == gone:
+                gone.rmdir()
+                raise FileNotFoundError(str(gone))
+            return original_iterdir(path)
+
+        monkeypatch.setattr(type(tmp_path), "iterdir", concurrent_remove)
+
+        assert bu_cli.reap_orphaned_browser_use_runtimes() == 1
+        assert stopped == [str(runtime)]
+        assert not runtime.exists()
+
+
 class TestBrowserExec:
     def test_missing_cli_returns_install_hint(self, monkeypatch):
         monkeypatch.setattr(bu_cli, "_find_cli", lambda: None)
