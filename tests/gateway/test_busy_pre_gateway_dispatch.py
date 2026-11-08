@@ -215,3 +215,56 @@ async def test_in_place_sanitization_and_marking_survive_into_the_queued_event(m
     assert handled is False  # the adapter queues THIS object
     assert event.media_urls == [] and event.media_types == []
     assert event.reply_expected is False
+
+
+@pytest.mark.asyncio
+async def test_shared_runtime_busy_burst_checks_each_delivery_before_merging(monkeypatch):
+    """A skipped second text must not join an allowed first text in a shared-runtime burst.
+
+    The authority-backed adapter uses session_ingress_burst instead of the runner busy
+    callback. Coalescing two messages before checking each one loses the second ID;
+    a per-message plugin policy then sees only the accepted first message at dispatch.
+    """
+    import asyncio
+    import gateway.session_ingress_burst as bursts
+
+    offered_ids = []
+
+    async def hook(name, **kwargs):
+        if name != "pre_gateway_dispatch":
+            return []
+        message_id = kwargs["event"].message_id
+        offered_ids.append(message_id)
+        return [{"action": "skip", "reason": "excluded follow-up"}] if message_id == "msg2" else []
+
+    monkeypatch.setattr("hermes_cli.lifecycle.ainvoke_hook", hook)
+    monkeypatch.setattr(bursts, "stamp_busy_arrival", lambda *_args: None)
+    monkeypatch.setattr(bursts, "settle_busy_arrival", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(bursts, "note_busy_merged", lambda *_args: None)
+    runner, _ = _make_runner()
+    adapter = _make_adapter()
+    adapter._message_handler = runner._handle_message
+    adapter._is_queue_text_debounce_candidate = lambda _event: True
+    adapter._can_merge_text_debounce_events = lambda _first, _second: True
+    adapter._busy_text_debounce_seconds = 60.0
+    adapter._busy_text_hard_cap_seconds = 60.0
+    adapter._background_tasks = set()
+    adapter.serial_receive_loop = True
+
+    first = _make_event("allowed")
+    first.message_id = "msg1"
+    second = _make_event("blocked")
+    second.message_id = "msg2"
+    key = build_session_key(first.source)
+    try:
+        await bursts.dispatch_busy_burst(adapter, first, key)
+        await bursts.dispatch_busy_burst(adapter, second, key)
+        assert offered_ids == ["msg1", "msg2"]
+        assert adapter.__dict__["_shared_bursts"][key].head.text == "allowed"
+    finally:
+        bursts.discard_busy_burst(adapter, key)
+        tasks = list(adapter._background_tasks)
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)

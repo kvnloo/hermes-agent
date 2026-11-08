@@ -80,6 +80,19 @@ async def dispatch_busy_burst(adapter, event, session_key):
     queue-mode TEXT+TEXT burst first."""
     from gateway.platforms.base import merge_pending_message_event
     from gateway.session_ingress import dispatch_shared_busy
+    # The shared-runtime adapter sends busy inputs here, not through run_busy's callback.
+    # Filter each delivery before coalescing: a skipped second message must not inherit the
+    # first message's acceptance just because they share a sender and debounce window.
+    if not getattr(event, "internal", False):
+        runner = getattr(getattr(adapter, "_message_handler", None), "__self__", None)
+        hook = getattr(runner, "_hm_pre_gateway_dispatch_hook", None)
+        if hook is not None:
+            offered = await hook(event, event.source)
+            if offered is None:
+                return
+            if offered is not event:
+                # A text rewrite returns a new event; the adapter/burst still owns the original.
+                event.text = offered.text
     stamp_busy_arrival(adapter, event)
     kind, bursts = _kind(adapter, event), _state(adapter, '_shared_bursts')
     while (burst := bursts.get(session_key)) is not None:
