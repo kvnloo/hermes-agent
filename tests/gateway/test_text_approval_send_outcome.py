@@ -112,6 +112,23 @@ def test_ambiguous_send_keeps_the_waiter_armed_without_resending(pending_entry):
         assert _approval._gateway_queues[SESSION] == [pending_entry], "the waiter stays armed"
 
 
+def test_structured_ambiguous_text_send_keeps_the_waiter_armed(pending_entry):
+    """A lost relay ACK is possibly delivered even if SendResult.success is false."""
+    scheduled: list = []
+    outcome = SendResult(
+        success=False, error="relay acknowledgement lost",
+        raw_response={"ambiguous": True, "error": "relay acknowledgement lost"},
+    )
+    runner = _runner(_TextAdapter(), _scheduling(_Fut(result=outcome), scheduled))
+
+    runner._render_approval_sync(dict(pending_entry.data))
+
+    assert len(scheduled) == 1, "never send a second approval after a lost ACK"
+    assert pending_entry.settle is None, "an unconfirmed send must not arm a card timeout notice"
+    with _approval._lock:
+        assert _approval._gateway_queues[SESSION] == [pending_entry]
+
+
 @pytest.mark.parametrize(
     "outcome",
     [
