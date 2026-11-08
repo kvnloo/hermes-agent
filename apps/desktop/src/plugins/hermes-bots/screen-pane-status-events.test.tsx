@@ -5,7 +5,7 @@
  * or hero mounted must pick it up itself or it stays "Stopped" forever.
  */
 
-import { act, render, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
@@ -39,6 +39,8 @@ vi.mock('./i18n', () => ({
   useBots: () => ({
     screen: {
       title: 'Screen',
+      unavailableTitle: 'Screen unavailable',
+      notInstalledTitle: 'Screen packages missing',
       stoppedTitle: 'Stopped',
       stoppedBody: 'Body',
       start: 'Start',
@@ -68,7 +70,7 @@ import { emitGatewayEvent } from '../../contrib/events'
 
 import { displayRequest } from './screen-connection'
 import { BotScreenPane } from './screen-pane'
-import { $screenState } from './screen-state'
+import { $screenState, setScreenStatus } from './screen-state'
 
 const bot: RosterRow = { name: 'ops', sourceScoped: true, connectionId: 'host-a', connectionKind: 'remote' }
 
@@ -119,5 +121,20 @@ it('a stopped pane learns of an external start from the pushed display.status ev
   act(() => emitGatewayEvent({ type: 'display.status', connectionId: 'host-a', profile: 'ops', payload: running }))
   await waitFor(() => expect(vi.mocked(displayRequest)).toHaveBeenCalledWith(bot, 'display.observe', expect.anything()))
   expect(view.queryByText('Stopped')).toBeNull()
+  view.unmount()
+})
+
+it('shows the failed status RPC instead of stale package instructions and recovers on retry', async () => {
+  // A cached status cannot overrule a failed fresh read of the gateway's truth.
+  setScreenStatus(bot, { ...stopped, installed: false, missing: ['Xvnc'] })
+  vi.mocked(displayRequest).mockRejectedValueOnce(new TypeError('host.requestProfile is not a function'))
+
+  const view = render(<BotScreenPane bot={bot} />)
+  await waitFor(() => expect(view.getByText('host.requestProfile is not a function')).toBeTruthy())
+  expect(view.queryByText('Screen packages missing')).toBeNull()
+
+  fireEvent.click(view.getByRole('button', { name: 'Reconnect' }))
+  await waitFor(() => expect(view.getByText('Stopped')).toBeTruthy())
+  expect(view.queryByText('host.requestProfile is not a function')).toBeNull()
   view.unmount()
 })
