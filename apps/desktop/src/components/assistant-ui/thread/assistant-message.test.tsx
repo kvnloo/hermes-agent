@@ -876,3 +876,35 @@ describe('message timeline timestamps', () => {
     expect(stamps.filter(stamp => stamp === formatTimelineRange(startedAt, completedAt))).toHaveLength(1)
   })
 })
+
+describe('expanded reasoning typography (#151410)', () => {
+  it('keeps its text size and line height aligned with reply prose', async () => {
+    const { container } = render(<Harness />)
+    await screen.findByText('done')
+
+    const disclosure = container.querySelector<HTMLElement>('[data-slot="aui_thinking-disclosure"]')
+    expect(disclosure).not.toBeNull()
+
+    const toggle = disclosure!.querySelector<HTMLButtonElement>('button[aria-expanded]')
+    expect(toggle).not.toBeNull()
+    fireEvent.click(toggle!)
+
+    const paragraph = await screen.findByText('checked carefully')
+    const reasoning = paragraph.closest<HTMLElement>('[data-slot="aui_reasoning-text"]')
+    const reply = container.querySelector<HTMLElement>('[data-slot="aui_assistant-message-content"] > .aui-md')
+    expect(reasoning).not.toBeNull()
+    expect(reply).not.toBeNull()
+
+    // Assert rendered typography, not source strings: the old text-xs /
+    // leading-snug override won the Tailwind merge and shrank reasoning.
+    const proseSize = 'text-[length:var(--conversation-text-font-size)]'
+    const proseLeading = 'leading-(--dt-line-height)'
+    expect(disclosure!.classList.contains(proseSize)).toBe(true)
+    expect(reply!.classList.contains(proseSize)).toBe(true)
+    expect(reply!.classList.contains(proseLeading)).toBe(true)
+    expect(reasoning!.classList.contains(proseSize)).toBe(true)
+    expect(reasoning!.classList.contains(proseLeading)).toBe(true)
+    expect(reasoning!.classList.contains('text-xs')).toBe(false)
+    expect(reasoning!.classList.contains('leading-snug')).toBe(false)
+  })
+})
