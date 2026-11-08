@@ -246,4 +246,89 @@ describe('useTranscriptPeerSync (#65047)', () => {
     expect(seeds).toHaveLength(1)
     expect((seeds[0] as { messages: unknown[] }).messages).toHaveLength(4)
   })
+
+  it('does not let a delayed older peer refresh overwrite a newer tile transcript', async () => {
+    const tileRuntime = 'rt-peer-tile'
+    const local = createClientSessionState(STORED, [{ id: 'u1', role: 'user', parts: [textPart('a')] }])
+    publishSessionState(RUNTIME, local)
+    publishSessionState(tileRuntime, local)
+    $sessionTiles.set([{ storedSessionId: STORED, runtimeId: tileRuntime }])
+
+    const older = {
+      session_id: STORED,
+      messages: [
+        { content: 'a', role: 'user', timestamp: 1 },
+        { content: 'b', role: 'assistant', timestamp: 2 }
+      ]
+    }
+    const newer = {
+      session_id: STORED,
+      messages: [
+        ...older.messages,
+        { content: 'c', role: 'user', timestamp: 3 },
+        { content: 'd', role: 'assistant', timestamp: 4 }
+      ]
+    }
+
+    let releaseOlderActive!: (value: typeof older) => void
+    const olderActive = new Promise<typeof older>(resolve => {
+      releaseOlderActive = resolve
+    })
+    const { getLatestSessionMessages } = await import('@/hermes')
+    vi.mocked(getLatestSessionMessages).mockReset()
+    vi.mocked(getLatestSessionMessages)
+      .mockReturnValueOnce(olderActive as never)
+      .mockResolvedValueOnce(newer as never)
+      .mockResolvedValueOnce(newer as never)
+      .mockResolvedValueOnce(older as never)
+
+    const { useTranscriptPeerSync } = await import('./use-transcript-peer-sync')
+    const published: Array<{ sessionId: string; count: number }> = []
+
+    function Harness() {
+      const activeSessionIdRef = useRef<string | null>(RUNTIME)
+      const busyRef = useRef(false)
+      const selectedStoredSessionIdRef = useRef<string | null>(STORED)
+
+      useTranscriptPeerSync({
+        activeSessionIdRef,
+        busyRef,
+        selectedStoredSessionIdRef,
+        updateSessionState: (sessionId, updater) => {
+          const next = updater(local)
+          published.push({ sessionId, count: next.messages.length })
+
+          return next
+        }
+      })
+
+      return null
+    }
+
+    await act(async () => {
+      render(<Harness />)
+    })
+
+    const peer = new FakeBroadcastChannel('hermes:transcript')
+
+    await act(async () => {
+      peer.postMessage({ messageCount: 2, sessionId: STORED })
+    })
+    await waitFor(() => expect(getLatestSessionMessages).toHaveBeenCalledTimes(1))
+
+    await act(async () => {
+      peer.postMessage({ messageCount: 4, sessionId: STORED })
+    })
+    await waitFor(() => expect(published.filter(row => row.sessionId === tileRuntime)).toHaveLength(1))
+
+    // The older event's active read completes only after the newer event has
+    // already published its tile. It must not mint a newer tile generation.
+    await act(async () => {
+      releaseOlderActive(older)
+      await new Promise<void>(resolve => setTimeout(resolve, 0))
+    })
+
+    expect(getLatestSessionMessages).toHaveBeenCalledTimes(3)
+    expect(published.filter(row => row.sessionId === tileRuntime)).toEqual([{ sessionId: tileRuntime, count: 4 }])
+  })
 })

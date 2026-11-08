@@ -35,13 +35,19 @@ export function useTranscriptPeerSync({
   // transcript read returns. Keep only the newest snapshot per runtime: an
   // earlier response would otherwise overwrite the later one on arrival.
   const refreshSequenceByRuntimeRef = useRef(new Map<string, number>())
+  // A peer notification may wait for foreground hydration before touching its
+  // tiles. Give it a generation at receipt, before any asynchronous reads.
+  const peerBroadcastSequenceRef = useRef(0)
 
   useEffect(() => {
     let cancelled = false
 
-    const latestRefresh = (runtimeId: string) => {
-      const sequence = (refreshSequenceByRuntimeRef.current.get(runtimeId) ?? 0) + 1
-      refreshSequenceByRuntimeRef.current.set(runtimeId, sequence)
+    const latestRefresh = (runtimeId: string, sequence: number) => {
+      const previous = refreshSequenceByRuntimeRef.current.get(runtimeId) ?? 0
+
+      if (sequence > previous) {
+        refreshSequenceByRuntimeRef.current.set(runtimeId, sequence)
+      }
 
       return () => !cancelled && refreshSequenceByRuntimeRef.current.get(runtimeId) === sequence
     }
@@ -52,6 +58,8 @@ export function useTranscriptPeerSync({
       if (!storedSessionId) {
         return
       }
+
+      const sequence = ++peerBroadcastSequenceRef.current
       void (async () => {
         const selected = selectedStoredSessionIdRef.current
         const runtimeId = activeSessionIdRef.current
@@ -59,7 +67,7 @@ export function useTranscriptPeerSync({
         if (!cancelled && selected === storedSessionId && runtimeId && !busyRef.current) {
           await hydrateStoredSessionTranscript({
             attempts: 1,
-            isCurrent: latestRefresh(runtimeId),
+            isCurrent: latestRefresh(runtimeId, sequence),
             runtimeSessionId: runtimeId,
             storedProfile: profileScopeForTranscriptSession(resolveActiveTranscriptSession(storedSessionId, runtimeId)),
             storedSessionId,
@@ -84,7 +92,7 @@ export function useTranscriptPeerSync({
 
           await hydrateStoredSessionTranscript({
             attempts: 1,
-            isCurrent: latestRefresh(tile.runtimeId),
+            isCurrent: latestRefresh(tile.runtimeId, sequence),
             runtimeSessionId: tile.runtimeId,
             storedProfile: profileScopeForTranscriptSession(owner),
             storedSessionId,
