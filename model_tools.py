@@ -726,9 +726,9 @@ def _dispatch_bridge_tool(function_name: str, function_args: dict[str, Any],
                           ids: Optional[_CallIds] = None):
     """Handle a Tool Search bridge call (tool_search / tool_describe / tool_call).
 
-    None when *function_name* is not a bridge tool; ``(result, None)`` for a
-    finished catalog read or error; ``(None, (name, args))`` when a validated
-    tool_call should be re-dispatched as the real tool.
+    None when *function_name* is not a bridge tool; ``(result, None)`` for
+    catalog reads or unresolved errors; ``(result, (name, args))`` for a
+    resolved but rejected tool call; ``(None, (name, args))`` for redispatch.
     """
     try:
         from tools import tool_search as ts
@@ -764,12 +764,12 @@ def _dispatch_bridge_tool(function_name: str, function_args: dict[str, Any],
     # Session-gated GUI tools fail fast with their real reason (#120413):
     # tool_search can never surface them in this session.
     if underlying_name not in ts.scoped_deferrable_names(current_defs):
-        return tool_error(ts.scope_block_reason(underlying_name)), None
+        return tool_error(ts.scope_block_reason(underlying_name)), (underlying_name, underlying_args)
     # Validate against the deferred tool's concrete schema — the generic
     # ``arguments: object`` bridge schema can't enforce it.
     probe_err = ts.validate_deferred_call_args(underlying_name, underlying_args)
     if probe_err is not None:
-        return probe_err, None
+        return probe_err, (underlying_name, underlying_args)
     return None, (underlying_name, underlying_args)
 
 
@@ -919,10 +919,14 @@ def handle_function_call(
     ids = _CallIds(task_id, session_id, tool_call_id, turn_id, api_request_id, conversation_id)
     start = time.monotonic()
 
-    def _emit(result: Any, **extra: Any) -> Any:
+    def _emit(result: Any, *, hook_name: Optional[str] = None,
+              hook_args: Optional[dict[str, Any]] = None, **extra: Any) -> Any:
         """Emit post_tool_call with this call's identity fields; returns *result*."""
-        _emit_post_tool_call_hook(function_name=function_name, function_args=function_args, result=result,
-                                  **asdict(ids), middleware_trace=list(trace), **extra)
+        _emit_post_tool_call_hook(
+            function_name=hook_name or function_name,
+            function_args=hook_args if hook_args is not None else function_args,
+            result=result, **asdict(ids), middleware_trace=list(trace), **extra,
+        )
         return result
 
     # Tool Search bridge: tool_search / tool_describe are catalog reads handled
@@ -931,8 +935,11 @@ def handle_function_call(
     bridged = _dispatch_bridge_tool(function_name, function_args, enabled_toolsets, disabled_toolsets, ids)
     if bridged is not None:
         result, underlying = bridged
-        if underlying is None:
-            return _emit(result, duration_ms=_elapsed_ms(start))
+        if result is not None:
+            hook_name, hook_args = underlying or (function_name, function_args)
+            duration_ms = _elapsed_ms(start)
+            _emit(result, hook_name=hook_name, hook_args=hook_args, duration_ms=duration_ms)
+            return _apply_transform_tool_result_hook(hook_name, hook_args, result, duration_ms, ids)
         from tools.connectors import CONNECTOR_BATCH_SENTINEL, dispatch_connector_batch
         if underlying[0] == CONNECTOR_BATCH_SENTINEL:
             return _emit(dispatch_connector_batch(

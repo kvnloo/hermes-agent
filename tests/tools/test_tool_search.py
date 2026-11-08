@@ -474,6 +474,59 @@ class TestHandleFunctionCallIntegration:
         assert payload["api_request_id"] == "private-request"
         assert payload["tool_call_id"] == "private-call"
 
+    def test_bridge_error_result_is_transformable_after_post(self, monkeypatch):
+        """#151243: schema and resolution errors still reach the model-facing hook."""
+        import model_tools
+        from hermes_cli import lifecycle
+        from tools.registry import registry
+
+        name = "mcp_bridge_transform_schema_probe"
+        toolset = "mcp-bridge-transform-probe"
+        dispatched = []
+        registry.register(
+            name=name, toolset=toolset,
+            schema={
+                "name": name, "description": "Bridge validation probe",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"priority": {"type": "string", "enum": ["low"]}},
+                    "required": ["priority"],
+                },
+            },
+            handler=lambda args, **kwargs: dispatched.append(args) or '{"ok": true}',
+        )
+
+        events = []
+        monkeypatch.setattr(
+            lifecycle, "has_hook",
+            lambda hook: hook in {"post_tool_call", "transform_tool_result"},
+        )
+
+        def invoke(hook, **payload):
+            events.append((hook, payload))
+            return [payload["result"] + " | plugin recovery cue"] if hook == "transform_tool_result" else []
+
+        monkeypatch.setattr(lifecycle, "invoke_hook", invoke)
+        for args, expected_name in (
+            ({"name": name, "arguments": {"priority": "urgent"}}, name),
+            ({"calls": []}, "tool_call"),
+        ):
+            events.clear()
+            returned = model_tools.handle_function_call(
+                "tool_call", args, enabled_toolsets=[toolset],
+                turn_id="bridge-turn", api_request_id="bridge-request",
+            )
+            assert [hook for hook, _ in events] == ["post_tool_call", "transform_tool_result"]
+            post, transform = (payload for _, payload in events)
+            assert post["tool_name"] == transform["tool_name"] == expected_name
+            assert post["status"] == transform["status"] == "error"
+            assert post["result"] == transform["result"]
+            assert "error" in json.loads(post["result"])
+            assert transform["turn_id"] == "bridge-turn"
+            assert transform["api_request_id"] == "bridge-request"
+            assert returned == post["result"] + " | plugin recovery cue"
+        assert dispatched == []
+
 
 class TestRegression_OpenClawCron84141:
     """Regression guard for the OpenClaw cron-tool-loss class of bug.

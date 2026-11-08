@@ -139,7 +139,7 @@ def test_restricted_toolset_never_gains_the_recovered_tool(mail_state, clock):
     assert _names(get_tool_definitions(**restricted)) == {ANCHOR}
     result, redispatch = model_tools._dispatch_bridge_tool(
         "tool_call", {"calls": [{"name": MAIL, "arguments": {}}]}, ["mcp-probe-anchor"], None)
-    assert redispatch is None and "error" in json.loads(result)
+    assert redispatch == (MAIL, {}) and "error" in json.loads(result)
 
 
 def test_profile_scoped_verdicts_stay_separate(mail_state, monkeypatch):
