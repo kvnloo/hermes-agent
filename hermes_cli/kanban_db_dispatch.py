@@ -357,9 +357,8 @@ def _pid_alive(pid: Optional[int]) -> bool:
                 timeout=1,
                 check=False,
             )
-            if proc.returncode != 0:
-                return False
-            if "Z" in (proc.stdout or "").strip():
+            # A failed ps probe is not evidence of death after _pid_exists succeeded.
+            if proc.returncode == 0 and "Z" in (proc.stdout or "").strip():
                 return False
         except (OSError, subprocess.SubprocessError, TimeoutError):
             # If the secondary probe fails, keep the kill(0) answer.

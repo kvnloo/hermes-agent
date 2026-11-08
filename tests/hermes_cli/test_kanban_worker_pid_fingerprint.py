@@ -381,3 +381,26 @@ def test_max_runtime_never_sigkills_a_recycled_near_match(board, monkeypatch):
     assert killed == [(os.getpid(), signal.SIGTERM)]
     task = kb.get_task(conn, tid)
     assert task.status == "running" and task.worker_pid == os.getpid()
+
+@pytest.mark.platforms("macos")
+def test_failed_ps_probe_does_not_reclaim_a_live_worker(board, monkeypatch):
+    """A transient nonzero ps exit must not overrule an existing live worker PID (#118326)."""
+    from subprocess import CompletedProcess
+
+    pid = os.getpid()
+    fingerprint = kbd._process_fingerprint(pid)
+    assert fingerprint is not None
+    tid = _claimed_running(board, pid=pid, started_at=fingerprint)
+    monkeypatch.setattr(
+        kbd.subprocess, "run",
+        lambda argv, **kwargs: CompletedProcess(argv, 1, stdout="", stderr=""),
+    )
+    signals = []
+
+    assert kbd._pid_alive(pid) is True
+    assert kb.release_stale_claims(
+        board, signal_fn=lambda worker_pid, sig: signals.append((worker_pid, sig))
+    ) == 0
+    assert signals == []
+    assert kb.get_task(board, tid).status == "running"
+    assert "claim_extended" in [event.kind for event in kb.list_events(board, tid)]
