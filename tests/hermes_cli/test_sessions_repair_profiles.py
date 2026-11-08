@@ -408,3 +408,37 @@ def test_ledger_rows_that_appear_after_the_scan_still_block_the_copy(homes, monk
     finally:
         root.close()
         acme.close()
+
+
+def test_multiplexed_repair_keeps_local_routes_beside_their_sessions(homes, monkeypatch):
+    """A profile's LOCAL route must survive while its copied gateway index moves to the root."""
+    monkeypatch.setattr("hermes_cli.sessions_repair_profiles._gateway_multiplexes", lambda root: True)
+    monkeypatch.setattr("hermes_cli.sessions_cmd_repair_profiles.default_snapshot", lambda store: "snap")
+    local_key = "agent:acme:local:dm:local-abc"
+    scope = str((homes["default"] / "sessions").resolve())
+    acme = SessionDB(homes["acme"] / "state.db")
+    try:
+        _session(acme, "local-abc", local_key, profile="acme", source="desktop")
+        acme.save_gateway_routing_entry(
+            local_key, json.dumps({"session_key": local_key, "session_id": "local-abc"}), scope="")
+        acme.save_gateway_routing_entry(
+            ACME_KEY, json.dumps({"session_key": ACME_KEY, "session_id": "copied-index"}), scope=scope)
+    finally:
+        acme.close()
+
+    strays = {f["subject"] for f in _report()["findings"] if f["kind"] == "routing_stray"}
+    assert any(s.startswith(ACME_KEY) for s in strays)
+    assert not any(s.startswith(local_key) for s in strays)
+
+    assert _run(apply=True) == 0
+    root = SessionDB(homes["default"] / "state.db")
+    acme = SessionDB(homes["acme"] / "state.db")
+    try:
+        assert local_key in acme.load_gateway_routing_entries(scope="")
+        assert local_key not in root.load_gateway_routing_entries(scope="")
+        assert ACME_KEY not in acme.load_gateway_routing_entries(scope=scope)
+        assert ACME_KEY in root.load_gateway_routing_entries(scope=scope)
+    finally:
+        root.close()
+        acme.close()
+    assert not any(f["kind"] == "routing_stray" for f in _report()["findings"])
