@@ -84,12 +84,10 @@ RETRIEVAL_HINT = ("uv could not download a pinned file (index or release host un
 # along, but the marker that means "packages may be installed, only the
 # optional compile step failed" is this line. #124268
 _BYTECODE_COMPILE_MARKER = "failed to bytecode-compile"
-# Streamed uv output keeps only the last 2000 characters. Resolver markers are
-# stitched back if a later verbose flood evicts them; the bytecode marker has
-# to ride the same path or repair/bootstrap never sees the retry signal, and so
-# does the build marker: a failed native build's traceback runs far past 2000
-# characters, and without it the failure reads as a fetch error, not a verdict.
-_STREAM_TAIL_MARKERS = _RESOLVER_MARKERS + (_BYTECODE_COMPILE_MARKER, *_BUILD_MARKERS)
+# Streamed uv output keeps only the last 2000 characters. Preserve the
+# resolver, bytecode, build, and retrieval markers when later verbose output
+# evicts their diagnostics; a lost fetch marker would skip offline lock retry.
+_STREAM_TAIL_MARKERS = _RESOLVER_MARKERS + (_BYTECODE_COMPILE_MARKER, *_BUILD_MARKERS, *_RETRIEVAL_MARKERS)
 
 # Retries after purging corrupt cached packages. Each round must name a package
 # not purged before, so this bounds a cache with several damaged entries, never
