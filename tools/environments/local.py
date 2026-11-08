@@ -865,13 +865,15 @@ class LocalEnvironment(BaseEnvironment):
         # custom init files so nvm/asdf/pyenv land on PATH in the snapshot.
         if login:
             cmd_string = _prepend_shell_init(cmd_string, _resolve_shell_init_files())
+        # Recover cwd before staging the (potentially sensitive) script:
+        # a failed recovery must not leave a command payload on disk.
+        self._recover_cwd()
         staged_script = None
         if _IS_WINDOWS:
             staged_script = self._stage_command_script(cmd_string)
             args = [bash, *(["-l"] if login else []), _bash_safe_path(staged_script)]
         else:
             args = [bash, *(["-l"] if login else []), "-c", cmd_string]
-        self._recover_cwd()
         try:
             proc = subprocess.Popen(
                 args, text=True, env=_make_run_env(self.env), encoding="utf-8", errors="replace",

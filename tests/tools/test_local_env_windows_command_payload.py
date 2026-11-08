@@ -297,3 +297,37 @@ def test_large_remote_script_reaches_fake_ssh_via_stdin_not_argv(local_env, tmp_
     assert "Write-Output" not in argv_text
     assert "EncodedCommand" not in argv
     assert stdin_file.read_bytes() == remote_script.encode("utf-8")
+
+
+@pytest.mark.windows_only
+def test_failed_cwd_recovery_does_not_leave_staged_command(local_env, monkeypatch):
+    """A pre-spawn failure must not retain a sensitive Windows command file."""
+    before = _staged_files(local_env)
+    monkeypatch.setattr(local_mod, "_find_bash", lambda: "bash")
+
+    def reject_cwd():
+        raise PermissionError("cannot inspect cwd")
+
+    monkeypatch.setattr(local_env, "_recover_cwd", reject_cwd)
+
+    with pytest.raises(PermissionError, match="cannot inspect cwd"):
+        local_env._run_bash("printf '%s' 'sensitive-wrapper-payload'")
+
+    assert _staged_files(local_env) == before
+
+
+@pytest.mark.windows_only
+def test_literal_heredoc_keeps_paired_backslashes(local_env, tmp_path):
+    """Regression for #150917: Git Bash must not halve a quoted heredoc pair."""
+    target = tmp_path / "literal.txt"
+    line = "x = 'a" + ("\\" * 2) + "b'\n"
+    command = (
+        f"cat > {shlex.quote(_bash_safe_path(str(target)))} <<'HERMES_LITERAL'\n"
+        f"{line}"
+        "HERMES_LITERAL\n"
+    )
+
+    result = local_env.execute(command, timeout=20)
+
+    assert result["returncode"] == 0, result
+    assert target.read_text(encoding="utf-8") == line
