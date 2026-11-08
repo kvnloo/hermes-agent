@@ -96,6 +96,9 @@ class CanonicalHostedRoomService(HostedControls, HostedRoomService):
             # The home that admitted a stopping attempt still answers for it; so does every home
             # a turn from before attempt homes were recorded may have been admitted at.
             target_home = claimed
+        if target_home is None and operation == 'execute':
+            # A queued turn at an unserved home cannot run; let the target release its FIFO.
+            raise stale_hosted_task('the member home is no longer served')
         if target_home is None or claimed != str(target_home):
             raise RuntimeStoreError('permission_denied')
         result = {'owner': owner, 'target_home': str(target_home)}

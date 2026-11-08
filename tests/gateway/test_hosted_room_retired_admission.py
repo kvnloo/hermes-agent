@@ -212,3 +212,35 @@ def test_a_queued_turn_whose_room_task_is_gone_reads_stale_not_denied(hosted_own
         service.check_admission(ref, stale)
     with pytest.raises(RuntimeStoreError, match='permission_denied'):
         service.check_admission(ref, {**row, 'payload': {'text': 'changed'}})
+
+
+def test_unserved_member_execute_attestation_is_stale_but_rebinding_is_denied(hosted_owner, monkeypatch):
+    """A remote queued execute cannot run at an unserved home; a moved binding stays denied."""
+    from dataclasses import asdict
+    import pytest
+
+    authority, _, _, _ = hosted_owner
+    service, _, identity, _ = _queued_member_turn(hosted_owner, monkeypatch, 'unserved', 'pending')
+    selector = {'room_id': 'room', 'member_id': 'one', 'profile': 'default'}
+    params = {'_target_home': str(authority.profile_id), 'task': asdict(identity),
+              'execution_generation': 1}
+
+    # Cross-gateway execution uses attest(), not local check_admission(). Without this
+    # verdict the target's queued head pauses under permission_denied on every drain.
+    monkeypatch.setattr(service, 'profile_homes', dict)
+    with pytest.raises(RuntimeStoreError) as exc:
+        service.attest(selector, 'execute', params)
+    assert exc.value.reason == 'stale_hosted_task'
+
+    # No new submission may be admitted after unserving the member.
+    with pytest.raises(RuntimeStoreError) as exc:
+        service.attest(selector, 'submit', params)
+    assert exc.value.reason == 'permission_denied'
+
+    # A now-served member whose home differs from the committed target is a
+    # changed binding, not a stale task that the target may cancel.
+    monkeypatch.setattr(service, 'profile_homes',
+                        lambda: {'default': Path(authority.profile_id).parent / 'moved-home'})
+    with pytest.raises(RuntimeStoreError) as exc:
+        service.attest(selector, 'execute', params)
+    assert exc.value.reason == 'permission_denied'
