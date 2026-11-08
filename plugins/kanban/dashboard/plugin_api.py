@@ -1269,8 +1269,13 @@ def get_task_log(task_id: str, tail: Optional[int] = Query(None, ge=1, le=2_000_
 @router.post("/dispatch")
 def dispatch(dry_run: bool = Query(False), max_n: int = Query(8, alias="max"), board: Optional[str] = Query(None)):
     """Dispatch nudge so the UI doesn't wait out the 60 s dispatcher tick."""
+    # This manual nudge must use the same endpoint quota lane as CLI/gateway ticks.
+    endpoint_caps = kbd.configured_max_in_progress_per_endpoint()
     with _board_conn(board) as (board, conn):
-        result = kbd.dispatch_once(conn, dry_run=dry_run, max_spawn=max_n, board=board)
+        result = kbd.dispatch_once(
+            conn, dry_run=dry_run, max_spawn=max_n, board=board,
+            max_in_progress_per_endpoint=endpoint_caps,
+        )
         try:
             return asdict(result)  # DispatchResult is a dataclass
         except TypeError:
