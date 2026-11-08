@@ -312,6 +312,54 @@ def _runner_author(command):
     return json.loads(parts[marker + 2])
 
 
+@pytest.mark.parametrize("has_reply_runner", [False, True], ids=["desktop", "bot-delivery"])
+def test_bot_reply_only_uses_implicit_path_when_runner_exists(tmp_path, monkeypatch, has_reply_runner):
+    """#151316: a bot-attributed Desktop turn needs an explicit reply; a delivery-owned turn does not."""
+    from agent.turn_author import parse_turn_author
+
+    home = _managed_home(tmp_path)
+    target = home / "profiles" / "researcher"
+    authority = _canonical_target(monkeypatch, target)
+    _capture_spawn(monkeypatch)
+    monkeypatch.setattr(bot_mode_dm, "_dm_dir", lambda: tmp_path)
+
+    agent = _FakeAgent(home)
+    agent._turn_author = parse_turn_author({
+        "id": "bot:researcher",
+        "name": "researcher",
+        "is_bot": True,
+        **({"reply_via_delivery": True} if has_reply_runner else {}),
+    })
+    result = json.loads(bot_mode_dm.message_agent_tool(
+        target="researcher", message="The requested answer.", agent=agent,
+    ))
+
+    if has_reply_runner:
+        assert "final response already goes back" in result["error"]
+        assert authority.calls == []
+    else:
+        assert result["status"] == "queued"
+        assert len(authority.calls) == 1
+
+
+def test_notify_only_dm_does_not_claim_implicit_reply_runner(tmp_path, monkeypatch):
+    """A message sent with expects_reply=False has no completion returning its recipient's answer."""
+    home = _managed_home(tmp_path)
+    authority = _canonical_target(monkeypatch, home / "profiles" / "researcher")
+    _capture_spawn(monkeypatch)
+    monkeypatch.setattr(bot_mode_dm, "_dm_dir", lambda: tmp_path)
+
+    result = json.loads(bot_mode_dm.message_agent_tool(
+        target="researcher", message="For your information.", expects_reply=False,
+        agent=_FakeAgent(home),
+    ))
+
+    assert result["status"] == "queued"
+    assert authority.calls[0][1]["author"] == {
+        "id": "bot:default", "name": "hermes", "is_bot": True,
+    }
+
+
 def test_local_delivery_admits_canonically_and_acks(tmp_path, monkeypatch):
     calls = _capture_spawn(monkeypatch)
     # These assertions target the -p/turn-args shape; pin the entrypoint resolution
@@ -360,7 +408,10 @@ def test_local_delivery_admits_canonically_and_acks(tmp_path, monkeypatch):
     assert "PAYLOAD_SENTINEL_7A91" not in command
     assert "$(" not in command
     # the sender rides the runner argv as a stable id plus display handle
-    assert _runner_author(command) == {"id": "bot:default", "name": "hermes", "is_bot": True}
+    assert _runner_author(command) == {
+        "id": "bot:default", "name": "hermes", "is_bot": True,
+        "reply_via_delivery": True,
+    }
 
     # attribution prefix applied server-side; body verbatim in the admitted message
     content = Path(dm_file).read_text(encoding="utf-8")
@@ -550,7 +601,10 @@ def test_peer_delivery_command(tmp_path, monkeypatch):
     assert mode == "stdin"
     assert transport_argv == ["hermes", "-p", "default", "peer", "dm", "spark/researcher"]
     # the peer child reads the author from its env and forwards it in the request body
-    assert _runner_author(calls[0]["command"]) == {"id": "bot:eri-mac.local/default", "name": "hermes", "is_bot": True}
+    assert _runner_author(calls[0]["command"]) == {
+        "id": "bot:eri-mac.local/default", "name": "hermes", "is_bot": True,
+        "reply_via_delivery": True,
+    }
 
     # bare peer name targets the peer's main agent
     result2 = json.loads(
@@ -616,8 +670,14 @@ def test_peer_delivery_author_carries_the_sender_hostname_and_local_stays_bare(t
     assert json.loads(bot_mode_dm.message_agent_tool(target="spark", message="ping", agent=agent))["status"] == "queued"
     assert json.loads(bot_mode_dm.message_agent_tool(target="researcher", message="ping", agent=agent))["status"] == "queued"
 
-    assert _runner_author(calls[0]["command"]) == {"id": "bot:erimac.local/coder", "name": "coder", "is_bot": True}
-    assert _runner_author(calls[1]["command"]) == {"id": "bot:coder", "name": "coder", "is_bot": True}
+    assert _runner_author(calls[0]["command"]) == {
+        "id": "bot:erimac.local/coder", "name": "coder", "is_bot": True,
+        "reply_via_delivery": True,
+    }
+    assert _runner_author(calls[1]["command"]) == {
+        "id": "bot:coder", "name": "coder", "is_bot": True,
+        "reply_via_delivery": True,
+    }
 
 
 def test_renamed_primary_signs_with_its_friendly_name_and_is_reachable_by_it(tmp_path, monkeypatch):
@@ -664,7 +724,10 @@ def test_named_profile_sender_prefix(tmp_path, monkeypatch):
     )
     assert result["status"] == "queued"
     assert authority.calls[0][1]["message"].startswith("Message from 🤖 coder (@coder): ")
-    assert _runner_author(calls[0]["command"]) == {"id": "bot:coder", "name": "coder", "is_bot": True}
+    assert _runner_author(calls[0]["command"]) == {
+        "id": "bot:coder", "name": "coder", "is_bot": True,
+        "reply_via_delivery": True,
+    }
 
 
 @pytest.mark.parametrize("lookup", ["not_ready", "no_owner"])
@@ -734,7 +797,10 @@ def test_live_dm_admitted_before_waiter_failure(tmp_path, monkeypatch):
     assert record["delivery_id"] == result["delivery_id"]
     assert record["profile_home"] == str(target.resolve())
     assert authority.records[result["delivery_id"]]["message"] == "Message from 🤖 hermes (@hermes): hello"
-    assert authority.calls[0][1]["author"] == {"id": "bot:default", "name": "hermes", "is_bot": True}
+    assert authority.calls[0][1]["author"] == {
+        "id": "bot:default", "name": "hermes", "is_bot": True,
+        "reply_via_delivery": True,
+    }
     assert "notification_error" in result
 
 

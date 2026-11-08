@@ -57,7 +57,8 @@ def local_origin() -> str:
 
 
 def parse_turn_author(raw: Any) -> Optional[dict[str, Any]]:
-    """Normalize a dict or JSON string into ``{"id", "name", "is_bot"}``; None for anything else or without id and name.
+    """Normalize a dict or JSON string to an author, including trusted delivery
+    return-path metadata. None for malformed input or missing id and name.
     The id is whatever the transport knows the sender by: ``bot:<profile>`` on a bot-mode delivery inside one
     install, ``bot:<connection>/<profile>`` when the Desktop relayed it from another machine,
     ``bot:<hostname>/<profile>`` on a peer dm, the platform user id elsewhere.
@@ -78,6 +79,9 @@ def parse_turn_author(raw: Any) -> Optional[dict[str, Any]]:
         hops = raw.get("hops")
         if isinstance(hops, int) and not isinstance(hops, bool) and 0 < hops <= _MAX_CHAIN_HOPS:
             author["hops"] = hops
+        # A bot's explicit DM reply is redundant only when the delivery runner returns its final answer.
+        if author["is_bot"] and raw.get("reply_via_delivery") is True:
+            author["reply_via_delivery"] = True
         origin = _clean_text(raw.get("origin"))
         if origin and author["id"] and author["id"].startswith("bot:") and "/" not in author["id"]:
             author["id"] = _clean_text(bot_author_id(author["id"][len("bot:"):], origin))

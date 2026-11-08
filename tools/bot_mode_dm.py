@@ -304,7 +304,8 @@ def _dispatch(raw_target: str, content: str, sender: Sender, *, wake: Any) -> st
     roster = list(roster_homes)
     delivery = dict(task_id=sender.task_id, agent=sender.agent, wake=wake)
     # Attribution for the recipient's memory hooks; the text prefix stays the human-facing signature.
-    author = {"id": f"bot:{me}", "name": _handle(me, roster), "is_bot": True, **sender.chain}
+    author = {"id": f"bot:{me}", "name": _handle(me, roster), "is_bot": True,
+              **({"reply_via_delivery": True} if wake != "none" else {}), **sender.chain}
 
     # Peer target: '<peer>/<agent>' or a bare registered peer name.
     peer_match = _PEER_TARGET_RE.match(raw_target)
@@ -353,9 +354,10 @@ def _dispatch(raw_target: str, content: str, sender: Sender, *, wake: Any) -> st
         return sender.roster_err(f"No teammate named '{raw_target}' on this install, on a connected "
                                  "machine, or on a registered peer. Pick a name from the roster "
                                  "(roles are listed in your system prompt).")
-    if (getattr(sender.agent, "_turn_author", None) or {}).get("id") == f"bot:{resolved}":
-        # One reply path (#95074): this turn answers @resolved's delivery, whose runner carries the
-        # final response back. A second DM races it and lands in their chat as a separate turn.
+    turn_author = getattr(sender.agent, "_turn_author", None) or {}
+    if turn_author.get("id") == f"bot:{resolved}" and turn_author.get("reply_via_delivery") is True:
+        # One reply path (#95074): only a delivery-owned runner returns this final answer.
+        # A bot-attributed Desktop turn without such a runner may reply explicitly (#151316).
         return _err(f"@{_handle(resolved, roster)} messaged you this turn and your final response already goes back "
                     "to them: put your reply in it instead of messaging them. Do not retry.")
     # Local teammates are admitted through the profile authority; the argv only names the
