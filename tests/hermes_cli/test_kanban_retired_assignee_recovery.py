@@ -41,6 +41,11 @@ def _profile(home: Path, name: str) -> None:
     (d / "config.yaml").write_text(f"name: {name}\n", encoding="utf-8")
 
 
+def _ghost_shell(home: Path, name: str) -> None:
+    """Locally present profile directory with no identity marker."""
+    (home / "profiles" / name).mkdir(parents=True)
+
+
 def _tombstoned_profile(home: Path, name: str) -> None:
     """A profile ``hermes profile delete`` left behind: identity marker + tombstone."""
     from hermes_constants import mark_named_profile_deleted
@@ -59,10 +64,11 @@ def _events(conn, tid: str) -> list:
     return [e for e in kb.list_events(conn, tid) if e.kind == "assignee_recovered"]
 
 
-def test_deleted_assignee_is_routed_to_the_live_creator(tmp_path, monkeypatch):
-    """(1) The deadlock: the block is addressed to a profile that no longer exists."""
+def test_ghost_shell_assignee_is_routed_to_the_live_creator(tmp_path, monkeypatch):
+    """(1) A local identity-less profile shell cannot work the blocked card."""
     home = _isolated_home(tmp_path, monkeypatch)
     _profile(home, "pm")
+    _ghost_shell(home, "gone")
     spawns: list[str] = []
     with kbc.connect() as conn:
         tid = _blocked(conn, assignee="gone", created_by="pm")
@@ -122,6 +128,7 @@ def test_recovery_never_completes_or_unblocks(tmp_path, monkeypatch):
     """(4) Ownership repair is not dispatch: status and block kind are untouched."""
     home = _isolated_home(tmp_path, monkeypatch)
     _profile(home, "pm")
+    _ghost_shell(home, "gone")
     with kbc.connect() as conn:
         tid = _blocked(conn, assignee="gone", created_by="pm")
         before = kb.get_task(conn, tid)
@@ -136,6 +143,7 @@ def test_three_ticks_are_one_recovery_episode(tmp_path, monkeypatch):
     """(5) The condition expires after the repair: no per-tick event spam."""
     home = _isolated_home(tmp_path, monkeypatch)
     _profile(home, "pm")
+    _ghost_shell(home, "gone")
     with kbc.connect() as conn:
         tid = _blocked(conn, assignee="gone", created_by="pm")
         for _ in range(3):
@@ -147,6 +155,7 @@ def test_three_ticks_are_one_recovery_episode(tmp_path, monkeypatch):
 def test_dry_run_tick_repairs_nothing(tmp_path, monkeypatch):
     home = _isolated_home(tmp_path, monkeypatch)
     _profile(home, "pm")
+    _ghost_shell(home, "gone")
     with kbc.connect() as conn:
         tid = _blocked(conn, assignee="gone", created_by="pm")
         kbd.dispatch_once(conn, dry_run=True, spawn_fn=lambda *a, **k: None)
@@ -172,6 +181,7 @@ def test_unreadable_profile_state_fails_closed(tmp_path, monkeypatch):
     """(7) An unreadable profile must never license a reassignment."""
     home = _isolated_home(tmp_path, monkeypatch)
     _profile(home, "pm")
+    _ghost_shell(home, "gone")
     from hermes_cli import profiles
 
     def _boom(name):  # pragma: no cover - raised, not returned
@@ -189,6 +199,7 @@ def test_missing_profile_introspection_fails_closed(tmp_path, monkeypatch):
     """(7) No ``profiles`` import on this host = no detection, so no write."""
     home = _isolated_home(tmp_path, monkeypatch)
     _profile(home, "pm")
+    _ghost_shell(home, "gone")
     monkeypatch.setattr(kbd, "_profile_exists_fn", lambda: None)
     with kbc.connect() as conn:
         tid = _blocked(conn, assignee="gone", created_by="pm")
@@ -212,3 +223,24 @@ def test_stale_assignment_cannot_be_overwritten(tmp_path, monkeypatch):
         assert kbd._repair_blocked_assignee(conn, tid, "gone", "pm", route="created_by") is False
         assert kb.get_task(conn, tid).assignee == "ops"
         assert _events(conn, tid) == []
+
+
+def test_foreign_owner_is_preserved_while_local_tombstone_recovers(tmp_path, monkeypatch):
+    """A remote or external lane is not a deleted local profile (#101015).
+
+    Base lacks tombstone recovery; the carrier PR incorrectly also takes the
+    foreign card. Both must be true in a shared-board dispatch tick.
+    """
+    home = _isolated_home(tmp_path, monkeypatch)
+    _profile(home, "pm")
+    _tombstoned_profile(home, "ghost")
+    with kbc.connect() as conn:
+        foreign = _blocked(conn, assignee="remote-worker", created_by="pm")
+        retired = _blocked(conn, assignee="ghost", created_by="pm")
+        kbd.dispatch_once(conn, spawn_fn=lambda *a, **k: None)
+        assert kb.get_task(conn, foreign).assignee == "remote-worker"
+        assert kb.get_task(conn, foreign).status == "blocked"
+        assert _events(conn, foreign) == []
+        assert kb.get_task(conn, retired).assignee == "pm"
+        assert kb.get_task(conn, retired).status == "blocked"
+        assert len(_events(conn, retired)) == 1

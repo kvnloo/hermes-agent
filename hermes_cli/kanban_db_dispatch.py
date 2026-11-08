@@ -2234,11 +2234,11 @@ def _repair_blocked_assignee(
 def _recover_blocked_assignees(conn: sqlite3.Connection, *, dry_run: bool = False) -> None:
     """Re-own blocked cards whose assignee can never work them again.
 
-    A block addressed to a deleted or tombstoned profile never clears — no worker
-    is left to unblock it — so the card deadlocks behind a dead name. Route it to
-    the card's creator when that is a live profile, else clear the assignee and
-    say so (``route="human"``). Ownership repair only: the card stays blocked, is
-    never completed, never unblocked and never spawned.
+    A block addressed to a tombstoned or identity-less *local* profile cannot
+    clear itself. Route it to a live creator, otherwise leave it ownerless.
+    A name with no local profile directory might instead be a foreign host's
+    worker on a shared board (#101015), so never treat absence as proof of
+    deletion. Ownership repair never changes the block status or spawns.
     """
     if dry_run:
         return
@@ -2252,10 +2252,15 @@ def _recover_blocked_assignees(conn: sqlite3.Connection, *, dry_run: bool = Fals
     if profile_exists is None:
         # No profile introspection on this host: fail closed, never reassign blind.
         return
+    from hermes_cli.profiles import get_profile_dir
+
     for row in rows:
         old = row["assignee"]
         try:
-            if profile_exists(old):
+            # Profile absence is not retirement: remote/CLI lanes can own cards
+            # on a shared board. Only a local tombstone or ghost shell proves
+            # that this host has a dead profile to recover.
+            if not get_profile_dir(old).is_dir() or profile_exists(old):
                 continue
             creator = (row["created_by"] or "").strip() or None
             new = creator if creator and profile_exists(creator) else None
