@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import argparse
 
+import pytest
+
 from hermes_cli.subcommands.cron import build_cron_parser
 
 
@@ -48,3 +50,20 @@ def test_cron_accept_hooks_flag_on_run_and_tick():
     assert ns.accept_hooks is True
     ns2 = parser.parse_args(["cron", "tick", "--accept-hooks"])
     assert ns2.accept_hooks is True
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["cron", "create", "every 1h", "run task", "--skill", "   "],
+        ["cron", "edit", "job-id", "--skill", "   "],
+        ["cron", "edit", "job-id", "--add-skill", "   "],
+        ["cron", "edit", "job-id", "--remove-skill", "   "],
+    ],
+)
+def test_explicit_blank_cron_skill_name_is_rejected(args, capsys):
+    """A supplied but blank skill must not silently disappear before validation."""
+    with pytest.raises(SystemExit) as exc:
+        _build().parse_args(args)
+
+    assert exc.value.code == 2
+    assert "skill name must not be empty" in capsys.readouterr().err

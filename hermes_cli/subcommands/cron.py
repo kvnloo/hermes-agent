@@ -7,9 +7,17 @@ import ``main`` (cycle avoidance).
 
 from __future__ import annotations
 
+import argparse
 from typing import Callable
 
 from hermes_cli.subcommands._shared import add_accept_hooks_flag
+
+
+def _required_skill_name(value: str) -> str:
+    name = value.strip()
+    if not name:
+        raise argparse.ArgumentTypeError("skill name must not be empty")
+    return name
 
 
 def build_cron_parser(subparsers, *, cmd_cron: Callable) -> None:
@@ -47,6 +55,7 @@ def build_cron_parser(subparsers, *, cmd_cron: Callable) -> None:
         "--skill",
         dest="skills",
         action="append",
+        type=_required_skill_name,
         help="Attach a skill. Repeat to add multiple skills.",
     )
     cron_create.add_argument(
@@ -147,18 +156,21 @@ def build_cron_parser(subparsers, *, cmd_cron: Callable) -> None:
         "--skill",
         dest="skills",
         action="append",
+        type=_required_skill_name,
         help="Replace the job's skills with this set. Repeat to attach multiple skills.",
     )
     cron_edit.add_argument(
         "--add-skill",
         dest="add_skills",
         action="append",
+        type=_required_skill_name,
         help="Append a skill without replacing the existing list. Repeatable.",
     )
     cron_edit.add_argument(
         "--remove-skill",
         dest="remove_skills",
         action="append",
+        type=_required_skill_name,
         help="Remove a specific attached skill. Repeatable.",
     )
     cron_edit.add_argument(
