@@ -81,9 +81,9 @@ def _env_write_errors(log_msg: str):
 def _sanitize_surrogates(obj):
     """Recursively replace lone UTF-16 surrogates with U+FFFD so the value is UTF-8 encodable."""
     if isinstance(obj, str):
-        return obj.encode("utf-8", "replace").decode("utf-8")
+        return obj.encode("utf-16", "surrogatepass").decode("utf-16", "replace")
     if isinstance(obj, dict):
-        return {k: _sanitize_surrogates(v) for k, v in obj.items()}
+        return {_sanitize_surrogates(k): _sanitize_surrogates(v) for k, v in obj.items()}
     if isinstance(obj, list):
         return [_sanitize_surrogates(v) for v in obj]
     if isinstance(obj, tuple):
