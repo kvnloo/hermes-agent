@@ -80,3 +80,12 @@ def test_override_still_beats_registry_roots():
         extra_roots=[r"D:\git"],
     )
     assert candidates[0] == r"E:\custom\Git\bin\bash.exe"
+
+def test_registry_install_root_ignores_non_text_values():
+    """A malformed InstallPath must not disable normal bash candidates."""
+    from pm import shell
+
+    for value in (17, b"D:\git", None):
+        assert shell._registry_install_root(value) is None
+    assert shell._registry_install_root(r"D:\git\\") == r"D:\git"
+

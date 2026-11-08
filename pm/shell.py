@@ -71,6 +71,13 @@ _WINDOWS_BASH_STUB_DIRS = ("system32", "windowsapps")
 _GIT_FOR_WINDOWS_KEY = "SOFTWARE\\Git for Windows"
 
 
+def _registry_install_root(value: object) -> str | None:
+    """Ignore malformed InstallPath values without breaking bash fallback."""
+    if not isinstance(value, str):
+        return None
+    return value.rstrip("\\/") or None
+
+
 def _registry_git_roots() -> list[str]:
     """Git for Windows roots from the registry ``InstallPath`` value.
 
@@ -93,8 +100,9 @@ def _registry_git_roots() -> list[str]:
                     install, _ = winreg.QueryValueEx(key, "InstallPath")
             except OSError:
                 continue
-            if install:
-                roots.append(install.rstrip("\\/"))
+            root = _registry_install_root(install)
+            if root is not None:
+                roots.append(root)
     return list(dict.fromkeys(roots))
 
 
