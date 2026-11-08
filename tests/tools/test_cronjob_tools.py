@@ -27,6 +27,7 @@ class TestBackendScriptValidationRedaction:
     def test_backend_preflight_error_is_redacted(self, monkeypatch):
         from tools import cronjob_job_args as args_mod
         from tools import terminal_tool as terminal_mod
+        monkeypatch.setattr(args_mod, "_terminal_backend_is_local", lambda: False)
 
         monkeypatch.setattr(
             terminal_mod, "terminal_tool",
@@ -41,6 +42,7 @@ class TestBackendScriptValidationRedaction:
     def test_backend_preflight_exception_is_redacted(self, monkeypatch):
         from tools import cronjob_job_args as args_mod
         from tools import terminal_tool as terminal_mod
+        monkeypatch.setattr(args_mod, "_terminal_backend_is_local", lambda: False)
 
         def raise_secret(**kwargs):
             raise RuntimeError("OPENAI_API_KEY=sk-proj-test-secret")

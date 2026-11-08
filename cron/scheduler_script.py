@@ -578,14 +578,21 @@ def _run_job_script_in_backend(script_path: str, workdir: Optional[str] = None,
         return False, f"Backend script path must be absolute: {raw!r}."
     if any(part == ".." for part in path.parts):
         return False, f"Backend script path must not contain traversal segments: {raw!r}."
-    from tools.cronjob_job_args import _terminal_backend_is_local
+    from tools.cronjob_job_args import (
+        _local_backend_script_path_error, _terminal_backend_is_local,
+    )
+    local_backend = _terminal_backend_is_local()
+    if local_backend:
+        local_error = _local_backend_script_path_error(path)
+        if local_error:
+            return False, local_error
 
     # Script suffix controls its interpreter for every backend. A local terminal
     # backend is still reached through the backend runner, but must not parse a
     # shell script with Hermes's Python interpreter.
     if path.suffix.lower() in {".sh", ".bash"}:
         interpreter = "bash"
-    elif _terminal_backend_is_local():
+    elif local_backend:
         interpreter = sys.executable
     else:
         interpreter = "python3"

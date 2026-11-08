@@ -433,6 +433,10 @@ def _validate_backend_script(script: str, workdir: Optional[str] = None) -> Opti
         return f"Backend script path must not contain traversal segments: {raw!r}."
     if not path.is_absolute():
         return f"Backend script path must be absolute: {raw!r}."
+    if _terminal_backend_is_local():
+        local_error = _local_backend_script_path_error(path)
+        if local_error:
+            return local_error
     try:
         from tools.terminal_tool import terminal_tool
         response = terminal_tool(
@@ -451,6 +455,20 @@ def _terminal_backend_is_local() -> bool:
     """Resolve the active terminal target using this upstream's terminal planner."""
     from tools.terminal_tool import _get_env_config
     return (_get_env_config() or {}).get("env_type", "local") == "local"
+
+
+def _local_backend_script_path_error(path: Path) -> Optional[str]:
+    """A local terminal backend shares the scheduler host: retain script containment."""
+    from hermes_constants import get_hermes_home
+    from tools.path_security import validate_within_dir
+
+    scripts_dir = get_hermes_home() / "scripts"
+    if validate_within_dir(path, scripts_dir):
+        return (
+            f"Local backend cron script path is outside the profile scripts directory "
+            f"({scripts_dir}): {path}"
+        )
+    return None
 
 
 def _validate_cron_script_path(

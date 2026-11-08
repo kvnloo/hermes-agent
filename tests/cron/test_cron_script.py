@@ -221,6 +221,9 @@ class TestRunJobScript:
         from cron import scheduler_script
         from tools import terminal_tool as terminal_mod
 
+        # Model a remote runner; local backend paths must be confined to profile scripts/.
+        monkeypatch.setattr("tools.cronjob_job_args._terminal_backend_is_local", lambda: False)
+
         calls = []
 
         def fake_terminal_tool(**kwargs):
@@ -248,14 +251,39 @@ class TestRunJobScript:
         assert scheduler_script._run_job_script_in_backend("/backend-visible/collect.py") == (True, "backend ok")
         assert calls[1]["background"] is True
         assert calls[1]["notify_on_complete"] is False
-        assert calls[1]["command"].startswith(f"{sys.executable} ")
+        assert calls[1]["command"].startswith("python3 ")
         assert not calls[1]["command"].startswith("setsid ")
 
-    def test_local_backend_runs_shell_scripts_with_bash(self, monkeypatch):
+    def test_local_backend_target_keeps_profile_script_containment(self, cron_env, monkeypatch):
+        """Even target=backend cannot run arbitrary scheduler-host files on a local backend."""
+        from cron import scheduler_script
+        from tools import cronjob_job_args as args_mod
+        from tools import terminal_tool as terminal_mod
+
+        outside = cron_env / "outside.py"
+        outside.write_text("print('unsafe')")
+        monkeypatch.setattr(terminal_mod, "_get_env_config", lambda: {"env_type": "local"})
+        terminal_calls = []
+        monkeypatch.setattr(
+            terminal_mod, "terminal_tool",
+            lambda **kwargs: (terminal_calls.append(kwargs) or json.dumps({"exit_code": 0})),
+        )
+
+        error = args_mod._validate_cron_script_path(str(outside), target="backend")
+        assert error and "outside the profile scripts directory" in error
+        success, message = scheduler_script._run_job_script_in_backend(str(outside))
+        assert success is False
+        assert "outside the profile scripts directory" in message
+        assert terminal_calls == []
+
+
+    def test_local_backend_runs_shell_scripts_with_bash(self, cron_env, monkeypatch):
         """A backend target remains backend-routed even when that backend is local."""
         from cron import scheduler_script
         from tools import terminal_tool as terminal_mod
 
+        script_path = cron_env / "scripts" / "collect.sh"
+        script_path.write_text("echo backend-shell-ok")
         calls = []
 
         def fake_terminal_tool(**kwargs):
@@ -275,7 +303,7 @@ class TestRunJobScript:
         monkeypatch.setattr(terminal_mod, "terminal_tool", fake_terminal_tool)
         monkeypatch.setattr("tools.process_registry.process_registry", FinishedProcess())
 
-        assert scheduler_script._run_job_script_in_backend("/backend-visible/collect.sh") == (
+        assert scheduler_script._run_job_script_in_backend(str(script_path)) == (
             True, "backend-shell-ok"
         )
         assert calls[1]["command"].startswith("bash ")
@@ -292,6 +320,7 @@ class TestRunJobScript:
     def test_backend_poll_error_is_redacted(self, monkeypatch):
         from cron import scheduler_script
         from tools import terminal_tool as terminal_mod
+        monkeypatch.setattr("tools.cronjob_job_args._terminal_backend_is_local", lambda: False)
 
         monkeypatch.setattr(
             terminal_mod, "terminal_tool",
@@ -317,6 +346,7 @@ class TestRunJobScript:
         """Polling errors must not orphan a successfully launched backend script."""
         from cron import scheduler_script
         from tools import terminal_tool as terminal_mod
+        monkeypatch.setattr("tools.cronjob_job_args._terminal_backend_is_local", lambda: False)
 
         monkeypatch.setattr(
             terminal_mod, "terminal_tool",
@@ -354,6 +384,7 @@ class TestRunJobScript:
     def test_backend_cancel_reports_failed_cleanup(self, monkeypatch):
         from cron import scheduler_script
         from tools import terminal_tool as terminal_mod
+        monkeypatch.setattr("tools.cronjob_job_args._terminal_backend_is_local", lambda: False)
 
         monkeypatch.setattr(
             terminal_mod, "terminal_tool",
