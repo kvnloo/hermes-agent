@@ -289,7 +289,9 @@ def _pageable_tool_json(content: str, payload: dict) -> str:
     for name, value in strings[1:]:
         if len(value) > len(text):
             key, text = name, value
-    if "\n" not in text or "\x00" in text or len(text) < len(content) / 2:
+    # Escaped newlines inflate JSON: compare the serialized string's share instead of
+    # its decoded length, or newline-only output stays an unpageable JSON line.
+    if "\n" not in text or "\x00" in text or len(json.dumps(text, ensure_ascii=False)) < len(content) / 2:
         return content
     extras = {name: value for name, value in payload.items() if name != key}
     extras["text_field"] = key

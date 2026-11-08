@@ -715,6 +715,23 @@ class TestMcpEnvelopeSpillover:
             "error": None, "exit_code": 0, "text_field": "output"}
         assert '"exit_code": 0' in result
 
+    def test_newline_only_builtin_output_stays_pageable(self):
+        """Regression for #150922: JSON escapes double newline-only terminal output."""
+        output = "\n" * 20_000
+        content = json.dumps({"output": output, "exit_code": 0, "error": None})
+        assert len(output) < len(content) / 2  # carrier's decoded-length gate rejects it
+
+        result = maybe_persist_tool_result(
+            content=content, tool_name="terminal", tool_use_id="tc_blank_lines",
+            env=None, threshold=10_000)
+        assert PERSISTED_OUTPUT_TAG in result
+        spill = (get_spillover_dir() / "tc_blank_lines.txt").read_text(encoding="utf-8")
+        metadata, marker, text = spill.partition("\n</tool-result-metadata>\n\n")
+        assert marker and text == output
+        assert len(text.splitlines()) == 20_000
+        assert json.loads(metadata.removeprefix("<tool-result-metadata>\n")) == {
+            "error": None, "exit_code": 0, "text_field": "output"}
+
     def test_unpageable_json_strings_still_verbatim(self):
         cases = {
             "tc_json_short": {"output": "one line", "exit_code": 0, "error": None},
