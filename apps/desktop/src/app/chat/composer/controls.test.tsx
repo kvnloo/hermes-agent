@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ChatBarState } from '@/app/chat/composer/types'
 import { I18nProvider } from '@/i18n'
 import { $hudMode } from '@/store/hud'
+import { $voiceLiveStatus } from '@/store/voice-live'
+import { $sttEnabled } from '@/store/voice-prefs'
 import { applyWakeStartResult, applyWakeStatus, resetWakeWordState } from '@/store/wake-word'
 
 import { ComposerControls } from './controls'
@@ -59,6 +61,8 @@ async function expectShortcutTooltip(label: string, shortcut: string) {
 afterEach(() => {
   cleanup()
   $hudMode.set(false)
+  $sttEnabled.set(true)
+  $voiceLiveStatus.set(null)
 })
 
 // The HUD is a Spotlight bar a few hundred pixels wide: the voice controls
@@ -236,5 +240,51 @@ describe('wake-word ear visibility', () => {
 
     const ear = screen.getByLabelText('Wake word: "hey hermes" — paused during voice chat')
     expect((ear as HTMLButtonElement).disabled).toBe(true)
+  })
+})
+
+describe('voice start with Hermes STT disabled', () => {
+  const liveStatus = { available: true, mode: 'gpt-live' as const, model: 'gpt-live', reason: null, voice: 'alloy' }
+
+  it('keeps available GPT-Live usable without the backend STT engine', () => {
+    $sttEnabled.set(false)
+    $voiceLiveStatus.set(liveStatus)
+    const onStart = vi.fn()
+
+    renderControls({
+      conversation: {
+        active: false,
+        level: 0,
+        muted: false,
+        onEnd: vi.fn(),
+        onStart,
+        onStopTurn: vi.fn(),
+        onToggleMute: vi.fn(),
+        status: 'idle'
+      },
+      hasComposerPayload: false
+    })
+
+    const start = screen.getByRole('button', { name: /^Start voice/i }) as HTMLButtonElement
+    expect(start.disabled).toBe(false)
+    fireEvent.click(start)
+    expect(onStart).toHaveBeenCalledTimes(1)
+  })
+
+  it('blocks chained voice but leaves the engine picker reachable', () => {
+    $sttEnabled.set(false)
+    $voiceLiveStatus.set({ ...liveStatus, mode: 'chained' })
+    renderControls({ hasComposerPayload: false })
+
+    expect((screen.getByRole('button', { name: /^Start voice/i }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: /Voice engine/i }) as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('still blocks an unavailable GPT-Live engine that would fall back to chained', () => {
+    $sttEnabled.set(false)
+    $voiceLiveStatus.set({ ...liveStatus, available: false, reason: 'No live voice key' })
+    renderControls({ hasComposerPayload: false })
+
+    expect((screen.getByRole('button', { name: /^Start voice/i }) as HTMLButtonElement).disabled).toBe(true)
   })
 })

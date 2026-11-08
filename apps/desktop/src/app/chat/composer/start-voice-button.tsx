@@ -8,6 +8,7 @@ import { triggerHaptic } from '@/lib/haptics'
 import { AudioLines, ChevronDown, iconSize } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { recordAction } from '@/store/desktop-metrics'
+import { $voiceLiveStatus, selectedVoiceChatMode } from '@/store/voice-live'
 import { $sttEnabled } from '@/store/voice-prefs'
 
 import { GHOST_ICON_BTN, PRIMARY_ICON_BTN } from './control-classes'
@@ -35,9 +36,12 @@ export function StartVoiceButton({
   const { t } = useI18n()
   const engine = useVoiceEngineName()
   const sttOn = useStore($sttEnabled)
-  // A voice conversation is speech-to-text on the way in, so STT off disables
-  // this too — and says why instead of opening a mic that cannot be read.
-  const tip = sttOn ? (engine ? `${label} — ${engine}` : label) : `${label} — ${t.desktop.sttDisabled}`
+  const liveStatus = useStore($voiceLiveStatus)
+  // GPT-Live transcribes its own audio; an unavailable live engine falls back
+  // to chained mode, which still needs Hermes STT.
+  const usesHermesStt = selectedVoiceChatMode(liveStatus) !== 'gpt-live' || !liveStatus?.available
+  const sttBlocked = !sttOn && usesHermesStt
+  const tip = sttBlocked ? `${label} — ${t.desktop.sttDisabled}` : engine ? `${label} — ${engine}` : label
 
   return (
     <span className="flex items-center">
@@ -45,7 +49,7 @@ export function StartVoiceButton({
         <Button
           aria-label={label}
           className={cn(PRIMARY_ICON_BTN, engine && 'rounded-r-none')}
-          disabled={disabled || !sttOn}
+          disabled={disabled || sttBlocked}
           onClick={() => {
             triggerHaptic('open')
             recordAction('composer.voice', 'click')
@@ -64,7 +68,7 @@ export function StartVoiceButton({
               <Button
                 aria-label={t.composer.voiceEngine}
                 className={cn(GHOST_ICON_BTN, 'w-(--composer-voice-menu-size) rounded-l-none p-0')}
-                disabled={disabled || !sttOn}
+                disabled={disabled}
                 size="icon"
                 type="button"
                 variant="ghost"
@@ -74,7 +78,7 @@ export function StartVoiceButton({
             </DropdownMenuTrigger>
           </Tip>
           <DropdownMenuContent align="end" className="min-w-52">
-            <VoiceEngineRows disabled={disabled || !sttOn} />
+            <VoiceEngineRows disabled={disabled} />
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
