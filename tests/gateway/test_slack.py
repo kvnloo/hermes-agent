@@ -5725,6 +5725,16 @@ class TestAgentSessionsApiRouting:
         a._app.client.agents_sessions_setStatus.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_status_client_lookup_failure_is_best_effort(self):
+        """If workspace resolution fails, typing and cleanup cannot abort the turn."""
+        _slack_mod._AGENT_SESSIONS_SUPPORTED = True
+        a = self._adapter()
+        a._get_client = MagicMock(side_effect=RuntimeError("workspace unavailable"))
+        await a.send_typing("C123", metadata={"thread_id": "parent_ts"})
+        await a.stop_typing("C123", metadata={"thread_id": "parent_ts"})
+        assert a._get_client.call_count == 2
+
+    @pytest.mark.asyncio
     async def test_status_failure_warns_once_per_workspace(self, caplog):
         """#132594: the first status API failure per workspace is a WARNING
         (so Slack-side API changes surface); repeats drop back to DEBUG."""

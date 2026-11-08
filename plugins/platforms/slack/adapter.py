@@ -2761,7 +2761,12 @@ class SlackAdapter(BasePlatformAdapter):
         ``assistant.threads.setStatus`` until Slack retires it (February 2027).
         When the installed SDK ships the new API it is driven alongside with its
         enum: ``processing`` while a turn runs, ``active`` again on clear."""
-        client = self._get_client(chat_id, team_id=team_id)
+        try:
+            client = self._get_client(chat_id, team_id=team_id)
+        except Exception as e:
+            # Status updates must never interrupt delivery, including client lookup.
+            self._log_status_failure(team_id, "status client lookup", fail_label, e)
+            return
         try:
             await client.assistant_threads_setStatus(
                 channel_id=chat_id, thread_ts=thread_ts, status=status)
