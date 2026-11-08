@@ -1266,6 +1266,48 @@ class TestConnectSmtp(unittest.TestCase):
             )
 
 
+    def test_custom_port_defaults_preserve_starttls_relays(self):
+        """#150806: alternate 465-suffix TLS must not break other custom STARTTLS ports."""
+        import asyncio
+        from types import SimpleNamespace
+        from plugins.platforms.email.adapter import _standalone_send
+
+        for port, security in ((10465, "tls"), (1025, "starttls")):
+            with self.subTest(port=port):
+                with patch.dict(os.environ, {
+                    "EMAIL_ADDRESS": "hermes@test.com",
+                    "EMAIL_PASSWORD": "secret",
+                    "EMAIL_SMTP_HOST": "smtp.test.com",
+                    "EMAIL_SMTP_PORT": str(port),
+                    "EMAIL_SMTP_SECURITY": "",
+                }, clear=True):
+                    adapter = self._make_adapter(str(port))
+                    self.assertEqual(adapter._smtp_security, security)
+
+                    with patch("smtplib.SMTP") as smtp, patch("smtplib.SMTP_SSL") as smtp_ssl:
+                        adapter._connect_smtp()
+                        if security == "tls":
+                            smtp_ssl.assert_called_once_with("smtp.test.com", port, context=ANY, timeout=30)
+                            smtp.assert_not_called()
+                        else:
+                            smtp.assert_called_once_with("smtp.test.com", port, timeout=30)
+                            smtp_ssl.assert_not_called()
+                            smtp.return_value.starttls.assert_called_once()
+
+                    with patch("smtplib.SMTP") as smtp, patch("smtplib.SMTP_SSL") as smtp_ssl:
+                        result = asyncio.run(_standalone_send(
+                            SimpleNamespace(extra={}), "recipient@test.com", "ping",
+                        ))
+                        self.assertTrue(result["success"], result)
+                        if security == "tls":
+                            smtp_ssl.assert_called_once_with("smtp.test.com", port, context=ANY)
+                            smtp.assert_not_called()
+                        else:
+                            smtp.assert_called_once_with("smtp.test.com", port)
+                            smtp_ssl.assert_not_called()
+                            smtp.return_value.starttls.assert_called_once()
+
+
 class TestConnectionConfigResolution(unittest.TestCase):
     """Host/address resolution and pre-connect validation (#49736)."""
 
