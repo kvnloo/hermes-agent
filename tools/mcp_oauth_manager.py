@@ -524,18 +524,32 @@ def _make_hermes_provider_class() -> Optional[type]:
             )
             return True
 
-        def _normalize_auth_server_url(self) -> None:
-            """Google's PRM lists ``https://accounts.google.com/`` while its AS
-            metadata issuer is ``https://accounts.google.com``; the SDK compares
-            them as plain strings (RFC 8414 §3.3), so drop the slash of a bare
-            origin before the SDK validates."""
-            url = self.context.auth_server_url
-            if not url or not url.endswith("/"):
-                return
+        def _normalize_auth_server_url(self, response) -> None:
+            """Only resolve a root-slash mismatch after the issuer metadata confirms it.
+
+            An issuer that really ends in "/" must keep its exact identifier.
+            """
             from urllib.parse import urlparse
 
-            if urlparse(url).path == "/":
-                self.context.auth_server_url = url.rstrip("/")
+            url = self.context.auth_server_url
+            if not url or not url.endswith("/") or response.status_code != 200:
+                return
+            advertised = urlparse(url)
+            source = urlparse(str(response.request.url))
+            if (advertised.scheme != "https" or advertised.path != "/"
+                    or advertised.username or advertised.query or advertised.fragment
+                    or source.scheme != advertised.scheme or source.netloc != advertised.netloc
+                    or source.path.rstrip("/") not in (
+                        "/.well-known/oauth-authorization-server",
+                        "/.well-known/openid-configuration",
+                    )):
+                return
+            try:
+                issuer = response.json().get("issuer")
+            except (ValueError, AttributeError):
+                return
+            if issuer == url.rstrip("/"):
+                self.context.auth_server_url = issuer
 
         @staticmethod
         def _synthetic_unauthorized(incoming):
@@ -583,7 +597,7 @@ def _make_hermes_provider_class() -> Optional[type]:
                     await self._maybe_flag_poisoned_client(incoming)
                     if self._needs_forced_authorization(request, outgoing, incoming):
                         incoming = self._synthetic_unauthorized(incoming)
-                    self._normalize_auth_server_url()
+                    self._normalize_auth_server_url(incoming)
                     outgoing = await inner.asend(incoming)
             except StopAsyncIteration:
                 # Persist any metadata the SDK discovered lazily during the
