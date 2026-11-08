@@ -426,14 +426,14 @@ export function ModelCatalogMenu({
     () =>
       customSlug
         ? pickerProviders
-            .filter(provider => (provider.models ?? []).length > 0)
+            .filter(provider => (provider.models ?? []).length > 0 && (slugEntry || !switchedOff.has(provider.slug)))
             .sort(
               (a, b) =>
                 Number(catalogProviderMatches(b, current.provider)) -
                 Number(catalogProviderMatches(a, current.provider))
             )
         : [],
-    [customSlug, pickerProviders, current.provider]
+    [customSlug, pickerProviders, current.provider, slugEntry, switchedOff]
   )
 
   const selectFamily = async (family: ModelFamily, provider: ModelOptionProvider): Promise<boolean> => {

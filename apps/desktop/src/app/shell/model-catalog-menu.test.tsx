@@ -455,6 +455,33 @@ describe('the catalog owns model curation', () => {
     expect(rows.some(text => text.includes('Gemini 3.1 Pro'))).toBe(false)
   })
 
+  it('excludes a switched-off provider from implicit custom-model search choices', async () => {
+    getGlobalModelOptions.mockResolvedValue({
+      providers: [
+        { models: ['openai/gpt-4o-mini'], name: 'Alpha Labs', slug: 'alpha' },
+        { models: ['google/gemini-3.1-pro'], name: 'OpenRouter', slug: 'openrouter' }
+      ]
+    })
+    setVisibleModels(new Set([modelVisibilityKey('alpha', 'openai/gpt-4o-mini'), emptyProviderSentinelKey('openrouter')]))
+
+    const select = renderMenu({ provider: 'openrouter' })
+    await screen.findByText('GPT-4o-mini')
+
+    const input = screen.getByRole('textbox', { name: 'Search models' })
+    fireEvent.change(input, { target: { value: 'gemini' } })
+
+    // No enabled catalog model matches. The implicit custom-id fallback must
+    // not restore the switched-off provider as a keyboard-selectable choice.
+    await vi.waitFor(() => {
+      const offers = menuRowTexts().filter(row => row.includes('gemini'))
+      expect(offers).toHaveLength(1)
+      expect(offers[0]).toContain('Alpha Labs')
+    })
+
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await vi.waitFor(() => expect(select).toHaveBeenCalledWith('gemini', 'alpha'))
+  })
+
   it('offers Edit Models without the host wiring it up', async () => {
     renderMenu()
     await screen.findByText(/Gemini 3\.1 Pro/i)
