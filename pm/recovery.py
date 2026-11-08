@@ -17,6 +17,8 @@ STARTUP_IMPORTS = (
     ("rich", "rich", "print"),
     ("cryptography", "cryptography.hazmat.bindings._rust", "openssl"),
     ("PyJWT", "jwt", "encode"),
+    ("pydantic-core", "pydantic_core._pydantic_core", "SchemaValidator"),
+    ("pydantic", "pydantic", "BaseModel"),
 )
 
 

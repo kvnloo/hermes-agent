@@ -55,6 +55,46 @@ def test_startup_validation_checks_real_ruamel_dependency(tmp_path, failure):
         validate_environment(python, env=dict(os.environ), cwd=tmp_path)
 
 
+def test_startup_validation_rejects_missing_pydantic_native_extension(tmp_path):
+    """A metadata-valid candidate must not be accepted with a missing native core."""
+    from importlib.metadata import distribution
+    import venv
+
+    import pydantic_core
+    import typing_extensions
+
+    from pm.environments import site_packages
+    from pm.package import InstallError
+    from pm.recovery import validate_environment
+
+    candidate = tmp_path / "candidate"
+    venv.EnvBuilder(with_pip=False).create(candidate)
+    python = candidate / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    target = site_packages(candidate)
+    package = target / "pydantic_core"
+    shutil.copytree(Path(pydantic_core.__file__).parent, package,
+                    ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copy2(typing_extensions.__file__, target / "typing_extensions.py")
+    installed = distribution("pydantic-core")
+    assert installed.files
+    metadata = next(Path(installed.locate_file(path)).parent
+                    for path in installed.files if path.name == "METADATA")
+    shutil.copytree(metadata, target / metadata.name)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname="native-recovery"\ndependencies=["pydantic-core"]\n',
+        encoding="utf-8",
+    )
+
+    # The real extension imports successfully before damage.
+    validate_environment(python, env=dict(os.environ), cwd=tmp_path)
+    native = [path for path in package.iterdir()
+              if path.name.startswith("_pydantic_core") and path.suffix in {".so", ".pyd"}]
+    assert len(native) == 1
+    native[0].unlink()
+    with pytest.raises(InstallError, match="pydantic_core"):
+        validate_environment(python, env=dict(os.environ), cwd=tmp_path)
+
+
 @pytest.fixture
 def recovery_graph(tmp_path):
     core = tmp_path / "core"
