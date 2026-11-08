@@ -339,13 +339,11 @@ function subscribeLiveScrollStateCache(
   // paint.
   const resizeMetrics = () => readThreadScrollResizeMetrics(el, clearanceRef.current)
 
-  // ponytail: previous-metrics precision is load-bearing — the predicate must
-  // see the frame BEFORE the growth, so a scroll event (which also writes it)
-  // can't leave a stale gap that makes a mid-stream resize look like growth.
+  // Only the resize observer advances this baseline: a delayed scroll from the
+  // preceding bottom pin can arrive after DOM growth but before the resize.
   let previousResizeMetrics = resizeMetrics()
 
   const update = () => {
-    previousResizeMetrics = resizeMetrics()
     liveScrollStateRef.current = threadScrollStateFromMetrics(el)
 
     // Back at the bottom (or a fresh short transcript): the restore may drive again.
@@ -1014,7 +1012,9 @@ const ThreadMessageListInner: FC<ThreadMessageListProps> = ({
   // session's live state and must not file it under the new key).
   const restoredContentKeyRef = useRef<string | null | undefined>(undefined)
 
-  useEffect(() => {
+  // Re-seed the resize baseline at the new transcript owner commit, before
+  // that owner's first observer callback sees a different scroll height.
+  useLayoutEffect(() => {
     const el = scrollRef.current
     const content = contentRef.current
 
@@ -1028,7 +1028,7 @@ const ThreadMessageListInner: FC<ThreadMessageListProps> = ({
       liveScrollStateRef,
       readerOwnsViewportRef
     })
-  }, [contentRef, paneVisible, scrollRef])
+  }, [contentRef, hasGroups, paneVisible, scrollRef, scrollStorageKey, sessionKey])
 
   // Persist the live position on app close, so a reading position survives a
   // quit without a session switch (the switch cleanup below only runs on
