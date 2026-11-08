@@ -47,7 +47,9 @@ _SECRET_NAME_SHAPES: tuple[tuple[str, str], ...] = (
     ("suffix", "_KEY_ID"), ("suffix", "_DSN"),
     # No-separator compound names (`STRIPE_APIKEY`, `GITHUB_AUTHTOKEN`, `SSH_PRIVATEKEY`).
     ("suffix", "APIKEY"), ("suffix", "AUTHTOKEN"), ("suffix", "PRIVATEKEY"),
-    ("contains", "_CREDENTIAL"),
+    # Cookies, webhook endpoints, and abbreviated creds can carry bearer material.
+    ("contains", "_CREDENTIAL"), ("contains", "_COOKIE"), ("contains", "_WEBHOOK"),
+    ("contains", "_CREDS"),
     ("exact", "PASSWORD"), ("exact", "PASSWD"), ("exact", "PASS"),
     ("exact", "TOKEN"), ("exact", "KEY"), ("exact", "SECRET"),
 )
