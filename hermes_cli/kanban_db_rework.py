@@ -29,9 +29,9 @@ _GUARD_TIME_COLS = {
     "task_comments": "created_at",
 }
 
-# A GitHub PR URL; group 1 is the PR number the guard keys on.
+# Capture the full PR identity. Distinct repositories can reuse a PR number.
 _PR_URL_RE = re.compile(
-    r"https?://github\.com/[^/\s]+/[^/\s]+/pull/(\d+)",
+    r"https?://github\.com/([^/\s]+)/([^/\s]+)/pull/(\d+)",
     re.IGNORECASE,
 )
 
@@ -114,9 +114,12 @@ def rows_since(
             yield t, row
 
 
-def pr_numbers(body: str) -> frozenset[int]:
-    """PR numbers named by GitHub PR URLs in a comment body."""
-    return frozenset(int(number) for number in _PR_URL_RE.findall(body))
+def pr_identities(body: str) -> frozenset[tuple[str, str, str]]:
+    """Distinct GitHub PRs in a comment, including their owning repository."""
+    return frozenset(
+        (owner.casefold(), repo.casefold(), number.lstrip("0") or "0")
+        for owner, repo, number in _PR_URL_RE.findall(body)
+    )
 
 
 def _rework_field(reason: str, key: str) -> Optional[str]:
@@ -148,7 +151,8 @@ def handoff_lifts_active_pr(kind: str, payload: Optional[str], prs: frozenset) -
     if not isinstance(reason, str) or not reason.strip():
         return False
     number = _rework_field(reason, "pr")
-    if number is None or not number.isdigit() or int(number) not in prs:
+    if (number is None or not number.isascii() or not number.isdigit()
+            or (number.lstrip("0") or "0") != next(iter(prs))[2]):
         return False
     head = _rework_field(reason, "head")
     if head is None or _HEAD_RE.fullmatch(head) is None:
@@ -191,7 +195,7 @@ def active_pr_engaged(conn, task_id: str, *, since: int, unreadable: int) -> boo
     the worker that opened the PR is not re-spawned against it.
     """
     pr_comments = [
-        (t, pr_numbers(_kb_lossy(c["body"])))
+        (t, pr_identities(_kb_lossy(c["body"])))
         for t, c in rows_since(conn, "task_comments", task_id, since,
                                cols=", body", unreadable=unreadable)
     ]

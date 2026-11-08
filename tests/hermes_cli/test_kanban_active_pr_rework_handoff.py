@@ -443,3 +443,27 @@ def test_validated_handoff_claims_the_card_once(
         second = kbd.dispatch_once(conn, spawn_fn=fake_spawn)
         assert task_id not in [task for task, _assignee, _ws in second.spawned]
         assert spawns.count(task_id) == 1
+
+
+def test_rework_marker_requires_one_pr_identity_not_just_one_number(
+    kanban_home: Path,
+) -> None:
+    """A matching number from another repository cannot release active_pr."""
+    with kbc.connect() as conn:
+        # The legitimate single-PR handoff still succeeds.
+        single_id = _card_with_pr(conn)
+        assert kb.block_task(conn, single_id, reason="rework") is True
+        assert kb.unblock_task(conn, single_id, reason=_marker()) is True
+        assert kbd.check_respawn_guard(conn, single_id) is None
+
+        # Two different repositories can assign the same PR number.
+        ambiguous_id = kb.create_task(conn, title="ambiguous PR", assignee="dev")
+        kb.add_comment(
+            conn, ambiguous_id, author="dev",
+            body=(f"Opened {PR_URL} and "
+                  "https://github.com/other/repo/pull/1240 for review."),
+        )
+        _backdate_comments(conn, ambiguous_id)
+        assert kb.block_task(conn, ambiguous_id, reason="rework") is True
+        assert kb.unblock_task(conn, ambiguous_id, reason=_marker()) is True
+        assert kbd.check_respawn_guard(conn, ambiguous_id) == "active_pr"
