@@ -295,18 +295,17 @@ def _remove_downloads(store: Store, artifacts: list[dict]) -> None:
 def _entry_verified(package: Package, fact: dict, store: Store, target: str) -> bool:
     """Explicit installs re-check realized bytes; startup keeps its cheap facts check.
 
-    A package with ``digest_skip_dirs`` never fails on a digest mismatch:
-    its recorded digest may predate the skip (facts written by an older
-    hermes counted the mutable layer), and the bytes a re-realization
-    would restore are the bare upstream archive — not the bundle-preinstalled
-    tree — so repairing on drift wipes both layers (#138689). Its integrity
-    stays with verify()."""
+    New facts identify a skip-scoped digest, preserving verification of sealed
+    bytes around mutable site-packages. Legacy full-tree facts cannot tell
+    build-tool seed drift from tampering; avoid destructive repair (#138689)."""
     entry = store.entry(fact["entry"])
     try:
         if package.verify(entry, target):
             return False
         if package.digest_skip_dirs:
-            return True
+            if fact.get("digest_skip_dirs") == list(package.digest_skip_dirs):
+                return fact.get("digest") == tree_digest(entry, package.digest_skip_dirs)
+            return True  # Legacy facts included the mutable layer.
         return fact.get("digest") == tree_digest(entry)
     except OSError:
         return False
@@ -476,6 +475,7 @@ def _install(
                             package.name, version, entry_name, package.env(entry, target), store.root,
                             target=target, artifacts=[a["sha256"] for a in artifacts],
                             digest=tree_digest(entry, package.digest_skip_dirs),
+                            digest_skip_dirs=package.digest_skip_dirs,
                         )
                 _remove_downloads(store, artifacts)
             except (InstallError, DownloadPaused):

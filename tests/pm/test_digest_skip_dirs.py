@@ -117,3 +117,26 @@ def test_doctor_tolerates_drift_in_a_packages_mutable_layer(core_env, monkeypatc
         target=fact["target"], artifacts=fact["artifacts"], digest=tree_digest(entry))
     assert cmd_doctor(None) == 0
     assert "mutable layer changed" in capsys.readouterr().out
+
+
+def test_doctor_rejects_immutable_drift_after_mutable_seed(core_env, monkeypatch, capsys):
+    """A build-tool seed is allowed; sealed bytes must still be checked (#151163)."""
+    from pm.cli import cmd_doctor
+    from pm.install import _entry_verified, ensure
+
+    package = get_package("faketool")
+    monkeypatch.setattr(package, "digest_skip_dirs", ("site-packages",))
+    ensure("faketool", base_env={})
+    fact = Facts(paths.facts_path()).get("faketool")
+    entry = paths.store_root() / fact["entry"]
+
+    site = entry / "lib" / "python3.14" / "site-packages"
+    site.mkdir(parents=True)
+    (site / "setuptools.py").write_text("build tool")
+    assert cmd_doctor(None) == 0
+    capsys.readouterr()
+
+    (entry / "lib" / "python3.14" / "os.py").write_text("tampered")
+    assert cmd_doctor(None) == 1
+    assert "realized bytes do not match recorded digest" in capsys.readouterr().out
+    assert not _entry_verified(package, fact, Store(paths.store_root()), current_target())

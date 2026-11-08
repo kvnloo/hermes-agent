@@ -191,7 +191,12 @@ class Facts:
             # Packages with a mutable layer (python's site-packages) record the
             # digest WITHOUT it: users pip-install into that layer after
             # publication and the digest must not see the drift (#138689).
-            fact["digest"] = tree_digest(entry, get_package(name).digest_skip_dirs)
+            skip_dirs = get_package(name).digest_skip_dirs
+            fact["digest"] = tree_digest(entry, skip_dirs)
+            if skip_dirs:
+                fact["digest_skip_dirs"] = list(skip_dirs)
+            else:
+                fact.pop("digest_skip_dirs", None)
             count += 1
         if not count:
             raise ValueError(f"payload facts carry no tool entries: {self.path}")
@@ -252,6 +257,7 @@ class Facts:
         target: str | None = None,
         artifacts: list[str] | None = None,
         digest: str | None = None,
+        digest_skip_dirs: tuple[str, ...] = (),
     ) -> None:
         """``target``/``artifacts`` record the identity this install came
         from (work item 1); ``digest`` is the realized tree digest of the
@@ -268,6 +274,8 @@ class Facts:
             fact["artifacts"] = list(artifacts)
         if digest is not None:
             fact["digest"] = digest
+            if digest_skip_dirs:
+                fact["digest_skip_dirs"] = list(digest_skip_dirs)
         self._merge_and_write(name, fact)
 
     def record_state(

@@ -85,7 +85,8 @@ def record_tools(root: Path, lock_path: Path, target: str, entries: dict[str, st
         # pip install after that; drift there is not damage, #138689).
         facts.record(name, version, entry_name, package.env(entry, target), store,
                      target=target, artifacts=[a["sha256"] for a in artifacts],
-                     digest=tree_digest(entry, package.digest_skip_dirs))
+                     digest=tree_digest(entry, package.digest_skip_dirs),
+                     digest_skip_dirs=package.digest_skip_dirs)
     if entries:
         _share_metadata(facts.path)
 
