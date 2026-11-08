@@ -189,3 +189,21 @@ class TestRealisticStreaming:
         s = StreamingThinkScrubber()
         deltas = ["Hello ", "world ", "how ", "are ", "you?"]
         assert _drive(s, deltas) == "Hello world how are you?"
+
+
+class TestUnboundDeferredToolMarkup:
+    def test_bare_name_xml_call_is_hidden_across_stream_chunks(self) -> None:
+        """A strict server can surface an undeclared deferred call as plain content (#151373)."""
+        deltas = [
+            "<", "tool", "_call>\n",
+            "<function=session_search>\n",
+            "<parameter=query>read text messages SMS adb script phone</parameter>\n",
+            "<parameter=limit>6</parameter>\n",
+            "</function>\n",
+            "</tool", "_call>",
+        ]
+        assert _drive(StreamingThinkScrubber(), deltas) == ""
+
+        # Escaped documentation prose is still ordinary visible text.
+        prose = "Write &lt;tool_call&gt; only when describing the XML format."
+        assert _drive(StreamingThinkScrubber(), [prose]) == prose

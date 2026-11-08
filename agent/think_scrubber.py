@@ -82,6 +82,7 @@ class StreamingThinkScrubber:
         "reasoning",
         "thought",
         "REASONING_SCRATCHPAD",
+        "tool_call",  # Strict servers can return unbound tool XML as streamed content (#151373).
     )
 
     # Materialise literal tag strings so the hot path does string
