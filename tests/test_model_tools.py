@@ -99,6 +99,44 @@ class TestHandleFunctionCall:
             ),
         ]
 
+    def test_post_tool_call_classifies_terminal_exit_semantics(self):
+        """Observer status must agree with terminal's benign/failure classification.
+
+        Regression for #151913: plugins see false failures for grep no-match,
+        while the old carrier also missed genuine nonzero failures without an
+        explicit error field.
+        """
+        from model_tools import _emit_post_tool_call_hook
+
+        cases = [
+            ({"exit_code": 1, "output": "", "error": None,
+              "exit_code_meaning": "No matches found (not an error)"}, "ok"),
+            ({"exit_code": 1, "output": "changed", "error": None,
+              "exit_code_meaning": "Files differ (expected, not an error)"}, "ok"),
+            ({"exit_code": 1, "output": "", "error": None,
+              "exit_code_meaning": "Condition evaluated to false (expected, not an error)"}, "ok"),
+            ({"exit_code": 2, "output": "grep: invalid pattern", "error": None}, "error"),
+            ({"exit_code": 127, "output": "command not found", "error": None}, "error"),
+            ({"exit_code": 1, "output": "", "error": "grep: invalid option",
+              "exit_code_meaning": "No matches found (not an error)"}, "error"),
+        ]
+        with (
+            patch("hermes_cli.plugins.has_hook", return_value=True),
+            patch("hermes_cli.plugins.invoke_hook") as mock_hook,
+        ):
+            for payload, expected in cases:
+                mock_hook.reset_mock()
+                _emit_post_tool_call_hook(
+                    function_name="terminal", function_args={"command": "grep needle file"},
+                    result=json.dumps(payload),
+                )
+                mock_hook.assert_called_once()
+                assert mock_hook.call_args.args[0] == "post_tool_call"
+                fields = mock_hook.call_args.kwargs
+                assert fields["status"] == expected, payload
+                assert fields["error_type"] == ("tool_error" if expected == "error" else None)
+                assert (fields["error_message"] is not None) == (expected == "error")
+
     def test_post_tool_call_receives_non_negative_integer_duration_ms(self):
         """Regression: post_tool_call and transform_tool_result hooks must
         receive a non-negative integer ``duration_ms`` kwarg measuring
