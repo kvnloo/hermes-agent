@@ -139,6 +139,8 @@ test('shellDriveToNativePath accepts the /E:/ drive spelling instead of bridging
   // Bare drive root, with and without the trailing slash.
   assert.equal(shellDriveToNativePath('/E:', exists), 'E:/')
   assert.equal(shellDriveToNativePath('/E:/', exists), 'E:/')
+  // /E:relative is a POSIX filename, not an absolute drive path, even if E:/relative exists.
+  assert.equal(shellDriveToNativePath('/E:Users/alex/notes.txt', exists), null)
   // Still gated by existence: no native twin means the path stays on the bridge.
   assert.equal(shellDriveToNativePath('/Z:/nope/x.txt', exists), null)
 })

@@ -17,7 +17,7 @@ const WSL_MOUNT_RE = /^\/mnt\/([a-z])(?:\/(.*))?$/i
 // `/E:/...` spelling some shells emit for `E:\...` — without the `:` branch a
 // perfectly valid Windows path fell through to the WSL branch below and became
 // `\\wsl.localhost\<distro>\E:\...`.
-const SHELL_DRIVE_RE = /^\/(?:cygdrive\/|mnt\/)?([a-z])(?:[:/]\/?|$)/i
+const SHELL_DRIVE_RE = /^\/(?:cygdrive\/|mnt\/)?([a-z])(?:\/|:\/|:$|$)/i
 
 let cachedDistro: null | string = null
 let cachedUncBase: null | string = null
