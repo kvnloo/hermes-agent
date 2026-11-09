@@ -225,28 +225,16 @@ def _git_version_info(repo_dir: Path, *, include_untracked: bool = False) -> Ver
     commit_date: int | None = None
     if commit_date_raw and commit_date_raw.isdigit():
         commit_date = int(commit_date_raw)
-    try:
-        # -uno: skip the untracked-file scan. This runs on the startup-banner
-        # path, and a full working-tree walk costs real time on large or cold
-        # checkouts. Same semantics as write_install_stamp.py.
-        # The 3 s timeout kills a slow status (a partial clone lazily fetching a tree, a cold or
-        # scanned disk), and a status killed while refreshing the index strands .git/index.lock:
-        # the update's own merge then dies on "File exists" (#132089). A read-only probe takes
-        # no optional lock.
-        status_command = ["git", "--no-optional-locks", "status", "--porcelain"]
-        if not include_untracked:
-            status_command.append("-uno")
-        dirty_result = subprocess.run(
-            status_command,
-            capture_output=True,
-            text=True, encoding="utf-8", errors="replace",
-            timeout=3,
-            cwd=str(repo_dir),
-            check=False,
-        )
-        dirty = dirty_result.returncode == 0 and bool((dirty_result.stdout or "").strip())
-    except (OSError, subprocess.SubprocessError):
-        dirty = False
+    # -uno: skip the untracked-file scan. This runs on the startup-banner
+    # path, and a full working-tree walk costs real time on large or cold
+    # checkouts. Same semantics as write_install_stamp.py.
+    # The 3 s timeout bounds a slow status; --no-optional-locks avoids
+    # leaving .git/index.lock behind if a status probe is killed (#132089).
+    # Use the worker-guarded helper for every live Git provenance probe.
+    status_command = ["--no-optional-locks", "status", "--porcelain"]
+    if not include_untracked:
+        status_command.append("-uno")
+    dirty = bool(_run_git(repo_dir, *status_command))
 
     tags = _run_git(repo_dir, "tag", "--merged", "HEAD", "--list", "v[0-9]*")
     releases = [
