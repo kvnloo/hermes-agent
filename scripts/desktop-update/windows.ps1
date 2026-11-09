@@ -1810,6 +1810,16 @@ try {
     } catch {
         Write-HandoffLog "could not probe update --help; running without --keep-stash"
     }
+    # Only a stash created by this invocation may become a user-facing warning.
+    # An older autostash must not turn an otherwise clean update into "manual".
+    $script:StashTracked = $false
+    $script:StashBefore = @()
+    if ($updateArgs -contains '--keep-stash') {
+        try {
+            $script:StashBefore = @(git -C $InstallRoot stash list --format='%H' 2>$null)
+            $script:StashTracked = ($LASTEXITCODE -eq 0)
+        } catch { Write-HandoffLog "could not read pre-update stash list" }
+    }
     # The update's receipt carries this id (update_receipt._launcher_correlation_id):
     # Get-CommittedReceiptOutcome finds THIS run's receipt by it, and the Desktop's
     # close-holder consent is bound to -HandoffRun. That run id beats an inherited
@@ -1852,6 +1862,28 @@ try {
     $script:Committed = $true
     $finalCode = 0
     $finalMsg = "Update complete."
+    # The CLI logs --keep-stash to its own update log, which the relaunched
+    # Desktop does not show. Publish this run's parked edits in the result.
+    if ($script:StashTracked) {
+        try {
+            $after = @(git -C $InstallRoot stash list --format='%H%x09%s' 2>$null)
+            if ($LASTEXITCODE -eq 0) {
+                foreach ($entry in $after) {
+                    $parts = $entry -split '\t', 2
+                    if ($parts.Count -ne 2 -or $parts[1] -notmatch 'hermes-update-autostash-' -or
+                        $script:StashBefore -contains $parts[0]) { continue }
+                    $paths = @(git -C $InstallRoot stash show --include-untracked --name-only $parts[0] 2>$null |
+                        Where-Object { $_ })
+                    $named = (@($paths | Select-Object -First 5) -join ', ')
+                    if ($paths.Count -gt 5) { $named += ", and $($paths.Count - 5) more" }
+                    if (-not $named) { $named = 'see git stash show --name-only' }
+                    $sentence = "local source edits ($named) were parked in git stash $($parts[0]), not restored to the running gateway. In '$InstallRoot', run 'git stash apply $($parts[0])' to restore after reviewing for conflicts."
+                    Add-Followup ("stash: local source edits parked at " + $parts[0]) $sentence -Manual
+                    break
+                }
+            }
+        } catch { Write-HandoffLog "could not inspect post-update stashes: $($_.Exception.Message)" }
+    }
     if ($script:UpdateInterrupted) {
         Add-Followup "post-update steps (gateway resume) were interrupted; run hermes update again" "its post-update steps (gateway resume) were interrupted. Run 'hermes update' again to finish them." -Manual
     }

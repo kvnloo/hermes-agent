@@ -58,6 +58,9 @@ def main():
     if os.environ.get('HANDOFF_HANG'):
         print(os.environ['HANDOFF_HANG'], flush=True)
         time.sleep(300)
+    if os.environ.get('HANDOFF_PARK_LOCAL_EDITS'):
+        subprocess.run(['git', '-C', str(Path(__file__).resolve().parents[1]), 'stash', 'push',
+                        '--include-untracked', '-m', 'hermes-update-autostash-fixture'], check=True)
     receipt = os.environ.get('HANDOFF_RECEIPT')   # this run's finalized receipt: outcome[,correlation]
     if receipt:
         outcome, correlation = (receipt.split(',') + [''])[:2]
@@ -224,3 +227,44 @@ def test_hanging_update_help_probe_is_bounded(tmp_path: Path) -> None:
     )
     assert code == 0, out
     assert argv[0][:2] == ['update', '--yes'] and '--keep-stash' not in argv[0], argv
+
+
+def _git_checkout_with_patch(_home: Path, install: Path) -> None:
+    """Make the real git working tree that a desktop update can autostash."""
+    tracked = install / 'hermes_state_runtime.py'
+    tracked.write_text('baseline = 1\n', encoding='utf-8')
+    subprocess.run(['git', 'init', '-q', str(install)], check=True)
+    subprocess.run(['git', '-C', str(install), 'config', 'user.name', 'Hermes Test'], check=True)
+    subprocess.run(['git', '-C', str(install), 'config', 'user.email', 'hermes-test@example.invalid'], check=True)
+    subprocess.run(['git', '-C', str(install), 'add', '-A'], check=True)
+    subprocess.run(['git', '-C', str(install), 'commit', '-qm', 'fixture'], check=True)
+    tracked.write_text('patched = 1\n', encoding='utf-8')
+
+
+@pytest.mark.platforms('windows')
+def test_successful_desktop_update_reports_newly_parked_local_patch(tmp_path: Path) -> None:
+    code, out, _, result, _ = _handoff(
+        tmp_path, prepare=_git_checkout_with_patch, HANDOFF_PARK_LOCAL_EDITS='1',
+    )
+    assert code == 0, out
+    stash = subprocess.check_output(
+        ['git', '-C', str(tmp_path / 'checkout'), 'rev-parse', 'stash@{0}'], text=True,
+    ).strip()
+    assert (result['ok'], result['manual']) == (True, True), result
+    assert len(result['warnings']) == 1 and 'stash:' in result['warnings'][0], result
+    assert stash in result['message'] and 'hermes_state_runtime.py' in result['message'], result
+    assert 'git stash apply' in result['message'], result
+
+
+@pytest.mark.platforms('windows')
+def test_previous_parked_stash_does_not_trigger_notice_on_clean_update(tmp_path: Path) -> None:
+    def seed_old_stash(home: Path, install: Path) -> None:
+        _git_checkout_with_patch(home, install)
+        subprocess.run(
+            ['git', '-C', str(install), 'stash', 'push', '-m', 'hermes-update-autostash-old'],
+            check=True,
+        )
+
+    code, out, _, result, _ = _handoff(tmp_path, prepare=seed_old_stash)
+    assert code == 0, out
+    assert (result['ok'], result['manual'], result['warnings']) == (True, False, []), result
