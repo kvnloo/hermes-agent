@@ -355,6 +355,30 @@ def check_macos_tcc_anchor(should_fix: bool = False) -> None:
         check_warn("macOS TCC anchor missing" if status == "missing" else "macOS TCC anchor stale", f"({detail})")
 
 
+def _launchd_tcc_notice(plist_path: Path) -> str | None:
+    """Explain the TCC identity of the installed gateway plist, not of this doctor process."""
+    import plistlib
+    from xml.parsers.expat import ExpatError
+
+    try:
+        with plist_path.open("rb") as stream:
+            definition = plistlib.load(stream)
+    except (OSError, ValueError, plistlib.InvalidFileException, ExpatError):
+        return None
+    if not isinstance(definition, dict):
+        return None
+    args = definition.get("ProgramArguments")
+    if not isinstance(args, list) or not args or args[0] != "/usr/bin/osascript":
+        return None
+    return (
+        "The installed gateway LaunchAgent plist starts osascript, which owns TCC responsibility "
+        "for gateway sessions. Full Disk Access grants to Hermes.app, your terminal, or managed Python "
+        "do not apply to that osascript-rooted service. For a grantable direct gateway identity, "
+        "set gateway.launchd_network_identity: direct and reinstall the service; direct mode can "
+        "lose the osascript Local Network exemption (#71206). Check the loaded job after reinstalling."
+    )
+
+
 def check_macos_full_disk_access() -> None:
     """One-grant guidance: Full Disk Access silences every per-folder TCC prompt. Silent on non-macOS.
 
@@ -369,11 +393,19 @@ def check_macos_full_disk_access() -> None:
     """
     if sys.platform != "darwin":
         return
+    # The doctor's terminal FDA and the gateway LaunchAgent's TCC identity are distinct.
+    try:
+        from hermes_cli.gateway import get_launchd_plist_path
+        notice = _launchd_tcc_notice(get_launchd_plist_path())
+    except (OSError, ValueError):
+        notice = None
+    if notice:
+        check_info(notice)
     try:
         os.listdir(Path.home() / "Library" / "Application Support" / "com.apple.TCC")
     except PermissionError:
-        check_info("One switch silences all macOS folder prompts: grant your terminal app Full Disk Access and Hermes "
-                   "will never trip per-folder dialogs (Desktop/Downloads/Documents/...) again. Open: System Settings → "
+        check_info("For this terminal session, grant your terminal app Full Disk Access; "
+                   "this avoids per-folder prompts (Desktop/Downloads/Documents/...) here. Open: System Settings → "
                    "Privacy & Security → Full Disk Access — or run:\n"
                    "      open \"x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles\"\n"
                    "    then enable your terminal (and Hermes.app if you use Desktop), and restart them once. "
@@ -381,7 +413,7 @@ def check_macos_full_disk_access() -> None:
     except OSError:
         pass  # missing dir / other error: indeterminate, stay silent
     else:
-        check_ok("macOS Full Disk Access granted", "(no per-folder permission prompts will occur)")
+        check_ok("macOS Full Disk Access granted", "(in this doctor process; the gateway job may have a different identity)")
 
 
 @doctor_check("Security advisory check failed: {e}")
