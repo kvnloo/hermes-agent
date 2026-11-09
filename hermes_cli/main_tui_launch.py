@@ -76,15 +76,15 @@ def _branch_lineage(db, session: dict) -> list:
 
 def _print_tui_exit_summary(session_id: Optional[str], active_session_file: Optional[str] = None) -> None:
     """Print a shell-visible epilogue after TUI exits."""
-    from hermes_cli.main import _resolve_last_session
-    target = (
-        _read_tui_active_session_file(active_session_file) or session_id or _resolve_last_session(source="tui")
-    )
-    if not target:
-        return
-
     db = None
     try:
+        from hermes_cli.main import _resolve_last_session
+        target = (
+            _read_tui_active_session_file(active_session_file) or session_id or _resolve_last_session(source="tui")
+        )
+        if not target:
+            return
+
         from hermes_state import SessionDB
         from hermes_cli.config import get_hermes_home
         db = SessionDB(db_path=get_hermes_home() / "state.db", read_only=True)

@@ -123,3 +123,8 @@ class TestTuiExitSummaryResumeHint:
             "hermes_cli.profiles.get_active_profile_name", return_value="dev"
         ), patch("hermes_cli.main_tui_launch.t", side_effect=KeyboardInterrupt):
             _print_tui_exit_summary("20260524_000001_abc123")  # must not raise
+
+    def test_tui_exit_summary_survives_keyboard_interrupt_during_last_session_lookup(self):
+        """Without an explicit session ID, a late Ctrl-C during fallback lookup is harmless."""
+        with patch("hermes_cli.main._resolve_last_session", side_effect=KeyboardInterrupt):
+            _print_tui_exit_summary(None)  # must not raise
