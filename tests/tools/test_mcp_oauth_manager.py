@@ -749,3 +749,19 @@ def test_netsuite_quirk_defaults_trusted_issuers():
     # Non-NetSuite servers are untouched.
     cfg = apply_oauth_provider_defaults({}, server_url="https://mcp.example.com/mcp")
     assert "trusted_issuers" not in cfg
+
+
+def test_netsuite_explicit_empty_allowlist_keeps_strict_issuer_validation(tmp_path, monkeypatch):
+    """An explicit empty allowlist opts out of the NetSuite issuer exception."""
+    from mcp.client.auth import OAuthFlowError
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    provider = _provider_for_server(
+        tmp_path, monkeypatch, _NS_SERVER, {"trusted_issuers": []}
+    )
+
+    with pytest.raises(OAuthFlowError, match="issuer mismatch"):
+        _drive_issuer_discovery(
+            provider, monkeypatch,
+            auth_server_url=_NS_AUTH_SERVER, metadata_issuer=_NS_ISSUER,
+        )

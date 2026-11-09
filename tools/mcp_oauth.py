@@ -872,7 +872,7 @@ def _is_netsuite_mcp(server_url: str | None = None) -> bool:
 def apply_oauth_provider_defaults(cfg: dict, *, server_name: str = "", server_url: str | None = None) -> dict:
     """Mutate *cfg* with provider-specific OAuth workarounds (before building client metadata /
     pre-registering); returns *cfg*. Only fills keys the user left unset — explicit values win."""
-    if _is_netsuite_mcp(server_url) and not cfg.get("trusted_issuers"):
+    if _is_netsuite_mcp(server_url) and "trusted_issuers" not in cfg:
         # NetSuite: accept the documented fixed issuer for this server only (see _NETSUITE_ISSUER).
         cfg["trusted_issuers"] = [_NETSUITE_ISSUER]
         logger.info(
