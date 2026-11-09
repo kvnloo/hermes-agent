@@ -21,7 +21,7 @@ function userFollowsSpokenOrdinal(messages: readonly AutoSpeakMessage[], spokenO
   let ordinal = -1
 
   for (const message of messages) {
-    if (message.hidden) {
+    if (message.hidden && message.role !== 'user') {
       continue
     }
 

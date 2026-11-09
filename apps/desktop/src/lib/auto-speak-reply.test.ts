@@ -99,6 +99,25 @@ describe('selectAutoSpeakReply', () => {
     })
   })
 
+  it('speaks the next turn after a hidden user action', () => {
+    const first = [user('u1'), assistant('a1', 'Done.')]
+    markAssistantIdSpoken('s', first, 'a1')
+
+    // Hidden user widget intents still start a new turn.
+    const second = [
+      user('u1'),
+      assistant('a1', 'Done.'),
+      { ...user('u2', 'widget intent'), hidden: true },
+      assistant('a2', 'Done.')
+    ]
+
+    expect(selectAutoSpeakReply('s', second)).toEqual({
+      id: 'a2',
+      pending: false,
+      text: 'Done.'
+    })
+  })
+
   it('reports pending so the hook waits instead of speaking a partial', () => {
     const messages = [user('u1'), assistant('assistant-stream-1', 'Hal', { pending: true })]
 
