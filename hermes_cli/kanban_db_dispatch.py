@@ -1554,6 +1554,26 @@ def _clear_failure_counter(conn: sqlite3.Connection, task_id: str) -> None:
         )
 
 
+def _rate_limit_backoff(conn: sqlite3.Connection, task_id: str, base: int) -> int:
+    """``base * 2**(streak-1)`` capped by ``HERMES_KANBAN_RATE_LIMIT_MAX_COOLDOWN_SECONDS``
+    (default 3600), where streak = consecutive trailing ``rate_limited`` runs.
+
+    A quota wall that outlasts one cooldown used to be re-probed every ``base``
+    seconds forever: 650 cold respawns on 2026-11-07 while the lanes reset in days.
+    """
+    cap = max(base, _kb._env_int("HERMES_KANBAN_RATE_LIMIT_MAX_COOLDOWN_SECONDS", 3600))
+    streak = 0
+    for (outcome,) in conn.execute(
+        "SELECT outcome FROM task_runs WHERE task_id = ? AND ended_at IS NOT NULL "
+        "ORDER BY ended_at DESC LIMIT 16",
+        (task_id,),
+    ):
+        if outcome != "rate_limited":
+            break
+        streak += 1
+    return min(cap, base * (1 << max(streak - 1, 0)))
+
+
 def check_respawn_guard(
     conn: sqlite3.Connection, task_id: str, *, lane: str = "ready",
 ) -> Optional[str]:
@@ -1607,7 +1627,9 @@ def check_respawn_guard(
             # the stamped rate-limit text doesn't re-trap the task.
             return None
         ended_at = _kb._to_epoch(latest_run["ended_at"])
-        if ended_at is not None and (now - ended_at) < rl_cooldown:
+        if ended_at is not None and (now - ended_at) < _rate_limit_backoff(
+            conn, task_id, rl_cooldown,
+        ):
             return "rate_limit_cooldown"
         # Cooldown elapsed — return early so blocker_auth doesn't catch the
         # stamped rate-limit text; this path intentionally retries forever
