@@ -199,7 +199,8 @@ def _adapter_for_subscription(runner: Any, platform: Any, sub: dict, owner_profi
     # platform match itself and refuse a DM thread the default profile owns (#151520). A row whose
     # chat_id is the thread's own id has no knowable parent, so the ordered gate keeps its historical
     # assumption and an earlier channel route is never skipped (#110919).
-    hosted_parent = chat if thread_like and chat_type not in _THREAD_CHAT_TYPES else None
+    # Empty legacy chat types are ambiguous: chat_id may itself identify a thread.
+    hosted_parent = chat if thread_like and chat_type and chat_type not in _THREAD_CHAT_TYPES else None
     # Preserve canonical route order, including equal-specificity ties. An older
     # row missing an anchor must not skip a potentially winning route. Reuse the
     # route's matcher (including platform-specific identity aliases), not a second

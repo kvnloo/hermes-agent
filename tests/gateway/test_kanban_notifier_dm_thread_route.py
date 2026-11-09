@@ -118,3 +118,22 @@ def test_a_thread_id_chat_still_needs_its_parent_anchor(tmp_path, monkeypatch):
                            delivery_mode="notify", delivery_metadata={"guild_id": TEAM})
         kb.complete_task(conn, task, result="finished")
     assert not collect(runner), "an anchorless thread-id row must stay fail-closed (#110919)"
+
+def test_legacy_untyped_thread_retains_unknown_parent_route_gate(tmp_path, monkeypatch):
+    """An old thread row with no chat_type must not skip a possible parent route (#110919)."""
+    runner = setup_runner(tmp_path, monkeypatch, [
+        dict(platform="discord", guild_id=TEAM, chat_id="C_OTHER", profile="household-coordinator"),
+    ])
+    runner.adapters = {Platform.DISCORD: RecordingAdapter()}
+    with kbc.connect() as conn:
+        task = kb.create_task(conn, title="legacy thread completion", assignee="worker")
+        kbn.add_notify_sub(conn, task_id=task, platform="discord", chat_id="post",
+                           thread_id="post", chat_type="thread", notifier_profile="default",
+                           delivery_mode="notify", delivery_metadata={"guild_id": TEAM})
+        # Simulate a stored subscription predating the chat_type column.
+        conn.execute("UPDATE kanban_notify_subs SET chat_type = NULL WHERE task_id = ?", (task,))
+        kb.complete_task(conn, task, result="finished")
+    assert not collect(runner), "an unknown parent cannot bypass an earlier channel route"
+    with kbc.connect() as conn:
+        assert kbn.unseen_events_for_sub(conn, task_id=task, platform="discord",
+                                         chat_id="post", thread_id="post", kinds=["completed"])[1]
