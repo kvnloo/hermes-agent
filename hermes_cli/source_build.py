@@ -60,6 +60,18 @@ def source_build_env(base_env: dict | None = None, *, explicit: bool = False, ve
         name = f"npm_config_{key.replace('-', '_').lower()}"
         if name.upper() not in inherited:  # an explicit setting wins, in any case
             env[name] = value
+    # The profile .env stores credentials; forward only Electron download overrides
+    # to pnpm/Node build children, not arbitrary secrets or process settings.
+    from hermes_cli.config import load_env
+
+    profile_env = load_env()
+    inherited = {key.upper() for key in env}
+    for key in ("ELECTRON_MIRROR", "ELECTRON_BUILDER_BINARIES_MIRROR"):
+        # Shell/base overrides and npmrc settings beat the profile fallback.
+        if key in inherited or f"NPM_CONFIG_{key}" in inherited:
+            continue
+        if value := profile_env.get(key):
+            env[key] = value
     return ensure("pnpm", base_env=pnpm_env(env), explicit=explicit, verify=verify).env
 
 
