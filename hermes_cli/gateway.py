@@ -2930,11 +2930,12 @@ def launchd_gateway_labels_for_install() -> list[str]:
     # NAMED-profile label below (#93349 remainder after #106611 — two custom roots with a
     # same-named profile still collide; see _root_qualified_profile_suffix).
     root = get_default_hermes_root().resolve()
+    root_hash = _native_root_hash(root)
     root_label: list[str] = []
     profile_labels: list[str] = []
     for profile in list_profiles():
         if profile.is_default:
-            root_label.append("ai.hermes.gateway")
+            root_label.append(f"ai.hermes.gateway-{root_hash}" if root_hash else "ai.hermes.gateway")
         elif _re.match(r"^[a-z0-9][a-z0-9_-]{0,63}$", profile.name):
             profile_labels.append(f"ai.hermes.gateway-{_root_qualified_profile_suffix(profile.name, root)}")
     return root_label + sorted(profile_labels)

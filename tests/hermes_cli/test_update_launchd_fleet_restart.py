@@ -102,10 +102,28 @@ class TestLaunchdGatewayLabelsForInstall:
 
         root_hash = hashlib.sha256(str(get_default_hermes_root().resolve()).encode()).hexdigest()[:8]
         assert launchd_gateway_labels_for_install() == [
-            "ai.hermes.gateway",
+            f"ai.hermes.gateway-{root_hash}",
             f"ai.hermes.gateway-merit-ops-{root_hash}",
             f"ai.hermes.gateway-tfl-wiki-{root_hash}",
         ]
+
+    def test_custom_root_default_enumerates_its_installed_label(self, tmp_path, monkeypatch):
+        """Both custom roots must enumerate their own default gateway, never the account's."""
+        monkeypatch.setattr(
+            hermes_cli.profiles, "list_profiles",
+            lambda: [_Profile("default", is_default=True)],
+        )
+        labels = []
+        for name in ("a", "b"):
+            root = tmp_path / name
+            root.mkdir()
+            monkeypatch.setenv("HERMES_HOME", str(root))
+            installed_label = gw.get_launchd_label()
+            assert launchd_gateway_labels_for_install() == [installed_label]
+            labels.append(installed_label)
+
+        assert labels[0] != labels[1]
+        assert "ai.hermes.gateway" not in labels
 
     def test_no_profiles_means_no_fleet(self, monkeypatch):
         monkeypatch.setattr(hermes_cli.profiles, "list_profiles", lambda: [])
