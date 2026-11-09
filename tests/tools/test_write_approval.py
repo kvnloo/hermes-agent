@@ -222,6 +222,27 @@ def _stage_memory_add(content, target="memory"):
         summary=f"add to {target}: {content[:120]}", origin="foreground")
 
 
+def test_gateway_headless_memory_staging_hint(hermes_home, monkeypatch):
+    """#152217: unattended gateway turns must name a reachable review location."""
+    from gateway import session_context
+    from tools.memory_tool import MemoryStore, memory_tool
+
+    monkeypatch.setattr(
+        session_context, "get_session_env",
+        lambda name, default="": "task-1" if name == "HERMES_KANBAN_TASK" else default,
+    )
+    _set_approval("memory", True)
+    store = MemoryStore()
+    store.load_from_disk()
+    response = json.loads(memory_tool("add", "memory", "gateway gate canary", store=store))
+
+    assert response["staged"] is True
+    assert response["pending_id"]
+    assert store.memory_entries == []
+    assert f"{hermes_home}/pending/memory" in response["message"]
+    assert "review from an interactive CLI session with /memory pending" in response["message"]
+
+
 def test_memory_gate_on_stages_even_with_approval_callback(hermes_home, approval_callback_cleanup):
     # #44963: memory writes use the pending-review flow, never the generic timed
     # approval box. A registered CLI approval callback must NOT be invoked.
