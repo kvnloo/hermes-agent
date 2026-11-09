@@ -27,3 +27,29 @@ def test_successful_fallback_keeps_release_owner_until_turn_settles():
         assert not old.provider.writer.is_alive()
     finally:
         old.cleanup()
+
+
+def test_stale_fallback_does_not_retire_newer_turn():
+    """An older successful fallback must not evict a replacement turn's agent."""
+    runner = _make_runner()
+    key = "agent:main:telegram:dm:stale-fallback"
+    old = SimpleNamespace(model="fallback", _provider_fallback_active=True)
+    successor = ResourceAgent()
+    state = runner._session_state(key)
+    state.persistent.run_generation = 2
+    state.turn.agent = successor
+    runner._agent_cache[key] = (successor, "current", 0, "session")
+    runner._persist_active_agents = Mock()
+    runner._spawn_release_thread = lambda target, args, *a, **kw: target(*args)
+    try:
+        assert not runner._is_session_run_current(key, 1)
+        runner._run_agent_evict_on_fallback(SimpleNamespace(
+            session_key=key, run_generation=1, agent_holder=[old],
+            result_holder=[{"failed": False}],
+        ))
+        runner._release_running_agent_state(key, run_generation=2)
+        assert runner._agent_cache[key][0] is successor
+        assert successor.releases == 0
+        assert successor.provider.writer.is_alive()
+    finally:
+        successor.cleanup()

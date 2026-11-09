@@ -1498,6 +1498,11 @@ class GatewayTurnMixin(GatewayBackgroundMixin, GatewayTurnPrepareMixin, GatewayT
         session_key, _agent, _result_for_fb = turn_ctx.session_key, turn_ctx.agent_holder[0], turn_ctx.result_holder[0]
         if _agent is None or not hasattr(_agent, 'model') or (_result_for_fb and _result_for_fb.get("failed")):
             return
+        # A displaced turn may settle after /stop or /new installs a successor.
+        # Its fallback must not retire that successor from the cache.
+        generation = getattr(turn_ctx, "run_generation", None)
+        if generation is not None and not self._is_session_run_current(session_key, generation):
+            return
         # A provider fallback is drift even when it serves the configured model name on another endpoint.
         if getattr(_agent, "_provider_fallback_active", False) is not True:
             # A LOCAL session runs its frozen launch policy's model, not the gateway's configured one.
