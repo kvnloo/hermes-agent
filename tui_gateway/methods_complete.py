@@ -198,6 +198,8 @@ def _dir_listing_items(root: str, word: str, path_part: str, prefix_tag: str, is
         search_dir = pth.join(root, search_dir)
     search_dir = pth.normpath(search_dir)
     items: list[dict] = []
+    # ~/ paths are relative to home even when the workspace is on another Windows drive.
+    relative_root = (os.path.expanduser("~") if local else "~") if word.startswith("~") else root
     if local:
         if not os.path.isdir(search_dir):
             return items
@@ -213,7 +215,7 @@ def _dir_listing_items(root: str, word: str, path_part: str, prefix_tag: str, is
             continue
         full = pth.join(search_dir, entry)
         try:
-            rel = pth.relpath(full, root).replace(os.sep, "/")
+            rel = pth.relpath(full, relative_root).replace(os.sep, "/")
         except ValueError:
             # Windows device names such as ``nul`` can resolve to the special
             # NUL device mount. Skip that candidate instead of dropping the
@@ -223,7 +225,7 @@ def _dir_listing_items(root: str, word: str, path_part: str, prefix_tag: str, is
         if is_context:
             text = f"@{prefix_tag or ('folder' if is_dir else 'file')}:{rel}{suffix}"
         elif word.startswith("~"):
-            text = "~/" + pth.relpath(full, os.path.expanduser("~") if local else "~") + suffix
+            text = "~/" + rel + suffix
         else:
             text = ("./" if word.startswith("./") else "") + rel + suffix
         items.append(_item(text, "dir" if is_dir else "", entry + suffix))

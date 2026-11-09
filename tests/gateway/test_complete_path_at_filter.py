@@ -102,6 +102,36 @@ def test_unrelatable_entry_does_not_drop_completion_response(tmp_path, monkeypat
     assert "nul" not in texts
 
 
+def test_home_completion_survives_workspace_on_another_drive(tmp_path, monkeypatch):
+    """A ~/ candidate is relative to home even when the session cwd is on another mount."""
+    workspace, home = tmp_path / "workspace", tmp_path / "home"
+    workspace.mkdir()
+    home.mkdir()
+    (home / "project.md").write_text("x")
+    monkeypatch.chdir(workspace)
+
+    real_expanduser = server.os.path.expanduser
+
+    def home_expanduser(path):
+        if path == "~":
+            return str(home)
+        if path.startswith("~/"):
+            return str(home) + path[1:]
+        return real_expanduser(path)
+
+    monkeypatch.setattr(server.os.path, "expanduser", home_expanduser)
+    real_relpath = server.os.path.relpath
+
+    def cross_drive_relpath(path, start):
+        if os.fspath(path) == str(home / "project.md") and os.fspath(start) == str(workspace):
+            raise ValueError("path is on mount 'D:', start on mount 'C:'")
+        return real_relpath(path, start)
+
+    monkeypatch.setattr(server.os.path, "relpath", cross_drive_relpath)
+
+    assert [text for text, _, _ in _items("~/")] == ["~/project.md"]
+
+
 # ── Non-local terminal backend: the popup must show the backend's tree ──
 
 
