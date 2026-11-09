@@ -120,10 +120,11 @@ def _apply_live_compression_config(agent: Any, cfg: dict | None) -> None:
         new_ctx = config_context_length_for_runtime(agent, cfg)
         if new_ctx != getattr(agent, "_config_context_length", None):
             from agent.model_metadata import get_model_context_length
+            from hermes_cli.config import get_compatible_custom_providers
             context_length = new_ctx if new_ctx is not None else get_model_context_length(
                 getattr(agent, "model", ""), base_url=getattr(agent, "base_url", "") or "",
                 api_key=getattr(agent, "api_key", "") or "", provider=getattr(agent, "provider", "") or "",
-                custom_providers=cfg.get("custom_providers"),
+                custom_providers=get_compatible_custom_providers(cfg),
             )
             cc.update_model(
                 model=getattr(agent, "model", ""), context_length=context_length,

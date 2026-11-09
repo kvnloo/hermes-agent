@@ -148,3 +148,39 @@ def test_plugin_keeps_context_pin_scoped_to_configured_default_route(configured_
     _apply_live_compression_config(agent, cfg)
 
     assert engine.context_length == 160_000
+
+def test_plugin_pin_removal_uses_v12_provider_window_from_live_config(monkeypatch):
+    """Live pin removal must use the supplied v12 provider entry, not disk metadata."""
+    from agent import model_metadata
+    from hermes_cli.config import get_custom_provider_context_length
+    from tui_gateway.session_compression import _apply_live_compression_config
+
+    engine = PluginEngine()
+    engine.context_length = 320_000
+    agent = host_agent(engine)
+    agent.base_url = "https://v12-fixture.invalid/v1"
+    agent._config_context_length = 320_000
+    cfg = edited_config()
+    cfg["providers"] = {
+        "fixture": {
+            "api": agent.base_url,
+            "models": {"plugin-model": {"context_length": 160_000}},
+        },
+    }
+
+    # Exercise the real provider-entry resolver while avoiding external metadata probes.
+    # A global config read must not silently replace the live config being applied.
+    monkeypatch.setattr("hermes_cli.config.load_config_readonly", lambda: {})
+
+    def resolve_window(model, *, base_url="", custom_providers=None, **kwargs):
+        return get_custom_provider_context_length(
+            model=model, base_url=base_url, custom_providers=custom_providers,
+        ) or 256_000
+
+    monkeypatch.setattr(model_metadata, "get_model_context_length", resolve_window)
+    _apply_live_compression_config(agent, cfg)
+
+    assert engine.context_length == 160_000
+    assert engine.should_compress(110_000) is False
+    assert engine.should_compress(112_000) is True
+    assert agent._config_context_length is None
