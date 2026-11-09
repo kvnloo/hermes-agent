@@ -66,6 +66,25 @@ class TestBuildAutoLoadPrompt:
         assert "PINNED CONTENT" not in prompt and "EXTRA CONTENT" in prompt
 
 
+    def test_preload_name_and_absolute_path_do_not_duplicate_skill(self, tmp_path):
+        """The same skill may be selected by name and its trusted absolute directory."""
+        from agent.launch_skills import preloaded_skill_names, preloaded_skill_paths
+        from agent.skill_commands import build_preloaded_skills_prompt
+
+        root = tmp_path / "skills"
+        skill_file = _write_skill(root, "one-skill", "UNIQUE ALIAS SKILL BODY")
+        with patch("tools.skills_tool.SKILLS_DIR", root):
+            prompt, names, missing = build_preloaded_skills_prompt(
+                ["one-skill", str(skill_file.parent)], task_id="alias-preload",
+            )
+
+        assert missing == []
+        assert names == ["one-skill"]
+        assert prompt.count("UNIQUE ALIAS SKILL BODY") == 1
+        assert preloaded_skill_names(prompt) == ["one-skill"]
+        assert preloaded_skill_paths(prompt) == {str(skill_file.parent.resolve())}
+
+
 class TestSharedPromptPath:
     def test_prompt_is_byte_stable_after_config_and_skill_mutation(self, tmp_path, monkeypatch):
         """The whole point: rebuilds (model switch, compression) reuse the first resolution."""

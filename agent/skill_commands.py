@@ -900,6 +900,7 @@ def _load_skill_blocks(
     disabled: list[str] = []
     blocks: list[str] = []
     seen: set[str] = set()
+    seen_paths: set[str] = set()
     for identifier in identifiers:
         if not identifier or identifier in seen:
             continue
@@ -917,6 +918,12 @@ def _load_skill_blocks(
                 disabled.append(skill_name or identifier)
             continue
         skill_path = str(loaded[1].resolve()) if loaded[1] is not None else None
+        # The name and its trusted absolute path can resolve to the same skill.
+        # Deduplicate the resolved directory, not just the caller's spelling.
+        if skill_path in seen_paths:
+            continue
+        if skill_path:
+            seen_paths.add(skill_path)
         if ((already_loaded and skill_name in already_loaded)
                 or (already_loaded_paths and skill_path in already_loaded_paths)):
             loaded_names.append(skill_name)
