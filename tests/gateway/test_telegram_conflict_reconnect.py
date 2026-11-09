@@ -67,6 +67,32 @@ async def test_secondary_polling_conflict_reconnects_then_parks_a_foreign_holder
     assert (last["platform_state"], last["error_code"], last["needs_attention"]) == ("fatal", "token_in_use_elsewhere", True)
 
 
+
+def test_secondary_token_rotation_resets_polling_contention_budget(monkeypatch, tmp_path):
+    """A replacement token must start its own 409 back-off, not inherit the old bot's strikes."""
+    runner = GatewayRunner(GatewayConfig(
+        platforms={TG: PlatformConfig(enabled=True, token="123:old")}, sessions_dir=tmp_path / "sessions"))
+    writes = _record_status(monkeypatch, runner)
+
+    def conflicted(token):
+        adapter = TelegramAdapter(PlatformConfig(enabled=True, token=token))
+        adapter._set_fatal_error("telegram_polling_conflict", "another getUpdates poller", retryable=True)
+        return adapter
+
+    # Old bot's full reconnect allowance is spent, without a 30-minute quiet period.
+    for delay in recovery._TOKEN_CONTENTION_RECONNECT_DELAYS:
+        assert runner._token_contention_reconnect_delay("a:telegram", conflicted("123:old")) == delay
+
+    # The same served profile can load a newly configured token during a reconnect.
+    fresh = conflicted("123:new")
+    assert runner._token_contention_reconnect_delay("a:telegram", fresh) == (
+        recovery._TOKEN_CONTENTION_RECONNECT_DELAYS[0]
+    )
+    assert (fresh.fatal_error_code, fresh.fatal_error_retryable) == ("telegram_polling_conflict", True)
+    assert writes[-1][0] == "a:telegram"
+    assert writes[-1][1]["platform_state"] == "retrying"
+
+
 @pytest.mark.asyncio
 async def test_primary_polling_conflict_is_queued_on_the_back_off_then_parked(monkeypatch, tmp_path):
     monkeypatch.setattr(recovery, "_TOKEN_CONTENTION_RECONNECT_DELAYS", (30.0, 60.0, 90.0), raising=False)

@@ -64,9 +64,11 @@ class GatewaySecondaryReconnectMixin:
         if strikes is None:
             strikes = self._token_contention_strikes = {}
         now = time.monotonic()
-        count, last = strikes.get(status_key, (0, now))
-        count = 1 if now - last > _TOKEN_CONTENTION_EPISODE_SECS else count + 1
-        strikes[status_key] = (count, now)
+        # A changed bot token must not inherit the previous token's contention budget.
+        credential = self._adapter_credential_fingerprint(adapter)
+        count, last, previous_credential = strikes.get(status_key, (0, now, credential))
+        count = 1 if credential != previous_credential or now - last > _TOKEN_CONTENTION_EPISODE_SECS else count + 1
+        strikes[status_key] = (count, now, credential)
         if count <= len(_TOKEN_CONTENTION_RECONNECT_DELAYS):
             delay = _TOKEN_CONTENTION_RECONNECT_DELAYS[count - 1]
             logger.warning("%s: bot token still polled elsewhere; reconnect %d/%d in %ds", status_key, count,
