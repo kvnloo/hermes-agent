@@ -333,8 +333,12 @@ class AuthorityConnection:
         if contract is not None and (problems := canonical_param_problems(contract, params)):
             # The declared wire contract (``tui_gateway/contracts/canonical.py``) is the closed
             # key set: an unknown or missing key never reaches the handler.
+            data = {'reason': 'invalid_params', 'fields': problems}
+            if method == 'session.create' and {'messages', 'parent_session_id'} & set(problems):
+                # Old clients must branch from an owned parent; seeded history is not admitted.
+                data['replacement'] = 'session.mutate'
             return {'jsonrpc': '2.0', 'id': rid, 'error': {
-                'code': 4001, 'message': 'invalid_params', 'data': {'reason': 'invalid_params', 'fields': problems}}}
+                'code': 4001, 'message': 'invalid_params', 'data': data}}
         original_params = dict(params)
         contract = contract or METHODS.get(method)
         authority = self.authority
@@ -364,9 +368,11 @@ class AuthorityConnection:
                     # JSON-RPC's own verdict: clients key compat fallbacks on -32601, and a
                     # 4001 'invalid_params' would read as a bad argument on a method that exists.
                     # An account-owned connector call (the Connectors page) keeps its legacy handler.
+                    data = {'reason': 'unknown_method'}
+                    if method == 'session.activate':
+                        data['replacement'] = 'session.resume'
                     return {'jsonrpc': '2.0', 'id': rid, 'error': {
-                        'code': -32601, 'message': unknown_method_message(method),
-                        'data': {'reason': 'unknown_method'}}}
+                        'code': -32601, 'message': unknown_method_message(method), 'data': data}}
                 else:
                     result = await handlers[method](ref, params)
                     if isinstance(result, DeferredReply):  # answered off the serial dispatch
@@ -378,9 +384,12 @@ class AuthorityConnection:
         except RuntimeStoreError as exc:
             _log_refusal(getattr(self.actor, 'profile_id', None), method, exc)
             # A connector refusal keeps the legacy handlers' code and message (gateway/session_connections.py).
+            data = _refusal_data(exc)
+            if method == 'config.set' and exc.reason == 'use_session_mutation_model':
+                data['replacement'] = 'session.mutate'
             return {'jsonrpc': '2.0', 'id': rid, 'error': {
                 'code': getattr(exc, 'wire_code', 4001), 'message': getattr(exc, 'wire_message', exc.reason),
-                'data': _refusal_data(exc)}}
+                'data': data}}
         except sqlite3.Error as exc:
             _log_storage_failure(getattr(self.actor, 'profile_id', None), method,
                                  params.get('session_id'), exc)

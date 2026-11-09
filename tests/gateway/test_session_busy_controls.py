@@ -223,3 +223,33 @@ def test_session_yolo_toggle_is_session_scoped_and_revokes_launch_yolo(tmp_path)
                 assert (home / 'config.yaml').read_bytes() == config_before
                 assert not admissions(home) and not peer.requests
         asyncio.run(probe())
+
+
+@pytest.mark.platforms("linux")
+def test_legacy_session_wire_refusals_name_the_safe_migration_verbs(tmp_path):
+    """Regression for #151779: legacy control calls need actionable, fenced replacements."""
+    with owner(tmp_path) as (home, peer, desc):
+        async def probe():
+            async with websocket(home, desc) as ws:
+                created = await rpc(ws, 'session.create', request_id='legacy-client', source='tui', toolsets=[])
+                sid = created['result']['session_id']
+
+                picked = await rpc(ws, 'config.set', session_id=sid, key='model',
+                                   value='controls-fixture --provider custom')
+                assert picked['error']['message'] == 'use_session_mutation_model'
+                assert picked['error']['data']['replacement'] == 'session.mutate'
+
+                seeded = await rpc(ws, 'session.create', messages=[{'role': 'assistant', 'content': 'x'}],
+                                   parent_session_id=sid)
+                assert seeded['error']['code'] == 4001
+                assert set(seeded['error']['data']['fields']) == {'messages', 'parent_session_id'}
+                assert seeded['error']['data']['replacement'] == 'session.mutate'
+
+                activated = await rpc(ws, 'session.activate', session_id=sid)
+                assert activated['error']['code'] == -32601
+                assert activated['error']['data']['replacement'] == 'session.resume'
+
+                resumed = await rpc(ws, 'session.resume', session_id=sid)
+                assert resumed['result']['session_id'] == sid
+
+        asyncio.run(probe())

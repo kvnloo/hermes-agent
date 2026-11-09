@@ -81,7 +81,27 @@ const gw = new GatewayClient({
 
 Other options (`terminalConnectFailure`, `attachUrl`, `sidecarUrl`, timeouts, `toolProgress`, `onLifecycle`, `text`, `fallbackWebSocket`) are documented on `GatewayClientOptions`. Browser-safe modules stay in `apps/shared/src/`; Node-only ones (the client, `prompt-history`) are in `apps/shared/src/node/`, and `apps/shared/src/node/boundary.test.ts` fails if the package's program ever includes a file from another workspace.
 
-### Method catalog (selected)
+### Migrating pre-v0.23 WebSocket clients
+
+The shared `hermes-gateway-v1` session authority does **not** accept every pre-v0.23
+TUI sidecar method. Legacy callers receive refusal details with a `replacement`
+method name, rather than an automatic write that would bypass session fences:
+
+| Legacy request | Shared-gateway replacement |
+| --- | --- |
+| `config.set` with `key: "model"` | `session.mutate` with `operation: "model"`, `payload: {model, provider}` |
+| `session.create` with `messages` and `parent_session_id` | `session.mutate` on the parent with `operation: "branch"` (not arbitrary client-supplied seed messages) |
+| `session.activate` | `session.resume` with `session_id` |
+
+For a model pick or branch, first `session.resume` to obtain `revision` and
+`execution_generation`. Send them as `expected_revision` and
+`expected_generation`, with a stable unique `request_id` for retries.
+For branching, `payload: {}` copies the whole saved conversation; use
+`payload: {through_message_id: <persisted row id>}` for a prefix. The reply
+contains `branched_session_id`, and the authority attaches the caller to that
+child. `prompt.submit` also requires an `input_id` or `submission_id`.
+
+### Method catalog (selected; legacy sidecar)
 
 ```
 prompt.submit           prompt.background       session.steer
@@ -104,7 +124,7 @@ Plugins add `plugin.<plugin_id>.<name>` methods (`ctx.register_rpc`) and session
 
 On the shared gateway's `hermes-gateway-v1` socket, a session picker reads stored conversations without attaching: `session.list` takes a `workspace` folder filter and, with `picker: true`, returns each row's `preview`, `last_reply`, `cwd`, `git_branch`, `workspace`, `last_active_at` and `pinned`; `session.transcript({session_id, subagent_id?, cursor?, limit?, order?})` pages a conversation's display rows across its compression lineage from the oldest or the newest, each compaction handoff a `row_kind: "compaction"` row at its position (`{rows, next_cursor, reset}`, opaque cursor, at most 2 MiB a page); an oldest-order cursor also polls for rows written since (`reset: true` when the rows it covered changed shape), and `subagent_id` reads a delegated child of the session. None of them subscribes the caller or starts an agent. Details: [Gateway local sessions](./gateway-local-sessions.md).
 
-Within one authenticated gateway, resuming or activating a live session attaches another event subscriber rather than replacing the previous connection. Streaming and terminal events go to all attached clients; disconnecting one client does not end a session another client is viewing. Existing submit exclusivity and configured busy-input policy remain in force. Attached clients can steer the session's subagents. This does not enable independent gateway processes to write the same session, nor does it imply durable prompt admission across an owner restart.
+Within one authenticated gateway, resuming a live session attaches another event subscriber rather than replacing the previous connection. Streaming and terminal events go to all attached clients; disconnecting one client does not end a session another client is viewing. Existing submit exclusivity and configured busy-input policy remain in force. Attached clients can steer the session's subagents. This does not enable independent gateway processes to write the same session, nor does it imply durable prompt admission across an owner restart.
 
 ### Model overrides on `session.create`
 
