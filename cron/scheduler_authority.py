@@ -226,6 +226,8 @@ def reconcile_pending(*, allow_connect=True):
                 if current is None:
                     journal.unlink(missing_ok=True)
                     continue
+                # The owner proved no admission; this failed fire spent nothing.
+                current['_model_unreachable'] = True
                 error = 'Cron admission missing: the owner never admitted this fire'
                 state = {'status': 'terminal', 'job': current,
                          'result': [False, f'# Cron Job: {params["job_id"]} (FAILED)\n\n{error}\n', '', error]}

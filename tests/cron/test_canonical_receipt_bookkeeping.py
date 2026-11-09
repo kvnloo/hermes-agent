@@ -1,5 +1,6 @@
 """Canonical cron recovery settles attempts and never re-pauses an explicitly resumed job."""
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 import json
 
 import pytest
@@ -138,3 +139,35 @@ def test_recovered_receipt_books_the_same_failure_verdicts_as_the_firer(tmp_path
         saved = jobs.get_job(job['id'])
         assert (saved['last_status'], saved['failure_streak']) == ('error', 1)
         assert executions.get_execution(execution['id'])['status'] == 'failed'
+
+def test_missing_admission_recovery_arms_a_bounded_retry(tmp_path, monkeypatch):
+    """A crashed firer's verified non-admission gets the same re-run as a live refusal."""
+    from cron import unreachable_retry
+
+    with jobs.use_cron_store(tmp_path / 'cron'):
+        job = jobs.create_job(prompt='nightly report', schedule='every 24h', deliver='local')
+        execution = executions.create_execution(job['id'], source='test')
+        executions.mark_execution_running(execution['id'])
+        with executions._transaction() as conn:
+            conn.execute('UPDATE executions SET process_id=?,pid=? WHERE id=?',
+                         ('old-owner', 999999, execution['id']))
+
+        params = {'job_id': job['id'], 'request_id': execution['id'], 'extra_prompt': None}
+        journal = scheduler_authority.journal_path(job['id'], execution['id'])
+        journal.parent.mkdir(parents=True, exist_ok=True)
+        journal.write_text(json.dumps({'params': params, 'receipt': None}))
+
+        def recover(method, _params):
+            assert method == 'cron.recover'
+            return {'status': 'missing'}
+
+        peer(monkeypatch, recover)
+        scheduler_authority.reconcile_pending()
+
+        saved = jobs.get_job(job['id'])
+        assert saved['last_status'] == 'error'
+        assert saved[unreachable_retry.STATE_KEY]['attempt'] == 1
+        until_retry = datetime.fromisoformat(saved['next_run_at']) - datetime.now(timezone.utc)
+        assert timedelta(minutes=4) < until_retry < timedelta(minutes=6)
+        assert executions.get_execution(execution['id'])['status'] == 'failed'
+        assert not journal.exists()
