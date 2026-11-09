@@ -97,6 +97,7 @@ def test_exhausted_fallback_preserves_transcript_and_reports_final_route(
 
 @pytest.mark.parametrize("primary_status,fallback_status", [
     ("overloaded", 429), (429, "overloaded"), ("overloaded", "overloaded"),
+    ("network", "overloaded"), ("timeout", "overloaded"),
 ])
 def test_exhausted_fallback_keeps_overload_grace_and_bounded_escalation(
     fallback_case, primary_status, fallback_status,
@@ -115,6 +116,8 @@ def test_exhausted_fallback_keeps_overload_grace_and_bounded_escalation(
             assert comp._last_compress_aborted
             assert comp.compression_count == 0
             assert comp._consecutive_overload_aborts == attempt
+            if primary_status in ("network", "timeout"):
+                assert comp._last_summary_network_failure
         else:
             assert compressed != case.messages
             assert not comp._last_compress_aborted

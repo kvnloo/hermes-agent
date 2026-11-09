@@ -118,7 +118,8 @@ class AuxRouteAttributionMixin:
         ):
             if getattr(kind, failure_class) or getattr(policy_kind, failure_class):
                 setattr(self, flag, True)
-                return
+        # A fallback overload still consumes one strike when the original attempt
+        # failed with a network or invalid-response error (#72636).
         if not (kind.overloaded or policy_kind.overloaded) or access_error:
             return
         # Count once per failed summary, even if both routes overloaded. Access/quota
