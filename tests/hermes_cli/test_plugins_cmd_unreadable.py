@@ -119,3 +119,25 @@ def test_the_loaders_own_scan_names_the_repair(plugin_home, caplog):
 
     assert unusable_dir_remedy(locked) in caplog.text
     assert str(locked) in caplog.text
+
+
+def test_dashboard_hub_reports_unreadable_plugin_without_actions(plugin_home, monkeypatch):
+    """The browser Dashboard hub must not silently drop a directory Desktop can report."""
+    from hermes_cli import web_server, web_server_dashboard
+
+    _root, _good, locked = plugin_home
+    monkeypatch.setattr(web_server, "_get_dashboard_plugins", lambda: [])
+    monkeypatch.setattr(plugins_cmd, "_discover_context_engines", list)
+
+    with patch("hermes_cli.web_server_memory._discover_memory_provider_statuses", return_value=[]), \
+         patch("hermes_cli.plugin_catalog.resolved_removed_entries", return_value={}):
+        payload = web_server_dashboard._merged_plugins_hub(force_refresh=True)
+
+    rows = {row["name"]: row for row in payload["plugins"]}
+    assert rows["good-plugin"]["runtime_status"] != "unreadable"
+    unreadable = rows["locked-plugin"]
+    assert unreadable["runtime_status"] == "unreadable"
+    assert unreadable["path"] == str(locked)
+    assert unusable_dir_remedy(locked) in unreadable["description"]
+    assert not unreadable["can_remove"]
+    assert not unreadable["can_update_git"]

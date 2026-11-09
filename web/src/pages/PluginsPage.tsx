@@ -1062,7 +1062,7 @@ function PluginRowCard(props: PluginRowCardProps) {
   const badgeTone =
     row.runtime_status === "enabled"
       ? "success"
-      : row.runtime_status === "disabled"
+      : row.runtime_status === "disabled" || row.runtime_status === "unreadable"
         ? "destructive"
         : "outline";
 
@@ -1100,7 +1100,7 @@ function PluginRowCard(props: PluginRowCardProps) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {row.runtime_status === "enabled" ? (
+            {row.runtime_status === "unreadable" ? null : row.runtime_status === "enabled" ? (
               <Button
                 disabled={busy}
                 ghost
@@ -1241,7 +1241,7 @@ function PluginRowCard(props: PluginRowCardProps) {
           />
         ) : null}
 
-        {!row.has_dashboard_manifest && !dm ? (
+        {!row.has_dashboard_manifest && !dm && row.runtime_status !== "unreadable" ? (
 
 
           <p className="text-xs italic text-text-disabled">

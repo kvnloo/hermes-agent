@@ -752,6 +752,7 @@ def _merged_plugins_hub(force_refresh: bool = False) -> dict[str, Any]:
     from hermes_cli.plugins_cmd import (
         _category_active_names,
         _discover_all_plugins,
+        unreadable_plugin_rows,
         _get_current_context_engine,
         _get_current_memory_provider,
         _discover_context_engines,
@@ -776,7 +777,8 @@ def _merged_plugins_hub(force_refresh: bool = False) -> dict[str, Any]:
     removed_entries = resolved_removed_entries()
     active = _category_active_names()
 
-    for name, version, description, source, dir_str, key in _discover_all_plugins():
+    skips: list = []
+    for name, version, description, source, dir_str, key in _discover_all_plugins(skips):
         # Same verdict as `hermes plugins list` / the TUI hub: name+key aliases for the lists, bundled
         # backends/platforms/providers and the live memory provider count as enabled without a list
         # entry (#73131, #82898).
@@ -812,6 +814,26 @@ def _merged_plugins_hub(force_refresh: bool = False) -> dict[str, Any]:
             "auth_command": auth_command,
             "user_hidden": name in hidden_plugins,
             "removed_reason": removed_annotation(name, dir_str, removed_entries),
+        })
+
+    # The CLI and Desktop show these skipped directories; keep the Dashboard hub in sync.
+    # An unreadable folder is not an activatable plugin and has no safe mutation actions.
+    for skipped in unreadable_plugin_rows(skips):
+        rows.append({
+            "name": skipped["name"],
+            "version": "",
+            "description": skipped["description"],
+            "source": skipped["source"],
+            "runtime_status": "unreadable",
+            "has_dashboard_manifest": False,
+            "dashboard_manifest": None,
+            "path": skipped["install_dir"],
+            "can_remove": False,
+            "can_update_git": False,
+            "auth_required": False,
+            "auth_command": "",
+            "user_hidden": skipped["name"] in hidden_plugins,
+            "removed_reason": None,
         })
 
     agent_names = {r["name"] for r in rows}
