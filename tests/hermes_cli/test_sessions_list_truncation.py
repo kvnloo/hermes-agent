@@ -37,3 +37,19 @@ def test_footer_when_more_sessions_than_limit(db, capsys):
 def test_no_footer_when_listing_fits(db, capsys):
     assert "more" not in _list(db, 6, capsys)  # exactly the limit
     assert "more" not in _list(db, 20, capsys)  # fewer than the limit
+
+
+def test_cron_sessions_hidden_by_default_but_visible_when_source_is_explicit(db, capsys):
+    """Cron runs stay out of the human list without losing direct inspection (#151484)."""
+    db.create_session("cron_run", "cron")
+    db.append_message("cron_run", "user", "cron-only content")
+
+    sessions_cmd._cmd_list(db, Namespace(limit=20, source=None, workspace=None))
+    default_listing = capsys.readouterr().out
+    assert "hello 0" in default_listing
+    assert "cron-only content" not in default_listing
+
+    sessions_cmd._cmd_list(db, Namespace(limit=20, source="cron", workspace=None))
+    cron_listing = capsys.readouterr().out
+    assert "cron-only content" in cron_listing
+    assert "hello 0" not in cron_listing
