@@ -149,6 +149,7 @@ let _scriptIndex = 0
 
 /** Per-server counter for the sidebar-states script (independent from _scriptIndex). */
 let _sidebarScriptIndex = 0
+let _ephemeralIndex = 0
 
 /** Per-server counter for the cross-session sidebar script. */
 let _sidebarCrossIndex = 0
@@ -172,6 +173,7 @@ const _receivedUserTexts: string[] = []
 function resetScriptIndex(): void {
   _scriptIndex = 0
   _sidebarScriptIndex = 0
+  _ephemeralIndex = 0
   _sidebarCrossIndex = 0
   _queueStopIndex = 0
   _correctionSwitchIndex = 0
@@ -288,6 +290,17 @@ function sidebarCrossScript(releasePath?: string, silent = false): ScriptedTurn[
 }
 
 const SIDEBAR_CROSS_SCRIPT: ScriptedTurn[] = sidebarCrossScript()
+
+// Ephemeral-ui cards: one turn, one MCP call per step on the sample apps in
+// apps/desktop/e2e/fixtures/sample-apps-mcp.py. Each call's row grows that app's card.
+export const EPHEMERAL_TRIGGER = 'E2E_EPHEMERAL_ACME'
+
+const EPHEMERAL_SCRIPT: ScriptedTurn[] = [
+  { text: 'Checking your inbox for anything about the Acme review.', toolCalls: [{ name: 'mcp__gmail__search_threads', args: { query: 'acme review is:unread' } }] },
+  { text: 'Sam asked to move it. Looking for open slots on Tuesday.', toolCalls: [{ name: 'mcp__google_calendar__find_free_slots', args: { day: 'tuesday', minutes: 30 } }] },
+  { text: 'And the repo, in case the demo build is broken.', toolCalls: [{ name: 'mcp__github__get_check_runs', args: { repo: 'acme/web', ref: 'main' } }] },
+  { text: 'You are mostly set for the Acme review (sample data): the deck arrived, Tuesday has three open slots, and lint fails on main.' }
+]
 
 const QUEUE_STOP_SCRIPT: ScriptedTurn[] = [
   {
@@ -979,6 +992,19 @@ export function startMockServer(options: MockServerOptions = {}): Promise<MockSe
             const script = sidebarCrossScript(options.backgroundReleasePath, options.backgroundSilent)
             const turn = script[_sidebarCrossIndex] ?? script[script.length - 1]
             _sidebarCrossIndex++
+
+            if (stream) {
+              streamScriptedTurn(res, model, turn)
+            } else {
+              nonStreamingScriptedTurn(res, model, turn)
+            }
+
+            return
+          }
+
+          if (userText.includes(EPHEMERAL_TRIGGER)) {
+            const turn = EPHEMERAL_SCRIPT[_ephemeralIndex] ?? EPHEMERAL_SCRIPT[EPHEMERAL_SCRIPT.length - 1]
+            _ephemeralIndex++
 
             if (stream) {
               streamScriptedTurn(res, model, turn)

@@ -94,6 +94,43 @@ interface ModeOptionCopy {
 export interface Translations extends NoticeTranslations {
   /** Shared-metrics consent: first-run dialog + Settings › Safety toggles. */
   sharedMetrics: SharedMetricsTranslations
+  openui: {
+    openApp: string
+    bestPrice: string
+    noMessages: string
+    previousStep: string
+    nextStep: string
+    checksPassed: string
+    conflictCount: string
+    seats: string
+    drive: string
+    walk: string
+    transit: string
+    bike: string
+    label: string
+    readOnly: string
+    receiving: string
+    showSource: string
+    showBoard: string
+    incomplete: string
+    invalid: string
+    oversized: string
+    readOnlyError: string
+    rows: string
+    series: string
+    kitLoading: string
+    kitIdle: string
+    kitPin: string
+    kitPinned: string
+    kitUnpin: string
+    kitShow: string
+    kitPinnedBar: string
+    kitPicked: string
+    kitAddToChat: string
+    kitAdded: string
+    kitNoComposer: string
+    kitFailed: string
+  }
   appTour: AppTourTranslations
   firstRun: FirstRunCopy
   externalOpenFailed: ExternalOpenFailedCopy
