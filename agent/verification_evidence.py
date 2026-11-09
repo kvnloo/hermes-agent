@@ -576,9 +576,7 @@ def _candidate_project_dirs(command: str):
 
 
 def _facts_for_command_cwd(cwd, command):
-    facts = _project_facts(cwd)
-    if facts:
-        return facts, cwd
+    # An explicit cd/-C selects the target project, even from another workspace.
     for cand in _candidate_project_dirs(command):
         try:
             p = Path(cand).expanduser()
@@ -588,7 +586,7 @@ def _facts_for_command_cwd(cwd, command):
                     return f, p
         except Exception:
             continue
-    return None, cwd
+    return _project_facts(cwd), cwd
 
 
 def classify_verification_command(
