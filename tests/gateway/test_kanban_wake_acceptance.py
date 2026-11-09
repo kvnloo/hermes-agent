@@ -193,3 +193,65 @@ async def test_suppressed_ping_has_no_sent_receipt_but_wake_executes(tmp_path, m
             conn.close()
     finally:
         await adapter.disconnect()
+
+@pytest.mark.asyncio
+async def test_kanban_wake_refusal_only_drops_permanent_reasons(tmp_path, monkeypatch):
+    """Regression for #151635: storage outages are retryable, invalid input is not."""
+    from gateway import kanban_watchers_notifier as notifier
+    from gateway.wake import WakeNotAccepted
+
+    monkeypatch.setenv("HERMES_KANBAN_DB", str(tmp_path / "board.db"))
+    runner, adapter, _source, key = setup_route()
+    reasons = ("not_found", "invalid_params", "storage_unavailable")
+    task_ids = {}
+    conn = kbc.connect()
+    try:
+        for reason in reasons:
+            task_id = kb.create_task(conn, title=reason, assignee="worker", session_id=key)
+            kbn.add_notify_sub(
+                conn, task_id=task_id, platform="telegram", chat_id="42",
+                user_id="42", chat_type="dm", delivery_mode="wake",
+            )
+            kb.complete_task(conn, task_id, summary="ready for review")
+            task_ids[reason] = task_id
+    finally:
+        conn.close()
+
+    reason_by_task = {task_id: reason for reason, task_id in task_ids.items()}
+
+    async def refuse_wake(notification):
+        reason = reason_by_task[notification.task_id]
+        raise WakeNotAccepted(f"admission refused: {reason}", reason=reason)
+
+    monkeypatch.setattr(_KanbanNotification, "wake", refuse_wake)
+    failures = {}
+    await adapter.connect()
+    try:
+        for _ in range(notifier.MAX_SEND_FAILURES):
+            deliveries = await asyncio.to_thread(
+                _notifier_collect, runner, kb,
+                notifier_profile=None, gc_due=False, gc_retention_days=30,
+            )
+            assert {d["task"].id for d in deliveries} == set(task_ids.values())
+            for delivery in deliveries:
+                await _KanbanNotification(
+                    runner, delivery, platform_cls=Platform, sub_fail_counts=failures,
+                ).deliver()
+
+        conn = kbc.connect()
+        try:
+            rows = conn.execute(
+                "SELECT task_id FROM kanban_notify_subs WHERE task_id IN (?, ?, ?)",
+                (task_ids["not_found"], task_ids["invalid_params"],
+                 task_ids["storage_unavailable"]),
+            ).fetchall()
+            assert {row["task_id"] for row in rows} == {task_ids["storage_unavailable"]}
+            assert kbn.unseen_events_for_sub(
+                conn, task_id=task_ids["storage_unavailable"], platform="telegram",
+                chat_id="42", kinds=["completed"],
+            )[1]
+        finally:
+            conn.close()
+        assert failures == {}
+    finally:
+        await adapter.disconnect()

@@ -791,7 +791,7 @@ class _KanbanNotification:
                     wake_payloads.append((self.synth, self.wake_diagnostic, self.wake_kinds))
             self.d = {**self.d, "events": original_events}
         is_push = self.is_push_adapter
-        from gateway.wake import WakeNotAccepted
+        from gateway.wake import PERMANENT_REFUSAL_REASONS, WakeNotAccepted
 
         # A requested wake is required even when its passive ping already landed.
         if wake_payloads:
@@ -800,10 +800,9 @@ class _KanbanNotification:
                     await self.wake()
                 self.clear_failures()
             except WakeNotAccepted as exc:
-                # Startup / full queue is not a dead destination. Keep the durable
-                # subscription alive regardless of how long admission takes, unless
-                # the failure is permanent or the session receipt is missing.
-                if exc.permanent or getattr(exc, "reason", None) in ("not_found", "storage_unavailable"):
+                # Startup, queue pressure, and storage failures can clear on retry.
+                # Only proven permanent refusals count toward unsubscribing.
+                if exc.permanent or exc.reason in PERMANENT_REFUSAL_REASONS:
                     await self._wake_failed(
                         "kanban notifier: wake-only delivery refused for %s (attempt %d/%d): %s" if is_push
                         else "kanban notifier: wake self-post refused for %s (attempt %d/%d): %s",
