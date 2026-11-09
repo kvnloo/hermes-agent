@@ -577,6 +577,25 @@ test.skipIf(process.platform === 'win32').each([['Ctrl-C reaches the job', 'grou
     expect(readdirSync(join(source, '.cache'))).toEqual([])
   }, 60000)
 
+// A failed pnpm install after Ctrl-C or closing the terminal must restore the
+// installed tree and release the checkout lock immediately, without a 30-second
+// stale-owner wait on the next launch. Signal the whole job, as a terminal does.
+test.skipIf(process.platform === 'win32').each(['SIGINT', 'SIGHUP'])(
+  '%s during an install restores the previous dependencies and releases the checkout lock', async signal => {
+    const { source, env } = fixture()
+    prepareNodeDependencies({ source, workspaces: ['web'], reuse: true, env })
+    addExtraOnly(source, env)
+    const pnpm = slowPnpm(30)
+    const run = background(source, pnpm.env(env), '--workspace', 'web', '--reuse')
+    await until(() => existsSync(pnpm.started))
+    run.signal(signal, true)
+    expect((await run.exit).code).not.toBe(0)
+    await until(() => !run.alive())
+    expect(readdirSync(join(source, '.cache'))).toEqual([])
+    expect(createRequire(join(source, 'web/package.json'))('web-only')).toBe('web-only')
+  }, 30000
+)
+
 // A heartbeat that fails once (an antivirus or indexer handle on Windows, ESTALE on NFS, EMFILE)
 // keeps beating: a waiter must not break the lock of an install that is still running.
 test.skipIf(process.platform === 'win32')('a transient heartbeat error does not let another run break a live lock', async () => {

@@ -429,9 +429,22 @@ if (child.pid) {
 child.on('exit', (code, signal) => process.exit(code ?? 128 + (constants.signals[signal] ?? 0)));
 `
 
+// A terminal sends SIGINT or SIGHUP to the whole job, including pnpm. Outlive the
+// signal while the synchronous child exits so the caller can restore the previous
+// dependency trees and release the lock. A SIGTERM to node-deps alone still
+// terminates it; the relay handles stopping its orphaned child in that case.
+const JOB_SIGNALS = ['SIGINT', 'SIGHUP']
+const outliveJobSignal = () => {}
+
 function runWatched({ lock, token }, file, args, { cwd, env }) {
-  const child = spawnSync(process.execPath, ['-e', RELAY, '--', WATCHER, lock, token, String(lockTiming.watch), file, ...args],
-    { cwd, env, stdio: 'inherit' })
+  for (const name of JOB_SIGNALS) process.on(name, outliveJobSignal)
+  let child
+  try {
+    child = spawnSync(process.execPath, ['-e', RELAY, '--', WATCHER, lock, token, String(lockTiming.watch), file, ...args],
+      { cwd, env, stdio: 'inherit' })
+  } finally {
+    for (const name of JOB_SIGNALS) process.off(name, outliveJobSignal)
+  }
   if (child.error) throw child.error
   if (child.status !== 0) {
     throw Object.assign(new Error(`Command failed: ${file} ${args.join(' ')}`), { status: child.status, signal: child.signal })
