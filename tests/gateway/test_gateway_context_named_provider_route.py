@@ -69,3 +69,26 @@ def test_reset_banner_reports_the_sessions_switched_model(routes, monkeypatch):
     monkeypatch.setattr(gateway_run, "_resolve_gateway_model_context", fake_resolve)
     GatewayTurnMixin._format_session_info(runner, runner._session_model_override("k"))
     assert captured["model"] == "local-model" and captured["route"]["provider"] == "local-ds4"
+
+
+def test_reset_notice_resolves_the_source_sessions_model_switch(routes):
+    """The reset-notice entry point must forward the source session's override."""
+    from contextlib import nullcontext
+
+    source = object()
+    switched = {"model": "local-model", "provider": "local-ds4", "base_url": None}
+    runner = SimpleNamespace(
+        _profile_scope_for_source=lambda current: nullcontext(),
+        _session_key_for_source=lambda current: "chat:switched" if current is source else None,
+        _session_model_override=lambda key: switched if key == "chat:switched" else None,
+    )
+    # Keep the real formatter and model-context resolver: an unforwarded override
+    # produces the default proxy's 512K window instead of the switched local 1M.
+    runner._format_session_info = lambda override=None: GatewayTurnMixin._format_session_info(runner, override)
+
+    notice = GatewayTurnMixin._reset_notice_session_info(runner, source)
+
+    assert "local-model" in notice
+    assert "1.0M" in notice
+    assert LOCAL in notice
+    assert routes == ["local-ds4"]
