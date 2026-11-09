@@ -250,3 +250,22 @@ def test_decompose_returns_false_when_task_not_triage(kanban_home):
     assert outcome.ok is False
 
 
+def test_list_triage_ids_backfills_past_decomposed_limit(kanban_home):
+    """Historical decompositions cannot starve new work at the 1000-task cap."""
+    done = [(f"t_done_{i:04d}", f"done {i}", "triage", 10, 1, "a") for i in range(1000)]
+    eligible = ("t_eligible", "fresh task", "triage", 0, 2, "a")
+    other_board = ("t_other", "other tenant", "triage", 100, 3, "b")
+
+    with kbc.connect() as conn:
+        conn.executemany(
+            "INSERT INTO tasks (id, title, status, priority, created_at, tenant) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [*done, eligible, other_board],
+        )
+        conn.executemany(
+            "INSERT INTO task_events (task_id, kind, created_at) "
+            "VALUES (?, 'decomposed', ?)",
+            [(row[0], 1) for row in done],
+        )
+
+    assert decomp.list_triage_ids(tenant="a") == ["t_eligible"]

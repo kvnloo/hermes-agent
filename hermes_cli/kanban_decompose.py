@@ -344,14 +344,17 @@ def decompose_task(
 
 
 def list_triage_ids(*, tenant: Optional[str] = None) -> list[str]:
-    """Return task ids currently in the triage column that have not already been decomposed."""
+    """Return up to 1000 triage tasks not previously decomposed."""
+    query = (
+        "SELECT t.id FROM tasks AS t WHERE t.status = 'triage' "
+        "AND NOT EXISTS ("
+        "SELECT 1 FROM task_events AS e "
+        "WHERE e.task_id = t.id AND e.kind = 'decomposed')"
+    )
+    params: list[str] = []
+    if tenant is not None:
+        query += " AND t.tenant = ?"
+        params.append(tenant)
+    query += " ORDER BY t.priority DESC, t.created_at ASC LIMIT 1000"
     with kbc.connect_closing() as conn:
-        rows = kb.list_tasks(conn, status="triage", tenant=tenant, limit=1000)
-        if not rows:
-            return []
-        decomposed = {
-            r[0] for r in conn.execute(
-                "SELECT DISTINCT task_id FROM task_events WHERE kind = 'decomposed'"
-            ).fetchall()
-        }
-    return [row.id for row in rows if row.id not in decomposed]
+        return [row[0] for row in conn.execute(query, params)]
