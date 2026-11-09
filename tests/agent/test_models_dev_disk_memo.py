@@ -94,3 +94,25 @@ def test_corrupt_or_empty_cache_still_quarantined_and_etag_cleared(cache_env, ba
     replacement = {"xai": {"models": {"repaired": {}}}}
     cache.write_text(json.dumps(replacement), encoding="utf-8")
     assert md._load_disk_cache() == replacement
+
+
+def test_production_model_consumers_cannot_poison_cached_registry(cache_env):
+    md, cache, _etag = cache_env
+    registry = {"xai": {"models": {"grok-test": {"limit": {"context": 64000},
+                                               "modalities": {"input": ["text"]}}}}}
+    cache.write_text(json.dumps(registry), encoding="utf-8")
+    fetched = md.fetch_models_dev(allow_network=False)
+    models = md._registry_models("xai", allow_network=False)
+    assert models is fetched["xai"]["models"]
+    with pytest.raises(TypeError, match="read-only"):
+        fetched["xai"]["models"]["grok-test"]["limit"]["context"] = 1
+    with pytest.raises(TypeError, match="read-only"):
+        models["grok-test"]["modalities"]["input"].append("image")
+    patched = md._merge_catalog_entry_with_override(
+        models["grok-test"], {"context_window": 1024, "supports_vision": True}
+    )
+    assert patched["limit"]["context"] == 1024
+    assert "image" in patched["modalities"]["input"]
+    assert models["grok-test"]["limit"]["context"] == 64000
+    assert models["grok-test"]["modalities"]["input"] == ["text"]
+    assert md._load_disk_cache() == registry

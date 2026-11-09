@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Compare one JSON disk parse with repeated no-copy memo hits.
+"""Cold/warm JSON and a real offline models.dev consumer, old vs memo.
 
-Stdlib only, synthetic 1k/10k/100k JSON rows, seven alternating reads per arm.
-Reports measured medians, comparison flags, error counts and work counts as JSON.
-No measurement is asserted here; groot decides KEEP/REVERT on its harness.
+Stdlib benchmark harness (plus the repository's actual models.dev module).
+The registry is provider-keyed, as in models.dev, not a synthetic providers
+list. Both arms force the same in-memory registry state before each consumer
+call to avoid counting the already-hot in-memory fast path as disk savings.
+All numbers are produced at run time; this script claims no speedup.
 
 Run: python -m scripts.bench.dsa_models_dev_nocopy_memo
 """
@@ -18,94 +20,126 @@ from pathlib import Path
 from typing import Any, Callable
 
 import json_disk_memo as memo
-
+from agent import models_dev as md
 
 SIZES = (1_000, 10_000, 100_000)
 REPEATS = 7
+PROVIDERS = ("xai", "openai", "anthropic", "google", "openrouter",
+             "deepseek", "mistral", "groq", "cohere", "together", "cerebras")
 
 
 def _make_registry(rows: int) -> dict[str, Any]:
-    labels = ("", "%", "_", r"C:\catalog\_100%", "模型", "a\\b")
-    return {
-        "providers": [
-            {
-                "id": i % 11,
-                "name": labels[i % len(labels)],
-                "path": r"C:\registry\model_%\\" + str(i),
-                "models": {"model": f"model-{i}", "limits": {"context": i + 1}},
-            }
-            for i in range(rows)
-        ]
+    registry: dict[str, Any] = {
+        key: {"name": key, "models": {}} for key in PROVIDERS
     }
+    names = ("", "%", "_", r"C:\catalog\_100%", "模型", "a\\b", "東京")
+    for i in range(rows):
+        provider = PROVIDERS[i % len(PROVIDERS)]
+        registry[provider]["models"][f"model-{i}"] = {
+            "name": names[i % len(names)],
+            "limit": {"context": 8192 + i, "output": 4096},
+            "modalities": {"input": ["text", "image"] if i % 3 == 0 else ["text"],
+                           "output": ["text"]},
+            "cost": {"input": i / 1000, "output": i / 500},
+            "path": r"C:\models\_%" + str(i),
+        }
+    return registry
 
 
-def _old_reader(path: Path) -> Any:
+def _legacy_read(path: Path) -> Any:
     with path.open(encoding="utf-8-sig") as stream:
         return json.load(stream)
 
 
-def _measure(path: Path, expected: dict[str, Any], size: int) -> dict[str, Any]:
-    times: dict[str, list[int]] = {"old_parse": [], "memo_hit": []}
-    errors = {"old_parse": 0, "memo_hit": 0}
-    memo.clear_json_disk_memo()
+def _consumer(path: Path, reader: Callable[[Path], Any]) -> tuple[int, str | None]:
+    """Exercise the real _registry_models -> fetch_models_dev -> disk path."""
+    saved = (md._models_dev_cache, md._models_dev_cache_time,
+             md.read_json_disk_memo, md._get_cache_path)
     try:
-        if memo.read_json_disk_memo(path) != expected:
-            errors["memo_hit"] += 1
-    except (OSError, ValueError, TypeError):
-        errors["memo_hit"] += 1
+        md._models_dev_cache = {}
+        md._models_dev_cache_time = 0
+        md.read_json_disk_memo = reader
+        md._get_cache_path = lambda: path
+        models = md._registry_models("xai", allow_network=False)
+        return len(models or {}), next(iter(models), None) if models else None
+    finally:
+        (md._models_dev_cache, md._models_dev_cache_time,
+         md.read_json_disk_memo, md._get_cache_path) = saved
 
-    readers: tuple[tuple[str, Callable[[Path], Any]], ...] = (
-        ("old_parse", _old_reader),
-        ("memo_hit", memo.read_json_disk_memo),
-    )
-    for repetition in range(REPEATS):
-        # Reverse order on alternate repetitions, avoiding a fixed warm-cache bias.
-        for label, reader in (readers if repetition % 2 == 0 else readers[::-1]):
-            started = time.perf_counter_ns()
-            try:
-                data = reader(path)
-            except (OSError, ValueError, TypeError):
-                elapsed = time.perf_counter_ns() - started
-                errors[label] += 1
-            else:
-                elapsed = time.perf_counter_ns() - started
-                if data != expected:
+
+def _run(path: Path, registry: dict[str, Any], rows: int) -> dict[str, Any]:
+    expected_consumer = (len(registry["xai"]["models"]), "model-0")
+    modes = ("disk_cold", "disk_warm", "consumer_cold", "consumer_warm")
+    output: dict[str, Any] = {}
+    for mode in modes:
+        times = {"old": [], "memo": []}
+        errors = {"old": 0, "memo": 0}
+        calls = {"old": 0, "memo": 0}
+        parses = {"old": 0, "memo": 0}
+        memo.clear_json_disk_memo()
+        if mode.endswith("warm"):
+            memo.read_json_disk_memo(path)
+        for iteration in range(REPEATS):
+            # AB/BA order; no fixed always-first arm.
+            for label in (("old", "memo") if iteration % 2 == 0 else ("memo", "old")):
+                reader = _legacy_read if label == "old" else memo.read_json_disk_memo
+                if mode.endswith("cold") and label == "memo":
+                    memo.clear_json_disk_memo()
+                operation = (
+                    (lambda: _consumer(path, reader))
+                    if mode.startswith("consumer") else (lambda: reader(path))
+                )
+                started = time.perf_counter_ns()
+                try:
+                    actual = operation()
+                except Exception:
+                    elapsed = time.perf_counter_ns() - started
                     errors[label] += 1
-            times[label].append(elapsed)
-
-    memo_parses = memo.json_disk_memo_parse_count()
-    result = {}
-    for label, parse_calls in (("old_parse", REPEATS), ("memo_hit", memo_parses)):
-        median_ns = int(statistics.median(times[label]))
-        result[label] = {
-            "median_ns": median_ns,
-            "median_ms": round(median_ns / 1_000_000, 3),
-            "runs": REPEATS,
-            "error_count": errors[label],
-            "work_count": {
-                "json_parses": parse_calls,
-                "rows_parsed": parse_calls * size,
-                "rows_copied": 0,
-                "rows_returned": REPEATS * size,
-            },
+                else:
+                    elapsed = time.perf_counter_ns() - started
+                    if actual != (expected_consumer if mode.startswith("consumer") else registry):
+                        errors[label] += 1
+                times[label].append(elapsed)
+                calls[label] += 1
+                if label == "old" or mode.endswith("cold"):
+                    parses[label] += 1
+        output[mode] = {
+            label: {
+                "median_ns": int(statistics.median(times[label])),
+                "median_ms": round(statistics.median(times[label]) / 1_000_000, 3),
+                "runs": REPEATS,
+                "error_count": errors[label],
+                "work_count": {
+                    "operations": calls[label],
+                    "json_parses": parses[label],
+                    "rows_decoded": rows * parses[label],
+                    "rows_frozen": rows * parses[label] if label == "memo" else 0,
+                    "consumer_lookups": calls[label] if mode.startswith("consumer") else 0,
+                    "consumer_models_returned": (
+                        expected_consumer[0] * calls[label]
+                        if mode.startswith("consumer") else 0
+                    ),
+                },
+            }
+            for label in ("old", "memo")
         }
-    result["memo_hit_cheaper_than_one_parse"] = (
-        result["memo_hit"]["median_ns"] < result["old_parse"]["median_ns"]
-    )
-    return result
+    return output
 
 
 def main() -> None:
     results = []
-    with tempfile.TemporaryDirectory(prefix="dsa-models-dev-nocopy-") as directory:
-        for size in SIZES:
-            expected = _make_registry(size)
-            path = Path(directory) / f"models-{size}.json"
+    with tempfile.TemporaryDirectory(prefix="dsa-models-dev-memo-") as directory:
+        for rows in SIZES:
+            registry = _make_registry(rows)
+            path = Path(directory) / f"models-{rows}.json"
             with path.open("w", encoding="utf-8") as stream:
-                json.dump(expected, stream, ensure_ascii=True)
-            results.append({"size_rows": size, **_measure(path, expected, size)})
-    print(json.dumps({"benchmark": "dsa-models-dev-nocopy-memo",
-                      "repetitions": REPEATS, "results": results}))
+                json.dump(registry, stream, ensure_ascii=True)
+            results.append({"size_rows": rows, "cases": _run(path, registry, rows)})
+    print(json.dumps({
+        "benchmark": "dsa-models-dev-readonly-memo",
+        "repetitions": REPEATS,
+        "results": results,
+    }))
 
 
 if __name__ == "__main__":

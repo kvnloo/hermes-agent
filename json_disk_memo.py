@@ -1,19 +1,17 @@
-"""Bounded process-local JSON disk memo, with no copy on cache hits.
+"""Bounded process-local, read-only JSON cache keyed by file identity and version.
 
-The cache key is (Path, st_mtime_ns, st_size). Hits return the same ordinary
-dict/list objects as json.load; the consuming registry/catalog paths only read
-them. Explicit writers invalidate the memo after atomic replacement.
-
-guard_json_disk_memo_mutations() is a test-only check: it reparses snapshots
-as recursively read-only dict/list subclasses, so a newly introduced mutating
-consumer fails at the mutation site. Production returns unmodified JSON types.
-An external in-place rewrite preserving both file metadata fields is not
-detectable by this key.
+Warm hits return the same recursively read-only dict/list subclasses without
+copying rows. These retain isinstance(value, dict/list) for existing consumers.
+Each miss checks the open descriptor and path both before and after reading;
+an external replacement or rewrite observed during a read is retried. This
+cannot detect a same-inode in-place rewrite which deliberately preserves all
+four metadata fields, or make an external writer's updates transactional.
 """
 
 from __future__ import annotations
 
 import json
+import os
 from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
@@ -38,7 +36,7 @@ class _ReadOnlyList(list):
 
 
 def _freeze_json(value: Any) -> Any:
-    """Build read-only JSON containers, preserving isinstance(..., dict/list)."""
+    """Freeze a newly parsed JSON tree once; preserve dict/list isinstance."""
     if isinstance(value, dict):
         return _ReadOnlyDict({key: _freeze_json(item) for key, item in value.items()})
     if isinstance(value, list):
@@ -46,45 +44,94 @@ def _freeze_json(value: Any) -> Any:
     return value
 
 
+def _file_version(metadata: os.stat_result) -> tuple[int, int, int, int]:
+    return (metadata.st_dev, metadata.st_ino, metadata.st_mtime_ns, metadata.st_size)
+
+
+class _FileChangedDuringRead(Exception):
+    """A file descriptor or pathname no longer names the sampled generation."""
+
+
 _read_lock = Lock()
 _mutation_guard = False
+_MAX_READ_ATTEMPTS = 4
 
 
 @lru_cache(maxsize=4)
-def _parse_version(path: Path, mtime_ns: int, size: int) -> Any:
-    """Read once per resident file signature; called under _read_lock."""
+def _parse_version(path: Path, dev: int, ino: int, mtime_ns: int, size: int) -> Any:
+    """Decode a stable file version; only successful decodes enter the LRU."""
+    expected = (dev, ino, mtime_ns, size)
     with path.open(encoding="utf-8-sig") as stream:
-        result = json.load(stream)
-    return _freeze_json(result) if _mutation_guard else result
+        fd = stream.fileno()
+        if _file_version(os.fstat(fd)) != expected:
+            raise _FileChangedDuringRead
+        try:
+            source = stream.read()
+        except UnicodeError as exc:
+            if _file_version(os.fstat(fd)) != expected:
+                raise _FileChangedDuringRead from exc
+            raise
+        if _file_version(os.fstat(fd)) != expected:
+            raise _FileChangedDuringRead
+    try:
+        parsed = json.loads(source)
+    except ValueError as exc:
+        if _file_version(path.stat()) != expected:
+            raise _FileChangedDuringRead from exc
+        raise
+    if _file_version(path.stat()) != expected:
+        raise _FileChangedDuringRead
+    return _freeze_json(parsed)
 
 
 def read_json_disk_memo(path: Path) -> Any:
-    """Return a shared JSON object on a hit, without copying any rows."""
+    """Read a stable generation and return a shared production read-only tree.
+
+    All stat, open, parse and final stat checks are serialized with local
+    clear_json_disk_memo callers. An external process is detected by matching
+    both descriptor and pathname metadata; it does not share this lock.
+    """
     path = Path(path)
-    version = path.stat()
     with _read_lock:
-        return _parse_version(path, version.st_mtime_ns, version.st_size)
+        for _attempt in range(_MAX_READ_ATTEMPTS):
+            try:
+                before = _file_version(path.stat())
+            except FileNotFoundError:
+                # Prevent delete/recreate from resurrecting an old signature.
+                _parse_version.cache_clear()
+                raise
+            try:
+                result = _parse_version(path, *before)
+            except (_FileChangedDuringRead, FileNotFoundError):
+                continue
+            try:
+                after = _file_version(path.stat())
+            except FileNotFoundError:
+                _parse_version.cache_clear()
+                raise
+            if after == before:
+                return result
+        raise OSError(f"JSON disk cache changed during repeated reads: {path}")
 
 
 def clear_json_disk_memo() -> None:
-    """Drop every resident version after an explicit writer/invalidation."""
+    """Discard resident generations after a local write or invalidation."""
     with _read_lock:
         _parse_version.cache_clear()
 
 
 def json_disk_memo_parse_count() -> int:
-    """Cache misses (including failed parse attempts) since the last clear."""
+    """Number of LRU misses, including failed attempts, since last clear."""
     with _read_lock:
         return _parse_version.cache_info().misses
 
 
 @contextmanager
 def guard_json_disk_memo_mutations() -> Iterator[None]:
-    """Make nested cache mutations raise during behavior tests.
+    """Legacy test helper; production now has the same mutation protection.
 
-    Enter with a cold registry state; each guarded parse uses read-only
-    dict/list subclasses. Clear the guarded entries on exit so they never
-    escape into normal later reads. The production path never freezes/copies.
+    Clear on entry/exit to isolate the test's parse accounting. This no longer
+    changes the type or mutability of objects returned by normal reads.
     """
     global _mutation_guard
     with _read_lock:
