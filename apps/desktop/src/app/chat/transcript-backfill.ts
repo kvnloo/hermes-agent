@@ -42,6 +42,70 @@ export function transcriptBackfillAvailable(
  * Preserves reference identity when nothing changes: handing React a fresh
  * array of the same messages re-renders the runtime for nothing.
  */
+
+/**
+ * A fetched page can begin with a tool result whose call (and narration) is in
+ * the previous page. Fold only that exact unfinished call/result occurrence;
+ * text equality and reused provider ids are not enough to merge turns.
+ */
+function joinSplitToolResultRows(messages: ChatMessage[]): ChatMessage[] {
+  const joined: ChatMessage[] = []
+  let changed = false
+
+  for (const message of messages) {
+    const previous = joined.at(-1)
+    const call = previous?.parts.at(-1)
+    const result = message.parts[0]
+
+    if (
+      previous?.role !== 'assistant' ||
+      message.role !== 'assistant' ||
+      call?.type !== 'tool-call' ||
+      result?.type !== 'tool-call' ||
+      !result.unpairedStoredToolResult ||
+      Object.hasOwn(call, 'result') ||
+      call.toolCallId !== result.toolCallId ||
+      call.sourceRowId === undefined ||
+      result.resultRowId === undefined ||
+      call.sourceRowId >= result.resultRowId ||
+      previous.parts.filter(part => part.type === 'tool-call').length !== 1 ||
+      message.parts.filter(part => part.type === 'tool-call').length !== 1
+    ) {
+      joined.push(message)
+      continue
+    }
+
+    const sourceRowIds = [...new Set([...representedRowIds(previous), ...representedRowIds(message)])].sort(
+      (a, b) => a - b
+    )
+
+    joined[joined.length - 1] = {
+      ...message,
+      id: previous.id,
+      rowId: previous.rowId,
+      timestamp: previous.timestamp,
+      sourceRowIds,
+      serverRowSpan: sourceRowIds.length,
+      parts: [
+        ...previous.parts.slice(0, -1),
+        {
+          ...call,
+          result: result.result,
+          resultRowId: result.resultRowId,
+          completedAt: result.completedAt,
+          storedResultToolName: result.storedResultToolName,
+          toolResultMetadata: result.toolResultMetadata,
+          isError: result.isError
+        },
+        ...message.parts.slice(1)
+      ]
+    }
+    changed = true
+  }
+
+  return changed ? joined : messages
+}
+
 export function mergeOlderTranscriptPage(existing: ChatMessage[], olderPage: ChatMessage[]): ChatMessage[] {
   // Backfill only makes sense under an already-hydrated tail. An empty store
   // here means the session was swapped or wiped mid-fetch; prepending would
@@ -113,7 +177,7 @@ export function mergeOlderTranscriptPage(existing: ChatMessage[], olderPage: Cha
     }
   }
 
-  return merged
+  return joinSplitToolResultRows(merged)
 }
 
 /**
@@ -303,7 +367,7 @@ export function graftRefreshedTailOntoBackfill(refreshedTail: ChatMessage[], pre
     previous.slice(0, anchor).every(message => representedRowIds(message).every(row => row < anchorRowId))
 
   if (anchor === 0) {
-    return retainCompletedTurnTools(refreshedTail, previous)
+    return joinSplitToolResultRows(retainCompletedTurnTools(refreshedTail, previous))
   }
 
   if (prefixIsEarlier) {
@@ -323,7 +387,9 @@ export function graftRefreshedTailOntoBackfill(refreshedTail: ChatMessage[], pre
       .slice(0, anchor)
       .filter(message => message.rowId !== undefined || !refreshedIds.has(message.id))
 
-    return retainCompletedTurnTools(prefix.length ? [...prefix, ...refreshedTail] : refreshedTail, previous)
+    return joinSplitToolResultRows(
+      retainCompletedTurnTools(prefix.length ? [...prefix, ...refreshedTail] : refreshedTail, previous)
+    )
   }
 
   const refreshedIds = new Set(refreshedTail.map(message => message.id))
@@ -332,10 +398,10 @@ export function graftRefreshedTailOntoBackfill(refreshedTail: ChatMessage[], pre
   // tail really did cover. Take the page. This is what keeps a finished reply
   // through a long tool turn.
   if (pageCoversWindow(previous, refreshedIds, refreshedRowIds)) {
-    return retainCompletedTurnTools(refreshedTail, previous)
+    return joinSplitToolResultRows(retainCompletedTurnTools(refreshedTail, previous))
   }
 
-  return retainCompletedTurnTools(mergeOverlappingTail(previous, refreshedTail), previous)
+  return joinSplitToolResultRows(retainCompletedTurnTools(mergeOverlappingTail(previous, refreshedTail), previous))
 }
 
 const REFRESH_OVERLAP_PAGE_LIMIT = 4

@@ -309,4 +309,43 @@ describe('folded transcript source identity', () => {
     const restored = JSON.parse(JSON.stringify(merged)) as ChatMessage[]
     expectLossless(graftRefreshedTailOntoBackfill(full, graftRefreshedTailOntoBackfill(narrow, restored)))
   })
+
+  // gaojiester-png #151666: narration and tool call are one stored row, but
+  // the page boundary can split that row from its result. The cached/live
+  // representation and the refreshed history must not render two tool chips.
+  it('renders pre-tool narration and the matching result once across a page cut', () => {
+    const source: SessionMessage[] = [
+      { id: 1, role: 'user', content: 'What time is it?', timestamp: 1 },
+      {
+        id: 2,
+        role: 'assistant',
+        content: 'Let me check.',
+        timestamp: 2,
+        tool_calls: [{ id: 'clock-1', function: { name: 'terminal', arguments: '{}' } }]
+      },
+      { id: 3, role: 'tool', content: '12:00', tool_call_id: 'clock-1', tool_name: 'terminal', timestamp: 3 },
+      { id: 4, role: 'assistant', content: 'It is noon.', timestamp: 4 }
+    ]
+    const openingPage = toChatMessages(source.slice(0, 2))
+    const closingPage = toChatMessages(source.slice(2))
+
+    const expectOnce = (messages: ChatMessage[]) => {
+      expect(messages.flatMap(message => message.parts).filter(part => part.type === 'text').map(part => part.text)).toEqual(
+        ['What time is it?', 'Let me check.', 'It is noon.']
+      )
+      const calls = messages.flatMap(message => message.parts).filter(part => part.type === 'tool-call')
+
+      expect(calls).toHaveLength(1)
+      expect(calls[0]).toMatchObject({
+        toolCallId: 'clock-1',
+        toolName: 'terminal',
+        sourceRowId: 2,
+        resultRowId: 3,
+        result: '12:00'
+      })
+    }
+
+    expectOnce(mergeOlderTranscriptPage(closingPage, openingPage))
+    expectOnce(graftRefreshedTailOntoBackfill([...openingPage, ...closingPage], openingPage))
+  })
 })
