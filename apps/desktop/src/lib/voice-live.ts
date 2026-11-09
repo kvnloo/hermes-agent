@@ -280,6 +280,11 @@ export class VoiceLiveSession {
       throw new Error('GPT-Live session already started')
     }
 
+    // Insecure remote HTTP hides mediaDevices before any permission prompt.
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new DOMException('Microphone capture is unavailable here', 'NotSupportedError')
+    }
+
     const connection = new RTCPeerConnection()
     this.peer = connection
 

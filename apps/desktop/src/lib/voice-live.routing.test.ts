@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { micError } from '@/app/chat/composer/hooks/use-mic-recorder'
 import { setApiRequestConnection, setApiRequestProfile } from '@/hermes'
+import { en } from '@/i18n/en'
 
 import { type VoiceLiveHandlers, VoiceLiveSession } from './voice-live'
 
@@ -56,6 +58,7 @@ afterEach(() => {
   Reflect.deleteProperty(window, 'hermesDesktop')
   Reflect.deleteProperty(globalThis, 'RTCPeerConnection')
   Reflect.deleteProperty(window.navigator, 'mediaDevices')
+  Reflect.deleteProperty(window, 'isSecureContext')
 })
 
 describe('GPT-Live owner routing', () => {
@@ -85,4 +88,15 @@ describe('GPT-Live owner routing', () => {
     expect(plain.connectionId).toBe('gw-active')
     expect(plain.priority).toBeUndefined()
   })
+})
+
+it('shows secure-context guidance before GPT-Live opens a peer on remote HTTP', async () => {
+  Object.defineProperty(window, 'isSecureContext', { configurable: true, value: false })
+  Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined })
+
+  const session = new VoiceLiveSession(handlers)
+  const failure = await session.start([]).catch((error: unknown) => error)
+
+  expect(failure).toBeInstanceOf(DOMException)
+  expect(micError(failure, en.notifications.voice).message).toBe(en.notifications.voice.microphoneSecureContextRequired)
 })

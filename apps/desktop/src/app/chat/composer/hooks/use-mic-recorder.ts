@@ -69,6 +69,10 @@ export function micError(error: unknown, copy: MicRecorderErrorCopy): Error {
     return new Error(copy.microphoneConstraintsUnsupported)
   }
 
+  if (name === 'NotSupportedError') {
+    return new Error(window.isSecureContext === false ? copy.microphoneSecureContextRequired : copy.microphoneUnsupported)
+  }
+
   if (error instanceof DOMException) {
     return new Error(copy.microphoneStartFailed)
   }
