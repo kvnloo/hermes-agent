@@ -6,6 +6,7 @@ import pytest
 
 from gateway.config import PlatformConfig
 from plugins.platforms.telegram.adapter import TelegramAdapter
+from plugins.platforms.telegram.telegram_markdown import escape_rich_currency_dollars
 from tests.fakes.platforms.telegram_standin import mdv2_error
 
 
@@ -135,4 +136,31 @@ def test_rich_currency_escape_does_not_backtrack_on_tex_commands(adapter, markdo
     """A digit-led span that isn't math fails in linear time (each row takes 10 s or more under backtracking)."""
     started = time.perf_counter()
     adapter._rich_message_payload(markdown)
+    assert time.perf_counter() - started < 2.0
+
+
+@pytest.mark.parametrize(
+    ("markdown", "expected"),
+    [
+        ("```bash\necho $5\n", "```bash\necho $5\n"),
+        ("~~~sh\necho $5\n~~~\nthen $7", "~~~sh\necho $5\n~~~\nthen \\$7"),
+        ("````text\n```sh\n$5\n```\n````\n$7", "````text\n```sh\n$5\n```\n````\n\\$7"),
+        ("    echo $5\nprice $7", "    echo $5\nprice \\$7"),
+        ("<pre>price $5</pre> $7", "<pre>price $5</pre> \\$7"),
+        ("<code>$5</code> $7", "<code>$5</code> \\$7"),
+        ("x ``y` $5 z` w $7", "x ``y` $5 z` w \\$7"),
+        (r"$1\text{ kg}$ and $x$", r"$1\text{ kg}$ and $x$"),
+    ],
+)
+def test_rich_code_and_digit_math_preserve_dollars(adapter, markdown, expected):
+    """Regression for #151725: do not introduce visible backslashes in code or math."""
+    assert adapter._rich_message_payload(markdown)["markdown"] == expected
+
+
+def test_rich_currency_escape_unmatched_backticks_is_bounded():
+    """32K+ unmatched mixed-width runs must not block the gateway event loop."""
+    payload = "$5 " + "``x```" * 11000
+    started = time.perf_counter()
+    result = escape_rich_currency_dollars(payload)
+    assert result.startswith(r"\$5 ")
     assert time.perf_counter() - started < 2.0
