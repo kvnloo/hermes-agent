@@ -12,6 +12,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import socket
 import threading
 import time
 
@@ -180,3 +181,33 @@ def test_nous_transient_error_still_benched(monkeypatch, caplog):
 
     assert result is None and cleared == [] and benched == ["e1"]
     assert not [r for r in caplog.records if r.levelno == logging.WARNING and "terminally invalid" in r.getMessage()]
+
+
+def test_anthropic_dns_failure_benches_two_rows_briefly(monkeypatch):
+    """A wake-from-sleep DNS failure cannot put a multi-login pool out for an hour (#151883)."""
+    from agent.credential_pool_refresh_failure import (
+        REFRESH_UNAVAILABLE_REASON, TRANSIENT_REFRESH_BENCH_SECONDS,
+    )
+
+    pool = _pool("anthropic")
+    first = _entry("anthropic", source="manual:hermes_pkce")
+    second = _entry("anthropic", source="manual:hermes_pkce")
+    second.id = "e2"
+    second.label = "e2"
+    pool._entries = [first, second]
+    monkeypatch.setattr(pool, "_sync_entry_from_pool_store", lambda e: e)
+    monkeypatch.setattr(pool, "_persist", lambda *a, **k: None)
+
+    start = time.time()
+    for entry in (first, second):
+        assert pool._recover_failed_refresh(
+            entry, socket.gaierror(socket.EAI_AGAIN, "getaddrinfo failed"),
+        ) is None
+
+    assert len(pool._entries) == 2
+    for row in pool._entries:
+        assert row.last_status == cp.STATUS_EXHAUSTED
+        assert row.last_error_reason == REFRESH_UNAVAILABLE_REASON
+        assert "getaddrinfo failed" in row.last_error_message
+        assert row.last_error_reset_at is not None
+        assert start < row.last_error_reset_at <= time.time() + TRANSIENT_REFRESH_BENCH_SECONDS + 1

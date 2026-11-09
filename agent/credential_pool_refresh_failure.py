@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import socket
 import time
 import urllib.error
 from typing import TYPE_CHECKING, Optional
@@ -34,7 +35,7 @@ TRANSIENT_REFRESH_BENCH_SECONDS = 30
 
 def _transport_error(exc: BaseException) -> bool:
     """A network-level failure: no HTTP verdict about the grant was ever received."""
-    if isinstance(exc, (TimeoutError, ConnectionError)):
+    if isinstance(exc, (TimeoutError, ConnectionError, socket.gaierror)):
         return True
     if isinstance(exc, urllib.error.URLError) and not isinstance(exc, urllib.error.HTTPError):
         return True
