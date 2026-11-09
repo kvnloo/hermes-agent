@@ -828,7 +828,17 @@ def _run_references_parallel(
         # callback; a separate heartbeat hook announces dispatch immediately and
         # refreshes liveness while any advisor remains pending.
         pending = set(futures)
-        completed = sum(result is not None for result in results)
+        # Recursion-guarded slots are terminal results too; count and announce
+        # each before the first pending-advisor heartbeat.
+        for result in results:
+            if result is None:
+                continue
+            completed += 1
+            if progress_callback is not None:
+                try:
+                    progress_callback(completed, total, result[0])
+                except Exception as exc:  # pragma: no cover - display must never break
+                    logger.debug("MoA progress_callback failed: %s", exc)
 
         def _emit_waiting_heartbeat(*, elapsed_seconds: float) -> None:
             if heartbeat_callback is None or not pending:
