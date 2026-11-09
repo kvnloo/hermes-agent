@@ -135,3 +135,30 @@ def test_readonly_legacy_database_without_companion_index(tmp_path):
         assert readonly.list_meta_prefix("loop:") == [("LOOP:old", "still-visible")]
     finally:
         readonly.close()
+
+
+def test_ascii_z_successor_and_nul_fallback(db):
+    """Z must advance past NOCASE 'z', not to '[' (which sorts before z)."""
+    pairs = (
+        ('LOOP:a"ZZAa', "upper-z"),
+        ('loop:A"z%tail', "mixed-case-percent"),
+        ('LOOP:a"[tail', "bracket-is-not-z"),
+        ("LOOP:éZtail", "unicode-z"),
+        ("loop:é[tail", "unicode-bracket"),
+        ("LOOP:%Zrest", "literal-percent"),
+        ("loop:_Zrest", "literal-underscore"),
+        (r"LOOP:\Zrest", "literal-backslash"),
+        ("LOOP:\x00tail", "embedded-nul"),
+    )
+    for key, value in pairs:
+        db.set_meta(key, value)
+
+    assert db.list_meta_prefix('LOOP:a"Z') == [
+        ('LOOP:a"ZZAa', "upper-z"),
+        ('loop:A"z%tail', "mixed-case-percent"),
+    ]
+    for prefix in (
+        'LOOP:a"Z', 'LOOP:a"[', "loop:z", "loop:{", "LOOP:éZ",
+        "loop:é[", "loop:%Z", "loop:_Z", r"LOOP:\Z", "LOOP:\x00tail",
+    ):
+        assert db.list_meta_prefix(prefix) == _legacy_scan(db, prefix), repr(prefix)

@@ -95,10 +95,11 @@ _MAX_SAFE_MESSAGES = 20_000  # resume/export guard default
 def _nocase_prefix_upper_bound(prefix: str) -> str | None:
     """Exclusive prefix bound in SQLite's ASCII-only NOCASE collation.
 
-    SQLite NOCASE folds only ASCII a-z; Python str.upper()/casefold() would also
-    fold non-ASCII and make this bound incorrect for some stored keys.
+    NOCASE orders ASCII A-Z like a-z. Compute the successor from the
+    ASCII-lowercased prefix: advancing uppercased Z to '[' sorts BELOW z.
+    Never Unicode-casefold non-ASCII codepoints.
     """
-    folded = "".join(chr(ord(c) - 32) if "a" <= c <= "z" else c for c in prefix)
+    folded = "".join(chr(ord(c) + 32) if "A" <= c <= "Z" else c for c in prefix)
     for pos in range(len(folded) - 1, -1, -1):
         codepoint = ord(folded[pos])
         if codepoint < 0x10FFFF:
@@ -1727,10 +1728,19 @@ class SessionDB(
         The BINARY primary key cannot serve that contract. Bound a NOCASE
         companion-index seek, retain LIKE for exact wildcard/escape semantics,
         and preserve the historical table-scan (rowid) result order.
+        Embedded-NUL patterns retain the original non-indexed LIKE scan.
         """
         if not prefix:
             return []
         pattern = _escape_like(prefix) + "%"
+        if "\x00" in prefix:
+            # SQLite LIKE treats embedded-NUL patterns specially; a NOCASE
+            # range cannot safely narrow the original LIKE result set.
+            rows = self._read_all(
+                "SELECT key, value FROM state_meta NOT INDEXED WHERE key LIKE ? ESCAPE '\\'",
+                (pattern,),
+            )
+            return [(row[0], row[1]) for row in rows]
         upper = _nocase_prefix_upper_bound(prefix)
         # Existing read-only DBs can precede the additive schema migration.
         index_hint = " INDEXED BY idx_state_meta_key_nocase" if not self.read_only else ""

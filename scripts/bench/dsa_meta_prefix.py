@@ -27,7 +27,7 @@ def _escape_like(text):
 
 
 def _upper(prefix):
-    folded = "".join(chr(ord(c) - 32) if "a" <= c <= "z" else c for c in prefix)
+    folded = "".join(chr(ord(c) + 32) if "A" <= c <= "Z" else c for c in prefix)
     for pos in range(len(folded) - 1, -1, -1):
         cp = ord(folded[pos])
         if cp < 0x10FFFF:
@@ -36,6 +36,8 @@ def _upper(prefix):
 
 
 def _new_query(prefix):
+    if "\x00" in prefix:
+        return OLD_SQL, [_escape_like(prefix) + "%"]
     upper = _upper(prefix)
     sql = NEW_SQL
     args = [prefix]
@@ -62,8 +64,8 @@ def _build(n):
     rng = random.Random(1107)
     chars = ("a", "A", "%", "_", "\\", "/", "🧪", "é", "\U0010ffff")
     values = []
-    # Eight distinct edge-case keys are appended below (the duplicate is an UPSERT).
-    for i in range(n - 8):
+    # Edge cases include a duplicate UPSERT; keep exactly n distinct keys.
+    for i in range(n - 12):
         stem = "loop:" if i % 44 == 0 else "LOOP:" if i % 44 == 1 else "other:"
         key = stem + f"{i:07d}" + rng.choice(chars)
         values.append((key, str(i)))
@@ -73,6 +75,10 @@ def _build(n):
         ("loop:🧪", "non-bmp"), ("loop:\U0010ffff", "max-codepoint"),
         ("loop:\U0010ffff-tail", "max-codepoint-tail"),
         ("loop:" + json.dumps({"path": r"C:\data\test"}, ensure_ascii=True), "json-escaped"),
+        ('LOOP:a"ZZAa', "quoted-upper-z"),
+        ('LOOP:a"[tail', "quoted-bracket"),
+        ("LOOP:éZtail", "unicode-z"),
+        ("LOOP:\x00tail", "embedded-nul"),
     ])
     conn.executemany(
         "INSERT INTO state_meta(key,value) VALUES(?,?) "
@@ -86,6 +92,8 @@ def _build(n):
 def _candidate_count(conn, prefix):
     if not prefix:
         return 0
+    if "\x00" in prefix:
+        return conn.execute("SELECT count(*) FROM state_meta").fetchone()[0]
     upper = _upper(prefix)
     sql = (
         "SELECT count(*) FROM state_meta INDEXED BY idx_state_meta_key_nocase "
@@ -104,6 +112,7 @@ def _benchmark(n):
     prefixes = (
         "", "loop:", "LOOP:", "lOoP:", "loop:%", "loop:_", "loop:\\",
         "loop:\U0010ffff", "loop:🧪", "loop:" + path, "other:", "missing:",
+        'LOOP:a"Z', "LOOP:éZ", "LOOP:\x00tail",
     )
     try:
         baseline = {prefix: _rows(conn, "old", prefix) for prefix in prefixes}
