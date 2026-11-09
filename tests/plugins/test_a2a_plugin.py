@@ -204,6 +204,21 @@ class TestPeerIdentity:
         assert ctx.authenticate("Bearer tok-c", "1.1.1.1") == "carol"
 
 
+    @pytest.mark.parametrize("as_peer", [False, True])
+    def test_surrogateescaped_configured_secret_returns_401(self, as_peer):
+        """A malformed POSIX env secret cannot crash authentication of a wrong token (#150028)."""
+        from dataclasses import replace
+
+        bad_token = "secret\udc83"  # surrogateescape of raw environment byte 0x83
+        ctx = security.A2ASecurityContext.capture()
+        ctx = replace(
+            ctx,
+            bearer_token="" if as_peer else bad_token,
+            peer_tokens=((bad_token, "alice"),) if as_peer else (),
+        )
+        assert ctx.authenticate("Bearer wrong", "1.1.1.1") is None
+
+
 class TestTrustedPeers:
     def test_localhost_trusts_all(self, monkeypatch):
         monkeypatch.delenv("A2A_BEARER_TOKEN", raising=False)
