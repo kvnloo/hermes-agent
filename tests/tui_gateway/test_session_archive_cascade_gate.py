@@ -81,3 +81,26 @@ def test_unarchive_never_gated(db):
 
     assert "error" not in envelope, envelope
     assert db.get_session("root")["archived"] == 0
+
+
+def test_live_session_cascade_archive_needs_confirm(db):
+    """A live runtime id must not bypass the confirmation gate for its persisted lineage."""
+    _lineage(db)
+    live_id = "active-compression-tip"
+    srv._sessions[live_id] = {"session_key": "tip", "history": [], "running": False}
+    try:
+        refused = _call("session.archive", {"session_id": live_id, "archived": True})
+        assert refused.get("error", {}).get("code") == 4033
+        assert set(refused["error"]["data"]["preview"]["affected_ids"]) == {"root", "tip"}
+        assert db.get_session("root")["archived"] == 0
+        assert db.get_session("tip")["archived"] == 0
+
+        confirmed = _call(
+            "session.archive",
+            {"session_id": live_id, "archived": True, "confirm_cascade": True},
+        )
+        assert "error" not in confirmed, confirmed
+        assert db.get_session("root")["archived"] == 1
+        assert db.get_session("tip")["archived"] == 1
+    finally:
+        srv._sessions.pop(live_id, None)

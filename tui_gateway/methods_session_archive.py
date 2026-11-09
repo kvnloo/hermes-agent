@@ -34,23 +34,25 @@ def _(rid, params: dict) -> dict:
         try:
             if session is not None:
                 key = session["session_key"]
-                if not db.set_session_archived(key, archived, trigger="desktop_rpc"):
-                    session["pending_archived"] = archived  # no row yet: _ensure_session_db_row applies it
             else:
                 # ``resolve_session_id`` follows key/title aliases like the REST pin/archive path.
                 if not (key := db.resolve_session_id(target) if hasattr(db, "resolve_session_id") else target):
                     return _err(rid, 4001, "session not found")
-                # Archive cascades through the whole compression lineage (#70185): surface the
-                # blast radius and demand an explicit confirm instead of hiding N rows silently.
-                if archived and not confirm_cascade:
-                    preview = db.preview_session_archive_lineage(key, archived=True)
-                    if preview["cascade_count"] > 1:
-                        return _err(
-                            rid, 4033,
-                            "archiving this session also archives its compression lineage "
-                            f"({preview['cascade_count']} sessions); pass confirm_cascade=true",
-                            data={"preview": preview},
-                        )
+            # Both a stored session and a live runtime's persisted key can have compression
+            # ancestors. Previewing an unpersisted live draft is empty and preserves deferral.
+            if archived and not confirm_cascade:
+                preview = db.preview_session_archive_lineage(key, archived=True)
+                if preview["cascade_count"] > 1:
+                    return _err(
+                        rid, 4033,
+                        "archiving this session also archives its compression lineage "
+                        f"({preview['cascade_count']} sessions); pass confirm_cascade=true",
+                        data={"preview": preview},
+                    )
+            if session is not None:
+                if not db.set_session_archived(key, archived, trigger="desktop_rpc"):
+                    session["pending_archived"] = archived  # no row yet: _ensure_session_db_row applies it
+            else:
                 db.set_session_archived(key, archived, trigger="desktop_rpc")
             return _ok(rid, {"archived": archived, "session_key": key})
         except Exception as e:  # health: allow BLE001 -- RPC boundary: any db error is the 5007 envelope
