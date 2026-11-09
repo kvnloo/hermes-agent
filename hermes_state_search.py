@@ -60,6 +60,8 @@ _FTS_ORDER_BY = {"newest": "ORDER BY m.timestamp DESC, rank", "oldest": "ORDER B
 # Canonical LIKE is the degraded read path when the derived index cannot be used. A
 # progress deadline keeps that full-table fallback from monopolising a large live store.
 _CANONICAL_SEARCH_TIMEOUT_SECONDS = 3.0
+# Short-CJK LIKE can need more than the canonical fallback's 3s budget on large stores.
+_CJK_LIKE_SEARCH_TIMEOUT_SECONDS = 30.0
 # ``search_messages(recall_info=...)`` sources: callers must not read a canonical-fallback miss
 # (unranked, bounded scan) as the same "no more matches" an FTS answer means.
 RECALL_SOURCE_FTS = "fts"
@@ -1330,7 +1332,8 @@ class SessionSearchMixin:
             recall_info.update(source=RECALL_SOURCE_CANONICAL, fallback_reason="cjk_substring")
         # instr() for the snippet uses the first search token.
         return self._like_rows(like_where, [non_op_tokens[0], *like_params, route["limit"], route["offset"]],
-                               order_by="ORDER BY m.timestamp DESC", limit_sql="LIMIT ? OFFSET ?")
+                               order_by="ORDER BY m.timestamp DESC", limit_sql="LIMIT ? OFFSET ?",
+                               timeout_seconds=_CJK_LIKE_SEARCH_TIMEOUT_SECONDS, recall_info=recall_info)
 
     def _search_unindexed_gap(self, fts_query: str, limit: int, **filters) -> List[Dict[str, Any]]:
         """LIKE-scan ids in (fts_rebuild_progress, fts_rebuild_high_water] — rows the deferred

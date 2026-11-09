@@ -5,6 +5,7 @@ must be able to tell "no more matches" from "the bounded scan stopped here" with
 """
 
 import sqlite3
+import time
 from contextlib import closing
 
 import pytest
@@ -81,6 +82,25 @@ def test_canonical_deadline_raises_and_reports_deadline_hit(db, monkeypatch):
     with pytest.raises(TimeoutError):
         db.search_messages("cobalt lantern", recall_info=info)
     assert info["source"] == "canonical_fallback" and info["deadline_hit"] is True
+
+
+def test_time_filtered_short_cjk_like_scan_is_interrupted(db, monkeypatch):
+    """The CJK substring route must not outlive the caller's SQLite budget (#134779)."""
+    db.append_message("s1", "user", "留言 格式")
+    db._conn.executemany(
+        "INSERT INTO messages (session_id, role, content, timestamp) VALUES ('s1', 'user', ?, ?)",
+        [(f"unrelated filler {n}", float(n + 1)) for n in range(5000)])
+    db._conn.commit()
+    db._fts_cjk_available = False
+    db._trigram_available = False
+    monkeypatch.setattr(hermes_state_search, "_CJK_LIKE_SEARCH_TIMEOUT_SECONDS", 0.0, raising=False)
+    info: dict = {}
+    with pytest.raises(TimeoutError, match="deadline"):
+        db.search_messages('"留言" "格式"', after_ts=int(time.time()) - 86_400,
+                           limit=3, sort="newest", recall_info=info)
+    assert info["source"] == "canonical_fallback"
+    assert info["fallback_reason"] == "cjk_substring"
+    assert info["deadline_hit"] is True
 
 
 def test_recall_info_is_optional(db):
