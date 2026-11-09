@@ -281,3 +281,17 @@ def test_tab_and_newline_ids_round_trip_nested_and_complete():
     ])
     _fold_todo_snapshot(agent, rows)
     assert rows[0]["content"] == "human request"
+
+
+def test_legacy_status_suffix_in_merged_user_turn_survives():
+    """A physical user turn ending in a todo status must not be consumed as legacy task text."""
+    agent = _agent({"id": "t1", "content": "old task", "status": "completed"})
+    rows = [{
+        "role": "user",
+        "content": (
+            "first request\n\n" + TODO_INJECTION_HEADER
+            + "\n- [ ] t1. old task (pending)\n\nSECOND MESSAGE (pending)"
+        ),
+    }]
+    _fold_todo_snapshot(agent, rows)
+    assert rows[0]["content"] == "first request\n\nSECOND MESSAGE (pending)"

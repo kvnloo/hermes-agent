@@ -85,7 +85,9 @@ def _consume_legacy_todo_tasks(text: str) -> str:
     text). The old format is inherently ambiguous; preferring the last suffix consumes snapshot
     scaffolding rather than promoting its remainder to user intent. Lines that open like a task but
     never close with a status suffix (abbreviated fixtures / residue) are also consumed so they are
-    not promoted to human intent after the header is removed.
+    not promoted to human intent after the header is removed. A blank separator after an
+    already-closed item is treated as the start of a later merged user turn, even if that
+    turn happens to end in the same status suffix.
     """
     from tools.todo_tool import TODO_INJECTION_HEADER, _STATUS_MARKERS
 
@@ -110,6 +112,15 @@ def _consume_legacy_todo_tasks(text: str) -> str:
             break
         suffix = f" ({status})"
         end = next((i for i in range(count + 1, len(lines)) if _is_boundary(lines[i])), len(lines))
+        # A closed legacy item followed by a blank line can precede a merged user turn.
+        # Do not absorb that turn just because its own text ends with the same status.
+        # Keep scanning through status-looking lines within an item (without a blank separator).
+        separator = next((
+            i for i in range(count + 1, end)
+            if not lines[i].strip() and lines[i - 1].endswith(suffix)
+        ), None)
+        if separator is not None:
+            end = separator
         last = next((i for i in range(end - 1, count - 1, -1) if lines[i].endswith(suffix)), None)
         if last is None:
             # Opener without a closing status suffix: still scaffolding, not human text.
