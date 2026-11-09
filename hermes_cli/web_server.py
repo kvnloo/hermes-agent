@@ -1195,6 +1195,18 @@ def _publish_host_rendezvous(host: str, port: int) -> None:
     hr.cleanup_on_exit(role)
 
 
+def _arm_web_loop_watchdog(server, loop: asyncio.AbstractEventLoop, *, headless: bool) -> None:
+    """Recover a wedged serve/dashboard loop from an OS thread, without touching gateway state."""
+    from gateway.shutdown_watchdog import start_loop_liveness_watchdog
+    from hermes_constants import get_process_hermes_home
+
+    name = "Serve" if headless else "Dashboard"
+    server._loop_liveness_watchdog = start_loop_liveness_watchdog(
+        loop, service_name=name, record_gateway_exit=False,
+        dump_path=Path(get_process_hermes_home()) / "logs" / f"{name.lower()}-loop-watchdog.log",
+    )
+
+
 def _on_server_started(
     server,
     *,
@@ -1351,6 +1363,8 @@ def _on_server_started(
         _hb_loop.call_later(_hb_interval, _loop_heartbeat, now + _hb_interval)
 
     _hb_loop.call_later(_hb_interval, _loop_heartbeat, _hb_loop.time() + _hb_interval)
+    # An asyncio timer cannot fire while the loop is blocked for hours (#151808).
+    _arm_web_loop_watchdog(server, _hb_loop, headless=headless)
 
 
 def _windows_serve_loop_factory(config):
@@ -1526,12 +1540,17 @@ def start_server(
                 start_mcp_discovery_after_bind=start_mcp_discovery_after_bind,
                 ssh_lock_path=ssh_lock_path,
             )
-            if headless:
-                from hermes_cli.observability.shared_metrics_startup import record_process_ready
-                record_process_ready("serve_boot", background=True)
+            try:
+                if headless:
+                    from hermes_cli.observability.shared_metrics_startup import record_process_ready
+                    record_process_ready("serve_boot", background=True)
 
-            await server.main_loop()
-            if server.started:
-                await server.shutdown()
+                await server.main_loop()
+                if server.started:
+                    await server.shutdown()
+            finally:
+                guard = getattr(server, "_loop_liveness_watchdog", None)
+                if guard is not None:
+                    guard.stop()
 
     _run_serve(_serve, config, host, port)

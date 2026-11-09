@@ -89,10 +89,13 @@ def start_loop_liveness_watchdog(
     probe_timeout: float = DEFAULT_LOOP_WATCHDOG_TIMEOUT_S,
     max_strikes: int = DEFAULT_LOOP_WATCHDOG_MAX_STRIKES,
     exit_code: int = GATEWAY_SERVICE_RESTART_EXIT_CODE,
+    service_name: str = "Gateway", dump_path: Optional[Path] = None,
+    record_gateway_exit: bool = True,
 ) -> Optional[_LoopLivenessWatchdogHandle]:
     """Start an out-of-loop watchdog that hard-exits after missed probes. The caller
     (``GatewayRunner._start_loop_liveness_guards``) enforces the ``gateway.loop_watchdog: false``
-    opt-out."""
+    opt-out. Web backends set ``record_gateway_exit=False`` to avoid changing the
+    status of a separate messaging gateway when their serving loop wedges."""
     stop_event = threading.Event()
 
     def _watchdog() -> None:
@@ -125,20 +128,24 @@ def start_loop_liveness_watchdog(
                 return
             with contextlib.suppress(Exception):
                 logger.critical(
-                    "Gateway event loop missed %d consecutive liveness probes; dumping all thread "
+                    "%s event loop missed %d consecutive liveness probes; dumping all thread "
                     "stacks and exiting with code %d so the service supervisor can restart it.",
-                    strikes, exit_code)
+                    service_name, strikes, exit_code)
             # File + stderr: a console-less launcher (Windows .vbs login item) discards stderr, so a
             # liveness death used to leave no stack anywhere (#120356, #91097).
             _write_watchdog_dump(
-                get_shutdown_watchdog_dump_path(), delay_s=probe_timeout * strikes,
+                dump_path if dump_path is not None else get_shutdown_watchdog_dump_path(),
+                delay_s=probe_timeout * strikes,
                 snapshot={"strikes": strikes, "probe_interval_s": probe_interval},
-                event="loop_liveness_watchdog_fired")
+                event=("loop_liveness_watchdog_fired" if record_gateway_exit
+                       else f"{service_name.lower()}_loop_liveness_watchdog_fired"),
+                service_name=service_name)
             if stop_event.is_set():
                 return
-            _mark_exited_quietly(exit_code, "loop_liveness_watchdog")
+            if record_gateway_exit:
+                _mark_exited_quietly(exit_code, "loop_liveness_watchdog")
             _hard_exit(exit_code)
-    thread = threading.Thread(target=_watchdog, daemon=True, name="gateway-loop-liveness-watchdog")
+    thread = threading.Thread(target=_watchdog, daemon=True, name=f"{service_name.lower()}-loop-liveness-watchdog")
     try:
         thread.start()
     except Exception:
@@ -239,7 +246,7 @@ def resolve_shutdown_watchdog_delay(
 
 
 def _write_watchdog_dump(dump_path: Path, *, delay_s: float, snapshot: Optional[dict[str, Any]],
-                         event: str = "shutdown_watchdog_fired") -> None:
+                         event: str = "shutdown_watchdog_fired", service_name: str = "Gateway") -> None:
     """Best-effort faulthandler + metadata dump before hard-exit (file, then stderr)."""
     header = {"event": event, "pid": os.getpid(), "delay_s": delay_s,
               "fired_at": datetime.now(UTC).isoformat(), "snapshot": snapshot or {}}
@@ -255,7 +262,7 @@ def _write_watchdog_dump(dump_path: Path, *, delay_s: float, snapshot: Optional[
         fh.write("--- end dump ---\n")
         fh.flush()
     with contextlib.suppress(Exception):  # stderr too: journald/launchd get it if disk is wedged
-        sys.stderr.write(f"Gateway {event.replace('_', ' ')} after {delay_s:.0f}s "
+        sys.stderr.write(f"{service_name} {event.replace('_', ' ')} after {delay_s:.0f}s "
                          f"(pid={os.getpid()}); dumping all thread stacks.\n")
         sys.stderr.flush()
         faulthandler.dump_traceback(all_threads=True)
