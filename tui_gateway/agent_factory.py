@@ -162,7 +162,7 @@ def _stored_session_runtime_overrides(row: dict | None) -> dict:
         if healed:
             logger.info("healed stale session provider %r to %r", provider, healed)
             provider = healed
-            base_url = ""  # the healed identity owns a registered endpoint; the snapshot URL must not override it
+            base_url = api_mode = ""  # recovered entry owns the endpoint and transport
         else:
             # The route is gone with its endpoint and wire: on the default provider they would send
             # that provider's credentials to the stored URL.
@@ -563,7 +563,7 @@ def _resolve_agent_model_runtime(model_override, provider_override) -> tuple[str
         overrides = {k: model_override.get(k) for k in ("base_url", "api_key", "api_mode")}
         if not provider_norm and requested_provider:
             # The healed entry resolves its own current endpoint; the row's URL may be retired.
-            overrides["base_url"] = None
+            overrides["base_url"] = overrides["api_mode"] = None
     else:
         model, requested_provider = _resolve_startup_runtime()
         if isinstance(model_override, str) and model_override:

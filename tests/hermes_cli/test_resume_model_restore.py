@@ -557,3 +557,20 @@ def test_stored_session_route_keeps_a_row_the_main_slot_still_serves(monkeypatch
     _custom_config(monkeypatch, {"name": "proxy", "base_url": GLM_NEW, "api_key": "***", "model": "claude-opus-5-5"})
 
     assert stored_session_route(_row(model="claude-opus-5-5"), current_model="x", current_provider="anthropic")[1] is None
+
+
+def test_healed_empty_provider_uses_current_custom_wire(monkeypatch):
+    """Once a saved row heals to a named entry, its old api_mode is not that entry's wire."""
+    from hermes_cli.cli_model_switch_mixin import stored_session_route
+
+    _custom_config(monkeypatch, {
+        "name": "entry-b",
+        "base_url": GLM_NEW,
+        "api_key": "sk-entry-b",
+        "api_mode": "anthropic_messages",
+        "models": {"model-b": {}},
+    })
+    row = _row(model="model-b", model_config={"api_mode": "chat_completions"})
+
+    route = stored_session_route(row, current_model="claude-opus-5-5", current_provider="anthropic")
+    assert route == ("model-b", "custom:entry-b", None, None, True)
