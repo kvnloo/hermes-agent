@@ -3626,8 +3626,8 @@ class TestVisionAutoKimiCoding:
     chat-completions wire and the Anthropic messages wire. Auto-detect must
     therefore try kimi-coding like any other provider, with the per-model
     capability gate (_main_model_supports_vision) protecting text-only models.
-    kimi-coding-cn (api.moonshot.cn) stays excluded pending the same live
-    verification on that key surface.
+    Moonshot CN (api.moonshot.cn/v1) also accepts images (#23657, #89848),
+    so its text-only models must be filtered by the per-model capability gate.
     """
 
     def test_kimi_coding_main_provider_used_for_vision(self, monkeypatch):
@@ -3663,21 +3663,23 @@ class TestVisionAutoKimiCoding:
         assert client is fake_kimi_client
         assert model == "k3"
 
-    def test_kimi_coding_cn_skipped_falls_through_to_openrouter(self, monkeypatch):
-        """kimi-coding-cn as main + vision auto → OpenRouter (still excluded)."""
+    def test_kimi_coding_cn_text_only_falls_through_to_openrouter(self, monkeypatch):
+        """Known text-only CN model falls through to OpenRouter."""
         fake_or_client = MagicMock(name="openrouter_client")
 
         monkeypatch.setattr(
             "agent.auxiliary_client._read_main_provider", lambda: "kimi-coding-cn",
         )
         monkeypatch.setattr(
-            "agent.auxiliary_client._read_main_model", lambda: "k3",
+            "agent.auxiliary_client._read_main_model", lambda: "legacy-text-only",
         )
-        # Guard: if the skip doesn't fire, resolve_provider_client would try
-        # kimi-coding-cn — fail loud.
+        # The per-model gate, not the provider name, must force the fallback.
+        monkeypatch.setattr(
+            "agent.auxiliary_client._main_model_supports_vision",
+            lambda *a, **k: False,
+        )
         rpc_mock = MagicMock(side_effect=AssertionError(
-            "resolve_provider_client should NOT be called for kimi-coding-cn "
-            "on the vision auto path"))
+            "text-only kimi-coding-cn model must not be used for vision"))
         monkeypatch.setattr(
             "agent.auxiliary_client.resolve_provider_client", rpc_mock,
         )
@@ -3689,7 +3691,7 @@ class TestVisionAutoKimiCoding:
                 return None, None
             raise AssertionError(
                 f"strict vision backend should not be called for {provider!r} "
-                "when main provider is kimi-coding-cn"
+                "when the CN main model is text-only"
             )
         monkeypatch.setattr(
             "agent.auxiliary_client._resolve_strict_vision_backend",

@@ -872,9 +872,10 @@ def _resolve_provider_vision_default(provider: str) -> Optional[str]:
 # capability is handled by _main_model_supports_vision (config override → models.dev
 # catalog → attempt on unknown), which is the same gate every other provider gets.
 #
-# kimi-coding-cn (api.moonshot.cn) stays excluded pending equivalent live verification —
-# its key surface differs from the Coding Plan and could not be tested here.
-_PROVIDERS_WITHOUT_VISION: frozenset = frozenset({"kimi-coding-cn"})
+# kimi-coding-cn (api.moonshot.cn/v1) also serves image_url content, verified
+# independently with a CN key (#23657, #89848). Both Kimi providers therefore
+# use the per-model capability gate, rather than a blanket provider skip.
+_PROVIDERS_WITHOUT_VISION: frozenset = frozenset()
 
 # OpenRouter app attribution (always sent). `X-Title` is what the dashboard reads.
 _OR_HEADERS_BASE = {
