@@ -111,6 +111,26 @@ def kanban_owner(tmp_path, monkeypatch):
 _CONFIG = {'model': {'default': 'loop-model', 'provider': 'custom'}, 'platform_toolsets': {'cli': ['terminal']}}
 
 
+def test_kanban_run_returns_the_registered_viewer_subscription(kanban_owner):
+    """A real owner must return the viewer handle that the worker will detach at settlement."""
+    from gateway.session_kanban import run_task
+
+    owner = kanban_owner(_CONFIG)
+
+    async def scenario():
+        try:
+            accepted = await run_task(owner.connection, owner.params)
+            sid = accepted['session_id']
+            subscription_id = accepted['subscription_id']
+            assert isinstance(subscription_id, str) and subscription_id
+            assert subscription_id == owner.connection.subscriptions[sid], (
+                'kanban.run must return the subscription actually attached to this socket')
+        finally:
+            await owner.close()
+
+    asyncio.run(scenario())
+
+
 @pytest.mark.parametrize('mode', ['deny', 'approve'])
 def test_durable_kanban_admission_preserves_headless_policy_in_worker(kanban_owner, mode):
     from gateway.session_contract import SessionRef
