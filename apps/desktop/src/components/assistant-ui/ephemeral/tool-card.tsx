@@ -37,11 +37,7 @@ const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.
  * the input bar instead.
  */
 export const EphemeralToolCall: FC<ToolCallProps & { match: EphemeralMatch; row?: ReactNode }> = ({ match, row, ...props }) => {
-  const { t } = useI18n()
-  const view = useSessionView()
-  const sessionId = useStore(view.$runtimeId)
   const id = props.toolCallId
-  const record = useStore($ephemeralCards)[id]
   // Interim text seals each step into its own assistant message, so liveness is the thread's.
   const running = useAuiState(s => s.thread.isRunning)
 
@@ -62,36 +58,55 @@ export const EphemeralToolCall: FC<ToolCallProps & { match: EphemeralMatch; row?
   // A card is born when its call returns: live while the turn runs or just after (the last step can
   // land with the final reply), a receipt when the call is history.
   const completedAt = props.completedAt
-  useEffect(() => {
-    if (settled) {
-      const fresh = typeof completedAt === 'number' && Date.now() - completedAt * 1000 < FRESH_MS
-      noteEphemeralCard(id, match, sessionId, running || fresh)
-    }
-  }, [completedAt, id, match, running, sessionId, settled])
+  const fresh = typeof completedAt === 'number' && Date.now() - completedAt * 1000 < FRESH_MS
 
   // The tool's usual row (the connector row when the gateway labelled the call).
   const toolRow = row ?? <ToolFallback {...props} />
 
-  if (!settled || !record) {
+  if (!settled) {
     return toolRow
   }
 
   return (
     <>
       {toolRow}
-      <div className="mt-1.5 min-w-0" data-ephemeral-call={match.kind} data-ephemeral-phase={record.phase}>
-        {record.phase === 'live' ? (
-          <LiveCard lifetimeMs={running && !movedOn ? null : EPHEMERAL_LIFETIME_MS} match={match} toolCallId={id} />
-        ) : (
-          <EphemeralReceipt
-            action={record.phase === 'receipt' ? t.openui.kitShow : undefined}
-            card={record}
-            note={record.phase === 'pinned' ? t.openui.kitPinned : undefined}
-            onAction={() => reopenEphemeralCard(id)}
-          />
-        )}
-      </div>
+      <EphemeralCardSlot born={running || fresh} id={id} lifetimeMs={running && !movedOn ? null : EPHEMERAL_LIFETIME_MS} match={match} />
     </>
+  )
+}
+
+/**
+ * One card's place in the transcript, keyed by `id` (a tool call, or an agent-written fence): the live
+ * card while its task runs, then the receipt chip it dissolves into. `born` = first seen during a live
+ * turn (history starts as a receipt); `lifetimeMs` null keeps the ring waiting.
+ */
+export const EphemeralCardSlot: FC<{ id: string; match: EphemeralMatch; born: boolean; lifetimeMs: number | null }> = ({ id, match, born, lifetimeMs }) => {
+  const { t } = useI18n()
+  const view = useSessionView()
+  const sessionId = useStore(view.$runtimeId)
+  const record = useStore($ephemeralCards)[id]
+
+  useEffect(() => {
+    noteEphemeralCard(id, match, sessionId, born)
+  }, [born, id, match, sessionId])
+
+  if (!record) {
+    return null
+  }
+
+  return (
+    <div className="mt-1.5 min-w-0" data-ephemeral-call={match.kind} data-ephemeral-phase={record.phase}>
+      {record.phase === 'live' ? (
+        <LiveCard lifetimeMs={lifetimeMs} match={match} toolCallId={id} />
+      ) : (
+        <EphemeralReceipt
+          action={record.phase === 'receipt' ? t.openui.kitShow : undefined}
+          card={record}
+          note={record.phase === 'pinned' ? t.openui.kitPinned : undefined}
+          onAction={() => reopenEphemeralCard(id)}
+        />
+      )}
+    </div>
   )
 }
 
@@ -142,7 +157,7 @@ const LiveCard: FC<{ match: EphemeralMatch; toolCallId: string; lifetimeMs: numb
 
   return (
     <div className="min-w-0 space-y-1" ref={shell}>
-      <EphemeralCardFrame app={match.app} kind={match.kind} lifetimeMs={lifetimeMs} onMessage={onMessage} title={`${match.appName} card`} />
+      <EphemeralCardFrame lifetimeMs={lifetimeMs} match={match} onMessage={onMessage} title={`${match.appName} card`} />
       <div aria-live="polite" className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs text-muted-foreground">
         <p className="min-w-0 flex-1">
           {intent ? t.openui.kitPicked.replace('{what}', intent.label || intent.action) : t.openui.kitIdle}
