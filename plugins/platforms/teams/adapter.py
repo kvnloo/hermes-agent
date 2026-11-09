@@ -528,7 +528,14 @@ class TeamsAdapter(BasePlatformAdapter):
             user_name=getattr(from_account, "name", None) or "",
             guild_id=getattr(conv, "tenant_id", None) or self._tenant_id,
             message_id=msg_id)
-        media: list = [m for m in [await self._cache_attachment(a) for a in getattr(activity, "attachments", None) or []] if m]
+        media: list = []
+        failed_attachments: list[str] = []
+        for attachment in getattr(activity, "attachments", None) or []:
+            cached = await self._cache_attachment(attachment, failed_attachments)
+            if cached:
+                media.append(cached)
+        if failed_attachments:
+            text = "\n".join((text, *failed_attachments)).strip()
         media_kinds = [kind for _, _, kind in media]  # media items are (path, media_type, kind)
         msg_type = next((t for kind, t in _MEDIA_KIND_PRECEDENCE if kind in media_kinds), MessageType.TEXT)
         await self.handle_message(MessageEvent(
@@ -545,11 +552,24 @@ class TeamsAdapter(BasePlatformAdapter):
             return "<at>" in text
         return any(str(getattr(getattr(e, "mentioned", None), "id", "")) in bot_ids for e in mentions)
 
-    async def _cache_attachment(self, att: Any) -> Optional[tuple]:
-        """Download + cache one inbound attachment → ``(path, media_type, kind)`` or ``None``."""
+    async def _cache_attachment(self, att: Any, failed: Optional[list[str]] = None) -> Optional[tuple]:
+        """Cache inbound media and optionally note real attachments that could not be received."""
         content_url = getattr(att, "content_url", None)
         content_type = (getattr(att, "content_type", None) or "").lower()
         att_name = getattr(att, "name", None) or ""
+
+        def note(reason: str | Exception) -> None:
+            if failed is None:
+                return
+            if isinstance(reason, Exception):
+                reason = (
+                    "exceeds the configured inbound media size limit"
+                    if "Inbound attachment payload is too large" in str(reason)
+                    else "download or validation failed"
+                )
+            # Filenames are untrusted: keep a short, single-line label, never a URL or error body.
+            name = re.sub(r"[\x00-\x1f\x7f]", " ", str(att_name))[:120] or "unnamed attachment"
+            failed.append(f"[Teams attachment not received: {name!r} ({reason}).]")
         # Skip non-file payloads: Teams mirrors the message body as a text/html attachment,
         # and cards arrive as application/vnd.microsoft.card.*
         if (content_type in ("text/html", "text/plain") and not content_url) or content_type.startswith("application/vnd.microsoft.card"):
@@ -562,6 +582,7 @@ class TeamsAdapter(BasePlatformAdapter):
             download_url = content.get("downloadUrl") or content.get("download_url")
             file_type = (content.get("fileType") or content.get("file_type") or "").lstrip(".")
             if not download_url:
+                note("download URL missing")
                 return None
             filename = att_name or (f"document.{file_type}" if file_type else "document")
             try:
@@ -569,10 +590,12 @@ class TeamsAdapter(BasePlatformAdapter):
                 cached = await cache_media_bytes_async(data, filename=filename, mime_type="")
                 if not cached:
                     logger.warning("[teams] Unsupported document type for attachment '%s', skipping", filename)
+                    note("unsupported file type")
                     return None
                 return cached.path, cached.media_type, cached.kind
             except Exception as e:
                 logger.warning("[teams] Failed to cache file attachment '%s': %s", filename, e)
+                note(e)
             return None
         if content_url and content_type.startswith("image/"):
             try:
@@ -585,20 +608,29 @@ class TeamsAdapter(BasePlatformAdapter):
                         logger.warning(
                             "[teams] Bot Framework attachment '%s' returned data that failed image validation, skipping",
                             att_name or content_url)
+                        note("image validation failed")
                         return None
                     return cached.path, cached.media_type, "image"
                 path = await cache_image_from_url(content_url)
+                if not path:
+                    note("image download or validation failed")
                 return (path, content_type, "image") if path else None
             except Exception as e:
                 logger.warning("[teams] Failed to cache image attachment: %s", e)
+                note(e)
             return None
         if content_url:  # direct-URL non-image attachment (video/audio/document)
             try:
                 data = await self._fetch_attachment_bytes(content_url)
                 cached = await cache_media_bytes_async(data, filename=att_name, mime_type=content_type)
+                if not cached:
+                    note("unsupported file type")
                 return (cached.path, cached.media_type, cached.kind) if cached else None
             except Exception as e:
                 logger.warning("[teams] Failed to cache attachment '%s' (%s): %s", att_name or content_url, content_type, e)
+                note(e)
+        if not content_url:
+            note("download URL missing")
         return None
 
     async def _send_card(self, chat_id: str, card: AdaptiveCard) -> Any:

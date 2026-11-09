@@ -614,6 +614,71 @@ class TestTeamsAttachmentClassification:
         assert event.message_type == MessageType.DOCUMENT
         assert len(event.media_urls) == 2
 
+    @pytest.mark.anyio
+    async def test_oversized_file_stays_visible_to_agent(self):
+        """Regression for #151903: oversized Teams files must not disappear from the event."""
+        adapter = self._make_adapter()
+        adapter._fetch_attachment_bytes = AsyncMock(side_effect=ValueError(
+            "Inbound attachment payload is too large (1015872292 bytes > 134217728 bytes)"
+        ))
+        activity = self._make_activity(
+            [self._html_body_attachment(), self._file_download_attachment("meeting.MOV", "mov")],
+            text="please summarise this",
+        )
+        await adapter._on_message(self._make_ctx(activity))
+
+        event = adapter.handle_message.call_args[0][0]
+        assert event.text.startswith("please summarise this\n")
+        assert "[Teams attachment not received: 'meeting.MOV'" in event.text
+        assert "configured inbound media size limit" in event.text
+        assert "text/html" not in event.text
+        assert event.media_urls == []
+        assert event.media_types == []
+
+    @pytest.mark.anyio
+    async def test_failed_file_does_not_hide_successful_sibling(self):
+        adapter = self._make_adapter()
+        adapter._fetch_attachment_bytes = AsyncMock(side_effect=[
+            b"%PDF-1.4 fake", OSError("temporary download failure"),
+        ])
+        activity = self._make_activity([
+            self._file_download_attachment("report.pdf", "pdf"),
+            self._file_download_attachment("minutes.mov", "mov"),
+        ])
+        await adapter._on_message(self._make_ctx(activity))
+
+        event = adapter.handle_message.call_args[0][0]
+        assert len(event.media_urls) == 1
+        assert event.media_types == ["application/pdf"]
+        assert "minutes.mov" in event.text
+        assert "download or validation failed" in event.text
+        assert "report.pdf" not in event.text
+
+    @pytest.mark.anyio
+    async def test_missing_file_url_noted_but_mirror_and_card_ignored(self):
+        adapter = self._make_adapter()
+        adapter._fetch_attachment_bytes = AsyncMock(
+            side_effect=AssertionError("missing URL must not fetch")
+        )
+        file = self._file_download_attachment("notes.txt", "txt")
+        file.content = {"fileType": "txt"}
+        card = MagicMock()
+        card.content_type = "application/vnd.microsoft.card.adaptive"
+        card.content_url = None
+        card.name = "status card"
+        activity = self._make_activity(
+            [self._html_body_attachment(), card, file], text="review"
+        )
+        await adapter._on_message(self._make_ctx(activity))
+
+        event = adapter.handle_message.call_args[0][0]
+        assert event.text.startswith("review\n")
+        assert event.text.count("[Teams attachment not received:") == 1
+        assert "notes.txt" in event.text
+        assert "download URL missing" in event.text
+        assert event.media_urls == []
+        adapter._fetch_attachment_bytes.assert_not_awaited()
+
 
 # ── Bot Framework connector attachments (pasted images) ──────────────────
 
