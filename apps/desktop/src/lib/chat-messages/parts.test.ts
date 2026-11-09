@@ -59,3 +59,28 @@ describe('inline-code MEDIA paths', () => {
     expect(renderMediaTags('MEDIA:/tmp/a.png')).toBe('[Image: a.png](#media:%2Ftmp%2Fa.png)')
   })
 })
+
+// Regression for NousResearch/hermes-agent#151711 (reported by 100yenadmin).
+describe('standalone delivery directives', () => {
+  const audioPath = '/tmp/cache/audio/x.ogg'
+  const audioCard = `[Audio: x.ogg](#media:${encodeURIComponent(audioPath)})`
+
+  it('hides delivery-only lines and still renders the audio card', () => {
+    expect(renderMediaTags(`[[audio_as_voice]]\nMEDIA:${audioPath}`)).toBe(audioCard)
+    expect(renderMediaTags(`Ready.\r\n  [[as_document]]\t\r\nMEDIA:${audioPath}`)).toBe(`Ready.\r\n${audioCard}`)
+    expect(renderMediaTags('[[audio_as_voice]]\n[[as_document]]')).toBe('')
+    expect(renderMediaTags('Explain [[audio_as_voice]] as prose.')).toBe('Explain [[audio_as_voice]] as prose.')
+  })
+
+  it('removes a split directive from the live assistant stream', () => {
+    const chunks = ['Done.\n[[audio_as_', 'voice]]\n', `MEDIA:${audioPath}`]
+    let parts = appendAssistantTextPart([], chunks[0])
+
+    for (const chunk of chunks.slice(1)) {
+      parts = appendAssistantTextPart(parts, chunk)
+    }
+
+    expect(chatMessageText({ id: 'a', parts, role: 'assistant' })).toBe(`Done.\n${audioCard}`)
+    expect(chatMessageText({ id: 'b', parts: appendAssistantTextPart([], '[[as_document]]'), role: 'assistant' })).toBe('')
+  })
+})

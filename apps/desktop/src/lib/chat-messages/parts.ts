@@ -273,8 +273,11 @@ function mediaLink(value: string): string | null {
   return isPlausibleMediaPath(path) ? `[${mediaDisplayLabel(path)}](${mediaMarkdownHref(path)})${punctuation}` : null
 }
 
+const DELIVERY_DIRECTIVE_LINE_RE = /^[ \t]*\[\[(?:audio_as_voice|as_document)\]\][ \t]*(?:\r?\n|$)/gm
+
 export function renderMediaTags(text: string): string {
   return text
+    .replace(DELIVERY_DIRECTIVE_LINE_RE, '')
     .replace(MEDIA_LINE_RE, (match, lead: string, value: string, trailer: string) => {
       const link = mediaLink(value)
 
@@ -649,7 +652,11 @@ export function appendAssistantTextPart(
   const previous = parts[index]
   const source = `${previous?.type === 'text' ? (previous.mediaSource ?? previous.text) : ''}${delta}`
 
-  if (!source.includes('MEDIA:')) {
+  if (
+    !source.includes('MEDIA:') &&
+    !source.includes('[[audio_as_voice]]') &&
+    !source.includes('[[as_document]]')
+  ) {
     return next
   }
 
