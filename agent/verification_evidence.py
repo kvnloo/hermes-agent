@@ -294,12 +294,19 @@ def _pipeline_span_start(segments: list[_ShellSegment], match_index: int) -> int
 
 
 def _pipefail_before(segments: list[_ShellSegment], upto: int) -> bool:
-    """Whether an earlier segment of the same command turned on ``pipefail``."""
+    """Whether ``pipefail`` remains enabled when the verifier's pipeline starts."""
+    enabled = False
     for segment in segments[:upto]:
         tokens = segment.tokens
-        if tokens and tokens[0] == "set" and any("pipefail" in token for token in tokens[1:]):
-            return True
-    return False
+        if not tokens or tokens[0] != "set":
+            continue
+        for index, token in enumerate(tokens[1:], start=1):
+            if token != "pipefail" or index < 2:
+                continue
+            option = tokens[index - 1]
+            if option[:1] in {"-", "+"} and "o" in option[1:]:
+                enabled = option.startswith("-")
+    return enabled
 
 
 def _echo_reported_status(

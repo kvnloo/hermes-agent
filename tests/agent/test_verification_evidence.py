@@ -726,6 +726,31 @@ def test_pipefail_makes_the_shell_code_describe_the_verifier(tmp_path, monkeypat
     assert passing is not None and passing.status == "passed"
 
 
+def test_disabling_pipefail_cannot_record_a_failed_pipeline_as_passed(tmp_path, monkeypatch):
+    """The latest pipefail toggle controls whether the shell's code proves pytest's status.
+
+    Without pipefail, a successful tail can mask a failing pytest invocation and the
+    verification ledger must leave it unattributed, not claim a passing suite.
+    """
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    _python_project(tmp_path)
+
+    enabled = record_terminal_result(
+        command="set -o pipefail; pytest -q | tail -5",
+        cwd=tmp_path, session_id="pipefail-enabled", exit_code=1,
+        output="1 failed, 5 passed",
+    )
+    disabled = record_terminal_result(
+        command="set -o pipefail; set +o pipefail; pytest -q | tail -5",
+        cwd=tmp_path, session_id="pipefail-disabled", exit_code=0,
+        output="1 failed, 5 passed",
+    )
+
+    assert enabled is not None
+    assert enabled["status"] == "failed"
+    assert disabled is None
+
+
 @pytest.mark.parametrize(
     "command, exit_code",
     [
