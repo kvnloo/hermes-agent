@@ -3,6 +3,7 @@
 import concurrent.futures
 import contextlib
 import logging
+import threading
 import time
 
 from cron import store_health
@@ -13,6 +14,9 @@ logger = logging.getLogger("cron.scheduler")
 # Log the yield at most once per episode (reset when the skew changes) to avoid per-interval spam.
 _YIELD_LOG_INTERVAL_SECONDS = 3600.0
 _last_yield_log: dict[str, object] = {}
+# A captured store from a stale ContextVar must not spam every minute-long tick.
+_rebound_warning_lock = threading.Lock()
+_rebound_warning_pairs: set[tuple[str, str]] = set()
 
 
 def _log_tick_yield_once(reason: str) -> None:
@@ -33,14 +37,34 @@ def _log_tick_yield_once(reason: str) -> None:
 def tick(verbose=True, adapters=None, loop=None, sync=True, *, can_dispatch=None,
          headless: bool = False):
     from hermes_cli.backend_retirement import retirement
+    from cron import scheduler as _sched
+    from cron.jobs import _cron_store_override, use_cron_store
 
+    # The tick lock and execution ledger use the active home. A ContextVar inherited from
+    # a staged store must not send this tick's job claims or completion writes elsewhere.
+    # Ordinary use_cron_store() callers (including distribution imports) are unaffected.
+    home = _sched._get_hermes_home().resolve()
+    captured = _cron_store_override.get()
+    rebound = captured is not None and captured.cron_dir.resolve() != home / "cron"
+    if rebound:
+        pair = (str(captured.cron_dir), str(home))
+        with _rebound_warning_lock:
+            first = pair not in _rebound_warning_pairs
+            _rebound_warning_pairs.add(pair)
+        if first:
+            logger.warning(
+                "CRON-STORE-REBOUND-AT-SEAM seam=tick captured_store=%s active_home=%s",
+                captured.cron_dir, home)
+
+    scope = use_cron_store(home) if rebound else contextlib.nullcontext()
     # Hold admission through the entire scan/advance/submit handoff. A predicate alone races
     # prepare after the check but before a due job enters the running-job ledger.
-    with retirement.work() as admitted:
-        if not admitted:
-            return 0
-        return _tick_admitted(verbose, adapters, loop, sync, can_dispatch=can_dispatch,
-                              headless=headless)
+    with scope:
+        with retirement.work() as admitted:
+            if not admitted:
+                return 0
+            return _tick_admitted(verbose, adapters, loop, sync, can_dispatch=can_dispatch,
+                                  headless=headless)
 
 
 def _acquire_tick_lock_or_degrade(_sched):
