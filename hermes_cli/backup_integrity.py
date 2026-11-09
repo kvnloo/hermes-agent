@@ -65,10 +65,15 @@ def verify_sqlite_integrity(
         return {"valid": valid, "message": message, "size": size}
 
     def _query_failure(message: str, exc: Exception, size: int) -> dict:
-        if _is_lock_contention(exc):
+        # SQLite can fail to open/read a DB after its raw header was read:
+        # CANTOPEN and IOERR are access failures, not proof of corruption.
+        if _is_lock_contention(exc) or _primary_code(exc) in (
+            sqlite3.SQLITE_CANTOPEN,
+            sqlite3.SQLITE_IOERR,
+        ):
             return _done(message, valid=None, size=size)
-        # Header unreadable AND SQLite cannot open the file (CANTOPEN/IOERR under a hard
-        # sharing lock): nothing proved corruption, so no verdict (#147938).
+        # An unreadable header plus any other non-corruption probe error
+        # is also indeterminate (#147938).
         if header_note and _primary_code(exc) not in _CORRUPT_PRIMARY_CODES:
             return _done(message, valid=None, size=size)
         return _done(message, size=size)

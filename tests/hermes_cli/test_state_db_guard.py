@@ -25,12 +25,25 @@ def valid_db(tmp_path):
     return path
 
 
+@pytest.mark.parametrize("max_bytes", [1, 1 << 30])
+def test_readable_header_sqlite_open_failure_is_indeterminate(
+    valid_db, tmp_path, monkeypatch, max_bytes
+):
+    """#147938: an SQLite open failure cannot authorize a state.db restore."""
+    from hermes_state_holders import read_only_db_uri
+    import hermes_cli.backup_integrity as integrity
 
+    # A real CANTOPEN error, applied to the probe of an otherwise healthy DB.
+    with pytest.raises(sqlite3.OperationalError) as error:
+        sqlite3.connect(read_only_db_uri(tmp_path / "missing.db"), uri=True)
+    assert error.value.sqlite_errorcode & 0xFF == sqlite3.SQLITE_CANTOPEN
 
-
-
-
-
+    monkeypatch.setattr(
+        integrity, "_query_ro_sqlite", lambda _path, _probe: (None, error.value)
+    )
+    result = verify_sqlite_integrity(valid_db, max_bytes=max_bytes)
+    assert result["valid"] is None
+    assert "unable to open database file" in result["message"]
 
 
 def test_oversized_db_probe_catches_malformed_schema(tmp_path):
