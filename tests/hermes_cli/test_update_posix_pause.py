@@ -303,3 +303,42 @@ def test_a_launchd_job_bootstraps_in_its_probed_domain(monkeypatch):
     assert bootstrapped == [("gui/501", job["plist"], label)]
     assert commands == [["launchctl", "kickstart", f"gui/501/{label}"]]
     assert job["domain"] == "gui/501"
+
+@pytest.mark.platforms("macos")
+def test_paused_launchd_debt_uses_running_domain_before_idle_registration(monkeypatch):
+    """An idle GUI registration must not hide a restarted gateway in the user domain."""
+    from hermes_cli import gateway
+    from hermes_cli.update_cmd_posix_pause import resume_paused_set
+
+    uid = os.getuid()  # windows-footgun: ok — macOS-only test
+    label = "ai.hermes.gateway-p2probe"
+    probes = []
+
+    def lookup(domain, candidate_label):
+        assert candidate_label == label
+        probes.append(domain)
+        return (True, None) if domain == f"gui/{uid}" else (True, 84)
+
+    monkeypatch.setattr(gateway, "_launchd_print_service_pid", lookup)
+    monkeypatch.setattr(
+        gateway, "_launchctl_bootstrap",
+        lambda *args, **kwargs: pytest.fail("bootstrapped despite a live user-domain gateway"),
+    )
+    monkeypatch.setattr(
+        gateway.subprocess, "run",
+        lambda *args, **kwargs: pytest.fail("kickstarted despite a live user-domain gateway"),
+    )
+    token = {
+        "posix_units": [{
+            "kind": "launchd", "label": label, "domain": f"gui/{uid}",
+            "plist": "/tmp/gateway.plist", "pid": 42,
+        }],
+        "unmapped": [], "resume_needed": True, "posix_stopped": True,
+    }
+
+    resume_paused_set(token)
+
+    assert probes == [f"gui/{uid}", f"user/{uid}"]
+    assert token["posix_units"] == []
+    assert token["resume_needed"] is False
+    assert token["posix_stopped"] is False

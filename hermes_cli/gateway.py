@@ -1510,14 +1510,14 @@ def _launchd_service_registered(label: str, *, timeout: int = 5) -> bool:
 
 
 def _locate_launchd_gateway_service(label: str) -> tuple[str | None, int | None]:
-    """``(domain, pid)`` for ``label``, probing ``gui/<uid>`` then ``user/<uid>``. Never uses the current
-    profile's cached ``_launchd_domain()`` — a fleet can mix domains. ``TimeoutExpired`` propagates."""
-    uid = os.getuid()  # windows-footgun: ok — POSIX launchd (macOS) helper, never invoked on Windows
+    """Prefer a live launchd job across domains; fall back to the first idle registration."""
+    uid, idle_domain = os.getuid(), None  # windows-footgun: ok — macOS-only launchd
     for domain in (f"gui/{uid}", f"user/{uid}"):
         loaded, pid = _launchd_print_service_pid(domain, label)
-        if loaded:
+        idle_domain = idle_domain or (domain if loaded else None)
+        if loaded and pid:
             return (domain, pid)
-    return (None, None)
+    return (idle_domain, None)
 
 
 def _probe_launchd_service_running() -> bool:
