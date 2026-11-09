@@ -157,6 +157,21 @@ class TestChatCompletionsBasic:
         assert msgs[0]["timestamp"] == 1781799468.409
         assert msgs[1]["finish_reason"] == "stop"
 
+    def test_convert_messages_strips_effect_disposition_from_tool_reply(self, transport):
+        """A persisted tool reply must not expose its effect bookkeeping to a provider."""
+        msgs = [
+            {
+                "role": "tool",
+                "tool_call_id": "call_1",
+                "content": "ok",
+                "effect_disposition": "committed",
+            },
+        ]
+        result = transport.convert_messages(msgs)
+        assert result == [{"role": "tool", "tool_call_id": "call_1", "content": "ok"}]
+        # Sanitization must not change the stored history.
+        assert msgs[0]["effect_disposition"] == "committed"
+
     def test_convert_messages_clean_list_is_identity(self, transport):
         """A list with no internal/codex keys is returned as-is (no copy)."""
         msgs = [

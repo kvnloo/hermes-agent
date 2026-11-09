@@ -23,6 +23,7 @@ _STRIP_TOP_LEVEL_MESSAGE_KEYS = (
     "codex_reasoning_items",
     "codex_message_items",
     "tool_name",
+    "effect_disposition",
     "timestamp",
     "message_id",
     "observed",
