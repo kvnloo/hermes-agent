@@ -116,3 +116,31 @@ def test_a_live_or_foreign_launcher_is_left_alone(store_update, monkeypatch):
     foreign = store_update.vbs.read_bytes()
     assert not gateway_windows.refresh_dead_launcher(store_update.home, store_update.name)
     assert store_update.vbs.read_bytes() == foreign
+
+@pytest.mark.platforms("windows")
+def test_ready_multiplexed_gateway_repairs_the_root_logon_launcher(store_update, monkeypatch):
+    """A running root owner skips service discovery, but its Store-era logon launcher still needs repair."""
+    from hermes_cli import gateway_runtime as runtime
+    from hermes_cli import gateway_runtime_multiplex as multiplex
+
+    profile = store_update.home / "profiles" / "work"
+    profile.mkdir(parents=True)
+    monkeypatch.setenv("HERMES_HOME", str(profile))
+    monkeypatch.setattr(runtime, "_update_fenced", lambda *_: False)
+    monkeypatch.setattr(
+        runtime, "_observe_replacing_stale",
+        lambda *_: runtime.GatewayDiscovery(
+            "ready",
+            endpoint=runtime.GatewayEndpoint(
+                profile_id=str(profile), instance_id="running",
+                authority_epoch=1, runtime_protocol=1, api_origin="http://127.0.0.1:9999",
+                supervisor="windows", capabilities=frozenset(), control_home=str(store_update.home),
+            ),
+        ),
+    )
+    monkeypatch.setattr(multiplex, "multiplexer_serves_home", lambda _: store_update.home)
+
+    assert _interpreter(store_update.vbs) == str(store_update.old)
+    result = runtime.ensure_gateway_runtime(profile, timeout=1)
+    assert result.state == "ready"
+    assert _interpreter(store_update.vbs) == str(store_update.new)

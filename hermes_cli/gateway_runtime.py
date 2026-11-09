@@ -479,6 +479,15 @@ def ensure_gateway_runtime(profile_home: str | Path, *, timeout: float | None = 
                 time.sleep(min(0.1, remaining(deadline)))
                 continue
             if observed.state not in {"absent", "starting"}:
+                # A live owner can outlast a Store update; ensure must still repair its logon launcher.
+                if observed.state == "ready" and os.name == "nt":
+                    from hermes_cli.gateway_runtime_multiplex import multiplexer_serves_home
+                    from hermes_cli.gateway_runtime_service import service_suffix
+                    from hermes_cli.gateway_windows import refresh_dead_launcher
+
+                    launcher_home = multiplexer_serves_home(home) or home
+                    suffix = service_suffix(launcher_home)
+                    refresh_dead_launcher(launcher_home, f"Hermes_Gateway{'_' + suffix if suffix else ''}")
                 return observed
             if status is not None and observed.state == "absent":
                 # The one start this invocation requested died without leaving an owner: waiting
