@@ -71,3 +71,21 @@ def test_model_info_degrades_to_builtin_preset_on_empty_moa_section(monkeypatch)
     assert info["model"]  # non-empty: the built-in "default" preset
     assert info["provider"] == "moa"
     assert info["stale_default"] is True
+
+def test_empty_moa_section_keeps_fallback_in_current_model_picker(monkeypatch):
+    """A stale MoA default and the selectable catalog must agree (#82613)."""
+    from hermes_cli import config as config_module
+    from hermes_cli import inventory
+
+    config = _config("TOP", {"default_preset": "TOP", "presets": {}})
+    monkeypatch.setattr(config_module, "load_config", lambda: config)
+    # Empty raw presets: the ordinary MoA opt-in gate stays closed.
+    monkeypatch.setattr(inventory, "_raw_config_has_enabled_moa_preset", lambda: False)
+
+    info = _get_info(monkeypatch, config)
+
+    assert info["stale_default"] is True
+    assert inventory._moa_provider_row("openrouter") is None
+    current_row = inventory._moa_provider_row(info["provider"])
+    assert current_row is not None
+    assert info["model"] in current_row["models"]

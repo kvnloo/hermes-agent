@@ -1033,11 +1033,12 @@ def _prewarm_pricing_async(
 def _moa_provider_row(current_provider: str = "") -> dict | None:
     """The virtual ``moa`` row shared by the CLI inventory and gateway picker; ``None`` without presets.
 
-    Strictly opt-in (#63353): the row only appears when the user's raw config.yaml explicitly
-    enables at least one MoA preset. The synthesized ``default`` preset from
-    ``normalize_moa_config({})`` — which every user gets via DEFAULT_CONFIG defaults — must not
-    be treated as a user choice."""
-    if not _raw_config_has_enabled_moa_preset():
+    Strictly opt-in (#63353): normally only a user-enabled raw preset shows MoA.
+    An explicitly selected MoA provider remains visible when its last preset was
+    deleted and /api/model/info falls back to the built-in preset (#82613)."""
+    # An explicit current MoA route must remain selectable after its final
+    # saved preset is deleted: /api/model/info advertises the built-in fallback.
+    if not _raw_config_has_enabled_moa_preset() and (current_provider or "").strip().lower() != "moa":
         return None
 
     try:
