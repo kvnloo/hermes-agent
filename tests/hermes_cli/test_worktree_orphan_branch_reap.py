@@ -257,3 +257,16 @@ def test_a_branch_whose_reflog_is_unreadable_is_kept_by_the_age_gate(repo, live)
     worktree_ops._prune_orphaned_branches(str(repo), max_age_hours=0)
 
     assert "hermes/hermes-stale" in _branches(repo)
+
+def test_master_only_repo_reaps_redundant_orphans_but_keeps_unique_work(repo, live):
+    """A local master trunk must count as a reachable ref, just like local main."""
+    _add_unreachable_commit(repo, "hermes/hermes-fresh")
+    _git(repo, "branch", "-m", "main", "master")
+
+    # No .worktrees directory: exercise the actual startup orphan-cleanup call.
+    worktree_ops._prune_stale_worktree_trees(str(repo), max_age_hours=0)
+
+    branches = _branches(repo)
+    assert "hermes/hermes-stale" not in branches
+    assert "hermes/hermes-fresh" in branches
+    assert "master" in branches
