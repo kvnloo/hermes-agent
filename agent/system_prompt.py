@@ -618,18 +618,20 @@ def _workspace_pin_key() -> str:
 
 
 def _persisted_workspace_block(prompt: str, key: str) -> Optional[str]:
-    """The workspace snapshot inside ``prompt`` taken for ``key`` (its ``- Root:`` is ``key`` or an
-    ancestor); "" when the prompt has none; None when it has one for another root."""
-    from agent.coding_context import WORKSPACE_BLOCK_HEADER
+    """The workspace snapshot inside ``prompt`` taken for this workspace's actual root;
+    "" when the prompt has none; None when its root belongs to another workspace.
+    A path alias can be rebound into a nested repository under the old root."""
+    from agent.coding_context import WORKSPACE_BLOCK_HEADER, _workspace_roots
     head = f"\n\n{WORKSPACE_BLOCK_HEADER}\n- Root: "
     start = prompt.find(head)
     if start < 0:
         return ""
     cwd = Path(key).resolve()
+    _, current_root = _workspace_roots(cwd)
     while start >= 0:
         block = prompt[start + 2:].split("\n\n", 1)[0]
         root = Path(block.split("\n", 2)[1][len("- Root: "):]).resolve()
-        if root == cwd or root in cwd.parents:
+        if root == current_root:
             return block
         start = prompt.find(head, start + 2)
     return None

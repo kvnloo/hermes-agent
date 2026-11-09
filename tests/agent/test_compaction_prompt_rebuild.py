@@ -275,6 +275,51 @@ class TestWorkspaceSnapshotPinnedAcrossCompaction(unittest.TestCase):
                     with patch("agent.system_prompt.resolve_context_cwd", return_value=second):
                         self.assertEqual(build_system_prompt(resumed), stored)
 
+
+    @pytest.mark.platforms("posix")
+    def test_alias_rebind_to_nested_repo_preserves_owner_snapshot_boundary(self):
+        import subprocess
+        import tempfile
+        from pathlib import Path
+        from agent.system_prompt import build_system_prompt
+
+        with tempfile.TemporaryDirectory(prefix="test-ws-owner-") as directory:
+            outer = _init_repo(Path(directory) / "outer", "outer initial")
+            source_dir = outer / "src"
+            source_dir.mkdir()
+            inner = _init_repo(outer / "inner", "inner initial")
+            alias = Path(directory) / "alias"
+            alias.symlink_to(source_dir, target_is_directory=True)
+
+            hints = f"Host: x\nUser home directory: /h\nCurrent working directory: {alias}"
+            agent = self._pin_agent()
+            with patch("agent.prompt_builder.load_soul_md", return_value=""), \
+                 patch("agent.prompt_builder.build_environment_hints", return_value=hints):
+                with patch("agent.system_prompt.resolve_context_cwd", return_value=alias):
+                    stored = build_system_prompt(agent)
+                self.assertIn(f"- Root: {outer}", stored)
+                subprocess.run(
+                    ["git", "commit", "-qm", "outer changed", "--allow-empty"],
+                    cwd=outer, check=True,
+                )
+                invalidate_system_prompt(agent)
+                with patch("agent.system_prompt.resolve_context_cwd", return_value=source_dir):
+                    self.assertEqual(build_system_prompt(agent), stored)
+
+            # This spelling now names a nested repository with a different owner.
+            alias.unlink()
+            alias.symlink_to(inner, target_is_directory=True)
+            db = SimpleNamespace(get_session=lambda sid: {"system_prompt": stored})
+            resumed = self._pin_agent(_cached_system_prompt=None, _session_db=db)
+            new_hints = f"Host: x\nUser home directory: /h\nCurrent working directory: {inner}"
+            with patch("agent.prompt_builder.load_soul_md", return_value=""), \
+                 patch("agent.prompt_builder.build_environment_hints", return_value=new_hints), \
+                 patch("agent.system_prompt.resolve_context_cwd", return_value=inner):
+                rebuilt = build_system_prompt(resumed)
+            self.assertIn(f"- Root: {inner}", rebuilt)
+            self.assertIn("inner initial", rebuilt)
+            self.assertNotIn(f"- Root: {outer}", rebuilt)
+
     def test_binding_the_launch_dir_explicitly_replays_the_pin(self):
         """CLI-shaped first build (no cwd bound -> launch dir), then TUI /compress binds that same dir:
         one workspace, so the rebuild replays the session-start snapshot."""
