@@ -1,6 +1,7 @@
 import { act, cleanup, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import * as canonicalProtocol from '@/api/canonical-protocol'
 import type { DesktopBootstrapState, DesktopConnectionsRegistry } from '@/global'
 import { createClientSessionState } from '@/lib/chat-runtime'
 import { BACKEND_BOOT_WAIT_TIMEOUT_MS } from '@/lib/with-timeout'
@@ -48,6 +49,8 @@ import {
   $sessionTiles,
   $workingSessionIds,
   clearAllSessionStates,
+  dropSessionState,
+  previewScopeForRuntime,
   publishSessionState,
   runtimeSessionOwner
 } from '@/store/session-states'
@@ -757,6 +760,49 @@ describe('shared host backend event provenance', () => {
     })
 
     expect(runtimeSessionOwner('rt-B')).toBe('beta')
+  })
+
+  it('keeps a canonically owned sibling preview on beta while the primary descriptor stays on default (#142849)', async () => {
+    const desktop = fakeDesktop()
+    const defaultConn = { ...sharedPrimaryConn, profile: 'default', sharedPrimary: false }
+
+    desktop.getConnection.mockResolvedValue(defaultConn)
+    desktop.getGatewayWsUrl.mockResolvedValue(defaultConn.wsUrl)
+    ;(window as { hermesDesktop?: unknown }).hermesDesktop = desktop
+
+    render(<Harness />)
+    await flushAsync()
+
+    const runtimeId = 'rt-canonical-sibling-142849'
+    const forgedId = 'rt-unsigned-sibling-142849'
+
+    expect($connection.get()?.sharedPrimary).not.toBe(true)
+    expect(runtimeSessionOwner(runtimeId)).toBeUndefined()
+
+    // The canonical client's authenticated per-session route can differ from
+    // the window's default profile. A bare wire field cannot establish it.
+    const owner = vi.spyOn(canonicalProtocol, 'canonicalOwnerProfile').mockImplementation(event =>
+      'session_id' in event && event.session_id === runtimeId ? 'beta' : undefined
+    )
+
+    try {
+      act(() => {
+        deliverEvent(FakeWebSocket.instances[0], { session_id: runtimeId, type: 'session.info' })
+      })
+
+      expect(runtimeSessionOwner(runtimeId)).toBe('beta')
+      expect(previewScopeForRuntime(runtimeId)).toBe('beta')
+
+      act(() => {
+        deliverEvent(FakeWebSocket.instances[0], { profile: 'beta', session_id: forgedId, type: 'session.info' })
+      })
+
+      expect(runtimeSessionOwner(forgedId)).toBeUndefined()
+    } finally {
+      owner.mockRestore()
+      dropSessionState(runtimeId)
+      dropSessionState(forgedId)
+    }
   })
 
   it('leaves an unshared primary on its exact owner — the socket already IS its profile', async () => {

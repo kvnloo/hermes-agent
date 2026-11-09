@@ -1222,7 +1222,8 @@ export function useGatewayBoot({
       }
 
       const connectionId = activeGatewayConnectionId()
-      const sourceProfile = canonicalOwnerProfile(event) ?? sourceProfileNow()
+      const provenProfile = canonicalOwnerProfile(event)
+      const sourceProfile = provenProfile ?? sourceProfileNow()
 
       const scopedEvent = {
         ...event,
@@ -1230,16 +1231,15 @@ export function useGatewayBoot({
         ...(connectionId ? { connectionId } : {})
       }
 
-      // On a shared host backend the socket no longer PROVES the profile the
-      // way a pooled secondary's closure did, so nothing stamps ownership and
-      // runtimeSessionOwner() stays blank for every non-primary local profile
-      // — the live sessions/cron sync dies and falls back to slow polling.
-      // The shared-primary descriptor is exactly the topology where the active
-      // profile is the authority for this socket's traffic. (The marker is the
-      // LAST rung of knownOwnerForSession, so durable stored identity still
-      // outranks it — #97511.)
+      // A canonical attached session also proves its owner when this shared
+      // socket's window descriptor still names default, not the sibling
+      // profile. Do not elevate an arbitrary wire `profile` field: only
+      // authenticated provenance or the shared-primary descriptor may stamp.
+      // Durable session bindings still outrank this transient owner (#97511).
       const ownedEvent =
-        $connection.get()?.sharedPrimary === true ? stampSecondaryProfileOwner(scopedEvent, sourceProfile) : scopedEvent
+        $connection.get()?.sharedPrimary === true || (!connectionId && Boolean(provenProfile))
+          ? stampSecondaryProfileOwner(scopedEvent, sourceProfile)
+          : scopedEvent
 
       deliverGatewayEvent(ownedEvent)
     })
