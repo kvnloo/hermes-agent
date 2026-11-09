@@ -713,8 +713,12 @@ def _gateway_command_subcommand(command: str | None) -> str | None:
             filtered.append(token)
     for i, token in enumerate(filtered):
         if token == "gateway":
-            # Bare `hermes gateway` defaults to `run`.
-            return filtered[i + 1] if i + 1 < len(filtered) else "run"
+            # --accept-hooks is a parent flag; no lifecycle verb still means run.
+            return next(
+                (part for part in filtered[i + 1:]
+                 if not (part.startswith("--a") and "--accept-hooks".startswith(part))),
+                "run",
+            )
     return None
 
 

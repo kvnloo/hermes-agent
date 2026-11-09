@@ -1290,6 +1290,23 @@ def test_gateway_run_boot_path_skips_the_immediate_check_that_would_have_false_p
     assert "did not restart running gateways" in capsys.readouterr().err
 
 
+def test_gateway_accept_hooks_boot_defers_pending_warning(monkeypatch, capsys):
+    """The valid parent flag still starts a gateway, whose identity is not yet stamped."""
+    disk_sha = "e" * 40
+    update_cmd._write_fleet_restart_pending_marker(
+        expected_sha=disk_sha, runtimes=[{"kind": "gateway", "profile": "default"}],
+    )
+    _patch_marker_sha(monkeypatch, disk_sha)
+    monkeypatch.setattr(
+        "hermes_cli.update_receipt.collect_fleet_versions", lambda **kwargs: [],
+    )
+
+    _boot_decision(monkeypatch, ["hermes", "gateway", "--accept-hooks"])
+
+    assert capsys.readouterr().err == ""
+    assert update_cmd_fleet._fleet_restart_obligation_armed()
+
+
 def test_receipt_only_stale_runtime_caught_regardless_of_boot_path(monkeypatch, capsys):
     """No marker at all -- the fallback path reads `update_receipts/latest.json` directly. A
     receipt whose post-restart `fleet` matrix records a stale OTHER profile must still be caught
