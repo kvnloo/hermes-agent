@@ -469,6 +469,64 @@ def test_respawn_guard_defers_rate_limited_within_cooldown(
         assert kbd.check_respawn_guard(conn, tid) is None
 
 
+def test_respawn_guard_rate_limit_cooldown_backs_off_exponentially(
+    kanban_home, monkeypatch,
+):
+    """A quota wall that outlasts one cooldown must not be probed every 5 min
+    forever (11-07: 650 rate_limited respawns in one day while burn-pace said
+    the lanes reset in 49-99 h). Each consecutive rate_limited run doubles the
+    cooldown, capped at HERMES_KANBAN_RATE_LIMIT_MAX_COOLDOWN_SECONDS."""
+    import hermes_cli.kanban_db as _kb
+
+    monkeypatch.setenv("HERMES_KANBAN_RATE_LIMIT_COOLDOWN_SECONDS", "300")
+    monkeypatch.setenv("HERMES_KANBAN_RATE_LIMIT_MAX_COOLDOWN_SECONDS", "3600")
+    now = 5_000_000
+
+    with kbc.connect() as conn:
+        tid = kb.create_task(conn, title="rl-backoff", assignee="a")
+        for i in range(4):  # 4 consecutive rate_limited runs
+            kb.claim_task(conn, tid)
+            run_id = kb.get_task(conn, tid).current_run_id
+            conn.execute(
+                "UPDATE task_runs SET outcome='rate_limited', status='rate_limited', "
+                "ended_at=? WHERE id=?",
+                (now - 10 + i, run_id),
+            )
+            conn.execute(
+                "UPDATE tasks SET status='ready', current_run_id=NULL, "
+                "claim_lock=NULL, claim_expires=NULL, worker_pid=NULL, "
+                "last_failure_error=? WHERE id=?",
+                ("pid 1 exited rate-limited (quota wall) — requeued", tid),
+            )
+        conn.commit()
+
+        # 4th consecutive wall -> 300 * 2**3 = 2400 s.
+        monkeypatch.setattr(_kb.time, "time", lambda: now + 2000)
+        assert kbd.check_respawn_guard(conn, tid) == "rate_limit_cooldown"
+        monkeypatch.setattr(_kb.time, "time", lambda: now + 2500)
+        assert kbd.check_respawn_guard(conn, tid) is None
+
+        # A completed run resets the streak back to the base cooldown.
+        kb.claim_task(conn, tid)
+        run_id = kb.get_task(conn, tid).current_run_id
+        conn.execute(
+            "UPDATE task_runs SET outcome='completed', status='done', ended_at=? WHERE id=?",
+            (now + 2600, run_id),
+        )
+        conn.execute(
+            "INSERT INTO task_runs (task_id, status, outcome, started_at, ended_at) "
+            "VALUES (?, 'rate_limited', 'rate_limited', ?, ?)",
+            (tid, now + 2700, now + 2701),
+        )
+        conn.execute(
+            "UPDATE tasks SET status='ready', current_run_id=NULL, claim_lock=NULL, "
+            "claim_expires=NULL, worker_pid=NULL WHERE id=?", (tid,),
+        )
+        conn.commit()
+        monkeypatch.setattr(_kb.time, "time", lambda: now + 2701 + 400)
+        assert kbd.check_respawn_guard(conn, tid) is None
+
+
 @pytest.mark.parametrize(
     "error_text, expected",
     [
