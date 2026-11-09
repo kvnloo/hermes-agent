@@ -100,7 +100,7 @@ def build_exec_approval_view(discord, base, *, unauthorized):
             ):
                 return
             from gateway.approval_actor import approval_refusal, refusal_text
-            if requester := approval_refusal(self.session_key, getattr(interaction.user, "id", ""), admin_ids=self.admin_user_ids,
+            if requester := approval_refusal(self.session_key, getattr(interaction.user, "id", ""),
                                              extra=self.approval_extra, request_id=self.request_id):
                 return await interaction.response.send_message(refusal_text(requester), ephemeral=True)
             label = t(label_key)
@@ -112,7 +112,7 @@ def build_exec_approval_view(discord, base, *, unauthorized):
                 from tools.approval import resolve_gateway_approval_card
                 count = resolve_gateway_approval_card(
                     self.session_key, choice, self.request_id, actor_id=getattr(interaction.user, "id", ""),
-                    admin_ids=self.admin_user_ids, extra=self.approval_extra)
+                    extra=self.approval_extra)
                 logger.info(
                     "Discord button resolved %d approval(s) for session %s (choice=%s, user=%s)",
                     count, self.session_key, choice, interaction.user.display_name,

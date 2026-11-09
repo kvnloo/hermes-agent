@@ -326,3 +326,80 @@ def test_other_views_not_admin_gated():
     )
     assert sc._check_auth(_interaction(11111)) is True
 
+
+@pytest.mark.asyncio
+async def test_discord_group_approval_buttons_do_not_inherit_dm_admins(monkeypatch):
+    """Regression for #151762: a DM-only admin cannot settle a group approval card."""
+    from unittest.mock import patch
+
+    from gateway.session_context import clear_session_vars, set_session_vars
+    from tools import approval as approval_mod
+    from tools.approval_gateway_wait import _ApprovalEntry
+
+    monkeypatch.setattr("tools.approval_context._get_approval_config", lambda: {"approvers": []})
+    key = "discord:group-approval-scope"
+    tokens = set_session_vars(
+        platform="discord", chat_type="group", user_id="requester",
+        user_name="Requester", session_key=key,
+    )
+    try:
+        entry = _ApprovalEntry({"command": "echo scoped"})
+    finally:
+        clear_session_vars(tokens)
+    assert entry.authority["approvers"] == []
+    assert entry.authority["chat_type"] == "group"
+    approval_mod._gateway_queues.setdefault(key, []).append(entry)
+
+    extra = {
+        "require_admin_for_exec_approval": True,
+        "allow_admin_from": ["dm-admin"],
+        "group_allow_admin_from": ["group-admin"],
+    }
+
+    def interaction_for(user_id):
+        interaction = _interaction(user_id)
+        interaction.user.display_name = user_id
+        interaction.response = SimpleNamespace(send_message=AsyncMock())
+        return interaction
+
+    def view_for(*, require_admin, admin_ids):
+        view = ExecApprovalView(
+            session_key=key,
+            request_id=entry.data["request_id"],
+            allowed_user_ids={"requester", "dm-admin", "group-admin"},
+            require_admin=require_admin,
+            admin_user_ids=admin_ids,
+            approval_extra=extra,
+        )
+        view._gate = AsyncMock(return_value=True)
+        view._finalize_embed = AsyncMock()
+        return view
+
+    try:
+        dm_view = view_for(require_admin=True, admin_ids={"dm-admin"})
+        dm_click = interaction_for("dm-admin")
+        # The separate Discord admin click gate admits this user; the approval
+        # actor must still refuse a DM-only admin on a GROUP approval.
+        assert dm_view._check_auth(dm_click) is True
+        await dm_view._resolve(dm_click, "once", None, "gateway.exec_approval.resolved_once")
+        dm_click.response.send_message.assert_awaited_once()
+        assert dm_click.response.send_message.await_args.kwargs["ephemeral"] is True
+        assert entry.result is None and not entry.event.is_set()
+
+        # Even when the pre-check is bypassed, the in-lock settlement check
+        # must not accept the DM admin via an unscoped admin_ids union.
+        with patch("gateway.approval_actor.approval_refusal", return_value=None):
+            await view_for(require_admin=True, admin_ids={"dm-admin"})._resolve(
+                interaction_for("dm-admin"), "once", None, "gateway.exec_approval.resolved_once",
+            )
+        assert entry.result is None and not entry.event.is_set()
+
+        # With the independent Discord admin-click gate off, the actual group
+        # admin may approve the same pending request.
+        group_view = view_for(require_admin=False, admin_ids=set())
+        await group_view._resolve(
+            interaction_for("group-admin"), "once", None, "gateway.exec_approval.resolved_once",
+        )
+        assert entry.result == "once" and entry.event.is_set()
+    finally:
+        approval_mod._gateway_queues.pop(key, None)
