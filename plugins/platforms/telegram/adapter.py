@@ -4066,6 +4066,14 @@ class TelegramAdapter(BasePlatformAdapter):
         self._polling_progress_event = asyncio.Event()
         self._send_path_degraded = True
 
+        # A periodic pool reset must not outlive the HTTP client it owns.
+        # Stop and join it before any later app-shutdown await.
+        maintenance_task = getattr(self, "_proactive_maintenance_task", None)
+        if maintenance_task and not maintenance_task.done():
+            maintenance_task.cancel()
+            await asyncio.gather(maintenance_task, return_exceptions=True)
+        self._proactive_maintenance_task = None
+
         # Recovery can be suspended in stop/drain/start while disconnect begins.
         # Cancel and await both polling lifecycle owners immediately after the
         # fence, before any other teardown await lets them start a new generation.

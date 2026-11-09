@@ -1105,6 +1105,35 @@ async def test_disconnect_cancels_heartbeat_task():
     assert adapter._polling_heartbeat_task is None
 
 
+@pytest.mark.asyncio
+async def test_disconnect_stops_proactive_pool_maintenance_before_shutdown():
+    """The periodic general-pool reset must not outlive its PTB HTTP client."""
+    adapter = _make_adapter()
+    mock_app = MagicMock()
+    mock_app.updater.running = False
+    mock_app.running = False
+    adapter._app = mock_app
+
+    maintenance = asyncio.create_task(adapter._proactive_pool_maintenance_loop())
+    adapter._proactive_maintenance_task = maintenance
+    await asyncio.sleep(0)  # Let the task enter its maintenance timer.
+
+    async def _shutdown():
+        assert maintenance.done(), "maintenance still running during PTB shutdown"
+
+    mock_app.shutdown = AsyncMock(side_effect=_shutdown)
+    try:
+        await adapter.disconnect()
+        assert maintenance.done(), "disconnect left a periodic maintenance task alive"
+        assert adapter._proactive_maintenance_task is None
+        mock_app.shutdown.assert_awaited_once()
+    finally:
+        # Also clean up on the unfixed carrier head, where assertions fail.
+        if not maintenance.done():
+            maintenance.cancel()
+            await asyncio.gather(maintenance, return_exceptions=True)
+
+
 # ── Bootstrap degradation: keep polling alive during outages (#47508) ────
 
 
