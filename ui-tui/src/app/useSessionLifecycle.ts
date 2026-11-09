@@ -153,6 +153,7 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
   )
 
   const cancelResumeScrollRef = useRef<null | (() => void)>(null)
+  const activationRequestRef = useRef(0)
 
   const resetSession = useCallback(() => {
     cancelResumeScrollRef.current?.()
@@ -305,6 +306,7 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
 
   const activateLiveSession = useCallback(
     (id: string) => {
+      const requestId = ++activationRequestRef.current
       patchOverlayState({ sessions: false })
       patchUiState({ status: t('session.status.switchingSession') })
       // The card belongs to the session being left; the activated one answers with its own.
@@ -312,6 +314,11 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
 
       gw.request<SessionActivateResponse>('session.activate', { session_id: id })
         .then(raw => {
+          // A slower response must not restore an earlier selection.
+          if (requestId !== activationRequestRef.current) {
+            return
+          }
+
           const r = asRpcResult<SessionActivateResponse>(raw)
 
           if (!r) {
@@ -349,6 +356,10 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
           cancelResumeScrollRef.current = scheduleResumeScrollToBottom(scrollRef)
         })
         .catch((e: Error) => {
+          if (requestId !== activationRequestRef.current) {
+            return
+          }
+
           sys(`error: ${e.message}`)
           patchUiState({ status: 'ready' })
         })
