@@ -80,3 +80,21 @@ def test_terminal_receipt_lifts_the_unknown_pause_it_caused(tmp_path, monkeypatc
         jobs.pause_job(job['id'], reason='operator hold')
         scheduler_authority.reconcile_pending()
         assert jobs.get_job(job['id'])['paused_reason'] == 'operator hold'
+
+
+def test_firer_booked_terminal_outcome_lifts_the_unknown_pause(tmp_path, monkeypatch):
+    """The firer's failed terminal row retires its unknown pause along with its journal."""
+    with jobs.use_cron_store(tmp_path / 'cron'):
+        job = jobs.create_job(prompt='report', schedule='every 1h', deliver='local')
+        fire = executions.create_execution(job['id'], source='test')['id']
+        journal = _unknown_fire(monkeypatch, job, fire)
+        # The firer lost the fire claim and already booked its terminal outcome.
+        with executions._transaction() as conn:
+            conn.execute(
+                "UPDATE executions SET status='failed', error=?, process_id=?, pid=? WHERE id=?",
+                ('Fire claim ownership lost; stale result was discarded.', 'old-owner', 999999, fire))
+        scheduler_authority.reconcile_pending()
+        saved = jobs.get_job(job['id'])
+        assert (saved['state'], saved['enabled'], saved['paused_reason']) == ('scheduled', True, None)
+        assert executions.get_execution(fire)['status'] == 'failed'
+        assert not journal.exists()

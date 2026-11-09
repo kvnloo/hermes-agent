@@ -178,6 +178,8 @@ def reconcile_pending(*, allow_connect=True):
             if row is not None and row['job_id'] == params['job_id'] and row['status'] in FIRER_FINISHED_STATES:
                 # The firer booked this attempt's terminal outcome itself (ownership lost, shutdown
                 # interrupt, a crashed tail): the receipt is not a result to save or deliver again.
+                # The terminal row resolves this journal's unverified-admission pause as well.
+                _lift_pause(params['job_id'], record.get('pause_recorded'))
                 journal.unlink(missing_ok=True)
                 continue
             if 'refusal' in record:
