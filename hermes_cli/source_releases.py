@@ -124,7 +124,8 @@ def _graph_then_probe(git_cmd, cwd, commit: str, head: str):
     answer locally instead of burning the bound and falling back to the network. A graph that
     cannot be written keeps the relation unknown, exactly as the unanswered probe did.
     """
-    written = _probe(git_cmd, cwd, "commit-graph", "write", "--reachable", timeout=60)
+    # Override a user-level commitGraph.changedPaths=true setting as well.
+    written = _probe(git_cmd, cwd, "commit-graph", "write", "--reachable", "--no-changed-paths", timeout=60)
     if written is None or written.returncode != 0:
         return None
     return _probe(git_cmd, cwd, "merge-base", "--is-ancestor", commit, head)

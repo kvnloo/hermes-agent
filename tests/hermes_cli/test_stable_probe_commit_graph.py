@@ -68,3 +68,17 @@ def test_unwritable_graph_keeps_the_relation_unknown(history, monkeypatch):
     monkeypatch.setattr(source_releases.subprocess, "run", run)
     monkeypatch.setattr(source_check, "_github_compare", lambda *a, **k: {"status": "behind"})
     assert source_releases._head_containing(["git"], origin, shas[2], "o/r") is None
+
+
+def test_retry_graph_ignores_changed_paths_config(history, monkeypatch):
+    """A user's Git setting must not turn the safe graph write into a tree-fetch loop."""
+    origin, shas = history
+    _git(origin, "config", "commitGraph.changedPaths", "true")
+    _first_probe_times_out(monkeypatch, "merge-base")
+    monkeypatch.setattr(source_check, "_github_compare", lambda *a, **k: pytest.fail("local retry answered"))
+
+    assert source_releases._head_containing(["git"], origin, shas[0], "o/r") == shas[2]
+    data = (origin / ".git" / "objects" / "info" / "commit-graph").read_bytes()
+    assert data[:4] == b"CGPH"
+    chunks = {data[8 + 12 * i:12 + 12 * i] for i in range(data[6])}
+    assert {b"BIDX", b"BDAT"}.isdisjoint(chunks)
