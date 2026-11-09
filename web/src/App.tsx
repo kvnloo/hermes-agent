@@ -16,7 +16,6 @@ import {
   Routes,
   Route,
   NavLink,
-  Navigate,
   useLocation,
   useNavigate,
 } from "react-router";
@@ -63,6 +62,7 @@ import { Typography } from "@nous-research/ui/ui/components/typography/index";
 import { ConfirmDialog } from "@nous-research/ui/ui/components/confirm-dialog";
 import { cn } from "@/lib/utils";
 import { SidebarFooter } from "@/components/SidebarFooter";
+import { ScopedSessionsRedirect } from "@/components/ScopedSessionsRedirect";
 import { SidebarStatusStrip, gatewayLine } from "@/components/SidebarStatusStrip";
 import { useBelowBreakpoint } from "@nous-research/ui/hooks/use-below-breakpoint";
 import { useSidebarStatus } from "@/hooks/useSidebarStatus";
@@ -131,7 +131,7 @@ function UnknownRouteFallback({ pluginsLoading }: { pluginsLoading: boolean }) {
     // Render nothing during the plugin-load window — a spinner here would just flash.
     return null;
   }
-  return <Navigate to="/sessions" replace />;
+  return <ScopedSessionsRedirect />;
 }
 
 const CHAT_NAV_ITEM: NavItem = {
