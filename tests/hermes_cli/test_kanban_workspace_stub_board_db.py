@@ -50,6 +50,28 @@ def test_named_board_file_without_tasks_table_is_not_a_board(board, tmp_path):
     assert (kb.boards_root() / "empty" / "kanban.db").stat().st_size == 0
 
 
+def test_stub_board_does_not_hide_live_task_in_mixed_case_table(board, tmp_path):
+    """#133739: ignore a stub, but preserve another board's live workspace."""
+    workspace = tmp_path / "ws"
+    _stray_board_file("empty").touch()
+    assert _in_use(workspace) is None
+
+    # SQLite resolves Tasks and tasks as the same table name. sqlite_master
+    # preserves the spelling, so a case-sensitive schema probe is unsafe.
+    db = sqlite3.connect(_stray_board_file("mixed-case"))
+    try:
+        db.execute("CREATE TABLE Tasks (id TEXT, status TEXT, workspace_path TEXT)")
+        db.execute(
+            "INSERT INTO Tasks (id, status, workspace_path) VALUES (?, ?, ?)",
+            ("t_other", "running", str(workspace)),
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    assert _in_use(workspace) == "shared"
+
+
 def test_corrupt_board_db_still_fails_closed(board, tmp_path):
     _stray_board_file("broken").write_bytes(b"not a sqlite database" * 64)
     assert _in_use(tmp_path / "ws") == "unknown"

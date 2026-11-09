@@ -163,9 +163,12 @@ def _other_board_uses_path(db_file: Path, task_id: str, key: str) -> bool:
         # A 0-byte or schema-less file (e.g. left by an ad-hoc ``sqlite3`` open)
         # holds no tasks, so it cannot hold a workspace. Locked or corrupt
         # files still raise here and keep the caller failing closed.
+        # sqlite_master keeps original table-name case, but SQLite identifiers
+        # are case-insensitive: a live Tasks table must not be skipped.
         if (
             other.execute(
-                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tasks'"
+                "SELECT 1 FROM sqlite_master WHERE type='table' "
+                "AND name='tasks' COLLATE NOCASE"
             ).fetchone()
             is None
         ):
