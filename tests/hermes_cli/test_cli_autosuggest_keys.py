@@ -81,3 +81,29 @@ def test_right_still_moves_the_cursor_inside_the_draft(cli):
         await _until(lambda: editor.buffer.cursor_position == len("okay le"))
         assert editor.text == "okay let"
     _drive(cli, script)
+
+def test_ctrl_e_accepts_history_in_composer_but_not_secret_prompt(cli):
+    """The native shortcut is useful for chat, never for modal secret input."""
+    async def normal_composer(pipe, editor):
+        pipe.send_text("okay let")
+        await _until(lambda: editor.buffer.suggestion is not None)
+        pipe.send_text("\x05")
+        await _until(lambda: editor.text == HISTORY_ENTRY)
+
+    # On the PR merge base, Ctrl+E cannot accept history and this half fails.
+    _drive(cli, normal_composer)
+
+    cli._secret_state = {"reason": "fixture secret prompt"}
+
+    async def secret_prompt(pipe, editor):
+        pipe.send_text("okay let")
+        await _until(lambda: editor.buffer.suggestion is not None)
+        assert editor.buffer.suggestion.text == "'s continue with our setup"
+        processed = asyncio.Event()
+        cli._app.key_processor.after_key_press += lambda _: processed.set()
+        pipe.send_text("\x05")
+        await asyncio.wait_for(processed.wait(), 3)
+        # On the unguarded PR head, Ctrl+E incorrectly appends command history.
+        assert editor.text == "okay let"
+
+    _drive(cli, secret_prompt)

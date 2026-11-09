@@ -440,11 +440,22 @@ class CLITuiRuntimeMixin:
         # PromptSession loads the ghost-text accept keys (Right, Ctrl+E, Ctrl+F, Alt+F) itself;
         # a bare Application does not, so only our Tab handler could accept a suggestion (#151352).
         # Our bindings come last so filtered overlays that also bind Right keep priority.
-        from prompt_toolkit.key_binding import merge_key_bindings
+        from prompt_toolkit.filters import Condition
+        from prompt_toolkit.key_binding import ConditionalKeyBindings, merge_key_bindings
         from prompt_toolkit.key_binding.bindings.auto_suggest import load_auto_suggest_bindings
+        # The history-backed composer also serves secret/sudo and other modal inputs.
+        # In those modes, accepting old chat history would inject unrelated text.
+        suggestion_keys = ConditionalKeyBindings(
+            load_auto_suggest_bindings(),
+            Condition(lambda: not (
+                self._secret_state or self._sudo_state or self._approval_state
+                or self._slash_confirm_state or self._connection_state or self._clarify_state
+                or self._model_picker_state or self._command_palette_state
+            )),
+        )
         return Application(
             layout=layout,
-            key_bindings=merge_key_bindings([load_auto_suggest_bindings(), kb]),
+            key_bindings=merge_key_bindings([suggestion_keys, kb]),
             style=style,
             full_screen=False,
             mouse_support=False,
