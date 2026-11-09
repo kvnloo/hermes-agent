@@ -275,3 +275,21 @@ def test_summary_output_redacts_llm_echoed_prose_key():
     assert summary is not None
     assert BARE_KEY not in summary
     assert BARE_KEY not in c._previous_summary
+
+
+def test_compacted_natural_language_password_is_masked_in_code_built_sections():
+    """Regression for #151656: an 18-character prose password must not survive compaction."""
+    secret = "Vx9-qLm2Tr8wPz4Kd7"  # made up; under the old 20-character candidate threshold
+    turns = [
+        {"role": "user", "content": f"The staging database password is {secret}, please use it for the migration."},
+        {"role": "assistant", "content": "Migration plan recorded."},
+    ]
+    compressor = _compressor()
+    summary = compressor._augment_summary_lean("## Goal\nRun the migration.", turns)
+    assert "## User Messages (verbatim, newest first)" in summary
+    assert secret not in summary
+
+    summary = compressor._ground_historical_task_snapshot(summary, turns)
+    assert "User asked (deterministic, from compacted turns):" in summary
+    assert secret not in summary
+    assert "staging database password is" in summary

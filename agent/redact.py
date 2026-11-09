@@ -1003,7 +1003,8 @@ def redact_sensitive_text(text: str, *, force: bool = False, code_file: bool = F
 # IDs and base64 blobs — and only the compaction boundary opts in, where a
 # false positive costs one masked word in a summary but a miss replays a live
 # key for the rest of the session.
-_BARE_TOKEN_RE = re.compile(r"[A-Za-z0-9+/_=-]{20,}")
+# Opaque prose passwords can be 16–19 chars (#151656); entropy and nearby credential words still gate masking.
+_BARE_TOKEN_RE = re.compile(r"[A-Za-z0-9+/_=-]{16,}")
 _SECRET_CONTEXT_RE = re.compile(
     r"(?i)\b(?:api[\s_-]?key|key|token|secret|pass(?:word|wd)?|credential|bearer)\b"
 )
