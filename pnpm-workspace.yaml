@@ -58,6 +58,8 @@ overrides:
 
 allowBuilds:
   unicode-animations: false
+  # Its postinstall only sends install telemetry; nothing it ships needs it.
+  "@openuidev/lang-core": false
   esbuild@0.28.2: true
   node-pty@1.1.0: true
   electron-winstaller@5.4.0: true
