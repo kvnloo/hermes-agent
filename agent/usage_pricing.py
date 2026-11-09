@@ -34,7 +34,7 @@ _MODELS_DEV_DIRECT_HOSTS = {
 _MODELS_DEV_RELAY_HOSTS = {
     "opencode": ("opencode", "opencode.ai"),
     "opencode-zen": ("opencode", "opencode.ai"),
-    "opencode-go": ("opencode", "opencode.ai"),
+    "opencode-go": ("opencode-go", "opencode.ai"),
 }
 
 # Below $0.01, render at 4 dp so cheap-model costs never display as $0.00.
