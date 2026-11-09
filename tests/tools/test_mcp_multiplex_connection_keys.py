@@ -156,6 +156,23 @@ def test_adopted_stdio_server_is_counted_in_the_adopters_discovery_summary(two_p
     assert disc._connected_summary(["netsuite"]) == (1, 1, [])
 
 
+def test_adopted_http_server_is_counted_in_discovery_summary(two_profiles):
+    """An HTTP adopter reports the live owner connection, not a phantom cooldown."""
+    from tools import mcp_tool_discovery as disc, mcp_tool_registration as reg
+    from tools.registry import registry
+
+    cfg = {"url": "https://mcp.example/x", "headers": {"Authorization": "Bearer shared"}}
+    two_profiles("a")
+    server = _server("x", cfg)
+    disc._adopt_server("x", server)
+    server._registered_tool_names = reg._register_server_tools("x", server, cfg)
+
+    two_profiles("b")
+    assert reg.register_connected_into_current_scope({"x": dict(cfg)}) == 1
+    assert registry.get_tool_names_for_toolset("mcp-x") == ["mcp__x__t"]
+    assert disc._connected_summary(["x"]) == (1, 1, [])
+
+
 def test_oauth_server_is_not_adopted_across_profiles(two_profiles):
     import tools.mcp_tool as core
     from tools import mcp_tool_discovery as disc
