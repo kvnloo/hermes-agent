@@ -817,7 +817,7 @@ class CLICommandsMixin(CLICommandsSessionToolsMixin):
 
     # ---- /resume, /sessions, /branch ------------------------------------------------------
     def _handle_resume_command(self, cmd_original: str) -> None:
-        """Handle /resume <session_id_or_title> — switch to a previous session mid-conversation."""
+        """Handle /resume [all|<session_id_or_title>] — list or switch sessions."""
         if getattr(self, "_agent_running", False):
             return _cp(f"  {_t('shared.agent_busy', command='/resume')}")
         from cli import _sync_process_session_id
@@ -833,6 +833,13 @@ class CLICommandsMixin(CLICommandsSessionToolsMixin):
                     getattr(self, "_last_session_listing", None) or self._list_recent_sessions(limit=10))
                 return
             return _cp(f"  {_t('resume.tip_find_sessions')}")
+        if target.lower() in {"all", "--all"}:
+            self._pending_resume_sessions = None
+            if self._show_recent_sessions(reason="resume", include_all_sources=True):
+                self._pending_resume_sessions = self._last_session_listing
+            else:
+                _cp(f"  {_t('resume.tip_find_sessions')}")
+            return
         # Any explicit /resume <target> supersedes a previously-armed bare numbered prompt.
         self._pending_resume_sessions = None
         if not self._session_db:

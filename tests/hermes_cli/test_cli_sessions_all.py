@@ -64,3 +64,44 @@ def test_sessions_target_still_delegates_to_resume():
     cli._handle_resume_command = Mock()
     cli._handle_sessions_command("/sessions all hands")
     cli._handle_resume_command.assert_called_once_with("/resume all hands")
+
+
+@pytest.mark.parametrize("command", ["/resume all", "/resume --all"])
+def test_resume_all_discovers_gui_sessions_without_widening_default(tmp_path, capsys, command):
+    """Regression for #151584: a Desktop gui row is discoverable via /resume all."""
+    db = SessionDB(db_path=tmp_path / "state.db")
+    try:
+        for index, (sid, source) in enumerate([
+            ("classic-cli", "cli"),
+            ("desktop-gui", "gui"),
+            ("tool-run", "tool"),
+            ("current-chat", "cli"),
+        ]):
+            db.create_session(sid, source=source)
+            db.append_message(sid, role="user", content="hello")
+            db._conn.execute(
+                "UPDATE sessions SET started_at=? WHERE id=?",
+                (1_000_000 + index, sid),
+            )
+        db._conn.commit()
+
+        cli = HermesCLI.__new__(HermesCLI)
+        cli._session_db = SurfaceLabelReader(db)
+        cli.session_id = "current-chat"
+
+        cli._handle_resume_command("/resume")
+        assert "desktop-gui" not in capsys.readouterr().out
+
+        cli._handle_resume_command(command)
+        output = capsys.readouterr().out
+        assert "desktop-gui" in output
+        assert "classic-cli" in output
+        assert "tool-run" not in output
+        assert "current-chat" not in output
+
+        rows = cli._last_session_listing
+        assert cli._pending_resume_sessions == rows
+        number = next(i for i, row in enumerate(rows, 1) if row["id"] == "desktop-gui")
+        assert cli._resolve_resume_target(str(number))[0] == "desktop-gui"
+    finally:
+        db.close()
