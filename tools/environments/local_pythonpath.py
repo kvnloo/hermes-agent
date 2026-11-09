@@ -9,6 +9,7 @@ so tests monkeypatching it there keep working."""
 import logging
 import os
 import platform
+import re
 import sys
 from pathlib import Path
 
@@ -135,8 +136,8 @@ def _hermes_environment_roots() -> tuple[Path, ...]:
     *superseded* generation's site-packages in ``os.environ``; ``pm.environments_adopt`` only
     rewrites it when the process successfully adopts the new generation, and otherwise only a
     restart loads it. ``_get_hermes_site_packages`` answers with the *current* selection, so
-    the stale twin is not recognized and leaks into children. Anything under this directory is
-    Hermes-owned by provenance, whichever generation it belongs to.
+    the stale twin is not recognized and leaks into children. Only exact
+    site-packages entries of each generation are owned, even after a switch.
     """
     from pm.environments import install_state_dir
 
@@ -148,18 +149,32 @@ def _hermes_environment_roots() -> tuple[Path, ...]:
         return ()
 
 
-def _is_under(path: Path, root: Path) -> bool:
+def _is_pm_generation_site_packages(path: Path, root: Path) -> bool:
+    """Only the exact venv site-packages path is owned, not its descendants
+    or other directories under a PM generation."""
     try:
-        return path.resolve().is_relative_to(root)
-    except OSError:
+        parts = path.resolve().relative_to(root).parts
+    except (OSError, ValueError, RuntimeError):
         return False
+
+    # <generation>/venv/Lib/site-packages (Windows)
+    if len(parts) == 4:
+        return (parts[1].casefold() == "venv"
+                and parts[2].casefold() == "lib"
+                and parts[3].casefold() in ("site-packages", "dist-packages"))
+    # <generation>/venv/lib/pythonX.Y/site-packages (POSIX)
+    return (len(parts) == 5
+            and parts[1].casefold() == "venv"
+            and parts[2].casefold() in ("lib", "lib64")
+            and re.fullmatch(r"python\d+\.\d+t?", parts[3], re.IGNORECASE) is not None
+            and parts[4].casefold() in ("site-packages", "dist-packages"))
 
 
 def _strip_hermes_owned_pythonpath(env: dict) -> None:
     """Remove Hermes-owned PYTHONPATH entries: exact matches of the repo root (any launcher
-    spelling), runtime site-packages, and any dependency-environment generation under this
-    install's state dir — a *superseded* generation is still Hermes-owned. Still never a
-    descendant of the repo root or of site-packages, which are user paths. Empty components
+    spelling), runtime site-packages, and exact venv site-packages of any
+    dependency-environment generation under this install's state dir — including
+    superseded generations. Never descendants or unrelated generation paths. Empty components
     (= cwd) and everything else are preserved.
 
     Everything else -- user libs, Nix plugin paths, a pythonX.Y/site-packages entry meant for a DIFFERENT
@@ -175,7 +190,7 @@ def _strip_hermes_owned_pythonpath(env: dict) -> None:
     stripped = [
         e for e in entries
         if e and (any(_same_path(Path(e), p) for p in owned_paths)
-                  or any(_is_under(Path(e), r) for r in owned_roots))
+                  or any(_is_pm_generation_site_packages(Path(e), r) for r in owned_roots))
     ]
     kept = [e for e in entries if e not in stripped]
     if kept:

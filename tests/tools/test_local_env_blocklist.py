@@ -256,6 +256,25 @@ def test_pythonpath_descendants_are_not_owned():
     assert env["PYTHONPATH"].split(os.pathsep) == entries
 
 
+@pytest.mark.parametrize("layout", ["lib/python3.14/site-packages", "Lib/site-packages"])
+def test_superseded_generation_strips_only_exact_site_packages(tmp_path, monkeypatch, layout):
+    """Do not erase user-added PYTHONPATH descendants within a PM generation."""
+    generations = tmp_path / "installs" / "abc123" / "environments"
+    site = generations / "superseded" / "venv" / layout
+    user_descendant = site / "custom-imports"
+    venv_bin = generations / "superseded" / "venv" / "bin"
+    outside_site = tmp_path / "user-venv" / "lib/python3.11/site-packages"
+    monkeypatch.setattr(pp, "_hermes_environment_roots", lambda: (generations.resolve(),))
+
+    entries = [site, user_descendant, venv_bin, outside_site]
+    env = {"PYTHONPATH": os.pathsep.join(map(str, entries))}
+    pp._strip_hermes_owned_pythonpath(env)
+
+    assert env["PYTHONPATH"].split(os.pathsep) == [
+        str(user_descendant), str(venv_bin), str(outside_site),
+    ]
+
+
 def test_pythonpath_superseded_environment_is_owned(tmp_path, monkeypatch):
     """A backend running across an environment switch still exports the *previous* generation's
     site-packages; it must be stripped exactly like the currently selected one (#122928)."""
