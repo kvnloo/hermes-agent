@@ -14,8 +14,7 @@ from typing import Any, Optional
 # error/empty-response path, not silence. A lane that does not think in English
 # translates the sentinel rather than dropping it, and the whole control token
 # then reaches the user as content, so the translated forms are carried here
-# too. zh-Hans is the only non-English locale this project ships documentation
-# for, which is where the list stops.
+# too. Add translated forms only when supported by observed deployments.
 LIVE_GATEWAY_SILENT_MARKERS = frozenset({
     "[SILENT]", "SILENT", "NO_REPLY", "NO REPLY",
     "[静默]", "静默", "[沉默]", "沉默",
@@ -32,12 +31,12 @@ _BRACKETED_SILENCE_MARKERS = tuple(
     sorted(m for m in LIVE_GATEWAY_SILENT_MARKERS if m.startswith("["))
 )
 
-# Single-token misspelled sentinels ("[SBYLENT]", "[SLIENT]" in #147526) are
-# matched fuzzily against these only: ASCII markers (the 2-3 char CJK forms
-# would collide with ordinary words at distance <= 2) of length >= 5. Prose can
-# never fuzzy-match: only whitespace-free candidates are considered.
+# Bracketed near-misses occur on autonomous cron/webhook lanes (#147526).
+# Never fuzzy-match ordinary short answers such as TALENT (two edits from SILENT).
+# The interactive and streaming silence predicates remain exact.
 _FUZZY_SILENCE_BASES = tuple(sorted(
-    m.upper() for m in LIVE_GATEWAY_SILENT_MARKERS if m.isascii() and len(m) >= 5
+    m.upper() for m in LIVE_GATEWAY_SILENT_MARKERS
+    if m.isascii() and m.startswith("[") and len(m) >= 5
 ))
 
 # The persisted user-row kind of a self-injected MessageEvent(internal=True) turn; only these
@@ -100,23 +99,22 @@ def _edit_distance_at_most(a: str, b: str, cap: int = 2) -> bool:
     return prev[-1] <= cap
 
 
+def _is_bracketed_autonomous_silence_typo(response: Any) -> bool:
+    """Only autonomous lanes may suppress a bracketed near-miss sentinel."""
+    return any(
+        c.startswith("[") and c.endswith("]")
+        and any(_edit_distance_at_most(c, marker) for marker in _FUZZY_SILENCE_BASES)
+        for c in _canonical_silence_candidates(response)
+    )
+
+
 def is_intentional_silence_response(response: Any) -> bool:
     """True only when ``response`` is exactly a silence marker.
 
     Prose that merely mentions ``NO_REPLY`` must be delivered normally. A blank
     response is not silence either — that is the empty-response failure path.
-    A whitespace-free token that is a <=2-edit misspelling of an ASCII marker
-    ("[SLIENT]", "[SBYLENT]") counts as the marker (#147526): autonomous lanes
-    type the sentinel by hand and a typo must not leak the control token into
-    the chat as user-visible content.
     """
-    candidates = _canonical_silence_candidates(response)
-    if any(c in LIVE_GATEWAY_SILENT_MARKERS for c in candidates):
-        return True
-    return any(
-        " " not in c and any(_edit_distance_at_most(c, m) for m in _FUZZY_SILENCE_BASES)
-        for c in candidates
-    )
+    return any(c in LIVE_GATEWAY_SILENT_MARKERS for c in _canonical_silence_candidates(response))
 
 
 def _split_trailing_line(text: str) -> tuple[str, str]:
@@ -199,7 +197,8 @@ def is_autonomous_silence_response(response: Any) -> bool:
     # Same de-punctuating forms as the interactive rule, so ``【静默】`` / ``静默。`` cannot
     # be suppressed in chat yet delivered by cron.
     return stripped.upper().startswith(_BRACKETED_SILENCE_MARKERS) or any(
-        is_intentional_silence_response(c) for c in (stripped, lines[0], lines[-1])
+        is_intentional_silence_response(c) or _is_bracketed_autonomous_silence_typo(c)
+        for c in (stripped, lines[0], lines[-1])
     )
 
 

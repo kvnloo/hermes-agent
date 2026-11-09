@@ -43,21 +43,24 @@ def test_autonomous_lane_agrees_with_interactive_lane_on_cjk_punctuation_variant
         assert is_autonomous_silence_response(variant) == is_intentional_silence_response(variant), variant
 
 
-def test_misspelled_sentinel_is_intentional_silence():
-    """#147526: the sentinel is typed by the model, so an autonomous lane occasionally
-    misspells it; a whitespace-free token within <=2 edits of an ASCII marker must suppress
-    delivery, or the control token reaches the chat as the whole message body."""
-    assert is_intentional_silence_response("[SLIENT]")
-    assert is_intentional_silence_response("[SBYLENT]")
-    assert is_intentional_silence_response("SBYLENT")  # brackets dropped, #51438 style
-    assert is_intentional_silence_response(".[SBILENT].")
-    assert is_intentional_silence_response("NOREPL")  # NO_REPLY minus underscore and tail
+def test_misspelled_sentinel_is_autonomous_only():
+    """#147526: cron tolerates bracketed typo tokens; interactive/streaming stays exact."""
+    for marker in ("[SLIENT]", "[SBYLENT]", ".[SBILENT]."):
+        assert is_autonomous_silence_response(marker)
+        assert not is_intentional_silence_response(marker)
     assert is_intentional_silence_response("[silent]")
 
 
+def test_near_miss_matcher_preserves_short_real_answers():
+    """Valid one-token replies must not disappear because of a near-miss control marker."""
+    for answer in ("TALENT", "SILENCE!", "SBYLENT", "NOREPL"):
+        assert not is_intentional_silence_response(answer)
+        assert not is_autonomous_silence_response(answer)
+    assert is_autonomous_silence_response("[SLIENT]")
+
+
 def test_misspelled_sentinel_suppresses_the_cron_lane_too():
-    """The loose autonomous rule inherits the typo tolerance: a misspelled marker on its
-    own closing line still suppresses, matching the exact-marker behaviour."""
+    """Cron suppresses bracketed near-miss sentinels on their own boundary line."""
     assert is_autonomous_silence_response("[SBYLENT]")
     assert is_autonomous_silence_response("[SBYLENT]\nNothing new this tick.")
     assert is_autonomous_silence_response("2 deals filtered\n\n[SLIENT]")
