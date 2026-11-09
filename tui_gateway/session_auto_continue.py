@@ -540,6 +540,12 @@ def _emit_terminal_turn_error(
     payload = {"text": text, "usage": _get_usage(agent) if agent is not None else {}, "status": "error",
                "error": message, "recoverable": True, **({"error_surface": error_surface} if error_surface else {}),
                **({"partial": True} if partial else {}), **({"rendered": rendered} if rendered else {})}
+    # This exception-based sibling bypasses _complete_turn_payload. Pass along the
+    # already-classified error code for clients that read failure_reason.
+    if isinstance(error_surface, dict):
+        failure_code = error_surface.get("code")
+        if isinstance(failure_code, str) and failure_code:
+            payload["failure_reason"] = failure_code
     if retire_marker:
         _retire_turn_marker(session)
     _emit("message.complete", sid, payload)

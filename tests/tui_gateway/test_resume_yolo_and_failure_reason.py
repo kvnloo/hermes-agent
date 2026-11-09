@@ -153,3 +153,32 @@ def test_failure_reason_reaches_payload_for_non_billing_failure(monkeypatch):
     )
     # Non-billing failures must not fabricate a billing descriptor.
     assert "billing" not in payload
+
+
+def test_exception_terminal_frame_forwards_classified_failure_reason(monkeypatch):
+    """An exception never reaches _complete_turn_payload; its terminal frame still needs the code."""
+    import threading
+
+    from tui_gateway import server
+
+    emitted = []
+    monkeypatch.setattr(server, "_fail_inflight_turn", lambda session, error, error_surface=None: session.update(
+        inflight_turn={"error": str(error), "assistant": ""}))
+    monkeypatch.setattr(server, "turn_error_text", lambda message, surface: message)
+    monkeypatch.setattr(server, "render_message", lambda raw, cols: "")
+    monkeypatch.setattr(server, "_get_usage", lambda agent: {})
+    monkeypatch.setattr(server, "_emit", lambda method, sid, payload: emitted.append((method, sid, payload)))
+
+    session = {"history_lock": threading.Lock(), "cols": 80, "agent": None}
+    server._emit_terminal_turn_error(
+        "runtime-sid", session, RuntimeError("unauthorized"),
+        error_surface={"layer": "provider", "code": "auth", "retryable": False},
+        retire_marker=False,
+    )
+
+    assert len(emitted) == 1
+    method, sid, payload = emitted[0]
+    assert (method, sid) == ("message.complete", "runtime-sid")
+    assert payload["status"] == "error"
+    assert payload["failure_reason"] == "auth"
+    assert payload["error_surface"]["code"] == "auth"
