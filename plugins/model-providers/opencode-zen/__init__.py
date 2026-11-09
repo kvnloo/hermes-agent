@@ -38,6 +38,24 @@ def _classify_relay_upstream_failure(error: Any, *, status_code: int | None, mes
     return {"reason": "overloaded"} if relay_failure else None
 
 
+def _classify_go_error_with_relay(error: Any, *, status_code: int | None,
+                                  message: str, body: Any, **kwargs: Any) -> dict[str, Any] | None:
+    """Keep Go's model-scoped 429 recovery alongside the relay 403 fix.
+
+    TurgutKural's #140713 (carried in #148403) keeps an upstream model throttle
+    from benching a healthy Go credential; the relay 403 callback must not
+    replace that pre-existing provider behavior.
+    """
+    relay_verdict = _classify_relay_upstream_failure(
+        error, status_code=status_code, message=message, body=body, **kwargs
+    )
+    if relay_verdict is not None:
+        return relay_verdict
+    if status_code == 429 and "upstream request failed" in message:
+        return {"reason": "upstream_rate_limit", "should_fallback": True}
+    return None
+
+
 def _flat_model_name(model: str | None) -> str:
     """Bare OpenCode model ID, tolerating aggregator prefixes."""
     return (model or "").strip().rsplit("/", 1)[-1].lower()
@@ -142,7 +160,7 @@ opencode_zen = OpenCodeZenProfile(
 opencode_go = OpenCodeGoProfile(
     name="opencode-go", aliases=("opencode_go", "go", "opencode-go-sub"), env_vars=("OPENCODE_GO_API_KEY",),
     base_url="https://opencode.ai/zen/go/v1", default_headers=dict(_ATTRIBUTION_HEADERS),
-    default_aux_model="glm-5", classify_api_error=_classify_relay_upstream_failure,
+    default_aux_model="glm-5", classify_api_error=_classify_go_error_with_relay,
     # The Go relay's upstream validates tool content as a strict string: list-type tool
     # content (native vision embeds) 422s with ``messages.N.tool.content.str Input should
     # be a valid string`` (Console Go, #104731) or 400s ``text is not set`` (MiMo, #47026),

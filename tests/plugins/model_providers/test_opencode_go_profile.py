@@ -347,3 +347,26 @@ def test_relay_403_server_error_is_an_upstream_outage_on_opencode_routes(provide
     verdict = classify_api_error(error, provider=provider, model="deepseek-v4.1-flash")
     assert verdict.reason.value == expected
     assert verdict.should_rotate_credential is (expected == "billing")
+
+
+def test_relay_403_fix_preserves_go_upstream_429():
+    """#117869 must preserve the per-model throttle recovery from #140713."""
+    import httpx
+    import openai
+
+    from agent.error_classifier import FailoverReason, classify_api_error
+
+    body = {"error": {
+        "type": "server_error",
+        "message": "Upstream request failed: Rate limit exceeded. Please try again later.",
+    }}
+    response = httpx.Response(
+        429, json=body,
+        request=httpx.Request("POST", "https://opencode.ai/zen/go/v1/chat/completions"),
+    )
+    error = openai.RateLimitError(f"Error code: 429 - {body}", response=response, body=body)
+    verdict = classify_api_error(error, provider="opencode-go", model="deepseek-v4.1-flash")
+
+    assert verdict.reason is FailoverReason.upstream_rate_limit
+    assert verdict.should_fallback is True
+    assert verdict.should_rotate_credential is False
