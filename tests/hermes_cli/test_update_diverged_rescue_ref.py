@@ -84,6 +84,25 @@ def test_hermes_update_merges_local_commit_and_keeps_a_recovery_ref(
     assert "git reset --hard" not in out
 
 
+def test_divergent_update_refuses_stale_pre_pull_head(diverged_checkout, monkeypatch, capsys):
+    """A checkout changed after the snapshot must not be merged using an obsolete rescue SHA."""
+    checkout, captured_sha = diverged_checkout
+    changed_sha = _commit(checkout, "concurrent-work.txt", "concurrent local work\n")
+    monkeypatch.setattr(update_cmd._m(), "PROJECT_ROOT", checkout)
+    stop_reasons = []
+    monkeypatch.setattr(update_cmd, "_record_stop", stop_reasons.append)
+
+    with pytest.raises(SystemExit) as exc:
+        update_cmd._reconcile_diverged_checkout(GIT, "main", captured_sha)
+
+    assert exc.value.code == 1
+    assert _git(checkout, "rev-parse", "HEAD").stdout.strip() == changed_sha
+    assert (checkout / "concurrent-work.txt").read_text(encoding="utf-8") == "concurrent local work\n"
+    assert _rescue_refs(checkout) == {}
+    assert stop_reasons == ["checkout_move_failed"]
+    assert "HEAD changed after the pre-update snapshot" in capsys.readouterr().out
+
+
 def test_hermes_update_stops_on_merge_conflict_and_retains_recovery_ref(
         diverged_checkout, monkeypatch, capsys):
     """A conflicting same-branch merge aborts without replacing local code."""

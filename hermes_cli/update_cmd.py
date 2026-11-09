@@ -876,6 +876,10 @@ def _reconcile_diverged_checkout(git_cmd, branch: str, pre_pull_sha, *, target_r
         print("✗ Captured pre-update HEAD is invalid; refusing to merge history without a recovery anchor.")
         _record_stop("checkout_move_failed")
         sys.exit(1)
+    if _capture_head_sha(git_cmd, _m().PROJECT_ROOT) != pre_pull_sha:
+        print("✗ HEAD changed after the pre-update snapshot; refusing to merge into a different checkout.")
+        _record_stop("checkout_move_failed")
+        sys.exit(1)
 
     from datetime import datetime as _dt
     kind = "diverged" if has_common_ancestor else "orphan"
