@@ -54,4 +54,24 @@ describe('catalog idle prefetch', () => {
     cancel()
     expect(cancelIdle).toHaveBeenCalledWith(42)
   })
+
+  it('suppresses a queued native prefetch after cleanup without cancelIdleCallback', () => {
+    const callbacks: Array<() => void> = []
+    const requestIdle = vi.fn((callback: () => void) => {
+      callbacks.push(callback)
+      return 42
+    })
+
+    vi.stubGlobal('requestIdleCallback', requestIdle)
+    vi.stubGlobal('cancelIdleCallback', undefined)
+
+    const cancel = prefetchCatalogWhenIdle('plugins')
+
+    expect(requestIdle).toHaveBeenCalledTimes(1)
+    expect(() => cancel()).not.toThrow()
+    expect(callbacks).toHaveLength(1)
+    for (const callback of callbacks) callback()
+    expect(queryClient.prefetchQuery).not.toHaveBeenCalled()
+  })
+
 })

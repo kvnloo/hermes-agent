@@ -309,7 +309,13 @@ export function prefetchCatalogWhenIdle(kind: CatalogKind) {
     return () => clearTimeout(timer)
   }
 
-  const id = requestIdleCallback(prefetch, { timeout: 5_000 })
+  let cancelled = false
+  const id = requestIdleCallback(() => {
+    if (!cancelled) prefetch()
+  }, { timeout: 5_000 })
 
-  return () => (typeof cancelIdleCallback === 'function' ? cancelIdleCallback(id) : undefined)
+  return () => {
+    cancelled = true
+    if (typeof cancelIdleCallback === 'function') cancelIdleCallback(id)
+  }
 }
