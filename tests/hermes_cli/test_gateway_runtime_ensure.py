@@ -314,6 +314,7 @@ def test_native_windows_spawn_never_retries_without_breakaway(tmp_path, monkeypa
     # A normal client: an elevated one is refused before any spawn (client_elevated), and the
     # hosted Windows runners are elevated.
     monkeypatch.setattr(hermes_dir_acl, "process_is_elevated", lambda: False)
+    monkeypatch.setattr(hermes_dir_acl, "process_elevation", lambda: False)
     calls = []
     def denied(argv, **kwargs):
         calls.append(kwargs)

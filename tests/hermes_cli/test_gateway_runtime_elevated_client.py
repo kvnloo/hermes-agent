@@ -51,3 +51,25 @@ def test_an_elevated_client_still_starts_the_registered_task(tmp_path, monkeypat
 
     assert started == [task] and result.reason_code != "client_elevated"
     assert time.monotonic() - before < 10 and elevated == []
+
+
+@pytest.mark.platforms("windows")
+def test_unknown_client_elevation_refuses_unmanaged_spawn(tmp_path, monkeypatch):
+    """An unreadable Windows token must not become a privileged detached gateway."""
+    import hermes_dir_acl
+    from hermes_cli import gateway_runtime_start as start
+    from hermes_cli.gateway_runtime_service import RuntimeStartError
+
+    # An unknown TokenElevation currently becomes False via bool(None).
+    monkeypatch.setattr(hermes_dir_acl, "process_is_elevated", lambda: False)
+    monkeypatch.setattr(hermes_dir_acl, "process_elevation", lambda: None)
+    monkeypatch.setattr(start.subprocess, "Popen",
+                        lambda *args, **kwargs: pytest.fail("unknown token spawned a gateway"))
+
+    home = tmp_path / "profile"
+    with pytest.raises(RuntimeStartError) as error:
+        start.spawn_unmanaged_gateway(home, deadline=time.monotonic() + 5)
+
+    assert error.value.reason == "client_elevation_unverified"
+    assert "administrator" in error.value.detail
+    assert not (home / "logs").exists()

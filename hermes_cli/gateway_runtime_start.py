@@ -46,6 +46,11 @@ CLIENT_ELEVATED_REMEDY = (
     "which locks every normal Hermes window out of it. Start Hermes from a normal (non-administrator) "
     "window, or run hermes gateway install once so the gateway always starts without administrator rights")
 
+# Windows token inspection can fail: an unknown token is not proof it is safe to spawn.
+CLIENT_ELEVATION_UNVERIFIED_REMEDY = (
+    "Hermes cannot verify whether this Windows client has administrator rights, so it did not start "
+    "an unmanaged gateway. Start Hermes from a normal window, or run hermes gateway install once.")
+
 
 def spawn_unmanaged_gateway(profile_home: Path, *, deadline: float, idle_exit: bool = False,
                             force: bool = False) -> subprocess.Popen | GatewayJob:
@@ -61,6 +66,13 @@ def spawn_unmanaged_gateway(profile_home: Path, *, deadline: float, idle_exit: b
     from hermes_dir_acl import process_is_elevated
     if process_is_elevated():
         raise RuntimeStartError("client_elevated", detail=CLIENT_ELEVATED_REMEDY)
+    if sys.platform == "win32":
+        from hermes_dir_acl import process_elevation
+        elevation = process_elevation()
+        if elevation is not False:
+            raise RuntimeStartError(
+                "client_elevated" if elevation else "client_elevation_unverified",
+                detail=CLIENT_ELEVATED_REMEDY if elevation else CLIENT_ELEVATION_UNVERIFIED_REMEDY)
     home = profile_home.resolve()
     root = Path(__file__).resolve().parent.parent
     # A root home is only pinned by an explicit selector: without one the child's
