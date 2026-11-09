@@ -1387,6 +1387,8 @@ host.state.activeSessionId  // ReadableAtom<string | null>
 host.state.awaitingResponse // ReadableAtom<boolean>  true until the first assistant payload
 host.state.busy             // ReadableAtom<boolean>  focused chat is working after a send
 host.state.busyBySession    // ReadableAtom<Record<string, boolean>>  runtime id → mid-turn
+host.state.focusedSurface    // ReadableAtom<'workspace' | 'plugin-workspace'>  visible content kind
+host.state.focusedSurfaceId  // ReadableAtom<string | null>  focused pane id (including plugin-workspace:...)
 host.state.focusedSessionId // ReadableAtom<string | null>  (runtime id of the FOCUSED session — tile-aware; prefer for session.* RPC)
 host.state.focusedSessionProfile // ReadableAtom<string>  (owner profile of the focused chat — prefer over `profile` for per-bot/profile readouts)
 host.state.focusedStoredSessionId // ReadableAtom<string | null>  (durable id — navigation / session-list matching)
@@ -1397,6 +1399,12 @@ host.state.model            // ReadableAtom<string>
 host.state.profile          // ReadableAtom<string>
 host.state.viewport         // ReadableAtom<{ width, height, narrow }>
 ```
+
+A plugin-owned workspace (such as a Bot Mode group room) has no single focused session.
+While it is on screen, the focused runtime/stored session ids and focused usage are
+`null`, and session-scoped status-bar chips show placeholders instead of the
+previous chat's numbers. The room may own several hidden member sessions; this
+is **not** a room-wide usage aggregation API.
 
 `gatewayActivationEpoch` is a named SDK export: `import { gatewayActivationEpoch } from '@hermes/plugin-sdk'`.
 It reads the canonical activation counter, which changes on every active route

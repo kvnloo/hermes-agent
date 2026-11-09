@@ -67,7 +67,7 @@ import {
   $turnStartedAt,
   idsShareLineage
 } from '@/store/session'
-import { $focusedStoredSessionId } from '@/store/session-focus'
+import { $focusedStoredSessionId, $focusedSurface } from '@/store/session-focus'
 import { $focusedRuntimeId, $focusedSessionState, $sessionTiles, isSessionRemote } from '@/store/session-states'
 import { $statusbarHiddenIds } from '@/store/statusbar-prefs'
 import { $subagentsBySession, activeSubagentCount, failedSubagentCount } from '@/store/subagents'
@@ -214,6 +214,7 @@ export function useStatusbarItems({
   // derivation the titlebar title follows): every session-scoped readout
   // below (workspace cwd, context count, timers, busy pulse) tracks it, so
   // clicking into a tile makes the statusbar describe THAT session.
+  const pluginWorkspaceFocused = useStore($focusedSurface) === 'plugin-workspace'
   const focusedStoredSessionId = useStore($focusedStoredSessionId)
   const focusedRuntimeId = useStore($focusedRuntimeId)
   // Whether the FOCUSED session's workspace lives on another machine: a
@@ -244,14 +245,17 @@ export function useStatusbarItems({
   const focusedStateStoredId = useStoreSelector($focusedSessionState, state => state?.storedSessionId?.trim() || null)
 
   const selectedStoredSessionId = useStore($selectedStoredSessionId)
-  const primaryFocused = !focusedStoredSessionId || focusedStoredSessionId === selectedStoredSessionId
+  const primaryFocused =
+    !pluginWorkspaceFocused && (!focusedStoredSessionId || focusedStoredSessionId === selectedStoredSessionId)
 
-  const activeSessionId = primaryFocused ? primaryActiveSessionId : (focusedRuntimeId ?? null)
-  const busy = primaryFocused ? primaryBusy : focusedBusy
+  const activeSessionId = pluginWorkspaceFocused ? null : primaryFocused ? primaryActiveSessionId : (focusedRuntimeId ?? null)
+  const busy = !pluginWorkspaceFocused && (primaryFocused ? primaryBusy : focusedBusy)
 
   // EMPTY_USAGE (module constant) keeps the fallback referentially stable —
   // a fresh `{...}` each render would bust the usage-label memos below.
-  const currentUsage = primaryFocused ? primaryUsage : (focusedUsage ?? EMPTY_USAGE)
+  // A group room is a plugin workspace, not one session: never paint the
+  // previous workspace's tokens or cache hit rate as if they belonged to it.
+  const currentUsage = pluginWorkspaceFocused ? EMPTY_USAGE : primaryFocused ? primaryUsage : (focusedUsage ?? EMPTY_USAGE)
 
   const turnStartedAt = primaryFocused ? primaryTurnStartedAt : focusedTurnStartedAt
 

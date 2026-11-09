@@ -84,7 +84,7 @@ import {
   setTurnStartedAt
 } from './session'
 import { secondaryProfileOwnerForEvent } from './session-event-provenance'
-import { $focusedStoredSessionId, TILE_PANE_PREFIX } from './session-focus'
+import { $focusedStoredSessionId, $focusedSurface, TILE_PANE_PREFIX } from './session-focus'
 import { turnHasReply, withNoReplyNotice } from './session-no-reply'
 import { assertSessionOwnerResolved } from './session-owner-resolution'
 import {
@@ -2914,8 +2914,12 @@ export const $openStoredSessionIds = computed(
 /** Live runtime id of the focused session (a tile's bound runtime, else the
  *  primary's active session). */
 export const $focusedRuntimeId = computed(
-  [$focusedStoredSessionId, $selectedStoredSessionId, $activeSessionId, $sessionTiles],
-  (focused, selected, primaryRuntime, tiles) => {
+  [$focusedSurface, $focusedStoredSessionId, $selectedStoredSessionId, $activeSessionId, $sessionTiles],
+  (surface, focused, selected, primaryRuntime, tiles) => {
+    if (surface === 'plugin-workspace') {
+      return null
+    }
+
     if (focused && focused !== selected) {
       return tiles.find(t => t.storedSessionId === focused)?.runtimeId ?? null
     }

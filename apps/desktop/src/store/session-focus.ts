@@ -6,11 +6,16 @@ import { $workspaceMode } from '@/components/pane-shell/workspace-scope'
 
 import { $selectedStoredSessionId } from './session'
 
-// A chat surface: the primary's workspace or a session tile. Everything else a
-// zone can show — the sessions list, Files, Terminal, a preview tab — is chrome.
+// A content surface: the primary chat, a session tile, or a plugin-owned
+// workspace (including Bot Mode rooms). Sidebars, Files, Terminal and previews
+// remain chrome; focusing them retains the last content surface.
 export const TILE_PANE_PREFIX = 'session-tile:'
+const PLUGIN_WORKSPACE_PANE_PREFIX = 'plugin-workspace:'
 
-const isChatPane = (paneId?: string): boolean => paneId === 'workspace' || Boolean(paneId?.startsWith(TILE_PANE_PREFIX))
+const isChatPane = (paneId?: string): boolean =>
+  paneId === 'workspace' ||
+  Boolean(paneId?.startsWith(TILE_PANE_PREFIX)) ||
+  Boolean(paneId?.startsWith(PLUGIN_WORKSPACE_PANE_PREFIX))
 
 // Chrome can own keyboard focus, but working in it (navigating the sessions
 // list, browsing Files, typing in Terminal) must not replace the chat being
@@ -83,10 +88,20 @@ export const $focusedTreePaneId = computed(
  *  `session-states` ⇄ `preview` a load cycle. The inputs (the layout tree and
  *  the primary selection) are both leaf stores, so every consumer can share one
  *  derivation without dragging session-states in. */
+/** A plugin workspace is a visible surface, but it is not a session and may
+ * contain many independent runtime sessions (for example, a group room). */
+export const $focusedSurface = computed($focusedTreePaneId, (active): 'workspace' | 'plugin-workspace' =>
+  active?.startsWith(PLUGIN_WORKSPACE_PANE_PREFIX) ? 'plugin-workspace' : 'workspace'
+)
+
 export const $focusedSessionIsTile = computed($focusedTreePaneId, active =>
   Boolean(active?.startsWith(TILE_PANE_PREFIX))
 )
 
-export const $focusedStoredSessionId = computed([$focusedTreePaneId, $selectedStoredSessionId], (active, selected) =>
-  active?.startsWith(TILE_PANE_PREFIX) ? active.slice(TILE_PANE_PREFIX.length) : selected
-)
+export const $focusedStoredSessionId = computed([$focusedTreePaneId, $selectedStoredSessionId], (active, selected) => {
+  if (active?.startsWith(PLUGIN_WORKSPACE_PANE_PREFIX)) {
+    return null
+  }
+
+  return active?.startsWith(TILE_PANE_PREFIX) ? active.slice(TILE_PANE_PREFIX.length) : selected
+})

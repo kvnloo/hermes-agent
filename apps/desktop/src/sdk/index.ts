@@ -92,7 +92,7 @@ import {
   setResumeExhaustedSessionId,
   setSessionOwnerHint
 } from '@/store/session'
-import { $focusedStoredSessionId } from '@/store/session-focus'
+import { $focusedStoredSessionId, $focusedSurface, $focusedTreePaneId } from '@/store/session-focus'
 import {
   $focusedRuntimeId,
   $focusedSessionState,
@@ -146,9 +146,10 @@ const focusedTurnFlag = (
   $primary: ReadableAtom<boolean>
 ): ReadableAtom<boolean> =>
   computed(
-    [$focusedStoredSessionId, $selectedStoredSessionId, $focusedSessionState, $primary],
-    (focused, selected, state, primary) =>
-      !focused || focused === selected ? primary : Boolean(state && select(state))
+    [$focusedSurface, $focusedStoredSessionId, $selectedStoredSessionId, $focusedSessionState, $primary],
+    (surface, focused, selected, state, primary) =>
+      surface !== 'plugin-workspace' &&
+      (!focused || focused === selected ? primary : Boolean(state && select(state)))
   )
 
 const $focusedBusy = focusedTurnFlag(state => state.busy, PRIMARY_SESSION_VIEW.$busy)
@@ -575,8 +576,13 @@ export const host = {
     connectionId: readonlyAtom<null | string>($activeConnectionId),
     /** Active workspace cwd ('' when detached). */
     cwd: readonlyAtom<string>($currentCwd),
+    /** The visible content surface. A plugin workspace is not itself a
+     *  session, even when it contains room members with hidden sessions. */
+    focusedSurface: readonlyAtom<'workspace' | 'plugin-workspace'>($focusedSurface),
+    /** The exact focused pane id (e.g. `plugin-workspace:hermes-bots:group:...`). */
+    focusedSurfaceId: readonlyAtom<null | string>($focusedTreePaneId),
     /** Runtime id of the FOCUSED chat session — the interacted tile, else the
-     *  primary. Prefer this over `activeSessionId` for any readout that
+     *  primary. Null on plugin workspaces. Prefer this over `activeSessionId` for any readout that
      *  should follow the user between tiles (context, tokens, cost). */
     focusedSessionId: readonlyAtom<null | string>($focusedRuntimeId),
     /** Connection-qualified owner of the focused chat. Prefer this for any

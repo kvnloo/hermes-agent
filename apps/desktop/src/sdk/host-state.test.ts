@@ -43,6 +43,56 @@ describe('host.state focused-session atoms', () => {
     session.setConnection(null)
   })
 
+  it('does not show the previous workspace usage while a Bot Mode room owns the focus', async () => {
+    const { host, session, states } = await setup()
+    const tree = await import('@/components/pane-shell/tree/store')
+    const model = await import('@/components/pane-shell/tree/model')
+    const { registry } = await import('@/contrib/registry')
+    const roomPane = 'plugin-workspace:hermes-bots:group:team-room'
+    const primaryUsage = { calls: 2, input: 1000, output: 200, total: 1200 }
+
+    for (const id of ['workspace', roomPane]) {
+      registry.register({
+        area: 'panes',
+        data: { placement: 'main' },
+        id,
+        render: () => null,
+        title: id
+      })
+    }
+
+    session.$selectedStoredSessionId.set('workspace-chat')
+    session.$activeSessionId.set('runtime-workspace')
+    states.$sessionStates.set({
+      'runtime-workspace': { storedSessionId: 'workspace-chat', usage: primaryUsage } as never
+    })
+    tree.declareDefaultTree(
+      model.split('row', [
+        model.group(['workspace'], { active: 'workspace', id: 'grp-workspace' }),
+        model.group([roomPane], { active: roomPane, id: 'grp-room' })
+      ])
+    )
+
+    tree.noteActiveTreeGroup('grp-workspace')
+    expect(host.state.focusedUsage.get()).toEqual(primaryUsage)
+
+    tree.noteActiveTreeGroup('grp-room')
+    // Before the fix, the previous workspace's tokens appeared here.
+    expect(host.state.focusedUsage.get()).toBeNull()
+    expect(host.state.focusedSessionId.get()).toBeNull()
+    expect(host.state.focusedStoredSessionId.get()).toBeNull()
+    expect(host.state.focusedSurface.get()).toBe('plugin-workspace')
+    expect(host.state.focusedSurfaceId.get()).toBe(roomPane)
+
+    tree.noteActiveTreeGroup('grp-workspace')
+    expect(host.state.focusedSurface.get()).toBe('workspace')
+    expect(host.state.focusedUsage.get()).toEqual(primaryUsage)
+
+    states.$sessionStates.set({})
+    session.$activeSessionId.set(null)
+    session.$selectedStoredSessionId.set(null)
+  })
+
   it('follows the interacted tile while the primary-only atom stays put', async () => {
     const { host, session, states } = await setup()
     const tree = await import('@/components/pane-shell/tree/store')
