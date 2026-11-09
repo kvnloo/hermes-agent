@@ -60,6 +60,18 @@ export function matchEphemeralTool(toolName: string): EphemeralMatch | null {
   return null
 }
 
+/**
+ * The one-line receipt a card leaves behind, written from the real tool call. The kit's own summaries
+ * narrate its scripted outcomes ("Paid…", "Booked…", "Merged…"); a Hermes card never acts, so they would lie.
+ * A pick is reported as a pick, never as done.
+ */
+export function ephemeralReceipt(match: Pick<EphemeralMatch, 'appName' | 'tool'>, picked?: string): string {
+  const step = match.tool.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()
+  const line = `${match.appName} · ${step}`
+
+  return picked ? `${line} · you picked ${picked}, not sent` : line
+}
+
 /** What a card reported back (the kit's `eui:intent`), reduced to bounded text. */
 export interface EphemeralIntent {
   kind: string

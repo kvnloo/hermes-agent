@@ -9,9 +9,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useI18n } from '@/i18n/context'
 
 import { EphemeralCardFrame } from './card-frame'
-import { ephemeralContextLine, type EphemeralIntent, type EphemeralMessage } from './model'
+import { ephemeralContextLine, type EphemeralIntent, type EphemeralMessage, ephemeralReceipt } from './model'
 import { EphemeralMark } from './receipt'
-import { $ephemeralCards, $openPin, $pinOrigin, type EphemeralCardRecord, pinnedEphemeralCards, unpinEphemeralCard } from './store'
+import { $ephemeralCards, $openPin, $pinOrigin, type EphemeralCardRecord, noteEphemeralSummary, pinnedEphemeralCards, unpinEphemeralCard } from './store'
 
 /**
  * Cards pinned to the input bar. Each collapses to a chip in the composer (app mark + its one-line
@@ -96,6 +96,7 @@ const PinnedChip: FC<{ card: EphemeralCardRecord }> = ({ card }) => {
     } else if (message.type === 'intent' && message.intent.action !== 'pin') {
       setIntent(message.intent)
       setAdded('idle')
+      noteEphemeralSummary(card.id, ephemeralReceipt(card, message.intent.label || message.intent.action))
     }
   }
 

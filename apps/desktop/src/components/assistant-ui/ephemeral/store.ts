@@ -1,6 +1,6 @@
 import { atom } from 'nanostores'
 
-import { EPHEMERAL_PIN_LIMIT, type EphemeralMatch } from './model'
+import { EPHEMERAL_PIN_LIMIT, type EphemeralMatch, ephemeralReceipt } from './model'
 
 // Where each tool call's card is in its life. Keyed by tool call id and kept for the window's
 // lifetime, so a turn that re-mounts (stored-turn bind, history refresh) shows the same phase
@@ -46,14 +46,13 @@ export function noteEphemeralCard(id: string, match: EphemeralMatch, sessionId: 
 
   $ephemeralCards.set({
     ...$ephemeralCards.get(),
-    [id]: { ...match, id, sessionId, phase: live ? 'live' : 'receipt', summary: `${match.appName} · ${match.kind}`, pinnedAt: 0 }
+    [id]: { ...match, id, sessionId, phase: live ? 'live' : 'receipt', summary: ephemeralReceipt(match), pinnedAt: 0 }
   })
 }
 
 export const noteEphemeralSummary = (id: string, summary: string) => summary && update(id, { summary })
 
-export const dissolveEphemeralCard = (id: string, summary?: string) =>
-  update(id, { phase: 'receipt', ...(summary ? { summary } : {}) })
+export const dissolveEphemeralCard = (id: string) => update(id, { phase: 'receipt' })
 
 /** Show a receipt's card again; it stays until the reader pins it or the ring runs out again. */
 export const reopenEphemeralCard = (id: string) => update(id, { phase: 'live' })

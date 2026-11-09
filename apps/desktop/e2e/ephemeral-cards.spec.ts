@@ -90,9 +90,13 @@ test.describe('ephemeral-ui cards from MCP tool calls', () => {
     await page.waitForFunction(text => (document.body.textContent ?? '').includes(text), FINAL, { timeout: 90_000 })
 
     // Unpinned cards dissolve into one-line receipts once their ring runs out.
-    for (const kind of ['inbox', 'ci']) {
+    // The receipt names the real call; it never repeats the kit's scripted outcome ("Paid…", "Booked…").
+    for (const [kind, receipt] of [
+      ['inbox', 'Gmail · search threads'],
+      ['ci', 'GitHub · get check runs']
+    ] as const) {
       await expect.poll(() => phase(page, kind), { timeout: 30_000, message: `${kind} receipt` }).toBe('receipt')
-      await expect(page.locator(`[data-ephemeral-call="${kind}"] [data-ephemeral-receipt]`)).toBeVisible()
+      await expect(page.locator(`[data-ephemeral-call="${kind}"] [data-ephemeral-receipt]`)).toHaveText(new RegExp(receipt))
       await expect(page.locator(`[data-ephemeral-call="${kind}"] iframe`)).toHaveCount(0)
     }
 

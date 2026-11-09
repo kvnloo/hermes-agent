@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n/context'
 
 import { EphemeralCardFrame } from './card-frame'
-import { EPHEMERAL_LIFETIME_MS, ephemeralContextLine, type EphemeralIntent, type EphemeralMatch, type EphemeralMessage } from './model'
+import { EPHEMERAL_LIFETIME_MS, ephemeralContextLine, type EphemeralIntent, type EphemeralMatch, type EphemeralMessage, ephemeralReceipt } from './model'
 import { EphemeralReceipt } from './receipt'
 import {
   $ephemeralCards,
@@ -122,17 +122,14 @@ const LiveCard: FC<{ match: EphemeralMatch; toolCallId: string; lifetimeMs: numb
   }
 
   const onMessage = (message: EphemeralMessage) => {
-    if (message.type === 'ready' || message.type === 'intent') {
-      noteEphemeralSummary(toolCallId, message.summary)
-    }
-
     if (message.type === 'dissolved') {
-      dissolveEphemeralCard(toolCallId, message.summary)
+      dissolveEphemeralCard(toolCallId)
     } else if (message.type === 'intent' && message.intent.action === 'pin') {
       pin()
     } else if (message.type === 'intent' && message.intent.action !== 'unpin') {
       setIntent(message.intent)
       setAdded('idle')
+      noteEphemeralSummary(toolCallId, ephemeralReceipt(match, message.intent.label || message.intent.action))
     }
   }
 

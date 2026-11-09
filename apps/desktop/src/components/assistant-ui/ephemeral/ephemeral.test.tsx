@@ -6,7 +6,7 @@ vi.mock('@/app/chat/composer/focus', () => ({ requestComposerInsertAcked: insert
 
 import { ephemeralCardDocument } from './document'
 import { EPHEMERAL_UI_CONNECTORS, EPHEMERAL_UI_KINDS, EPHEMERAL_UI_REVISION } from './kit-meta.generated'
-import { EPHEMERAL_PIN_LIMIT, ephemeralContextLine, matchEphemeralTool, parseEphemeralMessage } from './model'
+import { EPHEMERAL_PIN_LIMIT, ephemeralContextLine, ephemeralReceipt, matchEphemeralTool, parseEphemeralMessage } from './model'
 import { EphemeralPinnedBar } from './pinned-bar'
 import {
   $ephemeralCards,
@@ -90,8 +90,8 @@ describe('ephemeral-ui tool cards', () => {
     expect($ephemeralCards.get()['call-1'].phase).toBe('live')
     noteEphemeralCard('call-1', gmail, 's1', false) // a remount does not replay or reset it
     expect($ephemeralCards.get()['call-1'].phase).toBe('live')
-    dissolveEphemeralCard('call-1', 'Gmail · 3 unread from Acme')
-    expect($ephemeralCards.get()['call-1']).toMatchObject({ phase: 'receipt', summary: 'Gmail · 3 unread from Acme' })
+    dissolveEphemeralCard('call-1')
+    expect($ephemeralCards.get()['call-1']).toMatchObject({ phase: 'receipt', summary: 'Gmail · search threads' })
     reopenEphemeralCard('call-1')
     pinEphemeralCard('call-1')
     expect(pinnedEphemeralCards($ephemeralCards.get(), 's1').map(card => card.id)).toEqual(['call-1'])
@@ -101,6 +101,13 @@ describe('ephemeral-ui tool cards', () => {
 
     noteEphemeralCard('old', gmail, 's1', false)
     expect($ephemeralCards.get().old.phase).toBe('receipt')
+  })
+
+  it('writes receipts from the real call and never claims an outcome the card did not perform', () => {
+    const slots = matchEphemeralTool('mcp__google_calendar__find_free_slots')!
+
+    expect(ephemeralReceipt(slots)).toBe('Google Calendar · find free slots')
+    expect(ephemeralReceipt(slots, 'Tue 10:00a')).toBe('Google Calendar · find free slots · you picked Tue 10:00a, not sent')
   })
 
   it(`keeps at most ${EPHEMERAL_PIN_LIMIT} pins per session, unpinning the oldest`, () => {
@@ -123,12 +130,12 @@ describe('ephemeral-ui tool cards', () => {
   it('collapses a pinned card to an input-bar chip that opens it in a popup, and inserts only on request', async () => {
     const slots = matchEphemeralTool('mcp__google_calendar__find_free_slots')!
     noteEphemeralCard('cal', slots, 's1', true)
-    dissolveEphemeralCard('cal', 'Google Calendar · 3 open slots Tue')
+    dissolveEphemeralCard('cal')
     reopenEphemeralCard('cal')
     pinEphemeralCard('cal')
 
     const { container } = render(<EphemeralPinnedBar sessionId="s1" />)
-    const chip = screen.getByRole('button', { name: 'Google Calendar: Google Calendar · 3 open slots Tue' })
+    const chip = screen.getByRole('button', { name: 'Google Calendar: Google Calendar · find free slots' })
     expect(container.querySelector('iframe')).toBeNull() // collapsed: no card drawn until opened
 
     fireEvent.click(chip)
