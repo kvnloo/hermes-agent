@@ -176,6 +176,26 @@ def test_cli_assign_refuses_ghost_and_accepts_live(kanban_home):
         assert kb.get_task(conn, tid).assignee == "vera"
 
 
+def test_cli_assign_one_command_env_override(kanban_home, monkeypatch):
+    """A deliberate ghost can be seeded once; later typos still fail closed."""
+    from hermes_cli import kanban as kc
+    from hermes_cli import kanban_db as kb
+    from hermes_cli import kanban_db_connect as kbc
+
+    with kbc.connect_closing() as conn:
+        tid = kb.create_task(conn, title="external worker handoff")
+
+    assert kc.kanban_command(_kanban_args(["assign", tid, "devon"])) == 2
+
+    monkeypatch.setenv("HERMES_KANBAN_ALLOW_ANY_ASSIGNEE", "1")
+    assert kc.kanban_command(_kanban_args(["assign", tid, "devon"])) == 0
+
+    monkeypatch.delenv("HERMES_KANBAN_ALLOW_ANY_ASSIGNEE")
+    assert kc.kanban_command(_kanban_args(["assign", tid, "other-ghost"])) == 2
+    with kbc.connect_closing() as conn:
+        assert kb.get_task(conn, tid).assignee == "devon"
+
+
 def test_cli_assign_still_allows_unassign(kanban_home):
     from hermes_cli import kanban as kc
     from hermes_cli import kanban_db as kb

@@ -15,11 +15,13 @@ Accepted: ``None`` (unassigned), ``default``, live on-disk profiles
 (tombstoned dirs are refused), and ``bot_peers`` entries (cross-host
 workers served by a remote gateway — ``ON DISK no`` locally, by design).
 Operators can force a known-good ghost for seeding/CI by setting
-``kanban.allow_any_assignee: true`` in config.yaml.
+``kanban.allow_any_assignee: true`` in config.yaml or
+``HERMES_KANBAN_ALLOW_ANY_ASSIGNEE=1`` for a single command.
 """
 from __future__ import annotations
 
 import logging
+import os
 from typing import Optional
 
 _log = logging.getLogger(__name__)
@@ -38,6 +40,9 @@ def validate_assignee_exists(assignee: Optional[str]) -> Optional[str]:
 
     canonical = normalize_profile_name(assignee)
     if canonical == "default" or profile_exists(canonical):
+        return canonical
+    # One-command escape hatch for deliberate external/seeded assignees.
+    if os.environ.get("HERMES_KANBAN_ALLOW_ANY_ASSIGNEE") == "1":
         return canonical
     try:
         from hermes_cli.config import load_config_readonly
