@@ -63,3 +63,28 @@ async def test_a_full_run_keeps_its_own_booking_and_stays_listed(owner, monkeypa
 
     assert sid in {s['id'] for s in owner.db.list_sessions_rich()}
     assert owner.db.get_session(sid)['end_reason'] == 'cron_complete'
+
+
+@pytest.mark.asyncio
+async def test_pre_agent_exception_retires_unopened_cron_session(owner, monkeypatch):
+    """An exception before AIAgent exists must not strand its admitted empty session."""
+    job = jobs.create_job(prompt='check inbox', schedule='every 1h', deliver='local')['id']
+    execution_id = executions.create_execution(job, source='test')['id']
+    receipt = await session_cron.operation(
+        owner, 'submit', {'job_id': job, 'request_id': execution_id, 'extra_prompt': None},
+    )
+    sid = receipt['session_id']
+
+    def gate_failure(job, **kwargs):
+        raise RuntimeError('pre-agent gate failed')
+
+    monkeypatch.setattr(scheduler, 'run_job', gate_failure)
+    row = claim_session_input(owner.db, epoch=owner.epoch, session_id=sid)
+    policy = local_adapter_map(owner)[Platform.LOCAL].policies[sid]
+    with pytest.raises(RuntimeError, match='pre-agent gate failed'):
+        await session_cron.execute(owner, SessionRef(owner.profile_id, sid), row, policy)
+
+    session = owner.db.get_session(sid)
+    assert session['ended_at'] is not None
+    assert session['end_reason'] == session_cron.CRON_SKIPPED_END_REASON
+    assert sid not in {s['id'] for s in owner.db.list_sessions_rich()}

@@ -309,7 +309,6 @@ async def execute(authority, ref, row, policy):
         with _profile_runtime_scope(db_path.parent):
             result = await asyncio.to_thread(_run_identified, run_job, job, execution_id,
                                              extra_prompt=data['extra_prompt'], cancel_event=cancel)
-        await _close_unopened_session(authority, ref.session_id)
         # run_job stamps run-side verdicts on ITS job copy (quota hold, unreachable model); the
         # firing scheduler's bookkeeping reads them off its own dict, so they ride the result.
         flags = {key: job[key] for key in RUN_JOB_FLAGS if key in job}
@@ -320,7 +319,10 @@ async def execute(authority, ref, row, policy):
             raise RuntimeError(result[3] or 'cron execution failed')
         return result[2]
     finally:
-        from cron.scheduler_liveness import owner_progress
-        owner_progress.pop(execution_id, None)
-        _execution.reset(token)
-        cancellations.pop(row['admission_id'], None)
+        try:
+            await _close_unopened_session(authority, ref.session_id)
+        finally:
+            from cron.scheduler_liveness import owner_progress
+            owner_progress.pop(execution_id, None)
+            _execution.reset(token)
+            cancellations.pop(row['admission_id'], None)
