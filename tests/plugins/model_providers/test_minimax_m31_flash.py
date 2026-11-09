@@ -4,10 +4,13 @@ import pytest
 
 
 @pytest.mark.parametrize("provider", ["minimax", "minimax-cn", "minimax-oauth"])
-def test_catalog_lists_m31_flash_first(provider):
+def test_m31_flash_picker_entry_preserves_unselected_minimax_default(provider):
+    """Adding a selectable model must not silently change the no-selection fallback."""
+    from hermes_cli.models import get_default_model_for_provider
     from hermes_cli.models_catalog_static import _PROVIDER_MODELS
 
-    assert _PROVIDER_MODELS[provider][:2] == ["MiniMax-M3.1-Flash", "MiniMax-M3"]
+    assert "MiniMax-M3.1-Flash" in _PROVIDER_MODELS[provider]
+    assert get_default_model_for_provider(provider) == "MiniMax-M3"
 
 
 def test_context_length_is_1m():
