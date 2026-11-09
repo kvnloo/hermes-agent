@@ -1337,30 +1337,36 @@ class GatewayBusySessionMixin:
         task.add_done_callback(adapter._background_tasks.discard)
 
     async def _busy_skill_turn(self, event: MessageEvent, source, session_key: str, adapter=None) -> tuple[bool, Optional[str]]:
-        """A mid-run ``/<skill>`` or ``/<bundle>`` under a session authority, rewritten as on the idle
-        path and queued as a turn: ``(True, reply)`` when handled (``reply`` refuses it, or is the
-        turn's reply when admitted inline; with ``adapter``, the busy handler's, it is committed in
-        the background). ``(False, None)`` leaves a plugin, quick or unknown command to the busy path.
-        It keeps the /stop and /new epoch it arrived under across the (slow) rewrite."""
+        """Handle busy skill/bundle commands, and reject truly unknown slash commands as when idle.
+
+        The two busy entry paths meet here before they steer, queue or interrupt a turn.
+        Registered core, quick and plugin commands keep their own dispatch paths.
+        """
         from gateway.session_authorities import active_authority
         from gateway.session_ingress import executing_admission
         from hermes_cli.commands import is_gateway_known_command
         command = event.get_command()
-        if (not command or event.internal or active_authority(self) is None or executing_admission.get()
+        if (not command or event.internal
                 or command in self._hm_quick_commands() or is_gateway_known_command(command)):
             return False, None
-        epoch_key = self._session_key_for_source(source)
-        epoch = self._route_stop_epoch(epoch_key)
+        can_admit_skill = active_authority(self) is not None and not executing_admission.get()
+        epoch = self._route_stop_epoch(self._session_key_for_source(source)) if can_admit_skill else None
 
         def rewrite():  # disk-bound skill scan and load, off the loop (#111091)
             from agent.skill_bundles import resolve_bundle_command_key
             from agent.skill_commands import resolve_skill_command_key
             if resolve_bundle_command_key(command) is None and resolve_skill_command_key(command) is None:
-                return False, None
+                return False, self._hm_unknown_slash_reply(command, source)
+            if not can_admit_skill:
+                return True, None
             return True, self._hm_skill_slash_rewrite(event, source, session_key, command)
         skill, reply = await self._run_in_executor_with_context(rewrite)
-        if not skill or reply is not None:
-            return skill, reply
+        if not skill:
+            return reply is not None, reply
+        if not can_admit_skill:
+            return False, None
+        if reply is not None:
+            return True, reply
         if adapter is None:
             return await self._admit_command_turn(event, source, session_key, epoch)
         if not self._command_turn_admitted(event, session_key):
