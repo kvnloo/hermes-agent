@@ -1597,7 +1597,8 @@ def _named_custom_catalog(normalized: str, force_refresh: bool) -> Optional[list
     from hermes_cli.model_switch import _clean, _entry_configured_key, _scoped_key_env
 
     entry = _get_provider_config_dict(normalized.split(":", 1)[-1])
-    base_url = _clean(entry.get("base_url") or entry.get("url") or entry.get("api"))
+    # Match runtime_provider_custom._entry_url when old and new URL fields coexist.
+    base_url = _clean(entry.get("api") or entry.get("url") or entry.get("base_url"))
     if not base_url:
         return None
     api_key = _entry_configured_key(entry, _scoped_key_env)

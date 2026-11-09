@@ -205,3 +205,36 @@ class TestNamedCustomProviderCatalog:
             ("https://api.acme.test/v1", "sk-acme-secret"),
             ("https://api.beta.test/v1", "sk-beta-secret"),
         ], probes
+
+
+    def test_named_catalog_uses_runtime_api_when_both_url_fields_exist(
+        self, named_custom_home
+    ):
+        """Discovery and inference must use the same endpoint for an upgraded provider entry."""
+        config_path = named_custom_home / "config.yaml"
+        config_path.write_text(
+            config_path.read_text().replace(
+                "    api_key: sk-acme-secret\n",
+                "    api: https://inference.acme.test/v1\n"
+                "    api_key: sk-acme-secret\n",
+            )
+        )
+
+        from hermes_cli.runtime_provider_custom import _get_named_custom_provider
+
+        runtime = _get_named_custom_provider("custom:acme")
+        assert runtime is not None
+        assert runtime["base_url"] == "https://inference.acme.test/v1"
+
+        models = _reload_models_module()
+        probes = []
+
+        def fake_fetch(api_key, base_url, api_mode=None):
+            probes.append((base_url, api_key))
+            return ["inference-chat"] if base_url == runtime["base_url"] else []
+
+        with patch.object(models, "fetch_api_models", fake_fetch):
+            result = models.provider_model_ids("custom:acme", force_refresh=True)
+
+        assert result == ["inference-chat"]
+        assert probes == [("https://inference.acme.test/v1", "sk-acme-secret")]
