@@ -146,14 +146,14 @@ class GatewayBusySessionMixin:
         return pending_event
 
     def _defer_past_exhaustion_reset(
-        self, result: Any, adapter: Any, source: SessionSource, session_key: str, pending_event: MessageEvent,
+        self, result: Any, adapter: Any, source: SessionSource, session_key: str,
+        pending_event: Optional[MessageEvent],
     ) -> None:
         """Leave the post-turn drain to the fresh session after a compression-exhausted turn.
 
-        The outer handler owns the reset: the exact queued event goes back in the head slot so the
-        adapter's post-handler drain starts it on the fresh session (never promoted or prepared on the
-        exhausted one). An accepted leftover /steer was already taken out of the agent's buffer, so it
-        keeps its usual place ahead of that event instead of vanishing.
+        The outer handler owns the reset: a queued event, if present, goes back in the head slot
+        so the adapter's post-handler drain starts it on the fresh session. An accepted leftover
+        /steer takes priority, including when it is the only pending work.
         """
         leftover_steer = (result.get("pending_steer") or "").strip()
         if leftover_steer:
@@ -161,7 +161,8 @@ class GatewayBusySessionMixin:
             # the branch's preservation predicate (preserve_pin=True reuses the session's pins
             # without marking the user as internal).
             steer_prompt, steer_source = self._pinned_channel_inputs(session_key, None, source, preserve_pin=True)
-            self._session_state(session_key).conversation.queued_events.insert(0, pending_event)
+            if pending_event is not None:
+                self._session_state(session_key).conversation.queued_events.insert(0, pending_event)
             pending_event = MessageEvent(text=leftover_steer, source=steer_source, channel_prompt=steer_prompt)
         adapter._pending_messages[session_key] = pending_event
         logger.info("Deferring queued follow-up for session %s until after its compression-exhausted reset", session_key)

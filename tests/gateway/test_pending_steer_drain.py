@@ -138,3 +138,37 @@ async def test_interrupt_then_steer_preserves_channel_inputs(monkeypatch):
         source.parent_chat_id,
     )
     assert runner._queue_depth(KEY, adapter=adapter) == 0
+
+
+@pytest.mark.asyncio
+async def test_compression_exhaustion_rehomes_lone_accepted_steer(monkeypatch):
+    """An accepted /steer with no queued event must survive a context-exhaustion reset."""
+    runner = _make_runner(monkeypatch)
+    runner._draining = False
+    adapter = Adapter(PlatformConfig(enabled=True), Platform.DISCORD)
+    source = _human_source()
+    source.parent_chat_id = "parent-channel"
+    prompt = "Keep the channel policy."
+    runner._pinned_channel_inputs(KEY, prompt, source, preserve_pin=False)
+    assert KEY not in adapter._pending_messages
+
+    result = {
+        "final_response": "context exhausted",
+        "compression_exhausted": True,
+        "pending_steer": "correct the draft",
+    }
+    event, text = await runner._run_agent_drain_pending(result, adapter, source, KEY)
+    assert event is None and text is None
+    retained = adapter._pending_messages[KEY]
+    assert retained.text == "correct the draft"
+    assert retained.channel_prompt == prompt
+    assert retained.source.parent_chat_id == source.parent_chat_id
+    assert not retained.internal
+    # The next session needs the resolved channel prompt, not the old session's pin marker.
+    assert not retained.preserve_prompt_pins
+
+    # The outer handler resets the session, after which the normal drain claims this work.
+    next_event, next_text = await runner._run_agent_drain_pending(
+        {"final_response": "fresh"}, adapter, source, KEY)
+    assert next_event is retained and next_text == "correct the draft"
+    assert runner._queue_depth(KEY, adapter=adapter) == 0

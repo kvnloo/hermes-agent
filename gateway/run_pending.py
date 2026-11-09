@@ -77,10 +77,12 @@ class GatewayPendingTurnMixin:
         if not result or not adapter or not session_key:
             return None, None
         pending_event = _dequeue_pending_event(adapter, session_key)
-        if result.get("compression_exhausted") and pending_event is not None:
-            # The outer handler owns the fresh-session reset: hand the queued event back to the head
-            # slot so its post-handler drain starts it there, never on the exhausted session.
-            self._defer_past_exhaustion_reset(result, adapter, source, session_key, pending_event)
+        if result.get("compression_exhausted"):
+            # A lone accepted /steer must also survive for the fresh session: without a
+            # queued event, this path previously skipped deferral and discarded it.
+            if pending_event is not None or leftover_steer:
+                self._defer_past_exhaustion_reset(
+                    result, adapter, source, session_key, pending_event)
             return None, None
         pending_event = self._promote_queued_event(session_key, adapter, pending_event)
         pending = None
