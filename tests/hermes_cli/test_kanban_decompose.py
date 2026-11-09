@@ -250,3 +250,35 @@ def test_decompose_returns_false_when_task_not_triage(kanban_home):
     assert outcome.ok is False
 
 
+def test_retriaged_decomposed_root_is_not_decomposed_twice(kanban_home):
+    """A durable decomposition survives re-triage without another model call or child graph."""
+    with kbc.connect() as conn:
+        root_id = kb.create_task(conn, title="already split", triage=True)
+        fresh_id = kb.create_task(conn, title="new triage task", triage=True)
+        child_ids = decomp.decompose_triage_task(
+            conn,
+            root_id,
+            root_assignee="orchestrator",
+            children=[{"title": "build", "body": "deliver the work",
+                       "assignee": "builder", "parents": []}],
+            author="decomposer",
+            auto_promote=False,
+        )
+        assert child_ids and len(child_ids) == 1
+        # A human or recovery action can re-enter triage after the graph was committed.
+        conn.execute("UPDATE tasks SET status = 'triage' WHERE id = ?", (root_id,))
+
+    with patch.object(decomp, "_call_aux", side_effect=AssertionError(
+        "a previously decomposed root must not call the auxiliary model"
+    )) as call_aux:
+        outcome = decomp.decompose_task(root_id, author="decomposer")
+
+    assert outcome.ok is False
+    assert outcome.reason == "task already decomposed"
+    call_aux.assert_not_called()
+    assert set(decomp.list_triage_ids()) == {fresh_id}
+    with kbc.connect() as conn:
+        assert kb.get_task(conn, root_id).status == "triage"
+        assert kb.get_task(conn, child_ids[0]) is not None
+        assert len([event for event in kb.list_events(conn, root_id)
+                    if event.kind == "decomposed"]) == 1
