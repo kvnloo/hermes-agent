@@ -126,6 +126,15 @@ def reconcile_profile_gateways(
     fold = fold_named_slot_intent(
         default_prior_state, ((name, prior) for name, _dir, prior in named if name not in standalone))
     folded, default_should_start = list(fold.folded), fold.root_should_start
+    # An explicitly unsupervised foreground gateway owns the root slot. Starting the s6
+    # copy as well would make both processes poll the same Telegram token (issue #152152).
+    argv = tuple(container_argv) if container_argv is not None else _read_container_argv()
+    command = _strip_container_argv_prefix(argv)
+    if command[:2] == ["gateway", "run"] and (
+        "--no-supervise" in command
+        or os.environ.get("HERMES_GATEWAY_NO_SUPERVISE", "").lower() in ("1", "true", "yes")
+    ):
+        default_should_start = False
     if folded and default_prior_state not in _AUTOSTART_STATES:
         log.warning("%s", boot_notice(folded))
     if not dry_run:
