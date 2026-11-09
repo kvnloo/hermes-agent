@@ -321,6 +321,10 @@ class PinningConformance:
         for bind in _foreign_pins(backend).values():
             with bind():
                 _refused(lambda: ALL_READS[operation](world.storage, world))
+    @pytest.mark.parametrize("operation", sorted(ALL_READS))
+    def test_every_read_succeeds_for_its_own_agent(self, backend, operation):
+        """A working backend must serve every read under the agent's own pin."""
+        world = make_world(backend)
         with backend.bind("a"):
             ALL_READS[operation](world.storage, world)
 

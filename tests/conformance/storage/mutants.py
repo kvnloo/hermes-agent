@@ -279,8 +279,22 @@ MUTANTS = {
 }
 
 
+
+def _crash_on_admission_find(monkeypatch):
+    """Probe: a valid own-agent admission lookup crashes, not an isolation failure."""
+    from hermes_state_port_local import LocalTurnAdmission
+
+    def broken_find(self, *, principal_id, session_id, request_id):
+        raise TypeError("admission.find is broken even for its own agent")
+
+    monkeypatch.setattr(LocalTurnAdmission, "find", broken_find)
+
+
+CONTROL_PROBES = {"crash_on_admission_find": _crash_on_admission_find}
+
+
 def apply_mutant(monkeypatch):
     import os
     name = os.environ.get("HERMES_STORAGE_MUTANT")
     if name:
-        MUTANTS[name](monkeypatch)
+        (MUTANTS | CONTROL_PROBES)[name](monkeypatch)

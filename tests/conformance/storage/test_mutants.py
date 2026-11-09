@@ -14,13 +14,13 @@ from pathlib import Path
 
 import pytest
 
-from tests.conformance.storage.mutants import MUTANTS
+from tests.conformance.storage.mutants import CONTROL_PROBES, MUTANTS
 
 ROOT = Path(__file__).resolve().parents[3]
 SUITE = ["tests/conformance/storage/test_local.py", "tests/conformance/storage/test_local_pinning.py"]
 #: The mutant's own-agent control: every operation the agent itself may make, and the world setup.
 CONTROL = ["tests/conformance/storage/test_local_pinning.py", "-k",
-           "test_every_write_succeeds_for_its_own_agent"]
+           "test_every_write_succeeds_for_its_own_agent or test_every_read_succeeds_for_its_own_agent"]
 
 
 def _spawn(name, kind, root, *pytest_args):
@@ -63,3 +63,13 @@ def test_the_mutant_survives_its_own_agent_setup_and_the_suite_rejects_it(outcom
         f"has not been shown to reject it for the right reason:\n{output[-2000:]}")
     code, output = outcomes[(mutant, "suite")]
     assert code == 1 and " failed" in output, f"the suite passed broken backend {mutant!r}:\n{output[-2000:]}"
+
+
+@pytest.mark.parametrize("probe", sorted(CONTROL_PROBES))
+def test_a_crashing_own_agent_read_is_not_counted_as_a_mutant_kill(tmp_path, probe):
+    """A backend that cannot read its own admission must fail the positive control."""
+    proc = _spawn(probe, "control", tmp_path, *CONTROL)
+    output, _ = proc.communicate(timeout=240)
+    expected = "test_every_read_succeeds_for_its_own_agent[admission.find]"
+    assert proc.returncode == 1 and expected in output, (
+        f"the control did not detect the backend's broken own-agent read:\n{output[-2000:]}")
