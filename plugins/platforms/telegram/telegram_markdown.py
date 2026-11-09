@@ -126,8 +126,11 @@ def _crosses_quote_edge(text: str, start: int, end: int) -> bool:
     """True when a newline in text[start:end] borders a quote line: Telegram ends a blockquote at a
     newline into non-quote text, an entity still open there is rejected, and an entity spanning
     quote lines would swallow the next line's > marker."""
+    span = text[start:end]
+    if "\n" not in span:
+        return False  # A one-line link cannot cross a quote edge; avoid a prefix-wide rfind.
     line_start = text.rfind("\n", 0, start) + 1
-    for m in re.finditer("\n", text[start:end]):
+    for m in re.finditer("\n", span):
         pos = start + m.start()
         if _bordering_quote_newline(text, pos, line_start):
             return True

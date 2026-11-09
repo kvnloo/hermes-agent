@@ -160,6 +160,24 @@ def test_emphasis_pairing_does_not_rescan_a_distant_opener(adapter):
     assert mdv2_error(out) is None
 
 
+def test_one_line_link_quote_edge_does_not_scan_a_long_prefix():
+    """Regression for #151723: each short link must not scan the preceding long line.
+
+    The carrier's unconditional rfind searched from the link back to the start of
+    the message even when the link contains no newline. Many links on one line
+    therefore reintroduce quadratic work.
+    """
+
+    class GuardedText(str):
+        def rfind(self, *_args, **_kwargs):
+            raise AssertionError("one-line links must not scan the message prefix")
+
+    prefix = "a" * 32000
+    link = "[docs](https://example.com)"
+    message = GuardedText(prefix + link)
+    assert telegram_markdown._crosses_quote_edge(message, len(prefix), len(message)) is False
+
+
 @pytest.mark.parametrize(
     "markdown",
     [
