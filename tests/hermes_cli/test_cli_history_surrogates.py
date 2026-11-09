@@ -38,3 +38,34 @@ def test_plain_text_encoding_unchanged():
 
 def test_missing_file_loads_empty(tmp_path):
     assert list(SurrogateSafeFileHistory(str(tmp_path / "none")).load_history_strings()) == []
+
+def test_cli_import_under_mocked_history_keeps_surrogate_safe_io(tmp_path):
+    """CLI import under stub history must not bind a fake history base.
+
+    CLI initialization tests replace prompt_toolkit.history.FileHistory while
+    importing the TUI. Runtime history still needs the real FileHistory.
+    """
+    import subprocess
+    import sys
+
+    script = r"""
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+import prompt_toolkit.history as pt_history
+import sys
+
+with patch.object(pt_history, "FileHistory", MagicMock()):
+    import hermes_cli.cli_tui_mixin
+
+from hermes_cli.cli_history import SurrogateSafeFileHistory
+path = Path(sys.argv[1])
+text = "GE" + chr(0xDC94) + "FT"
+SurrogateSafeFileHistory(str(path)).append_string(text)
+assert b"+GE\x94FT\n" in path.read_bytes()
+assert list(SurrogateSafeFileHistory(str(path)).load_history_strings()) == [text]
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script, str(tmp_path / "history")],
+        capture_output=True, text=True, check=False, timeout=30,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr

@@ -20,7 +20,6 @@ from agent.interrupt_compat import request_hard_interrupt
 from hermes_cli.commands_completion import SlashCommandAutoSuggest, cli_slash_completer
 from pathlib import Path
 from prompt_toolkit.filters import Condition
-from hermes_cli.cli_history import SurrogateSafeFileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import (
     ConditionalContainer,
@@ -2194,6 +2193,9 @@ class CLITuiMixin:
             return cli_ref._get_tui_prompt_fragments()
 
         _completer = cli_slash_completer(self)
+        # Construct this subclass only with the real prompt_toolkit history.
+        # CLI import tests temporarily replace FileHistory with a mock.
+        from hermes_cli.cli_history import SurrogateSafeFileHistory
         input_area = TextArea(
             height=Dimension(min=1, max=8, preferred=1),
             prompt=get_prompt,
