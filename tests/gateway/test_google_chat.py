@@ -792,6 +792,61 @@ class TestSend:
         assert adapter._typing_messages["spaces/S"] == _TYPING_CONSUMED_SENTINEL
 
 
+
+    @pytest.mark.asyncio
+    async def test_separate_typing_card_creates_notifying_answer_in_same_thread(self, adapter):
+        """#151734: a PATCH does not notify or mark Google Chat unread."""
+        adapter.config.extra["typing_card"] = "separate"
+        adapter._typing_messages["spaces/S"] = "spaces/S/messages/THINK"
+        adapter._create_message = AsyncMock(
+            return_value=type("R", (), {"success": True, "message_id": "spaces/S/messages/ANSWER"})()
+        )
+        adapter._patch_message = AsyncMock()
+        result = await adapter.send("spaces/S", "hola", metadata={"thread_id": "spaces/S/threads/T"})
+        assert result.message_id == "spaces/S/messages/ANSWER"
+        adapter._create_message.assert_awaited_once()
+        assert adapter._create_message.await_args.args[1] == {
+            "text": "hola", "thread": {"name": "spaces/S/threads/T"}
+        }
+        adapter._patch_message.assert_awaited_once_with("spaces/S/messages/THINK", {"text": "✓"})
+        assert adapter._typing_messages["spaces/S"] == "<consumed>"
+
+    @pytest.mark.asyncio
+    async def test_separate_create_failure_keeps_card_for_completion(self, adapter):
+        adapter.config.extra["typing_card"] = "separate"
+        adapter._typing_messages["spaces/S"] = "spaces/S/messages/THINK"
+        adapter._create_message = AsyncMock(side_effect=RuntimeError("create failed"))
+        adapter._patch_message = AsyncMock()
+        with pytest.raises(RuntimeError, match="create failed"):
+            await adapter.send("spaces/S", "hola")
+        assert adapter._typing_messages["spaces/S"] == "spaces/S/messages/THINK"
+        adapter._patch_message.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_separate_mode_image_posts_new_message(self, adapter):
+        adapter.config.extra["typing_card"] = "separate"
+        adapter._typing_messages["spaces/S"] = "spaces/S/messages/THINK"
+        adapter._create_message = AsyncMock(
+            return_value=type("R", (), {"success": True, "message_id": "spaces/S/messages/IMAGE"})()
+        )
+        adapter._patch_message = AsyncMock()
+        await adapter.send_image("spaces/S", "https://example.com/image.png", caption="image")
+        adapter._create_message.assert_awaited_once()
+        assert adapter._create_message.await_args.args[1]["text"].startswith("image\n")
+        adapter._patch_message.assert_awaited_once_with("spaces/S/messages/THINK", {"text": "✓"})
+
+    @pytest.mark.asyncio
+    async def test_separate_mode_cron_does_not_retire_interactive_card(self, adapter):
+        adapter.config.extra["typing_card"] = "separate"
+        adapter._typing_messages["spaces/S"] = "spaces/S/messages/INTERACTIVE"
+        adapter._create_message = AsyncMock(
+            return_value=type("R", (), {"success": True, "message_id": "spaces/S/messages/CRON"})()
+        )
+        adapter._patch_message = AsyncMock()
+        await adapter.send("spaces/S", "cron update", metadata={"job_id": "cron-1"})
+        assert adapter._typing_messages["spaces/S"] == "spaces/S/messages/INTERACTIVE"
+        adapter._patch_message.assert_not_awaited()
+
     @pytest.mark.asyncio
     async def test_send_clarify_posts_choice_card(self, adapter):
         adapter._create_message = AsyncMock(

@@ -218,10 +218,12 @@ platforms:
     typing_status_text: "is pouncing… 🐾"
 ```
 
-Unlike Slack's ephemeral status line, this is a **real posted message** that
-gets edited in place with the response — so whatever you set here briefly
-appears in the chat as a normal message. Set `typing_indicator: false` to
-disable the marker entirely.
+Unlike Slack's ephemeral status line, this is a **real posted message**. By
+default the response edits the marker in place, which does not trigger a new
+Google Chat notification or unread badge. To notify when the answer arrives,
+set `platforms.google_chat.typing_card: separate`: the answer is posted as a
+new message in the same thread and the old marker becomes `✓` without being
+deleted. Set `typing_indicator: false` to disable the marker entirely.
 
 ---
 
