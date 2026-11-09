@@ -154,6 +154,33 @@ def test_gateway_uses_the_receiving_profile_bot_acl(monkeypatch):
     assert runner._is_user_authorized(denied) is False
 
 
+
+def test_null_bot_acl_uses_env_at_ingress_and_gateway(monkeypatch):
+    """A null profile override must not discard the exact environment bot ACL."""
+    monkeypatch.setenv("SLACK_ALLOWED_BOTS", "B_TRUSTED")
+    adapter = SlackAdapter(
+        PlatformConfig(
+            enabled=True,
+            token="***",
+            extra={"allow_bots": "all", "allowed_bots": None},
+        )
+    )
+    runner = object.__new__(GatewayRunner)
+    runner.pairing_store = SimpleNamespace(is_approved=lambda *_args: False)
+    runner.adapters = {Platform.SLACK: adapter}
+    runner._profile_adapters = {}
+
+    trusted = adapter.build_source(
+        chat_id="C1", chat_type="group", user_id="B_TRUSTED", is_bot=True
+    )
+    other = adapter.build_source(
+        chat_id="C1", chat_type="group", user_id="B_OTHER", is_bot=True
+    )
+    assert adapter._slack_allowed_bot_identities() == {"B_TRUSTED"}
+    assert runner._is_user_authorized(trusted) is True
+    assert runner._is_user_authorized(other) is False
+
+
 @pytest.mark.asyncio
 async def test_actual_config_admits_looper_and_rejects_spoof_before_prefetch(adapter):
     adapter.config.extra.update({

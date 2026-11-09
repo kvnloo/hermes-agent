@@ -546,7 +546,10 @@ class GatewayAuthorizationMixin:
         if mode not in {"mentions", "all"}:
             return False
         identity = str(source.user_id or "").strip()
-        allowed = _coerce_allow_set(extra.get("allowed_bots", _auth_env("SLACK_ALLOWED_BOTS")))
+        raw_allowed = extra.get("allowed_bots")
+        if raw_allowed is None:
+            raw_allowed = _auth_env("SLACK_ALLOWED_BOTS")
+        allowed = _coerce_allow_set(raw_allowed)
         if not identity:
             # Exact ACLs cannot admit an identity-less sender. Preserve the
             # legacy fallback only without an ACL or with an explicit wildcard.
