@@ -580,8 +580,12 @@ def enforce_turn_budget(tool_messages: list[dict], env=None,
                 tool_messages[idx]["content"] = parts
                 logger.info("Budget enforcement: persisted a text part of tool result %s (%d chars)", tool_use_id, saved)
             continue
+        # Layer 3 has the original name on the tool message. Preserve it so a
+        # skill_view result cannot become a generic budget spill (#151283).
+        tool_name = (tool_messages[idx].get("tool_name")
+                     or tool_messages[idx].get("name") or _BUDGET_TOOL_NAME)
         replacement = maybe_persist_tool_result(
-            content=content, tool_name=_BUDGET_TOOL_NAME, tool_use_id=tool_use_id,
+            content=content, tool_name=tool_name, tool_use_id=tool_use_id,
             env=env, config=config, threshold=0)
         if replacement != content:
             total_size += len(replacement) - size

@@ -419,6 +419,28 @@ class TestEnforceTurnBudget:
         )
         assert persisted_count >= 2  # Need to shed at least ~52K
 
+    def test_skill_view_budget_spill_warns_and_archives_pageable_rules(self):
+        """#151283: aggregate-only spilling must preserve the skill's rule boundary."""
+        skill_body = ("# Deployment\n" + "Check preflight.\n" * 400
+                      + "## Prohibitions\nNever deploy without approval.\n")
+        payload = json.dumps({
+            "success": True, "name": "deployment", "content": skill_body, "linked_files": [],
+        })
+        assert len(payload) < 100_000  # Under the ordinary per-result cap.
+        msgs = [{
+            "role": "tool", "name": "skill_view", "tool_name": "skill_view",
+            "tool_call_id": "skill_l3", "content": payload,
+        }]
+        enforce_turn_budget(msgs, env=None, config=BudgetConfig(turn_budget=1_000))
+        notice = msgs[0]["content"]
+        assert "SKILL RULES ARE INCOMPLETE" in notice
+        assert "DO NOT EXECUTE THIS SKILL YET" in notice
+        assert "## Prohibitions" in notice
+        path = get_spillover_dir() / "skill_l3.txt"
+        assert extract_persisted_path(notice) == str(path)
+        archive = path.read_text(encoding="utf-8")
+        assert "## Prohibitions\nNever deploy without approval." in archive
+
     def test_empty_messages(self):
         result = enforce_turn_budget([], env=None, config=BudgetConfig(turn_budget=200_000))
         assert result == []
