@@ -113,18 +113,18 @@ def pin_event_payload(store, key: str, event, *, buffer_id=None) -> dict:
                 raise FileNotFoundError(f"durable relay attachment unavailable: {raw}")
             continue
         directory.mkdir(parents=True, exist_ok=True)
-        target = directory / f"{index}{source.suffix}"
-        # Admission claims ensure a single writer; preserve a pre-existing committed pin.
-        if not target.exists():
-            temporary = directory / f".{index}-{uuid.uuid4().hex}.tmp"
-            try:
-                with source.open("rb") as reader, temporary.open("xb") as writer:
-                    shutil.copyfileobj(reader, writer)
-                    writer.flush()
-                    os.fsync(writer.fileno())
-                os.replace(temporary, target)
-            finally:
-                temporary.unlink(missing_ok=True)
+        # A failed DB commit can leave a previous pin for this key. Each attempt
+        # needs its own immutable copy; never overwrite a concurrently committed pin.
+        target = directory / f"{index}-{uuid.uuid4().hex}{source.suffix}"
+        temporary = directory / f".{index}-{uuid.uuid4().hex}.tmp"
+        try:
+            with source.open("rb") as reader, temporary.open("xb") as writer:
+                shutil.copyfileobj(reader, writer)
+                writer.flush()
+                os.fsync(writer.fileno())
+            os.replace(temporary, target)
+        finally:
+            temporary.unlink(missing_ok=True)
         urls[index] = str(target)
     if directory.exists():
         _fsync_directory(directory)

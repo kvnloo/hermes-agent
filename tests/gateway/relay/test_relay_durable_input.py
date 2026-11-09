@@ -62,6 +62,47 @@ def test_exact_snapshot_preserves_owner_and_attachment_custody(tmp_path, shape):
 
 
 @pytest.mark.asyncio
+async def test_failed_custody_write_retry_pins_current_attachment(tmp_path, monkeypatch):
+    """A pre-commit outage must not make a retry commit an older attachment."""
+    store = SessionStore(tmp_path / "sessions", _config())
+    adapter, recorder = _live_adapter(store)
+    key = "passthrough_buffer:media-retry"
+    first_file = tmp_path / "first.png"
+    second_file = tmp_path / "second.png"
+    first_file.write_bytes(b"first-photo")
+    second_file.write_bytes(b"second-photo")
+    first = _text("media-action", text="first request")
+    second = _text("media-action", text="second request")
+    for event, source in ((first, first_file), (second, second_file)):
+        event.media_urls = [str(source)]
+        event.media_types = ["image/png"]
+
+    try:
+        with monkeypatch.context() as outage:
+            outage.setattr(store, "stage_relay_delivery", lambda *_: False)
+            assert not await adapter._stage_durable_delivery(first, key, "media-retry")
+        assert store.get_relay_delivery_pending(key) is None
+
+        assert await adapter._stage_durable_delivery(second, key, "media-retry")
+        pending = store.get_relay_delivery_pending(key)
+        assert pending is not None
+        assert pending["event"]["text"] == "second request"
+        assert Path(pending["event"]["media_urls"][0]).read_bytes() == b"second-photo"
+        assert Path(second.media_urls[0]).read_bytes() == b"second-photo"
+
+        # Once committed, a changed retransmission must keep the first durable snapshot.
+        third = _text("media-action", text="changed again")
+        third.media_urls = [str(first_file)]
+        third.media_types = ["image/png"]
+        assert await adapter._stage_durable_delivery(third, key, "media-retry")
+        assert third.text == "second request"
+        assert Path(third.media_urls[0]).read_bytes() == b"second-photo"
+    finally:
+        await _release_all(adapter, recorder)
+        store.close_all_db_handles()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("scenario", ["ack-gated-control", "restart", "replacement", "refused", "receipt-outage"])
 async def test_durable_inbox_recovery_and_ack_gated_progress(tmp_path, monkeypatch, scenario):
     store = SessionStore(tmp_path / "sessions", _config())
