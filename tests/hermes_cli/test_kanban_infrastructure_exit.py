@@ -428,3 +428,34 @@ def test_the_free_stall_streak_is_bounded(board):
     assert seen[-1][0] == 14, seen
     assert [n for n, _, free in seen if not free] == [7, 14], seen
     assert seen[5][1] == 0 and seen[6][1] == 1 and seen[12][1] == 1 and seen[13][1] == 2, seen
+
+
+def test_simultaneous_exhausted_owner_stalls_do_not_become_sticky(board):
+    """Three cards on one stalled host each spend one failure at the seventh exit.
+
+    The per-card bound must not become a *sticky systemic card* breaker just
+    because an owner outage takes down several submitters in the same tick.
+    """
+    conn = _connect(board)
+    crashes = []
+    for i in range(3):
+        task = _claimed(board, title=f"same-owner-stall-{i}")
+        pid = 10_000 + i
+        dead = kbd._classify_dead_worker_exit(
+            pid, task.claim_lock, KANBAN_INFRASTRUCTURE_EXIT_CODE,
+            infrastructure_streak=kbd._INFRASTRUCTURE_STALL_LIMIT,
+        )
+        assert dead.event_payload["infrastructure_exhausted"] is True
+        crashes.append((task.id, pid, task.claim_lock, dead))
+
+    assert kbd._account_crashes(conn, crashes) == []
+    for task_id, _, _, _ in crashes:
+        row = conn.execute(
+            "SELECT status, consecutive_failures FROM tasks WHERE id = ?", (task_id,)
+        ).fetchone()
+        assert row["status"] == "running"  # accounting alone does not release claims
+        assert row["consecutive_failures"] == 1
+        assert not conn.execute(
+            "SELECT 1 FROM task_events WHERE task_id = ? AND kind = 'gave_up'", (task_id,)
+        ).fetchone()
+    conn.close()

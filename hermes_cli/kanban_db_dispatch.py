@@ -1292,6 +1292,10 @@ def _account_crashes(conn: sqlite3.Connection, crash_details: list) -> list[str]
     auto_blocked: list[str] = []
     fp_counts: dict[str, int] = {}
     for _, _, _, dead in crash_details:
+        # An exhausted owner stall spends one failure; its HOST fingerprint is not
+        # evidence of a systemic defect in every card sharing that owner.
+        if dead.kind == "infrastructure_failure":
+            continue
         fp = _error_fingerprint(dead.error_text)
         fp_counts[fp] = fp_counts.get(fp, 0) + 1
     for tid, pid, claimer, dead in crash_details:
@@ -1341,7 +1345,12 @@ def _account_crashes(conn: sqlite3.Connection, crash_details: list) -> list[str]
                 event_payload_extra={"pid": pid, "claimer": claimer, "terminal_provider": True},
             )
         else:
-            is_systemic = fp_counts.get(_error_fingerprint(error_text), 0) >= 3
+            # Even when the free-stall bound is exhausted, a host error must
+            # not become a sticky card-level breaker trip merely due to fleet size.
+            is_systemic = (
+                dead.kind != "infrastructure_failure"
+                and fp_counts.get(_error_fingerprint(error_text), 0) >= 3
+            )
             extra = {"pid": pid, "claimer": claimer}
             if is_systemic:
                 # Trips at 1, below any ``failure_limit``: hold it for an operator.
