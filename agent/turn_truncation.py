@@ -751,9 +751,30 @@ def handle_content_policy_refusal(
     stop_thinking_spinner(agent, thinking_spinner)
 
     _refusal_log = _refusal_text[:500] + "..." if len(_refusal_text) > 500 else _refusal_text
-    # native_stop_reason tells an Anthropic classifier refusal (``refusal``) from a Bedrock guardrail
-    # block (``end_turn``); both arrive here as content_filter. Logged before the fallback try so a
-    # refusal the fallback answers still leaves its cause in agent.log (#124874).
+    _refused_model, _refused_provider = agent.model, agent.provider
+    if agent._has_pending_fallback():
+        agent._buffer_diagnostic_status("⚠️ Model declined to respond (safety refusal) — trying fallback...")
+    # HTTP-200 refusals share the same content-policy reason as HTTP-400 refusals; this
+    # does not arm a rate-limit cooldown (#124874).
+    if agent._try_activate_fallback(reason=FailoverReason.content_policy_blocked):
+        # A refusal body and stop_details.explanation can echo private prompt text.
+        # Log the classifier metadata, not the blocked content, on a recovered turn.
+        _stop_meta = (
+            {key: _stop_details[key] for key in ("type", "category") if key in _stop_details}
+            if isinstance(_stop_details, dict) else {}
+        )
+        if isinstance(_stop_details, dict) and "explanation" in _stop_details:
+            _stop_meta["explanation_len"] = len(str(_stop_details["explanation"] or ""))
+        logger.warning(
+            "%sModel declined to respond (finish_reason=content_filter). model=%s provider=%s "
+            "native_stop_reason=%s stop_details=%s",
+            agent.log_prefix, _refused_model, _refused_provider,
+            getattr(response, "stop_reason", None) or "n/a", str(_stop_meta or "n/a")[:500],
+        )
+        active_system_prompt = _arm_fallback_restart(agent, api_messages, active_system_prompt, _retry)
+        return RefusalVerdict("break", None, active_system_prompt)
+
+    # No fallback succeeded: retain the existing capped terminal-path detail.
     logger.warning(
         "%sModel declined to respond (finish_reason=content_filter). model=%s provider=%s "
         "native_stop_reason=%s stop_details=%s refusal=%s",
@@ -761,15 +782,6 @@ def handle_content_policy_refusal(
         getattr(response, "stop_reason", None) or "n/a", str(_stop_details or "n/a")[:500],
         _refusal_log or "(no text)",
     )
-    if agent._has_pending_fallback():
-        agent._buffer_diagnostic_status("⚠️ Model declined to respond (safety refusal) — trying fallback...")
-    # Name the cause: without a reason the switch notice reads "unavailable (provider failure)",
-    # while the same refusal raised as an HTTP 400 (DeepSeek's "Content Exists Risk") says
-    # "content policy blocked the request" (#124874). Not a rate-limit reason, so no cooldown is armed.
-    if agent._try_activate_fallback(reason=FailoverReason.content_policy_blocked):
-        active_system_prompt = _arm_fallback_restart(agent, api_messages, active_system_prompt, _retry)
-        return RefusalVerdict("break", None, active_system_prompt)
-
     agent._flush_status_buffer()
     agent._emit_diagnostic_status("⚠️ The model declined to respond to this request (safety refusal).")
     _refusal_response = "⚠️ " + content_policy_copy(

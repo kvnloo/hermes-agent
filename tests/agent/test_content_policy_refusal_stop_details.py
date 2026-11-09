@@ -71,3 +71,46 @@ def test_refusal_log_caps_a_long_stop_details_explanation(caplog):
         )
     line = next(r.getMessage() for r in caplog.records if "native_stop_reason" in r.getMessage())
     assert "cyber" in line and "SENTINEL" not in line
+
+
+def test_refusal_fallback_logs_only_metadata_from_primary(caplog):
+    """A recovered Anthropic refusal must not write blocked user text to agent.log.
+
+    Regression for #124874, including the content-bearing stop_details explanation.
+    """
+    agent = _agent()
+    agent._has_pending_fallback.return_value = True
+
+    def switch_to_fallback(*, reason):
+        from agent.error_classifier import FailoverReason
+        assert reason == FailoverReason.content_policy_blocked
+        agent.model, agent.provider = "fallback-model", "custom"
+        return True
+
+    agent._try_activate_fallback.side_effect = switch_to_fallback
+    response = SimpleNamespace(
+        content=[SimpleNamespace(type="text", text="PRIVATE_REFUSAL_PAYLOAD")],
+        stop_reason="refusal", usage=None, model="claude",
+        stop_details={
+            "type": "refusal", "category": "cyber",
+            "explanation": "PRIVATE_STOP_EXPLANATION",
+        },
+    )
+    with caplog.at_level("WARNING", logger="agent.conversation_loop"):
+        verdict = handle_content_policy_refusal(
+            agent, response, TurnRetryState(), thinking_spinner=None,
+            messages=[], api_messages=[], api_kwargs={}, active_system_prompt=None,
+            conversation_history=[], api_call_count=1, effective_task_id="t",
+            turn_id="u", api_request_id="r", api_start_time=0.0,
+            retry_count=0, max_retries=0,
+        )
+
+    lines = [r.getMessage() for r in caplog.records if "Model declined to respond" in r.getMessage()]
+    assert verdict.action == "break"
+    assert len(lines) == 1
+    assert "model=claude provider=anthropic" in lines[0]
+    assert "native_stop_reason=refusal" in lines[0]
+    assert "'category': 'cyber'" in lines[0]
+    assert "explanation_len" in lines[0]
+    assert "PRIVATE_REFUSAL_PAYLOAD" not in lines[0]
+    assert "PRIVATE_STOP_EXPLANATION" not in lines[0]
