@@ -901,3 +901,40 @@ def test_bootstrap_marker_not_autostashed_by_update(tmp_path):
         ["git", "status", "--porcelain"], cwd=tmp_path, capture_output=True, text=True
     ).stdout
     assert ".hermes-bootstrap-complete" not in status
+
+@pytest.mark.parametrize("upstream_ahead", [0, 2], ids=["up-to-date", "upstream-ahead"])
+def test_fork_upstream_only_stashes_before_actual_fast_forward(monkeypatch, tmp_path, upstream_ahead):
+    """#3523: no-op fork updates leave edits alone; upstream fast-forwards protect them."""
+    _setup_update_mocks(monkeypatch, tmp_path)
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/uv" if name == "uv" else None)
+    monkeypatch.setattr(hermes_main, "_get_origin_url", lambda *_: "https://github.com/example/hermes-agent.git")
+    monkeypatch.setattr(hermes_main, "_is_fork", lambda *_: True)
+    monkeypatch.setattr(hermes_main, "_has_upstream_remote", lambda *_: True)
+    monkeypatch.setattr(
+        hermes_main, "_count_commits_between",
+        lambda _git, _cwd, older, newer: upstream_ahead
+        if (older, newer) == ("origin/main", "upstream/main") else 0,
+    )
+    monkeypatch.setattr(hermes_main, "_sync_fork_with_upstream", lambda *_: True)
+    monkeypatch.setattr(hermes_main, "_venv_core_imports_healthy", lambda: (True, None))
+
+    steps = []
+    monkeypatch.setattr(
+        hermes_main, "_stash_local_changes_if_needed",
+        lambda *_, **kw: steps.append("stash") or "saved-local-edits",
+    )
+    monkeypatch.setattr(
+        hermes_main, "_restore_stashed_changes",
+        lambda *_, **kw: steps.append("restore") or True,
+    )
+    run_update, _ = _make_update_side_effect(commit_count="0")
+
+    def record_run(cmd, **kwargs):
+        if cmd == ["git", "pull", "--ff-only", "upstream", "main"]:
+            steps.append("pull")
+        return run_update(cmd, **kwargs)
+
+    monkeypatch.setattr(hermes_main.subprocess, "run", record_run)
+    hermes_main.cmd_update(SimpleNamespace())
+
+    assert steps == (["stash", "pull", "restore"] if upstream_ahead else [])

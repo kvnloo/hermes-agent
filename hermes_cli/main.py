@@ -6901,17 +6901,25 @@ def _sync_with_upstream_if_needed(git_cmd: list[str], cwd: Path) -> None:
     print(f"→ Fork is {upstream_ahead} commit(s) behind upstream")
     print("→ Pulling from upstream...")
 
+    # An origin no-op can still move HEAD during upstream sync. Protect local
+    # edits only after the upstream-ahead check, and settle the stash even if
+    # the fast-forward fails.
+    upstream_stash_ref = _stash_local_changes_if_needed(git_cmd, cwd)
     try:
-        subprocess.run(
-            git_cmd + ["pull", "--ff-only", "upstream", "main"],
-            cwd=cwd,
-            check=True,
-        )
-    except subprocess.CalledProcessError:
-        print(
-            "  ✗ Failed to pull from upstream. You may need to resolve conflicts manually."
-        )
-        return
+        try:
+            subprocess.run(
+                git_cmd + ["pull", "--ff-only", "upstream", "main"],
+                cwd=cwd,
+                check=True,
+            )
+        except subprocess.CalledProcessError:
+            print(
+                "  ✗ Failed to pull from upstream. You may need to resolve conflicts manually."
+            )
+            return
+    finally:
+        if upstream_stash_ref is not None:
+            _restore_stashed_changes(git_cmd, cwd, upstream_stash_ref, prompt_user=False)
 
     print("  ✓ Updated from upstream")
 
