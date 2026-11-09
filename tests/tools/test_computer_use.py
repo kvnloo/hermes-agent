@@ -1195,6 +1195,28 @@ class TestCuaDriverSessionReconnect:
             ("call", "list_apps", {}),
         ]
 
+    def test_ending_retired_label_preserves_live_session(self):
+        """An explicit end_session(old) must not end the newly adopted public label."""
+        class FakeBridge:
+            def __init__(self):
+                self.calls = []
+
+            def run(self, value, timeout=None):
+                self.calls.append(value)
+                return {"isError": False}
+
+        bridge = FakeBridge()
+        session = self._make_session(bridge)
+        session._declared_session_id = "hermes-live"
+        session._retired_session_ids.add("hermes-old")
+
+        result = session.call_tool("end_session", {"session": "hermes-old"})
+
+        assert result["isError"] is False
+        assert bridge.calls == [("call", "end_session", {"session": "hermes-old"})]
+        assert session._declared_session_id == "hermes-live"
+
+
     def test_reconnect_replaces_a_label_rejected_by_the_new_transport(self, monkeypatch):
         """A replay must carry the fresh label when the old transport-owned one is unavailable."""
         from anyio import ClosedResourceError

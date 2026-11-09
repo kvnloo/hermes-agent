@@ -517,7 +517,8 @@ class _CuaDriverSession:
                     os.remove(shot_file)
 
     def call_tool(self, name: str, args: dict[str, Any], timeout: float = 30.0) -> dict[str, Any]:
-        args = self._live_label_args(args)
+        # A lifecycle request names its own identity; never end the replacement session for an old label.
+        args = self._live_label_args(args) if name not in self._LIFECYCLE_CALLS else args
         if name not in self._LIFECYCLE_CALLS:
             # A prior MCP timeout marks the session suspect (possibly wedged): recreate it so one timeout never
             # poisons the run. Healthy sessions are never restarted here.
