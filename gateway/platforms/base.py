@@ -1748,11 +1748,10 @@ MEDIA_EXTENSIONLESS_TAG_RE = re.compile(
 def _match_extensionless_path(scan_text: str, match: "re.Match") -> Optional[Tuple[str, int]]:
     """Resolve an extensionless MEDIA tag match to a validated on-disk path.
 
-    Tries the regex-captured path first. When that fails validation, the
-    candidate is progressively extended forward across single spaces
-    (validation-gated, bounded at 8 tokens, never past a newline or a
-    subsequent ``MEDIA:`` keyword) so unknown-extension paths containing
-    spaces deliver (#24032). Returns ``(safe_path, end_offset)`` where
+    Tries validated paths from shortest to longest, preferring the longest
+    existing candidate. A valid short prefix must not shadow the intended
+    spaced filename and become an unrelated attachment (#78383). Candidate
+    growth is bounded at 8 tokens and stops at newline or the next ``MEDIA:``. Returns ``(safe_path, end_offset)`` where
     ``end_offset`` is the index in ``scan_text`` just past the matched path,
     or ``None`` when nothing validates.
     """
@@ -1760,9 +1759,7 @@ def _match_extensionless_path(scan_text: str, match: "re.Match") -> Optional[Tup
     path = _normalize_media_tag_path(raw)
     if not path:
         return None
-    safe = validate_media_delivery_path(path)
-    if safe:
-        return safe, match.end("path")
+    best = (validate_media_delivery_path(path), match.end("path"))
     start = match.start("path")
     nl = scan_text.find("\n", start)
     limit = nl if nl != -1 else len(scan_text)
@@ -1782,9 +1779,9 @@ def _match_extensionless_path(scan_text: str, match: "re.Match") -> Optional[Tup
         candidate = _normalize_media_tag_path(segment[:tok_end])
         safe = validate_media_delivery_path(candidate)
         if safe:
-            return safe, start + tok_end
+            best = (safe, start + tok_end)
         pos = tok_end
-    return None
+    return best if best[0] else None
 
 
 def _merge_spans(spans: list) -> list:

@@ -459,6 +459,21 @@ class TestUniversalMediaEgress:
         assert "Done." in cleaned
 
 
+    def test_spaced_media_path_does_not_deliver_existing_prefix(self, tmp_path, monkeypatch):
+        """#78383: a shorter existing file must not hijack a spaced MEDIA path."""
+        root = tmp_path / "output"
+        root.mkdir()
+        prefix = root / "XA"
+        prefix.write_text("unrelated crash log", encoding="utf-8")
+        report = root / "XA Qlib Data report.md"
+        report.write_text("intended report", encoding="utf-8")
+        self._patch_allow_root(monkeypatch, root)
+
+        media, cleaned = BasePlatformAdapter.extract_media(f"MEDIA:{report}")
+        assert media == [(str(report), False)]
+        assert "MEDIA:" not in cleaned
+
+
     def test_known_extension_still_unconditional(self):
         # Known extensions keep the pre-#36060 behavior: extracted (and the
         # tag stripped) even when the file does not exist — downstream
