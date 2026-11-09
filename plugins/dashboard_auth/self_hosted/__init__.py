@@ -139,6 +139,9 @@ class SelfHostedOIDCProvider(JwtOAuthProvider):
         # fresh payload identical except for the omitted ``scope``. The retry only
         # runs on a path that otherwise ends in interactive login, so it cannot
         # break a working refresh; a genuinely expired token just fails twice.
+        # An absent token is a local rejection, not an IdP scope refusal.
+        if not refresh_token:
+            return super().refresh_session(refresh_token=refresh_token)
         try:
             return super().refresh_session(refresh_token=refresh_token)
         except RefreshExpiredError:
