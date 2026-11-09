@@ -63,6 +63,8 @@ _SKILL_NAME_RE = re.compile(re.escape(_SKILL_INVOCATION_PREFIX) + r'"([^"]*)"')
 # carries no instruction marker — the user's text simply follows the payload blocks — so the
 # describer strips the header + body and renders the typed request (session previews, titles).
 _AUTO_LOAD_PREFIX = '[IMPORTANT: The "'
+# Separates injected skill payloads from the original (potentially multiline) gateway text.
+_AUTO_LOAD_USER_TEXT_MARKER = "\n\n[Original user message after auto-loaded skills:]\n"
 _AUTO_LOAD_SUFFIX_RE = re.compile(r'" skill is auto-loaded\. Follow its instructions for this session\.\]')
 # Closing sentence of the skill-directory footer note (see _SKILL_DIR_NOTE in this module):
 # the last thing in every built payload, so it marks where an auto-load payload ends and the
@@ -112,11 +114,8 @@ def extract_user_instruction_from_skill_message(content: Any) -> Optional[str]:
     bare ``/skill`` invocation."""
     if not isinstance(content, str):
         return None
-    if content.startswith(_AUTO_LOAD_PREFIX):
-        # Gateway auto-load scaffolding wraps the user's typed text in the same
-        # model-facing turn as the loaded skill bodies; strip it so providers
-        # store only what the user actually typed (see _describe_auto_loaded_skill_turn).
-        return _describe_auto_loaded_skill_turn(content)
+    if _AUTO_LOAD_HEADER_RE.match(content):
+        return _extract_auto_loaded_user_text(content)
     if not content.startswith(_SKILL_INVOCATION_PREFIX):
         return content
     if _BUNDLE_MARKER in content:
@@ -128,33 +127,38 @@ def extract_user_instruction_from_skill_message(content: Any) -> Optional[str]:
     return None
 
 
-def _describe_auto_loaded_skill_turn(content: str) -> Optional[str]:
-    """``[IMPORTANT: The "X" skill is auto-loaded. …]`` + payload(s) + typed text
-    -> the typed text.
+def _extract_auto_loaded_user_text(content: str) -> Optional[str]:
+    """Extract user speech for memory, never a skill name or display fallback."""
+    if _AUTO_LOAD_USER_TEXT_MARKER in content:
+        user_text = content.rsplit(_AUTO_LOAD_USER_TEXT_MARKER, 1)[1]
+        return user_text if user_text.strip() else None
 
-    ``_hmwa_auto_load_skills`` builds each payload with ``_build_skill_message``
-    (activation header, body, then the skill-directory footer note) and appends the
-    user's text as the final block. The footer's closing sentence is the reliable
-    payload-end marker: the user's text is what follows the LAST footer. A header
-    quoted inside a body (a skill embedding the scaffold in an example) carries no
-    footer, so it cannot end the payload early. ``/<skill>`` renders when no user
-    text follows, matching the single-skill describer's bare-invocation shape."""
-    if not content.startswith(_AUTO_LOAD_PREFIX):
-        return None
-    name_match = re.match(re.escape(_AUTO_LOAD_PREFIX) + r'([^"]*)"', content)
-    name = name_match.group(1) if name_match else ""
-    # The payload footer ends with this exact sentence (_build_skill_message); the
-    # user's text is the last thing after the FINAL footer in the message.
+    # Old stored gateway turns have no explicit boundary; use the last directory
+    # footer as a best-effort delimiter, and skip a bare auto-load entirely.
     footer_end = content.rfind(_SKILL_DIR_NOTE_END)
-    if footer_end == -1:
-        return f"/{name}" if name else None
+    if footer_end < 0:
+        return None
     tail = content[footer_end + len(_SKILL_DIR_NOTE_END):].lstrip()
     while block_end := next((end for start, end in _TRAILING_BLOCK_ENDS if tail.startswith(start)), None):
         cut = tail.find(block_end)
         tail = tail[cut + len(block_end):].lstrip() if cut >= 0 else ""
-    if not tail.strip():
+    return tail if tail.strip() else None
+
+
+def _describe_auto_loaded_skill_turn(content: str) -> Optional[str]:
+    """Preview a gateway auto-load from the user's text, or the bare skill label.
+
+    Memory providers use _extract_auto_loaded_user_text directly: unlike a
+    preview, memory must not synthesize a /skill invocation or fold whitespace.
+    """
+    if not _AUTO_LOAD_HEADER_RE.match(content):
+        return None
+    name_match = re.match(re.escape(_AUTO_LOAD_PREFIX) + r'([^"]*)"', content)
+    name = name_match.group(1) if name_match else ""
+    instruction = _extract_auto_loaded_user_text(content)
+    if not instruction:
         return f"/{name}" if name else None
-    return " ".join(tail.split()) or None
+    return " ".join(instruction.split()) or None
 
 
 def describe_skill_invocation(content: Any, separator: str = " — ") -> Optional[str]:

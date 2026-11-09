@@ -495,7 +495,7 @@ class GatewayTurnPrepareMixin:
         """Prepend topic/channel-bound skill payload(s) to ``event.text`` on a new session."""
         _skill_names = [_auto] if isinstance(_auto, str) else list(_auto)
         try:
-            from agent.skill_commands import _load_skill_payload, _build_skill_message
+            from agent.skill_commands import _load_skill_payload, _build_skill_message, _AUTO_LOAD_USER_TEXT_MARKER
             _combined_parts: list[str] = []
             _loaded_names: list[str] = []
             for _sname in _skill_names:
@@ -513,8 +513,8 @@ class GatewayTurnPrepareMixin:
                     _combined_parts.append(_part)
                     _loaded_names.append(_sname)
             if _combined_parts:
-                _combined_parts.append(event.text)  # user's original text after the payloads
-                event.text = "\n\n".join(_combined_parts)
+                # Keep the user's exact text distinct from the injected skill bodies.
+                event.text = "\n\n".join(_combined_parts) + _AUTO_LOAD_USER_TEXT_MARKER + event.text
                 logger.info("[Gateway] Auto-loaded skill(s) %s for session %s", _loaded_names, session_key)
         except Exception as e:
             logger.warning("[Gateway] Failed to auto-load skill(s) %s: %s", _skill_names, e)

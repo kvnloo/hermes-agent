@@ -137,6 +137,48 @@ class TestMemoryManagerStripsScaffolding:
         assert provider.queued == expected
         assert provider.synced == expected
 
+    def test_gateway_auto_load_sync_preserves_user_text_and_skips_bare(self, tmp_path, monkeypatch):
+        from types import SimpleNamespace
+
+        from agent import skill_commands
+        from gateway.run_turn_prepare import GatewayTurnPrepareMixin
+
+        skill_dir = tmp_path / "example"
+        skill_dir.mkdir()
+        loaded = ({"name": "example", "content": "# Injected skill\nNot user speech."},
+                  skill_dir, "example")
+        monkeypatch.setattr(
+            skill_commands, "_load_skill_payload",
+            lambda name, task_id=None: loaded,
+        )
+        # The footer sentence can appear in ordinary user text, and whitespace
+        # may be significant (e.g. pasted Markdown or code).
+        for typed_text in (
+            f"  keep this formatting:\n\n{_SKILL_DIR_NOTE_END}\n  second line  ",
+            "",
+        ):
+            event = SimpleNamespace(text=typed_text)
+            GatewayTurnPrepareMixin._hmwa_auto_load_skills(
+                None, event, "example", "test-session", "test-session",
+            )
+            mgr, provider = _manager_with_recorder()
+            mgr.prefetch_all(event.text)
+            mgr.queue_prefetch_all(event.text)
+            mgr.sync_all(event.text, "Done.")
+            mgr.flush_pending(timeout=5.0)
+            expected = [typed_text] if typed_text else []
+            assert provider.prefetched == expected
+            assert provider.queued == expected
+            assert provider.synced == expected
+
+        # A normal pasted quote may start like a scaffold without being one.
+        quoted = '[IMPORTANT: The "note" is simply a quoted line'
+        assert skill_commands.extract_user_instruction_from_skill_message(quoted) == quoted
+        mgr, provider = _manager_with_recorder()
+        mgr.sync_all(quoted, "Done.")
+        mgr.flush_pending(timeout=5.0)
+        assert provider.synced == [quoted]
+
     def test_sync_all_skips_bare_skill(self):
         mgr, provider = _manager_with_recorder()
         mgr.sync_all(_BARE_SKILL_TURN, "Done.")
