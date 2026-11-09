@@ -221,7 +221,7 @@ def test_external_replace_between_stat_and_open_with_local_clear(tmp_path, monke
 
     def delayed_open(self, *args, **kwargs):
         nonlocal paused
-        if self == path and current_thread().name == "memo-race-reader" and not paused:
+        if self == path and current_thread().name.startswith("memo-race") and not paused:
             paused = True
             entered.set()
             assert proceed.wait(15)
