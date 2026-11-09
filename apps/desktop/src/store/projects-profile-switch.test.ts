@@ -159,6 +159,22 @@ describe('project cache per-profile boundary (#79406)', () => {
     expect(resolveNewSessionCwd()).toBe('/work/configured')
   })
 
+  it('drops the merged project scope when returning from All profiles to the already-live profile', () => {
+    setShowAllProfiles(true)
+    // The merged tree contains Profile B's project, entered while A serves
+    // the gateway. Exiting All profiles to A does not change the gateway atom.
+    $projectTree.set([treeNode({ id: 'p_b', label: 'Profile B project', path: '/work/profile-b' })])
+    $projectScope.set('p_b')
+
+    setShowAllProfiles(false)
+
+    expect($activeGatewayProfile.get()).toBe('profile-a')
+    expect($projectScope.get()).toBe(ALL_PROJECTS)
+    expect($projectTree.get()).toEqual([])
+    // A plain new chat cannot borrow B's cwd (or load B's AGENTS.md).
+    expect(resolveNewSessionCwd()).toBe('/work/configured')
+  })
+
   it('clears the project cache on a connection switch that keeps the same profile name', () => {
     // beginGatewaySwitch's wipe: a source change can serve the same profile
     // name from a different backend, so the profile-change reset never fires —

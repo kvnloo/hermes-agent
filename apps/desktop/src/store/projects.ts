@@ -663,6 +663,24 @@ $activeGatewayProfile.subscribe(profile => {
   resetProjectsCache()
 })
 
+// The All-profiles tree is a merged catalog, not the live profile's project
+// cache. Leaving that view can keep $activeGatewayProfile UNCHANGED (selecting
+// the already-live profile), so the profile-change reset above never fires.
+// Drop any entered foreign project and merged roots before a fresh draft
+// resolves its cwd from the now-single-profile sidebar (#79406).
+let projectsCacheWasAllProfiles = $profileScope.get() === ALL_PROFILES
+
+$profileScope.subscribe(scope => {
+  const isAllProfiles = scope === ALL_PROFILES
+
+  if (projectsCacheWasAllProfiles && !isAllProfiles) {
+    exitProjectScope()
+    resetProjectsCache()
+  }
+
+  projectsCacheWasAllProfiles = isAllProfiles
+})
+
 // A drill-in page read before an archive/delete committed can land after the
 // projects.tree prune has dropped the tombstone, resurrecting the row in the
 // entered project's lanes (#123685, same race as the sidebar refresh). The
