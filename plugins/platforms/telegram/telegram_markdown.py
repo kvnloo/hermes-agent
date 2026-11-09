@@ -311,8 +311,9 @@ def _escape_bare_bracket(m, seg: str) -> str:
 # amount, or after a currency prefix (R$ 1.000, US$ 1,200). Telegram's rich Markdown pairs any two
 # bare $ as inline LaTeX, so "$395k vs $483k" otherwise renders as one garbled math span.
 _RICH_DOLLAR_RE = re.compile(
-    r'(?P<keep>```[\s\S]*?```|(?P<ticks>`+)[^\n]*?(?<!`)(?P=ticks)(?!`)|\\\$|\$\$[\s\S]*?\$\$'
+    r'(?P<keep>\\\$|\$\$[\s\S]*?\$\
     r'|(?<![\w$])\$(?![\d\s$])(?:\\.|[^\\\n$])+?(?<!\s)\$(?![\d$])'
+    r'|(?<![\w$\\])\$\d[\w.,]*\\[a-zA-Z]+\{[^$\n}]*\}[^$\n]*\$(?![\w$])'
     r'|(?<![\w$\\])\$\d[\w.,]*(?:[-+*/^=<>]|\\[a-zA-Z]++)(?:[\w.,(){}^_+*/=<>-]|\\[a-zA-Z]+)*+(?<![-+*/^=<>])\$(?![\w$])'
     r'|(?<![\w$\\])\$\d[\w.,]*(?<![.,])\$(?![\w$])'
     r'|(?<![\w$\\])\$\d(?=[^$\n]*?(?:[^\w\s$.,`]|\\))'
@@ -321,8 +322,86 @@ _RICH_DOLLAR_RE = re.compile(
 )
 
 
+
+def _rich_code_block_ranges(text: str) -> list[tuple[int, int]]:
+    """Keep complete and streaming code blocks verbatim before dollar matching."""
+    spans = []
+    fence = None
+    offset = 0
+    for line in text.splitlines(keepends=True):
+        body = line.rstrip("\r\n")
+        if fence:
+            marker, width, start = fence
+            closer = r" {0,3}" + re.escape(marker) + "{" + str(width) + r",}[ \t]*"
+            if re.fullmatch(closer, body):
+                spans.append((start, offset + len(line)))
+                fence = None
+        else:
+            opener = re.match(r" {0,3}(`{3,}|~{3,})(.*)", body)
+            if opener and (opener.group(1)[0] == "~" or "`" not in opener.group(2)):
+                run = opener.group(1)
+                fence = (run[0], len(run), offset)
+            elif body.startswith(("    ", "\t")):
+                spans.append((offset, offset + len(line)))
+        offset += len(line)
+    if fence:
+        spans.append((fence[2], len(text)))
+
+    html_end = 0
+    for tag in re.finditer(r"<(pre|code)\b[^>]*>", text, re.IGNORECASE):
+        if tag.start() < html_end:
+            continue
+        closer = re.search(r"</" + tag.group(1) + r"\s*>", text[tag.end():], re.IGNORECASE)
+        html_end = tag.end() + closer.end() if closer else len(text)
+        spans.append((tag.start(), html_end))
+
+    merged = []
+    for start, end in sorted(spans):
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def _escape_rich_outside_blocks(text: str) -> str:
+    """Pair complete inline backtick runs by width, without retrying a line per opener."""
+    runs = list(re.finditer(r"`+", text))
+    next_same, later = [None] * len(runs), {}
+    for index in range(len(runs) - 1, -1, -1):
+        width = len(runs[index].group())
+        next_same[index], later[width] = later.get(width), index
+    breaks = [match.start() for match in re.finditer(r"[\r\n]", text)]
+    parts, pos, index = [], 0, 0
+
+    def escape(plain: str) -> str:
+        return _RICH_DOLLAR_RE.sub(
+            lambda match: match.group(0) if match.group("keep") else r"\$", plain
+        )
+
+    while index < len(runs):
+        closing = next_same[index]
+        after_opener = bisect.bisect_left(breaks, runs[index].end())
+        if closing is None or (
+            after_opener < len(breaks) and breaks[after_opener] < runs[closing].start()
+        ):
+            index += 1
+            continue
+        parts.append(escape(text[pos:runs[index].start()]))
+        parts.append(text[runs[index].start():runs[closing].end()])
+        pos, index = runs[closing].end(), closing + 1
+    parts.append(escape(text[pos:]))
+    return "".join(parts)
+
+
 def escape_rich_currency_dollars(text: str) -> str:
-    """Escape currency ``$`` for ``sendRichMessage`` markdown; real math, code and ``\\$`` are kept."""
-    if '$' not in text:
+    """Escape currency in rich markdown outside inline, fenced, indented and HTML code."""
+    if "$" not in text:
         return text
-    return _RICH_DOLLAR_RE.sub(lambda m: m.group(0) if m.group('keep') else '\\$', text)
+    parts, pos = [], 0
+    for start, end in _rich_code_block_ranges(text):
+        parts.append(_escape_rich_outside_blocks(text[pos:start]))
+        parts.append(text[start:end])
+        pos = end
+    parts.append(_escape_rich_outside_blocks(text[pos:]))
+    return "".join(parts)
