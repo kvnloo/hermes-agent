@@ -365,6 +365,45 @@ def _cached_local_lineage_index(db, conn):
     return _copy_lineage_index(value)
 
 
+def bounded_superseded_segments_clause(alias="s"):
+    """An index-probed reset fence for an already bounded session candidate page.
+
+    Each local reset segment carries its creation owner as chat_id; the original
+    owner also has its receipt under its own id. Looking up only those receipt
+    keys avoids scanning all of state_meta on every cold roster poll. A root is
+    superseded when its receipt lineage contains a LATER segment whose
+    predecessor ended with session_reset (the local_lineage_index rule).
+    """
+    safe = "CASE WHEN json_valid(p.value) THEN p.value ELSE '{}' END"
+    return f"""
+        NOT EXISTS (
+            SELECT 1 FROM state_meta p
+            WHERE p.key IN (
+                '{POLICY_PREFIX}' || {alias}.id,
+                '{POLICY_PREFIX}' || COALESCE({alias}.chat_id, '')
+            )
+              AND json_type({safe}, '$.session_id') = 'text'
+              AND json_type({safe}, '$.lineage') = 'array'
+              AND NOT EXISTS (
+                  SELECT 1 FROM json_each({safe}, '$.lineage') entry
+                  WHERE entry.type != 'text'
+              )
+              AND EXISTS (
+                  SELECT 1 FROM json_each({safe}, '$.lineage') segment
+                  WHERE segment.value = {alias}.id
+                    AND EXISTS (
+                        SELECT 1 FROM json_each({safe}, '$.lineage') later
+                        JOIN sessions previous ON previous.id = json_extract(
+                            {safe}, '$.lineage[' || (later.key - 1) || ']'
+                        )
+                        WHERE later.key > segment.key
+                          AND previous.end_reason = 'session_reset'
+                    )
+              )
+        )
+    """
+
+
 def exclude_superseded_segments(db, where_clauses, params):
     """Drop earlier reset segments from a listing or count query (one conversation, one row),
     in SQL before paging; returns ``heads`` for :func:`annotate_local_lineages`."""

@@ -1159,10 +1159,10 @@ class SessionSessionsMixin:
             candidate_clauses.append(f"s.source NOT IN ({placeholders})")
             candidate_params.extend(exclude_sources)
         candidate_where = " AND ".join(candidate_clauses)
-        from hermes_state_local import exclude_superseded_segments
-        root_clauses, root_params = [], []
-        exclude_superseded_segments(self, root_clauses, root_params)
-        root_filter = " AND " + " AND ".join(root_clauses) if root_clauses else ""
+        # A roster's cold read must not scan every local policy receipt just to
+        # exclude earlier /new segments. Check only candidate roots in SQL.
+        from hermes_state_local import bounded_superseded_segments_clause
+        root_filter = bounded_superseded_segments_clause("s")
 
         # A compression continuation is an implementation edge, unlike /new
         # reset and /branch children which are independent user-visible
@@ -1262,7 +1262,7 @@ class SessionSessionsMixin:
               AND s.hidden = 0
               AND {_LISTABLE_CHILD_SQL}
               AND {_delegate_from_json('s.model_config')} IS NULL
-              {root_filter}
+              AND {root_filter}
             ORDER BY rt.activity DESC, s.started_at DESC, tip.id DESC
             LIMIT ?
         """
@@ -1270,7 +1270,8 @@ class SessionSessionsMixin:
             candidate_limit,
             lineage_limit,
             lineage_limit,
-        ] + root_params + [limit]
+            limit,
+        ]
         deadline = time.monotonic() + timeout_seconds
         interrupted_by_deadline = False
 

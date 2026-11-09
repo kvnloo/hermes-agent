@@ -12,9 +12,20 @@ def test_roster_reads_recent_sessions_with_a_bounded_sql_budget(tmp_path, monkey
     db = SessionDB(tmp_path / "state.db")
     now = time.time()
     try:
+        # Large active stores can also have one local policy receipt per
+        # historical cron fire. These are not roster candidates, and scanning
+        # every receipt during a cold read defeats the bounded query.
+        history_count = 30000
         db._conn.executemany(
             "INSERT INTO sessions(id,source,started_at,last_activity_at) VALUES(?, 'cron', ?, ?)",
-            [(f"history-{i}", now - 20000 + i, now - 20000 + i) for i in range(10000)],
+            [(f"history-{i}", now - 40000 + i, now - 40000 + i)
+             for i in range(history_count)],
+        )
+        db._conn.executemany(
+            "INSERT INTO state_meta(key,value) VALUES(?, ?)",
+            ((f"gateway.local_policy.v1:history-{i}",
+              json.dumps({"session_id": f"history-{i}", "lineage": [f"history-{i}"]}))
+             for i in range(history_count)),
         )
         db.create_session("chat", "cli")
         db.append_message("chat", "user", "recent chat")
