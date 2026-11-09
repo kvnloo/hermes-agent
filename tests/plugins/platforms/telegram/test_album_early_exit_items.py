@@ -79,3 +79,33 @@ async def test_caption_on_an_album_item_too_large_to_download_reaches_the_album_
     adapter.handle_message.assert_awaited_once()
     text = adapter.handle_message.await_args.args[0].text
     assert "see both" in text and "too large" in text, text
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("media_kind", ["document", "video"])
+async def test_oversized_album_items_each_have_a_distinct_note(media_kind):
+    """A skipped sibling needs its own notice, even when both have the same size (#151871)."""
+    adapter = TelegramAdapter(PlatformConfig(enabled=True, token="t", extra={"media_group_wait_seconds": 0.05}))
+    adapter.handle_message = AsyncMock()
+    adapter._is_callback_user_authorized = lambda user_id, **_kw: True
+
+    for index, filename in enumerate(("a.zip", "b.zip")):
+        if media_kind == "document":
+            msg = _make_message(document=_make_document(filename, "application/zip", file_size=TOO_BIG),
+                                caption="see both" if index == 0 else None, media_group_id="mg")
+        else:
+            msg = _oversized_video()
+            msg.caption = "see both" if index == 0 else None
+        msg.message_id = 42 + index
+        await adapter._handle_media_message(_make_update(msg), MagicMock())
+
+    await async_wait_until(lambda: adapter.handle_message.await_count, timeout=5)
+    await async_wait_until(lambda: not adapter._media_group_events, timeout=5)
+    adapter.handle_message.assert_awaited_once()
+    text = adapter.handle_message.await_args.args[0].text
+    assert "see both" in text
+    if media_kind == "document":
+        assert "Document 'a.zip'" in text and "Document 'b.zip'" in text
+        assert text.count("too large") == 2
+    else:
+        assert "video file 'message 42'" in text and "video file 'message 43'" in text
+        assert text.count("skipped:") == 2
