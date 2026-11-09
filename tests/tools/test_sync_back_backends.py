@@ -2,6 +2,7 @@
 
 import asyncio
 import subprocess
+import tarfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -132,6 +133,51 @@ class TestSSHBulkDownload:
             ssh_mock_env._ssh_bulk_download(dest)
 
         assert "--exclude=home/testuser/.hermes/bot-desktop" in " ".join(mock_run.call_args[0][0])
+
+    @pytest.mark.platforms("linux")
+    def test_ssh_bulk_download_extracts_skills_with_live_browser_symlink(self, ssh_mock_env, tmp_path):
+        """A live Chromium profile must not break extraction of unrelated sandbox edits.
+
+        Exercise the production remote tar command against a real tree, not just its argv.
+        Regression for #151767; the link points outside the archive and data-filter rejects it.
+        """
+        home = tmp_path / "sandbox home"
+        hermes = home / ".hermes"
+        skills = hermes / "skills"
+        skills.mkdir(parents=True)
+        (skills / "edited.md").write_text("sandbox edit", encoding="utf-8")
+        cache = hermes / "cache"
+        cache.mkdir()
+        (cache / "state.json").write_text('{"updated": true}', encoding="utf-8")
+        browser = hermes / "bot-desktop" / "browser-profile"
+        browser.mkdir(parents=True)
+        (browser / "SingletonSocket").symlink_to("/tmp/org.chromium.Chromium.test/SingletonSocket")
+        (browser / "SingletonLock").symlink_to("host-1234")
+        ssh_mock_env._remote_home = str(home)
+        dest = tmp_path / "sync.tar"
+
+        real_run = subprocess.run
+
+        def run_remote_tar(cmd, **kwargs):
+            return real_run(["sh", "-c", cmd[-1]], **kwargs)
+
+        with patch.object(subprocess, "run", side_effect=run_remote_tar):
+            ssh_mock_env._ssh_bulk_download(dest)
+
+        rel_root = hermes.as_posix().lstrip("/")
+        staging = tmp_path / "staging"
+        staging.mkdir()
+        with tarfile.open(dest) as archive:
+            names = archive.getnames()
+            assert f"{rel_root}/skills/edited.md" in names
+            assert f"{rel_root}/cache/state.json" in names
+            assert not any(
+                name == f"{rel_root}/bot-desktop" or name.startswith(f"{rel_root}/bot-desktop/")
+                for name in names
+            )
+            archive.extractall(staging, filter="data")
+
+        assert (staging / rel_root / "skills" / "edited.md").read_text(encoding="utf-8") == "sandbox edit"
 
     def test_ssh_bulk_download_still_fails_on_every_other_status(self, ssh_mock_env, tmp_path):
         """rc=1; rc=2 with a real error beside the socket line, with no diagnostic at all, or
