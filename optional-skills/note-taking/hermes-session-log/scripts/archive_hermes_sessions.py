@@ -16,6 +16,7 @@ Idempotent: re-runs rewrite only changed sessions and print nothing on no-op
 Configuration: scripts/config.json next to this file (copy config.example.json),
 or the HERMES_SESSION_LOG_CONFIG environment variable pointing at a JSON file.
 """
+import hashlib
 import json
 import os
 import re
@@ -135,10 +136,20 @@ def export_db_session(con, s: dict, state: dict, vault: Path, raw_clip: int, too
     if not users or len(body_rows) < 2:
         return None
     max_id = max(m["id"] for m in msgs)
+    # Compaction rewrites existing rows without necessarily adding a message.
+    # Fingerprint the transcript and note metadata, not only the last row ID.
+    fingerprint = hashlib.sha256(json.dumps({
+        "messages": msgs,
+        "session": {k: s.get(k) for k in (
+            "title", "source", "model", "profile_name", "cwd",
+            "started_at", "end_reason",
+        )},
+    }, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
     stem = f"{datetime.fromtimestamp(float(s['started_at'])):%Y-%m-%d %H-%M} {sfx}"
     st = state.get("db:" + sid)
-    if not full and st and st.get("max_id") == max_id and st.get("ended_at") == s["ended_at"] \
-            and (vault / (st["note"] + ".md")).exists():
+    if not full and st and st.get("fingerprint") == fingerprint and st.get("ended_at") == s["ended_at"] \
+            and (vault / (st["note"] + ".md")).exists() \
+            and (vault / (st["note"] + ".jsonl")).exists():
         return {"note": st["note"], "changed": False}
 
     first_user = next((m["content"].strip() for m in users), "")
@@ -204,7 +215,7 @@ def export_db_session(con, s: dict, state: dict, vault: Path, raw_clip: int, too
     with open(vault / raw_name, "w", encoding="utf-8") as fh:
         for m in msgs:
             fh.write(json.dumps({k: m.get(k) for k in RAW_FIELDS}, ensure_ascii=False) + "\n")
-    state["db:" + sid] = {"note": stem, "max_id": max_id, "ended_at": s["ended_at"], "title": title}
+    state["db:" + sid] = {"note": stem, "max_id": max_id, "ended_at": s["ended_at"], "title": title, "fingerprint": fingerprint}
     return {"note": stem, "changed": True}
 
 

@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 SKILL_DIR = Path(__file__).resolve().parents[2] / "optional-skills" / "note-taking" / "hermes-session-log"
-SCRIPT = SKILL_DIR / "scripts" / "export_hermes_sessions.py"
+SCRIPT = SKILL_DIR / "scripts" / "archive_hermes_sessions.py"
 
 
 def _make_db(path: Path, with_compaction: bool = False) -> None:
@@ -133,3 +133,31 @@ def test_open_session_status(tmp_path):
     _run(tmp_path, db)
     text = _notes(tmp_path / "vault" / "Hermes Sessions")[0].read_text(encoding="utf-8")
     assert 'status: "open"' in text
+
+
+def test_compaction_rewrites_existing_rows_without_new_message_id(tmp_path):
+    db = tmp_path / "state.db"
+    _make_db(db)
+    initial = _run(tmp_path, db)
+    assert initial.returncode == 0, initial.stdout + initial.stderr
+    vault = tmp_path / "vault" / "Hermes Sessions"
+    note = _notes(vault)[0]
+    raw = vault / (note.stem + ".jsonl")
+    assert "Context compaction" not in note.read_text(encoding="utf-8")
+
+    con = sqlite3.connect(db)
+    con.execute(
+        "UPDATE messages SET active=0, compacted=1, _compressed_summary=? WHERE id=2",
+        ("Recovered from in-place compaction",),
+    )
+    con.commit()
+    con.close()
+
+    refreshed = _run(tmp_path, db)
+    assert refreshed.returncode == 0, refreshed.stdout + refreshed.stderr
+    assert "1 updated" in refreshed.stdout
+    assert "Context compaction" in note.read_text(encoding="utf-8")
+    rows = [json.loads(line) for line in raw.read_text(encoding="utf-8").splitlines()]
+    assert rows[1]["compacted"] == 1
+    assert rows[1]["active"] == 0
+    assert rows[1]["_compressed_summary"] == "Recovered from in-place compaction"
