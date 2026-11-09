@@ -118,6 +118,20 @@ def _tls_context(verify: bool, host: str) -> ssl.SSLContext:
     return ssl._create_unverified_context()
 
 
+def _open_imap(host: str, port: int, security: str, verify: bool) -> imaplib.IMAP4:
+    """Connect to IMAP using the same TLS settings for inbox and Sent operations."""
+    if security == "tls":
+        return imaplib.IMAP4_SSL(host, port, timeout=30, ssl_context=_tls_context(verify, host))
+    imap = imaplib.IMAP4(host, port, timeout=30)
+    if security == "starttls":
+        try:
+            imap.starttls(ssl_context=_tls_context(verify, host))
+        except Exception:
+            _close_imap(imap)
+            raise
+    return imap
+
+
 def _close_imap(imap: imaplib.IMAP4) -> None:
     """Teardown that guarantees the socket closes: ``logout()`` only guards ``OSError``, so ``IMAP4.abort`` on a
     broken connection skipped ``shutdown()`` and leaked one fd per failed poll (fatal on macOS's 256 soft limit).
@@ -447,6 +461,41 @@ def _attach_file(msg: MIMEMultipart, path: Path, filename: str) -> None:
         msg.attach(part)
 
 
+def _append_sent_copy(connect_imap: Callable[[], imaplib.IMAP4], address: str, password: str,
+                      msg: email_lib.message.Message, sent_mailbox: str) -> None:
+    """Best-effort post-SMTP archive; never turn a delivered email into a retry."""
+    mailbox = '"' + sent_mailbox.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    try:
+        imap = connect_imap()
+        try:
+            imap.login(address, password)
+            _send_imap_id(imap)
+            status, folders = imap.list()
+            if status == "OK":
+                for entry in folders or ():
+                    if not isinstance(entry, bytes):
+                        continue
+                    match = re.match(rb'^\(([^)]*)\)\s+(?:"(?:\\.|[^"])*"|NIL)\s+(.+)$', entry)
+                    if match and b"\\sent" in match.group(1).lower().split():
+                        mailbox = match.group(2).decode("ascii", errors="replace")
+                        break
+            status, _ = imap.select(mailbox, readonly=True)
+            if status != "OK":
+                raise imaplib.IMAP4.error(f"Cannot select Sent mailbox {mailbox}: {status}")
+            status, uids = imap.search(None, "HEADER", "Message-ID", msg["Message-ID"])
+            if status != "OK":
+                raise imaplib.IMAP4.error("Sent Message-ID search failed")
+            if not (uids and uids[0]):
+                status, _ = imap.append(mailbox, r"(\Seen)", None,
+                                        msg.as_bytes(policy=msg.policy.clone(linesep="\r\n")))
+                if status != "OK":
+                    raise imaplib.IMAP4.error(f"Sent APPEND failed: {status}")
+        finally:
+            _close_imap(imap)
+    except Exception as exc:
+        logger.warning("[Email] SMTP delivered, but Sent copy could not be saved: %s", exc)
+
+
 class EmailAdapter(BasePlatformAdapter):
     """Email gateway adapter using IMAP (receive) and SMTP (send)."""
     serial_receive_loop = True  # the IMAP poll loop awaits each message before dispatching the next
@@ -480,6 +529,8 @@ class EmailAdapter(BasePlatformAdapter):
         self._smtp_tls_verify = tls_verify("EMAIL_SMTP_TLS_VERIFY", "smtp_tls_verify")
         self._poll_interval = _esecret_int("EMAIL_POLL_INTERVAL", 15)
         self._skip_attachments = extra.get("skip_attachments", False)  # platforms.email.skip_attachments
+        self._save_sent = is_truthy_value(extra.get("save_sent"), default=True)
+        self._sent_mailbox = str(extra.get("sent_mailbox") or "Sent")
         # Require an authenticated From: domain (SPF/DKIM/DMARC) before trusting it for authorization
         # (GHSA-rxqh-5572-8m77). Default ON; opt out via require_authenticated_sender: false / EMAIL_TRUST_FROM_HEADER=true.
         if "require_authenticated_sender" in extra:
@@ -512,16 +563,7 @@ class EmailAdapter(BasePlatformAdapter):
 
     def _connect_imap(self) -> imaplib.IMAP4:
         """Create an IMAP connection using implicit TLS, STARTTLS, or plaintext."""
-        if self._imap_security == "tls":
-            return imaplib.IMAP4_SSL(self._imap_host, self._imap_port, timeout=30, ssl_context=_tls_context(self._imap_tls_verify, self._imap_host))
-        imap = imaplib.IMAP4(self._imap_host, self._imap_port, timeout=30)
-        if self._imap_security == "starttls":
-            try:
-                imap.starttls(ssl_context=_tls_context(self._imap_tls_verify, self._imap_host))
-            except Exception:
-                _close_imap(imap)
-                raise
-        return imap
+        return _open_imap(self._imap_host, self._imap_port, self._imap_security, self._imap_tls_verify)
 
     @contextmanager
     def _inbox(self):
@@ -887,6 +929,8 @@ class EmailAdapter(BasePlatformAdapter):
                 smtp.quit()
             except Exception:
                 smtp.close()
+        if self._save_sent:
+            _append_sent_copy(self._connect_imap, self._address, self._password, msg, self._sent_mailbox)
 
     def _send_email(self, to_addr: str, body: str, reply_to_msg_id: Optional[str] = None) -> str:
         """Send an email via SMTP. Runs in executor thread."""
@@ -975,12 +1019,21 @@ async def _standalone_send(pconfig, chat_id, message, *, thread_id=None, media_f
         return send_error("Email not configured (EMAIL_ADDRESS, EMAIL_PASSWORD, EMAIL_SMTP_HOST required)")
     try:
         msg = MIMEText(message, "plain", "utf-8")
+        domain = address.rsplit("@", 1)[-1] if "@" in address else "localhost"
+        msg["Message-ID"] = f"<hermes-{uuid.uuid4().hex[:12]}@{domain}>"
         for key, value in (("From", address), ("To", chat_id), ("Subject", t("platform.email.standalone_subject")), ("Date", formatdate(localtime=True))):
             msg[key] = value
         server = _open_smtp(smtp_host, smtp_port, smtp_security, _tls_context(smtp_tls_verify, smtp_host), smtplib.SMTP, smtplib.SMTP_SSL)
         server.login(address, password)
         server.send_message(msg)
         server.quit()
+        imap_host = extra.get("imap_host") or _get_secret("EMAIL_IMAP_HOST", "")
+        if imap_host and is_truthy_value(extra.get("save_sent"), default=True):
+            imap_port = _esecret_int("EMAIL_IMAP_PORT", 993)
+            imap_security = _normalize_security(_get_secret("EMAIL_IMAP_SECURITY", "") or extra.get("imap_security"))
+            verify = _esecret_bool("EMAIL_IMAP_TLS_VERIFY", is_truthy_value(extra.get("imap_tls_verify"), default=True))
+            _append_sent_copy(lambda: _open_imap(imap_host, imap_port, imap_security, verify),
+                              address, password, msg, str(extra.get("sent_mailbox") or "Sent"))
         return {"success": True, "platform": "email", "chat_id": chat_id}
     except Exception as e:
         try:
