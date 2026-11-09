@@ -11,13 +11,14 @@ import { useI18n } from '@/i18n'
 import { displayPath } from '@/lib/display-path'
 import { $dismissedWorktreeIds, $removedWorktreeIds, dismissWorktree, setWorkspaceNodeOpen } from '@/store/layout'
 import { notifyError } from '@/store/notifications'
-import { removeWorktreePath, switchBranchInRepo } from '@/store/projects'
+import { listRepoBranches, removeWorktreePath, switchBranchInRepo } from '@/store/projects'
 
 import { SidebarRowStack } from '../chrome'
 
 import { PROJECT_SESSION_PAGE, SIDEBAR_GROUP_PAGE, useRevealedRows, useWorkspaceNodeOpen } from './model'
 import { SidebarWorkspaceGroup } from './workspace-group'
 import {
+  laneSwitchTarget,
   mergeRepoWorktreeGroups,
   overlayRepoLanes,
   sessionRecency,
@@ -107,7 +108,15 @@ export function EnteredMainSessionButton({ project, onNewSession, repoWorktrees 
 
   const handleNewSession = async () => {
     try {
-      await switchBranchInRepo(path, mainGroup.label)
+      // Match SidebarWorkspaceGroup: plain folders have no git branch, and a
+      // persisted fallback label may not name a branch the checkout knows.
+      if (mainGroup.isGit !== false) {
+        const branch = laneSwitchTarget(mainGroup, await listRepoBranches(path))
+
+        if (branch) {
+          await switchBranchInRepo(path, branch)
+        }
+      }
     } catch (err) {
       notifyError(err, t.statusStack.coding.switchFailed(mainGroup.label))
 

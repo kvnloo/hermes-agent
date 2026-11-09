@@ -9,12 +9,14 @@ import { EnteredMainSessionButton, EnteredProjectContent } from './entered-conte
 import type * as SidebarModel from './model'
 import type { SidebarProjectTree, SidebarSessionGroup } from './workspace-groups'
 
+const listRepoBranchesMock = vi.spyOn(projectStore, 'listRepoBranches')
 const switchBranchInRepoMock = vi.spyOn(projectStore, 'switchBranchInRepo')
 const notifyErrorMock = vi.spyOn(notifications, 'notifyError')
 
 afterEach(() => {
   cleanup()
   notifyErrorMock.mockReset()
+  listRepoBranchesMock.mockReset()
   switchBranchInRepoMock.mockReset()
 })
 
@@ -166,6 +168,9 @@ describe('EnteredProjectContent', () => {
   })
 
   it('switches to the visible main lane before creating a session from the entered-project header', async () => {
+    listRepoBranchesMock.mockResolvedValue([
+      { name: 'main', isRemote: false }
+    ] as Awaited<ReturnType<typeof projectStore.listRepoBranches>>)
     switchBranchInRepoMock.mockResolvedValue(undefined)
     const onNewSession = vi.fn()
 
@@ -177,8 +182,34 @@ describe('EnteredProjectContent', () => {
     expect(switchBranchInRepoMock.mock.invocationCallOrder[0]).toBeLessThan(onNewSession.mock.invocationCallOrder[0])
   })
 
+  it('creates sessions in a non-git project without attempting a branch switch', async () => {
+    switchBranchInRepoMock.mockRejectedValue(new Error('fatal: not a git repository'))
+    notifyErrorMock.mockReturnValue('notification')
+    const onNewSession = vi.fn()
+    const project = projectWithMain()
+    const main = project.repos[0]?.groups[0]
+
+    if (!main) {
+      throw new Error('expected a main checkout fixture')
+    }
+
+    main.isGit = false
+    main.label = 'notes'
+
+    render(<EnteredMainSessionButton onNewSession={onNewSession} project={project} />)
+    fireEvent.click(screen.getByRole('button', { name: 'New session in notes' }))
+
+    await waitFor(() => expect(onNewSession).toHaveBeenCalledWith('/repo'))
+    expect(listRepoBranchesMock).not.toHaveBeenCalled()
+    expect(switchBranchInRepoMock).not.toHaveBeenCalled()
+    expect(notifyErrorMock).not.toHaveBeenCalled()
+  })
+
   it('does not create a session when switching the main lane fails', async () => {
     const error = new Error('switch failed')
+    listRepoBranchesMock.mockResolvedValue([
+      { name: 'main', isRemote: false }
+    ] as Awaited<ReturnType<typeof projectStore.listRepoBranches>>)
     switchBranchInRepoMock.mockRejectedValue(error)
     notifyErrorMock.mockReturnValue('notification')
     const onNewSession = vi.fn()
