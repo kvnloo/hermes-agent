@@ -12,6 +12,10 @@ import {
 } from "@/lib/resume-transcript";
 import { Spinner } from "@nous-research/ui/ui/components/spinner";
 
+// Keep the default loader stable across transcript state updates.
+const defaultResumeMessagesLoader: ResumeMessagesLoader = (id, profile) =>
+  api.getSessionMessages(id, profile);
+
 /**
  * Hydrate the transcript for the resumed session from
  * `GET /api/sessions/{id}/messages` (profile-scoped) while the PTY is
@@ -21,8 +25,7 @@ import { Spinner } from "@nous-research/ui/ui/components/spinner";
 export function useResumeTranscript(
   sessionId: string | null,
   profile: string,
-  loadMessages: ResumeMessagesLoader = (id, p) =>
-    api.getSessionMessages(id, p),
+  loadMessages: ResumeMessagesLoader = defaultResumeMessagesLoader,
 ): ResumeTranscriptState | null {
   const [transcript, setTranscript] = useState<ResumeTranscriptState | null>(
     null,
