@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { requestGatewayForProfile } from '@/store/gateway'
@@ -64,6 +64,29 @@ describe('MarkdownTextContent github refs', () => {
 
     expect(screen.queryByTitle('KaptenKatthatt/newsAgg#46')).toBeNull()
     expect(container.querySelector('a')).toBeNull()
+    expect(container.textContent).toContain('#46')
+  })
+
+  it('does not link to the previous repository when a reused view changes sessions', async () => {
+    repoRefsResult = { available: true, host: 'github.com', owner: 'KaptenKatthatt', repo: 'newsAgg' }
+    $activeSessionId.set('gh-test-before-switch')
+
+    const { container } = render(<MarkdownTextContent isRunning={false} text="merged #46" />)
+
+    await screen.findByTitle('KaptenKatthatt/newsAgg#46')
+    const requestsBeforeSwitch = vi.mocked(requestGatewayForProfile).mock.calls.length
+
+    // The next session has no GitHub origin. The old repo must not survive the switch,
+    // even if its transcript component was retained by React.
+    repoRefsResult = { available: false, host: '', owner: '', repo: '' }
+    act(() => {
+      $activeSessionId.set('gh-test-after-switch')
+    })
+
+    await waitFor(() =>
+      expect(vi.mocked(requestGatewayForProfile).mock.calls.length).toBeGreaterThan(requestsBeforeSwitch)
+    )
+    await waitFor(() => expect(container.querySelector('a')).toBeNull())
     expect(container.textContent).toContain('#46')
   })
 

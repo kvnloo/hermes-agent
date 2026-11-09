@@ -65,26 +65,30 @@ export const GhRefLink: FC<{
   // The backend's live session wins over this cwd; it covers chats the
   // gateway's session authority owns, which the TUI registry never holds.
   const cwd = useStore(view.$cwd)
-  const [refs, setRefs] = useState<GhRepoRefs | null>(null)
+  const [resolved, setResolved] = useState<{ key: string; refs: GhRepoRefs } | null>(null)
   const sessionId = runtimeId ?? storedId
+  const key = sessionId ? `${sessionId}\u0000${cwd}` : null
 
   useEffect(() => {
-    if (!sessionId) {
+    if (!sessionId || !key) {
       return
     }
 
     let cancelled = false
 
-    void fetchGhRepoRefs(sessionId, cwd).then(resolved => {
-      if (!cancelled && resolved) {
-        setRefs(resolved)
+    void fetchGhRepoRefs(sessionId, cwd).then(refs => {
+      if (!cancelled) {
+        setResolved(refs ? { key, refs } : null)
       }
     })
 
     return () => {
       cancelled = true
     }
-  }, [cwd, sessionId])
+  }, [cwd, sessionId, key])
+
+  // A reused transcript component must never keep linking to the old session's repo.
+  const refs = resolved?.key === key ? resolved.refs : null
 
   if (!refs) {
     return <>{label}</>
