@@ -152,6 +152,31 @@ class TestCronContextUpdatePath:
         assert result["success"] is True
         assert get_job(created["job_id"]).get("deliver") == "origin"
 
+    @pytest.mark.parametrize("stored_origin", ["literal", "captured"])
+    @pytest.mark.parametrize("running", [None, ("telegram", "-100999")], ids=["local", "telegram"])
+    def test_update_keeps_edited_jobs_origin(self, temp_cron_home, stored_origin, running):
+        """An update must not borrow the delivery target of a different running job."""
+        from cron.jobs import get_job, update_job
+        from tools.cronjob_tools import cronjob
+
+        created = _create(deliver="origin" if stored_origin == "literal" else "local")
+        assert created["success"] is True
+        if stored_origin == "captured":
+            update_job(created["job_id"], {"origin": {"platform": "telegram", "chat_id": "555"}})
+
+        tokens, extra = _enter_cron_context(*(running or ()))
+        try:
+            response = json.loads(cronjob(
+                action="update", job_id=created["job_id"],
+                deliver="origin", failure_deliver="origin",
+            ))
+        finally:
+            _exit_cron_context(tokens, extra)
+
+        assert response["success"] is True
+        job = get_job(created["job_id"])
+        assert (job["deliver"], job["failure_deliver"]) == ("origin", "origin")
+
 class TestNonCronContextUnchanged:
     def test_chat_session_create_keeps_literal_origin(self, temp_cron_home):
         # No cron_session var — ordinary chat/CLI create. Existing semantics:
