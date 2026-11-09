@@ -52,9 +52,9 @@ def test_live_pinned_cuda_download_pause_resume_and_execute(tmp_path, monkeypatc
         def tick(stage, done, total, label):
             nonlocal first_archive_bytes
             original(stage, done, total, label)
-            if stage == "download" and label == "1/2":
+            if stage == "download" and label == f"1/{len(pinned)}":
                 first_archive_bytes = done
-            if stage == "download" and label == "2/2" and first_archive_bytes < done < total and not flowing.is_set():
+            if stage == "download" and label == f"2/{len(pinned)}" and first_archive_bytes < done < total and not flowing.is_set():
                 flowing.set()
                 assert release.wait(30)
         return tick
