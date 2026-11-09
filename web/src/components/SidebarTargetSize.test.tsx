@@ -12,6 +12,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { ReactNode } from "react";
 
+import { api } from "@/lib/api";
 import { I18nProvider } from "@/i18n";
 import { ThemeProvider } from "@/themes";
 import { AuthWidget } from "./AuthWidget";
@@ -94,6 +95,27 @@ describe("sidebar control target sizes (WCAG 2.5.8, issue #70983)", () => {
     expect(btn).not.toBeNull();
     expect(hasClass(btn!, "min-h-[24px]")).toBe(true);
     expect(hasClass(btn!, "min-w-[24px]")).toBe(true);
+  });
+
+  it("Auth error reload button has a >=24px target", async () => {
+    // The request-failure branch renders a different button from Log out.
+    const getAuthMe = vi.spyOn(api, "getAuthMe").mockRejectedValueOnce(
+      new Error("network offline"),
+    );
+    try {
+      await render(
+        <I18nProvider>
+          <AuthWidget />
+        </I18nProvider>,
+      );
+      const reload = Array.from(container.querySelectorAll("button")).find(
+        (button) => button.textContent?.trim() === "Reload page",
+      );
+      expect(reload).toBeDefined();
+      expect(hasClass(reload!, "min-h-[24px]")).toBe(true);
+    } finally {
+      getAuthMe.mockRestore();
+    }
   });
 
   it("Switch language trigger uses py-1.5 (>=24px computed height)", async () => {

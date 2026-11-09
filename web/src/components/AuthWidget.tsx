@@ -100,7 +100,7 @@ export function AuthWidget({ className }: AuthWidgetProps) {
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="self-start underline underline-offset-2 hover:text-foreground"
+          className="self-start min-h-[24px] underline underline-offset-2 hover:text-foreground"
         >
           Reload page
         </button>
