@@ -23,7 +23,11 @@ def test_unpruned_cache_hogs_skips_hermes_owned_pm_caches(tmp_path, monkeypatch)
     monkeypatch.setattr(hermes_constants, "get_default_hermes_root", lambda: tmp_path)
     partials = tmp_path / "cache" / "managed-parts"
     monkeypatch.setattr(paths, "partials_root", lambda: partials)
-    assert _managed_cache_dirs() == {tmp_path / "cache" / "uv", partials}
+    assert _managed_cache_dirs() == {
+        tmp_path / "cache" / "uv",
+        tmp_path / "cache" / "pnpm",
+        partials,
+    }
 
     cache = tmp_path / "cache"
     for name in ("uv", "managed-parts", "campaign-x"):
@@ -33,3 +37,17 @@ def test_unpruned_cache_hogs_skips_hermes_owned_pm_caches(tmp_path, monkeypatch)
             fh.write(b"x" * 2048)
 
     assert unpruned_cache_hogs(tmp_path, min_bytes=1024) == [("campaign-x", 2048)]
+
+
+def test_unpruned_cache_hogs_preserves_pnpm_store(tmp_path, monkeypatch):
+    """The shared pnpm store is PM-owned, not disposable task residue."""
+    import hermes_constants
+
+    monkeypatch.setattr(hermes_constants, "get_default_hermes_root", lambda: tmp_path)
+    cache = tmp_path / "cache"
+    for relative in ("pnpm/store", "pnpm/cache", "pnpm/state", "task-run"):
+        directory = cache / relative
+        directory.mkdir(parents=True)
+        (directory / "payload").write_bytes(b"x" * 2048)
+
+    assert unpruned_cache_hogs(tmp_path, min_bytes=1024) == [("task-run", 2048)]

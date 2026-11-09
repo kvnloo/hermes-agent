@@ -254,8 +254,10 @@ def _managed_cache_dirs() -> set[Path]:
     from hermes_constants import get_default_hermes_root
     from pm.paths import partials_root
 
+    root = get_default_hermes_root() / "cache"
     return {
-        get_default_hermes_root() / "cache" / "uv",
+        root / "uv",
+        root / "pnpm",
         partials_root(),
     }
 
