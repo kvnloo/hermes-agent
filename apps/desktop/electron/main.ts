@@ -8455,7 +8455,9 @@ function readDesktopConnectionsRegistry(): any {
 // doors serve a primary switch back to This device (connection-primary-route).
 const connectionRouteIo = {
   readConfig: readDesktopConnectionConfig,
+  readRegistry: readDesktopConnectionsRegistry,
   writeConfig: writeDesktopConnectionConfig,
+  writeRegistry: writeDesktopConnectionsRegistry,
   log: rememberLog
 }
 
@@ -14433,8 +14435,7 @@ ipcMain.handle('hermes:connections:remove', async (_event, id) => {
 ipcMain.handle('hermes:connections:set-primary', async (_event, id) => {
   assertCanMutateManagedPrimaryRouting()
   const registry = setPrimaryConnection(readDesktopConnectionsRegistry(), String(id || ''))
-  writeDesktopConnectionsRegistry(registry)
-  applyLocalPrimaryRoute(registry, connectionRouteIo)
+  await applyLocalPrimaryRoute(registry, connectionRouteIo)
 
   return { ok: true, registry: sanitizeConnectionsRegistry(registry) }
 })

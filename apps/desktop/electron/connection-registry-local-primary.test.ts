@@ -1,7 +1,13 @@
-import { expect, it } from 'vitest'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 
-import { configForLocalPrimary } from './connection-primary-route'
+import { expect, it, onTestFinished } from 'vitest'
+
+import { applyLocalPrimaryRoute, configForLocalPrimary } from './connection-primary-route'
 import { normalizeRegistry, setPrimaryConnection } from './connection-registry'
+import { resolveDesktopRemoteRoute } from './desktop-remote-route'
+import { writeSecretFileAtomic } from './hardening'
 
 // Boot resolves connection.json's app-global route before the registry primary, so a
 // promotion back to This device must retire that route in the same write. Without it the
@@ -58,3 +64,68 @@ it('a local primary with no app-global route needs no rewrite', () => {
 
   expect(configForLocalPrimary(setPrimaryConnection(registry(), 'local'), alreadyLocal)).toBeNull()
 })
+
+function persistedRemote() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-local-primary-'))
+  onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }))
+  const configPath = path.join(root, 'connection.json')
+  const registryPath = path.join(root, 'connections.json')
+  const readConfig = () => JSON.parse(fs.readFileSync(configPath, 'utf8'))
+  const readRegistry = () => normalizeRegistry(JSON.parse(fs.readFileSync(registryPath, 'utf8')))
+  const writeConfig = (value: Record<string, any>) => writeSecretFileAtomic(configPath, JSON.stringify(value))
+  const writeRegistry = (value: ReturnType<typeof registry>) =>
+    writeSecretFileAtomic(registryPath, JSON.stringify(value))
+
+  writeConfig(globalRemote)
+  writeRegistry(registry())
+  return { readConfig, readRegistry, writeConfig, writeRegistry }
+}
+
+it('persists both primary and boot route before reporting a successful local promotion', async () => {
+  const state = persistedRemote()
+  const local = setPrimaryConnection(state.readRegistry(), 'local')
+
+  await applyLocalPrimaryRoute(local, { ...state, log: () => {} })
+
+  expect(state.readRegistry().primary).toBe('local')
+  expect(state.readConfig().mode).toBe('local')
+  expect(state.readConfig().profiles).toEqual(globalRemote.profiles)
+  expect(resolveDesktopRemoteRoute({ registry: state.readRegistry(), config: state.readConfig() })).toBeNull()
+})
+
+it.each(['config', 'registry'] as const)(
+  'does not persist split boot/primary state when the %s write fails',
+  async failingStore => {
+    const state = persistedRemote()
+    const failure = new Error('injected write failure')
+    let failed = false
+    const io = {
+      readConfig: state.readConfig,
+      readRegistry: state.readRegistry,
+      writeConfig: (value: Record<string, any>) => {
+        if (failingStore === 'config' && !failed) {
+          failed = true
+          throw failure
+        }
+
+        state.writeConfig(value)
+      },
+      writeRegistry: (value: ReturnType<typeof registry>) => {
+        if (failingStore === 'registry' && !failed) {
+          failed = true
+          throw failure
+        }
+
+        state.writeRegistry(value)
+      },
+      log: () => {}
+    }
+
+    await expect(applyLocalPrimaryRoute(setPrimaryConnection(state.readRegistry(), 'local'), io)).rejects.toBe(failure)
+    expect(state.readConfig()).toEqual(globalRemote)
+    expect(state.readRegistry()).toEqual(registry())
+    expect(resolveDesktopRemoteRoute({ registry: state.readRegistry(), config: state.readConfig() })?.source).toBe(
+      'settings'
+    )
+  }
+)

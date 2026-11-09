@@ -15,12 +15,15 @@
  * missing direction: registry → `connection.json`.
  */
 import { modeIsRemoteLike } from './connection-config'
+import { applyConnectionConfigAtomically } from './connection-config-apply'
 import type { ConnectionRegistry } from './connection-registry'
 import { forgetRemovedGlobalRoute, withoutGlobalRoute } from './connection-registry-remove'
 
 export interface PrimaryRouteIo {
   readConfig: () => Record<string, any>
+  readRegistry: () => ConnectionRegistry
   writeConfig: (config: Record<string, any>) => void
+  writeRegistry: (registry: ConnectionRegistry) => void
   log: (message: string) => void
 }
 
@@ -46,14 +49,25 @@ export function configForLocalPrimary(
 }
 
 /** Retire the app-global route once This machine is the primary, in the same step as the switch. */
-export function applyLocalPrimaryRoute(registry: ConnectionRegistry, io: PrimaryRouteIo): void {
-  const next = configForLocalPrimary(registry, io.readConfig())
+export async function applyLocalPrimaryRoute(registry: ConnectionRegistry, io: PrimaryRouteIo): Promise<void> {
+  const previousConfig = io.readConfig()
+  const next = configForLocalPrimary(registry, previousConfig)
 
   if (!next) {
+    io.writeRegistry(registry)
     return
   }
 
-  io.writeConfig(next)
+  // A failure in either file must not leave the registry primary and boot route disagreeing.
+  await applyConnectionConfigAtomically({
+    previousConfig,
+    previousRegistry: io.readRegistry(),
+    nextConfig: next,
+    nextRegistry: registry,
+    writeConfig: io.writeConfig,
+    writeRegistry: io.writeRegistry,
+    apply: async () => undefined
+  })
   io.log('[connections] This device is the primary; connection.json route reset to local')
 }
 
