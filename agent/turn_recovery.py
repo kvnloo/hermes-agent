@@ -1928,10 +1928,11 @@ def route_classified_error(
             if agent._try_activate_fallback(reason=classified.reason, reset_at=reset_at):
                 return _fallback_break()
 
-    # A 401/403 surviving credential refresh means a broken credential or endpoint:
-    # escalate to the fallback chain once; False -> terminal handling.
+    # A 401/403 surviving credential refresh indicates invalid credentials.
+    # Fail closed by default instead of silently switching executing models.
     if (
         classified.is_auth
+        and getattr(agent, "_fallback_on_auth_error", False)
         and not _retry.auth_failover_attempted
         and agent._fallback_index < len(agent._fallback_chain)
     ):
