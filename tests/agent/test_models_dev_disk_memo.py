@@ -116,3 +116,31 @@ def test_production_model_consumers_cannot_poison_cached_registry(cache_env):
     assert models["grok-test"]["limit"]["context"] == 64000
     assert models["grok-test"]["modalities"]["input"] == ["text"]
     assert md._load_disk_cache() == registry
+
+
+def test_benchmark_uses_provider_keyed_registry_and_real_consumer(cache_env):
+    from scripts.bench import dsa_models_dev_nocopy_memo as bench
+
+    md, cache, _etag = cache_env
+    registry = bench._make_registry(23)
+    assert "xai" in registry
+    assert isinstance(registry["xai"]["models"], dict)
+    assert "providers" not in registry
+    cache.write_text(json.dumps(registry), encoding="utf-8")
+
+    expected = (len(registry["xai"]["models"]), "model-0")
+    assert bench._consumer(cache, bench._legacy_read) == expected
+    assert bench._consumer(cache, memo.read_json_disk_memo) == expected
+    assert md._models_dev_cache == {}
+
+    measured = bench._run(cache, registry, 23)
+    assert set(measured) == {
+        "disk_cold", "disk_warm", "consumer_cold", "consumer_warm"
+    }
+    assert all(
+        measured[case][arm]["error_count"] == 0
+        for case in measured for arm in ("old", "memo")
+    )
+    assert measured["consumer_cold"]["memo"]["work_count"]["json_parses"] == 7
+    assert measured["consumer_warm"]["memo"]["work_count"]["json_parses"] == 0
+    assert measured["consumer_warm"]["old"]["work_count"]["json_parses"] == 7
