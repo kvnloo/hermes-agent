@@ -200,15 +200,20 @@ def _stored_breakdown(row, conversation, usage) -> dict:
             pin = None  # a pin hash whose row was swept resolves to itself
         breakdown = stored_context_breakdown(prompt, pinned_tool_defs(pin), conversation)
     context_max, context_source = int(usage.get('context_max') or 0), str(usage.get('context_source') or '')
+    context_used, context_percent = int(usage.get('context_used') or 0), int(usage.get('context_percent') or 0)
     if not context_max:
         # Fall back to the model's window and say so: ``estimated`` marks the percentage as derived rather
         # than reported by a provider, the same distinction the resident path draws for a catalog window.
         context_max, fallback_source = _stored_context_max(row)
         if context_max:
             context_source = fallback_source
+            # A resolved window without occupancy renders a misleading ~0% meter for a resumed
+            # session with history. The frozen category estimate is the available agentless reading.
+            context_used = min(context_max, max(0, context_used or int(breakdown['estimated_total'])))
+            context_percent = max(0, min(100, round(context_used / context_max * 100)))
     return {**breakdown, 'context_max': context_max,
-            'context_percent': int(usage.get('context_percent') or 0),
-            'context_used': int(usage.get('context_used') or 0),
+            'context_percent': context_percent,
+            'context_used': context_used,
             'context_estimated': bool(usage.get('context_estimated', False)) or bool(context_source and
                                                                                     not usage.get('context_max')),
             'context_source': context_source or 'provider_usage', 'model': str(usage.get('model') or '')}

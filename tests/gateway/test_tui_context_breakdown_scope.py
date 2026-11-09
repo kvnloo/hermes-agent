@@ -195,3 +195,32 @@ async def test_agentless_breakdown_keeps_zeros_when_the_model_is_unknown(owner, 
     monkeypatch.setattr(gateway_run, '_resolve_gateway_model_context', no_window)
     assert _stored_breakdown({}, [], {})['context_max'] == 0
     assert _stored_breakdown({'model': 'nowhere/unknown'}, [], {})['context_max'] == 0
+
+@pytest.mark.asyncio
+async def test_agentless_window_fallback_estimates_used_tokens_for_the_desktop_meter(owner, monkeypatch):
+    """A known window must not show ~0% for an idle session with a frozen prompt and transcript.
+    The Desktop gauge reads context_used/percent from this same breakdown, not its category rows."""
+    from gateway import run as gateway_run
+    from gateway.session_tui_reads import _stored_id
+
+    sid = (await owner.call('session.create', request_id='window-occupancy', source='tui',
+                            cwd=str(owner.workdir)))['session_id']
+    db = owner.authority.db
+    stored = _stored_id(owner.authority, SimpleNamespace(session_id=sid))
+    db.update_session_model(stored, 'catalog/known-8k', provider='catalog')
+    db.update_system_prompt(stored, 'You are Hermes. ' * 80)
+    db.append_message(stored, 'user', 'some history ' * 200)
+    assert owner.authority.agent(SimpleNamespace(session_id=sid)) is None
+
+    def resolve(model=None, route=None):
+        assert model == 'catalog/known-8k'
+        return SimpleNamespace(context_length=8192, context_source='detected')
+
+    monkeypatch.setattr(gateway_run, '_resolve_gateway_model_context', resolve)
+    payload = await owner.call('session.context_breakdown', session_id=sid)
+    assert payload['estimated_total'] > 100, payload
+    assert payload['context_max'] == 8192, payload
+    assert payload['context_used'] == min(payload['estimated_total'], 8192), payload
+    assert payload['context_percent'] == round(payload['context_used'] / 8192 * 100), payload
+    assert payload['context_estimated'] is True, payload
+    assert payload['context_source'] == 'detected', payload
