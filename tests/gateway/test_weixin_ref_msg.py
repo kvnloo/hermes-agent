@@ -150,5 +150,5 @@ class TestNoQuote:
     def test_empty_ref_msg_is_returned_unchanged(self):
         assert weixin._extract_text([_text_item("hi", {})]) == "hi"
 
-    def test_ref_msg_without_message_item_or_title_is_returned_unchanged(self):
-        assert weixin._extract_text([_text_item("hi", {"svr_id": "svr-1"})]) == "hi"
+    def test_id_only_ref_msg_remains_visible(self):
+        assert weixin._extract_text([_text_item("hi", {"svr_id": "svr-1"})]) == "[引用: msg svr-1]\nhi"

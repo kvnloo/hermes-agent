@@ -546,7 +546,7 @@ def _quoted_prefix(item: dict[str, Any]) -> str:
     parts = [p for p in (title, _extract_text([ref_item]) if ref_item else "") if p]
     if parts:
         return f"[引用: {' | '.join(parts)}]"
-    if not ref_item and not title:
+    if not ref_item and not title and not ref.get("svr_id"):
         return ""
     ref_id = str(ref_item.get("msg_id") or ref.get("svr_id") or "").strip()
     # Shape metadata only: the quoted title/body must never reach routine logs.
