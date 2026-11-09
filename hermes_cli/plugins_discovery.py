@@ -242,6 +242,17 @@ def resolve_manifest_winners(manifests: list[PluginManifest]) -> dict[str, Plugi
             logger.info("Plugin '%s' at %s (%s) shadows the bundled copy at %s", key, manifest.path,
                         manifest.source, shadowed.path)
         elif shadowed is not None and shadowed.source == manifest.source:
+            # Preserve the installed plugin over a later-sorting backup with the same
+            # manifest key. If neither directory is canonical, retain last-wins.
+            canonical_dir = key.rsplit("/", 1)[-1]
+            if (shadowed.path and Path(shadowed.path).name == canonical_dir
+                    and (not manifest.path or Path(manifest.path).name != canonical_dir)):
+                logger.warning(
+                    "Ignoring %s plugin at %s: manifest name '%s' collides with the "
+                    "canonical same-source plugin at %s; only the canonical one will load",
+                    manifest.source, manifest.path, key, shadowed.path,
+                )
+                continue
             logger.warning(
                 "Plugin '%s' at %s (%s) shadows an earlier %s plugin with the same manifest name at %s; "
                 "only the later one will load",
