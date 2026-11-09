@@ -1055,6 +1055,15 @@ def _status_429(c: _Ctx) -> Verdict:
     # ``terminal_quota_exhausted`` (a hard cap, not throttling) on 429s, and
     # this handler always returns, so _by_error_code never sees the code.
     if c.code in _BILLING_ERROR_CODES:
+        # DashScope's 429 TPM limit uses insufficient_quota, but is not an
+        # exhausted balance (Alibaba Model Studio error-code#token-limit, #151622).
+        if c.code == "insufficient_quota" and c.provider_slug.startswith("alibaba"):
+            body_message = _error_obj(c.body).get("message")
+            if (
+                isinstance(body_message, str)
+                and body_message.strip().lower().startswith("allocated quota exceeded")
+            ):
+                return _V_RATE_LIMIT
         return _V_BILLING
     # Z.AI/Zhipu reuse 429 for server-wide overload: back off on the same
     # key instead of burning the pool (#14038).

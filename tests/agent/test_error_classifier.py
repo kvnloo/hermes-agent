@@ -472,6 +472,37 @@ class TestClassifyApiError:
         assert result.reason == FailoverReason.rate_limit
         assert result.retryable is True
 
+    def test_429_dashscope_token_limit_insufficient_quota_is_rate_limit(self):
+        # Reported by dreamsroid (#151622): DashScope documents this 429 as a
+        # per-minute token cap even though its code says insufficient_quota.
+        msg = (
+            "Allocated quota exceeded, please increase your quota limit. For details, see: "
+            "https://www.alibabacloud.com/help/en/model-studio/error-code#token-limit"
+        )
+        body = {"error": {"message": msg, "type": "insufficient_quota", "code": "insufficient_quota"}}
+        error = MockAPIError(f"Error code: 429 - {body}", status_code=429, body=body)
+        result = classify_api_error(error, provider="alibaba-token-plan-cn", model="qwen3.8-flash")
+        assert result.reason == FailoverReason.rate_limit
+        assert result.retryable is True
+        assert result.should_fallback is True
+
+    @pytest.mark.parametrize(
+        "status, code, msg, provider",
+        [
+            (429, "insufficient_quota", "Account balance is too low; top up your credits", "alibaba-token-plan-cn"),
+            (429, "terminal_quota_exhausted", "Allocated quota exceeded", "alibaba-token-plan-cn"),
+            (429, "insufficient_quota", "Free allocated quota exceeded", "alibaba-token-plan-cn"),
+            (429, "insufficient_quota", "Allocated quota exceeded", "openai"),
+            (402, "insufficient_quota", "Allocated quota exceeded", "alibaba-token-plan-cn"),
+        ],
+    )
+    def test_dashscope_tpm_exception_preserves_hard_billing(self, status, code, msg, provider):
+        body = {"error": {"message": msg, "code": code}}
+        error = MockAPIError(msg, status_code=status, body=body)
+        result = classify_api_error(error, provider=provider)
+        assert result.reason == FailoverReason.billing
+        assert result.retryable is False
+
     def test_alibaba_rate_increased_too_quickly(self):
         """Alibaba/DashScope returns a unique throttling message.
 
