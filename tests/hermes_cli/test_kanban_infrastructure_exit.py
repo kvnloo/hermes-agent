@@ -428,3 +428,53 @@ def test_the_free_stall_streak_is_bounded(board):
     assert seen[-1][0] == 14, seen
     assert [n for n, _, free in seen if not free] == [7, 14], seen
     assert seen[5][1] == 0 and seen[6][1] == 1 and seen[12][1] == 1 and seen[13][1] == 2, seen
+
+
+def test_two_immediate_unknown_receipts_do_not_exhaust_the_card_budget(board, monkeypatch, capfd):
+    """#151761: two settled-unknown owner refusals without any bound worker are
+    host outcomes, not two card crashes. Exercise the submitter exit and the
+    real dead-worker booking together, rather than injecting exit 74 alone.
+    """
+    from hermes_cli.quiet_single_query import KANBAN_WORKER_EXIT_TRAILER
+
+    async def unknown_receipt(params, db_path):
+        return kwc._exit_code({"status": "unknown"}, params, db_path)
+
+    monkeypatch.setattr(kwc, "run", unknown_receipt)
+    task = _claimed(board)
+    for attempt in range(2):
+        if attempt:
+            with _connect(board) as conn:
+                task = kb.claim_task(conn, task.id)
+            assert task is not None
+
+        for key, value in _params(task, board).items():
+            env_name = {"board": "HERMES_KANBAN_BOARD", "task_id": "HERMES_KANBAN_TASK",
+                        "run_id": "HERMES_KANBAN_RUN_ID",
+                        "claim_lock": "HERMES_KANBAN_CLAIM_LOCK"}[key]
+            monkeypatch.setenv(env_name, str(value))
+        monkeypatch.setenv("HERMES_KANBAN_DB", str(board))
+
+        assert kwc.main() == KANBAN_INFRASTRUCTURE_EXIT_CODE
+        stderr = capfd.readouterr().err
+        assert "Kanban host unavailable: Kanban execution unknown" in stderr
+        assert f"{KANBAN_WORKER_EXIT_TRAILER}74" in stderr
+
+        # The submitter clears its inherited HERMES_KANBAN_* variables.
+        monkeypatch.setenv("HERMES_KANBAN_CRASH_GRACE_SECONDS", "0")
+        pid = _dead_worker_pid()
+        with _connect(board) as conn:
+            _park_as_dead_worker(conn, task, pid)
+            _register_exit(pid, KANBAN_INFRASTRUCTURE_EXIT_CODE)
+            kbd.detect_crashed_workers(conn)
+            row = conn.execute(
+                "SELECT status, consecutive_failures FROM tasks WHERE id = ?",
+                (task.id,),
+            ).fetchone()
+            assert row["status"] == "ready"
+            assert row["consecutive_failures"] == 0
+            kinds = [event["kind"] for event in conn.execute(
+                "SELECT kind FROM task_events WHERE task_id = ?", (task.id,),
+            )]
+            assert "gave_up" not in kinds
+
