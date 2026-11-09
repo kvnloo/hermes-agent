@@ -85,3 +85,26 @@ def test_create_task_explicit_scratch_wins_over_board_default(kanban_home, tmp_p
     assert t is not None
     assert t.workspace_kind == "scratch"
     assert t.workspace_path is None
+
+
+def test_create_task_omitted_kind_anchors_nested_git_board_workdir(kanban_home, tmp_path):
+    """A valid board subdirectory must not become an occupied worktree target."""
+    from hermes_cli import kanban_db_workspace as kbw
+
+    repo = tmp_path / "repo"
+    _init_git_repo(repo)
+    nested = repo / "src"
+    nested.mkdir()
+    sentinel = nested / "keep.txt"
+    sentinel.write_text("user files stay here\n", encoding="utf-8")
+    kb.write_board_metadata(None, default_workdir=str(nested))
+
+    with kbc.connect() as conn:
+        task_id = kb.create_task(conn, title="edit the repo", assignee="worker")
+        task = kb.get_task(conn, task_id)
+
+    assert task is not None
+    assert task.workspace_kind == "worktree"
+    assert task.workspace_path == str(repo)
+    assert kbw.resolve_workspace(task) == repo / ".worktrees" / task_id
+    assert sentinel.read_text(encoding="utf-8") == "user files stay here\n"

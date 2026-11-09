@@ -1433,7 +1433,13 @@ def create_task(
     if workspace_path is None and project_repo is None and workspace_kind in {"dir", "worktree"}:
         board_default = _board_meta_for(board).get("default_workdir")
         if board_default:
-            workspace_path = str(board_default)
+            if workspace_kind == "worktree":
+                # A nested board directory is not a safe worktree target: anchor
+                # new worktrees at the repository root, not inside user files.
+                repo_root = _git_toplevel(Path(board_default).expanduser())
+                workspace_path = str(repo_root) if repo_root else str(board_default)
+            else:
+                workspace_path = str(board_default)
 
     # Retry once on the extremely unlikely id collision.
     for attempt in range(2):
@@ -4455,6 +4461,7 @@ from hermes_cli.kanban_db_connect import (  # noqa: E402
 )
 from hermes_cli.kanban_db_workspace import (  # noqa: E402
     derive_board_default_workspace_kind,
+    _git_toplevel,
     _cleanup_workspace,
     _is_managed_scratch_path,
     _managed_scratch_path_info,
