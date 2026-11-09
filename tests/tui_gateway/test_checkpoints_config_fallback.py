@@ -174,3 +174,10 @@ class TestCheckpointLimits:
         )
         assert captured.get("checkpoint_max_total_size_mb") == 1000
         assert captured.get("checkpoint_max_snapshots") == 5
+
+    def test_file_size_limit_reaches_agent(self, monkeypatch):
+        """The configured per-file cap must also reach the desktop/TUI AIAgent."""
+        captured = TestMakeAgentCheckpointsFallback()._make_agent_with_checkpoints(
+            monkeypatch, {"checkpoints": {"enabled": True, "max_file_size_mb": 3}}
+        )
+        assert captured["checkpoint_max_file_size_mb"] == 3
