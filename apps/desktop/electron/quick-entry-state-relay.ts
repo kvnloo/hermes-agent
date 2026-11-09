@@ -50,6 +50,8 @@ export interface QuickEntryStateRelay {
   deliver: (payload: Record<string, unknown>) => void
   /** The window echoed an adopted payload; settle a matching in-flight replay. */
   acknowledge: (payload: QuickEntryStatePayloadLike) => void
+  /** Renderer subscribed after loading; immediately redeliver the latest cached truth. */
+  listenerReady: () => void
   /** Stop retrying (target window closed, feature torn down). */
   cancel: () => void
 }
@@ -139,6 +141,16 @@ export function createQuickEntryStateRelay(options: QuickEntryStateRelayOptions)
       if (outstanding && options.equals(payload, outstanding)) {
         outstanding = null
         clearTimer()
+      }
+    },
+    listenerReady() {
+      const current = options.latest()
+
+      if (current && options.isTargetAlive()) {
+        // Restart even if the original retry budget expired before React mounted.
+        attempts = 0
+        outstanding = current
+        sendNow()
       }
     },
     cancel() {

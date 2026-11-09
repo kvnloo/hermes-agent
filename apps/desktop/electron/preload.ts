@@ -228,6 +228,7 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     // Quick window → main: echo of the last adopted state payload, proving a
     // mounted composer received it (main retries un-acked replays).
     ackState: payload => ipcRenderer.send('hermes:quick-entry:state-ack', payload),
+    requestState: () => ipcRenderer.send('hermes:quick-entry:state-request'),
     // Quick window subscribes to those pushes.
     onState: callback => {
       const listener = (_event, payload) => callback(payload)

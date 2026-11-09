@@ -80,6 +80,22 @@ describe('quick entry state relay (#95132)', () => {
     expect(h.sent).toHaveLength(3)
   })
 
+  it('recovers a renderer mounting after every replay was missed (#151703)', () => {
+    const h = harness({ retryMs: 100, maxSends: 2 })
+    const connected = payload(true)
+
+    h.relay.deliver(connected)
+    vi.advanceTimersByTime(5_000) // A stalled Windows renderer missed both sends.
+    expect(h.sent).toHaveLength(2)
+
+    h.relay.listenerReady() // onState has finally been installed.
+    expect(h.sent).toEqual([connected, connected, connected])
+
+    h.relay.acknowledge(connected)
+    vi.advanceTimersByTime(5_000)
+    expect(h.sent).toHaveLength(3)
+  })
+
   it('abandons retries when the window dies mid-cycle', () => {
     const h = harness({ retryMs: 100, maxSends: 5 })
 

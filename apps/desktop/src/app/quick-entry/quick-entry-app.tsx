@@ -76,6 +76,8 @@ export function QuickEntryApp() {
       })
     })
 
+    // Listener is now installed, even if did-finish-load retries already expired.
+    api?.requestState?.()
     inputRef.current?.focus()
 
     return () => {

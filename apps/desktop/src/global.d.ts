@@ -186,6 +186,8 @@ declare global {
         // Quick window → main: echo of the state payload the composer just
         // adopted, so the shell stops retrying its did-finish-load replay.
         ackState?: (payload: QuickEntryStatePush) => void
+        // Late-loaded composer asks main to replay state after onState exists.
+        requestState?: () => void
         // Quick window subscribes to those pushes.
         onState: (callback: (payload: QuickEntryStatePush) => void) => () => void
         // Primary renderer subscribes to submits captured by the quick window.

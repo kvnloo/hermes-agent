@@ -18427,6 +18427,16 @@ ipcMain.on('hermes:quick-entry:state-ack', (event, payload) => {
   quickEntryStateRelay?.acknowledge(payload ?? null)
 })
 
+// The quick renderer registers onState after its lazy chunk mounts. Its ready
+// request repairs a cold replay lost beyond the bounded retry window (#151703).
+ipcMain.on('hermes:quick-entry:state-request', event => {
+  if (!quickEntryWindow || quickEntryWindow.isDestroyed() || event.sender !== quickEntryWindow.webContents) {
+    return
+  }
+
+  quickEntryStateRelay?.listenerReady()
+})
+
 ipcMain.on('hermes:quick-entry:dismiss', () => hideQuickEntryWindow())
 
 // Disable F12 DevTools: maintained in the main process so a cold launch
