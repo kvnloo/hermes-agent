@@ -68,6 +68,17 @@ class TestAzureRealtimeWsUrl:
         assert url.startswith("wss://foo.openai.azure.com/openai/realtime?")
         assert "deployment=my-deploy" in url
 
+    def test_documented_openai_v1_base_url_uses_realtime_endpoint(self):
+        expected = (
+            "wss://foo.openai.azure.com/openai/realtime"
+            f"?api-version={voice_live.AZURE_REALTIME_API_VERSION}&deployment=my-deploy"
+        )
+        for base_url in (
+            "https://foo.openai.azure.com/openai/v1",
+            "https://foo.openai.azure.com/openai/v1/",
+        ):
+            assert voice_live.azure_realtime_ws_url(base_url, "my-deploy") == expected
+
     def test_cognitiveservices_host_and_custom_api_version(self):
         url = voice_live.azure_realtime_ws_url(
             "https://foo.cognitiveservices.azure.com", "dep", api_version="2024-10-01-preview")

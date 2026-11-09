@@ -162,6 +162,9 @@ def azure_realtime_ws_url(base_url: str, deployment: str, api_version: str = AZU
     parsed = urllib.parse.urlparse(base_url)
     scheme = "wss" if parsed.scheme in ("https", "wss") else "ws"
     path = parsed.path.rstrip("/")
+    # The documented Azure /openai/v1 HTTP base is not a Realtime path prefix.
+    if path.endswith("/openai/v1"):
+        path = path[:-3]
     if path and not path.endswith("/openai"):
         path = f"{path}/openai"
     elif not path:
