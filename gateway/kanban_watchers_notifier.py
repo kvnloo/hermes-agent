@@ -597,8 +597,17 @@ class _KanbanNotification:
             # subscriber registered). task.session_id may be a WORKER session
             # for child tasks; use it only for legacy rows.
             self.session_key = sub["chat_id"] or getattr(task, "session_id", None) or ""
-        # i18n keys: gateway.kanban.wake.<kind> for each _WAKE_KINDS entry.
-        _parts = [t(f"gateway.kanban.wake.{k}") for k in _WAKE_KINDS if k in self.wake_kinds]
+        # A force-tripped gave_up is sticky even when retry budget remains.
+        # Use the existing localized neutral status, not "retries exhausted".
+        sticky_gave_up = any(
+            ev.kind == "gave_up" and (ev.payload or {}).get("sticky")
+            for ev in self.d["events"]
+        )
+        _parts = [
+            t("gateway.kanban.wake.blocked" if k == "gave_up" and sticky_gave_up
+              else f"gateway.kanban.wake.{k}")
+            for k in _WAKE_KINDS if k in self.wake_kinds
+        ]
         _status = t("gateway.kanban.wake.status_joiner").join(_parts) or t("gateway.kanban.wake.status_default")
         synth = t(
             "gateway.kanban.wake.message",

@@ -105,10 +105,10 @@ def test_blocked_without_reason_adds_no_line(tmp_path, monkeypatch):
     assert "Block reason:" not in posts[0]
 
 
-def _gave_up_sub(error, failures=3):
+def _gave_up_sub(error, *, force_trip=True, failure_limit=2, terminal_provider=False):
     conn = kbc.connect()
     try:
-        tid = kb.create_task(conn, title="retry budget exhausted", assignee="worker")
+        tid = kb.create_task(conn, title="worker stopped", assignee="worker")
         kbn.add_notify_sub(conn, task_id=tid, platform="api_server", chat_id="bot-chat")
         # Simulate the dispatcher breaker: mark the task blocked, then emit the
         # single `gave_up` event that carries `error` and `failures` (no
@@ -116,7 +116,9 @@ def _gave_up_sub(error, failures=3):
         from hermes_cli import kanban_db_dispatch as kbd
         assert kbd._record_task_failure(
             conn, tid, error,
-            outcome="gave_up", force_trip=True, release_claim=True, end_run=True,
+            outcome="crashed", failure_limit=failure_limit, force_trip=force_trip,
+            release_claim=True, end_run=True,
+            event_payload_extra={"terminal_provider": True} if terminal_provider else None,
         )
         return tid
     finally:
@@ -126,7 +128,33 @@ def _gave_up_sub(error, failures=3):
 def test_gave_up_wake_carries_error_as_block_reason(tmp_path, monkeypatch):
     posts = _wake_texts(
         tmp_path, monkeypatch,
-        lambda: _gave_up_sub("spawn failed: ENOENT hermes", failures=3),
+        lambda: _gave_up_sub("spawn failed: ENOENT hermes"),
     )
     assert len(posts) == 1
     assert "Block reason: spawn failed: ENOENT hermes" in posts[0]
+
+
+def test_terminal_provider_gave_up_wake_does_not_claim_retries_exhausted(tmp_path, monkeypatch):
+    """A first-failure sticky trip (one of two attempts) must not claim retry exhaustion."""
+    posts = _wake_texts(
+        tmp_path, monkeypatch,
+        lambda: _gave_up_sub(
+            "the provider rejected this profile's credential",
+            force_trip=True, failure_limit=2, terminal_provider=True,
+        ),
+    )
+    assert len(posts) == 1
+    assert "blocked; needs attention" in posts[0]
+    assert "gave up (retries exhausted)" not in posts[0]
+    assert "Block reason: the provider rejected this profile's credential" in posts[0]
+
+
+def test_retry_budget_gave_up_wake_still_reports_exhaustion(tmp_path, monkeypatch):
+    """A real threshold trip retains the more specific exhaustion status."""
+    posts = _wake_texts(
+        tmp_path, monkeypatch,
+        lambda: _gave_up_sub("the worker crashed", force_trip=False, failure_limit=1),
+    )
+    assert len(posts) == 1
+    assert "gave up (retries exhausted)" in posts[0]
+    assert "Block reason: the worker crashed" in posts[0]
