@@ -619,3 +619,32 @@ def test_source_filter_on_a_db_without_created_source(db):
     db._conn.execute("ALTER TABLE sessions DROP COLUMN created_source")
     db._conn.commit()
     assert InsightsEngine(db).generate(days=30, source="cli")["overview"]["total_sessions"] == 1
+
+def test_openrouter_provider_bill_is_visible_in_insights_cost_summaries(db):
+    """Regression for NousResearch/hermes-agent#152288, follow-up to Raymond Augé's #152289.
+
+    The carrier records usage.cost in actual_cost_usd. An actual-only session
+    must show that bill in both /insights summaries, not a blank cost section.
+    """
+    db.create_session("openrouter-bill", source="cli", model="deepseek/deepseek-v4.1-flash-1017")
+    db.update_token_counts(
+        "openrouter-bill",
+        input_tokens=9,
+        output_tokens=18,
+        actual_cost_usd=0.125,
+        cost_status="actual",
+        cost_source="provider_generation_api",
+        billing_provider="openrouter",
+        api_call_count=1,
+    )
+
+    engine = InsightsEngine(db)
+    report = engine.generate(days=30)
+
+    assert report["overview"]["actual_cost"] == pytest.approx(0.125)
+    terminal = engine.format_terminal(report)
+    gateway = engine.format_gateway(report)
+    assert "Actual:" in terminal
+    assert "Estimated:" not in terminal
+    assert "actual" in gateway
+    assert "estimated" not in gateway

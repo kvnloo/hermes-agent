@@ -485,11 +485,17 @@ class InsightsEngine:
 
     @staticmethod
     def _cost_lines(o: dict, templates: tuple) -> list[str]:
-        """One formatted line per non-zero cost bucket (estimated, included, unknown)."""
-        # Cost breakdown — surface the three buckets so subscription-included and unknown-cost sessions are
-        # visible instead of silently collapsing to $0. See #77223.
+        """One formatted line per non-zero bucket (actual, estimated, included, unknown)."""
+        # Report the provider's invoice separately from model-table estimates.
+        # Otherwise actual-only OpenRouter sessions have no cost line at all.
+        actual_cost = o.get("actual_cost", 0.0)
         est_cost = o.get("estimated_cost", 0.0)
-        values = (_fmt_est_cost(est_cost) if est_cost > 0 else "", o.get("included_cost_sessions", 0), o.get("unknown_cost_sessions", 0))
+        values = (
+            _fmt_est_cost(actual_cost) if actual_cost > 0 else "",
+            _fmt_est_cost(est_cost) if est_cost > 0 else "",
+            o.get("included_cost_sessions", 0),
+            o.get("unknown_cost_sessions", 0),
+        )
         return [tpl.format(v) for tpl, v in zip(templates, values) if v]
 
     def format_terminal(self, report: dict) -> str:
@@ -525,7 +531,7 @@ class InsightsEngine:
             lines.append(f"  Active time:       ~{format_duration_compact(o['total_hours'] * 3600):<11}  Avg session:     ~{format_duration_compact(o['avg_session_duration'])}")
         lines += [f"  Avg msgs/session:  {o['avg_messages_per_session']:.1f}", ""]
         # Cost buckets: show included/unknown sessions instead of collapsing to $0.
-        cost_lines = self._cost_lines(o, ("  Estimated:          {}", "  Included:           {} session(s) (subscription — no provider invoice)",
+        cost_lines = self._cost_lines(o, ("  Actual:             {}", "  Estimated:          {}", "  Included:           {} session(s) (subscription — no provider invoice)",
                                           "  Unknown:            {} session(s) (no pricing data)"))
         if cost_lines:
             lines += self._section("💰 Cost") + cost_lines + [""]
@@ -584,7 +590,7 @@ class InsightsEngine:
         if o["total_hours"] > 0:
             lines.append(f"**Active time:** ~{format_duration_compact(o['total_hours'] * 3600)} | **Avg session:** ~{format_duration_compact(o['avg_session_duration'])}")
         lines.append("")
-        cost_parts = self._cost_lines(o, ("{} estimated", "{} included (subscription)", "{} unknown"))
+        cost_parts = self._cost_lines(o, ("{} actual", "{} estimated", "{} included (subscription)", "{} unknown"))
         if cost_parts:
             lines += [f"**Cost:** {' | '.join(cost_parts)}", ""]
         if report["models"]:
