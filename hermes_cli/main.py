@@ -1428,6 +1428,11 @@ def _resolve_continue_arg(args, *, use_tui: bool) -> None:
                 # contract, so a route dropped here is frozen to the profile default forever (hw-lk5).
                 from hermes_cli.gateway_session_store import _LAUNCH_POLICY
                 launch = {k: getattr(args, k, None) for k in _LAUNCH_POLICY if hasattr(args, k)}
+                # Classic-only creation options must survive the first titled join too.
+                for key in ("run_budget", "verbose"):
+                    value = getattr(args, key, None)
+                    if value is not None and value is not False:
+                        launch[key] = value
                 if use_tui:
                     new_sid = _create_titled_session(continue_val, launch)
                 else:

@@ -27,7 +27,7 @@ def isolated_home(tmp_path, monkeypatch):
     monkeypatch.setenv("HERMES_HOME", str(home))
     from hermes_cli import gateway_session_store
 
-    def create_titled(title):
+    def create_titled(title, launch=None):
         from hermes_state import SessionDB
         db = SessionDB()
         try:
@@ -156,7 +156,8 @@ class TestChatCFailLoudlyOnStderr:
 
         created = []
         monkeypatch.setattr(store_mod, "create_titled_session",
-                            lambda title: created.append(title) or "local-" + "a" * 64, raising=False)
+                            lambda title, launch=None: created.append((title, launch)) or "local-" + "a" * 64,
+                            raising=False)
         args = type(
             "Args",
             (),
@@ -170,8 +171,39 @@ class TestChatCFailLoudlyOnStderr:
         main_mod._resolve_continue_arg(args, use_tui=False)
 
         assert args.resume == "local-" + "a" * 64, "resume should be set to the new session id"
-        assert created == ["Bot Chat"]
+        assert created == [("Bot Chat", {})]
         assert not (isolated_home / "state.db").exists(), "the CLI must not write the titled row itself"
+
+    def test_create_if_missing_forwards_pinned_workflow_policy(self, isolated_home, monkeypatch):
+        """#152129: a new titled workflow seat freezes route pins and classic-only limits."""
+        from hermes_cli import gateway_session_store as store_mod
+        from hermes_cli.main import _resolve_continue_arg
+
+        created = []
+        monkeypatch.setattr(
+            store_mod, "create_titled_session",
+            lambda title, launch=None: created.append((title, launch)) or "local-" + "b" * 64,
+        )
+        args = type("Args", (), {
+            "continue_last": "wf:pin-proof-r5:whoami:8a8438b0.97c93c#a0",
+            "resume": None,
+            "create_if_missing": True,
+            "model": "anthropic/claude-opus-5-5",
+            "provider": "anthropic",
+            "max_turns": 40,
+            "run_budget": 60,
+            "verbose": True,
+        })()
+
+        _resolve_continue_arg(args, use_tui=False)
+
+        assert args.resume == "local-" + "b" * 64
+        assert created == [(
+            args.continue_last,
+            {"model": "anthropic/claude-opus-5-5", "provider": "anthropic",
+             "max_turns": 40, "run_budget": 60, "verbose": True},
+        )]
+
 
     def test_tui_create_if_missing_keeps_the_local_titled_row(self, isolated_home):
         """The TUI launch is unchanged: main's titled row, then the TUI resumes it."""
