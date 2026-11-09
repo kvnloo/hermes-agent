@@ -8,10 +8,11 @@
 // only scale when the list re-renders (or rebuilds its measurements) per tick,
 // so the invariants here are COUNT bounds over a real mount of both libraries —
 // no module is stubbed into a fake that cannot loop.
-import { act, cleanup, render } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import * as React from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type * as TanStackVirtual from '@tanstack/react-virtual'
 import type { SessionInfo } from '@/hermes'
 import type { SidebarListRow } from '@/lib/session-date-groups'
 
@@ -35,7 +36,7 @@ let instance: {
 } | null = null
 
 vi.mock('@tanstack/react-virtual', async importOriginal => {
-  const original = await importOriginal<typeof import('@tanstack/react-virtual')>()
+  const original = await importOriginal<typeof TanStackVirtual>()
 
   return {
     ...original,
@@ -69,10 +70,19 @@ let rowRenders = 0
 vi.mock('./session-row', () => ({
   // forwardRef like the real row: useSortable's setNodeRef must reach a DOM
   // node or the droppable never measures.
-  SidebarSessionRow: React.forwardRef(function CountingRow(_props: unknown, ref: React.Ref<HTMLDivElement>) {
+  SidebarSessionRow: React.forwardRef(function CountingRow(
+    props: { onPin: () => void },
+    ref: React.Ref<HTMLDivElement>
+  ) {
     rowRenders += 1
 
-    return <div ref={ref} />
+    return (
+      <div ref={ref}>
+        <button onClick={props.onPin} type="button">
+          Pin
+        </button>
+      </div>
+    )
   })
 }))
 
@@ -158,7 +168,17 @@ const handleReorder = () => {}
 // A parent that re-renders on demand — the sidebar's real store ticks
 // (heartbeats, session refreshes, dot-state writes) all land as a prop-level
 // re-render of the section. Callbacks are inline, like the real caller's.
-function Harness({ ids, rows, sortable }: { ids: string[]; rows: SidebarListRow[]; sortable: boolean }) {
+function Harness({
+  ids,
+  onPin,
+  rows,
+  sortable
+}: {
+  ids: string[]
+  onPin?: (tick: number) => void
+  rows: SidebarListRow[]
+  sortable: boolean
+}) {
   const [tick, setTick] = React.useState(0)
   const bump = () => setTick(t => t + 1)
   ;(window as unknown as { bumpTick: () => void }).bumpTick = bump
@@ -166,10 +186,10 @@ function Harness({ ids, rows, sortable }: { ids: string[]; rows: SidebarListRow[
   const virtual = (
     <VirtualSessionList
       activeSessionId={null}
+      onArchiveSession={() => {}}
       onDeleteSession={() => {}}
       onResumeSession={() => {}}
-      onArchiveSession={() => {}}
-      onTogglePin={() => {}}
+      onTogglePin={() => onPin?.(tick)}
       onToggleUnread={() => {}}
       pinned={false}
       rows={rows}
@@ -217,6 +237,23 @@ describe('VirtualSessionList render/measure budget (#62964)', () => {
     expect(measures).toBe(measuresAfterMount)
 
     unmount()
+  })
+
+  it('a memoized row uses the current action handler after a parent state update', () => {
+    const seen: number[] = []
+    const onPin = (tick: number) => {
+      seen.push(tick)
+    }
+    const { getByRole } = render(<Harness ids={[]} onPin={onPin} rows={sessionRows(1)} sortable={false} />)
+    const rendersAfterMount = rowRenders
+
+    act(() => {
+      ;(window as unknown as { bumpTick: () => void }).bumpTick()
+    })
+
+    expect(rowRenders).toBe(rendersAfterMount)
+    fireEvent.click(getByRole('button', { name: 'Pin' }))
+    expect(seen).toEqual([1])
   })
 
   it('measures each mounted row exactly once for an N-item list', () => {

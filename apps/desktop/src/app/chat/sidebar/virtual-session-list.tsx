@@ -321,19 +321,20 @@ function shellRowProps(
   }: Omit<VirtualRowShellProps, 'index' | 'measure' | 'session' | 'start'>,
   session: SessionInfo
 ): SessionRowCommonProps {
-  const handlers = handlersRef.current
-
+  // Resolve actions when invoked, not when a memoized row last rendered.
   return {
     branchStem,
     card,
     isPinned: pinned,
     isSelected: selected,
-    onArchive: () => handlers.onArchiveSession(session.id),
-    onBranch: handlers.onBranchSession ? () => handlers.onBranchSession?.(session.id, session.profile) : undefined,
-    onDelete: () => handlers.onDeleteSession(session.id),
-    onPin: () => handlers.onTogglePin(sessionPinId(session)),
-    onToggleUnread: () => handlers.onToggleUnread(session.id),
-    onResume: () => handlers.onResumeSession(session.id, session),
+    onArchive: () => handlersRef.current.onArchiveSession(session.id),
+    onBranch: handlersRef.current.onBranchSession
+      ? () => handlersRef.current.onBranchSession?.(session.id, session.profile)
+      : undefined,
+    onDelete: () => handlersRef.current.onDeleteSession(session.id),
+    onPin: () => handlersRef.current.onTogglePin(sessionPinId(session)),
+    onToggleUnread: () => handlersRef.current.onToggleUnread(session.id),
+    onResume: () => handlersRef.current.onResumeSession(session.id, session),
     reorderable: sortable,
     showProfile,
     unread
