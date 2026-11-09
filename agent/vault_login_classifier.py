@@ -138,6 +138,14 @@ _RE_OTP = re.compile(
 # signal is a shared indexed id/name (``input-code-0``..``input-code-5`` — the inspection JS folds the
 # id into ``name``) carried by one compact row of inputs.
 _RE_INDEXED_FIELD = re.compile(r"^(?P<base>.*[a-z_-])(?P<n>\d+)$", re.IGNORECASE)
+# Indexed inputs alone are not evidence of an OTP: checkout and coupon widgets also use them.
+_RE_INDEXED_OTP_BASE = re.compile(
+    r"(?:^|[-_])(?:otp|totp|2fa|mfa|passcode|code|pin|token)(?:[-_]|$)", re.IGNORECASE
+)
+_RE_INDEXED_NON_OTP_BASE = re.compile(
+    r"(?:^|[-_])(?:address|shipping|coupon|promo|discount|voucher|gift|card|cc)(?:[-_]|$)",
+    re.IGNORECASE,
+)
 
 
 def _indexed_split_otp_group(controls: List[LoginControl]) -> List[LoginControl]:
@@ -151,7 +159,12 @@ def _indexed_split_otp_group(controls: List[LoginControl]) -> List[LoginControl]
             continue
         for token in c.name.split():
             m = _RE_INDEXED_FIELD.match(token)
-            if m and len(re.sub(r"[^a-z]", "", m.group("base").lower())) >= 2:
+            if (
+                m
+                and len(re.sub(r"[^a-z]", "", m.group("base").lower())) >= 2
+                and _RE_INDEXED_OTP_BASE.search(m.group("base"))
+                and not _RE_INDEXED_NON_OTP_BASE.search(m.group("base"))
+            ):
                 groups.setdefault((c.form_index, m.group("base").lower()), []).append([int(m.group("n")), c])
                 break
     for members in groups.values():

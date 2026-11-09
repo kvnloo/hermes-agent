@@ -882,6 +882,17 @@ class TestTwoFactor:
         assert build_otp_fills(classify_otp_controls(labeled), "246810") == [
             {"index": 0, "token": "one-time-code", "value": "246810"}]
 
+    def test_indexed_checkout_and_coupon_rows_are_not_otp_widgets(self):
+        """#113094: six adjacent numbered non-OTP inputs must not open the secure code prompt."""
+        from agent.vault_login_classifier import LoginControl, classify_otp_controls
+
+        for prefix in ("coupon-", "address-line-", "promo-code-"):
+            controls = [
+                LoginControl("", 0, i, "", f"{prefix}{i}", "text", None)
+                for i in range(6)
+            ]
+            assert classify_otp_controls(controls) == [], prefix
+
     def test_unlabeled_digit_boxes_classify_as_a_last_resort(self):
         """#113094 GoHighLevel follow-up: six formless ``maxlength=1`` number inputs with no id, name,
         label or autocomplete at all. The last-resort structural tier picks the digit row up and the
