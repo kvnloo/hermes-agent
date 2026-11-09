@@ -23,7 +23,9 @@ const Mark = ({ text }: { text: string }) =>
   React.createElement("span", null, text);
 
 afterEach(() => {
-  unregisterPluginSlots("test-plugin");
+  for (const plugin of ["test-plugin", "left-one", "left-two", "right-one", "right-two"]) {
+    unregisterPluginSlots(plugin);
+  }
 });
 
 describe("footer-left / footer-right slots (SidebarFooter)", () => {
@@ -60,6 +62,29 @@ describe("footer-left / footer-right slots (SidebarFooter)", () => {
     expect(html).toContain("PLUGIN-RIGHT");
     expect(html).not.toContain("nousresearch.com");
   });
+  it("keeps multiple plugins for each footer slot stacked in one cell", () => {
+    for (const [plugin, slot, label] of [
+      ["left-one", "footer-left", "LEFT-ONE"],
+      ["left-two", "footer-left", "LEFT-TWO"],
+      ["right-one", "footer-right", "RIGHT-ONE"],
+      ["right-two", "footer-right", "RIGHT-TWO"],
+    ] as const) {
+      registerSlot(plugin, slot, () =>
+        React.createElement(Mark, { text: label }),
+      );
+    }
+
+    const html = renderToStaticMarkup(
+      React.createElement(SidebarFooter, { status: null }),
+    );
+    expect(html).toMatch(
+      /<div class="[^"]*\bflex-col\b[^"]*"><span>LEFT-ONE<\/span><span>LEFT-TWO<\/span><\/div>/,
+    );
+    expect(html).toMatch(
+      /<div class="[^"]*\bflex-col\b[^"]*"><span>RIGHT-ONE<\/span><span>RIGHT-TWO<\/span><\/div>/,
+    );
+  });
+
 });
 
 describe("sidebar slot (CockpitSidebarSlot)", () => {
