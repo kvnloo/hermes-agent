@@ -6,12 +6,13 @@
 // without it. Prospective only: the November 6 failure threw pre-packaging
 // and produced no bundle, so no asar check could have caught that incident.
 // This locks the reader and the failure messages for future silent-omission
-// regressions — it is not wired to any packaging or CI hook.
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+// regressions — afterPack enforces it on every macOS packaged build.
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, expect, test } from 'vitest'
 import { assertDarwinGetWindowsTree, getWindowsFilesInAsar, listAsarFiles } from './assert-asar-get-windows.mjs'
+import afterPack from './after-pack.mjs'
 
 const roots = []
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }) })
@@ -84,4 +85,21 @@ test('reader lists nested files in order', () => {
     'dist/node_modules/get-windows/package.json',
   ])
   expect(listAsarFiles(asarFile(false))).toEqual([])
+})
+
+test('macOS afterPack refuses a ready bundle missing the get-windows helper', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'asar-after-pack-'))
+  roots.push(root)
+  const resources = join(root, 'Hermes.app', 'Contents', 'Resources')
+  mkdirSync(join(resources, 'app.asar.unpacked', 'dist'), { recursive: true })
+  writeFileSync(join(resources, 'app.asar'), asarBuffer({ files: { dist: { files: {} } } }))
+  writeFileSync(
+    join(resources, 'app.asar.unpacked', 'dist', 'electron-main.mjs'),
+    'const re = /HERMES_(?:BACKEND|DASHBOARD)_READY/'
+  )
+  await expect(afterPack({
+    electronPlatformName: 'darwin',
+    appOutDir: root,
+    packager: { appInfo: { productFilename: 'Hermes' } }
+  })).rejects.toThrow(/packaged bundle has no get-windows tree/)
 })
