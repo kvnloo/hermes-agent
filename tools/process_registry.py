@@ -356,7 +356,10 @@ def _is_supervised_gateway_process() -> bool:
     except Exception as exc:
         logger.debug("Could not verify supervised gateway process identity: %s", exc)
         return False
-    _SUPERVISED_GATEWAY_VERDICT = (key, verdict)
+    # A temporary PID-file mismatch is not a process-lifetime identity verdict.
+    # Only a confirmed gateway may reuse the expensive identity probe result.
+    if verdict:
+        _SUPERVISED_GATEWAY_VERDICT = (key, True)
     return verdict
 
 
