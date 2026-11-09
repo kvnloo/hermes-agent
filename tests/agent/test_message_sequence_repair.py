@@ -95,8 +95,15 @@ def test_repair_marker_user_merge_keeps_plain_row_addressable():
     assert merged["role"] == "user"
     assert not merged.get("display_kind")
     assert merged["_row_id"] == 12135
-    assert "the user's real prompt" in merged["content"]
-    assert "[System:" in merged["content"]
+    marker = "[System: The active model for this chat has changed to ds4.]"
+    assert merged["content"] == "the user's real prompt"
+    assert merged["api_content"] == f"{marker}\n\nthe user's real prompt"
+    # The real Desktop/TUI gateway projection must render the absorbed prompt,
+    # while model replay retains the notice only in api_content.
+    from tui_gateway.session_history import _history_to_messages
+    assert [(m["role"], m["text"]) for m in _history_to_messages([merged])] == [
+        ("user", "the user's real prompt"),
+    ]
 
 
 def test_repair_plain_user_then_marker_stays_addressable():

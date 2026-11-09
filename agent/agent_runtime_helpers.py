@@ -697,13 +697,27 @@ def _merge_consecutive_users(messages: list[dict]) -> tuple[list[dict], int]:
                 prev[MERGED_DURABLE_ROWS] = int(prev.get(MERGED_DURABLE_ROWS) or 1) + 1
             else:
                 prev.pop(MERGED_DURABLE_ROWS, None)
-            prev["content"] = merged_content
+            # A model-switch notice is model-facing context, not a human prompt.
+            # Keep the merged wire bytes for replay, but let the absorbed real turn own
+            # the display text (the gateway hides "[System:"-prefixed user rows).
+            if prev.get("display_kind") == "model_switch" and not msg.get("display_kind") and new_content:
+                previous_wire = prev.get("api_content")
+                incoming_wire = msg.get("api_content")
+                previous_wire = previous_wire if isinstance(previous_wire, str) else prev_content
+                incoming_wire = incoming_wire if isinstance(incoming_wire, str) else new_content
+                prev["api_content"] = (
+                    previous_wire + "\n\n" + incoming_wire
+                    if previous_wire and incoming_wire else (previous_wire or incoming_wire)
+                )
+                prev["content"] = new_content
+            else:
+                prev["content"] = merged_content
+                # A rewritten row must not replay a stale pre-merge sidecar.
+                drop_stale_api_content(prev)
             # The clean-text persist override must replace only the absorbed turn, never the
             # unanswered text before it; kept across replay passes (an empty turn absorbs too).
             if prev_content:
                 prev[MERGED_TURN_PREFIX] = prev_content
-            # Merged content invalidates the api_content sidecar; drop it so replay cannot use stale bytes.
-            drop_stale_api_content(prev)
             # A display-marker row (e.g. a model-switch marker persisted as role=user on
             # purpose, #48338) merging with a plain user row must not bury the plain row's
             # addressable identity: keeping the marker's display_kind hides the merged pair
@@ -720,6 +734,7 @@ def _merge_consecutive_users(messages: list[dict]) -> tuple[list[dict], int]:
             if prev.get("display_kind") and not msg.get("display_kind"):
                 marker_row_id = prev.get("_row_id")
                 prev.pop("display_kind", None)
+                prev.pop("display_metadata", None)
                 if msg.get("_row_id") is not None:
                     if isinstance(marker_row_id, int) and not isinstance(marker_row_id, bool):
                         absorbed_ids = prev.setdefault("_absorbed_row_ids", [])
