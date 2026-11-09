@@ -91,6 +91,7 @@ Thread safety:
 
 import asyncio
 import contextvars
+from functools import wraps
 import concurrent.futures
 import inspect
 import json
@@ -3032,6 +3033,9 @@ _scoped_servers: Dict[str, MCPServerTask] = {}
 # across the (blocking) connect, hence separate from ``_lock``, which only ever
 # guards short dict mutations.
 _scoped_connect_locks: Dict[str, threading.Lock] = {}
+_MAX_SCOPED_TRANSPORTS_PER_SERVER = 8
+# Protect active RPCs/retries, including the gap before the async lock is acquired.
+_scoped_active_calls: Dict[str, int] = {}
 
 # Circuit breaker: consecutive error counts per server.  After
 # _CIRCUIT_BREAKER_THRESHOLD consecutive failures, the handler returns
@@ -4049,6 +4053,59 @@ def _request_lazy_reconnect(server_name: str, server: MCPServerTask) -> bool:
         return False
 
 
+def _evict_idle_scoped_overflow(server_name: str, keep_key: str) -> None:
+    """Bound live stdio children per server; close idle scopes on the MCP event loop."""
+    with _lock:
+        scopes = [(key, server) for key, server in _scoped_servers.items()
+                  if server.name == server_name]
+        excess = len(scopes) - _MAX_SCOPED_TRANSPORTS_PER_SERVER
+        if excess <= 0:
+            return
+        victims = []
+        for key, server in sorted(scopes, key=lambda entry: entry[1]._last_tool_call_at):
+            if len(victims) >= excess:
+                break
+            connect_lock = _scoped_connect_locks.get(key)
+            if (key == keep_key or _scoped_active_calls.get(key)
+                    or server._rpc_lock.locked()
+                    or (connect_lock is not None and connect_lock.locked())):
+                continue
+            victims.append((key, server))
+        for key, _ in victims:
+            _scoped_servers.pop(key, None)
+            _scoped_connect_locks.pop(key, None)
+            _server_error_counts.pop(key, None)
+            _server_breaker_opened_at.pop(key, None)
+
+    # Never await while holding _lock: shutdown closes the anyio transport.
+    for key, server in victims:
+        try:
+            _run_on_mcp_loop(server.shutdown, timeout=15)
+        except Exception as exc:
+            logger.warning("MCP scope %s: idle transport shutdown failed: %s", key, exc)
+
+
+def _with_scoped_call_lease(server_name: str, handler):
+    """Prevent eviction until the whole RPC/retry completes."""
+    @wraps(handler)
+    def _leased(args: dict, **kwargs) -> str:
+        key, cwd = _call_scope(server_name)
+        if not cwd:
+            return handler(args, **kwargs)
+        with _lock:
+            _scoped_active_calls[key] = _scoped_active_calls.get(key, 0) + 1
+        try:
+            return handler(args, **kwargs)
+        finally:
+            with _lock:
+                remaining = _scoped_active_calls[key] - 1
+                if remaining:
+                    _scoped_active_calls[key] = remaining
+                else:
+                    _scoped_active_calls.pop(key, None)
+    return _leased
+
+
 def _get_connected_server_for_call(server_name: str) -> Optional[MCPServerTask]:
     """Return a connected server, lazily reconnecting recycled stdio state.
 
@@ -4057,8 +4114,10 @@ def _get_connected_server_for_call(server_name: str) -> Optional[MCPServerTask]:
     effect on the very next tool call without touching the agent's tool list.
     """
     server = _ensure_server_in_scope(server_name)
-    if server is not None and server.session is None and server._is_recycled_stdio():
-        _request_lazy_reconnect(server_name, server)
+    if server is not None:
+        if server.session is None and server._is_recycled_stdio():
+            _request_lazy_reconnect(server_name, server)
+        _evict_idle_scoped_overflow(server_name, getattr(server, "scope_key", server_name))
     return server
 
 
@@ -4258,7 +4317,7 @@ def _make_tool_handler(server_name: str, tool_name: str, tool_timeout: float):
                 )
             }, ensure_ascii=False)
 
-    return _handler
+    return _with_scoped_call_lease(server_name, _handler)
 
 
 def _make_list_resources_handler(server_name: str, tool_timeout: float):
@@ -4316,7 +4375,7 @@ def _make_list_resources_handler(server_name: str, tool_timeout: float):
                 )
             }, ensure_ascii=False)
 
-    return _handler
+    return _with_scoped_call_lease(server_name, _handler)
 
 
 def _make_read_resource_handler(server_name: str, tool_timeout: float):
@@ -4376,7 +4435,7 @@ def _make_read_resource_handler(server_name: str, tool_timeout: float):
                 )
             }, ensure_ascii=False)
 
-    return _handler
+    return _with_scoped_call_lease(server_name, _handler)
 
 
 def _make_list_prompts_handler(server_name: str, tool_timeout: float):
@@ -4439,7 +4498,7 @@ def _make_list_prompts_handler(server_name: str, tool_timeout: float):
                 )
             }, ensure_ascii=False)
 
-    return _handler
+    return _with_scoped_call_lease(server_name, _handler)
 
 
 def _make_get_prompt_handler(server_name: str, tool_timeout: float):
@@ -4510,7 +4569,7 @@ def _make_get_prompt_handler(server_name: str, tool_timeout: float):
                 )
             }, ensure_ascii=False)
 
-    return _handler
+    return _with_scoped_call_lease(server_name, _handler)
 
 
 def _make_check_fn(server_name: str):

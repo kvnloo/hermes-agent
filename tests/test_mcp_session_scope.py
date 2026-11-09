@@ -335,3 +335,34 @@ class TestCloneNeverOwnsTheToolSchemas:
         assert clone._registered_tool_names == []
         assert not mock_registry.get_all_tool_names()
         assert "mcp__srv__dyn" not in real_registry.get_all_tool_names()
+
+
+class TestScopedTransportEviction:
+    def test_idle_project_process_is_reaped_when_scope_cache_overflows(
+        self, probe, tmp_path, monkeypatch,
+    ):
+        """Visiting more projects must not retain one stdio child per project."""
+        from tools import mcp_tool
+
+        # On the carrier head this cap does not exist: the live-child assertion fails.
+        monkeypatch.setattr(mcp_tool, "_MAX_SCOPED_TRANSPORTS_PER_SERVER", 1, raising=False)
+        project_c = tmp_path / "project-c"
+        project_d = tmp_path / "project-d"
+        project_c.mkdir()
+        project_d.mkdir()
+
+        assert _whereami_in(str(project_c))[0] == str(project_c)
+        with mcp_tool._lock:
+            old = next(server for server in mcp_tool._scoped_servers.values()
+                       if server.name == SERVER_NAME and server.cwd == str(project_c))
+
+        assert _whereami_in(str(project_d))[0] == str(project_d)
+        with mcp_tool._lock:
+            scopes = [server for server in mcp_tool._scoped_servers.values()
+                      if server.name == SERVER_NAME]
+            assert len(scopes) == 1, "old project children remain alive after switching"
+            assert old.scope_key not in mcp_tool._scoped_servers
+            assert old.scope_key not in mcp_tool._scoped_connect_locks
+        assert old._task.done()
+        assert old.session is None
+        assert _whereami_in(str(project_c))[0] == str(project_c)
