@@ -23,7 +23,12 @@ import pytest
 
 from gateway.config import GatewayConfig
 from gateway.platforms.event import MessageEvent, MessageType
-from plugins.platforms.yuanbao.adapter import RecallGuardMiddleware
+try:  # Yuanbao moved out of core (e1f7b59ec22f); recall cases need the plugin
+    from plugins.platforms.yuanbao.adapter import RecallGuardMiddleware
+except ImportError:  # pragma: no cover - plugin not installed
+    RecallGuardMiddleware = None
+
+needs_yuanbao = pytest.mark.skipif(RecallGuardMiddleware is None, reason="yuanbao plugin not installed")
 from gateway.session import SessionStore
 from gateway.shutdown_flush import flush_pending_to_file, recover_pending_to_db
 from tests.gateway.restart_test_helpers import make_restart_runner, make_restart_source
@@ -212,6 +217,7 @@ def _queue_recall_notice(adapter, recalled_id: str = "recalled-1") -> MessageEve
     return adapter._pending_messages[RECALL_SLOT_KEY]
 
 
+@needs_yuanbao
 @pytest.mark.asyncio
 async def test_a_recall_notice_with_a_partial_source_keeps_its_slot_key(tmp_path, flush_dir):
     """The notice keeps the key it was queued under, and recovery lands it in that session."""
@@ -285,6 +291,7 @@ async def test_a_resolvable_slot_key_naming_another_session_does_not_capture_the
     assert _spooled_files(flush_dir) == []
 
 
+@needs_yuanbao
 @pytest.mark.asyncio
 async def test_an_unavailable_lookup_does_not_move_the_notice_off_its_slot_key(
         tmp_path, flush_dir):
@@ -311,6 +318,7 @@ async def test_an_unavailable_lookup_does_not_move_the_notice_off_its_slot_key(
     assert _spooled_files(flush_dir) == []
 
 
+@needs_yuanbao
 @pytest.mark.asyncio
 async def test_the_runner_flush_keeps_a_routed_slot_key_too(tmp_path, flush_dir):
     """``runner.stop()`` keys its queue head the same way: routed slot key, not a re-derivation."""

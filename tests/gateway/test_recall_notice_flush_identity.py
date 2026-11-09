@@ -20,6 +20,7 @@ from pathlib import Path
 import pytest
 
 from gateway.config import GatewayConfig, PlatformConfig
+pytest.importorskip("plugins.platforms.yuanbao.adapter", reason="yuanbao plugin moved out of core (e1f7b59ec22f)")
 from plugins.platforms.yuanbao.adapter import (
     DecodeMiddleware,
     InboundContext,
