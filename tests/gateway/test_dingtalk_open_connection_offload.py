@@ -4,6 +4,8 @@ import threading
 import time
 from types import SimpleNamespace
 
+import pytest
+
 from plugins.platforms.dingtalk.adapter import _offload_open_connection
 
 
@@ -53,3 +55,30 @@ def test_each_reconnect_after_a_ticket_fetches_a_fresh_one():
 def test_failed_handshake_passes_none_through():
     client = _client(lambda: None)
     assert client.open_connection() is None
+
+def test_stalled_handshake_exception_reaches_gateway_reconnect_path():
+    release, finished = threading.Event(), threading.Event()
+    calls = []
+
+    def fetch():
+        calls.append(1)
+        try:
+            if not release.wait(5):
+                raise AssertionError("handshake was not released")
+            raise ConnectionError("handshake failed")
+        finally:
+            finished.set()
+
+    client = _client(fetch)
+    assert client.open_connection() is None
+    release.set()
+    assert finished.wait(2)
+
+    with pytest.raises(ConnectionError, match="handshake failed"):
+        client.open_connection()
+    assert calls == [1]
+
+    # An exception clears the in-flight attempt, allowing the SDK's next retry.
+    client.open_connection = lambda: {"ticket": "next"}
+    assert client.open_connection() == {"ticket": "next"}
+

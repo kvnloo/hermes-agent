@@ -722,15 +722,26 @@ def _offload_open_connection(client) -> None:
     another. Daemon: a request that never returns must not hold up gateway shutdown."""
     fetch, state = client.open_connection, {}
 
+    def run_handshake():
+        try:
+            state["ticket"] = fetch()
+        except Exception as exc:
+            # Exceptions must reach the SDK's existing reconnect/error path, not vanish in a daemon thread.
+            state["error"] = exc
+
     def open_connection():
         worker = state.get("worker")
         if worker is None:
             worker = state["worker"] = threading.Thread(
-                target=lambda: state.update(ticket=fetch()), name="dingtalk-open-connection", daemon=True)
+                target=run_handshake, name="dingtalk-open-connection", daemon=True)
             worker.start()
         worker.join(_OPEN_CONNECTION_WAIT_S)
         if worker.is_alive():
             return None
+        if "error" in state:
+            error = state["error"]
+            state.clear()
+            raise error
         ticket = state.get("ticket")
         state.clear()
         return ticket
