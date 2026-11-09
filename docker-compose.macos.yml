@@ -10,32 +10,36 @@
 #
 # The dashboard service shares the gateway container's network namespace
 # (`network_mode: "service:gateway"`) so the gateway-liveness PID probe and
-# the dashboard's own binds keep working exactly as under host networking;
-# only the GATEWAY container's ports are published, on loopback only.
+# bridge port publication reaches the gateway's container address, while
+# only the GATEWAY container's ports are published on host loopback.
 #
 # Usage:
 #   HERMES_UID=$(id -u) HERMES_GID=$(id -g) \
 #     docker compose -f docker-compose.yml -f docker-compose.macos.yml up -d
 #
-# Then open http://localhost:9119 (HERMES_DASHBOARD=1) in the Mac browser.
+# Configure a dashboard auth provider first (basic auth or OAuth), then
+# open http://localhost:9119 in the Mac browser. Without one, the dashboard
+# refuses the non-loopback bind rather than serving without authentication.
 
 services:
   gateway:
     network_mode: bridge
     ports:
-      # Dashboard only — published on loopback, matching the base file's
-      # localhost-only posture. The dashboard binds 127.0.0.1 inside the
-      # shared namespace, so the container-side bind never engages the
-      # auth gate on a providerless install.
+      # Host loopback publish; forwarding targets the container's bridge
+      # address, so the dashboard itself must use an authenticated bind.
       - "127.0.0.1:9119:9119"
       # To also expose the OpenAI-compatible API server to the Mac, also
       # uncomment API_SERVER_HOST/API_SERVER_KEY in the base file and add:
       # - "127.0.0.1:8642:8642"
 
   dashboard:
-    # Share the gateway's bridge-network namespace: host networking without
-    # the VM problem. The dashboard reaches the gateway's loopback ports and
-    # the gateway-liveness PID probe works (same PID namespace, same netns).
+    # Preserve BOTH network and PID namespaces. Network sharing alone does
+    # not make the gateway process visible to the dashboard's liveness probe.
     network_mode: "service:gateway"
-    # The base file's `network_mode: host` and its own published ports
-    # (none) are overridden; ports belong on the gateway service above.
+    pid: "service:gateway"
+    # Docker port publishing forwards to the container interface, not to
+    # 127.0.0.1 inside it. A non-loopback bind is therefore required, and
+    # Hermes' auth gate refuses it unless an auth provider is configured.
+    # Never bypass the gate with --insecure.
+    command: ["dashboard", "--host", "0.0.0.0", "--no-open"]
+    # Port publication is owned by gateway in this shared namespace.

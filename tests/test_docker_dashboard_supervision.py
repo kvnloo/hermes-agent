@@ -2,9 +2,8 @@
 
 Regression for #49567 / #56401: a providerless non-loopback dashboard bind is
 a permanent configuration refusal — the supervisor must park the slot (not
-restart-loop), the default bind must be safe loopback, and the macOS Docker
-Desktop compose override must publish the dashboard on host loopback without
-an unauthenticated non-loopback bind.
+restart-loop), the default bind must be safe loopback. A published macOS bridge port instead
+requires a non-loopback *authenticated* listener and shared gateway PID namespace.
 """
 from __future__ import annotations
 
@@ -30,7 +29,7 @@ def _run_sh(script: Path, *args: str, env: dict) -> int:
     result = subprocess.run(
         [sh, str(script), *args],
         env={**os.environ, **env},
-        capture_output=True, text=True, timeout=10,
+        capture_output=True, text=True, timeout=10, check=False,
     )
     return result.returncode
 
@@ -80,52 +79,41 @@ def test_base_compose_keeps_loopback_dashboard_command():
     assert "--insecure" not in command
 
 
-def test_macos_override_publishes_loopback_port_without_public_bind():
-    """The macOS Docker Desktop override (#56401) must:
-
-    1. drop `network_mode: host` (which Docker Desktop maps into its Linux
-       VM, ignoring `ports:` entirely), and
-    2. publish the dashboard on host LOOPBACK only, without introducing the
-       `0.0.0.0` + `--insecure` unauthenticated pattern (the gap flagged on
-       the superseded contributor PRs).
+def test_macos_override_uses_authenticated_listener_for_bridge_publish():
+    """Docker forwards the host loopback publish to the container's bridge IP,
+    not 127.0.0.1 in its network namespace. Sharing network_mode does NOT
+    share PID visibility with the gateway liveness probe (#56401).
     """
     override = _load_compose(REPO / "docker-compose.macos.yml")["services"]
+    gateway = override["gateway"]
+    dashboard = override["dashboard"]
 
-    # Compose merge semantics: `network_mode` and `command` replace, `ports`
-    # and `environment` append. Assert the override's own declarations.
-    assert override["gateway"]["network_mode"] == "bridge", override["gateway"]
-    assert override["dashboard"]["network_mode"] == "service:gateway", (
-        "the dashboard must share the gateway's netns so gateway-liveness "
-        "probing keeps working under bridge networking"
-    )
+    assert gateway["network_mode"] == "bridge"
+    assert "127.0.0.1:9119:9119" in gateway["ports"]
+    assert all(str(port).startswith("127.0.0.1:") for port in gateway["ports"])
+    assert dashboard["network_mode"] == "service:gateway"
+    assert dashboard["pid"] == "service:gateway"
 
-    published = override["gateway"]["ports"]
-    assert "127.0.0.1:9119:9119" in published, published
-    for entry in published:
-        host_ip = str(entry).split(":", 1)[0]
-        assert host_ip == "127.0.0.1", f"non-loopback publish {entry!r}"
-
-    # No unauthenticated non-loopback override of the dashboard command.
-    dash_env = {str(e).split("=", 1)[0]: str(e).split("=", 1)[-1]
-                for e in override["dashboard"].get("environment", [])}
-    assert dash_env.get("HERMES_DASHBOARD_HOST", "127.0.0.1") == "127.0.0.1", dash_env
-    command = override["dashboard"].get("command")
-    if command is not None:
-        assert "--insecure" not in command and "0.0.0.0" not in command, command
+    # Docker bridge requires a listener on the container interface; Hermes'
+    # existing auth gate must refuse that bind without a registered provider.
+    command = dashboard["command"]
+    assert command[command.index("--host") + 1] == "0.0.0.0"
+    assert "--insecure" not in command
 
 
 def test_macos_override_merges_cleanly_with_base():
-    """`docker compose -f docker-compose.yml -f docker-compose.macos.yml`
-    must be valid: the merged services keep one publishable 9119 and the
-    dashboard ends up sharing the gateway's network namespace."""
+    """The platform override must replace host networking and the
+    loopback-only dashboard command without weakening the auth gate."""
     base = _load_compose(REPO / "docker-compose.yml")["services"]
     override = _load_compose(REPO / "docker-compose.macos.yml")["services"]
 
     merged_dash = {**base["dashboard"], **override["dashboard"]}
     assert merged_dash["network_mode"] == "service:gateway"
-    # The base command survives (loopback bind); no `--insecure` appears.
-    assert "127.0.0.1" in merged_dash["command"]
-    assert "--insecure" not in merged_dash["command"]
+    assert merged_dash["pid"] == "service:gateway"
+    command = merged_dash["command"]
+    assert command[command.index("--host") + 1] == "0.0.0.0"
+    assert "--insecure" not in command
 
     merged_gw = {**base["gateway"], **override["gateway"]}
     assert merged_gw["network_mode"] == "bridge"
+    assert "127.0.0.1:9119:9119" in merged_gw["ports"]

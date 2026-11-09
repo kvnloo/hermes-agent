@@ -96,7 +96,7 @@ Dashboard 由 s6 监管：若进程崩溃，`s6-supervise` 会在短暂退避后
 
 容器内的 dashboard 默认绑定 `127.0.0.1`（与 `hermes dashboard` CLI 相同的安全回环默认值），因此全新的容器绝不会提供无鉴权的 dashboard。若要通过发布的 `-p 9119:9119` 端口对外提供 dashboard，请设置 `HERMES_DASHBOARD_HOST=0.0.0.0` **并**配置鉴权提供方——未配置提供方的非回环绑定会在启动时被拒绝（退出码 78，服务被停放）。若你要把它限制在容器回环地址（例如 sidecar / 反向代理拓扑），请保持 `HERMES_DASHBOARD_HOST=127.0.0.1`。
 
-在 **macOS / Windows Docker Desktop** 上，`network_mode: host` 与容器内的回环绑定都无法到达宿主机（它们被映射进 Docker Desktop 的 Linux 虚拟机）。请使用仓库自带的 compose 覆盖文件：`docker compose -f docker-compose.yml -f docker-compose.macos.yml up -d` 会在宿主机上发布 `127.0.0.1:9119`（见 `docker-compose.macos.yml`）。
+在 **macOS / Windows Docker Desktop** 上，`network_mode: host` 与容器内的回环绑定都无法到达宿主机（它们被映射进 Docker Desktop 的 Linux 虚拟机）。请先配置 dashboard 身份验证提供方，再使用仓库自带的 compose 覆盖文件：`docker compose -f docker-compose.yml -f docker-compose.macos.yml up -d`。宿主机仅发布 `127.0.0.1:9119`，但 Docker 将连接转发到容器的 bridge 地址，因此 dashboard 需监听 `0.0.0.0` 并启用强制身份验证；未配置提供方时会安全拒绝启动（退出码 78），不会开放无鉴权的 dashboard。覆盖文件同时共享 gateway 的 PID 命名空间以支持存活检测（见 `docker-compose.macos.yml`）。
 
 当以下两项同时满足时，dashboard 的鉴权门控会自动启用：
 
