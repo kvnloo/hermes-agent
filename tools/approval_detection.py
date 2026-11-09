@@ -1866,6 +1866,53 @@ def _quoted_text_is_executed(variant: str, pattern_re: "re.Pattern[str] | _PipeR
     return False
 
 
+_RM_GLOB_MARKER = "\ue000"  # Preserve which wildcard characters the shell actually expands.
+_RM_REDIRECTIONS = frozenset({"<", ">", "<<", ">>", "<>", "<<<"})
+
+
+def _iter_rm_operand_descriptions(command: str):
+    """Inspect rm operands with the existing quote-aware command walker and shell lexer."""
+    for start, _, word in _iter_shell_command_word_spans(command):
+        if os.path.basename(_deobfuscate_shell_word_for_detection(word)).lower() != "rm":
+            continue
+        segment = _shell_command_segment(command, start)
+        # A wildcard in quotes is a literal filename, but "$DIR"/*.log still expands.
+        # Mark only unquoted wildcard chars before shlex removes their quote provenance.
+        marked = "".join(
+            _RM_GLOB_MARKER if kind == "char" and quote is None and segment[i] in "*?["
+            else segment[i:j]
+            for kind, i, j, quote in _scan_shell(segment)
+        )
+        argv = _shell_segment_tokens(marked, 0)
+        if not argv:
+            continue
+        operands, options_ended, i = [], False, 1
+        while i < len(argv):
+            token = argv[i]
+            # shlex separates redirections; fd numbers and redirection targets aren't rm paths.
+            if token.isdecimal() and i + 1 < len(argv) and argv[i + 1] in _RM_REDIRECTIONS:
+                i += 1
+                token = argv[i]
+            if token in _RM_REDIRECTIONS:
+                i += 2
+                continue
+            if token == "--" and not options_ended:
+                options_ended = True
+            elif not options_ended and token.startswith("-") and token != "-":
+                pass  # GNU rm permits options after operands as well as before.
+            else:
+                operands.append(token)
+            i += 1
+        if any(".." in path.replace("\\", "/").split("/") for path in operands):
+            yield "delete with parent directory traversal"
+        elif any(_RM_GLOB_MARKER in path for path in operands):
+            yield "delete with a glob"
+        elif len(operands) > 1:
+            yield "delete of multiple paths"
+        elif any("/" in path for path in operands):
+            yield "delete of a directory-relative path"
+
+
 def _iter_dangerous_descriptions(command: str, only: frozenset[str] | None = None):
     """Yield the description (= pattern key) of every dangerous match, in detection order; may repeat.
     *only* restricts the scan to those pattern rules and skips the parser-limit, execution-flag and
@@ -1900,6 +1947,10 @@ def _iter_dangerous_descriptions(command: str, only: frozenset[str] | None = Non
                     yield description
             elif pattern_re.search(command_lower):
                 yield description
+    # Structural rm operands are read from the RAW shell text so quotes, comments and
+    # wrapper options keep their meaning; pattern matching above retains its legacy keys.
+    if only is None and "rm" in command.lower():
+        yield from _iter_rm_operand_descriptions(command)
     if only is not None:
         # The variation-selector check is a content rule too, so the content-only scan keeps it.
         if _INVISIBLE_UNICODE_DESCRIPTION in only and _HIDDEN_VARIATION_SELECTOR_RE.search(command):
