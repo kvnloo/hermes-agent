@@ -176,7 +176,13 @@ export function CatalogDetail({
         ) : null
       )}
 
-      <p className="text-[0.65rem] leading-relaxed text-(--ui-text-quaternary)">{c.installHint}</p>
+      {entry.sourceUrl ? (
+        <p className="text-[0.65rem] leading-relaxed text-(--ui-text-quaternary)">{c.installHint}</p>
+      ) : kind === 'skills' && entry.installIdentifier ? (
+        <p className="text-[0.65rem] leading-relaxed text-(--ui-text-quaternary)">
+          {c.source}: <code className="select-text">{`hermes skills inspect ${entry.installIdentifier}`}</code>
+        </p>
+      ) : null}
 
       {related.length > 0 && (
         <section className="space-y-2">

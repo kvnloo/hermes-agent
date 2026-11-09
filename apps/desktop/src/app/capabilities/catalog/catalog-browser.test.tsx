@@ -21,20 +21,20 @@ afterEach(() => {
   $catalogCardView.set(true)
 })
 
-function setup(kind: CatalogKind) {
+function setup(kind: CatalogKind, withoutSource = false) {
   const entries = parseCatalog(
     kind,
     ['alpha', 'beta'].map(name => ({
       name,
-      identifier: `official/${name}`,
-      installIdentifier: `official/${name}`,
-      source: 'official',
+      identifier: withoutSource && name === 'alpha' ? 'openclaw-mastery' : `official/${name}`,
+      installIdentifier: withoutSource && name === 'alpha' ? 'clawhub/openclaw-mastery' : `official/${name}`,
+      source: withoutSource && name === 'alpha' ? 'ClawHub' : 'official',
       tier: 'official',
       category: name === 'alpha' ? 'memory' : 'voice',
       description: `${name} workflow`,
-      repo: `https://github.com/example/${name}`,
-      sourceUrl: `https://github.com/example/${name}`,
-      docsUrl: `https://example.com/${name}`
+      repo: withoutSource && name === 'alpha' ? '' : `https://github.com/example/${name}`,
+      sourceUrl: withoutSource && name === 'alpha' ? '' : `https://github.com/example/${name}`,
+      docsUrl: withoutSource && name === 'alpha' ? '' : `https://example.com/${name}`
     }))
   )
 
@@ -125,6 +125,17 @@ describe.each(['skills', 'plugins'] as const)('%s catalog layouts', kind => {
     expect(screen.getByRole('button', { name: /^Memory/, pressed: true })).toBeTruthy()
     expect(screen.queryByRole('dialog')).toBeNull()
   })
+})
+
+it('offers a read-only SKILL.md inspection command when a hub skill has no source URL', () => {
+  const { entries } = setup('skills', true)
+  expect(entries[0].sourceUrl).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'alpha' }))
+  const dialog = screen.getByRole('dialog', { name: 'alpha' })
+
+  expect(within(dialog).queryByRole('link', { name: 'Repository' })).toBeNull()
+  expect(within(dialog).getByText('hermes skills inspect clawhub/openclaw-mastery')).toBeTruthy()
+  expect(within(dialog).queryByText(/Review the source before installing/)).toBeNull()
 })
 
 it('shares the saved layout choice when moving between Skills and Plugins', () => {
