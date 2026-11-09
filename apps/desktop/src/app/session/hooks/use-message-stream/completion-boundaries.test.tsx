@@ -319,6 +319,45 @@ it('adds nothing to the prompt this window sent, or to a projected queued prompt
   projected.dispose()
 })
 
+it('keeps a Desktop-queued prompt waiting while a phone-submitted turn streams', async () => {
+  const h = mount()
+  const queued: ChatMessage = {
+    id: `user-queued-${SID}`,
+    role: 'user',
+    parts: [{ type: 'text', text: 'Next from Desktop.' }]
+  }
+  h.update(state => ({ ...state, messages: [queued] }))
+
+  await h.send('message.start', {
+    turn_id: 'phone-turn-1',
+    input: { text: 'From the phone.', submission_id: 'phone-sub-1' }
+  })
+  expect(timeline(h.state().messages)).toEqual([
+    ['user', 'From the phone.'],
+    ['user', 'Next from Desktop.']
+  ])
+  expect(h.state().messages.find(message => message.id === queued.id)?.queuedTurnStarted).toBeUndefined()
+
+  await h.send('message.delta', { text: ANSWER })
+  await flush()
+  expect(timeline(h.state().messages)).toEqual([
+    ['user', 'From the phone.'],
+    ['assistant', ANSWER],
+    ['user', 'Next from Desktop.']
+  ])
+
+  await h.send('message.complete', {
+    text: ANSWER,
+    persisted_turn: {
+      row_ids: [71, 72], user_row_id: 71, user_row_ids: [71],
+      final_assistant_row_id: 72, complete: true, submission_id: 'phone-sub-1'
+    }
+  })
+  expect(h.state().messages.find(message => message.id === 'user-phone-sub-1')?.rowId).toBe(71)
+  expect(h.state().messages.find(message => message.id === queued.id)?.queuedTurnStarted).toBeUndefined()
+  h.dispose()
+})
+
 const timeline = (messages: ChatMessage[]) => messages.map(message => [message.role, chatMessageText(message)])
 
 const flush = () =>

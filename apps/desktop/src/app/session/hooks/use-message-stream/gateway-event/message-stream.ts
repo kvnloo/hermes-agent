@@ -5,6 +5,7 @@ import { burstVibeHearts } from '@/components/chat/vibe-hearts'
 import { translateNow } from '@/i18n'
 import {
   type ChatMessage,
+  chatMessageText,
   finalizeInterruptedMessages,
   type GatewayEventPayload,
   markQueuedPromptStarted,
@@ -149,6 +150,9 @@ function lightOwnMessagingTurn(runtimeId: string, admissionId: string | undefine
  * stored row to it (`bindReceiptUserRows`). Like seedOptimistic, it settles a
  * leftover pending reply first instead of stranding it above the prompt.
  */
+const isUnstartedQueuedPrompt = (message: ChatMessage) =>
+  message.role === 'user' && message.id.startsWith('user-queued-') && !message.queuedTurnStarted
+
 function withAdmittedInput(
   messages: ChatMessage[],
   streamId: string | null,
@@ -163,12 +167,18 @@ function withAdmittedInput(
 
   const id = `user-${submissionId}`
 
-  return messages.some(message => message.id === id)
-    ? messages
-    : [
-        ...finalizeInterruptedMessages(messages, streamId, at),
-        { id, role: 'user', parts: [textPart(text)], timestamp: at }
-      ]
+  if (messages.some(message => message.id === id)) {
+    return messages
+  }
+
+  const settled = finalizeInterruptedMessages(messages, streamId, at)
+  const row: ChatMessage = { id, role: 'user', parts: [textPart(text)], timestamp: at }
+  const waitingIndex = settled.findLastIndex(isUnstartedQueuedPrompt)
+
+  // A projected queue row belongs to a later turn; the peer's prompt comes first.
+  return waitingIndex < 0
+    ? [...settled, row]
+    : [...settled.slice(0, waitingIndex), row, ...settled.slice(waitingIndex)]
 }
 
 /** message.start: arm the session for a new turn, unless it re-sends the current one. */
@@ -239,8 +249,16 @@ function handleMessageStart(ctx: GatewayEventContext): boolean {
     // A projected queued prompt drawn before this start is this turn's
     // prompt from here on, even while its row is still on screen; otherwise
     // the turn shows the input it was claimed with.
-    const queued = markQueuedPromptStarted(state.messages)
-
+    const waiting = state.messages.findLast(isUnstartedQueuedPrompt)
+    const admitted = (payload?.input ?? {}) as Partial<AdmittedInput>
+    // A peer's earlier claim must not consume this window's later queued prompt.
+    const differentClaim =
+      waiting &&
+      typeof admitted.text === 'string' &&
+      typeof admitted.submission_id === 'string' &&
+      admitted.submission_id.length > 0 &&
+      chatMessageText(waiting) !== admitted.text
+    const queued = differentClaim ? state.messages : markQueuedPromptStarted(state.messages)
     const messages =
       queued === state.messages ? withAdmittedInput(queued, state.streamId, payload?.input, occurredAt) : queued
 
@@ -249,7 +267,7 @@ function handleMessageStart(ctx: GatewayEventContext): boolean {
       messages,
       // Rows on screen now are earlier turns (or this turn's prompt): an
       // interim seal on one of them no longer means its call is running.
-      turnAnchorId: messages.at(-1)?.id ?? null,
+      turnAnchorId: messages.findLast(message => !isUnstartedQueuedPrompt(message))?.id ?? null,
       busy: true,
       awaitingResponse: true,
       sawAssistantPayload: false,

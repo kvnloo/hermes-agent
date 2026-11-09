@@ -207,17 +207,22 @@ export function useMessageStream({
           let nextMessages: ChatMessage[]
 
           if (!prev.some(m => m.id === streamId)) {
-            nextMessages = [
-              ...prev,
-              {
-                id: streamId,
-                role: 'assistant',
-                parts: seed(),
-                timestamp: occurredAt,
-                pending: true,
-                branchGroupId: groupId
-              }
-            ]
+            const row: ChatMessage = {
+              id: streamId,
+              role: 'assistant',
+              parts: seed(),
+              timestamp: occurredAt,
+              pending: true,
+              branchGroupId: groupId
+            }
+            const waitingIndex = prev.findLastIndex(
+              message => message.role === 'user' && message.id.startsWith('user-queued-') && !message.queuedTurnStarted
+            )
+
+            // The live reply belongs before a projected prompt for a later turn.
+            nextMessages = waitingIndex < 0
+              ? [...prev, row]
+              : [...prev.slice(0, waitingIndex), row, ...prev.slice(waitingIndex)]
           } else {
             nextMessages = prev.map(m => {
               if (m.id !== streamId) {
