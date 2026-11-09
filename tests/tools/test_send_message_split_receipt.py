@@ -136,6 +136,28 @@ def test_chunk_without_an_id_still_counts_as_delivered() -> None:
     assert result["accounted_chunks"] == 0, "the head landed but cannot be named"
 
 
+def test_failed_nested_chunk_keeps_delivered_ids() -> None:
+    """An internally split sender can deliver part of a chunk before it errors.
+
+    The outer receipt must retain both the fully delivered preceding chunk and
+    the sub-message that landed within the failed chunk.
+    """
+    send_one, sent = _sender(
+        _ok("outer-1"),
+        {"error": "rate limited", "partial_success": True,
+         "delivered_chunks": 1, "total_chunks": 2,
+         "delivered_message_ids": ["inner-1"]},
+    )
+
+    result = asyncio.run(_send_chunks(["one", "two"], send_one))
+
+    assert len(sent) == 2
+    assert result["success"] is False
+    assert result["partial_success"] is True
+    assert result["delivered_message_ids"] == ["outer-1", "inner-1"]
+    assert result["accounted_chunks"] == 1  # Only the first outer chunk fully completed
+
+
 # ----------------------------------------------------------------------- _send_via_adapter
 
 

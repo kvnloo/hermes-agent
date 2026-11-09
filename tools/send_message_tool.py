@@ -674,7 +674,8 @@ async def _send_chunks(chunks, send_one):
             if i:  # chunks 1..i are already visible in the chat; only the tail is missing
                 result.update({"success": False, "partial_success": True,
                                "delivered_chunks": i, "total_chunks": len(chunks),
-                               "delivered_message_ids": delivered,
+                               "delivered_message_ids": _ordered_message_ids(
+                                   delivered, result.get("delivered_message_ids")),
                                "accounted_chunks": accounted})
             break
         chunk_ids = _chunk_message_ids(result)
