@@ -501,3 +501,55 @@ class TestDeletedCwdFallback:
 
         # The primary CWD should be quoted
         assert "dir with spaces" in wrapped
+
+    def test_deleted_cwd_executes_and_reports_recovery(self, tmp_path, monkeypatch):
+        """Execute the wrapper after cwd removal; relocation must not be silent."""
+        import os
+        import shutil
+        import subprocess
+
+        import pytest
+
+        if os.name == "nt":
+            pytest.skip("POSIX Bash paths required")
+        bash = shutil.which("bash")
+        if bash is None:
+            pytest.skip("Bash is required")
+
+        home = tmp_path / "safe home"
+        home.mkdir()
+        removed = tmp_path / "removed"
+        removed.mkdir()
+        env = _TestableEnv(cwd=str(tmp_path))
+        env._snapshot_ready = False
+        env._cwd_file = str(tmp_path / "cwd-record")
+        monkeypatch.setenv("HOME", str(home))
+        wrapped = env._wrap_command(
+            "printf 'ran\\n'; touch relative.txt; (exit 7)", str(removed)
+        )
+        removed.rmdir()
+
+        result = subprocess.run(
+            [bash, "-c", wrapped], cwd=str(tmp_path),
+            env=os.environ.copy(), capture_output=True, text=True, check=False,
+        )
+        resolved_home = str(home.resolve())
+        assert result.returncode == 7
+        assert "ran" in result.stdout
+        assert (home / "relative.txt").exists()
+        assert f"{env._cwd_marker}{resolved_home}{env._cwd_marker}" in result.stdout
+        assert (tmp_path / "cwd-record").read_text().strip() == resolved_home
+        assert (
+            f"[hermes] warning: cwd unavailable; continuing in {resolved_home}"
+            in result.stderr
+        )
+
+        # The warning must not appear when the requested directory still exists.
+        healthy = subprocess.run(
+            [bash, "-c", env._wrap_command("printf healthy", str(home))],
+            cwd=str(tmp_path), env=os.environ.copy(),
+            capture_output=True, text=True, check=False,
+        )
+        assert healthy.returncode == 0
+        assert "healthy" in healthy.stdout
+        assert "[hermes] warning:" not in healthy.stderr

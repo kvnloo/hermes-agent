@@ -503,10 +503,11 @@ class BaseEnvironment(ABC):
         # causes exit 126 on every subsequent command, permanently bricking the session.
         # Issue #62169.
         parts.append(
-            f"builtin cd -- {quoted_cwd} 2>/dev/null || "
-            "{ builtin cd -- \"$HOME\" 2>/dev/null || builtin cd -- /; } || exit 126"
+            f"if ! builtin cd -- {quoted_cwd} 2>/dev/null; then "
+            "builtin cd -- \"$HOME\" 2>/dev/null || builtin cd -- / || exit 126; "
+            "printf '[hermes] warning: cwd unavailable; continuing in %s\\n' \"$(pwd -P)\" >&2; "
+            "fi"
         )
-
         # Run the actual command
         parts.append(f"eval '{escaped}'")
         parts.append("__hermes_ec=$?")
