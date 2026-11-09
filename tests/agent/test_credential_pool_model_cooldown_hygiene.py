@@ -78,3 +78,41 @@ def test_expired_model_cooldown_is_pruned_and_costs_no_store_read(home, monkeypa
         assert pool.has_available() and pool.next_available_at() is None
     assert reads == []
     assert _disk_cooldowns() == {}
+
+@pytest.mark.parametrize("peer_entitled", (True, False))
+def test_stale_flush_keeps_peer_model_cooldown_classification(home, tmp_path, peer_entitled):
+    """An older writer cannot relabel a peer's newer model cooldown as entitlement or rate-limit."""
+    from agent.credential_pool import load_pool
+    from agent.credential_pool_model_cooldowns import MODEL_ENTITLEMENT_KEY
+    from hermes_cli.auth import read_credential_pool
+
+    older = time.time() + 3600
+    newer = older + 1800
+    home({MODEL: older})
+    path = tmp_path / "hermes" / "auth.json"
+    store = json.loads(path.read_text())
+    row = store["credential_pool"]["openai-codex"][0]
+    row[MODEL_ENTITLEMENT_KEY] = {MODEL: older}
+    path.write_text(json.dumps(store))
+    stale = load_pool("openai-codex")
+
+    # A second process records a newer denial before the first process flushes.
+    store = json.loads(path.read_text())
+    row = store["credential_pool"]["openai-codex"][0]
+    row["model_cooldowns"][MODEL] = newer
+    if peer_entitled:
+        row[MODEL_ENTITLEMENT_KEY][MODEL] = newer
+    else:
+        row.pop(MODEL_ENTITLEMENT_KEY, None)
+    path.write_text(json.dumps(store))
+    stale._persist()
+
+    (saved,) = read_credential_pool("openai-codex")
+    assert saved["model_cooldowns"][MODEL] == pytest.approx(newer)
+    assert saved.get(MODEL_ENTITLEMENT_KEY, {}).get(MODEL) == (
+        newer if peer_entitled else None
+    )
+    fresh = load_pool("openai-codex")
+    assert fresh.select(model=MODEL) is None
+    state = fresh.limit_state([MODEL])
+    assert state and state.get("not_entitled", []) == ([MODEL] if peer_entitled else [])

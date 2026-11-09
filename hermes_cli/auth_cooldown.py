@@ -60,8 +60,12 @@ def _merge_model_cooldown_state(
         merged[MODEL_COOLDOWN_OBSERVED_AT_KEY] = merged_observations
     else:
         merged.pop(MODEL_COOLDOWN_OBSERVED_AT_KEY, None)
-    marks = {**(disk_entry.get(MODEL_ENTITLEMENT_KEY) or {}), **(entry.get(MODEL_ENTITLEMENT_KEY) or {})}
-    marks = {m: u for m, u in marks.items() if m in merged_cooldowns}
+    # The entitlement label belongs to the winning deadline, not the stale writer.
+    mark_sources = (disk_entry.get(MODEL_ENTITLEMENT_KEY), entry.get(MODEL_ENTITLEMENT_KEY))
+    marks = {
+        model: until for model, until in merged_cooldowns.items()
+        if any(isinstance(source, dict) and source.get(model) == until for source in mark_sources)
+    }
     if marks:
         merged[MODEL_ENTITLEMENT_KEY] = marks
     else:
