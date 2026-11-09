@@ -252,6 +252,39 @@ def test_legacy_main_rekey_adopts_a_standalone_gateways_history(homes, monkeypat
     assert not any(f["kind"] == "legacy_main" for f in _report()["findings"])
 
 
+def test_report_mode_does_not_relabel_named_profile_local_chat(homes, monkeypatch):
+    """#143150: report-mode apply must not re-own a named profile's legacy Bot Chat.
+
+    ivcdigital26 reported both a legacy rekey and a relabel-to-default for one chat.
+    The old standalone namespace is ambiguous until --legacy-main is explicit.
+    """
+    from hermes_state_local import POLICY_PREFIX
+
+    sid = "legacy-bot-chat"
+    route = f"agent:main:local:dm:{sid}"
+    db_path = homes["acme"] / "state.db"
+    db = SessionDB(db_path)
+    try:
+        _session(db, sid, route, profile="acme", source="local",
+                 origin_json=_local_origin(sid))
+        db.set_meta(POLICY_PREFIX + sid, _receipt(sid, route, sid))
+    finally:
+        db.close()
+
+    findings = _report()["findings"]
+    assert any(f["kind"] == "legacy_main" and f["subject"] == sid for f in findings)
+    assert not any(f["kind"] == "mislabelled" and f["subject"] == sid for f in findings)
+
+    monkeypatch.setattr("hermes_cli.sessions_cmd_repair_profiles.default_snapshot", lambda store: "snap")
+    assert _run(apply=True) == 0
+    db = SessionDB(db_path)
+    try:
+        row = db.get_session(sid)
+        assert (row["session_key"], row["profile_name"]) == (route, "acme")
+    finally:
+        db.close()
+
+
 def test_legacy_main_rekey_aligns_sessions_receipts_and_routing_atomically(homes):
     """A standalone gateway's ``agent:main:`` history is one identity spread over three tables.
 

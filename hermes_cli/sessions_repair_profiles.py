@@ -211,6 +211,10 @@ class RepairPlan:
         for row in crossed["mislabelled"]:
             if row["id"] in moving:
                 continue  # the move stamps the right label
+            if store.profile != "default" and row["session_key"].startswith("agent:main:"):
+                # The named profile may own this standalone gateway's legacy local chat.
+                # Never relabel it to default without an explicit legacy-main decision.
+                continue
             self._add(Finding(
                 "mislabelled", store.profile, row["id"],
                 f"profile_name={row['profile_name']!r} but key {row['session_key']!r} belongs to "
