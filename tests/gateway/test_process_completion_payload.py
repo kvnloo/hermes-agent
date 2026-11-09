@@ -30,3 +30,20 @@ def test_truncated_single_line_never_disappears_at_terminal_newline(limit):
     assert evt["output"].strip()
     assert evt["output"].endswith("x\n")
     assert evt["output_cut"] > 0
+
+@pytest.mark.parametrize("limit", [0, 18000])
+@pytest.mark.parametrize("redaction_enabled", [False, True], ids=["redaction-off", "redaction-on"])
+def test_completion_redacts_prefix_cut_by_tail_window(monkeypatch, limit, redaction_enabled):
+    """A completion must mask a token before clipping hides its recognizable prefix."""
+    import agent.redact as redact
+
+    monkeypatch.setattr(redact, "_REDACT_ENABLED", redaction_enabled)
+    body = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklm"
+    window = limit or 2000
+    # Put the sk- prefix just outside the kept window, in both budget modes.
+    raw = "x" * 150 + " sk-" + body + " " * (window - len(body) - 1) + "\n"
+    assert raw[-window:].startswith(body)
+
+    event = completion(raw, limit)
+    assert body not in event["output"]
+    assert body not in format_process_notification(event)

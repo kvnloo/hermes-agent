@@ -1772,6 +1772,8 @@ class GatewayNotificationsMixin(GatewayUpdateNotificationsMixin, GatewayNotifica
         _raw = transform_process_output(_raw, command=_command, returncode=session.exit_code,
                                         task_id=getattr(session, "task_id", "") or "") if _raw else _raw
         _raw = redact_terminal_output(_raw, _command)
+        # A cut can remove the prefix needed to recognize a secret; mask before slicing.
+        _raw = _redact_gateway_user_facing_secrets(_raw)
         # Bot delivery runners carry the reply itself and request a larger payload budget.
         _LIMIT = getattr(session, "completion_output_chars", 0) or 2000
         _cut = 0
