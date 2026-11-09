@@ -28,7 +28,9 @@ export function isForeignSessionEvent(ev: AnyGatewayEvent, activeSid: string | n
     return false
   }
 
-  if (GLOBAL_PREFIXES.some(p => ev.type.startsWith(p))) {
+  // Wake detection belongs to the owning transport, not a chat session.
+  // TUI arms wake.start without session_id, so the gateway stamps an empty id.
+  if (ev.type === 'wake.detected' || GLOBAL_PREFIXES.some(p => ev.type.startsWith(p))) {
     return false
   }
 

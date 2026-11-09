@@ -198,6 +198,28 @@ describe('cross-session event filtering', () => {
     expect(turnController.bufRef).toBe('mine')
   })
 
+  it('accepts the transport-owned wake detection with an empty session id', async () => {
+    // wake.start is called without a session_id, and _emit stamps it as ''.
+    const ctx = buildCtx([])
+    ctx.session.newSession.mockImplementation(async () => {
+      patchUiState({ sid: 'wake-session' })
+    })
+    const onEvent = createGatewayEventHandler(ctx)
+
+    patchUiState({ sid: null })
+    onEvent({
+      payload: { phrase: 'hey hermes', start_new_session: true },
+      session_id: '',
+      type: 'wake.detected'
+    } satisfies GatewayEvent)
+
+    await vi.waitFor(() =>
+      expect(ctx.gateway.rpc).toHaveBeenCalledWith('voice.record', { action: 'start', session_id: 'wake-session' })
+    )
+    expect(ctx.session.newSession).toHaveBeenCalledOnce()
+    expect(ctx.voice.setVoiceEnabled).toHaveBeenCalledWith(true)
+  })
+
   it('accepts an explicit empty session id for a global skin event', () => {
     const onEvent = createGatewayEventHandler(buildCtx([]))
 
