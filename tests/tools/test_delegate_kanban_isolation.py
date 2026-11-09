@@ -380,3 +380,24 @@ def test_child_attempting_default_complete_does_not_finish_parent_or_delete_work
     assert task.status == "running"
     assert run.status == "running"
     assert workspace.is_dir()
+
+
+def test_delegate_descendant_kanban_list_reads_without_mutating_board(monkeypatch, tmp_path):
+    """A child subprocess with scrubbed worker identity can read its fenced board."""
+    kb, tid, _workspace, _attachments_root = _make_running_kanban_task(monkeypatch, tmp_path)
+    # delegate_task subprocesses lose run ownership but keep the board fence.
+    monkeypatch.delenv("HERMES_KANBAN_TASK")
+    monkeypatch.delenv("HERMES_KANBAN_RUN_ID")
+    monkeypatch.setenv("HERMES_DELEGATED_CHILD_CONTEXT", str(tmp_path / ".hermes"))
+
+    from hermes_cli import kanban_db_connect as kbc
+    from tools import kanban_tools
+
+    with kbc.connect_closing() as conn:
+        with pytest.raises(PermissionError, match="delegate_task child"):
+            kb.recompute_ready(conn)
+
+    result = json.loads(kanban_tools._handle_list({"status": "running"}))
+    assert "error" not in result, result
+    assert tid in {task["id"] for task in result["tasks"]}
+    assert result["promoted"] == 0
