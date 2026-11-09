@@ -95,3 +95,14 @@ def test_retention_covers_partial_and_foreign_files(tmp_path):
     preflight_state_db(tmp_path)
     assert partial.exists()
     assert user_file.exists()
+
+
+def test_failed_snapshot_discloses_pruned_older_backups(tmp_path):
+    """After a failed SQLite copy, the error must not promise all backups survived."""
+    (tmp_path / "state.db").write_bytes(b"not a sqlite database")
+    _write_old_backups(tmp_path, len(STAMPS))
+
+    with pytest.raises(RuntimeError, match=r"older emergency snapshots may have been pruned"):
+        preflight_state_db(tmp_path)
+
+    assert len(_backups(tmp_path)) == EMERGENCY_BACKUP_RETENTION

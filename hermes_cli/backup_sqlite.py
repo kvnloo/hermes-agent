@@ -125,7 +125,7 @@ def _safe_copy_db(src: Path, dst: Path, *, timeout_seconds: float = 10.0) -> boo
 
 
 def preflight_state_db(home: Path) -> dict:
-    """Publish an emergency snapshot; do not prune recovery files on failure."""
+    """Publish an emergency snapshot; reclaim stale backups even if the copy fails."""
     # Unconditionally, and BEFORE any early return or snapshot attempt: the sweep
     # used to live at the end of the success path, so every reason this function
     # gives up (state.db missing — fresh install) and every reason the snapshot
@@ -144,7 +144,7 @@ def preflight_state_db(home: Path) -> dict:
     staged = Path(name)
     try:
         if not _safe_copy_db(source, staged):
-            raise RuntimeError("SQLite safe copy failed; previous emergency snapshots were retained")
+            raise RuntimeError("SQLite safe copy failed; older emergency snapshots may have been pruned to the retention limit")
         connection = sqlite3.connect(str(staged))
         try:
             result = connection.execute("PRAGMA quick_check").fetchall()
