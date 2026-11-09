@@ -1740,6 +1740,13 @@ export const getCurrentModelSource = (): ComposerModelSource => {
   return source === 'default' || source === 'manual' ? source : ''
 }
 
+/** The saved, owner-scoped user pick; runtime echoes may repaint the atoms but cannot launch a new chat. */
+export const getComposerModelSelection = () => ({
+  model: storedComposerString(COMPOSER_MODEL_KEY) ?? '',
+  provider: storedComposerString(COMPOSER_PROVIDER_KEY) ?? '',
+  source: getCurrentModelSource()
+})
+
 // Reactive mirror of the persisted source so UI (the composer pill's
 // override badge) can subscribe. The getter above stays storage-backed —
 // it's read cross-window, where this atom wouldn't see writes.
