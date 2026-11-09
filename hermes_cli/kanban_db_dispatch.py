@@ -1651,11 +1651,11 @@ def check_respawn_guard(
         ttl = _resolve_blocker_auth_ttl_seconds()
         if ttl <= 0:
             return None
-        ended_at = latest_run["ended_at"] if latest_run is not None else None
+        ended_at = _kb._to_epoch(latest_run["ended_at"]) if latest_run is not None else None
         # No ended_at: fail-closed hold (legacy rows / tests that only stamp
         # last_failure_error). With an ended run, expire after TTL so a
         # recovered provider is probed again (#118345).
-        if ended_at is not None and (now - int(ended_at)) >= ttl:
+        if ended_at is not None and (now - ended_at) >= ttl:
             return None
         return "blocker_auth"
 

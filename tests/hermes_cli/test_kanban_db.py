@@ -582,6 +582,44 @@ def test_respawn_guard_blocker_auth_expires_after_ttl(kanban_home, monkeypatch):
         assert kbd.check_respawn_guard(conn, tid) is None
 
 
+def test_respawn_guard_blocker_auth_expires_with_iso_run_timestamp(
+    kanban_home, monkeypatch,
+):
+    """An imported ISO-8601 run timestamp must not crash the TTL drain (#83047).
+
+    The kanban DB normalizes outside writers' numeric and ISO-8601 timestamps
+    through _to_epoch; the auth hold must honor that same storage contract.
+    """
+    from datetime import datetime, timezone
+
+    monkeypatch.setenv("HERMES_KANBAN_BLOCKER_AUTH_TTL_SECONDS", "3600")
+    now = 5_000_000
+    ended_at = datetime.fromtimestamp(now, tz=timezone.utc).isoformat()
+
+    with kbc.connect() as conn:
+        tid = kb.create_task(conn, title="auth-iso-expiry", assignee="a")
+        kb.claim_task(conn, tid)
+        run_id = kb.get_task(conn, tid).current_run_id
+        conn.execute(
+            "UPDATE task_runs SET outcome='spawn_failed', status='failed', "
+            "ended_at=? WHERE id=?",
+            (ended_at, run_id),
+        )
+        conn.execute(
+            "UPDATE tasks SET status='ready', current_run_id=NULL, "
+            "claim_lock=NULL, claim_expires=NULL, worker_pid=NULL, "
+            "last_failure_error=? WHERE id=?",
+            ("provider authentication failed", tid),
+        )
+        conn.commit()
+
+        monkeypatch.setattr(kbd.time, "time", lambda: now + 100)
+        assert kbd.check_respawn_guard(conn, tid) == "blocker_auth"
+
+        monkeypatch.setattr(kbd.time, "time", lambda: now + 3600)
+        assert kbd.check_respawn_guard(conn, tid) is None
+
+
 def test_respawn_guard_blocker_auth_ttl_zero_disables_hold(kanban_home, monkeypatch):
     monkeypatch.setenv("HERMES_KANBAN_BLOCKER_AUTH_TTL_SECONDS", "0")
     now = 5_000_000
