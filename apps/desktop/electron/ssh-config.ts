@@ -11,6 +11,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+import { sshClientFailedError } from './backend-start-failure'
+
 function parseSshConfigHosts(text) {
   const hosts: string[] = []
   const seen = new Set()
@@ -170,6 +172,50 @@ function parseSshGOutput(text) {
   }
 
   return out
+}
+
+/**
+ * Only killed or explicitly timed-out ssh -G probes can recover after sleep.
+ * Bounded in-place retries avoid reopening #103288's endless boot loop for
+ * genuinely hung clients. Each call has its own budget (no cross-host latch).
+ */
+export async function probeSshG(
+  ssh: string,
+  args: string[],
+  exec: (command: string, argv: string[], options: { timeout: number }) => Promise<string>,
+  now: () => number = Date.now
+): Promise<string> {
+  const timeout = 10_000
+  let shortTimeouts = 0
+  let lastTimeout: unknown
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const started = now()
+
+    try {
+      return await exec(ssh, args, { timeout })
+    } catch (error) {
+      const failure = error as { timedOut?: boolean; killed?: boolean; signal?: string | null } | null
+      const timedOut = failure?.timedOut === true || failure?.killed === true || typeof failure?.signal === 'string'
+
+      if (!timedOut) {
+        // Missing binary / bad local config remain terminal; never retry them.
+        throw sshClientFailedError(ssh, error)
+      }
+
+      lastTimeout = error
+
+      // A timeout firing after a long system sleep is not evidence of a hung
+      // client. Only three normal-duration timeouts may latch as terminal.
+      if (now() - started <= timeout * 2 && ++shortTimeouts >= 3) {
+        throw sshClientFailedError(ssh, error)
+      }
+    }
+  }
+
+  // Repeated wake-affected timeouts are transient. The existing bounded
+  // remote-boot retry path can try again on the next connection attempt.
+  throw lastTimeout instanceof Error ? lastTimeout : new Error('ssh -G probe timed out')
 }
 
 export { collectSshConfigHosts, parseSshConfigHosts, parseSshConfigIncludes, parseSshGOutput }

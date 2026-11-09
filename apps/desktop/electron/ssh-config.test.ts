@@ -3,7 +3,8 @@ import path from 'node:path'
 
 import { test } from 'vitest'
 
-import { collectSshConfigHosts, parseSshConfigHosts, parseSshConfigIncludes, parseSshGOutput } from './ssh-config'
+import { collectSshConfigHosts, parseSshConfigHosts, parseSshConfigIncludes, parseSshGOutput, probeSshG } from './ssh-config'
+import { isSshClientFailedBootFailure } from './backend-start-failure'
 
 test('parseSshConfigHosts keeps literal aliases and drops wildcard/negated patterns', () => {
   const cfg = [
@@ -104,4 +105,82 @@ test('parseSshGOutput takes the FIRST identityfile and tolerates missing keys', 
   assert.equal(parsed.identityFile, '~/.ssh/a')
   assert.equal(parsed.user, null)
   assert.equal(parsed.port, null)
+})
+
+const killedProbe = Object.assign(new Error('Command failed: ssh -G'), { killed: true, signal: 'SIGTERM' })
+
+test('ssh -G killed on wake retries instead of latching SSH_CLIENT_FAILED (#151462)', async () => {
+  let wall = 0
+  let calls = 0
+  const run = async () => {
+    calls++
+    if (calls === 1) {
+      wall += 1_044_000 // 17 minutes asleep; timeout fires on wake.
+      throw killedProbe
+    }
+    return 'hostname alive'
+  }
+
+  assert.equal(await probeSshG('ssh', ['-G', '--', 'alive'], run, () => wall), 'hostname alive')
+  assert.equal(calls, 2)
+})
+
+test('three short ssh -G timeouts latch rather than retry indefinitely', async () => {
+  let wall = 0
+  let calls = 0
+  const run = async () => {
+    calls++
+    wall += 10_000
+    throw killedProbe
+  }
+
+  await assert.rejects(probeSshG('ssh', ['-G', '--', 'hung'], run, () => wall), isSshClientFailedBootFailure)
+  assert.equal(calls, 3)
+})
+
+test('sleep-affected ssh -G timeouts remain retryable but bounded per attempt', async () => {
+  let wall = 0
+  let calls = 0
+  const run = async () => {
+    calls++
+    wall += 1_044_000
+    throw killedProbe
+  }
+
+  await assert.rejects(
+    probeSshG('ssh', ['-G', '--', 'suspended'], run, () => wall),
+    error => error === killedProbe && !isSshClientFailedBootFailure(error)
+  )
+  assert.equal(calls, 3)
+})
+
+test('ENOENT and ssh -G exit 255 remain terminal without extra probes', async () => {
+  const failures = [
+    Object.assign(new Error('spawn ssh ENOENT'), { code: 'ENOENT' }),
+    Object.assign(new Error('ssh -G exited 255'), { code: 255, killed: false, signal: null })
+  ]
+
+  for (const failure of failures) {
+    let calls = 0
+    await assert.rejects(
+      probeSshG('ssh', ['-G', '--', 'bad'], async () => {
+        calls++
+        throw failure
+      }),
+      isSshClientFailedBootFailure
+    )
+    assert.equal(calls, 1)
+  }
+})
+
+test('ssh -G timeout with a zero-exit SIGTERM handler is still retryable', async () => {
+  let calls = 0
+  const recovered = await probeSshG('ssh', ['-G', '--', 'alive'], async () => {
+    if (++calls === 1) {
+      throw Object.assign(new Error('ssh timed out after 10000ms'), { timedOut: true })
+    }
+    return 'hostname alive'
+  })
+  assert.equal(recovered, 'hostname alive')
+  assert.equal(calls, 2)
 })

@@ -97,8 +97,7 @@ import {
   shouldLatchHostKeyChangedFailure,
   shouldLatchRemoteReauthFailure,
   shouldLatchSshAuthFailure,
-  shouldLatchSshClientFailure,
-  sshClientFailedError
+  shouldLatchSshClientFailure
 } from './backend-start-failure'
 import { describeBootstrapFailure } from './bootstrap-failure-copy'
 import {
@@ -575,7 +574,7 @@ import { resolveSourcePython } from './source-python'
 import { registerSpellcheckDictionaryIpc } from './spellcheck-dictionary-ipc'
 import { resolveSshBinary } from './ssh-binary'
 import { createBootstrapCoordinator, sshConfigFingerprint } from './ssh-bootstrap-coordinator'
-import { collectSshConfigHosts, parseSshGOutput } from './ssh-config'
+import { collectSshConfigHosts, parseSshGOutput, probeSshG } from './ssh-config'
 import { createSshProbeConnection, pickLocalPort, redactSecrets, SshConnection } from './ssh-connection'
 import { createSshIsolatedKeepaliveRegistry } from './ssh-isolated-keepalive'
 import { managedSshConfig, resolveSharedSshProfileBackend, sharedSshProfiles } from './ssh-shared-profile-backend'
@@ -9392,17 +9391,7 @@ async function effectiveSshConfigFingerprint(sshConfig) {
   }
 
   args.push('--', sshConfig.user ? `${sshConfig.user}@${sshConfig.host}` : sshConfig.host)
-  let output: string
-
-  try {
-    output = await execText(ssh, args, { timeout: 10_000 })
-  } catch (error) {
-    // `ssh -G` only parses local config, so a failure here is the local client
-    // itself (missing, broken, or a bad ssh_config) and retrying cannot fix
-    // it. Tag it terminal so boot lands on the failure overlay instead of
-    // re-driving the same probe every ~2s (#103288).
-    throw sshClientFailedError(ssh, error)
-  }
+  const output = await probeSshG(ssh, args, execText)
 
   return crypto.createHash('sha256').update(output).digest('hex')
 }
