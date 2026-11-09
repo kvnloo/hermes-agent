@@ -360,7 +360,15 @@ async def scan_skill_hub(identifier: str = "", profile: Optional[str] = None):
 
 def _skills_list_cached(profile: Optional[str]) -> list[dict]:
     """One skill scan per profile per TTL, and never two scans concurrently."""
-    key = str(profile or "")
+    # An unnamed request inherits its task-local profile home (native tickets may
+    # serve different profiles without a ?profile= query). Cache by the resolved
+    # home, not the query text, so those callers never see each other's skills.
+    from hermes_constants import get_hermes_home, hermes_home_key
+    from hermes_cli.web_server_profiles import _is_current_profile, _resolve_profile_dir
+
+    key = hermes_home_key(
+        get_hermes_home() if _is_current_profile(profile)
+        else _resolve_profile_dir(profile.strip()))
     with _skills_list_lock:
         hit = _skills_list_cache.get(key)
         if hit is not None and time.monotonic() < hit[0]:
