@@ -161,6 +161,35 @@ def test_reclaim_task_reclaims_a_claim_with_no_worker(conn):
     assert kb.get_task(conn, tid).status == "ready"
 
 
+
+def test_manual_reclaim_preserves_worker_registered_after_pre_kill_read(
+    conn, live_worker, monkeypatch,
+):
+    """A late worker PID must not be cleared by an older reclaim snapshot."""
+    host = kb._claimer_id().split(":", 1)[0]
+    tid = kb.create_task(conn, title="late registration", assignee="w")
+    lock = f"{host}:A"
+    kb.claim_task(conn, tid, claimer=lock)
+    initial_run = kb.get_task(conn, tid).current_run_id
+    pid = live_worker()
+
+    def register_during_termination(observed_pid, observed_lock, **_kwargs):
+        # The reclaim saw no PID; the launcher registers before its UPDATE.
+        assert observed_pid is None
+        assert observed_lock == lock
+        kbd._set_worker_pid(conn, tid, pid)
+        return {"host_local": True, "termination_attempted": False, "terminated": False}
+
+    monkeypatch.setattr(kb, "_terminate_reclaimed_worker", register_during_termination)
+    assert kb.reclaim_task(conn, tid, reason="operator race") is False
+    task = kb.get_task(conn, tid)
+    assert task.status == "running"
+    assert task.claim_lock == lock
+    assert task.worker_pid == pid
+    assert task.current_run_id == initial_run
+    assert _latest_event(conn, tid, "reclaimed") is None
+
+
 def test_reclaim_task_reclaims_when_worker_is_not_ours(conn, live_worker):
     """A claim held by another host is not ours to defer on, so release it.
 

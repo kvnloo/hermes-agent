@@ -2514,11 +2514,14 @@ def reclaim_task(
         return False
     with write_txn(conn):
         retry_status = _retry_status_for_run(conn, task_id)
+        # A launcher can publish its PID after the pre-kill read. Do not
+        # release that newly attached worker's claim from a stale snapshot.
         cur = conn.execute(
             "UPDATE tasks SET status = ?, claim_lock = NULL, "
             "claim_expires = NULL, worker_pid = NULL, worker_started_at = NULL "
             "WHERE id = ? AND status IN ('running', 'ready', 'blocked') "
-            "AND claim_lock IS ?", (retry_status, task_id, prev_lock),
+            "AND claim_lock IS ? AND worker_pid IS ?",
+            (retry_status, task_id, prev_lock, row["worker_pid"]),
         )
         if cur.rowcount != 1:
             return False
