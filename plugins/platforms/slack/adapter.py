@@ -4481,10 +4481,14 @@ class SlackAdapter(BasePlatformAdapter):
         # workspace: Slack event ts values are only unique within one workspace, so two teams' events with
         # the same ts must not suppress each other.
         event_ts = event.get("_slack_changed_event_ts") or event.get("ts", "")
-        dedup_team_id = self._event_team_id(event, payload)
+        channel_id = event.get("channel", "")
+        # Team-less deliveries may still have a uniquely learned channel owner.
+        dedup_team_id = (
+            self._event_team_id(event, payload)
+            or self._channel_team.get(channel_id, "")
+        )
         if event_ts and self._dedup.is_duplicate(self._workspace_event_id(dedup_team_id, event_ts)):
             return None
-        channel_id = event.get("channel", "")
         if self._is_ignored_channel(channel_id):
             logger.info("[Slack] Ignoring message in configured ignored channel %s", channel_id)
             return None

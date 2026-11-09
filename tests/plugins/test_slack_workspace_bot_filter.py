@@ -50,3 +50,19 @@ async def test_own_bot_message_is_dropped_in_each_workspace(adapter, policy, tea
 async def test_primary_identity_remains_fallback_without_workspace(adapter):
     event = {"user": "U_PEER", "bot_id": "B_PEER", "text": "<@U_PRIMARY> hello"}
     assert await adapter._drop_bot_sender(event) is False
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mention,accepted", [
+    ("U_SECONDARY", True),
+    ("U_PRIMARY", False),
+])
+async def test_peer_bot_uses_cached_workspace_when_team_missing(adapter, mention, accepted):
+    adapter._remember_channel_team("C_SECONDARY", "T_SECONDARY")
+    event = {
+        "user": "U_PEER", "bot_id": "B_PEER", "channel": "C_SECONDARY",
+        "text": f"<@{mention}> are you there?", "ts": "101.001",
+    }
+    result = await adapter._prefilter_inbound(event, None)
+    assert (result is not None) is accepted
+    if accepted:
+        assert result == (event, "T_SECONDARY", "C_SECONDARY")
