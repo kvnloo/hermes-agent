@@ -3259,14 +3259,18 @@ def _deliver_result(job: dict, content: str, adapters=None, loop=None) -> Option
                 "Job '%s': desktop origin %s is not active; output saved locally",
                 job["id"], target["chat_id"],
             )
+            delivery_errors.append(
+                f"desktop session {target['chat_id']} is not active; output saved locally"
+            )
         else:
             logger.error(
                 "Job '%s': failed to queue desktop delivery; output saved locally",
                 job["id"],
             )
+            delivery_errors.append("failed to queue desktop delivery; output saved locally")
 
     if not gateway_targets:
-        return None
+        return "; ".join(delivery_errors) if delivery_errors else None
 
     from tools.send_message_tool import _send_to_platform
     from gateway.config import load_gateway_config, Platform

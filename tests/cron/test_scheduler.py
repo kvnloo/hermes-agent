@@ -463,13 +463,37 @@ class TestDeliverResultWrapping:
             patch("gateway.config.load_gateway_config") as load_gateway_config,
             caplog.at_level(logging.ERROR, logger="cron.scheduler"),
         ):
-            assert _deliver_result(job, "desktop report content") is None
+            error = _deliver_result(job, "desktop report content")
 
+        assert error is not None
+        assert "failed to queue desktop delivery" in error
         assert any(
             "failed to queue desktop delivery" in record.message
             for record in caplog.records
         )
         assert not any("is not active" in record.message for record in caplog.records)
+        load_gateway_config.assert_not_called()
+
+
+
+    def test_desktop_closed_session_is_delivery_error(self):
+        """A disconnected Desktop must not record a queued report as delivered."""
+        job = {
+            "id": "desktop-job",
+            "name": "desktop report",
+            "deliver": "origin",
+            "origin": {"platform": "desktop", "chat_id": "closed-desktop-session"},
+        }
+        with (
+            patch("cron.scheduler.load_config", return_value={"cron": {"wrap_response": False}}),
+            patch("cron.scheduler._queue_desktop_cron_delivery", return_value=False),
+            patch("gateway.config.load_gateway_config") as load_gateway_config,
+        ):
+            error = _deliver_result(job, "report produced after app closed")
+
+        assert error is not None
+        assert "closed-desktop-session" in error
+        assert "not active" in error
         load_gateway_config.assert_not_called()
 
 
