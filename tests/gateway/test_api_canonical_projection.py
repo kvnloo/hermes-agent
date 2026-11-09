@@ -149,6 +149,38 @@ async def test_run_projects_canonical_interim_commentary(api, owner, want_interi
     assert events[-1]['output'] == 'Done.'
 
 
+
+@pytest.mark.asyncio
+async def test_run_commentary_precedes_the_next_tool_event(api, owner):
+    """Regression for #67580: commentary is visible before the tool it introduces."""
+    from gateway.session_api_turn import wire_api_observers
+    from gateway.session_results import execution_result
+
+    admitted = admit_api_turn(api, session_id='commentary-tool', user_message='hello', conversation_history=[])
+    _, ref, _ = admitted
+    launch, queue = _launch(api, admitted)
+
+    async def handle(event):
+        turn = _turn_runner(owner, ref)
+        agent = SimpleNamespace(status_callback=None, interim_assistant_callback=None,
+                                tool_progress_callback=None)
+        wire_api_observers(agent, turn._approval_owner, True)
+        agent.interim_assistant_callback('Checking the file first.', already_streamed=False)
+        turn.combined_tool_start_callback('call-1', 'read_file', {'path': 'notes.txt'})
+        execution_result.get()['result'] = {'final_response': 'Done.'}
+        return 'Done.'
+
+    owner.runner._handle_message = handle
+    await _execute_run(api, launch, _api_server=_api_server)
+    await asyncio.sleep(0)  # Flush the scheduled run stream projections.
+    events = _events(queue)
+    assert [e['event'] for e in events] == ['message.interim', 'tool.started', 'run.completed']
+    assert events[0]['text'] == 'Checking the file first.'
+    assert events[0]['already_streamed'] is False
+    assert events[1]['tool_call_id'] == 'call-1'
+    assert events[-1]['output'] == 'Done.'
+
+
 def _wrap(api, run_id, loop, sink):
     from gateway.platforms.api_server_runs import _make_run_event_callback
     inner = _make_run_event_callback(api, run_id, loop, _api_server=_api_server)
