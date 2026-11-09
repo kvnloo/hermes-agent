@@ -285,3 +285,14 @@ def test_existing_rm_rules_keep_their_keys():
     assert _key("cd /srv/app && rm -r checkout-api/logs/archive") == "recursive delete"
     assert _key("find logs -delete") == "find -delete"
     assert _key("ls logs/archive | xargs rm") == "xargs with rm"
+
+
+def test_unrelated_grant_cannot_authorize_bulk_delete():
+    """A cached approval for a different rule must not silently cover a bulk rm."""
+    from tools import approval
+
+    command = "git reset --hard; rm a.txt b.txt"
+    first_key = detect_dangerous_command(command)[1]
+    assert first_key != approval_detection.RM_MULTI_KEY
+    pending = approval._unapproved_findings(command, lambda key: key == first_key)
+    assert pending == ([approval_detection.RM_MULTI_KEY], approval_detection.RM_MULTI_KEY)

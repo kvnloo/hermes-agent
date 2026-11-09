@@ -973,6 +973,8 @@ _CONTENT_RULE_DESCRIPTIONS = frozenset({
     "upload a secret or credential file via curl/wget (possible exfiltration)",
     "pipe a credential file into a curl/wget upload (possible exfiltration)",
     "invisible or bidirectional Unicode control character (possible obfuscation)",
+    # An approved earlier verb must not authorize a later bulk delete in the same command.
+    *_RM_EFFECT_KEYS,
 })
 
 # Preserve approvals stored under the removed interpreter regex rules.
