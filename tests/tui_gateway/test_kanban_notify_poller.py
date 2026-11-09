@@ -333,6 +333,24 @@ class TestFormatKanbanEventText:
         assert "implementer @bob" in text
 
 
+    def test_changes_requested_redacts_local_path_before_notification_turn(self):
+        """Review feedback should use the gateway's redaction before a TUI model turn."""
+        ev = SimpleNamespace(
+            kind="changes_requested",
+            payload={
+                "reason": "Check /home/worker/private/review.txt before retrying",
+                "reviewer": "alice",
+                "implementer": "bob",
+            },
+        )
+        text = _format_kanban_event_text(self.SUB, self.TASK, ev, "main")
+        assert "review requested changes/BLOCK" in text
+        assert "[local path]" in text
+        assert "/home/worker/private/review.txt" not in text
+        assert "reviewer @alice" in text
+        assert "implementer @bob" in text
+
+
 class TestNotificationPollerLoopKanbanWiring:
     """Drive a real TUI subscription through ``_notification_poller_loop``.
 

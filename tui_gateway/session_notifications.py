@@ -337,10 +337,15 @@ def _kb_review_requested(task, payload: dict, title: str) -> str:
 
 
 def _kb_changes_requested(task, payload: dict, title: str) -> str:
-    reason = " ".join(str(payload.get("reason") or "reviewer feedback requires changes").split())[:160]
-    provenance = f" — reviewer @{str(payload.get('reviewer'))[:48]}" if payload.get("reviewer") else ""
-    if payload.get("implementer"):
-        provenance += f" → implementer @{str(payload.get('implementer'))[:48]}"
+    # Match the gateway's redaction before forwarding review feedback to a model turn.
+    from gateway.kanban_watchers_notifier import _safe_review_reason
+
+    reason = _safe_review_reason(payload.get("reason")) or "reviewer feedback requires changes"
+    reviewer = _safe_review_reason(payload.get("reviewer"), 48)
+    implementer = _safe_review_reason(payload.get("implementer"), 48)
+    provenance = f" — reviewer @{reviewer}" if reviewer else ""
+    if implementer:
+        provenance += f" → implementer @{implementer}"
     return f" review requested changes/BLOCK: {reason}{provenance}"
 
 
