@@ -296,6 +296,39 @@ def test_async_schema_failure_preserves_authoritative_evidence():
     assert "schema_error='city' is a required property" in text
 
 
+def test_async_batch_all_invalid_schemas_reports_failed_outcome():
+    """Every child may finish, but the aggregate has no valid structured result."""
+    schema_errors = ["'city' is a required property"]
+
+    def runner():
+        return {"results": [
+            {
+                "task_index": i,
+                "status": "completed",
+                "outcome": "failed",
+                "summary": "{}",
+                "schema_valid": False,
+                "schema_errors": schema_errors,
+            }
+            for i in range(2)
+        ]}
+
+    dispatched = ad.dispatch_async_delegation_batch(
+        goals=["first", "second"], context=None, toolsets=None,
+        role="leaf", model="test-model", session_key="",
+        runner=runner, max_async_children=3,
+    )
+    assert dispatched["status"] == "dispatched"
+    evt = _drain_for(dispatched["delegation_id"])
+    assert evt is not None
+    assert evt["status"] == "completed"  # lifecycle remains distinct
+    assert evt["outcome"] == "failed"  # logical output contract failed
+    assert all(result["schema_valid"] is False for result in evt["results"])
+    rendered = format_process_notification(evt)
+    assert rendered is not None
+    assert rendered.count("outcome=failed") == 2
+
+
 def test_rich_reinjection_block_is_self_contained():
     def runner():
         return {"status": "completed", "summary": "The answer is 42.",
