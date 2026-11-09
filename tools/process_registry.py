@@ -601,6 +601,7 @@ class ProcessSession:
     # cleanup retries the stop even after the session finished.
     _scope_stop_pending: bool = field(default=False, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock)
+    _receipt_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     _reader_thread: Optional[threading.Thread] = field(default=None, repr=False)
     _reader_finish_requested: threading.Event = field(default_factory=threading.Event, repr=False)
     _reader_selectable: bool = field(default=False, repr=False)
@@ -1599,7 +1600,8 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
             try:
                 # Keep the session tracked until its result is durable, but never
                 # hold the registry lock across synchronous filesystem I/O.
-                save_completed_result(session)
+                with session._receipt_lock:
+                    save_completed_result(session)
             except BaseException:
                 with self._lock:
                     session._finish_claimed = False
@@ -2256,7 +2258,9 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
             # then persists this kill as a plain ``exited``. Re-write the receipt
             # so the durable record matches what the caller was told.
             if not self._move_to_finished(session):
-                save_completed_result(session)
+                # A reader's older receipt must finish before the kill rewrite.
+                with session._receipt_lock:
+                    save_completed_result(session)
             self._write_checkpoint()
             return {
                 "status": "killed", "session_id": session.id, "completion_reason": session.completion_reason,

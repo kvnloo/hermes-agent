@@ -669,6 +669,66 @@ class TestOrphanedPipeReconciliation:
         assert s._completion_event.is_set()
 
 
+    def test_kill_receipt_waits_for_inflight_reader_write(self, registry):
+        """The killed receipt must win when a reader's earlier disk write stalls."""
+        from hermes_constants import get_hermes_home
+        from utils import atomic_json_write
+
+        s = _make_session(sid="proc_kill_reader_receipt", output="done")
+        registry._running[s.id] = s
+        reader_writing = threading.Event()
+        release_reader = threading.Event()
+        kill_write_finished = threading.Event()
+        reader_threads = []
+        results = []
+
+        def ordered_write(path, record, **kwargs):
+            if record["completion_reason"] == "exited":
+                reader_writing.set()
+                assert release_reader.wait(timeout=10)
+            atomic_json_write(path, record, **kwargs)
+            if record["completion_reason"] == "killed":
+                kill_write_finished.set()
+
+        def signal_kill(*_args, **_kwargs):
+            reader = threading.Thread(
+                target=registry._finish_exited, args=(s, 0),
+            )
+            reader_threads.append(reader)
+            reader.start()
+            assert reader_writing.wait(timeout=5)
+            return None
+
+        def kill():
+            results.append(registry.kill_process(s.id, source="test.kill"))
+
+        with (
+            patch("tools.process_registry_results.atomic_json_write", side_effect=ordered_write),
+            patch.object(registry, "_signal_kill", side_effect=signal_kill),
+            patch.object(registry, "_write_checkpoint"),
+        ):
+            killer = threading.Thread(target=kill)
+            killer.start()
+            try:
+                assert reader_writing.wait(timeout=5)
+                # The kill's rewrite cannot overtake the blocked reader write.
+                overtook = kill_write_finished.wait(timeout=2)
+            finally:
+                release_reader.set()
+                killer.join(timeout=6)
+                for reader in reader_threads:
+                    reader.join(timeout=6)
+
+        assert not killer.is_alive()
+        assert all(not reader.is_alive() for reader in reader_threads)
+        assert results and results[0]["status"] == "killed"
+        assert not overtook, "Kill receipt was written before the older reader receipt"
+        receipt = get_hermes_home() / "logs" / "process-results" / f"{s.id}.json"
+        record = json.loads(receipt.read_text(encoding="utf-8"))
+        assert record["completion_reason"] == "killed"
+        assert record["termination_source"] == "test.kill"
+
+
 # =========================================================================
 # Read log
 # =========================================================================
