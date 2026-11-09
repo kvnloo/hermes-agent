@@ -283,3 +283,41 @@ class TestUpdateStatusRootLog:
         assert data["running"] is False
         assert data["exit_code"] == 3
         assert "action_id" not in data
+
+    @pytest.mark.parametrize("marker_present", [False, True])
+    def test_terminal_success_survives_action_process_killed_after_receipt(
+        self, monkeypatch, tmp_path, marker_present,
+    ):
+        # #106592: the process can exit on SIGKILL after its own receipt finalized.
+        # The completed action (not the raw process exit) is what Desktop must report.
+        from hermes_cli import update_receipt
+
+        root, action_id = tmp_path / "root", "a" * 32
+        monkeypatch.setenv("HERMES_HOME", str(root / "profiles" / "coder"))
+        monkeypatch.setenv("HERMES_ACTION_ID", action_id)
+        update_receipt.begin_update_receipt()
+        update_receipt.finalize_update_receipt("success")
+        (root / "logs").mkdir(parents=True, exist_ok=True)
+        if marker_present:
+            (root / "logs" / "update.log").write_text(
+                f"=== hermes-update completed {action_id} ===\n", encoding="utf-8",
+            )
+        log_dir = tmp_path / "dashboard-logs"
+        log_dir.mkdir()
+        (log_dir / "hermes-update.log").write_text(
+            f"=== hermes-update started 2026-11-09 02:00:00 {action_id} ===\n", encoding="utf-8",
+        )
+        monkeypatch.setattr(_web_server_gateway, "_ACTION_LOG_DIR", log_dir)
+        for registry in ("_ACTION_PROCS", "_ACTION_RESULTS", "_ACTION_COMMANDS", "_ACTION_IDS"):
+            monkeypatch.setattr(_web_server_gateway, registry, {})
+        _web_server_gateway._ACTION_PROCS["hermes-update"] = types.SimpleNamespace(
+            pid=42, poll=lambda: -9, wait=lambda timeout: -9,
+        )
+
+        result = self.client.get("/api/actions/hermes-update/status?lines=2000").json()
+
+        assert result["running"] is False
+        assert result["exit_code"] == 0
+        assert result["receipt"]["action_id"] == action_id
+        # The status also stays terminal after the process record is reaped.
+        assert self.client.get("/api/actions/hermes-update/status?lines=2000").json()["exit_code"] == 0

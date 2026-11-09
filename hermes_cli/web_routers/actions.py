@@ -435,6 +435,14 @@ async def get_action_status(name: str, lines: int = 200):
         running = exit_code is None
         pid = proc.pid
         if exit_code is not None:
+            if name == "hermes-update":
+                # A terminal result for THIS action survives a SIGKILL after finalization.
+                # A running or unrelated receipt is not evidence of completion.
+                terminal_exit = _completed_exit_code(
+                    None, durable_update_action_id, action_receipt_summary, durable_exit_code,
+                )
+                if terminal_exit is not None:
+                    exit_code = terminal_exit
             with contextlib.suppress(Exception):
                 proc.wait(timeout=1)
             _finish_action(name, exit_code, pid)
