@@ -49,7 +49,8 @@ def publish_plugin(staged: Path, target: Path, old_metadata: dict, new_metadata:
     }))
 
 
-def _refresh_declared_dependencies(target: Path, staged: Path, manifest: dict, *, interactive: bool) -> None:
+def _refresh_declared_dependencies(target: Path, staged: Path, manifest: dict, *, interactive: bool,
+                                   assume_deps_consent: bool = False) -> None:
     """Dependency changes carried by an update clear the same gates as an install.
 
     New Python requirements install packages into the shared environment: install and
@@ -78,6 +79,8 @@ def _refresh_declared_dependencies(target: Path, staged: Path, manifest: dict, *
     added = tuple(spec for spec in after.install_requirements if spec not in before.install_requirements)
     if not added and not (after.installs_packages and not before.installs_packages):
         return
+    if assume_deps_consent:
+        return  # Explicit CLI permission; PM still validates and installs the staged requirements.
     if not interactive:
         raise pc.PluginOperationError(
             f"The update declares new Python dependencies ({', '.join(added) or 'in its pyproject.toml'}); "
@@ -94,6 +97,7 @@ def update_plugin(
     catalog_entry=None,
     interactive: bool = False,
     force: bool = False,
+    assume_deps_consent: bool = False,
     scan_decision_cb: Callable[[Any], bool] | None = None,
     carry_user_files: Callable[[Path], list[str]] | None = None,
     surface_gate: Callable[[dict, Path], None] = lambda _manifest, _staged: None,
@@ -198,7 +202,8 @@ def update_plugin(
             pc._scan_merged_tree(staged, source, merged, force=force, scan_decision_cb=scan_decision_cb,
                                  reviewed_pin=catalog_entry is not None)
             pc._copy_example_files(staged, pc._console())
-            _refresh_declared_dependencies(target, staged, manifest, interactive=interactive)
+            _refresh_declared_dependencies(target, staged, manifest, interactive=interactive,
+                                           assume_deps_consent=assume_deps_consent)
             if tree_digest(target) != before:
                 raise pc.PluginOperationError("Plugin files changed while preparing the update; retry.")
             record["revision"] = revision

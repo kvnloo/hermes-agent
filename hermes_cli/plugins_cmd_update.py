@@ -21,7 +21,7 @@ def _pc():
 
 
 def _pull_plugin_update(target: Path, pinned_msg, not_git_msg, before_pull=None, *, interactive: bool = False,
-                        force: bool = False, scan_decision_cb=None, surface_gate=None) -> str:
+                        force: bool = False, yes_deps: bool = False, scan_decision_cb=None, surface_gate=None) -> str:
     """Shared ``update`` core: refuse pinned checkouts, ``git pull`` (or re-install from the
     recorded source when the tree carries no ``.git`` — subdirectory installs), record the new
     revision. Returns the pull output; raises :class:`PluginOperationError` on any refusal.
@@ -45,17 +45,20 @@ def _pull_plugin_update(target: Path, pinned_msg, not_git_msg, before_pull=None,
             before_pull()
         return _reclone_plugin_update(target, source, install_record.get("revision"),
                                       force=force, scan_decision_cb=scan_decision_cb, surface_gate=surface_gate,
-                                      allow_removed=install_record.get("allow_removed") is True)
+                                      allow_removed=install_record.get("allow_removed") is True,
+                                      assume_deps_consent=yes_deps)
     if before_pull is not None:
         before_pull()
     from hermes_cli.plugins_transaction import update_plugin
 
-    return update_plugin(target, interactive=interactive, force=force, scan_decision_cb=scan_decision_cb,
+    return update_plugin(target, interactive=interactive, assume_deps_consent=yes_deps,
+                         force=force, scan_decision_cb=scan_decision_cb,
                          **({"surface_gate": surface_gate} if surface_gate else {}))
 
 
 def _reclone_plugin_update(target: Path, source: str, previous_revision: object, *, force: bool = False,
-                           scan_decision_cb=None, surface_gate=None, allow_removed: bool = False) -> str:
+                           scan_decision_cb=None, surface_gate=None, allow_removed: bool = False,
+                           assume_deps_consent: bool = False) -> str:
     """Update a subdirectory install by re-cloning its source and atomically replacing the tree.
 
     These installs carry no local ``.git``, so the staged replacement also carries user-owned
@@ -77,6 +80,7 @@ def _reclone_plugin_update(target: Path, source: str, previous_revision: object,
         accept_caution=force,
         scan_decision_cb=scan_decision_cb,
         allow_removed=allow_removed,
+        assume_deps_consent=assume_deps_consent,
         before_swap=_before_swap,
     )
     revision = str(_pc()._read_install_metadata().get(new_target.name, {}).get("revision") or "")
@@ -87,7 +91,7 @@ def _reclone_plugin_update(target: Path, source: str, previous_revision: object,
 
 
 def update_one(name: str, target: Path, console, *, interactive: bool = True, force: bool = False,
-               unattended: bool = False) -> bool:
+               yes_deps: bool = False, unattended: bool = False) -> bool:
     """:func:`_update_one_locked` under the plugin's one-updater lock (a terminal update, the gateway's
     auto-apply and a Desktop click never pull the same plugin at once; the loser changes nothing).
     *unattended* (the auto-apply tick) applies :func:`~hermes_cli.plugins_auto_update.unattended_gate`
@@ -95,11 +99,12 @@ def update_one(name: str, target: Path, console, *, interactive: bool = True, fo
     from hermes_cli.plugins_auto_update import plugin_update_lock, unattended_gate
     with plugin_update_lock(target):
         gate = unattended_gate(name, target) if unattended else None
-        return _update_one_locked(name, target, console, interactive=interactive, force=force, surface_gate=gate)
+        return _update_one_locked(name, target, console, interactive=interactive, force=force,
+                                  yes_deps=yes_deps, surface_gate=gate)
 
 
 def _update_one_locked(name: str, target: Path, console, *, interactive: bool = True, force: bool = False,
-                       surface_gate=None) -> bool:
+                       yes_deps: bool = False, surface_gate=None) -> bool:
     """Update one installed plugin, printing progress and consent prompts; True when it moved.
 
     Every update is scanned. A caution verdict on a git update asks ``Update anyway? [y/N]`` when
@@ -113,7 +118,8 @@ def _update_one_locked(name: str, target: Path, console, *, interactive: bool = 
     from hermes_cli.plugins_cmd_install import interactive_scan_decision
     sidecar = catalog.catalog_install_record(target)
     if sidecar:  # catalog installs re-pin to the reviewed SHA — never `git pull`
-        return catalog.cmd_update_catalog(name, target, sidecar, console, interactive=interactive)
+        return catalog.cmd_update_catalog(name, target, sidecar, console, interactive=interactive,
+                                          assume_deps_consent=yes_deps)
     output = _pull_plugin_update(
         target,
         lambda rec: (
@@ -124,6 +130,7 @@ def _update_one_locked(name: str, target: Path, console, *, interactive: bool = 
         before_pull=lambda: console.print(f"[dim]Updating {name}...[/dim]"),
         interactive=interactive,
         force=force,
+        yes_deps=yes_deps,
         scan_decision_cb=interactive_scan_decision(console, "Update") if interactive else None,
         surface_gate=surface_gate)
     _post_pull_housekeeping(target, console)
@@ -153,13 +160,14 @@ def _update_one_locked(name: str, target: Path, console, *, interactive: bool = 
     return True
 
 
-def cmd_update(name: str, *, interactive: bool = True, force: bool = False) -> None:
+def cmd_update(name: str, *, interactive: bool = True, force: bool = False,
+               yes_deps: bool = False) -> None:
     """``hermes plugins update <name> [--force]``: :func:`update_one`, exit 1 on a refusal."""
     from hermes_cli.plugins_cmd_catalog import RepinConsentRequired
     console = _pc()._console()
     target = _pc()._require_installed_plugin(name, _pc()._plugins_dir(), console)
     try:
-        update_one(name, target, console, interactive=interactive, force=force)
+        update_one(name, target, console, interactive=interactive, force=force, yes_deps=yes_deps)
     except RepinConsentRequired as exc:
         _pc()._fail(console, f"[yellow]Update of {name} not applied:[/yellow] {exc}")
     except _pc().PluginScanBlocked as exc:

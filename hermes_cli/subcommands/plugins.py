@@ -73,6 +73,9 @@ def build_plugins_parser(subparsers, *, cmd_plugins: Callable) -> None:
         "--yes", "-y", action="store_true",
         help="With no name: update everything listed without the confirmation question (required without a terminal)")
     plugins_update.add_argument(
+        "--yes-deps", action="store_true",
+        help="Explicitly consent to new Python dependencies during a named plugin update (including over SSH)")
+    plugins_update.add_argument(
         "--force", "-f", action="store_true",
         help="Apply the update even when the security scan returns a caution verdict (a dangerous verdict "
              "still blocks). Without it, a terminal asks first")

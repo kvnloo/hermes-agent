@@ -635,6 +635,7 @@ def repin_catalog_plugin(
     *,
     interactive: bool = False,
     consent_cb=None,
+    assume_deps_consent: bool = False,
 ) -> RepinResult:
     """Re-pin a catalog install to the current catalog SHA (never ``git pull``).
 
@@ -705,6 +706,7 @@ def repin_catalog_plugin(
         target,
         catalog_entry=entry,
         interactive=interactive,
+        assume_deps_consent=assume_deps_consent,
         carry_user_files=lambda staged: _carry_user_files(target, staged, local),
     )
     matches = []
@@ -747,7 +749,8 @@ def repin_catalog_plugin(
     return RepinResult(entry.sha, True, installed_name, warnings)
 
 
-def cmd_update_catalog(name: str, target: Path, sidecar: dict, console, *, interactive: bool = True) -> bool:
+def cmd_update_catalog(name: str, target: Path, sidecar: dict, console, *, interactive: bool = True,
+                       assume_deps_consent: bool = False) -> bool:
     """Re-pin a catalog install, printing progress; True when the pin moved. Refusals raise
     :class:`RepinConsentRequired` / ``PluginOperationError`` with nothing changed (the caller reports them)."""
     from hermes_cli.plugins_cmd import (
@@ -758,13 +761,17 @@ def cmd_update_catalog(name: str, target: Path, sidecar: dict, console, *, inter
         console.print(f"\n  [yellow]The new pin of [bold]{name}[/bold] adds:[/yellow]")
         for line in surface_delta_lines(delta):
             console.print(f"    {line}")
+        # Only Python deps are pre-approved; tools, capabilities and other grants still require review.
+        if assume_deps_consent and set(delta) == {"python_dependencies"}:
+            return True
         if not interactive or not _is_tty():
             console.print("  [yellow]Non-interactive session: update NOT applied (fail closed). "
                           "Re-run `hermes plugins update` in a terminal to review and confirm.[/yellow]")
             return False
         return _ask_yes("  Apply this update? [y/N]: ")
 
-    result = repin_catalog_plugin(target, sidecar, interactive=interactive, consent_cb=_confirm_widening)
+    result = repin_catalog_plugin(target, sidecar, interactive=interactive, consent_cb=_confirm_widening,
+                                  assume_deps_consent=assume_deps_consent)
     verb = "updated to" if result.changed else "is already at catalog pin"
     console.print(f"[green]✓[/green] Plugin [bold]{result.installed_name}[/bold] {verb} {result.sha[:8]}.")
     for warning in result.warnings:
