@@ -1208,3 +1208,26 @@ async def test_non_object_body_is_a_400_before_the_sdk(raw):
         resp = await client.post("/api/messages", data=raw, headers={"Content-Type": "application/json"})
         assert resp.status == 400
     handler.assert_not_awaited()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("raw", "content_type"),
+    [
+        (b'{"type":"message"}', "application/json; charset=unknown-hermes-codec"),
+        (b"[" * 1500 + b"]" * 1500, "application/json"),
+    ],
+    ids=["unknown-charset", "too-deep"],
+)
+async def test_unknown_charset_or_deep_json_is_a_400_before_the_sdk(raw, content_type):
+    pytest.importorskip("aiohttp")
+    from aiohttp import web
+    from aiohttp.test_utils import TestClient, TestServer
+
+    app = web.Application()
+    handler = AsyncMock(return_value={"status": 200})
+    _teams_mod._AiohttpBridgeAdapter(app).register_route("POST", "/api/messages", handler)
+    async with TestClient(TestServer(app, host="127.0.0.1")) as client:
+        resp = await client.post("/api/messages", data=raw, headers={"Content-Type": content_type})
+        assert resp.status == 400
+    handler.assert_not_awaited()
