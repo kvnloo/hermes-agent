@@ -415,3 +415,27 @@ def test_module_entry_keeps_an_explicit_default_profile_over_the_sticky_one(tmp_
                          env=env, capture_output=True, text=True, timeout=120, check=True).stdout
 
     assert Path(out.strip().splitlines()[-1]).resolve() == (root / "config.yaml").resolve()
+
+@pytest.mark.parametrize(
+    ("argv", "active_profile"),
+    [
+        (["hermes", "-p", "work", "config", "path"], None),
+        (["hermes", "config", "path"], "work"),
+    ],
+)
+def test_failed_requested_profile_override_exits_nonzero(tmp_path, monkeypatch, capsys, argv, active_profile):
+    """Regression for #152716: a resolver crash cannot run the default profile."""
+    def fail_lookup(_name):
+        raise RuntimeError("profile lookup failed")
+
+    monkeypatch.setattr("hermes_cli.profiles.resolve_profile_env", fail_lookup)
+    root = tmp_path / ".hermes"
+    with pytest.raises(SystemExit) as failure:
+        _run_apply_profile_override(
+            tmp_path, monkeypatch, hermes_home=str(root),
+            active_profile=active_profile, argv=argv,
+        )
+
+    assert failure.value.code == 1
+    assert "Error: profile override failed (profile lookup failed)" in capsys.readouterr().err
+    assert os.environ["HERMES_HOME"] == str(root)
