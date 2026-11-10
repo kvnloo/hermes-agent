@@ -69,3 +69,34 @@ async def test_fire_blocked_before_the_agent_ends_its_owner_session_row(owner):
     session = owner.db.get_session(sid)
     assert session['ended_at'] is not None
     assert session['end_reason'] == 'cron_agent_skipped'
+
+
+@pytest.mark.asyncio
+async def test_monitor_preparation_exception_ends_its_owner_session_row(owner, tmp_path, monkeypatch):
+    """A monitor read error before run_job's main try cannot strand the pre-created session."""
+    from cron import monitor
+    from cron.executions import create_execution
+
+    (tmp_path / 'scripts').mkdir()
+    (tmp_path / 'scripts' / 'mon.sh').write_text("echo ready\n", encoding='utf-8')
+    job = jobs.create_job(prompt='Summarize changes', model='test-model', schedule='every 5m',
+                          monitor_script='mon.sh', deliver='local')
+
+    def fail_monitor(_job):
+        raise OSError('monitor source unavailable')
+
+    monkeypatch.setattr(monitor, 'check_monitor', fail_monitor)
+    execution_id = create_execution(job['id'], source='test')['id']
+    receipt = await session_cron.operation(
+        owner, 'submit', {'job_id': job['id'], 'request_id': execution_id, 'extra_prompt': None})
+    sid = receipt['session_id']
+    assert owner.db.get_session(sid)['ended_at'] is None
+    row = claim_session_input(owner.db, epoch=owner.epoch, session_id=sid)
+    policy = local_adapter_map(owner)[Platform.LOCAL].policies[sid]
+
+    with pytest.raises(OSError, match='monitor source unavailable'):
+        await session_cron.execute(owner, SessionRef(owner.profile_id, sid), row, policy)
+
+    session = owner.db.get_session(sid)
+    assert session['ended_at'] is not None
+    assert session['end_reason'] == 'cron_agent_skipped'
