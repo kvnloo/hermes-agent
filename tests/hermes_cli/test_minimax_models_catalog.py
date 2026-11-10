@@ -58,3 +58,11 @@ def test_custom_anthropic_base_probes_the_sdk_catalog_path(monkeypatch, custom_b
     get_provider_profile("minimax").fetch_models(base_url=custom_base, api_key="k", timeout=1.5)
 
     assert seen == [expected_url]
+
+@pytest.mark.parametrize("provider", ["minimax", "minimax-cn"])
+def test_new_minimax_model_preserves_noninteractive_default(provider):
+    """An added picker choice must not silently alter the preselected model at startup."""
+    from hermes_cli.models import get_default_model_for_provider, static_catalog
+
+    assert "MiniMax-M3.1-Flash" in static_catalog(provider)
+    assert get_default_model_for_provider(provider) == "MiniMax-M3"
