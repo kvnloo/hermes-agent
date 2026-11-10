@@ -224,8 +224,10 @@ def restore_local_session(authority, sid):
             # adopted conversation in place, so its viewers keep their subscriptions (as restore_api_session).
             live.source, live.route = source, route
         adapter.register_source(source)
+    # The live source carries the triggering message_id; the receipt names a conversation.
+    # Keep the adapter's registered-source guard and compare only durable identity.
     elif (not adapter.authorize_source(live.source)
-          or live.source.to_dict() != source.to_dict()
+          or adapter._identity(live.source) != adapter._identity(source)
           or adapter.policies.get(chat_id) != policy):
         raise RuntimeStoreError('storage_unavailable')
     elif _route_already_restored(store, route, target, receipt.get('lineage', [sid])):
