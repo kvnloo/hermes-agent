@@ -117,3 +117,11 @@ def test_fenced_numbered_lines_stay_code():
 
     text = "```\nlabel\n4. not a list\n```\nIntro\n1. First\n> **Quote**\n> 4. Fourth"
     assert _separate_late_start_ordered_lists(text) == text
+
+
+def test_empty_first_item_of_continued_list_after_label():
+    from hermes_cli.cli_render import _separate_late_start_ordered_lists
+
+    text = "**Follow-ups**\n4.\n5. Next"
+    assert _separate_late_start_ordered_lists(text) == "**Follow-ups**\n\n4.\n5. Next"
+    assert _separate_late_start_ordered_lists("Release\n4.") == "Release\n4."

@@ -10,7 +10,7 @@ afterEach(cleanup)
 // CommonMark lets only a list starting at 1 interrupt a paragraph, so a reply
 // numbering on from an earlier list rendered as one run-on paragraph.
 it('renders an ordered list that continues numbering after a label line as a list', async () => {
-  const { container } = render(<MarkdownTextContent text={'**Follow-ups**\n4. First\n5. Second'} />)
+  const { container } = render(<MarkdownTextContent isRunning={false} text={'**Follow-ups**\n4. First\n5. Second'} />)
   await act(async () => Promise.resolve())
 
   const list = container.querySelector('ol')
@@ -29,4 +29,17 @@ it('leaves markdown that already renders correctly alone', () => {
   ]) {
     expect(preprocessMarkdown(markdown)).toBe(markdown)
   }
+})
+
+// CommonMark allows an empty item in an existing list, but it cannot
+// interrupt a paragraph without a separating blank line.
+it('renders an empty first item when a continued numbered list follows a label', async () => {
+  const { container } = render(<MarkdownTextContent isRunning={false} text={'**Follow-ups**\n4.\n5. Next'} />)
+  await act(async () => Promise.resolve())
+
+  const list = container.querySelector('ol')
+  expect(list?.getAttribute('start')).toBe('4')
+  expect([...(list?.querySelectorAll('li') ?? [])].map(li => li.textContent?.trim())).toEqual(['', 'Next'])
+  // A standalone empty marker is still paragraph text, not an automatic list.
+  expect(preprocessMarkdown('Release\n4.')).toBe('Release\n4.')
 })

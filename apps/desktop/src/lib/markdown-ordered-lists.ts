@@ -1,4 +1,5 @@
 const ORDERED_ITEM_RE = /^ {0,3}(\d{1,9})[.)][ \t]+\S/
+const EMPTY_ORDERED_ITEM_RE = /^ {0,3}(\d{1,9})[.)][ \t]*$/
 const BLANK_OR_HEADING_RE = /^(?:[ \t]*$| {0,3}#{1,6}(?:[ \t]|$))/
 // Lines that open (or continue) a non-paragraph block: bullets, ordered items,
 // blockquotes, table rows, indented code.
@@ -18,7 +19,9 @@ export function separateOrderedLists(text: string): string {
   let inParagraph = false
   let blockStart = true
 
-  for (const line of text.split('\n')) {
+  const lines = text.split('\n')
+
+  for (const [index, line] of lines.entries()) {
     if (BLANK_OR_HEADING_RE.test(line)) {
       inParagraph = false
       blockStart = true
@@ -28,8 +31,17 @@ export function separateOrderedLists(text: string): string {
     }
 
     const item = ORDERED_ITEM_RE.exec(line)
+    const emptyItem = EMPTY_ORDERED_ITEM_RE.exec(line)
+    const nextItem = index + 1 < lines.length ? ORDERED_ITEM_RE.exec(lines[index + 1]) : null
+    // An empty item cannot interrupt prose by itself. Only split when a
+    // consecutive populated item proves this is a continued list.
+    const startsEmptyContinuation =
+      emptyItem !== null &&
+      nextItem !== null &&
+      Number(emptyItem[1]) !== 1 &&
+      Number(nextItem[1]) === Number(emptyItem[1]) + 1
 
-    if (inParagraph && item && Number(item[1]) !== 1) {
+    if (inParagraph && ((item && Number(item[1]) !== 1) || startsEmptyContinuation)) {
       out.push('')
       inParagraph = false
     } else if (OTHER_BLOCK_RE.test(line)) {

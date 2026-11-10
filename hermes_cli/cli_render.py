@@ -420,6 +420,7 @@ def _preserve_windows_dot_segments_for_markdown(text: str) -> str:
 
 _MD_FENCE_RE = re.compile(r" {0,3}(`{3,}|~{3,})(.*)")
 _MD_ORDERED_ITEM_RE = re.compile(r" {0,3}(\d{1,9})[.)][ \t]+\S")
+_MD_EMPTY_ORDERED_ITEM_RE = re.compile(r" {0,3}(\d{1,9})[.)][ \t]*$")
 _MD_BLANK_OR_HEADING_RE = re.compile(r"[ \t]*$| {0,3}#{1,6}(?:[ \t]|$)")
 _MD_OTHER_BLOCK_RE = re.compile(r"(?: {0,3}(?:[-*+][ \t]|\d{1,9}[.)](?:[ \t]|$)|>|\|)| {4}|\t)")
 
@@ -435,7 +436,8 @@ def _separate_late_start_ordered_lists(text: str) -> str:
     fence: str | None = None
     in_paragraph = False
     block_start = True
-    for line in text.split("\n"):
+    lines = text.split("\n")
+    for index, line in enumerate(lines):
         fence_match = _MD_FENCE_RE.match(line)
         if fence is not None:
             marker = fence_match.group(1) if fence_match else ""
@@ -452,7 +454,17 @@ def _separate_late_start_ordered_lists(text: str) -> str:
             out.append(line)
             continue
         item = _MD_ORDERED_ITEM_RE.match(line)
-        if in_paragraph and item and int(item.group(1)) != 1:
+        empty_item = _MD_EMPTY_ORDERED_ITEM_RE.match(line)
+        next_item = _MD_ORDERED_ITEM_RE.match(lines[index + 1]) if index + 1 < len(lines) else None
+        # A lone empty item cannot interrupt a paragraph; a consecutive
+        # populated item establishes that the list is continuing.
+        starts_empty_continuation = (
+            empty_item is not None
+            and next_item is not None
+            and int(empty_item.group(1)) != 1
+            and int(next_item.group(1)) == int(empty_item.group(1)) + 1
+        )
+        if in_paragraph and ((item and int(item.group(1)) != 1) or starts_empty_continuation):
             out.append("")
             in_paragraph = False
         elif _MD_OTHER_BLOCK_RE.match(line):
