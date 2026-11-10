@@ -109,6 +109,23 @@ class TestBenchOnSuccessfulResponse:
         assert reloaded.select().id == "fresh"
         assert reloaded.select(model="claude-sonnet-x").id == "fresh"
 
+    def test_two_rejected_windows_bench_until_the_later_reset(self, tmp_path, monkeypatch):
+        """The unified reset may name the 5h claim while the 7d claim is still spent."""
+        pool = _seed_pool(tmp_path, monkeypatch)
+        agent = self._agent(pool, "spent", "tok-spent")
+        headers = _unified(week_status="rejected", week_util="1.0")
+        headers["anthropic-ratelimit-unified-5h-status"] = "rejected"
+        headers["anthropic-ratelimit-unified-5h-utilization"] = "1.0"
+        headers["anthropic-ratelimit-unified-reset"] = str(SESSION_RESET)
+
+        agent._bench_spent_subscription_window(SimpleNamespace(headers=headers))
+
+        from agent.credential_pool import _exhausted_until, load_pool
+        assert _exhausted_until(_status(pool, "spent")) == WEEK_RESET
+        reloaded = load_pool("anthropic")
+        assert _exhausted_until(_status(reloaded, "spent")) == WEEK_RESET
+        assert reloaded.select().id == "fresh"
+
     def test_bench_covers_every_entry_backed_by_the_spent_token(self, tmp_path, monkeypatch):
         """The window belongs to the account, so a second row on the same token is spent too;
         leaving it selectable hands the spent account straight back."""

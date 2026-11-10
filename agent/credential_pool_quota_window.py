@@ -39,12 +39,14 @@ def spent_quota_reset_at(headers: Any) -> Optional[float]:
     def _rejected(name: str) -> bool:
         return str(getter(_UNIFIED_PREFIX + name) or "").strip().lower() == "rejected"
 
+    # The unified reset tracks a representative window, not necessarily the last
+    # rejected one. Keep the account benched until every rejected window reopens.
+    resets = []
     if _rejected("status"):
         overall = _future("reset")
         if overall is not None:
-            return overall
+            resets.append(overall)
     keys = headers.keys() if callable(getattr(headers, "keys", None)) else ()
-    resets = []
     for key in keys:
         name = str(key).lower()
         if not name.startswith(_UNIFIED_PREFIX) or not name.endswith("-status") or name == _UNIFIED_PREFIX + "status":
