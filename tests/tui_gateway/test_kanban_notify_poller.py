@@ -56,6 +56,20 @@ def _sub_rows(tid: str) -> list:
 
 
 class TestCollectKanbanNotifications:
+    def test_empty_board_probe_cached_across_tui_sessions(self):
+        """Each idle board is probed once per TTL, even across live sessions."""
+        conn = kbc.connect()
+        conn.close()
+        kb.create_board("second-board")
+
+        with patch.object(kbn, "count_notify_subs", wraps=kbn.count_notify_subs) as probe:
+            assert _collect_kanban_notifications(_session("first-session")) == []
+            assert _collect_kanban_notifications(_session("second-session")) == []
+
+        # Two boards, not two sessions times two boards: this fails on main,
+        # which reopens both SQLite databases on every notification poll.
+        assert probe.call_count == 2
+
     def test_zero_sub_board_is_never_opened_writable(self):
         conn = kbc.connect()
         conn.close()
