@@ -59,6 +59,10 @@ def detect_terminal_graphics() -> str:
         return "iterm"
     if term_program == "mintty" or "foot" in term or "mlterm" in term or "sixel" in term:
         return "sixel"
+    # Zellij documents ZELLIJ=0 in its panes; TERM_PROGRAM may be missing.
+    # Only warn at the blind fallback, not when a real image protocol is visible.
+    if "ZELLIJ" in os.environ:
+        _warn_multiplexer_hides_terminal("zellij")
     return "unicode"
 
 

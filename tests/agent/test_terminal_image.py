@@ -335,3 +335,26 @@ def test_tmux_and_screen_are_not_treated_as_identity_erasing(monkeypatch):
         monkeypatch.delenv("TERM_PROGRAM", raising=False)
         assert "screen" not in terminal_image._MULTIPLEXER_TERM_PROGRAMS
         assert "tmux" not in terminal_image._MULTIPLEXER_TERM_PROGRAMS
+
+
+def test_zellij_marker_only_fallback_warns_without_disabling_detectable_graphics(monkeypatch, caplog):
+    # Zellij documents ZELLIJ=0, not TERM_PROGRAM=zellij, as a pane marker.
+    # Missing emulator identity must explain the fallback without guessing a protocol.
+    _clear_graphics_env(monkeypatch)
+    monkeypatch.delenv("HERDR_ENV", raising=False)
+    monkeypatch.setenv("ZELLIJ", "0")
+    monkeypatch.setenv("TERM", "xterm-256color")
+    monkeypatch.setattr(terminal_image, "_multiplexer_warned", False, raising=False)
+
+    with caplog.at_level("INFO", logger="agent.terminal_image"):
+        assert terminal_image.detect_terminal_graphics() == "unicode"
+    assert len([r for r in caplog.records if "blind inside zellij" in r.getMessage()]) == 1
+
+    # Do not turn a working, explicitly identifiable Zellij graphics path into blocks.
+    caplog.clear()
+    monkeypatch.setattr(terminal_image, "_multiplexer_warned", False)
+    monkeypatch.setenv("TERM", "xterm-ghostty")
+    monkeypatch.setenv("TERM_PROGRAM", "ghostty")
+    with caplog.at_level("INFO", logger="agent.terminal_image"):
+        assert terminal_image.detect_terminal_graphics() == "kitty"
+    assert not any("blind inside zellij" in r.getMessage() for r in caplog.records)
