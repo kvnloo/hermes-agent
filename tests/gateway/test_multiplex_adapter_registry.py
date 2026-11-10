@@ -647,6 +647,59 @@ class TestSecondaryStartupFailureRecovery:
         ]
 
     @pytest.mark.asyncio
+    async def test_same_home_token_lock_initial_failure_hands_off_to_reconnect(
+        self, monkeypatch
+    ):
+        """#131875: a multiplex secondary that races its own draining gateway must
+        reach the reconnect watcher, not be permanently parked as a foreign holder.
+
+        The primary-platform own-home case is covered separately in
+        test_runner_startup_failures.py. This exercises the secondary startup
+        router used by the Telegram multiplex outage reported on #131875.
+        """
+        runner = _secondary_recovery_runner()
+        failed = _SecondaryRecoveryAdapter()
+        failed.fatal_error_code = "discord-bot-token_lock"
+        failed.fatal_error_message = "Discord bot token held by the previous gateway."
+        # _acquire_platform_lock stamps this after comparing the lock record's
+        # canonical hermes_home with this process's home.
+        failed._platform_lock_conflict_own_home = True
+        _install_secondary_reconnect_context(monkeypatch, runner, failed)
+        monkeypatch.setattr(runner, "_create_adapter", lambda platform, config: failed)
+        statuses = []
+        monkeypatch.setattr(
+            runner, "_update_platform_runtime_status",
+            lambda key, **kwargs: statuses.append((key, kwargs)),
+        )
+
+        async def fail_initial_connect(adapter, platform):
+            return False
+
+        monkeypatch.setattr(
+            runner, "_connect_initial_adapter_with_timeout", fail_initial_connect
+        )
+        handoffs = []
+        monkeypatch.setattr(
+            runner, "_schedule_secondary_profile_reconnect",
+            lambda profile, platform, adapter: handoffs.append((profile, platform, adapter)),
+        )
+
+        connected = await runner._start_one_profile_adapters(
+            "reviewer", "/tmp/reviewer", {}
+        )
+
+        assert connected == 0
+        assert failed.disconnected is True
+        bridge = list(runner._background_tasks)
+        assert len(bridge) == 1
+        await asyncio.wait_for(bridge[0], timeout=0.5)
+        assert handoffs == [("reviewer", Platform.DISCORD, failed)]
+        assert runner._profile_failed_platforms == {}
+        assert not any(
+            kwargs.get("platform_state") == "fatal" for _, kwargs in statuses
+        )
+
+    @pytest.mark.asyncio
     async def test_handoff_failure_is_logged_not_raised(self, monkeypatch, caplog):
         """If the scheduler raises at bridge handoff, the parked task must not
         die as an unretrieved-task exception — the failure surfaces in the log."""
