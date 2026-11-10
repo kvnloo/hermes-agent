@@ -171,3 +171,26 @@ async def test_the_bot_chat_still_has_to_be_unrouted_and_on_this_profile(home):
     finally:
         await owner.close()
         store.close_all_db_handles()
+
+def test_api_owned_bot_chat_requires_operator_even_without_user_stamp(tmp_path):
+    """#152072: a native non-operator must not claim a routeless API-owned Bot Chat.
+
+    The API row has no principal stamp: absence of a foreign user_id is not
+    evidence that a native read/create client may adopt the API transcript.
+    """
+    from hermes_state import SessionDB
+    from hermes_state_local_migration import validate_legacy_row
+    from hermes_state_runtime import RuntimeStoreError
+
+    with SessionDB(db_path=tmp_path / 'state.db') as db:
+        db.create_session('api_1_aaaa', source='api_server')
+        db.set_session_title('api_1_aaaa', BOT_CHAT)
+        row = db.get_session('api_1_aaaa')
+        assert row['chat_id'] is None and row['session_key'] is None
+        assert row['user_id'] is None
+
+        with pytest.raises(RuntimeStoreError, match='not_found'):
+            validate_legacy_row(db, row, subject='desktop')
+        # Refusal is read-only; an explicitly authorized operator can still recover it.
+        assert db.get_session('api_1_aaaa') == row
+        validate_legacy_row(db, row, subject='desktop', operator=True)

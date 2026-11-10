@@ -69,7 +69,7 @@ def validate_legacy_row(db, row, *, subject=None, operator=False):
     # A non-operator caller still meets a login-stamped chat as its owner's (#140183 F1).
     user_id = row.get('user_id')
     foreign = bool(user_id) and user_id != subject and not legacy_account_label(row) and not login_owned_by(row, subject)
-    canonical = canonical_bot_chat_row(row) and (operator or not foreign)
+    canonical = canonical_bot_chat_row(row) and operator
     if (row.get('profile_name') not in (None, '', db._own_profile_name() or 'default')
             or any(row.get(k) for k in ('session_key', 'chat_id', 'origin_json'))
             or (not canonical and (row['source'] not in LEGACY_LOCAL_SOURCES or foreign))):
