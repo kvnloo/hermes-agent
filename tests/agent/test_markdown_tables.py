@@ -75,6 +75,17 @@ def test_split_preserves_cells_when_backticks_pair_across_boundaries():
     assert split_table_row("| `` | x | `` |") == ["``", "x", "``"]
 
 
+def test_split_keeps_spaced_pipes_in_code_with_literal_outer_pipe():
+    # Regression for #151724: shell pipeline cells may start/end with a pipe.
+    # A pipe that is code content must not look like a standalone backtick cell.
+    assert split_table_row("| cmd | `| grep py | wc -l` | note |") == [
+        "cmd", "`| grep py | wc -l`", "note",
+    ]
+    assert split_table_row("| cmd | `grep py | wc -l |` | note |") == [
+        "cmd", "`grep py | wc -l |`", "note",
+    ]
+
+
 def test_split_many_distinct_unmatched_backtick_runs():
     cells = ["`" * width for width in range(1, 160)]
     assert split_table_row("| " + " | ".join(cells) + " |") == cells

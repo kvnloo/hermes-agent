@@ -29,14 +29,22 @@ def _disp_width(s: str) -> int:
     return max(wcswidth(s), 0)
 
 
-def _not_a_code_span(row: str, opener: int, opener_end: int, closing_end: int) -> bool:
-    """A backtick pair that crosses a spaced pipe without being code: glued to a word on its outside
-    (``don`t | it`s``: apostrophes), or a run alone in its cell (`` `` | x | `` ``)."""
+def _not_a_code_span(row: str, opener: int, opener_end: int, closing_end: int,
+                     cell_edges: list[int]) -> bool:
+    """A cross-cell backtick pair is not code when glued to a word (apostrophe),
+    or when a delimiter run is alone in its table cell. A literal leading/trailing
+    pipe *inside* a real code span does not make its delimiter a standalone cell.
+    """
     closer = closing_end - (opener_end - opener)
-    content = row[opener_end:closer].strip()
-    return ((opener > 0 and row[opener - 1].isalnum()) or (closing_end < len(row) and row[closing_end].isalnum())
-            or content.startswith("|") or content.endswith("|"))
-
+    if (opener > 0 and row[opener - 1].isalnum()) or (
+        closing_end < len(row) and row[closing_end].isalnum()
+    ):
+        return True
+    next_edge = bisect_left(cell_edges, opener_end)
+    prev_edge = bisect_left(cell_edges, closer) - 1
+    opener_alone = next_edge < len(cell_edges) and not row[opener_end:cell_edges[next_edge]].strip()
+    closer_alone = prev_edge >= 0 and not row[cell_edges[prev_edge] + 1:closer].strip()
+    return opener_alone or closer_alone
 
 def split_table_row(row: str) -> list[str]:
     """Split a GFM row on unescaped pipes outside matched inline-code spans."""
@@ -79,7 +87,7 @@ def split_table_row(row: str) -> list[str]:
             if closing_end is not None:
                 edge = bisect_left(cell_edges, end)
                 within_cell = edge == len(cell_edges) or cell_edges[edge] >= closing_end - (end - i)
-                if within_cell or not _not_a_code_span(row, i, end, closing_end):
+                if within_cell or not _not_a_code_span(row, i, end, closing_end, cell_edges):
                     i = closing_end
                     continue
             i = end  # unmatched or cross-cell backticks are literal
