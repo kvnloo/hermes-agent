@@ -976,12 +976,20 @@ def _cold_start_attested_profiles(token: dict) -> None:
                 if not pid:
                     raise RuntimeError("cold-start did not return a process ID")
             ready_pids = gateway_windows._wait_for_gateway_ready(home=home)
+            via = f"cold-start after update (profile {name})"
+            display_via = "cold-start after update"
+            if not ready_pids:
+                # The sibling's direct spawn can die in the updater Job Object just like the active profile.
+                ready_pids = gateway_windows.run_scheduled_task_and_wait(home=home)
+                if ready_pids:
+                    via = f"cold-start after update (profile {name}, scheduled task)"
+                    display_via += " (scheduled task)"
             if not ready_pids:
                 raise RuntimeError(f"gateway profile {name} did not become ready")
             gateway_windows._consume_start_attestation(generation, home=home)
             # Keep the attestation chain: a death after this CLI exits must be visible to the next update.
-            gateway_windows._write_start_attestation(ready_pids, f"cold-start after update (profile {name})", home=home)
-            print(f"\n✓ Gateway profile {name} started via cold-start after update (PID: {ready_pids[0]})")
+            gateway_windows._write_start_attestation(ready_pids, via, home=home)
+            print(f"\n✓ Gateway profile {name} started via {display_via} (PID: {ready_pids[0]})")
             token["cold_start_profiles"].pop(name, None)
     if token["cold_start_profiles"]:
         # Surface the miss like the active-profile cold-start does: the merged outcome marks the update

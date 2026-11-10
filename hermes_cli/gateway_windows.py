@@ -217,12 +217,12 @@ def _launch_elevated_install(force: bool = False, *, start_now: bool | None = No
 
 # ── Paths: where we stash our task script and where Startup lives
 
-def get_task_name() -> str:
-    """Scheduled Task name, scoped per profile."""
+def get_task_name(home: Path | None = None) -> str:
+    """Scheduled Task name for this profile, or the explicitly requested profile home."""
     _assert_windows()
     from hermes_cli.gateway import _profile_suffix  # local: avoids circular init during boot
 
-    suffix = _profile_suffix()
+    suffix = _profile_suffix(home) if home is not None else _profile_suffix()
     return f"{_TASK_NAME_DEFAULT}_{suffix}" if suffix else _TASK_NAME_DEFAULT
 
 
@@ -891,25 +891,26 @@ def _wait_for_gateway_ready(
     return []
 
 
-def run_scheduled_task_and_wait(*, timeout_s: float = 30.0, all_profiles: bool = False) -> list[int]:
-    """Job-Object-free relaunch fallback: run the registered Scheduled Task, then wait for a live gateway.
+def run_scheduled_task_and_wait(
+    *, timeout_s: float = 30.0, all_profiles: bool = False, home: Path | None = None,
+) -> list[int]:
+    """Run an installed gateway task outside the updater's Job Object and wait for readiness.
 
-    The updater's ``_spawn_detached`` / ``launch_detached_*`` children are created inside the updater's
-    own Job Object; when breakaway is denied they are reaped on its teardown (#48820/#91675), so the
-    post-update ``✓`` never holds. ``schtasks /Run`` executes the gateway under the Task Scheduler
-    service — outside any caller Job Object — the one start path that survives (and exactly the manual
-    ``schtasks /Run /TN Hermes_Gateway`` recovery we already print). Returns the live PIDs, or ``[]``
-    when no task is registered, ``schtasks`` refused, or nothing came up (caller reports as before).
-
-    ponytail: targets the current profile's task only (``get_task_name()``); a fully-down multi-profile
-    fleet recovers just the active profile here — plumb per-``home`` task names if that ever matters.
+    A named home uses that profile's task AND PID file; a running sibling cannot vouch for
+    it (#91675). With no home, retain the current-profile behavior for existing callers.
     """
-    if not is_task_registered():
+    task_name = get_task_name(home) if home is not None else get_task_name()
+    if home is None:
+        if not is_task_registered():
+            return []
+    elif _exec_schtasks(["/Query", "/TN", task_name])[0] != 0:
         return []
-    code, _out, err = _exec_schtasks(["/Run", "/TN", get_task_name()])
+    code, _out, err = _exec_schtasks(["/Run", "/TN", task_name])
     if code != 0:
         logger.warning("Scheduled Task /Run relaunch fallback failed (code %s): %s", code, (err or "").strip())
         return []
+    if home is not None:
+        return _wait_for_gateway_ready(timeout_s=timeout_s, home=home)
     return _wait_for_gateway_ready(timeout_s=timeout_s, all_profiles=all_profiles)
 
 
