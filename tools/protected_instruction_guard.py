@@ -163,7 +163,7 @@ def terminal_write_targets(
 # Redirect spellings, longest first so `2>>` wins over `2>`.
 _REDIRECT_RE = re.compile(r"(\d?&?>>?|&>)")
 # Commands whose LAST non-flag argument is the file they write.
-_DEST_LAST_CMDS = frozenset({"cp", "mv", "install", "ln", "rsync", "scp"})
+_DEST_LAST_CMDS = frozenset({"cp", "mv", "install", "ln", "rsync", "scp", "copy-item"})
 # Commands whose every non-flag argument is a file they write.
 _DEST_ALL_CMDS = frozenset({"tee", "truncate", "touch"})
 # In-place editors: the file arguments are written in place. `-i`, `-i.bak`, `-si`,

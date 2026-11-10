@@ -333,6 +333,26 @@ def test_terminal_write_targets_resolves_relative_to_workdir(tmp_path):
     assert targets == [os.path.normpath(str(tmp_path / "sub" / "AGENTS.md"))]
 
 
+def test_terminal_write_targets_detects_powershell_copy_item(tmp_path, monkeypatch):
+    """PowerShell Copy-Item -Force must not bypass the protected-file approval seam."""
+    monkeypatch.setattr(
+        pig,
+        "guard_spec",
+        lambda task_id="default": {
+            "enabled": True,
+            "basenames": list(pig.BASENAMES),
+            "extra": [],
+            "exempt": [],
+        },
+    )
+    targets = pig.terminal_write_targets(
+        "Copy-Item -Force backup.md SOUL.md",
+        str(tmp_path),
+        env_type="local",
+    )
+    assert targets == [str(tmp_path / "SOUL.md")]
+
+
 def test_terminal_gate_runs_before_force(monkeypatch):
     """``force`` (the user already confirmed a DANGEROUS command) must not skip this gate."""
     from tools import terminal_tool as tt
