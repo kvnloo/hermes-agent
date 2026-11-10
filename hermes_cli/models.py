@@ -2219,14 +2219,14 @@ def _fetch_anthropic_models(
 ) -> Optional[list[str]]:
     """Sorted Anthropic model ids using an explicit key, resolver, or read-only API-key pool row."""
     try:
-        from agent.anthropic_credentials import resolve_anthropic_token, _is_oauth_token
+        from agent.anthropic_credentials import resolve_anthropic_token, _is_oauth_token, catalog_api_key_declared
     except ImportError:
         return None
 
     resolved_base_url = base_url
     explicit = (api_key or "").strip()
     token = explicit or resolve_anthropic_token()
-    declared_api_key = True if explicit else None
+    declared_api_key = catalog_api_key_declared(explicit) if explicit else None
     if not token:
         # Keep the pool credential paired with its own endpoint.
         token, resolved_base_url = _resolve_anthropic_pool_catalog_credentials()

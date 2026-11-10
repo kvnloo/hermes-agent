@@ -102,6 +102,33 @@ class TestFetchAnthropicModelsPagination:
         assert got is not None
         assert 0 < len(got) <= len(MODELS)
 
+    @pytest.mark.parametrize(
+        "env_name, oauth",
+        [("ANTHROPIC_TOKEN", True), ("CLAUDE_CODE_OAUTH_TOKEN", True),
+         ("ANTHROPIC_API_KEY", False), (None, False)],
+    )
+    def test_forwarded_ambiguous_token_preserves_env_origin(self, monkeypatch, env_name, oauth):
+        """The /model switch forwards a live key via api_key, even when the source is OAuth."""
+        from hermes_cli import models
+
+        token = "sk-ant-future-catalog-fixture"
+        for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN"):
+            monkeypatch.delenv(name, raising=False)
+        if env_name:
+            monkeypatch.setenv(env_name, token)
+
+        captured = []
+
+        def get_json(_url, *, timeout, headers):
+            captured.append(dict(headers))
+            return {"data": [{"id": "claude-fixture"}], "has_more": False}
+
+        monkeypatch.setattr(models, "_get_json", get_json)
+        assert _fetch_anthropic_models(api_key=token) == ["claude-fixture"]
+        headers, = captured
+        assert (headers.get("Authorization") == f"Bearer {token}") is oauth
+        assert (headers.get("x-api-key") == token) is (not oauth)
+
 
 class TestPluginFetchModelsPagination:
     def test_follows_cursor_across_all_pages(self, paged_server):

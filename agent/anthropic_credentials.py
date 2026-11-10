@@ -101,6 +101,14 @@ def _is_oauth_token(key: str, *, declared_api_key: Optional[bool] = None) -> boo
     return False
 
 
+def catalog_api_key_declared(token: str) -> bool:
+    """A model-switch forwards a live OAuth token as api_key; the argument is not its source."""
+    # Known credential shapes need no env read; only future sk-ant-* families are ambiguous.
+    if not token.startswith("sk-ant-") or token.startswith(_API_KEY_FAMILIES + _OAUTH_TOKEN_SHAPES):
+        return True
+    return token not in (_first_env("ANTHROPIC_TOKEN"), _first_env("CLAUDE_CODE_OAUTH_TOKEN"))
+
+
 def is_native_anthropic_host(base_url: Any) -> bool:
     """True when *base_url* is exactly ``api.anthropic.com`` (an empty base_url is the native default)."""
     text = str(base_url or "").strip()
