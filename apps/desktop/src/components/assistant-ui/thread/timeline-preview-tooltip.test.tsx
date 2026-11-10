@@ -1,4 +1,4 @@
-import { cleanup, render } from '@testing-library/react'
+import { act, cleanup, render } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -54,5 +54,21 @@ describe('TimelineRail preview tooltip', () => {
     // content-facing edge. Keep the 5px arrow and a 2px breathing gap.
     expect(props.sideOffset).toBe(-19)
     expect(props.className).toContain('timeline-preview-tooltip')
+  })
+
+  it('reorients an existing preview when UI direction changes without a resize', async () => {
+    window.document.documentElement.dir = 'ltr'
+    render(<TimelineRail activeIndex={0} entries={[{ id: 'one', preview: 'One' }]} loadingId={null} onJump={vi.fn()} />)
+    expect(tipProps.at(-1)?.side).toBe('left')
+
+    await act(async () => {
+      window.document.documentElement.dir = 'rtl'
+    })
+    expect(tipProps.at(-1)?.side).toBe('right')
+
+    await act(async () => {
+      window.document.documentElement.dir = 'ltr'
+    })
+    expect(tipProps.at(-1)?.side).toBe('left')
   })
 })

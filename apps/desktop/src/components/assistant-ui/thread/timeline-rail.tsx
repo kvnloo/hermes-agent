@@ -61,10 +61,19 @@ export function TimelineRail({ activeIndex, entries, loadingId, onJump }: Timeli
     }
 
     const observer = new ResizeObserver(measure)
+    const directionObserver = new MutationObserver(measure)
     observer.observe(element)
+    // A locale change updates <html dir> without resizing the timeline.
+    directionObserver.observe(element.ownerDocument.documentElement, {
+      attributes: true,
+      attributeFilter: ['dir']
+    })
     measure()
 
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      directionObserver.disconnect()
+    }
   }, [])
 
   useEffect(() => virtualizer.measure(), [pitch, virtualizer])
