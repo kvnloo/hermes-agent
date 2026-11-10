@@ -212,8 +212,10 @@ COPY hermes_constants.py hermes_constants.py
 # PM imports the shared stdlib locking owner before deps exist.
 COPY hermes_cli/__init__.py hermes_cli/runtime_state.py hermes_cli/
 COPY scripts/bundles/payload.py scripts/bundles/payload.py
+# PM checks pnpm as a required tool even for a Python-only `--extra` sync.
+# Keep its lock-pinned store entry in the runtime layers, not only build stages.
 RUN set -eu; \
-    python3 -c 'from pm import ensure; [ensure(name, explicit=True) for name in ("uv", "chromium", "npm", "ffmpeg", "ripgrep")]'; \
+    python3 -c 'from pm import ensure; [ensure(name, explicit=True) for name in ("uv", "chromium", "npm", "pnpm", "ffmpeg", "ripgrep")]'; \
     python3 -c 'from pathlib import Path; from pm import installed_package; [Path("/usr/local/bin", command).symlink_to(installed_package(package).binary) for command, package in (("python3", "python"), ("node", "node"), ("npm", "npm"), ("ffmpeg", "ffmpeg"), ("rg", "ripgrep"))]; Path("/usr/local/bin/ffprobe").symlink_to(installed_package("ffmpeg").binary.with_name("ffprobe"))'; \
     ffmpeg -version >/dev/null; ffprobe -version >/dev/null; rg --version >/dev/null; \
     python3 -c 'import shutil; from pathlib import Path; from pm import env_for; Path("/usr/local/bin/npx").symlink_to(shutil.which("npx", path=env_for("npm", base_env={})["PATH"]))'; \
@@ -315,8 +317,8 @@ RUN /opt/hermes/.venv/bin/python -I scripts/generate_icons.py --source /opt/herm
 
 # Frontend dependencies never enter the runtime layers.
 FROM runtime_base AS frontend_build
-# pnpm installs the workspaces; nothing in the runtime image runs it, so only
-# the build stages (this one and webapp_build) stage it.
+# pnpm installs JS workspaces only in the build stages; the runtime carries
+# its PM store entry for drift/preflight checks, but not node_modules.
 RUN python3 -c 'from pathlib import Path; from pm import ensure, installed_package; ensure("pnpm", explicit=True); Path("/usr/local/bin/pnpm").symlink_to(installed_package("pnpm").binary)' && \
     pnpm --version
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
@@ -491,8 +493,9 @@ ENV HERMES_WEB_DIST=/opt/hermes/hermes_cli/web_dist
 #
 # Why this is required (not just an optimization): the runtime image carries
 # no workspace node_modules (frontend dependencies stay in frontend_build; only
-# a TypeScript copy ships) and no pnpm. So the launcher's install check fails on
-# every launch, and the install it triggers (a) can never converge here and
+# a TypeScript copy ships). The install check still fails without workspace
+# dependencies despite the pinned pnpm tool; the install it triggers (a)
+# can never converge in the immutable runtime tree and
 # (b) races itself across concurrent embedded-chat (/api/pty) connections →
 # ENOTEMPTY → the chat tab dies with a 502 / "[session ended]". Pointing at the
 # prebuilt bundle sidesteps the whole check. (A separate launcher hardening is

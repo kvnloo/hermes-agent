@@ -48,3 +48,18 @@ assert Path('/opt/hermes/node_modules/typescript/bin/tsc').is_file()
         check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_runtime_pm_preflight_has_pnpm(built_image: str) -> None:
+    """The shipped non-root image must pass the preflight for --extra mcp (#152519)."""
+    probe = """
+from pm.install import activate
+problems = activate(allow_incomplete=True)
+assert not problems, problems
+"""
+    result = subprocess.run(
+        ["docker", "run", "--rm", "--network", "none", "--user", "hermes",
+         "--entrypoint", "/opt/hermes/.venv/bin/python", built_image, "-c", probe],
+        capture_output=True, text=True, timeout=60, check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr

@@ -156,3 +156,16 @@ def test_default_install_carries_the_computer_use_driver_wherever_it_builds():
         assert ("cua-driver" in defaults) == (driver.missing_reason(target) is None), target
     assert "cua-driver" not in default_packages(
         lock.names(), target="linux-x64", declined_names=frozenset({"cua-driver"}))
+
+
+def test_docker_runtime_stages_pnpm_for_extra_sync() -> None:
+    """A Docker --extra sync must not fail the required-tool preflight on pnpm."""
+    from pathlib import Path
+
+    assert not pm.cli.get_package("pnpm").optional
+    dockerfile = (Path(__file__).resolve().parents[2] / "Dockerfile").read_text(encoding="utf-8")
+    runtime = dockerfile.split(" AS runtime_base\n", 1)[1].split(
+        "\nFROM runtime_base AS python_deps", 1
+    )[0]
+    tool_install = next(line for line in runtime.splitlines() if "ensure(name, explicit=True)" in line)
+    assert '"pnpm"' in tool_install
