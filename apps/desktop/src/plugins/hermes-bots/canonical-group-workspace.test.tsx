@@ -5,6 +5,7 @@ import type { ComponentProps } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 const request = vi.hoisted(() => vi.fn())
+const historyRenders = vi.hoisted(() => vi.fn())
 vi.mock('@hermes/plugin-sdk', async () => {
   const { pluginSdkMock, createGroupGateway } = await import('./group-test-utils')
   const gateway = createGroupGateway()
@@ -22,6 +23,20 @@ vi.mock('@hermes/plugin-sdk', async () => {
     RowButton: (p: ComponentProps<'button'>) => <button type="button" {...p} />,
     host: { ...gateway.host, requestProfile: captureGroupRequests(request).request } }
 })
+vi.mock('./canonical-group-history', async importOriginal => {
+  const actual = await importOriginal<typeof import('./canonical-group-history')>()
+  const { memo } = await import('react')
+
+  return {
+    ...actual,
+    // Count costly transcript renders, not unrelated room-level updates.
+    CanonicalGroupHistory: memo((props: ComponentProps<typeof actual.CanonicalGroupHistory>) => {
+      historyRenders()
+
+      return <actual.CanonicalGroupHistory {...props} />
+    })
+  }
+})
 import { host } from '@hermes/plugin-sdk'
 
 import { CANONICAL_GROUP_CAPABILITIES, LEGACY_STANDALONE_GROUP_CAPABILITIES, STANDALONE_GROUP_CAPABILITIES } from './canonical-group-contract-test-utils'
@@ -37,6 +52,45 @@ beforeEach(() => { Object.defineProperty(window, 'hermesDesktop', { configurable
 afterEach(() => { cleanup(); request.mockReset(); localStorage.clear(); window.hermesDesktop = originalDesktop; vi.unstubAllGlobals(); vi.useRealTimers() })
 // What gateway/session_group_controls.py answers for groups.send.
 const receipt = (params: { event_id?: string }) => ({ event: {}, client_event_id: params.event_id, accepted: true, driver_started: true })
+
+it('keeps typing out of the transcript but refreshes a second approval for the same task', async () => {
+  const members = [{ member_id: 'ops', profile: 'ops', handle: 'ops', display_name: 'Ops' }]
+  let requestId = 'approval-1'
+  let command = 'echo first'
+
+  request.mockImplementation(async (_route, method) => {
+    if (method === 'groups.state') {
+      return {
+        room: { room_id: 'approval-room', name: 'Room', members, authority_epoch: 1, latest_seq: 0, updated_at: 1 },
+        driver_status: {
+          working: true,
+          pending_actions: [{
+            kind: 'approval', member_id: 'ops', task_id: 'task-1', execution_generation: 1,
+            request_id: requestId, approval: { request_id: requestId, command, choices: ['once', 'deny'] }
+          }]
+        }
+      }
+    }
+
+    if (method === 'groups.log') {return { events: [], has_more: false }}
+
+    return {}
+  })
+
+  render(<CanonicalGroupWorkspace binding={{ connectionId: 'remote', profile: 'team', roomId: 'approval-room' }} />)
+  await screen.findByText('echo first')
+  historyRenders.mockClear()
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Unsent text' } })
+  expect(historyRenders).not.toHaveBeenCalled()
+
+  // A second approval can arrive in the same task/generation without changing room.updated_at.
+  // Dropping that state update leaves the first command visible and its request ID actionable.
+  requestId = 'approval-2'
+  command = 'echo second'
+  await screen.findByText('echo second', {}, { timeout: 5_000 })
+  expect(screen.queryByText('echo first')).toBeNull()
+  expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('Unsent text')
+})
 
 it('preserves the draft and full hover name when only the room display name changes', async () => {
   const name = 'A very long group chat name '.repeat(40).trim()

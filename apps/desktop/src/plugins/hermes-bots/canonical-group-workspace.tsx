@@ -96,9 +96,9 @@ const sameMembers = (current: CanonicalRoomMember[], next: CanonicalRoomMember[]
       member.handle === other.handle && member.display_name === other.display_name
   })
 
-/** The driver scalars the cycle footer, pause controls and send gate read. `pending_actions` is compared
- *  by id/count: its payload may carry volatile fields a byte compare would trip over, and the actions a
- *  card shows are keyed on kind/task_id/execution_generation anyway. */
+/** The driver scalars the cycle footer, pause controls and send gate read. One task can issue
+ *  successive approvals with the same execution generation but new request IDs and commands;
+ *  preserve those changes so the card never offers an earlier approval. */
 const sameDriverScalars = (current?: RoomDriverStatus, next?: RoomDriverStatus) => {
   if (current === undefined || next === undefined) {return current === next}
 
@@ -110,7 +110,8 @@ const sameDriverScalars = (current?: RoomDriverStatus, next?: RoomDriverStatus) 
       const other = next.pending_actions?.[index]
 
       return !!other && action.kind === other.kind && action.member_id === other.member_id &&
-        sameValue(action.task_id, other.task_id) && sameValue(action.execution_generation, other.execution_generation)
+        sameValue(action.task_id, other.task_id) && sameValue(action.execution_generation, other.execution_generation) &&
+        sameValue(action.request_id, other.request_id) && sameValue(action.approval, other.approval)
     }) &&
     ['working', 'blocked', 'max_rounds', 'max_continues'].every(key =>
       (current as Record<string, unknown>)[key] === (next as Record<string, unknown>)[key]) &&
