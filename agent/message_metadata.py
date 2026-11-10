@@ -165,9 +165,15 @@ REPLAYED_REASONING_TOKENS = "reasoning_tokens"
 
 
 def stamp_reasoning_tokens(message: MutableMapping[str, Any], tokens: Any) -> None:
-    """Record *tokens* as the provider-reported reasoning size of assistant *message*."""
-    if isinstance(tokens, int) and not isinstance(tokens, bool) and tokens > 0:
+    """Record this response's replay price; clear a superseded stamp when usage is absent."""
+    if not isinstance(tokens, int) or isinstance(tokens, bool):
+        return
+    if tokens > 0:
         _set_display_metadata_key(message, REPLAYED_REASONING_TOKENS, tokens)
+    elif tokens == 0:
+        metadata = message.get("display_metadata")
+        if isinstance(metadata, dict) and REPLAYED_REASONING_TOKENS in metadata:
+            message["display_metadata"] = {k: v for k, v in metadata.items() if k != REPLAYED_REASONING_TOKENS}
 
 
 def stamped_reasoning_tokens(message: Any) -> int:

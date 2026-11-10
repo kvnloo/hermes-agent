@@ -42,3 +42,54 @@ def test_window_reaches_into_a_reasoning_heavy_active_turn():
     # ~96k of replayed reasoning against a 10k tail budget: most tool rounds must be summarizable.
     summarizable_rounds = sum(1 for m in messages[start:end] if m.get("codex_reasoning_items"))
     assert summarizable_rounds >= 8, f"window {start}-{end}: only {summarizable_rounds} rounds summarizable"
+
+
+def test_incomplete_codex_refresh_without_usage_drops_stale_reasoning_price():
+    """An incomplete continuation replaces the ciphertext; old provider usage must not price new bytes."""
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock
+
+    from agent.message_metadata import stamped_reasoning_tokens
+    from agent.replayed_reasoning import codex_reasoning_replay_tokens
+    from agent.turn_truncation import continue_codex_incomplete
+
+    agent = MagicMock()
+    agent.max_tokens = 2_048
+    agent.quiet_mode = True
+    agent.log_prefix = ""
+    agent._codex_incomplete_retries = 0
+    agent._codex_reasoning_only_streak = 0
+    agent._interim_assistant_visible_text.return_value = ""
+
+    def build(message, finish_reason):
+        row = {
+            "role": "assistant", "content": message.content, "finish_reason": finish_reason,
+            "codex_reasoning_items": message.codex_reasoning_items,
+        }
+        stamp_reasoning_tokens(row, message.reasoning_tokens)
+        return row
+
+    agent._build_assistant_message.side_effect = build
+    prior = {
+        "role": "assistant", "content": "", "finish_reason": "incomplete",
+        "codex_reasoning_items": [{"type": "reasoning", "encrypted_content": "x" * 13_500}],
+        "display_metadata": {"display_kind": "progress"},
+    }
+    stamp_reasoning_tokens(prior, 8_000)
+    current = SimpleNamespace(
+        content="", tool_calls=None, reasoning=None, reasoning_tokens=0,
+        codex_reasoning_items=[{"type": "reasoning", "encrypted_content": "y" * 1_350}],
+    )
+    messages = [{"role": "user", "content": "continue"}, prior]
+
+    outcome = continue_codex_incomplete(
+        agent, current, "incomplete", messages=messages, conversation_history=None,
+        api_call_count=1, response=SimpleNamespace(status="incomplete", usage=None),
+    )
+
+    assert outcome is None
+    assert messages[1] is prior
+    assert prior["codex_reasoning_items"] == current.codex_reasoning_items
+    assert prior["display_metadata"]["display_kind"] == "progress"
+    assert stamped_reasoning_tokens(prior) == 0
+    assert codex_reasoning_replay_tokens(prior) == 100
