@@ -133,6 +133,27 @@ describe('usePromptActions cron write gate vs scope switch during owner resoluti
     expect($notifications.get()).toHaveLength(toastsBefore)
   })
 
+  it('drops a cron send if the ambient profile changes while its authoritative read is pending', async () => {
+    const pendingRead = deferred<ReturnType<typeof sessionInfo>>()
+    vi.mocked(resolveSessionOwner).mockResolvedValue('alpha')
+    vi.mocked(getSession).mockReturnValue(pendingRead.promise)
+    const handle = await render()
+    let result = true
+
+    await act(async () => {
+      const submitted = handle.submitTextRaw('into the cron session')
+      await vi.waitFor(() => expect(getSession).toHaveBeenCalledWith(storedId, 'alpha'))
+      setApiRequestProfile('beta')
+      pendingRead.resolve(liveRun())
+      result = await submitted
+    })
+
+    expect(result).toBe(false)
+    expect(promptSubmits()).toHaveLength(0)
+    expect(hasCronRunVerdict(storedId)).toBe(false)
+    expect($composerDraft.get()).toBe('keep this draft')
+  })
+
   it('an unchanged scope still takes the normal write-gate path', async () => {
     serveSession(liveRun())
 

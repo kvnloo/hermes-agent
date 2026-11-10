@@ -383,12 +383,20 @@ export function useSubmitPrompt(deps: SubmitPromptDeps) {
             const ambientBefore = [getApiRequestConnection(), getApiRequestProfile()]
             const scope = profileScopeForSessionOwner(await resolveSessionOwner(id))
             const pinned = typeof scope === 'object' && scope !== null && Boolean(scope.connectionId?.trim())
+            const ambientChanged = () =>
+              !pinned && [getApiRequestConnection(), getApiRequestProfile()].some((v, i) => v !== ambientBefore[i])
 
-            if (!pinned && [getApiRequestConnection(), getApiRequestProfile()].some((v, i) => v !== ambientBefore[i])) {
+            if (ambientChanged()) {
               throw new CronRunGateSupersededError()
             }
 
-            return getSession(id, scope)
+            const row = await getSession(id, scope)
+
+            if (ambientChanged()) {
+              throw new CronRunGateSupersededError()
+            }
+
+            return row
           })
         } catch (error) {
           if (error instanceof CronRunGateSupersededError) {
