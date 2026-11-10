@@ -38,13 +38,26 @@ def search(query, max_results=3):
 
 
 def display(food):
-    nutrients = {n["nutrientName"]: n.get("value", "?") for n in food.get("foodNutrients", [])}
-    cal = nutrients.get("Energy", "?")
-    prot = nutrients.get("Protein", "?")
-    fat = nutrients.get("Total lipid (fat)", "?")
-    carb = nutrients.get("Carbohydrate, by difference", "?")
-    fib = nutrients.get("Fiber, total dietary", "?")
-    sug = nutrients.get("Sugars, total including NLEA", "?")
+    # Names collide across USDA data types (1008 kcal and 1062 kJ both say Energy).
+    by_id = {n.get("nutrientId"): n for n in food.get("foodNutrients", [])}
+
+    def value(*ids, unit=None):
+        for nutrient_id in ids:
+            nutrient = by_id.get(nutrient_id)
+            if (
+                nutrient
+                and nutrient.get("value") is not None
+                and (unit is None or (nutrient.get("unitName") or "").upper() == unit)
+            ):
+                return nutrient["value"]
+        return "?"
+
+    cal = value(1008, 2047, 2048, unit="KCAL")
+    prot = value(1003)
+    fat = value(1004)
+    carb = value(1005)
+    fib = value(1079)
+    sug = value(2000)
 
     print(f"  {food.get('description', 'N/A')}")
     print(f"    Calories : {cal} kcal")

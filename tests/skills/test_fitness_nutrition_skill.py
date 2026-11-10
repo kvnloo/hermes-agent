@@ -18,6 +18,7 @@ SKILL_DIR = (
 )
 BODY_CALC = SKILL_DIR / "scripts" / "body_calc.py"
 EXERCISE_SEARCH = SKILL_DIR / "scripts" / "exercise_search.py"
+NUTRITION_SEARCH = SKILL_DIR / "scripts" / "nutrition_search.py"
 SKILL_MD = SKILL_DIR / "SKILL.md"
 FORMULAS_MD = SKILL_DIR / "references" / "FORMULAS.md"
 
@@ -267,3 +268,47 @@ def test_skill_contract_routes_through_corrected_helpers() -> None:
         in skill.lower()
     )
     assert "convert centimetres to inches" in formulas.lower()
+
+def load_nutrition_search():
+    spec = importlib.util.spec_from_file_location("nutrition_search", NUTRITION_SEARCH)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.parametrize(
+    ("nutrients", "calories", "sugar"),
+    [
+        (
+            [
+                {"nutrientId": 1008, "nutrientName": "Energy", "unitName": "KCAL", "value": 172},
+                {"nutrientId": 1062, "nutrientName": "Energy", "unitName": "kJ", "value": 720},
+                {"nutrientId": 2000, "nutrientName": "Total Sugars", "unitName": "G", "value": 0.0},
+            ],
+            "172",
+            "0.0",
+        ),
+        (
+            [
+                {"nutrientId": 2047, "nutrientName": "Energy (Atwater General Factors)", "unitName": "KCAL", "value": 106},
+                {"nutrientId": 2048, "nutrientName": "Energy (Atwater Specific Factors)", "unitName": "KCAL", "value": 112},
+            ],
+            "106",
+            "?",
+        ),
+        (
+            [{"nutrientId": 1062, "nutrientName": "Energy", "unitName": "kJ", "value": 720}],
+            "?",
+            "?",
+        ),
+    ],
+)
+def test_usda_search_calories_use_ids_and_units(capsys, nutrients, calories, sugar):
+    """Regression for #152535: duplicate names must not turn kJ into kcal."""
+    nutrition_search = load_nutrition_search()
+    nutrition_search.display({"description": "Chicken", "foodNutrients": nutrients})
+
+    output = capsys.readouterr().out
+    assert f"Calories : {calories} kcal" in output
+    assert f"sugar: {sugar}g" in output

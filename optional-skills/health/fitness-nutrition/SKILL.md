@@ -127,7 +127,9 @@ configured, otherwise `DEMO_KEY`. Search with
 For a selected record, fetch `/fdc/v1/food/{fdcId}?api_key={key}`.
 
 Inspect descriptions and FDC IDs before choosing a result; search rank alone is
-not an identity match. For packaged food, prefer the product label when
+not an identity match. Resolve `foodNutrients` by `nutrientId`, not name:
+energy 1008, then Atwater 2047/2048 only with `unitName=KCAL` (never 1062 kJ);
+protein 1003, fat 1004, carbohydrate 1005, and total sugars 2000. For packaged food, prefer the product label when
 available. Treat generic USDA values as estimates and state the per-100 g basis
 before scaling to a serving. Report kcal, protein, fat, and carbohydrate when
 those nutrients are present.
