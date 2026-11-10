@@ -313,3 +313,24 @@ def test_a_marker_arm_that_times_out_still_rolls_the_broken_pull_back(tmp_path, 
     assert "Rollback complete" in capsys.readouterr().out
     assert git("rev-parse", "HEAD") == previous
     assert source.read_text(encoding="utf-8") == "print('runnable')\n"
+
+
+def test_preflight_reports_partial_clone_fetch_before_git_waits(tmp_path, monkeypatch, capsys):
+    """#102540: the potentially 120-second pre-move read must announce itself before Git waits."""
+    from hermes_cli import update_stage, update_downgrade_guard
+
+    events = []
+    monkeypatch.setattr(main, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(update_stage, "publish_stage", lambda label: events.append(("ui", label)))
+
+    def preflight(*_args):
+        events.append(("git_preflight", capsys.readouterr().out))
+        return None
+
+    monkeypatch.setattr(update_cmd._commit, "preflight_refusal", preflight)
+    monkeypatch.setattr(update_downgrade_guard, "downgrade_refusal", lambda *_args: None)
+    update_cmd._refuse_before_commit_point(["git"], "HEAD", None)
+
+    assert events[0] == ("ui", "Checking update target startup syntax")
+    assert events[1][0] == "git_preflight"
+    assert "partial clones may fetch missing Git objects" in events[1][1]

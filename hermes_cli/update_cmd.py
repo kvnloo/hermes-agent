@@ -1263,6 +1263,9 @@ def _switch_branch_at_commit_point(git_cmd, branch, target_ref, *, pre, stash):
 
 def _refuse_before_commit_point(git_cmd, target_ref, _windows_gateway_resume) -> None:
     """Preconditions that used to fail AFTER the swap: refuse with the install untouched."""
+    from hermes_cli.update_stage import publish_stage
+    publish_stage("Checking update target startup syntax")
+    print("→ Checking update target startup syntax (partial clones may fetch missing Git objects)...")
     reason = _commit.preflight_refusal(git_cmd, _m().PROJECT_ROOT, target_ref, _UPDATE_CRITICAL_FILES)
     if reason is None:
         from hermes_cli.update_downgrade_guard import downgrade_refusal
