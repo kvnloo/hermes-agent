@@ -738,7 +738,24 @@ export function overlayRepoLanes(
   for (const session of live) {
     const sessionPath = livePathForRepo(repo.path ?? '', session)
 
-    if (removed.has(session.id) || !sessionPath || deeperRepoPaths.some(p => isPathUnder(p, sessionPath))) {
+    if (removed.has(session.id) || !sessionPath) {
+      continue
+    }
+
+    if (deeperRepoPaths.some(p => isPathUnder(p, sessionPath))) {
+      // The snapshot can still hold this conversation in the outer folder
+      // after its live cwd moves into the nested folder. Evict that stale row.
+      const matchesLive = sameConversationAs(session)
+
+      for (const group of lanes) {
+        const kept = group.sessions.filter(row => !matchesLive(row))
+
+        if (kept.length !== group.sessions.length) {
+          group.sessions = kept
+          changed = true
+        }
+      }
+
       continue
     }
 
