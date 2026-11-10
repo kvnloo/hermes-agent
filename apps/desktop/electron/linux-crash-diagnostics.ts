@@ -9,6 +9,7 @@ import path from 'node:path'
 // Route Chromium's own log to a file next to desktop.log and let Crashpad keep
 // local minidumps, so the next crash carries its FATAL line with it. Windows
 // needs the same local evidence because packaged GUI launches have no stderr.
+// macOS also receives local crash artifacts, independent of OS crash reports.
 
 export interface LinuxCrashDiagnostics {
   /** Chromium command-line switches, applied before `app` is ready. */
@@ -27,7 +28,7 @@ export function linuxCrashDiagnostics(
   logsDir: string,
   platform: NodeJS.Platform = process.platform
 ): LinuxCrashDiagnostics | null {
-  if (platform !== 'linux' && platform !== 'win32') {
+  if (platform !== 'linux' && platform !== 'win32' && platform !== 'darwin') {
     return null
   }
 

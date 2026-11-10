@@ -35,8 +35,29 @@ test('Windows receives local crash reporting and Chromium file logging', () => {
   assert.equal(plan.crashReporter.uploadToServer, false)
 })
 
+test('Windows and macOS keep local Crashpad when Chromium logging is unavailable', () => {
+  for (const platform of ['win32', 'darwin'] as const) {
+    const logsDir = '/read-only/logs'
+    const plan = linuxCrashDiagnostics(logsDir, platform)
+    assert.ok(plan)
+
+    const starts: Array<{ uploadToServer: false; compress: false }> = []
+
+    enableLinuxCrashDiagnostics(plan, logsDir, {
+      ensureLogsDir: () => {
+        throw new Error('EROFS: read-only logs directory')
+      },
+      reclaimChromiumLog: () => assert.fail('no writable Chromium log dir'),
+      appendSwitch: () => assert.fail('no writable Chromium log dir'),
+      startCrashReporter: options => starts.push(options)
+    })
+
+    assert.deepEqual(starts, [{ uploadToServer: false, compress: false }], platform)
+  }
+})
+
 test('unsupported platforms get no Chromium logging switches and no crash reporter', () => {
-  assert.equal(linuxCrashDiagnostics('/Users/u/.hermes/logs', 'darwin'), null)
+  assert.equal(linuxCrashDiagnostics('/unavailable/logs', 'freebsd'), null)
 })
 
 test('a logs dir that cannot be created degrades to no logging, never a dead shell', () => {
