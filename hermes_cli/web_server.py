@@ -1179,7 +1179,10 @@ def _on_server_started(
         except (TypeError, ValueError):
             grace = DEFAULT_IDLE_GRACE_S
         start_idle_watchdog(server, app.state.ssh_isolated_clients, grace_s=grace)
-    if getattr(app.state, "ssh_isolated_clients", None) is not None or is_desktop_owned_backend():
+    from hermes_cli.web_server_skew_exit import supervisor_opted_in
+
+    if (getattr(app.state, "ssh_isolated_clients", None) is not None or is_desktop_owned_backend()
+            or supervisor_opted_in()):
         # The host's updater never restarts this backend (SSH-isolated: only the remote Desktop
         # client holds its token and owner nonce, #91668/#101626; Desktop-owned local serve:
         # the updater defers to the app's ledger-verified restart and the backend otherwise

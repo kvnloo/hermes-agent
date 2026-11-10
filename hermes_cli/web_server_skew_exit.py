@@ -36,6 +36,15 @@ def should_retire_for_skew(*, skew: Skew, update_in_progress: bool) -> bool:
     return bool(skew) and not update_in_progress
 
 
+def supervisor_opted_in(env=None) -> bool:
+    """A supervisor that restarts the backend on a clean exit (systemd ``Restart=always``) opts a
+    host-managed dashboard into skew retirement with ``HERMES_RETIRE_ON_CODE_SKEW=1``. Without it,
+    an in-place checkout move leaves the dashboard serving old code until someone restarts it."""
+    import os
+
+    return (env if env is not None else os.environ).get("HERMES_RETIRE_ON_CODE_SKEW") == "1"
+
+
 def _update_in_progress() -> bool:
     try:
         from hermes_cli.update_lock import update_in_progress
