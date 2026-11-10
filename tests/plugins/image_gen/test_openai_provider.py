@@ -52,6 +52,20 @@ def _patched_openai(fake_client: MagicMock):
 
 class TestMetadata:
 
+    def test_manifest_description_exposes_catalog_versions(self):
+        """The plugin listing reads plugin.yaml, separate from the selectable model catalog."""
+        from hermes_cli.plugins_manifest import parse_manifest_file
+
+        plugin_dir = Path(openai_plugin.__file__).parent
+        manifest = parse_manifest_file(plugin_dir / "plugin.yaml", plugin_dir, "bundled", "")
+        assert manifest is not None
+        versions = {
+            model_id.split("-")[2] for model_id in openai_plugin.MODELS
+            if model_id.startswith("gpt-image-2.")
+        }
+        for version in versions:
+            assert f"GPT Image {version}" in manifest.description
+
 
     def test_picker_matches_resolvable_catalog(self, provider):
         ids = [m["id"] for m in provider.list_models()]
