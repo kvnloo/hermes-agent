@@ -30,6 +30,11 @@ from pathlib import Path
 from datetime import datetime
 from typing import Callable, Dict, Optional, Any, List, Tuple, cast
 
+# With -m, runpy executes this file as __main__. Publish its canonical name
+# before sibling imports so late gateway.run imports see the live runner globals.
+if __name__ == "__main__":
+    sys.modules.setdefault("gateway.run", sys.modules["__main__"])
+
 from agent.async_utils import safe_schedule_threadsafe
 from agent.i18n import t
 from agent.conversation_compression import (
