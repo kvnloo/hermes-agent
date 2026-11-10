@@ -14,7 +14,14 @@ def native_manifest_file(plugin_dir: Path) -> Path | None:
         except FileNotFoundError:
             continue
         except OSError as exc:
-            raise ValueError(f"Could not inspect plugin manifest {path}: {exc}") from exc
+            message = f"Could not inspect plugin manifest {path}: {exc}"
+            if isinstance(exc, PermissionError) and getattr(exc, "winerror", None) == 5:
+                message += (
+                    f". An elevated Windows install may have left {plugin_dir} unreadable. "
+                    "If this is not a link or junction, from an elevated terminal run "
+                    f'`icacls "{plugin_dir}" /reset /T`, then retry Hermes without elevation.'
+                )
+            raise ValueError(message) from exc
         return path
     return None
 

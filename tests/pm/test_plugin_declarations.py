@@ -144,3 +144,30 @@ def test_non_table_project_key_uses_the_legacy_manifest_declaration(tmp_path):
 
     assert declaration.pyproject is None
     assert declaration.requirements == ("fixturedep>=1,<2",)
+
+
+def test_old_elevated_plugin_manifest_denial_names_windows_acl_repair(tmp_path, monkeypatch):
+    """An ACL stranded by a previous elevated install must report a repair, not version drift."""
+    from pm.plugin_declarations import native_manifest_file
+
+    plugin = tmp_path / "plugins" / "advanced-delegation"
+    plugin.mkdir(parents=True)
+    manifest = plugin / "plugin.yaml"
+    manifest.write_text("name: advanced-delegation\n", encoding="utf-8")
+    original_stat = Path.stat
+
+    def denied_stat(path, *args, **kwargs):
+        if path == manifest:
+            denied = PermissionError(13, "Access is denied", str(path))
+            denied.winerror = 5
+            raise denied
+        return original_stat(path, *args, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "stat", denied_stat)
+        with pytest.raises(ValueError) as failure:
+            native_manifest_file(plugin)
+
+    assert isinstance(failure.value.__cause__, PermissionError)
+    assert "elevated Windows install" in str(failure.value)
+    assert f'icacls "{plugin}" /reset /T' in str(failure.value)
