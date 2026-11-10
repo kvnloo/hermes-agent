@@ -255,9 +255,10 @@ class TestRealProfileCdpLaunch:
         else:
             assert err and "not a supported Chromium browser" in err
 
-    def test_launch_is_headless_on_the_real_binary_and_keeps_the_keychain(self, tmp_path, monkeypatch):
-        """Real-profile browsing runs headless (no focus-stealing window) on the user's REAL binary, on the
-        profile COPY, through the launcher.
+    @pytest.mark.parametrize("headed", [False, True])
+    def test_real_profile_launch_disables_extensions_and_keeps_the_keychain(self, tmp_path, monkeypatch, headed):
+        """Real-profile browsing uses the user's REAL binary on the profile COPY, both headed and
+        headless, through the launcher.
 
         ``--headless=new`` shares the profile's normal cookie store (unlike legacy ``--headless``), and
         cookie decryption is unaffected by headless — the drop we avoid comes from ``--use-mock-keychain`` /
@@ -273,6 +274,7 @@ class TestRealProfileCdpLaunch:
         records.mkdir()
         monkeypatch.setattr(launcher, "_records_dir", lambda _home: records)
         monkeypatch.setattr(launcher, "_start_time", lambda pid: None)
+        monkeypatch.setattr(bs, "ensure_screen_for_headed_chromium", lambda: None)
         monkeypatch.setattr("tools.browser_session_cloud.chromium_args", list)
         monkeypatch.setattr(launcher, "needs_chromium_sandbox_bypass", lambda: True)
         captured = {}
@@ -297,14 +299,15 @@ class TestRealProfileCdpLaunch:
              patch("hermes_cli.browser_connect.snapshot_real_profile", return_value=(str(copy_dir), None)), \
              patch("hermes_cli.browser_connect.chromium_executable", return_value="/usr/bin/chrome"), \
              patch.object(launcher, "_spawn", side_effect=fake_spawn), \
-             patch.object(bs_cloud, "is_headed_mode", return_value=False):
+             patch.object(bs_cloud, "is_headed_mode", return_value=headed):
             cdp, err = rp.real_profile_cdp()
         assert (cdp, err) == ("ws://127.0.0.1:41000/devtools/browser/x", None)
         argv = captured["argv"]
         assert argv[0] == "/usr/bin/chrome"  # the user's real binary, not the packaged Chromium
         assert f"--user-data-dir={copy_dir}" in argv
-        # The chrome launch itself is headless (no window, no focus steal).
-        assert "--headless=new" in argv
+        assert ("--headless=new" in argv) is (not headed)
+        # Chrome must not try to verify extensions whose payloads were intentionally omitted.
+        assert "--disable-extensions" in argv
         assert "--password-store=basic" not in argv and "--use-mock-keychain" not in argv
         assert not set(launcher.CHROMIUM_SANDBOX_BYPASS_ARGS) & set(argv)
         assert (copy_dir / "Default" / "Cookies").read_text(encoding="utf-8") == "copied-cookies"

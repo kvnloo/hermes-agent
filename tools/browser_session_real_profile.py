@@ -25,7 +25,10 @@ _locks: dict[str, threading.Lock] = {}
 _locks_guard = threading.Lock()
 # Extra flags on top of the launcher's base set: no hang monitor / popup blocking / repost prompts on an
 # unattended browser driving the user's own sessions.
-_REAL_PROFILE_EXTRA_FLAGS = ("--disable-hang-monitor", "--disable-popup-blocking", "--disable-prompt-on-repost")
+_REAL_PROFILE_EXTRA_FLAGS = (
+    "--disable-extensions",  # No extension payloads survive the real-profile snapshot.
+    "--disable-hang-monitor", "--disable-popup-blocking", "--disable-prompt-on-repost",
+)
 
 
 def real_profile_fallback_note(err: str) -> str:
