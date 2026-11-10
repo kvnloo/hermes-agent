@@ -69,6 +69,26 @@ async def test_hung_preagent_resolve_is_cancelled_and_notified(monkeypatch, capl
 
 
 @pytest.mark.asyncio
+async def test_operation_timeout_is_not_misreported_as_setup_watchdog(monkeypatch, caplog):
+    """Only the pre-agent watchdog may produce the setup-stalled resend notice."""
+    monkeypatch.setenv("HERMES_AGENT_TIMEOUT", "30")
+    runner = _bare_runner()
+
+    async def _failed_session_lookup(*_args, **_kwargs):
+        raise TimeoutError("session store lookup timed out")
+
+    runner._hmwa_resolve_session = _failed_session_lookup
+
+    with pytest.raises(TimeoutError, match="session store lookup timed out"):
+        await GatewayRunner._handle_message_with_agent(
+            runner, _event(), _source(), KEY, 1,
+        )
+
+    assert "Pre-agent setup timed out" not in caplog.text
+    runner.hooks.emit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_preagent_timeout_zero_does_not_bound_setup(monkeypatch):
     monkeypatch.setenv("HERMES_AGENT_TIMEOUT", "0")
     runner = _bare_runner()

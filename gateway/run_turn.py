@@ -50,6 +50,10 @@ if TYPE_CHECKING:  # string annotations only; never imported at runtime (cycle)
 logger = logging.getLogger("gateway.run")
 
 
+class _PreAgentSetupTimeout(TimeoutError):
+    """The pre-agent watchdog expired; distinct from an operation's TimeoutError."""
+
+
 @asynccontextmanager
 async def _preagent_setup_timeout(session_key: str):
     """Bound session-resolve / turn-prepare / agent:start on the current task.
@@ -98,7 +102,7 @@ async def _preagent_setup_timeout(session_key: str):
         if fired:
             if task is not None:
                 task.uncancel()
-            raise TimeoutError from None
+            raise _PreAgentSetupTimeout from None
         raise
     finally:
         handle.cancel()
@@ -2232,7 +2236,7 @@ class GatewayTurnMixin:
                     "message": message_text[:500],
                 }
                 await self.hooks.emit("agent:start", hook_ctx)
-        except TimeoutError:
+        except _PreAgentSetupTimeout:
             return t("gateway.busy.setup_timeout")
 
         try:
