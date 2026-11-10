@@ -616,6 +616,29 @@ def test_normalize_mcp_input_schema_preserves_typed_object_branches():
     assert not valid({"focus": "today", "bogus": 1})  # parent additionalProperties kept
 
 
+def test_normalize_mcp_input_schema_preserves_typed_dependent_schema_required():
+    """A dependentSchemas branch requires parent-declared names on the same instance."""
+    from jsonschema.validators import Draft202012Validator
+    from tools.mcp_tool_schema import _normalize_mcp_input_schema
+
+    out = _normalize_mcp_input_schema({
+        "type": "object",
+        "properties": {
+            "scope": {"type": "string"},
+            "list_id": {"type": "string"},
+        },
+        "dependentSchemas": {
+            "scope": {"type": "object", "required": ["list_id"]},
+        },
+    })
+
+    assert out["dependentSchemas"]["scope"] == {"type": "object", "required": ["list_id"]}
+    valid = Draft202012Validator(out).is_valid
+    assert valid({})
+    assert valid({"scope": "selected", "list_id": "L1"})
+    assert not valid({"scope": "selected"})
+
+
 def test_builtin_tool_without_required_gets_empty_required_list():
     """Object nodes that never had ``required`` are coerced to ``required: []`` (#56123):
     strict OpenAI-compatible backends read a missing key as ``null`` and 400 the request."""
