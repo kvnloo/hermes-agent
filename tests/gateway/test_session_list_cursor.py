@@ -1,4 +1,6 @@
 """``session.list``'s stored scope pages with ``cursor`` / ``next_cursor`` and filters by ``query`` (#141982)."""
+import base64
+import json
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
 
@@ -90,6 +92,9 @@ async def test_cursor_and_query_refusals(tmp_path, monkeypatch):
         page = (await listing(scope='stored', query='needle', limit=1))['result']
         cursor = page['next_cursor']
         assert isinstance(cursor, str)
+        forged = json.loads(base64.urlsafe_b64decode(cursor + '=' * (-len(cursor) % 4)))
+        forged[1] = 1 << 63  # SQLite OFFSET cannot bind an unsigned 64-bit integer.
+        oversized_cursor = base64.urlsafe_b64encode(json.dumps(forged).encode()).decode().rstrip('=')
         assert 'result' in await listing(scope='stored', query='needle', limit=3, cursor=cursor)
         refused = [
             {'scope': 'stored', 'query': 'other', 'cursor': cursor},
@@ -102,6 +107,7 @@ async def test_cursor_and_query_refusals(tmp_path, monkeypatch):
             {'title': 'needle 1', 'query': 'needle'},
             {'scope': 'stored', 'query': '   '},
             {'scope': 'stored', 'query': 'x' * 201},
+            {'scope': 'stored', 'query': 'needle', 'cursor': oversized_cursor},
             {'scope': 'stored', 'cursor': 'not a cursor'},
             {'scope': 'stored', 'cursor': cursor[:-4]},
         ]
