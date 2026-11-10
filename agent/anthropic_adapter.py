@@ -101,7 +101,7 @@ _THINKING_BINDING_BETA = "thinking-binding-controls-2026-08-01"
 # Accept gateway namespaces (``anthropic/claude-fable-5.1``) and ``@suffix``/``:suffix`` variants
 # without treating a snapshot date (``claude-opus-5-20260901``) as a minor version.
 _CLAUDE_VERSION_RE = re.compile(
-    r"(?:^|[./])claude-[a-z]+-(?P<major>\d+)(?:[.-](?P<minor>\d{1,2}))?(?:$|[-:@])", re.IGNORECASE
+    r"(?:^|[./])claude-(?P<family>[a-z]+)-(?P<major>\d+)(?:[.-](?P<minor>\d{1,2}))?(?:$|[-:@])", re.IGNORECASE
 )
 
 
@@ -214,18 +214,16 @@ def _supports_fast_mode(model: str) -> bool:
 
 
 def _supports_thinking_block_binding(model: str) -> bool:
-    """True for Claude 5.1+ (``claude-<family>-<major>[.<minor>]``), where Anthropic enforces
-    thinking-prefix binding. A version floor, not an allowlist: enforcement expands to every later
-    model, so an allowlist would silently route a new model into hard 400s. Snapshot dates
-    (``claude-opus-5-20260901``) are not minor versions; models without a parseable version
-    (Haiku is additionally excluded — it has no extended thinking) return False."""
-    if "haiku" in model.lower():
-        return False
+    """True where Claude binds signed thinking to its prefix (5.1+, Haiku 5.5+).
+
+    A version floor avoids hard 400s on future models. Haiku before 5.5 has no
+    extended thinking; snapshot dates are not semantic minor versions."""
     match = _CLAUDE_VERSION_RE.search(model)
     if not match:
         return False
     major, minor = int(match.group("major")), int(match.group("minor") or 0)
-    return major > 5 or (major == 5 and minor >= 1)
+    floor = (5, 5) if match.group("family").lower() == "haiku" else (5, 1)
+    return (major, minor) >= floor
 
 
 def _apply_thinking_block_binding(kwargs: Dict[str, Any]) -> None:

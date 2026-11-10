@@ -78,3 +78,16 @@ def test_block_binding_respects_disable_and_third_party_endpoints():
     assert (no_reasoning.get("thinking") or {}).get("block_binding") == {
         "prefix_mismatch_behavior": "drop_block"
     }
+
+@pytest.mark.parametrize("model", ["claude-haiku-5-5", "claude-haiku-6"])
+def test_adaptive_haiku_uses_prefix_binding(model):
+    """Haiku 5.5+ replays signed thinking; a changed prefix must not hard-400 the turn."""
+    kwargs = build_anthropic_kwargs(
+        model=model, messages=list(_MSGS), tools=None, max_tokens=1024,
+        reasoning_config=None,
+    )
+    assert kwargs["thinking"]["type"] == "adaptive"
+    assert kwargs["thinking"]["block_binding"] == {
+        "prefix_mismatch_behavior": "drop_block",
+    }
+    assert "thinking-binding-controls-2026-08-01" in kwargs["extra_headers"]["anthropic-beta"]
