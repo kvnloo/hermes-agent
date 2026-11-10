@@ -193,3 +193,49 @@ test('commit builds retain exact provenance without entering an update channel',
   }
 })
 
+
+// A stamp that names a release must also become the *packaged app* version.
+// Run the real electron-builder config with only the stamp read intercepted:
+// this guards the consumer seam, not just the stamp writer.
+import { readFileSync as readBuildConfigSource } from 'node:fs'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { runInNewContext } from 'node:vm'
+
+test('a local Desktop rebuild bakes the stamped release into Electron and macOS versions', () => {
+  const configFile = fileURLToPath(new URL('../electron-builder.config.cjs', import.meta.url))
+  const configDir = dirname(configFile)
+  const stampFile = join(configDir, 'build', 'install-stamp.json')
+  const nativeRequire = createRequire(configFile)
+  const fsWithLocalStamp = Object.create(nativeRequire('node:fs'))
+  fsWithLocalStamp.readFileSync = (file, ...args) => {
+    if (String(file) === stampFile) {
+      return JSON.stringify({
+        baseVersion: '0.23.1',
+        displayVersion: '0.23.1+6.gabcdef0'
+      })
+    }
+    return readBuildConfigSource(file, ...args)
+  }
+
+  // Loading the real config in a fresh CommonJS context avoids writing to
+  // build/ or mutating a shared module cache, so other tests stay isolated.
+  const module = { exports: {} }
+  runInNewContext(readBuildConfigSource(configFile, 'utf8'), {
+    require: (specifier) => specifier === 'node:fs'
+      ? fsWithLocalStamp
+      : nativeRequire(specifier),
+    module,
+    exports: module.exports,
+    __filename: configFile,
+    __dirname: configDir,
+    process,
+    console
+  }, { filename: configFile })
+
+  assert.equal(module.exports.buildVersion, '0.23.1')
+  assert.equal(module.exports.extraMetadata.version, '0.23.1')
+  assert.equal(module.exports.mac.bundleVersion, '0.23.1')
+  assert.equal(module.exports.mac.bundleShortVersion, '0.23.1')
+})
