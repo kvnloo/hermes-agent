@@ -602,6 +602,24 @@ def _record_successful_read(task_data: dict, task_id: str, path: str, resolved_s
     return count
 
 
+def _hold_file_tool_environment(handler):
+    """Keep the resolved terminal env alive across file-tool preflight and backend I/O."""
+    from functools import wraps
+    from inspect import signature
+
+    task_position = tuple(signature(handler).parameters).index("task_id")
+
+    @wraps(handler)
+    def held(*args, **kwargs):
+        task_id = kwargs.get("task_id", args[task_position] if len(args) > task_position else "default")
+        from tools.terminal_tool import _call_in_flight, _resolve_container_task_id
+        with _call_in_flight(_resolve_container_task_id(task_id)):
+            return handler(*args, **kwargs)
+
+    return held
+
+
+@_hold_file_tool_environment
 def read_file_tool(path: str, offset: int = 1, limit: int = DEFAULT_READ_LIMIT, task_id: str = "default") -> str:
     """Read a file with pagination and line numbers.
 
@@ -860,6 +878,7 @@ def _whole_file_rewrite_hint(task_id: str, resolved: str | None, new_content: st
     )
 
 
+@_hold_file_tool_environment
 def write_file_tool(path: str, content: str, task_id: str = "default",
                     cross_profile: bool = False,
                     session_id: str | None = None) -> str:
@@ -956,6 +975,7 @@ def _collect_v4a_header_paths(patch: str) -> tuple[list[str], list[str], list[st
     return paths, content_paths, entry_paths
 
 
+@_hold_file_tool_environment
 def patch_tool(mode: str = "replace", path: str | None = None, old_string: str | None = None,
                new_string: str | None = None, replace_all: bool = False, patch: str | None = None,
                task_id: str = "default", cross_profile: bool = False,
@@ -1050,6 +1070,7 @@ def patch_tool(mode: str = "replace", path: str | None = None, old_string: str |
         return tool_error(str(e))
 
 
+@_hold_file_tool_environment
 def search_tool(pattern: str, target: str = "content", path: str = ".",
                 file_glob: str | None = None, limit: int = 50, offset: int = 0,
                 output_mode: str = "content", context: int = 0,
