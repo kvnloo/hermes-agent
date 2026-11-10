@@ -284,3 +284,40 @@ class TestFlushCursorMarkerPop:
                 assert "the final answer" in _contents(db)
             finally:
                 db.close()
+
+    def test_interrupted_flushed_blank_tail_persists_on_reload(self, tmp_path):
+        """Disconnect recovery must rewrite a blank row skipped by the flush cursor.
+
+        The carrier's replace_messages-based test misses this append-only path:
+        the blank assistant row was flushed earlier in the same turn.
+        """
+        from agent.turn_finalizer import _close_transcript_tail
+        from hermes_state import SessionDB
+
+        db = SessionDB(db_path=tmp_path / "state.db")
+        try:
+            agent = _make_agent(db)
+            partial = "Visible before disconnect."
+            messages = [
+                {"role": "user", "content": "write a long answer"},
+                {"role": "assistant", "content": ""},
+            ]
+            agent._flush_messages_to_session_db_unlocked(messages)
+            assert messages[-1]["_db_persisted"] is True
+            assert agent._db_flush_scan_prefix is not None
+
+            _close_transcript_tail(agent, messages, partial, True, True)
+            assert messages[-1]["content"] == partial
+            assert messages[-1]["finish_reason"] == "interrupted"
+            assert "_db_persisted" not in messages[-1]
+            assert agent._db_flush_scan_prefix is None
+
+            agent._flush_messages_to_session_db_unlocked(messages)
+            reloaded = db.get_messages_as_conversation(SESSION_ID)
+            assert reloaded[-1]["role"] == "assistant"
+            assert reloaded[-1]["content"] == partial
+            assert reloaded[-1]["finish_reason"] == "interrupted"
+            assert reloaded[-1]["display_metadata"]["interrupted"] is True
+            assert sum(row.get("content") == partial for row in reloaded) == 1
+        finally:
+            db.close()

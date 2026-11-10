@@ -295,6 +295,10 @@ def _close_transcript_tail(agent, messages, final_response, interrupted, _recove
             elif _assistant_row_missing_visible_text(_tail) and not _tail.get("tool_calls"):
                 _tail["content"] = final_response
                 stamp_message_timestamp(_tail)
+                # An earlier incremental flush may already have stored this blank row.
+                # The changed content and interrupt status must reach the next flush.
+                _tail.pop(_DB_PERSISTED_MARKER, None)
+                agent._db_flush_scan_prefix = None
             if flatten_message_text(_tail.get("content")).strip() == final_response:
                 _display_metadata = _tail.get("display_metadata")
                 _tail["finish_reason"] = "interrupted"
