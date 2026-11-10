@@ -1149,7 +1149,7 @@ it('names the Bot behind each pending action and shows what an approval would al
 
   const actions = [
     { kind: 'approval', member_id: 'ops', task_id: 'clean', execution_generation: 3, request_id: 'r-clean',
-      approval: { request_id: 'r-clean', command: 'rm -rf build', description: 'Clear the build folder', choices: ['once', 'deny'] } },
+      approval: { request_id: 'r-clean', command: 'rm -rf build', description: 'Clear the build folder', choices: ['once', 'session', 'always', 'deny'] } },
     { kind: 'approval', member_id: 'qa', task_id: 'vague', execution_generation: 1, request_id: 'r-vague',
       approval: { description: 'Use a tool', choices: ['once', 'deny'] } },
     // A plugin `approve` rule (tools/approval.py request_tool_approval): a tool label and the plugin's words.
@@ -1166,6 +1166,8 @@ it('names the Bot behind each pending action and shows what an approval would al
   const clean = (await screen.findByText('rm -rf build')).closest('[data-task-id]') as HTMLElement
   expect(within(clean).getByText('Ops Bot is asking for approval. You decide.')).toBeTruthy()
   expect(within(clean).getByText('Clear the build folder')).toBeTruthy()
+  expect(within(clean).getByRole('button', { name: 'Allow this session' })).toBeTruthy()
+  expect(within(clean).getByRole('button', { name: 'Always allow' })).toBeTruthy()
   const vague = screen.getByText('QA Bot is asking for approval. You decide.').closest('[data-task-id]') as HTMLElement
   expect(within(vague).getByText('Action details are unavailable. Check again before allowing this.')).toBeTruthy()
   expect(within(vague).queryByRole('button', { name: 'Allow once' })).toBeNull()
@@ -1180,6 +1182,8 @@ it('names the Bot behind each pending action and shows what an approval would al
   expect(within(guarded).queryByText('Action details are unavailable. Check again before allowing this.')).toBeNull()
   // Only the choices the gateway offered.
   expect(within(guarded).queryByRole('button', { name: 'Deny' })).toBeNull()
+  expect(within(guarded).queryByRole('button', { name: 'Allow this session' })).toBeNull()
+  expect(within(guarded).queryByRole('button', { name: 'Always allow' })).toBeNull()
 
   for (const [index, card, member, task, generation, requestId] of [
     [1, clean, 'ops', 'clean', 3, 'r-clean'],
@@ -1193,6 +1197,19 @@ it('names the Bot behind each pending action and shows what an approval would al
       room_id: 'approvals', member_id: member, task_id: task, execution_generation: generation, request_id: requestId, choice: 'once', profile: 'team'
     })
   }
+  for (const [index, choice, label] of [
+    [3, 'session', 'Allow this session'], [4, 'always', 'Always allow']
+  ] as const) {
+    const button = within(clean).getByRole('button', { name: label }) as HTMLButtonElement
+    await waitFor(() => expect(button.disabled).toBe(false))
+    fireEvent.click(button)
+    await waitFor(() => expect(request.mock.calls.filter(call => call[1] === 'groups.approve')).toHaveLength(index))
+    expect(request.mock.calls.filter(call => call[1] === 'groups.approve')[index - 1][2]).toEqual({
+      room_id: 'approvals', member_id: 'ops', task_id: 'clean', execution_generation: 3,
+      request_id: 'r-clean', choice, profile: 'team'
+    })
+  }
+
 })
 
 it('jumps from the approval count to the waiting card without answering it', async () => {

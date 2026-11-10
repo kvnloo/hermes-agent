@@ -591,7 +591,7 @@ class HostedRoomRuntime:
             return
         approval, action = info.get("pending_approval") or info.get("approval"), None
         if isinstance(approval, Mapping):
-            choices = [c for c in approval.get("choices") or () if c in {"once", "deny"}]
+            choices = [c for c in approval.get("choices") or () if c in {"once", "session", "always", "deny"}]
             safe_approval = {**approval, "choices": choices or ["once", "deny"]}
             action = {
                 "kind": "approval", "task_id": task["identity"].task_id,

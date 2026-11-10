@@ -1117,8 +1117,9 @@ class HostedRoomService:
                 if (member_id, task_id, execution_generation) not in live:
                     self._pending_actions.pop(key, None)
                     raise RuntimeError("room approval is no longer pending")
-            if choice not in {"once", "deny"}:
-                raise RuntimeError("room approval choice must be once or deny")
+            offered = (action.get("approval") or {}).get("choices") or ()
+            if choice not in {"once", "session", "always", "deny"} or choice not in offered:
+                raise RuntimeError("room approval choice was not offered")
             result = self._dispatch_approval(
                 route, client, action, task_id=task_id, execution_generation=execution_generation,
                 request_id=requested_approval_id, choice=choice)
