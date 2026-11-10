@@ -26,12 +26,17 @@ def peer(monkeypatch, call):
     monkeypatch.setattr(gateway_client, 'connect_gateway', connected)
 
 
-def pending_origin_receipt(tmp_path, monkeypatch):
-    """A settled admission whose delivery must resolve the Slack home channel at recovery time."""
+def pending_origin_receipt(tmp_path, monkeypatch, *, platform='slack', deliver='origin'):
+    """A settled admission whose delivery must resolve a profile-scoped home channel."""
+    origin = {
+        'platform': platform,
+        'chat_id': 'D0HOME' if platform == 'slack' else '!default:example.org',
+        'chat_type': 'channel' if platform == 'slack' else 'room',
+    }
+    if platform == 'slack':
+        origin['thread_id'] = '1700000000.1'
     job = jobs.create_job(
-        prompt='report', schedule='every 1h', deliver='origin',
-        origin={'platform': 'slack', 'chat_id': 'D0HOME', 'thread_id': '1700000000.1',
-                'chat_type': 'channel'})
+        prompt='report', schedule='every 1h', deliver=deliver, origin=origin)
     execution = executions.create_execution(job['id'], source='test')
     executions.mark_execution_running(execution['id'])
     with executions._transaction() as conn:
@@ -74,6 +79,23 @@ def test_orphaned_admission_is_consumed_not_deferred_forever(tmp_path, monkeypat
             scheduler_authority.reconcile_pending()
             assert 'Cron receipt recovery deferred' not in caplog.text
             assert not journal.exists()
+    finally:
+        secret_scope.reset_multiplex_context(token)
+
+
+def test_matrix_default_profile_recovery_binds_home_secret_scope(tmp_path, monkeypatch, caplog):
+    """Regression for #151918: Matrix on a default-only multiplexed gateway."""
+    token = secret_scope.set_multiplex_context(True)
+    try:
+        with jobs.use_cron_store(tmp_path / 'cron'):
+            monkeypatch.setattr('cron.delivery_queue.DELIVERY_DB', tmp_path / 'deliveries.db')
+            _job, execution, journal = pending_origin_receipt(
+                tmp_path, monkeypatch, platform='matrix', deliver='matrix')
+            scheduler_authority.reconcile_pending()
+            assert 'Cron receipt recovery deferred' not in caplog.text
+            assert not journal.exists()
+            row = executions.get_execution(execution['id'])
+            assert row is not None and row['status'] == 'completed'
     finally:
         secret_scope.reset_multiplex_context(token)
 
