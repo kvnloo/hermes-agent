@@ -270,7 +270,7 @@ class RecordingContext:
 
             return _noop
         if name in context_properties:
-            return _InertService()
+            return _InertState() if name == "state" else _InertService()
         raise AttributeError(name)
 
 
@@ -283,6 +283,12 @@ class _InertService:
             return None
 
         return _noop
+
+
+class _InertState(_InertService):
+    def get(self, key, default=None):
+        # The isolated probe has no persisted state: mirror PluginState.get for a missing key.
+        return default
 
 
 def emit(payload):
