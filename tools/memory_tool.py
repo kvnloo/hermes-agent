@@ -408,6 +408,7 @@ class MemoryStore:
         payload = json.dumps(
             {
                 "store": target,
+                "limit_chars": self._char_limit(target),
                 "entries": entries,
             },
             ensure_ascii=False,

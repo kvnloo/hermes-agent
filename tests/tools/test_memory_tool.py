@@ -317,6 +317,37 @@ class TestMemoryQuotaSameStateRetryGuard:
         assert retry["success"] is True
         assert new_fact in store.memory_entries
 
+    def test_limit_increase_allows_identical_add_without_memory_change(self, store):
+        """Quota increases permit retries even when memory entries are unchanged (#35121)."""
+        from agent.tool_guardrails import ToolCallGuardrailController
+
+        store.memory_char_limit = 20
+        assert store.add("memory", "keep")["success"] is True
+        content = "The user prefers short answers"
+        args = {"target": "memory", "action": "add", "content": content}
+        controller = ToolCallGuardrailController()
+        initial_token = store.stat("memory")["store_state_token"]
+        assert controller.before_call(
+            "memory", args, current_store_state_token=initial_token
+        ).allows_execution
+
+        overflow = store.add("memory", content)
+        assert overflow["error_code"] == "memory_quota_exceeded"
+        controller.after_call("memory", args, json.dumps(overflow), failed=True)
+        assert controller.before_call(
+            "memory", args, current_store_state_token=initial_token
+        ).action == "skip"
+
+        unchanged_entries = list(store.memory_entries)
+        store.memory_char_limit = 200
+        raised_token = store.stat("memory")["store_state_token"]
+        assert store.memory_entries == unchanged_entries
+        assert raised_token != initial_token
+        assert controller.before_call(
+            "memory", args, current_store_state_token=raised_token
+        ).allows_execution
+        assert store.add("memory", content)["success"] is True
+
     def test_post_cap_quota_overflow_still_skips_identical_retry(self, store):
         from agent.tool_guardrails import ToolCallGuardrailController
 
