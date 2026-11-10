@@ -188,6 +188,21 @@ describe('watchSessionPins remote pull', () => {
     expect(patch).not.toHaveBeenCalled()
   })
 
+  it('does not replay a stale cached pin when another client unpinned it (#152798)', async () => {
+    // Client B remembers a pin in localStorage. After B quits, client A
+    // unpins it on the shared backend. B's restart must not send pinned=true.
+    $pinnedSessionIds.set(['stale-on-b'])
+    resetSessionPinMirror() // fresh process: no in-memory click or mirror state
+    patch.mockClear()
+
+    // B's first authoritative page disagrees with its stale disk cache.
+    $sessions.set([row('stale-on-b', { pinned: false, profile: 'work' })])
+    await flush()
+
+    expect(patch).not.toHaveBeenCalledWith('stale-on-b', true, 'work')
+    expect($pinnedSessionIds.get()).not.toContain('stale-on-b')
+  })
+
   it('drops a local pin the server reports as unpinned', async () => {
     $pinnedSessionIds.set(['gone'])
     $sessions.set([row('gone', { pinned: true })])

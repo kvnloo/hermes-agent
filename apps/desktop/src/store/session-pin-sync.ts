@@ -7,9 +7,9 @@
  * server-side and would otherwise hide a pinned chat, and a second Desktop app
  * pointed at the same gateway has its own, separate localStorage.
  *
- * Push: PATCH `pinned` whenever the local set changes, and re-assert the whole
- * set at boot — which transparently migrates pre-existing pins with no user
- * action.
+ * Push: PATCH `pinned` for local membership changes. A cached pin from disk
+ * is not a new click and must not overwrite a different client's unpin.
+ * Older backends without the `pinned` field retain legacy pin migration.
  *
  * Pull: session rows now carry `pinned`, and the list endpoints back-fill
  * pinned conversations past their LIMIT, so a row's absence from a page no
@@ -47,6 +47,9 @@ import type { SessionInfo } from '@/types/hermes'
 const mirrored = new Set<string>()
 // pin ids awaiting their row so we can resolve the owning profile before PATCH.
 const pending = new Set<string>()
+// A gateway rescope reloads the pin atom from storage synchronously. That is
+// not a user click, even when the cached sets differ.
+let reloadingPinScope = false
 // Writes we've issued, id -> the value we wrote and when. A list page already
 // in flight when we PATCH still carries the OLD value, and it can land after
 // our ack — so the ack is not proof the page we're reading is newer than the
@@ -348,7 +351,7 @@ function reconcile(): void {
 
 function reconcileInner(): void {
   // Config/session REST is only reachable through the Electron bridge.
-  if (!window.hermesDesktop) {
+  if (!window.hermesDesktop || reloadingPinScope) {
     return
   }
 
@@ -373,10 +376,16 @@ function reconcileInner(): void {
     }
   }
 
-  // Newly pinned: hold until we can resolve the row (for its profile).
+  // The localStorage list is only a cache. For modern backends, only the pin
+  // listener below can queue fresh user intent; never replay a cached pin on
+  // boot before reading a server row another client may have unpinned.
+  // Preserve migration for older backends which omit the pinned flag.
   for (const id of current) {
-    if (!mirrored.has(id)) {
-      pending.add(id)
+    if (!mirrored.has(id) && !pending.has(id)) {
+      const row = loadedRowFor(id)
+      if (row && typeof row.pinned !== 'boolean') {
+        pending.add(id)
+      }
     }
   }
 
@@ -406,9 +415,29 @@ export function watchSessionPins(): void {
   // A connection rescope repaints $pinnedSessionIds from the new backend's
   // storage scope; the mirrored/pending/unconfirmed bookkeeping describes
   // the PREVIOUS backend and must reset before that reload reconciles.
-  onConnectionScopeChange(resetSessionPinMirror)
+  onConnectionScopeChange(() => {
+    reloadingPinScope = true
+    resetSessionPinMirror()
+    queueMicrotask(() => {
+      reloadingPinScope = false
+      reconcile()
+    })
+  })
   reconcile()
-  $pinnedSessionIds.listen(reconcile)
+  $pinnedSessionIds.listen((next, previous) => {
+    if (!reconciling && !reloadingPinScope) {
+      const before = new Set(previous)
+      const after = new Set(next)
+      // A real click must be fenced before pullRemotePins reads a stale page.
+      for (const id of after) {
+        if (!before.has(id)) pending.add(id)
+      }
+      for (const id of before) {
+        if (!after.has(id)) mirrored.add(id)
+      }
+    }
+    reconcile()
+  })
   $sessions.listen(reconcile)
   $cronSessions.listen(reconcile)
   $messagingSessions.listen(reconcile)
