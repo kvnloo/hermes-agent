@@ -95,3 +95,11 @@ def test_default_probe_retires_once_the_checkout_moves_past_the_boot_revision(tm
     start_code_skew_watchdog(moved, update_probe=lambda: False, fence=fence,
                              poll_s=0.01, max_polls=4).join(timeout=5)
     assert moved.should_exit is True
+
+
+def test_supervisor_opt_in_requires_exact_flag():
+    from hermes_cli.web_server_skew_exit import supervisor_opted_in
+
+    assert supervisor_opted_in({"HERMES_RETIRE_ON_CODE_SKEW": "1"})
+    assert not supervisor_opted_in({})
+    assert not supervisor_opted_in({"HERMES_RETIRE_ON_CODE_SKEW": "0"})
