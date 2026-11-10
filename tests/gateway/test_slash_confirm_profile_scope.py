@@ -231,3 +231,45 @@ async def test_the_opt_out_is_per_profile_across_an_a_b_a_round_trip(tmp_path, m
     pending = await _ask(home_a)
     assert pending is None, "A's opt-out did not survive the round trip"
     _slash_confirm_mod.clear(session_key)
+
+@pytest.mark.asyncio
+async def test_reload_mcp_always_approve_stays_in_the_routed_profile(tmp_path, monkeypatch):
+    """The second persistent gate must write to its reader's profile, not the launch home."""
+    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+    from tools import slash_confirm as _slash_confirm_mod
+
+    launch_home, profile_home = _profile_home(tmp_path, monkeypatch)
+    runner = _make_runner()
+    session_key = build_session_key(_make_source())
+    runner._session_key_for_source = lambda src: session_key
+    runner._execute_mcp_reload = AsyncMock(return_value="reloaded")
+    _slash_confirm_mod.clear(session_key)
+
+    # Asking and resolving occur in different tasks and therefore different home scopes.
+    token = set_hermes_home_override(str(profile_home))
+    try:
+        await runner._handle_reload_mcp_command(_make_event("/reload-mcp"))
+    finally:
+        reset_hermes_home_override(token)
+    pending = _slash_confirm_mod.get_pending(session_key)
+    assert pending is not None, "the profile must initially ask"
+
+    reply = await _slash_confirm_mod.resolve(session_key, pending["confirm_id"], "always")
+    assert "reloaded" in reply
+    profile_cfg = yaml.safe_load((profile_home / "config.yaml").read_text(encoding="utf-8-sig"))
+    assert profile_cfg["approvals"]["mcp_reload_confirm"] is False
+    launch_cfg_path = launch_home / "config.yaml"
+    if launch_cfg_path.exists():
+        launch_cfg = yaml.safe_load(launch_cfg_path.read_text(encoding="utf-8-sig"))
+        assert "approvals" not in (launch_cfg or {}), "root config was changed by routed approval"
+
+    # The second invocation reads the newly persisted flag and skips confirmation.
+    token = set_hermes_home_override(str(profile_home))
+    try:
+        second_reply = await runner._handle_reload_mcp_command(_make_event("/reload-mcp"))
+    finally:
+        reset_hermes_home_override(token)
+    assert second_reply == "reloaded"
+    assert _slash_confirm_mod.get_pending(session_key) is None
+    assert runner._execute_mcp_reload.await_count == 2
+    _slash_confirm_mod.clear(session_key)
