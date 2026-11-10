@@ -139,9 +139,15 @@ def _head_and_tail(text: str, limit: int, sep: str = "") -> str:
 
 def _error_signature(job_id: str, error: str) -> str:
     """Dedup key: stable for same job + same normalized error head and tail."""
-    normalized = _DURATION_RE.sub("#s", _normalize_error(error))
-    normalized = _head_and_tail(normalized, 2 * _ERROR_END_CHARS)
-    return hashlib.sha256(job_id.encode() + normalized.encode()).hexdigest()[:12]
+    raw_error = str(error or "")
+    normalized = _DURATION_RE.sub("#s", _normalize_error(raw_error))
+    signed = _head_and_tail(normalized, 2 * _ERROR_END_CHARS)
+    if len(normalized) > 2 * _ERROR_END_CHARS and "\n" in raw_error:
+        # A long URL on the last traceback line can push the exception code out of the tail.
+        # Preserve its beginning, not just the shared URL ending.
+        final_line = raw_error.rstrip().splitlines()[-1]
+        signed += "|" + _DURATION_RE.sub("#s", _normalize_error(final_line))[:_ERROR_END_CHARS]
+    return hashlib.sha256(job_id.encode() + signed.encode()).hexdigest()[:12]
 
 
 def _incident_id(job_id: str, error_sig: str) -> str:

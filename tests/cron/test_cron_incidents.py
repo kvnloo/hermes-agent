@@ -182,6 +182,22 @@ def test_stored_error_keeps_the_exception_line(monkeypatch, tmp_path):
     assert stored.endswith("401 Client Error: Unauthorized for url: /orders")
 
 
+def test_acked_long_http_url_still_distinguishes_exception_status(monkeypatch, tmp_path):
+    """An unchanged long URL must not hide 500 vs 401 at the start of the final line."""
+    inc = _point_db(monkeypatch, tmp_path)
+    url = "https://example.invalid/orders?cursor=" + "x" * 300
+    server_error = _SCRIPT_TRACEBACK + "500 Server Error: Internal Server Error for url: " + url
+    auth_error = _SCRIPT_TRACEBACK + "401 Client Error: Unauthorized for url: " + url
+
+    first_id, _ = inc.upsert_incident("job-1", server_error)
+    assert inc.ack_incident(first_id) is True
+    repeated_id, is_new = inc.upsert_incident("job-1", server_error)
+    assert repeated_id == first_id and is_new is False
+
+    other_id, is_new = inc.upsert_incident("job-1", auth_error)
+    assert is_new is True and other_id != first_id, "401 must not inherit an acked 500"
+    assert inc.get_incident(first_id)["state"] == "closed"
+
 # ── Redaction / classification ─────────────────────────────────────────────
 
 
