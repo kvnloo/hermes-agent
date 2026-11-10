@@ -117,3 +117,26 @@ def test_fresh_conversation_after_reset_is_still_reachable(db: SessionDB):
     )
     db.append_message(successor, "user", "a brand new conversation")
     assert _route(db) == successor
+
+
+def test_compressed_branch_tip_with_inherited_marker_keeps_its_route(db: SessionDB):
+    """Compression copies _branched_from, but its tip is not a new branch.
+
+    The existing compression inheritance contract keeps the gateway peer on
+    the tip; excluding rows by marker presence alone loses that conversation.
+    """
+    root = "20261014_010000_" + uuid.uuid4().hex[:6]
+    branch = "20261014_020000_" + uuid.uuid4().hex[:6]
+    tip = "20261014_030000_" + uuid.uuid4().hex[:6]
+    db.create_session(root, source="telegram")
+    db.create_session(
+        branch, parent_session_id=root, model_config={"_branched_from": root}, **PEER,
+    )
+    db.end_session(branch, "compression")
+    db.create_session(
+        tip, source="telegram", parent_session_id=branch,
+        model_config={"_branched_from": root},
+    )
+    db.append_message(tip, "user", "follow-up in my compressed branch")
+    assert db.get_session(tip)["session_key"] == PEER["session_key"]
+    assert _route(db) == tip, "a compression continuation must retain its gateway peer"

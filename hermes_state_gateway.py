@@ -47,9 +47,17 @@ _COMPRESSION_LINEAGE_CTE = f"""
 # stamped with the parent's source (``session_source_for`` reads the session env before the
 # platform argument), so a source filter would not exclude it and would also misclassify one-shot
 # children (#112550).
+# The marker survives compression: it names the ORIGINAL fork parent, not each
+# compression successor's immediate parent. Mirror is_explicit_fork_child's
+# direct-parent check; a marker on an unparented restored row is still suspect.
 _FORK_CHILD_EXCLUSION_SQL = (
-    f"AND NOT (COALESCE({_sql_json_extract('s.model_config', '$._delegate_from')}, '') != ''"
-    f" OR COALESCE({_sql_json_extract('s.model_config', '$._branched_from')}, '') != '')"
+    "AND NOT (CASE WHEN COALESCE(s.parent_session_id, '') != '' THEN ("
+    f"COALESCE({_sql_json_extract('s.model_config', '$._delegate_from')}, '') = s.parent_session_id"
+    f" OR COALESCE({_sql_json_extract('s.model_config', '$._branched_from')}, '') = s.parent_session_id"
+    ") ELSE ("
+    f"{_sql_json_extract('s.model_config', '$._delegate_from')} IS NOT NULL"
+    f" OR {_sql_json_extract('s.model_config', '$._branched_from')} IS NOT NULL"
+    ") END)"
 )
 
 # Projection shared by both peer-recovery queries (exact key, then peer tuple).
