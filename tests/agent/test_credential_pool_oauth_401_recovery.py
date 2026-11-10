@@ -153,6 +153,26 @@ class TestRotatedEntryIsNotRefreshedAgain:
         assert endpoint.accepts(first.api_key)
 
 
+    def test_reloaded_pool_adopts_key_rotated_during_inflight_request(self, endpoint, _fake_pool_store):
+        # A second worker loaded auth.json after the first worker's refresh, but its
+        # in-flight request still carried the old token. The stored generation is
+        # already current, so a 401 must NOT force a second single-use refresh POST.
+        first_pool = CredentialPool("anthropic", [_row("claude-3")])
+        first = _Child(first_pool, "claude-3")
+        stale_key = first.api_key
+        assert _on_401(first) == (True, False)
+
+        persisted = next(row for row in _fake_pool_store["anthropic"] if row["id"] == "claude-3")
+        second_pool = CredentialPool("anthropic", [PooledCredential.from_dict("anthropic", persisted)])
+        second = _Child(second_pool, "claude-3")
+        second.api_key = stale_key  # bearer actually sent before the other worker rotated it
+
+        assert _on_401(second) == (True, False)
+        assert second.api_key == first.api_key == "claude-3-at-1"
+        assert endpoint.accepts(second.api_key)
+        assert endpoint.posts == ["claude-3-rt-0"]
+
+
 class TestRefreshCap:
     def test_after_the_cap_the_session_rotates_to_another_healthy_row(self, endpoint):
         pool = CredentialPool("anthropic", [_row("claude-3", 0), _row("claude-4", 1)])
