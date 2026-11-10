@@ -470,6 +470,7 @@ def activate_dependencies(project_root: Path) -> None:
     import sys
 
     state = install_state_dir(project_root)
+    release = None  # Sealed payloads do not hold a generation lease.
     if state.is_dir():
         from hermes_cli.runtime_state import runtime_lock, recover_publication, lease_generation
         # The lock's holder may be another profile's backend running a full dependency rebuild;
@@ -514,6 +515,8 @@ def activate_dependencies(project_root: Path) -> None:
     # ImportError: skip the switch and let the caller keep what it booted with.
     environment_version = venv_python_version(environment)
     if environment_version is not None and environment_version != sys.version_info[:2]:
+        if release is not None:
+            release()  # No generation was adopted; do not pin a skipped tree.
         return _require_own_dependencies(project_root)
     import site
 

@@ -73,3 +73,32 @@ def test_release_removes_the_lease_file(generations):
     assert list((environment.parent / ".leases").iterdir())
     release()
     assert not list((environment.parent / ".leases").iterdir())
+
+def test_skipped_foreign_generation_releases_its_lease(generations, monkeypatch, tmp_path):
+    """#122555: rejecting a foreign tree must not pin it for the process lifetime."""
+    from pm.environments import activate_dependencies, site_packages
+
+    repo, _state, select = generations
+    foreign = select("first")
+    # uv's version_info key is what PM records; select a mismatching Python X.Y.
+    (foreign / "pyvenv.cfg").write_text(
+        f"version_info = {sys.version_info.major}.{sys.version_info.minor + 1}.0\n",
+        encoding="utf-8",
+    )
+    site_packages(foreign).mkdir(parents=True, exist_ok=True)
+
+    # Emulate a venv caller with its own packages without changing the host OS.
+    monkeypatch.setattr(sys, "prefix", str(tmp_path / "caller-venv"))
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    for key in ("PYTHONPATH", "PATH", "VIRTUAL_ENV"):
+        monkeypatch.setenv(key, os.environ.get(key, ""))
+    before_path = list(sys.path)
+    before_pythonpath = os.environ.get("PYTHONPATH")
+
+    activate_dependencies(repo)
+
+    assert sys.path == before_path, "foreign packages must not replace launch packages"
+    assert os.environ.get("PYTHONPATH") == before_pythonpath
+    assert not list((foreign.parent / ".leases").iterdir()), (
+        "skipped generation must not keep a lifetime lease"
+    )
