@@ -759,8 +759,25 @@ def _aux_call_kwargs(messages: list, model: Optional[str], default_timeout: floa
     Local vision models (llama.cpp, ollama) can take well over 30s, hence generous defaults
     (temperature 0.1); ``min_timeout`` lets video enforce a floor."""
     timeout, temperature = default_timeout, 0.1
+    config = _cfg_auxiliary("vision", default={})
+    _vision_cfg = config if isinstance(config, dict) else {}
+    route = {}
+    # The tool reads the live model from config; carry its provider and endpoint
+    # too, instead of letting the aux client re-read a different session/profile.
+    # Bypass sessions own their auxiliary policy and must not import user routes.
+    from agent.auxiliary_task_config import _SESSION_AUXILIARY
+    if _SESSION_AUXILIARY.get() is None:
+        for field in ("provider", "base_url", "api_key"):
+            value = _vision_cfg.get(field)
+            if isinstance(value, str) and value.strip():
+                route[field] = value.strip()
+        key_env = _vision_cfg.get("key_env") or _vision_cfg.get("api_key_env")
+        if "api_key" not in route and isinstance(key_env, str) and key_env.strip():
+            from agent.secret_scope import get_secret
+            secret = get_secret(key_env.strip())
+            if secret:
+                route["api_key"] = secret
     try:
-        _vision_cfg = _cfg_auxiliary("vision", default={}) or {}
         if _vision_cfg.get("timeout") is not None:
             timeout = max(float(_vision_cfg["timeout"]), float("-inf") if min_timeout is None else min_timeout)
         if _vision_cfg.get("temperature") is not None:
@@ -768,7 +785,7 @@ def _aux_call_kwargs(messages: list, model: Optional[str], default_timeout: floa
     except Exception:
         pass
     return {"task": "vision", "messages": messages, "temperature": temperature, "timeout": timeout,
-            **({"model": model} if model else {})}
+            **route, **({"model": model} if model else {})}
 
 
 def _media_messages(user_prompt: str, part_type: str, data_url: str) -> list:

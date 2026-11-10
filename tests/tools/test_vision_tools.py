@@ -296,6 +296,51 @@ class TestVisionConfig:
         assert kwargs["timeout"] == 120.0
 
 
+    @pytest.mark.asyncio
+    async def test_live_vision_route_switches_provider_and_endpoint_with_model(self, tmp_path):
+        """#143288: the model must not ride to a previous session's endpoint."""
+        img = tmp_path / "test.png"
+        img.write_bytes(VALID_PNG)
+        config = {"auxiliary": {"vision": {
+            "provider": "deepseek", "model": "deepseek-flash",
+            "base_url": "https://api.deepseek.com/v1",
+        }}}
+        response = MagicMock()
+        response.choices = [MagicMock()]
+        response.choices[0].message.content = "ok"
+        with (
+            patch("hermes_cli.config.load_config", side_effect=lambda: config),
+            patch("tools.vision_tools._should_use_native_vision_fast_path", return_value=False),
+            patch("tools.vision_tools.async_call_llm",
+                  new_callable=AsyncMock, return_value=response) as mock_llm,
+        ):
+            for provider, model, endpoint in (
+                ("deepseek", "deepseek-flash", "https://api.deepseek.com/v1"),
+                ("opencode-go", "qwen3.8-max", "https://opencode.ai/zen/go/v1/"),
+            ):
+                config["auxiliary"]["vision"].update(
+                    provider=provider, model=model, base_url=endpoint)
+                result = json.loads(await _handle_vision_analyze(
+                    {"image_url": str(img), "question": "describe"}))
+                assert result["success"] is True
+                sent = mock_llm.await_args.kwargs
+                assert (sent["provider"], sent["model"], sent["base_url"]) == (
+                    provider, model, endpoint)
+
+        # Even a stale downstream auxiliary config cannot replace an explicit
+        # provider/base_url captured at the tool boundary.
+        from agent.auxiliary_client import _resolve_task_provider_model
+        with patch("agent.auxiliary_client._get_auxiliary_task_config", return_value={
+            "provider": "deepseek", "model": "deepseek-flash",
+            "base_url": "https://api.deepseek.com/v1",
+        }):
+            route = _resolve_task_provider_model(
+                "vision", provider=sent["provider"], model=sent["model"],
+                base_url=sent["base_url"])
+        assert route[:3] == ("opencode-go", "qwen3.8-max",
+                             "https://opencode.ai/zen/go/v1/")
+
+
 class TestVisionSafetyGuards:
     @pytest.mark.asyncio
     async def test_local_non_image_file_rejected_before_llm_call(self, tmp_path):
