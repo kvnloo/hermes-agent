@@ -137,6 +137,29 @@ class TestRegisterAndDispatch:
         }
 
 class TestGetDefinitions:
+    def test_invalid_dynamic_override_keeps_static_tool_and_other_tools(self, caplog):
+        """A runtime override must not poison the next provider request (#152342)."""
+        reg = ToolRegistry()
+        static_schema = _make_schema("dynamic")
+        reg.register(
+            name="dynamic", toolset="s1", schema=static_schema, handler=_dummy_handler,
+            dynamic_schema_overrides=lambda: {
+                "parameters": {"type": "object", "properties": {
+                    "folder": {"type": "string", "default": Path("/tmp/notes")}}}},
+        )
+        reg.register(
+            name="healthy", toolset="s1", schema=_make_schema("healthy"),
+            handler=_dummy_handler,
+        )
+
+        with caplog.at_level(logging.WARNING, logger="tools.registry"):
+            definitions = reg.get_definitions({"dynamic", "healthy"})
+        assert [d["function"]["name"] for d in definitions] == ["dynamic", "healthy"]
+        assert definitions[0]["function"]["parameters"] == static_schema["parameters"]
+        assert "dynamic" in caplog.text
+        assert "using static schema" in caplog.text
+        json.dumps(definitions, allow_nan=False)
+
     def test_returns_openai_format(self):
         reg = ToolRegistry()
         reg.register(

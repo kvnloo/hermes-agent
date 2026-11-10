@@ -1048,7 +1048,15 @@ class ToolRegistry:
                         "dynamic_schema_overrides for tool %s raised %s; using static schema",
                         name, exc)
                 if isinstance(overrides, dict):
-                    schema_with_name.update(overrides)
+                    candidate = {**schema_with_name, **overrides}
+                    try:
+                        json.dumps(candidate, allow_nan=False)
+                    except (TypeError, ValueError) as exc:
+                        logger.warning(
+                            "dynamic_schema_overrides for tool %s produced a non-JSON schema (%s); "
+                            "using static schema", name, exc)
+                    else:
+                        schema_with_name = candidate
             result.append({"type": "function", "function": schema_with_name})
         return result
 
