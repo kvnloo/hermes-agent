@@ -205,3 +205,55 @@ def test_worker_toolsets_come_from_the_assignee_profile_not_the_parent_config(tm
         build_kanban_policy(SimpleNamespace(authority=SimpleNamespace(profile_id=str(other_profile)),
                                             actor=actor, native_owner=True), params, root_only_kanban)
     assert json.loads(policy.kanban_json)["profile"] == "elias"
+
+
+@pytest.mark.platforms("windows")
+def test_default_spawn_breakaway_denial_preserves_worker_args(monkeypatch, tmp_path):
+    """A gateway-owned Kanban worker must request job breakaway so it survives
+    gateway restart, then retry unchanged inside a restrictive outer job.
+    Regression for #152435 exposed by the self-attach fix in PR #137860.
+    """
+    from hermes_cli import kanban_db as kb
+    from hermes_cli import kanban_db_dispatch as kbd
+    from hermes_cli._subprocess_compat import (
+        windows_detach_flags,
+        windows_detach_flags_without_breakaway,
+    )
+
+    root = tmp_path / ".hermes"
+    profile = root / "profiles" / "elias"
+    profile.mkdir(parents=True)
+    root.joinpath("config.yaml").write_text("{}\n", encoding="utf-8")
+    profile.joinpath("config.yaml").write_text("{}\n", encoding="utf-8")
+    monkeypatch.setenv("HERMES_HOME", str(root))
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    attempts = []
+
+    class FakeProc:
+        pid = 4245
+
+    def fake_popen(cmd, **kwargs):
+        attempts.append((list(cmd), kwargs))
+        if len(attempts) == 1:
+            denied = PermissionError(13, "Job does not allow breakaway")
+            denied.winerror = 5
+            raise denied
+        return FakeProc()
+
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
+    try:
+        assert kbd._default_spawn(_make_task(kb, assignee="elias"), str(workspace)) == 4245
+        assert len(attempts) == 2
+        first_argv, first = attempts[0]
+        retry_argv, retry = attempts[1]
+        assert first["creationflags"] == windows_detach_flags()
+        assert retry["creationflags"] == windows_detach_flags_without_breakaway()
+        assert first_argv == retry_argv
+        for key in ("cwd", "stdin", "stdout", "stderr", "env", "start_new_session"):
+            assert first[key] == retry[key], key
+    finally:
+        if attempts:
+            attempts[0][1]["stdout"].close()
+        kbd._live_worker_procs.pop(4245, None)

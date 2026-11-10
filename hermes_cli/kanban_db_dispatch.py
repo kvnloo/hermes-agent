@@ -2874,23 +2874,38 @@ def _default_spawn(task: Task, workspace: str, *, board: Optional[str] = None) -
     from tools.process_registry import systemd_user_bus_env
     env = systemd_user_bus_env(env)
     log_f = _open_worker_log(task, board)
+    from hermes_cli._subprocess_compat import windows_detach_flags, windows_detach_flags_without_breakaway
+
+    popen_kwargs = dict(
+        cwd=workspace if os.path.isdir(workspace) else None,
+        stdin=subprocess.DEVNULL,
+        stdout=log_f,
+        stderr=subprocess.STDOUT,
+        env=env,
+        start_new_session=True,  # detached-spawn: ok — restart-safe kanban worker, must survive the dispatcher
+    )
     try:
-        proc = subprocess.Popen(
-            cmd,
-            cwd=workspace if os.path.isdir(workspace) else None,
-            stdin=subprocess.DEVNULL,
-            stdout=log_f,
-            stderr=subprocess.STDOUT,
-            env=env,
-            start_new_session=True,  # detached-spawn: ok — restart-safe kanban worker, must survive the dispatcher
-            creationflags=subprocess.CREATE_NO_WINDOW if _kb._IS_WINDOWS else 0,
-        )
+        try:
+            # The gateway's kill-on-close job must not reap a restart-safe worker.
+            proc = subprocess.Popen(cmd, creationflags=windows_detach_flags(), **popen_kwargs)
+        except PermissionError as exc:
+            if not _kb._IS_WINDOWS or getattr(exc, "winerror", None) != 5:
+                raise
+            # Some outer jobs forbid CREATE_BREAKAWAY_FROM_JOB. Keep the same
+            # argv/env/handles on the documented fallback, as for gateway restart.
+            _kb._log.warning("kanban worker: job denied breakaway; retrying inside parent job")
+            proc = subprocess.Popen(
+                cmd, creationflags=windows_detach_flags_without_breakaway(), **popen_kwargs
+            )
     except FileNotFoundError:
         log_f.close()
         raise RuntimeError(
             "`hermes` executable not found on PATH. "
             "Install Hermes Agent or activate its venv before running the kanban dispatcher."
         )
+    except OSError:
+        log_f.close()
+        raise
     # Intentionally NOT closing log_f: the child keeps writing after return;
     # the OS-level FD stays open in the child until it exits.
     if _kb._IS_WINDOWS:
