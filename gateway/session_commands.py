@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 _READ_COMMANDS = frozenset({'help', 'commands', 'status', 'context', 'version', 'whoami',
                             'usage', 'insights', 'profile', 'diff', 'memory', 'kanban', 'topup',
                             'suggestions', 'bundles', 'skills'})
-_CONTROL_COMMANDS = frozenset({'title'})
+_CONTROL_COMMANDS = frozenset({'title', 'discard'})
 # Authoring/workflow commands whose messaging handler (``_command_handler_table``) runs as-is for a
 # local session: goal/loop/heartbeat state on the session's row, the review/refine forks of its
 # cached agent, the /debug summary upload, /blueprint's job creation. A turn the handler would have
@@ -464,6 +464,13 @@ async def execute_command(connection, ref, params, *, dispatch=False):
         raise RuntimeStoreError('permission_denied')
     if capability != 'session:read':
         authority._require_admission_open()
+    if canonical == 'discard':
+        # Local clients need the same fenced recovery the messaging gateway already owns.
+        # Resolve only the named lost admission; never replay its unknown effects.
+        await before()
+        from gateway.slash_commands_session import discard_lost_turns
+        return {'type': 'exec', 'output': await discard_lost_turns(
+            authority, ref.session_id, arg.strip() or None)}
     if definition is not None and (canonical in _INFO_READS or canonical in _OWNER_COMMANDS
                                    or authority._handle(ref).execution_state == 'idle'):
         await before()  # mid-run the busy dispatcher fires it once it accepts the command (``BUSY_ACCEPTED``)

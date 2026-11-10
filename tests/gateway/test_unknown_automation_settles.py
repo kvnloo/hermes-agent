@@ -45,13 +45,17 @@ def _runner(tmp_path, monkeypatch, executed):
     return store, runner
 
 
-async def _lost_head_then_restart(tmp_path, monkeypatch, executed, admit_head):
+async def _lost_head_then_restart(tmp_path, monkeypatch, executed, admit_head, *, local=False):
     """Owner 1 admits a head (via ``admit_head``) and a person's follower, claims the head, dies.
     Owner 2 starts on the same store. Returns (store, owner2, head_id, follower_id)."""
     store, runner = _runner(tmp_path, monkeypatch, executed)
     db = store._db
-    source = SessionSource(platform=Platform.TELEGRAM, chat_id='gw10')
-    db.create_session('s', source='telegram')
+    if local:
+        source = SessionSource(platform=Platform.LOCAL, chat_id='gw10', user_id='human', chat_type='dm')
+        db.create_session('s', source='cli', chat_id='gw10', user_id='human')
+    else:
+        source = SessionSource(platform=Platform.TELEGRAM, chat_id='gw10')
+        db.create_session('s', source='telegram')
     first = await initialize_session_authority(runner, profile_id='p', instance_id='owner-1')
     first.sessions['s'] = LiveSession(source, 's')
     ref = SessionRef('p', 's')
@@ -263,4 +267,45 @@ async def test_lost_automation_worker_settles_on_its_own_exit_and_runs_the_queue
         assert statuses[head_id] == ('terminal', 'interrupted')
         assert statuses[follower.admission_id][0] == 'terminal'
     finally:
+        store.close_all_db_handles()
+
+
+@pytest.mark.asyncio
+async def test_desktop_slash_discard_resolves_only_named_unknown_and_restarts_fifo(tmp_path, monkeypatch):
+    """Desktop slash.exec acknowledges only the lost turn selected by the user, not queued input."""
+    from gateway import session_local
+
+    # The recovery fixture creates a local route without a registered Desktop adapter.
+    # Stub that transport gate only; use the real authority, WS dispatcher and SQLite ledger.
+    monkeypatch.setattr(session_local, 'authorize_local_source', lambda _runner, _source: True)
+    executed = []
+    store, authority, head_id, follower_id = await _lost_head_then_restart(
+        tmp_path, monkeypatch, executed, _person_head, local=True)
+    connection = AuthorityConnection(authority, Peer(), {'user_id': 'human'})
+    ref = SessionRef('p', 's')
+    try:
+        authority._schedule(ref)
+        live = authority.sessions['s']
+        await async_wait_until(lambda: live.task is not None and live.task.done(),
+                               what='unknown head paused the FIFO')
+        assert _statuses(authority.db)[head_id] == ('unknown', None)
+        assert _statuses(authority.db)[follower_id] == ('queued', None)
+
+        async def slash(command):
+            return await connection.dispatch({'id': 1, 'method': 'slash.exec',
+                                              'params': {'session_id': 's', 'command': command}})
+
+        missing = await slash('discard other-admission')
+        assert missing.get('result', {}).get('type') == 'exec', missing
+        assert _statuses(authority.db)[head_id] == ('unknown', None)
+        assert executed == []
+
+        acknowledged = await slash('discard ' + head_id)
+        assert acknowledged.get('result', {}).get('type') == 'exec', acknowledged
+        await async_wait_until(lambda: executed == ['FOLLOWER'],
+                               what='queued follower resumed exactly once')
+        assert _statuses(authority.db)[head_id] == ('terminal', 'interrupted')
+        assert _statuses(authority.db)[follower_id] == ('terminal', 'completed')
+    finally:
+        await connection.close()
         store.close_all_db_handles()
