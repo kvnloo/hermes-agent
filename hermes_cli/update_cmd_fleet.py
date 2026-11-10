@@ -1210,9 +1210,27 @@ def _repair_unit_without_fatal_exit_park(svc_name: str, scope: str) -> None:
     system = scope == "system"
     unit_path = (_SYSTEM_UNIT_DIR if system else user_systemd_unit_dir()) / f"{svc_name}.service"
     try:
-        parked = re.search(rf"^RestartPreventExitStatus=.*\b{GATEWAY_FATAL_CONFIG_EXIT_CODE}\b", unit_path.read_text(encoding="utf-8-sig"), re.MULTILINE)
+        unit_text = unit_path.read_text(encoding="utf-8-sig")
     except OSError:
         return
+    # Query systemd's merged policy: drop-ins may add or reset the exit-status park.
+    scope_cmd = ["systemctl"] if system else ["systemctl", "--user"]
+    try:
+        status = _systemctl(
+            scope_cmd + ["show", f"{svc_name}.service", "--property=RestartPreventExitStatus"],
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        status = None
+    effective = (status.stdout or "").strip() if status is not None and status.returncode == 0 else ""
+    if effective.startswith("RestartPreventExitStatus="):
+        parked = str(GATEWAY_FATAL_CONFIG_EXIT_CODE) in effective.partition("=")[2].split()
+    else:
+        # Preserve the prior check when the manager cannot answer.
+        parked = re.search(
+            rf"^RestartPreventExitStatus=.*\b{GATEWAY_FATAL_CONFIG_EXIT_CODE}\b",
+            unit_text, re.MULTILINE,
+        ) is not None
     if parked:
         return
     from hermes_cli.update_cmd_commit import past_commit_point
