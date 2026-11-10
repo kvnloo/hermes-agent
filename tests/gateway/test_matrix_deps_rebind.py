@@ -146,3 +146,37 @@ def test_setup_enabling_e2ee_prepares_the_e2ee_extra(tmp_path, monkeypatch):
     monkeypatch.setattr(pm_extras, "missing", lambda extra: ())
     matrix_adapter.interactive_setup()
     assert calls == [(["matrix", "matrix-e2ee"], {"explicit": True})]
+
+@pytest.mark.parametrize("previous_mode,enable,expected_mode,expected_extras", [
+    ("required", False, "off", ["matrix"]),
+    ("off", True, "required", ["matrix", "matrix-e2ee"]),
+])
+def test_reconfigure_e2ee_choice_overrides_persisted_mode(
+    monkeypatch, previous_mode, enable, expected_mode, expected_extras
+):
+    """A prior explicit mode must not override the new setup answer.
+
+    With E2EE split into a separate extra, preparing plaintext-only deps while
+    leaving a persisted required mode would fail closed at gateway startup.
+    """
+    import pm
+    from hermes_cli import cli_output, config, setup_platforms
+
+    stored = {"MATRIX_E2EE_MODE": previous_mode, "MATRIX_ENCRYPTION": "true"}
+    answers = iter(["https://matrix.example.test", "test-token", "@bot:example.test",
+                    "@owner:example.test", "!home:example.test"])
+    monkeypatch.setattr(setup_platforms, "declines_reconfigure", lambda *a, **kw: False)
+    monkeypatch.setattr(cli_output, "prompt", lambda *a, **kw: next(answers))
+    monkeypatch.setattr(cli_output, "prompt_yes_no", lambda *a, **kw: enable)
+    monkeypatch.setattr(config, "get_env_value", lambda key: stored.get(key))
+    monkeypatch.setattr(config, "save_env_value", lambda key, val: stored.__setitem__(key, val))
+    monkeypatch.setattr(matrix_adapter, "_get_scoped_secret",
+                        lambda key, default="": stored.get(key, default))
+    syncs = []
+    monkeypatch.setattr(pm, "sync_venv", lambda extras, **kw: syncs.append((extras, kw)))
+
+    matrix_adapter.interactive_setup()
+
+    assert stored["MATRIX_E2EE_MODE"] == expected_mode
+    assert matrix_adapter._resolve_e2ee_mode() == expected_mode
+    assert syncs == [(expected_extras, {"explicit": True})]

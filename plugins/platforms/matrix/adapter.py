@@ -3242,8 +3242,10 @@ def interactive_setup() -> None:
             print_success("Matrix credentials saved")
     if token or get_env_value("MATRIX_PASSWORD"):
         want_e2ee = prompt_yes_no("Enable end-to-end encryption (E2EE)?", False)
+        # The explicit mode wins over legacy MATRIX_ENCRYPTION. Write either
+        # choice so reconfiguring a bot cannot retain the old E2EE setting.
+        save_env_value("MATRIX_E2EE_MODE", "required" if want_e2ee else "off")
         if want_e2ee:
-            save_env_value("MATRIX_ENCRYPTION", "true")
             print_success("E2EE enabled")
         try:
             from pm import sync_venv
