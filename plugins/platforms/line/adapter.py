@@ -761,6 +761,13 @@ class LineAdapter(BasePlatformAdapter):
         """
         try:
             current = str(_get_scoped_secret("LINE_PUBLIC_URL") or "").rstrip("/")
+            # Unscoped standalone gateways retain their startup .env in os.environ.
+            # Read the owning home's file without mutating process-wide credentials.
+            from agent.secret_scope import current_secret_scope, is_multiplex_active
+            if current_secret_scope() is None and not is_multiplex_active():
+                from hermes_constants import get_hermes_home
+                from hermes_cli.env_loader import resolve_home_dotenv
+                current = str(resolve_home_dotenv(Path(get_hermes_home())).get("LINE_PUBLIC_URL") or current).rstrip("/")
         except Exception:  # unscoped under multiplex: keep what we have
             return self.public_base_url
         if current and current != self.public_base_url:

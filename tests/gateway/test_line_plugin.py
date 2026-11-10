@@ -355,6 +355,18 @@ class TestPublicUrlFreshness:
         assert url.startswith("https://second-tunnel.example/"), url
         assert adapter.public_base_url == "https://second-tunnel.example"
 
+    def test_rotated_dotenv_is_used_without_process_env_reload(self, adapter):
+        from pathlib import Path
+        from hermes_constants import get_hermes_home
+
+        home = Path(get_hermes_home())
+        home.mkdir(parents=True, exist_ok=True)
+        (home / ".env").write_text(
+            "LINE_PUBLIC_URL=https://second-tunnel.example\n", encoding="utf-8"
+        )
+        token = adapter._register_media(__file__)
+        assert adapter._media_url(token, "x.png").startswith("https://second-tunnel.example/")
+
     def test_constructed_value_survives_a_scoped_miss(self, adapter, monkeypatch):
         # A miss (unset env) must NOT wipe a value supplied by config: the adapter
         # would then fall back to a localhost URL and every image would 404.
