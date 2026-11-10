@@ -43,7 +43,7 @@ export function RemoteReauthBanner() {
     void window.hermesDesktop
       .oauthLoginConnectionConfig(connection.baseUrl)
       .then(result => {
-        if (result?.ok) {
+        if (result?.ok && result.connected === true) {
           clearRemoteReauthExhausted(connection.baseUrl)
         } else {
           notifyError(new Error(result?.error || 'Sign-in did not complete'), t.remoteReauthBanner.failed)

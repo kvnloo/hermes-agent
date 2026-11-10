@@ -121,4 +121,22 @@ describe('RemoteReauthBanner', () => {
 
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
   })
+
+  it('keeps manual recovery available when sign-in completes but the gateway remains disconnected', async () => {
+    latchRemoteReauthExhausted(GATEWAY)
+    oauthLoginConnectionConfig.mockResolvedValue({
+      baseUrl: GATEWAY,
+      connected: false,
+      error: 'Could not reconnect after OAuth sign-in',
+      ok: true
+    })
+
+    render(<RemoteReauthBanner />)
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    // Wait for the async sign-in to settle before checking the recovery UI.
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in' })).toBeTruthy())
+    expect(screen.getByRole('alert')).toBeTruthy()
+    expect(oauthLoginConnectionConfig).toHaveBeenCalledTimes(1)
+  })
 })
