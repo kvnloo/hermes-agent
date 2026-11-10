@@ -811,6 +811,13 @@ _WINDOWS_BASH_SHELL_HINT = (
     "driving prompts."
 )
 
+_WINDOWS_BASH_COMPACT_HINT = (
+    "Shell: `terminal` runs Git Bash/MSYS (POSIX), not PowerShell or cmd.exe. "
+    "Bash builtins accept `/c/Users/...` paths; native Windows programs (git, rg, node, python) "
+    "need `C:/Users/...` paths. For interactive Windows PTYs, use `process(submit)` to send Enter "
+    "instead of `process(write)` with a bare newline."
+)
+
 
 def _tenv_read(name: str, default: str = "") -> str:
     """Scope-aware TERMINAL_* read: the multiplexing gateway's per-turn scope carries
@@ -902,7 +909,7 @@ def _clear_backend_probe_cache() -> None:
     _BACKEND_PROBE_CACHE.clear()
 
 
-def _local_host_hints() -> list[str]:
+def _local_host_hints(*, compact: bool = False) -> list[str]:
     """Host OS / home / cwd block for a local terminal backend (tools run on this host)."""
     import platform
 
@@ -919,13 +926,16 @@ def _local_host_hints() -> list[str]:
         pass
     # The model reaches for the system temp dir by reflex (tmpfs on most Linux hosts, fills RAM);
     # naming Hermes' scratch dir here is what makes the TMPDIR export a habit rather than a hidden default.
-    try:
-        host_lines.append(f"Scratch directory: {get_scratch_dir()} (TMPDIR points here; write temporary files "
-                          "and probes there, never under the system temp dir; entries idle for 24h are pruned)")
-    except OSError:
-        pass
+    if not compact:
+        try:
+            host_lines.append(f"Scratch directory: {get_scratch_dir()} (TMPDIR points here; write temporary files "
+                              "and probes there, never under the system temp dir; entries idle for 24h are pruned)")
+        except OSError:
+            pass
     if not (sys.platform == "win32" and not is_wsl()):
         return ["\n".join(host_lines)]
+    if compact:
+        return ["\n".join(host_lines), _WINDOWS_BASH_COMPACT_HINT]
     host_lines.append(
         "Note: on Windows, the machine hostname (e.g. from `hostname` or uname) is NOT the username. "
         "Use the 'User home directory' above to construct paths under C:\\Users\\<user>\\, never the hostname."
@@ -1017,7 +1027,9 @@ def build_environment_hints() -> str:
     WSL and embedder hints are appended."""
     backend = (_tenv_read("TERMINAL_ENV") or "local").strip().lower()
     is_remote_backend = backend in _REMOTE_TERMINAL_BACKENDS or _plugin_backend_is_remote(backend)
-    hints = [_remote_backend_hint(backend)] if is_remote_backend else _local_host_hints()
+    agent_config = _config_readonly("agent.environment_hint_mode").get("agent", {}) or {}
+    compact = agent_config.get("environment_hint_mode") == "compact"
+    hints = [_remote_backend_hint(backend)] if is_remote_backend else _local_host_hints(compact=compact)
     # A host-placed Bot Screen is only reachable from a local backend (a sandboxed terminal cannot
     # open windows on the gateway host), and a sandbox-placed one is the sandbox probe's business.
     if not is_remote_backend:

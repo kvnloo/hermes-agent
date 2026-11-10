@@ -753,6 +753,18 @@ model:
   context_length: 64000   # See warning below
 ```
 
+For a small local model that ignores tool calls after lengthy runtime instructions,
+you can opt into shorter **local terminal** environment hints in `config.yaml`:
+
+```yaml
+agent:
+  environment_hint_mode: compact  # full (default) or compact
+```
+
+Compact mode keeps host, home, working directory, and Windows Git Bash/path semantics;
+remote-backend isolation guidance stays unchanged. Start a new conversation for the
+setting to take effect. It does not guarantee tool selection by a small model.
+
 :::caution Ollama defaults to very low context lengths
 Ollama does **not** use your model's full context window by default. Depending on your VRAM, the default is:
 

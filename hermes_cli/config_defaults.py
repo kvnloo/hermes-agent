@@ -180,10 +180,9 @@ DEFAULT_CONFIG = {
         "environment_probe": True,
         # Bot Mode teammate-messaging protocol section (silent unless desktop Bot Mode manages it).
         "bot_mode_protocol": True,
-        # Embedder-supplied text appended to the system prompt's environment-hints block, so a host
-        # wrapping Hermes (sandbox runner, managed platform) can describe proxy/credential/ mount
-        # layout without editing SOUL.md. Env HERMES_ENVIRONMENT_HINT overrides it.
+        # Extra environment prose; HERMES_ENVIRONMENT_HINT overrides config.
         "environment_hint": "",
+        "environment_hint_mode": "full",  # compact shortens local hints, never remote backend boundaries.
         # Coding posture: on interactive coding surfaces (CLI, TUI, desktop, ACP) in a code
         # workspace, add a coding brief + live git/workspace snapshot to the system prompt
         # (agent/coding_context.py). "auto" = prompt-only when interactive AND cwd is a code

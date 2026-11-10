@@ -900,6 +900,25 @@ class TestEnvironmentHints:
         assert created["probe_only"] is True
         assert calls == ["cleanup"]
 
+    def test_compact_runtime_hint_preserves_host_without_full_details(self, monkeypatch, tmp_path):
+        """Opt-in small-model prompt keeps host facts but drops verbose local guidance."""
+        import agent.prompt_builder as _pb
+        monkeypatch.setattr(_pb, "is_wsl", lambda: False)
+        monkeypatch.setenv("TERMINAL_ENV", "local")
+        monkeypatch.setenv("TERMINAL_CWD", str(tmp_path))
+        monkeypatch.delenv("HERMES_ENVIRONMENT_HINT", raising=False)
+        monkeypatch.setattr(_pb, "_config_readonly",
+                            lambda _: {"agent": {"environment_hint_mode": "compact"}})
+        monkeypatch.setattr(_pb, "get_scratch_dir", lambda: tmp_path / "scratch")
+
+        hints = _pb.build_environment_hints()
+        assert "Host:" in hints
+        assert f"Current working directory: {tmp_path}" in hints
+        assert "Scratch directory:" not in hints
+        if sys.platform == "win32":
+            assert "Git Bash/MSYS" in hints
+            assert "PowerShell builtins" not in hints
+
     def test_environment_hint_from_env_var_is_appended(self, monkeypatch):
         """HERMES_ENVIRONMENT_HINT lets an embedder describe the runtime env."""
         import agent.prompt_builder as _pb
