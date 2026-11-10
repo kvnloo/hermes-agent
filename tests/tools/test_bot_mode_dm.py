@@ -1329,3 +1329,18 @@ def test_poll_reply_is_persisted_as_a_delivery_row_when_the_runner_exits(tmp_pat
     assert kw["display_kind"] == "process_complete"
     assert "PAYLOAD_SENTINEL_42" in kw["content"]
     assert procs[0].id in kw["content"]
+
+def test_live_dm_reply_utf8_fits_the_completion_budget(tmp_path, monkeypatch, capsys):
+    """#152837: a Thai reply must not expand into JSON escapes before notification sizing."""
+    from tools import bot_live_delivery as live
+
+    reply = "ภาษาไทย" * 2400
+    monkeypatch.setattr(live, "await_delivery", lambda *_args, **_kwargs: {
+        "status": "settled", "delivery_id": "thai", "reply": reply,
+    })
+    assert bot_mode_dm._wait_live_dm(str(tmp_path), "thai") == 0
+
+    stdout = capsys.readouterr().out
+    assert reply in stdout
+    assert len(stdout) <= bot_mode_dm.REPLY_COMPLETION_CHARS
+    assert json.loads(stdout)["reply"] == reply
