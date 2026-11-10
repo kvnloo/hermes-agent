@@ -13,7 +13,7 @@ import pytest
 from agent.system_prompt import build_system_prompt_parts
 
 
-def _stable(platform, valid_tool_names):
+def _volatile(platform, valid_tool_names):
     agent = SimpleNamespace(
         platform=platform, load_soul_identity=False, skip_context_files=False, valid_tool_names=valid_tool_names,
         _task_completion_guidance=False, _tool_use_enforcement=False, _environment_probe=False,
@@ -22,14 +22,14 @@ def _stable(platform, valid_tool_names):
     with (patch("agent.prompt_builder.load_soul_md", return_value=""),
           patch("agent.prompt_builder.build_environment_hints", return_value=""),
           patch("agent.prompt_builder.build_context_files_prompt", return_value="")):
-        return build_system_prompt_parts(agent)["stable"]
+        return build_system_prompt_parts(agent)["volatile"]
 
 
-def test_telegram_stable_prompt_prefers_clarify_buttons_over_fake_controls():
-    stable = _stable("telegram", ["clarify", "terminal"])
-    assert "You are on Telegram." in stable
-    assert "call `clarify`" in stable and "tappable buttons" in stable
-    assert "copy-to-clipboard" in stable
+def test_telegram_prompt_prefers_clarify_buttons_over_fake_controls():
+    volatile = _volatile("telegram", ["clarify", "terminal"])
+    assert "You are on Telegram." in volatile
+    assert "call `clarify`" in volatile and "tappable buttons" in volatile
+    assert "copy-to-clipboard" in volatile
 
 
 def _cron_tool_names():
@@ -45,10 +45,10 @@ def test_telegram_hint_never_recommends_clarify_without_the_tool(surface, monkey
         monkeypatch.setenv("HERMES_CRON_AUTO_DELIVER_PLATFORM", "telegram")
         names = _cron_tool_names()
         assert "clarify" not in names
-        stable = _stable("cron", names)
-        assert "Delivery destination (telegram): You are on Telegram." in stable
+        volatile = _volatile("cron", names)
+        assert "Delivery destination (telegram): You are on Telegram." in volatile
     else:
-        stable = _stable("telegram", ["terminal", "read_file"])
-        assert "You are on Telegram." in stable
-    assert "clarify`" not in stable
-    assert "copy-to-clipboard" not in stable
+        volatile = _volatile("telegram", ["terminal", "read_file"])
+        assert "You are on Telegram." in volatile
+    assert "clarify`" not in volatile
+    assert "copy-to-clipboard" not in volatile

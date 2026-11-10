@@ -703,7 +703,7 @@ class TestSkillsInVolatileBand:
         assert full.index(_SKILLS) < full.index("Conversation started:")
 
     def test_desktop_and_telegram_share_prefix_with_coding_mode_off(self):
-        from agent.prompt_builder import PLATFORM_HINTS
+        from agent.system_prompt import platform_hint
 
         # These surfaces resolve different postures in a code workspace;
         # pin both to general mode so the hint is the divergence point.
@@ -713,14 +713,20 @@ class TestSkillsInVolatileBand:
         ):
             desktop = _build(build_system_prompt, platform="desktop")
             telegram = _build(build_system_prompt, platform="telegram")
+            hints = {surface: platform_hint(_make_agent(platform=surface, valid_tool_names=["skills_list"]))
+                     for surface in ("desktop", "telegram")}
 
         common = os.path.commonprefix((desktop, telegram))
+        assert _CONTEXT in common
         assert _SKILLS in common
         assert "SHARED_MEMORY_SENTINEL" in common
         for prompt, surface in ((desktop, "desktop"), (telegram, "telegram")):
-            assert PLATFORM_HINTS[surface] not in common
-            assert prompt.index("SHARED_MEMORY_SENTINEL") < prompt.index(PLATFORM_HINTS[surface])
-            assert prompt.index(PLATFORM_HINTS[surface]) < prompt.index("Conversation started:")
+            hint = hints[surface]
+            assert hint and hint in prompt
+            assert hint not in common
+            assert prompt.index(_CONTEXT) < prompt.index(hint)
+            assert prompt.index("SHARED_MEMORY_SENTINEL") < prompt.index(hint)
+            assert prompt.index(hint) < prompt.index("Conversation started:")
 
 
 class TestMemoryProviderSystemPromptGating:
