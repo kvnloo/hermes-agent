@@ -187,6 +187,22 @@ class TestPluginContextRegisterSkill:
         entry = ctx._manager._plugin_skills["testplugin:my-skill"]
         assert entry["description"] == "From the caller."
 
+    def test_caller_frontmatter_description_wins_over_file(self, ctx, tmp_path):
+        skill_md = tmp_path / "skills" / "my-skill" / "SKILL.md"
+        skill_md.parent.mkdir(parents=True)
+        skill_md.write_text(
+            "---\nname: my-skill\ndescription: From the file.\n---\n\nBody.\n"
+        )
+
+        ctx.register_skill(
+            "my-skill", skill_md,
+            frontmatter={"name": "my-skill", "description": "From caller metadata."},
+        )
+
+        entry = ctx._manager._plugin_skills["testplugin:my-skill"]
+        assert entry["description"] == "From caller metadata."
+        assert entry["frontmatter"]["description"] == "From caller metadata."
+
     def test_missing_frontmatter_leaves_description_empty(self, ctx, tmp_path):
         # A SKILL.md with no frontmatter is malformed; registration must still succeed
         # and simply carry no description rather than raising.

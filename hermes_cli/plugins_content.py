@@ -75,7 +75,8 @@ def register_skill(
         if not frontmatter:
             frontmatter = dict(parsed)
         if not description:
-            description = str(parsed.get("description") or "").strip()
+            preferred = (frontmatter or {}).get("description")
+            description = str(preferred or parsed.get("description") or "").strip()
     entry = {
         "path": path, "plugin": namespace, "plugin_key": self.plugin_id, "plugin_name": self.manifest.name,
         "portable": self.manifest.portable, "bare_name": name,
