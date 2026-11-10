@@ -53,6 +53,40 @@ class TestMCPLoopExceptionHandler:
             _mcp_loop._stop_mcp_loop()
 
 
+    def test_stuck_loop_teardown_retains_shared_loop_and_live_connections(self):
+        """A failed drain must not orphan the shared loop and spawn a replacement (#152175)."""
+        import tools.mcp_tool as mcp_mod
+
+        live = MagicMock(session=object())
+        blocked_loop = MagicMock()
+        blocked_loop.is_running.return_value = True
+        blocked_thread = MagicMock()
+        blocked_thread.is_alive.return_value = True
+
+        # Do not create a real thread: emulate the reported 4s drain timeout
+        # followed by a thread which still has not stopped after the join.
+        def failed_schedule(coro, _loop, **_kwargs):
+            coro.close()
+            future = MagicMock()
+            future.result.side_effect = TimeoutError("MCP drain hung")
+            return future
+
+        with patch.object(mcp_mod, "_mcp_loop", blocked_loop), \
+             patch.object(mcp_mod, "_mcp_thread", blocked_thread), \
+             patch.object(mcp_mod, "_servers", {"live": live}), \
+             patch.object(mcp_mod, "_server_connecting", set()), \
+             patch("agent.async_utils.safe_schedule_threadsafe", side_effect=failed_schedule), \
+             patch("tools.mcp_tool_lifecycle._kill_orphaned_mcp_children") as reap:
+            assert _mcp_loop._stop_mcp_loop() is False
+            assert mcp_mod._mcp_loop is blocked_loop
+            assert mcp_mod._mcp_thread is blocked_thread
+            assert mcp_mod._servers["live"] is live
+            blocked_loop.close.assert_not_called()
+            reap.assert_not_called()
+            _mcp_loop._ensure_mcp_loop()
+            assert mcp_mod._mcp_loop is blocked_loop
+
+
 # ---------------------------------------------------------------------------
 # Fix 2: stdio PID tracking
 # ---------------------------------------------------------------------------

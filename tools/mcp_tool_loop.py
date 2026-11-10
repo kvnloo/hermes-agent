@@ -266,7 +266,6 @@ def _stop_mcp_loop(*, only_if_idle: bool = False) -> bool:
             logger.debug("Leaving MCP event loop running; active servers are registered or connecting")
             return False
         loop, thread = _origin._mcp_loop, _origin._mcp_thread
-        _origin._mcp_loop = _origin._mcp_thread = None
     if loop is None:
         return True
     # Drain before stopping: tasks still suspended when the loop closes get resumed by the GC
@@ -298,11 +297,22 @@ def _stop_mcp_loop(*, only_if_idle: bool = False) -> bool:
     if thread is not None:
         thread.join(timeout=5)
         if thread.is_alive():
-            logger.warning("MCP event loop thread did not stop within 5.0s")
+            logger.warning("MCP event loop thread did not stop within 5.0s; retaining its handles")
+            return False
+    # A failed drain can leave the loop running even after the thread join budget.
+    # Never detach or close a live loop: the next discovery must not spawn another
+    # loop while registered MCP sessions still refer to this one (#152175).
+    if loop.is_running():
+        logger.warning("MCP event loop is still running after shutdown; retaining its handles")
+        return False
     try:
         loop.close()
     except Exception as exc:
         logger.warning("Unable to close MCP event loop cleanly: %s", exc)
+        return False
+    with _core._lock:
+        if _origin._mcp_loop is loop:
+            _origin._mcp_loop = _origin._mcp_thread = None
     # The loop is gone, so no session can be in flight: reap active too.
     _lifecycle._kill_orphaned_mcp_children(include_active=True)
     return True
