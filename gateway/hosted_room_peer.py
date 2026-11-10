@@ -74,6 +74,15 @@ def _gateway_room_grant_secret_for_home(home_value: str) -> bytes:
                 os.link(temporary, path)
             except FileExistsError:
                 material = _read()
+            except (AttributeError, OSError):
+                # Publish the complete secret under a cross-process mutex when hard links are unavailable.
+                from hermes_cli.update_lock import marker_mutex
+                with marker_mutex(path):
+                    if os.path.lexists(path):
+                        material = _read()
+                    else:
+                        os.replace(temporary, path)
+                        fsync_directory(home)
             else:
                 fsync_directory(home)
         finally:

@@ -74,6 +74,22 @@ def test_gateway_room_grant_secret_is_atomic_across_concurrent_workers(
 
 
 
+def test_gateway_room_grant_secret_is_atomic_without_os_link(tmp_path, monkeypatch):
+    """Android/Termux may lack os.link; simultaneous issuers must share one signing key."""
+    import os
+    from gateway.hosted_room_peer import _gateway_room_grant_secret_for_home
+
+    home = tmp_path / ".hermes"
+    monkeypatch.delattr(os, "link", raising=False)
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        secrets = list(pool.map(
+            lambda _: _gateway_room_grant_secret_for_home.__wrapped__(str(home)), range(8)))
+
+    assert len(set(secrets)) == 1
+    assert (home / ".room-link-grant-secret").stat().st_size == 32
+
+
+
 
 def test_room_link_protocol_fixture_matches_backend_contract():
     fixture = json.loads(
