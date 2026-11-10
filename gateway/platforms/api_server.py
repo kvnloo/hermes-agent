@@ -3056,8 +3056,13 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
             return handed_off
         gateway_session_key = ctx["gateway_session_key"]
         session_id = ctx["session_id"]
-        history = await self._conversation_history_for_session(session_id)
-        result, usage = await self._run_agent(conversation_history=history, **ctx["run_kwargs"])
+        from gateway.platforms.api_server_authority_runs import store_error_response
+        from hermes_state_runtime import RuntimeStoreError
+        try:
+            history = await self._conversation_history_for_session(session_id)
+            result, usage = await self._run_agent(conversation_history=history, **ctx["run_kwargs"])
+        except RuntimeStoreError as exc:
+            return store_error_response(_openai_error, exc)
         # One policy-gated re-run of a transiently failed turn — the peer-DM transport's half of the
         # retry the local (``tools.bot_mode_dm``) and relayed (``tui_gateway.methods_bot_relay``)
         # delivery lanes already apply (#93091 item 5, #115325). Same policy, same gate: transient
@@ -3067,9 +3072,12 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         # transcript's unanswered tail row, and the re-run resumes that row instead of appending a
         # second copy of it. A turn that fails again reaches the peer client exactly as before.
         if result_retry_action(result) != RETRY_NONE:
-            history = await self._conversation_history_for_session(session_id)
-            result, usage = await self._run_agent(
-                conversation_history=history, resume_unanswered_turn=True, **ctx["run_kwargs"])
+            try:
+                history = await self._conversation_history_for_session(session_id)
+                result, usage = await self._run_agent(
+                    conversation_history=history, resume_unanswered_turn=True, **ctx["run_kwargs"])
+            except RuntimeStoreError as exc:
+                return store_error_response(_openai_error, exc)
         is_dict = isinstance(result, dict)
         effective_session_id = result.get("session_id") if is_dict else session_id
         final_response = _resolve_media_to_data_urls(
