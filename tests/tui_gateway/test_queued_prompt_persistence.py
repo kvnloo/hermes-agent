@@ -118,6 +118,33 @@ def test_queued_prompt_keeps_server_stamped_origin_after_drain(monkeypatch, tmp_
         db.close()
 
 
+
+def test_busy_queue_keeps_distinct_authenticated_senders_separate(monkeypatch, tmp_path):
+    """A later sender must not be folded into the first sender's queued transcript row."""
+    db = SessionDB(db_path=tmp_path / "state.db")
+    sid, _key = _desktop_session(monkeypatch, db)
+    session = server._sessions[sid]
+    try:
+        _busy(session)
+        for i, user_id in enumerate(("sender-a", "sender-b")):
+            transport = types.SimpleNamespace(auth_identity={
+                "provider": "local", "user_id": user_id})
+            response = server._handle_busy_submit(
+                f"r{i}", sid, session, f"prompt from {user_id}",
+                transport, queued=True, display_kind=None)
+            assert response["result"]["status"] == "queued"
+
+        queued = [session["queued_prompt"], *session.get("queued_prompts", [])]
+        assert [entry["text"] for entry in queued] == [
+            "prompt from sender-a", "prompt from sender-b"]
+        assert [entry["origin"]["authenticated_user"]["user_id"] for entry in queued] == [
+            "sender-a", "sender-b"]
+        assert all(isinstance(entry.get("_submit_user_row"), dict) for entry in queued)
+    finally:
+        server._sessions.pop(sid, None)
+        db.close()
+
+
 def test_redirect_queue_fallback_persists_its_server_stamped_origin(monkeypatch, tmp_path):
     """A redirect during the deferred agent build has the same durable audit trail as prompt.submit."""
     db = SessionDB(db_path=tmp_path / "state.db")
