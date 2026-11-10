@@ -1006,6 +1006,27 @@ def test_no_token_listener_refuses_browser_originated_posts(monkeypatch, headers
         assert status == 403
 
 
+def test_live_a2a_server_header_hides_stdlib_banner(monkeypatch):
+    """The live listener identifies Hermes without exposing the Python runtime."""
+    monkeypatch.delenv("A2A_BEARER_TOKEN", raising=False)
+    monkeypatch.delenv("A2A_PEER_TOKENS", raising=False)
+    adapter, base = _make_live_adapter(monkeypatch)
+
+    def read_banner():
+        with urllib.request.urlopen(base + "/health", timeout=10) as response:
+            assert response.status == 200
+            return response.headers.get("Server")
+
+    async def run():
+        assert await adapter.connect() is True
+        try:
+            return await asyncio.to_thread(read_banner)
+        finally:
+            await adapter.disconnect()
+
+    assert asyncio.run(run()) == "Hermes-A2A"
+
+
 @pytest.mark.integration
 class TestInboundRoundTrip:
     def test_live_server_card_and_message_send(self, monkeypatch):
