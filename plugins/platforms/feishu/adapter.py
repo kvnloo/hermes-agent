@@ -2252,14 +2252,22 @@ class FeishuAdapter(FeishuChoiceCardsMixin, BasePlatformAdapter):
             # Lists may name a user by any id intake accepts (_sender_identity).
             operator_ids = {normalized, str(user_id or "").strip(), str(union_id or "").strip()} - {""}
             return "*" in allowed_ids or bool(operator_ids & allowed_ids)
-        # SessionSource.user_id is the tenant user_id, else open_id (_resolve_sender_profile).
-        principal = str(user_id or "").strip() or normalized
-        # Feishu chat ids don't say DM vs group; "group" is the check's own default.
-        verdict = self._is_sender_authorized(principal, "group", str(chat_id or "") or None)
-        if verdict is None:
-            logger.debug("[Feishu] No gateway authorization check for card operator %s; denying", normalized)
-            return False
-        return verdict
+        # Pairing grants may use any SDK-associated ID. A learned tenant ID
+        # must not shadow an existing open_id pairing on card callbacks.
+        # Feishu chat ids don't say DM vs group; "group" remains the default.
+        chat = str(chat_id or "") or None
+        for principal in dict.fromkeys(
+            (str(user_id or "").strip(), normalized, str(union_id or "").strip())
+        ):
+            if not principal:
+                continue
+            verdict = self._is_sender_authorized(principal, "group", chat)
+            if verdict is True:
+                return True
+            if verdict is None:
+                logger.debug("[Feishu] No gateway authorization check for card operator %s; denying", normalized)
+                return False
+        return False
 
     @staticmethod
     def _card_response(card_data: Optional[dict[str, Any]] = None) -> Any:
