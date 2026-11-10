@@ -1203,6 +1203,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> dict[str, A
     if floor_refused:
         msg = support_floor_message()
         results["warnings"].append(msg)
+        results["floor_refused"] = True
         # stderr so it is visible even on quiet startup paths.
         sys.stderr.write(f"⚠ hermes config: {msg}\n")
         if not quiet:
@@ -3654,13 +3655,15 @@ def _cmd_config_migrate(args):
     print()
     results = migrate_config(interactive=True, quiet=False)
     print()
-    if results["env_added"] or results["config_added"]:
+    if not results.get("floor_refused") and (results["env_added"] or results["config_added"]):
         print(color("✓ Configuration updated!", Colors.GREEN))
     if results["warnings"]:
         print()
         for warning in results["warnings"]:
             print(color(f"  ⚠️  {warning}", Colors.YELLOW))
     print()
+    if results.get("floor_refused"):
+        raise SystemExit(1)
 
 
 def _cmd_config_check(args):
