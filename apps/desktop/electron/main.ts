@@ -570,7 +570,12 @@ import {
 } from './session-windows'
 import { ensureLoginShellPath } from './shell-path'
 import { removeStaleSingletonLock } from './singleton-lock'
-import { createSourcePythonBackend, resolveSourceInstallationBackend, type SourceBackend } from './source-backend'
+import {
+  createSourcePythonBackend,
+  resolvePresentSourceInstallationBackend,
+  resolveSourceInstallationBackend,
+  type SourceBackend
+} from './source-backend'
 import { resolveSourcePython } from './source-python'
 import { registerSpellcheckDictionaryIpc } from './spellcheck-dictionary-ipc'
 import { resolveSshBinary } from './ssh-binary'
@@ -4953,6 +4958,8 @@ async function resolveHermesBackend(backendArgs: string[]): Promise<ResolvedHerm
     return activeBackend
   }
 
+  let userInstall: Awaited<ReturnType<typeof userLauncherInstallRootAsync>> = null
+
   if (bootstrapRepairRequested) {
     rememberLog('[bootstrap] repair requested; bypassing the usable active runtime to re-run the installer')
   } else {
@@ -4961,8 +4968,7 @@ async function resolveHermesBackend(backendArgs: string[]): Promise<ResolvedHerm
     //    fixed user-bin location: a Finder/Dock launch inherits a PATH without
     //    ~/.local/bin. The reported root is then resolved and probed like any
     //    installed runtime; HERMES_DESKTOP_IGNORE_EXISTING=1 skips it too.
-    const userInstall: Awaited<ReturnType<typeof userLauncherInstallRootAsync>> =
-      await userLauncherInstallRootAsync(IS_WINDOWS, HERMES_HOME)
+    userInstall = await userLauncherInstallRootAsync(IS_WINDOWS, HERMES_HOME)
 
     if (userInstall) {
       const userBackend: SourceBackend | null = await installedRuntimeGate.resolve(userInstall.root, () =>
@@ -4981,25 +4987,23 @@ async function resolveHermesBackend(backendArgs: string[]): Promise<ResolvedHerm
     }
   }
 
-  // 6. Presence-only fallback. Both rungs above proved the install two ways:
-  //    the root and a launcher are on disk, and only the bounded `--version`
-  //    health probe came back empty. A probe that times out on an install that
-  //    IS there is a stall, not an absence -- resolving it as "not installed"
-  //    is what opened the first-run setup card over a healthy install
-  //    (desktop.log 2026-11-07 11:49:45 and 2026-11-08 01:00:50, both during
-  //    8-25s main-process stalls). Keep the install and let the backend's own
-  //    start report a real failure; the operator's HERMES_DESKTOP_IGNORE_EXISTING
-  //    request for the first-run choice still wins.
+  // 6. Presence-only fallback, only after both probed rungs failed. A
+  //    timed-out --version check is not evidence that the source install is
+  //    missing. Check the canonical root AND any noncanonical install the
+  //    published user-bin launcher identified in rung 5; otherwise an install
+  //    found through install.sh --dir can still be sent to first-run setup.
   if (!bootstrapRepairRequested && !installedRuntimeGate.skipsInstalledRuntimes()) {
-    const presentBackend: SourceBackend | null = await resolveSourceInstallationBackend(
-      ACTIVE_HERMES_ROOT,
+    const presentBackend: SourceBackend | null = await resolvePresentSourceInstallationBackend(
+      userInstall && userInstall.root !== ACTIVE_HERMES_ROOT
+        ? [ACTIVE_HERMES_ROOT, userInstall.root]
+        : [ACTIVE_HERMES_ROOT],
       backendArgs,
-      { hermesHome: HERMES_HOME, skipProbe: true, log: rememberLog }
+      { hermesHome: HERMES_HOME, log: rememberLog }
     )
 
     if (presentBackend) {
       rememberLog(
-        `[bootstrap] Hermes install at ${ACTIVE_HERMES_ROOT} is present but its --version probe failed; ` +
+        `[bootstrap] Hermes install at ${presentBackend.root} is present but its --version probe failed; ` +
           'starting it instead of first-run setup'
       )
 

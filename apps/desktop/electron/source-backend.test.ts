@@ -8,7 +8,12 @@ import { test, vi } from 'vitest'
 import WebSocket from 'ws'
 
 import { waitForDashboardPort } from './backend-ready'
-import { createSourcePythonBackend, resolveSourceInstallationBackend, type SourceBackend } from './source-backend'
+import {
+  createSourcePythonBackend,
+  resolvePresentSourceInstallationBackend,
+  resolveSourceInstallationBackend,
+  type SourceBackend
+} from './source-backend'
 
 const SERVE_ARGS = ['serve', '--host', '127.0.0.1', '--port', '0']
 
@@ -247,6 +252,38 @@ test('a present install whose --version probe fails stays resolvable presence-on
       null,
       'no launcher on disk is still no installation'
     )
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true })
+  }
+})
+
+test('a noncanonical published install survives a failed health probe after the canonical root is absent', async (): Promise<void> => {
+  const temp: string = fs.mkdtempSync(path.join(os.tmpdir(), 'desktop-user-install-'))
+  const canonicalRoot: string = path.join(temp, 'canonical', 'hermes-agent')
+  const userRoot: string = path.join(temp, 'custom', 'hermes-agent')
+  const staged: string = path.join(userRoot, '.hermes', 'bin')
+  const options = { hermesHome: temp, env: {} }
+
+  try {
+    fs.mkdirSync(path.join(userRoot, 'hermes_cli'), { recursive: true })
+    fs.writeFileSync(path.join(userRoot, 'hermes_cli', 'main.py'), '')
+    fs.mkdirSync(staged, { recursive: true })
+    for (const name of ['hermes.exe', 'hermes']) {
+      fs.writeFileSync(path.join(staged, name), 'not a launcher')
+    }
+
+    assert.equal(await resolveSourceInstallationBackend(userRoot, SERVE_ARGS, options), null)
+
+    const recovered: SourceBackend | null = await resolvePresentSourceInstallationBackend(
+      [canonicalRoot, userRoot],
+      SERVE_ARGS,
+      options
+    )
+
+    assert.ok(recovered, 'the absent canonical install must not conceal a present user-bin source root')
+    assert.equal(recovered.root, userRoot)
+    assert.equal(recovered.bootstrap, false)
+    assert.match(recovered.command, /[\\/]\.hermes[\\/]bin[\\/]hermes(\.exe)?$/)
   } finally {
     fs.rmSync(temp, { recursive: true, force: true })
   }

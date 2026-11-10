@@ -85,6 +85,30 @@ export async function resolveSourceInstallationBackend(
   }
 }
 
+/**
+ * Final fallback after both health probes failed: a published user-bin launcher
+ * may identify an install outside ACTIVE_HERMES_ROOT. Keep the candidate order
+ * (canonical first), but do not mistake a failed probe for missing files.
+ */
+export async function resolvePresentSourceInstallationBackend(
+  roots: readonly string[],
+  args: string[],
+  options: SourceOptions & { hermesHome?: string } = {}
+): Promise<SourceBackend | null> {
+  for (const root of roots) {
+    const backend: SourceBackend | null = await resolveSourceInstallationBackend(root, args, {
+      ...options,
+      skipProbe: true
+    })
+
+    if (backend) {
+      return backend
+    }
+  }
+
+  return null
+}
+
 /** Developer overrides retain their interpreter, even outside the checkout. */
 export function createSourcePythonBackend(
   root: string,
