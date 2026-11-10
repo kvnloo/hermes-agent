@@ -121,6 +121,12 @@ export async function assertAttachmentUploadBudget(
   }
 
   const report = await stat(sized.map(candidate => candidate.path as string))
+  // Electron deliberately bounds a stat batch to 256 paths; an omitted path
+  // must not silently count as zero against the per-message upload limit.
+  if (report.files.length !== sized.length) {
+    throw new Error('Could not verify every attachment size. Send fewer files at once.')
+  }
+
   const sizeByPath = new Map(report.files.map(file => [file.path, file.size]))
 
   const verdict = checkAttachmentUploadBudget(

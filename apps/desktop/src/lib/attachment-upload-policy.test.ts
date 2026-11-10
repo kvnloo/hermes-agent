@@ -98,6 +98,21 @@ describe('assertAttachmentUploadBudget', () => {
     expect(bridge).toHaveBeenCalledWith(['/d/a', '/d/b', '/d/c'])
   })
 
+  it('rejects a stat report truncated at the native 256-path cap', async () => {
+    // 257 * 512 KiB exceeds the 128 MiB message cap, but the first 256
+    // paths total exactly 128 MiB. Dropping the final stat would allow it.
+    const paths = Array.from({ length: 257 }, (_, index) => `/d/sample-${index}.wav`)
+    const bridge = vi.fn(async (requested: string[]) => ({
+      limits,
+      files: requested.slice(0, 256).map(path => ({ path, size: MiB / 2 }))
+    }))
+
+    await expect(
+      assertAttachmentUploadBudget(paths.map(path => ({ kind: 'file', path })), bridge)
+    ).rejects.toThrow(/Could not verify every attachment size.*fewer files/)
+    expect(bridge).toHaveBeenCalledTimes(1)
+  })
+
   it('is a no-op on an older shell without the stat bridge', async () => {
     await expect(assertAttachmentUploadBudget([{ kind: 'file', path: '/d/huge' }], undefined)).resolves.toBeUndefined()
   })
