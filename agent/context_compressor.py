@@ -1340,9 +1340,15 @@ def _pending_tool_round(messages: list[dict[str, Any]]) -> tuple[int, ...]:
     assistant_idx = _last_assistant_index(messages)
     if assistant_idx < 0 or not messages[assistant_idx].get("tool_calls"):
         return ()
-    call_ids = {_tc_get(tc, "id") for tc in messages[assistant_idx]["tool_calls"]}
-    return tuple(i for i in range(assistant_idx + 1, len(messages))
-        if messages[i].get("role") == "tool" and messages[i].get("tool_call_id") in call_ids)
+    # The Responses call_id and its output-item id can differ; use the API pairing policy.
+    from agent.message_sanitization import tool_call_id_variants, tool_result_id_variants
+
+    call_ids = set().union(*(tool_call_id_variants(tc) for tc in messages[assistant_idx]["tool_calls"]))
+    return tuple(
+        i for i in range(assistant_idx + 1, len(messages))
+        if messages[i].get("role") == "tool"
+        and (tool_result_id_variants(messages[i].get("tool_call_id")) & call_ids)
+    )
 
 
 def _part_text(item: Any) -> Optional[str]:

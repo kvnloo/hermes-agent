@@ -363,3 +363,21 @@ def test_interleaved_pending_results_are_not_stale_lean_rounds(compressor_128k):
     results = {m["tool_call_id"]: m["content"] for m in out if m.get("role") == "tool"}
     assert {call_id: results.get(call_id) for call_id in pending} == pending
     assert next(m["tool_calls"] for m in reversed(out) if m.get("tool_calls")) == calls
+
+def test_unread_responses_call_id_survives_pressure(compressor_128k):
+    """Responses function-call item id differs from its result's pairing call_id."""
+    msgs = _already_compacted_session(n_pairs=4, tool_chars=20_000, user_chars=160_000)
+    call = _terminal_call("fc_item_99", "python3 probe.py latest")
+    call["call_id"] = "call_99"  # Responses pairing key; "id" names the output item.
+    unread = _terminal_result("call_99", "latest", 150)
+    msgs.extend([
+        {"role": "assistant", "content": None, "tool_calls": [call]},
+        unread,
+        {"role": "user", "content": "[IMPORTANT: Background process finished.] " + "N" * 160_000},
+    ])
+
+    # RED on the PR head: only call["id"] was compared with result["tool_call_id"].
+    assert compressor_128k._spared_pending_tool_round(msgs) == (len(msgs) - 3, len(msgs) - 2)
+    out = compressor_128k.compress(msgs, current_tokens=estimate_messages_tokens_rough(msgs))
+    by_id = {m["tool_call_id"]: m["content"] for m in out if m.get("role") == "tool"}
+    assert by_id.get("call_99") == unread["content"]
