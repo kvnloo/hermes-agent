@@ -88,3 +88,38 @@ def test_session_search_lazily_opens_db_when_entrypoint_did_not_pass_one(monkeyp
     assert captured["query"] == "Hermes"
     assert captured["detail"] == "full"
     assert agent._session_db is sentinel_db
+
+
+def test_openrouter_reported_cost_persists_as_actual_for_telegram():
+    """Regression for #152288: the billed response must reach the token queue.
+
+    A real non-CLI agent receives an OpenRouter usage object with model_dump,
+    as the OpenAI SDK response does. The DB delta must record billed dollars
+    in actual_cost_usd, not mark them as a model-table estimate.
+    """
+    import model_tools  # register model-provider profiles via normal discovery
+
+    session_db = MagicMock()
+    agent = _make_agent(session_db, platform="telegram")
+    agent.provider = "openrouter"
+    agent.model = "deepseek/deepseek-v4.1-flash-1017"
+    response = agent.client.chat.completions.create.return_value
+    response.usage.model_dump = lambda: {
+        "prompt_tokens": 11,
+        "completion_tokens": 7,
+        "total_tokens": 18,
+        "cost": 0.125,
+    }
+
+    result = agent.run_conversation("hello")
+
+    assert result["final_response"] == "done"
+    session_db.queue_token_counts.assert_called_once()
+    session_id, = session_db.queue_token_counts.call_args.args
+    delta = session_db.queue_token_counts.call_args.kwargs
+    assert session_id == "telegram-session"
+    assert delta["billing_provider"] == "openrouter"
+    assert delta["actual_cost_usd"] == 0.125
+    assert delta["estimated_cost_usd"] is None
+    assert delta["cost_status"] == "actual"
+    assert delta["cost_source"] == "provider_generation_api"
