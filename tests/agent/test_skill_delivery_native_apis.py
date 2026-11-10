@@ -123,3 +123,32 @@ def test_native_skill_delivery(hermes_home, monkeypatch, api_mode, case):
         assert len(requests) == 1, result
         assert pending == ["delivery_call"]
         assert result.get("turn_exit_reason") == "skill_reload_delivery_blocked", result
+
+
+@pytest.mark.parametrize("api_mode", ["anthropic_messages", "bedrock_converse"])
+def test_native_skill_payload_accepts_split_blocks(api_mode):
+    """A complete skill split across adjacent text parts must count as delivered."""
+    from agent.context_compressor import ContextCompressor
+
+    content = '{"success": true, "content": "## Skill\\nUse the policy before acting."}'
+    middle = len(content) // 2
+    if api_mode == "anthropic_messages":
+        parts = [
+            {"type": "text", "text": content[:middle]},
+            {"type": "text", "text": content[middle:]},
+        ]
+        result = {"type": "tool_result", "tool_use_id": "skill-call", "content": parts}
+        non_text = {"type": "image"}
+    else:
+        parts = [{"text": content[:middle]}, {"text": content[middle:]}]
+        result = {"toolResult": {"toolUseId": "skill-call", "content": parts}}
+        non_text = {"image": {}}
+
+    payload = {"messages": [{"role": "user", "content": [result]}]}
+    delivered = ContextCompressor._payload_contains_skill_result
+    assert delivered(payload, "skill-call", content, api_mode)
+    assert not delivered(payload, "wrong-call", content, api_mode)
+
+    # Text separated by a non-text item is not a complete contiguous skill body.
+    parts.insert(1, non_text)
+    assert not delivered(payload, "skill-call", content, api_mode)

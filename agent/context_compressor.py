@@ -3232,6 +3232,23 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin
     def _payload_contains_skill_result(payload: Any, call_id: str, exact_content: str, api_mode: str) -> bool:
         if not isinstance(payload, dict):
             return False
+
+        def has_contiguous_text(parts: Any, *, typed: bool) -> bool:
+            """Accept adjacent text chunks, but never cross a non-text boundary."""
+            if not isinstance(parts, list):
+                return False
+            text_run = ""
+            for part in parts:
+                if (not isinstance(part, dict)
+                        or (typed and part.get("type") != "text")
+                        or not isinstance(part.get("text"), str)):
+                    text_run = ""
+                    continue
+                text_run += part["text"]
+                if exact_content in text_run:
+                    return True
+            return False
+
         if api_mode in ("anthropic_messages", "bedrock_converse"):
             messages = payload.get("messages")
             if not isinstance(messages, list):
@@ -3251,21 +3268,14 @@ class ContextCompressor(SummaryDispatchMixin, MicroCompactionMixin, ContextEngin
                         content = block.get("content")
                         if isinstance(content, str) and exact_content in content:
                             return True
-                        if isinstance(content, list) and any(
-                            isinstance(part, dict) and part.get("type") == "text"
-                            and isinstance(part.get("text"), str) and exact_content in part["text"]
-                            for part in content
-                        ):
+                        if has_contiguous_text(content, typed=True):
                             return True
                     else:
                         result = block.get("toolResult")
                         if not isinstance(result, dict) or result.get("toolUseId") != call_id:
                             continue
                         content = result.get("content")
-                        if isinstance(content, list) and any(
-                            isinstance(part, dict) and isinstance(part.get("text"), str)
-                            and exact_content in part["text"] for part in content
-                        ):
+                        if has_contiguous_text(content, typed=False):
                             return True
             return False
         shape = {
