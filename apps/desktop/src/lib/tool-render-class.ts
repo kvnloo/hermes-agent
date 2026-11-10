@@ -50,7 +50,15 @@ export function isCardToolName(toolName: string): toolName is CardToolName {
 export const CONNECTION_CARD_KEY = 'manage_connections:card'
 
 export function isCardTool(toolName: string): boolean {
-  return isCardToolName(toolName) || toolName === CONNECTION_CARD_KEY || isFileEditTool(toolName)
+  // Memory and skill writes can be staged; their review instructions must not
+  // disappear into a collapsed tool run, even with tool activity hidden.
+  return (
+    isCardToolName(toolName) ||
+    toolName === CONNECTION_CARD_KEY ||
+    isFileEditTool(toolName) ||
+    toolName === 'skill_manage' ||
+    toolName === 'memory'
+  )
 }
 
 // Activity tools that render nothing at all: `todo` parts are hoisted to a

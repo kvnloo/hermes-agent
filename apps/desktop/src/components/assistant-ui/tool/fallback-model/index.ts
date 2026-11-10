@@ -1496,6 +1496,18 @@ export function buildToolView(part: ToolPart, inlineDiff: string): ToolView {
   const resultRecord = toolResultRecord(part)
   const meta = toolMeta(part.toolName)
   const status = toolStatus(part, resultRecord)
+  // Only successful staging with a valid store ID gets a review instruction;
+  // a completed write, a refused mutation, or arbitrary tool text does not.
+  const reviewCommand = part.toolName === 'skill_manage' ? 'skills' : part.toolName === 'memory' ? 'memory' : null
+  const pendingId =
+    reviewCommand &&
+    status === 'success' &&
+    resultRecord.success === true &&
+    resultRecord.staged === true &&
+    typeof resultRecord.pending_id === 'string' &&
+    /^[0-9a-f]{8}$/.test(resultRecord.pending_id)
+      ? resultRecord.pending_id
+      : null
   // Skip residual error-heuristic text once status is success (stale isError
   // envelope over a landed memory write would otherwise foul the subtitle).
   const error = status === 'success' ? '' : toolErrorText(part, resultRecord)
@@ -1518,9 +1530,11 @@ export function buildToolView(part: ToolPart, inlineDiff: string): ToolView {
 
   const unavailable = part.result === undefined && part.completedAt !== undefined
 
-  const title = unavailable
-    ? translateNow(part.interrupted ? 'assistant.tool.resultInterrupted' : 'assistant.tool.resultUnavailable')
-    : titleParts.title
+  const title = pendingId
+    ? `${reviewCommand === 'skills' ? 'Skill' : 'Memory'} write staged: /${reviewCommand} pending · ${pendingId}`
+    : unavailable
+      ? translateNow(part.interrupted ? 'assistant.tool.resultInterrupted' : 'assistant.tool.resultUnavailable')
+      : titleParts.title
 
   const titleEnriched = title !== baseTitle
   const baseSubtitle = error || toolSubtitle(part, argsRecord, resultRecord)

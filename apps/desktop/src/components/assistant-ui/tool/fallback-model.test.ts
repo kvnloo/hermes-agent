@@ -7,6 +7,7 @@ import {
   clampForDisplay,
   countDiffLineStats,
   inlineDiffFromResult,
+  isCardTool,
   isPreviewableTarget,
   MAX_TOOL_RENDER_CHARS,
   prettyJson,
@@ -612,5 +613,35 @@ describe('toolCallFailed on delegate_task result shapes', () => {
 
   it('leaves a settled batch whose child failed alone', () => {
     expect(toolCallFailed({ result: { results: [{ status: 'failed', error: 'boom' }] } })).toBe(false)
+  })
+})
+
+// #152817: a successful staged write is not a saved skill/memory update.
+// The pending ID and review command must survive the tool-run collapse.
+describe('staged write review visibility', () => {
+  it.each([
+    ['skill_manage', 'skills'],
+    ['memory', 'memory']
+  ] as const)('keeps %s pending approvals readable in chat', (toolName, command) => {
+    expect(isCardTool(toolName)).toBe(true)
+
+    const staged = buildToolView(
+      part({
+        toolName,
+        result: JSON.stringify({ success: true, staged: true, pending_id: '475030c0' })
+      }),
+      ''
+    )
+    expect(staged.status).toBe('success')
+    expect(staged.title).toContain(`/${command} pending`)
+    expect(staged.title).toContain('475030c0')
+
+    for (const result of [
+      { success: true, staged: false, pending_id: '475030c0' },
+      { success: true, staged: true, pending_id: 'invalid-id' },
+      { success: false, staged: true, pending_id: '475030c0' }
+    ]) {
+      expect(buildToolView(part({ toolName, result }), '').title).not.toContain(`/${command} pending`)
+    }
   })
 })
