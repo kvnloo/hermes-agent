@@ -25,8 +25,12 @@ interface PreviewNode {
 }
 
 function previewText(node: PreviewNode): string {
-  if (node.type === 'definition' || node.type === 'html') {
+  if (node.type === 'definition') {
     return ''
+  }
+
+  if (node.type === 'html') {
+    return /^<br\s*\/?>$/i.test(node.value?.trim() ?? '') ? ' ' : ''
   }
 
   if (node.type === 'image' || node.type === 'imageReference') {

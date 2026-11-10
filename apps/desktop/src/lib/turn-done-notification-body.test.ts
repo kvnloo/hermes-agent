@@ -50,6 +50,12 @@ describe('turnDoneNotificationBody', () => {
     expect(cases.map(([markdown]) => turnDoneNotificationBody(markdown))).toEqual(cases.map(([, text]) => text))
   })
 
+  it('preserves word boundaries across inline HTML line breaks in notification previews', () => {
+    expect(turnDoneNotificationBody('Done<br>Next')).toBe('Done Next')
+    expect(turnDoneNotificationBody('Done<BR />Next')).toBe('Done Next')
+    expect(turnDoneNotificationBody('Done<br/>Next')).toBe('Done Next')
+  })
+
   it('flattens the full reply before truncation and uses localized fallback for formatting-only replies', () => {
     expect(turnDoneNotificationBody(`**${'a'.repeat(200)}**`)).toBe('a'.repeat(TURN_DONE_BODY_MAX))
     expect(turnDoneNotificationBody(`[${'b'.repeat(200)}](https://example.com)`)).toBe('b'.repeat(TURN_DONE_BODY_MAX))
