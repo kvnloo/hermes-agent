@@ -30,6 +30,13 @@ def test_cron_admission_uses_job_model_and_exact_retry(tmp_path, monkeypatch):
     async def probe():
         params = {'job_id': 'job', 'request_id': 'fire', 'extra_prompt': 'extra'}
         receipt = await session_cron.operation(authority, 'submit', params, actor)
+        # The agent has not written a message; a later setup failure must not leave an
+        # untitled, NULL-activity shell invisible to direct session maintenance queries.
+        row = db.get_session(receipt['session_id'])
+        assert row['message_count'] == 0
+        assert row['last_activity_at'] == row['started_at']
+        assert row['title'] == f"Cron: job [{receipt['session_id'][-12:]}]"
+        assert row['title_source'] == 'derived'
         assert await session_cron.operation(authority, 'submit', params, actor) == receipt
         assert await session_cron.operation(authority, 'submit', params) == receipt
         with pytest.raises(RuntimeStoreError):
