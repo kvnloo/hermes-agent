@@ -472,16 +472,41 @@ def _verify_fleet_after_update(restart, *, _pre_update_plan, _windows_gateway_re
                 # live to restart this time): keep owing it rather than clearing the obligation.
                 print("  ⚠ A gateway owed a restart by a previous update is still not serving this checkout.")
                 restart.incomplete = _gateway_owed = True
-    if getattr(restart, "stopped_unmapped_pids", None):
-        # A gateway stopped with no successor is owed a restart, not "accounted for": keep the
-        # fleet obligation armed so the startup warning names it until someone restarts it.
+    stopped = set(getattr(restart, "stopped_unmapped_pids", None) or ())
+    if stopped and _pre_update_plan is not None:
+        # A PID already named by a mapped gateway is not a second "unmapped" obligation
+        # once all its profiles have a uniquely attributable, current successor (#147873).
+        # A genuinely unmapped PID, or an unverified/ambiguous successor, stays owed.
+        with _best_effort('Stopped gateway identity check failed: %s'):
+            from hermes_cli.update_receipt import row_is_external
+            sha = fleet._current_checkout_sha()
+            covered = fleet._fleet_covered_gateways([
+                row for row in _fleet_snapshot if sha and not row_is_external(row)
+                and row.get("state") == "current" and row.get("code_sha") == sha
+            ]) or set()
+            by_pid: dict[int, set[tuple[str, str]]] = {}
+            by_profile: dict[str, set[int]] = {}
+            for runtime in getattr(_pre_update_plan, "runtimes", ()) or ():
+                pid, profile = getattr(runtime, "pid", None), getattr(runtime, "profile", None)
+                if (getattr(runtime, "kind", None) == "gateway" and isinstance(pid, int)
+                        and not isinstance(pid, bool) and isinstance(profile, str)
+                        and profile.strip() and profile != "unknown"):
+                    by_pid.setdefault(pid, set()).add(("gateway", profile))
+                    by_profile.setdefault(profile, set()).add(pid)
+            settled = {
+                pid for pid in stopped if pid in by_pid and by_pid[pid] <= covered
+                and all(len(by_profile[profile]) == 1 for _, profile in by_pid[pid])
+            }
+            stopped.difference_update(settled)
+    if stopped:
+        # An unverified stop still owes a successor; never clear on an empty fleet.
         restart.incomplete = _gateway_owed = True
     if restart.incomplete:
         # Code is committed (contract C3): a gateway that may still run stale modules is a
         # follow-up, never a failed update. The fleet obligation stays armed, every CLI start
         # warns about it, and the next `hermes update` retries the restart.
         from hermes_cli.update_receipt import record_followup
-        stopped = sorted(getattr(restart, "stopped_unmapped_pids", None) or ())
+        stopped = sorted(stopped)
         record_followup("gateway_restart", _owed_restart_reason(
             restart, stopped, gateway_owed=_gateway_owed, stale_serves=_stale_serves_owed,
             down_serves=set(_dashboards_down or ())))
