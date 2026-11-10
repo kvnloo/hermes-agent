@@ -264,6 +264,21 @@ describe('withSessionNotFoundResume', () => {
     expect(d.requestGateway).not.toHaveBeenCalled()
   })
 
+  it('does not resume when a structured refusal contradicts its legacy message', async () => {
+    const d = deps()
+    const refusal = new JsonRpcGatewayError('session not found', {
+      code: 4001,
+      data: { reason: 'session_read_only' }
+    })
+    const call = vi.fn(async () => {
+      throw refusal
+    })
+
+    await expect(withSessionNotFoundResume(DEAD, 'stored-structured-refusal', call, d)).rejects.toBe(refusal)
+    expect(call).toHaveBeenCalledTimes(1)
+    expect(d.requestGateway).not.toHaveBeenCalled()
+  })
+
   it('resumes on the session-owning profile so recovery cannot fork the conversation', async () => {
     const d = deps({ resolveProfile: vi.fn(async () => 'work') })
     let first = true
