@@ -167,3 +167,24 @@ def test_managed_kanban_turn_writes_its_tool_feed(tmp_path, monkeypatch, kanban)
     assert owner[0].endswith('start terminal: rg -n needle src/')
     assert SECRET not in text and 'QQQQQQQQQQ' not in text
     assert text.startswith('Session: s\n')
+
+
+def test_task_log_strips_opaque_url_credentials_from_start_and_result():
+    """A persisted card feed must not leak query tokens or URL userinfo."""
+    from gateway.session_managed_worker_log import format_tool_line
+
+    url = ('https://runner:opaque-pass@host.example/api?'
+           'access_token=unpatterned-value&view=summary')
+    frames = (
+        {'type': 'tool.start', 'name': 'web_extract', 'args': {'urls': [url]}},
+        {'type': 'tool.complete', 'name': 'web_extract', 'args': {},
+         'result': url, 'is_error': False},
+    )
+    for frame in frames:
+        line = format_tool_line(frame, list)
+        assert 'opaque-pass' not in line
+        assert 'runner:' not in line
+        assert 'unpatterned-value' not in line
+        assert 'access_token=***' in line
+        assert 'view=summary' in line
+        assert line.startswith('[tool] ')

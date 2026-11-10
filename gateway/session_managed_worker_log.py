@@ -72,11 +72,11 @@ def _append(path, text):
             os.close(fd)
 
 
-def _redact(line, scrub):
+def _redact(line, scrub, *, strict_urls=False):
     from agent.redact import redact_sensitive_text
     for value in sorted((v for v in scrub() if isinstance(v, str) and v), key=len, reverse=True):
         line = line.replace(value, '***')
-    return redact_sensitive_text(line, force=True)
+    return redact_sensitive_text(line, force=True, redact_url_credentials=strict_urls)
 
 
 def format_tool_line(frame, scrub):
@@ -96,7 +96,7 @@ def format_tool_line(frame, scrub):
     else:
         verb = 'error' if frame['is_error'] else 'done'
         text = frame['result']
-    body = _LINE_BREAKS.sub(' ', _redact(f'{name}: {text}', scrub)).strip()
+    body = _LINE_BREAKS.sub(' ', _redact(f'{name}: {text}', scrub, strict_urls=True)).strip()
     if len(body) > TASK_LOG_PREVIEW_CHARS:
         body = body[:TASK_LOG_PREVIEW_CHARS] + ' [truncated]'
     return f'{TASK_LOG_TAG} {time.strftime("%Y-%m-%d %H:%M:%S")} {verb} {body}\n'
