@@ -236,6 +236,14 @@ export function renderComposerContents(target: HTMLElement, text: string, option
   // restored draft, a sent message opened for edit) pass `trailingCommitted`.
   appendComposerContents(target, text, options)
 
+  // WebKit cannot put the caret on a final line represented by only one <br>.
+  // Keep a display-only break after the real final newline, including restores.
+  if (text.endsWith('\n')) {
+    const sentinel = document.createElement('br')
+    sentinel.dataset.composerSentinel = ''
+    target.append(sentinel)
+  }
+
   // The other writer that reshapes the editor root: painting a restored draft
   // in clears the marker, clearing back to '' sets it.
   markEditorEmptiness(target)
@@ -306,6 +314,11 @@ function atTokenBoundary(editor: HTMLElement, range: Range | null): boolean {
  *  insert. That's how a paste into an open `@url:` scope replaces the scope
  *  instead of stacking on it (`@url:@url:\`https://…\``). */
 export function insertComposerContentsAtCaret(editor: HTMLElement, text: string, consumeBefore = 0) {
+  // A lone <br> is the empty editor's height scaffold, not a typed newline.
+  if (editor.childNodes.length === 1 && editor.firstChild?.nodeName === 'BR') {
+    editor.replaceChildren()
+  }
+
   const scoped = consumeBefore > 0 ? rangeBeforeCaret(editor, consumeBefore) : null
 
   if (scoped) {
@@ -354,6 +367,15 @@ export function insertComposerContentsAtCaret(editor: HTMLElement, text: string,
     const selection = hit?.selection ?? window.getSelection()
     selection?.removeAllRanges()
     selection?.addRange(caret)
+  }
+
+  // WebKit places a caret after a terminal <br> on the previous visible line.
+  // A second display-only <br> gives that caret its own line without adding a
+  // second newline to the submitted draft.
+  if (text.endsWith('\n') && tail?.nodeName === 'BR' && !meaningfulNextSibling(tail)) {
+    const sentinel = document.createElement('br')
+    sentinel.dataset.composerSentinel = ''
+    editor.append(sentinel)
   }
 
   revealCaret(editor)
@@ -579,7 +601,7 @@ export function composerPlainText(node: Node): string {
   }
 
   if (el.tagName === 'BR') {
-    return '\n'
+    return el.dataset.composerSentinel !== undefined ? '' : '\n'
   }
 
   const text = Array.from(node.childNodes).map(composerPlainText).join('')
@@ -600,8 +622,15 @@ export function placeCaretEnd(element: HTMLElement) {
   const range = document.createRange()
   const selection = window.getSelection()
 
-  range.selectNodeContents(element)
-  range.collapse(false)
+  const sentinel = element.lastElementChild
+
+  if (sentinel?.tagName === 'BR' && (sentinel as HTMLElement).dataset.composerSentinel !== undefined) {
+    range.setStartBefore(sentinel)
+  } else {
+    range.selectNodeContents(element)
+    range.collapse(false)
+  }
+
   selection?.removeAllRanges()
   selection?.addRange(range)
   revealCaret(element)
@@ -845,6 +874,13 @@ export function normalizeComposerEditorDom(editor: HTMLElement) {
     if (isEmptyTextNode(child) && child !== selectedContainer) {
       child.remove()
     }
+  }
+
+  // Once the user types after a newline, its display-only sentinel is obsolete.
+  const sentinel = editor.lastElementChild as HTMLElement | null
+
+  if (sentinel?.dataset.composerSentinel !== undefined && meaningfulPreviousSibling(sentinel)?.nodeName !== 'BR') {
+    sentinel.remove()
   }
 
   // A trailing block wrapper holding only a break/whitespace is the phantom

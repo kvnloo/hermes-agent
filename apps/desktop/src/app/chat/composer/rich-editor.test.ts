@@ -276,6 +276,36 @@ describe('insertInlineRefsIntoEditor', () => {
 })
 
 describe('insertComposerContentsAtCaret', () => {
+  it('keeps a terminal Shift+Enter newline visible in WebKit without adding draft text', () => {
+    const editor = document.createElement('div')
+    editor.dataset.slot = RICH_INPUT_SLOT
+    editor.contentEditable = 'true'
+    editor.textContent = 'Test'
+    document.body.append(editor)
+    placeCaretAtEnd(editor)
+
+    insertComposerContentsAtCaret(editor, '\n')
+    normalizeComposerEditorDom(editor)
+
+    expect(composerPlainText(editor)).toBe('Test\n')
+    expect(editor.querySelector(':scope > br[data-composer-sentinel]')).not.toBeNull()
+
+    // Restoring the draft must keep the trailing line visible and editable.
+    renderComposerContents(editor, composerPlainText(editor))
+    placeCaretEnd(editor)
+    expect(editor.querySelector(':scope > br[data-composer-sentinel]')).not.toBeNull()
+    const sentinel = editor.lastChild!
+    expect(window.getSelection()!.getRangeAt(0).startOffset).toBe(Array.from(editor.childNodes).indexOf(sentinel))
+
+    // Typing on the new line removes the scaffold, not the real newline.
+    editor.insertBefore(document.createTextNode('next'), sentinel)
+    normalizeComposerEditorDom(editor)
+    expect(editor.querySelector('[data-composer-sentinel]')).toBeNull()
+    expect(composerPlainText(editor)).toBe('Test\nnext')
+
+    editor.remove()
+  })
+
   it('inserts multiline text as text nodes + br', () => {
     const editor = document.createElement('div')
     editor.dataset.slot = RICH_INPUT_SLOT

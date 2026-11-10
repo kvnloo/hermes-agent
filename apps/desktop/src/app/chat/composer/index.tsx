@@ -967,6 +967,17 @@ export function ChatBar({
       return
     }
 
+    // Own line breaks instead of accepting WebKit's trailing <div><br></div>,
+    // which DOM normalization correctly removes as an editor phantom.
+    if (event.key === 'Enter' && event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      event.preventDefault()
+      recordUndoPoint()
+      insertComposerContentsAtCaret(event.currentTarget, '\n')
+      flushEditorToDraft(event.currentTarget)
+
+      return
+    }
+
     // Cmd/Ctrl+Enter queues a follow-up while a turn runs. Plain Enter steers
     // a text-only draft, so both live-turn actions stay reachable by keyboard.
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
