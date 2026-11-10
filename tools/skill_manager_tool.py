@@ -409,6 +409,11 @@ def _guarded_write(name: str, skill_dir: Path, target: Path, action: str, label:
     """Read-before-write guard (existing targets only), the description budget for the root SKILL.md
     (whichever action and file_path reach it), atomic write, then the security scan; a blocked scan
     restores the original (or unlinks a new file). Error dict or None."""
+    # A NUL written through skill_manage makes read_file classify this text as binary.
+    # Keep the same refusal as write_file/patch at the shared skill-write boundary.
+    from tools.file_tools_write_guards import _nul_text_error
+    if err := _nul_text_error(content):
+        return _err(err)
     original = None
     if target.exists():
         if read_guard := _background_review_read_before_write_guard(name, target, action, label):
