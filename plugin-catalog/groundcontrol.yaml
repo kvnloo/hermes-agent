@@ -7,7 +7,7 @@ description: "Scoped GroundControl operations guidance and conservative evidence
 maintainer: teckedd-code2save
 tier: community
 capabilities:
-  tools: []
-  hooks: []
-  middleware: []
-  env_vars: []
+  provides_tools: []
+  provides_hooks: []
+  provides_middleware: []
+  requires_env: []

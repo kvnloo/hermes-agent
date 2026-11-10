@@ -330,3 +330,21 @@ def test_directory_mode_all_valid_exits_zero(tmp_path):
     )
     result = run_validator(str(tmp_path))
     assert result.returncode == 0, result.stdout + result.stderr
+
+# ── catalog submission capability contract ───────────────────────────
+
+
+def test_groundcontrol_catalog_capabilities_use_runtime_keys():
+    """The GroundControl catalog entry must use the keys the loader reads."""
+    path = REPO_ROOT / "plugin-catalog" / "groundcontrol.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert data["capabilities"] == {
+        "provides_tools": [],
+        "provides_hooks": [],
+        "provides_middleware": [],
+        "requires_env": [],
+    }
+    result = run_validator("--json", str(path))
+    assert result.returncode == 0, result.stdout + result.stderr
+    (entry,) = json.loads(result.stdout)["files"]
+    assert entry["warnings"] == []
