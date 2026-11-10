@@ -890,7 +890,8 @@ class LineAdapter(BasePlatformAdapter):
             return SendResult(success=True, message_id=None)
         n = LINE_MAX_MESSAGES_PER_CALL
         batches = [messages[i:i + n] for i in range(0, len(messages), n)]
-        token, used_reply = self._consume_reply_token(chat_id)
+        # A forced push is for a prior turn: do not spend a newer message reply token.
+        token, used_reply = ("", False) if force_push else self._consume_reply_token(chat_id)
         start = 0
         if used_reply and not force_push:
             try:

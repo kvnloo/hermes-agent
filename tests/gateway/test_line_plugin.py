@@ -364,6 +364,31 @@ class TestSlowLLMPostbackRegression:
 
 
 
+
+    def test_tapped_pending_answer_keeps_newer_reply_token(self, adapter):
+        """The old answer's forced push must not spend a new message's free reply token."""
+        rid = adapter._cache.register_pending("Uchat")
+        adapter._pending_buttons["Uchat"] = rid
+        asyncio.run(adapter._handle_postback_event({
+            "replyToken": "tap-token",
+            "source": {"type": "user", "userId": "Uchat"},
+            "postback": {"data": json.dumps({"action": "show_response", "request_id": rid})},
+        }))
+        # A newer inbound message arrives before the earlier turn completes.
+        adapter._reply_tokens["Uchat"] = ("new-message-token", float("inf"))
+
+        first = asyncio.run(adapter.send("Uchat", "Earlier answer"))
+        assert first.success
+        adapter._client.push.assert_awaited_once()
+        assert adapter._reply_tokens["Uchat"][0] == "new-message-token"
+
+        # The newer message can still use its own free LINE reply.
+        second = asyncio.run(adapter.send("Uchat", "Newer answer"))
+        assert second.success
+        adapter._client.reply.assert_any_await(
+            "new-message-token", [{"type": "text", "text": "Newer answer"}])
+
+
 class TestEnvEnablement:
 
     def test_returns_none_without_credentials(self, monkeypatch):
