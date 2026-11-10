@@ -565,10 +565,9 @@ class CLIChatTurnMixin:
         while the user's message sat behind the lease. Waiting here keeps the flag set, so the old
         turn stops at its next interrupt check and the new turn starts from its final transcript.
 
-        Returns False while that turn still runs on the current agent: the caller must not start
-        another turn on it, because the session lease serializes database ownership but does not
-        make two turns on one ``AIAgent`` safe. The record and the old agent's interrupt flag stay
-        as they are, so a later call waits again.
+        Returns False while the old turn still runs on this agent OR owns the active session.
+        A rebuilt agent cannot use the pre-compression transcript while the old owner may
+        rotate that session; retain the record and interrupt until its result can be adopted.
         """
         from cli import logger
         from agent.turn_facade_lease import LEASE_WAIT_SECONDS
@@ -580,12 +579,14 @@ class CLIChatTurnMixin:
             while agent_thread.is_alive() and not self._should_exit and time.monotonic() < deadline:
                 agent_thread.join(timeout=0.2)
             if agent_thread.is_alive():
-                if self.agent is owner:
-                    logger.warning("Interrupted agent thread %s is still running; the next message waits for it",
+                if self.agent is owner or session_id == self.session_id:
+                    # Retiring an agent does not retire its session. If compression later
+                    # rotates the session, a new turn must inherit the finished transcript.
+                    logger.warning("Interrupted agent thread %s still owns this session; the next message waits for it",
                                    agent_thread.ident)
                     return False
-                # The CLI already dropped that agent (a model or route change rebuilds it), so the
-                # next turn runs on a different AIAgent and the old worker no longer blocks it.
+                # A rebuilt agent in a different session can proceed independently;
+                # the old turn must not overwrite the newly selected session.
                 logger.warning("Interrupted agent thread %s is still running on a retired agent", agent_thread.ident)
                 self._abandoned_turn = None
                 return True

@@ -187,20 +187,63 @@ def test_adopting_the_old_turn_reads_its_own_agent_not_a_rebuilt_one():
     assert cli._abandoned_turn is None
 
 
+def test_retired_agent_on_same_session_waits_for_compressed_transcript():
+    """Retiring a CLI agent must not drop an interrupted turn's future compressed history."""
+    cli, agent = _setup(rotated_session_id="compressed-child")
+    creds, route, init = _turn_patches(cli)
+    try:
+        with creds, route, init, patch("agent.turn_facade_lease.LEASE_WAIT_SECONDS", 0.3):
+            cli.chat("read notes.txt until it is checked")
+            pending = cli._pending_input.get_nowait()
+            abandoned = cli._abandoned_turn
+
+            # /personality or a route rebuild can retire the AIAgent without
+            # changing sessions while the old compression call is still running.
+            cli.agent = None
+            assert cli.chat(pending) is None
+            assert cli._abandoned_turn is abandoned
+            assert cli._pending_input_items() == [pending]
+            assert cli.conversation_history != COMPRESSED
+
+            agent.compression_done.set()
+            assert cli._chat_wait_for_abandoned_turn() is True
+
+        assert agent.turns[0]["stopped_by_interrupt"] is True
+        assert cli.session_id == "compressed-child"
+        assert cli.conversation_history == COMPRESSED
+        assert cli._abandoned_turn is None
+
+        # The new agent, built after the barrier, sees the compressed child history.
+        rebuilt = _CompressingAgent(cli.session_id)
+        rebuilt.compression_done.set()
+        cli.agent = rebuilt
+        with creds, route, init:
+            cli.chat(cli._pending_input.get_nowait())
+        assert [turn["user"] for turn in rebuilt.turns] == [pending]
+        assert rebuilt.turns[0]["history"] == COMPRESSED
+    finally:
+        agent.compression_done.set()
+
+
 def test_wedged_turn_on_a_retired_agent_does_not_block_a_rebuilt_one():
     cli, agent = _setup()
     creds, route, init = _turn_patches(cli)
-    rebuilt = _CompressingAgent(cli.session_id)
+    rebuilt = _CompressingAgent("new-session")
     rebuilt.compression_done.set()
     try:
         with creds, route, init, patch("agent.turn_facade_lease.LEASE_WAIT_SECONDS", 0.3):
             cli.chat("read notes.txt until it is checked")
             pending = cli._pending_input.get_nowait()
+            # A separate session has no transcript to inherit from the old worker.
+            cli.session_id = "new-session"
+            cli.conversation_history = []
             cli.agent = rebuilt
             cli.chat(pending)
         assert len(agent.turns) == 1
         assert agent._interrupt_requested is True  # the old worker still gets its stop
         assert [t["user"] for t in rebuilt.turns] == [pending]
+        assert rebuilt.turns[0]["history"] == []
+        assert cli.session_id == "new-session"
         assert cli._abandoned_turn is None
     finally:
         agent.compression_done.set()
