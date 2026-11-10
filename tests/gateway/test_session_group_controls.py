@@ -140,3 +140,39 @@ def test_groups_list_pages_the_actor_visible_rooms(tmp_path):
                 break
             params = {'limit': 2, 'offset': page['next_offset']}
         assert pages == [['m1', 'm2'], ['m3']], pages
+
+def test_canonical_profiles_list_legacy_ui_meta_has_cas_baseline_for_owner_and_sibling(tmp_path, monkeypatch):
+    """A canonical roster must agree with the legacy profile editor's CAS baseline (#138963)."""
+    home = tmp_path / 'state'
+    sibling = home / 'profiles' / 'helper'
+    sibling.mkdir(parents=True)
+    monkeypatch.setenv('HERMES_HOME', str(home))
+    monkeypatch.setenv('HOME', str(tmp_path / 'user'))
+    legacy = (
+        'ui_meta:\n'
+        '  hermes-bots:\n'
+        '    group: MachineTeam\n'
+        '    groups: [MachineTeam]\n'
+    )
+    (home / 'profile.yaml').write_text(legacy, encoding='utf-8')
+    (sibling / 'profile.yaml').write_text(legacy, encoding='utf-8')
+    with SessionDB(home / 'state.db') as db:
+        authority = SimpleNamespace(
+            profile_id=str(home), instance_id='owner', db=db, events={}, sessions={},
+            hosted_room_service=SimpleNamespace(profile_homes=lambda: {'helper': sibling}),
+        )
+        connection = AuthorityConnection(authority, object(), {
+            'user_id': 'reader', 'capabilities': ['session:read'],
+        })
+        result = asyncio.run(connection.dispatch({
+            'id': 'legacy', 'method': 'profiles.list',
+            'params': {'include_sessions': False},
+        }))
+    assert 'result' in result, result
+    rows = {row['name']: row for row in result['result']['profiles']}
+    assert set(rows) == {'default', 'helper'}
+    for row in rows.values():
+        assert row['ui_meta_revisions']['hermes-bots'] == 1
+        assert row['ui_meta']['hermes-bots']['groups'] == ['MachineTeam']
+    assert (home / 'profile.yaml').read_text(encoding='utf-8') == legacy
+    assert (sibling / 'profile.yaml').read_text(encoding='utf-8') == legacy

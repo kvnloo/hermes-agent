@@ -253,6 +253,18 @@ def _execution_control(service, method, params):
     return handlers[method]()
 
 
+
+def _ui_meta_revisions(meta):
+    """Pre-CAS namespaces are existing state, not revision-zero empty keys."""
+    raw = meta.get('_ui_meta_revisions')
+    revisions = {str(k): max(0, v) for k, v in raw.items()
+                 if type(v) is int} if isinstance(raw, dict) else {}
+    if isinstance(meta.get('ui_meta'), dict):
+        for key in meta['ui_meta']:
+            revisions.setdefault(str(key), 1)
+    return revisions
+
+
 def _profiles(authority, actor, home, params):
     from hermes_cli.profiles import _profile_info, read_profile_meta
     import hermes_yaml as yaml
@@ -269,9 +281,7 @@ def _profiles(authority, actor, home, params):
     path = home / 'profile.yaml'
     meta = yaml.safe_load(path.read_text(encoding='utf-8-sig')) if path.is_file() else {}
     meta = meta if isinstance(meta, dict) else {}
-    revisions = meta.get('_ui_meta_revisions')
-    row['ui_meta_revisions'] = {str(k): max(0, v) for k, v in revisions.items()
-                              if type(v) is int} if isinstance(revisions, dict) else {}
+    row['ui_meta_revisions'] = _ui_meta_revisions(meta)
     if isinstance(meta.get('ui_meta'), dict):
         row['ui_meta'] = meta['ui_meta']
     row['has_avatar'] = any((home / 'assets' / f'avatar.{ext}').is_file() for ext in ('png', 'jpg', 'webp'))
@@ -334,6 +344,7 @@ def _profiles(authority, actor, home, params):
             entry['display_name'] = str(meta.get('display_name') or configured)
             if isinstance(meta.get('ui_meta'), dict):
                 entry['ui_meta'] = meta['ui_meta']
+                entry['ui_meta_revisions'] = _ui_meta_revisions(meta)
         profiles.append(entry)
 
     # Sibling profiles this process multiplexes: the roster lists them with the same
