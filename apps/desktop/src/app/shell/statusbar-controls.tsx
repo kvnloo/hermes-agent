@@ -28,7 +28,7 @@ import {
 // Shared chrome styling for interactive statusbar items (button / link / menu
 // trigger). The 'text' variant intentionally omits hover/transition/disabled.
 const STATUSBAR_ACTION_CLASS =
-  'inline-flex h-full items-center gap-1 rounded-none px-1.5 text-[0.6875rem] text-(--ui-text-tertiary) transition-colors hover:bg-(--chrome-action-hover) hover:text-foreground disabled:cursor-default disabled:opacity-45'
+  'inline-flex h-full items-center gap-1 rounded-none px-1.5 text-[0.6875rem] text-(--ui-text-tertiary) transition-colors hover:bg-(--chrome-action-hover) hover:text-foreground disabled:cursor-default disabled:opacity-45 [@media(pointer:coarse)]:min-h-11'
 
 /** Dismisses the open statusbar dropdown from inside element `menuContent`
  *  (render-fn content gets `close()` as an argument instead). */
@@ -114,8 +114,8 @@ export function StatusbarControls({ className, leftItems = [], items = [], ...pr
         <footer
           className={cn(
             // Grow by the bottom safe-area inset so installed Android PWAs clear
-            // gesture navigation; env() is 0 on desktop so the bar stays h-5.
-            'flex h-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shrink-0 items-stretch justify-between gap-2 bg-(--ui-sidebar-surface-background) px-1 pt-0 pb-[env(safe-area-inset-bottom,0px)] text-(--ui-text-tertiary) [-webkit-app-region:no-drag]',
+            // gesture navigation; coarse-pointer hit targets get 44px while desktop stays h-5.
+            'flex h-[calc(1.25rem+env(safe-area-inset-bottom,0px))] [@media(pointer:coarse)]:h-[calc(2.75rem+env(safe-area-inset-bottom,0px))] shrink-0 items-stretch justify-between gap-2 bg-(--ui-sidebar-surface-background) px-1 pt-0 pb-[env(safe-area-inset-bottom,0px)] text-(--ui-text-tertiary) [-webkit-app-region:no-drag]',
             className
           )}
           data-slot="statusbar"
