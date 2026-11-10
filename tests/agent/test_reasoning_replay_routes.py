@@ -59,6 +59,23 @@ def test_each_route_gets_exactly_the_carriers_it_reads(provider, base_url, model
     assert _TURN["reasoning_details"] is _DETAILS and "reasoning" in _TURN  # history untouched
 
 
+
+def test_reflection_custom_wire_rejects_bare_reasoning_alias():
+    """Reflection Beam accepts reasoning_content but returns 400 for the bare alias (#152460)."""
+    reflection, no_reasoning = _wire("custom", "https://api.reflection.ai/v1")
+    assert {key for key in ("reasoning_content", "reasoning", "reasoning_details") if key in reflection} == {
+        "reasoning_content"
+    }
+    assert reflection["reasoning_content"] == "thought"
+    assert not any(key in no_reasoning for key in ("reasoning_content", "reasoning", "reasoning_details"))
+
+    # Host-scoped rule must not remove the alias from local OpenAI-compatible backends.
+    local, _ = _wire("custom", "http://127.0.0.1:8080/v1")
+    assert {key for key in ("reasoning_content", "reasoning", "reasoning_details") if key in local} == {
+        "reasoning_content", "reasoning"
+    }
+
+
 def test_must_echo_pads_and_aliased_gemini_keeps_its_signature():
     _, bare = _wire("deepseek", "https://api.deepseek.com/v1", "deepseek-v4-flash")
     assert bare["reasoning_content"] == " "  # DeepSeek 400s without it; "" is rejected too
