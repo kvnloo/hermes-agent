@@ -204,6 +204,22 @@ def test_ensure_and_bind_preserves_target_on_failure(monkeypatch, failure):
 
 
 
+def test_sms_aiohttp_loss_refuses_dependency_generation_adoption(tmp_path):
+    """The SMS extra has no other anchor: dropping aiohttp must block adoption."""
+    from pm.environments import site_packages
+    from pm.environments_adopt import _lost_extras
+
+    previous, selected = tmp_path / "previous", tmp_path / "selected"
+    (site_packages(previous) / "aiohttp").mkdir(parents=True)
+    site_packages(selected).mkdir(parents=True)
+
+    # A previously working SMS/API server cannot be swapped onto a bare generation.
+    assert "sms" in _lost_extras(previous, selected)
+    # Merely switching generations with the same dependency must not be refused.
+    (site_packages(selected) / "aiohttp").mkdir()
+    assert "sms" not in _lost_extras(previous, selected)
+
+
 def test_every_anchor_extra_exists_in_pyproject():
     """Contract: ANCHORS maps real pyproject extras (no orphaned names)."""
     import tomllib

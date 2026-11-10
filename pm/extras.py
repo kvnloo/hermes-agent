@@ -41,6 +41,7 @@ ANCHORS: dict[str, str | tuple[str, ...]] = {
     "wake-porcupine": "pvporcupine",
     "fal": "fal_client",
     "messaging": "telegram",
+    "sms": "aiohttp",
     "telegram": "telegram",
     "discord": "discord",
     "slack": "slack_bolt",
