@@ -75,6 +75,25 @@ class TestHasPlatformMessageIdVisibility:
         )
         assert db.has_platform_message_id("s1", "msg-1") is True
 
+    def test_observed_context_does_not_shadow_accepted_user_turn(self, tmp_path):
+        """A passively observed group message is not an accepted inbound turn.
+
+        The gateway's transient-failure path must persist the accepted user
+        turn even if the same platform id was saved as observed context.
+        """
+        db = _make_db(tmp_path)
+        db.append_message(
+            session_id="s1", role="user", content="group context",
+            platform_message_id="msg-obs", observed=True,
+        )
+        assert db.has_platform_message_id("s1", "msg-obs") is False
+
+        db.append_message(
+            session_id="s1", role="user", content="accepted input",
+            platform_message_id="msg-obs",
+        )
+        assert db.has_platform_message_id("s1", "msg-obs") is True
+
     def test_absent_id_is_false(self, tmp_path):
         db = _make_db(tmp_path)
         db.append_message(

@@ -1064,6 +1064,10 @@ class SessionMessagesMixin:
         transient-failure dedupe guard (#47237) to skip re-persisting a user message that was already saved
         on a prior retry of the same inbound platform message.
 
+        Only a persisted, non-observed user turn can suppress the gateway's
+        retry append. An observed group-context row with the same platform id
+        is not an accepted turn, so it must not shadow the incoming message.
+
         Mirrors the visibility contract of ``has_gateway_input_owner`` (main
         3114916ee4): soft-archived rewind/undo rows (``active=0``,
         ``compacted=0`` — the user took the turn back) do NOT count as
@@ -1074,6 +1078,7 @@ class SessionMessagesMixin:
         """
         return self._read_one(
             "SELECT 1 FROM messages WHERE session_id = ? AND platform_message_id = ? "
+            "AND role = 'user' AND observed = 0 "
             "AND (active = 1 OR compacted = 1) LIMIT 1",
             (session_id, platform_message_id)) is not None
 
