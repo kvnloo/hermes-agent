@@ -95,6 +95,36 @@ def test_fetch_account_usage_codex(monkeypatch):
     assert "Credits balance: $12.50" in snapshot.details
 
 
+def test_fetch_account_usage_anthropic_scoped_weeks_do_not_exhaust_account(monkeypatch):
+    """Scoped and legacy model weeks must never be confused with account-wide quota."""
+    monkeypatch.setattr("agent.account_usage.resolve_anthropic_token", lambda: "sk-ant-oat-test")
+    monkeypatch.setattr("agent.account_usage._is_oauth_token", lambda token: True)
+    monkeypatch.setattr(
+        "agent.account_usage.httpx.Client",
+        lambda timeout=15.0: _Client({
+            "five_hour": {"utilization": 60},
+            "seven_day": {"utilization": 20},
+            "seven_day_opus": {"utilization": 90},
+            "limits": [
+                {"kind": "session", "percent": 60},
+                {"kind": "weekly_all", "percent": 20},
+                {"kind": "weekly_scoped", "percent": 100,
+                 "scope": {"model": {"display_name": "Fable"}}},
+            ],
+        }),
+    )
+
+    snapshot = fetch_account_usage("anthropic")
+
+    assert snapshot is not None
+    assert [(w.label, w.scope) for w in snapshot.windows] == [
+        ("Current session", "account"),
+        ("Current week", "account"),
+        ("Opus week", "model"),
+        ("Fable week", "model"),
+    ]
+
+
 def test_fetch_account_usage_anthropic_includes_scoped_weekly_limits(monkeypatch):
     reset = "2026-07-11T00:59:59.849583+00:00"
     monkeypatch.setattr("agent.account_usage.resolve_anthropic_token", lambda: "sk-ant-oat-test")

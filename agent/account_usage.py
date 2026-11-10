@@ -28,6 +28,8 @@ class AccountUsageWindow:
     used_percent: Optional[float] = None
     reset_at: Optional[datetime] = None
     detail: Optional[str] = None
+    # Exhausting a model-scoped window does not exhaust the entire account.
+    scope: str = "account"
 
 
 @dataclass(frozen=True)
@@ -957,6 +959,7 @@ def _fetch_anthropic_account_usage() -> Optional[AccountUsageSnapshot]:
                 label=label,
                 used_percent=used,
                 reset_at=_parse_dt(limit.get("resets_at")),
+                scope="model",
             )
         )
         scoped_identities.add(identity)
@@ -985,6 +988,7 @@ def _fetch_anthropic_account_usage() -> Optional[AccountUsageSnapshot]:
                 label=label,
                 used_percent=used,
                 reset_at=_parse_dt(window.get("resets_at")),
+                scope="model",
             )
         )
 
