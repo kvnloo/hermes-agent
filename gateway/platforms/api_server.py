@@ -3118,13 +3118,25 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         def _tool_progress(event_type: str, tool_name: str | None = None, preview: str | None = None, args=None, **kwargs) -> None:
             if event_type == "reasoning.available":
                 events.enqueue("tool.progress", {"message_id": message_id, "tool_name": tool_name or "_thinking", "delta": preview or ""})
+            elif event_type == "tool.progress":
+                payload = {"message_id": message_id, "tool_name": tool_name,
+                           "tool_call_id": kwargs.get("tool_call_id"),
+                           "progress": kwargs.get("progress"), "message": preview or ""}
+                if kwargs.get("total") is not None:
+                    payload["total"] = kwargs["total"]
+                    if kwargs.get("percent") is not None:
+                        payload["percent"] = kwargs["percent"]
+                events.enqueue("tool.progress", payload)
             elif event_type in {"tool.started", "tool.completed", "tool.failed"}:
                 event_name = (
                     "tool.failed"
                     if event_type == "tool.completed" and kwargs.get("is_error")
                     else event_type
                 )
-                events.enqueue(event_name, {"message_id": message_id, "tool_name": tool_name, "preview": preview, "args": args})
+                payload = {"message_id": message_id, "tool_name": tool_name, "preview": preview, "args": args}
+                if kwargs.get("tool_call_id"):
+                    payload["tool_call_id"] = kwargs["tool_call_id"]
+                events.enqueue(event_name, payload)
 
         def _commentary(text: str, *, already_streamed: bool = False) -> None:
             # Mid-turn assistant commentary (Codex ``phase="commentary"``, text beside tool calls)

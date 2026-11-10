@@ -401,3 +401,62 @@ async def test_canonical_sse_projects_the_turn_reasoning(api, owner, path, body,
         text = await response.text()
     assert response.status == 200, text
     assert marker in text and 'THINKING' in text, text
+
+@pytest.mark.asyncio
+async def test_bound_progress_reaches_messaging_and_remote_streams_without_fabricated_total(api, owner):
+    """The call's real ID and server values survive both gateway paths; off stays silent."""
+    from agent.tool_progress_relay import bound_tool_progress, current_tool_progress
+    from gateway.config import Platform
+    from gateway.session import SessionSource
+    from gateway.turn_context import TurnContext
+    from gateway.run_turn_runner import TurnRunner
+    from gateway.platforms.api_server_runs import _make_run_event_callback
+
+    seen = []
+    turn = object.__new__(TurnRunner)
+    turn._approval_owner = (SimpleNamespace(publish_execution=lambda *args: seen.append(args)), 'chat-sid', 7)
+    turn._ctx = TurnContext(
+        source=SessionSource(platform=Platform.TELEGRAM, chat_id='chat-sid', chat_type='group'),
+        tool_progress_enabled=True,
+    )
+    turn.progress_callback('tool.progress', 'mcp__slow', 'half', None,
+                           tool_call_id='call-7', progress=2, total=4, percent=50)
+    assert [(sid, gen, kind) for sid, gen, kind, _ in seen] == [('chat-sid', 7, 'tool.progress')]
+    assert seen[0][3]['tool_id'] == 'call-7' and seen[0][3]['percent'] == 50
+    turn._ctx.tool_progress_enabled = False
+    turn.progress_callback('tool.progress', 'mcp__slow', 'ignored', None,
+                           tool_call_id='call-7', progress=3, total=4, percent=75)
+    assert len(seen) == 1
+
+    def produce(api_turn):
+        agent = _wired_agent(api_turn)
+        agent.tool_progress_callback('tool.started', 'mcp__slow', 'running', {},
+                                     tool_call_id='call-7')
+        with bound_tool_progress(agent.tool_progress_callback, 'mcp__slow', 'call-7'):
+            current_tool_progress()(2, 4, 'half')
+        with bound_tool_progress(agent.tool_progress_callback, 'mcp__slow', 'call-8'):
+            current_tool_progress()(3, None, 'unknown total')
+        agent.tool_progress_callback('tool.completed', 'mcp__slow', None, None,
+                                     tool_call_id='call-7', is_error=False)
+
+    frames = await _session_stream_tool_frames(api, owner, produce)
+    progress = {payload['tool_call_id']: payload for kind, payload in frames
+                if kind == 'tool.progress' and payload.get('tool_call_id')}
+    assert progress['call-7']['progress'] == 2
+    assert progress['call-7']['total'] == 4 and progress['call-7']['percent'] == 50
+    assert progress['call-8']['progress'] == 3 and 'total' not in progress['call-8']
+    assert 'percent' not in progress['call-8']
+    assert ('tool.completed', 'call-7') in [
+        (kind, payload.get('tool_call_id')) for kind, payload in frames]
+
+    queue = asyncio.Queue()
+    run = SimpleNamespace(_run_streams={'run-probe': queue}, _run_statuses={'run-probe': {}},
+                          _set_run_status=lambda *args, **kwargs: None)
+    callback = _make_run_event_callback(run, 'run-probe', asyncio.get_running_loop(),
+                                        _api_server=_api_server)
+    with bound_tool_progress(callback, 'mcp__slow', 'call-7'):
+        current_tool_progress()(2, 4, 'half')
+    await asyncio.sleep(0)
+    run_progress = [item for item in _events(queue) if item.get('event') == 'tool.progress']
+    assert len(run_progress) == 1 and run_progress[0]['tool_call_id'] == 'call-7'
+    assert run_progress[0]['progress'] == 2 and run_progress[0]['percent'] == 50

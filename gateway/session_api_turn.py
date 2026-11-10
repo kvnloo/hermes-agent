@@ -502,7 +502,7 @@ def wire_api_observers(agent, owner, want_interim):
     progress = agent.tool_progress_callback
 
     def tool_progress_callback(event_type, *args, **kwargs):
-        if event_type in ('tool.started', 'tool.completed'):
+        if event_type in ('tool.started', 'tool.completed', 'tool.progress'):
             publish_api_tool_progress(authority, session_id, generation, event_type, *args, **kwargs)
         if progress is not None:
             return progress(event_type, *args, **kwargs)

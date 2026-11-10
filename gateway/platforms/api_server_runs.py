@@ -387,6 +387,15 @@ def _make_run_event_callback(self, run_id: str, loop: asyncio.AbstractEventLoop,
                 event_fields["preview"] = _tool_completed_preview(
                     kwargs.get("result"), redact_sensitive_text)
             _push(_run_event(run_id, event_type, **event_fields))
+        elif event_type == "tool.progress":
+            event_fields = {"tool": tool_name, "progress": kwargs.get("progress"), **_call_id(kwargs)}
+            if preview:
+                event_fields["message"] = redact_sensitive_text(str(preview), force=True)[:_TOOL_COMPLETED_PREVIEW_MAX_CHARS]
+            if kwargs.get("total") is not None:
+                event_fields["total"] = kwargs["total"]
+                if kwargs.get("percent") is not None:
+                    event_fields["percent"] = kwargs["percent"]
+            _push(_run_event(run_id, event_type, **event_fields))
         elif event_type in {"subagent.start", "subagent.complete"}:
             event = _run_event(run_id, event_type)
             if preview is not None:
