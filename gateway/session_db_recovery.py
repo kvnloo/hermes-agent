@@ -15,10 +15,10 @@ _MAX_RETRY_DELAY_SECONDS = 60.0
 
 
 def _close_handle(handle: Any) -> None:
-    """Default closer for a rejected cache handle (no close_all callback yet)."""
-    closer = getattr(handle, "close", None)
-    if callable(closer):
-        closer()
+    """Release a rejected handle, unwrapping an async facade before closing."""
+    from hermes_state_registry import release_or_close
+
+    release_or_close(getattr(handle, "_db", handle))
 
 
 @dataclass

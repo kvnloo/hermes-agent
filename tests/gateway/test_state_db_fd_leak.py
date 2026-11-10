@@ -287,6 +287,32 @@ def test_rejected_handle_is_closed_even_without_close_all_callback():
     assert handle.closed, "rejected handle was dropped without close() (#96027)"
 
 
+def test_rejected_async_facade_releases_shared_store(tmp_path):
+    """Rejected AsyncSessionDB handles must release their underlying registry writer."""
+    from hermes_state import AsyncSessionDB
+    from hermes_state_registry import acquire, release_or_close
+    from hermes_cli.sqlite_safe_read import live_connection_count
+
+    db_path = tmp_path / "state.db"
+    db = acquire(db_path)
+    cache = RecoverableHandleCache()
+    assert live_connection_count(db_path) > 0
+
+    def opener():
+        with cache.lock:
+            cache._generation += 1  # close_all races with the open
+        return AsyncSessionDB(db)
+
+    try:
+        assert cache.get(db_path, opener) is None
+        assert live_connection_count(db_path) == 0, (
+            "rejected AsyncSessionDB retained its underlying SQLite writer (#96027)"
+        )
+    finally:
+        if live_connection_count(db_path):
+            release_or_close(db)
+
+
 def test_rejected_handle_uses_close_all_callback_when_installed():
     """With a close_all callback installed, rejection goes through it."""
     cache = RecoverableHandleCache()
