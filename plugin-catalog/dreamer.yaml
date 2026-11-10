@@ -8,5 +8,5 @@ version: "1.2.0"
 maintainer: Cosmonautic1
 description: "Sleep cycle for Hermes: it replays your day's work into a narrative dream with insights, then whispers that residue into your next session."
 capabilities:
-  tools: [dream_now, dream_journal, dream_status]
-  hooks: [pre_llm_call]
+  provides_tools: [dream_now, dream_journal, dream_status]
+  provides_hooks: [pre_llm_call]
