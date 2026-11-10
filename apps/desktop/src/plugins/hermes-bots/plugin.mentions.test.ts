@@ -223,6 +223,45 @@ describe('Bot Chat reset guard', () => {
       }
     }
   })
+  it('compacts an opened remote Bot Chat before roster hydration, not an adjacent chat', async () => {
+    const { handler } = await contributions()
+    const { $lastRoster } = await import('./data')
+    const { $openBotChat, saveSelectedRosterBot } = await import('./bot-state')
+
+    const remote = {
+      connectionId: 'moopy',
+      name: 'writer',
+      remoteSource: true,
+      sourceScoped: true
+    } as RosterRow
+
+    // Local and remote own a bot named writer. The remote canonical chat was
+    // opened by exact-title lookup, but the union roster is still thin.
+    $lastRoster.set([
+      { connectionId: 'local', name: 'writer', sourceScoped: true, canonical_session: { id: 'local-chat' } },
+      remote
+    ] as RosterRow[])
+    saveSelectedRosterBot(remote)
+    $openBotChat.set({ key: 'moopy::writer', openedRegistryId: 'remote-root', openedSessionId: 'remote-tip' })
+    live.stored = 'remote-tip'
+
+    for (const text of ['/new', '/reset']) {
+      expect(await handler({ text })).toEqual({ text: '/compact' })
+    }
+    expect(hostMock.notify).toHaveBeenCalledTimes(2)
+
+    for (const stored of ['side-chat', 'local-chat', null]) {
+      live.stored = stored
+      const draft = { text: '/new' }
+      expect(await handler(draft)).toBe(draft)
+    }
+
+    // A draft fallback never proved the exact-title canonical registry row.
+    $openBotChat.set({ key: 'moopy::writer', openedRegistryId: '', openedSessionId: 'remote-tip' })
+    live.stored = 'remote-tip'
+    const draft = { text: '/new' }
+    expect(await handler(draft)).toBe(draft)
+  })
 })
 
 describe('@-mention completions', () => {

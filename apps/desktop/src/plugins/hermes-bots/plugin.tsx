@@ -37,6 +37,7 @@ import {
   $lastRoster,
   botHandle,
   botMentionTag,
+  botRosterKey,
   botSelectionKey,
   cachedUnionRoster,
   isActiveRosterBot,
@@ -698,7 +699,18 @@ export default {
             // never match, so the guard read `host.activeSessionId` — no such
             // property — and silently resolved to null on every turn: /new
             // reset the forever-chat instead of compacting it.
-            if (activeBot && isCanonicalChatOnScreen(row, host.state.focusedStoredSessionId.get())) {
+            const focusedStoredId = host.state.focusedStoredSessionId.get()
+            const opened = $openBotChat.get()
+            // An exact-title open proved this chat's identity even while a
+            // remote union-roster row is still missing canonical_session.
+            // Trust only that transient proof for the currently focused chat.
+            const openedCanonicalOnScreen =
+              !!row &&
+              !!opened?.openedRegistryId &&
+              opened.key === botRosterKey(row) &&
+              [opened.openedRegistryId, opened.openedSessionId].includes(focusedStoredId || '')
+
+            if (activeBot && (isCanonicalChatOnScreen(row, focusedStoredId) || openedCanonicalOnScreen)) {
               host.notify({
                 kind: 'info',
                 title: 'This chat never resets',
