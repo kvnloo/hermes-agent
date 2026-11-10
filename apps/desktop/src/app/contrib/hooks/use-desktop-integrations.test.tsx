@@ -50,6 +50,19 @@ vi.mock('@/store/plugin-install-request', () => ({
   openPluginInstallRequest: vi.fn()
 }))
 
+// The Webapp's tab election: `null` = browser host with the election still
+// pending, true/false = the settled answer for this tab. Defaults keep the
+// suite on the native primary-window path.
+const { tabNavigationRoleMock, tabElectionMock } = vi.hoisted(() => ({
+  tabNavigationRoleMock: vi.fn((): boolean | null => true),
+  tabElectionMock: vi.fn(async (): Promise<boolean> => true)
+}))
+
+vi.mock('@/lib/webapp-tab-role', () => ({
+  browserTabNavigationRole: () => tabNavigationRoleMock(),
+  webappTabReplaysRememberedNavigation: () => tabElectionMock()
+}))
+
 vi.mock('@/store/windows', async importOriginal => {
   const actual = await importOriginal<typeof WindowsStore>()
 
@@ -85,6 +98,10 @@ describe('useDesktopIntegrations', () => {
     // Every test starts as a main window; only the HUD describe flips this.
     hudWindowMock.mockReturnValue(false)
     peerWindowMock.mockReturnValue(false)
+    // Native primary window: this window owns its restore (no tab election).
+    tabNavigationRoleMock.mockReturnValue(true)
+    tabElectionMock.mockReset()
+    tabElectionMock.mockResolvedValue(true)
     // Isolated owner-hint state per test: persisted hints are global
     // module state that would otherwise leak between restore cases.
     _resetSessionOwnerHintsForTests({ storage: true })
@@ -240,6 +257,67 @@ describe('useDesktopIntegrations', () => {
       })
 
       expect(navigate).toHaveBeenCalledWith('/remembered-session', { replace: true })
+    })
+
+    it('a held restore replays this window’s boot destination, not a chat another tab opens meanwhile', () => {
+      // Boot: an earlier chat is remembered, but the session list has not
+      // arrived yet, so the restore is deliberately held (the test above).
+      window.localStorage.setItem('hermes.desktop.lastSessionId.profile.default', 'boot-chat')
+
+      const result = render({ profileReady: true, sessions: [] })
+
+      expect(navigate).not.toHaveBeenCalled()
+
+      // While this window's boot list is still loading, the user opens a chat
+      // in ANOTHER window/tab. The remembered navigation is shared, so it now
+      // names that other chat.
+      window.localStorage.setItem('hermes.desktop.lastSessionId.profile.default', 'other-tab-chat')
+
+      result.rerender({
+        activeProfile: 'default',
+        locationPathname: '/',
+        profileReady: true,
+        resumeExhaustedSessionId: null,
+        resumeLastSession: true,
+        routedSessionId: null,
+        sessions: [
+          session({ id: 'boot-chat', profile: 'default' }),
+          session({ id: 'other-tab-chat', profile: 'default' })
+        ]
+      })
+
+      // The held restore replays what THIS window booted with — never the chat
+      // another tab opened while the list was loading.
+      expect(navigate).toHaveBeenCalledWith('/boot-chat', { replace: true })
+      expect(navigate).not.toHaveBeenCalledWith('/other-tab-chat', { replace: true })
+    })
+  })
+
+  describe('browser tabs of one origin (Webapp)', () => {
+    it('boots a later tab like a peer: it never replays the origin’s remembered chat', async () => {
+      // A browser host (every tab is the same URL, so no `?peer=1` exists) and
+      // the election says another tab already owns the restore.
+      tabNavigationRoleMock.mockReturnValue(null)
+      tabElectionMock.mockResolvedValue(false)
+      window.localStorage.setItem('hermes.desktop.lastRoute.profile.default', '/remembered-session')
+      window.localStorage.setItem('hermes.desktop.lastSessionId.profile.default', 'remembered-session')
+
+      render({ profileReady: true, sessions: [session({ id: 'remembered-session', profile: 'default' })] })
+
+      await waitFor(() => expect(tabElectionMock).toHaveBeenCalled())
+      expect(navigate).not.toHaveBeenCalled()
+      // The other tab's navigation stays remembered for the tab that owns it.
+      expect(window.localStorage.getItem('hermes.desktop.lastSessionId.profile.default')).toBe('remembered-session')
+    })
+
+    it('lets the tab that won the election restore the remembered chat', async () => {
+      tabNavigationRoleMock.mockReturnValue(null)
+      tabElectionMock.mockResolvedValue(true)
+      window.localStorage.setItem('hermes.desktop.lastSessionId.profile.default', 'remembered-session')
+
+      render({ profileReady: true, sessions: [session({ id: 'remembered-session', profile: 'default' })] })
+
+      await waitFor(() => expect(navigate).toHaveBeenCalledWith('/remembered-session', { replace: true }))
     })
   })
 
