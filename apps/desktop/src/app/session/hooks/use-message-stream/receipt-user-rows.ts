@@ -53,14 +53,22 @@ export function bindReceiptUserRows(messages: ChatMessage[], receipt: PersistedT
 
   const turnRows = new Set(receipt.row_ids)
 
+  // An earlier completion receipt ends its turn even if none of its bubbles has a rowId.
+  // Without this boundary, a process_complete turn with no prompt bubble can adopt the
+  // preceding turn's still-unbound prompt (#149560).
+  const afterPreviousTurn = messages.findLastIndex(message => message.persistedTurn !== undefined) + 1
+
   const start =
     anchor >= 0
       ? anchor
-      : messages.findLastIndex(message => {
-          const rows = transcriptRowIds(message)
+      : Math.max(
+          afterPreviousTurn,
+          messages.findLastIndex(message => {
+            const rows = transcriptRowIds(message)
 
-          return rows.length > 0 && !rows.some(id => turnRows.has(id))
-        }) + 1
+            return rows.length > 0 && !rows.some(id => turnRows.has(id))
+          }) + 1
+        )
 
   const candidates = messages.flatMap((message, index) => (index >= start && isTurnUserBubble(message) ? [index] : []))
 
