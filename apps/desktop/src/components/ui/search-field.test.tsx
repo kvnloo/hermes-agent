@@ -16,7 +16,7 @@ describe('SearchField', () => {
     // edge (#119204).
     const { container, getByRole } = render(<SearchField onChange={() => {}} placeholder="Search" value="abc" />)
 
-    const input = getByRole('textbox') as HTMLInputElement
+    const input = getByRole('searchbox') as HTMLInputElement
     const row = container.firstElementChild as HTMLElement
 
     expect(row.className).toContain('inline-flex')
@@ -25,10 +25,21 @@ describe('SearchField', () => {
     expect(input.className).toContain('min-w-0')
   })
 
+  it('treats integration filtering as search rather than a credential input', () => {
+    const onChange = vi.fn()
+    const { getByRole } = render(<SearchField onChange={onChange} placeholder="Search integrations" value="" />)
+
+    const input = getByRole('searchbox', { name: 'Search integrations' }) as HTMLInputElement
+    expect(input.value).toBe('')
+
+    fireEvent.change(input, { target: { value: 'telegram' } })
+    expect(onChange).toHaveBeenCalledWith('telegram')
+  })
+
   it('opts out of password-manager autofill so saved usernames never land in filter boxes', () => {
     const { getByRole } = render(<SearchField onChange={() => {}} placeholder="Search" value="" />)
 
-    const input = getByRole('textbox') as HTMLInputElement
+    const input = getByRole('searchbox') as HTMLInputElement
 
     expect(input.getAttribute('autocomplete')).toBe('off')
     expect(input.getAttribute('name')).toBe('hermes-search')

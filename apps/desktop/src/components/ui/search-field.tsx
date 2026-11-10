@@ -102,7 +102,7 @@ export function SearchField({
           // button to the row's right edge instead of trailing the typed
           // text (#119204). Long queries scroll inside the field.
           // text-xs matches the form controls (Input/Select via controlVariants).
-          'h-7 min-w-0 max-w-full flex-1 bg-transparent text-xs text-foreground [field-sizing:content] placeholder:text-muted-foreground focus:outline-hidden',
+          'h-7 min-w-0 max-w-full flex-1 bg-transparent text-xs text-foreground [field-sizing:content] placeholder:text-muted-foreground focus:outline-hidden [&::-webkit-search-cancel-button]:hidden',
           // Boxed: the wrapper owns the chrome, the input fills it (same as an
           // adorned Input).
           boxed && 'h-auto w-full flex-1 text-sm leading-5 [field-sizing:initial]',
@@ -117,7 +117,8 @@ export function SearchField({
         onKeyDown={onKeyDown}
         placeholder={effectivePlaceholder}
         ref={inputRef}
-        type="text"
+        // Preserve one clear affordance, not a second browser-native icon.
+        type="search"
         value={value}
       />
       {trailingAction}
