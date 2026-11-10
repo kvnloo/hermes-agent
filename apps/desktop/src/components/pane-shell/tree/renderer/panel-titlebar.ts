@@ -86,6 +86,9 @@ export function usePanelTitlebar(ref: RefObject<HTMLElement | null>, enabled: bo
 
     observe()
     measure()
+    // The language picker changes <html dir> without resizing any titlebar cluster.
+    const directionObserver = new MutationObserver(measure)
+    directionObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['dir'] })
     window.addEventListener('resize', measure)
     window.addEventListener(TITLEBAR_CHROME_CHANGED_EVENT, onChromeChanged)
 
@@ -113,6 +116,7 @@ export function usePanelTitlebar(ref: RefObject<HTMLElement | null>, enabled: bo
 
     return () => {
       observer.disconnect()
+      directionObserver.disconnect()
       window.removeEventListener('resize', measure)
       window.removeEventListener(TITLEBAR_CHROME_CHANGED_EVENT, onChromeChanged)
       unsubscribeChrome()

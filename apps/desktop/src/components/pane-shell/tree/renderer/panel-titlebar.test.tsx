@@ -1,4 +1,4 @@
-import { act, cleanup, renderHook } from '@testing-library/react'
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { HermesConnection } from '@/global'
@@ -105,4 +105,38 @@ describe('usePanelTitlebar', () => {
     expect(element.style.getPropertyValue('--panel-titlebar-start')).toBe(start)
     expect(element.style.getPropertyValue('--panel-titlebar-end')).toBe(end)
   })
+
+  it('re-maps the titlebar spacers when the user switches to RTL without a resize', async () => {
+    const originalDir = document.documentElement.getAttribute('dir')
+    const element = document.createElement('div')
+    element.style.direction = 'ltr'
+    element.getBoundingClientRect = () => rect(0, 1000)
+    document.body.append(element)
+    document.documentElement.dir = 'ltr'
+
+    try {
+      renderHook(() => usePanelTitlebar({ current: element }, true, false))
+      expect(element.style.getPropertyValue('--panel-titlebar-start')).toBe('172px')
+      expect(element.style.getPropertyValue('--panel-titlebar-end')).toBe('100px')
+
+      act(() => {
+        document.documentElement.dir = 'rtl'
+        // jsdom does not reliably inherit html[dir], so mirror its computed direction.
+        element.style.direction = 'rtl'
+      })
+
+      await waitFor(() => {
+        expect(element.style.getPropertyValue('--panel-titlebar-start')).toBe('100px')
+        expect(element.style.getPropertyValue('--panel-titlebar-end')).toBe('172px')
+      })
+    } finally {
+      cleanup()
+      if (originalDir === null) {
+        document.documentElement.removeAttribute('dir')
+      } else {
+        document.documentElement.setAttribute('dir', originalDir)
+      }
+    }
+  })
+
 })
