@@ -77,20 +77,34 @@ def _installed(path: list[str]) -> dict:
     return found
 
 
-def _unmet(specs: Iterable[str], installed: dict, *, extra: str = "") -> list[str]:
+def _unmet(specs: Iterable[str], installed: dict, *, extra: str = "",
+           visited_extras: set[tuple[str, str]] | None = None) -> list[str]:
     from packaging.requirements import Requirement
     from packaging.utils import canonicalize_name
     from packaging.version import InvalidVersion, Version
 
+    if visited_extras is None:
+        visited_extras = set()
     missing = []
     for spec in specs:
         requirement = Requirement(spec)
         if requirement.marker is not None and not requirement.marker.evaluate({"extra": extra}):
             continue
-        distribution = installed.get(canonicalize_name(requirement.name))
+        name = canonicalize_name(requirement.name)
+        distribution = installed.get(name)
         if distribution is None:
             missing.append(str(requirement))
             continue
+        # A present distribution need not include dependencies for its requested extras.
+        for feature in requirement.extras:
+            edge = (name, canonicalize_name(feature))
+            if edge in visited_extras:
+                continue
+            visited_extras.add(edge)
+            optional = (dependency for dependency in distribution.requires or ()
+                        if (marker := Requirement(dependency).marker) is not None
+                        and "extra" in str(marker))
+            missing.extend(_unmet(optional, installed, extra=feature, visited_extras=visited_extras))
         try:
             version = Version(distribution.version)
         except InvalidVersion:

@@ -204,6 +204,29 @@ def test_missing_reports_extras_against_the_installed_core(tmp_path, monkeypatch
     assert nix_admission.missing((), [plugin]) == ["present-dist>=2 (found 1.5) (plugin 'plugin')"]
 
 
+def test_plugin_dependency_extra_is_not_admitted_without_its_dependencies(tmp_path, monkeypatch):
+    """A present distribution does not imply its requested optional extra is satisfied."""
+    from pm import nix_admission
+
+    site = tmp_path / "site"
+    _distribution(site, "nix-transport", "1.0", [
+        "Provides-Extra: socks",
+        f"Requires-Dist: {ABSENT}; extra == 'socks'",
+        "Requires-Dist: nix-unrelated-extra>=1; extra == 'tls'",
+    ])
+    monkeypatch.setenv(nix_admission.APPLICATION_PATH_ENV, str(site))
+    plugin = tmp_path / "plugin"
+    plugin.mkdir()
+    (plugin / "plugin.yaml").write_text(
+        'name: plugin\npython_dependencies: ["nix-transport[socks]>=1"]\n')
+
+    lacking = nix_admission.missing((), [plugin])
+    assert len(lacking) == 1
+    assert ABSENT in lacking[0] and "(plugin 'plugin')" in lacking[0]
+    _distribution(site, "hermes-nix-absent-dist", "1.0")
+    assert nix_admission.missing((), [plugin]) == []
+
+
 def test_a_member_that_excludes_the_running_python_is_reported(tmp_path, monkeypatch):
     from pm import nix_admission
 
