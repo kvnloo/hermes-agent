@@ -2221,8 +2221,13 @@ def _strip_stale_todo_snapshot(content: Any) -> Any:
     Snapshots are appended to the trailing user turn, so a surviving header is stale; stripping before
     re-injection prevents accumulation across boundaries."""
     from tools.todo_tool import TODO_INJECTION_HEADER
+
+    def _find(text: str) -> int:
+        # A reload notice can ride alone (no todos), so it is a strip anchor too.
+        hits = [i for i in (text.find(TODO_INJECTION_HEADER), text.find(_PRUNED_SKILL_RELOAD_NOTICE_HEADER)) if i != -1]
+        return min(hits) if hits else -1
     if isinstance(content, str):
-        idx = content.find(TODO_INJECTION_HEADER)
+        idx = _find(content)
         if idx == -1:
             return content
         return content[:idx].rstrip()
@@ -2230,7 +2235,7 @@ def _strip_stale_todo_snapshot(content: Any) -> Any:
         cleaned = []
         for part in content:
             text = str(part.get("text") or "") if isinstance(part, dict) and part.get("type") == "text" else ""
-            idx = text.find(TODO_INJECTION_HEADER) if text else -1
+            idx = _find(text) if text else -1
             if idx == -1:
                 cleaned.append(part)
             elif stripped := text[:idx].rstrip():
@@ -3011,6 +3016,27 @@ def _fold_todo_snapshot(agent: Any, compressed: list) -> None:
                 # _is_real_user_message() recomputes provenance from content + flags.
                 _todo_message.pop("_todo_snapshot_synthetic", None)
             break
+    if not todo_snapshot:
+        # No todos, but skills were still pruned: the reload notice must not depend on the todo list.
+        todo_snapshot = _pruned_skill_reload_notice(compressed)
+        if todo_snapshot:
+            # Refresh, never stack: drop notices left by earlier boundaries.
+            for _i in range(len(compressed) - 1, -1, -1):
+                _m = compressed[_i]
+                if not isinstance(_m, dict) or _m.get("role") != "user":
+                    continue
+                _old = _m.get("content")
+                _new = _strip_stale_todo_snapshot(_old)
+                if _new == _old:
+                    continue
+                if _m.get("_todo_snapshot_synthetic") and not _message_text({"role": "user", "content": _new}).strip():
+                    del compressed[_i]
+                else:
+                    _replace_message_content(_m, _new)
+            agent._repair_message_sequence(compressed)
+        todo_snapshot_is_notice_only = bool(todo_snapshot)
+    else:
+        todo_snapshot_is_notice_only = False
     if todo_snapshot:
         # If this boundary pruned skill bodies, the policy behind the todos is gone:
         # add a reload notice after TODO_INJECTION_HEADER so both strip together.
@@ -3018,7 +3044,7 @@ def _fold_todo_snapshot(agent: Any, compressed: list) -> None:
         # boundary pruned skill bodies to [SKILL_PRUNED: ...] markers, the policy that governed those tasks
         # is gone — couple a reload instruction to the snapshot so the imperative never crosses the boundary
         # alone.
-        _reload_notice = _pruned_skill_reload_notice(compressed)
+        _reload_notice = "" if todo_snapshot_is_notice_only else _pruned_skill_reload_notice(compressed)
         if _reload_notice:
             todo_snapshot = f"{todo_snapshot}\n\n{_reload_notice}"
         # Fold the snapshot into a trailing REAL user msg (no synthetic user/user pair);

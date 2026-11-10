@@ -4246,6 +4246,7 @@ Write only the summary body. Do not include any preamble or prefix."""
             _LEGACY_LENGTH_CONTINUATION_NETWORK_STUB, _LENGTH_CONTINUATION_NETWORK_STUB,
             _LENGTH_CONTINUATION_OUTPUT_LIMIT,
         )
+        from agent.conversation_compression import _PRUNED_SKILL_RELOAD_NOTICE_HEADER
         return text in {
             COMPRESSION_CONTINUATION_USER_CONTENT, _LEGACY_COMPRESSION_CONTINUATION_USER_CONTENT,
             MAX_ITERATIONS_SUMMARY_REQUEST, _CODEX_INCOMPLETE_NUDGE, _CODEX_ACK_CONTINUATION_NUDGE,
@@ -4254,6 +4255,7 @@ Write only the summary body. Do not include any preamble or prefix."""
             _LENGTH_CONTINUATION_OUTPUT_LIMIT,
         } or text.startswith((
             _BACKGROUND_PROCESS_NOTIFICATION_PREFIX, TODO_INJECTION_HEADER + "\n", _LENGTH_CONTINUATION_DROPPED_TOOLS_PREFIX,
+            _PRUNED_SKILL_RELOAD_NOTICE_HEADER + "\n",
         ))
 
     @staticmethod
