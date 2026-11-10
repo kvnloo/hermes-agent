@@ -86,3 +86,10 @@ def test_turn_cap_stays_free_text() -> None:
     (``config.resolve_turn_limit``), so a number-only field would drop that spelling."""
     assert CONFIG_SCHEMA["agent.max_turns"]["type"] == "string"
 
+
+
+def test_null_numeric_fields_can_be_cleared_to_auto() -> None:
+    # AutoField uses this schema flag to emit null, not zero, when an optional
+    # numeric field is emptied after a value has been entered.
+    for key in sorted(NULL_NUMERIC_KEYS):
+        assert CONFIG_SCHEMA[key]["nullable"] is True, key
