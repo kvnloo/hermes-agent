@@ -1832,3 +1832,38 @@ def test_retained_gateway_state_keeps_watchdog_degraded_like_startup_failed():
     assert status.retained_gateway_state({**watchdog, "desired_state": "stopped"}) == "stopped"
     assert status.retained_gateway_state({"gateway_state": "degraded", "exit_reason": None}) == "stopped"
     assert status.retained_gateway_state({"gateway_state": "startup_failed", "exit_reason": "x"}) == "startup_failed"
+
+
+def test_new_gateway_does_not_reuse_previous_process_served_roster(tmp_path, monkeypatch):
+    """A booting multiplexer must not publish the old PID's roster as its own (#152451).
+
+    The post-lock multiplex-decision status write precedes the current runner's
+    served_profiles update. A stale list would bypass the standalone start
+    guard's bounded wait and permanently refuse a profile on exit 78.
+    """
+    state_path = tmp_path / "gateway_state.json"
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setattr(status, "_get_runtime_status_path", lambda: state_path)
+    monkeypatch.setattr(status, "_runtime_status_state_path", None)
+    monkeypatch.setattr(status, "_runtime_status_state", None)
+
+    previous = {
+        **status._build_pid_record(),
+        "pid": os.getpid() + 100,
+        "start_time": -1,
+        "gateway_state": "stopped",
+        "served_profiles": ["default", "solo"],
+        "platforms": {},
+    }
+    state_path.write_text(json.dumps(previous), encoding="utf-8")
+
+    path, booting, _ = status._prepare_runtime_status_update(
+        multiplex_standalone_reason=None,
+    )
+    assert path == state_path
+    assert booting["pid"] == os.getpid()
+    assert booting["served_profiles"] is None
+    assert status._merge_over_on_disk(path, booting)["served_profiles"] is None
+
+    _, ready, _ = status._prepare_runtime_status_update(served_profiles=["default"])
+    assert ready["served_profiles"] == ["default"]

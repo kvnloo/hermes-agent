@@ -1109,6 +1109,13 @@ def _prepare_runtime_status_update(
         previous_payload = _runtime_status_state
         payload = copy.deepcopy(previous_payload)
         current_record = _build_pid_record()
+        # The served roster belongs to one gateway process. On a new PID/start-time,
+        # the prior process's roster is not evidence of what this boot will serve.
+        # Write None (rather than deleting the key) so _merge_over_on_disk cannot
+        # resurrect the stale list before the runner publishes its new roster.
+        if (payload.get("pid") != current_record["pid"]
+                or payload.get("start_time") != current_record["start_time"]):
+            payload["served_profiles"] = None
         payload.setdefault("platforms", {})
         if not isinstance(payload["platforms"], dict):
             payload["platforms"] = {}
