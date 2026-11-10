@@ -142,3 +142,45 @@ async def test_update_prompt_answers_only_its_opener(surface, sender, tmp_path, 
             assert query.answer.call_args.kwargs == {"text": REFUSAL, "show_alert": True}
     assert response.exists() is (sender == "alice")
     assert runner._session_state(key).persistent.update_prompt_pending is (surface == "telegram_button" or sender == "bob")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("picker", "callback_data", "handler_name"),
+    [
+        ("choice", "cp:0", "_handle_choice_picker_callback"),
+        ("model", "mp:openai", "_handle_model_picker_callback"),
+    ],
+)
+@pytest.mark.parametrize("message_id", [42, 43])
+async def test_telegram_stale_picker_does_not_dispatch_to_new_card(picker, callback_data, handler_name, message_id, monkeypatch):
+    """Tapping card 42 must not answer or dismiss a newer card 43 in the same shared chat.
+
+    An older Alice card still has buttons, but the chat-keyed registry now holds Bob's
+    newer picker. A click on Alice's old message must never invoke Bob's callback.
+    """
+    from gateway.approval_actor import opener_authority
+    from plugins.platforms.telegram.adapter import TelegramAdapter
+
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USERS", "*")
+    adapter = TelegramAdapter(PlatformConfig(enabled=True, token="t", extra=EXTRA))
+    adapter._app = MagicMock()
+    selected = AsyncMock(return_value="changed")
+    selected.prompt_authority = opener_authority(MessageEvent(text="/fast", source=_source("bob")))
+    state = getattr(adapter, "_choice_picker_state" if picker == "choice" else "_model_picker_state")
+    state["-100"] = {"msg_id": 43, "on_choice_selected" if picker == "choice" else "on_model_selected": selected}
+    adapter._callback_authorized = AsyncMock(return_value=True)
+    handler = AsyncMock()
+    setattr(adapter, handler_name, handler)
+    query = AsyncMock(
+        data=callback_data, from_user=MagicMock(first_name="Bob", id="bob"),
+        message=MagicMock(chat_id=-100, message_id=message_id, message_thread_id=7,
+                          chat=MagicMock(type="supergroup")),
+    )
+
+    await adapter._handle_callback_query(SimpleNamespace(callback_query=query), MagicMock())
+
+    assert handler.await_count == (1 if message_id == 43 else 0)
+    assert state["-100"]["msg_id"] == 43
+    if message_id == 42:
+        query.answer.assert_awaited()
