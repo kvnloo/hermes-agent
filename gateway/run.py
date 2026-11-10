@@ -4922,9 +4922,11 @@ def _owner_is_standalone() -> bool:
     is treated as a multiplexer, which keeps the second-gateway refusal as the default.
     """
     try:
-        from gateway.host_attach import host_gateway, profile_name_for_home, request_serve_profile
+        from gateway.host_attach import (
+            ATTACH_CHANNEL_WAIT_S, host_gateway, profile_name_for_home, request_serve_profile,
+        )
 
-        owner = host_gateway()
+        owner = host_gateway(wait_for_channel=ATTACH_CHANNEL_WAIT_S)
         if owner is None or owner.pid == os.getpid():
             return False
         answered = request_serve_profile(profile_name_for_home(get_hermes_home()), owner=owner)

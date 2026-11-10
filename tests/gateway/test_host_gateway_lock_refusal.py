@@ -133,6 +133,47 @@ def test_an_unmigrated_standalone_fleet_starts_beside_the_owner_instead_of_spinn
     assert MIGRATE_COMMAND in logged, "the bounded outcome must name the command that converges"
 
 
+@pytest.mark.platforms("posix")  # real flock contention
+def test_multiplexer_waits_for_new_standalone_owner_channel_on_lock_loss(
+    host_lock_dir, monkeypatch, caplog,
+):
+    """At boot the standalone owner may hold the lock before its control socket binds (#152451)."""
+    import logging
+
+    from gateway import host_rendezvous as hr
+    from gateway.host_attach import ATTACH_CHANNEL_WAIT_S, HostGateway
+    from gateway.run import _claim_host_gateway_role
+
+    hr.publish_record(hr.ROLE_GATEWAY, profiles=("other",), home=str(get_hermes_home()))
+    record = hr.read_record(hr.ROLE_GATEWAY, include_stale=True)
+    assert record is not None
+    standalone_owner = HostGateway(
+        pid=record.pid + 1, home=host_lock_dir, profiles=("other",),
+        served_known=True, standalone=True,
+    )
+    waits = []
+
+    def probe_host(*, wait_for_channel=0.0):
+        waits.append(wait_for_channel)
+        return standalone_owner if wait_for_channel == ATTACH_CHANNEL_WAIT_S else None
+
+    monkeypatch.setattr("hermes_cli.profiles.profile_is_standalone", lambda home: False)
+    monkeypatch.setattr("gateway.host_attach.host_gateway", probe_host)
+    monkeypatch.setattr(
+        "gateway.host_attach.request_serve_profile",
+        lambda profile, owner=None: standalone_owner if owner is standalone_owner else None,
+    )
+    handle = _hold_host_lock_from_another_description(hr)
+    try:
+        with caplog.at_level(logging.WARNING):
+            _claim_host_gateway_role()
+    finally:
+        handle.close()
+
+    assert waits == [ATTACH_CHANNEL_WAIT_S]
+    assert "standalone gateway owns this host" in caplog.text
+
+
 @pytest.mark.platforms("posix")  # flock-based contention setup
 def test_a_multiplexing_owner_is_still_refused(host_lock_dir, monkeypatch):
     """The carve-out is scoped to an unmigrated fleet: losing the race to a MULTIPLEXER is still
