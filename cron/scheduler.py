@@ -4404,7 +4404,7 @@ if __name__ == "__main__":
         finish_worker_boot()  # may relaunch: before the payload is read and the ack published
         import argparse
 
-        parser = argparse.ArgumentParser(add_help=False)
+        parser = argparse.ArgumentParser()
         parser.add_argument("--external-worker-file", type=Path, required=True)
         parser.add_argument("--ack-file", type=Path, required=True)
         args = parser.parse_args()

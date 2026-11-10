@@ -65,3 +65,12 @@ def test_the_worker_flag_keeps_its_own_parser(tmp_path):
     assert done.returncode == 2
     assert "--ack-file" in done.stderr
     assert not _tick_ran(tmp_path)
+
+
+def test_worker_help_prints_usage_before_missing_ack(tmp_path):
+    """A worker-flag invocation asking for help must never dispatch a payload."""
+    done = _run(["--external-worker-file", str(tmp_path / "payload.json"), "--help"], tmp_path)
+    assert done.returncode == 0, (done.stdout, done.stderr)
+    assert "usage:" in done.stdout
+    assert "--ack-file" in done.stdout
+    assert not _tick_ran(tmp_path)
