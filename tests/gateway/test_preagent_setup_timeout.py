@@ -17,6 +17,7 @@ from gateway.config import Platform
 from gateway.platforms.event import MessageEvent, MessageType
 from gateway.run import GatewayRunner, _AGENT_PENDING_SENTINEL
 from gateway.session import SessionSource
+from gateway.session_context import get_session_env, reset_session_vars, set_session_vars
 
 
 KEY = "agent:main:telegram:dm:138358-preagent"
@@ -137,3 +138,42 @@ async def test_fresh_pending_followup_stays_silent(monkeypatch):
     )
     assert result is None
     assert merged == [True]
+
+
+@pytest.mark.asyncio
+async def test_preagent_hook_timeout_clears_session_identity(monkeypatch):
+    """A timed-out agent:start hook must not leave its session identity bound."""
+    monkeypatch.setenv("HERMES_AGENT_TIMEOUT", "0.05")
+    reset_session_vars()
+    runner = _bare_runner()
+
+    async def _resolve(*_args, **_kwargs):
+        return _source(), SimpleNamespace(session_id="resolved-session"), KEY
+
+    async def _prepare(*_args, **_kwargs):
+        tokens = set_session_vars(
+            platform="telegram", session_key=KEY, session_id="resolved-session",
+            profile="secondary",
+        )
+        return GatewayRunner._PreparedTurn(
+            history=[], context_prompt="", message_text="hello",
+            persist_user_message=None, persist_user_timestamp=None,
+            persist_user_display_kind=None,
+        ), tokens
+
+    async def _hang_in_agent_start(*_args, **_kwargs):
+        await asyncio.sleep(10)
+
+    runner._hmwa_resolve_session = _resolve
+    runner._hmwa_prepare_turn = _prepare
+    runner.hooks.emit.side_effect = _hang_in_agent_start
+
+    try:
+        result = await GatewayRunner._handle_message_with_agent(
+            runner, _event(), _source(), KEY, 1,
+        )
+        assert "Turn setup stalled" in result
+        assert get_session_env("HERMES_SESSION_KEY") == ""
+        assert get_session_env("HERMES_SESSION_PROFILE") == ""
+    finally:
+        reset_session_vars()

@@ -2209,6 +2209,7 @@ class GatewayTurnMixin:
             (getattr(event, "reply_to_text", None) or "")[:80].replace("\n", " "),
         )
 
+        _session_env_tokens = None
         try:
             async with _preagent_setup_timeout(_quick_key):
                 resolved = await self._hmwa_resolve_session(event, source)
@@ -2233,6 +2234,8 @@ class GatewayTurnMixin:
                 }
                 await self.hooks.emit("agent:start", hook_ctx)
         except TimeoutError:
+            if _session_env_tokens is not None:
+                self._clear_session_env(_session_env_tokens)
             return t("gateway.busy.setup_timeout")
 
         try:
