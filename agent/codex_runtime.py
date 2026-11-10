@@ -97,7 +97,8 @@ def _prune_zero_event_retry_payload(
     if not isinstance(items, list):
         return api_kwargs
     before = len(json.dumps(items, default=str).encode("utf-8"))
-    if before <= DEFAULT_BUDGET.turn_budget:
+    # A rejected request can contain prunable tool output even below the aggregate turn budget.
+    if not rejected and before <= DEFAULT_BUDGET.turn_budget:
         return api_kwargs
     # The ordinary result limit allowed large inline outputs on the rejected turn.
     threshold = 16_000 if rejected else DEFAULT_BUDGET.default_result_size

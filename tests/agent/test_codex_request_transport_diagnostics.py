@@ -181,3 +181,31 @@ def test_codex_pre_stream_bad_request_retries_only_with_reduced_input(
         with pytest.raises(BadRequestError):
             agent._run_codex_stream(kwargs)
         assert len(seen) == 1
+
+def test_codex_bare_400_reduces_tool_output_below_turn_budget(monkeypatch, tmp_path):
+    """A reducible tool result warrants a retry even below the aggregate turn budget."""
+    from tests.agent.test_run_agent_codex_responses import _build_agent
+    from tools.budget_config import DEFAULT_BUDGET
+    from tools.tool_result_storage import PERSISTED_OUTPUT_TAG
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setattr("hermes_constants.get_hermes_home", lambda: tmp_path)
+    request = httpx.Request("POST", "https://chatgpt.com/backend-api/codex/responses")
+    error = BadRequestError(
+        "Bad Request", response=httpx.Response(400, request=request),
+        body={"detail": "Bad Request"},
+    )
+    agent = _build_agent(monkeypatch)
+    seen = []
+    agent.client = _zero_event_then_completed_client(seen, error)
+    kwargs = _oversized_codex_kwargs(21_000)
+    assert len(json.dumps(kwargs["input"]).encode("utf-8")) < DEFAULT_BUDGET.turn_budget
+
+    response = agent._run_codex_stream(kwargs)
+
+    assert response.status == "completed"
+    assert len(seen) == 2
+    assert seen[1][2]["call_id"] == seen[0][2]["call_id"]
+    assert PERSISTED_OUTPUT_TAG in seen[1][2]["output"]
+    assert kwargs["input"][2]["output"] == "x" * 21_000
+    assert (tmp_path / "cache" / "spillover" / "call_browser.txt").read_text() == "x" * 21_000
