@@ -14,7 +14,9 @@ from agent.chat_completion_helpers import (
     _BEDROCK_FALLBACK_MAX_OUTPUT_TOKENS,
     _BEDROCK_UNKNOWN_MODEL_MAX_OUTPUT_TOKENS,
     _resolve_bedrock_max_output_tokens,
+    build_api_kwargs,
 )
+from agent.transports.bedrock import BedrockTransport
 
 
 def _agent(model, max_tokens=None):
@@ -98,3 +100,25 @@ def test_build_api_kwargs_consumes_the_ephemeral_boost():
 
     assert budget == 16_384
     assert agent._ephemeral_max_output_tokens is None
+
+
+def test_converse_builder_resolves_unlisted_claude_and_consumes_boost_once():
+    """The actual Converse wire budget must survive new Claude model IDs and retries."""
+    agent = _agent("global.anthropic.claude-opus-9")
+    agent.api_mode = "bedrock_converse"
+    agent.tools = []
+    agent._get_transport = lambda: BedrockTransport()
+    messages = [{"role": "user", "content": "Write a long technical report."}]
+
+    # A new Claude model must use the existing native-limit fallback, not 8192.
+    initial = build_api_kwargs(agent, messages)
+    assert initial["inferenceConfig"]["maxTokens"] == 128_000
+
+    # After a truncated turn, use the boost exactly once, then restore the pin.
+    agent.max_tokens = 8_192
+    agent._ephemeral_max_output_tokens = 16_384
+    retry = build_api_kwargs(agent, messages)
+    assert retry["inferenceConfig"]["maxTokens"] == 16_384
+    assert agent._ephemeral_max_output_tokens is None
+    following = build_api_kwargs(agent, messages)
+    assert following["inferenceConfig"]["maxTokens"] == 8_192

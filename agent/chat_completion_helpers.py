@@ -1017,12 +1017,8 @@ def _resolve_bedrock_max_output_tokens(agent, ephemeral_out=None) -> int:
     """
     ceiling = None
     try:
-        from agent.anthropic_adapter import (
-            _get_anthropic_max_output,
-            _ANTHROPIC_OUTPUT_LIMITS,
-        )
-        _model_norm = (agent.model or "").lower().replace(".", "-")
-        if any(key in _model_norm for key in _ANTHROPIC_OUTPUT_LIMITS):
+        from agent.anthropic_adapter import _get_anthropic_max_output, _is_claude_model
+        if _is_claude_model(agent.model):
             ceiling = _get_anthropic_max_output(agent.model)
     except Exception:
         ceiling = None
