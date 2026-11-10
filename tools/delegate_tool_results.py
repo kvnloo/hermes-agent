@@ -379,6 +379,13 @@ def _fire_subagent_stop_hooks(results, child_by_index, parent_agent) -> tuple[fl
                     children_cost_statuses.append(status if isinstance(status, str) and status else "estimated")
         except (TypeError, ValueError):
             pass
+        # A zero quote after real API calls can mean unpriced usage, not free usage.
+        if (
+            not child_cost
+            and entry.get("cost_status") == "unknown"
+            and (entry.get("api_calls") or 0) > 0
+        ):
+            children_cost_statuses.append("unknown")
         if invoke_hook is None:
             continue
         try:
@@ -398,7 +405,7 @@ def _fire_subagent_stop_hooks(results, child_by_index, parent_agent) -> tuple[fl
 
 def _rollup_children_cost(parent_agent, children_cost_total: float, children_cost_statuses: list[str]) -> None:
     """Fold children's spend into the parent without overstating cost provenance."""
-    if children_cost_total <= 0.0:
+    if children_cost_total <= 0.0 and not children_cost_statuses:
         return
     try:
         current = float(getattr(parent_agent, "session_estimated_cost_usd", 0.0) or 0.0)

@@ -79,6 +79,7 @@ class TestCostInResultEntry(unittest.TestCase):
             "task_index": 0,
             "status": "completed",
             "summary": "done",
+            "api_calls": child.run_conversation.return_value["api_calls"],
             "_child_cost_usd": child.session_estimated_cost_usd,
             "cost_status": child.session_cost_status,
         }
@@ -132,6 +133,17 @@ class TestCostInResultEntry(unittest.TestCase):
         parent = self._finalize_cost(parent, _make_mock_child(cost=0.25, cost_status="estimated"))
         self.assertAlmostEqual(parent.session_estimated_cost_usd, 0.75, places=6)
         self.assertEqual(parent.session_cost_status, "estimated")
+
+    def test_unpriced_child_with_api_calls_keeps_parent_provenance_unknown(self):
+        parent = _make_mock_parent()
+        parent.session_estimated_cost_usd = 0.5
+        parent.session_cost_status = "actual"
+        parent.session_cost_source = "provider"
+
+        parent = self._finalize_cost(parent, _make_mock_child(cost=0.0, cost_status="unknown"))
+
+        self.assertAlmostEqual(parent.session_estimated_cost_usd, 0.5, places=6)
+        self.assertEqual(parent.session_cost_status, "unknown")
 
 
 if __name__ == "__main__":
