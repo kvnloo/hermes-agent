@@ -146,3 +146,30 @@ def test_setup_enabling_e2ee_prepares_the_e2ee_extra(tmp_path, monkeypatch):
     monkeypatch.setattr(pm_extras, "missing", lambda extra: ())
     matrix_adapter.interactive_setup()
     assert calls == [(["matrix", "matrix-e2ee"], {"explicit": True})]
+
+def test_matrix_register_exposes_e2ee_extra_without_duplicate_authz(monkeypatch):
+    """#132820: a rebased plugin must register before the updater can inspect its extras.
+
+    The actual register() call previously raised TypeError when two explicit
+    authorization kwargs collided with gateway_env.AUTHZ. The plugin loader
+    swallowed that exception, silently removing Matrix from the registry.
+    """
+    registered = []
+
+    class RecordingContext:
+        def register_platform(self, **kwargs):
+            registered.append(kwargs)
+
+    monkeypatch.delenv("MATRIX_E2EE_MODE", raising=False)
+    monkeypatch.delenv("MATRIX_ENCRYPTION", raising=False)
+    matrix_adapter.register(RecordingContext())
+
+    assert len(registered) == 1
+    entry = registered[0]
+    assert entry["name"] == "matrix"
+    assert entry["allowed_users_env"] == "MATRIX_ALLOWED_USERS"
+    assert entry["allow_all_env"] == "MATRIX_ALLOW_ALL_USERS"
+    assert entry["extra_names_fn"]() == ["matrix"]
+
+    monkeypatch.setenv("MATRIX_E2EE_MODE", "optional")
+    assert entry["extra_names_fn"]() == ["matrix", "matrix-e2ee"]
