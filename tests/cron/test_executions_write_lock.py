@@ -13,6 +13,7 @@ import os
 import sqlite3
 import subprocess
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -110,3 +111,28 @@ def test_write_lock_is_reentrant(monkeypatch, tmp_path) -> None:
     with executions._ledger_write_lock():
         with executions._ledger_write_lock():
             pass
+
+
+def test_progress_stamp_retries_transient_contention(monkeypatch, tmp_path) -> None:
+    """A busy progress UPDATE must not abort the active cron runner (#135487)."""
+    monkeypatch.setattr(executions, "EXECUTIONS_FILE", tmp_path / "executions.db")
+    record = executions.create_execution("busy-progress", source="cron")
+    original_transaction = executions._transaction
+    calls = []
+
+    @contextmanager
+    def briefly_locked():
+        calls.append(1)
+        if len(calls) == 1:
+            raise sqlite3.OperationalError("database is locked")
+        with original_transaction() as conn:
+            yield conn
+
+    monkeypatch.setattr(executions, "_transaction", briefly_locked)
+    monkeypatch.setattr(executions.time, "sleep", lambda _seconds: None)
+
+    assert executions.touch_execution_progress(record["id"]) is True
+    assert len(calls) == 2, "progress UPDATE should retry after one SQLITE_BUSY"
+    with original_transaction() as conn:
+        row = conn.execute("SELECT progress_at FROM executions WHERE id=?", (record["id"],)).fetchone()
+    assert row["progress_at"] is not None

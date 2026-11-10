@@ -402,6 +402,7 @@ def _stale_age_seconds(claimed_at: str, progress_at: Optional[str]) -> float:
     return _claim_age_seconds(progress_at or claimed_at)
 
 
+@_ledger_write
 def touch_execution_progress(execution_id: str) -> bool:
     """Stamp ``progress_at`` on a running attempt this process owns. Returns False when the row
     is no longer ours or no longer running (the caller treats that as informational only)."""
