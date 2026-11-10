@@ -110,6 +110,36 @@ def test_accepted_and_finished_records_on_success(turn_env, caplog):
     assert "hunter2" not in fin
 
 
+@pytest.mark.parametrize("cleanup", ["scopes", "context", "hosted_room"])
+def test_completed_turn_settles_when_best_effort_cleanup_raises(turn_env, monkeypatch, caplog, cleanup):
+    """Post-turn cleanup failure must not strand a finished Desktop/TUI session (#131740)."""
+    agent = types.SimpleNamespace(
+        session_id="agent-sid-1",
+        run_conversation=lambda *a, **k: {"final_response": "done"},
+        clear_interrupt=lambda: None,
+    )
+    session = _session(agent=agent, running=True)
+    names = {
+        "scopes": "_release_turn_scopes",
+        "context": "reset_transport",
+        "hosted_room": "_release_hosted_room_turn_slot",
+    }
+    name = names[cleanup]
+    original = getattr(server, name)
+
+    def fail_after_cleanup(*args, **kwargs):
+        original(*args, **kwargs)
+        raise RuntimeError(f"{cleanup} teardown failed")
+
+    monkeypatch.setattr(server, name, fail_after_cleanup)
+    with caplog.at_level(logging.INFO, logger="tui_gateway.server"):
+        server._run_prompt_submit("rid", "ui-sid", session, "hi")
+
+    assert session["running"] is False
+    assert len(_records(caplog, "tui turn finished")) == 1
+    assert "_active_turn_marker_key" not in session
+
+
 @pytest.mark.parametrize("settle_info_raises", [False, True])
 def test_turn_settles_before_post_turn_trim(turn_stubs, monkeypatch, caplog, settle_info_raises):
     """A blocked post-turn trim must not hold the session running or its bookend (#131740);

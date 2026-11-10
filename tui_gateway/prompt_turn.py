@@ -1212,19 +1212,36 @@ def _run_prompt_submit(
         except Exception as e:
             _recover_turn_exception(sid, session, st, e)
         finally:
-            _release_turn_scopes(sid, session, st)
+            # Best-effort teardown must not prevent a completed turn from settling (#131740).
+            try:
+                _release_turn_scopes(sid, session, st)
+            except Exception:
+                logger.exception("TUI turn scope release failed")
             try:  # a raising settle step must not skip the trim / HERMES_HOME reset
-                _current_runtime_session_record.reset(runtime_session_token)
-                reset_transport(transport_token)
+                try:
+                    _current_runtime_session_record.reset(runtime_session_token)
+                except Exception:
+                    logger.exception("TUI turn runtime scope reset failed")
+                try:
+                    reset_transport(transport_token)
+                except Exception:
+                    logger.exception("TUI turn transport reset failed")
                 # A stale interim closure must not fire during a later turn.
-                st.agent.interim_assistant_callback = None
+                with contextlib.suppress(Exception):
+                    st.agent.interim_assistant_callback = None
                 with session["history_lock"]:
                     session["running"] = False
                     session["last_active"] = time.time()
                     session.pop("_turn_user_input", None)  # per turn: never leaks into the next one
                     if not st.error_retained:
-                        _clear_inflight_turn(session)
-                    _release_hosted_room_turn_slot(session)
+                        try:
+                            _clear_inflight_turn(session)
+                        except Exception:
+                            logger.exception("TUI turn inflight cleanup failed")
+                    try:
+                        _release_hosted_room_turn_slot(session)
+                    except Exception:
+                        logger.exception("TUI turn hosted-room cleanup failed")
                     if session.get(SESSION_KEY) is segments:
                         session.pop(SESSION_KEY)
                 # Closing bookend of "tui prompt accepted" — exactly one per accepted prompt.
