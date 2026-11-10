@@ -442,6 +442,37 @@ class TestGenerate:
         assert payload["response_format"] == "b64_json"
         assert "storage_options" not in payload
 
+
+    @pytest.mark.parametrize(
+        "mime,header,suffix",
+        [
+            ("image/jpeg", b"\xff\xd8\xff\xd9", ".jpg"),
+            ("image/png", b"\x89PNG\r\n\x1a\n", ".png"),
+        ],
+    )
+    def test_storage_disabled_inline_bytes_keep_mime(self, tmp_path, mime, header, suffix):
+        """The cached image extension must agree with xAI's response MIME."""
+        import base64
+        import mimetypes
+        from pathlib import Path
+
+        from plugins.image_gen.xai import XAIImageGenProvider
+
+        (tmp_path / "config.yaml").write_text(
+            "image_gen:\n  xai:\n    storage:\n      enabled: false\n")
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = {
+            "data": [{"b64_json": base64.b64encode(header).decode("ascii"), "mime_type": mime}]
+        }
+        with patch("plugins.image_gen.xai.requests.post", return_value=mock_resp):
+            result = XAIImageGenProvider().generate(prompt="test")
+
+        assert result["success"] is True
+        image_path = Path(result["image"])
+        assert image_path.read_bytes() == header
+        assert image_path.suffix == suffix
+        assert mimetypes.guess_type(str(image_path))[0] == mime
+
     def test_public_url_file_output_wins_over_temporary_url(self):
         from plugins.image_gen.xai import XAIImageGenProvider
 

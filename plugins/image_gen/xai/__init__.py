@@ -324,7 +324,10 @@ class XAIImageGenProvider(StaticImageGenProvider):
             # ``imgen.x.ai/xai-tmp-*`` URLs 404 within minutes; materialise locally for a stable path.
             image_ref, err = materialize_image(
                 first.get("b64_json"), first.get("url"), prefix=f"xai_{model_id}", label="xAI", provider="xai",
-                model=model_id, prompt=prompt, aspect=aspect, log=logger)
+                model=model_id, prompt=prompt, aspect=aspect,
+                extension={"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}.get(
+                    first.get("mime_type"), "png"),
+                log=logger)
             if err:
                 return err
 

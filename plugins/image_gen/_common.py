@@ -198,7 +198,7 @@ def import_openai(provider: str, aspect: str) -> tuple[Any, Optional[dict[str, A
 
 def materialize_image(
     b64: Optional[str], url: Optional[str], *, prefix: str, label: str, provider: str, model: str,
-    prompt: str, aspect: str, log: logging.Logger = logger,
+    prompt: str, aspect: str, extension: str = "png", log: logging.Logger = logger,
     on_url_fail: Optional[Callable[[Exception], None]] = None,
 ) -> tuple[Optional[str], Optional[dict[str, Any]]]:
     """``(image_ref, None)`` or ``(None, error)`` for a ``(b64_json, url)`` pair. Base64 is always
@@ -206,7 +206,7 @@ def materialize_image(
     fail = error_factory(provider, aspect, model=model, prompt=prompt)
     if b64:
         try:
-            return str(save_b64_image(b64, prefix=prefix)), None
+            return str(save_b64_image(b64, prefix=prefix, extension=extension)), None
         except Exception as exc:
             return None, fail(f"Could not save image to cache: {exc}", "io_error")
     if url:
