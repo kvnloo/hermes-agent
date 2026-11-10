@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 
@@ -169,3 +170,58 @@ def test_worker_store_persists_and_restores_the_tools_prefix_pin(tmp_path):
             store._outbox_owner.close()
     finally:
         db.close()
+
+
+def test_refused_compression_publish_revalidates_session_before_next_write(tmp_path, monkeypatch):
+    """A replayed publication can rotate the assignment; never charge its old parent to the child.
+
+    The pending publication was refused before owner I/O. The next write must first land
+    that publication, then reject its stale parent identity rather than persist usage
+    under the newly assigned child session.
+    """
+    from agent.runtime_session_store import WorkerRPC
+
+    calls = []
+
+    class OwnerReplies:
+        def send(self, request_id, message):
+            params = json.loads(message)['params']
+            calls.append((params['session_id'], params['operation']))
+            if params['operation'] == 'compression.publish':
+                result = {
+                    'value': None,
+                    'worker_assignment': {'parent': 'parent', 'session_id': 'child'},
+                    'annotations': [],
+                }
+            else:
+                result = {'value': None}
+            self.reply = {'jsonrpc': '2.0', 'id': request_id, 'result': result}
+
+        def receive(self, timeout):
+            return self.reply
+
+    owner = OwnerReplies()
+    monkeypatch.setattr(WorkerRPC, '_connection', lambda self: owner)
+    store = RuntimeSessionStore(WorkerRPC(tmp_path / 'home'), {'session_id': 'parent'},
+                                tmp_path / 'outbox')
+    try:
+        async def publish_on_loop():
+            store.publish_compression_child(parent_session_id='parent', child_session_id='child',
+                                           source='context_compression', messages=[])
+
+        with pytest.raises(WorkerPersistenceError, match='synchronous_rpc_on_event_loop'):
+            asyncio.run(publish_on_loop())
+        assert calls == []
+        assert [entry['operation'] for entry in store.journal['pending']] == ['compression.publish']
+
+        with pytest.raises(WorkerPersistenceError, match='permission_denied'):
+            store.queue_token_counts('parent', input_tokens=17)
+
+        assert calls == [('parent', 'compression.publish')]
+        assert store.scope['session_id'] == 'child'
+        assert store.journal['pending'] == []
+
+        store.queue_token_counts('child', input_tokens=9)
+        assert calls == [('parent', 'compression.publish'), ('child', 'usage.main')]
+    finally:
+        store._outbox_owner.close()

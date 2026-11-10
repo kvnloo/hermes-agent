@@ -324,8 +324,12 @@ class RuntimeSessionStore(RuntimeSessionCompressionMixin, RuntimeSessionLifecycl
         atomic_write_bytes(self.path, encoded, tmp_prefix='.pending-', mode=0o600, fsync_dir=True)
 
     def _session(self, session_id):
-        if session_id != self.scope['session_id']:
-            raise WorkerPersistenceError('permission_denied')
+        # Replay a refused publication before checking the session: its receipt may
+        # have moved the worker to a child, so an old-parent write must not follow it.
+        with self.lock:
+            self._raise_if_failed()
+            if session_id != self.scope['session_id']:
+                raise WorkerPersistenceError('permission_denied')
 
     def _record_failure(self, exc):
         """Remember why writes stopped and whether a later call may re-probe (exc or its message)."""
