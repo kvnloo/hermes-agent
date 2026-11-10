@@ -49,6 +49,19 @@ class TestPolicyFromExtra:
         assert p.user_allowed_commands == frozenset({"status", "model", "help"})
 
 
+    def test_telegram_plugin_spelling_preserves_explicit_group_allowlist(self):
+        # Telegram shows underscores, but plugin dispatch looks up canonical hyphenated names.
+        for configured_name in ("/MEMORY_HISTORY", "memory-history"):
+            policy = policy_from_extra(
+                {
+                    "group_allow_admin_from": ["owner"],
+                    "group_user_allowed_commands": [configured_name],
+                },
+                "group",
+            )
+            assert policy.can_run("reader", "memory-history"), configured_name
+            assert not policy.can_run("reader", "memory-delete"), configured_name
+
     def test_dm_admin_does_not_imply_group_admin(self):
         # Admin lists are scope-specific. DM admin must not auto-promote in groups.
         extra = {"allow_admin_from": ["111"]}

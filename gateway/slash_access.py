@@ -80,7 +80,7 @@ def _coerce_id_list(raw: Any) -> frozenset[str]:
 def _coerce_command_list(raw: Any) -> frozenset[str]:
     """Command allowlist: strip leading slashes (``/help`` or ``help``) and lowercase to match
     how ``resolve_command()`` stores names."""
-    return _coerce_list(raw, lambda s: s.lstrip("/").lower())
+    return _coerce_list(raw, lambda s: s.lstrip("/").lower().replace("_", "-"))
 
 
 def policy_from_extra(extra: dict, scope: str) -> SlashAccessPolicy:
