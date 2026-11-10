@@ -1,5 +1,6 @@
 """Tests for agent.error_classifier — structured API error classification."""
 
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -379,6 +380,37 @@ class TestClassifyApiError:
 
         assert result.reason == FailoverReason.billing
         assert result.retryable is False
+        assert result.should_fallback is True
+
+    @pytest.mark.parametrize("reset_source", [
+        "reset_at", "resets_at", "x-ratelimit-reset", "x-ratelimit-reset-ms",
+    ])
+    @pytest.mark.parametrize("remaining, expected", [
+        (30, FailoverReason.rate_limit),
+        (5 * 3600, FailoverReason.billing),
+    ])
+    def test_go_usage_window_absolute_reset_uses_remaining_seconds(self, reset_source, remaining, expected):
+        # jhston's GoUsageLimitError is a plan wall, not a per-minute model throttle.
+        # Numeric *_at fields and x-ratelimit-reset epochs must be priced relative to now.
+        reset_at = time.time() + remaining
+        body = {
+            "error": {"type": "GoUsageLimitError", "message": "Go usage limit exceeded"},
+            "metadata": {"limitName": "5 hour"},
+        }
+        headers = {}
+        if reset_source == "x-ratelimit-reset":
+            headers["x-ratelimit-reset"] = str(reset_at)
+        elif reset_source == "x-ratelimit-reset-ms":
+            headers["x-ratelimit-reset"] = str(int(reset_at * 1000))
+        else:
+            body[reset_source] = reset_at
+        err = MockAPIError("Error code: 429 - Go usage limit exceeded", status_code=429,
+                           body=body, headers=headers)
+
+        result = classify_api_error(err, provider="opencode-go", model="deepseek-v4.1-flash")
+
+        assert result.reason == expected
+        assert result.retryable is (expected == FailoverReason.rate_limit)
         assert result.should_fallback is True
 
     def test_429_generic_quota_wall_is_billing(self):

@@ -1224,10 +1224,8 @@ _STATUS_HANDLERS: Dict[int, Callable[[_Ctx], Verdict]] = {
 
 _RESET_FIELDS = ("resets_in_seconds", "resets_at", "reset_at", "retry_after")
 _RESET_HEADERS = ("retry-after", "Retry-After", "x-ratelimit-reset", "X-RateLimit-Reset")
-# Quantified reset fields we can price in seconds. The ``*_at`` stamps are ISO strings here, which
-# ``parse_retry_after_seconds`` (numeric / RFC 7231 date) cannot turn into a wait; they keep the
-# conservative "non-empty = transient" read below. ``_rate_limit_reset_seconds`` doesn't cover the
-# reset-header family (it reads ``Retry-After`` only), so this scan stays separate.
+# Compare absolute reset epochs and relative waits as remaining seconds. ISO
+# stamps stay unpriced and retain the existing conservative transient verdict.
 _RESET_SECONDS_FIELDS = ("resets_in_seconds", "retry_after")
 # A quantified reset window only proves the limit is TRANSIENT when it is short enough to be waited
 # out. OpenCode Go answers a quota-exhausted key with ``retry-after: 1627902`` (18.8 days - the
@@ -1238,16 +1236,24 @@ _USAGE_LIMIT_TRANSIENT_MAX_RESET_S = 3600.0
 
 
 def _usage_limit_reset_seconds(body: dict, response_headers) -> Optional[float]:
-    """Shortest quantified reset window named by the body's seconds fields or the reset headers."""
+    """Shortest quantified time until reset (not an absolute epoch)."""
     from agent.retry_utils import parse_retry_after_seconds
     windows = []
     for payload in (p for p in (body, _error_obj(body)) if isinstance(p, dict)):
-        for name in _RESET_SECONDS_FIELDS:
-            if (seconds := parse_retry_after_seconds(payload.get(name))) is not None:
-                windows.append(seconds)
+        for name in _RESET_FIELDS:
+            value = payload.get(name)
+            if name.endswith("_at") and isinstance(value, (int, float)):
+                windows.append(max(0.0, float(value) - time.time()))
+            elif name in _RESET_SECONDS_FIELDS:
+                if (seconds := parse_retry_after_seconds(value)) is not None:
+                    windows.append(seconds)
     if response_headers and hasattr(response_headers, "get"):
         for header in _RESET_HEADERS:
             if (seconds := parse_retry_after_seconds(response_headers.get(header))) is not None:
+                if header.lower() == "x-ratelimit-reset" and seconds >= 1_000_000_000:
+                    # This header can carry epoch seconds/milliseconds or a relative delay.
+                    epoch = seconds / 1000 if seconds >= 1_000_000_000_000 else seconds
+                    seconds = max(0.0, epoch - time.time())
                 windows.append(seconds)
     return min(windows) if windows else None
 
