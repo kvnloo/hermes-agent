@@ -257,6 +257,21 @@ class TestCapabilityProbe:
         assert report.ok, report.failures
 
 
+    def test_probe_state_get_returns_missing_key_default(self, tmp_path):
+        """A documented state cursor read must work against the probe's empty state."""
+        d = _make_plugin(
+            tmp_path,
+            manifest={**BASE_MANIFEST, "provides_tools": ["t"]},
+            init_py=(
+                "def register(ctx):\n"
+                "    cursor = ctx.state.get('cursor', default={'page': 0})\n"
+                "    ctx.state.set('cursor', {'page': cursor['page'] + 1})\n"
+                "    ctx.register_tool('t', 'cursor', {}, lambda args: None)\n"),
+        )
+        report = validate_plugin_dir(d)
+        assert report.ok, report.failures
+
+
 class TestModelProviderKind:
     def test_import_time_register_provider_is_the_entry_point(self, tmp_path):
         """``kind: model-provider`` plugins register at import via providers.register_provider and

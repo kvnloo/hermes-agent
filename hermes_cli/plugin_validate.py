@@ -270,7 +270,7 @@ class RecordingContext:
 
             return _noop
         if name in context_properties:
-            return _InertService()
+            return _InertState() if name == "state" else _InertService()
         raise AttributeError(name)
 
 
@@ -291,6 +291,12 @@ class _InertService:
 
     def __str__(self):
         return _inert_dir()
+
+
+class _InertState(_InertService):
+    def get(self, key, default=None):
+        # The scratch probe has no persisted state; a missing key returns its default.
+        return default
 
 
 _INERT_DIR = []
