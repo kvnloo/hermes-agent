@@ -164,6 +164,14 @@ export function useComposerVoice({
     return collectUnspokenTurnSpeech(messages, resolveSpokenReply(sessionId, messages)?.id ?? null)
   }
 
+  const pendingLiveAnswer = () => {
+    const messages = $messages.get()
+
+    return collectUnspokenTurnSpeech(messages, resolveSpokenReply(sessionId, messages)?.id ?? null, {
+      answerOnly: true
+    })
+  }
+
   const consumePendingResponse = () => {
     const messages = $messages.get()
     const last = messages.findLast(m => m.role === 'assistant' && !m.hidden)
@@ -250,7 +258,7 @@ export function useComposerVoice({
     onInterrupt,
     onStopWord: () => setVoiceConversationActive(false),
     onSubmit: submitLiveDelegation,
-    pendingResponse: pendingTurnResponse,
+    pendingResponse: pendingLiveAnswer,
     seedHistory: seedLiveHistory
   })
 

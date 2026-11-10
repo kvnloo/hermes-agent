@@ -1465,6 +1465,28 @@ describe('collectUnspokenTurnSpeech', () => {
     expect(speech?.pending).toBe(false)
   })
 
+  it('keeps GPT-Live answer-only while chained TTS still includes narration (#152345)', () => {
+    const messages = [
+      user('u1', 'list my projects'),
+      assistant('narration', 'Let me filter the tasks.', { interim: true }),
+      assistant('fused', '', {
+        parts: [
+          { type: 'text', text: 'First, I will query the tools.' },
+          toolCallPart('call1'),
+          { type: 'text', text: 'You have seven projects.' }
+        ]
+      })
+    ]
+
+    expect(collectUnspokenTurnSpeech(messages, null)?.text).toContain('Let me filter')
+    expect(collectUnspokenTurnSpeech(messages, null, { answerOnly: true })).toMatchObject({
+      id: 'fused',
+      pending: false,
+      text: 'You have seven projects.'
+    })
+    expect(collectUnspokenTurnSpeech(messages.slice(0, 2), null, { answerOnly: true })).toBeNull()
+  })
+
   it('keeps the binding id stable while later bubbles stream in', () => {
     const turnStart = [user('u1', 'go'), assistant('a1', 'Let me check.', { interim: true })]
     const first = collectUnspokenTurnSpeech(turnStart, null)

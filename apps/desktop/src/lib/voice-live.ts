@@ -73,7 +73,7 @@ export interface VoiceLiveHandlers {
 const CLOSE_TIMEOUT_MS = 15_000
 const ICE_GATHER_TIMEOUT_MS = 10_000
 // Vendor cap: 500 tokens per append. ~4 chars/token, keep headroom.
-const APPEND_CHAR_LIMIT = 1_400
+const APPEND_CHAR_LIMIT = 800
 // How much conversation the backend receives per delegation.
 const CONTEXT_WINDOW_MS = 5 * 60_000
 const CONTEXT_MAX_FRAGMENTS = 80
@@ -124,8 +124,26 @@ export function chunkForCommentary(text: string, limit = APPEND_CHAR_LIMIT): str
         current = ''
       }
 
-      for (let index = 0; index < sentence.length; index += limit) {
-        chunks.push(sentence.slice(index, index + limit))
+      let remaining = sentence
+
+      while (remaining.length > limit) {
+        const slice = remaining.slice(0, limit)
+        const comma = slice.lastIndexOf(', ')
+        const space = slice.lastIndexOf(' ')
+        let cut = limit
+
+        if (comma > limit / 2) {
+          cut = comma + 1
+        } else if (space > limit / 2) {
+          cut = space
+        }
+
+        chunks.push(remaining.slice(0, cut).trim())
+        remaining = remaining.slice(cut).trimStart()
+      }
+
+      if (remaining) {
+        chunks.push(remaining)
       }
 
       continue
@@ -226,6 +244,9 @@ export class VoiceLiveSession {
   private started = false
   private eventCounter = 0
   private transcript: LiveTranscriptFragment[] = []
+  private commentaryQueue: Array<{ delegationId: null | string; content: string }> = []
+  private commentaryPending: null | string = null
+  private commentaryTimer: null | number = null
   private speakingProbe: null | number = null
   private analyser: null | AnalyserNode = null
   private audioContext: null | AudioContext = null
@@ -424,6 +445,7 @@ export class VoiceLiveSession {
         const id = event.delegation?.id
 
         if (id) {
+          this.clearCommentary()
           this.activeDelegationId = id
           this.handlers.onDelegation(id, this.contextWindow())
         }
@@ -431,7 +453,13 @@ export class VoiceLiveSession {
         return
       }
 
+      case 'session.commentary.appended':
+        this.settleCommentary(event.client_event_id)
+
+        return
+
       case 'error': {
+        this.settleCommentary(event.error?.client_event_id)
         const code = event.error?.code ?? ''
 
         // Late appends after our own close are expected noise.
@@ -468,16 +496,67 @@ export class VoiceLiveSession {
     }
   }
 
-  /** A result the voice should say aloud (paraphrased). */
-  speak(delegationId: null | string, content: string): void {
-    for (const chunk of chunkForCommentary(content)) {
-      this.send({
-        content: chunk,
-        delegation_id: delegationId,
-        event_id: this.nextEventId('say'),
-        type: 'session.commentary.append'
-      })
+  private clearCommentary(): void {
+    this.commentaryQueue = []
+    this.commentaryPending = null
+
+    if (this.commentaryTimer !== null) {
+      window.clearTimeout(this.commentaryTimer)
+      this.commentaryTimer = null
     }
+  }
+
+  private settleCommentary(eventId: string | undefined): void {
+    if (!eventId || eventId !== this.commentaryPending) {
+      return
+    }
+
+    if (this.commentaryTimer !== null) {
+      window.clearTimeout(this.commentaryTimer)
+      this.commentaryTimer = null
+    }
+
+    this.commentaryPending = null
+    this.sendNextCommentary()
+  }
+
+  private sendNextCommentary(): void {
+    if (this.commentaryPending || !this.commentaryQueue.length) {
+      return
+    }
+
+    const next = this.commentaryQueue.shift()
+
+    if (!next) {
+      return
+    }
+
+    const eventId = this.nextEventId('say')
+
+    if (!this.send({
+      content: next.content,
+      delegation_id: next.delegationId,
+      event_id: eventId,
+      type: 'session.commentary.append'
+    })) {
+      this.clearCommentary()
+
+      return
+    }
+
+    this.commentaryPending = eventId
+    // A missing vendor ack must not strand all following chunks.
+    this.commentaryTimer = window.setTimeout(() => this.settleCommentary(eventId), 5_000)
+  }
+
+  /** A result the voice should say aloud (paraphrased), one accepted chunk at a time. */
+  speak(delegationId: null | string, content: string): void {
+    if (this.finalized) {
+      return
+    }
+
+    this.commentaryQueue.push(...chunkForCommentary(content).map(chunk => ({ delegationId, content: chunk })))
+    this.sendNextCommentary()
   }
 
   /** Steer the live persona mid-conversation (session-wide). */
@@ -511,6 +590,8 @@ export class VoiceLiveSession {
       return
     }
 
+    this.clearCommentary()
+
     if (!this.send({ type: 'session.close' })) {
       this.finish('close_requested', null)
 
@@ -526,6 +607,7 @@ export class VoiceLiveSession {
     }
 
     this.finalized = true
+    this.clearCommentary()
 
     if (this.closeTimer) {
       window.clearTimeout(this.closeTimer)

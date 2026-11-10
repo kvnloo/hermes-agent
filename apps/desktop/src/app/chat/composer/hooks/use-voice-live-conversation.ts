@@ -134,9 +134,7 @@ export function useVoiceLiveConversation({
   // leaving a second billed one running.
   const startEpochRef = useRef(0)
   const startingRef = useRef(false)
-  // Set at delegation submit; a turn is only "settled" once it has been seen
-  // running (busy) or produced a reply — the gateway ack lags the submit.
-  const turnObservedRef = useRef(false)
+  // A delayed submit ack must not be mistaken for a completed empty turn.
   const submittedAtRef = useRef(0)
   const enabledRef = useRef(enabled)
   const busyRef = useRef(busy)
@@ -144,8 +142,6 @@ export function useVoiceLiveConversation({
   const userUtteranceRef = useRef('')
   const utteranceTimerRef = useRef<null | number>(null)
   const delegationRef = useRef<null | string>(null)
-  const spokenLengthRef = useRef(0)
-  const spokenResponseIdRef = useRef<null | string>(null)
   const lastToolLabelRef = useRef<null | string>(null)
   const wasEnabledRef = useRef(enabled)
 
@@ -217,8 +213,6 @@ export function useVoiceLiveConversation({
     const session = sessionRef.current
     sessionRef.current = null
     setDelegation(null)
-    spokenResponseIdRef.current = null
-    spokenLengthRef.current = 0
     speakingRef.current = false
     session?.close()
     setMuted(false)
@@ -313,10 +307,7 @@ export function useVoiceLiveConversation({
           }
 
           setDelegation(delegationId)
-          spokenResponseIdRef.current = null
-          spokenLengthRef.current = 0
           lastToolLabelRef.current = null
-          turnObservedRef.current = false
           submittedAtRef.current = Date.now()
           latest.current.consumePendingResponse()
           refreshStatus()
@@ -374,9 +365,8 @@ export function useVoiceLiveConversation({
     }
   }, [end, refreshStatus, setDelegation, voiceCopy])
 
-  // Drive the reply back into the voice: stream commentary as Hermes writes
-  // it (sentence-chunked), quiet tool progress as thinking appends, and clear
-  // the delegation when the turn settles.
+  // GPT-Live should paraphrase only a settled answer, never provisional
+  // text or tool narration. Tool progress stays on the quiet thinking channel.
   // eslint-disable-next-line no-restricted-syntax -- turn-coordination refs (delegation id / spoken cursor), not atom mirrors
   useEffect(() => {
     const session = sessionRef.current
@@ -391,10 +381,6 @@ export function useVoiceLiveConversation({
         return
       }
 
-      if (busyRef.current) {
-        turnObservedRef.current = true
-      }
-
       const tool = latest.current.activeToolLabel?.() ?? null
 
       if (tool && tool !== lastToolLabelRef.current) {
@@ -404,32 +390,15 @@ export function useVoiceLiveConversation({
 
       const response = latest.current.pendingResponse()
 
-      if (response) {
-        turnObservedRef.current = true
+      // An idle row left pending by a lost completion may still be spoken after
+      // the settle grace; never feed a live/busy row to GPT-Live.
+      const graceExpired = Date.now() - submittedAtRef.current > SUBMIT_SETTLE_GRACE_MS
 
-        if (spokenResponseIdRef.current !== response.id) {
-          spokenResponseIdRef.current = response.id
-          spokenLengthRef.current = 0
-        }
-
+      if (response && !busyRef.current && (!response.pending || graceExpired)) {
         const spoken = sanitizeTextForSpeech(response.text)
 
-        // Append only completed sentences while streaming; the tail lands on settle.
-        if (response.pending || busyRef.current) {
-          const boundary = spoken.lastIndexOf('. ', spoken.length - 2)
-          const cut = boundary > spokenLengthRef.current ? boundary + 1 : spokenLengthRef.current
-
-          if (cut > spokenLengthRef.current) {
-            session.speak(delegationId, spoken.slice(spokenLengthRef.current, cut))
-            spokenLengthRef.current = cut
-          }
-
-          return
-        }
-
-        if (spoken.length > spokenLengthRef.current) {
-          session.speak(delegationId, spoken.slice(spokenLengthRef.current))
-          spokenLengthRef.current = spoken.length
+        if (spoken) {
+          session.speak(delegationId, spoken)
         }
 
         latest.current.consumePendingResponse()
@@ -439,17 +408,8 @@ export function useVoiceLiveConversation({
         return
       }
 
-      // The submit ack lags: give the turn time to be seen running before
-      // reading "idle and no reply" as a finished turn.
-      if (
-        !busyRef.current &&
-        (turnObservedRef.current || Date.now() - submittedAtRef.current > SUBMIT_SETTLE_GRACE_MS)
-      ) {
-        // Turn settled without a speakable reply (tool-only, error, interrupted).
-        if (spokenLengthRef.current === 0) {
-          session.think(delegationId, 'Hermes finished that request without a spoken result.')
-        }
-
+      if (!response && !busyRef.current && graceExpired) {
+        session.think(delegationId, 'Hermes finished that request without a spoken result.')
         setDelegation(null)
         refreshStatus()
       }

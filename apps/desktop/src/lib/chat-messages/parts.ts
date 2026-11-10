@@ -361,7 +361,8 @@ export interface UnspokenTurnSpeech {
  */
 export function collectUnspokenTurnSpeech(
   messages: ChatMessage[],
-  lastSpokenId: string | null
+  lastSpokenId: string | null,
+  options: { answerOnly?: boolean } = {}
 ): UnspokenTurnSpeech | null {
   let spokenIndex = lastSpokenId ? messages.findLastIndex(m => m.id === lastSpokenId) : -1
 
@@ -383,7 +384,13 @@ export function collectUnspokenTurnSpeech(
     }
 
     pending = Boolean(message.pending)
-    const text = chatMessageText(message).trim()
+    if (options.answerOnly && message.interim) {
+      continue
+    }
+
+    // GPT-Live paraphrases a final answer; chained TTS still reads narration.
+    const boundary = options.answerOnly ? message.parts.findLastIndex(part => part.type === 'tool-call') + 1 : 0
+    const text = partsText(message.parts.slice(boundary)).trim()
 
     if (!text) {
       continue
