@@ -41,6 +41,10 @@ def stored_picker_sessions(authority, actor, *, limit, include_hidden=False):
         rows = db.list_sessions_rich(exclude_sources=_excluded_sources(), limit=200, offset=offset,
             order_by_last_active=True, compact_rows=True, include_hidden=include_hidden)
         for row in rows:
+            # Untitled, message-free startup routes are placeholders, not conversations.
+            # Explicitly named drafts remain selectable before the first user turn.
+            if not row.get('message_count') and not (row.get('title') or '').strip():
+                continue
             local = row['source'] in _LOCAL_SOURCES
             if not local and _messaging_platform(row['source']) is None:
                 continue  # neither a local nor a messaging label (acp, unknown, ...): nothing this picker resumes
