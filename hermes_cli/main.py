@@ -1164,14 +1164,14 @@ def _session_db():
 
 def _latest_session_id(use_tui: bool) -> Optional[str]:
     """MRU session for the active interface, falling back across the local
-    interactive family (cli/webui/tui).
+    interactive family (cli/webui/tui/desktop).
 
-    A chat started in the webui or the desktop TUI is continuable from any
-    local surface. Webui sessions were tagged ``tui`` in older builds and
-    ``webui`` in newer ones, so both are in the family. Gateway and
+    A chat started in the webui or Desktop/TUI is continuable from any local
+    surface. Older Desktop conversations can retain ``source="desktop"``,
+    while WebUI may use ``tui`` or ``webui``. Messaging gateway and
     automation sessions are never picked here (use the ``/resume`` picker).
     """
-    family = ("tui", "webui", "cli") if use_tui else ("cli", "webui", "tui")
+    family = ("tui", "webui", "desktop", "cli") if use_tui else ("cli", "webui", "tui", "desktop")
     return _resolve_last_session(source=family)
 
 

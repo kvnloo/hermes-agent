@@ -177,6 +177,34 @@ def _real_db_fixture(tmp_path, monkeypatch):
     return db, repo_a, _stamp, _use_repo_a
 
 
+def test_desktop_source_in_current_workspace_precedes_foreign_cli(tmp_path, monkeypatch):
+    """A Desktop session must remain continuable from either local interface.
+
+    #44964 reports mixed-source histories, including desktop-tagged records.
+    With only a desktop row in this workspace, a newer CLI row elsewhere
+    must not become the fallback just because the source family omits desktop.
+    """
+    db, repo_a, stamp, use_repo_a = _real_db_fixture(tmp_path, monkeypatch)
+    try:
+        db.create_session(
+            "local_desktop", source="desktop",
+            cwd=str(repo_a), git_repo_root=str(repo_a),
+        )
+        db.create_session(
+            "foreign_cli", source="cli",
+            cwd="/other/repo-b", git_repo_root="/other/repo-b",
+        )
+        stamp("local_desktop", 1000.0)
+        stamp("foreign_cli", 9000.0)
+        use_repo_a()
+        from hermes_cli.main import _latest_session_id
+
+        assert _latest_session_id(use_tui=False) == "local_desktop"
+        assert _latest_session_id(use_tui=True) == "local_desktop"
+    finally:
+        db.close()
+
+
 def test_family_prefers_current_workspace_over_foreign_preferred_source(tmp_path, monkeypatch):
     """Reviewer case: local webui in /repo-a must beat a foreign cli in /repo-b."""
     db, repo_a, _stamp, _use_repo_a = _real_db_fixture(tmp_path, monkeypatch)
