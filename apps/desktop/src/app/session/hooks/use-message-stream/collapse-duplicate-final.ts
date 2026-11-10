@@ -200,8 +200,31 @@ export function collapseLiveTwinOfPersistedFinal(
     return null
   }
 
+  // A refreshed final row may arrive before every live tool detail has
+  // reached the historical page. Keep live-only calls, but never copy one
+  // already painted elsewhere in this turn.
+  const representedToolIds = new Set(
+    messages.flatMap((message, index) =>
+      index <= options.lastUserIndex || index === streamIndex
+        ? []
+        : message.parts.flatMap(part => (part.type === 'tool-call' ? [part.toolCallId] : []))
+    )
+  )
+  const liveOnlyTools = messages[streamIndex].parts.filter(part => {
+    if (part.type !== 'tool-call' || representedToolIds.has(part.toolCallId)) {
+      return false
+    }
+
+    representedToolIds.add(part.toolCallId)
+    return true
+  })
+
   const next = messages.slice()
-  next[storedIndex] = options.completeMessage(messages[storedIndex])
+  next[storedIndex] = options.completeMessage(
+    liveOnlyTools.length
+      ? { ...messages[storedIndex], parts: [...messages[storedIndex].parts, ...liveOnlyTools] }
+      : messages[storedIndex]
+  )
   next.splice(streamIndex, 1)
 
   return { keptId: messages[storedIndex].id, messages: next }

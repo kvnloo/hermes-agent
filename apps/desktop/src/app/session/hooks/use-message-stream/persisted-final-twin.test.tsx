@@ -4,7 +4,7 @@ import { afterEach, expect, it } from 'vitest'
 
 import { graftRefreshedTailOntoBackfill } from '@/app/chat/transcript-backfill'
 import type { ClientSessionState } from '@/app/types'
-import { chatMessageText, toChatMessages } from '@/lib/chat-messages'
+import { type ChatMessage, chatMessageText, toChatMessages } from '@/lib/chat-messages'
 import { createClientSessionState } from '@/lib/chat-runtime'
 import type { SessionMessage } from '@/types/hermes'
 
@@ -112,4 +112,40 @@ it('never settles onto an identical reply from an earlier occurrence', async () 
 
   expect(copies().map(message => message.rowId)).toEqual([2, 4])
   expect(stream.state().messages.at(-1)?.id).toMatch(/^assistant-stream-/)
+})
+
+it('keeps live-only tool calls when a stored final already exists, without duplicating hydrated calls (#123801)', () => {
+  // A latest-page refresh may show the committed final reply before it
+  // includes every tool call the renderer already received over the socket.
+  const tool = { type: 'tool-call' as const, toolCallId: 't1', toolName: 'read_file', args: {} }
+  const user: ChatMessage = { id: 'user-3', role: 'user', rowId: 3, parts: [{ type: 'text', text: 'q' }] }
+  const final: ChatMessage = { id: 'stored-final-6', role: 'assistant', rowId: 6, parts: [{ type: 'text', text: FINAL }] }
+  const live: ChatMessage = {
+    id: 'assistant-stream-twin',
+    role: 'assistant',
+    parts: [{ type: 'text', text: FINAL }, tool]
+  }
+  const completeMessage = (message: ChatMessage): ChatMessage => ({ ...message, pending: false, durableComplete: true })
+
+  const missingFromPage = collapseLiveTwinOfPersistedFinal([user, final, live], 2, {
+    completeMessage,
+    finalRowId: 6,
+    lastUserIndex: 0
+  })
+
+  expect(missingFromPage?.messages.map(message => message.id)).toEqual(['user-3', 'stored-final-6'])
+  expect(missingFromPage?.messages[1].parts).toContainEqual(tool)
+
+  // When the same call DID hydrate in its own bubble, it must not be
+  // copied into the final bubble and painted twice.
+  const hydratedTool: ChatMessage = { id: 'stored-tool-4', role: 'assistant', rowId: 4, parts: [tool] }
+  const alreadyInPage = collapseLiveTwinOfPersistedFinal([user, hydratedTool, final, live], 3, {
+    completeMessage,
+    finalRowId: 6,
+    lastUserIndex: 0
+  })
+
+  expect(alreadyInPage?.messages.flatMap(message => message.parts).filter(
+    part => part.type === 'tool-call' && part.toolCallId === 't1'
+  )).toHaveLength(1)
 })
