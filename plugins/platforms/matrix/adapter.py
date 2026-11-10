@@ -1113,10 +1113,22 @@ class MatrixAdapter(BasePlatformAdapter):
 
     async def _connect_authenticate(self, client: Any, api: Any) -> bool:
         """Authenticate via access token (whoami) or password login; resolve user/device IDs."""
+        token_authenticated = False
         if self._access_token:
             api.token = self._access_token
             try:
-                resp = await client.whoami()
+                for attempt in range(3):
+                    try:
+                        resp = await client.whoami()
+                        break
+                    except Exception as exc:
+                        if _is_permanent_matrix_auth_error(exc) or attempt == 2:
+                            raise
+                        logger.warning(
+                            "Matrix: transient whoami error (attempt %d/3); retrying in 2s: %s",
+                            attempt + 1,
+                            describe_proxy_error(exc, matrix_redaction_proxy(self._proxy_url, self._homeserver)) or exc)
+                        await asyncio.sleep(2)
                 resolved_user_id = getattr(resp, "user_id", "") or self._user_id
                 resolved_device_id = str(getattr(resp, "device_id", "") or "")
                 if resolved_user_id:
@@ -1154,12 +1166,19 @@ class MatrixAdapter(BasePlatformAdapter):
                 logger.info(
                     "Matrix: using access token for %s%s", self._user_id or "(unknown user)",
                     f" (device {effective_device_id})" if effective_device_id else "")
+                token_authenticated = True
             except Exception as exc:
                 proxy_error = describe_proxy_error(exc, matrix_redaction_proxy(self._proxy_url, self._homeserver))
-                logger.error("Matrix: whoami failed — check MATRIX_ACCESS_TOKEN and MATRIX_HOMESERVER: %s",
-                             proxy_error or exc, exc_info=not proxy_error)
-                return await self._abort_connect(api)
-        elif self._password and self._user_id:
+                classification = "permanent" if _is_permanent_matrix_auth_error(exc) else "transient"
+                if self._password and self._user_id:
+                    logger.warning("Matrix: %s whoami failure; using password fallback: %s",
+                                   classification, proxy_error or exc)
+                    api.token = ""
+                else:
+                    logger.error("Matrix: %s whoami failure; no password fallback: %s",
+                                 classification, proxy_error or exc, exc_info=not proxy_error)
+                    return await self._abort_connect(api)
+        if not token_authenticated and self._password and self._user_id:
             try:
                 resp = await client.login(
                     identifier=self._user_id, password=self._password, device_name="Hermes Agent",
@@ -1170,7 +1189,7 @@ class MatrixAdapter(BasePlatformAdapter):
             except Exception as exc:
                 logger.error("Matrix: login failed — %s", describe_proxy_error(exc, matrix_redaction_proxy(self._proxy_url, self._homeserver)) or exc)
                 return await self._abort_connect(api)
-        else:
+        elif not token_authenticated:
             logger.error("Matrix: need MATRIX_ACCESS_TOKEN or MATRIX_USER_ID + MATRIX_PASSWORD")
             return await self._abort_connect(api)
         return True
