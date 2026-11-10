@@ -501,6 +501,39 @@ def test_run_conversation_bounds_successful_mutations_but_allows_changing_termin
 
 
 
+
+def test_unattended_default_stops_successful_kanban_comment_replay():
+    """#137170: an unattended turn must stop replaying a successful mutation."""
+    agent = _make_agent("kanban_comment", platform="telegram")
+    assert agent._tool_guardrails.config.hard_stop_enabled
+    args = {"task_id": "task-1", "body": "human decision"}
+    agent.client.chat.completions.create.side_effect = [
+        _mock_response(
+            content="", finish_reason="tool_calls",
+            tool_calls=[_mock_tool_call("kanban_comment", json.dumps(args), f"c{i}")],
+        )
+        for i in range(7)
+    ] + [_mock_response(content="done", finish_reason="stop")]
+
+    with (
+        patch("model_tools.handle_function_call", side_effect=[
+            json.dumps({"ok": True, "comment_id": 953 + i}) for i in range(7)
+        ]) as dispatch,
+        patch.object(agent, "_persist_session"),
+        patch.object(agent, "_save_trajectory"),
+        patch.object(agent, "_cleanup_task_resources"),
+    ):
+        result = agent.run_conversation("record and then unblock")
+
+    assert dispatch.call_count == 5
+    assert result["turn_exit_reason"] == "guardrail_halt"
+    assert any(
+        "repeated_successful_call_block" in m["content"]
+        for m in result["messages"] if m.get("role") == "tool"
+    )
+
+
+
 def test_guardrail_halt_emits_final_response_through_stream_delta_callback():
     """Regression for #30770: when the guardrail halts the loop, the
     synthesized halt message must be pushed through ``stream_delta_callback``
