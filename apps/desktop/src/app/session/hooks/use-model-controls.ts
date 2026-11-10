@@ -260,14 +260,16 @@ export function useModelControls({
       const touchesPrimary = !liveSessionId || liveSessionId === primaryRuntimeId
 
       const readSnapshot = (): ModelPickSnapshot => {
-        const tileState = touchesPrimary ? undefined : $sessionStates.get()[liveSessionId!]
+        // The live slice owns the model shown by the primary pill. Its state can
+        // differ from composer draft globals, so rollback must snapshot that slice.
+        const liveState = liveSessionId ? $sessionStates.get()[liveSessionId] : undefined
 
         return {
-          model: touchesPrimary ? $currentModel.get() : (tileState?.model ?? ''),
-          provider: touchesPrimary ? $currentProvider.get() : (tileState?.provider ?? ''),
+          model: touchesPrimary ? (liveState?.model ?? $currentModel.get()) : (liveState?.model ?? ''),
+          provider: touchesPrimary ? (liveState?.provider ?? $currentProvider.get()) : (liveState?.provider ?? ''),
           reasoningEffortWire: touchesPrimary
-            ? $currentReasoningEffortWire.get()
-            : (tileState?.reasoningEffortWire ?? ''),
+            ? (liveState?.reasoningEffortWire ?? $currentReasoningEffortWire.get())
+            : (liveState?.reasoningEffortWire ?? ''),
           source: getCurrentModelSource()
         }
       }

@@ -2,6 +2,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { act, cleanup, render, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { PRIMARY_SESSION_VIEW } from '@/app/chat/session-view'
 import { getGlobalModelInfo } from '@/hermes'
 import { modelOptionsQueryKey } from '@/lib/model-options'
 import { $activeGatewayProfile } from '@/store/profile'
@@ -827,6 +828,48 @@ describe('useModelControls', () => {
     }
 
     expect(primaryState).toMatchObject({ model: 'fast-model', provider: 'workbuddy', reasoningEffortWire: 'high' })
+  })
+
+  it('restores the live primary model instead of stale draft globals after a rejected pick', async () => {
+    let primaryState: Record<string, unknown> = {
+      model: 'live-model',
+      provider: 'live-provider',
+      reasoningEffortWire: 'high'
+    }
+    SessionStates.$sessionStates.set({ 'runtime-a': primaryState } as never)
+    tile.delegate = {
+      updateSession: (_id: string, update: (state: Record<string, unknown>) => Record<string, unknown>) => {
+        primaryState = update(primaryState)
+        SessionStates.$sessionStates.set({ 'runtime-a': primaryState } as never)
+      }
+    }
+    $activeSessionId.set('runtime-a')
+    setCurrentModel('stale-draft-model')
+    setCurrentProvider('stale-draft-provider')
+    setCurrentReasoningEffortWire('low')
+    const requestGateway = vi.fn(async () => {
+      throw new Error('switch denied')
+    })
+    const { result } = renderHook(() => useModelControls({ queryClient: new QueryClient(), requestGateway }))
+
+    try {
+      await expect(result.current.selectModel({ model: 'rejected-model', provider: 'rejected-provider' })).resolves.toBe(
+        false
+      )
+    } finally {
+      tile.delegate = null
+    }
+
+    // The pill reads this live view, not the composer's $currentModel draft.
+    expect(PRIMARY_SESSION_VIEW.$model.get()).toBe('live-model')
+    expect(PRIMARY_SESSION_VIEW.$provider.get()).toBe('live-provider')
+    expect(primaryState).toMatchObject({
+      model: 'live-model',
+      provider: 'live-provider',
+      reasoningEffortWire: 'high'
+    })
+    expect($currentModel.get()).toBe('live-model')
+    expect($currentProvider.get()).toBe('live-provider')
   })
 
   it('rolls a failed focused-B selection back only in B cache', async () => {
