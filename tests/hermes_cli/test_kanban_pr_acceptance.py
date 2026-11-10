@@ -214,6 +214,41 @@ def test_fork_pr_without_branch_protection_accepts(github, monkeypatch):
     assert receipt["head_sha"] == "a" * 40
 
 
+@pytest.mark.platforms("linux")
+@pytest.mark.parametrize(
+    ("live_sha", "live_state", "expected_ok"),
+    [
+        ("a" * 40, "open", True),
+        ("b" * 40, "open", False),
+        ("a" * 40, "closed", False),
+    ],
+)
+def test_unprotected_pr_rechecks_live_head_before_acceptance(
+    monkeypatch, live_sha, live_state, expected_ok
+):
+    """An unprotected PR is accepted only if its final state/head still match."""
+    requests = []
+
+    def fake_api(endpoint, **_kwargs):
+        requests.append(endpoint)
+        if endpoint == "graphql":
+            return {"data": {"repository": {"pullRequest": {
+                "headRefOid": "a" * 40, "baseRefName": "main", "state": "OPEN",
+                "baseRef": {"branchProtectionRule": None}}}}}
+        if "/rules/branches/" in endpoint:
+            return [[]]
+        if "/pulls/" in endpoint:
+            return {"head": {"sha": live_sha}, "base": {"ref": "main"},
+                    "state": live_state, "merged": False}
+        raise AssertionError(f"Unexpected GitHub request: {endpoint}")
+
+    monkeypatch.setattr("hermes_cli.kanban_pr_acceptance._api", fake_api)
+    receipt = collect_acceptance("acme/repo", "https://github.com/acme/repo/pull/7")
+    assert receipt["ok"] is expected_ok, receipt
+    assert receipt["classification"] == ("success" if expected_ok else "stale"), receipt
+    assert any("/pulls/" in path for path in requests), requests
+
+
 @pytest.mark.platforms("posix")
 def test_assignee_without_own_gh_login_never_falls_through_to_ambient_login(tmp_path, monkeypatch):
     """An assignee profile with no GH_TOKEN/GH_CONFIG_DIR of its own must not inherit the

@@ -207,6 +207,13 @@ def collect_acceptance(contract: str, published_pr: str | None,
                                     for r in rule["parameters"]["required_status_checks"])
         receipt["required"] = [{"context": c, "app_id": a} for c, a in sorted(required, key=str)]
         if not required:
+            # An unprotected PR can be closed or force-pushed during the rules read.
+            # Revalidate it just as we do after collecting required-check evidence.
+            current = _api(f"repos/{repo}/pulls/{number}", profile_home=profile_home)
+            if (current["head"]["sha"] != sha or current["base"]["ref"] != branch
+                    or (current["state"] == "closed" and not current.get("merged"))):
+                receipt.update(classification="stale", detail="PR head/base changed while collecting evidence; retry.")
+                return receipt
             # No CI gate is configured on the target ref. This is the normal
             # fork-PR path: the fork has no branch protection, so there is no
             # required check-run to wait for. The PR is already verified OPEN or
