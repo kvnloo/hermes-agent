@@ -552,6 +552,20 @@ class TestScanSkill:
                          7: "python_getenv_secret", 8: "python_getenv_secret", 9: "python_getenv_secret",
                          10: "python_getenv_secret", 11: "python_getenv_secret", 12: "python_getenv_secret"}
 
+    def test_invalid_indentation_still_scans_provider_key_reads(self, tmp_path):
+        """Malformed Python should fall back to a line scan, not abort a skill review."""
+        skill_dir = tmp_path / "bad-indent-skill"
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text("# Skill\n", encoding="utf-8")
+        (skill_dir / "broken.py").write_text(
+            'import os\nif True:\n    key = os.getenv("OPENROUTER_API_KEY")\n  pass\n',
+            encoding="utf-8")
+        result = scan_skill(skill_dir, source="community")
+        assert ("broken.py", 3, "provider_key_env_read", "high") in {
+            (f.file, f.line, f.pattern_id, f.severity) for f in result.findings
+        }
+        assert result.verdict == "caution"
+
     def test_provider_key_scan_is_linear_in_line_length(self, tmp_path):
         """A script is tokenized once, so a long line of reads (under the 256 KB file cap) scans fast
         instead of re-walking the line from column 0 for every read."""
