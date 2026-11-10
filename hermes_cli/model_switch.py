@@ -1367,6 +1367,14 @@ def _route_configured_provider(st: _Switch) -> Optional[ModelSwitchResult] | boo
         return False
     current_slug = _current_provider_match(st, cfg_matches)
     if current_slug is not None:
+        # A canonical built-in session is not on providers.Anthropic just because
+        # its key aliases match: runtime keeps bare "anthropic" on the built-in (#151775).
+        entry = st.user_providers.get(current_slug) if isinstance(st.user_providers, dict) else None
+        if isinstance(entry, dict) and any(entry.get(k) for k in ("api", "url", "base_url")):
+            from hermes_cli.runtime_provider_custom import _shadowed_by_builtin
+            if _shadowed_by_builtin(st.current_provider.strip().lower()):
+                current_slug = None
+    if current_slug is not None:
         st.new_model = cfg_matches[current_slug]
         return True
     match_slugs = sorted(cfg_matches)

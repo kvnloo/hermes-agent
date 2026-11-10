@@ -146,3 +146,28 @@ def test_dashboard_main_pick_of_builtin_named_key_runs_where_it_validated(key, m
 
     runtime = resolve_runtime_provider(target_model="m1")
     assert (runtime["base_url"].rstrip("/"), runtime["api_key"]) == (result.base_url.rstrip("/"), result.api_key)
+
+
+def test_typed_model_from_builtin_session_uses_configured_endpoint(monkeypatch):
+    """A built-in session is not already on the matching providers.Anthropic endpoint.
+    A typed model declared only there must select it, not stay on built-in Anthropic (#151775).
+    """
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-builtin-123456")
+    from hermes_cli.config import atomic_config_write, load_config
+    from hermes_cli.model_switch import model_selection_config_updates, switch_model
+    from hermes_cli.runtime_provider import resolve_runtime_provider
+
+    config_path, base_url = _write_config("Anthropic", provider="anthropic")
+    cfg = load_config()
+    result = switch_model("m1", "anthropic", "x", is_global=True,
+                          user_providers=cfg["providers"], custom_providers=[])
+    assert result.success, result.error_message
+    assert (result.target_provider, result.base_url, result.api_key) == (
+        "custom:anthropic", base_url, "mixed-key-123456")
+
+    updates = model_selection_config_updates(result, cfg["model"])
+    new_model = {k: v for k, v in {**cfg["model"], **updates}.items() if v is not None}
+    atomic_config_write(config_path, {"model": new_model, "providers": cfg["providers"]})
+    runtime = resolve_runtime_provider(target_model="m1")
+    assert runtime["provider"] == "custom"
+    assert (runtime["base_url"].rstrip("/"), runtime["api_key"]) == (base_url, "mixed-key-123456")
