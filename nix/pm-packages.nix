@@ -59,8 +59,9 @@ let
   # yet released; drop this once nixpkgs ships a patchelf that contains it.
   # The patch is written against 0.19 and does not apply to the 0.15.2 that
   # nixpkgs went back to (NixOS/nixpkgs@61a15beb37), which does not have the bug.
+  # patchelf 0.19.3 already includes NixOS/patchelf#672; do not backport twice.
   patchelfFixed =
-    if lib.versionOlder patchelf.version "0.19" then
+    if lib.versionOlder patchelf.version "0.19" || lib.versionAtLeast patchelf.version "0.19.3" then
       patchelf
     else
       patchelf.overrideAttrs (old: {

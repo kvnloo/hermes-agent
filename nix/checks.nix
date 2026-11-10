@@ -749,6 +749,26 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
               ''
           );
       } // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+        # patchelf 0.19.3 ships the overlap fix (#672). Exercise the actual
+        # pm-node derivation: applying the backport again breaks its build.
+        pm-patchelf-upstream-fix =
+          let
+            upstreamPatchelf = pkgs.patchelf // {
+              version = "0.19.3";
+              overrideAttrs = _: throw "patchelf 0.19.3 must not be backported";
+            };
+            node = (pkgs.callPackage ./pm-packages.nix { patchelf = upstreamPatchelf; }).node;
+            evaluation = builtins.tryEval (builtins.seq node.drvPath true);
+          in
+          pkgs.runCommand "hermes-pm-patchelf-upstream-fix" { } (
+            if !evaluation.success then
+              throw "pm-node must evaluate with stock patchelf 0.19.3"
+            else ''
+              mkdir -p $out
+              echo ok > $out/result
+            ''
+          );
+
         # ── The NixOS module ─────────────────────────────────────────────
         # This check runs on Linux only. The evaluation of a NixOS module
         # needs a Linux hostPlatform.
