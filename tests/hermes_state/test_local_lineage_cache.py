@@ -7,7 +7,7 @@ from threading import Barrier
 import pytest
 
 from hermes_state import SessionDB
-from hermes_state_local import POLICY_PREFIX, _cached_local_lineage_index
+from hermes_state_local import POLICY_PREFIX, _cached_local_lineage_index, local_lineage_index
 
 
 @pytest.fixture
@@ -177,3 +177,41 @@ def test_read_only_legacy_database_needs_no_schema_change(tmp_path):
     finally:
         db.close()
     assert path.read_bytes() == before
+
+def test_local_lineage_work_does_not_scale_with_single_segment_receipts(db):
+    """An unchanged lineage answer must not parse every unrelated policy snapshot (#152507)."""
+    conn = db._conn
+    assert conn is not None
+
+    def lookup_work():
+        steps = 0
+
+        def tick():
+            nonlocal steps
+            steps += 1
+            return 0
+
+        conn.set_progress_handler(tick, 1)
+        try:
+            result = local_lineage_index(conn)
+        finally:
+            conn.set_progress_handler(None, 0)
+        return steps, result
+
+    before_steps, before = lookup_work()
+    assert before == ({'owner'}, {'head': ('owner', ['owner', 'head'])})
+    config = 'x' * 4096
+    conn.executemany(
+        'INSERT INTO state_meta(key, value) VALUES(?, ?)',
+        ((POLICY_PREFIX + f'ordinary-{i}', json.dumps({
+            'session_id': f'ordinary-{i}', 'lineage': [f'ordinary-{i}'],
+            'policy': {'config_json': config},
+        })) for i in range(400)),
+    )
+    conn.commit()
+
+    after_steps, after = lookup_work()
+    assert after == before
+    # SQLite VM steps, not elapsed time: an index seek stays bounded as the
+    # store accumulates receipts without resets; the old JSON scan is O(rows).
+    assert after_steps - before_steps < 100, (before_steps, after_steps)
