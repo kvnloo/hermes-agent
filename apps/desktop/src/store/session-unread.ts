@@ -512,6 +512,24 @@ export function forgetSessionUnread(
   }
 }
 
+/** Re-archive cleanup must not turn an unread chat into a read one when Undo restores it. */
+export function restoreUnreadAfterArchiveUndo(storedId: string, profile?: string, lineageRoot?: null | string): void {
+  const key = normalizeProfileKey(profile)
+  const durableId = lineageRoot || storedId
+  const markers = $unreadFinishedMarkers.get()[key] ?? []
+
+  if (!markers.includes(durableId)) {
+    const next = [...markers, durableId]
+    setMarkerBucket(key, next.length > MARKERS_CAP ? next.slice(-MARKERS_CAP) : next)
+  }
+
+  const unreadIds = $unreadFinishedSessionIds.get()
+
+  if (!unreadIds.includes(storedId)) {
+    $unreadFinishedSessionIds.set([...unreadIds, storedId])
+  }
+}
+
 /** Seed/refresh watermarks from freshly loaded lists: the SELECTED session
  *  tracks its live count (it's on screen — nothing there is unread), and a
  *  session never seen before seeds at its current count instead of lighting

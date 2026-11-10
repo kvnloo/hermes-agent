@@ -69,6 +69,7 @@ import {
   $messages,
   $newChatWorkspaceTarget,
   $sessions,
+  $unreadFinishedSessionIds,
   $yoloActive,
   idsShareLineage,
   type NewChatWorkspaceTarget,
@@ -3250,6 +3251,8 @@ export function useSessionActions({
       // live tip after compression. Drop both so the pin can't linger.
       const archivedPinId = archived ? sessionPinId(archived) : storedSessionId
       const archivedIds = [storedSessionId, archived?.id, archived?._lineage_root_id]
+      // The archive cleanup forgets unread markers; Undo is not an acknowledgement.
+      const wasUnread = $unreadFinishedSessionIds.get().some(id => archivedIds.includes(id))
 
       // Soft-hide: drop from every sidebar slice immediately, keep the data.
       dropListedSession(storedSessionId)
@@ -3283,7 +3286,8 @@ export function useSessionActions({
             profile,
             row: archived,
             slice: listed?.slice,
-            storedSessionId
+            storedSessionId,
+            wasUnread
           },
           copy
         )

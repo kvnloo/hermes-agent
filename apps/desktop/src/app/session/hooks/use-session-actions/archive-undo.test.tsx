@@ -6,7 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type SessionInfo, setSessionArchived } from '@/hermes'
 import { $pinnedSessionIds } from '@/store/layout'
 import { $notifications, clearNotifications } from '@/store/notifications'
-import { $sessions, setSessions } from '@/store/session'
+import { $sessions, $unreadFinishedSessionIds, setSessions } from '@/store/session'
+import { $sessionSeenCounts, $unreadFinishedMarkers, markSessionUnreadFinished } from '@/store/session-unread'
 
 import type { ClientSessionState } from '../../../types'
 
@@ -94,6 +95,9 @@ describe('archiveSession undo', () => {
   beforeEach(() => {
     setSessions([])
     $pinnedSessionIds.set([])
+    $sessionSeenCounts.set({})
+    $unreadFinishedMarkers.set({})
+    $unreadFinishedSessionIds.set([])
     clearNotifications()
     vi.mocked(setSessionArchived).mockReset()
     vi.mocked(setSessionArchived).mockResolvedValue({ ok: true })
@@ -103,6 +107,9 @@ describe('archiveSession undo', () => {
     cleanup()
     setSessions([])
     $pinnedSessionIds.set([])
+    $sessionSeenCounts.set({})
+    $unreadFinishedMarkers.set({})
+    $unreadFinishedSessionIds.set([])
     clearNotifications()
   })
 
@@ -127,4 +134,26 @@ describe('archiveSession undo', () => {
     await waitFor(() => expect($sessions.get().map(session => session.id).sort()).toEqual(['chat-1', 'other']))
     expect($pinnedSessionIds.get()).toEqual(['p0', 'chat-1', 'p2'])
   })
+
+  it('Undo keeps the unread dot after the archive cleanup', async () => {
+    setSessions([listedSession({ profile: 'work', message_count: 4 })])
+    markSessionUnreadFinished('chat-1')
+    expect($unreadFinishedMarkers.get().work).toContain('chat-1')
+
+    const handle = await mountHarness()
+
+    await act(() => handle.archiveSession('chat-1'))
+    expect($unreadFinishedMarkers.get().work ?? []).not.toContain('chat-1')
+    expect($unreadFinishedSessionIds.get()).not.toContain('chat-1')
+
+    const toast = $notifications.get().find(item => item.action)
+
+    await act(async () => toast!.action!.onClick())
+
+    // Archiving should not silently acknowledge a completion the user hasn't read.
+    await waitFor(() => expect($unreadFinishedMarkers.get().work).toContain('chat-1'))
+    expect($unreadFinishedSessionIds.get()).toContain('chat-1')
+    expect($sessions.get()[0]?.id).toBe('chat-1')
+  })
+
 })

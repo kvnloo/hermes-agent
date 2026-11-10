@@ -2,6 +2,7 @@ import { type SessionInfo, setSessionArchived } from '@/hermes'
 import { $pinnedSessionIds } from '@/store/layout'
 import { clearNotifications, notify, notifyError } from '@/store/notifications'
 import { untombstoneSessions } from '@/store/session-removal'
+import { restoreUnreadAfterArchiveUndo } from '@/store/session-unread'
 import { $archivedSessions } from '@/store/sidebar-archive'
 
 import { type ListedSessionSlice, restoreListedSession, sessionMatchesStoredId } from './utils'
@@ -22,6 +23,7 @@ export interface ArchivedRow {
   row?: SessionInfo
   slice?: ListedSessionSlice
   storedSessionId: string
+  wasUnread: boolean
 }
 
 /** Where `storedSessionId`'s pin sat before the archive dropped it, or null. */
@@ -41,6 +43,10 @@ async function undoArchive(archived: ArchivedRow, copy: ArchiveUndoCopy): Promis
 
     if (archived.row) {
       restoreListedSession({ ...archived.row, archived: false }, archived.slice)
+    }
+
+    if (archived.wasUnread) {
+      restoreUnreadAfterArchiveUndo(archived.storedSessionId, archived.profile, archived.row?._lineage_root_id)
     }
 
     const pins = $pinnedSessionIds.get()
