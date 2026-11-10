@@ -29,6 +29,13 @@ def _span_end(command: str, cursor: int, closer: str) -> int:
     return end
 
 
+def _starts_shell_comment(command: str, cursor: int, content_start: int) -> bool:
+    """A word-initial # can comment out an apparent substitution closer."""
+    return command[cursor] == "#" and (
+        cursor == content_start or command[cursor - 1].isspace()
+        or command[cursor - 1] in ";|&()"
+    )
+
 def _header_expansion_end(command: str, cursor: int) -> int | None:
     """Find a complete one-line substitution, refusing nested heredoc syntax.
 
@@ -38,7 +45,23 @@ def _header_expansion_end(command: str, cursor: int) -> int | None:
     if command[cursor] == "`":
         end = _span_end(command, cursor, "`")
         span = command[cursor:end]
-        return end if len(span) > 1 and span.endswith("`") and "\n" not in span and "<<" not in span else None
+        if len(span) <= 1 or not span.endswith("`") or "\n" in span or "<<" in span:
+            return None
+        quote = None
+        index = cursor + 1
+        while index < end - 1:
+            char = command[index]
+            if char == "\\" and quote != "'":
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+            elif quote is None and char in "'\"":
+                quote = char
+            elif quote is None and _starts_shell_comment(command, index, cursor + 1):
+                return None
+            index += 1
+        return end
     quotes: list[str | None] = [None]
     cursor += 2
     while cursor < len(command):
@@ -47,6 +70,8 @@ def _header_expansion_end(command: str, cursor: int) -> int | None:
             return None
         if char == "\\":
             cursor += 2
+        elif char == "#" and quotes[-1] is None and _starts_shell_comment(command, cursor, 0):
+            return None
         elif char == "'" and quotes[-1] is None:
             end = command.find("'", cursor + 1)
             if end == -1 or "\n" in command[cursor:end]:

@@ -42,3 +42,23 @@ def test_executable_header_is_still_scanned_when_the_body_is_data(tmp_path, open
     command = f"{opener}\nprint('data')\nPY"
     assert strip_inert_heredoc_bodies(command) == opener + "\n\n"
     assert scan_gateway_lifecycle(command, cwd=str(tmp_path)) == (True, None)
+
+
+@pytest.mark.parametrize(
+    ("ordinary", "commented", "closer"),
+    [
+        ("$(printf sink)", "$(printf sink # )", ")"),
+        ("`printf sink`", "`printf sink # `", "`"),
+    ],
+)
+def test_comment_in_substitution_does_not_hide_executable_body(ordinary, commented, closer):
+    # An apparent closer after # is a shell comment, not the end of the substitution.
+    # The following line therefore executes inside that substitution.
+    body = "hermes gateway restart\n:\n"
+    ordinary_command = f"cat > {ordinary} <<':'\n{body}"
+    commented_command = f"cat > {commented} <<':'\n{body}{closer} </dev/null\n"
+
+    # Base is conservative here, PR #152501 correctly masks an ordinary redirect.
+    assert "hermes gateway restart" not in strip_inert_heredoc_bodies(ordinary_command)
+    # But the misleading commented closer cannot turn executable lines into inert data.
+    assert strip_inert_heredoc_bodies(commented_command) == commented_command
