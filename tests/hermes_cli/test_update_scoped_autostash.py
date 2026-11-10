@@ -68,6 +68,34 @@ def test_declining_up_front_discards_without_a_stash_entry(tmp_path, monkeypatch
     _git(work, "merge", "--ff-only", "-q", "origin/main")
 
 
+def test_declining_up_front_backs_up_colliding_untracked_directory(tmp_path, monkeypatch):
+    """A colliding untracked directory remains recoverable when the user declines to keep it."""
+    work = _behind_clone(tmp_path)
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setattr("builtins.input", lambda *_: "n")
+
+    local_draft = work / "pkg" / "notes" / "draft.txt"
+    local_draft.parent.mkdir()
+    local_draft.write_text("unsaved draft\n")
+
+    changes = update_cmd_stash._scan_local_changes(["git"], work, _TARGETS)
+    assert changes is not None and "pkg/" in changes.stash_untracked
+    update_cmd_stash._stash_local_changes_if_needed(
+        ["git"], work, untracked_targets=_TARGETS, ask_first=True)
+
+    assert not (work / "pkg" / "new.py").exists()
+    assert not local_draft.exists()
+    assert (work / "stray" / "big.bin").exists()
+    assert _git(work, "stash", "list") == ""
+
+    copies = list((home / "backups").glob("update-discard-*/untracked/pkg"))
+    assert len(copies) == 1
+    assert (copies[0] / "new.py").read_text() == "my copy\n"
+    assert (copies[0] / "notes" / "draft.txt").read_text() == "unsaved draft\n"
+
+
 def test_up_to_date_checkout_never_offers_to_delete(tmp_path, monkeypatch):
     work = _behind_clone(tmp_path)
     _git(work, "stash", "push", "-q", "--include-untracked")

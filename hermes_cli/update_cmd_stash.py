@@ -229,11 +229,14 @@ def _preserve_before_discard(git_cmd: list[str], cwd: Path, changes: _LocalChang
         saved = 0
         for rel in changes.stash_untracked:
             source = Path(cwd) / rel
-            if not source.is_file():
+            if not (source.is_file() or source.is_dir() or source.is_symlink()):
                 continue
             destination = target / "untracked" / rel
             destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, destination)
+            if source.is_dir() and not source.is_symlink():
+                shutil.copytree(source, destination, symlinks=True)
+            else:
+                shutil.copy2(source, destination, follow_symlinks=False)
             saved += 1
         if saved:
             where.append(f"{saved} untracked file(s) under {target / 'untracked'}")
