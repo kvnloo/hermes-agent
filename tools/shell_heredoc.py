@@ -216,8 +216,17 @@ def strip_inert_heredoc_bodies(command: str) -> str:
         ):
             masked_opener = _mask_simple_quotes(command[command_start:command_end])
             masked_owner = _mask_simple_quotes(command[owner_start:command_end])
+            # A cat redirect to a path built by command substitution still consumes
+            # quoted heredoc data. A process-substitution redirect can execute it.
+            marker_scope = masked_opener
+            if (
+                re.match(r"^\s*cat(?=\s|$)", masked_owner)
+                and ">" in masked_owner
+                and not any(token in masked_owner for token in ("<(", ">("))
+            ):
+                marker_scope = masked_owner.split(">", 1)[0]
             if not any(
-                marker in masked_opener
+                marker in marker_scope
                 for marker in ("$(", "`", "<(", ">(", "(", ")", "{", "}")
             ) and _INERT_HEREDOC_CONSUMER_RE.search(masked_owner):
                 ranges.extend(body_ranges)
