@@ -211,20 +211,65 @@ def reconcile_pending(*, allow_connect=True):
                     record['pause_recorded'] = _pause_identity(pause_job(params['job_id'], reason=reason))
                     atomic_json_write(journal, record, mode=0o600, fsync_dir=True)
                 continue
-            success, output, answer, error = state['result']
-            job = dict(state['job'], **(state.get('job_flags') or {}))
-            job['execution_id'] = params['request_id']
-            # The same result verdicts as the ordinary tail: an agent-declared [CRON_FAILURE] and a
-            # blank answer are failures, whichever process books them.
-            success, error, declared = _apply_agent_failure_marker(job, success, error, answer)
-            delivery = _RunDelivery(job, success, error, agent_declared=declared)
-            # The canonical receipt supplies the result; a dead scheduler's fire claim does not
-            # authorize replay and must not prevent finishing its durable bookkeeping.
-            fence = _FireOwnership(dict(job, fire_claim=None))
-            _save_compose_deliver(delivery, fence, answer, output, adapters=None, loop=None,
-                                 verbose=False, execution_token=None)
-            fail_empty_response(delivery, answer)
-            if finish_completed_run(delivery, None, params['request_id'], recovered=True):
-                _lift_pause(params['job_id'], record.get('pause_recorded'))
+            from datetime import datetime
+            from cron.executions import latest_execution, recover_receipted_execution
+            from cron.jobs import _fire_job_lock
+            from cron.scheduler_ownership import _claim_owner_is_dead
+
+            # Recovery's entire output-to-ledger tail must linearize with the next acquisition.
+            # A sampled owner check before this fence lets a newer claim arrive mid-delivery.
+            with _fire_job_lock(params['job_id']) as acquired:
+                if not acquired:
+                    continue
+                original = get_execution(params['request_id'])
+                latest = latest_execution(params['job_id'])
+                newer = (
+                    original is not None and latest is not None
+                    and latest['id'] != original['id']
+                    and datetime.fromisoformat(latest['claimed_at'])
+                    >= datetime.fromisoformat(original['claimed_at'])
+                )
+                if newer:
+                    if (latest['status'] in {'claimed', 'running', 'unknown'}
+                            and execution_owner_live(latest['id'], params['job_id'])):
+                        continue
+                    # The successor has settled (or no longer owns its execution).
+                    # Book A's historical row only; B owns latest status, budget and delivery.
+                    settled = recover_receipted_execution(
+                        params['request_id'], params['job_id'], success=state['result'][0],
+                        error=state['result'][3], delivery_outcome='suppressed')
+                    if settled is None and original['status'] not in FIRER_FINISHED_STATES:
+                        continue
+                    journal.unlink(missing_ok=True)
+                    _lift_pause(params['job_id'], record.get('pause_recorded'))
+                    continue
+
+                current = get_job(params['job_id'])
+                claim = current.get('fire_claim') if current else None
+                if isinstance(claim, dict):
+                    if original is None:
+                        continue  # An unidentifiable legacy receipt cannot take a live claim.
+                    try:
+                        claim_newer = (
+                            datetime.fromisoformat(claim['at'])
+                            > datetime.fromisoformat(original['claimed_at']))
+                    except (KeyError, TypeError, ValueError):
+                        claim_newer = True
+                    if claim_newer and not _claim_owner_is_dead(claim):
+                        continue
+
+                success, output, answer, error = state['result']
+                job = dict(state['job'], **(state.get('job_flags') or {}))
+                job['execution_id'] = params['request_id']
+                # The same result verdicts as the ordinary tail: an agent-declared [CRON_FAILURE]
+                # and a blank answer are failures, whichever process books them.
+                success, error, declared = _apply_agent_failure_marker(job, success, error, answer)
+                delivery = _RunDelivery(job, success, error, agent_declared=declared)
+                fence = _FireOwnership(dict(job, fire_claim=None))
+                _save_compose_deliver(delivery, fence, answer, output, adapters=None, loop=None,
+                                     verbose=False, execution_token=None)
+                fail_empty_response(delivery, answer)
+                if finish_completed_run(delivery, None, params['request_id'], recovered=True):
+                    _lift_pause(params['job_id'], record.get('pause_recorded'))
         except Exception:
             logging.getLogger(__name__).warning('Cron receipt recovery deferred: %s', journal, exc_info=True)
