@@ -310,6 +310,24 @@ describe('useDesktopIntegrations', () => {
       expect(window.localStorage.getItem('hermes.desktop.lastSessionId.profile.default')).toBe('remembered-session')
     })
 
+    it('preserves the primary tab’s remembered page when a peer boots on a fresh draft', async () => {
+      // The first tab was on a page, not a chat. A later tab skips its
+      // restore, but its initial '/' must not erase the origin's page memory.
+      tabNavigationRoleMock.mockReturnValue(null)
+      const electionAnswer = Promise.resolve(false)
+      tabElectionMock.mockReturnValue(electionAnswer)
+      window.localStorage.setItem('hermes.desktop.lastRoute.profile.default', '/skills')
+
+      render({ profileReady: true, sessions: [] })
+
+      await act(async () => {
+        await electionAnswer
+      })
+
+      expect(navigate).not.toHaveBeenCalled()
+      expect(window.localStorage.getItem('hermes.desktop.lastRoute.profile.default')).toBe('/skills')
+    })
+
     it('lets the tab that won the election restore the remembered chat', async () => {
       tabNavigationRoleMock.mockReturnValue(null)
       tabElectionMock.mockResolvedValue(true)

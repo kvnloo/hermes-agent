@@ -400,7 +400,13 @@ export function useDesktopIntegrations({
           activeProfile
         )
       }
-    } else if (!routedSessionId && !isOverlayView(appViewForPath(locationPathname))) {
+    } else if (
+      !routedSessionId &&
+      !isOverlayView(appViewForPath(locationPathname)) &&
+      (replaysRememberedNavigation || locationPathname !== NEW_CHAT_ROUTE)
+    ) {
+      // A peer's initial fresh draft must not erase the primary tab's
+      // remembered page from the origin-shared storage.
       setRememberedRoute(locationPathname, activeProfile)
     }
   }, [
