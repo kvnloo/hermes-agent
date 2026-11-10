@@ -167,6 +167,9 @@ def session_called_kanban_terminal(
                     continue
                 calls[call_id] = (name, target)
         elif msg.get("role") == "tool":
+            # A cancelled/unstarted call has a paired tool result but no board action.
+            if msg.get("effect_disposition") == "none":
+                continue
             call_id = str(msg.get("tool_call_id") or "").strip()
             name = str(msg.get("name") or "")
             if call_id and name in _TERMINAL_KANBAN_TOOLS:

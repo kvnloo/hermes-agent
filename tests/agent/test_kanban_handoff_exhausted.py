@@ -106,6 +106,16 @@ class KanbanHandoffExhaustedTests(unittest.TestCase):
         self.assertFalse(session_called_kanban_terminal(_TERMINAL_FAILED))
         self.assertTrue(kanban_handoff_exhausted(_TERMINAL_FAILED, attempts=2))
 
+    def test_cancelled_terminal_tool_does_not_satisfy_handoff(self):
+        # The executor writes a paired result for unstarted, cancelled calls.
+        messages = [_TERMINAL[0], {
+            "role": "tool", "name": "kanban_complete", "tool_call_id": "1",
+            "content": "[Tool execution cancelled — kanban_complete was skipped. User interrupted.]",
+            "effect_disposition": "none",
+        }]
+        self.assertFalse(session_called_kanban_terminal(messages))
+        self.assertTrue(kanban_handoff_exhausted(messages, attempts=2))
+
     def test_terminal_tool_targeting_wrong_task_does_not_satisfy_handoff(self):
         # Completing an external or child task does not hand off the assigned task.
         self.assertFalse(session_called_kanban_terminal(_TERMINAL_WRONG_TASK))
