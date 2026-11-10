@@ -126,3 +126,29 @@ async def test_a_non_flood_failure_of_the_carried_lines_is_retried(error):
 
     assert _shown_steps(bot) == {f"{i:03d}" for i in range(160)}
     assert len(bot.landed) == len(set(bot.landed))
+
+@pytest.mark.asyncio
+async def test_reply_anchor_fallback_preserves_flood_wait_for_overflow_continuation():
+    """A deleted reply target cannot hide the flood wait from the gateway's progress backoff."""
+    def refuse(_text, attempt):
+        if attempt == 1:
+            return Exception("Bad Request: reply message not found")
+        return RetryAfter(20)
+
+    bot = _bot(refuse)
+    adapter = TelegramAdapter(PlatformConfig(enabled=True, token="fake-token"))
+    adapter._bot = bot
+    result = await adapter._edit_overflow_split(
+        "-1001", "7", "oversized continuation\n" * 300, finalize=True)
+
+    assert result.raw_response["partial_overflow"] is True
+    assert result.error == "flood_control:20.0"
+    assert result.retry_after == 20.0
+    assert len(bot.sends) == 2  # one deleted-anchor send, one no-anchor retry
+
+    from gateway.run_turn_progress import _note_flood
+
+    st = SimpleNamespace(flood_until=0.0, flood_pending=False)
+    assert _note_flood(st, result)
+    assert st.flood_pending
+    assert st.flood_until > time.monotonic() + 10

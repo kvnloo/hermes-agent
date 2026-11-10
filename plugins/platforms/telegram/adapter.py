@@ -3768,6 +3768,9 @@ class TelegramAdapter(TelegramContactMixin, TelegramHeldInboundMixin, TelegramRe
                     except Exception as _retry_err:
                         logger.warning(
                             "[%s] Overflow continuation no-reply retry failed: %s", self.name, _redact_telegram_error_text(_retry_err))
+                        # The no-reply retry is also a send; preserve any flood penalty for the caller.
+                        if getattr(_retry_err, "retry_after", None) is not None or "retry after" in str(_retry_err).lower():
+                            return _flood_cap_result(float(getattr(_retry_err, "retry_after", None) or 30.0))
                         return None
                 if getattr(send_err, "retry_after", None) is not None or "retry after" in str(send_err).lower():
                     return _flood_cap_result(float(getattr(send_err, "retry_after", None) or 30.0))  # no plain retry into the penalty (#76494)
