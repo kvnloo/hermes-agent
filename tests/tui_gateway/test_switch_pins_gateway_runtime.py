@@ -78,3 +78,14 @@ def test_one_turn_switch_does_not_pin_route(monkeypatch, db):
     _desktop_switch(monkeypatch, db, "s1", "grok-4.7", XAI_OAUTH, snapshot={"model": "deepseek-v4.1-flash"})
 
     assert SessionDB.session_gateway_runtime(db.get_session("s1"))["provider"] == "opencode-go"
+
+
+def test_one_turn_switch_keeps_durable_model_on_cold_resume(monkeypatch, db):
+    """An interrupted --once must not resume its temporary model on the previous provider."""
+    _gateway_turn(db, "s1", _agent(db, "deepseek-v4.1-flash", OPENCODE_GO))
+    _desktop_switch(monkeypatch, db, "s1", "grok-4.7", XAI_OAUTH,
+                    snapshot={"model": "deepseek-v4.1-flash"})
+
+    # Before the fix, the row contains grok-4.7 while its gateway route remains opencode-go.
+    assert db.get_session("s1")["model"] == "deepseek-v4.1-flash"
+    assert _resumed_route(db, "s1") == ("deepseek-v4.1-flash", "opencode-go")
