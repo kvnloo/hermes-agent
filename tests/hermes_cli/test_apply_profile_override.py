@@ -163,6 +163,44 @@ class TestApplyProfileOverrideHermesHomeGuard:
         assert os.environ["HERMES_HOME"] == str(profile_dir)
         assert os.environ["HOME"] == str(profile_home)
 
+    @pytest.mark.parametrize("profile_name", ["default", "coder"])
+    def test_image_environment_aligns_home_without_entrypoint(
+        self, tmp_path, monkeypatch, profile_name
+    ):
+        """Image-level opt-in must work without sourcing docker/entrypoint.sh.
+
+        The live /init and s6 paths do not run that historical shell entrypoint.
+        This test exercises the CLI helper with the image's declared environment.
+        """
+        dockerfile = Path(__file__).resolve().parents[2] / "Dockerfile"
+        monkeypatch.delenv("HERMES_DOCKER_ALIGN_HOME", raising=False)
+        for line in dockerfile.read_text(encoding="utf-8").splitlines():
+            if line.startswith("ENV HERMES_DOCKER_ALIGN_HOME="):
+                monkeypatch.setenv("HERMES_DOCKER_ALIGN_HOME", line.split("=", 1)[1].strip())
+
+        root = tmp_path / "opt" / "data"
+        selected = root if profile_name == "default" else root / "profiles" / profile_name
+        expected_home = selected / "home"
+        expected_home.mkdir(parents=True)
+        if profile_name != "default":
+            (root / "active_profile").write_text(profile_name)
+
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        monkeypatch.setenv("HERMES_HOME", str(root))
+        monkeypatch.setenv("HOME", str(root))
+        monkeypatch.setattr(sys, "argv", ["hermes", "gateway", "start"])
+
+        from hermes_cli.main import (
+            _align_process_home_for_docker_profile,
+            _apply_profile_override,
+        )
+        from hermes_constants import get_subprocess_home
+
+        _apply_profile_override()
+        _align_process_home_for_docker_profile()
+        assert os.environ["HERMES_HOME"] == str(selected)
+        assert os.environ["HOME"] == get_subprocess_home() == str(expected_home)
+
     def test_home_alignment_is_opt_in(self, tmp_path, monkeypatch):
         """Non-Docker installs keep the subprocess-only HOME isolation model."""
         hermes_root = tmp_path / ".hermes"

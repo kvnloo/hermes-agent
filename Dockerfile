@@ -112,6 +112,10 @@ RUN uv pip install --no-cache-dir --no-deps -e "."
 # ---------- Runtime ----------
 ENV HERMES_WEB_DIST=/opt/hermes/hermes_cli/web_dist
 ENV HERMES_HOME=/opt/data
+
+# All official Docker launch paths inherit this, including /init and s6 gateways.
+# The CLI resolves named profiles before aligning its own HOME with tool HOME.
+ENV HERMES_DOCKER_ALIGN_HOME=1
 ENV PATH="/opt/data/.local/bin:${PATH}"
 VOLUME [ "/opt/data" ]
 ENTRYPOINT [ "/usr/bin/tini", "-g", "--", "/opt/hermes/docker/entrypoint.sh" ]
