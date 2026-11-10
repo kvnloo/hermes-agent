@@ -242,3 +242,18 @@ async def test_suffixed_bsuid_live_allowlist_interactive_dispatch(monkeypatch, e
     await expect_tap(_OTHER_BSUID, "restored", True)
     monkeypatch.delenv(env_var)
     await expect_tap(_OTHER_BSUID, "removed", False)
+
+def test_configured_bsuid_does_not_authorize_colliding_sender(monkeypatch):
+    """An explicit config allowlist keeps BSUID identity exact, despite env aliases."""
+    allowed = "DE.1A2B3C4D5E"
+    collision = "DE.12345ABCDE"
+    adapter = _build_adapter(
+        monkeypatch,
+        {"WHATSAPP_CLOUD_ALLOWED_USERS": collision},
+        extra={"dm_policy": "allowlist", "allow_from": [allowed]},
+    )
+
+    assert adapter._dm_allowlist_source == "config"
+    assert adapter._is_dm_allowed(allowed) is True
+    assert adapter._is_dm_allowed(collision) is False
+    assert adapter._is_dm_intake_allowed(collision) is False
