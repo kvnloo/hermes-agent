@@ -51,8 +51,8 @@ class HostedRoomAuthorityRPC:
         return future.result(self.timeout)
 
     async def _dispatch(self, operation, params):
-        from gateway.session_authorities import owner_scope
-        with owner_scope(self.authority):
+        from gateway.session_authorities import async_owner_scope
+        async with async_owner_scope(self.authority):
             return await self._dispatch_owned(operation, params)
 
     async def _dispatch_owned(self, operation, params):
