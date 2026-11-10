@@ -267,7 +267,7 @@ def mark_execution_handoff_pending(execution_id: str) -> Optional[dict[str, Any]
 # A claim row is fenced (status='claimed' AND handoff_pending=1), so retrying the
 # adoption UPDATE after transient writer contention cannot double-adopt: only the
 # row's current owner predicate matches, and a lost race returns rowcount 0.
-_ADOPT_LOCK_RETRY_ATTEMPTS = 4
+_ADOPT_LOCK_RETRY_ATTEMPTS = 5
 _ADOPT_LOCK_RETRY_SLEEP_MAX = 2.0
 
 
@@ -289,9 +289,9 @@ def adopt_claimed_execution(execution_id: str) -> Optional[dict[str, Any]]:
     Transient ``database is locked`` (synchronous=FULL commits queueing behind
     a batch-fire tick, #135487) is retried with backoff instead of killing
     the dispatch: the fenced UPDATE is idempotent for the owner, and losing the
-    race to another process still returns None.  The retry budget stays well
-    under HANDOFF_ADOPTION_GRACE_SECONDS so the ready acknowledgement cannot be
-    starved by the backoff itself.
+    race to another process still returns None.  Five 5-second busy timeouts
+    and 0.25/0.5/1/2-second backoffs fit in 30 seconds from adoption entry.
+    The gateway separately handles cold starts and late acknowledgements.
     """
     pid = os.getpid()
     process_started_at = _process_start_time(pid)
@@ -318,7 +318,7 @@ def adopt_claimed_execution(execution_id: str) -> Optional[dict[str, Any]]:
                 or attempt + 1 == _ADOPT_LOCK_RETRY_ATTEMPTS
             ):
                 raise
-            time.sleep(min(0.5 * (2**attempt), _ADOPT_LOCK_RETRY_SLEEP_MAX))
+            time.sleep(min(0.25 * (2**attempt), _ADOPT_LOCK_RETRY_SLEEP_MAX))
     _emit_execution_state(record)
     return record
 

@@ -80,7 +80,7 @@ def test_adopt_retries_transient_lock_and_succeeds(monkeypatch):
     rec = ex.adopt_claimed_execution("deadbeef")
     assert rec is not None, "adopt must still succeed after transient lock contention"
     assert len(conns) == 3, "3 attempts (2x locked, 1x success)"
-    assert sleeps == [0.5, 1.0], "backoff 0.5 s then 1.0 s"
+    assert sleeps == [0.25, 0.5], "backoff 0.25 s then 0.5 s"
 
 
 def test_adopt_lost_race_returns_none_without_retry(monkeypatch):
@@ -100,6 +100,24 @@ def test_adopt_non_contention_error_raises_immediately(monkeypatch):
     assert len(conns) == 1, "schema errors are not retried"
 
 
+def test_adopt_recovers_after_four_busy_timeouts_within_grace(monkeypatch):
+    """A writer releasing at about 24 seconds must not lose the occurrence.
+
+    Each injected error represents one exhausted five-second SQLite busy timeout.
+    The timing check is arithmetic; there is no wall-clock delay or live database.
+    Regression for mrwick1's skipped cron runs (#135487).
+    """
+    locked = sqlite3.OperationalError("database is locked")
+    script = [locked] * 4 + [_FakeCursor(1), _FakeCursor(0, {"id": "x"})]
+    conns, sleeps = _patch(monkeypatch, script)
+    record = ex.adopt_claimed_execution("deadbeef")
+    assert record == {"id": "x"}
+    assert len(conns) == 5
+    assert sleeps == [0.25, 0.5, 1.0, 2.0]
+    # Fifth attempt starts at 23.75s and can adopt after a 24s lock release.
+    assert 4 * 5.0 + sum(sleeps) < 24.0 < ex.HANDOFF_ADOPTION_GRACE_SECONDS
+
+
 def test_adopt_gives_up_after_budget_and_raises(monkeypatch):
     locked = sqlite3.OperationalError("database is locked")
     script = [locked] * ex._ADOPT_LOCK_RETRY_ATTEMPTS
@@ -107,9 +125,9 @@ def test_adopt_gives_up_after_budget_and_raises(monkeypatch):
     with pytest.raises(sqlite3.OperationalError, match="database is locked"):
         ex.adopt_claimed_execution("deadbeef")
     assert len(conns) == ex._ADOPT_LOCK_RETRY_ATTEMPTS
-    assert sleeps == [0.5, 1.0, 2.0], "backoff capped at 2.0 s"
-    # The budget has to fit inside the grace window: busy (4 x 5 s) + sleeps < 30 s.
-    busy_budget = 4 * 5.0
+    assert sleeps == [0.25, 0.5, 1.0, 2.0], "backoff capped at 2.0 s"
+    # The budget from adoption entry: busy (5 x 5 s) + sleeps < 30 s.
+    busy_budget = ex._ADOPT_LOCK_RETRY_ATTEMPTS * 5.0
     assert busy_budget + sum(sleeps) < ex.HANDOFF_ADOPTION_GRACE_SECONDS
 
 
