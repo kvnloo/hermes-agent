@@ -123,16 +123,10 @@ def _copy_core_inputs(source: Path, destination: Path) -> None:
     for entry in source.iterdir():
         if (entry.is_dir() and not entry.is_symlink() and entry.name not in excluded
                 and not entry.name.startswith(".") and entry.resolve() != destination.resolve()
-                and (entry.name in where_roots
+                and (entry.name == "locales" or entry.name in where_roots
                      or any(fnmatch.fnmatchcase(entry.name, pattern) for pattern in package_roots))):
             target = destination / entry.name
             shutil.copytree(entry, target, ignore=ignore)
-    # Translation catalogs are loaded relative to the source root, rather than
-    # as package data. Keep them in sealed PM environments even though the
-    # directory is intentionally not a setuptools package.
-    locales = source / "locales"
-    if locales.is_dir() and not locales.is_symlink():
-        shutil.copytree(locales, destination / "locales", ignore=ignore)
     for name in files:
         entry = source / name
         if not entry.is_file() or entry.is_symlink():

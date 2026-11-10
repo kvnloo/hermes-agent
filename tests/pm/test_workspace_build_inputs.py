@@ -315,12 +315,13 @@ def test_tool_store_inside_a_package_stays_out_of_the_snapshot(tmp_path):
         assert not (destination / "tools" / entry).exists(), f"store entry {entry} copied into the snapshot"
 
 
-def test_locale_catalogs_travel_with_the_core_snapshot(tmp_path):
+@pytest.mark.parametrize("include", ['["pm"]', '["*"]'])
+def test_locale_catalogs_travel_with_the_core_snapshot(tmp_path, include):
     core = tmp_path / "core"
     core.mkdir()
     (core / "pyproject.toml").write_text(
         '[project]\nname="core"\nversion="1"\nrequires-python=">=3.11"\n'
-        '[tool.setuptools.packages.find]\ninclude=["pm"]\n',
+        f'[tool.setuptools.packages.find]\ninclude={include}\n',
         encoding="utf-8",
     )
     (core / "pm").mkdir()
