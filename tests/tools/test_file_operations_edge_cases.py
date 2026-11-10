@@ -418,8 +418,21 @@ class TestZeroStatSizeNativeReads:
         assert result.total_lines == 1
         assert result.file_size == len(content)
 
-    @pytest.mark.skipif(sys.platform != "linux" or not os.path.exists("/proc/version"),
-                        reason="Requires Linux procfs")
+    @pytest.mark.platforms("linux")
+    @pytest.mark.skipif(not os.path.exists("/proc/version"),
+                        reason="Requires mounted Linux procfs")
+    @pytest.mark.platforms("posix")
+    def test_zero_stat_size_through_public_read_file(self, virtual_file, ops):
+        content = b"first\\nsecond\\n"
+        virtual_file.write_bytes(content)
+
+        result = ops.read_file(str(virtual_file), offset=2, limit=1)
+
+        assert result.error is None
+        assert result.content == "2|second"
+        assert result.total_lines == 2
+        assert result.file_size == len(content)
+
     def test_live_linux_proc_version(self, ops):
         # Exercise the public tool path, which selects native reads locally.
         assert ops._native_read_enabled()
