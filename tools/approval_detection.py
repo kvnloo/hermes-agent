@@ -955,15 +955,24 @@ def _command_parser_limit_exceeded(command: str) -> bool:
 
 
 def _max_substitution_depth(command: str) -> int:
-    """Deepest `$(` nesting, in one linear pass. Quote-blind on purpose: over-counting only fails
-    closed. Sequential substitutions stay flat, so ordinary automation is unaffected."""
-    depth = deepest = 0
+    """Count nested substitutions in one pass; quoted closing parens are literals."""
+    saved_quotes: list[str | None] = []
+    quote: str | None = None
+    escaped = False
+    deepest = 0
     for index, char in enumerate(command):
-        if char == "(" and index and command[index - 1] == "$":
-            depth += 1
-            deepest = max(deepest, depth)
-        elif char == ")" and depth:
-            depth -= 1
+        if escaped:
+            escaped = False
+        elif char == "\\" and quote != "'":
+            escaped = True
+        elif char in "'\"" and (quote is None or quote == char):
+            quote = None if quote == char else char
+        elif char == "$" and index + 1 < len(command) and command[index + 1] == "(" and quote != "'":
+            saved_quotes.append(quote)
+            quote = None  # A substitution starts its own quoting context.
+            deepest = max(deepest, len(saved_quotes))
+        elif char == ")" and saved_quotes and quote is None:
+            quote = saved_quotes.pop()
     return deepest
 
 

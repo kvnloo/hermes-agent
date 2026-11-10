@@ -85,3 +85,13 @@ def test_shallow_and_sequential_substitutions_are_still_scanned():
     assert detect_dangerous_command("echo " + "$(date)" * 200)[1] is None
     # A dangerous command inside a substitution is still found.
     assert detect_dangerous_command("echo $(rm -rf /)")[0]
+
+
+def test_quoted_or_escaped_parens_cannot_hide_deep_substitutions():
+    _run_bounded('''
+from tools.approval_detection import detect_dangerous_command, _PARSER_LIMIT_DESCRIPTION
+for literal in ("')'", r"\\)"):
+    # The original quote-blind depth counter consumes these literal closing parens.
+    command = "echo " + ("$(echo " + literal + " ") * 48 + "x" + ")" * 48
+    assert detect_dangerous_command(command)[1] == _PARSER_LIMIT_DESCRIPTION, literal
+''')
