@@ -412,6 +412,10 @@ def _restore_state_db_from_snapshot(state_path: Path, snap_state: Path) -> bool:
 
     snap_state.stat()  # Preserve the caller's OSError reporting for missing snapshots.
     if not verify_sqlite_integrity(snap_state, check_header=True, run_pragma=True).get("valid"):
+        print(
+            f"  ✗ Auto-restore skipped invalid snapshot {snap_state}; "
+            "state.db was not restored."
+        )
         return False
     if not _safe_restore_db(snap_state, state_path):
         print("  ✗ Auto-restore refused or failed; state.db was not restored.")

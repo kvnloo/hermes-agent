@@ -198,6 +198,37 @@ def test_restore_helper_names_replaced_snapshot_when_post_check_fails(tmp_path, 
     assert "post-restore integrity check failed" in output
 
 
+def test_post_update_guard_reports_snapshot_invalidated_before_restore(
+    tmp_path, monkeypatch, capsys
+):
+    """A snapshot failing the second check must not disappear into silence."""
+    from hermes_cli import update_cmd, update_cmd_maint
+
+    home = tmp_path / "home"
+    home.mkdir()
+    state = home / "state.db"
+    state.write_bytes(b"corrupt")
+    _make_valid_snapshot(home, "latest", 7)
+    snapshot = home / "state-snapshots" / "latest" / "state.db"
+
+    real_restore = update_cmd_maint._restore_state_db_from_snapshot
+
+    def invalidate_before_restore(destination, source):
+        source.write_bytes(b"no longer a sqlite database")
+        return real_restore(destination, source)
+
+    monkeypatch.setattr(
+        update_cmd_maint, "_restore_state_db_from_snapshot", invalidate_before_restore
+    )
+
+    update_cmd._verify_and_restore_one_state_db(home, label="test home")
+
+    assert state.read_bytes() == b"corrupt"
+    output = capsys.readouterr().out
+    assert f"Auto-restore skipped invalid snapshot {snapshot}" in output
+    assert "state.db was not restored" in output
+
+
 # ── Multi-profile coverage (#97994) ─────────────────────────────────────
 
 
