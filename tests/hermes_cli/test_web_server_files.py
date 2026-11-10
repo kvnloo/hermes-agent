@@ -1011,3 +1011,33 @@ def test_a_browser_paste_still_reads_back_while_the_workspace_is_remote(host_hom
     paste.write_bytes(b"\x89PNG\r\n\x1a\n")
 
     assert _rt_files._is_host_file(str(paste), None) is True
+
+
+def test_generated_image_download_bypasses_locked_root_without_dialing_ssh(
+    forced_files_client, host_home, monkeypatch,
+):
+    """The Webapp download and its browser ticket must keep host-owned generated media reachable
+    when a managed-files root is locked to a different directory."""
+    client, locked_root = forced_files_client
+    locked_root.mkdir(exist_ok=True)
+    monkeypatch.setenv("HERMES_HOME", str(host_home))
+    monkeypatch.setattr(web_server.app.state, "ui_surface", "webapp", raising=False)
+    monkeypatch.setattr(
+        _rt_files, "_fs_backend",
+        lambda profile=None: pytest.fail("Generated image download must not dial SSH"),
+    )
+    image = _write_generated_image(host_home)
+    expected = image.read_bytes()
+
+    direct = client.get("/api/fs/download", params={"path": str(image)})
+    assert (direct.status_code, direct.content) == (200, expected)
+
+    minted = client.post("/api/files/ticket", json={"route": "download", "path": str(image)})
+    assert minted.status_code == 200, minted.text
+
+    del client.headers[web_server._SESSION_HEADER_NAME]
+    ticketed = client.get(
+        "/api/fs/download", params={"path": str(image), "ticket": minted.json()["ticket"]},
+    )
+    assert (ticketed.status_code, ticketed.content) == (200, expected)
+
