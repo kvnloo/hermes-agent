@@ -77,3 +77,14 @@ def test_matching_generation_still_selects(monkeypatch, tmp_path):
     before = list(sys.path)
     env.activate_dependencies(tmp_path)
     assert sys.path != before  # the generation was selected
+
+
+def test_uv_version_info_without_posix_lib_is_parsed(tmp_path):
+    """A uv Windows-layout generation has version_info but no lib/pythonX.Y fallback."""
+    venv = tmp_path / "generation"
+    (venv / "Lib" / "site-packages").mkdir(parents=True)
+    (venv / "pyvenv.cfg").write_text(
+        "home = test\nimplementation = CPython\nuv = 0.12.3\nversion_info = 9.9.0\n",
+        encoding="utf-8",
+    )
+    assert env.venv_python_version(venv) == (9, 9)
