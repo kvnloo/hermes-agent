@@ -277,3 +277,29 @@ class TestRunBoundedByTimeout:
         assert elapsed < 3.0, f"_run blocked on grandchild for {elapsed:.1f}s"
         assert rc == 0, f"expected clean exit, got rc={rc} err={err!r}"
         assert out == "ok"
+
+
+class TestToolchainRefresh:
+    """A long-lived gateway must not retain pre-refresh probe facts."""
+
+    def test_replaced_toolchain_reprobes_without_gateway_restart(self, monkeypatch, tmp_path):
+        executable = tmp_path / "python3"
+        executable.write_text("old", encoding="utf-8")
+        monkeypatch.setattr(
+            env_probe.shutil, "which",
+            lambda name: str(executable) if name == "python3" else None,
+        )
+        observed = []
+
+        def probe():
+            observed.append(executable.read_text(encoding="utf-8"))
+            return "Python toolchain: " + observed[-1]
+
+        monkeypatch.setattr(env_probe, "_build_probe_line", probe)
+        assert env_probe.get_environment_probe_line() == "Python toolchain: old"
+        assert env_probe.get_environment_probe_line() == "Python toolchain: old"
+        assert observed == ["old"]  # unchanged toolchain stays cached
+
+        executable.write_text("replacement-store", encoding="utf-8")
+        assert env_probe.get_environment_probe_line() == "Python toolchain: replacement-store"
+        assert observed == ["old", "replacement-store"]

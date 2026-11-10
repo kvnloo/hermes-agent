@@ -1,16 +1,18 @@
 """Local-environment toolchain probe for the system prompt: when the terminal backend
 is local, one deterministic line about Python tooling (python3/python versions, missing
 pip, pip bound to another Python, PEP 668) so models don't discover it by hitting
-walls. Cached per process; "" when clean. Remote backends are skipped (the sandbox has
+walls. Cached until the local toolchain changes; "" when clean. Remote backends are skipped (the sandbox has
 its own probe in agent/prompt_builder). Toggle: ``agent.environment_probe`` in config.yaml."""
 
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import subprocess
 import tempfile
 import threading
+from pathlib import Path
 from typing import Optional
 
 from hermes_cli._subprocess_compat import windows_hide_flags
@@ -21,13 +23,15 @@ logger = logging.getLogger(__name__)
 # signals completion. Callers block at most ``_PROBE_WAIT_TIMEOUT`` s then fail open
 # with "" — a stuck probe (e.g. a Windows pipe wedged by an orphaned pip descendant)
 # can degrade only the probe line, never system-prompt construction.
-# Module-level cache. The probe result is deterministic for the lifetime of the process — Python install
-# state doesn't change mid-session in any way that would matter for the system prompt. See #67964.
+# Recheck the executable identities on each prompt: a managed runtime may be refreshed
+# while the gateway lives. The bounded background probe still avoids subprocess work
+# on unchanged tools (see #67964).
 _CACHE_LOCK = threading.Lock()
 _CACHED_LINE: Optional[str] = None  # None = not probed yet; "" = probed, nothing to say.
 _PROBE_DONE = threading.Event()
 _PROBE_THREAD: Optional[threading.Thread] = None
 _PROBE_GEN = 0  # bumped on reset so a stale worker can't publish into the fresh generation
+_CACHE_SIGNATURE: Optional[tuple] = None
 _PROBE_WAIT_TIMEOUT = 10.0  # healthy runtime ~0.5s
 _WAIT_ALREADY_TIMED_OUT = False  # after one full wait, later callers only peek
 
@@ -171,7 +175,7 @@ def get_environment_probe_line(*, force_refresh: bool = False) -> str:
     """Return the cached probe line (building it on first call); "" when the
     environment is clean, so the prompt assembler drops the section. Waits at most
     ``_PROBE_WAIT_TIMEOUT`` on the single worker, then fails open with "".
-    ``force_refresh`` is for tests.
+    Re-probes when a resolved toolchain executable changes. ``force_refresh`` is for tests.
 
     A wedged probe subprocess (#67964) therefore can never block system-prompt construction — at worst the
     toolchain line is absent from prompts built while the probe is stuck.
@@ -187,9 +191,9 @@ def get_environment_probe_line(*, force_refresh: bool = False) -> str:
     backend = _resolve_terminal_backend()
     if backend in _REMOTE_BACKENDS or _plugin_backend_is_remote(backend):
         return ""
+    _ensure_probe_started()
     if _PROBE_DONE.is_set():
         return _CACHED_LINE or ""
-    _ensure_probe_started()
     wait_timeout = 0.05 if _WAIT_ALREADY_TIMED_OUT else _PROBE_WAIT_TIMEOUT
     if not _PROBE_DONE.wait(timeout=wait_timeout):
         # Probe stuck or pathologically slow: the line is a nice-to-have,
@@ -218,10 +222,34 @@ def _probe_worker(gen: int) -> None:
         _PROBE_DONE.set()
 
 
+def _toolchain_signature() -> tuple:
+    """Fingerprint the command targets, including in-place replacements or symlink swaps."""
+    binaries = []
+    for name in ("python3", "python", "pip", "uv"):
+        path = shutil.which(name)
+        if path is None:
+            binaries.append((name, None))
+            continue
+        try:
+            stat = Path(path).stat()
+            binaries.append((name, path, stat.st_mtime_ns, stat.st_size, stat.st_ino))
+        except OSError:
+            binaries.append((name, path, None))
+    return (os.environ.get("PATH", ""), tuple(binaries))
+
+
 def _ensure_probe_started() -> None:
-    """Start the probe worker if it isn't running and hasn't finished."""
-    global _PROBE_THREAD
+    """Start a fresh generation when the local toolchain changes."""
+    global _PROBE_THREAD, _PROBE_GEN, _CACHE_SIGNATURE, _CACHED_LINE, _WAIT_ALREADY_TIMED_OUT
+    signature = _toolchain_signature()
     with _CACHE_LOCK:
+        if signature != _CACHE_SIGNATURE:
+            _CACHE_SIGNATURE = signature
+            _PROBE_GEN += 1
+            _CACHED_LINE = None
+            _PROBE_DONE.clear()
+            _PROBE_THREAD = None
+            _WAIT_ALREADY_TIMED_OUT = False
         if _PROBE_DONE.is_set() or (_PROBE_THREAD is not None and _PROBE_THREAD.is_alive()):
             return
         _PROBE_THREAD = threading.Thread(
@@ -238,8 +266,9 @@ def warm_environment_probe_async() -> None:
 
 def _reset_cache_for_tests() -> None:
     """Test helper — clear the cache between probe scenarios."""
-    global _CACHED_LINE, _PROBE_THREAD, _PROBE_GEN, _WAIT_ALREADY_TIMED_OUT
+    global _CACHED_LINE, _PROBE_THREAD, _PROBE_GEN, _WAIT_ALREADY_TIMED_OUT, _CACHE_SIGNATURE
     with _CACHE_LOCK:
+        _CACHE_SIGNATURE = None
         _CACHED_LINE = None
         _PROBE_DONE.clear()
         _PROBE_THREAD = None
