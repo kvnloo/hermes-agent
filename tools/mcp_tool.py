@@ -521,6 +521,8 @@ _server_errors_all_application: dict[Any, bool] = {}
 # the most recent striker: scoping to one tool lets a model alternating between two broken tools
 # un-block each with the other's strikes; every struck tool stays blocked instead.
 _server_breaker_application_tool: dict[Any, set] = {}
+# Args hashes of real application rejections, grouped by connection and tool; no raw arguments stored.
+_server_breaker_application_signatures: dict[Any, dict[str, set[str]]] = {}
 _CIRCUIT_BREAKER_THRESHOLD, _CIRCUIT_BREAKER_COOLDOWN_SEC = 3, 60.0
 
 # Trust-tier gating (``trust: full | untrusted``): on an untrusted server every write-capable
@@ -551,6 +553,7 @@ def _bump_server_error(server_name: str, *, application: bool = False, tool_name
     _server_errors_all_application[key] = all_application
     if not all_application:
         _server_breaker_application_tool.pop(key, None)
+        _server_breaker_application_signatures.pop(key, None)
     if application and tool_name:
         _server_breaker_application_tool.setdefault(key, set()).add(tool_name)
     if n >= _CIRCUIT_BREAKER_THRESHOLD:
@@ -565,6 +568,7 @@ def _reset_server_error(server_name: str) -> None:
     _server_breaker_opened_at.pop(key, None)
     _server_errors_all_application.pop(key, None)
     _server_breaker_application_tool.pop(key, None)
+    _server_breaker_application_signatures.pop(key, None)
 
 
 # Servers opted into parallel tool calls, keyed by the consuming profile's own key (``foo-bar``/

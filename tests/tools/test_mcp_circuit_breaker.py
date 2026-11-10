@@ -91,6 +91,8 @@ def _install_stub_server(mcp_tool_module, name: str, call_tool_impl):
         mcp_tool_module._server_errors_all_application.pop(name, None)
     if hasattr(mcp_tool_module, "_server_breaker_application_tool"):
         mcp_tool_module._server_breaker_application_tool.pop(name, None)
+    if hasattr(mcp_tool_module, "_server_breaker_application_signatures"):
+        mcp_tool_module._server_breaker_application_signatures.pop(name, None)
     return server
 
 
@@ -103,6 +105,8 @@ def _cleanup(mcp_tool_module, name: str) -> None:
         mcp_tool_module._server_errors_all_application.pop(name, None)
     if hasattr(mcp_tool_module, "_server_breaker_application_tool"):
         mcp_tool_module._server_breaker_application_tool.pop(name, None)
+    if hasattr(mcp_tool_module, "_server_breaker_application_signatures"):
+        mcp_tool_module._server_breaker_application_signatures.pop(name, None)
 
 
 # ---------------------------------------------------------------------------
@@ -701,3 +705,81 @@ def test_stdio_respawn_retry_strike_stays_scoped_to_the_tool(monkeypatch, tmp_pa
     # The healthy sibling is not blocked: the strike stayed scoped, not whole-server.
     assert handlers._check_circuit_breaker("vault", "search") is None
     _cleanup(mcp_tool, "vault")
+
+
+def test_open_application_breaker_probes_new_args_without_guardrail_halt(monkeypatch, tmp_path):
+    """A never-failed GAQL correction reaches the server; cooldown refusals are not executed failures."""
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    from agent.display import _detect_tool_failure
+    from agent.tool_guardrails import ToolCallGuardrailConfig, ToolCallGuardrailController
+    from tools import mcp_tool
+    from tools.mcp_tool_handlers import _make_tool_handler
+
+    dispatched = []
+
+    async def _call_tool(tool_name, arguments=None, **kwargs):
+        field = (arguments or {}).get("field")
+        dispatched.append(field)
+        result = MagicMock()
+        result.is_error = field != "shared_criterion.shared_set"
+        block = MagicMock()
+        block.text = "Unrecognized field in the query" if result.is_error else "GAQL data"
+        result.content = [block]
+        result.structured_content = None
+        return result
+
+    _install_stub_server(mcp_tool, "google_ads", _call_tool)
+    _mcp_loop._ensure_mcp_loop()
+    name = "mcp_google_ads_query"
+    guard = ToolCallGuardrailController(
+        ToolCallGuardrailConfig(hard_stop_enabled=True, warnings_enabled=False))
+    bad = {"field": "shared_criterion.shared_set_id", "account": "one"}
+    try:
+        query = _make_tool_handler("google_ads", "query", 10.0)
+        for _ in range(mcp_tool._CIRCUIT_BREAKER_THRESHOLD):
+            result = query(bad)
+            assert "Unrecognized field" in json.loads(result)["error"]
+            failed, _ = _detect_tool_failure(name, result)
+            assert failed
+            guard.after_call(name, bad, result, failed=failed)
+
+        # Canonical argument identity is stable across different dict insertion orders.
+        same_args = {"account": "one", "field": "shared_criterion.shared_set_id"}
+        for _ in range(10):
+            refusal = query(same_args)
+            payload = json.loads(refusal)
+            assert payload["guardrail_refusal"] is True
+            assert "paused" in payload["error"]
+            failed, _ = _detect_tool_failure(name, refusal)
+            assert failed is False
+            assert not guard.after_call(name, same_args, refusal, failed=failed).should_halt
+        assert len(dispatched) == 3
+        assert guard._same_tool_failure_counts.get(name, 0) == 0
+
+        corrected = query({"field": "shared_criterion.shared_set", "account": "one"})
+        assert "GAQL data" in json.loads(corrected)["result"]
+        assert dispatched[-1] == "shared_criterion.shared_set"
+        assert mcp_tool._server_error_counts.get("google_ads") == 0
+
+        # Executed application failures still count; distinct new calls may be attempted,
+        # but the pre-existing same-tool guardrail halts after eight genuine failures.
+        for i in range(8):
+            args = {"field": f"invalid_field_{i}"}
+            result = query(args)
+            assert "Unrecognized field" in json.loads(result)["error"]
+            failed, _ = _detect_tool_failure(name, result)
+            assert failed is True
+            decision = guard.after_call(name, args, result, failed=failed)
+            assert decision.should_halt is (i == 7)
+        assert len(dispatched) == 12
+
+        # A transport-strike breaker must remain whole-server even for corrected arguments.
+        mcp_tool._reset_server_error("google_ads")
+        for _ in range(mcp_tool._CIRCUIT_BREAKER_THRESHOLD):
+            mcp_tool._bump_server_error("google_ads")
+        refusal = json.loads(query({"field": "shared_criterion.shared_set"}))
+        assert refusal["guardrail_refusal"] is True
+        assert "unreachable" in refusal["error"]
+        assert len(dispatched) == 12
+    finally:
+        _cleanup(mcp_tool, "google_ads")

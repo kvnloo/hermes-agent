@@ -85,7 +85,8 @@ def _trust_gate_check(server_name: str, tool_name: str) -> Optional[str]:
                       f"'{server_name}'. The command was NOT run. Do not retry without explicit user direction.")
 
 
-def _check_circuit_breaker(server_name: str, tool_name: Optional[str] = None) -> Optional[str]:
+def _check_circuit_breaker(server_name: str, tool_name: Optional[str] = None,
+                           args: Optional[dict] = None) -> Optional[str]:
     """Open-breaker error, or None when calls may proceed. After the cooldown the breaker is
     half-open: the next call probes; success resets, failure re-bumps and re-arms the cooldown.
     An open state reached on application strikes only (the server answered every time) blocks the
@@ -100,17 +101,25 @@ def _check_circuit_breaker(server_name: str, tool_name: Optional[str] = None) ->
     retry_in = max(1, int(_core._CIRCUIT_BREAKER_COOLDOWN_SEC - age))
     if _core._server_errors_all_application.get(key):
         blocked = _core._server_breaker_application_tool.get(key)
-        if blocked and tool_name is not None and tool_name not in blocked:
-            return None
+        if blocked and tool_name is not None:
+            if tool_name not in blocked:
+                return None
+            failed_hashes = _core._server_breaker_application_signatures.get(key, {}).get(tool_name)
+            if args is not None and failed_hashes:
+                from agent.tool_guardrails import ToolCallSignature
+                if ToolCallSignature.from_call(tool_name, args).args_hash not in failed_hashes:
+                    return None  # Allow an untried argument signature to probe the reachable server.
         # The server answered every time; the calls were rejected. Calling it "unreachable" sent the
         # model to the user instead of to its own arguments (#11113).
         who = f"to MCP tool '{tool_name}' on server '{server_name}'" if tool_name else f"to MCP server '{server_name}'"
         return tool_error(f"The last {failures} calls {who} were rejected (the server is reachable; see the "
                           f"error text those calls returned). This tool is paused for ~{retry_in}s. Do NOT repeat "
-                          f"the same call — fix the arguments/URL/target, or use a different tool on this server.")
+                          f"the same call — fix the arguments/URL/target, or use a different tool on this server.",
+                          guardrail_refusal=True)
     return tool_error(f"MCP server '{server_name}' is unreachable after {failures} consecutive failures. "
                       f"Auto-retry available in ~{retry_in}s. Do NOT retry "
-                      f"this tool yet — use alternative approaches or ask the user to check the MCP server.")
+                      f"this tool yet — use alternative approaches or ask the user to check the MCP server.",
+                      guardrail_refusal=True)
 
 
 def _acquire_call_server(server_name: str, tool_timeout: float):
@@ -586,7 +595,7 @@ def _make_tool_handler(server_name: str, tool_name: str, tool_timeout: float, *,
 
     def _handler(args: dict, **kwargs) -> Any:
         # Security boundary: untrusted-server write tools need approval before ANY transport work (incl. lazy spawn).
-        error = _trust_gate_check(server_name, tool_name) or _check_circuit_breaker(server_name, tool_name)
+        error = _trust_gate_check(server_name, tool_name) or _check_circuit_breaker(server_name, tool_name, args)
         if error is not None:
             return error
         server, error = _acquire_call_server(server_name, tool_timeout)
@@ -596,6 +605,8 @@ def _make_tool_handler(server_name: str, tool_name: str, tool_timeout: float, *,
         # pre-dispatch so the auth recoverer keeps its retry for every tool.
         read_only = _tool_is_read_only(server_name, tool_name)
         image_paths: list[str] = []  # the LAST attempt's cached images (a recoverer may retry _call)
+        from tools.mcp_tool_scope import _resolve_server_key
+        breaker_key = _resolve_server_key(server_name)
 
         async def _call():
             async with server._rpc_lock, _track_inflight_rpc(server, server_name, op, retry_safe=read_only):
@@ -607,7 +618,13 @@ def _make_tool_handler(server_name: str, tool_name: str, tool_timeout: float, *,
             if getattr(server, "_mark_session_proven", None) is not None:  # round-trip done: transport healthy
                 server._mark_session_proven()
             image_paths.clear()
-            return _render_call_tool_result(result, server_name, image_paths)
+            rendered = _render_call_tool_result(result, server_name, image_paths)
+            if _result_is_error(rendered):
+                # Record only real tools/call replies, including successful recoverer retries.
+                from agent.tool_guardrails import ToolCallSignature
+                _core._server_breaker_application_signatures.setdefault(breaker_key, {}).setdefault(
+                    tool_name, set()).add(ToolCallSignature.from_call(tool_name, args).args_hash)
+            return rendered
 
         def _on_failure(exc):
             _core._bump_server_error(server_name)
