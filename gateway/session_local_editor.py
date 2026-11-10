@@ -35,6 +35,7 @@ def validate_editor(source, editor):
 
 
 def request_editor_edit(proposal):
+    from acp_adapter.edit_approval import preview_edit_proposal
     from tools import approval
     from tools.approval_context import get_current_session_key
     from tools.approval_gateway_wait import _await_gateway_decision
@@ -46,7 +47,7 @@ def request_editor_edit(proposal):
     # Each diff is a one-use consent, never a command-pattern or session grant.
     data = {'command': f'Edit {proposal.path}', 'description': 'Approve proposed file change',
             'pattern_key': 'editor-' + uuid.uuid4().hex,
-            'allow_session': False, 'allow_permanent': False, 'edit': asdict(proposal)}
+            'allow_session': False, 'allow_permanent': False, 'edit': asdict(preview_edit_proposal(proposal))}
     data['pattern_keys'] = [data['pattern_key']]
     decision = _await_gateway_decision(route, notify, data, surface='acp')
     if decision.get('notify_failed'):

@@ -203,6 +203,9 @@ _SPECS = [
         _arg("--provider", dest="provider_override",
              help="Provider the --model belongs to (passed as --provider <name> to "
                   "the worker). Requires --model."),
+        _arg("--reasoning-effort", dest="reasoning_effort",
+             help="Pin the worker's reasoning effort (minimal|low|medium|high|xhigh|max|ultra|none). "
+                  "Overrides the profile's agent.reasoning_effort. 'none' disables thinking."),
         _arg("--completion-contract", metavar="CONTRACT",
              help="local-only (default), OWNER/REPO for publication, or exact GitHub PR URL; required CI gates done."),
         _arg("--goal", action="store_true", dest="goal_mode",

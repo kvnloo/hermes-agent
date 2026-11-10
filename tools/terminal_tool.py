@@ -1403,6 +1403,11 @@ def _pre_exec_block(
         blocked = self_repo_block(command=command, cwd=cwd, workdir=workdir, session_key=session_key)
         if blocked:
             raise _Rejected(blocked)
+        from tools.search_root_guard import broad_walk_error
+        walk_error = broad_walk_error(command)
+        if walk_error:
+            logger.warning("Blocked broad-root walk (command: %s)", _safe_command_preview(command))
+            raise _Rejected(_error_json(walk_error, status="blocked"))
 
 
 _PTY_DISABLED_REASON = (
