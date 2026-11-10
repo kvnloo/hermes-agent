@@ -2598,6 +2598,13 @@ def repair_tool_call(agent, tool_name: str) -> str | None:
     for c in cands:
         if c and c in agent.valid_tool_names:
             return c
+    # OAuth advertises agent-local context-engine tools with mcp__ wire names,
+    # although those tools are absent from the global registry (#149710).
+    # Exact agent names win before length-dependent fuzzy repair.
+    if lowered.startswith("mcp__"):
+        bare = lowered[len("mcp__"):]
+        if bare in agent.valid_tool_names:
+            return bare
     matches = get_close_matches(lowered, agent.valid_tool_names, n=1, cutoff=0.7)
     return matches[0] if matches else None
 
