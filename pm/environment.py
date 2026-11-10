@@ -346,6 +346,11 @@ class PythonEnvironment:
             env.update(XDG_CONFIG_HOME=config, XDG_CONFIG_DIRS=config)
             if self.no_config:
                 env.update(APPDATA=config, LOCALAPPDATA=config)
+                # uv also loads system config from %PROGRAMDATA%/uv/uv.toml on Windows.
+                for key in tuple(env):
+                    if key.casefold() == "programdata":
+                        del env[key]
+                env["ProgramData"] = config
             command = [native(self.uv), *map(native, args)]
             if self.offline:
                 command.append("--offline")

@@ -858,3 +858,36 @@ def test_no_config_preserves_project_uv_configuration(tmp_path):
     checked = environment._run(["lock", "--check"], cwd=project, timeout=60)
     assert checked.returncode == 0, checked.stderr
     assert (project / "uv.lock").read_bytes() == locked
+
+
+def test_no_config_masks_windows_system_uv_toml(tmp_path):
+    """A pinned runtime cannot inherit the machine-level Windows uv.toml."""
+    from pm.environment import PythonEnvironment
+
+    system_home = tmp_path / "machine-config"
+    system_config = system_home / "uv" / "uv.toml"
+    system_config.parent.mkdir(parents=True)
+    system_config.write_text('index-url = "https://blocked.invalid/simple"\n', encoding="utf-8")
+    ambient = {key: value for key, value in os.environ.items()
+               if key.casefold() != "programdata"}
+    ambient["ProgramData"] = str(system_home)
+    child = (
+        "import os, pathlib, sys\n"
+        "root = next((v for k, v in os.environ.items() if k.casefold() == 'programdata'), '')\n"
+        "if (pathlib.Path(root) / 'uv' / 'uv.toml').is_file():\n"
+        "    sys.exit('inherited system uv.toml remains visible')\n"
+    )
+
+    def run(no_config):
+        environment = PythonEnvironment(
+            uv=Path(sys.executable), python=Path(sys.executable),
+            destination=tmp_path / "venv", cache=tmp_path / "cache",
+            env=ambient, no_config=no_config,
+        )
+        return environment._run(["-c", child], cwd=tmp_path, timeout=60)
+
+    bridged = run(False)
+    assert bridged.returncode == 1, "control must see the machine-level config"
+    assert "inherited system uv.toml" in bridged.stderr, bridged.stderr
+    isolated = run(True)
+    assert isolated.returncode == 0, isolated.stderr
