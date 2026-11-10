@@ -2022,9 +2022,9 @@ def _write_full_zip_backup_locked(out_path: Path, hermes_root: Path) -> Optional
     def _publish_path() -> Optional[Path]:
         # Decide clean/salvage/discard once; the post-publish stat and return reuse it.
         nonlocal published
-        if not errors and len(vanished) <= vanish_budget:
+        if not errors and len(vanished) <= min(vanish_budget, len(files_to_add) - 1):
             published = out_path
-        elif len(errors) < len(files_to_add):
+        elif len(errors) + len(vanished) < len(files_to_add):
             published = salvage_path
         return published
 
