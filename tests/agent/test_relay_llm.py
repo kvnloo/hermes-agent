@@ -313,7 +313,7 @@ def test_provider_request_process_transport_keeps_caller_headers():
         process_transport=True,
     )
 
-    assert provider_request["extra_headers"]["x-caller"] == "kept"
+    assert provider_request["extra_headers"] == {"x-caller": "kept"}
 
 
 def test_is_process_transport_follows_provider_auth_type():

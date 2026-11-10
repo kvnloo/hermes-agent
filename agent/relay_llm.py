@@ -792,8 +792,9 @@ def _provider_request(
     # and may reject an SDK-only argument. Non-trace middleware headers are preserved as before.
     # An ``external_process`` provider keeps an SDK-shaped api_mode (e.g. chat_completions) but is a CLI
     # subprocess: there is no HTTP request for a trace header to ride on, and its client rejects the kwarg.
-    sdk_mode = _RELAY_PROTOCOL_BY_API_MODE.get(_api_mode(metadata)) is not None and not process_transport
-    supports_extra_headers = sdk_mode or "extra_headers" in original
+    # A pre-existing caller header must not bypass the no-HTTP-hop trace guard.
+    sdk_mode = _RELAY_PROTOCOL_BY_API_MODE.get(_api_mode(metadata)) is not None
+    supports_extra_headers = not process_transport and (sdk_mode or "extra_headers" in original)
     if headers and not supports_extra_headers:
         headers = {k: v for k, v in headers.items() if str(k).lower() != "traceparent"}
     if headers:
