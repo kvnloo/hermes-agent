@@ -5,7 +5,7 @@ from contextlib import nullcontext, suppress
 from pathlib import Path
 
 from gateway.session_contract import SessionActor
-from gateway.session_authorities import active_authority, all_authorities, owner_scope, serving_authorities
+from gateway.session_authorities import active_authority, all_authorities, async_owner_scope, serving_authorities
 from gateway.session_hosted_controls import HostedControls
 from gateway.owner_identity import same_owner
 from hermes_state_runtime import RuntimeStoreError, _epoch
@@ -344,7 +344,7 @@ async def _ensure_hosted_service(runner, authority):
         # past the liveness watchdog's three strikes, which hard-kills the gateway (exit 75).
         # Every stall dump in logs/gateway-shutdown-watchdog.log was such a read or a path resolve.
         return
-    with owner_scope(authority):
+    async with async_owner_scope(authority):
         service = getattr(authority, 'hosted_room_service', None)
         if service is None:
             loop = asyncio.get_running_loop()

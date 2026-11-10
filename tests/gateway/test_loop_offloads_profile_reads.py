@@ -9,7 +9,7 @@ hard-exits the process with code 75, killing in-flight turns.
 
 These pin the two cheapest authors of that stall.
 """
-from contextlib import nullcontext
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 
 import pytest
@@ -18,11 +18,12 @@ import pytest
 def _counting_scope(monkeypatch, module):
     entered = []
 
-    def scope(authority, **_kwargs):
+    @asynccontextmanager
+    async def scope(authority):
         entered.append(authority)
-        return nullcontext()
+        yield
 
-    monkeypatch.setattr(module, 'owner_scope', scope)
+    monkeypatch.setattr(module, 'async_owner_scope', scope)
     return entered
 
 
@@ -92,3 +93,44 @@ async def test_watcher_signature_hashing_runs_off_the_event_loop(tmp_path, monke
     assert seen, 'the watcher must compare served-profile signatures'
     assert all(ident != loop_thread for ident in seen), \
         'signature hashing must not run on the event loop thread'
+
+
+@pytest.mark.asyncio
+async def test_cold_hosted_service_scope_file_work_runs_off_loop(tmp_path, monkeypatch):
+    """A newly served multiplex profile must not read its terminal policy on the gateway loop."""
+    import threading
+
+    from gateway import session_hosted_service as mod
+    from tools import terminal_scope
+
+    home = tmp_path / 'profiles' / 'secondary'
+    home.mkdir(parents=True)
+    (home / '.env').write_text('HOSTED_ROOM_TEST_KEY=secondary\n', encoding='utf-8')
+    (home / 'config.yaml').write_text(
+        'terminal:\n  backend: local\n  cwd: /srv/work\n', encoding='utf-8')
+
+    runner = SimpleNamespace(config=SimpleNamespace(multiplex_profiles=True),
+                             session_control_server=object())
+    service = SimpleNamespace(_transport_installed=False, attest=lambda *args: True)
+    authority = SimpleNamespace(
+        runner=runner, profile_id=str(home), epoch=None,
+        db=SimpleNamespace(db_path=str(home / 'state.db')), hosted_room_service=service)
+
+    installed = []
+    monkeypatch.setattr('gateway.session_hosted_transport.install_hosted_transport',
+                        lambda *args, **kwargs: installed.append((args, kwargs)))
+    loop_thread = threading.get_ident()
+    build_threads = []
+    original_build = terminal_scope.build_profile_terminal_scope
+
+    def record_build(*args, **kwargs):
+        build_threads.append(threading.get_ident())
+        return original_build(*args, **kwargs)
+
+    monkeypatch.setattr(terminal_scope, 'build_profile_terminal_scope', record_build)
+    await mod._ensure_hosted_service(runner, authority)
+
+    assert build_threads, 'the cold profile must load its terminal policy'
+    assert all(thread_id != loop_thread for thread_id in build_threads), (
+        'cold profile reads must not block the gateway event loop')
+    assert installed and service._transport_installed is True
