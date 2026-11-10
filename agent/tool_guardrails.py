@@ -354,6 +354,7 @@ class ToolCallGuardrailController:
         # work there.
         self._identical_streak_sig: ToolCallSignature | None = None
         self._identical_streak_result_hash: str = ""
+        self._identical_streak_first_result_hash: str = ""
         self._identical_streak_count: int = 0
         self._identical_streak_first_call_id: str = ""
         # Batch-cycle loop breaker (port of can1357/oh-my-pi#10521): sequence of
@@ -492,6 +493,7 @@ class ToolCallGuardrailController:
             # New streak; non-string (multimodal) results never form one.
             self._identical_streak_sig = signature if is_plain_str else None
             self._identical_streak_result_hash = _streak_result_hash
+            self._identical_streak_first_result_hash = result_hash
             self._identical_streak_count = 1 if is_plain_str else 0
             self._identical_streak_first_call_id = tool_call_id or ""
         count = self._identical_streak_count
@@ -520,7 +522,11 @@ class ToolCallGuardrailController:
                     self._decide("halt", "identical_cycle_halt", tool_name, laps, signature, period=period)
 
         stub = None
-        if is_plain_str and count >= 2 and not failed and len(result) >= IDENTICAL_RESULT_STUB_MIN_CHARS:
+        if (
+            is_plain_str and count >= 2 and not failed
+            and len(result) >= IDENTICAL_RESULT_STUB_MIN_CHARS
+            and result_hash == self._identical_streak_first_result_hash
+        ):
             stub = self._build_result_reference_stub(tool_name, args)
         return IdenticalCallObservation(notice=notice, stub=stub, kind=kind)
 
