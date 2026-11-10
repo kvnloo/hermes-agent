@@ -1013,9 +1013,9 @@ class GatewayShutdownMixin(GatewaySessionEndMixin):
                     continue
                 if not self._notice_allowed(platform, "home channel", platform_cfg):
                     continue
-                await self._send_shutdown_notice(
-                    adapter, str(home.chat_id), msg, "crash-loop alert", platform.value)
-                break  # one delivered alert is enough
+                if await self._send_shutdown_notice(
+                    adapter, str(home.chat_id), msg, "crash-loop alert", platform.value):
+                    break  # one delivered alert is enough
         except Exception:
             logger.debug("Failed to send crash-loop alert", exc_info=True)
 

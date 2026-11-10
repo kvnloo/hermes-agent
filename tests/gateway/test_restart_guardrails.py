@@ -153,3 +153,44 @@ async def test_long_uptime_shutdown_still_broadcasts_home_channel():
     await runner._notify_active_sessions_of_shutdown()
 
     assert [call[0] for call in adapter.sent_calls] == ["home-chat"]
+
+
+@pytest.mark.asyncio
+async def test_crash_loop_alert_tries_next_home_after_failed_send(monkeypatch):
+    """A failing first bot must not consume the only attempted alert delivery.
+
+    The hourly on-disk slot is already claimed; another configured home channel
+    may be the only way to tell the operator the gateway keeps crashing.
+    """
+    from unittest.mock import AsyncMock
+
+    from gateway.config import PlatformConfig
+    from gateway.platforms.base import SendResult
+    from tests.gateway.restart_test_helpers import RestartTestAdapter
+
+    runner, primary = make_restart_runner()
+    primary_config = runner.config.platforms[Platform.TELEGRAM]
+    primary_config.home_channel = HomeChannel(
+        platform=Platform.TELEGRAM, chat_id="unreachable-home", name="Primary"
+    )
+    secondary_config = PlatformConfig(
+        enabled=True, token="***",
+        home_channel=HomeChannel(
+            platform=Platform.TELEGRAM, chat_id="working-home", name="Secondary"
+        ),
+    )
+    secondary = RestartTestAdapter()
+    primary.send = AsyncMock(return_value=SendResult(success=False, error="bot disconnected"))
+    runner._profile_adapters = {"work": {Platform.TELEGRAM: secondary}}
+    runner._served_home_channel_configs = lambda: [
+        (None, Platform.TELEGRAM, primary_config),
+        ("work", Platform.TELEGRAM, secondary_config),
+    ]
+    runner._notice_allowed = lambda *args, **kwargs: True
+    monkeypatch.setattr("gateway.status.crash_loop_alert_due", lambda now=None, home=None: True)
+
+    await runner._send_crash_loop_alert(10.0)
+
+    assert primary.send.await_count == 1
+    assert [call[0] for call in secondary.sent_calls] == ["working-home"]
+    assert "crash-looping" in secondary.sent_calls[0][1]
