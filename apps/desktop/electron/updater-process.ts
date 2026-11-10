@@ -218,7 +218,17 @@ const launcherIdentities = new Map<string, Promise<string | null>>()
 const launcherIdentityMisses = new Map<string, number>()
 
 function launcherIdentity(launcher: string, root: string): Promise<string | null> {
-  const key = `${launcher}\u0000${root}`
+  // A user-bin launcher may be replaced while Desktop stays open. Cache only
+  // while the file identity stays the same; a stat is cheap beside --version.
+  let stamp: string
+  try {
+    const { dev, ino, size, mtimeMs, ctimeMs } = statSync(launcher)
+    stamp = `${dev}:${ino}:${size}:${mtimeMs}:${ctimeMs}`
+  } catch {
+    return Promise.resolve(null)
+  }
+
+  const key = `${launcher}\u0000${root}\u0000${stamp}`
   const missedAt = launcherIdentityMisses.get(key)
 
   if (missedAt !== undefined && Date.now() - missedAt < LAUNCHER_ROOT_MISS_TTL_MS) {

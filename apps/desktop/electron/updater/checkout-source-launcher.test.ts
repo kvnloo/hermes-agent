@@ -4,6 +4,7 @@ import * as path from 'node:path'
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
+import { resolveInstallationLauncherAsync } from '../updater-process'
 import { readSourceUpdate } from './checkout-source'
 
 // Every window that mounts runs the passive update check on Electron's main
@@ -112,4 +113,36 @@ it('resolves a slow user-bin launcher without blocking the event loop, once per 
   expect(second.result).toBeNull()
   expect(versionProbes()).toBe(1)
   expect(second.blockedMs).toBeLessThan(100)
+}, 30000)
+
+it('revalidates a memoized launcher after its file is replaced', async (): Promise<void> => {
+  const root: string = path.join(base, 'checkout')
+  const otherRoot: string = path.join(base, 'other-checkout')
+  const home: string = path.join(base, 'home')
+  const calls: string = path.join(base, 'calls')
+  fs.mkdirSync(path.join(root, 'hermes_cli'), { recursive: true })
+  fs.writeFileSync(path.join(root, 'hermes_cli', '_launchers.py'), '')
+
+  const launcher: string = writeSlowLauncher(home, root, calls)
+  const resolve = (): Promise<string | null> =>
+    resolveInstallationLauncherAsync(root, process.platform === 'win32', home)
+  const versionProbes = (): number =>
+    fs
+      .readFileSync(calls, 'utf8')
+      .split(/\r?\n/)
+      .filter((line: string): boolean => line.trim() === '--version').length
+
+  expect(await resolve()).toBe(launcher)
+  expect(await resolve()).toBe(launcher)
+  expect(versionProbes()).toBe(1)
+
+  // Replacing the launcher at the same path changes which checkout it runs.
+  // The old cached success must not select the wrong checkout.
+  writeSlowLauncher(home, otherRoot, calls)
+  expect(await resolve()).toBeNull()
+  expect(versionProbes()).toBe(2)
+
+  writeSlowLauncher(home, root, calls)
+  expect(await resolve()).toBe(launcher)
+  expect(versionProbes()).toBe(3)
 }, 30000)
