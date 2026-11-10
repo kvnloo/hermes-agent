@@ -536,6 +536,33 @@ def _content_dual_emits_structured(result, structured) -> bool:
     return False
 
 
+def _accepted_write_pending_receipt(error_text: str) -> Optional[dict]:
+    """An accepted asynchronous write is not a failed MCP call (#152518).
+
+    Require the server's explicit write_pending code plus a pollable receipt;
+    ordinary isError application failures must still strike (#10447).
+    """
+    try:
+        payload = json.loads(error_text)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    receipt = payload.get("write_request")
+    if not (
+        payload.get("code") == "write_pending"
+        and payload.get("error") == "write_pending"
+        and isinstance(receipt, dict)
+        and isinstance(receipt.get("request_id"), str)
+        and bool(receipt["request_id"])
+        and receipt.get("state") in ("queued", "pending", "running")
+        and type(receipt.get("retry_after_ms")) in (int, float)
+        and receipt["retry_after_ms"] > 0
+    ):
+        return None
+    return payload
+
+
 def _render_call_tool_result(result, server_name: str, image_paths: Optional[list[str]] = None) -> str:
     """Pure: ``CallToolResult`` -> handler JSON (``image_paths``, when given, receives the files this
     call's image blocks were cached to). ``content`` and ``structuredContent`` are both
@@ -549,7 +576,11 @@ def _render_call_tool_result(result, server_name: str, image_paths: Optional[lis
     used. ``structuredContent`` fills ``result`` when the blocks rendered effectively empty
     (structuredContent-only servers); ``_meta`` minus reserved keys is always surfaced."""
     if mcp_field(result, "is_error", "isError", False):
-        return tool_error(_sanitize_error(_truncate_mcp_text_result(_error_result_text(result) or "MCP tool returned an error")))
+        error_text = _sanitize_error(_truncate_mcp_text_result(_error_result_text(result) or "MCP tool returned an error"))
+        accepted = _accepted_write_pending_receipt(error_text)
+        if accepted is not None:
+            return json.dumps({"result": accepted}, ensure_ascii=False)
+        return tool_error(error_text)
     text_result, usable_parts, cached_images = _render_content_blocks(result, server_name)
     if image_paths is not None:
         image_paths.extend(cached_images)

@@ -701,3 +701,70 @@ def test_stdio_respawn_retry_strike_stays_scoped_to_the_tool(monkeypatch, tmp_pa
     # The healthy sibling is not blocked: the strike stayed scoped, not whole-server.
     assert handlers._check_circuit_breaker("vault", "search") is None
     _cleanup(mcp_tool, "vault")
+
+
+def test_accepted_pending_write_receipt_is_not_a_breaker_strike(monkeypatch, tmp_path):
+    """Two genuine rejects then an accepted queued write must leave the receipt poll usable (#152518).
+
+    A write_pending-shaped error without retry_after_ms is not a valid receipt.
+    """
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+
+    from tools import mcp_tool
+    from tools.mcp_tool_handlers import _make_tool_handler
+
+    receipt = {
+        "error": "write_pending",
+        "code": "write_pending",
+        "message": "The write is accepted and is still pending.",
+        "write_request": {
+            "request_id": "req-152518",
+            "state": "queued",
+            "retry_after_ms": 15123,
+        },
+    }
+    called = []
+
+    async def _call_tool(tool_name, arguments=None, **_kwargs):
+        called.append(tool_name)
+        result = MagicMock()
+        result.is_error = tool_name != "get_write_request"
+        block = MagicMock()
+        if tool_name == "get_write_request":
+            block.text = "state: committed"
+        elif arguments.get("invalid"):
+            block.text = '{"error": "invalid_params", "code": "invalid_params"}'
+        elif arguments.get("non_object"):
+            block.text = '["not a receipt"]'
+        elif arguments.get("missing_retry"):
+            bad_receipt = json.loads(json.dumps(receipt))
+            del bad_receipt["write_request"]["retry_after_ms"]
+            block.text = json.dumps(bad_receipt)
+        else:
+            block.text = json.dumps(receipt)
+        result.content = [block]
+        result.structured_content = None
+        return result
+
+    _install_stub_server(mcp_tool, "gbrain", _call_tool)
+    _mcp_loop._ensure_mcp_loop()
+    try:
+        write = _make_tool_handler("gbrain", "add_link", 10.0)
+        poll = _make_tool_handler("gbrain", "get_write_request", 10.0)
+        for _ in range(2):
+            assert "invalid_params" in json.loads(write({"invalid": True}))["error"]
+        assert mcp_tool._server_error_counts.get("gbrain") == 2
+
+        # The third server answer is an accepted receipt, not a third rejection.
+        assert json.loads(write({}))["result"] == receipt
+        assert mcp_tool._server_error_counts.get("gbrain", 0) == 0
+        assert json.loads(poll({"request_id": "req-152518"}))["result"] == "state: committed"
+
+        # Only a pollable accepted receipt is exempt; plain isError still strikes.
+        assert "error" in json.loads(write({"missing_retry": True}))
+        assert mcp_tool._server_error_counts.get("gbrain", 0) == 1
+        assert "error" in json.loads(write({"non_object": True}))
+        assert mcp_tool._server_error_counts.get("gbrain", 0) == 2
+        assert called == ["add_link", "add_link", "add_link", "get_write_request", "add_link", "add_link"]
+    finally:
+        _cleanup(mcp_tool, "gbrain")
