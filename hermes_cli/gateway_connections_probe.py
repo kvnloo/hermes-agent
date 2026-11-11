@@ -10,12 +10,12 @@ session token, then run the same authenticated HTTP probe.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
-
-from starlette.concurrency import run_in_threadpool
 
 from hermes_cli import gateway_connections as store
 from hermes_cli import gateway_connections_reach as reach
+from hermes_cli import webapp_relay_target as relay_reach
 
 _TIMEOUT_S = 8.0
 
@@ -69,6 +69,8 @@ async def probe_connection(connection_id: str) -> dict[str, Any]:
 
         return {"ok": True, "baseUrl": None, "version": __version__}
     if entry["kind"] == "ssh":
-        target = await run_in_threadpool(reach.resolve_target, connection_id)
+        # Same gateway-reach pool as relayed requests: an SSH dial must not exhaust
+        # the shared Starlette workers needed for local Webapp routes.
+        target = await asyncio.wrap_future(relay_reach._submit(reach.resolve_target, connection_id))
         return await _probe(*target)
     return await _probe(*_credential_headers(entry["id"]))

@@ -109,3 +109,58 @@ def test_ssh_test_reports_reach_failures_and_keeps_the_webapp_gate(connection, s
     monkeypatch.setattr(web_server.app.state, "ui_surface", "serve")
     assert client.post(path).status_code == 404
     assert attempts == [connection["id"]]
+
+
+@pytest.mark.asyncio
+async def test_unanswered_ssh_test_keeps_local_sync_routes_available(connection, monkeypatch):
+    """A stalled saved-gateway Test must not occupy the Webapp's shared worker slot.
+
+    With one Starlette/AnyIO worker, the local connection-list route must still answer
+    while Test waits for an unreachable SSH dial. The relay-only pool fix does not cover
+    this sibling path unless the Test's reach also runs on that pool.
+    """
+    import anyio.to_thread
+    import httpx
+
+    from tests.waiting import async_wait_until
+
+    for key in ("gateway_runner", "listener_public_url", "webapp_home"):
+        monkeypatch.delattr(web_server.app.state, key, raising=False)
+    monkeypatch.setattr(web_server.app.state, "auth_required", False, raising=False)
+    monkeypatch.setattr(web_server.app.state, "ui_surface", "webapp", raising=False)
+
+    entered, release = threading.Event(), threading.Event()
+
+    def unreachable(_entry):
+        entered.set()
+        assert release.wait(10), "SSH dial did not receive its release"
+        raise ssh.SshReachError("timeout", "The saved gateway did not answer.")
+
+    monkeypatch.setattr(ssh, "ensure_tunnel", unreachable)
+    limiter = anyio.to_thread.current_default_thread_limiter()
+    old_limit = limiter.total_tokens
+    limiter.total_tokens = 1
+    test_request = list_request = None
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=web_server.app),
+            base_url="http://localhost",
+            headers={web_server._SESSION_HEADER_NAME: web_server._SESSION_TOKEN},
+        ) as client:
+            test_request = asyncio.create_task(
+                client.post(f"/api/gateway-connections/{connection['id']}/test")
+            )
+            await async_wait_until(entered.is_set, timeout=3, what="SSH Test dial to begin")
+            list_request = asyncio.create_task(client.get("/api/gateway-connections"))
+            await async_wait_until(
+                list_request.done, timeout=2, what="local connections list while SSH Test is stalled"
+            )
+            assert list_request.result().status_code == 200
+    finally:
+        release.set()
+        limiter.total_tokens = old_limit
+        if test_request is not None:
+            response = await test_request
+            assert response.status_code == 502
+        if list_request is not None:
+            await list_request
