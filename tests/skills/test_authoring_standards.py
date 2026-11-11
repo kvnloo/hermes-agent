@@ -150,7 +150,7 @@ def _dangling_skill_refs(text, where, dirs):
         if not targets:
             found.append(f"{where}: skill_view({name!r}) names no shipped skill")
         elif (file_path and not any(c in file_path for c in "<*…") and "..." not in file_path
-              and not any((d / file_path).exists() for d in targets)):
+              and not any((d / file_path).is_file() for d in targets)):
             found.append(f"{where}: skill_view({name!r}, {file_path!r}) has no such file")
     names = {d.name for d in dirs}
     return found + [f"{where}: `{n}` skill does not ship" for n in _SKILL_INSTRUCTION.findall(text) if n not in names]
@@ -168,9 +168,10 @@ def test_skill_instruction_check_catches_positional_and_category_refs(tmp_path):
     (skill / "templates").mkdir(parents=True)
     (skill / "templates" / "ok.html").write_text("x")
     body = ('skill_view("demo", "templates/ok.html") skill_view("creative/demo", "templates/typo.html") '
-            'skill_view("other/demo")')
+            'skill_view("demo", "templates") skill_view("other/demo")')
     assert _dangling_skill_refs(body, "probe.md", [skill]) == [
         "probe.md: skill_view('creative/demo', 'templates/typo.html') has no such file",
+        "probe.md: skill_view('demo', 'templates') has no such file",
         "probe.md: skill_view('other/demo') names no shipped skill"]
 
 
