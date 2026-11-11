@@ -472,6 +472,9 @@ def _stop_gateways(token: dict, entries: list[dict]) -> None:
                 waiting.append(entry)  # a SIGTERMed bare gateway is waited for like a drained one
     if not waiting:
         return
+    # The panel must name the drain, not leave the previous download stage on screen.
+    from hermes_cli.update_stage import publish_stage
+    publish_stage("Waiting for running tasks to finish")
     print(f"  ⏳ Waiting up to {budget:.0f}s for in-flight turns on {_names(waiting)} to finish before the update...")
     ticks = [drain_progress_reporter(Path(e["home"]) if e.get("home") else None, budget_s=budget) for e in waiting]
     deadline = time.monotonic() + budget
