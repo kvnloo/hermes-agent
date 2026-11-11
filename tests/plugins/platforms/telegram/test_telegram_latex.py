@@ -35,6 +35,16 @@ def test_format_message_renders_latex_macros_as_unicode(markdown, visible):
     assert _shown(formatted) == visible
 
 
+def test_relative_windows_paths_remain_literal_in_both_telegram_formats():
+    """LaTeX normalization must not turn relative Windows / PowerShell paths into symbols."""
+    content = r"Open .\alpha\notes, ..\beta\docs or ~\gamma\tests"
+    adapter = TelegramAdapter(PlatformConfig(enabled=True, token="123:abc"))
+    formatted = adapter.format_message(content)
+    assert mdv2_error(formatted) is None
+    assert _shown(formatted) == content
+    assert adapter._rich_message_payload(content)["markdown"] == content
+
+
 @pytest.mark.asyncio
 async def test_rich_send_maps_bare_macros_and_keeps_math_for_the_client():
     """A rich reply (a table makes it rich-eligible) maps bare macros; math spans the rich client

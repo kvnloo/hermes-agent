@@ -42,9 +42,9 @@ _MACROS = {
     "rceil": "⌉", "lfloor": "⌊", "rfloor": "⌋", "angle": "∠", "hbar": "ℏ", "ell": "ℓ",
     "aleph": "ℵ", "dagger": "†", "checkmark": "✓", "degree": "°",
 }
-# A macro is a backslash word that no letter extends, never part of a path or an escaped backslash.
+# A macro is a backslash word, not part of a drive, relative or home path, or an escaped backslash.
 _MACRO_NAMES = "|".join(sorted(_MACROS, key=len, reverse=True))
-_MACRO_RE = re.compile(r"(?<![\w:/\\])\\(" + _MACRO_NAMES + r")(?![A-Za-z])")
+_MACRO_RE = re.compile(r"(?<![\w:/.~\\])\\(" + _MACRO_NAMES + r")(?![A-Za-z])")
 # Inside a confirmed ``$...$`` span a macro may follow a letter (``$x\leq y$``): no path guard there.
 _MATH_MACRO_RE = re.compile(r"(?<!\\)\\(" + _MACRO_NAMES + r")(?![A-Za-z])")
 _INLINE_MATH_RE = re.compile(r"(?<![\\$\w])\$([^$\n]{1,120}?)\$(?![\w$])")
