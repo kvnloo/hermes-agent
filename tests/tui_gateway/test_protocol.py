@@ -41,8 +41,14 @@ def server():
     import tui_gateway.transport
     import hermes_constants  # real get_process_hermes_home: a mocked one put state.db under the cwd (repo)
     with patch.dict("sys.modules", {
-        "hermes_constants": MagicMock(get_hermes_home=MagicMock(return_value="/tmp/hermes_test"),
-                                      get_process_hermes_home=hermes_constants.get_process_hermes_home),
+        "hermes_constants": MagicMock(
+            get_hermes_home=MagicMock(return_value="/tmp/hermes_test"),
+            get_process_hermes_home=hermes_constants.get_process_hermes_home,
+            get_hermes_home_override=hermes_constants.get_hermes_home_override,
+            set_hermes_home_override=hermes_constants.set_hermes_home_override,
+            reset_hermes_home_override=hermes_constants.reset_hermes_home_override,
+            profile_name_for_home=hermes_constants.profile_name_for_home,
+        ),
         "hermes_cli.env_loader": MagicMock(),
         "hermes_cli.banner": MagicMock(),
         "hermes_state": MagicMock(),
@@ -70,6 +76,18 @@ def server():
     from tui_gateway import server_requests
     server_requests.reset_for_tests()
     mod._live_transports.clear()
+
+
+def test_server_uses_profile_home_override_on_cold_import(server, tmp_path):
+    """The imported server must resolve the active profile home, even when imported first."""
+    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+
+    profile_home = tmp_path / "profiles" / "isolated"
+    token = set_hermes_home_override(profile_home)
+    try:
+        assert server._active_config_path() == profile_home / "config.yaml"
+    finally:
+        reset_hermes_home_override(token)
 
 
 @pytest.fixture()
