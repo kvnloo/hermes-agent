@@ -326,6 +326,32 @@ describe('MessagingView setup-guide link', () => {
   })
 })
 
+describe('MessagingView credential documentation link', () => {
+  it('opens a credential docs icon through the validated external opener', async () => {
+    const docsUrl = 'https://learn.microsoft.com/en-us/microsoftteams/'
+    getMessagingPlatforms.mockResolvedValue({ platforms: [platform({ env_vars: [{
+      advanced: false,
+      description: 'Teams application credential',
+      is_password: true,
+      is_set: false,
+      key: 'TEAMS_APP_ID',
+      prompt: 'Application ID',
+      redacted_value: null,
+      required: true,
+      url: docsUrl
+    }] })] })
+
+    const { container } = await renderMessaging()
+    const link = await waitFor(() => {
+      const anchor = container.querySelector<HTMLAnchorElement>(`a[href="${docsUrl}"]`)
+      expect(anchor).not.toBeNull()
+      return anchor!
+    })
+    fireEvent.click(link)
+    expect(openExternalLink).toHaveBeenCalledWith(docsUrl)
+  })
+})
+
 describe('MessagingView pairing', () => {
   const pendingUser = {
     age_minutes: 3,
