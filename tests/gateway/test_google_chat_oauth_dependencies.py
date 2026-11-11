@@ -112,3 +112,30 @@ def test_probe_pins_match_the_pins_pyproject_declares():
 
     assert not drift, f"probe pins disagree with the {oauth._DEPENDENCY_EXTRAS} extras: {drift}"
 
+
+def test_declared_google_versions_pass_oauth_gate_without_reinstall(tmp_path, monkeypatch, capsys):
+    """Regression for #153279: the PM-synced Google extras must pass the OAuth gate."""
+    extras = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))[
+        "project"
+    ]["optional-dependencies"]
+
+    for extra in oauth._DEPENDENCY_EXTRAS:
+        for spec in extras[extra]:
+            requirement = Requirement(spec)
+            version = next(iter(requirement.specifier)).version
+            dist_info = tmp_path / f"{requirement.name.replace('-', '_')}-{version}.dist-info"
+            dist_info.mkdir()
+            (dist_info / "METADATA").write_text(
+                f"Metadata-Version: 2.1\nName: {requirement.name}\nVersion: {version}\n",
+                encoding="utf-8",
+            )
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    def unexpected_repair(*args, **kwargs):
+        pytest.fail("Declared Google dependencies unexpectedly triggered a PM repair")
+
+    monkeypatch.setattr(pm, "sync_venv", unexpected_repair)
+    assert oauth._missing_required_packages() == []
+    oauth._ensure_deps()
+    assert oauth.install_deps() is True
+    assert "already installed" in capsys.readouterr().out.lower()
