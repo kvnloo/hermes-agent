@@ -29,6 +29,7 @@ class Model(BaseHTTPRequestHandler):
             payload = json.dumps({'error': {'message': 'Rate limit exceeded' if self.server.mode == 'rate_limit' else 'Insufficient quota',
                 'type': 'rate_limit_error' if self.server.mode == 'rate_limit' else 'insufficient_quota',
                 'code': 'rate_limit_exceeded' if self.server.mode == 'rate_limit' else 'insufficient_quota'}}).encode()
+            self.server.error_statuses.append(429)
             self.send_response(429)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Content-Length', str(len(payload)))
@@ -65,7 +66,7 @@ def main():
     Path(os.environ['HOME']).mkdir(parents=True, exist_ok=True)
     os.environ['HERMES_KANBAN_HOME'] = str(home)
     peer = ThreadingHTTPServer(('127.0.0.1', 0), Model)
-    peer.requests = []
+    peer.requests, peer.error_statuses = [], []
     peer.mode = os.environ.get('KANBAN_PROBE_MODE', 'complete')
     peer.blocked, peer.release = threading.Event(), threading.Event()
     threading.Thread(target=peer.serve_forever, daemon=True).start()
@@ -78,10 +79,23 @@ def main():
     (skill / 'SKILL.md').write_text('---\nname: owned-skill\ndescription: Owned fixture\n---\nKANBAN_SKILL_SENTINEL\n', encoding='utf-8')
     hook = home / 'hook.py'
     hook.write_text('from pathlib import Path\nPath(' + repr(str(home / 'hook-effect')) + ').write_text("accepted")\n', encoding='utf-8')
+    fallback = None
+    complete = peer.mode == 'complete' or os.environ.get('KANBAN_PROBE_FALLBACK') == '1'
+    if os.environ.get('KANBAN_PROBE_FALLBACK') == '1':
+        fallback = ThreadingHTTPServer(('127.0.0.1', 0), Model)
+        fallback.requests, fallback.error_statuses, fallback.mode = [], [], 'complete'
+        fallback.blocked, fallback.release = threading.Event(), threading.Event()
+        fallback.blocked.set()
+        fallback.release.set()
+        threading.Thread(target=fallback.serve_forever, daemon=True).start()
     cfg = {'gateway': {'multiplex_profiles': False}, 'model': {'provider': 'custom', 'default': 'loop-model', 'base_url': url},
         'auxiliary': {'title_generation': {'enabled': False}}, 'platform_toolsets': {'cli': ['terminal', 'file']},
         'terminal': {'backend': 'local'}, 'agent': {'api_max_retries': 1}, 'kanban': {'dispatch_in_gateway': False},
         'hooks': {'post_tool_call': [{'command': f'{sys.executable} {hook}'}]}}
+    if fallback is not None:
+        cfg['fallback_providers'] = [{'provider': 'custom', 'model': 'fallback-model',
+                                     'base_url': f'http://127.0.0.1:{fallback.server_port}/v1',
+                                     'api_key': 'loopback-only'}]
     (home / 'config.yaml').write_text(json.dumps(cfg), encoding='utf-8')
     from hermes_cli import kanban_db as kb
     from hermes_cli.kanban_db_connect import connect
@@ -93,7 +107,7 @@ def main():
     with closing(connect(board='owned')) as conn:
         tid = kb.create_task(conn, title='KANBAN_TASK_SENTINEL', body='Acceptance: finish owned card', assignee='default',
             workspace_kind='dir', workspace_path=str(workspace), skills=['owned-skill'],
-            goal_mode=peer.mode == 'complete', goal_max_turns=2,
+            goal_mode=complete, goal_max_turns=2,
             max_runtime_seconds=3600 if peer.mode == 'timeout' else None)
     env = dict(os.environ)
     receipt, clients = {}, []
@@ -158,7 +172,7 @@ def main():
                     receipt.update(task_status=task.status, failures=task.consecutive_failures, run_outcome=run['outcome'],
                         run_metadata=kb._json_dict(run['metadata']), rate_limited=swept.rate_limited,
                         cooldown=dispatch.check_respawn_guard(conn, tid))
-                    if peer.mode in {'rate_limit', 'billing'}:
+                    if peer.mode in {'rate_limit', 'billing'} and fallback is None:
                         assert task.status == 'ready' and task.consecutive_failures == 0 and run['outcome'] == 'rate_limited', receipt
                         assert receipt['client_exit'] == ('rate_limited', kb.KANBAN_RATE_LIMIT_EXIT_CODE), receipt
                         assert receipt['cooldown'] == 'rate_limit_cooldown', receipt
@@ -169,7 +183,7 @@ def main():
                         assert task.status == 'ready' and task.consecutive_failures == 1 and run['outcome'] == 'timed_out', receipt
             finally:
                 subprocess.Popen = original_popen
-            if peer.mode != 'complete':
+            if not complete:
                 return
             assert receipt['client_exit'] == ('clean_exit', 0), receipt
             async def retry():
@@ -185,8 +199,13 @@ def main():
                 receipt['admissions'] = db.execute('SELECT count(*) FROM session_admissions').fetchone()[0]
             with closing(connect(board='owned')) as conn:
                 receipt['task_status'] = kb.get_task(conn, tid).status
-            wire = json.dumps(peer.requests)
-            turns = [r for r in peer.requests if r.get('tools')]
+            requests = peer.requests
+            if fallback is not None:
+                receipt.update(primary_requests=len(peer.requests), primary_statuses=peer.error_statuses,
+                               fallback_models=sorted({r['model'] for r in fallback.requests if r.get('tools')}))
+                requests = peer.requests + fallback.requests
+            wire = json.dumps(requests)
+            turns = [r for r in requests if r.get('tools')]
             prefixes = [json.dumps([m for m in r['messages'] if m['role'] in {'system', 'developer'}]) for r in turns]
             receipt.update(goal_continuation=len(turns) >= 4, stable_prefix=len(set(prefixes)) == 1,
                 retry_same_session=same, tools='kanban_complete' in wire,
@@ -198,6 +217,10 @@ def main():
             if child.poll() is None:
                 child.kill()
             child.wait(timeout=10)
+        if fallback is not None:
+            fallback.shutdown()
+            fallback.server_close()
+            (home / 'fallback-requests.json').write_text(json.dumps(fallback.requests, indent=2), encoding='utf-8')
         peer.shutdown()
         peer.server_close()
         (home / 'model-requests.json').write_text(json.dumps(peer.requests, indent=2), encoding='utf-8')
