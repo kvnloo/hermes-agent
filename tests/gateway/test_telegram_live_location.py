@@ -10,7 +10,7 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-from tests.gateway.test_telegram_group_gating import _group_location_message, _make_adapter
+from tests.gateway.test_telegram_group_gating import _FakeSessionStore, _group_location_message, _make_adapter
 
 _T0 = datetime(2026, 11, 11, 12, 0, tzinfo=UTC)
 
@@ -62,3 +62,28 @@ def test_static_pins_and_separate_live_shares_each_reach_the_agent():
         _pin(52.52, message_id=4),  # a second live share, its own message
     ])
     assert turns == ["latitude: 52.52"] * 4
+
+
+def test_observed_group_live_share_skips_gps_refreshes():
+    """An unmentioned group's transcript must not get a row for every GPS edit (#151333)."""
+    adapter = _make_adapter(
+        require_mention=True,
+        allowed_chats=["-100"],
+        group_allowed_chats=["-100"],
+        observe_unmentioned_group_messages=True,
+    )
+    store = _FakeSessionStore()
+    adapter._session_store = store
+    adapter.handle_message = AsyncMock()
+
+    updates = [
+        _pin(52.52, update_id=1),
+        _pin(52.52001, edited_after=30, update_id=2),  # stationary GPS jitter
+        _pin(52.53, edited_after=60, update_id=3),  # meaningful movement still observed
+    ]
+    for update in updates:
+        update.message.chat = SimpleNamespace(id=-100, type="group", title="Test Group", is_forum=False)
+
+    assert _deliver(adapter, updates) == []  # unmentioned; observe-only, never dispatch
+    assert len(store.messages) == 2  # initial share + actual move, not the jitter edit
+    assert all(entry["observed"] for _, entry, _ in store.messages)
