@@ -703,6 +703,14 @@ def _project_for_display(messages: list, *, home=None, inline_images: bool = Tru
     projected_messages = []
     for message in messages:
         message = _with_tool_call_labels(message)
+        # REST transcript pages need readable reasoning, not the provider's replay envelope.
+        # Keep details-only rows for the Desktop's reasoning fallback.
+        if message.get("reasoning_details") is not None and any(
+            isinstance(message.get(field), str) and message[field].strip()
+            for field in ("reasoning", "reasoning_content")
+        ):
+            message = message.copy()
+            message.pop("reasoning_details")
         if coerce is not None:
             message = coerce(message)
         # Same read-side typing as session.resume (tui_gateway/session_history.py).
