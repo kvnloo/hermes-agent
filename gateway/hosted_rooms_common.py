@@ -120,11 +120,11 @@ def connect(
             except Exception:
                 conn.rollback()
                 raise
-    # Late import: a gateway that outlives an on-disk upgrade has the OLD sqlite_util cached.
-    from hermes_cli.sqlite_util import open_db
+    # Resolve the pool and its SQLite opener at call time.
+    from gateway.hosted_room_connection_reuse import open_reused
 
-    return open_db(db_path, db_label=db_label, busy_timeout_ms=10_000, foreign_keys=True,
-                   wal_lock_retries=lock_retries, initialize=_initialize)
+    return open_reused(db_path, db_label=db_label, busy_timeout_ms=10_000, foreign_keys=True,
+                       wal_lock_retries=lock_retries, initialize=_initialize)
 
 
 def fenced_update(conn: sqlite3.Connection, sql: str, params: tuple, error: Exception) -> None:
