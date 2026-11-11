@@ -106,3 +106,30 @@ def test_update_prompt_after_reconnect_reaches_the_replacement(tmp_path):
     asyncio.run(scenario())
     assert live.calls == ["update_prompt", "text"]
     assert retired.calls == []
+
+
+def test_long_running_heartbeat_uses_reconnected_adapter(monkeypatch):
+    """The periodic working notification also outlives a mid-turn adapter rebuild."""
+    retired, live = _Adapter("old"), _Adapter("new")
+    runner = _bare_runner(retired)
+    decisions = iter((True, True, False))
+    runner._should_emit_long_running_notification = lambda *_args: next(decisions)
+    runner._agent_activity_summary = lambda _agent: None
+    source = SessionSource(platform=Platform.TELEGRAM, chat_id="111", chat_type="dm", user_id="111")
+    ctx = TurnContext(source=source, session_key=SESSION, _status_thread_metadata={})
+    disp = SimpleNamespace(
+        _display_surface_mode=lambda *_args, **_kw: "on",
+        resolve_display_setting=lambda *_args: False,
+        user_config={},
+        platform_key="telegram",
+    )
+
+    async def reconnect(_seconds):
+        retired.connected = False
+        runner.adapters[Platform.TELEGRAM] = live
+
+    monkeypatch.setattr("gateway.run_turn.asyncio.sleep", reconnect)
+    asyncio.run(runner._run_agent_notify_long_running(disp, ctx, [None]))
+
+    assert live.calls == ["text"], "working heartbeat must use the live adapter"
+    assert retired.calls == [], "the retired adapter must not receive the heartbeat"

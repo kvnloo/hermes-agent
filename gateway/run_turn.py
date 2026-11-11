@@ -2072,6 +2072,8 @@ class GatewayTurnMixin(GatewayBackgroundMixin, GatewayTurnPrepareMixin, GatewayT
                 else t("gateway.progress.working_heartbeat", minutes=_elapsed_mins, detail=_status_detail)
             )
             try:
+                # A reconnect can replace the adapter during the heartbeat sleep.
+                _notify_adapter = self._delivery_adapter_for(source) or _notify_adapter
                 _notify_res = None
                 if _heartbeat_msg_id:
                     try:
