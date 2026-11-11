@@ -995,10 +995,15 @@ def restore_policy(data):
         policy = LocalSessionPolicy(**data)
         from gateway.session_a2a import is_forward_policy
         surfaces = {**SURFACES, 'cron': 'cron', 'kanban': 'cli', 'bot_room': 'bot_room'}
-        if ((not is_forward_policy(policy) and
-             (policy.source not in surfaces or policy.platform != surfaces[policy.source]))
+        source_ok = (
+            (policy.source in surfaces and policy.platform == surfaces[policy.source])
+            or (policy.source == 'local'
+                and policy.platform in {SURFACES[name] for name in STORED_AS_LOCAL})
+        )
+        if ((not is_forward_policy(policy) and not source_ok)
                 or not isinstance(policy.cwd, str) or not Path(policy.cwd).is_absolute()
-                or not isinstance(policy.model, str) or not policy.model.strip()
+                or (policy.model not in (None, '') and
+                    (not isinstance(policy.model, str) or not policy.model.strip()))
                 or not isinstance(policy.toolsets, (list, tuple))
                 or any(not isinstance(name, str) for name in policy.toolsets)
                 or type(policy.safe_mode) is not bool or type(policy.ignore_user_config) is not bool
@@ -1007,7 +1012,8 @@ def restore_policy(data):
                 or not _valid_client_env(policy.client_env_json) or type(policy.client_env_remote) is not bool
                 or not _valid_client_env(policy.client_env_rules_json, list)
                 or policy.edit_approval_policy not in EDIT_APPROVAL_POLICIES
-                or (policy.edit_approval_policy != 'ask' and policy.source != 'acp')
+                or (policy.edit_approval_policy != 'ask' and
+                    (policy.source, policy.platform) not in {('acp', 'acp'), ('local', 'acp')})
                 or (policy.safe_mode and not policy.ignore_user_config)):
             raise ValueError('invalid policy')
         from dataclasses import replace
