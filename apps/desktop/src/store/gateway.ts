@@ -1188,10 +1188,28 @@ export async function requestGatewayForAgent<T>(
     return requestGatewayForProfile<T>(key, method, params, timeoutMs, signal, { spawnPriority })
   }
 
-  if (notePrimaryRider(primaryIdentity(), scope, await ridesPrimaryBackend(connectionId, key))) {
+  // Local owner-route lookups can join the same cold gateway boot as profile
+  // routes. A failed lookup must cool background polls, not just secondary dials.
+  if (
+    spawnPriority !== 'foreground' &&
+    !isOpen(g.secondaries.get(scope)?.gateway ?? null) &&
+    backgroundDialCoolingDown(scope)
+  ) {
+    throw new Error(`Backend for "${key}" is reconnecting; retry after it settles.`)
+  }
+
+  const ridesPrimary = await ridesPrimaryBackend(connectionId, key).catch((error: unknown) => {
+    recordDialFailure({ connectionId: String(connectionId ?? '').trim() || null, scope }, error)
+    throw error
+  })
+
+  if (notePrimaryRider(primaryIdentity(), scope, ridesPrimary)) {
     traceAgentRoute(scope, 'primary-shared')
 
-    return requestOnPrimaryGateway<T>(method, { ...params, profile: key }, timeoutMs, signal)
+    const result = await requestOnPrimaryGateway<T>(method, { ...params, profile: key }, timeoutMs, signal)
+    g.dialFailures.delete(scope)
+
+    return result
   }
 
   traceAgentRoute(scope, 'secondary')

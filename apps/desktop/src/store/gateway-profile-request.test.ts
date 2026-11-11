@@ -885,6 +885,37 @@ describe('session-owner calls for a profile on the shared local host backend (#1
     expect(primary.request).not.toHaveBeenCalled()
   })
 
+  it('backs off failed local owner-route lookups on background polls but allows a user retry', async () => {
+    vi.useFakeTimers()
+
+    try {
+      const primary = makePrimary()
+      setPrimaryGateway(primary as never, 'default')
+      setPrimaryGatewayConnection({ connectionId: 'local', mode: 'local' })
+      const getConnectionFor = installLocalHost(profile => ({ profile, sharedPrimary: true }))
+      await ensureGatewayForProfile('default')
+      getConnectionFor.mockRejectedValue(new Error('Hermes gateway did not start'))
+
+      // This owner-route probe is a dial into Electron main too. Without a
+      // cooldown, a 20 Hz session.control.read poll causes 20 failing lookups.
+      for (let index = 0; index < 20; index += 1) {
+        await requestGatewayForAgent('local', 'work', 'session.control.read', {}).catch(() => undefined)
+        await vi.advanceTimersByTimeAsync(50)
+      }
+
+      // Same 300/600/1200 ms ladder as profile routes: t=0, 300, 900.
+      expect(getConnectionFor).toHaveBeenCalledTimes(3)
+
+      await requestGatewayForAgent('local', 'work', 'session.activate', {}, undefined, undefined, {
+        spawnPriority: 'foreground'
+      }).catch(() => undefined)
+      expect(getConnectionFor).toHaveBeenCalledTimes(4)
+      expect(secondaryGateways).toHaveLength(0)
+      expect(primary.request).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
   it('fails an owner-route activation whose route lookup fails, without dialing a second socket', async () => {
     // The agent-door twin of the profile switch: main's answer is the only proof a
     // local profile is pooled, and the secondary dial would repeat that same lookup
