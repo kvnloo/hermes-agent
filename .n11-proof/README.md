@@ -5,6 +5,7 @@ This is a private test payload, not an installed engine. Hermes HEAD does not co
 - `handoff_capsule.before.py` preserves the original N11 snapshot, SHA-256 `55bdea533f74b9575d8f3991570dd05a884601e53a76a33b0b3411ac301541f1`.
 - `handoff_capsule.py` is the candidate under test.
 - `tests/plugins/test_handoff_capsule_acceptance.py` preserves the original six acceptance checks without changes.
+- `tests/plugins/test_handoff_capsule_regression.py` reuses seven N11 checks for clipping boundaries, abort safety, real discovery, and synthetic session rotation.
 - Source and tests come from `data/operations/intent-analyzer-20261104/ayo-runs/exec-N11/evidence/` in `/mnt/zer0models/workspace/zer0`.
 - The fix reuses N11 commit `1a133934eb7a149819cfeb1322cd5b5ba0ad5c6a`. It reserves space for clipping notices and aborts a failed spill without replacing the conversation.
 

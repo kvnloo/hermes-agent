@@ -125,8 +125,13 @@ def _sections(text: str) -> dict[str, str]:
 def _clip(body: str, limit: int, spill: str) -> str:
     if len(body) <= limit:
         return body
-    cut = body[:limit].rsplit("\n", 1)[0]
-    return f"{cut}\n- [cut here; the rest is in {spill}]"
+    notice = f"\n- [cut here; the rest is in {spill}]"
+    if len(notice) >= limit:
+        return notice[:limit]
+    cut = body[:limit - len(notice)]
+    if "\n" in cut:
+        cut = cut.rsplit("\n", 1)[0]
+    return cut + notice
 
 
 def _spill(session_id: str, full: str) -> Path:
@@ -230,9 +235,9 @@ class HandoffCompactor(ContextCompressor):
             return full
         try:
             capsule = build_capsule(self._strip_summary_prefix(full), getattr(self, "_session_id", "") or "")
-        except Exception:  # noqa: BLE001 - an uncapped capsule beats a failed handoff
-            logger.warning("handoff_capsule: capsule cap failed; using the full summary", exc_info=True)
-            return full
+        except OSError:
+            logger.warning("handoff_capsule: spill failed; preserving the conversation", exc_info=True)
+            return None
         return self._with_summary_prefix(capsule)
 
     def update_model(self, model: str, context_length: int, base_url: str = "", api_key: str = "",
@@ -271,6 +276,7 @@ def build() -> HandoffCompactor:
         min_tail_user_messages=int(cs.get("min_tail_user_messages") or 1),
         tail_mode=str(cs.get("tail_mode") or "lean"),
         quiet_mode=True,
+        abort_on_summary_failure=True,
     )
     engine._handoff_override = _handoff_tokens()
     return engine
