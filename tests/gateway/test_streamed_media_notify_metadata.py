@@ -69,3 +69,30 @@ async def test_streamed_media_delivery_carries_notify_metadata(tmp_path, monkeyp
     metadata = adapter.voices[0]["metadata"] or {}
     assert metadata.get("notify") is True
 
+
+@pytest.mark.asyncio
+async def test_queued_streamed_media_notifies_without_losing_topic(tmp_path, monkeypatch):
+    """Queued first-turn MEDIA must ring after the already-streamed text, in the same topic."""
+    from gateway.platforms import base as platforms_base
+
+    voice = tmp_path / "queued-note.ogg"
+    voice.write_bytes(b"ogg")
+    monkeypatch.setattr(platforms_base, "MEDIA_DELIVERY_SAFE_ROOTS", (tmp_path,))
+    adapter = _VoiceCaptureAdapter()
+    runner = _make_runner(adapter)
+    source = SessionSource(
+        platform=Platform.TELEGRAM, chat_id="-1001", chat_type="group", thread_id="17585",
+    )
+
+    await runner._deliver_queued_first_response(
+        f"MEDIA: {voice} [[audio_as_voice]]",
+        source=source,
+        adapter=adapter,
+        metadata={"thread_id": "17585"},
+        text_already_delivered=True,
+    )
+
+    assert len(adapter.voices) == 1
+    metadata = adapter.voices[0]["metadata"]
+    assert metadata["thread_id"] == "17585"
+    assert metadata["notify"] is True

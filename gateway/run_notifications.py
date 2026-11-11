@@ -398,7 +398,9 @@ class GatewayNotificationsMixin(GatewayUpdateNotificationsMixin, GatewayNotifica
             return True
         await self._deliver_media_from_response(
             response, MessageEvent(text="", source=source, message_id=event_message_id), adapter,
-            thread_metadata=metadata,
+            # Only completed streams bypass the final send, so their queued MEDIA must ring.
+            # Keep the original routing keys (topic, reply anchor, profile) unchanged.
+            thread_metadata=_mark_notify_metadata(metadata) if text_already_delivered else metadata,
         )
         return True
 
