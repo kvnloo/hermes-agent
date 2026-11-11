@@ -70,9 +70,10 @@ def test_explicit_inputs_and_a_changed_environment_are_never_answered_from_the_r
     from pm.plugin_inputs import Members
 
     _repo, _environment, workers = probes
+    monkeypatch.setenv("XDG_CACHE_HOME", str(_repo / "cache-before"))
     assert client.venv_is_current()
     assert client.venv_is_current(plugins=Members([]))
     assert not client.venv_is_current(extras=["new-extra"])
-    monkeypatch.setenv("HERMES_DISABLE_LAZY_INSTALLS", "1")
+    monkeypatch.setenv("XDG_CACHE_HOME", str(_repo / "cache-after"))
     assert client.venv_is_current()
     assert len(workers) == 4
