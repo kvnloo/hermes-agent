@@ -551,10 +551,10 @@ export function useTerminalSession({
   }, [activeTheme, themeName])
 
   // Expose this terminal's buffer to the agent's `read_terminal` tool, keyed by
-  // id. The tab selection (setActiveTerminalId) decides which one it reads, so
-  // every live terminal stays registered regardless of visibility.
+  // id. A failed shell leaves its tab and scrollback mounted, so readers must
+  // remain registered after the shell exits; only startup has no settled buffer.
   useEffect(() => {
-    if (status !== 'open') {
+    if (status === 'starting') {
       return
     }
 

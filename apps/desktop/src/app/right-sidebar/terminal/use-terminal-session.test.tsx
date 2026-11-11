@@ -9,6 +9,7 @@ import { $connectionsRegistry } from '@/store/connections'
 import { $connection } from '@/store/session'
 import { clearWebappSession, seedWebappSession } from '@/test/webapp-session'
 
+import { readActiveTerminal, setActiveTerminalId } from './buffer'
 import { $terminals, closeAllTerminals, closeOtherTerminals, createTerminal, updateTerminalReviveBuffer } from './terminals'
 import { useTerminalSession } from './use-terminal-session'
 
@@ -87,7 +88,12 @@ vi.mock('@xterm/addon-webgl', () => ({
   }
 }))
 vi.mock('./links', () => ({ terminalLinkHandler: {}, terminalWebLinksAddon: () => ({}) }))
-vi.mock('./buffer', () => ({ makeTerminalReader: () => () => '', registerTerminalReader: () => () => {} }))
+// Keep the real reader registry: a closed-but-visible terminal must still answer read_terminal.
+vi.mock('./buffer', async importOriginal => {
+  const actual = await importOriginal<typeof import('./buffer')>()
+
+  return { ...actual, makeTerminalReader: () => () => ({ text: emulator.output }) }
+})
 vi.mock('./terminal-context-menu', () => ({ registerTerminalContextMenu: () => () => {} }))
 vi.mock('./terminal-font', () => ({ prepareTerminalFontFamily: async () => 'monospace' }))
 vi.mock('./use-terminal-font', () => ({ useTerminalFontController: () => emulator }))
@@ -174,6 +180,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  setActiveTerminalId(null)
   window.dispatchEvent(new Event('beforeunload'))
   Reflect.deleteProperty(window, 'hermesDesktop')
   clearWebappSession()
@@ -604,4 +611,25 @@ it.each([
     act(() => emulator.input('\r'))
     await waitFor(() => expect(start).toHaveBeenCalledTimes(2))
   }
+})
+
+it('native Desktop: failed shell scrollback remains readable via read_terminal', async () => {
+  let exit: ((value: { code: null | number; signal: null | string }) => void) | null = null
+  nativeTerminalApi(vi.fn(async () => ({ id: 'pty-1', shell: 'bash' })))
+  window.hermesDesktop!.terminal.onExit = vi.fn((_id: string, callback: typeof exit) => {
+    exit = callback
+
+    return () => {}
+  }) as never
+
+  const id = createTerminal('/work')
+  setActiveTerminalId(id)
+  render(<Harness id={id} />)
+  await waitFor(() => expect(screen.getByText('open')).toBeTruthy())
+
+  act(() => exit!({ code: 2, signal: null }))
+
+  await waitFor(() => expect(screen.getByText('closed')).toBeTruthy())
+  expect($terminals.get().some(tab => tab.id === id)).toBe(true)
+  expect(readActiveTerminal()?.text).toContain('Shell ended (exit code 2)')
 })
