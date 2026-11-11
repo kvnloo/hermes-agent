@@ -17,23 +17,15 @@ if TYPE_CHECKING:
 class ProcessCompletionQueueMixin:
     """Build and swap autonomous completion notifications on the live queue.
 
-    Mixed into ``ProcessRegistry``; callers invoke these helpers while holding
-    ``self._lock`` (or acquire it themselves) so the snapshot-then-put is
-    atomic with the kill path's drain-and-swap.
+    Mixed into ``ProcessRegistry``. Callers never hold ``self._lock``: each helper
+    builds the redacted notice unlocked and takes the lock only for the queue swap/put.
     """
 
-    def _enqueue_completion_notification(self, session: "ProcessSession") -> None:
-        """Build and enqueue the autonomous completion notification for ``session``.
+    def _completion_notification(self, session: "ProcessSession") -> dict:
+        """The redacted completion notice for ``session``'s current fields.
 
-        Caller MUST hold ``self._lock``. The notification snapshots the *current*
-        session fields, so a kill that just stamped ``completion_reason="killed"``
-        and called this from ``_replace_stale_completion_notification`` emits the
-        corrected ``killed`` payload; the reader calling it from
-        ``_move_to_finished`` before the kill stamps it sees the reader's
-        ``exited`` view (which the kill then swaps out under the same lock).
-        Holding the lock makes the snapshot-then-put atomic with the kill's
-        drain-and-swap, which is the property that closes the durable-but-stale
-        race on the live ``completion_queue`` payload."""
+        Caller must NOT hold ``self._lock``: redaction can look the owner up through
+        the registry (``process_registry.get``) and run transform hooks."""
         from tools.process_registry import _completion_output, _redact_process_result
 
         notification = {
@@ -51,8 +43,22 @@ class ProcessCompletionQueueMixin:
             # consumer-observed completion timestamp).
             "started_at": session.started_at,
         }
-        _redact_process_result(notification)
-        self.completion_queue.put(notification)
+        return _redact_process_result(notification)
+
+    def _enqueue_completion_notification(self, session: "ProcessSession") -> None:
+        """Publish ``session``'s completion notice (the owner, after its checkpoint).
+
+        Caller must NOT hold ``self._lock``. The notice is built outside the lock and put
+        under it only while its exit fields still match the session, so a kill that
+        stamps ``killed`` and then drains the queue (``_replace_stale_completion_notification``)
+        either finds and swaps the reader's ``exited`` notice or makes the reader rebuild.
+        That closes the durable-but-stale race on the live ``completion_queue`` payload."""
+        while True:
+            notification = self._completion_notification(session)
+            with self._lock:
+                if all(notification.get(k) == v for k, v in self._exit_fields(session).items()):
+                    self.completion_queue.put(notification)
+                    return
 
     def _replace_stale_completion_notification(self, session: "ProcessSession") -> None:
         """Swap the reader's stale completion event for ``session`` out of the
@@ -81,6 +87,7 @@ class ProcessCompletionQueueMixin:
         the only correction the kill path can still make — fixing the live
         payload for an already-consumed event needs the consumer to respect a
         per-session kill gate (outside this queue helper)."""
+        corrected = self._completion_notification(session)
         with self._lock:
             keep: list = []
             dropped_stale = False
@@ -105,4 +112,4 @@ class ProcessCompletionQueueMixin:
             # corrected payload would be silently dropped and the stale
             # ``exited`` text would stay visible).
             if dropped_stale:
-                self._enqueue_completion_notification(session)
+                self.completion_queue.put(corrected)

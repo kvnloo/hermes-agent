@@ -271,7 +271,9 @@ class SessionRewindMixin:
             if len(warm_user) != len(durable_user):
                 raise RuntimeError(_HISTORY_CHANGED)
             # Count is not identity: an earlier user turn can differ while the target text matches.
-            for k in range(user_ordinal + 1):
+            # The target itself is compared below through its user-originated view, so a carrier's
+            # degraded warm projection still reaches the retryability check (4018), not 5008.
+            for k in range(user_ordinal):
                 if _comparison_content(warm[warm_user[k]]) != _comparison_content(durable[durable_user[k]]):
                     raise RuntimeError(_HISTORY_CHANGED)
             prefix, warm_live_view = history_before_user_originated_turn(warm, warm_user[user_ordinal])

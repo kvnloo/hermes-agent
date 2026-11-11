@@ -1576,12 +1576,10 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
         the FIRST move enqueues the completion notification, so no duplicates.
         Returns True when this call is the one that persisted the session.
 
-        The completion-notification enqueue runs UNDER ``self._lock`` so a racing
-        ``kill_process`` cannot see a partially-updated queue: the reader's
-        enqueue and the kill's drain-and-swap (``_replace_stale_completion_notification``)
-        are mutually excluded for the same ``session_id``, which is what lets the
-        kill path atomically correct a stale ``exited`` event the reader put on
-        the queue while the SIGTERM grace window was still draining."""
+        The owner enqueues the notice after its checkpoint (``_publish_finished``); the
+        put is serialized with the kill path's drain-and-swap
+        (``_replace_stale_completion_notification``) so a kill stamp is never overtaken
+        by the reader's stale ``exited`` notice."""
         with self._lock:
             was_running = session.id in self._running
             if was_running:
@@ -1592,8 +1590,6 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
                 save_completed_result(session)
                 self._running.pop(session.id)
             self._finished[session.id] = session
-            if was_running and session.notify_on_complete:
-                self._enqueue_completion_notification(session)
         self._release_job_group(session)
         # Release the retained Popen/PTY handles now: otherwise every
         # finished-but-unpruned session keeps its stdout pipe (or PTY master)
@@ -1616,6 +1612,8 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
     def _publish_finished(self, session: ProcessSession, was_running: bool) -> None:
         self._release_finished_handles(session)
         self._write_checkpoint()
+        if was_running and session.notify_on_complete:
+            self._enqueue_completion_notification(session)
 
     @staticmethod
     def _exit_fields(session: ProcessSession) -> dict:
@@ -2223,8 +2221,7 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
             # blocks in the SIGKILL grace window: its ``save_completed_result``
             # then persists this kill as a plain ``exited`` AND enqueues a stale
             # ``completion_reason="exited"`` notification on completion_queue
-            # (the reader's enqueue runs under self._lock, BEFORE the kill path
-            # stamps the session ``killed``). Re-write BOTH the durable receipt
+            # (the reader's put is serialized with this swap under self._lock). Re-write BOTH the durable receipt
             # AND the live queue event so the CLI/TUI drain surfaces see the kill
             # attribution, not the reader's plain-exit snapshot — the durable
             # surface was fixed by 0724a6a0; the live queue was left stale, which
