@@ -482,9 +482,12 @@ def local_session_info(authority, ref):
     else:
         info.update(_reasoning_fields(agent, policy, info['model'], authority, override))
     if policy:
+        import json
+        # Report this session's frozen terminal policy, never the gateway launch profile's.
+        backend = json.loads(policy.terminal_json).get('TERMINAL_ENV')
+        info['terminal_backend'] = str(backend or '').strip().lower() or 'local'
         # The creation request the route was frozen with (secrets already extracted), so a
         # resuming client can tell "same flags again" from a real override attempt.
-        import json
         info['launch_request'] = json.loads(policy.request_json)
         from gateway.session_client import policy_client
         if (client := policy_client(policy)) is not None:  # only a client that named itself

@@ -33,6 +33,35 @@ async def test_session_info_carries_the_classic_cli_fields(tmp_path, monkeypatch
         {**info, 'profile_name': 'default', 'desktop_protocol': 'hermes-gateway-v1', 'lazy': False})
 
 
+@pytest.mark.asyncio
+async def test_gateway_session_info_exposes_the_frozen_terminal_backend(tmp_path, monkeypatch):
+    """A Desktop/Webapp viewer gets its session's backend, not the gateway host's."""
+    import json
+    from dataclasses import replace
+
+    from gateway.session_local import create_local_session, local_session_info
+    from tests.gateway.test_local_post_delivery import _owner, _viewer
+    from tui_gateway.contracts.registry import CANONICAL_METHODS
+
+    runner, authority, db = await _owner(tmp_path, monkeypatch)
+    try:
+        ref = create_local_session(authority, _viewer(), {
+            'request_id': 'backend', 'source': 'tui', 'model': 'fixture', 'toolsets': []})
+        source = authority.sessions[ref.session_id].source
+        policies = runner.adapters[Platform.LOCAL].policies
+        policy = policies[source.chat_id]
+        monkeypatch.setenv('TERMINAL_ENV', 'ssh')  # gateway process is not this session's policy
+
+        for backend in ('local', 'docker'):
+            policies[source.chat_id] = replace(
+                policy, terminal_json=json.dumps({
+                    **json.loads(policy.terminal_json), 'TERMINAL_ENV': backend}))
+            info = local_session_info(authority, ref)
+            assert info['terminal_backend'] == backend
+            assert CANONICAL_METHODS['session.info'].result.model_validate(info).terminal_backend == backend
+    finally:
+        db.close()
+
 def test_local_viewer_title_republishes_session_info(monkeypatch):
     from gateway.run_turn_runner import TurnRunner
     published = []
