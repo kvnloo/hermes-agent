@@ -90,7 +90,10 @@ async def cache_sticker_description_async(
 def _inert_quoted(value: str) -> str:
     """One JSON-quoted line: a sender-controlled value (vision transcript, pack name) cannot close
     the quote or the bracketed note, nor open a fake turn on a new line."""
-    return json.dumps(" ".join(str(value).split()), ensure_ascii=False)
+    note = json.dumps(" ".join(str(value).split()), ensure_ascii=False)
+    # JSON-decoded vision text can contain lone surrogates. Escape just those
+    # code points so UTF-8 transport works without hiding ordinary Unicode.
+    return note.encode("utf-8", "backslashreplace").decode("utf-8")
 
 
 def build_sticker_injection(description: str, emoji: str = "", set_name: str = "") -> str:

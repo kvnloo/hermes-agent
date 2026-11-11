@@ -31,6 +31,16 @@ def test_hostile_description_and_pack_name_stay_inside_their_quotes():
     assert _quoted_values(note) == [HOSTILE_SET, " ".join(HOSTILE.split())]
 
 
+
+def test_json_escaped_unpaired_surrogate_stays_utf8_safe():
+    """A legal JSON escape can decode to a lone surrogate that UTF-8 cannot encode."""
+    description = json.loads(r'"A cat \ud800 wearing 😺"')
+    note = sticker_cache.build_sticker_injection(description, "😺", "Cats")
+    assert note.encode("utf-8")  # Outbound model payload must be serializable.
+    assert _quoted_values(note) == ["Cats", description]
+    assert "😺" in note  # Do not ASCII-escape otherwise readable Unicode.
+
+
 def test_handle_sticker_frames_a_fresh_vision_transcript(monkeypatch):
     """Production entry point: a cache-miss sticker goes through vision, and the text the gateway
     hands the agent is the framed, single-line note."""
