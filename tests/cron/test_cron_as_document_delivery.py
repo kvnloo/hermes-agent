@@ -87,6 +87,20 @@ def test_live_lane_sends_an_as_document_image_as_a_document(loop):
     assert not any(method == "send_image_file" for method, _ in adapter.calls)
 
 
+def test_job_name_document_marker_does_not_change_image_delivery(loop):
+    """A literal directive in cron's generated header must not change attachment routing."""
+    adapter = _FakeTelegram()
+    job = {**_JOB, "name": "How to use [[as_document]]"}
+    content = f"Preview chart.\\nMEDIA:{_media('preview.png')}"
+
+    with patch("gateway.config.load_gateway_config", return_value=_gateway_config()):
+        error = _deliver_result(job, content, adapters={Platform.TELEGRAM: adapter}, loop=loop)
+
+    assert error is None
+    assert ("send_image_file", "preview.png") in adapter.calls
+    assert not any(method == "send_document" for method, _ in adapter.calls)
+
+
 def test_standalone_lane_passes_force_document(monkeypatch):
     seen = {}
 
