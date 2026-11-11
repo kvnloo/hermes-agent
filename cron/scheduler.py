@@ -778,6 +778,13 @@ def is_job_running(job_id: str, home: Optional[Path | str] = None) -> bool:
         return key in _running_job_ids or key in _running_fire_owners
 
 
+def has_inflight_for_home(home: Path | str) -> bool:
+    """A departed profile keeps its plugin callbacks until the last cron run exits."""
+    home_key = hermes_home_key(home)
+    with _running_lock:
+        return any(key[0] == home_key for key in _running_job_ids | _running_fire_owners.keys())
+
+
 def _record_external_cron_worker(job_id: str, pid: Any, *, scope_isolated: bool) -> None:
     """Record the external worker holding *job_id* so a drain observer can name it, and whether
     its scope isolates it from this process.
