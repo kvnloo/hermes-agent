@@ -253,6 +253,57 @@ def test_transcript_mutation_serializes_pending_queue_drain(
     assert store.load_transcript(session_id)[-1]["content"] == "concurrent answer"
 
 
+@pytest.mark.parametrize("display_kind", ["model_switch", None])
+@pytest.mark.asyncio
+async def test_gateway_retry_skips_synthetic_user_before_latest_ask(
+    tmp_path, monkeypatch, display_kind
+):
+    """Regression for #150939: retry must not replay a merged cron/display marker."""
+    import hermes_state
+
+    monkeypatch.setattr(hermes_state, "DEFAULT_DB_PATH", tmp_path / "state.db")
+    config = GatewayConfig()
+    store = SessionStore(sessions_dir=tmp_path, config=config)
+    session_id = "retry-synthetic-merged-user"
+    synthetic = "[Cron delivery: report]\nbody"
+    latest_ask = "what model is this"
+    store._db.create_session(session_id=session_id, source="test")
+    store._db.append_message(session_id, "user", "1+1")
+    store._db.append_message(session_id, "assistant", "2")
+    store._db.append_message(session_id, "user", synthetic, display_kind=display_kind)
+    store._db.append_message(session_id, "user", latest_ask)
+    store._db.append_message(session_id, "assistant", "old answer")
+
+    # The normal replay projection deliberately merges this user;user pair.
+    assert store.load_transcript(session_id)[-2]["content"] == (
+        f"{synthetic}\n\n{latest_ask}"
+    )
+
+    gw = GatewayRunner.__new__(GatewayRunner)
+    gw.config = config
+    gw.session_store = store
+    session_entry = MagicMock(session_id=session_id, last_prompt_tokens=123)
+    gw.session_store.get_or_create_session = MagicMock(return_value=session_entry)
+
+    async def fake_handle_message(event):
+        assert event.text == latest_ask
+        active = store._db.get_messages_as_conversation(session_id)
+        assert [row["content"] for row in active] == ["1+1", "2", synthetic]
+        assert active[-1].get("display_kind") == display_kind
+        store._db.append_message(session_id, "user", event.text)
+        return "new answer"
+
+    gw._handle_message = AsyncMock(side_effect=fake_handle_message)
+    result = await gw._handle_retry_command(
+        MessageEvent(text="/retry", message_type=MessageType.TEXT, source=MagicMock())
+    )
+
+    assert result == "new answer"
+    active = store._db.get_messages_as_conversation(session_id)
+    assert [row["content"] for row in active] == ["1+1", "2", synthetic, latest_ask]
+    assert active[-2].get("display_kind") == display_kind
+
+
 @pytest.mark.asyncio
 async def test_gateway_retry_replaces_last_user_turn_in_transcript(tmp_path, monkeypatch):
     # Pin DEFAULT_DB_PATH so SessionDB() doesn't write to the real ~/.hermes/state.db.
