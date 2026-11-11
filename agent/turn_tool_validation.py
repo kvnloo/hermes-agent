@@ -120,6 +120,9 @@ def validate_tool_calls(
         for msg in messages if msg.get("role") == "assistant"
         for tc in msg.get("tool_calls") or ()
     }
+    # Native replay blocks still use the provider's original IDs. A call ID can
+    # be renamed here when the provider reuses one from an earlier session turn.
+    native_call_ids = {id(tc): coalesce_tool_call_id(tc) for tc in tool_calls}
     agent._uniquify_tool_call_ids(tool_calls, taken=taken)
     normalize_provider_tool_call_ids(tool_calls)
 
@@ -139,7 +142,7 @@ def validate_tool_calls(
     # Signed-thinking turns replay the native sidecar blocks, not tool_calls: every rename must reach them.
     if repaired_ids and (provider_data := getattr(assistant_message, "provider_data", None)):
         from agent.tool_call_batches import replace_native_tool_blocks
-        replace_native_tool_blocks(provider_data, {coalesce_tool_call_id(tc): [tc] for tc in tool_calls
+        replace_native_tool_blocks(provider_data, {native_call_ids[id(tc)]: [tc] for tc in tool_calls
                                                    if id(tc) in repaired_ids})
     # Counted here, before any exit or normalization, so every emitted call is seen once as the model sent it.
     from hermes_cli.observability.shared_metrics_model import record_tool_call_quality

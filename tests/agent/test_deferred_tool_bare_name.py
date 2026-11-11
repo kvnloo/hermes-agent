@@ -14,7 +14,7 @@ _ARGS = {"action": "poll", "session_id": "proc_x"}
 
 def _validate(arguments, *, name="process_manage",
               valid_tool_names=("terminal", "tool_search", "tool_describe", "tool_call"),
-              enabled_toolsets=None, provider_data=None):
+              enabled_toolsets=None, provider_data=None, prior_messages=None):
     """Real validation on an agent whose tool search deferred process_manage behind the bridge."""
     from agent.turn_tool_validation import validate_tool_calls
 
@@ -27,7 +27,7 @@ def _validate(arguments, *, name="process_manage",
     agent._vprint = lambda *a, **k: None
     tc = SimpleNamespace(id="call_1", type="function",
                          function=SimpleNamespace(name=name, arguments=arguments))
-    messages = []
+    messages = list(prior_messages or [])
     message = SimpleNamespace(content="", tool_calls=[tc], provider_data=provider_data)
     verdict = validate_tool_calls(agent, message, "tool_calls",
                                   messages=messages, conversation_history=[], api_call_count=1,
@@ -81,3 +81,42 @@ def test_unroutable_call_is_still_rejected(arguments, kwargs):
     assert verdict.action == "continue"
     assert tc.function.name == "process_manage"
     assert errors and errors[0].startswith("Tool 'process_manage' does not exist")
+
+
+
+def test_reused_session_call_id_updates_native_deferred_replay():
+    """A provider's reused ID must be changed in signed native replay too (#153177)."""
+    from agent.anthropic_message_convert import _convert_assistant_message
+    from agent.bedrock_adapter import _assistant_blocks
+
+    prior_messages = [{"role": "assistant", "tool_calls": [
+        {"id": "call_1", "type": "function",
+         "function": {"name": "terminal", "arguments": "{}"}}]}]
+    provider_data = {
+        "anthropic_content_blocks": [
+            {"type": "thinking", "thinking": "poll it", "signature": "sig"},
+            {"type": "tool_use", "id": "call_1", "name": "process_manage", "input": _ARGS}],
+        "bedrock_content_blocks": [
+            {"reasoningContent": {"text": "poll it", "signature": "sig"}},
+            {"toolUse": {"toolUseId": "call_1", "name": "process_manage", "input": _ARGS}}],
+    }
+    verdict, tc, errors, _ = _validate(
+        json.dumps(_ARGS), provider_data=provider_data, prior_messages=prior_messages)
+    routed = {"calls": [{"name": "process_manage", "arguments": _ARGS}]}
+
+    assert verdict.action == "ok" and errors == []
+    assert tc.id == "call_1_d2"
+    assert tc.function.name == "tool_call"
+    assert json.loads(tc.function.arguments) == routed
+    assert provider_data["anthropic_content_blocks"][1] == {
+        "type": "tool_use", "id": "call_1_d2", "name": "tool_call", "input": routed}
+    assert provider_data["bedrock_content_blocks"][1] == {
+        "toolUse": {"toolUseId": "call_1_d2", "name": "tool_call", "input": routed}}
+
+    stored = {"role": "assistant", "content": "", **provider_data, "tool_calls": [
+        {"id": tc.id, "type": "function",
+         "function": {"name": tc.function.name, "arguments": tc.function.arguments}}]}
+    assert [b for b in _convert_assistant_message(stored)["content"] if b["type"] == "tool_use"] == [
+        {"type": "tool_use", "id": "call_1_d2", "name": "tool_call", "input": routed}]
+    assert [b["toolUse"] for b in _assistant_blocks(stored, "") if "toolUse" in b] == [
+        {"toolUseId": "call_1_d2", "name": "tool_call", "input": routed}]
