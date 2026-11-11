@@ -219,6 +219,51 @@ def test_get_version_info_takes_the_version_a_calver_only_release_shipped(tmp_pa
     assert info.derived_version == f"0.21.4+1.g{git('rev-parse', '--short=7', 'HEAD')}"
 
 
+def test_a_timed_out_release_tag_query_is_unknown_not_an_older_calver_release(tmp_path, monkeypatch):
+    """A loaded host can time out ``git tag --merged``. That must read as "unknown"
+    (permissive for ``requires_hermes``), never as the older version a CalVer tag shipped."""
+    from hermes_cli import version_info
+    from hermes_cli.plugins_manifest import version_satisfies
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    def git(*args: str) -> str:
+        result = subprocess.run(
+            ["git", *args], cwd=repo, text=True, capture_output=True, check=True,
+            env={"HOME": str(tmp_path), "PATH": os.environ["PATH"]},
+        )
+        return result.stdout.strip()
+
+    git("init", "-q")
+    git("config", "user.name", "Hermes Test")
+    git("config", "user.email", "hermes@example.invalid")
+    (repo / "pyproject.toml").write_text('[project]\nname = "hermes-agent"\nversion = "0.21.5"\n', encoding="utf-8")
+    git("add", "pyproject.toml")
+    git("commit", "-qm", "calver release")
+    git("tag", "v2026.9.24")
+    (repo / "pyproject.toml").write_text('[project]\nname = "hermes-agent"\nversion = "0.23.1"\n', encoding="utf-8")
+    git("commit", "-qam", "semver release")
+    git("tag", "v0.23.1")
+
+    real_run = subprocess.run
+
+    def slow_tag_query(cmd, *args, **kwargs):
+        if "tag" in cmd and "--merged" in cmd:
+            raise subprocess.TimeoutExpired(cmd, kwargs.get("timeout") or 3)
+        return real_run(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(version_info.subprocess, "run", slow_tag_query)
+    monkeypatch.setattr("hermes_cli.version_info._resolve_stamp_file", lambda: None)
+    monkeypatch.setattr("hermes_cli.version_info._resolve_repo_dir", lambda: repo)
+
+    info = get_version_info()
+
+    assert info.base_version == "unknown"
+    assert info.distance is None
+    assert version_satisfies(">=0.22.2", info.base_version)
+
+
 def test_resolve_stamp_file_honors_install_root(tmp_path, monkeypatch):
     """Sealed installs (the Nix wrapper) point HERMES_INSTALL_ROOT at the stamp dir."""
     stamp = {"commit": "e" * 40, "source": "nix", "distribution": "nix", "updateMechanism": "external"}
