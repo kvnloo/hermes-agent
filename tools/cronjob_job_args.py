@@ -172,7 +172,7 @@ def _mode_guidance_notes(job: dict[str, Any], user_deliver: Optional[str]) -> li
                 "automatically.")
         if _deliver.startswith("bot-chat:"):
             notes.append("Targeting another profile's Bot Chat costs that bot an agent turn per run.")
-        # platform:chat_id with no thread segment loses topic targeting.
+        # No explicit thread can still inherit a usable topic on the origin chat.
         for target in _deliver.split(","):
             parts = target.strip().split(":")
             if (
@@ -182,8 +182,9 @@ def _mode_guidance_notes(job: dict[str, Any], user_deliver: Optional[str]) -> li
                 and not parts[1].startswith("#")):
                 notes.append(
                     f"deliver target '{target.strip()}' has no :thread_id "
-                    "segment — on thread/topic platforms the delivery lands in "
-                    "the main chat, not a topic.")
+                    "segment — on thread/topic platforms a same-chat target inherits "
+                    "a usable origin thread; other chat-only targets post to the "
+                    "main chat.")
                 break
     return notes
 

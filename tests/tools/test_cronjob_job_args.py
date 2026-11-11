@@ -8,7 +8,7 @@ through get_hermes_home(), which is per-profile.
 """
 
 from hermes_constants import get_hermes_home
-from tools.cronjob_job_args import _validate_cron_script_path
+from tools.cronjob_job_args import _mode_guidance_notes, _validate_cron_script_path
 
 
 class TestValidateCronScriptPath:
@@ -34,3 +34,20 @@ class TestValidateCronScriptPath:
         scripts_dir = get_hermes_home() / "scripts"
         error = _validate_cron_script_path("/etc/passwd")
         assert str(scripts_dir) in error
+
+
+def test_chat_only_topic_delivery_guidance_matches_resolved_target():
+    """#152520: a job born in a topic must not tell its creator it will post in General."""
+    from cron.scheduler_delivery import _resolve_delivery_targets
+
+    job = {
+        "name": "topic brief",
+        "deliver": "telegram:167384518",
+        "origin": {
+            "platform": "telegram", "chat_id": "167384518", "thread_id": "631677",
+        },
+    }
+    assert _resolve_delivery_targets(job)[0]["thread_id"] == "631677"
+    guidance = "\n".join(_mode_guidance_notes(job, job["deliver"]))
+    assert "inherits a usable origin thread" in guidance
+    assert "the delivery lands in the main chat, not a topic" not in guidance
