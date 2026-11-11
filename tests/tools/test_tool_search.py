@@ -424,6 +424,30 @@ class TestBridgeDispatch:
         _, _, err = resolve_underlying_call({"calls": [{"name": "todo_list", "arguments": '{"todos": ['}]})
         assert err
 
+    def test_oauth_wire_alias_resolves_inside_bridge_arguments(self):
+        """On Anthropic OAuth the prompt calls ``session_search`` ``chat_history_lookup``; the model
+        then names the alias inside ``tool_call``/``tool_describe`` arguments, which the transport's
+        top-level reversal never sees. Both bridges must resolve it to the registered tool."""
+        import model_tools  # noqa: F401  # registers the built-in tools
+        from tools.tool_search import dispatch_tool_describe, resolve_underlying_call
+        name, args, err = resolve_underlying_call(
+            {"calls": [{"name": "chat_history_lookup", "arguments": {"query": "x"}}]})
+        assert (name, args, err) == ("session_search", {"query": "x"}, None)
+        described = json.loads(dispatch_tool_describe(
+            {"names": ["chat_history_lookup"]}, current_tool_defs=[_td("session_search", "recall")]))
+        assert described["tools"]["chat_history_lookup"]["description"] == "recall"
+        assert "not_found" not in described
+
+    def test_registered_tool_under_a_wire_alias_name_is_never_rewritten(self, monkeypatch):
+        """Negative control: a real tool registered as ``chat_history_lookup`` keeps its name."""
+        from tools.registry import registry
+        from tools.tool_search_catalog import resolve_wire_alias
+        real = registry.get_entry
+        monkeypatch.setattr(registry, "get_entry",
+                            lambda n: object() if n == "chat_history_lookup" else real(n))
+        assert resolve_wire_alias("chat_history_lookup") == "chat_history_lookup"
+        assert resolve_wire_alias("unknown_xxx") == "unknown_xxx"
+
 
 # ---------------------------------------------------------------------------
 # End-to-end via the real handle_function_call (smoke test).
