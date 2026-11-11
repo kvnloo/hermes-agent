@@ -22,10 +22,10 @@ from acp_adapter.session import _translate_acp_cwd, _normalize_cwd_for_compare
 logger = logging.getLogger(__name__)
 
 
-def _slash_command(text):
+def _slash_command(text, plugin_commands=()):
     """Canonical Hermes command name ``text`` invokes, or None for ordinary text.
 
-    Only a registered command (or alias) is a command: ``/etc/hosts is wrong`` or ``/tmp/x``
+    Only a registered command (or alias), or one of the session's ``plugin_commands``, is a command: ``/etc/hosts is wrong`` or ``/tmp/x``
     (a path, the same rule ``MessageEvent.get_command`` applies) and unknown ``/words`` are
     prompt text for the model. A registered command is never sent as prompt text: it is answered
     by a gateway verb or refused by name (``acp_adapter/gateway_commands.py``)."""
@@ -40,7 +40,7 @@ def _slash_command(text):
     if command is not None:
         return command.name
     from acp_adapter.gateway_commands import ROUTES
-    return name if name in ROUTES else None
+    return name if name in ROUTES or name.lower() in plugin_commands else None
 
 
 def _bypass_route():
@@ -121,6 +121,8 @@ class GatewayACPAgent(GatewayReplyMixin, acp.Agent):
         self._configs = {}
         # Session -> the owner's latest usage dict (``session.usage`` / ``session.stats``).
         self._usage = {}
+        # Session -> the owner's plugin commands (``commands.catalog``), advertised and run via ``slash.exec``.
+        self._plugin_commands = {}
         self._background = set()
 
     def on_connect(self, conn):
@@ -325,12 +327,30 @@ class GatewayACPAgent(GatewayReplyMixin, acp.Agent):
         from acp_adapter.gateway_session_meta import available_commands_update
         await asyncio.sleep(0)  # after the session reply: the editor routes updates by a known id
         try:
-            await self._conn.session_update(session_id=editor_id, update=available_commands_update())
+            await self._conn.session_update(session_id=editor_id,
+                                            update=available_commands_update(self._plugin_commands.get(session_id)))
             await self._project_usage(session_id, editor_id,
                                       await (await self._client()).rpc("session.stats", session_id=session_id))
+            # Plugin commands come last, so the built-in menu and context indicator never wait on the catalog.
+            known = self._plugin_commands.get(session_id)
+            plugin_commands = await self._session_plugin_commands(session_id)
+            if plugin_commands and plugin_commands != known:
+                await self._conn.session_update(session_id=editor_id,
+                                                update=available_commands_update(plugin_commands))
         except Exception:
             # Boundary: a detached editor or a refused read is not the attach's failure.
             logger.debug("ACP post-attach notices for %s not delivered", session_id, exc_info=True)
+
+    async def _session_plugin_commands(self, session_id):
+        """The owner's plugin commands for this session's profile; ``{}`` when the catalog is unavailable."""
+        try:
+            catalog = await (await self._client()).rpc('commands.catalog', session_id=session_id)
+        except Exception:
+            logger.debug("commands.catalog unavailable for %s", session_id, exc_info=True)
+            return self._plugin_commands.get(session_id, {})
+        found = catalog.get('plugin_commands') if isinstance(catalog, dict) else None
+        self._plugin_commands[session_id] = {str(k).lower(): str(v) for k, v in (found or {}).items()}
+        return self._plugin_commands[session_id]
 
     async def _attach_info(self, client, session_id):
         """``session.info`` for a session to attach. A thread main's in-process server wrote has no
@@ -762,7 +782,7 @@ class GatewayACPAgent(GatewayReplyMixin, acp.Agent):
 
     async def _run_slash(self, held_id, session_id, text):
         """Run a slash command's local half: ``(answered, text to submit)``; answered ends the prompt."""
-        command = _slash_command(text)
+        command = _slash_command(text, self._plugin_commands.get(session_id, {}))
         if command is None:
             return False, text
         from acp_adapter.gateway_commands import CommandRefused, run_command

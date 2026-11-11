@@ -1,0 +1,10 @@
+name: stats-dashboard
+version: 0.2.0
+description: "/stats opens omp's trace dashboard (omp stats) over this profile's Hermes sessions; trace_query lets the agent answer trace questions with interactive inline boards and read back the user's @trace selections."
+author: "Kevin Rajan (kvnloo)"
+kind: standalone
+provides_tools:
+  - trace_query
+  - trace_resolve
+provides_hooks:
+  - pre_tool_call
