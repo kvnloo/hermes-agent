@@ -1331,6 +1331,12 @@ class SessionAuthority:
                 # name a command that does nothing. Fence it before leaving so the way out works.
                 self._fence_abandoned_claim(row)
                 if isinstance(exc, ManagedExecutionUnknown):
+                    # A dead worker may have failed before it could stamp `unknown`. After
+                    # fencing it above, unattended Bot Chat deliveries must not wait for
+                    # a human /discard or leave the following admissions blocked.
+                    from gateway.session_unattended_unknown import settle_unattended_unknown
+                    if await settle_unattended_unknown(self, ref):
+                        continue
                     return
                 raise
             settled = None

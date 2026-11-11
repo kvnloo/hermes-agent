@@ -18,7 +18,7 @@ from gateway.session_contract import SessionRef, Submission
 from gateway.session_controls import AuthorityConnection
 from gateway.session_managed_worker import ManagedExecutionUnknown
 from gateway.slash_commands_session import discard_lost_turns
-from hermes_state_runtime import list_session_admissions
+from hermes_state_runtime import admit_session_input, list_session_admissions
 from tests.waiting import async_wait_until
 
 
@@ -81,5 +81,56 @@ async def test_a_drain_that_abandons_a_persons_turn_fences_it_so_discard_resumes
         await async_wait_until(lambda: _statuses(db)[follower.admission_id][0] == 'terminal',
                                what='follower settled')
         assert _statuses(db)[head.admission_id][0] == 'terminal'
+    finally:
+        store.close_all_db_handles()
+
+@pytest.mark.asyncio
+async def test_abandoned_bot_chat_delivery_does_not_block_next_turn(tmp_path, monkeypatch):
+    """A Bot Chat automation loses its managed worker before its unknown verdict commits.
+
+    It must settle interrupted without a gateway restart or human /discard; the FIFO
+    follower must run exactly once. The preceding human test stays unknown.
+    """
+    monkeypatch.setenv('HERMES_HOME', str(tmp_path))
+    store = SessionStore(tmp_path / 'sessions', GatewayConfig())
+    db = store._db
+    db.create_session('s', source='telegram')
+    source = SessionSource(platform=Platform.TELEGRAM, chat_id='bot-chat')
+    runner = SimpleNamespace(
+        _session_db=db, session_store=store, _draining=False,
+        _handle_message=lambda event: None, _adapter_for_source=lambda source: None,
+    )
+    authority = await initialize_session_authority(runner, profile_id='p', instance_id='owner-1')
+    authority.sessions['s'] = LiveSession(source, 's')
+    ref = SessionRef('p', 's')
+    actor = AuthorityConnection(authority, Peer(), {'user_id': 'human'}).actor
+    ran = []
+    try:
+        authority._schedule = lambda ref: None
+        bot = admit_session_input(
+            db, epoch=authority.epoch, principal_id='automation:bot-chat',
+            session_id='s', request_id='bot:overflow',
+            payload={'text': 'BOT HEAD', 'local_automation_v1': {
+                'identity': 'bot:overflow', 'owner': 's'}},
+        )
+        follower = await authority.submit(
+            actor, Submission('follower', ref, {'text': 'FOLLOWER'}, 'queue'))
+
+        async def execute(owner, ref, row):
+            if row['admission_id'] == bot['admission_id']:
+                raise ManagedExecutionUnknown('managed_worker_unknown')
+            ran.append(row['payload']['text'])
+            return 'ACK'
+
+        monkeypatch.setattr('gateway.session_finite.execute_finite_admission', execute)
+        del authority._schedule
+        authority._schedule(ref)
+        live = authority.sessions['s']
+        await async_wait_until(lambda: live.task is not None and live.task.done(),
+                               what='Bot Chat FIFO recovered')
+        statuses = _statuses(db)
+        assert statuses[bot['admission_id']] == ('terminal', 'interrupted')
+        assert statuses[follower.admission_id] == ('terminal', 'completed')
+        assert ran == ['FOLLOWER']
     finally:
         store.close_all_db_handles()
