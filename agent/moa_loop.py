@@ -858,7 +858,7 @@ def _is_failed_reference(text: str) -> bool:
 # is hedging prose, not a fabricated block. Quarantining a genuine re-quote of a real tool
 # result loses nothing — the aggregator reads the full transcript, so the authoritative copy is
 # already in its own context. Traces keep the raw advisor text for post-hoc inspection.
-_FABRICATED_TOOL_BLOCK_RE = re.compile(r"^\[(?:called tool|tool result):.*$", re.MULTILINE)
+_FABRICATED_TOOL_BLOCK_RE = re.compile(r"^[ \t]*\[(?:called tool|tool result):.*$", re.MULTILINE)
 _QUARANTINED_TOOL_SYNTAX_NOTE = "[reference emitted tool syntax — unverified, not executed]"
 
 
