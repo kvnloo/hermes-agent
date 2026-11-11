@@ -513,27 +513,98 @@ def collect_unheld_api_images(db):
         return 0
 
 
-def _history_mentions(conn, references, after_id=0):
-    """Candidate paths any transcript row (id > after_id) mentions raw or JSON-escaped, in ONE
-    messages pass. Rows are prefiltered in SQL on the literal text before each candidate's digest
-    directory, so only rows that could name a candidate reach Python's exact substring test."""
-    # Matched by the content-addressed tail ``<sha256>/<name>`` with either separator, so every
-    # spelling a note can carry (the host path, a sandbox backend's ``to_agent_visible_cache_path``)
-    # counts as a mention.
+def _history_mentions_scan(conn, references, after_id=0, *, exceptions_only=False,
+                           indexed_exceptions=False):
+    """Exact original SQLite-instr scan, or its BLOB/NUL-only safety fallback.
+
+    The sparse exceptions table is used ONLY after its atomic ready marker was
+    published. A legacy index without that marker scans BLOB and NUL text
+    directly, preserving text that GLOB/FTS cannot see after an embedded NUL.
+    """
     needles = {}
     for reference in references:
         raw = reference['path']
         for tail in (reference['sha256'] + sep + Path(raw).name for sep in ('/', '\\')):
             needles[tail] = needles[json.dumps(tail)[1:-1]] = raw
     prefixes = sorted({reference['sha256'] for reference in references})
-    # The digests are ONE bound JSON array, never one ``instr`` term each: the statement's size
-    # must not grow with the candidate count (SQLite's expression-depth limit fails at ~1000 terms).
-    query = ('WITH digests(value) AS MATERIALIZED (SELECT value FROM json_each(?)) SELECT content FROM messages '
-             'WHERE EXISTS (SELECT 1 FROM digests WHERE instr(content, digests.value))' + (' AND id>?' if after_id else ''))
+    if not prefixes:
+        return set()
+    source = ('messages_history_fts_exact AS e CROSS JOIN messages AS m ON m.id=e.id'
+              if exceptions_only and indexed_exceptions else 'messages')
+    content = 'm.content' if exceptions_only and indexed_exceptions else 'content'
+    row_id = 'm.id' if exceptions_only and indexed_exceptions else 'id'
+    extra = ""
+    if exceptions_only and not indexed_exceptions:
+        extra = (" AND (typeof(content)='blob' OR "
+                 "(typeof(content)='text' AND instr(content, char(0))>0))")
+    query = ('WITH digests(value) AS MATERIALIZED (SELECT value FROM json_each(?)) '
+             f'SELECT {content} FROM {source} '
+             f'WHERE EXISTS (SELECT 1 FROM digests WHERE instr({content}, digests.value))'
+             + extra + (f' AND {row_id}>?' if after_id else ''))
     mentioned = set()
-    for (content,) in conn.execute(query, (json.dumps(prefixes), *((after_id,) if after_id else ()))):
-        text = content.decode('utf-8', 'replace') if isinstance(content, bytes) else str(content)
+    for (value,) in conn.execute(query, (json.dumps(prefixes), *((after_id,) if after_id else ()))):
+        text = value.decode('utf-8', 'replace') if isinstance(value, bytes) else str(value)
         mentioned.update(raw for needle, raw in needles.items() if needle in text)
+    return mentioned
+
+def _history_mentions(conn, references, after_id=0):
+    """Find exact raw/JSON-escaped media tails via a digest-selective trigram index.
+
+    FTS is only a candidate generator: confirm the same literal tails as the
+    original scan. Every role and session source is indexed, including copied
+    rows; BLOBs and non-SHA directory names retain their original scan path.
+    The caller owns the read snapshot and optional id watermark.
+    """
+    if not references:
+        return set()
+    from hermes_state_history_fts import HISTORY_FTS_EXACT_READY_KEY, history_fts_ready
+    try:
+        if not history_fts_ready(conn.cursor()):
+            return _history_mentions_scan(conn, references, after_id)
+    except sqlite3.DatabaseError:
+        return _history_mentions_scan(conn, references, after_id)
+
+    by_digest = {}
+    invalid = []
+    valid = []
+    for reference in references:
+        digest = reference['sha256']
+        if _SHA256_NAME.fullmatch(digest) is None:
+            invalid.append(reference)
+            continue
+        valid.append(reference)
+        needles = by_digest.setdefault(digest, {})
+        raw = reference['path']
+        for tail in (digest + sep + Path(raw).name for sep in ('/', '\\')):
+            needles[tail] = raw
+            needles[json.dumps(tail)[1:-1]] = raw
+
+    query = ("SELECT m.content FROM messages_history_fts "
+             "JOIN messages AS m ON m.id = messages_history_fts.rowid "
+             "WHERE messages_history_fts MATCH ?" + (" AND m.id>?" if after_id else ""))
+    mentioned = set()
+    try:
+        for digest, needles in by_digest.items():
+            for (content,) in conn.execute(
+                    query, ('"' + digest + '"', *((after_id,) if after_id else ()))):
+                text = content.decode('utf-8', 'replace') if isinstance(content, bytes) else str(content)
+                mentioned.update(raw for needle, raw in needles.items() if needle in text)
+        # SQLite GLOB and FTS can stop at embedded NUL even for TEXT; the
+        # original instr() sees the digest and filename after that byte.
+        # The sparse table is published atomically only after all backfill
+        # rows have been checked; legacy-v1 stores scan exceptions exactly.
+        if valid:
+            exact_ready = conn.execute(
+                "SELECT 1 FROM state_meta WHERE key=? AND value='1'",
+                (HISTORY_FTS_EXACT_READY_KEY,)).fetchone() is not None
+            mentioned |= _history_mentions_scan(
+                conn, valid, after_id, exceptions_only=True,
+                indexed_exceptions=exact_ready)
+        if invalid:
+            mentioned |= _history_mentions_scan(conn, invalid, after_id)
+    except sqlite3.DatabaseError:
+        logger.warning("Media history FTS unavailable; using exact transcript scan", exc_info=True)
+        return _history_mentions_scan(conn, references, after_id)
     return mentioned
 
 
@@ -545,20 +616,18 @@ def _collectable(references, root):
 def release_unheld_media(db, references, *, retain_history=True):
     """Delete unowned references, preserving accepted admission and retained transcript owners.
 
-    The history owner check is one read-snapshot pass over messages, outside the write lock; under
-    the lock only rows inserted after that snapshot (an indexed id range) are re-checked. A new
-    transcript mention of a retained image comes from an admission holding it (re-checked under the
-    lock) or from a copied row (branch/compress insert, caught by the range)."""
+    The first pass reduces candidate files outside the write lock. Under the
+    lock ALL remaining candidates are checked again against current history:
+    updates to old message ids (not just new inserts) must prevent deletion."""
     root = _media_root()
     references = _collectable(references or (), root)
     if not references:
         return 0
-    seen, last_id = set(), 0
+    seen = set()
     if retain_history:
         with db._read_ctx() as conn:
-            conn.execute('BEGIN')  # one snapshot: the id watermark and the scan agree
+            conn.execute('BEGIN')  # one consistent snapshot for the initial check
             try:
-                last_id = conn.execute('SELECT coalesce(max(id), 0) FROM messages').fetchone()[0]
                 seen = _history_mentions(conn, references)
             finally:
                 if conn.in_transaction:
@@ -572,7 +641,7 @@ def release_unheld_media(db, references, *, retain_history=True):
         if identities is None:
             return 0
         if retain_history:
-            held |= _history_mentions(conn, references, after_id=last_id)
+            held |= _history_mentions(conn, references)
         released = 0
         for reference in references:
             path = Path(reference['path'])
