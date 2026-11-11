@@ -440,13 +440,21 @@ def _check_runtime_venv_dependencies(report: "DoctorReport", venv: "Path | None"
     """Outside the runtime sandbox: verify declared deps under the interpreter the gateway runs."""
     if venv is None:
         return
-    pydeps = getattr(report.manifest, "python_dependencies", None) or []
+    # PM builds environments from one effective declaration: plugin.yaml or
+    # pyproject.toml [project].dependencies. Doctor must check that same set.
+    try:
+        from pm.plugin_declarations import read_python_declaration
+
+        pydeps = read_python_declaration(report.path).install_requirements
+    except (OSError, ValueError) as exc:
+        report.warning(f"could not inspect runtime Python dependencies: {exc}")
+        return
     if not pydeps:
         return
     missing = _deps_missing_from_venv(venv, list(pydeps))
     if missing:
         report.warning(
-            "declared python_dependencies missing from the staged runtime venv the gateway runs: "
+            "declared Python dependencies missing from the staged runtime venv the gateway runs: "
             + ", ".join(missing)
             + " — run `hermes pm repair` to resync the runtime venv, then restart gateways")
 

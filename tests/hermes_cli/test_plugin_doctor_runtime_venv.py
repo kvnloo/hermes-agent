@@ -68,6 +68,34 @@ def test_doctor_stays_silent_when_runtime_venv_has_declared_deps(tmp_path, monke
     assert "staged runtime venv" not in messages
 
 
+def test_doctor_rechecks_pyproject_dependencies_in_staged_runtime(tmp_path, monkeypatch) -> None:
+    """PM installs pyproject deps; Doctor must check them in the gateway's venv."""
+    plugin = _deps_plugin(tmp_path)
+    (plugin / "plugin.yaml").write_text("name: deps-plugin\n", encoding="utf-8")
+    (plugin / "pyproject.toml").write_text(
+        "[project]\n"
+        "name = 'deps-plugin'\n"
+        "version = '0.1.0'\n"
+        "dependencies = ['mnemosyne-memory>=3,<4']\n",
+        encoding="utf-8",
+    )
+    venv = _fake_venv(tmp_path)
+    monkeypatch.setattr(plugin_dev, "_staged_runtime_venv", lambda: venv)
+    inspected = []
+
+    def missing_from_venv(selected, requirements):
+        inspected.append((selected, requirements))
+        return ["mnemosyne-memory"]
+
+    monkeypatch.setattr(plugin_dev, "_deps_missing_from_venv", missing_from_venv)
+
+    report = plugin_dev.doctor_plugin(plugin)
+
+    assert inspected == [(venv, ["mnemosyne-memory>=3,<4"])]
+    assert "missing from the staged runtime venv" in report.format_text()
+    assert "mnemosyne-memory" in report.format_text()
+
+
 def test_doctor_skips_runtime_probe_without_staged_venv(tmp_path, monkeypatch) -> None:
     probes: list[tuple[Path, list[str]]] = []
     monkeypatch.setattr(plugin_dev, "_staged_runtime_venv", lambda: None)
