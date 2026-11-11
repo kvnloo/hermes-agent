@@ -21,6 +21,7 @@ inherits the captured stdout/stderr handles.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import stat
@@ -166,6 +167,42 @@ def test_run_git_bounds_the_call_when_a_descendant_holds_the_pipes(tmp_path, mon
             f"held the captured pipes, so run()'s post-timeout communicate() blocked"
         )
         assert _descendants_in(repo) == [], "the timed-out probe left a descendant process behind"
+    finally:
+        _reap(repo)
+
+
+def test_git_install_stamp_probe_bounds_launcher_and_reaps_descendants(tmp_path, monkeypatch):
+    """A Git-sourced stamp must not wedge startup or leak a timed-out Git child.
+
+    The stamp path calls _run_git('rev-parse', 'HEAD') on every uncached
+    version lookup. On Windows a killed launcher can leave its real Git child
+    holding captured pipes; on POSIX the same timeout can orphan a child.
+    """
+    repo = _install_blocking_shim(tmp_path, monkeypatch)
+    (repo / ".git").mkdir()
+    stamp_file = repo / "install-stamp.json"
+    stamp_file.write_text(
+        json.dumps({"commit": "a" * 40, "source": "git", "updateMechanism": "self"}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(version_info, "_resolve_stamp_file", lambda: stamp_file)
+    # cmd.exe stands in for the Windows Git launcher, and requires /c to
+    # execute its shim script. Real Git for Windows needs no such switch.
+    underlying_run_git = version_info._run_git
+    monkeypatch.setattr(
+        version_info, "_run_git",
+        lambda cwd, *args: underlying_run_git(cwd, *_LAUNCH, *args),
+    )
+
+    started = time.monotonic()
+    try:
+        info = version_info._stamp_version_info()
+        elapsed = time.monotonic() - started
+        assert info is not None and info.source == "git" and info.commit == "a" * 40
+        assert elapsed < _BOUND_CEILING_S, (
+            f"Git-sourced stamp lookup took {elapsed:.1f}s despite the 3s probe timeout"
+        )
+        assert _descendants_in(repo) == [], "stamp lookup left a Git launcher child behind"
     finally:
         _reap(repo)
 
