@@ -6,7 +6,7 @@ import pytest
 from typing import Any, cast
 
 from gateway.config import GatewayConfig, HomeChannel, Platform, PlatformConfig
-from gateway.delivery import DeliveryRouter, DeliveryTarget
+from gateway.delivery import DeliveryRouter, DeliverySendError, DeliveryTarget
 from gateway.platforms.base import SendResult
 from gateway.relay.adapter import RelayAdapter
 from gateway.relay.descriptor import CONTRACT_VERSION, CapabilityDescriptor
@@ -289,6 +289,23 @@ async def test_explicit_telegram_private_thread_uses_reply_fallback_with_anchor(
 class FailingAdapter:
     async def send(self, chat_id, content, metadata=None):
         return SendResult(success=False, error="route failed", retryable=False)
+
+
+@pytest.mark.asyncio
+async def test_failed_dict_send_preserves_retryable_verdict(tmp_path, monkeypatch):
+    """A dictionary-shaped adapter failure must carry its retryable bit to cron's queue gate."""
+    monkeypatch.setattr("gateway.delivery.get_hermes_home", lambda: tmp_path)
+
+    class RetryableDictAdapter:
+        async def send(self, chat_id, content, metadata=None):
+            return {"success": False, "error": "Not connected", "retryable": True}
+
+    router = DeliveryRouter(GatewayConfig(), adapters={Platform.TELEGRAM: RetryableDictAdapter()})
+    with pytest.raises(DeliverySendError, match="Not connected") as exc:
+        await router._deliver_to_platform(
+            DeliveryTarget.parse("telegram:-100"), "cron report", metadata={"job_id": "cron-1"}
+        )
+    assert exc.value.send_retryable is True
 
 
 # ---------------------------------------------------------------------------

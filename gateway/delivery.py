@@ -356,7 +356,12 @@ class DeliveryRouter:
             from gateway.platforms.base import BasePlatformAdapter
             if BasePlatformAdapter._is_partial_delivery(result):
                 raise PartialDeliveryError(error, result)
+            retryable = (
+                result.get("retryable", False)
+                if isinstance(result, dict)
+                else getattr(result, "retryable", False)
+            )
             raise DeliverySendError(
                 error or f"{target.platform.value} delivery failed",
-                retryable=bool(getattr(result, "retryable", False)))
+                retryable=bool(retryable))
         return result
