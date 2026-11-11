@@ -8,6 +8,7 @@ truncation notice; a partial send never offers the dropped tail for resumption.
 
 from __future__ import annotations
 
+import re
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -75,6 +76,25 @@ def _assert_notice(text: str, parse_mode) -> None:
     assert parse_mode == MARKDOWN_V2
     assert "\\(" in text and utf16_len(text) <= MAX  # MarkdownV2-escaped, fits one message
 
+
+@pytest.mark.asyncio
+async def test_truncation_notice_excludes_generated_mdv2_marker_separators():
+    """Only omitted reply characters count as dropped, not synthesized (N/M) separators."""
+    sent: list = []
+    adapter = _adapter(sent)
+    cap = adapter.MAX_SPLIT_MESSAGES
+    content = "x" * (MAX * (cap + 1))
+    uncapped = telegram_adapter.split_formatted_mdv2(
+        adapter.format_message(content), MAX, adapter.truncate_message, utf16_len)
+    assert len(uncapped) > cap
+    shown = sum(len(re.sub(r" \\\(\d+/\d+\\\)$", "", chunk)) for chunk in uncapped[:cap - 1])
+
+    result = await adapter.send("4242", content)
+
+    assert result.success is True
+    assert len(sent) == cap
+    _assert_notice(*sent[-1])
+    assert f"{len(content) - shown} characters were not delivered" in sent[-1][0]
 
 @pytest.mark.asyncio
 async def test_send_over_cap_delivers_at_most_cap_messages_ending_with_notice():

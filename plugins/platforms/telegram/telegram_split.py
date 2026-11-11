@@ -17,7 +17,8 @@ from agent.i18n import t
 # The ``(N/M)`` marker ``truncate_message`` appends: raw on edit-overflow chunks, MarkdownV2-escaped
 # (``\(N/M\)``, possibly moved onto its own line after a closing fence) on send chunks.
 _RAW_INDICATOR_RE = re.compile(r" \((\d+)/(\d+)\)$")
-_MDV2_INDICATOR_RE = re.compile(r"\\\((\d+)/(\d+)\\\)$")
+# Include the generated space (or fence newline) when stripping a dropped chunk marker.
+_MDV2_INDICATOR_RE = re.compile(r"([ \n])\\\((\d+)/(\d+)\\\)$")
 _MDV2_ESCAPE_RE = re.compile(r"\\(.)", re.DOTALL)
 
 
@@ -44,5 +45,5 @@ def cap_split_chunks(adapter: Any, chunks: list[str], *, formatted: bool) -> lis
     tail = [adapter.format_message(notice) if formatted else notice] if notice else []
     total = len(kept) + len(tail)
     if formatted:
-        return [marker.sub(lambda m: f"\\({m.group(1)}/{total}\\)", chunk) for chunk in kept] + tail
+        return [marker.sub(lambda m: f"{m.group(1)}\\({m.group(2)}/{total}\\)", chunk) for chunk in kept] + tail
     return [marker.sub(lambda m: f" ({m.group(1)}/{total})", chunk) for chunk in kept] + tail
