@@ -545,6 +545,14 @@ class ShellFileOperations(LintMixin, SearchMixin, FileOperations):
         not ``$(umask)`` arithmetic (zsh parses leading-zero constants as decimal),
         quoted so zsh doesn't =word-expand. ``trap ... EXIT`` removes the temp on every failure.
         """
+        # Native local Windows can inspect and preserve the security descriptor.
+        # Git Bash's chmod/cp fallback cannot guarantee the existing owner SID.
+        if sys.platform == "win32" and self._lsp_local_only():
+            native_path = self._native_path(path)
+            if os.path.isfile(native_path):
+                from tools.file_operations_winacl import atomic_write as win_atomic_write
+                error = win_atomic_write(native_path, content.encode("utf-8", "surrogateescape"))
+                return ExecuteResult(stdout=error or "", exit_code=1 if error else 0)
         q_path = self._escape_shell_arg(path)
         q_parent = self._escape_shell_arg(os.path.dirname(path) or ".")
         tmpl = self._escape_shell_arg(".hermes-tmp.XXXXXX")

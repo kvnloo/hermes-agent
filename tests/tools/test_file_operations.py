@@ -842,3 +842,53 @@ class TestEscapeNativeToolArg:
         assert node_cmds, f"no node command captured in: {commands}"
         assert "'C:/Users/alice/app/main.js'" in node_cmds[0]
         assert "/c/Users" not in node_cmds[0]
+
+# Regression for NousResearch/hermes-agent#153174 (DrumRobot):
+# An existing file's owner/group/DACL must survive a patch or the swap must be refused.
+def test_windows_security_clone_mismatch_refuses_before_replace(tmp_path, monkeypatch):
+    from tools import file_operations_winacl as winacl
+
+    target = tmp_path / "existing.txt"
+    target.write_bytes(b"before\n")
+    monkeypatch.setattr(winacl, "_security_descriptor",
+                        lambda p: b"original-sid-and-dacl" if p == str(target)
+                        else b"changed-owner-or-dacl")
+    monkeypatch.setattr(winacl, "_set_security", lambda _path, _descriptor: None)
+
+    error = winacl.atomic_write(str(target), b"after\n")
+    assert error and "staged owner, group, DACL" in error
+    assert target.read_bytes() == b"before\n"
+    assert not list(tmp_path.glob(".hermes-tmp.*"))
+
+
+@pytest.mark.platforms("windows")
+def test_windows_patch_preserves_acl_or_refuses_before_replace(tmp_path, monkeypatch):
+    from tools import file_operations_winacl as winacl
+
+    target = tmp_path / "owned.txt"
+    target.write_text("before\n", encoding="utf-8")
+    # Protected DACL exposes silent metadata loss if both cp variants fail.
+    acl = subprocess.run(["icacls", str(target), "/inheritance:d"],
+                         capture_output=True, text=True, check=False)
+    assert acl.returncode == 0, acl.stderr
+    before_security = winacl._security_descriptor(str(target))
+
+    env = make_real_subprocess_env(str(tmp_path))
+    env.uses_host_filesystem = True
+    ops = ShellFileOperations(env)
+    original_exec = ops._exec
+
+    def metadata_copy_unavailable(command, **kwargs):
+        # Force the carrier's shell writer to its chmod-only fallback.
+        command = command.replace("cp --attributes-only --preserve=all", "false")
+        command = command.replace("cp -p", "false")
+        return original_exec(command, **kwargs)
+
+    monkeypatch.setattr(ops, "_exec", metadata_copy_unavailable)
+    result = ops.patch_replace(str(target), "before", "after")
+    if not result.success:
+        assert "Windows file security" in (result.error or "")
+    assert winacl._security_descriptor(str(target)) == before_security
+    assert target.read_text(encoding="utf-8") == ("after\n" if result.success else "before\n")
+    assert not list(tmp_path.glob(".hermes-tmp.*"))
+
