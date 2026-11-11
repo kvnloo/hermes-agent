@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from gateway.session_contract import Principal
+from gateway.session_contract import SessionActor
 from hermes_state_runtime import get_session_admission, list_session_admissions
 from tests.gateway.test_automation_notification_category import _authority
 
@@ -20,7 +20,7 @@ async def _bot_chat(tmp_path, monkeypatch):
     from gateway.session_local import create_local_session
     from gateway.session_local_title import title_new_session
     _runner, authority = await _authority(tmp_path, monkeypatch)
-    actor = Principal('test-owner', 'default', frozenset({'session:create', 'session:submit', 'session:read'}), 'fixture')
+    actor = SessionActor('test-owner', 'default', frozenset({'session:create', 'session:submit', 'session:read'}), 'fixture')
     ref = create_local_session(authority, actor, dict(request_id='bot', source='gui', model='fixture', toolsets=[]))
     title_new_session(authority, ref, 'Bot Chat')
     return authority, ref, SimpleNamespace(authority=authority, actor=actor)
