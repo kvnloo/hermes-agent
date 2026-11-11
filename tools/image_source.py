@@ -328,7 +328,7 @@ def _finalize(
         if "image" not in permitted:
             raise NotAnImage("source is an image, but this argument takes a video", src=src, origin=origin)
         return ResolvedImage(data=data, mime=sniffed, origin=origin)
-    if "image" in permitted and data[:5] == b"%PDF-":
+    if "image" in permitted and data[:1024].lstrip(b"\xef\xbb\xbf \t\r\n").startswith(b"%PDF-"):
         # Perplexity Computer passes document pages to the model as images (Agent API native document
         # input); here a PDF source renders one page (page 1 unless ``#page=N``) via poppler.
         return ResolvedImage(data=data, mime="application/pdf", origin=origin)

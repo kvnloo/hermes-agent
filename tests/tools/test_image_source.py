@@ -735,6 +735,23 @@ def _blank_pdf() -> bytes:
     return bytes(out)
 
 
+@pytest.mark.parametrize("prefix", [b"\xef\xbb\xbf", b"\r\n"])
+@pytest.mark.asyncio
+async def test_pdf_with_leading_bom_or_whitespace_reaches_page_renderer(tmp_path, monkeypatch, prefix):
+    """Poppler reads PDFs with a leading BOM/newline; vision must still select the requested page."""
+    isrc = _reload(monkeypatch, tmp_path / "hermes")
+    monkeypatch.setenv("TERMINAL_ENV", "local")
+    path = tmp_path / "scan.pdf"
+    path.write_bytes(prefix + _blank_pdf())
+    source = f"{path}#page=2"
+    rendered = isrc.ResolvedImage(PNG, "image/png", "file")
+    with patch.object(isrc, "_render_pdf_page", return_value=rendered) as render:
+        result = await isrc.resolve_image_source(source, isrc.ResolveContext())
+    render.assert_called_once_with(
+        isrc.ResolvedImage(path.read_bytes(), "application/pdf", "file"), 2, source)
+    assert result == rendered
+
+
 @pytest.mark.skipif(__import__("shutil").which("pdftoppm") is None, reason="needs poppler pdftoppm")
 @pytest.mark.parametrize("data_url, suffix, width", [
     (False, "", 150), (False, "#page=2", 300), (True, "#page=2", 300), (False, "#page=9", None)])
