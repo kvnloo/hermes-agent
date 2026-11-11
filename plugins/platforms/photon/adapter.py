@@ -927,8 +927,12 @@ class PhotonAdapter(BasePlatformAdapter):
         # Mention gate BEFORE normalising: _normalize_content persists inline attachment
         # bytes to the media cache, and a dropped group message must not leave files behind.
         gated = chat_type == "group" and self.require_mention
-        spoken = gated and ctype == "voice" and voice_mention_gate_enabled(self.config.extra)  # #102330
-        if gated and not spoken and not self._message_matches_mention_patterns(_mention_gate_text(content)):
+        matches_text = gated and self._message_matches_mention_patterns(_mention_gate_text(content))
+        has_voice = ctype == "voice" or (
+            ctype == "group" and any(item.get("type") == "voice" for item in _group_item_contents(content))
+        )
+        spoken = gated and not matches_text and has_voice and voice_mention_gate_enabled(self.config.extra)
+        if gated and not (matches_text or spoken):
             logger.debug("[photon] ignoring group message (require_mention=true, no mention pattern matched)")
             return
         if ctype in _BINARY_CONTENT_TYPES:
@@ -936,9 +940,19 @@ class PhotonAdapter(BasePlatformAdapter):
             text, mtype, media_urls, media_types = await asyncio.to_thread(_normalize_content, content)
         else:
             text, mtype, media_urls, media_types = _normalize_content(content)
-        if spoken and not await spoken_mention_clips(media_urls, self._mention_patterns):
-            logger.debug("[photon] ignoring group voice note (require_mention=true, no wake word spoken)")
-            return
+        if spoken:
+            # A grouped message may carry photos alongside speech; only audio enters STT.
+            gate_paths = (media_urls if ctype == "voice" else [
+                path for path, mime in zip(media_urls, media_types) if mime.lower().startswith("audio/")
+            ])
+            if not await spoken_mention_clips(gate_paths, self._mention_patterns):
+                # Normalization just cached these files; rejected messages own their cleanup.
+                if ctype == "group":
+                    for path in media_urls:
+                        with contextlib.suppress(OSError):
+                            os.remove(path)
+                logger.debug("[photon] ignoring group voice note (require_mention=true, no wake word spoken)")
+                return
         if gated:
             text = self._clean_mention_text(text)
         self._record_recent_richlink(space_id, _richlink_url_from_content(content) or text)
