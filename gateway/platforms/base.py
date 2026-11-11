@@ -2883,12 +2883,9 @@ class BasePlatformAdapter(_SessionModelSettingsMixin, ABC):
     async def send_multiple_images(
         self, chat_id: str, images: list[tuple[str, str]],
         metadata: Optional[dict[str, Any]] = None, human_delay: float = 0.0) -> SendResult:
-        """Send ``(url, alt)`` images (``http(s)://`` or ``file://``) one by one (GIFs via
-        ``send_animation``, local files via ``send_image_file``); override to bundle natively
-        (Signal). Returns success when at least one image was delivered — the outcome
-        the turn-level delivery tracker records; every override must return the same
-        aggregate, or a media-only turn on that platform reports FAILURE (#106153)."""
-        delivered = False
+        """Send images individually (animation/local-aware); succeed if ANY landed (#106153).
+        Report per-image failures so the caption-footer fallback can find a lost photo (#74547)."""
+        delivered, failed = False, []
         for image_url, alt_text in images:
             if human_delay > 0:
                 await asyncio.sleep(human_delay)
@@ -2905,16 +2902,19 @@ class BasePlatformAdapter(_SessionModelSettingsMixin, ABC):
                 img_result = await sender(
                     chat_id=chat_id, **url_kw, caption=alt_text or None, metadata=metadata)
                 if not img_result.success:
+                    failed.append((image_url, img_result.error or "send failed"))
                     logger.error("[%s] Failed to send image: %s", self.name, img_result.error)
                 else:
                     delivered = True
             except Exception as img_err:
+                failed.append((image_url, str(img_err)))
                 logger.error("[%s] Error sending image: %s", self.name, img_err, exc_info=True)
         if not images:
             return SendResult(success=False, error="no images to send")
         return SendResult(
             success=delivered,
-            error=None if delivered else "all images failed to send")
+            error=None if delivered else "all images failed to send",
+            raw_response={"failed": failed} if failed else None)
 
     async def send_image(
         self, chat_id: str, image_url: str, caption: Optional[str] = None,

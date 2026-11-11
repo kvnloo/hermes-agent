@@ -221,3 +221,23 @@ async def test_no_separate_footer_when_the_captioned_photo_is_queued_for_a_reupl
 
     assert [batch[-1][1] for batch in adapter.batches] == [FOOTER, FOOTER]
     assert FOOTER not in adapter.sent
+
+@pytest.mark.asyncio
+async def test_streamed_footer_survives_per_image_fallback_partial_failure(tmp_path, monkeypatch):
+    """Telegram uses the base per-image sender if InputMediaPhoto is unavailable (#74547)."""
+    first = _photo(tmp_path, monkeypatch, "a.png")
+    last = _photo(tmp_path, monkeypatch, "b.png")
+    adapter = _Adapter()
+    adapter.send_multiple_images = BasePlatformAdapter.send_multiple_images.__get__(adapter)
+
+    async def send_image_file(chat_id, image_path, caption=None, metadata=None):
+        adapter.batches.append((image_path, caption))
+        landed = image_path == str(first)
+        return SendResult(success=landed, error=None if landed else "upload refused")
+
+    adapter.send_image_file = send_image_file
+    await _streamed_turn(adapter, f"Here\nMEDIA:{first}\nMEDIA:{last}", FOOTER)
+
+    assert len(adapter.batches) == 2
+    assert adapter.batches[-1] == (str(last), FOOTER)
+    assert adapter.sent == [FOOTER]
