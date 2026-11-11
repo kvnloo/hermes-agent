@@ -778,12 +778,15 @@ class TestValidateCustomUnreachableFallback:
     def test_anthropic_messages_reachable_listing_without_slug_is_not_called_unimplemented(self):
         """A listing that answered 200 but lacks the slug must not be described as a proxy that
         'does not implement GET /v1/models'; it names the alias candidates instead (#111436)."""
-        result = self._validate("kimi-k3", "kimi-coding", models=["k3", "k3-turbo"], api_mode="anthropic_messages")
-        assert (result["accepted"], result["persist"], result["recognized"]) == (True, True, False)
-        assert "do not implement" not in result["message"]
-        assert "`k3`" in result["message"]
-        # Case-only spelling differences are a match, not a warning.
-        assert self._validate("K3", "kimi-coding", models=["k3"], api_mode="anthropic_messages")["recognized"] is True
+        with patch("hermes_cli.models.provider_model_ids", return_value=[]):
+            result = self._validate("k3-pro", "kimi-coding", models=["k3", "k3-turbo"],
+                                    api_mode="anthropic_messages")
+            assert (result["accepted"], result["persist"], result["recognized"]) == (True, True, False)
+            assert "do not implement" not in result["message"]
+            assert "`k3`" in result["message"]
+            # Case-only spelling differences are a match, not a warning.
+            assert self._validate("K3", "kimi-coding", models=["k3"],
+                                  api_mode="anthropic_messages")["recognized"] is True
 
 
 # -- validate — profile-owned catalog is authoritative (#116667) ----------------
@@ -846,6 +849,40 @@ class TestProfileCatalogAuthoritative:
         assert result["accepted"] is True
         assert result["recognized"] is True
         assert calls == [relay_base_url]
+
+
+    def test_anthropic_messages_respects_profile_catalog_with_endpoint_overrides(self, relay_profile):
+        """Picker aliases and owned catalogs beat wire ids; generic relays still own their listing."""
+        with patch("hermes_cli.models.provider_model_ids", return_value=["kimi-k3.1-pro"]), \
+             patch("hermes_cli.models.fetch_api_models", return_value=["k3.1-pro"]) as wire:
+            selected = validate_requested_model(
+                "kimi-k3.1-pro", "kimi-coding", api_key="k",
+                base_url="https://api.kimi.com/coding", api_mode="anthropic_messages")
+
+        assert (selected["accepted"], selected["persist"], selected["recognized"], selected["message"]) == (
+            True, True, True, None)
+        wire.assert_not_called()
+
+        with patch("hermes_cli.models.provider_model_ids", return_value=["plan/model-1"]), \
+             patch("hermes_cli.models.fetch_api_models", return_value=["foreign/model"]) as wire:
+            foreign = validate_requested_model(
+                "foreign/model", relay_profile.name, api_key="k",
+                base_url=relay_profile.base_url, api_mode="anthropic_messages")
+
+        assert (foreign["accepted"], foreign["persist"], foreign["recognized"]) == (False, False, False)
+        assert "plan/model-1" in foreign["message"]
+        wire.assert_not_called()
+
+        relay_url = "https://relay.example.invalid/v1"
+        with patch("hermes_cli.models.provider_model_ids") as catalog, \
+             patch("hermes_cli.models.fetch_api_models", return_value=["relay-only/model"]) as wire:
+            relayed = validate_requested_model(
+                "relay-only/model", "nebius-token-factory", api_key="k",
+                base_url=relay_url, api_mode="anthropic_messages")
+
+        assert (relayed["accepted"], relayed["persist"], relayed["recognized"]) == (True, True, True)
+        catalog.assert_not_called()
+        wire.assert_called_once_with("k", relay_url, api_mode="anthropic_messages")
 
 
 # -- validate — whitespace in self-hosted / user-configured ids --------------

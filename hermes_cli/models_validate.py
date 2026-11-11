@@ -536,6 +536,15 @@ def _validate_anthropic_messages(req: _Request) -> dict[str, Any]:
     listing that simply doesn't name the slug (vendors alias ids: ``kimi-k3`` is served as ``k3``)."""
     from hermes_cli import models as _m
 
+    catalog, authoritative = _profile_catalog(req.normalized, req.base_url)
+    if catalog:
+        match = _match_in_catalog(req.lookup, catalog, suggest_query=req.requested)
+        if match.exact:
+            return _accept()
+        if authoritative:
+            return _reject(
+                f"Model `{req.requested}` was not found in this provider's catalog.{match.suggestion_text}")
+
     models = _m.fetch_api_models(req.api_key, req.base_url, api_mode=req.api_mode)
     if models is None:
         return _soft_accept(
@@ -604,9 +613,10 @@ def _profile_catalog(normalized: str, base_url: Optional[str] = None) -> tuple[l
     profile = get_provider_profile(normalized)
     if profile is None:
         return [], False
-    # A non-default runtime base_url is a user-configured relay/proxy; its own /models listing
-    # decides validation, not the provider profile's canonical catalog endpoint.
-    if base_url and (base_url.rstrip("/") != (profile.base_url or "").rstrip("/")):
+    # Generic-fetch profiles must trust a configured relay. Custom fetchers can re-shape
+    # the active endpoint's model ids, so their picker catalog remains relevant.
+    if (base_url and base_url.rstrip("/") != (profile.base_url or "").rstrip("/")
+            and type(profile).fetch_models is ProviderProfile.fetch_models):
         return [], False
     generic = (profile.base_url or "").rstrip("/") + "/models"
     own_endpoint = bool(profile.models_url) and profile.models_url.rstrip("/") != generic
