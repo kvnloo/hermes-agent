@@ -1440,6 +1440,42 @@ def _iter_shell_command_starts(command: str):
             starts.append(end)
 
 
+
+_SHELL_FUNCTION_HEAD_RE = re.compile(
+    r'(?:[A-Za-z_]\w*\s*\(\s*\)|function\s+[A-Za-z_]\w*(?:\s*\(\s*\))?)\s*\{'
+)
+_SHELL_ALIAS_ASSIGN_RE = re.compile(r'alias[ \t]+[A-Za-z_]\w*=')
+_SHELL_POSITIONAL_RE = re.compile(r'\$(?:[@*1-9]|\{(?:[@*]|[1-9][0-9]*)[^}]*\})')
+_SHELL_INDIRECTION_DESCRIPTION = "shell function forwarding arguments or alias definition (command indirection)"
+
+
+def _has_shell_forwarding_definition(command: str) -> bool:
+    """An alias or function expanding positional args can conceal the invoked command."""
+    for start in _iter_shell_command_starts(command):
+        if _SHELL_ALIAS_ASSIGN_RE.match(command, start):
+            return True
+        head = _SHELL_FUNCTION_HEAD_RE.match(command, start)
+        if head is None:
+            continue
+        depth, forwards = 1, False
+        for kind, i, _, quote in _scan_shell(command, head.end(), subst="uq", brace=True, comments=True):
+            if kind == "subst":
+                if command.startswith("${", i) and _SHELL_POSITIONAL_RE.match(command, i):
+                    forwards = True
+            elif kind == "char" and quote != "'":
+                if quote is None and command[i] == "{":
+                    depth += 1
+                elif quote is None and command[i] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        if forwards:
+                            return True
+                        break
+                elif command[i] == "$" and _SHELL_POSITIONAL_RE.match(command, i):
+                    forwards = True
+    return False
+
+
 def _mark_command_starts(command: str, marker: str = "\n") -> str:
     """Insert *marker* (a newline) before each real (quote-aware) command start.
     ``\\n`` is already a ``_CMDPOS`` separator, so this exposes subshell ``(cmd)`` and brace-group
@@ -1908,6 +1944,8 @@ def _iter_dangerous_descriptions(command: str, only: frozenset[str] | None = Non
     normalized = _normalize_command_for_detection(command)
     for description, _ in _execution_flag_findings(normalized):
         yield description
+    if _has_shell_forwarding_definition(command):
+        yield _SHELL_INDIRECTION_DESCRIPTION
     if _is_shell_token_spliced_gateway_lifecycle(command):
         yield _GATEWAY_LIFECYCLE_SPLICE_DESCRIPTION
     if _HIDDEN_VARIATION_SELECTOR_RE.search(command):
