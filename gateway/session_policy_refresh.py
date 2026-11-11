@@ -80,11 +80,12 @@ def _settings(policy, config, live, picked):
 
 
 def _terminal(policy, terminal, picked):
-    from gateway.session_policy import terminal_uses_host_cwd
+    from gateway.session_policy import has_profile_local_terminal_cwd, terminal_uses_host_cwd
     terminal, request = dict(terminal), json.loads(policy.request_json)
-    # The session's own folder, where it now is, under build_policy's rule; a committed Move to project is
-    # the user's pick on every backend (it rewrote the policy, never the launch request).
-    if request.get('cwd_explicit') is True or 'workspace' in picked or terminal_uses_host_cwd(terminal):
+    # Explicit session picks win on every backend; an implicit launch cwd must not replace
+    # the routed profile's local terminal cwd on resume.
+    if (request.get('cwd_explicit') is True or 'workspace' in picked
+            or (terminal_uses_host_cwd(terminal) and not has_profile_local_terminal_cwd(terminal))):
         terminal['TERMINAL_CWD'] = policy.cwd
     return terminal
 
