@@ -697,8 +697,16 @@ def _fenced_page_op(task_id: Optional[str], fn) -> str:
     browser_exec; they must honour the Bot Desktop lease like every other page access, or a human
     typing a credential on the taken-over screen could be read or written to."""
     from tools.browser_session import run_fenced, session_for_task
+    from tools.browser_vault_session import VaultBrowserClosing, retain_vault_browser
 
-    res = run_fenced(session_for_task(task_id), lambda: {"raw": fn()})
+    try:
+        if _page_backend(task_id or "default") is not None:
+            res = run_fenced(session_for_task(task_id), lambda: {"raw": fn()})
+        else:
+            with retain_vault_browser(task_id):
+                res = run_fenced(session_for_task(task_id), lambda: {"raw": fn()})
+    except VaultBrowserClosing as exc:
+        return json.dumps({"success": False, "error_type": "browser_closing", "error": str(exc)})
     return res["raw"] if "raw" in res else json.dumps(res)
 
 
