@@ -983,6 +983,43 @@ class TestBuildSkillsSystemPromptConditional:
 
 
 
+    def test_mcp_server_alias_controls_skill_visibility(self, monkeypatch, tmp_path):
+        """Regression for #149651: an MCP server name gates both skill directions."""
+        from tools.registry import registry
+
+        # Copy the registry's alias table so this test cannot leak a global alias.
+        monkeypatch.setattr(registry, "_toolset_aliases", registry.get_registered_toolset_aliases())
+        registry.register_toolset_alias("iris", "mcp-iris")
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+
+        for name, condition in (
+            ("iris-required", "requires_toolsets"),
+            ("iris-fallback", "fallback_for_toolsets"),
+        ):
+            skill_dir = tmp_path / "skills" / "mcp" / name
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_text(
+                f"---\nname: {name}\ndescription: {name} skill\n"
+                "metadata:\n  hermes:\n"
+                f"    {condition}: [iris]\n---\n# Skill\n",
+                encoding="utf-8",
+            )
+
+        connected = build_skills_system_prompt(
+            available_tools={"skills_list", "mcp_iris_find"},
+            available_toolsets={"skills", "mcp-iris"},
+        )
+        assert "iris-required" in connected
+        assert "iris-fallback" not in connected
+
+        disconnected = build_skills_system_prompt(
+            available_tools={"skills_list"},
+            available_toolsets={"skills"},
+        )
+        assert "iris-required" not in disconnected
+        assert "iris-fallback" in disconnected
+
+
 # =========================================================================
 # Tool-use enforcement guidance
 # =========================================================================
