@@ -476,6 +476,37 @@ def test_run_as_host_user_passes_uid_gid(monkeypatch):
     )
 
 
+
+def test_host_user_attachment_cache_mount_matches_agent_visible_path(monkeypatch, tmp_path):
+    """#152917: a non-root Docker agent must not be sent a path under /root (0700)."""
+    from tools.credential_files import (
+        from_agent_visible_cache_path, to_agent_visible_cache_path,
+    )
+    from tools.image_generation_tool import _agent_cache_base_for_env
+
+    home = tmp_path / ".hermes"
+    document = home / "cache" / "documents" / "report.pdf"
+    document.parent.mkdir(parents=True)
+    document.write_bytes(b"%PDF-1.4 test fixture")
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("TERMINAL_ENV", "docker")
+    monkeypatch.setenv("TERMINAL_DOCKER_RUN_AS_HOST_USER", "true")
+    monkeypatch.setattr(docker_env, "find_docker", lambda: "/usr/bin/docker")
+    monkeypatch.setattr(docker_env.os, "getuid", lambda: 1000, raising=False)
+    monkeypatch.setattr(docker_env.os, "getgid", lambda: 1000, raising=False)
+    calls = _mock_subprocess_run(monkeypatch)
+
+    env = _make_dummy_env(run_as_host_user=True)
+    run_args = next(cmd for cmd, _ in calls if isinstance(cmd, list) and cmd[1] == "run")
+
+    visible = to_agent_visible_cache_path(str(document))
+    assert visible == "/tmp/.hermes/cache/documents/report.pdf"
+    assert f"{document.parent}:/tmp/.hermes/cache/documents:ro" in run_args
+    assert from_agent_visible_cache_path(visible) == str(document)
+    assert env.agent_visible_cache_base() == "/tmp/.hermes"
+    assert _agent_cache_base_for_env(env) == "/tmp/.hermes"
+
+
 def test_run_as_host_user_drops_setuid_setgid_caps(monkeypatch):
     """When --user is passed, the container already starts unprivileged and
     never needs a privilege drop, so SETUID/SETGID caps are omitted for a

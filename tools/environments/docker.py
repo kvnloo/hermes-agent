@@ -549,7 +549,7 @@ _RO_MOUNT_SOURCES = (
     ("get_cache_directory_mounts", False, "cache dir"))
 
 
-def _readonly_skill_mount_args() -> list[str]:
+def _readonly_skill_mount_args(run_as_host_user: bool = False) -> list[str]:
     """``-v host:container:ro`` args for credential files, skill dirs and cache dirs. Read-only so the
     container can authenticate/read but never modify host state. Missing or wrong-kind sources are
     skipped with a warning (Docker-in-Docker auto-creates a missing file source as a directory,
@@ -558,7 +558,11 @@ def _readonly_skill_mount_args() -> list[str]:
     try:
         import tools.credential_files as cf
         for getter, expects_file, noun in _RO_MOUNT_SOURCES:
-            for entry in getattr(cf, getter)():
+            get_entries = getattr(cf, getter)
+            entries = (get_entries(container_base=cf.docker_cache_base(True))
+                       if run_as_host_user and getter == "get_cache_directory_mounts"
+                       else get_entries())
+            for entry in entries:
                 src = Path(entry["host_path"])
                 if expects_file:
                     problem = ("source is a directory (likely Docker-in-Docker auto-creation)" if src.is_dir()
@@ -653,6 +657,10 @@ class DockerEnvironment(BaseEnvironment):
         """Keep explicit docker_forward_env values out of shared snapshots."""
         return tuple(self._forward_env)
 
+    def agent_visible_cache_base(self) -> str:
+        """Same cache root that was bound into this Docker sandbox."""
+        return self._cache_base
+
     def __init__(
         self,
         image: str,
@@ -687,6 +695,8 @@ class DockerEnvironment(BaseEnvironment):
         self._task_id = task_id
         self._forward_env = _normalize_forward_env_names(forward_env)
         self._env = _normalize_env_dict(env)
+        from tools.credential_files import docker_cache_base
+        self._cache_base = docker_cache_base(run_as_host_user)
         self._init_unset_passthrough_names: tuple[str, ...] = ()
         self._container_id: Optional[str] = None
         self._init_env_values: dict[str, str] = {}
@@ -710,7 +720,7 @@ class DockerEnvironment(BaseEnvironment):
                 mount, cwd)
             cwd = mount
             self.cwd = mount
-        volume_args.extend(_readonly_skill_mount_args())
+        volume_args.extend(_readonly_skill_mount_args(run_as_host_user=run_as_host_user))
         egress_label, egress_volume_args, egress_host_args, env_args, validated_extra = (
             self._egress_and_env_args(extra_args))
         volume_args.extend(egress_volume_args)

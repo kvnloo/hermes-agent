@@ -287,7 +287,7 @@ def _upscale_image(image_url: str, original_prompt: str) -> Optional[dict[str, A
 _CONTAINER_HOME_ENVS = {"DockerEnvironment", "ModalEnvironment"}
 # No env yet: only deterministic cache roots translate side-effect free (SSH: tilde path; its
 # first sync uploads the cache file).
-_CACHE_BASE_BY_BACKEND = {"docker": "/root/.hermes", "modal": "/root/.hermes", "ssh": "~/.hermes"}
+_CACHE_BASE_BY_BACKEND = {"modal": "/root/.hermes", "ssh": "~/.hermes"}
 
 
 def _looks_like_absolute_file_path(value: str) -> bool:
@@ -323,6 +323,9 @@ def _agent_cache_base_for_env(env: Any) -> str | None:
             return "/root/.hermes"
     from tools.terminal_scope import terminal_env
     backend = (terminal_env("TERMINAL_ENV") or "local").strip().lower()
+    if backend == "docker":
+        from tools.credential_files import docker_cache_base
+        return docker_cache_base()
     return _CACHE_BASE_BY_BACKEND.get(backend)
 
 

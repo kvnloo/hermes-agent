@@ -274,6 +274,21 @@ _CACHE_DIRS: list[tuple[str, str]] = [
     ("composer-pastes", "composer-pastes"),
 ]
 
+def docker_cache_base(run_as_host_user: bool | None = None) -> str:
+    """Keep Docker cache mounts traversable by non-root host-UID containers.
+
+    Docker's /tmp is an exec-capable tmpfs; /root is commonly mode 0700.
+    This base is shared by cache mounts and gateway path translation.
+    """
+    if run_as_host_user is None:
+        from tools.terminal_scope import terminal_env
+        run_as_host_user = (
+            terminal_env("TERMINAL_ENV").strip().lower() == "docker"
+            and terminal_env("TERMINAL_DOCKER_RUN_AS_HOST_USER").strip().lower()
+            in {"1", "true", "yes", "on"}
+        )
+    return "/tmp/.hermes" if run_as_host_user else "/root/.hermes"
+
 
 def _cache_dir_roots(container_base: str, *, create_missing: bool) -> Iterator[tuple[Path, str]]:
     """Yield ``(host_dir, container_root)`` per cache dir; always maps to the *new* container layout."""
@@ -299,9 +314,10 @@ def _cache_dir_roots(container_base: str, *, create_missing: bool) -> Iterator[t
         yield host_dir, f"{base}/{new_subpath}"
 
 
-def get_cache_directory_mounts(container_base: str = "/root/.hermes") -> list[dict[str, str]]:
+def get_cache_directory_mounts(container_base: str | None = None) -> list[dict[str, str]]:
     """Bind-mount entries for each cache directory (host layout via ``get_hermes_dir``)."""
-    return [_mount(h, c) for h, c in _cache_dir_roots(container_base, create_missing=True)]
+    return [_mount(h, c) for h, c in _cache_dir_roots(
+        container_base if container_base is not None else docker_cache_base(), create_missing=True)]
 
 
 def _remap_cache_path(path: str, container_base: str, src: str, dst: str, join: Callable[[str, Path], str]) -> Optional[str]:
@@ -335,11 +351,12 @@ def map_cache_path_to_container(host_path: str, container_base: str = "/root/.he
     return None
 
 
-def from_agent_visible_cache_path(container_path: str, container_base: str = "/root/.hermes") -> str:
+def from_agent_visible_cache_path(container_path: str, container_base: str | None = None) -> str:
     """Inverse of :func:`to_agent_visible_cache_path`; unchanged unless Docker + cache dir."""
     if _terminal_backend() != "docker":
         return container_path
-    mapped = _remap_cache_path(container_path, container_base, "container_path", "host_path", lambda root, rel: str(Path(root) / rel))
+    base = container_base if container_base is not None else docker_cache_base()
+    mapped = _remap_cache_path(container_path, base, "container_path", "host_path", lambda root, rel: str(Path(root) / rel))
     return mapped if mapped is not None else container_path
 
 
@@ -355,16 +372,17 @@ def _terminal_backend() -> str:
     return (terminal_env("TERMINAL_ENV") or "local").strip().lower()
 
 
-def to_agent_visible_cache_path(host_path: str, container_base: str = "/root/.hermes") -> str:
+def to_agent_visible_cache_path(host_path: str, container_base: str | None = None) -> str:
     """Translate a host cache path to where the active backend (TERMINAL_ENV) sees it.
 
-    Mirrors ``_agent_cache_base_for_env`` in tools/image_generation_tool.py: docker/modal mount at
-    ``/root/.hermes``; ssh/daytona/vercel_sandbox under ``~/.hermes``; plugin backends declare
+    Mirrors ``_agent_cache_base_for_env`` in tools/image_generation_tool.py: Docker host-user
+    cache mounts use ``/tmp/.hermes`` (otherwise ``/root/.hermes``); Modal uses ``/root/.hermes``.
+    SSH/Daytona/Vercel sandboxes use ``~/.hermes``; plugin backends declare
     ``cache_path_base`` (None = host paths stay correct, e.g. the singularity plugin); local/unknown
     unchanged.
 
-    * docker / modal — bind-mounted (docker) or per-file-synced (modal) at ``/root/.hermes`` (the
-    *container_base* default). * ssh / daytona / vercel_sandbox — file-synced under the remote user's home;
+    * docker / modal — bind-mounted (docker) or per-file-synced (modal) at the
+    backend-specific *container_base*. * ssh / daytona / vercel_sandbox — synced under the remote user's home;
     ``~/.hermes`` is shell-expanded by the remote shell, so tool commands resolve it regardless of the
     actual remote home. Previously these backends synced the bytes but still rendered the dangling host path
     (#76577 gap).
@@ -372,7 +390,11 @@ def to_agent_visible_cache_path(host_path: str, container_base: str = "/root/.he
     backend = _terminal_backend()
     if backend in _HOME_RELATIVE_BACKENDS:
         container_base = "~/.hermes"
-    elif backend not in ("docker", "modal"):
+    elif backend == "docker":
+        container_base = container_base if container_base is not None else docker_cache_base()
+    elif backend == "modal":
+        container_base = container_base if container_base is not None else "/root/.hermes"
+    else:
         try:
             from agent.terminal_env_registry import provider_flag
             plugin_base = provider_flag(backend, "cache_path_base", None)
