@@ -965,21 +965,68 @@ def _is_valid_cimd_url(url: str) -> bool:
 _assigned_cimd_ports: list[int] = []
 
 
-def _pick_cimd_port() -> int | None:
+def _other_profile_cimd_ports(storage: HermesTokenStorage | None, client_id: str) -> set[int]:
+    """CIMD callback ports registered by other profiles, even after their login process exited.
+
+    The bound socket guards active logins, but a completed login leaves a client registration
+    that still owns its redirect URI. Read only client metadata, never another profile's tokens.
+    """
+    if storage is None:
+        return set()
+
+    from hermes_constants import get_default_hermes_root
+
+    home = storage._tokens_path().parent.parent.resolve()
+    root = get_default_hermes_root(home=home)
+    siblings = [root]
+    try:
+        siblings.extend(path for path in (root / "profiles").iterdir()
+                        if path.is_dir() and not path.is_symlink())
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        logger.warning("MCP OAuth: cannot enumerate profile registrations: %s", exc)
+        return set(_CIMD_PORTS)
+
+    claimed: set[int] = set()
+    for sibling in siblings:
+        if sibling.resolve() == home:
+            continue
+        try:
+            for path in (sibling / "mcp-tokens").glob("*.client.json"):
+                if path.is_symlink():
+                    continue
+                info = _read_json(path)
+                if not isinstance(info, dict) or info.get("client_id") != client_id:
+                    continue
+                other = HermesTokenStorage(path.name.removesuffix(".client.json"), hermes_home=sibling)
+                _, port = _cached_redirect(other)
+                if port in _CIMD_PORTS:
+                    claimed.add(port)
+        except OSError as exc:
+            logger.warning("MCP OAuth: cannot inspect sibling registrations: %s", exc)
+            return set(_CIMD_PORTS)
+    return claimed
+
+
+def _pick_cimd_port(storage: HermesTokenStorage | None = None,
+                    client_id: str = _CIMD_CLIENT_METADATA_URL) -> int | None:
     """Reserve a pinned CIMD callback port, or None when none is usable. Holding the bound socket makes
-    contention cooperative: a sibling finds the bind refused and moves down the range. Once every pinned
-    port belongs to this process the range wraps rather than falling back to DCR — a reused port only
-    bites if both servers authorize at the same moment (reported by the waiter); DCR may be unsupported entirely.
+    contention cooperative: a sibling finds the bind refused and moves down the range. Ports
+    persisted by other profiles are excluded even after those processes exit; when all ports belong
+    to other profiles, use DCR rather than silently cancel a working grant. Within one process,
+    recycling a port still lets more servers than the range size use CIMD.
 
     Holding the bound socket until ``_wait_for_callback`` adopts it does the same job here as
     ``_reserve_callback_port`` does for ephemeral ports (#22161): a fixed port is just as stealable in the
     minutes between selection and the browser redirect arriving.
     """
+    other_ports = _other_profile_cimd_ports(storage, client_id)
     for port in _CIMD_PORTS:
-        if port not in _assigned_cimd_ports and _bind_reserved(port) is not None:
+        if port not in other_ports and port not in _assigned_cimd_ports and _bind_reserved(port) is not None:
             _assigned_cimd_ports.append(port)
             return port
-    return _assigned_cimd_ports[0] if _assigned_cimd_ports else None
+    return next((port for port in _assigned_cimd_ports if port not in other_ports), None)
 
 
 def _server_declined_cimd(storage: HermesTokenStorage | None) -> bool:
@@ -1013,7 +1060,7 @@ def _maybe_use_cimd(cfg: dict, storage: HermesTokenStorage | None = None) -> tup
         or _cached_client_info(storage) is not None
         or (storage is not None and storage.cimd_rejected())
         or _server_declined_cimd(storage))
-    port = None if ineligible else _pick_cimd_port()
+    port = None if ineligible else _pick_cimd_port(storage, url)
     return None if port is None else (url, port)
 
 
