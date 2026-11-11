@@ -61,8 +61,7 @@ def plugin_activation_summary(manager: Any, plugin_key: str) -> dict[str, Any]:
     if kinds.get("locale"):  # language-pack layers: the i18n caches reset on registration, so live at once
         now["locales"] = sorted(kinds["locale"])
     deferred: dict[str, list[str]] = {}
-    tools = sorted(set(kinds.get("tool", ())) | set(getattr(loaded, "tools_registered", None) or ())
-                   | set(getattr(manifest, "provides_tools", None) or ()))
+    tools = sorted(set(kinds.get("tool", ())) | set(getattr(loaded, "tools_registered", None) or ()))
     if tools:
         deferred["tools"] = tools
     if kinds.get("system_prompt_section"):
