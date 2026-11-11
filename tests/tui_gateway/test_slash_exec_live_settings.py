@@ -47,3 +47,37 @@ def test_unrecognised_reasoning_form_still_reaches_the_worker() -> None:
     session = {"session_key": "k", "agent": None, "slash_worker": worker}
     with patch.dict(server._sessions, {"s2": session}):
         assert _exec("s2", "/reasoning bogus")["result"]["output"] == "worker:/reasoning bogus"
+
+
+def test_live_settings_slash_preserves_pre_command_observer() -> None:
+    """Live /reasoning and /yolo must still reach command-ledger's pre_command hook."""
+    from tools.approval import is_session_yolo_enabled
+    from tools.approval_yolo import toggle_session_yolo
+
+    agent = SimpleNamespace(reasoning_config=None, service_tier=None, model="m", provider="p",
+                            session_id="hook-key")
+    session = {"session_key": "hook-key", "agent": agent, "history": [], "slash_worker": None}
+    observed = []
+
+    def observe(**fields):
+        observed.append(fields)
+
+    try:
+        with patch.dict(server._sessions, {"hook-sid": session}), \
+                patch.object(server, "_SlashWorker", side_effect=AssertionError("no slash worker")), \
+                patch.object(server, "_persist_live_session_runtime"), patch.object(server, "_emit"), \
+                patch.object(server, "_session_db"), \
+                patch("hermes_cli.plugins.fire_pre_command_hook", side_effect=observe):
+            assert "high" in _exec("hook-sid", "/reasoning high")["result"]["output"]
+            assert "ON" in _exec("hook-sid", "/yolo on")["result"]["output"]
+            assert agent.reasoning_config == {"enabled": True, "effort": "high"}
+            assert is_session_yolo_enabled("hook-key")
+
+        assert observed == [
+            {"surface": "cli", "command": "reasoning", "alias_used": "reasoning",
+             "args_raw": "high", "session_key": "hook-key", "platform": "cli"},
+            {"surface": "cli", "command": "yolo", "alias_used": "yolo",
+             "args_raw": "on", "session_key": "hook-key", "platform": "cli"},
+        ]
+    finally:
+        toggle_session_yolo("hook-key", False)

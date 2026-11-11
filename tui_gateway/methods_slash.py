@@ -419,7 +419,16 @@ def _live_slash_command_output(sid: str, session: Optional[dict], name: str, arg
     no_session_reply, fmt = entry
     if session is None and no_session_reply is not None:
         return no_session_reply
-    return fmt(sid, session, arg) if callable(fmt) else fmt
+    output = fmt(sid, session, arg) if callable(fmt) else fmt
+    if output is not None and name in {"reasoning", "yolo"} and session is not None:
+        # A live reply bypasses the slash worker's HermesCLI.process_command observer.
+        # Keep pre_command (e.g. command-ledger) on the same profile and session.
+        from hermes_cli.plugins import fire_pre_command_hook
+        with _session_profile_runtime_scope(session):
+            fire_pre_command_hook(
+                surface="cli", command=name, alias_used=name, args_raw=arg,
+                session_key=session.get("session_key"), platform="cli")
+    return output
 
 
 # ── Side-effect mirroring ────────────────────────────────────────────
