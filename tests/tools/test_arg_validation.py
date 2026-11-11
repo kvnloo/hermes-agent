@@ -51,3 +51,17 @@ def test_unknown_argument_reaches_the_handler_and_is_flagged(monkeypatch):
         assert json.loads(handle_function_call("mcp_probe_handoff", dict(call), task_id="t")) == {"status": "ok"}
     finally:
         registry.deregister("mcp_probe_handoff")
+
+
+def test_cronjob_missing_action_with_forwarded_argument_is_refused(monkeypatch):
+    dispatched = []
+    monkeypatch.setattr("tools.cronjob_tools.cronjob",
+                        lambda **kwargs: dispatched.append(kwargs) or json.dumps({"success": True}))
+
+    # Both are valid optional compatibility fields, but neither supplies action.
+    for args in ({"reason": "manual"}, {"job_id": "nonexistent-job"}):
+        result = json.loads(handle_function_call("cronjob_manage", args, task_id="t"))
+        assert "missing required argument(s): action" in result["error"]
+        assert "NOT invoked" in result["error"]
+
+    assert dispatched == []

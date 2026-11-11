@@ -1244,6 +1244,10 @@ _HANDLER_FORWARDED_ARGS = (
 def _cronjob_handler(args, **kw):
     """Model-tool dispatch: resolves the one model-facing ``monitor`` field into the stored
     ``monitor_script``/``monitor_url`` pair (legacy field names still accepted)."""
+    # Optional forwarded compatibility fields must not mask the required action.
+    if "action" not in args:
+        return tool_error("cronjob_manage is missing required argument(s): action. "
+                          "The tool was NOT invoked.", success=False)
     _mon_script, _mon_url = _split_monitor_arg(args.get("monitor"), args.get("monitor_script"), args.get("monitor_url"))
     return cronjob(
         action=args.get("action", ""),
