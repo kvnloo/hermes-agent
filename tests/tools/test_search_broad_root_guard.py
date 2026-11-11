@@ -72,8 +72,18 @@ def test_multi_path_string_with_a_broad_part_is_refused(tree, no_shell):
     _refused(search_tool("NEEDLE_TOKEN", path=f"{task}, {tree / 'disk'}", task_id="t-broad"))
 
 
-def test_task_root_below_broad_root_still_searches(tree):
+def test_task_root_below_broad_root_still_searches(tree, monkeypatch):
     task = tree / "disk" / "workspace" / "oss" / "repo"
+    from tools.file_operations_common import SearchResult, SearchMatch
+    from tools import file_tools
+    
+    def _mock_search(*_a, **_k):
+        return SearchResult(
+            matches=[SearchMatch(path=str(task / "a.py"), line_number=1, content="NEEDLE_TOKEN = 1\n")],
+            total_count=1
+        )
+    monkeypatch.setattr(file_tools, "_get_file_ops", lambda _tid: type("MockOps", (), {"search": _mock_search})())
+    
     result = json.loads(search_tool("NEEDLE_TOKEN", path=str(task), task_id="t-broad"))
     assert "error" not in result, result
     assert result["total_count"] == 1

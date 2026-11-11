@@ -170,7 +170,7 @@ def _check_all_guards(command: str, env_type: str,
                                   has_host_access=has_host_access)
 
 
-from tools.environments.base import EnvironmentConnectionError
+from tools.environments.base import AmbiguousExecutionError, EnvironmentConnectionError
 
 
 # Tool description for LLM
@@ -178,8 +178,7 @@ TERMINAL_TOOL_DESCRIPTION = """Run shell commands on the OS/shell/backend named 
 
 Use read_file, search_files, patch and write_file instead of cat/head/tail, grep/find/ls, sed/awk and echo/heredoc. Output is auto-truncated with the full text saved to a file; never pipe through head/tail to shorten it.
 
-Foreground (default) returns as soon as the command finishes. To wait a fixed time, run the wait in the foreground; never background a sleep or polling loop. Background is only for commands that must keep running after this call returns; health-check a server in a separate call and manage jobs with process_manage. When a command changes directory, trust the result's "cwd" instead of prefixing later commands with cd.
-"""
+Foreground (default) returns as soon as the command finishes. To wait for a job, start it with background=true, notify=true, or block once with process_manage wait; never loop sleep+check across tool calls. Foreground sleep is only for short pacing (<=10 s); never background a bare sleep. Health-check a background server in a separate call and manage jobs with process_manage. When a command changes directory, trust the result's "cwd" instead of prefixing later commands with cd."""
 
 # Environment lifecycle state.
 _active_environments: dict[str, Any] = {}
@@ -1376,12 +1375,23 @@ def _run_foreground(
                                 task_id=task_id, session_key=session_key),
             )
             break
+        except AmbiguousExecutionError:
+            # A process existed, so the command may already have changed the
+            # world even though Hermes lost its trustworthy completion signal.
+            # Never replay an arbitrary shell command under a fresh execution.
+            return _error_json(
+                "Command execution outcome is unknown after it started. "
+                "Some effects may already have occurred; verify the target state before resending.",
+                status="ambiguous",
+                outcome_unknown=True,
+            )
         except Exception as e:
-            # A backend exception (e.g. an SSH connect timeout) never reached an exit status, so it
-            # is not a terminal outcome; Hermes' own deadline arrives as ``hermes_timed_out``.
+            # Exceptions that escape before BaseEnvironment publishes a process
+            # handle are pre-spawn/setup failures and remain retryable. Normal
+            # command timeouts/nonzero exits are structured results, not this path.
             if "timeout" in str(e).lower():
                 return _error_json(f"Command timed out after {effective_timeout} seconds", exit_code=124)
-            # Retry on transient errors
+            # Retry pre-spawn transient errors.
             if retry_count < max_retries:
                 wait_time = 2 ** (retry_count + 1)
                 logger.warning("Execution error, retrying in %ds (attempt %d/%d) - Command: %s - Error: %s: %s - Task: %s, Backend: %s",
@@ -1625,13 +1635,10 @@ TERMINAL_SCHEMA = {
     "parameters": {
         "type": "object",
         "properties": {
-            "command": {
-                "type": "string",
-                "description": "The shell command to execute"
-            },
+            "command": {"type": "string"},
             "background": {
                 "type": "boolean",
-                "description": "Keep running after this call returns; returns a session_id.",
+                "description": "Only for commands that must keep running after this call returns; returns a session_id.",
                 "default": False
             },
             "timeout": {
@@ -1675,6 +1682,34 @@ TERMINAL_SCHEMA = {
 }
 
 
+# Bool-ish tokens accepted for ``notify`` after provider/schema round-trips
+# (anyOf boolean|array often arrives as the strings "true"/"false"). Unrecognized
+# tokens stay fail-closed via the same error as a non-bool/non-list value.
+_NOTIFY_TRUTHY_TOKENS = frozenset({"1", "true", "yes", "on"})
+_NOTIFY_FALSY_TOKENS = frozenset({"0", "false", "no", "off"})
+
+
+def _coerce_notify_arg(notify):
+    """Map advertised ``notify`` onto ``(notify_on_complete, watch_patterns)``.
+
+    Returns ``(True/False, None)`` for bool / recognized bool-ish strings,
+    ``(False, list)`` for pattern lists, or ``None`` when the value is invalid
+    (caller emits the standard tool_error).
+    """
+    if isinstance(notify, bool):
+        return notify, None
+    if isinstance(notify, str):
+        token = notify.strip().lower()
+        if token in _NOTIFY_TRUTHY_TOKENS:
+            return True, None
+        if token in _NOTIFY_FALSY_TOKENS:
+            return False, None
+        return None
+    if isinstance(notify, list):
+        return False, notify
+    return None
+
+
 def _handle_terminal(args, **kw):
     from agent.terminal_approval_batch import validate_prepared_terminal
     validate_prepared_terminal(args)
@@ -1702,8 +1737,19 @@ def _handle_terminal(args, **kw):
     persist_on_release = bool(args.get("persist_on_release", False))
     if not isinstance(heartbeat, int) or isinstance(heartbeat, bool) or heartbeat < 0:
         return tool_error("heartbeat must be a whole number of seconds (0 disables; positive values are clamped to min 60).")
+    # Coerce before the foreground gate so string "true"/"false" do not trip
+    # the truthiness check (non-empty strings) or the strict isinstance(bool)
+    # branch — #123345.
+    if notify is not None:
+        coerced = _coerce_notify_arg(notify)
+        if coerced is None:
+            return tool_error(
+                "notify must be true/false (notify on exit) or a list of "
+                "strings (notify on output pattern match)."
+            )
+        notify_on_complete, watch_patterns = coerced
     if not args.get("background", False):
-        if notify or watch_patterns or notify_on_complete:
+        if watch_patterns or notify_on_complete:
             return tool_error(
                 "notify only applies to background commands (foreground "
                 "results return directly). Either drop it, or run as "
@@ -1722,18 +1768,6 @@ def _handle_terminal(args, **kw):
                 "persist_on_release only applies to background commands (a foreground "
                 "process is awaited inline and has nothing to persist). Retry as "
                 "terminal(command=..., background=true, persist_on_release=true)."
-            )
-    if notify is not None:
-        if isinstance(notify, bool):
-            notify_on_complete = notify
-            watch_patterns = None
-        elif isinstance(notify, list):
-            watch_patterns = notify
-            notify_on_complete = False
-        else:
-            return tool_error(
-                "notify must be true/false (notify on exit) or a list of "
-                "strings (notify on output pattern match)."
             )
     if heartbeat:
         notify_on_complete = True  # the heartbeat rides the completion delivery path

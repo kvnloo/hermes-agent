@@ -7,14 +7,13 @@ import { PreviewDocumentFrame } from '@/components/ui/preview-document-frame'
 import { useThemeEpoch } from '@/hooks/use-theme-epoch'
 import { useI18n } from '@/i18n/context'
 
-import { type EphemeralMessage, lifetimeMessage, parseEphemeralMessage, readDesktopPalette } from './model'
+import { ephemeralCardSpec, type EphemeralMatch, type EphemeralMessage, lifetimeMessage, parseEphemeralMessage, readDesktopPalette } from './model'
 
 // The generated kit is large, so it loads only once a card is actually on screen.
 const loadDocument = () => import('./document')
 
 interface EphemeralCardFrameProps {
-  app: string
-  kind: string
+  match: EphemeralMatch
   title: string
   /** Draw the card already kept (no lifetime): the input bar popup. */
   pinned?: boolean
@@ -24,7 +23,7 @@ interface EphemeralCardFrameProps {
 }
 
 /** One kit card in a sandboxed frame: no same-origin, no network (its CSP), no host access. */
-export const EphemeralCardFrame = memo(function EphemeralCardFrame({ app, kind, title, pinned = false, lifetimeMs = null, onMessage }: EphemeralCardFrameProps) {
+export const EphemeralCardFrame = memo(function EphemeralCardFrame({ match, title, pinned = false, lifetimeMs = null, onMessage }: EphemeralCardFrameProps) {
   const { t } = useI18n()
   const dark = useIsDark()
   const epoch = useThemeEpoch()
@@ -37,6 +36,8 @@ export const EphemeralCardFrame = memo(function EphemeralCardFrame({ app, kind, 
   const handler = useRef(onMessage)
   handler.current = onMessage
 
+  const spec = useMemo(() => JSON.stringify(ephemeralCardSpec(match)), [match])
+  const kind = match.kind
   const palette = useMemo(() => JSON.stringify(readDesktopPalette()), [dark, epoch]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -44,14 +45,14 @@ export const EphemeralCardFrame = memo(function EphemeralCardFrame({ app, kind, 
     setReady(false)
     void loadDocument().then(module => {
       if (live) {
-        setHtml(module.ephemeralCardDocument({ channel, scheme: dark ? 'dark' : 'light', palette: JSON.parse(palette), card: { kind, app }, pinned }))
+        setHtml(module.ephemeralCardDocument({ channel, scheme: dark ? 'dark' : 'light', palette: JSON.parse(palette), card: JSON.parse(spec), pinned }))
       }
     })
 
     return () => {
       live = false
     }
-  }, [app, channel, dark, kind, palette, pinned])
+  }, [channel, dark, palette, pinned, spec])
 
   useEffect(() => {
     const onWindowMessage = (event: MessageEvent) => {

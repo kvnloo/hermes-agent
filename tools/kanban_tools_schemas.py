@@ -516,6 +516,17 @@ KANBAN_CREATE_SCHEMA = _schema(
                 "the profile's provider and will fail if it belongs "
                 "to a different one. Requires 'model'."
         )),
+
+        "reasoning_effort": {
+            "type": "string",
+            "enum": ["minimal", "low", "medium", "high", "xhigh", "max", "ultra", "none"],
+            "description": (
+                "Pin the dispatched worker's reasoning effort "
+                "(minimal|low|medium|high|xhigh|max|ultra|none). "
+                "Overrides the profile's agent.reasoning_effort. 'none' disables thinking. "
+                "Omit to inherit the profile default."
+            ),
+        },
     },
     ["title", "assignee"],
 )

@@ -9,7 +9,7 @@ import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from tools.registry import tool_error
-from tools.tool_search_catalog import BRIDGE_TOOL_NAMES, _registry_entry
+from tools.tool_search_catalog import BRIDGE_TOOL_NAMES, _registry_entry, resolve_wire_alias
 
 logger = logging.getLogger("tools.tool_search")
 
@@ -84,7 +84,9 @@ def validate_deferred_call_args(name: str, args: dict[str, Any]) -> Optional[str
     """
     try:
         from tools.registry import registry as _registry
-        schema = _registry.get_schema(name)
+        # The schema tool_describe served, dynamic overrides included (ElevenLabs drops `text`).
+        served = _registry.get_definitions({name}, quiet=True)
+        schema = served[0] if served else _registry.get_schema(name)
         if not isinstance(schema, dict):
             return None
         fn = schema.get("function") if schema.get("type") == "function" else schema
@@ -167,7 +169,7 @@ def normalize_tool_call_entries(args: dict[str, Any]) -> tuple[list[dict[str, An
     for position, raw in enumerate(raw_calls):
         if not isinstance(raw, dict):
             return [], f"tool_call calls[{position}] must be an object with 'name' and 'arguments'"
-        name = str(raw.get("name") or "").strip()
+        name = resolve_wire_alias(str(raw.get("name") or "").strip())
         if not name:
             return [], f"tool_call calls[{position}] requires a 'name'"
         if name in BRIDGE_TOOL_NAMES:

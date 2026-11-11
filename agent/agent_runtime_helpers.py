@@ -1387,6 +1387,21 @@ def _primary_quota_reopened_early(agent, primary_provider, primary_model, matche
         return False
 
 
+def _announce_pinned_fallback(agent, primary_model: str, remaining_s) -> None:
+    """Say, on every turn the session stays pinned to a fallback, which model is really answering
+    and until when (oss-factory #314). Without it the UI kept the primary's label while another
+    model family ran for hours. Best-effort: a notification surface must never fail the turn."""
+    fb_model = str(getattr(agent, "model", "") or "unknown")
+    fb_provider = str(getattr(agent, "provider", "") or "unknown")
+    if remaining_s is not None and remaining_s > 0:
+        until = time.strftime("%H:%M", time.localtime(time.time() + remaining_s))
+        why = f"until {until} ({primary_model or 'primary'} rate-limited)"
+    else:
+        why = f"while {primary_model or 'the primary'} stays unavailable"
+    with contextlib.suppress(Exception):
+        agent._emit_diagnostic_status(f"⚠️ On fallback {fb_model} via {fb_provider} {why}.")
+
+
 def restore_primary_runtime(agent) -> bool:
     """Restore the primary runtime at the start of a new turn so fallback stays turn-scoped
     (long-lived CLI agents and the gateway's cached agents)."""
@@ -1421,11 +1436,13 @@ def restore_primary_runtime(agent) -> bool:
     if _primary_quota_reopened_early(agent, primary_provider, primary_model, _matches_primary, _load_primary_pool):
         agent._rate_limited_until = 0
     if getattr(agent, "_rate_limited_until", 0) > time.monotonic():
+        _announce_pinned_fallback(agent, primary_model, agent._rate_limited_until - time.monotonic())
         return False  # primary still in rate-limit cooldown, stay on fallback
     blocked, prefetched_pool, prefetched = _primary_reset_gate_blocks(
         agent, rt, primary_provider, primary_runtime_base_url, _matches_primary, _load_primary_pool
     )
     if blocked:
+        _announce_pinned_fallback(agent, primary_model, None)
         return False
     agent._restore_wait_logged = False
     fallback_route = getattr(agent, "_provider_fallback_route", None)
@@ -3606,7 +3623,22 @@ def _duration_string_seconds(text: str) -> Optional[float]:
     return sum(float(n) * _DURATION_UNIT_SECONDS[u] for n, u in parts)
 
 
+# Anthropic subscription (OAuth) limits: epoch seconds of the binding window's reset. A plain
+# subscription 429 carries no Retry-After, so without these the failed turn could not say
+# "Limit resets at HH:MM" (oss-factory #314: interactive profiles fail closed, no fallback).
+_UNIFIED_RESET_HEADERS = (
+    "anthropic-ratelimit-unified-reset",
+    "anthropic-ratelimit-unified-5h-reset", "anthropic-ratelimit-unified-7d-reset",
+)
+
+
 def _set_reset_from_vendor_headers(context: dict[str, Any], headers: Any) -> None:
+    for name in _UNIFIED_RESET_HEADERS:
+        value = headers.get(name)
+        absolute = _parse_absolute_timestamp(value.strip()) if isinstance(value, str) and value.strip() else None
+        if absolute is not None and absolute > time.time():
+            context["reset_at"] = absolute
+            return
     for name in _VENDOR_RESET_HEADERS:
         value = headers.get(name)
         if not isinstance(value, str) or not value.strip():

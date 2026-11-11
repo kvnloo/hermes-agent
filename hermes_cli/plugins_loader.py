@@ -309,7 +309,8 @@ class PluginLoaderMixin:
         short-circuits on ``_discovered`` and never fires). See
         :func:`hermes_cli.plugins_activation.plugin_activation_summary` for the payload: ``activated_now``
         (gateway commands/transforms/hooks/callbacks, live at once) vs ``deferred`` (``tools``/``prompt``
-        until the next session, ``mcp_servers`` — the plugin's mcp.json server names — until ``mcp.reload``).
+        until the next session, ``mcp_servers`` — the plugin's mcp.json server names, connected in place
+        by ``load_and_go_live`` after the sweep and surfaced to install surfaces as ``live_now.mcp_servers``).
         Listeners belong to the process (gateway runner, TUI server), not to a plugin, so ``unload()``
         never clears them. Returns an unsubscribe callable. Fires on the discovering thread with the
         discovery lock released; marshal onto your own loop."""
@@ -633,7 +634,8 @@ class PluginLoaderMixin:
             # whole process (and every other plugin's registry) down with it; KeyboardInterrupt still propagates.
             # PluginLoadTimeout lands here as well: the abandoned worker's later registrations are refused
             # by ``ctx``, and whatever it registered before hanging is disposed below.
-            owned = [r for r in self._registration_order if r.plugin_key == plugin_key]
+            # Failure rolls back persistent registrations too; only routine unload preserves them.
+            owned = list(self._ownership_ledger.get(plugin_key, ()))
             self._dispose_registrations(owned)
             self._forget_registrations(owned)
             loaded.error = _load_error_text(exc)

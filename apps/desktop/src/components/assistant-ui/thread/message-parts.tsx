@@ -190,7 +190,7 @@ const ChainToolFallback: FC<TimelineToolCallProps> = props => {
 
   // A call on a known app's MCP server grows that app's ephemeral-ui card under its row. The card
   // is the point of the call, so it shows even when the tool feed is hidden.
-  const ephemeral = matchEphemeralTool(props.toolName)
+  const ephemeral = matchEphemeralTool(props.toolName, props.args)
   const labelled = toolLabels(props.args).length > 0
 
   if (ephemeral) {

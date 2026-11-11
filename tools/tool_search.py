@@ -22,7 +22,7 @@ from toolsets import CLIENT_SURFACE_TOOLSETS, TOOLSET_SESSION_PLATFORMS
 from tools.tool_search_catalog import (
     BRIDGE_TOOL_NAMES, CHARS_PER_TOKEN, TOOL_CALL_NAME, TOOL_DESCRIBE_NAME, TOOL_SEARCH_NAME,
     CatalogEntry, _fn, _listing_group_label, _registry_entry, _registry_toolset,
-    build_catalog, build_catalog_listing_with_form, search_catalog)
+    build_catalog, build_catalog_listing_with_form, resolve_wire_alias, search_catalog)
 from tools.tool_search_validation import (
     local_batch_error, normalize_tool_call_entries, not_deferrable_error, session_unavailable_error,
     unavailable_in_session_reason, validate_deferred_call_args)
@@ -143,7 +143,10 @@ _DIRECT_SURFACE_TOOLSETS = CLIENT_SURFACE_TOOLSETS | TOOLSET_SESSION_PLATFORMS.k
 # list in DEFAULT_CONFIG so config discovery and runtime behavior cannot drift. An explicit
 # ``defer`` list replaces this wholesale ([] = everything eager). ``clarify`` is deliberately
 # absent: A/B showed deferring it collapsed structured-clarify usage (18/18 -> 7/18) — the
-# ask-the-user affordance must be ambient, a stub is not enough.
+# ask-the-user affordance must be ambient, a stub is not enough. ``manage_connections`` is absent
+# for the same reason: deferred, a weak model installed an MCP server through the terminal
+# instead of finding it (3/3 -> 0/3, evals/tts_connections_deferral), while ``text_to_speech``
+# was reached 12/12 on both arms.
 _DEFAULT_DEFERRED_TOOLS = frozenset(DEFAULT_CONFIG["tools"]["tool_search"]["defer"])
 
 
@@ -512,7 +515,7 @@ def dispatch_tool_describe(args: dict[str, Any], *, current_tool_defs: list[dict
     errors: dict[str, str] = {}
     session_names = session_tool_names(current_tool_defs)
     for name in names:
-        fn = by_name.get(name)
+        fn = by_name.get(resolve_wire_alias(name))  # keyed by the name the model asked for
         remote_fn = remote_schemas.get(name)
         if fn is not None:
             tools[name] = {"description": fn.get("description", ""),

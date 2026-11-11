@@ -1159,6 +1159,7 @@ from plugins.platforms.discord.adapter_config_readers import (
     _DISCORD_PROMPT_TIMEOUT_DEFAULT, _DISCORD_PROMPT_TIMEOUT_MIN, _read_discord_prompt_timeout, _read_dm_role_auth_guild,
     _resolve_exec_approval_admin_gate)
 from plugins.platforms.discord.adapter_exec_approval_view import build_exec_approval_view
+from plugins.platforms.discord.adapter_component_auth import opener_refusal
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -3406,8 +3407,21 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
             # Pre-flight oversize: final edits split-and-deliver; streaming edits truncate in place.
             if len(formatted) > self.MAX_MESSAGE_LENGTH:
                 if finalize:
-                    return await self._edit_overflow_split(channel, msg, message_id, content)
-                formatted = self.truncate_message(formatted, self.MAX_MESSAGE_LENGTH)[0]
+                    overflow_result = await self._edit_overflow_split(
+                        channel, msg, message_id, content,
+                    )
+                    if overflow_result.success:
+                        await asyncio.to_thread(
+                            self._record_discord_response,
+                            reply_to=(metadata or {}).get("reply_to_message_id"),
+                            result=overflow_result,
+                            content=content,
+                            final=True,
+                        )
+                    return overflow_result
+                formatted = self.truncate_message(
+                    formatted, self.MAX_MESSAGE_LENGTH,
+                )[0]
                 _saturated_preview = True
                 # Saturated-preview dedup: past the cap every edit is the same text; skip until finalize.
                 # Re-sending it is a visual no-op that still counts against Discord's edit rate limit — skip
@@ -3425,8 +3439,22 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
                 # Reactive split: format_message inflation can exceed 2,000 (50035) even after pre-flight.
                 if self._is_length_overflow_error(edit_err):
                     if finalize:
-                        return await self._edit_overflow_split(channel, msg, message_id, content)
-                    truncated = self.truncate_message(formatted, self.MAX_MESSAGE_LENGTH)[0]
+                        overflow_result = await self._edit_overflow_split(
+                            channel, msg, message_id, content,
+                        )
+                        if overflow_result.success:
+                            await asyncio.to_thread(
+                                self._record_discord_response,
+                                reply_to=(metadata or {}).get("reply_to_message_id"),
+                                result=overflow_result,
+                                content=content,
+                                final=True,
+                            )
+                        return overflow_result
+                    # Mid-stream: truncate and retry in place (no split).
+                    truncated = self.truncate_message(
+                        formatted, self.MAX_MESSAGE_LENGTH,
+                    )[0]
                     if self._last_overflow_preview.get(_preview_key) == truncated:
                         # Saturated-preview dedup (see pre-flight path above).
                         return SendResult(success=True, message_id=message_id)
@@ -3464,8 +3492,10 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
     ) -> SendResult:
         """Deliver an oversized final edit: edit ``message_id`` with chunk 1, send chunks 2..N as
         replies to the previous. Returns ``message_id=<last-id>`` + ``continuation_message_ids``.
-        A continuation failure still reports success plus ``partial_overflow`` so the consumer
-        delivers the tail; only a first-chunk edit failure returns ``success=False``."""
+        A first-chunk edit failure returns ``success=False`` (nothing was delivered). A
+        continuation failure returns ``success=False`` with ``raw_response.partial_overflow`` and
+        ``delivered_prefix`` so the consumer's failure arm sends only the missing tail and the
+        ledger stays un-advanced until the tail lands."""
         formatted = self.format_message(content)
         chunks = self._cap_split_chunks(self.truncate_message(formatted, self.MAX_MESSAGE_LENGTH))
         if len(chunks) <= 1:
@@ -3509,13 +3539,14 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
                     )
                     last_id = continuation_ids[-1] if continuation_ids else message_id
                     return SendResult(
-                        success=True,
+                        success=False,
                         message_id=last_id,
                         continuation_message_ids=tuple(continuation_ids),
                         raw_response={
                             "partial_overflow": True, "delivered_chunks": delivered,
                             "total_chunks": len(chunks), "last_message_id": last_id,
                             "continuation_message_ids": tuple(continuation_ids),
+                            "delivered_prefix": "".join(chunks[:delivered]),
                         },
                     )
             new_id = str(sent.id)
@@ -6347,8 +6378,11 @@ def _define_discord_view_classes() -> None:
             if not self._check_auth(interaction):
                 await interaction.response.send_message(unauth_msg, ephemeral=True)
                 return False
-            if refusal and (requester := refusal(getattr(interaction.user, "id", ""))):
-                await interaction.response.send_message(refusal_text(requester), ephemeral=True)
+            denial = opener_refusal(self, interaction)
+            if denial is None and refusal and (requester := refusal(getattr(interaction.user, "id", ""))):
+                denial = refusal_text(requester)
+            if denial is not None:  # someone else's card or prompt: it stays open for its owner
+                await interaction.response.send_message(denial, ephemeral=True)
                 return False
             return True
 
@@ -6464,6 +6498,8 @@ def _define_discord_view_classes() -> None:
     class UpdatePromptView(_HermesView):
         """Yes/No buttons for ``hermes update`` prompts; the answer is written to
         ``.update_response`` for the detached update process to pick up."""
+
+        is_update_prompt = True  # opener_refusal binds it to the /update sender
 
         def __init__(self, session_key: str, allowed_user_ids: set, allowed_role_ids: Optional[set] = None):
             super().__init__(allowed_user_ids, allowed_role_ids, timeout=_read_discord_prompt_timeout())
@@ -6716,8 +6752,7 @@ def _define_discord_view_classes() -> None:
             self.add_item(select)
 
         async def _on_select(self, interaction: discord.Interaction):
-            if not self._check_auth(interaction):
-                await interaction.response.send_message(_unauthorized(), ephemeral=True)
+            if not await self._gate(interaction, resolved_msg=None, unauth_msg=_unauthorized()):
                 return
             if self.resolved:
                 await interaction.response.defer()

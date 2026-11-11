@@ -221,10 +221,62 @@ def _resolve_skill_dir(name: str, category: str | None = None) -> Path:
 
 
 def _iter_skill_dirs(root: Path):
+    """Yield skill dirs under *root*, following directory symlinks safely.
+
+    ``Path.rglob`` does NOT follow directory symlinks (Python 3.12), so a skill
+    nested behind a category symlink (e.g. profile A symlinking profile B's
+    category dir) was invisible to ``_find_skill`` — ``skill_manage(create)``
+    then duplicated it and ``skill_view(name)`` started failing with
+    "Ambiguous skill name". This walker follows directory symlinks with two
+    guards:
+    - ``seen`` = resolved real paths (``Path.resolve``): breaks symlink cycles
+      AND de-duplicates the same real dir reachable via multiple symlink
+      aliases, so a skill is yielded once per root scan;
+    - ``max_depth``: hard bound on recursion below *root* as a belt-and-braces
+      stop for pathological trees (deep category nesting is 3-4 today).
+    Dangling symlinks fail ``is_dir()`` and are skipped naturally; ``resolve()``
+    failures (permission/mount) skip that entry instead of aborting the scan.
+    """
     from agent.skill_utils import is_excluded_skill_path
-    for skill_md in root.rglob("SKILL.md"):
-        if not is_excluded_skill_path(skill_md):
-            yield skill_md.parent
+
+    max_depth = 6
+    seen: set = set()
+
+    def _walk(dir_path: Path, depth: int):
+        if depth > max_depth:
+            return
+        try:
+            real = dir_path.resolve()
+        except OSError:
+            return
+        if real in seen:
+            return
+        seen.add(real)
+        try:
+            entries = sorted(dir_path.iterdir())
+        except OSError:
+            return
+        for entry in entries:
+            try:
+                if not entry.is_dir():
+                    continue
+            except OSError:
+                continue
+            if is_excluded_skill_path(entry):
+                continue
+            skill_md = entry / "SKILL.md"
+            try:
+                md_exists = skill_md.is_file()
+            except OSError:
+                md_exists = False
+            if md_exists:
+                yield entry
+            # Keep descending below a skill dir too: category dirs may nest
+            # (category/subcategory/skill) and support dirs are filtered by
+            # is_excluded_skill_path above.
+            yield from _walk(entry, depth + 1)
+
+    yield from _walk(root, 0)
 
 
 def _read_frontmatter_name(skill_md: Path) -> Optional[str]:
@@ -837,13 +889,11 @@ def skill_manage(
 def _skill_manage_description() -> str:
     return (
         "Create, update or delete skills: your procedural memory for recurring "
-        "tasks. The call is an operations array (a single "
-        "edit is a list of one); it applies atomically — any failure rolls "
-        "every touched skill back. Ops: create (full SKILL.md; lands in "
+        "tasks. The operations apply atomically — any failure rolls "
+        "every touched skill back. Ops: create (lands in "
         "the profile's skills directory or configured skills.create_dir; must precede that skill's other "
-        "ops), patch (targeted old_string/new_string fix — preferred; "
-        "content alone REPLACES the whole file, read it via skill_view() "
-        "first), write_file/remove_file (supporting files), delete (sole "
+        "ops), patch (targeted old_string/new_string fix — preferred), "
+        "write_file/remove_file (supporting files), delete (sole "
         "op only). Existing skills are modified wherever they live. "
         f"Description: max {SKILL_PROMPT_DESC_LIMIT} chars, 'Use when <trigger>. <behavior>.', never "
         "the category name (the index shows it). Write lessons, not logs: "
@@ -886,7 +936,7 @@ SKILL_MANAGE_SCHEMA = {
             "operations": {
                 "type": "array",
                 "description": (
-                    "Ordered ops; each names its target skill (lowercase, hyphens/underscores, "
+                    "Ordered ops (a single edit is a list of one); each names its target skill (lowercase, hyphens/underscores, "
                     "max 64 chars). Each action is its own shape; another action's text slot is invalid."
                 ),
                 # Per-action branches, not one flat union: with one object holding content /
@@ -908,7 +958,7 @@ SKILL_MANAGE_SCHEMA = {
                     }, ("old_string", "new_string")),
                     _op_schema("patch", {
                         "content": {"type": "string",
-                                    "description": "Full SKILL.md rewrite (REPLACES the whole file; last resort)."},
+                                    "description": "Full SKILL.md rewrite (REPLACES the whole file; last resort — read it via skill_view() first)."},
                     }, ("content",)),
                     _op_schema("write_file", {
                         "file_path": _FILE_PATH,

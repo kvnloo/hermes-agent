@@ -113,7 +113,27 @@ def get_interval_hours() -> int:
 
 
 def get_min_idle_hours() -> float:
-    return _config_number("min_idle_hours", DEFAULT_MIN_IDLE_HOURS, float)
+    """``curator.min_idle_hours``, floored at 0 — a value below that falls back to the default.
+
+    maybe_run_curator() gates on ``idle_for_seconds < get_min_idle_hours() * 3600.0``, so a negative
+    value makes that comparison false at every idle measurement and the "let the agent settle" guard
+    stops existing: the review pass can fork while the agent is mid-turn. Floored at 0 rather than at
+    1 like the day/hour counts in ``_bounded_count`` — ``0`` is a coherent "no idle requirement" and
+    is honoured; a negative number cannot describe an elapsed duration. Shares that function's
+    warn-once set, for the same reason: the dashboard status endpoint polls these getters."""
+    value = _config_number("min_idle_hours", DEFAULT_MIN_IDLE_HOURS, float)
+    # `not (value >= 0)` rather than `value < 0`: it also catches NaN, which YAML can express
+    # (`min_idle_hours: .nan`) and which makes every comparison in the gate false in the same way.
+    if not (value >= 0):
+        # Keyed on repr(), not the float: NaN never equals itself, so a NaN marker would miss the
+        # set on every call and turn warn-once into a warning per poll.
+        marker = ("min_idle_hours", repr(value))
+        if marker not in _warned_bad_values:
+            _warned_bad_values.add(marker)
+            logger.warning("curator.min_idle_hours must be >= 0 (got %s); using the default of %s",
+                           value, DEFAULT_MIN_IDLE_HOURS)
+        return float(DEFAULT_MIN_IDLE_HOURS)
+    return value
 
 
 _warned_bad_values: set = set()
@@ -437,15 +457,19 @@ CURATOR_REVIEW_PROMPT = (
     "goes through skill_manage above so it is ledgered and rollback-able "
     "(issue #96962). Reading files works through skill_view (including "
     "skill_view(name, file_path=...) for support files).\n\n"
-    "'keep' is a legitimate decision ONLY when the skill is already a "
-    "class-level umbrella and none of the proposed merges would improve "
-    "discoverability. 'This is narrow but distinct from its siblings' "
-    "is NOT a reason to keep — it's a reason to move it under an "
-    "umbrella as a subsection or support file.\n\n"
+    "'keep' is a legitimate decision when no consolidation would make "
+    "the skill easier to find and read than it is today — normally "
+    "because it is already a class-level umbrella, but also when the "
+    "library is small or already well-consolidated. 'This is narrow "
+    "but distinct from its siblings' is NOT a reason to keep — it's "
+    "a reason to move it under an umbrella as a subsection or support "
+    "file.\n\n"
     "Expected output: real umbrella-ification. Process every obvious "
-    "cluster. If you end the pass with fewer than 10 archives, you "
-    "stopped too early — go back and look at the clusters you left "
-    "alone.\n\n"
+    "cluster. The pass is done when every cluster has been decided on "
+    "its merits, not when a count is reached — zero consolidations is "
+    "a valid result when no merge genuinely improves discoverability, "
+    "and merging or archiving a skill merely to reach a count is never "
+    "justified.\n\n"
     "When done, write a human summary AND a structured machine-readable "
     "block so downstream tooling can distinguish consolidation from "
     "pruning. Format EXACTLY:\n\n"

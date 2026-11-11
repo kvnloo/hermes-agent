@@ -23,6 +23,7 @@ from hermes_cli.config import load_env
 from agent.secret_scope import get_secret as _get_secret, get_secret_str
 from agent.retry_utils import reset_delay_from_message
 from hermes_cli.auth_plugin_providers import plugin_refresh_hook
+from agent import burn_pace_gate
 from agent.credential_pool_plugin import apply_plugin_refresh_result, plugin_row_is_expiring, recover_failed_plugin_refresh
 from agent.credential_persistence import (
     fingerprint_secret_value,
@@ -2111,7 +2112,7 @@ class CredentialPool(CredentialPoolAdminMixin, CredentialPoolModelCooldownMixin)
             self._entries = [e for e in self._entries if e.id not in pruned_ids]
         if cleared_any:
             self._persist(removed_ids=entries_to_prune)
-        return available, pending_refresh
+        return burn_pace_gate.admit(self.provider, available, model), pending_refresh
 
     def _log_no_available_entries(self) -> None:
         """Emit the empty-pool INFO line at most once per throttle window."""
@@ -2857,6 +2858,40 @@ def _env_key_var_candidates(env_vars: list[str], entries: list[PooledCredential]
     return names
 
 
+def _seed_custom_provider_key_env(provider: str, seed: "_Seeder") -> None:
+    """Seed a user-declared ``providers.<key>`` pool from the entry's ``key_env`` (#125436).
+
+    The main chat path resolves credentials only from the pool, and
+    ``_seed_from_env`` returns early for providers absent from
+    ``PROVIDER_REGISTRY`` — which every user-declared endpoint is. Their
+    ``key_env`` contract (documented alongside inline ``api_key``/``key_cmd``)
+    was therefore only honoured by the auxiliary path. Seed the env-backed
+    key so the pool semantics (rotation, exhaustion marking) stay intact.
+    """
+    # ``custom:*``-keyed pools are handled by ``_seed_custom_pool``; this path
+    # covers the durable ``providers.<key>`` slug (and the bare configured
+    # provider name legacy setups used).
+    if provider.startswith(CUSTOM_POOL_PREFIX):
+        return
+    try:
+        for _norm_name, entry in _iter_custom_providers():
+            provider_key = _normalize_custom_pool_name(str(entry.get("provider_key") or ""))
+            aliases = _custom_entry_name_aliases(_norm_name, entry)
+            if provider not in aliases:
+                continue
+            key_env = str(entry.get("key_env") or "").strip()
+            if not key_env:
+                continue
+            token = get_env_prefer_dotenv(key_env)
+            if not token:
+                continue
+            base_url = _norm_url(entry.get("base_url"))
+            seed.upsert(f"env:{key_env}", _env_payload(env_var=key_env, token=token, base_url=base_url))
+            return
+    except Exception:
+        logger.debug("key_env seeding for provider %r failed", provider, exc_info=True)
+
+
 def _seed_from_env(provider: str, entries: list[PooledCredential]) -> tuple[bool, set[str]]:
     seed = _Seeder(provider, entries)
     # A profile that seeds its own rows may exchange the raw env token for a runtime one; the
@@ -2876,6 +2911,11 @@ def _seed_from_env(provider: str, entries: list[PooledCredential]) -> tuple[bool
 
     pconfig = PROVIDER_REGISTRY.get(provider)
     if not pconfig or pconfig.auth_type != AUTH_TYPE_API_KEY:
+        # User-declared ``providers.<key>`` endpoints are never in the registry;
+        # their credential lives in ``key_env`` and must still seed the pool
+        # (#125436), or the main chat path (pool as sole source) calls out
+        # key-less and silently falls back.
+        _seed_custom_provider_key_env(provider, seed)
         return seed.result
 
     env_url = ""
@@ -3012,6 +3052,9 @@ def load_pool(provider: str) -> CredentialPool:
         singleton_changed, singleton_sources = _seed_from_singletons(provider, entries)
         env_changed, env_sources = _seed_from_env(provider, entries)
         changed |= singleton_changed or env_changed
+        # ``_seed_custom_provider_key_env`` upserts through the shared seeder;
+        # its ``env:*`` sources are already in ``env_sources`` here because
+        # ``_seed_from_env`` returns the seeder's accumulated source set.
         # ``load_pool()`` is a non-destructive read for env-seeded entries
         # (#9331); file-backed singletons still prune when their file is gone.
         if provider in SINGLE_USE_REFRESH_POOL_PROVIDERS and disk_ids:

@@ -17,7 +17,7 @@ import os
 import re
 from pathlib import Path
 from urllib.parse import unquote as _unquote
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from gateway.config import Platform, PlatformConfig
 from gateway.platforms.helpers import MessageDeduplicator
@@ -99,6 +99,58 @@ def validate_mattermost_config(config: PlatformConfig) -> bool:
         logger.warning("Mattermost: MATTERMOST_URL not set")
         return False
     return True
+
+
+# Mention-boundary and strip hygiene shared by the edge self-mention cleanup. A mention is
+# only addressable text when it starts at a word boundary (after start/whitespace/punct), so
+# `@Al` must not eat `@Alice`; terminal punct may directly follow a trailing mention.
+_MENTION_BOUNDARY_CHARS = frozenset(" \t\n\r.,;:!?、，。；：！？()[]{}<>\"'`")
+_TRAILING_TERMINAL_PUNCT = frozenset(" \t\n\r.!?。！？")
+
+
+def _strip_edge_self_mentions(text: str, handles: Sequence[str]) -> str:
+    """Remove the receiving bot's own @handles only at the START/END of *text*.
+
+    The old unconditional ``re.sub`` stripped every occurrence, so in a channel served by
+    several bot profiles each adapter deleted ITS OWN handle from the shared post and every
+    profile's model saw a different text: a multi-recipient ``@A @B`` read to A's agent as
+    "addressed to B" (phantom misroute complaints). Inline occurrences — the co-recipient
+    set — are now PRESERVED, mirroring the Feishu adapter's mention handling. Strips are
+    boundary-checked and collapse their own whitespace, so ``**@bot**`` no longer redacts
+    to a literal ``****`` and an inline ``x @bot y`` never leaves a double space (those
+    occurrences now simply stay). See #125380.
+    """
+    if not text:
+        return text
+    names = sorted((h for h in handles if h), key=len, reverse=True)
+    if not names:
+        return text
+    lowered = [nm.lower() for nm in names]
+    remaining = text.lstrip()
+    while True:
+        for nm, nm_low in zip(names, lowered):
+            if remaining[: len(nm)].lower() != nm_low:
+                continue
+            after = remaining[len(nm):]
+            # A longer handle may share this prefix; only strip at a true mention boundary.
+            if after and after[0] not in _MENTION_BOUNDARY_CHARS:
+                continue
+            remaining = after.lstrip()
+            break
+        else:
+            break
+    while True:
+        i = len(remaining)
+        while i > 0 and remaining[i - 1] in _TRAILING_TERMINAL_PUNCT:
+            i -= 1
+        body, tail = remaining[:i], remaining[i:]
+        for nm, nm_low in zip(names, lowered):
+            if body[-len(nm):].lower() != nm_low:
+                continue
+            remaining = body[: -len(nm)].rstrip() + tail
+            break
+        else:
+            return remaining
 
 
 class MattermostAdapter(BasePlatformAdapter):
@@ -338,6 +390,7 @@ class MattermostAdapter(BasePlatformAdapter):
     async def _send_url_as_file(self, chat_id: str, url: str, caption: Optional[str], reply_to: Optional[str],
                                 kind: str = "file", metadata: _Metadata = None) -> SendResult:
         """Download a URL and upload it as a file attachment (text fallback with the URL on failure)."""
+        from gateway.platforms.base import read_httpx_body_with_limit
         from tools.url_safety import is_safe_url
 
         async def fallback() -> SendResult:
@@ -356,8 +409,13 @@ class MattermostAdapter(BasePlatformAdapter):
                     elif resp.status >= 400:
                         return await fallback()
                     else:
-                        file_data, ct = await resp.read(), resp.content_type or "application/octet-stream"
+                        file_data = await read_httpx_body_with_limit(
+                            resp, media_type="image", body=resp.content.iter_chunked(65536))
+                        ct = resp.content_type or "application/octet-stream"
                         break
+            except ValueError as exc:  # over gateway.max_inbound_media_bytes; a retry would refetch it
+                logger.warning("Mattermost: refusing %s: %s", url[:80], exc)
+                return await fallback()
             except (TimeoutError, aiohttp.ClientError) as exc:
                 if attempt == 2:
                     logger.warning("Mattermost: failed to download %s after %d attempts: %s", url, attempt + 1, exc)
@@ -391,6 +449,7 @@ class MattermostAdapter(BasePlatformAdapter):
                 logger.warning("Mattermost: skipping missing image %s", local_path)
                 return None
             return p.read_bytes(), p.name, mimetypes.guess_type(p.name)[0] or "image/png"
+        from gateway.platforms.base import read_httpx_body_with_limit
         from tools.url_safety import is_safe_url
         if not is_safe_url(image_url):
             logger.warning("Mattermost: blocked unsafe image URL in batch")
@@ -400,7 +459,9 @@ class MattermostAdapter(BasePlatformAdapter):
                 if resp.status >= 400:
                     logger.warning("Mattermost: failed to download image (HTTP %d): %s", resp.status, image_url[:80])
                     return None
-                file_data, ct = await resp.read(), resp.content_type or "image/png"
+                file_data = await read_httpx_body_with_limit(
+                    resp, media_type="image", body=resp.content.iter_chunked(65536))
+                ct = resp.content_type or "image/png"
         except Exception as dl_err:
             logger.warning("Mattermost: download failed for %s: %s", image_url[:80], dl_err)
             return None
@@ -417,12 +478,19 @@ class MattermostAdapter(BasePlatformAdapter):
         for chunk_idx, chunk in enumerate(chunks):
             if human_delay > 0 and chunk_idx > 0:
                 await asyncio.sleep(human_delay)
-            file_ids, caption_parts = [], []
+            file_ids, caption_parts, retry = [], [], list(chunk)  # retry: refused links already went out
             try:
                 for image_url, alt_text in chunk:
+                    loaded = await self._load_batch_image(image_url, len(file_ids))
+                    if loaded is None and not image_url.startswith("file://"):
+                        # Refused/failed remote image already left the reply text: keep the link.
+                        sent = await self.send(chat_id, f"{alt_text}\n{image_url}" if alt_text else image_url,
+                                               metadata=metadata)
+                        delivered = delivered or sent.success
+                        retry.remove((image_url, alt_text))
+                        continue
                     if alt_text:
                         caption_parts.append(alt_text)
-                    loaded = await self._load_batch_image(image_url, len(file_ids))
                     if loaded is not None and (fid := await self._upload_file(chat_id, *loaded)):
                         file_ids.append(fid)
                 if not file_ids:
@@ -434,12 +502,12 @@ class MattermostAdapter(BasePlatformAdapter):
                     delivered = True
                 else:
                     logger.warning("Mattermost: multi-image post failed, falling back")
-                    fallback = await super().send_multiple_images(chat_id, chunk, metadata, human_delay=human_delay)
+                    fallback = await super().send_multiple_images(chat_id, retry, metadata, human_delay=human_delay)
                     delivered = delivered or fallback.success
             except Exception as e:
                 logger.warning("Mattermost: multi-image send failed (chunk %d/%d), falling back: %s",
                                chunk_idx + 1, len(chunks), e, exc_info=True)
-                fallback = await super().send_multiple_images(chat_id, chunk, metadata, human_delay=human_delay)
+                fallback = await super().send_multiple_images(chat_id, retry, metadata, human_delay=human_delay)
                 delivered = delivered or fallback.success
         return SendResult(success=delivered, error=None if delivered else "all images failed to send")
 
@@ -520,9 +588,11 @@ class MattermostAdapter(BasePlatformAdapter):
         if require_mention and channel_id not in free_channels and not has_mention:
             logger.debug("Mattermost: skipping non-DM message without @mention (channel=%s)", channel_id)
             return None
-        if has_mention:  # strip the @mention so the agent sees clean input
-            for pattern in mention_patterns:
-                message_text = re.sub(re.escape(pattern), "", message_text, flags=re.IGNORECASE).strip()
+        if has_mention:
+            # Strip only EDGE self-mentions so the model still sees the co-recipient set:
+            # the old strip-everywhere rewrite made `@A @B` read to A's agent as "addressed
+            # to B" in multi-bot channels, and left `****` / double-space residue (#125380).
+            message_text = _strip_edge_self_mentions(message_text, mention_patterns).strip()
         return message_text
 
     async def _download_attachments(self, file_ids: list[str]) -> tuple[list[str], list[str]]:

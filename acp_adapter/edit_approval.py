@@ -13,7 +13,7 @@ import logging
 import re
 import tempfile
 from contextvars import ContextVar, Token
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from itertools import count
 from pathlib import Path
 from typing import Any, Callable
@@ -34,9 +34,18 @@ class EditProposal:
     # display string for multi-file V4A patches; ``paths`` is the authoritative
     # set for auto-approve checks. Empty means "``path`` alone".
     paths: tuple[str, ...] = ()
+    preview_truncated: bool = False
 
 
-EditApprovalRequester = Callable[[EditProposal], bool]
+# A requester answers True (approved), False (refused), or a key below when nobody answered. An
+# unanswered prompt is never reported as a refusal (kvnloo/oss-factory#320), and only ``True`` approves.
+_NOT_A_REFUSAL = "Nobody refused it: do not route around it via terminal; ask the user or retry later."
+EDIT_UNANSWERED = {
+    "timeout": f"Edit approval timed out with no answer; file was not modified. {_NOT_A_REFUSAL}",
+    "no_viewer": f"No client is attached to approve edits; file was not modified. {_NOT_A_REFUSAL}",
+}
+
+EditApprovalRequester = Callable[[EditProposal], bool | str]
 
 _EDIT_APPROVAL_REQUESTER: ContextVar[EditApprovalRequester | None] = ContextVar("ACP_EDIT_APPROVAL_REQUESTER", default=None)
 _PERMISSION_REQUEST_IDS = count(1)
@@ -174,27 +183,72 @@ def _denied(message: str) -> str:
     return json.dumps({"error": message}, ensure_ascii=False)
 
 
+def _approvals_switched_off() -> bool:
+    """The operator's "do not ask me" sources, which every other Hermes gate already honours.
+
+    ``approvals.mode: off`` (the Desktop toggle writes it) and a session ``/yolo`` skip the
+    recoverable approval layer on the dangerous-command, plugin-rule, SSH-config and
+    execute_code gates. The edit gate was the one surface that still parked a prompt: a session
+    whose approvals are off waited the full ``approvals.timeout`` per edit, then heard the edit
+    was "denied" although nobody had refused it, and edited through terminal instead
+    (kvnloo/oss-factory#320 — 90 blocked edits/week, 5.5 agent-hours stalled, 17 Mtok re-sent).
+    """
+    from tools.approval import is_approval_bypass_active
+    try:
+        return is_approval_bypass_active()
+    except Exception:
+        logger.debug("ACP edit approval bypass check failed", exc_info=True)
+        return False
+
+
 def maybe_require_edit_approval(tool_name: str, arguments: dict[str, Any]) -> str | None:
     """Run ACP edit approval if bound.
 
     Returns a JSON tool-error string when the edit must be blocked, otherwise
     ``None`` so dispatch can continue.  Requester exceptions deny by default."""
     requester = _EDIT_APPROVAL_REQUESTER.get()
-    if requester is None:
+    if requester is None or _approvals_switched_off():
         return None
     try:
         proposal = build_edit_proposal(tool_name, arguments)
     except Exception as exc:
         logger.warning("Could not build ACP edit approval proposal for %s: %s", tool_name, exc)
-        return _denied(f"Edit approval denied: could not prepare diff ({exc})")
+        return _denied(f"Edit not attempted: the approval diff could not be prepared ({exc}). "
+                       "Re-read the file and retry with its exact current text.")
     if proposal is None:
         return None
     try:
-        approved = bool(requester(proposal))
+        verdict = requester(proposal)
     except Exception as exc:
         logger.warning("ACP edit approval requester failed: %s", exc)
-        approved = False
-    return None if approved else _denied("Edit approval denied by ACP client; file was not modified.")
+        verdict = False
+    if verdict is True:
+        return None
+    unanswered = EDIT_UNANSWERED.get(verdict) if isinstance(verdict, str) else None
+    return _denied(unanswered or "Edit approval denied by ACP client; file was not modified.")
+
+
+def preview_edit_proposal(proposal: EditProposal) -> EditProposal:
+    """Bound only the consent display, never the proposal retained for execution.
+
+    Old/new text plus arguments repeat large writes in both live approval events and
+    reconnect snapshots. Cap each before either transport serializes the card.
+    """
+    from gateway.session_tool_events import MAX_TOOL_EVENT_CHARS, bounded_args
+
+    def preview(text):
+        if text is None or len(text) <= MAX_TOOL_EVENT_CHARS:
+            return text
+        notice = (f"\n[Preview truncated: full text has {len(text)} characters; "
+                  "approval applies to the full file change.]\n")
+        half = (MAX_TOOL_EVENT_CHARS - len(notice)) // 2
+        return text[:half] + notice + text[-half:]
+
+    old, new = preview(proposal.old_text), preview(proposal.new_text)
+    arguments = bounded_args(proposal.arguments)
+    truncated = (proposal.preview_truncated or old != proposal.old_text or new != proposal.new_text
+                 or arguments is not proposal.arguments)
+    return replace(proposal, old_text=old, new_text=new, arguments=arguments, preview_truncated=truncated)
 
 
 def build_acp_edit_tool_call(proposal: EditProposal):
@@ -203,8 +257,11 @@ def build_acp_edit_tool_call(proposal: EditProposal):
     from agent.redact import redact_approval_display
 
     # The title is display text; the diff keeps the raw path the client opens.
+    proposal = preview_edit_proposal(proposal)
+    title = (f"Approve edit{' (preview truncated)' if proposal.preview_truncated else ''}: "
+             f"{redact_approval_display(proposal.path)}")
     return acp.update_tool_call(
-        f"edit-approval-{next(_PERMISSION_REQUEST_IDS)}", title=f"Approve edit: {redact_approval_display(proposal.path)}",
+        f"edit-approval-{next(_PERMISSION_REQUEST_IDS)}", title=title,
         kind="edit",
         status="pending",
         content=[acp.tool_diff_content(path=proposal.path, old_text=proposal.old_text, new_text=proposal.new_text)],
@@ -219,7 +276,7 @@ def make_acp_edit_approval_requester(
 ) -> EditApprovalRequester:
     """Return a sync requester that bridges edit proposals to ACP permissions."""
 
-    def _requester(proposal: EditProposal) -> bool:
+    def _requester(proposal: EditProposal) -> bool | str:
         from acp.schema import PermissionOption
         from acp_adapter.permissions import await_permission, resolve_permission_timeout
 
@@ -232,12 +289,14 @@ def make_acp_edit_approval_requester(
             except Exception:
                 logger.debug("ACP edit auto-approval policy check failed", exc_info=True)
 
-        response, _timed_out = await_permission(
+        response, timed_out = await_permission(
             request_permission_fn, loop, session_id, tool_call=build_acp_edit_tool_call(proposal),
             options=[PermissionOption(option_id="allow_once", kind="allow_once", name="Allow edit"),
                      PermissionOption(option_id="deny", kind="reject_once", name="Deny")],
             timeout=resolve_permission_timeout(timeout), what="Edit approval request", send_update=send_update,
         )
+        if timed_out:
+            return "timeout"
         outcome = getattr(response, "outcome", None)
         return getattr(outcome, "outcome", None) == "selected" and getattr(outcome, "option_id", None) == "allow_once"
 

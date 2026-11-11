@@ -742,6 +742,48 @@ def test_create_happy_path(worker_env):
         conn.close()
 
 
+# --- `reasoning_effort` param (Z21, kanban t_a43e2432) -----------------------
+# `gateway/session_kanban.py` already forwards `task.reasoning_effort` to the
+# worker, but the tool had no parameter to set it, so a tool-created child
+# always inherited the profile default (t_be64c8d2 shipped with effort empty).
+# The schema's enum rejects a bad level before `create_task` ever sees it.
+
+@pytest.mark.parametrize("effort", ["minimal", "low", "medium", "high", "xhigh", "max", "ultra", "none"])
+def test_create_reasoning_effort_persists(worker_env, effort):
+    from tools import kanban_tools as kt
+    d = json.loads(kt._handle_create({
+        "title": "effort child", "assignee": "peer", "reasoning_effort": effort,
+    }))
+    assert d["ok"] is True, d
+    assert d["reasoning_effort"] == effort
+    from hermes_cli import kanban_db as kb
+    from hermes_cli import kanban_db_connect as kbc
+    conn = kbc.connect()
+    try:
+        stored = kb.get_task(conn, d["task_id"])
+        assert stored is not None
+        assert stored.reasoning_effort == effort
+    finally:
+        conn.close()
+
+
+def test_create_reasoning_effort_invalid_is_rejected_by_the_schema(worker_env):
+    from tools.kanban_tools_schemas import KANBAN_CREATE_SCHEMA
+    enum = KANBAN_CREATE_SCHEMA["parameters"]["properties"]["reasoning_effort"]["enum"]
+    assert enum == ["minimal", "low", "medium", "high", "xhigh", "max", "ultra", "none"]
+    # The runtime guard backs the schema up: normalize_reasoning_effort raises
+    # rather than quietly handing the task back to the profile default.
+    from hermes_cli.kanban_db import normalize_reasoning_effort
+    with pytest.raises(ValueError, match="reasoning_effort must be one of"):
+        normalize_reasoning_effort("ultrabrain")
+
+
+def test_create_without_reasoning_effort_leaves_it_null(worker_env):
+    from tools import kanban_tools as kt
+    d = json.loads(kt._handle_create({"title": "default effort", "assignee": "peer"}))
+    assert d["reasoning_effort"] is None
+
+
 @pytest.mark.parametrize("explicit", [{"workspace_kind": "scratch"}, {"project": ""}])
 @pytest.mark.parametrize("target_scoped", [False, True])
 def test_create_explicit_scratch_ignores_ambient_board_project(

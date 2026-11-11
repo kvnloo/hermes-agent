@@ -224,15 +224,19 @@ def _tick_metadata(metadata):
 
 
 def _replace_queued(admission_id, session_id, replaced):
-    """Write guard: cancel the replaced queued tick in the replacement's own transaction; refuse the
-    replacement when that tick was claimed or settled first (its output already ran)."""
+    """Write guard: cancel the replaced queued row(s) in the replacement's own transaction; refuse the
+    replacement when any of them was claimed or settled first (its output already ran).
+    ``admission_id`` is one id or a list (a bot DM superseding several queued DMs of its sender)."""
+    ids = [admission_id] if isinstance(admission_id, str) else list(admission_id)
+
     def guard(conn):
-        changed = conn.execute("UPDATE session_admissions SET status='terminal',outcome='cancelled' "
-                               "WHERE admission_id=? AND target_session_id=? AND status='queued'",
-                               (admission_id, session_id)).rowcount
-        if changed != 1:
-            raise RuntimeStoreError('stale_generation')
-        replaced[:] = [admission_id]
+        for one in ids:
+            changed = conn.execute("UPDATE session_admissions SET status='terminal',outcome='cancelled' "
+                                   "WHERE admission_id=? AND target_session_id=? AND status='queued'",
+                                   (one, session_id)).rowcount
+            if changed != 1:
+                raise RuntimeStoreError('stale_generation')
+        replaced[:] = ids
     return guard
 
 
@@ -632,8 +636,8 @@ async def admit_automation(authority, adapter, event, identity, replaces=None, f
     admitted, replaced = partial(authority._admitted, ref, event), []
     if replaces is not None:
         def admitted(row, admitted=admitted):
-            if replaced:  # the guard ran in the committed write; an exact replay runs no guard
-                authority._settle_cancelled(ref, replaces)
+            for one in replaced:  # the guard ran in the committed write; an exact replay runs no guard
+                authority._settle_cancelled(ref, one)
             return admitted(row)
     return await tracked_write(authority, partial(
         admit_session_input, authority.db, epoch=authority.epoch, principal_id='automation:' + entry.session_key,
