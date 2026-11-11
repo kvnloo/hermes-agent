@@ -1061,6 +1061,9 @@ def _spawn_gateway_restart_watcher(old_pid: int, run_argv: list[str], *, host: b
     if old_pid <= 0 or not run_argv:
         return False
     from hermes_cli._subprocess_compat import windows_detach_flags_without_breakaway, windows_detach_popen_kwargs
+    # Resolve before the Windows overlay: it must not restore the updater's HERMES_HOME.
+    watcher_env = restart_watcher_env(
+        run_argv, host=_restart_argv_is_host_gateway(run_argv) if host is None else host, home=home)
 
     # Windows: ``run_argv`` leads with the venv's console ``python.exe`` — the interpreter we want:
     # the watcher respawns it under CREATE_NO_WINDOW detach flags so the gateway owns one hidden
@@ -1078,6 +1081,9 @@ def _spawn_gateway_restart_watcher(old_pid: int, run_argv: list[str], *, host: b
             # Fall back to the original argv: a visible window beats a failed respawn.
             respawn_cwd = ""
             respawn_env_overlay = {}
+        # The watcher merges this overlay LAST. Keep the target profile's home, not the updater's.
+        if watcher_env is not None and "HERMES_HOME" in watcher_env:
+            respawn_env_overlay["HERMES_HOME"] = watcher_env["HERMES_HOME"]
 
     # cwd/env overlay are embedded as JSON literals in the watcher source (no extra argv plumbing).
     watcher = textwrap.dedent(
@@ -1164,10 +1170,7 @@ def _spawn_gateway_restart_watcher(old_pid: int, run_argv: list[str], *, host: b
 
     watcher_argv = [sys.executable, "-c", watcher, str(old_pid), *run_argv]
     devnull = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
-    # The watcher copies os.environ into the gateway child, so the child's env is the watcher's: a
-    # host respawn gets the default root's secrets, a sibling profile's its own (never the launcher's).
-    watcher_env = restart_watcher_env(
-        run_argv, host=_restart_argv_is_host_gateway(run_argv) if host is None else host, home=home)
+    # The watcher env is the gateway's base env; the Windows overlay above is applied on top.
     popen_env = {"env": watcher_env} if watcher_env is not None else {}
     # Same detach for the watcher itself, so closing the terminal doesn't kill it.
     try:

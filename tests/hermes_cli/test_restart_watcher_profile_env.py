@@ -5,6 +5,7 @@ spawned with to the gateway it respawns, so a profile that declares no bot token
 API-only profile) used to start the ROOT bot and steal its polling lock (#135792).
 """
 
+import ast
 import os
 import subprocess
 
@@ -60,3 +61,29 @@ def test_sibling_profile_without_a_token_never_gets_the_updaters(homes, monkeypa
     reset_secret_source_cache()
     assert _watcher_env(monkeypatch, "api1").get("TELEGRAM_BOT_TOKEN") == _OWN_TOKEN
     assert _watcher_env(monkeypatch, "default").get("TELEGRAM_BOT_TOKEN") == _ROOT_TOKEN
+
+@pytest.mark.platforms("posix")
+def test_windows_restart_overlay_keeps_sibling_profile_home(homes, monkeypatch):
+    """Windows merges the overlay after watcher env; it must not reset HERMES_HOME to root."""
+    _root, api1 = homes
+    from hermes_cli import _subprocess_compat, gateway
+
+    launched = []
+    monkeypatch.setattr(subprocess, "Popen", lambda argv, **kw: launched.append((argv, kw)))
+    run_argv = gateway._gateway_run_args_for_profile("api1")
+    # Exercise the real Windows spec on POSIX; only the platform-specific detach flags are stubbed.
+    with monkeypatch.context() as win:
+        win.setattr(gateway.sys, "platform", "win32")
+        win.setattr(_subprocess_compat, "windows_detach_popen_kwargs", lambda: {})
+        assert gateway._spawn_gateway_restart_watcher(424242, run_argv, host=False)
+
+    assert len(launched) == 1
+    watcher_argv, watcher_kwargs = launched[0]
+    assert watcher_kwargs["env"]["HERMES_HOME"] == str(api1)
+    overlay_literal = next(
+        node.value for node in ast.parse(watcher_argv[2]).body
+        if isinstance(node, ast.Assign)
+        and any(isinstance(target, ast.Name) and target.id == "_respawn_env_overlay"
+                for target in node.targets)
+    )
+    assert ast.literal_eval(overlay_literal)["HERMES_HOME"] == str(api1)
