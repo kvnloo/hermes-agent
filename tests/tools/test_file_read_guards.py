@@ -660,6 +660,27 @@ class TestOverlappingReadDedup(unittest.TestCase):
         r = self._read(1, 99)
         self.assertEqual(_shown_line_numbers(r), list(range(cut_at, 100)))
 
+    def test_clipped_line_is_not_hidden_after_read_budget_increases(self):
+        """A line truncated mid-line at the real default budget was not fully seen.
+
+        If a profile increases its read budget, a shifted window must return
+        that line rather than treating its previously clipped prefix as whole.
+        """
+        long_line = "x" * (_DEFAULT_MAX_READ_CHARS + 80)
+        with open(self._tmpfile, "w", encoding="utf-8", newline="\n") as f:
+            f.write(f"{long_line}\nsecond line\n")
+
+        with patch("tools.file_tools._get_max_read_chars", return_value=_DEFAULT_MAX_READ_CHARS):
+            first = self._read(1, 1)
+        self.assertTrue(first["truncated_lines"], first)
+        self.assertTrue(first["truncated"])
+
+        with patch("tools.file_tools._get_max_read_chars", return_value=_DEFAULT_MAX_READ_CHARS * 2):
+            wider = self._read(1, 2)
+        self.assertNotIn("omitted_lines", wider, wider)
+        self.assertEqual(_shown_line_numbers(wider), [1, 2])
+        self.assertIn(f"1|{long_line}", wider["content"])
+
     def test_sandbox_file_ops_never_withhold_lines(self):
         """A sandbox's files are not the host's: a host file at the same path says nothing about
         whether the sandbox copy changed, so its lines are never omitted as already seen."""
