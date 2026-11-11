@@ -239,6 +239,20 @@ class TestSyncBackNewerHostGuard:
         return FileSyncManager(get_files_fn=lambda: [], upload_fn=lambda *a: None,
                                delete_fn=lambda *a: None)
 
+    def test_unchanged_host_accepts_remote_edit_despite_clock_skew(self, tmp_path):
+        # Host clock is ahead of SSH host; only the remote bytes changed since push.
+        staged, host = tmp_path / "staged.md", tmp_path / "host.md"
+        host.write_bytes(b"pushed")
+        staged.write_bytes(b"edited remotely")
+        os.utime(host, (2_000, 2_000))
+        os.utime(staged, (1_000, 1_000))
+        manager = self._manager()
+        manager._pushed_hashes[self.REMOTE] = _sha(b"pushed")
+
+        assert manager._apply_staged_file(
+            str(staged), self.REMOTE, [(str(host), self.REMOTE)], set()) == 1
+        assert host.read_bytes() == b"edited remotely"
+
     def test_refuses_to_overwrite_newer_host_file(self, tmp_path, caplog):
         staged, host = tmp_path / "staged.md", tmp_path / "host.md"
         staged.write_bytes(b"old remote bytes")

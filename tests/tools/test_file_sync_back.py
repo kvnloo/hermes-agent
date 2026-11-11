@@ -262,7 +262,7 @@ class TestSyncBackNewRemoteFile:
 
 
 class TestSyncBackConflict:
-    """Host AND remote both changed since push -- warning logged, remote wins."""
+    """A two-sided edit must preserve both copies instead of overwriting the host."""
 
     def test_sync_back_conflict_warns(self, tmp_path, caplog):
         host_file = tmp_path / "host" / "config.json"
@@ -290,8 +290,16 @@ class TestSyncBackConflict:
         # Conflict warning was logged
         assert any("conflict" in r.message.lower() for r in caplog.records)
 
-        # Remote version wins (last-write-wins)
-        assert host_file.read_bytes() == remote_content
+        # No last-write-wins: preserve the operator's edit and the remote edit.
+        assert host_file.read_bytes() == b'{"v": 2, "host-edit": true}'
+        sidecar = host_file.with_name(
+            f"{host_file.name}.{_sha256_bytes(remote_content)[:12]}.conflict")
+        assert sidecar.read_bytes() == remote_content
+        assert str(sidecar) in caplog.text
+
+        # Repeating the same sync must not overwrite or duplicate the sidecar.
+        mgr.sync_back(hermes_home=tmp_path / ".hermes")
+        assert list(host_file.parent.glob("*.conflict")) == [sidecar]
 
 
 class TestSyncBackRetries:
