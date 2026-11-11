@@ -13,6 +13,13 @@ export const LARGE_PASTE_ATTACHMENT_THRESHOLD = 3_000
 /** Maximum source text retained exclusively for automatic title generation. */
 export const LARGE_PASTE_TITLE_PREVIEW_CHARS = 1_000
 
+/** Never cut an astral character in half when retaining the title hint. */
+export function largePasteTitlePreview(text: string): string {
+  const preview = text.slice(0, LARGE_PASTE_TITLE_PREVIEW_CHARS)
+
+  return /[\uD800-\uDBFF]$/.test(preview) ? preview.slice(0, -1) : preview
+}
+
 /**
  * True when a plain-text paste should be converted into a text attachment
  * rather than inserted inline. Only sheer size qualifies — rich clipboard
