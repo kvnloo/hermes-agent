@@ -1,0 +1,6 @@
+name: wait-once-guard
+version: "0.1.0"
+description: "Refuse foreground terminal sleeps over 10 s (sleep+check re-poll loops re-send the whole context each turn); points to background+notify or one process_manage wait."
+author: "kvnloo / Hermes Agent"
+provides_hooks:
+  - pre_tool_call

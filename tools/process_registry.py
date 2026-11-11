@@ -345,6 +345,47 @@ def _build_systemd_scope_argv(shell_argv: list[str], unit_suffix: str) -> list[s
     return _systemd_scope_argv(binary, f"hermes-worker-{unit_suffix}", *shell_argv)
 
 
+def _own_slice(cgroup_file: Path = Path("/proc/self/cgroup")) -> Optional[str]:
+    """The slice holding this process's unit (``agent.slice`` for .../agent.slice/hermes-gateway.service)."""
+    try:
+        for line in cgroup_file.read_text(encoding="utf-8").splitlines():
+            if line.startswith("0::"):
+                parts = [p for p in line.partition("::")[2].split("/") if p]
+                return next((p for p in reversed(parts[:-1]) if p.endswith(".slice")), None)
+    except OSError:
+        pass
+    return None
+
+
+def turn_scope_argv(argv: list[str], label: str) -> list[str]:
+    """Run a gateway turn executor in its own transient scope in the gateway's slice.
+
+    Without it every managed worker, its tools and their page cache are charged to the gateway's
+    cgroup, which then reads many GB while the gateway process itself holds well under one.
+    Deliberately no memory limit: the turn is the session itself (owner rule 2026-11-07, caps
+    slowed turns and got them OOM-killed); kill order belongs to the host's OOM policy.
+    ``systemd-run --scope`` execs in place, so the pid and process group stay the worker's.
+    """
+    if not (_IS_LINUX and _is_supervised_gateway_process() and _systemd_run_user_scope_available()):
+        return argv
+    import re
+    import shutil
+
+    binary = shutil.which("systemd-run")
+    if binary is None:
+        return argv
+    safe = re.sub(r"[^A-Za-z0-9_-]+", "-", label).strip("-")[:48] or "turn"
+    slice_name = _own_slice()
+    no_expand = ["--expand-environment=no"] if _SYSTEMD_RUN_NO_EXPAND else []
+    return [
+        binary, "--user", "--scope", "--quiet", *no_expand,
+        "--unit", f"hermes-turn-{safe}-{uuid.uuid4().hex[:8]}", "--collect",
+        *(["--slice", slice_name] if slice_name else []),
+        "--property", "MemoryAccounting=yes",
+        "--", *argv,
+    ]
+
+
 _scope_degraded_warned = False
 
 

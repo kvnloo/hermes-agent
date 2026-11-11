@@ -961,6 +961,11 @@ class GatewayStartupMixin:
                 faulthandler.register(
                     _sigusr2, file=self._open_faulthandler_log(), all_threads=True, chain=False,
                 )
+        # SIGRTMIN+3: on-demand tracemalloc snapshots for live leak attribution (gateway/heap_diag.py).
+        with _log_suppressed(logging.DEBUG, "Could not install the heap-diag signal", exc_info=True):
+            from gateway.heap_diag import install as _install_heap_diag
+            from gateway.run import get_hermes_home
+            _install_heap_diag(get_hermes_home())
 
     async def _start_log_startup_environment(self) -> None:
         """Bind the gateway loop, disarm the startup watchdog, and log the startup environment."""
