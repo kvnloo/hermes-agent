@@ -36,6 +36,18 @@ def test_stale_model_options_refuses_instead_of_building(tmp_path, monkeypatch):
     assert builds == []
 
 
+def test_stale_model_options_names_backend_owner_not_gateway(monkeypatch):
+    """A systemd-managed dashboard is not restarted by `hermes gateway restart` (#152913)."""
+    from gateway import code_skew
+
+    monkeypatch.setattr(code_skew, "detect_code_skew", lambda: ("abc1234567", "def4567890"))
+    msg = _call("model.options")["error"]["message"]
+    assert "restart the process serving this model picker" in msg
+    assert "supervised dashboard, restart its own service" in msg
+    assert "Hermes Desktop, use Restart backend" in msg
+    assert "hermes gateway restart" not in msg
+
+
 def test_stale_model_save_key_refuses_instead_of_writing(tmp_path, monkeypatch):
     from gateway import code_skew
 

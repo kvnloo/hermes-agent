@@ -313,7 +313,7 @@ def _model_skew_err(rid) -> dict | None:
     from agent.i18n import t
 
     return _err(rid, 5098, t("gateway.model.error_prefix", error=t(
-        "gateway.model.err_skew", boot_rev=boot_rev, disk_rev=disk_rev)))
+        "gateway.model.err_skew_backend", boot_rev=boot_rev, disk_rev=disk_rev)))
 
 
 @method("model.options")
