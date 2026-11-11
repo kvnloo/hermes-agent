@@ -75,7 +75,7 @@ async def reopen_for_turn(authority, ref):
     ended."""
     from gateway.session_runtime_workers import tracked_write
     live = authority.sessions.get(ref.session_id)
-    if live is not None and live.detached:
+    if live is not None and getattr(live, "detached", False):
         from gateway.session_api import reopen_api_session as reopen
     else:
         from gateway.session_local_recovery import reopen_local_session as reopen

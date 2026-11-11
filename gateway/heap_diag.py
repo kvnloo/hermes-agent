@@ -36,7 +36,7 @@ def snapshot(directory: Path) -> Path:
     census = collections.Counter(type(o).__name__ for o in gc.get_objects())
     (directory / f"census-{n}.json").write_text(json.dumps(
         {"ts": time.time(), "pid": os.getpid(), "traced": tracemalloc.get_traced_memory(),
-         "top": census.most_common(80)}))
+         "top": census.most_common(80)}), encoding="utf-8")
     path = directory / f"snap-{n}.tm"
     tracemalloc.take_snapshot().dump(str(path))
     if (directory / "stop").exists():
