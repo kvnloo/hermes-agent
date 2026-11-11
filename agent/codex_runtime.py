@@ -1117,11 +1117,18 @@ class _CodexResponseAssembler:
         # a call is dropped from the turn (#143893); bare output_text beside commentary stays narration (length).
         # The recovery needs a terminal frame: a stream cut mid-turn (no terminal, a call still pending) must raise
         # below and retry, never end the turn on the cut-off sentence with the call silently lost.
+        # An unphased announcement can settle as commentary: the done item already
+        # owns these deltas, so the missing-answer recovery must not copy them.
+        streamed_text = "".join(self.text_deltas).strip()
         if self.text_deltas and (
                 (not output and not self.has_tool_calls)
                 or (self.saw_terminal and self.saw_answer_item_added and not any(
                     _event_field(item, "type", "") == "message"
-                    and _message_phase(item) not in ("commentary", "analysis") for item in output))):
+                    and _message_phase(item) not in ("commentary", "analysis") for item in output)
+                    and not any(
+                        _event_field(item, "type", "") == "message"
+                        and _message_phase(item) in ("commentary", "analysis")
+                        and _output_text_of(item) == streamed_text for item in output))):
             content = [SimpleNamespace(type="output_text", text="".join(self.text_deltas))]
             message = SimpleNamespace(type="message", role="assistant", status="completed", content=content)
             first_call = next((i for i, item in enumerate(output)
