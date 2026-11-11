@@ -59,3 +59,20 @@ def test_another_chat_and_an_explicit_id_are_left_alone(kanban_home):
         other = kb.create_task(conn, title="explicit", assignee="worker")
     _subscribe(other, "--platform", "telegram", "--chat-id", GROUP, "--user-id", "222")
     assert _row(other)["user_id"] == "222"
+
+
+def test_other_topic_does_not_inherit_caller(kanban_home, monkeypatch):
+    """Same group is not same conversation: topic 77 cannot sign topic 88's subscription."""
+    monkeypatch.setenv("HERMES_SESSION_THREAD_ID", "77")
+    _subscribe(kanban_home, "--platform", "telegram", "--chat-id", GROUP, "--chat-type", "group",
+               "--thread-id", "88", "--delivery-mode", "notify+wake")
+    row = _row(kanban_home)
+    assert row["thread_id"] == "88"
+    assert row["user_id"] is None, "a different topic must not borrow the caller's sender"
+
+    # Control: when the thread also matches, the existing same-session fix still applies.
+    with kbc.connect() as conn:
+        same_topic = kb.create_task(conn, title="same-topic card", assignee="worker")
+    _subscribe(same_topic, "--platform", "telegram", "--chat-id", GROUP,
+               "--chat-type", "group", "--thread-id", "77", "--delivery-mode", "notify+wake")
+    assert _row(same_topic)["user_id"] == "111"
