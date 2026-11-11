@@ -894,20 +894,20 @@ def _mask_control_split_tokens(text: str, mask_fn) -> str:
         return text
     orig_idx = [i for i, c in enumerate(text) if not _CONTROL_CHARS_RE.match(c)]
     out, matches = list(text), []
-    for m in _PREFIX_RE.finditer(stripped):
+    for m in _PREFIX_SUB_RE.finditer(stripped):
         start_orig = orig_idx[m.start(1)]
         end_orig = orig_idx[m.end(1) - 1] + 1
         span = text[start_orig:end_orig]
-        # Self-matching fragment AND a span crossing a LINE boundary: do NOT join
-        # (``ghp_<tok>\nbutton`` would mask ``button``; the prefix pass handles the
-        # fragment). Non-newline controls (ESC, ZWSP) never legitimately sit
-        # between a token and prose, so there the join proceeds regardless.
+        # A self-matching head must not consume unrelated text across a newline.
+        # Non-newline controls can join the token's remaining body.
         if ("\n" in span or "\r" in span) and _PREFIX_RE.search(span):
             continue
         # Reject spans containing a non-token char (``sk_abc…\nTAVILY_API_KEY=``
         # matched across lines) and matches running into a ``KEY=`` name.
         if (all(c in _TOKEN_BODY_CHARS or _CONTROL_CHARS_RE.match(c) for c in span)
-                and (end_orig >= len(text) or text[end_orig] != "=")):
+                and (end_orig >= len(text) or text[end_orig] != "=")
+                and (m.start() == 0 or stripped[m.start() - 1] not in "-_"
+                     or _is_opaque_prefixed_token(m.group(1)))):
             matches.append((start_orig, end_orig, mask_fn(m.group(1))))
     for start_orig, end_orig, replacement in reversed(matches):
         out[start_orig:end_orig] = list(replacement)

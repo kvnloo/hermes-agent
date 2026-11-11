@@ -334,6 +334,16 @@ class TestControlCharSplitTokens:
             if unicodedata.category(chr(cp)) == "Cf":
                 self._assert_split_masked(f"{tok[:10]}{chr(cp)}{tok[10:]}", tok)
 
+    @pytest.mark.parametrize("glue", ("-", "_"))
+    def test_glued_format_split_token_masks(self, glue):
+        # The normal prefix pass accepts glued opaque keys, but a short head split
+        # by a format character cannot match until the split-token pass joins it.
+        tok = "ghp_abcdef1234567890ABCDEF1234567890abcdef"
+        text = f"backup{glue}{tok[:10]}\u00ad{tok[10:]}"
+        result = redact_sensitive_text(text, force=True, code_file=True)
+        assert result.startswith(f"backup{glue}")
+        assert tok[10:] not in result
+
     def test_complete_token_does_not_swallow_next_line(self):
         # A COMPLETE token at end-of-line followed by ordinary text must not
         # be joined across the newline — the ordinary prefix pass masks the
