@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from gateway.config import GatewayConfig, Platform, PlatformConfig
-from gateway.platforms.event import MessageEvent
+from gateway.platforms.event import MessageEvent, MessageType
 from gateway.session import SessionEntry, SessionSource, build_session_key
 
 
@@ -201,6 +201,34 @@ async def test_steer_with_media_queues_whole_event_instead_of_dropping_the_photo
     # ...and the reply says so.
     assert result is not None
     assert "queued" in result.lower()
+
+
+@pytest.mark.asyncio
+async def test_steer_with_photo_and_slash_like_caption_keeps_it_as_user_input():
+    """A queued photo captioned '/steer /new' must not reset the session on replay.
+
+    The /steer prefix is a gateway control; the text after it is a user prompt,
+    even when that prompt begins with another slash.
+    """
+    runner, adapter = _make_runner(_session_entry())
+    sk = build_session_key(_make_source())
+    running_agent = MagicMock()
+    runner._running_agents[sk] = running_agent
+
+    event = _make_event("/steer /new")
+    event.message_type = MessageType.PHOTO
+    event.media_urls = ["cache/photo.jpg"]
+    event.media_types = ["image/jpeg"]
+
+    reply = await runner._handle_message(event)
+
+    running_agent.steer.assert_not_called()
+    assert reply is not None and "queued" in reply.lower()
+    queued = adapter._pending_messages[sk]
+    assert queued.text == "/new"
+    assert queued.media_urls == ["cache/photo.jpg"]
+    assert queued.message_type == MessageType.PHOTO
+    assert queued.get_command() is None  # not a second /new on the queued turn
 
 
 if __name__ == "__main__":  # pragma: no cover

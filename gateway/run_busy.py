@@ -1213,6 +1213,7 @@ class GatewayBusySessionMixin:
             queued = MessageEvent(
                 text=queued_text, message_type=event.message_type if has_media else MessageType.TEXT,
                 source=event.source, raw_message=event.raw_message, message_id=event.message_id,
+                allow_gateway_control=False,  # the queued prompt may itself begin with /new
                 media_urls=list(getattr(event, "media_urls", []) or []),
                 media_types=list(getattr(event, "media_types", []) or []),
                 media_text_inlined=list(getattr(event, "media_text_inlined", []) or []),
