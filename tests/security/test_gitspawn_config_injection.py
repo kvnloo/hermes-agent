@@ -371,6 +371,60 @@ def test_submodule_filters_never_run_from_superproject_status(tmp_path):
     assert sorted(p.name for p in tmp_path.glob("FILTER.*")) == []
 
 
+def test_nested_submodule_filters_never_run_from_superproject_status(tmp_path):
+    """Filter discovery must follow initialized gitlinks more than one level deep.
+
+    The outer repo's index only names parent, not parent/child. The nested
+    checkout has its own filter config, which automatic status must not execute.
+    """
+    from hermes_cli import worktree_gc
+
+    marker = (tmp_path / "FILTER").as_posix()
+    leaf = _make_filter_repo(tmp_path, "README filter=evil\n", lambda r, m: "", marker)
+    ident = ["-c", "user.email=a@b", "-c", "user.name=a"]
+    middle, outer = tmp_path / "middle", tmp_path / "outer"
+    for repo in (middle, outer):
+        subprocess.run(["git", "init", "-q", str(repo)], check=True, env=_CLEAN_GIT_ENV)
+    subprocess.run(
+        ["git", "-C", str(middle), *ident, "-c", "protocol.file.allow=always",
+         "submodule", "add", "-q", str(leaf), "child"],
+        check=True, env=_CLEAN_GIT_ENV, capture_output=True,
+    )
+    subprocess.run(["git", "-C", str(middle), *ident, "commit", "-qm", "middle"],
+                   check=True, env=_CLEAN_GIT_ENV)
+    subprocess.run(
+        ["git", "-C", str(outer), *ident, "-c", "protocol.file.allow=always",
+         "submodule", "add", "-q", str(middle), "parent"],
+        check=True, env=_CLEAN_GIT_ENV, capture_output=True,
+    )
+    subprocess.run(["git", "-C", str(outer), *ident, "commit", "-qm", "outer"],
+                   check=True, env=_CLEAN_GIT_ENV)
+    subprocess.run(
+        ["git", "-C", str(outer), "-c", "protocol.file.allow=always",
+         "submodule", "update", "--init", "--recursive", "-q"],
+        check=True, env=_CLEAN_GIT_ENV, capture_output=True,
+    )
+
+    child = outer / "parent" / "child"
+    subprocess.run(["git", "-C", str(child), "config", "filter.evil.clean",
+                    f"touch '{marker}.clean'; cat"], check=True, env=_CLEAN_GIT_ENV)
+    subprocess.run(["git", "-C", str(child), "config", "filter.evil.required", "true"],
+                   check=True, env=_CLEAN_GIT_ENV)
+
+    env = noninteractive_repo_git_env(outer)
+    assert env is not None
+    overrides = {
+        env[f"GIT_CONFIG_KEY_{idx}"]: env[f"GIT_CONFIG_VALUE_{idx}"]
+        for idx in range(int(env["GIT_CONFIG_COUNT"]))
+    }
+    assert overrides["filter.evil.clean"] == ""
+    assert overrides["filter.evil.required"] == "false"
+
+    (child / "README").write_text("modified\n")
+    assert worktree_gc._git(["status", "--porcelain"], cwd=str(outer)).returncode == 0
+    assert not (tmp_path / "FILTER.clean").exists()
+
+
 def test_noninteractive_env_pins_fsmonitor_and_hooks():
     env = noninteractive_git_env({})
     values = {
