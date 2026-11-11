@@ -52,3 +52,22 @@ def test_signed_block_with_omitted_text_keeps_its_signature():
     assert _replay_ordered_blocks(msg.bedrock_content_blocks)[0] == {
         "reasoningContent": {"reasoningText": {"text": "", "signature": "SIG"}}}
     assert msg.reasoning_details == [{"type": "thinking", "thinking": "", "signature": "SIG"}]
+
+
+def test_redacted_then_signature_only_same_index_preserves_replay_order():
+    """A redacted union must stay ahead of the next omitted-text signed union on replay."""
+    raw = b"\x00\xab\xff"
+    msg = normalize_converse_stream_events(_stream(
+        _delta({"redactedContent": raw}),
+        _delta({"signature": "SIG"}),
+    )).choices[0].message
+
+    assert _replay_ordered_blocks(msg.bedrock_content_blocks) == [
+        {"reasoningContent": {"redactedContent": raw}},
+        {"reasoningContent": {"reasoningText": {"text": "", "signature": "SIG"}}},
+        {"text": "answer"},
+    ]
+    assert msg.reasoning_details == [
+        {"type": "redacted_thinking", "data": base64.b64encode(raw).decode()},
+        {"type": "thinking", "thinking": "", "signature": "SIG"},
+    ]

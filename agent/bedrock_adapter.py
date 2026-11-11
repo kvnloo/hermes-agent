@@ -1082,12 +1082,16 @@ def _opens_new_reasoning_block(current: Any, reasoning: dict[str, Any]) -> bool:
     """True when a reasoning delta belongs to a NEW block under the same ``contentBlockIndex``. Bedrock can stream
     two signed blocks under one index with no contentBlockStop between them (text, signature, text, signature);
     a signature signs only its own block, so a merged replay 400s "Invalid signature". Text after a signed or
-    redacted block, or redacted bytes after a signed one, starts the next block."""
+    redacted block, redacted bytes after a signed one, or a signature-only block after redacted
+    bytes starts the next block."""
     if not isinstance(current, dict):
         return False
     signed, redacted = bool(current.get("signature")), bool(current.get("redactedContentBase64"))
     if _encode_redacted(reasoning.get("redactedContent")):
         return signed and not redacted
+    # A signature-only reasoningText delta after redactedContent is a distinct tagged-union block.
+    if redacted and reasoning.get("signature"):
+        return True
     return bool(reasoning.get("text")) and (signed or redacted)
 
 
