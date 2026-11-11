@@ -42,6 +42,7 @@ from tools.process_registry_termination import ProcessTerminationMixin
 from tools.process_registry_results import load_completed_results, save_completed_result
 from tools.process_registry_env_log import fallback_exit_code, log_delta_command, parse_log_delta_reply
 from tools.process_registry_wsl import _is_wsl_launcher_command
+from tools.process_registry_paging import coerce_int, select_log_lines
 
 logger = logging.getLogger(__name__)
 
@@ -2043,7 +2044,7 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
             result.update(detached=True, note="Process recovered after restart -- output history unavailable")
         return result
 
-    def read_log(self, session_id: str, offset: int | None = None, limit: int = 200) -> dict:
+    def read_log(self, session_id: str, offset: int | str | float | None = None, limit: int | str | float | None = 200) -> dict:
         """Read the full output log with optional pagination by lines."""
         from tools.ansi_strip import strip_ansi
 
@@ -2055,17 +2056,11 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
             exited, finalizing = session.exited, self._reader_finalizing(session)
         lines = full_output.splitlines()
         total_lines = len(lines)
-        # An explicit offset=0 means "start from the first line" — previously it was conflated with the
-        # default and silently returned the TAIL instead of the head (same falsy-coercion class as the
-        # wait() timeout guard; salvaged from PR #60004, credit @isheng-eqi).
-        if offset is None and limit > 0:
-            selected = lines[-limit:]
-            observed_completion_output = bool(selected) or total_lines == 0
-        else:
-            offset = offset or 0
-            selected = lines[offset:offset + limit]
-            stop = slice(offset, offset + limit).indices(total_lines)[1]
-            observed_completion_output = total_lines == 0 or (bool(selected) and stop == total_lines)
+        # Keep offset=0 as the head and None as the tail (PR #60004, isheng-eqi).
+        try:
+            selected, observed_completion_output = select_log_lines(lines, offset, limit)
+        except ValueError as exc:
+            return {**self._status_head(session), "status": "error", "error": str(exc)}
         result = {
             **self._status_head(session), "output": "\n".join(selected),
             "total_lines": total_lines, "showing": f"{len(selected)} lines"}
@@ -2073,7 +2068,7 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
             self._completion_consumed.add(session_id)
         return result
 
-    def wait(self, session_id: str, timeout: int | None = None) -> dict:
+    def wait(self, session_id: str, timeout: int | str | float | None = None) -> dict:
         """Block until the process exits, the timeout elapses, the user interrupts, or a
         mid-turn user message (steer/redirect → ``request_yield``) releases the wait.
         ``timeout`` defaults to (and is clamped by) TERMINAL_TIMEOUT. Returns a dict
@@ -2084,8 +2079,11 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
             max_timeout = int(os.getenv("TERMINAL_TIMEOUT", "180"))
         except (ValueError, TypeError):
             max_timeout = 180
-        # The schema says minimum=1 but not every caller enforces it; timeout=0 is
-        # falsy and would silently fall through to the default wait.
+        try:
+            timeout = coerce_int(timeout, name="timeout", default=None)
+        except ValueError as exc:
+            return {"status": "error", "error": str(exc)}
+        # Preserve the explicit zero rejection (PR #60004, isheng-eqi).
         if timeout is not None and timeout <= 0:
             return {"status": "error", "error": f"timeout must be positive (got {timeout})"}
         timeout_note = None
