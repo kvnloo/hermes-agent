@@ -118,6 +118,34 @@ class TestContextOverflowLimitSelection:
 
         assert get_context_length_from_provider_error(error_msg, 1_048_576) == limit
 
+
+    def test_gemini_overflow_updates_compressor_and_persists_provider_limit(self):
+        """The Gemini 400 must update recovery state and cache, not just parse a number."""
+        from types import SimpleNamespace
+
+        from agent.model_metadata import get_cached_context_length
+        from agent.turn_overflow import _adopt_provider_context_limit
+
+        model = "gemini-3.5-flash"
+        base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+        compressor = MagicMock()
+        notices = []
+        agent = SimpleNamespace(
+            model=model, base_url=base_url, provider="custom", api_mode="chat_completions",
+            api_key="", context_compressor=compressor, _buffer_vprint=notices.append,
+        )
+        error = (
+            "The input token count (135538) exceeds the maximum number of "
+            "tokens allowed (131072)."
+        )
+        assert _adopt_provider_context_limit(SimpleNamespace(agent=agent), error, 1_048_576) == 131_072
+        compressor.update_model.assert_called_once_with(
+            model=model, context_length=131_072, base_url=base_url, api_key="",
+            provider="custom", api_mode="chat_completions",
+        )
+        assert get_cached_context_length(model, base_url) == 131_072
+        assert not any("did not report" in notice for notice in notices)
+
 # ---------------------------------------------------------------------------
 # build_anthropic_kwargs — output cap clamping
 # ---------------------------------------------------------------------------
