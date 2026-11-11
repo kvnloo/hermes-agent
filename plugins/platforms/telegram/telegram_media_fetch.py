@@ -49,15 +49,26 @@ def local_bot_api_path(file_path: Any, root: str) -> Path | None:
     """The host copy of a ``--local`` Bot API file under ``root`` (``extra.local_bot_api_root``),
     or ``None``. The server reports its OWN path (``/var/lib/telegram-bot-api/<token>/videos/x``,
     or that path behind ``base_file_url`` once PTB found it unreadable here); the part after the
-    token segment is looked up as ``root/<token>/<rest>`` then ``root/<rest>``. Two stats, no
+    token segment is looked up as ``root/<token>/<rest>`` then ``root/<rest>``. A relative
+    getFile path also maps to ``root/<rest>`` when root is the token directory. Two stats, no
     directory walk; ``..`` never escapes ``root``. Blocking: call it via ``to_thread``."""
-    raw = unquote(urlsplit(str(file_path or "")).path)
+    location = urlsplit(str(file_path or ""))
+    raw = unquote(location.path)
     parts = [p for p in raw.replace("\\", "/").split("/") if p]
     # ``bot<token>`` (the URL prefix) never matches: the pattern starts with the numeric bot id.
     token_at = next((i for i, p in enumerate(parts) if _TOKEN_SEGMENT.match(p)), None)
-    if token_at is None or token_at == len(parts) - 1 or ".." in parts:
+    if not parts or ".." in parts:
         return None
     base = Path(root).expanduser()
+    if token_at is None:
+        # Relative getFile paths are relative to a root mounted at the token directory.
+        # An absolute path or URL still needs a token segment to anchor the mapping.
+        if location.scheme or location.netloc or raw.startswith(("/", "\\")):
+            return None
+        candidate = base.joinpath(*parts)
+        return candidate if candidate.is_file() else None
+    if token_at == len(parts) - 1:
+        return None
     rest = parts[token_at + 1:]
     for candidate in (base.joinpath(parts[token_at], *rest), base.joinpath(*rest)):
         if candidate.is_file():

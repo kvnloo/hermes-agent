@@ -80,6 +80,26 @@ async def test_local_server_file_is_read_from_the_mounted_root(tmp_path, as_docu
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("as_document", [False, True], ids=["video", "video-document"])
+async def test_relative_file_from_local_server_uses_mounted_token_directory(tmp_path, as_document):
+    """A reported relative path must not force an HTTP GET when the token dir is mounted (#55698)."""
+    kind = "documents" if as_document else "videos"
+    mount = tmp_path / "mount"
+    _stored(mount, kind)
+    adapter = _adapter({"base_url": "http://127.0.0.1:8081/bot", "local_mode": True,
+                        "local_bot_api_root": str(mount / TOKEN)})
+    msg, file_obj = _message(f"{kind}/file_7.MOV", as_document=as_document)
+
+    await adapter._handle_media_message(MagicMock(message=msg, effective_message=msg), MagicMock())
+
+    event = adapter.handle_message.call_args[0][0]
+    assert event.message_type == MessageType.VIDEO
+    assert Path(event.media_urls[0]).read_bytes() == DATA
+    file_obj.download_as_bytearray.assert_not_awaited()
+    msg.reply_text.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_without_the_root_the_download_path_is_unchanged(tmp_path):
     """No ``local_bot_api_root``: the PTB download runs as before (and its failure is surfaced)."""
     _stored(tmp_path / "mount")
@@ -103,8 +123,10 @@ def test_mapping_bounds(tmp_path):
     assert local_bot_api_path(f"/srv/tg/{TOKEN}/videos/file_7.MOV", str(root)) == stored
     # a root mounted at the token directory itself (``<root>/<rest>``)
     assert local_bot_api_path(f"/var/lib/telegram-bot-api/{TOKEN}/videos/flat.MOV", str(root)) == root / "videos" / "flat.MOV"
-    # a relative public-API path has no token segment; a missing file maps to nothing
+    # A relative path resolves only inside the explicitly configured root.
     assert local_bot_api_path("videos/file_7.MOV", str(root)) is None
+    assert local_bot_api_path("videos/file_7.MOV", str(root / TOKEN)) == stored
+    assert local_bot_api_path("/unrelated/videos/file_7.MOV", str(root / TOKEN)) is None
     assert local_bot_api_path(f"/var/lib/telegram-bot-api/{TOKEN}/videos/none.MOV", str(root)) is None
     # ``..`` never escapes the root
     assert local_bot_api_path(f"/x/{TOKEN}/../../secret.txt", str(root)) is None
