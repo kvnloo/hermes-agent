@@ -287,6 +287,11 @@ function openClientDirectSpeechSession(tts: DirectTtsConfig, options: VoicePlayb
       settled = true
       liveStops.delete(stop)
 
+      // Decoding uses a fresh context per reply; release it on completion,
+      // fallback, and barge-in, just as the relay streaming path does.
+      void trimCtx?.close().catch(() => undefined)
+      trimCtx = null
+
       if (playing) {
         playing.pause()
         playing.src = ''
