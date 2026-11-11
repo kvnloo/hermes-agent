@@ -161,8 +161,8 @@ _runtime_status_state: Optional[dict[str, Any]] = None
 
 def _merge_over_on_disk(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
     """Lay the canonical snapshot over whatever is on disk right before writing. Out-of-process
-    writers (the migration's compensator clearing multiplex-owned status, container_boot
-    seeding ``desired_state``) stamp this file directly; the gateway's fields win, theirs survive."""
+    writers (such as container_boot seeding ``desired_state``) stamp this file directly;
+    the gateway's fields win, theirs survive."""
     existing = _read_json_file(path)
     return {**existing, **payload} if isinstance(existing, dict) else payload
 
@@ -1119,6 +1119,9 @@ def _prepare_runtime_status_update(
                 if not isinstance(k, str) or ":" not in k
                 or (drop_prefix is not None and not k.startswith(drop_prefix)) or k in keep_platforms
             }
+        if clear_profile_platforms:
+            # A new gateway cannot inherit the previous process's served-profile claims.
+            payload["served_profiles"] = []
         payload.update({key: current_record[key] for key in ("kind", "pid", "argv", "start_time")})
         payload["updated_at"] = _utc_now_iso()
         payload.update(_get_code_identity_fields())

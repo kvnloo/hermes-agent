@@ -74,10 +74,12 @@ def fleet(tmp_path, monkeypatch):
             runtime_path = root / "gateway_state.json"
             runtime = json.loads(runtime_path.read_text()) if runtime_path.exists() else {}
             runtime.update({"pid": os.getpid(), "hermes_home": str(root), "gateway_state": "running"})
-            # Multiplex startup records ownership; standalone startup historically preserved the
-            # old key, which is the stale-state half of #109473's rollback failure.
-            if _config_flag(root):
-                runtime["served_profiles"] = ["default", "coder", "ops"]
+            # The gateway clears previous profile claims when it publishes startup status.
+            runtime["platforms"] = {
+                key: value for key, value in runtime.get("platforms", {}).items()
+                if not isinstance(key, str) or ":" not in key
+            }
+            runtime["served_profiles"] = ["default", "coder", "ops"] if _config_flag(root) else []
             runtime_path.write_text(json.dumps(runtime))
 
     from gateway import status

@@ -859,26 +859,6 @@ def _write_manifest(default_home: Path, data: dict) -> None:
     atomic_json_write(_manifest_path(default_home), data)
 
 
-def _reconcile_standalone_runtime(default_home: Path, secondary_names: set[str]) -> None:
-    """Remove only status owned by multiplexing, without re-stamping gateway identity."""
-    from gateway.status import read_runtime_status
-    from utils import atomic_json_write
-
-    path = default_home / "gateway_state.json"
-    runtime = read_runtime_status(path)
-    if runtime is None:
-        return
-    runtime["served_profiles"] = []
-    platforms = runtime.get("platforms")
-    if isinstance(platforms, dict):
-        prefixes = tuple(f"{name}:" for name in secondary_names if name)
-        runtime["platforms"] = {
-            key: value for key, value in platforms.items()
-            if not (isinstance(key, str) and key.startswith(prefixes))
-        }
-    atomic_json_write(path, runtime, indent=None, separators=(",", ":"))
-
-
 def _wait_for_served(default_home: Path, expected: set[str], timeout: float) -> Optional[list[str]]:
     """Poll the default's ``gateway_state.json`` until ``served_profiles`` covers ``expected``."""
     from hermes_cli.gateway_multiplex_served import recorded_served_profiles
@@ -1113,17 +1093,12 @@ def _wait_for_live_gateway(home: Path, timeout: float) -> Optional[int]:
 def rollback_migration(default_home: Optional[Path] = None) -> bool:
     """COMPENSATOR for a failed apply: put ONE gateway back on this host.
 
-    Not a user-facing rollback and deliberately NOT a fleet restore. It used to reinstall and
-    start every recorded per-profile gateway, which the host gateway lock now forbids by
-    construction: this function clears the multiplex-owned served record first, so
-    ``gateway.host_attach`` tells each secondary to "start normally" and the flock loser exits 75
-    into a supervisor respawn loop (observed live: a secondary won the race while the default's
-    unit sat at ``NRestarts=38, ExecMainStatus=75``, respawning every 5 s — ``StartLimitIntervalSec=0``
-    defeats the limiter). Under multiplex-only a restored fleet is not a state we want to be able
-    to reach, so the compensation is the one gateway the topology allows: the DEFAULT's, on the
-    recorded flag. The secondaries whose units this attempt already removed are named in the
-    output and are served by that gateway as soon as it multiplexes (``flag_was`` is either unset
-    or the retired ``false``; both resolve to multiplex at boot once nothing blocks it).
+    Not a user-facing rollback and deliberately NOT a fleet restore. The host gateway lock
+    forbids rebuilding per-profile gateways: competing processes can respawn at exit 75.
+    Restore only the DEFAULT gateway on its recorded flag. The replacement gateway resets
+    the previous process's multiplex-owned runtime status at startup, before it reports the
+    profiles it actually serves. Secondaries removed by this attempt are named in the output
+    and can be served when the default gateway multiplexes again.
 
     Returns True only when a gateway is VERIFIABLY live again; the manifest is kept otherwise so
     the next ``hermes gateway migrate --multiplex`` resumes.
@@ -1154,16 +1129,6 @@ def rollback_migration(default_home: Optional[Path] = None) -> bool:
         services=(_recorded_services(default_rec) if isinstance(default_rec, dict) else []) or _installed_services(default_home),
     )
     names = [str(rec["profile"]) for rec in secondaries]
-    # The live multiplexer's record still claims every secondary, and every lifecycle verb reads it;
-    # clear it before the default comes back up on the restored flag.
-    try:
-        _reconcile_standalone_runtime(default_home, set(names))
-        print("  ✓ default: cleared multiplex-owned runtime status")
-    except Exception as exc:
-        print(f"  ✗ default: could not clear multiplex-owned runtime status ({exc})")
-        print(incomplete)
-        return False
-
     if not default_gw.has_gateway and not any(rec.get("pid") or _recorded_services(rec) for rec in secondaries):
         _manifest_path(default_home).unlink(missing_ok=True)
         print(f"✓ Nothing was running before this attempt ({_NOTHING_RECORDED}); the flag is restored.")
