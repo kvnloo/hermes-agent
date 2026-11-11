@@ -359,8 +359,11 @@ class TestKillProcessLiveQueue:
         real-Popen repro fired the stale ``exited`` payload in 25 of 30 trials
         against current code; after the fix it must always read ``killed``.
         """
+        # Spawn ``sleep`` directly, not via ``sh -c``: dash (Ubuntu's /bin/sh) does
+        # not exec its last command, so the tree kill would SIGTERM a reparented
+        # ``sleep`` grandchild, which the live-system guard rightly refuses.
         proc = subprocess.Popen(
-            ["sh", "-c", "sleep 30"],
+            ["sleep", "30"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
