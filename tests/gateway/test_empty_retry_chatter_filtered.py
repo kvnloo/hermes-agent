@@ -42,3 +42,12 @@ def test_terminal_empty_status_is_left_to_the_final_reply(reasoning):
 def test_other_warnings_still_reach_the_chat():
     text = "⚠️ Tool output was truncated to 50,000 characters."
     assert _prepare_gateway_status_message("telegram", "status", text) == text
+
+
+@pytest.mark.parametrize("platform", ["telegram", "slack", "feishu"])
+def test_failed_empty_fallback_attempt_is_not_a_second_chat_reply(platform):
+    # recover_empty_response buffers this exact status before _try_activate_fallback();
+    # when activation fails, _terminal_empty flushes it beside the final explanation.
+    message = "⚠️ Model returning empty responses — switching to fallback provider..."
+    assert _prepare_gateway_status_message(platform, "lifecycle", message) is None
+    assert _prepare_gateway_status_message("local", "lifecycle", message) == message

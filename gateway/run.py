@@ -101,6 +101,7 @@ _TELEGRAM_NOISY_STATUS_RE = re.compile(
     r"|session\s+compressed\s+\d+\s+times"
     r"|rate\s+limited\.\s+waiting\s+\d"
     r"|retrying(?:\s+\(\d+/\d+\))?\s+in\s+\d"  # also the counted 'retrying (1/3) in 6s'
+    r"|model\s+returning\s+empty\s+responses\s+[—-]\s+switching\s+to\s+fallback\s+provider"
     r"|max\s+retries\s+\(\d+\).*(?:trying\s+fallback|exhausted|invalid\s+responses)"
     r"|stream\s+(?:drop|drop\s+mid\s+tool-call).+retry\s+\d"
     r"|stale\s+connections\s+from\s+a\s+previous\s+provider\s+issue"
