@@ -194,3 +194,48 @@ async def test_finishing_edit_carries_the_topic_routing_metadata():
     from gateway.run_turn_final_reconcile import edit_preview_to_final
     await edit_preview_to_final(adapter, "chat-1", "1", "answer", {"thread_id": "77"})
     assert seen == [{"thread_id": "77"}]
+
+
+@pytest.mark.asyncio
+async def test_queued_final_without_edit_receipt_falls_back_to_send():
+    """A no-result edit is not the same as /new: the queued final must still be delivered.
+
+    The helper returns None for a superseded run and also when an adapter returns no
+    SendResult. Only the former is permission to discard the queued reply.
+    """
+    from gateway.run_notifications import GatewayNotificationsMixin
+
+    class _NoEditReceipt(_FloodedChat):
+        def extract_media(self, content):
+            return [], content
+
+        async def edit_message(self, chat_id, message_id, content, *, finalize=False, **_kw):
+            self.calls.append(("edit", content))
+            return None
+
+    class _QueuedHarness(GatewayNotificationsMixin):
+        def __init__(self):
+            self.sent = []
+
+        async def _send_queued_final_text(
+            self, adapter, source, text_content, metadata, event_message_id, session_key,
+            inbound_message_id=None,
+        ):
+            self.sent.append(text_content)
+            return SendResult(success=True, message_id="2")
+
+    adapter = _NoEditReceipt(flood_secs=0.0)
+    adapter.messages["1"] = "Frozen partial reply"
+    consumer = GatewayStreamConsumer(adapter, "chat-1")
+    consumer._message_id = "1"
+    answer = "The complete final reply"
+    harness = _QueuedHarness()
+
+    delivered = await harness._deliver_queued_first_response(
+        answer, SimpleNamespace(chat_id="chat-1"), adapter,
+        stream_consumer=consumer, deliver_media=False,
+    )
+
+    assert delivered is True
+    assert adapter.calls == [("edit", answer)]
+    assert harness.sent == [answer]  # carrier PR head: empty, answer silently lost

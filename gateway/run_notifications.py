@@ -358,9 +358,11 @@ class GatewayNotificationsMixin(GatewayUpdateNotificationsMixin, GatewayNotifica
                             adapter, source.chat_id, _sc_msg_id, text_content, metadata,
                             still_current=getattr(stream_consumer, "_run_still_current", None))
                         if _edit_res is None:
-                            # The turn was replaced (/new, /stop) during a flood wait: nothing more is
-                            # owed, and False would make the caller re-send this stale answer.
-                            return True
+                            # An edit may return no receipt even while this turn is current.
+                            # Only a replaced turn should suppress the normal queued final send.
+                            _still_current = getattr(stream_consumer, "_run_still_current", None)
+                            if callable(_still_current) and not _still_current():
+                                return True
                         if getattr(_edit_res, "success", False):
                             _reconciled = True
                             logger.info(
