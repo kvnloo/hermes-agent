@@ -102,9 +102,16 @@ async def set_status_indicator(adapter: TelegramAdapter, online: bool) -> None:
             adapter._status_capture_saved = False
             await _capture_original(adapter, bot)
             adapter._status_capture_saved = True
+        elif getattr(adapter, "_status_capture_saved", False):
+            # A BotFather edit while connected must not be replaced by "Offline" on shutdown.
+            live = getattr(await bot.get_my_short_description(), "short_description", "") or ""
+            entry = _captures(adapter).get(_bot_key(bot)) or {}
+            if not _is_ours(adapter, entry, live):
+                return
     except Exception as e:  # health: allow BLE001 -- best-effort profile text; never blocks connect/disconnect
         logger.debug("[%s] Bot short description capture/restore failed: %s", adapter.name,
                      _redact_telegram_error_text(e), exc_info=True)
+        return
     if not enabled or not getattr(adapter, "_status_capture_saved", False):
         return
     text = _status_text(adapter, online)

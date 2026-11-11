@@ -100,3 +100,17 @@ async def test_turning_the_indicator_off_keeps_a_newer_botfather_text(tmp_path):
     await _adapter(tmp_path, bot)._set_status_indicator(online=True)
 
     assert bot.text == "v2 text"
+
+@pytest.mark.asyncio
+async def test_botfather_edit_while_online_survives_clean_disconnect(tmp_path):
+    bot = _Bot("BotFather profile")
+    running = _adapter(tmp_path, bot, status_indicator=True)
+    await running._set_status_indicator(online=True)
+    assert bot.text == "Online"
+
+    bot.text = "New BotFather profile while running"
+    await running._set_status_indicator(online=False)
+    assert bot.text == "New BotFather profile while running"
+
+    await _adapter(tmp_path, bot)._set_status_indicator(online=True)
+    assert bot.text == "New BotFather profile while running"
