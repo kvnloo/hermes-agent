@@ -75,3 +75,73 @@ def test_background_transport_refusal_fails_closed(monkeypatch, buttons):
     with pytest.raises(RuntimeError):
         transport.background_notify({"command": "print(1)"})
     assert sent == [("origin-chat", "origin-session")] if buttons else sent == ["text"]
+
+
+def test_background_text_send_timeout_keeps_delivered_prompt_answerable(monkeypatch):
+    """A delayed send receipt must not orphan a text prompt already visible in chat."""
+    import asyncio
+    import threading
+    from concurrent.futures import TimeoutError as FutureTimeoutError
+
+    from tools import approval
+    from tools.approval_context import reset_current_session_key, set_current_session_key
+    from tools.approval_notify_lease import acquire, run
+
+    key = "background-text-ambiguous-receipt"
+    sent = []
+    scheduled, finished = threading.Event(), threading.Event()
+    decisions = []
+
+    class TextOnlyAdapter:
+        typed_command_prefix = "/"
+
+        async def send(self, chat_id, message, metadata=None):
+            sent.append((chat_id, message))
+            return SimpleNamespace(success=True, message_id="visible-prompt")
+
+    class LateReceipt:
+        def result(self, timeout=None):
+            assert timeout == 15  # production receipt wait; never shorten it in this test
+            scheduled.set()
+            raise FutureTimeoutError()
+
+    def schedule(self, coro, *args):
+        asyncio.run(coro)  # the chat has already received the message; only its receipt stalls
+        return LateReceipt()
+
+    monkeypatch.setattr(TurnRunner, "_schedule", schedule)
+    monkeypatch.setattr(approval.approval_context, "_get_approval_mode", lambda: "manual")
+    monkeypatch.setattr(approval, "_presence", lambda cb=None: (None, False, True, False))
+
+    ctx = TurnContext(session_key=key, source=_CHAT, _status_adapter_pinned=TextOnlyAdapter(),
+                      _status_chat_id="a", _status_thread_metadata={},
+                      _run_still_current=lambda: False)
+    transport = approval_transport(TurnRunner(None, ctx))
+    approval.register_gateway_notify(key, transport)
+    lease = acquire(key)
+    approval.unregister_gateway_notify(key)  # the parent has replied
+
+    def child():
+        token = set_current_session_key(key)
+        try:
+            decisions.append(run(lease, lambda: approval.check_execute_code_guard("print('safe')", "local")))
+        finally:
+            reset_current_session_key(token)
+            finished.set()
+
+    thread = threading.Thread(target=child)
+    thread.start()
+    try:
+        assert scheduled.wait(5), "the background text prompt must be attempted"
+        assert len(sent) == 1 and sent[0][0] == "a"
+        assert not finished.wait(2), "a late text receipt is not proof of failed delivery"
+        assert approval.has_blocking_approval(key), "/approve must find the delivered text request"
+        assert approval.resolve_gateway_approval(key, "once") == 1
+        assert finished.wait(5)
+        assert decisions[0]["approved"] is True
+    finally:
+        lease.release()
+        thread.join(5)
+        approval.unregister_gateway_notify(key)
+        with approval._lock:
+            approval._gateway_queues.pop(key, None)

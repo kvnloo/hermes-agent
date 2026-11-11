@@ -828,7 +828,17 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
                 adapter.send(ctx._status_chat_id, msg, metadata=_interim_metadata(metadata)), "Approval text-send scheduling error",
             )
             if fut is not None:
-                res = fut.result(timeout=15)
+                try:
+                    res = fut.result(timeout=15)
+                except TimeoutError:
+                    if not background:
+                        raise
+                    # A send can reach the chat before its acknowledgement. As with a
+                    # timed-out card, keep the request answerable instead of orphaning
+                    # the late text prompt; never resend an ambiguous delivery.
+                    logger.warning("Background approval text send timed out — prompt may have arrived; keeping request answerable")
+                    register_timeout_notice(self, approval_data, command=cmd, card_message_id=None)
+                    return
                 # Text-lane receipt (#138133): a card failure lands here, and a failed fallback was silent too.
                 logger.log(logging.INFO if getattr(res, "success", False) else logging.WARNING,
                            "Exec approval text prompt send (success=%s, message_id=%s, error=%s, request_id=%s, session=%s)",
