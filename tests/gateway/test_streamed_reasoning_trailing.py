@@ -52,3 +52,36 @@ async def test_no_trailing_reasoning_when_hidden_or_not_streamed(monkeypatch, sh
     assert adapter.sent == []
     if not already_sent:  # the caller's normal send carries the reasoning above the answer
         assert returned.startswith("💭") and returned.endswith("the answer is 42")
+
+@pytest.mark.asyncio
+async def test_uncertain_streamed_reply_ledgers_reasoning_without_an_early_duplicate(monkeypatch):
+    """A timed-out final is retried with its reasoning; do not send a second copy now."""
+    import gateway.run as gateway_run
+
+    monkeypatch.setattr(gateway_run, "_load_gateway_config",
+                        lambda: {"display": {"show_reasoning": True}})
+    adapter = ProgressCaptureAdapter(platform=Platform.TELEGRAM)
+    runner = _make_runner(adapter)
+    source = SessionSource(platform=Platform.TELEGRAM, chat_id="42", chat_type="dm")
+    event = MessageEvent(text="hi", message_type=MessageType.TEXT, source=source, message_id="1")
+    result = {"final_response": "the answer is 42", "last_reasoning": "thinking hard about it",
+              "already_sent": True, "delivery_uncertain": True}
+    response = runner._hmwa_prepend_reasoning(result, result["final_response"], source, False)
+    ledgered = []
+
+    async def capture_ledger(_event, _session_key, text, *, error):
+        ledgered.append(text)
+
+    monkeypatch.setattr(adapter, "ledger_attempted_final", capture_ledger)
+
+    class _Entry:
+        session_id = "s1"
+
+    returned = await runner._hmwa_deliver_turn_response(
+        event, source, _Entry(), "agent:main:telegram:dm:42", None,
+        result, [], response, None, False)
+
+    assert returned is None
+    assert ledgered == [response]
+    assert "thinking hard about it" in response and "the answer is 42" in response
+    assert adapter.sent == []  # the ledger owns a full marked redelivery, including reasoning

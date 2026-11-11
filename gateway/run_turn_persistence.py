@@ -730,7 +730,9 @@ class GatewayTurnPersistenceMixin:
             # The stream showed only the answer: the reasoning block prepended to ``response`` for
             # show_reasoning never reached the chat, so it follows as its own message (#7251).
             reasoning_block = self._hmwa_reasoning_block(agent_result, response, source, _intentional_silence)
-            if reasoning_block and adapter:
+            # An uncertain streamed send is ledgered with its reasoning prefix;
+            # the ledger's marked redelivery includes it, so avoid a second copy.
+            if reasoning_block and adapter and not agent_result.get("delivery_uncertain"):
                 try:
                     await adapter.send(source.chat_id, reasoning_block, metadata=self._event_thread_metadata(event, source))
                 except Exception:
