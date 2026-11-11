@@ -125,7 +125,13 @@ def build_ptb_requests(request_cls, *, fallback_ips: list[str], proxy_url: Optio
     from gateway.platforms._http_client_limits import platform_httpx_limits
     verify = platform_ssl_context() if verify is None else verify
     kwargs = ptb_request_kwargs()
-    ips = list(dict.fromkeys(_normalize_fallback_ips(fallback_ips)))[:MAX_FALLBACK_IPS] if not proxy_url else []
+    ips = list(dict.fromkeys(_normalize_fallback_ips(fallback_ips))) if not proxy_url else []
+    if len(ips) > MAX_FALLBACK_IPS:
+        # Discovery appends last-resort seeds after DoH results; reserve their slots in the cap.
+        seeds = [ip for ip in ips if ip in SEED_FALLBACK_IPS]
+        others = [ip for ip in ips if ip not in SEED_FALLBACK_IPS][:MAX_FALLBACK_IPS - len(seeds)]
+        selected = set(others + seeds)
+        ips = [ip for ip in ips if ip in selected]
     base = platform_httpx_limits()
     pool = updates = None
     if base is not None:

@@ -85,3 +85,30 @@ async def test_tighter_configured_connect_is_never_widened(monkeypatch):
         await transport.handle_async_request(request)
 
     assert [connect for _, connect in calls] == [1.0, 1.0, 1.0]
+
+
+@pytest.mark.asyncio
+async def test_capped_discovery_retains_seed_fallbacks_after_many_doh_addresses(monkeypatch):
+    """When DoH returns at least four A records, the capped walk still tries both seed IPs.
+
+    Discovery puts its emergency seed addresses last. Truncating that list at the pool cap
+    must not silently drop both seeds and leave a blackholed DNS path as the last resort.
+    """
+    clock = _Clock()
+    monkeypatch.setattr(tnet.time, "monotonic", clock.monotonic)
+    calls = []
+    monkeypatch.setattr(tnet.httpx, "AsyncHTTPTransport", lambda **kw: _HangingConnect(calls, clock))
+    doh = ["149.154.161.10", "149.154.161.11", "149.154.161.12", "149.154.161.13"]
+    request = tnet.build_ptb_requests(
+        _CaptureRequest, fallback_ips=[*doh, *tnet.SEED_FALLBACK_IPS],
+        proxy_url=None, verify=False,
+    )[0]
+    transport = request.kwargs["httpx_kwargs"]["transport"]
+
+    with pytest.raises(httpx.ConnectTimeout):
+        await transport.handle_async_request(_stock_send_request())
+
+    attempted = [host for host, _ in calls]
+    assert attempted[-1] == "api.telegram.org"
+    assert len(attempted) == tnet.MAX_FALLBACK_IPS + 1
+    assert set(tnet.SEED_FALLBACK_IPS).issubset(attempted)
