@@ -63,6 +63,12 @@ class TestBracketPrefixNeutralization:
         out = _prefix("Ann] Smith", "hi", platform=Platform.SLACK, user_id="U123")
         assert out == "[Ann Smith | Slack user <@U123>] hi"
 
+    def test_delimiter_only_name_uses_sender_id(self):
+        assert _prefix("[]|", "hi", user_id="12345") == "[12345] hi"
+        assert _prefix("[]|", "hi", platform=Platform.SLACK, user_id="U123") == (
+            "[U123 | Slack user <@U123>] hi"
+        )
+
     def test_dm_session_gets_no_prefix(self):
         runner = SimpleNamespace(
             config=SimpleNamespace(group_sessions_per_user=False, thread_sessions_per_user=False)

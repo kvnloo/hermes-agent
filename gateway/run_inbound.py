@@ -1515,7 +1515,10 @@ class GatewayInboundMixin(GatewayInboundHooksMixin, GatewayInboundTranscriptionM
             # Display names are attacker-influenceable: one inert line with the tag's own delimiters
             # dropped, so a name can neither fake a markdown section nor end the [Name] prefix early,
             # forge bracketed structure, or a second "| Slack user <@id>" span (#127053).
-            _safe_user_name = tag_safe_display_name(source.user_name)
+            # A name made only of tag delimiters must still identify the sender.
+            _safe_user_name = tag_safe_display_name(source.user_name) or tag_safe_display_name(
+                source.user_id or "unknown"
+            )
             # Slack: expose the CURRENT speaker's verifiable `<@U...>` id so "mention me again" has a
             # trusted target (display names are ambiguous). user_id comes from the envelope, not user-editable.
             # See #17916.
