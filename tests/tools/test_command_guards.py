@@ -197,3 +197,34 @@ class TestGatewayApprovalAllowPermanent:
         assert payload["command"] == "rm -rf /important"
         assert payload["allow_permanent"] is True
         assert payload["allow_session"] is True
+
+def test_acp_bare_rm_rf_never_autoapproves_without_a_gateway_permission_bridge(tmp_path):
+    """#152896: an ACP turn with no reachable approval card must fail closed."""
+    import json
+    import shlex
+
+    from gateway.session_policy import build_policy, policy_scope
+    from tools.terminal_tool import _Rejected, _run_approval_guards
+
+    target = tmp_path / "stage7-tmp"
+    target.mkdir()
+    (target / "owned.txt").write_text("keep")
+    command = "rm -rf " + shlex.quote(str(target))
+    policy = build_policy(
+        {"source": "acp", "cwd": str(tmp_path), "model": "fixture"},
+        {"approvals": {"mode": "manual", "timeout": 300}, "terminal": {"env_type": "local"}},
+    )
+    route_token = set_current_session_key("acp-152896-without-bridge")
+    try:
+        with policy_scope(policy):
+            # No approval notifier is registered for this ACP viewer route.
+            # The local danger guard's unattended fallback must not grant ACP consent.
+            with pytest.raises(_Rejected) as caught:
+                _run_approval_guards(command, "local", {"env_type": "local"}, force=False)
+    finally:
+        reset_current_session_key(route_token)
+
+    result = json.loads(caught.value.result_json)
+    assert result["status"] == "blocked"
+    assert "ACP client did not approve" in result["error"]
+    assert (target / "owned.txt").read_text() == "keep"
