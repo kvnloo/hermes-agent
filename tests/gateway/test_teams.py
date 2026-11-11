@@ -359,6 +359,32 @@ class TestTeamsConnect:
 
 
 
+
+class TestTeamsProactiveSend:
+    @pytest.mark.anyio
+    async def test_cached_conversation_reference_uses_sdk_send_helper(self, monkeypatch):
+        """SDK 2.1 App has no activity_sender; cached refs use its send helper."""
+        api = object()
+        reference = object()
+        activity = object()
+        sent = SimpleNamespace(id="sent-123")
+        send_activity = AsyncMock(return_value=sent)
+        activity_send_module = types.ModuleType("microsoft_teams.apps.activity_send")
+        activity_send_module.send_or_update_activity = send_activity
+        monkeypatch.setitem(sys.modules, "microsoft_teams.apps.activity_send", activity_send_module)
+
+        adapter = TeamsAdapter(_make_config(client_id="bot", client_secret="s", tenant_id="tenant"))
+        adapter._app = SimpleNamespace(api=api, send=AsyncMock())
+        adapter._conv_refs["chat-1"] = reference
+
+        result = await adapter._send_via_conv_ref("chat-1", activity, "fallback")
+
+        assert result is sent
+        send_activity.assert_awaited_once_with(api, activity, reference)
+        adapter._app.send.assert_not_awaited()
+        assert "sent-123" in adapter._sent_ids
+
+
 def _make_summary_payload():
     return TeamsMeetingSummaryPayload(
         meeting_ref=TeamsMeetingRef(meeting_id="meeting-123"),
