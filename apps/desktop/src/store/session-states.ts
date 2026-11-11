@@ -869,6 +869,20 @@ export function publishSessionState(runtimeId: string, state: ClientSessionState
   const current = $sessionStates.get()
   const prev = current[runtimeId] ?? null
 
+  // A reset's physical continuation is the visible stored row, while its original
+  // session id still owns the gateway FIFO. A delayed owner-id projection must not
+  // send the renderer backwards through that row's ordered lineage.
+  const before = prev?.storedSessionId
+  const proposed = state.storedSessionId
+
+  if (before && proposed && before !== proposed) {
+    const lineage = $sessions.get().find(row => row._lineage_ids?.includes(before))?._lineage_ids
+
+    if (lineage && lineage.indexOf(proposed) >= 0 && lineage.indexOf(proposed) < lineage.indexOf(before)) {
+      state = { ...state, storedSessionId: before }
+    }
+  }
+
   if (prev === state) {
     return
   }
