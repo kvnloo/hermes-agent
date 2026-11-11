@@ -3138,11 +3138,29 @@ def looks_like_codex_intermediate_ack(
     turn's own user row: ``messages`` is the whole session, #69778, and a nudge row starts no new turn).
     A response then needs a future ack + action marker, or a bounded pronounless clause + transition cue."""
     from agent.turn_context import reanchor_current_turn_user_idx as turn_user_idx
-    if any(isinstance(m, dict) and m.get("role") == "tool" for m in messages[turn_user_idx(messages, user_message) + 1:]):
+    current_user_idx = turn_user_idx(messages, user_message)
+    if any(isinstance(m, dict) and m.get("role") == "tool" for m in messages[current_user_idx + 1:]):
         return False
     assistant_text = agent._strip_think_blocks(assistant_content or "").strip().lower()
     if not assistant_text or len(assistant_text) > 1200:
         return False
+    # A previously queued Bot Mode DM wakes the coordinator on completion. A
+    # deferred status acknowledgment is not a promise to start a fresh tool call
+    # (#149942); fresh action announcements must still take the normal path.
+    if (
+        re.search(r"\b(?:i['’]ll|i will) report back (?:when|once|after)\b", assistant_text)
+        and re.search(r"\b(?:already queued|still pending|still working)\b", assistant_text)
+    ):
+        for earlier in messages[:current_user_idx]:
+            if not (isinstance(earlier, dict) and earlier.get("role") == "tool"
+                    and earlier.get("name") == "message_agent"):
+                continue
+            try:
+                result = json.loads(earlier.get("content") or "{}")
+            except (TypeError, ValueError):
+                continue
+            if isinstance(result, dict) and result.get("status") == "queued":
+                return False
     # Some tool-using providers narrate the next action in terse log style: "Brief written. Creating the
     # session now." Bare gerunds are too ambiguous ("Reading the traceback explains the failure" is a final
     # answer), so this path also requires an explicit transition cue such as "now", "on <ACP agent> via acpx",
