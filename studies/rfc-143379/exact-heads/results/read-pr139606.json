@@ -1,0 +1,346 @@
+{
+  "harness": "read_dispatch",
+  "authored_execution_status": "NOT RUN BY AUTHOR",
+  "checkout": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance",
+  "head": "5b31ccb7d56ad614da63588ef876584b9f95dd3f",
+  "scenarios": [
+    {
+      "scenario": "simple_read_memory",
+      "head": "5b31ccb7d56ad614da63588ef876584b9f95dd3f",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "finding": "production/runtime error; not replaced with a replica",
+      "error": {
+        "type": "AttributeError",
+        "message": "'MemoryStore' object has no attribute 'read'",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 173, in record\n    result = fn()\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 465, in <lambda>\n    self.record(\"simple_read_\" + target, lambda target=target: self.simple_read(target))\n                                                               ~~~~~~~~~~~~~~~~^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 191, in simple_read\n    result = self.call(store, action=\"read\", target=target)\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 166, in call\n    result = json.loads(self.mt.memory_tool(store=store, target=kwargs.pop(\"target\", \"memory\"), **kwargs))\n                        ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool.py\", line 300, in memory_tool\n    outcome, result = _memory_tool(action, target, content, old_text, new_text, operations, doc, store)\n                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool.py\", line 330, in _memory_tool\n    return _applied(store.read(target))\n                    ^^^^^^^^^^\nAttributeError: 'MemoryStore' object has no attribute 'read'\n"
+      }
+    },
+    {
+      "scenario": "simple_read_user",
+      "head": "5b31ccb7d56ad614da63588ef876584b9f95dd3f",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "finding": "production/runtime error; not replaced with a replica",
+      "error": {
+        "type": "AttributeError",
+        "message": "'MemoryStore' object has no attribute 'read'",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 173, in record\n    result = fn()\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 465, in <lambda>\n    self.record(\"simple_read_\" + target, lambda target=target: self.simple_read(target))\n                                                               ~~~~~~~~~~~~~~~~^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 191, in simple_read\n    result = self.call(store, action=\"read\", target=target)\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 166, in call\n    result = json.loads(self.mt.memory_tool(store=store, target=kwargs.pop(\"target\", \"memory\"), **kwargs))\n                        ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool.py\", line 300, in memory_tool\n    outcome, result = _memory_tool(action, target, content, old_text, new_text, operations, doc, store)\n                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool.py\", line 330, in _memory_tool\n    return _applied(store.read(target))\n                    ^^^^^^^^^^\nAttributeError: 'MemoryStore' object has no attribute 'read'\n"
+      }
+    },
+    {
+      "scenario": "missing_file_read",
+      "head": "5b31ccb7d56ad614da63588ef876584b9f95dd3f",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "finding": "production/runtime error; not replaced with a replica",
+      "error": {
+        "type": "AttributeError",
+        "message": "'MemoryStore' object has no attribute 'read'",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 173, in record\n    result = fn()\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 205, in absent_file\n    result = self.call(store, action=\"read\")\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 166, in call\n    result = json.loads(self.mt.memory_tool(store=store, target=kwargs.pop(\"target\", \"memory\"), **kwargs))\n                        ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool.py\", line 300, in memory_tool\n    outcome, result = _memory_tool(action, target, content, old_text, new_text, operations, doc, store)\n                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool.py\", line 330, in _memory_tool\n    return _applied(store.read(target))\n                    ^^^^^^^^^^\nAttributeError: 'MemoryStore' object has no attribute 'read'\n"
+      }
+    },
+    {
+      "scenario": "batch_read_schema_vs_runtime",
+      "head": "5b31ccb7d56ad614da63588ef876584b9f95dd3f",
+      "mode": "unmodified",
+      "acceptance": "GREEN",
+      "checks": {
+        "schema_matches_runtime": true,
+        "standalone_read_only_contract": true,
+        "no_partial_commit": true,
+        "cache_preserved_on_rejection": true
+      },
+      "single_action_enum": [
+        "add",
+        "patch",
+        "remove",
+        "read"
+      ],
+      "batch_action_enum": [
+        "add",
+        "patch",
+        "remove"
+      ],
+      "batch_read_schema_advertised": false,
+      "batch_read_runtime_success": false,
+      "operations": [
+        {
+          "action": "read"
+        }
+      ],
+      "result": {
+        "success": false,
+        "error": "Operation 1 (read): unknown action. Use add, patch, or remove. No operations were applied (batch is all-or-nothing).",
+        "usage": "24/50,000"
+      }
+    },
+    {
+      "scenario": "mixed_batch_read_atomic_rejection",
+      "head": "5b31ccb7d56ad614da63588ef876584b9f95dd3f",
+      "mode": "unmodified",
+      "acceptance": "GREEN",
+      "checks": {
+        "schema_matches_runtime": true,
+        "standalone_read_only_contract": true,
+        "no_partial_commit": true,
+        "cache_preserved_on_rejection": true
+      },
+      "single_action_enum": [
+        "add",
+        "patch",
+        "remove",
+        "read"
+      ],
+      "batch_action_enum": [
+        "add",
+        "patch",
+        "remove"
+      ],
+      "batch_read_schema_advertised": false,
+      "batch_read_runtime_success": false,
+      "operations": [
+        {
+          "action": "add",
+          "content": "Synthetic batch candidate."
+        },
+        {
+          "action": "read"
+        }
+      ],
+      "result": {
+        "success": false,
+        "error": "Operation 2 (read): unknown action. Use add, patch, or remove. No operations were applied (batch is all-or-nothing).",
+        "usage": "24/50,000"
+      }
+    },
+    {
+      "scenario": "read_with_write_operations",
+      "head": "5b31ccb7d56ad614da63588ef876584b9f95dd3f",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "finding": "production/runtime error; not replaced with a replica",
+      "error": {
+        "type": "AttributeError",
+        "message": "'MemoryStore' object has no attribute 'read'",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 173, in record\n    result = fn()\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 469, in <lambda>\n    self.record(\"read_with_write_operations\", lambda: self.ambiguous_dispatch([{\"action\": \"add\", \"content\": \"Synthetic ignored candidate.\"}]))\n                                                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 231, in ambiguous_dispatch\n    result = self.call(store, action=\"read\", operations=operations)\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 166, in call\n    result = json.loads(self.mt.memory_tool(store=store, target=kwargs.pop(\"target\", \"memory\"), **kwargs))\n                        ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool.py\", line 300, in memory_tool\n    outcome, result = _memory_tool(action, target, content, old_text, new_text, operations, doc, store)\n                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool.py\", line 330, in _memory_tool\n    return _applied(store.read(target))\n                    ^^^^^^^^^^\nAttributeError: 'MemoryStore' object has no attribute 'read'\n"
+      }
+    },
+    {
+      "scenario": "read_with_empty_operations",
+      "head": "5b31ccb7d56ad614da63588ef876584b9f95dd3f",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "finding": "production/runtime error; not replaced with a replica",
+      "error": {
+        "type": "AttributeError",
+        "message": "'MemoryStore' object has no attribute 'read'",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 173, in record\n    result = fn()\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 470, in <lambda>\n    self.record(\"read_with_empty_operations\", lambda: self.ambiguous_dispatch([]))\n                                                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 231, in ambiguous_dispatch\n    result = self.call(store, action=\"read\", operations=operations)\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 166, in call\n    result = json.loads(self.mt.memory_tool(store=store, target=kwargs.pop(\"target\", \"memory\"), **kwargs))\n                        ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool.py\", line 300, in memory_tool\n    outcome, result = _memory_tool(action, target, content, old_text, new_text, operations, doc, store)\n                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool.py\", line 330, in _memory_tool\n    return _applied(store.read(target))\n                    ^^^^^^^^^^\nAttributeError: 'MemoryStore' object has no attribute 'read'\n"
+      }
+    },
+    {
+      "scenario": "read_invalid_utf8_preserves_cache_and_disk",
+      "head": "5b31ccb7d56ad614da63588ef876584b9f95dd3f",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "finding": "production/runtime error; not replaced with a replica",
+      "error": {
+        "type": "RuntimeError",
+        "message": "Actual MemoryStore.read is absent on this head; dispatch race cannot run",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 173, in record\n    result = fn()\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 471, in <lambda>\n    self.record(\"read_invalid_utf8_preserves_cache_and_disk\", lambda: self.failed_read(False))\n                                                                      ~~~~~~~~~~~~~~~~^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 237, in failed_read\n    self.require_read()\n    ~~~~~~~~~~~~~~~~~^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 183, in require_read\n    raise RuntimeError(\"Actual MemoryStore.read is absent on this head; dispatch race cannot run\")\nRuntimeError: Actual MemoryStore.read is absent on this head; dispatch race cannot run\n"
+      }
+    },
+    {
+      "scenario": "read_oserror_preserves_cache_and_disk",
+      "head": "5b31ccb7d56ad614da63588ef876584b9f95dd3f",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "finding": "production/runtime error; not replaced with a replica",
+      "error": {
+        "type": "RuntimeError",
+        "message": "Actual MemoryStore.read is absent on this head; dispatch race cannot run",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 173, in record\n    result = fn()\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 472, in <lambda>\n    self.record(\"read_oserror_preserves_cache_and_disk\", lambda: self.failed_read(True))\n                                                                 ~~~~~~~~~~~~~~~~^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 237, in failed_read\n    self.require_read()\n    ~~~~~~~~~~~~~~~~~^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 183, in require_read\n    raise RuntimeError(\"Actual MemoryStore.read is absent on this head; dispatch race cannot run\")\nRuntimeError: Actual MemoryStore.read is absent on this head; dispatch race cannot run\n"
+      }
+    },
+    {
+      "scenario": "write_then_read",
+      "head": "5b31ccb7d56ad614da63588ef876584b9f95dd3f",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "finding": "production/runtime error; not replaced with a replica",
+      "error": {
+        "type": "AttributeError",
+        "message": "'MemoryStore' object has no attribute 'read'",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 173, in record\n    result = fn()\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 291, in write_then_read\n    read = self.call(store, action=\"read\")\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 166, in call\n    result = json.loads(self.mt.memory_tool(store=store, target=kwargs.pop(\"target\", \"memory\"), **kwargs))\n                        ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool.py\", line 300, in memory_tool\n    outcome, result = _memory_tool(action, target, content, old_text, new_text, operations, doc, store)\n                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool.py\", line 330, in _memory_tool\n    return _applied(store.read(target))\n                    ^^^^^^^^^^\nAttributeError: 'MemoryStore' object has no attribute 'read'\n"
+      }
+    },
+    {
+      "scenario": "deterministic_same_store_stale_cache_race",
+      "head": "5b31ccb7d56ad614da63588ef876584b9f95dd3f",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "finding": "production/runtime error; not replaced with a replica",
+      "error": {
+        "type": "RuntimeError",
+        "message": "Actual MemoryStore.read is absent on this head; dispatch race cannot run",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 173, in record\n    result = fn()\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 300, in race\n    self.require_read()\n    ~~~~~~~~~~~~~~~~~^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 183, in require_read\n    raise RuntimeError(\"Actual MemoryStore.read is absent on this head; dispatch race cannot run\")\nRuntimeError: Actual MemoryStore.read is absent on this head; dispatch race cannot run\n"
+      }
+    },
+    {
+      "scenario": "concurrent_survival_and_cache_freshness_separate",
+      "head": "5b31ccb7d56ad614da63588ef876584b9f95dd3f",
+      "mode": "unmodified",
+      "acceptance": "RED",
+      "finding": "production/runtime error; not replaced with a replica",
+      "error": {
+        "type": "RuntimeError",
+        "message": "Actual MemoryStore.read is absent on this head; dispatch race cannot run",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 173, in record\n    result = fn()\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 414, in concurrency_survival\n    self.require_read()\n    ~~~~~~~~~~~~~~~~~^^\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 183, in require_read\n    raise RuntimeError(\"Actual MemoryStore.read is absent on this head; dispatch race cannot run\")\nRuntimeError: Actual MemoryStore.read is absent on this head; dispatch race cannot run\n"
+      }
+    }
+  ],
+  "blockers": [],
+  "native_neighboring_tests_suggested_not_run": [
+    {
+      "path": "tests/tools/test_memory_tool.py",
+      "neighbors": [
+        "TestMemoryToolDispatcher",
+        "TestMemoryBatch",
+        "TestUnreadableFileDoesNotWipeMemory",
+        "TestMemoryStoreSnapshot",
+        "TestMemoryFileLockPermissions",
+        "TestBomToleranceInMemoryFiles"
+      ],
+      "add_cases": [
+        "standalone read refreshes cache, reports usage, leaves bytes and prompt snapshot unchanged",
+        "batch action enum agrees with actual apply_batch; read is standalone-only",
+        "action=read plus operations is explicitly refused, never silently ignores operations",
+        "invalid UTF-8 and injected PermissionError preserve existing cache and disk on read",
+        "event-controlled read snapshot / writer commit / cache publication interleaving",
+        "shared _mutation_lock excludes writer until read publishes; file lock remains real",
+        "concurrent writers survive on disk; cache freshness is a distinct assertion"
+      ]
+    },
+    {
+      "path": "tests/tools/test_memory_tool_schema.py",
+      "neighbors": [
+        "test_memory_schema_has_no_forbidden_top_level_combinators"
+      ],
+      "add_cases": [
+        "read advertised in single action enum, absent from mutating batch enum"
+      ]
+    },
+    {
+      "path": "tests/tools/test_memory_target_contract.py",
+      "add_cases": [
+        "read still observes disabled/invalid target contract at dispatcher boundary"
+      ]
+    }
+  ],
+  "expected_heads": {
+    "af16e3ab16eed2492552c325ad1777533a8b7004": "PR #141876",
+    "fab9b01c915a3118cc8daa6cc1b18c15b3f982d0": "main control",
+    "5b31ccb7d56ad614da63588ef876584b9f95dd3f": "PR #139606"
+  },
+  "external_providers": "forbidden",
+  "isolation": {
+    "HERMES_HOME_set_before_production_imports": true,
+    "HOME_and_XDG_synthetic": true,
+    "native_algorithms_replaced": false,
+    "network_blocked": true,
+    "temporary_root_removed_on_exit": true
+  },
+  "head_label": "PR #139606",
+  "source_files": {
+    "tools/memory_tool.py": {
+      "sha256": "2d4afcf1b4f18bf66db5e463be7aae1b38102716aceede4280abdec6c0b5bab3",
+      "matches_HEAD": true
+    },
+    "tools/memory_tool_store.py": {
+      "sha256": "3280e2294928815ab2dd52479c5616aee805e27819b901f9af40831a293728c6",
+      "matches_HEAD": true
+    }
+  },
+  "production_functions": {
+    "memory_tool": {
+      "present": true,
+      "module": "tools.memory_tool",
+      "qualname": "memory_tool",
+      "file": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool.py",
+      "line": 289,
+      "source_sha256": "ad939a1f31f24b01089339692190ee78675139de3d91e2d4d425af1d14676588",
+      "source": "def memory_tool(action: str | None = None, target: str = \"memory\", content: str | None = None, old_text: str | None = None,\n                new_text: str | None = None, operations: Optional[list[dict[str, Any]]] = None,\n                doc: str | None = None, store: Optional[MemoryStore] = None) -> str:\n    \"\"\"Tool entry point; returns a JSON string. Single op (action + content/old_text)\n    or batch (``operations``, atomic against the final budget). ``new_text``\n    aliases ``content``. ``doc`` addresses a MEMORY.md chain document\n    (read/add/patch/remove).\"\"\"\n    if store is None:\n        return tool_error(\"Memory is not available. It may be disabled in config or this environment.\", success=False)\n    token = FAILURE_CLASS.set(\"other\")\n    try:\n        outcome, result = _memory_tool(action, target, content, old_text, new_text, operations, doc, store)\n        failure_class = \"none\" if outcome == \"success\" else FAILURE_CLASS.get()\n    finally:\n        FAILURE_CLASS.reset(token)\n    from hermes_cli.observability.shared_metrics_loop import record_builtin_memory_call\n    record_builtin_memory_call(action, operations, outcome=outcome, failure_class=failure_class)\n    return result\n"
+    },
+    "_memory_tool": {
+      "present": true,
+      "module": "tools.memory_tool",
+      "qualname": "_memory_tool",
+      "file": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool.py",
+      "line": 318,
+      "source_sha256": "2c79f855419b115265be51fb2985f37236cd4255ed99d0b91c781ab19c99613c",
+      "source": "def _memory_tool(action, target, content, old_text, new_text, operations, doc, store) -> tuple[str, str]:\n    \"\"\"``(outcome, result_json)``: ``rejected`` when refused or held before touching the store.\"\"\"\n    # An omitted optional string can arrive as \"\" (#90468): let the new_text alias fill it.\n    if not content and new_text:\n        content = new_text\n    target, doc_error = _resolve_target(target, doc)\n    if doc_error is not None:\n        return _invalid(doc_error)\n    target_error = _memory_target_error(store, target, operations)\n    if target_error is not None:\n        return \"rejected\", json.dumps(target_error)\n    if action == \"read\":\n        return _applied(store.read(target))\n    if operations:\n        if not isinstance(operations, list):\n            return _invalid(\"operations must be a list of {action, content?, old_text?} objects.\")\n        if any(isinstance(op, dict) and op.get(\"action\") == \"replace\" for op in operations):\n            return _invalid(_REPLACE_REMOVED)\n        denied = _background_delete_gate(store, action, operations, target)\n        if denied is not None:\n            return \"rejected\", denied\n        # Approval gate: stages (background/gateway) or prompts inline (CLI); off by default.\n        gate_result = _apply_write_gate(store, \"batch\", target, None, None, operations)\n        if gate_result is not None:\n            return \"rejected\", gate_result\n        return _applied(store.apply_batch(target, operations))\n    # Reject calls that provide neither action (single-op) nor operations\n    # (batch).  Without this guard the dispatch falls through to the generic\n    # \"Unknown action 'None'\" error, which gives the model no signal about\n    # *why* the call was malformed and can trigger repeated retries. (#64291)\n    if not action and not operations:\n        return _invalid(\n            \"Missing required parameter: provide 'action' (add/patch/remove) \"\n            \"or 'operations' (batch list). Got neither.\"\n        )\n    if action == \"replace\":\n        return _invalid(_REPLACE_REMOVED)\n    if action not in _STORE_ACTIONS:\n        return _invalid(f\"Unknown action '{action}'. Use: add, patch, remove\")\n    invalid = (_validate_single_op(store, action, target, content, old_text)\n               or _background_delete_gate(store, action, None, target, content, old_text)\n               or _apply_write_gate(store, action, target, content, old_text))\n    if invalid is not None:\n        return \"rejected\", invalid\n    result = _STORE_ACTIONS[action][0](store, target, content, old_text)\n    # Stage 7 — post-write read-back (T1-2): after an admitted replace/patch/remove,\n    # re-read the target and confirm old_text is gone. Bounded: one read per write.\n    if result.get(\"success\"):\n        from tools.write_gate import verify_post_write\n        readback = verify_post_write(store, target, action, old_text, content=content)\n        if readback is not None:\n            return \"failed\", readback\n    return _applied(result)\n"
+    },
+    "MemoryStore.read": {
+      "present": false
+    },
+    "MemoryStore._mutate": {
+      "present": true,
+      "module": "tools.memory_tool_store",
+      "qualname": "MemoryStore._mutate",
+      "file": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool_store.py",
+      "line": 338,
+      "source_sha256": "ebc3cd428b9b94496a93fae117996a3398ddfb8a52a1c6fffcd47b3a34b3e98c",
+      "source": "    def _mutate(self, target: str, mutate, *, skip_drift: bool = False) -> dict[str, Any]:\n        \"\"\"Lock, re-read from disk, run ``mutate(entries, limit)`` -> ``(new_entries, message)``\n        or an error dict, then persist and return the success response. The reload aborts\n        on an existing-but-unreadable file (even append-only ``add`` rewrites the whole\n        file) and, unless *skip_drift*, on external drift (flushing would discard\n        un-roundtrippable content). Drift check and parse use the SAME raw snapshot —\n        a failed second read used to count as \"no drift\". The closure may return a\n        third value, a dict merged into the success payload (``_error``'s ``**extra``\n        convention) — e.g. the full text a replace overwrote (#117952). ANY dict the closure\n        returns is passed through verbatim and nothing is persisted: error dicts, or the\n        success payload of a read-only closure (``resolve_entry``, ``resolve_batch_entries``).\"\"\"\n        path = self._path_for(target)\n        with self._file_lock(path):\n            raw, read_ok = self._read_raw_checked(path)\n            if not read_ok:\n                return _read_failed_error(path)\n            bak = None if skip_drift else self._detect_external_drift(target, raw)\n            self._set_entries(target, list(dict.fromkeys(self._parse_entries(raw))))\n            if bak:\n                return _drift_error(path, bak)\n            result = mutate(self._entries_for(target), self._char_limit(target))\n            if isinstance(result, dict):\n                return result\n            self._set_entries(target, result[0])\n            from hermes_constants import mkdir_under_hermes_home\n\n            mkdir_under_hermes_home(path.parent)\n            self._write_file(path, result[0])\n            extra_fields = result[2] if len(result) > 2 else {}\n            return self._success_response(target, result[1], **extra_fields)\n"
+    },
+    "MemoryStore._read_raw_checked": {
+      "present": true,
+      "module": "tools.memory_tool_store",
+      "qualname": "MemoryStore._read_raw_checked",
+      "file": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool_store.py",
+      "line": 646,
+      "source_sha256": "e1361d4a3e3e2b2ad02633db4e7835eaf4e2bb0aa5523d67b96e18ef38eb9359",
+      "source": "    @staticmethod\n    def _read_raw_checked(path: Path) -> tuple[str, bool]:\n        \"\"\"``(raw, read_ok)``; ``read_ok`` is False ONLY when the file EXISTS but can't be\n        read. Decoding stays STRICT (``errors=\"replace\"`` would hand callers a lossy view\n        a save then persists); ``utf-8-sig`` strips a Notepad BOM off the first entry.\"\"\"\n        if not path.exists():\n            return \"\", True\n        try:\n            # utf-8-sig strips a leading UTF-8 BOM (Notepad-edited memory files on Windows) and is\n            # byte-identical to utf-8 otherwise. Plain utf-8 kept U+FEFF glued to the first entry,\n            # corrupting matching/dedup for that entry forever (#10878 / PR #10888). Decode errors stay\n            # STRICT on purpose: errors=\"replace\" would hand read-modify-write callers a lossy view that a\n            # subsequent save persists over the real bytes — the wipe class documented above. Undecodable\n            # bytes must surface as read_ok=False.\n            return path.read_text(encoding=\"utf-8-sig\"), True\n        except (OSError, UnicodeDecodeError):\n            return \"\", False\n"
+    },
+    "MemoryStore._set_entries": {
+      "present": true,
+      "module": "tools.memory_tool_store",
+      "qualname": "MemoryStore._set_entries",
+      "file": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool_store.py",
+      "line": 306,
+      "source_sha256": "54aecabee9d2047b6c98e2567b5507147431a3dc1d52b75592888ec815d9b844",
+      "source": "    def _set_entries(self, target: str, entries: list[str]):\n        setattr(self, \"user_entries\" if target == \"user\" else \"memory_entries\", entries)\n"
+    },
+    "MemoryStore._file_lock": {
+      "present": true,
+      "module": "tools.memory_tool_store",
+      "qualname": "MemoryStore._file_lock",
+      "file": "/home/agentjob/jobs/20261023-014926-8dfc/src/checkouts/governance/tools/memory_tool_store.py",
+      "line": 255,
+      "source_sha256": "a369caf71b914cb1dd82ffac5b49c95f9f7c55f4ec4129b67a8365c500ce8312",
+      "source": "    @staticmethod\n    @contextmanager\n    def _file_lock(path: Path):\n        \"\"\"Exclusive lock on a separate .lock file so the memory file itself can\n        still be atomically replaced.\"\"\"\n        from tools import memory_tool as _mt  # fcntl/msvcrt live (and are patched) there\n        fcntl, msvcrt = _mt.fcntl, _mt.msvcrt\n        lock_path = path.with_suffix(path.suffix + \".lock\")\n        from hermes_constants import mkdir_under_hermes_home\n\n        mkdir_under_hermes_home(lock_path.parent)\n        if fcntl is None and msvcrt is None:\n            yield\n            return\n        flags = os.O_RDWR | os.O_CREAT\n        if hasattr(os, \"O_NOFOLLOW\"):\n            flags |= os.O_NOFOLLOW\n        raw_fd = os.open(lock_path, flags, 0o600)\n        try:\n            # The creation mode is filtered through the process umask and does\n            # not repair a lock left loose by an older Hermes process. Tighten\n            # the opened inode before acquiring the lock so both cases are\n            # owner-only. Operating on the fd avoids a path-swap window.\n            if hasattr(os, \"fchmod\"):\n                os.fchmod(raw_fd, 0o600)\n            fd = os.fdopen(raw_fd, \"r+\", encoding=\"utf-8\")\n        except Exception:\n            os.close(raw_fd)\n            raise\n        with fd:\n            def _flock(unlock: bool):\n                if fcntl:\n                    fcntl.flock(fd, fcntl.LOCK_UN if unlock else fcntl.LOCK_EX)\n                else:\n                    fd.seek(0)\n                    msvcrt.locking(fd.fileno(), msvcrt.LK_UNLCK if unlock else msvcrt.LK_LOCK, 1)\n            _flock(False)\n            try:\n                yield\n            finally:\n                with suppress(OSError):\n                    _flock(True)\n"
+    }
+  },
+  "upstream_lock_inspection": {
+    "_mutation_lock_present": false,
+    "_mutation_lock_type": "NoneType",
+    "_file_lock_present": true,
+    "finding": "Do not attribute proposed _mutation_lock to upstream; inspected pinned source uses _file_lock in _mutate."
+  },
+  "patched_control": {
+    "mode": "PATCHED_INSTRUMENTED_CONTROL",
+    "acceptance": "BLOCKED",
+    "error": {
+      "type": "RuntimeError",
+      "message": "PATCHED CONTROL unavailable: checkout has no MemoryStore.read; no replica supplied",
+      "traceback": "Traceback (most recent call last):\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 545, in main\n    with patched_shared_lock_and_dispatch(mt) as control:\n         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^\n  File \"/usr/lib/python3.14/contextlib.py\", line 141, in __enter__\n    return next(self.gen)\n  File \"/home/agentjob/jobs/20261023-014926-8dfc/src/harness/read_dispatch.py\", line 96, in patched_shared_lock_and_dispatch\n    raise RuntimeError(\"PATCHED CONTROL unavailable: checkout has no MemoryStore.read; no replica supplied\")\nRuntimeError: PATCHED CONTROL unavailable: checkout has no MemoryStore.read; no replica supplied\n"
+    },
+    "missing_read_not_reimplemented": true
+  },
+  "summary": {
+    "GREEN": 2,
+    "RED": 10,
+    "BLOCKED": 0,
+    "expected_red_findings_do_not_abort": true,
+    "runtime_errors_remain_findings": true
+  }
+}
