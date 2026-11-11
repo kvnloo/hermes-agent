@@ -834,7 +834,23 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
                 token = set_edit_approval_requester(edit_approval_requester)
                 return lambda: reset_edit_approval_requester(token)
 
+            def _sudo() -> Callable[[], None]:
+                # Masked sudo prompt through the client's request_secret card (acp_adapter/sudo_prompt.py).
+                from acp_adapter.sudo_prompt import make_sudo_callback
+                from tools import terminal_tool
+
+                def _secret_tool_names() -> set[str]:
+                    # request_secret is usually deferred (tool_search), so it is in the registry, not agent.tools.
+                    from tools.registry import registry
+                    return set(getattr(agent, "valid_tool_names", None) or ()) | set(registry.get_all_tool_names())
+
+                previous = terminal_tool._get_sudo_password_callback()
+                terminal_tool.set_sudo_password_callback(
+                    make_sudo_callback(_secret_tool_names))
+                return lambda: terminal_tool.set_sudo_password_callback(previous)
+
             _bind_guarded(stack, "session context", _session_context)
+            _bind_guarded(stack, "sudo prompt", _sudo)
             if approval_cb:
                 _bind_guarded(stack, "approval callback", _approval)
             if edit_approval_requester:
