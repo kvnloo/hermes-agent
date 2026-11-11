@@ -97,8 +97,11 @@ class _HelloSizeEdge:
                 if not chunk:
                     return
                 request += chunk
-            body = json.dumps({"ok": True, "result": {"id": 1, "is_bot": True, "first_name": "edge",
-                                                      "username": "edge_bot"}}).encode()
+            payload = ({"Answer": [{"type": 1, "data": "149.154.165.42"}]}
+                       if request.startswith(b"GET ") else
+                       {"ok": True, "result": {"id": 1, "is_bot": True, "first_name": "edge",
+                                               "username": "edge_bot"}})
+            body = json.dumps(payload).encode()
             tls.sendall(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %d\r\n"
                         b"Connection: close\r\n\r\n" % len(body) + body)
             self.answered += 1
@@ -156,5 +159,37 @@ async def test_unrecognised_setting_keeps_the_default_handshake(tmp_path, monkey
             await _get_me_through_adapter(edge, monkeypatch, {"tls_classic_key_exchange": value})
         assert min(edge.hello_sizes) > _RESET_ABOVE
         assert "tls_classic_key_exchange" in caplog.text and "expected true or false" in caplog.text
+    finally:
+        edge.close()
+
+
+@pytest.mark.asyncio
+async def test_classic_opt_in_covers_telegram_doh_discovery(tmp_path, monkeypatch, caplog):
+    """On a PQ-hello-reset path the Telegram opt-in must also reach fallback IP discovery."""
+    _require_large_default_hello()
+    from plugins.platforms.telegram import telegram_network as network
+
+    edge = _HelloSizeEdge(tmp_path)
+    try:
+        monkeypatch.setenv("SSL_CERT_FILE", str(edge.cert_path))
+        for key in ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy", "TELEGRAM_PROXY"):
+            monkeypatch.delenv(key, raising=False)
+        monkeypatch.setattr(network, "_DOH_PROVIDERS", [{
+            "url": f"https://127.0.0.1:{edge.port}/resolve",
+            "params": {"name": "api.telegram.org", "type": "A"},
+            "headers": {},
+        }])
+        monkeypatch.setattr(network, "_resolve_system_dns", lambda: set())
+        adapter = TelegramAdapter(PlatformConfig(
+            enabled=True, token="123:abc", extra={"tls_classic_key_exchange": True}))
+        with caplog.at_level("INFO"):
+            general, updates = await adapter._build_ptb_requests()
+        try:
+            assert edge.answered == 1
+            assert edge.hello_sizes and max(edge.hello_sizes) <= _RESET_ABOVE
+            assert "149.154.165.42" in caplog.text  # live DoH answer, not the hard-coded seed fallback
+        finally:
+            await general.shutdown()
+            await updates.shutdown()
     finally:
         edge.close()

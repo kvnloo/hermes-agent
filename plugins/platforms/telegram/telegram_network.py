@@ -429,7 +429,7 @@ async def _query_doh_provider(client: httpx.AsyncClient, provider: dict) -> list
         return []
 
 
-async def discover_fallback_ips() -> list[str]:
+async def discover_fallback_ips(*, verify=None) -> list[str]:
     """Resolve api.telegram.org via Google + Cloudflare DoH; unique A records, in order. IPs matching the
     system resolver are deliberately KEPT (often the most reliable path); ``SEED_FALLBACK_IPS`` always
     form the tail, so a one-record DoH answer cannot make one edge the fallback path's single point of
@@ -439,7 +439,8 @@ async def discover_fallback_ips() -> list[str]:
     IP is the most reliable path to api.telegram.org and a transient primary-path failure should be retried
     against the same address via the IP-rewrite path before the seed list is consulted (#14520).
     """
-    async with httpx.AsyncClient(timeout=httpx.Timeout(_DOH_TIMEOUT), verify=platform_ssl_context()) as client:
+    verify = platform_ssl_context() if verify is None else verify
+    async with httpx.AsyncClient(timeout=httpx.Timeout(_DOH_TIMEOUT), verify=verify) as client:
         system_dns_task = asyncio.ensure_future(asyncio.to_thread(_resolve_system_dns))
         results = await asyncio.gather(*[_query_doh_provider(client, p) for p in _DOH_PROVIDERS], return_exceptions=True)
     # The getaddrinfo leg has no timeout of its own and only feeds the log line below — bound it.

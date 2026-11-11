@@ -2779,13 +2779,14 @@ class TelegramAdapter(TelegramContactMixin, TelegramHeldInboundMixin, TelegramRe
     async def _build_ptb_requests(self) -> tuple:
         """Build the (general, getUpdates) HTTPXRequest pair: fallback-IP transport, explicit proxy, or
         direct DNS; the getUpdates request is instrumented for polling-progress tracking."""
+        verify = telegram_verify(self.config.extra, platform_ssl_context())
         disable_fallback = os.getenv("HERMES_TELEGRAM_DISABLE_FALLBACK_IPS", "").strip().lower() in {"1", "true", "yes", "on"}
         fallback_ips = [] if disable_fallback else self._fallback_ips()
         if not fallback_ips and not disable_fallback:
             discovery_timeout = self._env_float_clamped("HERMES_TELEGRAM_FALLBACK_DISCOVERY_TIMEOUT", 5.0, min_value=0.0)
             logger.warning("[%s] Discovering Telegram API fallback IPs via DNS-over-HTTPS…", self.name)
             try:
-                fallback_ips = await _await_with_thread_deadline(discover_fallback_ips(), timeout=discovery_timeout)
+                fallback_ips = await _await_with_thread_deadline(discover_fallback_ips(verify=verify), timeout=discovery_timeout)
             except Exception as exc:
                 logger.warning(
                     "[%s] Telegram fallback-IP discovery failed after %.0fs; "
@@ -2804,7 +2805,6 @@ class TelegramAdapter(TelegramContactMixin, TelegramHeldInboundMixin, TelegramRe
             logger.info("[%s] Proxy detected; passing explicitly to HTTPXRequest: %s", self.name, safe_proxy_url_for_log(proxy_url))
         elif disable_fallback:
             logger.info("[%s] Telegram fallback-IP transport disabled via env", self.name)
-        verify = telegram_verify(self.config.extra, platform_ssl_context())
         request, get_updates_request = build_ptb_requests(HTTPXRequest, fallback_ips=fallback_ips, proxy_url=proxy_url, verify=verify)
         return request, self._instrument_polling_request(get_updates_request)
 
