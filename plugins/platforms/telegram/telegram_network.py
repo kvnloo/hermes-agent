@@ -312,10 +312,16 @@ class TelegramFallbackTransport(httpx.AsyncBaseTransport):
                 continue
         if last_error is None:
             raise RuntimeError("All Telegram fallback IPs exhausted but no error was recorded")
-        # Per-path failures are INFO while the walk can still recover; the
-        # WARNING is owed only when every path failed (#152898).
+        # A bounded walk may end before the remaining IPs/hostname were attempted.
+        # Report that separately from genuine all-path exhaustion (#152898).
+        reason = (
+            "connect budget exhausted before all paths were tried"
+            if len(failures) < len(order)
+            else "unreachable via all paths"
+        )
         logger.warning(
-            "[Telegram] Telegram API unreachable via all paths: %s",
+            "[Telegram] Telegram API %s: %s",
+            reason,
             "; ".join(f"{path} ({failure})" for path, failure in failures),
         )
         raise last_error
