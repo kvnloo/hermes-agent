@@ -946,6 +946,11 @@ class WeixinAdapter(OwnAccessPolicyMixin, BasePlatformAdapter):
             data = await _download_and_decrypt_media(
                 self._poll_session, cdn_base_url=self._cdn_base_url, encrypted_query_param=media.get("encrypt_query_param"),
                 aes_key_b64=aes_key_b64, full_url=media.get("full_url"), timeout_seconds=timeout_seconds)
+            # file_item.md5 is the sender's plaintext checksum; reject invalid CDN decryptions before caching.
+            if item_key == "file_item" and payload.get("md5"):
+                expected_md5 = str(payload["md5"]).strip().lower()
+                if hashlib.md5(data, usedforsecurity=False).hexdigest() != expected_md5:
+                    raise ValueError("decrypted file checksum does not match file_item.md5")
             return await cache_fn(data, filename), mime
         except Exception as exc:
             logger.warning("[%s] %s download failed: %s", self.name, label, exc)
