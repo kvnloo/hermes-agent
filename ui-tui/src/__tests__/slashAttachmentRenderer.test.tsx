@@ -309,6 +309,32 @@ it('`/queue` with an image journals its attachment in the first durable write', 
   } finally { save.mockRestore(); h.close() }
 })
 
+it('rejected /branch and /fork keep the draft and its image attachment', async () => {
+  for (const command of ['/branch', '/fork']) {
+    const h = mount(true, method => {
+      if (method === 'session.resume') { return { revision: 1, execution_generation: 2 } }
+      if (method === 'session.mutate') { return Promise.reject(new Error('nothing to branch')) }
+
+      return undefined
+    })
+    vi.stubEnv('HERMES_TUI_GATEWAY_URL', '')
+    const path = join(h.home, 'shot.png')
+    writeFileSync(path, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nL8AAAAASUVORK5CYII=', 'base64'))
+
+    try {
+      await h.submit(`/image ${path}`)
+      await vi.waitFor(() => expect(h.composer.state.input).toContain('[[ Image 1 ]]'))
+      const token = h.composer.refs.tokensRef.current[0]!
+      const draft = `${command} Child [[ Image 1 ]]`
+      await h.submit(draft)
+      await vi.waitFor(() => expect(h.sys).toHaveBeenCalledWith(expect.stringContaining('nothing to branch')))
+      expect(h.request.mock.calls.filter(([method]) => method === 'session.mutate')).toHaveLength(1)
+      expect(h.composer.state.input).toBe(draft)
+      expect(h.composer.refs.tokensRef.current).toEqual([token])
+    } finally { h.close() }
+  }
+})
+
 const queuedText = (h: ReturnType<typeof mount>) => h.composer.refs.queueRef.current.map(item => item.text)
 
 const lastNotice = (h: ReturnType<typeof mount>) => h.sys.mock.calls.at(-1)?.[0]

@@ -433,6 +433,7 @@ export interface ComposerActions {
   /** Attach several images in order to the destination current at the call; stops on any change. */
   attachImagePaths: (paths: readonly string[], options?: { followTyping?: boolean }) => Promise<void>
   clearIn: () => void
+  clearInIfCurrent?: (expected: string) => boolean
   stage?: (text: string, display?: string, destination?: SubmissionDestination, attachments?: QueueItem['attachments']) => QueueItem
   dequeue: (retry?: boolean) => QueueItem | undefined
   enqueue: (text: string, display?: string, destination?: SubmissionDestination, attachments?: QueueItem['attachments']) => QueueItem | void
@@ -592,6 +593,8 @@ export interface GatewayEventHandlerContext {
 export interface SlashSubmission {
   attachments: Array<{ path: string; mime: string }>
   expand: (text: string) => string
+  /** Invoked after an asynchronous branch mutation commits, never on rejection. */
+  onAccepted?: () => void
 }
 
 /** `typed` is false for programmatic calls (a picker re-issuing `/model <x>`, the backend's alias
