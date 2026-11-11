@@ -24,6 +24,13 @@ def test_every_required_binary_maps_to_an_installed_package(pm):
     assert not {"xorg-x11-server-utils", "xorg-x11-utils"} & set(runtime.PACKAGES["dnf"]), "retired on Fedora"
 
 
+def test_apt_installs_dbus_run_session_without_dbus_launch() -> None:
+    """Regression for NousResearch/hermes-agent#149323: avoid orphaned godbus session daemons."""
+    assert runtime.BINARY_PACKAGES["apt"]["dbus-run-session"] == "dbus-daemon"
+    assert "dbus-daemon" in runtime.PACKAGES["apt"]
+    assert "dbus-x11" not in runtime.PACKAGES["apt"]
+
+
 def test_the_image_bakes_the_same_apt_packages_the_runtime_would_install() -> None:
     """The image layer is the only delivery path on a hosted instance, so a package added here but not
     there stalls the screen with no error until someone presses Start."""
