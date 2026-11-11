@@ -1454,8 +1454,7 @@ def restore_primary_runtime(agent) -> bool:
         _is_entitlement_rejected(agent, primary_provider, primary_model)
         or is_known_non_chat_model(primary_model)
     ):
-        # Unentitled (#106475) or already known non-chat: restoring would announce a recovery
-        # that was never verified and re-fail every turn. Stay on the fallback.
+        # Restoring a rejected or non-chat primary would falsely announce recovery.
         _announce_pinned_fallback(agent, primary_model, None)
         return False
     primary_runtime_base_url = str((rt or {}).get("base_url") or "")
