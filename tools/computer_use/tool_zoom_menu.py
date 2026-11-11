@@ -12,6 +12,9 @@ def _do_zoom(backend, action, args, fence=lambda: None, **_):
         return json.dumps({"error": "zoom requires `region` = [x1, y1, x2, y2] in capture pixels with x1<x2, y1<y2"})
     cap = backend.zoom(tuple(region))
     fence()
+    if not cap.png_b64:
+        return json.dumps({"ok": False, "action": action,
+                           "error": cap.window_title or "zoom returned no image"})
     from tools.computer_use.tool import _capture_response  # late: tool.py imports this module
     # No session_id: a zoom crop must never be deduped against (or replace) the full capture's frame.
     return _capture_response(cap)

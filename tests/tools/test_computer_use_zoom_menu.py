@@ -43,6 +43,16 @@ def test_zoom_is_free_and_menu_is_gated_and_targets_the_sticky_window():
                                                    "session": "s", "pid": 42})
 
 
+def test_zoom_driver_refusal_is_an_error_not_an_empty_capture():
+    # A syntactically valid region may still be refused by the driver (e.g. outside the window).
+    # The user must get a tool error, not a plausible-looking "vision 0x0" success payload.
+    backend = _Backend({"isError": True, "data": "zoom: region is outside the captured window",
+                        "images": [], "structuredContent": {"refusal": {"code": "region_unavailable"}}})
+    out = json.loads(_dispatch(backend, "zoom", {"region": [2000, 2000, 2200, 2200]}))
+    assert out == {"ok": False, "action": "zoom", "error": "zoom: region is outside the captured window"}
+    assert backend._session.calls[-1][0] == "zoom"
+
+
 def test_refused_menu_path_surfaces_its_code_without_a_pixel_escalation_verdict():
     # The driver fails closed on a missing/disabled segment; the tool must not recommend the pixel rungs.
     backend = _Backend({"isError": True, "data": "invoke_menu: no item 'Nope'", "structuredContent": {
