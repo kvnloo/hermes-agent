@@ -137,6 +137,7 @@ export function useVoiceLiveConversation({
   // Set at delegation submit; a turn is only "settled" once it has been seen
   // running (busy) or produced a reply — the gateway ack lags the submit.
   const turnObservedRef = useRef(false)
+  const previousTurnBusyRef = useRef(false)
   const submittedAtRef = useRef(0)
   const enabledRef = useRef(enabled)
   const busyRef = useRef(busy)
@@ -317,6 +318,7 @@ export function useVoiceLiveConversation({
           spokenLengthRef.current = 0
           lastToolLabelRef.current = null
           turnObservedRef.current = false
+          previousTurnBusyRef.current = busyRef.current
           submittedAtRef.current = Date.now()
           latest.current.consumePendingResponse()
           refreshStatus()
@@ -391,7 +393,13 @@ export function useVoiceLiveConversation({
         return
       }
 
-      if (busyRef.current) {
+      // The interrupted turn's busy state cannot establish that this delegation ran.
+      if (previousTurnBusyRef.current) {
+        if (!busyRef.current) {
+          previousTurnBusyRef.current = false
+          submittedAtRef.current = Date.now()
+        }
+      } else if (busyRef.current) {
         turnObservedRef.current = true
       }
 

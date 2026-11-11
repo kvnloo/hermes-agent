@@ -15,7 +15,12 @@ import { delegationPrompt, useVoiceLiveConversation } from './use-voice-live-con
 // The transport is the only seam in the live hook, so the fake session records
 // the handlers it registers (tests drive the close/error paths directly) and
 // lets `start` reject with exactly what the real `getUserMedia` would throw.
-const transport = vi.hoisted(() => ({ failure: null as unknown, handlers: [] as VoiceLiveHandlers[] }))
+const transport = vi.hoisted(() => ({
+  failure: null as unknown,
+  handlers: [] as VoiceLiveHandlers[],
+  spoken: [] as Array<{ id: string; text: string }>,
+  thoughts: [] as Array<{ id: string; text: string }>
+}))
 
 vi.mock('@/lib/voice-live', async importOriginal => {
   const actual = (await importOriginal()) as Record<string, unknown>
@@ -26,8 +31,12 @@ vi.mock('@/lib/voice-live', async importOriginal => {
       close = vi.fn()
       instruct = vi.fn()
       setMuted = vi.fn()
-      speak = vi.fn()
-      think = vi.fn()
+      speak = vi.fn((id: string, text: string) => {
+        transport.spoken.push({ id, text })
+      })
+      think = vi.fn((id: string, text: string) => {
+        transport.thoughts.push({ id, text })
+      })
 
       constructor(handlers: VoiceLiveHandlers) {
         transport.handlers.push(handlers)
@@ -82,6 +91,8 @@ function resetToasts() {
   clearNotifications()
   transport.failure = null
   transport.handlers.length = 0
+  transport.spoken.length = 0
+  transport.thoughts.length = 0
 }
 
 describe('Voice-live toast copy', () => {
@@ -125,6 +136,56 @@ describe('Voice-live toast copy', () => {
 })
 
 describe('GPT-Live delegation → Hermes turn', () => {
+  afterEach(cleanup)
+
+  it('does not settle a new delegation in the interrupted turn idle gap', async () => {
+    resetToasts()
+    let reply: null | { id: string; pending: boolean; text: string } = null
+    const onInterrupt = vi.fn()
+    const onSubmit = vi.fn()
+    const hook = renderHook(
+      ({ busy }: { busy: boolean }) =>
+        useVoiceLiveConversation({
+          busy,
+          consumePendingResponse: vi.fn(),
+          enabled: true,
+          onInterrupt,
+          onSubmit,
+          pendingResponse: () => reply,
+          seedHistory: () => []
+        }),
+      { initialProps: { busy: true } }
+    )
+
+    await act(async () => {
+      await hook.result.current.start()
+    })
+
+    const handlers = transport.handlers.at(-1) as VoiceLiveHandlers
+
+    act(() => {
+      handlers.onDelegation('follow-up', [
+        { endMs: 1000, speaker: 'user', startMs: 0, text: 'How much does it cost?' }
+      ])
+    })
+
+    expect(onInterrupt).toHaveBeenCalledOnce()
+    expect(onSubmit).toHaveBeenCalledWith('How much does it cost?', 'User: How much does it cost?')
+
+    // The old turn ends before the replacement is accepted by the gateway.
+    hook.rerender({ busy: false })
+    expect(transport.thoughts).not.toContainEqual({
+      id: 'follow-up',
+      text: 'Hermes finished that request without a spoken result.'
+    })
+
+    // The replacement runs and its final response is still spoken to GPT-Live.
+    hook.rerender({ busy: true })
+    reply = { id: 'new-reply', pending: false, text: 'It costs 23 euros.' }
+    hook.rerender({ busy: false })
+    expect(transport.spoken).toContainEqual({ id: 'follow-up', text: 'It costs 23 euros.' })
+  })
+
   it('sends the latest user words as the turn and the exchange as model-only context', () => {
     // The delegation event carries no text: both are reconstructed from
     // transcript deltas, fragments of one speaker concatenated as received.
