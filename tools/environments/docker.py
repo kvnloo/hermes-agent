@@ -1296,12 +1296,23 @@ class DockerEnvironment(BaseEnvironment):
                     run_cmd, timeout=120, check=True,  # image pull may take a while
                     env=self._run_client_env)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-            logger.warning("docker run failed for %s, cleaning up orphaned container: %s", container_name, e)
+            stderr = e.stderr or ""
+            if isinstance(stderr, bytes):
+                stderr = stderr.decode("utf-8", errors="replace")
+            detail = stderr.strip()
+            logger.warning(
+                "docker run failed for %s, cleaning up orphaned container: %s%s",
+                container_name, e, f"; stderr: {detail}" if detail else "")
             subprocess.run(
                 [self._docker_exe, "rm", "-f", container_name],
                 capture_output=True, timeout=10, stdin=subprocess.DEVNULL, check=False)
             if owners is not None and lease is not None:
                 owners.release(lease)
+            if isinstance(e, subprocess.CalledProcessError):
+                raise EnvironmentConnectionError(
+                    f"Docker run failed (exit {e.returncode}): {detail or e}",
+                    retry_hint="Check Docker networking and mounts, then retry.",
+                ) from e
             raise
         container_id = result.stdout.strip()
         if owners is not None:
