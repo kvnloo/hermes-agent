@@ -210,7 +210,7 @@ class StreamFallbackMixin:
         if (stale_message_id and stale_message_id != last_message_id
                 and not self._fallback_preserve_partial_messages and continuation == final_text):
             await self._delete_previews([stale_message_id], label="Fallback partial",
-                                        skip_sentinel=False)
+                                        skip_sentinel=False, retry_on_false=True)
 
         self._message_id = last_message_id
         self._already_sent = True

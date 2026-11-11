@@ -101,3 +101,34 @@ async def test_preview_holding_part_of_the_first_word_is_replaced_by_the_whole_a
     shown = list(adapter.messages.values())
     # One message holds the whole answer; nothing starts mid-word or keeps a fragment beside it.
     assert shown == [answer], shown
+
+@pytest.mark.asyncio
+async def test_full_resend_retries_transient_preview_delete():
+    """A transient Telegram delete refusal must not leave the replaced fragment visible."""
+    first_word = "<<" + "x" * 60 + ">>"
+    fragment = first_word[:12]
+    answer = f"{first_word} q000 q001 <<end>>"
+    adapter = _SlotAdapter(refuse="<<end>>")
+    adapter._next = 101
+    adapter.messages["101"] = fragment + CURSOR
+
+    attempts = 0
+    original_delete = adapter.delete_message
+
+    async def transient_delete(chat_id, message_id):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            return False
+        return await original_delete(chat_id, message_id)
+
+    adapter.delete_message = transient_delete
+    consumer = GatewayStreamConsumer(adapter, "-100123")  # production config defaults
+    consumer._message_id = "101"
+    consumer._last_sent_text = adapter.messages["101"]
+    consumer._fallback_prefix = fragment
+
+    await consumer._send_fallback_final(answer)
+
+    assert attempts == 2
+    assert adapter.messages == {"102": answer}
