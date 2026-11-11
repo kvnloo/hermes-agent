@@ -13,7 +13,7 @@ import logging
 import re
 import tempfile
 from contextvars import ContextVar, Token
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from itertools import count
 from pathlib import Path
 from typing import Any, Callable
@@ -34,6 +34,7 @@ class EditProposal:
     # display string for multi-file V4A patches; ``paths`` is the authoritative
     # set for auto-approve checks. Empty means "``path`` alone".
     paths: tuple[str, ...] = ()
+    preview_truncated: bool = False
 
 
 # A requester answers True (approved), False (refused), or a key below when nobody answered. An
@@ -227,14 +228,40 @@ def maybe_require_edit_approval(tool_name: str, arguments: dict[str, Any]) -> st
     return _denied(unanswered or "Edit approval denied by ACP client; file was not modified.")
 
 
+def preview_edit_proposal(proposal: EditProposal) -> EditProposal:
+    """Bound only the consent display, never the proposal retained for execution.
+
+    Old/new text plus arguments repeat large writes in both live approval events and
+    reconnect snapshots. Cap each before either transport serializes the card.
+    """
+    from gateway.session_tool_events import MAX_TOOL_EVENT_CHARS, bounded_args
+
+    def preview(text):
+        if text is None or len(text) <= MAX_TOOL_EVENT_CHARS:
+            return text
+        notice = (f"\n[Preview truncated: full text has {len(text)} characters; "
+                  "approval applies to the full file change.]\n")
+        half = (MAX_TOOL_EVENT_CHARS - len(notice)) // 2
+        return text[:half] + notice + text[-half:]
+
+    old, new = preview(proposal.old_text), preview(proposal.new_text)
+    arguments = bounded_args(proposal.arguments)
+    truncated = (proposal.preview_truncated or old != proposal.old_text or new != proposal.new_text
+                 or arguments is not proposal.arguments)
+    return replace(proposal, old_text=old, new_text=new, arguments=arguments, preview_truncated=truncated)
+
+
 def build_acp_edit_tool_call(proposal: EditProposal):
     """Build the ToolCallUpdate payload for ACP request_permission."""
     import acp
     from agent.redact import redact_approval_display
 
     # The title is display text; the diff keeps the raw path the client opens.
+    proposal = preview_edit_proposal(proposal)
+    title = (f"Approve edit{' (preview truncated)' if proposal.preview_truncated else ''}: "
+             f"{redact_approval_display(proposal.path)}")
     return acp.update_tool_call(
-        f"edit-approval-{next(_PERMISSION_REQUEST_IDS)}", title=f"Approve edit: {redact_approval_display(proposal.path)}",
+        f"edit-approval-{next(_PERMISSION_REQUEST_IDS)}", title=title,
         kind="edit",
         status="pending",
         content=[acp.tool_diff_content(path=proposal.path, old_text=proposal.old_text, new_text=proposal.new_text)],

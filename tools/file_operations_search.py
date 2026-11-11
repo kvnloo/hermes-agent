@@ -706,10 +706,10 @@ class SearchMixin:
         """Run an rg command (shell-quoted words) and keep the first ``fetch_limit``
         lines: natively on a local POSIX host, else through the backend shell as
         ``<prefix><words> | head -n N``. ``native_ok=False`` keeps a form the native
- lane cannot express (the multi-root ``cd`` prefix); ``shell_prefix`` is shell-only."""
+        lane cannot express (the multi-root ``cd`` prefix); ``shell_prefix`` is shell-only."""
         if native_ok and self._native_read_enabled():
             return self._run_rg_native(words, fetch_limit, timeout, merge_stderr=merge_stderr)
-        stderr = "" if merge_stderr else " 2>/dev/null"
+        stderr = " 2>&1" if merge_stderr else " 2>/dev/null"
         return self._exec(f"{shell_prefix}{' '.join(words)}{stderr} | head -n {fetch_limit}", timeout=timeout)
 
     def _quote_executable(self, executable: str) -> str:
