@@ -471,6 +471,77 @@ def _resolve_rate_limit_cooldown_seconds() -> int:
     return DEFAULT_RATE_LIMIT_COOLDOWN_SECONDS
 
 
+def _get_next_fallback_for_profile(
+    assignee: str,
+    current_model: Optional[str],
+    current_provider: Optional[str],
+) -> Optional[tuple[str, str]]:
+    """Return the next (model, provider) fallback for a profile, or None.
+
+    Reads the profile's config.yaml for the fallback_providers chain.
+    If the current model/provider matches an entry in the chain, returns
+    the next entry. If no current model/provider is set (task uses profile
+    defaults), returns the first fallback entry. Returns None if no fallback
+    is available or the profile config cannot be read.
+    """
+    try:
+        from hermes_cli.profiles import get_profile_dir
+        from hermes_cli.config import read_user_config_raw
+        from hermes_cli.fallback_config import get_fallback_chain
+
+        profile_dir = get_profile_dir(assignee)
+        config_path = profile_dir / "config.yaml"
+        if not config_path.exists():
+            return None
+
+        cfg = read_user_config_raw(config_path)
+        fallback_chain = get_fallback_chain(cfg)
+        if not fallback_chain:
+            return None
+
+        # Normalize current model/provider for comparison
+        current_model_norm = (current_model or "").strip().lower()
+        current_provider_norm = (current_provider or "").strip().lower()
+
+        # If task has no override, it's using the profile's default model.
+        # In that case, we want the FIRST fallback entry.
+        if not current_model_norm and not current_provider_norm:
+            first = fallback_chain[0]
+            model = first.get("model")
+            provider = first.get("provider")
+            if model and provider:
+                return (model, provider)
+            return None
+
+        # Find the current model/provider in the chain and return the next one
+        for i, entry in enumerate(fallback_chain):
+            entry_model = (entry.get("model") or "").strip().lower()
+            entry_provider = (entry.get("provider") or "").strip().lower()
+            if entry_model == current_model_norm and entry_provider == current_provider_norm:
+                # Found current in chain, return next if available
+                if i + 1 < len(fallback_chain):
+                    next_entry = fallback_chain[i + 1]
+                    model = next_entry.get("model")
+                    provider = next_entry.get("provider")
+                    if model and provider:
+                        return (model, provider)
+                return None
+
+        # Current model/provider not in fallback chain (e.g., task override
+        # points to a model not in the chain). Return first fallback as a
+        # best-effort recovery.
+        first = fallback_chain[0]
+        model = first.get("model")
+        provider = first.get("provider")
+        if model and provider:
+            return (model, provider)
+        return None
+
+    except Exception:
+        # Best-effort: any failure means no fallback available
+        return None
+
+
 # Worker-context caps so build_worker_context() stays bounded on
 # pathological boards (retry-heavy tasks, comment storms, giant
 # summaries). Values chosen to fit a typical 100k-char LLM prompt with
@@ -9266,6 +9337,40 @@ def detect_crashed_workers(conn: sqlite3.Connection) -> list[str]:
                         "UPDATE tasks SET last_failure_error = ? WHERE id = ?",
                         (error_text[:500], row["id"]),
                     )
+                    # Try to switch to a fallback provider/model for the assignee profile.
+                    # This allows the task to continue making progress instead of
+                    # waiting for the quota window to reset.
+                    assignee = row["assignee"]
+                    if assignee:
+                        # Fetch current model_override/provider_override from the task
+                        task_row = conn.execute(
+                            "SELECT model_override, provider_override FROM tasks WHERE id = ?",
+                            (row["id"],),
+                        ).fetchone()
+                        current_model = task_row["model_override"] if task_row else None
+                        current_provider = task_row["provider_override"] if task_row else None
+                        fallback = _get_next_fallback_for_profile(
+                            assignee, current_model, current_provider
+                        )
+                        if fallback:
+                            fallback_model, fallback_provider = fallback
+                            conn.execute(
+                                "UPDATE tasks SET model_override = ?, provider_override = ? WHERE id = ?",
+                                (fallback_model, fallback_provider, row["id"]),
+                            )
+                            # Update error text to indicate fallback was applied
+                            error_text = (
+                                f"pid {pid} exited rate-limited (quota wall) — "
+                                f"switched to fallback {fallback_provider}/{fallback_model}"
+                            )
+                            conn.execute(
+                                "UPDATE tasks SET last_failure_error = ? WHERE id = ?",
+                                (error_text[:500], row["id"]),
+                            )
+                            _log.info(
+                                "kanban: task %s rate-limited, switched to fallback %s/%s",
+                                row["id"], fallback_provider, fallback_model
+                            )
                     rate_limited.append(row["id"])
                 else:
                     if protocol_violation:
