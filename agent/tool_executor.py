@@ -133,8 +133,15 @@ def _budget_for_agent(agent) -> BudgetConfig:
 
 _MAX_TOOL_WORKERS = 8  # concurrent worker threads per batch
 _DEFAULT_IMAGE_PARALLEL_REQUESTS = 4
-# Generous: slow-but-valid tool work must never be preempted by the batch guard.
-_DEFAULT_CONCURRENT_TOOL_TIMEOUT_S = 420.0
+# Below the 5-minute prompt-cache TTL: a tool that blocks past it makes the next model call rewrite the
+# whole context (measured: 28 such rewrites, 3.1M cache-write tokens, in 24h on one profile). Slow work
+# runs as a background process and is polled. ``timeouts.tools.concurrent_batch`` overrides.
+_DEFAULT_CONCURRENT_TOOL_TIMEOUT_S = 270.0
+# Appended to both executor timeout results so the model re-polls instead of re-running.
+_TOOL_TIMEOUT_GUIDANCE = (
+    " The tool may still be running; do not re-run it unchanged. Re-poll its output with a shorter wait,"
+    " or start long work with terminal(background=true) and poll the process."
+)
 # Long enough for an approval round-trip, short enough that one wedged dispatch can't starve the batch.
 _START_ORDER_GATE_TIMEOUT_S = 120.0
 # Fallback only; the effective bound derives from approvals.timeout (_authorization_gate_lock_timeout).
@@ -977,7 +984,7 @@ def _run_sequential_tool_execution_middleware(
             )
         else:
             assert timeout_s is not None  # only reachable when a deadline exists
-            message = f"Error executing tool '{function_name}': timed out after {timeout_s:.1f}s"
+            message = f"Error executing tool '{function_name}': timed out after {timeout_s:.1f}s.{_TOOL_TIMEOUT_GUIDANCE}"
             logger.warning("sequential tool %s timed out after %.1fs", function_name, timeout_s)
             result_cls, outcome = _ToolTimeoutResult, dict(
                 duration_ms=int(timeout_s * 1000), status="timeout", error_type="tool_timeout", error_message=message,
@@ -1529,7 +1536,7 @@ def _unfinished_tool_result(agent, ref: _ToolCallRef, *, timed_out: bool, timeou
     ``(function_result, tool_duration, effect_disposition)``."""
     if timed_out:
         suffix = f"{timeout_s:.1f}s" if timeout_s is not None else "the configured timeout"
-        function_result = f"Error executing tool '{ref.name}': timed out after {suffix}"
+        function_result = f"Error executing tool '{ref.name}': timed out after {suffix}.{_TOOL_TIMEOUT_GUIDANCE}"
         outcome = dict(duration_ms=int((timeout_s or 0.0) * 1000), status="timeout", error_type="tool_timeout", error_message=function_result)
         tool_duration, effect_disposition = float(timeout_s or 0.0), "unknown"
     elif agent._interrupt_requested:

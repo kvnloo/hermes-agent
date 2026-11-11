@@ -54,7 +54,7 @@ from agent.turn_iteration_prep import (
 )
 from agent.turn_loop_errors import handle_outer_loop_error
 from agent.turn_preflight_gate import run_preflight_gate
-from agent.turn_request_assembly import assemble_api_request
+from agent.turn_request_assembly import assemble_api_request, record_wire_cache_break
 from agent.turn_response_check import check_api_response
 from agent.turn_response_intake import normalize_model_response
 from agent.turn_tool_round import run_tool_round
@@ -1583,7 +1583,9 @@ def _run_api_retry_loop(agent, s: _LoopState) -> Optional[dict[str, Any]]:
             return None
         try:
             _run_phase(build_api_request, agent, s)
-            if _run_phase(perform_api_call, agent, s).action == "break":
+            _call = _run_phase(perform_api_call, agent, s)
+            record_wire_cache_break(agent, s.response, s.api_kwargs, s.current_turn_user_idx)
+            if _call.action == "break":
                 return None
             _rc = _run_phase(check_api_response, agent, s)
             if _rc.action == "return":
@@ -1814,7 +1816,9 @@ def run_conversation(
     agent._turn_user_intervened = False
     # Images attached natively to this user turn stay visible to vision_analyze for the turn, so
     # it does not embed the same pixels a second time into the same request (#76411).
-    with native_turn_images(user_message):
+    from agent.burn_pace_gate import cache_session
+
+    with cache_session(agent), native_turn_images(user_message):
         try:
             result = _run_conversation_turn(
                 agent,

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import os
 import threading
 import time
 import urllib.parse
@@ -90,6 +91,8 @@ class SelfHostedOIDCProvider(JwtOAuthProvider):
     def __init__(
         self, *, issuer: str, client_id: str, scopes: str = _DEFAULT_SCOPES, client_secret: str = "",
         id_token_leeway: float = DEFAULT_TOKEN_LEEWAY_SECONDS,
+        extra_authorize_params: Optional[Dict[str, str]] = None,
+        allowed_emails: Optional[list[str]] = None,
     ) -> None:
         if not issuer:
             raise ValueError("issuer is required")
@@ -107,6 +110,13 @@ class SelfHostedOIDCProvider(JwtOAuthProvider):
         # Empty/whitespace secret ⇒ public client, so a provisioned-but-blank secret
         # can't flip us into a broken confidential mode.
         self._client_secret = (client_secret or "").strip()
+        # IdP-specific /authorize params (Google mints a refresh_token only with
+        # access_type=offline [+ prompt=consent]). Standard OIDC/PKCE keys always win.
+        self._extra_authorize_params: Dict[str, str] = {
+            str(k).strip(): str(v).strip() for k, v in (extra_authorize_params or {}).items() if str(k).strip()}
+        # Optional email allowlist (lowercased). Empty ⇒ any identity the IDP vouches for
+        # is accepted — the IDP's own user/audience policy is then the only gate.
+        self._allowed_emails = frozenset(e.strip().lower() for e in (allowed_emails or []) if e and e.strip())
         # Discovery + JWKS resolve lazily so registration never hits the network
         # (the IDP may be down at boot; fail per-request instead).
         self._discovery: dict[str, Any] | None = None
@@ -118,8 +128,34 @@ class SelfHostedOIDCProvider(JwtOAuthProvider):
         # Validate the redirect before discovery so a bad redirect_uri surfaces even when the IDP is unreachable.
         validate_redirect_uri(redirect_uri)
         disco = self._get_discovery()
-        return pkce_login_start(
+        start = pkce_login_start(
             disco["authorization_endpoint"], client_id=self._client_id, scope=self._scopes, redirect_uri=redirect_uri)
+        if not self._extra_authorize_params:
+            return start
+        base, _, query = start.redirect_url.partition("?")
+        params = dict(urllib.parse.parse_qsl(query, keep_blank_values=True))
+        merged = {**{k: v for k, v in self._extra_authorize_params.items() if k not in params}, **params}
+        return LoginStart(redirect_url=f"{base}?{urllib.parse.urlencode(merged)}", cookie_payload=start.cookie_payload)
+
+    def _email_allowed(self, claims: dict[str, Any]) -> bool:
+        """True when no allowlist is configured, or the claims carry an allowlisted email
+        the IDP marked verified (``email_verified`` absent is treated as unverified)."""
+        if not self._allowed_emails:
+            return True
+        email = str(claims.get("email", "") or "").strip().lower()
+        verified = claims.get("email_verified")
+        verified = verified is True or str(verified).lower() == "true"
+        return bool(email) and verified and email in self._allowed_emails
+
+    def verify_session(self, *, access_token: str) -> Optional[Session]:
+        session = super().verify_session(access_token=access_token)
+        if session is None:
+            return None
+        try:
+            claims = self._claims_for(access_token)
+        except Exception:
+            return None
+        return session if self._email_allowed(claims) else None
 
     def revoke_session(self, *, refresh_token: str) -> None:
         # Best-effort RFC 7009 revocation when the IDP advertises an endpoint.
@@ -184,6 +220,9 @@ class SelfHostedOIDCProvider(JwtOAuthProvider):
                 "scope is configured and the client is allowed to receive an "
                 "ID token."))
         claims = self._verify_id_token(id_token)
+        if not self._email_allowed(claims):
+            logger.warning("self-hosted OIDC: rejected identity not in allowed_emails (sub=%s)", claims.get("sub"))
+            raise bad_request_exc("identity is not in dashboard.oauth.self_hosted.allowed_emails")
         # Prefer a freshly-issued RT, else keep the previous (some IDPs don't rotate).
         return self._session(id_token, refresh_token_from(payload, previous_refresh_token), claims)
 
@@ -314,7 +353,26 @@ def _settings() -> dict:
         # Credential: canonical home is the env var / ~/.hermes/.env. Empty ⇒ public client.
         "client_secret": setting("HERMES_DASHBOARD_OIDC_CLIENT_SECRET", "client_secret"),
         # Clock-skew tolerance for ID-token exp/nbf/iat (config.yaml only; default 60s, 0 = strict).
-        "id_token_leeway": parse_leeway(oidc_cfg.get("id_token_leeway"))}
+        "id_token_leeway": parse_leeway(oidc_cfg.get("id_token_leeway")),
+        "extra_authorize_params": _extra_params(
+            os.environ.get("HERMES_DASHBOARD_OIDC_EXTRA_AUTHORIZE_PARAMS"), oidc_cfg.get("extra_authorize_params")),
+        "allowed_emails": _email_list(
+            os.environ.get("HERMES_DASHBOARD_OIDC_ALLOWED_EMAILS"), oidc_cfg.get("allowed_emails"))}
+
+
+def _extra_params(env_value: Optional[str], cfg_value: Any) -> Dict[str, str]:
+    """Env (urlencoded ``a=b&c=d``) wins over the config.yaml mapping."""
+    if env_value and env_value.strip():
+        return dict(urllib.parse.parse_qsl(env_value.strip(), keep_blank_values=True))
+    return {str(k): str(v) for k, v in cfg_value.items()} if isinstance(cfg_value, dict) else {}
+
+
+def _email_list(env_value: Optional[str], cfg_value: Any) -> list[str]:
+    """Env (comma/space separated) wins over the config.yaml list or string."""
+    raw: Any = env_value if env_value and env_value.strip() else cfg_value
+    if isinstance(raw, str):
+        raw = raw.replace(",", " ").split()
+    return [str(e).strip() for e in raw or [] if str(e).strip()]
 
 
 def register(ctx) -> None:
@@ -325,5 +383,6 @@ def register(ctx) -> None:
     if kw is not None:
         logger.info(
             "dashboard-auth-self-hosted: registered provider "
-            "(issuer=%s, client_id=%s, scopes=%r, confidential=%s, id_token_leeway=%ss)",
-            kw["issuer"], kw["client_id"], kw["scopes"], bool(kw["client_secret"]), kw["id_token_leeway"])  # never log the secret itself
+            "(issuer=%s, client_id=%s, scopes=%r, confidential=%s, id_token_leeway=%ss, extra_authorize_params=%s, allowed_emails=%d)",
+            kw["issuer"], kw["client_id"], kw["scopes"], bool(kw["client_secret"]), kw["id_token_leeway"],
+            sorted(kw["extra_authorize_params"]), len(kw["allowed_emails"]))  # never log the secret itself

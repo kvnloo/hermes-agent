@@ -149,6 +149,9 @@ def perform_api_call(
                 bool(agent._pending_redirect) if _redirect_lock is not None
                 else agent._has_pending_redirect()
             )
+    from agent.burn_pace_gate import record_call
+
+    record_call(agent, response, api_kwargs.get("messages") or [])
     if _redirect_crossed_response:
         # Response and redirect can cross threads: discard the now-stale
         # response and rebuild from the correction rather than lose it.
