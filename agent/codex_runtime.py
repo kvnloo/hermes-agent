@@ -1253,6 +1253,9 @@ def run_codex_stream(agent, api_kwargs: dict, client: Any = None, on_first_delta
             with watchdog_state.lock:
                 first_event = watchdog_state.last_event_ts is None
                 watchdog_state.last_event_ts = now
+                if not watchdog_state.phase_aware:
+                    # Compatible routes start idle at the first parsed event, even after a retry.
+                    watchdog_state.retry_started_ts = None
                 if has_progress:
                     first_progress = watchdog_state.last_progress_ts is None
                     watchdog_state.last_progress_ts = now
@@ -1393,7 +1396,7 @@ def run_codex_stream(agent, api_kwargs: dict, client: Any = None, on_first_delta
             raise TimeoutError("Codex Responses stream request retired before retry")
         if agent._interrupt_requested:
             raise InterruptedError("Agent interrupted before Codex stream retry")
-        if attempt > 0 and watchdog_state is not None and watchdog_state.phase_aware:
+        if attempt > 0 and watchdog_state is not None:
             # One origin for the whole physical attempt: lifecycle frames may change
             # diagnostics, but cannot restart the first-progress budget.
             with watchdog_state.lock:
