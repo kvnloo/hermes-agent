@@ -83,6 +83,8 @@ def _stamp_event(obj: dict) -> None:
     # Freeze OUTSIDE the lock (same rule as transport.write) so one large payload cannot stall
     # other threads' frames. The server-owned seq is restored when replaying, so the snapshot can
     # be serialized before sequence assignment without retaining the mutable params dict.
+    # Preserve native session epochs; use the process epoch for legacy frames.
+    params.setdefault("replay_epoch", _REPLAY_EPOCH)
     payload = _freeze_params(params)
     size = len(payload)
     with _replay_lock:
