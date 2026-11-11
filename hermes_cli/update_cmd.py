@@ -1812,7 +1812,6 @@ def _cmd_update_impl(args, gateway_mode: bool):
     # the post-update cron-jobs safety net. A deliberate opt-out is recorded as a skip with its
     # reason, not as a failed step (see _record_pre_update_backup_outcome).
     pre_update_snapshot_id = _m()._run_pre_update_backup(args)
-    _record_pre_update_backup_outcome(args, pre_update_snapshot_id)
     _record_snapshot_stage(args, pre_update_snapshot_id)
     from hermes_cli.update_stage import publish_stage
     publish_stage("Downloading updates")  # a failed backup never stops the update
