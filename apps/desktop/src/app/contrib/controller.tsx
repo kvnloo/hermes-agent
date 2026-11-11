@@ -58,7 +58,6 @@ import { $connectionsRegistry } from '@/store/connection-registry-state'
 import { watchDeadSessionPrune } from '@/store/dead-session-prune'
 import { $interfaceMode, $showsAdvancedChrome, setModeContext, toggleSimpleMode } from '@/store/interface-mode'
 import {
-  $fileBrowserOpen,
   $sidebarOpen,
   FILE_BROWSER_DEFAULT_WIDTH,
   FILE_BROWSER_MAX_WIDTH,
@@ -83,7 +82,6 @@ import {
 } from '@/store/review'
 import {
   $cronSessions,
-  $currentCwd,
   $messagingSessions,
   $selectedStoredSessionId,
   $sessions,
@@ -92,7 +90,7 @@ import {
   sessionMatchesStoredId
 } from '@/store/session'
 import { watchSessionPins } from '@/store/session-pin-sync'
-import { $botChatScopes } from '@/store/session-states'
+import { $botChatScopes, $focusedWorkspaceCwd } from '@/store/session-states'
 import { watchUnreadWriteGuard } from '@/store/session-unread-remote'
 import { $statusbarVisible } from '@/store/statusbar-prefs'
 import { isBrowserWindow, isHudWindow } from '@/store/windows'
@@ -119,6 +117,7 @@ import { $workspaceIsPage, WORKSPACE_PAGE_HEADER_AREA } from '../routes'
 import { Butterbar } from '../shell/butterbar'
 import { TermsButterbar } from '../shell/terms-butterbar'
 
+import { $filesPaneVisible } from './files-workspace-visibility'
 import { BASIC_TREE, DEFAULT_TREE, registerLayoutPresets } from './layout-presets'
 import { bindLayoutSides } from './layout-sides'
 import { FilesPane, LogsPane, ReviewPaneContent } from './panes'
@@ -574,7 +573,9 @@ bindLayoutSides()
 // collapse and the chat absorbs the width; picking a project brings them
 // back. The terminal is NOT workspace-gated: unlike the old shell (where it
 // rode the rail's row and vanished with it), its zone stands on its own.
-const $hasWorkspace = computed($currentCwd, cwd => Boolean(cwd.trim()))
+// Files visibility and Review's workspace gate both follow the focused session,
+// not the profile's remembered/current CWD (which can be stale or empty).
+const $hasWorkspace = computed($focusedWorkspaceCwd, cwd => Boolean(cwd.trim()))
 
 // The tree pane's own presence tracks ⌘J directly, not just the column's
 // collapse — otherwise a pane revealed into that shared column would drag the
@@ -588,7 +589,7 @@ const $hasWorkspace = computed($currentCwd, cwd => Boolean(cwd.trim()))
 // is about.
 bindPaneVisibility(
   'files',
-  computed([$hasWorkspace, $fileBrowserOpen], (workspace, open) => workspace && open),
+  $filesPaneVisible,
   () => setFileBrowserOpen(false),
   () => setFileBrowserOpen(true)
 )
