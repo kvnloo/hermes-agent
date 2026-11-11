@@ -281,3 +281,52 @@ def test_every_desktop_window_request_with_no_viewer_still_returns_at_once():
         assert local_desktop_ui._ask_result(turn, agent, method, {}, 60) is None
     assert time.monotonic() - started < 2
     assert open_requests(events, "s1") == [] and published == []
+
+# Closing the session explicitly is different from a brief transport disconnect.
+# The owner records the close in pending_closes until the running turn settles.
+# A password/secret/vault card cannot be answered by that closed session.
+
+@pytest.mark.parametrize(("kind", "method"), [
+    ("sudo", "sudo"), ("secret", "secret"), ("vault", "vault.unlock_prompt"),
+])
+def test_explicit_viewer_close_interrupts_a_detached_prompt(monkeypatch, kind, method):
+    from agent.vault_backends import unlock
+    from gateway import session_sudo_prompt, session_secret_prompt, session_vault_prompt
+    from gateway.session_secret_prompt import secret_prompt_scope
+    from gateway.session_sudo_prompt import sudo_prompt_scope
+    from gateway.session_vault_prompt import vault_prompt_scope
+    from tools.skills_tool_setup import _capture_required_environment_variables
+    from tools.terminal_tool_sudo import _prompt_for_sudo_password
+
+    # Shorten only the deadline; the pre-fix result must be timeout, not close-interrupted.
+    limits = {"sudo": (session_sudo_prompt, "SUDO_TIMEOUT_S"),
+              "secret": (session_secret_prompt, "SECRET_TIMEOUT_S"),
+              "vault": (session_vault_prompt, "UNLOCK_TIMEOUT_S")}
+    module, limit = limits[kind]
+    monkeypatch.setattr(module, limit, 1.5)
+    monkeypatch.setenv("HERMES_GATEWAY_SESSION", "1")
+    monkeypatch.delenv("HERMES_INTERACTIVE", raising=False)
+    events, published = _detached()
+    turn = _turn(events)
+    authority = turn._approval_owner[0]
+    authority.pending_closes = {}
+    agent = SimpleNamespace(_interrupt_requested=False)
+
+    def ask():
+        if kind == "sudo":
+            with sudo_prompt_scope(turn, agent):
+                return _prompt_for_sudo_password(command="sudo true")
+        if kind == "secret":
+            with secret_prompt_scope(turn, agent):
+                return _capture_required_environment_variables(
+                    "close-skill", [{"name": "HAB_CLOSE_SECRET_KEY", "prompt": "Key"}])
+        with vault_prompt_scope(turn, agent):
+            return unlock.get_unlock_prompt_callback()("bitwarden", "Bitwarden")
+
+    call = _Call(ask)
+    _held_open(events, method)
+    assert not call.done.is_set()
+    # session.detach with end_reason (unlike a reconnectable socket drop).
+    authority.pending_closes["s1"] = object()
+    call.result(timeout=5)
+    assert [(c["method"], c["reason"]) for c in _cancels(published)] == [(method, "interrupted")]

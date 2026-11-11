@@ -53,7 +53,10 @@ def vault_prompt_scope(turn, agent):
         if live is None:
             return ""
         return ask_viewer(live.event_stream, session_id, method, params, timeout=timeout,
-                          cancelled=lambda: bool(getattr(agent, "_interrupt_requested", False)),
+                          cancelled=lambda: (
+                              bool(getattr(agent, "_interrupt_requested", False))
+                              or session_id in getattr(authority, "pending_closes", ())
+                          ),
                           wait_for_viewer=wait)
 
     def unlock_prompt(backend, display_name):

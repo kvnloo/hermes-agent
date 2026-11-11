@@ -50,7 +50,10 @@ def sudo_prompt_scope(turn, agent):
         if live is None:
             return ""
         return ask_sudo(live.event_stream, session_id, _redact_approval_command(get_sudo_prompt_command()),
-                        cancelled=lambda: bool(getattr(agent, "_interrupt_requested", False)),
+                        cancelled=lambda: (
+                            bool(getattr(agent, "_interrupt_requested", False))
+                            or session_id in getattr(authority, "pending_closes", ())
+                        ),
                         timeout=SUDO_TIMEOUT_S, wait_for_viewer=wait)
 
     previous = _get_sudo_password_callback()
