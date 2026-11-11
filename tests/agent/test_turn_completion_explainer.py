@@ -169,6 +169,24 @@ def test_explanation_persistence_owner_unavailable_never_blames_disk(failure):
     assert out != AIAgent._format_turn_completion_explanation("session_persistence_failed", "unknown")
 
 
+def test_owner_receipt_timeout_keeps_save_outcome_unknown():
+    """A timed-out worker.persist receipt can follow a successful owner commit.
+
+    WorkerRPC sends the request before waiting for the receipt; the timeout cannot
+    prove that the write failed. Avoid prompting an automatic duplicate resend.
+    """
+    from hermes_state import classify_persistence_error
+
+    cause = classify_persistence_error(TimeoutError("worker_receipt_timeout"))
+    assert cause == "owner_unavailable"
+    explanation = AIAgent._format_turn_completion_explanation(
+        "session_persistence_failed", cause
+    ).lower()
+    assert "unclear whether your message was saved" in explanation
+    assert "check whether your message appears" in explanation
+    assert "your message was not saved" not in explanation
+
+
 def test_classify_persistence_error_owner_rpc_failures_are_not_storage():
     """Both owner-side tokens are their own cause and outrank nothing else (pure strings)."""
     from hermes_state import classify_persistence_error
