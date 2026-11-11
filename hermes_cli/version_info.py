@@ -242,17 +242,8 @@ def _git_version_info(repo_dir: Path, *, include_untracked: bool = False) -> Ver
     except (OSError, subprocess.SubprocessError):
         dirty = False
 
-    tags = _run_git(repo_dir, "tag", "--merged", "HEAD", "--list", "v[0-9]*")
-    releases = [
-        tag[1:]
-        for tag in (tags or "").splitlines()
-        if STABLE_TAG_RE.fullmatch(tag)
-    ]
-    # A HEAD sitting exactly on a release tag is that release (`git checkout
-    # v0.22.2`). Read it from the tags pointing at HEAD itself: the --merged
-    # walk above can fail outright on slow or cold checkouts (the 3 s probe
-    # timeout), and the CalVer fallback then reported a much older base —
-    # 0.21.5+12940.g<sha> for an exact v0.22.2 checkout (#140329).
+    # An exact release tag needs no ancestry walk. On cold/partial checkouts
+    # the merged-tag query can consume its entire 3 s deadline (#140329).
     head_releases = [
         tag[1:]
         for tag in (_run_git(repo_dir, "tag", "--points-at", "HEAD") or "").splitlines()
@@ -262,19 +253,24 @@ def _git_version_info(repo_dir: Path, *, include_untracked: bool = False) -> Ver
         base_version = max(head_releases, key=lambda value: tuple(int(part) for part in value.split(".")))
         distance = 0
         base_source = "release-tag"
-    elif releases:
-        base_version = max(releases, key=lambda value: tuple(int(part) for part in value.split(".")))
-        distance = _parse_nonnegative(
-            _run_git(repo_dir, "rev-list", "--count", f"v{base_version}..HEAD")
-        )
-        base_source = "release-tag"
     else:
-        base_version, distance = _calver_release_version(repo_dir) or ("unknown", None)
-        # No SemVer release tag is reachable at all: the base came from the CalVer
-        # describe instead. It is a guess that changes once release tags are
-        # fetched (one checkout printed 0.21.0+32768 before and 0.22.5+1710 after
-        # a single `hermes update`, #140329), so presenters mark it as such.
-        base_source = "calver-fallback" if base_version != "unknown" else None
+        tags = _run_git(repo_dir, "tag", "--merged", "HEAD", "--list", "v[0-9]*")
+        releases = [
+            tag[1:]
+            for tag in (tags or "").splitlines()
+            if STABLE_TAG_RE.fullmatch(tag)
+        ]
+        if releases:
+            base_version = max(releases, key=lambda value: tuple(int(part) for part in value.split(".")))
+            distance = _parse_nonnegative(
+                _run_git(repo_dir, "rev-list", "--count", f"v{base_version}..HEAD")
+            )
+            base_source = "release-tag"
+        else:
+            base_version, distance = _calver_release_version(repo_dir) or ("unknown", None)
+            # No SemVer tag is reachable; the CalVer identity is a guess that
+            # may change after fetching tags, rather than a release identity.
+            base_source = "calver-fallback" if base_version != "unknown" else None
     short_commit = _run_git(repo_dir, "rev-parse", "--short=7", "HEAD")
     if base_version == "unknown" and short_commit:
         display_version = f"git.{short_commit}{'.dirty' if dirty else ''}"

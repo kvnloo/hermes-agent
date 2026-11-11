@@ -274,6 +274,47 @@ def test_get_version_info_reports_the_tag_a_detached_head_sits_on(tmp_path, monk
     assert info.derived_version == "0.22.2"
     assert info.base_version_source == "release-tag"
 
+def test_detached_release_lookup_skips_slow_merged_walk(tmp_path, monkeypatch):
+    """An exact release checkout must not pay a stalled ancestry walk's 3 s cost."""
+    import time
+
+    from hermes_cli import version_info
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    def git(*args: str) -> str:
+        return subprocess.run(
+            ["git", *args], cwd=repo, capture_output=True, text=True, check=True,
+            env={"HOME": str(tmp_path), "PATH": os.environ["PATH"]},
+        ).stdout.strip()
+
+    git("init", "-q")
+    git("config", "user.name", "Hermes Test")
+    git("config", "user.email", "hermes@example.invalid")
+    (repo / "tracked").write_text("release", encoding="utf-8")
+    git("add", "tracked")
+    git("commit", "-qm", "release")
+    git("tag", "v0.22.2")
+    git("checkout", "-q", "--detach", "v0.22.2")
+
+    real_run_git = version_info._run_git
+
+    def slow_merged_walk(repo_dir, *args):
+        if args[:2] == ("tag", "--merged"):
+            # Emulate the real 3 s _run_git timeout; do not shorten the default.
+            time.sleep(3.25)
+            return None
+        return real_run_git(repo_dir, *args)
+
+    monkeypatch.setattr(version_info, "_run_git", slow_merged_walk)
+    started = time.monotonic()
+    info = version_info._git_version_info(repo)
+
+    assert info.base_version == "0.22.2"
+    assert info.distance == 0
+    assert time.monotonic() - started < 3.0, "an exact tag should not wait for merged history"
+
 
 def test_resolve_stamp_file_honors_install_root(tmp_path, monkeypatch):
     """Sealed installs (the Nix wrapper) point HERMES_INSTALL_ROOT at the stamp dir."""
