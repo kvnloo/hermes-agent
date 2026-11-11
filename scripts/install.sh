@@ -950,6 +950,29 @@ stage_repository() {
                 [ "$attempt" = 2 ] || sleep 5
             done
             if [ "$cloned" = false ]; then
+                # Lazy object downloads can fail after the filtered clone and
+                # tag fetch succeed. Retry without a filter before giving up.
+                log_warn "partial-clone checkout failed; trying a complete clone"
+                rm -rf "$staged/tree"
+                if run_logged "Cloning without partial filter" git clone ${progress[@]+"${progress[@]}"} \
+                    --no-checkout --branch "$BRANCH" "$REPO_URL" "$staged/tree"; then
+                    if [ -n "$INSTALL_COMMIT" ]; then
+                        git -C "$staged/tree" merge-base --is-ancestor "$INSTALL_COMMIT" "origin/$BRANCH" 2>/dev/null \
+                            || { rm -rf "$staged"; fail "commit $INSTALL_COMMIT is not on branch $BRANCH" commit_not_on_branch; }
+                    fi
+                    if [ -n "$release" ] && ! fetch_release "$staged/tree"; then
+                        rm -rf "$staged"
+                        stable_unreachable "could not fetch $release"
+                    fi
+                    if run_logged "Checking out ${INSTALL_COMMIT:-${release:-files}} (complete clone)" \
+                        git -C "$staged/tree" "${materialize[@]}"; then
+                        cloned=true
+                        [ -z "$INSTALL_COMMIT" ] || pinned=true
+                    fi
+                fi
+            fi
+
+            if [ "$cloned" = false ]; then
                 rm -rf "$staged"
                 fail "could not check out ${INSTALL_COMMIT:-the cloned tree}; no checkout published$(native_detail)" git_checkout_failed
             fi
