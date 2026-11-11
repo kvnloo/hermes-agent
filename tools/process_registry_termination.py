@@ -2,11 +2,12 @@
 
 import logging
 import os
+import shlex
 import signal
 import subprocess
 import time
 from contextlib import suppress
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from hermes_cli._subprocess_compat import windows_hide_flags
 
@@ -128,6 +129,105 @@ class ProcessTerminationMixin:
                 if cls._proc_alive(proc):
                     proc.kill()  # SIGKILL on POSIX
                     logger.info("Escalated to SIGKILL for pid %d (ignored SIGTERM within %.1fs grace)", proc.pid, grace)
+
+    def _terminate_env_worker(self, env: Any, session: "ProcessSession") -> list:
+        """Tree-kill the nohup'd worker a sandbox-backed session spawned, returning the
+        PIDs (worker + descendants) still alive afterward so the caller can refuse to
+        publish a ``killed`` receipt for a session whose worker survived.
+
+        ``spawn_via_env`` stores the wrapper subshell PID as ``session.pid`` and the real
+        worker PID in ``session.worker_pid_path``. Signaling only the wrapper SIGTERMs it
+        while it ``wait``s on the worker, leaving the worker reparented to PID 1 inside the
+        sandbox and still running. This reads the worker PID, validates it is a positive
+        integer, then tree-kills it **parent-first** (mirroring ``_terminate_host_pid``):
+        snapshot the recursive descendants *before* signalling, SIGTERM the worker so an
+        orderly worker can reap its own tree, give it a brief grace, re-collect any children
+        it spawned during the grace, then SIGKILL the worker and every descendant it
+        snapshotted — a worker that ignores SIGTERM cannot keep a child alive this way, and
+        a grandchild is never missed (the old ``pkill -P`` only reached direct children and
+        signalled them *before* the worker, so a TERM-ignoring child was reparented between
+        the two calls and escaped). The PIDs still alive after the escalation are returned
+        so ``_signal_kill`` can report a surviving worker instead of a false ``killed``.
+
+        A missing/unreadable worker PID file (legacy session, dead sandbox, race with
+        cleanup) returns ``[]`` and leaves the caller's subsequent ``kill {session.pid}``
+        to clean up the wrapper — the historical best-effort behavior, no regression.
+        """
+        worker_pid_path = getattr(session, "worker_pid_path", "") or ""
+        if not worker_pid_path:
+            return []
+        try:
+            res = env.execute(
+                f"cat {shlex.quote(worker_pid_path)} 2>/dev/null", timeout=5
+            )
+        except Exception:
+            logger.debug("worker pid read failed for %s", worker_pid_path, exc_info=True)
+            return []
+        worker_pid = (res.get("output", "") or "").strip()
+        # The PID came from a file we wrote and is interpolated into a kill command, so
+        # validate it is a positive integer first: a corrupt file can never inject shell
+        # syntax, and PID 0 has process-group semantics for kill(2) (signalling the whole
+        # group is never what a single-worker kill intends). A stale/recycled PID that
+        # points at a stranger is caught downstream — the survivor verification returns any
+        # PID still alive after the escalation so the caller never publishes a `killed`
+        # receipt for a process we did not actually stop.
+        if not worker_pid.isdigit() or int(worker_pid) <= 0:
+            return []
+        wpid = int(worker_pid)
+        # One round-trip: snapshot the recursive descendants BEFORE signalling (once the
+        # worker exits, pgrep -P can no longer find reparented grandchildren), SIGTERM the
+        # worker first (parent-first, per tools/AGENTS.md), give it a grace, re-collect any
+        # children it spawned during the grace, then SIGKILL the worker and every descendant
+        # from both passes. SIGKILL is asynchronous, so a short settle poll follows before
+        # the survivor check (mirroring _KILL_SETTLE_SECONDS on the host path) — without it
+        # a just-killed PID still answers ``kill -0`` and every kill reads as incomplete.
+        # Survivors (PIDs still alive after the escalation) are printed last so the caller
+        # can refuse a false `killed` receipt.
+        kill_cmd = (
+            f"__wk_collect() {{ __q=$1; __o=; while [ -n \"$__q\" ]; do __n=; "
+            f"for __p in $__q; do for __c in $(pgrep -P $__p 2>/dev/null); do "
+            f"__o=\"$__o $__c\"; __n=\"$__n $__c\"; done; done; __q=$__n; done; "
+            f"printf '%s' \"$__o\"; }}; "
+            f"__d1=$(__wk_collect {wpid}); "
+            f"kill {wpid} 2>/dev/null; "
+            f"sleep 0.5; "
+            f"__d2=$(__wk_collect {wpid}); "
+            f"for __c in $__d1 $__d2; do kill -9 $__c 2>/dev/null; done; "
+            f"kill -9 {wpid} 2>/dev/null; "
+            f"__alive=; __i=0; "
+            f"while [ $__i -lt 50 ]; do "
+            f"__alive=; for __c in {wpid} $__d1 $__d2; do "
+            f"kill -0 $__c 2>/dev/null && __alive=\"$__alive $__c\"; done; "
+            f"[ -z \"$__alive\" ] && break; __i=$((__i + 1)); sleep 0.02; done; "
+            f"printf '%s\\n' \"$__alive\""
+        )
+        try:
+            kill_res = env.execute(kill_cmd, timeout=10)
+        except Exception:
+            logger.debug("env worker tree-kill failed for %s", worker_pid_path, exc_info=True)
+            # Transport failure: the worker's liveness is unknown, treat it as a survivor
+            # so the caller does not claim a verified `killed`.
+            return [wpid]
+        survivors = [
+            int(x) for x in (kill_res.get("output", "") or "").split()
+            if x.strip().isdigit() and int(x) > 0
+        ]
+        return survivors
+
+    @staticmethod
+    def _env_kill_incomplete_result(session: "ProcessSession", survivors: list) -> dict:
+        """Build the ``Kill incomplete`` receipt for a sandbox worker that survived its
+        tree-kill (or a stale/recycled worker PID we refused to signal) so ``_signal_kill``
+        keeps the session listed and killable instead of publishing a false ``killed``."""
+        alive = ", ".join(map(str, survivors))
+        logger.warning(
+            "Kill incomplete for %s: sandbox worker + %d descendant(s) still alive (%s) "
+            "— session kept running", session.id, len(survivors), alive)
+        return {
+            "status": "error",
+            "error": (f"Kill incomplete: {len(survivors)} sandbox process(es) still alive "
+                      f"({alive}); session running"),
+            "session_id": session.id, "survivors": survivors, "process_running": True}
 
     @staticmethod
     def _live_descendants(pid: int) -> list[int]:
