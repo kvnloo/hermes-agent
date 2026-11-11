@@ -479,3 +479,95 @@ def test_old_langfuse_plugin_key_keeps_naming_the_catalog_plugin(tmp_path, monke
     # The old key in plugins.disabled still names the plugin, so with the new key enabled both lists do.
     assert gate_manifest(manifest, {"observability/langfuse"}, {"langfuse"}).error == IN_BOTH_LISTS
     assert gate_manifest(manifest, {"observability/langfuse"}, None).error == "disabled via config"
+
+
+def _left_core_racer(home, role, entered, scanned, release, results):
+    """Two independent processes that both saw a missing plugin before publication."""
+    import hermes_cli.memory_provider_migration as mpm
+    mpm.catalog_source = lambda name: name
+    if role == "second":
+        original_pending = lcm._pending
+
+        def after_scan(*args, **kwargs):
+            pending = original_pending(*args, **kwargs)
+            scanned.set()
+            return pending
+
+        lcm._pending = after_scan
+
+    def install(name):
+        if role == "first":
+            entered.set()
+            if not release.wait(30):
+                raise TimeoutError("first installer was not released")
+            (home / "plugins" / name).mkdir(parents=True)
+            return {"ok": True}
+        return {"ok": False, "error": f"Plugin '{name}' already exists"}
+
+    notices = []
+    results.put((role, lcm.migrate_home(home, install=install, say=notices.append), notices))
+
+
+@pytest.mark.platforms("linux")
+def test_left_core_cross_process_install_rechecks_after_lock(tmp_path):
+    """Regression for #148608: an update and an agent start must not race the same home."""
+    from multiprocessing import get_context
+    home = _home(tmp_path, env="HASS_TOKEN=abc\n")
+    ctx = get_context("fork")
+    entered, scanned, release = ctx.Event(), ctx.Event(), ctx.Event()
+    results = ctx.Queue()
+    first = ctx.Process(target=_left_core_racer, args=(home, "first", entered, scanned, release, results))
+    second = ctx.Process(target=_left_core_racer, args=(home, "second", entered, scanned, release, results))
+    first.start()
+    try:
+        assert entered.wait(30)
+        second.start()
+        assert scanned.wait(30)
+    finally:
+        release.set()
+        for process in (first, second):
+            if process.pid is None:
+                continue
+            process.join(30)
+            if process.is_alive():
+                process.terminate()
+                process.join(5)
+    assert first.exitcode == second.exitcode == 0
+    outcomes = {role: (installed, notices) for role, installed, notices in
+                (results.get(timeout=5), results.get(timeout=5))}
+    assert outcomes["first"][0] == ["homeassistant"]
+    assert outcomes["second"] == (["homeassistant"], [])
+
+
+@pytest.mark.parametrize("marked", [False, True])
+def test_left_core_resumes_published_but_unenabled_catalog_plugin(tmp_path, monkeypatch, marked):
+    """Regression for #148608: restart must finish enable even after a premature marker."""
+    import json
+    home = _home(tmp_path, env="HASS_TOKEN=abc\n",
+                 config="_left_core_installed: [homeassistant]\n" if marked else "")
+    plugins = home / "plugins"
+    (plugins / "homeassistant").mkdir(parents=True)
+    revision = "a" * 40
+    (plugins / ".install-metadata.json").write_text(json.dumps({
+        "homeassistant": {
+            "pinned": True, "revision": revision, "source": "https://github.com/NousResearch/hermes-official-plugins",
+            "catalog": {"name": "homeassistant", "repo": "https://github.com/NousResearch/hermes-official-plugins",
+                        "sha": revision, "pin": revision, "tier": "official"},
+        },
+    }), encoding="utf-8")
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    installs = []
+
+    def resume(name):
+        installs.append(name)
+        from hermes_cli.config import atomic_config_write
+        config = lcm._read_config(home)
+        config["plugins"] = {**config.get("plugins", {}), "enabled": [name]}
+        atomic_config_write(home / "config.yaml", config)
+        return {"ok": True}
+
+    assert lcm.migrate_home(home, install=resume, say=lambda _message: None) == ["homeassistant"]
+    config = lcm._read_config(home)
+    assert installs == ["homeassistant"]
+    assert "homeassistant" in config["plugins"]["enabled"]
+    assert "homeassistant" in config["_left_core_installed"]

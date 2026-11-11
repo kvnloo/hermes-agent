@@ -924,6 +924,23 @@ def plugin_present(plugin: str, home: Path) -> bool:
     return (home / "plugins" / plugin).is_dir()
 
 
+def _unfinished_catalog_install(home: Path, feature: LeftCoreFeature) -> bool:
+    """A catalog tree was published but its enable decision was interrupted.
+
+    Provider plugins may load implicitly without a plugins.enabled entry.
+    """
+    if feature.providers or not plugin_present(feature.plugin, home) or any(_plugin_lists(home, feature.plugin)):
+        return False
+    from hermes_cli.plugins_cmd_catalog import catalog_install_record
+    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+    token = set_hermes_home_override(home)
+    try:
+        record = catalog_install_record(home / "plugins" / feature.plugin)
+    finally:
+        reset_hermes_home_override(token)
+    return bool(record and record["catalog_name"] == feature.plugin)
+
+
 def _core_carried(feature: LeftCoreFeature, selection: list) -> bool:
     """Whether core resolved *feature*'s toolsets on for a platform selecting *selection*: named
     directly, or through a ``hermes`` / ``hermes-<platform>`` composite that included them."""
@@ -1090,24 +1107,26 @@ def _pending(home: Path, *, say: Callable[[str], None], process_env: bool = Fals
     from hermes_cli.memory_provider_migration import catalog_source
     out = []
     for feature in LEFT_CORE:
-        if _marked(_read_config(home), _INSTALLED_KEY, feature):
+        unfinished = _unfinished_catalog_install(home, feature)
+        if _marked(_read_config(home), _INSTALLED_KEY, feature) and not unfinished:
             continue
         if not feature_in_use(feature, home, process_env=process_env):
             continue
-        if not _predates_split(home, feature):
+        if not _predates_split(home, feature) and not unfinished:
             _say_post_split(home, feature, say=say, backoff=backoff, process_env=process_env)
             continue
         present = plugin_present(feature.plugin, home)
         try:
-            _record_migration(home, feature)
+            if not unfinished:
+                _record_migration(home, feature)
         except Exception as exc:
             say(f"  ⚠ {feature.label} moved out of core into the '{feature.plugin}' plugin: its per-platform "
                 f"toolset selection could not be kept ({exc}). Check `hermes tools`"
                 + ("." if present else f" and run `{_install_command(feature.plugin, home)}`."))
             continue
-        if present:
+        if present and not unfinished:
             continue
-        if backoff and _failed_recently(home, feature.plugin):
+        if backoff and not unfinished and _failed_recently(home, feature.plugin):
             logger.info("%s plugin install failed recently for %s; retrying later or on `hermes update`",
                         feature.label, home)
             continue
@@ -1164,26 +1183,36 @@ def _first_cause(error: str) -> str:
 
 def _install_one(home: Path, feature: LeftCoreFeature, *, install: Callable[[str], dict],
                  say: Callable[[str], None], process_env: bool = False) -> bool:
+    import threading
+    from hermes_cli.auth import _file_lock
+
     try:
-        result = install(feature.plugin)
-    except Exception as exc:  # network, uv, kill list — report, do not raise
+        with _file_lock(home / "cache" / "left-core-install.lock", threading.local(), 300.0,
+                        f"Timed out waiting for the left-core install lock ({home})"):
+            # Pending work was computed before the lock: another process may have finished.
+            unfinished = _unfinished_catalog_install(home, feature)
+            if not unfinished and (plugin_present(feature.plugin, home) or
+                                   _marked(_read_config(home), _INSTALLED_KEY, feature)):
+                # Another process completed it; update's grouped loop must advance to the next home.
+                return plugin_present(feature.plugin, home)
+            result = install(feature.plugin)
+            if result.get("ok"):
+                from providers import refresh_bound_home
+                refresh_bound_home()
+                try:
+                    _record_migration(home, feature)
+                except Exception as exc:  # the next run sees the plugin dir and records it then
+                    logger.debug("left-core install marker not written for %s: %s", home, exc)
+                say(_noticed(f"  ✓ {feature.label} moved out of core — installed the '{feature.plugin}' plugin from the "
+                             f"catalog ({feature.unchanged}).", home, feature, process_env))
+                return True
+    except Exception as exc:  # network, uv, kill list, lock timeout — report, do not raise
         result = {"ok": False, "error": str(exc)}
-    if result.get("ok"):
-        from providers import refresh_bound_home
-        refresh_bound_home()  # a provider plugin resolves in this same call, not after the stamp TTL
-        try:
-            _record_migration(home, feature)
-        except Exception as exc:  # the next run sees the plugin dir and records it then
-            logger.debug("left-core install marker not written for %s: %s", home, exc)
-        say(_noticed(f"  ✓ {feature.label} moved out of core — installed the '{feature.plugin}' plugin from the "
-                     f"catalog ({feature.unchanged}).", home, feature, process_env))
-        return True
     _note_failure(home, feature.plugin)
     error = _first_cause(str(result.get("error") or ""))
     say(_noticed(f"  ⚠ {feature.label} moved out of core and its '{feature.plugin}' plugin could not be installed "
                  f"automatically: {error}. Run `{_install_command(feature.plugin, home)}`.", home, feature, process_env))
     return False
-
 
 def migrate_home(home: Path, *, install: Callable[[str], dict], say: Callable[[str], None] = print,
                  process_env: bool = False) -> list[str]:
