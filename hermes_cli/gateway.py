@@ -4341,10 +4341,21 @@ def _guard_supervised_gateway_conflict(force: bool = False) -> None:
     except Exception:
         logger.debug("Supervised-gateway conflict probe failed", exc_info=True)
         return
-    if not (snapshot.service_installed and snapshot.service_running):
+    # A systemd unit with Restart=always still owns its gateway during RestartSec:
+    # is-active is not "active" while it is activating/auto-restart (#73480).
+    pending_systemd_restart = False
+    if snapshot.service_installed and not snapshot.service_running and snapshot.manager.startswith("systemd ("):
+        props = _read_systemd_unit_properties(system=snapshot.service_scope == "system")
+        pending_systemd_restart = (
+            props.get("ActiveState") == "activating" and props.get("SubState") == "auto-restart"
+        )
+    if not snapshot.service_installed or not (snapshot.service_running or pending_systemd_restart):
         return
 
-    print_error(f"A gateway is already running under {snapshot.manager} for this profile.")
+    if pending_systemd_restart:
+        print_error(f"A gateway restart is pending under {snapshot.manager} for this profile.")
+    else:
+        print_error(f"A gateway is already running under {snapshot.manager} for this profile.")
     print(
         "  Starting another one from a shell leaves an orphan dispatcher that\n"
         "  escapes the service, survives restarts, and writes to the same kanban\n"
