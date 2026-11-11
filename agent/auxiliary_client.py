@@ -6410,7 +6410,7 @@ def _forwards_max_tokens(provider: str, provider_norm: str, model: str, effectiv
     a provider profile opting in via ``forwards_max_tokens``.
     """
     return (
-        _is_anthropic_compat_endpoint(provider, effective_base)
+        _is_anthropic_compat_endpoint(provider, effective_base) or provider_norm == "anthropic"
         or _nous_on_messages_wire(provider_norm, model)
         or provider_norm in _NVIDIA_PROVIDER_NAMES
         or base_url_host_matches(effective_base, "integrate.api.nvidia.com")
