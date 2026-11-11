@@ -1700,6 +1700,7 @@ export interface PairingResponse {
 
 export interface WebhookRoute {
   name: string;
+  source?: "config" | "subscription";
   description: string;
   events: string[];
   deliver: string;

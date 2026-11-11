@@ -464,7 +464,7 @@ function ProfileOwnedWebhooksView({ backendProfile, onClose }: ProfileOwnedWebho
                   active={selectedSub?.name === sub.name}
                   dotClassName={sub.enabled ? 'bg-emerald-500' : 'bg-muted-foreground/50'}
                   key={sub.name}
-                  menuItems={[
+                  menuItems={sub.source === 'config' ? [] : [
                     {
                       icon: sub.enabled ? 'circle-slash' : 'check',
                       label: sub.enabled ? w.disableRow : w.enableRow,
@@ -630,6 +630,7 @@ function WebhookDetail({ sub }: { sub: WebhookRoute }) {
       <header className="space-y-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <h3 className="text-[0.95rem] font-semibold tracking-tight text-foreground">{sub.name}</h3>
+          {sub.source === 'config' && <PanelPill>config.yaml (read-only)</PanelPill>}
           {sub.deliver_only && <PanelPill tone="warn">{w.deliverOnly}</PanelPill>}
         </div>
 
