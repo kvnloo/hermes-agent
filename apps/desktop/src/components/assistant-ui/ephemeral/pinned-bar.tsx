@@ -126,7 +126,7 @@ const PinnedChip: FC<{ card: EphemeralCardRecord }> = ({ card }) => {
         onFocusOutside={event => event.preventDefault()}
         side="top"
       >
-        <EphemeralCardFrame app={card.app} kind={card.kind} onMessage={onMessage} pinned title={`${card.appName} card (pinned)`} />
+        <EphemeralCardFrame match={card} onMessage={onMessage} pinned title={`${card.appName} card (pinned)`} />
         <div aria-live="polite" className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs text-muted-foreground">
           <p className="min-w-0 flex-1">
             {intent ? t.openui.kitPicked.replace('{what}', intent.label || intent.action) : t.openui.kitIdle}
