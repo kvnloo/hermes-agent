@@ -70,6 +70,26 @@ def test_profile_helper_does_not_inherit_process_secret(monkeypatch):
     assert output == "unset|profile-value"
 
 
+@pytest.mark.parametrize("home_lookup_succeeds", [True, False])
+def test_strict_shell_helper_gets_home_without_parent_home(tmp_path, monkeypatch, home_lookup_succeeds):
+    monkeypatch.delenv("HOME", raising=False)
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    if home_lookup_succeeds:
+        expected_home = str(tmp_path / "mock-user-home")
+        monkeypatch.setattr(Path, "home", lambda: tmp_path / "mock-user-home")
+    else:
+        expected_home = "/"
+
+        def _no_passwd_entry():
+            raise RuntimeError("Could not determine home directory.")
+
+        monkeypatch.setattr(Path, "home", _no_passwd_entry)
+    helper = _write_helper(tmp_path, 'set -eu\nprintf "CMDTEST_HOME=%s\\n" "$HOME"')
+    result = CommandSource().fetch({"enabled": True, "command": str(helper)}, tmp_path)
+    assert result.ok
+    assert result.secrets == {"CMDTEST_HOME": expected_home}
+
+
 @pytest.fixture(autouse=True)
 def _clean_env(monkeypatch):
     """Each test starts with a clean source map, applied-home guard, and no
