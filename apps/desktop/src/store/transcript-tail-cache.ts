@@ -36,6 +36,9 @@ const INDEX_KEY = 'hermes.transcript-tail.v2-index'
 const TAIL_MESSAGES = 40
 const MAX_ENTRY_BYTES = 256 * 1024
 const MAX_ENTRIES = 50
+// The cache is disposable; group rooms and other user data share this origin.
+// Count UTF-16 storage bytes, not characters, and leave room for durable keys.
+const MAX_CACHE_BYTES = 3 * 1024 * 1024
 
 /** Owning scope of an entry — same shape the REST layer threads through
  *  `getLatestSessionMessages(id, scope)` and the in-memory twin stores in
@@ -54,6 +57,7 @@ interface CacheEntry {
 }
 
 let legacyPurged = false
+let budgetChecked = false
 
 /** One-time sweep of pre-scoping v1 entries (#94828): a bare-id key cannot
  *  be attributed to a profile, so it must never paint again. Best effort —
@@ -92,6 +96,15 @@ function storage(): Storage | null {
     const store = window.localStorage
 
     purgeLegacyV1(store)
+
+    // Reclaim old near-quota installations on their first cache access, not
+    // only after a later cache write happens to hit the browser's limit.
+    if (!budgetChecked) {
+      const ids = readIndex(store)
+      const retained = trimCacheToBudget(store, ids)
+      if (retained.length !== ids.length) writeIndex(store, retained)
+      budgetChecked = true
+    }
 
     return store
   } catch {
@@ -141,6 +154,25 @@ function writeIndex(store: Storage, ids: string[]): void {
   }
 }
 
+/** Evict oldest cached tails before they crowd out durable renderer storage.
+ *  Existing string-array indices are kept; missing entries count as zero. */
+function trimCacheToBudget(store: Storage, ids: string[]): string[] {
+  const sizes = ids.map(id => {
+    const value = store.getItem(PREFIX + id)
+    return value === null ? 0 : 2 * (PREFIX.length + id.length + value.length)
+  })
+  let bytes = sizes.reduce((sum, size) => sum + size, 0)
+  let dropped = 0
+
+  while (bytes > MAX_CACHE_BYTES && dropped < ids.length) {
+    store.removeItem(PREFIX + ids[dropped])
+    bytes -= sizes[dropped]
+    dropped += 1
+  }
+
+  return dropped ? ids.slice(dropped) : ids
+}
+
 function touchIndex(store: Storage, suffix: string): void {
   const ids = readIndex(store).filter(id => id !== suffix)
   ids.push(suffix)
@@ -157,7 +189,7 @@ function touchIndex(store: Storage, suffix: string): void {
     }
   }
 
-  writeIndex(store, ids)
+  writeIndex(store, trimCacheToBudget(store, ids))
 }
 
 /** Persist the tail of a session's transcript. No-op on empty/oversized.
