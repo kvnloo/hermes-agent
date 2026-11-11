@@ -135,3 +135,47 @@ def test_prepared_aggregator_plans_tools_without_decorating_prepared_state(monke
     assert "cache_control" in calls[0]["tools"][-1]
     assert "cache_control" not in tools[-1]
     assert prepared == canonical_prepared
+
+
+def test_delegated_moa_aggregator_marks_shared_session_before_task_text():
+    """Different delegated MoA tasks must reuse the session's skills-index breakpoint.
+
+    MoA resolves an OpenRouter aggregator through its own cache planner, not the main
+    conversation-loop planner. Both paths must preserve the same three-part system shape.
+    """
+    from agent import moa_loop
+
+    static = "You are Hermes.\n"
+    session = static + "## Skills\n- alpha: useful helper\n"
+    completions = moa_loop.MoAChatCompletions.__new__(moa_loop.MoAChatCompletions)
+    completions._agent = SimpleNamespace(
+        _cache_disabled=False,
+        _cache_ttl="5m",
+        _cached_system_prompt_static=static,
+        _cached_system_prompt=session,
+    )
+    runtime = {
+        "provider": "openrouter",
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_mode": "chat_completions",
+        "model": "anthropic/claude-sonnet-4.6",
+    }
+    shared_session_parts = []
+    for task in ("\n\nTask A", "\n\nTask B"):
+        for history, tail_marked in (
+            ([{"role": "user", "content": "go"}], True),
+            ([{"role": "user", "content": "go"}, {"role": "assistant", "content": "working"}], False),
+        ):
+            original = [{"role": "system", "content": session + task}, *history]
+            planned, _ = completions._plan_aggregator_cache(original, [], None, runtime)
+            parts = planned[0]["content"]
+            assert [p["text"] for p in parts] == [static, session[len(static):], task]
+            assert ["cache_control" in p for p in parts] == [True, True, tail_marked]
+            all_parts = [
+                part for msg in planned if isinstance(msg.get("content"), list)
+                for part in msg["content"]
+            ]
+            assert sum("cache_control" in p for p in all_parts) == 4
+            assert original[0]["content"] == session + task
+            shared_session_parts.append(parts[1]["text"])
+    assert len(set(shared_session_parts)) == 1

@@ -1194,6 +1194,7 @@ class MoAChatCompletions:
                 base_url=agg_runtime.get("base_url") or "", api_mode=agg_runtime.get("api_mode") or "",
                 model=agg_runtime.get("model") or "", cache_disabled=cache_disabled, cache_ttl=cache_ttl,
                 static_system_prefix=getattr(_agent, "_cached_system_prompt_static", None),
+                session_system_prompt=getattr(_agent, "_cached_system_prompt", None),
             )
             if guidance:
                 _attach_reference_guidance(agg_messages, str(guidance))
