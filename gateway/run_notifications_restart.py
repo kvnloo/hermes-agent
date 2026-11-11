@@ -72,7 +72,10 @@ class GatewayRestartNoticeMixin:
             if not notify_path.exists():
                 return None
             keep = True  # a send cancelled mid-flight (shutdown) is not proof of delivery: keep it
+            marker_stat = None
             try:
+                # The send can yield while a second /restart atomically replaces this marker.
+                marker_stat = notify_path.stat()
                 raw = notify_path.read_text(encoding="utf-8-sig")
                 if not replay:
                     self._restart_notice_claimed = raw
@@ -90,8 +93,21 @@ class GatewayRestartNoticeMixin:
                 logger.warning("Restart notification failed", exc_info=True)
                 return None
             finally:
-                if not keep:
-                    notify_path.unlink(missing_ok=True)
+                if not keep and marker_stat is not None:
+                    # Consume only the marker we handled, never one saved by a later /restart
+                    # while the previous confirmation was awaiting the platform send.
+                    try:
+                        current = notify_path.stat()
+                        if (
+                            current.st_dev, current.st_ino, current.st_mtime_ns, current.st_size
+                        ) == (
+                            marker_stat.st_dev, marker_stat.st_ino, marker_stat.st_mtime_ns, marker_stat.st_size
+                        ):
+                            notify_path.unlink(missing_ok=True)
+                    except FileNotFoundError:
+                        pass
+                    except OSError:
+                        logger.warning("Could not retire handled restart marker", exc_info=True)
 
     async def _deliver_restart_notification(self, data: dict) -> tuple[Optional[tuple[str, str, Optional[str]]], bool]:
         """One send of the requester notice: ``(delivered target or None, keep the marker)``."""

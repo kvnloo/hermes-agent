@@ -151,3 +151,33 @@ async def test_an_unreadable_requester_marker_does_not_stop_the_other_boot_sends
     assert [chat for chat, text in _sent(adapter) if ONLINE in text] == ["999"]
     runner._redeliver_claimed_obligations.assert_awaited_once_with([])
     assert not (home / ".restart_notify.json").exists()
+
+
+@pytest.mark.asyncio
+async def test_a_second_restart_marker_survives_an_in_flight_confirmation(rig):
+    """A completed send must not consume the next /restart marker written while it awaited Telegram."""
+    runner, adapter, generation, home = rig
+    assert adapter._record_polling_progress(generation)
+    await _settle(runner, adapter)
+
+    entered = asyncio.Event()
+    release = asyncio.Event()
+
+    async def delayed_send(*args, **kwargs):
+        entered.set()
+        await release.wait()
+        return MagicMock(message_id=9)
+
+    adapter._bot.send_message = AsyncMock(side_effect=delayed_send)
+    first_notice = asyncio.create_task(runner._send_restart_notification())
+    await asyncio.wait_for(entered.wait(), timeout=5)
+
+    next_notice = {"platform": "telegram", "chat_id": "222", "chat_type": "dm"}
+    replacement = home / ".restart_notify.next.json"
+    replacement.write_text(json.dumps(next_notice), encoding="utf-8")
+    os.replace(replacement, home / ".restart_notify.json")  # as atomic_json_write does
+
+    release.set()
+    assert await first_notice == ("telegram", "111", None)
+    assert [chat for chat, text in _sent(adapter) if RESTARTED in text] == ["111"]
+    assert json.loads((home / ".restart_notify.json").read_text(encoding="utf-8")) == next_notice
