@@ -1704,8 +1704,15 @@ def _enable_multiplex_log_routing(config: object) -> bool:
     try:
         from hermes_logging import enable_profile_log_routing
         return enable_profile_log_routing([home for _name, home in _multiplex_profile_homes(config)])
-    except Exception:
-        logger.debug("could not enable per-profile log routing", exc_info=True)
+    except Exception as exc:
+        # Gateway runs without a stderr INFO handler by default: make the fallback visible.
+        from hermes_logging import _safe_stderr
+        print(
+            f"hermes gateway: per-profile log routing is off ({exc}); "
+            "records remain in the launch profile's logs/",
+            file=_safe_stderr(),
+        )
+        logger.error("could not enable per-profile log routing", exc_info=True)
         return False
 
 

@@ -65,3 +65,65 @@ def test_multiplex_gateway_routes_profile_records_to_their_own_logs(
         assert not _contains(default_home, filename, "BETA-GATEWAY-WARN"), filename
     assert _contains(default_home, "gateway.log", "DEFAULT-GATEWAY-INFO")
     assert not _contains(beta_home, "gateway.log", "DEFAULT-GATEWAY-INFO")
+
+
+def test_router_constructor_failure_keeps_gateway_file_sink(
+    tmp_path, monkeypatch, clean_logging, capsys
+):
+    """Regression for #141958: a mid-swap failure must not orphan queued records."""
+    default_home = tmp_path / "default"
+    beta_home = tmp_path / "beta"
+    beta_home.mkdir()
+    monkeypatch.setattr(
+        run, "_multiplex_profile_homes",
+        lambda _cfg: [("default", default_home), ("beta", beta_home)],
+    )
+    hermes_logging.setup_logging(hermes_home=default_home, mode="gateway")
+    original_handlers = list(hermes_logging._queued_file_handlers)
+    real_router = hermes_logging._ProfileRoutingFileHandler
+    constructed = []
+
+    class RefuseSecondRouter(real_router):
+        def __init__(self, handler, homes):
+            if constructed:
+                raise RuntimeError("second router refused")
+            constructed.append(True)
+            super().__init__(handler, homes)
+
+    monkeypatch.setattr(hermes_logging, "_ProfileRoutingFileHandler", RefuseSecondRouter)
+    assert run._enable_multiplex_log_routing(types.SimpleNamespace(multiplex_profiles=True)) is False
+    assert hermes_logging._queued_file_handlers == original_handlers
+    assert hermes_logging._queue_listener is not None
+    logging.getLogger("gateway.run").warning("AFTER-CONSTRUCTOR-REFUSAL")
+    hermes_logging.flush_log_queue()
+    for filename in ("agent.log", "gateway.log", "errors.log"):
+        assert _contains(default_home, filename, "AFTER-CONSTRUCTOR-REFUSAL")
+    assert "per-profile log routing is off" in capsys.readouterr().err
+
+
+def test_listener_restart_failure_restores_launch_profile_sink(
+    tmp_path, monkeypatch, clean_logging
+):
+    """Regression for #141958: listener startup failure must restore the old listener."""
+    default_home = tmp_path / "default"
+    beta_home = tmp_path / "beta"
+    beta_home.mkdir()
+    monkeypatch.setattr(
+        run, "_multiplex_profile_homes",
+        lambda _cfg: [("default", default_home), ("beta", beta_home)],
+    )
+    hermes_logging.setup_logging(hermes_home=default_home, mode="gateway")
+    original_handlers = list(hermes_logging._queued_file_handlers)
+    original_listener = hermes_logging._queue_listener
+
+    def refuse_replacement_listener():
+        raise RuntimeError("replacement listener refused")
+
+    monkeypatch.setattr(hermes_logging, "_start_queue_listener_locked", refuse_replacement_listener)
+    assert run._enable_multiplex_log_routing(types.SimpleNamespace(multiplex_profiles=True)) is False
+    assert hermes_logging._queued_file_handlers == original_handlers
+    assert hermes_logging._queue_listener is original_listener
+    logging.getLogger("gateway.run").warning("AFTER-LISTENER-REFUSAL")
+    hermes_logging.flush_log_queue()
+    for filename in ("agent.log", "gateway.log", "errors.log"):
+        assert _contains(default_home, filename, "AFTER-LISTENER-REFUSAL")

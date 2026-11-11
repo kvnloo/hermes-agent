@@ -955,20 +955,44 @@ def enable_profile_log_routing(profile_homes: Sequence[str | Path]) -> bool:
                 with handler._profile_handlers_lock:
                     handler._profile_homes = handler._profile_homes.union(homes)
             return True
+        # Stage the whole replacement while the original queue and its files are alive.
+        previous = list(_queued_file_handlers)
+        staged = []
+        try:
+            for existing in previous:
+                staged.append(
+                    _ProfileRoutingFileHandler(existing, homes)
+                    if isinstance(existing, RotatingFileHandler) else existing
+                )
+        except Exception:
+            for candidate in staged:
+                if candidate not in previous:
+                    _quietly(candidate.close)
+            raise
+
         listener = _queue_listener
-        if listener is not None:
-            listener.stop()
-            _queue_listener = None
-        replacement = []
-        for existing in _queued_file_handlers:
-            if isinstance(existing, RotatingFileHandler):
-                replacement.append(_ProfileRoutingFileHandler(existing, homes))
-                _quietly(existing.close)
-            else:
-                replacement.append(existing)
-        _queued_file_handlers[:] = replacement
-        if listener is not None:
-            _start_queue_listener_locked()
+        try:
+            if listener is not None:
+                listener.stop()
+                _queue_listener = None
+            _queued_file_handlers[:] = staged
+            if listener is not None:
+                _start_queue_listener_locked()
+        except Exception:
+            _queued_file_handlers[:] = previous
+            _queue_listener = listener
+            try:
+                if listener is not None:
+                    listener.start()
+            finally:
+                for candidate in staged:
+                    if candidate not in previous:
+                        _quietly(candidate.close)
+            raise
+
+        for old, new in zip(previous, staged):
+            if old is not new:
+                _quietly(old.close)
         return True
 
 
