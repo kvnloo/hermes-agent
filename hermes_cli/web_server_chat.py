@@ -568,6 +568,11 @@ def _resolve_chat_argv(
 
     if sidecar_url:
         env["HERMES_TUI_SIDECAR_URL"] = sidecar_url
+        # The active Ink sidebar mirror uses Node's WebSocket dispatcher, not the
+        # legacy Python publisher. Keep its loopback /api/pub dial off the proxy.
+        from agent.proxy_bypass import add_loopback_no_proxy
+
+        add_loopback_no_proxy(env)
 
     if active_session_file:
         env["HERMES_TUI_ACTIVE_SESSION_FILE"] = active_session_file
