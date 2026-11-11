@@ -3871,6 +3871,7 @@ export type ProcessKillStatus = 'killed' | 'already_exited' | 'not_found' | 'err
 export interface ShellExecParams {
   command: string
   profile?: string | null
+  raw_stdout?: boolean
 }
 export interface ShellExecResult {
   stdout: string
@@ -4741,6 +4742,7 @@ export interface CanonicalShellExecParams {
   session_id: string
   command: string
   profile?: string | null
+  raw_stdout?: boolean
 }
 export interface PromptReceiptParams {
   session_id: string

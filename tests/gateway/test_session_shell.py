@@ -63,9 +63,10 @@ async def test_shell_exec_refusal_names_a_sandboxed_terminal_backend(tmp_path, m
         authority.sessions['s'] = LiveSession(None, 'route')
         connection = AuthorityConnection(authority, object(), {'user_id': 'owner'})
 
-        async def call():
+        async def call(extra=None):
             return await connection.dispatch({'id': 1, 'method': 'shell.exec',
-                                              'params': {'session_id': 's', 'command': 'echo ran'}})
+                                              'params': {'session_id': 's', 'command': 'echo ran',
+                                                         **(extra or {})}})
 
         refused = await call()
         assert refused['error']['data'] == {'reason': 'unsupported_terminal_backend',
@@ -73,3 +74,31 @@ async def test_shell_exec_refusal_names_a_sandboxed_terminal_backend(tmp_path, m
         terminal['TERMINAL_ENV'] = 'local'
         ran = await call()
         assert ran.get('result', {}).get('stdout', '').strip() == 'ran', ran
+        raw = await call({'raw_stdout': True})
+        assert raw.get('result', {}).get('stdout', '').strip() == 'ran', raw
+        invalid = await call({'raw_stdout': 'true'})
+        assert 'error' in invalid, invalid
+
+
+
+def test_shell_exec_raw_stdout_preserves_structured_json_and_redacts_stderr(tmp_path, monkeypatch):
+    from agent import redact
+    from gateway import session_shell
+
+    token = "1341a55f03ce51f23d46420e9bcd6226"
+    structured = '{"snapshot_token":"' + token + '","snapshots":[]}\n'
+    secret = "sk-shell-exec-secret-1234567890"
+
+    def fake_run(command, **kwargs):
+        return subprocess.CompletedProcess(
+            command, 0, stdout=structured, stderr=f"diagnostic {secret}"
+        )
+
+    monkeypatch.setattr(redact, "_REDACT_ENABLED", False)
+    monkeypatch.setattr(session_shell.subprocess, "run", fake_run)
+    default = session_shell._run("echo safe", str(tmp_path))
+    raw = session_shell._run("echo safe", str(tmp_path), raw_stdout=True)
+
+    assert token not in default['stdout']
+    assert raw['stdout'] == structured
+    assert secret not in raw['stderr']
