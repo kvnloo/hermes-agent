@@ -120,6 +120,48 @@ class FakeBot:
         return None
 
 
+
+@pytest.mark.asyncio
+async def test_connect_identifies_online_on_fresh_and_reconnected_client(monkeypatch):
+    """Every Discord IDENTIFY must declare online status (report #64932).
+
+    Complements the original constructor-status regression by lesterlxt in #65017;
+    exercises both connect() and its existing-client replacement on mylosol's #152910.
+    """
+    adapter = DiscordAdapter(PlatformConfig(enabled=True, token="test-token"))
+    monkeypatch.setattr(
+        "gateway.status.acquire_scoped_lock",
+        lambda scope, identity, metadata=None: (True, None),
+    )
+    monkeypatch.setattr(
+        "gateway.status_scoped_locks.release_scoped_lock",
+        lambda scope, identity: None,
+    )
+    intents = SimpleNamespace(
+        message_content=False, dm_messages=False, guild_messages=False,
+        members=False, voice_states=False,
+    )
+    monkeypatch.setattr(discord_platform.Intents, "default", lambda: intents)
+
+    identified_statuses = []
+
+    class PresenceBot(FakeBot):
+        def is_closed(self):
+            return False
+
+    def fake_bot(*, command_prefix, intents, status, allowed_mentions=None, **kwargs):
+        identified_statuses.append(status)
+        return PresenceBot(intents=intents, allowed_mentions=allowed_mentions)
+
+    monkeypatch.setattr(discord_platform.commands, "Bot", fake_bot)
+    monkeypatch.setattr(adapter, "_resolve_allowed_usernames", AsyncMock())
+
+    assert await adapter.connect() is True
+    assert await adapter.connect() is True
+    assert identified_statuses == [discord_platform.discord.Status.online] * 2
+    await adapter.disconnect()
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "initial_allowed",
