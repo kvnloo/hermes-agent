@@ -217,3 +217,53 @@ def test_a_launchd_job_is_paused_through_launchd_and_restarted_through_it(tmp_pa
         assert pid() and pid() != first, "the restart did not bring the job back under launchd"
     finally:
         subprocess.run(["launchctl", "bootout", f"{domain}/{label}"], capture_output=True, check=False)
+
+
+@pytest.mark.platforms("macos")
+def test_bare_replay_keeps_launchd_network_identity_after_update(tmp_path, monkeypatch):
+    """A replayed unmanaged gateway keeps its launchd parent when the updater exits (#153226)."""
+    from hermes_cli import gateway_launchd_runtime, update_cmd_posix_pause as pause
+
+    command = [sys.executable, "-m", "hermes_cli.main", "gateway", "run"]
+    entry = {"pid": 418, "home": str(tmp_path), "argv": command}
+    started, checks = {}, []
+
+    def serving(home, excluded):
+        checks.append((home, excluded))
+        return 62001 if started else None
+
+    def start_job(cmd, *, env, cwd, log_path, deadline):
+        started.update(cmd=cmd, env=env, cwd=cwd, log_path=log_path, deadline=deadline)
+
+        class Job:
+            def poll(self):
+                return None
+
+        return Job()
+
+    monkeypatch.setattr(pause, "_gateway_on_home", serving)
+    monkeypatch.setattr(pause, "_replay_env", lambda home: {
+        "HERMES_HOME": home, "INVOCATION_ID": "obsolete-supervisor"
+    })
+    monkeypatch.setattr(gateway_launchd_runtime, "start_gateway_job", start_job)
+    monkeypatch.setattr(pause.subprocess, "Popen",
+                        lambda *args, **kwargs: pytest.fail("macOS replay bypassed launchd"))
+
+    assert pause._relaunch_bare(entry) == 62001
+    assert checks == [(str(tmp_path), {418}), (str(tmp_path), {418})]
+    assert started["cmd"] == command
+    assert started["env"] == {"HERMES_HOME": str(tmp_path)}
+    assert started["cwd"] == pause.Path(pause.__file__).resolve().parent.parent
+    assert started["log_path"] == tmp_path / "logs" / "gateway-update-resume.log"
+    assert started["deadline"] > time.monotonic()
+
+    # A launchd job is a poll()-only handle, unlike Popen (no .returncode attribute).
+    class FailedJob:
+        def poll(self):
+            return 8
+
+    monkeypatch.setattr(pause, "_gateway_on_home", lambda home, excluded: None)
+    monkeypatch.setattr(gateway_launchd_runtime, "start_gateway_job",
+                        lambda *args, **kwargs: FailedJob())
+    with pytest.raises(RuntimeError, match="exited 8"):
+        pause._relaunch_bare(entry)

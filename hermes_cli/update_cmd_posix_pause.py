@@ -547,16 +547,24 @@ def _relaunch_bare(entry: dict) -> int:
     env = _replay_env(entry["home"])
     for leaked in ("INVOCATION_ID", "JOURNAL_STREAM", "HERMES_UPDATE_PAUSED", "_HERMES_GATEWAY"):
         env.pop(leaked, None)
-    with open(logs / "gateway-update-resume.log", "ab") as log:
-        proc = subprocess.Popen(list(entry["argv"]), env=env, stdin=subprocess.DEVNULL, stdout=log,
-                                # detached-spawn: ok — resumes the paused gateway after an update; it must outlive the updater
-                                stderr=subprocess.STDOUT, start_new_session=True, close_fds=True)
     deadline = time.monotonic() + _READY_TIMEOUT_S
+    log_path = logs / "gateway-update-resume.log"
+    proc = None
+    if sys.platform == "darwin":
+        from hermes_cli.gateway_launchd_runtime import start_gateway_job
+        # The updater may exit: launchd's osascript parent retains Local Network responsibility.
+        proc = start_gateway_job(list(entry["argv"]), env=env, cwd=Path(__file__).resolve().parent.parent,
+                                 log_path=log_path, deadline=deadline)
+    if proc is None:
+        with open(log_path, "ab") as log:
+            proc = subprocess.Popen(list(entry["argv"]), env=env, stdin=subprocess.DEVNULL, stdout=log,
+                                    # detached-spawn: ok — fallback when no GUI launchd job can start
+                                    stderr=subprocess.STDOUT, start_new_session=True, close_fds=True)
     while time.monotonic() < deadline:
         if (pid := _gateway_on_home(entry["home"], {int(entry["pid"])})) is not None:
             return pid  # the replay, or a gateway someone started meanwhile (the replay then exits 0)
-        if proc.poll() is not None:
-            raise RuntimeError(f"replayed gateway for {entry['home']} exited {proc.returncode} "
+        if (status := proc.poll()) is not None:
+            raise RuntimeError(f"replayed gateway for {entry['home']} exited {status} "
                                f"(see {logs / 'gateway-update-resume.log'})")
         time.sleep(0.5)
     raise RuntimeError(f"replayed gateway for {entry['home']} did not come up within {int(_READY_TIMEOUT_S)}s")
