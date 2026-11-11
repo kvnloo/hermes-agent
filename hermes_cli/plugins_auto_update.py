@@ -100,11 +100,10 @@ def apply_unattended(name: str) -> None:
     target = pc._user_installed_plugin_dir(name)
     if target is None:
         raise pc.PluginOperationError(f"Plugin '{name}' is no longer installed.")
-    if update_one(name, target, pc._console(), interactive=False, unattended=True):
-        # The tick runs in the gateway: reload the plugin here, or the gateway keeps serving the old
-        # version and a lazily imported file of the new one mixes in (#153300).
+    if updated := update_one(name, target, pc._console(), interactive=False, unattended=True):
+        # The tick runs in the gateway; a catalog re-pin can rename the plugin.
         from hermes_cli.plugins_activation import load_and_go_live
-        load_and_go_live(target.name)
+        load_and_go_live(updated if isinstance(updated, str) else target.name)
 
 
 # ── the auto-update switch ────────────────────────────────────────────────────────────────────

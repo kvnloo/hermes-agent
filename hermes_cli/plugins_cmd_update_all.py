@@ -94,7 +94,7 @@ def _update_one(row, console, *, interactive: bool) -> tuple[str, str]:
     if not moved:
         return "current", ""
     from hermes_cli.plugins_activation import report_activation
-    report_activation(console, target.name)  # load it in the running gateway, like `update <name>`
+    report_activation(console, moved if isinstance(moved, str) else target.name)
     return "updated", f"{(row.current or '')[:8]}..{(row.latest or '')[:8]}"
 
 

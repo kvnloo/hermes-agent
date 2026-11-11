@@ -87,7 +87,7 @@ def _reclone_plugin_update(target: Path, source: str, previous_revision: object,
 
 
 def update_one(name: str, target: Path, console, *, interactive: bool = True, force: bool = False,
-               unattended: bool = False) -> bool:
+               unattended: bool = False) -> bool | str:
     """:func:`_update_one_locked` under the plugin's one-updater lock (a terminal update, the gateway's
     auto-apply and a Desktop click never pull the same plugin at once; the loser changes nothing).
     *unattended* (the auto-apply tick) applies :func:`~hermes_cli.plugins_auto_update.unattended_gate`
@@ -99,7 +99,7 @@ def update_one(name: str, target: Path, console, *, interactive: bool = True, fo
 
 
 def _update_one_locked(name: str, target: Path, console, *, interactive: bool = True, force: bool = False,
-                       surface_gate=None) -> bool:
+                       surface_gate=None) -> bool | str:
     """Update one installed plugin, printing progress and consent prompts; True when it moved.
 
     Every update is scanned. A caution verdict on a git update asks ``Update anyway? [y/N]`` when
@@ -159,10 +159,10 @@ def cmd_update(name: str, *, interactive: bool = True, force: bool = False) -> N
     console = _pc()._console()
     target = _pc()._require_installed_plugin(name, _pc()._plugins_dir(), console)
     try:
-        if update_one(name, target, console, interactive=interactive, force=force):
-            # Like install/enable: load it in the running gateway and say what is live (#153300).
+        if updated := update_one(name, target, console, interactive=interactive, force=force):
+            # A catalog re-pin can rename the plugin and remove target.
             from hermes_cli.plugins_activation import report_activation
-            report_activation(console, target.name)
+            report_activation(console, updated if isinstance(updated, str) else target.name)
     except RepinConsentRequired as exc:
         _pc()._fail(console, f"[yellow]Update of {name} not applied:[/yellow] {exc}")
     except _pc().PluginScanBlocked as exc:

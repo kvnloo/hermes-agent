@@ -747,7 +747,7 @@ def repin_catalog_plugin(
     return RepinResult(entry.sha, True, installed_name, warnings)
 
 
-def cmd_update_catalog(name: str, target: Path, sidecar: dict, console, *, interactive: bool = True) -> bool:
+def cmd_update_catalog(name: str, target: Path, sidecar: dict, console, *, interactive: bool = True) -> bool | str:
     """Re-pin a catalog install, printing progress; True when the pin moved. Refusals raise
     :class:`RepinConsentRequired` / ``PluginOperationError`` with nothing changed (the caller reports them)."""
     from hermes_cli.plugins_cmd import (
@@ -783,7 +783,8 @@ def cmd_update_catalog(name: str, target: Path, sidecar: dict, console, *, inter
                     console.print(
                         f"[yellow]Plugin {result.installed_name} has new capabilities; review them with "
                         f"`hermes plugins capabilities {result.installed_name}`.[/yellow]")
-    return result.changed
+    # A catalog re-pin may rename the manifest and remove the old installed directory.
+    return result.installed_name if result.changed and result.installed_name != target.name else result.changed
 
 
 
