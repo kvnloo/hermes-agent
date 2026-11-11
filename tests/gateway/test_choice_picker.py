@@ -127,6 +127,8 @@ class TestReasoningChoicePicker:
         assert result is None
         # Every button the global picker offers works under --global (a session reset would be refused).
         assert "reset" not in [c["value"] for c in adapter.calls[0]["choices"]]
+        from agent.i18n import t
+        assert t("gateway.reasoning.scope_global") in adapter.calls[0]["title"]
         on_choice = adapter.calls[0]["on_choice_selected"]
         reply = await on_choice(event.source.chat_id, "ultra")
 

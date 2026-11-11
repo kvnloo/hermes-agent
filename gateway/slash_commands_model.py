@@ -1013,6 +1013,8 @@ class GatewayModelCommandsMixin:
         _rs_state = self._peek_session_state(session_key)
         has_session_override = _rs_state is not None and _rs_state.conversation.reasoning_override is not None
         scope = t("gateway.reasoning.scope_session") if has_session_override else t("gateway.reasoning.scope_global")
+        # The explicit --global picker saves to config even when this turn has a session override.
+        picker_scope = t("gateway.reasoning.scope_global") if persist_global else scope
 
         async def _on_reasoning_choice(_chat_id: str, value: str) -> str:
             def _apply() -> str:
@@ -1030,7 +1032,7 @@ class GatewayModelCommandsMixin:
         picker_sent = await self._try_send_choice_picker(
             event,
             session_key,
-            title=t("gateway.reasoning.picker_title", level=level, scope=scope, display=display_state),
+            title=t("gateway.reasoning.picker_title", level=level, scope=picker_scope, display=display_state),
             choices=[
                 {"value": "none", "label": t("gateway.reasoning.choice_none"), "is_current": current_effort == "none"},
                 *({"value": lv, "label": effort_display_label(lv, *_route), "is_current": lv == current_effort}
