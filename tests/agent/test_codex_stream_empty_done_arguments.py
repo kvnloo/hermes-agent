@@ -36,3 +36,18 @@ def test_empty_done_arguments_keep_the_streamed_arguments():
 def test_nonempty_done_arguments_still_win():
     response = _consume_codex_event_stream(iter(_events('{"city":"Rome"}')), model="gpt-5.5")
     assert [_arguments(o) for o in response.output] == ['{"city":"Rome"}']
+
+
+def test_empty_arguments_done_before_empty_item_done_keeps_the_streamed_arguments():
+    """Both closing events can omit the accumulated arguments; the tool must keep the deltas."""
+    from agent.codex_responses_adapter import _normalize_codex_response
+
+    events = _events("", as_objects=True)
+    events.insert(-2, {
+        "type": "response.function_call_arguments.done",
+        "item_id": "fc_1", "output_index": 0, "arguments": "",
+    })
+    response = _consume_codex_event_stream(iter(events), model="gpt-5.5")
+    assistant, finish_reason = _normalize_codex_response(response)
+    assert finish_reason == "tool_calls"
+    assert [call.function.arguments for call in assistant.tool_calls] == ['{"city":"Paris"}']

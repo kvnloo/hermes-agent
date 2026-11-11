@@ -995,10 +995,12 @@ class _CodexResponseAssembler:
         if "delta" in event_type:
             pending["arguments"] += _event_field(event, "delta", "") or ""
         elif event_type.endswith("function_call_arguments.done"):
-            # Authoritative for the accumulated string; an explicit "" (zero-arg call) counts, only a
-            # missing field keeps the streamed deltas.
+            # A non-empty done string is authoritative, but some backends close with "" after
+            # sending deltas. Do not erase streamed arguments before output_item.done can use them.
             if (done_args := _event_field(event, "arguments", None)) is not None:
-                pending["arguments"] = str(done_args)
+                done_args = str(done_args)
+                if done_args.strip() or not pending["arguments"].strip():
+                    pending["arguments"] = done_args
 
     def _on_reasoning_delta(self, event: Any, event_type: str) -> None:
         reasoning_text = _event_field(event, "delta", "")
