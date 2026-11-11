@@ -660,6 +660,26 @@ class TestOverlappingReadDedup(unittest.TestCase):
         r = self._read(1, 99)
         self.assertEqual(_shown_line_numbers(r), list(range(cut_at, 100)))
 
+    def test_transport_truncated_line_is_not_marked_seen(self):
+        """An incomplete line from the real file-ops transport is not fully seen.
+
+        A later overlapping window must re-show the truncated line, even when
+        it also contains new lines. Use the backend's real line limit.
+        """
+        long_line = "x" * 4096
+        with open(self._tmpfile, "w", encoding="utf-8", newline="\n") as f:
+            f.write(f"{long_line}\nsecond line\n")
+
+        first = self._read(1, 1)
+        self.assertTrue(first["truncated_lines"], first)
+        self.assertIn("[truncated]", first["content"])
+
+        wider = self._read(1, 2)
+        self.assertNotIn("omitted_lines", wider, wider)
+        self.assertEqual(_shown_line_numbers(wider), [1, 2])
+        self.assertIn("1|", wider["content"])
+        self.assertIn("2|second line", wider["content"])
+
     def test_sandbox_file_ops_never_withhold_lines(self):
         """A sandbox's files are not the host's: a host file at the same path says nothing about
         whether the sandbox copy changed, so its lines are never omitted as already seen."""

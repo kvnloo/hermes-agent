@@ -637,7 +637,8 @@ def _record_successful_read(task_data: dict, task_id: str, path: str, resolved_s
             task_data.setdefault("read_timestamps", {})[resolved_str] = os.path.getmtime(resolved_str)
         except OSError:
             pass
-        if returned_span and stable and not programmatic:
+        if returned_span and stable and not programmatic and not redacted:
+            # A clipped or redacted page was not shown verbatim; don't mark it seen.
             # Keyed to the version this read returned, never to a later stat.
             _record_seen_span(task_data, resolved_str, version, returned_span)
         baselines = task_data["full_write_baselines"]
