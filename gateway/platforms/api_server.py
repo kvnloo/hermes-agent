@@ -3106,8 +3106,8 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         if err is not None:
             return err
         handed_off = await self._stream_through_live_bot_chat(request, ctx)
-        if handed_off is not None:
-            return handed_off
+        if (response := await _api_runs.session_chat_stream_preflight(self, ctx["session_id"], handed_off)) is not None:
+            return response
         gateway_session_key, session_id = ctx["gateway_session_key"], ctx["session_id"]
         user_message, runtime_request = ctx["user_message"], ctx["runtime_request"]
         runtime_meta = self._sanitize_runtime_metadata(

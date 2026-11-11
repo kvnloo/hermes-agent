@@ -30,6 +30,25 @@ from gateway.platforms.api_server_run_idempotency import TERMINAL_STATUSES
 
 logger = logging.getLogger("gateway.platforms.api_server")
 
+async def session_chat_stream_preflight(adapter, session_id, handed_off):
+    """Reject a foreign-source session before the native session-chat SSE is opened.
+
+    A live Bot Chat handoff has already been admitted through its own principal;
+    only ordinary API-principal turns must satisfy the API target-source guard.
+    """
+    if handed_off is not None or getattr(adapter.gateway_runner, "session_authority", None) is None:
+        return handed_off
+    from gateway.session_api_turn import API_TARGET_SOURCES
+    db = await adapter._ensure_session_db_async()
+    session = await asyncio.to_thread(db.get_session, session_id) if db is not None else None
+    if session is None or session["source"] in API_TARGET_SOURCES:
+        return None
+    from gateway.platforms.api_server import _error_response
+    return _error_response(
+        f"Session belongs to the {session['source']} surface; API turns cannot continue it.",
+        409, code="permission_denied")
+
+
 # Executor-thread lifetime for API-server agent turns (#116535). The handler-side
 # ``_inflight_agent_runs`` count in api_server.py drops in the handler's ``finally`` when the
 # handler task is cancelled (disconnect/shutdown) while the executor thread behind
