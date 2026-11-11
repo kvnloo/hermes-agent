@@ -108,6 +108,7 @@ export function BotScreenPane({ bot }: { bot: RosterRow }) {
   const pasteCleanup = useRef<(() => void) | null>(null)
   const [conn, setConn] = useState<ConnState>('idle')
   const [error, setError] = useState<null | string>(null)
+  const [statusError, setStatusError] = useState<null | string>(null)
   const [busy, setBusy] = useState(false)
   // Caption after a 4000 eviction; cleared once the watch-mode re-attach paints live frames.
   const [evicted, setEvicted] = useState(false)
@@ -123,13 +124,16 @@ export function BotScreenPane({ bot }: { bot: RosterRow }) {
     try {
       const next = await displayRequest<DisplayStatus>(bot, 'display.status')
       setScreenStatus(bot, next, request)
+      setStatusError(null)
       setError(null)
     } catch (err) {
       if (isDisplayUnavailable(err)) {
         setScreenUnavailable(bot)
       }
 
-      setError(err instanceof Error ? err.message : String(err))
+      const message = err instanceof Error ? err.message : String(err)
+      setStatusError(message)
+      setError(message)
     }
   }, [bot])
 
@@ -152,6 +156,7 @@ export function BotScreenPane({ bot }: { bot: RosterRow }) {
 
       if (payload?.profile_key && isEventForBotScreen(bot, event, status?.profile_key)) {
         setScreenStatus(bot, payload)
+        setStatusError(null)
       }
     })
 
@@ -436,6 +441,22 @@ export function BotScreenPane({ bot }: { bot: RosterRow }) {
     const description = isManagedBackend(bot) ? t.screen.portalUnavailableManaged : t.screen.portalUnavailable
 
     return <EmptyState description={description} title={t.screen.unavailableTitle} />
+  }
+
+  // An unsuccessful status RPC does not establish that packages are missing.
+  // Prefer the transport failure over a cached install card until a retry succeeds.
+  if (statusError) {
+    return (
+      <div className="grid min-h-48 place-items-center p-6 text-center">
+        <div className="flex max-w-md flex-col items-center gap-3">
+          <div className="text-sm font-medium">{t.screen.unavailableTitle}</div>
+          <div className="break-all text-xs text-red-500">{statusError}</div>
+          <Button onClick={() => void refresh()} size="sm" variant="secondary">
+            <Codicon name="refresh" /> {t.screen.reconnect}
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   if (status && !status.supported) {
