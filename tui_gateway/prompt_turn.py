@@ -557,6 +557,9 @@ def _adopt_out_of_band_turns(session: dict) -> None:
     with session["history_lock"]:
         if int(session.get("history_version", 0)) != version:
             return  # /compress, a rewind or a pivot marker landed meanwhile; the next turn re-derives
+        if rewritten:
+            logger.info("DB rehydrate out-of-band rewrite session=%s rows_before=%d rows_after=%d",
+                        _submit_row_target_key(session), len(history), len(tail))
         session["history"] = tail if rewritten else history + tail
         session["history_version"] = version + 1
 

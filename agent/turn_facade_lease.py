@@ -398,6 +398,8 @@ def admit_durable_turn_lease(
                     if isinstance(m, dict) and m.get(_PERSIST_AFTER_ADMISSION_INTERRUPT)
                     and "_row_id" not in m
                 )
+                logger.info("DB rehydrate turn lease session=%s rows_before=%d rows_after=%d",
+                            agent.session_id, len(conversation_history or []), len(reloaded))
                 admission.conversation_history = reloaded
         lease.build_threads()
     except BaseException:
