@@ -38,4 +38,21 @@ describe('SidebarViewSwitcher', () => {
     expect(onChange).toHaveBeenCalledOnce()
     expect(onChange).toHaveBeenCalledWith('projects')
   })
+
+  it('keeps an entered project open when its active Projects view is clicked again', () => {
+    const onChange = vi.fn()
+
+    render(
+      <SidebarViewSwitcher
+        active="projects"
+        ariaLabel="Sidebar view"
+        onChange={onChange}
+        projectsLabel="Projects"
+        sessionsLabel="Sessions"
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Projects' }))
+    expect(onChange).not.toHaveBeenCalled()
+  })
 })

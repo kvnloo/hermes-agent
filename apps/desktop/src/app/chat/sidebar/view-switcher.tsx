@@ -53,7 +53,7 @@ export function SidebarViewSwitcher({
       <Button
         aria-pressed={active === 'projects'}
         className={itemClass('projects')}
-        onClick={() => onChange('projects')}
+        onClick={active === 'projects' ? undefined : () => onChange('projects')}
         size="xs"
         type="button"
         variant="ghost"
