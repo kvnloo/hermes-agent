@@ -51,6 +51,27 @@ platforms:
     expect(config.model.provider).toBe('openai-codex')
   })
 
+  it('disables legacy gateway.<platform> shorthands that override top-level platform settings', () => {
+    const config = parse(
+      withPlatformsDisabled(
+        `
+gateway:
+  telegram:
+    enabled: true
+    require_mention: true
+platforms:
+  telegram:
+    enabled: true
+`,
+        ['telegram']
+      )
+    )
+
+    expect(config.platforms.telegram.enabled).toBe(false)
+    // gateway/config_loader.py merges gateway.telegram after platforms.telegram.
+    expect(config.gateway.telegram).toEqual({ enabled: false, require_mention: true })
+  })
+
   it('seeds the isolated home with bundled plugin platforms pinned off and credentials copied', () => {
     const source = tempDir()
     const target = tempDir()

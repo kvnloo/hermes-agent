@@ -62,6 +62,12 @@ export function withPlatformsDisabled(configText, platformNames) {
   for (const name of platformNames) {
     const block = platforms[name]
     platforms[name] = { ...(block && typeof block === 'object' ? block : {}), enabled: false }
+
+    // gateway.<name> shorthands merge after platforms.<name>; don't let them re-enable a platform.
+    const legacy = config.gateway?.[name]
+    if (legacy && typeof legacy === 'object' && !Array.isArray(legacy)) {
+      config.gateway[name] = { ...legacy, enabled: false }
+    }
   }
 
   config.platforms = platforms
