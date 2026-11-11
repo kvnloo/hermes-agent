@@ -60,6 +60,7 @@ vi.mock('@/store/profile', () => ({
 
 const { $pendingConnectionId, _resetConnectionsForTests, initializeConnectionsRegistry } = await import('./connections')
 const { _resetFleetRosterForTests } = await import('./fleet-roster')
+const { $notifications, clearNotifications } = await import('./notifications')
 
 const registry: DesktopConnectionsRegistry = {
   connections: [
@@ -86,6 +87,7 @@ function roster(homelab: { reachable: boolean; error?: string }): DesktopAgentRo
 const setLastUsed = vi.fn(async (id: string) => ({ ok: true, registry: { ...registry, lastUsed: id } }))
 
 beforeEach(() => {
+  clearNotifications()
   localStorage.clear()
   _resetConnectionsForTests()
   _resetFleetRosterForTests()
@@ -106,6 +108,8 @@ function stubBridge(
   }: { api?: (request: { path: string }) => Promise<unknown>; list?: DesktopConnectionsRegistry } = {}
 ) {
   vi.stubGlobal('window', {
+    clearTimeout: window.clearTimeout.bind(window),
+    setTimeout: window.setTimeout.bind(window),
     hermesDesktop: {
       api,
       connections: { list: vi.fn(async () => list), setLastUsed },
@@ -133,6 +137,28 @@ describe('launch restore onto the last-used gateway', () => {
     expect(ensureGatewayAgent).not.toHaveBeenCalled()
     expect($connection.get()?.connectionId).toBe('local')
     expect(setLastUsed).not.toHaveBeenCalled()
+  })
+
+  it('warns which machine runs tools when a remote primary cannot be restored', async () => {
+    const dial = deferred<void>()
+    openGatewayAgent.mockReturnValueOnce(dial.promise)
+    stubBridge(async () => roster({ reachable: false, error: 'gateway timed out' }), {
+      list: { ...registry, launchMode: 'primary', primary: 'homelab' }
+    })
+
+    const boot = initializeConnectionsRegistry()
+    await vi.waitFor(() => expect(openGatewayAgent).toHaveBeenCalledWith('homelab', 'default'))
+    await vi.waitFor(() =>
+      expect($notifications.get().find(note => note.id === 'desktop-restore-fallback:homelab')).toMatchObject({
+        kind: 'warning',
+        title: 'Homelab is unreachable',
+        message: 'Still using This device. Tools run on this device.'
+      })
+    )
+
+    dial.resolve()
+    await boot
+    expect($connection.get()?.connectionId).toBe('local')
   })
 
   it('a reachable but slow target still lands the launch on it', async () => {

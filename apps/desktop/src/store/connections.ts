@@ -14,6 +14,7 @@ import {
 import { $connectionsRegistry } from '@/store/connection-registry-state'
 import { $defaultProfileRoute, refreshDefaultProfile } from '@/store/default-profile'
 import { $fleetRoster, refreshFleetRoster } from '@/store/fleet-roster'
+import { notify, RECOVERY_ACTIONS } from '@/store/notifications'
 import { supersedeGatewaySwitch } from '@/store/gateway-switch'
 import {
   $activeGatewayProfile,
@@ -367,7 +368,23 @@ async function restoreConnection(connectionId: string, options: SelectConnection
 
   const off = $fleetRoster.subscribe(roster => {
     if (ownsPick() && launchTargetUnreachable(roster, connectionId)) {
+      const fallbackId = $activeConnectionId.get()
       abandonPick()
+
+      const fallback = $connectionsRegistry.get()?.connections.find(connection => connection.id === fallbackId)
+      if (fallback && fallback.id !== connectionId) {
+        const target = $connectionsRegistry.get()?.connections.find(connection => connection.id === connectionId)
+        // An imported transcript may look identical on two machines. Disclose
+        // the actual tool host when a remote launch stays on another gateway.
+        notify({
+          id: `desktop-restore-fallback:${connectionId}`,
+          kind: 'warning',
+          title: `${target?.label ?? connectionId} is unreachable`,
+          message: `Still using ${fallback.label}. Tools run on ${fallback.kind === 'local' ? 'this device' : fallback.label}.`,
+          action: RECOVERY_ACTIONS.openGateways()
+        })
+        traceIdentityChange('gateway-route', 'restore-fallback', `wanted=${connectionId} actual=${fallback.id} reason=unreachable`)
+      }
     }
   })
 
