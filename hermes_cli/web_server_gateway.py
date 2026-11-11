@@ -554,6 +554,10 @@ def _spawn_hermes_action(
     log_file.close()  # child holds its own dup'd fd; keeping ours leaks one per action
     if name == "gateway-restart":
         _write_restart_record(proc.pid)
+        # The restart verb can refuse immediately and nobody may poll its status before a later
+        # gateway starts. Persist that failure while this spawner is still alive.
+        threading.Thread(target=_settle_failed_restart, args=(proc,),
+                         name="gateway-restart-failure", daemon=True).start()
     _ACTION_RESULTS.pop(name, None)
     _ACTION_COMMANDS[name] = tuple(subcommand)
     _ACTION_PROCS[name] = proc
@@ -648,6 +652,16 @@ def settle_restart_record(action_pid: int, exit_code: int) -> None:
     record = _read_restart_record()
     if record is not None and record["action"][0] == action_pid:
         _store_restart_record({**record, "exit_code": exit_code})
+
+
+def _settle_failed_restart(proc: subprocess.Popen) -> None:
+    """Keep a failed restart child\'s exit code even if nobody polls the action route."""
+    try:
+        exit_code = proc.wait()
+    except OSError:
+        return
+    if exit_code != 0:
+        settle_restart_record(proc.pid, exit_code)
 
 
 def _may_succeed(record: dict[str, Any], me: list[int]) -> bool:

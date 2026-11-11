@@ -277,6 +277,27 @@ def test_a_failed_restart_is_reported_failed_and_never_later_certified(
     assert _answer(seen["answers"]["gateway-restart"][1]) == NEVER_STARTED
 
 
+def test_unpolled_failed_restart_is_not_certified_by_an_unrelated_gateway(
+        client, home, old_gateway, restart_child, tmp_path):
+    """A refused restart cannot become a successful one when a gateway is started separately."""
+    restart_child["argv"] = ["-c", "import sys, time; time.sleep(0.25); sys.exit(3)"]
+    pid = _restart(client)
+    assert _wait_for_child() == 3
+    # No GET /api/actions/gateway-restart/status was made: the original code settled only there.
+    record_path = home / "logs" / "gateway-restart.record.json"
+    assert record_path.exists()
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        if json.loads(record_path.read_text(encoding="utf-8"))["exit_code"] == 3:
+            break
+        time.sleep(0.02)
+    else:
+        pytest.fail("unpolled restart failure was not persisted")
+    old_gateway()
+    seen = _run_replacement(home, tmp_path / "replacement.json")
+    assert _answer(seen["answers"]["gateway-restart"][1]) == NEVER_STARTED
+
+
 @pytest.mark.parametrize("damage", ["missing", "not json {", "corrupt-shape", "directory", "unreadable",
                                     "too deep"])
 def test_an_unreadable_record_degrades_to_the_base_answer(client, home, old_gateway, tmp_path, damage):
