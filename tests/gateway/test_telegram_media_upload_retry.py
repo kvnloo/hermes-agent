@@ -184,3 +184,22 @@ async def test_standalone_sender_repeats_unsent_and_never_resends_a_lost_upload(
     with pytest.raises(Exception):
         await standalone._telegram_send_one_media(bot, 123, str(path), False, **kw)
     assert len(reads) == 1
+
+@pytest.mark.asyncio
+async def test_album_fallback_preserves_unconfirmed_photo_delivery(adapter, monkeypatch):
+    """A refused album followed by a lost photo ACK must not mark that photo undelivered."""
+    from telegram.error import BadRequest
+
+    adapter._bot.send_media_group = AsyncMock(side_effect=BadRequest("wrong file identifier"))
+    adapter._bot.send_photo = AsyncMock(side_effect=_read_error())
+    monkeypatch.setattr("tools.url_safety.is_safe_url", lambda _url: True)
+    download = MagicMock(side_effect=AssertionError("unconfirmed photo must not be re-uploaded"))
+    monkeypatch.setattr("tools.url_safety.create_ssrf_safe_async_client", download)
+
+    result = await adapter.send_multiple_images("123", [("https://example.com/chart.png", "Chart")])
+
+    assert result.success is True
+    assert result.raw_response == {"failed": [], "refused": [], "ambiguous": True}
+    adapter._bot.send_media_group.assert_awaited_once()
+    adapter._bot.send_photo.assert_awaited_once()
+    download.assert_not_called()
