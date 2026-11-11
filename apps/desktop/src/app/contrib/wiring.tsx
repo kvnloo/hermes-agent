@@ -496,9 +496,10 @@ export function ContribWiring({ children }: { children: ReactNode }) {
   // Refresh any active transcript changed by another process. Signature-gated
   // so a no-change event does not churn the thread.
   const refreshActiveTranscript = useCallback(
-    () =>
+    (allowBusyCatchUp = false) =>
       reconcileActiveTranscript({
         activeSessionIdRef,
+        allowBusyCatchUp,
         busyRef,
         requestSequenceRef: activeTranscriptRequestSequenceRef,
         resolveSession: resolveActiveTranscriptSession,

@@ -129,6 +129,7 @@ export function resolveActiveTranscriptSession(
 }
 
 export interface ActiveTranscriptRefreshDeps {
+  allowBusyCatchUp?: boolean
   activeSessionIdRef: MutableRefObject<string | null>
   busyRef: MutableRefObject<boolean>
   requestSequenceRef: MutableRefObject<number>
@@ -208,6 +209,27 @@ function emptyPageOverPopulatedTranscript(
   storedSessionId: string
 ): boolean {
   return page.length === 0 && Boolean(current?.messages.length) && current?.storedSessionId === storedSessionId
+}
+
+/** A reconnect may re-read a running session when its cached view contains only
+ * committed rows. Any optimistic prompt or live row leaves streaming authority
+ * with the renderer until the turn becomes idle. */
+function canCatchUpBusyTranscript(storedSessionId: string, runtimeSessionId: string): boolean {
+  const state = $sessionStates.get()[runtimeSessionId]
+
+  return Boolean(
+    state?.storedSessionId === storedSessionId &&
+      state.messages.length > 0 &&
+      state.messages.every(
+        message =>
+          message.rowId !== undefined &&
+          message.pending !== true &&
+          message.interim !== true &&
+          message.durableComplete !== false &&
+          !message.id.startsWith('assistant-stream-') &&
+          !message.id.startsWith('user-')
+      )
+  )
 }
 
 type TileTranscriptTarget = { ownerRoute?: SessionOwnerRoute; storedSessionId: string; runtimeId?: string }
@@ -561,6 +583,7 @@ export async function hydrateStoredSessionTranscript({
 /** Reconcile one persisted transcript snapshot into the currently viewed session. */
 export async function reconcileActiveTranscript({
   activeSessionIdRef,
+  allowBusyCatchUp = false,
   busyRef,
   requestSequenceRef,
   resolveSession,
@@ -582,13 +605,11 @@ export async function reconcileActiveTranscript({
     return Boolean(hosted && hosted !== storedSessionId)
   }
 
-  if (
-    !storedSessionId ||
-    !runtimeSessionId ||
-    busyRef.current ||
-    tileRuntimeOwnsLiveState(runtimeSessionId) ||
-    hostsOtherSession()
-  ) {
+  const blocksLiveRefresh = () =>
+    (busyRef.current || (runtimeSessionId ? tileRuntimeOwnsLiveState(runtimeSessionId) : false)) &&
+    !(allowBusyCatchUp && storedSessionId && runtimeSessionId && canCatchUpBusyTranscript(storedSessionId, runtimeSessionId))
+
+  if (!storedSessionId || !runtimeSessionId || blocksLiveRefresh() || hostsOtherSession()) {
     return
   }
 
@@ -608,8 +629,7 @@ export async function reconcileActiveTranscript({
 
   if (
     requestId !== requestSequenceRef.current ||
-    busyRef.current ||
-    tileRuntimeOwnsLiveState(runtimeSessionId) ||
+    blocksLiveRefresh() ||
     selectedStoredSessionIdRef.current !== storedSessionId ||
     activeSessionIdRef.current !== runtimeSessionId
   ) {
@@ -640,8 +660,7 @@ export async function reconcileActiveTranscript({
     // Re-checked after every await: reads the fresh store each time.
     const stale = () =>
       requestId !== requestSequenceRef.current ||
-      busyRef.current ||
-      tileRuntimeOwnsLiveState(runtimeSessionId) ||
+      blocksLiveRefresh() ||
       transcriptChangedDuringRead(messagesAtRequest, $sessionStates.get()[runtimeSessionId]?.messages) ||
       selectedStoredSessionIdRef.current !== storedSessionId ||
       activeSessionIdRef.current !== runtimeSessionId ||
@@ -989,7 +1008,7 @@ interface BackgroundSyncParams {
   activeStoredSessionId: null | string
   freshDraftReady: boolean
   gatewayState: string
-  refreshActiveTranscript: () => Promise<unknown> | unknown
+  refreshActiveTranscript: (allowBusyCatchUp?: boolean) => Promise<unknown> | unknown
   refreshCronJobs: () => Promise<unknown> | unknown
   refreshCurrentModel: (force?: boolean) => Promise<unknown> | unknown
   refreshHermesConfig: () => Promise<unknown> | unknown
@@ -1084,7 +1103,7 @@ export function useBackgroundSync({
   // $sessionStates; the primary chat's $busy atom has no authority over tiles.
 
   const requestActiveTranscriptRefresh = useCallback(
-    (preservePending: boolean) => {
+    (preservePending: boolean, allowBusyCatchUp = false) => {
       if (!activeStoredSessionId || !activeSessionId) {
         return
       }
@@ -1097,7 +1116,10 @@ export function useBackgroundSync({
         activeTranscriptRefreshPendingRef.current = sessionKey
       }
 
-      if ($busy.get() || tileRuntimeOwnsLiveState(runtimeSessionId)) {
+      const busyCatchUp =
+        allowBusyCatchUp && canCatchUpBusyTranscript(storedSessionId, runtimeSessionId)
+
+      if (($busy.get() || tileRuntimeOwnsLiveState(runtimeSessionId)) && !busyCatchUp) {
         return
       }
 
@@ -1107,7 +1129,7 @@ export function useBackgroundSync({
 
       const read = { sessionKey, preservePending }
       activeTranscriptReadRef.current = read
-      void Promise.resolve(refreshActiveTranscript()).finally(() => {
+      void Promise.resolve(refreshActiveTranscript(busyCatchUp)).finally(() => {
         // A superseded request cannot retire the replacement's observation.
         if (activeTranscriptReadRef.current === read) {
           activeTranscriptReadRef.current = null
@@ -1243,7 +1265,9 @@ export function useBackgroundSync({
   // messaging transcripts already refresh on open in their own effect below.
   useEffect(() => {
     if (gatewayState === 'open' && !activeIsMessaging && activeSessionId && activeStoredSessionId) {
-      requestActiveTranscriptRefresh(true)
+      // A reconnected foreground may still be busy after its missing turns
+      // reached state.db. Only reconcile if its cached rows are all durable.
+      requestActiveTranscriptRefresh(true, true)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- connect-scoped: session deps would fire on every switch
   }, [activeConnectionId, activeGatewayProfile, gatewayState])
