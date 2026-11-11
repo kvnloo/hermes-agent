@@ -60,10 +60,20 @@ def _derived_version(
 
 def _run_git(repo_dir: Path, *args: str) -> str | None:
     try:
+        return _run_git_or_timeout(repo_dir, *args)
+    except subprocess.TimeoutExpired:
+        return None
+
+
+def _run_git_or_timeout(repo_dir: Path, *args: str) -> str | None:
+    """``_run_git`` that raises ``TimeoutExpired``, for callers whose empty answer means something."""
+    try:
         result = subprocess.run(
             ["git", *args], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=3, cwd=str(repo_dir),
             check=False,
         )
+    except subprocess.TimeoutExpired:
+        raise
     except (OSError, subprocess.SubprocessError):
         return None
     value = (result.stdout or "").strip()
@@ -237,7 +247,15 @@ def _git_version_info(repo_dir: Path, *, include_untracked: bool = False) -> Ver
     except (OSError, subprocess.SubprocessError):
         dirty = False
 
-    tags = _run_git(repo_dir, "tag", "--merged", "HEAD", "--list", "v[0-9]*")
+    # On a loaded host with a cold cache this walk can outlast the timeout (13.8 s seen at load
+    # ~18). A timeout is not "no semver release": falling through to the CalVer lookup would
+    # name an older release (0.21.5 on a 0.23.1 checkout) and wrongly skip plugins'
+    # requires_hermes. Leave the version unknown, which those gates treat as permissive.
+    try:
+        tags = _run_git_or_timeout(repo_dir, "tag", "--merged", "HEAD", "--list", "v[0-9]*")
+        tag_query_timed_out = False
+    except subprocess.TimeoutExpired:
+        tags, tag_query_timed_out = None, True
     releases = [
         tag[1:]
         for tag in (tags or "").splitlines()
@@ -250,7 +268,7 @@ def _git_version_info(repo_dir: Path, *, include_untracked: bool = False) -> Ver
     distance = _parse_nonnegative(
         _run_git(repo_dir, "rev-list", "--count", f"v{base_version}..HEAD")
     ) if releases else None
-    if not releases:
+    if not releases and not tag_query_timed_out:
         base_version, distance = _calver_release_version(repo_dir) or ("unknown", None)
     short_commit = _run_git(repo_dir, "rev-parse", "--short=7", "HEAD")
     if base_version == "unknown" and short_commit:
