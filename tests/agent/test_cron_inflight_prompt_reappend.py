@@ -201,6 +201,29 @@ def test_completed_exchange_is_not_replayed():
     ), "a completed exchange must not be re-appended as a new user instruction"
 
 
+
+def test_completed_exchange_with_synthetic_status_after_final_is_not_replayed():
+    """An internal user-role notice after a final reply must not revive old work (#152937)."""
+    from agent.context_compressor import _INFLIGHT_TASK_REPLAY_HEADER
+
+    messages = [
+        *_cron_transcript(),
+        {"role": "assistant", "content": "Digest written. Nothing else to do."},
+        {
+            "role": "user",
+            "content": "[Your active task list was preserved across context compression]\n- done",
+            "_todo_snapshot_synthetic": True,
+        },
+    ]
+
+    assert ContextCompressor._find_inflight_user_task(messages) is None
+    compressed = _compress(messages)
+    assert not any(
+        _INFLIGHT_TASK_REPLAY_HEADER in _text(message) for message in compressed
+    )
+
+
+
 # ---------------------------------------------------------------------------
 # Follow-up coverage (salvage of #101170)
 # ---------------------------------------------------------------------------

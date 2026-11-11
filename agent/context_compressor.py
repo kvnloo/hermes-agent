@@ -4751,6 +4751,9 @@ Write only the summary body. Do not include any preamble or prefix."""
             return None
 
         for msg in reversed(messages[last_user_idx + 1:]):
+            if isinstance(msg, dict) and msg.get("role") == "user" and not _is_real_user_message(msg):
+                # Internal status rows cannot reopen a task after its final reply.
+                continue
             if not isinstance(msg, dict) or msg.get("role") != "assistant":
                 # Trailing tool result (or anything else): still mid-task.
                 break
