@@ -118,6 +118,52 @@ def test_mid_turn_authorization_reads_admitting_transport_allowlist(mux):
         assert mux.runner._is_user_authorized_for_source(stranger) is False
 
 
+def test_sender_authorization_does_not_wait_for_other_profile_vault_fetch(mux):
+    """#152902: the transport-profile sender check must not wait behind another home's vault."""
+    from hermes_cli import env_loader
+
+    source = SessionSource(
+        platform=Platform.TELEGRAM, chat_id="777", chat_type="dm",
+        user_id="777", profile="ops",
+    )
+    source._transport_adapter_ref = weakref.ref(mux.primary)
+    assert str(mux.runner._authorization_home_for_source(source)) == str(mux.home)
+
+    lock_held = threading.Event()
+    release_fetch = threading.Event()
+    check_done = threading.Event()
+    result = {}
+
+    def _other_profile_fetch():
+        with env_loader._SECRET_SOURCE_CACHE_LOCK:
+            lock_held.set()
+            release_fetch.wait(timeout=20)
+
+    def _authorize_sender():
+        try:
+            result["allowed"] = mux.runner._is_user_authorized_for_source(source)
+        except BaseException as error:
+            result["error"] = error
+        finally:
+            check_done.set()
+
+    fetcher = threading.Thread(target=_other_profile_fetch)
+    checker = threading.Thread(target=_authorize_sender)
+    fetcher.start()
+    try:
+        assert lock_held.wait(timeout=5)
+        checker.start()
+        assert check_done.wait(timeout=5), "sender authorization waited behind another vault fetch"
+    finally:
+        release_fetch.set()
+        fetcher.join(timeout=5)
+        if checker.ident is not None:
+            checker.join(timeout=5)
+
+    assert "error" not in result, result.get("error")
+    assert result["allowed"] is True
+
+
 def test_shared_bot_satellite_resolves_primary_transport_for_restored_sources(mux):
     """A routed satellite with no bot of its own drains through the primary for restored/cached
     sources (no transport ref); a disconnected secondary that owns a credential stays fail-closed."""

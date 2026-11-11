@@ -3762,7 +3762,7 @@ class GatewayRunner(
         authorization_home = self._authorization_home_for_source(source)
         if authorization_home is None:
             return check()
-        with _profile_runtime_scope(Path(authorization_home)):
+        with _profile_runtime_scope(Path(authorization_home), hydrate_secrets=False):
             return check()
 
     def _cache_session_source(self, session_key: str, source) -> None:
