@@ -10,6 +10,13 @@ export const frModelMenu = {
   removeFavorite: 'Retirer des favoris',
   favoriteShortcut: '⇧ Clic',
   fast: 'Rapide',
+  turboDescriptions: {
+    turbo: 'Sélection automatique du modèle',
+    'free-quality': 'Route gratuite axée sur la qualité',
+    'free-reasoning': 'Route gratuite pour le raisonnement',
+    'free-verify': 'Route gratuite pour la vérification',
+    'free-longctx': 'Route gratuite pour les longs contextes'
+  },
   free: 'gratuit',
   cacheRead: 'lecture en cache',
   priceTitle: (input: string, output: string, cache: string) =>

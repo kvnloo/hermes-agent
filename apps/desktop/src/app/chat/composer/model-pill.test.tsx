@@ -29,6 +29,26 @@ afterEach(() => {
   setCurrentModelSource('')
 })
 
+describe('ModelPill Turbo indicator', () => {
+  it('marks a selected Semantic Router virtual model', () => {
+    render(
+      <ModelPill disabled={false} model={modelState({ model: 'vllm-sr/free-reasoning', provider: 'custom:vllm-sr' })} />
+    )
+    expect(screen.getByTestId('turbo-model-badge').textContent).toBe('Turbo')
+  })
+
+  it('is absent on other providers and unrecognized router models', () => {
+    const wrongProvider = render(
+      <ModelPill disabled={false} model={modelState({ model: 'vllm-sr/turbo', provider: 'openrouter' })} />
+    )
+    expect(screen.queryByTestId('turbo-model-badge')).toBeNull()
+    wrongProvider.unmount()
+
+    render(<ModelPill disabled={false} model={modelState({ model: 'vllm-sr/other', provider: 'vllm-sr' })} />)
+    expect(screen.queryByTestId('turbo-model-badge')).toBeNull()
+  })
+})
+
 // #62055: a manual composer pick is sticky and silently overrides the
 // Settings → Model default for every NEW chat. The pill must say so.
 describe('ModelPill pinned-override badge', () => {

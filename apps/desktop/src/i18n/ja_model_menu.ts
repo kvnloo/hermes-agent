@@ -10,6 +10,13 @@ export const jaModelMenu = {
   removeFavorite: 'お気に入りから削除',
   favoriteShortcut: '⇧ クリック',
   fast: '高速',
+  turboDescriptions: {
+    turbo: 'モデルを自動選択',
+    'free-quality': '回答品質重視の無料ルート',
+    'free-reasoning': '推論用の無料ルート',
+    'free-verify': '検証用の無料ルート',
+    'free-longctx': '長い文脈向けの無料ルート'
+  },
   free: '無料',
   cacheRead: 'キャッシュ読み取り',
   priceTitle: (input: string, output: string, cache: string) =>

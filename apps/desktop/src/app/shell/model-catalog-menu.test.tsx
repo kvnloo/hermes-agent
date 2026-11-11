@@ -361,6 +361,73 @@ function renderMenu(current: Partial<ModelMenuController['current']> = {}, host:
   return select
 }
 
+describe('gateway-backed Turbo virtual models', () => {
+  const router = {
+    models: [
+      'vllm-sr/free-longctx',
+      'vllm-sr/free-verify',
+      'vllm-sr/turbo',
+      'vllm-sr/free-reasoning',
+      'vllm-sr/free-quality'
+    ],
+    name: 'Semantic Router',
+    slug: 'custom:vllm-sr'
+  }
+
+  it('does not render a Turbo group without router routes', async () => {
+    renderMenu()
+    await screen.findByText('Gemini 3.1 Pro')
+    expect(screen.queryByText('Turbo')).toBeNull()
+  })
+
+  it('pins the five listed routes in intended order, above Favorites, even when the shortlist hides them', async () => {
+    getGlobalModelOptions.mockResolvedValue({
+      providers: [{ models: ['gemini-3.1-pro'], name: 'Google', slug: 'google' }, router]
+    })
+    setVisibleModels(new Set([modelVisibilityKey('google', 'gemini-3.1-pro')]))
+    toggleFavoriteModel('google', 'gemini-3.1-pro')
+
+    renderMenu()
+
+    const descriptions = [
+      'Automatic model routing',
+      'Free route prioritizing answer quality',
+      'Free route for reasoning tasks',
+      'Free route for verification tasks',
+      'Free route for long-context tasks'
+    ]
+    await screen.findByText(descriptions[0])
+    const rows = screen.getAllByRole('menuitem')
+    const positions = descriptions.map(description => rows.findIndex(row => row.textContent?.includes(description)))
+
+    expect(positions.every(position => position >= 0)).toBe(true)
+    expect(positions).toEqual([...positions].sort((a, b) => a - b))
+    expect(
+      screen.getAllByText('Turbo')[0].compareDocumentPosition(rows[positions[0]]) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    expect(
+      rows[positions[0]].compareDocumentPosition(screen.getByText('Favorites')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+  })
+
+  it('finds a virtual route by its description and selects through the ordinary handler', async () => {
+    getGlobalModelOptions.mockResolvedValue({ providers: [router] })
+    const select = renderMenu()
+    await screen.findByText('Free route for verification tasks')
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search models' }), {
+      target: { value: 'verification' }
+    })
+
+    const row = screen.getAllByRole('menuitem').find(item => item.textContent?.includes('Free Verify'))
+    expect(row).toBeDefined()
+    fireEvent.click(row!)
+    await waitFor(() => expect(select).toHaveBeenCalledWith('vllm-sr/free-verify', 'custom:vllm-sr'))
+  })
+})
+
 // Curation is ONE global preference, so it belongs to the catalog rather than
 // to whichever surface mounted it. If a host had to opt in, the composer and
 // the kanban board would end up disagreeing about what "my models" means —
