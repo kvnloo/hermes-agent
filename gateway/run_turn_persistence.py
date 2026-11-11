@@ -104,6 +104,7 @@ class GatewayTurnPersistenceMixin:
         _quick_key, run_generation, _run_start_session_id, _platform_name, _msg_start_time,
         persist_user_display_kind: Optional[str] = None,
         reply_expected: Optional[bool] = None,
+        turn_event=None,
     ):
         """Turn the raw agent result into the outbound text: sentinel/silence handling, response
         logging, resume-pending clear, empty-response normalization, and identity-guarded
@@ -145,6 +146,9 @@ class GatewayTurnPersistenceMixin:
                 "silence marker suppressed on an unaddressed or opted-in turn: platform=%s chat=%s",
                 _platform_name, source.chat_id or "unknown",
             )
+
+        if _intentional_silence and turn_event is not None:
+            self._hmwa_pause_typing_after_silence(turn_event, source)
 
         # "(empty)" = the model produced no visible content after exhausting all retries. One
         # text with the CLI explainer and the desktop (agent/turn_explainers.py) so the user

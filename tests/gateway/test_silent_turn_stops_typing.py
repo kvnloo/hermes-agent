@@ -94,3 +94,51 @@ async def test_typing_stops_once_a_silent_turn_returns(monkeypatch, tmp_path, an
 
     assert (ticks.count("hook") > 0) is typing_after_agent
     assert "-1001" not in adapter._typing_paused  # the turn's finally lifted the pause
+
+
+@pytest.mark.asyncio
+async def test_silent_turn_pauses_during_resume_pending_clear(monkeypatch, tmp_path):
+    """#149948: the first awaited post-agent reset must not re-arm Telegram typing."""
+    runner = _runner(monkeypatch, tmp_path)
+    adapter = _Adapter(PlatformConfig(enabled=True, token="t"), Platform.TELEGRAM)
+    adapter.gateway_runner = runner
+    runner._delivery_adapter_for = lambda _source: adapter
+    adapter._typing_paused = paused = _CountingPaused(adapter._typing_paused)
+    keep_typing = adapter._keep_typing
+    adapter._keep_typing = lambda chat_id, **kw: keep_typing(chat_id, interval=0.05, **kw)
+    ticks = []
+
+    async def send_typing(chat_id, metadata=None):
+        ticks.append(chat_id)
+
+    adapter.send_typing = send_typing
+    release_agent, clear_started, release_clear = asyncio.Event(), asyncio.Event(), asyncio.Event()
+
+    async def run_agent(**_kwargs):
+        await release_agent.wait()
+        return _result("[SILENT]")
+
+    async def held_restart_clear(_key):
+        clear_started.set()
+        await release_clear.wait()
+
+    runner._run_agent = AsyncMock(side_effect=run_agent)
+    runner._clear_restart_failure_count = AsyncMock(side_effect=held_restart_clear)
+    adapter._message_handler = lambda ev: runner._handle_message_with_agent(ev, _source(), KEY, 1)
+    adapter._active_sessions[KEY] = asyncio.Event()
+    turn = asyncio.create_task(adapter._process_message_background(_event(reply_expected=False), KEY))
+
+    try:
+        await async_wait_until(lambda: len(ticks) >= 2, what="typing while agent works", timeout=10)
+        release_agent.set()
+        await async_wait_until(clear_started.is_set, what="post-agent restart clear", timeout=10)
+        before = len(ticks)
+        paused.armed = True
+        await async_wait_until(lambda: paused.checks >= 3, what="keep-alive ticks during clear", timeout=10)
+        assert len(ticks) == before, "silent turn re-sent Telegram typing while restart clear was held"
+    finally:
+        release_agent.set()
+        release_clear.set()
+        await asyncio.wait_for(turn, 10)
+
+    assert "-1001" not in adapter._typing_paused
