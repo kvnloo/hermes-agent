@@ -61,7 +61,29 @@ class GatewayGoalCommandsMixin:
         result = await self._run_in_executor_with_context(dispatch)
         if result.clear_pending:
             self._clear_goal_continuations(event, result.clear_pending)
-        if result.prompt:
+        # A paused completion owns the FIFO head. Resume/clear wakes that same admission,
+        # not a duplicate goal prompt which would queue behind the held result.
+        resumed_head = False
+        words = (event.get_command_args() or '').strip().split(None, 1)
+        if words and words[0].lower() in ('resume', 'clear') and not result.error:
+            from gateway.session_authorities import active_authority
+            from gateway.session_contract import SessionRef
+            from gateway.config import Platform
+            from hermes_state_runtime import list_session_admissions
+            authority = active_authority(self)
+            if authority is not None:
+                origin = getattr(_session_entry, 'origin', None)
+                owner = (origin.chat_id if origin is not None and origin.platform == Platform.LOCAL
+                         else authority.logical_owner(mgr.session_id))
+                head = next((row for row in list_session_admissions(authority.db, session_id=owner)
+                             if row['status'] == 'queued'), None)
+                if head is not None and owner in authority.sessions:
+                    payload = head['payload']
+                    if ('local_automation_v1' in payload
+                            or 'automation' in (payload.get('native_text_v1') or {})):
+                        authority._schedule(SessionRef(authority.profile_id, owner))
+                        resumed_head = True
+        if result.prompt and not resumed_head:
             self._enqueue_goal_turn(event, result.prompt, label="command enqueue", kickoff=result.kickoff)
         return result.output
 

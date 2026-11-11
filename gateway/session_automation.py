@@ -592,6 +592,59 @@ def check_local_automation(authority, ref, row, *, route=None):
         raise RuntimeStoreError('admission_conflict')
 
 
+def guard_automation_goal(session_id, expected_head, conn):
+    """Hold producer turns against the persisted pause in the claim's own transaction."""
+    import sqlite3
+    from hermes_state_compression import _CHAIN_CAP, _CHAIN_STEP_SQL, _walk_compression_chain
+    from hermes_state_local_lineage import local_physical_target
+
+    head = conn.execute("SELECT admission_id,payload_json,request_id FROM session_admissions "
+                        "WHERE target_session_id=? AND status='queued' ORDER BY seq LIMIT 1",
+                        (session_id,)).fetchone()
+    if head is None or head['admission_id'] != expected_head:
+        return
+    try:
+        payload = json.loads(head['payload_json'])
+        descriptor = payload.get('local_automation_v1') or (payload.get('native_text_v1') or {}).get('automation')
+    except (ValueError, TypeError, AttributeError) as exc:
+        raise RuntimeStoreError('goal_state_unknown') from exc
+    if descriptor is None:  # Human turns remain available; this is a producer-only fence.
+        return
+    if (not isinstance(descriptor, dict) or descriptor.get('owner') != session_id
+            or descriptor.get('identity') != head['request_id']):
+        raise RuntimeStoreError('permission_denied')
+
+    try:
+        physical = local_physical_target(conn, session_id)
+        step = lambda sid: conn.execute(_CHAIN_STEP_SQL, (sid,)).fetchone()
+        physical = _walk_compression_chain(physical, step)[-1]
+        if step(physical) is not None:
+            raise RuntimeStoreError('goal_state_unknown')
+        for _ in range(_CHAIN_CAP):
+            saved = conn.execute('SELECT value FROM state_meta WHERE key=?', ('goal:' + physical,)).fetchone()
+            if saved is not None:
+                goal = json.loads(saved['value'])
+                if (not isinstance(goal, dict) or not isinstance(goal.get('goal'), str)
+                        or not goal['goal'].strip()
+                        or goal.get('status') not in ('active', 'paused', 'done', 'cleared')):
+                    raise RuntimeStoreError('goal_state_unknown')
+                if goal['status'] == 'paused':
+                    raise RuntimeStoreError('goal_paused')
+                return
+            parent = conn.execute("SELECT p.id FROM sessions c JOIN sessions p ON p.id=c.parent_session_id "
+                                  "WHERE c.id=? AND p.end_reason='compression'", (physical,)).fetchone()
+            if parent is None:
+                return
+            if (preferred := step(parent['id'])) is None or preferred['id'] != physical:
+                return
+            physical = parent['id']
+        raise RuntimeStoreError('goal_state_unknown')
+    except RuntimeStoreError:
+        raise
+    except (sqlite3.DatabaseError, ValueError, KeyError, TypeError, IndexError) as exc:
+        raise RuntimeStoreError('goal_state_unknown') from exc
+
+
 def restore_local_automation(authority, ref, row):
     check_local_automation(authority, ref, row)
     live = authority.sessions[ref.session_id]
