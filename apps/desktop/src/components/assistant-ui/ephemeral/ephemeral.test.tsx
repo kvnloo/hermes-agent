@@ -32,7 +32,9 @@ describe('ephemeral-ui tool cards', () => {
 
     for (const [server, entry] of Object.entries(EPHEMERAL_UI_CONNECTORS)) {
       for (const [, kind] of entry.tools) {
-        expect(EPHEMERAL_UI_KINDS as readonly string[], `${server} → ${kind}`).toContain(kind)
+        if (kind !== null) {
+          expect(EPHEMERAL_UI_KINDS as readonly string[], `${server} → ${kind}`).toContain(kind)
+        }
       }
     }
   })

@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url'
 
 import { expect, type Page, test } from '@playwright/test'
 
-import { EPHEMERAL_TRIGGER, restartMockServer } from '../../../tests-js/scripts/mock-server'
+import { EPHEMERAL_GH_TRIGGER, EPHEMERAL_TRIGGER, EPHEMERAL_WRITTEN_TRIGGER, restartMockServer } from '../../../tests-js/scripts/mock-server'
 
 import { type MockBackendFixture, setupMockBackend, waitForAppReady } from './fixtures'
 
@@ -112,5 +112,45 @@ test.describe('ephemeral-ui cards from MCP tool calls', () => {
     await page.getByRole('button', { name: 'Unpin' }).click()
     await expect(page.locator('[data-slot="ephemeral-pins"]')).toHaveCount(0)
     expect(await phase(page, 'slots')).toBe('receipt')
+  })
+
+  test('gh run in the terminal tool grows the GitHub CI card', async () => {
+    test.setTimeout(120_000)
+    const page = fixture.page
+    const ciCalls = page.locator('[data-ephemeral-call="ci"]')
+    const before = await ciCalls.count()
+    const composer = page.locator('[contenteditable="true"]').first()
+    await composer.click()
+    await page.keyboard.press('ControlOrMeta+A')
+    await page.keyboard.press('Backspace')
+    await composer.type(`Is CI green? ${EPHEMERAL_GH_TRIGGER}`, { delay: 5 })
+    await page.keyboard.press('Enter')
+
+    await expect(ciCalls).toHaveCount(before + 1, { timeout: 60_000 })
+    await expect(ciCalls.last().locator('iframe[title="GitHub card"][sandbox="allow-scripts"]')).toBeAttached()
+    await expect(page.getByText('Done checking CI (sample).')).toBeVisible({ timeout: 60_000 })
+  })
+
+  test('a card the agent writes itself grows in the reply, takes a pick, and dissolves to a receipt', async () => {
+    test.setTimeout(120_000)
+    const page = fixture.page
+    const composer = page.locator('[contenteditable="true"]').first()
+    await composer.click()
+    await page.keyboard.press('ControlOrMeta+A')
+    await page.keyboard.press('Backspace')
+    await composer.type(`Show me CI. ${EPHEMERAL_WRITTEN_TRIGGER}`, { delay: 5 })
+    await page.keyboard.press('Enter')
+
+    await expect(page.getByText('Lint fails on main; unit tests pass.')).toBeVisible({ timeout: 60_000 })
+    const slot = page.locator('[data-ephemeral-call="card"]').last()
+    await expect(slot.locator('iframe[title="GitHub card"][sandbox="allow-scripts"]')).toBeAttached({ timeout: 30_000 })
+    const card = slot.frameLocator('iframe')
+    await expect(card.getByText('CI on main')).toBeVisible({ timeout: 30_000 })
+    await card.getByText('lint · failed').click()
+    await slot.getByRole('button', { name: 'Add to chat' }).click()
+    await expect(composer).toContainText('[ephemeral-ui card · GitHub · agent card] lint')
+
+    // Its ring runs out after the turn: the card leaves a one-line receipt.
+    await expect(slot).toHaveAttribute('data-ephemeral-phase', 'receipt', { timeout: 30_000 })
   })
 })

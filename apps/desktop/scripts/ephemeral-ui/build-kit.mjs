@@ -48,6 +48,7 @@ try {
 async function vendor(kit) {
   const read = path => readFileSync(join(kit, path), 'utf8')
   const json = path => JSON.parse(read(path))
+  const withoutFontUrls = catalog => ({ ...catalog, themes: catalog.themes.map(theme => ({ ...theme, fontUrl: undefined })) })
 
   const script = (
     await build({
@@ -71,7 +72,9 @@ async function vendor(kit) {
   const apps = json('data/apps.json')
   const data = {
     'data/apps.json': { ...apps, apps: apps.apps.map(app => ({ ...app, path: undefined })) },
-    'data/themes.json': json('data/themes.json'),
+    // A card document is offline (its CSP blocks remote styles), so web-font links are dropped and
+    // each theme falls back to its own font stack instead of logging a blocked request per card.
+    'data/themes.json': withoutFontUrls(json('data/themes.json')),
     'data/trace-fixture.json': synthesize('trace', json('data/trace-fixture.json')),
     'data/intent-snapshot.json': synthesize('intent', json('data/intent-snapshot.json'))
   }
@@ -94,7 +97,17 @@ async function vendor(kit) {
     const app = byId[entry.app]
     if (!app) throw new Error(`connector ${server}: app ${entry.app} is not in the kit catalog`)
     for (const [pattern, kind] of entry.tools) {
-      if (!kinds.includes(kind)) throw new Error(`connector ${server}: kind ${kind} is not in this build`)
+      if (kind !== null && !kinds.includes(kind)) throw new Error(`connector ${server}: kind ${kind} is not in this build`)
+      new RegExp(pattern, 'i')
+    }
+    connectorApps[app.id] = { name: app.name, hex: app.hex ?? null }
+  }
+  const commands = JSON.parse(readFileSync(join(here, 'connectors.json'), 'utf8')).commands ?? {}
+  for (const [cli, entry] of Object.entries(commands)) {
+    const app = byId[entry.app]
+    if (!app) throw new Error(`command ${cli}: app ${entry.app} is not in the kit catalog`)
+    for (const [pattern, kind] of entry.subcommands) {
+      if (kind !== null && !kinds.includes(kind)) throw new Error(`command ${cli}: kind ${kind} is not in this build`)
       new RegExp(pattern, 'i')
     }
     connectorApps[app.id] = { name: app.name, hex: app.hex ?? null }
@@ -115,6 +128,8 @@ async function vendor(kit) {
   const hostCss =
     'html,body{margin:0;background:transparent}#eui-root{padding:2px 2px 6px}' +
     '#eui-root>.eu-card{max-width:none;width:auto;margin:0}#eui-root>.eu-card.gone{width:fit-content}' +
+    '.eui-written{color:var(--h-fg);font-size:13px;line-height:1.45;overflow-wrap:anywhere}.eui-written img{max-width:100%}' +
+    '.eui-written [data-eui-pick]{cursor:pointer}.eui-written [data-eui-picked]{outline:2px solid var(--a);outline-offset:2px;border-radius:6px}' +
     '.eui-fail{padding:10px 12px;border:1px solid var(--h-danger,#e5484d);border-radius:10px;color:var(--h-fg,#ddd);font:13px system-ui}'
   const documentHead =
     '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
@@ -137,7 +152,9 @@ async function vendor(kit) {
       '/** Catalog name and brand colour of every app a connector names (data/apps.json). */\n' +
       `export const EPHEMERAL_UI_APPS: Record<string, { name: string; hex: string | null }> = ${JSON.stringify(connectorApps)}\n` +
       '/** scripts/ephemeral-ui/connectors.json: which card a tool call on each MCP server grows. */\n' +
-      `export const EPHEMERAL_UI_CONNECTORS: Record<string, { app: string; aliases: readonly string[]; tools: readonly (readonly [string, string])[] }> = ${JSON.stringify(connectors)}\n`,
+      `export const EPHEMERAL_UI_CONNECTORS: Record<string, { app: string; aliases: readonly string[]; tools: readonly (readonly [string, string | null])[] }> = ${JSON.stringify(connectors)}\n` +
+      '/** connectors.json `commands`: which card a CLI run through the terminal tool grows. */\n' +
+      `export const EPHEMERAL_UI_COMMANDS: Record<string, { app: string; subcommands: readonly (readonly [string, string | null])[] }> = ${JSON.stringify(commands)}\n`,
     'kit.generated.ts':
       banner +
       `export const EPHEMERAL_UI_HEAD = ${JSON.stringify(documentHead)}\n` +

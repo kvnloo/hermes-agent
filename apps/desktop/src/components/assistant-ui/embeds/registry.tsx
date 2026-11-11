@@ -10,6 +10,7 @@ import type { RichFenceProps } from './types'
 // Mermaid renderer defers its heavier runtime import until after its source
 // fallback has had a chance to paint.
 const LAZY_FENCE: Record<string, LazyExoticComponent<ComponentType<RichFenceProps>>> = {
+  'ephemeral-ui': lazy(() => import('../ephemeral/fence-card')),
   listing: lazy(() => import('./listing-embed')),
   mermaid: lazy(() => import('./mermaid-embed')),
   'openui-v2': lazy(() => import('./openui-embed')),
