@@ -143,11 +143,13 @@ class GatewayVoiceMixin:
                 adapter._auto_tts_default = auto_tts_default
         prefix = self._voice_key(platform, "", profile=getattr(adapter, "_owner_profile", None))
         explicit = {key[len(prefix):] for key in self._voice_mode if key.startswith(prefix)}
-        # A legacy unprefixed ``off`` row predates platform and profile keys, so it can only have
+        # A legacy ``off`` row predates platform and profile keys, so it can only have
         # come from the default profile's bots; it suppresses where no explicit entry exists.
+        # Matrix room IDs (!room:server) also contain ":" despite being unprefixed.
         legacy_off = set() if prefix != f"{platform.value}:" else {
             key for key, mode in self._voice_mode.items()
-            if mode == "off" and ":" not in key and key not in explicit}
+            if mode == "off" and key not in explicit
+            and (":" not in key or (platform == Platform.MATRIX and key.startswith("!")))}
         for chats, modes in chat_sets:
             chats.clear()
             chats.update(key[len(prefix):] for key, mode in self._voice_mode.items()

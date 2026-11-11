@@ -16,10 +16,10 @@ from gateway.platforms.base import BasePlatformAdapter
 from tests.gateway.test_voice_command import _make_event, _make_runner
 
 
-def _restart(tmp_path, *, profile=None):
+def _restart(tmp_path, *, profile=None, platform=Platform.TELEGRAM):
     runner = _make_runner(tmp_path)
     runner._voice_mode = runner._load_voice_modes()
-    adapter = SimpleNamespace(platform=Platform.TELEGRAM, _auto_tts_default=False, _owner_profile=profile,
+    adapter = SimpleNamespace(platform=platform, _auto_tts_default=False, _owner_profile=profile,
                               _auto_tts_enabled_chats=set(), _auto_tts_disabled_chats=set())
     with patch("hermes_cli.config.load_config", return_value={"voice": {"auto_tts": True}}):
         runner._sync_voice_mode_state_to_adapter(adapter)
@@ -51,3 +51,16 @@ async def test_an_explicit_voice_command_overrides_the_legacy_off(tmp_path):
     _, adapter = _restart(tmp_path)
 
     assert _speaks(adapter, "123")
+
+def test_matrix_legacy_room_id_with_colon_stays_off_after_restart(tmp_path):
+    room_id = "!hermes:example.org"  # Matrix uses its full room ID as chat_id
+    saved = tmp_path / "gateway_voice_mode.json"
+    saved.write_text(json.dumps({room_id: "off"}))
+
+    _, adapter = _restart(tmp_path, platform=Platform.MATRIX)
+    assert not _speaks(adapter, room_id)
+
+    # A later explicit Matrix /voice on still takes precedence over the old fallback.
+    saved.write_text(json.dumps({room_id: "off", f"matrix:{room_id}": "voice_only"}))
+    _, enabled = _restart(tmp_path, platform=Platform.MATRIX)
+    assert _speaks(enabled, room_id)
