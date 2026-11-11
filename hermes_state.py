@@ -92,6 +92,21 @@ logger = logging.getLogger(__name__)
 
 _MAX_SAFE_MESSAGES = 20_000  # resume/export guard default
 
+def _nocase_prefix_upper_bound(prefix: str) -> str | None:
+    """Exclusive prefix bound in SQLite's ASCII-only NOCASE collation.
+
+    NOCASE orders ASCII A-Z like a-z. Compute the successor from the
+    ASCII-lowercased prefix: advancing uppercased Z to '[' sorts BELOW z.
+    Never Unicode-casefold non-ASCII codepoints.
+    """
+    folded = "".join(chr(ord(c) + 32) if "A" <= c <= "Z" else c for c in prefix)
+    for pos in range(len(folded) - 1, -1, -1):
+        codepoint = ord(folded[pos])
+        if codepoint < 0x10FFFF:
+            return folded[:pos] + chr(codepoint + 1)
+    return None
+
+
 
 def _configured_transcript_limit(key: str, fallback: int = _MAX_SAFE_MESSAGES) -> int:
     """``sessions.<key>`` from config.yaml (lazy import: circular at load), else *fallback*; 0 disables."""
@@ -1712,13 +1727,35 @@ class SessionDB(
         return bool(rows)
 
     def list_meta_prefix(self, prefix: str) -> list[tuple[str, str]]:
-        """``[(key, value), ...]`` for state_meta keys starting with the literal
-        ``prefix`` (LIKE wildcards escaped) — e.g. ``loop:<session_id>`` rows."""
+        """Literal-prefix keys with the legacy SQLite LIKE ASCII case folding.
+
+        The BINARY primary key cannot serve that contract. Bound a NOCASE
+        companion-index seek, retain LIKE for exact wildcard/escape semantics,
+        and preserve the historical table-scan (rowid) result order.
+        Embedded-NUL patterns retain the original non-indexed LIKE scan.
+        """
         if not prefix:
             return []
-        rows = self._read_all(
-            "SELECT key, value FROM state_meta WHERE key LIKE ? ESCAPE '\\'", (_escape_like(prefix) + "%",),
-        )
+        pattern = _escape_like(prefix) + "%"
+        if "\x00" in prefix:
+            # SQLite LIKE treats embedded-NUL patterns specially; a NOCASE
+            # range cannot safely narrow the original LIKE result set.
+            rows = self._read_all(
+                "SELECT key, value FROM state_meta NOT INDEXED WHERE key LIKE ? ESCAPE '\\'",
+                (pattern,),
+            )
+            return [(row[0], row[1]) for row in rows]
+        upper = _nocase_prefix_upper_bound(prefix)
+        # Existing read-only DBs can precede the additive schema migration.
+        index_hint = " INDEXED BY idx_state_meta_key_nocase" if not self.read_only else ""
+        sql = "SELECT key, value FROM state_meta" + index_hint + " WHERE key COLLATE NOCASE >= ?"
+        if upper is None:
+            params = (prefix, pattern)
+        else:
+            sql += " AND key COLLATE NOCASE < ?"
+            params = (prefix, upper, pattern)
+        sql += " AND key LIKE ? ESCAPE '\\' ORDER BY rowid"
+        rows = self._read_all(sql, params)
         return [(row[0], row[1]) for row in rows]
 
 
