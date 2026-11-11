@@ -715,14 +715,14 @@ def auth_status_command(args) -> None:
 
 
 def auth_logout_command(args) -> None:
-    # The built-in path keeps receiving the raw provider id (byte-for-byte
-    # unchanged); the normalized alias is used only for the handler lookup.
-    raw_provider = getattr(args, "provider", None)
-    if dispatch_plugin_auth("logout", args, _normalize_provider(raw_provider or "")):
+    # The built-in handler accepts canonical registry IDs, not raw aliases.
+    # Keep it in lockstep with the alias used for plugin dispatch and auth add/status.
+    provider = _normalize_provider(getattr(args, "provider", "") or "") or None
+    if dispatch_plugin_auth("logout", args, provider or ""):
         return
-    if moved := _moved_auth_hint("logout", _normalize_provider(raw_provider or "")):
+    if moved := _moved_auth_hint("logout", provider or ""):
         raise SystemExit(moved)
-    auth_mod.logout_command(SimpleNamespace(provider=raw_provider))
+    auth_mod.logout_command(SimpleNamespace(provider=provider))
 
 
 def _print_bedrock_status() -> None:

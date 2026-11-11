@@ -1062,3 +1062,33 @@ def test_normalize_provider_uses_shared_alias_map(tmp_path, monkeypatch):
     assert _normalize_provider("qwen-oauth") == "qwen-oauth"
     # Unknown providers pass through (caller raises a useful error)
     assert _normalize_provider("totally-fake-provider") == "totally-fake-provider"
+
+
+def test_auth_logout_qwen_alias_clears_alibaba_credentials(tmp_path, monkeypatch, capsys):
+    """An alias accepted by auth add/status must work for logout, too (#153256)."""
+    from types import SimpleNamespace
+    from hermes_cli.auth_commands import auth_logout_command
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    _write_auth_store(tmp_path, {
+        "version": 1,
+        "active_provider": "alibaba",
+        "providers": {},
+        "credential_pool": {
+            "alibaba": [{
+                "id": "dashscope-1",
+                "label": "DashScope",
+                "auth_type": "api_key",
+                "priority": 0,
+                "source": "manual",
+                "access_token": "sk-dashscope-test-123456789",
+            }],
+        },
+    })
+
+    auth_logout_command(SimpleNamespace(provider="qwen"))
+
+    store = json.loads((tmp_path / "hermes" / "auth.json").read_text(encoding="utf-8"))
+    assert store.get("credential_pool", {}).get("alibaba") is None
+    assert store["active_provider"] is None
+    assert "Logged out of Qwen Cloud." in capsys.readouterr().out
