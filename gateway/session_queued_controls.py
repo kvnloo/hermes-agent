@@ -71,7 +71,12 @@ def pending_rows(authority, ref):
         row = get_session_admission(authority.db, admission_id=admission_id)
         if row is not None and row['status'] == 'terminal' and row['outcome'] == STEERING:
             rows[admission_id] = row
-    return sorted(rows.values(), key=lambda row: row['seq'])
+    # Producer wakes still run from the durable FIFO; they are not user-submitted prompts.
+    # Keep unknown rows visible: recovery blocks followers until the lost turn is resolved.
+    return sorted(
+        (row for row in rows.values()
+         if row['status'] != 'queued' or 'local_automation_v1' not in (row.get('payload') or {})),
+        key=lambda row: row['seq'])
 
 
 async def _queued(connection, ref, admission_id):

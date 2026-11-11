@@ -454,3 +454,41 @@ async def test_a_served_profiles_desktop_session_admits_its_own_process_notices(
     await gateway.settled(secondary, sid, 3)
     assert [(turn.profile, turn.chat, turn.policy) for turn in gateway.turns] == [
         ('beta', sid, ('desk-model', str(gateway.tmp_path)))] * 3
+
+
+@pytest.mark.asyncio
+async def test_busy_desktop_queue_omits_watch_and_completion_notices(gateway):
+    """Only the viewer's own queued input is editable; producer wakes retain their FIFO slots."""
+    secondary = gateway.secondary
+    desktop = gateway.connect(secondary)
+    sid = gateway.create(secondary, desktop, 'desktop-queue', 'gui').session_id
+    resumed = await desktop.dispatch({'id': 1, 'method': 'session.resume', 'params': {'session_id': sid}})
+    assert 'result' in resumed, resumed
+
+    gateway.gate = asyncio.Event()
+    submitted = await desktop.dispatch({'id': 2, 'method': 'prompt.submit', 'params': {
+        'session_id': sid, 'input_id': 'active-human', 'text': 'start background work'}})
+    assert 'result' in submitted, submitted
+    await async_wait_until(lambda: len(gateway.turns) == 1, timeout=30, what='active desktop turn')
+
+    match = gateway.process_event(secondary, sid, 'watch_match',
+                                  process='proc_watch', event_id='match-queue', pattern='READY')
+    assert await gateway.drain(match) == []
+    completion = gateway.process_event(secondary, sid, 'completion',
+                                       process='proc_done', exit_code=0)
+    assert await gateway.runner._deliver_completion_notification('[proc_done finished]', completion) is True
+    follow = await desktop.dispatch({'id': 3, 'method': 'prompt.submit', 'params': {
+        'session_id': sid, 'input_id': 'followup-human', 'text': 'human follow-up'}})
+    assert 'result' in follow, follow
+
+    durable = gateway.rows(secondary, sid)
+    producers = [row for row in durable if 'local_automation_v1' in row['payload']]
+    assert len(producers) == 2 and all(row['status'] == 'queued' for row in producers), durable
+    snapshot = await desktop.dispatch({'id': 4, 'method': 'session.resume', 'params': {'session_id': sid}})
+    assert 'result' in snapshot, snapshot
+    listed = [row for row in snapshot['result']['pending'] if row['status'] == 'queued']
+    assert [(row['input_id'], row['text']) for row in listed] == [('followup-human', 'human follow-up')]
+    assert not {row['admission_id'] for row in producers} & {row['admission_id'] for row in listed}
+
+    gateway.gate.set()
+    await gateway.settled(secondary, sid, len(durable))
