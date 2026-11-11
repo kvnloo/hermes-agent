@@ -10,7 +10,12 @@ so ``patch("agent.conversation_loop.X")`` sites keep intercepting.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+from itertools import zip_longest
+import json
 import logging
+from pathlib import Path
+import time
 from typing import Any
 
 from agent.message_sanitization import _sanitize_messages_surrogates
@@ -19,6 +24,55 @@ from agent.prompt_caching import build_prompt_cache_plan, effective_cache_ttl
 from agent.turn_context import build_api_messages
 
 logger = logging.getLogger("agent.conversation_loop")
+
+
+def record_wire_cache_break(agent, response, api_kwargs, current_turn_user_idx) -> None:
+    """Compare completed Anthropic calls without retaining or logging message text."""
+    if agent.api_mode != "anthropic_messages" or not getattr(response, "usage", None):
+        agent._cache_break_previous = None
+        return
+    from agent.usage_pricing import normalize_usage
+
+    usage = normalize_usage(response.usage, provider=agent.provider, api_mode=agent.api_mode)
+    hashes = [
+        hashlib.sha256(json.dumps(message, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        for message in api_kwargs["messages"]
+    ]
+    now = time.time()
+    compression_count = getattr(agent.context_compressor, "compression_count", 0)
+    current = {
+        "ts": now, "session": agent.session_id, "in": usage.prompt_tokens,
+        "cred": getattr(agent, "_credential_pool_entry_id", None),
+        "hashes": hashes, "compression_count": compression_count,
+    }
+    previous = getattr(agent, "_cache_break_previous", None)
+    agent._cache_break_previous = current
+    if previous is None or previous["session"] != current["session"]:
+        return
+    gap = now - previous["ts"]
+    if not 0 <= gap < 270 or usage.cache_read_tokens >= 0.5 * previous["in"]:
+        return
+    row = {
+        "ts": now, "session": agent.session_id, "gap_s": gap,
+        "prev_in": previous["in"], "in": usage.prompt_tokens,
+        "cache_read": usage.cache_read_tokens, "write": usage.cache_write_tokens,
+        "cred_prev": previous["cred"], "cred": current["cred"],
+        "msgs_prev": len(previous["hashes"]), "msgs": len(hashes),
+        "first_diff_idx": next((
+            idx for idx, (before, after) in enumerate(zip_longest(previous["hashes"], hashes))
+            if before != after
+        ), -1),
+        "anchor_idx": current_turn_user_idx,
+        "compacted": compression_count != previous["compression_count"],
+    }
+    try:
+        path = Path.home() / ".z0int/state/posture/cache-breaks.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as output:
+            output.write(json.dumps(row, separators=(",", ":")) + "\n")
+    except OSError:
+        # Diagnostics must not turn a successful model response into a retry.
+        logger.warning("Could not append cache-break diagnostic", exc_info=True)
 
 
 @dataclass
