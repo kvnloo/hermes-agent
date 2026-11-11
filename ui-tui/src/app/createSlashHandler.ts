@@ -2,6 +2,7 @@ import type { SlashExecResponse } from '@hermes/shared/gateway-types'
 import { parseCommandDispatch, parseSlashCommand } from '@hermes/shared/slash'
 import { scoreSlashMenuItem } from '@hermes/shared/slash-score'
 
+import { stripInlineMarkup } from '../components/markdown.js'
 import type { GatewayClient } from '../gatewayClient.js'
 import { rpcErrorMessage } from '../lib/rpc.js'
 import { launchWidget } from '../sdk/host.js'
@@ -157,9 +158,11 @@ export function createSlashHandler(ctx: SlashHandlerContext): SlashHandler {
 
     // Main's sidecar slash output: a long reply opens the pager, a short one is a system line.
     const showOutput = (text: string) => {
-      const long = text.length > 180 || text.split('\n').filter(Boolean).length > 2
+      // /insights returns gateway Markdown, but the TUI pager displays literal text.
+      const display = parsed.name === 'insights' ? stripInlineMarkup(text) : text
+      const long = display.length > 180 || display.split('\n').filter(Boolean).length > 2
 
-      long ? page(text, parsed.name[0]!.toUpperCase() + parsed.name.slice(1)) : sys(text)
+      long ? page(display, parsed.name[0]!.toUpperCase() + parsed.name.slice(1)) : sys(display)
     }
 
     const handleDispatch = (raw: unknown, fromExec = false): void => {
