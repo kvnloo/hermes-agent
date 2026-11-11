@@ -268,7 +268,9 @@ def recover_empty_response(
     # "nothing to add", so end the turn quietly (no nudge, no paid retries, no provider
     # switch, no sentinel row). Only when no tool ran this turn; a model that acted on the
     # notice is mid-task and keeps the ladder below unchanged.
-    if _notification_turn_without_tool_round(messages):
+    # A provider that promises tool_calls but supplies none has not completed its turn.
+    # Do not turn that malformed/unfinished action into a silent acknowledgement.
+    if finish_reason != "tool_calls" and _notification_turn_without_tool_round(messages):
         _turn_exit_reason = NOTIFICATION_NO_REPLY_EXIT
         logger.info(
             "Empty response on a machinery turn (%s): ending the turn without a reply",

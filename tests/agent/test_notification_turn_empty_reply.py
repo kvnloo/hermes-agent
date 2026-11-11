@@ -150,6 +150,26 @@ class TestNotificationTurnLoop:
             for message in provider_messages
         )
 
+    def test_machinery_missing_tool_calls_retries_instead_of_silent_exit(self, loop_agent):
+        # A provider may announce tool_calls but omit the calls (Claude via gateways).
+        # The turn is incomplete: recover instead of treating the blank as no news.
+        missing = _empty_response()
+        missing.choices[0].finish_reason = "tool_calls"
+        loop_agent.client.chat.completions.create.side_effect = [
+            missing,
+            _text_response("The background completion needs follow-up."),
+        ]
+
+        result = loop_agent.run_conversation(
+            "[process completed] Follow up on the result.",
+            conversation_history=_completed_tool_round(),
+            persist_user_display_kind="process_complete",
+        )
+
+        assert loop_agent.client.chat.completions.create.call_count == 2
+        assert result["final_response"] == "The background completion needs follow-up."
+        assert result["turn_exit_reason"] != ter.NOTIFICATION_NO_REPLY_EXIT
+
     def test_human_turn_empty_reply_still_retries(self, loop_agent):
         loop_agent.run_conversation(
             "What happened?",
