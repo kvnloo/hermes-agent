@@ -359,8 +359,11 @@ class TestKillProcessLiveQueue:
         real-Popen repro fired the stale ``exited`` payload in 25 of 30 trials
         against current code; after the fix it must always read ``killed``.
         """
+        # No shell wrapper: dash (CI's /bin/sh) forks ``sleep`` instead of exec'ing it, the
+        # orphaned grandchild leaves the test subtree, and the live-system guard then
+        # refuses the kill's descendant SIGTERM, so the kill never stamps the session.
         proc = subprocess.Popen(
-            ["sh", "-c", "sleep 30"],
+            ["sleep", "30"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
