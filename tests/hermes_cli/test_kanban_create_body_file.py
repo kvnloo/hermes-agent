@@ -64,3 +64,41 @@ def test_body_file_dash_reads_stdin(kanban_home, monkeypatch, capsys):
     assert _create(["PROBE", "--body-file", "-"], monkeypatch, stdin=BODY) == 0
     capsys.readouterr()
     assert _latest_body().body == BODY
+
+
+# --- `--reasoning-effort` (Z21, kanban t_a43e2432) ----------------------------
+# `create_task` already had the kwarg and `gateway/session_kanban.py` already
+# forwarded `task.reasoning_effort` to the worker; neither create surface could
+# set it, so a task created from the CLI or the kanban_create tool always ran at
+# the profile default. These lock the wiring on both ends.
+
+def _reasoning_effort(task_id):
+    with kbc.connect_closing() as conn:
+        return conn.execute(
+            "SELECT reasoning_effort FROM tasks WHERE id = ?", (task_id,)
+        ).fetchone()[0]
+
+
+def test_reasoning_effort_flag_persists_to_the_row(kanban_home, capsys):
+    assert _create(["PROBE", "--assignee", "baxter", "--reasoning-effort", "low"]) == 0
+    capsys.readouterr()
+    assert _reasoning_effort(_latest_body().id) == "low"
+
+
+def test_reasoning_effort_none_disables_thinking(kanban_home, capsys):
+    assert _create(["PROBE", "--reasoning-effort", "none", "--json"]) == 0
+    assert _reasoning_effort(_latest_body().id) == "none"
+
+
+def test_reasoning_effort_invalid_value_is_rejected(kanban_home, capsys):
+    # A typo'd level must not silently fall back to the profile default.
+    assert _create(["PROBE", "--reasoning-effort", "ultrabrain"]) == 2
+    assert "reasoning_effort must be one of" in capsys.readouterr().err
+    with kbc.connect_closing() as conn:
+        assert kb.list_tasks(conn) == []
+
+
+def test_reasoning_effort_omitted_stays_null(kanban_home, capsys):
+    assert _create(["PROBE"]) == 0
+    capsys.readouterr()
+    assert _reasoning_effort(_latest_body().id) is None
