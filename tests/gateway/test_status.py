@@ -272,6 +272,28 @@ class TestScopedGatewayPidQuery:
         assert (profile_dir / "gateway.lock").exists()
 
 
+    @pytest.mark.platforms("linux")
+    def test_scoped_status_keeps_pid_file_for_held_foreign_namespace(self, tmp_path, monkeypatch):
+        """#123081: a host-side status poll must not erase a live PrivatePIDs gateway's identity."""
+        from hermes_state_pidns import pid_namespace_id
+
+        local_ns = pid_namespace_id()
+        if local_ns is None:
+            pytest.skip("PID namespace identity is unavailable")
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "default-home"))
+        profile_dir, pid_path, record = self._write_scoped_profile(tmp_path)
+        # The owner's namespace PID 1 can be a different process on the reader's host.
+        record.update(pid=1, pidns=str(int(local_ns) + 1))
+        pid_path.write_text(json.dumps(record))
+        (profile_dir / "gateway.lock").write_text(json.dumps(record))
+        monkeypatch.setattr(status, "is_gateway_runtime_lock_active", lambda _path=None: True)
+        monkeypatch.setattr(status, "_pid_exists", lambda _pid: True)
+        monkeypatch.setattr(status, "_get_process_start_time", lambda _pid: 456)
+
+        assert status.get_running_pid(pid_path) is None
+        assert pid_path.exists(), "status poll deleted a live namespaced gateway's PID record"
+
+
 class TestGatewayRuntimeStatus:
     def test_clear_profile_platforms_preserves_primary_entries(self, tmp_path, monkeypatch):
         monkeypatch.setenv("HERMES_HOME", str(tmp_path))

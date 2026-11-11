@@ -1971,14 +1971,21 @@ def get_running_pid(
         expected_home = pid_path.parent if pid_path is not None else None
         saw_live_pid = False
         foreign_live_pid = False
+        from hermes_state_pidns import persistent_record_pidns_checkable
         for record in records:
-            pid = _live_pid_from_record(record)
-            if pid is None:
-                continue
             home_ok = (
                 _pid_record_belongs_to_current_profile(record) if expected_home is None
                 else not recorded_gateway_home_conflicts(record, expected_home=expected_home)
             )
+            if record and not persistent_record_pidns_checkable(record.get("pidns")):
+                # The held flock is live ownership evidence. Its foreign PID is not local
+                # liveness evidence, so a status probe must not delete its PID record.
+                if home_ok or expected_home is not None:
+                    saw_live_pid = True
+                continue
+            pid = _live_pid_from_record(record)
+            if pid is None:
+                continue
             if home_ok and _record_matches_live_gateway_pid(
                 record, pid, expected_home=expected_home
             ):
