@@ -201,6 +201,11 @@ os.environ["HERMES_TEST_ISOLATION"] = os.environ.get("HERMES_HOME", "") or "1"
 # on whether botocore was importable yet.
 os.environ["HERMES_DISABLE_LAZY_INSTALLS"] = "1"
 
+# The credential pool's burn-pace gate loads the host's deployed z0 twin
+# (~/.local/lib/z0/burn_pace) and refuses rows that are over pace in real life.
+# Point it at a path that does not exist so tests see the pool unchanged.
+os.environ["HERMES_POOL_ADMISSION"] = os.path.join(_SESSION_HERMES_HOME, "no-burn-pace-twin.py")
+
 #: HERMES_HOME as it stood when conftest was imported - i.e. before any test
 #: module could import code that configures logging. Recorded so the guard in
 #: tests/test_log_isolation.py can assert the sandbox existed AT THAT MOMENT.
