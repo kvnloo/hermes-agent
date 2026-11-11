@@ -117,3 +117,45 @@ async def test_same_voice_note_sent_again_while_idle_is_echoed_again(tmp_path, m
         assert [m for m in sent if '"hi"' in m] == ['🎙️ "hi"', '🎙️ "hi"']
     finally:
         authority.db.close()
+
+@pytest.mark.asyncio
+async def test_failed_busy_echo_is_retried_on_restored_turn(tmp_path, monkeypatch):
+    """A rejected first echo must not be mistaken for a confirmed delivery."""
+    calls = []
+
+    def transcribe_audio(path, model=None, source=None):
+        calls.append(path)
+        return {'success': True, 'transcript': 'check the latest logs', 'provider': 'fake'}
+
+    monkeypatch.setattr('tools.transcription_tools.transcribe_audio', transcribe_audio)
+    runner, authority, source, agent, sent = await _busy_rig(tmp_path, monkeypatch)
+    adapter = runner.adapters[Platform.WHATSAPP]
+    original_send = adapter.send
+    rejected = []
+
+    async def fail_first_echo(chat_id, content, **kwargs):
+        if content == '🎙️ "check the latest logs"' and not rejected:
+            rejected.append(content)
+            return SendResult(success=False)
+        return await original_send(chat_id, content, **kwargs)
+
+    monkeypatch.setattr(adapter, 'send', fail_first_echo)
+    clip = tmp_path / 'note.ogg'
+    clip.write_bytes(b'OggS a voice note whose first echo is rejected')
+    try:
+        task = asyncio.ensure_future(runner._handle_message(MessageEvent(
+            text='', message_type=MessageType.VOICE, source=source, message_id='v1',
+            media_urls=[str(clip)], media_types=['audio/ogg'])))
+        await async_wait_until(lambda: _rows(authority), timeout=10, what='the voice note admitted')
+        task.cancel()
+        assert agent.interrupts == [('"check the latest logs"',)]
+
+        restored = restore_native(_rows(authority)[0]['payload'], runner)
+        text = await runner._prepare_inbound_message_text(event=restored, source=restored.source, history=[])
+
+        assert '"check the latest logs"' in text
+        assert len(calls) == 1, calls
+        assert rejected == ['🎙️ "check the latest logs"']
+        assert [m for m in sent if 'check the latest logs' in m] == ['🎙️ "check the latest logs"']
+    finally:
+        authority.db.close()

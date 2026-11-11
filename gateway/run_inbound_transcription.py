@@ -100,12 +100,15 @@ def hand_prepared_voice_to_turn(event) -> None:
     native admission restores from the same clip bytes, noting whether the chat was shown them."""
     clip_memo = getattr(event, "_gateway_pending_stt_clips", None) or {}
     done = [(path, transcript) for path, (transcript, _note) in clip_memo.items() if transcript is not None]
-    echoed = 0 < len(done) <= int(getattr(event, "_gateway_pending_stt_echoed", 0) or 0)
-    for path, transcript in done:
+    delivered = getattr(event, "_gateway_pending_stt_delivered_indices", None)
+    if delivered is None:
+        # Compatibility for prepared callers without a delivery receipt.
+        delivered = set(range(int(getattr(event, "_gateway_pending_stt_echoed", 0) or 0)))
+    for index, (path, transcript) in enumerate(done):
         if (key := _gate_key(path)) is None:
             continue
         remember_gate_transcript(path, transcript)
-        if echoed:
+        if index in delivered:
             with _GATE_TRANSCRIPTS_LOCK:
                 _ECHOED_CLIPS[key] = None
                 while len(_ECHOED_CLIPS) > _GATE_TRANSCRIPTS_MAX:
@@ -251,17 +254,22 @@ class GatewayInboundTranscriptionMixin:
         self, event, adapter, source, transcripts: list[str], *, metadata=None,
         log_context: str = "Transcript",
     ) -> None:
-        """Echo pending-event STT transcripts to the chat at most once. Tracked as a COUNT (not a
-        set — identical transcripts are distinct deliveries): ``merge_pending_message_event`` can
-        append a second voice note and invalidate the cache; the re-run returns earlier transcripts
-        as a prefix, so only the unsent tail is echoed."""
+        """Reserve each echo once, but suppress only accepted deliveries in the restored turn.
+
+        The reservation protects concurrent pending passes; a rejected send needs its FIFO retry.
+        """
         if not transcripts or not self._should_echo_stt_transcripts() or adapter is None:
             return
         already_echoed = int(getattr(event, "_gateway_pending_stt_echoed", 0) or 0)
         event._gateway_pending_stt_echoed = max(already_echoed, len(transcripts))
-        await self._echo_stt_transcripts(
+        accepted = await self._echo_stt_transcripts(
             adapter, source, transcripts[already_echoed:], metadata=metadata, log_context=log_context,
         )
+        delivered = getattr(event, "_gateway_pending_stt_delivered_indices", None)
+        if delivered is None:
+            delivered = set()
+            event._gateway_pending_stt_delivered_indices = delivered
+        delivered.update(already_echoed + index for index in (accepted or ()))
 
     async def _transcribe_and_echo_pending_voice(
         self, event, adapter, source, text: str, *, log_context: str, metadata=_UNSET
