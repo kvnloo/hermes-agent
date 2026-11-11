@@ -3645,7 +3645,11 @@ class GatewayRunner(
             recovered = self._recover_telegram_topic_thread_id(source)
         except Exception:
             return source
-        return source if recovered is None else dataclasses.replace(source, thread_id=recovered)
+        if recovered is None:
+            return source
+        # Preserve the receiving bot identity when /resume normalizes a DM lobby event.
+        from gateway.session_identity import replace_source
+        return replace_source(source, thread_id=recovered)
 
     def _resolve_session_key_or_none(self, source, session_key: Optional[str]) -> Optional[str]:
         """``session_key`` if given, else the key for ``source`` (None when it cannot be derived)."""

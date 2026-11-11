@@ -63,7 +63,12 @@ def _private_topic_lanes_of_one_chat(current, origin) -> bool:
                                         _sattr(current, "chat_id"), _sattr(current, "user_id"))
     theirs = _telegram_private_chat_owner(origin.platform, _sattr(origin, "chat_type"),
                                           _sattr(origin, "chat_id"), _sattr(origin, "user_id"))
-    return bool(mine) and mine == theirs
+    if not (mine and mine == theirs):
+        return False
+    # The same Telegram user has the same private chat_id with different bots.
+    # Only the receiving bot's proven transport can cross topic lanes.
+    from gateway.session_identity import transport_profile_of
+    return transport_profile_of(current) == transport_profile_of(origin)
 
 
 def _manual_compression_reply_lines(summary: dict, compressor, focus_topic) -> list[str]:
@@ -420,7 +425,11 @@ class GatewaySessionCommandsMixin:
                                                  _sattr(source, "chat_id"), caller_uid)
         if caller_dm and caller_dm == _telegram_private_chat_owner(
                 row_src, row.get("chat_type"), row.get("chat_id"), row.get("user_id")):
-            return True  # another topic lane of the caller's own Telegram DM (#57821)
+            from gateway.session_identity import transport_profile_of
+            # Persisted sessions can share a runtime between different Telegram bots.
+            # Missing transport provenance only matches missing (standalone / legacy).
+            if transport_profile_of(source) == (row.get("transport_profile") or None):
+                return True  # another topic lane of this receiving bot's DM (#57821)
         if not (row_src and caller_src and str(row_src) == str(caller_src)
                 and row_thread == _sattr(source, "thread_id")):
             return False  # blank/legacy source cannot prove the platform; other thread = other session

@@ -80,3 +80,47 @@ async def test_resume_across_threads_stays_refused_outside_the_callers_own_dm(tm
     runner.async_session_store.switch_session.assert_not_awaited()
     assert runner._same_origin_chat(caller, _src(**origin)) is False  # live-origin path agrees
     db.close()
+
+@pytest.mark.asyncio
+async def test_resume_dm_topic_does_not_cross_telegram_bots_sharing_a_runtime(tmp_path):
+    """One Telegram user has the same private chat ID with two different bot credentials."""
+    from gateway.session_identity import RoutingIdentity, transport_profile_of
+
+    home = tmp_path / "shared-runtime"
+    db = SessionDB(db_path=tmp_path / "state.db")
+    original = _src(thread_id="topic-a")
+    caller = _src(thread_id="topic-b")
+    for source, bot in ((original, "alpha"), (caller, "beta")):
+        source._identity = RoutingIdentity(
+            transport_profile=bot, runtime_profile="shared",
+            authorization_home=home, runtime_home=home, multiplexed=True)
+
+    db.create_session(
+        "alpha_work", "telegram", user_id=original.user_id, chat_id=original.chat_id,
+        chat_type=original.chat_type, thread_id=original.thread_id,
+        transport_profile="alpha", session_key=build_session_key(original, profile="shared"))
+    db.set_session_title("alpha_work", "Alpha Work")
+    runner = _runner(db, caller)
+    runner._recover_telegram_topic_thread_id = lambda _source: "topic-b"
+
+    # Lobby-topic normalization must not erase the authenticated receiving bot.
+    normalized = runner._normalize_source_for_session_key(caller)
+    assert normalized is not caller
+    assert transport_profile_of(normalized) == "beta"
+
+    # Both ownership paths must refuse a different bot despite identical chat/user ids.
+    row = db.get_session("alpha_work")
+    assert runner._same_origin_chat(caller, original) is False
+    assert runner._persisted_row_proves_owner(caller, row) is False
+    reply = await runner._handle_resume_command(
+        MessageEvent(text="/resume Alpha Work", source=caller))
+    assert "belongs to a different user or chat" in reply
+    runner.async_session_store.switch_session.assert_not_awaited()
+
+    # A different topic in the SAME receiving bot remains resumable.
+    caller._identity = RoutingIdentity(
+        transport_profile="alpha", runtime_profile="shared",
+        authorization_home=home, runtime_home=home, multiplexed=True)
+    assert runner._same_origin_chat(caller, original) is True
+    assert runner._persisted_row_proves_owner(caller, row) is True
+    db.close()
