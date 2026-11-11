@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="0.893" timestamp="2026-10-26T06:55:52.570306+00:00" hostname="lab-host"><testcase classname="tests.tools.test_memory_tool_schema" name="test_memory_schema_has_no_forbidden_top_level_combinators" time="0.754" /></testsuite></testsuites>
