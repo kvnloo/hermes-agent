@@ -42,3 +42,26 @@ async def test_rich_send_without_message_id_stays_recoverable_and_is_sent_once(t
     assert states == ["failed"], "the row must stay for redelivery, not be finalized as delivered and pruned"
     assert bot.do_api_request.await_count == 1 and bot.send_message.await_count == 0, (
         "delivery is unknown: neither a retry nor a legacy resend may duplicate it")
+
+
+@pytest.mark.asyncio
+async def test_rich_send_zero_message_id_is_unknown_delivery_not_pruned(tmp_path, monkeypatch):
+    """Telegram's zero ID is ephemeral/scheduled, not an acknowledged chat message."""
+    monkeypatch.setattr(dl, "_db_path", lambda: tmp_path / "state.db")
+    adapter = TelegramAdapter(PlatformConfig(enabled=True, token="fake-token", extra={"rich_messages": True}))
+    bot = MagicMock()
+    bot.do_api_request = AsyncMock(return_value={"ok": True, "result": {"message_id": 0}})
+    bot.send_message = AsyncMock(return_value=SimpleNamespace(message_id=7))
+    bot.send_chat_action = AsyncMock()
+    adapter._bot = bot
+    event = MessageEvent(text="hi", message_type=MessageType.TEXT, message_id="in-1",
+                         source=SessionSource(platform=Platform.TELEGRAM, chat_id="111", chat_type="dm"))
+
+    result, _ = await adapter.send_final_ledgered(event, "agent:main:telegram:dm:111", TABLE_REPLY, {}, reply_to=None)
+
+    assert result.success is False
+    assert result.raw_response["delivery_uncertain"] is True
+    with dl._connect() as conn:
+        assert [row[0] for row in conn.execute("SELECT state FROM delivery_obligations")] == ["failed"]
+    bot.do_api_request.assert_awaited_once()
+    bot.send_message.assert_not_awaited()

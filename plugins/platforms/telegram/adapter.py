@@ -1415,7 +1415,7 @@ class TelegramAdapter(TelegramContactMixin, TelegramHeldInboundMixin, TelegramRe
         message_id = msg.get("message_id") if isinstance(msg, dict) else getattr(msg, "message_id", None)
         if message_id is None and isinstance(msg, dict):
             message_id = (msg.get("result") or {}).get("message_id")
-        if message_id is None:  # accepted with no id: delivery unknown, never proof of it (#147616)
+        if message_id is None or message_id == 0:  # no usable id: delivery unknown (#147616)
             from plugins.platforms.telegram.telegram_send_errors import idless_send_result
             return idless_send_result(self.name, chat_id, "sendRichMessage")
         await self._record_rich_sent(chat_id, message_id, content)
