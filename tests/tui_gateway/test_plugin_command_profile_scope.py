@@ -139,3 +139,22 @@ def test_launch_profile_chat_reads_its_own_secret_once_multiplexed(plugin_homes)
     output = res["result"]["output"]
     assert output.startswith("probe@"), output
     assert output.endswith(":launch-key"), output
+
+
+def test_sessionless_plugin_dispatch_uses_explicit_profile_and_secrets(plugin_homes):
+    """A profile-selected Desktop draft must not resolve the launch profile's plugin.
+
+    commands.catalog already accepts profile without session_id; dispatch must match it.
+    """
+    from tui_gateway import server
+
+    result = server._methods["command.dispatch"](
+        1, {"name": "infraonly", "arg": "hi", "profile": "infra"}
+    )
+    assert result.get("result", {}).get("type") == "plugin", result
+    assert result["result"]["output"] == "probe@infra:infra-key"
+
+    foreign = server._methods["command.dispatch"](
+        2, {"name": "launchonly", "arg": "hi", "profile": "infra"}
+    )
+    assert foreign.get("error", {}).get("code") == 4018, foreign

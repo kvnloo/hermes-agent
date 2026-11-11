@@ -519,10 +519,12 @@ def _run_plugin_command(handler, arg: str, session=None, sid: str = "") -> str:
         _clear_session_context(tokens)
 
 
-def _dispatch_plugin_in_profile_scope(name: str, arg: str, session, sid: str = "") -> str | None:
+def _dispatch_plugin_in_profile_scope(name: str, arg: str, session, sid: str = "", *, profile=None) -> str | None:
     """Look up AND run plugin command *name* under the session's profile runtime scope (registry and
     secrets), as messaging ingress does; None when that profile has no such command (#133244)."""
-    with _session_profile_runtime_scope(session or {}):
+    home = _profile_home(profile) if session is None and profile else None
+    scope_session = session or {"profile_home": str(home) if home else None}
+    with _session_profile_runtime_scope(scope_session):
         handler = _plugin_command_handler(name)
         if handler is None:
             return None
@@ -601,7 +603,9 @@ def _is_registry_command(base: str) -> bool:
 
 def _dispatch_plugin(rid, params, session, name, arg):
     with contextlib.suppress(Exception):
-        if (output := _dispatch_plugin_in_profile_scope(name, arg, session, params.get("session_id", ""))) is not None:
+        output = _dispatch_plugin_in_profile_scope(
+            name, arg, session, params.get("session_id", ""), profile=params.get("profile"))
+        if output is not None:
             return _ok(rid, {"type": "plugin", "output": output})
     return None
 
@@ -1025,7 +1029,7 @@ def _(rid, params: dict) -> dict:
     # must resolve against the SAME profile or a secondary-only skill is routed here and then
     # not found (#110695).
     stages = (_dispatch_quick, _dispatch_plugin, _dispatch_bundle, _dispatch_skill, _SLASH_BUILTINS.get(name))
-    with _session_home_scope(session):
+    with _session_home_scope(session, profile=params.get("profile")):
         for stage in filter(None, stages):
             res = stage(rid, params, session, name, arg)
             if res is not None:
