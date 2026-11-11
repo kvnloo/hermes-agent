@@ -145,13 +145,27 @@ def test_connection_codes_show_a_card_where_one_exists_and_a_link_elsewhere(code
     assert link["connect_url"] == "https://example.test/c/1"
 
 
+def test_connection_card_recovery_hint_reaches_deferred_tool():
+    """Connection errors must explain the bridge when manage_connections is deferred."""
+    for code in ("CONNECTION_REQUIRED", "CONNECTION_EXPIRED"):
+        error = model_entry(FakeTransport(failure(code, 409)), CARD)["error"]
+        assert error["connect_card_available"] is True
+        assert "connect_url" not in error
+        assert "manage_connections" in error["hint"]
+        assert "tool_search" in error["hint"]
+        assert "tool_call" in error["hint"]
+        if code == "CONNECTION_EXPIRED":
+            assert "reconnect" in error["hint"]
+
+
 def test_expired_wording_says_reconnect_and_required_wording_is_unchanged():
     expired = model_entry(FakeTransport(failure("CONNECTION_EXPIRED", 409)), CARD)["error"]
     assert "expired" in expired["hint"] and "reconnect" in expired["hint"]
 
     required = model_entry(FakeTransport(failure("CONNECTION_REQUIRED", 409)), CARD)["error"]
     assert required["hint"] == (
-        "This app is not connected. Call manage_connections to open a connection card for it; "
+        "This app is not connected. Call manage_connections to open a connection card for it "
+        "(if deferred, find it with tool_search and invoke through tool_call); "
         "there is no link to show the user.")
 
 

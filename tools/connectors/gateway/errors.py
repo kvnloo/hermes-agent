@@ -112,7 +112,8 @@ SIDE_AGENT_HINT = (
 )
 
 CARD_HINT = (
-    "This app is not connected. Call manage_connections to open a connection card for it; "
+    "This app is not connected. Call manage_connections to open a connection card for it "
+    "(if deferred, find it with tool_search and invoke through tool_call); "
     "there is no link to show the user."
 )
 
@@ -124,7 +125,8 @@ EXPIRED_SIDE_AGENT_HINT = (
 
 EXPIRED_CARD_HINT = (
     "This app's connection expired. Call manage_connections with action 'reconnect' to open a "
-    "connection card for it; there is no link to show the user."
+    "connection card for it (if deferred, find it with tool_search and invoke through tool_call); "
+    "there is no link to show the user."
 )
 
 EXPIRED_LINK_HINT = "The connection expired. Show the user the connect_url to reconnect, then retry the call."
