@@ -309,6 +309,7 @@ class TestFlushCursorMarkerPop:
             _close_transcript_tail(agent, messages, partial, True, True)
             assert messages[-1]["content"] == partial
             assert messages[-1]["finish_reason"] == "interrupted"
+            assert messages[-1]["display_metadata"] == {"interrupted": True}
             assert "_db_persisted" not in messages[-1]
             assert agent._db_flush_scan_prefix is None
 
@@ -316,8 +317,9 @@ class TestFlushCursorMarkerPop:
             reloaded = db.get_messages_as_conversation(SESSION_ID)
             assert reloaded[-1]["role"] == "assistant"
             assert reloaded[-1]["content"] == partial
+            # finish_reason is the durable status: a row-addressed rewrite leaves
+            # display_metadata to its own writers (transcript_repair._METADATA_COLUMNS).
             assert reloaded[-1]["finish_reason"] == "interrupted"
-            assert reloaded[-1]["display_metadata"]["interrupted"] is True
             assert sum(row.get("content") == partial for row in reloaded) == 1
         finally:
             db.close()
