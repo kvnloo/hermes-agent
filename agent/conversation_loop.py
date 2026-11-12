@@ -4927,23 +4927,15 @@ def run_conversation(
                             _retry.restart_with_rebuilt_messages = True
                             break
 
-                # ── Auth-failure provider failover ───────────────────────
-                # A 401/403 that survives the per-provider credential-refresh
-                # attempt above (each guarded by its own
-                # ``*_auth_retry_attempted`` flag) means the active provider's
-                # credential or endpoint is broken in a way refreshing can't
-                # fix (revoked OAuth, blocked/expired key, an account pinned to
-                # a dead/staging endpoint). Previously the loop only printed
-                # "switch providers manually" advice and fell through, so a
-                # user with a configured fallback chain kept thrashing on the
-                # same dead credential every turn instead of failing over.
-                # Escalate to the fallback chain here, mirroring the rate-
-                # limit/billing failover above. When no fallback is configured
-                # (or the chain is exhausted), _try_activate_fallback returns
-                # False and we fall through to the existing terminal handling
-                # + provider-specific troubleshooting guidance unchanged.
+                # Persistent auth failures must not silently change models.
+                # Apply this policy to the generic client-error fallback below too.
+                _allow_provider_fallback = (
+                    not classified.is_auth
+                    or getattr(agent, "_fallback_on_auth_error", False)
+                )
                 if (
                     classified.is_auth
+                    and _allow_provider_fallback
                     and not _retry.auth_failover_attempted
                     and agent._fallback_index < len(agent._fallback_chain)
                 ):
@@ -5553,14 +5545,14 @@ def run_conversation(
                     # exists; otherwise "trying fallback..." is a lie and the
                     # session looks like it's recovering when it's about to
                     # abort silently (#35314, #17446).
-                    if agent._has_pending_fallback():
+                    if _allow_provider_fallback and agent._has_pending_fallback():
                         if classified.reason == FailoverReason.content_policy_blocked:
                             agent._buffer_status("⚠️ Provider safety filter blocked this request — trying fallback...")
                         elif classified.reason == FailoverReason.ssl_cert_verification:
                             agent._buffer_status("⚠️ TLS certificate verification failed — trying fallback...")
                         else:
                             agent._buffer_status(f"⚠️ Non-retryable error (HTTP {status_code}) — trying fallback...")
-                    if agent._try_activate_fallback():
+                    if _allow_provider_fallback and agent._try_activate_fallback():
                         active_system_prompt = _sync_failover_system_message(
                             agent, api_messages, active_system_prompt)
                         retry_count = 0

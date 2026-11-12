@@ -1456,6 +1456,17 @@ def drop_thinking_only_and_merge_users(
 
 
 
+def _announce_pinned_fallback(agent, reset_at: float) -> None:
+    primary_model = (agent._primary_runtime or {}).get("model") or "primary"
+    until = time.strftime("%H:%M", time.localtime(reset_at))
+    notice = (
+        f"On fallback {agent.model} via {agent.provider} until {until} "
+        f"({primary_model} rate-limited)."
+    )
+    agent._buffer_status(notice)
+    agent._pending_fallback_notice = notice
+
+
 def restore_primary_runtime(agent) -> bool:
     """Restore the primary runtime at the start of a new turn.
 
@@ -1479,6 +1490,9 @@ def restore_primary_runtime(agent) -> bool:
         return False
 
     if getattr(agent, "_rate_limited_until", 0) > time.monotonic():
+        _announce_pinned_fallback(
+            agent, time.time() + agent._rate_limited_until - time.monotonic()
+        )
         return False  # primary still in rate-limit cooldown, stay on fallback
 
     # ── Reset-aware gate ──
@@ -1531,6 +1545,7 @@ def restore_primary_runtime(agent) -> bool:
                     agent.provider,
                     agent.model,
                 )
+            _announce_pinned_fallback(agent, next_at)
             return False
     except Exception:
         logger.debug(
