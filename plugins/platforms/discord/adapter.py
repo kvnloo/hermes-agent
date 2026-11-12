@@ -5604,6 +5604,7 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
                 thread = await seed_msg.create_thread(
                     name=thread_name, auto_archive_duration=1440, reason=reason,
                 )
+                await self._threads.mark_async(str(thread.id))
                 return str(thread.id)
         except Exception as seed_error:
             logger.debug(
@@ -5617,6 +5618,7 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
                     name=thread_name, auto_archive_duration=1440, reason=reason,
                     type=discord.ChannelType.public_thread,
                 )
+                await self._threads.mark_async(str(thread.id))
                 return str(thread.id)
         except Exception as direct_error:
             logger.warning(

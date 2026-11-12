@@ -5,7 +5,7 @@ Discord inlines a thread in the feed only when it has a starter message (#131690
 """
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 import sys
 
 import pytest
@@ -98,3 +98,16 @@ async def test_handoff_thread_returns_none_when_both_paths_fail(adapter):
     adapter._client.get_channel = lambda _id: parent
 
     assert await adapter.create_handoff_thread("123", "Hermes — Nightly brief") is None
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("seed_ok", [True, False], ids=["anchored", "public_fallback"])
+async def test_handoff_thread_registers_for_mentionless_replies(adapter, monkeypatch, seed_ok):
+    """A created cron thread must admit follow-ups without a bot mention (#131690)."""
+    monkeypatch.delenv("DISCORD_THREAD_REQUIRE_MENTION", raising=False)
+    parent, _seed_message, thread = _parent_with(seed_ok=seed_ok)
+    adapter._client.get_channel = lambda _id: parent
+
+    assert await adapter.create_handoff_thread("123", "Hermes — Nightly brief") == "555"
+    incoming_thread = Mock(spec=discord.Thread)
+    incoming_thread.id = thread.id
+    assert adapter._in_bot_thread(SimpleNamespace(channel=incoming_thread))
