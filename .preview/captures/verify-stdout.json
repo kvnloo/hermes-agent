@@ -1,0 +1,277 @@
+[
+  {
+    "width": 320,
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "overflow": false,
+    "minControlHeight": 7.5,
+    "densityTargetHeights": [
+      {
+        "className": "hermes-kanban-attention-toggle",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-attention-dismiss",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      }
+    ],
+    "cardCount": 7,
+    "drawerVisible": true,
+    "drawerCloseHeight": 44,
+    "drawerClosed": true,
+    "filterWorks": true,
+    "errors": []
+  },
+  {
+    "width": 360,
+    "scrollWidth": 360,
+    "clientWidth": 360,
+    "overflow": false,
+    "minControlHeight": 7.5,
+    "densityTargetHeights": [
+      {
+        "className": "hermes-kanban-attention-toggle",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-attention-dismiss",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      }
+    ],
+    "cardCount": 7,
+    "drawerVisible": true,
+    "drawerCloseHeight": 44,
+    "drawerClosed": true,
+    "filterWorks": true,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "overflow": false,
+    "minControlHeight": 7.5,
+    "densityTargetHeights": [
+      {
+        "className": "hermes-kanban-attention-toggle",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-attention-dismiss",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      }
+    ],
+    "cardCount": 7,
+    "drawerVisible": true,
+    "drawerCloseHeight": 44,
+    "drawerClosed": true,
+    "filterWorks": true,
+    "errors": []
+  },
+  {
+    "width": 430,
+    "scrollWidth": 430,
+    "clientWidth": 430,
+    "overflow": false,
+    "minControlHeight": 7.5,
+    "densityTargetHeights": [
+      {
+        "className": "hermes-kanban-attention-toggle",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-attention-dismiss",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 44
+      }
+    ],
+    "cardCount": 7,
+    "drawerVisible": true,
+    "drawerCloseHeight": 44,
+    "drawerClosed": true,
+    "filterWorks": true,
+    "errors": []
+  },
+  {
+    "width": 1280,
+    "scrollWidth": 1280,
+    "clientWidth": 1280,
+    "overflow": false,
+    "minControlHeight": 13.5,
+    "densityTargetHeights": [
+      {
+        "className": "hermes-kanban-attention-toggle",
+        "height": 23.9375
+      },
+      {
+        "className": "hermes-kanban-attention-dismiss",
+        "height": 23.9375
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 22
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 22
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 22
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 22
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 22
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 22
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 22
+      },
+      {
+        "className": "hermes-kanban-column-add",
+        "height": 22
+      }
+    ],
+    "cardCount": 7,
+    "drawerVisible": true,
+    "drawerCloseHeight": 18.75,
+    "drawerClosed": true,
+    "filterWorks": true,
+    "errors": []
+  }
+]

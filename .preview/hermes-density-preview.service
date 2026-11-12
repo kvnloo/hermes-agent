@@ -1,0 +1,15 @@
+[Unit]
+Description=Hermes reviewed density/alignment Tailnet preview 0ba3d009d
+After=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+WorkingDirectory=/workspace/zer0/oss/hermes-agent/.worktrees/t_c394d5be
+ExecStart=/home/kvn/.hermes/hermes-agent/venv/bin/python -m uvicorn density_preview:app --app-dir /workspace/zer0/oss/hermes-agent/.worktrees/t_c394d5be/.preview --host 127.0.0.1 --port 9135
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target
