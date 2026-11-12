@@ -234,6 +234,21 @@ class TestNoninteractiveGitEnv:
         assert pin(noninteractive_git_env({"GIT_SSH": "/usr/bin/ssh"})) == "/usr/bin/ssh -o BatchMode=yes"
 
 
+    def test_batchmode_text_in_paths_is_not_an_explicit_option(self):
+        """A key or executable path named BatchMode must still receive the no-prompt flag."""
+        env = noninteractive_git_env({"GIT_SSH_COMMAND": "ssh -i /tmp/BatchMode-work-key"})
+        assert env["GIT_SSH_COMMAND"] == "ssh -o BatchMode=yes -i /tmp/BatchMode-work-key"
+
+        env = noninteractive_git_env({"GIT_SSH": "/opt/BatchMode/bin/ssh"})
+        values = {env[f"GIT_CONFIG_KEY_{i}"]: env[f"GIT_CONFIG_VALUE_{i}"]
+                  for i in range(int(env["GIT_CONFIG_COUNT"]))}
+        assert values["core.sshCommand"] == "/opt/BatchMode/bin/ssh -o BatchMode=yes"
+
+        # A genuine explicit override still wins, including OpenSSH's joined -o form.
+        command = "ssh -oBatchMode=no -i /tmp/BatchMode-work-key"
+        assert noninteractive_git_env({"GIT_SSH_COMMAND": command})["GIT_SSH_COMMAND"] == command
+
+
 # ---------------------------------------------------------------------------
 # 2. Real-git E2E: 401 remote fails fast instead of prompting
 # ---------------------------------------------------------------------------

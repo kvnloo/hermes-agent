@@ -307,7 +307,7 @@ _GIT_CONFIG_OVERRIDES = {
 _PLINK_NAME_RE = re.compile(r"^(?:tortoise(?:git)?)?plink(?:\.exe)?$", re.IGNORECASE)
 _SSH_EXECUTABLE_RE = re.compile(r"""^\s*(?:"([^"]+)"|'([^']+)'|(\S+))""")
 # Any explicit batch choice (``BatchMode=no`` included) is the user's call and is left alone.
-_SSH_BATCH_CHOICE_RE = re.compile(r"(?:^|\s)-batch(?:\s|$)|batchmode", re.IGNORECASE)
+_SSH_BATCH_CHOICE_RE = re.compile(r"""(?:^|\s)-batch(?=\s|$)|(?:^|\s)-o\s*["']?BatchMode(?=[\s=])""", re.IGNORECASE)
 
 
 def _with_batch_flag(command: str) -> str:
