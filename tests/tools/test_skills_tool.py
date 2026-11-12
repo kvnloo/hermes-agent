@@ -400,6 +400,20 @@ class TestSkillView:
         assert result["metadata"]["released"] == "2025-12-01"
 
 
+    def test_view_skill_with_date_keyed_metadata(self, tmp_path):
+        # PyYAML also parses unquoted date mapping keys as datetime.date.
+        with patch("tools.skills_tool.SKILLS_DIR", tmp_path):
+            _make_skill(
+                tmp_path,
+                "dated-history",
+                frontmatter_extra="metadata:\n  releases:\n    2025-12-01: launched\n",
+            )
+            raw = skill_view("dated-history")
+        result = json.loads(raw)
+        assert result["success"] is True
+        assert result["metadata"]["releases"] == {"2025-12-01": "launched"}
+
+
     def test_view_reference_files(self, tmp_path):
         with patch("tools.skills_tool.SKILLS_DIR", tmp_path):
             skill_dir = _make_skill(tmp_path, "my-skill")

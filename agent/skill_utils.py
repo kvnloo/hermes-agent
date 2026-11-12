@@ -79,7 +79,10 @@ def _stringify_temporal(obj: Any) -> Any:
     frontmatter stays JSON-safe. (``datetime`` subclasses ``date``.)
     """
     if isinstance(obj, dict):
-        return {k: _stringify_temporal(v) for k, v in obj.items()}
+        return {
+            k.isoformat() if isinstance(k, (datetime.date, datetime.time)) else k: _stringify_temporal(v)
+            for k, v in obj.items()
+        }
     if isinstance(obj, (list, tuple)):
         return [_stringify_temporal(v) for v in obj]
     if isinstance(obj, (datetime.date, datetime.time)):
