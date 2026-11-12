@@ -128,6 +128,66 @@ class GatewaySlashCommandsMixin:
 
     async_session_store: AsyncSessionStore
 
+    async def _handle_attention_mode_command(self, event: MessageEvent, command: str) -> str:
+        """Read or update presentation-only conversation state."""
+        from gateway.conversation_modes import get_mode, receipt, set_focus, set_mode
+
+        source = event.source
+        args = event.get_command_args().split()
+        typed = (event.get_command() or "").lower()
+        if command == "orchestration":
+            requested = args[0].lower() if args else None
+            status = (
+                "ORCHESTRATION · focused · Keel L0 · no system freeze · "
+                "fully-autonomous LOCKED (requires higher Keel level and sealed acceptance evidence)"
+            )
+            if requested is None:
+                return status
+            if requested == "focused" and len(args) == 1:
+                return status + " · already active; no authority changed"
+            if requested == "frozen":
+                return (
+                    "FROZEN unavailable from chat: requires exact Captain confirmation, "
+                    "canonical freeze receipt, dispatcher verification, and reversible recovery; nothing changed."
+                )
+            if requested == "fully-autonomous":
+                return (
+                    "FULLY-AUTONOMOUS LOCKED at Keel L0: higher Keel level and sealed "
+                    "acceptance evidence are unmet; nothing changed."
+                )
+            return "Usage: /orchestration [focused|frozen|fully-autonomous]; nothing changed."
+        if command == "chat":
+            if typed in {"pm", "manager", "brainstorm", "copilot"}:
+                requested = "pm" if typed == "manager" else typed
+                args = [requested, *args]
+            if not args:
+                return receipt(await asyncio.to_thread(get_mode, source)) + " · valid: pm, brainstorm, copilot"
+            requested, args = args[0].lower(), args[1:]
+            if requested not in {"pm", "brainstorm", "copilot"}:
+                return "Usage: /chat [pm|brainstorm|copilot] [up to 3 focuses]; nothing changed."
+            if requested != "copilot" and args:
+                return "Only /chat copilot accepts focuses; nothing changed."
+            if len(args) > 3:
+                return "Copilot accepts at most 3 focuses; nothing changed."
+            return receipt(await asyncio.to_thread(
+                set_mode, source, requested, focus=args or None
+            ))
+        if command == "mode":
+            return receipt(await asyncio.to_thread(get_mode, source))
+        if command == "unfocus":
+            return receipt(await asyncio.to_thread(set_focus, source, []))
+        if command == "focus":
+            if not args:
+                return "Usage: /focus <task-id|product> [up to 3]"
+            if len(args) > 3:
+                return "Focus accepts at most 3 task IDs/products; nothing changed."
+            return receipt(await asyncio.to_thread(set_focus, source, args))
+        if command == "copilot":
+            if len(args) > 3:
+                return "Copilot accepts at most 3 focuses; nothing changed."
+            return receipt(await asyncio.to_thread(set_mode, source, "copilot", focus=args or None))
+        return receipt(await asyncio.to_thread(set_mode, source, command))
+
     def _typed_command_prefix_for(self, platform) -> str:
         """Return the prefix users can always type to reach Hermes commands.
 
