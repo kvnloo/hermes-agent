@@ -229,7 +229,8 @@ def _arm_full_duplex_listener() -> None:
         if _fd_listener_active:
             return
         _fd_listener_active = True
-    threading.Thread(target=_full_duplex_listener, daemon=True, name="voice-full-duplex").start()
+    from agent.memory_provider import spawn_context_thread
+    spawn_context_thread(_full_duplex_listener, name="voice-full-duplex").start()
 
 
 def _arm_barge_listener_if_enabled() -> None:
