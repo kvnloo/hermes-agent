@@ -14495,6 +14495,10 @@ def test_interrupt_before_agent_ready_prevents_late_turn_start(monkeypatch):
             ),
         )
 
+        # Reproduce the Darwin holder-scan ordering on every CI platform:
+        # an unrelated background thread is constructed before prompt.submit.
+        server.threading.Thread(target=lambda: None, daemon=True, name="wal-holder-scan").start()
+
         submit = server.handle_request(
             {
                 "id": "1",
