@@ -498,6 +498,41 @@ def test_rootless_podman_keeps_host_uid(monkeypatch, exe, euid, extra, want_keep
     assert run_args[run_args.index("--user") + 1] == "1234:5678"
 
 
+@pytest.mark.platforms("linux")
+def test_rootless_podman_upgrade_skips_pre_keep_id_container(monkeypatch):
+    """#72946: a retained pre-upgrade Podman container still has subuid ownership."""
+    monkeypatch.setattr(docker_env, "find_docker", lambda: "/usr/bin/podman")
+    monkeypatch.setattr(docker_env, "_get_active_profile_name", lambda: "default")
+    monkeypatch.setattr(docker_env.os, "getuid", lambda: 1000)
+    monkeypatch.setattr(docker_env.os, "getgid", lambda: 1000)
+    monkeypatch.setattr(docker_env.os, "geteuid", lambda: 1000)
+    docker_env._cgroup_limits_ok = True
+    calls = []
+
+    def _run(cmd, **kwargs):
+        calls.append(cmd)
+        if isinstance(cmd, list) and len(cmd) > 1:
+            if cmd[1] == "ps":
+                # A legacy container matches all old filters; it has no keep-id label.
+                old_matches = "label=hermes-userns=keep-id" not in cmd
+                return subprocess.CompletedProcess(
+                    cmd, 0, stdout="legacy-cid\trunning\n" if old_matches else "", stderr="")
+            if cmd[1] == "inspect":
+                return subprocess.CompletedProcess(cmd, 0, stdout="python:3.11\n", stderr="")
+            if cmd[1] == "run":
+                return subprocess.CompletedProcess(cmd, 0, stdout="fresh-cid\n", stderr="")
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(docker_env.subprocess, "run", _run)
+    env = _make_dummy_env(task_id="podman-keep-id-upgrade", run_as_host_user=True)
+
+    assert env._container_id == "fresh-cid", "legacy subuid-mapped container was reused"
+    run_args = next(cmd for cmd in calls if isinstance(cmd, list) and len(cmd) > 1 and cmd[1] == "run")
+    idx = run_args.index("--userns")
+    assert run_args[idx:idx + 4] == ["--userns", "keep-id", "--user", "1000:1000"]
+    assert "hermes-userns=keep-id" in _labels_in_run_args(run_args)
+
+
 def test_run_as_host_user_drops_setuid_setgid_caps(monkeypatch):
     """When --user is passed, the container already starts unprivileged and
     never needs a privilege drop, so SETUID/SETGID caps are omitted for a

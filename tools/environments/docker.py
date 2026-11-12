@@ -50,6 +50,7 @@ _DOCKER_SEARCH_PATHS = [
 _docker_executable: Optional[str] = None  # resolved once, cached
 _ENV_VAR_NAME_RE = _SHELL_ENV_NAME_RE
 _ENVIRONMENT_LABEL_KEY = "hermes-environment"
+_USERNS_LABEL_KEY = "hermes-userns"
 # Stamped at create time on per-workspace persistent containers (task key ``<base>:ws:<digest>``)
 # with the digest as its value. The orphan reaper reads it to spare a container the idle reaper
 # stopped on purpose; ``hermes-task-id`` cannot serve, it is truncated to 63 chars.
@@ -769,6 +770,10 @@ class DockerEnvironment(BaseEnvironment):
             "hermes-task-id": task_label,
             "hermes-profile": profile_name,
             _EGRESS_LABEL_KEY: egress_label}
+        # The mapping is fixed at container creation; pre-keep-id Podman containers
+        # must not be reused after upgrading Hermes.
+        if user_args[:2] == ["--userns", "keep-id"]:
+            self._labels[_USERNS_LABEL_KEY] = "keep-id"
         if workspace := _WORKSPACE_TASK_RE.search(task_id or ""):
             self._labels[_WORKSPACE_LABEL_KEY] = workspace.group(1)
         # Explicit sharing opts into the first creator's settings. Otherwise,
@@ -1269,6 +1274,8 @@ class DockerEnvironment(BaseEnvironment):
             "--filter", f"label={_EGRESS_LABEL_KEY}={egress_label}"]
         if environment_label := self._labels.get(_ENVIRONMENT_LABEL_KEY):
             filters.extend(["--filter", f"label={_ENVIRONMENT_LABEL_KEY}={environment_label}"])
+        if userns_label := self._labels.get(_USERNS_LABEL_KEY):
+            filters.extend(["--filter", f"label={_USERNS_LABEL_KEY}={userns_label}"])
         result = _docker_query(
             [self._docker_exe, "ps", "-a", *filters, "--format", "{{.ID}}\t{{.State}}"], timeout=10,
             fail="docker ps probe failed: %s — will start a fresh container",
