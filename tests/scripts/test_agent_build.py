@@ -422,4 +422,30 @@ def test_automatic_frontends_use_requested_snapshot_not_current_checkout(tmp_pat
     monkeypatch.setattr(stage.subprocess, "run", run)
     monkeypatch.setattr(stage, "stage_native", lambda args: 0)
     assert stage.main(["--out", str(tmp_path / "out"), "--ref", revision]) == 0
-    assert len(built_sources) == 4
+    assert len(built_sources) == 5
+
+
+def test_source_desktop_bundle_stages_webapp_product(tmp_path, monkeypatch):
+    """The source desktop command uses automatic staging, not desktop.py's prepared route."""
+    from scripts.bundles import stage, payload
+    from scripts.build import icon_environment
+
+    monkeypatch.setattr(stage, "ROOT", tmp_path / "checkout")
+    monkeypatch.setattr(stage.shutil, "which", lambda _name: "/prepared/node")
+    monkeypatch.setattr(payload, "snapshot", lambda _root, _ref, destination: destination.mkdir(parents=True))
+    monkeypatch.setattr(icon_environment, "prepare_icon_environment",
+                        lambda _source, _out, _cache: sys.executable)
+    commands = []
+    monkeypatch.setattr(stage.subprocess, "run", lambda argv, **_kwargs: commands.append(argv))
+    staged = []
+    monkeypatch.setattr(stage, "stage_native", lambda args: staged.append(args.frontends) or 0)
+
+    assert stage.main(["--out", str(tmp_path / "bundle")]) == 0
+    assert len(staged) == 1
+    assert set(staged[0]) == {"tui", "web", "webapp"}
+    assert staged[0]["webapp"].name == "webapp"
+    assert [argv[1] for argv in commands] == [
+        "scripts/build/node-deps.mjs", "scripts/generate-icons.mjs",
+        "scripts/build/tui.mjs", "scripts/build/web.mjs", "scripts/build/webapp.mjs",
+    ]
+    assert "apps/desktop" in commands[0]
