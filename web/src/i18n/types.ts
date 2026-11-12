@@ -203,6 +203,8 @@ export interface Translations {
     noSessions: string;
     noSessionsInFilter: string;
     noMatch: string;
+    /** Optional until translated; search failures must not claim an empty store. */
+    searchUnavailable?: string;
     startConversation: string;
     noMessages: string;
     untitledSession: string;

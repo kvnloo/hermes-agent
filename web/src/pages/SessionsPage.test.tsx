@@ -316,3 +316,26 @@ describe("SessionsPage header slots across navigation", () => {
     expect(header()).not.toContain("Prune old sessions");
   });
 });
+
+describe("SessionsPage search errors", () => {
+  it("shows an unavailable state instead of unrelated sessions when the store is busy", async () => {
+    apiMocks.searchSessions.mockRejectedValue(new Error("503 Session store is busy"));
+    await renderSessionsPage([
+      { id: "sid-unrelated", profile: "default", source: "cli", model: null, title: "Unrelated session", started_at: 1,
+        ended_at: null, last_active: 1, is_active: false, message_count: 2, tool_call_count: 0,
+        input_tokens: 1, output_tokens: 1, preview: "unrelated" },
+    ]);
+
+    const search = document.querySelector<HTMLInputElement>('input[placeholder="Search message content..."]');
+    if (!search) throw new Error("session search input not rendered");
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(search, "nimbus");
+      search.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await waitFor(() => apiMocks.searchSessions.mock.calls.length > 0);
+    await waitFor(() => document.querySelector('[role="alert"]')?.textContent?.includes("Search is unavailable") === true);
+
+    expect(document.body.textContent).not.toContain("Unrelated session");
+    expect(document.body.textContent).not.toContain("No sessions match your search");
+  });
+});

@@ -187,6 +187,7 @@ export const en: Translations = {
     noSessions: "No sessions yet",
     noSessionsInFilter: "No sessions in this filter",
     noMatch: "No sessions match your search",
+    searchUnavailable: "Search is unavailable right now. Try again in a moment.",
     startConversation: "Start a conversation to see it here",
     noMessages: "No messages",
     untitledSession: "Untitled session",

@@ -80,6 +80,7 @@ import {
 import { useSystemActions } from "@/contexts/useSystemActions";
 import { useToast } from "@nous-research/ui/hooks/use-toast";
 import { useI18n } from "@/i18n";
+import { en } from "@/i18n/en";
 import { usePageHeader } from "@/contexts/usePageHeader";
 import { PluginSlot } from "@/plugins";
 import { isDashboardEmbeddedChatEnabled } from "@/lib/dashboard-flags";
@@ -748,6 +749,7 @@ export default function SessionsPage() {
     SessionSearchResult[] | null
   >(null);
   const [searching, setSearching] = useState(false);
+  const [searchFailed, setSearchFailed] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const logScrollRef = useRef<HTMLPreElement | null>(null);
@@ -1175,6 +1177,8 @@ export default function SessionsPage() {
   // Debounced FTS search
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    setSearchFailed(false);
+    let cancelled = false;
 
     if (!search.trim()) {
       debounceRef.current = setTimeout(() => {
@@ -1189,12 +1193,22 @@ export default function SessionsPage() {
       setSearchResults(null);
       api
         .searchSessions(search.trim(), sessionQueryOptions)
-        .then((resp) => setSearchResults(resp.results))
-        .catch(() => setSearchResults(null))
-        .finally(() => setSearching(false));
+        .then((resp) => {
+          if (!cancelled) setSearchResults(resp.results);
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setSearchResults([]);
+            setSearchFailed(true);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setSearching(false);
+        });
     }, 300);
 
     return () => {
+      cancelled = true;
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [search, sessionQueryOptions]);
@@ -2014,13 +2028,19 @@ export default function SessionsPage() {
       {showList ? (
         filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <Clock className="h-8 w-8 mb-3 opacity-40" />
-            <p className="text-sm font-medium">
-              {search
-                ? t.sessions.noMatch
-                : selectedSources !== null || sessionCategory !== "chats"
-                  ? t.sessions.noSessionsInFilter
-                  : t.sessions.noSessions}
+            {searchFailed ? (
+              <AlertTriangle className="h-8 w-8 mb-3 opacity-40" />
+            ) : (
+              <Clock className="h-8 w-8 mb-3 opacity-40" />
+            )}
+            <p className="text-sm font-medium" role={searchFailed ? "alert" : undefined}>
+              {searchFailed
+                ? (t.sessions.searchUnavailable ?? en.sessions.searchUnavailable)
+                : search
+                  ? t.sessions.noMatch
+                  : selectedSources !== null || sessionCategory !== "chats"
+                    ? t.sessions.noSessionsInFilter
+                    : t.sessions.noSessions}
             </p>
             {!search && sessionCategory === "chats" && selectedSources === null && (
               <p className="text-xs mt-1 text-text-tertiary">
