@@ -22,6 +22,18 @@ FAKE_WORKER = str(Path(__file__).parent / "_fake_worker.py")
 PY = sys.executable
 
 
+def isolated_worker_env(home: str, inherited=None):
+    """Build an environment that cannot inherit selectors for a real board."""
+    source = os.environ if inherited is None else inherited
+    env = {
+        key: value
+        for key, value in source.items()
+        if not key.upper().startswith("HERMES_KANBAN_")
+    }
+    env["HERMES_KANBAN_DB"] = str(Path(home) / "kanban.db")
+    return env
+
+
 def make_spawn_fn(home: str):
     """Return a spawn_fn the dispatcher can call. Launches the fake
     worker as a detached subprocess."""
@@ -29,7 +41,7 @@ def make_spawn_fn(home: str):
     def _spawn(task, workspace):
         log_path = os.path.join(home, f"worker_{task.id}.log")
         env = {
-            **os.environ,
+            **isolated_worker_env(home),
             "HERMES_HOME": home,
             "HOME": home,
             "PYTHONPATH": WT,
@@ -53,6 +65,9 @@ def make_spawn_fn(home: str):
 
 def main():
     home = tempfile.mkdtemp(prefix="hermes_e2e_")
+    env = isolated_worker_env(home)
+    os.environ.clear()
+    os.environ.update(env)
     os.environ["HERMES_HOME"] = home
     os.environ["HOME"] = home
     sys.path.insert(0, WT)

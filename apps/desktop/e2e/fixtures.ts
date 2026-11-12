@@ -223,6 +223,17 @@ function writeEmptyConfig(hermesHome: string): void {
 export function buildAppEnv(sandbox: Sandbox, extra: Record<string, string> = {}): Record<string, string> {
   const clean = stripCredentials(process.env)
 
+  // A developer running E2E from a dispatcher shell may have selectors for a
+  // real board in their environment. HERMES_HOME does not override those
+  // selectors, so remove them case-insensitively before constructing the
+  // disposable app environment.
+  for (const key of Object.keys(clean)) {
+    if (key.toUpperCase().startsWith('HERMES_KANBAN_')) delete clean[key]
+  }
+  const safeExtra = Object.fromEntries(
+    Object.entries(extra).filter(([key]) => !key.toUpperCase().startsWith('HERMES_KANBAN_')),
+  )
+
   // XDG_RUNTIME_DIR is needed for Electron on Linux when running in a
   // headless/CI context — without it the zygote may fail to initialize.
   if (!clean.XDG_RUNTIME_DIR && process.env.XDG_RUNTIME_DIR) {
@@ -248,7 +259,8 @@ export function buildAppEnv(sandbox: Sandbox, extra: Record<string, string> = {}
     // Clear dev-server override — we want the built dist/, not a vite server.
     // The dev-server check in main.ts looks for this env var; if it's set,
     // it loads from the vite URL instead of the local file.
-    ...extra,
+    ...safeExtra,
+    HERMES_KANBAN_DB: path.join(sandbox.hermesHome, 'kanban.db'),
   }
 }
 
