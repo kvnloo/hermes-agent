@@ -2149,15 +2149,17 @@ def update_job(job_id: str, updates: dict[str, Any]) -> Optional[dict[str, Any]]
             from cron.quota_hold import clear_state as _clear_quota_hold
             _clear_quota_hold(updated)
             unreachable_retry.clear_state(updated)
-        elif "timezone" in updates and updated.get("state") != "paused":
-            # The instant on file was computed in the OLD zone; leaving it would make the new
-            # zone fire it at the wrong wall clock (or skip it). Only overwrite when the new
-            # zone can compute one (a past one-shot keeps its recorded instant).
-            recomputed = compute_next_run(
-                updated["schedule"], timezone=updated.get("timezone"))
-            if recomputed is not None:
-                updated["next_run_at"] = recomputed
-                unreachable_retry.clear_state(updated)
+        elif "timezone" in updates:
+            # A timezone edit supersedes the old retry even when the job is paused.
+            unreachable_retry.clear_state(updated)
+            if updated.get("state") != "paused":
+                # The instant on file was computed in the OLD zone; leaving it would make the new
+                # zone fire it at the wrong wall clock (or skip it). Only overwrite when the new
+                # zone can compute one (a past one-shot keeps its recorded instant).
+                recomputed = compute_next_run(
+                    updated["schedule"], timezone=updated.get("timezone"))
+                if recomputed is not None:
+                    updated["next_run_at"] = recomputed
         if {"schedule", "next_run_at", "enabled", "state", "timezone"}.intersection(updates):
             # An explicit schedule/lifecycle rewrite supersedes any occurrence the dispatcher
             # left unclaimed — pause/resume/edit must not resurrect a slot from before the edit.

@@ -13,7 +13,7 @@ import pytest
 import cron.scheduler as sched
 from cron import unreachable_retry as ur
 from cron.scheduler_bookkeeping import finish_completed_run
-from cron.jobs import create_job, get_due_jobs, get_job, load_jobs, mark_job_run, save_jobs, update_job
+from cron.jobs import create_job, get_due_jobs, get_job, load_jobs, mark_job_run, pause_job, resume_job, save_jobs, update_job
 
 
 @pytest.fixture
@@ -45,6 +45,29 @@ def test_schedule_edit_restarts_the_unreachable_retry_ladder(tmp_cron_home, monk
     retried = get_job(job_id)
     assert datetime.fromisoformat(retried["next_run_at"]) == now + timedelta(minutes=5)
     assert retried[ur.STATE_KEY]["attempt"] == 1
+
+
+def test_paused_timezone_edit_restarts_unreachable_retry_on_resume(tmp_cron_home, monkeypatch):
+    # A timezone edit while paused must not carry the old occurrence's retry budget
+    # into the recomputed occurrence on resume (regression for #154399).
+    clock = [datetime(2026, 11, 12, 9, tzinfo=UTC)]
+    monkeypatch.setattr("cron.jobs._hermes_now", lambda: clock[0])
+    monkeypatch.setattr(ur, "_hermes_now", lambda: clock[0])
+    job = create_job("daily report", "0 10 * * *", timezone="UTC")
+    job_id = job["id"]
+    assert mark_job_run(job_id, False, "ConnectError: dns", model_unreachable=True)
+    assert get_job(job_id)[ur.STATE_KEY]["attempt"] == 1
+
+    assert pause_job(job_id) is not None
+    assert update_job(job_id, {"timezone": "America/Los_Angeles"}) is not None
+    resumed = resume_job(job_id)
+    assert resumed is not None
+    clock[0] = datetime.fromisoformat(resumed["next_run_at"])
+    assert mark_job_run(job_id, False, "ConnectError: dns", model_unreachable=True)
+
+    retried = get_job(job_id)
+    assert retried[ur.STATE_KEY]["attempt"] == 1
+    assert datetime.fromisoformat(retried["next_run_at"]) == clock[0] + timedelta(minutes=5)
 
 
 def test_unreachable_failure_pulls_next_run_earlier_then_ladder_exhausts(
