@@ -110,3 +110,27 @@ def test_picker_visibility_keeps_the_full_custom_probe_budget(monkeypatch):
 
     custom = next(r for r in rows if r["slug"] == "custom")
     assert "slow-discovered-model" in custom["models"]
+
+
+@pytest.mark.parametrize("provider", ["minimax", "minimax-cn"])
+def test_flash_visible_off_current_profile_without_changing_default(pooled_home, provider):
+    """The explicit-only Desktop picker must not rely on saved-pick injection.
+
+    A temporarily exhausted MiniMax pool still has other usable models, and adding
+    Flash to that row must not change the non-interactive default for new sessions.
+    Regression for NousResearch/hermes-agent#154585.
+    """
+    pooled_home(provider, "exhausted")
+    ctx = load_picker_context()
+    assert ctx.current_provider != provider  # no current-pick injection
+    rows = build_model_options_payload(ctx, explicit_only=True)["providers"]
+    row = next((r for r in rows if r["slug"] == provider), None)
+
+    assert row is not None, "a 429-exhausted pool must stay in the desktop picker"
+    assert "MiniMax-M3.1-Flash" in row["models"], (
+        "a served model must be selectable on a different current profile"
+    )
+    from hermes_cli.models import get_default_model_for_provider
+    assert get_default_model_for_provider(provider) == "MiniMax-M3", (
+        "a new picker choice must not silently change the unselected fallback"
+    )
