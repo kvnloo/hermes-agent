@@ -69,6 +69,8 @@ def _normalize_dashboard_cron_updates(updates: dict[str, Any], profile_home: Pat
     of truth for scheduling; this only translates form payloads into shapes the
     core functions already accept.
     """
+    from tools.cronjob_job_args import _normalize_deliver_param
+
     normalized = dict(updates or {})
     internal = sorted(set(normalized) - _DASHBOARD_UPDATABLE_FIELDS)
     if internal:
@@ -83,11 +85,11 @@ def _normalize_dashboard_cron_updates(updates: dict[str, Any], profile_home: Pat
     if "base_url" in normalized:
         normalized["base_url"] = _cron_optional_text(normalized["base_url"], strip_trailing_slash=True)
     if "deliver" in normalized:
-        normalized["deliver"] = _cron_optional_text(normalized["deliver"]) or "local"
+        normalized["deliver"] = _normalize_deliver_param(normalized["deliver"]) or "local"
     if "failure_deliver" in normalized:
         # Same normalization as deliver, but empty CLEARS the override (failures
         # fall back to deliver) rather than coalescing — the field is optional.
-        normalized["failure_deliver"] = _cron_optional_text(normalized["failure_deliver"])
+        normalized["failure_deliver"] = _normalize_deliver_param(normalized["failure_deliver"])
     for key in ("context_from", "enabled_toolsets"):
         if key in normalized:
             normalized[key] = _cron_string_list(normalized[key])

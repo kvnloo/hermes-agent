@@ -1775,3 +1775,43 @@ async def test_update_cron_job_confines_monitor_script(isolated_profiles, tmp_pa
 
     assert exc.value.status_code == 400
     assert "scripts" in exc.value.detail
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("delivery_field", ("deliver", "failure_deliver"))
+async def test_dashboard_update_validates_list_bot_chat_deliver(isolated_profiles, delivery_field):
+    """List-valued delivery has the tool path's comma-separated semantics.
+
+    Stringifying the list first bypasses the bot-chat profile check and persists
+    a Python repr that the scheduler cannot deliver.
+    """
+    job = _web_server_cron._call_cron_for_profile(
+        "worker_alpha", "create_job",
+        prompt="hourly summary", schedule="every 1h",
+    )
+    before = _web_server_cron._call_cron_for_profile(
+        "worker_alpha", "get_job", job["id"],
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await _rt_cron.update_cron_job(
+            job["id"],
+            _web_models.CronJobUpdate(
+                updates={delivery_field: ["bot-chat:ghost_profile"]},
+            ),
+            profile="worker_alpha",
+        )
+    assert exc.value.status_code == 400
+    assert "bot-chat delivery profile 'ghost_profile' not found" in exc.value.detail
+    stored = _web_server_cron._call_cron_for_profile(
+        "worker_alpha", "get_job", job["id"],
+    )
+    assert stored.get(delivery_field) == before.get(delivery_field)
+
+    updated = await _rt_cron.update_cron_job(
+        job["id"],
+        _web_models.CronJobUpdate(
+            updates={delivery_field: ["bot-chat:worker_alpha"]},
+        ),
+        profile="worker_alpha",
+    )
+    assert updated[delivery_field] == "bot-chat:worker_alpha"
