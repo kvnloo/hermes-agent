@@ -125,10 +125,10 @@ HARDLINE_PATTERNS = [
     # A word followed by `()` is a shell function DEFINITION and a word followed
     # (no space) by `=` is a variable ASSIGNMENT — neither can invoke the named
     # program, so `halt()` error helpers and `shutdown=1` flags must not hit the
-    # floor (#132444). Two separate lookaheads: `(?!\s*\()` allows the shell's
-    # optional space before the parens, while `(?!=)` must stay adjacency-only —
-    # `halt =1` passes "=1" as an argument and is a real invocation.
-    (_CMDPOS + r'(shutdown|reboot|halt|poweroff)\b(?!\s*\()(?!=)', "system shutdown/reboot"),
+    # floor (#132444). Only horizontal whitespace may precede the function's `(`:
+    # a newline ends the preceding command, so `halt\n( echo ok )` still invokes
+    # `halt`. Keep `(?!=)` adjacency-only: `halt =1` passes `=1` as an argument.
+    (_CMDPOS + r'(shutdown|reboot|halt|poweroff)\b(?![ \t]*\()(?!=)', "system shutdown/reboot"),
     (_CMDPOS + r'init\s+[06]\b', "init 0/6 (shutdown/reboot)"),
     (_CMDPOS + r'systemctl\s+(poweroff|reboot|halt|kexec)\b', "systemctl poweroff/reboot"),
     (_CMDPOS + r'telinit\s+[06]\b', "telinit 0/6 (shutdown/reboot)"),
