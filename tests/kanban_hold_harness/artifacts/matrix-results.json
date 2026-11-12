@@ -1,0 +1,332 @@
+{
+  "live": {
+    "url": "http://127.0.0.1:43757/kanban",
+    "pid": 1048176,
+    "home": "/tmp/hermes-hold-drag-23_1t56j",
+    "db": "/tmp/hermes-hold-drag-23_1t56j/kanban/boards/hold-drag-review/kanban.db",
+    "log": "/tmp/hermes-hold-drag-23_1t56j/dashboard.log",
+    "commit": "12a906568ece4e1fff35d2d6533903cda68a69b0",
+    "assets": {
+      "plugins/kanban/dashboard/dist/index.js": "71988b873e2d4da1c074c950ece28847f5693015d60ca751043f2f8dfde4a400",
+      "plugins/kanban/dashboard/dist/style.css": "49c81a8a1610eb1c2f540b0b1daaa23a9fa49a5e1ef1d20e620db127ef15e946"
+    },
+    "canonical_sentinel_before": {
+      "path": "/home/kvn/.hermes/kanban/boards/zer0-company/kanban.db",
+      "sha256": "77e66174197fe9c00ef7692fcd60dd454e9d9a7becf6db0b3549a64cca51647d",
+      "size": 2846720
+    },
+    "start_command": "python tests/kanban_hold_harness/start.py"
+  },
+  "results": [
+    {
+      "width": 320,
+      "dims": {
+        "scrollWidth": 320,
+        "clientWidth": 320,
+        "minCard": 73.9375,
+        "controls": [
+          73.9375,
+          73.9375,
+          73.9375,
+          73.9375
+        ]
+      },
+      "state": {
+        "clicks": [],
+        "drops": [
+          {
+            "taskId": "t_hold_alpha",
+            "status": "todo"
+          }
+        ],
+        "deletes": [],
+        "vibrations": [
+          18,
+          12
+        ],
+        "requests": [
+          {
+            "url": "/api/plugins/kanban/tasks/t_hold_alpha?board=hold-drag-review",
+            "method": "PATCH",
+            "status": 200
+          }
+        ],
+        "pointer": [
+          {
+            "type": "pointerdown",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 154.75,
+            "y": 657.65625,
+            "prevented": false
+          },
+          {
+            "type": "pointermove",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 159.75,
+            "y": 662.65625,
+            "prevented": false
+          },
+          {
+            "type": "pointerup",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 159.75,
+            "y": 662.65625,
+            "prevented": false
+          }
+        ],
+        "aria": []
+      }
+    },
+    {
+      "width": 360,
+      "dims": {
+        "scrollWidth": 360,
+        "clientWidth": 360,
+        "minCard": 73.9375,
+        "controls": [
+          73.9375,
+          73.9375,
+          73.9375,
+          73.9375
+        ]
+      },
+      "state": {
+        "clicks": [],
+        "drops": [
+          {
+            "taskId": "t_hold_alpha",
+            "status": "todo"
+          }
+        ],
+        "deletes": [],
+        "vibrations": [
+          18,
+          12
+        ],
+        "requests": [
+          {
+            "url": "/api/plugins/kanban/tasks/t_hold_alpha?board=hold-drag-review",
+            "method": "PATCH",
+            "status": 200
+          }
+        ],
+        "pointer": [
+          {
+            "type": "pointerdown",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 207.75,
+            "y": 657.65625,
+            "prevented": false
+          },
+          {
+            "type": "pointermove",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 212.75,
+            "y": 662.65625,
+            "prevented": false
+          },
+          {
+            "type": "pointerup",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 212.75,
+            "y": 662.65625,
+            "prevented": false
+          }
+        ],
+        "aria": []
+      }
+    },
+    {
+      "width": 390,
+      "dims": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "minCard": 73.9375,
+        "controls": [
+          73.9375,
+          73.9375,
+          73.9375,
+          73.9375
+        ]
+      },
+      "state": {
+        "clicks": [],
+        "drops": [
+          {
+            "taskId": "t_hold_alpha",
+            "status": "todo"
+          }
+        ],
+        "deletes": [],
+        "vibrations": [
+          18,
+          12
+        ],
+        "requests": [
+          {
+            "url": "/api/plugins/kanban/tasks/t_hold_alpha?board=hold-drag-review",
+            "method": "PATCH",
+            "status": 200
+          }
+        ],
+        "pointer": [
+          {
+            "type": "pointerdown",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 237.75,
+            "y": 590.15625,
+            "prevented": false
+          },
+          {
+            "type": "pointermove",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 242.75,
+            "y": 595.15625,
+            "prevented": false
+          },
+          {
+            "type": "pointerup",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 242.75,
+            "y": 595.15625,
+            "prevented": false
+          }
+        ],
+        "aria": []
+      }
+    },
+    {
+      "width": 430,
+      "dims": {
+        "scrollWidth": 430,
+        "clientWidth": 430,
+        "minCard": 73.9375,
+        "controls": [
+          73.9375,
+          73.9375,
+          73.9375,
+          73.9375
+        ]
+      },
+      "state": {
+        "clicks": [],
+        "drops": [
+          {
+            "taskId": "t_hold_alpha",
+            "status": "todo"
+          }
+        ],
+        "deletes": [],
+        "vibrations": [
+          18,
+          12
+        ],
+        "requests": [
+          {
+            "url": "/api/plugins/kanban/tasks/t_hold_alpha?board=hold-drag-review",
+            "method": "PATCH",
+            "status": 200
+          }
+        ],
+        "pointer": [
+          {
+            "type": "pointerdown",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 277.75,
+            "y": 551.390625,
+            "prevented": false
+          },
+          {
+            "type": "pointermove",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 282.75,
+            "y": 556.390625,
+            "prevented": false
+          },
+          {
+            "type": "pointerup",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 282.75,
+            "y": 556.390625,
+            "prevented": false
+          }
+        ],
+        "aria": []
+      }
+    },
+    {
+      "width": 1280,
+      "dims": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280,
+        "minCard": 73.9375,
+        "controls": [
+          73.9375,
+          73.9375,
+          73.9375,
+          73.9375
+        ]
+      },
+      "state": {
+        "clicks": [],
+        "drops": [
+          {
+            "taskId": "t_hold_alpha",
+            "status": "todo"
+          }
+        ],
+        "deletes": [],
+        "vibrations": [
+          18,
+          12
+        ],
+        "requests": [
+          {
+            "url": "/api/plugins/kanban/tasks/t_hold_alpha?board=hold-drag-review",
+            "method": "PATCH",
+            "status": 200
+          }
+        ],
+        "pointer": [
+          {
+            "type": "pointerdown",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 693,
+            "y": 422.890625,
+            "prevented": false
+          },
+          {
+            "type": "pointermove",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 698,
+            "y": 427.890625,
+            "prevented": false
+          },
+          {
+            "type": "pointerup",
+            "pointerType": "touch",
+            "id": 5,
+            "x": 698,
+            "y": 427.890625,
+            "prevented": false
+          }
+        ],
+        "aria": []
+      }
+    }
+  ]
+}
