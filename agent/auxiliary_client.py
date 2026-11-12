@@ -2590,6 +2590,7 @@ def _record_route_info(
 ) -> None:
     """Expose the concrete route selected for one auxiliary call."""
     if route_info is not None:
+        route_info.pop("output_reservation", None)  # A fallback must not inherit the previous route's cap.
         route_info["provider"] = provider or "auto"
         route_info["model"] = model or "default"
 
@@ -7392,6 +7393,10 @@ def _prepare_aux_request(
         tools=tools, timeout=effective_timeout, extra_body=effective_extra_body,
         reasoning_config=reasoning_config, base_url=base_info or resolved_base_url, task=task,
         no_progress_timeout=no_progress_timeout)
+    if task == "compression" and route_info is not None:
+        wire_cap = kwargs.get("max_tokens", kwargs.get("max_completion_tokens"))
+        if isinstance(wire_cap, int) and not isinstance(wire_cap, bool) and wire_cap > 0:
+            route_info["output_reservation"] = str(wire_cap)
     if extra_headers:
         kwargs["extra_headers"] = dict(extra_headers)
     # Convert image blocks for Anthropic-compatible endpoints (e.g. MiniMax)

@@ -3845,8 +3845,8 @@ Summary generation was unavailable, so this is a best-effort deterministic fallb
             self._last_aux_resolved_model = _aux_model or None
             self._record_aux_compression_call(
                 prompt_messages=call_kwargs["messages"],
-                # max_tokens is intentionally absent; .get() keeps the telemetry hook from breaking the call.
-                max_tokens=call_kwargs.get("max_tokens"),
+                # Provider-specific caps are applied after dispatch; report the actual wire reservation.
+                max_tokens=_safe_int(_aux_route.get("output_reservation")) or call_kwargs.get("max_tokens"),
                 duration_ms=int((time.monotonic() - _aux_call_start) * 1000),
                 aux_provider=_aux_route.get("provider") or self.provider or "",
                 aux_model=_aux_model,
