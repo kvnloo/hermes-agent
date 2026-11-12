@@ -139,6 +139,25 @@ describe('new chats launch on the picked route', () => {
 
 describe('a pick queued for the next turn', () => {
   it.each([
+    { kind: 'deferred', deferred: true },
+    { kind: 'immediate', deferred: false }
+  ])('does not let an older $kind reply retire the newer queued route', async ({ deferred: olderDeferred }) => {
+    const olderReply = deferred<{ deferred: boolean }>()
+    const newerReply = deferred<{ deferred: boolean }>()
+    const older = pick(olderReply.promise, 'older')
+    const newer = pick(newerReply.promise, 'newer')
+
+    newerReply.resolve({ deferred: true })
+    await expect(newer).resolves.toBe(true)
+    olderReply.resolve({ deferred: olderDeferred })
+    await expect(older).resolves.toBe(true)
+
+    verdict({ status: 'refused', target_model: 'newer', model: picked.model, provider: picked.provider })
+    // The newest route was refused; session.create must return to Settings, not send it again.
+    await expect(desktopSessionCreateParams('')).resolves.not.toHaveProperty('model')
+  })
+
+  it.each([
     { when: 'is refused', then: () => refuse(), launches: undefined },
     { when: 'is refused after switching chats', then: () => refuse('busy', 'elsewhere'), launches: undefined },
     { when: 'is overtaken by a newer pick', then: () => (setCurrentModel('newer'), refuse()), launches: 'newer' },

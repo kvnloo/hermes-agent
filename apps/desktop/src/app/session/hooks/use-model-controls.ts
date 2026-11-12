@@ -380,8 +380,11 @@ export function useModelControls({
           ...(confirmExpensiveModel ? { confirm_expensive_model: true } : {})
         })
 
-      const finishSwitch = (result: ModelSwitchResponse | undefined) => {
-        noteQueuedLaunchPick(liveSessionId, touchesPrimary && result?.deferred ? selection : null, composerScope)
+      const finishSwitch = (result: ModelSwitchResponse | undefined, isLatestPick: boolean) => {
+        // An older response must not replace or retire a newer pick's queued launch record.
+        if (isLatestPick) {
+          noteQueuedLaunchPick(liveSessionId, touchesPrimary && result?.deferred ? selection : null, composerScope)
+        }
 
         // A pick made DURING a turn is queued by the gateway and applied at the
         // next turn start (`deferred`). Re-fetching now would answer with the
@@ -447,11 +450,13 @@ export function useModelControls({
             },
             requestConfirmed: () => requestSwitch(true),
             finish: result => {
+              const isLatestPick = retryToken !== null && !isPickSuperseded(liveSessionId, retryToken)
+
               if (retryToken !== null) {
                 settleModelPick(liveSessionId, retryToken, true)
               }
 
-              finishSwitch(result)
+              finishSwitch(result, isLatestPick)
             },
             rollback: () => {
               const repaint = retryToken === null ? restored : settleModelPick(liveSessionId, retryToken, false)
@@ -465,8 +470,9 @@ export function useModelControls({
           return false
         }
 
+        const isLatestPick = !isPickSuperseded(liveSessionId, pickToken)
         settleModelPick(liveSessionId, pickToken, true)
-        finishSwitch(result)
+        finishSwitch(result, isLatestPick)
 
         return true
       } catch (err) {
