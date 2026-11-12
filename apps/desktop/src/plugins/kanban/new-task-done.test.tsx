@@ -22,17 +22,17 @@ vi.mock('./api', async importOriginal => ({
     assignees: [],
     columns: [
       { name: 'ready', tasks: [] },
-      { name: 'done', tasks: [] }
+      { name: 'done', tasks: [{ id: 'already_done', title: 'Completed task', status: 'done' }] }
     ],
     latest_event_id: 0,
     now: 0,
     tenants: []
   })),
   fetchBoards: vi.fn(async () => ({
-    boards: [{ name: 'Main', project_id: null, slug: 'main', total: 0 }],
+    boards: [{ name: 'Main', project_id: null, slug: 'main', total: 1 }],
     current: 'main'
   })),
-  fetchOrchestration: vi.fn(async () => ({ resolved_default_assignee: 'default' })),
+  fetchOrchestration: vi.fn(async () => ({ default_assignee: 'default' })),
   fetchProfiles: vi.fn(async () => ({ profiles: [] })),
   createTask: createTaskMock,
   patchTask: patchTaskMock
