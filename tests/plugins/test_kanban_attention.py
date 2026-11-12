@@ -94,6 +94,15 @@ def test_idempotency_and_concurrent_revision_conflicts(client, kanban_home):
     assert conflict.status_code == 409
     stale = act(client, task["id"], "wake", "other", revision=0)
     assert stale.status_code == 409
+    assert stale.json()["detail"] == {
+        "message": "stale attention revision",
+        "current_revision": 1,
+        "attention": {
+            **stale.json()["detail"]["attention"],
+            "state": "settled",
+            "revision": 1,
+        },
+    }
 
     conn = kb.connect()
     receipt = conn.execute(
