@@ -37,6 +37,7 @@ import { fileURLToPath } from 'url'
 import tailwindcss from '@tailwindcss/vite'
 
 import { withCompilerCache } from './scripts/compiler-cache.mjs'
+import { shikiGrammarChunkName } from './scripts/shiki-chunk-name.mjs'
 
 // The runner loads this as ESM without the default bundler's CJS globals.
 const __dirname: string = path.dirname(fileURLToPath(import.meta.url))
@@ -199,6 +200,17 @@ export default defineConfig(({ command }) => ({
             {
               name: 'vendor-util',
               test: /node_modules[\\/](lodash-es|es-toolkit|dayjs|d3-array|d3-color|d3-force|d3-interpolate|d3-time[^\\/]*|dompurify)[\\/]/
+            },
+            // Shiki grammars (~16.5 MB) and themes (~2.9 MB) are each a lazy
+            // `import()` inside shiki, but grouped into the `shiki` chunk below
+            // they were all parsed + evaluated on the first highlighted block
+            // (~115-200 ms on the first session open). Split them out: common
+            // languages and the default themes get their own small chunk, the
+            // long tail is bucketed by initial so the file count stays in the
+            // tens. Must precede the `shiki` group (first match wins).
+            {
+              name: shikiGrammarChunkName,
+              test: /node_modules[\\/]@shikijs[\\/](langs|themes)[\\/]dist[\\/]/
             },
             // One chunk per heavyweight, lazy-only library family.
             // @streamdown/code lives WITH shiki because it statically imports
