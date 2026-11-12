@@ -78,7 +78,11 @@ function stripCredentials(env: Record<string, string | undefined>): Record<strin
       continue
     }
 
-    if (isCredentialEnvVar(key)) {
+    // A desktop E2E sandbox owns its board as well as its config/session home.
+    // Dispatcher workers export exact canonical-board overrides; inheriting
+    // even one of them makes kanban_db ignore the sandbox HERMES_HOME and lets
+    // synthetic fixtures mutate the live board.
+    if (isCredentialEnvVar(key) || key.startsWith('HERMES_KANBAN_')) {
       continue
     }
 
