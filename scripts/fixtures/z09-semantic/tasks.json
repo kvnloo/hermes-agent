@@ -1,0 +1,29 @@
+[
+  {
+    "id": "callback-body",
+    "question": "Recover the callback's stdin handling, timeout and command mutation.",
+    "tool": "find_symbol",
+    "arguments": {"name_path_pattern": "_pre_tool_call", "relative_path": "rtk_plugin.py", "include_body": true},
+    "targeted_command": ["sed", "-n", "51,92p", "rtk_plugin.py"],
+    "required": ["stdin=subprocess.DEVNULL", "timeout=_rewrite_timeout()", "args[\"command\"] = rewritten"],
+    "source": "rtk_plugin.py:51-92"
+  },
+  {
+    "id": "timeout-body",
+    "question": "Recover the timeout override and handling of nonpositive/nonfinite values.",
+    "tool": "find_symbol",
+    "arguments": {"name_path_pattern": "_rewrite_timeout", "relative_path": "rtk_plugin.py", "include_body": true},
+    "targeted_command": ["sed", "-n", "43,48p", "rtk_plugin.py"],
+    "required": ["RTK_HERMES_TIMEOUT", "except ValueError", "math.isfinite(timeout) and timeout > 0"],
+    "source": "rtk_plugin.py:43-48"
+  },
+  {
+    "id": "timeout-references",
+    "question": "Find the real caller of _rewrite_timeout and its callsite.",
+    "tool": "find_referencing_symbols",
+    "arguments": {"name_path": "_rewrite_timeout", "relative_path": "rtk_plugin.py"},
+    "targeted_command": ["rg", "-n", "-B", "15", "_rewrite_timeout\\(", "rtk_plugin.py"],
+    "required": ["_pre_tool_call", "timeout=_rewrite_timeout()"],
+    "source": "rtk_plugin.py:51,66"
+  }
+]
