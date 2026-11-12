@@ -12,6 +12,7 @@ import ctypes
 import json
 import locale
 import logging
+import ntpath
 import os
 import re
 import shlex
@@ -353,9 +354,27 @@ def _stable_gateway_working_dir(project_root: Path, home: Path | None = None) ->
 
 # ── Script rendering
 
+def _msix_gateway_alias(python_exe: str) -> str | None:
+    """Use the packaged CLI's execution alias outside the MSIX process identity (#154335)."""
+    path = ntpath.normcase(ntpath.normpath(python_exe))
+    roots = (os.environ.get("ProgramW6432"), os.environ.get("ProgramFiles"))
+    if not any(path.startswith(ntpath.normcase(ntpath.join(root, "WindowsApps")) + "\\")
+               for root in roots if root):
+        return None
+    local = os.environ.get("LOCALAPPDATA")
+    if not local:
+        raise RuntimeError("MSIX gateway autostart needs LOCALAPPDATA to locate its execution alias")
+    alias = ntpath.join(local, "Microsoft", "WindowsApps", "hermes.exe")
+    if not Path(alias).is_file():
+        raise RuntimeError("Hermes MSIX execution alias is missing; enable 'hermes' under "
+                           "Windows Settings > App execution aliases before gateway install")
+    return alias
+
+
 def _gateway_run_argv(python_exe: str, profile_arg: str) -> list[str]:
     """``python -m hermes_cli.main [--profile X] gateway run`` — shared by every launcher renderer."""
-    argv = [python_exe, "-m", "hermes_cli.main"]
+    alias = _msix_gateway_alias(python_exe)
+    argv = [alias] if alias else [python_exe, "-m", "hermes_cli.main"]
     if profile_arg:
         argv.extend(profile_arg.split())
     argv.extend(["gateway", "run"])
