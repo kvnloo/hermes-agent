@@ -1,0 +1,39 @@
+{
+  "asset_expectations": {
+    "plugins/kanban/dashboard/dist/index.js": "bbf0399a395f444dcbdd4521b5d73d910dcebce770484a8603514d11741be205",
+    "plugins/kanban/dashboard/dist/style.css": "fdaf951dd5b80ccf3657314fab89a3f6a2c89a08dfd1356ad8d41c65416e68bb"
+  },
+  "command": [
+    "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.venv/bin/python",
+    "-m",
+    "hermes_cli.main",
+    "dashboard",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "13431",
+    "--no-open",
+    "--skip-build",
+    "--isolated"
+  ],
+  "error": "TimeoutError: dashboard readiness timeout after 60.0s in assets",
+  "exit_status": -15,
+  "home": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/manual",
+  "live_json": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/tests/kanban_hold_harness/live.json",
+  "phase": "assets",
+  "port_checks": [
+    {
+      "connectable": false,
+      "host": "127.0.0.1",
+      "port": 13431
+    }
+  ],
+  "process_tree": {
+    "ps": [
+      "1400450 1400430 1400450 Ssl  /workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.venv/bin/python -m hermes_cli.main dashboard --host 127.0.0.1 --port 13431 --no-open --skip-build --isolated"
+    ],
+    "root_pid": 1400450
+  },
+  "stderr": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/manual/dashboard.stderr.log",
+  "stdout": "/workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/.tmp-tests/manual/dashboard.stdout.log"
+}

@@ -1,0 +1,3 @@
+→ Skipping web UI build (--skip-build); using dist at /workspace/zer0/oss/hermes-agent/.worktrees/t_91a83fc4/hermes_cli/web_dist
+HERMES_DASHBOARD_READY port=25529
+  Hermes Web UI → http://127.0.0.1:25529
