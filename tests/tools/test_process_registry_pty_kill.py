@@ -194,3 +194,52 @@ def test_kill_reclaims_the_reader_without_waiting_out_the_escapee(tmp_path, unsc
     assert _wait_for(lambda: not reader.is_alive(), 10), (
         "reader stayed blocked on the PTY the escapee holds open")
     assert session._pty.closed
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux select() FD_SETSIZE regression")
+def test_pty_reader_handles_master_fd_above_fd_setsize(tmp_path, monkeypatch, unscoped):
+    """A real PTY master >= 1024 must still deliver output on a busy host.
+
+    select.select() raises ValueError for this valid descriptor on Linux, causing
+    the reader to abandon normal output ingestion and park in pty.wait().
+    """
+    import fcntl
+    import io
+    import resource
+
+    ptyprocess = pytest.importorskip("ptyprocess")
+    if resource.getrlimit(resource.RLIMIT_NOFILE)[0] <= 1024:
+        pytest.skip("host cannot allocate fd 1024 under its current soft limit")
+
+    original_spawn = ptyprocess.PtyProcess.spawn
+
+    def spawn_with_high_fd(cls, *args, **kwargs):
+        proc = original_spawn(*args, **kwargs)
+        try:
+            high_fd = fcntl.fcntl(proc.fd, fcntl.F_DUPFD, 1024)
+        except OSError:
+            proc.terminate(force=True)
+            proc.close()
+            raise
+        # Keep the same kernel PTY, moving the master to a descriptor above
+        # select()'s ceiling before ProcessRegistry starts its reader thread.
+        proc.fileobj.close()
+        proc.fd = high_fd
+        proc.fileobj = io.BufferedRWPair(
+            io.open(high_fd, "rb", buffering=0),
+            io.open(high_fd, "wb", buffering=0, closefd=False),
+        )
+        return proc
+
+    monkeypatch.setattr(ptyprocess.PtyProcess, "spawn", classmethod(spawn_with_high_fd))
+    registry = ProcessRegistry()
+    session = registry.spawn_local(
+        "sleep 0.2; echo HIGH-FD-PTY-MARKER; exec sleep 30",
+        cwd=str(tmp_path), use_pty=True,
+    )
+    try:
+        assert session._pty is not None and session._pty.fd >= 1024, "PTY spawn fell back"
+        assert _wait_for(lambda: "HIGH-FD-PTY-MARKER" in session.output_buffer, 4), (
+            "reader stopped before reading from the real high-numbered PTY fd")
+    finally:
+        registry.kill_process(session.id)

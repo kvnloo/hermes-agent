@@ -10,7 +10,7 @@ import json
 import logging
 import os
 import platform
-import select
+import selectors
 import shlex
 import signal
 import stat
@@ -1564,20 +1564,21 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
             # but leave the killed session's output as the kill reported it.
             self._ingest_output(session, text, unless_exited=True)
 
+        selector = None
         try:
+            fd = None if _IS_WINDOWS else getattr(pty, "fd", None)
+            if fd is not None and fd >= 0:
+                # SelectSelector is limited by FD_SETSIZE on Linux; background
+                # PTYs on a busy gateway can have an fd >= 1024. DefaultSelector
+                # uses epoll/poll/kqueue where supported without that limit.
+                selector = selectors.DefaultSelector()
+                selector.register(fd, selectors.EVENT_READ)
             while pty.isalive():
                 try:
-                    fd = None if _IS_WINDOWS else getattr(pty, "fd", None)
-                    if fd is not None and fd >= 0:
-                        # A descendant that setsid()s past the kill keeps the slave open, so a
-                        # blocking read below would never return while it holds the file
-                        # object's buffer lock — the reader (and the master fd it closes)
-                        # would stay leaked for the escapee's whole lifetime (#132358). Poll
-                        # with a timeout so the loop re-checks isalive() once the child is dead.
-                        ready, _, _ = select.select(
-                            [fd], [], [], _PTY_READER_POLL_SECONDS)
-                        if not ready:
-                            continue
+                    # A setsid() descendant can hold the slave open after the
+                    # direct child dies. Recheck liveness after each poll timeout.
+                    if selector is not None and not selector.select(_PTY_READER_POLL_SECONDS):
+                        continue
                     chunk = pty.read(4096)
                     if chunk:
                         # ptyprocess returns bytes; pywinpty returns str
@@ -1598,6 +1599,9 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin):
                     break
         except Exception as e:
             logger.debug("PTY stdout reader ended: %s", e)
+        finally:
+            if selector is not None:
+                selector.close()
         if responder is not None:
             # A query prefix split across the final reads is plain output after all.
             tail = decoder.decode(responder.flush())
