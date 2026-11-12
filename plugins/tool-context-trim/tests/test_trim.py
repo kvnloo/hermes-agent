@@ -7,11 +7,12 @@ Run: /workspace/hermes-home/hermes-agent/venv/bin/python -m pytest \
 from __future__ import annotations
 
 import importlib.util
+import os
 from pathlib import Path
 
 import pytest
 
-PLUGIN_DIR = Path(__file__).resolve().parents[1]
+PLUGIN_DIR = Path(os.environ.get("HZ21_TEST_PLUGIN_SOURCE", str(Path(__file__).resolve().parents[1])))
 
 
 def _load():

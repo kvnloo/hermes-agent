@@ -5,8 +5,8 @@ that runs after ``post_tool_call`` and before the result enters the model's cont
 
 1. **cap+summary** - a *text* result over ``max_chars`` from a non-owner path becomes
    ``head + tail + note``. Tool output was ~52% of Opus weighted tokens, so this is the
-   single biggest lever; structured (JSON) results are skipped because the model parses
-   them whole.
+   single biggest lever. Single-key content/text/output/stdout JSON string envelopes
+   are unwrapped and re-wrapped; other structured results stay exact.
 2. **dedupe** - an *identical read-only* call inside one session returns the cached
    result (capped) with a duplicate marker. 14% of tool calls were exact repeats. Any
    non-read tool clears the session cache, so a result can never be replayed after the
@@ -83,7 +83,7 @@ def _session_cwd(task_id: str) -> str:
         return ""
 
 
-def _is_owner_path(args: Any, cwd: str) -> bool:
+def _is_owner_path(args: Any, cwd: str, result_text: str = "") -> bool:
     texts = [cwd]
     if isinstance(args, dict):
         texts += [v for v in args.values() if isinstance(v, str)]
@@ -94,7 +94,8 @@ def _is_owner_path(args: Any, cwd: str) -> bool:
         for root in _owner_paths():
             if text == root or text.startswith(root + "/"):
                 return True
-    return False
+    return (any(part in result_text.lower() for part in _SENSITIVE_PARTS)
+            or any(root in result_text for root in _owner_paths()))
 
 
 def _primary_path(args: Any) -> str:
@@ -176,6 +177,23 @@ def _on_transform_tool_result(
         _cache_clear(session)
         return None
 
+    envelope_key = None
+    if _is_json_text(result):
+        envelope = json.loads(result)
+        if not isinstance(envelope, dict) or envelope.get("_multimodal"):
+            return None
+        if len(envelope) != 1:
+            return None
+        envelope_key, text = next(iter(envelope.items()))
+        if envelope_key not in {"content", "text", "output", "stdout"} or not isinstance(text, str):
+            return None
+        result = text
+        if _is_json_text(result):
+            return None
+
+    # Exempt results must never enter the replay cache, including repeated reads.
+    if _is_owner_path(args, _session_cwd(task_id), result):
+        return None
     key = _cache_key(tool_name, args)
     cached = _cache_get(session, key)
     if cached is not None:
@@ -187,17 +205,18 @@ def _on_transform_tool_result(
             "of the cached result instead of re-reading it. If the file changed since, "
             "make the call differ (e.g. a narrower pattern) or use a different tool.]"
         )
-        return kept + marker
-
-    _cache_put(session, key, result)
-    if _is_owner_path(args, _session_cwd(task_id)):
-        return None
-    max_chars = _int_env("Z21_TRIM_MAX_CHARS", 4000)
-    if len(result) <= max_chars or _is_json_text(result):
-        return None  # short, or a payload the model parses whole
-    return _trim(result, tool_name, args, max_chars,
-                 _int_env("Z21_TRIM_HEAD", 2400),
-                 _int_env("Z21_TRIM_TAIL", 800))
+        transformed = kept + marker
+    else:
+        _cache_put(session, key, result)
+        max_chars = _int_env("Z21_TRIM_MAX_CHARS", 4000)
+        if len(result) <= max_chars:
+            return None
+        transformed = _trim(result, tool_name, args, max_chars,
+                            _int_env("Z21_TRIM_HEAD", 2400),
+                            _int_env("Z21_TRIM_TAIL", 800))
+    if envelope_key is not None:
+        return json.dumps({envelope_key: transformed}, ensure_ascii=False)
+    return transformed
 
 
 def register(ctx) -> None:
