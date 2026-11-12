@@ -16,6 +16,7 @@ import logging
 import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.error import HTTPError
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +125,8 @@ def activate_plugin_now(name: str, *, in_process: bool = True) -> dict[str, Any]
     in another process (``hermes plugins install``) passes ``in_process=False``; the running Desktop /
     dashboard backend is then asked to do the in-process half (:func:`notify_serve_backend`). Never raises.
 
-    Returns ``{"gateway_reloaded": bool, "activation": summary | None, "restart_required": bool}``.
+    Returns ``{"gateway_reloaded": bool, "activation": summary | None, "restart_required": bool,
+    "backend_error": str | None}``. A backend error must stay visible even if the gateway reloads.
     ``activation.live_now`` lists what is usable in open chats now; ``activation.deferred`` what waits
     for the next session. ``restart_required`` is True when no gateway answered (old gateway, not
     running), or when this process or the gateway cannot import the plugin's Python dependencies
@@ -133,8 +135,12 @@ def activate_plugin_now(name: str, *, in_process: bool = True) -> dict[str, Any]
     generation an enable just installed, so only restarting that process loads them."""
     from hermes_constants import get_hermes_home
     activation: Optional[dict[str, Any]] = load_and_go_live(name) if in_process else None
+    backend_error = None
     if not in_process:
-        activation = (notify_serve_backend(name, Path(get_hermes_home())) or {}).get("activation")
+        backend = notify_serve_backend(name, Path(get_hermes_home()))
+        activation = (backend or {}).get("activation")
+        if backend is not None and not activation:
+            backend_error = backend.get("error") or "plugin did not load"
     answer = reload_running_gateway()
     reloaded = bool(answer and answer.get("reloaded"))
     gateway_activation = find_activation((answer or {}).get("activations"), name) if reloaded else None
@@ -147,7 +153,7 @@ def activate_plugin_now(name: str, *, in_process: bool = True) -> dict[str, Any]
         activation = {**(activation or {"name": name, "key": name}), "missing_dependencies": missing,
                       "missing_in": [process for process, deps in gaps.items() if deps]}
     return {"gateway_reloaded": reloaded, "activation": activation,
-            "restart_required": not reloaded or bool(missing)}
+            "restart_required": not reloaded or bool(missing), "backend_error": backend_error}
 
 
 def reload_running_gateway() -> Optional[dict[str, Any]]:
@@ -245,7 +251,8 @@ def _serve_backend_record():
 
 def notify_serve_backend(name: str, home: Path) -> Optional[dict[str, Any]]:
     """Ask the running dashboard / Desktop backend (``hermes serve``, found through its host record) to
-    run :func:`load_and_go_live` for ``name`` in ``home``. None when no backend answers. Never raises."""
+    run :func:`load_and_go_live` for ``name`` in ``home``. None when no backend is discoverable;
+    an ``error`` result when a discovered backend fails to activate it. Never raises."""
     try:
         import json
         import urllib.request
@@ -259,12 +266,13 @@ def notify_serve_backend(name: str, home: Path) -> Optional[dict[str, Any]]:
             f"http://{format_url_host(hr.dial_host(record))}:{record.port}"
             "/api/dashboard/agent-plugins/activate",
             data=json.dumps({"name": name, "home": str(home)}).encode("utf-8"), method="POST",
-            headers={"Content-Type": "application/json", "X-Hermes-Session-Token": token})
+            headers={"Content-Type": "application/json", "X-Hermes-Session-Token": token,
+                     "Authorization": f"Bearer {token}"})
         with urllib.request.urlopen(request, timeout=60) as response:
             return json.loads(response.read().decode("utf-8"))
-    except Exception:
+    except Exception as exc:
         logger.debug("serve backend activation for %r failed", name, exc_info=True)
-        return None
+        return {"error": f"HTTP {exc.code}" if isinstance(exc, HTTPError) else type(exc).__name__}
 
 
 def _gateway_present() -> bool:
@@ -298,7 +306,10 @@ def dependency_restart_hint(missing: list[str], processes: list[str]) -> str:
 def report_activation(console, name: str) -> None:
     """After a CLI install/enable: load *name* where it can go live now (:func:`activate_plugin_now`)
     and print :func:`activation_hint`, or nothing when there is nothing to say."""
-    if hint := activation_hint(activate_plugin_now(name, in_process=False)):
+    result = activate_plugin_now(name, in_process=False)
+    if error := result.get("backend_error"):
+        console.print(f"[yellow]Plugin not live in GUI: {error}. Enable it in the Plugins hub to retry.[/yellow]")
+    if hint := activation_hint(result):
         console.print(f"[dim]{hint}[/dim]")
 
 

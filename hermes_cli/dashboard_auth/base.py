@@ -114,6 +114,7 @@ class DashboardAuthProvider(ABC):
     ``supports_password`` (credential form + ``complete_password_login``; OAuth methods may be
     ``NotImplementedError`` stubs), ``supports_token`` (``verify_token`` for the token-auth seam),
     ``supports_session`` (False for token-only credentials such as drain, never offered a login),
+    ``token_paths`` (optional exact paths where this provider's bearer credential may be used),
     ``interactive_login`` (False for a provider that verifies credentials but has no browser
     sign-in flow — kept out of the login page, ``/api/auth/providers`` and the auto-SSO redirect
     even though its ``verify_session`` is real; a session provider presenting a provisioned
@@ -123,6 +124,8 @@ class DashboardAuthProvider(ABC):
     display_name: str = ""
     supports_password: bool = False
     supports_token: bool = False
+    # None preserves unrestricted service providers; a set limits the credential to exact paths.
+    token_paths: frozenset[str] | None = None
     supports_session: bool = True
     interactive_login: bool = True
 

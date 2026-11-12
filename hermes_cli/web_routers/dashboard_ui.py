@@ -310,7 +310,9 @@ async def post_agent_plugin_activate(request: Request):
     """``hermes plugins install`` / ``enable`` in another process asks this backend to load the plugin
     for ``home`` and hand its MCP servers and skills to that profile's open chats
     (``hermes_cli.plugins_activation.load_and_go_live``). ``home`` must be a profile this host serves."""
-    _require_token(request)
+    principal = getattr(request.state, "token_principal", None)
+    if principal is None or principal.provider != "host-rendezvous" or "plugin-activation" not in principal.scopes:
+        _require_token(request)
     try:
         body = await request.json()
     except Exception:

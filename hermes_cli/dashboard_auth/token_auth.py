@@ -55,6 +55,8 @@ def authenticate_token(request: Request) -> tuple[Optional[TokenPrincipal], Opti
         return None, None
     unreachable: Optional[str] = None
     for provider in list_token_providers():
+        if provider.token_paths is not None and request.url.path not in provider.token_paths:
+            continue
         try:
             principal = provider.verify_token(token=token)
         except ProviderError as e:

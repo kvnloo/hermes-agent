@@ -1177,7 +1177,7 @@ def _publish_host_rendezvous(host: str, port: int) -> None:
         )
         return
     app.state.host_role = role
-    hr.publish_record(
+    record = hr.publish_record(
         role,
         host=host,
         port=port,
@@ -1186,6 +1186,9 @@ def _publish_host_rendezvous(host: str, port: int) -> None:
         # authenticate even when the backend is gated and `GET /` withholds it.
         token=_SESSION_TOKEN,
     )
+    if record is not None:
+        from hermes_cli.dashboard_auth.rendezvous import register_activation_auth
+        register_activation_auth(_SESSION_TOKEN)
     # SIGTERM included: it is the normal stop, and it does not run atexit here.
     hr.cleanup_on_exit(role)
 
