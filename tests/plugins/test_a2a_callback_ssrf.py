@@ -134,3 +134,28 @@ def test_callback_name_cannot_rebind_to_loopback_between_check_and_connect(monke
     _push(monkeypatch, f"http://rebind.example:{target.server_port}/hook")
 
     assert target.hits == []
+
+def test_callback_post_ignores_environment_proxy(monkeypatch, serve):
+    """The callback must use the pinned direct transport, never an ambient proxy mount."""
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    monkeypatch.delenv("no_proxy", raising=False)
+    proxy = serve()
+    monkeypatch.setenv("HTTP_PROXY", f"http://127.0.0.1:{proxy.server_port}")
+    _resolve_as(monkeypatch, {"callback.example": "8.8.8.8"})
+
+    # The direct route is deliberately offline. A proxy-route bypass would hit our local server.
+    real_connect = socket.socket.connect
+
+    def no_external_connect(sock, address):
+        if isinstance(address, tuple) and address[0] not in ("127.0.0.1", "::1"):
+            raise OSError("test prohibits outbound connections")
+        return real_connect(sock, address)
+
+    monkeypatch.setattr(socket.socket, "connect", no_external_connect)
+    sent, failed = protocol.metrics.push_sent, protocol.metrics.push_failed
+
+    _push(monkeypatch, "http://callback.example/hook")
+
+    assert proxy.hits == []
+    assert protocol.metrics.push_sent == sent
+    assert protocol.metrics.push_failed == failed + 1
