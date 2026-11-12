@@ -136,3 +136,29 @@ def test_the_id_line_is_flushed_and_printed_once():
         sys.stderr = real_stderr
         cli_single_query._quiet_session_line_due = False
     assert stderr.buffer.getvalue() == b"\nsession_id: SESS-ONCE\n", "exactly one id line, bytes visible on the spot"
+
+
+def test_kanban_sigterm_does_not_emit_quiet_id_before_hard_exit(monkeypatch, capsys):
+    """An armed quiet turn must not emit an id on the Kanban hard-exit path."""
+    import cli
+    from tools.environments import base as process_env
+
+    handlers = {}
+    monkeypatch.setenv("HERMES_KANBAN_TASK", "task-121890")
+    monkeypatch.setattr(signal, "signal", lambda sig, fn: handlers.__setitem__(sig, fn))
+    if hasattr(signal, "alarm"):
+        monkeypatch.setattr(signal, "alarm", lambda seconds: 0)
+    monkeypatch.setattr(cli, "_arm_exit_watchdog_on_shutdown_signal", lambda: None)
+    monkeypatch.setattr(cli, "_flush_one_shot_session_store", lambda _cli: None)
+    monkeypatch.setattr(cli, "_flush_logging_and_stdio", lambda: None)
+    monkeypatch.setattr(process_env, "kill_live_foreground_processes", lambda **kwargs: None)
+    monkeypatch.setattr(cli_single_query.os, "_exit", lambda code: sys.exit(code))
+    monkeypatch.setattr(cli_single_query, "_quiet_session_line_due", True)
+
+    worker = type("Cli", (), {"agent": None, "session_id": "SESS-KANBAN"})()
+    cli_single_query._install_single_query_signal_handlers(worker)
+    with pytest.raises(SystemExit) as stopped:
+        handlers[signal.SIGTERM](signal.SIGTERM, None)
+
+    assert stopped.value.code == 0
+    assert "session_id:" not in capsys.readouterr().err

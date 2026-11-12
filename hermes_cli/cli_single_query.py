@@ -416,7 +416,9 @@ def _install_single_query_signal_handlers(cli):
         _arm_exit_watchdog_on_shutdown_signal()  # covers wedges in the unwind below
         # The spawner's kill sequence (SIGTERM then SIGKILL after its own grace) can
         # land inside the interrupt-grace sleep below; publish the id line first.
-        _emit_quiet_session_line(cli)
+        # Kanban signals hard-exit without publishing a quiet session id (#28181).
+        if not os.environ.get("HERMES_KANBAN_TASK"):
+            _emit_quiet_session_line(cli)
         _interrupt_agent_for_signal(getattr(cli, "agent", None), signum)
         # Kanban: a non-daemon worker blocked in _wait_for_process survives KeyboardInterrupt
         # and the dispatcher sees 'running' forever, so os._exit(0) (SIGALRM deadman guards
