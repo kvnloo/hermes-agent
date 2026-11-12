@@ -2,6 +2,7 @@
 environment as ``session.create``'s ``client_env``, and only to a gateway that lists the field."""
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -167,3 +168,17 @@ def test_append_system_prompt_flags_reach_this_launchs_client_env(monkeypatch, t
     with pytest.raises(SystemExit):
         _apply_append_system_prompt(SimpleNamespace(append_system_prompt=None,
                                                     append_system_prompt_file=str(tmp_path / 'missing.md')))
+
+
+def test_resuming_does_not_read_unneeded_append_prompt_file(monkeypatch, tmp_path, capsys):
+    """A resumed session keeps its frozen prompt even after the launch's prompt file is removed."""
+    from hermes_cli.main_launch_env import APPEND_PROMPT_ENV, _apply_append_system_prompt
+
+    monkeypatch.delenv(APPEND_PROMPT_ENV, raising=False)
+    missing = str(tmp_path / 'deleted-instructions.md')
+    for resume, continue_last in (('existing-id', None), (None, 'existing-title')):
+        _apply_append_system_prompt(SimpleNamespace(
+            append_system_prompt='new sessions only', append_system_prompt_file=missing,
+            resume=resume, continue_last=continue_last))
+        assert APPEND_PROMPT_ENV not in os.environ
+    assert capsys.readouterr().err.count('resumed session keeps') == 2

@@ -30,6 +30,14 @@ def _apply_append_system_prompt(args) -> None:
     first): this launch's addition after the session's system-prompt overlay. It rides the new
     session's ``client_env``, so it reaches only the sessions this process creates, never the shared
     gateway's other sessions."""
+    resuming = getattr(args, "resume", None) or getattr(args, "continue_last", None)
+    if resuming and not getattr(args, "create_if_missing", False):
+        # The existing session has its own frozen prompt; even its launch file may be gone.
+        if getattr(args, "append_system_prompt", None) or getattr(args, "append_system_prompt_file", None):
+            print("Note: --append-system-prompt applies only if this launch creates a new session; "
+                  "a resumed session keeps the prompt it was created with.", file=sys.stderr)
+        return
+
     parts = [getattr(args, "append_system_prompt", None) or ""]
     path = getattr(args, "append_system_prompt_file", None)
     if path:
