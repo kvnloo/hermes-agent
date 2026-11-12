@@ -147,7 +147,8 @@ def make_approval_callback(request_permission_fn: Callable, loop: asyncio.Abstra
             # without user response" instead of a user denial.
             return "timeout"
         if response is None:
-            return "deny"
+            # An unavailable ACP client cannot be interpreted as a user refusal.
+            return "cancelled"
         return _map_outcome_to_hermes(response.outcome, allowed_option_ids={option.option_id for option in options})
 
     return _callback

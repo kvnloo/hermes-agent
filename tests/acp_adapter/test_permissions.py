@@ -175,7 +175,7 @@ import warnings
 
 class TestSchedulerFailure:
     def test_scheduler_failure_closes_permission_coroutine(self):
-        """If run_coroutine_threadsafe raises, the coro is closed and we return 'deny'."""
+        """A scheduler failure closes the coroutine without inventing user denial."""
         loop = MagicMock(spec=asyncio.AbstractEventLoop)
         created = {"coro": None}
 
@@ -196,7 +196,7 @@ class TestSchedulerFailure:
                 result = cb("rm -rf /", "dangerous")
             gc.collect()
 
-        assert result == "deny"
+        assert result == "cancelled"
         assert created["coro"] is not None
         assert created["coro"].cr_frame is None
         runtime_warnings = [
@@ -206,6 +206,56 @@ class TestSchedulerFailure:
             and "_response_coro" in str(w.message)
         ]
         assert runtime_warnings == []
+
+
+    def test_failed_acp_rpc_does_not_claim_user_refused_mcp_write(self, monkeypatch):
+        """#135522: a failed ACP permission RPC is not a human rejection of an MCP write."""
+        import json
+
+        from gateway.session_context import clear_session_vars, set_session_vars
+        from tools import mcp_tool, mcp_tool_handlers
+        from tools.approval_context import reset_current_session_key, set_current_session_key
+        from tools.mcp_tool_scope import _server_key
+        from tools.terminal_tool import set_approval_callback
+
+        monkeypatch.setenv("HERMES_SINGLE_QUERY_SESSION", "0")
+        monkeypatch.setenv("HERMES_GATEWAY_SESSION", "0")
+        monkeypatch.setenv("HERMES_YOLO_MODE", "0")
+        rpc_sessions = []
+
+        async def unsupported_rpc(**kwargs):
+            rpc_sessions.append(kwargs["session_id"])
+            raise RuntimeError("ACP client does not implement request_permission")
+
+        async def exercise():
+            callback = make_approval_callback(
+                unsupported_rpc, asyncio.get_running_loop(), "acp-write"
+            )
+
+            def turn_thread():
+                tokens = set_session_vars(session_key="acp-write", cron_session="")
+                key_token = set_current_session_key("acp-write")
+                set_approval_callback(callback)
+                try:
+                    with patch.dict(mcp_tool._server_trust_levels, {
+                        _server_key("acp-gated"): "untrusted",
+                    }):
+                        return mcp_tool_handlers._trust_gate_check(
+                            "acp-gated", "write_file", args={"path": "/tmp/note"}
+                        )
+                finally:
+                    set_approval_callback(None)
+                    reset_current_session_key(key_token)
+                    clear_session_vars(tokens)
+
+            return await asyncio.to_thread(turn_thread)
+
+        result = asyncio.run(exercise())
+        assert rpc_sessions == ["acp-write"]
+        message = json.loads(result)["error"]
+        assert "no approval answer" in message
+        assert "The user did not approve" not in message
+
 
 
 class TestPermissionRequestToolCallReachesATerminalStatus:
