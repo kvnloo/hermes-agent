@@ -231,3 +231,37 @@ async def test_gateway_clarify_photo_reply_carries_the_image_path_but_a_choice_p
             assert entry.response == "prod"
         else:
             assert "[The user sent an image." in entry.response and str(png) in entry.response
+
+
+@pytest.mark.asyncio
+async def test_photo_only_reply_to_choice_clarify_releases_waiter_for_normal_turn(tmp_path):
+    """A photo without a caption cannot pick a choice; release the waiting tool instead.
+
+    Otherwise a photo-only reply arrives at the busy route while the agent is still
+    blocked on the multiple-choice clarify, so it cannot be seen until timeout.
+    """
+    _clear_clarify_state()
+    from gateway.run import GatewayRunner
+    from tools import clarify_gateway as cm
+
+    photo_path = tmp_path / "img_abc_answer.png"
+    photo_path.write_bytes(b"\x89PNG fake")
+    event = _event("")
+    event.message_type = MessageType.PHOTO
+    event.media_urls = [str(photo_path)]
+    event.media_types = ["image/png"]
+
+    runner = GatewayRunner.__new__(GatewayRunner)
+    runner._refused_clarify = lambda _event, _id: None
+    runner._current_session_run_generation = lambda _key: 7
+    runner._delivery_adapter_for = lambda _source: None
+
+    key = "clarify-photo-only-choice"
+    entry = cm.register("photo-only-choice", key, "Which deployment?", ["staging", "prod"])
+    assert not entry.awaiting_text
+
+    assert await runner._hm_clarify_reply(event, event.source, key) is None
+    assert entry.event.is_set()
+    assert entry.response == cm.CANCELLED
+    assert event._clarify_superseded == 7
+    assert event.media_urls == [str(photo_path)]

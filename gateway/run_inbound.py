@@ -405,7 +405,7 @@ class GatewayInboundMixin(GatewayInboundHooksMixin, GatewayInboundTranscriptionM
         # A free-text answer keeps its attachments (the file the agent just asked for): each gets the
         # path note a normal turn would carry. A choice pick stays the bare label; an attachment-only
         # reply to a choice prompt is prose, so the release below hands it to a normal turn.
-        if event.media_urls and (not _pending_clarify.choices or _pending_clarify.awaiting_text):
+        if event.media_urls and (not _pending_clarify.choices or _pending_clarify.awaiting_text or not _raw_clarify_reply):
             _raw_clarify_reply = with_attachment_notes(type(self), event, _raw_clarify_reply)
         if not _raw_clarify_reply:
             return None
