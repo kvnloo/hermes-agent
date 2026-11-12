@@ -822,6 +822,17 @@ class TestCmdlineCapture:
 
         assert argv == ["hermes", "serve", "--port", "8300"]
 
+    @pytest.mark.platforms("posix")
+    def test_ps_fallback_refuses_octally_escaped_argv(self):
+        """Do not replay a ps command where embedded newlines lost their argv boundaries."""
+        import psutil
+
+        command = "/opt/python3 -I -c import os\\012print('ready')\n"
+        with patch.object(psutil, "Process", side_effect=psutil.AccessDenied(pid=889)), \
+             patch.object(main_dashboard.os.path, "exists", return_value=False), \
+             patch.object(main_dashboard, "_run_probe", return_value=MagicMock(returncode=0, stdout=command)):
+            assert main_dashboard._dashboard_cmdline_for_pid(889) is None
+
     @pytest.mark.skipif(sys.platform == "win32", reason="POSIX psutil cmdline path")
     def test_psutil_exact_argv_wins_over_ps(self):
         """ps shell-quotes its output, so shlex.split mangles arguments containing spaces

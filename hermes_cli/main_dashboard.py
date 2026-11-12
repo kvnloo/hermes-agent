@@ -381,6 +381,10 @@ def _dashboard_cmdline_for_pid(pid: int) -> list[str] | None:
         command = (result.stdout or "").strip()
         if not command:
             return None
+        # macOS ps escapes control bytes as \012; shlex consumes the backslash.
+        # Without an exact argv source, refusing replay is safer than a broken restart.
+        if re.search(r"\\[0-7]{3}", command):
+            return None
         try:
             argv = shlex.split(command)
         except ValueError:
