@@ -431,3 +431,32 @@ class TestSchemaReferencesStayLocal:
         assert expected in errors[0]
         assert "properties" not in errors[0]  # the schema is not pasted back into the retry turn
         assert requests == []
+
+    def test_remote_reference_refused_before_any_child_is_built(self):
+        """The public delegate_task path rejects a model-written remote ref before spawning."""
+        schema = {
+            "type": "object",
+            "properties": {"city": {"$ref": "https://example.invalid/city.json"}},
+        }
+        with (
+            patch("tools.delegate_tool._load_config", return_value={}),
+            patch(
+                "tools.delegate_tool._resolve_delegation_credentials",
+                return_value={
+                    "provider": None, "model": None, "base_url": None,
+                    "api_key": None, "api_mode": None,
+                },
+            ),
+            patch(
+                "tools.delegate_tool._build_child_preserving_parent_tools",
+                side_effect=AssertionError("external schema must not spawn a child"),
+            ) as build_child,
+        ):
+            result = delegate_task(
+                goal="produce the address",
+                output_schema=schema,
+                parent_agent=_make_mock_parent(),
+            )
+
+        assert "output_schema" in (json.loads(result).get("error") or "")
+        build_child.assert_not_called()
