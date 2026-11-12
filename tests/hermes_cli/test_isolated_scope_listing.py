@@ -106,6 +106,28 @@ def test_isolated_named_profile_lists_only_itself(client, homes, monkeypatch):
     assert [item["text"] for item in _profile_mention_items("")] == ["@worker"]
 
 
+
+@pytest.mark.parametrize("isolated, expected", [
+    (True, ["worker"]),
+    (False, ["default", "worker"]),
+])
+def test_profile_list_fallback_keeps_isolated_roster(client, homes, monkeypatch, isolated, expected):
+    """A failed profile metadata read must not advertise siblings on a named isolated serve."""
+    from hermes_cli import profiles as profiles_mod
+
+    assert _launch_in(monkeypatch, homes["worker"], isolated=isolated) == (
+        "worker" if isolated else None
+    )
+
+    def fail_metadata_read(*args, **kwargs):
+        raise OSError("profile metadata unavailable")
+
+    monkeypatch.setattr(profiles_mod, "list_profiles", fail_metadata_read)
+    response = client.get("/api/profiles")
+    assert response.status_code == 200
+    assert [profile["name"] for profile in response.json()["profiles"]] == expected
+
+
 @pytest.mark.parametrize("launch", [
     {"isolated": False},                        # the machine dashboard
     {"isolated": True, "desktop_owned": True},  # Desktop's SSH serve: one backend, every profile
