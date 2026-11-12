@@ -1,6 +1,7 @@
 """Canary policy on real Git refs; GitHub publication stays an inert boundary."""
 from datetime import datetime, timezone, UTC
 import importlib.util
+import json
 from pathlib import Path
 from types import SimpleNamespace
 import subprocess
@@ -139,9 +140,24 @@ def github_bodies(canary_repo, monkeypatch):
     """Draft bodies by tag. Like GitHub, the fixture refuses one over the limit, its own generated notes included."""
     bodies = {}
     fixture_run = subprocess.run
+    calls = canary_repo[2]
     busy_repository_generated_notes = "* a merged pull request\n" * GITHUB_BODY_LIMIT
 
     def run(argv, *args, **kwargs):
+        if argv[:3] == ["gh", "release", "view"]:
+            viewed = fixture_run(argv, *args, **kwargs)
+            if viewed.returncode == 0:
+                response = json.loads(viewed.stdout)
+                response["body"] = bodies.get(argv[3], "")
+                return subprocess.CompletedProcess(argv, 0, json.dumps(response), "")
+            return viewed
+        if argv[:3] == ["gh", "release", "edit"]:
+            calls.append(argv)
+            body = kwargs["input"]
+            if len(body) > GITHUB_BODY_LIMIT:
+                return subprocess.CompletedProcess(argv, 1, "", "body is too long")
+            bodies[argv[3]] = body
+            return subprocess.CompletedProcess(argv, 0, "", "")
         if argv[:3] == ["gh", "release", "create"]:
             if "--generate-notes" in argv:
                 body = busy_repository_generated_notes
@@ -231,6 +247,36 @@ def test_canary_tag_pushed_without_a_draft_is_recovered_on_a_busy_repository(can
     assert f"(https://github.com/fixture/release/commits/{tag})" in body
     assert len(builds_table.splice(body, _every_download(tag))) <= GITHUB_BODY_LIMIT
     assert [call[1:3] for call in calls].count(["workflow", "run"]) == 1
+
+
+def test_resume_repairs_persisted_canary_draft_without_download_marker(
+        canary_repo, github_bodies, monkeypatch):
+    git, _remote, calls = canary_repo
+    git("commit", "--allow-empty", "-qm", "stable")
+    git("tag", "v1.2.3")
+    git("commit", "--allow-empty", "-qm", "feat: next")
+    tag = "v1.2.3+canary.20260818T103000Z"
+    args = SimpleNamespace(date="20260818T103000Z", publish=True, no_changelog=False, remote="origin")
+    release.cmd_canary(args)
+
+    # A failed pre-fix GitHub create can leave a real draft row with only stub notes.
+    stub = "Existing draft notes, without a builds-table marker"
+    github_bodies[tag] = stub
+    from scripts.releases import versioning
+    monkeypatch.setattr(versioning, "published_channel_identity", lambda *_args: None)
+    calls.clear()
+
+    release.cmd_canary(args)
+
+    repaired = github_bodies[tag]
+    assert stub in repaired
+    assert builds_table.MARKER in repaired
+    assert f"https://github.com/fixture/release/commits/{tag}" in repaired
+    assert len(builds_table.splice(repaired, _every_download(tag))) <= GITHUB_BODY_LIMIT
+    actions = [call[1:3] for call in calls]
+    assert actions.count(["release", "edit"]) == 1
+    assert actions.count(["workflow", "run"]) == 1
+    assert actions.index(["release", "edit"]) < actions.index(["workflow", "run"])
 
 
 def test_tag_shape_and_prune_use_canonical_receipts(canary_repo, monkeypatch, capsys):

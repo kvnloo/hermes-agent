@@ -449,7 +449,7 @@ def _resume_canary(tag: str, remote: str, repository: str, *, notes_file: Path |
         raise ValueError("Canary receipt differs from its exact remote tag object")
 
     view = subprocess.run(
-        ["gh", "release", "view", tag, "--repo", repository, "--json", "tagName,isDraft,isPrerelease,url"],
+        ["gh", "release", "view", tag, "--repo", repository, "--json", "tagName,isDraft,isPrerelease,url,body"],
         cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8",
         check=False,
     )
@@ -479,6 +479,26 @@ def _resume_canary(tag: str, remote: str, repository: str, *, notes_file: Path |
                 or release.get("isPrerelease") is not True):
             raise ValueError("Canary release state differs from its receipt")
         draft_url = release.get("url") or ""
+        body = release.get("body")
+        if release["isDraft"] and isinstance(body, str) and "<!-- HERMES_BUILDS_TABLE -->" not in body:
+            # Older failed creates could leave an existing draft without the downloads marker.
+            # Preserve its notes if there is room for the build table; otherwise link the history.
+            from scripts.releases.entrypoint import GITHUB_BODY_LIMIT
+
+            suffix = (f"\n\n<!-- HERMES_BUILDS_TABLE -->\n\n"
+                      f"**Full Changelog**: [{tag}](https://github.com/{repository}/commits/{tag})\n")
+            existing_notes = body.rstrip()
+            repaired = (existing_notes + suffix
+                        if len(existing_notes) + len(suffix) <= GITHUB_BODY_LIMIT - BUILDS_TABLE_ROOM
+                        else generate_changelog([], tag, tag[1:], repo_url=f"https://github.com/{repository}",
+                                                no_changelog=True))
+            edit = subprocess.run(
+                ["gh", "release", "edit", tag, "--repo", repository, "--notes-file", "-"],
+                input=repaired, cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8",
+                check=False,
+            )
+            if edit.returncode != 0:
+                raise ValueError(edit.stderr.strip() or "Canary draft could not be repaired")
 
     from scripts.releases.versioning import published_channel_identity
     published = published_channel_identity(repository, "canary")
