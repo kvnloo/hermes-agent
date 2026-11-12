@@ -39,6 +39,7 @@ from agent.context_compressor_prompt_rules import EPISTEMIC_STANCE_RULE, UNVERIF
 from agent.context_compressor_retry import retryable_user_text, typed_prompt_content
 from agent.context_compressor_typed_input import TYPED_TURNS_POINTER, typed_summary_messages
 from agent.conversation_compression_scaffolding import is_user_role_scaffolding
+from agent.conversation_compression_skill_reload import _salvage_reduce_todo_snapshot
 from agent.context_compressor_tail import (
     demote_stale_tail_tools, lean_tail_budget, is_demoted_stub, skill_view_names_by_call_id, tail_cut_pricer,
     elide_keeping_skill_safety_rule, with_skill_safety_rule, without_skill_safety_rule, tail_cut_progress_floor,
@@ -548,22 +549,6 @@ def _looks_like_compaction_summary(msg: dict[str, Any], content: str) -> bool:
         return False
     head = content[:280]
     return bool(msg.get(COMPRESSED_SUMMARY_METADATA_KEY)) or "CONTEXT COMPACTION" in head or "Conversation Summary" in head
-
-
-def _salvage_reduce_todo_snapshot(out: list[dict[str, Any]]) -> None:
-    """Last-resort shrink: drop the synthetic todo snapshot, keeping only a pruned-skill reload notice if present."""
-    from agent.conversation_compression import _PRUNED_SKILL_RELOAD_NOTICE_HEADER
-    for i in range(len(out) - 1, -1, -1):
-        msg = out[i]
-        if not isinstance(msg, dict) or not (msg.get("_todo_snapshot_synthetic") and msg.get("role") == "user"):
-            continue
-        content = msg.get("content")
-        notice_idx = content.find(_PRUNED_SKILL_RELOAD_NOTICE_HEADER) if isinstance(content, str) else -1
-        if notice_idx >= 0:
-            msg["content"] = content[notice_idx:]
-        else:
-            del out[i]
-        return
 
 
 def salvage_grown_transcript(
@@ -4116,6 +4101,7 @@ Write only the summary body. Do not include any preamble or prefix."""
             _LEGACY_LENGTH_CONTINUATION_NETWORK_STUB, _LENGTH_CONTINUATION_NETWORK_STUB,
             _LENGTH_CONTINUATION_OUTPUT_LIMIT,
         )
+        from agent.conversation_compression_skill_reload import _PRUNED_SKILL_RELOAD_NOTICE_HEADER
         return text in {
             COMPRESSION_CONTINUATION_USER_CONTENT, _LEGACY_COMPRESSION_CONTINUATION_USER_CONTENT,
             MAX_ITERATIONS_SUMMARY_REQUEST, _CODEX_INCOMPLETE_NUDGE, _CODEX_ACK_CONTINUATION_NUDGE,
@@ -4124,6 +4110,7 @@ Write only the summary body. Do not include any preamble or prefix."""
             _LENGTH_CONTINUATION_OUTPUT_LIMIT,
         } or text.startswith((
             _BACKGROUND_PROCESS_NOTIFICATION_PREFIX, TODO_INJECTION_HEADER + "\n", _LENGTH_CONTINUATION_DROPPED_TOOLS_PREFIX,
+            _PRUNED_SKILL_RELOAD_NOTICE_HEADER + "\n",
         ))
 
     @staticmethod
