@@ -349,3 +349,24 @@ def test_provision_only_validates_explicit_selections(launch, validation, kind, 
         probe.assert_not_called()
         assert config.read_user_config_raw(result.path / "config.yaml")["model"] == raw["model"]
         assert result.mirrored["model_inherited"] is (kind == "clone-unpinned")
+
+
+def test_inherit_updates_shared_model_yaml_anchor(launch):
+    """The inherited route must reach YAML aliases of the destination model block."""
+    config.atomic_config_write(launch / "config.yaml", {
+        "model": {"provider": "custom", "default": "source-model",
+                  "base_url": "http://127.0.0.1:18080/v1"}})
+    target = launch / "profiles" / "target"
+    target.mkdir(parents=True)
+    (target / "config.yaml").write_text(
+        "model: &route\n"
+        "  temperature: 0.31\n"
+        "auxiliary:\n"
+        "  vision: *route\n",
+        encoding="utf-8",
+    )
+    assert inherit_launch_model(target) is True
+    saved = config.read_user_config_raw(target / "config.yaml")
+    assert saved["model"]["provider"] == "custom"
+    assert saved["model"]["default"] == "source-model"
+    assert saved["auxiliary"]["vision"] == saved["model"]

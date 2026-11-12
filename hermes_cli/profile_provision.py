@@ -472,8 +472,14 @@ def inherit_launch_model(path: Path) -> bool:
                 success=True, target_provider=inherited["provider"], new_model=inherited["default"],
                 base_url=inherited.get("base_url") or "", api_mode=inherited.get("api_mode") or ""),
                 mask_cleared=not supports_file_tooling())
-            cfg["model"] = {**selected, **inherited}
-            remote_model_selection_guard(dst_model, cfg["model"])
+            updated_model = {**selected, **inherited}
+            remote_model_selection_guard(dst_model, updated_model)
+            # Preserve YAML aliases that share the model mapping with another section.
+            if isinstance(cfg.get("model"), dict):
+                cfg["model"].clear()
+                cfg["model"].update(updated_model)
+            else:
+                cfg["model"] = updated_model
             with refusing_locked_omissions("model"):
                 save_config(cfg)
     return True
