@@ -218,3 +218,20 @@ def test_cached_driver_identity_follows_a_gateway_hosted_screen(gateway_screen, 
     from tools.computer_use import cua_backend
     monkeypatch.setenv("DISPLAY", ":0")
     assert cua_backend.desktop_identity() == ":23"
+
+
+def test_a_sandbox_lease_does_not_fence_a_preexisting_host_browser(sandbox_screen, monkeypatch):
+    """Changing screen placement does not make an existing host Chromium the sandbox's browser."""
+    from tools import browser_session
+    from tools.bot_desktop import lease
+
+    monkeypatch.setattr(lease, "human_holds", lambda: True)
+
+    def blocked():
+        raise lease.HumanHasControl("the sandbox screen is held by a human")
+
+    monkeypatch.setattr(lease, "assert_agent_may_act", blocked)
+    host_session = {"features": {"local": True}}  # cached before bot_desktop.placement=terminal
+    sandbox_session = {"features": {"local": True, "sandbox": True}}
+    assert browser_session.run_fenced(host_session, lambda: {"success": True}) == {"success": True}
+    assert browser_session.run_fenced(sandbox_session, lambda: {"success": True})["code"] == "human_has_control"

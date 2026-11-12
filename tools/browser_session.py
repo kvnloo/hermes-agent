@@ -85,10 +85,17 @@ def shares_bot_desktop_browser(session_info: dict[str, Any]) -> bool:
     """Every LOCAL session is a browser Hermes launched with this profile's Bot Desktop DISPLAY, so it is the
     screen a human who took over is typing into. Cloud / user-supplied CDP sessions are another browser. A
     human lease with the screen already gone still fences (computer_use does the same)."""
-    if not (session_info.get("features") or {}).get("local"):
+    features = session_info.get("features") or {}
+    if not features.get("local"):
         return False
-    from tools.bot_desktop import lease as _bd_lease, runtime as _bd_runtime
-    return bool(_bd_runtime.published_env().get("DISPLAY")) or _bd_lease.human_holds()
+    from tools.bot_desktop import lease as _bd_lease, runtime as _bd_runtime, sandbox_host
+    # A sandbox screen can coexist with a cached host browser from before placement changed.
+    # The human holds the sandbox's browser, never that unrelated host browser.
+    if features.get("sandbox"):
+        return bool(_bd_runtime.published_env().get("DISPLAY")) or _bd_lease.human_holds()
+    return bool(_bd_runtime.host_published_env().get("DISPLAY")) or (
+        not sandbox_host._read_marker() and _bd_lease.human_holds()
+    )
 
 
 def human_holds_shared_browser(session_info: dict[str, Any]) -> bool:
