@@ -35,7 +35,13 @@ declare global {
     }
     __PERF_DRIVE__?: {
       /** Inject an assistant message and grow it by `chunk` every `intervalMs`. Returns a stop handle. */
-      stream: (opts?: { chunk?: string; intervalMs?: number; totalTokens?: number }) => SyntheticDriverHandle
+      stream: (opts?: {
+        chunk?: string
+        intervalMs?: number
+        part?: 'reasoning' | 'text'
+        seedChars?: number
+        totalTokens?: number
+      }) => SyntheticDriverHandle
       /**
        * Replace the transcript with `turns` synthetic user/assistant pairs of
        * realistic mixed markdown, then resolve with the ms elapsed from the
@@ -310,8 +316,20 @@ if (typeof window !== 'undefined' && !window.__PERF_DRIVE__) {
       // numbers actually reflect what a real LLM stream of the same token
       // rate would feel like. Set to 0 to bypass and apply every token
       // immediately (worst-case).
-      flushMinMs = 0
-    }: { chunk?: string; intervalMs?: number; totalTokens?: number; flushMinMs?: number } = {}) => {
+      flushMinMs = 0,
+      // Which part grows. 'reasoning' exercises the live Thinking preview.
+      part = 'text',
+      // Start the part this long (repeated `chunk`), e.g. a long reasoning
+      // block that is still streaming.
+      seedChars = 0
+    }: {
+      chunk?: string
+      intervalMs?: number
+      part?: 'reasoning' | 'text'
+      seedChars?: number
+      totalTokens?: number
+      flushMinMs?: number
+    } = {}) => {
       activeHandle?.stop()
       const current = $messages.get()
 
@@ -326,7 +344,7 @@ if (typeof window !== 'undefined' && !window.__PERF_DRIVE__) {
         {
           id: msgId,
           role: 'assistant',
-          parts: [{ type: 'text', text: '' }],
+          parts: [{ type: part, text: chunk.repeat(Math.ceil(seedChars / Math.max(1, chunk.length))) }],
           timestamp: Date.now(),
           pending: true
         }
@@ -352,11 +370,11 @@ if (typeof window !== 'undefined' && !window.__PERF_DRIVE__) {
 
             const head = m.parts.slice(0, -1)
             const last = m.parts.at(-1)
-            const lastText = last && last.type === 'text' ? last.text : ''
+            const lastText = last && last.type === part ? last.text : ''
 
             return {
               ...m,
-              parts: [...head, { type: 'text', text: lastText + delta }]
+              parts: [...head, { type: part, text: lastText + delta }]
             }
           })
         )

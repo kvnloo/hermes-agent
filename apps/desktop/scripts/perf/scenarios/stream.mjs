@@ -197,7 +197,7 @@ export default {
     } else {
       // Synthetic path: drive $messages directly. No LLM, no credits.
       await cdp.eval(
-        `window.__PERF_DRIVE__.stream({ chunk: ${JSON.stringify(chunk)}, intervalMs: ${intervalMs}, totalTokens: ${tokens}, flushMinMs: ${flushMinMs} })`
+        `window.__PERF_DRIVE__.stream({ chunk: ${JSON.stringify(chunk)}, intervalMs: ${intervalMs}, totalTokens: ${tokens}, flushMinMs: ${flushMinMs}, part: ${JSON.stringify(opts.part ?? 'text')}, seedChars: ${Number(opts.seedChars ?? 0)} })`
       )
       await sleep(200)
       await cdp.eval('window.__MO__.arm()')
