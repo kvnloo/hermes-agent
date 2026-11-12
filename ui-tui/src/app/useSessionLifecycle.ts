@@ -791,6 +791,14 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
             })
             .finally(() => gw.settleAttach?.(hold))
         })
+        .catch((error: unknown) => {
+          if (flight !== attachmentFlight.current) {
+            return
+          }
+
+          sys(`error: ${error instanceof Error ? error.message : String(error)}`)
+          patchUiState({ status: 'ready' })
+        })
         .finally(() => finishAttachment(flight))
     },
     [
