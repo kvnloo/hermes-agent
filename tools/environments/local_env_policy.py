@@ -349,7 +349,10 @@ def _config_declared_key_envs(node: Any) -> set:
     names = {str(v).strip() for k, v in node.items()
              if isinstance(v, str) and _CONFIG_KEY_ENV_FIELD_RE.search(str(k))}
     names.discard("")
-    return names.union(*(_config_declared_key_envs(value) for value in node.values()))
+    # MCP server config is passed to an external process, not consumed as Hermes credentials.
+    # A server's own env key (e.g. api_key_env) must not deny a third-party source name.
+    return names.union(*(_config_declared_key_envs(value) for key, value in node.items()
+                         if key != "mcp_servers"))
 
 
 # A field holding a credential value: ``key``, ``*_key`` (``api_key``, Feishu's ``encrypt_key``,
