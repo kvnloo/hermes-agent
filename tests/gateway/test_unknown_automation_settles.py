@@ -45,17 +45,13 @@ def _runner(tmp_path, monkeypatch, executed):
     return store, runner
 
 
-async def _lost_head_then_restart(tmp_path, monkeypatch, executed, admit_head, *, local=False):
+async def _lost_head_then_restart(tmp_path, monkeypatch, executed, admit_head):
     """Owner 1 admits a head (via ``admit_head``) and a person's follower, claims the head, dies.
     Owner 2 starts on the same store. Returns (store, owner2, head_id, follower_id)."""
     store, runner = _runner(tmp_path, monkeypatch, executed)
     db = store._db
-    if local:
-        source = SessionSource(platform=Platform.LOCAL, chat_id='gw10', user_id='human', chat_type='dm')
-        db.create_session('s', source='cli', chat_id='gw10', user_id='human')
-    else:
-        source = SessionSource(platform=Platform.TELEGRAM, chat_id='gw10')
-        db.create_session('s', source='telegram')
+    source = SessionSource(platform=Platform.TELEGRAM, chat_id='gw10')
+    db.create_session('s', source='telegram')
     first = await initialize_session_authority(runner, profile_id='p', instance_id='owner-1')
     first.sessions['s'] = LiveSession(source, 's')
     ref = SessionRef('p', 's')
@@ -275,12 +271,12 @@ async def test_desktop_slash_discard_resolves_only_named_unknown_and_restarts_fi
     """Desktop slash.exec acknowledges only the lost turn selected by the user, not queued input."""
     from gateway import session_local
 
-    # The recovery fixture creates a local route without a registered Desktop adapter.
-    # Stub that transport gate only; use the real authority, WS dispatcher and SQLite ledger.
+    # The recovery fixture's route has no registered Desktop adapter. Stub that transport gate
+    # only; use the real authority, WS dispatcher and SQLite ledger.
     monkeypatch.setattr(session_local, 'authorize_local_source', lambda _runner, _source: True)
     executed = []
     store, authority, head_id, follower_id = await _lost_head_then_restart(
-        tmp_path, monkeypatch, executed, _person_head, local=True)
+        tmp_path, monkeypatch, executed, _person_head)
     connection = AuthorityConnection(authority, Peer(), {'user_id': 'human'})
     ref = SessionRef('p', 's')
     try:
