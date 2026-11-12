@@ -32,7 +32,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Optional
 
-from agent.context_compressor import SUMMARY_PREFIX, ContextCompressor
+from agent.context_compressor import SUMMARY_PREFIX, _SUMMARY_END_MARKER, ContextCompressor
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +43,10 @@ THRESHOLD_PERCENT = 0.85
 # A handoff carries state in the capsule, so keep only the last owner message and the last reply.
 PROTECT_LAST_N = 2
 CAPSULE_TOKENS = 4_000
-_CHARS_PER_TOKEN = 4
-# Capsule sections in priority order with their share of the budget (chars). Anything else
+# One UTF-8 byte per token is a conservative upper bound for byte-level tokenizers.
+# This deliberately spends less than 4k tokens on ordinary prose without a provider tokenizer.
+CAPSULE_UTF8_BYTES = CAPSULE_TOKENS
+# Capsule sections in priority order with their share of the budget (UTF-8 bytes). Anything else
 # (completed actions, decisions, history) lives only in the spill file.
 CAPSULE_SECTIONS = (
     ("Goal", 900), ("Open Asks", 3_200), ("User Messages (verbatim, newest first)", 3_500),
@@ -123,12 +125,14 @@ def _sections(text: str) -> dict[str, str]:
 
 
 def _clip(body: str, limit: int, spill: str) -> str:
-    if len(body) <= limit:
+    encoded = body.encode("utf-8")
+    if len(encoded) <= limit:
         return body
     notice = f"\n- [cut here; the rest is in {spill}]"
-    if len(notice) >= limit:
-        return notice[:limit]
-    cut = body[:limit - len(notice)]
+    notice_bytes = notice.encode("utf-8")
+    if len(notice_bytes) >= limit:
+        return notice_bytes[:limit].decode("utf-8", errors="ignore")
+    cut = encoded[:limit - len(notice_bytes)].decode("utf-8", errors="ignore")
     if "\n" in cut:
         cut = cut.rsplit("\n", 1)[0]
     return cut + notice
@@ -159,8 +163,9 @@ def build_capsule(full_body: str, session_id: str) -> str:
     parts.append(f"## Pointers\n- Full handoff detail (completed actions, decisions, files, history): {path} "
                  "(read_file it for anything not here)." + (f"\n{_clip(recovery, 700, path)}" if recovery else ""))
     body = "\n\n".join(parts)
-    limit = CAPSULE_TOKENS * _CHARS_PER_TOKEN - len(HANDOFF_PREFIX) - 2
-    return _clip(body, limit, path) if len(body) > limit else body
+    framing = f"{HANDOFF_PREFIX}\n\n\n{_SUMMARY_END_MARKER}"
+    limit = CAPSULE_UTF8_BYTES - len(framing.encode("utf-8"))
+    return _clip(body, limit, path)
 
 
 def _set_engine(value: str) -> None:

@@ -36,17 +36,36 @@ def test_capsule_preserves_open_work_and_private_spill(capsule, tmp_path):
     assert str(spill) in body
 
 
-def test_capsule_obeys_even_its_own_character_budget(capsule):
+def test_capsule_includes_framing_in_byte_budget(capsule):
     full = "\n\n".join(
         f"## {name}\n" + ("X" * 80 + "\n") * 400
         for name, _limit in capsule.CAPSULE_SECTIONS
     ) + "\n\n## Context Recovery\n" + ("Y" * 80 + "\n") * 100
     body = capsule.build_capsule(full, "synthetic-long-summary")
     framed = capsule.HANDOFF_PREFIX + "\n" + body
-    measured = len(framed)
-    limit = capsule.CAPSULE_TOKENS * capsule._CHARS_PER_TOKEN
-    print(json.dumps({"framed_characters": measured, "character_budget": limit}))
+    measured = len(framed.encode("utf-8"))
+    limit = capsule.CAPSULE_TOKENS
+    print(json.dumps({"framed_utf8_bytes": measured, "conservative_token_bound": limit}))
     assert measured <= limit, "The clipping notice itself must fit inside the budget"
+
+
+@pytest.mark.parametrize("text", [
+    "owner ask with exact identifiers /repo/path 12345\n",
+    "漢字の引き継ぎ🙂\n",
+    "क्षेत्र العربية Ελληνικά e\u0301\n",
+])
+@pytest.mark.parametrize("structured", [True, False])
+def test_capsule_has_a_conservative_utf8_token_bound(capsule, text, structured):
+    """Byte-level tokenizers cannot emit more text tokens than UTF-8 bytes."""
+    full = ("## Open Asks\n" if structured else "") + text * 500
+    body = capsule.build_capsule(full, "synthetic-multilingual")
+    framed = capsule.HandoffCompactor._with_summary_prefix(body)
+    measured = len(framed.encode("utf-8"))
+    assert measured <= capsule.CAPSULE_TOKENS, (
+        f"{measured} UTF-8 bytes exceeds the conservative {capsule.CAPSULE_TOKENS}-token bound"
+    )
+    assert str(capsule._hermes_home() / "handoffs/synthetic-multilingual.md") in body
+    assert "\ufffd" not in framed, "Clipping must not split a UTF-8 codepoint"
 
 
 def test_host_adapts_legacy_engine_signature(capsule):
@@ -93,9 +112,11 @@ def test_spill_failure_does_not_return_an_oversized_capsule(capsule, monkeypatch
 
 
 @pytest.mark.parametrize("limit", [0, 1, 30, 200])
-def test_clip_includes_notice_in_budget(capsule, limit):
-    body = capsule._clip("x" * 1000, limit, "/long/" + "p" * 300)
-    assert len(body) <= limit
+@pytest.mark.parametrize("text", ["x", "漢🙂"])
+def test_clip_includes_notice_in_budget(capsule, limit, text):
+    body = capsule._clip(text * 1000, limit, "/long/" + text * 300)
+    assert len(body.encode("utf-8")) <= limit
+    assert "\ufffd" not in body
 
 
 def test_spill_failure_preserves_original_conversation(capsule, monkeypatch):
@@ -145,7 +166,7 @@ def test_forced_handoff_keeps_chat_metadata_with_rotation_enabled(capsule, tmp_p
 
     set_config_value("compression.in_place", "false")
     monkeypatch.setattr(ContextCompressor, "_generate_summary", lambda *a, **k:
-                        "## Goal\nRemember SYNTHETIC-783.\n## Open Asks\nProve continuity.\n")
+                        "## Goal\nRemember SYNTHETIC-783.\n## Open Asks\nProve continuity.\n" + "漢🙂\n" * 2000)
     with SessionDB(db_path=tmp_path / "synthetic-state.db") as db:
         parent = "synthetic-parent"
         db.create_session(parent, source="telegram", user_id="synthetic-user",
@@ -171,6 +192,14 @@ def test_forced_handoff_keeps_chat_metadata_with_rotation_enabled(capsule, tmp_p
         assert row["chat_id"] == "synthetic-chat"
         assert row["session_key"] == "telegram:synthetic-user:synthetic-chat"
         assert any("SYNTHETIC-783" in str(message.get("content")) for message in returned)
+        from agent.context_compressor import _handoff_only_content
+        summaries = [_handoff_only_content(message["content"]) for message in returned
+                     if engine._is_context_summary_message(message)]
+        assert summaries
+        for content in summaries:
+            text = content if isinstance(content, str) else "".join(part.get("text", "") for part in content)
+            assert text.startswith(capsule.HANDOFF_PREFIX)
+            assert len(text.encode("utf-8")) <= capsule.CAPSULE_TOKENS
         persisted = db.get_messages_as_conversation(child)
         assert any("SYNTHETIC-783" in str(message.get("content")) for message in persisted)
         print(json.dumps({"parent": parent, "child": child, "chat_id": row["chat_id"],
