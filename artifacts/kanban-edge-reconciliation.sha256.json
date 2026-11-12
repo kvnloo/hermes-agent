@@ -1,0 +1,8 @@
+{
+  "algorithm": "sha256",
+  "files": {
+    "kanban-edge-reconciliation.json": "a000361e43f400e838efa431554de930ea6189a3ff3c07a070b36d29798c91fb",
+    "kanban-edge-reconciliation.md": "ae3b5eddf0f465929166e47457401d705f184c76431abc9b1855450bf3d0748a"
+  },
+  "schema_version": 1
+}
