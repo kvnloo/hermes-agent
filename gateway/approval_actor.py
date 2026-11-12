@@ -63,6 +63,15 @@ def may_answer(authority: dict, actor_id: Any, admin_ids: Any = (), extra: Any =
     else:
         policy = SlashAccessPolicy(False, frozenset(str(a) for a in admin_ids), frozenset())
     approvers = _coerce_id_list(authority.get("approvers"))
+    if authority.get("approvers_only") is True and commands:
+        # A requester (including a peer bot) is not implicitly an approver.
+        # A wildcard is not an explicit approver list. Denials remain available
+        # to admitted senders; callers enforce admission before this check.
+        if commands == ("deny",):
+            return bool(actor)
+        return bool(actor) and "*" not in approvers and (
+            actor in approvers or actor in policy.admin_user_ids
+        )
     if "*" in approvers:
         return not (commands and policy.enabled) or any(policy.can_run(actor or None, c) for c in commands)
     requester = str(authority.get("requester_id") or "")
@@ -83,6 +92,8 @@ def _refusal_name(authority: dict, commands: tuple[str, ...]) -> str:
     policy refused it), else the requester."""
     from gateway.slash_access import _coerce_id_list
 
+    if authority.get("approvers_only") is True and commands:
+        return _NO_REQUESTER  # existing translated "admin or listed approver" message
     if commands and "*" in _coerce_id_list(authority.get("approvers")):
         return _ADMIN_ONLY + commands[0]
     return str(authority.get("requester_name") or authority.get("requester_id") or _NO_REQUESTER)
