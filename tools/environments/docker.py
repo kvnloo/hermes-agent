@@ -760,9 +760,10 @@ class DockerEnvironment(BaseEnvironment):
             _EGRESS_LABEL_KEY: egress_label}
         if workspace := _WORKSPACE_TASK_RE.search(task_id or ""):
             self._labels[_WORKSPACE_LABEL_KEY] = workspace.group(1)
-        # Explicit sharing opts into the first creator's settings. Otherwise,
-        # changed image/mount/home configuration must start a fresh container.
-        if not shared_container_key:
+        # Explicit sharing normally inherits the first creator's mounts, but a
+        # no-auto-mount worker must never inherit its credential-bearing binds.
+        # Keep the immutable mount fingerprint even for an explicit shared key.
+        if not shared_container_key or not auto_mounts:
             self._labels[_ENVIRONMENT_LABEL_KEY] = _reuse_environment_fingerprint(
                 image=image, mount_args=[*writable_args, *volume_args],
                 hermes_home=str(get_hermes_home()))

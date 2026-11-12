@@ -86,6 +86,43 @@ def test_auto_mounts_disabled_omits_hermes_ro_mounts(monkeypatch):
     assert marker not in run_args
 
 
+def test_auto_mount_opt_out_does_not_reuse_credential_mounted_shared_container(monkeypatch):
+    """A shared Docker identity cannot override an operator's mount opt-out."""
+    monkeypatch.setattr(docker_env, "find_docker", lambda: "/usr/bin/docker")
+    docker_env._cgroup_limits_ok = True
+    marker = "/host/credential:/root/.hermes/credential:ro"
+    monkeypatch.setattr(docker_env, "_readonly_skill_mount_args", lambda: ["-v", marker])
+    calls = []
+
+    def _run(cmd, **kwargs):
+        calls.append(cmd)
+        output = ""
+        if cmd[1] == "ps":
+            # Docker would find the old shared container, which has no
+            # environment-fingerprint label, unless a fingerprint is required.
+            fingerprint_filter = f"label={docker_env._ENVIRONMENT_LABEL_KEY}="
+            if not any(arg.startswith(fingerprint_filter) for arg in cmd):
+                output = "old-shared-container\trunning\n"
+        elif cmd[1] == "inspect":
+            output = "python:3.11\n"
+        elif cmd[1] == "run":
+            output = "new-isolated-container\n"
+        return subprocess.CompletedProcess(cmd, 0, stdout=output, stderr="")
+
+    monkeypatch.setattr(docker_env.subprocess, "run", _run)
+
+    env = _make_dummy_env(
+        auto_mounts=False,
+        shared_container_key="trusted-workers",
+        persistent_filesystem=True,
+        persist_across_processes=True,
+    )
+
+    assert env._container_id == "new-isolated-container"
+    docker_run = next(cmd for cmd in calls if cmd[1] == "run")
+    assert marker not in docker_run
+
+
 def test_ensure_docker_available_raises_when_not_found(monkeypatch):
     """When docker cannot be found, raise a clear error before container setup."""
 
