@@ -134,3 +134,23 @@ def render_user_content_with_timestamp(content: str, ts_value: Any = None, tz=No
     clean_content, embedded_epoch = strip_leading_message_timestamps(content, tz=tz)
     prefix = format_message_timestamp(ts_value if embedded_epoch is None else embedded_epoch, tz=tz)
     return f"{prefix} {clean_content}" if prefix and clean_content else (prefix or clean_content)
+
+
+def preserve_merged_replay_sidecar(entry: dict[str, Any], row: dict[str, Any], timestamp: Any, tz=None) -> None:
+    """Restamp only a merged user sidecar whose stored prefix proves its origin.
+
+    Transcript repair merges clean rows before gateway replay renders their
+    timestamps. The sidecar already stamps the absorbed turn; replacing only
+    the leading stamp preserves its memory context and cached prefix.
+    """
+    from agent.message_metadata import MERGED_TURN_PREFIX
+
+    head = row.get(MERGED_TURN_PREFIX)
+    sidecar = entry.get("api_content")
+    if isinstance(head, str) and head and isinstance(sidecar, str) and sidecar:
+        stamped = render_user_content_with_timestamp(sidecar, timestamp, tz=tz)
+        stamped_head = render_user_content_with_timestamp(head, timestamp, tz=tz)
+        if stamped == stamped_head or stamped.startswith(stamped_head + "\n\n"):
+            entry["api_content"] = stamped
+            return
+    entry.pop("api_content", None)

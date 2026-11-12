@@ -1260,7 +1260,7 @@ def _build_gateway_agent_history(
     Observed context stays out of ``conversation_history`` so consecutive-user repair can't merge it in."""
     from hermes_time import get_timezone as _get_msg_tz
     from gateway.message_timestamps import (
-        render_user_content_with_timestamp as _render_msg_ts,
+        render_user_content_with_timestamp as _render_msg_ts, preserve_merged_replay_sidecar as _keep,
         strip_leading_message_timestamps as _strip_msg_ts,
     )
 
@@ -1311,7 +1311,7 @@ def _build_gateway_agent_history(
                 if rendered != content and sidecar and not (
                     sidecar == rendered or sidecar.startswith(rendered + "\n\n")
                 ):
-                    entry.pop("api_content", None)
+                    _keep(entry, msg, replay_timestamp, tz=_msg_tz)
                 entry["content"] = rendered
             if msg.get("mirror"):
                 mirror_src = msg.get("mirror_source", "another session")
