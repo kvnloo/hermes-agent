@@ -249,7 +249,7 @@ def post_callback(url: str, body: bytes, headers: dict, *, localhost_mode: bool,
     if localhost_mode and is_loopback_host(httpx.URL(url).host):
         client = httpx.Client(timeout=timeout, follow_redirects=False, trust_env=False)
     else:
-        client = create_ssrf_safe_client(timeout=timeout, follow_redirects=False)
+        client = create_ssrf_safe_client(timeout=timeout, follow_redirects=False, trust_env=False)
     with client:
         return client.post(url, content=body, headers=headers).status_code
 

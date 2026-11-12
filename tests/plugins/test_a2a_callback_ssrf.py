@@ -134,3 +134,33 @@ def test_callback_name_cannot_rebind_to_loopback_between_check_and_connect(monke
     _push(monkeypatch, f"http://rebind.example:{target.server_port}/hook")
 
     assert target.hits == []
+
+
+def test_callback_post_ignores_environment_proxy(monkeypatch, serve):
+    """Callback delivery must bypass ambient proxies so the connect-time guard cannot be skipped."""
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    monkeypatch.delenv("no_proxy", raising=False)
+    proxy = serve()
+    proxy_url = f"http://127.0.0.1:{proxy.server_port}"
+    # urllib ignores uppercase HTTP_PROXY in CGI mode; set lowercase too for a real base-RED.
+    monkeypatch.setenv("HTTP_PROXY", proxy_url)
+    monkeypatch.setenv("http_proxy", proxy_url)
+    _resolve_as(monkeypatch, {"callback.example": "8.8.8.8"})
+    assert security.is_safe_callback_url("http://callback.example/hook", localhost_mode=True)
+
+    # Make the direct path offline; only an unguarded proxy mount can reach the local server.
+    real_connect = socket.socket.connect
+
+    def no_external_connect(sock, address):
+        if isinstance(address, tuple) and address[0] not in ("127.0.0.1", "::1"):
+            raise OSError("test prohibits outbound connections")
+        return real_connect(sock, address)
+
+    monkeypatch.setattr(socket.socket, "connect", no_external_connect)
+    sent, failed = protocol.metrics.push_sent, protocol.metrics.push_failed
+
+    _push(monkeypatch, "http://callback.example/hook")
+
+    assert proxy.hits == []
+    assert protocol.metrics.push_sent == sent
+    assert protocol.metrics.push_failed == failed + 1
