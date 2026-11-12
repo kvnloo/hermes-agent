@@ -2444,6 +2444,21 @@ DEFAULT_CONFIG = {
         # so stale rows don't accumulate and get scanned on every notifier
         # tick forever. Set 0 to disable the sweep.
         "done_sub_retention_days": 30,
+        # Destination-scoped Captain attention control. Disabled by default,
+        # so existing destinations retain immediate notifications. Enable it
+        # only with an explicit destination selector; setting enabled=false is
+        # the immediate rollback/kill switch.
+        "notification_policy": {
+            "enabled": False,
+            # Presentation only; never mutates, pauses, or freezes task state.
+            # brainstorm queues all non-emergency updates, pm emits bounded
+            # portfolio digests, copilot limits digests to focus_task_ids.
+            "mode": "pm",
+            "destinations": [],
+            "focus_task_ids": [],  # copilot mode; first three are honored
+            "interval_seconds": 900,
+            "max_chars": 900,
+        },
     },
 
     # execute_code settings — controls the tool used for programmatic tool calls.
