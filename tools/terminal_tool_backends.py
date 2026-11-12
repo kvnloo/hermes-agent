@@ -369,7 +369,7 @@ def _ssh_pre(config: dict[str, Any]) -> bool:
 def _daytona_post(config: dict[str, Any]) -> bool:
     from daytona import Daytona
     from agent.secret_scope import get_secret
-    return get_secret("DAYTONA_API_KEY") is not None
+    return bool(get_secret("DAYTONA_API_KEY"))
 
 
 _BACKEND_SPECS: dict[str, dict[str, Any]] = {

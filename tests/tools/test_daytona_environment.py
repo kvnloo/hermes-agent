@@ -157,6 +157,14 @@ class TestCredentials:
         (config,), _ = daytona_sdk.Daytona.call_args
         assert config.api_key == "dtn-env-key"
 
+    def test_empty_served_key_does_not_advertise_daytona_backend(self, daytona_sdk, served_profile):
+        """A scoped empty key cannot enable terminal tools when the SDK constructor refuses it."""
+        from agent.runtime_scope import bind_profile_scope
+        from tools.terminal_tool_backends import _REQUIREMENT_CHECKERS
+
+        with bind_profile_scope(served_profile("DAYTONA_API_KEY=\n")):
+            assert _REQUIREMENT_CHECKERS["daytona"]({}) is False
+
 
 # ---------------------------------------------------------------------------
 # Constructor / cwd resolution
