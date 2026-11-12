@@ -302,6 +302,34 @@ test('macOS close-to-tray leaves fullscreen before hiding, so no empty Space is 
   }
 })
 
+test('macOS second Close during fullscreen exit waits for leave-full-screen', async () => {
+  setPlatform('darwin')
+
+  try {
+    const { controller, main } = setup()
+    await controller.start()
+    await controller.setEnabled(true)
+
+    main.fullScreen = true
+    const setFullScreen = vi.spyOn(main, 'setFullScreen')
+    const hide = vi.spyOn(main, 'hide')
+
+    expect(main.close().preventDefault).toHaveBeenCalled()
+    // The mock updates isFullScreen() before the native exit event arrives.
+    // A second Close must not hide the window into the still-live Space.
+    expect(main.close().preventDefault).toHaveBeenCalled()
+    expect(setFullScreen).toHaveBeenCalledOnce()
+    expect(hide).not.toHaveBeenCalled()
+    expect(main.visible).toBe(true)
+
+    main.emit('leave-full-screen')
+    expect(hide).toHaveBeenCalledOnce()
+    expect(main.visible).toBe(false)
+  } finally {
+    restorePlatform()
+  }
+})
+
 test('a restore before the deferred hide fires cancels the stale hide', async () => {
   const { controller, main } = setup()
   await controller.start()

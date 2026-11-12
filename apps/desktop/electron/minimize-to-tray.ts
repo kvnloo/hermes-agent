@@ -27,6 +27,7 @@ export function createMinimizeToTray(options: Options) {
   let pending = Promise.resolve()
   const windows = new Set<BrowserWindow>()
   const hidden = new Set<BrowserWindow>()
+  const leavingFullScreen = new Set<BrowserWindow>()
 
   const status = (): MinimizeToTrayStatus => ({ enabled, available: !!tray && !tray.isDestroyed() })
 
@@ -238,8 +239,14 @@ export function createMinimizeToTray(options: Options) {
       // is left on an empty black Space. Leave fullscreen first and hide once
       // the (asynchronous, animated) exit has finished. A restore meanwhile
       // releases the window, which cancels the pending hide.
+      // isFullScreen() can change before the native exit event arrives.
+      if (process.platform === 'darwin' && leavingFullScreen.has(win)) {
+        return true
+      }
       if (process.platform === 'darwin' && win.isFullScreen()) {
+        leavingFullScreen.add(win)
         win.once('leave-full-screen', () => {
+          leavingFullScreen.delete(win)
           if (!win.isDestroyed() && hidden.has(win)) {
             win.hide()
             syncDock()
@@ -310,6 +317,7 @@ export function createMinimizeToTray(options: Options) {
     win.on('closed', () => {
       windows.delete(win)
       hidden.delete(win)
+      leavingFullScreen.delete(win)
       syncDock()
     })
   }
