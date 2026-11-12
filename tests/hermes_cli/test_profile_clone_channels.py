@@ -198,6 +198,24 @@ def test_clone_all_drops_a_root_file_link_that_dangles_in_the_source(home, tmp_p
     assert (profile_dir / ".env").read_text(encoding="utf-8") == _PLACEHOLDER_ENV
 
 
+@pytest.mark.require_symlinks
+@pytest.mark.platforms("posix")
+def test_clone_all_relative_linked_env_is_private_when_source_mode_is_loose(home, tmp_path):
+    """A Stow-linked .env is copied privately even if its source file has mode 0644 (#142943)."""
+    target = tmp_path / "dotfiles" / "hermes" / ".env"
+    target.parent.mkdir(parents=True)
+    target.write_text("OPENAI_API_KEY=sk-model-key\n", encoding="utf-8")
+    target.chmod(0o644)
+    (home / ".env").unlink()
+    (home / ".env").symlink_to(os.path.relpath(target, home))
+
+    cloned = create_profile("full", clone_all=True, no_alias=True) / ".env"
+
+    assert cloned.read_text(encoding="utf-8") == target.read_text(encoding="utf-8")
+    assert cloned.stat().st_mode & 0o777 == 0o600
+    assert target.stat().st_mode & 0o777 == 0o644
+
+
 def test_clone_all_never_writes_through_a_symlinked_source_env(home, tmp_path):
     """A source whose ``.env`` is a symlink (shared secrets file) must keep its bot token: the clone
     materializes the link before stripping instead of editing the target through it."""

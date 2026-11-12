@@ -1173,6 +1173,10 @@ def _materialize_symlinked_files(source_dir: Path, profile_dir: Path) -> list[st
         path.unlink()
         if target.is_file():
             shutil.copy2(target, path)
+            if name == ".env":
+                # Like --clone, never retain a loose source mode on copied credentials.
+                with contextlib.suppress(OSError):
+                    os.chmod(str(path), 0o600)
         done.append(name)
     return done
 
