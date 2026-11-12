@@ -146,7 +146,8 @@ def test_pinned_fresh_clone_publishes_nothing_when_the_pin_fails(tmp_path):
     assert not list(tmp_path.glob(".hermes-clone-*"))
 
 
-@pytest.mark.parametrize("damage", ["commitless", "lost_head", "dangling_gitdir_file"])
+@pytest.mark.parametrize("damage", ["commitless", "lost_head", "dangling_gitdir_file",
+                                    "dangling_git_symlink"])
 def test_unusable_checkout_is_moved_aside_and_recloned(tmp_path, damage):
     """An interrupted clone, or a .git a killed update left unreadable (the state `hermes update`
     tells the user to repair by rerunning the installer): moved aside, never deleted, then cloned."""
@@ -155,6 +156,8 @@ def test_unusable_checkout_is_moved_aside_and_recloned(tmp_path, damage):
     install.mkdir()
     if damage == "dangling_gitdir_file":
         (install / ".git").write_text(f"gitdir: {tmp_path / 'gone'}\n")
+    elif damage == "dangling_git_symlink":
+        (install / ".git").symlink_to(tmp_path / "gone", target_is_directory=True)
     else:
         _git(install, "init", "-q")
         if damage == "lost_head":
@@ -165,6 +168,8 @@ def test_unusable_checkout_is_moved_aside_and_recloned(tmp_path, damage):
     assert (install / "README").read_text() == "one"
     [broken] = tmp_path.glob("install.broken-*")
     assert (broken / "keep").read_text() == "user file"
+    if damage == "dangling_git_symlink":
+        assert (broken / ".git").is_symlink()  # preserve the damaged marker with the user files
 
 
 def test_damaged_checkout_inside_a_git_managed_home_never_touches_the_home_repo(tmp_path):
