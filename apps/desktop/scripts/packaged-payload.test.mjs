@@ -10,6 +10,7 @@ import { getFileMatchers } from 'app-builder-lib/internal'
 import { afterEach, expect, it, vi } from 'vitest'
 
 import afterPack from './after-pack.mjs'
+import { assertPackagedPayload } from './packaged-payload.mjs'
 import { resolvePackagedAsarPath } from './backend-ready-artifact.mjs'
 
 const require = createRequire(import.meta.url)
@@ -101,6 +102,18 @@ it('lets an exact payload copy through afterPack and fails a lossy one, naming e
   ]) {
     expect(failure.message).toContain(difference)
   }
+})
+
+it.skipIf(process.platform === 'win32')('rejects a retargeted tool symlink in the packaged payload', () => {
+  const { prepared, packaged } = packContext()
+  const alias = path.join('tools', 'pnpm', 'bin', 'pnpm-cli')
+  fs.symlinkSync('pnpm', path.join(prepared, alias))
+  fs.cpSync(prepared, packaged, { recursive: true, verbatimSymlinks: true })
+  fs.unlinkSync(path.join(packaged, alias))
+  fs.symlinkSync('missing-pnpm', path.join(packaged, alias))
+  expect(() => assertPackagedPayload(prepared, packaged)).toThrow(
+    'tools/pnpm/bin/pnpm-cli: symlink to pnpm became symlink to missing-pnpm'
+  )
 })
 
 it('fails a bundled pack whose payload never arrived but leaves Hermes Light alone', async () => {
