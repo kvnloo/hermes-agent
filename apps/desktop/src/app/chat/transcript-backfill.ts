@@ -455,6 +455,20 @@ export function graftRefreshedTailOntoBackfill(refreshedTail: ChatMessage[], pre
     return retainCompletedTurnTools(prefix.length ? [...prefix, ...refreshedTail] : refreshedTail, previous)
   }
 
+
+  // A reconnect can leave a days-old cached fragment next to the live row.
+  // Sharing that live row alone does not anchor the older fragment: the fresh
+  // page starts after it, so preserving it paints missing history as adjacent.
+  // A real backfilled prefix has the page's first durable row as its anchor.
+  if (
+    anchor < 0 &&
+    anchorRowId !== undefined &&
+    previous.some(message => message.rowId !== undefined && message.rowId < anchorRowId) &&
+    previous.some(message => message.rowId !== undefined && refreshedRowIds.has(message.rowId))
+  ) {
+    return retainCompletedTurnTools(refreshedTail, previous)
+  }
+
   const refreshedIds = new Set(refreshedTail.map(message => message.id))
 
   // The page already contains everything on screen, including a live row the

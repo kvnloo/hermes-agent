@@ -225,6 +225,18 @@ describe('graftRefreshedTailOntoBackfill', () => {
     expect(graftRefreshedTailOntoBackfill(refreshed, previous).map(m => m.rowId)).toEqual([1, 2, 3, 4])
   })
 
+
+  it('discards a stale pre-disconnect fragment even when the live row overlaps the 120-row tail (#154326)', () => {
+    // REST has the correct newest page; the cached window has jumped from a
+    // days-old anchor to the newest turn, without the intervening history.
+    const refreshed = Array.from({ length: 120 }, (_, index) => chat(`fetched-${index}`, 831 + index))
+    const previous = [chat('days-old-user', 41), chat('days-old-answer', 42), chat('live-user', 950)]
+
+    expect(graftRefreshedTailOntoBackfill(refreshed, previous)).toBe(refreshed)
+    // A second switch-back must not resurrect the old fragment.
+    expect(graftRefreshedTailOntoBackfill(refreshed, refreshed)).toBe(refreshed)
+  })
+
   it('returns the refreshed tail unchanged when no anchor is found', () => {
     const previous = [chat('x', 90), chat('y', 91), chat('z', 92)]
     const refreshed = [chat('p', 200), chat('q', 201)]
