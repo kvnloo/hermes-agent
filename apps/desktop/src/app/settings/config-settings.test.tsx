@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type * as ConfigApi from '@/api/config'
-import { $settingsRequestProfile } from '@/store/settings-scope'
+import { $settingsRequestProfile, $settingsScopeOverride } from '@/store/settings-scope'
 import { $autoSpeakReplies, setAutoSpeakReplies } from '@/store/voice-prefs'
 
 import type { ConfigSettings as ConfigSettingsType } from './config-settings'
@@ -14,6 +14,7 @@ import type { ConfigSettings as ConfigSettingsType } from './config-settings'
 // The vi.mock factory below replaces the computed (read-only) atom with a
 // writable one; narrow the import back so tests can drive it.
 const scopeProfileMock = $settingsRequestProfile as unknown as { set: (value: string) => void }
+const scopeOverrideMock = $settingsScopeOverride as unknown as { set: (value: string | null) => void }
 
 const getHermesConfigRecord = vi.fn()
 const getHermesConfigSchema = vi.fn()
@@ -72,6 +73,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   scopeProfileMock.set('default')
+  scopeOverrideMock.set(null)
   getElevenLabsVoices.mockResolvedValue({ available: false })
   getHermesConfigSchema.mockResolvedValue({ fields: {} })
   saveHermesConfig.mockResolvedValue({ ok: true })
@@ -152,6 +154,22 @@ describe('ConfigSettings autosave', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('editing another profile voice setting does not change this machine read-aloud preference', async () => {
+    // Settings' "Applies to" selector scopes the config edit to nash; the
+    // composer toggle is machine-wide and must keep its current state.
+    await setAutoSpeakReplies(false)
+    scopeProfileMock.set('nash')
+    scopeOverrideMock.set('nash')
+    getHermesConfigRecord.mockResolvedValue({ voice: { auto_tts: false } })
+    getHermesConfigSchema.mockResolvedValue({ fields: { 'voice.auto_tts': { type: 'boolean' } } })
+
+    renderConfigSettings('voice')
+
+    ;(await screen.findByRole('switch')).click()
+    expect($autoSpeakReplies.get()).toBe(false)
+    await vi.waitFor(() => expect(saveHermesConfig).toHaveBeenCalledWith({ voice: { auto_tts: true } }, 'nash'))
   })
 
   it('the Settings "Read Responses Aloud" switch also turns Desktop read-aloud on and off', async () => {

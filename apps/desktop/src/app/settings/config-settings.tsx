@@ -31,7 +31,7 @@ import { refreshMemoryStatus } from '@/store/memory-status'
 import { notify, notifyError } from '@/store/notifications'
 import { normalizeProfileKey } from '@/store/profile'
 import { repoDiscoveryPolicyFromConfig, repoDiscoveryPolicySignature, scanAndRecordRepos } from '@/store/projects'
-import { $settingsRequestProfile } from '@/store/settings-scope'
+import { $settingsRequestProfile, $settingsScopeOverride } from '@/store/settings-scope'
 import { setAutoSpeakReplies } from '@/store/voice-prefs'
 import type { ConfigFieldSchema, HermesConfigRecord } from '@/types/hermes'
 
@@ -566,7 +566,10 @@ function ConfigSettingsInner({
                     // Flipping "Read Responses Aloud" here is a choice for this app too, not only
                     // the messaging gateway; a config refresh still never overrides the composer's
                     // toggle (#119885).
-                    if (key === 'voice.auto_tts') {
+                    // Editing a different profile changes only that profile's gateway config.
+                    // Desktop's machine-wide preference belongs to the active app, not that
+                    // other profile (#118432).
+                    if (key === 'voice.auto_tts' && $settingsScopeOverride.get() === null) {
                       void setAutoSpeakReplies(value === true)
                     }
                   }}
