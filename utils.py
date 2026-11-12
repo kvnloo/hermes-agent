@@ -568,6 +568,8 @@ def atomic_roundtrip_yaml_update(path: str | Path, key_path: str, value: Any) ->
     mkdir_under_hermes_home(path.parent)
     yaml_rt, config = _roundtrip_load(path)
     current = config
+    parent = None
+    parent_key = None
     keys = _split_key_path(key_path)
     i = 0
     while True:
@@ -585,8 +587,12 @@ def atomic_roundtrip_yaml_update(path: str | Path, key_path: str, value: Any) ->
                 return  # nothing to remove under a missing/scalar parent
             next_value = CommentedMap()
             current[seg] = next_value
+        parent, parent_key = current, seg
         current = next_value
         i += consumed
+    if value is None and parent is not None and not current:
+        # Dropping the final key leaves orphaned comments on the old ruamel node.
+        parent[parent_key] = CommentedMap()
     _roundtrip_dump(path, yaml_rt, config)
 
 
