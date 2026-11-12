@@ -1,0 +1,86 @@
+/* Machine-activity arc — a highlight that travels the card's border while an
+   agent is ACTUALLY working the card (amber-slow when the heartbeat is gone).
+   Queued/attached cards do NOT animate — that's the footer's named-agent chip.
+   The tone rides --kanban-tone, set inline from the column meta. Painted as an
+   overlay ring (mask keeps only the border band) so the card stays flat. */
+
+@property --kanban-arc-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.kanban-arc {
+  pointer-events: none;
+  position: absolute;
+  inset: -1px; /* sit on the card's own border line */
+  border-radius: inherit;
+  padding: 1.5px; /* arc thickness */
+  background: conic-gradient(
+    from var(--kanban-arc-angle),
+    transparent 0deg,
+    var(--kanban-tone, var(--ui-stroke-primary)) 55deg,
+    transparent 110deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: kanban-arc-spin 2.2s linear infinite;
+}
+
+/* Running but no heartbeat: amber crawl — still claimed, health unknown. */
+.kanban-arc--stale {
+  --kanban-tone: #fbbf24;
+  animation-duration: 6s;
+}
+
+@keyframes kanban-arc-spin {
+  to {
+    --kanban-arc-angle: 360deg;
+  }
+}
+
+/* Summary-first operator-console geometry. Verbose task prose stays in the
+   drawer; square edges make lane alignment exact instead of SaaS-card soft. */
+.kanban-card,
+.kanban-filter-chip {
+  border-radius: 0;
+}
+
+.kanban-filter-chip {
+  display: inline-flex;
+  min-height: 1.75rem;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--ui-stroke-tertiary);
+  padding: 0 0.5rem;
+  color: var(--ui-text-secondary);
+  font-size: 0.625rem;
+}
+
+.kanban-filter-chip:hover,
+.kanban-filter-chip:focus-visible {
+  background: var(--chrome-action-hover);
+  color: var(--ui-text-primary);
+}
+
+@media (max-width: 767px) {
+  .kanban-touch,
+  .kanban-filter-chip,
+  .kanban-drawer-action {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kanban-arc {
+    animation: none;
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "snooze": {
+    "receipt": null,
+    "projected": {
+      "state": "active",
+      "wake_at": null,
+      "revision": 0,
+      "reason": "unacknowledged",
+      "observed_event_id": 1
+    },
+    "events": [
+      {
+        "kind": "created",
+        "payload": "{\"assignee\": null, \"status\": \"blocked\", \"parents\": [], \"tenant\": null, \"workspace_kind\": \"scratch\", \"workspace_path\": null, \"branch_name\": null, \"project_id\": null, \"skills\": null, \"goal_mode\": null, \"model_override\": null, \"provider_override\": null}"
+      }
+    ]
+  },
+  "settle": {
+    "receipt": null,
+    "projected": {
+      "state": "active",
+      "wake_at": null,
+      "revision": 0,
+      "reason": "unacknowledged",
+      "observed_event_id": 2
+    },
+    "events": [
+      {
+        "kind": "created",
+        "payload": "{\"assignee\": null, \"status\": \"blocked\", \"parents\": [], \"tenant\": null, \"workspace_kind\": \"scratch\", \"workspace_path\": null, \"branch_name\": null, \"project_id\": null, \"skills\": null, \"goal_mode\": null, \"model_override\": null, \"provider_override\": null}"
+      }
+    ]
+  },
+  "failure": {
+    "receipt": null,
+    "projected": {
+      "state": "active",
+      "wake_at": null,
+      "revision": 0,
+      "reason": "unacknowledged",
+      "observed_event_id": 3
+    },
+    "events": [
+      {
+        "kind": "created",
+        "payload": "{\"assignee\": null, \"status\": \"blocked\", \"parents\": [], \"tenant\": null, \"workspace_kind\": \"scratch\", \"workspace_path\": null, \"branch_name\": null, \"project_id\": null, \"skills\": null, \"goal_mode\": null, \"model_override\": null, \"provider_override\": null}"
+      }
+    ]
+  }
+}
