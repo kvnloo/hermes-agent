@@ -100,8 +100,9 @@ def test_repair_marker_user_merge_keeps_plain_row_addressable():
     assert merged["api_content"] == f"{marker}\n\nthe user's real prompt"
     # The real Desktop/TUI gateway projection must render the absorbed prompt,
     # while model replay retains the notice only in api_content.
-    from tui_gateway.session_history import _history_to_messages
-    assert [(m["role"], m["text"]) for m in _history_to_messages([merged])] == [
+    import tui_gateway.server as srv  # binds session_history's server globals
+
+    assert [(m["role"], m["text"]) for m in srv._history_to_messages([merged])] == [
         ("user", "the user's real prompt"),
     ]
 
