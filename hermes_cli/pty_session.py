@@ -267,17 +267,23 @@ class PtySessionRegistry:
             return session, True
 
     async def close_other_sessions(self, prefix: str, *, keep_key: str) -> None:
-        """Close sessions belonging to the same logical client except ``keep_key``.
+        """Close same-token PTYs on a profile change, not a chat switch.
 
         Dashboard profile changes keep the browser's attach token but change the
         canonical session key. The previous profile's detached PTY must not
         remain alive long enough to hold the TUI session lease and reject a
-        later return to that chat.
+        later return to that chat. Same-profile resume-less reattaches may use
+        different keys while the older PTY still has an in-flight turn; leave it
+        alive for normal expiry or an explicit resume.
         """
+        # Only a profile change supersedes another PTY. A same-profile
+        # chat switch or resume-less reattach must not kill an in-flight turn.
+        keep_profile = _key_segments(keep_key)[0]
         async with self._attach_lock:
             keys = [
                 key for key in self._sessions
                 if key != keep_key and (key == prefix or key.startswith(prefix + "\0"))
+                and _key_segments(key)[0] != keep_profile
             ]
             for key in keys:
                 session = self._sessions.pop(key, None)

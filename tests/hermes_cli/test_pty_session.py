@@ -489,6 +489,41 @@ async def test_close_other_sessions_removes_old_profile_session():
     # The displaced viewer gets the documented supersede code rather than going silent.
     assert old_ws.close_code == WS_CLOSE_SUPERSEDED
     await reg.close_all()
+
+
+@pytest.mark.asyncio
+async def test_close_other_sessions_keeps_running_same_profile_on_resumeless_attach():
+    """#136713: a no-resume reattach cannot supersede a running same-profile PTY."""
+    from hermes_cli.pty_session import PtySession
+
+    reg = make_registry()  # The production retention TTL and session limit.
+    running_bridge = FakeBridge([b""])
+    running = PtySession(
+        "token\0default\0session-a", running_bridge, buffer_cap=1024, read_timeout=0.01,
+    )
+    await running.start()
+    running.detach(None)  # User navigated away while the turn was running.
+    reg._sessions[running.key] = running
+
+    # Returning without ?resume= keeps the attach token and profile, but the
+    # new key has an empty resume field. This must not close the old PTY.
+    no_resume_key = "token\0default\0"
+    await reg.close_other_sessions("token", keep_key=no_resume_key)
+    new, created = await reg.attach_or_spawn(no_resume_key, spawn=lambda: FakeBridge([b""]))
+
+    assert created
+    assert new is not running
+    assert reg._sessions[running.key] is running
+    assert running.alive and not running_bridge.closed
+
+    # A real profile change still supersedes both PTYs using this token.
+    await reg.close_other_sessions("token", keep_key="token\0other\0")
+    assert running_bridge.closed
+    assert running.key not in reg._sessions
+    assert new.key not in reg._sessions
+    await reg.close_all()
+
+
 @pytest.mark.asyncio
 async def test_close_orphaned_sessions_closes_pty_stranded_by_token_rotation():
     from hermes_cli.pty_session import PtySession
