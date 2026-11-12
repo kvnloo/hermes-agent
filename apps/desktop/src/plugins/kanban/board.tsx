@@ -254,14 +254,16 @@ export interface AttentionAnnouncement {
 
 type AttentionActionKind = 'settle' | 'snooze' | 'wake'
 type NextAttentionAttemptId = (taskId: string, kind: AttentionActionKind) => string
-let detachedAttentionAttempt = 0
-
-const nextDetachedAttentionAttemptId: NextAttentionAttemptId = (taskId, kind) => {
-  detachedAttentionAttempt += 1
-
-  return `${taskId}:${kind}:detached:${detachedAttentionAttempt}`
+interface AttentionActionIntent {
+  kind: AttentionActionKind
+  revision: number
+  taskId: string
+  wakeAt?: number
 }
-
+interface AttentionActionController {
+  isPending(taskId: string, kind?: AttentionActionKind): boolean
+  run(intent: AttentionActionIntent): void
+}
 export function useBoardAttentionAnnouncements() {
   const [announcement, setAnnouncement] = useState<AttentionAnnouncement | null>(null)
   const attempt = useRef(0)
@@ -282,6 +284,60 @@ export function useBoardAttentionAnnouncements() {
   }, [])
 
   return { announce, announcement, focusTarget, nextAttemptId }
+}
+
+const GENERIC_ATTENTION_FAILURE = 'Your action could not be applied. Please try again.'
+
+function attentionFailure(error: unknown): { message: string; stale: boolean } {
+  const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
+  const detail = errText(error)
+  const stale = /(?:^|\D)409(?:\D|$)|stale|revision conflict|conflict.*revision/i.test(`${raw} ${detail}`)
+
+  return { message: stale ? STALE_ATTENTION_ANNOUNCEMENT : GENERIC_ATTENTION_FAILURE, stale }
+}
+
+function useAttentionActionController(attention: ReturnType<typeof useBoardAttentionAnnouncements>): AttentionActionController {
+  const qc = useQueryClient()
+  const pending = useRef(new Set<string>())
+  const [, repaint] = useState(0)
+
+  const isPending = useCallback((taskId: string, kind?: AttentionActionKind) => {
+    const prefix = `${taskId}:`
+
+    return [...pending.current].some(key => key.startsWith(kind ? `${prefix}${kind}` : prefix))
+  }, [])
+
+  const run = useCallback((intent: AttentionActionIntent) => {
+    const lock = `${intent.taskId}:${intent.kind}`
+
+    if (pending.current.has(lock)) {
+      return
+    }
+
+    const attemptId = attention.nextAttemptId(intent.taskId, intent.kind)
+    pending.current.add(lock)
+    repaint(value => value + 1)
+
+    void updateAttention(intent.taskId, intent.kind, intent.revision, intent.wakeAt)
+      .then(result => {
+        const message = result.attention.state === 'settled' ? 'Attention settled' : result.attention.state === 'snoozed' ? 'Task snoozed' : 'Task awake'
+        attention.announce({ attemptId, message })
+        host.notify({ kind: 'success', message })
+      })
+      .catch(error => {
+        const failure = attentionFailure(error)
+        attention.announce({ attemptId, message: failure.message, stale: failure.stale })
+        host.notify({ kind: 'error', message: failure.message })
+      })
+      .finally(() => {
+        pending.current.delete(lock)
+        repaint(value => value + 1)
+        void qc.invalidateQueries({ queryKey: ['kanban', 'board'] })
+        void qc.invalidateQueries({ queryKey: ['kanban', 'task'] })
+      })
+  }, [attention, qc])
+
+  return { isPending, run }
 }
 
 export function KanbanAnnouncementHost({ announcement }: { announcement: AttentionAnnouncement | null }) {
@@ -328,14 +384,15 @@ export function KanbanAnnouncementHost({ announcement }: { announcement: Attenti
 /** @deprecated Use KanbanAnnouncementHost at the page shell boundary. */
 export const BoardAnnouncer = KanbanAnnouncementHost
 
-type BoardAttentionAnnouncements = ReturnType<typeof useBoardAttentionAnnouncements>
+type BoardAttentionAnnouncements = ReturnType<typeof useBoardAttentionAnnouncements> & { actions: AttentionActionController }
 const BoardAttentionContext = createContext<BoardAttentionAnnouncements | null>(null)
 
 export function KanbanPageShell({ children }: { children: ReactNode }) {
   const attention = useBoardAttentionAnnouncements()
+  const actions = useAttentionActionController(attention)
 
   return (
-    <BoardAttentionContext.Provider value={attention}>
+    <BoardAttentionContext.Provider value={{ ...attention, actions }}>
       <KanbanAnnouncementHost announcement={attention.announcement} />
       <div className="contents" data-kanban-interactive-root>{children}</div>
     </BoardAttentionContext.Provider>
@@ -353,7 +410,7 @@ export function useKanbanPageAnnouncements() {
 }
 
 export function AttentionControls({
-  nextAttemptId = nextDetachedAttentionAttemptId,
+  nextAttemptId,
   onAnnouncement,
   task
 }: {
@@ -361,54 +418,33 @@ export function AttentionControls({
   onAnnouncement?: (announcement: AttentionAnnouncement) => void
   task: KanbanTask
 }) {
-  const qc = useQueryClient()
+  const page = useContext(BoardAttentionContext)
+  const localAttention = useBoardAttentionAnnouncements()
+  const detachedAttention = useMemo(() => ({
+    ...localAttention,
+    announce: onAnnouncement ?? localAttention.announce,
+    nextAttemptId: nextAttemptId ?? localAttention.nextAttemptId
+  }), [localAttention, nextAttemptId, onAnnouncement])
+  const localActions = useAttentionActionController(detachedAttention)
+  const actions = page?.actions ?? localActions
   const [custom, setCustom] = useState('')
-  const [localAnnouncement, setLocalAnnouncement] = useState<AttentionAnnouncement | null>(null)
   const [snoozeOpen, setSnoozeOpen] = useState(false)
   const snoozeTrigger = useRef<HTMLButtonElement>(null)
   const receipt = task.attention ?? { state: 'active' as const, revision: 0 }
-  const announce = onAnnouncement ?? setLocalAnnouncement
+  const pending = actions.isPending(task.id)
 
   const closeSnooze = () => {
     setSnoozeOpen(false)
     window.requestAnimationFrame(() => snoozeTrigger.current?.focus())
   }
 
-  type ActionAttempt = { attemptId: string; kind: AttentionActionKind; wakeAt?: number }
-  const action = useMutation({
-    mutationFn: ({ kind, wakeAt }: ActionAttempt) => updateAttention(task.id, kind, receipt.revision, wakeAt),
-    onError: (error, variables) => {
-      const detail = errText(error)
-      const message = /stale|conflict|\b409\b/i.test(detail) ? STALE_ATTENTION_ANNOUNCEMENT : detail
-      announce({ attemptId: variables.attemptId, message, stale: message === STALE_ATTENTION_ANNOUNCEMENT })
-      host.notify({ kind: 'error', message })
-      void qc.invalidateQueries({ queryKey: ['kanban', 'board'] })
-      void qc.invalidateQueries({ queryKey: ['kanban', 'task'] })
-    },
-    onSuccess: (result, variables) => {
-      host.notify({
-        kind: 'success',
-        message:
-          result.attention.state === 'settled'
-            ? 'Attention settled'
-            : result.attention.state === 'snoozed'
-              ? 'Snoozed'
-              : 'Awake'
-      })
-      announce({ attemptId: variables.attemptId, message: result.attention.state === 'settled' ? 'Attention settled' : result.attention.state === 'snoozed' ? 'Task snoozed' : 'Task awake' })
-
-      if (result.attention.state === 'snoozed') {
-        closeSnooze()
-      }
-
-      void qc.invalidateQueries({ queryKey: ['kanban', 'board'] })
-      void qc.invalidateQueries({ queryKey: ['kanban', 'task'] })
-    }
-  })
-
   const stop = (event: SyntheticEvent) => event.stopPropagation()
-  const run = (kind: ActionAttempt['kind'], wakeAt?: number) => {
-    action.mutate({ attemptId: nextAttemptId(task.id, kind), kind, wakeAt })
+  const run = (kind: AttentionActionKind, wakeAt?: number) => {
+    actions.run({ kind, revision: receipt.revision, taskId: task.id, wakeAt })
+
+    if (kind === 'snooze') {
+      setSnoozeOpen(false)
+    }
   }
   const snooze = (seconds: number) => run('snooze', Math.floor(Date.now() / 1000) + seconds)
   const customWake = parseLocalDateTime(custom)
@@ -429,10 +465,10 @@ export function AttentionControls({
   if (receipt.state === 'settled') {
     return (
       <div onClick={stop} onKeyDown={stop}>
-        {!onAnnouncement && <BoardAnnouncer announcement={localAnnouncement} />}
+        {!page && !onAnnouncement && <BoardAnnouncer announcement={localAttention.announcement} />}
         <button
           className="min-h-7 rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
-          disabled={action.isPending}
+          disabled={pending}
           onClick={() => run('wake')}
           type="button"
         >
@@ -444,10 +480,10 @@ export function AttentionControls({
 
   return (
     <div className="flex flex-wrap items-center gap-1 border-t border-(--ui-stroke-tertiary) pt-1.5" onClick={stop} onKeyDown={stop}>
-      {!onAnnouncement && <BoardAnnouncer announcement={localAnnouncement} />}
+      {!page && !onAnnouncement && <BoardAnnouncer announcement={localAttention.announcement} />}
       <button
         className="min-h-7 rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
-        disabled={action.isPending}
+        disabled={pending}
         onClick={() => run('settle')}
         type="button"
       >
@@ -458,7 +494,7 @@ export function AttentionControls({
           aria-expanded={snoozeOpen}
           aria-haspopup="dialog"
           className="flex min-h-7 cursor-pointer list-none items-center rounded px-2 text-[0.6875rem] text-(--ui-text-secondary) hover:bg-(--chrome-action-hover) focus-visible:outline focus-visible:outline-2"
-          disabled={action.isPending}
+          disabled={pending}
           onClick={() => setSnoozeOpen(true)}
           ref={snoozeTrigger}
           type="button"
@@ -476,10 +512,10 @@ export function AttentionControls({
             }}
           >
             <div className="grid grid-cols-5 gap-1">
-              <button className="min-h-11 min-w-11 rounded px-1 text-[0.6875rem] hover:bg-(--chrome-action-hover)" disabled={action.isPending} onClick={() => snooze(3600)} type="button">1 hr</button>
-              <button className="min-h-11 min-w-11 rounded px-1 text-[0.6875rem] hover:bg-(--chrome-action-hover)" disabled={action.isPending} onClick={tomorrowMorning} type="button">Tmrw 9am</button>
-              <button className="min-h-11 min-w-11 rounded px-1 text-[0.6875rem] hover:bg-(--chrome-action-hover)" disabled={action.isPending} onClick={() => snooze(7 * 24 * 3600)} type="button">1 wk</button>
-              <button className="min-h-11 min-w-11 rounded px-1 text-[0.6875rem] hover:bg-(--chrome-action-hover)" disabled={action.isPending} onClick={nextMonth} type="button">1 mo</button>
+              <button className="min-h-11 min-w-11 rounded px-1 text-[0.6875rem] hover:bg-(--chrome-action-hover)" disabled={pending} onClick={() => snooze(3600)} type="button">1 hr</button>
+              <button className="min-h-11 min-w-11 rounded px-1 text-[0.6875rem] hover:bg-(--chrome-action-hover)" disabled={pending} onClick={tomorrowMorning} type="button">Tmrw 9am</button>
+              <button className="min-h-11 min-w-11 rounded px-1 text-[0.6875rem] hover:bg-(--chrome-action-hover)" disabled={pending} onClick={() => snooze(7 * 24 * 3600)} type="button">1 wk</button>
+              <button className="min-h-11 min-w-11 rounded px-1 text-[0.6875rem] hover:bg-(--chrome-action-hover)" disabled={pending} onClick={nextMonth} type="button">1 mo</button>
               <button className="min-h-11 min-w-11 rounded px-1 text-[0.6875rem] hover:bg-(--chrome-action-hover)" onClick={() => document.getElementById(`snooze-custom-${task.id}`)?.focus()} type="button">Custom…</button>
             </div>
             <label className="grid gap-1 text-[0.6875rem] text-(--ui-text-tertiary)">
@@ -490,7 +526,7 @@ export function AttentionControls({
               <button className="min-h-11 rounded px-3 text-xs hover:bg-(--chrome-action-hover)" onClick={closeSnooze} type="button">Cancel</button>
               <button
                 className="min-h-11 rounded bg-primary px-3 text-xs text-primary-foreground disabled:opacity-50"
-                disabled={action.isPending || !customWake || customWake.getTime() <= Date.now()}
+                disabled={pending || !customWake || customWake.getTime() <= Date.now()}
                 onClick={() => customWake && run('snooze', Math.floor(customWake.getTime() / 1000))}
                 type="button"
               >
@@ -505,8 +541,6 @@ export function AttentionControls({
 
 function Card({
   columns,
-  nextAttemptId,
-  onAnnouncement,
   onDelete,
   onMove,
   onOpen,
@@ -515,8 +549,6 @@ function Card({
   task
 }: {
   columns: string[]
-  nextAttemptId: NextAttentionAttemptId
-  onAnnouncement: (announcement: AttentionAnnouncement) => void
   onDelete: (id: string) => void
   onMove: (id: string, status: string) => void
   onOpen: (id: string) => void
@@ -571,7 +603,7 @@ function Card({
             <span className="line-clamp-2 text-[0.6875rem] leading-snug text-(--ui-text-tertiary)">{summary}</span>
           )}
           <CardFooter arc={arc} task={task} />
-          <AttentionControls nextAttemptId={nextAttemptId} onAnnouncement={onAnnouncement} task={task} />
+          <AttentionControls task={task} />
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
@@ -609,9 +641,7 @@ function Column({
   column,
   columns,
   laneWidth,
-  nextAttemptId,
   onAdd,
-  onAnnouncement,
   onDelete,
   onDropTask,
   onMove,
@@ -624,9 +654,7 @@ function Column({
   column: { name: string; tasks: KanbanTask[] }
   columns: string[]
   laneWidth: number
-  nextAttemptId: NextAttentionAttemptId
   onAdd: (status: string) => void
-  onAnnouncement: (announcement: AttentionAnnouncement) => void
   onDelete: (id: string) => void
   onDropTask: (id: string, status: string) => void
   onMove: (id: string, status: string) => void
@@ -762,8 +790,6 @@ function Column({
                   <Card
                     columns={columns}
                     key={task.id}
-                    nextAttemptId={nextAttemptId}
-                    onAnnouncement={onAnnouncement}
                     onDelete={onDelete}
                     onMove={onMove}
                     onOpen={onOpen}
@@ -778,8 +804,6 @@ function Column({
               <Card
                 columns={columns}
                 key={task.id}
-                nextAttemptId={nextAttemptId}
-                onAnnouncement={onAnnouncement}
                 onDelete={onDelete}
                 onMove={onMove}
                 onOpen={onOpen}
@@ -798,8 +822,6 @@ function Column({
                 <Card
                   columns={columns}
                   key={task.id}
-                  nextAttemptId={nextAttemptId}
-                  onAnnouncement={onAnnouncement}
                   onDelete={onDelete}
                   onMove={onMove}
                   onOpen={onOpen}
@@ -1782,9 +1804,7 @@ export function KanbanBoardPage() {
                 columns={columnNames}
                 key={col.name}
                 laneWidth={viewport.laneWidth}
-                nextAttemptId={attentionAnnouncements.nextAttemptId}
                 onAdd={setAddStatus}
-                onAnnouncement={attentionAnnouncements.announce}
                 onDelete={id => deleteMut.mutate(id)}
                 onDropTask={onMove}
                 onMove={onMove}
