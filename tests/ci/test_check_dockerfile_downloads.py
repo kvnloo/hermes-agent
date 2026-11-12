@@ -49,6 +49,24 @@ def test_a_download_streamed_into_tar_across_a_continuation_fails(tmp_path, caps
     assert "  Dockerfile:" not in out
 
 
+def test_downloads_piped_into_absolute_executables_are_rejected(tmp_path, capsys):
+    # /bin/tar and /bin/sh still execute the unverified stream.
+    repo = _repo(tmp_path, {
+        "tar.Dockerfile": (
+            "FROM alpine:3.22\n"
+            "RUN curl -fsSL https://example.com/a.tgz | /bin/tar -xz -C /opt\n"
+        ),
+        "shell.Dockerfile": (
+            "FROM alpine:3.22\n"
+            "RUN wget -qO- https://example.com/install.sh | /bin/sh\n"
+        ),
+    })
+    assert cdd.main(["--root", str(repo)]) == 1
+    out = capsys.readouterr().out
+    assert "tar.Dockerfile:2" in out
+    assert "shell.Dockerfile:2" in out
+
+
 def test_fetch_verify_extract_passes_and_so_does_the_repo(tmp_path):
     repo = _repo(tmp_path, {"Dockerfile": _VERIFIED, "x/y.Dockerfile": "FROM a\nRUN wget -qO- u | sh\n"})
     assert cdd.main(["--root", str(repo)]) == 1

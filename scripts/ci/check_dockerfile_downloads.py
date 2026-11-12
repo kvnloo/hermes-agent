@@ -28,6 +28,7 @@ REPO = Path(__file__).resolve().parents[2]
 _DOCKERFILES = ("Dockerfile", "*.Dockerfile", "**/Dockerfile", "**/*.Dockerfile")
 _STREAMED = re.compile(
     r"\b(?:curl|wget)\b[^|;&]*\|\s*(?:sudo\s+)?"
+    r"(?:/(?:usr/(?:local/)?)?bin/)?"
     r"(?:tar|bsdtar|unzip|gunzip|gzip|xz|zstd|bzip2|sh|bash|dash|zsh|python3?|perl|node)\b"
 )
 
