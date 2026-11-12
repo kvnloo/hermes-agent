@@ -60,3 +60,51 @@ def test_register_is_idempotent(monkeypatch):
             sched.release_running_job(job_id)
     finally:
         runner._unregister_cron_persist_hook()
+
+def test_cron_startup_admission_is_persisted(monkeypatch):
+    """The first due job must publish its count even if ticker startup is immediate."""
+    import asyncio
+    from types import SimpleNamespace
+
+    import gateway.run as gateway_run
+    from cron import scheduler_provider, scheduler_thread
+
+    writes = []
+    runner, _adapter = make_restart_runner()
+    monkeypatch.setattr(
+        gateway_run, "_write_runtime_status_quiet",
+        lambda **fields: writes.append(fields))
+    monkeypatch.setattr(gateway_run, "_cron_tick_profile_homes", lambda _config: [])
+    monkeypatch.setattr(gateway_run, "_start_gateway_housekeeping",
+                        lambda *args, **kwargs: None)
+
+    provider = SimpleNamespace(name="test", start=lambda *args, **kwargs: None)
+    monkeypatch.setattr(scheduler_provider, "resolve_cron_scheduler",
+                        lambda: provider)
+    monkeypatch.setattr(scheduler_provider, "scheduler_for_profile_mode",
+                        lambda scheduler, multiplex_profiles: scheduler)
+
+    job_id = "persist-startup-admission"
+
+    class ImmediateTicker:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def start(self):
+            # The scheduler is permitted to admit a job before start() returns.
+            assert sched.try_register_running_job(job_id) is True
+
+    monkeypatch.setattr(scheduler_thread, "SupervisedTickerThread", ImmediateTicker)
+
+    async def start():
+        gateway_run._start_gateway_start_cron_and_housekeeping(runner)
+
+    try:
+        asyncio.run(start())
+        # RED on the carrier head: ticker.start() ran before hook registration.
+        assert [w["active_agents"] for w in writes] == [1]
+        sched.release_running_job(job_id)
+        assert [w["active_agents"] for w in writes] == [1, 0]
+    finally:
+        runner._unregister_cron_persist_hook()
+        sched.release_running_job(job_id)

@@ -5731,12 +5731,13 @@ def _start_gateway_start_cron_and_housekeeping(runner):
     from cron.scheduler_thread import SupervisedTickerThread
     cron_thread = SupervisedTickerThread(
         cron_provider.start, args=(cron_stop,), kwargs=cron_start_kwargs, stop_event=cron_stop)
-    cron_thread.start()
+    # Subscribe before starting the producer: the first tick can admit work immediately.
     # Every scheduler mode funnels job register/release through cron.scheduler's shared
     # in-flight registry, so ONE lifecycle hook here covers in-process, multiplex, and
     # external providers: gateway_state.json's active_agents now tracks cron work at
     # every count change (#122813).
     runner._register_cron_persist_hook()
+    cron_thread.start()
 
     # External providers fire over loopback HTTP to THIS process's api_server; if it never came up (usually
     # API_SERVER_KEY missing) every fire fails while manual runs work — misread as a job bug. Say it ONCE.
