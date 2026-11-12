@@ -37,6 +37,7 @@ export interface LightboxGallery {
   next: string | null
   previous: string | null
   onStep: (src: string) => void
+  focusThumbnail: () => HTMLElement | null
 }
 
 export function ZoomableImage({
@@ -74,6 +75,7 @@ export function ZoomableImage({
 
   const gallery: LightboxGallery = {
     ...neighbors,
+    focusThumbnail: () => anchorRef.current?.querySelector<HTMLButtonElement>('button') ?? null,
     onStep: target => {
       revealLightboxThumbnail(anchorRef.current, target)
       openTranscriptLightbox(target)
@@ -237,7 +239,12 @@ export function ImageLightbox({
         // the real opener instead of letting Radix's missing trigger lose focus.
         onCloseAutoFocus={event => {
           event.preventDefault()
-          const opener = openerRef.current
+          // A prior slide closing during navigation must not steal focus from the new dialog.
+          if (gallery && $transcriptLightbox.get() && $transcriptLightbox.get() !== src) {
+            return
+          }
+
+          const opener = gallery?.focusThumbnail() ?? openerRef.current
 
           if (opener?.isConnected) {
             opener.focus({ preventScroll: true })

@@ -2,7 +2,7 @@
 // (port of block/buzz#6705): ←/→ and the toolbar arrows move to the
 // neighbouring transcript image; images in another chat surface are not part
 // of the gallery.
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { I18nProvider } from '@/i18n/context'
@@ -61,6 +61,29 @@ describe('transcript lightbox gallery', () => {
       fireEvent.keyDown(screen.getByRole('dialog'), { key: 'ArrowLeft' })
     })
     expect(shown()).toBe('https://e.x/b.png')
+  })
+
+  it('returns focus to the viewed thumbnail after stepping and closing', async () => {
+    await renderChats()
+    const first = screen.getByAltText('first').closest('button')!
+    const second = screen.getByAltText('second').closest('button')!
+    first.focus()
+
+    await act(async () => {
+      fireEvent.click(first)
+    })
+    await act(async () => {
+      fireEvent.keyDown(screen.getByRole('dialog'), { key: 'ArrowRight' })
+    })
+    expect(shown()).toBe('https://e.x/b.png')
+
+    await act(async () => {
+      fireEvent.keyDown(document, { key: 'Escape' })
+    })
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(document.activeElement).toBe(second)
+    })
   })
 
   it('shows no step arrows for an image that is alone in its chat', async () => {
