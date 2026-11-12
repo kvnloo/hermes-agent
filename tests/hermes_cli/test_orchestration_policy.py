@@ -263,6 +263,26 @@ def test_final_pathname_reopen_rejects_rename_replacement(tmp_path: Path, monkey
     assert snapshot.reason == f"pathname_replaced_{name}"
 
 
+def test_trust_root_cannot_change_after_its_reopen_while_manifest_reopens(tmp_path: Path, monkeypatch) -> None:
+    home, fd = _fixture(tmp_path)
+    anchor = policy.trust_anchor_path(home)
+    real_reopen = policy._reopen_regular
+
+    def swap_after_manifest_reopen(anchor_fd: int, name: str, identity, digest: str) -> None:
+        real_reopen(anchor_fd, name, identity, digest)
+        if name == policy.MANIFEST_NAME:
+            target = anchor / policy.TRUST_ROOT_NAME
+            raw = target.read_bytes()
+            target.write_bytes(raw)
+
+    monkeypatch.setattr(policy, "_reopen_regular", swap_after_manifest_reopen)
+    try:
+        snapshot = _loader(home, fd).reload()
+    finally:
+        os.close(fd)
+    assert snapshot.validity == "DENY"
+
+
 def test_disposable_gate_executes_real_db_and_popen_surfaces_only_when_active(tmp_path: Path) -> None:
     from hermes_cli import kanban_db as kb
 
