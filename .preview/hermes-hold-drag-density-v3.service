@@ -1,0 +1,17 @@
+[Unit]
+Description=Hermes hold-drag density v3 exact private preview
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/workspace/zer0/oss/hermes-agent/.worktrees/t_8ac76e84
+Environment=HERMES_HOME=/tmp/hermes-hold-drag-2e9fx4ts
+Environment=HERMES_KANBAN_DB=/tmp/hermes-hold-drag-2e9fx4ts/kanban/boards/hold-drag-review/kanban.db
+Environment=HERMES_KANBAN_BOARD=hold-drag-review
+ExecStart=/home/kvn/.hermes/hermes-agent/venv/bin/python -m uvicorn combined_preview:app --app-dir /workspace/zer0/oss/hermes-agent/.worktrees/t_8ac76e84/.preview --host 127.0.0.1 --port 9136
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target
