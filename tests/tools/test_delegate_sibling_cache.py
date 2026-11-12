@@ -32,8 +32,10 @@ def test_siblings_send_one_system_prompt_and_get_their_context_in_the_user_turn(
     assert first["tools"] == second["tools"]
     assert "auditing numbers" not in str(first["messages"][0])
     task = first["messages"][1]
-    assert task["role"] == "user" and task["content"] == "CONTEXT:\nThe parent is auditing numbers.\n\nTASK:\ncount the files"
-    assert "The parent is fixing the gateway." in second["messages"][1]["content"]
+    assert task["role"] == "user" and [p["text"] for p in task["content"]] == [
+        "CONTEXT:\n", "The parent is auditing numbers.\n\nTASK:\n", "count the files",
+    ]
+    assert "The parent is fixing the gateway." in second["messages"][1]["content"][1]["text"]
 
 
 def test_schema_correction_turn_carries_the_contract_even_after_a_compaction():
@@ -149,3 +151,52 @@ def test_codex_siblings_share_the_session_header_the_backend_caches_under():
     assert own["extra_headers"]["session_id"] == "parent" != one["extra_headers"]["session_id"]
     assert own["prompt_cache_key"] != one["prompt_cache_key"]
     assert isolated == children[0].session_id
+
+def test_delegate_preserves_verbatim_goal_and_separate_context_on_first_wire_request():
+    """Regression for NousResearch/hermes-agent#154492, including a context-free task."""
+    from hermes_state import SessionDB
+    from run_agent import AIAgent
+    from tests.e2e.core.history._helpers import NO_BACKGROUND_REVIEW, OFFLINE_CONFIG
+    from tests.fakes.fake_llm_provider import FakeLLMServer, Text, write_hermes_home
+    from tools.delegate_tool import delegate_task
+
+    home = Path(os.environ["HERMES_HOME"])
+    with FakeLLMServer([]) as srv:
+        write_hermes_home(home, srv.base_url, extra_config=OFFLINE_CONFIG + NO_BACKGROUND_REVIEW)
+        srv.push(Text("first done"), Text("second done"))
+        parent = AIAgent(provider="custom", base_url=srv.base_url, api_key="sk-fake-e2e", model="fake-model",
+                         session_db=SessionDB(db_path=home / "state.db"), session_id="parent",
+                         quiet_mode=True, platform="cli")
+        parent._ensure_db_session()
+        goal = "  Inspect this specific failure. \n"
+        delegate_task(goal=goal, context="Fixture context", parent_agent=parent)
+        plain_goal = "  Keep this whitespace. \n"
+        delegate_task(goal=plain_goal, parent_agent=parent)
+        parent.close()
+        first, second = srv.main_requests()
+
+    assert [p["text"] for p in first["messages"][1]["content"]] == [
+        "CONTEXT:\n", "Fixture context\n\nTASK:\n", goal,
+    ]
+    assert [p["text"] for p in second["messages"][1]["content"]] == ["TASK:\n", plain_goal]
+
+
+def test_delegated_context_cache_marker_covers_both_prefix_parts_not_goal():
+    from agent.prompt_cache_boundary import register_stable_prefix
+    from agent.prompt_caching import apply_anthropic_cache_control
+
+    register_stable_prefix("CONTEXT:\nShared brief\n\nTASK:\n")
+    messages = [
+        {"role": "system", "content": "system"},
+        {"role": "user", "content": [
+            {"type": "text", "text": "CONTEXT:\n"},
+            {"type": "text", "text": "Shared brief\n\nTASK:\n"},
+            {"type": "text", "text": "  goal with whitespace \n"},
+        ]},
+    ]
+    wire = apply_anthropic_cache_control(messages)
+    assert [p["text"] for p in wire[1]["content"]] == [
+        "CONTEXT:\n", "Shared brief\n\nTASK:\n", "  goal with whitespace \n",
+    ]
+    assert wire[1]["content"][1]["cache_control"]["type"] == "ephemeral"
+    assert "cache_control" not in wire[1]["content"][2]

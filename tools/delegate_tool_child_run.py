@@ -1004,6 +1004,22 @@ class _ChildRun:
         _brief = child_task_message(self.goal, getattr(child, "_delegate_context", None))
         task_text = self.goal if resume else _brief
         user_message: Any = _build_child_goal_message(task_text, _images, child) if _images else task_text
+        if not resume:
+            # Distinct context and goal blocks survive prompt-cache canonicalization;
+            # the planner otherwise coalesces a two-part registered skill prefix.
+            context = getattr(child, "_delegate_context", None)
+            first_text = (user_message if isinstance(user_message, str) else
+                          user_message[0].get("text") if isinstance(user_message, list) and user_message else None)
+            if isinstance(first_text, str):
+                if context and context.strip():
+                    prefix = f"CONTEXT:\n{context}\n\nTASK:\n"
+                    parts = ([{"type": "text", "text": "CONTEXT:\n"},
+                              {"type": "text", "text": f"{context}\n\nTASK:\n"},
+                              {"type": "text", "text": first_text[len(prefix):]}]
+                             if first_text.startswith(prefix) else [{"type": "text", "text": first_text}])
+                else:
+                    parts = [{"type": "text", "text": "TASK:\n"}, {"type": "text", "text": first_text}]
+                user_message = parts + (user_message[1:] if isinstance(user_message, list) else [])
 
         def _run_with_thread_capture():
             worker_thread_holder["t"] = threading.current_thread()

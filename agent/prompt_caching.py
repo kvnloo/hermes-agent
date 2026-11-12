@@ -74,7 +74,15 @@ def _apply_cache_marker(msg: dict, cache_marker: dict, native_anthropic: bool = 
         # rides unmarked. Request-local only — the stored message stays a string.
         msg["content"] = _scaffold_parts(msg, cache_marker) or [_text_part(content, cache_marker)]
     elif isinstance(content, list) and content and isinstance(content[-1], dict):
-        content[-1]["cache_control"] = cache_marker
+        # The child sends a two-part registered context prefix, then the task;
+        # placing the cache marker after the prefix keeps sibling goals unmarked.
+        if (role == "user" and len(content) >= 3
+                and all(isinstance(part, dict) and part.get("type") == "text" for part in content[:3])
+                and find_stable_prefix("".join(part["text"] for part in content[:3]))
+                == content[0]["text"] + content[1]["text"]):
+            content[1]["cache_control"] = cache_marker
+        else:
+            content[-1]["cache_control"] = cache_marker
 
 
 def _scaffold_parts(msg: dict, cache_marker: dict | None = None) -> list | None:
