@@ -210,9 +210,10 @@ class SharedRouteAdapters:
     See #101113.
     """
 
-    def __init__(self, primary_adapters, routes) -> None:
+    def __init__(self, primary_adapters, routes, *, profile=None) -> None:
         self._primary = dict(primary_adapters or {})
         self._routes = list(routes or [])
+        self._profile = profile
 
     def __bool__(self) -> bool:
         return bool(self._primary) and bool(self._routes)
@@ -254,7 +255,9 @@ class SharedRouteAdapters:
                 str(route.platform), guild_id=route.guild_id, chat_id=chat_id, thread_id=thread_id,
                 user_id=route_user_id,
             ):
-                return adapter
+                # The first matching (most-specific) route owns the target, even when
+                # a broader route also matches a different satellite profile.
+                return adapter if self._profile is None or route.profile == self._profile else default
         return default
 
 

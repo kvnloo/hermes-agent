@@ -219,3 +219,35 @@ async def test_shared_bot_satellite_cannot_escape_routed_chat_via_thread_id(prof
         assert (await deliver("discord", {"chat_id": "222", "thread_id": "333"})).success
         assert discord.send.await_args.kwargs["metadata"] == {"thread_id": "333"}
         assert (await deliver("telegram", {"chat_id": "-100", "message_thread_id": "42"})).success
+
+@pytest.mark.asyncio
+async def test_shared_bot_satellite_cannot_deliver_to_another_profiles_thread(profile_homes, tmp_path):
+    """A broad Slack chat route must not trump another profile's more-specific thread route."""
+    from unittest.mock import patch
+
+    from gateway.profile_routing import parse_profile_routes
+
+    profile_homes.multiplex_profiles = True
+    profile_homes.profile_routes = parse_profile_routes([
+        {"name": "sec-chat", "platform": "slack", "profile": "sec", "chat_id": "C"},
+        {"name": "peer-thread", "platform": "slack", "profile": "peer", "chat_id": "C",
+         "thread_id": "T-PEER"},
+        {"name": "sec-thread", "platform": "slack", "profile": "sec", "chat_id": "C",
+         "thread_id": "T-SEC"},
+    ])
+    primary = _target()
+    webhook = _webhook(_Runner({Platform.SLACK: primary}, {"sec": {}}, profile_homes))
+
+    async def deliver(thread_id):
+        return await webhook._deliver_cross_platform(
+            "slack", "hi",
+            {"deliver": "slack", "deliver_extra": {"chat_id": "C", "thread_id": thread_id},
+             "profile": "sec"})
+
+    with patch("gateway.run._multiplex_profile_homes", return_value=[("sec", tmp_path / "sec")]):
+        assert (await deliver("T-SEC")).success
+        primary.send.assert_awaited_once()
+        primary.send.reset_mock()
+        refused = await deliver("T-PEER")
+        assert not refused.success and "not routed" in refused.error
+        primary.send.assert_not_awaited()

@@ -250,11 +250,13 @@ class GatewayAuthorizationMixin:
         if platform in (self._profile_adapters_map().get(profile_name) or {}):
             return True
         from cron.scheduler_preflight import SharedRouteAdapters
+        # Keep competing profiles' routes: a more-specific thread route must override
+        # this satellite's broad chat route, just as it does for inbound routing.
         routes = [r for r in getattr(self.config, "profile_routes", None) or []
-                  if r.enabled and r.profile == profile_name and r.bot_profile is None]
+                  if r.enabled and r.bot_profile is None]
         sentinel = object()
         target = {"chat_id": str(chat_id or ""), "thread_id": str(thread_id) if thread_id else None}
-        return SharedRouteAdapters({platform: sentinel}, routes).get(platform, target) is sentinel
+        return SharedRouteAdapters({platform: sentinel}, routes, profile=profile_name).get(platform, target) is sentinel
 
     def _routed_primary_adapter(self, source: Optional[SessionSource]):
         """The primary's transport for *source* when it is a routed destination of a shared-bot satellite.
