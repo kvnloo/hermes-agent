@@ -664,22 +664,23 @@ class _HealPass:
         from hermes_cli.auth import _is_same_auth_store
         if self.root_singleton is not None and _is_same_auth_store(profile_singleton, self.root_singleton):
             return  # an aliased singleton pair is one shared grant, not a fork: never self-compare/unlink
-        # See #101356.
         p_single = _singleton_as_row(profile_singleton)
-        root_has_grant = bool(self.r_oauth) or self.root_singleton_row is not None
-        # Otherwise root has NO grant for this provider (or the file is not a grant): the
-        # profile's singleton may be the only surviving copy — never delete it.
-        if p_single is None or not root_has_grant:
+        if p_single is None:
             return
-        if self.root_singleton_row is not None:
+        singleton_matches = self.root_singleton_row is not None and any(
+            p_single.get(key) and p_single[key] == self.root_singleton_row.get(key)
+            for key in ("access_token", "refresh_token")
+        )
+        if singleton_matches:
             self._adopt_root_singleton(p_single)
         else:
-            # Root only has pool rows: fold the singleton's pair into the freshest-matching
-            # root pkce row, if any.
-            idx = next(
-                (i for i, r in enumerate(self.r_rows)
-                 if _is_oauth_pool_payload(r) and _is_pkce_row(r)), None)
-            if idx is not None:
+            # Singleton files have no stable row ID. Only shared token material proves
+            # lineage; another account's root grant must not absorb or delete this pair.
+            # A pool row healed above already carries the adopted profile generation.
+            idx = _find_root_counterpart(p_single, self.r_rows)
+            if idx is None:
+                return
+            if _is_pkce_row(self.r_rows[idx]):
                 self._adopt_root_row(idx, p_single)
         try:
             profile_singleton.unlink()
@@ -712,7 +713,10 @@ class _HealPass:
 
     @property
     def dirty(self) -> bool:
-        return bool(self.profile_changed or self.root_changed or self.summary["adopted"])
+        return bool(
+            self.profile_changed or self.root_changed
+            or self.summary["adopted"] or self.summary["files"]
+        )
 
     def notice(self, profile_name: str) -> str:
         summary = self.summary
