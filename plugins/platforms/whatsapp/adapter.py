@@ -367,8 +367,8 @@ def _bridge_token_lock(lock_path: Path):
 def _load_or_create_bridge_token(session_path: Path, *, rotate: bool = False) -> str:
     """Per-session secret shared by the adapter, the bridge it spawns and standalone (cron) senders; 0600 beside creds.json.
 
-    Created once under an exclusive lock so two first-use callers (gateway start + a cron delivery) agree on one
-    value; a short or unreadable file is replaced. ``rotate`` mints a fresh one regardless (each new bridge spawn),
+    Created once under an exclusive lock so concurrent first-use callers agree on one value (standalone senders
+    only read it via ``_read_bridge_token``); a short or unreadable file is replaced. ``rotate`` mints a fresh one regardless (each new bridge spawn),
     so a token that leaked to whoever held the port of a dead bridge dies with it. Raises OSError when the session
     dir cannot be written."""
     import secrets
@@ -861,7 +861,7 @@ class WhatsAppAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
             if not self._ensure_bridge_deps(bridge_path.parent):
                 return False
             self._session_path.mkdir(parents=True, exist_ok=True)
-            # flock blocks until a concurrent minter (a cron send) releases it: never on the event loop.
+            # Minting writes and fsyncs the token file under a file lock: keep that disk wait off the loop.
             self._bridge_token = await asyncio.to_thread(_load_or_create_bridge_token, self._session_path)
             # A secondary adopts or reaps only a bridge its own pidfile identifies; the default keeps
             # its historical adopt-or-clear-the-port path. A bridge this version started dies with
