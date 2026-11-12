@@ -92,6 +92,33 @@ async def test_handoff_thread_falls_back_to_messageless_public_thread(adapter):
     )
 
 
+
+@pytest.mark.asyncio
+async def test_handoff_thread_seed_create_error_still_requests_public_fallback(adapter):
+    """A failed seed-thread create must not fall back to a private handoff (#95670)."""
+    parent, seed_message, _thread = _parent_with()
+    seed_message.create_thread.side_effect = RuntimeError("seed thread rejected")
+    adapter._client.get_channel = lambda _id: parent
+
+    result = await adapter.create_handoff_thread("123", "Hermes — Nightly brief")
+
+    assert result == "555"
+    parent.send.assert_awaited_once_with(
+        t("platform.discord.thread.handoff_seed", name="Hermes — Nightly brief")
+    )
+    seed_message.create_thread.assert_awaited_once_with(
+        name="Hermes — Nightly brief",
+        auto_archive_duration=1440,
+        reason="Hermes session handoff",
+    )
+    parent.create_thread.assert_awaited_once_with(
+        name="Hermes — Nightly brief",
+        auto_archive_duration=1440,
+        reason="Hermes session handoff",
+        type=discord.ChannelType.public_thread,
+    )
+
+
 @pytest.mark.asyncio
 async def test_handoff_thread_returns_none_when_both_paths_fail(adapter):
     parent, _seed_message, _thread = _parent_with(seed_ok=False, direct_ok=False)
