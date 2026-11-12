@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "verdict": "APPROVED_MANIFEST_ONLY",
+  "reviewed_commit": "d238539b54c0a0d7c2109528c249492c086fc629",
+  "db_identity": {
+    "canonical_path": "/workspace/hermes-home/kanban/boards/zer0-company/kanban.db",
+    "device": 66307,
+    "inode": 413083864,
+    "schema_version": 32,
+    "user_version": 0
+  },
+  "sealed_snapshot": {
+    "tasks": 160,
+    "links": 278,
+    "dangling": 165,
+    "both_missing": 165,
+    "missing_parent": 0,
+    "missing_child": 0
+  },
+  "independent_live_read_only_recheck": {
+    "open_mode": "SQLite URI mode=ro",
+    "query_only": true,
+    "tasks": 166,
+    "links": 287,
+    "dangling": 165,
+    "both_missing": 165,
+    "missing_parent": 0,
+    "missing_child": 0,
+    "dangling_rows_and_classifications_exact_match": true,
+    "logical_sentinel_before": "3ee7dfa7f8eb9923ec421bb796f16e96679d50dd893e38c89e54d032fd196eda",
+    "logical_sentinel_after": "3ee7dfa7f8eb9923ec421bb796f16e96679d50dd893e38c89e54d032fd196eda",
+    "logical_sentinel_equal": true,
+    "file_stat_equal_during_query": true,
+    "note": "The active board advanced after sealing, so 160/278 are retained only as sealed point-in-time totals and are not reused as a fixture. The exact 165 dangling edge tuples and classifications remained unchanged."
+  },
+  "query_sha256": "42913b70cd1320d4724d370a0ca2ca143c36e441207e250bea165c07bdc13610",
+  "artifact_sha256": {
+    "kanban-edge-reconciliation.json": "a000361e43f400e838efa431554de930ea6189a3ff3c07a070b36d29798c91fb",
+    "kanban-edge-reconciliation.md": "ae3b5eddf0f465929166e47457401d705f184c76431abc9b1855450bf3d0748a",
+    "kanban-edge-reconciliation.sha256.json": "0476b348ef2fb07b9e4fb2c825f53971a628dba7753a71864c0d3ea2ce1c1fb8"
+  },
+  "checks": {
+    "seal_matches": true,
+    "all_165_proposals_retain_low_confidence_nonexecuting": true,
+    "all_165_provenance_unknown": true,
+    "sensitive_body_result_comment_event_payload_keys_absent": true,
+    "explicit_absolute_db_required": true,
+    "ambient_board_resolution_rejected": true,
+    "blind_delete_rejected": true,
+    "migration_authority": false,
+    "targeted_tests_passed": 2
+  },
+  "governance": "This approval covers only the reconciliation manifest. Any database migration remains blocked pending Captain approval, backup, rollback plan, a separate migration card, and a separate independent verifier."
+}
