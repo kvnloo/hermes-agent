@@ -106,6 +106,21 @@ def test_isolated_named_profile_lists_only_itself(client, homes, monkeypatch):
     assert [item["text"] for item in _profile_mention_items("")] == ["@worker"]
 
 
+
+def test_isolated_listing_scope_stays_at_launch_home_after_profile_rebind(client, homes, monkeypatch):
+    """A later turn's HERMES_HOME must not retarget a dedicated server's listings."""
+    _seed(homes["default"], "default-chat")
+    _seed(homes["worker"], "worker-chat")
+    assert _launch_in(monkeypatch, homes["worker"]) == "worker"
+
+    # Multiplexed turns can mirror a different profile into the process environment.
+    monkeypatch.setenv("HERMES_HOME", str(homes["default"]))
+
+    assert [p["name"] for p in client.get("/api/profiles").json()["profiles"]] == ["worker"]
+    assert client.get("/api/status").json()["profiles"] == ["worker"]
+    assert _sidebar_ids(client) == {"worker-chat"}
+
+
 @pytest.mark.parametrize("launch", [
     {"isolated": False},                        # the machine dashboard
     {"isolated": True, "desktop_owned": True},  # Desktop's SSH serve: one backend, every profile
