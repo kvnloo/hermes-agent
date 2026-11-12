@@ -425,4 +425,11 @@ async def set_model_assignment(body: ModelAssignment, profile: Optional[str] = N
                         scope, provider, model, task, base_url, api_key,
                         reasoning_effort=reasoning_effort, prepared=prepared)
 
-        return await asyncio.to_thread(_apply_assignment)
+        try:
+            return await asyncio.to_thread(_apply_assignment)
+        except ValueError as exc:
+            # A managed .env can refuse an auxiliary endpoint key. Show that refusal
+            # to the dashboard instead of masking it as a generic HTTP 500.
+            if scope == "auxiliary" and base_url and api_key:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            raise
