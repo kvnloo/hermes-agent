@@ -298,8 +298,10 @@ async def test_desktop_slash_discard_resolves_only_named_unknown_and_restarts_fi
 
         acknowledged = await slash('discard ' + head_id)
         assert acknowledged.get('result', {}).get('type') == 'exec', acknowledged
-        await async_wait_until(lambda: executed == ['FOLLOWER'],
-                               what='queued follower resumed exactly once')
+        # The follower's row settles just after its turn runs; wait for the drain, not the side effect.
+        await async_wait_until(lambda: _statuses(authority.db)[follower_id][0] == 'terminal',
+                               what='queued follower settled')
+        assert executed == ['FOLLOWER']  # resumed exactly once
         assert _statuses(authority.db)[head_id] == ('terminal', 'interrupted')
         assert _statuses(authority.db)[follower_id] == ('terminal', 'completed')
     finally:
