@@ -244,12 +244,18 @@ def _check_and_apply_config_migration(
             # Gateway/--yes/non-interactive can't prompt for API keys; still run the
             # non-interactive pass so defaults and version bumps land before the gateway restarts.
             unattended = gateway_mode or assume_yes or response == "auto"
-            results = migrate_config(interactive=not unattended, quiet=False)
-            if results.get("failed_step") is not None:
-                owed.append(f"stopped at v{results['failed_step']}")
-            elif results["env_added"] or results["config_added"]:
-                print()
-                print("✓ Configuration updated!")
+            try:
+                results = migrate_config(interactive=not unattended, quiet=False)
+                if results.get("failed_step") is not None:
+                    owed.append(f"stopped at v{results['failed_step']}")
+                elif results["env_added"] or results["config_added"]:
+                    print()
+                    print("✓ Configuration updated!")
+            except Exception as _mig_err:
+                print(f"  ⚠️  Config update failed: {_mig_err}")
+                print("     Run 'hermes config migrate' to retry.")
+                owed.append(f"active profile config update failed: {_mig_err}")
+                owed_cause = _mig_err
             if unattended and missing_env:
                 print("  ℹ API keys require manual entry: hermes config migrate")
         else:

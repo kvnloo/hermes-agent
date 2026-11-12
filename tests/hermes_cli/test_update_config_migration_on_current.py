@@ -136,7 +136,8 @@ def test_active_config_write_failure_still_migrates_siblings_and_restores_snapsh
     sibling_version, latest = config.check_config_version()
     assert sibling_version == latest > 48
 
-def test_owed_reasons_from_the_active_write_and_a_sibling_are_all_kept(monkeypatch, capsys):
+@pytest.mark.parametrize("new_options", [False, True], ids=("format-only", "new-options"))
+def test_owed_reasons_from_the_active_write_and_a_sibling_are_all_kept(monkeypatch, capsys, new_options):
     """A failed active write and a sibling that advanced then stopped both reach the receipt:
     one RuntimeError names each reason, chained to the write error, and the sibling that only
     got part of the way is not reported with a success mark."""
@@ -153,16 +154,22 @@ def test_owed_reasons_from_the_active_write_and_a_sibling_are_all_kept(monkeypat
 
     monkeypatch.setattr(config, "check_config_version", lambda **_: (20, 53))
     monkeypatch.setattr(config, "get_missing_env_vars", lambda **_: [])
-    monkeypatch.setattr(config, "get_missing_config_fields", list)
+    monkeypatch.setattr(config, "get_missing_config_fields",
+                        lambda: [{"key": "display.new_setting"}] if new_options else [])
     monkeypatch.setattr(config, "migrate_config", failing_write)
     monkeypatch.setattr(update_cmd, "_migrate_sibling_profile_configs", siblings)
-    monkeypatch.setattr(update_cmd_config, "_restore_snapshot_safety_nets", lambda _snapshot: None)
+    snapshots = []
+    monkeypatch.setattr(update_cmd_config, "_restore_snapshot_safety_nets", snapshots.append)
 
     with pytest.raises(RuntimeError) as raised:
-        update_cmd_config._check_and_apply_config_migration(pre_update_snapshot_id="snap")
-    assert "format v20 → v53 was not written: disk full" in str(raised.value)
+        update_cmd_config._check_and_apply_config_migration(
+            assume_yes=True, pre_update_snapshot_id="snap")
+    reason = ("active profile config update failed: disk full" if new_options
+              else "format v20 → v53 was not written: disk full")
+    assert reason in str(raised.value)
     assert "profile 'work' stopped at v21" in str(raised.value)
     assert raised.value.__cause__ is disk_full
+    assert snapshots == ["snap"]
     out = capsys.readouterr().out
     assert "Profile 'work': config migration stopped at v21 (v16 → v20 applied)" in out
     assert "✓ Profile 'work'" not in out
