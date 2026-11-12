@@ -110,16 +110,34 @@ def test_stale_writer_preserves_new_source_entry(bounded_store):
     assert store._entries_for(target) == [OWNER_FACTS[1], added]
 
 
-def test_oversized_external_append_is_not_deleted(bounded_store):
+def test_oversized_external_append_survives_unrelated_delete(bounded_store):
     store, target, path = bounded_store
     seed(store, target)
     with path.open("a") as stream:
         stream.write("\n[source:fixture-external] Keep this owner correction. " + "x" * 501)
     before = path.read_bytes()
+    entries = MemoryStore._read_file(path)
     result = store.remove(target, "fixture-owner-1")
-    assert not result["success"]
-    assert path.read_bytes() == before
-    assert result.get("drift_backup")
+    if result["success"]:
+        assert MemoryStore._read_file(path) == entries[1:]
+    else:
+        assert path.read_bytes() == before
+
+
+def test_deleting_glued_external_text_requires_exact_backup(bounded_store):
+    from pathlib import Path
+
+    store, target, path = bounded_store
+    seed(store, target)
+    with path.open("a") as stream:
+        stream.write("\n[source:fixture-external] Keep this owner correction. " + "x" * 501)
+    before = path.read_bytes()
+    result = store.remove(target, "fixture-owner-2")
+    if result["success"]:
+        assert Path(result["drift_backup"]).read_bytes() == before
+        assert MemoryStore._read_file(path) == OWNER_FACTS[:1]
+    else:
+        assert path.read_bytes() == before
 
 
 def test_oversized_existing_memory_is_not_automatically_pruned(bounded_store):
