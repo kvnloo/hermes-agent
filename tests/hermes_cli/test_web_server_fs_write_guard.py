@@ -165,3 +165,18 @@ def test_write_text_judges_a_named_profile_save_by_that_profiles_protected_state
     saved = _save(client, notes, "kept", profile="work")
     assert saved.status_code == 200, saved.text
     assert notes.read_text() == "kept"
+
+@pytest.mark.parametrize("path", [
+    r"\??\UNC\example.invalid\share\notes.txt",
+    r"\\?\UNC\example.invalid\share\notes.txt",
+    r"\\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1\notes.txt",
+    r"\\.\PhysicalDrive0",
+])
+def test_write_text_refuses_nt_namespaces_before_any_path_resolution(client, monkeypatch, path):
+    """Raw NT namespace input must be rejected before a Windows filesystem path is touched."""
+    def unexpected_fs_access(*_args, **_kwargs):
+        raise AssertionError("NT namespace input reached filesystem path inspection")
+
+    monkeypatch.setattr(file_routes, "_remote_fs_backend", unexpected_fs_access)
+    response = _save(client, path)
+    assert response.status_code == 403, response.text
