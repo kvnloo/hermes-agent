@@ -687,6 +687,7 @@ def _launcher_python(target: Path) -> Path | None:
     except OSError:
         return None
     line: str | None = None
+    joined: str | None = None
     suffix = Path(target).suffix.lower()
     if suffix == ".exe":
         # distlib native launcher: loader stub, "#!<python> -I" shebang, zip.
@@ -714,10 +715,15 @@ def _launcher_python(target: Path) -> Path | None:
             return None
         lines = text.splitlines()
         if suffix == ".cmd":
-            # "@echo off", then '"<python>" -I -c "<code>" %*'. The file's
-            # own \r\n pair gains a translated extra \r on Windows writes,
-            # so the command may sit past a blank line — never assume its index.
-            line = next((entry for entry in lines[1:] if entry.strip()), None)
+            # The fallback can set HPY and enable delayed expansion before its
+            # command line. Read the actual invocation, not the first command.
+            for entry in lines[1:]:
+                stripped = entry.strip()
+                if stripped.startswith('set "HPY=%~dp0') and stripped.endswith('"'):
+                    joined = stripped[len('set "HPY=%~dp0'):-1]
+                if " -I -c " in stripped:
+                    line = stripped
+                    break
             if line is None:
                 return None
         else:
@@ -736,9 +742,15 @@ def _launcher_python(target: Path) -> Path | None:
                 return None
             return Path(token) if token else None
     try:
-        return _first_token(line)
+        token = _first_token(line)
     except (ValueError, OSError):
         return None
+    if joined is not None and token == Path("!HPY!"):
+        # %~dp0 is the launcher's own directory; the original interpreter
+        # must remain identifiable by the shared-launcher ownership guard.
+        relative = joined.replace("\\", os.sep)
+        return Path(os.path.normpath(os.path.join(str(Path(target).parent), relative)))
+    return token
 
 
 def _kept_shared_launcher(name: str, local: Path, store: Path, own: Path | None) -> Path | None:
