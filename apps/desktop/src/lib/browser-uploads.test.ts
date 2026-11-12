@@ -27,6 +27,47 @@ function png(size: number): Uint8Array {
   return bytes
 }
 
+describe('browser file picker defaults', () => {
+  it('stages more than one file by default but honors explicit single-select', async () => {
+    seedWebappSession('served-token')
+    const uploads: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input), window.location.origin)
+
+      if (url.pathname !== '/api/chat/file-upload') {
+        throw new Error(`Unexpected fetch: ${url}`)
+      }
+
+      const file = (init?.body as FormData).get('file') as File
+      uploads.push(file.name)
+
+      return new Response(JSON.stringify({ path: `/srv/upload/${file.name}` }), { status: 200 })
+    }))
+    expect(installBrowserDesktopBridge()).toBe(true)
+
+    const first = new File(['one'], 'one.txt', { type: 'text/plain' })
+    const second = new File(['two'], 'two.txt', { type: 'text/plain' })
+    const modes: boolean[] = []
+
+    vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(function (this: HTMLInputElement) {
+      modes.push(this.multiple)
+      Object.defineProperty(this, 'files', {
+        configurable: true,
+        value: this.multiple ? [first, second] : [first]
+      })
+      this.dispatchEvent(new Event('change'))
+    })
+
+    await expect(window.hermesDesktop!.selectPaths({})).resolves.toEqual([
+      '/srv/upload/one.txt',
+      '/srv/upload/two.txt'
+    ])
+    await expect(window.hermesDesktop!.selectPaths({ multiple: false })).resolves.toEqual(['/srv/upload/one.txt'])
+    expect(modes).toEqual([true, false])
+    expect(uploads).toEqual(['one.txt', 'two.txt', 'one.txt'])
+  })
+})
+
 describe('browser image paste size', () => {
   // A pasted or dropped image is staged on the host, and sending the message reads it back through
   // /api/fs/read-data-url, which stops at 16 MiB. An image over that limit is refused at the paste,
