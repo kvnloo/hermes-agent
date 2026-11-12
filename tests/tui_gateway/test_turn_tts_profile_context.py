@@ -48,3 +48,24 @@ def test_speaker_keeps_caller_profile(profile_b, monkeypatch):
     server._speak_text_with_barge("the reply")
     assert done.wait(10)
     assert seen["home"] == profile_b
+
+
+def test_barge_in_listener_keeps_turn_profile(profile_b, monkeypatch):
+    """The fallback's barge-in mic worker must not use the gateway launch home."""
+    from tools import voice_mode
+    from tui_gateway import server
+
+    seen, ready = {}, threading.Event()
+
+    def fake_listen(_should_stop, **_kwargs):
+        # Transcription runs under this same listener worker context.
+        seen["home"] = get_hermes_home()
+        ready.set()
+        return None
+
+    monkeypatch.setattr(server, "_fd_listener_active", False)
+    monkeypatch.setattr(voice_mode, "full_duplex_listen", fake_listen)
+
+    server._arm_full_duplex_listener()
+    assert ready.wait(10)
+    assert seen["home"] == profile_b
