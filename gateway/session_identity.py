@@ -152,8 +152,15 @@ def _runtime_home_for_identity(
     named_runtime = runtime_name != primary_profile
     runtime_is_available = True
     if named_runtime:
-        from hermes_cli.profiles import profile_exists, profile_matches_home
-        runtime_is_available = profile_exists(runtime_name)
+        from gateway.run import _multiplex_profile_homes
+        from hermes_cli.profiles import normalize_profile_name, profile_exists, profile_matches_home
+        runtime_is_available = (
+            profile_exists(runtime_name)
+            and any(
+                name == normalize_profile_name(runtime_name)
+                for name, _home in _multiplex_profile_homes(runner.config)
+            )
+        )
     if runtime_name == transport_name:
         runtime_home = authorization_home
     else:

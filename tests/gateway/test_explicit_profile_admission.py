@@ -99,3 +99,39 @@ def test_restored_source_refuses_an_explicit_runtime_without_a_live_profile(
     assert source.profile_route_rejected is True
     assert identity_of(source) is None
     assert not hasattr(source, "_rejected_route_profile")
+
+
+@pytest.mark.parametrize("admission", ["primary", "restored"])
+def test_parked_named_runtime_is_refused_even_while_its_profile_exists(
+    multiplex_runner, admission,
+):
+    """A parked profile is installed but not served; it must not receive an inbound turn."""
+    from gateway.run import _multiplex_profile_homes
+    from hermes_cli.profiles import profile_exists
+
+    runner, default_home, served_home = multiplex_runner
+    assert profile_exists("served")
+    assert "served" in {name for name, _home in _multiplex_profile_homes(runner.config)}
+
+    live_source = _source("served")
+    if admission == "primary":
+        assert runner._admit_primary_source(live_source, default_home) == served_home
+    else:
+        assert runner._restored_source(
+            SimpleNamespace(origin=live_source, transport_profile="default"),
+        ) is live_source
+        assert identity_of(live_source).runtime_home == served_home
+
+    (served_home / "gateway.parked").touch()
+    assert profile_exists("served")  # still installed: the old existence-only check accepts it
+    assert "served" not in {name for name, _home in _multiplex_profile_homes(runner.config)}
+
+    rejected_source = _source("served")
+    if admission == "primary":
+        assert runner._admit_primary_source(rejected_source, default_home) is None
+    else:
+        assert runner._restored_source(
+            SimpleNamespace(origin=rejected_source, transport_profile="default"),
+        ) is None
+    assert rejected_source.profile_route_rejected is True
+    assert identity_of(rejected_source) is None
