@@ -1,0 +1,14 @@
+name: tool-context-trim
+version: "1.0.0"
+description: "Z21 (t_01df79f7): cap oversized tool results and dedupe repeated read-only calls before they enter the model's context. Deterministic and local-only - no LLM, no network. Owner-private paths stay verbatim."
+author: reliability lane (Kevin Rajan's fleet)
+license: MIT
+manifest_version: 2
+provides_hooks:
+  - transform_tool_result
+config_schema:
+  max_chars: {type: int, description: "results longer than this get head+tail+note (default 4000)"}
+  head: {type: int, description: "chars kept from the head (default 2400)"}
+  tail: {type: int, description: "chars kept from the tail (default 800)"}
+  dedupe_head: {type: int, description: "chars kept when an identical read-only call repeats (default 1600)"}
+  "off": {type: bool, description: "kill switch: 1 disables both transforms"}
