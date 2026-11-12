@@ -255,3 +255,18 @@ def test_suffixed_star_entry_is_not_a_wildcard(monkeypatch, carrier):
         adapter = _build_adapter(monkeypatch, {}, {"allow_from": [entry]})
     assert adapter._is_dm_allowed("15551234567") is False
     assert adapter._is_dm_allowed(_BSUID) is False
+
+def test_configured_bsuid_does_not_authorize_colliding_sender(monkeypatch):
+    """Config-based BSUID grants stay exact even when an env carrier names a colliding ID."""
+    allowed = "DE.1A2B3C4D5E"
+    collision = "DE.12345ABCDE"
+    adapter = _build_adapter(
+        monkeypatch,
+        {"WHATSAPP_CLOUD_ALLOWED_USERS": collision},
+        extra={"dm_policy": "allowlist", "allow_from": [allowed]},
+    )
+
+    assert adapter._dm_allowlist_source == "config"
+    assert adapter._is_dm_allowed(allowed) is True
+    assert adapter._is_dm_allowed(collision) is False
+    assert adapter._is_dm_intake_allowed(collision) is False
