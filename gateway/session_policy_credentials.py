@@ -231,6 +231,20 @@ def _pre_151775_route(model_cfg, config):
         return None
     builtin = _canonical(name)
     own = str(model_cfg.get('base_url') or '').strip().rstrip('/')
+    if builtin == 'openrouter':
+        # The pre-#151775 OpenRouter resolver takes a profile-scoped CUSTOM_BASE_URL
+        # before model.base_url, and OPENROUTER_BASE_URL before the default host.
+        # A conflicting override is not an unchanged endpoint, even if the
+        # unoverridden built-in URL happens to match the providers: entry.
+        from agent.secret_scope import UnscopedSecretError, get_secret_str
+        try:
+            override = get_secret_str('CUSTOM_BASE_URL', '').strip()
+            if not override and not own:
+                override = get_secret_str('OPENROUTER_BASE_URL', '').strip()
+        except UnscopedSecretError:
+            return None  # Cannot prove the old endpoint without a profile scope.
+        if override and _url(override) != _url(url):
+            return None
     if _url(own or _builtin_default_url(builtin)) != _url(url):
         return None
     return builtin, own

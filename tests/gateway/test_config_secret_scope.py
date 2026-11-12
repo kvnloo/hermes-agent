@@ -624,3 +624,36 @@ def _set(cfg, path, value):
     for key in path[:-1]:
         cfg = cfg[key]
     cfg[path[-1]] = value
+
+@pytest.mark.parametrize('override, own_url', [
+    ('OPENROUTER_BASE_URL', None),
+    ('CUSTOM_BASE_URL', 'https://openrouter.ai/api/v1'),
+])
+def test_pre_151775_openrouter_env_endpoint_move_refuses_frozen_key(tmp_path, monkeypatch, override, own_url):
+    """A scoped URL override sent the old built-in key to a different host.
+
+    The legacy bound digest contains only the route's own URL, not its env
+    override. Matching the unoverridden default to the new providers: entry
+    must not let the old key escape to that new endpoint.
+    """
+    from hermes_state_runtime import RuntimeStoreError
+    monkeypatch.delenv('CUSTOM_BASE_URL', raising=False)
+    monkeypatch.delenv('OPENROUTER_BASE_URL', raising=False)
+    model = {'provider': 'openrouter', 'default': 'm', 'api_key': 'sk-frozen-test'}
+    if own_url:
+        model['base_url'] = own_url
+    config = {'model': model, 'providers': {'openrouter': {
+        'base_url': 'https://openrouter.ai/api/v1'}}}
+    owner, policy = _bind(tmp_path, monkeypatch, config)
+    legacy = _stamped_before_151775(policy, monkeypatch)
+
+    # Without the override the pre-151775 key stayed on OpenRouter's host.
+    assert legacy.config(owner())['model']['api_key'] == 'sk-frozen-test'
+
+    # With the pre-existing override, the old built-in sent the key elsewhere.
+    # The newly selected providers: entry must not receive it.
+    monkeypatch.setenv(override, 'https://mirror.invalid/v1')
+    with pytest.raises(RuntimeStoreError, match='launch_credentials_unavailable') as refused:
+        legacy.config(owner())
+    assert refused.value.field == 'model.api_key'
+    assert 'endpoint' in refused.value.detail
