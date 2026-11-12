@@ -145,13 +145,18 @@ def get_fallback_chain(config: dict[str, Any] | None) -> list[dict[str, Any]]:
     copies.
     """
     config = config or {}
+    from agent.backend_identity import credential_fingerprint
+
     chain: list[dict[str, Any]] = []
-    seen: set[tuple[str, str, str]] = set()
+    seen: dict[tuple[str, str, str], set[str]] = {}
     for key in ("fallback_providers", "fallback_model"):
         for entry in _iter_fallback_entries(config.get(key)):
             identity = _entry_identity(entry)
-            if identity not in seen:
-                seen.add(identity)
+            credential = credential_fingerprint(resolve_entry_api_key(entry))
+            prior = seen.get(identity)
+            # An unknown key proves no separate quota; two known different keys do.
+            if prior is None or (credential and "" not in prior and credential not in prior):
+                seen.setdefault(identity, set()).add(credential)
                 chain.append(entry)
     return chain
 

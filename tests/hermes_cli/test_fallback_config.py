@@ -82,3 +82,22 @@ class TestFallbackEntryRuntimeKwargs:
         from hermes_cli.fallback_config import fallback_entry_runtime_kwargs
         assert fallback_entry_runtime_kwargs({"provider": "nous", "model": "m"}) == {
             "requested": "nous", "target_model": "m"}
+
+class TestFallbackChainAccountDedup:
+    """Distinct credential accounts must survive chain normalization (#151321)."""
+
+    def test_different_key_env_accounts_same_route_both_survive(self, monkeypatch):
+        from hermes_cli.fallback_config import get_fallback_chain
+
+        monkeypatch.setenv("HERMES_TEST_ACCOUNT_A", "sk-account-a")
+        monkeypatch.setenv("HERMES_TEST_ACCOUNT_B", "sk-account-b")
+        route = {"provider": "custom", "model": "shared-model", "base_url": "https://pool.example.test/v1"}
+        config = {"fallback_providers": [
+            {**route, "key_env": "HERMES_TEST_ACCOUNT_A"},
+            {**route, "key_env": "HERMES_TEST_ACCOUNT_B"},
+            {**route, "key_env": "HERMES_TEST_ACCOUNT_A"},
+        ]}
+
+        assert [entry["key_env"] for entry in get_fallback_chain(config)] == [
+            "HERMES_TEST_ACCOUNT_A", "HERMES_TEST_ACCOUNT_B",
+        ]
