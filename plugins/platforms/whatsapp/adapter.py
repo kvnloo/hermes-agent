@@ -861,7 +861,8 @@ class WhatsAppAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
             if not self._ensure_bridge_deps(bridge_path.parent):
                 return False
             self._session_path.mkdir(parents=True, exist_ok=True)
-            self._bridge_token = _load_or_create_bridge_token(self._session_path)
+            # flock blocks until a concurrent minter (a cron send) releases it: never on the event loop.
+            self._bridge_token = await asyncio.to_thread(_load_or_create_bridge_token, self._session_path)
             # A secondary adopts or reaps only a bridge its own pidfile identifies; the default keeps
             # its historical adopt-or-clear-the-port path. A bridge this version started dies with
             # its gateway (spawn_owned), so what is adopted here is one a pre-update gateway or
@@ -895,7 +896,7 @@ class WhatsAppAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
             # A secondary that skipped the kills found the port free, so this returns at once on that path.
             if not await self._wait_bridge_port_free():
                 return False
-            self._bridge_token = _load_or_create_bridge_token(self._session_path, rotate=True)
+            self._bridge_token = await asyncio.to_thread(_load_or_create_bridge_token, self._session_path, rotate=True)
             # Bridge output goes to a log file so QR codes, errors, and reconnection messages survive for troubleshooting.
             self._bridge_log = self._session_path.parent / "bridge.log"
             self._bridge_log_fh = bridge_log_fh = open(self._bridge_log, "a", encoding="utf-8")  # noqa: ASYNC230 -- long-lived log handle handed to the bridge subprocess
