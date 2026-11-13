@@ -1,0 +1,52 @@
+{
+  "feature": "Hermes Kanban mobile interactions",
+  "status": "approved exact product active on distinct Tailnet-only private preview; Captain choice pending",
+  "surface": "standalone Kanban WebUI with synthetic isolated board; not Electron Desktop; not chat sidebar",
+  "source": {
+    "product_commit": "e78904f1ffb2af707d896c0de9fcb298c4d747fb",
+    "evidence_commit": "ba17e764467557a4e1dcbaaf48cd04de9e121f9c"
+  },
+  "caption_actions": {
+    "Open Live": "https://0.taila30dc.ts.net:8453/kanban?rev=e78904f1",
+    "Compare": "https://0.taila30dc.ts.net:8450/kanban?rev=dcb6804e9",
+    "Evidence": "mobile-interactions-e78904f1-evidence.json"
+  },
+  "served_assets": {
+    "index_js_sha256": "e08b3c2730034d754fa7c0eac472921596af0281bcf1949f83e3e10a32d1a43d",
+    "style_css_sha256": "afe45c5cf8e92fbadb0b13f7fc45ba0953ef50e80ffdd29da8ddcd8b2c382cdd"
+  },
+  "verification": {
+    "startup": "4/4 passed",
+    "hold_matrix": "PASS at 320/360/390/430/1280; 199ms inert and 200ms armed",
+    "gesture_matrix": "PASS at 320/360/390/430/1280; pan-y, one lane change and one 8ms vibration on mobile; desktop preserved",
+    "targets": "67.9375px controls and no horizontal overflow at all five widths",
+    "compact_snooze": "not represented by the exact standalone product: no Kanban Snooze literal or surface exists at e78904f1; no claim made",
+    "isolation": "synthetic DB at .preview/home-isolated/kanban/boards/hold-drag-review/kanban.db",
+    "listeners": "one dashboard listener at 127.0.0.1:44923 and one Host-rewrite proxy at 127.0.0.1:9137",
+    "logs": "dashboard stdout 165 bytes; stderr valid zero bytes"
+  },
+  "deployment": {
+    "tailnet_port": 8453,
+    "origin_port": 44923,
+    "proxy_port": 9137,
+    "services": [
+      "hermes-mobile-interactions-e78904f1.service",
+      "hermes-mobile-interactions-e78904f1-proxy.service"
+    ],
+    "baseline_8450_mutated": false,
+    "public_push_or_pr_mutation": false
+  },
+  "rollback": [
+    "tailscale serve --https=8453 off",
+    "systemctl --user disable --now hermes-mobile-interactions-e78904f1-proxy.service hermes-mobile-interactions-e78904f1.service"
+  ],
+  "poster": {
+    "path": ".preview/mobile-interactions-e78904f1-editorial.png",
+    "sha256": "24803f34715ff9df2e03dc481797d85cdcf1d6daefe48b411e51fa31bc63f7f6",
+    "telegram_jpeg": ".preview/mobile-interactions-e78904f1-editorial-telegram.jpg",
+    "telegram_jpeg_sha256": "3d9fe5cd56789aa2f58d6a915e85b40e1ed279dbf545f27df2104604d69623b0",
+    "telegram_downscale_ocr": "headline, all three summary headings, matrix, byte callout, surface, evidence, availability and baseline labels remained readable",
+    "source_capture": "tests/kanban_hold_harness/artifacts/430.png",
+    "source_capture_uncropped": true
+  }
+}

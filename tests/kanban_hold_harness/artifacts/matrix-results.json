@@ -5,15 +5,15 @@
       "plugins/kanban/dashboard/dist/style.css": "afe45c5cf8e92fbadb0b13f7fc45ba0953ef50e80ffdd29da8ddcd8b2c382cdd"
     },
     "canonical_sentinel_before": {
-      "path": "/home/kvn/.hermes/kanban/boards/zer0-company/kanban.db",
-      "sha256": "40a784e47fe8ae29c5dcc40e9d8d12e1617e7cfd6649348b0fa49a7f0e37d78e",
-      "size": 3993600
+      "path": "/home/kvn/.hermes/kanban.db",
+      "sha256": "4ee40331798b2eacaa1386566dedaf62bd6833f24ee778d75d5e62657d43d734",
+      "size": 131072
     },
     "commit": "e78904f1ffb2af707d896c0de9fcb298c4d747fb",
-    "db": "/tmp/hermes-hold-drag-uq6lm28h/kanban/boards/hold-drag-review/kanban.db",
-    "home": "/tmp/hermes-hold-drag-uq6lm28h",
-    "pid": 2074749,
-    "port": 24565,
+    "db": "/workspace/zer0/oss/hermes-agent/.worktrees/t_61407470/.preview/home-isolated/kanban/boards/hold-drag-review/kanban.db",
+    "home": "/workspace/zer0/oss/hermes-agent/.worktrees/t_61407470/.preview/home-isolated",
+    "pid": 2870760,
+    "port": 44923,
     "readiness_timeout": 120,
     "source_identity": {
       "approved_base": "dcb6804e9411c9559e9f53a3958876882ec247da",
@@ -25,9 +25,9 @@
       "product_commit": "e78904f1ffb2af707d896c0de9fcb298c4d747fb"
     },
     "start_command": "python tests/kanban_hold_harness/start.py",
-    "stderr": "/tmp/hermes-hold-drag-uq6lm28h/dashboard.stderr.log",
-    "stdout": "/tmp/hermes-hold-drag-uq6lm28h/dashboard.stdout.log",
-    "url": "http://127.0.0.1:24565/kanban"
+    "stderr": "/workspace/zer0/oss/hermes-agent/.worktrees/t_61407470/.preview/home-isolated/dashboard.stderr.log",
+    "stdout": "/workspace/zer0/oss/hermes-agent/.worktrees/t_61407470/.preview/home-isolated/dashboard.stdout.log",
+    "url": "http://127.0.0.1:44923/kanban"
   },
   "results": [
     {
@@ -42,8 +42,8 @@
           67.9375
         ]
       },
-      "measured199": 199.09999999776483,
-      "measured200": 200.19999999925494
+      "measured199": 199.19999999552965,
+      "measured200": 200.29999999701977
     },
     {
       "width": 360,
@@ -57,8 +57,8 @@
           67.9375
         ]
       },
-      "measured199": 199.30000000074506,
-      "measured200": 200.09999999776483
+      "measured199": 199.10000000149012,
+      "measured200": 200.19999999552965
     },
     {
       "width": 390,
@@ -72,8 +72,8 @@
           67.9375
         ]
       },
-      "measured199": 199.09999999776483,
-      "measured200": 200.30000000074506
+      "measured199": 199.19999999552965,
+      "measured200": 200.19999999552965
     },
     {
       "width": 430,
@@ -87,8 +87,8 @@
           67.9375
         ]
       },
-      "measured199": 199.19999999925494,
-      "measured200": 200.19999999925494
+      "measured199": 199.10000000149012,
+      "measured200": 200.10000000149012
     },
     {
       "width": 1280,
@@ -102,8 +102,8 @@
           67.9375
         ]
       },
-      "measured199": 199.30000000074506,
-      "measured200": 200.19999999925494
+      "measured199": 199.20000000298023,
+      "measured200": 200.19999999552965
     }
   ]
 }

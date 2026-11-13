@@ -1,0 +1,4 @@
+{
+  "dbSentinel": "t_4f9623d1|Synthetic todo card 1|ready\n3224|t_9e73b340|created|{\"assignee\": \"fixture-alpha\", \"status\": \"ready\", \"parents\": [], \"tenant\": null, \"workspace_kind\": \"scratch\", \"workspace_path\": null, \"branch_name\": null, \"project_id\": null, \"skills\": null, \"goal_mode\": null, \"model_override\": null, \"provider_override\": null}\n",
+  "config": "a815f40ee61784f28d452f582834afec2749a419cb77771880117cb62fd4af12"
+}

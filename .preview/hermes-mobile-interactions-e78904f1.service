@@ -1,0 +1,14 @@
+[Unit]
+Description=Hermes approved mobile interactions e78904f1 private preview
+After=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+WorkingDirectory=/workspace/zer0/oss/hermes-agent/.worktrees/t_61407470
+ExecStart=/home/kvn/.hermes/hermes-agent/venv/bin/python tests/kanban_hold_harness/start.py --home /workspace/zer0/oss/hermes-agent/.worktrees/t_61407470/.preview/home-isolated --keep-home --readiness-timeout 120
+TimeoutStartSec=150
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

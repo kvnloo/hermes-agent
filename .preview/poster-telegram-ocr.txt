@@ -1,0 +1,18 @@
+Mobile lanes now
+move on intent.
+
+PRIVATE PREVIEW ACTIVE | exact approved product e78904f1
+HOLD 02 GESTURE 03 SCOPE
+199ms stays inert. Vertical scroll stays native. Desktop behavior stays intact.
+200ms arms drag. Horizontal moves one lane. Baseline :8450 is untouched.
+
+ACTUAL 430 PX CAPTURE Hermes Agent
+
+Synthetic isolated board Kanban
+
+No production data
+
+MATRIX BYTES
+199 /200 ms passed 320 360 390 430 1280 JS + CSS exact hashes
+
+Hermes standalone Kanban WebUI | evidence bal7e7644 | Tailnet-only | baseline :8450 unchanged

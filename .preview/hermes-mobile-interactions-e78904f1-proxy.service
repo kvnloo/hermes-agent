@@ -1,0 +1,15 @@
+[Unit]
+Description=Tailnet Host-rewrite proxy for e78904f1 mobile interactions
+After=hermes-mobile-interactions-e78904f1.service
+Requires=hermes-mobile-interactions-e78904f1.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python /workspace/zer0/oss/hermes-agent/.worktrees/t_61407470/.preview/tailnet_proxy.py
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target
