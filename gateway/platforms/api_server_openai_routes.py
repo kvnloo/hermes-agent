@@ -764,8 +764,14 @@ def _select_current_turn(conversation_messages: list[dict[str, Any]]) -> tuple:
         None)
     if user_idx is None:
         return None, None
-    return (conversation_messages[user_idx].get("content", ""),
-            conversation_messages[:user_idx] + conversation_messages[user_idx + 1:])
+    history = conversation_messages[:user_idx] + conversation_messages[user_idx + 1:]
+    # Client-side empty drafts are not replayable history; tool-call carriers
+    # and visible assistant continuations retain their existing semantics.
+    while (history and history[-1].get("role") == "assistant"
+           and not history[-1].get("tool_calls")
+           and not _content_has_visible_payload(history[-1].get("content", ""))):
+        history.pop()
+    return conversation_messages[user_idx].get("content", ""), history
 
 
 def _parse_responses_input(raw_input: Any) -> tuple:

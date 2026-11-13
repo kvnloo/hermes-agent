@@ -145,3 +145,17 @@ def test_tool_tailed_history_keeps_result_paired_with_assistant_call():
     carrier, tool_result = history
     assert tool_result["role"] == "tool"
     assert tool_result["tool_call_id"] == carrier["tool_calls"][0]["id"]
+
+
+def test_trailing_empty_assistant_placeholder_is_not_replayed():
+    """An empty Open WebUI assistant draft must not enter replay history."""
+    _, conversation, err = _parse_chat_messages(
+        [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": ""},
+        ]
+    )
+    assert err is None
+    user_message, history = _select_current_turn(conversation)
+    assert user_message == "Hello"
+    assert history == []
