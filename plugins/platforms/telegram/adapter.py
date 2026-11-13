@@ -6742,9 +6742,8 @@ def register(ctx) -> None:
     from .standalone import standalone_send
     from . import gateway_env  # env -> GatewayConfig bridge (gateway.config_env)
     ctx.register_platform(
-        voice_output_opus=gateway_env.VOICE_OUTPUT_OPUS,
         name="telegram", label="Telegram", adapter_factory=_build_adapter, check_fn=telegram_deps_present,
-        **DASHBOARD_CARD,
+        voice_output_opus=gateway_env.VOICE_OUTPUT_OPUS, **DASHBOARD_CARD,
         ensure_deps_fn=check_telegram_requirements, is_connected=_is_connected, required_env=["TELEGRAM_BOT_TOKEN"],
         install_hint=t("platform.telegram.install_hint"), setup_fn=interactive_setup, apply_yaml_config_fn=_apply_yaml_config, cron_deliver_env_var="TELEGRAM_HOME_CHANNEL",
         standalone_sender_fn=standalone_send, max_message_length=4096, emoji="✈️", allow_update_command=True,
