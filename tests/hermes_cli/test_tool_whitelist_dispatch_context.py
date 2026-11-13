@@ -72,3 +72,25 @@ def test_plain_thread_does_not_inherit_the_whitelist(monkeypatch):
         assert seen["message"] is None
     finally:
         plugins.clear_thread_tool_whitelist()
+
+def test_reused_worker_rechecks_context_after_review(monkeypatch):
+    """The same pool worker must not keep a previous review's tool restriction."""
+    _isolate_whitelist(monkeypatch)
+    worker_ids = []
+
+    def check_terminal():
+        worker_ids.append(threading.get_ident())
+        return _gate("terminal")
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        plugins.set_thread_tool_whitelist({"memory"})
+        try:
+            denied = pool.submit(propagate_context_to_thread(check_terminal)).result()
+        finally:
+            plugins.clear_thread_tool_whitelist()
+
+        allowed = pool.submit(propagate_context_to_thread(check_terminal)).result()
+
+    assert len(worker_ids) == 2 and worker_ids[0] == worker_ids[1]
+    assert denied is not None and DENIED in denied
+    assert allowed is None
