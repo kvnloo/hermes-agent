@@ -54,6 +54,24 @@ describe('useMessageStream compaction lifecycle', () => {
     expect($compactingSessions.get()).toEqual({ [OTHER_SID]: true })
   })
 
+  it('shows a compression-provider warning without falsely marking compaction', () => {
+    mountStream()
+    const warning =
+      "⚠ Configured auxiliary compression provider 'nous' is unavailable, so older messages in long chats will be cut without a summary."
+
+    emit('status.update', { kind: 'warn', text: warning })
+
+    expect($notifications.get()).toEqual([
+      expect.objectContaining({
+        id: `gateway-warning:${SID}:${warning}`,
+        kind: 'warning',
+        message: warning
+      })
+    ])
+    expect($compactingSessions.get()).toEqual({})
+    expect(stream.state().messages).toEqual([])
+  })
+
   // Manual /compress pins `compressing` (methods_session._compress_live) and
   // always clears it with `ready` from that function's `finally`. The desktop
   // matched only the auto-compaction spelling, so /compress showed no phase at

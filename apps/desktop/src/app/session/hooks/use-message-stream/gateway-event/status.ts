@@ -171,6 +171,17 @@ export function handleStatusEvent(ctx: GatewayEventContext): boolean {
           }
         ]
       }))
+    } else if (sessionId && payload?.kind === 'warn') {
+      // Compression-provider failures (and other actionable warnings) are status updates,
+      // not agent notices; without a Desktop consumer they vanish from the UI.
+      const warning = coerceGatewayText(payload?.text).trim()
+      if (warning) {
+        notify({
+          id: `gateway-warning:${sessionId}:${warning}`,
+          kind: 'warning',
+          message: warning
+        })
+      }
     }
 
     return true
