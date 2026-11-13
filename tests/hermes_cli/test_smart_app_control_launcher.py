@@ -82,3 +82,31 @@ def test_app_control_off_leaves_a_healthy_exe(tmp_path, monkeypatch):
 
     assert ensure_windows_bin_launchers(root, windows=True, user_path_entries=[]) == []
     assert (bindir / "hermes.exe").read_bytes() == b"MZ healthy"
+
+
+def test_enforcing_app_control_retires_a_mapped_shadowing_exe(tmp_path, monkeypatch):
+    """If DeleteFile fails but rename succeeds, the blocked exe must not shadow CMD."""
+    out = tmp_path / "bin"
+    out.mkdir()
+    exe = out / "hermes.exe"
+    exe.write_bytes(b"MZ mapped unsigned launcher")
+    python = tmp_path / "store" / "python.exe"
+    python.parent.mkdir()
+    python.write_bytes(b"MZ python")
+
+    original_unlink = Path.unlink
+
+    def sharing_violation(path, *args, **kwargs):
+        if path == exe:
+            raise PermissionError("mapped executable refuses DeleteFile")
+        return original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", sharing_violation)
+    written = _launchers.mint_launcher(
+        "hermes", tmp_path / "repo", out, python, None, windows=True, app_control=True,
+    )
+
+    assert written == out / "hermes.cmd"
+    assert written.is_file()
+    assert not exe.exists(), "Windows would execute the blocked EXE before CMD"
+    assert list(out.glob("hermes.exe.*.deleteme")) == []

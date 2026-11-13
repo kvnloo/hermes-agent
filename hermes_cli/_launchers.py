@@ -218,12 +218,24 @@ def _write_cmd_launcher(name: str, out_dir: Path, python_exe: Path, script: str)
 
 
 def _drop_shadowing_exe(out_dir: Path, name: str) -> bool:
-    """PATHEXT runs ``.exe`` before ``.cmd`` and does not fall through when the exe is blocked."""
+    """Retire the blocked exe so Windows can resolve the .cmd we just published."""
     exe = out_dir / f"{name}.exe"
     try:
         exe.unlink(missing_ok=True)
+        return True
+    except OSError:
+        pass
+    # A mapped Windows image can refuse DeleteFile yet allow a rename.
+    # Do not leave the old exe at the name PATHEXT searches first.
+    aside = exe.with_name(f"{exe.name}.{os.getpid()}.deleteme")
+    try:
+        os.replace(exe, aside)
     except OSError:
         return not exe.exists()
+    try:
+        aside.unlink()
+    except OSError:
+        pass  # The next repair can remove the aside after the holder exits.
     return True
 
 
