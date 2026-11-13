@@ -280,7 +280,7 @@ class TestCachedChatTypeResolution:
 
     def test_dm_cached_chat_type_passes_dm_admission(self):
         adapter = _make_adapter()
-        adapter._chat_info_cache["oc_group"] = {"type": "dm"}
+        adapter._chat_info_cache["oc_group"] = {"type": "dm", "raw_mode": "p2p"}
         seen = []
 
         def dm_only(user_id, chat_type=None, chat_id=None, **_kw):
@@ -298,7 +298,7 @@ class TestCachedChatTypeResolution:
 
     def test_update_prompt_dm_cached_chat_type(self):
         adapter = _make_adapter()
-        adapter._chat_info_cache["oc_group"] = {"type": "dm"}
+        adapter._chat_info_cache["oc_group"] = {"type": "dm", "raw_mode": "p2p"}
         seen = []
 
         def dm_only(user_id, chat_type=None, chat_id=None, **_kw):
@@ -334,6 +334,39 @@ class TestCachedChatTypeResolution:
             adapter._on_card_action_trigger(_approval_click("ou_requester"))
 
         assert check.seen == [("ou_requester", "group", "oc_group")]
+
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("chat_mode", "expected_type"),
+        [("p2p", "dm"), ("group", "group"), ("topic", "forum")],
+    )
+    async def test_private_chat_visibility_does_not_grant_dm_card_access(self, chat_mode, expected_type):
+        """chat_type=private describes visibility for groups too; chat_mode selects admission."""
+        adapter = _make_adapter()
+        chat_data = SimpleNamespace(chat_type="private", chat_mode=chat_mode, name="Private chat")
+        api_response = SimpleNamespace(success=lambda: True, data=chat_data)
+        with (
+            patch.object(adapter, "_build_get_chat_request", return_value=object()),
+            patch.object(adapter, "_run_blocking", new_callable=AsyncMock, return_value=api_response),
+        ):
+            await adapter.get_chat_info("oc_group")
+
+        seen = []
+
+        def dm_only(user_id, chat_type=None, chat_id=None, **_kw):
+            seen.append((user_id, chat_type, chat_id))
+            return chat_type == "dm"
+
+        adapter.set_authorization_check(dm_only)
+        with patch("asyncio.run_coroutine_threadsafe", side_effect=_close_submitted_coro) as submit:
+            response = adapter._on_card_action_trigger(_approval_click("ou_requester"))
+
+        assert seen == [("ou_requester", expected_type, "oc_group")]
+        assert (response.card is not None) == (chat_mode == "p2p")
+        assert submit.called == (chat_mode == "p2p")
+        if chat_mode != "p2p":
+            assert 1 in adapter._approval_state
 
 
 class TestIdFormFallback:

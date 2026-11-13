@@ -3210,10 +3210,10 @@ class FeishuAdapter(FeishuChoiceCardsMixin, FeishuSyntheticEventsMixin, BasePlat
         return "dm" if event_chat_type == "p2p" else "group"
 
     def _cached_chat_type(self, chat_id: str) -> str:
-        """dm/group/forum for a card click, from the sync chat-info cache; "group" when unknown."""
+        """Use Feishu chat_mode, not chat_type (private/public), for card-click admission."""
         info = self._chat_info_cache.get(str(chat_id or "").strip()) or {}
-        resolved = str(info.get("type") or "").strip().lower()
-        return resolved if resolved in {"dm", "group", "forum"} else "group"
+        raw_mode = str(info.get("raw_mode") or "").strip().lower()
+        return {"p2p": "dm", "topic": "forum"}.get(raw_mode, "group")
 
     async def _resolve_sender_profile(self, sender_id: Any, *, is_bot: bool = False) -> dict[str, Optional[str]]:
         """Map Feishu's ID tiers onto SessionSource: user_id (tenant) > open_id (app) as primary,
