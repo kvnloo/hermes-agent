@@ -210,7 +210,7 @@ _RESPONSES_BUILTIN_TOOL_TYPES = {
 # response is ``completed``, so they must NOT flip the incomplete verdict (else every
 # server-search turn burns 3 fruitless continuation retries).
 _SERVER_SIDE_TOOL_CALL_TYPES = {
-    "web_search_call", "file_search_call", "code_interpreter_call",
+    "web_search_call", "web_fetch_call", "file_search_call", "code_interpreter_call",
     "image_generation_call", "computer_call", "local_shell_call", "mcp_call",
 }
 

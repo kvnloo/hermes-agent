@@ -891,8 +891,12 @@ class _CodexResponseAssembler:
     # are real answer text even when its done event never arrives. Bare output_text deltas carry no such proof.
     saw_answer_item_added = False
 
-    def __init__(self, *, model, on_text_delta, on_reasoning_delta, on_commentary_message, on_first_delta):
+    def __init__(self, *, model, on_text_delta, on_reasoning_delta, on_commentary_message, on_first_delta,
+                 on_tool_progress=None, on_tool_start=None, on_tool_complete=None):
         self.model, self.on_text_delta, self.on_reasoning_delta = model, on_text_delta, on_reasoning_delta
+        self.on_tool_progress, self.on_tool_start, self.on_tool_complete = (
+            on_tool_progress, on_tool_start, on_tool_complete)
+        self.native_web_active: dict[str, tuple] = {}
         self.on_commentary_message, self.on_first_delta = on_commentary_message, on_first_delta
         self.output_items: list[Any] = []
         # output_index / first-observed sequence per output item, in lockstep, so settled pending calls merge
@@ -910,7 +914,42 @@ class _CodexResponseAssembler:
     def _safe(self, cb: Callable | None, label: str, *args: Any) -> None:
         _call_guarded(cb, f"Codex stream {label} raised", args=args)
 
+    def _native_web_progress(self, event: Any, *, finished: bool) -> None:
+        """Project provider-executed search/fetch items into the existing live tool UI only."""
+        item = _event_field(event, "item")
+        item_type = _event_field(item, "type")
+        if item_type not in {"web_search_call", "web_fetch_call"}:
+            return
+        index = _event_field(event, "output_index")
+        item_id = _event_field(item, "id")
+        key = f"index:{index}" if index is not None else (f"id:{item_id}" if item_id else "")
+        if not key:
+            return
+        if finished:
+            active = self.native_web_active.pop(key, None)
+            if active is None:
+                return
+            call_id, name, args, started = active
+            _call_guarded(
+                self.on_tool_progress, "Native web completion callback raised",
+                args=("tool.completed", name, None, None),
+                kwargs={"duration": time.monotonic() - started, "is_error": False, "result": ""},
+            )
+            self._safe(self.on_tool_complete, "on_tool_complete", call_id, name, args, "")
+        elif key not in self.native_web_active:
+            name = "web_search" if item_type == "web_search_call" else "web_extract"
+            field = "query" if name == "web_search" else "url"
+            value = _event_field(_event_field(item, "action"), field)
+            args = {field: value} if isinstance(value, str) and value else {}
+            preview = value if isinstance(value, str) and value else (
+                "Searching the web" if name == "web_search" else "Fetching page")
+            call_id = f"native_web_{id(self)}_{key}"
+            self.native_web_active[key] = (call_id, name, args, time.monotonic())
+            self._safe(self.on_tool_progress, "on_tool_progress", "tool.started", name, preview, args)
+            self._safe(self.on_tool_start, "on_tool_start", call_id, name, args)
+
     def _on_item_added(self, event: Any, event_type: str) -> None:
+        self._native_web_progress(event, finished=False)
         item = _event_field(event, "item")
         item_type = _event_field(item, "type", "")
         self.active_message_phase = _message_phase(item) if item_type == "message" else None
@@ -1004,6 +1043,7 @@ class _CodexResponseAssembler:
         self._safe(self.on_reasoning_delta, "on_reasoning_delta", reasoning_text)
 
     def _on_item_done(self, event: Any, event_type: str) -> None:
+        self._native_web_progress(event, finished=True)
         done_item = _event_field(event, "item")
         if done_item is None:
             return
@@ -1139,6 +1179,7 @@ class _CodexResponseAssembler:
 def _consume_codex_event_stream(
     event_iter: Any, *, model: str, on_text_delta=None, on_reasoning_delta=None, on_commentary_message=None,
     on_first_delta=None, on_event=None, interrupt_check=None,
+    on_tool_progress=None, on_tool_start=None, on_tool_complete=None,
 ) -> SimpleNamespace:
     """Consume a Codex Responses SSE stream into a Response-shaped ``SimpleNamespace`` (see
     :class:`_CodexResponseAssembler`; ``status`` is ``completed`` when the stream ended with content but no
@@ -1150,8 +1191,10 @@ def _consume_codex_event_stream(
     tool item; ``on_first_delta`` one-shot; ``on_event`` every event before any processing; ``interrupt_check()``
     True breaks the loop and may raise ``TimeoutError`` / ``InterruptedError`` for request retirement that
     must not become a partial final response."""
-    assembler = _CodexResponseAssembler(model=model, on_text_delta=on_text_delta, on_reasoning_delta=on_reasoning_delta,
-                                        on_commentary_message=on_commentary_message, on_first_delta=on_first_delta)
+    assembler = _CodexResponseAssembler(
+        model=model, on_text_delta=on_text_delta, on_reasoning_delta=on_reasoning_delta,
+        on_commentary_message=on_commentary_message, on_first_delta=on_first_delta,
+        on_tool_progress=on_tool_progress, on_tool_start=on_tool_start, on_tool_complete=on_tool_complete)
     for event in event_iter:
         if on_event is not None:
             try:
@@ -1233,7 +1276,7 @@ def run_codex_stream(agent, api_kwargs: dict, client: Any = None, on_first_delta
 
     def _live(fn: Callable[..., None]) -> Callable[..., None]:
         """Wrap a live-display callback so a superseded writer's frames never reach the sink (retired ones neither)."""
-        return lambda *args: fn(*args) if _request_is_current() and _writer_is_current() else None
+        return lambda *args, **kwargs: fn(*args, **kwargs) if _request_is_current() and _writer_is_current() else None
 
     def _on_text_delta(text: str) -> None:
         agent._codex_streamed_text_parts.append(text)
@@ -1424,6 +1467,9 @@ def run_codex_stream(agent, api_kwargs: dict, client: Any = None, on_first_delta
                     on_reasoning_delta=_live(agent._fire_reasoning_delta), on_commentary_message=on_commentary_message,
                     on_first_delta=_live(on_first_delta) if on_first_delta is not None else None,
                     on_event=_fenced(_on_event), interrupt_check=_interrupt_or_superseded,
+                    on_tool_progress=_live(agent.tool_progress_callback) if getattr(agent, "tool_progress_callback", None) else None,
+                    on_tool_start=_live(agent.tool_start_callback) if getattr(agent, "tool_start_callback", None) else None,
+                    on_tool_complete=_live(agent.tool_complete_callback) if getattr(agent, "tool_complete_callback", None) else None,
                 )
             except transport_errors as exc:
                 if attempt >= max_stream_retries:
