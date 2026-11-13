@@ -64,7 +64,7 @@ def reconcile_served_context_after_response(agent: Any, api_call_count: int) -> 
     """Once per (model, base_url) after the first response: warn + clamp when Ollama serves less than detected."""
     believed = getattr(agent, "_ollama_num_ctx", None)
     base_url = getattr(agent, "base_url", None) or ""
-    if api_call_count != 1 or not believed or not base_url:
+    if api_call_count < 1 or not believed or not base_url:
         return
     key = (agent.model, base_url)
     if getattr(agent, "_ollama_served_window_checked", None) == key:

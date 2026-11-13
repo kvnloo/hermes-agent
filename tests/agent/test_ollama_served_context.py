@@ -37,3 +37,18 @@ def test_served_window_matching_detected_is_silent():
         reconcile_served_context_after_response(agent, api_call_count=1)
     agent._emit_warning.assert_not_called()
     agent.context_compressor.update_model.assert_not_called()
+
+def test_model_switch_checks_served_context_even_after_first_api_call():
+    """Each Ollama model needs its own served-window check, even mid-session."""
+    agent = _agent(believed=131072, window=131072)
+    with patch(
+        "agent.ollama_served_context.query_ollama_served_context", side_effect=[131072, 4096],
+    ) as probe:
+        reconcile_served_context_after_response(agent, api_call_count=1)
+        agent.model = "qwen3.8:27b"
+        reconcile_served_context_after_response(agent, api_call_count=2)
+        reconcile_served_context_after_response(agent, api_call_count=3)
+    assert probe.call_count == 2
+    agent._emit_warning.assert_called_once()
+    assert agent.context_compressor.update_model.call_args.kwargs["model"] == "qwen3.8:27b"
+    assert agent.context_compressor.update_model.call_args.kwargs["context_length"] == 4096
