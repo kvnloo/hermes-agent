@@ -75,10 +75,23 @@ def typed_summary_messages(
             if role == "user":
                 body = record.removeprefix("[USER]: ")
                 _text("user", body) if is_real_user(msg) else _text("assistant", "[INTERNAL CONTEXT]: " + body)
-            elif role == "tool" and msg.get("tool_call_id") in open_calls:
-                open_calls.remove(msg["tool_call_id"])
+            elif role == "tool":
                 body = record.split("]: ", 1)[1] if record.startswith("[TOOL RESULT") else record
-                out.append({"role": "tool", "tool_call_id": msg["tool_call_id"], "content": body})
+                call_id = msg.get("tool_call_id")
+                if call_id in open_calls:
+                    open_calls.remove(call_id)
+                else:
+                    # A sampled window can retain a tool result but omit its invoking assistant.
+                    # Pair it with a replay-only call rather than promoting tool text to assistant text.
+                    _close_calls()
+                    call_id = f"compaction_orphan_{index}"
+                    out.append({
+                        "role": "assistant",
+                        "content": "[tool invocation omitted from sampled history]",
+                        "tool_calls": [{"id": call_id, "type": "function",
+                                        "function": {"name": "tool", "arguments": "{}"}}],
+                    })
+                out.append({"role": "tool", "tool_call_id": call_id, "content": body})
             elif role == "assistant" and any(isinstance(tc, dict) for tc in msg.get("tool_calls") or ()):
                 _close_calls()
                 text = record.removeprefix("[ASSISTANT]: ").split("\n[Tool calls:\n", 1)[0]

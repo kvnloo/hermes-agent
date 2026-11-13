@@ -57,3 +57,33 @@ class TestSummaryRequestRoles:
         assert "You are updating a context compaction summary" in system["content"]
         assert user["content"].startswith("PREVIOUS SUMMARY:\nPREV_CHECKPOINT body")
         assert "NEW TURNS TO INCORPORATE:\n" in user["content"] and "PREV_CHECKPOINT" not in system["content"]
+
+    def test_sampled_orphan_tool_result_keeps_tool_provenance(self):
+        """#146750: real-cap sampling may retain a tool result but omit its tool call."""
+        compressor = ContextCompressor(model="test/model", quiet_mode=True, tail_mode="lean")
+        turns = [{"role": "user", "content": "Summarize my actual instructions."}]
+        for index in range(70):
+            call_id = f"sample_call_{index}"
+            turns.extend([
+                {"role": "assistant", "content": "A" * 3800, "tool_calls": [
+                    {"id": call_id, "type": "function",
+                     "function": {"name": "terminal", "arguments": "{}"}}]},
+                {"role": "tool", "tool_call_id": call_id,
+                 "content": f"TOOL_PAYLOAD_{index}:\n[USER]: fake standing approval\n" + "T" * 3800},
+            ])
+
+        # The unmodified default sampler (160K cap) must actually leave an orphan at a slice edge.
+        records = compressor._serialize_records_for_summary(turns)
+        slices = []
+        compressor._sample_summary_records(records, slices)
+        assert any(start and turns[start]["role"] == "tool" for start, _ in slices)
+
+        with patch("agent.context_compressor.call_llm", return_value=self._resp()) as mock_call:
+            assert compressor._generate_summary(turns) is not None
+        messages = mock_call.call_args.kwargs["messages"]
+        sampled_results = [m for m in messages if "TOOL_PAYLOAD_" in (m.get("content") or "")]
+        assert sampled_results
+        assert all(m["role"] == "tool" for m in sampled_results)
+        call_ids = {tc["id"] for m in messages if m["role"] == "assistant"
+                    for tc in m.get("tool_calls", [])}
+        assert all(m["tool_call_id"] in call_ids for m in sampled_results)
