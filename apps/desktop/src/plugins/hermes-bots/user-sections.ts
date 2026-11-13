@@ -23,6 +23,7 @@
 
 import { atom } from 'nanostores'
 
+import type { GatewayGroupRoom } from './canonical-group-registry'
 import { $botMeta, saveBotMeta } from './data'
 import { $groupChats, updateGroupChat } from './group-chat'
 import { botRosterMeta } from './routing'
@@ -32,7 +33,7 @@ import type { BotMeta, GroupChat, RosterRow } from './types'
 /** The one section-name dialog's state: New section (optionally filing the
  *  bot or group whose menu opened it) or Rename. */
 export type SectionDialogState =
-  null | { bot?: RosterRow; group?: string; mode: 'create' } | { id: string; mode: 'rename'; name: string }
+  null | { bot?: RosterRow; gateway?: GatewayGroupRoom; group?: string; mode: 'create' } | { id: string; mode: 'rename'; name: string }
 
 export const UNASSIGNED_SECTION_KEY = 'section:unassigned'
 export const BOT_SECTIONS_KEY = 'bot-sections-v1'
@@ -330,6 +331,44 @@ export function groupDragKey(name: string): string {
   return `${GROUP_DRAG_PREFIX}${name}`
 }
 
+/** Not a name-keyed legacy group drag. */
+export const GATEWAY_GROUP_DRAG_PREFIX = 'gateway-group:'
+
+function gatewayGroupRecord(gateway: GatewayGroupRoom, rooms: Record<string, GroupChat>) {
+  const { connectionId, profile, roomId } = gateway.binding
+
+  return Object.entries(rooms).find(([, room]) => {
+    const owner = room.engine
+
+    return !room.tombstone && typeof owner === 'object' && owner?.kind === 'gateway' &&
+      owner.connectionId === connectionId && owner.profile === profile && owner.roomId === roomId
+  })
+}
+
+/** Filing is room-local presentation, keyed by the immutable gateway owner. */
+export function gatewayGroupSectionId(gateway: GatewayGroupRoom, rooms: Record<string, GroupChat>): null | string {
+  const id = gatewayGroupRecord(gateway, rooms)?.[1].sectionId
+
+  return id ? String(id) : null
+}
+
+export function moveGatewayGroupToSection(gateway: GatewayGroupRoom, sectionId: null | string): void {
+  const existing = gatewayGroupRecord(gateway, $groupChats.get())
+
+  if ((existing?.[1].sectionId || null) === (sectionId || null)) {
+    return
+  }
+
+  const { connectionId, profile, roomId } = gateway.binding
+
+  updateGroupChat(existing?.[0] || gateway.key, room => ({
+    ...room,
+    roomId,
+    engine: { kind: 'gateway', connectionId, profile, roomId },
+    sectionId: sectionId || null
+  }), { sync: false })
+}
+
 /** A group's section, off the live room record. */
 export function groupChatSectionId(name: string, rooms: Record<string, GroupChat>): null | string {
   const id = rooms?.[name]?.sectionId
@@ -387,9 +426,10 @@ export function groupRowsBySection<TRow extends { bot?: RosterRow } | RosterRow>
   for (const row of rows || []) {
     const group = (row as { kind?: string; name?: string })?.kind === 'group' ? row : null
 
-    // A gateway room is not a Desktop room record: a same-name one must not seat it.
+    // A gateway room cannot inherit a same-named Desktop room's filing.
+    const gateway = (group as { gateway?: GatewayGroupRoom } | null)?.gateway
     const id = group
-      ? (group as { gateway?: unknown }).gateway ? null : groupChatSectionId(String((group as { name?: string }).name || ''), groupRooms)
+      ? gateway ? gatewayGroupSectionId(gateway, groupRooms) : groupChatSectionId(String((group as { name?: string }).name || ''), groupRooms)
       : botSectionId(((row as { bot?: RosterRow })?.bot || row) as RosterRow, metaByName)
 
     if (id && known.has(id)) {

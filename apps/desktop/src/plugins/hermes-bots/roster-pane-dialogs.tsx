@@ -8,7 +8,7 @@ import { disbandGroupChat, openGroupChat } from './group-chat-view'
 import type { useBots } from './i18n'
 import { deleteBot } from './profile-ops'
 import type { GroupMember, RosterRow } from './types'
-import { createBotSection, moveGroupChatsToSection, renameBotSection, type SectionDialogState } from './user-sections'
+import { createBotSection, moveGatewayGroupToSection, moveGroupChatsToSection, renameBotSection, type SectionDialogState } from './user-sections'
 import { SectionNameDialog } from './user-sections-ui'
 
 interface renderRosterDialogsProps {
@@ -88,6 +88,10 @@ export function renderRosterDialogs({
 
             if (section && sectionDialog?.group) {
               moveGroupChatsToSection([sectionDialog.group], section.id)
+            }
+
+            if (section && sectionDialog?.gateway) {
+              moveGatewayGroupToSection(sectionDialog.gateway, section.id)
             }
           }
         }}

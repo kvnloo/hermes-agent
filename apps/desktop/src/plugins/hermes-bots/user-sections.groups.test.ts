@@ -56,12 +56,14 @@ vi.mock('./shared', () => ({
 // './group-chat' is deliberately NOT mocked: filing must go through the real
 // room-store path (atom + durable plugin-storage record), with only its
 // externals (sdk, data, routing, shared) faked above.
+import type { GatewayGroupRoom } from './canonical-group-registry'
 import { $botMeta } from './data'
-import { $groupChats } from './group-chat'
+import { $groupChats, updateGroupChat } from './group-chat'
 import type { RosterRow } from './types'
 import {
   $botSections,
   createBotSection,
+  deleteBotSection,
   groupChatSectionId,
   groupRowsBySection,
   moveGroupChatsToSection,
@@ -101,6 +103,50 @@ describe('user sections — group chats', () => {
     expect(
       (storage.get('group-chats') as Record<string, { sectionId?: null | string }>)['Team Chat']?.sectionId
     ).toBeNull()
+  })
+
+  it('seats gateway groups by durable owner, not same-named Desktop rooms, across reloads and renames', () => {
+    const projects = createBotSection('Projects')!
+    const legacy = createBotSection('Legacy')!
+    moveGroupChatsToSection(['Team Chat'], legacy.id)
+
+    const gateway = (connectionId: string, roomId: string, name: string) => ({
+      key: `canonical:${connectionId}:default:${roomId}`,
+      name,
+      binding: { connectionId, profile: 'default', roomId, roomName: name },
+      members: [],
+      updatedAt: 0,
+      room: { room_id: roomId, name, members: [] }
+    }) as GatewayGroupRoom
+
+    const owned = gateway('owner-a', 'room-1', 'Team Chat')
+    const other = gateway('owner-b', 'room-1', 'Team Chat')
+
+    updateGroupChat(owned.key, room => ({
+      ...room,
+      roomId: owned.binding.roomId,
+      engine: { kind: 'gateway', connectionId: 'owner-a', profile: 'default', roomId: 'room-1' },
+      sectionId: projects.id
+    }), { sync: false })
+
+    // Rehydrate the same persisted room record used by live section filing.
+    const durable = storage.get('group-chats') as ReturnType<typeof $groupChats.get>
+    $groupChats.set({})
+    $groupChats.set(durable)
+
+    const renamed = gateway('owner-a', 'room-1', 'Renamed')
+    const first = { kind: 'group' as const, name: renamed.name, gateway: renamed }
+    const second = { kind: 'group' as const, name: other.name, gateway: other }
+    const desktop = groupRow('Team Chat')
+    const rows = [first, second, desktop]
+    const blocks = () => groupRowsBySection(rows, $botSections.get(), $botMeta.get(), $groupChats.get())
+
+    expect(blocks().find(block => block.id === projects.id)?.rows).toEqual([first])
+    expect(blocks().find(block => block.id === legacy.id)?.rows).toEqual([desktop])
+    expect(blocks().find(block => block.key === UNASSIGNED_SECTION_KEY)?.rows).toEqual([second])
+
+    deleteBotSection(projects.id)
+    expect(blocks().find(block => block.key === UNASSIGNED_SECTION_KEY)?.rows).toEqual([first, second])
   })
 
   it('grouping seats group rows per their room record section; unfiled or dangling groups fall to Unassigned', () => {

@@ -449,6 +449,7 @@ export function BotsPane() {
     <CanonicalGroupRow
       active={groupChatName === gateway.key}
       key={gateway.key}
+      onNewSection={target => setSectionDialog({ gateway: target, mode: 'create' })}
       onOpen={() => openGroupChat(bindGatewayGroupRoom(gateway), 'key')}
       room={gateway}
     />

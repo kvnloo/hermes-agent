@@ -10,11 +10,13 @@ import type { BotMeta, GroupChat, RosterRow } from './types'
 import type { $botSections, SectionDialogState } from './user-sections'
 import {
   deleteBotSection,
+  GATEWAY_GROUP_DRAG_PREFIX,
   GROUP_DRAG_PREFIX,
   groupDragKey,
   groupRowsBySection,
   moveBotSection,
   moveBotsToSection,
+  moveGatewayGroupToSection,
   moveGroupChatsToSection,
   UNASSIGNED_SECTION_KEY
 } from './user-sections'
@@ -100,7 +102,9 @@ export function rosterSectionRenderers({
               isSource={
                 Boolean(dragging) &&
                 block.rows.some(row =>
-                  row.kind === 'group' ? groupDragKey(row.name) === dragging : botRosterKey(row.bot) === dragging
+                  row.kind === 'group'
+                    ? (row.gateway ? `${GATEWAY_GROUP_DRAG_PREFIX}${row.gateway.key}` : groupDragKey(row.name)) === dragging
+                    : botRosterKey(row.bot) === dragging
                 )
               }
               key={key}
@@ -108,6 +112,17 @@ export function rosterSectionRenderers({
               onDropBot={rosterKey => {
                 // `block.id` is null for Unassigned, which is exactly the value
                 // both movers want for "clear the assignment".
+                if (rosterKey.startsWith(GATEWAY_GROUP_DRAG_PREFIX)) {
+                  const key = rosterKey.slice(GATEWAY_GROUP_DRAG_PREFIX.length)
+                  const gateway = sortedGroupRows.find(row => row.gateway?.key === key)?.gateway
+
+                  if (gateway) {
+                    moveGatewayGroupToSection(gateway, block.id)
+                  }
+
+                  return
+                }
+
                 if (rosterKey.startsWith(GROUP_DRAG_PREFIX)) {
                   moveGroupChatsToSection([rosterKey.slice(GROUP_DRAG_PREFIX.length)], block.id)
 
