@@ -696,6 +696,29 @@ def recover_after_classification(
             "messages with image parts found; surfacing original error."
         )
 
+    # Azure Foundry GPT-6 tool+reasoning rejects the chat wire, not the effort level.
+    # Only this explicit server signature may switch to Responses, once per call attempt.
+    if (
+        agent.provider == "azure-foundry"
+        and agent.api_mode == "chat_completions"
+        and status_code == 400
+        and not _retry.azure_responses_switch_attempted
+        and all(part in str(api_error).lower() for part in (
+            "function tools with reasoning_effort", "not supported for",
+            "/v1/chat/completions", "/v1/responses",
+        ))
+    ):
+        _retry.azure_responses_switch_attempted = True
+        agent.api_mode = "codex_responses"
+        agent.client = None
+        cache = getattr(agent, "_transport_cache", None)
+        if isinstance(cache, dict):
+            cache.clear()
+        # The existing request-client kwargs retain the Azure endpoint and credential.
+        _vlines(agent, "Azure Foundry requires Responses for tool calls with reasoning — switching wire and retrying...")
+        logger.warning("%sAzure Foundry tool/reasoning 400: retrying on Responses for %s", agent.log_prefix, agent.model)
+        return True, recovered_with_pool
+
     # Route rejecting a reasoning disable: a reasoning-mandatory route (Nous Portal / OpenRouter,
     # e.g. GLM-5.3) 400s on ``reasoning: {enabled: false}``; a chat-only OpenAI-compatible relay
     # 400s on the ``reasoning_effort: none`` the title/continuation disable projects (#114460).
