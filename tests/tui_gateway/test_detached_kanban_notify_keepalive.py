@@ -103,12 +103,21 @@ def test_cap_and_ttl_reapers_spare_session_awaiting_card(server, detached):
     assert not server._session_is_reapable(sid, session)
 
 
-def test_session_released_once_card_settles(server, detached):
+def test_unclaimed_completion_notice_survives_reap_until_poller_claims_it(server, detached):
     sid, session, popped = detached
     tid = _subscribed_task()
     _complete(tid)
 
+    # The worker finished, but the subscribed session has not seen its completed event.
     server._schedule_ws_orphan_reap(sid)
+    _Timer.created[-1].callback()
+
+    assert server._sessions.get(sid) is session and not popped
+    assert server._pending_ws_reaps[sid] is _Timer.created[-1]
+
+    # After the notification poller advances the cursor, the detached session can go.
+    texts = server._collect_kanban_notifications(session)
+    assert len(texts) == 1 and tid in texts[0]
     _Timer.created[-1].callback()
 
     assert server._sessions.get(sid) is None and popped == [session]

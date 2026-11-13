@@ -213,6 +213,7 @@ def count_notify_subs(
     chat_id: Optional[str] = None,
     thread_id: Optional[str] = None,
     task_statuses: Optional[Iterable[str]] = None,
+    unseen_event_kinds: Optional[Iterable[str]] = None,
 ) -> int:
     """Count ``kanban_notify_subs`` rows via a read-only connection — the
     notifier's cheap zero-subscription early exit. Unlike :func:`connect` it
@@ -220,8 +221,9 @@ def count_notify_subs(
     still visible so a fresh sub is never missed. Missing DB / missing table
     counts as zero; platform matches case-insensitively (as notifier routing),
     chat/thread exactly. Raises :class:`sqlite3.Error` if the DB exists but is
-    unreadable — callers pick their own fallback. ``task_statuses`` counts only
-    subscriptions whose task is currently in one of those statuses.
+    unreadable — callers pick their own fallback. ``task_statuses`` selects
+    active tasks; ``unseen_event_kinds`` selects rows with matching events past
+    the subscriber cursor. Either condition is sufficient when both are set.
     """
     path = db_path if db_path is not None else _kb.kanban_db_path(board=board)
     if not path.exists():
@@ -242,10 +244,22 @@ def count_notify_subs(
         if value is not None:
             clauses.append(clause)
             params.append(value)
+    pending_clauses = []
     if task_statuses is not None:
         statuses = list(task_statuses)
-        clauses.append(f"task_id IN (SELECT id FROM tasks WHERE status IN ({', '.join('?' * len(statuses)) or 'NULL'}))")
+        pending_clauses.append(f"task_id IN (SELECT id FROM tasks WHERE status IN ({', '.join('?' * len(statuses)) or 'NULL'}))")
         params.extend(statuses)
+    if unseen_event_kinds is not None:
+        kinds = list(unseen_event_kinds)
+        pending_clauses.append(
+            "EXISTS (SELECT 1 FROM task_events AS event "
+            "WHERE event.task_id = kanban_notify_subs.task_id "
+            "AND event.id > kanban_notify_subs.last_event_id "
+            f"AND event.kind IN ({', '.join('?' * len(kinds)) or 'NULL'}))"
+        )
+        params.extend(kinds)
+    if pending_clauses:
+        clauses.append("(" + " OR ".join(pending_clauses) + ")")
     query = "SELECT COUNT(*) FROM kanban_notify_subs"
     if clauses:
         query += " WHERE " + " AND ".join(clauses)
