@@ -115,3 +115,49 @@ def test_background_on_timeout_moves_a_late_command_instead_of_killing_it(tmp_pa
         assert process_registry.poll(r["session_id"])["status"] == "running"
     finally:
         assert process_registry.kill_process(r["session_id"])["status"] == "killed"
+
+
+@pytest.mark.live_system_guard_bypass
+def test_timeout_handoff_consumes_racing_redirect_yield(tmp_path, monkeypatch):
+    """A redirect at the deadline must not spuriously yield the next terminal command."""
+    import subprocess
+    import sys
+
+    from tools.environments.local import LocalEnvironment
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    env = LocalEnvironment()
+    proc = subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(30)"],
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    )
+    parent_tid = threading.get_ident()
+    real_poll = proc.poll
+    armed = False
+
+    def poll_with_racing_redirect():
+        nonlocal armed
+        if threading.get_ident() == parent_tid and not armed:
+            armed = True
+            time.sleep(2.1)  # A real two-second deadline has passed before the redirect arrives.
+            interrupt_mod.request_yield(parent_tid)
+        return real_poll()
+
+    monkeypatch.setattr(proc, "poll", poll_with_racing_redirect)
+    try:
+        result = env._wait_for_process(
+            proc, timeout=2, watch_interrupt_tid=parent_tid,
+            yield_handler=lambda _proc, output: {
+                "yielded_session_id": "proc_racing_redirect", "output": output,
+            },
+            background_on_timeout=True,
+        )
+        assert result.get("timed_out") is True
+        assert not interrupt_mod.is_thread_yield_requested(parent_tid), (
+            "timeout handoff left a redirect for the next terminal call"
+        )
+    finally:
+        interrupt_mod.consume_yield(parent_tid)
+        proc.kill()
+        proc.wait(timeout=5)
+        env.cleanup()

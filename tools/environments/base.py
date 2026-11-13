@@ -570,7 +570,7 @@ class BaseEnvironment(LongLivedProcessMixin, ABC):
                             "hermes_interrupted": True}
                 expired = time.monotonic() > deadline
                 if yield_handler is not None and (
-                        (expired and background_on_timeout) or consume_yield(watch_interrupt_tid)):
+                        consume_yield(watch_interrupt_tid) or (expired and background_on_timeout)):
                     drain_stop.set()
                     drain_thread.join(timeout=1)
                     try:
