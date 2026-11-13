@@ -11,7 +11,7 @@
 import { atom, host } from '@hermes/plugin-sdk'
 
 import { $lastRoster, botRosterKey, botSelectionKey } from './data'
-import { getPluginCtx } from './shared'
+import { $pendingBotOpen, getPluginCtx } from './shared'
 import type { RosterRow } from './types'
 
 // last_active watermark per source-qualified bot, seeded on first poll so a
@@ -52,7 +52,7 @@ export const $botsPaneVisible = atom(false)
  *  canonical chat was resolved). This transient view observation is never an
  *  identity preference. */
 export const $openBotChat = atom<{ key: string; openedRegistryId: string; openedSessionId?: string } | null>(null)
-export { $pendingBotOpen } from './shared'
+export { $pendingBotOpen }
 /** A session owns the main workspace. The roster highlight and the Cronjobs
  *  lifecycle both key off this rather than reading host.state conditionally
  *  from render. */
@@ -201,6 +201,12 @@ export function focusedRosterOwner(
  *  rooms, which own no single row. */
 export function reconcileSelectionToFocusedChat(): void {
   if (!$botChatFocused.get() || !$selectedRosterHydrated.get()) {
+    return
+  }
+
+  // The old chat can still be focused while an explicit roster click dials
+  // another bot. A passive roster refresh must not overwrite that new intent.
+  if ($pendingBotOpen.get()?.key === $selectedRosterKey.get()) {
     return
   }
 

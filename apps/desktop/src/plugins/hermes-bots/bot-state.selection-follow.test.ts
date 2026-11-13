@@ -50,7 +50,15 @@ vi.mock('@hermes/plugin-sdk', async () => {
   }
 })
 
-vi.mock('./shared', () => ({ getPluginCtx: () => null, ID: 'hermes-bots' }))
+vi.mock('./shared', async () => {
+  const { atom } = await import('nanostores')
+
+  return {
+    $pendingBotOpen: atom<null | { generation: number; key: string }>(null),
+    getPluginCtx: () => null,
+    ID: 'hermes-bots'
+  }
+})
 
 /** $focusedBotOwner binds to host.state at module load, so each topology needs
  *  a fresh graph. */
@@ -100,6 +108,38 @@ describe('reconcileSelectionToFocusedChat — the selection follows the chat on 
     // The Routines tile scope follows too — botSelectionKey for a
     // source-scoped row is the same source-qualified key.
     expect($selectedBot.get()).toBe('source-b::worker')
+  })
+
+  it('keeps the explicit bot pick while its backend is opening, then resumes focus-follow', async () => {
+    state.focusedOwner = { connectionId: 'source-b', profile: 'worker' }
+
+    const {
+      $botChatFocused,
+      $lastRoster,
+      $pendingBotOpen,
+      $selectedBot,
+      $selectedRosterHydrated,
+      $selectedRosterKey,
+      reconcileSelectionToFocusedChat
+    } = await load()
+
+    $lastRoster.set(roster)
+    $selectedRosterKey.set('source-a::alpha')
+    $selectedBot.set('source-a::alpha')
+    $selectedRosterHydrated.set(true)
+    $botChatFocused.set(true)
+    // A user clicked alpha, but worker is still the focused chat while the
+    // remote source dials. Roster hydration must not redirect the next \"+\".
+    $pendingBotOpen.set({ generation: 1, key: 'source-a::alpha' })
+
+    reconcileSelectionToFocusedChat()
+
+    expect($selectedRosterKey.get()).toBe('source-a::alpha')
+    expect($selectedBot.get()).toBe('source-a::alpha')
+
+    $pendingBotOpen.set(null)
+    reconcileSelectionToFocusedChat()
+    expect($selectedRosterKey.get()).toBe('source-b::worker')
   })
 
   it('leaves the selection when no session owns the workspace', async () => {
