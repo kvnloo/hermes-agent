@@ -58,5 +58,6 @@ def test_stdio_cwd_expands_a_leading_tilde(tmp_path, monkeypatch):
     from tools.mcp_tool_transport import _stdio_launch
 
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Windows expanduser ignores HOME
     assert _stdio_launch({"command": sys.executable, "cwd": "~/work"})[2] == str(tmp_path / "work")
     assert _stdio_launch({"command": sys.executable, "cwd": "/abs/dir"})[2] == "/abs/dir"
