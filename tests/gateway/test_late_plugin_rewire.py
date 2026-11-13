@@ -32,6 +32,9 @@ def _write_plugin(home: Path, name: str = "late_cmd") -> None:
     (d / "plugin.yaml").write_text(f"name: {name}\nversion: '0.1'\ndescription: t\nprovides_tools: [late_tool]\n")
     (d / "__init__.py").write_text(textwrap.dedent('''
         def register(ctx):
+            ctx.register_tool(name="late_tool", toolset="late_ts", handler=lambda args, **kw: "{}",
+                              schema={"name": "late_tool", "description": "late",
+                                      "parameters": {"type": "object", "properties": {}}})
             ctx.register_command("late", lambda raw: "hi", description="late")
             ctx.register_platform_handler("telegram", lambda app, adapter: None)
     '''))
