@@ -84,9 +84,8 @@ def raise_if_declared_key_missing(requested_provider: Optional[str], runtime: di
     that resolves to nothing in a ROUTED profile's scope (a profile served by a process launched
     for another, which never reads that process's environment). A single-profile process keeps
     the placeholder plus ``_key_env_secret``'s warning: there the variable is read from the
-    process environment too, and callers rely on the placeholder rather than an error. A block
-    that declares no key variable keeps the placeholder: that IS the keyless local-server
-    configuration. Only a placeholder the resolver SYNTHESIZED is refused: a caller-supplied key
+    process environment too, and callers rely on the placeholder rather than an error. A block without a declared key stays keyless unless it targets the official OpenAI API,
+    which requires credentials. Only a placeholder the resolver SYNTHESIZED is refused: a caller-supplied key
     (even the literal ``no-key-required``, the same value a set key variable may hold) and a
     transport that never sends the key (``_KEYLESS_API_MODES``, judged on the final api_mode) pass.
     ``config`` is a frozen
@@ -97,6 +96,16 @@ def raise_if_declared_key_missing(requested_provider: Optional[str], runtime: di
         return
     if str(explicit_api_key or "").strip() or runtime.get("api_mode") in _KEYLESS_API_MODES:
         return
+    # The OpenAI API always requires credentials. The SDK placeholder is not a usable key;
+    # refuse it at the shared resolution boundary before CLI, gateway or cron dispatch.
+    from hermes_cli.providers import is_official_openai_host
+    if is_official_openai_host(str(runtime.get("base_url") or "")):
+        from hermes_cli.auth import AuthError
+        raise AuthError(
+            "No API key for the OpenAI endpoint; the request was not sent. "
+            + where_to_set_key("OPENAI_API_KEY"),
+            provider=str(requested_provider or "custom"), code="missing_api_key",
+        )
     if not serves_routed_profile():
         return
     label, key_env = _declared_custom_key(str(requested_provider or "").strip().lower(), runtime, model_cfg, config)
