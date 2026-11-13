@@ -1013,7 +1013,9 @@ def _kill_process_group_posix(proc) -> None:
                     # Leader exited during the grace window; do not escalate to
                     # SIGKILL on a possibly-recycled PGID.
                     return
-                os.killpg(pgid, signal.SIGKILL)  # windows-footgun: ok — POSIX only (see _IS_WINDOWS gate in caller)
+                # On macOS even SIGKILL reaches group members one at a time; a TERM-ignoring
+                # shell must not run the next command while its foreground child is killed.
+                _signal_group_frozen(pgid, signal.SIGKILL)
                 _wait_for_group_exit(proc, pgid, 2.0)
                 with contextlib.suppress(subprocess.TimeoutExpired, OSError):
                     proc.wait(timeout=0.2)

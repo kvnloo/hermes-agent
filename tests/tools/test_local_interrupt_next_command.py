@@ -25,7 +25,7 @@ def _burn(stop):
         sum(i * i for i in range(20000))
 
 
-def _interrupt_once(work: str, n: int) -> bool:
+def _interrupt_once(work: str, n: int, *, ignore_term: bool = False) -> bool:
     marker = os.path.join(work, f"leak-{n}")
     env = LocalEnvironment(cwd=work, timeout=60)
     tid: list[int] = []
@@ -34,7 +34,10 @@ def _interrupt_once(work: str, n: int) -> bool:
     def run():
         tid.append(threading.get_ident())
         try:
-            env.execute("sleep 30 & " * 30 + f"sleep 30; echo leaked > {marker}", timeout=60)
+            command = "sleep 30 & " * 30 + f"sleep 30; echo leaked > {marker}"
+            if ignore_term:
+                command = "trap '' TERM; " + command
+            env.execute(command, timeout=60)
         finally:
             done.set()
 
@@ -53,7 +56,8 @@ def _interrupt_once(work: str, n: int) -> bool:
 
 
 @pytest.mark.platforms("macos")
-def test_interrupt_never_runs_the_next_command(tmp_path, monkeypatch):
+@pytest.mark.parametrize("ignore_term", [False, True], ids=["sigterm", "sigkill-escalation"])
+def test_interrupt_never_runs_the_next_command(tmp_path, monkeypatch, ignore_term):
     monkeypatch.setenv("HERMES_HOME", str(tmp_path / "home"))
     stop = multiprocessing.Event()
     burners = [multiprocessing.Process(target=_burn, args=(stop,), daemon=True)
@@ -62,10 +66,41 @@ def test_interrupt_never_runs_the_next_command(tmp_path, monkeypatch):
         proc.start()
     try:
         with ThreadPoolExecutor(6) as pool:
-            leaked = sum(pool.map(lambda n: _interrupt_once(str(tmp_path), n), range(80)))
+            leaked = sum(pool.map(
+                lambda n: _interrupt_once(str(tmp_path), n, ignore_term=ignore_term), range(80)
+            ))
     finally:
         stop.set()
         for proc in burners:
             with contextlib.suppress(Exception):
                 proc.join(5)
     assert leaked == 0, f"{leaked}/80 interrupts let the next command of `a; b` run"
+
+
+def test_macos_sigkill_escalation_freezes_group(monkeypatch):
+    """A TERM-ignoring shell must be frozen again before group SIGKILL on macOS."""
+    import signal
+    from types import SimpleNamespace
+
+    from tools.environments import local as local_mod
+
+    pgid = 47301
+    calls = []
+    proc = SimpleNamespace(pid=pgid, _hermes_pgid_start=None,
+                           wait=lambda timeout: None)
+    monkeypatch.setattr(local_mod.sys, "platform", "darwin")
+    monkeypatch.setattr(local_mod.os, "getpgid", lambda pid: pgid)
+    monkeypatch.setattr(local_mod.os, "getpgrp", lambda: pgid + 1)
+    monkeypatch.setattr(local_mod.os, "killpg", lambda group, sig: calls.append((group, sig)))
+    monkeypatch.setattr(local_mod, "_leader_is_ours", lambda *_: True)
+    # TERM is ignored: the real one-second grace expires and escalation runs.
+    monkeypatch.setattr(local_mod, "_wait_for_group_exit",
+                        lambda _proc, _pgid, seconds: seconds > 1.0)
+    monkeypatch.setattr(local_mod, "_sweep_escaped_descendants", lambda *_: None)
+
+    local_mod._kill_process_group_posix(proc)
+
+    assert calls == [(pgid, sig) for sig in (
+        signal.SIGSTOP, signal.SIGTERM, signal.SIGCONT,
+        signal.SIGSTOP, signal.SIGKILL, signal.SIGCONT,
+    )]
