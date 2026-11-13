@@ -151,6 +151,24 @@ class TestPluginSTTProviders:
         provider.available = True
         assert tools_config_providers.provider_readiness_status(row, {}) == "ready"
 
+    def test_configured_plugin_keys_do_not_mask_unavailable_backend(self):
+        provider = _FakeSTTProvider(available=False)
+        transcription_registry.register_provider(provider)
+        # API-backed STT plugins can have valid credentials but a missing SDK/binary.
+        with patch.object(provider, "get_setup_schema", return_value={
+            "name": "Fake STT",
+            "env_vars": [{"key": "FAKE_STT_KEY", "prompt": "API key"}],
+        }):
+            row = next(r for r in tools_config_providers._plugin_stt_providers()
+                       if r.get("stt_provider") == "fake-stt")
+
+        with patch("hermes_cli.tools_config._provider_env_ready", return_value=False):
+            assert tools_config_providers.provider_readiness_status(row, {}) == "needs_keys"
+        with patch("hermes_cli.tools_config._provider_env_ready", return_value=True):
+            assert tools_config_providers.provider_readiness_status(row, {}) == "needs_setup"
+            provider.available = True
+            assert tools_config_providers.provider_readiness_status(row, {}) == "ready"
+
     def test_route_forwards_provider_id(self, _isolate_hermes_home):
         transcription_registry.register_provider(_FakeSTTProvider())
 

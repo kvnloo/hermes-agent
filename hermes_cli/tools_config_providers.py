@@ -185,7 +185,11 @@ def provider_readiness_status(provider: dict, config: dict, *, features=None, is
     from hermes_cli.tools_config_post_setup import _POST_SETUP_AUTH_READY
 
     if provider.get("env_vars", []):
-        return "ready" if _provider_env_ready(provider) else "needs_keys"
+        if not _provider_env_ready(provider):
+            return "needs_keys"
+        # STT plugin keys do not prove its binary/SDK is available.
+        if not provider.get("stt_plugin_name"):
+            return "ready"
 
     managed_feature = provider.get("managed_nous_feature")
     if provider.get("requires_nous_auth") or managed_feature:
