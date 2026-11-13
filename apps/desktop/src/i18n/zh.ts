@@ -27,6 +27,12 @@ import { zhThemePicker } from './zh_theme_picker'
 import { zhUpdateChannel } from './zh_update_channel'
 
 export const zhOverrides = {
+  ephemeralUi: {
+    label: 'Ephemeral UI 卡片',
+    invalid: '这些 ephemeral-ui 卡片不是有效的 card.v0 JSON，显示源代码。',
+    showSource: '显示源代码',
+    showCards: '显示卡片'
+  },
   openui: {
     openApp: "在{app}中打开",
     bestPrice: "最低价格",

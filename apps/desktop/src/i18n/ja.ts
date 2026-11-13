@@ -28,6 +28,12 @@ import { jaThemePicker } from './ja_theme_picker'
 import { jaUpdateChannel } from './ja_update_channel'
 
 export const jaOverrides = {
+  ephemeralUi: {
+    label: 'Ephemeral UI カード',
+    invalid: 'この ephemeral-ui カードは有効な card.v0 JSON ではないため、ソースを表示しています。',
+    showSource: 'ソースを表示',
+    showCards: 'カードを表示'
+  },
   openui: {
     openApp: "{app}で開く",
     bestPrice: "最安値",

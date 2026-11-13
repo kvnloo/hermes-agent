@@ -14,6 +14,12 @@ import { zhHantFirstRun } from './zh-hant_first_run'
 import { zhHantSettings } from './zh-hant_settings'
 
 export const zhHantOverrides = {
+  ephemeralUi: {
+    label: 'Ephemeral UI 卡片',
+    invalid: '這些 ephemeral-ui 卡片不是有效的 card.v0 JSON，顯示原始碼。',
+    showSource: '顯示原始碼',
+    showCards: '顯示卡片'
+  },
   openui: {
     openApp: "在{app}中開啟",
     bestPrice: "最低價格",

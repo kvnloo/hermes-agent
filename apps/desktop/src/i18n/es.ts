@@ -28,6 +28,12 @@ import { esUpdateChannel } from './es_update_channel'
 import { introEs } from './intro-es'
 
 export const esOverrides = {
+  ephemeralUi: {
+    label: 'Tarjetas de Ephemeral UI',
+    invalid: 'Estas tarjetas ephemeral-ui no son JSON card.v0 válido; se muestra el código.',
+    showSource: 'Ver código',
+    showCards: 'Ver tarjetas'
+  },
   openui: {
     openApp: "Abrir en {app}",
     bestPrice: "Más barato",

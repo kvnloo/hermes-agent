@@ -28,6 +28,12 @@ import { defineLocale, type TranslationOverrides } from './define-locale'
 import { introDe } from './intro-de'
 
 export const deOverrides = {
+  ephemeralUi: {
+    label: 'Ephemeral-UI-Karten',
+    invalid: 'Diese ephemeral-ui-Karten sind kein gültiges card.v0-JSON; Quelltext wird angezeigt.',
+    showSource: 'Quelltext anzeigen',
+    showCards: 'Karten anzeigen'
+  },
   openui: {
     openApp: "In {app} öffnen",
     bestPrice: "Günstigster Preis",

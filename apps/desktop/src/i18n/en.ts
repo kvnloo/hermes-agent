@@ -34,6 +34,12 @@ import { enUpdateChannel } from './en_update_channel'
 import type { Translations } from './types'
 
 export const en: Translations = {
+  ephemeralUi: {
+    label: 'Ephemeral UI cards',
+    invalid: 'These ephemeral-ui cards are not valid card.v0 JSON; showing the source.',
+    showSource: 'Show source',
+    showCards: 'Show cards'
+  },
   openui: {
     openApp: "Open in {app}",
     bestPrice: "Cheapest",

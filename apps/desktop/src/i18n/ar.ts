@@ -13,6 +13,12 @@ import { arSettings } from './ar_settings'
 import { defineLocale, type TranslationOverrides } from './define-locale'
 
 export const arOverrides = {
+  ephemeralUi: {
+    label: 'بطاقات Ephemeral UI',
+    invalid: 'بطاقات ephemeral-ui هذه ليست JSON صالحًا وفق card.v0؛ يُعرض المصدر.',
+    showSource: 'عرض المصدر',
+    showCards: 'عرض البطاقات'
+  },
   openui: {
     openApp: "افتح في {app}",
     bestPrice: "الأرخص",

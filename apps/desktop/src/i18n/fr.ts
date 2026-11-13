@@ -28,6 +28,12 @@ import { frUpdateChannel } from './fr_update_channel'
 import { introFr } from './intro-fr'
 
 export const frOverrides = {
+  ephemeralUi: {
+    label: 'Cartes Ephemeral UI',
+    invalid: 'Ces cartes ephemeral-ui ne sont pas du JSON card.v0 valide ; affichage de la source.',
+    showSource: 'Afficher la source',
+    showCards: 'Afficher les cartes'
+  },
   openui: {
     openApp: "Ouvrir dans {app}",
     bestPrice: "Le moins cher",

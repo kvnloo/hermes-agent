@@ -10,6 +10,7 @@ import type { RichFenceProps } from './types'
 // Mermaid renderer defers its heavier runtime import until after its source
 // fallback has had a chance to paint.
 const LAZY_FENCE: Record<string, LazyExoticComponent<ComponentType<RichFenceProps>>> = {
+  'ephemeral-ui': lazy(() => import('./ephemeral-ui/ephemeral-ui-embed')),
   listing: lazy(() => import('./listing-embed')),
   mermaid: lazy(() => import('./mermaid-embed')),
   'openui-v2': lazy(() => import('./openui-embed')),
@@ -34,7 +35,7 @@ export function RichCodeBlock({ code, fallback, language, streaming }: RichCodeB
 
   // A streaming board's first chunk would otherwise flash its raw source while
   // the renderer chunk loads; a quiet placeholder holds the space instead.
-  const loading = streaming && language?.toLowerCase() === 'openui-v2'
+  const loading = streaming && (language?.toLowerCase() === 'openui-v2' || language?.toLowerCase() === 'ephemeral-ui')
     ? <div aria-hidden="true" className="my-2 h-24 animate-pulse rounded-md border border-(--ui-stroke-tertiary) bg-muted/20 motion-reduce:animate-none" data-openui-loading="" />
     : fallback
 

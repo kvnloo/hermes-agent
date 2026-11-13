@@ -25,3 +25,9 @@ declare module '@novnc/novnc' {
     clipboardPasteFrom(text: string): void
   }
 }
+
+declare module 'virtual:ephemeral-ui-frame' {
+  /** The vendored ephemeral-ui kit + frame runtime as one classic script. */
+  const runtime: string
+  export default runtime
+}

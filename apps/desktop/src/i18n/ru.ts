@@ -26,6 +26,12 @@ import { ruThemePicker } from './ru_theme_picker'
 import { ruUpdateChannel } from './ru_update_channel'
 
 export const ruOverrides = {
+  ephemeralUi: {
+    label: 'Карточки Ephemeral UI',
+    invalid: 'Эти карточки ephemeral-ui — не корректный JSON card.v0; показан исходный код.',
+    showSource: 'Показать код',
+    showCards: 'Показать карточки'
+  },
   openui: {
     openApp: "Открыть в {app}",
     bestPrice: "Самый дешёвый",

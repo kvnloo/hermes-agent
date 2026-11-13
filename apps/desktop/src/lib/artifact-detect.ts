@@ -45,6 +45,8 @@ const NON_ARTIFACT_LANGUAGES = new Set([
   'listing',
   'log',
   'logs',
+  // ephemeral-ui card.v0 fences render as repo cards (rich-fence registry).
+  'ephemeral-ui',
   'markdown',
   'md',
   'mermaid',

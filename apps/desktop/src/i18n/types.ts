@@ -94,6 +94,12 @@ interface ModeOptionCopy {
 export interface Translations extends NoticeTranslations {
   /** Shared-metrics consent: first-run dialog + Settings › Safety toggles. */
   sharedMetrics: SharedMetricsTranslations
+  ephemeralUi: {
+    label: string
+    invalid: string
+    showSource: string
+    showCards: string
+  }
   openui: {
     openApp: string
     bestPrice: string
