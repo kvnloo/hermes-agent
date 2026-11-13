@@ -42,20 +42,21 @@ def _register_profile(request) -> None:
     request.addfinalizer(_cleanup)
 
 
-def _write_model_config() -> None:
-    """The dashboard's own config shape: a named custom route plus catalog data for the
-    provider the host claims (never for the raw ``custom:<name>`` id)."""
+def _write_model_config(*, endpoint_in_provider: bool = False) -> None:
+    """Use a named model route with its endpoint inline or in the provider entry."""
     from hermes_constants import get_hermes_home
 
     home = get_hermes_home()
     home.mkdir(parents=True, exist_ok=True)
-    (home / "config.yaml").write_text(
-        yaml.safe_dump({
-            "model": {"default": RELAY_MODEL, "provider": f"custom:{RELAY_NAME}", "base_url": BASE_URL},
-            "model_overrides": {RELAY_NAME: {RELAY_MODEL: {"context_window": RELAY_WINDOW, "tool_call": True}}},
-        }),
-        encoding="utf-8",
-    )
+    config = {
+        "model": {"default": RELAY_MODEL, "provider": f"custom:{RELAY_NAME}"},
+        "model_overrides": {RELAY_NAME: {RELAY_MODEL: {"context_window": RELAY_WINDOW, "tool_call": True}}},
+    }
+    if endpoint_in_provider:
+        config["providers"] = {RELAY_NAME: {"base_url": BASE_URL}}
+    else:
+        config["model"]["base_url"] = BASE_URL
+    (home / "config.yaml").write_text(yaml.safe_dump(config), encoding="utf-8")
 
 
 def test_model_info_reports_the_relays_window_and_capabilities_for_a_named_route(request):
@@ -70,3 +71,17 @@ def test_model_info_reports_the_relays_window_and_capabilities_for_a_named_route
     assert info["auto_context_length"] == RELAY_WINDOW  # ...but resolved through the host's profile
     assert info["capabilities"]["supports_tools"] is True
     assert info["capabilities"]["context_window"] == RELAY_WINDOW
+
+
+def test_model_info_resolves_endpoint_from_named_provider_when_model_url_is_absent(request):
+    from hermes_cli.web_routers import models as router
+
+    _register_profile(request)
+    # CLI config may reference providers.<name> without copying its URL into model.base_url.
+    _write_model_config(endpoint_in_provider=True)
+
+    info = router.get_model_info()
+
+    assert info["provider"] == f"custom:{RELAY_NAME}"
+    assert info["auto_context_length"] == RELAY_WINDOW
+    assert info["capabilities"]["supports_tools"] is True

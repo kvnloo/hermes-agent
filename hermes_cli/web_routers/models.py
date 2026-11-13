@@ -94,13 +94,20 @@ def get_model_info(profile: Optional[str] = None):
     context length (so the UI can show "Auto-detected: 200K" beside the
     override) plus models.dev capabilities when available."""
     try:
-        model_cfg = _load_config_scoped(profile).get("model", "")
+        config = _load_config_scoped(profile)
+        model_cfg = config.get("model", "")
         model_name, provider = _main_model_fields(model_cfg)
         base_url = model_cfg.get("base_url", "") if isinstance(model_cfg, dict) else ""
         config_ctx = model_cfg.get("context_length") if isinstance(model_cfg, dict) else None
 
         if not model_name:
             return dict(_EMPTY_MODEL_INFO, provider=provider)
+        if not base_url and provider.lower().startswith("custom:"):
+            # The named route may live only under providers.<name>; model.base_url is optional.
+            from hermes_cli.runtime_provider_custom import _get_named_custom_provider
+            endpoint = _get_named_custom_provider(provider, config=config, resolve_credentials=False)
+            if endpoint:
+                base_url = endpoint.get("base_url", "")
 
         try:
             # config_context_length=None: ignore the override — we want the auto value.
