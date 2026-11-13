@@ -347,3 +347,26 @@ def test_hermes_tool_display_args_are_redacted_but_execution_args_are_not():
     assert agent.tool_start_callback.call_args.args[2]["ref"] == "@e3"
     assert all(secret not in s for s in shown), shown
     assert item["arguments"]["text"] == secret
+
+
+def test_codex_command_display_redacts_key_without_mutating_execution_command():
+    """Codex's supported commandExecution item must not leak key-shaped input in live tool cards."""
+    secret = "sk-ant-api03-" + "A1b2C3d4E5" * 4
+    command = f"curl -H 'Authorization: Bearer {secret}' https://example.com"
+    agent = _make_stub_agent()
+    agent.tool_start_callback = MagicMock(name="tool_start_callback")
+    agent.tool_complete_callback = MagicMock(name="tool_complete_callback")
+    item = {"type": "commandExecution", "id": "exec-key", "command": command, "cwd": "/tmp"}
+    bridge = make_codex_app_server_event_bridge(agent)
+    bridge(_item_started(item))
+    bridge(_item_completed({**item, "exitCode": 0, "aggregatedOutput": ""}))
+
+    progress = agent.tool_progress_callback.call_args_list[0]
+    assert progress.args[0] == "tool.started"
+    assert "curl -H" in progress.args[2]
+    assert progress.args[3]["cwd"] == "/tmp"
+    shown = [repr(call) for callback in (agent.tool_progress_callback, agent.tool_start_callback,
+                                         agent.tool_complete_callback)
+             for call in callback.call_args_list]
+    assert all(secret not in entry for entry in shown), shown
+    assert item["command"] == command
