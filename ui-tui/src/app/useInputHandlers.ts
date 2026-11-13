@@ -431,6 +431,11 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
   const { actions, composer, gateway, terminal, voice, wheelStep } = ctx
   const { actions: cActions, refs: cRefs, state: cState } = composer
 
+  // A steer RPC can settle after the user has started editing another draft.
+  // Keep the latest rendered input and attachments so its success cannot erase them.
+  const currentDraft = useRef({ input: cState.input, inputBuf: cState.inputBuf, tokens: cState.tokens, queueEditIdx: cState.queueEditIdx })
+  currentDraft.current = { input: cState.input, inputBuf: cState.inputBuf, tokens: cState.tokens, queueEditIdx: cState.queueEditIdx }
+
   const overlay = useStore($overlayState)
   const isBlocked = useStore($isBlocked)
   const pagerPageSize = Math.max(5, (terminal.stdout?.rows ?? 24) - 6)
@@ -915,13 +920,18 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
       const index = cState.queueEditIdx
       const preview = cActions.queueDraft(index)
       const sid = live.sid
+      const draft = currentDraft.current
 
       void cActions.steerQueue(index).then(steered => {
         if (!steered || getUiState().sid !== sid) {
           return
         }
 
-        cActions.clearIn()
+        const latest = currentDraft.current
+        if (latest.queueEditIdx === draft.queueEditIdx && latest.input === draft.input &&
+            latest.inputBuf === draft.inputBuf && latest.tokens === draft.tokens) {
+          cActions.clearIn()
+        }
         actions.sys(t('slashCmd.core.steer.queued', preview.length > 50 ? `${preview.slice(0, 50)}…` : preview))
       })
 
