@@ -211,15 +211,25 @@ def _watch_submitter(db, run_id):
     Exiting hard leaves no ``worker_result``, so the dead-worker sweep books this run's crash.
     The run row is re-read each tick: the dispatcher records the pid only after its spawn returns."""
     import os
-    from hermes_cli.kanban_db_dispatch import _worker_alive
+    import time
+    from hermes_cli.kanban_db_dispatch import (
+        TERMINAL_WORKER_REAP_GRACE_SECONDS, _worker_alive,
+    )
 
     def watch():
         with closing(sqlite3.connect(db.resolve().as_uri() + '?mode=ro', uri=True)) as conn:
             while not _TURNS_DONE.wait(1.0):
                 try:
-                    row = conn.execute('SELECT worker_pid, worker_started_at FROM task_runs WHERE id=?', (run_id,)).fetchone()
+                    row = conn.execute(
+                        'SELECT worker_pid, worker_started_at, ended_at FROM task_runs WHERE id=?',
+                        (run_id,),
+                    ).fetchone()
                 except sqlite3.Error:
                     continue
+                # The reaper may already have cleared worker_pid on an ended run.
+                # Preserve the completion grace, then stop the bound interpreter itself.
+                if row and row[2] is not None and time.time() - row[2] >= TERMINAL_WORKER_REAP_GRACE_SECONDS:
+                    os._exit(1)
                 if row and row[0] and row[0] != os.getpid() and not _worker_alive(row[0], row[1]):
                     os._exit(1)
     threading.Thread(target=watch, name='kanban-submitter-watch', daemon=True).start()
