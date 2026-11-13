@@ -284,8 +284,8 @@ export function SidebarGroupRow({
         // makes with its kebab and age — you read the number or you act on the
         // group, never both at once.
         facts.length ? (
-          <div className="group/group-actions relative flex items-center">
-            <span className="min-w-9 whitespace-nowrap text-right text-[0.625rem] leading-none text-(--ui-text-tertiary) transition-opacity group-hover/workspace:opacity-0 group-has-[:focus-visible]/group-actions:opacity-0 group-has-[[data-state=open]]/group-actions:opacity-0">
+          <div className="sidebar-group-actions relative flex items-center">
+            <span className="sidebar-group-totals min-w-9 whitespace-nowrap text-right text-[0.625rem] leading-none text-(--ui-text-tertiary) transition-opacity group-hover/workspace:opacity-0">
               {facts.join(' · ')}
             </span>
             {actions ? <div className="absolute right-0 flex items-center">{actions}</div> : null}

@@ -1087,6 +1087,13 @@
 }
 
 @layer utilities {
+  /* Group totals fade when their own controls take keyboard focus or open a
+     menu. Keep :has() on that row, not in Tailwind's broad group-has
+     descendant matcher, which invalidates unrelated chat panes. */
+  :where(.sidebar-group-actions):has(:focus-visible, [data-state='open']) .sidebar-group-totals {
+    opacity: 0;
+  }
+
   /* Keep relational selectors on their owning row, not inside a universal
      group-has descendant match: that invalidates unrelated chat panes. */
   .row-hover:is(:hover, :has([data-session-actions]:is(:focus-visible, [data-state='open']))) .session-row-tail {
