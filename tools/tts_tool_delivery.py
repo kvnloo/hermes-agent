@@ -122,21 +122,24 @@ class AudioDeliveryProfile:
         return max(1, int(self.max_file_bytes * self.safety_ratio))
 
 
-_PLATFORM_AUDIO_DEFAULTS: dict[str, dict[str, Any]] = {
-    "discord": {"max_file_bytes": 10 * 1024 * 1024, "safety_ratio": 0.85},
-    "telegram": {"max_file_bytes": 50 * 1024 * 1024, "safety_ratio": 0.85},
-    "default": {"max_file_bytes": 10 * 1024 * 1024, "safety_ratio": 0.85}}
+_DEFAULT_AUDIO_DELIVERY: dict[str, Any] = {"max_file_bytes": 10 * 1024 * 1024, "safety_ratio": 0.85}
 
 
 def _resolve_audio_delivery_profile(
     platform: Optional[str], tts_config: Optional[dict[str, Any]] = None) -> AudioDeliveryProfile:
-    """Resolve upload constraints, including optional ``tts.delivery_profiles`` overrides."""
+    """Upload constraints: explicit config > platform metadata > generic defaults."""
+    from gateway.platform_registry import platform_registry
+
     key = (platform or "default").lower().strip() or "default"
-    defaults = dict(_PLATFORM_AUDIO_DEFAULTS.get(key) or _PLATFORM_AUDIO_DEFAULTS["default"])
+    defaults = dict(_DEFAULT_AUDIO_DELIVERY)
+    # get() loads only the destination's registration, without constructing an adapter or installing deps.
+    entry = platform_registry.get(key)
+    defaults["max_file_bytes"] = (_positive_int(getattr(entry, "audio_upload_max_bytes", None))
+                                  or defaults["max_file_bytes"])
     overrides = _section(_section(tts_config, "delivery_profiles"), key)
     defaults.update({k: v for k, v in overrides.items() if v is not None})
     max_file_bytes = (_positive_int(defaults.get("max_file_bytes"))
-                      or _PLATFORM_AUDIO_DEFAULTS["default"]["max_file_bytes"])
+                      or _DEFAULT_AUDIO_DELIVERY["max_file_bytes"])
     safety_ratio = defaults.get("safety_ratio", 0.85)
     if (isinstance(safety_ratio, bool) or not isinstance(safety_ratio, (int, float))
             or not 0 < safety_ratio <= 1):

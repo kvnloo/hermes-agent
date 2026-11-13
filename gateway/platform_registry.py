@@ -182,6 +182,9 @@ class PlatformEntry:
     # Env names whose presence drives that enable, cited by the explicit-disable WARNING and used by
     # ``hermes_cli.profile_channels`` as the platform's credential set; () = none declared.
     env_enable_credentials: tuple = ()
+    # TTS upload hard limit in bytes; 0 uses the generic default.
+    # ``tts.delivery_profiles.<name>.max_file_bytes`` overrides it.
+    audio_upload_max_bytes: int = 0
 
 
 def core_ships_platform(name: str) -> bool:
