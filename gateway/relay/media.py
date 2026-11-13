@@ -55,7 +55,7 @@ _MEDIA_USER_AGENT = "HermesAgent-Relay/1.0 (+https://github.com/NousResearch/her
 
 def _filename_header(name: str) -> str:
     """Keep portable legacy headers byte-identical; encode everything else."""
-    if name.isascii() and name.isprintable() and "%" not in name:
+    if name.isascii() and name.isprintable() and "%" not in name and not name.startswith("UTF-8''"):
         return name
     # The caller truncates by Unicode code point, before encoding: at most
     # 255 * 4 UTF-8 bytes * 3 percent-escape characters + 7 prefix = 3067 bytes.

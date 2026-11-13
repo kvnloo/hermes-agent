@@ -466,7 +466,8 @@ media sends degrade to their pre-media text fallbacks). Size cap 25 MB
 (connector `mediaStore.ts` MEDIA_MAX_BYTES; uploads over it are rejected 413).
 
 **Upload filenames.** `X-Media-Filename` stays raw for printable ASCII names
-without `%`, preserving compatibility with existing relays. All other names
+without `%` that do not start with `UTF-8''`, preserving compatibility with
+existing relays. All other names
 (including Latin-1, controls and literal `%`) use the RFC 8187 / RFC 5987
 ext-value form `UTF-8''` followed by percent-encoded UTF-8, for example
 `UTF-8''%D0%BE%D1%82%D1%87%D1%91%D1%82.pdf` for `отчёт.pdf`.

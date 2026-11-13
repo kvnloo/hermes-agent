@@ -72,6 +72,20 @@ async def test_upload_filename_roundtrip(media_server, tmp_path, name, header):
 
 
 @pytest.mark.asyncio
+async def test_literal_ext_value_marker_roundtrips(media_server, tmp_path):
+    """The ext-value marker must not silently rename a literal ASCII filename."""
+    client, received, base = media_server
+    name = "UTF-8''receipt.pdf"
+    path = tmp_path / "payload.pdf"
+    path.write_bytes(b"%PDF")
+
+    reference = await client.upload(str(path), filename=name, mime="application/pdf")
+
+    assert reference == f"{base}/relay/media/uploaded"
+    assert received == [("UTF-8''UTF-8%27%27receipt.pdf", name, b"%PDF", "application/pdf", "/relay/media")]
+
+
+@pytest.mark.asyncio
 async def test_cyrillic_document_sends_media_without_fallback(media_server, tmp_path):
     client, received, base = media_server
     adapter, stub, _fake = _adapter()
