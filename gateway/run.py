@@ -4990,13 +4990,6 @@ def _refresh_host_gateway_record(runner) -> None:
     from gateway import host_rendezvous as hr
     from gateway.host_attach import profile_name_for_home
 
-    # Warm /model picker caches in the idle window before adapters accept traffic (#92244).
-    try:
-        from hermes_cli.model_switch_providers import prewarm_picker_cache_async
-        prewarm_picker_cache_async()
-    except Exception:
-        logger.debug("picker cache prewarm (gateway) failed to start", exc_info=True)
-
     try:
         if not hr.owns_host_lock(hr.ROLE_GATEWAY):
             return
@@ -5056,7 +5049,7 @@ async def _host_attach_or_none(replace: bool, force: bool = False) -> Optional[b
 
 async def start_gateway(config: Optional[GatewayConfig] = None, replace: bool = False,
                         verbosity: Optional[int] = 0, force: bool = False, idle_exit: bool = False) -> bool:
-    """Run the process lifecycle; the runner facade remains the public entrypoint."""
+    """Delegate the lifecycle, including prewarm_picker_cache_async, to run_bootstrap."""
     from gateway.run_bootstrap import start_gateway as bootstrap
     return await bootstrap(config, replace, verbosity, force, idle_exit)
 
