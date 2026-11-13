@@ -36,6 +36,7 @@ import { fileURLToPath } from 'url'
 
 import tailwindcss from '@tailwindcss/vite'
 
+import { cheapProseQuotesPlugin } from './scripts/cheap-prose-quotes.mjs'
 import { withCompilerCache } from './scripts/compiler-cache.mjs'
 import { shikiGrammarChunkName } from './scripts/shiki-chunk-name.mjs'
 
@@ -138,7 +139,7 @@ const emojibaseAssets = () => ({
 
 export default defineConfig(({ command }) => ({
   base: './',
-  plugins: [react(), cachedCompilerPass(command), tailwindcss(), emojibaseAssets()],
+  plugins: [react(), cachedCompilerPass(command), tailwindcss(), cheapProseQuotesPlugin(), emojibaseAssets()],
   css: {
     // Pin an explicit (empty) PostCSS config. Tailwind is handled entirely by
     // `@tailwindcss/vite`, so the renderer needs no PostCSS plugins — and
