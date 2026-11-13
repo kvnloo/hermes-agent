@@ -195,7 +195,7 @@ export function PluginInstallModal() {
         {request?.repo && (
           <InstallView
             installing={installing}
-            key={request.repo}
+            key={request.catalogName ? `catalog:${request.catalogName}` : request.repo}
             onInstallingChange={setInstalling}
             request={request}
           />
@@ -361,7 +361,8 @@ function useReviewAgain(request: PluginInstallRequest, start: () => void) {
             const open = $pluginInstallRequest.get()
 
             if (found.ok && open?.catalogName === name) {
-              openPluginInstallRequest({ ...open, sha: found.entry.sha })
+              const repo = found.entry.subdir ? `${found.entry.repo}#${found.entry.subdir}` : found.entry.repo
+              openPluginInstallRequest({ ...open, repo, sha: found.entry.sha })
             }
           })
           .finally(() => setRereview('shown'))

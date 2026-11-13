@@ -257,7 +257,7 @@ describe('a catalog pick is held to the pin the dialog showed', () => {
   it('native Desktop: a re-pin since the dialog opened is refused, and the next Install holds the new pin', async () => {
     const pin = { current: V1 }
     catalogBackend(() => pin.current)
-    lookupPluginCatalogEntry.mockImplementation(async () => ({ ok: true, entry: { name: 'pkg', sha: pin.current } }))
+    lookupPluginCatalogEntry.mockImplementation(async () => ({ ok: true, entry: { name: 'pkg', repo: REPO, sha: pin.current } }))
     const probePluginRepo = vi.fn(async () => ({ ok: true, agent: true, desktop: false, sha: V2, warnings: [] }))
     vi.stubGlobal('hermesDesktop', { probePluginRepo })
 
@@ -282,7 +282,7 @@ describe('a catalog pick is held to the pin the dialog showed', () => {
     lookupPluginCatalogEntry.mockImplementation(
       () =>
         new Promise(resolve => {
-          release = () => resolve({ ok: true, entry: { name: 'pkg', sha: pin.current } })
+          release = () => resolve({ ok: true, entry: { name: 'pkg', repo: REPO, sha: pin.current } })
         })
     )
     const probePluginRepo = vi.fn(async () => ({ ok: true, agent: true, desktop: false, sha: V2, warnings: [] }))
@@ -306,5 +306,42 @@ describe('a catalog pick is held to the pin the dialog showed', () => {
     fireEvent.click(installButton()!)
     await waitFor(() => expect($pluginInstallRequest.get()).toBeNull())
     expect(callsFor('install').map(([, params]) => params?.inspected_sha)).toEqual([V1, V2])
+  })
+
+  it('native Desktop: a moved catalog repository is re-probed and installed at its new pin', async () => {
+    const previousRepo = `${REPO}#plugin`
+    const newRoot = 'https://github.com/example/new-plugin'
+    const newRepo = `${newRoot}#nested`
+    catalogBackend(() => V2)
+    lookupPluginCatalogEntry.mockResolvedValue({
+      ok: true,
+      entry: { name: 'pkg', repo: newRoot, subdir: 'nested', sha: V2 }
+    })
+    const probePluginRepo = vi.fn(async ({ identifier, ref }: { identifier: string; ref?: string }) => {
+      const matches = (identifier === previousRepo && ref === V1) || (identifier === newRepo && ref === V2)
+
+      return matches
+        ? { ok: true, agent: true, desktop: false, sha: ref, warnings: [] }
+        : { ok: false, agent: false, desktop: false, error: 'Pin is not in this repository.', warnings: [] }
+    })
+    vi.stubGlobal('hermesDesktop', { probePluginRepo })
+
+    renderModal()
+    act(() => openPluginInstallRequest({ catalogName: 'pkg', repo: previousRepo, sha: V1 }))
+    await waitFor(() => expect(probePluginRepo).toHaveBeenCalledWith({ identifier: previousRepo, ref: V1 }))
+    await waitFor(() => expect(installButton()?.disabled).toBe(false))
+    fireEvent.click(installButton()!)
+
+    await waitFor(() => expect(probePluginRepo).toHaveBeenCalledWith({ identifier: newRepo, ref: V2 }))
+    expect(await screen.findByText(/Review the new version/)).toBeTruthy()
+    expect(callsFor('install')).toHaveLength(1)
+    await waitFor(() => expect(installButton()?.disabled).toBe(false))
+    fireEvent.click(installButton()!)
+
+    await waitFor(() => expect($pluginInstallRequest.get()).toBeNull())
+    expect(callsFor('install').map(([, params]) => [params?.identifier, params?.inspected_sha])).toEqual([
+      [previousRepo, V1],
+      [newRepo, V2]
+    ])
   })
 })
