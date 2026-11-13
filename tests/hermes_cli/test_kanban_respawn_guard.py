@@ -310,3 +310,26 @@ def test_infrastructure_spawn_refusal_never_charges_the_card(
         assert conn.execute(
             "SELECT consecutive_failures FROM tasks WHERE id = ?", (tid,),
         ).fetchone()[0] == 1
+
+
+def test_manual_promote_after_auth_failure_is_a_fresh_attempt(kanban_home):
+    """A failed run's auth error cannot park an explicitly requeued card.
+
+    Regression for #121281 (DresvyanskiyDenis): manual promote writes
+    promoted_manual but, unlike unblock_task, leaves the error stamp intact.
+    A still-blocked card with no requeue must remain guarded.
+    """
+    with kbc.connect() as conn:
+        tid = kb.create_task(conn, title="credentials repaired", assignee="a")
+        kb.claim_task(conn, tid)
+        kbd._record_task_failure(
+            conn, tid, "provider authentication failed (401)",
+            outcome="spawn_failed", force_trip=True,
+            release_claim=True, end_run=True,
+        )
+        assert kb.get_task(conn, tid).status == "blocked"
+        assert kbd.check_respawn_guard(conn, tid) == "blocker_auth"
+
+        assert kb.promote_task(conn, tid, actor="operator") == (True, None)
+        assert kb.get_task(conn, tid).status == "ready"
+        assert kbd.check_respawn_guard(conn, tid) is None

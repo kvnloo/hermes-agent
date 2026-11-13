@@ -127,8 +127,19 @@ def check_respawn_guard(
         if latest_run is not None else None
     )
     latest_outcome = latest_run["outcome"] if latest_run is not None else None
+    # A deliberate requeue after this run supersedes its blocker diagnosis:
+    # credentials may have been repaired since the failure (#121281).
+    requeued = False
+    if latest_run is not None:
+        ended_at = _kb._to_epoch(latest_run["ended_at"])
+        if ended_at is not None:
+            requeued = any(_rows_since(
+                conn, "task_events", task_id, ended_at,
+                "AND kind IN ('status', 'promoted', 'promoted_manual', 'review_reopened')",
+            ))
     if (err and latest_outcome != "crashed"
             and row["last_failure_error"] is not None
+            and not requeued
             and _RESPAWN_BLOCKER_RE.search(err)):
         return "blocker_auth"
 
