@@ -5,6 +5,7 @@ import { $gateway } from './gateway'
 import { refreshSessionGoal } from './goals'
 import { isSessionGone, isSessionGoneForBackgroundPolling, markSessionGone } from './runtime-gone'
 import { ambientRequestFor } from './session-gone-latch'
+import { isSessionOwnerResolutionError } from './session-owner-resolution'
 import { requestForOwnedSession } from './session-states'
 
 export type SessionControlGoalStatus = 'active' | 'done' | 'paused'
@@ -807,6 +808,16 @@ export async function refreshSessionControl(
 
     if (isSessionGoneForBackgroundPolling(error)) {
       finishGoneRequest(sessionId, token, false)
+
+      return $sessionControlBySession.get()[sessionId]
+    }
+
+    // Unknown ownership is not a backend control failure. Retain any last
+    // snapshot and allow the next poll to retry after the owner is rehydrated.
+    if (isSessionOwnerResolutionError(error)) {
+      const current = $sessionControlBySession.get()[sessionId] ?? emptyEntry()
+
+      publishEntry(sessionId, { ...current, error: null, loading: false })
 
       return $sessionControlBySession.get()[sessionId]
     }
