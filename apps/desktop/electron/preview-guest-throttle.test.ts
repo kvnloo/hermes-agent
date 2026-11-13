@@ -30,6 +30,20 @@ describe('applyPreviewGuestUserAgent', () => {
     )
   })
 
+  it('removes a lone Hermes token after Electron has already been stripped', () => {
+    // The issue reporter observed that removing Electron alone still failed Kolide Device Trust.
+    const session = {
+      getUserAgent: vi.fn(() => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Hermes/0.0.0 Chrome/152.0.7977.167 Safari/537.36'),
+      setUserAgent: vi.fn()
+    }
+
+    applyPreviewGuestUserAgent(session, PREVIEW_GUEST_PARTITION)
+
+    expect(session.setUserAgent).toHaveBeenCalledExactlyOnceWith(
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.7977.167 Safari/537.36'
+    )
+  })
+
   it('leaves sessions outside the preview partition untouched', () => {
     const session = {
       getUserAgent: vi.fn(),
