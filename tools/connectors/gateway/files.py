@@ -185,7 +185,7 @@ def _substitute(value: Any, path: Sequence[str], stage) -> Any:
 def _stage_one(client: Any, plan: PlannedCall, raw: str, task_id: Optional[str]) -> dict[str, str]:
     path = _readable_file(raw, task_id)
     data = _read_bytes(raw, path)
-    name = Path(path).name[-255:]
+    name = Path(raw).name[-255:]
     mimetype = mimetypes.guess_type(name)[0] or "application/octet-stream"
     try:
         staged = client.stage_file(toolkit=plan.connector.lower(), tool=plan.tool, filename=name,
@@ -206,7 +206,16 @@ def _readable_file(raw: str, task_id: Optional[str]) -> str:
     from gateway.platforms.base import validate_media_delivery_path
     from gateway.session_context import get_session_env
 
-    candidate = _backend_path(raw, task_id)
+    try:
+        candidate = _backend_path(raw, task_id)
+    except FileInputError as exc:
+        if exc.code != "FILE_NOT_ALLOWED":
+            raise
+        from gateway.media_fetch import fetch_remote_media
+
+        candidate = fetch_remote_media(raw)
+        if candidate is None:
+            raise
     allowed = validate_media_delivery_path(candidate, session_key=get_session_env("HERMES_SESSION_KEY", ""))
     if allowed:
         return allowed

@@ -330,3 +330,65 @@ def test_a_storage_descriptor_from_the_model_is_refused_with_a_hint():
     entry = _execute(Gateway(), Storage(), {"attachment": {"name": "a", "mimetype": "b", "s3key": "x"}})
 
     assert entry["error"]["code"] == "FILE_NOT_ALLOWED" and "path" in entry["error"]["hint"]
+
+
+def test_remote_ssh_file_input_uses_media_delivery_policy(tmp_path, monkeypatch):
+    """Regression for #154564: connector uploads can fetch safe remote terminal files."""
+    from gateway import media_fetch
+    from gateway.platforms import base as platform_base
+
+    fetched = []
+
+    class Remote:
+        _remote_home = "/home/agent"
+
+        def fetch_realpath(self, path):
+            return path
+
+        def fetch_file(self, path, dest, max_bytes=None):
+            fetched.append((path, max_bytes))
+            Path(dest).write_bytes(b"%PDF-1.4 from ssh")
+
+    monkeypatch.setenv("TERMINAL_ENV", "ssh")
+    monkeypatch.setattr(platform_base, "DOCUMENT_CACHE_DIR", get_hermes_home() / "cache" / "documents")
+    monkeypatch.setattr(media_fetch, "_active_remote_env", lambda: Remote())
+
+    remote_path = "/home/agent/workspace/report.pdf"
+    gateway, storage = Gateway(), Storage()
+    entry = _execute(gateway, storage, {"attachment": remote_path})
+
+    assert entry["response"] == {"sent": True}
+    assert gateway.requests[1]["json"]["filename"] == "report.pdf"
+    assert [put["data"] for put in storage.requests] == [b"%PDF-1.4 from ssh"]
+    assert fetched == [(remote_path, media_fetch._FETCH_MAX_BYTES)]
+
+    for denied in (
+        "/home/agent/.ssh/id_ed25519",
+        "/home/agent/.hermes/auth.json",
+        "/etc/shadow",
+        "/root/private.txt",
+        "report.pdf",
+    ):
+        gateway, storage = Gateway(), Storage()
+        rejected = _execute(gateway, storage, {"attachment": denied})
+        assert rejected["error"]["code"] == "FILE_NOT_ALLOWED", denied
+        assert "files/upload" not in gateway.routes() and storage.requests == []
+    assert len(fetched) == 1
+
+    monkeypatch.setenv("HERMES_MEDIA_DELIVERY_STRICT", "1")
+    gateway, storage = Gateway(), Storage()
+    strict = _execute(gateway, storage, {"attachment": remote_path})
+    assert strict["error"]["code"] == "FILE_NOT_ALLOWED"
+    assert "files/upload" not in gateway.routes() and storage.requests == []
+    assert len(fetched) == 1
+
+    monkeypatch.delenv("HERMES_MEDIA_DELIVERY_STRICT")
+    def file_missing(raw, task_id):
+        raise files.FileInputError("FILE_NOT_FOUND", "other backend error")
+
+    monkeypatch.setattr(files, "_backend_path", file_missing)
+    gateway, storage = Gateway(), Storage()
+    other = _execute(gateway, storage, {"attachment": remote_path})
+    assert other["error"]["code"] == "FILE_NOT_FOUND"
+    assert "files/upload" not in gateway.routes() and storage.requests == []
+    assert len(fetched) == 1
