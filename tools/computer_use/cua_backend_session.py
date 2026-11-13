@@ -212,6 +212,9 @@ class _CuaDriverSession:
         import time as _time
         from mcp import ClientSession, StdioServerParameters
         from mcp.client.stdio import stdio_client
+        # Computer-use starts MCP independently of the configured-server SDK loader.
+        from tools.mcp_tool_wire_repair import install as _install_lenient_json
+        _install_lenient_json()
         from tools.computer_use import cua_backend as _cb
         from tools.environments.local import _sanitize_subprocess_env
 
