@@ -260,7 +260,11 @@ def _foreground_gateway_profile(argv: Sequence[str], hermes_home: Path) -> str |
         args = args[:index] + args[index + consumed:]
     # Bare `gateway` also runs, but argparse only accepts `--no-supervise` on `gateway run`
     # (gateway-level `--accept-hooks` may sit before `run`).
-    action = [t for t in command_argv(args)[1:] if not t.startswith("-")][:1]
+    # Docker also execs `python -m hermes_cli.main` directly; skip that launcher before
+    # reading the action after `gateway`, not the first executable token.
+    cmd = command_argv(args)
+    gateway_at = cmd.index("gateway") if "gateway" in cmd else -1
+    action = [t for t in cmd[gateway_at + 1:] if not t.startswith("-")][:1] if gateway_at >= 0 else []
     flag_opt_out = action == ["run"] and "--no-supervise" in args
     if not flag_opt_out and os.environ.get("HERMES_GATEWAY_NO_SUPERVISE", "").lower() not in ("1", "true", "yes"):
         return None

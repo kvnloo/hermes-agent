@@ -22,6 +22,7 @@ _WRAPPER = ["/init", "/opt/hermes/docker/main-wrapper.sh"]
         (["-p", "solo", "gateway", "run", "--no-supervise"], False, True),  # standalone: serves only solo
         (["gateway", "-p", "coder", "run", "--no-supervise"], False, False),  # -p after `gateway`
         (["gateway", "--accept-hooks", "run", "--no-supervise"], False, False),  # gateway-level flag first
+        (["python", "-m", "hermes_cli.main", "gateway", "run", "--no-supervise"], False, False),  # wrapper exec path
         (["gateway", "--no-supervise"], False, True),  # argparse rejects it: no foreground gateway
         (["gateway", "run"], False, True),  # bare run redirects to s6: the slot IS the gateway
         (["gateway", "status"], True, True),
