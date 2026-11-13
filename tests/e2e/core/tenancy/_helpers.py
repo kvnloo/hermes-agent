@@ -308,7 +308,7 @@ def _launch_index_view(path: Path, rel: Path, tenants: dict[str, Tenant]) -> lis
         data = json.loads(path.read_text(encoding="utf-8"))
         return split((k, json.dumps({k: v})) for k, v in data.items())
     if rel.name in ("state.db-wal", "state.db-shm") and rel.parent == Path("."):
-        return []  # read through the database below, which sees committed WAL frames
+        return []  # query committed frames via SQLite; file_leaks checks retained WAL secrets
     if rel != Path("state.db"):
         return None
     import sqlite3
@@ -337,6 +337,18 @@ def file_leaks(tenants: dict[str, Tenant], launch: str = "default") -> list[str]
     for t in tenants.values():
         for path in t.home.rglob("*"):
             rel = path.relative_to(t.home)
+            # Committed WAL frames are read through SQLite below, but overwritten/deleted page
+            # images can remain in the physical WAL. Shared routing rows may carry another
+            # profile's cwd by design; credentials from that profile must never be retained here.
+            if t.name == launch and rel == Path("state.db-wal") and path.is_file():
+                try:
+                    wal = path.read_bytes()
+                except OSError:
+                    continue
+                problems += [f"{t.name}: {rel} contains {u.name}'s {kind}"
+                             for u in tenants.values() if u.name != t.name
+                             for kind, secret in u.secrets().items() if secret.encode() in wal]
+                continue
             if not path.is_file() or (t.name == launch and "profiles" in rel.parts[:1]):
                 continue
             try:

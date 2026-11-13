@@ -56,3 +56,25 @@ def test_a_third_profiles_workdir_in_another_profiles_routing_row_is_a_leak(tmp_
     _write_launch_home(t, own_row_cwd=own, own_route_cwd=own, alpha_route_cwd=str(t["beta"].workdir))
     assert set(H.file_leaks(t)) == {"default: alpha's routing row in state.db contains beta's workdir",
                                     "default: alpha's routing row in sessions/sessions.json contains beta's workdir"}
+
+
+def test_deleted_secondary_secret_retained_in_launch_wal_is_a_leak(tmp_path: Path) -> None:
+    """SQLite's live rows are clean after deletion, but old page images still expose the secret."""
+    t = _tenants(tmp_path)
+    own = str(t["default"].workdir)
+    _write_launch_home(t, own_row_cwd=own, own_route_cwd=own)
+    db = t["default"].home / "state.db"
+    conn = sqlite3.connect(db)
+    try:
+        assert conn.execute("PRAGMA journal_mode=WAL").fetchone()[0] == "wal"
+        conn.execute("PRAGMA wal_autocheckpoint=0")
+        conn.execute("INSERT INTO sessions VALUES (?, ?)", ("discarded", t["alpha"].provider_key))
+        conn.commit()
+        conn.execute("DELETE FROM sessions WHERE id = 'discarded'")
+        conn.commit()
+        wal = db.with_name("state.db-wal")
+        assert t["alpha"].provider_key.encode() in wal.read_bytes()
+        assert conn.execute("SELECT * FROM sessions WHERE id = 'discarded'").fetchone() is None
+        assert H.file_leaks(t) == ["default: state.db-wal contains alpha's provider_key"]
+    finally:
+        conn.close()
