@@ -20,6 +20,7 @@ import { atom, computed } from 'nanostores'
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 
 import { useGatewayRequest } from '@/app/gateway/hooks/use-gateway-request'
+import { useHermesConfigRecord } from '@/app/hooks/use-config-record'
 import { useModelControls } from '@/app/session/hooks/use-model-controls'
 import { blobToDataUrl } from '@/app/session/hooks/use-prompt-actions/utils'
 import { probeStoredSession, resolveStoredSession } from '@/app/session/hooks/use-session-actions/utils'
@@ -60,7 +61,7 @@ import {
   sessionPinId
 } from '@/store/session'
 import { isSessionRemovalPending } from '@/store/session-removal'
-import { requestForSessionProfile } from '@/store/session-request-router'
+import { profileScopeForSessionOwner, requestForSessionProfile } from '@/store/session-request-router'
 import {
   $botChatScopes,
   $sessionStates,
@@ -257,7 +258,7 @@ export function toggleTilePin(storedSessionId: string): void {
   }
 }
 
-function TileChat({
+export function TileChat({
   runtimeId,
   storedSessionId,
   view
@@ -283,6 +284,16 @@ function TileChat({
 
     return tileOwnerRoute(tiles, rows, storedSessionId)
   }, [cronRows, messagingRows, sessionRows, storedSessionId, tiles])
+
+  // Dictation reads the tile's owner, never the foreground workspace's config.
+  const { data: voiceConfig } = useHermesConfigRecord(profileScopeForSessionOwner(ownerRoute))
+  const voice = voiceConfig?.voice
+  const limit =
+    voice && typeof voice === 'object'
+      ? (voice as { max_recording_seconds?: unknown }).max_recording_seconds
+      : undefined
+  const maxVoiceRecordingSeconds =
+    typeof limit === 'number' && Number.isFinite(limit) && limit > 0 ? limit : 120
 
   const requestTileGateway = useCallback(
     <T,>(method: string, params?: Record<string, unknown>, timeoutMs?: number, signal?: AbortSignal): Promise<T> =>
@@ -420,6 +431,7 @@ function TileChat({
       <ComposerScopeProvider value={scope}>
         <ChatView
           gateway={gateway}
+          maxVoiceRecordingSeconds={maxVoiceRecordingSeconds}
           modelMenuContent={modelMenuContent}
           modelOptionsOwnerConnectionId={ownerRoute?.connectionId || undefined}
           modelOptionsProfile={ownerRoute?.targetProfile || ownerRoute?.profile || activeGatewayProfile}
