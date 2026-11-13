@@ -624,6 +624,17 @@ async def admit_managed(authority, ref, row, policy):
     like the in-process runner: a worker failing in its policy scope reads as a LOST execution
     (``unknown``) and parks every follower behind it."""
     from gateway.session_policy import workspace_ready, workspace_unavailable_result
+    # Raw prompt.submit on a managed session skips the inbound slash-command handler.
+    # Refuse /moa here instead of silently running it on the worker's own model.
+    command = (row['payload'].get('text') or '').lstrip().split(maxsplit=1)
+    if command and command[0].casefold() == '/moa':
+        from agent.i18n import t
+        from gateway.session_context_refs import refused_turn_result
+        refusal = t('gateway.moa.managed_session')
+        authority.pending_results[row['admission_id']] = {
+            'result': refused_turn_result(row, refusal), 'usage': {},
+        }
+        return refusal
     if not workspace_ready(policy):
         result = workspace_unavailable_result(policy)
         authority.pending_results[row['admission_id']] = {'result': result, 'usage': {}}
