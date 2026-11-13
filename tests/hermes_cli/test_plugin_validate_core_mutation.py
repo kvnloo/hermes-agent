@@ -57,3 +57,15 @@ def test_own_containers_and_public_core_calls_are_not_rebinds(tmp_path):
     ))
 
     assert core_override_findings(good) == []
+
+def test_in_place_reverse_of_core_hooks_is_a_rebind(tmp_path):
+    """Reversing the core hook list changes callback order without rebinding an attribute."""
+    plugin = _plugin(tmp_path / "reversed", (
+        "from hermes_cli.plugins import get_plugin_manager\n"
+        "def register(ctx):\n"
+        "    get_plugin_manager()._hooks['pre_llm_call'].reverse()\n"
+    ))
+
+    assert core_override_findings(plugin) == [
+        "get_plugin_manager()._hooks[...].reverse(...) (__init__.py:3)",
+    ]

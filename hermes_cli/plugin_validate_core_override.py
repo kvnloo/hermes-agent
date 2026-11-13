@@ -127,7 +127,9 @@ def _call_name(node: ast.Call) -> str:
 
 # Methods that change a list / dict / set in place.
 _MUTATORS = frozenset({
-    "append", "extend", "insert", "remove", "pop", "clear", "update", "setdefault", "add", "discard", "popitem"})
+    "append", "extend", "insert", "remove", "pop", "clear", "update", "setdefault",
+    "add", "discard", "popitem", "reverse",
+})
 
 
 def _render(node: ast.AST) -> str:
