@@ -613,7 +613,7 @@ class SearchMixin:
             proc = subprocess.Popen(
                 args, cwd=cwd, env=_make_run_env(self.env.env), stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE if merge_stderr else subprocess.DEVNULL,
-                # detached-spawn: ok — awaited rg under a deadline; the group is killed on timeout or interrupt
+                # detached-spawn: ok — its group is owned by the owner-death supervisor, so it dies with this process on SIGKILL/OOM too; leader status only so the deadline kill and the supervisor's killpg can reach it
                 start_new_session=True)
         except OSError as exc:
             return ExecuteResult(stdout=f"rg: {exc}", exit_code=2)
@@ -623,62 +623,82 @@ class SearchMixin:
             proc._hermes_pgid = os.getpgid(proc.pid)
             from gateway.status import get_process_start_time
             proc._hermes_pgid_start = get_process_start_time(proc.pid)
+        # Hand rg's group to this process's owner-death supervisor so it dies with US however we die:
+        # the graceful deadline/interrupt kill below runs only if we survive to run it, but a worker
+        # reclaim or /stop can SIGKILL us mid-wait — the #797 2.3 GiB orphan. start_new_session made
+        # pgid == pid, so the number is rg's pid even after it exits, and a descendant that escaped the
+        # group still gets reaped. Released below once the group empties; a survivor of a crashed leader
+        # stays covered until reaped (mcp_tool_transport does the same for MCP stdio children).
+        owned_pgid = getattr(proc, "_hermes_pgid", proc.pid)
+        try:
+            from hermes_cli.process_identity import own_process_groups
+            own_process_groups([owned_pgid])
+        except Exception:  # health: allow BLE001 -- losing the safety net must never fail a live search
+            pass
+        try:
+            # Drain on a thread so a silent rg (huge tree, no hits yet) cannot pin the
+            # caller past the deadline or past a /stop; the waiter below owns both.
+            lines: list[bytes] = []
+            bounded = threading.Event()
 
-        # Drain on a thread so a silent rg (huge tree, no hits yet) cannot pin the
-        # caller past the deadline or past a /stop; the waiter below owns both.
-        lines: list[bytes] = []
-        bounded = threading.Event()
+            def _drain() -> None:
+                for raw in proc.stdout:
+                    lines.append(raw)
+                    if len(lines) >= fetch_limit:
+                        bounded.set()
+                        break
 
-        def _drain() -> None:
-            for raw in proc.stdout:
-                lines.append(raw)
-                if len(lines) >= fetch_limit:
-                    bounded.set()
+            drainer = threading.Thread(target=_drain, daemon=True)
+            drainer.start()
+            err_chunks: list[bytes] = []
+            err_omitted = [0]
+            err_drainer = None
+            if merge_stderr:
+                err_pipe = proc.stderr
+                err_drainer = threading.Thread(  # health: allow HX012 -- pipe drainer, reads no profile-scoped state
+                    target=_drain_stderr_capped, args=(err_pipe, err_chunks, err_omitted), daemon=True)
+                err_drainer.start()
+            deadline = time.monotonic() + timeout
+            exit_code: Optional[int] = None
+            while True:
+                drainer.join(0.05)
+                if not drainer.is_alive() or bounded.is_set():
                     break
-
-        drainer = threading.Thread(target=_drain, daemon=True)
-        drainer.start()
-        err_chunks: list[bytes] = []
-        err_omitted = [0]
-        err_drainer = None
-        if merge_stderr:
-            err_pipe = proc.stderr
-            err_drainer = threading.Thread(  # health: allow HX012 -- pipe drainer, reads no profile-scoped state
-                target=_drain_stderr_capped, args=(err_pipe, err_chunks, err_omitted), daemon=True)
-            err_drainer.start()
-        deadline = time.monotonic() + timeout
-        exit_code: Optional[int] = None
-        while True:
-            drainer.join(0.05)
-            if not drainer.is_alive() or bounded.is_set():
-                break
-            if tool_interrupt.is_interrupted():
-                exit_code = 130
-                break
-            if time.monotonic() > deadline:
-                exit_code = 124
-                break
-        if proc.poll() is None:
-            _kill_process_group_posix(proc)  # native lane is POSIX-only (gate above)
-        proc.wait()
-        drainer.join()
-        proc.stdout.close()
-        stdout = b"".join(lines).decode("utf-8", errors="replace")
-        if err_drainer is not None:
-            err_drainer.join()
-            if proc.stderr is not None:
-                proc.stderr.close()
-            err_text = b"".join(err_chunks).decode("utf-8", errors="replace")
-            if err_omitted[0]:
-                err_text = err_text.rstrip("\n") + "\n" + _omitted_diagnostics_line(err_omitted[0]) + "\n"
-            stdout = err_text + stdout
-        if exit_code == 124:
-            return ExecuteResult(stdout=stdout + f"\n[Command timed out after {timeout}s]", exit_code=124)
-        if exit_code == 130:
-            return ExecuteResult(stdout=stdout + "\n[Command interrupted]", exit_code=130)
-        # A killed-at-bound rg reports a signal (negative returncode); head would have
-        # left the pipeline at 0 unless rg itself already failed.
-        return ExecuteResult(stdout=stdout, exit_code=0 if bounded.is_set() else proc.returncode)
+                if tool_interrupt.is_interrupted():
+                    exit_code = 130
+                    break
+                if time.monotonic() > deadline:
+                    exit_code = 124
+                    break
+            if proc.poll() is None:
+                _kill_process_group_posix(proc)  # native lane is POSIX-only (gate above)
+            proc.wait()
+            drainer.join()
+            proc.stdout.close()
+            stdout = b"".join(lines).decode("utf-8", errors="replace")
+            if err_drainer is not None:
+                err_drainer.join()
+                if proc.stderr is not None:
+                    proc.stderr.close()
+                err_text = b"".join(err_chunks).decode("utf-8", errors="replace")
+                if err_omitted[0]:
+                    err_text = err_text.rstrip("\n") + "\n" + _omitted_diagnostics_line(err_omitted[0]) + "\n"
+                stdout = err_text + stdout
+            if exit_code == 124:
+                return ExecuteResult(stdout=stdout + f"\n[Command timed out after {timeout}s]", exit_code=124)
+            if exit_code == 130:
+                return ExecuteResult(stdout=stdout + "\n[Command interrupted]", exit_code=130)
+            # A killed-at-bound rg reports a signal (negative returncode); head would have
+            # left the pipeline at 0 unless rg itself already failed.
+            return ExecuteResult(stdout=stdout, exit_code=0 if bounded.is_set() else proc.returncode)
+        finally:
+            # Forget the group once nothing is left in it; a survivor keeps it covered, so it still
+            # dies with us. timeout=0: a single existence probe on the hot path — no added latency.
+            try:
+                from hermes_cli.process_identity import release_process_group_once_empty
+                release_process_group_once_empty(owned_pgid, proc=proc, timeout=0)
+            except Exception:  # health: allow BLE001 -- bookkeeping must never fail the caller
+                pass
 
     def _run_rg_bounded(self, words: list[str], fetch_limit: int, timeout: int, *,
                         merge_stderr: bool = False, native_ok: bool = True,
