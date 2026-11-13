@@ -186,3 +186,22 @@ def test_reused_branch_converges_to_true_remote_tip_without_prior_fetch(board_on
 
     subprocess.run(["git", "-C", str(tree), "merge-base", "--is-ancestor", tip, "HEAD"], check=True)
     assert _behind(tree) == 0
+
+
+def test_new_branch_is_fresh_without_main_as_push_upstream(board_on):
+    """New work must include the fetched tip but must never push to main by default.
+
+    With push.default=upstream, a task branch tracking origin/main can target
+    the remote's main branch on a bare 'git push'.  Resolution uses an explicit
+    origin/main ref, so the task branch does not need any configured upstream.
+    """
+    tree = _dispatch_anchored("wt/safe-push")
+    assert _behind(tree) == 0
+    upstream = subprocess.run(
+        ["git", "-C", str(tree), "rev-parse", "--abbrev-ref",
+         "--symbolic-full-name", "@{upstream}"],
+        capture_output=True, text=True, timeout=15, check=False,
+    )
+    assert upstream.returncode != 0, (
+        f"task branch unexpectedly tracks {upstream.stdout.strip()}"
+    )

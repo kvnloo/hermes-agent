@@ -858,7 +858,7 @@ def _ensure_git_worktree(repo_root: Path, target: Path, branch_name: str) -> Non
     else:
         # A new branch starts at the fetched default branch so it cannot
         # inherit a stale anchor checkout's blindness.
-        args = ["worktree", "add", "-b", branch_name, str(target), _worktree_base_ref(repo_root)]
+        args = ["worktree", "add", "--no-track", "-b", branch_name, str(target), _worktree_base_ref(repo_root)]
     result = _git(repo_root, *args, timeout=60)
     if result.returncode != 0:
         stderr = (result.stderr or result.stdout or "").strip()
