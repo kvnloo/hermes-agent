@@ -127,7 +127,9 @@ function runNode(scriptRelPath, args = []) {
 // build); do it once, then run/attach many times.
 export async function buildProdRenderer() {
   const viteBin = resolveViteBin()
-  await runProcess(process.execPath, [viteBin, 'build'], { env: { VITE_PERF_PROBE: '1' } })
+  // PERF_SOURCEMAP=1 emits sourcemaps so --cpuprofile frames map back to src/.
+  const args = process.env.PERF_SOURCEMAP === '1' ? ['build', '--sourcemap', 'true'] : ['build']
+  await runProcess(process.execPath, [viteBin, ...args], { env: { VITE_PERF_PROBE: '1' } })
   await runNode('scripts/bundle-electron-main.mjs')
 }
 
