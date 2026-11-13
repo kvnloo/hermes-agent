@@ -41,3 +41,20 @@ def test_anthropic_falls_back_to_curated_when_live_unavailable():
         result = M.provider_model_ids("anthropic")
 
     assert result == list(M._PROVIDER_MODELS["anthropic"])
+
+
+def test_anthropic_picker_keeps_55_aliases_when_live_catalog_lags():
+    """Regression for #135448: a stale live listing must not hide native 5.5 models."""
+    with patch.object(
+        M,
+        "_fetch_anthropic_models",
+        return_value=["claude-sonnet-5", "claude-haiku-4-5-20251001"],
+    ):
+        models = M.provider_model_ids("anthropic")
+
+    for newer, older in (
+        ("claude-sonnet-5-5", "claude-sonnet-5"),
+        ("claude-haiku-5-5", "claude-haiku-4-5-20251001"),
+    ):
+        assert models.count(newer) == 1
+        assert models.index(newer) < models.index(older)
