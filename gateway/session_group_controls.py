@@ -1,5 +1,6 @@
 """Profile-owned room controls over the canonical hosted service."""
 import asyncio
+import json
 import logging
 import os
 from pathlib import Path
@@ -468,6 +469,7 @@ def _profiles(authority, actor, home, params, siblings=()):
     """The Bots roster: this profile's row, then every profile it can name. ``siblings`` is
     ``_roster_siblings``' snapshot; a sibling with a reader carries the same session fields."""
     from hermes_cli.profiles import _profile_info
+    from hermes_cli.profiles_cache import json_safe_dumps
     import hermes_yaml as yaml
     include_sessions = params.get('include_sessions', True)
     if type(include_sessions) is not bool:
@@ -484,7 +486,7 @@ def _profiles(authority, actor, home, params, siblings=()):
     meta = meta if isinstance(meta, dict) else {}
     row['ui_meta_revisions'] = _ui_meta_revisions(meta)
     if isinstance(meta.get('ui_meta'), dict):
-        row['ui_meta'] = meta['ui_meta']
+        row['ui_meta'] = json.loads(json_safe_dumps(meta['ui_meta']))
     row['has_avatar'] = _has_avatar(home)
     if include_sessions:
         row.update(_bot_sessions(authority, actor))
@@ -510,7 +512,7 @@ def _profiles(authority, actor, home, params, siblings=()):
             entry['display_name'] = str(meta.get('display_name') or '')
             entry['ui_meta_revisions'] = _ui_meta_revisions(meta)
             if isinstance(meta.get('ui_meta'), dict):
-                entry['ui_meta'] = meta['ui_meta']
+                entry['ui_meta'] = json.loads(json_safe_dumps(meta['ui_meta']))
         profiles.append(entry)
 
     # Sibling profiles this process multiplexes: the roster lists them with the same
