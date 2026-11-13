@@ -1178,6 +1178,21 @@ def _contains_unsafe_gateway_action(
                     "~/Library/CloudStorage) that the guard refuses to open",
                 )
             continue
+        # A local bare path without execute permission fails at execve(EACCES): its
+        # contents cannot run, even if a config.yaml approval label looks like a restart.
+        # Do not infer remote execute permission from the gateway host's filesystem.
+        # Unquoted heredoc bodies retain the conservative executed-reference scan.
+        if (
+            candidate_executed
+            and not via_shell
+            and "\n" not in command
+            and read_remote_script is None
+        ):
+            try:
+                if script_path.is_file() and not os.access(script_path, os.X_OK):
+                    continue
+            except (OSError, ValueError):
+                pass
         resolved = _resolve_lenient(script_path)
         if resolved in visited:
             continue

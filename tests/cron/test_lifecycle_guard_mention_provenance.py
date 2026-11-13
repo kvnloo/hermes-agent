@@ -87,9 +87,25 @@ def test_executed_references_never_gated(tmp_path):
     script = _write(
         tmp_path, "restart.sh", "#!/bin/sh\nhermes gateway restart\n", 0o755
     )
-    for command in (f"bash {config}", str(config), f"sh {script}", f"source {script}"):
+    for command in (f"bash {config}", f"sh {script}", f"source {script}"):
         assert guard(command, cwd=str(tmp_path)) is True, command
     assert guard(f"cat {config}", cwd=str(tmp_path)) is False
+
+
+@pytest.mark.platforms("linux", "macos")
+def test_nonexecutable_config_path_is_not_a_lifecycle_script(tmp_path):
+    """An inert config cannot run when named directly: execve would return EACCES.
+
+    Explicit shell routing can consume non-executable text, and a directly executable
+    config-like file must still be scanned.
+    """
+    config = _write(tmp_path, "config.yaml", _ALLOWLIST_CONFIG, 0o600)
+    for command in (str(config), f'"{config}"'):
+        assert guard(command, cwd=str(tmp_path)) is False, command
+
+    assert guard(f"bash {config}", cwd=str(tmp_path)) is True
+    config.chmod(0o700)
+    assert guard(str(config), cwd=str(tmp_path)) is True
 
 
 def test_unquoted_heredoc_mention_stays_fail_closed(tmp_path):
