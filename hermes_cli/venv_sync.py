@@ -622,6 +622,11 @@ def _finish_source_update(root: Path, *, current: bool, pending: Path) -> None:
     # emitting machine-readable stdout (a JSON probe, a piped query).
     from hermes_cli.update_custody import CustodyRefused, run
 
+    # Counted before the child starts (#127284): a launch killed while its tail runs (a caller's
+    # timeout, a closed terminal) never returns here, and an uncounted attempt would bypass the
+    # retry backoff, so every later launch re-enters the same tail and fences the gateway forever.
+    # Success clears the record with the marker.
+    _record_completion_attempt(root, failed=True)
     # The completion child stays in this launch's checkout custody (POSIX: it inherits the lock
     # fd; Windows: created suspended and bound to the lock owner's kill-on-close job), so a
     # contender never sees the checkout free while it builds. A child the job refuses never runs:
@@ -638,7 +643,6 @@ def _finish_source_update(root: Path, *, current: bool, pending: Path) -> None:
         print(f"hermes: {exc.reason}", file=sys.stderr, flush=True)
         code = 1
     if code != 0:
-        _record_completion_attempt(root, failed=True)
         raise RuntimeError(
             "source update completion failed; run `hermes update` to finish it"
         )

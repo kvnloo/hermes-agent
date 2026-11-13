@@ -88,6 +88,31 @@ def test_a_tail_child_custody_refuses_never_runs_and_stays_owed(tmp_path, monkey
     assert not started.exists(), "the tail child ran outside the update's custody"
 
 
+def test_a_tail_killed_mid_run_still_counts_as_an_attempt(tmp_path, monkeypatch):
+    """#127284: a launch wrapped in a caller's timeout is killed while its tail runs, so it never
+    returns to record the failure. Uncounted, the retry backoff never engages and every later
+    launch re-enters the same tail (and fences the gateway) forever. The attempt is counted
+    before the child starts; a normal failure still counts exactly once."""
+    from hermes_cli import update_custody
+
+    root, _ = _tail_root(tmp_path, monkeypatch)
+    venv_sync.arm_completion(root)
+    record = venv_sync._completion_attempts_path(root)
+
+    def killed(argv, **kwargs):
+        raise SystemExit(-15)  # the caller's SIGTERM lands before the tail returns
+
+    monkeypatch.setattr(update_custody, "run", killed)
+    with pytest.raises(SystemExit):
+        venv_sync._finish_source_update(root, current=True, pending=root / ".update-pending")
+    assert record.read_text(encoding="utf-8").split()[0] == "1"
+
+    monkeypatch.setattr(update_custody, "run", lambda argv, **kw: subprocess.CompletedProcess(argv, 3))
+    with pytest.raises(RuntimeError, match="source update completion failed"):
+        venv_sync._finish_source_update(root, current=True, pending=root / ".update-pending")
+    assert record.read_text(encoding="utf-8").split()[0] == "2", "a failed tail is counted once"
+
+
 @pytest.mark.platforms("windows")
 def test_a_tail_child_the_job_refuses_never_runs(tmp_path, monkeypatch):
     """N10/R6b native: with the launch holding the checkout lock, the REAL bind is refused (the

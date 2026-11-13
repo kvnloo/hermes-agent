@@ -98,6 +98,9 @@ environments/benchmarks/evals/
 
 # Web UI build output
 hermes_cli/web_dist/
+# Its swap-in temp dir: a build killed mid-swap leaves it behind, and as untracked residue it
+# marked every install stamp dirty (#125147)
+hermes_cli/.web_dist-build-*/
 # Cross-process web UI build lock (flock target, always empty)
 .web_ui_build.lock
 apps/desktop/build/
