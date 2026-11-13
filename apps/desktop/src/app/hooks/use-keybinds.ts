@@ -154,6 +154,7 @@ export function useKeybinds(deps: KeybindRuntimeDeps): void {
   // Keep the latest closures without re-subscribing the listener.
   const handlersRef = useRef<HandlerMap>({})
   const commitSwitcherRef = useRef<() => void>(() => {})
+  const lastAttentionJump = useRef<null | { id: string; state: 'needs-input' | 'unread' }>(null)
 
   const profileSwitchHandlers: HandlerMap = {}
 
@@ -333,16 +334,22 @@ export function useKeybinds(deps: KeybindRuntimeDeps): void {
     'session.next': () => cycleTab(1),
     'session.prev': () => cycleTab(-1),
     'session.nextAttention': () => {
-      const target = nextAttentionSessionId(
-        $sessionDotStateById.get(),
-        $focusedStoredSessionId.get(),
-        $sessions.get(),
-        $messagingSessions.get()
-      )
+      const byId = $sessionDotStateById.get()
+      const focusedId = $focusedStoredSessionId.get()
+      const prior = lastAttentionJump.current
+      const cursor = prior?.id === focusedId ? prior : focusedId
+      const target = nextAttentionSessionId(byId, cursor, $sessions.get(), $messagingSessions.get())
 
       if (target) {
+        const state = byId[target]
+
+        if (state === 'needs-input' || state === 'unread') {
+          lastAttentionJump.current = { id: target, state }
+        }
+
         goToSession(target)
       } else {
+        lastAttentionJump.current = null
         notify({ durationMs: 2000, kind: 'info', message: translateNow('keybinds.nothingNeedsYou'), placement: 'default' })
       }
     },

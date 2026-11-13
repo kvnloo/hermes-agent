@@ -231,21 +231,30 @@ export function unreadSessionCount(
  *  out for the same reason as the titlebar badge (#93552). */
 export function nextAttentionSessionId(
   byId: Readonly<Record<string, SessionDotState>>,
-  currentId: null | string,
+  current: null | string | { id: string; state: 'needs-input' | 'unread' },
   ...lists: Array<readonly { archived?: boolean; id: string }[]>
 ): null | string {
   const rows = lists.flat().filter(row => !row.archived)
   const tier = (state: SessionDotState | undefined) => (state === 'needs-input' ? 0 : state === 'unread' ? 1 : null)
-  const ordered = [0, 1].flatMap(rank => rows.filter(row => tier(byId[row.id]) === rank).map(row => row.id))
+  const currentId = typeof current === 'string' ? current : current?.id ?? null
+  // Opening an unread session clears its dot. Keep its last attention tier as
+  // the cycle cursor so the next press does not restart at the first blocker.
+  const cursorTier = current && typeof current === 'object' ? tier(current.state) : null
+  const rankOf = (row: { id: string }) => tier(byId[row.id]) ?? (row.id === currentId ? cursorTier : null)
+  const ordered = [0, 1].flatMap(rank => rows.filter(row => rankOf(row) === rank).map(row => row.id))
   const candidates = [...new Set(ordered)]
-
-  if (candidates.length === 0) {
-    return null
-  }
-
   const at = currentId ? candidates.indexOf(currentId) : -1
 
-  return candidates[(at + 1) % candidates.length]
+  // A read cursor is only a position; it is no longer a waiting destination.
+  for (let step = 1; step <= candidates.length; step += 1) {
+    const next = candidates[(at + step) % candidates.length]
+
+    if (tier(byId[next]) !== null) {
+      return next
+    }
+  }
+
+  return null
 }
 
 /** The titlebar badge. Cron sessions are deliberately EXCLUDED: cron runs

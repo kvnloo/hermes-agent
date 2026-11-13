@@ -198,6 +198,17 @@ describe('nextAttentionSessionId', () => {
   it('finds nothing when no listed, unarchived session is waiting', () => {
     expect(nextAttentionSessionId(states, null, [{ id: 'busy' }, { archived: true, id: 'old' }])).toBeNull()
   })
+
+  it('advances past a read cursor without reopening the first blocked session', () => {
+    const rows = [{ id: 'blocked' }, { id: 'first' }, { id: 'second' }]
+    const unread = { blocked: 'needs-input', first: 'unread', second: 'unread' } as const
+
+    expect(nextAttentionSessionId(unread, 'blocked', rows)).toBe('first')
+
+    // openSession marks 'first' read; its dot disappears before the next key.
+    const afterOpen = { ...unread, first: 'idle' } as const
+    expect(nextAttentionSessionId(afterOpen, { id: 'first', state: 'unread' }, rows)).toBe('second')
+  })
 })
 
 describe('$unreadSessionCount (titlebar badge)', () => {
