@@ -15,6 +15,7 @@ from pathlib import Path
 # wiped (#57828) so early recovery provably runs before third-party imports (test_early_recovery).
 # The parser internals are imported lazily below because gateway tests stub ``sys.modules["dotenv"]``.
 import dotenv
+from hermes_constants import hermes_home_key
 from hermes_cli.left_core_migration import profile_env_names
 from utils import atomic_replace, mkstemp_beside
 
@@ -187,7 +188,7 @@ def adopt_env_provenance(provenance: dict[str, list[str]]) -> None:
 
 def get_secret_source_values(hermes_home: str | os.PathLike) -> dict[str, str]:
     """Return the external-secret value snapshot for ``hermes_home``."""
-    return dict(_SECRET_SOURCE_VALUES_BY_HOME.get(str(Path(hermes_home).resolve()), {}))
+    return dict(_SECRET_SOURCE_VALUES_BY_HOME.get(hermes_home_key(hermes_home), {}))
 
 
 def hydrate_profile_secret_sources(hermes_home: str | os.PathLike) -> dict[str, str]:
@@ -207,7 +208,7 @@ def _hydrate_profile_secret_sources(home: Path) -> dict[str, str]:
 
     if worker_config_snapshot() is not None:
         return {}
-    home_key = str(home.resolve())
+    home_key = hermes_home_key(home)
     if home_key in _APPLIED_HOMES:
         return get_secret_source_values(home)
 
@@ -289,7 +290,7 @@ def reset_secret_source_cache(hermes_home: str | os.PathLike | None = None) -> N
         _SECRET_SOURCE_RESTORE_BY_HOME.clear()
         _SECRET_SOURCE_WRITES_BY_HOME.clear()
         return
-    home_key = str(Path(hermes_home).resolve())
+    home_key = hermes_home_key(hermes_home)
     _APPLIED_HOMES.discard(home_key)
     _SECRET_SOURCE_VALUES_BY_HOME.pop(home_key, None)
     _SECRET_SOURCE_RESTORE_BY_HOME.pop(home_key, None)
@@ -703,7 +704,7 @@ def load_hermes_dotenv(
     launch_home = _process_hermes_home().resolve()
     if (is_multiplex_active() and get_hermes_home_override() is not None
             and (home_path.resolve() != launch_home or get_hermes_home().resolve() != launch_home)):
-        home_key = str(home_path.resolve())
+        home_key = hermes_home_key(home_path)
         if home_key not in _SCOPED_SKIP_LOGGED:
             _SCOPED_SKIP_LOGGED.add(home_key)
             logger.debug("multiplex: skipping process-global dotenv load for routed "
@@ -752,7 +753,7 @@ def load_hermes_dotenv(
     # once-per-home no-op — so the clobber stuck for the life of the process (#74265). Re-assert only what the
     # source is authoritative for; managed scope, applied last with override=True, still wins on purpose.
     if _SECRET_SOURCE_RESTORE_BY_HOME:
-        for name, value in _SECRET_SOURCE_RESTORE_BY_HOME.get(str(home_path.resolve()), {}).items():
+        for name, value in _SECRET_SOURCE_RESTORE_BY_HOME.get(hermes_home_key(home_path), {}).items():
             if os.environ.get(name) != value:
                 os.environ[name] = value
 
@@ -841,7 +842,7 @@ def _revoke_secret_source_writes(home_path: Path, *, keep) -> None:
     replaced since (the profile's ``.env``, the administrator-managed ``.env``, a shell export, a later
     source) is theirs and stays. A revoked name gets back the value it held before the source's first
     write, or is removed when it had none."""
-    home_key = str(Path(home_path).resolve())
+    home_key = hermes_home_key(home_path)
     writes = _SECRET_SOURCE_WRITES_BY_HOME.get(home_key)
     if not writes:
         return
@@ -939,7 +940,7 @@ def _apply_external_secret_sources(home_path: Path) -> None:
     tokens), BEFORE Hermes reads credentials; failures never block startup. Precedence/conflicts/provenance
     live in ``registry.apply_all``; this wrapper owns the once-per-home guard, the post-apply ASCII sweep,
     the ``_SECRET_SOURCES`` map and status lines."""
-    home_key = str(Path(home_path).resolve())
+    home_key = hermes_home_key(home_path)
     if home_key in _APPLIED_HOMES:
         return
 
