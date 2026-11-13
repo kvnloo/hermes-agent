@@ -310,23 +310,31 @@ class Facts:
         packages = _read(self.path, strict=True)["packages"]
         self.retain(set(packages) - set(names))
 
-    def drop_dead_history(self, live) -> None:
-        """Forget tool pins whose owning checkouts ``live(owner)`` reports gone.
+    def drop_dead_history(self, live, *, retain_selected: bool = True) -> None:
+        """Forget pins whose owning checkouts ``live(owner)`` reports gone.
 
-        A dead selection gives way to the first live pin in its history; a row with no owners
-        (written before per-install history) is kept selected, since nothing proves it unused."""
+        Staged payloads keep their selected pin even with no checkout owner; live-store GC
+        may drop a fully orphaned selection. Legacy ownerless selections remain unknown."""
         packages = _read(self.path, strict=True)["packages"]
         changed = False
-        for name, fact in packages.items():
-            if not isinstance(fact, dict) or not isinstance(fact.get("previous"), list):
+        for name, fact in list(packages.items()):
+            if not isinstance(fact, dict) or "entry" not in fact:
+                continue
+            previous = fact.get("previous")
+            if not isinstance(previous, list) and (retain_selected or not fact.get("owners")):
                 continue
             top = {k: v for k, v in fact.items() if k != "previous"}
-            rows = [row for row in [top, *fact["previous"]]
+            rows = [row for row in [top, *(previous if isinstance(previous, list) else [])]
                     if isinstance(row, dict) and any(map(live, row.get("owners") or []))]
             if not top.get("owners") and top not in rows:
                 rows.insert(0, top)
             if not rows:
-                rows = [top]
+                if retain_selected:
+                    rows = [top]
+                else:
+                    del packages[name]
+                    changed = True
+                    continue
             kept = {**rows[0], "previous": rows[1:]} if rows[1:] else rows[0]
             if kept != fact:
                 packages[name], changed = kept, True

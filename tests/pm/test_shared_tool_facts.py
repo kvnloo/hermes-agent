@@ -89,3 +89,27 @@ def test_upgrade_releases_the_old_entry_and_a_deleted_install_releases_its_pins(
     cli._gc_store(store, Facts(root / "facts.json"))
     assert not other.exists() and new.is_dir()
     assert Facts(root / "facts.json").get("uv")["version"] == "1.1"
+
+
+def test_gc_reclaims_solo_pin_when_checkout_gone(tmp_path, monkeypatch):
+    """A deleted checkout's only pin must not survive just because it has no history."""
+    root = tmp_path / "tools"
+    root.mkdir()
+    installs = tmp_path / "installs"
+    (installs / "A").mkdir(parents=True)
+    (installs / "B").mkdir()
+    target = current_target()
+
+    monkeypatch.setattr(pm_lock, "install_owner", lambda: "A")
+    live, _ = _publish(root, "python", "1.0", "1" * 64, target)
+    monkeypatch.setattr(pm_lock, "install_owner", lambda: "B")
+    gone, _ = _publish(root, "uv", "2.0", "2" * 64, target)
+    assert "previous" not in Facts(root / "facts.json").get("uv")
+
+    # An orphan sweep removed B's state; A still uses the same shared store.
+    (installs / "B").rmdir()
+    monkeypatch.setattr(pm_lock, "install_owner", lambda: "A")
+    monkeypatch.setattr(paths, "partials_root", lambda: tmp_path / "partials")
+    assert cli._gc_store(Store(root), Facts(root / "facts.json")) == (1, 1)
+    assert live.is_dir() and not gone.exists()
+    assert Facts(root / "facts.json").get("uv") is None

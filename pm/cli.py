@@ -548,7 +548,7 @@ def _gc_store(store, facts) -> tuple[int, int]:
         from pm.defaults import RETIRED_DEFAULTS
 
         facts.forget(RETIRED_DEFAULTS)
-        facts.drop_dead_history(_install_alive(store))
+        facts.drop_dead_history(_install_alive(store), retain_selected=False)
         keep = facts.entries_in_use()
         collect_partials(partials_dir)
         removed += _reclaim_set_aside(store)
