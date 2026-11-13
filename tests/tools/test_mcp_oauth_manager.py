@@ -734,6 +734,7 @@ async def _drive_flow(provider, responder):
     (429, "nan", 1),
     (429, "inf", 1),
     (429, "-inf", 1),
+    (429, "-1", 1),
 ])
 async def test_transient_refresh_preserves_grant_and_defers_post(
     tmp_path, monkeypatch, caplog, status, retry_after, delay

@@ -480,14 +480,14 @@ class HermesProviderMixin:
 
                 raw = response.headers.get("Retry-After")
                 delay = parse_retry_after_seconds(raw)
-                # The shared parser clamps negative values to zero, which also
-                # hides NaN/-inf. Reject nonfinite numeric headers before using it.
+                # The shared parser clamps negative values to zero, masking
+                # invalid headers. Reject negative or nonfinite numbers.
                 try:
                     numeric = float(raw)
                 except (TypeError, ValueError):
                     numeric = None
                 if (delay is None or not math.isfinite(delay)
-                        or (numeric is not None and not math.isfinite(numeric))):
+                        or (numeric is not None and (not math.isfinite(numeric) or numeric < 0))):
                     delay = 1.0
                 self._hermes_refresh_retry_at = monotonic() + delay
                 # False would make the SDK send an anonymous resource request
