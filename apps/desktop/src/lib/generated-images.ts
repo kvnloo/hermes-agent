@@ -133,8 +133,12 @@ export function stripGeneratedImageEchoes(text: string, sources: readonly string
     )
     // Bare occurrence of the source path/URL. `(`/`)` are excluded from the
     // boundary classes so a path inside a markdown link destination
-    // (`[label](/tmp/a.png)`) is not corrupted into `[label]()`.
-    next = next.replace(new RegExp(String.raw`(^|[\s[{])<?${escaped}>?(?=$|[\s\]}.,!?])`, 'g'), '$1')
+    // (`[label](/tmp/a.png)`) is not corrupted into `[label]()`, and backticked
+    // paths stay inert. Quotes (`"`) and colons (`:`) ARE boundaries, so a path
+    // restated in quotes (`"path"`) or followed by a colon (`path:`) is stripped
+    // while a path glued to a path-continuation character
+    // (`/tmp/a.png/foo`, `x/tmp/a.png`, `/tmp/a.png_bar`, `/tmp/a.png-baz`) is not.
+    next = next.replace(new RegExp(String.raw`(^|[\s\[{"'])<?${escaped}>?(?=$|[\s\]}.,!?:'"])`, 'g'), '$1')
   }
 
   return next
