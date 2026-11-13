@@ -6,6 +6,7 @@ import { Tip, TipKeybindLabel } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
 import { hostHas } from '@/lib/host-capabilities'
+import { $touchPointer } from '@/lib/touch-interaction'
 import { Ear, EarOff, iconSize, Layers3, Loader2, Square } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { recordAction } from '@/store/desktop-metrics'
@@ -89,6 +90,7 @@ export function ComposerControls({
   const { t } = useI18n()
   const c = t.composer
   const hudMode = useStore($hudMode)
+  const touchPointer = useStore($touchPointer)
 
   if (conversation.active) {
     return <ConversationPill {...conversation} disabled={disabled} />
@@ -110,7 +112,8 @@ export function ComposerControls({
   // same reason — same controls, same state, different budget. Below that
   // even the menu goes: at `minimal` the row is the send button and nothing
   // else, which is the one thing that must survive every width.
-  const foldedVoice = hudMode || foldVoice
+  // Touch cannot hover to reveal the fan: the mic must open controls without recording.
+  const foldedVoice = hudMode || foldVoice || touchPointer
 
   const voiceControls = foldedVoice ? (
     <VoiceMenu

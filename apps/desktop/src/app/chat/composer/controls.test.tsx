@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { ChatBarState } from '@/app/chat/composer/types'
 import { I18nProvider } from '@/i18n'
+import { $touchPointer } from '@/lib/touch-interaction'
 import { $hudMode } from '@/store/hud'
 import { applyWakeStartResult, applyWakeStatus, resetWakeWordState } from '@/store/wake-word'
 
@@ -59,6 +60,7 @@ async function expectShortcutTooltip(label: string, shortcut: string) {
 afterEach(() => {
   cleanup()
   $hudMode.set(false)
+  $touchPointer.set(false)
 })
 
 // The HUD is a Spotlight bar a few hundred pixels wide: the voice controls
@@ -106,6 +108,27 @@ describe('HUD mode', () => {
 
     expect(screen.getByLabelText('Stop dictation')).toBeTruthy()
     expect(screen.queryByLabelText('Voice')).toBeNull()
+  })
+})
+
+// Browser-hosted touch users must be able to reach read-aloud and wake-word
+// controls without opening the mic. Dictation is a separate menu selection.
+describe('touch voice controls', () => {
+  it('opens the voice menu without dictation and records only on explicit selection', () => {
+    $touchPointer.set(true)
+    const onDictate = vi.fn()
+    renderControls({ onDictate, state: { ...state, voice: { active: false, enabled: true } } })
+
+    const trigger = screen.getByRole('button', { name: 'Voice' })
+    fireEvent.pointerDown(trigger, { button: 0, pointerType: 'touch' })
+    fireEvent.pointerUp(trigger, { button: 0, pointerType: 'touch' })
+    fireEvent.click(trigger)
+
+    expect(onDictate).not.toHaveBeenCalled()
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Read replies aloud' })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Voice dictation' }))
+    expect(onDictate).toHaveBeenCalledOnce()
   })
 })
 
