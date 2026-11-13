@@ -386,3 +386,34 @@ class TestSensitivePathRejection:
             paths, cleaned = _extract(text)
         assert paths == []
         assert cleaned == text
+
+
+def test_home_credentials_stay_in_prose_and_bare_attachment_can_be_disabled(tmp_path, monkeypatch):
+    """Fresh third-party credentials are not implicit uploads; explicit artifacts still work."""
+    from gateway.platforms.base import validate_media_delivery_path
+
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.delenv("HERMES_AUTO_ATTACH_BARE_FILES", raising=False)
+
+    for relative in (".claude/settings.json", ".claude.json", ".codex/settings.json"):
+        credential = home / relative
+        credential.parent.mkdir(parents=True, exist_ok=True)
+        credential.write_text("synthetic credential (not a real key)\n", encoding="utf-8")
+        message = f"配置（【~/{relative}】，权限 600）：仅本地"
+        assert BasePlatformAdapter.extract_local_files(message) == ([], message)
+        assert validate_media_delivery_path(str(credential)) is None
+
+    report = home / "report.json"
+    report.write_text('{"artifact": true}\n', encoding="utf-8")
+    message = "Generated report: ~/report.json"
+    paths, cleaned = BasePlatformAdapter.extract_local_files(message)
+    assert paths == [str(report)]
+    assert "~/report.json" not in cleaned
+
+    monkeypatch.setenv("HERMES_AUTO_ATTACH_BARE_FILES", "0")
+    assert BasePlatformAdapter.extract_local_files(message) == ([], message)
+    media, _ = BasePlatformAdapter.extract_media(f"MEDIA:{report}")
+    assert media == [(str(report), False)]

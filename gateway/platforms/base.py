@@ -832,7 +832,7 @@ _MEDIA_DELIVERY_DENIED_PREFIXES = (
 # Credential / config dirs denied under $HOME (Library/Keychains = macOS), resolved at check time.
 _MEDIA_DELIVERY_DENIED_HOME_SUBPATHS = (
     ".ssh", ".aws", ".gnupg", ".kube", ".docker", ".config", ".azure", ".gcloud",
-    "Library/Keychains")
+    ".claude", ".claude.json", ".codex", "Library/Keychains")
 
 def _sqlite_files(name: str) -> tuple[str, ...]:
     """A SQLite store plus its WAL/SHM/rollback-journal sidecars."""
@@ -1373,7 +1373,8 @@ def _is_sensitive_bare_local_file_path(path: str) -> bool:
     parts = {part for part in re.split(r"[/\\]+", lowered) if part}
     name = next((part for part in reversed(re.split(r"[/\\]+", lowered)) if part), "")
 
-    if ".hermes" in parts:
+    # Third-party agent homes and their root credential file contain active tokens.
+    if parts.intersection((".hermes", ".claude", ".codex")) or name == ".claude.json":
         return True
     if name in _SENSITIVE_BARE_FILE_NAMES:
         return True
@@ -3465,7 +3466,11 @@ class BasePlatformAdapter(ABC):
 
         The bare-path allow-list is intentionally narrower than explicit ``MEDIA:`` tags: YAML/YML is
         excluded, and config/credential-looking paths (including anything under a ``.hermes``
-        directory) are never auto-attached. Use explicit ``MEDIA:`` for intentional uploads."""
+        directory) are never auto-attached. Use explicit ``MEDIA:`` for intentional uploads.
+        Set ``HERMES_AUTO_ATTACH_BARE_FILES=0`` to disable bare-path scanning."""
+        # Opt out of implicit attachment without disabling explicit MEDIA: directives.
+        if os.environ.get("HERMES_AUTO_ATTACH_BARE_FILES", "1").strip().lower() in {"0", "false", "no", "off"}:
+            return [], content
         ext_part = '|'.join(e.lstrip('.') for e in BARE_LOCAL_FILE_EXTS)
         # Lookbehind rejects URL/relative matches (https://…/img.png, ./foo.png).
         # (?<![/:\w.]) prevents matching inside URLs (e.g. https://…/img.png) and relative paths (./foo.png)
