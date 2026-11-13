@@ -36,6 +36,27 @@ afterEach(() => {
 })
 
 describe('browser-hosted Desktop bridge', () => {
+  it('does not open a disposable microphone stream before browser capture', async () => {
+    seedWebappSession('served-token')
+    const getUserMedia = vi.fn(async () => {
+      throw new Error('the recorder, not the preflight, must request microphone access')
+    })
+    const previous = Object.getOwnPropertyDescriptor(navigator, 'mediaDevices')
+    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { getUserMedia } })
+
+    try {
+      expect(installBrowserDesktopBridge()).toBe(true)
+      await expect(mutableWindow().hermesDesktop!.requestMicrophoneAccess!()).resolves.toBe(true)
+      expect(getUserMedia).not.toHaveBeenCalled()
+    } finally {
+      if (previous) {
+        Object.defineProperty(navigator, 'mediaDevices', previous)
+      } else {
+        Reflect.deleteProperty(navigator, 'mediaDevices')
+      }
+    }
+  })
+
   it('does not make network requests to resolve link titles', async () => {
     seedWebappSession('served-token')
     const fetchMock = vi.fn().mockResolvedValue(new Response('<title>Untrusted title</title>'))

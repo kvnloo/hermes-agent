@@ -191,16 +191,9 @@ export function installBrowserDesktopBridge(): boolean {
       return target ? openWindow(target) : { error: 'invalid_session_id', ok: false }
     },
     settings: createBrowserSettings({ basePath: () => browserFolderBasePath(activeConnectionId()), currentProfile }),
-    requestMicrophoneAccess: async () => {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        return false
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      stream.getTracks().forEach(track => track.stop())
-
-      return true
-    },
+    // Actual capture owns the permission request and any denial error. A throwaway
+    // browser probe can stall Safari when the recorder immediately reopens the mic.
+    requestMicrophoneAccess: async () => Boolean(navigator.mediaDevices?.getUserMedia),
     terminal: createBrowserTerminal({
       basePath: bootstrap.basePath,
       currentProfile,
