@@ -149,3 +149,20 @@ def test_a_person_at_a_terminal_may_still_turn_the_gate_off(tmp_path, monkeypatc
 
     assert _REAL_GATE_CONFIG() == (False, [])
 
+
+def test_encoded_security_mapping_key_cannot_disable_gate_unattended(tmp_path, monkeypatch, capsys):
+    """A YAML escape must not hide a protected switch from an unattended config write."""
+    from hermes_cli import config as cli_config
+
+    monkeypatch.setattr(_guards, "_protected_instruction_config", _REAL_GATE_CONFIG)
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("HERMES_SINGLE_QUERY_SESSION", "1")
+    # The raw string hides the f; yaml.safe_load restores it before writing config.yaml.
+    escaped_section = r'{"protected_instruction_\u0066iles": false}'
+
+    with pytest.raises(SystemExit) as refused:
+        cli_config.set_config_value("security", escaped_section, force=True)
+
+    assert refused.value.code == 1
+    assert "Refusing to set 'security'" in capsys.readouterr().err
+    assert _REAL_GATE_CONFIG() == (True, [])

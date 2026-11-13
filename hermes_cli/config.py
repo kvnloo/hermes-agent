@@ -3212,12 +3212,6 @@ def set_config_value(key: str, value: str, force: bool = False):
             f"✗ Invalid config key: {key!r} — contains an empty path segment "
             "(leading, trailing, or doubled '.').")
     _exit_if_key_managed(key, "set")
-    # A gate's own switch is not settable by the process it guards: an unattended agent runs
-    # `hermes config set` itself, so without this it can grant the approval the gate requires.
-    from hermes_cli.config_self_control import refuse_unattended_security_self_control
-
-    refuse_unattended_security_self_control(key, value)
-
     if _is_env_config_key(key):
         from hermes_cli.credential_lifecycle import save_provider_env_credential
 
@@ -3267,6 +3261,9 @@ def set_config_value(key: str, value: str, force: bool = False):
     config_path = get_config_path()
     user_config = require_readable_config_before_write(config_path)
     value = _coerce_config_set_value(key, value)
+    # Check parsed values: YAML escapes may hide a protected leaf from a raw-text scan.
+    from hermes_cli.config_self_control import refuse_unattended_security_self_control
+    refuse_unattended_security_self_control(key, value)
     # A scalar ``model`` shorthand must become a dict before writing sub-keys, or _set_nested
     # replaces it with an empty dict and the model id is lost.
     _model_val = user_config.get("model")
