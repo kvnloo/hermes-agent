@@ -74,13 +74,16 @@ import {
   fetchBoard,
   fetchBoards,
   fetchProfiles,
+  fetchRoadmap,
   patchTask,
-  PROFILES_KEY
+  PROFILES_KEY,
+  roadmapKey
 } from './api'
 import { BoardSwitcher } from './board-switcher'
 import { TaskDrawer } from './drawer'
 import { EMPTY_OVERRIDE, ModelOverrideField, overrideCreateFields, type TaskModelOverride } from './model-override'
 import { OrchestrationPanel } from './orchestration'
+import { RoadmapView } from './roadmap'
 import { columnMeta, type KanbanBoard, type KanbanTask, type TaskEstimate } from './types'
 import {
   $newTaskLane,
@@ -1084,12 +1087,18 @@ export function KanbanBoardPage() {
   const qc = useQueryClient()
   const slug = useValue($boardSlug)
   const [archived, setArchived] = useState(false)
+  const [view, setView] = useState<'board' | 'roadmap'>('board')
 
   // Live updates ride the events socket (bindApi); this interval is only the
   // slow heartbeat for socketless paths (OAuth remotes, dropped connections).
   const { data: board, error } = useQuery({
     queryFn: () => fetchBoard(archived),
     queryKey: boardKey(slug, archived),
+    refetchInterval: 60_000
+  })
+  const { data: roadmapCapability } = useQuery({
+    queryFn: fetchRoadmap,
+    queryKey: roadmapKey(slug),
     refetchInterval: 60_000
   })
 
@@ -1332,6 +1341,26 @@ export function KanbanBoardPage() {
         <span className="rounded-full bg-(--ui-bg-quaternary) px-1.5 py-px text-[0.625rem] tabular-nums text-(--ui-text-tertiary)">
           {total}
         </span>
+        <div aria-label="Kanban view" className="flex h-8 shrink-0 rounded-md bg-(--ui-bg-quinary) p-0.5" role="group">
+          <button
+            aria-pressed={view === 'board'}
+            className={cn('min-w-11 rounded px-2 text-[0.6875rem]', view === 'board' && 'bg-(--ui-bg-elevated) text-foreground shadow-sm')}
+            onClick={() => setView('board')}
+            type="button"
+          >
+            Board
+          </button>
+          <button
+            aria-pressed={view === 'roadmap'}
+            className={cn('min-w-11 rounded px-2 text-[0.6875rem]', view === 'roadmap' && 'bg-(--ui-bg-elevated) text-foreground shadow-sm')}
+            disabled={!roadmapCapability?.capability}
+            onClick={() => setView('roadmap')}
+            title={roadmapCapability?.capability ? 'Open read-only Roadmap' : 'No Roadmap catalog for this board'}
+            type="button"
+          >
+            Roadmap
+          </button>
+        </div>
         {board && (
           <FilterMenu
             archived={archived}
@@ -1365,9 +1394,11 @@ export function KanbanBoardPage() {
 
       {settingsOpen && <OrchestrationPanel />}
 
-      {board && <Intro />}
+      {board && view === 'board' && <Intro />}
 
-      {errorMessage && !board ? (
+      {view === 'roadmap' ? (
+        <RoadmapView onReturnToBoard={() => setView('board')} slug={slug} />
+      ) : errorMessage && !board ? (
         <div className="grid flex-1 place-items-center">
           <ErrorState title={errorMessage} />
         </div>

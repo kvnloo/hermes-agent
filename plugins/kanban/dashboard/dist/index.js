@@ -600,6 +600,109 @@
   // Root page
   // -------------------------------------------------------------------------
 
+  function RoadmapProjection(props) {
+    const { data, error, loading, onRetry } = props;
+    const [selected, setSelected] = useState(null);
+    const returnFocusRef = useRef(null);
+    const detailRef = useRef(null);
+    const typeDepth = { company: 0, portfolio: 1, workstream: 2, project: 3, epic: 4, sprint: 5, board: 6 };
+
+    useEffect(function () {
+      if (!selected) return undefined;
+      const close = detailRef.current && detailRef.current.querySelector('[aria-label="Close details"]');
+      if (close) close.focus();
+      const onKey = function (event) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          setSelected(null);
+          requestAnimationFrame(function () { if (returnFocusRef.current) returnFocusRef.current.focus(); });
+        } else if (event.key === "Tab" && detailRef.current) {
+          const focusable = detailRef.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+          if (!focusable.length) return;
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
+      };
+      window.addEventListener("keydown", onKey);
+      return function () { window.removeEventListener("keydown", onKey); };
+    }, [selected]);
+
+    if (loading) return h("div", { className: "p-8 text-sm text-muted-foreground" }, "Loading Roadmap…");
+    if (error || !data) return h(Card, null, h(CardContent, { className: "p-6 flex flex-col gap-3" },
+      h("div", { className: "text-sm text-destructive" }, error || "Roadmap unavailable"),
+      h(Button, { className: "self-start", onClick: onRetry, variant: "outline" }, "Retry")));
+    if (!data.capability || data.state === "absent") {
+      return h("div", { className: "p-8 text-sm text-muted-foreground" }, "This board has no Roadmap catalog.");
+    }
+    if (data.state === "invalid" || data.state === "unavailable") {
+      return h(Card, null, h(CardContent, { className: "p-6 flex flex-col gap-3" },
+        h("div", { className: "text-sm text-destructive" }, data.warnings[0] || "Roadmap data failed closed"),
+        h(Button, { className: "self-start", onClick: onRetry, variant: "outline" }, "Retry")));
+    }
+
+    const children = new Map();
+    data.scopes.forEach(function (scope) {
+      const parent = scope.parent_id || null;
+      children.set(parent, (children.get(parent) || []).concat(scope));
+    });
+    const ordered = [];
+    const visit = function (parent) {
+      (children.get(parent) || []).forEach(function (scope) {
+        ordered.push(scope);
+        visit(scope.id);
+      });
+    };
+    visit(null);
+
+    return h("div", { className: "flex min-w-0 gap-3 overflow-hidden" },
+      h("div", { "aria-label": "Roadmap hierarchy", className: "min-w-0 flex-1 overflow-y-auto", role: "tree" },
+        ordered.map(function (scope) {
+          const total = scope.rollup.task_count;
+          const done = scope.rollup.status_counts.done || 0;
+          return h("button", {
+            "aria-selected": selected && selected.id === scope.id,
+            className: "grid min-h-11 w-full grid-cols-[minmax(0,1fr)_5rem] items-center gap-3 border-b px-3 text-left hover:bg-muted focus-visible:outline-2",
+            key: scope.id,
+            onClick: function (event) { returnFocusRef.current = event.currentTarget; setSelected(scope); },
+            role: "treeitem",
+            style: { paddingLeft: String(12 + (typeDepth[scope.type] || 0) * 14) + "px" },
+          },
+          h("span", { className: "min-w-0 py-2" },
+            h("span", { className: "block truncate text-xs font-medium" }, scope.name),
+            h("span", { className: "block text-[10px] capitalize text-muted-foreground" }, scope.type, " · ", total, " tasks")),
+          h("span", { className: "text-right text-xs tabular-nums text-muted-foreground" }, done, "/", total));
+        })),
+      selected ? h("aside", {
+        "aria-label": selected.name + " details",
+        "aria-modal": "true",
+        className: "fixed inset-x-0 bottom-0 z-30 max-h-[72dvh] overflow-y-auto rounded-t-xl border bg-background p-4 shadow-xl md:static md:max-h-none md:w-80 md:shrink-0 md:rounded-lg md:shadow-none",
+        ref: detailRef,
+        role: "dialog",
+      },
+      h("div", { className: "flex min-h-11 items-center gap-2" },
+        h("div", { className: "min-w-0 flex-1" },
+          h("div", { className: "truncate text-sm font-semibold" }, selected.name),
+          h("div", { className: "text-xs capitalize text-muted-foreground" }, selected.type)),
+        h(Button, { "aria-label": "Close details", onClick: function () {
+          setSelected(null);
+          requestAnimationFrame(function () { if (returnFocusRef.current) returnFocusRef.current.focus(); });
+        }, variant: "ghost" }, "Close")),
+      h("dl", { className: "mt-3 grid grid-cols-2 gap-2 text-xs" },
+        h("div", { className: "rounded-md bg-muted p-2" }, h("dt", null, "Tasks"), h("dd", { className: "mt-1 text-base font-semibold" }, selected.rollup.task_count)),
+        h("div", { className: "rounded-md bg-muted p-2" }, h("dt", null, "Outcomes"), h("dd", { className: "mt-1 text-base font-semibold" }, selected.rollup.verified_outcomes))),
+      h("div", { className: "mt-4 space-y-1 text-xs text-muted-foreground" },
+        h("p", null, "Critical path: ", selected.rollup.critical_path.state),
+        h("p", null, "Blocked: ", selected.rollup.blocker_task_ids.length),
+        h("p", null, "Event revision: ", selected.provenance.latest_event_id))) : null);
+  }
+
   function KanbanPage() {
     const { t } = useI18n();
     const kanbanDialogs = useKanbanDialogs(t);
@@ -607,6 +710,10 @@
     const [boardList, setBoardList] = useState([]);      // [{slug, name, counts, ...}]
     const [showNewBoard, setShowNewBoard] = useState(false);
     const [showBoardSettings, setShowBoardSettings] = useState(false);
+    const [view, setView] = useState("board");
+    const [roadmap, setRoadmap] = useState(null);
+    const [roadmapError, setRoadmapError] = useState(null);
+    const [roadmapLoading, setRoadmapLoading] = useState(false);
 
     const [kanbanBoard, setKanbanBoard] = useState(null);  // the grid data
     // Alias so the rest of the function can keep using `board` semantically
@@ -703,6 +810,16 @@
     }, [board]);
 
     useEffect(function () { loadBoardList(); }, [loadBoardList]);
+
+    const loadRoadmap = useCallback(function () {
+      setRoadmapLoading(true);
+      return SDK.fetchJSON(withBoard(`${API}/roadmap`, board))
+        .then(function (data) { setRoadmap(data); setRoadmapError(null); })
+        .catch(function (err) { setRoadmapError(String(err && err.message ? err.message : err)); })
+        .finally(function () { setRoadmapLoading(false); });
+    }, [board]);
+
+    useEffect(function () { loadRoadmap(); }, [loadRoadmap]);
 
     const scheduleReload = useCallback(function () {
       if (reloadTimerRef.current) return;
@@ -1236,6 +1353,22 @@
     }, [selectedIds, board, loadBoard, t, kanbanDialogs]);
 
     // --- render -------------------------------------------------------------
+    if (view === "roadmap") {
+      return h(ErrorBoundary, null,
+        h("div", { className: "hermes-kanban flex flex-col gap-4" },
+          h("div", { className: "flex flex-wrap items-center gap-2" },
+            h(BoardSwitcher, {
+              board: board,
+              boardList: boardList,
+              onSwitch: switchBoard,
+              onNewClick: function () { setShowNewBoard(true); },
+              onSettingsClick: function () { setShowBoardSettings(true); },
+              onDeleteBoard: deleteBoard,
+              requestDialog: function (req) { return kanbanDialogs.request(req); },
+            }),
+            h(Button, { className: "min-h-11", onClick: function () { setView("board"); }, variant: "outline" }, "Board")),
+          h(RoadmapProjection, { data: roadmap, error: roadmapError, loading: roadmapLoading, onRetry: loadRoadmap })));
+    }
     if (loading && !boardData) {
       return h("div", { className: "p-8 text-sm text-muted-foreground" },
         tx(t, "loading", "Loading Kanban board…"));
@@ -1266,6 +1399,11 @@
           onDeleteBoard: deleteBoard,
           requestDialog: function (req) { return kanbanDialogs.request(req); },
         }),
+        roadmap && roadmap.capability ? h(Button, {
+          className: "min-h-11 self-start",
+          onClick: function () { setView("roadmap"); },
+          variant: "outline",
+        }, "Roadmap") : null,
         showNewBoard ? h(NewBoardDialog, {
           onCancel: function () { setShowNewBoard(false); },
           onCreate: function (payload) {

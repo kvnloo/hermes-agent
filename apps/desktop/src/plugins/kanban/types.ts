@@ -38,6 +38,37 @@ export interface KanbanBoard {
   now: number
 }
 
+export interface RoadmapRollup {
+  task_count: number
+  status_counts: Record<string, number>
+  blocker_task_ids: string[]
+  critical_path: { state: 'cycle' | 'ok'; task_ids: string[] }
+  verified_outcomes: number
+  outcome_event_ids: number[]
+  volume_score: 0
+}
+
+export interface RoadmapScope {
+  id: string
+  type: 'board' | 'company' | 'epic' | 'portfolio' | 'project' | 'sprint' | 'workstream'
+  name: string
+  parent_id: null | string
+  board_bound: boolean
+  rollup: RoadmapRollup
+  provenance: { board: string; latest_event_id: number; source_revision: string }
+}
+
+export interface RoadmapProjection {
+  contract_version: 1
+  capability: boolean
+  board: string
+  state: 'absent' | 'empty' | 'invalid' | 'ready' | 'unavailable'
+  source_revision: null | string
+  freshness: { observed_at: number; latest_event_id: number }
+  warnings: string[]
+  scopes: RoadmapScope[]
+}
+
 /** A structured recovery action attached to a diagnostic. */
 export interface DiagnosticAction {
   kind: string

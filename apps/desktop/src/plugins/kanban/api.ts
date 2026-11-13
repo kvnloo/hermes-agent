@@ -29,6 +29,7 @@ import type {
   KanbanTask,
   KanbanTaskDetail,
   OrchestrationSettings,
+  RoadmapProjection,
   TaskEstimate,
   WorkerLog
 } from './types'
@@ -68,6 +69,7 @@ function onEventsFrame(slug: string, data: unknown): void {
   }
 
   void queryClient.invalidateQueries({ queryKey: ['kanban', 'board'] })
+  void queryClient.invalidateQueries({ queryKey: ['kanban', 'roadmap'] })
   // Any event can change a board's card count — keep the switcher badge honest.
   void queryClient.invalidateQueries({ queryKey: BOARDS_KEY })
 
@@ -157,11 +159,14 @@ export const BOARDS_KEY = ['kanban', 'boards'] as const
 export const PROFILES_KEY = ['kanban', 'profiles'] as const
 export const PROJECTS_KEY = ['kanban', 'projects'] as const
 export const ORCHESTRATION_KEY = ['kanban', 'orchestration'] as const
+export const roadmapKey = (slug: string) => ['kanban', 'roadmap', slug] as const
 
 // ── reads ─────────────────────────────────────────────────────────────────────
 
 export const fetchBoard = (archived: boolean) =>
   call<KanbanBoard>(withBoard('/board', archived ? { include_archived: 'true' } : {}))
+
+export const fetchRoadmap = () => call<RoadmapProjection>(withBoard('/roadmap'))
 
 export const fetchTask = (id: string) => call<KanbanTaskDetail>(withBoard(`/tasks/${id}`))
 
