@@ -61,14 +61,12 @@
   *::after {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    /* Static mask-image fades (scroll edges, HUD viewport, streaming code
-       cards, clamped text, pane tabs, shimmer text) each build a
-       CoreAnimation filter layer (ImagingNode). WindowServer re-walks and
-       re-renders that nested chain every display refresh — measured
-       ~10-15% of a core at 120 Hz on the built-in panel, independent of
-       pixel count, window count, or app count. The fade is a texture, not
-       the content: every masked surface keeps its own background, so the
-       ramp disappears but nothing becomes unreadable. */
+  }
+
+  /* Static edge/text masks are decorative, but the .arc-border mask cuts
+     out a functional ring. Other ring cutouts live on pseudo-elements.
+     Preserve both kinds of structural mask under reduced transparency. */
+  *:not(.arc-border) {
     mask-image: none !important;
     -webkit-mask-image: none !important;
   }
