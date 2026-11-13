@@ -510,3 +510,49 @@ def test_an_unavailable_replacement_default_falls_back_to_the_bundled_strategy(m
         if current is not None:
             _registry.restore_registration("default", current, previous)
 
+def test_pinned_session_reports_configured_backend_mismatch_without_changing_its_route(
+    tmp_path, monkeypatch, caplog,
+):
+    """Regression for #154936: a saved backend switch must not silently conceal the session's old route."""
+    from agent.delegation_provider import DelegationProvider
+    from agent.delegation_registry import _registry
+    from tools.delegate_tool_config import _load_config
+    from tools.delegate_tool_routes import resolve_task_routes
+
+    class InheritingProfiles(DelegationProvider):
+        @property
+        def name(self):
+            return "probe-profiles"
+
+        def route_task(self, task, config):
+            return {}  # A profile route with no default: the child inherits the parent's model.
+
+    _, manager = _home(tmp_path, monkeypatch, {
+        "backend": "probe-options", "provider": "openrouter", "model": "configured-child",
+        "backends": {"probe-options": {"options": OPTIONS}},
+    })
+    profiles = InheritingProfiles()
+    _registry.register(profiles)
+    try:
+        parent = _parent()
+        parent._delegation_backend = "probe-profiles"  # restored from the session's tools[] pin
+        (stale,), error = resolve_task_routes([{"goal": "review"}], _load_config(), parent)
+        assert error is None
+        assert (stale.backend, stale.creds["provider"], stale.creds["model"]) == (
+            "probe-profiles", None, None,
+        )
+        warning = stale.report()["warning"]
+        assert "pinned backend 'probe-profiles'" in warning
+        assert "delegation.backend 'probe-options'" in warning
+        assert "delegation.provider/model" in warning
+        assert "/delegation probe-options --now" in warning
+        assert any(warning in message for message in caplog.messages)
+
+        (matching,), error = resolve_task_routes(
+            [{"goal": "review"}], {**_load_config(), "backend": "probe-profiles"}, parent,
+        )
+        assert error is None
+        assert matching.report() == {"backend": "probe-profiles"}
+    finally:
+        _registry.restore_registration("probe-profiles", profiles, None)
+        manager.unload()

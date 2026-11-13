@@ -791,7 +791,9 @@ _DESCRIPTION_HEAD = (
     "the parent applies the transition.\n"
 )
 _DESCRIPTION_TAIL = (
-    "- Children inherit the parent model unless pinned via delegation.provider / delegation.model in config.yaml."
+    "- With the default delegation backend, children inherit the parent model unless pinned by "
+    "delegation.provider / delegation.model. Other backends choose their own routes; a running session "
+    "keeps its tool-pinned backend until `/delegation <backend> --now` or `/new`."
 )
 
 def _build_tasks_param_description() -> str:

@@ -42,12 +42,15 @@ class TaskRoute:
     # The task's provider-declared parameters this route came from (no secrets): what a continue after a restart
     # re-routes with. None for an internal caller's explicit route (``route_for_config``), which cannot be rebuilt.
     request: Optional[dict[str, Any]] = None
+    # Operator-visible diagnostic when config.yaml selects another backend than this session's cached tools.
+    warning: Optional[str] = None
 
     def report(self) -> Optional[dict[str, Any]]:
         """The ``route`` a backend-routed task's result carries (None for the default backend's unlabelled route)."""
-        if self.backend == "default" and not self.label:
+        if self.backend == "default" and not self.label and not self.warning:
             return None
-        return {"backend": self.backend, **({"label": self.label} if self.label else {})}
+        return {"backend": self.backend, **({"label": self.label} if self.label else {}),
+                **({"warning": self.warning} if self.warning else {})}
 
     def refused_entry(self, index: int) -> dict[str, Any]:
         """Result entry for a task this route refused: no child was built for it."""
@@ -316,7 +319,17 @@ def resolve_task_routes(task_list: list[dict[str, Any]], config: Mapping[str, An
     A task the backend cannot route gets a route with ``error`` set; its siblings are unaffected. Identical routes
     resolve credentials once per call (the default backend resolves exactly once)."""
     from agent.delegation_backends import pinned_backend
+    from agent.delegation_registry import configured_backend
+    configured = configured_backend(config)
+    warning = None
     if pinned := pinned_backend(parent_agent):
+        if pinned != configured:
+            warning = (
+                f"Session delegate_task uses pinned backend '{pinned}', not configured delegation.backend "
+                f"'{configured}'; delegation.provider/model cannot override the session pin. "
+                f"Use `/delegation {configured} --now` or `/new` to apply the saved backend."
+            )
+            logger.warning("%s", warning)
         config = {**config, "backend": pinned}
     try:
         provider = _active_provider(config)
@@ -331,7 +344,7 @@ def resolve_task_routes(task_list: list[dict[str, Any]], config: Mapping[str, An
             _check_backend_effort(i, route, config)
             request = {name: task[name] for name in declared if task.get(name) is not None}
             routes.append(replace(_route_to_task_route(route, parent_agent, cache, config, provider.name),
-                                  request=request))
+                                  request=request, warning=warning))
         except ValueError as exc:  # DelegationRouteError, the credential resolver's and the tier check's refusals
             routes.append(TaskRoute({}, {}, backend=provider.name, error=str(exc)))
     return routes, None
