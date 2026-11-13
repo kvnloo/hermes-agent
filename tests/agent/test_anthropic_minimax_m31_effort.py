@@ -180,3 +180,11 @@ class TestPickerHonesty:
             "ultra (sends max on this route)"
         )
         assert effort_display_label("high", "minimax", "MiniMax-M3.1-Flash") == "high"
+
+    @pytest.mark.parametrize(
+        "model",
+        ["MiniMax-M3.10", "MiniMax-M3.1x", "MiniMax-M3-10", "minimax/MiniMax-M3.10-Flash"],
+    )
+    def test_lookalike_model_keeps_the_legacy_picker_ladder(self, model: str) -> None:
+        from agent.reasoning_effort import route_supported_efforts
+        assert route_supported_efforts("minimax", model) == route_supported_efforts("minimax", "MiniMax-M3")

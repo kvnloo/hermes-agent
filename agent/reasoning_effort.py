@@ -212,9 +212,11 @@ def _is_minimax_adaptive_route(
       the model, not the endpoint), the provider name decides: ``minimax``, ``minimax-cn`` and
       ``minimax-oauth`` are MiniMax's own routes.
     """
-    from agent.anthropic_endpoints import _is_minimax_anthropic_endpoint
-    slug = (model or "").strip().lower().rsplit("/", 1)[-1]
-    if not (slug.startswith("minimax-m3.1") or slug.startswith("minimax-m3-1")):
+    from agent.anthropic_endpoints import (
+        _is_minimax_anthropic_endpoint,
+        _model_name_is_minimax_adaptive,
+    )
+    if not _model_name_is_minimax_adaptive(model):
         return False
     if base_url:
         return _is_minimax_anthropic_endpoint(base_url)
