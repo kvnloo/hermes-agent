@@ -909,6 +909,54 @@ class TestBackgroundReviewDeleteGate:
         assert overflow["staged"] is False
         assert "already await review" in overflow["message"]
 
+    def test_full_review_queue_is_failed_write_but_still_notifies(self, tmp_path, monkeypatch):
+        """#117894: a rejected review proposal must not claim success or lose its warning."""
+        from agent.background_review import summarize_background_review_actions
+        from tools import write_approval as wa
+        from tools.memory_tool import _MAX_BACKGROUND_MEMORY_PROPOSALS
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "home"))
+        monkeypatch.setattr("tools.memory_tool.get_memory_dir", lambda: tmp_path / "memories")
+        store = MemoryStore()  # Real 2200/1375-character defaults.
+        store.load_from_disk()
+        assert store.memory_char_limit == 2200
+        assert store.add("memory", "standing rule")["success"] is True
+
+        for index in range(_MAX_BACKGROUND_MEMORY_PROPOSALS):
+            wa.stage_write(
+                wa.MEMORY,
+                {"action": "replace", "target": "memory", "old_text": "standing rule",
+                 "content": f"earlier proposal {index}"},
+                summary=f"review proposal {index}", origin="background_review",
+            )
+
+        token = set_current_write_origin("background_review")
+        try:
+            raw = memory_tool(
+                action="replace", old_text="standing rule", content="new proposal",
+                store=store,
+            )
+        finally:
+            reset_current_write_origin(token)
+
+        result = json.loads(raw)
+        assert result["success"] is False  # RED on the carrier head: it reports True.
+        assert result["proposal_blocked"] is True
+        assert result["staged"] is False
+        assert result["pending_id"] == ""
+        assert wa.pending_count(wa.MEMORY) == _MAX_BACKGROUND_MEMORY_PROPOSALS
+        assert store._entries_for("memory") == ["standing rule"]
+
+        messages = [
+            {"role": "assistant", "tool_calls": [
+                {"id": "c1", "function": {"name": "memory", "arguments": "{}"}}
+            ]},
+            {"role": "tool", "tool_call_id": "c1", "content": raw},
+        ]
+        assert summarize_background_review_actions(
+            messages, [], notification_mode="off"
+        ) == [result["message"]]
+
     def test_add_still_allowed_in_background_review(self, store):
         token = set_current_write_origin("background_review")
         try:

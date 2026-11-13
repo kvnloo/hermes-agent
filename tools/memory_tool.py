@@ -185,7 +185,7 @@ def _background_delete_gate(action, operations, target="memory", content=None, o
                 "(approve to apply, reject to drop)."
             )
         return json.dumps({
-            "success": True, "staged": not record.get("queue_full", False),
+            "success": not record.get("queue_full", False), "staged": not record.get("queue_full", False),
             "proposal_staged": not record.get("queue_full", False),
             "proposal_blocked": bool(record.get("queue_full")), "pending_id": record["id"],
             "pending_count": pending_count, "deduplicated": bool(record.get("deduplicated")),

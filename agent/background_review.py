@@ -681,7 +681,8 @@ def summarize_background_review_actions(
             continue
         # Wrapper MCP servers may return a top-level list/scalar; only dict payloads carry
         # ``success``/``_change``.
-        if not isinstance(data, dict) or not data.get("success"):
+        # Queue-full proposals are denied writes, but their safety notices must still reach the user.
+        if not isinstance(data, dict) or (not data.get("success") and not data.get("proposal_blocked")):
             continue
         # Approval-required proposals are safety notices, not ordinary update notifications:
         # hiding them behind display.memory_notifications recreates an invisible pending queue.
