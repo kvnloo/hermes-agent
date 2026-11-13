@@ -114,3 +114,32 @@ async def test_status_does_not_label_a_planned_route_change_as_fallback(tmp_path
         assert "**Model:** `minimax/minimax-m3:free` (openrouter)\n" in status
     finally:
         db.close()
+
+@pytest.mark.asyncio
+async def test_status_uses_owning_profile_default_after_restart(tmp_path):
+    """#130572: idle multiplexed Telegram chat uses its profile, not the launch profile."""
+    launch_home = tmp_path / "launch"
+    profile_home = tmp_path / "profiles" / "AAAA"
+    launch_home.mkdir()
+    profile_home.mkdir(parents=True)
+    (launch_home / "config.yaml").write_text(
+        "model:\n  provider: openrouter\n  default: dots-studio/dots-3-note-preview:free\n"
+    )
+    (profile_home / "config.yaml").write_text(
+        "model:\n  provider: openrouter\n  default: thinkingmachines/inkling-small:free\n"
+    )
+    runner, db = _runner_with_old_usage(tmp_path)
+    runner.config.multiplex_profiles = True
+    runner._resolve_profile_home_for_source = lambda _source: profile_home
+    try:
+        # The next turn uses the owning profile's config; /status has no resident agent
+        # and must discard launch-profile/old usage instead of displaying it.
+        with patch("gateway.run._gateway_config_home", return_value=launch_home):
+            assert runner._channel_default_route(
+                _make_source(), profile_home / "config.yaml"
+            ) == ("thinkingmachines/inkling-small:free", "openrouter")
+            status = await runner._handle_message(_make_event("/status"))
+        assert "**Model:** `thinkingmachines/inkling-small:free` (openrouter)" in status
+        assert "dots-studio/dots-3-note-preview:free" not in status
+    finally:
+        db.close()

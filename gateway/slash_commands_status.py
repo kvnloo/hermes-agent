@@ -301,7 +301,11 @@ class GatewayStatusCommandsMixin:
         if (status_agent is None or status_agent is _AGENT_PENDING_SENTINEL) and not active_override.get("model"):
             # Nothing resident and no /model pin: the next turn runs the channel/config default, so a
             # SessionDB route recorded under an older default is history, not the current model.
-            default_route = await asyncio.to_thread(self._channel_default_route, source, None)
+            # Slash dispatch is outside the routed profile scope on a multiplexed gateway.
+            # Read the same owning profile config.yaml that /model reset uses.
+            profile_config_path = (self._resolve_profile_home_for_source(source) / "config.yaml"
+                                   if getattr(getattr(self, "config", None), "multiplex_profiles", False) else None)
+            default_route = await asyncio.to_thread(self._channel_default_route, source, profile_config_path)
             persisted_route, session_row = _routes_for_default(default_route, persisted_route, session_row)
         model_name, provider_name, context_used, context_total, route = _status_model_route(
             status_agent, active_override, persisted_route, session_row, session_entry
