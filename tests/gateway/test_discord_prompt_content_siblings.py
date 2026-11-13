@@ -64,4 +64,62 @@ async def test_clarify_with_choices_mirrors_question_into_content():
     assert sent["view"] is not None
     assert "Which environment should I deploy to?" in sent["content"]
 
+@pytest.mark.asyncio
+async def test_clarify_omits_duplicate_title_but_keeps_question_when_configured():
+    adapter = DiscordAdapter(PlatformConfig(enabled=True, token="***", extra={"prompt_header_in_content": False}))
+    sent = _capture_channel(adapter)
 
+    result = await adapter.send_clarify(
+        chat_id="555",
+        question="Which environment should I deploy to?",
+        choices=["staging", "production"],
+        clarify_id="cl1",
+        session_key="discord:555",
+    )
+
+    assert result.success is True
+    assert sent["embed"].title == "❓ Hermes needs your input"
+    assert "Hermes needs your input" not in sent["content"]
+    assert sent["content"].startswith("Which environment should I deploy to?")
+    assert "Pick one below" in sent["content"]
+    assert sent["view"] is not None
+
+
+@pytest.mark.asyncio
+async def test_slash_confirm_omits_duplicate_title_but_keeps_message_when_configured():
+    adapter = DiscordAdapter(PlatformConfig(enabled=True, token="***", extra={"prompt_header_in_content": False}))
+    sent = _capture_channel(adapter)
+
+    result = await adapter.send_slash_confirm(
+        chat_id="555",
+        title="Reset session?",
+        message="This will clear the current conversation history.",
+        session_key="discord:555",
+        confirm_id="c1",
+    )
+
+    assert result.success is True
+    assert sent["embed"].title == "Reset session?"
+    assert sent["content"] == "This will clear the current conversation history."
+    assert sent["view"] is not None
+
+
+@pytest.mark.asyncio
+async def test_exec_approval_omits_title_but_keeps_command_and_reason_when_configured():
+    adapter = DiscordAdapter(PlatformConfig(enabled=True, token="***", extra={"prompt_header_in_content": False}))
+    sent = _capture_channel(adapter)
+
+    command = "python scripts/deploy.py --env prod --force"
+    result = await adapter.send_exec_approval(
+        chat_id="555",
+        command=command,
+        session_key="discord:555",
+        description="script execution via -c flag",
+    )
+
+    assert result.success is True
+    assert sent["embed"].title == "⚠️ Hermes wants to run a command that needs your OK"
+    assert "Hermes wants to run a command that needs your OK" not in sent["content"]
+    assert command in sent["content"]
+    assert "script execution via -c flag" in sent["content"]
+    assert sent["view"] is not None

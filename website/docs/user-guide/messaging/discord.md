@@ -469,6 +469,19 @@ When enabled, every `@mention` in a regular text channel automatically creates a
 
 Messages sent in existing threads or DMs are unaffected by this setting. Channels listed in `discord.no_thread_channels`, and channels listed in `discord.free_response_channels` unless [`discord.free_response_auto_thread`](#discordfree_response_auto_thread) is `true`, also bypass auto-threading and get inline replies instead.
 
+#### `discord.prompt_header_in_content`
+
+**Type:** boolean — **Default:** `true`
+
+Interactive prompt titles normally appear in both the plain message content and embed so clients
+that hide embeds still show the title. Set this to `false` to show the title only in the embed,
+without dropping the question, command, reason, hints or buttons. This setting is config-only.
+
+```yaml
+discord:
+  prompt_header_in_content: false
+```
+
 #### `discord.reactions`
 
 **Type:** boolean — **Default:** `true`

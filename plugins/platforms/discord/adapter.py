@@ -4892,6 +4892,10 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
             "free_response_auto_thread", "DISCORD_FREE_RESPONSE_AUTO_THREAD", "false", truthy=True,
         )
 
+    def _discord_prompt_header_in_content(self) -> bool:
+        """Keep title fallbacks unless Discord config explicitly disables them."""
+        return self.config.extra.get("prompt_header_in_content", True) is not False
+
     def _discord_max_attachment_bytes(self) -> int:
         """Per-attachment byte cap; 0 = unlimited (whole attachment is held in memory). Default 32 MiB."""
         configured = self.config.extra.get("max_attachment_bytes")
@@ -5576,11 +5580,12 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
         """Plain content mirroring an embed's payload.
         Embeds can be invisible/detached on web/mobile, so ``content`` carries the payload."""
         body = str(body or "")
+        include_header = self._discord_prompt_header_in_content()
         if code_block:
-            prefix = f"{header}\n```bash\n"
+            prefix = (f"{header}\n" if include_header else "") + "```bash\n"
             suffix = f"\n```{tail}"
         else:
-            prefix = f"{header}\n\n"
+            prefix = f"{header}\n\n" if include_header else ""
             suffix = tail
         truncated_suffix = "\n" + t("platform.discord.prompt.truncated_marker")
         budget = max(0, self.MAX_MESSAGE_LENGTH - len(prefix) - len(suffix))
@@ -5667,6 +5672,10 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
 
         def _build(_channel):
             content = prompt.text
+            if not self._discord_prompt_header_in_content():
+                header = f"⚠️ **{t('gateway.exec_approval.header')}**\n\n"
+                if content.startswith(header):
+                    content = content[len(header):]
             mention_content = self._approval_mention_content()
             if mention_content:
                 content = f"{mention_content}\n{content}"
