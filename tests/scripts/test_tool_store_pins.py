@@ -136,13 +136,16 @@ def _provisioned_store(tmp_path: Path, account: Path, home: Path, naming: dict) 
 
 @pytest.mark.platforms("posix")
 @pytest.mark.parametrize("named_by", ["HERMES_RUNTIME_DIR", "HERMES_HOME"])
-def test_faked_home_run_naming_the_account_store_never_provisions_other_pins_into_it(tmp_path, named_by):
+@pytest.mark.parametrize("suffix", ["", "-isolated"])
+def test_faked_home_run_naming_the_account_store_never_provisions_other_pins_into_it(tmp_path, named_by, suffix):
     """A lane that passes the account's store explicitly, or inherits the agent shell's HERMES_HOME,
     must not re-stage its checkout's pins over the ones the account's own Hermes runs on."""
     account, home = tmp_path / "account", tmp_path / "fakehome"
-    store = account / ".hermes" / "tools"
+    store = account / f".hermes{suffix}" / "tools"
     _matching_store(store)
     naming = {"HERMES_RUNTIME_DIR": str(store)} if named_by == "HERMES_RUNTIME_DIR" else {"HERMES_HOME": str(store.parent)}
+    if suffix:
+        naming["HERMES_DATA_DIR_SUFFIX"] = suffix
     assert _provisioned_store(tmp_path, account, home, naming).samefile(store), \
         "control: a named store at this checkout's pins is used as is"
 
@@ -150,5 +153,5 @@ def test_faked_home_run_naming_the_account_store_never_provisions_other_pins_int
     data["packages"]["chromium"]["version"] = "0+another-checkouts-pin"
     (store / "facts.json").write_text(json.dumps(data), encoding="utf-8")
     before = _snapshot(store)
-    assert _provisioned_store(tmp_path, account, home, naming) == (home / ".hermes" / "tools").resolve()
+    assert _provisioned_store(tmp_path, account, home, naming) == (home / f".hermes{suffix}" / "tools").resolve()
     assert _snapshot(store) == before

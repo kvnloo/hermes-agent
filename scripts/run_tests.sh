@@ -99,16 +99,24 @@ _account_tool_store() {
 # True when this run's `pm install` would write other pins into that store.
 _names_account_store_at_other_pins() {
   local account store python resolved
+  local -a stores
   account="$(_account_home)" || return 1
-  store="$account/.hermes/tools"
-  [ -f "$store/facts.json" ] || return 1
-  python="$(HERMES_RUNTIME_DIR="$store" hermes_bootstrap_python "$REPO_ROOT")" || return 1
-  # pm's own resolver, so every way of naming a store is covered by one answer.
-  resolved="$(PYTHONHOME= "$python" -I -B -c 'import sys
+  stores=("$account/.hermes/tools")
+  # A suffixed data root is also an OS-account default, not a custom store.
+  if [ -n "${HERMES_DATA_DIR_SUFFIX:-}" ]; then
+    stores+=("$account/.hermes${HERMES_DATA_DIR_SUFFIX}/tools")
+  fi
+  for store in "${stores[@]}"; do
+    [ -f "$store/facts.json" ] || continue
+    python="$(HERMES_RUNTIME_DIR="$store" hermes_bootstrap_python "$REPO_ROOT")" || continue
+    # pm's own resolver, so every way of naming a store is covered by one answer.
+    resolved="$(PYTHONHOME= "$python" -I -B -c 'import sys
 sys.path.insert(0, sys.argv[1])
 from pm.environments import store_root
-print(store_root(sys.argv[1]))' "$REPO_ROOT" 2>/dev/null)" || return 1
-  [ "$resolved" -ef "$store" ] && ! _store_has_pins "$store" >/dev/null
+print(store_root(sys.argv[1]))' "$REPO_ROOT" 2>/dev/null)" || continue
+    [ "$resolved" -ef "$store" ] && ! _store_has_pins "$store" >/dev/null && return 0
+  done
+  return 1
 }
 # Read-only check that the store already records this checkout's pins
 # (scripts/tool_store_pins.py says why and what counts); prints the Python minor.
@@ -128,7 +136,7 @@ if _shared="$(_account_tool_store)"; then
   fi
   echo "▶ faked HOME: using the account's tool store $HERMES_RUNTIME_DIR"
 elif _names_account_store_at_other_pins; then
-  export HERMES_RUNTIME_DIR="$HOME/.hermes/tools"
+  export HERMES_RUNTIME_DIR="$HOME/.hermes${HERMES_DATA_DIR_SUFFIX:-}/tools"
   echo "▶ faked HOME: the account's tool store records other pins; provisioning $HERMES_RUNTIME_DIR instead"
 fi
 unset _account _shared
