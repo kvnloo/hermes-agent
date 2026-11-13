@@ -31,6 +31,7 @@ class _BackgroundReviewRun:
     def __init__(self) -> None:
         self.cancel_requested = threading.Event()
         self.request_done = threading.Event()
+        self._cancelled_for_non_turn_reason = False
         self._lock = threading.Lock()
         self._review_agent = None
         self._request_finished = self._cancel_dispatched = False
@@ -43,9 +44,11 @@ class _BackgroundReviewRun:
             self._review_agent = review_agent
             return True
 
-    def cancel(self) -> Any:
-        """Fence startup and return the running fork, if one was admitted."""
+    def cancel(self, *, resume_on_next_turn: bool = True) -> Any:
+        """Fence startup; only a new live turn can defer the cancelled review."""
         with self._lock:
+            if not resume_on_next_turn:
+                self._cancelled_for_non_turn_reason = True
             self.cancel_requested.set()
             if self._review_agent is None or self._cancel_dispatched:
                 return None
@@ -172,7 +175,8 @@ def cancel_background_review_for_live_turn(
     with _optional_lock(agent, "_background_review_lock"):
         run = getattr(agent, "_background_review_run", None)
         legacy_agent = getattr(agent, "_background_review_agent", None)
-    review_agent = legacy_agent if run is None else run.cancel()
+    review_agent = legacy_agent if run is None else run.cancel(
+        resume_on_next_turn=(tool_reason == "background review superseded"))
     # Attribute the review fork's usage to the PARENT session. Snapshot BEFORE unregister/close so counters
     # survive teardown. Placed in this finally so a fork that consumed tokens and THEN raised is still
     # attributed (issue #87250). Best-effort: the recorder never raises into the review thread.

@@ -845,7 +845,9 @@ class AIAgent(
         """
         try:
             # Not cancelled == ran to completion (or was never admitted).
-            if not review_run.cancel_requested.is_set() or kwargs.get("focus") is not None or kwargs.get("explicit"):
+            if (not review_run.cancel_requested.is_set()
+                    or getattr(review_run, "_cancelled_for_non_turn_reason", False)
+                    or kwargs.get("focus") is not None or kwargs.get("explicit")):
                 return
             if kwargs.get("_requeue_attempts", 0) > self._REVIEW_REQUEUE_MAX_ATTEMPTS:
                 logger.info("Preempted background review dropped after %d requeues", self._REVIEW_REQUEUE_MAX_ATTEMPTS)

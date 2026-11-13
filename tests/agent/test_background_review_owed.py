@@ -43,3 +43,25 @@ def test_a_review_that_ran_owes_nothing(monkeypatch):
     agent = _agent(monkeypatch)
     _finish_review(agent, cancelled=False)
     assert with_owed_background_review(agent, False, False) == (False, False)
+
+
+def test_only_live_turn_preemption_creates_review_debt(monkeypatch):
+    """Stopping or closing a session must not schedule the stopped review on its next turn."""
+    from agent.background_review import _BackgroundReviewRun, cancel_background_review_for_live_turn
+
+    for reason, expected in (
+        ("background review superseded", True),
+        ("session interrupted", False),
+        ("session ended", False),
+    ):
+        agent = _agent(monkeypatch)
+        review_run = _BackgroundReviewRun()
+        agent._background_review_run = review_run
+        # The thread's request acknowledgement is already delivered in this isolated boundary test.
+        review_run.request_done.set()
+        cancel_background_review_for_live_turn(agent, tool_reason=reason)
+        run_agent.AIAgent._maybe_requeue_preempted_review(
+            agent, review_run,
+            {"task_cfg": {}, "focus": None, "review_memory": True, "review_skills": False},
+        )
+        assert with_owed_background_review(agent, False, False) == (expected, False), reason
