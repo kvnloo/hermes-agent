@@ -1,0 +1,1082 @@
+[
+  {
+    "id": "R01",
+    "owner": "reliability",
+    "ask": "Make all Claude subscription accounts usable from Hermes and S25 T3; separate secure auth links",
+    "check": "Real harmless turn on each intended account from installed S25 app; vault provenance, native route and account identity recorded",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-r1/VERDICTS.json; ",
+    "note": "partial [M] missing: A complete intended-account inventory with non-secret identity, vault provenance and separate secure login links; one successful harmless installed-S25 turn per intended account with native model/prov | next: Reliability and the existing device owner should reconcile the account labels against the clean-profile plugin and the existing T3 checkout /mnt/zer0models/workspace/zer0/oss/t3code without opening cr"
+  },
+  {
+    "id": "R02",
+    "owner": "reliability",
+    "ask": "Triage server-mode/sudo failures against upstream and forks; fingerprint-safe privileged actions",
+    "check": "Owner-only approval path with expiration/reopen behavior, negative unauthorized case and exact device proof",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-r1/VERDICTS.json; ",
+    "note": "partial [M] missing: Exact installed-device evidence for owner-only approval, fingerprint-safe handoff, expiration followed by safe reopening, and rejection of an unauthorized actor or expired request. Need proof that the | next: Use /mnt/zer0models/hermes-wt/acp-t3-sudo-prompt, preserving the runtime checkout's existing modifications. Qualify `fleet-build -- python -m pytest -q tests/acp_adapter/test_acp_sudo_prompt.py tests/"
+  },
+  {
+    "id": "R03",
+    "owner": "reliability",
+    "ask": "Complete Claude SDK subscription plugin setup, secure mobile login and clickable links",
+    "check": "Native subscription-backed E2E tool turn, advertised versus actual provider matched",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-r1/VERDICTS.json; ",
+    "note": "partial [M] missing: A successful native subscription-backed Hermes tool turn through this installed plugin, with requested model, actual provider/model, account label and native session ID matching. Secure mobile login a | next: In /workspace/hermes-home/profiles/clean, the current routing owner should use the already-installed plugin and explicit claude_config_dir without copying credentials. In a separately authorized quali"
+  },
+  {
+    "id": "R04",
+    "owner": "ossfactory",
+    "ask": "Let an expired/disappeared secure prompt be reopened by a user button",
+    "check": "Expired prompt safely recreated from UI; old code invalid; secrets never rendered in transcript",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-o3/VERDICTS.json; ",
+    "note": "not-started [M] missing: A user-triggered reopen action for expired/disappeared prompts; safe server-side recreation tied to the original authorized thread; old-code invalidation; executed UI/security regression proof with no | next: Existing T3 secure-request owner implements reopen in channels checkout, touching mobile/web SecretRequestCard and the contracts/server secret-request action at the boundary. Preserve original authori"
+  },
+  {
+    "id": "R05",
+    "owner": "reliability",
+    "ask": "Continue free LLM/tool/GPU provider onboarding autonomously and report actual totals",
+    "check": "Provider names, working capability checks, stored-secret references and actual zero-cost eligibility, no secret values",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-r1/VERDICTS.json; ",
+    "note": "partial [L] missing: Current working capability receipts tied to intended accounts and stored-secret references for each claimed onboarded provider; verified zero-cost eligibility and expiry, especially GPU/tool capacity; | next: Reuse /mnt/zer0models/workspace/zer0/data/operations/free-tier-research/20261102/signup-queue.json as the inventory and /mnt/zer0models/z0-wt/salvage/free-lanes as the capability checker, not a new si"
+  },
+  {
+    "id": "R06",
+    "owner": "reliability",
+    "ask": "Enforce zero-spend caps and consolidated quota/burn-rate tracking across subscriptions, free APIs and phone sends",
+    "check": "Free-tier requests, resets, monthly caps and device send pacing recorded; exhaustion stops rather than spills into paid fallback",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-r1/VERDICTS.json; ",
+    "note": "partial [L] missing: One account-aware ledger covering free request/token counts, resets, monthly caps, approved existing Cerebras/Groq credits, and every phone sender. Need exact negative receipts showing quota exhaustio | next: Use the existing source checkout /mnt/zer0models/z0-wt/o19-spend-approval and adapter /workspace/hermes-home/profiles/clean/plugins/spend-gate, preserving their owners' changes. The installed kernel r"
+  },
+  {
+    "id": "R07",
+    "owner": "reliability",
+    "ask": "Diagnose frozen chats, fallback/tool-stream failures and wrong actual model versus T3 label",
+    "check": "Harmless real tool turns on affected lanes; actual intended model/account in native receipts, not catalog/UI alone",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-r1/VERDICTS.json; ",
+    "note": "partial [M] missing: A harmless real tool-turn receipt for each affected T3/Hermes lane, correlating installed app, requested model, actual native model/provider and account. Need stream completion or explicit failure rec | next: The routing owner should correlate the failing and successful session IDs in /workspace/hermes-home/profiles/clean/state.db using mode=ro SELECTs before changing any live service. In /mnt/zer0models/w"
+  },
+  {
+    "id": "R08",
+    "owner": "reliability",
+    "ask": "Repair paid semantic-router account routing and Hermes pass-through configuration",
+    "check": "Three intended Claude accounts/OpenAI inventory reconciled; configured and executing route agree, token reduction measured",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-r2/VERDICTS.json; ",
+    "note": "partial [M] missing: No independently reconciled inventory binding the three intended Claude accounts and OpenAI account to actual execution. No current native receipt proving intended Opus/account selection and fallback  | next: Existing Reliability and router owners continue in /mnt/zer0models/z0-wt/z0int-vllm-sr-turbo. Reconcile nonsecret account identifiers and native SDK selection against the existing limits inventory and"
+  },
+  {
+    "id": "R09",
+    "owner": "reliability",
+    "ask": "Minimal CachyOS maintenance codified in .files; defer reboot-requiring updates to maintenance",
+    "check": "Non-reboot updates safe; reboot class staged only immediately before scheduled reboot; rollback and resource impact documented",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-r2/VERDICTS.json; ",
+    "note": "partial [M] missing: Prepared policy is untracked and not active. No successful native preparation/offline transaction or recovery drill observed. No owner-approved maintenance time and active-work handling are wired. Dis | next: Host-setup owner retains /workspace/.files and first reviews the three existing untracked files. Kevin must supply the maintenance-window decision and privileged authorization. After existing disk rec"
+  },
+  {
+    "id": "R10",
+    "owner": "reliability",
+    "ask": "Finish actual HF/tool onboarding, doctors and cross-tool integration, not just installation",
+    "check": "Hermes/T3/HF and frequently used tools pass applicable doctor plus real integrated workflow, with exact unresolved gaps",
+    "status": "open",
+    "audit_status": "assistant_claim_incomplete",
+    "evidence": "ayo-runs/rec-r2/VERDICTS.json; ",
+    "note": "partial [M] missing: No current acceptance run linking canonical runtime entrypoints to Hermes/T3/HF and frequently used tools. No observed HF authenticated download/use or other intended HF onboarding workflow. HF expans | next: Existing tooling owner continues from /mnt/zer0models/workspace/zer0/data/operations/t3-thread-triage/20261104/reports/integration-check.py and the canonical onboarding checkout it identifies. Reconci"
+  },
+  {
+    "id": "R11",
+    "owner": "reliability",
+    "ask": "Repair automatic worktree/fleet lifecycle, durable terminal evidence, safe retention and admission recovery",
+    "check": "A real completed stage survives observer death, archives and safely reclaims; natural disk/admission recovery and admitted test proven",
+    "status": "in-progress",
+    "audit_status": "assistant_claim_incomplete",
+    "evidence": "fleet-stage-lifecycle-20261104/receipts/ (46 stages, 40.9 GiB reclaimed, ayo saw dir), reclaim-apply.json; .files branch fix/fleet-reattach-detached-20261104 @1650568a deployed, 45 tests pass (reported)",
+    "note": "MBP / 8MB->22.4GiB; DiskPressure needs ~47GiB (kubelet 10%); ayo approved gradle cache delete + legacy fleet-run dirs moved (rsync-verified) to groot; then observer-kill proof"
+  },
+  {
+    "id": "R12",
+    "owner": "reliability",
+    "ask": "Use existing isolated S22/S25 testing routes instead of treating a full MBP as global blockage",
+    "check": "Bounded actual test on authenticated hardware without focus theft; distinguish phone host versus virtual display and reconcile unknown remote runs before retry",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-r2/VERDICTS.json; ",
+    "note": "partial [M] missing: No fresh bounded test on currently authenticated S22/S25 hardware with focus-safe virtual-display evidence. Current phone guest/probe failures remain and S22 nonterminal runs are unreconciled. Histori | next: Existing phone/fleet owner uses the managed fleet runtime sourced from /mnt/zer0models/releases/host-storage/e3e96a419b4f27d07e0f87ee61245e41387bed2e. First inspect durable state for the named running"
+  },
+  {
+    "id": "C01",
+    "owner": "ayo",
+    "ask": "Consolidate attention into five categories; settle excess chats and bind recurring workflows to existing hubs",
+    "check": "Exactly five proposed lane views; existing task IDs/cadences preserved, no orphan/duplicate recurring execution",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-c/VERDICTS.json; ",
+    "note": "partial [S] missing: Five views exist, but literal task-ID preservation fails for two cross-project migrations. Current scheduler bindings, terminal status of the enabled Math372 one-shot, and absence of duplicate/orphan  | next: In the existing T3 host checkout /mnt/zer0models/workspace/zer0/oss/t3code, obtain supported read-only list_scheduled_tasks readback for the five manifest threads and Chief hub. Compare IDs, cadences,"
+  },
+  {
+    "id": "C02",
+    "owner": "ayo",
+    "ask": "Chief of Staff mines all historical asks, runs relevant easy work as nested Hermes workers, surfaces complex decisions as pinned UI",
+    "check": "Existing queue maps asks to owners and receipts; bounded nested work completes and wakes parent; no cluttering top-level assistants",
+    "status": "open",
+    "audit_status": "assistant_claim_incomplete",
+    "evidence": "ayo-runs/rec-c/VERDICTS.json; ",
+    "note": "partial [M] missing: No attributable admitted extraction child, validated complete pilot output, independent result acceptance, or delivered parent-completion wake. Historical ask coverage remains incomplete. Complex deci | next: Use existing task t_93cb6881 in the clean Hermes board and Chief hub. First refresh pacing, privacy/hash eligibility, and the supported exact-seat nested Hermes route. When admitted, run one existing "
+  },
+  {
+    "id": "C03",
+    "owner": "ayo",
+    "ask": "Give substantive source-backed handoffs to existing pinned threads, not just renamed titles",
+    "check": "Each retained lane has reconciled asks, current owner, next eligible action and original-source links",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-c/VERDICTS.json; ",
+    "note": "partial [S] missing: Factory has no lane-owned ACK or completed current multi-repo reconciliation. Its packet leaves canonical Gods Eye View intake and current owner/queue mapping pending. Manifest delivery state also rem | next: In existing Factory thread fb2b7ccc-6175-41c8-9a97-a5bdd21eb459, read 2-oss-factory.md and its linked repo/issue sources. Reconcile each retained Factory ask to current owner, source link, state and n"
+  },
+  {
+    "id": "C04",
+    "owner": "ayo",
+    "ask": "Recover initial cross-session requirements and explain actual project goals before continuing",
+    "check": "Kevin can compare each project purpose and acceptance with original asks, including kvn/maintainer/archive/jobapp",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-c/VERDICTS.json; ",
+    "note": "partial [M] missing: No validated four-row comparison of original project purpose, acceptance, authenticated owner source and current owner for kvn, hermes-maintainer, gh-contrib-archive and hermes-jobapp. Kvn has useful  | next: Continue existing card t_9da3c96c in Chief. Use the existing candidate catalog only as a locator. Hydrate the exact original owner requests through the app-owned source reader, exclude duplicated and "
+  },
+  {
+    "id": "C05",
+    "owner": "ayo",
+    "ask": "Reconcile every ask and restore proven continuous execution instead of report polling and plan-only stalls",
+    "check": "One original ask progresses through existing queue to verified result and parent follow-up; live versus blocked states honest; no new controller",
+    "status": "open",
+    "audit_status": "assistant_claim_incomplete",
+    "evidence": "ayo-runs/rec-c/VERDICTS.json; ",
+    "note": "partial [M] missing: No independently verified present-day chain from an original ledger ask through an existing queue admission, dispatch, accepted product result and parent follow-up. Historical implementation and tests | next: Continue t_99101f1d using existing Hermes installation /workspace/hermes-home/hermes-agent and historical candidate /mnt/zer0models/worktrees/hermes-goal-continuity-20261028. First inspect supported n"
+  },
+  {
+    "id": "C06",
+    "owner": "ayo",
+    "ask": "Transfer _pm optimization/autoresearch ideas to Hermes kanban without rebuilding PM",
+    "check": "Source-backed gap map and one bounded measured improvement through existing PM path; do not invent a new priority engine",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-c/VERDICTS.json; ",
+    "note": "not-started [M] missing: No located request-specific _pm-to-kanban gap map or bounded measured improvement attributable to this ask. Existing ranking code and unrelated kanban dispatch work do not establish that the transfer  | next: In existing Chief/Factory ownership, resolve the canonical _pm repo from G1000's original thread and existing source catalogs before coding. Compare its exact optimization entry point with Hermes herm"
+  },
+  {
+    "id": "O01",
+    "owner": "ossfactory",
+    "ask": "Show Blueprint preview and qualify with comprehensive E2E tester army on turbo/free",
+    "check": "Accessible exact-revision preview plus meaningful E2E receipts and negative controls, not only unit tests",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-o1/VERDICTS.json; ",
+    "note": "partial [M] missing: A currently accessible preview with independently verified source-revision identity; completed meaningful free-lane E2E coverage and negative-control receipts bound to that revision. Existing determin | next: In /mnt/zer0models/workspace/zer0/oss/blueprint-zer0, use the existing preview deployment owner to expose the archived build with a manifest pinning 64ffedefdfd9bc9ddd9bf9c834bb8a284fdeebf3. Confirm w"
+  },
+  {
+    "id": "O02",
+    "owner": "ossfactory",
+    "ask": "Bring hermes-tern to omp-tern parity, fully integrate ephemeral-ui and enter plugin hackathon",
+    "check": "Parity matrix, installed/real-turn plugin evidence; catalog PR, under-90s demo and form links ready by owner-pasted Nov11 17:00 EST deadline (externally unverified)",
+    "status": "in-progress",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "/mnt/zer0models/project-artifacts/hermes-tern-parity-wave-20261104/lane3-installed-22d476e/ACCEPTANCE.md + 13 screenshots (ayo viewed 09-tree.png: 2-branch /tree); channels.json parity sha 22d476e, bundle e539b057",
+    "note": "tern serve real turns OK at exact SHA; left: native Luau intent board in a real Tern window (Kevin's client), --install-deps isolated validate, Python suite; hackathon public steps need Kevin OK"
+  },
+  {
+    "id": "O03",
+    "owner": "ossfactory",
+    "ask": "Read RFC/PR 654 and related threads and post approved reply",
+    "check": "Existing exact GitHub comment and readback evidence, tests linked to candidate not blanket success",
+    "status": "open",
+    "audit_status": "assistant_claim_reply_posted",
+    "evidence": "ayo-runs/rec-o1/VERDICTS.json; ",
+    "note": "partial [M] missing: The read-and-reply portion is done. Full acceptance remains short of independently inspected test receipts bound to the published patch bytes or the new candidate SHA. A successful run on a different  | next: Do not repost the reply. Locate the existing RFC runner checkout with git -C /mnt/zer0models/workspace/zer0/oss/hermes-agent worktree list and the rfc143379-avrea archives. Recover its patch hashes an"
+  },
+  {
+    "id": "O04",
+    "owner": "ossfactory",
+    "ask": "Run Pascal editor factory continuously in small ChatGPT units; gigapixel and other existing features; strongest free review",
+    "check": "Per-unit dispatch/return/revision/test receipts, integration validation and actual editor interactions",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-o1/VERDICTS.json; ",
+    "note": "partial [L] missing: A complete dispatch-to-return-to-revision-to-test ledger for the 30 units; successful exact-head tests and integration validation; independently recorded strongest-free review; actual editor capture/e | next: Reuse /mnt/zer0models/github/pascal-editor and /mnt/zer0models/worktrees/pascal-editor-pr3, not a new factory. On an admitted off-host lane with space, run fleet-build -- bun test packages/viewer/src/"
+  },
+  {
+    "id": "O05",
+    "owner": "ossfactory",
+    "ask": "T3 UX PR/discussion dependency graph, invariants, merge ordering and incremental maintainer-integrated changes",
+    "check": "Complete bounded issue/PR/discussion coverage; dependency/conflict edges and incremental tested fixes, not unsolicited wholesale RFC",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-o1/VERDICTS.json; ",
+    "note": "partial [L] missing: A current-SHA refresh or explicit retention of the historical boundary; proof that every selected target has a final outcome; incremental fixes with base-red/head-green and integration receipts. A sub | next: In /mnt/zer0models/workspace/zer0/oss/t3code and data/operations/t3code-ux-bundle/20261104, reconcile the existing wave target lists against gate/results and live heads first. For one still-relevant v"
+  },
+  {
+    "id": "O06",
+    "owner": "ossfactory",
+    "ask": "Multi-parameter session/project attention priority sorting, linked demo in existing UX RFC and issue",
+    "check": "Actual sorted main page and tier behavior plus exact existing RFC/issue media links",
+    "status": "open",
+    "audit_status": "assistant_claim_posted",
+    "evidence": "ayo-runs/rec-o1/VERDICTS.json; ",
+    "note": "partial [M] missing: Independently verified actual main-page/mobile and grouped-project tier behavior at the pinned head; an exact second issue media link if the request requires both the RFC and a separate issue. The RFC | next: Reuse /mnt/zer0models/workspace/zer0/oss/t3code-wt/attention-priority at 58019b7754c8d02013d74b13f9e12f06d3fda1d9 and the existing 69-second media branch. On an admitted verification lane, record the "
+  },
+  {
+    "id": "O07",
+    "owner": "ossfactory",
+    "ask": "Crisp fframes films across UX-wave features; show working inline videos and full feature/film inventory; draft wave before posting",
+    "check": "Playable inline media, sharp frames, source-revision/feature binding and draft owner review before publication",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-o1/VERDICTS.json; ",
+    "note": "partial [L] missing: Working inline playback in the owner's delivery surface; four absent Android feature films; an accepted Needs-you flow; verified template activation; a complete feature-to-final-film inventory and dra | next: Reuse data/operations/t3code-ux-videos/20261104/plates and lane-c/DELIVERY.json. First make a draft inventory from marks.json that preserves blocked/skipped states and exact source SHAs. Validate temp"
+  },
+  {
+    "id": "O08",
+    "owner": "ossfactory",
+    "ask": "Operate productive Hermes-only OSS factory for Hermes, T3, Tern and related Android work at paced available compute",
+    "check": "Separate queued/sent/returned/tested/merged counts and useful per-repo receipts; timer enabled is not progress",
+    "status": "open",
+    "audit_status": "assistant_claim_incomplete",
+    "evidence": "ayo-runs/rec-o2/VERDICTS.json; ",
+    "note": "partial [L] missing: Current per-repository queued/sent/returned/tested/merged accounting joined to real native attempts and exact revisions; useful admitted Hermes-only work on Hermes, T3, Tern and relevant Android repos | next: Existing factory owner resumes in /mnt/zer0models/workspace/zer0/worktrees/vol-factory-runtime, first obtains fresh admission from the existing budget/runtime owner and reconciles unknown attempts. Us"
+  },
+  {
+    "id": "O09",
+    "owner": "ossfactory",
+    "ask": "Add GEV full-time factory scope including humanitarian evidence, city rebuilding and cooperative Civilization; recover fork/upstream/ChatGPT context",
+    "check": "Original issue scope mapped to actionable cards, native sends/returns and validated humanitarian-to-civic journey",
+    "status": "open",
+    "audit_status": "assistant_claim_queued_not_delivered",
+    "evidence": "ayo-runs/rec-o2/VERDICTS.json; ",
+    "note": "partial [L] missing: Reconciled original issue-to-feature acceptance map, returned fork/upstream/ChatGPT context, native sends and returns for the five cards, and exact-revision validation of the humanitarian-to-civic-to- | next: Existing GEV/factory owner starts from /mnt/zer0models/workspace/zer0/products/gods-eye-view and runs gh issue view 249 -R kvnloo/gods-eye-view --comments, then gh pr view 245 -R kvnloo/gods-eye-view "
+  },
+  {
+    "id": "O10",
+    "owner": "ossfactory",
+    "ask": "Research existing factory architecture patterns including Sandcastle/Michelin kitchen while operational work proceeds",
+    "check": "Source-linked comparison and smallest architecture that replaces failures, not duplicate queue infrastructure",
+    "status": "done",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-o2/VERDICTS.json; Read /mnt/zer0models/workspace/zer0/data/operations/kitchen/profile-consolidation-20261102/factory-v2/research/SOURCE-BRIEF.md, SHA256 9bdef41b900f83f1d6a8157ca3ad0858766fca5e358396f205ec87295390b67e. Sections compare Sandcastle, pstack, Matt Pocock's factory glossary, Hermes profile topology and pr",
+    "note": "done [S] missing: None for the bounded research acceptance: a source-linked comparison and minimal reuse-first architecture proposal are present and inspected. This verdict does not certify a shipped architecture, a qu | next: No further work is required for this research item. Reuse SOURCE-BRIEF.md and the correcting DECISION-DRAFT.md in the existing main factory thread; do not implement the older DRAFT-PLAN.md broker choi"
+  },
+  {
+    "id": "O11",
+    "owner": "ossfactory",
+    "ask": "Realistic LayersFS/worktree benchmarks with full distributions, p99 and p99.99 rather than medians only",
+    "check": "Raw samples, throughput and tail confidence/sample limits, cold/warm/resource controls, real-workload comparison",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-o2/VERDICTS.json; ",
+    "note": "partial [L] missing: A controlled representative real-workload comparison with explicit verified-completion throughput, cold/warm strata and sufficient independent observations or defensible confidence bounds for the requ | next: Benchmark owner resumes the existing referee under /mnt/zer0models/workspace/zer0/data/operations/t3code-factory/20261102/autoresearch, adds historical bug-fix and interrupted-resume tasks plus explic"
+  },
+  {
+    "id": "O12",
+    "owner": "ossfactory",
+    "ask": "Clock tap should open Clock; add widgets to existing launcher surface",
+    "check": "Installed intended app opens Clock and adds widgets through authentic native flow",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-o2/VERDICTS.json; ",
+    "note": "partial [M] missing: Revision-bound build/test acceptance, intended installed launcher identity/version, actual Clock launch while retaining hold behavior, and native widget add/configure/persist/remove success. Dirty sou | next: Existing clock/widgets owner preserves and finishes the dirty /mnt/zer0models/worktrees/detent-clock-widgets checkout, including all three untracked files, then runs fleet-build --android --fetch app/"
+  },
+  {
+    "id": "O13",
+    "owner": "ossfactory",
+    "ask": "Improve T3 Android AI/fuzzy search first and prototype bottom search/navigation without clutter",
+    "check": "Search relevance/typo tests and installed-device task success; alternative layouts reviewed before broad UI changes",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-o2/VERDICTS.json; ",
+    "note": "not-started [M] missing: No request-specific implementation, typo/relevance regression set, AI-search design, alternative bottom-navigation prototypes, review outcome or installed-device task-success evidence was located. Exi | next: Resume existing search thread 84357779-8fad-4ea9-bc55-cdf4bc95d1d9 using the current T3 channels checkout /mnt/zer0models/workspace/zer0/oss/t3code-wt/channels, first locate the real thread-search que"
+  },
+  {
+    "id": "O14",
+    "owner": "ossfactory",
+    "ask": "Open email drafts directly from T3 across actual affected surfaces",
+    "check": "Draft opens correct email client with fields populated on installed affected app; regression tests bound to revision",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-o2/VERDICTS.json; ",
+    "note": "partial [M] missing: Passed regression result bound to the complete changed source, an installed desktop draft opening the intended client with populated fields, a traced Android conversation-link path and corresponding i | next: Existing email-draft owner resumes /mnt/zer0models/worktrees/t3/t3code/fix-email-draft-links without discarding its two dirty files. Run fleet-build --light -- bun run --cwd apps/desktop test src/elec"
+  },
+  {
+    "id": "O15",
+    "owner": "ossfactory",
+    "ask": "Fix real Android glass lifecycle, Settings opacity and previous-screen bleed; update Glass/Preview/Nightly builds",
+    "check": "Solid-to-see-through toggles immediately inside Settings, Chats/thread/Settings show wallpaper not old screen; installed SHA/version/device evidence",
+    "status": "open",
+    "audit_status": "assistant_claim_incomplete",
+    "evidence": "ayo-runs/rec-o3/VERDICTS.json; ",
+    "note": "partial [M] missing: Successful focused tests/native compilation; integrated source and APK receipts for Glass, Preview and Nightly; installed SHA/device mapping; immediate Settings Solid-to-See-through without resume; Ch | next: Existing glass owner resumes mobile-glass-theme without discarding dirty work. Once admitted, run fleet-build --node mbp --class test --mem 4G --cpus 2 --wait 1800 -- bash -lc 'cd apps/mobile && ../.."
+  },
+  {
+    "id": "O16",
+    "owner": "ossfactory",
+    "ask": "Mobile Tags popup pencil for name/color/icon and redesigned editing settings",
+    "check": "Editing display name does not orphan assignments; native settings/quick edit verified with exact revision",
+    "status": "open",
+    "audit_status": "assistant_claim_incomplete",
+    "evidence": "ayo-runs/rec-o3/VERDICTS.json; ",
+    "note": "partial [M] missing: Executed proof that display-name edits preserve assigned tag keys; native pencil versus apply behavior, Save/Cancel/error/permissions, settings scope, keyboard/small-screen/focus acceptance; exact rev | next: Existing tags owner uses thread-appearance and preserves the dirty editor. Run fleet-build --node mbp --class test --mem 4G --cpus 2 --wait 1800 -- node_modules/.bin/vp test run packages/client-runtim"
+  },
+  {
+    "id": "O17",
+    "owner": "ossfactory",
+    "ask": "Pin generative/ephemeral UI to bottom sticky chips/bubbles; audit all T3 UX complaints",
+    "check": "Pin/expand/collapse/unpin thread-scoped cards; no feed occlusion, keyboard issues or WebView lookalike; complaint coverage ledger",
+    "status": "open",
+    "audit_status": "assistant_claim_incomplete",
+    "evidence": "ayo-runs/rec-o3/VERDICTS.json; ",
+    "note": "partial [L] missing: Pin/expand/collapse/unpin implementation and thread/environment-scoped snapshot state; measured composer/dock layout; keyboard/feed non-occlusion and safe gestures; native renderer reuse proved throug | next: After the existing tags qualification gate, implement the scoped native header/context/dock in openui-gallery using MarkdownOpenUiReport and the existing OpenUiReport renderer inside ThreadDetailScree"
+  },
+  {
+    "id": "O18",
+    "owner": "ossfactory",
+    "ask": "Use authorized wireless phone control, explain virtual displays and why prior QA missed actual failures",
+    "check": "Exact reproduction of owner's real toggle/navigation gesture; explain phone CPU/process hosting and isolated-focus constraints",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-o3/VERDICTS.json; ",
+    "note": "partial [M] missing: Exact recorded reproduction of the owner's immediate Settings toggle and navigation on a source-identified installed package; delivered explanation of the coverage failure, phone-hosted app CPU/proces | next: Glass/QA owner uses mobile-glass-theme plus the existing installed-package manifest, not a fresh mock. Under a coordinated authorized device lease reproduce Settings Solid-to-See-through without resum"
+  },
+  {
+    "id": "O19",
+    "owner": "ossfactory",
+    "ask": "Detent long press should continuously encase the same item in glass, move it right and reveal quick actions",
+    "check": "Recorded installed-device same-item gesture at slow and fast hold; continuity, cancellation and folder/app cases verified",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-o3/VERDICTS.json; ",
+    "note": "partial [M] missing: Recorded installed-device same-item slow and fast holds; visible glass formation and rightward continuity; release/cancel behavior; folder and app cases; source/APK/device mapping for the actual insta | next: Existing Detent owner resumes detent-quick-panes at bbdac4e4a8b66f64695b40974bae12c9a11d84b7. Run fleet-build --android -- ./gradlew :app:testDebugUnitTest through admitted off-host build routing, bui"
+  },
+  {
+    "id": "O20",
+    "owner": "ossfactory",
+    "ask": "Make video showcasing Excalidraw and learning tools inside actual new T3 fork",
+    "check": "Finished playable film of working tools in fork, not a storyboard or generic mockup; private data screened",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-o3/VERDICTS.json; ",
+    "note": "not-started [L] missing: Any located O20-specific implementation/capture/delivery artifact; working Excalidraw and learning tools shown inside the actual fork; finished playable film; privacy-screening evidence and source rev | next: Existing recovery/video owner resumes in /mnt/zer0models/workspace/zer0/oss/t3code-wt/openui-gallery and the operation's video artifact directory. Recover the exact reference and tool entry points, pr"
+  },
+  {
+    "id": "Z01",
+    "owner": "z0i",
+    "ask": "Explain biological mushroom/fly weights research, compare slime alternatives and use comprehensive traces to find better reduced-thinking approaches",
+    "check": "Source-backed research plus measured trace bottlenecks and alternative decisions; claimed efficiency not equated to model capability",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-z1/VERDICTS.json; ",
+    "note": "partial [S] missing: research comparison exists (README.z0.md:22-28) but no measured trace bottlenecks; None for the stated research-and-analysis acceptance. Production offloading, universal trace coverage and actual wall | next: No execution needed to close this acceptance. Existing z0intelligence research owner can send Kevin a short explanation linking README.z0.md, RESULTS.md and colony JSON, preserving the proxy and cover"
+  },
+  {
+    "id": "Z02",
+    "owner": "z0i",
+    "ask": "Apply weight-space/blog results to real workflows, resume on available authorized subscription, report actual outcome",
+    "check": "Completed model-proposed edit with held-out quality, latency and controls or explicit negative result",
+    "status": "open",
+    "audit_status": "assistant_claim_incomplete",
+    "evidence": "ayo-runs/rec-z1/VERDICTS.json; ",
+    "note": "partial [M] missing: A completed model-authored edit, safe session.forward integration, paired held-out quality/latency and cheap-control comparison, and a final accepted or rejected outcome. Baseline inference and a hand | next: In /mnt/zer0models/worktrees/z0evals-tiny-slm, finish the Oracle session.forward adapter described in studies/tiny-slm-gym-v0/PROGRAM.md. Qualify its lifecycle/isolation on the existing Oracle CPU wor"
+  },
+  {
+    "id": "Z03",
+    "owner": "z0i",
+    "ask": "Run GEPA faster with turbo/free on permitted public repo/event-trace material",
+    "check": "Model/route, held-out data policy, baseline/treatment metrics, spending and provenance recorded",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-z1/VERDICTS.json; ",
+    "note": "partial [M] missing: Reconciled actual spend/credit use, complete request-level route provenance, source-level authorization for trace export including unknown-repo cases, and a matched held-out baseline/treatment/random- | next: In /mnt/zer0models/workspace/zer0/data/operations/protocol-evolution-20261103, reconcile existing served.jsonl, optimizer result and heldout JSONL by identical test IDs before any rerun. Audit unknown"
+  },
+  {
+    "id": "Z04",
+    "owner": "z0i",
+    "ask": "Use actual kvnloo/autokernel repo, not a similarly named tiny-SLM loop; integrate non-GPU kernels continuously",
+    "check": "Real Autokernel run produces bounded proposal/evaluation/keep-or-reject receipt and integration evidence",
+    "status": "open",
+    "audit_status": "assistant_claim_incomplete",
+    "evidence": "",
+    "note": ""
+  },
+  {
+    "id": "Z05",
+    "owner": "z0i",
+    "ask": "Research Cyber-Prime and hillclimb practitioners; choose and run first useful experiment",
+    "check": "Public-source research, explicit first hypothesis, actual baseline/treatment/controls and honest failure result",
+    "status": "in-progress",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/exec-Z05/RESULT.json + REPORT.md; staged on branch ayo/Z05; historical receipt rejects mushroom superiority",
+    "note": "replay blocked: MBP admission (R11) exit 75; rerun on admission"
+  },
+  {
+    "id": "Z06",
+    "owner": "z0i",
+    "ask": "Troubleshoot wrong tools/skills, prefer agent-reach for X and run doctors; discuss T3 prevention",
+    "check": "Replayed real failures select correct tools, fallback behavior tested, discussion/current issue linked if already posted",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-z1/VERDICTS.json; ",
+    "note": "partial [M] missing: End-to-end replay of the actual wrong-tool failures through the installed runtime, alias-fix integration evidence, executed fallback/error tests, current doctor evidence and a verified existing T3 dis | next: Reliability/tool-routing owner should identify the actual installed Hermes source revision, reconcile the saved alias patch there, then use the existing token-thrift skill-eval replay and installed pl"
+  },
+  {
+    "id": "Z07",
+    "owner": "z0i",
+    "ask": "Audit Hermes memory configuration and prune policy; ensure useful context survives without growth",
+    "check": "Source recall/correction tests, size/prune evidence and false-deletion controls; memory capacity not presumed cause of execution stalls",
+    "status": "in-progress",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/exec-Z07/RESULT.json; fixtures added",
+    "note": "behavioral tests blocked: MBP admission exit 75; rerun on admission"
+  },
+  {
+    "id": "Z08",
+    "owner": "z0i",
+    "ask": "Inventory installed tools, APIs, libraries, models and skills by capability; research T3 OS and existing routers; onboard Serena/best tools",
+    "check": "Versioned capability inventory with decision paths, integration checks and provenance; no competing catalog service",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-z2/VERDICTS.json; ",
+    "note": "partial [M] missing: Complete, revision-bound inventory across requested capability categories; current installed-versus-usable checks and decision paths tied into the existing registry. Index coverage is explicitly incom | next: In /mnt/zer0models/z0-wt/look-first, correct the existing roots configuration for the two missing repositories and broken skill links, then use scripts/look-first/generate.py --config scripts/look-fir"
+  },
+  {
+    "id": "Z09",
+    "owner": "z0i",
+    "ask": "Install and evaluate token/velocity tools including RTK, headroom and Serena; clarify when actually wired",
+    "check": "Representative real-task before/after accuracy+latency+token evidence and explicit installed/enabled distinctions",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-z2/VERDICTS.json; ",
+    "note": "partial [M] missing: Matched representative task before/after correctness, end-to-end latency and token receipts for the enabled RTK rewrite path; explicit headroom enabled state and Serena installation/usability/qualific | next: Use /mnt/zer0models/workspace/zer0/data/operations/token-thrift-tools-20261104/bench.py and the existing clean-profile plugin as the starting point. Freeze a small representative task set and run raw "
+  },
+  {
+    "id": "Z10",
+    "owner": "z0i",
+    "ask": "Network-first SLM selection and scaling research using all traces, inventory, free compute and existing dependencies",
+    "check": "Evidence-based starting model and ranked kernels, bottleneck analysis plus research tradeoffs tied to owner's work",
+    "status": "open",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-z2/VERDICTS.json; ",
+    "note": "partial [M] missing: One current synthesis binding the owner's actual network workload and recurring failure costs to the model starting point and ranked offload kernels. Existing measurements span different dates, task f | next: In /mnt/zer0models/worktrees/autokernel-agentsys/agentsys, join the existing profile and receipt provenance to the measured SLM ledger and z0evals task-family results. Produce a revisioned decision ta"
+  },
+  {
+    "id": "Z11",
+    "owner": "z0i",
+    "ask": "Find relevant hillclimb leaderboards and judge practical usefulness for this system",
+    "check": "Source-linked leaderboard comparison and relevance/transfer limits, not leaderboard score as local improvement",
+    "status": "done",
+    "audit_status": "unverified",
+    "evidence": "/mnt/zer0models/worktrees/z0evals-ayo-Z11 @005f727 docs/hillclimb-leaderboards-20261105.md (71 lines, 18 links; ayo reran verify_z11.py PASS, sha 32b0c8eb); ayo-runs/exec-Z11/REPORT.md",
+    "note": "local branch ayo/Z11, not pushed"
+  },
+  {
+    "id": "Z12",
+    "owner": "z0i",
+    "ask": "Build multidimensional capability ontology/skill hub and demonstrate replay improvement; report whole-thread outcomes",
+    "check": "Frozen no-future-context task replay baseline/treatment and negative guards; actual better tool use, not recommendation-only count savings",
+    "status": "open",
+    "audit_status": "assistant_claim_incomplete",
+    "evidence": "ayo-runs/rec-z2/VERDICTS.json; ",
+    "note": "partial [L] missing: Executed tests/guards and a frozen independent no-future-context baseline/treatment showing actual task completion and better tool use, with latency/token/tool receipts. No executed treatment exists i | next: In /mnt/zer0models/z0-wt/z0int-weight-space, first execute/fetch the existing seven-test suite and micro-eval through the documented supported fleet interface after capacity is admitted. Then freeze r"
+  },
+  {
+    "id": "Z13",
+    "owner": "z0i",
+    "ask": "Run network-wide ABAB across months of concepts, dependencies, open PRs and recurring failures; prioritize offloading/prefetch kernels",
+    "check": "Source-linked dependency/PR audit, frozen independent evaluations and measured accepted/rejected kernels across network",
+    "status": "open",
+    "audit_status": "assistant_claim_incomplete",
+    "evidence": "ayo-runs/rec-z2/VERDICTS.json; ",
+    "note": "partial [L] missing: Source-linked current network dependency/open-PR/owner-concept reconciliation distinguishing concepts, repos, files, features and intent; independent frozen evaluations for offload/prefetch kernels an | next: Reuse /mnt/zer0models/worktrees/autokernel-agentsys/agentsys and the existing LookFirst/registry graph. Freeze a bounded owner-concept-to-dependency/PR audit from the actual source quotes and current "
+  },
+  {
+    "id": "Z14",
+    "owner": "z0i",
+    "ask": "Fill intent contract from owner concepts and assumptions using ephemeral-ui; link to products/files/memory",
+    "check": "Owner-reviewable assumptions/acceptance card maps concept to implementation/evaluation; unsupported inference clearly marked",
+    "status": "open",
+    "audit_status": "assistant_claim_incomplete",
+    "evidence": "ayo-runs/rec-z2/VERDICTS.json; ",
+    "note": "partial [M] missing: The actual owner-reviewable native ephemeral-ui card for these concepts, with exact owner-source links, product/repository/file/memory relationships, acceptance/evaluation references and visibly marke | next: In /mnt/zer0models/z0-wt/intent-service, reuse the existing AODL contract shape and /mnt/zer0models/workspace/zer0/data/operations/ephemeral-aodl-cards-20261103 native card pattern. Build one review-o"
+  },
+  {
+    "id": "P01",
+    "owner": "product",
+    "ask": "Refresh Nous jobapp contribution context and evidence; do not downplay breadth using stale commit counts",
+    "check": "Claims backed by correct dated repo/PR contributions and product impact, without inventing totals",
+    "status": "done",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/rec-p/VERDICTS.json; /mnt/zer0models/workspace/zer0/products/hermes-jobapp/docs/EMAIL-FINAL-2026-11-04.md:6,14 replaces the stale 40-commit framing with explicitly dated claims and distinguishes commits on main from external merged PRs; product examples include cron, gateway, compaction, kanban and desktop work.; /mnt/z",
+    "note": "done [S] missing: None for the dated contribution-context requirement. This does not certify application-site delivery, every product's current readiness, or present-day totals. The involvement/review figures remain ex | next: No implementation needed. Career should reuse the dated evidence and product-impact examples in /mnt/zer0models/workspace/zer0/products/hermes-jobapp/docs, retaining the distinction between commits on"
+  },
+  {
+    "id": "P02",
+    "owner": "product",
+    "ask": "Contribution archive featured pinned repos with branded per-repo themes, personal active/past work and attention management",
+    "check": "Correct accessible Pages URL and served revision; branded repo drilldown works against actual contributions",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-p/VERDICTS.json; ",
+    "note": "partial [M] missing: Live HTML/assets have not been bound to a commit. No independently observed pinned-repo selection, branded repository drilldown, active/past contribution grouping or attention-management journey. | next: Product: reconcile the existing gh-contrib-archive deployment with API-reported main 4f9ef54b93ca00578a6c986e0219748b5631857d using deployment metadata and asset hashes, then run one read-only branded"
+  },
+  {
+    "id": "P03",
+    "owner": "product",
+    "ask": "Prepare Cua/Francesco meeting and abstract with honest SFT/RL relevance, collaboration and compute ask",
+    "check": "Concrete abstract, research question, measured pilot proposal and follow-up artifact; RL benefit labelled hypothesis",
+    "status": "done",
+    "audit_status": "assistant_claim_answered_research_pending",
+    "evidence": "/mnt/zer0models/project-artifacts/cua-francesco-meeting-20261104/ABSTRACT-DRAFT.md + MEETING-BRIEF.md + PILOT-ADDENDUM.md; ayo-runs/exec-P03/logs/verification.log PASS 46 checks (ayo read abstract)",
+    "note": "draft only; sending to Francesco is Kevin's"
+  },
+  {
+    "id": "P04",
+    "owner": "product",
+    "ask": "Finalize Nous email in Kevin's voice: human flow/group-flow, deterministic+ephemeral interfaces, smart home, z0, diverse roles and restrained enterprise enthusiasm",
+    "check": "Sent status comes from G0780 owner statement, not agent inference; future follow-up only when authorized",
+    "status": "done",
+    "audit_status": "owner_reports_sent",
+    "evidence": "owner-message-audit-20261104/REPORT.md (G0780: Kevin says sent)",
+    "note": "owner statement; never resend"
+  },
+  {
+    "id": "P05",
+    "owner": "product",
+    "ask": "Deliver kvn original scope including BYOK/Hermes ACP, role workflows, costs and enforceable existing plan",
+    "check": "Exact preview URL/revision, real Hermes ACP/tool and role workflows, bounded/security tests; account Free/Turnstile gates verified",
+    "status": "in-progress",
+    "audit_status": "assistant_claim_partial_blocked",
+    "evidence": "products/hermes-jobapp@bd9f60a evidence/acceptance-f9bbe6f/; preview https://0.taila30dc.ts.net:18799/ (ayo: HTTP 200, worktree HEAD f9bbe6f, served acp.js sha256 de582a41 = git)",
+    "note": "ACP/role workflows partly verified via P08; BYOK/costs/plan scope remain"
+  },
+  {
+    "id": "P06",
+    "owner": "product",
+    "ask": "Deliver hermes-maintainer testable site from original requirements",
+    "check": "Served revision and actual maintainer flow interactions, not only HTTP200; safe test link",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-p/VERDICTS.json; ",
+    "note": "partial [M] missing: Exact served SHA; independently exercised graph/filter/theme and campaign/backlog workflows; qualified safe test link distinguishing public audit seeds from current local backlog. HTTP reachability an | next: Product: inspect the existing kvnloo/hermes-maintainer preview deployment and match served assets to its commit, then exercise the original read-only graph/filter/campaign journey against a safe fixtu"
+  },
+  {
+    "id": "P07",
+    "owner": "product",
+    "ask": "Deliver contribution archive tested preview; preserve existing Civilization integration",
+    "check": "Current served revision plus archive/world interactions and source coverage; explicit tested link",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-p/VERDICTS.json; ",
+    "note": "partial [M] missing: Revision-bound tested archive/world preview, source coverage reconciliation and observed archive-to-world interactions. Existing integration code/history is present; live integration behavior is unver | next: Product with existing Civilization owner: reuse /workspace/civ-gitops commit 4c4dfe78692147e6a057472387de363eaac2b6cd and the current archive deployment. Check one real contribution through archive se"
+  },
+  {
+    "id": "P08",
+    "owner": "product",
+    "ask": "Deliver private hermes-jobapp preview and original reviewer workflows",
+    "check": "Private mobile-reachable exact-revision preview, rendered interactions and role/ACP acceptance, not static tests alone",
+    "status": "in-progress",
+    "audit_status": "assistant_claim_partial_blocked",
+    "evidence": "origin/main=79caa43 (ayo: git status main...origin/main in sync); permission approve/deny via jobapp-permtest + brief x3 receipts",
+    "note": "left: Kevin wording (K06), phone browser check"
+  },
+  {
+    "id": "P09",
+    "owner": "product",
+    "ask": "Correct rich repo-specific mini-app components for GEV, z0 playlist, OMP and Cua, starting with wrong GEV",
+    "check": "Representative authentic interactive journeys with correct branding, real assets and source/live coverage, not generic cards",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-p/VERDICTS.json; ",
+    "note": "partial [L] missing: Authentic rendered and live/source-backed journeys across all four products, verified branding/assets, GEV layer/camera/Director coverage and acknowledged action results. Synthetic contact filtering i | next: Existing Product owner: retain the mixed-ownership ephemeral-ui checkout, qualify the existing GEV contact slice against the actual products/gods-eye-view source and add the smallest missing source/la"
+  },
+  {
+    "id": "P10",
+    "owner": "product",
+    "ask": "Research agent-extensible OSS widgets without a hard software limitation on custom widget types",
+    "check": "Source-backed options plus smallest existing extension seam; no new widget runtime unless real gap proven",
+    "status": "done",
+    "audit_status": "unverified",
+    "evidence": "ayo-runs/exec-P10/owner-worktree/pretotypes/ephemeral-ui/WIDGET-EXTENSIBILITY.md sha e3cbdf0a (branch ayo/P10); ayo reran verify-research.py PASS",
+    "note": "answer: reuse ephemeral-ui KINDS_* extension; true no-install unseen types not supported by OpenUI/json-render"
+  },
+  {
+    "id": "P11",
+    "owner": "product",
+    "ask": "Build portfolio app store alongside ramen with product pages, interactive prototypes, videos and features across apps",
+    "check": "Actual catalog pages and playable prototypes, films and feature coverage per app; privacy and served-revision checks",
+    "status": "open",
+    "audit_status": "assistant_claim_partial",
+    "evidence": "ayo-runs/rec-p/VERDICTS.json; ",
+    "note": "partial [L] missing: Playable source-specific prototypes, films and feature coverage across apps; current physical interaction and independent privacy qualification; committed/served revision and an exact reachable test l | next: Chief retains /workspace/repos/portfolio and task t_38e8eadd. Inventory each catalog entry's existing public-safe prototype/media, attach real assets from Product, and mark absent experiences honestly"
+  },
+  {
+    "id": "P12",
+    "owner": "reliability",
+    "ask": "Unblock vault/keyring using existing owner-only secure route on actual chatting device; identify which host and recover setup history",
+    "check": "Command/prompt appears on intended device with owner confirmation; error observable safely; locked vault/account gate accurately reported",
+    "status": "blocked-kevin",
+    "audit_status": "assistant_claim_blocked",
+    "evidence": "23:39 ayo: busctl login collection Locked=true on groot; last gkr-pam unlock 2026-11-03 23:04 (sddm login)",
+    "note": "host=groot (Kevin runs keyring-unlock from Tern on phone). pw = groot account pw set 2026-02-15 install, unchanged; sddm unlocked keyring with it 2026-11-03 23:04. Kevin does not remember it; clean recovering hints"
+  },
+  {
+    "id": "A01",
+    "owner": "ayo",
+    "ask": "Intent corpus labeled + aggregated (PLAN 1-2)",
+    "check": "coverage.json missing=0",
+    "status": "done",
+    "audit_status": "",
+    "evidence": "/mnt/zer0models/sft-svlm/data/intent-analyzer/20261104/coverage.json: corpus 14732, labeled 14732, missing 0, verbatim 0.993; RECURRING.md 404 lines, STANDING.md 3954 lines",
+    "note": "batches 001/008 rerun ok 41/41, 131/131"
+  },
+  {
+    "id": "A02",
+    "owner": "ayo",
+    "ask": "Canon draft <=60 quoted lines; top 15 shown to Kevin (PLAN 3)",
+    "check": "CANON-DRAFT.md exists, every line quoted+sourced; top 15 sent",
+    "status": "done",
+    "audit_status": "",
+    "evidence": "unified-memory/OWNER-CANON.md replaced by CANON-DRAFT.md (sha match; backup OWNER-CANON.md.bak-ayo-20261105); Kevin OK 00:2x 'lets lock it'",
+    "note": "Kevin: OK the top 15 before CANON-DRAFT replaces unified-memory/OWNER-CANON.md"
+  },
+  {
+    "id": "A03",
+    "owner": "ayo",
+    "ask": "Unii intent analyzer (PLAN 4)",
+    "check": "dry-run cost shown; import; 10 held-out asks answered",
+    "status": "blocked-kevin",
+    "audit_status": "",
+    "evidence": "ayo-runs/exec-A03/REPORT.md + RESULT.json done=true; ayo saw unii-stage/ (manifest.json 1.1M, plan.json, heldout.json 10, COST.md, mode 600/700); final-check.py PASS",
+    "note": "Kevin: real import 12,851 calls ~$29.74 haiku API, or $0 on subscription quota (recommended)"
+  },
+  {
+    "id": "A04",
+    "owner": "ayo",
+    "ask": "North-star canon injected on Hermes/Claude Code/fx/pi groot+MBP (PLAN 5)",
+    "check": "canon visible in fresh session prompt per harness",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "",
+    "note": ""
+  },
+  {
+    "id": "A05",
+    "owner": "ayo",
+    "ask": "Skills diet (PLAN 6)",
+    "check": "inventory rerun: 0 over 8KB among top 40 by load",
+    "status": "done",
+    "audit_status": "",
+    "evidence": "waves 1+2: ayo inventory recheck: top-40-by-load skills in clean over 8KB = 0 (23:47)",
+    "note": "REVIEW.md semantic conflicts kept as-is (undated); review later"
+  },
+  {
+    "id": "A06",
+    "owner": "ayo",
+    "ask": "Handoff engine default before compaction, every profile (PLAN 0, BRIEF 5)",
+    "check": "context.engine=handoff_compactor in every work profile + live readback",
+    "status": "done",
+    "audit_status": "",
+    "evidence": "agent.log 'handoff_compactor: engine built (claude cap 250000...)' in live ayo sessions 21:39/21:50/21:54 and z0i 21:59; config+probe_select HandoffCompactor 250000 for ayo, clean, reliability, ossfactory, z0i, product, all-providers, intake, telegram, mytern, myternp",
+    "note": "bench/isolation profiles (jev-*, gym-*, tiny-*, vol-canary, clean-baseline) and chiefstaff (retiring) and default left unchanged on purpose; MBP side tracked in A11"
+  },
+  {
+    "id": "A07",
+    "owner": "ayo",
+    "ask": "Lane profiles + core skill pack (BRIEF 2-3)",
+    "check": "profiles exist with SOUL, core pack copied, each core skill <=8KB",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "",
+    "note": ""
+  },
+  {
+    "id": "A08",
+    "owner": "ayo",
+    "ask": "all-providers profile (BRIEF 2)",
+    "check": "auth list + one tiny real call per provider",
+    "status": "in-progress",
+    "audit_status": "",
+    "evidence": "ayo-runs/all-providers/probes.json",
+    "note": "profile created (12 provider entries, = clean). pong OK: anthropic, openrouter, kilo-free; codex OK via fx gpt-6.1-sol. FAIL: xai 403 out of credits (Kevin: money); ovh-free 403; vllm-sr/free timeout; llm7 model mismatch; copilot model unsupported; deepseek/nvidia/ai-gateway keys not resolved even under bws hermes-root"
+  },
+  {
+    "id": "A09",
+    "owner": "ayo",
+    "ask": "chiefstaff retirement checklist (BRIEF 2)",
+    "check": "checklist written; delete only on Kevin OK",
+    "status": "done",
+    "audit_status": "",
+    "evidence": "ayo-runs/exec-A09/INVENTORY.md, RETIREMENT-CHECKLIST.md, MIGRATION-PLAN.md (ayo read; nothing changed)",
+    "note": "checklist done; executing retirement needs Kevin: bot-token owner (chiefstaff+clean share a Telegram token hash), integrations to keep (agentsviews/linear/z0intelligence), archive vs delete"
+  },
+  {
+    "id": "A10",
+    "owner": "ayo",
+    "ask": "Public + private profile distribution (BRIEF 4)",
+    "check": "private overlay + public draft repo, publication gate passed; public release on Kevin OK",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "",
+    "note": ""
+  },
+  {
+    "id": "A11",
+    "owner": "reliability",
+    "ask": "Harness parity groot/MBP (HANDOFF 4, BRIEF 5)",
+    "check": "diff of harness rules/config groot vs MBP is empty",
+    "status": "in-progress",
+    "audit_status": "",
+    "evidence": "fleet-stage-lifecycle-20261104/A11-PARITY-SWAP.md (groot 18 changes, MBP 1); ayo grep 00:21: 0 non-comment openai-codex/gpt-N model/provider lines in groot default+11 profiles (gpt-oss excluded); .bak-ayo present",
+    "note": "1,441 other config diffs groot vs MBP remain (exec-A11/PARITY-DIFF.md); gateways pick up on restart"
+  },
+  {
+    "id": "A12",
+    "owner": "reliability",
+    "ask": "Simple usage tracker admit(lane) over burn-pace incl. free + app caps (HANDOFF 4)",
+    "check": "admit(lane) returns decision from live rows; test",
+    "status": "in-progress",
+    "audit_status": "",
+    "evidence": "ayo-runs/exec-A12: branch ayo/A12, 19 tests pass (reported)",
+    "note": "see RESULT.json remaining"
+  },
+  {
+    "id": "A13",
+    "owner": "reliability",
+    "ask": "Router: vllm-sr/free + vllm-sr/local, delete vllm-sr/paid (HANDOFF 4)",
+    "check": "router config lists free+local only; real call each",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "",
+    "note": ""
+  },
+  {
+    "id": "A14",
+    "owner": "z0i",
+    "ask": "coding-license-v0 eval from z0evals harness-speed-v1 (HANDOFF 4)",
+    "check": "eval runs, per-model pass/fail table",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "",
+    "note": ""
+  },
+  {
+    "id": "A15",
+    "owner": "ayo",
+    "ask": "Permanent work lanes visible as subagents + pinned T3 chats (HANDOFF 4)",
+    "check": "lanes listed in Hermes + T3 pinned chats",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "",
+    "note": ""
+  },
+  {
+    "id": "PH7",
+    "owner": "ayo",
+    "ask": "Stale info purge: memory/canon, skills, docs, branches, disk (BRIEF 7)",
+    "check": "per-pass delete list shown; reproducible deletes done with receipts",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "",
+    "note": ""
+  },
+  {
+    "id": "PH8",
+    "owner": "reliability",
+    "ask": "Full PC cleanup groot/MBP/S25/S22 + self-healing timers in .files (BRIEF 8)",
+    "check": "each failure class: detector+repair timer+receipt; cleanup receipts per host",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "",
+    "note": ""
+  },
+  {
+    "id": "PH9",
+    "owner": "ayo",
+    "ask": "z0 v2 (simpler) (BRIEF 9)",
+    "check": "definition from Kevin",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "OWNER-DECISIONS-20261105.md",
+    "note": "2026-11-05 defined by Kevin (OWNER-DECISIONS #6); A18 audit is the next step"
+  },
+  {
+    "id": "K01",
+    "owner": "ayo",
+    "ask": "gh CLI auth on groot (HTTP 401) blocks pushes",
+    "check": "gh auth status OK",
+    "status": "done",
+    "audit_status": "",
+    "evidence": "23:45 ayo: gh auth status -> logged in kvnloo, scopes repo/workflow",
+    "note": "private pushes resumed (jobapp); public-repo pushes (.files, z0evals ayo/Z11) need Kevin OK -> K07"
+  },
+  {
+    "id": "K02",
+    "owner": "ayo",
+    "ask": "xAI Grok OAuth returns 403 out of credits (all-providers probe)",
+    "check": "pong from xai-oauth",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "ayo-runs/all-providers/probes.json + 403 personal-team-blocked:spending-limit",
+    "note": "2026-11-05 Kevin: keep xAI, no credits; record subscription type + limits, route only within limit"
+  },
+  {
+    "id": "N01",
+    "owner": "ayo",
+    "ask": "ayo replies not visible to Kevin in UI (asked 22:43 in clean session 5_88fcd0)",
+    "check": "Kevin sees an ayo reply in his UI",
+    "status": "in-progress",
+    "audit_status": "",
+    "evidence": "23:32 ayo ran: hermes -p clean send --to telegram -> 'You must pass the token you received from BotFather'; clean/.env has no TELEGRAM_BOT_TOKEN; relay last_id=600",
+    "note": "Kevin 00:2x: intake owns Telegram token; reliability migrating gateway; intake = idea triage -> briefs to ayo"
+  },
+  {
+    "id": "N02",
+    "owner": "reliability",
+    "ask": "S22 wireless ADB turned itself off: why, and keep it on (22:43)",
+    "check": "adb devices shows S22 over wifi after reboot/idle + cause found",
+    "status": "done",
+    "audit_status": "",
+    "evidence": "ayo: ~/.local/state/fleet/health/phone-adb-keeper.jsonl last state ok, adb_wifi_enabled=1; cause: wifi drop 09:46 disabled wireless debugging; branch fix/phone-adb-keeper-20261104@18b1286b (not pushed)",
+    "note": "folds into R12 sender restore"
+  },
+  {
+    "id": "N03",
+    "owner": "z0i",
+    "ask": "Run autokernel full time on z0live on S25 Ultra at 100% compute (22:43)",
+    "check": "autokernel loop running on S25 with receipts, without stealing Kevin's focus",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "",
+    "note": "scope: all on-device RT voice models (ASR/TTS/VAD/LLM) GPU/NPU; inventory+baseline first; yield on foreground/call; thermals"
+  },
+  {
+    "id": "K03",
+    "owner": "reliability",
+    "ask": "S22 ADB pairing revoked (connect refused/offline); phone sends stopped since 09:30",
+    "check": "adb devices -l shows RFCTA1RZAQY + one 'sent' in dispatches.jsonl",
+    "status": "done",
+    "audit_status": "",
+    "evidence": "ayo: dispatches.jsonl 3D10-THREE-LHF8 sent 22:53:29 via 100.72.191.23:5555 (S22), HUP-088 23:19:34; adb serial RFCTA1RZAQY",
+    "note": "clean restored via tcpip 5555; left: sender repoint + first 'sent' in dispatches.jsonl + reboot watchdog (N02)"
+  },
+  {
+    "id": "K04",
+    "owner": "reliability",
+    "ask": "S25 idle-worker window S25_IDLE_WORKER_UNTIL expired 2026-10-29",
+    "check": "renewed window in burst.py; sends only while Kevin is idle",
+    "status": "blocked-kevin",
+    "audit_status": "",
+    "evidence": "reliability report: gate working as designed",
+    "note": "Kevin: renew S25 idle-send window (until when?) or leave off | 2026-11-05: Kevin unsure what it means; explained, awaiting answer"
+  },
+  {
+    "id": "K05",
+    "owner": "ossfactory",
+    "ask": "Tern parity channel needs one real-window check + hackathon public steps",
+    "check": "native intent board seen in a real Tern window; catalog PR/X demo/form submitted",
+    "status": "blocked-kevin",
+    "audit_status": "",
+    "evidence": "lane3-installed-22d476e/ACCEPTANCE.md",
+    "note": "Kevin: run `hermes -p clean tern --channel parity` once on your client (or OK ossfactory to show it on S25 while idle); OK hackathon public steps (deadline Nov 11 17:00 EST)"
+  },
+  {
+    "id": "A16a",
+    "owner": "z0i",
+    "ask": "HF public bucket kvnloo/shadow-slm (BRIEF 10, hf-buckets-20261104/PLAN.md)",
+    "check": "hf buckets list shows README + MANIFEST/SOURCES; scan receipt in hf-buckets-20261104/scans/",
+    "status": "in-progress",
+    "audit_status": "",
+    "evidence": "hf buckets list 22:5x: bucket exists, README only",
+    "note": "dispatched"
+  },
+  {
+    "id": "A16b",
+    "owner": "z0i",
+    "ask": "HF public bucket kvnloo/hillclimbs (BRIEF 10, hf-buckets-20261104/PLAN.md)",
+    "check": "hf buckets list shows README + MANIFEST/SOURCES; scan receipt in hf-buckets-20261104/scans/",
+    "status": "in-progress",
+    "audit_status": "",
+    "evidence": "hf buckets list 22:5x: bucket exists, README only",
+    "note": "dispatched"
+  },
+  {
+    "id": "A16c",
+    "owner": "z0i",
+    "ask": "HF public bucket kvnloo/evals-public (BRIEF 10, hf-buckets-20261104/PLAN.md)",
+    "check": "hf buckets list shows README + MANIFEST/SOURCES; scan receipt in hf-buckets-20261104/scans/",
+    "status": "in-progress",
+    "audit_status": "",
+    "evidence": "hf buckets list 22:5x: bucket exists, README only",
+    "note": "dispatched"
+  },
+  {
+    "id": "A16d",
+    "owner": "product",
+    "ask": "HF public bucket kvnloo/assets (BRIEF 10, hf-buckets-20261104/PLAN.md)",
+    "check": "hf buckets list shows README + MANIFEST/SOURCES; scan receipt in hf-buckets-20261104/scans/",
+    "status": "in-progress",
+    "audit_status": "",
+    "evidence": "hf-buckets-20261104/scans/assets-2026-11-04.json: regex/secret/EXIF-GPS 0 findings; GLiNER2 PII pending",
+    "note": "SOURCES.json + README not yet listed in bucket"
+  },
+  {
+    "id": "A05B",
+    "owner": "ayo",
+    "ask": "Skills diet wave 2: rest of top-40 over 8KB",
+    "check": "check.py PASS for the wave",
+    "status": "done",
+    "audit_status": "",
+    "evidence": "ayo reran check.py: PASS 21 skills <=8192B, 5520 lines preserved; installed clean+ayo+lanes (backups */backups/skills-diet2-202611042347)",
+    "note": ""
+  },
+  {
+    "id": "A17",
+    "owner": "ayo",
+    "ask": "BRIEF 11: process as code (Bend laws + gates for top-broken canon rules, intake hook pre_llm_call, GEPA)",
+    "check": "laws block violating tool calls in a test; intake hook live; GEPA run receipt",
+    "status": "in-progress",
+    "audit_status": "",
+    "evidence": "",
+    "note": "z0i: bend/owner_canon/LAWS.bend in z0intelligence + owner-canon-gate plugin + RULES-MAP.json consolidation"
+  },
+  {
+    "id": "N04",
+    "owner": "ossfactory",
+    "ask": "Launch all fully specified OSS factory cards in parallel (hermes-tern, t3code, ephemeral-ui, 23 eligible) - Kevin 23:0x",
+    "check": "card ids launched with worker + result paths; sent/returned/qualified counts",
+    "status": "in-progress",
+    "audit_status": "",
+    "evidence": "lane3-20261104/LAUNCH-2026-11-04.md: 40 sent/1 failed/30 returned/0 qualified since 22:30; ayo: gh pr list hermes-tern drafts #199-#203 exist; oss-factory#306 T3UX1104 issue exists; t3code O13/O14 cards sent 23:57-58",
+    "note": "qualified=0: review/accept at exact SHA; fix-up cards for #199/#202 CI fails; ephemeral-ui integration cards not listed yet"
+  },
+  {
+    "id": "K06",
+    "owner": "product",
+    "ask": "Jobapp recruiter wording: hero 'native Tern frontend as a plugin' (plugin repo is alt-glitch's; kvnloo/hermes-tern is a fork, 76 PRs merged) and story.json '24 runs' unsourced",
+    "check": "Kevin picks wording; product applies",
+    "status": "blocked-kevin",
+    "audit_status": "",
+    "evidence": "products/hermes-jobapp/evidence/card-audit-20261104/AUDIT.md; WORDING-OPTIONS.md (drafting)",
+    "note": "options shown to Kevin in chat 2026-11-05; awaiting pick"
+  },
+  {
+    "id": "A18",
+    "owner": "ayo",
+    "ask": "z0 v2 audit: thorough read-only audit of all code in every repo in the z0 repo map (dead code, old systems, ideas to archive, what moves off main to incomplete/* branches, experiments before code)",
+    "check": "per-repo AUDIT report with evidence; recommendations only, no deletions/branch moves without Kevin OK",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "OWNER-DECISIONS-20261105.md",
+    "note": "Kevin 2026-11-05 (PH9)"
+  },
+  {
+    "id": "K07",
+    "owner": "ayo",
+    "ask": "Push draft branches to PUBLIC repos: kvnloo/.files fix/fleet-reattach-detached-20261104 (reliability), kvnloo/z0evals ayo/Z11",
+    "check": "branches on origin, no PR",
+    "status": "blocked-kevin",
+    "audit_status": "",
+    "evidence": "gh repo view: .files PUBLIC, z0evals PUBLIC",
+    "note": ".files pushed 2026-11-05 @1650568a; Z11 held: needs \"publish Z11 doc\" for a cleaned T0 branch"
+  },
+  {
+    "id": "R20",
+    "owner": "reliability",
+    "ask": "Full groot PC audit + cleanup: dead services, recurring failures, k3s OOM, disk cleanup (delete-if-finished), folder/worktree reorg, tiered storage plan, perf tuning",
+    "check": "Per-phase before/after tables in storage-maintenance/runs/pc-audit-20261105/PLAN.md; / >=25% free, /mnt/zer0models >=15% free; 0 failed user units without an owner note; 0 k3s OOM restarts for 24h",
+    "status": "in-progress",
+    "audit_status": "",
+    "evidence": "/mnt/zer0models/workspace/zer0/data/operations/storage-maintenance/runs/pc-audit-20261105/PLAN.md (baseline + Phase-1 k3s QoS fix live by clean)",
+    "note": "Kevin 2026-11-05. Start Phase 1. Tiered-storage migration needs Kevin OK before any filesystem change."
+  },
+  {
+    "id": "A19",
+    "owner": "ayo",
+    "ask": "Sandboxing eval: measure agent sandbox strategies (bubblewrap/landlock, rootless podman/docker, per-task container with worktree created at start and removed at stop, microVM) on real agent tasks; pick the one with no measurable slowdown",
+    "check": "EVAL report: same tasks per strategy, wall time, startup/teardown ms, tool latency, disk/IO, escape tests; recommendation + Kevin OK before rollout. Experiments before code (z0 v2).",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "",
+    "note": "Kevin 2026-11-05: sandboxing should make worktree cleanup a natural part of container start/stop, reducing the need for enforcement. Reuse prior work: cua hobbylm guest sandbox (rootfs lock), cloud-VM trial with age-encrypted per-VM secrets (Oct 23-24)."
+  },
+  {
+    "id": "A20",
+    "owner": "ayo",
+    "ask": "Privacy at rest: recover/finish scoped document access and encryption at rest for T2-T4 data per privacy tiers (sft-svlm/data/privacy/README.md pol-1.2)",
+    "check": "Inventory where T2-T4 data lives today, what is encrypted, who/what can read it; plan for encrypt-at-rest + per-agent scoped access; no migration without Kevin OK",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "A20-SENSITIVE-DATA-PRIOR-WORK.md",
+    "note": "Design found: hermes-agent #107700/#107704/#107705/#102922 + kvnloo/passd, pass-cli, pii + ChatGPT \"Proton Pass Proxy Plan\". Remaining: inventory + encrypt-at-rest + first synthetic vertical slice after A19 sandbox eval."
+  },
+  {
+    "id": "A17b",
+    "owner": "ayo",
+    "ask": "BRIEF 11b: intake pre_llm_call hook matches each owner message to ledger rows; appends new asks",
+    "check": "replay 20 real owner messages: >=90% matched to correct row or correctly appended; hook live in intake",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "",
+    "note": "fx Sol unit"
+  },
+  {
+    "id": "A17c",
+    "owner": "z0i",
+    "ask": "BRIEF 11c: GEPA on evals once they exist",
+    "check": "GEPA run receipt on a frozen eval with A/A control",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "",
+    "note": "after A16c evals-public + Z04"
+  },
+  {
+    "id": "E01",
+    "owner": "clean",
+    "ask": "ephemeral-ui work dock: blockers, todos, in-progress bots and subagents as one component, pinnable to the input bar (ref: tern omp context line). Consolidate existing zerOS/Dash prototypes before writing new code.",
+    "check": "Renders live ledger + subagent state in T3 nightly and hermes-tern; pin/unpin above input verified on S25 screenshot",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "",
+    "note": "Kevin 2026-11-05. Related O17 (sticky chips), O02. Reuse first: zerOS + Dash prototypes."
+  },
+  {
+    "id": "Z15",
+    "owner": "clean",
+    "ask": "zerOS research engine: inventory everything in kvnloo/solarpunk, read it in shards, and map useful ideas/features to z0, aodl, ephemeral-ui, dash, hermes-tern and other active OSS repos",
+    "check": "Stage 1 units.jsonl + SUMMARY.md; stage 2 per-unit cards with keep/package/archive + target repo; stage 3 PACKAGING.md reviewed by Kevin",
+    "status": "in-progress",
+    "audit_status": "",
+    "evidence": "zeros-research-20261105/",
+    "note": "Stage 1 deterministic inventory built. Stage 2 readers: T1 source, so subscription/local models only unless the unit is public (turbo is T0 only)."
+  },
+  {
+    "id": "T01",
+    "owner": "clean",
+    "ask": "Reprioritize turbo burst mode: sr:free at Cerebras/Groq free-tier limits + ChatGPT and DeepSeek apps maxed; stand up turbo + annotation + z0live (ChatGPT realtime voice first) + ephemeral-ui workflows in t3code nightly",
+    "check": "One timed burst: N defined units done via turbo with 0 limit violations (429 honored), receipts per unit; the four surfaces usable together in T3 nightly on S25",
+    "status": "open",
+    "audit_status": "",
+    "evidence": "",
+    "note": "Kevin 2026-11-05: HIGH priority now that work runs smoothly. Rule recorded in skill vllm-sr-turbo-router #4. Privacy: Cerebras/Groq/DeepSeek get T0 only."
+  }
+]
