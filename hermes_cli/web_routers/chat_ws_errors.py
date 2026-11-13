@@ -12,10 +12,15 @@ from __future__ import annotations
 from fastapi import HTTPException
 
 from hermes_cli.pty_session import RegistryFull
+from hermes_cli.main_tui_launch import TuiLaunchError
 
 CHAT_NEEDS_NODE = (
     "{surface} could not start: Hermes needs Node.js to run the terminal chat. "
     "Install Node 18+ (for example from nodejs.org) and reopen this tab."
+)
+CHAT_TUI_MISSING = (
+    "{surface} could not start: the Hermes TUI bundle is missing from this install. "
+    "Set HERMES_TUI_DIR to a prebuilt ui-tui directory (or reinstall), then reopen this tab."
 )
 CHAT_TOO_MANY_TERMINALS = (
     "{surface} could not start: too many chat terminals are open in other tabs. "
@@ -26,8 +31,10 @@ CHAT_START_FAILED = "{surface} could not start: {detail} Check the server log (`
 
 
 def _node_missing(exc: BaseException) -> bool:
+    if isinstance(exc, TuiLaunchError):
+        return exc.kind == "node_missing"
     text = str(exc)
-    return isinstance(exc, SystemExit) or "'node'" in text or "'npm'" in text or "Node.js" in text
+    return "'node'" in text or "'npm'" in text or "Node.js" in text
 
 
 def chat_start_failure_message(exc: BaseException, *, surface: str = "Chat") -> str:
@@ -36,6 +43,8 @@ def chat_start_failure_message(exc: BaseException, *, surface: str = "Chat") -> 
         return CHAT_TOO_MANY_TERMINALS.format(surface=surface)
     if isinstance(exc, HTTPException):
         return CHAT_PROFILE_UNKNOWN.format(surface=surface, detail=_sentence(str(exc.detail)))
+    if isinstance(exc, TuiLaunchError) and exc.kind == "workspace_missing":
+        return CHAT_TUI_MISSING.format(surface=surface)
     if _node_missing(exc):
         return CHAT_NEEDS_NODE.format(surface=surface)
     return CHAT_START_FAILED.format(surface=surface, detail=_sentence(str(exc) or type(exc).__name__))

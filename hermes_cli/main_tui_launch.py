@@ -21,6 +21,14 @@ from agent.i18n import t
 logger = logging.getLogger("hermes_cli.main")
 
 
+class TuiLaunchError(SystemExit):
+    """Preserve CLI exit codes while identifying why TUI startup failed."""
+
+    def __init__(self, code: int, kind: str) -> None:
+        super().__init__(code)
+        self.kind = kind
+
+
 def _bypass_chat_launch(args) -> bool:
     """--safe-mode / --ignore-user-config chat: the gateway owner freezes code defaults and runs
     the turn out of process, so the profile's display.interface must not pick a surface and the
@@ -192,7 +200,7 @@ def _ensure_tui_workspace(tui_dir: Path) -> None:
         "  3. Retry `hermes --tui`\n"
         "If the checkout is still inconsistent, run `hermes update --force`.",
         file=sys.stderr)
-    sys.exit(1)
+    raise TuiLaunchError(1, "workspace_missing")
 
 
 def _tui_node_bin(bin: str) -> str:
@@ -209,7 +217,7 @@ def _tui_node_bin(bin: str) -> str:
             "https://nodejs.org (run `hermes doctor` for the install hint for your OS), then "
             "retry `hermes --tui`. To keep working now, run `hermes --cli`."
         )
-        sys.exit(1)
+        raise TuiLaunchError(1, "node_missing")
     return path
 
 
