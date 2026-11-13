@@ -3811,6 +3811,10 @@ class FeishuAdapter(FeishuChoiceCardsMixin, BasePlatformAdapter):
                 )
                 request = self._build_reply_message_request(anchor, body)
                 return await self._run_blocking(self._client.im.v1.message.reply, request)
+            logger.warning(
+                "[Feishu] Thread %s has no reply anchor; falling back to chat %s",
+                thread_id, chat_id,
+            )
         if chat_id.startswith("feishu_user_id:"):
             receive_id, receive_id_type = chat_id.split(":", 1)[1], "user_id"
         else:
