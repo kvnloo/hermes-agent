@@ -60,3 +60,42 @@ def test_local_optional_skill_keeps_its_executable_bit(tmp_path):
 
     assert bundle.executables == {"scripts/run"}
     assert _is_exec(_quarantine(tmp_path, bundle) / "scripts" / "run")
+
+def test_mode_only_github_change_is_an_available_update(tmp_path):
+    """A 100644 -> 100755 Git change must update an installed 0644 script, even with identical bytes."""
+    import tools.skills_hub as hub
+    from tools.skills_hub_install import bundle_content_hash, check_for_skill_updates
+    from tools.skills_hub_models import SkillBundle
+
+    skills_dir = tmp_path / "skills"
+    installed = skills_dir / "demo"
+    (installed / "scripts").mkdir(parents=True)
+    skill_md = "---\nname: demo\n---\n"
+    script_bytes = b"#!/bin/sh\necho ok\n"
+    (installed / "SKILL.md").write_text(skill_md, encoding="utf-8")
+    script_path = installed / "scripts" / "run"
+    script_path.write_bytes(script_bytes)
+    os.chmod(script_path, 0o644)
+
+    bundle = SkillBundle(
+        name="demo",
+        files={"SKILL.md": skill_md, "scripts/run": script_bytes},
+        source="github", identifier="owner/repo/skills/demo", trust_level="community",
+        executables=frozenset({"scripts/run"}),
+        metadata={"source_revision": "b" * 40},
+    )
+    lock = MagicMock()
+    lock.list_installed.return_value = [{
+        "name": "demo", "source": "github", "identifier": bundle.identifier,
+        "install_path": "demo", "content_hash": bundle_content_hash(bundle),
+        "metadata": {"source_revision": "a" * 40},
+    }]
+    source = MagicMock()
+    source.source_id.return_value = "github"
+    source.current_revision.return_value = "b" * 40
+    source.fetch.return_value = bundle
+
+    with patch.object(hub, "SKILLS_DIR", skills_dir):
+        assert check_for_skill_updates(lock=lock, sources=[source])[0]["status"] == "update_available"
+        os.chmod(script_path, 0o755)
+        assert check_for_skill_updates(lock=lock, sources=[source])[0]["status"] == "up_to_date"

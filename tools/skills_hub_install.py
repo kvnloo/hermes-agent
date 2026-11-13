@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import hashlib
+import os
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
@@ -323,8 +324,20 @@ def check_for_skill_updates(
             results.append({**row, "status": "unavailable"})
             continue
         current_hash, latest_hash = entry.get("content_hash", ""), bundle_content_hash(bundle)
+        # Git mode-only changes leave the byte hash unchanged. If the source now
+        # marks a script executable, an installed 0644 copy still needs updating.
+        update_available = current_hash != latest_hash
+        if not update_available and os.name == "posix":
+            for rel_path in bundle.executables & bundle.files.keys():
+                try:
+                    path = install_dir.joinpath(*_validate_bundle_rel_path(rel_path).split("/"))
+                    if path.is_file() and not path.is_symlink() and not (path.stat().st_mode & 0o100):
+                        update_available = True
+                        break
+                except (OSError, ValueError):
+                    continue
         results.append({
-            **row, "status": "up_to_date" if current_hash == latest_hash else "update_available",
+            **row, "status": "update_available" if update_available else "up_to_date",
             "current_hash": current_hash, "latest_hash": latest_hash, "bundle": bundle,
         })
     return results
