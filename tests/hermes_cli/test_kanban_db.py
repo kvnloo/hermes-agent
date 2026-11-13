@@ -500,6 +500,33 @@ def test_dispatch_retries_aged_failure_breaker_once_per_cooldown(kanban_home, mo
         ).promoted == 0
 
 
+def test_systemic_crash_breaker_stays_sticky_after_default_cooldown(kanban_home, monkeypatch):
+    """Three identical worker crashes must not be retried as independent card faults."""
+    now = 2_000_000_000
+    monkeypatch.setattr(kbd.time, "time", lambda: now)
+    with kbc.connect() as conn:
+        task_ids = [
+            kb.create_task(conn, title=f"same host failure {i}", assignee="a")
+            for i in range(3)
+        ]
+        assert all(kb.get_task(conn, tid).status == "ready" for tid in task_ids)
+        crashes = [
+            (tid, 9000 + i, "host:worker", False, f"pid {9000 + i} not alive")
+            for i, tid in enumerate(task_ids)
+        ]
+        assert kbd._account_crashes(conn, crashes) == task_ids
+        assert all(kb.get_task(conn, tid).status == "blocked" for tid in task_ids)
+
+        # The systemic trip is sticky even though each task has only one failure.
+        assert kbd.dispatch_once(conn, max_spawn=0).promoted == 0
+        monkeypatch.setattr(
+            kbd.time, "time",
+            lambda: now + kbd.DEFAULT_FAILURE_RETRY_SECONDS,
+        )
+        assert kbd.dispatch_once(conn, max_spawn=0).promoted == 0
+        assert all(kb.get_task(conn, tid).status == "blocked" for tid in task_ids)
+
+
 def test_failed_crash_probe_uses_dispatcher_failure_limit(kanban_home, monkeypatch):
     """A failed cooldown probe re-trips even with a strict dispatcher limit."""
     import hermes_cli.kanban_db as _kb
