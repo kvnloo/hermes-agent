@@ -134,3 +134,36 @@ def test_callback_name_cannot_rebind_to_loopback_between_check_and_connect(monke
     _push(monkeypatch, f"http://rebind.example:{target.server_port}/hook")
 
     assert target.hits == []
+
+
+def test_callback_post_ignores_environment_proxy(monkeypatch, serve):
+    """A callback must use the vetted direct route, never a proxy that resolves on its behalf."""
+    import urllib.request
+
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    monkeypatch.delenv("no_proxy", raising=False)
+    proxy = serve()
+    proxy_url = f"http://127.0.0.1:{proxy.server_port}"
+    monkeypatch.setenv("HTTP_PROXY", proxy_url)
+    monkeypatch.setenv("http_proxy", proxy_url)
+    # urllib's process-global opener (used on main before this PR) caches proxy settings.
+    # Reset it so this test represents a process started with the proxy enabled.
+    monkeypatch.setattr(urllib.request, "_opener", None)
+    _resolve_as(monkeypatch, {"callback.example": "8.8.8.8"})
+
+    # The vetted direct connection is deliberately offline; a proxy bypass reaches the local server.
+    real_connect = socket.socket.connect
+
+    def no_external_connect(sock, address):
+        if isinstance(address, tuple) and address[0] not in ("127.0.0.1", "::1"):
+            raise OSError("test prohibits outbound connections")
+        return real_connect(sock, address)
+
+    monkeypatch.setattr(socket.socket, "connect", no_external_connect)
+    sent, failed = protocol.metrics.push_sent, protocol.metrics.push_failed
+
+    _push(monkeypatch, "http://callback.example/hook")
+
+    assert proxy.hits == []
+    assert protocol.metrics.push_sent == sent
+    assert protocol.metrics.push_failed == failed + 1
