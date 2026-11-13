@@ -1,0 +1,15 @@
+[Unit]
+Description=Hermes PR 88752 privacy-safe Tailnet attention preview
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/workspace/zer0/oss/hermes-agent/.worktrees/t_72b4d311
+ExecStart=/home/kvn/.hermes/hermes-agent/venv/bin/python -m uvicorn sidebar_attention_preview:app --app-dir /workspace/zer0/oss/hermes-agent/.worktrees/t_72b4d311/.preview --host 127.0.0.1 --port 9132
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

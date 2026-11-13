@@ -1,0 +1,48 @@
+{
+  "url": "https://0.taila30dc.ts.net:8449/kanban",
+  "head": "6d5f34c45e9154fa47df6fef6d8866d15176c6fe",
+  "surface": "shipped standalone WebUI plugin in dashboard host",
+  "privacySafeFixture": true,
+  "captures": [
+    {
+      "width": 320,
+      "filename": "webui-live-320.png",
+      "bytes": 31165,
+      "sha256": "3f51e6d6e2ec3b54ab03ad58d660cde991909cd616c15a7335cb8374f54262d7",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 360,
+      "filename": "webui-live-360.png",
+      "bytes": 32212,
+      "sha256": "5c10b77b2229649cb4151882657c8d19904b1ec616c630170ffe0882f2928610",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "filename": "webui-live-390.png",
+      "bytes": 33976,
+      "sha256": "3fce81fd4999dc4e61355a9fbb832d4f7f23f1a952389733215e788300b5f41c",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 430,
+      "filename": "webui-live-430.png",
+      "bytes": 33778,
+      "sha256": "94778615398a071e94a34dd8d7e22648bb617cc7f28706cccecefdbaf374e2d1",
+      "overflow": false,
+      "errors": []
+    }
+  ],
+  "interactions": {
+    "snoozeVisible": true,
+    "wakeVisibleAfterSnooze": true,
+    "settleVisibleAfterWake": true,
+    "filename": "webui-live-interactions-390.png",
+    "bytes": 38925,
+    "sha256": "baf40eaeb1a144a88b9ebe680e638e6dcfe852472dc752deff8e97f3520cf55c"
+  }
+}
