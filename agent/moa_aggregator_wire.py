@@ -140,7 +140,11 @@ class AggregatorWire:
         if unknown:
             logger.info("MoA aggregator: not replaying %d signed thinking block(s) it did not produce", len(unknown))
         self.rejected |= unknown
-        if guidance and (guidance_key is None or all(fanout != guidance_key for _, fanout, _ in entries)):
+        # An interrupted fan-out is not cached; it can return new advice under the same key.
+        # Keep earlier guidance in the signed prefix and append the refreshed advice.
+        previous = next((msg for _, fanout, msg in reversed(entries)
+                         if fanout == guidance_key and msg is not None), None)
+        if guidance and (guidance_key is None or previous is None or previous.get("content") != str(guidance)):
             entries.append((None, guidance_key, {"role": "user", "content": str(guidance)}))
         else:
             guidance = None
