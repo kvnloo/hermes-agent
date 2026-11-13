@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useProfileScope } from "@/contexts/useProfileScope";
 import {
   AlignLeft,
@@ -265,19 +265,27 @@ function creationReceiptFor(title: string, warnings: string[] = [], modelFailed 
   return messages.length ? { title, messages } : null;
 }
 
-function useCreationFeedback() {
+function useCreationFeedback(initialReceipt: CreationReceipt | null) {
   const { toast, showToast } = useToast();
-  const [creationReceipt, setCreationReceipt] = useState<CreationReceipt | null>(null);
+  const [creationReceipt, setCreationReceipt] = useState<CreationReceipt | null>(initialReceipt);
   return { toast, showToast, creationReceipt, setCreationReceipt };
 }
 
 export default function ProfilesPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Capture the handoff at mount; ProfileProvider may replace route state before loading finishes.
+  const incomingReceipt = (location.state as { creationReceipt?: CreationReceipt } | null)?.creationReceipt ?? null;
   const [profiles, setProfiles] = useState<ProfileInfo[]>([]);
   const [activeInfo, setActiveInfo] = useState<ActiveProfileInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const { toast, showToast, creationReceipt, setCreationReceipt } = useCreationFeedback();
+  const { toast, showToast, creationReceipt, setCreationReceipt } = useCreationFeedback(incomingReceipt);
   const { t } = useI18n();
+  useEffect(() => {
+    if (incomingReceipt) {
+      navigate(`${location.pathname}${location.search}${location.hash}`, { replace: true, state: null });
+    }
+  }, [incomingReceipt, location.pathname, location.search, location.hash, navigate]);
   const { setEnd } = usePageHeader();
   const { setProfile } = useProfileScope();
 

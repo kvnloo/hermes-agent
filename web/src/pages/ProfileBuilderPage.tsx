@@ -263,13 +263,16 @@ export default function ProfileBuilderPage() {
           : undefined,
       });
       const pending = (res.hub_installs ?? []).filter((h) => h.pid).length;
-      showToast(
-        pending
-          ? `Profile "${n}" created — ${pending} hub skill${pending === 1 ? "" : "s"} installing`
-          : `Profile "${n}" created`,
-        "success",
-      );
-      navigate("/profiles");
+      const title = pending
+        ? `Profile "${n}" created — ${pending} hub skill${pending === 1 ? "" : "s"} installing`
+        : `Profile "${n}" created`;
+      // This wizard unmounts when navigation completes; its local toast cannot carry warnings.
+      if (res.warnings?.length) {
+        navigate("/profiles", { state: { creationReceipt: { title, messages: res.warnings } } });
+      } else {
+        showToast(title, "success");
+        navigate("/profiles");
+      }
     } catch (e) {
       showToast(`Create failed: ${errorMessage(e)}`, "error");
     } finally {
