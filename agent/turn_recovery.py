@@ -812,6 +812,15 @@ def recover_after_classification(
     return False, recovered_with_pool
 
 
+def _network_transport_failure(classified: Any) -> bool:
+    """Transport outage rather than a provider throttle, billing wall, or ordinary 5xx."""
+    return (
+        classified.reason in (FailoverReason.timeout, FailoverReason.server_error, FailoverReason.overloaded)
+        and (classified.status_code is None or 500 <= classified.status_code < 600)
+        and bool(classified.error_context.get("transport"))
+    )
+
+
 def _failed_turn_result(final_response: str, messages: Any, api_call_count: int, error: str) -> dict[str, Any]:
     """Base failed-turn result dict shared by the two terminal paths."""
     return {
@@ -1162,6 +1171,7 @@ def nonretryable_client_error_result(
     result = _failed_turn_result(_final_response, messages, api_call_count, _nonretryable_summary)
     result.update({
         "failure_reason": classified.reason.value,
+        "failure_network": _network_transport_failure(classified),
         "failure_retryable": bool(classified.retryable),
     })
     if _keep_partial:
@@ -1300,6 +1310,7 @@ def max_retries_exhausted_result(
         # Classified reason so callers (kanban worker in cli.py) can tell a quota wall
         # (``rate_limit`` / ``billing``) from a task failure.
         "failure_reason": classified.reason.value,
+        "failure_network": _network_transport_failure(classified),
         # The classifier's own retry verdict — UI surfaces use this, not the reason string.
         "failure_retryable": bool(classified.retryable),
         # True when the billing verdict rests on an ambiguous body.

@@ -234,7 +234,7 @@ def notify_task_updated(
 # DispatchResult counters whose non-zero value means the tick did something.
 _TICK_ACTIVITY_FIELDS = (
     "spawned", "reclaimed", "promoted", "reconciled_orphans", "reaped_terminal_workers", "crashed", "stale",
-    "timed_out", "auto_blocked", "rate_limited", "auto_assigned_default",
+    "timed_out", "auto_blocked", "rate_limited", "network", "auto_assigned_default",
     "respawn_guarded", "skipped_per_profile_capped", "skipped_unassigned",
     "skipped_nonspawnable",
 )
@@ -305,9 +305,10 @@ def _resolve_claim_ttl_seconds(ttl_seconds: Optional[int] = None) -> int:
 # fork -> /proc window can report a fresh worker dead.
 DEFAULT_CRASH_GRACE_SECONDS = 30
 
-# Worker exit "provider rate-limited": released WITHOUT counting a failure (the
-# breaker must never trip on a throttle). 75 == BSD EX_TEMPFAIL.
+# Provider throttles never spend a task failure (BSD EX_TEMPFAIL).
 KANBAN_RATE_LIMIT_EXIT_CODE = 75
+# Network transport outages are likewise neutral, but not quota walls.
+KANBAN_NETWORK_ERROR_EXIT_CODE = 76
 
 # Worker exit "provider rejected the configuration": credential revoked (401/403), model gone
 # (404), TLS chain broken — a retry cannot fix it, so the dispatcher parks the card blocked on
@@ -927,7 +928,7 @@ CREATE TABLE IF NOT EXISTS task_runs (
     ended_at            INTEGER,
     outcome             TEXT,
     -- outcome: completed | blocked | crashed | timed_out | spawn_failed |
-    --          gave_up | reclaimed | (null while still running)
+    --          gave_up | reclaimed | rate_limited | network | (null while running)
     summary             TEXT,
     metadata            TEXT,
     error               TEXT
@@ -2023,7 +2024,7 @@ def _resume_status_from_events(conn: sqlite3.Connection, task_id: str) -> str:
         "WHERE task_id = ? AND kind IN ("
         "'blocked', 'block_loop_detected', 'dependency_wait', 'gave_up', "
         "'unblocked', 'changes_requested', 'review_reopened', 'status', 'reclaimed', "
-        "'stale', 'timed_out', 'crashed', 'spawn_failed', 'rate_limited'"
+        "'stale', 'timed_out', 'crashed', 'spawn_failed', 'rate_limited', 'network'"
         ") ORDER BY id DESC LIMIT 1", (task_id,),
     ).fetchone()
     payload = _json_dict(_row_get(row, "payload"))

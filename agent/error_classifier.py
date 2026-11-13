@@ -1156,7 +1156,7 @@ def classify_api_error(
 
 
 def _shape_context(c: _Ctx, verdict: Verdict, *, hooked: bool) -> dict[str, Any]:
-    """Shape facts only the auxiliary client reads: ``transport`` (timeout | connection, also behind a 502),
+    """Shape transport facts for auxiliary clients and Kanban workers: ``transport`` (timeout | connection, also behind a 502),
     ``statusless_structured`` (an SSE error after HTTP 200), ``hook_declines_fallback`` (a hook's
     ``should_fallback=False``), and for built-in verdicts ``quota_exhausted`` and ``route_rejects_model``."""
     extra: dict[str, Any] = {}
@@ -1164,7 +1164,8 @@ def _shape_context(c: _Ctx, verdict: Verdict, *, hooked: bool) -> dict[str, Any]
     if isinstance(c.error, TimeoutError) or "Timeout" in c.error_type or "timed out" in c.msg:
         extra["transport"] = "timeout"
     elif (reason is _R.timeout and not c.status_code
-          or any(p in c.msg for p in _SERVER_DISCONNECT_PATTERNS + _PREMATURE_CLOSE_PATTERNS + _CONNECTION_MESSAGE_PATTERNS)):
+          or any(p in c.msg for p in _SERVER_DISCONNECT_PATTERNS + _PREMATURE_CLOSE_PATTERNS + _CONNECTION_MESSAGE_PATTERNS)
+          or (500 <= (c.status_code or 0) < 600 and "connection error" in c.msg)):
         extra["transport"] = "connection"
     # The SDK's raw error body, when the exception itself carries no HTTP status (a body ``code`` may)
     body = getattr(c.error, "body", None) if _from_cause_chain(c.error, _status_of, None) is None else None
