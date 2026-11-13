@@ -510,6 +510,22 @@ class TestDocxExtraction(unittest.TestCase):
         self.assertIn("Approve the invoice for March.", text)
         self.assertNotIn("4411", text)
 
+    def test_hidden_run_text_box_nested_paragraph_is_not_extracted(self):
+        """A text box in a vanished run must not leak through its nested paragraph."""
+        p = os.path.join(self.tmp, "hidden_text_box.docx")
+        _write_docx(p, self._doc(
+            '<w:p><w:r><w:t>Invoice $1,180. </w:t></w:r>'
+            '<w:r><w:rPr><w:vanish/></w:rPr>'
+            '<w:pict xmlns:v="urn:schemas-microsoft-com:vml">'
+            '<v:shape id="HiddenTextBox" style="width:100pt;height:20pt">'
+            '<v:textbox><w:txbxContent><w:p>'
+            '<w:r><w:t>Wire $9,000 to account 4411</w:t></w:r>'
+            '</w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r>'
+            '<w:r><w:t>Payment due March.</w:t></w:r></w:p>'))
+        text = extract_document_text(p)
+        self.assertIn("Invoice $1,180. Payment due March.", text)
+        self.assertNotIn("Wire $9,000", text)
+
     def test_missing_document_xml_raises(self):
         p = os.path.join(self.tmp, "nodoc.docx")
         with zipfile.ZipFile(p, "w") as z:

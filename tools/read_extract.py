@@ -482,16 +482,18 @@ def _extract_docx(path: str) -> str:
         root = _zip_xml(zf, "word/document.xml")
     w = f"{{{_NS_W}}}"
     breaks = {f"{w}tab": "\t", f"{w}br": "\n", f"{w}cr": "\n"}
+    # A hidden drawing can contain its own w:p (text box). Collect hidden descendants
+    # at document scope so visiting that nested paragraph cannot expose them again.
+    hidden = {n for run in root.iter(f"{w}r") if _run_is_hidden(run, w) for n in run.iter()}
     lines: list[str] = []
     for para in root.iter(f"{w}p"):
+        if para in hidden:
+            continue
         # w:rt is the ruby (phonetic) guide over w:rubyBase; it annotates the text, it is not text.
-        # A run with w:vanish is hidden text Word never displays: drop it like hidden XLSX sheets, so
-        # the model reads what a human reviewer sees, not a channel only extractors see (arXiv:2611.05806).
         skip = {n for rt in para.iter(f"{w}rt") for n in rt.iter()}
-        skip.update(n for run in para.iter(f"{w}r") if _run_is_hidden(run, w) for n in run.iter())
         text = "".join(
             (n.text or "") if n.tag == f"{w}t" else breaks.get(n.tag, "")
-            for n in para.iter() if n not in skip)
+            for n in para.iter() if n not in skip and n not in hidden)
         lines.extend(text.split("\n"))
     return _joined(lines, "DOCX contains no extractable text")
 
