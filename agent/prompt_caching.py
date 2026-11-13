@@ -55,7 +55,7 @@ def _text_part(text: str, cache_marker: dict | None = None) -> dict:
 
 
 def _apply_cache_marker(msg: dict, cache_marker: dict, native_anthropic: bool = False,
-                        tool_part_markers: bool = True) -> None:
+                        tool_part_markers: bool = True, split_scaffolds: bool = True) -> None:
     """Add cache_control to a single message, handling all format variations."""
     role = msg.get("role", "")
     content = msg.get("content")
@@ -72,7 +72,7 @@ def _apply_cache_marker(msg: dict, cache_marker: dict, native_anthropic: bool = 
     elif isinstance(content, str):
         # Builder-declared boundary: the scaffold carries the breakpoint and the volatile tail
         # rides unmarked. Request-local only — the stored message stays a string.
-        msg["content"] = _scaffold_parts(msg, cache_marker) or [_text_part(content, cache_marker)]
+        msg["content"] = (_scaffold_parts(msg, cache_marker) if split_scaffolds else None) or [_text_part(content, cache_marker)]
     elif isinstance(content, list) and content and isinstance(content[-1], dict):
         content[-1]["cache_control"] = cache_marker
 
@@ -334,17 +334,20 @@ def build_prompt_cache_plan(
     api_messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None, *,
     cache_ttl: str = "5m", native_anthropic: bool = False, static_system_prefix: str | None = None,
     direct_native_tool_cache: bool = False, tool_part_markers: bool = True,
-    session_system_prompt: str | None = None,
+    session_system_prompt: str | None = None, preserve_signed_thinking: bool = False,
 ) -> PromptCachePlan:
-    """Build copy-on-write cache sections for one resolved request destination
-    (``tool_part_markers=False`` keeps markers off role:tool parts on LiteLLM-style routes)."""
+    """Build copy-on-write cache sections for one resolved request destination.
+
+    Signed thinking binds earlier message blocks: never derive their split from a registry
+    that can disappear on restart or LRU eviction. Other routes keep scaffold caching.
+    """
     planned_tools = strip_anthropic_tool_cache_control(tools)
     if not direct_native_tool_cache or not planned_tools:
         # apply_anthropic_cache_control re-canonicalises prior decoration itself.
         planned_messages = apply_anthropic_cache_control(
             list(api_messages or []), cache_ttl=cache_ttl, native_anthropic=native_anthropic,
             static_system_prefix=static_system_prefix, tool_part_markers=tool_part_markers,
-            session_system_prompt=session_system_prompt)
+            session_system_prompt=session_system_prompt, preserve_signed_thinking=preserve_signed_thinking)
         return PromptCachePlan(messages=planned_messages, tools=planned_tools)
 
     messages = _strip_prior_decoration(list(api_messages or []))
@@ -358,8 +361,10 @@ def build_prompt_cache_plan(
     planned_tools[-1]["cache_control"] = dict(marker)
     for endpoint in _completed_transaction_endpoint_indexes(messages, native_anthropic=True)[-2:]:
         messages[endpoint] = copy.deepcopy(messages[endpoint])
-        _apply_cache_marker(messages[endpoint], marker, native_anthropic=True)
-    _split_unmarked_scaffolds(messages)
+        _apply_cache_marker(messages[endpoint], marker, native_anthropic=True,
+                            split_scaffolds=not preserve_signed_thinking)
+    if not preserve_signed_thinking:
+        _split_unmarked_scaffolds(messages)
 
     return PromptCachePlan(messages=messages, tools=planned_tools)
 
@@ -367,7 +372,7 @@ def build_prompt_cache_plan(
 def apply_anthropic_cache_control(
     api_messages: list[dict[str, Any]], cache_ttl: str = "5m", native_anthropic: bool = False,
     static_system_prefix: str | None = None, tool_part_markers: bool = True,
-    session_system_prompt: str | None = None,
+    session_system_prompt: str | None = None, preserve_signed_thinking: bool = False,
 ) -> list[dict[str, Any]]:
     """Apply Anthropic cache-control markers to API messages.
 
@@ -396,7 +401,10 @@ def apply_anthropic_cache_control(
             session_system_prompt=session_system_prompt, mark_session_end=len(non_sys) < 2)
     for idx in non_sys[-(4 - breakpoints_used):]:
         messages[idx] = copy.deepcopy(messages[idx])
-        _apply_cache_marker(messages[idx], marker, native_anthropic=native_anthropic, tool_part_markers=tool_part_markers)
-    _split_unmarked_scaffolds(messages)
+        _apply_cache_marker(messages[idx], marker, native_anthropic=native_anthropic,
+                            tool_part_markers=tool_part_markers,
+                            split_scaffolds=not preserve_signed_thinking)
+    if not preserve_signed_thinking:
+        _split_unmarked_scaffolds(messages)
 
     return messages

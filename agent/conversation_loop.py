@@ -1317,6 +1317,7 @@ def _redecorate_prompt_cache_for_provider(
         _ensure_cached_system_prompt_static(agent, system_message=system_message)
         static = getattr(agent, "_cached_system_prompt_static", None)
         from agent.prompt_caching import envelope_tool_part_cache_markers_supported
+        from agent.anthropic_thinking_policy import native_anthropic_preserves_prior_thinking
         plan = build_prompt_cache_plan(
             messages,
             planned_tools,
@@ -1324,6 +1325,9 @@ def _redecorate_prompt_cache_for_provider(
             # Qwen/Alibaba routes, whose context cache is 5m-only (#84733).
             cache_ttl=effective_cache_ttl(agent._cache_ttl, provider=agent.provider, model=agent.model),
             native_anthropic=agent._use_native_cache_layout,
+            preserve_signed_thinking=native_anthropic_preserves_prior_thinking(
+                getattr(agent, "base_url", ""), agent.model
+            ),
             static_system_prefix=static if isinstance(static, str) else None,
             session_system_prompt=agent._cached_system_prompt,
             direct_native_tool_cache=getattr(

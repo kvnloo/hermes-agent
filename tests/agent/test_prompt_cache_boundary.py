@@ -278,6 +278,52 @@ class TestRequestLocalSplit:
         assert stripped == organic
 
 
+    @pytest.mark.parametrize("direct_tool_cache", [False, True], ids=["message-cache", "tool-cache"])
+    def test_preserved_thinking_scaffold_never_changes_after_registry_eviction(self, direct_tool_cache):
+        """A signed assistant turn binds earlier user blocks, even after restart or eviction."""
+        from types import SimpleNamespace
+        from agent.conversation_loop import _redecorate_prompt_cache_for_provider
+
+        scaffold = "stable scaffold\n\n" + _SINGLE_SKILL_INSTRUCTION
+        register_stable_prefix(scaffold)
+        user_content = scaffold + "ticket=one"
+        tools = [{"type": "function", "function": {
+            "name": "t", "description": "d", "parameters": {"type": "object", "properties": {}}}}]
+        history = [
+            {"role": "system", "content": "sys"},
+            {"role": "user", "content": user_content},
+            {"role": "assistant", "content": "", "tool_calls": [
+                {"id": "call1", "type": "function", "function": {"name": "t", "arguments": "{}"}}],
+             "reasoning_details": [{"type": "thinking", "thinking": "reason", "signature": "signed"}]},
+            {"role": "tool", "tool_call_id": "call1", "content": "result"},
+        ]
+        agent = SimpleNamespace(
+            _cached_system_prompt="sys", _cached_system_prompt_static="sys",
+            _use_prompt_caching=True, _use_native_cache_layout=True, _cache_ttl="5m",
+            _direct_native_anthropic_tool_cache_capability=lambda: direct_tool_cache,
+            provider="anthropic", base_url="https://api.anthropic.com",
+            model="claude-opus-5-5", tools=tools, client=None,
+        )
+
+        def user_parts():
+            planned, _, _ = _redecorate_prompt_cache_for_provider(agent, copy.deepcopy(history))
+            content = planned[1]["content"]
+            return [content] if isinstance(content, str) else [part["text"] for part in content]
+
+        assert user_parts() == [user_content]
+        for i in range(prompt_cache_boundary._MAX_ENTRIES):
+            register_stable_prefix(f"unrelated-scaffold-{i} ")
+        assert find_stable_prefix(user_content) is None
+        assert user_parts() == [user_content]
+        prompt_cache_boundary._prefixes.clear()  # a resumed process starts with an empty registry
+        assert user_parts() == [user_content]
+        assert history[1]["content"] == user_content
+
+        agent.model = "claude-sonnet-4-5"  # last-turn-only thinking: keep the cache optimisation
+        register_stable_prefix(scaffold)
+        assert user_parts() == [scaffold, "ticket=one"]
+
+
 class TestRealBuilders:
     def test_two_invocations_share_the_marked_scaffold(self, skills):
         first = skill_commands.build_skill_invocation_message(
