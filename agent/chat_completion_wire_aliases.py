@@ -32,7 +32,8 @@ OLLAMA_TOOL_CALL_ALIAS = "call_deferred_tool"
 _OLLAMA_COLLIDING_NAME = "tool_call"
 # A standalone ``tool_call`` reference: not ``<tool_call>``/``</tool_call>`` markup, not
 # ``tool_calls`` and not part of a longer identifier such as ``post_tool_call``.
-_TOOL_CALL_REFERENCE = re.compile(r"(?<![A-Za-z0-9_<>/])tool_call(?![A-Za-z0-9_>])")
+# Slash-separated tool names are references, but closing </tool_call> tags are markup.
+_TOOL_CALL_REFERENCE = re.compile(r"(?<![A-Za-z0-9_<>])(?<!</)tool_call(?![A-Za-z0-9_>])")
 
 
 def _function_name(tool: Any) -> Any:

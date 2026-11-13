@@ -104,6 +104,19 @@ class TestAliasDeclarations:
         for tool in wire:
             assert tool["function"]["description"] == text.replace("`tool_call`", f"`{OLLAMA_TOOL_CALL_ALIAS}`")
 
+    def test_slash_separated_bridge_reference_uses_wire_name(self):
+        text = ("Connected tools are callable through tool_describe/tool_call. "
+                "The </tool_call> delimiter is markup, not a function.")
+        tools = [_td("tool_call"), _td("manage_connections", text)]
+        wire, alias_map = alias_tool_call_for_ollama(tools)
+
+        assert alias_map == {OLLAMA_TOOL_CALL_ALIAS: "tool_call"}
+        assert wire[1]["function"]["description"] == (
+            f"Connected tools are callable through tool_describe/{OLLAMA_TOOL_CALL_ALIAS}. "
+            "The </tool_call> delimiter is markup, not a function."
+        )
+        assert tools[1]["function"]["description"] == text
+
     def test_no_bridge_no_change(self):
         tools = [_td("web_search"), _td("tool_describe")]
         wire, alias_map = alias_tool_call_for_ollama(tools)
