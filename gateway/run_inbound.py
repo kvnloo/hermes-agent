@@ -1399,7 +1399,14 @@ class GatewayInboundMixin(GatewayInboundHooksMixin, GatewayInboundTranscriptionM
         self._hm_evict_idle_stale_agent(_quick_key)
         if self._is_session_running(_quick_key):
             self._hm_evict_reaped_agent(_quick_key)
-        if self._is_session_running(_quick_key):
+        # The boot event owns this sentinel. Do not queue it behind itself: the
+        # adapter's follow-up drain may never start after that self-bounce.
+        _preclaimed_boot_resume = (
+            is_internal and getattr(event, "_gateway_boot_resume_preclaim", False) is True
+            and (state := self._peek_session_state(_quick_key)) is not None
+            and state.turn.agent is _AGENT_PENDING_SENTINEL and state.turn.event is event
+        )
+        if self._is_session_running(_quick_key) and not _preclaimed_boot_resume:
             return await self._hm_handle_running_session_message(event, source, _quick_key)
 
         _handled, _result = await self._hm_dispatch_idle_commands(event, source, _quick_key)
@@ -1424,6 +1431,16 @@ class GatewayInboundMixin(GatewayInboundHooksMixin, GatewayInboundTranscriptionM
         # Claim this session before any await: many awaits sit between here and _run_agent
         # registering the real AIAgent; without this sentinel a second message during any of them
         # passes the "already running" guard and spins up a duplicate agent for the same session.
+        if _preclaimed_boot_resume:
+            # Command resolution awaited. A stop/reset may have revoked this claim.
+            state = self._peek_session_state(_quick_key)
+            if (state is None or state.turn.agent is not _AGENT_PENDING_SENTINEL
+                    or state.turn.event is not event):
+                return None
+            event._gateway_boot_resume_preclaim = False
+            # No await between releasing the reservation and claiming the real
+            # cross-process active-session slot; another event cannot slip in.
+            self._release_running_agent_state(_quick_key)
         _active_session_lease, _limit_message = self._claim_active_session_slot(_quick_key, source)
         if _limit_message is not None:
             logger.info("Rejecting new active session %s: max_concurrent_sessions reached", _quick_key)

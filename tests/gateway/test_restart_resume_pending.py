@@ -1122,30 +1122,12 @@ async def test_auto_resume_sets_sentinel_before_task_execution():
 
 @pytest.mark.asyncio
 async def test_auto_resume_runs_agent_exactly_once_through_full_path():
-    """Full-path regression: the pre-claim must NOT make auto-resume a no-op.
+    """The boot event must consume its own pre-claim without self-queueing.
 
-    The two tests above mock ``adapter.handle_message`` outright, so they
-    only prove the sentinel is set/cleaned around a stub — they never
-    exercise the real dispatch chain.  This drives the production path
-    end to end:
-
-        _schedule_resume_pending_sessions
-          -> _guarded_handle_message
-            -> adapter.handle_message            (real)
-              -> _process_message_background      (real)
-                -> _handle_message                (real)
-
-    The risk the pre-claim introduces is a *self-bounce*: the resume
-    turn's own ``_handle_message`` sees the sentinel it pre-claimed at
-    the early running-agent guard, queues the event into
-    ``_pending_messages`` and returns ``None`` without running the
-    agent.  The adapter's late-arrival drain (in
-    ``_process_message_background``'s ``finally``) re-dispatches the
-    queued event, and because the guard wrapper's ``finally`` releases
-    the pre-claim before the spawned drain task starts, the agent runs
-    exactly once.  This test locks that invariant in: the resume agent
-    must run once — never zero (regression) and never twice (the bug
-    the fix targets).
+    A lost late-arrival drain leaves a self-queued resume with no turn
+    body, even though the startup gate saw an occupied slot. Drive the
+    real adapter -> runner dispatch, forbid that fragile handoff, and
+    require exactly one agent run with no leaked pending event.
     """
     runner, adapter = make_restart_runner()
     source = make_restart_source(chat_id="full-path-chat")
@@ -1189,6 +1171,9 @@ async def test_auto_resume_runs_agent_exactly_once_through_full_path():
         return "RESUMED OK"
 
     runner._handle_message_with_agent = _fake_run
+    runner._queue_or_replace_pending_event = MagicMock(
+        side_effect=AssertionError("boot resume must not self-queue behind its reserved slot")
+    )
 
     # Route the adapter's real background pipeline at the real handler,
     # and stub the leaf send/typing calls so delivery is a no-op.
@@ -1214,9 +1199,59 @@ async def test_auto_resume_runs_agent_exactly_once_through_full_path():
     # Exactly one agent run for the resumed session — not zero (the
     # pre-claim did not swallow the resume) and not two (no duplicate).
     assert agent_runs == [session_key]
+    runner._queue_or_replace_pending_event.assert_not_called()
     # No leaked sentinel and no orphaned queued event.
     assert session_key not in runner._running_agents
     assert session_key not in getattr(adapter, "_pending_messages", {})
+
+
+@pytest.mark.asyncio
+async def test_boot_resume_enters_turn_when_adapter_drain_does_not_replay():
+    """A reserved boot turn must start even if no adapter drain replays it.
+
+    Fault-inject a one-shot adapter dispatch with no follow-up task:
+    pre-claim self-queueing leaves resume_pending stuck with no agent turn.
+    """
+    runner, adapter = make_restart_runner()
+    source = make_restart_source(chat_id="no-drain-chat")
+    key = runner._session_key_for_source(source)
+    runner.session_store._entries = {key: SessionEntry(
+        session_key=key, session_id="sid", created_at=datetime.now(), updated_at=datetime.now(),
+        origin=source, platform=Platform.TELEGRAM, chat_type="dm", resume_pending=True,
+        resume_reason="restart_interrupted", last_resume_marked_at=datetime.now(),
+    )}
+
+    from gateway.run import GatewayRunner
+
+    runner._handle_message = GatewayRunner._handle_message.__get__(runner, GatewayRunner)
+    runner._release_running_agent_state = GatewayRunner._release_running_agent_state.__get__(
+        runner, GatewayRunner
+    )
+    runner._check_slash_access = lambda *args, **kwargs: None
+    runner._begin_session_run_generation = lambda _key: 1
+    runner._is_session_run_current = lambda _key, _generation: True
+    runner._invalidate_session_run_generation = lambda *args, **kwargs: 0
+    runner._claim_active_session_slot = lambda _key, _source: (None, None)
+    runner._post_turn_goal_continuation = AsyncMock()
+    runner.session_store.get_or_create_session.return_value = None
+
+    runs = []
+
+    async def run_agent(_event, _source, quick_key, _generation):
+        runs.append(quick_key)
+        return "RESUMED OK"
+
+    async def dispatch_once(event):
+        await runner._handle_message(event)
+
+    runner._handle_message_with_agent = run_agent
+    adapter.handle_message = dispatch_once  # fault injection: no queued follow-up drain
+    runner._startup_restore_in_progress = True
+
+    assert runner._schedule_resume_pending_sessions() == 1
+    await asyncio.wait_for(asyncio.gather(*runner._startup_restore_tasks), timeout=5)
+    assert runs == [key]
+    assert key not in runner._running_agents
 
 
 # ---------------------------------------------------------------------------

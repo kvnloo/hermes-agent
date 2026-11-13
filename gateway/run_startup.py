@@ -684,6 +684,9 @@ class GatewayStartupMixin:
             self._persist_active_agents()
             # Empty-text internal event: the _is_resume_pending branch prepends the reason-aware note.
             event = MessageEvent(text="", message_type=MessageType.TEXT, source=source, internal=True)
+            # Only this event may consume the reservation; unrelated inbound stays busy/queued.
+            event._gateway_boot_resume_preclaim = True
+            _resume_state.turn.event = event
             task = self._retain_background_task(
                 asyncio.create_task(self._run_startup_resume_event(adapter, event, entry.session_key))
             )
