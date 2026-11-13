@@ -113,3 +113,32 @@ def test_zsh_with_zdotdir_wires_the_files_zsh_reads(tmp_path):
     assert MARKER in (zdotdir / ".zshrc").read_text(encoding="utf-8")
     assert MARKER in (zdotdir / ".zprofile").read_text(encoding="utf-8")
     assert not (home / ".zshrc").exists()
+
+
+def test_zsh_reload_hint_sources_zdotdir_with_spaces(tmp_path):
+    home = _home(tmp_path)
+    zdotdir = home / ".config" / "zsh profile"
+    _wire(home, shell="/bin/zsh", ZDOTDIR=str(zdotdir))
+
+    env = {k: v for k, v in os.environ.items() if k not in ("CI", "GITHUB_ACTIONS", "ZDOTDIR")}
+    env.update(HOME=str(home), HERMES_HOME=str(home / "hermes"), SHELL="/bin/zsh",
+               ZDOTDIR=str(zdotdir), PATH="/usr/local/bin:/usr/bin:/bin",
+               NO_COLOR="1", TERM="dumb", CI="true")
+    result = subprocess.run(
+        [shutil.which("bash"), "-c",
+         f"source {shlex.quote(INSTALL_SH.as_posix())} --manifest\nprint_path_reload_hint"],
+        env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "or run: " in result.stdout
+    hint = result.stdout.rsplit("or run: ", 1)[-1].strip()
+    assert hint.startswith("source ")
+
+    sourced = subprocess.run(
+        [shutil.which("bash"), "-ec", f'{hint}\nprintf %s "$PATH"'],
+        env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=30,
+        check=False,
+    )
+    assert sourced.returncode == 0, sourced.stderr
+    assert str(home / ".local" / "bin") in sourced.stdout.split(":")

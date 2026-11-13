@@ -1198,7 +1198,7 @@ print_path_reload_hint() {
     local rc
     local login_shell="${SHELL:-}"
     case "${login_shell##*/}" in
-        zsh) rc="source ${ZDOTDIR:-~}/.zshrc" ;;
+        zsh) printf -v rc 'source %q' "${ZDOTDIR:-$HOME}/.zshrc" ;;
         fish) rc="source ~/.config/fish/config.fish" ;;
         bash|"") rc="source ~/.bashrc" ;;
         *) rc=". ~/.profile" ;;
