@@ -8,6 +8,7 @@ skip and the warning it removes are described in
 import logging
 
 import hermes_yaml as yaml
+import pytest
 
 from hermes_cli.plugins import PluginManager
 
@@ -87,3 +88,26 @@ class TestDesktopOnlyPluginLoading:
         assert (plugin_dir / "imported").exists()
         entry = mgr._plugins["hermes-media"]
         assert entry.enabled and entry.error is None
+
+    @pytest.mark.parametrize("declaration", ["provides_tools", "provides_hooks"])
+    def test_desktop_bundle_does_not_mask_missing_python_registrations(
+        self, tmp_path, monkeypatch, caplog, declaration,
+    ):
+        """Desktop JS cannot satisfy a manifest's promised agent-side registrations."""
+        hermes_home, plugin_dir = self._plugin(tmp_path, "broken-agent-half", files={
+            "desktop/plugin.js": "export default { render() {} }\\n",
+        })
+        (plugin_dir / "plugin.yaml").write_text(
+            yaml.safe_dump({"name": "broken-agent-half", declaration: ["missing_registration"]}),
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+
+        mgr = PluginManager()
+        with caplog.at_level(logging.WARNING, logger="hermes_cli.plugins"):
+            mgr.discover_and_load()
+
+        entry = mgr._plugins["broken-agent-half"]
+        assert not entry.enabled
+        assert entry.error is not None and "No __init__.py" in entry.error
+        assert "Failed to load plugin 'broken-agent-half'" in caplog.text

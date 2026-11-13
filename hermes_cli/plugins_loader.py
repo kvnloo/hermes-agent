@@ -575,7 +575,7 @@ class PluginLoaderMixin:
         log on the web server side, not as this ``No __init__.py`` warning (#132762's shape, where the
         warning was never the signal for the unmounted routes).
         """
-        if not manifest.path:
+        if not manifest.path or manifest.provides_tools or manifest.provides_hooks:
             return False
         plugin_dir = Path(manifest.path)
         if (plugin_dir / "__init__.py").is_file():
