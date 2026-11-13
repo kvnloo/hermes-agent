@@ -1,7 +1,7 @@
 import { type ChildProcess, execFileSync, spawn } from 'node:child_process'
 
 import type { GatewayEndpoint } from './local-gateway'
-import { configurePythonGatewayTicketClient, createLocalGatewayDials, createStaleGatewayRestarter, ensureLocalGateway, gatewayOwnerProfile, localGatewayDial, nativeGatewayHttpHeaders, redialLocalGateway, runGatewayEnsure, runGatewayOwnerRestart } from './local-gateway'
+import { configurePythonGatewayTicketClient, createLocalGatewayDials, createStaleGatewayRestarter, ensureLocalGateway, gatewayOwnerProfile, localGatewayDial, nativeGatewayHttpHeaders, redialLocalGateway, revalidateSuspectLocalGateways, runGatewayEnsure, runGatewayOwnerRestart } from './local-gateway'
 import { closeGatewayTicketBridges, createGatewayTicketResolver } from './local-gateway-python'
 import { createPluginWsUrlHandler } from './plugin-ws-url'
 const localGatewayDials = createLocalGatewayDials()
@@ -76,7 +76,7 @@ import { createBackendConnectionState } from './backend-connection-state'
 import { assertDescriptorStillOwned, forgetFailedDescriptor } from './backend-descriptor-cache'
 import { BackendDialClaims } from './backend-dial-claim'
 import { buildDesktopBackendEnv, profileBackendParentEnv } from './backend-env'
-import { isReauthRequiredError, waitForHermesReady } from './backend-health'
+import { DEFAULT_HEALTH_PROBE_TIMEOUT_MS, isReauthRequiredError, waitForHermesReady } from './backend-health'
 import {
   backendCommandMatches,
   createBackendOwnership,
@@ -6221,7 +6221,10 @@ function registerPowerResumeListeners() {
     attachPowerResumeRemoteRevalidation({
       log: rememberLog,
       powerMonitor,
-      revalidate: () => revalidateSuspectPoolAfterResume()
+      revalidate: async () => {
+        const [, local] = await Promise.all([revalidateSuspectPoolAfterResume(), revalidateSuspectLocalPoolAfterResume()])
+        if (local.restarted.length) { sendPowerResume() }
+      }
     })
   } catch {
     // powerMonitor is unavailable before app 'ready' on some platforms; the
@@ -11271,8 +11274,7 @@ const GATEWAY_RESTART_CLIENT_TIMEOUT_MS = 120_000
 
 // Supervised restart of the per-host gateway Desktop attaches to (it never owns that process): the
 // `gateway ensure` resolver, spawn helper and quoting, against the profile owning the process, with
-// `--detach` (runGatewayOwnerRestart). A non-zero exit is logged, not thrown: the re-ensure reports
-// what answers.
+ // `--detach` (runGatewayOwnerRestart). Refuse a nonzero restart result before re-dialling.
 async function restartLocalGatewayOwner(ownerProfile: string): Promise<void> {
   const result = await runGatewayOwnerRestart(async args => {
     const backend = await ensureRuntime(await resolveHermesBackend(args), () => undefined)
@@ -11288,6 +11290,7 @@ async function restartLocalGatewayOwner(ownerProfile: string): Promise<void> {
 
   const reason = `${result.stdout}\n${result.stderr}`.trim().split(/\r?\n/).filter(Boolean).pop()
   rememberLog(`[gateway] hermes --profile ${ownerProfile} gateway restart exited ${result.code}${reason ? `: ${reason}` : ''}`)
+  if (result.code !== 0) { throw new Error('Gateway owner restart failed (exit ' + result.code + ')') }
 }
 
 // A ready gateway whose boot commit differs from this Hermes (it outlived `hermes update`) is
@@ -13887,8 +13890,8 @@ ipcMain.on('hermes:connection:active-route', (event, route) => recordWindowConne
 // re-dials the same dead descriptor forever and the composer stays stuck on
 // "Starting Hermes…". Before the renderer's backoff loop reconnects, it asks us
 // to confirm the cached PRIMARY backend is still reachable; if a remote one is
-// not, we drop the cache so the next getConnection() rebuilds it. Local backends
-// self-heal via their child 'exit' handler, so we never touch them here.
+// not, we drop the cache so the next getConnection() rebuilds it. Local owner
+// recovery is instead handled by the coalesced power-resume health sweep.
 ipcMain.handle('hermes:connection:revalidate', async () => {
   const connectionPromise = backendConnectionState.getPromise()
 
@@ -13984,6 +13987,37 @@ function revalidateSuspectPoolAfterResume() {
       tracker: remoteLiveness
     })
   )
+}
+
+// Canonical local descriptors can outlive a Windows sleep after their owner stops answering.
+const suspectLocalSweepScope = {}
+function revalidateSuspectLocalPoolAfterResume() {
+  const entries = [...backendPool.entries()].map(([key, entry]) => ({
+    connectionPromise: entry.connectionPromise,
+    isCurrent: () => backendPool.get(key) === entry,
+    redial: async () => { await stopPoolBackend(key); await redialPoolBackendAfterResume(key) }
+  }))
+  const primary = backendConnectionState.getPromise()
+  if (primary) {
+    entries.push({
+      connectionPromise: primary,
+      isCurrent: () => backendConnectionState.getPromise() === primary && !softRehomeInProgress,
+      redial: async () => {
+        const profile = primaryProfileKey()
+        resetHermesConnectionState({ soft: true })
+        await ensureBackend(profile)
+      }
+    })
+  }
+  return remoteRevalidation.run(suspectLocalSweepScope, () => revalidateSuspectLocalGateways({
+    entries,
+    log: rememberLog,
+    probe: connection => fetchPublicJson(
+      connection.baseUrl!.replace(/\/+$/, '') + '/api/health',
+      { timeoutMs: DEFAULT_HEALTH_PROBE_TIMEOUT_MS }
+    ),
+    restartOwner: restartLocalGatewayOwner
+  }))
 }
 
 ipcMain.handle('hermes:gateway:ws-url', async (_event, profile) => {

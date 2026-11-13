@@ -2,7 +2,7 @@ import path from 'node:path'
 
 import { expect, test, vi } from 'vitest'
 
-import { createLocalGatewayDials, ensureLocalGateway, nativeGrantRoute, routedGatewayEndpoint, runGatewayEnsure } from './local-gateway'
+import { createLocalGatewayDials, ensureLocalGateway, nativeGrantRoute, revalidateSuspectLocalGateways, routedGatewayEndpoint, runGatewayEnsure } from './local-gateway'
 import { shortSocketTmpDir } from './local-gateway.test-helpers'
 
 test('the ensure client inherits the caller-scrubbed parent env, not the raw Desktop env', async () => {
@@ -658,4 +658,52 @@ test('an update-paused ensure refusal points to the restart that completes its t
   await expect(ensureLocalGateway(async () => ({
     code: 6, stdout: JSON.stringify({ state: 'draining', reason_code: 'update_paused', endpoint: null })
   }))).rejects.toThrow('Gateway draining (update_paused). Use hermes gateway restart for recovery.')
+})
+
+
+test('wake restarts a refused shared gateway owner once before redial and skips remote descriptors (#154815)', async () => {
+  const gatewayEndpoint = {
+    profile_id: '/home/user/.hermes', control_home: '/home/user/.hermes',
+    instance_id: 'before-wake', authority_epoch: 1, runtime_protocol: 1,
+    api_origin: 'http://127.0.0.1:53101', capabilities: ['session-authority-v1'], supervisor: 'service'
+  }
+  const stale = { mode: 'local', baseUrl: gatewayEndpoint.api_origin, gatewayEndpoint }
+  const healthy = { mode: 'local', baseUrl: gatewayEndpoint.api_origin, gatewayEndpoint }
+  const remote = { mode: 'remote', baseUrl: 'https://gateway.example.com' }
+  const actions: string[] = []
+  const probe = vi.fn(async (connection: typeof stale | typeof remote) => {
+    if (connection === stale) { throw Object.assign(new Error('connection refused'), { code: 'ECONNREFUSED' }) }
+  })
+  const restartOwner = vi.fn(async (owner: string) => { actions.push('restart:' + owner) })
+  const entries = [
+    { connectionPromise: Promise.resolve(stale), isCurrent: () => true, redial: async () => { actions.push('redial:stale') } },
+    { connectionPromise: Promise.resolve(healthy), isCurrent: () => true, redial: async () => { actions.push('redial:healthy') } },
+    { connectionPromise: Promise.resolve(remote), isCurrent: () => true, redial: async () => { actions.push('redial:remote') } }
+  ]
+  const result = await revalidateSuspectLocalGateways<typeof stale | typeof remote>({ entries, probe, restartOwner, log: vi.fn() })
+  expect(result.restarted).toEqual(['default'])
+  expect(restartOwner).toHaveBeenCalledOnce()
+  expect(probe).toHaveBeenCalledTimes(2)
+  expect(actions).toEqual(['restart:default', 'redial:stale', 'redial:healthy'])
+})
+
+test('wake spares intentionally retired and temporarily slow local gateways (#154815)', async () => {
+  const gatewayEndpoint = {
+    profile_id: '/home/user/.hermes', instance_id: 'still-live', authority_epoch: 1,
+    runtime_protocol: 1, api_origin: 'http://127.0.0.1:53101',
+    capabilities: ['session-authority-v1'], supervisor: 'service'
+  }
+  const connectionPromise = Promise.resolve({ mode: 'local', baseUrl: gatewayEndpoint.api_origin, gatewayEndpoint })
+  const restartOwner = vi.fn(async () => undefined)
+  const redial = vi.fn(async () => undefined)
+  const probe = vi.fn(async () => { throw new Error('Timed out after the default health budget') })
+  await revalidateSuspectLocalGateways({
+    entries: [
+      { connectionPromise, isCurrent: () => false, redial },
+      { connectionPromise, isCurrent: () => true, redial }
+    ], probe, restartOwner, log: vi.fn()
+  })
+  expect(probe).toHaveBeenCalledOnce()
+  expect(restartOwner).not.toHaveBeenCalled()
+  expect(redial).not.toHaveBeenCalled()
 })

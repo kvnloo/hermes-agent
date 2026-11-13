@@ -89,6 +89,55 @@ export function gatewayOwnerProfile(endpoint: GatewayEndpoint): string {
   return path.basename(path.dirname(home)) === 'profiles' ? path.basename(home) : 'default'
 }
 
+/** After wake, probe current local descriptors and restart a failed gateway owner only once. */
+export async function revalidateSuspectLocalGateways<T extends { mode?: string; baseUrl?: string; gatewayEndpoint?: GatewayEndpoint | null }>({
+  entries, probe, restartOwner, log
+}: {
+  entries: Iterable<{ connectionPromise: Promise<T> | null; isCurrent: () => boolean; redial: () => Promise<unknown> }>
+  probe: (connection: T) => Promise<unknown>
+  restartOwner: (owner: string) => Promise<void>
+  log: (message: string) => void
+}): Promise<{ restarted: string[] }> {
+  const groups = new Map<string, Array<{ connection: T; entry: { isCurrent: () => boolean; redial: () => Promise<unknown> } }>>()
+  await Promise.all([...entries].map(async entry => {
+    if (!entry.connectionPromise || !entry.isCurrent()) {return}
+    const connection = await entry.connectionPromise.catch(() => null)
+    if (!entry.isCurrent() || connection?.mode !== 'local' || !connection.gatewayEndpoint || !connection.baseUrl) {return}
+    const owner = gatewayOwnerProfile(connection.gatewayEndpoint)
+    if (!groups.has(owner)) {groups.set(owner, [])}
+    groups.get(owner)!.push({ connection, entry })
+  }))
+
+  const restarted: string[] = []
+  await Promise.all([...groups].map(async ([owner, members]) => {
+    const failed = await Promise.all(members.map(async ({ connection, entry }) => {
+      if (!entry.isCurrent()) {return false}
+      try { await probe(connection); return false }
+      catch (error) {
+        const failure = error as { code?: unknown; cause?: { code?: unknown } } | null
+        // A timeout can be a healthy busy owner (#146843); only a refused socket proves death.
+        if (failure?.code !== 'ECONNREFUSED' && failure?.cause?.code !== 'ECONNREFUSED') {
+          log('[gateway] local owner "' + owner + '" health uncertain after wake (' + String(error) + '); not restarting.')
+          return false
+        }
+        return entry.isCurrent()
+      }
+    }))
+    if (!failed.some(Boolean) || !members.some(({ entry }, i) => failed[i] && entry.isCurrent())) {return}
+    try { await restartOwner(owner) }
+    catch (error) {
+      log('[gateway] local owner "' + owner + '" restart failed (' + String(error) + ').')
+      return
+    }
+    restarted.push(owner)
+    await Promise.all(members.filter(({ entry }) => entry.isCurrent()).map(async ({ entry }) => {
+      try { await entry.redial() }
+      catch (error) { log('[gateway] post-resume redial failed (' + String(error) + ').') }
+    }))
+  }))
+  return { restarted }
+}
+
 /** `hermes --profile P gateway restart --detach`: without a service, the CLI would otherwise run the
  *  replacement as this bounded client, a child its timeout kills. A runtime older than `--detach`
  *  names the flag argparse rejects (exit 2); it gets its old restart, which still works wherever a
