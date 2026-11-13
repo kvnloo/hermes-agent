@@ -581,8 +581,9 @@ def skipped_projects_notice(limit: int = 3) -> Optional[str]:
     more = f" and {len(skipped) - limit} more" if len(skipped) > limit else ""
     noun = "working directory" if len(skipped) == 1 else "working directories"
     return (
-        f"Checkpoints are disabled for {len(skipped)} {noun}: {shown}{more}. No rollback "
-        f"point is kept there — `hermes checkpoints` lists the same rows."
+        f"Checkpoints are disabled for {len(skipped)} {noun}: {shown}{more}. "
+        "No new rollback point is recorded for skipped attempts; earlier "
+        "snapshots, if any, remain available via `hermes checkpoints`."
     )
 
 
