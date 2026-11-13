@@ -2,6 +2,8 @@
 
 from unittest.mock import patch
 
+import pytest
+
 
 def test_proxy_env_vars_forwarded_from_parent():
     """Parent proxy keys (both cases) and CA-bundle keys must reach stdio MCP children."""
@@ -51,3 +53,20 @@ def test_user_env_proxy_overrides_parent():
     assert "no_proxy" not in result
     assert "NO_PROXY" not in result
     assert "HTTP_PROXY" not in result
+
+
+@pytest.mark.platforms("posix")
+def test_explicit_uppercase_proxy_precedes_inherited_lowercase():
+    """The configured proxy wins even when urllib prefers lowercase inherited vars."""
+    from urllib.request import getproxies_environment
+
+    from tools.mcp_tool_config import _build_safe_env
+
+    with patch.dict("os.environ", {
+        "PATH": "/usr/bin",
+        "https_proxy": "http://parent.invalid:3128",
+    }, clear=True):
+        child_env = _build_safe_env({"HTTPS_PROXY": "http://configured.invalid:8443"})
+
+    with patch.dict("os.environ", child_env, clear=True):
+        assert getproxies_environment()["https"] == "http://configured.invalid:8443"

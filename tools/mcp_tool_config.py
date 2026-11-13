@@ -250,6 +250,12 @@ def _build_safe_env(user_env: Optional[dict]) -> dict:
         # (PATH, HOME, TERM, ...) at spawn anyway, so popping here would not unset it.
         for key, value in user_env.items():
             if not getattr(value, "unset_ref", False):
+                # Different clients prioritize proxy env casing differently; a server's
+                # explicit setting must not compete with the parent's opposite spelling.
+                if key in _SAFE_ENV_KEYS and key.lower() in {"http_proxy", "https_proxy", "no_proxy", "all_proxy"}:
+                    twin = key.lower() if key == key.upper() else key.upper()
+                    if twin not in user_env or getattr(user_env[twin], "unset_ref", False):
+                        env.pop(twin, None)
                 env[key] = value
     from agent.delegation_context import delegated_child_subprocess_env
     return delegated_child_subprocess_env(env)
