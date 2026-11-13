@@ -57,7 +57,11 @@ def _dispatch(db, conn, session_id, payload, *, execution_id, worker_pid, worker
     # an owner-reserved source envelope, not worker-selected transport identities.
     # A ``source_label`` row (``--source heartbeat``) keeps its creating surface in created_source.
     compute = ('cli', 'tui', 'gui', 'tool', 'oneshot')
-    if session is None or (session['source'] not in compute and session['created_source'] not in compute):
+    # A local session handed to a messaging lane keeps its creating surface; it is no longer compute.
+    from gateway.session_source_label import source_label_problem
+    labelled_compute = (session is not None and session['created_source'] in compute
+                        and source_label_problem(session['source']) is None)
+    if session is None or (session['source'] not in compute and not labelled_compute):
         raise RuntimeStoreError('unsupported_producer')
     if (payload['parent_session_id'] != session_id
             or payload['session_key'] != (session['session_key'] or '')

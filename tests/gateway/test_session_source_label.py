@@ -86,7 +86,8 @@ def test_a_labelled_oneshot_row_may_still_register_compute_delegations(tmp_path)
     try:
         db._execute_write(lambda conn: conn.execute(
             "INSERT INTO sessions(id,source,created_source,session_key,started_at) "
-            "VALUES ('wake','heartbeat','oneshot','route',0),('bot','telegram','telegram','route',0)"))
+            "VALUES ('wake','heartbeat','oneshot','route',0),('bot','telegram','telegram','route',0),"
+            "('handoff','telegram','oneshot','route',0),('schedule','cron','oneshot','route',0)"))
         payload = {'delegation_id': 'd', 'task': {}, 'dispatched_at': 0, 'parent_session_id': 'other',
                    'session_key': 'route', 'origin_ui_session_id': '', 'origin_session_id': ''}
 
@@ -98,5 +99,8 @@ def test_a_labelled_oneshot_row_may_still_register_compute_delegations(tmp_path)
             return db._execute_write(write)
         assert refusal('wake') == 'permission_denied'
         assert refusal('bot') == 'unsupported_producer'
+        # Handoff changes the current source, not the creator's provenance.
+        assert refusal('handoff') == 'unsupported_producer'
+        assert refusal('schedule') == 'unsupported_producer'
     finally:
         db.close()
