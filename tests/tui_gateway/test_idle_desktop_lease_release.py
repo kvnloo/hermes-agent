@@ -69,3 +69,36 @@ def test_idle_desktop_record_releases_its_lease_on_the_reaper_tick(resident):
         if other_surface is not None:
             other_surface.release()
     assert _held() == ["stored-busy"]
+
+
+def test_idle_desktop_with_active_loop_keeps_lease_until_loop_stops(resident):
+    """A Desktop-owned /loop must not lose its next tick to a newly admitted Telegram turn."""
+    from hermes_cli.loops import LoopManager
+
+    record = resident("loop-tab", _desktop_record("stored-loop"))
+    loop = LoopManager(session_id=record["session_key"])
+    loop.set("check the board", interval_seconds=1800)
+    try:
+        assert server._session_owns_live_wakeup_schedule(record)
+        server._reap_idle_sessions()
+        telegram, refusal = try_acquire_active_session(
+            session_id="stored-loop", surface="telegram", config={})
+        try:
+            assert telegram is None and refusal is not None
+            assert _held() == ["stored-loop"]
+        finally:
+            if telegram is not None:
+                telegram.release()
+    finally:
+        loop.clear()
+
+    server._reap_idle_sessions()
+    telegram, refusal = try_acquire_active_session(
+        session_id="stored-loop", surface="telegram", config={})
+    try:
+        assert telegram is not None and refusal is None
+        assert server._sessions.get("loop-tab") is record
+        assert "active_session_lease" not in record
+    finally:
+        if telegram is not None:
+            telegram.release()

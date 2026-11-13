@@ -340,7 +340,14 @@ def _session_lease_is_idle(sid: str, session: dict, now: float) -> bool:
     ready = session.get("agent_ready")
     if ready is not None and not ready.is_set():
         return False
-    return not (_session_pending_kind(sid) or _session_has_active_delegations(sid, session))
+    # An active local /loop, /heartbeat or process completion still has work owned by this poller.
+    # The normal TTL/LRU reapers protect the same wakeups; the lease reaper must too.
+    return not (
+        _session_pending_kind(sid)
+        or _session_has_active_delegations(sid, session)
+        or _session_owns_live_wakeup_schedule(session)
+        or _session_owns_pending_process_notification(session)
+    )
 
 
 def _release_idle_session_leases(now: float | None = None) -> int:
