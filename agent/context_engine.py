@@ -71,6 +71,8 @@ class ContextEngine(ABC):
     # False keeps successful automatic compaction passes silent (routine background
     # maintenance); warnings, errors and manual /compress still surface.
     emit_automatic_compaction_status: bool = True
+    # Opt in when the engine handles model switches before the next provider request.
+    handles_model_switch: bool = False
 
     @abstractmethod
     def update_from_response(self, usage: dict[str, Any]) -> None:

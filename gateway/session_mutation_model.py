@@ -328,12 +328,14 @@ def _alias_credential(authority, result):
     return None, None, None
 
 
-def _persisted_selection_context(authority, snapshot, current):
+def _persisted_selection_context(authority, snapshot, current, *, handles_model_switch=False):
     from agent.usage_anchor import persisted_anchor_tokens
     from hermes_cli.model_selection_guards import SelectionContext
     target = snapshot.get('target') or snapshot['receipt']['session_id']
     tokens = persisted_anchor_tokens(authority.db, target, authority.db.get_messages_as_conversation(target))
-    return SelectionContext(context_tokens=tokens, current_model=current.model or None) if tokens else None
+    return SelectionContext(
+        context_tokens=tokens, current_model=current.model or None,
+        handles_model_switch=handles_model_switch) if tokens else None
 
 
 async def _selection_guard_refusal(authority, live, payload, snapshot, current, result):
@@ -354,7 +356,9 @@ async def _selection_guard_refusal(authority, live, payload, snapshot, current, 
         # No resident agent (evicted by the previous switch, or an owner restart): the session's
         # persisted usage anchor still measures the context at stake, so the large-context guard
         # does not go quiet on exactly the switch that follows another one.
-        context = await asyncio.to_thread(_persisted_selection_context, authority, snapshot, current)
+        context = await asyncio.to_thread(
+            _persisted_selection_context, authority, snapshot, current,
+            handles_model_switch=bool(getattr(getattr(agent, "context_compressor", None), "handles_model_switch", False)))
     # Off-loop: pricing lookups may hit models.dev on a cache miss.
     warnings = await asyncio.to_thread(
         selection_warnings, result.new_model, provider=result.target_provider,

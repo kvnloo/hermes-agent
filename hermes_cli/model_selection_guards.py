@@ -32,6 +32,7 @@ class SelectionContext:
 
     context_tokens: Optional[int] = None
     current_model: Optional[str] = None
+    handles_model_switch: bool = False
 
 
 def selection_context_for_agent(agent: object) -> Optional[SelectionContext]:
@@ -50,7 +51,9 @@ def selection_context_for_agent(agent: object) -> Optional[SelectionContext]:
         tokens = 0
     if tokens <= 0:
         return None
-    return SelectionContext(context_tokens=tokens, current_model=getattr(agent, "model", "") or None)
+    return SelectionContext(
+        context_tokens=tokens, current_model=getattr(agent, "model", "") or None,
+        handles_model_switch=bool(getattr(cc, "handles_model_switch", False)))
 
 
 def _wrap(kind: str, title: str, warning, model_name: str, provider: Optional[str]):
@@ -106,8 +109,8 @@ def _context_cache_guard(
     model_info: Optional[ModelInfo], ctx: Optional[SelectionContext] = None) -> Optional[SelectionWarning]:
     """Confirm a mid-session switch that abandons a large cached context. Fires only when the surface
     supplied live facts showing the active context at/above the threshold; smaller sessions, sessions
-    with no measured size and same-model re-selects (cache stays warm) are silent."""
-    if ctx is None or not ctx.context_tokens:
+    with no measured size, engine-owned switches and same-model re-selects (cache stays warm) are silent."""
+    if ctx is None or not ctx.context_tokens or ctx.handles_model_switch:
         return None
     target = (model_name or "").strip()
     current = (ctx.current_model or "").strip()

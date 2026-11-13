@@ -250,7 +250,9 @@ def _one_turn_selection_context(cli):
     tokens = persisted_anchor_tokens(db, sid, messages)
     if not tokens:
         return None
-    return SelectionContext(context_tokens=tokens, current_model=getattr(cli, "model", None) or None)
+    return SelectionContext(
+        context_tokens=tokens, current_model=getattr(cli, "model", None) or None,
+        handles_model_switch=bool(getattr(getattr(agent, "context_compressor", None), "handles_model_switch", False)))
 
 
 def _ask_switch_anyway(cli, title: str, detail: str) -> bool:
