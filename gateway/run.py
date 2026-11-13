@@ -4165,6 +4165,14 @@ class GatewayRunner(
             if not name:
                 name = get_active_profile_name() or "default"
             profile_dir = get_profile_dir(name)
+            if explicit_profile and getattr(self.config, "multiplex_profiles", False):
+                served_home = dict(_multiplex_profile_homes(self.config)).get(name)
+                if not profile_exists(name) or served_home is None:
+                    logger.warning(
+                        "Rejecting %s/%s: explicit profile %r is not served",
+                        source.platform.value, source.chat_id, name)
+                    raise ProfileRouteRejected("source", name)
+                return Path(served_home)
             if explicit_profile and not profile_exists(name):
                 logger.warning(
                     "Profile %r does not exist for source %s/%s (guild_id=%s), "
@@ -4175,7 +4183,12 @@ class GatewayRunner(
             return profile_dir
         except ProfileRouteRejected:
             raise
-        except Exception:
+        except Exception as exc:
+            if explicit_profile and getattr(self.config, "multiplex_profiles", False):
+                logger.warning(
+                    "Rejecting %s/%s: cannot resolve explicit profile %r",
+                    source.platform.value, source.chat_id, explicit_profile, exc_info=True)
+                raise ProfileRouteRejected("source", explicit_profile) from exc
             logger.warning(
                 "Failed to resolve profile directory for source %s/%s (guild_id=%s), "
                 "falling back to global HERMES_HOME: %s",
