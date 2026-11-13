@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { type ResolvedOwner, resolveOwnerNow } from '@/hermes'
 import { useI18n } from '@/i18n'
+import { isTouchInteraction } from '@/lib/touch-interaction'
 import { syncSttLease, VOICE_INPUT_LEASE } from '@/lib/stt-lease'
 import { fetchVoiceClientConfigFor } from '@/lib/voice-client-direct'
 import { type DictationStreamSession, openDictationStream } from '@/lib/voice-stream'
@@ -136,7 +137,10 @@ export function useVoiceRecorder({
       if (live()) {
         finish(dictation)
         setVoiceStatus('idle')
-        focusInput()
+        // A completed dictation is not a typing gesture: do not reopen a dismissed touch keyboard.
+        if (!isTouchInteraction()) {
+          focusInput()
+        }
       }
     }
   }

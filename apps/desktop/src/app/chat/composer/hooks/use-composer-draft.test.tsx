@@ -896,4 +896,24 @@ describe('useComposerDraft — touch never re-enters the editor on its own', () 
     act(() => draft.clearDraft())
     expect(draft.editorRef.current?.contains(window.getSelection()?.anchorNode ?? null)).toBe(true)
   })
+
+  it('inserts a touch dictation transcript without reopening the keyboard (#154850)', () => {
+    render(<TouchDraft sessionId="touch-focus" />)
+    const editor = draft.editorRef.current!
+    expect(getActiveComposer()).toBe('main')
+    window.getSelection()?.removeAllRanges()
+
+    act(() => draft.insertText('spoken words'))
+
+    expect(composerPlainText(editor)).toBe('spoken words')
+    expect(document.activeElement).not.toBe(editor)
+    expect(window.getSelection()?.rangeCount).toBe(0)
+
+    // An editor deliberately focused by the user keeps its focus and caret.
+    act(() => draft.focusInput())
+    act(() => draft.insertText('second take'))
+    expect(composerPlainText(editor)).toBe('spoken words\nsecond take')
+    expect(document.activeElement).toBe(editor)
+    expect(editor.contains(window.getSelection()?.anchorNode ?? null)).toBe(true)
+  })
 })

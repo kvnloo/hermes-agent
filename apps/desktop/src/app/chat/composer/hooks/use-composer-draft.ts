@@ -239,7 +239,12 @@ export function useComposerDraft({
 
         if (caretOffset !== null) {
           placeCaretAtOffset(editor, Math.min(caretOffset, composerPlainText(editor).length))
-        } else if (visibleRef.current && getActiveComposer() === target && !isElementInHiddenPane(editor)) {
+        } else if (
+          visibleRef.current &&
+          getActiveComposer() === target &&
+          !isElementInHiddenPane(editor) &&
+          (!isTouchInteraction() || document.activeElement === editor)
+        ) {
           // Selection is document-global: a keep-alive composer in a hidden tab
           // may repaint when its background session updates, but moving its caret
           // here steals the selection from the visible composer without changing
@@ -640,7 +645,8 @@ export function useComposerDraft({
     const base = draftRef.current
     const sep = base && !base.endsWith('\n') ? '\n' : ''
 
-    paintDraft(`${base}${sep}${text}`)
+    // A transcript arriving asynchronously must not bring back the mobile keyboard.
+    paintDraft(`${base}${sep}${text}`, !isTouchInteraction() || document.activeElement === editorRef.current)
   }
 
   // insertInlineRefs mutates the editor in place (chips), so it can't go through

@@ -108,11 +108,12 @@ describe('useVoiceRecorder STT readiness barrier', () => {
 
   function renderRecorder(
     onTranscribeAudio: (audio: Blob, owner?: unknown) => Promise<string>,
-    onTranscript: (text: string) => void = () => undefined
+    onTranscript: (text: string) => void = () => undefined,
+    focusInput: () => void = () => undefined
   ) {
     return renderHook(() =>
       useVoiceRecorder({
-        focusInput: () => undefined,
+        focusInput,
         maxRecordingSeconds: 30,
         onTranscript,
         onTranscribeAudio
@@ -304,5 +305,29 @@ describe('useVoiceRecorder STT readiness barrier', () => {
     await stopping
 
     expect(onTranscript).not.toHaveBeenCalled()
+  })
+
+  it('does not refocus a touch composer after dictation completes (#154850)', async () => {
+    document.documentElement.dataset.hermesDesktopHost = 'browser'
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }))
+
+    const focusInput = vi.fn()
+    const onTranscript = vi.fn()
+    try {
+      const hook = renderRecorder(async () => 'spoken words', onTranscript, focusInput)
+
+      await act(async () => {
+        hook.result.current.dictate() // start
+      })
+      await act(async () => {
+        hook.result.current.dictate() // stop and transcribe
+      })
+
+      await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('spoken words'))
+      expect(focusInput).not.toHaveBeenCalled()
+    } finally {
+      delete document.documentElement.dataset.hermesDesktopHost
+      vi.unstubAllGlobals()
+    }
   })
 })
