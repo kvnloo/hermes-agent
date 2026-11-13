@@ -124,7 +124,12 @@ _PROLOGUE_TEMPLATE = (
 )
 
 
-_SUDO_CHECK = "  SUDO_ASKPASS=/bin/false \\command {word} -A -V </dev/null >/dev/null 2>&1 &&\n"
+# `command` bypasses shell functions and aliases. Only trust the -A probe when it checks
+# the same executable that the command will invoke; otherwise leave the stdin form intact.
+_SUDO_CHECK = (
+    '  \\builtin test "$(\\builtin type -t {word})" = file &&\n'
+    "  SUDO_ASKPASS=/bin/false \\command {word} -A -V </dev/null >/dev/null 2>&1 &&\n"
+)
 
 
 def build_prologue(count: int, timeout_token: str, background: bool = True,

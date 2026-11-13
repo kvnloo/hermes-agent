@@ -236,6 +236,26 @@ def test_sdk_backend_sudo_rejecting_askpass_falls_back_to_stdin_form_in_the_same
     _wait_gone(runner.temp_dir)
 
 
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_sdk_backend_shadowed_sudo_function_uses_stdin_form(make_backend, tmp_path, backend):
+    """The preflight must not mistake an external sudo for the shell function actually called."""
+    env, runner = make_backend(backend)
+    bash_env = tmp_path / "sudo-function.sh"
+    bash_env.write_text(
+        "sudo() {\n"
+        "  if [ \"$1\" = -A ]; then echo 'sudo wrapper refuses -A' >&2; return 42; fi\n"
+        "  command sudo \"$@\"\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    runner.env["BASH_ENV"] = str(bash_env)
+    result = env.execute("sudo id -u && echo authed; cat", stdin_data="rest\n")
+    assert result["returncode"] == 0, result
+    assert result["output"].split() == [str(os.getuid()), "authed", "rest"]
+    assert _probe_commands(runner) == []
+    _wait_gone(runner.temp_dir)
+
+
 def test_local_backend_sudo_rejecting_askpass_falls_back_to_stdin_form(tmp_path, monkeypatch):
     """LocalEnvironment with a probe answer of True: the prologue's own check still falls back."""
     from tools.environments.local import LocalEnvironment
