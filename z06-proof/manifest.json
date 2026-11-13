@@ -1,0 +1,2297 @@
+[
+  {
+    "source": "/workspace/hermes-home/profiles/clean/plugins/skill-routes/__init__.py",
+    "snapshot": "profile/plugins/skill-routes/__init__.py",
+    "sha256": "4da1fd4966bac643335a89e1d58d23b0680029fc0abf744a866c588770f08540"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/plugins/skill-routes/plugin.yaml",
+    "snapshot": "profile/plugins/skill-routes/plugin.yaml",
+    "sha256": "5ce45e5551a160092fa1885831169400429226cd9c75ec6381a15fe63505d3a0"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/plugins/skill-routes/routes.yaml",
+    "snapshot": "profile/plugins/skill-routes/routes.yaml",
+    "sha256": "67984ed3a0fcbf74e8bb24b7af0fe719662e651b5d6d7398c97d931b86fc6077"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/plugins/skill-routes/tool_routes.py",
+    "snapshot": "profile/plugins/skill-routes/tool_routes.py",
+    "sha256": "1e33e0ba1880ca1c8c558ddacdf986e53c020e94a5ecb96b19422894e542b201"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/plugins/skill-routes/tool_routes.yaml",
+    "snapshot": "profile/plugins/skill-routes/tool_routes.yaml",
+    "sha256": "7c4cda2e69fa7dfd2ef4b073d5659a492489f9d2fbcddf43e061053429ae6820"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/plugins/skill-rank/__init__.py",
+    "snapshot": "profile/plugins/skill-rank/__init__.py",
+    "sha256": "14ef32d75b6b0f4bcd186d696357661f7c18e567aaae73b69c4e540a5c2404ea"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/plugins/skill-rank/plugin.yaml",
+    "snapshot": "profile/plugins/skill-rank/plugin.yaml",
+    "sha256": "60776ee2ed4941932dbfdd04d09fec7a8cdb2a78b82b0ddc4e512b10fe3d284d"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/apple/apple-notes/SKILL.md",
+    "snapshot": "profile/skills/apple/apple-notes/SKILL.md",
+    "sha256": "1ba042cb17e3aca06a68415526e926ada464bf873c8592c3326125cd72cb397f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/apple/apple-reminders/SKILL.md",
+    "snapshot": "profile/skills/apple/apple-reminders/SKILL.md",
+    "sha256": "ee5084f2d7ec196488bef2c74248fb3d8328d1b2e3277ddda3f0de9da6fc7131"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/apple/findmy/SKILL.md",
+    "snapshot": "profile/skills/apple/findmy/SKILL.md",
+    "sha256": "e35d4d165daadfd066661df59a202a4159c5df41b77642884d3656830054d6bc"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/apple/imessage/SKILL.md",
+    "snapshot": "profile/skills/apple/imessage/SKILL.md",
+    "sha256": "bc68b1648e301409bc25b1084ec26766213ca9f3c1b2fd3d3d6ebe3dbde9e967"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/computer-use/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/computer-use/SKILL.md",
+    "sha256": "774222d421b75e111d3ac8a77a0bc69c5e1465bfbf2db08734ff78185a6ec6f8"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/codex/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/codex/SKILL.md",
+    "sha256": "36f69341df7da84d3b8c54bb6ca1b9a1da4cc5145f67deedf40c8855e811e764"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/opencode/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/opencode/SKILL.md",
+    "sha256": "885582e6f2d5b88f431c5a0bc3b69b88f5aab701774f91572487a6f4e4679a0b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/hermes-install-maintenance/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/hermes-install-maintenance/SKILL.md",
+    "sha256": "b225771cb587d4119959cd732038f87b8ea601e42f104f78f1f2eecc8c5eaa05"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/claude-code/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/claude-code/SKILL.md",
+    "sha256": "a44e50af32979985e018e861f2d26dc3cbdb1d45778288ea6a0ede87fc7290f9"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/hermes-profile-lifecycle/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/hermes-profile-lifecycle/SKILL.md",
+    "sha256": "0c1ed01e4c6b049926592948312d34e822f1f238b5f15ae37e64dfb246118c3f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/local-agent-acp-bridge/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/local-agent-acp-bridge/SKILL.md",
+    "sha256": "d1a2471e8ed4e89d66d2a9caf3ae28ff4eb7707f9e62ce14470bf9fffaf64391"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/hermes-messaging-gateway-routing/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/hermes-messaging-gateway-routing/SKILL.md",
+    "sha256": "f55ccbeb8d8c71dfd45a704de064bcbf789902eeaf25950d65f90cfdd71f7319"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/parallel-subagent-app-builds/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/parallel-subagent-app-builds/SKILL.md",
+    "sha256": "21dc2630cdae6c3daaffeb81550de8dff32ff8a7eee6b76ed208b49fa01a6de9"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/realtime-voice-assistant-ux/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/realtime-voice-assistant-ux/SKILL.md",
+    "sha256": "311b17717f35550c70f67dbf17f5bde66850de141b544b1861c752d369656d71"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/remote-agent-orchestration/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/remote-agent-orchestration/SKILL.md",
+    "sha256": "566f57ebb1620fd702e7ca9449ad6167210a5b5c17f0530669f2d0d0599ca10b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/hermes-acp-bridge-clients/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/hermes-acp-bridge-clients/SKILL.md",
+    "sha256": "6f6c56978d56aeb9e2d3a74f18c9074825acd91f6b4256484f00664ebb01af75"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/phone-harness-android-fast-tree/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/phone-harness-android-fast-tree/SKILL.md",
+    "sha256": "b83de7170dc749e11c436969cafbc89fa0a687266d0c20e9ca127e1197bd3945"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/phone-goal-vs-exec/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/phone-goal-vs-exec/SKILL.md",
+    "sha256": "44249407c4ff3cd7f8b9807da5d50bbf772f5c58bf4d9e86f595b1edaac444cb"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/hermes-fx-worker-surface/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/hermes-fx-worker-surface/SKILL.md",
+    "sha256": "7ad6b7a335236a7b9fae7d804ab7bc2d2caa2269e2aa072fdda1a98e95b511f2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/unified-memory-operations/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/unified-memory-operations/SKILL.md",
+    "sha256": "08223866576bae47837e49458f3ee7e0698c709d87d831aa091b0a959e0da310"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/linux-compositor-window-capture/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/linux-compositor-window-capture/SKILL.md",
+    "sha256": "8db34979dcb45757a955d4fed4bf4832bdff2f315293a72b1aa84452cc75fb38"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/hermes-contribution-workflows/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/hermes-contribution-workflows/SKILL.md",
+    "sha256": "24a9b57c4da0594bb714e3b66810b04632e9112ebaf4675b5b68ed4b0150d72e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/android-agent-virtual-display/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/android-agent-virtual-display/SKILL.md",
+    "sha256": "14695e8b2f23735b754c07bca07b6361ec1da9e206c2563e488bf8c2fb62551b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/secure-provider-onboarding/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/secure-provider-onboarding/SKILL.md",
+    "sha256": "292cd463c3a9fd9b356ce18f91f4827faa89eb5441640c90b864b262c9397497"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/hermes-agent/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/hermes-agent/SKILL.md",
+    "sha256": "ebc5db786f697c306faeb58eb73a09fcfe5cb58afa92bd565ea308337510f022"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/hermes-dashboard-remote-clients/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/hermes-dashboard-remote-clients/SKILL.md",
+    "sha256": "884134be083dcc345c7feef33a22edc9c8951c0db61fce8a7630ce2b63e887a0"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/phone-focus-safe-apps/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/phone-focus-safe-apps/SKILL.md",
+    "sha256": "44ba3a40d9cacfe9c328bf078eb093638ed445b31503777685205407f96c1a5d"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/oss-factory-kitchen/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/oss-factory-kitchen/SKILL.md",
+    "sha256": "e7abe75fce2621b5ba1afd2d37550bdc2947ff4ea45caf0e8f5f0eb4688d9141"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/detent-launcher-fork/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/detent-launcher-fork/SKILL.md",
+    "sha256": "2798924dcf14bfa4d906afb2eb42c15c3553d8ec055e683f186e9578384d6b6c"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/token-thrifty-agent-routing/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/token-thrifty-agent-routing/SKILL.md",
+    "sha256": "b9a0c09fc54a9f3fdef7abbc4b81d2e8d8b7eb78018089f8b402760e8f15f2f4"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/autonomous-ai-agents/cross-profile-peek/SKILL.md",
+    "snapshot": "profile/skills/autonomous-ai-agents/cross-profile-peek/SKILL.md",
+    "sha256": "787aeb8b3861fc38b133feef065508ae0e13bd75719f73e2977213e2bd89282f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/claude-design/SKILL.md",
+    "snapshot": "profile/skills/creative/claude-design/SKILL.md",
+    "sha256": "1582b0d49e48bdf937b2f555098484e0979cdfa285c6cc9fa329ba8e416d347a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/humanizer/SKILL.md",
+    "snapshot": "profile/skills/creative/humanizer/SKILL.md",
+    "sha256": "887d5e3467a682da9b166e5293007f8bbbc299f8a6718ae00f26161b7d062b04"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/blender-botanical-assets/SKILL.md",
+    "snapshot": "profile/skills/creative/blender-botanical-assets/SKILL.md",
+    "sha256": "89f7756a9493569660c9ea54540d13ec4cebb1cafb8152becd9b4fb00567860e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/creative-plant-scene/SKILL.md",
+    "snapshot": "profile/skills/creative/creative-plant-scene/SKILL.md",
+    "sha256": "3e9067e9fbf76e9ff7ea8f888aa597f4712438300873fa4192173b5d74ff6cac"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/architecture-diagram/SKILL.md",
+    "snapshot": "profile/skills/creative/architecture-diagram/SKILL.md",
+    "sha256": "0e7e2736aafe052e409c2ad27863d51ef3007c116711e584033787ccb5d99d3f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/ascii-video/SKILL.md",
+    "snapshot": "profile/skills/creative/ascii-video/SKILL.md",
+    "sha256": "3bd3f39985a52954e2693866608bd8105f4dc0efbca5b6baa3045c2b641bda26"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/baoyu-infographic/SKILL.md",
+    "snapshot": "profile/skills/creative/baoyu-infographic/SKILL.md",
+    "sha256": "2922677ca6d3c75646cc7bc455ea4f5f6314fc148060ca84d679d624bfdc52ee"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/blender-headless-addon-qualification/SKILL.md",
+    "snapshot": "profile/skills/creative/blender-headless-addon-qualification/SKILL.md",
+    "sha256": "bd231def12f58dcc4e991ad7c948a345464277f39763bb5f2d86641ae11e552f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/design-md/SKILL.md",
+    "snapshot": "profile/skills/creative/design-md/SKILL.md",
+    "sha256": "7ed56bba40ffc9573fa51b33b2424f37fb5f774e9ecb7e76e737797afd0b62ae"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/manim-video/SKILL.md",
+    "snapshot": "profile/skills/creative/manim-video/SKILL.md",
+    "sha256": "467376469fc2043e2674a843509f8eea52660791e76fb2e142074ecd4abc7e69"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/popular-web-designs/SKILL.md",
+    "snapshot": "profile/skills/creative/popular-web-designs/SKILL.md",
+    "sha256": "cd89bdb86008bb30b35d9bdd30e06587f75ee54055c54e1a79afb20418264b3d"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/songwriting-and-ai-music/SKILL.md",
+    "snapshot": "profile/skills/creative/songwriting-and-ai-music/SKILL.md",
+    "sha256": "5dbf92dc336e9b17be45c35c92a5bb307e4655e39a86617f07b7654678f92583"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/blender-locked-scene-continuation/SKILL.md",
+    "snapshot": "profile/skills/creative/blender-locked-scene-continuation/SKILL.md",
+    "sha256": "136b4f618be94647c2cf6f7fd274e0cd18df2d48ded3c204df2329f547354098"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/chatgpt-image-generation/SKILL.md",
+    "snapshot": "profile/skills/creative/chatgpt-image-generation/SKILL.md",
+    "sha256": "2c3618b2272fd45da2d3317953ca14e87ac695770aec4b2cb5b20dc333438c50"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/blender-lookdev-recipes/SKILL.md",
+    "snapshot": "profile/skills/creative/blender-lookdev-recipes/SKILL.md",
+    "sha256": "cf60748f97ae195ef0671374f09c411bd8c2a35912db827345dd3eecaf5ed143"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/making-of-case-study/SKILL.md",
+    "snapshot": "profile/skills/creative/making-of-case-study/SKILL.md",
+    "sha256": "7760c0c1bd205f84ba6d0532e5887162a59e890e20104339930742266d370f40"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/blender-lighting/SKILL.md",
+    "snapshot": "profile/skills/creative/blender-lighting/SKILL.md",
+    "sha256": "fea7319759f0ef31fd9371eed2a45f009139288e2d94c4422420627e6a3f2c70"
+  },
+  {
+    "source": "/workspace/dream-loop/SKILL.md",
+    "snapshot": "profile/skills/creative/dream-loop/SKILL.md",
+    "sha256": "33aa5f5bc74f8c17babd3f3eb50f36d50da6c7b1ed13abbd6f5a774a770db931"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/blender-reference-match-loop/SKILL.md",
+    "snapshot": "profile/skills/creative/blender-reference-match-loop/SKILL.md",
+    "sha256": "b7ce423042a66cdb1012df0338fc46a8abbb3b80c7320bd83251b8dfa027c070"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/blender-volumetric-growth-gates/SKILL.md",
+    "snapshot": "profile/skills/creative/blender-volumetric-growth-gates/SKILL.md",
+    "sha256": "73c12ea7a23e168dd5cf4f08e9cc4ff80b83dc3d0178899bae57693450b72053"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/local-image-review-gallery/SKILL.md",
+    "snapshot": "profile/skills/creative/local-image-review-gallery/SKILL.md",
+    "sha256": "8433def76fef6421d1be4d0b18e10bbca094dd9d82fba6ccbc645546cd950397"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/threejs-procedural-asset-builds/SKILL.md",
+    "snapshot": "profile/skills/creative/threejs-procedural-asset-builds/SKILL.md",
+    "sha256": "0da11c846c7e69ab389bf0f320bac4bbe52f0b5904eebb47f102f2eb5937b146"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/multi-scene-reference-match-orchestration/SKILL.md",
+    "snapshot": "profile/skills/creative/multi-scene-reference-match-orchestration/SKILL.md",
+    "sha256": "77773b1585306181395d24e499cef35938c8ce5d42eafd3bdeadec7b6015bb3b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/browser-3d-asset-pipelines/SKILL.md",
+    "snapshot": "profile/skills/creative/browser-3d-asset-pipelines/SKILL.md",
+    "sha256": "66be91defe8aaef5d6a73cf72b23761171b9442a9f55a01d8cc53fa8060f8d8b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/comfyui/SKILL.md",
+    "snapshot": "profile/skills/creative/comfyui/SKILL.md",
+    "sha256": "48bd97339c186c6ae1b298d296f9b1a4e6f07aa61ef31019bd7eb1628a3fe003"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/ripple-visual-review/SKILL.md",
+    "snapshot": "profile/skills/creative/ripple-visual-review/SKILL.md",
+    "sha256": "d5b1cb79f25d265b4f17ba6802b887f509d9a0a3a12eff94a93523f092b9393e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/dash-stage-html-prototypes/SKILL.md",
+    "snapshot": "profile/skills/creative/dash-stage-html-prototypes/SKILL.md",
+    "sha256": "4acaef8140ef40e886c74a9eb1c70d9a4d98fbf50a45551333d37b9724b2e600"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/hapsland-bend-fsm-layers/SKILL.md",
+    "snapshot": "profile/skills/creative/hapsland-bend-fsm-layers/SKILL.md",
+    "sha256": "ed471aac7c63d4afd9fed27cdbd6c331ed79adf48cdaa96487d71f2bddf115e2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/showcase-site-feature-work/SKILL.md",
+    "snapshot": "profile/skills/creative/showcase-site-feature-work/SKILL.md",
+    "sha256": "8714fe3aab6dfa293835d93fa5b380bd343afb13db15bfec4140c832ccf655ee"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/app-card-design-resources/SKILL.md",
+    "snapshot": "profile/skills/creative/app-card-design-resources/SKILL.md",
+    "sha256": "485d164a50cc2a898204b988f7362c99547daf84ee9cee1dd9ccd99d3a8625f2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/ephemeral-ui-kit/SKILL.md",
+    "snapshot": "profile/skills/creative/ephemeral-ui-kit/SKILL.md",
+    "sha256": "c8583d5a95c47a557bb54a11ea3ef82518a53c9e70cb3f0da23b9bc57e674ae8"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/z0-public-artifact-sites/SKILL.md",
+    "snapshot": "profile/skills/creative/z0-public-artifact-sites/SKILL.md",
+    "sha256": "a9bd34ddd7d3f5e73a56a5ba525eee40880fae4679c972e98fb8a107d59cf32d"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/quackles-project/SKILL.md",
+    "snapshot": "profile/skills/creative/quackles-project/SKILL.md",
+    "sha256": "c324ab86976d18bc3e5bf31159544429f281b4e56ce22494ae234abab6cd06ef"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/launch-videos-library/SKILL.md",
+    "snapshot": "profile/skills/creative/launch-videos-library/SKILL.md",
+    "sha256": "74eea25b49027126b62ba38880d95c49edf6f70c03db65b8f36d28949e99c52a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/p5js/SKILL.md",
+    "snapshot": "profile/skills/creative/p5js/SKILL.md",
+    "sha256": "3b39b75303e082af69b3f4e2deab7a55b27d60293eff6a561fb627188194a33e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/creative/procedural-blender-reference-reconstruction/SKILL.md",
+    "snapshot": "profile/skills/creative/procedural-blender-reference-reconstruction/SKILL.md",
+    "sha256": "ec2388fee2d9d86ff6d44e0f1c7d457efc0408795c625ef111c9ff53fac2eac3"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/email/email-inbox-triage/SKILL.md",
+    "snapshot": "profile/skills/email/email-inbox-triage/SKILL.md",
+    "sha256": "deeade1bb70f8835b2f3158980030b8aa41bb1ea6f798631451c89cfd632bcc8"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/email/himalaya/SKILL.md",
+    "snapshot": "profile/skills/email/himalaya/SKILL.md",
+    "sha256": "0f6c9bb4c0a5c4f4627e139b6beb2b1ba0addd7145895196528b8125929e3837"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/media/gif-search/SKILL.md",
+    "snapshot": "profile/skills/media/gif-search/SKILL.md",
+    "sha256": "a8349043740a8805d4ebfeb3a21f67ec0e9a9733a84f96403ca142c88a312b5d"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/media/platform-delivery-evidence/SKILL.md",
+    "snapshot": "profile/skills/media/platform-delivery-evidence/SKILL.md",
+    "sha256": "4353eece5845debcdf002885b3c6060ac0999d1e80b5640c36d38650d5f640e0"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/media/youtube-content/SKILL.md",
+    "snapshot": "profile/skills/media/youtube-content/SKILL.md",
+    "sha256": "b556a0d2a220b46b80eb011619f0c951404f4d6e2edcc8b4847faec512b55132"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/media/social-demo-video-planning/SKILL.md",
+    "snapshot": "profile/skills/media/social-demo-video-planning/SKILL.md",
+    "sha256": "f5f12787e67e99895e0d6dc9b12ade72ba8d41b4b475b8bd7ee4de8319900ea1"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/media/songsee/SKILL.md",
+    "snapshot": "profile/skills/media/songsee/SKILL.md",
+    "sha256": "d9d8d1394c630bd83329cd54cd8f18e0e3cd140debe31c3ccf5d9667f054de07"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/note-taking/obsidian/SKILL.md",
+    "snapshot": "profile/skills/note-taking/obsidian/SKILL.md",
+    "sha256": "7aea4e8f89f94ab2876d79898d10a5d4cdab31390c53f72ad6934b071179f826"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/maps/SKILL.md",
+    "snapshot": "profile/skills/productivity/maps/SKILL.md",
+    "sha256": "775ef9f79be9cd147bc81e0c4a4ef952230a04736a6082f44dbac78554ef89ab"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/source-faithful-publication/SKILL.md",
+    "snapshot": "profile/skills/productivity/source-faithful-publication/SKILL.md",
+    "sha256": "cc87f9465d4ca0d541ff69b6f51980a6653cbf91666cfd343f1f1cc2d3d02ab9"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/job-application-materials/SKILL.md",
+    "snapshot": "profile/skills/productivity/job-application-materials/SKILL.md",
+    "sha256": "9cd999eb101ca2ab26e1fa12de52a7b5979ad699f3605e95be3bbedabd039e10"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/airtable/SKILL.md",
+    "snapshot": "profile/skills/productivity/airtable/SKILL.md",
+    "sha256": "28253f1e20c4d250725eb7f475c886952a4c6a1ef43ef6900c2dc0e75ebb40e6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/box/SKILL.md",
+    "snapshot": "profile/skills/productivity/box/SKILL.md",
+    "sha256": "e9672412333de4feff348e6dc387d9022d32005247360347a10a7131fb87eb13"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/document-to-action-items/SKILL.md",
+    "snapshot": "profile/skills/productivity/document-to-action-items/SKILL.md",
+    "sha256": "8a7556754aca2a7d04d38847131fb4db8d6705fa2106fcb154279e26117b41ee"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/docx/SKILL.md",
+    "snapshot": "profile/skills/productivity/docx/SKILL.md",
+    "sha256": "9678b14d5e7841d588b969f6a4696cd46bcc46c3e4ac1479edc7656a051aa5ff"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/google-workspace/SKILL.md",
+    "snapshot": "profile/skills/productivity/google-workspace/SKILL.md",
+    "sha256": "4ab062fe5131d123a6c4f1297e58c7f75b8d517fd282b68547da7ebfabb2a0b9"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/meeting-action-items/SKILL.md",
+    "snapshot": "profile/skills/productivity/meeting-action-items/SKILL.md",
+    "sha256": "1902f782551da96ee1f9b34d6f13af627f06150a498d874b0cc2a75d06d35aa8"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/notion/SKILL.md",
+    "snapshot": "profile/skills/productivity/notion/SKILL.md",
+    "sha256": "e5aaf194f2688223890cb2eb6cf5ce866e6390082f1dff845c9e37a25fe0bfee"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/pdf/SKILL.md",
+    "snapshot": "profile/skills/productivity/pdf/SKILL.md",
+    "sha256": "c16b9c159a3a0b49353bfcd10c498b02aef3d319207b1019aa7dc8db129d06ab"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/powerpoint/SKILL.md",
+    "snapshot": "profile/skills/productivity/powerpoint/SKILL.md",
+    "sha256": "b71d29d9809c4464d7f8d10afabf4f22f6a26c647cf7aacb6f9faf196ebe82f2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/product-price-monitor/SKILL.md",
+    "snapshot": "profile/skills/productivity/product-price-monitor/SKILL.md",
+    "sha256": "b87bf2102fed13d2c7c64759fa153f24f5e43a0afcf6f8ec5e13def92a6642ef"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/teams-meeting-pipeline/SKILL.md",
+    "snapshot": "profile/skills/productivity/teams-meeting-pipeline/SKILL.md",
+    "sha256": "ae1b08f044d7dfd9abb01c643cac3b69e4a3a1cbe7fd5782dd17785964cdc441"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/weekly-review-planning/SKILL.md",
+    "snapshot": "profile/skills/productivity/weekly-review-planning/SKILL.md",
+    "sha256": "a689257facb937cfca9bc5507dd9e729f287f0cd3f6abbf73448eb25f73fbaab"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/productivity/xlsx/SKILL.md",
+    "snapshot": "profile/skills/productivity/xlsx/SKILL.md",
+    "sha256": "b302d7ac997843a757ab3c11513ea012889ebdae32f842edb44faa9a4485f19b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/arxiv/SKILL.md",
+    "snapshot": "profile/skills/research/arxiv/SKILL.md",
+    "sha256": "9b41877bcb64166dc2355a43aedd3198c3e5214af67f09e1d1b717a989d92f72"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/local-image-evidence-provenance/SKILL.md",
+    "snapshot": "profile/skills/research/local-image-evidence-provenance/SKILL.md",
+    "sha256": "cc871c28498379d8f48254d48ebbbf301a4fbcadd66f920b40c8ba6b0060b10e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/paper-process-gap-audit/SKILL.md",
+    "snapshot": "profile/skills/research/paper-process-gap-audit/SKILL.md",
+    "sha256": "24718016e1bb96592625ee4f93dceff1e3a0a56c88019f80cba29f9e45c0c934"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/multi-repo-product-research/SKILL.md",
+    "snapshot": "profile/skills/research/multi-repo-product-research/SKILL.md",
+    "sha256": "88e7929297a8dd78d242379173075c7c5b8d380157e4523d891e3da6a1aa79dd"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/pretotype-gtm-validation/SKILL.md",
+    "snapshot": "profile/skills/research/pretotype-gtm-validation/SKILL.md",
+    "sha256": "224f0b61a0344358c77c642c4e87fc2540df73d05f08619e122d9206302c7a78"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/grounded-citations/SKILL.md",
+    "snapshot": "profile/skills/research/grounded-citations/SKILL.md",
+    "sha256": "19fba3a4ceedf768af6851e094b268a66b62af750d4d0689c5d62d5d50c032b6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/offline-rate-limit-catalog/SKILL.md",
+    "snapshot": "profile/skills/research/offline-rate-limit-catalog/SKILL.md",
+    "sha256": "ec03101e994df58abcd1251010649410198e95b012e5d2584c9e78e0e039f3fa"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/personal-corpus-distillation/SKILL.md",
+    "snapshot": "profile/skills/research/personal-corpus-distillation/SKILL.md",
+    "sha256": "df115cf7aa4223bd5497f022844fa658f2238c28d1be9e1f8f7a2c2665aef976"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/graphrag-model-benchmark/SKILL.md",
+    "snapshot": "profile/skills/research/graphrag-model-benchmark/SKILL.md",
+    "sha256": "a6c98e9dcdc1354a7ca9b59bdbc7f3d58d922af56e45afd5abdd8b57d785d9c8"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/public-story-source-brief/SKILL.md",
+    "snapshot": "profile/skills/research/public-story-source-brief/SKILL.md",
+    "sha256": "b14e71f9619e5e45f9c9554ef1a7c469fa6259e14a8bd8b1eb28b07963af8fc6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/third-party-stack-research/SKILL.md",
+    "snapshot": "profile/skills/research/third-party-stack-research/SKILL.md",
+    "sha256": "8d22962328f43d7bbacc13a1b7d6131924eff6d6bf64cc85b7a9435ea252ea71"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/x-post-recovery/SKILL.md",
+    "snapshot": "profile/skills/research/x-post-recovery/SKILL.md",
+    "sha256": "f365916980d19e92869d40b96a6f7aa22c294f4b6c181608f4b51caa8b89b1a6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/owner-context-sweep/SKILL.md",
+    "snapshot": "profile/skills/research/owner-context-sweep/SKILL.md",
+    "sha256": "b9ef3a97dec891e0d57e37e3dbe8d8d3a40b6eae372c43cb8b460717671ad2e6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/grounded-chat-answer-eval/SKILL.md",
+    "snapshot": "profile/skills/research/grounded-chat-answer-eval/SKILL.md",
+    "sha256": "1b1c78db8ad00229db9a0ff41d50165b7607700ab1dc72b581e776e2159a261e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/limitless-stack-operations/SKILL.md",
+    "snapshot": "profile/skills/research/limitless-stack-operations/SKILL.md",
+    "sha256": "fce12d8b35ccb19c442864c080224c4f8fb0c520e79e221c435db232f42e28f6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/council-autoresearch-loops/SKILL.md",
+    "snapshot": "profile/skills/research/council-autoresearch-loops/SKILL.md",
+    "sha256": "219d4f6295ecb52538fdb3d3d21143d4de2f4c8cefa016f9913129165a26bfd6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/local-trace-micro-learners/SKILL.md",
+    "snapshot": "profile/skills/research/local-trace-micro-learners/SKILL.md",
+    "sha256": "86a7b63227e2e1cdca4400f8f45ba17f428ba03c2cb73a832a23dc7ebb2bbdf6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/owner-sent-resources/SKILL.md",
+    "snapshot": "profile/skills/research/owner-sent-resources/SKILL.md",
+    "sha256": "974786cf96af897718203f5f9ed13de3073185c8569823c24a316f7a06ed48ac"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/huggingface-hub-storage/SKILL.md",
+    "snapshot": "profile/skills/research/huggingface-hub-storage/SKILL.md",
+    "sha256": "9e04eb4280783cf87537b31c49776611c8735b853ce1e7cf1cfde50983bd997e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/competitor-news-monitor/SKILL.md",
+    "snapshot": "profile/skills/research/competitor-news-monitor/SKILL.md",
+    "sha256": "d8fd2a3a26ff45455709595132a092825a48f6c9dd3bcc98b06c1a43eaa7fcca"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/research/llm-wiki/SKILL.md",
+    "snapshot": "profile/skills/research/llm-wiki/SKILL.md",
+    "sha256": "0229e37c1783fcac5b77cfb3242703666cf4aa472d2ae85b6bd5279756b515b6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/social-media/xurl/SKILL.md",
+    "snapshot": "profile/skills/social-media/xurl/SKILL.md",
+    "sha256": "70da0a9e7a8ba33cebeee806be23093d29b0f48814e6cd7027360e7ee5cbd760"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/git-subdirectory-extraction/SKILL.md",
+    "snapshot": "profile/skills/software-development/git-subdirectory-extraction/SKILL.md",
+    "sha256": "a1f3151a9379e062ed6e438f4716451fb45b7d60da317d5cc26afaa652a236a1"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/secure-autonomous-experimentation/SKILL.md",
+    "snapshot": "profile/skills/software-development/secure-autonomous-experimentation/SKILL.md",
+    "sha256": "6c751d81918efe792603945abce68403a1ba47ffafd25dc7d70505234c853429"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/spike/SKILL.md",
+    "snapshot": "profile/skills/software-development/spike/SKILL.md",
+    "sha256": "573d8fc0d6699eaf5308e742402bc02c883152ffeebe14607f164c6c538495c2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/systematic-debugging/SKILL.md",
+    "snapshot": "profile/skills/software-development/systematic-debugging/SKILL.md",
+    "sha256": "ae1a36ef72072de08a02fb4cbbee2cf9ba865e5aeff62822398546d350453ec0"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/test-driven-development/SKILL.md",
+    "snapshot": "profile/skills/software-development/test-driven-development/SKILL.md",
+    "sha256": "92e4081f3ab7889b3832d8e42cba5008edbcb31b4c17c91e49fa9c1b5d006b1b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/dogfood/SKILL.md",
+    "snapshot": "profile/skills/software-development/dogfood/SKILL.md",
+    "sha256": "1b2793734493dbc624a1d1f1c0667cb510e191fa79b1c740d866706550190560"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/codebase-inspection/SKILL.md",
+    "snapshot": "profile/skills/software-development/codebase-inspection/SKILL.md",
+    "sha256": "17cf11a715c6fc21f1422c8d095314fb43226dd7f861c0520e14263fdc4ac156"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/t3code-upstream-contribution/SKILL.md",
+    "snapshot": "profile/skills/software-development/t3code-upstream-contribution/SKILL.md",
+    "sha256": "c6e895add6dfa4d60b65a9c3e1b115bc833121da136259c65c030749971af2ef"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/requesting-code-review/SKILL.md",
+    "snapshot": "profile/skills/software-development/requesting-code-review/SKILL.md",
+    "sha256": "001ce782b2229733a87430536f04a12ce7d665c7b5bd965bd56a5a7105ada9ef"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/node-inspect-debugger/SKILL.md",
+    "snapshot": "profile/skills/software-development/node-inspect-debugger/SKILL.md",
+    "sha256": "422eed9a0997182c5b197a8879ab194647799d69e573000e53b65b8708cf3a77"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/inspecting-hermes-desktop-dom/SKILL.md",
+    "snapshot": "profile/skills/software-development/inspecting-hermes-desktop-dom/SKILL.md",
+    "sha256": "8dfdcf2fe3797beec4297ce629e62395d7a69ec2691fc00ef25bc6273139cbc4"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/fail-closed-code-review/SKILL.md",
+    "snapshot": "profile/skills/software-development/fail-closed-code-review/SKILL.md",
+    "sha256": "25f88050785828e4fdd37ef2c3bfab0d07af6a2f8769aaa7278fd166a1bd1a33"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/multi-agent-release-readiness/SKILL.md",
+    "snapshot": "profile/skills/software-development/multi-agent-release-readiness/SKILL.md",
+    "sha256": "42c81176465672be8cc857ff82b28653e5bdcea46d783a1575eb4ef3486e7e37"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/rag-chat-answer-quality-eval/SKILL.md",
+    "snapshot": "profile/skills/software-development/rag-chat-answer-quality-eval/SKILL.md",
+    "sha256": "e3a3cdfd1b3431afef383c05ef1e5d112c9a68b90cbb5f3b51ab11dc8a5eb16b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/dotfiles-desktop-work/SKILL.md",
+    "snapshot": "profile/skills/software-development/dotfiles-desktop-work/SKILL.md",
+    "sha256": "4efa77a624f61057c103a7747df118d94b95ef5c073f67d4cb654b68ba99918f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/python-debugpy/SKILL.md",
+    "snapshot": "profile/skills/software-development/python-debugpy/SKILL.md",
+    "sha256": "cb1b8b0795a56fa0fd79f80f3363f1ad79d404a6757d6cf547971cf89f21155e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/rule-profile-provenance-freeze/SKILL.md",
+    "snapshot": "profile/skills/software-development/rule-profile-provenance-freeze/SKILL.md",
+    "sha256": "6ee9f3a6ce5a15ac4029eee7949ba52867c412d4f41735dc54dae72913d77770"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/cua-headless-sway-isolation/SKILL.md",
+    "snapshot": "profile/skills/software-development/cua-headless-sway-isolation/SKILL.md",
+    "sha256": "b8fc67e761e899885bca8bd42a1524268fce03de68c689dab8630280f177038a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/evidence-backed-harness-evaluation/SKILL.md",
+    "snapshot": "profile/skills/software-development/evidence-backed-harness-evaluation/SKILL.md",
+    "sha256": "359f1210304fa1d45a64555c78859a6020397dad0174da85552a56fbb46a0d4c"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/cua-driver-evidence-lane/SKILL.md",
+    "snapshot": "profile/skills/software-development/cua-driver-evidence-lane/SKILL.md",
+    "sha256": "1a731e5c0e707fa6095bd3caba2d6674b8f732648e101e1294e33186520f9892"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/hermes-agent-skill-authoring/SKILL.md",
+    "snapshot": "profile/skills/software-development/hermes-agent-skill-authoring/SKILL.md",
+    "sha256": "1f8d0be987c7c2d6095849ebb6dc8ff908ca1a43bdcc300fa936922c14271ecd"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/project-docs-site/SKILL.md",
+    "snapshot": "profile/skills/software-development/project-docs-site/SKILL.md",
+    "sha256": "0a87c8f54450e15dc00cc1f56cd6525fcdfe79a395d4511d2fd07a03e07aff80"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/light-browser-routing/SKILL.md",
+    "snapshot": "profile/skills/software-development/light-browser-routing/SKILL.md",
+    "sha256": "29858298deb84d9953b22c83b2dd2ec49f7a66cbef33e589c07abdda2d88abe3"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/web-frame-budget-gating/SKILL.md",
+    "snapshot": "profile/skills/software-development/web-frame-budget-gating/SKILL.md",
+    "sha256": "7785e8c1581f728ca4a9df7b6bd747dd8f79e85bbb8810d271572b650d59d4e4"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/agent-ready-public-repo/SKILL.md",
+    "snapshot": "profile/skills/software-development/agent-ready-public-repo/SKILL.md",
+    "sha256": "d7c07ecc294fa741e063207a16e4b63dbf94b26e65d6a0fb7c0f8a15ef21ff8e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/coding-session-continuity/SKILL.md",
+    "snapshot": "profile/skills/software-development/coding-session-continuity/SKILL.md",
+    "sha256": "c8607f8957f79b81261daa30b6f89c6f2a2ef1ab0357138b2df4beed49198177"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/comparative-visual-build-audits/SKILL.md",
+    "snapshot": "profile/skills/software-development/comparative-visual-build-audits/SKILL.md",
+    "sha256": "bad84dca35495cbf7800051f6a13685da8bc1fe4dee08cac344cebcec8636d6a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/hermes-engine-extension/SKILL.md",
+    "snapshot": "profile/skills/software-development/hermes-engine-extension/SKILL.md",
+    "sha256": "f54eaccdbac81c64237b63821e1c975a21854330a3e4ea29ffd02918e8aaccf8"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/git-repo-extraction/SKILL.md",
+    "snapshot": "profile/skills/software-development/git-repo-extraction/SKILL.md",
+    "sha256": "6859960cbd433eda46a0f24c19e66231db9fa78d42444191ff4f06b0ba6b7bc2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/public-repo-snapshot-publishing/SKILL.md",
+    "snapshot": "profile/skills/software-development/public-repo-snapshot-publishing/SKILL.md",
+    "sha256": "f4ae701e9d347806b574d39f1050d13a5e5592132d7a3e3d394bbf135bac8cc1"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/skill-library-maintenance/SKILL.md",
+    "snapshot": "profile/skills/software-development/skill-library-maintenance/SKILL.md",
+    "sha256": "144901cce90b7459fb29aa490c52728d0c367fdb8ff09aeb6e6d79af6c58c6cc"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/voice-agent-acoustic-ab-eval/SKILL.md",
+    "snapshot": "profile/skills/software-development/voice-agent-acoustic-ab-eval/SKILL.md",
+    "sha256": "9a2c995048ddc47014337a5fc12712e579169cc28ca2ace93f43d329a8a706ec"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/overnight-independent-verification/SKILL.md",
+    "snapshot": "profile/skills/software-development/overnight-independent-verification/SKILL.md",
+    "sha256": "7ec0c9624e32afc874670c0c1189118913e48fb70cdb38bf804aa69b5ce856ab"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/reverse-engineer-anything/SKILL.md",
+    "snapshot": "profile/skills/software-development/reverse-engineer-anything/SKILL.md",
+    "sha256": "02864c1af2818e52ba2da0892db9082c54f35a21e84ee21723a9c22dd7e42dde"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/rn-web-component-gallery/SKILL.md",
+    "snapshot": "profile/skills/software-development/rn-web-component-gallery/SKILL.md",
+    "sha256": "0b3705230c2727d16f422de3b74ab25773acc94a91fa38e6dbc76cf8461ae8f2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/artifact-stage-browser-proof/SKILL.md",
+    "snapshot": "profile/skills/software-development/artifact-stage-browser-proof/SKILL.md",
+    "sha256": "7f62daec35ce94f9644d9a85afb3bb6257310b818100b6d9441b110f77f0ae36"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/simplify-code/SKILL.md",
+    "snapshot": "profile/skills/software-development/simplify-code/SKILL.md",
+    "sha256": "9ee977c3362a1c07f2e327198e066ddb3c0ed67709706fc410165ee820b2ca01"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/noop-android-s25-feature-ship/SKILL.md",
+    "snapshot": "profile/skills/software-development/noop-android-s25-feature-ship/SKILL.md",
+    "sha256": "3cf2d35cd42835cf3dd5283f5d9ba566d60928d35a9cacc10e6618db50297f90"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/harness-speed-ab/SKILL.md",
+    "snapshot": "profile/skills/software-development/harness-speed-ab/SKILL.md",
+    "sha256": "3fe95410160ea63039bac18d6093dad725aca0bc1d3ab6a9383b730195f92daf"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/repository-architecture-audits/SKILL.md",
+    "snapshot": "profile/skills/software-development/repository-architecture-audits/SKILL.md",
+    "sha256": "59e8b72c04338fea2cb844edb5fd746126802ccf7d3dcb84ac31fdc6d93f3fee"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/hermes-branch-preview/SKILL.md",
+    "snapshot": "profile/skills/software-development/hermes-branch-preview/SKILL.md",
+    "sha256": "ff95483cee623b637cc2a1a5f4e7e31564d7cba92593047c8242654e7c655412"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/avrea-exact-head-verification/SKILL.md",
+    "snapshot": "profile/skills/software-development/avrea-exact-head-verification/SKILL.md",
+    "sha256": "632c452862dcbda9fb35efca90e99e3c3cbec56dbdcdcd009ed1baff55c4b85d"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/android-audiocpp-variant-builds/SKILL.md",
+    "snapshot": "profile/skills/software-development/android-audiocpp-variant-builds/SKILL.md",
+    "sha256": "f1270dcdf473d80be00f6b9f8e4f62e1bd08e80617ec87a0bd7e81b9ce94a7ab"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/t3code-host-install-operations/SKILL.md",
+    "snapshot": "profile/skills/software-development/t3code-host-install-operations/SKILL.md",
+    "sha256": "6181e8c125b3eef7e0fa8b14d8844a78312d15f7792cf2693856ed8dd305a855"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/codebase-exploration/SKILL.md",
+    "snapshot": "profile/skills/software-development/codebase-exploration/SKILL.md",
+    "sha256": "252b8bd8ae899f5f508aebe4dba3f3160cd3653449210061324c8c5ee0425e41"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/github/SKILL.md",
+    "snapshot": "profile/skills/software-development/github/SKILL.md",
+    "sha256": "5d3c657751b7424f7dfec1ff25a8a1c9358ee642b4bae531d3f8775e2c8ccd28"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/software-development/fork-ledger-cleanup/SKILL.md",
+    "snapshot": "profile/skills/software-development/fork-ledger-cleanup/SKILL.md",
+    "sha256": "7b4d9b041ca477e038d15d9394977efb73a7b9768b4c10c8022f30881c275c8e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/devops/sdlc-review/SKILL.md",
+    "snapshot": "profile/skills/devops/sdlc-review/SKILL.md",
+    "sha256": "ce90e8a3e145cce69c62880dc85921700110879f9290952d6cec28218503155f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/devops/home-k3s-fleet/SKILL.md",
+    "snapshot": "profile/skills/devops/home-k3s-fleet/SKILL.md",
+    "sha256": "bb0143a73e8abf10b437d23a91cac3b17e9e65684e508900a78de3947a92699b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/devops/home-network-diagnosis/SKILL.md",
+    "snapshot": "profile/skills/devops/home-network-diagnosis/SKILL.md",
+    "sha256": "dce690a061a50ace218ac8bb2c1f55db56ce7fc282d2e60d3e01e188cb5971d1"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/web/blocked-page-recovery/SKILL.md",
+    "snapshot": "profile/skills/web/blocked-page-recovery/SKILL.md",
+    "sha256": "e95e93747840b78e000372ccd04c6bad61aca52329eac0989511b3442c0a5d19"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/comfy-da3-producer-gate/SKILL.md",
+    "snapshot": "profile/skills/comfy-da3-producer-gate/SKILL.md",
+    "sha256": "16e90ea3a6772c620a58a7e7b90a9ae022499ca79eb046dca32801e4251b0c3a"
+  },
+  {
+    "source": "/mnt/zer0models/home-offload/kvn/claude-home/skills/agent-reach/SKILL.md",
+    "snapshot": "profile/skills/agent-reach/SKILL.md",
+    "sha256": "8683fd48682ec639defe8395af1d41689880d6be8e1b18b9951fa38169553ab1"
+  },
+  {
+    "source": "/home/kvn/.agents/skills/review-bugbot/SKILL.md",
+    "snapshot": "profile/skills/review-bugbot/SKILL.md",
+    "sha256": "24bb0b36844583c5a1ffe2dc11f861c85d68a281cc61ceda35966bbf60c08e7a"
+  },
+  {
+    "source": "/workspace/hermes-home/skills/high-end-visual-design/SKILL.md",
+    "snapshot": "profile/skills/high-end-visual-design/SKILL.md",
+    "sha256": "e1e32f5e2d420872c6c7332b53d5ff7721946766b78c4822b424c2d512c8fdbc"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/architect/SKILL.md",
+    "snapshot": "profile/skills/pstack/architect/SKILL.md",
+    "sha256": "31f8e97a52bfa5432edd61f68ade2a8632ef0bacbc2d2a6802d7a0e6821944ac"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/benchmark-checklist/SKILL.md",
+    "snapshot": "profile/skills/pstack/benchmark-checklist/SKILL.md",
+    "sha256": "8fcf9367d1ab251a9a92ea98a833179ef770aa062a8f1aba7d2eee1c4db7baef"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/correct/SKILL.md",
+    "snapshot": "profile/skills/pstack/correct/SKILL.md",
+    "sha256": "e347045d00c967a0b831ef883cc6ac79d21329aa10b5968637df95de7febf0ba"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/figure-it-out/SKILL.md",
+    "snapshot": "profile/skills/pstack/figure-it-out/SKILL.md",
+    "sha256": "bdb23cdbd82a1e6af094b495691c832a6f7f3ab9706ba9edbeb664ef51a726e1"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/how/SKILL.md",
+    "snapshot": "profile/skills/pstack/how/SKILL.md",
+    "sha256": "08a00079bb15b4258874ac3ff62d4ca7e94350ffedb521d0fd296dc9dd21904e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/interrogate/SKILL.md",
+    "snapshot": "profile/skills/pstack/interrogate/SKILL.md",
+    "sha256": "2a94bac319e33e9f6387e14c8184eb40a3d060c0ba5406623756edbc824e61c1"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/in-your-own-words/SKILL.md",
+    "snapshot": "profile/skills/pstack/in-your-own-words/SKILL.md",
+    "sha256": "fa8ba74e27d7be371dc270ec78bbf816411477d0dfab185356c861ac8dd413ad"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/make-bot-ui/SKILL.md",
+    "snapshot": "profile/skills/pstack/make-bot-ui/SKILL.md",
+    "sha256": "ad19d0bc6764287ec08c2521701974e7dac941f72e4d0fe81a24f4614494586f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/no-comments/SKILL.md",
+    "snapshot": "profile/skills/pstack/no-comments/SKILL.md",
+    "sha256": "078ecfe224eafbb017f6476870612838bf6dbe38c0b697e12f0c887d0313f17e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/poteto-mode/SKILL.md",
+    "snapshot": "profile/skills/pstack/poteto-mode/SKILL.md",
+    "sha256": "58fe354c02ee2e2a3f3a927e6c715f993353441151c6a46d0124d31795023e76"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-attack-the-premise/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-attack-the-premise/SKILL.md",
+    "sha256": "6a932884daad4aa189e9b5d1665226bbc75621d4d2a398fd4003bebd382f4599"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-build-the-lever/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-build-the-lever/SKILL.md",
+    "sha256": "3434b0ad0c640c6f1d7960be7a8986c3bcdc14e26060360dec29903df60074ff"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-encode-lessons-in-structure/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-encode-lessons-in-structure/SKILL.md",
+    "sha256": "228963799189f481827d6f28065f278bc2008ffa37030b1234cbd5814d36b9e9"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-experience-first/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-experience-first/SKILL.md",
+    "sha256": "58903529d733b1c1a7c9ccf127d45ef3c7d0d9f0b81164a4dc6b80efe6f2912b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-explain-the-number/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-explain-the-number/SKILL.md",
+    "sha256": "cd5a25f9e7cf023627ccb470dc5faa97542f29b4319496a32b839a8e1e988047"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-fix-root-causes/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-fix-root-causes/SKILL.md",
+    "sha256": "8df3c8c3fe57eb0055a5c8efab8ab144557fdf301da70b1cdc77a3a3ef3f3052"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-foundational-thinking/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-foundational-thinking/SKILL.md",
+    "sha256": "864b827e8199d946ce58beca0f89c4ed4099ed6e426fb698a3aaa45de2a9eea2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-guard-the-context-window/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-guard-the-context-window/SKILL.md",
+    "sha256": "af0b9dd70b43628ce4a59a4d332e9d9ad055084e460f430e7a757495c627e81a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-make-operations-idempotent/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-make-operations-idempotent/SKILL.md",
+    "sha256": "7aa9327cf1f1aa057e95d47a0a78bd88a8f9d556b608866fee939d455a53a019"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-model-the-domain/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-model-the-domain/SKILL.md",
+    "sha256": "52c0d85e0c3827c41c18299b642657d7b47eaf77b7b31609e42e0df42b84c75f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-never-block-on-the-human/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-never-block-on-the-human/SKILL.md",
+    "sha256": "da84a705c9cfe4f036223a320928cee3b86b6f03a865cc697ec73eb8147812e2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-prove-it-works/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-prove-it-works/SKILL.md",
+    "sha256": "de0369a0e5734ebf89dbeae45ba887cccc3307231908aa0ee77012e16dd32a68"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-sequence-verifiable-units/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-sequence-verifiable-units/SKILL.md",
+    "sha256": "2ccbbacc56ace5afdfb8670cef19d7bd009fb2a0033b9a741cbdf2b6baf72187"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-type-system-discipline/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-type-system-discipline/SKILL.md",
+    "sha256": "5cdaf79785e3c12b2592b9469ee8c272143eb86ab7a18d8382197cea5fd30106"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/recall/SKILL.md",
+    "snapshot": "profile/skills/pstack/recall/SKILL.md",
+    "sha256": "b0ceb996259c3404532f61e4b010df4e3d80d7ddbed85b3c302895723eb62a89"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/setup-pstack/SKILL.md",
+    "snapshot": "profile/skills/pstack/setup-pstack/SKILL.md",
+    "sha256": "b45512f6ca5e96e81681984683b7472bfe892581da3a89a73cca4159438f29ed"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/show-me-your-work/SKILL.md",
+    "snapshot": "profile/skills/pstack/show-me-your-work/SKILL.md",
+    "sha256": "920a8217cbb62f92a2222fb81fc9eab17ecd554a0277e444a95a927195139bd1"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/swarm/SKILL.md",
+    "snapshot": "profile/skills/pstack/swarm/SKILL.md",
+    "sha256": "031657cb81e490f9aed5c75d6ff2a4fda35ccafbaf72be604e59481cc4080cdc"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/technical-writing/SKILL.md",
+    "snapshot": "profile/skills/pstack/technical-writing/SKILL.md",
+    "sha256": "61fe9c424a798ebf36ad94941f87be049cb8827bdf86d21474a0dde37b513c43"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/typescript-best-practices/SKILL.md",
+    "snapshot": "profile/skills/pstack/typescript-best-practices/SKILL.md",
+    "sha256": "b5d25403873974a4e310960fb088357240430a3a8c863d8d430c0be47bd0213d"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/unslop/SKILL.md",
+    "snapshot": "profile/skills/pstack/unslop/SKILL.md",
+    "sha256": "ccab208e315ce05e2fab8eeee2f7879f1289b5c6844840b2d307adf31c79144f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/create-formal-verification-skill/SKILL.md",
+    "snapshot": "profile/skills/pstack/create-formal-verification-skill/SKILL.md",
+    "sha256": "6c934cd15a9583533ff9b7a9cad62775d7e80402d26d3ba7f74f79ea21a1d8eb"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/arena/SKILL.md",
+    "snapshot": "profile/skills/pstack/arena/SKILL.md",
+    "sha256": "ed72f6c132b1ce3974d949581d0adc5dade424fe20793ac3b4c4fae22ecb9354"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/automate-me/SKILL.md",
+    "snapshot": "profile/skills/pstack/automate-me/SKILL.md",
+    "sha256": "30b35f3628c4fd8c11af0ada06d14cdc3b28901810caca2480f627d4d21acfbe"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/blast-radius/SKILL.md",
+    "snapshot": "profile/skills/pstack/blast-radius/SKILL.md",
+    "sha256": "2e10745b97f5862323dcda3b29ca60d56b5c3c98e37020085d26b48efbe0a436"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/bro/SKILL.md",
+    "snapshot": "profile/skills/pstack/bro/SKILL.md",
+    "sha256": "aa329d0ceeeecb6822a7174ad76bb07a7826a3c52ceb6a588dec4138815084bb"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/create-verification-skill/SKILL.md",
+    "snapshot": "profile/skills/pstack/create-verification-skill/SKILL.md",
+    "sha256": "d353973547bf8ad8977eca645f4cd4feaed0d32f4b43d1448f906b0a76c4d694"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/ketchup/SKILL.md",
+    "snapshot": "profile/skills/pstack/ketchup/SKILL.md",
+    "sha256": "f2923ffd14f6fc778f75a47aaed1f317fb5fd00b5701ca769d6446c74106dead"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/maintain-formal-verification-skill/SKILL.md",
+    "snapshot": "profile/skills/pstack/maintain-formal-verification-skill/SKILL.md",
+    "sha256": "0c96f54293542d3818b68754562b338073958781a9684454611dca37592e2d2c"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/maintain-verification-skill/SKILL.md",
+    "snapshot": "profile/skills/pstack/maintain-verification-skill/SKILL.md",
+    "sha256": "515c0eaa054b3f6be1b1fb06f2c2f173c80fddb58bbcac57576f89c479bc68e8"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/poteto-help/SKILL.md",
+    "snapshot": "profile/skills/pstack/poteto-help/SKILL.md",
+    "sha256": "67c77ee5e91c19809b01d08cc73cc2870a52fb95fc64dc33328bf8ff9e49891c"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-boundary-discipline/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-boundary-discipline/SKILL.md",
+    "sha256": "62ac2862c2caa22dd14531f51c9c6bb445ceb198ca98a687e25b4d47c1f10a28"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-exhaust-the-design-space/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-exhaust-the-design-space/SKILL.md",
+    "sha256": "2de83d99f93f60ec6313455b0bc9aa9f0bfb93dd59f414f403691322db00d4db"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-laziness-protocol/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-laziness-protocol/SKILL.md",
+    "sha256": "1be6e7a435f26a75a76eb848b9c3d611b9977d0f5822361753244da25ca3ca45"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-migrate-callers-then-delete-legacy-apis/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-migrate-callers-then-delete-legacy-apis/SKILL.md",
+    "sha256": "580ad9bb1a0994ecb924321ba49efc38a2f85c64e22c76fb133f57a78272a2e6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-minimize-reader-load/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-minimize-reader-load/SKILL.md",
+    "sha256": "1ea2b7fef2391cae5844c4efdbd59031f775e8a52d06b7495d707229a200dcca"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-outcome-oriented-execution/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-outcome-oriented-execution/SKILL.md",
+    "sha256": "10eb91633aa570355ba4bb37088fcade2b22e498df7a58edc749e65bc5a78e2d"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-redesign-from-first-principles/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-redesign-from-first-principles/SKILL.md",
+    "sha256": "170e0a658783e43fee8ec5a8c2422a4abb8f69cef621dd1819a95910b8207034"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-separate-before-serializing-shared-state/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-separate-before-serializing-shared-state/SKILL.md",
+    "sha256": "05294b40448e927c5da1c7b6f5c6b9fed3744637e3833d2d948b9154a9dd00bb"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-subtract-before-you-add/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-subtract-before-you-add/SKILL.md",
+    "sha256": "8c93bb9d1a7f38e2ef37655d93f0e790fa59903105af3d500cc8a663ebe45f3f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/principle-test-behavior-not-implementation/SKILL.md",
+    "snapshot": "profile/skills/pstack/principle-test-behavior-not-implementation/SKILL.md",
+    "sha256": "f7223698623b6a26fea49c751e466b38e6691b1f32ce841d3983e7ffbe2b74a6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/reflect/SKILL.md",
+    "snapshot": "profile/skills/pstack/reflect/SKILL.md",
+    "sha256": "1f5a8c246cdee8251f8667d85bd5d97f6c2801f505843c26ddbd6c621632519b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/sharpen/SKILL.md",
+    "snapshot": "profile/skills/pstack/sharpen/SKILL.md",
+    "sha256": "563dfc460c605d311e650726288e2f1cbd61eab817db178d6e7e29643e07e7a2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/tdd/SKILL.md",
+    "snapshot": "profile/skills/pstack/tdd/SKILL.md",
+    "sha256": "eeb868e2dfebee528d730a67d7b17498fac4bb85dec2e38bc5c5176aca4d5d2f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/teach/SKILL.md",
+    "snapshot": "profile/skills/pstack/teach/SKILL.md",
+    "sha256": "bd286e5a6290673be2cd28aef7af2ec7f1fb138e6bce156ea657368c7e7fc8a4"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pstack/why/SKILL.md",
+    "snapshot": "profile/skills/pstack/why/SKILL.md",
+    "sha256": "144d42e7712723d763e607bc0a969e5f1cdf83ec7228519d87677cc534571bed"
+  },
+  {
+    "source": "/workspace/hermes-home/skills/redesign-existing-projects/SKILL.md",
+    "snapshot": "profile/skills/redesign-existing-projects/SKILL.md",
+    "sha256": "98ad3e5b051bfb71b2795f7e8a6aa0d32b51ee095606c098a4b2822ac07926c9"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/omp-readonly-promotion-gates/SKILL.md",
+    "snapshot": "profile/skills/omp-readonly-promotion-gates/SKILL.md",
+    "sha256": "36d7802882fdabe075bb09e1c57307076a474d2cda8671fc38b1cbf09955da20"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/leanrea/SKILL.md",
+    "snapshot": "profile/skills/leanrea/SKILL.md",
+    "sha256": "6caa615a6091e768c7e7cd5d2dc2a660141d0dcdd35380f7f972bf120d24d74d"
+  },
+  {
+    "source": "/workspace/hermes-home/skills/minimalist-ui/SKILL.md",
+    "snapshot": "profile/skills/minimalist-ui/SKILL.md",
+    "sha256": "36bc7328f085405f43b476938e62460fa573bf7e984e949e072bcf014831a44c"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/openusd-doc-promotion-preflight/SKILL.md",
+    "snapshot": "profile/skills/openusd-doc-promotion-preflight/SKILL.md",
+    "sha256": "7f28a4fcdaf5dab7886867681c583eef219e1d70dfc263fc1260a77a60851d66"
+  },
+  {
+    "source": "/home/kvn/.agents/skills/review-security/SKILL.md",
+    "snapshot": "profile/skills/review-security/SKILL.md",
+    "sha256": "d007ec5a617e9caeef03055cd9c5dad762d80acb4ae1b20377bde4b3b41c46fd"
+  },
+  {
+    "source": "/workspace/hermes-home/skills/design-taste-frontend/SKILL.md",
+    "snapshot": "profile/skills/design-taste-frontend/SKILL.md",
+    "sha256": "aa194351b246b8b4799099d4ed7b033d29eab6e6e3d58d8d2172978be7b3ec89"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/verification/gdp-wired-law-port-receipts/SKILL.md",
+    "snapshot": "profile/skills/verification/gdp-wired-law-port-receipts/SKILL.md",
+    "sha256": "8fe151112ea40a86634c74a10122b63c24fae51e3bd12675cbe8f366ec717357"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/verification/aodl-intent-contracts/SKILL.md",
+    "snapshot": "profile/skills/verification/aodl-intent-contracts/SKILL.md",
+    "sha256": "af4e0cef09f1b642b034ac37cfc5094a5165d18d3495a552219c99846aac1132"
+  },
+  {
+    "source": "/home/kvn/.agents/skills/loop/SKILL.md",
+    "snapshot": "profile/skills/loop/SKILL.md",
+    "sha256": "03f141406a7e6f658aaf9d84c526e047896676191931535a0f0f719fa26aaf5c"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/gev-ci-reliability-receipts/SKILL.md",
+    "snapshot": "profile/skills/gev-ci-reliability-receipts/SKILL.md",
+    "sha256": "635121e26f76aa611b816eb74fceed6a8cd26334441a28395eb99124b9ae417b"
+  },
+  {
+    "source": "/workspace/frontier-kb/skills/frontier-kb/SKILL.md",
+    "snapshot": "profile/skills/frontier-kb/SKILL.md",
+    "sha256": "417ad5b9b5cbde68a22eb246f89e9ee0a1220ab6304cefd7e32355bb4ea33177"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/session-recovery/SKILL.md",
+    "snapshot": "profile/skills/session-recovery/SKILL.md",
+    "sha256": "5aa41cd7a3b135a814c0e7d0701290b009756bbdd6cab184b3e323200b386b4a"
+  },
+  {
+    "source": "/home/kvn/.agents/skills/focus-safe-desktop-automation/SKILL.md",
+    "snapshot": "profile/skills/focus-safe-desktop-automation/SKILL.md",
+    "sha256": "ca063c6af0082909356c12e345a79bdf26d87b110c5eac230da3b6fad35d0b4c"
+  },
+  {
+    "source": "/mnt/zer0models/z0-wt/salvage/skills-home/work/kvnloo-skills/skills/abab-meta-research/SKILL.md",
+    "snapshot": "profile/skills/abab-meta-research/SKILL.md",
+    "sha256": "d70d2914f1335c5303092603da16c9e90cfcacd9bdb7044e140a00c21a56df96"
+  },
+  {
+    "source": "/home/kvn/.agents/skills/no-mistakes/SKILL.md",
+    "snapshot": "profile/skills/no-mistakes/SKILL.md",
+    "sha256": "791a99f869cdb02c625c02276ebf9eeee83557da9f6ac792bc4947a777e2b67c"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/api-key-secret-storage/SKILL.md",
+    "snapshot": "profile/skills/api-key-secret-storage/SKILL.md",
+    "sha256": "59d007d90eb4394c0d9bf7d42d8cbd25d90c01f18f7ca3a7f582e8a0bc516f6e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/gz-sensors-native-requalification/SKILL.md",
+    "snapshot": "profile/skills/gz-sensors-native-requalification/SKILL.md",
+    "sha256": "bb3c4413c5b68903917fdcf8b802153453b1d2af0741043a7f9ede8bafbbe049"
+  },
+  {
+    "source": "/home/kvn/.agents/skills/qmd/SKILL.md",
+    "snapshot": "profile/skills/qmd/SKILL.md",
+    "sha256": "bb4664ad7d959f171c8aa5c9575394327d8fc1070b2529bcc5494a0843a7bc1b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/operations/portfolio-operations-recovery/SKILL.md",
+    "snapshot": "profile/skills/operations/portfolio-operations-recovery/SKILL.md",
+    "sha256": "f637e4fe1075e02aa1cd6420aac96c45265083b60c59ff425a7594ad6cce5220"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/maestro-local-android/SKILL.md",
+    "snapshot": "profile/skills/maestro-local-android/SKILL.md",
+    "sha256": "eb725acc8d5a593a15a9f1f0c3f57644b3785a0d3613631b29e0e374343dd093"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/ace-campus-twin/SKILL.md",
+    "snapshot": "profile/skills/ace-campus-twin/SKILL.md",
+    "sha256": "5516cf6ed0b75d072bc0b250cafc2f27c7fbf07c4564d9f582aa4197bfba1e9b"
+  },
+  {
+    "source": "/workspace/hermes-home/skills/jev/jev-browser-use/SKILL.md",
+    "snapshot": "profile/skills/jev/jev-browser-use/SKILL.md",
+    "sha256": "6e3fbbfeaf5799602ab12a890a607fdd95c8403fd72ec6e62bbb36fd8a2ae5ca"
+  },
+  {
+    "source": "/workspace/hermes-home/skills/jev/jev-computer-use/SKILL.md",
+    "snapshot": "profile/skills/jev/jev-computer-use/SKILL.md",
+    "sha256": "182bc044d978ad0b50799300bc4ba5a16e313ccd4e819a35c00364a8e3c927ff"
+  },
+  {
+    "source": "/workspace/hermes-home/skills/jev/jev-memory/SKILL.md",
+    "snapshot": "profile/skills/jev/jev-memory/SKILL.md",
+    "sha256": "8773153533ceacf1cc18e4f51072ac35679cf169b28ff6693193f26c1489d722"
+  },
+  {
+    "source": "/workspace/hermes-home/skills/jev/jev-model-routing/SKILL.md",
+    "snapshot": "profile/skills/jev/jev-model-routing/SKILL.md",
+    "sha256": "52730e36a2e91a15079276a21dc78efc2205ef851a735d9367f30cb8de0ef8cf"
+  },
+  {
+    "source": "/workspace/hermes-home/skills/jev/jev-skill-select/SKILL.md",
+    "snapshot": "profile/skills/jev/jev-skill-select/SKILL.md",
+    "sha256": "9f2fc15f8909479ab0e4b3f8266c66d802a56d45e3ed917fee683e3804e8078e"
+  },
+  {
+    "source": "/workspace/hermes-home/skills/jev/jev-frontier-work/SKILL.md",
+    "snapshot": "profile/skills/jev/jev-frontier-work/SKILL.md",
+    "sha256": "1e569d9b55894840a092b74a0c5b4df796149214de4a71e6c8eeacc6f063bfc8"
+  },
+  {
+    "source": "/workspace/hermes-home/skills/jev/jev-setup/SKILL.md",
+    "snapshot": "profile/skills/jev/jev-setup/SKILL.md",
+    "sha256": "b15d50a943468688e8bd8f083d831eb54e41a85aa24b152fcf15cfbdd6e2398c"
+  },
+  {
+    "source": "/workspace/hermes-home/skills/jev/jev-compaction/SKILL.md",
+    "snapshot": "profile/skills/jev/jev-compaction/SKILL.md",
+    "sha256": "b7b94aab22d415693c972ed258dd80f678683499b0fd800065305eae89ece7f5"
+  },
+  {
+    "source": "/workspace/hermes-home/skills/jev/jev-mailbox/SKILL.md",
+    "snapshot": "profile/skills/jev/jev-mailbox/SKILL.md",
+    "sha256": "48ea7a543bee19570b658c4503581e6bc418f92e47099f5ae077c0e2fa527935"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/source-bound-motion-labs/SKILL.md",
+    "snapshot": "profile/skills/source-bound-motion-labs/SKILL.md",
+    "sha256": "c36f1858a0cf11d848b644c69738a2c3728ce56354c3dbe38e5f59b3b39d50a2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/vercel-cli-deploy/SKILL.md",
+    "snapshot": "profile/skills/vercel-cli-deploy/SKILL.md",
+    "sha256": "cc1d8778055b6fdefa0fd604f2ea5e4fc0c4b60c4670fff3b3c0dffab2d386dd"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-isolated-procedural-assets/SKILL.md",
+    "snapshot": "profile/skills/blender-isolated-procedural-assets/SKILL.md",
+    "sha256": "a0cc4fc1f113117cb92798da110be428ab985d8cb88112889b8b6f0ebac8134a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/ops-plane-owner-laws/SKILL.md",
+    "snapshot": "profile/skills/ops-plane-owner-laws/SKILL.md",
+    "sha256": "fae394079d973f2b71a17d749f0b131e2ad6e1fafcaf3727c9022bbd5c3fc1bb"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-batched-grass/SKILL.md",
+    "snapshot": "profile/skills/blender-batched-grass/SKILL.md",
+    "sha256": "996bc5e2d40aac9f625aef54c1a72bf1dbc5051fcdf29137a32213f143cd65cf"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-owned-asset/SKILL.md",
+    "snapshot": "profile/skills/blender-owned-asset/SKILL.md",
+    "sha256": "3d115c49a476b400422a7aa4545a43c58b45d1809a5c7ddf0a8a766e8dd9baa4"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-inert-botanical-asset/SKILL.md",
+    "snapshot": "profile/skills/blender-inert-botanical-asset/SKILL.md",
+    "sha256": "4e38f71081b32cc31ca9a1319042dcd5712e8e9e8823e9970b7fface6fbfe053"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/benchmark-driven-development/SKILL.md",
+    "snapshot": "profile/skills/benchmark-driven-development/SKILL.md",
+    "sha256": "e9dd6623556e277e0df783b4a9a843e5910cd5064b71b8fc2de64cf8aff37c38"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-inert-assets/SKILL.md",
+    "snapshot": "profile/skills/blender-inert-assets/SKILL.md",
+    "sha256": "6f13b36e62f1bc6abd4744ebe1d17517e9646a8e108a60e77ea04f1e7c0b9f5a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/differential-transition-harness/SKILL.md",
+    "snapshot": "profile/skills/differential-transition-harness/SKILL.md",
+    "sha256": "3ba6499659336636f8b8d5af7158b14043b6d1f7483277bc518510cb09cf35d6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/newton-cpu-raycast-receipts/SKILL.md",
+    "snapshot": "profile/skills/newton-cpu-raycast-receipts/SKILL.md",
+    "sha256": "c242cc0da703dbb24674192a4e269428f5788f4e2f29f48afdb5648b130c00e6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/gpu-python-package-install/SKILL.md",
+    "snapshot": "profile/skills/gpu-python-package-install/SKILL.md",
+    "sha256": "64567d76f37901b373559fd34af91f56ee6551ecc8482719a967d4b4168f9d73"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/env-setup/SKILL.md",
+    "snapshot": "profile/skills/env-setup/SKILL.md",
+    "sha256": "ebb38c599e2c3cb9ce16acc9139267b2fa87cdbaf54ba12fb044987e08795523"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-material-identity-audit/SKILL.md",
+    "snapshot": "profile/skills/blender-material-identity-audit/SKILL.md",
+    "sha256": "1f1aa196a69fd57451aa479d7a347cdcf3e654c4539b4c0d9cc10d229bdf585a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/local-gltf-review/SKILL.md",
+    "snapshot": "profile/skills/local-gltf-review/SKILL.md",
+    "sha256": "9a88a81c1f209dd02d6e4ab489cc0af1e00d51b202b10d14d9cfbe44f2fb4e49"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tiered-local-checks/SKILL.md",
+    "snapshot": "profile/skills/tiered-local-checks/SKILL.md",
+    "sha256": "c26e32e7808afbe6d31e8d99cee03577b30105ce366cfa22478d5ade34d8d3f7"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/render-cache-provenance/SKILL.md",
+    "snapshot": "profile/skills/render-cache-provenance/SKILL.md",
+    "sha256": "47e374b11fc9624dd6c927d26b9a561dab1075402f86673110987aff90a345d3"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/git-isolated-contribution-guards/SKILL.md",
+    "snapshot": "profile/skills/git-isolated-contribution-guards/SKILL.md",
+    "sha256": "bb3b3696bea0418dc675d68c31db52de977b364198ac0cedbe47ef398171b37d"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/bounded-cooperative-job-admission/SKILL.md",
+    "snapshot": "profile/skills/bounded-cooperative-job-admission/SKILL.md",
+    "sha256": "e0777a2fc37164452a96eec2c05189be7cf6dc44af38bc0e0cf33caab99a7327"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/terminal-agent-orchestration/SKILL.md",
+    "snapshot": "profile/skills/terminal-agent-orchestration/SKILL.md",
+    "sha256": "e74dff54d1a851d4ca7757d32da218956188b4b3ea9a1633106d417d86f32d54"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/7dps/SKILL.md",
+    "snapshot": "profile/skills/7dps/SKILL.md",
+    "sha256": "e463ba953d815063c79c5fe6cd3fc8d698a5d20b865ce8d417c2f282e5fae721"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/asd-ste100/SKILL.md",
+    "snapshot": "profile/skills/asd-ste100/SKILL.md",
+    "sha256": "2c06477df272fee455451f3a71508c1189b409e858f9ae4d3c859ea124b10675"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-asset-smoke/SKILL.md",
+    "snapshot": "profile/skills/blender-asset-smoke/SKILL.md",
+    "sha256": "8e5fdd2df87a0000847534de2e97afd76cd414c68dce60997b01874991d54e3c"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/secrets-manager-bws/SKILL.md",
+    "snapshot": "profile/skills/secrets-manager-bws/SKILL.md",
+    "sha256": "57ea2af0b396bfd876c449948d43fb233d578b38eb26667d03b0f6c8ab4d55a2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/local-usage-sync-audit/SKILL.md",
+    "snapshot": "profile/skills/local-usage-sync-audit/SKILL.md",
+    "sha256": "9ef05dbc580c31b1f4e2caab06631fa95afb5cd2cf29171b88b2005b997f15ea"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-botanical-smoke/SKILL.md",
+    "snapshot": "profile/skills/blender-botanical-smoke/SKILL.md",
+    "sha256": "a7047c1631d0480136b37f5664564ca5ee1125e6eb223b31e355b5cfee7ec8a2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/astra-blender-modeling/SKILL.md",
+    "snapshot": "profile/skills/astra-blender-modeling/SKILL.md",
+    "sha256": "501f44dd289bf51aadc8794425a86fdeaa74fecd8f30ad36ed0f9a86cc16f1b3"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/anki-disposable-fsrs-bridge/SKILL.md",
+    "snapshot": "profile/skills/anki-disposable-fsrs-bridge/SKILL.md",
+    "sha256": "a1c8f033caa71ff937ccf6b5ad41d4aff630e73ffca6fe8875d14a1f09c571c5"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tiled-scene-readonly-critic/SKILL.md",
+    "snapshot": "profile/skills/tiled-scene-readonly-critic/SKILL.md",
+    "sha256": "5049c6bc5f000c58ef2eeba1d0d0120f76add0f37ed42256f116782ff442f318"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/public-safe-snapshot-sync/SKILL.md",
+    "snapshot": "profile/skills/public-safe-snapshot-sync/SKILL.md",
+    "sha256": "3d46b65957c41bb3c275167bd14c44740434d6d9c975b690f67c0891a0df17ec"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/agentsview-safe-source-retrieval/SKILL.md",
+    "snapshot": "profile/skills/agentsview-safe-source-retrieval/SKILL.md",
+    "sha256": "95870dff3c1fd5b8339eae850732819de7aeef717ffe32667540159e916e397c"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/frozen-source-cohort/SKILL.md",
+    "snapshot": "profile/skills/frozen-source-cohort/SKILL.md",
+    "sha256": "03a8019b974a4ba1638572135d4ebcc1706c29c2d0f078c75ba66ceb3c4b1464"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dream-loop/SKILL.md",
+    "snapshot": "profile/skills/dream-loop/SKILL.md",
+    "sha256": "bf9bd23577b99b3cab4ca7db3dce2bcf382413f061d5df1185ebda0defa003e4"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/oss-checkout-install/SKILL.md",
+    "snapshot": "profile/skills/oss-checkout-install/SKILL.md",
+    "sha256": "51389d16236dd91c8688fcf62f977d3809980a9b44369003cebf581784ce1dc3"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/activitywatch-local-sync/SKILL.md",
+    "snapshot": "profile/skills/activitywatch-local-sync/SKILL.md",
+    "sha256": "fad8f19bbdd0b8ea85aaa66b23e08071c6d888f229e0fedb55dbcf4d227b9c2c"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/webgpu-canvas-recovery/SKILL.md",
+    "snapshot": "profile/skills/webgpu-canvas-recovery/SKILL.md",
+    "sha256": "f7b20a794fd479005bdc82234fb3b32f3b7e4338ab04e6bb01eb126684e48f3c"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/live-overlay-integration/SKILL.md",
+    "snapshot": "profile/skills/live-overlay-integration/SKILL.md",
+    "sha256": "8b8529131f425b072ec133b7928a65d08c032e5a270f4029024ee5daabac7cc2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/git-evidence-preservation/SKILL.md",
+    "snapshot": "profile/skills/git-evidence-preservation/SKILL.md",
+    "sha256": "16cbd1e301d338d3c9573a7e543c73d43981b915b99b0d9df29c6dbd760b2b7b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/bounded-host-mission-qualification/SKILL.md",
+    "snapshot": "profile/skills/bounded-host-mission-qualification/SKILL.md",
+    "sha256": "a39039fdf19c82f7eb0ec109df12000da90ba19e2e5e07ecc77ba086ba5e4ce2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/upstream-contribution/SKILL.md",
+    "snapshot": "profile/skills/upstream-contribution/SKILL.md",
+    "sha256": "fab1150d03c7233dd6cef4a59ce0fcad989d51a97ccede04f9afab9a8cd21091"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/kingdom-civ-visual-tdd/SKILL.md",
+    "snapshot": "profile/skills/kingdom-civ-visual-tdd/SKILL.md",
+    "sha256": "063299b2c4ded2f617ae73283631b28c1811f3b0f7aa890927357229f04fe9c3"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/git-lineage-recovery/SKILL.md",
+    "snapshot": "profile/skills/git-lineage-recovery/SKILL.md",
+    "sha256": "af7ee83f7d3bda0bccb4b25d9035f3b6f69a530bf2306d8a9f3bf6dd3b667961"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-recessed-optics/SKILL.md",
+    "snapshot": "profile/skills/blender-recessed-optics/SKILL.md",
+    "sha256": "4733069c372221248630c498692e098e6a55a07047b0017bdafd7fa7a8faefe6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/isolated-gui-interaction-trials/SKILL.md",
+    "snapshot": "profile/skills/isolated-gui-interaction-trials/SKILL.md",
+    "sha256": "b682bce0f42185cd2022c3b2ed1277eddb1dcecff60596d10d93555ab7d281f6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/reconstruction-evidence-consumer-gates/SKILL.md",
+    "snapshot": "profile/skills/reconstruction-evidence-consumer-gates/SKILL.md",
+    "sha256": "93cfbcd694dcb65246159487840a94825cc72d39e190d66da95c31ef216a9afc"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/threejs-real-gpu-receipts/SKILL.md",
+    "snapshot": "profile/skills/threejs-real-gpu-receipts/SKILL.md",
+    "sha256": "217969fb4d2e3a3b9d8ee5e5ca734815e26bc4891638909ee5ca5a54266f7446"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/anki-game-readonly-proxy/SKILL.md",
+    "snapshot": "profile/skills/anki-game-readonly-proxy/SKILL.md",
+    "sha256": "81b56e6d4fa266c0919298c5f63b8ca7300ceff9b785721390d90a8f7c7c13cd"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/sqlite-retention-evidence/SKILL.md",
+    "snapshot": "profile/skills/sqlite-retention-evidence/SKILL.md",
+    "sha256": "91b8baa2eb0172d371f03293eac2ba6357b5e2fe8984397649a6052d59cfdbc1"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/reference-driven-ui-styling/SKILL.md",
+    "snapshot": "profile/skills/reference-driven-ui-styling/SKILL.md",
+    "sha256": "158528ec0da65955195968c3d2bd600202a8c273eab333c8e3f0fae83eee290a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/company-os-visual-language/SKILL.md",
+    "snapshot": "profile/skills/company-os-visual-language/SKILL.md",
+    "sha256": "111baa46403a6747c2fe123c926d7b923cdfda52d17b8a6b5e9601ef9c0b8a3b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/readonly-js-worktree-gates/SKILL.md",
+    "snapshot": "profile/skills/readonly-js-worktree-gates/SKILL.md",
+    "sha256": "f7cccac9399f5b897416d97e6551b15cf1672fb9a80f426560122d7b0771c59a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/hermes-openui-tern-evidence/SKILL.md",
+    "snapshot": "profile/skills/hermes-openui-tern-evidence/SKILL.md",
+    "sha256": "ac1abd55b4914231653f0f4020c34e6badfd183a333b02c57553beba4b5767b1"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/root-pressure-safe-cleanup/SKILL.md",
+    "snapshot": "profile/skills/root-pressure-safe-cleanup/SKILL.md",
+    "sha256": "b7bfe1085c5d07ab263434ca71640bd839219a5dc3abafc98b1e1e2e64b9083f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-cpu-locked-hero-audit/SKILL.md",
+    "snapshot": "profile/skills/blender-cpu-locked-hero-audit/SKILL.md",
+    "sha256": "7cd61c2ba0f7b025beebd01636ca5d964fdaea0ee276a7cdd6c6ab3a63a7b1ea"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/hermes-z0-bend-dogfood/SKILL.md",
+    "snapshot": "profile/skills/hermes-z0-bend-dogfood/SKILL.md",
+    "sha256": "224f46a5af782a0909f61644bb1442d253f5d33448dd6644f755bdcf84d15afb"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/privacy-first-activity-telemetry/SKILL.md",
+    "snapshot": "profile/skills/privacy-first-activity-telemetry/SKILL.md",
+    "sha256": "439bad1ee76d95924559ea6033e6b60138a2393d4dd6edb77f3f5a09ce627204"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/linked-promotion-ledger/SKILL.md",
+    "snapshot": "profile/skills/linked-promotion-ledger/SKILL.md",
+    "sha256": "238e1b478a219505f4e40dae082525dee1ae0b97037994d7a0ae37a1333a2e5d"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/live-projection-audit/SKILL.md",
+    "snapshot": "profile/skills/live-projection-audit/SKILL.md",
+    "sha256": "ac19cc066d32a10477ad3db94fd06b4e1e54d7587a9218d7a07279c85ae2bb9f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/discord-server-admin/SKILL.md",
+    "snapshot": "profile/skills/discord-server-admin/SKILL.md",
+    "sha256": "f904c8dcf944be95a7ad097e12535f5d93348709ab6ea5078f8b158b987169ae"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/reference-led-ui-recovery/SKILL.md",
+    "snapshot": "profile/skills/reference-led-ui-recovery/SKILL.md",
+    "sha256": "68442f0ffff2c715b4a19ad90f6a20e871d339bcfc0e2b5b72fd7cc2839d8970"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/private-learning-evaluation-gates/SKILL.md",
+    "snapshot": "profile/skills/private-learning-evaluation-gates/SKILL.md",
+    "sha256": "8167f62308db4f1c0b306d889fb27a06706b06772b44f7684bd2561a157f3443"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/neuroforge-local-first-integration/SKILL.md",
+    "snapshot": "profile/skills/neuroforge-local-first-integration/SKILL.md",
+    "sha256": "e555a9ac28ef8a75aff889c5225c84046112a10cefccbcf68d2a2b4da5bc34ee"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/anatomy-native-accessibility-receipts/SKILL.md",
+    "snapshot": "profile/skills/anatomy-native-accessibility-receipts/SKILL.md",
+    "sha256": "d0ece549a3407daef251fbc154c3fd0ec1ac32384f5258728903742ce2ced811"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/hermes-linked-native-reconciliation/SKILL.md",
+    "snapshot": "profile/skills/hermes-linked-native-reconciliation/SKILL.md",
+    "sha256": "48ff3dccd626dab72ce80966c86046ba147b86cd0b0bb1fb43df2410c51e9b73"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/optional-provider-pulse-gates/SKILL.md",
+    "snapshot": "profile/skills/optional-provider-pulse-gates/SKILL.md",
+    "sha256": "bdb67cae5c760ccfa0eb1daea2298288389e52210cdb3c9b9967cc8f39bf89d7"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/99-native-provider-qualification/SKILL.md",
+    "snapshot": "profile/skills/99-native-provider-qualification/SKILL.md",
+    "sha256": "731b23ac637b2117096e338efd4820acfa03b3d08f7786574d34b159d816d2a4"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/neovim-plugin-review-receipts/SKILL.md",
+    "snapshot": "profile/skills/neovim-plugin-review-receipts/SKILL.md",
+    "sha256": "adaa3891baca7642008444a3aabcb3dcb4f7eb2ade9219db4bfdc8150eacad82"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/release-fragment-idempotence-qualification/SKILL.md",
+    "snapshot": "profile/skills/release-fragment-idempotence-qualification/SKILL.md",
+    "sha256": "de250f2ca22de77702e7c124db4332f1b0dd3fbe01e1f00d483362c29eda4672"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/qmp-review-fail-closed-receipts/SKILL.md",
+    "snapshot": "profile/skills/qmp-review-fail-closed-receipts/SKILL.md",
+    "sha256": "2d69ce01dd8bdcdfd05d3581b316e3a7c97c92ee0c030ec29070185e2e1fe200"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/gev-architecture-request-qualification/SKILL.md",
+    "snapshot": "profile/skills/gev-architecture-request-qualification/SKILL.md",
+    "sha256": "996d68f3469a5bf24cae3f43f646fcf5e5673babd5eea1fbdd514d43a61f5633"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/static-threejs-harness-studio/SKILL.md",
+    "snapshot": "profile/skills/static-threejs-harness-studio/SKILL.md",
+    "sha256": "28b089a260c705c44bbc30d2239c631cc6ea2fc93b31b983fbab376f6235fb30"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/deferred-layout-gate-diagnosis/SKILL.md",
+    "snapshot": "profile/skills/deferred-layout-gate-diagnosis/SKILL.md",
+    "sha256": "4a5d6db718c19f853f5479b9e947e8d4e8f6751efd14ed985a1a1dedd09b85d6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/quackles-plate-editor-evidence/SKILL.md",
+    "snapshot": "profile/skills/quackles-plate-editor-evidence/SKILL.md",
+    "sha256": "1ad5e98469f4e180186d4647870f82c24d5775578d430830d5fa37e4de34b2be"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/rendered-ui-qualification/SKILL.md",
+    "snapshot": "profile/skills/rendered-ui-qualification/SKILL.md",
+    "sha256": "9a1fb64c243fe862dc9d49a2030df8cf61a5436961073cb8c2fc84930f3f6ca1"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tern-exploratory-devtools-evidence/SKILL.md",
+    "snapshot": "profile/skills/tern-exploratory-devtools-evidence/SKILL.md",
+    "sha256": "e0e13bbf278b3b9ccf6ab707b38834cf43fb8cbf4bd22d89081c88794471bc92"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/hermes-api-only-worker/SKILL.md",
+    "snapshot": "profile/skills/hermes-api-only-worker/SKILL.md",
+    "sha256": "c2c254d62881f99c7612fb858d0aa789870f4250b96f6c5940be5c1851454520"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/garden-room-zen-module-qualification/SKILL.md",
+    "snapshot": "profile/skills/garden-room-zen-module-qualification/SKILL.md",
+    "sha256": "391097eaec4054fb737390fab43621db41dcb38785d820af473548931f6f26fd"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/garden-room-real-camera-gates/SKILL.md",
+    "snapshot": "profile/skills/garden-room-real-camera-gates/SKILL.md",
+    "sha256": "7aa18bad588e5e5af5f3ad2d23f17801f2e20f82bdad633a9bd6d275710d4543"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/registry-current-base-replay/SKILL.md",
+    "snapshot": "profile/skills/registry-current-base-replay/SKILL.md",
+    "sha256": "fe95ee7967a768b79b43a5cae7b3c37a5ce03b091ff61dd4d13d5e63b95e4015"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dash-host-only-qualification/SKILL.md",
+    "snapshot": "profile/skills/dash-host-only-qualification/SKILL.md",
+    "sha256": "39937e9ed7be36ee94ba89c24b3a7b5838edb0b4f91e66919d151aa8a5984373"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-essentials-moss-ivygen/SKILL.md",
+    "snapshot": "profile/skills/blender-essentials-moss-ivygen/SKILL.md",
+    "sha256": "6766cbe908755b88b7a729ddce1eb2a1d6e11f27021f4f61a8f242b10a01d450"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/phone-adb-tailnet-qualification/SKILL.md",
+    "snapshot": "profile/skills/phone-adb-tailnet-qualification/SKILL.md",
+    "sha256": "866e3faa2e6c32f97debb0914f58c247b5efcc68c2dda1db506bc288989c49fd"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/night-stone-moss-component-review/SKILL.md",
+    "snapshot": "profile/skills/night-stone-moss-component-review/SKILL.md",
+    "sha256": "cf561a4280d6675880e624f9cc7cf2c47e0960521c050b76979390d605c8eb5f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/cplantbox-headless-spike/SKILL.md",
+    "snapshot": "profile/skills/cplantbox-headless-spike/SKILL.md",
+    "sha256": "21d44afe1203b190a92cc6e9e7403aa25482fbc7d50fba13f9bce6e7bff6950f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/source-backed-process-editorial/SKILL.md",
+    "snapshot": "profile/skills/source-backed-process-editorial/SKILL.md",
+    "sha256": "41f18945d04196e88bd6292c6a1037e83236ee600c86241e82d3aabbfafa1748"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-agent-sota-qualification/SKILL.md",
+    "snapshot": "profile/skills/blender-agent-sota-qualification/SKILL.md",
+    "sha256": "1dd224f71d7411e03780ddea06e6da18fa40e5dbd02306d272f90a986872107a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/replay-ecosystem-research/SKILL.md",
+    "snapshot": "profile/skills/replay-ecosystem-research/SKILL.md",
+    "sha256": "53a5377c69bbd9305d0922f207171c1a4c377ffeeb2dc70b94c13282f21fc208"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/agentic-gitops-integration/SKILL.md",
+    "snapshot": "profile/skills/agentic-gitops-integration/SKILL.md",
+    "sha256": "a0130358b8341cc83e8da378d5ce8fe2f3a73938ddb2f189f4b5aa9d4d8422ae"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/native-feel-web-performance-research/SKILL.md",
+    "snapshot": "profile/skills/native-feel-web-performance-research/SKILL.md",
+    "sha256": "1aad40af95d79cc73772ba822ca43ebb65f6aeb391834d1a685598ea9ceb92f5"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/public-lineage-static-island/SKILL.md",
+    "snapshot": "profile/skills/public-lineage-static-island/SKILL.md",
+    "sha256": "23df6f22dc7f8db8641663efded547ebeb0ee52a57bc2874e7b3983b8c4a6d1a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/source-backed-learning-lab/SKILL.md",
+    "snapshot": "profile/skills/source-backed-learning-lab/SKILL.md",
+    "sha256": "e0a3458bcf75f8ba2faafdcf641f632ab56d173ef0241c1eae1f5e6d9b7e818f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-ai-projection-texture-paint/SKILL.md",
+    "snapshot": "profile/skills/blender-ai-projection-texture-paint/SKILL.md",
+    "sha256": "adba95cdc6bdbfbf27d5a5fdae72c374cb69e196e9bedea720ba807ec61df288"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/fork-squash-reconciliation/SKILL.md",
+    "snapshot": "profile/skills/fork-squash-reconciliation/SKILL.md",
+    "sha256": "ff3dd37816f6ac7145dcee1d1ea2d30fe08b106f75dbd464c9f2be37c237e923"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/light-browser-engine-qualification/SKILL.md",
+    "snapshot": "profile/skills/light-browser-engine-qualification/SKILL.md",
+    "sha256": "44edf59da243baa98681b5a47010c80b25bd26fec7fbe439b2e5a42465de7d04"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/garden-room-almanac-density/SKILL.md",
+    "snapshot": "profile/skills/garden-room-almanac-density/SKILL.md",
+    "sha256": "4706ac14f95bafca7279f4513d8a6f47d1beec645960e50508ddd4fe9431896e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-meta-loop-evidence/SKILL.md",
+    "snapshot": "profile/skills/blender-meta-loop-evidence/SKILL.md",
+    "sha256": "4638919298e5d79bb04b67fec14bebba223abb213a9a9d70208792cc347e55cf"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/lawnchair-z0live-delivery/SKILL.md",
+    "snapshot": "profile/skills/lawnchair-z0live-delivery/SKILL.md",
+    "sha256": "6eeac16433345011cac354461584f73a44f2b5c6ce1506a9bfe1ed5a8d704c7a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-screen-free-engraving/SKILL.md",
+    "snapshot": "profile/skills/blender-screen-free-engraving/SKILL.md",
+    "sha256": "a0ed7efe45de96c2abbb960b9387def7feab8515da9f40c3909d3fcb06ac6f49"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/garden-room-voice-realtime/SKILL.md",
+    "snapshot": "profile/skills/garden-room-voice-realtime/SKILL.md",
+    "sha256": "8cbdfe7dc7bf10ee94b660dcdc1b22e440356fbfe4cd032c85e2675804e87aeb"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/garden-room-live-feedback/SKILL.md",
+    "snapshot": "profile/skills/garden-room-live-feedback/SKILL.md",
+    "sha256": "1c2133766b0b9a56daf39a0663ab3b28a90da98863e383a5228af53978d2b78a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/vllm-sr-turbo-router/SKILL.md",
+    "snapshot": "profile/skills/vllm-sr-turbo-router/SKILL.md",
+    "sha256": "caad19b02ff43843fcaba850fd0dd13f363ebd8b35ee6f45fc14412a6f6c0e0a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/canvas-atlas-timeline-qualification/SKILL.md",
+    "snapshot": "profile/skills/canvas-atlas-timeline-qualification/SKILL.md",
+    "sha256": "d5a415c0772a407012bf28f92d63dde7cfb9b85eb5533aa0fe658bc20d428144"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/clean-publication-adapter-gate/SKILL.md",
+    "snapshot": "profile/skills/clean-publication-adapter-gate/SKILL.md",
+    "sha256": "a54358b8d51b1810f23e6b6daea861c1190f1afc18bf3b9ec17320b1465676d9"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-regional-ink-ablation/SKILL.md",
+    "snapshot": "profile/skills/blender-regional-ink-ablation/SKILL.md",
+    "sha256": "35a1625d43078254b1f2e810d2c27fe3b995f2b1a0d4b04defa7af4149e92720"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-regional-optics-coupons/SKILL.md",
+    "snapshot": "profile/skills/blender-regional-optics-coupons/SKILL.md",
+    "sha256": "4eb1b79ec306bf022fac0c0012d6f1722344457784b8c022ec027218f0f1a686"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/same-journey-painted-coverage/SKILL.md",
+    "snapshot": "profile/skills/same-journey-painted-coverage/SKILL.md",
+    "sha256": "3d47e2dcfa4eee6bdef97ba40e2ac190d79b4c44e06b637fbaab28e804825491"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-reference-derived-relief/SKILL.md",
+    "snapshot": "profile/skills/blender-reference-derived-relief/SKILL.md",
+    "sha256": "33b1826f23ec4f1343e3d924497ca9fc70cb0c919c657da48ae9e6f5dee853d9"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-frequency-split-projection-gates/SKILL.md",
+    "snapshot": "profile/skills/blender-frequency-split-projection-gates/SKILL.md",
+    "sha256": "27b64502abcf3157d5409492a6f16517b3faa5ae5d7779255d6c2dff45944475"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/carrier-closure-repair-receipts/SKILL.md",
+    "snapshot": "profile/skills/carrier-closure-repair-receipts/SKILL.md",
+    "sha256": "9fa8b772259294e7c53752d2a50c5382b8c48e51716cc96e79f6c49d1293902a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/bounded-promotion-evidence-ledger/SKILL.md",
+    "snapshot": "profile/skills/bounded-promotion-evidence-ledger/SKILL.md",
+    "sha256": "6da57734d85e1cfffa81eec46a4e3df95efa11396baf0b0faf09fd8f21b16572"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/objectkv-native-composition-receipts/SKILL.md",
+    "snapshot": "profile/skills/objectkv-native-composition-receipts/SKILL.md",
+    "sha256": "d2a7f4e2f2d016926514882658201b29b3117a228e2caa43571a26505d72445b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/omp-pii-bounded-hook-repair/SKILL.md",
+    "snapshot": "profile/skills/omp-pii-bounded-hook-repair/SKILL.md",
+    "sha256": "ca40eb7c38e138fad06b61185d3b6efd53c9529a2c723c908c5171a3afb66a3c"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/restate-native-ack-receipts/SKILL.md",
+    "snapshot": "profile/skills/restate-native-ack-receipts/SKILL.md",
+    "sha256": "d2181a502d24cc939b8b77a544fe49547ec72fbcb960403a452edf459c95da6b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/hermes-pending-token-recovery/SKILL.md",
+    "snapshot": "profile/skills/hermes-pending-token-recovery/SKILL.md",
+    "sha256": "1081acc77aa9840b822ef01f20fe63e2be790eb0c5680b402df513a702ded66a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/llama-bend-pinned-native-baseline/SKILL.md",
+    "snapshot": "profile/skills/llama-bend-pinned-native-baseline/SKILL.md",
+    "sha256": "ffc1727087c6bdf332b1363f0d2b19847c256567a34094a0a2a653e842a534c0"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/openroad-hosted-numeric-attestation/SKILL.md",
+    "snapshot": "profile/skills/openroad-hosted-numeric-attestation/SKILL.md",
+    "sha256": "058bc5b5d2db6dcc06b5ac371fcbcc4636ee5194a251881c32dde3676a9d53f9"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/omarchy-isolated-aggregate-gates/SKILL.md",
+    "snapshot": "profile/skills/omarchy-isolated-aggregate-gates/SKILL.md",
+    "sha256": "624e222f15c6d0ba03bfac2a49ec7b402a8de454d8895fbbc197a0fbfbdfdf09"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/public-video-reference-audit/SKILL.md",
+    "snapshot": "profile/skills/public-video-reference-audit/SKILL.md",
+    "sha256": "a42f6fad1c1f0a586a0660fc7e34c44489a33dc879f39b28f1dcadeb71ec0605"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/bookmark-sync-taste-evidence/SKILL.md",
+    "snapshot": "profile/skills/bookmark-sync-taste-evidence/SKILL.md",
+    "sha256": "84b65f459b8b291e5dc0757073086a4b19448ffadafea4907ea410deef32b3f6"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tern-source-parity-audit/SKILL.md",
+    "snapshot": "profile/skills/tern-source-parity-audit/SKILL.md",
+    "sha256": "b9d93a0b811d18bf4c30c69a46dc941c29c4abb6e3823cd6e5c8acc7f96eddac"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/gev-deterministic-4k-capture/SKILL.md",
+    "snapshot": "profile/skills/gev-deterministic-4k-capture/SKILL.md",
+    "sha256": "aee67995c483311a444e34177714b2c41b002aa717547bb7e6cd07aa768e9b84"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/fframes-workflow-evidence/SKILL.md",
+    "snapshot": "profile/skills/fframes-workflow-evidence/SKILL.md",
+    "sha256": "465fad1f74c6aced27375edab42bb338472866baae046ce977fe700909c687d0"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tern-secondary-native-ui/SKILL.md",
+    "snapshot": "profile/skills/tern-secondary-native-ui/SKILL.md",
+    "sha256": "0ab5bc4a97f1676f981894c07196bc5c2a2600b4a50e18252722eca3a94e52fa"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tern-modal-splash-key-ownership/SKILL.md",
+    "snapshot": "profile/skills/tern-modal-splash-key-ownership/SKILL.md",
+    "sha256": "5da1f20456a68cea7e5e0c58e814879534ca02b449c8d7f8acca9ca3921127b1"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/browser-media-engine-qualification/SKILL.md",
+    "snapshot": "profile/skills/browser-media-engine-qualification/SKILL.md",
+    "sha256": "caf0793cf0cc5fa47b53a1969987fcd6575c553f7438d927d70551f9da6e8546"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/fframestudio-editor-core-qualification/SKILL.md",
+    "snapshot": "profile/skills/fframestudio-editor-core-qualification/SKILL.md",
+    "sha256": "fad3621585ab76cec36b4d91cbd71c5a37e7f82862b2bab33674d290c8941689"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/turbo-native-ab-receipts/SKILL.md",
+    "snapshot": "profile/skills/turbo-native-ab-receipts/SKILL.md",
+    "sha256": "437b9b2be9641aade75e0c4f16e1f34470a848547f281ea1385e2fd5e899e0b8"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tern-action-shortcut-receipts/SKILL.md",
+    "snapshot": "profile/skills/tern-action-shortcut-receipts/SKILL.md",
+    "sha256": "ecb0dcce30634468356918cb9919a8b32fc3fa16fc32395fad3579d19428eb5e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tern-sync-seam-preparation/SKILL.md",
+    "snapshot": "profile/skills/tern-sync-seam-preparation/SKILL.md",
+    "sha256": "b9aced77225c23b88dfa68d262dc073c99fae55b0b2a197880eeaf5920ba40ad"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tern-resume-tool-fidelity/SKILL.md",
+    "snapshot": "profile/skills/tern-resume-tool-fidelity/SKILL.md",
+    "sha256": "388bc5cf78a0d0153a675b0e01dff150be688a25c7f4305dcc8fd385042d4921"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/hermes-tern-parity-orchestration/SKILL.md",
+    "snapshot": "profile/skills/hermes-tern-parity-orchestration/SKILL.md",
+    "sha256": "47c9222f2e6bb382a301be064bfb9728ba47af232ddfa1e89a99ece7cf4e4c60"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/garden-room-photo-history/SKILL.md",
+    "snapshot": "profile/skills/garden-room-photo-history/SKILL.md",
+    "sha256": "a6953c7f8a2c585d6f7bcaee642e5c3f5341514e4e6dd8217130a5ba69d85e81"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/device-credential-handoff/SKILL.md",
+    "snapshot": "profile/skills/device-credential-handoff/SKILL.md",
+    "sha256": "4bcb23bfacc4ab132735e58bc640d242de376c07ad5b363f0626b5ef6566b9a1"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tern-event-inspector-receipts/SKILL.md",
+    "snapshot": "profile/skills/tern-event-inspector-receipts/SKILL.md",
+    "sha256": "5f91d35b72de374fe2b97db1c816f008c47c7842a117d511e245c8c45d1ef5cb"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/garden-room-core-planner/SKILL.md",
+    "snapshot": "profile/skills/garden-room-core-planner/SKILL.md",
+    "sha256": "8d3ec1acd4bdf591fe9a96ef9ea8d02383fff29aa19ed4742b0bad3020fb3732"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/z0live-voice-work-tools/SKILL.md",
+    "snapshot": "profile/skills/z0live-voice-work-tools/SKILL.md",
+    "sha256": "5d1c1e2562d1737743dc0321b7428583d300411609ba74fd9d9484a6f9af241c"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/issue-driven-agent-integration/SKILL.md",
+    "snapshot": "profile/skills/issue-driven-agent-integration/SKILL.md",
+    "sha256": "5ba14d9ab1feac4f095b377748707a6a4182cf602aecaab396de6dc02156bdeb"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tern-native-dictation-receipts/SKILL.md",
+    "snapshot": "profile/skills/tern-native-dictation-receipts/SKILL.md",
+    "sha256": "91b78d8b793d072bd258e6858e36dec49f76b466555422558b0b3352614627c3"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tern-sdk-retention-gates/SKILL.md",
+    "snapshot": "profile/skills/tern-sdk-retention-gates/SKILL.md",
+    "sha256": "5c425372300267c29d03053aedb3f1c628fa6c8c82fec606d0877115a1f0afaa"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/realtime-voice-agent-design/SKILL.md",
+    "snapshot": "profile/skills/realtime-voice-agent-design/SKILL.md",
+    "sha256": "9651070383fb9380d310035823f88059eee44d4fe1d134d50d37dee848c8e364"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tern-sdk-pr-qualification/SKILL.md",
+    "snapshot": "profile/skills/tern-sdk-pr-qualification/SKILL.md",
+    "sha256": "d465cd0087ea091f7da1df9069ba010739b274d43f04adc31cac27d6ba24cd8b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/issue-queue-agent-integration/SKILL.md",
+    "snapshot": "profile/skills/issue-queue-agent-integration/SKILL.md",
+    "sha256": "fc5511c66899f8eeb67d4c80eb681e348b8c16a15d3805526c826e0bae54fbca"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tern-serve-real-turn-isolation/SKILL.md",
+    "snapshot": "profile/skills/tern-serve-real-turn-isolation/SKILL.md",
+    "sha256": "5a33cc9cad66b76504c1e679652671297a129f17f0f94e8cbb3e7e52fce9c800"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tern-keyboard-bugbash/SKILL.md",
+    "snapshot": "profile/skills/tern-keyboard-bugbash/SKILL.md",
+    "sha256": "be157817489495270d162de71c2909d82ebd3f23585da11b8be7e2d5c96d9783"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/garden-room-webxr-measurement/SKILL.md",
+    "snapshot": "profile/skills/garden-room-webxr-measurement/SKILL.md",
+    "sha256": "2a5e9d61dc89712ae6c3e04af2f6f5e675c74de591ba4a46222048e39c969855"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/garden-room-replay-watch/SKILL.md",
+    "snapshot": "profile/skills/garden-room-replay-watch/SKILL.md",
+    "sha256": "f5a5330059c37af4656b451a66a47712058ae045c3e6157153e020da4edb827a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/ace-racquet-net-receivers/SKILL.md",
+    "snapshot": "profile/skills/ace-racquet-net-receivers/SKILL.md",
+    "sha256": "aa39bbc1b5406a5c59bc36152fb532fce1869c285047ff6a32d2378fa0eb9597"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blender-campus-interior-breadth-gates/SKILL.md",
+    "snapshot": "profile/skills/blender-campus-interior-breadth-gates/SKILL.md",
+    "sha256": "1429e5e63acf621314ff9bf62ac106e4dcdcfd7ec950c76ada466b8b5b82ece7"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dash-living-night-proof/SKILL.md",
+    "snapshot": "profile/skills/dash-living-night-proof/SKILL.md",
+    "sha256": "0030a73732d60aa0284c92983fa4292b1b959adc55dfc1173b75d93bcdc66152"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/sport-form-prototype-gates/SKILL.md",
+    "snapshot": "profile/skills/sport-form-prototype-gates/SKILL.md",
+    "sha256": "262a698668c074762f3e29b54a334a79e3aefcf72d4ba4b8ec3ba6a16e4c292a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/bend-reachable-cuda-rule-gates/SKILL.md",
+    "snapshot": "profile/skills/bend-reachable-cuda-rule-gates/SKILL.md",
+    "sha256": "697bef665791661d24d70b07a69b7d43628e9104dde575b06457a2ca425c3e88"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dash-phone-service-switch/SKILL.md",
+    "snapshot": "profile/skills/dash-phone-service-switch/SKILL.md",
+    "sha256": "8ca1cc62a9f2c01e2db695ef005a2de01ef4a07950b052a8bd261e9b6233d670"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/noop-hermes-agent-access/SKILL.md",
+    "snapshot": "profile/skills/noop-hermes-agent-access/SKILL.md",
+    "sha256": "15bbd32e3a37391cf6ff7a6792086b7675283e747164dd637441f5094476c212"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dash-native-dev-build/SKILL.md",
+    "snapshot": "profile/skills/dash-native-dev-build/SKILL.md",
+    "sha256": "0a0b0ac2d871d30f6b8d70564a262023f0438ddbbbb78c4284f0bc2cc338e242"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dash-summary-transport-qualification/SKILL.md",
+    "snapshot": "profile/skills/dash-summary-transport-qualification/SKILL.md",
+    "sha256": "34be3a9976973839c88338759c5c79c6c6c8a005e8a9f68b98f722e8626a48d3"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/fleet-owner-ssh-parity/SKILL.md",
+    "snapshot": "profile/skills/fleet-owner-ssh-parity/SKILL.md",
+    "sha256": "94c93a7043e2801b05ad614150e2e4a185772644c79ff05f208164c5d78532ad"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/z0bridge-owned-ssh-enrollment/SKILL.md",
+    "snapshot": "profile/skills/z0bridge-owned-ssh-enrollment/SKILL.md",
+    "sha256": "91ffae634b0e7f342fee125bfa05334de711ae52f425a1cfb065d7e682919624"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dash-event-log-watch-qualification/SKILL.md",
+    "snapshot": "profile/skills/dash-event-log-watch-qualification/SKILL.md",
+    "sha256": "cedef7d191a68b616ac880c70d6cfff4aa0110832691eaf69b79775dced420e1"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dash-same-chat-agent-surface/SKILL.md",
+    "snapshot": "profile/skills/dash-same-chat-agent-surface/SKILL.md",
+    "sha256": "95707f6109fc5b9f619c34239e27980464320d9d7dd96c7db58d0911614db28e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/team-sport-rule-projection-gates/SKILL.md",
+    "snapshot": "profile/skills/team-sport-rule-projection-gates/SKILL.md",
+    "sha256": "09a9da00fbb3a13efee128f6562fcd63bd639a5c6450f3ccec9c932d612a11ab"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/ace-licensed-human-intake/SKILL.md",
+    "snapshot": "profile/skills/ace-licensed-human-intake/SKILL.md",
+    "sha256": "820d77bbb55c5e30fe776d4715f1ca3729a09264dd5cab39df34446ee1b29d9b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/public-technical-founder-dossier/SKILL.md",
+    "snapshot": "profile/skills/public-technical-founder-dossier/SKILL.md",
+    "sha256": "fd54b46394c36b73bbb0ea44f5090ba24fb33c5a323f5c753e1c52fb85b3bbbb"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/fork-parallel-union-ci/SKILL.md",
+    "snapshot": "profile/skills/fork-parallel-union-ci/SKILL.md",
+    "sha256": "3c2de86ace060186462511d5c0cdae57fdf67e57f3223addedb907e4fd4601d8"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dash-memory-retention-qualification/SKILL.md",
+    "snapshot": "profile/skills/dash-memory-retention-qualification/SKILL.md",
+    "sha256": "9234367ee7eff004c3ed783b41c34309f63a7cd1e996e9c1c2718ab91345f97a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dash-stylus-native-qualification/SKILL.md",
+    "snapshot": "profile/skills/dash-stylus-native-qualification/SKILL.md",
+    "sha256": "f8a690415cd3dffe88b081d740b620b853faa1e1e8f135bc91f9405121389266"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/o8-linux-launch-qualification/SKILL.md",
+    "snapshot": "profile/skills/o8-linux-launch-qualification/SKILL.md",
+    "sha256": "75cd5c5000c02b3868b72f18b84110e70319aa0c0677f25b6e5bc5d8ad0cf128"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/gdp-wired-law-family-critic/SKILL.md",
+    "snapshot": "profile/skills/gdp-wired-law-family-critic/SKILL.md",
+    "sha256": "85cc1bc3def2d06433dcf18237fe950356c5c132697a21f0912805cee1bdf50a"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/gdp-wired-law-measurement/SKILL.md",
+    "snapshot": "profile/skills/gdp-wired-law-measurement/SKILL.md",
+    "sha256": "17903b15b26b57a26d7c7f8b6599964263573036fe23204abc0cfb9887691897"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/blind-semantic-seed-validation/SKILL.md",
+    "snapshot": "profile/skills/blind-semantic-seed-validation/SKILL.md",
+    "sha256": "e83cb54d9273b4c3240adef4f3fda77d76413ed2467c3a2d6c8760cf66acc80e"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/hermes-memory-combined-substrate/SKILL.md",
+    "snapshot": "profile/skills/hermes-memory-combined-substrate/SKILL.md",
+    "sha256": "f16f9946047a2817b246908656e2066388fe26685e3d57648d645c8983e88c36"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/cua-downstream-frontier-triage/SKILL.md",
+    "snapshot": "profile/skills/cua-downstream-frontier-triage/SKILL.md",
+    "sha256": "ac666cdffe716a14ef09e702b50585fd0bbcd1f76ced7e6ced5a2a64277d46bc"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/hermes-pinned-compressor-boundary-studies/SKILL.md",
+    "snapshot": "profile/skills/hermes-pinned-compressor-boundary-studies/SKILL.md",
+    "sha256": "2ac1027fbf617db923864c7a5528f8045d7a8a633c0e8b563d454ef5084f2b91"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/pomerado-subscription-transport/SKILL.md",
+    "snapshot": "profile/skills/pomerado-subscription-transport/SKILL.md",
+    "sha256": "36da3dc419ab9b9e8aea4f1977a66a78a03ab8fb47444d05f1e510f2902155a7"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/z0-laws-toolkit-qualification/SKILL.md",
+    "snapshot": "profile/skills/z0-laws-toolkit-qualification/SKILL.md",
+    "sha256": "5e9ac49ad2135318a5a8ab3fa83dc7255b0b9fe6bd43db55807896098c21faf2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dash-hermes-session-qualification/SKILL.md",
+    "snapshot": "profile/skills/dash-hermes-session-qualification/SKILL.md",
+    "sha256": "e1efd7a430702977507ebef60775f1ce42c55bfce660cef3952aaa1646ab99c8"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/z0-onboard-llm-qualification/SKILL.md",
+    "snapshot": "profile/skills/z0-onboard-llm-qualification/SKILL.md",
+    "sha256": "80c12e9906485ead864d5fd44dc11b18bdb04bbc236cfce23698c617a15bed9b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/overnight-run-forensics/SKILL.md",
+    "snapshot": "profile/skills/overnight-run-forensics/SKILL.md",
+    "sha256": "b84e2cebe6bfc37799f9a3937e4d60bedc25be31319535302576e5547b04766b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dash-circadian-notice-gates/SKILL.md",
+    "snapshot": "profile/skills/dash-circadian-notice-gates/SKILL.md",
+    "sha256": "85ee5631178d228294d68567cb7a213148687162e88c73ec012365012a89c65c"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/z0int-verifier-budget-gates/SKILL.md",
+    "snapshot": "profile/skills/z0int-verifier-budget-gates/SKILL.md",
+    "sha256": "998f53bb6473d0aa3f949c3035ecdc4d5d8b36e4fc1bbc93ff895bb0f64f5118"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dash-army-roster-304-diagnosis/SKILL.md",
+    "snapshot": "profile/skills/dash-army-roster-304-diagnosis/SKILL.md",
+    "sha256": "94639c71c7eb07f8dc775854cce1d0438e8a093f4c061d3025c0411cc13cf6d0"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dash-tldraw-army-qualification/SKILL.md",
+    "snapshot": "profile/skills/dash-tldraw-army-qualification/SKILL.md",
+    "sha256": "50f14066b83a3d2e6c423b7b87be49f9af6f2d1ecaa41b2233023d080c22a790"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/t3-mode-state-recovery/SKILL.md",
+    "snapshot": "profile/skills/t3-mode-state-recovery/SKILL.md",
+    "sha256": "c4087d77b38eec914fa03d010924c5f33a3c3139c6f339d583e85932a03a270f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/android-ui-replay-qualification/SKILL.md",
+    "snapshot": "profile/skills/android-ui-replay-qualification/SKILL.md",
+    "sha256": "e3ec65db3f68b7f399b67b40111728523bf7a75375c2f35147bedf6472f98560"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/fframes-video-via-fframestudio/SKILL.md",
+    "snapshot": "profile/skills/fframes-video-via-fframestudio/SKILL.md",
+    "sha256": "11d1185ad8c27d90ece920c5a0ec270c469621ed22f605aef763ec8d8977e71b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/hermes-tern-version-launches/SKILL.md",
+    "snapshot": "profile/skills/hermes-tern-version-launches/SKILL.md",
+    "sha256": "14b269033254a39c9c8e278b2ce13f64180f6392d65f350b89efb6cf6c9df8a8"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/audiocpp-host-voice-stage-qualification/SKILL.md",
+    "snapshot": "profile/skills/audiocpp-host-voice-stage-qualification/SKILL.md",
+    "sha256": "46135830c47c693e4b02b4a9f14c0ee49788e319c5cbd54c659775d17e9d73da"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dash-turbo-live-preview/SKILL.md",
+    "snapshot": "profile/skills/dash-turbo-live-preview/SKILL.md",
+    "sha256": "802edd55e296afd522cdf7fb15597277dfb79bf1d3cb973b0e6621ed0aa17d8d"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/southpaw-training-onboarding/SKILL.md",
+    "snapshot": "profile/skills/southpaw-training-onboarding/SKILL.md",
+    "sha256": "cef41e3a6acb332b2e9b09045b041fa2115106975ac32751ce0e5b89251a9016"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/omp-tui-lsp-integration/SKILL.md",
+    "snapshot": "profile/skills/omp-tui-lsp-integration/SKILL.md",
+    "sha256": "a5d4c2c2a262eba14323c512f1635a7815af5d590f2b2e8343cc8d1c32af6a5b"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/host-performance-learning/SKILL.md",
+    "snapshot": "profile/skills/host-performance-learning/SKILL.md",
+    "sha256": "933d5e20809c5a9fb64adffe4001066002ed0da7b9e9883d9352c742eaa43ef2"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/decision-runtime-contract-review/SKILL.md",
+    "snapshot": "profile/skills/decision-runtime-contract-review/SKILL.md",
+    "sha256": "2be6af69acca87813eb04b06da89a97c83176b016111e894a7bae04b78237d72"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/dsh-source-diagnostic-runner/SKILL.md",
+    "snapshot": "profile/skills/dsh-source-diagnostic-runner/SKILL.md",
+    "sha256": "6f7b69a681b78034e32e7cb69ffa841fa64e06d15b4575a20d5da81ae5d01afd"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/lpy-headless-growth-export/SKILL.md",
+    "snapshot": "profile/skills/lpy-headless-growth-export/SKILL.md",
+    "sha256": "70f74f621f8c3a730532434ed4dddfa1b6766efee1ab88a260ad71b83edbdab8"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/private-linearraw-candidate/SKILL.md",
+    "snapshot": "profile/skills/private-linearraw-candidate/SKILL.md",
+    "sha256": "abc8e4258b07170020b8be970378abc7285b544a76d113e6db0ede7c8afea04f"
+  },
+  {
+    "source": "/workspace/hermes-home/profiles/clean/skills/tern-merge-wave-union/SKILL.md",
+    "snapshot": "profile/skills/tern-merge-wave-union/SKILL.md",
+    "sha256": "20ddafbea2b0821695cfd6d20d68226fa103d023b91202e72cfa693a1658635c"
+  },
+  {
+    "source": "/mnt/zer0models/workspace/zer0/data/operations/token-thrift-tools-20261104/skill-eval/labels-noedit.jsonl",
+    "snapshot": "labels-noedit.jsonl",
+    "sha256": "e94c676cfb788979b1afaec9e80443a97ca3ac7184860beb0f7e09e264fcf952"
+  },
+  {
+    "source": "/mnt/zer0models/workspace/zer0/data/operations/t3-tool-failures/hermes-oauth-alias-bridge.patch",
+    "snapshot": "alias.patch",
+    "sha256": "015bc8e5aa25f4f6588ea809edfaed2ae3deb5027895f1c836b935b3a9a9aca3"
+  }
+]

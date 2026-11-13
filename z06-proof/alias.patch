@@ -1,0 +1,127 @@
+From 3c4314c488fd3963943ed3c87df6e7c6254a605e Mon Sep 17 00:00:00 2001
+From: Kevin Rajan <7121943+kvnloo@users.noreply.github.com>
+Date: Wed, 4 Nov 2026 01:40:11 -0600
+Subject: [PATCH] fix(tool-search): resolve OAuth wire aliases named inside
+ bridge arguments
+
+On Anthropic OAuth the prompt prose renames session_search to
+chat_history_lookup. When the tool is deferred, the model passes that alias
+as a string inside tool_call/tool_describe arguments, where the transport's
+top-level name reversal never reaches, so every call failed with
+"'chat_history_lookup' is not a known tool name" (42 failures in a week of
+T3 Code traces). Resolve the alias at the bridge; a tool registered under the
+alias name still wins.
+---
+ tests/tools/test_tool_search.py | 24 ++++++++++++++++++++++++
+ tools/tool_search.py            |  4 ++--
+ tools/tool_search_catalog.py    | 14 ++++++++++++++
+ tools/tool_search_validation.py |  4 ++--
+ 4 files changed, 42 insertions(+), 4 deletions(-)
+
+diff --git a/tests/tools/test_tool_search.py b/tests/tools/test_tool_search.py
+index 779d9bf8b6b..42bf5a2ae87 100644
+--- a/tests/tools/test_tool_search.py
++++ b/tests/tools/test_tool_search.py
+@@ -424,6 +424,30 @@ class TestBridgeDispatch:
+         _, _, err = resolve_underlying_call({"calls": [{"name": "todo_list", "arguments": '{"todos": ['}]})
+         assert err
+ 
++    def test_oauth_wire_alias_resolves_inside_bridge_arguments(self):
++        """On Anthropic OAuth the prompt calls ``session_search`` ``chat_history_lookup``; the model
++        then names the alias inside ``tool_call``/``tool_describe`` arguments, which the transport's
++        top-level reversal never sees. Both bridges must resolve it to the registered tool."""
++        import model_tools  # noqa: F401  # registers the built-in tools
++        from tools.tool_search import dispatch_tool_describe, resolve_underlying_call
++        name, args, err = resolve_underlying_call(
++            {"calls": [{"name": "chat_history_lookup", "arguments": {"query": "x"}}]})
++        assert (name, args, err) == ("session_search", {"query": "x"}, None)
++        described = json.loads(dispatch_tool_describe(
++            {"names": ["chat_history_lookup"]}, current_tool_defs=[_td("session_search", "recall")]))
++        assert described["tools"]["chat_history_lookup"]["description"] == "recall"
++        assert "not_found" not in described
++
++    def test_registered_tool_under_a_wire_alias_name_is_never_rewritten(self, monkeypatch):
++        """Negative control: a real tool registered as ``chat_history_lookup`` keeps its name."""
++        from tools.registry import registry
++        from tools.tool_search_catalog import resolve_wire_alias
++        real = registry.get_entry
++        monkeypatch.setattr(registry, "get_entry",
++                            lambda n: object() if n == "chat_history_lookup" else real(n))
++        assert resolve_wire_alias("chat_history_lookup") == "chat_history_lookup"
++        assert resolve_wire_alias("unknown_xxx") == "unknown_xxx"
++
+ 
+ # ---------------------------------------------------------------------------
+ # End-to-end via the real handle_function_call (smoke test).
+diff --git a/tools/tool_search.py b/tools/tool_search.py
+index 90631843bcf..bc0e12597fd 100644
+--- a/tools/tool_search.py
++++ b/tools/tool_search.py
+@@ -22,7 +22,7 @@ from toolsets import CLIENT_SURFACE_TOOLSETS, TOOLSET_SESSION_PLATFORMS
+ from tools.tool_search_catalog import (
+     BRIDGE_TOOL_NAMES, CHARS_PER_TOKEN, TOOL_CALL_NAME, TOOL_DESCRIBE_NAME, TOOL_SEARCH_NAME,
+     CatalogEntry, _fn, _listing_group_label, _registry_entry, _registry_toolset,
+-    build_catalog, build_catalog_listing_with_form, search_catalog)
++    build_catalog, build_catalog_listing_with_form, resolve_wire_alias, search_catalog)
+ from tools.tool_search_validation import (
+     local_batch_error, normalize_tool_call_entries, not_deferrable_error, session_unavailable_error,
+     unavailable_in_session_reason, validate_deferred_call_args)
+@@ -511,7 +511,7 @@ def dispatch_tool_describe(args: dict[str, Any], *, current_tool_defs: list[dict
+     errors: dict[str, str] = {}
+     session_names = session_tool_names(current_tool_defs)
+     for name in names:
+-        fn = by_name.get(name)
++        fn = by_name.get(resolve_wire_alias(name))  # keyed by the name the model asked for
+         remote_fn = remote_schemas.get(name)
+         if fn is not None:
+             tools[name] = {"description": fn.get("description", ""),
+diff --git a/tools/tool_search_catalog.py b/tools/tool_search_catalog.py
+index d46ab157929..a42b14dd2db 100644
+--- a/tools/tool_search_catalog.py
++++ b/tools/tool_search_catalog.py
+@@ -70,6 +70,20 @@ def _registry_entry(name: str) -> Any:
+         return None
+ 
+ 
++def resolve_wire_alias(name: str) -> str:
++    """Registered name for a tool the model cited by its Anthropic OAuth wire alias.
++
++    On OAuth the prompt prose calls ``session_search`` ``chat_history_lookup``, so the model
++    passes that alias as a *string argument* to the bridge (``tool_call`` / ``tool_describe``),
++    where normalize_response's top-level name reversal never reaches. A registered tool under
++    the alias still wins, mirroring the transport's resolution order."""
++    if _registry_entry(name) is not None:
++        return name
++    from agent.anthropic_adapter import _OAUTH_TOOL_NAME_REVERSE_ALIASES  # late: heavy import
++    original = _OAUTH_TOOL_NAME_REVERSE_ALIASES.get(name)
++    return original if original and _registry_entry(original) is not None else name
++
++
+ def _registry_toolset(name: str) -> Optional[str]:
+     """Toolset of a registered tool; None when unregistered or malformed (no str toolset)."""
+     toolset = getattr(_registry_entry(name), "toolset", None)
+diff --git a/tools/tool_search_validation.py b/tools/tool_search_validation.py
+index f52fa3d14ec..e293b98923f 100644
+--- a/tools/tool_search_validation.py
++++ b/tools/tool_search_validation.py
+@@ -9,7 +9,7 @@ import re
+ from typing import Any, Dict, Iterable, List, Optional, Tuple
+ 
+ from tools.registry import tool_error
+-from tools.tool_search_catalog import BRIDGE_TOOL_NAMES, _registry_entry
++from tools.tool_search_catalog import BRIDGE_TOOL_NAMES, _registry_entry, resolve_wire_alias
+ 
+ logger = logging.getLogger("tools.tool_search")
+ 
+@@ -167,7 +167,7 @@ def normalize_tool_call_entries(args: dict[str, Any]) -> tuple[list[dict[str, An
+     for position, raw in enumerate(raw_calls):
+         if not isinstance(raw, dict):
+             return [], f"tool_call calls[{position}] must be an object with 'name' and 'arguments'"
+-        name = str(raw.get("name") or "").strip()
++        name = resolve_wire_alias(str(raw.get("name") or "").strip())
+         if not name:
+             return [], f"tool_call calls[{position}] requires a 'name'"
+         if name in BRIDGE_TOOL_NAMES:
+-- 
+2.56.0
+

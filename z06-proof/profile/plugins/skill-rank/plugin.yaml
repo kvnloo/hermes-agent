@@ -1,0 +1,6 @@
+name: skill-rank
+version: 0.1.0
+description: On fresh owner turns, names the top 3 skills ranked by BM25 over each SKILL.md's full body (the 60-char index descriptions are too short to choose from). Injected into the user turn, not the system prompt; no model or network.
+author: kvnloo
+provides_hooks:
+  - pre_llm_call

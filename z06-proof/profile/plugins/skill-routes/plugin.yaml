@@ -1,0 +1,9 @@
+name: skill-routes
+version: 1.0.0
+description: Per turn, nudges the agent to load a specific skill when Kevin's message matches a route in routes.yaml (e.g. X/Reddit/YouTube links -> agent-reach). Fires once per skill per session; silent once the skill is loaded. tool_routes.yaml adds a pre_tool_call gate (Z06) - the first generic call on X/GitHub links and repeats of hard failures are blocked with the right command; the identical retry or the doctor passes.
+author: kvnloo
+provides_hooks:
+  - pre_llm_call
+  - pre_tool_call
+  - post_tool_call
+  - transform_tool_result

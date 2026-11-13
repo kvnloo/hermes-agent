@@ -1,0 +1,44 @@
+# tool-routes (Z06). route: block the first generic call and name the right tool; the identical retry passes.
+# breaker: after a hard, non-retryable error, block the same tool (max_blocks times).
+# hint: after a failure that may still clear, append one doctor line to the result; never blocks.
+routes:
+  - id: x-via-agent-reach
+    tools: 'web_extract|web_search|browser_navigate|browser_exec|mcp__browser_exec'
+    args: '(?:x|twitter)\.com/\w+/status/|site:(?:x|twitter)\.com|(?:x|twitter)\.com/search'
+    message: >-
+      X/Twitter goes through agent-reach (skill agent-reach), not generic web tools. Read a post:
+      terminal `twitter -c tweet <id>`; a user's posts: `twitter -c user-posts <handle>`. On an error run
+      `agent-reach doctor --json`. Fallback for a single post: `curl -s https://api.fxtwitter.com/i/status/<id>`.
+      Search: `twitter -c search "<q>"`; if it 404s, `mcporter call 'exa.web_search_exa(query: "<q> site:x.com", numResults: 5)'`.
+  - id: github-via-gh
+    tools: 'web_extract|browser_navigate'
+    args: 'github\.com/[\w.-]+/[\w.-]+/(?:issues|pull|discussions|commit|actions/runs)/'
+    message: >-
+      GitHub issues, PRs, discussions, commits and runs go through the gh CLI (skill github):
+      `gh issue view N -R o/r --comments`, `gh pr view N -R o/r --comments`, `gh api repos/o/r/commits/SHA`.
+      If gh says "not logged in", run `gh auth status` first.
+breakers:
+  - id: x-search-no-credits
+    tools: 'x_search'
+    result: 'personal-team-blocked|spending-limit|run out of credits'
+    max_blocks: 99
+    message: >-
+      x_search is out of xAI credits for this account, and retrying will not help. Use agent-reach:
+      `twitter -c search "<q>"` (if it 404s: `mcporter call 'exa.web_search_exa(query: "<q> site:x.com", numResults: 5)'`),
+      `twitter -c user-posts <handle>`, `twitter -c tweet <id>`.
+hints:
+  - id: gh-not-logged-in
+    tools: 'terminal'
+    binary: '(?:^\s*|\n\s*|[;&|(]\s*|\$\(\s*|\btimeout\s+\d+\s+|\benv\s+(?:\w+=\S*\s+)*)gh(?=\s)'
+    result: '(?:^|\\n|"output": ")(?:To get started with GitHub CLI, please run:\s+gh auth login|You are not logged into any GitHub hosts|HTTP 401: Requires authentication|gh: Bad credentials|  - The token in \w+ is invalid)'
+    message: >-
+      gh failed auth. Run the doctor before retrying: `gh auth status`. If the token
+      is missing or invalid, stop and ask Kevin to run `gh auth login` (the token lives in ~/.config/gh/hosts.yml).
+      Do not route around it with web_extract or anonymous curl for private repos.
+  - id: same-command-timed-out
+    tools: 'terminal'
+    scope: command
+    result: '\[Command timed out after|timed out after \d+(?:\.\d+)?s'
+    message: >-
+      This command timed out. Do not rerun it unchanged: narrow it (bound find/grep paths, add
+      `timeout`), or run it with background=true and poll the process.

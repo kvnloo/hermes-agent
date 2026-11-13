@@ -1,0 +1,20 @@
+---
+name: blender-essentials-moss-ivygen
+description: Use when grooming moss with Blender and Ivy Gen.
+---
+# Native moss and Ivy Gen
+
+- Prefer Blender Essentials native hair assets for editable short-fuzz grooming. In Blender 5.2 the shipped library is `/usr/share/blender/5.2/datafiles/assets/nodes/procedural_hair_node_assets.blend`; inspect actual interface sockets before setting inputs.
+- Set Clump Hair Curves `Tip Spread` in scene-length units, not as a normalized ratio. At metre-scale botanical scenes, `.22` can explosively spread millimetre moss into centimetres. Use bounded submillimetre values, preserve length, and measure evaluated bounds before rendering.
+- Attach hair curves to a real UV-mapped cushion surface, with `surface_uv_coordinate` per guide root, before using Interpolate Hair Curves. Keep native guide and evaluated curve counts separate; interpolation counts are not visual proof.
+- Check emitter winding numerically before rejecting bald particle cushions: dot each prototype face normal with its outward radial direction. Phi-first dome quads can all point inward and grow hairs into the surface; repair only the owned emitter and preserve the original failed render as implementation-confounded evidence.
+- Treat downloaded moss assets according to their actual representation. A CC0 scanned botanical texture on crossed cards is not a volumetric moss scan. Record publisher metadata, license evidence and file hashes; inspect diffuse image-node consumers before tinting because a top-level Principled shader is not guaranteed.
+- Judge the macro cushion at native pixels. Dense short interpolated/clumped/curled/frizzed hairs on separate smooth domes can still read as flat lily-pad discs. Do not equate tool compliance with moss morphology acceptance.
+- Install official Ivy Gen at USER scope using `blender --online-mode --command extension install --sync --enable ivygen`; `--sync` fails when online access is disabled without the explicit per-invocation online flag. Confirm the package under the user's Blender extensions directory; never change system paths.
+- Use Ivy Gen's deterministic `Ivy.seed`, `Ivy.grow` and `createIvyGeometry` with fixed iteration limits for headless surface growth. Set new hanging roots' initial primary direction downward: the extension defaults every new root upward, which otherwise produces upright lip shrubs.
+- The extension's leaves are quad cards and their probability is biased toward branch tips. Rebuild laminae into rounded/cupped geometry if requested; inspect root-to-tip leaf density instead of merely raising leaf count. Preserve the extension's license/provenance when freezing source.
+- Re-seat generated drape nodes just off the actual receiving face, reserve whole label/print regions, and audit every rounded-leaf vertex plus curve controls. Report that checked control points are not a continuous curved-tube proof.
+- Keep final judge evidence immutable and report rejected morphology candidly. A better drape does not validate worse top moss or unchanged clay-like relief.
+- Build owner-pick moss coupons from explicit leafy shoots/rosettes/feather axes first, with Essentials curl/frizz as secondary fuzz. Copy the frozen world/view, calibrate the nominal clump span against a projected world-space segment in the hero camera, and render separate native and 4x images instead of enlarging one capture.
+- Set small-scale coupon cameras' near clip explicitly below the camera-to-coupon distance (for centimetre coupons, 0.0001 m is a usable starting point). Blender's default 0.1 m near clip can yield valid but completely black renders; test image variance and inspect the actual image before counting it as evidence.
+- For restricted botanical paint-overs, retain raw generations, finite-support feathered masks and exact unchanged-pixel checks; restore protected emitter neighborhoods from the source. Label color-based organic masks as approximate rather than claiming perfect semantic segmentation or physically correct contact.

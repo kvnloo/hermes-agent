@@ -1,0 +1,35 @@
+---
+name: threejs-real-gpu-receipts
+description: Use when proving Three.js WebGPU/WebGL browser receipts.
+version: 1.0.0
+author: Hermes Agent
+license: MIT
+metadata:
+  hermes:
+    tags: [threejs, webgpu, webgl, browser, evidence, isolation]
+    related_skills: [focus-safe-desktop-automation, local-gltf-review, upstream-contribution, github, jev-browser-use]
+---
+
+# Three.js real-GPU receipt verification
+
+## When to Use
+
+Use for real hardware-backed Three.js example acceptance, renderer-backend receipts, and deterministic WebGPU/WebGL comparisons on a shared desktop.
+
+For a privacy-constrained vertical slice where screenshots/OCR are prohibited, use `references/no-screenshot-vertical-slice.md` for owned browser isolation, backend diagnostics and honest non-visual evidence boundaries.
+
+## Procedure
+
+1. Load focus-safe desktop, browser/JeV, GitHub and upstream-contribution guidance. Discover checkouts and inspect dirty state/worktrees before fetching. Preserve the existing experiment stack; use a clean owned checkout when none exists. Pin both branch and parent SHAs. Never reset, flatten, or rewrite experiment commits to make evidence easier.
+2. Read package-lock, CI Node version, test entrypoints, and contributing policy. Three.js may omit packageManager while using npm ci; record the exact Node/npm versions and unchanged lock hash. Test files are explicitly imported by `test/unit/three.addons.unit.js`: a green addon suite does not cover an unadopted file. Run the focused file and a normal-suite filter to prove adoption.
+3. Own a real installed Chromium process with a separate profile and loopback CDP. Do not use the user's browser or global desktop driver. Isolate it under private headless Sway, with host DISPLAY, WAYLAND_DISPLAY, SWAYSOCK, Hyprland and DBus routes removed. Keep all input on the owned page. Record sanitized host monitor/focus state and process environments; independent user focus changes are not permission to restore their old focus.
+4. Distinguish GPU rendering from compositor presentation. A pixman Sway compositor can allow NVIDIA WebGPU drawing and canvas readback while the visible canvas and CDP screenshot remain black. For browser-only GPU evidence, a private `WLR_BACKENDS=headless`, `WLR_RENDERER=gles2`, `WLR_RENDER_DRM_DEVICE=/dev/dri/renderD128` compositor can provide hardware presentation. This is not a reason to change the separate Cua input-isolation harness. Chromium native Wayland may reject Vulkan compositing even when WebGPU itself uses Vulkan; test ANGLE GL presentation rather than changing application code or moving to a host workspace.
+5. Prove actual hardware with CDP SystemInfo, the initialized renderer backend/device adapterInfo, WebGL debug renderer strings, GPU tooling, exact browser binary hash/version and launch flags. Reject SwiftShader/software adapters as hardware evidence. A WebGPURenderer class flag remains true with the WebGL fallback: classify `renderer.backend.isWebGLBackend` / `isWebGPUBackend` first. Force fallback only with the renderer's supported `forceWebGL` constructor option, exposed at example level if necessary; no core API expansion.
+6. Freeze one input tape for both backends: viewport/DPR, substantial wheel zoom, horizontal/vertical pans, zoom out, reverse/revisit, eviction and reload. Have Jev choose each prevalidated navigation/gesture. Reobserve on a low-confidence decision instead of treating it as a browser failure. Verify settled camera, all visible pages ready, pending=0 and activeLoads=0 before checkpoint capture. On reload, mark the old document and wait for that marker to disappear as well as the receipt hook to exist; the old hook can otherwise satisfy the wait prematurely.
+7. Capture actual PNGs, compute SHA-256, and pass the digest into `window.__threeVirtualTextureReceipt` where supported. Bind receipts to source SHA plus the actual generated build hashes. Compare input tapes exactly and camera pose/zoom within an explicit tolerance; WebGPU/WebGL depth projection conventions legitimately differ. Keep rolling-window and full-trace frame summaries distinct.
+8. State measurement scope accurately: copyTextureToTexture elapsed time is CPU submission, not GPU completion. Persistent atlas/page-table/fallback bytes exclude transient uploads and render-target/browser allocations. Screenshot/readback stalls can appear in measured frame intervals; do not relabel evidence-trace timings as an uncontaminated benchmark. A reported zero stale-drop counter does not prove that branch ran. For a bounded stale-work gate, follow `references/stale-work-stress.md`: gate real asynchronous completion, prove per-callback rejection without uploads, and distinguish obsolete generations from legitimate later re-requests.
+9. Inspect actual screenshots through vision. For a procedural texture, add an independent pixel oracle using camera-to-UV mapping, generator resolution, tile-edge clamping, bilinear sRGB sampling and fixed tolerance. Settled screenshots should match the correct detail page. Separate correctness-only capture during loading can read the real canvas immediately after render and require each sampled pixel to match either its correct detail page or coarse fallback; preserve these separately because readback alters timing. Do not claim every transient frame was inspected.
+10. Run normal lint, relevant lint, core/addon suites and build. The stock Puppeteer unit runner can internally skip GPU assertions while its summary reports zero skipped tests; retain warnings and separately execute the same addon page in the owned hardware browser. Record RED/GREEN for minimal fixes, including backend misidentification and missing test imports.
+11. Preserve generated browser builds outside Git with a hash manifest. Three.js contributing policy excludes build files from commits, so restore only the build files this run generated before a clean explicit-ref fast-forward push. Use `--atomic --no-follow-tags`, re-read remote heads, preserve parent/design branches, and never post comments or alter readiness without scope authorization.
+12. Shut down owned HTTP/browser/compositor processes and verify sockets/listeners are gone. Save exact receipts, screenshots, input tape, browser/console logs, hardware/build/source identities, gate outputs and limitations in one evidence directory. A CPU unit result or nonblank canvas readback alone never substitutes for actual visible hardware-browser evidence.
+13. Before publishing recovered evidence, hash every indexed artifact and bind relevant source bytes to both the receipt and committed blobs. Read the exact run log and tracked process exit status, then identify the successful runtime-plus-verifier rerun; shell startup warnings can occur in both failed and successful processes and do not establish either outcome. Recompute saved-frame pixel/stale assertions without rewriting the original receipt package. Keep setup/ENOSPC attempts separate from durable successful evidence. Certify only the tested exact head: a passing stacked descendant does not clear its parent's exact-head gate.

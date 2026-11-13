@@ -1,0 +1,24 @@
+---
+name: night-stone-moss-component-review
+description: "Use when isolating wet stone and moss review assets."
+---
+# Isolated wet stone and moss
+
+- Inspect every material slot and auxiliary geometry before replacing a stone shader. A printed substrate can cover the whole front, and a separately named coarse-grain mesh can retain the unwanted leopard appearance after slot-zero replacement.
+- Preserve the complete original print shader inside its full artwork UV rectangle; replace only the substrate outside that rectangle. Validate original node values, images and links as a preserved subgraph, not merely an unchanged unused source material.
+- Clip support triangles against the artwork UV rectangle and build a world-space BVH to enforce print clearance. Glyph distances and guessed screen masks do not prove a full-rectangle centimetre margin.
+- Seed both a local Python RNG and `mathutils.noise.seed_set(seed)` inside the builder. Blender noise vectors can differ across fresh processes despite a seeded Python RNG; test a saved geometry hash against a separately launched rebuild.
+- Give moss an opaque small-scale cushion and irregular fine leaves, but evaluate morphology in native hero crops. Millions of triangles can still look like frost or paint; uniformly sized cushions can read as cauliflower.
+- Anchor front drapes to sampled real top edges, then meander and taper them independently. Unconstrained anisotropic noise can accidentally form floating letters, hourglasses or evenly spaced columns even without a symmetric formula.
+- Use a broad size distribution, restrained coverage, dark desaturated greens, and limited wet glints. Check silhouette, contact, self-shadow and edge wrapping separately from geometry existence.
+- Keep generated albedo plates separate from derived map approximations. Remove broad illumination, derive aligned height/normal/roughness, inspect half-offset seams, record returned rather than requested resolution, and retain raw plates/prompts and hashes.
+- Do not infer basalt suitability from scan provenance. Some dark-rock scans read as folded plastic or shale at a 13cm tile scale; retain rejected scan candidates honestly.
+- Validate the winding of Shapely/Voronoi cap polygons before extrusion; buffered exterior rings can be clockwise. Require upward cap normals and inspect the bevel result instead of assuming polygon order.
+- Transfer all applicable original support light-receiver memberships to replacement caps and moss, including computed water-reflection collections. Reusing only the broad moonlight collections can silently omit the specular lights without changing any lamp.
+- Preserve polygon material indices when replacing a mesh palette: assign slots in place, not `materials.clear()`. Clearing resets indices to zero; geometry hashes alone miss the appearance change. Include material-index assertions in rebuild checks, and freeze a reviewed failure honestly rather than silently changing it after judging.
+- Develop wet materials inside the actual integrated exposure convention. Put stone-only area sources in the camera/top-normal mirror direction, set added light bounces to zero, and compare protected robot crops against a same-resolution/same-sample control; downsampling a native control changes bloom and can falsely suggest a readability regression.
+- Treat native hair as a representation, not a morphology pass. Long uniformly leaning fibres read as grass or combed fur, while densely repeated glinting leaves turn drapes into hedge panels. Inspect native taper, negative space and lip continuity before adding more strands.
+- Add evaluated-world AABB broadphase and a finite search radius before robot BVH nearest-distance tests. Per-control-point unbounded searches over every robot mesh can exceed foreground build limits without adding clearance accuracy.
+- Render native crop sheets with target, historical base and all candidates; preserve failed intermediates and fresh brief-based critic reports. A qualified reusable component is not an accepted visual match. Export an append-only collection plus a separate full review scene and report residual art-direction failures.
+- Audit inherited flat shading and modifier order before adding real displacement. Flat-shaded subdivided quads can become rectangular highlight tiles; smoothing removes those facets but does not turn luminance-derived ripples into granular pits. Qualify morphology independently and stop after the declared failed-trial budget.
+- Bound subdivision using evaluated upstream geometry, not raw vertex counts. A bevel can multiply cap geometry before subdivision; place macro bevels before fine tessellation and avoid beveling every displaced microfacet. Measure actual displaced-coordinate deltas against the same tessellated mesh with displacement disabled.

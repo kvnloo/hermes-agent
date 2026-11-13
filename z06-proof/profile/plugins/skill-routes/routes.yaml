@@ -1,0 +1,8 @@
+# skill-routes routes: when Kevin's message matches `pattern` (Python regex, case-insensitive),
+# the turn gets a one-line nudge to load `skill` before reaching for generic tools.
+# Add a route whenever an agent misses an obvious skill. Keep patterns tight: a false nudge costs a turn.
+- skill: agent-reach
+  reason: a social/video/platform link or ask; web_extract and web_search fail or go shallow on these
+  pattern: |-
+    https?://(?:www\.|m\.|old\.|mobile\.)?(?:x\.com|twitter\.com|reddit\.com|youtube\.com|youtu\.be|linkedin\.com|instagram\.com|facebook\.com|bilibili\.com|xiaohongshu\.com|xhslink\.com|v2ex\.com|xueqiu\.com)/
+    |\b(?:deep[- ]dive on|look (?:this|it|that) up|search (?:the web|online|x|twitter|reddit|youtube)|what (?:are )?(?:people|ppl) (?:say|saying|think)|(?:post|posts|video|videos|thread|saw|seen|said) on (?:x|twitter|reddit|youtube))\b

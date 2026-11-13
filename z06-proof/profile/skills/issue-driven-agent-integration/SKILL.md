@@ -1,0 +1,65 @@
+---
+name: issue-driven-agent-integration
+description: "Use when ChatGPT codes from issues and Hermes integrates."
+version: 1.0.0
+author: Hermes Agent
+license: MIT
+metadata:
+  hermes:
+    tags: [orchestration, github, integration, subagents, e2e]
+    related_skills: [session-recovery, hermes-openui-tern-evidence, github]
+---
+
+# Issue-driven agent integration
+
+## When to Use
+Kevin runs a write-only coder (ChatGPT app on his phone: unlimited tokens, cannot run code) alongside Hermes on his machine. Hermes owns integration: tests, fixes, merges, previews in Tern panes, and keeps the GitHub work board current. Use for any multi-feature push (feature parity, ports) organised this way. Project specifics: `references/hermes-tern-lane.md`. For coordinated active repositories and divergent donor/default protocols, also read `references/dual-repo-lanes.md`.
+
+## Procedure
+1. **Scan before planning.** Inventory branches/worktrees/PRs (ahead/behind, contained-in-integration, dirty state), reconstruct decisions from GitHub issue bodies+comments and `ctx`, and build a parity/gap matrix against the reference product. Dispatch these three scans as parallel subagents; write reports to a canonical artifact dir, not scratch.
+2. **Preserve first.** Push local-only commits and dirty worktrees to `wip/*` before anything else (recipe below).
+3. **Board on GitHub, state in bodies.** One pinned RFC (design, constraints, acceptance, gap table) and one pinned START-HERE roadmap (who does what, current base branch, ordered queue with status, never-idle tracks, rules, log). Fold older overlapping issues into the RFC: banner at top of their bodies + close as not planned (keep collaborator threads open with a banner). One self-contained task issue per feature: why, reference-source links, files/functions to touch, numbered spec, acceptance bullets to write as tests, branch name, base, PR naming, hard rules. Generate bodies from a script kept in the artifact dir; edit files then `gh issue edit --body-file`.
+4. **Never let the coder run dry.** Keep a long ordered queue, file the next wave before the queue empties, and add standing "never idle" improvement tracks (tests, code quality, performance, motion/polish, accessibility) with a conflict rule (don't restructure files an open task PR touches). Give Kevin a one-line re-prompt to paste.
+5. **Integration lane.** Tasks branch from and PR into one integration branch; Hermes merges batches, then fast-forwards the dogfood/preview branch. Main and upstream only via separate draft PRs that wait for Kevin's explicit OK.
+6. **Qualify every PR** (subagent): typecheck, full unit tests, lint 0 errors, touched backend tests, e2e smoke + feature journey; fix with separate commits on the PR branch (preserve the coder's commits), post a receipt comment (exact SHA, counts, evidence class, what is unverified).
+7. **Plan a merge wave before merging a backlog of PRs.** First run trial merges: clone, `git fetch origin '+refs/pull/*/head:refs/remotes/pr/*'`, then `git merge --no-ff` each PR in sequence onto `main`, logging `git diff --name-only --diff-filter=U` and running `merge --abort` on any conflict. Every PR can be MERGEABLE on its own and still collide with its siblings; only a sequential trial merge shows that. Group PRs into lanes by the conflict hot files (lanes are disjoint, so they merge in parallel; inside a lane, merge serially, with stacks bottom-up and each child retargeted to `main` after its parent merges). Read the failed-job log of every red PR before filing anything (`gh run view <run> --log-failed`): red PRs often share one CI root cause (e.g. the test job missing the host app's deps), so one fix issue unblocks them all. File one pinned START-HERE roadmap with a per-lane status table plus only the small coder issues the wave actually needs; the integrator resolves every conflict. Keep the generator script and bodies in the artifact dir (`operations/<project>/merge-wave/`). Merging into the fork's `main` is a human gate: file the wave, then wait for Kevin's "go".
+8. **Merge batches** (subagent): detached worktree at the lane tip, `merge --no-ff` each PR in order, gates after each, verify remote tips unchanged, then one atomic fast-forward push of lane+preview, confirm PRs MERGED, close issues, update the roadmap.
+   - Land the shared CI fix and the conflict-free lane first, then re-run the trial merges against the new `main`. Each landed batch turns more siblings into conflicts, so the lane plan has to be refreshed.
+   - A conflicting PR has no merge ref. Its CI therefore never picks up the workflow fix from `main` until someone merges `main` into it.
+   - Have the lane workers merge the latest `origin/main` into each PR branch as a merge commit (never rebase or force), wait for green CI, then `gh pr merge --merge --match-head-commit <sha>`. Run one parallel subagent per disjoint lane, and have each worker edit only its own rows of the roadmap, re-reading the body before every edit.
+   - Before merging the parent of a stack, check `gh api repos/R -q .delete_branch_on_merge`. Auto-delete of the parent branch closes its stacked children, so retarget each child to `main` first.
+   - Drafts must be `gh pr ready` before `gh pr merge` will accept them.
+9. **Show Kevin.** Relaunch the preview pane on the new head after closing the old pane; tell him what to try.
+
+## Rules
+- Android phone queue: use the factory method in `oss-factory-kitchen` (drop briefs into `chatgpt-driver/<run>/queue/`, `tern-queue-loop@s22` sends them as ordinary chats). `references/android-codex-queue.md` documents a REJECTED Codex Cloud adapter; read it only as a record of what not to do.
+- The coder reads issue BODIES only. Every status change, answer or rework instruction goes into the body; never into comments.
+- For many parallel mobile conversations, assign one exclusive write allowlist per issue and validate the union for path collisions before publication. Split shared-file features into working new-file modules/components with explicit interface contracts; reserve parser registration and hot-file wiring to one integrator. Disjoint files alone do not remove dependency or integration gates.
+- Give each task one stable `Claimed by: none` allocation line and a lane label. Re-read the BODY after claim edits; GitHub BODY replacement is not atomic locking, so the dispatcher must allocate distinct issue numbers. Generate an atomic machine-readable queue of number/url/title/priority, refresh from current BODY claims/status, and omit claimed, closed and Hermes-skip tasks.
+- For a bounded bug-feed watch, retain the publisher/generator, source snapshots, issue map, readbacks and poll receipts together. Deduplicate stable bug IDs, sanitize private evidence paths, preserve existing claims, and hold an exclusive publisher lock. Report future polls as pending; a subagent must hand its running watcher process to its parent before finishing or the runtime will kill it.
+- Apply a superseding owner correction before publishing any issue bodies. Before asking the owner a design-system question or filing design tasks, read the repo's DESIGN.md/theme modules and compare them with the proposed alternatives; scans often report one zerOS-derived system as two competing designs. If existing design/token modules are authoritative, file conformance audits rather than a replacement theme; explain historical reference-image conflicts without reviving obsolete chrome.
+- Keep conformance tasks collision-free while an integrator repairs the same screens: allow one new audit/fix-pack file per screen, require exact source-backed before/after snippets and acceptance cases, and leave production files read only until the integrator releases an implementation scope in the issue BODY.
+- Before Hermes takes a queued task, mark it "Hermes doing it (skip)" in the roadmap, so the two never write the same branch. If the coder is idle, take tasks yourself rather than waiting; don't make the coder rebase or resolve cross-task conflicts — the integrator does.
+- Cost: routine qualify/merge/e2e/implementation work goes to subagents; the main (Opus) loop only plans, writes issue specs and decides. Event watchers poll no faster than every 15 minutes; no idle heartbeats.
+- Keep working without check-ins until the goal is reached; report each batch briefly (what merged, gate counts, what is blocked on Kevin).
+- If `git push` hangs on groot while `gh auth status` is fine, the global `git-credential-libsecret store` step is blocking on the keyring: push with `GIT_TERMINAL_PROMPT=0 git -c credential.helper= -c 'credential.helper=!/usr/bin/gh auth git-credential' push ...`.
+- Every push: `git push --no-follow-tags`, never force; set identity via `GIT_AUTHOR_*`/`GIT_COMMITTER_*` env when no global identity exists.
+- Evidence classes stay separate: unit, fixture replay, headless/serve, real window, real model turn. A blocked class is reported as blocked, never green.
+- A label from an automated cleanup/triage pass ("drop", "not P0") is not a product decision; trace it to its parent session and the live PR state before treating work as cancelled.
+- Before pointing a branch build at Kevin's real profile, back up its state DB (`sqlite3 state.db ".backup '<dir>/state.db'"`) — branch code may be older than the installed app.
+
+## Phone-driven ChatGPT lane (S22)
+- Send only through the canonical chatgpt-driver (`/mnt/zer0models/workspace/zer0/data/operations/chatgpt-driver/README.md`, `launch_queue.py --dir RUN --device s22`, one brief per invocation), with one conversation per issue. The brief says: open the issue URL, follow the body, branch from and PR into the integration branch.
+- Before the first send, check that adb shows the S22 (it may only appear after the owner turns on wireless debugging) and confirm `getprop ro.serialno` matches the S22, so nothing ever goes to the S25. If the device is missing, say so in one line and ask him to connect it. Do not leave a worker polling.
+- Check for parallel senders first: another Hermes/OMP chat may have been asked to do the same thing. Look at the driver's claims ledger and `pgrep -af launch_queue`. Rely on the driver's at-most-once claims and keep a sends.jsonl ledger, so the same issue is never sent twice.
+- Find the lane's owner before queueing anything. When he says "kick off the chats" (often a request he sent from Dash or another session), query `~/.hermes/profiles/<profile>/state.db` for recent user messages and recent `sessions` titles (read-only `sqlite3`). Also read the lane's artifact dir (`data/operations/<project>-chatgpt-lane/`: `queue.json`, `task-catalog.json`, `write-ownership.json`, `held-*`). If a live session or subagent owns the lane, hand over the new fact it was waiting for (e.g. "S22 adb is up at ip:port") and let it send. Do not drop your own briefs into the canonical run dirs (`chatgpt-driver/<run>/queue/`): the owner's generator moves foreign briefs to `held-existing/`, and its collision-free file split assumes it alone writes the queue.
+- `owner_busy: foreground agent launch evidence unavailable` means ChatGPT is in front but the owner opened it. Wait about 60 s with no owner touch, then, under the host UI lock (`flock -w 120 /tmp/s22-ui.lock`), take `burst.activity_snapshot(serial)`, relaunch ChatGPT (`adb shell monkey -p com.openai.chatgpt -c android.intent.category.LAUNCHER 1`), and call `burst.record_agent_open('s22', 'com.openai.chatgpt', snap)`. Never bypass the guard any other way.
+- Send phone briefs as ordinary ChatGPT chats through the canonical `chatgpt-driver/tern-01/launch_queue.py` (fresh New chat, Extra High), the owner's established OSS-factory method. Never select Codex / Codex Cloud: he never asked for it, it bills his Codex budget, and a Codex wave on 2026-10-25 was an agent invention he rejected.
+- After the target count is reached, leave a capped feeder unit, such as `<project>-chatgpt-s22-feeder.service`, that monitors but never exceeds the count. Name the unit to the owner.
+- Send one, confirm that ChatGPT accepted it, then send the rest. When the owner names a count ("kick off 25"), send exactly that many without a slow ramp, highest priority first. Pause only on a quota signal. If fewer issues exist than the count, keep sending as the filer creates more.
+
+## Recipes
+- Back up a dirty worktree without touching it: copy its index to a temp file, `GIT_INDEX_FILE=$T git add -A`, `git write-tree`, `git commit-tree <tree> -p HEAD -m wip`, push the commit to `refs/heads/wip/<name>`; check the commit id is non-empty before pushing (an empty `$c` turns `$c:refs/heads/x` into a branch deletion).
+- PR watcher: shell loop comparing `gh pr list --base <lane> --json number,headRefOid` to a state file, printing a sentinel line on change; run in background with notify on the sentinel.
+- Merge-composition pitfalls for parallel feature branches: `references/merge-composition.md`.
+- Plugin fork (kvnloo/hermes-tern) map, CI and lint gates: the plugin section of `references/hermes-tern-lane.md`.
