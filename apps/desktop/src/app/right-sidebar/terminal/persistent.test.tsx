@@ -388,6 +388,33 @@ describe('PersistentTerminal rect tracking', () => {
     expect($terminalTakeover.get()).toBe(true)
   })
 
+  it('re-arms a visible terminal after a connection switch clears takeover without resizing', () => {
+    const raf = installRaf()
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(rect(10, 20, 200, 100))
+    $terminalTakeover.set(true)
+
+    mount.render(<Harness />)
+
+    act(() => {
+      raf.runNext()
+    })
+    expect(raf.pending()).toBe(0)
+
+    // Closing the outgoing gateway's last terminal clears the persisted toggle,
+    // but the still-visible terminal slot keeps the same rect.
+    act(() => {
+      $terminalTakeover.set(false)
+    })
+    expect(raf.pending()).toBe(1)
+
+    act(() => {
+      raf.runNext()
+    })
+    expect($terminalTakeover.get()).toBe(true)
+    expect(mount.container!.querySelector('[data-testid="terminal-workspace"]')).not.toBeNull()
+    expect(raf.pending()).toBe(0)
+  })
+
   it('keeps an explicit off toggle while the slot sits in a hidden pane', () => {
     const raf = installRaf()
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(rect(10, 20, 200, 100))

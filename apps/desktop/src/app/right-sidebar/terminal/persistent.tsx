@@ -142,22 +142,18 @@ export function PersistentTerminal({ onAddSelectionToChat }: PersistentTerminalP
         height: Math.ceil(r.bottom) - top
       }
 
+      // Reconcile the latch on every measurement, even when the rectangle is
+      // unchanged: a connection switch can clear takeover without moving the slot.
+      if (!next.hidden && next.width > 0 && next.height > 0 && !$terminalTakeover.get()) {
+        $terminalTakeover.set(true)
+      }
+
       if (!sameRect(prev, next)) {
         prev = next
         setRect(next)
 
         if (next.width > 0 && next.height > 0) {
           setReady(true)
-
-          // A measured, non-hidden slot means the layout shows the terminal
-          // zone — so an off toggle is stale (persisted tree unfolded the
-          // zone, a tab click, the sash). Re-arm it: the empty-but-tabbed
-          // body must not be reachable. Collapse paths (the rail chevron,
-          // the pane toggle) never measure a visible slot again, so their
-          // explicit false survives.
-          if (!next.hidden && !$terminalTakeover.get()) {
-            $terminalTakeover.set(true)
-          }
         }
 
         return true
@@ -252,6 +248,11 @@ export function PersistentTerminal({ onAddSelectionToChat }: PersistentTerminalP
     // and file-tree updates are unrelated and used to wake this tracker).
     const unsubscribeLayout = $layoutTree.listen(() => scheduleMeasure('layout-tree'))
     const unsubscribePanes = $paneStates.listen(() => scheduleMeasure('pane-state'))
+    const unsubscribeTakeover = $terminalTakeover.listen(active => {
+      if (!active) {
+        scheduleMeasure('takeover-reset')
+      }
+    })
 
     const handleResize = () => scheduleMeasure('window-resize')
 
@@ -264,6 +265,7 @@ export function PersistentTerminal({ onAddSelectionToChat }: PersistentTerminalP
       positionObserver?.disconnect()
       unsubscribeLayout()
       unsubscribePanes()
+      unsubscribeTakeover()
       window.removeEventListener('resize', handleResize)
       scrollTargets.forEach(target => target.removeEventListener('scroll', handleScroll))
       pauseController?.dispose()
