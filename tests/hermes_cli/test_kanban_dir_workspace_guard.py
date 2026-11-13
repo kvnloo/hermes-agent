@@ -134,3 +134,28 @@ def test_scratch_and_worktree_ignore_dir_main_checkout_guard(
     assert scratch_ws.name == scratch.id
     assert worktree_ws == repo / ".worktrees" / worktree.id
     assert (worktree_ws / ".git").is_file()
+
+
+def test_dir_workspace_git_probe_timeout_fails_open(kanban_home, tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    _init_git_repo(repo)
+    with kbc.connect() as conn:
+        main_task = _create_workspace_task(
+            conn, kind="dir", path=str(repo), title="reject main checkout",
+        )
+        # The same test must fail on the PR's merge base, which has no guard.
+        with pytest.raises(ValueError, match="main checkout of git repo"):
+            kbw.resolve_workspace(main_task)
+
+        plain = tmp_path / "plain-new-folder"
+        plain_task = _create_workspace_task(
+            conn, kind="dir", path=str(plain), title="allow failed git probe",
+        )
+
+        def stalled_git(*_args, timeout):
+            assert timeout == 30  # Production timeout, not a shortened test limit.
+            raise subprocess.TimeoutExpired(cmd=["git", "rev-parse"], timeout=timeout)
+
+        monkeypatch.setattr(kbw, "_git", stalled_git)
+        assert kbw.resolve_workspace(plain_task) == plain
+    assert plain.is_dir()

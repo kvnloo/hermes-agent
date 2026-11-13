@@ -793,10 +793,14 @@ def _refuse_dir_main_checkout(task_id: str, path: Path) -> None:
     probe = path if path.exists() else _nearest_existing_path(path)
     if not probe.exists():
         return
-    spec = _git(
-        probe, "rev-parse", "--path-format=absolute", "--show-toplevel",
-        "--git-dir", "--git-common-dir", timeout=30,
-    )
+    try:
+        spec = _git(
+            probe, "rev-parse", "--path-format=absolute", "--show-toplevel",
+            "--git-dir", "--git-common-dir", timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        # A failed git probe is advisory, not a dir-workspace spawn failure.
+        return
     lines = (spec.stdout or "").splitlines() if spec.returncode == 0 else []
     if len(lines) < 3:
         return
