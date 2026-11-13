@@ -183,7 +183,23 @@ export function windowHostsSession(
 ): boolean {
   return (
     requestNamesActiveSession({ activeSessionId, sessionId, storedIdForRuntimeId }) ||
-    $sessionTiles.get().some(tile => tile.runtimeId === sessionId)
+    $sessionTiles.get().some(tile => {
+      if (tile.runtimeId === sessionId) {
+        return true
+      }
+
+      // A rebound runtime may still have a tile bound to its previous tip.
+      // Require both observed bindings before matching conversation lineage.
+      if (!tile.runtimeId || !storedIdForRuntimeId) {
+        return false
+      }
+
+      return Boolean(
+        storedIdForRuntimeId(tile.runtimeId) &&
+          storedIdForRuntimeId(sessionId) &&
+          requestNamesActiveSession({ activeSessionId: tile.runtimeId, sessionId, storedIdForRuntimeId })
+      )
+    })
   )
 }
 

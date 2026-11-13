@@ -491,6 +491,43 @@ describe('preview requests act for the session that asked (#73890)', () => {
     }
   })
 
+  it('routes a focused tile after its requesting runtime is rebound', async () => {
+    const oldState = createClientSessionState('stored-b')
+    const newState = createClientSessionState('stored-b')
+    deps.sessionStateByRuntimeIdRef.current.set('rt-b', oldState)
+    deps.sessionStateByRuntimeIdRef.current.set('rt-b-next', newState)
+    publishSessionState('rt-b', oldState)
+    publishSessionState('rt-b-next', newState)
+    openPreview({ kind: 'url', label: 'b', source: 'https://b.example', url: 'https://b.example' }, 'stored-b')
+    const back = vi.fn()
+    const unbind = registerPreviewNav($previewTabs.get()[0]!.id, {
+      back,
+      forward: () => {},
+      reload: () => {}
+    })
+    focusTileB()
+
+    try {
+      // The tile still holds rt-b, but the gateway stamps rt-b-next.
+      const { decline, respond } = deliver('preview.act', { action: 'back', session_id: 'rt-b-next' }, 'rt-a')
+      await vi.waitFor(() => expect(respond).toHaveBeenCalledTimes(1))
+      expect(decline).not.toHaveBeenCalled()
+      expect(JSON.parse(respond.mock.calls[0][0].value)).toMatchObject({ acted: 'back', success: true })
+      expect(back).toHaveBeenCalledTimes(1)
+
+      // An unrelated runtime must still decline, not take the focused tile's page.
+      const foreign = deliver('preview.act', { action: 'back', session_id: 'rt-other' }, 'rt-a')
+      expect(foreign.decline).toHaveBeenCalledTimes(1)
+      expect(foreign.respond).not.toHaveBeenCalled()
+    } finally {
+      unbind()
+      deps.sessionStateByRuntimeIdRef.current.delete('rt-b')
+      deps.sessionStateByRuntimeIdRef.current.delete('rt-b-next')
+      dropSessionState('rt-b')
+      dropSessionState('rt-b-next')
+    }
+  })
+
   it("runs a preview tour against the focused tile's own tabs", async () => {
     focusTileB()
     vi.mocked(runTour).mockClear()
