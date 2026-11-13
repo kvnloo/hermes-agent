@@ -327,11 +327,27 @@ export function backendArgvMatches(argv: readonly string[]): boolean {
   let offset = /^hermes(?:\.exe)?$/i.test(executable) ? 1 : 0
 
   if (!offset && /^python(?:\d+(?:\.\d+)?)?(?:\.exe)?$/i.test(executable)) {
-    offset = argv[1] === '-m' && entry(argv[2] || '')
-      ? 3
-      : entry(argv[1] || '') || /(?:^|[/\\])hermes$/i.test(argv[1] || '')
-        ? 2
-        : 0
+    // POSIX source launchers exec managed Python with -I -c (see hermes_cli/_launchers.py).
+    // Require the concrete Hermes bootstrap, not just 'serve' in arbitrary -c text.
+    const code = argv[3] || ''
+    const sourceLauncher =
+      argv[1] === '-I' && argv[2] === '-c' &&
+      code.startsWith('import os, re, sys\nimport contextlib, hashlib, io, pathlib, shutil, subprocess\n') &&
+      code.endsWith(
+        "from hermes_cli.main import main\nsys.argv[0] = re.sub(r'(-script\\.pyw|\\.exe)?$', '', sys.argv[0])\nsys.exit(main())\n"
+      )
+    const runtimeLauncher =
+      argv[1] === '-I' && argv[2] === '-c' &&
+      code.startsWith('import os, sys, runpy; ') &&
+      code.endsWith("runpy.run_module('hermes_cli.main', run_name='__main__', alter_sys=True)")
+
+    offset = sourceLauncher || runtimeLauncher
+      ? 4
+      : argv[1] === '-m' && entry(argv[2] || '')
+        ? 3
+        : entry(argv[1] || '') || /(?:^|[/\\])hermes$/i.test(argv[1] || '')
+          ? 2
+          : 0
   }
 
   if (!offset) {return false}

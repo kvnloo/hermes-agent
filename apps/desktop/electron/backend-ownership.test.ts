@@ -334,6 +334,26 @@ test('native argv matcher ignores command-shaped data and preserves owned teardo
   assert.equal(backendArgvMatches(['/venv/bin/hermes serve', '--port', '0']), false)
 })
 
+test('native argv matcher accepts managed POSIX Python launchers, not arbitrary inline code', () => {
+  // _mint_shell_launcher executes store Python -I -c <bootstrap> "$@".
+  const published = [
+    'import os, re, sys',
+    'import contextlib, hashlib, io, pathlib, shutil, subprocess',
+    "os.environ.pop('PYTHONHOME', None)",
+    'from hermes_cli.main import main',
+    "sys.argv[0] = re.sub(r'(-script\\.pyw|\\.exe)?$', '', sys.argv[0])",
+    'sys.exit(main())',
+    ''
+  ].join('\n')
+  const runtime = "import os, sys, runpy; os.environ.pop('PYTHONHOME', None); runpy.run_module('hermes_cli.main', run_name='__main__', alter_sys=True)"
+  const python = '/opt/hermes/runtime/bin/python3.14'
+
+  assert.equal(backendArgvMatches([python, '-I', '-c', published, '--profile', 'work', 'serve', '--host', '127.0.0.1']), true)
+  assert.equal(backendArgvMatches([python, '-I', '-c', runtime, 'dashboard']), true)
+  assert.equal(backendArgvMatches([python, '-I', '-c', published, 'chat', '--query', 'serve']), false)
+  assert.equal(backendArgvMatches([python, '-I', '-c', "print('hermes serve')", 'serve']), false)
+})
+
 test('shutdown coordinator returns one promise and awaits teardown exactly once', async () => {
   const completion = deferred()
   const teardown = vi.fn(() => completion.promise)
