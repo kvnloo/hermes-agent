@@ -38,6 +38,7 @@ def complete_source_checkout(
     announce: str | None = None,
     followups: list[tuple[str, str]] | None = None,
     after_dependencies=None,
+    allow_deferred_web_build: bool = False,
 ) -> bool:
     """Publish commands, build the products, then run post-build maintenance.
 
@@ -47,7 +48,8 @@ def complete_source_checkout(
 
     Every step runs even when an earlier one failed; each failure is printed as ``⚠``,
     recorded on the open update receipt and appended to ``followups`` as ``(step, reason)``.
-    Returns True only when every step finished and the SQLite runtime is not unsafe.
+    Returns True only when every step finished (except an explicitly deferred
+    installer web UI build) and the SQLite runtime is not unsafe.
     """
     from hermes_cli.update_lock import UpdateLock, describe_holder
 
@@ -76,6 +78,7 @@ def complete_source_checkout(
             pre_update_version=pre_update_version,
             completion_message=completion_message, announce=announce, followups=followups,
             after_dependencies=after_dependencies,
+            allow_deferred_web_build=allow_deferred_web_build,
         )
     finally:
         lock.release()
@@ -93,9 +96,10 @@ def _complete_locked(
     announce: str | None,
     followups: list[tuple[str, str]] | None = None,
     after_dependencies=None,
+    allow_deferred_web_build: bool = False,
 ) -> bool:
     """The completion body; callers hold the update lock already."""
-    from hermes_cli.source_build import build_update_products
+    from hermes_cli.source_build import ProductBuildError, build_update_products
     from hermes_cli.update_cmd_maint import _run_post_update_maintenance
     from hermes_cli.venv_sync import publish_launchers
 
@@ -108,8 +112,10 @@ def _complete_locked(
     except Exception as exc:
         print(f"⚠ Could not provide git for the source completion: {exc}", file=sys.stderr)
     owed: list[tuple[str, str]] = []
+    deferred_web_build = False
 
     def step(name: str, run) -> None:
+        nonlocal deferred_web_build
         # Each step is independent: a failed launcher publish or web build must not skip the
         # config migration, the maintenance, or (in an update) the gateway restart after it.
         try:
@@ -120,9 +126,15 @@ def _complete_locked(
             reason = str(exc) or type(exc).__name__
             record_followup(name, reason)
             owed.append((name, reason))
+            if (allow_deferred_web_build and name == "build"
+                    and isinstance(exc, ProductBuildError)
+                    and len(exc.failures) == 1 and exc.failures[0][0] == "web UI build"):
+                deferred_web_build = True
 
     step("launchers", lambda: publish_launchers(root))
     step("build", lambda: build_update_products(root, desktop=desktop, after_dependencies=after_dependencies))
+    if deferred_web_build and completion_message == "✓ Install complete!":
+        completion_message = "✓ Hermes CLI installed; web UI build deferred (retry with `hermes update`)"
     if announce:
         print(announce)
     verdict: list[bool] = []
@@ -148,7 +160,7 @@ def _complete_locked(
         followups.extend(owed)
     # The SQLite verdict is not tail work (re-running the tail cannot fix the interpreter); it
     # is reported by the maintenance step itself and only withholds an install's success.
-    return tail_done and all(verdict)
+    return (tail_done or (deferred_web_build and len(owed) == 1)) and all(verdict)
 
 
 def _bootstrap_command(root: Path, argv: list[str]) -> list[str]:
@@ -200,6 +212,7 @@ def main(argv: list[str] | None = None) -> int:
             ok = complete_source_checkout(
                 root, desktop=args.desktop, assume_yes=not args.interactive,
                 completion_message="✓ Install complete!",
+                allow_deferred_web_build=True,
             )
         return 0 if ok else 1
 
