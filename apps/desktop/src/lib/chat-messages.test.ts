@@ -362,6 +362,26 @@ describe('toChatMessages', () => {
     }
   })
 
+  it('preserves authored text after a native image while hiding injected context', () => {
+    const caption = 'compare this'
+    const path = '/tmp/shot.png'
+    const prefix = `${caption}\n\n[Image attached at: ${path}]\n[screenshot]\n`
+
+    for (const { tail, expected } of [
+      { tail: 'Also explain the colors.', expected: `${caption}\nAlso explain the colors.` },
+      { tail: '<memory-context>\nrecall\n</memory-context>', expected: caption },
+      {
+        tail: '[System: This conversation is now being answered on a different interface: desktop]',
+        expected: caption
+      }
+    ]) {
+      const [message] = toChatMessages([{ role: 'user', content: prefix + tail, timestamp: 1, row_id: 9 }])
+
+      expect(chatMessageText(message)).toBe(expected)
+      expect(message.attachmentRefs).toEqual([`@image:${path}`])
+    }
+  })
+
   it('lifts @image directive lines into attachmentRefs instead of inline text', () => {
     const [message] = toChatMessages([
       {

@@ -52,7 +52,16 @@ function persistedImageRefs(text: string) {
   if (paths.length !== suffix[2].split('[screenshot]').length - 1) { return extractImageRefs(text) }
   const extracted = extractImageRefs(text.slice(0, suffix.index))
 
-  return { cleanedText: extracted.cleanedText, refs: [...extracted.refs, ...paths.map(path => `@image:${formatRefValue(path)}`)] }
+  // Only backend-authored context should be hidden; later user text remains visible.
+  const trailing = text.slice(suffix.index + suffix[0].length)
+  const tailStart = trailing.trimStart()
+  const injected = tailStart.startsWith('<memory-context>') ||
+    tailStart.startsWith('[System: This conversation is now being answered on a different interface:')
+
+  return {
+    cleanedText: extracted.cleanedText + (trailing && !injected ? '\n' + trailing : ''),
+    refs: [...extracted.refs, ...paths.map(path => `@image:${formatRefValue(path)}`)]
+  }
 }
 
 // Gateway routing note for Discord turns (gateway/run_inbound.py::discord_triggering_note).
