@@ -63,7 +63,7 @@ async def handle_multi_token(adapter: Any, query: Any, clarify_id: str, token: s
         return True
     selected = adapter._clarify_multi.setdefault(clarify_id, set())
     if is_toggle:
-        await _toggle(adapter, query, clarify_id, len(entry.choices), selected, idx)
+        await _toggle(adapter, query, clarify_id, len(entry.choices), selected, idx, user_display)
         return True
     # The tool strips the "(Recommended)" display label per item when it decodes the array.
     labels = [str(entry.choices[i]).strip() for i in sorted(selected) if i < len(entry.choices)]
@@ -75,7 +75,8 @@ async def handle_multi_token(adapter: Any, query: Any, clarify_id: str, token: s
     return True
 
 
-async def _toggle(adapter: Any, query: Any, clarify_id: str, count: int, selected: set[int], idx: int) -> None:
+async def _toggle(adapter: Any, query: Any, clarify_id: str, count: int, selected: set[int], idx: int,
+                  user_display: str) -> None:
     """Flip *idx* only once Telegram shows the new ticks, so Send never submits a pick the card hides."""
     from telegram.error import BadRequest, NetworkError
     from plugins.platforms.telegram.adapter import _toast
@@ -88,6 +89,13 @@ async def _toggle(adapter: Any, query: Any, clarify_id: str, count: int, selecte
         return
     except NetworkError as exc:  # a timeout may still have landed the edit: keep the flip, answer the tap
         logger.warning("Telegram clarify toggle edit unconfirmed (id=%s): %s", clarify_id, exc)
+    # The gateway can time out or clear this entry while the Telegram edit is in flight.
+    # A successful edit must not resurrect an already-retired prompt.
+    if pending_multi_entry(clarify_id) is None:
+        adapter._clarify_state.pop(clarify_id, None)
+        adapter._clarify_multi.pop(clarify_id, None)
+        await adapter._notify_clarify_expired(query, user_display)
+        return
     selected.symmetric_difference_update({idx})
     await answer_callback(query, _toast("platform.telegram.prompt.selected_count", count=len(selected)))
 
