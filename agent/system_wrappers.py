@@ -28,9 +28,10 @@ SYSTEM_WRAPPER_PREFIXES = (CRON_HINT_PREFIX, CRON_RUN_TIME_PREFIX, BOT_CHAT_DELI
 
 # ``cron.scheduler_prompt._prepend_context_block`` frames a previous/upstream run's output as a
 # fenced block that sits AHEAD of the job prompt (after the cron hint). Pinned to the build site
-# by contract test; the block always opens with the self-context heading (upstream-context rows
-# are cron-run rows that open with the hint and are cut by it first).
+# by contract test; self-context and upstream-job context use distinct headings.
 CONTEXT_BLOCK_HEADING = "## Your previous run's output"
+UPSTREAM_CONTEXT_BLOCK_PREFIX = "## Output from job '"
+CONTEXT_BLOCK_PREFIXES = (CONTEXT_BLOCK_HEADING, UPSTREAM_CONTEXT_BLOCK_PREFIX)
 # ``_prepend_context_block`` emits ``## heading\n{intro}\n\n```\n{body}\n```\n\n{prompt}``.
 # Unflattened, the opening fence is the first ``\n\n```\n`` and the closing fence the next
 # ``\n```\n\n``. Once a listing query flattens newlines to spaces the fences are indistinguishable
@@ -100,7 +101,7 @@ def _strip_one_wrapper(text: str) -> str:
 
 def _strip_one_context_block(text: str) -> str:
     stripped = text.lstrip()
-    if not stripped.startswith(CONTEXT_BLOCK_HEADING):
+    if not stripped.startswith(CONTEXT_BLOCK_PREFIXES):
         return text
     open_idx = stripped.find(FENCE_OPEN)
     if open_idx != -1:

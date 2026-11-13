@@ -83,6 +83,26 @@ def test_cron_run_session_previews_the_job_prompt(db):
     assert "IMPORTANT" not in preview
 
 
+def test_cron_run_with_upstream_job_context_shows_prompt_on_all_surfaces(db):
+    """A context_from=other-job run must not preview the other job's archived output."""
+    from cron import scheduler_prompt
+    from hermes_cli.web_routers.sessions import _project_for_display
+    from tui_gateway import server
+
+    prompt = "Summarize the deployment results."
+    context = scheduler_prompt._prepend_context_block(
+        prompt, "Output from job 'deadbeef'", scheduler_prompt._UPSTREAM_CONTEXT_INTRO,
+        "Earlier job output: 17 green builds and two pending reviews")
+    content = scheduler_prompt._CRON_HINT + scheduler_prompt._run_time_line() + context
+    db.create_session("cronupstream", source="cron")
+    db.append_message("cronupstream", role="user", content=content)
+
+    assert _preview(db, "cronupstream") == prompt
+    assert strip_system_wrappers(content) == prompt
+    assert server._history_to_messages([{"role": "user", "content": content}])[0]["text"] == prompt
+    assert _project_for_display([{"role": "user", "content": content}])[0]["display_content"] == prompt
+
+
 def test_bot_chat_mirror_previews_the_content(db):
     db.create_session("botchat", source="telegram")
     db.append_message("botchat", role="user", content=(

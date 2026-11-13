@@ -16,7 +16,7 @@ from hermes_state_keys import CRON_PRINCIPAL_ID
 from hermes_state_pidns import persistent_record_pidns_checkable, pid_namespace_id
 from agent.skill_commands import (AUTO_LOAD_SCAFFOLD_SQL_LIKE, SKILL_EXCERPT_JOINT,
     SKILL_SCAFFOLD_SQL_LIKE, _SINGLE_SKILL_INSTRUCTION, describe_skill_invocation)
-from agent.system_wrappers import (BOT_CHAT_DELIVERY_PREFIX, CONTEXT_BLOCK_HEADING,
+from agent.system_wrappers import (BOT_CHAT_DELIVERY_PREFIX, CONTEXT_BLOCK_PREFIXES,
     CRON_HINT_PREFIX, CRON_RUN_TIME_PREFIX, FENCE, SYSTEM_WRAPPER_PREFIXES, WRAPPER_END_FLATTENED,
     strip_system_wrappers)
 from agent.context_compressor import (LEGACY_SUMMARY_PREFIX, SUMMARY_PREFIX, _MERGED_PRIOR_CONTEXT_HEADER,
@@ -173,17 +173,19 @@ def _sql_skip_to_run_time(expression: str) -> str:
 
 
 def _sql_strip_context_block(expression: str) -> str:
-    """``expression`` with a leading fenced previous-run context block
+    """``expression`` with a leading fenced previous- or upstream-job context block
     (``_prepend_context_block``) cut off, landing on the job prompt behind it. Flattened, the
     block's two fences are the only ones the frame itself emits, so the cut is positional:
     after the second ```` ``` ````, skipping the blank-line spaces. Scoped to rows opening
     with the block heading; unchanged when a fence is missing (never guess)."""
     fence = _sql_literal(FENCE)
-    heading = _sql_literal(CONTEXT_BLOCK_HEADING)
 
     def body(t: str) -> str:
+        headings = " OR ".join(
+            f"SUBSTR({t}, 1, {len(prefix)}) = {_sql_literal(prefix)}"
+            for prefix in CONTEXT_BLOCK_PREFIXES)
         after_open = f"SUBSTR({t}, INSTR({t}, {fence}) + {len(FENCE)})"
-        return (f"CASE WHEN SUBSTR({t}, 1, {len(CONTEXT_BLOCK_HEADING)}) = {heading}"
+        return (f"CASE WHEN ({headings})"
                 f" AND INSTR({t}, {fence}) > 0 AND INSTR({after_open}, {fence}) > 0"
                 f" THEN LTRIM(SUBSTR({t}, INSTR({t}, {fence}) + {len(FENCE)}"
                 f" + INSTR({after_open}, {fence}) + {len(FENCE)}), {_SQL_WHITESPACE})"
