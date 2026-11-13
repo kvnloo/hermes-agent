@@ -276,6 +276,32 @@ describe('insertInlineRefsIntoEditor', () => {
 })
 
 describe('insertComposerContentsAtCaret', () => {
+  it('round-trips a newline at the empty composer or immediately after a chip', () => {
+    const editor = document.createElement('div')
+    editor.dataset.slot = RICH_INPUT_SLOT
+    editor.contentEditable = 'true'
+    document.body.append(editor)
+
+    try {
+      normalizeComposerEditorDom(editor) // Native sizing break, not user input.
+      expect(composerPlainText(editor)).toBe('')
+
+      placeCaretEnd(editor)
+      insertComposerContentsAtCaret(editor, '\n')
+      normalizeComposerEditorDom(editor)
+      expect(composerPlainText(editor)).toBe('\n')
+
+      editor.replaceChildren(refChipElement('file', '`note.md`'))
+      placeCaretEnd(editor)
+      insertComposerContentsAtCaret(editor, '\n')
+      normalizeComposerEditorDom(editor)
+      expect(composerPlainText(editor)).toBe('@file:`note.md`\n')
+    } finally {
+      window.getSelection()?.removeAllRanges()
+      editor.remove()
+    }
+  })
+
   it('inserts multiline text as text nodes + br', () => {
     const editor = document.createElement('div')
     editor.dataset.slot = RICH_INPUT_SLOT

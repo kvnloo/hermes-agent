@@ -173,7 +173,10 @@ function appendTextWithBreaks(target: DocumentFragment | HTMLElement, text: stri
 
   lines.forEach((line, index) => {
     if (index > 0) {
-      target.append(document.createElement('br'))
+      const br = document.createElement('br')
+      // Textual newlines must not be mistaken for Chromium's sizing <br>.
+      br.dataset.composerTextBreak = ''
+      target.append(br)
     }
 
     if (line) {
@@ -306,6 +309,16 @@ function atTokenBoundary(editor: HTMLElement, range: Range | null): boolean {
  *  insert. That's how a paste into an open `@url:` scope replaces the scope
  *  instead of stacking on it (`@url:@url:\`https://…\``). */
 export function insertComposerContentsAtCaret(editor: HTMLElement, text: string, consumeBefore = 0) {
+  // Replace the empty editor's sizing break, not the user's first newline.
+  if (
+    editor.dataset.slot === RICH_INPUT_SLOT &&
+    editor.childNodes.length === 1 &&
+    editor.firstChild?.nodeName === 'BR' &&
+    !(editor.firstChild as HTMLElement).hasAttribute('data-composer-text-break')
+  ) {
+    editor.replaceChildren()
+  }
+
   const scoped = consumeBefore > 0 ? rangeBeforeCaret(editor, consumeBefore) : null
 
   if (scoped) {
@@ -574,7 +587,12 @@ export function composerPlainText(node: Node): string {
   // its height — not a line the user typed. Reading it as "\n" is how a
   // just-cleared composer stayed non-empty: the newline got stashed as the
   // session's draft and painted back on return.
-  if (el.dataset.slot === RICH_INPUT_SLOT && el.childNodes.length === 1 && el.firstChild?.nodeName === 'BR') {
+  if (
+    el.dataset.slot === RICH_INPUT_SLOT &&
+    el.childNodes.length === 1 &&
+    el.firstChild?.nodeName === 'BR' &&
+    !(el.firstChild as HTMLElement).hasAttribute('data-composer-text-break')
+  ) {
     return ''
   }
 
@@ -890,7 +908,7 @@ export function normalizeComposerEditorDom(editor: HTMLElement) {
   // A trailing <br> right after a chip / only whitespace is a phantom line.
   const last = editor.lastChild
 
-  if (last?.nodeName === 'BR') {
+  if (last?.nodeName === 'BR' && !(last as HTMLElement).hasAttribute('data-composer-text-break')) {
     let prev: ChildNode | null = last.previousSibling
 
     while (prev?.nodeType === Node.TEXT_NODE && !(prev.textContent || '').trim()) {
