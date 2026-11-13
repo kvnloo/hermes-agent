@@ -401,22 +401,24 @@ async function reviewDiff(repoPath, filePath, scope, baseRef, staged, gitBin) {
 
   const git = gitFor(cwd, gitBin)
   const safe = args => git.diff(args).catch(() => '')
+  // Git status paths are literal names, not Git pathspec globs.
+  const literalPath = `:(literal)${filePath}`
 
   if (scope === 'branch') {
     const base = await branchBase(git)
 
-    return base ? safe([`${base}...HEAD`, '--', filePath]) : ''
+    return base ? safe([`${base}...HEAD`, '--', literalPath]) : ''
   }
 
   if (scope === 'lastTurn') {
-    return baseRef ? safe([baseRef, '--', filePath]) : ''
+    return baseRef ? safe([baseRef, '--', literalPath]) : ''
   }
 
   if (staged) {
-    return safe(['--cached', '--', filePath])
+    return safe(['--cached', '--', literalPath])
   }
 
-  const worktree = await safe(['--', filePath])
+  const worktree = await safe(['--', literalPath])
 
   if (worktree.trim()) {
     return worktree

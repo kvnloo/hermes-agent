@@ -43,7 +43,7 @@ async function reviewHunk(repoPath, filePath, hunk, action: ReviewHunkAction, gi
     '--dst-prefix=b/',
     ...(action === 'unstage' ? ['--cached'] : []),
     '--',
-    filePath
+    `:(literal)${filePath}`
   ])
 
   const patch = singleHunkPatch(diff, hunk)

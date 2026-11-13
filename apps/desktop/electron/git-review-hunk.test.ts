@@ -9,6 +9,7 @@ import { afterEach, test } from 'vitest'
 import { splitDiffHunks } from '../../shared/src/diff-hunks'
 
 import { reviewHunk, STALE_HUNK_ERROR } from './git-review-hunk'
+import { reviewDiff } from './git-review-ops'
 
 const tempDirs: string[] = []
 
@@ -65,4 +66,29 @@ test('a change the file no longer holds is refused and the file is left untouche
 
   await assert.rejects(reviewHunk(dir, 'sub/f.txt', hunks[0], 'revert', 'git'), { message: STALE_HUNK_ERROR })
   assert.equal(fs.readFileSync(file, 'utf8'), before)
+})
+
+test('bracketed file paths do not include or stage a pathspec-matching sibling', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-review-literal-path-'))
+
+  tempDirs.push(dir)
+  git(dir, 'init', '-q')
+  fs.writeFileSync(path.join(dir, '[id].tsx'), 'route-old\n')
+  fs.writeFileSync(path.join(dir, 'i.tsx'), 'sibling-old\n')
+  git(dir, 'add', '.')
+  git(dir, '-c', 'user.email=t@example.invalid', '-c', 'user.name=t', 'commit', '-qm', 'init')
+  fs.writeFileSync(path.join(dir, '[id].tsx'), 'route-new\n')
+  fs.writeFileSync(path.join(dir, 'i.tsx'), 'sibling-new\n')
+
+  // Ordinary Git pathspec '[id].tsx' also matches i.tsx.
+  const diff = await reviewDiff(dir, '[id].tsx', 'uncommitted', null, false, 'git')
+
+  assert.match(diff, /^diff --git a\/\[id\]\.tsx b\/\[id\]\.tsx/m)
+  assert.doesNotMatch(diff, /^diff --git a\/i\.tsx b\/i\.tsx/m)
+  const hunks = splitDiffHunks(diff).hunks
+
+  assert.equal(hunks.length, 1)
+  await reviewHunk(dir, '[id].tsx', hunks[0], 'stage', 'git')
+  assert.equal(git(dir, 'diff', '--cached', '--name-only').trim(), '[id].tsx')
+  assert.match(git(dir, 'diff', '--', 'i.tsx'), /\+sibling-new/)
 })
