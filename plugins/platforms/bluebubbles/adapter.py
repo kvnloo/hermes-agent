@@ -373,6 +373,9 @@ class BlueBubblesAdapter(BasePlatformAdapter):
             return SendResult(success=False, error="BlueBubbles send requires text")
         # Each paragraph becomes its own iMessage bubble; truncate any still too long.
         paragraphs = [p.strip() for p in re.split(r'\n\s*\n', text) if p.strip()] or [text]
+        if len(paragraphs) > 1 and paragraphs[0].startswith("♻️ Recovered reply —"):
+            # A recovery notice is part of the reply, never a standalone iMessage.
+            paragraphs[:2] = [f"{paragraphs[0]}\n{paragraphs[1]}"]
         chunks = [c for para in paragraphs for c in (
             [para] if len(para) <= self.MAX_MESSAGE_LENGTH else self.truncate_message(para, self.MAX_MESSAGE_LENGTH))]
         last = SendResult(success=True)
