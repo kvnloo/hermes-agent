@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { setApiRequestConnection } from '@/api/client'
+import { setApiRequestConnection, setSessionOwnerResolver } from '@/api/client'
 import { $connection } from '@/store/session'
 
 import {
@@ -83,6 +83,7 @@ describe('desktop filesystem facade', () => {
     vi.clearAllMocks()
     $connection.set(null)
     setApiRequestConnection(null)
+    setSessionOwnerResolver(null)
     delete document.documentElement.dataset.hermesDesktopHost
     setDesktopFsRemotePicker(null)
   })
@@ -223,6 +224,45 @@ describe('desktop filesystem facade', () => {
     for (const [request] of api.mock.calls) {
       expect(request).toMatchObject({ connectionId: 'mr-small', profile: 'default' })
     }
+  })
+
+  it('reads a Files-tree path from its listing connection, not its preview tab session', async () => {
+    const filePath = '/home/hiro/project/readme.txt'
+    const fsOwner = { connectionId: 'wsl', profile: 'web-laravel' }
+
+    $connection.set({ connectionId: 'wsl', mode: 'remote', profile: 'web-laravel' } as never)
+    setApiRequestConnection('wsl')
+    // The preview tab belongs to a local chat, while the tree was listed on WSL.
+    setSessionOwnerResolver(() => ({ connectionId: 'local', profile: 'default' }))
+
+    await readDesktopDir('/home/hiro/project')
+    api.mockImplementationOnce(async request => {
+      const routed = request as { connectionId?: string; profile?: string }
+
+      if (routed.connectionId !== 'wsl' || routed.profile !== 'web-laravel') {
+        throw new Error('404: profile is not on this backend')
+      }
+
+      return { path: filePath, text: 'from WSL', byteSize: 8 }
+    })
+
+    await expect(readDesktopFileText(filePath, { owner: fsOwner, sessionId: 'local-chat' })).resolves.toMatchObject({
+      text: 'from WSL'
+    })
+    expect(api).toHaveBeenNthCalledWith(2, {
+      connectionId: 'wsl',
+      path: '/api/fs/read-text?path=%2Fhome%2Fhiro%2Fproject%2Freadme.txt',
+      profile: 'web-laravel'
+    })
+
+    // When the session belongs to that same backend, keep its sandbox mapping.
+    setSessionOwnerResolver(() => ({ connectionId: 'wsl', profile: 'web-laravel' }))
+    await readDesktopFileText('/workspace/code.txt', { owner: fsOwner, sessionId: 'wsl-chat' })
+    expect(api).toHaveBeenLastCalledWith({
+      connectionId: 'wsl',
+      path: '/api/fs/read-text?path=%2Fworkspace%2Fcode.txt&session_id=wsl-chat',
+      profile: 'web-laravel'
+    })
   })
 
   it('separates filesystem cache keys for registered connections sharing a profile', () => {

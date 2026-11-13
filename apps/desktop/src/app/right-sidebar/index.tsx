@@ -1,6 +1,7 @@
 import { useStore } from '@nanostores/react'
 import { type ComponentProps, useCallback, useEffect } from 'react'
 
+import { getApiRequestConnection } from '@/api/client'
 import { TreeSkeleton } from '@/components/chat/skeletons'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,7 @@ import { $panesFlipped } from '@/store/layout'
 import { notifyError } from '@/store/notifications'
 import { openPreview } from '@/store/preview'
 import { openFolderAsProject } from '@/store/projects'
+import { $connection } from '@/store/session'
 import { $focusedWorkspaceCwd } from '@/store/session-states'
 
 import { SidebarPanelLabel } from '../shell/sidebar-label'
@@ -31,6 +33,7 @@ export function RightSidebarPane({ onActivateFile, onActivateFolder }: RightSide
   const { t } = useI18n()
   const r = t.rightSidebar
   const panesFlipped = useStore($panesFlipped)
+  const connection = useStore($connection)
   const targetCwd = useStore($focusedWorkspaceCwd)
   const hasWorkspace = Boolean(targetCwd)
 
@@ -77,6 +80,15 @@ export function RightSidebarPane({ onActivateFile, onActivateFolder }: RightSide
   const canCollapse = Object.values(openState).some(Boolean)
 
   const previewFile = async (path: string) => {
+    // Capture the backend that listed this path BEFORE preview normalization awaits.
+    const fsOwner =
+      connection?.mode === 'remote'
+        ? {
+            connectionId: getApiRequestConnection() ?? connection.connectionId ?? undefined,
+            profile: connection.profile || undefined
+          }
+        : undefined
+
     try {
       const preview = await normalizeOrLocalPreviewTarget(path, effectiveCwd || undefined)
 
@@ -84,7 +96,7 @@ export function RightSidebarPane({ onActivateFile, onActivateFolder }: RightSide
         throw new Error(r.couldNotPreview(path))
       }
 
-      openPreview(preview)
+      openPreview(fsOwner ? { ...preview, fsOwner } : preview)
     } catch (error) {
       notifyError(error, r.previewUnavailable)
     }

@@ -54,6 +54,8 @@ export interface PreviewTarget {
    * path the preview can't reliably re-read. Rendered directly and NOT
    * persisted (it would bloat localStorage). */
   dataUrl?: string
+  /** Files-tree origin pinned at click time; this may differ from the tab's session owner. */
+  fsOwner?: { connectionId?: string; profile?: string }
   /** `artifact` targets have nothing behind them on disk or on the network —
    * `url` is an id into the artifact registry, which owns the content. They
    * are what lets the rail preview generated HTML the workspace never saw. */

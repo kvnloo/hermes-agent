@@ -1,4 +1,4 @@
-import { hermesApi, sessionFileOwnerScope } from '@/api/client'
+import { ambientOwnerConnectionId, hermesApi, sessionFileOwnerScope } from '@/api/client'
 import type {
   HermesConnection,
   HermesReadDirResult,
@@ -58,6 +58,8 @@ export function desktopFsProfile(): string | undefined {
  *  sandbox, so a gateway read names it; a local (native) read has no use for it. */
 export interface DesktopFsSessionScope {
   sessionId?: null | string
+  /** Connection that listed a Files-tree path, independent of the tab's owning chat. */
+  owner?: { connectionId?: string; profile?: string }
 }
 
 interface FsRoute {
@@ -70,9 +72,21 @@ interface FsRoute {
  *  no known owner the request names no session and goes to the window's profile. */
 function fsRoute(scope?: DesktopFsSessionScope): FsRoute {
   const sessionId = scope?.sessionId || undefined
-  const owner = sessionId ? sessionFileOwnerScope(sessionId) : null
+  const sessionOwner = sessionId ? sessionFileOwnerScope(sessionId) : null
 
-  return owner ? { owner, sessionId } : { owner: { profile: desktopFsProfile() } }
+  if (scope?.owner) {
+    // A tab's session id may resolve /workspace, but must never redirect a
+    // Files-tree path to another profile or connection.
+    const ambient = ambientOwnerConnectionId() ?? 'local'
+    const sameOwner =
+      !!sessionOwner &&
+      sessionOwner.profile === scope.owner.profile &&
+      (sessionOwner.connectionId ?? ambient) === (scope.owner.connectionId ?? ambient)
+
+    return { owner: scope.owner, ...(sameOwner ? { sessionId } : {}) }
+  }
+
+  return sessionOwner ? { owner: sessionOwner, sessionId } : { owner: { profile: desktopFsProfile() } }
 }
 
 function fsPath(endpoint: string, filePath: string, sessionId?: string) {

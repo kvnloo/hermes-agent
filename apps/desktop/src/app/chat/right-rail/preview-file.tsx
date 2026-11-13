@@ -27,6 +27,7 @@ import {
   desktopFileDiff,
   DesktopFileMissingError,
   desktopFsCacheKey,
+  type DesktopFsSessionScope,
   desktopGitRoot,
   isReadFileErrorResult,
   readDesktopFileDataUrl,
@@ -282,9 +283,9 @@ function dataUrlToBlob(dataUrl: string) {
   return new Blob([bytes], { type: 'application/pdf' })
 }
 
-async function readTextPreview(filePath: string, sessionId?: string) {
+async function readTextPreview(filePath: string, scope?: DesktopFsSessionScope) {
   try {
-    return await readDesktopFileText(filePath, { sessionId })
+    return await readDesktopFileText(filePath, scope)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
 
@@ -787,6 +788,10 @@ export function LocalFilePreview({
   const connection = useStore($connection)
   const fsCacheKey = desktopFsCacheKey(connection)
   const filePath = filePathForTarget(target)
+  const fileScope = useMemo<DesktopFsSessionScope>(
+    () => (target.fsOwner ? { owner: target.fsOwner, sessionId } : { sessionId }),
+    [sessionId, target.fsOwner]
+  )
   const isImage = target.previewKind === 'image'
   const isPdf = target.previewKind === 'pdf'
 
@@ -831,7 +836,7 @@ export function LocalFilePreview({
         if (isImage || isPdf) {
           // Prefer bytes the caller already handed us (a pasted/dropped
           // screenshot) over re-reading a path that may be transient/unreadable.
-          const dataUrl = target.dataUrl || (await readDesktopFileDataUrl(filePath, { sessionId }))
+          const dataUrl = target.dataUrl || (await readDesktopFileDataUrl(filePath, fileScope))
 
           if (active) {
             setState({ dataUrl, loading: false })
@@ -840,7 +845,7 @@ export function LocalFilePreview({
           return
         }
 
-        const result = await readTextPreview(filePath, sessionId)
+        const result = await readTextPreview(filePath, fileScope)
 
         if (active) {
           const shouldBlock = !forcePreview && (result.binary || (result.byteSize ?? 0) > TEXT_PREVIEW_MAX_BYTES)
@@ -898,6 +903,7 @@ export function LocalFilePreview({
   }, [
     blockedByTarget,
     filePath,
+    fileScope,
     forcePreview,
     fsCacheKey,
     isImage,
@@ -1054,7 +1060,7 @@ export function LocalFilePreview({
       // choice. `force` is the user picking "overwrite" from that banner.
       if (!force) {
         try {
-          const current = await readTextPreview(filePath, sessionId)
+          const current = await readTextPreview(filePath, fileScope)
 
           if (!current.binary && (current.text ?? '') !== baselineRef.current) {
             setConflict(true)
@@ -1070,7 +1076,7 @@ export function LocalFilePreview({
       // Also guards Overwrite: bypassing a content conflict never authorizes
       // writing the same path on another connection/profile or this device.
       requireEditorOwner()
-      await writeDesktopFileText(filePath, draftRef.current, { sessionId })
+      await writeDesktopFileText(filePath, draftRef.current, fileScope)
       baselineRef.current = draftRef.current
       setDirty(false)
       setConflict(false)
