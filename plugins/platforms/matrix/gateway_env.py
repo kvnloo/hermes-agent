@@ -13,6 +13,8 @@ def _e2ee(config: GatewayConfig, matrix_config: PlatformConfig) -> None:
     env_extras(matrix_config.extra, (("device_id", "MATRIX_DEVICE_ID"),))
 
 
+VOICE_OUTPUT_OPUS = True
+
 ENV_ENABLE_CREDENTIALS = ("MATRIX_ACCESS_TOKEN", "MATRIX_PASSWORD")
 ENV_OVERRIDES = (
     EnvCred(

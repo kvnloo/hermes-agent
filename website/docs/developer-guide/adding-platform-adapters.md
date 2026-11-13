@@ -187,6 +187,14 @@ def register(ctx):
     )
 ```
 
+### Voice-output encoding
+
+To request Ogg/Opus for synthesized voice replies, pass `voice_output_opus=True` to `ctx.register_platform()`.
+The optional field defaults to `False`, which keeps MP3 output.
+Both the TTS tool and gateway auto-TTS read the registration in the active profile scope.
+Lookup may load the destination's deferred registration, but never constructs an adapter or installs dependencies.
+This declaration does not change explicit audio-attachment routing or voice-intent policy.
+
 ### Configuration
 
 Users configure the platform in `config.yaml`:

@@ -4523,6 +4523,7 @@ def register(ctx) -> None:
     from .dashboard_card import DASHBOARD_CARD
     from . import gateway_env  # env -> GatewayConfig bridge (gateway.config_env)
     ctx.register_platform(
+        voice_output_opus=gateway_env.VOICE_OUTPUT_OPUS,
         **SEND_ENTRY_KWARGS,  # send_message target syntax + routing
         name="feishu", label="Feishu / Lark", adapter_factory=FeishuAdapter,
         **DASHBOARD_CARD,

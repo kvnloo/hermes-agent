@@ -149,9 +149,6 @@ def _get_provider(tts_config: dict[str, Any]) -> str:
     return "openai" if provider == NOUS_MANAGED_PROVIDER else provider
 
 
-# Platforms whose native voice-bubble delivery requires Ogg/Opus (MP3 renders broken there).
-OPUS_VOICE_PLATFORMS = frozenset({"telegram", "matrix", "feishu", "whatsapp", "signal"})
-
 # MEDIA:<path> is a line-level gateway protocol. A filename containing an anchored media
 # directive forges a second attachment whenever the path is echoed into the tool result
 # (media_tag / file_path fields, error text): the collector scans producer output with a
@@ -352,9 +349,10 @@ def _find_voices(find: Any) -> str:
 
 def _session_platform() -> tuple:
     """``(platform, wants_opus)`` — platforms delivering voice bubbles only as Ogg/Opus want Opus."""
+    from gateway.platform_voice import prefers_opus_voice_output
     from gateway.session_context import get_session_env
     platform = get_session_env("HERMES_SESSION_PLATFORM", "").lower()
-    return platform, platform in OPUS_VOICE_PLATFORMS
+    return platform, prefers_opus_voice_output(platform)
 
 
 def _resolve_output_base(

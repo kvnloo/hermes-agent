@@ -182,6 +182,8 @@ class PlatformEntry:
     # Env names whose presence drives that enable, cited by the explicit-disable WARNING and used by
     # ``hermes_cli.profile_channels`` as the platform's credential set; () = none declared.
     env_enable_credentials: tuple = ()
+    # Native voice output prefers Ogg/Opus; does not change explicit attachment routing.
+    voice_output_opus: bool = False
 
 
 def core_ships_platform(name: str) -> bool:

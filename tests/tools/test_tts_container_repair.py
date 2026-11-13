@@ -15,7 +15,7 @@ import struct
 
 import pytest
 
-from tools.tts_tool import OPUS_VOICE_PLATFORMS, _repair_ogg_container
+from tools.tts_tool import _repair_ogg_container
 from tools.tts_tool_delivery import _sniff_audio_container
 
 MP3_ID3 = b"ID3\x04\x00\x00\x00\x00\x00\x00" + b"\x00" * 64
@@ -75,10 +75,3 @@ class TestRepairOggContainer:
         result = _repair_ogg_container(str(p))
         assert result == str(p)
         assert _sniff_audio_container(str(p)) == "ogg"
-
-class TestOpusPlatformSet:
-    def test_opus_platforms_cover_voice_bubble_platforms(self):
-        # Behavior contract: the platforms whose adapters deliver native
-        # voice bubbles only for Ogg/Opus must be recognized.
-        for platform in ("telegram", "matrix", "feishu", "whatsapp", "signal"):
-            assert platform in OPUS_VOICE_PLATFORMS

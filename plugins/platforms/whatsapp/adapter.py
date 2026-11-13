@@ -1386,6 +1386,7 @@ _SEND_JID_RE = re.compile(r"^\s*[\w-]+@(?:g\.us|s\.whatsapp\.net|lid|broadcast|n
 def register(ctx) -> None:
     from . import gateway_env  # env -> GatewayConfig bridge (gateway.config_env)
     ctx.register_platform(
+        voice_output_opus=gateway_env.VOICE_OUTPUT_OPUS,
         target_ref_syntax_fn=regex_stripped_parser(_SEND_JID_RE),
         # Media goes through Baileys /send-media; ``mentions`` force the standalone route too.
         standalone_send=StandaloneSendPolicy(label="WhatsApp", media=True, captionable=True,

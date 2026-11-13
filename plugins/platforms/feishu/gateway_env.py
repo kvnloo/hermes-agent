@@ -3,6 +3,8 @@
 from gateway.config import Platform
 from gateway.platform_env import EnvCred
 
+VOICE_OUTPUT_OPUS = True
+
 ENV_ENABLE_CREDENTIALS = ("FEISHU_APP_ID", "FEISHU_APP_SECRET")
 ENV_OVERRIDES = (
     EnvCred(

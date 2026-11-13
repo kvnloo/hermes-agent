@@ -18,6 +18,8 @@ def _enabled_flag(config: GatewayConfig) -> None:
         enable_from_env(config, Platform.WHATSAPP)
 
 
+VOICE_OUTPUT_OPUS = True
+
 ENV_ENABLE_CREDENTIALS = ("WHATSAPP_ENABLED",)
 ENV_OVERRIDES = (_enabled_flag, home_step(Platform.WHATSAPP, "WHATSAPP_HOME_CHANNEL"))
 

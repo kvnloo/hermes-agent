@@ -4,6 +4,8 @@ from gateway.config import Platform
 from gateway.platform_env import EnvCred, home_step
 from utils import is_truthy_value
 
+VOICE_OUTPUT_OPUS = True
+
 ENV_ENABLE_CREDENTIALS = ("SIGNAL_HTTP_URL",)
 ENV_OVERRIDES = (
     EnvCred(

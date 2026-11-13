@@ -6,8 +6,8 @@ runs AFTER ``_clear_session_env`` wiped ``HERMES_SESSION_PLATFORM``, so the
 TTS tool's contextvar-based ``want_opus`` detection always resolved False on
 that path and Opus platforms received MP3 (audio attachment, not a native
 voice bubble). The fix passes an explicit output path from
-``build_auto_tts_output_path(platform)``, which consults the TTS tool's
-``OPUS_VOICE_PLATFORMS`` set — the single source of truth.
+``build_auto_tts_output_path(platform)``, which reads the platform's
+voice-output encoding declaration.
 """
 
 import asyncio
@@ -72,7 +72,7 @@ def _hold_typing():
 
 
 # ---------------------------------------------------------------------------
-# build_auto_tts_output_path: OPUS_VOICE_PLATFORMS is the single source of truth
+# build_auto_tts_output_path: platform voice-output encoding declarations
 # ---------------------------------------------------------------------------
 
 

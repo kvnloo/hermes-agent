@@ -9,6 +9,8 @@ def _fallback_ips(config: GatewayConfig) -> None:
         config.platforms.setdefault(Platform.TELEGRAM, PlatformConfig()).extra["fallback_ips"] = csv_list(ips)
 
 
+VOICE_OUTPUT_OPUS = True
+
 ENV_ENABLE_CREDENTIALS = ("TELEGRAM_BOT_TOKEN",)
 # Order matters: the reply mode / fallback IPs may create the entry the home channel then attaches to.
 ENV_OVERRIDES = (

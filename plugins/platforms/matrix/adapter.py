@@ -3275,6 +3275,7 @@ def register(ctx) -> None:
     from .dashboard_card import DASHBOARD_CARD
     from . import gateway_env  # env -> GatewayConfig bridge (gateway.config_env)
     ctx.register_platform(
+        voice_output_opus=gateway_env.VOICE_OUTPUT_OPUS,
         **SEND_ENTRY_KWARGS,  # send_message target syntax + routing
         name="matrix", label="Matrix", adapter_factory=MatrixAdapter, check_fn=matrix_deps_present,
         **DASHBOARD_CARD,

@@ -53,6 +53,7 @@ def register(ctx) -> None:
     """Plugin entry point — called by the Hermes plugin system."""
     from . import gateway_env  # env -> GatewayConfig bridge (gateway.config_env)
     ctx.register_platform(
+        voice_output_opus=gateway_env.VOICE_OUTPUT_OPUS,
         target_ref_syntax_fn=_parse_send_target,
         # Attachments ride the JSON-RPC param on the final chunk.
         standalone_send=StandaloneSendPolicy(label="Signal", media=True, empty_list_between_chunks=True,

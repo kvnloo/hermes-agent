@@ -21,7 +21,7 @@ class TestAutoVoiceReplyFormat:
         [Platform.MATRIX, Platform.FEISHU, Platform.WHATSAPP, Platform.SIGNAL],
     )
     async def test_opus_platform_auto_voice_reply_requests_ogg(self, platform):
-        """Every OPUS_VOICE_PLATFORMS member gets an explicit .ogg output path.
+        """Every Opus-preferring platform gets an explicit .ogg output path.
 
         Regression for #14841 (Matrix) / #45557 (Feishu): _send_voice_reply
         hardcoded .ogg for Telegram only, so Matrix/Feishu voice replies were

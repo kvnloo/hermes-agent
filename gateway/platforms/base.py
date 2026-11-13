@@ -207,18 +207,13 @@ def should_send_media_as_audio(platform, ext: str, is_voice: bool = False) -> bo
 
 
 def build_auto_tts_output_path(platform) -> str:
-    """Unique temp output path for gateway auto-TTS: ``.ogg`` for ``OPUS_VOICE_PLATFORMS``
-    (the tool's ``_repair_ogg_container`` then guarantees real Opus bytes), else ``.mp3``.
-    Platform-awareness lives HERE because ``_clear_session_env`` wipes the TTS tool's
-    ``HERMES_SESSION_PLATFORM`` contextvar before the post-handler auto-TTS block runs.
+    """Unique auto-TTS path using the platform's voice-output encoding declaration.
 
-    Platforms whose native voice bubbles require Ogg/Opus (``tools.tts_tool.OPUS_VOICE_PLATFORMS`` — the
-    single source of truth) get an explicit ``.ogg`` path; the tool's central container repair
-    (``_repair_ogg_container``) then guarantees real Ogg/Opus bytes for every provider, including MP3-only
-    backends like Edge TTS. Everything else keeps the MP3 default. See #36685, #57049.
+    The explicit path survives cleared session context (#36685, #57049). The TTS
+    tool repairs non-Opus provider output when the requested extension is ``.ogg``.
     """
-    from tools.tts_tool import OPUS_VOICE_PLATFORMS
-    ext = "ogg" if _platform_name(platform) in OPUS_VOICE_PLATFORMS else "mp3"
+    from gateway.platform_voice import prefers_opus_voice_output
+    ext = "ogg" if prefers_opus_voice_output(_platform_name(platform)) else "mp3"
     audio_path = os.path.join(
         tempfile.gettempdir(), "hermes_voice", f"tts_reply_{uuid.uuid4().hex[:12]}.{ext}")
     os.makedirs(os.path.dirname(audio_path), exist_ok=True)
