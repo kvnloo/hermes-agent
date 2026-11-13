@@ -804,7 +804,10 @@ def recover_after_classification(
             _vlines(agent, "🔕 OAuth subscription doesn't support the 1M-context beta — disabled for this session and retrying...")
             return True, recovered_with_pool
 
-    if _refresh_credentials_after_401(agent, api_error, _retry, status_code):
+    # A proxy-relayed transport failure can carry 401; never refresh a healthy token for it.
+    if classified.reason is not FailoverReason.timeout and _refresh_credentials_after_401(
+        agent, api_error, _retry, status_code
+    ):
         return True, recovered_with_pool
 
     if _recover_format_errors(agent, api_error, classified, _retry, messages, api_messages):

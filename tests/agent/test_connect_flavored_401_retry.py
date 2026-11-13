@@ -15,14 +15,14 @@ Lazy-importing it from inside a test instead reads the real ``~/.hermes/manifest
 guard; this is the idiom the other main-loop tests (test_auth_provider_failover,
 test_api_max_retries_config, ...) use for exactly this reason.
 """
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import run_agent  # loads agent.conversation_loop pre-guard — see module docstring
 import pytest
 
 from agent.error_classifier import FailoverReason, classify_api_error
 from agent.turn_api_error import settle_unrecovered_error
-from agent.turn_recovery import route_classified_error
+from agent.turn_recovery import recover_after_classification, route_classified_error
 from agent.turn_retry_state import TurnRetryState
 
 
@@ -170,6 +170,35 @@ def test_connect_flavored_401_is_not_routed_to_credential_guidance():
     classified = classify_api_error(_ProxyError(CONNECT_401), provider=PROVIDER, base_url=LITELLM)
     assert classified.is_auth is False
     assert not (classified.is_auth or classified.reason == FailoverReason.billing)
+
+
+@pytest.mark.parametrize("body, expected_reason, should_refresh", [
+    (CONNECT_401, FailoverReason.timeout, False),
+    (BAD_KEY_401, FailoverReason.auth, True),
+])
+def test_connect_flavored_401_does_not_refresh_healthy_oauth_token(body, expected_reason, should_refresh):
+    """The post-classifier recovery rung must respect transport vs auth, not raw 401."""
+    agent = MagicMock(
+        api_mode="codex_responses", provider="openai-codex",
+        codex_responses_native_compaction=False,
+    )
+    agent._get_transport.return_value.reject_all_turns = None
+    agent._extract_api_error_context.return_value = {}
+    agent._recover_with_credential_pool.return_value = (False, False)
+    agent._try_refresh_codex_client_credentials.return_value = True
+    error = _ProxyError(body)
+    classified = classify_api_error(error, provider=agent.provider, base_url=LITELLM)
+    assert classified.reason is expected_reason
+
+    retry_now, recovered_with_pool = recover_after_classification(
+        agent, error, classified, TurnRetryState(), status_code=401,
+        error_context={}, messages=[], api_messages=[],
+    )
+    assert (retry_now, recovered_with_pool) == (should_refresh, False)
+    if should_refresh:
+        agent._try_refresh_codex_client_credentials.assert_called_once_with(force=True)
+    else:
+        agent._try_refresh_codex_client_credentials.assert_not_called()
 
 
 if __name__ == "__main__":
