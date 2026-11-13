@@ -74,7 +74,7 @@ vi.mock('@/i18n', () => ({
   })
 }))
 vi.mock('@/lib/haptics', () => ({ triggerHaptic: vi.fn() }))
-vi.mock('@/lib/profile-color', () => ({ PROFILE_SWATCHES: [] }))
+vi.mock('@/lib/profile-color', () => ({ PROFILE_SWATCHES: ['#e5484d'] }))
 vi.mock('@/lib/session-export', () => ({ exportSession: vi.fn() }))
 vi.mock('@/store/gateway', () => ({ activeGateway: vi.fn(() => null) }))
 vi.mock('@/store/notifications', () => ({ notify: vi.fn(), notifyError: vi.fn() }))
@@ -395,5 +395,35 @@ describe('SessionActionsMenu', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Move to project' }))
 
     await waitFor(() => expect(refreshProjectTree).toHaveBeenCalledTimes(1))
+  })
+
+  // A swatch must leave the palette open, but one outside press must close
+  // the entire session menu even when its bubble event is intercepted.
+  it('closes the whole menu on the first outside pointerdown, palette open', async () => {
+    renderMenu()
+
+    const trigger = screen.getByRole('button', { name: 'Session actions' })
+    fireEvent.pointerDown(trigger, { button: 0, pointerType: 'mouse' })
+    fireEvent.pointerUp(trigger, { button: 0, pointerType: 'mouse' })
+    fireEvent.click(trigger)
+
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Appearance' }))
+
+    const swatch = await screen.findByRole('button', { name: '#e5484d' })
+    fireEvent.pointerDown(swatch, { button: 0, pointerType: 'mouse' })
+    fireEvent.pointerUp(swatch, { button: 0, pointerType: 'mouse' })
+    fireEvent.click(swatch)
+
+    expect(screen.queryAllByRole('menu').length).toBeGreaterThan(0)
+
+    // eslint-disable-next-line no-restricted-globals -- assert outside-document propagation
+    const swallowed = document.createElement('div')
+    // eslint-disable-next-line no-restricted-globals -- assert outside-document propagation
+    document.body.append(swallowed)
+    swallowed.addEventListener('pointerdown', event => event.stopPropagation())
+    fireEvent.pointerDown(swallowed, { button: 0, pointerType: 'mouse' })
+    swallowed.remove()
+
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
   })
 })

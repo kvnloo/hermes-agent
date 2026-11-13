@@ -1,5 +1,5 @@
 import type * as React from 'react'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { Codicon } from '@/components/ui/codicon'
 import {
@@ -98,6 +98,41 @@ export function renderActionItem(
   )
 }
 
+// Close the whole Radix menu on the first outside press even when a submenu
+// or a stopped bubble event would consume its normal dismissable-layer event.
+// Keep presses on either menu surface or trigger available for re-picking.
+const MENU_SURFACE_SELECTOR = [
+  '[data-slot="context-menu-content"]',
+  '[data-slot="context-menu-sub-content"]',
+  '[data-slot="context-menu-trigger"]',
+  '[data-slot="dropdown-menu-content"]',
+  '[data-slot="dropdown-menu-sub-content"]',
+  '[data-slot="dropdown-menu-trigger"]',
+  '[data-hermes-context-menu-trigger]'
+].join(',')
+
+function useDismissOnOutsidePointerDown(open: boolean, requestClose: () => void) {
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target
+
+      if (target instanceof Element && target.closest(MENU_SURFACE_SELECTOR)) {
+        return
+      }
+
+      requestClose()
+    }
+
+    document.addEventListener('pointerdown', onPointerDown, true)
+
+    return () => document.removeEventListener('pointerdown', onPointerDown, true)
+  }, [open, requestClose])
+}
+
 interface ActionsMenuProps extends Pick<
   React.ComponentProps<typeof DropdownMenuContent>,
   'align' | 'side' | 'sideOffset' | 'onCloseAutoFocus'
@@ -135,8 +170,30 @@ export function ActionsMenu({
   side,
   sideOffset = 6
 }: ActionsMenuProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = open !== undefined
+
+  const requestClose = useCallback(() => {
+    if (!isControlled) {
+      setUncontrolledOpen(false)
+    }
+
+    onOpenChange?.(false)
+  }, [isControlled, onOpenChange])
+
+  useDismissOnOutsidePointerDown(isControlled ? Boolean(open) : uncontrolledOpen, requestClose)
+
   return (
-    <DropdownMenu onOpenChange={onOpenChange} open={open}>
+    <DropdownMenu
+      onOpenChange={next => {
+        if (!isControlled) {
+          setUncontrolledOpen(next)
+        }
+
+        onOpenChange?.(next)
+      }}
+      open={isControlled ? open : uncontrolledOpen}
+    >
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent
         align={align}
@@ -181,6 +238,9 @@ export function ActionsContextMenu({
   onCloseAutoFocus
 }: ActionsContextMenuProps) {
   const [open, setOpen] = useState(false)
+  const requestClose = useCallback(() => setOpen(false), [])
+
+  useDismissOnOutsidePointerDown(open, requestClose)
 
   if (disabled) {
     return <>{children}</>
