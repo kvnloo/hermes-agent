@@ -464,3 +464,46 @@ def test_heartbeat_does_not_wait_on_the_fence_its_own_run_holds(temp_home, monke
         holder.join(timeout=5)
     assert result == {"owns": True}
     assert holder.is_alive() is False
+
+@pytest.mark.parametrize("was_advanced", [False, True])
+def test_manual_fire_spanning_due_slot_does_not_replay(temp_home, was_advanced):
+    """#154557: a live manual fire covers a due cron slot, even after the owner exits.
+
+    Regression on #146246: its live-claim guard suppresses dispatch but leaves
+    either an overdue next_run_at or a stale pending_slot for the next tick.
+    """
+    from datetime import datetime, timedelta
+
+    from cron import jobs
+    from cron.executions import list_executions
+    from hermes_time import now as hermes_now
+
+    job = jobs.create_job(prompt="x", schedule="* * * * *", name="manual-overlap")
+    claimed = jobs.claim_job_for_fire(job["id"], manual=True, return_job=True)
+    assert isinstance(claimed, dict)
+
+    now = hermes_now()
+    slot = now.replace(second=0, microsecond=0)
+    saved = jobs.load_jobs()
+    record = next(row for row in saved if row["id"] == job["id"])
+    if was_advanced:
+        # Crash/restart window: the tick advanced but its pending_slot survived.
+        record["next_run_at"] = (slot + timedelta(minutes=1)).isoformat()
+        record["pending_slot"] = {
+            "scheduled_at": slot.isoformat(), "at": now.isoformat(), "by": "old-tick",
+        }
+    else:
+        # Normal manual fire starts before the cron minute and spans the slot.
+        record["next_run_at"] = slot.isoformat()
+    jobs.save_jobs(saved)
+
+    assert jobs.get_due_jobs() == []
+    after = jobs.get_job(job["id"])
+    assert after.get("pending_slot") is None
+    assert datetime.fromisoformat(after["next_run_at"]) > now
+
+    # When the manual run finishes, the covered cron slot must not run again.
+    assert jobs.mark_job_run(
+        job["id"], success=True, expected_fire_owner=claimed["fire_claim"]["by"])
+    assert jobs.get_due_jobs() == []
+    assert list_executions(job_id=job["id"]) == []

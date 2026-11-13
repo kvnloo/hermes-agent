@@ -2771,6 +2771,8 @@ def claim_job_for_fire(
         # Per-acquisition token: a process may legitimately reclaim its own stale lease, and the
         # previous runner must not heartbeat the new claim merely because hostname + PID match.
         job["fire_claim"] = {"at": now.isoformat(), "by": f"{_machine_id()}:{uuid.uuid4().hex}"}
+        if manual_fire:
+            job["fire_claim"]["manual"] = True  # off-schedule fire owns overlapping due slots
         # Claimed: the occurrence is now owned by a run (its ledger row + fire claim carry it).
         job.pop("pending_slot", None)
         if job.get("schedule", {}).get("kind") in {"cron", "interval"}:
@@ -3235,6 +3237,31 @@ def _evaluate_due_job(job: dict[str, Any], scan: _DueScan, run_claim_ttl: float)
     # claim's TTL lapses (t_30f68d08). Uses FIRE_CLAIM_TTL_SECONDS (not run_claim_ttl, which is the
     # unrelated one-shot run-claim TTL) to match the window claim_job_for_fire() itself honours.
     if _claim_is_live(job.get("fire_claim"), now, FIRE_CLAIM_TTL_SECONDS):
+        # A manual fire already doing this job covers any scheduled slot it crosses.
+        # A scheduled fire (no manual marker) must keep its usual crash-retry window.
+        claim = job["fire_claim"]
+        if claim.get("manual") and job.get("schedule", {}).get("kind") in {"cron", "interval"}:
+            next_run = job.get("next_run_at")
+            due_at = _parse_aware(next_run) if next_run else None
+            if (due_at is not None and not _instant_after(due_at, now)
+                    and job.get("manual_run_at") != next_run):
+                later = compute_next_run(job["schedule"], now.isoformat())
+                if later:
+                    scan.persist(job["id"], next_run_at=later)
+                    logger.info(
+                        "Job '%s': scheduled slot %s covered by live manual fire; skipping",
+                        job.get("name", job["id"]), next_run)
+            pending = job.get("pending_slot")
+            pending_at = (_parse_aware(pending.get("scheduled_at"))
+                          if isinstance(pending, dict) else None)
+            if pending_at is not None and not _instant_after(pending_at, now):
+                raw = scan.find(job["id"])
+                if raw is not None:
+                    raw.pop("pending_slot", None)
+                    scan.needs_save = True
+                logger.info(
+                    "Job '%s': pending slot %s covered by live manual fire; not replaying",
+                    job.get("name", job["id"]), pending["scheduled_at"])
         return False
 
     next_run = _restore_unclaimed_slot(job, scan) or job.get("next_run_at") or _recover_missing_next_run(job, scan)
