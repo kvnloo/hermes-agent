@@ -8,6 +8,7 @@ import { $layoutTree, noteActiveTreeGroup } from '@/components/pane-shell/tree/s
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { registry } from '@/contrib/registry'
 import { $connectionsRegistry } from '@/store/connection-registry-state'
+import { setCronJobs } from '@/store/cron'
 import {
   $pinnedSessionIds,
   $sidebarMessagingOpenIds,
@@ -15,6 +16,7 @@ import {
   $sidebarShowArchived,
   $sidebarStatusFilter,
   setSidebarAgentsGrouped,
+  setSidebarCronOpen,
   setSidebarGrouping
 } from '@/store/layout'
 import { $activeGatewayProfile, $profiles, setShowAllProfiles } from '@/store/profile'
@@ -437,6 +439,8 @@ describe('ChatSidebar empty-profile sections', () => {
     $sidebarMessagingOpenIds.set([])
     $sessions.set([])
     setSidebarAgentsGrouped(false)
+    setSidebarCronOpen(false)
+    setCronJobs([])
   })
 
   it('shows the messaging section for a profile with no normal sessions', () => {
@@ -464,6 +468,18 @@ describe('ChatSidebar empty-profile sections', () => {
 
     expect(screen.getAllByText('Telegram').length).toBeGreaterThan(0)
     expect(screen.getByText('tg-one')).toBeTruthy()
+  })
+
+  it('keeps Cron jobs reachable in Project grouping view (#90579)', () => {
+    setSidebarAgentsGrouped(true)
+    setSidebarCronOpen(true)
+    $projectTree.set([])
+    setCronJobs([{ enabled: true, id: 'daily-digest', name: 'Daily digest', schedule_display: '30 8 * * *' }])
+
+    renderSidebar('/', 'chat')
+
+    expect(screen.getByRole('button', { name: 'Cron jobs' })).toBeTruthy()
+    expect(screen.getByText('Daily digest')).toBeTruthy()
   })
 
   it('still shows the blank state when a profile has nothing at all', () => {
