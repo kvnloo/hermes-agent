@@ -1,0 +1,307 @@
+{
+  "selection": "Hand-selected coverage set, 15 identifiable asks and 5 context-dependent abstentions; not a random or held-out population estimate. NEW means no identifiable match from message alone.",
+  "corpus": "/mnt/zer0models/sft-svlm/data/intent-analyzer/20261104/corpus.jsonl",
+  "date": "2026-11-04",
+  "messages": [
+    {
+      "id": "e30ebb95b1688b5620f3",
+      "agent": "hermes",
+      "session_id": "hermes:local-46de1486d4896bb145940cc3e8cc3fa279b39b7a2d4c27bcc8465ff53a98059f",
+      "ts": "2026-11-04T00:05:06.514122009Z",
+      "text": "some of them dont work on mobile still",
+      "repeats": 1,
+      "source_message_id": 924322,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14466,
+      "expected": "NEW",
+      "reason": "Context-dependent mobile complaint; no product or feature identifies a row."
+    },
+    {
+      "id": "9ad07a92ec281281c840",
+      "agent": "hermes",
+      "session_id": "hermes:local-16c634dcd39514e956b7962e11fe7563652c02d86cf8154f69ea1b41b4a2c974",
+      "ts": "2026-11-04T06:00:52.316757917Z",
+      "text": "can you explain what i asked for and what you did? how was my idea? what did the research say about my idea?",
+      "repeats": 1,
+      "source_message_id": 934009,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14560,
+      "expected": "NEW",
+      "reason": "Unspecified idea/research recap cannot identify a ledger ask without thread history."
+    },
+    {
+      "id": "e0443a45cea02cf245d7",
+      "agent": "hermes",
+      "session_id": "hermes:local-3e8a844f22fe8190731c353b1ac12888396802fe2faf5c5c541be14390f34c39",
+      "ts": "2026-11-04T06:06:30.576525926Z",
+      "text": "lemme see the preview,  did you thoroughly test with e2e tester army? please run in turbo free mode",
+      "repeats": 1,
+      "source_message_id": 935101,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14564,
+      "expected": "O01",
+      "reason": "Preview, E2E tester army and turbo/free exactly identify the Blueprint acceptance request."
+    },
+    {
+      "id": "a21f06c692fd48182b39",
+      "agent": "hermes",
+      "session_id": "hermes:local-16c634dcd39514e956b7962e11fe7563652c02d86cf8154f69ea1b41b4a2c974",
+      "ts": "2026-11-04T06:13:30.707695007Z",
+      "text": "so how are the mushroom weights being used and fly weights? how are they being updated? did you actually run research on how ppl are using these models online? should we try the slime instead? i just think bc of how efficient biological organisms are compared to silicon for energy usage, they might have more optimized NNs. how much more powerful is a biological NN than the best artificial NN made thru computer science?",
+      "repeats": 1,
+      "source_message_id": 934011,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14567,
+      "expected": "Z01",
+      "reason": "Mushroom/fly biological weights and slime comparison are the biological-network research ask."
+    },
+    {
+      "id": "b837fa5360e031265d09",
+      "agent": "hermes",
+      "session_id": "hermes:local-16c634dcd39514e956b7962e11fe7563652c02d86cf8154f69ea1b41b4a2c974",
+      "ts": "2026-11-04T06:20:23.513582944Z",
+      "text": "idk, this doesn't seem very promising, can you find a better idea based on my initial prompt? try to see the goal and find a similar concept",
+      "repeats": 1,
+      "source_message_id": 934016,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14568,
+      "expected": "NEW",
+      "reason": "Unspecified initial prompt and better idea; no recoverable topic in this message alone."
+    },
+    {
+      "id": "a36c2488a5a56eb838b0",
+      "agent": "hermes",
+      "session_id": "hermes:local-6d5f70deca16dc0f3f36f445e0219a75d21d24a373bdbf003e892c795b5a7747",
+      "ts": "2026-11-04T06:36:30.287725925Z",
+      "text": "bro can u not read?? i said autokernel \n\nhttps://github.com/kvnloo/autokernel",
+      "repeats": 1,
+      "source_message_id": 938638,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14574,
+      "expected": "Z04",
+      "reason": "Explicit correction to the actual kvnloo/autokernel repository."
+    },
+    {
+      "id": "f18bfb301f66550b0fa1",
+      "agent": "hermes",
+      "session_id": "hermes:local-2fd9c493d6e2ae2b0f44508fdc7706271bfb95a69258e508f22045b09cc486d4",
+      "ts": "2026-11-04T07:05:34.054296016Z",
+      "text": "can u make agent reach the default tool over x search? yeah run the doctor",
+      "repeats": 1,
+      "source_message_id": 934096,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14579,
+      "expected": "Z06",
+      "reason": "Agent-reach preferred over X search plus doctor command."
+    },
+    {
+      "id": "8fe0469ec9a1dbd570f2",
+      "agent": "hermes",
+      "session_id": "hermes:local-300a833222c9fda5fe438c43ae47c00bfe4a43838002ff687a1ed7371cfd21fe",
+      "ts": "2026-11-04T07:13:10.984319925Z",
+      "text": "gimme reccs based on best practices,  check hermes docs. is it better to increase memory or prune old ones",
+      "repeats": 1,
+      "source_message_id": 934153,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14581,
+      "expected": "Z07",
+      "reason": "Hermes memory size versus pruning policy."
+    },
+    {
+      "id": "72089dd95400e666d64f",
+      "agent": "hermes",
+      "session_id": "hermes:local-9c78ff96cb8257021a59a61adee05784c80ce6d9ffef2013c2bde622a4e41ade",
+      "ts": "2026-11-04T15:36:59.758764982Z",
+      "text": "in the future when the prompt disappears can we add a way for the user to click a button to bring it back up? bc i just had to waste tokens by asking u to send it again lol",
+      "repeats": 1,
+      "source_message_id": 936931,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14604,
+      "expected": "R04",
+      "reason": "A disappeared prompt should reopen with a user button."
+    },
+    {
+      "id": "b073758d170827bf71ed",
+      "agent": "omp",
+      "session_id": "omp:01a1a742-7de2-721f-9669-b52db5c7684b",
+      "ts": "2026-11-04T15:52:41.054Z",
+      "text": "what happened to hermes? all my chats in t3code froze? did the gateway crash? or is it updating?",
+      "repeats": 1,
+      "source_message_id": 937345,
+      "agents": [
+        "omp"
+      ],
+      "corpus_line": 14607,
+      "expected": "R07",
+      "reason": "Frozen Hermes/T3 chats and suspected gateway failure."
+    },
+    {
+      "id": "939ab7fdc8ec672574d1",
+      "agent": "omp",
+      "session_id": "omp:01a1a742-7de2-721f-9669-b52db5c7684b",
+      "ts": "2026-11-04T15:56:49.565Z",
+      "text": "can u fix the semantic router endpoint for paid? do u see 3 claude accounts & an openai account in it? or does it have the keys attached how does it work? i think it must be",
+      "repeats": 1,
+      "source_message_id": 937356,
+      "agents": [
+        "omp"
+      ],
+      "corpus_line": 14609,
+      "expected": "R08",
+      "reason": "Paid semantic-router endpoint with three Claude accounts and OpenAI."
+    },
+    {
+      "id": "ee030c3aed651ad621bd",
+      "agent": "hermes",
+      "session_id": "hermes:local-9c78ff96cb8257021a59a61adee05784c80ce6d9ffef2013c2bde622a4e41ade",
+      "ts": "2026-11-04T16:19:20.729434013Z",
+      "text": "is it done? did u finish full setup that i asked for in first message",
+      "repeats": 1,
+      "source_message_id": 939021,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14611,
+      "expected": "NEW",
+      "reason": "Full setup from unspecified first message cannot identify a row without history."
+    },
+    {
+      "id": "606e6af7c2231e96a189",
+      "agent": "hermes",
+      "session_id": "hermes:local-f3272cde0fcb8b6a7dd0a00fc560e0b7a2e0f02f2832fe98d5d067291c594f42",
+      "ts": "2026-11-04T16:45:55.433192014Z",
+      "text": "are any of these actually useful for how we use our agents and system?",
+      "repeats": 1,
+      "source_message_id": 941401,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14613,
+      "expected": "NEW",
+      "reason": "Unspecified these gives no target or task; abstain rather than guess Z11 from history."
+    },
+    {
+      "id": "556b46e38b8ad0079562",
+      "agent": "hermes",
+      "session_id": "hermes:local-1b20cb9376d71b902e7b9f0c10f6ba2f86169a4335ef61f24dc4a9c5dcf9da49",
+      "ts": "2026-11-04T17:11:23.160165071Z",
+      "text": "the army of assistants should mine conversation history to catalog all my asks. then the chief of staff assigns new worker agents for anything still relevant that is an easy task. the more complex ones just enter a priority queue for me to look at and gets pinned as an ephemeral ui component in the chief of staff thread",
+      "repeats": 1,
+      "source_message_id": 937874,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14616,
+      "expected": "C02",
+      "reason": "Chief mines asks, delegates easy work and pins complex decisions."
+    },
+    {
+      "id": "99e83663dfc136afa0de",
+      "agent": "hermes",
+      "session_id": "hermes:local-1fd968c4a3be398ed7352030134edfc62601b886f0ac45d2ec5039fd96107a20",
+      "ts": "2026-11-04T18:26:39.484577894Z",
+      "text": "can you also make sure that all of the apps on my phone for t3code are up to date? i just checked the glass version as well as the preview version and the nightly version, and none of them had the seat through background or blurred screen.",
+      "repeats": 1,
+      "source_message_id": 938017,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14634,
+      "expected": "O15",
+      "reason": "Glass, Preview and Nightly builds all lack intended transparent/blurred background."
+    },
+    {
+      "id": "1dd4ded9a9b14bcc60be",
+      "agent": "hermes",
+      "session_id": "hermes:local-cbd480a72ee89ccd1a1af9f5283170898982ae2516205515292cf42ee0a743b8",
+      "ts": "2026-11-04T18:53:00.302246093Z",
+      "text": "i mentioned specific requirements for these in sessions today and yesterday. and for thr kvn repo weve discussed it many times, can you make sure that you gather all of the context? And explain to me what the goal of each of the projects are so that I know you're working on the right things",
+      "repeats": 1,
+      "source_message_id": 939764,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14651,
+      "expected": "C04",
+      "reason": "Gather original cross-session project requirements and explain each project goal."
+    },
+    {
+      "id": "386bedf3980946643fc7",
+      "agent": "hermes",
+      "session_id": "hermes:local-f3272cde0fcb8b6a7dd0a00fc560e0b7a2e0f02f2832fe98d5d067291c594f42",
+      "ts": "2026-11-04T20:42:17.820986032Z",
+      "text": "yeah, but like, why isn't it just clearing up The space to automatically? i specifically asked you to configure t3code in the entire point of this loop is not just to find issues but solve the issues. i specifically had mentioned like we can't just keep running out of disk space, because it's convenient for you to make ten thousand work trees and not clean a single one of them up. do you understand how annoying it is? And I keep complaining about it. And every time you tell me, you'll implement a permanent fix, but then you never do",
+      "repeats": 1,
+      "source_message_id": 941480,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14685,
+      "expected": "R11",
+      "reason": "Repeated worktree/disk-space exhaustion needs permanent automatic cleanup."
+    },
+    {
+      "id": "808bc380e2cf8be0fa81",
+      "agent": "hermes",
+      "session_id": "hermes:local-6d5f70deca16dc0f3f36f445e0219a75d21d24a373bdbf003e892c795b5a7747",
+      "ts": "2026-11-04T20:50:06.639331102Z",
+      "text": "cool can you build it out? try running it with replays to see if you can find ineffective tool use and see if this system improves it.  we want it create a multi dimensional ontological system",
+      "repeats": 1,
+      "source_message_id": 938862,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14687,
+      "expected": "Z12",
+      "reason": "Build multidimensional ontology and test tool-use improvement with replays."
+    },
+    {
+      "id": "291236e712343b880fe5",
+      "agent": "hermes",
+      "session_id": "hermes:local-f3272cde0fcb8b6a7dd0a00fc560e0b7a2e0f02f2832fe98d5d067291c594f42",
+      "ts": "2026-11-04T21:06:56.63892889Z",
+      "text": "okay, so can you make sure that everything is properly integrated and linked up? see, I have asked for you to onboard every process and run a doctor command on tools We're constantly using like hermes doctor, t3code doctor, onboarding to all the tools, making sure everything is integrated, making sure we're using all the right skills etc. but lmao its not working bro",
+      "repeats": 1,
+      "source_message_id": 941493,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14691,
+      "expected": "R10",
+      "reason": "Finish integrated onboarding and doctors across Hermes, T3 and commonly used tools."
+    },
+    {
+      "id": "5e456681dbedcd7a5bb2",
+      "agent": "hermes",
+      "session_id": "hermes:local-bb4cccdc1a4e838894eb79680738831683c220af8cb2a896faee94eaf14c9060",
+      "ts": "2026-11-04T21:16:14.018073081Z",
+      "text": "which device is this for? groot? i have no clue what the pw is lol jts not in bws?",
+      "repeats": 2,
+      "source_message_id": 939307,
+      "agents": [
+        "hermes"
+      ],
+      "corpus_line": 14694,
+      "expected": "P12",
+      "reason": "Vault/keyring access question explicitly asks which host/device and where password lives."
+    }
+  ]
+}
