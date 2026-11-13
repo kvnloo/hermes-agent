@@ -135,3 +135,22 @@ def test_case_collision_uses_casefold(emails_dir):
     (emails_dir / "strasse@example.com").write_text("someone\n")
     assert add_contributor("STRASSE@example.com", "someone") == 1
     assert add_contributor("straße@example.com", "someone") == 1
+
+
+def test_mailmap_alias_keeps_original_commit_email_resolvable():
+    """Mailmap changes presentation, not the raw %ae consumed by release notes."""
+    original_email = "claytoneyoung+github@gmail.com"
+    login = "borealBytes"
+    noreply = "206480607+borealBytes@users.noreply.github.com"
+
+    # Historical commits retain the original email in their Git author objects.
+    assert authors._load_contributor_dir().get(original_email) == login
+    assert authors.resolve_author(login, original_email) == f"@{login}"
+
+    remapped = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "check-mailmap", f"{login} <{original_email}>"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert remapped.stdout.strip() == f"{login} <{noreply}>"
