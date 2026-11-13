@@ -44,7 +44,9 @@ def _api(endpoint: str, *, query: str | None = None, paginate: bool = False,
         # or missing grant), not a transient API failure. Persist only the status
         # code + endpoint, never gh's stderr (credentials/host details).
         denied = re.search(r"HTTP (40[134])", exc.stderr or "")
-        if denied and denied[1] == "403" and _PLAN_LIMIT.search(exc.stderr or ""):
+        if (denied and denied[1] == "403"
+                and _PLAN_LIMIT.search(exc.stderr or "")
+                and _plan_limit_response(endpoint, exc.stdout)):
             # Local 2026-11-07: GitHub Free cannot read rulesets/branch protection on a private
             # repo. That is a plan limit with nothing configured to read, not an identity failure.
             raise _GatePlanRestricted(f"HTTP 403 (plan limit) on {endpoint.split('?')[0]}") from None
@@ -60,6 +62,21 @@ def _api(endpoint: str, *, query: str | None = None, paginate: bool = False,
 
 
 _PLAN_LIMIT = re.compile(r"Upgrade to GitHub Pro or make this repository public", re.I)
+
+
+def _plan_limit_response(endpoint: str, output: str | None) -> bool:
+    """Require the exact GitHub JSON error on the branch-rules endpoint."""
+    if not re.fullmatch(r"repos/[^/]+/[^/]+/rules/branches/[^/]+", endpoint.split("?", 1)[0]):
+        return False
+    try:
+        body = json.loads(output or "")
+    except (TypeError, ValueError):
+        return False
+    if isinstance(body, list) and len(body) == 1:
+        body = body[0]
+    return isinstance(body, dict) and body.get("message") == (
+        "Upgrade to GitHub Pro or make this repository public to enable this feature."
+    )
 
 
 class _GateAuthError(RuntimeError):

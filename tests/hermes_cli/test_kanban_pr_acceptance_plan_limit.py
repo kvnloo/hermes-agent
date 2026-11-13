@@ -1,4 +1,5 @@
 """Plan-limited rule reads require nonempty green exact-head checks."""
+import json
 import subprocess
 
 import pytest
@@ -7,14 +8,16 @@ from hermes_cli import kanban_pr_acceptance as acc
 
 SHA = "a" * 40
 PR = "https://github.com/example/repo/pull/47"
-PLAN_403 = ("gh: Upgrade to GitHub Pro or make this repository public to enable this feature. (HTTP 403)\n")
+PLAN_MESSAGE = "Upgrade to GitHub Pro or make this repository public to enable this feature."
+PLAN_403 = f"gh: {PLAN_MESSAGE} (HTTP 403)\n"
 
 
-def _fake_github(monkeypatch, *, runs, statuses=(), rules_error=PLAN_403, protection=None, other_403=None):
+def _fake_github(monkeypatch, *, runs, statuses=(), rules_error=PLAN_403,
+                 protection=None, other_403=None, rules_body=None):
     def run(command, **kwargs):
         endpoint = command[2]
-        def fail(stderr):
-            raise subprocess.CalledProcessError(1, command, output="", stderr=stderr)
+        def fail(stderr, output=""):
+            raise subprocess.CalledProcessError(1, command, output=output, stderr=stderr)
         if other_403 and other_403 in endpoint:
             fail("gh: Resource not accessible by integration (HTTP 403)")
         if endpoint == "graphql":
@@ -23,7 +26,8 @@ def _fake_github(monkeypatch, *, runs, statuses=(), rules_error=PLAN_403, protec
                 "baseRef": {"branchProtectionRule": protection}}}}}
         elif "/rules/branches/" in endpoint:
             if rules_error:
-                fail(rules_error)
+                error_body = {"message": PLAN_MESSAGE} if rules_body is None else rules_body
+                fail(rules_error, json.dumps(error_body))
             body = [[]]
         elif "/check-runs" in endpoint:
             body = [{"total_count": len(runs), "check_runs": list(runs)}]
@@ -33,7 +37,6 @@ def _fake_github(monkeypatch, *, runs, statuses=(), rules_error=PLAN_403, protec
             body = {"head": {"sha": SHA}, "base": {"ref": "main"}, "state": "open"}
         else:
             raise AssertionError(endpoint)
-        import json
         return subprocess.CompletedProcess(command, 0, stdout=json.dumps(body), stderr="")
     monkeypatch.setattr(acc.subprocess, "run", run)
     monkeypatch.setattr(acc, "_gh_env", lambda home: None)
@@ -85,12 +88,25 @@ def test_other_403s_remain_auth_failures(monkeypatch):
     assert acc.collect_acceptance("example/repo", PR)["classification"] == "auth"
 
 
+@pytest.mark.parametrize("body,expected", [
+    ({"message": "API rate limit exceeded"}, "auth"),
+    ({"message": PLAN_MESSAGE + " Unexpected"}, "auth"),
+    ([], "auth"),
+])
+def test_plan_limited_rules_require_exact_json_body(monkeypatch, body, expected):
+    # A plan phrase in stderr without the exact rules API response is not authority.
+    _fake_github(monkeypatch, runs=[_run("test")], rules_body=body)
+    receipt = acc.collect_acceptance("example/repo", PR)
+    assert receipt["classification"] == expected
+    assert receipt["ok"] is (expected == "success")
+
+
 def test_plan_limit_text_on_a_non_rules_read_is_not_tolerated(monkeypatch):
     def run(command, **kwargs):
         raise subprocess.CalledProcessError(1, command, output="", stderr=PLAN_403)
     monkeypatch.setattr(acc.subprocess, "run", run)
     monkeypatch.setattr(acc, "_gh_env", lambda home: None)
-    with pytest.raises(acc._GatePlanRestricted):
+    with pytest.raises(acc._GateAuthError):
         acc._api("graphql", query="{}")
     assert acc.collect_acceptance("example/repo", PR)["classification"] == "auth"
 
