@@ -387,6 +387,7 @@ class _Scope:
         own = [n for stmt in func.body for n in _walk_scope(stmt, class_bodies=False)]
         self.locals = (_local_bindings(own) | set(self.params)) - self.globals - self.nonlocals
         self.children: list[_Scope] = []
+        self.descendant_nonlocals: set[str] = set()
 
 
 def _scopes(tree: ast.AST) -> list[_Scope]:
@@ -408,6 +409,11 @@ def _scopes(tree: ast.AST) -> list[_Scope]:
     for scope in found:
         if scope.parent is not None:
             by_func[scope.parent].children.append(scope)
+    # A nested `nonlocal` can replace a container in an ancestor with a patching helper.
+    for scope in reversed(found):
+        for child in scope.children:
+            scope.descendant_nonlocals.update(child.nonlocals)
+            scope.descendant_nonlocals.update(child.descendant_nonlocals - child.locals)
     return found
 
 
@@ -491,7 +497,8 @@ def _summarise_helpers(analysis: _Analysis, modules: list[_Module]) -> None:
             _module_taint, taints = module.taints(analysis)
             for scope in module.scopes:
                 func = scope.func
-                _enter_scope(analysis, module, scope.nodes, set(scope.params) | scope.globals | scope.nonlocals)
+                _enter_scope(analysis, module, scope.nodes,
+                             set(scope.params) | scope.globals | scope.nonlocals | scope.descendant_nonlocals)
                 if any(isinstance(n, ast.Return) and n.value is not None and analysis.is_core(n.value, taints[func])
                        for n in scope.nodes):
                     analysis.core_returners.add(func.name)
@@ -539,8 +546,8 @@ def core_override_findings(plugin_dir: Path) -> list[str]:
         module_taint, taints = module.taints(analysis)
         module_derived, derived = module.taints(analysis, calls=True)
         scopes = [(module.nodes, {n for s in module.scopes for n in s.globals}, module_taint, module_derived)]
-        scopes += [(s.nodes, set(s.params) | s.globals | s.nonlocals, taints[s.func], derived[s.func])
-                   for s in module.scopes]
+        scopes += [(s.nodes, set(s.params) | s.globals | s.nonlocals | s.descendant_nonlocals,
+                    taints[s.func], derived[s.func]) for s in module.scopes]
         for nodes, shadowed, taint, derived_taint in scopes:
             _enter_scope(analysis, module, nodes, shadowed)
             for node in nodes:

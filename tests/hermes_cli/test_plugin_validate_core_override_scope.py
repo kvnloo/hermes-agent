@@ -142,3 +142,21 @@ def test_core_override_scope(tmp_path: Path, init_py: str, extra: dict, expected
         (plugin / name).write_text(src, encoding="utf-8")
 
     assert core_override_findings(plugin) == expected
+
+
+def test_nonlocal_container_rebound_to_patcher(tmp_path: Path):
+    """A nested nonlocal assignment invalidates an outer container exemption."""
+    plugin = tmp_path / "p"
+    plugin.mkdir()
+    (plugin / "__init__.py").write_text(
+        _RECORDER
+        + "def register(ctx):\n"
+        + "    rec = set()\n"
+        + "    def replace():\n"
+        + "        nonlocal rec\n"
+        + "        rec = Recorder()\n"
+        + "    replace()\n"
+        + "    rec.add(run_agent, print)\n",
+        encoding="utf-8",
+    )
+    assert core_override_findings(plugin) == ["rec.add(run_agent, ...) (__init__.py:11)"]
