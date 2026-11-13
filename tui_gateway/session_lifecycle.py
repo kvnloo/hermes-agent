@@ -640,6 +640,9 @@ def _pop_session_by_id(sid: str) -> dict | None:
             last_active = time.time() if session.get("running") else float(session.get("last_active") or 0)
             _closed_session_activity[home] = max(_closed_session_activity.get(home, 0), last_active)
             session["_closing"] = True
+            # Retirement owns the poller lifetime, not the slower teardown that follows.
+            if (stop := session.get("_notif_stop")) is not None:
+                stop.set()
             session["_sid"] = sid  # out of _sessions now, so teardown can't recover the live id by scanning
     return session
 
