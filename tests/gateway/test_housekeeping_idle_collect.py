@@ -1,11 +1,8 @@
-"""Timer-lane trims run the full collection only while nobody is waiting (#139763).
+"""Timer-lane trims collect young cycles only while conversations are quiet (#139763, #154924).
 
-The gateway housekeeping tick dropped its forced ``gc.collect()`` because a full pass over a
-multi-million-object heap holds the GIL for 250-750 ms and froze every live session once a minute.
-Python 3.14's incremental collector only advances on allocation, so a quiet gateway would then keep
-closed agents' reference cycles (and their pages) forever. The tick collects once the process has
-been turn-free for ``IDLE_COLLECT_AFTER_SECONDS``: once per quiet period, again after a later
-agent close, and never while a turn runs.
+A gateway may have active Lark/Desktop WebSockets after its last conversation ends. Full
+``gc.collect()`` holds the GIL long enough to miss heartbeats on a large mature heap.
+The timer must not force a full collection, even after the real quiet-period threshold.
 """
 
 import pytest
@@ -74,3 +71,25 @@ def test_a_new_turn_starts_a_new_quiet_period(clock):
     now[0] += mem_trim.IDLE_COLLECT_AFTER_SECONDS
     _tick()
     assert len(collects) == 2
+
+
+def test_idle_gateway_collects_only_young_generation_after_real_quiet_window(clock, monkeypatch):
+    """Regression for #154924: idle Lark sockets still require heartbeats.
+
+    After the production five-minute quiet window the gateway timer must not sweep the
+    unbounded mature heap; it may still collect newly-created cycles. Use the real
+    300-second window and 60-second default cooldown, not relaxed test settings.
+    """
+    queue, now, _ = clock
+    generations = []
+    monkeypatch.setattr(
+        mem_trim.gc, "collect", lambda generation=None: generations.append(generation) or 0
+    )
+    monkeypatch.setattr(mem_trim, "_config_settings", lambda: (True, 60.0, 1, 0.0))
+    queue.note_turn_started()
+    queue.note_turn_finished()
+    now[0] += mem_trim.IDLE_COLLECT_AFTER_SECONDS
+
+    _tick()
+
+    assert generations == [0], "idle housekeeping must not scan the mature heap"

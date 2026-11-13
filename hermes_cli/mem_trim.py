@@ -156,8 +156,8 @@ def trim_memory(
     housekeeping tick, agent close, TUI turn completion, post-compression): a full collection walks
     the whole shared heap with the GIL held, 250-750 ms on a multi-million-object gateway, freezing
     every thread (adapters, streams, API requests) while it runs. Most of what those paths free goes
-    by reference counting; cycles wait for ``trim_memory_when_idle``, the timer lanes' one full
-    collection per quiet period. The forced collection otherwise stays only where memory is the
+    by reference counting; young cycles wait for ``trim_memory_when_idle``, the timer lanes' bounded generation-0
+    collection per quiet period. A full collection otherwise stays only where memory is the
     emergency (agent-cache pressure eviction) or the process is single-session (slash worker).
     """
     enabled, configured_cooldown, log_every_n, info_log_min_delta_mb = _config_settings()
@@ -205,9 +205,9 @@ def trim_memory(
             return False
 
 
-# A gateway that has been turn-free this long has nobody waiting on it, so the full collection the busy-path
-# trims skip can run here without freezing anyone. Python 3.14's incremental collector advances only on new
-# allocations, so a quiet process otherwise keeps closed agents' reference cycles (and their pages) forever.
+# Turn-free does not mean connection-free: messaging and Desktop sockets still owe heartbeats.
+# Even after a quiet period, the timer must not scan the entire old heap while they are attached.
+# Generation-0 collection releases young cycles without a potentially minute-long full GC (#154924).
 IDLE_COLLECT_AFTER_SECONDS = 300.0
 _idle_collect_lock = threading.Lock()
 _idle_collected_for: float | None = None  # quiet-period stamp the last idle collection covered
@@ -221,8 +221,11 @@ def note_agent_closed() -> None:
 
 
 def trim_memory_when_idle(*, reason: str) -> bool:
-    """Timer-lane trim: allocator release only, plus ONE full collection per quiet period once no turn has run
-    in this process for ``IDLE_COLLECT_AFTER_SECONDS`` (again only after a later agent close)."""
+    """Timer-lane trim: allocator release plus ONE young-generation collection per quiet period
+    after ``IDLE_COLLECT_AFTER_SECONDS`` without a turn (again after a later agent close).
+
+    Idle conversations may still have live messaging sockets; never run a full-heap GC here.
+    """
     global _idle_collected_for, _agent_closed_since_idle_collect
     from agent.review_idle_queue import QUEUE
 
@@ -235,7 +238,7 @@ def trim_memory_when_idle(*, reason: str) -> bool:
     if not due or not _config_settings()[0]:
         return trim_memory(reason=reason, collect=False)
     started = time.perf_counter()
-    freed = gc.collect()
-    logger.info("idle full collection: reason=%s quiet_s=%d unreachable=%d duration_ms=%.1f",
+    freed = gc.collect(0)
+    logger.info("idle young collection: reason=%s quiet_s=%d unreachable=%d duration_ms=%.1f",
                 reason, quiet_for, freed, (time.perf_counter() - started) * 1000)
     return trim_memory(force=True, reason=f"{reason} after idle collection", collect=False)

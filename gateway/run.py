@@ -4394,7 +4394,7 @@ def _housekeeping_deferred_fts_retry() -> None:
 
 
 def _housekeeping_memory_trim() -> None:
-    """Messaging-gateway counterpart to the TUI idle reaper; timer lane: full GC only once idle (#139763)."""
+    """Messaging-gateway counterpart to the TUI idle reaper; only young GC on idle (#154924)."""
     from hermes_cli.mem_trim import trim_memory_when_idle
     trim_memory_when_idle(reason="messaging gateway housekeeping")
 

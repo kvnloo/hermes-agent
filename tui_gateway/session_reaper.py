@@ -273,9 +273,8 @@ def _reap_idle_sessions() -> None:
     _repair_missing_ws_orphan_reaps()
     _enforce_session_cap()
     _reclaim_orphaned_leases()
-    # Long-lived processes: gen2 GC rarely runs at steady state and glibc retains freed pages as RSS, so trim
-    # every quiescent scan to prevent unbounded RSS growth over days/weeks. Forced trims (agent close, cache
-    # pressure) are unaffected.
+    # Even a turn-idle gateway may have live sockets needing heartbeats. The timer's
+    # young-generation collection avoids full-heap pauses; explicit pressure GC is unaffected.
     if not _sessions_quiescent():
         logger.debug("idle reaper periodic trim deferred: a session is busy or attached")
         return
