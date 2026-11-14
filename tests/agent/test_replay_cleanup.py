@@ -122,8 +122,9 @@ def _wire(messages):
 
 
 def _send(agent, history, idx=None):
+    idx = len(history) - 1 if idx is None else idx
     request, _ = build_api_messages(
-        agent, history, current_turn_user_idx=len(history) - 1 if idx is None else idx,
+        agent, history, current_turn_user_idx=idx, user_message=history[idx]["content"],
         ext_prefetch_cache="", plugin_user_context="", moa_config=None, active_system_prompt="",
     )
     return request

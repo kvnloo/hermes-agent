@@ -114,12 +114,12 @@ def _refund_api_call(agent: Any, api_call_count: int) -> int:
 
 
 def _reanchor(agent: Any, messages: list[Any], user_message: Any) -> int:
-    """Compaction rebuilt ``messages``: re-anchor this turn's user index so the
-    api_content stamp, injection site and persist-override row hit the same dict."""
+    """Re-anchor after compaction; fallback rows must not receive the turn's persist override."""
     from agent.turn_context import reanchor_current_turn_user_idx
+    from agent.turn_iteration_prep import _anchors_current_turn
 
     idx = reanchor_current_turn_user_idx(messages, user_message)
-    agent._persist_user_message_idx = idx
+    agent._persist_user_message_idx = idx if _anchors_current_turn(messages, idx, user_message) else None
     return idx
 
 

@@ -1421,6 +1421,7 @@ def _sanitize_model_for(agent: Any, moa_config: Any) -> Any:
 def build_api_messages(
     agent: Any, messages: list[dict[str, Any]], *, current_turn_user_idx: Any,
     ext_prefetch_cache: Any, plugin_user_context: Any, moa_config: Any, active_system_prompt: Any,
+    user_message: Any = None,
 ) -> tuple[list[dict[str, Any]], str]:
     """Build the wire copy of ``messages`` for one API call plus the effective system
     message. Returns ``(api_messages, effective_system)``.
@@ -1435,8 +1436,14 @@ def build_api_messages(
     from agent.agent_runtime_helpers import fill_empty_non_final_wire_payload
     from agent.conversation_loop import _clone_message_for_send
     from agent.replay_cleanup import canonicalize_replay_history
+    from agent.turn_iteration_prep import _anchors_current_turn
 
     has_current = isinstance(current_turn_user_idx, int) and 0 <= current_turn_user_idx < len(messages)
+    if has_current:
+        # A fallback anchor is not this turn's ask and cannot acquire its live context.
+        has_current = _anchors_current_turn(messages, current_turn_user_idx, user_message) or bool(
+            extract_api_content_sidecar(messages[current_turn_user_idx])
+        )
     current_turn_message = messages[current_turn_user_idx] if has_current else None
 
     # Replay consumers canonicalize the persisted prefix on read; the request copy must
