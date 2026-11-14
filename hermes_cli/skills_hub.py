@@ -324,7 +324,7 @@ def _line_input(prompt: str) -> Optional[str]:
 def _prompt_for_skill_name(c: Console, url: str, default: str = "") -> Optional[str]:
     """Prompt interactively for a skill name. Returns None on cancel/EOF."""
     c.print()
-    c.print(f"[yellow]The SKILL.md at {url} doesn't declare a `name:` in its frontmatter,[/]\n"
+    c.print(f"[yellow]The SKILL.md at {_shown(url)} doesn't declare a `name:` in its frontmatter,[/]\n"
             "[yellow]and the URL path doesn't produce a valid identifier either.[/]")
     c.print(f"[bold]Enter a skill name{f' [{default}]' if default else ''}:[/] "
             "[dim](lowercase letters, digits, hyphens, underscores; starts with a letter)[/]")
@@ -572,6 +572,7 @@ def _resolve_url_bundle_name(c: Console, bundle, meta, identifier: str,
     if bundle.source != "url" or (bundle.name and not bundle_meta.get("awaiting_name")):
         return True
     url = bundle_meta.get("url") or identifier
+    shown_url = _shown(url)
     if name_override and _is_valid_installed_skill_name(name_override):
         bundle.name = name_override.strip()
     elif name_override:
@@ -580,12 +581,12 @@ def _resolve_url_bundle_name(c: Console, bundle, meta, identifier: str,
         return False
     elif skip_confirm:
         # Non-interactive surface (slash command / TUI / gateway): can't prompt.
-        c.print(f"[bold red]Cannot install from URL:[/] {url}\n"
+        c.print(f"[bold red]Cannot install from URL:[/] {shown_url}\n"
                 "[yellow]The SKILL.md has no `name:` in its frontmatter, "
                 "and the URL path doesn't produce a valid identifier.[/]\n\n"
                 "Retry with an explicit name:\n"
-                f"  [bold]/skills install {url} --name <your-name>[/]\n"
-                f"  [bold]hermes skills install {url} --name <your-name>[/]\n\n"
+                f"  [bold]/skills install {shown_url} --name <your-name>[/]\n"
+                f"  [bold]hermes skills install {shown_url} --name <your-name>[/]\n\n"
                 "[dim]Or ask the SKILL.md's author to add a `name:` field to "
                 "its YAML frontmatter.[/]\n")
         return False

@@ -32,3 +32,27 @@ def test_skills_hub_messages_never_print_the_url_token(tmp_path, monkeypatch):
     assert "Could not download 'https://user:***@127.0.0.1:9/s/SKILL.md'" in out
     assert "Added tap: https://user:***@127.0.0.1:9/s/SKILL.md" in out
     assert TOKEN not in out
+
+
+@pytest.mark.parametrize("skip_confirm", [True, False])
+def test_unnamed_url_skill_never_prints_credentials(skip_confirm, monkeypatch):
+    """Both the prompt and non-interactive refusal must mask credentials before a scan."""
+    from hermes_cli import skills_hub
+    from tools.skills_hub_models import SkillBundle
+
+    url = f"https://user:{TOKEN}@127.0.0.1:9/SKILL.md"
+    bundle = SkillBundle(
+        name="", files={"SKILL.md": "# Untitled skill\n"}, source="url",
+        identifier=url, trust_level="community",
+        metadata={"url": url, "awaiting_name": True},
+    )
+    if not skip_confirm:
+        monkeypatch.setattr(skills_hub, "_line_input", lambda _prompt: None)
+    console = Console(record=True, width=240)
+
+    assert skills_hub._resolve_url_bundle_name(
+        console, bundle, None, url, name_override="", skip_confirm=skip_confirm
+    ) is False
+    output = console.export_text()
+    assert "https://user:***@127.0.0.1:9/SKILL.md" in output
+    assert TOKEN not in output
