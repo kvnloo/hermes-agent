@@ -31,6 +31,22 @@ def test_reply_to_a_message_with_toolcall_markup_is_redacted_in_the_turn():
     assert row.endswith("什么情况")
 
 
+def test_reply_with_toolcall_in_its_json_argument_keeps_the_following_prose():
+    """A quoted legacy tool call whose JSON contains a literal protocol tag is redacted
+    as one block, without swallowing the subsequent message text (#61217)."""
+    source = SessionSource(platform=Platform.TELEGRAM, chat_id="111", chat_type="dm", user_id="42")
+    quoted = """Checking.
+<TOOLCALL>{"name":"terminal","arguments":{"command":"printf '<TOOLCALL>'"}}</TOOLCALL>
+Done."""
+    event = MessageEvent(text="why?", source=source, reply_to_message_id="42", reply_to_text=quoted)
+
+    row = GatewayRunner._prepend_inbound_reply_context(event, source, "why?")
+
+    assert row.startswith('[Replying to: "Checking.\n[processing...]\nDone."]')
+    assert row.endswith("why?")
+    assert "terminal" not in row
+
+
 def test_reply_quoting_an_inline_toolcall_mention_keeps_its_trailing_prose():
     """Prose that merely mentions the tag is not a block: everything after it survives."""
     source = SessionSource(platform=Platform.TELEGRAM, chat_id="111", chat_type="dm", user_id="42")

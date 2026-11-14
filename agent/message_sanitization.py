@@ -483,7 +483,13 @@ def _looks_like_corrupt_image_rejection(error_body: str) -> bool:
 # a block left unclosed by truncation (stored reply previews are capped, so a block can be cut
 # mid-JSON) only at a block boundary, as the outbound filter does, so prose that merely mentions
 # ``<TOOLCALL>`` keeps everything after it.
-_TOOLCALL_CLOSED_RE = re.compile(r"<TOOLCALL>(?:(?!<TOOLCALL>).)*?</TOOLCALL>", re.DOTALL | re.IGNORECASE)
+# A tool-call JSON argument can itself mention "<TOOLCALL>" (for example in a shell
+# command). Prefer the JSON-shaped outer block before the nested-tag guard so
+# the fallback for inline prose mentions does not discard the reply's tail.
+_TOOLCALL_CLOSED_RE = re.compile(
+    r"<TOOLCALL>(?:[ \t\r\n]*[\[{](?:(?!</TOOLCALL>).)*?</TOOLCALL>|(?:(?!<TOOLCALL>).)*?</TOOLCALL>)",
+    re.DOTALL | re.IGNORECASE,
+)
 _TOOLCALL_UNCLOSED_RE = re.compile(r"(?:\A|(?<=\n))([ \t]*)<TOOLCALL>(?:(?!</TOOLCALL>).)*\Z", re.DOTALL | re.IGNORECASE)
 
 _TOOLCALL_PLACEHOLDER = "[processing...]"
