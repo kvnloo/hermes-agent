@@ -81,6 +81,15 @@ def _statement_bindings(stmt: ast.stmt) -> set[str]:
     return {sub.id for target in targets for sub in ast.walk(target) if isinstance(sub, ast.Name)}
 
 
+def _completed_statement_bindings(stmt: ast.stmt) -> set[str]:
+    """Names bound after a straight-line statement finishes, including nested with bodies."""
+    names = _statement_bindings(stmt)
+    if isinstance(stmt, ast.With):
+        for child in stmt.body:
+            names |= _completed_statement_bindings(child)
+    return names
+
+
 def _node_may_reach_process(node: ast.AST, bound: set[str]) -> bool:
     if isinstance(node, _SCOPE_OR_FLOW_NODES):
         return True
@@ -108,7 +117,7 @@ def _stmt_may_reach_process(stmt: ast.stmt, bound: set[str]) -> bool:
         for child in stmt.body:
             if _stmt_may_reach_process(child, inner):
                 return True
-            inner |= _statement_bindings(child)
+            inner |= _completed_statement_bindings(child)
         return False
     return any(_node_may_reach_process(node, bound) for node in ast.walk(stmt))
 
@@ -122,10 +131,7 @@ def _is_inert_python(code: str) -> bool:
     for stmt in tree.body:
         if _stmt_may_reach_process(stmt, bound):
             return False
-        bound |= _statement_bindings(stmt)
-        if isinstance(stmt, ast.With):
-            for child in stmt.body:
-                bound |= _statement_bindings(child)
+        bound |= _completed_statement_bindings(stmt)
     return True
 
 

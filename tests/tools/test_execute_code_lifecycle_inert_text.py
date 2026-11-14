@@ -54,6 +54,18 @@ def test_cell_that_can_reach_a_process_is_still_refused(code):
     assert _blocked(code) is not None
 
 
+def test_documentation_only_nested_with_binding_is_not_refused():
+    # A with body does not introduce a Python scope: the inner binding survives both exits.
+    code = (
+        'with open("runbook.md", "w") as runbook:\n'
+        '    with open("scratch.md", "w") as scratch:\n'
+        f'        line = "{_CMD}"\n'
+        '    runbook.write(line)\n'
+        'print(line)'
+    )
+    assert _blocked(code) is None
+
+
 def test_rejection_names_the_matched_command(in_gateway):
     result = json.loads(cet.execute_code(f'import os\nos.system("{_CMD}")'))
     assert "cannot restart or stop the gateway" in result["error"]
