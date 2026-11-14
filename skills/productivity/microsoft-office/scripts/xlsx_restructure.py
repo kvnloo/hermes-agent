@@ -40,6 +40,8 @@ from openpyxl.formatting.formatting import ConditionalFormattingList
 from openpyxl.utils import (column_index_from_string, get_column_letter,
                             range_boundaries)
 
+from xlsx_hyperlinks import move_cells_with_hyperlinks
+
 # A1-style reference, optionally sheet-qualified, optionally a range.
 # Guards: not preceded by a word char/$/. (avoids ABC123 identifiers) and
 # not followed by a word char or "(" (avoids function names like LOG10().
@@ -305,7 +307,7 @@ def main(argv=None):
         ws.unmerge_cells(rng)
 
     # 2. structural move of cell values/styles/comments
-    getattr(ws, f"{report['op']}_{axis}")(idx, n)
+    move_cells_with_hyperlinks(ws, axis, idx, n, delete)
 
     # 3. formulas everywhere
     _rewrite_formulas(wb, rewriter, report)
