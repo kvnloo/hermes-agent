@@ -88,6 +88,37 @@ def test_removed_provider_is_a_config_error_not_a_rejected_key():
     assert key_surface["auth_kind"] == "api_key"
 
 
+@pytest.mark.parametrize("platform", ["local", "telegram"])
+@pytest.mark.parametrize("stamped_retryable", [False, True])
+def test_unknown_runtime_provider_keeps_resolver_diagnostic(platform, stamped_retryable):
+    """Real resolution errors keep their diagnosis through the client descriptor."""
+    from agent.error_surface import build_error_surface_from_result
+    from gateway.config import Platform
+    from gateway.run_turn_runner import _resolution_failure_reply
+    from hermes_cli.auth import AuthError
+    from hermes_cli.runtime_provider import resolve_runtime_provider
+
+    provider = "removed-provider-for-test"
+    with pytest.raises(AuthError) as caught:
+        resolve_runtime_provider(requested=provider, target_model="retired-model")
+    exc = caught.value
+    assert exc.code == "invalid_provider"
+    assert provider in str(exc) and "hermes model" in str(exc)
+
+    reply, reason, retryable = _resolution_failure_reply(exc, Platform(platform))
+    assert (reason, retryable) == ("invalid_provider", False)
+    assert str(exc) in reply
+    result = {"failed": True, "error": str(exc), "failure_reason": reason}
+    if stamped_retryable:
+        result["failure_retryable"] = retryable
+    surface = build_error_surface_from_result(result, provider=provider)
+    assert surface["layer"] == "provider"
+    assert surface["code"] == "invalid_provider"
+    assert surface["retryable"] is False
+    assert surface["message"] == str(exc)
+    assert "auth_kind" not in surface and "api_key_env" not in surface
+
+
 @pytest.mark.parametrize("enabled", [False, True])
 def test_turn_failure_is_an_endpoint_failure_not_a_rejected_key(llamacpp_home, enabled):
     from agent.error_surface import build_error_surface_from_result
