@@ -158,7 +158,6 @@ def _maybe_autoinstall_chromium() -> bool:
     global _autoinstall_attempted
     if _autoinstall_attempted:
         return False
-    _autoinstall_attempted = True
     from hermes_cli.browser_runtime import chromium_executable
     from hermes_constants import is_termux
     if running_in_docker() or is_termux() or _explicit_executable_configured(chromium_executable):
@@ -166,6 +165,8 @@ def _maybe_autoinstall_chromium() -> bool:
     from pm import InstallError, ensure, lazy_installs_allowed
     if not lazy_installs_allowed():
         return False
+    # A pinned browser or denied install in one profile has not used the process-wide attempt.
+    _autoinstall_attempted = True
     logger.info("browser: installing PM's pinned Chromium")
     try:
         ensure("chromium")

@@ -102,6 +102,35 @@ def test_execution_acquires_missing_browser_through_pm(browser_store, monkeypatc
     assert requests == [("ensure", {"name": "chromium", "explicit": False})]
 
 
+
+def test_pinned_browser_in_one_profile_does_not_block_another_profiles_first_install(
+    browser_store, monkeypatch, tmp_path,
+):
+    """A rejected per-profile browser override must not spend the process-wide PM install attempt."""
+    import pm.client
+
+    _, _, publish = browser_store
+    monkeypatch.delenv("HERMES_DISABLE_LAZY_INSTALLS")
+    monkeypatch.setattr(launcher, "running_in_docker", lambda: False)
+    _pin_executable(tmp_path / "missing-pinned-browser")
+    requests = []
+
+    def request(operation, payload, **kwargs):
+        requests.append((operation, payload))
+        publish("chromium")
+
+    monkeypatch.setattr(pm.client, "_request", request)
+    assert launcher.chromium_ready()[0] is False
+    assert requests == []
+
+    second_home = tmp_path / "other-home"
+    second_home.mkdir()
+    monkeypatch.setenv("HERMES_HOME", str(second_home))
+    assert pm.lazy_installs_allowed()  # real default for an unconfigured home
+    assert launcher.chromium_ready() == (True, "")
+    assert requests == [("ensure", {"name": "chromium", "explicit": False})]
+
+
 def test_doctor_fix_publishes_and_reads_the_pm_browser(browser_store, monkeypatch, capsys):
     """Plain ``hermes doctor`` never acquires Chromium; ``--fix`` acquires it explicitly through PM and reports
     the published binary. Only the worker/download boundary is replaced: selection, admission, facts and
