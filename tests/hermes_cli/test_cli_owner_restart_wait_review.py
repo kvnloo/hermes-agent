@@ -124,3 +124,31 @@ def test_quiet_query_cancel_exits_130(monkeypatch, capsys):
         CLIAgentSetupMixin._init_agent(host)
     assert exited.value.code == 130
     assert "Stopped waiting" in capsys.readouterr().err
+
+def test_resume_reply_after_ctrl_c_is_not_adopted(monkeypatch):
+    """Startup --resume must not attach a session if Ctrl+C arrives with the successor's reply."""
+    from hermes_cli.gateway_owner_restart import through_owner_restart
+
+    conn = GatewayConnection()
+    store = GatewaySessionStore(conn)
+    cli = types.SimpleNamespace(_gateway_command_wait=None)
+    seen = []
+
+    def call(method, **params):
+        assert method == "session.resume"
+        seen.append(params)
+        if len(seen) == 1:
+            raise GatewayRPCError("runtime_draining", -32000, {"reason": "runtime_draining"})
+        # A successful reply races with Ctrl+C after the owner starts accepting requests.
+        cli._gateway_command_wait.set()
+        return _snapshot("local-resumed")
+
+    monkeypatch.setattr(conn, "start", lambda **_kw: None)
+    monkeypatch.setattr(conn, "call", call)
+
+    with pytest.raises(SuccessorWaitStopped):
+        through_owner_restart(cli, store, lambda: store.attach("local-resumed"))
+    assert len(seen) == 2
+    assert callable(seen[1].get("abandon"))
+    assert store.current is None
+    assert "local-resumed" not in store.snapshots

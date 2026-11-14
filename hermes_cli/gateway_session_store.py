@@ -23,7 +23,7 @@ import sys
 import uuid
 
 from hermes_cli.gateway_client import GatewayClientError
-from hermes_cli.gateway_connection import RESUME_REFUSALS, GatewayConnection
+from hermes_cli.gateway_connection import CallStopped, RESUME_REFUSALS, GatewayConnection
 
 logger = logging.getLogger(__name__)
 
@@ -148,7 +148,14 @@ class GatewaySessionStore:
         refuses it instead, as the thin client does."""
         if session_id in self.snapshots:
             return self.snapshots[session_id]
-        snapshot = self.connection.resume(self.call, session_id, typed=typed)
+        # A restart wait also covers startup --resume and the child's attach after /branch.
+        # Both must poll Ctrl+C, including the race where a reply arrives just as it is pressed.
+        _, abandon = self._retry_state()
+        snapshot = self.connection.resume(
+            lambda method, **params: self._call(method, abandon, **params),
+            session_id, typed=typed)
+        if abandon is not None and abandon():
+            raise CallStopped("session.resume")
         self._adopt(snapshot)
         return snapshot
 
