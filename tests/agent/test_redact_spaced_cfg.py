@@ -107,3 +107,13 @@ def test_spaced_pass_linear_on_long_keyword_runs(text):
     start = time.perf_counter()
     redact_spaced_cfg_assignments(text, _mask_token)
     assert time.perf_counter() - start < 2.0
+
+def test_spaced_config_with_url_on_neighbor_line_masks_secret_only():
+    # Config files often contain a service URL beside a password. Do not turn
+    # the URL query's intentional passthrough into a file-wide masking bypass.
+    url = "https://example.test/callback?token=workflow"
+    text = f'[service]\nendpoint = "{url}"\npassword = "hunter2"\n'
+    for result in (redact_for_egress(text), redact_terminal_output(text, "cat ~/.hermes/.env")):
+        assert 'password = "***"' in result
+        assert "hunter2" not in result
+        assert url in result

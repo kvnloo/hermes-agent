@@ -104,5 +104,13 @@ def redact_spaced_cfg_assignments(text: str, mask) -> str:
     if not _SPACED_EQ_RE.search(text):  # the common case: nothing spaced around ``=`` to look at
         return text
     dotted, anchored = _patterns()
-    text = dotted.sub(lambda m: _sub(m, True), text)
-    return anchored.sub(lambda m: _sub(m, False), text)
+
+    def _apply(line: str) -> str:
+        line = dotted.sub(lambda m: _sub(m, True), line)
+        return anchored.sub(lambda m: _sub(m, False), line)
+
+    # URL query params pass through, but an endpoint URL on one config line
+    # cannot exempt a password on another. Split on \n to preserve regex anchors.
+    if "://" in text:
+        return "\n".join(line if "://" in line else _apply(line) for line in text.split("\n"))
+    return _apply(text)

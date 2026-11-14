@@ -1325,7 +1325,7 @@ def _redact_assignments(text: str, *, mask_nonreusable: bool = False) -> str:
     mask = _mask_token_nonreusable if mask_nonreusable else _mask_token
     if "=" in text:
         text = redact_cookie_assignments(text, mask)
-        if "://" not in text and _CFG_SECRET_WORD_RE.search(text):  # before the ENV passes: their ``\S+``
+        if _CFG_SECRET_WORD_RE.search(text):  # the spaced pass skips only URL-bearing lines
             text = redact_spaced_cfg_assignments(text, mask)        # value stops at a quoted value's space
         _redact_env = _assignment_sub(lambda g: f"{g[0]}={g[1]}{mask(g[2])}{g[1]}", check_keyword=True)
         text = _ENV_ASSIGN_RE.sub(_redact_env, text)
@@ -1337,16 +1337,17 @@ def _redact_assignments(text: str, *, mask_nonreusable: bool = False) -> str:
             text = _ENV_ASSIGN_LOWER_RE.sub(_redact_env, text)
         # The keyword pre-gate is exact and matters: _CFG_DOTTED_RE backtracks
         # quadratically on long unbroken [A-Za-z0-9_.\-] runs.
-        # Lowercase/dotted config keys (issue #16413). Skip URLs entirely — web-URL query params are
+        # Lowercase/dotted config keys (issue #16413). Adjacent patterns skip URL payloads — query params are
         # intentionally passed through (see note near the bottom of this function); _DB_CONNSTR_RE still
         # guards connection-string passwords. Extra gate: every _CFG_*_RE match requires a secret keyword in
         # the key, so a text without any secret keyword cannot match — skipping is exact. This matters
         # because _CFG_DOTTED_RE backtracks quadratically on long unbroken [A-Za-z0-9_.\-] runs (e.g.
         # base64/hex blobs in compaction payloads); the linear keyword scan prevents that pathological path
         # on secret-free text.
-        if "://" not in text and _CFG_SECRET_WORD_RE.search(text):
-            text = _CFG_DOTTED_RE.sub(_redact_env, text)
-            text = _CFG_ANCHORED_RE.sub(_redact_env, text)
+        if _CFG_SECRET_WORD_RE.search(text):
+            if "://" not in text:  # preserve URL query passthrough for the adjacent patterns
+                text = _CFG_DOTTED_RE.sub(_redact_env, text)
+                text = _CFG_ANCHORED_RE.sub(_redact_env, text)
             text = redact_spaced_cfg_assignments(text, mask)
 
     if ":" in text and '"' in text:
