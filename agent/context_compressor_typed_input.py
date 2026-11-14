@@ -44,9 +44,9 @@ def typed_summary_messages(
 ) -> list[dict[str, Any]]:
     """OpenAI-shape messages for the sampled ``slices`` (start index, display records) of ``turns``.
 
-    ``records`` are the serializer's redacted/elided text, 1:1 with ``turns``; ``render_args`` is the
-    serializer's redact-and-cap for tool-call arguments. Synthetic harness user turns, orphaned tool
-    results and elision markers become assistant text.
+    ``records`` are redacted/elided, 1:1 with ``turns``; ``render_args`` redacts tool arguments.
+    Synthetic harness user turns and elision markers become assistant text.
+    Orphaned tool results retain ``role=tool`` via replay-only pairing.
     """
     out: list[dict[str, Any]] = []
     open_calls: list[str] = []
@@ -76,10 +76,22 @@ def typed_summary_messages(
             if role == "user":
                 body = record.removeprefix("[USER]: ")
                 _text("user", body) if is_real_user(msg) else _text("assistant", body and "[INTERNAL CONTEXT]: " + body)
-            elif role == "tool" and msg.get("tool_call_id") in open_calls:
-                open_calls.remove(msg["tool_call_id"])
+            elif role == "tool":
                 body = record.split("]: ", 1)[1] if record.startswith("[TOOL RESULT") else record
-                out.append({"role": "tool", "tool_call_id": msg["tool_call_id"], "content": body})
+                call_id = msg.get("tool_call_id")
+                if call_id in open_calls:
+                    open_calls.remove(call_id)
+                else:
+                    # A sampled slice can retain a result without its invoking assistant turn.
+                    _close_calls()
+                    call_id = f"compaction_orphan_{index}"
+                    out.append({
+                        "role": "assistant",
+                        "content": "[tool invocation omitted from sampled history]",
+                        "tool_calls": [{"id": call_id, "type": "function",
+                                        "function": {"name": "tool", "arguments": "{}"}}],
+                    })
+                out.append({"role": "tool", "tool_call_id": call_id, "content": body})
             # A record the sampler cut stays text: rebuilding its calls would undo the input cap.
             elif role == "assistant" and record == records[index] and any(isinstance(tc, dict) for tc in msg.get("tool_calls") or ()):
                 _close_calls()
