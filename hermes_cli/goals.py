@@ -21,6 +21,7 @@ from datetime import datetime, timezone, UTC
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from agent.errors import InvalidProviderResponseError
 from hermes_cli._subprocess_compat import noninteractive_git_env
 from hermes_time import safe_strftime
 
@@ -747,6 +748,10 @@ def _session_waiting(session_id: str) -> bool:
         return False
 
 
+class InvalidGoalJudgeResponse(InvalidProviderResponseError):
+    """A goal-judge reply violated its verdict contract after a successful HTTP request."""
+
+
 _JSON_OBJECT_RE = re.compile(r"\{.*?\}", re.DOTALL)
 
 
@@ -915,7 +920,7 @@ def judge_goal(
         timeout = _goal_judge_timeout()   # the declared default is the config key, not the constant
 
     try:
-        from agent.auxiliary_client import InvalidGoalJudgeResponse, call_llm
+        from agent.auxiliary_client import call_llm
         from agent.auxiliary_unavailable import AuxiliaryClientUnavailable
     except Exception as exc:
         logger.debug("goal judge: auxiliary client import failed: %s", exc)

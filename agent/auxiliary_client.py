@@ -3923,10 +3923,13 @@ def _quarantine_fallback_candidate(
     None = dead token): mark it unhealthy so the ordered re-walk skips it and the caller moves on to
     the next entry. Transient classes get a short hold, payment/quota and dead tokens the long one;
     a model the route lacks or refuses marks only that ``model``, its siblings stay eligible."""
+    from hermes_cli.goals import InvalidGoalJudgeResponse
+
     _mark_provider_unhealthy(
         fb_provider or fb_label, ttl=fallback_candidate_quarantine_ttl(reason),
         base_url=base_url, reason=reason or "stale fallback credential",
-        model=model if reason in (aux_errors.MODEL_NOT_FOUND, aux_errors.MODEL_INCOMPATIBLE) else None)
+        model=model if reason in (aux_errors.MODEL_NOT_FOUND, aux_errors.MODEL_INCOMPATIBLE)
+        or isinstance(fb_err, InvalidGoalJudgeResponse) else None)
     why = f"is out of capacity ({reason})" if reason else "has a stale/unrefreshable credential"
     logger.warning("Auxiliary %s%s: fallback candidate %s %s (%s) — skipping to next fallback",
                    task or "call", tag, fb_label, why, fb_err)
@@ -6624,10 +6627,6 @@ def _build_call_kwargs(
     return merge_session_affinity_headers(kwargs, provider, base_url, _runtime_main_value("session_id") or None)
 
 
-class InvalidGoalJudgeResponse(RuntimeError):
-    """A goal-judge reply violated its verdict contract after a successful HTTP request."""
-
-
 def _validate_llm_response(
     response: Any, task: Optional[str] = None, provider: Optional[str] = None, base_url: Optional[str] = None,
 ) -> Any:
@@ -6680,7 +6679,7 @@ def _validate_llm_response(
     # auxiliary fallback ladder cannot recover a parse error raised after call_llm.
     # With no chain, preserve the goal manager's normal three-strike policy.
     if task == "goal_judge" and _get_auxiliary_task_config(task).get("fallback_chain"):
-        from hermes_cli.goals import _parse_judge_response
+        from hermes_cli.goals import InvalidGoalJudgeResponse, _parse_judge_response
         content = _message_field(response.choices[0].message, "content")
         if not isinstance(content, str) or _parse_judge_response(content)[2]:
             error = InvalidGoalJudgeResponse(
