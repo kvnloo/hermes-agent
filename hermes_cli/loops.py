@@ -271,7 +271,16 @@ def _db_op(label: str, fn, default=None):
 def _parse_state(raw: str, session_id: str = "") -> Optional[LoopState]:
     """``LoopState`` from stored JSON; None (warning when *session_id* given) on corrupt data."""
     try:
-        return LoopState.from_json(raw)
+        state = LoopState.from_json(raw)
+        # A loop saved before the 55m cap may have an hour-long deadline already queued.
+        # Adjust both the delay and its deadline when restoring that older state.
+        if state.mode == "self_paced" and state.current_delay > MAX_SELF_PACED_CEILING_SECONDS:
+            ceiling = self_paced_ceiling_seconds()
+            if state.current_delay > ceiling:
+                if state.status == "active" and not state.awaiting_response:
+                    state.next_due_at -= state.current_delay - ceiling
+                state.current_delay = float(ceiling)
+        return state
     except Exception as exc:
         if session_id:
             logger.warning("LoopManager: could not parse stored loop for %s: %s", session_id, exc)

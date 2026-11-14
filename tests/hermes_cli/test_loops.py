@@ -254,6 +254,27 @@ class TestPersistence:
         cleared = load_loop("sess-1")
         assert cleared is not None and cleared.status == "cleared"
 
+    def test_persisted_self_paced_wait_is_shortened_on_upgrade(self, hermes_home):
+        """A loop saved with the old 1h backoff must not survive restart past the cache TTL."""
+        from hermes_cli.loops import LoopManager, list_active_loops, save_loop
+
+        (hermes_home / "config.yaml").write_text(
+            "loops:\n  self_paced_ceiling_seconds: 3600\n"
+        )
+        mgr = LoopManager(session_id="preupgrade-loop")
+        mgr.set("watch the deploy")
+        now = time.time()
+        mgr.state.current_delay = 3600.0
+        mgr.state.next_due_at = now + 3600
+        save_loop("preupgrade-loop", mgr.state)
+
+        restarted = LoopManager(session_id="preupgrade-loop")
+        assert restarted.state.current_delay == 3300
+        assert restarted.state.next_due_at == pytest.approx(now + 3300, abs=1)
+        assert restarted.is_due(now + 3301)
+        gateway_state = dict(list_active_loops())["preupgrade-loop"]
+        assert gateway_state.next_due_at == pytest.approx(now + 3300, abs=1)
+
     def test_list_active_loops(self, hermes_home):
         from hermes_cli.loops import LoopManager, list_active_loops
 
