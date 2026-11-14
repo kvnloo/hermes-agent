@@ -75,7 +75,8 @@ def run_cmd(cmd: list[str], *, dry_run: bool = False,
                           check=False, stdin=subprocess.DEVNULL, env=env)
     out = (proc.stdout or "") + (proc.stderr or "")
     for secret in (env_overlay or {}).values():
-        out = out.replace(secret, "***")
+        if secret:
+            out = out.replace(secret, "***")
     return proc.returncode, out
 
 
@@ -97,9 +98,14 @@ def _model_auth_env(url: str, hf_token: str | None,
     """
     supplied = {"HF_API_TOKEN": hf_token, "CIVITAI_API_TOKEN": civitai_token}
     for key, hosts in _TOKEN_HOSTS.items():
-        token = supplied[key] or os.environ.get(key)
-        if token and _host_matches(url, hosts):
-            return {key: token}
+        if not _host_matches(url, hosts):
+            continue
+        explicit = supplied[key]
+        if explicit is not None:
+            return {key: explicit}
+        inherited = os.environ.get(key)
+        if inherited:
+            return {key: inherited}
     return {}
 
 

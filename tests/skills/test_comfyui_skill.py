@@ -312,6 +312,28 @@ def test_explicit_token_wins_and_dotless_lookalike_gets_none(monkeypatch):
     assert "HF_API_TOKEN" not in lookalike_env
 
 
+def test_explicit_empty_token_blocks_inherited_hf_token(monkeypatch):
+    """Empty explicit auth must suppress inherited and already-persisted tokens."""
+    inherited_hf, _civ = _inherit_tokens(monkeypatch)
+    mod = _load_auto_fix_deps()
+    calls = _record_subprocess(monkeypatch, mod, stdout="download output")
+    responses = []
+    original_run_cmd = mod.run_cmd
+
+    def record_response(*args, **kwargs):
+        response = original_run_cmd(*args, **kwargs)
+        responses.append(response)
+        return response
+
+    monkeypatch.setattr(mod, "run_cmd", record_response)
+    assert mod.install_model("https://huggingface.co/o/r/m.safetensors", "loras", hf_token="")
+    (_cmd, child_env), = calls
+    assert inherited_hf
+    assert child_env["HF_API_TOKEN"] == ""
+    assert "CIVITAI_API_TOKEN" not in child_env
+    assert responses == [(0, "download output")]
+
+
 def test_malformed_model_url_fails_closed_without_raising(monkeypatch):
     monkeypatch.delenv("HF_API_TOKEN", raising=False)
     mod = _load_auto_fix_deps()
