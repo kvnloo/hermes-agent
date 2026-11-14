@@ -338,7 +338,7 @@ class _JsonStateFile:
 
     def _read(self) -> dict:
         try:
-            data = json.loads(self.path.read_text(encoding="utf-8-sig"))
+            data = json.loads(self.path.read_text(encoding="utf-8-sig", errors="replace"))
         except (json.JSONDecodeError, OSError):
             data = None
         if not self._has_state_shape(data):

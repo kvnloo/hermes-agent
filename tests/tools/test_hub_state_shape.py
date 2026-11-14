@@ -26,3 +26,26 @@ def test_taps_skip_a_malformed_tap_and_still_accept_new_ones(tmp_path):
     assert [t["repo"] for t in taps.load()] == ["a/b", "c/d"]
     assert taps.remove("a/b") is True
     assert [t["repo"] for t in taps.load()] == ["c/d"]
+
+
+def test_non_utf8_bytes_in_one_hub_row_keep_other_rows_visible(tmp_path):
+    """Regression for #118686: one undecodable byte must not hide valid records."""
+    lock_path = tmp_path / "lock.json"
+    lock_path.write_bytes(
+        b'{"version":1,"installed":{"good":{"identifier":"owner/good","install_path":"good"},'
+        b'"bad":"\xff"}}'
+    )
+    lock = HubLockFile(lock_path)
+    assert lock.list_installed() == [
+        {"name": "good", "identifier": "owner/good", "install_path": "good"}
+    ]
+    assert list(lock.by_identifier()) == ["owner/good"]
+
+    taps_path = tmp_path / "taps.json"
+    taps_path.write_bytes(
+        b'{"taps":[{"repo":"good/repo","path":"skills/"}, "\xff"]}'
+    )
+    taps = TapsManager(taps_path)
+    assert taps.load() == [{"repo": "good/repo", "path": "skills/"}]
+    assert taps.add("more/repo") is True
+    assert [row["repo"] for row in taps.load()] == ["good/repo", "more/repo"]
