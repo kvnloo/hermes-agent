@@ -633,10 +633,16 @@ class MemoryManager:
     def on_turn_start(self, turn_number: int, message: str, **kwargs) -> None:
         if self._fork_turn_hooks_suppressed() or not self._owner_allows("on_turn_start"):
             return
-        # previous_message is earlier user text, so it is scrubbed with the message (one learned-token set). The rest
-        # are identity/runtime values, raw as in sync_all: masking a phone-number author_id merges two senders.
+        # This hook sees the raw gateway turn, unlike prefetch/sync. Never pass an
+        # auto-loaded skill body as the user's message (or previous message).
+        if isinstance(message, str):
+            message = self._strip_skill_scaffolding(message) or ""
+        # Identity/runtime values stay raw: a phone-number author_id must not merge senders.
         if "previous_message" in kwargs:
-            message, previous = _redact_for_provider(message, kwargs["previous_message"])
+            previous = kwargs["previous_message"]
+            if isinstance(previous, str):
+                previous = self._strip_skill_scaffolding(previous) or ""
+            message, previous = _redact_for_provider(message, previous)
             kwargs = {**kwargs, "previous_message": previous}
         else:
             message = _redact_for_provider(message)

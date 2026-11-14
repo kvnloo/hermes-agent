@@ -53,6 +53,7 @@ class _RecordingProvider(MemoryProvider):
         self.prefetched = []
         self.queued = []
         self.synced = []
+        self.turn_starts = []
 
     @property
     def name(self) -> str:
@@ -76,6 +77,9 @@ class _RecordingProvider(MemoryProvider):
 
     def sync_turn(self, user_content, assistant_content, *, session_id: str = "", messages=None) -> None:
         self.synced.append(user_content)
+
+    def on_turn_start(self, turn_number, message, **kwargs):
+        self.turn_starts.append((message, kwargs.get("previous_message")))
 
     def get_tool_schemas(self):
         return []
@@ -171,3 +175,22 @@ class TestMemoryManagerStripsScaffolding:
         mgr.sync_all(scaffold + footer, "Checking.")
         mgr.flush_pending(timeout=5.0)
         assert provider.synced == [note, footer]
+
+    def test_turn_start_strips_auto_loaded_user_and_previous_messages(self):
+        """Turn-start providers see speech, not channel-bound SKILL.md bodies (#92036)."""
+        scaffold = (
+            '[IMPORTANT: The "example" skill is auto-loaded. Follow its instructions for this session.]\n'
+            "Injected skill body is not user speech.\n"
+            f"[Skill directory: /skills/example]\nResolve paths, {_SKILL_DIR_NOTE_END}\n\n"
+        )
+        register_auto_load_scaffold(scaffold)
+        typed = "remember only my words\n\nsecond line"
+        mgr, provider = _manager_with_recorder()
+        mgr.on_turn_start(1, scaffold + typed, previous_message="")
+        mgr.on_turn_start(2, "follow up", previous_message=scaffold + typed)
+        mgr.on_turn_start(3, scaffold, previous_message=scaffold)
+        assert provider.turn_starts == [
+            (typed, ""),
+            ("follow up", typed),
+            ("", ""),
+        ]
