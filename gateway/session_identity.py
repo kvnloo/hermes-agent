@@ -188,6 +188,10 @@ def restore_identity(
         else get_profile_dir(transport_name))
     from gateway.profile_routing import ProfileRouteRejected
     try:
+        # Persisted direct-bot origins can outlive their profile. Validate the named owner
+        # even when transport and runtime match, without changing its authorization home.
+        if runtime_name == transport_name and _name(source.profile):
+            runner._resolve_profile_home_for_source(source)
         runtime_home = (
             authorization_home if runtime_name == transport_name
             else Path(runner._resolve_profile_home_for_source(source)))

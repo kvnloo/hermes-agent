@@ -88,3 +88,11 @@ def test_restored_origin_for_deleted_profile_is_not_revived(homes):
     assert restore_identity(source, runner=_runner(), transport_profile="default") is None
     assert source.profile_route_rejected is True
     assert identity_of(source) is None
+
+@pytest.mark.parametrize("name", ["ghost", "parked"])
+def test_restored_own_bot_origin_for_unserved_profile_is_refused(homes, name):
+    # Persisted direct-bot rows have matching transport/runtime names, unlike routed rows.
+    source = _src(name)
+    assert restore_identity(source, runner=_runner(), transport_profile=name) is None
+    assert source.profile_route_rejected is True
+    assert identity_of(source) is None
