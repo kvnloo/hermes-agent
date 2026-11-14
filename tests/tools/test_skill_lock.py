@@ -170,6 +170,25 @@ def test_usage_bumps_never_save_over_a_damaged_lock_record(unreadable_record):
     assert "cannot be read" in (command_refusal(f"echo x > {locked_md}", str(home)) or "")
 
 
+def test_non_object_skill_row_fails_closed_and_preserves_the_record(locked_home):
+    """A valid JSON map can still have a damaged row hiding an unknown user lock (#147986)."""
+    from tools import skill_usage
+    from tools.skill_lock import command_refusal, path_refusal
+
+    home = locked_home
+    record = home / "skills/.usage.json"
+    record.write_text(json.dumps({**skill_usage.load_usage(), "free-skill": None}), encoding="utf-8")
+    free = home / "skills/ops/free-skill/SKILL.md"
+
+    assert "cannot be read" in (path_refusal([str(free)]) or "")
+    assert "cannot be read" in (command_refusal(f"echo x > {free}", str(home)) or "")
+    assert skill_usage.locked_skill_names() == ["locked-skill"]  # listing remains best-effort
+
+    before = record.read_bytes()
+    skill_usage.bump_view("locked-skill")
+    assert record.read_bytes() == before
+
+
 def test_a_damaged_lock_record_stays_protected_with_no_skills_on_disk(tmp_path, monkeypatch):
     """With every skill archived or removed, the damaged record is still the only copy of its locks."""
     from tools.skill_lock import command_refusal, path_refusal

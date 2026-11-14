@@ -366,20 +366,23 @@ def _report_row(name: str, raw: Any, **extra: Any) -> dict[str, Any]:
     return row
 
 
-def _load_usage_strict() -> dict[str, dict[str, Any]]:
-    """The map, raising on an UNREADABLE sidecar (a missing file is still {}); non-dict values dropped.
-    A top-level value that is not an object is damage too, not "no records"."""
+def _load_usage_strict(*, tolerate_bad_rows: bool = False) -> dict[str, dict[str, Any]]:
+    """Read the sidecar strictly for writes/locks; listings may omit non-object skill records."""
     path = _usage_file()
     data = json.loads(path.read_text(encoding="utf-8-sig")) if path.exists() else {}
     if not isinstance(data, dict):
         raise ValueError(f"{path} holds a JSON {type(data).__name__}, not an object")
+    if not tolerate_bad_rows:
+        bad = next((name for name, rec in data.items() if not isinstance(rec, dict)), None)
+        if bad is not None:
+            raise ValueError(f"{path} has a non-object skill record for {bad!r}")
     return {str(k): v for k, v in data.items() if isinstance(v, dict)}
 
 
 def load_usage() -> dict[str, dict[str, Any]]:
     """The whole .usage.json map (non-dict values dropped); {} on missing/corrupt."""
     try:
-        return _load_usage_strict()
+        return _load_usage_strict(tolerate_bad_rows=True)
     except (OSError, ValueError) as e:  # json.JSONDecodeError subclasses ValueError
         logger.debug("Failed to read %s: %s", _usage_file(), e)
         return {}
