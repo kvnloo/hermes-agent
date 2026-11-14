@@ -144,6 +144,23 @@ class TestWebhookUrlShapes:
         out = redact_sensitive_text("https://hooks.slack.com/services/T0123ABCD/B0123ABCD/" + self.SECRET + "/")
         assert self.SECRET[6:-4] not in out
 
+    @pytest.mark.parametrize("template", [
+        "POST {url} failed", "response_url={url}",
+    ])
+    def test_slack_slash_response_url_masks_temporary_webhook(self, template):
+        """Slack's slash response_url is a short-lived webhook under /commands/;
+        the callback's opaque final segment is a posting credential (#19688)."""
+        url = ("https://hooks.slack.com/commands/T0123ABCD/1234567890/"
+               + self.SECRET)
+        text = template.format(url=url)
+        log = RedactingFormatter("%(message)s").format(
+            logging.LogRecord("slack", logging.WARNING, "", 0, "%s", (text,), None))
+        for out in (redact_sensitive_text(text),
+                    redact_sensitive_text(text, file_read=True), log):
+            assert self.SECRET[6:-4] not in out
+            assert "hooks.slack.com/commands/T0123ABCD/1234567890/" in out
+        assert "redacted-secret" in redact_sensitive_text(text, file_read=True)
+
     @pytest.mark.parametrize("prefix", [
         "https://hooks.slack.com.:443/services/T0123ABCD/B0123ABCD/",
         "https://hooks.slack-gov.com/services/T0123ABCD/B0123ABCD/",

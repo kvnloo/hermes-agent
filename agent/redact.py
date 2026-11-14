@@ -759,7 +759,7 @@ _WEBHOOK_URL_RE = re.compile(
     r"(https?://hooks\.slack(?:-gov)?\.com" + _WEBHOOK_HOST_END
     + r"workflows/[A-Z0-9]+/[A-Z0-9]+/\d+/)([A-Za-z0-9]{8,})"
     r"|(https?://hooks\.slack(?:-gov)?\.com" + _WEBHOOK_HOST_END
-    + r"(?:services|workflows|triggers)/[A-Z0-9]+/[A-Z0-9]+/)(?!\d+/)([A-Za-z0-9]{8,})"
+    + r"(?:services|workflows|triggers|commands)/[A-Z0-9]+/[A-Z0-9]+/)(?!\d+/)([A-Za-z0-9]{8,})"
     r"|(https?://(?:canary\.|ptb\.|www\.)?discord(?:app)?\.com" + _WEBHOOK_HOST_END
     + r"api/(?:v\d+/)?webhooks/\d+/)([\w-]{8,})"
     r"|(https?://[A-Za-z0-9.-]*\.?(?:webhook\.office\.com" + _WEBHOOK_HOST_END
