@@ -1153,6 +1153,9 @@ def _redact_python_repr_fields(text: str) -> str:
         # programmatic env lookups just like the ENV/JSON/YAML passes do.
         if _ENV_LOOKUP_VALUE_RE.match(value):
             return match.group(0)
+        # Config literals are state, not credentials, in repr output as in ENV/JSON/YAML (#142574).
+        if value.lower() in _CONFIG_LITERAL_VALUES:
+            return match.group(0)
         # An upstream pass (MCP probe header scrub, _mask_token) already masked this
         # value; re-masking would erase the scheme word it deliberately kept
         # (``'Authorization': 'Digest ***'`` → ``'***'``).

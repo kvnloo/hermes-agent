@@ -20,6 +20,21 @@ def test_config_literal_under_secret_named_key_is_kept(text):
     assert redact_sensitive_text(text, force=True) == text
 
 
+@pytest.mark.parametrize("text", [
+    "{'token': 'none'}",
+    "{'password': 'false'}",
+    "{'api_key': 'NULL'}",
+])
+def test_python_repr_config_literal_under_secret_named_key_is_kept(text):
+    assert redact_sensitive_text(text, force=True) == text
+
+
+def test_opaque_python_repr_secret_still_masked():
+    value = "opaque" + "Cred3ntialValue0123456789"
+    out = redact_sensitive_text(f"{{'token': '{value}'}}", force=True)
+    assert value not in out
+
+
 def test_opaque_value_under_secret_named_key_still_masked():
     value = "Zq8" + "vN3pL6xR2tY9wB4m"
     out = redact_sensitive_text(f"redact_secrets: {value}", force=True)
