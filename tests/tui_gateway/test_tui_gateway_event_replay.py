@@ -42,6 +42,31 @@ def test_stamp_adds_monotonic_seq_per_session():
     assert other["params"]["seq"] == 1
 
 
+
+def test_sequenced_legacy_events_share_epoch_for_live_and_replay():
+    """#151075: two gateway sockets must use the same event-dedupe bucket."""
+    frames = [_frame("same-session"), _frame("same-session")]
+    for frame in frames:
+        event_replay._stamp_event(frame)
+
+    epoch = event_replay.replay_epoch()
+    assert [(f["params"]["seq"], f["params"].get("replay_epoch")) for f in frames] == [
+        (1, epoch),
+        (2, epoch),
+    ]
+    assert [(e["seq"], e.get("replay_epoch")) for e in events_since("same-session", 0)] == [
+        (1, epoch),
+        (2, epoch),
+    ]
+
+    # Native session authorities own a distinct epoch; never overwrite it.
+    native = _frame("native-session")
+    native["params"]["replay_epoch"] = "authority-epoch"
+    event_replay._stamp_event(native)
+    assert native["params"]["replay_epoch"] == "authority-epoch"
+    assert events_since("native-session", 0)[0]["replay_epoch"] == "authority-epoch"
+
+
 def test_stamp_ignores_non_event_and_sessionless_frames():
     rpc = {"jsonrpc": "2.0", "id": 1, "result": {}}
     no_sid = {"jsonrpc": "2.0", "method": "event", "params": {"type": "skin.changed"}}
