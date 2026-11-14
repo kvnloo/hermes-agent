@@ -111,7 +111,7 @@ def test_external_equal_signature_replacement_updates_cached_plugin_kill_list(tm
     cache.write_text(old_payload, encoding="utf-8")
     baseline = cache.stat()
     monkeypatch.setattr(pc, "_live_cache_path", lambda: cache)
-    monkeypatch.setattr(pc, "load_removed_list", lambda: [])
+    monkeypatch.setattr(pc, "load_removed_list", list)
     assert [r.name for r in pc.cached_removed_entries()] == ["revoked-a"]
 
     writer = (
