@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import hermes_yaml as yaml
+from json_disk_memo import clear_json_disk_memo, read_json_disk_memo
 from datetime import UTC
 
 logger = logging.getLogger(__name__)
@@ -328,6 +329,7 @@ def invalidate_live_cache_for_home(home: Path) -> None:
     """
     try:
         (Path(home) / "cache" / "plugin-catalog.json").unlink(missing_ok=True)
+        clear_json_disk_memo()
     except Exception as exc:
         logger.debug("Plugin catalog: could not drop the live cache under %s: %s", home, exc)
 
@@ -346,7 +348,7 @@ def _stale_live_cache(cache: Path) -> Optional[dict[str, Any]]:
     try:
         if not cache.is_file():
             return None
-        data = json.loads(cache.read_text(encoding="utf-8-sig"))
+        data = read_json_disk_memo(cache)
         if time.time() - cache.stat().st_mtime > LIVE_CATALOG_MAX_STALE_SECONDS:
             data = {**data, "entries": []}
         return data
@@ -364,7 +366,7 @@ def fetch_live_catalog(*, force: bool = False) -> Optional[dict[str, Any]]:
     cache = _live_cache_path()
     try:
         if not force and cache.is_file() and time.time() - cache.stat().st_mtime < LIVE_CATALOG_TTL_SECONDS:
-            return json.loads(cache.read_text(encoding="utf-8-sig"))
+            return read_json_disk_memo(cache)
     except Exception as exc:
         logger.debug("Plugin catalog: unreadable live cache %s: %s", cache, exc)
     if not force and time.time() < _live_fetch_failed_until:
@@ -385,6 +387,7 @@ def fetch_live_catalog(*, force: bool = False) -> Optional[dict[str, Any]]:
         # Atomic: a concurrent reader (gateway, TUI, a second CLI) must never see a half-written
         # document, which would read as a fetch failure and start its own 60 s failure window.
         atomic_write_text(cache, json.dumps(data), tmp_prefix=f"{cache.name}.tmp-")
+        clear_json_disk_memo()
         return data
     except Exception as exc:
         logger.debug("Plugin catalog: live fetch failed: %s", exc)
