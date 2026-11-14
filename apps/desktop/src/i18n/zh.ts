@@ -148,6 +148,9 @@ export const zh: Translations = {
       noMicrophone: '未找到麦克风。',
       noSpeechDetected: '没有检测到语音',
       playbackFailed: '语音播放失败',
+      modelFailed: '模型未返回回复',
+      submissionFailed: '无法提交语音请求',
+      synthesisFailed: '语音合成失败',
       recordingFailed: '语音录制失败',
       transcriptionFailed: '语音转写失败',
       transcriptionUnavailable: '语音转写暂不可用。',
@@ -1817,6 +1820,15 @@ export const zh: Translations = {
   },
 
   composer: {
+    voicePreferences: {
+      title: '语音偏好', description: '按当前配置文件保存，并从下一条合成回复开始应用。', provider: '提供商', voice: '语音', visualizer: '可视化样式',
+      loading: '正在加载语音偏好…', loadFailed: '无法加载语音偏好', save: '保存语音', saveFailed: '无法保存语音偏好', saved: '语音偏好已保存', nextTurn: '新语音将从下一条回复开始应用。',
+      preview: '预览语音', previewing: '正在预览…', previewFailed: '语音预览失败', previewPhrase: '你好，我是 Hermes。这是你选择的语音。', latency: '语音各阶段延迟',
+      providers: { edge: 'Edge', elevenlabs: 'ElevenLabs', openai: 'OpenAI' },
+      visualizers: { pill: '胶囊', orb: '光球', waveform: '波形', minimal: '极简' },
+      errorStages: { stt: '转写失败', submission: '提交失败', model: '模型回复失败', tts: '语音合成失败', playback: '音频播放失败' },
+      latencyStages: { captureMs: '录音', sttMs: '转写', submissionMs: '提交', modelMs: '模型', ttsMs: '合成', playbackMs: '播放' }
+    },
     message: '消息',
     wakingProfile: profile => `正在唤醒 ${profile}…`,
     placeholderStarting: '正在启动 Hermes…',

@@ -148,6 +148,9 @@ export const zhHant = defineLocale({
       noMicrophone: '找不到麥克風。',
       noSpeechDetected: '未偵測到語音',
       playbackFailed: '語音播放失敗',
+      modelFailed: '模型未傳回回覆',
+      submissionFailed: '無法提交語音要求',
+      synthesisFailed: '語音合成失敗',
       recordingFailed: '語音錄製失敗',
       transcriptionFailed: '語音轉寫失敗',
       transcriptionUnavailable: '語音轉寫暫不可用。',
@@ -1532,6 +1535,15 @@ export const zhHant = defineLocale({
   },
 
   composer: {
+    voicePreferences: {
+      title: '語音偏好設定', description: '依目前設定檔儲存，並從下一則合成回覆開始套用。', provider: '提供者', voice: '語音', visualizer: '視覺樣式',
+      loading: '正在載入語音偏好設定…', loadFailed: '無法載入語音偏好設定', save: '儲存語音', saveFailed: '無法儲存語音偏好設定', saved: '語音偏好設定已儲存', nextTurn: '新語音將從下一則回覆開始套用。',
+      preview: '預覽語音', previewing: '正在預覽…', previewFailed: '語音預覽失敗', previewPhrase: '你好，我是 Hermes。這是你選擇的語音。', latency: '語音各階段延遲',
+      providers: { edge: 'Edge', elevenlabs: 'ElevenLabs', openai: 'OpenAI' },
+      visualizers: { pill: '膠囊', orb: '光球', waveform: '波形', minimal: '極簡' },
+      errorStages: { stt: '轉寫失敗', submission: '提交失敗', model: '模型回覆失敗', tts: '語音合成失敗', playback: '音訊播放失敗' },
+      latencyStages: { captureMs: '錄音', sttMs: '轉寫', submissionMs: '提交', modelMs: '模型', ttsMs: '合成', playbackMs: '播放' }
+    },
     message: '訊息',
     wakingProfile: profile => `正在喚醒 ${profile}…`,
     placeholderStarting: '正在啟動 Hermes...',

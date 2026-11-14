@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
+import { AdaptiveEndpoint, type AdaptiveEndpointOptions } from '@/lib/voice-endpointing'
+
 type BrowserAudioContext = typeof AudioContext
 
 export interface MicRecorderOptions {
@@ -9,6 +11,7 @@ export interface MicRecorderOptions {
   silenceLevel?: number
   silenceMs?: number
   idleSilenceMs?: number
+  endpointing?: AdaptiveEndpointOptions
 }
 
 export interface MicRecording {
@@ -73,9 +76,8 @@ export function useMicRecorder(copy: MicRecorderErrorCopy): {
   const audioContextRef = useRef<AudioContext | null>(null)
   const animationRef = useRef<number | null>(null)
   const startedAtRef = useRef(0)
-  const heardSpeechRef = useRef(false)
+  const endpointRef = useRef<AdaptiveEndpoint | null>(null)
   const silenceTriggeredRef = useRef(false)
-  const silenceStartedAtRef = useRef<number | null>(null)
   const stopResolverRef = useRef<((recording: MicRecording | null) => void) | null>(null)
 
   const cleanup = () => {
@@ -92,6 +94,7 @@ export function useMicRecorder(copy: MicRecorderErrorCopy): {
     setLevel(0)
     setRecording(false)
     silenceTriggeredRef.current = false
+    endpointRef.current = null
   }
 
   useEffect(() => () => cleanup(), [])
@@ -132,24 +135,10 @@ export function useMicRecorder(copy: MicRecorderErrorCopy): {
         setLevel(normalized)
         options.onLevel?.(normalized)
 
-        const speechThreshold = options.silenceLevel ?? 0
-        const silenceMs = options.silenceMs ?? 0
-        const idleSilenceMs = options.idleSilenceMs ?? 0
+        if (options.onSilence && !silenceTriggeredRef.current) {
+          const endpointState = endpointRef.current?.push(normalized, now)
 
-        if (speechThreshold > 0 && options.onSilence && !silenceTriggeredRef.current) {
-          if (normalized >= speechThreshold) {
-            heardSpeechRef.current = true
-            silenceStartedAtRef.current = null
-          } else if (heardSpeechRef.current && silenceMs > 0) {
-            silenceStartedAtRef.current ??= now
-
-            if (now - silenceStartedAtRef.current >= silenceMs) {
-              silenceTriggeredRef.current = true
-              options.onSilence()
-
-              return
-            }
-          } else if (!heardSpeechRef.current && idleSilenceMs > 0 && now - startedAtRef.current >= idleSilenceMs) {
+          if (endpointState === 'endpoint') {
             silenceTriggeredRef.current = true
             options.onSilence()
 
@@ -208,9 +197,15 @@ export function useMicRecorder(copy: MicRecorderErrorCopy): {
     chunksRef.current = []
     streamRef.current = stream
     recorderRef.current = recorder
-    heardSpeechRef.current = false
+    endpointRef.current = new AdaptiveEndpoint({
+      silenceMs: options.silenceMs,
+      idleTimeoutMs: options.idleSilenceMs,
+      // Preserve old callers that supplied an absolute threshold while moving
+      // detection to a margin above the learned room floor.
+      startMargin: options.silenceLevel == null ? undefined : Math.max(0.01, options.silenceLevel - 0.01),
+      ...options.endpointing
+    })
     silenceTriggeredRef.current = false
-    silenceStartedAtRef.current = null
     startedAtRef.current = Date.now()
 
     recorder.ondataavailable = event => {
@@ -223,7 +218,7 @@ export function useMicRecorder(copy: MicRecorderErrorCopy): {
       const chunks = chunksRef.current
       const recordingType = recorder.mimeType || mimeType || 'audio/webm'
       const durationMs = Date.now() - startedAtRef.current
-      const heardSpeech = heardSpeechRef.current
+      const heardSpeech = endpointRef.current?.heardSpeech ?? false
 
       chunksRef.current = []
       cleanup()

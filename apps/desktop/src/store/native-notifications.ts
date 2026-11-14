@@ -152,10 +152,34 @@ export interface NativeNotificationInput {
   actions?: NativeNotificationAction[]
 }
 
+let voiceTurnActive = false
+const queuedDuringVoice: NativeNotificationInput[] = []
+
+/** Prevent routine background completion sounds from competing with an active
+ * spoken turn. Blocking approval/input notifications still break through. */
+export function setVoiceTurnNotificationHold(active: boolean): void {
+  voiceTurnActive = active
+
+  if (!active && queuedDuringVoice.length) {
+    const queued = queuedDuringVoice.splice(0)
+    for (const notification of queued) {
+      dispatchNativeNotification(notification)
+    }
+  }
+}
+
 export function dispatchNativeNotification(input: NativeNotificationInput): void {
   const prefs = $nativeNotifyPrefs.get()
 
   if (!prefs.enabled || !prefs.kinds[input.kind]) {
+    return
+  }
+
+  if (voiceTurnActive && input.kind === 'backgroundDone') {
+    queuedDuringVoice.push(input)
+    if (queuedDuringVoice.length > 8) {
+      queuedDuringVoice.shift()
+    }
     return
   }
 

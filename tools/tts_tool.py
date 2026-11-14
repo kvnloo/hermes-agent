@@ -2150,9 +2150,24 @@ def _generate_kittentts(text: str, output_path: str, tts_config: Dict[str, Any])
 # ===========================================================================
 # Main tool function
 # ===========================================================================
+def require_tts_success(result_json: Any) -> Dict[str, Any]:
+    """Parse the TTS JSON envelope and raise the provider's structured error."""
+    try:
+        payload = json.loads(result_json) if isinstance(result_json, str) else result_json
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError("TTS provider returned invalid JSON") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError("TTS provider returned an invalid response")
+    if not payload.get("success"):
+        raise RuntimeError(str(payload.get("error") or "Speech synthesis failed"))
+    return payload
+
+
 def text_to_speech_tool(
     text: str,
     output_path: Optional[str] = None,
+    *,
+    _config_override: Optional[Dict[str, Any]] = None,
 ) -> str:
     """
     Convert text to speech audio.
@@ -2175,6 +2190,16 @@ def text_to_speech_tool(
         return tool_error("Text is required", success=False)
 
     tts_config = _load_tts_config()
+    if _config_override:
+        # Internal-only preview overrides are merged onto the authoritative
+        # server-side config. This preserves credentials without accepting or
+        # returning them through the desktop API.
+        tts_config = dict(tts_config)
+        for key, value in _config_override.items():
+            if isinstance(value, dict) and isinstance(tts_config.get(key), dict):
+                tts_config[key] = {**tts_config[key], **value}
+            else:
+                tts_config[key] = value
     provider = _get_provider(tts_config)
 
     # User-declared command provider (type: command under tts.providers.<name>)
@@ -2364,14 +2389,38 @@ def text_to_speech_tool(
 
             if edge_available:
                 logger.info("Generating speech with Edge TTS...")
+                timeout_seconds = max(5.0, min(float(tts_config.get("synthesis_timeout_seconds", 30.0)), 120.0))
+
+                async def _edge_with_deadline():
+                    return await asyncio.wait_for(
+                        _generate_edge_tts(text, file_str, tts_config),
+                        timeout=timeout_seconds,
+                    )
+
                 try:
-                    import concurrent.futures
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                        pool.submit(
-                            lambda: asyncio.run(_generate_edge_tts(text, file_str, tts_config))
-                        ).result(timeout=60)
+                    asyncio.get_running_loop()
                 except RuntimeError:
-                    asyncio.run(_generate_edge_tts(text, file_str, tts_config))
+                    asyncio.run(_edge_with_deadline())
+                else:
+                    # This synchronous API may be called from an async host.  A
+                    # daemon runner avoids deadlocking that host's event loop;
+                    # wait_for cancels the Edge websocket coroutine at deadline.
+                    result_queue: queue.Queue = queue.Queue(maxsize=1)
+
+                    def _run_edge() -> None:
+                        try:
+                            result_queue.put((True, asyncio.run(_edge_with_deadline())))
+                        except BaseException as exc:
+                            result_queue.put((False, exc))
+
+                    runner = threading.Thread(target=_run_edge, name="hermes-edge-tts", daemon=True)
+                    runner.start()
+                    runner.join(timeout_seconds + 1.0)
+                    if runner.is_alive():
+                        raise TimeoutError(f"Speech synthesis exceeded {timeout_seconds:.0f}s deadline")
+                    ok, value = result_queue.get_nowait()
+                    if not ok:
+                        raise value
             elif _check_neutts_available():
                 logger.info("Edge TTS not available, falling back to NeuTTS (local)...")
                 provider = "neutts"

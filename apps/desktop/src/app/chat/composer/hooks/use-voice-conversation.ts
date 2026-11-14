@@ -1,12 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useI18n } from '@/i18n'
-import { playSpeechText, stopVoicePlayback } from '@/lib/voice-playback'
+import {
+  playSpeechText,
+  stopVoicePlayback,
+  VoiceAudioPlaybackError,
+  VoiceSynthesisError
+} from '@/lib/voice-playback'
+import { setVoiceTurnNotificationHold } from '@/store/native-notifications'
 import { notify, notifyError } from '@/store/notifications'
 
 import { useMicRecorder } from './use-mic-recorder'
 
-export type ConversationStatus = 'idle' | 'listening' | 'transcribing' | 'thinking' | 'speaking'
+export type ConversationStatus = 'idle' | 'listening' | 'transcribing' | 'thinking' | 'speaking' | 'error'
+export type VoiceErrorStage = 'stt' | 'submission' | 'model' | 'tts' | 'playback'
+
+export interface VoiceConversationError {
+  message: string
+  stage: VoiceErrorStage
+}
+
+export interface VoiceStageLatency {
+  captureMs?: number
+  sttMs?: number
+  submissionMs?: number
+  modelMs?: number
+  ttsMs?: number
+  playbackMs?: number
+}
 
 interface PendingVoiceResponse {
   id: string
@@ -38,6 +59,12 @@ export function useVoiceConversation({
   const { handle, level } = useMicRecorder(voiceCopy)
   const [status, setStatus] = useState<ConversationStatus>('idle')
   const [muted, setMuted] = useState(false)
+  const [error, setError] = useState<VoiceConversationError | null>(null)
+  const [latency, setLatency] = useState<VoiceStageLatency>({})
+  const retryRef = useRef<(() => void) | null>(null)
+  const lastTranscriptRef = useRef('')
+  const modelStartedAtRef = useRef<number | null>(null)
+  const modelSawBusyRef = useRef(false)
   const turnTimeoutRef = useRef<number | null>(null)
   const pendingStartRef = useRef(false)
   const turnClosingRef = useRef(false)
@@ -67,12 +94,34 @@ export function useVoiceConversation({
     statusRef.current = status
   }, [status])
 
+  useEffect(() => {
+    setVoiceTurnNotificationHold(enabled && status !== 'idle' && status !== 'error')
+    return () => setVoiceTurnNotificationHold(false)
+  }, [enabled, status])
+
   const clearTurnTimeout = () => {
     if (turnTimeoutRef.current) {
       window.clearTimeout(turnTimeoutRef.current)
       turnTimeoutRef.current = null
     }
   }
+
+  const failTurn = (stage: VoiceErrorStage, cause: unknown, fallback: string, retry?: () => void) => {
+    const message = cause instanceof Error ? cause.message : fallback
+    retryRef.current = retry ?? null
+    pendingStartRef.current = false
+    setError({ message, stage })
+    setStatus('error')
+    notifyError(cause, fallback)
+  }
+
+  const retry = useCallback(() => {
+    const action = retryRef.current
+    retryRef.current = null
+    setError(null)
+    setStatus('idle')
+    action?.()
+  }, [])
 
   const resetSpeechBuffer = () => {
     responseIdRef.current = null
@@ -153,37 +202,55 @@ export function useVoiceConversation({
           return
         }
 
-        try {
-          const transcript = (await onTranscribeAudio(result.audio)).trim()
+        setLatency(previous => ({ ...previous, captureMs: result.durationMs }))
 
-          if (!transcript) {
-            if (enabledRef.current) {
-              pendingStartRef.current = true
-            }
+        const transcribeAndSubmit = async () => {
+          const sttStartedAt = performance.now()
+          let transcript: string
 
-            setStatus('idle')
-
+          try {
+            transcript = (await onTranscribeAudio(result.audio)).trim()
+            setLatency(previous => ({ ...previous, sttMs: performance.now() - sttStartedAt }))
+          } catch (cause) {
+            failTurn('stt', cause, voiceCopy.transcriptionFailed, () => void transcribeAndSubmit())
             return
           }
 
-          awaitingSpokenResponseRef.current = true
-          resetSpeechBuffer()
-          await onSubmit(transcript)
-          setStatus('thinking')
-        } catch (error) {
-          notifyError(error, voiceCopy.transcriptionFailed)
-
-          if (enabledRef.current && !mutedRef.current && !busyRef.current) {
-            pendingStartRef.current = true
+          if (!transcript) {
+            failTurn('stt', new Error(voiceCopy.noSpeechDetected), voiceCopy.transcriptionFailed, () => void transcribeAndSubmit())
+            return
           }
 
-          setStatus('idle')
+          lastTranscriptRef.current = transcript
+          awaitingSpokenResponseRef.current = true
+          resetSpeechBuffer()
+          const submissionStartedAt = performance.now()
+
+          try {
+            await onSubmit(transcript)
+            setLatency(previous => ({ ...previous, submissionMs: performance.now() - submissionStartedAt }))
+            modelStartedAtRef.current = performance.now()
+            modelSawBusyRef.current = false
+            setStatus('thinking')
+          } catch (cause) {
+            awaitingSpokenResponseRef.current = false
+            failTurn('submission', cause, voiceCopy.submissionFailed, () => void transcribeAndSubmit())
+          }
         }
+
+        await transcribeAndSubmit()
       } finally {
         turnClosingRef.current = false
       }
     },
-    [handle, onSubmit, onTranscribeAudio, voiceCopy.transcriptionFailed]
+    [
+      handle,
+      onSubmit,
+      onTranscribeAudio,
+      voiceCopy.noSpeechDetected,
+      voiceCopy.submissionFailed,
+      voiceCopy.transcriptionFailed
+    ]
   )
 
   const startListening = useCallback(async () => {
@@ -220,24 +287,31 @@ export function useVoiceConversation({
     }
   }, [handle, handleTurn, onFatalError, voiceCopy.couldNotStartSession, voiceCopy.microphoneFailed])
 
-  const speak = useCallback(
+  const speak: (text: string) => Promise<void> = useCallback(
     async (text: string) => {
       setStatus('speaking')
 
       try {
-        await playSpeechText(text, { source: 'voice-conversation' })
-      } catch (error) {
-        notifyError(error, voiceCopy.playbackFailed)
-      } finally {
-        if (enabledRef.current) {
-          pendingStartRef.current = true
-          setStatus('idle')
-        } else {
-          setStatus('idle')
-        }
+        await playSpeechText(text, {
+          source: 'voice-conversation',
+          onLatency: measured => setLatency(previous => ({ ...previous, ...measured }))
+        })
+      } catch (cause) {
+        const stage: VoiceErrorStage =
+          cause instanceof VoiceSynthesisError
+            ? 'tts'
+            : cause instanceof VoiceAudioPlaybackError
+              ? 'playback'
+              : 'playback'
+        const fallback = stage === 'tts' ? voiceCopy.synthesisFailed : voiceCopy.playbackFailed
+        failTurn(stage, cause, fallback, () => void speak(text))
+        return
       }
+
+      pendingStartRef.current = enabledRef.current
+      setStatus('idle')
     },
-    [voiceCopy.playbackFailed]
+    [voiceCopy.playbackFailed, voiceCopy.synthesisFailed]
   )
 
   const start = useCallback(async () => {
@@ -253,6 +327,8 @@ export function useVoiceConversation({
     }
 
     setMuted(false)
+    setError(null)
+    setLatency({})
     awaitingSpokenResponseRef.current = false
     resetSpeechBuffer()
     consumePendingResponse()
@@ -332,11 +408,20 @@ export function useVoiceConversation({
       return
     }
 
+    if (busy && status === 'thinking') {
+      modelSawBusyRef.current = true
+    }
+
     if (awaitingSpokenResponseRef.current && status !== 'speaking') {
       const response = pendingResponse()
 
       if (response) {
         if (response.id !== responseIdRef.current) {
+          if (modelStartedAtRef.current !== null) {
+            const startedAt = modelStartedAtRef.current
+            modelStartedAtRef.current = null
+            setLatency(previous => ({ ...previous, modelMs: performance.now() - startedAt }))
+          }
           resetSpeechBuffer()
           responseIdRef.current = response.id
         }
@@ -365,11 +450,14 @@ export function useVoiceConversation({
         }
       }
 
-      if (!busy && status === 'thinking') {
+      if (!busy && status === 'thinking' && modelSawBusyRef.current) {
         awaitingSpokenResponseRef.current = false
         resetSpeechBuffer()
-        pendingStartRef.current = true
-        setStatus('idle')
+        failTurn('model', new Error(voiceCopy.modelFailed), voiceCopy.modelFailed, () => {
+          if (lastTranscriptRef.current) {
+            void onSubmit(lastTranscriptRef.current)
+          }
+        })
 
         return
       }
@@ -382,7 +470,18 @@ export function useVoiceConversation({
     if (pendingStartRef.current) {
       void startListening()
     }
-  }, [busy, consumePendingResponse, enabled, muted, pendingResponse, speak, startListening, status])
+  }, [
+    busy,
+    consumePendingResponse,
+    enabled,
+    muted,
+    onSubmit,
+    pendingResponse,
+    speak,
+    startListening,
+    status,
+    voiceCopy.modelFailed
+  ])
 
   useEffect(() => {
     if (enabled && !wasEnabledRef.current) {
@@ -396,5 +495,5 @@ export function useVoiceConversation({
     wasEnabledRef.current = enabled
   }, [enabled, end, start])
 
-  return { end, level, muted, start, status, stopTurn, toggleMute }
+  return { end, error, latency, level, muted, retry, start, status, stopTurn, toggleMute }
 }

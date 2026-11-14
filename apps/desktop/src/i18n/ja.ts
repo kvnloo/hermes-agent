@@ -151,7 +151,10 @@ export const ja = defineLocale({
       microphoneUnsupported: 'このランタイムはマイク録音をサポートしていません。',
       noMicrophone: 'マイクが見つかりませんでした。',
       noSpeechDetected: '音声が検出されませんでした',
-      playbackFailed: '音声再生に失敗しました',
+      playbackFailed: '音声の再生に失敗しました',
+      modelFailed: 'モデルから応答がありませんでした',
+      submissionFailed: '音声ターンを送信できませんでした',
+      synthesisFailed: '音声合成に失敗しました',
       recordingFailed: '音声録音に失敗しました',
       transcriptionFailed: '音声文字起こしに失敗しました',
       transcriptionUnavailable: '音声文字起こしはまだ利用できません。',
@@ -1581,6 +1584,15 @@ export const ja = defineLocale({
   },
 
   composer: {
+    voicePreferences: {
+      title: '音声設定', description: 'このプロフィールに保存され、次に合成される返信から適用されます。', provider: 'プロバイダー', voice: '音声', visualizer: '表示スタイル',
+      loading: '音声設定を読み込み中…', loadFailed: '音声設定を読み込めませんでした', save: '音声を保存', saveFailed: '音声設定を保存できませんでした', saved: '音声設定を保存しました', nextTurn: '新しい音声は次の返信から適用されます。',
+      preview: '音声をプレビュー', previewing: 'プレビュー中…', previewFailed: '音声プレビューに失敗しました', previewPhrase: 'こんにちは、Hermes です。選択した音声のプレビューです。', latency: '音声ステージの遅延',
+      providers: { edge: 'Edge', elevenlabs: 'ElevenLabs', openai: 'OpenAI' },
+      visualizers: { pill: 'ピル', orb: 'オーブ', waveform: '波形', minimal: 'ミニマル' },
+      errorStages: { stt: '文字起こしに失敗', submission: '送信に失敗', model: 'モデル応答に失敗', tts: '音声合成に失敗', playback: '音声再生に失敗' },
+      latencyStages: { captureMs: '録音', sttMs: '文字起こし', submissionMs: '送信', modelMs: 'モデル', ttsMs: '音声合成', playbackMs: '再生' }
+    },
     message: 'メッセージ',
     wakingProfile: profile => `${profile} を起動中…`,
     placeholderStarting: 'Hermes を起動中...',

@@ -34,7 +34,17 @@ function currentState(
 
 export interface VoicePlaybackOptions {
   messageId?: string | null
+  preview?: { provider: string; voice: string }
   source: VoicePlaybackSource
+  onLatency?: (latency: { playbackMs: number; ttsMs: number }) => void
+}
+
+export class VoiceSynthesisError extends Error {
+  override name = 'VoiceSynthesisError'
+}
+
+export class VoiceAudioPlaybackError extends Error {
+  override name = 'VoiceAudioPlaybackError'
 }
 
 export function stopVoicePlayback() {
@@ -72,8 +82,18 @@ export async function playSpeechText(text: string, options: VoicePlaybackOptions
 
   setVoicePlaybackState(currentState('preparing', options))
 
+  const ttsStartedAt = performance.now()
+
   try {
-    const response = await speakText(speakableText)
+    let response: Awaited<ReturnType<typeof speakText>>
+
+    try {
+      response = await speakText(speakableText, options.preview)
+    } catch (error) {
+      throw new VoiceSynthesisError(error instanceof Error ? error.message : 'Speech synthesis failed')
+    }
+
+    const ttsMs = performance.now() - ttsStartedAt
 
     if (!isCurrent()) {
       return false
@@ -83,6 +103,7 @@ export async function playSpeechText(text: string, options: VoicePlaybackOptions
     currentAudio = audio
     setVoicePlaybackState(currentState('speaking', options, audio))
 
+    const playbackStartedAt = performance.now()
     await new Promise<void>((resolve, reject) => {
       let stall: number | null = null
 
@@ -105,7 +126,7 @@ export async function playSpeechText(text: string, options: VoicePlaybackOptions
 
         stall = window.setTimeout(() => {
           cleanup()
-          reject(new Error('Playback stalled'))
+          reject(new VoiceAudioPlaybackError('Playback stalled'))
         }, PLAYBACK_STALL_MS)
       }
 
@@ -116,7 +137,7 @@ export async function playSpeechText(text: string, options: VoicePlaybackOptions
 
       const onError = () => {
         cleanup()
-        reject(new Error('Playback failed'))
+        reject(new VoiceAudioPlaybackError('Playback failed'))
       }
 
       currentStop = () => {
@@ -137,6 +158,7 @@ export async function playSpeechText(text: string, options: VoicePlaybackOptions
 
     currentAudio = null
     setVoicePlaybackState(currentState('idle'))
+    options.onLatency?.({ playbackMs: performance.now() - playbackStartedAt, ttsMs })
 
     return true
   } catch (error) {
