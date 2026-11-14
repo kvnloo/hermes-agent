@@ -1771,6 +1771,10 @@ def start() -> None:
     _print_start_attestation_warning()   # once: the LAST start's ✓ turned out to be false
     running_pids = _gateway_pids()
     if running_pids:
+        # An already-running gateway can still have an outdated login task (#152218).
+        # Repair the registration before returning, without restarting the process.
+        if is_task_registered():
+            reconcile_scheduled_task(get_task_name())
         _report_already_running(running_pids)
         return
 

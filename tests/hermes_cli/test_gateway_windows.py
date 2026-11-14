@@ -725,6 +725,50 @@ def test_scheduled_task_drift_flags_an_s4u_principal():
     assert gateway_windows.compare_scheduled_task_drift(no_logon, template) == []
 
 
+def test_start_repairs_s4u_task_while_gateway_is_already_running(monkeypatch, tmp_path, capsys):
+    """#152218: the status repair hint must work even while the old gateway is running.
+
+    A running process does not make its persisted S4U login task current.
+    """
+    script_path = tmp_path / "gateway.cmd"
+    launcher = script_path.with_suffix(".vbs")
+    task_name = "Hermes_Gateway"
+    template = gateway_windows._build_scheduled_task_xml(task_name, launcher, r"PC\me")
+    registered = {"xml": template.replace(
+        "<LogonType>InteractiveToken</LogonType>", "<LogonType>S4U</LogonType>"
+    )}
+    calls: list[list[str]] = []
+
+    def fake_schtasks(args):
+        calls.append(list(args))
+        if args[0] == "/Query" and "/XML" in args:
+            return (0, registered["xml"], "")
+        if args[0] == "/Create":
+            registered["xml"] = Path(args[args.index("/XML") + 1]).read_text(encoding="utf-16")
+        return (0, "SUCCESS", "")
+
+    monkeypatch.setattr(gateway_windows, "_assert_windows", lambda: None)
+    monkeypatch.setattr(gateway_windows, "_print_start_attestation_warning", lambda: None)
+    monkeypatch.setattr(gateway_windows, "_gateway_pids", lambda: [12345])
+    monkeypatch.setattr(gateway_windows, "is_task_registered", lambda: True)
+    monkeypatch.setattr(gateway_windows, "get_task_name", lambda: task_name)
+    monkeypatch.setattr(gateway_windows, "get_task_script_path", lambda: script_path)
+    monkeypatch.setattr(gateway_windows, "_write_task_script", lambda: script_path)
+    monkeypatch.setattr(gateway_windows, "_resolve_task_user", lambda: r"PC\me")
+    monkeypatch.setattr(gateway_windows, "_exec_schtasks", fake_schtasks)
+    monkeypatch.setattr(
+        gateway_windows, "_spawn_detached", lambda: pytest.fail("must not spawn another gateway")
+    )
+
+    gateway_windows.start()
+
+    assert [a[0] for a in calls if a[0] in ("/Delete", "/Create")] == ["/Delete", "/Create"]
+    assert gateway_windows.compare_scheduled_task_drift(registered["xml"], template) == []
+    output = capsys.readouterr().out
+    assert "Repairing outdated Scheduled Task registration (LogonType S4U)" in output
+    assert "Gateway already running (PID: 12345)" in output
+
+
 def test_reconcile_scheduled_task_reregisters_only_on_drift(monkeypatch, tmp_path):
     """The Windows sibling of ``refresh_systemd_unit_if_needed`` (#113670): a pre-hardening
     registration is deleted and re-created from the current template (so ``RestartOnFailure`` and the
