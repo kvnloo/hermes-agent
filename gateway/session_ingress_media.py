@@ -446,10 +446,9 @@ def release_admission_media(db, admission_id):
         # Settled: inline base64 of committed images and the client history are redundant row weight.
         from gateway.session_api_media import compact_settled_api_payloads
         compact_settled_api_payloads(db, admission_id)
-    # Native and hosted inputs are named in the prompt the transcript keeps ("It is saved at: <path>"),
-    # so they are history context like an API image: they go once no live row and no transcript row
-    # names them, never while a follow-up turn can still be told to read them. Session deletion
-    # collects them through ``retire_media``; ``sweep_settled_media`` bounds the rest at main's 24 h.
+    # Named input paths remain history context while the transcript needs them.
+    # Session deletion retires their bytes; only platform-inbound native media is age-swept.
+    # Local-client attachments belong to the owner, not the platform cache.
     released = release_unheld_media(db, admission_media_references(row['payload']))
     released += release_unheld_media(db, hosted_document_references(row['request_id'], row['payload']))
     return released + sweep_settled_media(db)
@@ -460,10 +459,11 @@ _last_sweep = {}
 
 
 def sweep_settled_media(db, *, now=None):
-    """At most hourly per store: collect settled native/attachment inputs older than
-    ``MEDIA_CACHE_MAX_AGE_HOURS`` whatever the transcript says, as main's age-based document cache
-    cleanup did for the staging copy the note used to name. A live admission or an in-flight capture
-    still holds its bytes; API images and hosted documents keep their own owners."""
+    """At most hourly per store: collect settled platform-inbound native media older
+    than ``MEDIA_CACHE_MAX_AGE_HOURS``. Owner-provided ``attachments_v1.media``
+    stay with the session and are freed on session deletion, not an age sweep.
+    Live admissions, in-flight captures, API images and hosted documents retain
+    their separate ownership rules."""
     import time
     from agent.provider_media import MEDIA_CACHE_MAX_AGE_HOURS
     now = time.time() if now is None else now
@@ -471,14 +471,14 @@ def sweep_settled_media(db, *, now=None):
         return 0
     _last_sweep[db.db_path] = now
     with db._read_ctx() as conn:
-        rows = conn.execute("""SELECT json_extract(payload_json, '$.attachments_v1.media', '$.native_text_v1.media')
-            FROM session_admissions WHERE status='terminal' AND (json_type(payload_json, '$.attachments_v1.media')
-            IS NOT NULL OR json_type(payload_json, '$.native_text_v1.media') IS NOT NULL)""").fetchall()
+        rows = conn.execute("""SELECT json_extract(payload_json, '$.native_text_v1.media')
+            FROM session_admissions WHERE status='terminal'
+            AND json_type(payload_json, '$.native_text_v1.media') IS NOT NULL""").fetchall()
     cutoff = now - MEDIA_CACHE_MAX_AGE_HOURS * 3600
     stale = {}
     for (encoded,) in rows:
-        attachments, native = json.loads(encoded)
-        for reference in (attachments or []) + (native or []):
+        native = json.loads(encoded)
+        for reference in native or []:
             try:
                 if Path(reference['path']).stat(follow_symlinks=False).st_mtime < cutoff:
                     stale[reference['path']] = reference
