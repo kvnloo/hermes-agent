@@ -11,7 +11,7 @@ from gateway.config import PlatformConfig
 from gateway.config import GatewayConfig, Platform
 from plugins.platforms.weixin import adapter as weixin
 from plugins.platforms.weixin.adapter import ContextTokenStore, WeixinAdapter
-from tools.send_message_targets import _parse_target_ref
+from tools.send_message_targets import _parse_target_ref, resolve_send_target
 
 
 def _make_adapter() -> WeixinAdapter:
@@ -210,6 +210,18 @@ class TestWeixinSendMessageIntegration:
         assert _parse_target_ref("weixin", "wxid_test123") == ("wxid_test123", None, True)
         assert _parse_target_ref("weixin", "filehelper") == ("filehelper", None, True)
         assert _parse_target_ref("weixin", "group@chatroom") == ("group@chatroom", None, True)
+
+    @pytest.mark.parametrize(
+        "recipient",
+        ["oExample_012-abc@im.wechat", "m.N_123@im.wechat"],
+    )
+    def test_ilink_dm_id_resolves_without_channel_directory(self, recipient):
+        with patch(
+            "gateway.channel_directory.resolve_channel_name",
+            side_effect=AssertionError("native iLink IDs must bypass directory lookup"),
+        ):
+            assert _parse_target_ref("weixin", recipient) == (recipient, None, True)
+            assert resolve_send_target("weixin", recipient) == (recipient, None, None)
 
 
 class TestWeixinChunkDelivery:
