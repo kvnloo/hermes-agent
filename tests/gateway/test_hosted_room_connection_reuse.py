@@ -106,6 +106,9 @@ def test_inode_replacement_reopens_database(tmp_path):
         authority_gateway_id="gateway-a", now=10)
     with closing(sqlite3.connect(path)) as source, closing(sqlite3.connect(replacement)) as target:
         source.backup(target)
+        # Replacing only the main file with pending WAL frames mixes two databases.
+        # Drain the old WAL while retaining the idle lease whose inode must be checked.
+        assert source.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone() == (0, 0, 0)
     with closing(sqlite3.connect(replacement)) as conn:
         with conn:
             conn.execute("UPDATE hosted_rooms SET name='After' WHERE room_id='room-1'")
