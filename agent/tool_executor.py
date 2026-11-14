@@ -135,8 +135,8 @@ def _budget_for_agent(agent) -> BudgetConfig:
 
 _MAX_TOOL_WORKERS = 8  # concurrent worker threads per batch
 _DEFAULT_IMAGE_PARALLEL_REQUESTS = 4
-# Generous: slow-but-valid tool work must never be preempted by the batch guard.
-_DEFAULT_CONCURRENT_TOOL_TIMEOUT_S = 420.0
+# Longer-running work should use a tracked background process.
+_DEFAULT_CONCURRENT_TOOL_TIMEOUT_S = 270.0
 # Long enough for an approval round-trip, short enough that one wedged dispatch can't starve the batch.
 _START_ORDER_GATE_TIMEOUT_S = 120.0
 # Fallback only; the effective bound derives from approvals.timeout (_authorization_gate_lock_timeout).
@@ -913,6 +913,8 @@ def _run_sequential_tool_execution_middleware(
 
     timeout_s = None if function_name in _SEQUENTIAL_DEADLINE_EXEMPT_TOOLS else _resolve_sequential_tool_timeout()
     timeout_s = _extend_tool_timeout(function_name, timeout_s)
+    if function_name == "terminal" and not function_args.get("background", False):
+        timeout_s = min(timeout_s or _DEFAULT_CONCURRENT_TOOL_TIMEOUT_S, _DEFAULT_CONCURRENT_TOOL_TIMEOUT_S)
     ref = _ToolCallRef(function_name, function_args, effective_task_id, tool_call_id, middleware_trace)
     kwargs = dict(ref.middleware_kwargs(), execute=execute, scope_block=scope_block, display_index=display_index)
     from agent.terminal_approval_batch import take_prepared_call
@@ -969,7 +971,10 @@ def _run_sequential_tool_execution_middleware(
             )
         else:
             assert timeout_s is not None  # only reachable when a deadline exists
-            message = f"Error executing tool '{function_name}': timed out after {timeout_s:.1f}s"
+            message = (
+                f"Error executing tool '{function_name}': timed out after {timeout_s:.1f}s. "
+                "Re-poll existing work if a process handle is available, or use a background process for longer work."
+            )
             logger.warning("sequential tool %s timed out after %.1fs", function_name, timeout_s)
             result_cls, outcome = _ToolTimeoutResult, dict(
                 duration_ms=int(timeout_s * 1000), status="timeout", error_type="tool_timeout", error_message=message,
@@ -1522,7 +1527,10 @@ def _unfinished_tool_result(agent, ref: _ToolCallRef, *, timed_out: bool, timeou
     ``(function_result, tool_duration, effect_disposition)``."""
     if timed_out:
         suffix = f"{timeout_s:.1f}s" if timeout_s is not None else "the configured timeout"
-        function_result = f"Error executing tool '{ref.name}': timed out after {suffix}"
+        function_result = (
+            f"Error executing tool '{ref.name}': timed out after {suffix}. "
+            "Re-poll existing work if a process handle is available, or use a background process for longer work."
+        )
         outcome = dict(duration_ms=int((timeout_s or 0.0) * 1000), status="timeout", error_type="tool_timeout", error_message=function_result)
         tool_duration, effect_disposition = float(timeout_s or 0.0), "unknown"
     elif agent._interrupt_requested:
