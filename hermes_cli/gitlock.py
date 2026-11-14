@@ -63,13 +63,12 @@ def _git_proc_running() -> bool:
     whose name psutil may not read) answers True and the sweep removes nothing. The age floor is
     no proof on its own: a stopped or slow writer's lock ages like an abandoned one.
     """
-    if os.name != "nt":
-        try:
-            import psutil
-        except ImportError:  # the dependency-free bootstrap interpreter
-            pass
-        else:
-            return _psutil_git_running(psutil)
+    try:
+        import psutil
+    except ImportError:  # the dependency-free bootstrap interpreter
+        pass
+    else:
+        return _psutil_git_running(psutil)
     from hermes_cli._early_recovery import _git_program
 
     try:
