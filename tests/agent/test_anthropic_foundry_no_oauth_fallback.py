@@ -54,3 +54,14 @@ def test_native_anthropic_endpoint_still_falls_back_to_the_oauth_token(built):
     from agent.agent_init import _init_anthropic_client
     _init_anthropic_client(_agent(), "", "https://api.anthropic.com", None)
     assert built == [(OAUTH_TOKEN, "https://api.anthropic.com")]
+
+
+def test_model_switch_does_not_reuse_previous_oauth_key_on_foundry(built, monkeypatch):
+    from agent.agent_runtime_helpers import _build_switched_client
+    monkeypatch.setenv("AZURE_ANTHROPIC_KEY", "azure-key")
+    agent = _agent()
+    agent.api_key = OAUTH_TOKEN
+    agent.base_url = "https://api.anthropic.com"
+    _build_switched_client(agent, "anthropic", "", FOUNDRY_URL, "anthropic_messages", "anthropic")
+    assert built == [("azure-key", FOUNDRY_URL)]
+    assert agent.api_key == "azure-key"
