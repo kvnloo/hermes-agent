@@ -20,6 +20,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
+import sys
 import threading
 from pathlib import Path
 from typing import Dict, Iterator, Optional
@@ -28,6 +29,8 @@ logger = logging.getLogger(__name__)
 
 _lock = threading.Lock()
 _snapshot: Optional[dict[str, str]] = None
+# Only names a source had actually written when the env was frozen can be revoked later.
+_snapshot_source_writes: set[str] = set()
 
 
 def capture_launch_env() -> dict[str, str]:
@@ -36,14 +39,26 @@ def capture_launch_env() -> dict[str, str]:
     Called at activation, immediately before the first secondary home is registered as
     served — the last moment ambient env is provably the launch profile's.
     """
-    global _snapshot
+    global _snapshot, _snapshot_source_writes
     with _lock:
         if _snapshot is None:
             _snapshot = dict(os.environ)
+            # A source first enabled after activation must not later revoke an identically valued
+            # operator key from this snapshot. Only writes already attributed at freeze time count.
+            # A boot source must have loaded env_loader; avoid importing it on the freeze path.
+            from hermes_constants import get_routing_process_hermes_home
+
+            loader = sys.modules.get("hermes_cli.env_loader")
+            writes_by_home = getattr(loader, "_SECRET_SOURCE_WRITES_BY_HOME", {})
+            writes = writes_by_home.get(str(get_routing_process_hermes_home().resolve()), {})
+            _snapshot_source_writes = {
+                name for name, (_source, written, _prior) in writes.items()
+                if _snapshot.get(name) == written
+            }
         return dict(_snapshot)
 
 
-def revoke_launch_env_write(name: str, written: str, prior: str | None) -> None:
+def revoke_launch_env_write(name: str, written: str, prior: str | None, *, revoked: bool = False) -> None:
     """Take a revoked secret-source write back out of the frozen launch env.
 
     The snapshot copies ``os.environ``, so a value a source wrote before activation sits in it as
@@ -53,12 +68,15 @@ def revoke_launch_env_write(name: str, written: str, prior: str | None) -> None:
     (the value before the source's first write) or loses the name. A value the operator set and a
     source merely also supplied was never written (``skipped_existing``), so it is never here."""
     with _lock:
-        if _snapshot is None or _snapshot.get(name) != written:
+        if (_snapshot is None or name not in _snapshot_source_writes
+                or _snapshot.get(name) != written):
             return
         if prior is None:
             _snapshot.pop(name, None)
         else:
             _snapshot[name] = prior
+        if revoked:
+            _snapshot_source_writes.discard(name)
 
 
 def activate_multi_profile_hosting() -> None:

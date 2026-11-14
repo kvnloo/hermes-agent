@@ -952,7 +952,7 @@ def _revoke_value_writes(home_key: str, writes: dict, keep, owned_by_dotenv: set
                 os.environ.pop(name, None)
             else:
                 os.environ[name] = prior
-        revoke_launch_env_write(name, value, prior)  # activation froze a copy of the write too
+        revoke_launch_env_write(name, value, prior, revoked=True)  # only pre-activation source writes are frozen
         still_attributed = any(
             other.get(name, ("",))[0] == source
             for key, other in _SECRET_SOURCE_WRITES_BY_HOME.items() if key != home_key)

@@ -323,3 +323,35 @@ def test_an_unstamped_scope_on_a_pinned_host_belongs_to_the_pinned_home(tmp_path
     finally:
         secret_scope.reset_secret_scope(token)
         pin_process_hermes_home(None)
+
+
+def test_source_enabled_after_activation_cannot_revoke_an_equal_operator_value(launch_home):
+    """A late source cannot claim an operator value merely because its text matches the frozen env."""
+    from agent.secret_scope import set_multiplex_active
+    from hermes_cli.plugins import get_plugin_manager
+    from tui_gateway.launch_profile_policy import activate_multi_profile_hosting, capture_launch_env, launch_secret_scope
+
+    config = launch_home / "config.yaml"
+    original = config.read_text(encoding="utf-8")
+    config.write_text(original.replace("enabled: [fixture-secret-source]", "enabled: []"), encoding="utf-8")
+    # The operator's launch value predates activation; the plugin has not written anything yet.
+    os.environ["VAULT_ONLY_KEY"] = "from-plugin"
+    activate_multi_profile_hosting()
+    try:
+        assert capture_launch_env()["VAULT_ONLY_KEY"] == "from-plugin"
+        # A secondary thread changes the live process env; the frozen operator value must not follow.
+        os.environ["VAULT_ONLY_KEY"] = "late-foreign"
+        config.write_text(original.replace(
+            "enabled: true\n", "enabled: true\n    override_existing: true\n"), encoding="utf-8")
+        manager = get_plugin_manager()
+        manager.discover_and_load(force=True)  # first source write happens AFTER activation
+        assert os.environ["VAULT_ONLY_KEY"] == "from-plugin"
+
+        config.write_text(original.replace("enabled: [fixture-secret-source]", "enabled: []"), encoding="utf-8")
+        manager.discover_and_load(force=True)  # removal restores the late live env value
+        assert os.environ["VAULT_ONLY_KEY"] == "late-foreign"
+        # Its first late write must never revoke the operator's identical frozen value.
+        assert capture_launch_env()["VAULT_ONLY_KEY"] == "from-plugin"
+        assert launch_secret_scope(launch_home)["VAULT_ONLY_KEY"] == "from-plugin"
+    finally:
+        set_multiplex_active(False)
