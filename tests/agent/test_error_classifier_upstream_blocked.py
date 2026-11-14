@@ -53,3 +53,56 @@ def test_openrouter_security_policy_403_keeps_valid_key():
         provider="openrouter",
     )
     assert permission.reason == FailoverReason.auth
+
+
+@pytest.mark.parametrize("provider, status, body", [
+    ("openai", 403, {"success": False, "error": "Access denied by security policy."}),
+    ("openrouter", 401, {"success": False, "error": "Access denied by security policy."}),
+    ("openrouter", 403, {"success": True, "error": "Access denied by security policy."}),
+    ("openrouter", 403, {"success": 0, "error": "Access denied by security policy."}),
+    ("openrouter", 403, {"error": "Access denied by security policy."}),
+    ("openrouter", 403, {"success": False, "error": "Access denied."}),
+])
+def test_security_policy_exception_requires_exact_openrouter_envelope(provider, status, body):
+    result = classify_api_error(_APIError(str(body), status, body=body), provider=provider)
+    assert result.reason == FailoverReason.auth
+
+
+def test_openrouter_security_policy_turn_preserves_pool_key(monkeypatch):
+    """Drive a real SDK 403 through the turn loop without contacting a provider."""
+    import httpx
+
+    from agent.credential_pool import CredentialPool, PooledCredential
+    from run_agent import AIAgent
+
+    requests = []
+
+    def deny(request):
+        requests.append(request)
+        return httpx.Response(403, json={"success": False, "error": "Access denied by security policy."})
+
+    monkeypatch.setattr(
+        AIAgent, "_build_keepalive_http_client",
+        lambda self, *args, **kwargs: httpx.Client(transport=httpx.MockTransport(deny)),
+    )
+    key = PooledCredential("openrouter", "test-key", "test", "api_key", 0, "manual", "sk-test")
+    pool = CredentialPool("openrouter", [key])
+    agent = AIAgent(
+        api_key="sk-test", base_url="https://openrouter.ai/api/v1", provider="openrouter",
+        api_mode="chat_completions", model="openai/gpt-4.1-nano", quiet_mode=True,
+        skip_context_files=True, skip_memory=True, enabled_toolsets=[], max_iterations=1,
+        credential_pool=pool, save_trajectories=False,
+    )
+    try:
+        result = agent.run_conversation("ping", conversation_history=[], task_id="security-policy-test")
+    finally:
+        agent.client.close()
+
+    assert len(requests) == 1
+    assert requests[0].url.path == "/api/v1/chat/completions"
+    assert result["failed"] is True
+    assert result["failure_reason"] == "upstream_blocked"
+    assert result["failure_retryable"] is False
+    assert "firewall" in result["final_response"].lower()
+    assert pool.entries()[0].last_status is None
+    assert pool.has_available()
