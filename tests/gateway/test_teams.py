@@ -13,6 +13,12 @@ from plugins.teams_pipeline.models import TeamsMeetingRef, TeamsMeetingSummaryPa
 from tests.gateway._plugin_adapter_loader import load_plugin_adapter
 
 
+@pytest.fixture
+def anyio_backend():
+    # The adapter and SDK use asyncio locks, tasks, and to_thread.
+    return "asyncio"
+
+
 # ---------------------------------------------------------------------------
 # SDK Mock — install in sys.modules before importing the adapter
 # ---------------------------------------------------------------------------
@@ -384,6 +390,61 @@ class TestTeamsProactiveSend:
         adapter._app.send.assert_not_awaited()
         assert "sent-123" in adapter._sent_ids
 
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("cached", [True, False])
+    @pytest.mark.parametrize("kind", ["card", "document", "image"])
+    async def test_proactive_payload_reaches_sender(self, monkeypatch, tmp_path, cached, kind):
+        """Card and attachment entry points preserve payloads and sent IDs."""
+        import base64
+
+        sent = SimpleNamespace(id="payload-123")
+        sdk_send = AsyncMock(return_value=sent)
+        module = types.ModuleType("microsoft_teams.apps.activity_send")
+        module.send_or_update_activity = sdk_send
+        monkeypatch.setitem(sys.modules, "microsoft_teams.apps.activity_send", module)
+        adapter = TeamsAdapter(_make_config(client_id="bot", client_secret="s", tenant_id="tenant"))
+        adapter._app = SimpleNamespace(api=object(), send=AsyncMock(return_value=sent))
+        reference = object()
+        if cached:
+            adapter._conv_refs["chat-1"] = reference
+
+        activity = MagicMock()
+        activity.add_card.return_value = activity
+        activity.add_attachments.return_value = activity
+        activity.add_text.return_value = activity
+        monkeypatch.setattr(sys.modules["microsoft_teams.api"], "MessageActivityInput", lambda: activity)
+        monkeypatch.setattr(sys.modules["microsoft_teams.api"], "Attachment", lambda **kw: SimpleNamespace(**kw))
+        if kind == "card":
+            card = _teams_mod.AdaptiveCard().with_version("1.4").with_body([])
+            assert await adapter._send_card("chat-1", card) is sent
+            activity.add_card.assert_called_once_with(card)
+            fallback = card
+        else:
+            if kind == "document":
+                path = tmp_path / "report.pdf"
+                path.write_bytes(b"%PDF-1.4 test")
+                result = await adapter.send_document("chat-1", str(path), caption="Report")
+                expected_url = "data:application/pdf;base64," + base64.b64encode(path.read_bytes()).decode()
+                expected_mime = "application/pdf"
+            else:
+                expected_url = "https://example.com/image.png"
+                result = await adapter.send_image("chat-1", expected_url, caption="Report")
+                expected_mime = "image/png"
+            assert result.success and result.message_id == sent.id
+            attachment = activity.add_attachments.call_args.args[0]
+            assert attachment.content_url == expected_url
+            assert attachment.content_type == expected_mime
+            activity.add_text.assert_called_once_with("Report")
+            fallback = activity
+
+        if cached:
+            sdk_send.assert_awaited_once_with(adapter._app.api, activity, reference)
+            adapter._app.send.assert_not_awaited()
+        else:
+            adapter._app.send.assert_awaited_once_with("chat-1", fallback)
+            sdk_send.assert_not_awaited()
+        assert sent.id in adapter._sent_ids
+
 
 def _make_summary_payload():
     return TeamsMeetingSummaryPayload(
@@ -497,6 +558,10 @@ class TestTeamsMessageHandling:
     @pytest.mark.anyio
     async def test_aad_user_route_survives_conversation_changes(self, monkeypatch):
         from gateway.profile_routing import parse_profile_routes
+
+        # Worktree git metadata can live in the production home. This routing
+        # test must not inspect or recover the operator's interrupted updates.
+        monkeypatch.setattr("hermes_cli._early_recovery.restore_interrupted_pull", lambda root: False)
         from gateway.run import GatewayRunner
 
         routes = parse_profile_routes([
