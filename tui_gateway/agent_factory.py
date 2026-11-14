@@ -167,6 +167,15 @@ def _stored_session_runtime_overrides(row: dict | None) -> dict:
             # The route is gone with its endpoint and wire: on the default provider they would send
             # that provider's credentials to the stored URL.
             provider = base_url = api_mode = ""
+    # Pre-#154786 default sessions could persist the literal alias and the old profile provider.
+    # Replaying that row as a dict override bypasses alias startup resolution on resume.
+    # Restore the profile default only for this unpinned, still-configured default alias.
+    default_model, default_provider = _config_model_target()
+    if model == default_model and (not provider or provider.lower() == default_provider.lower()):
+        from hermes_cli.default_model_alias import default_alias_route
+        if default_alias_route(_load_cfg()) is not None:
+            model = provider = base_url = api_mode = ""
+
     if model:
         # Same dict-shaped override live /model switches use, so a DB-restored session keeps custom endpoint
         # metadata across resume and rebuilds (/new). Raw api_key is never persisted/restored.
