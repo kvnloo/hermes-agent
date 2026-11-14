@@ -44,8 +44,23 @@ const RT_COOKIE_VARIANTS = ['__Host-hermes_session_rt', '__Secure-hermes_session
 // cookies are not scoped to a port; the dashboard keeps the bare names.
 const GATEWAY_COOKIE_SUFFIX = /_[0-9a-f]{16}$/
 
-function isCookieVariant(name: unknown, variants: string[]): boolean {
-  return typeof name === 'string' && (variants.includes(name) || variants.includes(name.replace(GATEWAY_COOKIE_SUFFIX, '')))
+function isCookieVariant(name: unknown, variants: string[], requestUrl = ''): boolean {
+  if (typeof name !== 'string') {
+    return false
+  }
+  // The gateway accepts only __Host- directly over HTTPS or __Secure- under a
+  // proxy prefix. Stale other-name cookies can survive an upgrade and must not
+  // cause Desktop's OAuth login window to close before a real sign-in.
+  if (requestUrl) {
+    const url = new URL(requestUrl)
+    if (url.protocol === 'https:') {
+      const expected = url.pathname.replace(/\/+$/, '') ? '__Secure-' : '__Host-'
+      if (!name.startsWith(expected)) {
+        return false
+      }
+    }
+  }
+  return variants.includes(name) || variants.includes(name.replace(GATEWAY_COOKIE_SUFFIX, ''))
 }
 
 // Keep this aligned with hermes_cli.profiles.validate_profile_name(). `default`
@@ -1165,12 +1180,12 @@ function resolveAuthMode(inputAuthMode, existingAuthMode) {
  * check. `cookiesHaveSession` remains exported for callers that specifically
  * need to know whether an unexpired access token is present right now.
  */
-function cookiesHaveSession(cookies) {
+function cookiesHaveSession(cookies, requestUrl = '') {
   if (!Array.isArray(cookies)) {
     return false
   }
 
-  return cookies.some(c => c && isCookieVariant(c.name, AT_COOKIE_VARIANTS) && c.value)
+  return cookies.some(c => c && isCookieVariant(c.name, AT_COOKIE_VARIANTS, requestUrl) && c.value)
 }
 
 /**
@@ -1186,13 +1201,13 @@ function cookiesHaveSession(cookies) {
  * the actual ws-ticket mint at connect time (which surfaces a true 401 when
  * the RT is also dead/revoked).
  */
-function cookiesHaveLiveSession(cookies) {
+function cookiesHaveLiveSession(cookies, requestUrl = '') {
   if (!Array.isArray(cookies)) {
     return false
   }
 
   return cookies.some(
-    c => c && c.value && (isCookieVariant(c.name, AT_COOKIE_VARIANTS) || isCookieVariant(c.name, RT_COOKIE_VARIANTS))
+    c => c && c.value && (isCookieVariant(c.name, AT_COOKIE_VARIANTS, requestUrl) || isCookieVariant(c.name, RT_COOKIE_VARIANTS, requestUrl))
   )
 }
 

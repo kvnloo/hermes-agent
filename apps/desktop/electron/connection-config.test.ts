@@ -1294,6 +1294,20 @@ test('a gateway Webapp signs in with cookies named for its gateway, and they cou
   assert.equal(cookiesHaveLiveSession([{ name: `hermes_webapp_signin_${gateway}`, value: 'x' }]), false)
 })
 
+test('OAuth cookie probes ignore stale HTTPS names after dashboard hardening', () => {
+  // The gateway reader now ignores these persisted variants over HTTPS. A false
+  // positive here makes the Desktop OAuth login window close before re-login.
+  const direct = 'https://agent.example.test'
+  const prefixed = 'https://agent.example.test/hermes'
+  const loopback = 'http://127.0.0.1:9119'
+  assert.equal(cookiesHaveSession([{ name: 'hermes_session_at', value: 'legacy' }], direct), false)
+  assert.equal(cookiesHaveSession([{ name: '__Secure-hermes_session_at', value: 'planted' }], direct), false)
+  assert.equal(cookiesHaveSession([{ name: '__Host-hermes_session_at', value: 'valid' }], direct), true)
+  assert.equal(cookiesHaveLiveSession([{ name: '__Host-hermes_session_rt', value: 'legacy' }], prefixed), false)
+  assert.equal(cookiesHaveLiveSession([{ name: '__Secure-hermes_session_rt', value: 'valid' }], prefixed), true)
+  assert.equal(cookiesHaveLiveSession([{ name: 'hermes_session_rt', value: 'legacy' }], loopback), true)
+})
+
 // --- cookiesHaveLiveSession (AT or RT — the connectivity check) ---
 
 test('cookiesHaveLiveSession is true for a live access-token cookie', () => {

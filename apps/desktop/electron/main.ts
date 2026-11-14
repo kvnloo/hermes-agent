@@ -7010,13 +7010,13 @@ async function hasOauthSessionCookie(baseUrl, { connectionId = '', pendingAuthMo
     // Query by URL so the cookie jar applies Domain/Path/Secure scoping for us.
     const cookies = await sess.cookies.get({ url: baseUrl })
 
-    return cookiesHaveSession(cookies)
+    return cookiesHaveSession(cookies, baseUrl)
   } catch {
     // Fall back to a host match if the URL query path errors.
     try {
       const cookies = await sess.cookies.get({ domain: parsed.hostname })
 
-      return cookiesHaveSession(cookies)
+      return cookiesHaveSession(cookies, baseUrl)
     } catch {
       return false
     }
@@ -7043,12 +7043,12 @@ async function hasLiveOauthSession(baseUrl) {
     try {
       const cookies = await sess.cookies.get({ url: baseUrl })
 
-      return cookiesHaveLiveSession(cookies)
+      return cookiesHaveLiveSession(cookies, baseUrl)
     } catch {
       try {
         const cookies = await sess.cookies.get({ domain: parsed.hostname })
 
-        return cookiesHaveLiveSession(cookies)
+        return cookiesHaveLiveSession(cookies, baseUrl)
       } catch {
         return false
       }
