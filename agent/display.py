@@ -992,7 +992,7 @@ def _trim_error(msg: str) -> str:
     """Shrink an error message for inline display (long 'File not found' paths -> filename)."""
     msg = msg.strip()
     if "File not found:" in msg:
-        tail = msg.partition("File not found:")[2].strip()
+        tail = msg.partition("File not found:")[2].strip().split("\n", 1)[0]
         if "/" in tail:
             msg = t("display.failure.file_not_found", name=tail.rsplit("/", 1)[-1])
     return _tail_trunc(msg, _ERROR_SUFFIX_MAX_LEN)

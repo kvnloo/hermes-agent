@@ -34,6 +34,12 @@ class TestTrimError:
         long_path = "File not found: /home/teknium/.hermes/hermes-agent/very/deep/path/foo.py"
         assert _trim_error(long_path) == "File not found: foo.py"
 
+    def test_file_not_found_with_missing_folder_note_keeps_filename(self):
+        # read_file appends a second paragraph naming the missing folder (#149785).
+        msg = ("File not found: /repo/gone/sub/foo.py\n\n"
+               "The folder /repo/gone does not exist. The nearest folder that does is /repo.")
+        assert _trim_error(msg) == "File not found: foo.py"
+
 
 
 
