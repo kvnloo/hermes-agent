@@ -462,7 +462,8 @@ def _require_installed_plugin(name: str, plugins_dir: Path, console) -> Path:
     except ValueError as e:
         from pm.filesystem import is_junction
         link = plugins_dir / name.strip("/")
-        if link.parent == plugins_dir and (link.is_symlink() or is_junction(link)):
+        if (".." not in name and "\\" not in name and link.parent.is_relative_to(plugins_dir)
+                and (link.is_symlink() or is_junction(link))):
             from rich.markup import escape
             _fail(console, f"[red]Error:[/red] Plugin '{escape(name)}' is a link to {escape(os.path.realpath(link))}, outside the "
                            "plugins directory, and Hermes does not change files there. Pull updates in that "

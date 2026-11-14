@@ -52,3 +52,24 @@ def test_named_verb_on_a_linked_plugin_says_where_to_update_it(tmp_path, monkeyp
 
     shown = capsys.readouterr().out
     assert str(checkout) in shown and "Pull updates in that checkout" in shown
+
+
+@pytest.mark.platforms("posix")
+def test_nested_linked_checkout_update_names_its_external_checkout(tmp_path, monkeypatch, capsys):
+    from hermes_cli.plugins_cmd_update import cmd_update
+
+    home = tmp_path / "home"
+    checkout = _checkout(tmp_path / "src[bold]" / "plug")
+    (checkout / "plugin.yaml").write_text("name: firecrawl\nkind: standalone\nversion: 1.0.0\n")
+    category = home / "plugins" / "web"
+    category.mkdir(parents=True)
+    os.symlink(checkout, category / "firecrawl")
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("COLUMNS", "1000")
+
+    with pytest.raises(SystemExit):
+        cmd_update("web/firecrawl", interactive=False)
+
+    shown = capsys.readouterr().out
+    assert str(checkout) in shown
+    assert "Pull updates in that checkout" in shown
