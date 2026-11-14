@@ -224,3 +224,41 @@ def test_job_with_pre_run_script_never_enters_ladder(tmp_cron_home):
     j = get_job(job["id"])
     assert j.get(ur.STATE_KEY) is None
     assert datetime.fromisoformat(j["next_run_at"]) - datetime.now(UTC) > timedelta(hours=23)
+
+
+@pytest.mark.parametrize("monitor_field,value", [
+    ("monitor_script", "snapshot.sh"),
+    ("monitor_url", "https://example.com/snapshot"),
+])
+def test_changed_monitor_is_not_silently_retried_after_provider_outage(
+    tmp_cron_home, monkeypatch, monitor_field, value,
+):
+    """A monitor consumes the change before a failed model call; a 5xx re-run would be
+    a silent no_change tick, losing the report and the withheld failure notice."""
+    from types import SimpleNamespace
+    from cron import monitor
+
+    scripts = tmp_cron_home / "scripts"
+    scripts.mkdir(exist_ok=True)
+    (scripts / "snapshot.sh").write_text("printf 'changed\\n'\\n", encoding="utf-8")
+    monkeypatch.setattr(monitor, "_run_monitor_source", lambda _job: (True, "changed"))
+    job = create_job("watch changes", "every 24h", **{monitor_field: value})
+    assert monitor.check_monitor(job).changed
+    persisted = get_job(job["id"])
+    assert persisted["monitor_state"]["last_output_hash"]
+    assert not monitor.check_monitor(persisted).changed
+
+    with pytest.raises(RuntimeError) as raised:
+        sched._final_response_from_result(
+            {"failed": True, "completed": False, "error": "HTTP 503: overloaded",
+             "failure_reason": "overloaded"},
+            job["id"], job["name"], object,
+        )
+    assert ur.is_model_unreachable_failure(
+        raised.value, SimpleNamespace(session_api_calls=0))
+    # Holding the failure notice would lose it: the next monitor tick sees no change.
+    assert not ur.will_retry(persisted)
+    assert mark_job_run(job["id"], False, str(raised.value), model_unreachable=True)
+    after = get_job(job["id"])
+    assert after.get(ur.STATE_KEY) is None
+    assert datetime.fromisoformat(after["next_run_at"]) - datetime.now(UTC) > timedelta(hours=23)

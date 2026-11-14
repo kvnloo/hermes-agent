@@ -85,12 +85,15 @@ def is_model_unreachable_failure(exc: BaseException, agent: Any = None) -> bool:
 
 
 def _ladder_applies(job: dict[str, Any]) -> bool:
-    """The ladder's applicability gate: recurring, not paused, enabled in config, and no pre-run
-    ``script``. The script runs before the provider is reached (``_prepare_job_prompt``), so a
-    re-run would run it again: it may consume queued work or flip a wake gate that then drops
-    the original fire."""
-    return (is_recurring(job) and job.get("state") != "paused" and not job.get("script")
-            and retry_enabled())
+    """Recurring jobs without pre-agent work can safely re-run: a script may have side
+    effects, and a monitor persists its change hash before the model replies. Retrying
+    a failed monitor fire with unchanged input silently skips the agent."""
+    return (
+        is_recurring(job) and job.get("state") != "paused"
+        and not job.get("script")
+        and not job.get("monitor_script") and not job.get("monitor_url")
+        and retry_enabled()
+    )
 
 
 def _ladder_instant(job: dict[str, Any], natural_next: Optional[datetime],
