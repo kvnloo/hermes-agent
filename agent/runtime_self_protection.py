@@ -430,6 +430,10 @@ class _ShellWalk:
     def after_directory_change(self, change: _DirectoryChange) -> tuple[tuple[str, ...], bool]:
         """Directories the shell may be in after ``change`` ran, and whether it surely moved."""
         moved = tuple(change.destination(cwd) for cwd in self.cwds) + (("",) if change.physical else ())
+        if not change.physical:
+            # Bash's default cd -L resolves '..' logically before following symlinks.
+            # Keep the physical spelling too: bash can fall back to it when needed.
+            moved = _cap(moved + tuple(os.path.normpath(path) for path in moved if path))
         if self.cdpath and change.target and not os.path.isabs(change.target):
             return _cap(self.cwds + moved + ("",)), False
         if self.trusted:

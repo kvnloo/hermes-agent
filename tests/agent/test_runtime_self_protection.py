@@ -381,3 +381,24 @@ def test_a_bare_assignment_keeps_the_or_that_follows_it(fake_runtime, tmp_path, 
         for tail in (" ; rm -rf ../hermes-agent/venv", " && rm -rf ../hermes-agent/venv", "\nrm -rf ../hermes-agent/venv"):
             command = f"{assign} || cd ..{tail}"
             assert rsp.command_deletes_runtime(command) is not None, command
+
+
+@pytest.mark.platforms("posix")
+def test_logical_cd_symlink_parent_still_blocks_relative_runtime_delete(fake_runtime, tmp_path, monkeypatch):
+    # Bash cd -L enters the logical PWD even when the corresponding physical
+    # symlink/../safe path is missing. The process cwd fallback cannot see ../venv.
+    install = tmp_path / "hermes-agent"
+    (install / "safe").mkdir()
+    physical = tmp_path / "physical"
+    (physical / "child").mkdir(parents=True)
+    (install / "link").symlink_to(physical / "child", target_is_directory=True)
+    monkeypatch.chdir(install)
+
+    from tools import approval
+
+    for cd in ("cd", "cd -L"):
+        command = f"{cd} link/../safe; rm -rf ../venv"
+        assert rsp.command_deletes_runtime(command) is not None, command
+        assert approval._floor_block(command).get("approved") is False
+    # Physical cd -P fails here and remains at the install (../venv is unrelated).
+    assert rsp.command_deletes_runtime("cd -P link/../safe; rm -rf ../venv") is None
