@@ -154,7 +154,11 @@ def main(argv: list[str] | None = None) -> int:
     # The real URL can carry the Cloud token and --host userinfo; stderr lands in
     # the agent transcript, so the diagnostic names only scheme, host and path.
     host_part = netloc.rpartition("@")[2]
-    log(f"Connecting to {scheme}://{host_part}{base_path}/ws (client_id={client_id})")
+    display_url = f"{scheme}://{host_part}{base_path}/ws"
+    # json.dumps escapes CR/LF/ANSI controls without changing the dial URL.
+    safe_url = json.dumps(display_url, ensure_ascii=False)[1:-1]
+    safe_client_id = json.dumps(client_id, ensure_ascii=False)[1:-1]
+    log(f"Connecting to {safe_url} (client_id={safe_client_id})")
     if args.prompt_id:
         log(f"Filtering messages to prompt_id={args.prompt_id}")
 

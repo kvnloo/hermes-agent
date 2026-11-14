@@ -127,7 +127,7 @@ def test_load_schema_tolerates_utf8_bom(tmp_path):
     assert "SUCCESS" in result.stdout
 
 
-def _run_ws_monitor(monkeypatch, capsys, argv, env_key=None):
+def _run_ws_monitor(monkeypatch, capsys, argv, env_key=None, client_id="cid-1"):
     """Run ws_monitor.main() against a websocket double; return (stderr, urls)."""
     import types
 
@@ -161,7 +161,7 @@ def _run_ws_monitor(monkeypatch, capsys, argv, env_key=None):
         monkeypatch.setenv("COMFY_CLOUD_API_KEY", env_key)
     import ws_monitor
 
-    assert ws_monitor.main(argv + ["--client-id", "cid-1", "--timeout", "1"]) == 0
+    assert ws_monitor.main(argv + ["--client-id", client_id]) == 0
     return capsys.readouterr().err, connected
 
 
@@ -184,3 +184,18 @@ def test_ws_monitor_connect_diagnostic_omits_url_userinfo(monkeypatch, capsys):
     assert password not in err
     assert "ws://[::1]:8188/comfy/ws" in err
     assert urls == [f"ws://user:{password}@[::1]:8188/comfy/ws?clientId=cid-1"]
+
+
+def test_ws_monitor_connect_diagnostic_escapes_controls(monkeypatch, capsys):
+    """Untrusted control characters cannot forge or reformat stderr log lines."""
+    host = "http://127.0.0.1:8188/proxy\x1b[2J"
+    client_id = "cid\n[comfyui-skill] forged message"
+    err, urls = _run_ws_monitor(
+        monkeypatch, capsys, ["--host", host], client_id=client_id
+    )
+    assert "\x1b" not in err
+    assert "\n[comfyui-skill] forged message" not in err
+    assert r"\u001b[2J" in err
+    assert r"cid\n[comfyui-skill] forged message" in err
+    # Preserve the URL passed to the transport exactly, including user input.
+    assert urls == [f"ws://127.0.0.1:8188/proxy\x1b[2J/ws?clientId={client_id}"]
