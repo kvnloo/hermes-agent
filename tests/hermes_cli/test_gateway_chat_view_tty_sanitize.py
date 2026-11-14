@@ -53,3 +53,37 @@ def test_reply_to_a_pipe_is_unchanged(tmp_path):
     with open(path, "w", encoding="utf-8") as pipe:
         _settle(HOSTILE, pipe)
     assert path.read_text(encoding="utf-8").strip("\n") == HOSTILE
+
+
+@pytest.mark.platforms("posix")
+def test_local_plugin_notice_on_a_tty_keeps_only_sgr(monkeypatch):
+    """A plugin notification.show reaches the interactive chat's stderr; its controls stay inert."""
+    from hermes_cli.gateway_chat_view import GatewayChatView
+    view = GatewayChatView(None, {"stored_session_id": "s"})
+    master, slave = os.openpty()
+    os.set_blocking(master, False)
+    try:
+        with os.fdopen(slave, "w", encoding="utf-8", closefd=True) as tty:
+            assert tty.isatty()
+            with monkeypatch.context() as patch:
+                patch.setattr(sys, "stderr", tty)
+                view._dispatch_event("notification.show", None, {"text": HOSTILE})
+        shown = _read_all(master).decode()
+    finally:
+        os.close(master)
+    assert "start" in shown and "end" in shown
+    assert f"{ESC}[31mred{ESC}[0m" in shown, "SGR styling must survive"
+    for bad in (f"{ESC}]", f"{ESC}[2J", f"{ESC}[H", "\x07", "PWNED"):
+        assert bad not in shown, f"{bad!r} reached stderr: {shown!r}"
+
+
+def test_local_plugin_notice_to_pipe_is_unchanged(tmp_path, monkeypatch):
+    """The TTY guard must not alter redirected diagnostic output."""
+    from hermes_cli.gateway_chat_view import GatewayChatView
+    view = GatewayChatView(None, {"stored_session_id": "s"})
+    path = tmp_path / "notices.err"
+    with open(path, "w", encoding="utf-8") as pipe:
+        with monkeypatch.context() as patch:
+            patch.setattr(sys, "stderr", pipe)
+            view._dispatch_event("notification.show", None, {"text": HOSTILE})
+    assert path.read_text(encoding="utf-8") == HOSTILE + "\n"

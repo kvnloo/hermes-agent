@@ -265,7 +265,7 @@ class GatewayChatView:
     def _notice(self, admission, payload):
         # The owner already applied display.warning_notifications; it publishes only what shows.
         if not self.quiet and str(payload.get("text") or "").strip():
-            print(str(payload["text"]).strip(), file=sys.stderr, flush=True)
+            print(sanitize_for_tty(str(payload["text"]).strip(), stream=sys.stderr), file=sys.stderr, flush=True)
 
     def _tool_start(self, admission, payload):
         # Deltas before a tool call are interim commentary the final reply does not repeat;
