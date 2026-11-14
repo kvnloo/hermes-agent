@@ -81,7 +81,11 @@ def markdown_to_signal(text: str) -> tuple[str, list[str]]:
     """Convert markdown to plain text + Signal textStyles list. Signal uses ``bodyRanges`` (signal-cli
     ``textStyle`` / ``textStyles`` params) as ``start:length:STYLE`` with positions in UTF-16 code units.
     Supported styles: BOLD, ITALIC, STRIKETHROUGH, MONOSPACE."""
-    text = _fence_tables(_normalize_bullet_markers(re.sub(r"\n{3,}", "\n\n", text).strip()))
+    # Keep approval commands byte-identical: collapse excess blank lines only outside code fences.
+    parts = _split_fenced(text.strip())
+    text = "".join(re.sub(r"\n{3,}", "\n\n", part) if idx % 2 == 0 else part
+                   for idx, part in enumerate(parts))
+    text = _fence_tables(_normalize_bullet_markers(text))
     styles: list[tuple[int, int, str]] = []
     code_blocks: list[tuple[int, int]] = []
     # One pass over the original text: code a longer fence kept may hold ``` runs, never re-parsed.

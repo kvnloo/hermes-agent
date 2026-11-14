@@ -373,3 +373,19 @@ def test_backtick_run_kept_in_a_longer_fence_does_not_pair_with_a_later_fence():
     assert text == f"{command}\nThen this:\nlater"
     spans = [m.split(":") for m in _find_style(styles, "MONOSPACE")]
     assert [text[int(s) : int(s) + int(n)] for s, n, _ in spans] == [command, "later"]
+
+
+def test_approval_command_preserves_internal_blank_lines():
+    """An operator must see the same multiline shell string the approval would execute."""
+    from gateway.platforms.base_exec_approval import code_fence
+
+    command = "printf 'before\n\n\nafter'"
+    fence = code_fence(command)
+    rendered, styles = _m2s(
+        f"## Approve?\n{fence}\n{command}\n{fence}\nThen **review**."
+    )
+    assert rendered == f"Approve?\n{command}\nThen review."
+    monospace = _find_style(styles, "MONOSPACE")
+    assert len(monospace) == 1
+    start, length, _ = monospace[0].split(":")
+    assert rendered[int(start):int(start) + int(length)] == command
