@@ -111,6 +111,14 @@ def sanitize_borrowed_credential_payload(
         return result
     fingerprint = _credential_secret_fingerprint(result)
     sanitized = {k: v for k, v in result.items() if not _is_secret_payload_key(k)}
+    # Legacy rows may have stored provider-echoed keys before error redaction existed.
+    # Re-scrub the retained diagnostics on every borrowed-row load/write (#71994).
+    from agent.credential_pool_errors import redact_error_text
+    known_secrets = (result.get("access_token"), result.get("refresh_token"), result.get("agent_key"))
+    for field in ("last_error_reason", "last_error_message"):
+        value = sanitized.get(field)
+        if isinstance(value, str) and value:
+            sanitized[field] = redact_error_text(value, known_secrets)
     if fingerprint:
         sanitized["secret_fingerprint"] = fingerprint
     return sanitized
