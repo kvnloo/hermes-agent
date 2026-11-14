@@ -216,6 +216,9 @@ def _cmd_subscribe(args):
     from hermes_cli.secret_prompt import resolve_secret_arg
 
     given_secret = resolve_secret_arg(args.secret)
+    if args.secret == "-" and not given_secret:
+        print("Error: No HMAC secret read from stdin (--secret -).")
+        return 1
     existing_profile = existing.get("profile", "default")
     profile_changed = is_update and profile != existing_profile
     if profile_changed and given_secret and given_secret == existing.get("secret"):

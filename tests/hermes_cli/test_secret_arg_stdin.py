@@ -25,3 +25,30 @@ def test_peer_add_dash_stores_stdin_key(monkeypatch):
     args = SimpleNamespace(peer_action="add", name="spark", url="http://spark.lan:8377", key="-", note="")
     assert peer_cmd.cmd_peer(args) == 0
     assert list(saved.values()) == ["peer-key-123456"]
+
+
+def test_empty_piped_webhook_secret_refuses_route_rebind(monkeypatch, tmp_path, capsys):
+    """An explicit empty --secret - must not silently rotate a saved route."""
+    from hermes_cli import webhook
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setattr(webhook, "_is_webhook_enabled", lambda: True)
+    named = tmp_path / "profiles" / "work"
+    named.mkdir(parents=True)
+    (named / "config.yaml").write_text("{}\n", encoding="utf-8")
+
+    base = dict(
+        webhook_action="subscribe", name="events", route_profile=None,
+        events="", description="", prompt="", skills="", deliver="log",
+        deliver_chat_id="", secret="existing-hmac", signature=None,
+    )
+    webhook.webhook_command(SimpleNamespace(**base))
+    previous = webhook._load_subscriptions()["events"].copy()
+
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))
+    result = webhook.webhook_command(SimpleNamespace(**{
+        **base, "route_profile": "work", "secret": "-",
+    }))
+    assert result == 1
+    assert webhook._load_subscriptions()["events"] == previous
+    assert "No HMAC secret read from stdin" in capsys.readouterr().out
