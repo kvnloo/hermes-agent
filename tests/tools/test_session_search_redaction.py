@@ -170,3 +170,28 @@ def test_lower_ranked_compact_results_are_redacted(tmp_path, monkeypatch):
         assert ">>>rankneedle<<<" in hit["snippet"]
     blob = _dump(results)
     assert SECRET_BODY not in blob and SK_TAIL not in blob and IMAGE_URL not in blob
+
+
+# A data URL inside ordinary text or JSON arguments does not start at offset 0.
+# Discovery must still omit its opaque payload while preserving surrounding text.
+@pytest.mark.parametrize("location", ["text", "multipart", "tool_arguments"])
+def test_embedded_data_url_is_omitted_from_discovery(tmp_path, monkeypatch, location):
+    from agent import redact
+    monkeypatch.setattr(redact, "_redact_enabled", lambda: False)
+    db = SessionDB(tmp_path / "state.db")
+    db.create_session("s_embed", source="cli")
+    text = f"embedneedle screenshot {IMAGE_URL} shown"
+    if location == "text":
+        db.append_message("s_embed", role="user", content=text)
+    elif location == "multipart":
+        db.append_message("s_embed", role="user", content=[{"type": "text", "text": text}])
+    else:
+        db.append_message("s_embed", role="user", content="embedneedle screenshot")
+        db.append_message("s_embed", role="assistant", content="", tool_calls=[{
+            "id": "c1", "type": "function",
+            "function": {"name": "vision", "arguments": json.dumps({"source": IMAGE_URL})}}])
+    db.append_message("s_embed", role="assistant", content="ok")
+    hit = json.loads(session_search(query="embedneedle", db=db))["results"][0]
+    assert IMAGE_URL not in _dump(hit)
+    assert "[inline data omitted]" in _dump(hit)
+    assert ">>>embedneedle<<<" in hit["snippet"]
