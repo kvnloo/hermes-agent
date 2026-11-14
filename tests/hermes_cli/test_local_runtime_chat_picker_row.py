@@ -72,3 +72,26 @@ def test_a_saved_endpoint_elsewhere_sharing_model_names_keeps_its_row(hermes_hom
     rows, _local = inject_local_runtime_row([saved, managed], ctx)
 
     assert [r.get("api_url") for r in rows if r["slug"] == "custom"] == ["http://my-vllm-box:8000/v1"]
+
+
+def test_chat_model_text_fallback_lists_staged_local_without_picker_adapter(hermes_home):
+    """A chat platform without a picker must offer the same staged Local row in /model text."""
+    import asyncio
+
+    from gateway.slash_commands_model import GatewayModelCommandsMixin, _ModelSwitchContext
+
+    _stage(hermes_home, "Offline-Model")
+
+    class TextOnlyGateway(GatewayModelCommandsMixin):
+        def _delivery_adapter_for(self, source):
+            return None
+
+    ctx = _ModelSwitchContext(
+        session_key="s", source=None, config_path=hermes_home / "config.yaml",
+        persist_global=False, current_provider="openrouter", current_model="remote-model",
+    )
+    reply = asyncio.run(TextOnlyGateway()._model_listing_reply(None, ctx, None))
+
+    assert reply is not None
+    assert "**Local** `--provider llamacpp`" in reply
+    assert "`Offline-Model`" in reply

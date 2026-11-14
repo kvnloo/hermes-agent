@@ -493,7 +493,7 @@ class GatewayModelCommandsMixin:
         self, event: MessageEvent, ctx: _ModelSwitchContext, profile_home
     ) -> Optional[str]:
         """``/model`` with no args: interactive picker where supported, else the text list."""
-        from hermes_cli.model_switch import list_authenticated_providers
+        from hermes_cli.model_switch_providers import list_picker_providers
         from hermes_cli.providers import get_label
 
         listing_kwargs = dict(
@@ -527,7 +527,7 @@ class GatewayModelCommandsMixin:
         lines = [t("gateway.model.current_label", model=ctx.current_model or t("gateway.shared.unknown_value"),
                    provider=get_label(ctx.current_provider)), ""]
         try:  # off-loop: listing still reads config/disk cache synchronously (#41289)
-            providers = await asyncio.to_thread(list_authenticated_providers, max_models=_TEXT_LISTING_MODELS, **listing_kwargs)
+            providers = await asyncio.to_thread(list_picker_providers, max_models=_TEXT_LISTING_MODELS, **listing_kwargs)
             lines.extend(_model_provider_listing_lines(providers))
         except Exception:
             pass
