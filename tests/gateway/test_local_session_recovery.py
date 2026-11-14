@@ -5,6 +5,12 @@ from types import SimpleNamespace
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _isolate_checkout_recovery(monkeypatch):
+    # Session recovery must not repair or probe the developer's owning checkout.
+    monkeypatch.setattr('hermes_cli._early_recovery.restore_interrupted_pull', lambda root: False)
+
+
 @pytest.mark.asyncio
 async def test_local_create_receipt_survives_cold_authority_atomically(tmp_path, monkeypatch):
     from gateway.config import GatewayConfig, Platform
