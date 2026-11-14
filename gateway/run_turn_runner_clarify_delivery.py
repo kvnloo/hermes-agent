@@ -123,6 +123,11 @@ def _clarify_send_then_wait(fut, *, clarify_id: str, session_key: str, clarify_m
         return late.undeliverable, False
     if response == clarify_mod.CANCELLED:
         return response, False
+    if response == clarify_mod.SKIPPED:
+        # Stop may race with the owner's empty-answer -> SKIPPED projection.
+        from tools.interrupt import is_interrupted
+        if is_interrupted():
+            return clarify_mod.CANCELLED, False
     if response is None or response == "":
         return f"[user did not respond within {int(timeout / 60)}m]", False
     return response, True

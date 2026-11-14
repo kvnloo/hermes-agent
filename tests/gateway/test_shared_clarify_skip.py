@@ -27,6 +27,15 @@ def test_empty_answer_is_a_skip_the_batch_continues_past():
     assert (response, answered) == (skipped, True)
 
 
+def test_stop_during_a_shared_skip_cancels_instead_of_asking_another_question(monkeypatch):
+    """The owner may resolve Skip just before the turn observes its Stop."""
+    from tools import clarify_gateway
+
+    monkeypatch.setattr('tools.interrupt.is_interrupted', lambda: True)
+    (response, answered), _ = _wait_while_viewer_answers('')
+    assert (response, answered) == (clarify_gateway.CANCELLED, False)
+
+
 def test_real_answer_still_reaches_the_tool():
     (response, answered), _ = _wait_while_viewer_answers('a')
     assert (response, answered) == ('a', True)
