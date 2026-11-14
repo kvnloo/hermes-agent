@@ -273,6 +273,10 @@ _AUTH_COPY: dict[str, str] = {
         "{label} rejected your API key, so the model can't be reached. Update it in "
         "Settings → Providers, or run `hermes setup` in a terminal."
     ),
+    "key_cmd": (
+        "{label} rejected the `key_cmd` token, so the model can't be reached. "
+        "Run the configured `key_cmd` manually and verify the token it prints."
+    ),
 }
 
 CONTENT_POLICY_NEXT_STEPS = (
@@ -493,13 +497,18 @@ def relogin_command_hint(provider: Any) -> str:
 
 def nonretryable_copy(
     classified: Any, *, provider: Any, model: Any, summary: str, prefix_suggestion: Optional[str] = None,
+    credential_key: Any = None,
 ) -> str:
     """Chat copy for a terminal non-retryable rejection (auth, model missing, TLS, generic 4xx)."""
     label = provider_label_for(provider)
     if getattr(classified, "is_auth", False):
+        from agent.credential_source import KEY_CMD, credential_source
         from agent.error_surface import auth_kind
 
-        template = _AUTH_COPY[auth_kind(str(provider or ""))]
+        kind = auth_kind(str(provider or ""))
+        if kind == "api_key" and credential_source(credential_key) == KEY_CMD:
+            kind = "key_cmd"
+        template = _AUTH_COPY[kind]
     else:
         template = _NONRETRYABLE_COPY.get(classified.reason.value, _NONRETRYABLE_DEFAULT_COPY)
     prefix_hint = (

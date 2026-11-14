@@ -161,3 +161,27 @@ def test_masked_previews_name_the_source_not_entra(monkeypatch, build, label_key
     expected = f"<{credential_source(key) or 'entra-id'}-bearer>"
     assert ApiErrorSummaryMixin._mask_api_key_for_logs(None, key) == expected
     assert _truncate_token(key) == expected
+
+
+def test_anthropic_keycmd_401_terminal_copy_matches_help(monkeypatch):
+    """The final failed-turn copy must not undo source-aware Anthropic 401 help."""
+    from agent.error_classifier import FailoverReason
+    from agent.turn_failure_copy import nonretryable_copy
+
+    key = _key_cmd_provider(monkeypatch)
+    classified = SimpleNamespace(is_auth=True, reason=FailoverReason.auth)
+    args = dict(provider="corp", model="claude-haiku-5-5", summary="HTTP 401: invalid x-api-key")
+
+    diagnostic = _anthropic_401_help(monkeypatch, key)
+    assert "Auth method: key_cmd token" in diagnostic
+
+    final_copy = nonretryable_copy(classified, credential_key=key, **args)
+    assert "rejected the `key_cmd` token" in final_copy
+    assert "Run the configured `key_cmd` manually" in final_copy
+    assert "Settings → Providers" not in final_copy
+    assert "hermes setup" not in final_copy
+    assert "Provider said: HTTP 401: invalid x-api-key" in final_copy
+
+    string_copy = nonretryable_copy(classified, credential_key="sk-ant-api03-fake", **args)
+    assert "rejected your API key" in string_copy
+    assert "Settings → Providers" in string_copy
