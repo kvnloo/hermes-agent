@@ -131,3 +131,57 @@ def test_tool_create_reports_partial_registration_failure(
     assert out["retry_create"] is False
     assert out["job_id"]
     assert "private callback URL and token" not in out["error"]
+
+
+def test_cli_create_reports_saved_job_on_scheduler_registration_failure(
+    temp_home, monkeypatch, make_cron_provider, capsys
+):
+    """A stored job must not appear absent when its external trigger fails (#150973)."""
+    from types import SimpleNamespace
+
+    import cron.scheduler_provider as sp
+    from cron.jobs import list_jobs
+    from hermes_cli.cron import cron_create
+    from hermes_cli.colors import Colors
+
+    monkeypatch.setattr("hermes_cli.colors.should_use_color", lambda: True)
+    provider = make_cron_provider(register_job=_fail_registration, name="chronos")
+    monkeypatch.setattr(sp, "resolve_cron_scheduler", lambda: provider)
+
+    rc = cron_create(SimpleNamespace(
+        schedule="every 5m", prompt="echo hi", name="w", deliver="local",
+    ))
+    output = capsys.readouterr().out
+    jobs = list_jobs()
+
+    assert len(jobs) == 1
+    assert jobs[0]["name"] == "w"
+    assert rc == 1  # The external scheduler is still not registered.
+    assert f"{Colors.YELLOW}Saved cron job 'w'" in output
+    assert Colors.RED not in output
+    assert "don't re-create it" in output
+    assert f"Job ID: {jobs[0]['id']}" in output
+    assert "Failed to create job" not in output
+    assert "RuntimeError" not in output
+    assert "private callback URL and token" not in output
+
+
+def test_cli_create_reports_unsaved_failure(temp_home, monkeypatch, capsys):
+    """An invalid schedule remains a red error without a persisted job."""
+    from types import SimpleNamespace
+
+    from cron.jobs import list_jobs
+    from hermes_cli.colors import Colors
+    from hermes_cli.cron import cron_create
+
+    monkeypatch.setattr("hermes_cli.colors.should_use_color", lambda: True)
+    rc = cron_create(SimpleNamespace(
+        schedule="not a valid schedule", prompt="echo hi", name="w", deliver="local",
+    ))
+    output = capsys.readouterr().out
+
+    assert rc == 1
+    assert list_jobs() == []
+    assert f"{Colors.RED}Failed to create job:" in output
+    assert Colors.YELLOW not in output
+    assert "Job ID:" not in output
