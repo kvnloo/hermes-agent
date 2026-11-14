@@ -23,7 +23,7 @@ from tools.skills_guard_credentials import SKILL_ONLY_PATTERNS, code_views, rais
 from tools.threat_patterns import FORGET_RULES_RE, mask_negated_forget
 
 
-SCANNER_VERSION = "skills-guard-v15"
+SCANNER_VERSION = "skills-guard-v16"
 
 # NVIDIA-verified skills each ship a signed `skill.oms.sig` + governance `skill-card.md`.
 TRUSTED_REPOS = {
@@ -798,7 +798,12 @@ def _scan_text(text: str, rel_path: str, suffix: str, skill: bool) -> list[Findi
     for pattern, pid, severity, category, description in patterns:
         for i, line in enumerate(lines, start=1):
             if pid == "forget_rules":
-                scan_line = forget_lines[i - 1]
+                # A directive can hard-wrap its determiner, filler, or target word. Check a
+                # bounded forward window, but attribute matches only to their starting line.
+                scan_line = "\n".join(forget_lines[i - 1:i + 7])
+                hit = pattern.search(scan_line)
+                if hit is None or hit.start() >= len(line):
+                    continue
             elif pid in _DOCSTRING_EXEMPT_PATTERN_IDS and i in docstring_lines:
                 if suffix != ".py":
                     continue
@@ -809,7 +814,7 @@ def _scan_text(text: str, rel_path: str, suffix: str, skill: bool) -> list[Findi
             else:
                 scan_line = (traversal_lines[i - 1] if pid in _PATH_TRAVERSAL_PATTERN_IDS
                              else views[0][i - 1] if views and pid == "hermes_env_dotenv" else line)
-            if pattern.search(scan_line):
+            if pid == "forget_rules" or pattern.search(scan_line):
                 text = line.strip()
                 line_severity, line_description = _demote_inert_path_reference(
                     pid, severity, description, line, lines[owners[i - 1]], suffix)
