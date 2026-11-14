@@ -232,3 +232,30 @@ def test_other_dangerous_commands_still_use_the_guardian(smart_interactive):
     result = check_all_command_guards("rm -rf ./build", "local", approval_callback=lambda *a, **k: "deny")
     assert result.get("smart_approved") is True
     assert smart_interactive == ["rm -rf ./build"]
+
+
+@pytest.mark.parametrize("gate", [
+    check_all_command_guards,
+    approval_module.check_dangerous_command,
+])
+@pytest.mark.parametrize("persisted_grant", ["osascript *", RISKY])
+def test_preexisting_grants_cannot_skip_osascript_human_approval(gate, persisted_grant, smart_interactive):
+    """Upgrading must not turn an old broad allowlist or rule-key grant into data-loss consent."""
+    command = 'osascript -e \'tell application "Keynote" to close front document saving no\''
+    approval_module.approve_permanent(persisted_grant)
+    prompts = []
+
+    def human(_command, _description, **kwargs):
+        prompts.append(kwargs)
+        return "deny"
+
+    try:
+        result = gate(command, "local", approval_callback=human)
+        assert result["approved"] is False
+        assert len(prompts) == 1
+        assert prompts[0].get("allow_session") is False
+        assert prompts[0].get("allow_permanent") is False
+        assert smart_interactive == []
+    finally:
+        with approval_module._lock:
+            approval_module._permanent_set().discard(persisted_grant)

@@ -785,7 +785,10 @@ def _command_findings(command: str) -> list[tuple[str, str]]:
 def _pending_findings(findings: list[tuple[str, str]], approved) -> tuple[list[str], str] | None:
     """``(pattern_keys, description)`` of *findings* still needing consent, or None.
     ``approved(key)`` is the session or permanent check."""
-    pending = [(key, text) for key, text in findings if not approved(key)]
+    # Operator-owned state needs fresh consent even if a pre-upgrade session or config
+    # still carries an approval for this detector key.
+    pending = [(key, text) for key, text in findings
+               if key in SMART_MANUAL_ONLY_DESCRIPTIONS or not approved(key)]
     if not pending:
         return None
     return [key for key, _ in pending], "; ".join(text for _, text in pending)
@@ -1161,7 +1164,7 @@ def _run_approval_gate(
     if _yolo_active() or approval_context._get_approval_mode() == "off":
         return _approved()
     session_key = get_current_session_key()
-    if is_approved(session_key, pattern_key):
+    if pattern_key not in SMART_MANUAL_ONLY_DESCRIPTIONS and is_approved(session_key, pattern_key):
         return _approved()
 
     approval_callback, is_cli, is_gateway, is_ask = _presence(approval_callback)
@@ -1276,7 +1279,9 @@ def check_dangerous_command(command: str, env_type: str,
         return blocked
     if _yolo_active() or approval_context._get_approval_mode() == "off":
         return _approved()
-    if _command_matches_permanent_allowlist(command):
+    if _command_matches_permanent_allowlist(command) and not any(
+        key in SMART_MANUAL_ONLY_DESCRIPTIONS for key, _ in _command_findings(command)
+    ):
         return _allowlisted(command)
     session_key = get_current_session_key()
     findings = _command_findings(command)
@@ -1345,7 +1350,9 @@ def check_all_command_guards(command: str, env_type: str,
     approval_mode = approval_context._get_approval_mode()
     if _yolo_active() or approval_mode == "off":
         return _approved()
-    if _command_matches_permanent_allowlist(command):
+    if _command_matches_permanent_allowlist(command) and not any(
+        key in SMART_MANUAL_ONLY_DESCRIPTIONS for key, _ in _command_findings(command)
+    ):
         return _allowlisted(command)
 
     approval_callback, is_cli, is_gateway, is_ask = _presence(approval_callback)
