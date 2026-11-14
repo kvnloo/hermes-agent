@@ -1,3 +1,5 @@
+import { COMPOSER_IMAGE_MAX_BYTES } from './hardening'
+
 // Electron 44 rearchitected the clipboard onto the W3C async API: readText /
 // writeText return Promises, and image reads no longer have a readImage()
 // shortcut — the bytes arrive through clipboard.read() (ClipboardItem[]) and
@@ -31,7 +33,17 @@ async function readClipboardImagePng(clipped) {
         continue
       }
 
+      // Reject oversized PNGs before arrayBuffer() allocates their bytes.
+      if (typeof blob.size === 'number' && blob.size > COMPOSER_IMAGE_MAX_BYTES) {
+        continue
+      }
+
       const buffer = Buffer.from(await blob.arrayBuffer())
+
+      // Never write over the cap, even when a clipboard provider misreports size.
+      if (buffer.byteLength > COMPOSER_IMAGE_MAX_BYTES) {
+        continue
+      }
 
       // Guard against a degenerate empty payload: an empty image must behave
       // like "no image" so the WSL fallback still runs.

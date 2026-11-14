@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { test } from 'vitest'
 
 import { readClipboardImagePng } from './clipboard-image'
+import { COMPOSER_IMAGE_MAX_BYTES } from './hardening'
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 
@@ -38,6 +39,27 @@ test('readClipboardImagePng returns PNG bytes from an image/png clipboard item',
 
   assert.ok(Buffer.isBuffer(result))
   assert.ok(result.equals(png))
+})
+
+test('readClipboardImagePng skips an oversized clipboard Blob before allocating it', async () => {
+  let materializations = 0
+  const oversizedBlob = {
+    size: COMPOSER_IMAGE_MAX_BYTES + 1,
+    async arrayBuffer() {
+      materializations += 1
+      return Uint8Array.from(PNG_SIGNATURE).buffer
+    }
+  }
+  const png = fakePngBuffer()
+  const clipboard = clipboardWith([
+    itemOf(['image/png'], () => Promise.resolve(oversizedBlob)),
+    itemOf(['image/png'], () => Promise.resolve(blobOf(png)))
+  ])
+
+  const result = await readClipboardImagePng(clipboard)
+
+  assert.equal(materializations, 0)
+  assert.ok(result && result.equals(png))
 })
 
 test('readClipboardImagePng skips items without an image/png type', async () => {
