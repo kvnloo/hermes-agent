@@ -383,3 +383,30 @@ def test_migration_backups_are_owner_only_even_from_a_world_readable_source(tmp_
     assert len(backups) == 2
     for dest in backups.values():
         assert dest.stat().st_mode & 0o777 == 0o600, dest
+
+
+@pytest.mark.platforms("posix")
+def test_up_to_date_boot_tightens_old_migration_backups(tmp_path, monkeypatch):
+    """Old stamped copies must lose world access even when no migration runs (#148317)."""
+    from hermes_cli.config_defaults import DEFAULT_CONFIG
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setattr("hermes_constants.get_managed_system", lambda *a, **k: None)
+    monkeypatch.setattr("hermes_constants._container_or_chmod_skipped", lambda: False)
+    (tmp_path / "config.yaml").write_text(
+        f"_config_version: {DEFAULT_CONFIG['_config_version']}\n"
+    )
+    old_config = tmp_path / "config.yaml.bak-20260101T000000Z"
+    old_env = tmp_path / ".env.bak-20260101T000000Z.1"
+    user_copy = tmp_path / "config.yaml.bak-personal"
+    outside = tmp_path / "outside.txt"
+    for path in (old_config, old_env, user_copy, outside):
+        path.write_text("secret\n")
+        path.chmod(0o644)
+    (tmp_path / ".env.bak-20260101T000000Z.2").symlink_to(outside)
+
+    assert step_migrate_config() == {"ok": True, "skipped": "up-to-date"}
+    assert old_config.stat().st_mode & 0o777 == 0o640
+    assert old_env.stat().st_mode & 0o777 == 0o640
+    assert user_copy.stat().st_mode & 0o777 == 0o644
+    assert outside.stat().st_mode & 0o777 == 0o644

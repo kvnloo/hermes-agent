@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import shutil
 from datetime import datetime, timezone, UTC
 from pathlib import Path
@@ -35,6 +36,19 @@ def _backup_path(path: Path, stamp: str) -> Path:
         if not candidate.exists():
             return candidate
     raise RuntimeError(f"could not choose a backup path for {path}")
+
+
+
+def _tighten_old_migration_backups(paths: Iterable[Path]) -> None:
+    """Harden stamped config/.env migration copies left by earlier versions (#148317)."""
+    from hermes_cli.config_backend import drop_other_access
+
+    for path in paths:
+        # Only touch names emitted by _backup_path, not hand-named user copies.
+        stamped = re.compile(rf"{re.escape(path.name)}\.bak-\d{{8}}T\d{{6}}Z(?:\.\d+)?")
+        for backup in path.parent.glob(f"{path.name}.bak-*"):
+            if backup.is_file() and not backup.is_symlink() and stamped.fullmatch(backup.name):
+                drop_other_access(backup)
 
 
 def _backup_existing(paths: Iterable[Path]) -> dict:
@@ -86,6 +100,9 @@ def step_migrate_config() -> dict:
     from hermes_cli.config_version_stamp import read_config_version_stamp, stamp_missing_config
 
     stamp_missing_config()  # a missing config.yaml reads as current below
+    # Migration backups live beside config.yaml/.env, outside backups/config's normal sweep.
+    # Even an up-to-date install can retain old world-readable copies indefinitely.
+    _tighten_old_migration_backups((get_config_path(), get_env_path()))
     stamp, latest_ver = read_config_version_stamp()
     current_ver = 0 if stamp is None else stamp
     if current_ver >= latest_ver:
