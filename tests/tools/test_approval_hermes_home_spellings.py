@@ -97,3 +97,21 @@ class TestUnrelatedPathsStaySafe:
         monkeypatch.setenv("HERMES_HOME", "/home/tester/hermes-data")
         assert _is_dangerous("sed -i s/a/b/ ~/hermes-data-old/config.yaml") is False
         assert _is_dangerous("sed -i s/a/b/ $HOME/hermes-data-old/config.yaml") is False
+
+
+class TestShellEscapedSpaceInWindowsHome:
+    """Git Bash escapes a space in an unquoted Windows profile path."""
+
+    def test_escaped_profile_space_still_gates_config_edit(self, monkeypatch):
+        profile = r"C:\Users\John Smith"
+        monkeypatch.setenv("HOME", profile)
+        monkeypatch.setenv("USERPROFILE", profile)
+        monkeypatch.setenv("LOCALAPPDATA", profile + r"\AppData\Local")
+        monkeypatch.setenv("HERMES_HOME", profile + r"\AppData\Local\hermes")
+
+        assert _is_dangerous(
+            r"sed -i s/a/b/ /c/Users/John\ Smith/AppData/Local/hermes/config.yaml"
+        ) is True
+        assert _is_dangerous(
+            r"sed -i s/a/b/ /c/Users/John\ Smith/AppData/Local/hermes2/config.yaml"
+        ) is False

@@ -29,7 +29,9 @@ def _home_prefix_fold_regex(path: str):
     if len(components) < 2:
         return None
     # Optional leading root separator; a Windows drive letter is a component.
-    return re.compile(r"[/\\]*" + r"[/\\]+".join(re.escape(c) for c in components) + _PATH_TAIL)
+    # Git Bash escapes spaces in unquoted paths, so John\ Smith names the same home as John Smith.
+    spelled = [re.escape(c).replace(r"\ ", r"\\? ") for c in components]
+    return re.compile(r"[/\\]*" + r"[/\\]+".join(spelled) + _PATH_TAIL)
 
 
 def _fold_home_prefixes(command: str, paths, replacement: str) -> str:
