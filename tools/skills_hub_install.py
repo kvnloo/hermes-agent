@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import hashlib
 import shutil
-from contextlib import suppress
+from contextlib import ExitStack, suppress
 import tempfile
 import threading
 from pathlib import Path
@@ -244,25 +244,37 @@ def install_from_quarantine(
 
 
 def uninstall_skill(skill_name: str) -> tuple[bool, str]:
-    """Remove a hub-installed skill. Refuses to remove builtins."""
+    """Remove a hub-installed skill under the same per-profile lock as installs.
+
+    Target deletion and provenance removal are one transaction with respect to
+    concurrent hub installs; a successful install must not vanish during uninstall.
+    """
     from tools.skills_hub import HubLockFile, append_audit_log
-    lock = HubLockFile()
-    entry = lock.get_installed(skill_name)
-    if not entry:
-        return False, f"'{skill_name}' is not a hub-installed skill (may be a builtin)"
-    # The destructive boundary: whatever reaches rmtree MUST be inside
-    # SKILLS_DIR and MUST NOT be SKILLS_DIR itself (see _resolve_lock_install_path).
-    try:
-        install_path = _resolve_lock_install_path(entry.get("install_path", ""), skill_name)
-    except ValueError as exc:
-        return False, f"Refusing to uninstall '{skill_name}': {exc}"
-    if install_path.exists():
-        shutil.rmtree(install_path)
-    lock.record_uninstall(skill_name)
-    append_audit_log("UNINSTALL", skill_name, entry["source"], entry["trust_level"], "n/a", "user_request")
-    from hermes_cli.observability.shared_metrics_disabled import record_skill_removed
-    record_skill_removed(skill_name)
-    return True, f"Uninstalled '{skill_name}' from {entry['install_path']}"
+    with ExitStack() as stack:
+        try:
+            stack.enter_context(hub_install_lock())
+        except TimeoutError as exc:
+            return False, f"Could not uninstall '{skill_name}': {exc}"
+        except OSError:
+            # Match do_install's best-effort fallback on filesystems without locking.
+            logger.warning("Uninstalling %s without the hub install lock", skill_name, exc_info=True)
+        lock = HubLockFile()
+        entry = lock.get_installed(skill_name)
+        if not entry:
+            return False, f"'{skill_name}' is not a hub-installed skill (may be a builtin)"
+        # The destructive boundary: whatever reaches rmtree MUST be inside
+        # SKILLS_DIR and MUST NOT be SKILLS_DIR itself (see _resolve_lock_install_path).
+        try:
+            install_path = _resolve_lock_install_path(entry.get("install_path", ""), skill_name)
+        except ValueError as exc:
+            return False, f"Refusing to uninstall '{skill_name}': {exc}"
+        if install_path.exists():
+            shutil.rmtree(install_path)
+        lock.record_uninstall(skill_name)
+        append_audit_log("UNINSTALL", skill_name, entry["source"], entry["trust_level"], "n/a", "user_request")
+        from hermes_cli.observability.shared_metrics_disabled import record_skill_removed
+        record_skill_removed(skill_name)
+        return True, f"Uninstalled '{skill_name}' from {entry['install_path']}"
 
 
 def bundle_content_hash(bundle: SkillBundle) -> str:

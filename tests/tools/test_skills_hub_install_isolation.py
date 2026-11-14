@@ -145,3 +145,48 @@ def test_failed_quarantine_write_leaves_no_partial_tree(hub_dirs, monkeypatch, e
     with pytest.raises(type(exc)):
         quarantine_bundle(bundle)
     assert list((hub_dir / "quarantine").iterdir()) == []
+
+
+def test_uninstall_waits_for_same_profile_install_lock(hub_dirs, monkeypatch):
+    """A concurrent uninstall cannot delete a skill while its install transaction is active."""
+    import tools.skills_hub_install as hub_install
+    from tools.skills_hub import HubLockFile, ensure_hub_dirs
+
+    skills_dir, _hub_dir = hub_dirs
+    ensure_hub_dirs()
+    target = skills_dir / "demo"
+    target.mkdir()
+    (target / "SKILL.md").write_text("---\nname: demo\n---\n", encoding="utf-8")
+    HubLockFile().record_install(
+        name="demo", source="official", identifier="official/demo",
+        trust_level="builtin", scan_verdict="safe", skill_hash="sha256:demo",
+        install_path="demo", files=["SKILL.md"], metadata={},
+    )
+
+    reached_lock = threading.Event()
+    results: list = []
+    original_lock = hub_install.hub_install_lock
+
+    def observed_lock():
+        if threading.current_thread() is uninstaller:
+            reached_lock.set()
+        return original_lock()
+
+    monkeypatch.setattr(hub_install, "hub_install_lock", observed_lock)
+    uninstaller = threading.Thread(target=lambda: results.append(hub_install.uninstall_skill("demo")))
+    try:
+        with original_lock():
+            uninstaller.start()
+            assert reached_lock.wait(10), "Uninstall never requested the install lock"
+            uninstaller.join(2.0)
+            assert uninstaller.is_alive()
+            assert target.is_dir()
+            assert HubLockFile().get_installed("demo") is not None
+    finally:
+        if uninstaller.ident is not None:
+            uninstaller.join(10)
+
+    assert not uninstaller.is_alive()
+    assert results and results[0][0] is True
+    assert not target.exists()
+    assert HubLockFile().get_installed("demo") is None
