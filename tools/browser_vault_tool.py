@@ -250,7 +250,20 @@ def _bound_page_origin(task_id: str, meta: Any, probe_kind: str) -> str | dict[s
         return {"success": False, "error_type": "no_origin",
                 "error": f"Vault item {meta.id!r} has no bound origin; {meta.kind} items are filled only on "
                          "the site they were saved for."}
-    page_origin = next((o for o in (_focus_bound_origin(task_id, c, probe_kind) for c in allowed) if o), None)
+    page_origin = None
+    if len(allowed) > 1:
+        # A manager item's origin order must not choose a background tab before browser_exec's tab.
+        current_url = _focus_bound_origin(task_id, "", probe_kind)
+        if current_url:
+            from agent.vault_store import VaultError, normalize_origin
+            try:
+                candidate = normalize_origin(current_url)
+            except VaultError:
+                candidate = None
+            if candidate in allowed:
+                page_origin = candidate
+    page_origin = page_origin or next(
+        (o for o in (_focus_bound_origin(task_id, c, probe_kind) for c in allowed) if o), None)
     page_origin = page_origin or _current_page_origin(task_id)
     if not page_origin:
         return {"success": False,

@@ -103,6 +103,26 @@ def test_driven_tab_elsewhere_falls_back_to_the_origin_walk(supervisor):
     assert cdp.attached == ["T-stale"]
 
 
+def test_multi_origin_vault_item_prefers_driven_tab_before_primary_origin(supervisor, monkeypatch):
+    """A manager item saved on two sites must not fill a stale tab on its primary site."""
+    from types import SimpleNamespace
+
+    from tools import browser_supervisor, browser_vault_tool
+
+    sup, cdp = supervisor
+    driven_origin = "https://second.example"
+    monkeypatch.setitem(_TABS[2], "url", f"{driven_origin}/login")
+    monkeypatch.setattr(browser_supervisor, "SUPERVISOR_REGISTRY",
+                        SimpleNamespace(get=lambda task_id: sup))
+    monkeypatch.setattr(browser_vault_tool, "_page_backend", lambda task_id: None)
+    sup.set_driven_target("T-own")
+    meta = SimpleNamespace(id="multi", kind="login", origin=_ORIGIN,
+                           allowed_origins=(_ORIGIN, driven_origin))
+
+    assert browser_vault_tool._bound_page_origin("t", meta, "login") == driven_origin
+    assert cdp.attached == ["T-own"]
+
+
 @pytest.mark.platforms("linux", "macos")
 def test_harness_current_target_reads_the_daemons_attached_tab():
     """The daemon socket the harness binds for ``env`` answers ``current_tab`` with its targetId."""
