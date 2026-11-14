@@ -194,8 +194,19 @@ def _redact_spill_file(path, total_chars, command, env=None) -> list[tuple[str, 
     # SSH's next pre-command sync can still be inside its five-second throttle.
     # Publish the redacted bytes before handing the model the remote path.
     sync_manager = getattr(env, "_sync_manager", None)
-    if sync_manager is not None:
-        sync_manager.sync(force=True)
+    try:
+        if sync_manager is not None:
+            sync_manager.sync(force=True)
+        if visible_path != str(path):
+            from tools.tool_result_storage import _sandbox_shell_path
+            if env is None or env.execute(
+                f"test -r {_sandbox_shell_path(visible_path)}", timeout=15,
+            ).get("returncode", 1) != 0:
+                logger.warning("Terminal spill unreadable on backend: %s", visible_path)
+                return []
+    except Exception:  # health: allow BLE001 -- remote sync/probe errors must not lose a completed tool result
+        logger.warning("Terminal spill visibility check failed: %s", visible_path, exc_info=True)
+        return []
     note = ("Output exceeded the capture window (head+tail shown). "
             f"Full output ({total_chars:,} chars) saved to {visible_path} — search it with "
             "search_files or page it with read_file instead of re-running the command.")

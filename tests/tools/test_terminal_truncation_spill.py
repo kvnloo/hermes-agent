@@ -89,9 +89,14 @@ def test_ssh_spill_path_resolves_to_synced_remote_file(tmp_path, monkeypatch):
     # The SSH backend already synced at startup; a fresh spill must bypass
     # the five-second normal sync throttle before the next read_file call.
     uploaded = {}
+    remote_home = tmp_path / "remote-home"
+    remote_home.mkdir()
 
     def upload(staged, remote):
         uploaded[remote] = Path(staged).read_text(encoding="utf-8")
+        remote_path = remote_home / Path(remote).relative_to("/home/remote")
+        remote_path.parent.mkdir(parents=True, exist_ok=True)
+        remote_path.write_text(uploaded[remote], encoding="utf-8")
 
     sync_manager = FileSyncManager(
         get_files_fn=lambda: iter_sync_files("/home/remote/.hermes"),
@@ -104,7 +109,15 @@ def test_ssh_spill_path_resolves_to_synced_remote_file(tmp_path, monkeypatch):
     collector.append(output)
     result = _finalize_wait_result(collector, collector.render(), 0)
     host_path = Path(result["full_output_path"])
-    env = SimpleNamespace(_sync_manager=sync_manager)
+    def execute(command, timeout=None):
+        import subprocess
+        result = subprocess.run(
+            ["bash", "-c", command], capture_output=True, text=True,
+            env={**os.environ, "HOME": str(remote_home)}, timeout=timeout, check=False,
+        )
+        return {"returncode": result.returncode}
+
+    env = SimpleNamespace(_sync_manager=sync_manager, execute=execute)
     fields = dict(
         _redact_spill_file(str(host_path), result["output_total_chars"], "echo safe", env=env)
     )
@@ -118,3 +131,43 @@ def test_ssh_spill_path_resolves_to_synced_remote_file(tmp_path, monkeypatch):
     assert (str(host_path), f"/home/remote/.hermes/{remote_rel}") in iter_sync_files(
         "/home/remote/.hermes"
     )
+
+@pytest.mark.platforms("posix")
+def test_ssh_spill_does_not_advertise_a_failed_upload(tmp_path, monkeypatch):
+    """A swallowed SCP error must not produce a dead read_file path (#154749)."""
+    from types import SimpleNamespace
+
+    from tools.environments.file_sync import FileSyncManager
+    from tools.terminal_tool_result import _redact_spill_file
+    from tools.tool_output_limits import get_max_bytes
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    monkeypatch.setenv("TERMINAL_ENV", "ssh")
+    host_path = tmp_path / ".hermes" / "cache" / "terminal-output" / "out-failed.log"
+    host_path.parent.mkdir(parents=True)
+    row = "safe output row\n"
+    content = row * (get_max_bytes() // len(row) + 2)
+    host_path.write_text(content, encoding="utf-8")
+    upload_calls = []
+
+    def fail_upload(staged, remote):
+        upload_calls.append((staged, remote))
+        raise OSError("SCP upload rejected")
+
+    manager = FileSyncManager(
+        get_files_fn=lambda: [
+            (str(host_path), "/home/remote/.hermes/cache/terminal-output/out-failed.log"),
+        ],
+        upload_fn=fail_upload,
+        delete_fn=lambda _: None,
+    )
+    env = SimpleNamespace(
+        _sync_manager=manager,
+        execute=lambda command, timeout=None: {"returncode": 1},
+    )
+    fields = dict(_redact_spill_file(str(host_path), len(content), "echo safe", env=env))
+
+    assert upload_calls  # FileSyncManager logs/rolls back the upload error instead of raising.
+    assert host_path.is_file()  # Keep the redacted host archive and the terminal head/tail.
+    assert "full_output_path" not in fields
+    assert "truncation_note" not in fields
