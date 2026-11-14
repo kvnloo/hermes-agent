@@ -84,6 +84,7 @@ def merge_mac_feeds(legs: dict[str, str], tag: str, light: bool = False,
     that namespace (the attempt ref for stable attempts); `tag` stays the
     version identity."""
     import hermes_yaml as yaml  # lazy
+    from scripts.bundles.release_artifacts import SQUIRREL_ZIP_LIMIT
 
     version = tag[1:] if isinstance(tag, str) and tag.startswith("v") else ""
     if not is_release_version(version):
@@ -104,6 +105,9 @@ def merge_mac_feeds(legs: dict[str, str], tag: str, light: bool = False,
         for file_entry in leg["files"]:
             if file_entry.get("url") not in (f"{prefix}.zip", f"{prefix}.dmg"):
                 raise ValueError(f"Wrong variant or architecture: {file_entry.get('url')}")
+            if file_entry["url"].endswith(".zip") and file_entry["size"] >= SQUIRREL_ZIP_LIMIT:
+                raise ValueError(
+                    f"macOS update ZIP is {file_entry['size']:,} bytes; Squirrel.Mac cannot download 1 GiB or more")
             rewritten = {**file_entry, "url": f"/releases/tag/{archive or tag}/{file_entry['url']}"}
             prior = files.get(file_entry["url"])
             if prior is not None and prior != rewritten:

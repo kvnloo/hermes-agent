@@ -95,6 +95,17 @@ def test_merges_native_legs_and_preserves_release_metadata():
     assert light_plan["key"] == f"{selection['directory']}/{selection['fileName']}"
 
 
+def test_merge_refuses_oversized_zip_from_previously_recorded_feed():
+    """A pre-recorded over-limit ZIP must not reach a live Squirrel.Mac update feed."""
+    legs, _ = _inputs()
+    name = "arm64-stable-mac.yml"
+    feed = yaml.safe_load(legs[name])
+    feed["files"][0]["size"] = 1 << 30  # Real 1 GiB boundary, not a lowered test limit.
+    legs[name] = yaml.safe_dump(feed, sort_keys=False)
+    with pytest.raises(ValueError, match="Squirrel.Mac cannot download 1 GiB"):
+        merge_mac_feeds(legs, "v0.28.0")
+
+
 @pytest.mark.parametrize(
     "kind", ["missing", "version", "variant", "hash", "legacy", "traversal"]
 )
