@@ -46,7 +46,7 @@ const abandonedReason = (outcome: string, notice?: string) =>
 /** A stored clarify result on resume, shown as the live turn showed it: a submitted form as the settled trail and
  * `question → answer` bubble (`abandoned: false`), a cancelled, timed-out or undelivered one as its system line.
  * Null when the result has no responses. */
-export function storedClarifyRows(content: string) {
+export function storedClarifyRows(content: string, args?: { questions?: { question?: string }[] }) {
   let result: StoredClarifyResult | null
 
   try {
@@ -65,7 +65,7 @@ export function storedClarifyRows(content: string) {
   const rows = responses.map((row, index) => ({
     answer: Array.isArray(row?.user_response) ? row.user_response.join(', ') : (row?.user_response ?? undefined),
     qid: `q${index}`,
-    question: row?.question ?? ''
+    question: row?.question || args?.questions?.[index]?.question || ''
   }))
 
   const answers = Object.fromEntries(rows.map(row => [row.qid, row.answer]))

@@ -59,4 +59,24 @@ describe('clarifySettledRows', () => {
     expect(line?.text).toContain(reason)
     expect(line?.text).not.toContain('(skipped)')
   })
+
+  it('restores the question from saved tool-call args for a legacy statusless clarify result', () => {
+    // Older persisted results have user_response but no echoed question.
+    // The projection already carries the original tool-call arguments.
+    const content = JSON.stringify({ responses: [{ user_response: 'release' }] })
+    const rows = toTranscriptMessages([
+      {
+        args: { questions: [{ question: 'Deploy which branch?' }] },
+        content,
+        context: '1 question',
+        name: 'clarify',
+        role: 'tool'
+      }
+    ])
+
+    expect(rows.map(row => [row.role, row.text])).toEqual([
+      ['system', ''],
+      ['user', 'Deploy which branch? → release']
+    ])
+  })
 })

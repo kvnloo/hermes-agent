@@ -26,8 +26,8 @@ const storedRowId = (role: string, rowId: unknown): Pick<Msg, 'rowId'> =>
 
 /** A resumed tool row joins the next reply's trail; a clarify row shows what the live turn wrote after its trail
  * (the answers bubble, or the abandoned form's system line). Returns the trail lines still pending. */
-const pushToolRow = (out: Msg[], pending: string[], { content, context, name }: TranscriptRow): string[] => {
-  const clarify = name === 'clarify' && content ? storedClarifyRows(content) : null
+const pushToolRow = (out: Msg[], pending: string[], { args, content, context, name }: TranscriptRow): string[] => {
+  const clarify = name === 'clarify' && content ? storedClarifyRows(content, args) : null
 
   if (!clarify) {
     return [...pending, buildToolTrailLine(name ?? 'tool', context ?? '')]
@@ -52,13 +52,13 @@ export const toTranscriptMessages = (rows: unknown): Msg[] => {
       continue
     }
 
-    const { content, context, display_kind, name, role, row_id, text, timestamp } = row as TranscriptRow
+    const { args, content, context, display_kind, name, role, row_id, text, timestamp } = row as TranscriptRow
 
     const createdAt =
       typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0 ? timestamp : undefined
 
     if (role === 'tool') {
-      pending = pushToolRow(out, pending, { content, context, name })
+      pending = pushToolRow(out, pending, { args, content, context, name })
 
       continue
     }
@@ -142,6 +142,7 @@ export const fmtDuration = (ms: number) => {
 }
 
 interface TranscriptRow {
+  args?: { questions?: { question?: string }[] }
   content?: string
   context?: string
   display_kind?: string
