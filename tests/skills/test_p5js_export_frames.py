@@ -88,3 +88,15 @@ def test_unreadable_asset_fails_only_its_own_request(tmp_path):
         assert _serve(sketch_dir, "/ok.txt") == {"status": 200, "body": "fine"}
     finally:
         locked.chmod(0o600)
+
+def test_wasm_asset_uses_streaming_mime(tmp_path):
+    # WebAssembly.instantiateStreaming requires application/wasm, not octet-stream.
+    (tmp_path / "engine.wasm").write_bytes(bytes.fromhex("0061736d01000000"))
+    out = _node(
+        "(() => { let served; m.sketchRequestHandler(" + json.dumps(str(tmp_path)) + ")({"
+        " url: () => m.SKETCH_ORIGIN + '/engine.wasm',"
+        " continue: () => { throw new Error('local WASM request was continued'); },"
+        " respond: (r) => { served = { status: r.status, contentType: r.contentType, length: r.body.length }; }"
+        " }); return served; })()"
+    )
+    assert out == {"status": 200, "contentType": "application/wasm", "length": 8}
