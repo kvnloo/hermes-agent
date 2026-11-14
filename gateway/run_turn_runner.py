@@ -147,6 +147,9 @@ def _resolution_failure_reply(exc: Exception, platform: Platform) -> tuple[str, 
         # The chosen model is configured; its local server is down. Not a credential verdict, so
         # the client must not offer "Update API key" or sign-in: the sentence names the fix.
         return f"⚠️ {exc}", exc.error_code, exc.retryable
+    if isinstance(exc, AuthError) and exc.code == "invalid_provider":
+        # A removed provider is a stale session choice, not a rejected credential.
+        return f"⚠️ {exc}", "invalid_provider", False
     if isinstance(exc, RuntimeStoreError) and exc.reason == 'launch_credentials_unavailable':
         # The session's launch key is gone (a restart revoked a CLI --api-key, a route key changed):
         # the shared refusal copy names /new, never a resend.

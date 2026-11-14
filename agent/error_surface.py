@@ -57,7 +57,7 @@ _FREE_TIER_RETRYABLE_KINDS = {"rate_limited", "at_capacity", "outage"}
 _NON_RETRYABLE_REASONS = {
     "auth", "auth_permanent", "billing", "billing_unverified", "content_policy_blocked",
     "provider_policy_blocked", "data_policy_denied", "model_not_found", "format_error", "ssl_cert_verification",
-    "context_overflow", "interpreter_shutdown", "upstream_blocked",
+    "context_overflow", "interpreter_shutdown", "upstream_blocked", "invalid_provider",
 }
 
 # Providers whose base_url is user-supplied rather than a known vendor.
@@ -204,6 +204,9 @@ def build_error_surface_from_result(result: Any, provider: str = "", model: str 
         if not isinstance(retryable, bool):
             retryable = reason not in _NON_RETRYABLE_REASONS
         surface = _surface(_result_layer(reason, error_text, provider), reason, retryable, provider, model)
+        if reason == "invalid_provider":
+            # The resolver already names the stale pin and how to inspect the available providers.
+            surface["message"] = error_text
         # When the provider named the moment its limit lifts (Retry-After / ``resets_at``,
         # ``agent/turn_recovery.py::_stamp_limit_reset``) the card can say "Limit resets at HH:mm"
         # next to Retry instead of leaving the user to guess (#98852). Epoch seconds.
