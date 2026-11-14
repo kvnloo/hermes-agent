@@ -727,6 +727,25 @@ class TestCellStdoutSpill(unittest.TestCase):
         if os.name == "posix":
             self.assertEqual(stat_mod.S_IMODE(os.stat(spill).st_mode), 0o600)
 
+    def test_cell_spill_hides_secret_fragment_split_at_runner_cap(self):
+        """A runner-capped spill must not publish a credential fragment too short
+        for the redactor to recognize without the missing suffix."""
+        from agent.redact import redact_code_output
+        from tools.code_kernel import _RUNNER_SPILL_CHARS
+        token = "ghp_0123456789abcdef"
+        fragment = token[:13]  # nine body chars: below the ghp_ matcher minimum
+        self.assertNotIn(token, redact_code_output(token))  # complete token is masked
+        with _kernel_config():
+            result = _run(
+                f"print('x' * {_RUNNER_SPILL_CHARS - len(fragment) - 1} + '\\n' + {token!r})"
+            )
+        self.assertEqual(result["status"], "success", result)
+        self.assertIn("FULL output saved", result.get("warning", ""))
+        body = Path(result["stdout_spill_path"]).read_text(encoding="utf-8")
+        self.assertNotIn(fragment, body)
+        self.assertIn("[... spill capped", body)
+        self.assertGreater(len(body), _RUNNER_SPILL_CHARS - 1024)
+
     def test_cell_spill_keeps_full_non_ascii_output(self):
         """The runner caps its spill in characters written as UTF-8, so a multibyte
         spill under that cap is several times larger on disk; it is still our spill

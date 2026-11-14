@@ -96,9 +96,14 @@ def _spill_full_stdout(stdout_text: str, env: Any = None) -> Optional[str]:
         from tools.spill_safety import ensure_spill_dir, write_text_exclusive
         from tools.tool_result_storage import _persist_hosted
         if len(stdout_text) > MAX_SPILLED_STDOUT_BYTES:
-            stdout_text = (stdout_text[:MAX_SPILLED_STDOUT_BYTES]
+            # The runner may already have clipped a credential mid-token. Redact
+            # the bounded prefix, then discard its tail: an incomplete token can
+            # fall below the redactor's minimum matching length.
+            clean = _sanitize_output_text(stdout_text[:MAX_SPILLED_STDOUT_BYTES])
+            stdout_text = (clean[:-256]
                            + f"\n\n[... spill capped at {MAX_SPILLED_STDOUT_BYTES:,} bytes ...]")
-        stdout_text = _sanitize_output_text(stdout_text)
+        else:
+            stdout_text = _sanitize_output_text(stdout_text)
         digest = hashlib.sha256(stdout_text.encode("utf-8", errors="replace")).hexdigest()[:12]
         if (hosted_path := _persist_hosted(stdout_text, f"exec-stdout-{digest}", env)) is not None:
             return hosted_path or None
