@@ -184,3 +184,65 @@ def test_ws_monitor_connect_diagnostic_omits_url_userinfo(monkeypatch, capsys):
     assert password not in err
     assert "ws://[::1]:8188/comfy/ws" in err
     assert urls == [f"ws://user:{password}@[::1]:8188/comfy/ws?clientId=cid-1"]
+
+
+def _load_auto_fix_deps():
+    sys.path.insert(0, str(SCRIPTS))
+    try:
+        import auto_fix_deps
+    finally:
+        sys.path.remove(str(SCRIPTS))
+    return auto_fix_deps
+
+
+def _record_subprocess(monkeypatch, module, stdout=""):
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append((cmd, kwargs.get("env")))
+        return subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr="")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+    return calls
+
+
+def test_model_download_tokens_go_through_child_env_not_argv(monkeypatch, capsys):
+    """Download tokens never reach comfy-cli argv (persisted --set-* setters, logged)."""
+    mod = _load_auto_fix_deps()
+    hf = "hf_" + "x" * 30
+    civ = "civ" + "y" * 30
+    calls = _record_subprocess(monkeypatch, mod, stdout=f"auth {hf} ok")
+
+    assert mod.install_model("https://huggingface.co/o/r/resolve/main/m.safetensors",
+                             "checkpoints", hf_token=hf, civitai_token=civ)
+    assert mod.install_model("https://civitai.com/api/download/models/1",
+                             "loras", hf_token=hf, civitai_token=civ)
+    assert mod.install_model("https://huggingface.co.evil.example/m.safetensors",
+                             "loras", hf_token=hf, civitai_token=civ)
+
+    for cmd, _env in calls:
+        assert not any(a.startswith("--set-") for a in cmd), cmd
+        assert hf not in cmd and civ not in cmd, cmd
+    (_, hf_env), (_, civ_env), (_, other_env) = calls
+    assert hf_env["HF_API_TOKEN"] == hf and hf_env.get("CIVITAI_API_TOKEN") != civ
+    assert civ_env["CIVITAI_API_TOKEN"] == civ and civ_env.get("HF_API_TOKEN") != hf
+    assert other_env is None or (other_env.get("HF_API_TOKEN") != hf
+                                 and other_env.get("CIVITAI_API_TOKEN") != civ)
+    err = capsys.readouterr().err
+    assert hf not in err and civ not in err
+
+
+def test_node_install_gets_no_supplied_token(monkeypatch):
+    mod = _load_auto_fix_deps()
+    calls = _record_subprocess(monkeypatch, mod)
+    assert mod.install_node("some-pack")
+    (cmd, env), = calls
+    assert env is None and "some-pack" in cmd
+
+
+def test_run_cmd_redacts_supplied_token_from_output(monkeypatch):
+    mod = _load_auto_fix_deps()
+    secret = "hf_" + "z" * 30
+    _record_subprocess(monkeypatch, mod, stdout=f"using token {secret}")
+    _code, out = mod.run_cmd(["comfy"], env_overlay={"HF_API_TOKEN": secret})
+    assert secret not in out
