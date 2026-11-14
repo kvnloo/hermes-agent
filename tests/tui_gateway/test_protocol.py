@@ -1865,6 +1865,49 @@ def test_skin_live_switch_end_to_end(server, tmp_path, monkeypatch):
     assert emitted[0][1]["customCSS"] == ".chat-input { font-size: 16px; }"
 
 
+def test_set_theme_skin_goes_live_and_in_place_edits_repaint(server, tmp_path, monkeypatch):
+    """The agent's loop for a custom look: write skins/<name>.yaml, set_theme(skin=<name>), then edit
+    the file. Each step reaches the desktop as skin.changed carrying the file's current customCSS."""
+    import json
+
+    from hermes_cli import skin_engine
+    from tools.registry import discover_builtin_tools, registry
+
+    skin = tmp_path / "skins" / "pixel-quest.yaml"
+    skin.parent.mkdir()
+
+    def write(seconds, mtime):
+        skin.write_text(f"name: pixel-quest\ncolors:\n  background: '#120a24'\n"
+                        f"customCSS: |\n  body {{ animation: drift {seconds}s infinite; }}\n", encoding="utf-8")
+        os.utime(skin, (mtime, mtime))
+
+    write(8, 1_000_000)
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setattr(skin_engine, "get_hermes_home", lambda: tmp_path)
+    monkeypatch.setattr(server, "_hermes_home", tmp_path)
+    monkeypatch.setattr(server, "_last_skin_sig", None, raising=False)
+    server._cfg_cache = server._cfg_sig = server._cfg_path = None
+    emitted = []
+    monkeypatch.setattr(server, "_stdio_is_rpc_channel", True)
+    monkeypatch.setattr(server, "_emit", lambda ev, sid, payload=None: emitted.append((ev, payload)))
+    (tmp_path / "config.yaml").write_text("display:\n  skin: default\n", encoding="utf-8")
+    server._broadcast_skin_if_changed()
+    emitted.clear()
+
+    time.sleep(0.01)
+    discover_builtin_tools()
+    result = json.loads(registry.dispatch("set_theme", {"skin": "pixel-quest"}, callback=lambda _: {}))
+    server._broadcast_skin_if_changed()
+    write(4, 1_000_100)
+    server._broadcast_skin_if_changed()
+
+    assert result == {"success": True, "skin": "pixel-quest"}
+    assert [(ev, p["name"], p["customCSS"]) for ev, p in emitted] == [
+        ("skin.changed", "pixel-quest", "body { animation: drift 8s infinite; }"),
+        ("skin.changed", "pixel-quest", "body { animation: drift 4s infinite; }"),
+    ]
+
+
 def test_broadcast_skin_if_changed_on_any_signature_move(server, monkeypatch):
     """A skin the agent changes mid-turn goes live once per real move: a name
     switch (incl. switch-then-revert) OR an in-place color edit to the active skin

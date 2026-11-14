@@ -37,3 +37,40 @@ def test_the_renderer_answer_is_the_result_for_values_and_pickers():
     assert sent == [{"layout": "cockpit", "accent": "#8A2BE2"}, {"picker": "layout"}]
     assert applied == {"success": False, "error": "Unknown layout", "available": ["sidebar-left"]}
     assert picked == {"success": True, "picked": {"layout": "terminal-deck"}}
+
+
+def _write_skin(home, name, css):
+    skins = home / "skins"
+    skins.mkdir(parents=True, exist_ok=True)
+    (skins / f"{name}.yaml").write_text(f"name: {name}\ncolors:\n  background: '#120a24'\n"
+                                        f"customCSS: |\n  {css}\n", encoding="utf-8")
+
+
+def test_a_skin_file_becomes_display_skin_without_reaching_the_renderer():
+    import os
+    from pathlib import Path
+
+    import hermes_yaml as yaml
+
+    home = Path(os.environ["HERMES_HOME"])
+    _write_skin(home, "pixel-quest", "body { animation: drift 8s infinite; }")
+    sent = []
+
+    applied = _dispatch({"skin": " pixel-quest "}, sent.append)
+
+    assert applied == {"success": True, "skin": "pixel-quest"} and sent == []
+    assert yaml.safe_load((home / "config.yaml").read_text())["display"]["skin"] == "pixel-quest"
+
+
+def test_an_unknown_skin_writes_nothing_and_names_the_file_to_create():
+    import os
+    from pathlib import Path
+
+    home = Path(os.environ["HERMES_HOME"])
+    sent = []
+
+    missing = _dispatch({"skin": "nope", "accent": "pink"}, sent.append)
+
+    assert missing["success"] is False and "skins/nope.yaml" in missing["error"]
+    assert "default" in missing["available"]
+    assert sent == [] and not (home / "config.yaml").exists()
