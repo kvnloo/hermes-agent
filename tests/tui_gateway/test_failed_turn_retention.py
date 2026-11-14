@@ -361,6 +361,43 @@ def test_exception_closes_turn_with_terminal_complete_and_partial(emits, turn_en
     assert snapshot["error_surface"]["layer"] == "gateway"
 
 
+def test_exception_pauses_active_goal_with_reason(emits, turn_env, tmp_path, monkeypatch):
+    """The exception terminal-frame path must pause /goal, not leave it active and idle."""
+    from hermes_cli import goals
+
+    home = tmp_path / ".hermes"
+    home.mkdir()
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    goals._DB_CACHE.clear()
+    goals._get_session_db()  # Warm the real goal store before the turn starts.
+    try:
+        mgr = goals.GoalManager("session-key")
+        mgr.set("ship the release")
+
+        def _fail(*args, **kwargs):
+            raise RuntimeError("connection reset mid-stream")
+
+        agent = types.SimpleNamespace(
+            session_id="session-key", run_conversation=_fail, clear_interrupt=lambda: None)
+        session = _session(agent=agent, running=True)
+        server._start_inflight_turn(session, "do the thing")
+        server._run_prompt_submit("rid", "sid", session, "do the thing")
+
+        completes = _events(emits, "message.complete")
+        assert len(completes) == 1
+        assert completes[0]["status"] == "error"
+        assert completes[0]["error"] == "connection reset mid-stream"
+        state = goals.GoalManager("session-key").state
+        assert state is not None
+        assert (state.status, state.paused_reason) == ("paused", "turn failed (turn_exception)")
+        notices = [p for p in _events(emits, "status.update") if p.get("kind") == "goal"]
+        assert len(notices) == 1
+        assert "turn_exception" in notices[0]["text"]
+        assert "/goal resume" in notices[0]["text"]
+    finally:
+        goals._DB_CACHE.clear()
+
+
 # ── Resume replay (the reason retention exists) ───────────────────────
 
 

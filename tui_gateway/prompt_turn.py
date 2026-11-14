@@ -1051,6 +1051,13 @@ def _recover_turn_exception(sid: str, session: dict, st: _TurnRun, e: BaseExcept
             file=sys.stderr, flush=True)
         _emit("error", sid, {"message": str(e)})
 
+    # An exception before run_conversation returned bypasses the ordinary post-turn hook.
+    # The error frame has already been emitted; now pause the active goal and notify the viewer.
+    if st.result is None and session.get("session_key"):
+        _goal_followup_after_turn(
+            sid, session, {"failed": True, "failure_reason": "turn_exception"}, "error", "")
+        _publish_session_control_snapshot(sid, session, only_if_present=True)
+
 
 def _release_turn_scopes(sid: str, session: dict, st: _TurnRun) -> None:
     """Finally-path, before settlement: drop snapshots, end turn audio, undo a one-turn model, reset the
