@@ -22,6 +22,7 @@ full CLI (which needs a real provider config).
 from __future__ import annotations
 
 import os
+import select
 import signal
 import subprocess
 import sys
@@ -131,13 +132,49 @@ def _spawn_synthetic(env_overrides: dict) -> subprocess.Popen:
     )
     # Wait for "READY" so we know the signal handler is installed.
     assert proc.stdout is not None
-    deadline = time.time() + 30.0
-    while time.time() < deadline:
-        line = proc.stdout.readline()
-        if line and line.startswith(b"READY"):
+    # A blocking readline would ignore the deadline if a child stalls before READY.
+    deadline = time.monotonic() + 30.0
+    partial = b""
+    while (remaining := deadline - time.monotonic()) > 0:
+        readable, _, _ = select.select([proc.stdout], [], [], remaining)
+        if not readable or time.monotonic() >= deadline:
+            break
+        chunk = os.read(proc.stdout.fileno(), 4096)
+        if not chunk:
+            break
+        partial += chunk
+        *lines, partial = partial.split(b"\n")
+        if any(line.startswith(b"READY") for line in lines):
             return proc
     proc.kill()
     raise RuntimeError("synthetic worker never signalled READY")
+
+@pytest.mark.platforms("posix")
+def test_synthetic_ready_timeout_does_not_block_on_silent_worker(monkeypatch):
+    """A worker that never sends READY must not bypass the startup deadline."""
+    import select as select_module
+
+    class SilentStdout:
+        def fileno(self):
+            return 0
+
+        def readline(self):
+            pytest.fail("blocking readline bypassed the startup deadline")
+
+    class SilentWorker:
+        stdout = SilentStdout()
+        killed = False
+
+        def kill(self):
+            self.killed = True
+
+    proc = SilentWorker()
+    monkeypatch.setattr(subprocess, "Popen", lambda *args, **kwargs: proc)
+    # Simulate the real 30s select timeout without reducing the deadline.
+    monkeypatch.setattr(select_module, "select", lambda *args, **kwargs: ([], [], []))
+    with pytest.raises(RuntimeError, match="never signalled READY"):
+        _spawn_synthetic({"HERMES_KANBAN_TASK": "t_test_28181"})
+    assert proc.killed
 
 def _cleanup(proc: subprocess.Popen) -> None:
     try:
