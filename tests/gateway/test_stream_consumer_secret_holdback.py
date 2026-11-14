@@ -281,3 +281,22 @@ async def test_a_double_quoted_value_holding_an_apostrophe_is_held_to_its_closin
     adapter = _adapter()
     await _stream(adapter, *('Config: {"pass' + 'word": "' + value + '", "user": "bob"} done'))
     assert not _raw_runs([content for _op, _id, content in adapter.ops], value)
+
+
+def test_grafana_cloud_plus_newline_split_is_held_before_streaming():
+    """A '+' in glc_ base64 must not release the first half of a split token (#150339)."""
+    import base64
+
+    from agent.redact import redact_for_egress
+    from gateway.stream_consumer_redact import settled_end
+
+    token = "glc_" + base64.b64encode(
+        b'{"abc":"~","n":"long-lived-cloud-access-policy-token"}'
+    ).decode("ascii")
+    head = token[:27]  # Includes '+' but is below the contiguous glc_ regex's body floor.
+    assert "+" in head and len(head) < len(token)
+    partial = "Result: " + head + "\n"
+    # The token's first half must not settle into an irrevocable preview/draft frame.
+    assert settled_end(partial) == len("Result: ")
+    final = redact_for_egress(partial + token[len(head):] + " done")
+    assert token[13:23] not in final
