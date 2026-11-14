@@ -192,3 +192,14 @@ def test_config_backend_outage_fails_closed(session, caplog):
         assert _write_call_asks()
     session.call_tool.assert_not_awaited()
     assert any("config read failed (ConfigBackendUnavailable)" in r.getMessage() for r in caplog.records)
+
+
+@pytest.mark.parametrize("managed_yaml", ["- unexpected\n", "[]\n", "false\n"])
+def test_non_mapping_managed_overlay_fails_closed(session, managed_dir, caplog, managed_yaml):
+    """A YAML-valid wrong-root admin overlay must not make a lost trust record default to full."""
+    _configure(None)  # Native entry has no trust; managed policy may have required untrusted.
+    (managed_dir / "config.yaml").write_text(managed_yaml)
+    with caplog.at_level(logging.WARNING, logger=_mcp_handlers.logger.name):
+        assert _write_call_asks()
+    session.call_tool.assert_not_awaited()
+    assert any("config read failed (ValueError)" in r.getMessage() for r in caplog.records)

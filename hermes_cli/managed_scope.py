@@ -108,7 +108,11 @@ def _load_managed_file(name: str, cache: dict[str, tuple], parse, *, strict: boo
     if managed_dir is None:
         return {}
     parsed = _cached_read(managed_dir / name, cache, parse, strict=strict)
-    return parsed if isinstance(parsed, dict) else {}
+    if isinstance(parsed, dict):
+        return parsed
+    if strict and parsed is not None:
+        raise ValueError(f"managed scope: {name} must contain a mapping, got {type(parsed).__name__}")
+    return {}
 
 
 def load_managed_config(*, strict: bool = False) -> dict:
@@ -119,7 +123,7 @@ def load_managed_config(*, strict: bool = False) -> dict:
 
     if not get_config_backend().honors_managed_config():
         return {}
-    return _load_managed_file("config.yaml", _CONFIG_CACHE, lambda p: fast_safe_load(p.read_text(encoding="utf-8-sig")) or {},
+    return _load_managed_file("config.yaml", _CONFIG_CACHE, lambda p: fast_safe_load(p.read_text(encoding="utf-8-sig")),
                               strict=strict)
 
 
