@@ -107,6 +107,23 @@ def test_scratch_home_update_never_rewrites_the_account_unit_or_another_checkout
     assert events == [("systemctl", "daemon-reload")]
 
 
+@pytest.mark.platforms("linux")
+def test_disjoint_home_update_never_rewrites_account_unit_from_same_checkout(tmp_path, monkeypatch, account):
+    root, _nested, events = account
+    # Unlike a scratch home below ~/.hermes, this independent root is a sibling
+    # of the account's inventory root. Same checkout is not the same home.
+    disjoint = tmp_path / "independent-home"
+    disjoint.mkdir()
+    monkeypatch.setenv("HERMES_HOME", str(disjoint))
+    unit = _unit(tmp_path, _updater_code_root(), root)
+    monkeypatch.setattr(gateway_cli, "get_systemd_unit_path", lambda system=False: unit)
+
+    update_launch_files.refresh_launch_files()
+
+    assert unit.read_text(encoding="utf-8").endswith(STALE)
+    assert events == []
+
+
 @pytest.mark.platforms("posix")
 @pytest.mark.parametrize("own", [False, True], ids=["other-checkout", "own-checkout"])
 def test_ancestor_gateway_of_another_checkout_is_never_signalled(tmp_path, monkeypatch, own):

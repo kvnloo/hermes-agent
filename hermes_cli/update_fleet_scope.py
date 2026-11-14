@@ -38,8 +38,8 @@ def _resolved(path) -> Path | None:
 def update_scope_homes() -> set[Path]:
     """Resolved homes the running update owns: the invoking home, the install root and its profiles.
 
-    A home NESTED inside an inventoried home (a scratch ``HERMES_HOME`` under ``~/.hermes/cache``
-    resolves the account's root) is not that install: it owns only itself."""
+    A home outside the profile inventory is a separate install, whether nested below
+    ``~/.hermes`` or disjoint from it: it owns only itself."""
     invoking: Path | None = None
     with suppress(Exception):
         from hermes_constants import get_hermes_home
@@ -50,7 +50,7 @@ def update_scope_homes() -> set[Path]:
         inventory = {resolved for _profile, home in _profile_homes() if (resolved := _resolved(home)) is not None}
     if invoking is None:
         return inventory
-    if invoking not in inventory and any(invoking.is_relative_to(home) for home in inventory):
+    if invoking not in inventory:
         return {invoking}
     return {invoking, *inventory}
 
