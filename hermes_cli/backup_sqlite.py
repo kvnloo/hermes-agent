@@ -213,7 +213,7 @@ _ABANDONED_STAGING_SECONDS = 2 * 3600
 
 def _reclaim_abandoned_staging(home: Path, prefix: str) -> None:
     horizon = time.time() - _ABANDONED_STAGING_SECONDS
-    for staged in home.glob(f"{prefix}*.partial*"):  # + the copy's -journal
+    for staged in home.glob(f"{prefix}*.partial*"):  # + SQLite's -journal/-wal/-shm
         with suppress(OSError):
             if staged.stat().st_mtime < horizon:
                 staged.unlink()
@@ -244,8 +244,9 @@ def preflight_state_db(home: Path) -> dict:
     # Named before it exists, so a SIGTERM at any point after creation reaches the
     # cleanup below; _safe_copy_db creates it owner-only and refuses a symlink.
     staged = home / f"{prefix}{stamp}-{os.getpid()}.partial"
-    # A copy stopped mid-write leaves the staging copy's rollback journal behind too.
-    staging = {staged, Path(f"{staged}-journal")}
+    # A WAL-mode copy can leave -wal/-shm open during quick_check. os._exit bypasses
+    # connection.close(), so the SIGTERM handler must remove those sidecars too.
+    staging = {staged, Path(f"{staged}-journal"), Path(f"{staged}-wal"), Path(f"{staged}-shm")}
     _STAGING.update(staging)
     try:
         if not _safe_copy_db(source, staged):

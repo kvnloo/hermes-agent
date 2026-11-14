@@ -162,3 +162,37 @@ def test_a_sigterm_landing_inside_a_weakref_callback_still_stops_the_copy(tmp_pa
 
     assert proc.returncode == 128 + signal.SIGTERM, stderr
     assert _staging(home) == []
+
+@pytest.mark.platforms("posix")
+def test_sigterm_during_wal_integrity_check_removes_all_staging_sidecars(tmp_path):
+    """A SIGTERM during WAL quick_check must not strand the copy's -wal/-shm files.
+
+    The progress callback pins the signal inside the real integrity check without
+    shrinking the production backup deadline. Both the copy and signal handler
+    run through backup_sqlite.py as __main__ in a child interpreter.
+    """
+    home = _home_with_db(tmp_path, 10, journal_mode="WAL")
+    child = (
+        "import os, runpy, signal, sqlite3, sys\n"
+        f"sys.argv = ['backup_sqlite.py', {str(home)!r}]\n"
+        "real_connect = sqlite3.connect\n"
+        "def connect(path, *args, **kwargs):\n"
+        "    conn = real_connect(path, *args, **kwargs)\n"
+        "    if str(path).endswith('.partial') and 'check_same_thread' not in kwargs:\n"
+        "        assert conn.execute('PRAGMA journal_mode').fetchone() == ('wal',)\n"
+        "        def terminate():\n"
+        "            os.kill(os.getpid(), signal.SIGTERM)\n"
+        "            return 0\n"
+        "        conn.set_progress_handler(terminate, 1)\n"
+        "    return conn\n"
+        "sqlite3.connect = connect\n"
+        f"runpy.run_path({str(SCRIPT)!r}, run_name='__main__')\n"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-I", "-S", "-c", child],
+        capture_output=True, timeout=60, check=False,
+    )
+    assert proc.returncode == 128 + signal.SIGTERM, proc.stderr
+    assert _staging(home) == []
+    assert not list(home.glob("state.db.pre-update-emergency-*.bak"))
+
