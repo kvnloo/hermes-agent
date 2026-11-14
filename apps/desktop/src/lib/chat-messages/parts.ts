@@ -189,7 +189,11 @@ const _MEDIA_EXT_ALTERNATION = [...MEDIA_DELIVERY_EXTS].sort((a, b) => b.length 
  * extension. Matches the Python-side `MEDIA_TAG_CLEANUP_RE` behavior where
  * `(?:[^\S\n]+\S+?)*?\.(?:EXT)` permits spaces inside filenames (#96657).
  */
-const _MEDIA_PATH_ANCHORED = `(?:~/|/|[A-Za-z]:[/\\\\])\\S+?(?:[^\\S\\n]+\\S+?)*?\\.(?:${_MEDIA_EXT_ALTERNATION})(?=[\\s\`"'*_,;:)\\]}]|MEDIA:|$)`
+// Backslash-n/r/t escape runs end a path only before a real caption/media boundary.
+const _MEDIA_ESCAPED_CONTROL_BOUNDARY = '(?:\\\\[nrtNRT])+(?=[\\s`"\'*_,;:)\\]}]|MEDIA:|$)'
+const _MEDIA_ESCAPED_CONTROL_RE = new RegExp(_MEDIA_ESCAPED_CONTROL_BOUNDARY)
+
+const _MEDIA_PATH_ANCHORED = `(?:~/|/|[A-Za-z]:[/\\\\])\\S+?(?:[^\\S\\n]+\\S+?)*?\\.(?:${_MEDIA_EXT_ALTERNATION})(?=[\\s\`"'*_,;:)\\]}]|MEDIA:|$|${_MEDIA_ESCAPED_CONTROL_BOUNDARY})`
 
 // Bare-word fallback for paths the anchored branch misses (relative paths,
 // unknown extensions). Stop before backtick and double-quote so an inline-code
@@ -217,7 +221,7 @@ const MEDIA_LINE_RE = new RegExp(
 )
 
 const MEDIA_TAG_RE = new RegExp(
-  `[\`"']?MEDIA:\\s*(?<inline>\`[^\`\n]+\`|"[^"\n]+"|'[^'\n]+'|${_MEDIA_PATH_ANCHORED}|${_MEDIA_PATH_BARE})[\`"']?`,
+  `[\`"']?MEDIA:\\s*(?<inline>\`[^\`\n]+\`|"[^"\n]+"|'[^'\n]+'|${_MEDIA_PATH_ANCHORED}|${_MEDIA_PATH_BARE})[\`"']?(?:${_MEDIA_ESCAPED_CONTROL_BOUNDARY})?`,
   'g'
 )
 
@@ -276,6 +280,12 @@ function mediaLink(value: string): string | null {
 export function renderMediaTags(text: string): string {
   return text
     .replace(MEDIA_LINE_RE, (match, lead: string, value: string, trailer: string) => {
+      // The bare line fallback would merge glued Windows MEDIA paths into one link.
+      // Let the inline parser split each escaped-control boundary instead.
+      if (_MEDIA_ESCAPED_CONTROL_RE.test(value)) {
+        return match
+      }
+
       const link = mediaLink(value)
 
       return link ? `${lead}${link}${trailer}` : match

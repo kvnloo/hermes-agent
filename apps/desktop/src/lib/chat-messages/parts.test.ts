@@ -59,3 +59,25 @@ describe('inline-code MEDIA paths', () => {
     expect(renderMediaTags('MEDIA:/tmp/a.png')).toBe('[Image: a.png](#media:%2Ftmp%2Fa.png)')
   })
 })
+
+describe('escaped-control separators between Windows media tags', () => {
+  const bs = String.fromCharCode(92)
+  const first = ['C:', 'out', 'a.png'].join(bs)
+  const second = ['C:', 'out', 'b.png'].join(bs)
+
+  it('keeps both media paths separately addressable in Desktop chat and Artifacts', () => {
+    const raw = 'MEDIA:' + first + bs + 'nMEDIA:' + second
+    expect(mediaTagValues(raw)).toEqual([first, second])
+    expect(renderMediaTags(raw)).toBe(
+      renderMediaTags('MEDIA:' + first) + renderMediaTags('MEDIA:' + second)
+    )
+  })
+
+  it('preserves following emphasis and ordinary backslash directory names', () => {
+    expect(renderMediaTags('MEDIA:' + first + bs + 'n**Summary**: ok')).toBe(
+      renderMediaTags('MEDIA:' + first) + '**Summary**: ok'
+    )
+    const nested = ['C:', 'out', 'album.png', 'photo.jpg'].join(bs)
+    expect(mediaTagValues('MEDIA:' + nested)).toEqual([nested])
+  })
+})
