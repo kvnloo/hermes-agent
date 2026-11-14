@@ -225,3 +225,11 @@ class TestSubscriptEvaluationSpellings:
         assert not _command_matches_permanent_allowlist(f"echo $['a[{_SUB}]']")
         assert _command_matches_permanent_allowlist("test -f /etc/hostname")
         assert _command_matches_permanent_allowlist("ls ${HOME}")
+
+    @pytest.mark.parametrize("option", ["-$OPT", "$OPT"])
+    def test_shell_variable_option_cannot_approve_quoted_subscript(self, option, monkeypatch):
+        import tools.approval as mod
+        monkeypatch.setattr(mod, "_permanent_approved", {"test *"})
+        cmd = f"test {option} 'a[{_SUB}]'"
+        assert _has_allowlist_shell_operator(cmd)
+        assert not _command_matches_permanent_allowlist(cmd)

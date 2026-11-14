@@ -176,8 +176,13 @@ def _evaluates_quoted_subscript(command: str) -> bool:
     if not words or words[0] not in _SUBSCRIPT_EVALUATING_BUILTINS:
         return False
     required = _SUBSCRIPT_EVALUATING_BUILTINS[words[0]]
-    # printf -vNAME; a glob (-?, -[v]) expands to -v when such a file exists in the cwd
-    return required is None or any(w.startswith(required) or fnmatch.fnmatchcase(required, w) for w in words[1:])
+    # printf -vNAME; a glob (-?, -[v]) expands to -v when such a file exists in the cwd.
+    # An unquoted $OPT or -$OPT can also expand to -v after shlex tokenization.
+    return required is None or any(
+        w.startswith(required) or fnmatch.fnmatchcase(required, w)
+        or re.fullmatch(r"-?\$[A-Za-z_][A-Za-z0-9_]*", w)
+        for w in words[1:]
+    )
 
 
 def _has_allowlist_shell_operator(command: str) -> bool:
