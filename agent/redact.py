@@ -801,7 +801,7 @@ _URL_USERINFO_RE = re.compile(r"(https?|wss?|ftp)://([^/\s:@]+):([^/\s@]+)@")
 # separately for classification. Values stop at ``&``/``;`` (both valid). An apostrophe
 # followed by a token character is part of the value (``?token=abc'tail``); one followed by
 # anything else closes a quoted URL (``'…?token=abc')``, ``',``, ``'.strip()``) and stays.
-_STRICT_URL_PARAM_RE = re.compile(r"([?#&;])([A-Za-z0-9_.~+%\-]+)=([^#&;\s\"'<>]*(?:'[A-Za-z0-9_~+%\-][^#&;\s\"'<>]*)*)")
+_STRICT_URL_PARAM_RE = re.compile(r"([?#&;])([A-Za-z0-9_.~+%\-]+(?:\[[A-Za-z0-9_.~+%\-]*\])*)=([^#&;\s\"'<>]*(?:'[A-Za-z0-9_~+%\-][^#&;\s\"'<>]*)*)")
 
 # Userinfo in absolute and network-path (``//user:pass@host``) references; the
 # authority stops at path/query/fragment delimiters. Anchored on the mandatory
@@ -1299,10 +1299,10 @@ def _is_sensitive_url_param(name: str) -> bool:
     JSON rule masks those fields."""
     if _canonical_url_param_name(name) in _SENSITIVE_QUERY_PARAMS:
         return True
-    decoded = _decode_url_param_name(name).replace("-", "_")  # camelCase kept: _key_name_words splits on it
-    # Same suffix drop as _json_affixed_key_secret: ``api_key_value`` / ``passwordValue`` hold the credential.
-    return (bool(_JSON_KEY_NAMES_FULL_RE.fullmatch(decoded))
-            or _is_python_repr_secret_key(_JSON_VALUE_SUFFIX_RE.sub("", decoded)))
+    # Bracketed form keys (auth[api_key], api_key[]) carry the same secret names.
+    parts = re.split(r"[\[\]]", _decode_url_param_name(name).replace("-", "_"))
+    return any(_JSON_KEY_NAMES_FULL_RE.fullmatch(part)
+               or _is_python_repr_secret_key(_JSON_VALUE_SUFFIX_RE.sub("", part)) for part in parts if part)
 
 
 def _redact_strict_url_credentials(text: str) -> str:

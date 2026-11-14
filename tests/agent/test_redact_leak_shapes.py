@@ -302,3 +302,14 @@ def test_egress_url_query_mask_covers_the_json_field_secret_names(name):
 def test_egress_url_query_mask_keeps_metadata_names(name):
     url = "https://x.example/y?" + name + "=Zo4q8vN3kPw2xR7tL&page=2"
     assert redact_for_egress(url, urls=True) == url
+
+
+@pytest.mark.parametrize("name", ["auth[api_key]", "api_key[]", "auth%5Bapi_key%5D", "api_key%5B%5D"],
+                         ids=["nested", "array", "nested-encoded", "array-encoded"])
+def test_egress_url_query_bracketed_secret_names_masked(name):
+    # Bracket notation is a nested query key in form-encoded URLs; its credential must not be archived.
+    value = "Zo4q8vN3kPw2xR7tL"
+    url = f"https://x.example/y?{name}={value}&page=2"
+    assert redact_for_egress(url, urls=True) == f"https://x.example/y?{name}=***&page=2"
+    public_url = f"https://x.example/y?filters[page]={value}&page=2"
+    assert redact_for_egress(public_url, urls=True) == public_url
