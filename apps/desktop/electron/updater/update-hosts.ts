@@ -101,9 +101,11 @@ export function configuredUpdateHosts(
   // userconfig, else the profile's $HERMES_HOME/npmrc, which replaces ~/.npmrc when it exists.
   const hermesNpmrc = hermesHome ? path.join(hermesHome, 'npmrc') : ''
 
+  // Like pm.index_config.user_npmrc: prefer the lowercase spelling, then any non-empty case variant.
+  const explicitUserconfig = env.npm_config_userconfig ||
+    Object.entries(env).find(([name, value]) => name.toLowerCase() === 'npm_config_userconfig' && value)?.[1]
   const npmrc =
-    env.npm_config_userconfig ||
-    env.NPM_CONFIG_USERCONFIG ||
+    explicitUserconfig ||
     (hermesNpmrc && existsSync(hermesNpmrc) ? hermesNpmrc : path.join(home, '.npmrc'))
 
   values.push(...iniValues(readText(npmrc), '', ['registry']))

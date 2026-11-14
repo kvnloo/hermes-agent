@@ -137,6 +137,25 @@ describe('update child proxy env from the system proxy (#123387)', () => {
     }
   })
 
+  it('keeps an explicit mixed-case npm userconfig mirror direct instead of falling back to Hermes npmrc', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-update-hosts-'))
+
+    try {
+      const selected = path.join(root, 'selected.npmrc')
+      fs.writeFileSync(selected, 'registry=https://selected-mirror.invalid/\n')
+      const hermesHome = path.join(root, 'hermes-home')
+      fs.mkdirSync(hermesHome)
+      fs.writeFileSync(path.join(hermesHome, 'npmrc'), 'registry=https://fallback-mirror.invalid/\n')
+
+      const env = await updateProxyEnv({ Npm_Config_Userconfig: selected }, undefined, root, hermesHome)
+
+      expect(env.NO_PROXY?.split(',')).toContain('selected-mirror.invalid')
+      expect(env.NO_PROXY?.split(',')).not.toContain('fallback-mirror.invalid')
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("keeps the npm mirror of the profile's $HERMES_HOME/npmrc direct, as the update's pnpm reads it", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-update-hosts-'))
 
