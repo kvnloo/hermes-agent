@@ -59,6 +59,47 @@ def test_windows_git_guard_uses_psutil_without_tasklist(
     assert spawned == []
 
 
+@pytest.mark.parametrize(("process_name", "expected"), [("git.exe", True), ("notepad.exe", False)])
+def test_psutil_git_guard_needs_no_platform_probe(monkeypatch, process_name, expected):
+    """An available in-process scanner works without host-platform information."""
+    import psutil
+    from types import SimpleNamespace
+
+    from hermes_cli import gitlock
+
+    process = SimpleNamespace(name=lambda: process_name)
+    monkeypatch.setattr(psutil, "process_iter", lambda: iter((process,)))
+    # Isolate this module's dependency, not the interpreter's real operating system.
+    monkeypatch.setattr(gitlock, "os", object())
+
+    def unexpected_spawn(*args, **kwargs):
+        pytest.fail("An available psutil scanner must not spawn a process")
+
+    monkeypatch.setattr(gitlock.subprocess, "run", unexpected_spawn)
+    assert gitlock._git_proc_running() is expected
+
+
+@pytest.mark.parametrize("process_name", ["git.exe", "notepad.exe"])
+def test_psutil_scan_protects_live_git_lock(repo, monkeypatch, process_name):
+    """Drive the real lock sweep with an in-process process-list result."""
+    import psutil
+    from types import SimpleNamespace
+
+    process = SimpleNamespace(name=lambda: process_name)
+    monkeypatch.setattr(psutil, "process_iter", lambda: iter((process,)))
+    lock = repo / ".git" / "shallow.lock"
+    _touch(lock, STALE_LOCK_MIN_AGE_SECONDS + 60)
+
+    removed = clear_stale_git_locks(repo)
+
+    if process_name == "git.exe":
+        assert removed == []
+        assert lock.exists()
+    else:
+        assert removed == [str(lock)]
+        assert not lock.exists()
+
+
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
     """A real, tiny git repo with two commits (no network)."""
