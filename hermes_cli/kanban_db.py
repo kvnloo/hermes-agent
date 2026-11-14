@@ -8093,6 +8093,11 @@ class DispatchResult:
     spawned. ``None`` when memory was fine/unknown and the guard imposed
     no restriction. Reclaim/promotion bookkeeping still ran either way;
     deferred tasks stay queued for the next tick."""
+    storage_pressure: Optional[str] = None
+    """Storage reserve observed at spawn time when the storage guard stopped
+    new workers: ``"critical"`` when either free bytes or free inodes on the
+    workspace filesystem are below the durable reserve. Existing workers and
+    reclaim/promotion bookkeeping are untouched; queued tasks are deferred."""
 
 
 # Bounded registry of recently-reaped worker child exits, populated by the
@@ -9816,6 +9821,76 @@ def _memory_pressure_level(sample: Optional[Mapping[str, Any]] = None) -> str:
         return "unknown"
 
 
+_DISPATCH_MIN_FREE_BYTES = 30 * 1024**3
+_DISPATCH_MIN_FREE_INODE_RATIO = 0.05
+
+
+def _storage_pressure_level(
+    path: str = "/workspace",
+    sample: Optional[Mapping[str, Any]] = None,
+) -> str:
+    """Classify dispatch storage pressure from both byte and inode reserves.
+
+    ``critical`` is fail-closed for a valid sample: breaching either reserve
+    prevents worktree materialization and other write-heavy worker startup.
+    Unsupported hosts or stat failures return ``unknown`` so Hermes remains
+    portable rather than being bricked by a Linux-specific mount assumption.
+    """
+    if sample is None:
+        try:
+            stat = os.statvfs(path)
+            sample = {
+                "free_bytes": stat.f_bavail * stat.f_frsize,
+                "free_inodes": stat.f_favail,
+                "total_inodes": stat.f_files,
+            }
+        except (OSError, ValueError):
+            return "unknown"
+    try:
+        free_bytes = int(sample["free_bytes"])
+        free_inodes = int(sample["free_inodes"])
+        total_inodes = int(sample["total_inodes"])
+    except (KeyError, TypeError, ValueError):
+        return "unknown"
+    if min(free_bytes, free_inodes, total_inodes) < 0 or total_inodes == 0:
+        return "unknown"
+    if (
+        free_bytes < _DISPATCH_MIN_FREE_BYTES
+        or free_inodes / total_inodes < _DISPATCH_MIN_FREE_INODE_RATIO
+    ):
+        return "critical"
+    return "ok"
+
+
+def _task_storage_probe_path(task: Task, *, board: Optional[str] = None) -> Path:
+    """Return the existing filesystem anchor that will hold ``task`` writes.
+
+    Probe the task's destination mount rather than a global ``/workspace``.
+    Symlink resolution is intentional: a repo exposed under ``/workspace`` may
+    actually live on a healthy capacity drive. This helper never materializes
+    a scratch directory or worktree.
+    """
+    kind = task.workspace_kind or "scratch"
+    raw_path = (task.workspace_path or "").strip()
+    if raw_path:
+        candidate = Path(raw_path).expanduser()
+    elif kind == "scratch":
+        candidate = workspaces_root(board=board)
+    elif kind == "worktree":
+        board_slug = board if board else get_current_board()
+        default_workdir = (
+            read_board_metadata(board_slug).get("default_workdir") or ""
+        ).strip()
+        candidate = (
+            Path(default_workdir).expanduser()
+            if default_workdir
+            else Path("/workspace")
+        )
+    else:
+        candidate = Path("/workspace")
+    return _nearest_existing_path(candidate).resolve(strict=False)
+
+
 def dispatch_once(
     conn: sqlite3.Connection,
     *,
@@ -10226,6 +10301,18 @@ def _dispatch_once_locked(
                         {"reason": guard_reason},
                     )
             continue
+        task_for_storage = get_task(conn, row["id"])
+        if task_for_storage is not None:
+            storage_path = _task_storage_probe_path(task_for_storage, board=board)
+            storage_pressure = _storage_pressure_level(str(storage_path))
+            if storage_pressure == "critical":
+                result.storage_pressure = storage_pressure
+                _log.warning(
+                    "kanban dispatch: task %s destination %s has critical "
+                    "byte/inode reserve; deferring this task (not dropped)",
+                    row["id"], storage_path,
+                )
+                continue
         if dry_run:
             result.spawned.append((row["id"], row_assignee, ""))
             spawned += 1
@@ -10357,6 +10444,18 @@ def _dispatch_once_locked(
                         {"reason": guard_reason},
                     )
             continue
+        task_for_storage = get_task(conn, row["id"])
+        if task_for_storage is not None:
+            storage_path = _task_storage_probe_path(task_for_storage, board=board)
+            storage_pressure = _storage_pressure_level(str(storage_path))
+            if storage_pressure == "critical":
+                result.storage_pressure = storage_pressure
+                _log.warning(
+                    "kanban dispatch: review task %s destination %s has critical "
+                    "byte/inode reserve; deferring this task (not dropped)",
+                    row["id"], storage_path,
+                )
+                continue
         if dry_run:
             result.spawned.append((row["id"], row["assignee"], ""))
             spawned += 1
