@@ -32,8 +32,12 @@ from acp_adapter.session import SessionManager
 
 
 @pytest.fixture()
-def mock_manager():
+def mock_manager(monkeypatch):
     """SessionManager with a mock agent factory."""
+    # ACP protocol tests must not repair the live checkout during lazy core imports.
+    monkeypatch.setattr(
+        "hermes_cli._early_recovery.restore_interrupted_pull", lambda *args, **kwargs: False
+    )
     return SessionManager(agent_factory=lambda: MagicMock(name="MockAIAgent"))
 
 
@@ -395,7 +399,10 @@ class TestPrompt:
                 session_id=resp.session_id,
             )
 
-        updates = [call.kwargs["update"] for call in conn.session_update.await_args_list]
+        updates = [
+            call.args[1] if call.args else call.kwargs["update"]
+            for call in conn.session_update.await_args_list
+        ]
         assert any(
             getattr(update, "session_update", None) == "agent_message_chunk"
             and getattr(getattr(update, "content", None), "text", None) == "Error: provider offline"
