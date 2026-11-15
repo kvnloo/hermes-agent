@@ -1100,7 +1100,8 @@ class SessionAuthority:
             pending = await asyncio.to_thread(list_session_admissions, self.db, session_id=ref.session_id)
             if any(row['status'] == 'unknown' for row in pending):
                 raise RuntimeStoreError('unknown_execution')
-            first = next((row for row in pending if row['status'] == 'queued'), None)
+            from hermes_state_runtime import preferred_session_input
+            first = preferred_session_input(pending)
             from gateway.config import Platform
             if live.source.platform == Platform.LOCAL:
                 # A reasoning command or a model pick made while the previous turn ran lands here, at the
