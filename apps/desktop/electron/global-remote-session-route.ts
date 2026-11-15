@@ -49,6 +49,7 @@ function withinBudget<T>(work: Promise<T>, budgetMs: number): Promise<T> {
 
 export function createGlobalRemoteSessionRoute(deps: GlobalRemoteSessionDeps) {
   let pending: null | Promise<RemoteConnection> = null
+  let routeGeneration = 0
 
   const connect = async (): Promise<RemoteConnection> => {
     const remote = await deps.resolveGlobalRemote()
@@ -67,9 +68,18 @@ export function createGlobalRemoteSessionRoute(deps: GlobalRemoteSessionDeps) {
   // A failed dial or request drops the cached connection so the next read redials.
   const requestGlobal = async (path: string, method: string, body?: unknown) => {
     const attempt = connection()
+    const startedGeneration = routeGeneration
 
     try {
-      return await deps.request(await attempt, path, method, body)
+      const remote = await attempt
+
+      // A pending dial may finish after Save & Reconnect. Never send a late
+      // session mutation to the previous server after its route was reset.
+      if (startedGeneration !== routeGeneration) {
+        throw new Error('The app-global Hermes connection changed before the session request was sent.')
+      }
+
+      return await deps.request(remote, path, method, body)
     } catch (error) {
       if (pending === attempt) {
         pending = null
@@ -100,6 +110,7 @@ export function createGlobalRemoteSessionRoute(deps: GlobalRemoteSessionDeps) {
     request: (path: string, method: string, body?: unknown) =>
       usesGlobal() ? requestGlobal(path, method, body) : deps.requestPrimary(path, method, body),
     reset: () => {
+      routeGeneration += 1
       pending = null
     }
   }

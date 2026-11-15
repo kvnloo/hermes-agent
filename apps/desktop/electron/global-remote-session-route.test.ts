@@ -69,3 +69,34 @@ test('the aggregate owner is the global remote it was read from, not the overrid
   const plain = route({ primaryHasRemoteOverride: () => false }).sessions
   assert.equal(await primaryAggregateConnectionId(plain.aggregateBackend), 'conn-override')
 })
+
+test('a reconnect never sends a pending session mutation to the previous global remote', async () => {
+  let releaseOldDial!: (conn: typeof globalConn) => void
+  const oldDial = new Promise<typeof globalConn>(resolve => {
+    releaseOldDial = resolve
+  })
+  let dialCount = 0
+  const writes: string[] = []
+  const { sessions } = route({
+    resolveGlobalRemote: () => {
+      dialCount += 1
+
+      return dialCount === 1 ? oldDial : Promise.resolve({ ...globalConn, baseUrl: 'https://next.example' })
+    },
+    request: async (conn: { baseUrl: string }, _path: string, method: string) => {
+      writes.push(`${method} ${conn.baseUrl}`)
+
+      return { ok: true }
+    }
+  })
+
+  const staleDelete = sessions.request('/api/sessions/session-1?profile=default', 'DELETE')
+  sessions.reset()
+  releaseOldDial(globalConn)
+
+  await assert.rejects(staleDelete, /connection changed before the session request was sent/)
+  assert.deepEqual(writes, [])
+
+  await sessions.request('/api/sessions/session-1?profile=default', 'DELETE')
+  assert.deepEqual(writes, ['DELETE https://next.example'])
+})
