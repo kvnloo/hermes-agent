@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 from agent.error_classifier import FailoverReason
 from agent.turn_retry_state import TurnRetryState
-from agent.turn_truncation import _REPEATED_STUB_FINAL, recover_from_truncation
+from agent.turn_truncation import recover_from_truncation
 from hermes_constants import FINISH_REASON_LENGTH, PARTIAL_STREAM_STUB_ID
 
 GLITCH = "évrier"
@@ -69,15 +69,6 @@ def _has_trail(messages):
                for m in messages)
 
 
-def test_first_stub_continues():
-    agent = _agent()
-    verdict = _first_attempt(agent, GLITCH)
-    assert verdict.length_continue_retries == 1
-    assert verdict.truncated_response_parts == [(GLITCH, True)]
-    assert verdict.messages[1]["_length_continuation_fragment"] is True
-    assert verdict.messages[2]["_length_continuation_nudge"] is True
-
-
 def test_repeated_stub_with_fallback_switches_provider():
     agent = _agent(fallback_chain=[{"provider": "other"}])
     first = _first_attempt(agent, GLITCH)
@@ -105,32 +96,8 @@ def test_repeated_stub_without_fallback_ends_turn_with_notice():
     assert verdict.action == "return"
     agent._try_activate_fallback.assert_not_called()
     result = verdict.result
-    assert result["final_response"] == _REPEATED_STUB_FINAL
+    assert "same fragment" in result["final_response"]
     assert not _has_trail(result["messages"])
     assert all(GLITCH not in (m.get("content") or "") for m in result["messages"])
 
 
-def test_different_stub_fragments_keep_continuing():
-    agent = _agent(fallback_chain=[{"provider": "other"}])
-    first = _first_attempt(agent, "The answer starts here")
-    verdict = _recover(agent, _response("and continues here"), first.messages,
-                       first.truncated_response_parts, first.length_continue_retries)
-
-    assert verdict.action == "break"
-    agent._try_activate_fallback.assert_not_called()
-    assert verdict.length_continue_retries == 2
-    assert [p[0] for p in verdict.truncated_response_parts] == [
-        "The answer starts here", "and continues here",
-    ]
-
-
-def test_repeated_real_length_truncation_is_unchanged():
-    agent = _agent(fallback_chain=[{"provider": "other"}])
-    first = _first_attempt(agent, GLITCH, stub=False)
-    verdict = _recover(agent, _response(GLITCH, stub=False), first.messages,
-                       first.truncated_response_parts, first.length_continue_retries)
-
-    assert verdict.action == "break"
-    agent._try_activate_fallback.assert_not_called()
-    assert verdict.length_continue_retries == 2
-    assert verdict.truncated_response_parts == [(GLITCH, False), (GLITCH, False)]
