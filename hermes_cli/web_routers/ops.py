@@ -137,9 +137,20 @@ async def clear_pending_pairing(profile: Optional[str] = None):
 # hot-reloads it. Per-route HMAC secrets are redacted on read, surfaced once on create.
 
 
-def _webhook_route_summary(name: str, route: dict[str, Any], base_url: str) -> dict[str, Any]:
+def _webhook_gateway_settings() -> tuple[bool, dict]:
+    """Use the gateway's effective enablement and route configuration."""
+    from gateway.config import Platform, load_gateway_config
+
+    config = load_gateway_config().platforms.get(Platform.WEBHOOK)
+    return bool(config and config.enabled), config.extra if config else {}
+
+
+def _webhook_route_summary(
+    name: str, route: dict[str, Any], base_url: str, *, source: str = "subscription",
+) -> dict[str, Any]:
     return {
         "name": name,
+        "source": source,
         "description": route.get("description", ""),
         "events": list(route.get("events") or []),
         "deliver": route.get("deliver", "log"),
@@ -160,13 +171,25 @@ async def list_webhooks(profile: Optional[str] = None):
     def _run():
         import hermes_cli.webhook as wh
 
-        base_url = wh._get_webhook_base_url()
+        enabled, extra = _webhook_gateway_settings()
+        host = extra.get("host")
+        display_host = "localhost" if not host or host in {"0.0.0.0", "::"} else host
+        if ":" in display_host and not display_host.startswith("["):
+            display_host = f"[{display_host}]"
+        base_url = f"http://{display_host}:{extra.get('port', 8644)}"
+        static_routes = extra.get("routes") or {}
+        if not isinstance(static_routes, dict):
+            static_routes = {}
         return {
-            "enabled": wh._is_webhook_enabled(),
+            "enabled": enabled,
             "base_url": base_url,
             "subscriptions": [
                 _webhook_route_summary(name, route, base_url)
                 for name, route in wh._load_subscriptions().items()
+                if name not in static_routes
+            ] + [
+                _webhook_route_summary(name, route, base_url, source="config")
+                for name, route in static_routes.items() if isinstance(route, dict)
             ],
         }
 
@@ -196,7 +219,7 @@ async def create_webhook(body: WebhookCreate, profile: Optional[str] = None):
     import hermes_cli.webhook as wh
 
     def _enabled():
-        return wh._is_webhook_enabled()
+        return _webhook_gateway_settings()[0]
 
     if not await config_scoped_to_thread(profile, _enabled):
         raise HTTPException(
@@ -207,6 +230,11 @@ async def create_webhook(body: WebhookCreate, profile: Optional[str] = None):
         raise HTTPException(
             status_code=400, detail="Invalid name. Use lowercase alphanumeric with hyphens/underscores.",
         )
+    def _static_conflict():
+        return name in (_webhook_gateway_settings()[1].get("routes") or {})
+
+    if await config_scoped_to_thread(profile, _static_conflict):
+        raise HTTPException(status_code=409, detail="Routes from config.yaml are read-only.")
     if body.deliver_only and body.deliver == "log":
         raise HTTPException(
             status_code=400, detail="Direct delivery requires a real target (telegram, discord, …), not 'log'.",

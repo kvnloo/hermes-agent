@@ -484,6 +484,7 @@ export interface TelegramOnboardingApplyResponse {
 // redacted on read and surfaced exactly once on create.
 
 export interface WebhookRoute {
+  source?: 'config' | 'subscription'
   created_at: null | string
   deliver: string
   deliver_only: boolean
