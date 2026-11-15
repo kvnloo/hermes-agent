@@ -307,8 +307,9 @@ def bridge_tool_schemas(deferred_count: int, listing: Optional[str] = None,
         _bridge_schema(
             TOOL_CALL_NAME,
             "Invoke deferred tools: `calls` is an array of {name, arguments}, one entry per "
-            "invocation (batch independent calls; results come back in order). Arguments match "
-            f"the schema from `{TOOL_DESCRIBE_NAME}`; approvals and hooks apply as usual.",
+            "invocation (batch independent calls; results come back in order). "
+            "`arguments` is a JSON-encoded object matching the schema from "
+            f"`{TOOL_DESCRIBE_NAME}`; approvals and hooks apply as usual.",
             {
                 "calls": {
                     "type": "array",
@@ -316,12 +317,10 @@ def bridge_tool_schemas(deferred_count: int, listing: Optional[str] = None,
                         "type": "object",
                         "properties": {
                             "name": {"type": "string", "description": "Exact tool name to invoke."},
-                            # additionalProperties: true is load-bearing: strict
-                            # tool-call decoders (Moonshot grammar mode) treat an
-                            # object with no declared properties as closed and emit {}
-                            # otherwise. Same pattern as mcp_tool_schema / browser_cdp.
-                            "arguments": {"type": "object", "additionalProperties": True,
-                                          "description": "Arguments matching the tool schema."},
+                            # A string avoids backends that grammar-constrain free-form objects
+                            # to {}; normalize_tool_call_entries already decodes JSON strings.
+                            "arguments": {"type": "string",
+                                          "description": "JSON-encoded object of tool arguments."},
                         },
                         "required": ["name", "arguments"],
                     },

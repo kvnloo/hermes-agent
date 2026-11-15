@@ -35,7 +35,7 @@ place of the deferred ones:
 ```
 tool_search(queries, limit?)   search the deferred-tool catalog (one or more queries)
 tool_describe(names)           load the full schemas for one or more tools
-tool_call(calls)               invoke deferred tools; `calls` is an array of {name, arguments}
+tool_call(calls)               invoke deferred tools; calls is [{name, arguments}], arguments is JSON text
 ```
 
 `calls` takes one entry per invocation; a single call is an array of one.
@@ -60,7 +60,7 @@ Model: tool_describe(["mcp_github_create_issue", "mcp_slack_post_message"])
   → { tools: { mcp_github_create_issue: { parameters: { ... } },
                mcp_slack_post_message: { parameters: { ... } } } }
 Model: tool_call({ calls: [{ name: "mcp_github_create_issue",
-                             arguments: { title: "...", body: "..." } }] })
+                             arguments: '{"title":"...","body":"..."}' }] })
   → { ok: true, issue_number: 42 }
 ```
 
@@ -227,8 +227,10 @@ account management. Tool discovery, execution, and connection-status watching
 continue through the gateway; the model tool cannot disconnect an account.
 
 `tool_call` accepts a batch: `calls` is an array of `{name, arguments}`
-entries (a single call is an array of one). Each connector entry in a batch
-is dispatched as its own gateway request, one after another; local deferred
+entries (a single call is an array of one). `arguments` is a JSON string
+encoding the target tool's parameter object; Hermes also accepts legacy
+object-valued arguments for backends that emit them. Each connector entry
+in a batch is dispatched as its own gateway request, one after another; local deferred
 tools stay one entry per `tool_call`. A multi-entry batch that names a local
 tool is rejected with a correction that restates the valid shape using the
 caller's own first entry, and a `calls` value emitted as a JSON string is
@@ -264,8 +266,8 @@ to any progressive-disclosure design, not specific to this implementation:
   prefix.
 - **No provider-native validation for deferred schemas.** `tool_describe`
   lets the model read a deferred tool's schema, but the provider still sees
-  only the generic `tool_call.arguments` object. Hermes therefore coerces and
-  validates the underlying arguments locally before dispatch; the concrete
+  only a generic JSON-string `tool_call.arguments` field. Hermes decodes,
+  coerces, and validates the underlying arguments locally before dispatch; the concrete
   tool or MCP server remains responsible for schemas Hermes cannot safely
   validate, such as malformed schemas or external references.
 - **Model-quality dependence.** Tool Search assumes the model can write a
