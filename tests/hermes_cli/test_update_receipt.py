@@ -12,6 +12,7 @@ Covers:
 import json
 import os
 import sys
+import zipfile
 from types import SimpleNamespace
 
 import pytest
@@ -572,3 +573,39 @@ class TestPreUpdateBackupStep:
         empty = self._record(monkeypatch, args=args, snapshot_id=None, updates_cfg=updates_cfg)
         assert empty["skips"] == []
         assert [step["ok"] for step in empty["steps"]] == [False]
+
+    @pytest.mark.parametrize("complete_zip", [False, True], ids=["incomplete", "complete"])
+    def test_full_zip_verdict_reaches_receipt(self, receipt_home, monkeypatch, complete_zip):
+        """A clean quick snapshot must not certify an incomplete full-home ZIP (#150335)."""
+        from hermes_cli import backup
+
+        args = SimpleNamespace(no_backup=False, backup=False)
+        monkeypatch.setattr(update_cmd_maint, "_load_updates_cfg",
+                            lambda: {"pre_update_backup": "full"})
+        monkeypatch.setattr(update_cmd_maint, "_run_quick_snapshots",
+                            lambda: "snapshot-complete")
+
+        zip_path = receipt_home / "backups" / "pre-update.zip"
+        zip_path.parent.mkdir()
+        published = zip_path if complete_zip else zip_path.with_name("pre-update.incomplete.zip")
+        with zipfile.ZipFile(published, "w") as archive:
+            archive.writestr("config.yaml", "model: test")
+        # The backup API returns None even when it published a valid salvage ZIP.
+        monkeypatch.setattr(backup, "create_pre_update_backup",
+                            lambda *, keep: zip_path if complete_zip else None)
+
+        ur.begin_update_receipt()
+        snapshot_id = update_cmd_maint._run_pre_update_backup(args)
+        update_cmd._record_snapshot_stage(args, snapshot_id)
+        path = _finalize("success")
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        steps = {step["name"]: step for step in payload["steps"]}
+
+        assert snapshot_id == "snapshot-complete"
+        assert steps["pre_update_backup"]["ok"] is complete_zip
+        assert steps["pre_update_full_backup"]["ok"] is complete_zip
+        assert "snapshot=snapshot-complete" in steps["pre_update_backup"]["detail"]
+        assert [stage["outcome"] for stage in payload["stages"]
+                if stage["name"] == "snapshot"] == ["success"]
+        if complete_zip:
+            assert str(zip_path) in steps["pre_update_full_backup"]["detail"]
