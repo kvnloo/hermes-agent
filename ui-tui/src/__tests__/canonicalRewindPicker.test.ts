@@ -148,6 +148,23 @@ describe('/rewind picker (#21910)', () => {
     expect(composer.setInput).toHaveBeenCalledWith('again')
   })
 
+  it('a restart-lost admission keeps the picker edit and explains Ctrl+X recovery', async () => {
+    const unknown = new JsonRpcGatewayError('unknown_execution', {
+      code: 4001, data: { reason: 'unknown_execution' }
+    })
+    const { composer, send, slash, sys } = harness(unknown)
+
+    slash('/rewind')
+    await flush()
+    $overlayState.get().rewind!.onSubmit($overlayState.get().rewind!.targets[1]!, 'again')
+    await flush()
+    await flush()
+
+    expect(send).not.toHaveBeenCalled()
+    expect(composer.setInput).toHaveBeenCalledWith('again')
+    expect(sys).toHaveBeenLastCalledWith('unknown execution — Ctrl+X to discard before retrying')
+  })
+
   it("a cut that commits but cannot repaint keeps the edit as that session's next prompt", async () => {
     const { composer, send, slash } = harness(undefined, new Error('transport closed'))
 

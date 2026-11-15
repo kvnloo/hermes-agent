@@ -225,6 +225,22 @@ it('/undo and /retry while a turn runs print main\'s stop-first text, not the ba
   expect(send).not.toHaveBeenCalled()
 })
 
+it('/undo and /retry recover a restart-lost admission without printing the raw refusal', async () => {
+  const unknown = new JsonRpcGatewayError('unknown_execution', {
+    code: 4001, data: { reason: 'unknown_execution' }
+  })
+  const { send, slash, sys } = harness(unknown)
+
+  for (const command of ['undo', 'retry']) {
+    slash(`/${command}`)
+    await flush()
+    expect(sys).toHaveBeenLastCalledWith('unknown execution — Ctrl+X to discard before retrying')
+  }
+
+  expect(send).not.toHaveBeenCalled()
+  expect(sys.mock.calls.some(([line]) => String(line).includes('error: unknown_execution'))).toBe(false)
+})
+
 it('/undo and /retry while a compression holds the session say to wait for it', async () => {
   const compressing = new JsonRpcGatewayError('session_busy', {
     code: 4001,

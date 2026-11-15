@@ -218,6 +218,11 @@ export function rewindBusyText(error: unknown, intent: 'retry' | 'rewind' | 'und
 
   const data = asRpcResult(error.data)
 
+  // A restart-lost admission blocks rewind until the person discards it.
+  if (data?.reason === 'unknown_execution' || (!data?.reason && error.message === 'unknown_execution')) {
+    return t('canonical.queue.unknownExecution')
+  }
+
   if (data?.reason !== 'session_busy') {
     return null
   }
