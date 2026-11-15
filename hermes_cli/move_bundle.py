@@ -63,7 +63,7 @@ _MACHINE_LOCAL_CONFIG_KEYS = frozenset({
     "telemetry", "dashboard", "webapp", "gateway", "database", "runtime", "onboarding", "vault",
     "secrets", "plugins", "network",
 })
-_SECRET_KEY_RE = re.compile(r"(?i)(api[_-]?key|token|secret|passw(or)?d|credential|private[_-]?key|bearer)")
+_SECRET_KEY_RE = re.compile(r"(?i)(api[_-]?key|token|secret|passw(or)?d|credential|private[_-]?key|bearer|authorization)")
 
 
 @dataclass
@@ -208,8 +208,8 @@ _AUTH_SECRET_MIN_LEN = 16
 _MIN_SECRET_LEN = 8
 
 
-def _known_secret_values(home: Path) -> dict[str, str]:
-    """Every credential VALUE this machine holds (``.env`` + ``auth.json``), keyed by value.
+def _known_secret_values(home: Path, config: dict[str, Any]) -> dict[str, str]:
+    """Every known credential VALUE (``.env``, ``auth.json``, MCP auth headers), keyed by value.
 
     Transcripts and skills can quote a key the user pasted once; the bundle replaces each exact
     value with a named placeholder before it is written, so no stored credential leaves the
@@ -222,6 +222,19 @@ def _known_secret_values(home: Path) -> dict[str, str]:
         value = value.strip().strip("\"'")
         if sep and key and not key.startswith("#") and len(value) >= _MIN_SECRET_LEN and _SECRET_KEY_RE.search(key):
             values[value] = key
+
+    # MCP remote headers are a documented place for literal bearer tokens (e.g. Stripe).
+    # Scrub them from config *and* from any skill/chat text that quotes the same value.
+    servers = config.get("mcp_servers")
+    if isinstance(servers, dict):
+        for server_name, spec in servers.items():
+            headers = spec.get("headers") if isinstance(spec, dict) else None
+            if not isinstance(headers, dict):
+                continue
+            for header, value in headers.items():
+                if (isinstance(header, str) and _SECRET_KEY_RE.search(header)
+                        and isinstance(value, str) and len(value) >= _MIN_SECRET_LEN):
+                    values.setdefault(value, f"mcp_servers.{server_name}.headers.{header}")
 
     def walk(node: Any, path: str) -> None:
         if isinstance(node, dict):
@@ -452,7 +465,7 @@ def build_bundle(home: Path, profile: str, out_path: Path, *, include_history: b
     }
     out_path.parent.mkdir(parents=True, exist_ok=True)
     partial = out_path.with_name(out_path.name + ".partial")
-    red = _Redactor(_known_secret_values(home))
+    red = _Redactor(_known_secret_values(home, raw))
     members: list[tuple[str, bytes]] = [
         ("config.yaml", red.text(yaml.safe_dump(config, sort_keys=False, allow_unicode=True)).encode()),
     ]

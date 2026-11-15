@@ -97,6 +97,26 @@ def test_portable_config_scrubs_nested_secrets():
     assert dropped == ["_config_version", "browser"]
 
 
+def test_move_scrubs_mcp_authorization_header(tmp_path):
+    home = _source_home(tmp_path)
+    credential = "Bearer mcp-transfer-test-token-123456789"
+    config = yaml.safe_load((home / "config.yaml").read_text())
+    config["mcp_servers"]["remote"]["headers"] = {"Authorization": credential, "X-Trace": "keep"}
+    (home / "config.yaml").write_text(yaml.safe_dump(config))
+    (home / "skills" / "custom" / "mine" / "notes.md").write_text(f"quoted {credential}\n")
+
+    out = tmp_path / "move.zip"
+    report = build_bundle(home, "default", out, include_history=False)
+    with zipfile.ZipFile(out) as zf:
+        members = {name: zf.read(name) for name in zf.namelist()}
+
+    assert credential.encode() not in b"".join(members.values())
+    transferred = yaml.safe_load(members["config.yaml"])
+    assert transferred["mcp_servers"]["remote"]["headers"] == {"X-Trace": "keep"}
+    assert b"[redacted mcp_servers.remote.headers.Authorization]" in members["skills/custom/mine/notes.md"]
+    assert report.redacted["mcp_servers.remote.headers.Authorization"] == 1
+
+
 def test_keys_never_include_values(tmp_path):
     home = _source_home(tmp_path)
     assert all(set(k) == {"key", "category", "label"} for k in keys_to_reenter(home))
