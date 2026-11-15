@@ -22,6 +22,7 @@ def split_reply_anchor(adapter: Any, chat_id: str, reply_to: Optional[str],
     ``extra.anchor_multipart_replies`` is false (TDLib/Desktop can hide an anchored split reply's
     first part, #55059). DM topics keep it: the topic is routed by the anchor."""
     if (getattr(adapter, "_anchor_multipart_replies", True) or parts <= 1
+            or getattr(adapter, "_reply_to_mode", "first") == "all"
             or adapter._is_private_dm_topic_send(chat_id, adapter._metadata_thread_id(metadata), metadata)):
         return reply_to
     return None

@@ -109,6 +109,25 @@ class TestMultipartAnchorOptOut:
         await adapter.send("12345", "long content", reply_to="999")
         assert [c.kwargs.get("reply_to_message_id") for c in adapter._bot.send_message.call_args_list] == [999, None]
 
+    @pytest.mark.asyncio
+    async def test_all_mode_keeps_each_anchor_with_multipart_opt_out(self):
+        """The opt-out for first-mode replies must not override explicit all-mode routing (#55059)."""
+        config = PlatformConfig(
+            enabled=True, token="test-token", reply_to_mode="all",
+            extra={"anchor_multipart_replies": False},
+        )
+        adapter = TelegramAdapter(config)
+        adapter._bot = MagicMock()
+        adapter._bot.send_message = AsyncMock(return_value=MagicMock(message_id=1))
+        content = "word " * (adapter.MAX_MESSAGE_LENGTH // 5 + 50)
+
+        result = await adapter.send("12345", content, reply_to="999")
+
+        assert result.success
+        calls = adapter._bot.send_message.call_args_list
+        assert len(calls) >= 2  # Real limit, not a mocked chunk count.
+        assert [c.kwargs.get("reply_to_message_id") for c in calls] == [999] * len(calls)
+
 
 class TestConfigSerialization:
     """Tests for reply_to_mode serialization."""
