@@ -172,7 +172,9 @@ class _KanbanDispatcher:
         self.disabled_corrupt_boards.pop(slug, None)
         return True
 
-    def tick_once_for_board(self, slug: str) -> Optional[object]:
+    def tick_once_for_board(
+        self, slug: str, *, running_by_path: Optional[dict[str, int]] = None,
+    ) -> Optional[object]:
         """Run one dispatch_once for a specific board.
 
         The per-board DB is opened explicitly so boards never share a
@@ -183,6 +185,18 @@ class _KanbanDispatcher:
         if not self._quarantine_lifted(slug, fingerprint):
             return None
         kwargs = {k: v for k, v in asdict(self.settings).items() if k != "interval"}
+        if running_by_path is not None and self.settings.max_in_progress is not None:
+            # Convert the shared host headroom into a board-local cap.
+            other_running = sum(
+                count for path, count in running_by_path.items()
+                if path != fingerprint[0]
+            )
+            board_cap = max(self.settings.max_in_progress - other_running, 0)
+            if kwargs["max_spawn"] is None:
+                kwargs["max_spawn"] = board_cap
+            else:
+                kwargs["max_spawn"] = min(kwargs["max_spawn"], board_cap)
+            kwargs["max_in_progress"] = None
         try:
             # No explicit init_db(): connect() runs the migration once per
             # process (see the matching note in the notifier collector).
@@ -192,7 +206,10 @@ class _KanbanDispatcher:
             from hermes_cli import kanban_db as _kb
             with _kb.pin_first_board_resolution():
                 conn = _kbc().connect(board=slug)
-                return _kbd().dispatch_once(conn, board=slug, **kwargs)
+                result = _kbd().dispatch_once(conn, board=slug, **kwargs)
+                if running_by_path is not None:
+                    running_by_path[fingerprint[0]] = _kbd().count_running_tasks(conn)
+                return result
         except Exception as exc:
             if self.is_corrupt_board_db_error(exc):
                 self.disabled_corrupt_boards[slug] = (fingerprint, time.monotonic())
@@ -214,7 +231,32 @@ class _KanbanDispatcher:
 
     def tick_once(self) -> list[tuple[str, Optional[object]]]:
         """Run one dispatch_once per board. Returns (slug, result) pairs."""
-        return [(slug, self.tick_once_for_board(slug)) for slug in self._board_slugs()]
+        slugs = self._board_slugs()
+        if self.settings.max_in_progress is None:
+            return [(slug, self.tick_once_for_board(slug)) for slug in slugs]
+
+        # Sample each distinct DB once, then account for this pass's spawns.
+        from hermes_cli import kanban_db as _kb
+        running_by_path: dict[str, int] = {}
+        for slug in slugs:
+            path = self.board_db_fingerprint(slug)[0]
+            if path in running_by_path:
+                continue
+            conn = None
+            try:
+                with _kb.pin_first_board_resolution():
+                    conn = _kbc().connect(board=slug)
+                    running_by_path[path] = _kbd().count_running_tasks(conn)
+            except Exception:
+                running_by_path[path] = 0
+            finally:
+                if conn is not None:
+                    with contextlib.suppress(Exception):
+                        conn.close()
+        return [
+            (slug, self.tick_once_for_board(slug, running_by_path=running_by_path))
+            for slug in slugs
+        ]
 
     def ready_nonempty(self) -> bool:
         """Is there a ready+assigned+unclaimed task on ANY board the dispatcher would spawn for?
