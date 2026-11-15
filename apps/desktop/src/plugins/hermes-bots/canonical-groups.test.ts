@@ -122,6 +122,14 @@ it('creates only same-authority rosters and dispatches exact advertised attempt 
   })
   expect(host.requestProfile).toHaveBeenCalledTimes(count + 2)
 
+  const broad = { ...approval, approval: { choices: ['once', 'session', 'always', 'deny'], command: 'rm -rf build' } }
+  for (const choice of ['session', 'always'] as const) {
+    await actCanonicalGroup(binding, broad, choice)
+    expect(host.requestProfile).toHaveBeenLastCalledWith(expect.objectContaining(route), 'groups.approve',
+      expect.objectContaining({ request_id: 'request:original', choice }))
+  }
+  await expect(actCanonicalGroup(binding, { ...broad, approval: { choices: ['once'], command: 'rm -rf build' } }, 'always')).rejects.toThrow()
+
   expect(host.request).not.toHaveBeenCalled()
 })
 

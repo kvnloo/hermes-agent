@@ -18,6 +18,8 @@ export interface CanonicalGroupMessages extends GroupReasonMessages {
   driverUnavailable: string
   invalidLogCursor: string
   allowOnce: string
+  allowSession: string
+  alwaysAllow: string
   deny: string
   discardUnknown: string
   discardWarning: string
@@ -179,6 +181,8 @@ export const CANONICAL_GROUP_LOCALES = {
     driverUnavailable: 'This group chat isn’t available. Update or reconnect the gateway that hosts it.',
     invalidLogCursor: "Couldn't load more of this group chat's history.",
     allowOnce: 'Allow once',
+    allowSession: 'Allow this session',
+    alwaysAllow: 'Always allow',
     deny: 'Deny',
     discardUnknown: 'Discard turn',
     discardWarning: 'Side effects may already have occurred. Discarding does not undo them. For a bot on another computer, Discard waits for that computer to confirm the turn has stopped or never started.',
@@ -337,6 +341,8 @@ export const CANONICAL_GROUP_LOCALES = {
     driverUnavailable: 'このグループチャットは利用できません。実行元のゲートウェイを更新するか、再接続してください。',
     invalidLogCursor: 'グループチャットの履歴の続きを読み込めませんでした。',
     allowOnce: '今回のみ許可',
+    allowSession: 'このセッションで許可',
+    alwaysAllow: '常に許可',
     deny: '拒否',
     discardUnknown: 'ターンを破棄',
     discardWarning: 'すでに変更が生じている場合があります。破棄しても元には戻りません。別のコンピューターのボットでは、そのコンピューターがターンの停止または未開始を確認するまで待ちます。',
@@ -495,6 +501,8 @@ export const CANONICAL_GROUP_LOCALES = {
     driverUnavailable: '此群聊暂不可用。请更新或重新连接运行它的网关。',
     invalidLogCursor: '无法继续加载此群聊的历史记录。',
     allowOnce: '仅允许一次',
+    allowSession: '允许本会话',
+    alwaysAllow: '始终允许',
     deny: '拒绝',
     discardUnknown: '丢弃回合',
     discardWarning: '可能已经产生了更改，丢弃不会撤销这些更改。对于其他电脑上的机器人，丢弃会等待该电脑确认回合已停止或从未开始。',
@@ -653,6 +661,8 @@ export const CANONICAL_GROUP_LOCALES = {
     driverUnavailable: '此群組聊天目前無法使用。請更新或重新連線至執行它的閘道。',
     invalidLogCursor: '無法繼續載入此群組聊天的歷史記錄。',
     allowOnce: '僅允許一次',
+    allowSession: '允許本工作階段',
+    alwaysAllow: '一律允許',
     deny: '拒絕',
     discardUnknown: '捨棄回合',
     discardWarning: '可能已經產生了變更，捨棄不會復原這些變更。對於其他電腦上的機器人，捨棄會等待該電腦確認回合已停止或從未開始。',
@@ -811,6 +821,8 @@ export const CANONICAL_GROUP_LOCALES = {
     driverUnavailable: 'محادثة المجموعة هذه غير متاحة. حدّث البوابة التي تستضيفها أو أعد الاتصال بها.',
     invalidLogCursor: 'تعذّر تحميل المزيد من سجل محادثة المجموعة هذه.',
     allowOnce: 'السماح مرة واحدة',
+    allowSession: 'السماح لهذه الجلسة',
+    alwaysAllow: 'السماح دائمًا',
     deny: 'رفض',
     discardUnknown: 'تجاهل الدور',
     discardWarning: 'ربما حدثت تغييرات بالفعل. لن يؤدي تجاهل الدور إلى التراجع عنها. بالنسبة لروبوت على جهاز آخر، ينتظر التجاهل تأكيد ذلك الجهاز أن الدور توقف أو لم يبدأ أصلًا.',
@@ -970,6 +982,8 @@ export const CANONICAL_GROUP_LOCALES = {
       'Этот групповой чат недоступен. Обновите шлюз, на котором он работает, или подключитесь к нему заново.',
     invalidLogCursor: 'Не удалось загрузить следующую часть истории этого группового чата.',
     allowOnce: 'Разрешить один раз',
+    allowSession: 'Разрешить в этой сессии',
+    alwaysAllow: 'Разрешать всегда',
     deny: 'Отклонить',
     discardUnknown: 'Отбросить ход',
     discardWarning: 'Изменения уже могли произойти. Отмена хода не отменяет их. Для бота на другом компьютере нужно дождаться подтверждения, что ход остановлен или не начинался.',
@@ -1131,6 +1145,8 @@ export const CANONICAL_GROUP_LOCALES = {
       'Cette discussion de groupe est indisponible. Mettez à jour ou reconnectez la passerelle qui l’héberge.',
     invalidLogCursor: 'Impossible de charger la suite de l’historique de cette discussion de groupe.',
     allowOnce: 'Autoriser une fois',
+    allowSession: 'Autoriser pour cette session',
+    alwaysAllow: 'Toujours autoriser',
     deny: 'Refuser',
     discardUnknown: 'Abandonner le tour',
     discardWarning: 'Des changements ont peut-être déjà eu lieu. Abandonner le tour ne les annule pas. Pour un bot sur un autre ordinateur, il faut attendre que cet ordinateur confirme que le tour est arrêté ou n’a jamais démarré.',
@@ -1291,6 +1307,8 @@ export const CANONICAL_GROUP_LOCALES = {
       'Dieser Gruppenchat ist nicht verfügbar. Aktualisieren Sie das Gateway, auf dem er läuft, oder verbinden Sie es neu.',
     invalidLogCursor: 'Der weitere Verlauf dieses Gruppenchats konnte nicht geladen werden.',
     allowOnce: 'Einmal erlauben',
+    allowSession: 'Für diese Sitzung erlauben',
+    alwaysAllow: 'Immer erlauben',
     deny: 'Ablehnen',
     discardUnknown: 'Turn verwerfen',
     discardWarning: 'Es können bereits Änderungen erfolgt sein. Verwerfen macht sie nicht rückgängig. Bei einem Bot auf einem anderen Computer wird gewartet, bis dieser Computer bestätigt, dass der Turn gestoppt wurde oder nie begonnen hat.',
@@ -1452,6 +1470,8 @@ export const CANONICAL_GROUP_LOCALES = {
       'Este chat de grupo no está disponible. Actualiza o vuelve a conectar la pasarela que lo aloja.',
     invalidLogCursor: 'No se pudo cargar más historial de este chat de grupo.',
     allowOnce: 'Permitir una vez',
+    allowSession: 'Permitir en esta sesión',
+    alwaysAllow: 'Permitir siempre',
     deny: 'Denegar',
     discardUnknown: 'Descartar turno',
     discardWarning: 'Es posible que ya se hayan producido cambios. Descartar no los deshace. Si el bot está en otro equipo, se espera a que ese equipo confirme que el turno se ha detenido o nunca llegó a empezar.',

@@ -115,6 +115,8 @@ function CanonicalApprovalDetails({ action, labels }: { action: CanonicalPending
 interface PendingLabels extends ApprovalLabels {
   refresh: string
   allowOnce: string
+  allowSession: string
+  alwaysAllow: string
   deny: string
   discard: string
   retry: string
@@ -134,7 +136,7 @@ const ACTION_METHODS: Record<string, string> = { discard: 'groups.discard', retr
 /** A decision the room is waiting on, named by the bot that needs it. */
 export function CanonicalPendingCard({ action, avatar, busy, labels, methods, name, onAct, onDiscard, onRefresh }: {
   action: CanonicalPendingAction; avatar: ReactNode; busy: boolean; labels: PendingLabels; methods: GroupMethods; name: string
-  onAct: (action: CanonicalPendingAction, choice?: 'deny' | 'once') => unknown; onDiscard: () => void; onRefresh: () => void
+  onAct: (action: CanonicalPendingAction, choice?: 'deny' | 'once' | 'session' | 'always') => unknown; onDiscard: () => void; onRefresh: () => void
 }) {
   const approval = action.kind === 'approval'
   const reviewable = approval && canonicalApprovalPreview(action).reviewable
@@ -155,6 +157,8 @@ export function CanonicalPendingCard({ action, avatar, busy, labels, methods, na
         {offered && action.kind === 'discard' && <Button disabled={busy} onClick={onDiscard} size="sm" variant="secondary">{labels.discard}</Button>}
         {offered && action.kind === 'retry' && <Button disabled={busy} onClick={() => void onAct({ ...action })} size="sm" variant="secondary">{labels.retry}</Button>}
         {offered && reviewable && choices.includes('once') && <Button disabled={busy} onClick={() => void onAct({ ...action }, 'once')} size="sm">{labels.allowOnce}</Button>}
+        {offered && reviewable && choices.includes('session') && <Button disabled={busy} onClick={() => void onAct({ ...action }, 'session')} size="sm" variant="secondary">{labels.allowSession}</Button>}
+        {offered && reviewable && choices.includes('always') && <Button disabled={busy} onClick={() => void onAct({ ...action }, 'always')} size="sm" variant="secondary">{labels.alwaysAllow}</Button>
         {denyOffered && choices.includes('deny') && <Button disabled={busy} onClick={() => void onAct({ ...action }, 'deny')} size="sm" variant="secondary">{labels.deny}</Button>}
         {approval && !reviewable && <Button disabled={busy} onClick={onRefresh} size="sm" variant="secondary">{labels.refresh}</Button>}
       </div>

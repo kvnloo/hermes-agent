@@ -329,7 +329,7 @@ def _execution_control(service, method, params):
     def approve():
         if (type(params.get('execution_generation')) is not int
                 or params['execution_generation'] < 1
-                or params.get('choice') not in {'once', 'deny'}
+                or params.get('choice') not in {'once', 'session', 'always', 'deny'}
                 or not isinstance(params.get('request_id'), str) or not params['request_id']):
             raise RuntimeStoreError('invalid_params')
         try:

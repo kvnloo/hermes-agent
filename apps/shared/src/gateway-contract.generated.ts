@@ -5485,7 +5485,7 @@ export interface CanonicalRoomApproveParams {
   member_id: string
   task_id: string
   execution_generation: number
-  choice: 'once' | 'deny'
+  choice: 'once' | 'session' | 'always' | 'deny'
   request_id: string
 }
 export interface CanonicalBotDeliverParams {

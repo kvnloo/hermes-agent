@@ -10022,6 +10022,8 @@
           "choice": {
             "enum": [
               "once",
+              "session",
+              "always",
               "deny"
             ],
             "title": "Choice",

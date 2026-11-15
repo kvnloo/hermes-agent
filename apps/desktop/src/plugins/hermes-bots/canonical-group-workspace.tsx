@@ -438,7 +438,7 @@ function CanonicalRoomView({ binding: initialBinding, visible, onBack, onReplace
   const continueDiscussion = (discussionEventId: string) =>
     mutate(() => canonicalGroupRequest(binding, 'groups.continue', { room_id: binding.roomId, discussion_event_id: discussionEventId }))
 
-  const act = (action: CanonicalPendingAction, choice?: 'once' | 'deny') =>
+  const act = (action: CanonicalPendingAction, choice?: 'once' | 'session' | 'always' | 'deny') =>
     mutate(() => {
       if (action.kind === 'retry') {stopIntent.current = null}
 

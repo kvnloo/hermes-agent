@@ -432,7 +432,7 @@ export function canonicalGroupCreateError(error: unknown, labels: CreateErrorLab
 export async function actCanonicalGroup(
   binding: CanonicalGroupBinding,
   action: CanonicalPendingAction,
-  choice?: 'once' | 'deny'
+  choice?: 'once' | 'session' | 'always' | 'deny'
 ): Promise<Record<string, unknown>> {
   const methods: Record<string, string> = { retry: 'groups.retry', discard: 'groups.discard', approval: 'groups.approve' }
   const method = Object.hasOwn(methods, action.kind) ? methods[action.kind] : undefined
@@ -450,13 +450,13 @@ export async function actCanonicalGroup(
   }
 
   if (action.kind === 'approval') {
-    if (!action.request_id || (choice !== 'once' && choice !== 'deny') ||
+    if (!action.request_id || (choice !== 'once' && choice !== 'session' && choice !== 'always' && choice !== 'deny') ||
       !Array.isArray(action.approval?.choices) || !action.approval.choices.includes(choice)) {
       throw new Error('Approval requires its exact request ID and a choice the gateway offered')
     }
 
-    if (choice === 'once' && !canonicalApprovalPreview(action).reviewable) {
-      throw new Error('Allow once requires a reviewable command or edit')
+    if (choice !== 'deny' && !canonicalApprovalPreview(action).reviewable) {
+      throw new Error('Allow requires a reviewable command or edit')
     }
 
     params.request_id = action.request_id
