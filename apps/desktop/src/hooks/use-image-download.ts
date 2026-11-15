@@ -36,6 +36,12 @@ export function useImageDownload(src?: string) {
     setSaving(true)
 
     try {
+      if (src.startsWith('blob:')) {
+        // Object URLs belong to this renderer and cannot be fetched by Electron's main process.
+        await startBrowserDownload(src)
+        return
+      }
+
       if (window.hermesDesktop?.saveImageFromUrl) {
         if (await window.hermesDesktop.saveImageFromUrl(src)) {
           notify({ kind: 'success', title: copy.imageSaved, message: imageFilename(src) })
