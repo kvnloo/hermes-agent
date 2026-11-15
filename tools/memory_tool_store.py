@@ -186,11 +186,15 @@ class MemoryStore:
     _MAX_CONSOLIDATION_FAILURES_PER_TURN = 3
 
     def __init__(self, memory_char_limit: int = 2200, user_char_limit: int = 1375, *,
-                 memory_enabled: bool = True, user_profile_enabled: bool = True):
+                 memory_enabled: bool = True, user_profile_enabled: bool = True,
+                 config_home: Optional[Path] = None):
         self.memory_entries: list[str] = []
         self.user_entries: list[str] = []
         self.memory_char_limit, self.user_char_limit = memory_char_limit, user_char_limit
         self.memory_enabled, self.user_profile_enabled = memory_enabled, user_profile_enabled
+        # Only native config-owned stores opt in; explicit/custom budgets stay fixed.
+        self._config_home = Path(config_home) if config_home is not None else None
+        self._drift_char_limits = {"memory": memory_char_limit, "user": user_char_limit}
         self._system_prompt_snapshot: dict[str, str] = {"memory": "", "user": ""}
         self._consolidation_failures = 0  # per turn; reset by reset_consolidation_failures()
 
@@ -720,13 +724,17 @@ class MemoryStore:
             raise RuntimeError(f"Failed to write memory file {path}: {e}")
 
     def _has_oversized_entry(self, target: str, raw: str) -> bool:
-        """True when one entry in *raw* is longer than the whole-file limit. A tool write
-        never produces one, so it is free-form text appended without delimiters, or an entry
-        written before the limit was lowered. Layout differences (blank lines around ``§``,
-        empty entries, padding) are NOT drift: parsing only strips whitespace, so the flush
-        loses nothing but whitespace, and refusing there blocked every replace/remove on a
-        hand-formatted file for good (#107270)."""
-        return max(map(len, self._parse_entries(raw)), default=0) > self._char_limit(target)
+        """True when one entry exceeds the known valid whole-file budget.
+
+        Config-owned live stores keep a quota high-water mark: a later quota cut
+        must not misclassify previously legal entries as foreign drift. Cold/custom
+        stores still use their current cap. This heuristic is not provenance proof;
+        layout differences alone are never drift (#107270).
+        """
+        limit = self._char_limit(target)
+        if self._config_home is not None:
+            limit = max(limit, self._drift_char_limits[target])
+        return max(map(len, self._parse_entries(raw)), default=0) > limit
 
     def _drift_backup(self, target: str, raw: str) -> str:
         """``.bak.<ts>[.<n>]`` snapshot of *raw* before a drift refusal or a delete that drops an
