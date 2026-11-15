@@ -32,3 +32,76 @@ export function freshProbe(key: string, now = Date.now()): McpTestResult | null 
 
   return cached && now - cached.at < PROBE_TTL_MS ? cached.result : null
 }
+
+const MAX_AUTO_MCP_PROBES = 4
+
+interface AutoProbeJob {
+  key: string
+  run: () => Promise<McpTestResult>
+  needed: Array<() => boolean>
+  resolve: (result: McpTestResult | null) => void
+  reject: (error: unknown) => void
+}
+
+let runningAutoProbes = 0
+const queuedAutoProbes: AutoProbeJob[] = []
+const pendingAutoProbes = new Map<
+  string,
+  { promise: Promise<McpTestResult | null>; needed: Array<() => boolean> }
+>()
+
+function startQueuedAutoProbes(): void {
+  while (runningAutoProbes < MAX_AUTO_MCP_PROBES) {
+    const job = queuedAutoProbes.shift()
+
+    if (!job) {
+      return
+    }
+
+    // A profile switch can retire work before it occupies a connection slot.
+    if (!job.needed.some(isNeeded => isNeeded())) {
+      pendingAutoProbes.delete(job.key)
+      job.resolve(null)
+      continue
+    }
+
+    runningAutoProbes += 1
+    void Promise.resolve()
+      .then(job.run)
+      .then(job.resolve, job.reject)
+      .finally(() => {
+        runningAutoProbes -= 1
+        pendingAutoProbes.delete(job.key)
+        startQueuedAutoProbes()
+      })
+  }
+}
+
+/** One renderer-wide cap and single flight per (profile, server, config). */
+export function scheduleAutoMcpProbe(
+  key: string,
+  run: () => Promise<McpTestResult>,
+  isNeeded: () => boolean
+): Promise<McpTestResult | null> {
+  const existing = pendingAutoProbes.get(key)
+
+  if (existing) {
+    existing.needed.push(isNeeded)
+
+    return existing.promise
+  }
+
+  let resolve!: (result: McpTestResult | null) => void
+  let reject!: (error: unknown) => void
+  const promise = new Promise<McpTestResult | null>((yes, no) => {
+    resolve = yes
+    reject = no
+  })
+  const needed = [isNeeded]
+
+  pendingAutoProbes.set(key, { promise, needed })
+  queuedAutoProbes.push({ key, run, needed, resolve, reject })
+  startQueuedAutoProbes()
+
+  return promise
+}

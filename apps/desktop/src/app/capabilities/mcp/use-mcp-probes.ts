@@ -1,7 +1,7 @@
 import { type RefObject, useEffect, useMemo, useRef, useState } from 'react'
 
 import { type ProfileScope, testMcpServer } from '@/hermes'
-import { PROBE_TTL_MS, probeCache, probeKey, serverFingerprint } from '@/lib/mcp-probe-cache'
+import { PROBE_TTL_MS, probeCache, probeKey, scheduleAutoMcpProbe, serverFingerprint } from '@/lib/mcp-probe-cache'
 import { type McpServerEntry, type McpServers, serverEnabled } from '@/lib/mcp-servers'
 import { countEnabledTools } from '@/lib/mcp-tool-filter'
 
@@ -43,15 +43,21 @@ export function useMcpProbes({
     setProbes(current => ({ ...current, [serverName]: value }))
   }
 
-  const runProbe = async (serverName: string) => {
+  const runProbe = async (serverName: string, automatic = false) => {
     const epoch = profileEpoch.current
     const key = probeKey(serverName, servers[serverName], scopeProfileKey)
     setProbes(current => ({ ...current, [serverName]: 'probing' }))
 
     try {
-      const result = await testMcpServer(serverName, profile ?? undefined)
+      const result = automatic
+        ? await scheduleAutoMcpProbe(
+            key,
+            () => testMcpServer(serverName, profile ?? undefined),
+            () => profileEpoch.current === epoch
+          )
+        : await testMcpServer(serverName, profile ?? undefined)
 
-      if (profileEpoch.current !== epoch) {
+      if (profileEpoch.current !== epoch || result === null) {
         return
       }
 
@@ -79,7 +85,7 @@ export function useMcpProbes({
       if (cached && Date.now() - cached.at < PROBE_TTL_MS) {
         setProbes(current => ({ ...current, [serverName]: cached.result }))
       } else {
-        void runProbe(serverName)
+        void runProbe(serverName, true)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
