@@ -400,6 +400,12 @@ def _vbs_identity(script: str) -> tuple[str, list[str]]:
             _unverified(f"the launcher sets {match[1]} twice or sets an unexpected variable")
         env[match[1]] = match[2][1:-1].replace('""', '"')
         index += 1
+    # Task-only /restart supervision marker. An installed older launcher omits it.
+    if index < len(lines) and lines[index] == (
+        'env.Item("HERMES_GATEWAY_EXTERNAL_SUPERVISOR") = '
+        'CStr(WScript.Arguments.Named.Exists("restartable-task"))'
+    ):
+        index += 1
     tail = lines[index:]
     mismatch = _tail_mismatch(tail, waits)
     if mismatch is not None:
@@ -458,7 +464,7 @@ def verify_windows_task(xml: str | bytes, home: Path, account: str, sid: str) ->
     if action.tag != '{' + ns['t'] + '}Exec' or action.findtext('t:Command', '', ns).lower() not in {"wscript.exe", r"c:\windows\system32\wscript.exe"}:
         _unverified(f"the task runs {action.findtext('t:Command', '', ns) or action.tag!r}, not wscript.exe")
     args = action.findtext("t:Arguments", "", ns)
-    match = re.fullmatch(r'//B //Nologo "([^"\r\n]+)"', args)
+    match = re.fullmatch(r'//B //Nologo "([^"\r\n]+)"(?: /restartable-task)?', args)
     if not match:
         _unverified(f"the task arguments are {args!r}, not //B //Nologo \"<launcher>\"")
     script = _absolute(match[1])

@@ -27,6 +27,7 @@ def _pre_146976(script: str) -> str:
     lines[2] = "Dim sh, env, existing_pp"
     lines[run] = "sh.Run " + lines[run][len("code = sh.Run("):-len(", 0, True)")] + ", 0, False"
     del lines[run + 1:run + 4]
+    lines = [line for line in lines if 'env.Item("HERMES_GATEWAY_EXTERNAL_SUPERVISOR")' not in line]
     return "\r\n".join(lines)
 
 
@@ -77,3 +78,49 @@ def test_wscript_waits_for_the_gateway_and_returns_its_mapped_exit(tmp_path, mon
                           stdin=subprocess.DEVNULL, capture_output=True)
     assert marker.exists(), "wscript returned before the gateway exited"
     assert done.returncode == expected
+
+
+@pytest.mark.platforms("any")
+def test_task_restart_flag_is_not_inherited_by_startup_fallback(tmp_path, monkeypatch):
+    """Only the Scheduled Task can ask the waiting VBS to enable supervisor restarts.
+
+    A plain gateway start and the Startup-folder fallback must still use a detached /restart:
+    neither is covered by Task Scheduler's RestartOnFailure policy.
+    """
+    from gateway.restart import is_gateway_supervisor_process
+
+    home, script = _launcher(tmp_path, monkeypatch, tmp_path / "python.exe")
+    task = gateway_windows._build_scheduled_task_xml("Hermes_Gateway", tmp_path / "gateway.vbs", "PC\\user")
+    startup = gateway_windows._build_startup_launcher(tmp_path / "gateway.cmd")
+    assert ' /restartable-task</Arguments>' in task
+    assert "/restartable-task" not in startup
+    assert ('env.Item("HERMES_GATEWAY_EXTERNAL_SUPERVISOR") = '
+            'CStr(WScript.Arguments.Named.Exists("restartable-task"))') in script
+    assert is_gateway_supervisor_process({"HERMES_GATEWAY_EXTERNAL_SUPERVISOR": "True"})
+    assert not is_gateway_supervisor_process({"HERMES_GATEWAY_EXTERNAL_SUPERVISOR": "False"})
+    configured, _argv = _vbs_identity(script)
+    assert configured == str(home)
+    # The already-installed waiting launcher and the original asynchronous one must still verify.
+    old_waiting = "\r\n".join(line for line in script.split("\r\n")
+                                if 'env.Item("HERMES_GATEWAY_EXTERNAL_SUPERVISOR")' not in line)
+    assert _vbs_identity(old_waiting)[0] == str(home)
+    assert _vbs_identity(_pre_146976(script))[0] == str(home)
+
+
+@pytest.mark.platforms("windows")
+@pytest.mark.parametrize("task_owned,expected", [(True, "True"), (False, "False")])
+def test_wscript_task_flag_controls_actual_child_supervisor_env(tmp_path, monkeypatch, task_owned, expected):
+    """Real WSH: /restartable-task is present for the Scheduled Task, absent for Startup."""
+    stub = tmp_path / "stub.cmd"
+    marker = tmp_path / "supervisor-env.txt"
+    stub.write_text(f'@echo %HERMES_GATEWAY_EXTERNAL_SUPERVISOR%> "{marker}"\r\n@exit /b 75\r\n',
+                    encoding="ascii")
+    _home, script = _launcher(tmp_path, monkeypatch, stub)
+    vbs = tmp_path / "gateway.vbs"
+    vbs.write_text(script, encoding="utf-8", newline="")
+    wscript = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "wscript.exe"
+    arguments = ["/restartable-task"] if task_owned else []
+    done = subprocess.run([str(wscript), "//B", "//Nologo", str(vbs), *arguments], timeout=60,
+                          check=False, stdin=subprocess.DEVNULL, capture_output=True)
+    assert done.returncode == 75
+    assert marker.read_text(encoding="ascii").strip() == expected

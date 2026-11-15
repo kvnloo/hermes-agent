@@ -450,6 +450,10 @@ def _build_gateway_vbs_script(python_path: str, working_dir: str, hermes_home: s
         f"env.Item({q('HERMES_HOME')}) = {q(hermes_home)}",
         *[f"env.Item({q(k)}) = {q(v)}" for k, v in _GATEWAY_ENV],
         f"env.Item({q('VIRTUAL_ENV')}) = {q(_preserve_hermes_home_path(venv_dir))}",
+        # A Scheduled Task passes this flag; the Startup-folder fallback runs the same VBS without it.
+        # Use the existing supervisor marker only for the task, so /restart remains task-owned.
+        'env.Item("HERMES_GATEWAY_EXTERNAL_SUPERVISOR") = '
+        'CStr(WScript.Arguments.Named.Exists("restartable-task"))',
         # Mirror the cmd wrapper's ``PYTHONPATH=<static>;%PYTHONPATH%`` at runtime.
         f"existing_pp = env.Item({q('PYTHONPATH')})",
         "If Len(existing_pp) > 0 Then",
@@ -651,7 +655,7 @@ def _build_scheduled_task_xml(task_name: str, launcher_path: Path, user: str | N
   <Actions Context="Author">
     <Exec>
       <Command>wscript.exe</Command>
-      <Arguments>//B //Nologo "{escape(str(launcher_path))}"</Arguments>
+      <Arguments>//B //Nologo "{escape(str(launcher_path))}" /restartable-task</Arguments>
     </Exec>
   </Actions>
 </Task>
