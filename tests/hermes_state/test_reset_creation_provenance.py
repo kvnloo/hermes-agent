@@ -149,3 +149,28 @@ def test_reset_creation_evidence_survives_enrichment_without_upgrading_legacy(db
         assert stored["temperature"] == 0.25
         assert stored["extra_setting"] is True
         assert stored["provider"] == "test-provider"
+
+def test_reopen_rejects_child_older_than_parent_even_with_stale_end(db):
+    """An older markerless child cannot be a reset successor of a newer parent."""
+    key = "agent:main:telegram:dm:preparent"
+    db.create_session("parent", source="telegram", session_key=key)
+    db.create_session(
+        "older-child", source="telegram", session_key=key, parent_session_id="parent",
+    )
+    db.end_session("parent", "session_switch")
+    baseline = time.time() - 1000
+    # A stale imported end timestamp can precede both sessions' start times.
+    db._conn.execute(
+        "UPDATE sessions SET started_at = ?, ended_at = ? WHERE id = 'parent'",
+        (baseline + 300, baseline + 100),
+    )
+    db._conn.execute(
+        "UPDATE sessions SET started_at = ? WHERE id = 'older-child'",
+        (baseline + 200,),
+    )
+    db._conn.commit()
+
+    db.reopen_session("parent")
+
+    assert db.get_session("older-child")["model_config"] is None
+    assert db.get_session("parent")["end_reason"] is None
