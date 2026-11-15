@@ -18,13 +18,12 @@ logger = logging.getLogger(__name__)
 TOOL_KIND_MAP: dict[str, ToolKind] = {
     name: kind
     for kind, names in {
-        "read": ("read_file", "skill_view", "skills_list", "browser_snapshot", "browser_vision",
-                 "browser_get_images", "vision_analyze"),
+        "read": ("read_file", "skill_view", "skills_list", "vision_analyze"),
         "edit": ("write_file", "patch", "skill_manage"),
         "search": ("search_files",),
-        "execute": ("terminal", "process", "execute_code", "browser_click", "browser_type", "browser_scroll",
-                    "browser_press", "browser_back", "delegate_task", "image_generate", "text_to_speech"),
-        "fetch": ("web_search", "web_extract", "browser_navigate"),
+        "execute": ("terminal", "process", "execute_code", "browser_exec", "browser_cdp",
+                    "browser_dialog", "browser_vault", "delegate_task", "image_generate", "text_to_speech"),
+        "fetch": ("web_search", "web_extract"),
         "other": ("todo",),
         "think": ("_thinking",),
     }.items()
@@ -40,8 +39,7 @@ _POLISHED_TOOLS = {
     "read_file", "write_file", "patch", "search_files", "terminal", "process", "execute_code",
     # Skills / web / browser / media
     "skill_view", "skills_list", "skill_manage", "web_search", "web_extract",
-    "browser_navigate", "browser_click", "browser_type", "browser_press", "browser_scroll",
-    "browser_back", "browser_snapshot", "browser_console", "browser_get_images", "browser_vision",
+    "browser_exec", "browser_cdp", "browser_dialog", "browser_vault",
     "vision_analyze", "image_generate", "text_to_speech",
     # Schedulers / platform integrations
     "cronjob", "send_message", "clarify", "discord", "discord_admin",
@@ -492,23 +490,22 @@ def _format_edit_result(tool_name: str, result: Optional[str], args: Optional[Ar
 
 @_structured(text_fallback=True)
 def _format_browser_result(tool_name: str, data: Args, args: Args) -> Optional[str]:
-    if failed := _failure(data, f"{tool_name} failed"):
-        return failed
-    images = (data.get("images") or data.get("data")) if tool_name == "browser_get_images" else None
-    if isinstance(images, list):
-        lines = [f"Images found: {len(images)}"]
-        for img in images[:12]:
-            if isinstance(img, dict):
-                url = str(img.get("url") or img.get("src") or "").strip()
-                lines.append(f"- {str(img.get('alt') or '').strip() or 'image'}" + (f" — {url}" if url else ""))
-        return _truncate_text("\n".join(lines), limit=5000)
-    title = str(_first(data, "title", "url", "status", default=tool_name))
-    lines = [title]
-    if data.get("url") and data.get("url") != title:
-        lines.append(str(data.get("url")))
-    if text := str(_first(data, "text", "content", "snapshot", "analysis", "message")).strip():
-        lines.extend(["", _truncate_text(text, limit=5000)])
-    return _truncate_text("\n".join(lines), limit=7000)
+    """Render browser_exec's stdout and error details, not its JSON envelope."""
+    if error := data.get("error"):
+        return _truncate_text(f"{tool_name} failed: {error}", limit=7000)
+    failed = data.get("success") is False
+    headline = f"{tool_name} failed" if failed else f"{tool_name} completed"
+    if failed and data.get("exit_code") is not None:
+        headline += f" (exit {data['exit_code']})"
+    lines = [headline]
+    if output := str(data.get("output") or "").strip():
+        lines.append(_truncate_text(output, limit=5000))
+    if stderr := str(data.get("stderr") or "").strip():
+        lines.append(f"stderr: {_truncate_text(stderr, limit=1500)}")
+    for key, label in (("screenshot_path", "Screenshot"), ("workspace", "Workspace")):
+        if value := data.get(key):
+            lines.append(f"{label}: {value}")
+    return _truncate_text("\n\n".join(lines), limit=7000)
 
 
 @_structured(text_fallback=True)
@@ -629,7 +626,7 @@ _COMPLETION_FORMATTERS: dict[str, _Formatter] = {
     "skill_view": _format_skill_view_result,
     "skill_manage": _format_skill_manage_result,
     "web_search": _format_web_search_result,
-    **{n: _format_browser_result for n in ("browser_navigate", "browser_snapshot", "browser_vision", "browser_get_images")},
+    "browser_exec": _format_browser_result,
     **{n: _format_media_or_cron_result for n in ("vision_analyze", "image_generate", "cronjob")},
 }
 
