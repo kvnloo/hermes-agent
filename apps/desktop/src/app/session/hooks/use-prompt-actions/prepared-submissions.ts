@@ -43,6 +43,8 @@ const SPENT_PREFIX = 'hermes.desktop.preparedSubmissions.spent.v2:'
 // The pre-v2 single blob: still honored, drained entry by entry as each tombstone clears.
 const LEGACY_SPENT_KEY = 'hermes.desktop.preparedSubmissions.spent.v1'
 const retired = new Map<string, string>()
+// Browser-only fallback when a full origin rejects the optional recovery write.
+const unstored = new Map<string, PreparedSubmission>()
 
 function readLegacySpent(): Record<string, string> {
   const raw = window.localStorage.getItem(LEGACY_SPENT_KEY)
@@ -123,7 +125,9 @@ async function readJournal(): Promise<Record<string, PreparedSubmission>> {
 
   const stored = parsed as Record<string, PreparedSubmission>
   const listed = listPrefixed()
-  const journal = native ? stored : readBrowserJournal(stored, listed[ENTRY_PREFIX])
+  const journal = native
+    ? stored
+    : { ...readBrowserJournal(stored, listed[ENTRY_PREFIX]), ...Object.fromEntries(unstored) }
 
   // Tombstones are read only after the entries: a retirement tombstones its entry before removing
   // it, so a tombstone written before an entry was read here is seen and hides that entry.
@@ -313,14 +317,22 @@ export async function writePreparedSubmission(key: string, entry: PreparedSubmis
 
   // Browser-only clients retain reload recovery, not a process-crash guarantee.
   // Native write failures never fall back here: sending requires their ACK.
-  window.localStorage.setItem(ENTRY_PREFIX + key, JSON.stringify(entry))
-  clearSpent(key)
+  try {
+    window.localStorage.setItem(ENTRY_PREFIX + key, JSON.stringify(entry))
+    clearSpent(key)
+    unstored.delete(key)
+  } catch (error) {
+    // A full browser origin loses reload recovery, not the user's send or its in-window retry ID.
+    unstored.set(key, entry)
+    console.warn('[prepared-submission-unstored]', error)
+  }
 }
 
 /** Retire an admitted entry. Its identity is spent — durably, in a separate store — before the
  *  journal removal is attempted, so a failed removal can only leave a stale file entry that every
  *  later read (this window, a reload, another window) hides and retries, never a reusable one. */
 export async function removePreparedSubmission(key: string, id: string): Promise<void> {
+  unstored.delete(key)
   retired.set(key, id)
 
   // The tombstone store failing too (quota) leaves the in-memory mark; the removal still runs.
