@@ -89,3 +89,21 @@ def test_unsubscribe_without_thread_still_prefers_a_root_lane_row(task):
         kbn.add_notify_sub(conn, task_id=task, platform="telegram", chat_id=DM, thread_id="7")
     assert _unsubscribe(task, "--platform", "telegram", "--chat-id", DM) == 0
     assert _threads(task) == ["7"]
+
+
+def test_topic_subscribe_warns_when_preupgrade_root_subscription_still_delivers(task, monkeypatch, capsys):
+    """A persisted root subscriber remains active after adding a topic subscriber (#87281)."""
+    with kbc.connect() as conn:
+        kbn.add_notify_sub(conn, task_id=task, platform="telegram", chat_id=DM)
+    for name, value in (("PLATFORM", "telegram"), ("CHAT_ID", DM), ("THREAD_ID", "42")):
+        monkeypatch.setenv(f"HERMES_SESSION_{name}", value)
+
+    _subscribe(task, "--platform", "telegram", "--chat-id", DM)
+    assert _threads(task) == ["", "42"]  # old root and newly inferred topic both remain subscribed
+    err = capsys.readouterr().err
+    assert "existing DM-root subscription will still receive completion pings" in err
+    assert "notify-unsubscribe --thread-id ''" in err
+
+    # The warning's escape hatch removes only the legacy root row.
+    assert _unsubscribe(task, "--platform", "telegram", "--chat-id", DM, "--thread-id", "") == 0
+    assert _threads(task) == ["42"]

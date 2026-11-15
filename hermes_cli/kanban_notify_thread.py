@@ -50,6 +50,12 @@ def resolve_subscribe_thread(conn, args) -> str | None:
     if args.thread_id is not None:
         return args.thread_id
     if thread_id := _session_thread_for(args.platform, args.chat_id):
+        # A pre-upgrade root subscription is a separate persisted row. Picking the caller's topic
+        # adds another row; it does not move or cancel the existing root-lane delivery.
+        if (args.platform.lower() == "telegram" and args.chat_type in (None, "dm")
+                and None in _chat_threads(kbn.list_notify_subs(conn, args.task_id), args)):
+            print("warning: an existing DM-root subscription will still receive completion pings; "
+                  "remove it with notify-unsubscribe --thread-id '' if unintended", file=sys.stderr)
         print(f"(no --thread-id given; using this session's thread_id={thread_id})", file=sys.stderr)
         return thread_id
     # Several threaded rows per chat are normal (the PK is the full 4-tuple) and list_notify_subs is
