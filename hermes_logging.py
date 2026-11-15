@@ -15,6 +15,7 @@ import os
 import queue
 import sys
 import threading
+from functools import lru_cache
 from logging.handlers import QueueHandler, QueueListener
 from pathlib import Path
 from time import monotonic as _monotonic
@@ -260,6 +261,12 @@ def clear_session_context() -> None:
     _session_context.session_id = None
 
 
+@lru_cache(maxsize=16)
+def _resolved_record_home(home: str) -> str:
+    """Resolve a log home once per raw path, preserving multiplexed profile routing."""
+    return str(Path(home).resolve())
+
+
 def _install_session_record_factory() -> None:
     """Replace the global LogRecord factory with one that adds ``session_tag``.
 
@@ -279,7 +286,7 @@ def _install_session_record_factory() -> None:
         # ContextVar is gone; keep the resolved home on the record so a
         # multiplex desktop ticker can route to the job owner's files (#97489).
         try:
-            record.hermes_home = str(get_hermes_home().resolve())  # type: ignore[attr-defined]
+            record.hermes_home = _resolved_record_home(str(get_hermes_home()))  # type: ignore[attr-defined]
         except Exception:
             record.hermes_home = ""  # type: ignore[attr-defined]
         return record
