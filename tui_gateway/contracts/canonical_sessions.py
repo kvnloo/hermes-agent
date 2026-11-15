@@ -128,6 +128,7 @@ class CanonicalSnapshotInfo(SessionInventoryFields):
     profile_id: str | None = None
     profile_name: str | None = None
     cwd: str | None = None
+    terminal_backend: str | None = None
     edit_approval_policy: Literal['ask', 'workspace_session', 'session'] | None = None
     launch_request: dict[str, JsonValue] | None = None
     # ``session.info``'s ``client``: create and resume return the same projection.
