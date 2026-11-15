@@ -39,7 +39,13 @@ def fingerprint(servers):
 
 
 def validate_servers(servers):
-    from acp.schema import McpServerStdio, McpServerHttp, McpServerSse
+    try:
+        from acp.schema import McpServerStdio, McpServerHttp, McpServerSse
+    except ModuleNotFoundError as exc:
+        if exc.name not in ('acp', 'acp.schema'):
+            raise
+        raise RuntimeStoreError('acp_extra_missing', field='editor.mcp_servers',
+                                detail="install the optional '[acp]' extra (agent-client-protocol)") from exc
     from pydantic import ValidationError
     kinds = {'stdio': McpServerStdio, 'http': McpServerHttp, 'sse': McpServerSse}
     if not isinstance(servers, list):
