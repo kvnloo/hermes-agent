@@ -433,7 +433,7 @@ async def execute_command(connection, ref, params, *, dispatch=False):
     canonical = definition.name if definition else name
     live = authority.sessions[ref.session_id]
     adapter = authority.runner._adapter_for_source(live.source) if canonical == 'voice' else None
-    local_tts = bool(adapter and getattr(adapter, 'can_play_host_audio', lambda _id: False)(ref.session_id))
+    local_tts = adapter is not None and getattr(adapter, 'can_play_host_audio', lambda _id: False)(ref.session_id) is True
     verdict = command_verdict(canonical, arg, local_tts=local_tts) if definition else None
 
     fired = []

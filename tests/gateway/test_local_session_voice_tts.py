@@ -12,7 +12,6 @@ import asyncio
 import json
 import signal
 import threading
-import time
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
@@ -69,6 +68,44 @@ def test_single_host_tui_can_play_but_remote_or_desktop_cannot(monkeypatch):
     played.assert_called_once_with('/tmp/speech.ogg')
 
 
+@pytest.mark.parametrize('client,expected', [
+    ('local', True), ('remote', False), ('desktop', False), ('unknown', False),
+    ('envless', False), ('no-player', False), ('unconfirmed', False),
+])
+def test_local_auto_tts_requires_playable_host_audio(monkeypatch, client, expected):
+    """Exercise the runner's synthesis gate, not just the adapter capability probe."""
+    from types import SimpleNamespace
+
+    from gateway.config import Platform
+    from gateway.platforms.event import MessageEvent
+    from gateway.run import GatewayRunner
+    from gateway.session import SessionSource
+    from gateway.session_local import LocalSessionAdapter
+    from tools import voice_mode
+
+    adapter = LocalSessionAdapter(SimpleNamespace(runner=None))
+    adapter.policies[client] = SimpleNamespace(
+        source='gui' if client == 'desktop' else 'tui',
+        client_env_json=None if client == 'envless' else '{}',
+        client_env_remote=client == 'remote')
+    if client == 'unknown':
+        adapter.policies.clear()
+    if client == 'unconfirmed':
+        monkeypatch.setattr(adapter, 'can_play_host_audio', lambda _chat: object())
+    monkeypatch.setattr(voice_mode, '_system_player_candidates', lambda path: [['test-player', path]])
+    monkeypatch.setattr(voice_mode.shutil, 'which',
+                        lambda _binary: None if client == 'no-player' else '/test/player')
+    runner = GatewayRunner.__new__(GatewayRunner)
+    runner.adapters = {Platform.LOCAL: adapter}
+    source = SessionSource(platform=Platform.LOCAL, chat_id=client, user_id='owner')
+    event = MessageEvent(text='hello', source=source)
+    key = runner._voice_key_for_source(source)
+    runner._voice_mode = {key: 'all'}
+    assert runner._should_send_voice_reply(event, 'the reply', []) is expected
+    runner._voice_mode[key] = 'off'
+    assert runner._should_send_voice_reply(event, 'the reply', []) is False
+
+
 def test_local_voice_tts_is_refused_and_other_voice_forms_stay():
     """``/voice tts`` is a named refusal. ``/voice on|off|status`` stay controls."""
     from gateway.session_commands import command_verdict
@@ -89,7 +126,10 @@ def test_local_voice_refusal_reads_the_argument_as_the_handler_does():
 
 
 @pytest.mark.platforms("linux")  # the daemon is stopped with SIGINT, which raises on Windows
-def test_local_session_voice_tts_never_synthesizes_unplayable_audio(tmp_path):
+@pytest.mark.parametrize('source,client_env,playable', [
+    ('tui', {}, True), ('tui', None, False), ('gui', {}, False),
+])
+def test_local_session_voice_tts_never_synthesizes_unplayable_audio(tmp_path, source, client_env, playable):
     root = Path(__file__).resolve().parents[2]
     home, user, work = tmp_path / 'state', tmp_path / 'user', tmp_path / 'work'
     home.mkdir(mode=0o700)
@@ -107,27 +147,41 @@ def test_local_session_voice_tts_never_synthesizes_unplayable_audio(tmp_path):
         'auxiliary': {'title_generation': {'enabled': False}},
         'tts': {'provider': 'openai', 'openai': {'base_url': url, 'api_key': 'loopback-only'}},
     }))
+    # A recording system-player executable exercises real subprocess delivery without speakers.
+    import os
+    import sys
+    from tests.waiting import async_wait_until
+
+    player_log = tmp_path / 'played.jsonl'
+    players = tmp_path / 'bin'
+    players.mkdir()
+    player = players / 'ffplay'
+    player.write_text(
+        f'#!{sys.executable}\nimport json, sys\nfrom pathlib import Path\n'
+        f'with Path({str(player_log)!r}).open("a") as log:\n'
+        '    log.write(json.dumps({"size": Path(sys.argv[-1]).stat().st_size}) + "\\n")\n')
+    player.chmod(0o755)
     env = child_env()
     env.update(HOME=str(user), USERPROFILE=str(user), HERMES_HOME=str(home), PYTHONPATH=str(root),
-               OPENAI_API_KEY='loopback-only', OPENAI_BASE_URL=url, PYTHONUNBUFFERED='1')
+               OPENAI_API_KEY='loopback-only', OPENAI_BASE_URL=url, PYTHONUNBUFFERED='1',
+               PATH=str(players) + os.pathsep + env.get('PATH', ''))
     out = {}
 
     async def probe(desc):
         async with websocket(home, desc) as ws:
-            created = await rpc(ws, 'session.create', request_id='voice', source='tui', toolsets=[], cwd=str(work))
+            params = dict(request_id='voice', source=source, toolsets=[], cwd=str(work))
+            if client_env is not None:
+                params['client_env'] = client_env
+            created = await rpc(ws, 'session.create', **params)
             sid = created['result']['session_id']
             out['first'] = await rpc(ws, 'slash.exec', session_id=sid, command='voice tts')
             await rpc(ws, 'prompt.submit', session_id=sid, input_id='hello', text='HELLO')
-            deadline = time.monotonic() + 45
-            snap = None
-            while time.monotonic() < deadline:
+            async def settled():
                 snap = (await rpc(ws, 'session.resume', session_id=sid))['result']
-                if (not snap['running'] and not snap['pending']
-                        and 'RECOVERY_ACK_HELLO' in json.dumps(snap['messages'])):
-                    break
-                await asyncio.sleep(0.1)
-            else:
-                raise AssertionError(snap)
+                return (not snap['running'] and not snap['pending']
+                        and 'RECOVERY_ACK_HELLO' in json.dumps(snap['messages']))
+
+            await async_wait_until(settled, timeout=45, what='voice reply settled')
             # Voice synthesis is awaited before the turn settles, so the paths are final here.
             out['paths_after_turn'] = list(peer.paths)
             out['second'] = await rpc(ws, 'slash.exec', session_id=sid, command='voice tts')
@@ -141,9 +195,13 @@ def test_local_session_voice_tts_never_synthesizes_unplayable_audio(tmp_path):
         peer.server_close()
         thread.join(timeout=5)
     speech = [p for p in out['paths_after_turn'] if p.endswith('/audio/speech')]
-    # No client of a local session can play an owner-side voice reply.
-    assert not speech, ('owner synthesized TTS for a TUI session reply that nothing plays', out)
-    # The owner names the refusal instead of acknowledging a mode it cannot deliver.
-    for reply in (out['first'], out['second']):
-        assert reply.get('error', {}).get('message') == 'unsupported_command', (
-            '/voice tts claims a voice mode nothing delivers', out)
+    if playable:
+        assert len(speech) == 1, out
+        assert player_log.exists(), ('synthesis never reached the host player', out)
+        assert json.loads(player_log.read_text())['size'] > 0
+        assert all('result' in out[key] for key in ('first', 'second')), out
+    else:
+        assert not speech, ('owner synthesized TTS that nothing plays', out)
+        assert not player_log.exists()
+        for reply in (out['first'], out['second']):
+            assert reply.get('error', {}).get('message') == 'unsupported_command', out

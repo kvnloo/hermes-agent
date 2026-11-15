@@ -387,7 +387,7 @@ class GatewayVoiceMixin:
         # Remote Desktop/TUI and headless local sessions must not synthesize undeliverable audio.
         if event.source.platform == Platform.LOCAL:
             adapter = self._delivery_adapter_for(event.source)
-            if not getattr(adapter, "can_play_host_audio", lambda _chat: False)(event.source.chat_id):
+            if getattr(adapter, "can_play_host_audio", lambda _chat: False)(event.source.chat_id) is not True:
                 return False
         chat_id = event.source.chat_id
         voice_mode = self._voice_mode.get(self._voice_key_for_source(event.source))
