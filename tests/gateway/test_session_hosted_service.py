@@ -112,7 +112,21 @@ async def test_service_does_not_plan_or_run_historical_unowned_rooms(tmp_path, m
                 authority_gateway_id=local_authority_gateway_id(), members=[
                     {'member_id': 'one', 'profile': 'default', 'handle': 'one'},
                     {'member_id': 'two', 'profile': 'other', 'handle': 'two'}])
-        assert [b.room_id for b in service.bindings()] == ['owned']
+        # A case-variant key is not a canonical owner; the idle supervisor must seek owners only.
+        db.set_meta('Gateway.hosted.owner.v1:unowned', 'alice')
+        db.set_meta('gateway.local_policy.v1:noise', 'x' * 35_000)
+        statements = []
+        with db._read_ctx() as conn:
+            conn.set_trace_callback(statements.append)
+        try:
+            assert [b.room_id for b in service.bindings()] == ['owned']
+        finally:
+            with db._read_ctx() as conn:
+                conn.set_trace_callback(None)
+        query = next(sql for sql in statements if 'SELECT key FROM state_meta' in sql)
+        with db._read_ctx() as conn:
+            plan = [row[-1] for row in conn.execute('EXPLAIN QUERY PLAN ' + query)]
+        assert any('SEARCH state_meta USING COVERING INDEX' in step for step in plan), plan
 
 
 

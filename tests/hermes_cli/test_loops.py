@@ -673,6 +673,26 @@ class TestListMetaPrefix:
         db.set_meta("prefix:y", "2")
         assert db.list_meta_prefix("pre%") == [("pre%fix:x", "1")]
 
+    def test_literal_prefix_uses_index_seek(self, hermes_home, monkeypatch):
+        from hermes_state import SessionDB
+
+        with SessionDB() as db:
+            db.set_meta("heartbeat:active", "ready")
+            db.set_meta("HEARTBEAT:other", "wrong case")
+            db.set_meta("gateway.local_policy.v1:large", "x" * 35_000)
+            statements = []
+            original = db._read_all
+
+            def capture(sql, params=()):
+                statements.append((sql, params))
+                return original(sql, params)
+
+            monkeypatch.setattr(db, "_read_all", capture)
+            assert db.list_meta_prefix("heartbeat:") == [("heartbeat:active", "ready")]
+            sql, params = statements[0]
+            plan = [row[-1] for row in db._conn.execute("EXPLAIN QUERY PLAN " + sql, params)]
+            assert any("SEARCH state_meta USING INDEX" in step for step in plan), plan
+
     def test_empty_prefix(self, hermes_home):
         from hermes_state import SessionDB
 

@@ -1712,15 +1712,25 @@ class SessionDB(
         return bool(rows)
 
     def list_meta_prefix(self, prefix: str) -> list[tuple[str, str]]:
-        """``[(key, value), ...]`` for state_meta keys starting with the literal
-        ``prefix`` (LIKE wildcards escaped) — e.g. ``loop:<session_id>`` rows."""
+        """``[(key, value), ...]`` for literal state_meta key prefixes."""
         if not prefix:
             return []
-        rows = self._read_all(
-            "SELECT key, value FROM state_meta WHERE key LIKE ? ESCAPE '\\'", (_escape_like(prefix) + "%",),
-        )
+        # state_meta.key uses BINARY collation; a half-open range seeks its primary-key index.
+        end = len(prefix)
+        while end and ord(prefix[end - 1]) == 0x10FFFF:
+            end -= 1
+        if end:
+            codepoint = ord(prefix[end - 1]) + 1
+            if codepoint == 0xD800:
+                codepoint = 0xE000  # Skip the non-UTF-8 surrogate range.
+            upper = prefix[:end - 1] + chr(codepoint)
+            sql = "SELECT key, value FROM state_meta WHERE key >= ? AND key < ?"
+            params = (prefix, upper)
+        else:
+            sql = "SELECT key, value FROM state_meta WHERE key >= ?"
+            params = (prefix,)
+        rows = self._read_all(sql, params)
         return [(row[0], row[1]) for row in rows]
-
 
 class AsyncSessionDB:
     """Async door onto SessionDB: every call runs via asyncio.to_thread so a blocking SQLite call
