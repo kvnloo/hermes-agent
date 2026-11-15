@@ -2247,9 +2247,21 @@ def _chat_summary_attempt(agent, api_messages: list, api_request_id: str):
     def _attempt(retry_count: int) -> str:
         # Use the ordinary request-local lifecycle: a summary can be interrupted
         # during a long prefill without closing the shared primary client.
-        response = _managed_summary_call(
-            agent, api_request_id, summary_kwargs, agent._interruptible_api_call,
-            retry_count=retry_count)
+        try:
+            response = _managed_summary_call(
+                agent, api_request_id, summary_kwargs, agent._interruptible_api_call,
+                retry_count=retry_count)
+        except Exception as exc:
+            # Unlike ordinary turns, the final iteration summary has no error-classification
+            # recovery. Retry a busy fast tier at standard speed before losing the summary.
+            from agent.fast_mode import fast_tier_busy, use_standard_speed_this_turn
+            if not (fast_tier_busy(exc, summary_kwargs) and use_standard_speed_this_turn(agent)):
+                raise
+            standard_kwargs = agent._build_api_kwargs(api_messages)
+            sanitize_outbound_kwargs(agent, standard_kwargs)
+            response = _managed_summary_call(
+                agent, api_request_id, standard_kwargs, agent._interruptible_api_call,
+                retry_count=retry_count)
         return _summary_text(agent, response)
     return _attempt
 

@@ -234,3 +234,38 @@ def test_busy_fast_tier_ignores_standard_requests_and_client_errors():
     assert fast_mode.fast_tier_busy(_StatusError(400), {"service_tier": "priority"}) is False
     assert fast_mode.fast_tier_busy(_StatusError(429), {"service_tier": "flex"}) is False
     assert fast_mode.fast_tier_busy(RuntimeError("boom"), {"service_tier": "priority"}) is False
+
+
+def test_max_iterations_summary_retries_busy_fast_tier_at_standard_speed():
+    """A final work summary survives a fast-tier 429 without falling back to 'could not summarize'."""
+    from unittest.mock import patch
+    from run_agent import AIAgent
+
+    requests = []
+
+    def complete(**kwargs):
+        requests.append(kwargs)
+        if kwargs.get("service_tier") == "priority":
+            raise _StatusError(429)
+        return SimpleNamespace(
+            choices=[SimpleNamespace(
+                message=SimpleNamespace(content="Work summary", tool_calls=None), finish_reason="stop")],
+            usage=None, model="gpt-5.4")
+
+    with patch("agent.process_bootstrap.OpenAI"):
+        agent = AIAgent(
+            api_key="test-key", base_url="https://api.openai.com/v1", model="gpt-5.4",
+            quiet_mode=True, skip_context_files=True, skip_memory=True, enabled_toolsets=[])
+    agent.provider = "openai"
+    agent.api_mode = "chat_completions"
+    agent._cached_system_prompt = "You are helpful."
+    agent.service_tier = "priority"
+    agent.request_overrides = {"service_tier": "priority"}
+    fast_mode.begin_turn(agent, conversation_history=[])
+    agent.client.chat.completions.create.side_effect = complete
+
+    reply = agent._handle_max_iterations(
+        [{"role": "user", "content": "Finish the task"}], agent.max_iterations)
+    assert reply == "Work summary"
+    assert [request.get("service_tier") for request in requests] == ["priority", None]
+    assert agent.request_overrides == {"service_tier": "priority"}
