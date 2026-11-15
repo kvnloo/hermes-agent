@@ -204,6 +204,48 @@ class TestCreateJob:
 
 
     @pytest.mark.asyncio
+    async def test_gateway_api_wrap_response_create_update_and_inherit(self, adapter, tmp_path, monkeypatch):
+        """POST/PATCH /api/jobs must honor the per-job override, as the CLI and tool do."""
+        from cron import jobs
+        from cron.scheduler_delivery import _should_wrap_cron_response
+
+        monkeypatch.setattr("cron.jobs.CRON_DIR", tmp_path / "cron")
+        monkeypatch.setattr("cron.jobs.JOBS_FILE", tmp_path / "cron" / "jobs.json")
+        monkeypatch.setattr("cron.jobs.OUTPUT_DIR", tmp_path / "cron" / "output")
+        app = _create_app(adapter)
+        async with TestClient(TestServer(app)) as cli:
+            with patch(f"{_MOD}._CRON_AVAILABLE", True), \
+                    patch(f"{_MOD}._cron_create", jobs.create_job), \
+                    patch(f"{_MOD}._cron_update", jobs.update_job):
+                resp = await cli.post("/api/jobs", json={
+                    "name": "raw-brief", "schedule": "every 1h", "prompt": "Brief",
+                    "wrap_response": False})
+                assert resp.status == 200, await resp.text()
+                job_id = (await resp.json())["job"]["id"]
+                assert jobs.get_job(job_id)["wrap_response"] is False
+                assert _should_wrap_cron_response(jobs.get_job(job_id), {
+                    "cron": {"wrap_response": True}}) is False
+
+                resp = await cli.patch(f"/api/jobs/{job_id}", json={"wrap_response": True})
+                assert resp.status == 200, await resp.text()
+                assert jobs.get_job(job_id)["wrap_response"] is True
+
+                resp = await cli.patch(f"/api/jobs/{job_id}", json={"wrap_response": None})
+                assert resp.status == 200, await resp.text()
+                assert jobs.get_job(job_id).get("wrap_response") is None
+                assert _should_wrap_cron_response(jobs.get_job(job_id), {
+                    "cron": {"wrap_response": False}}) is False
+
+                resp = await cli.patch(f"/api/jobs/{job_id}", json={"wrap_response": "false"})
+                assert resp.status == 400
+                assert jobs.get_job(job_id).get("wrap_response") is None
+
+                resp = await cli.post("/api/jobs", json={
+                    "name": "invalid-brief", "schedule": "every 1h", "prompt": "Brief",
+                    "wrap_response": "false"})
+                assert resp.status == 400
+
+    @pytest.mark.asyncio
     async def test_create_job_prompt_too_long(self, adapter):
         """POST /api/jobs with prompt > 5000 chars returns 400."""
         app = _create_app(adapter)
