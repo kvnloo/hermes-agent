@@ -408,6 +408,16 @@ def _matrix_event_timestamp_seconds(event: Any) -> float:
     return ts / 1000.0 if ts > 10_000_000_000 else ts
 
 
+def _matrix_inbound_datetime(event_ts: float | None) -> datetime:
+    """Preserve server send time, or use arrival time if absent or unrepresentable."""
+    if event_ts is not None and event_ts > 0:
+        try:
+            return datetime.fromtimestamp(event_ts, tz=UTC)
+        except (OverflowError, OSError, ValueError):
+            pass
+    return datetime.now(UTC)
+
+
 def _create_matrix_session(proxy_url: str | None):
     """ClientSession whose proxy applies to *all* requests: mautrix's ``HTTPAPI._send()`` never
     forwards per-request ``proxy=``, so it must be session-level (``proxy=`` for HTTP(S),
@@ -2052,15 +2062,15 @@ class MatrixAdapter(BasePlatformAdapter):
             await self._parked_voices.settle(room_id, sender)  # same-/sync-batch voice still gating
             parked = self._parked_voices.claim(room_id, sender, before=limit)
             if parked:  # answer the voice this bare mention was typed for, not an empty text
-                voice_id, voice_content, voice_relates = parked
+                voice_id, voice_ts, voice_content, voice_relates = parked
                 await self._handle_media_message(
-                    room_id, sender, voice_id, event_ts, voice_content, voice_relates, "m.audio",
+                    room_id, sender, voice_id, voice_ts, voice_content, voice_relates, "m.audio",
                     mention_claimed=True)
                 self._background_read_receipt(room_id, event_id)  # the claim receipted the voice
                 return
         msg_event = await self._build_inbound_event(
             room_id, sender, event_id, _normalize_matrix_bang_command(body), source_content, relates_to,
-            timestamp=datetime.fromtimestamp(event_ts, tz=UTC) if event_ts is not None else None)
+            timestamp=_matrix_inbound_datetime(event_ts))
         if msg_event is None:
             return
         if msg_event.message_type == MessageType.TEXT and self._text_batch_delay_seconds > 0:
@@ -2100,7 +2110,7 @@ class MatrixAdapter(BasePlatformAdapter):
         # Gate (require_mention / allowed rooms) BEFORE the download: an unmentioned or
         # non-allowlisted room must not pull media onto the host only to drop it.
         # First await: mark a voice that may park in-flight so a concurrent bare mention waits for it.
-        gate = self._parked_voices.begin(room_id, sender) if self._voice_may_park(
+        gate = self._parked_voices.begin(room_id, sender, event_ts) if self._voice_may_park(
             room_id, body, source_content, relates_to, mention_claimed) else None
         try:
             ctx = await self._resolve_message_context(
@@ -2129,7 +2139,7 @@ class MatrixAdapter(BasePlatformAdapter):
         msg_event = await self._build_inbound_event(
             room_id, sender, event_id, body, source_content, relates_to, ctx=ctx, message_type=msg_type,
             media_urls=media_urls, media_types=[media_type] if media_urls else None, media_msgtype=msgtype,
-            timestamp=datetime.fromtimestamp(event_ts, tz=UTC) if event_ts is not None else None)
+            timestamp=_matrix_inbound_datetime(event_ts))
         if msg_event is not None:
             await self.handle_message(msg_event)
 
