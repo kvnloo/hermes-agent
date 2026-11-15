@@ -21,6 +21,7 @@ import shutil
 import sys
 import tempfile
 import threading
+from importlib._bootstrap import _DeadlockError, _ModuleLockManager
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -78,29 +79,28 @@ def tree_fingerprint(plugin_dir: Path) -> str:
 def import_into_layer(plugin_dir: Path, source: str, base_name: str) -> None:
     """Import *plugin_dir* into the layer being scanned unless that exact tree is already live there; an
     updated tree replaces the live one only once it imported completely."""
-    # One import+publish at a time: a second thread scanning the same home would find the module already in
-    # ``sys.modules`` (still executing on the first thread, registering into the first thread's staging layer)
-    # and publish its own empty staging layer over the first one's registrations.
-    with _import_lock:
-        _import_into_layer(plugin_dir, source, base_name)
+    fingerprint = tree_fingerprint(plugin_dir)
+    module_name = f"{base_name}_{fingerprint}"
+    # Native module locks track cycles across different imports. A process-wide RLock held through a
+    # plugin import can deadlock when that plugin and another importing thread depend on each other.
+    try:
+        with _ModuleLockManager(module_name):
+            _import_into_layer(plugin_dir, source, base_name, fingerprint, module_name)
+    except _DeadlockError:
+        # The owning import will publish the tree when it completes; never publish an empty staging layer.
+        return
 
 
-# Re-entrant: a plugin whose import lists providers re-enters the scan of its own home on the same thread.
-_import_lock = threading.RLock()
-
-
-def _import_into_layer(plugin_dir: Path, source: str, base_name: str) -> None:
+def _import_into_layer(plugin_dir: Path, source: str, base_name: str,
+                       fingerprint: str, module_name: str) -> None:
     import providers as P
 
     layer = P._REGISTRATION_TARGET.get()
-    fingerprint = tree_fingerprint(plugin_dir)
     live = layer.trees.get(base_name)
     if live is not None and live[0] == fingerprint:
         return
-    module_name = f"{base_name}_{fingerprint}"
     if module_name in sys.modules:
-        # This exact tree is mid-import further up this thread's stack (the re-entrant scan above): that
-        # import publishes its registrations when it completes; an empty staging layer here would erase them.
+        # Re-entrant scan of the tree being imported higher in this thread's stack.
         return
     staging = P._HomeLayer()
     token = P._REGISTRATION_TARGET.set(staging)

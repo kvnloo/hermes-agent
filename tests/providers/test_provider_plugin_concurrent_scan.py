@@ -9,6 +9,7 @@ it again: "Unknown provider '<name>'" for that profile, and no row in the model 
 
 from __future__ import annotations
 
+import subprocess
 import sys
 import textwrap
 import threading
@@ -79,3 +80,63 @@ def test_concurrent_first_scans_of_one_home_keep_its_provider_plugin(home):
     assert profile is not None  # the plugin survived the race ...
     assert get_provider_profile("demo-slow-alias") is profile
     assert seen == [profile] * threads  # ... and no thread was told the provider does not exist
+
+    # A plugin can import a module whose other importing thread scans that same home. Holding an
+    # unrelated RLock across plugin execution deadlocks; isolate the cycle so a bad head can't hang pytest.
+    code = textwrap.dedent(r"""
+        import os
+        import sys
+        import threading
+        from pathlib import Path
+
+        home = Path(sys.argv[1])
+        home.mkdir()
+        os.environ["HERMES_HOME"] = str(home)
+        sys.path.insert(0, str(home))
+        import providers
+        providers.list_providers()  # finish bundled discovery before making the plugin visible
+
+        plugin_entered = threading.Event()
+        helper_entered = threading.Event()
+        (home / "helper_scan.py").write_text(
+            "from __main__ import helper_entered\n"
+            "helper_entered.set()\n"
+            "from providers import get_provider_profile\n"
+            "get_provider_profile('demo-cycle')\n"
+        )
+        plugin = home / "plugins" / "demo-cycle"
+        plugin.mkdir(parents=True)
+        (plugin / "plugin.yaml").write_text("name: demo-cycle\nkind: model-provider\n")
+        (plugin / "__init__.py").write_text(
+            "from __main__ import plugin_entered, helper_entered\n"
+            "plugin_entered.set()\n"
+            "assert helper_entered.wait(10)\n"
+            "import helper_scan\n"
+            "from providers import register_provider\n"
+            "from providers.base import ProviderProfile\n"
+            "register_provider(ProviderProfile(name='demo-cycle', "
+            "base_url='process://demo-cycle', auth_type='external_process'))\n"
+        )
+
+        errors = []
+        def load():
+            try:
+                assert providers.get_provider_profile("demo-cycle") is not None
+            except BaseException as exc:
+                errors.append(repr(exc))
+
+        worker = threading.Thread(target=load, daemon=True)
+        worker.start()
+        assert plugin_entered.wait(10)
+        import helper_scan  # holds the Python module import lock while it scans the provider
+        worker.join(10)
+        assert not worker.is_alive(), "provider import deadlocked with helper module import"
+        assert not errors, errors
+        assert providers.get_provider_profile("demo-cycle") is not None
+    """)
+    completed = subprocess.run(
+        [sys.executable, "-c", code, str(home / "cross-import")],
+        capture_output=True, text=True, timeout=30, check=False,
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+
