@@ -132,6 +132,10 @@ def build_request_payload(
     )
     # A model that rejected image content gets text only; history keeps the images.
     strip_images_for_rejecting_model(agent, api_messages)
+    # A prior provider size rejection has already paid to re-encode this image.
+    # Reuse only that successful wire payload across later turns/tool rounds.
+    from agent.turn_recovery import apply_recovered_image_shrinks
+    apply_recovered_image_shrinks(agent, api_messages)
     observe_request_tools(agent, tools_for_api)
     if tools_for_api == agent.tools:
         api_kwargs = agent._build_api_kwargs(api_messages)

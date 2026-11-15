@@ -729,3 +729,91 @@ class TestShrinkCopyOnWriteHistoryIsolation:
         assert history_msg["content"][0] is history_part
         assert history_part["image_url"]["url"] == oversized_url
 
+
+class TestRecoveredImageAcrossTurns:
+    def test_recovered_image_replays_across_turns_without_mutating_history(self, monkeypatch):
+        """A size-rejected image should not be re-sent at full size on the next turn.
+
+        Covers the actual error-recovery and outbound-request assembly call sites,
+        rather than just importing the new replay helper. Control: model switches
+        and unrelated new images still receive their original payloads.
+        """
+        from agent import turn_recovery
+        from agent.turn_api_request import build_request_payload
+
+        agent = _make_agent()
+        agent.session_id = "oversized-image-turns"
+        agent.base_url = "https://api.anthropic.com"
+        agent.api_mode = "chat_completions"
+        agent.log_prefix = ""
+        agent.tools = []
+        agent._empty_content_retries = 0
+        agent._is_user_initiated_turn = False
+        agent._reset_stream_delivery_tracking = lambda: None
+        agent._reapply_reasoning_echo_for_provider = lambda _messages: None
+        agent._recover_with_credential_pool = lambda **_kw: (False, False)
+        agent._vprint = lambda *_args, **_kw: None
+        agent._build_api_kwargs = lambda payload, **_kw: {"model": agent.model, "messages": payload}
+
+        oversized = _big_png_data_url(5000)
+        shrunk = "data:image/jpeg;base64," + "Z" * 1024
+        image_part = {"type": "image_url", "image_url": {"url": oversized, "detail": "high"}}
+        history_row = {"role": "user", "content": [{"type": "text", "text": "read this"}, image_part]}
+        first_request = [history_row.copy()]
+
+        monkeypatch.setattr(
+            "tools.vision_tools._resize_image_for_vision",
+            lambda *_args, **_kw: shrunk,
+        )
+        monkeypatch.setattr(turn_recovery, "_recover_welcome_tier", lambda *_args: False)
+        monkeypatch.setattr(turn_recovery, "_clamp_to_affordable_budget", lambda *_args: False)
+        monkeypatch.setattr(turn_recovery, "_is_codex_token_expired", lambda *_args: False)
+        monkeypatch.setattr(turn_recovery, "_pool_error_context", lambda *_args: {})
+        verdict = SimpleNamespace(reason=FailoverReason.image_too_large, billing_unverified=False)
+        retry = SimpleNamespace(image_shrink_retry_attempted=False, has_retried_429=False)
+        error = _FakeApiError(400, "image exceeds 5 MB maximum")
+        recovered, _ = turn_recovery.recover_after_classification(
+            agent, error, verdict, retry, status_code=400, error_context={},
+            messages=[history_row], api_messages=first_request,
+        )
+        assert recovered is True
+        assert first_request[0]["content"][1]["image_url"]["url"] == shrunk
+
+        monkeypatch.setattr(
+            "agent.conversation_loop._redecorate_prompt_cache_for_provider",
+            lambda _agent, payload, **_kw: (payload, None, []),
+        )
+        monkeypatch.setattr("agent.turn_api_request.strip_images_for_rejecting_model", lambda *_a: None)
+        monkeypatch.setattr("agent.turn_api_request.observe_request_tools", lambda *_a: None)
+        monkeypatch.setattr("agent.turn_api_request.sanitize_outbound_kwargs", lambda *_a: None)
+        monkeypatch.setattr(
+            "hermes_cli.middleware.apply_llm_request_middleware",
+            lambda payload, **_kw: SimpleNamespace(payload=payload, original_payload=payload, trace=[]),
+        )
+
+        def next_request(payload):
+            return build_request_payload(
+                agent, api_messages=payload, _moa_prepared_request=None, tools_for_api=[],
+                system_message="", api_call_count=2, api_request_id="followup",
+                effective_task_id=None, turn_id="followup",
+            ).api_kwargs["messages"]
+
+        # Fresh turn reconstruction sees the same optimized bytes, as does a
+        # subsequent compaction or tool step using this request assembly path.
+        second = next_request([history_row.copy()])
+        assert second[0]["content"][1]["image_url"]["url"] == shrunk
+        assert second[0]["content"][1]["image_url"]["detail"] == "high"
+
+        # The source history remains pristine for storage or another provider.
+        assert history_row["content"][1] is image_part
+        assert image_part["image_url"]["url"] == oversized
+
+        new_image = {"type": "image_url", "image_url": {"url": "data:image/png;base64,NEW"}}
+        followup = next_request([{"role": "user", "content": [image_part, new_image]}])
+        assert followup[0]["content"][0]["image_url"]["url"] == shrunk
+        assert followup[0]["content"][1] is new_image
+
+        # A model switch must not project the previous provider's repair.
+        agent.model = "claude-other"
+        switched = next_request([history_row.copy()])
+        assert switched[0]["content"][1]["image_url"]["url"] == oversized
