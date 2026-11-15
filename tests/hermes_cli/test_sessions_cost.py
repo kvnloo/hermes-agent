@@ -45,3 +45,20 @@ def test_unpriced_session_is_not_reported_as_free(db, capsys):
     b = session_cost_breakdown({"cache_read_tokens": 10, "estimated_cost_usd": 0.0, "cost_status": "included"})
     assert (b["estimated_cost"], b["savings"]) == (0.0, 0.0)  # a subscription zero stays a real zero
     assert cache_hit_ratio_from_config({"cost": {"cache_hit_ratio": 5}}) == 0.10
+
+
+def test_priced_then_unpriced_session_hides_partial_bill(db, capsys):
+    # The real delta writer preserves $1 but takes the latest call's unknown status.
+    db.update_token_counts("priced", model="unpriced-model", input_tokens=50_000,
+                           output_tokens=1_000, estimated_cost_usd=None, cost_status="unknown")
+    stored = db.get_session("priced")
+    assert stored["estimated_cost_usd"] == pytest.approx(1.0)
+    assert stored["cost_status"] == "unknown"
+
+    # The table and the detail view must not claim the partial $1 is the whole bill.
+    rows = _cost(db, capsys)
+    assert rows["priced"][6:9] == ["n/a", "n/a", "n/a"]
+    sessions_cmd._cmd_cost(db, Namespace(session="priced", limit=20, source=None))
+    detail = capsys.readouterr().out
+    assert next(line.split()[-1] for line in detail.splitlines()
+                if line.strip().startswith("Estimated cost:")) == "n/a"

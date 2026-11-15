@@ -52,6 +52,10 @@ def _recorded_cost(row: dict[str, Any], has_usage: bool) -> Optional[float]:
         cost = float(raw)
     except (TypeError, ValueError):
         return None
+    # COALESCE retains earlier dollars when a later model call has no price.
+    # That positive amount is only a partial bill, not a priced session total.
+    if has_usage and status == "unknown":
+        return None
     if cost == 0.0 and has_usage and status not in ("included", "actual", "estimated"):
         return None
     return cost
