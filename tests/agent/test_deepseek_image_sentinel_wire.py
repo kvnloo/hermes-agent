@@ -3,6 +3,9 @@
 import json
 from copy import deepcopy
 
+import httpx
+from openai import OpenAI
+
 from agent.transports.chat_completions import ChatCompletionsTransport
 
 
@@ -35,7 +38,7 @@ def test_convert_messages_scrubs_poison_without_touching_history():
     ]
     original = deepcopy(history)
     route = {"provider": "custom", "model": "deepseek-v4.1-flash-1017",
-             "base_url": "http://127.0.0.1:8000/v1"}
+             "base_url": "https://deepseek.example.test/v1"}
     transport = ChatCompletionsTransport()
 
     wire = transport.convert_messages(history, **route)
@@ -57,3 +60,44 @@ def test_convert_messages_scrubs_poison_without_touching_history():
 
     clean = [{"role": "user", "content": "Hello"}]
     assert transport.convert_messages(clean, **route) is clean
+
+
+def test_build_kwargs_scrubs_serialized_sdk_request_without_touching_history():
+    history = [{"role": "user", "content": "Explain <｜deepseek_image｜> and <|deepseek_image|>"}]
+    original = deepcopy(history)
+    requests = []
+
+    def respond(request):
+        requests.append(json.loads(request.content))
+        return httpx.Response(200, json={
+            "id": "chatcmpl-test",
+            "object": "chat.completion",
+            "created": 0,
+            "model": "deepseek-v4.1-flash-1017",
+            "choices": [{
+                "index": 0,
+                "message": {"role": "assistant", "content": "Accepted"},
+                "finish_reason": "stop",
+            }],
+        })
+
+    transport = ChatCompletionsTransport()
+    kwargs = transport.build_kwargs(
+        model="deepseek-v4.1-flash-1017",
+        messages=history,
+        provider_name="custom",
+        base_url="https://deepseek.example.test/v1",
+    )
+    with OpenAI(
+        api_key="test-only",
+        base_url="https://deepseek.example.test/v1",
+        http_client=httpx.Client(transport=httpx.MockTransport(respond)),
+    ) as client:
+        response = client.chat.completions.create(**kwargs)
+
+    assert response.choices[0].message.content == "Accepted"
+    assert len(requests) == 1
+    assert requests[0]["messages"] == [
+        {"role": "user", "content": "Explain [ds-image-token] and [ds-image-token]"}
+    ]
+    assert history == original
