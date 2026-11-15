@@ -181,5 +181,46 @@ def test_disconnect_on_a_package_managed_install_still_clears_the_auth_store(ant
 
 
 # ── bulk save strips managed leaves ──────────────────────────────────────────
+def test_always_allow_preserves_user_values_shadowed_by_managed_scope(homes):
+    """An unrelated approval cannot erase user values that an administrator overrides."""
+    import hermes_yaml as yaml
 
+    from hermes_cli import config as cfg, managed_scope
+    from tools import approval
+
+    home, managed = homes
+    (managed / "config.yaml").write_text(
+        "plugins:\n  enabled: [admin-plugin]\n"
+        "terminal:\n  env_passthrough: [ADMIN]\n",
+        encoding="utf-8",
+    )
+    managed_scope.invalidate_managed_cache()
+    cfg._LOAD_CONFIG_CACHE.clear()
+
+    path = home / "config.yaml"
+    path.write_text(
+        "# My notes about this file\n"
+        "plugins:\n  enabled: [disk-cleanup]  # keep my choice\n"
+        "terminal:\n  env_passthrough: []  # intentionally empty\n",
+        encoding="utf-8",
+    )
+    assert cfg.load_config()["plugins"]["enabled"] == ["admin-plugin"]
+    assert cfg.load_config()["terminal"]["env_passthrough"] == ["ADMIN"]
+
+    approval.save_permanent_allowlist({"mcp:apps/EXAMPLE"})
+
+    saved_text = path.read_text(encoding="utf-8")
+    saved = yaml.safe_load(saved_text)
+    assert saved["command_allowlist"] == ["mcp:apps/EXAMPLE"]
+    assert saved["plugins"]["enabled"] == ["disk-cleanup"]
+    assert saved["terminal"]["env_passthrough"] == []
+    assert "# My notes about this file" in saved_text
+    assert "# keep my choice" in saved_text
+    assert "# intentionally empty" in saved_text
+
+    (managed / "config.yaml").write_text("{}\n", encoding="utf-8")
+    managed_scope.invalidate_managed_cache()
+    cfg._LOAD_CONFIG_CACHE.clear()
+    assert cfg.load_config()["plugins"]["enabled"] == ["disk-cleanup"]
+    assert cfg.load_config()["terminal"]["env_passthrough"] == []
 
