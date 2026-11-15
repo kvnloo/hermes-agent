@@ -16,3 +16,16 @@ def test_punctuation_never_changes_search_results(tmp_path):
         assert db.search_messages("my-app.config.")
     finally:
         db.close()
+
+
+def test_blanked_punctuation_never_leaves_a_dangling_operator(tmp_path):
+    """Blanking a stray ``.``/``-`` can leave AND/OR/NOT at an end (``deploy AND -`` ->
+    ``deploy AND``), so the dangling-operator trim has to run after the blanking."""
+    db = SessionDB(db_path=tmp_path / "state.db")
+    try:
+        db.create_session(session_id="s1", source="cli")
+        db.append_message("s1", role="user", content="the deploy target is my-app.config")
+        for q in ("deploy AND -", "- OR deploy", ". AND deploy", "deploy NOT ."):
+            assert db.search_messages(q), q
+    finally:
+        db.close()
