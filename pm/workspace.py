@@ -852,6 +852,37 @@ def core_lock_upgrades(core_lock: Path, seed_lock: Path, *, python: Path | None 
     return upgrades
 
 
+def _reseat_seed(seed: bytes, root: Path) -> bytes:
+    """Point the seed's editable members at this generation's snapshot of the same package.
+
+    A buildable member keeps its ``[project].name``, but its snapshot dir is ``_member_key``.
+    When the key moves between generations, the previous generation's lock still names the old
+    dir and ``uv lock`` stops at "Distribution not found". A seed naming no member (core's own
+    lock, the bootstrap path) is returned untouched, before tomllib is needed.
+    """
+    if b"plugin-sources/" not in seed:
+        return seed
+    import tomllib
+
+    from packaging.utils import canonicalize_name
+
+    text = seed.decode("utf-8")
+    try:
+        packages = tomllib.loads(text).get("package", [])
+    except tomllib.TOMLDecodeError:
+        return seed
+    current: dict[str, list[str]] = {}
+    for pyproject in (root / "plugin-sources").glob("*/pyproject.toml"):
+        name = tomllib.loads(pyproject.read_text(encoding="utf-8-sig")).get("project", {}).get("name", "")
+        current.setdefault(canonicalize_name(name), []).append(f"plugin-sources/{pyproject.parent.name}")
+    for package in packages:
+        old = package.get("source", {}).get("editable", "")
+        new = current.get(canonicalize_name(package.get("name", "")), [])
+        if old.startswith("plugin-sources/") and not (root / old).exists() and len(new) == 1:
+            text = text.replace(f'"{old}"', f'"{new[0]}"')
+    return text.encode("utf-8")
+
+
 def lock_and_sync(
     plugin_dirs: list[Path] | Mapping[Path, Path],
     extras: list[str],
@@ -876,7 +907,7 @@ def lock_and_sync(
     if replay is None:
         _generate_pyproject(plugin_dirs, root, source=source, python=environment.python, extras=extras)
         if seed_lock is not None:
-            (root / "uv.lock").write_bytes(seed_lock.read_bytes())
+            (root / "uv.lock").write_bytes(_reseat_seed(seed_lock.read_bytes(), root))
     else:
         if not (replay / "pyproject.toml").is_file() or not (replay / "uv.lock").is_file():
             raise InstallError("venv", f"recorded workspace is missing: {replay}")
