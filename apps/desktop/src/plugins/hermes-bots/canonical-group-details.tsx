@@ -158,7 +158,7 @@ export function CanonicalPendingCard({ action, avatar, busy, labels, methods, na
         {offered && action.kind === 'retry' && <Button disabled={busy} onClick={() => void onAct({ ...action })} size="sm" variant="secondary">{labels.retry}</Button>}
         {offered && reviewable && choices.includes('once') && <Button disabled={busy} onClick={() => void onAct({ ...action }, 'once')} size="sm">{labels.allowOnce}</Button>}
         {offered && reviewable && choices.includes('session') && <Button disabled={busy} onClick={() => void onAct({ ...action }, 'session')} size="sm" variant="secondary">{labels.allowSession}</Button>}
-        {offered && reviewable && choices.includes('always') && <Button disabled={busy} onClick={() => void onAct({ ...action }, 'always')} size="sm" variant="secondary">{labels.alwaysAllow}</Button>
+        {offered && reviewable && choices.includes('always') && <Button disabled={busy} onClick={() => void onAct({ ...action }, 'always')} size="sm" variant="secondary">{labels.alwaysAllow}</Button>}
         {denyOffered && choices.includes('deny') && <Button disabled={busy} onClick={() => void onAct({ ...action }, 'deny')} size="sm" variant="secondary">{labels.deny}</Button>}
         {approval && !reviewable && <Button disabled={busy} onClick={onRefresh} size="sm" variant="secondary">{labels.refresh}</Button>}
       </div>
