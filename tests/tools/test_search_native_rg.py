@@ -140,3 +140,28 @@ def test_local_search_runs_the_pinned_ripgrep_not_the_first_on_path(_local_env, 
                         lambda name: InstalledPackage(pinned.parent, "15", pinned) if name == "ripgrep" else None)
     ops = ShellFileOperations(_local_env, cwd=str(tmp_path))
     assert ops._resolve_command("rg") == str(pinned).replace("\\", "/")
+
+def test_capped_native_search_closes_pipe_before_force_kill(tree, ops_factory):
+    """A normal result cap lets the child handle pipe closure instead of SIGTERM (#155054)."""
+    import shlex
+    import sys
+
+    script = tree / "stream.py"
+    marker = tree / "closed.txt"
+    script.write_text(
+        'import os, sys\n'
+        'from pathlib import Path\n'
+        'for _ in range(100000):\n'
+        '    try:\n'
+        '        os.write(1, b"match\\n")\n'
+        '    except BrokenPipeError:\n'
+        '        Path(sys.argv[1]).write_text("closed", encoding="utf-8")\n'
+        '        break\n',
+        encoding="utf-8",
+    )
+    result = ops_factory(tree, [])._run_rg_native(
+        [shlex.quote(sys.executable), shlex.quote(str(script)), shlex.quote(str(marker))],
+        fetch_limit=100, timeout=10, merge_stderr=True,
+    )
+    assert (result.exit_code, result.stdout) == (0, "match\n" * 100)
+    assert marker.read_text(encoding="utf-8") == "closed"

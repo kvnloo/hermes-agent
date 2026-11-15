@@ -657,6 +657,23 @@ class SearchMixin:
             if time.monotonic() > deadline:
                 exit_code = 124
                 break
+        if bounded.is_set() and exit_code is None:
+            # Closing the read end lets rg unwind pending filesystem operations
+            # before the existing process-group termination fallback.
+            drainer.join()
+            proc.stdout.close()
+            grace_deadline = min(deadline, time.monotonic() + 0.5)
+            while proc.poll() is None:
+                if tool_interrupt.is_interrupted():
+                    exit_code = 130
+                    break
+                remaining = grace_deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                try:
+                    proc.wait(timeout=min(0.05, remaining))
+                except subprocess.TimeoutExpired:
+                    pass
         if proc.poll() is None:
             _kill_process_group_posix(proc)  # native lane is POSIX-only (gate above)
         proc.wait()
