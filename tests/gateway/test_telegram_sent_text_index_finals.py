@@ -82,3 +82,33 @@ async def test_a_failed_index_write_is_logged(adapter, tmp_path, monkeypatch, ca
         result = await adapter.edit_message("555", "41", "hello there", finalize=True)
     assert result.success
     assert any("failed to index sent message 41" in r.getMessage() for r in caplog.records)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("delivery", ["send", "final_edit"])
+async def test_plain_fallback_matches_quote_recovery(adapter, delivery):
+    """A parse-refused MarkdownV2 message must show the same code the quote index remembers."""
+    from telegram.error import BadRequest
+
+    content = "Calculate `a*b*c` then **report**"
+    adapter._rich_messages_enabled = False
+    error = BadRequest("Can't parse entities: invalid MarkdownV2")
+    if delivery == "send":
+        adapter._bot.send_message = AsyncMock(
+            side_effect=[error, SimpleNamespace(message_id=77)])
+        result = await adapter.send("555", content)
+        calls = adapter._bot.send_message.await_args_list
+        message_id = result.message_id
+    else:
+        adapter._bot.edit_message_text = AsyncMock(side_effect=[error, True])
+        result = await adapter.edit_message("555", "41", content, finalize=True)
+        calls = adapter._bot.edit_message_text.await_args_list
+        message_id = "41"
+
+    assert result.success
+    assert len(calls) == 2  # refused MarkdownV2, then accepted plain fallback
+    assert calls[1].kwargs.get("parse_mode") is None
+    shown = calls[1].kwargs["text"]
+    indexed = rich_sent_store.lookup("555", message_id)
+    assert "`a*b*c`" in shown, shown
+    assert shown == indexed

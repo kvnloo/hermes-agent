@@ -3215,7 +3215,7 @@ class TelegramAdapter(TelegramContactMixin, TelegramHeldInboundMixin, TelegramRe
             if not is_entity_parse_error(md_error):  # an HTML 5xx page is no refusal: it may be in the chat
                 raise
             logger.warning("[%s] MarkdownV2 parse failed, falling back to plain text: %s", self.name, md_error)
-            return await send(_strip_mdv2(chunk), None)
+            return await send(quotable_text(chunk, mdv2=True), None)
 
     async def _send_chunk_with_retries(
         self, chat_id: str, chunk: str, index: int, reply_to: Optional[str], metadata: Optional[dict[str, Any]],
@@ -3589,7 +3589,7 @@ class TelegramAdapter(TelegramContactMixin, TelegramHeldInboundMixin, TelegramRe
         # Previews edit in the final's parse mode (#49536): a plain -> MarkdownV2 flip on the same message makes
         # clients draw the old layout over the new text. A rejected preview retries as raw text (nothing lost).
         formatted = self.format_message(content)
-        plain = (_strip_mdv2(content) if content else content) if finalize else content
+        plain = (quotable_text(content) if content else content) if finalize else content
         warn = "[%s] MarkdownV2 edit failed, falling back to plain text: %s"
         try:
             await self._edit_markdown_or_plain(chat_id, message_id, formatted, plain, warn)
