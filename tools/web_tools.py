@@ -317,7 +317,9 @@ def web_search_tool(query: str, limit: int = 5) -> str:
     if not isinstance(query, str) or not query.strip():
         # Every backend rejects an empty query; refusing here keeps the model's malformed call from
         # walking the whole provider fallback chain and gives it an error it can act on.
-        return tool_error("web_search needs a non-empty 'query' string.", success=False)
+        error = "web_search needs a non-empty 'query' string."
+        _finish_debug("web_search_tool", debug_call_data, error)
+        return tool_error(error, success=False)
     try:
         from tools.interrupt import is_interrupted
         if is_interrupted():
