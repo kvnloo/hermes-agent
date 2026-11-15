@@ -38,7 +38,7 @@ STALL_GUARD_REPEATABLE_TOOLS = frozenset({"process_manage"})
 # here because this module is dependency-free and imported by agent/__init__ paths).
 # An identical-args retry of a terminal handoff is a replay, never a new experiment.
 KANBAN_LIFECYCLE_TOOL_NAMES = frozenset({
-    "kanban_complete", "kanban_block",
+    "kanban_complete", "kanban_block", "kanban_schedule",
     "kanban_request_review", "kanban_request_changes",
 })
 # After this many identical FAILED lifecycle calls the next identical call is blocked and the
