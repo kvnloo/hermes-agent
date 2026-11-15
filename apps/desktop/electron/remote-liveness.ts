@@ -221,11 +221,12 @@ export interface PooledRemoteEntry<TConnection extends RemoteConnectionDescripto
 export interface RevalidatePooledRemoteBackendsOptions<TConnection extends RemoteConnectionDescriptor> {
   entries: Iterable<[string, PooledRemoteEntry<TConnection>]>
   currentEntry?: (profile: string) => PooledRemoteEntry<TConnection> | undefined
+  /** Return a guarded retirement closure to release an exact SSH owner after proof. */
   canRetire?: (
     profile: string,
     entry: PooledRemoteEntry<TConnection>,
     connection: TConnection | undefined
-  ) => Promise<boolean>
+  ) => Promise<boolean | (() => Promise<void>)>
   log: (message: string) => void
   probe: (connection: TConnection, path: string, options: { timeoutMs: number }) => Promise<unknown>
   stopBackend: (profile: string) => Promise<void> | void
@@ -289,7 +290,12 @@ export async function revalidatePooledRemoteBackends<TConnection extends RemoteC
         }
 
         log(`Pooled remote backend for profile "${profile}" failed liveness probe; dropping stale descriptor.`)
-        await stopBackend(profile)
+        if (typeof permitted === 'function') {
+          await permitted()
+        } else {
+          await stopBackend(profile)
+        }
+
         dropped.push(profile)
       }
     })

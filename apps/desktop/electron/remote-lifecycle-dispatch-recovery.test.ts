@@ -198,6 +198,55 @@ describe('background SSH pool retirement', () => {
     }
   )
 
+  it('releases the captured SSH forward after a confirmed-dead background owner', async () => {
+    const connection = { baseUrl: 'http://127.0.0.1:50001', remoteKind: 'ssh' }
+    const entry = { connectionPromise: Promise.resolve(connection), remoteBaseUrl: connection.baseUrl }
+    const pool = new Map([['scope', entry]])
+    const state = { pid: 333 }
+    const sshStates = new Map([['scope', state]])
+    const stopBackend = vi.fn(async (key: string) => {
+      pool.delete(key)
+    })
+    const releaseTransport = vi.fn(async (scope: string, captured: typeof state) => {
+      expect(captured).toBe(state)
+      sshStates.delete(scope)
+    })
+    const recover = recovery.createPooledBackendRecovery({
+      pool,
+      sshStates,
+      scopeFor: key => key,
+      proveStopped: async () => true,
+      markRecovery: () => {},
+      retireEntry: stopBackend,
+      releaseTransport,
+      drain: async (_scope, cleanup) => cleanup()
+    })
+    const run = () =>
+      revalidatePooledRemoteBackends({
+        entries: pool.entries(),
+        currentEntry: key => pool.get(key),
+        canRetire: async (key, current, resolved) => {
+          const guard = recover(key, current, resolved?.remoteKind === 'ssh')
+
+          return (await guard.canRetire()) ? () => guard.retire() : false
+        },
+        probe: async () => {
+          throw new Error('probe timed out')
+        },
+        stopBackend,
+        tracker,
+        log: () => {}
+      })
+    const tracker = new RemoteLivenessTracker()
+
+    expect(await run()).toEqual({ dropped: [] })
+    expect(await run()).toEqual({ dropped: [] })
+    expect(await run()).toEqual({ dropped: ['scope'] })
+    expect(stopBackend).toHaveBeenCalledOnce()
+    expect(releaseTransport).toHaveBeenCalledOnce()
+    expect(sshStates.has('scope')).toBe(false)
+  })
+
   it('does not drop a replacement installed while awaiting retirement permission', async () => {
     const connection = { baseUrl: 'http://127.0.0.1:50001' }
     const entry = { connectionPromise: Promise.resolve(connection), remoteBaseUrl: connection.baseUrl }

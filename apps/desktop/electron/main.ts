@@ -13934,7 +13934,15 @@ function revalidatePool() {
     log: rememberLog,
     probe: (connection, path, options) => fetchJsonForBackend(connection, path, options),
     currentEntry: key => backendPool.get(key),
-    canRetire: (key, entry, connection) => pooledBackendRecovery(key, entry, connection ? connection.remoteKind === 'ssh' : sshConnections.has(sshScopeKey(key))).canRetire(),
+    canRetire: async (key, entry, connection) => {
+      const guard = pooledBackendRecovery(
+        key,
+        entry,
+        connection ? connection.remoteKind === 'ssh' : sshConnections.has(sshScopeKey(key))
+      )
+
+      return (await guard.canRetire()) ? () => guard.retire() : false
+    },
     stopBackend: stopPoolBackend,
     tracker: pooledRemoteLiveness
   })
