@@ -743,6 +743,7 @@ class TestRecoveredImageAcrossTurns:
 
         agent = _make_agent()
         agent.session_id = "oversized-image-turns"
+        agent.platform = "cli"
         agent.base_url = "https://api.anthropic.com"
         agent.api_mode = "chat_completions"
         agent.log_prefix = ""
