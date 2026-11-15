@@ -55,3 +55,42 @@ def test_env_requested_provider_is_named_over_auto_detect(deepseek_only_home, mo
 def test_configured_provider_is_listed_as_configured(deepseek_only_home):
     line = _listing_first_line(deepseek_only_home, "model:\n  provider: anthropic\n  default: claude-x\n")
     assert line.lower() == "current: `claude-x` on anthropic", line
+
+
+@pytest.mark.asyncio
+async def test_listing_rehydrates_persisted_session_override_after_restart(tmp_path, monkeypatch):
+    """First /model after restart must show the saved session route, not the config route."""
+    from types import SimpleNamespace
+
+    import gateway.run as gateway_run
+    from gateway.config import GatewayConfig, Platform
+    from gateway.platforms.event import MessageEvent, MessageType
+    from gateway.run import GatewayRunner
+    from gateway.session import SessionSource, SessionStore, build_session_key
+
+    home = tmp_path / "hermes"
+    home.mkdir()
+    (home / "config.yaml").write_text(
+        "model:\n  default: config-model\n  provider: anthropic\n", encoding="utf-8")
+    monkeypatch.setattr(gateway_run, "_hermes_home", home)
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test-not-real")
+
+    source = SessionSource(platform=Platform.TELEGRAM, chat_id="chat", user_id="user", chat_type="dm")
+    store = SessionStore(tmp_path / "sessions", GatewayConfig())
+    key = store.get_or_create_session(source).session_key
+    store.set_model_override(key, {"model": "deepseek-v4-flash", "provider": "deepseek"})
+
+    # Gateway restart: persistence remains, but the in-memory override has not been hydrated.
+    runner = object.__new__(GatewayRunner)
+    runner.config = SimpleNamespace(multiplex_profiles=False)
+    runner.session_store = store
+    runner._session_model_overrides = {}
+    runner._normalize_source_for_session_key = lambda src: src
+    runner._session_key_for_source = lambda src: build_session_key(src)
+    runner._serving_channel_config = lambda src: None
+    runner._delivery_adapter_for = lambda src: None
+
+    event = MessageEvent(text="/model", message_type=MessageType.TEXT, source=source)
+    reply = await runner._handle_model_command(event)
+    assert (reply or "").splitlines()[0].lower() == "current: `deepseek-v4-flash` on deepseek"
