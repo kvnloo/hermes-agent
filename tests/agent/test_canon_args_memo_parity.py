@@ -65,6 +65,23 @@ def test_cache_bounded_by_bytes():
     assert len(cl._CANON_ARGS_CACHE) >= 1  # still memoizes something
 
 
+def test_cache_byte_budget_counts_literal_unicode():
+    """Literal emoji tool arguments must not bypass the default 32 MiB cap."""
+    content = "🎉" * 250_000
+    for i in range(20):
+        raw = json.dumps(
+            {"path": f"note_{i}.txt", "content": content}, ensure_ascii=False,
+        )
+        cl._canonicalize_tool_call_arguments(raw)
+
+    retained_bytes = sum(
+        len(raw.encode("utf-8", "surrogatepass")) +
+        len(canonical.encode("utf-8", "surrogatepass"))
+        for raw, canonical in cl._CANON_ARGS_CACHE.items()
+    )
+    assert retained_bytes <= cl._CANON_ARGS_CACHE_MAX_BYTES
+
+
 def build_history(n_tool_calls, arg_bytes=2048):
     """Synthetic session: n assistant tool-call messages (+ tool results).
 

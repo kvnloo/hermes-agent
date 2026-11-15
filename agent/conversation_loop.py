@@ -1068,6 +1068,16 @@ _CANON_ARGS_CACHE_MAX_BYTES = 32 * 1024 * 1024
 _canon_args_cache_bytes = 0
 
 
+def _canonical_args_cache_entry_bytes(arg_str: str, canonical: str) -> int:
+    """Count UTF-8 bytes, not code points; literal emoji uses four bytes.
+
+    surrogatepass also handles lone halves until the send-path sanitizer runs.
+    """
+    return len(arg_str.encode("utf-8", "surrogatepass")) + len(
+        canonical.encode("utf-8", "surrogatepass")
+    )
+
+
 def _canonicalize_tool_call_arguments(arg_str: str) -> str:
     """Canonical wire form of a tool-call arguments JSON string; raises on malformed input
     (the caller falls back to ``_repair_tool_call_arguments``). Non-ASCII stays literal:
@@ -1081,13 +1091,14 @@ def _canonicalize_tool_call_arguments(arg_str: str) -> str:
         json.loads(arg_str), separators=(",", ":"), sort_keys=True, ensure_ascii=False,
     )
     _CANON_ARGS_CACHE[arg_str] = canonical
-    _canon_args_cache_bytes += len(arg_str) + len(canonical)
+    _canon_args_cache_bytes += _canonical_args_cache_entry_bytes(arg_str, canonical)
     while len(_CANON_ARGS_CACHE) > _CANON_ARGS_CACHE_MAX or (
         _canon_args_cache_bytes > _CANON_ARGS_CACHE_MAX_BYTES and len(_CANON_ARGS_CACHE) > 1
     ):
         try:
             evicted_key = next(iter(_CANON_ARGS_CACHE))
-            _canon_args_cache_bytes -= len(evicted_key) + len(_CANON_ARGS_CACHE.pop(evicted_key))
+            evicted_value = _CANON_ARGS_CACHE.pop(evicted_key)
+            _canon_args_cache_bytes -= _canonical_args_cache_entry_bytes(evicted_key, evicted_value)
         except (StopIteration, KeyError, RuntimeError):
             break
     return canonical
