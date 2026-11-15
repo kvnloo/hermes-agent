@@ -467,7 +467,7 @@ _GIT_PUSH_ARGS = (r'''(?:(?>'[^']*'|"(?:[^"\\]|\\[\s\S])*")|'(?![^']*')|"(?![^"]
 _GIT_PUSH_ARG_START = r'''\s["']?'''
 _DEV_TCP_REDIRECT_DESCRIPTION = "reverse shell via /dev/tcp or /dev/udp redirect"
 # PowerShell verbs/aliases that write a registry key when given a provider path.
-_REG_WRITE_VERB = r'(?:sp|si|ni|set-item|new-item)'
+_REG_WRITE_VERB = r'(?:sp|si|ni|set-item|new-item|md|mkdir)'
 
 DANGEROUS_PATTERNS = [
     (r'\brm\s+(-[^\s]*\s+)*/', "delete in root path"),
