@@ -1422,25 +1422,31 @@ async def fs_download(
 ):
     """A workspace file as an attachment: from the profile's SSH workspace when it has one, else
     from this host. A browser download link authenticates with a path-bound ``?ticket=``."""
-    session = await _fs_owned_session(session_id, profile)
-    authority = getattr(getattr(request, "state", None), "file_ticket_authority", None)
-    if authority is not None:
-        return await _ticketed_fs_download(request, authority, profile)
-    backend = await asyncio.to_thread(_remote_fs_backend, path, profile)
-    if backend is not None:
-        target, size = await asyncio.to_thread(_remote_download_target, backend, path)
-        return _remote_download_response(request, backend, target, size)
-    target = await _fs_download_path(path, profile, session_id, session=session)
-    _hosted_fs_read_guard(target, request)
-    target, _st = _fs_regular_file(target, _fs_profile_home(profile))
-    await asyncio.to_thread(_refuse_live_database, target)
-    return FileResponse(
-        path=str(target),
-        media_type=_fs_mime_type(target),
-        filename=target.name,
-        content_disposition_type="attachment",
-        headers=_DOWNLOAD_CACHE_HEADERS,
-    )
+    try:
+        session = await _fs_owned_session(session_id, profile)
+        authority = getattr(getattr(request, "state", None), "file_ticket_authority", None)
+        if authority is not None:
+            return await _ticketed_fs_download(request, authority, profile)
+        backend = await asyncio.to_thread(_remote_fs_backend, path, profile)
+        if backend is not None:
+            target, size = await asyncio.to_thread(_remote_download_target, backend, path)
+            return _remote_download_response(request, backend, target, size)
+        target = await _fs_download_path(path, profile, session_id, session=session)
+        _hosted_fs_read_guard(target, request)
+        target, _st = _fs_regular_file(target, _fs_profile_home(profile))
+        await asyncio.to_thread(_refuse_live_database, target)
+        return FileResponse(
+            path=str(target),
+            media_type=_fs_mime_type(target),
+            filename=target.name,
+            content_disposition_type="attachment",
+            headers=_DOWNLOAD_CACHE_HEADERS,
+        )
+
+    except HTTPException as exc:
+        # A missing download is also cacheable by default (HTTP 404).
+        exc.headers = {**(exc.headers or {}), **_DOWNLOAD_CACHE_HEADERS}
+        raise
 
 
 @router.get("/api/fs/git-root")

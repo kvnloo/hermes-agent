@@ -107,3 +107,19 @@ def test_ticketed_browser_download_refuses_intermediary_caching(client, monkeypa
     assert response.status_code == 200
     assert response.content == b"converge build 1c2572cb\n"
     assert "no-store" in _directives(response), response.headers
+
+
+def test_missing_download_refuses_negative_caching_before_file_appears(client, tmp_path):
+    target = tmp_path / "not-ready-yet.txt"
+    missing = client.get("/api/fs/download", params={"path": str(target)})
+
+    assert missing.status_code == 404
+    assert "no-store" in _directives(missing), missing.headers
+
+    # A late-generated file at the same URL must not inherit a cached 404.
+    target.write_bytes(b"ready now\n")
+    present = client.get("/api/fs/download", params={"path": str(target)})
+
+    assert present.status_code == 200
+    assert present.content == b"ready now\n"
+    assert "no-store" in _directives(present), present.headers
