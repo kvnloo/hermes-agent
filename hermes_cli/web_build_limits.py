@@ -22,6 +22,7 @@ tailoring without code changes.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 # Never let the heap ceiling drop below this on constrained-but-usable hosts:
 # below ~1 GB V8 spends the build GC-thrashing instead of making progress.
@@ -37,31 +38,34 @@ _TRUTHY = {"1", "true", "yes", "on"}
 
 
 def _cgroup_memory_limit_mb() -> int | None:
-    """Return the cgroup memory limit in MB, or None when unconstrained."""
+    """Tightest own/ancestor cgroup ceiling, with root and v1 fallbacks."""
+    paths = []
+    try:
+        from gateway.cgroup_cleanup import _own_cgroup_path
+
+        own = _own_cgroup_path()
+        if own:
+            root = Path("/sys/fs/cgroup")
+            current = root / own.lstrip("/")
+            while current != root and current.is_relative_to(root):
+                paths.extend((current / "memory.high", current / "memory.max"))
+                current = current.parent
+    except (OSError, ValueError):
+        pass
+    paths.extend((Path("/sys/fs/cgroup/memory.max"),
+                  Path("/sys/fs/cgroup/memory/memory.limit_in_bytes")))
     limit = None
-    for path in (
-        "/sys/fs/cgroup/memory.max",  # cgroup v2
-        "/sys/fs/cgroup/memory/memory.limit_in_bytes",  # cgroup v1
-    ):
+    for path in paths:
         try:
-            with open(path, "r", encoding="utf-8-sig") as f:
-                raw = f.read().strip()
+            raw = path.read_text(encoding="utf-8-sig").strip()
         except OSError:
             continue
-        if raw == "max":
-            return None
-        try:
-            value = int(raw)
-        except ValueError:
+        if not raw.isdigit():
             continue
-        if value <= 0 or value >= (1 << 50):  # the v1 "unlimited" sentinel
-            return None
-        limit = value
-        break
-    if limit is None:
-        return None
-    return limit // (1024 * 1024)
-
+        value = int(raw)
+        if 0 < value < (1 << 50):
+            limit = min(limit, value) if limit is not None else value
+    return limit // (1024 * 1024) if limit is not None else None
 
 def _available_cores() -> int:
     try:
@@ -75,19 +79,30 @@ def _bounded_threads() -> int:
     return max(1, min(_MAX_WEB_BUILD_THREADS, _available_cores() // 2 or 1))
 
 
-def _bounded_heap_mb() -> int:
-    """Heap ceiling from the cgroup limit, clamped to [_MIN, _MAX]."""
+def _bounded_heap_mb(kind: str = "web") -> int:
+    """Webapp keeps room for pnpm and native bundler in the worker scope."""
     limit_mb = _cgroup_memory_limit_mb()
+    if kind == "webapp":
+        # Agent workers are capped at half physical RAM, at most 4 GiB.
+        budget = min(_MAX_WEB_BUILD_HEAP_MB, limit_mb or _MAX_WEB_BUILD_HEAP_MB)
+        try:
+            physical_mb = (int(os.sysconf("SC_PHYS_PAGES")) *
+                           int(os.sysconf("SC_PAGE_SIZE"))) // (1024 * 1024)
+        except (AttributeError, OSError, ValueError, TypeError):
+            pass
+        else:
+            if physical_mb > 0:
+                budget = min(budget, max(1, physical_mb // 2))
+        return max(_MIN_WEB_BUILD_HEAP_MB, int(budget * 0.67))
     if not limit_mb:
         return _MAX_WEB_BUILD_HEAP_MB
     return max(_MIN_WEB_BUILD_HEAP_MB, min(_MAX_WEB_BUILD_HEAP_MB, int(limit_mb * 0.75)))
-
 
 def _env_flag(env: dict[str, str], name: str) -> bool:
     return str(env.get(name, "")).strip().lower() in _TRUTHY
 
 
-def web_build_limits(env: dict[str, str] | None = None) -> dict[str, str]:
+def web_build_limits(env: dict[str, str] | None = None, *, kind: str = "web") -> dict[str, str]:
     """Return a copy of *env* bounding the web dashboard build's CPU and heap (#63338).
 
     Never overrides the user: an existing ``NODE_OPTIONS`` containing
@@ -104,10 +119,10 @@ def web_build_limits(env: dict[str, str] | None = None) -> dict[str, str]:
         explicit = (env.get("HERMES_WEB_BUILD_MAX_OLD_SPACE_SIZE") or "").strip()
         try:
             heap_mb = int(explicit) if explicit else (
-                _MIN_WEB_BUILD_HEAP_MB if light else _bounded_heap_mb()
+                _MIN_WEB_BUILD_HEAP_MB if light else _bounded_heap_mb(kind)
             )
         except ValueError:
-            heap_mb = _MIN_WEB_BUILD_HEAP_MB if light else _bounded_heap_mb()
+            heap_mb = _MIN_WEB_BUILD_HEAP_MB if light else _bounded_heap_mb(kind)
         heap_mb = max(_MIN_WEB_BUILD_HEAP_MB, heap_mb)
         tokens.append(f"--max-old-space-size={heap_mb}")
         env["NODE_OPTIONS"] = " ".join(t for t in tokens if t).strip()
@@ -124,9 +139,9 @@ def web_build_limits(env: dict[str, str] | None = None) -> dict[str, str]:
     return env
 
 
-def apply_web_build_limits(env: dict[str, str]) -> dict[str, str]:
+def apply_web_build_limits(env: dict[str, str], *, kind: str = "web") -> dict[str, str]:
     """Apply :func:`web_build_limits` into *env* (in place) and return it."""
-    env.update(web_build_limits(env))
+    env.update(web_build_limits(env, kind=kind))
     return env
 
 

@@ -129,3 +129,41 @@ class TestPackageJsonBuildScriptCapped:
         assert "RAYON_NUM_THREADS" in build_script
         # caps apply on direct invocation before vite is imported
         assert "isMain(import.meta.url)" in build_script
+
+    def test_webapp_build_uses_real_worker_scope_budget(self, monkeypatch, tmp_path):
+        """The default Webapp build must fit the reporter's 1907 MiB worker scope."""
+        import os
+        from pathlib import Path
+        from hermes_cli import source_build
+        from hermes_cli.web_build_limits import _cgroup_memory_limit_mb
+
+        monkeypatch.setattr("gateway.cgroup_cleanup._own_cgroup_path",
+                            lambda: "/user.slice/hermes-worker.scope")
+        original_read = Path.read_text
+
+        def read_scope(path, *args, **kwargs):
+            if str(path) == "/sys/fs/cgroup/user.slice/hermes-worker.scope/memory.max":
+                return "2000644096"  # actual worker MemoryMax from #156161
+            if str(path) == "/sys/fs/cgroup/memory.max":
+                return "max"
+            if str(path).startswith("/sys/fs/cgroup/"):
+                return "max"
+            return original_read(path, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "read_text", read_scope)
+        sysconf = {"SC_PHYS_PAGES": 3814 * 256, "SC_PAGE_SIZE": 4096}
+        monkeypatch.setattr(os, "sysconf", lambda key: sysconf[key])
+        assert _cgroup_memory_limit_mb() == 1907
+
+        captured = {}
+
+        def fake_run(_root, script, *args, env, label):
+            captured.update(script=script, env=env, label=label)
+
+        monkeypatch.setattr(source_build, "run_source_script", fake_run)
+        original_env = {"PATH": "/bin"}
+        source_build.build_source_webapp(tmp_path, env=original_env, explicit=True)
+        assert original_env == {"PATH": "/bin"}
+        assert captured["script"] == "apps/desktop/scripts/build-webapp.mjs"
+        assert "--max-old-space-size=1277" in captured["env"]["NODE_OPTIONS"]
+        assert captured["env"]["RAYON_NUM_THREADS"].isdigit()

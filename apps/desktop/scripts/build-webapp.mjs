@@ -12,6 +12,7 @@ import { isMain, repoRoot } from '../../../scripts/build/frontend-common.mjs'
 import { sourceEntries } from '../../../scripts/build/freshness.mjs'
 import { prepareNodeDependencies } from '../../../scripts/build/node-deps.mjs'
 import { buildWebapp } from '../../../scripts/build/webapp.mjs'
+import { applyThreadCap, ensureHeapCapForFreshProcess } from '../../../scripts/build/web.mjs'
 
 /** Make the workspace hash exactly like the checkout for the Webapp product. The filtered
  *  frozen install needs no other workspace's manifest, so none is copied. */
@@ -53,6 +54,8 @@ export async function buildSourceWebapp(options = {}) {
 }
 
 if (isMain(import.meta.url)) {
+  applyThreadCap()
+  await ensureHeapCapForFreshProcess('webapp')
   try {
     const { values } = parseArgs({ options: {
       'no-install': { type: 'boolean', default: false },

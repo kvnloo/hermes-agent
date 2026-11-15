@@ -41,27 +41,47 @@ function boundedThreads() {
 
 // cgroup v2/v1 memory limit in MB, or null when unconstrained.
 function readCgroupLimitMb() {
-  for (const cgroupPath of ['/sys/fs/cgroup/memory.max', '/sys/fs/cgroup/memory/memory.limit_in_bytes']) {
+  const paths = []
+  try {
+    const own = readFileSync('/proc/self/cgroup', 'utf8').split('\n')
+      .find(line => line.startsWith('0::'))?.slice(3).trim()
+    if (own?.startsWith('/')) {
+      const root = '/sys/fs/cgroup'
+      let current = path.resolve(root, '.' + own)
+      while (current !== root && current.startsWith(root + '/')) {
+        paths.push(path.join(current, 'memory.high'), path.join(current, 'memory.max'))
+        current = path.dirname(current)
+      }
+    }
+  } catch { /* no cgroup v2 */ }
+  paths.push('/sys/fs/cgroup/memory.max', '/sys/fs/cgroup/memory/memory.limit_in_bytes')
+  let limit = null
+  for (const file of paths) {
     try {
-      const raw = String(readFileSync(cgroupPath, 'utf-8')).trim()
-      if (raw === 'max' || !/^\d+$/.test(raw)) continue
-      const value = Number(raw)
-      if (value <= 0 || value >= 2 ** 50) return null // the v1 "unlimited" sentinel
-      return Math.floor(value / (1024 * 1024))
-    } catch { /* unconstrained or unsupported */ }
+      const raw = readFileSync(file, 'utf8').trim()
+      if (!/^\d+$/.test(raw)) continue
+      const bytes = Number(raw)
+      if (bytes > 0 && bytes < 2 ** 50) limit = Math.min(limit ?? bytes, bytes)
+    } catch { /* unsupported or unconstrained */ }
   }
-  return null
+  return limit === null ? null : Math.floor(limit / (1024 * 1024))
 }
 
 // 75% of the cgroup limit when constrained (mirrors the TUI launcher's heap
 // sizing), else the conservative ceiling. Never below the GC-thrash floor.
-function boundedHeapMb() {
+function boundedHeapMb(kind = 'web') {
   const limitMb = readCgroupLimitMb()
+  if (kind === 'webapp') {
+    // Agent worker scopes use half physical RAM (max 4 GiB). Leave pnpm headroom.
+    const hostHalfMb = Math.floor(os.totalmem() / (2 * 1024 * 1024))
+    const budget = Math.min(MAX_HEAP_MB, limitMb || MAX_HEAP_MB, hostHalfMb || MAX_HEAP_MB)
+    return Math.max(MIN_HEAP_MB, Math.floor(budget * 0.67))
+  }
   const sized = limitMb ? Math.floor(limitMb * 0.75) : MAX_HEAP_MB
   return Math.max(MIN_HEAP_MB, Math.min(MAX_HEAP_MB, sized))
 }
 
-function applyThreadCap() {
+export function applyThreadCap() {
   if (process.env.RAYON_NUM_THREADS) return
   const explicit = Number.parseInt(process.env.HERMES_WEB_BUILD_THREADS ?? '', 10)
   const threads = Number.isFinite(explicit) && explicit > 0 ? explicit
@@ -71,13 +91,13 @@ function applyThreadCap() {
 
 // Re-exec with the heap cap appended to NODE_OPTIONS unless the user already
 // set one. Runs only for direct invocation (isMain), before vite is imported.
-async function ensureHeapCapForFreshProcess() {
+export async function ensureHeapCapForFreshProcess(kind = 'web') {
   const tokens = (process.env.NODE_OPTIONS ?? '').split(/\s+/).filter(Boolean)
   if (tokens.some(token => token.startsWith('--max-old-space-size='))) return
   const explicit = Number.parseInt(process.env.HERMES_WEB_BUILD_MAX_OLD_SPACE_SIZE ?? '', 10)
   const heapMb = Number.isFinite(explicit) && explicit > 0
     ? Math.max(MIN_HEAP_MB, explicit)
-    : (webBuildLight() ? MIN_HEAP_MB : boundedHeapMb())
+    : (webBuildLight() ? MIN_HEAP_MB : boundedHeapMb(kind))
   tokens.push(`--max-old-space-size=${heapMb}`)
   const { spawnSync } = await import('node:child_process')
   const result = spawnSync(process.execPath, process.argv.slice(1), {

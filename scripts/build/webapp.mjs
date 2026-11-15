@@ -6,6 +6,7 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { frontendArgs, isMain, productOutput, withProduct, workspaceTool } from './frontend-common.mjs'
 import { buildInputs, outputIntact, recordProduct, sourceHash } from './freshness.mjs'
+import { applyThreadCap, ensureHeapCapForFreshProcess } from './web.mjs'
 
 // Vite's build manifest (apps/desktop/vite.config.ts names it too): the files a generation emitted.
 const manifestName = 'renderer-manifest.json'
@@ -97,6 +98,8 @@ export async function buildWebapp({ source, workspace, out }) {
 }
 
 if (isMain(import.meta.url)) {
+  applyThreadCap()
+  await ensureHeapCapForFreshProcess('webapp')
   try {
     const { source, out } = frontendArgs(process.argv.slice(2))
     const result = await buildWebapp({ source, workspace: source, out })
