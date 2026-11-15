@@ -53,6 +53,7 @@ function mount(canonical = false, extra: (method: string, params: any) => unknow
   const slashRef = { current: (_value: string) => false }
   const slashFlightRef = { current: 0 }
   const sys = vi.fn()
+  const resumeById = vi.fn(async (sid: string) => { patchUiState({ sid }) })
   let composer!: ReturnType<typeof useComposerState>
   let submission!: ReturnType<typeof useSubmission>
   const stdout = Object.assign(new PassThrough(), { columns: 80, rows: 20, isTTY: false })
@@ -63,8 +64,8 @@ function mount(canonical = false, extra: (method: string, params: any) => unknow
     composer = useComposerState({ gw, submitRef, sys })
     submission = useSubmission({ gw, submitRef, slashRef, sys, composerActions: composer.actions,
       composerRefs: composer.refs, composerState: composer.state, appendMessage: vi.fn(), setLastUserMsg: vi.fn() })
-    slashRef.current = createSlashHandler({ gateway: { gw }, local: {}, transcript: { sys, send: submission.send },
-      composer: composer.actions, slashFlightRef } as any)
+    slashRef.current = createSlashHandler({ gateway: { gw, rpc: request }, local: {}, transcript: { sys, send: submission.send },
+      session: { resumeById }, composer: composer.actions, slashFlightRef } as any)
 
     return <Text>{composer.state.input}</Text>
   }
@@ -73,7 +74,7 @@ function mount(canonical = false, extra: (method: string, params: any) => unknow
     stderr: new PassThrough() as any, patchConsole: false })
 
   return {
-    home, images, pending, request, sys,
+    home, images, pending, request, resumeById, sys,
     get composer() { return composer },
     get output() { return output },
     async submit(command: string) {
@@ -309,28 +310,85 @@ it('`/queue` with an image journals its attachment in the first durable write', 
   } finally { save.mockRestore(); h.close() }
 })
 
-it('rejected /branch and /fork keep the draft and its image attachment', async () => {
-  for (const command of ['/branch', '/fork']) {
-    const h = mount(true, method => {
-      if (method === 'session.resume') { return { revision: 1, execution_generation: 2 } }
-      if (method === 'session.mutate') { return Promise.reject(new Error('nothing to branch')) }
+const branchCases = [true, false].flatMap(canonical =>
+  ['/branch', '/fork'].map(command => ({ canonical, command })))
+
+it.each(branchCases)('rejected $command keeps the draft and image, canonical=$canonical', async ({ canonical, command }) => {
+  for (const reason of ['nothing to branch', 'owner busy', 'stale generation']) {
+    const method = canonical ? 'session.mutate' : 'session.branch'
+
+    const h = mount(canonical, name => {
+      if (name === 'session.resume') { return { revision: 1, execution_generation: 2 } }
+
+      if (name === method) { return Promise.reject(Object.assign(new Error(reason), { data: { reason } })) }
 
       return undefined
     })
+
     vi.stubEnv('HERMES_TUI_GATEWAY_URL', '')
     const path = join(h.home, 'shot.png')
     writeFileSync(path, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nL8AAAAASUVORK5CYII=', 'base64'))
 
     try {
       await h.submit(`/image ${path}`)
+
+      if (!canonical) { h.pending[0]!.finish(path) }
       await vi.waitFor(() => expect(h.composer.state.input).toContain('[[ Image 1 ]]'))
       const token = h.composer.refs.tokensRef.current[0]!
       const draft = `${command} Child [[ Image 1 ]]`
       await h.submit(draft)
-      await vi.waitFor(() => expect(h.sys).toHaveBeenCalledWith(expect.stringContaining('nothing to branch')))
-      expect(h.request.mock.calls.filter(([method]) => method === 'session.mutate')).toHaveLength(1)
+      await vi.waitFor(() => expect(h.sys).toHaveBeenCalledWith(expect.stringContaining(reason)))
+      expect(h.request.mock.calls.filter(([name]) => name === method)).toHaveLength(1)
       expect(h.composer.state.input).toBe(draft)
       expect(h.composer.refs.tokensRef.current).toEqual([token])
+      expect(h.output).toContain(draft)
+      expect(h.resumeById).not.toHaveBeenCalled()
+    } finally { h.close() }
+  }
+})
+
+it.each(branchCases)('accepted $command clears only its unchanged draft and image, canonical=$canonical', async ({ canonical, command }) => {
+  for (const edited of [false, true]) {
+    let accept!: (result: Record<string, unknown>) => void
+    const pendingBranch = new Promise<Record<string, unknown>>(resolve => { accept = resolve })
+    const method = canonical ? 'session.mutate' : 'session.branch'
+
+    const h = mount(canonical, name => {
+      if (name === 'session.resume') { return { revision: 1, execution_generation: 2 } }
+
+      if (name === method) { return pendingBranch }
+
+      if (name === 'session.info') { return { title: 'Child' } }
+
+      return undefined
+    })
+
+    vi.stubEnv('HERMES_TUI_GATEWAY_URL', '')
+    const path = join(h.home, 'shot.png')
+    writeFileSync(path, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nL8AAAAASUVORK5CYII=', 'base64'))
+
+    try {
+      await h.submit(`/image ${path}`)
+
+      if (!canonical) { h.pending[0]!.finish(path) }
+      await vi.waitFor(() => expect(h.composer.state.input).toContain('[[ Image 1 ]]'))
+      const token = h.composer.refs.tokensRef.current[0]!
+      const draft = `${command} Child [[ Image 1 ]]`
+      await h.submit(draft)
+      await vi.waitFor(() => expect(h.request.mock.calls.filter(([name]) => name === method)).toHaveLength(1))
+      expect(h.composer.state.input).toBe(draft)
+      expect(h.composer.refs.tokensRef.current).toEqual([token])
+      const newerDraft = 'newer caption [[ Image 1 ]]'
+
+      if (edited) { h.composer.actions.setInput(newerDraft) }
+
+      accept(canonical ? { branched_session_id: 'child' } : { session_id: 'child' })
+      await vi.waitFor(() => expect(h.resumeById).toHaveBeenCalledWith('child'))
+      await flush()
+      expect(h.composer.state.input).toBe(edited ? newerDraft : '')
+      expect(h.composer.refs.tokensRef.current).toEqual(edited ? [token] : [])
+      expect(getUiState().sid).toBe('child')
+      expect(h.sys.mock.calls.some(([notice]) => String(notice).startsWith('error:'))).toBe(false)
     } finally { h.close() }
   }
 })

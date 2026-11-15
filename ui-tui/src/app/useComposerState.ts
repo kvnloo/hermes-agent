@@ -261,7 +261,9 @@ export function useComposerState({ gw, submitRef, sys }: UseComposerStateOptions
   // typing while the mutation is pending must never be erased.
   const clearInIfCurrent = useCallback((expected: string): boolean => {
     if (inputRef.current !== expected) { return false }
+
     clearIn()
+
     return true
   }, [clearIn])
 
