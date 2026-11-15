@@ -35,11 +35,15 @@ _CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 # `\u{E0069}\u{E0067}\u{E006E}...` = invisible instructions inside otherwise benign tool output). Ported
 # from block/goose#10746. The ONLY legitimate modern use is emoji tag sequences (Unicode TR51): a U+1F3F4
 # black-flag base followed by tag spec characters and the U+E007F CANCEL TAG terminator (e.g. the flags of
-# Scotland/Wales/England). goose strips those too; we preserve them — same rationale as keeping ZWJ inside
-# emoji sequences.
+# Scotland/Wales/England). Only recognized RGI subdivision flags are preserved:
+# arbitrary TAG prose after a black flag must not bypass tool-result sanitization.
 _UNICODE_TAG_SUB_RE = re.compile(
-    r"(\U0001F3F4[\U000E0020-\U000E007E]+\U000E007F)"  # valid emoji tag seq (kept)
+    r"(\U0001F3F4[\U000E0020-\U000E007E]+\U000E007F)"  # candidate emoji tag seq (validated below)
     r"|[\U000E0000-\U000E007F]"                        # any other tag char (stripped)
+)
+_RGI_FLAG_TAG_SEQUENCES = frozenset(
+    "\U0001F3F4" + "".join(chr(0xE0000 + ord(ch)) for ch in code) + "\U000E007F"
+    for code in ("gbeng", "gbsct", "gbwls")
 )
 
 
@@ -80,7 +84,14 @@ def strip_unicode_tags(text: str) -> str:
     """
     if not text or not _HAS_UNICODE_TAG.search(text):
         return text
-    return _UNICODE_TAG_SUB_RE.sub(lambda m: m.group(1) or "", text)
+    def _keep_rgi_flag_only(match: re.Match[str]) -> str:
+        candidate = match.group(1)
+        if candidate is None:
+            return ""
+        # The black flag remains visible, but non-RGI hidden TAG prose must not.
+        return candidate if candidate in _RGI_FLAG_TAG_SEQUENCES else "\U0001F3F4"
+
+    return _UNICODE_TAG_SUB_RE.sub(_keep_rgi_flag_only, text)
 
 
 # Bidi embedding/override (U+202A-202E) and isolate (U+2066-2069) controls reorder how text renders,
