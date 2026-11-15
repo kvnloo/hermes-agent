@@ -1904,6 +1904,18 @@ def configured_max_in_progress() -> Optional[int]:
     return ival if ival >= 1 else None
 
 
+def configured_max_in_progress_per_profile() -> Optional[int]:
+    """Read the standalone daemon's per-profile cap with the CLI's positive-int rules."""
+    try:
+        from hermes_cli.config import load_config_readonly
+        raw = ((load_config_readonly() or {}).get("kanban") or {}).get(
+            "max_in_progress_per_profile"
+        )
+    except Exception:
+        return None
+    return _positive_int(raw, None)
+
+
 def count_running_tasks(conn: sqlite3.Connection) -> int:
     """Number of tasks in ``status='running'``.
 
@@ -2880,11 +2892,13 @@ def run_daemon(
             # Re-resolved every tick (config load is mtime-cached) so operator
             # edits apply without a restart.
             max_in_progress = resolve_max_in_progress(configured_max_in_progress())
+            max_in_progress_per_profile = configured_max_in_progress_per_profile()
             with contextlib.closing(_kbc.connect()) as conn:
                 res = dispatch_once(
                     conn,
                     max_spawn=max_spawn,
                     max_in_progress=max_in_progress,
+                    max_in_progress_per_profile=max_in_progress_per_profile,
                     failure_limit=failure_limit,
                 )
             if on_tick is not None:

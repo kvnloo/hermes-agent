@@ -86,6 +86,40 @@ def test_run_daemon_resolves_and_passes_max_in_progress(
 
 
 
+def test_run_daemon_refreshes_per_profile_cap_each_tick(kanban_home, monkeypatch):
+    """A running standalone daemon must obey a tightened profile cap without restart.
+
+    The gateway and one-shot CLI already forward this setting.  The daemon
+    previously omitted it, so three workers of one profile could be spawned
+    despite an operator lowering kanban.max_in_progress_per_profile to one.
+    """
+    import hermes_cli.config as cfgmod
+
+    current = {"cap": 3}
+    monkeypatch.setattr(
+        cfgmod,
+        "load_config_readonly",
+        lambda: {"kanban": {"max_in_progress_per_profile": current["cap"]}},
+    )
+    monkeypatch.setattr(kbd, "configured_max_in_progress", lambda: 8)
+    observed = []
+    stop = threading.Event()
+
+    def fake_dispatch_once(conn, **kwargs):
+        observed.append(kwargs.get("max_in_progress_per_profile"))
+        return kb.DispatchResult()
+
+    def on_tick(_result):
+        if len(observed) == 1:
+            current["cap"] = 1
+        else:
+            stop.set()
+
+    monkeypatch.setattr(kbd, "dispatch_once", fake_dispatch_once)
+    kbd.run_daemon(interval=0, stop_event=stop, on_tick=on_tick)
+
+    assert observed == [3, 1]
+
 
 def test_configured_max_in_progress_parsing(monkeypatch):
     import hermes_cli.config as cfgmod
