@@ -199,3 +199,34 @@ def test_allocator_only_trim_does_not_suppress_a_forced_collection(monkeypatch):
     assert mem_trim.trim_memory(reason="housekeeping", collect=False) is True
     assert mem_trim.trim_memory(force=True, reason="agent_cache_pressure") is True
     assert calls == ["gc"]
+
+
+def test_idle_housekeeping_limits_gc_without_allocator_release(monkeypatch):
+    """#150518: a quiet macOS gateway must not traverse the whole swapped old generation."""
+    from agent.review_idle_queue import QUEUE
+
+    collection = Mock(return_value=7)
+    allocator_trim = Mock(return_value=False)
+    monkeypatch.setattr(mem_trim.gc, "collect", collection)
+    monkeypatch.setattr(QUEUE, "quiet_period", lambda: (301.0, 42.0))
+    monkeypatch.setattr(mem_trim, "_idle_collected_for", None)
+    monkeypatch.setattr(mem_trim, "_agent_closed_since_idle_collect", False)
+    monkeypatch.setattr(mem_trim, "_config_settings", lambda: (True, 60.0, 1, 0.0))
+    monkeypatch.setattr(mem_trim, "trim_memory", allocator_trim)
+
+    # Model the real allocator seam, not a fake macOS interpreter.
+    monkeypatch.setattr(mem_trim, "_probe_glibc_malloc_trim", lambda: None)
+    assert mem_trim.trim_memory_when_idle(reason="messaging gateway housekeeping") is False
+    collection.assert_called_once_with(1)
+    allocator_trim.assert_called_once_with(
+        force=True, reason="messaging gateway housekeeping after idle collection", collect=False)
+
+    # A glibc process retains its intentional full idle sweep.
+    collection.reset_mock()
+    allocator_trim.reset_mock()
+    monkeypatch.setattr(mem_trim, "_probe_glibc_malloc_trim", lambda: lambda _pad: 1)
+    monkeypatch.setattr(mem_trim, "_idle_collected_for", None)
+    assert mem_trim.trim_memory_when_idle(reason="messaging gateway housekeeping") is False
+    collection.assert_called_once_with(2)
+    allocator_trim.assert_called_once_with(
+        force=True, reason="messaging gateway housekeeping after idle collection", collect=False)
