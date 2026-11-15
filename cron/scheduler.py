@@ -2292,6 +2292,14 @@ def _prepare_job_prompt(
             runtime_data_prompt=monitor and monitor.context_block,
         )
     except CronPromptInjectionBlocked as block_exc:
+        # Reject repeated monitor-side injection once, but keep a safe monitor change pending
+        # when the block came from a skill, script, or the user-authored prompt.
+        if monitor is not None:
+            from tools.cronjob_prompt_scan import _scan_cron_skill_assembled
+
+            _cleaned, monitor_error = _scan_cron_skill_assembled(monitor.context_block or "")
+            if monitor_error:
+                monitor.commit(job_id)
         # Injection scanner tripped: refuse this tick and tell the operator WHY.
         logger.warning(
             "Job '%s' (ID: %s): blocked by prompt-injection scanner — %s", job_name, job_id, block_exc,
