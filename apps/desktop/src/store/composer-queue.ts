@@ -440,6 +440,23 @@ export const dequeueQueuedPrompt = (key: string | null | undefined): null | Queu
   return head
 }
 
+/** A definite missing cancel RPC means this backend cannot withdraw the admission.
+ *  Honor the user's Delete only in this window's persisted cache; never claim that
+ *  the backend cancelled work. Read live storage so another window's rows survive. */
+export const dismissUnsupportedQueuedPrompt = (key: string | null | undefined, id: string): boolean => {
+  const sid = sidOf(key)
+
+  if (!sid) {
+    return false
+  }
+
+  return mutateSession(sid, queue =>
+    queue.some(entry => entry.id === id && entry.serverStatus === 'queued')
+      ? queue.filter(entry => entry.id !== id || entry.serverStatus !== 'queued')
+      : null
+  )
+}
+
 export const removeQueuedPrompt = (
   key: string | null | undefined,
   id: string,

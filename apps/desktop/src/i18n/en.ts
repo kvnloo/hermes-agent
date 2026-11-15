@@ -3503,6 +3503,7 @@ export const en: Translations = {
     queueLostNote: 'Turn lost during restart',
     restoreImageDraft: 'Restore image draft',
     queueCancelFailed: "Couldn't remove the queued turn",
+    queueLocalOnlyDiscarded: 'Removed the saved queue card only. This backend cannot cancel the turn; it may still run.',
     queueLostDiscard: 'Discard',
     queueLostDiscardTip:
       'The gateway restarted mid-turn and cannot finish this one. Discard it so the queued turns behind it run.',

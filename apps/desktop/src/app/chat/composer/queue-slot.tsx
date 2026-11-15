@@ -1,10 +1,17 @@
 import type { ReactNode } from 'react'
 
+import { isMissingRpcMethod } from '@/lib/gateway-rpc'
+
 import type { HermesGateway } from '@/hermes'
 import type { Translations } from '@/i18n'
 import { useStoresSelector } from '@/lib/use-session-slice'
-import { type QueuedPromptEntry, removeQueuedPrompt, unparkQueuedPrompts } from '@/store/composer-queue'
-import { notifyError } from '@/store/notifications'
+import {
+  dismissUnsupportedQueuedPrompt,
+  type QueuedPromptEntry,
+  removeQueuedPrompt,
+  unparkQueuedPrompts
+} from '@/store/composer-queue'
+import { notify, notifyError } from '@/store/notifications'
 import { $activeSessionId, $selectedStoredSessionId } from '@/store/session'
 import { $sessionStates, $sessionTiles, storedSessionIdForRuntimeId } from '@/store/session-states'
 
@@ -97,9 +104,22 @@ export function renderComposerQueueSlot({
         if (serverStatus && gateway) {
           const withdraw = serverStatus === 'unknown' ? discardLostPrompt : cancelQueuedPrompt
 
-          withdraw(sessionId, activeQueueSessionKey, id, gateway.request.bind(gateway)).catch((error: unknown) =>
+          withdraw(sessionId, activeQueueSessionKey, id, gateway.request.bind(gateway)).catch((error: unknown) => {
+            // A legacy backend does not serve prompt.cancel. The user explicitly asked to
+            // dismiss this cached row, but that is NOT a cancellation of backend work.
+            // A timeout/refusal other than -32601 must keep the authoritative row.
+            if (
+              serverStatus === 'queued' &&
+              isMissingRpcMethod(error) &&
+              dismissUnsupportedQueuedPrompt(activeQueueSessionKey, id)
+            ) {
+              notify({ kind: 'warning', message: t.composer.queueLocalOnlyDiscarded })
+
+              return
+            }
+
             notifyError(error, t.composer.queueCancelFailed)
-          )
+          })
 
           return
         }

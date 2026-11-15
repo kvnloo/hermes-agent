@@ -1,10 +1,17 @@
+import { JSON_RPC_METHOD_NOT_FOUND, JsonRpcGatewayError } from '@hermes/shared'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 
 import type { HermesGateway } from '@/hermes'
 import { I18nProvider } from '@/i18n/context'
 import { en } from '@/i18n/en'
-import { $queuedPromptsBySession, enqueueQueuedPrompt, getQueuedPrompts } from '@/store/composer-queue'
+import {
+  $queuedPromptsBySession,
+  enqueueQueuedPrompt,
+  getQueuedPrompts,
+  simulateComposerQueueReloadForTests
+} from '@/store/composer-queue'
+import { $notifications, clearNotifications } from '@/store/notifications'
 import { reconcilePendingSubmissions } from '@/store/pending-submissions'
 
 import { renderComposerQueueSlot } from './queue-slot'
@@ -70,6 +77,42 @@ it('Delete on a server-queued card cancels its admission at the authority', asyn
   fireEvent.click(screen.getByRole('button', { name: en.composer.queueDelete }))
 
   await vi.waitFor(() => expect(request).toHaveBeenCalledWith('prompt.cancel', { session_id: 'runtime-1', admission_id: 'adm-1' }))
+})
+
+it('Delete on a backend without prompt.cancel removes only the stale local card after a definitive -32601', async () => {
+  clearNotifications()
+  reconcilePendingSubmissions('stored', [
+    { admission_id: 'ghost', status: 'queued', user: 'already delivered' },
+    { admission_id: 'live', status: 'queued', user: 'still waiting' }
+  ])
+  const request = vi.fn(async () => {
+    throw new JsonRpcGatewayError('unknown method: prompt.cancel', { code: JSON_RPC_METHOD_NOT_FOUND })
+  })
+  renderSlot(request)
+  await expand()
+  fireEvent.click(rowButtons('already delivered').getByRole('button', { name: en.composer.queueDelete }))
+
+  await vi.waitFor(() => expect(getQueuedPrompts('stored').map(entry => entry.id)).toEqual(['live']))
+  expect($notifications.get().some(item =>
+    item.kind === 'warning' && item.message === en.composer.queueLocalOnlyDiscarded
+  )).toBe(true)
+  simulateComposerQueueReloadForTests()
+  expect(getQueuedPrompts('stored').map(entry => entry.id)).toEqual(['live'])
+  expect(request).toHaveBeenCalledWith('prompt.cancel', { session_id: 'runtime-1', admission_id: 'ghost' })
+})
+
+it('Delete preserves a server row after a transient RPC error', async () => {
+  reconcilePendingSubmissions('stored', [{ admission_id: 'still-owned', status: 'queued', user: 'not settled' }])
+  const request = vi.fn(async () => { throw new Error('gateway disconnected') })
+  renderSlot(request)
+  await expand()
+  fireEvent.click(rowButtons('not settled').getByRole('button', { name: en.composer.queueDelete }))
+
+  await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1))
+  // Let the rejected promise's handler settle, then check durable storage.
+  await vi.waitFor(() => expect($notifications.get().some(item => item.kind === 'error')).toBe(true))
+  simulateComposerQueueReloadForTests()
+  expect(getQueuedPrompts('stored').map(entry => entry.id)).toEqual(['still-owned'])
 })
 
 it('a server-queued card shows the Steer and Edit its owner serves, and never Next (RT-35)', async () => {
