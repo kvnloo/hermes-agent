@@ -1193,6 +1193,42 @@ class TestDiscoveryTemporalNarrowing:
         assert run(exclude_session_ids=["s_newest"]) == {"s_middle", "s_oldest"}
 
 
+    def test_title_match_window_follows_matched_child_not_lineage_root(self, db):
+        """A title-only hit dated in June must not inherit a May root's time window."""
+        db.create_session("title_root", source="telegram", session_key="tg:window:1")
+        db.end_session("title_root", "session_reset")
+        db.create_session(
+            "title_child", source="telegram", parent_session_id="title_root",
+            session_key="tg:window:1", model_config={"_reset_from": "title_root"},
+        )
+        db._conn.execute(
+            "UPDATE sessions SET title = ? WHERE id = ?",
+            ("June rollout review", "title_child"),
+        )
+        db.append_message("title_child", role="user", content="Recorded launch checklist.")
+        db.end_session("title_child", "session_reset")
+        db.create_session(
+            "title_current", source="telegram", parent_session_id="title_child",
+            session_key="tg:window:1", model_config={"_reset_from": "title_child"},
+        )
+        _set_started(db, title_root=_unix(2026, 5, 1), title_child=_unix(2026, 6, 15))
+
+        june = json.loads(session_search(
+            query="June rollout review", after="2026-06-01", before="2026-07-01",
+            current_session_id="title_current", db=db,
+        ))
+        assert june["success"] is True
+        assert [hit["session_id"] for hit in june["results"]] == ["title_child"]
+        assert "June" in june["results"][0]["when"]
+
+        may = json.loads(session_search(
+            query="June rollout review", before="2026-06-01",
+            current_session_id="title_current", db=db,
+        ))
+        assert may["success"] is True
+        assert may["results"] == []
+
+
 class TestDiscoverySessionExclusion:
     def test_exclude_session_ids_drops_whole_lineage(self, db):
         db.create_session("s_root", source="cli")

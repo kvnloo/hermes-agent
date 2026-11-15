@@ -367,7 +367,7 @@ def _discover(db, query: str, role_filter: Optional[list[str]], limit: int, sort
     # query, so it is the one place the window is re-checked in Python.
     if title_result:
         title_sid, title_root = title_result["session_id"], title_result.get("_lineage_root") or title_result["session_id"]
-        title_started = _coerce_started_ts((_get_session_meta(db, title_root) or _get_session_meta(db, title_sid)).get("started_at"))
+        title_started = _coerce_started_ts((_get_session_meta(db, title_sid) or _get_session_meta(db, title_root)).get("started_at"))
         if {title_sid, title_root} & excluded_roots or not _in_time_window(title_started, after_ts, before_ts):
             title_result = None
     raw_results, err = _loud(lambda: db.search_messages(
