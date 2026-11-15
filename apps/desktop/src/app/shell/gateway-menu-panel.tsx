@@ -78,12 +78,6 @@ function useGatewayLogTail(): string[] {
 
 const prettyState = (state: string) => state.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase())
 
-// Strip leading "YYYY-MM-DD HH:MM:SS,mmm " and "[runtime_id] " prefixes from
-// log lines so they don't dominate the display. Full text preserved on hover.
-const TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}[,.\d]*\s+/
-const RUNTIME_BRACKET_RE = /^\[[^\]]+]\s+/
-const trimLogLine = (raw: string) => raw.trim().replace(TIMESTAMP_RE, '').replace(RUNTIME_BRACKET_RE, '')
-
 export function GatewayMenuPanel({
   gatewayState,
   inferenceStatus,
@@ -229,7 +223,7 @@ export function GatewayMenuPanel({
             </Button>
           </div>
           <LogView className="mt-1.5 max-h-40 border-0 px-0" ref={logScrollRef}>
-            {recentLogs.map(trimLogLine).join('\n')}
+            {recentLogs.join('\n')}
           </LogView>
         </Section>
       )}

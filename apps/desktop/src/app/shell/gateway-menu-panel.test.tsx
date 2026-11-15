@@ -116,6 +116,18 @@ describe('GatewayMenuPanel recent activity source', () => {
     logs.mockReset().mockResolvedValue({ file: 'gateway', lines: [] })
   })
 
+  it('preserves log timestamps so an old gateway tail is visibly old', async () => {
+    logs.mockResolvedValue({
+      file: 'gateway',
+      lines: ['2026-11-06 08:14:02,871 WARNING gateway from a previous run']
+    })
+
+    renderPanel('open')
+
+    expect(await screen.findByText(/2026-11-06 08:14:02,871 WARNING gateway from a previous run/)).toBeTruthy()
+    expect(logs).toHaveBeenCalledWith({ file: 'gateway', lines: 120 })
+  })
+
   it('tails the live gateway log instead of a stale gui log (#155027)', async () => {
     // Under the gateway runtime, gui.log stopped when the backend last ran in
     // mode="gui": its last lines are days old, while gateway.log is live.
