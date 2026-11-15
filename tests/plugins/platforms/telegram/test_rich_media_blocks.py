@@ -29,3 +29,12 @@ def test_every_media_block_is_found_in_order_with_its_caption_as_text():
 def test_a_text_only_rich_message_has_no_media():
     msg = SimpleNamespace(text=None, rich_message={"blocks": [{"type": "paragraph", "text": "hi"}]})
     assert rich_media_items(msg) == []
+
+
+def test_rich_media_caption_credit_remains_in_agent_text():
+    """Telegram's RichBlockCaption.credit (<cite>) must survive rich-text flattening."""
+    msg = SimpleNamespace(text=None, api_kwargs={"rich_message": {"blocks": [
+        {"type": "photo", "photo": [{"file_id": "credited-photo"}],
+         "caption": {"text": "Original painting", "credit": {"type": "italic", "text": "© Ada"}}},
+    ]}})
+    assert rich_message_text(msg) == "Original painting\n© Ada"

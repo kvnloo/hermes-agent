@@ -66,6 +66,11 @@ def _rich_lines(blocks: Any, prefix: str = "", depth: int = 0, skip_code: bool =
             if key in block:
                 lines.append(prefix + _rich_inline(block[key], skip_code=skip_code, urls=urls))
                 prefix = ""
+                # Bot API RichBlockCaption.credit (<cite>) is displayed beside its text.
+                if key == "caption" and isinstance(block[key], Mapping):
+                    credit = block[key].get("credit")
+                    if credit is not None:
+                        lines.append(_rich_inline(credit, skip_code=skip_code, urls=urls))
         cells, items = block.get("cells"), block.get("items")
         for row in cells if isinstance(cells, list) else []:  # table: one line per row
             if isinstance(row, list):
