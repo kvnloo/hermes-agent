@@ -288,6 +288,8 @@ def _referenced_support_paths(skill_md: str) -> Optional[set[str]]:
         candidate = match.group(1).rstrip(".,;:")
         parsed = urlsplit(candidate)
         raw = unquote(parsed.path)
+        # File:line and file:line:column are citations, not bundle path syntax.
+        raw = re.sub(r":\d+(?::\d+)?$", "", raw)
         if (candidate.endswith("?") or any(char in raw for char in "*?[]")
                 or (parsed.query and not _query_is_concrete(parsed.query))):
             continue
