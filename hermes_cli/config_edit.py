@@ -12,11 +12,13 @@ import sys
 def editor_argv(editor: str) -> list[str]:
     """``$EDITOR`` as argv, since it may carry flags (``code --wait``, ``omarchy-launch-editor --inline``).
 
-    Windows keeps the whole value: POSIX shlex eats the backslashes of ``C:\\...\\notepad.exe``.
+    Windows uses the existing platform-safe splitter, preserving backslashes and editor flags.
     Unbalanced quotes give ``[]``, so the caller reports it instead of retrying through a shell."""
-    if sys.platform == "win32":
-        return [editor]
     try:
+        if sys.platform == "win32":
+            from hermes_cli._subprocess_compat import split_command_line
+
+            return split_command_line(editor)
         return shlex.split(editor)
     except ValueError:
         return []

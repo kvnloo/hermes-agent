@@ -34,7 +34,25 @@ def test_unrunnable_editor_opens_nothing(monkeypatch, capsys, run_calls, editor)
 
 
 def test_windows_editor_path_stays_whole(tmp_path, monkeypatch, run_calls):
+    from hermes_cli import _subprocess_compat
+
+    monkeypatch.setattr(_subprocess_compat, "IS_WINDOWS", True)
     monkeypatch.setenv("EDITOR", r"C:\Windows\notepad.exe")
     monkeypatch.setattr(config_edit.sys, "platform", "win32")
     config_edit.edit_config()
     assert run_calls == [[r"C:\Windows\notepad.exe", str(tmp_path / "config.yaml")]]
+
+
+@pytest.mark.parametrize("editor, expected", [
+    ("code --wait", ["code", "--wait"]),
+    (r'"C:\Program Files\My Editor\editor.exe" --wait',
+     [r"C:\Program Files\My Editor\editor.exe", "--wait"]),
+])
+def test_windows_editor_with_args_preserves_path(tmp_path, monkeypatch, run_calls, editor, expected):
+    from hermes_cli import _subprocess_compat
+
+    monkeypatch.setenv("EDITOR", editor)
+    monkeypatch.setattr(_subprocess_compat, "IS_WINDOWS", True)
+    monkeypatch.setattr(config_edit.sys, "platform", "win32")
+    config_edit.edit_config()
+    assert run_calls == [[*expected, str(tmp_path / "config.yaml")]]
