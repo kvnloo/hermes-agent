@@ -32,7 +32,15 @@ vi.mock('@/hermes', () => ({
 vi.mock('@/lib/query-client', () => ({ invalidateProfileScopedQueries: vi.fn() }))
 vi.mock('@/store/starmap', () => ({ reloadOpenStarmapGraph: vi.fn(), resetStarmapGraph }))
 
-const { $activeGatewayProfile, newSessionInProfile, selectProfile } = await import('./profile')
+const {
+  $activeGatewayProfile,
+  $newChatConnectionId,
+  newSessionInProfile,
+  pinNewChatProfile,
+  resolveActiveSourceOwnerRoute,
+  resolveNewChatOwnerRoute,
+  selectProfile
+} = await import('./profile')
 
 beforeEach(() => {
   ensureGatewayForProfile.mockClear()
@@ -224,5 +232,24 @@ describe('selectProfile startup preference (#79886)', () => {
     await new Promise(resolve => setTimeout(resolve, 0))
 
     expect(rememberProfile).not.toHaveBeenCalled()
+  })
+})
+
+describe('project + on This device with a remote primary (#156095)', () => {
+  it('keeps both project creation paths on the named local profile', () => {
+    // The selected registry source is This device, even though the saved
+    // primary is remote. A bare profile name would inherit the remote door.
+    activeGatewayConnectionId.mockReturnValue('local')
+    $activeGatewayProfile.set('private')
+
+    // startWorkspaceSession pins this intent for the fresh-draft path.
+    pinNewChatProfile('private')
+    const localOwner = { connectionId: 'local', profile: 'private' }
+
+    expect($newChatConnectionId.get()).toBe('local')
+    expect(resolveNewChatOwnerRoute()).toEqual(localOwner)
+    // An occupied chat instead opens a project-cwd tile through this route.
+    expect(resolveActiveSourceOwnerRoute('private')).toEqual(localOwner)
+    expect(ensureGatewayForProfile).not.toHaveBeenCalled()
   })
 })
