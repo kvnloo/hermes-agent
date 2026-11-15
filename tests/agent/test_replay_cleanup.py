@@ -248,30 +248,24 @@ def _interrupted_read_only_block():
     ]
 
 
-def test_dropped_read_only_block_invalidates_skill_view_dedup(tmp_path):
-    """#132177: a successful skill_view body dropped with its interrupted read-only
-    sibling must not keep answering 'unchanged' stubs pointing at the dropped row."""
-    from tools.skills_tool_dedup import (
-        _check_skill_view_dedup,
-        _record_skill_view,
-        reset_skill_view_dedup,
-    )
+def _served_skill_view(task_id):
+    """Serve one full skill_view through the real repeat-view dedup and confirm a repeat stubs."""
+    from tools.skills_tool_dedup import dedup_skill_view, reset_skill_view_dedup
 
     reset_skill_view_dedup()
-    src = tmp_path / "SKILL.md"
-    src.write_text("# Demo\n\nfull body\n", encoding="utf-8")
-    _record_skill_view(
-        "t-132177", "demo-skill", None, {"_source_path": str(src), "name": "demo-skill"}
-    )
-    assert (
-        _check_skill_view_dedup("t-132177", "demo-skill", None) is not None
-    )  # pre: stub served
+    body = '{"success": true, "name": "demo-skill", "content": "# Demo full body"}'
+    assert dedup_skill_view(task_id, "demo-skill", None, {"name": "demo-skill"}, body) is None
+    return lambda: dedup_skill_view(task_id, "demo-skill", None, {"name": "demo-skill"}, body)
+
+
+def test_dropped_read_only_block_invalidates_skill_view_dedup():
+    """#132177: a successful skill_view body dropped with its interrupted read-only
+    sibling must not keep answering 'unchanged' stubs pointing at the dropped row."""
+    repeat = _served_skill_view("t-132177")
 
     out = strip_interrupted_tool_tails(_interrupted_read_only_block())
     assert out == [_user("run the demo")]  # whole read-only block dropped
-    assert (
-        _check_skill_view_dedup("t-132177", "demo-skill", None) is None
-    )  # full content again
+    assert repeat() is None  # full content again, not the "unchanged" stub
 
 
 def test_dropped_read_only_block_advances_file_read_dedup_generation():
@@ -289,23 +283,9 @@ def test_dropped_read_only_block_advances_file_read_dedup_generation():
     del _read_tracker["t-132177-file"]
 
 
-def test_clean_replay_keeps_skill_view_dedup(tmp_path):
+def test_clean_replay_keeps_skill_view_dedup():
     """No interrupted rows → no replay loss → the repeat-view stub keeps serving."""
-    from tools.skills_tool_dedup import (
-        _check_skill_view_dedup,
-        _record_skill_view,
-        reset_skill_view_dedup,
-    )
-
-    reset_skill_view_dedup()
-    src = tmp_path / "SKILL.md"
-    src.write_text("# Demo\n\nfull body\n", encoding="utf-8")
-    _record_skill_view(
-        "t-132177-clean",
-        "demo-skill",
-        None,
-        {"_source_path": str(src), "name": "demo-skill"},
-    )
+    repeat = _served_skill_view("t-132177-clean")
 
     history = [
         _user("hi"),
@@ -314,4 +294,27 @@ def test_clean_replay_keeps_skill_view_dedup(tmp_path):
     ]
     out = strip_interrupted_tool_tails(history)
     assert out == history
-    assert _check_skill_view_dedup("t-132177-clean", "demo-skill", None) is not None
+    assert '"status": "unchanged"' in repeat()
+
+
+def test_request_built_without_the_dropped_block_serves_the_skill_in_full():
+    """Through the real per-request builder: the wire copy of a history carrying an interrupted
+    read-only block drops the earlier skill_view body, so the next repeat view must not stub (#132177)."""
+    from unittest.mock import patch
+
+    from agent.turn_context import build_api_messages
+
+    with patch("agent.process_bootstrap.OpenAI"):
+        from run_agent import AIAgent
+
+        agent = AIAgent(api_key="test-key-1234567890", base_url="https://openrouter.ai/api/v1", quiet_mode=True,
+                        skip_context_files=True, skip_memory=True, max_iterations=4)
+    agent._current_turn_timestamp = 1e9
+    repeat = _served_skill_view("t-132177-wire")
+    history = _interrupted_read_only_block() + [_user("go on")]
+
+    request, _ = build_api_messages(agent, history, current_turn_user_idx=len(history) - 1, ext_prefetch_cache="",
+                                    plugin_user_context="", moa_config=None, active_system_prompt="")
+
+    assert not any(m.get("role") == "tool" for m in request)  # the body is gone from the wire
+    assert repeat() is None
