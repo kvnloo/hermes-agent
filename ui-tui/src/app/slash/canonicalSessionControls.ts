@@ -433,6 +433,8 @@ export async function runCanonicalSessionControl(
     if (operation === 'model' && needsModelConfirmation(result)) {
       askModelConfirmation(result, arg, ctx, Boolean(confirm))
     } else if (operation === 'branch') {
+      // Only the committed branch consumes the composer; a refusal leaves text and images intact.
+      ctx.onAccepted?.()
       await applyBranchResult(result, arg, ctx)
     } else if (operation === 'model') {
       applyModelResult(result, ctx.transcript.sys)

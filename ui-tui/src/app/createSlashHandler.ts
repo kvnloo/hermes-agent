@@ -94,7 +94,7 @@ export function createSlashHandler(ctx: SlashHandlerContext): SlashHandler {
       }
     }
 
-    const runCtx: SlashRunCtx = { ...ctx, flight, guarded, guardedErr, sid, stale, ui }
+    const runCtx: SlashRunCtx = { ...ctx, flight, guarded, guardedErr, onAccepted: submission?.onAccepted, sid, stale, ui }
 
     const found = findSlashCommand(parsed.name)
 

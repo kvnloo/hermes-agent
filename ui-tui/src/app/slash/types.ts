@@ -4,6 +4,8 @@ import type { SlashHandlerContext, UiState } from '../interfaces.js'
 
 export interface SlashRunCtx extends SlashHandlerContext {
   flight: number
+  /** Clear only the accepted branch's original draft. */
+  onAccepted?: () => void
   guarded: <T>(fn: (r: T) => void) => (r: null | T) => void
   guardedErr: (e: unknown) => void
   /** A recognized command Ink runs itself calls this once it ran (`command.observe`, so the gateway
