@@ -84,3 +84,27 @@ def test_cron_allowlist_and_late_connection_keep_mcp_key():
         {"kind": "mcp", "name": "homeassistant", "state": "connected", "tools": ["GetLiveContext"]}
     ]}))
     assert HA in selected(agent.enabled_toolsets)
+
+
+@pytest.mark.parametrize("requested,present,absent", [
+    (["hermes-acp"], {HA, GH, "ha_get_state"}, set()),
+    (["hermes-acp", "no_mcp"], {"ha_get_state"}, {HA, GH}),
+    (["hermes-acp", "github"], {"ha_get_state", GH}, {HA}),
+])
+def test_acp_session_preserves_plugin_and_mcp_allowlist(monkeypatch, tmp_path, requested, present, absent):
+    """Exercise config-file loading through ACP construction, not only its platform resolver."""
+    from acp_adapter.session import SessionManager
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    (tmp_path / "config.yaml").write_text(json.dumps({
+        **CFG, "platform_toolsets": {"acp": requested},
+    }), encoding="utf-8")
+    monkeypatch.setattr("run_agent.AIAgent", lambda **kwargs: SimpleNamespace(**kwargs))
+    monkeypatch.setattr("hermes_cli.runtime_provider.resolve_runtime_provider", lambda **kwargs: {})
+    monkeypatch.setattr("hermes_cli.mcp_startup.ensure_mcp_discovery_before_agent_build", lambda **kwargs: None)
+
+    agent = SessionManager(db=object())._make_agent(session_id="collision", cwd=str(tmp_path))
+    tools = selected(agent.enabled_toolsets)
+    assert present <= tools
+    assert not absent & tools
+    assert "homeassistant" in agent.enabled_toolsets
