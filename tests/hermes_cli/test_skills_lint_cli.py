@@ -206,3 +206,11 @@ def test_slash_lint_dir_value_is_not_a_target(tmp_path):
     handle_skills_slash(f"/skills lint --all --dir {tree}", console=c)
     out = sink.getvalue()
     assert "1 skill(s) linted" in out and "cannot be combined" not in out
+
+def test_slash_lint_dir_supports_quoted_path_with_spaces(tmp_path):
+    # /skills uses the shared slash parser, not argparse. The path must remain one --dir value.
+    tree = tmp_path / "skill library"
+    _skill(tree, "fine")
+    c, sink = _console()
+    handle_skills_slash(f'/skills lint --dir "{tree}"', console=c)
+    assert "1 skill(s) linted: 0 error(s), 0 warning(s)" in sink.getvalue()

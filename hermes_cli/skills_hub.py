@@ -4,6 +4,7 @@
 import json
 import logging
 import re
+import shlex
 import shutil
 import sys
 from datetime import datetime, timezone, UTC
@@ -1787,7 +1788,16 @@ _SLASH_USAGE = {
 def handle_skills_slash(cmd: str, console: Optional[Console] = None) -> None:
     """Parse and dispatch `/skills <subcommand> [args]` from the chat interface."""
     c = console or _console
-    parts = cmd.strip().split()
+    # Slash arguments can include quoted skill paths, e.g. --dir "/my skills".
+    # Keep backslashes literal so native Windows paths still work.
+    lexer = shlex.shlex(cmd.strip(), posix=True)
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    lexer.escape = ""
+    try:
+        parts = list(lexer)
+    except ValueError:
+        parts = cmd.strip().split()  # Preserve legacy handling of unbalanced quotes.
     if parts and parts[0].lower() == "/skills":
         parts = parts[1:]
     if not parts:
