@@ -109,7 +109,7 @@ export interface GatewayOauthRequestOptions<S> {
   url: string
   session: S
   useSessionCookies: true
-  redirect: 'follow'
+  redirect: 'error'
 }
 
 export interface GatewayOauthDownloadDeps<S> extends GatewayFileSaveDeps {
@@ -138,7 +138,7 @@ export function downloadViaOauthSessionToFile<S>(
       url,
       session,
       useSessionCookies: true,
-      redirect: 'follow'
+      redirect: 'error'
     })
 
     let settled: boolean = false
@@ -160,6 +160,14 @@ export function downloadViaOauthSessionToFile<S>(
 
       settled = true
       clearTimeout(timer)
+
+      // Electron must not follow an auth-wall redirect; also refuse any 3xx that reaches this seam.
+      if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400) {
+        request.abort()
+        reject(new Error(`Unexpected download redirect (${response.statusCode})`))
+
+        return
+      }
 
       // Electron net's IncomingMessage is a Readable: bound a stalled body the same way.
       if (typeof (response as Partial<StallWatchableBody>).destroy === 'function') {

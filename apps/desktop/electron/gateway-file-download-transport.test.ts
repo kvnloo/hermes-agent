@@ -252,7 +252,7 @@ test('cookie transport preserves the session, waits for the dialog without a dea
         url: 'https://gateway.example/file',
         session,
         useSessionCookies: true,
-        redirect: 'follow'
+        redirect: 'error'
       })
       expect(options.session).toBe(session)
 
@@ -278,6 +278,42 @@ test('cookie transport preserves the session, waits for the dialog without a dea
   expect(request.aborted).toBe(true)
   expect(await fs.promises.readdir(directory)).toEqual([])
   response.destroy()
+})
+
+test('cookie transport refuses a proxy login redirect without saving HTML', async (): Promise<void> => {
+  const request: CookieRequest = new CookieRequest()
+  let redirect: string | null = null
+  const showSaveDialog = vi.fn(async (): Promise<GatewaySaveDialogResult> => ({
+    canceled: false,
+    filePath: path.join(directory, 'report.pdf')
+  }))
+
+  const pending: Promise<GatewayFileSaveResult> = downloadViaOauthSessionToFile(
+    'https://gateway.example/file',
+    context,
+    {
+      getSession: (): FixtureSession => ({ partition: 'persist:gateway-test' }),
+      request: (options: GatewayOauthRequestOptions<FixtureSession>): GatewayOauthDownloadRequest => {
+        redirect = options.redirect
+
+        return request
+      },
+      showSaveDialog
+    }
+  )
+
+  const response = Object.assign(new PassThrough(), {
+    statusCode: 302,
+    headers: { location: 'https://access.example/login' }
+  })
+  request.emit('response', response)
+  response.end('<html>302 Found</html>')
+
+  await expect(pending).rejects.toThrow('Unexpected download redirect (302)')
+  expect(redirect).toBe('error')
+  expect(request.aborted).toBe(true)
+  expect(showSaveDialog).not.toHaveBeenCalled()
+  expect(await fs.promises.readdir(directory)).toEqual([])
 })
 
 test('cookie connection timeout aborts before headers and never opens a dialog', async (): Promise<void> => {
