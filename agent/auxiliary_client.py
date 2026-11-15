@@ -7108,6 +7108,36 @@ class _ChatStreamAccumulator:
             if read_more:
                 _notify_aux_progress()
             return False
+        # Provider errors can arrive without choices after an SSE HTTP-200 commit.
+        # Do not turn them into an empty, successful auxiliary completion (#150672).
+        extra = getattr(chunk, "model_extra", None)
+        extra = extra if isinstance(extra, dict) else {}
+        error = getattr(chunk, "error", None) or extra.get("error")
+        error_type = getattr(chunk, "error_type", None) or extra.get("error_type")
+        error_message = getattr(chunk, "error_message", None) or extra.get("error_message")
+        if error or error_type or error_message:
+            from agent.chat_completion_helpers import (
+                ProviderStreamError, _provider_error_body, _status_code_from_payload,
+            )
+            if isinstance(error, dict):
+                payload = error
+            else:
+                payload = {
+                    "type": getattr(error, "type", None) or error_type,
+                    "code": getattr(error, "code", None),
+                    "message": (error if isinstance(error, str) else getattr(error, "message", None))
+                    or error_message,
+                    "status_code": getattr(error, "status_code", None),
+                }
+            status = _status_code_from_payload(payload)
+            if status is None:
+                status = _status_code_from_payload({
+                    "status_code": getattr(chunk, "status_code", None) or extra.get("status_code"),
+                })
+            body = _provider_error_body(payload, status)
+            raise ProviderStreamError(
+                status_code=status, body=body, raw_text=str(body["error"]["message"]),
+            )
         choices = getattr(chunk, "choices", None) or []
         if not choices:
             return False
