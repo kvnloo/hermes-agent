@@ -16,7 +16,7 @@ BINARY_EXTENSIONS = frozenset({
     ".sqlite", ".sqlite3", ".db", ".mdb", ".idx",
     # Columnar data: a plain-encoded string column has no NUL in its first KB,
     # so the content sniff alone serves the page bytes as "text".
-    ".parquet", ".orc", ".feather", ".arrow",
+    ".parquet", ".parq", ".orc", ".feather", ".arrow",
     ".psd", ".ai", ".eps", ".sketch", ".fig", ".xd", ".blend", ".3ds", ".max",
     ".swf", ".fla", ".lockb", ".dat", ".data",
 })
