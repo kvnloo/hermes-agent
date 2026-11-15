@@ -104,7 +104,9 @@ describe('scanDiskPlugins (#66899)', () => {
 
       return { entries: [] }
     })
+
     const register = vi.fn()
+
     ;(globalThis as unknown as { __omhRegister: unknown }).__omhRegister = register
     readFileText.mockResolvedValue({ text: 'export default { id: "omh", register: globalThis.__omhRegister }' })
     watchPreviewFile.mockResolvedValue({ id: 'w-omh' })
@@ -115,6 +117,7 @@ describe('scanDiskPlugins (#66899)', () => {
         blob =>
           `data:text/javascript;base64,${Buffer.from((blob as unknown as { parts: string[] }).parts.join('')).toString('base64')}`
       )
+
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
     const RealBlob = globalThis.Blob
     vi.stubGlobal(
