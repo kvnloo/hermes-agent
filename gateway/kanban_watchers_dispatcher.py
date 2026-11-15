@@ -239,8 +239,12 @@ class _KanbanDispatcher:
         from hermes_cli import kanban_db as _kb
         running_by_path: dict[str, int] = {}
         for slug in slugs:
-            path = self.board_db_fingerprint(slug)[0]
+            fingerprint = self.board_db_fingerprint(slug)
+            path = fingerprint[0]
             if path in running_by_path:
+                continue
+            if not self._quarantine_lifted(slug, fingerprint):
+                running_by_path[path] = 0
                 continue
             conn = None
             try:
