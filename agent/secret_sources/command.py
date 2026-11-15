@@ -72,6 +72,13 @@ def _run_helper(command: str, secret_key: str, timeout_seconds: float, max_outpu
     # The helper legitimately gets the user's shell env (it may need any
     # credential to resolve the secret) — but a multiplex profile only its own.
     env = source_child_env()
+    # Minimal containers may lack both HOME and a passwd entry. "/" is a
+    # stable, non-user-writable fallback rather than a guessed home directory.
+    if "HOME" not in env:
+        try:
+            env["HOME"] = str(Path.home())
+        except (RuntimeError, OSError):
+            env["HOME"] = "/"
     env["HERMES_SECRET_KEY"] = secret_key
 
     try:
