@@ -1825,13 +1825,13 @@ def _command_detection_variants(command: str):
     faithful = _normalize_command_for_detection(_mark_command_starts(_mask_quoted_newlines(command), marker=" \n"))
     if fresh(faithful):
         yield faithful
-    # An escaped separator is literal text in its word (`git push -o ci\;skip -f`; normalization would leave a real
-    # `;`), and `>|` (noclobber-overriding redirect) is a `>` write the `>\s*<target>` rules otherwise never see.
-    joined = re.sub(r'\\(.)', lambda m: '_' if m.group(1) in ';&|' else m.group(0), command).replace('>|', '>')
+    # Escaped separators are literal; rewrite only `>|` outside quoted shell data.
+    joined = re.sub(r'\\(.)', lambda m: '_' if m.group(1) in ';&|' else m.group(0), command)
+    spans = [(m.start(), m.end(), '>') for m in re.finditer(r'>\|', _mask_quoted_prose(joined))]
+    joined = _splice(joined, spans)
     if joined != command and fresh(variant := _normalize_command_for_detection(_mask_quoted_newlines(joined))):
         yield variant
-    # Quoting/escaping can spell an executable in pieces (r\m, r''m). Keep that deobfuscation scoped
-    # to command words so arguments don't false-positive.
+    # Deobfuscate only executable command words (r\m, r''m), never argument prose.
     # One variant with EVERY command word deobfuscated, not one full-length variant per word: a heredoc
     # body of quoted lines has hundreds of quoted command words, and per-word variants made both
     # detection passes O(words * len) — minutes of GIL-held regex on a 15 KB command (#113535).
