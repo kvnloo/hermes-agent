@@ -129,6 +129,29 @@ def test_shared_bot_satellite_resolves_primary_transport_for_restored_sources(mu
     assert mux.runner._authorization_adapter(Platform.TELEGRAM, "team_b") is None
 
 
+
+def test_served_api_server_completion_uses_shared_listener_without_route(mux):
+    """#156062: a restored /p/team_b/ run uses the default profile's API listener."""
+    from gateway.session_identity import restore_identity
+
+    runner = mux.runner
+    runner.config.profile_routes = []
+    runner.config.platforms[Platform.API_SERVER] = PlatformConfig(enabled=True, extra={})
+    shared_api = _stub(Platform.API_SERVER, runner, "SHARED_API")
+    runner.adapters[Platform.API_SERVER] = shared_api
+
+    restored = SessionSource(platform=Platform.API_SERVER, chat_id="api-parent",
+                             chat_type="dm", profile="team_b")
+    identity = restore_identity(restored, runner=runner, transport_profile="default")
+    assert identity is not None
+    assert not runner._restored_transport_trusted(restored, identity)
+    assert runner._resolve_injection_adapter("api_server", restored) is shared_api
+
+    unpinned = SessionSource(platform=Platform.API_SERVER, chat_id="api-parent",
+                             chat_type="dm", profile="team_b")
+    assert runner._resolve_injection_adapter("api_server", unpinned) is None
+
+
 def test_completion_preflight_runs_in_target_profile_scope(mux):
     """An async-delegation completion for a secondary session must be classified against THAT
     profile's state.db (the watcher runs unscoped, where the row does not exist → ``terminal``)."""

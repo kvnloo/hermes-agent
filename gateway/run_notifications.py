@@ -849,7 +849,9 @@ class GatewayNotificationsMixin(GatewayUpdateNotificationsMixin, GatewayNotifica
         from gateway.session_identity import identity_of
         identity = identity_of(source)
         pinned = (identity is not None and identity.multiplexed and not identity.transport_inferred
-                  and self._restored_transport_trusted(source, identity))
+                  and (self._restored_transport_trusted(source, identity)
+                       or (platform_name == Platform.API_SERVER.value
+                           and self._names_receiving_bot(source, identity))))
         adapters = self._adapters_for_profile(
             identity.transport_profile if pinned else getattr(source, "profile", None))
         try:
