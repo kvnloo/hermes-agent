@@ -5,10 +5,8 @@ The dashboard's WS endpoints (``/api/pty``, ``/api/console``, ``/api/ws``,
 loopback mode it accepts ``?token=<_SESSION_TOKEN>``; in gated mode it accepts
 a single-use ``?ticket=`` minted by ``POST /api/auth/ws-ticket``.
 
-These tests exercise the helper at the unit level (no actual WS upgrade)
-plus the ticket-mint endpoint under realistic gated-mode setup. We don't
-test the full WS upgrade because the starlette TestClient WS path has a
-pre-existing regression unrelated to dashboard-auth.
+These tests exercise the helper, the ticket-mint endpoint, and the real
+loopback gateway WebSocket upgrade through a JSON-RPC heartbeat reply.
 """
 
 from __future__ import annotations
@@ -113,6 +111,77 @@ def _logged_in(client: TestClient) -> None:
 
 
 class TestWsTicketEndpoint:
+    @pytest.mark.parametrize("surface", ["dashboard", "serve"])
+    @pytest.mark.parametrize("carrier", ["query", "subprotocol"])
+    def test_loopback_ticket_opens_gateway_and_answers_rpc_once(
+            self, loopback_app, monkeypatch, surface, carrier):
+        from starlette.websockets import WebSocketDisconnect
+        from hermes_cli import mcp_startup
+        from hermes_cli.web_routers import chat_ws
+        from tui_gateway import server, ws as gateway_transport
+
+        monkeypatch.setattr(web_server.app.state, "ui_surface", surface, raising=False)
+        monkeypatch.setattr(chat_ws, "_DASHBOARD_EMBEDDED_CHAT_ENABLED", True)
+        # No discovery or process watchers are needed to exercise the real RPC transport.
+        monkeypatch.setattr(mcp_startup, "start_deferred_mcp_discovery_now", lambda: None)
+        monkeypatch.setattr(server, "_ensure_skin_watcher", lambda: None)
+        monkeypatch.setattr(server, "_ensure_lease_watcher", lambda: None)
+        monkeypatch.setattr(gateway_transport, "_start_backend_liveness", lambda: None)
+        headers = ({web_server._SESSION_HEADER_NAME: web_server._SESSION_TOKEN}
+                   if carrier == "query" else {"Authorization": f"Bearer {web_server._SESSION_TOKEN}"})
+        response = loopback_app.post("/api/auth/ws-ticket", headers=headers)
+        assert response.status_code == 200
+        ticket = response.json()["ticket"]
+        url = str(loopback_app.base_url).replace("http://", "ws://").rstrip("/") + "/api/ws"
+        protocols = []
+        if carrier == "query":
+            url += f"?ticket={ticket}"
+        else:
+            protocols = [
+                _web_server_chat._GATEWAY_WS_PROTOCOL,
+                f"{_web_server_chat._GATEWAY_WS_TICKET_PROTOCOL_PREFIX}{ticket}",
+            ]
+        client = TestClient(web_server.app, base_url=str(loopback_app.base_url), client=("localhost", 0))
+        with client.websocket_connect(url, subprotocols=protocols) as ws:
+            assert ws.accepted_subprotocol == (
+                _web_server_chat._GATEWAY_WS_PROTOCOL if protocols else None)
+            assert ws.receive_json()["params"]["type"] == "gateway.ready"
+            ws.send_json({"jsonrpc": "2.0", "id": "heartbeat", "method": "gateway.ping"})
+            assert ws.receive_json() == {
+                "jsonrpc": "2.0", "id": "heartbeat", "result": {"ok": True},
+            }
+        with pytest.raises(WebSocketDisconnect) as closed:
+            with client.websocket_connect(url, subprotocols=protocols):
+                pytest.fail("a spent ticket opened a second socket")
+        assert closed.value.code == 4401
+
+    @pytest.mark.parametrize("surface", ["dashboard", "serve"])
+    @pytest.mark.parametrize("refusal", ["other_socket", "rotated_token", "foreign_ticket", "unbound_ticket"])
+    def test_loopback_ticket_keeps_socket_and_credential_boundaries(
+            self, loopback_app, monkeypatch, surface, refusal):
+        from hermes_cli.browser_credential import generation
+        from hermes_cli.web_session_sockets import GATEWAY_SOCKET
+
+        monkeypatch.setattr(web_server.app.state, "ui_surface", surface, raising=False)
+        response = loopback_app.post(
+            "/api/auth/ws-ticket", headers={web_server._SESSION_HEADER_NAME: web_server._SESSION_TOKEN})
+        assert response.status_code == 200
+        ticket = response.json()["ticket"]
+        socket = GATEWAY_SOCKET
+        if refusal == "other_socket":
+            socket = "speak-stream"
+        elif refusal == "rotated_token":
+            monkeypatch.setattr(web_server, "_SESSION_TOKEN", "replacement-session-token")
+        elif refusal == "foreign_ticket":
+            ticket = mint_ticket(user_id="foreign", provider="stub",
+                                 extra={"socket": socket, "session_token": generation()})
+        else:
+            ticket = mint_ticket(user_id="legacy-token-owner", provider="session-token",
+                                 extra={"socket": socket})
+        reason, _credential = _web_server_chat._ws_auth_reason(
+            _fake_ws(query={"ticket": ticket}, path="/api/ws"), socket=socket)
+        assert reason is not None
+
     def test_loopback_session_token_mints_gateway_ws_ticket(self, loopback_app, monkeypatch):
         from hermes_cli.web_session_sockets import GATEWAY_SOCKET
 
@@ -298,11 +367,10 @@ class TestWsAuthOkLoopback:
 
 
     @pytest.mark.parametrize("surface", ["dashboard", "serve"])
-    def test_off_the_webapp_the_loopback_gate_takes_only_the_token_as_on_main(
+    def test_unnamed_loopback_socket_keeps_legacy_token_rules(
             self, loopback_app, monkeypatch, surface):
-        """The standalone dashboard and ``hermes serve`` mint no socket tickets, so their loopback
-        gate judges ``?token=`` alone, as on main: a ticket opens nothing there and is not spent, and
-        one riding beside the session token does not refuse it."""
+        """Without a route's socket name, a standalone ticket opens nothing and is not spent.
+        A ticket riding beside the legacy session token does not refuse that token."""
         from hermes_cli.dashboard_auth.ws_tickets import consume_ticket
 
         monkeypatch.setattr(web_server.app.state, "ui_surface", surface, raising=False)
