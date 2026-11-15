@@ -411,7 +411,7 @@ _SHADOW_CHECKED: set[tuple[str, ...]] = set()
 # Skill names become /commands and prompt-index entries, so a name that hides or reorders text
 # (bidi, zero-width, tag chars), carries terminal controls, markup brackets, or letters that render
 # blank (Bamum, Hangul fillers, braille blank) is refused instead of shown as something else.
-_HIDDEN_NAME_CHARS = re.compile("[<>\u115f\u1160\u2800\u3164\ua6a0-\ua6ff\uffa0]")
+_HIDDEN_NAME_CHARS = re.compile("[<>\u034f\u115f\u1160\u2800\u3164\ua6a0-\ua6ff\uffa0]")
 _UNSAFE_NAME_WARNED: set[str] = set()
 
 

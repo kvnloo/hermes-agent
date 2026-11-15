@@ -508,6 +508,21 @@ class TestScanSkillCommands:
         assert caplog.text.count("refused") == 9
 
 
+    def test_invisible_combining_grapheme_joiner_name_is_refused(self, tmp_path):
+        """U+034F is a zero-width Mn mark, but must not appear in the skill index or as /ab."""
+        hidden = tmp_path / "masked"
+        hidden.mkdir()
+        (hidden / "SKILL.md").write_text(
+            '---\nname: "a\\u034fb"\ndescription: Hidden separator\n---\nBody.\n', encoding="utf-8"
+        )
+        _make_skill(tmp_path, "visible")
+        with patch("tools.skills_tool.SKILLS_DIR", tmp_path):
+            commands = scan_skill_commands()
+            listed = [skill["name"] for skill in skills_tool_module.find_all_skills()]
+        assert set(commands) == {"/visible"}
+        assert listed == ["visible"]
+
+
 class TestResolveSkillCommandKey:
     """Telegram bot-command names disallow hyphens, so the menu registers
     skills with hyphens swapped for underscores. When Telegram autocomplete
