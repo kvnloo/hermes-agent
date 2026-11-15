@@ -333,3 +333,47 @@ async def test_no_agent_usage_counts_tool_messages_and_keeps_persisted_prompt_fl
     estimate.assert_called_once_with(history)
     assert t("gateway.usage.label_messages", count=4) in result
     assert t("gateway.usage.label_estimated_context", count="1,500") in result
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "prompt_tokens,tool_content",
+    [(1500, "2"), (0, "result " * 2000)],
+    ids=["provider-floor", "rough-estimate"],
+)
+async def test_no_agent_usage_from_persisted_tool_transcript(tmp_path, monkeypatch, prompt_tokens, tool_content):
+    """Exercise SQLite transcript reload, the real estimator, and the rendered command reply."""
+    from agent.model_metadata import estimate_messages_tokens_rough
+    from gateway.config import GatewayConfig, Platform
+    from gateway.platforms.event import MessageEvent
+    from gateway.session import SessionSource, SessionStore
+    from gateway.slash_commands_status import t
+
+    source = SessionSource(platform=Platform.TELEGRAM, chat_id="12345")
+    store = SessionStore(sessions_dir=tmp_path, config=GatewayConfig())
+    entry = store.get_or_create_session(source)
+    history = [
+        {"role": "user", "content": "calculate"},
+        {"role": "assistant", "content": None,
+         "tool_calls": [{"id": "call_1", "type": "function",
+                         "function": {"name": "calculator", "arguments": '{"x":1}'}}]},
+        {"role": "tool", "tool_call_id": "call_1", "content": tool_content},
+        {"role": "assistant", "content": "2"},
+    ]
+    for message in history:
+        store.append_to_transcript(entry.session_id, message)
+    store.update_session(entry.session_key, last_prompt_tokens=prompt_tokens)
+
+    runner = _make_runner(entry.session_key)
+    runner._session_db = None
+    runner.session_store = SessionStore(sessions_dir=tmp_path, config=GatewayConfig())
+    monkeypatch.setattr("gateway.slash_commands_status._configured_provider", lambda: None)
+    monkeypatch.setattr("agent.account_usage.nous_credits_lines", lambda **_kw: [])
+
+    result = await runner._handle_usage_command(MessageEvent(text="/usage", source=source))
+
+    reloaded = runner.session_store.load_transcript(entry.session_id)
+    assert [message["role"] for message in reloaded] == ["user", "assistant", "tool", "assistant"]
+    expected = max(estimate_messages_tokens_rough(reloaded), prompt_tokens)
+    assert t("gateway.usage.label_messages", count=4) in result
+    assert t("gateway.usage.label_estimated_context", count=f"{expected:,}") in result
