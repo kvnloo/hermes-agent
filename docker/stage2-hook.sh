@@ -700,9 +700,15 @@ if [ ! -f "$HERMES_HOME/auth.json" ] && [ -n "${HERMES_AUTH_JSON_BOOTSTRAP:-}" ]
         # boot dead partway.
         (umask 077 && printf '%s' "$HERMES_AUTH_JSON_BOOTSTRAP" > "$HERMES_HOME/auth.json")
         chown hermes:hermes "$HERMES_HOME/auth.json" 2>/dev/null || true
-        chmod 600 "$HERMES_HOME/auth.json" 2>/dev/null \
-            || echo "[stage2] Warning: could not tighten auth.json permissions" >&2
     fi
+fi
+
+# Repair credential modes inherited from older images without replacing a
+# rotated token. An auth.json left 0644 by a prior failed chmod otherwise
+# remains world-readable on every subsequent container start.
+if [ -f "$HERMES_HOME/auth.json" ] && ! refuse_symlinked_path "chmod" "$HERMES_HOME/auth.json"; then
+    chmod 600 "$HERMES_HOME/auth.json" 2>/dev/null \
+        || echo "[stage2] Warning: could not tighten auth.json permissions" >&2
 fi
 
 # auth.json: re-seed a TERMINALLY-DEAD Nous bootstrap session (self-heal).

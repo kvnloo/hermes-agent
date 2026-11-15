@@ -124,7 +124,9 @@ def _auth_seed_block(text: str) -> str:
         text,
     )
     assert m, "stage2-hook.sh must keep the auth.json first-boot seed block"
-    return m.group(0)
+    # Include the post-seed repair when exercising an upgraded, persisted home.
+    next_section = text.index("# auth.json: re-seed", m.end())
+    return text[m.start():next_section]
 
 
 def _run_auth_seed(stage2_text: str, tmp_path: Path, chmod_stub: str) -> tuple:
@@ -249,3 +251,35 @@ def test_gateway_state_seed_survives_failing_chmod(stage2_text: str, tmp_path: P
     assert "SEED_DONE" in proc.stdout
     assert "could not set gateway_state.json permissions" in proc.stderr
     assert (home / "gateway_state.json").read_text() == '{"gateway_state":"running"}\n'
+
+
+@pytest.mark.platforms("posix")
+def test_existing_auth_seed_restricts_mode_after_upgrade(stage2_text: str, tmp_path: Path) -> None:
+    """A pre-fix 0644 auth store must become private without losing rotated tokens."""
+    sh = shutil.which("sh")
+    if sh is None:
+        pytest.skip("sh not available")
+    home = tmp_path / "home"
+    home.mkdir()
+    auth = home / "auth.json"
+    persisted = '{"providers":{"nous":{"refresh_token":"rotated"}}}'
+    auth.write_text(persisted)
+    auth.chmod(0o644)
+
+    script = (
+        "set -eu\n"
+        "umask 022\n"
+        f'HERMES_HOME="{home}"\n'
+        "HERMES_AUTH_JSON_BOOTSTRAP=should_not_replace_existing\n"
+        f"{_path_guard_functions(stage2_text)}\n"
+        f"{_auth_seed_block(stage2_text)}"
+        "echo SEED_DONE\n"
+    )
+    script_path = tmp_path / "upgrade.sh"
+    script_path.write_text(script)
+    proc = subprocess.run([sh, str(script_path)], capture_output=True, text=True, check=False)
+
+    assert proc.returncode == 0, proc.stderr
+    assert "SEED_DONE" in proc.stdout
+    assert auth.read_text() == persisted
+    assert auth.stat().st_mode & 0o777 == 0o600
