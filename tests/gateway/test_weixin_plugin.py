@@ -249,6 +249,71 @@ class TestWeixinInboundFileIntegrity:
         assert (path, mime) == (None, "application/pdf")
         cache.assert_not_awaited()
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("case", ["valid", "normalized", "no-md5", "wrong-key", "mismatch"])
+    async def test_inbound_file_dispatch_uses_verified_disk_cache(self, tmp_path, monkeypatch, caplog, case):
+        """Exercise HTTP download, AES decryption, disk cache, and inbound event dispatch."""
+        import hashlib
+        from pathlib import Path
+
+        from aiohttp import ClientSession, web
+        from aiohttp.test_utils import TestServer
+        from gateway.platforms.base import get_document_cache_dir
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        plaintext = b"%PDF-1.7\nverified attachment\n%%EOF\n"
+        key = bytes(range(16))
+        ciphertext = weixin._aes128_ecb_encrypt(plaintext, key)
+        checksum = hashlib.md5(plaintext, usedforsecurity=False).hexdigest()
+        payload = {"file_name": "worksheet.pdf", "md5": checksum}
+        if case == "normalized":
+            payload["md5"] = f" {checksum.upper()} "
+        elif case == "no-md5":
+            del payload["md5"]
+        elif case == "mismatch":
+            payload["md5"] = "0" * 32
+        supplied_key = bytes(range(16, 32)) if case == "wrong-key" else key
+        payload["media"] = {
+            "encrypt_query_param": "fixture-ref",
+            "aes_key": base64.b64encode(supplied_key.hex().encode("ascii")).decode("ascii"),
+        }
+        downloads = []
+
+        async def download(request):
+            downloads.append(request.query["encrypted_query_param"])
+            return web.Response(body=ciphertext)
+
+        app = web.Application()
+        app.router.add_get("/download", download)
+        adapter = _make_adapter()
+        adapter._typing_cache.set("sender", "fixture-ticket")
+        dispatch = AsyncMock()
+        monkeypatch.setattr(adapter, "handle_message", dispatch)
+        cache_dir = get_document_cache_dir()
+        async with TestServer(app) as server, ClientSession(trust_env=False) as session:
+            adapter._poll_session = session
+            adapter._cdn_base_url = str(server.make_url("/")).rstrip("/")
+            await adapter._process_message({
+                "from_user_id": "sender", "message_id": "fixture-message",
+                "item_list": [{"type": weixin.ITEM_FILE, "file_item": payload}],
+            })
+
+        assert downloads == ["fixture-ref"]
+        files = list(cache_dir.iterdir())
+        if case in {"wrong-key", "mismatch"}:
+            assert files == []
+            dispatch.assert_not_awaited()
+            assert "decrypted file checksum does not match file_item.md5" in caplog.text
+        else:
+            dispatch.assert_awaited_once()
+            event = dispatch.await_args.args[0]
+            assert event.media_types == ["application/pdf"]
+            assert len(event.media_urls) == 1
+            cached = Path(event.media_urls[0])
+            assert files == [cached]
+            assert cached.is_relative_to(tmp_path)
+            assert cached.read_bytes() == plaintext
+
 
 class TestWeixinSendMessageIntegration:
     def test_parse_target_ref_accepts_weixin_ids(self):
