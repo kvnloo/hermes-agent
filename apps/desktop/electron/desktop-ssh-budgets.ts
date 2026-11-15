@@ -24,7 +24,9 @@ function rawDesktopSshTimeouts(yamlText: string): Partial<Record<keyof typeof KE
   const start = lines.findIndex(line => /^desktop:\s*(#.*)?$/.test(line))
   const raw: Partial<Record<keyof typeof KEYS, string>> = {}
 
-  for (let i = start + 1; start >= 0 && i < lines.length && !/^\S/.test(lines[i]); i += 1) {
+  for (let i = start + 1; start >= 0 && i < lines.length; i += 1) {
+    // An unindented YAML comment does not close the desktop mapping.
+    if (/^\S/.test(lines[i]) && !lines[i].startsWith('#')) break
     const keyed = /^ {2}(ssh_connect_timeout|ssh_forward_timeout):\s*(.*?)\s*$/.exec(lines[i])
     const value = keyed?.[2].replace(/\s+#.*$/, '').trim().replace(/^(['"])(.*)\1$/, '$2')
 

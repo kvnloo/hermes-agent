@@ -40,6 +40,20 @@ describe('readDesktopSshBudgets (#132508)', () => {
     expect(warned[1]).toContain('desktop.ssh_forward_timeout was ignored')
   })
 
+  it('keeps reading the desktop mapping across a root-level YAML comment', () => {
+    const { budgets, warned } = read([
+      'desktop:',
+      '  ssh_connect_timeout: 45',
+      '# YAML comments do not terminate their surrounding mapping',
+      '  ssh_forward_timeout: 60',
+      'display:',
+      '  ssh_forward_timeout: 9'
+    ])
+
+    expect(budgets).toEqual({ connectTimeoutMs: 45_000, forwardTimeoutMs: 60_000 })
+    expect(warned).toEqual([])
+  })
+
   it('caps a huge value and treats an empty or absent key as unset without warning', () => {
     expect(read(['desktop:', '  ssh_connect_timeout: 999999']).budgets).toEqual({ connectTimeoutMs: 120_000 })
 
