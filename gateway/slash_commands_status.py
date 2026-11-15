@@ -54,9 +54,9 @@ def _clip(text: str, limit: int) -> str:
 
 
 def _transcript_estimate(history) -> tuple[int, int]:
-    """``(approx_tokens, message_count)`` over the user/assistant messages of a transcript."""
+    """``(approx_tokens, message_count)`` for all transcript messages, including tool turns."""
     from agent.model_metadata import estimate_messages_tokens_rough
-    msgs = [m for m in history if m.get("role") in {"user", "assistant"} and m.get("content")]
+    msgs = [m for m in history if isinstance(m, dict)]
     return estimate_messages_tokens_rough(msgs), len(msgs)
 
 
@@ -645,6 +645,9 @@ class GatewayStatusCommandsMixin:
             return history_unreadable()
         if history:
             approx, count = _transcript_estimate(history)
+            # The previous provider-reported prompt includes prompt/tool overhead that a bare
+            # transcript estimate cannot see; never show a lower estimate than that measurement.
+            approx = max(approx, max(0, _int_value(getattr(session_entry, "last_prompt_tokens", 0))))
             return _with_account_blocks([
                 t("gateway.usage.header_session_info"),
                 t("gateway.usage.label_messages", count=count),

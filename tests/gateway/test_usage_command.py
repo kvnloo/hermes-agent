@@ -6,6 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from gateway.run import GatewayRunner
+
 
 def _make_mock_agent(**overrides):
     """Create a mock AIAgent with realistic session counters."""
@@ -44,8 +46,6 @@ def _make_mock_agent(**overrides):
 
 def _make_runner(session_key, agent=None, cached_agent=None):
     """Build a bare GatewayRunner with just the fields _handle_usage_command needs."""
-    from gateway.run import GatewayRunner
-
     runner = object.__new__(GatewayRunner)
     runner._running_agents = {}
     runner._agent_cache = {}
@@ -305,3 +305,31 @@ class TestUsageContextBreakdown:
         # Zero-token category is dropped, not rendered.
         assert "Conversation" not in result
 
+
+@pytest.mark.asyncio
+async def test_no_agent_usage_counts_tool_messages_and_keeps_persisted_prompt_floor(monkeypatch):
+    """#4223: fallback /usage must count tool and tool-call-only entries, not just text."""
+    from gateway.slash_commands_status import t
+
+    runner = _make_runner(SK)
+    runner._session_db = None
+    entry = MagicMock(session_id="sess-tools", last_prompt_tokens=1500)
+    runner.session_store.get_or_create_session.return_value = entry
+    history = [
+        {"role": "user", "content": "calculate"},
+        {"role": "assistant", "content": None,
+         "tool_calls": [{"id": "call_1", "type": "function",
+                         "function": {"name": "calculator", "arguments": '{"x":1}'}}]},
+        {"role": "tool", "tool_call_id": "call_1", "content": "2"},
+        {"role": "assistant", "content": "2"},
+    ]
+    runner.session_store.load_transcript.return_value = history
+    monkeypatch.setattr("gateway.slash_commands_status._configured_provider", lambda: None)
+    monkeypatch.setattr("agent.account_usage.nous_credits_lines", lambda **_kw: [])
+
+    with patch("agent.model_metadata.estimate_messages_tokens_rough", return_value=80) as estimate:
+        result = await runner._handle_usage_command(MagicMock())
+
+    estimate.assert_called_once_with(history)
+    assert t("gateway.usage.label_messages", count=4) in result
+    assert t("gateway.usage.label_estimated_context", count="1,500") in result
