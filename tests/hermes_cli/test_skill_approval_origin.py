@@ -186,3 +186,42 @@ def test_approved_patch_keeps_audit_origin_without_review_read_marks(skill_home,
         reset_current_write_origin(token)
     assert result["success"] is False and result["_read_before_write_required"] is True
     assert b"updated" in (source / "SKILL.md").read_bytes()
+
+@pytest.mark.parametrize("origin,created_by", [
+    ("background_review", "agent"),
+    ("foreground", "learn"),
+])
+def test_approved_create_keeps_curator_ownership_for_future_consolidation(skill_home, origin, created_by):
+    from hermes_cli.write_approval_commands import handle_pending_subcommand
+    from tools import skill_usage, write_approval as wa
+    from tools.skill_manager_tool import apply_skill_pending
+    from tools.skill_provenance import reset_current_write_origin, set_current_write_origin
+
+    name = f"approved-{origin}"
+    content = (
+        f"---\nname: {name}\n"
+        "description: Use when checking a sample task.\n"
+        "---\n\nFollow the original procedure.\n"
+    )
+    token = set_current_write_origin(origin)
+    try:
+        staged = _manage({"action": "create", "name": name, "content": content})
+    finally:
+        reset_current_write_origin(token)
+    assert staged["staged"], staged
+    assert not (skill_home / "skills" / name).exists()
+
+    message = handle_pending_subcommand(wa.SKILLS, ["approve", staged["pending_id"]])
+    assert "Approved 1" in message, message
+    assert wa.get_pending(wa.SKILLS, staged["pending_id"]) is None
+    assert (skill_home / "skills" / name / "SKILL.md").read_text() == content
+    assert skill_usage.get_record(name)["created_by"] == created_by
+    assert skill_usage.is_curator_managed(name) == (origin == "background_review")
+    assert _ledger(skill_home)[-1]["actor"] == ("curator" if origin == "background_review" else "agent")
+
+    if origin == "background_review":
+        umbrella, _ = _package(skill_home, "approved-umbrella")
+        deleted = json.loads(apply_skill_pending(
+            {"action": "delete", "name": name, "absorbed_into": umbrella.name}, origin=origin))
+        assert deleted["success"], deleted
+        assert (skill_home / "skills" / ".archive" / name / "SKILL.md").read_text() == content
