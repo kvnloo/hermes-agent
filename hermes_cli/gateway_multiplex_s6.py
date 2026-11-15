@@ -84,6 +84,19 @@ def park_named_slot(profile: str, manager=None) -> None:
     _set_down_marker(manager.scandir / slot, down=True)
 
 
+def stand_down_own_named_slot(profile: str, manager=None) -> None:
+    """Park a rogue named supervised child before it can --replace the host.
+
+    Unlike external migration, the caller is the slot's own process.  The
+    supervisor may SIGTERM it during stop(), so write the durable down marker
+    first; stopping before marking would let the next scan revive the slot.
+    """
+    manager = manager or _manager()
+    slot = named_slot_name(profile)
+    _set_down_marker(manager.scandir / slot, down=True)
+    manager.stop(slot)
+
+
 def _set_down_marker(service_dir: Path, *, down: bool) -> None:
     """Create or remove a slot's ``down`` file without following symlinks.
 

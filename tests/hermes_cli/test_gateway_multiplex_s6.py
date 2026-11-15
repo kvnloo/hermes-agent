@@ -126,3 +126,52 @@ def test_resolved_default_is_written_once_and_never_on_a_guard(s6_host):
     notice = mode.consume_rewritten_notice(root)
     assert any("rewritten to true" in line for line in notice) and notice[0].startswith("┌")
     assert mode.consume_rewritten_notice(root) == []  # one-time
+
+
+def test_named_s6_slot_parks_itself_before_replacing_host(s6_host, monkeypatch, capsys):
+    """#156185: bare s6-svc -u must not replace the live multiplex host."""
+    import os
+    from types import SimpleNamespace
+    from gateway import host_attach
+
+    root, fake = s6_host
+    home = root / "profiles/alpha"
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("HERMES_S6_SUPERVISED_CHILD", "1")
+    monkeypatch.setattr(gw, "get_hermes_home", lambda: home)
+    monkeypatch.setattr(
+        gw, "host_multiplexer_serving",
+        lambda profile: SimpleNamespace(pid=os.getpid() + 1, standalone=False)
+        if profile == "alpha" else None,
+    )
+    monkeypatch.setattr(
+        host_attach, "decide",
+        lambda _home, replace=False: host_attach.HostAttachDecision(
+            host_attach.REPLACE_HOST, ""),
+    )
+    fake.up.add("gateway-alpha")
+    original_stop = fake.stop
+
+    def stop_only_after_marker(slot):
+        assert (fake.scandir / slot / "down").is_file()
+        original_stop(slot)
+
+    fake.stop = stop_only_after_marker
+    with pytest.raises(SystemExit) as exit_info:
+        gw._attach_to_host_gateway_or_guard(replace=True)
+
+    assert exit_info.value.code == 0
+    assert fake.calls == [("stop", "gateway-alpha")]
+    assert "gateway-alpha" not in fake.up
+    assert (fake.scandir / "gateway-alpha" / "down").is_file()
+    assert "parking its named s6 slot" in capsys.readouterr().out
+
+    # The deliberate carve-outs still proceed to the host decision without
+    # parking, but are checked in this same regression test.
+    fake.calls.clear()
+    gw._attach_to_host_gateway_or_guard(force=True, replace=True)
+    assert fake.calls == []
+    (home / "config.yaml").write_text(
+        "gateway:\n  standalone: true\n", encoding="utf-8")
+    gw._attach_to_host_gateway_or_guard(replace=True)
+    assert fake.calls == []

@@ -4217,6 +4217,23 @@ def _attach_to_host_gateway_or_guard(force: bool = False, replace: bool = False)
     """
     if force:
         return
+    # A direct s6-svc -u bypasses the CLI's named-profile start guard.  A named
+    # supervised child with --replace must never evict the host that serves it.
+    if replace and os.environ.get("HERMES_S6_SUPERVISED_CHILD") == "1":
+        from hermes_constants import profile_name_for_home
+        from hermes_cli.profiles import profile_is_standalone
+
+        home = get_hermes_home()
+        profile = profile_name_for_home(home)
+        if profile not in (None, "default") and not profile_is_standalone(home):
+            owner = host_multiplexer_serving(profile)
+            if owner is not None and owner.pid != os.getpid() and not owner.standalone:
+                print(f"Profile '{profile}' is served by the host gateway; "
+                      "parking its named s6 slot instead of replacing the host.",
+                      flush=True)
+                from hermes_cli.gateway_multiplex_s6 import stand_down_own_named_slot
+                stand_down_own_named_slot(profile)
+                sys.exit(0)
     try:
         from gateway.host_attach import ATTACH, REFUSE, REPLACE_HOST, decide
         decision = decide(get_hermes_home(), replace=replace)
