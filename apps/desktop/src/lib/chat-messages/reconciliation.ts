@@ -653,10 +653,23 @@ export function preserveLocalSystemNotices(nextMessages: ChatMessage[], currentM
     }
   }
 
-  const trailing = pending.slice(orphaned)
-  const preserved = trailing.length ? [...merged, ...trailing] : merged
+  // Compaction can re-emit all following rows under new ids. Where the
+  // adjacency anchor is gone, use the local notice's clock to place it
+  // before the first newer hydrated row instead of dropping or tailing it.
+  pending.forEach((message, index) => {
+    const stamp = message.timestamp
+    const at = validTimelineBoundary(stamp)
+      ? merged.findIndex(row => validTimelineBoundary(row.timestamp) && row.timestamp > stamp)
+      : -1
 
-  return preserved.length === nextMessages.length ? nextMessages : preserved
+    if (at >= 0) {
+      merged.splice(at, 0, message)
+    } else if (index >= orphaned) {
+      merged.push(message)
+    }
+  })
+
+  return merged.length === nextMessages.length ? nextMessages : merged
 }
 
 export function branchGroupForUser(userMessage: ChatMessage): string {

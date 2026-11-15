@@ -420,6 +420,30 @@ it('keeps a rowId-less preserved run trailing (#118002 behavior unchanged)', () 
   expect(merged.map(message => message.id)).toEqual(['9-0-user', '9-1-assistant', 'user-no-row', 'assistant-stream-x'])
 })
 
+it('keeps a /compress result ahead of newer turns when compaction reissues following rowIds (#154974)', () => {
+  const notice: ChatMessage = {
+    id: 'system-15000-compress',
+    role: 'system',
+    timestamp: 15,
+    parts: [textPart('slash:/compress\\nCompressed context\\n12 messages removed')]
+  }
+  const current = [
+    row('old-user', 'user', 'earlier', { rowId: 10, timestamp: 10 }),
+    notice,
+    row('old-reply', 'assistant', 'continuation', { rowId: 12, timestamp: 20 })
+  ]
+  const refreshed = [
+    row('summary', 'assistant', 'compressed summary', { rowId: 110, timestamp: 12 }),
+    row('rewritten-reply', 'assistant', 'continuation', { rowId: 112, timestamp: 20 }),
+    row('newer-turn', 'user', 'next question', { rowId: 113, timestamp: 30 })
+  ]
+
+  const first = preserveLocalSystemNotices(refreshed, current)
+  expect(first.map(message => message.id)).toEqual(['summary', notice.id, 'rewritten-reply', 'newer-turn'])
+  const again = preserveLocalSystemNotices(refreshed, first)
+  expect(again.map(message => message.id)).toEqual(first.map(message => message.id))
+})
+
 // #126422: the fallback-switch notice is a client-local `system` row the
 // stored page cannot carry; the post-turn refresh rebuilds from stored rows
 // and must re-graft it instead of silently dropping it.

@@ -343,7 +343,8 @@ export function usePromptActions({
         return
       }
 
-      const messageId = `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const createdAt = Date.now()
+      const messageId = `${role}-${createdAt}-${Math.random().toString(36).slice(2, 8)}`
 
       updateSessionState(
         sessionId,
@@ -351,7 +352,8 @@ export function usePromptActions({
           const message: ChatMessage = {
             id: messageId,
             role,
-            parts: [textPart(body)]
+            parts: [textPart(body)],
+            ...(role === 'system' ? { timestamp: createdAt / 1000 } : {})
           }
 
           // Mid-turn correction: arrival order. The bubble lands after the
