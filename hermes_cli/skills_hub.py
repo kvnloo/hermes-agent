@@ -1177,11 +1177,12 @@ def do_update(name: Optional[str] = None, console: Optional[Console] = None,
 
 def do_audit(name: Optional[str] = None, console: Optional[Console] = None,
              deep: bool = False) -> None:
-    """Re-scan installed hub skills; ``deep`` adds an AST diagnostic (review aid, not a gate)."""
-    from tools.skills_hub import HubLockFile, SKILLS_DIR
-    from tools.skills_guard import scan_skill, format_scan_report
+    """Audit hub skills, recording the scan without changing installation metadata."""
+    from tools.skills_hub import HubLockFile, SKILLS_DIR, HUB_DIR
+    from tools.skills_guard import scan_skill_cached, format_scan_report
     c = console or _console
-    installed = HubLockFile().list_installed()
+    lock = HubLockFile()
+    installed = lock.list_installed()
     if not installed:
         c.print("[dim]No hub-installed skills to audit.[/]\n")
         return
@@ -1197,12 +1198,17 @@ def do_audit(name: Optional[str] = None, console: Optional[Console] = None,
         if not skill_path.exists():
             c.print(f"[yellow]Warning:[/] {entry['name']} — path missing: {entry['install_path']}")
             continue
-        c.print(format_scan_report(scan_skill(skill_path, source=_untrusted_scan_source(
-            entry.get("identifier", ""), entry.get("source", "")))))
+        result, provenance = scan_skill_cached(
+            skill_path,
+            source=_untrusted_scan_source(entry.get("identifier", ""), entry.get("source", "")),
+            source_url=(entry.get("scan_provenance") or {}).get("source_url", ""),
+            cache_dir=HUB_DIR / "scan-cache",
+        )
+        c.print(format_scan_report(result))
+        lock.record_scan(entry["name"], result.verdict, provenance)
         if deep:
             c.print(format_ast_report(ast_scan_path(skill_path), skill_name=entry["name"]))
         c.print()
-
 
 # --- uninstall / reset / bundled-skill management ---
 

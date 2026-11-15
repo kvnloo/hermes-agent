@@ -421,6 +421,29 @@ class HubLockFile(_JsonStateFile):
 
         self._update(record, ensure_ascii=False)
 
+    def record_scan(self, name: str, scan_verdict: str, scan_provenance: dict[str, Any]) -> bool:
+        """Persist a fresh audit while retaining the original install provenance.
+
+        The cache-hit flag is ephemeral: retaining it would rewrite lock.json on
+        every audit even if neither the skill nor the scanner changed.
+        """
+        safe_name = _validate_skill_name(name)
+        provenance = {key: value for key, value in scan_provenance.items() if key != "fresh"}
+
+        def update(data: dict) -> bool:
+            entry = data.get("installed", {}).get(safe_name)
+            if entry is None:  # Concurrent uninstall: do not recreate the entry.
+                return False
+            scanned_at = provenance.get("scanned_at")
+            if (entry.get("scan_verdict") == scan_verdict
+                    and entry.get("scan_provenance") == provenance
+                    and entry.get("scanned_at") == scanned_at):
+                return False
+            entry.update(scan_verdict=scan_verdict, scan_provenance=provenance, scanned_at=scanned_at)
+            return True
+
+        return self._update(update, ensure_ascii=False)
+
     def record_uninstall(self, name: str) -> None:
         def forget(data: dict) -> bool:
             data.setdefault("installed", {}).pop(name, None)

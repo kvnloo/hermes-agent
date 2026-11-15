@@ -100,7 +100,7 @@ def test_audit_does_not_elevate_reserved_lock_identifier(tmp_path, monkeypatch):
     (skills_dir / "x").mkdir(parents=True)
     (skills_dir / "x" / "SKILL.md").write_text(_PAYLOAD, encoding="utf-8")
     monkeypatch.setattr(skills_hub, "SKILLS_DIR", skills_dir)
-    monkeypatch.setattr(skills_hub, "HubLockFile", lambda: type("Lock", (), {"list_installed": lambda self: [
+    monkeypatch.setattr(skills_hub, "HubLockFile", lambda: type("Lock", (), {"record_scan": lambda self, *_: False, "list_installed": lambda self: [
         {"name": "x", "source": "clawhub", "identifier": "official", "install_path": "x"}]})())
     sink = StringIO()
     cli_hub.do_audit(console=Console(file=sink, force_terminal=False, color_system=None, width=200))
