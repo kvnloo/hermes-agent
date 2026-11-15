@@ -425,7 +425,8 @@ export function useTerminalSession({
       term.open(host)
       mountedRef.current = true
       mounted = true
-      term.focus()
+      // Inactive keep-alive tabs must not steal focus from chat on mount.
+      // An active tab gets its focus from the activation effect below.
 
       // WebGL renderer matches the dashboard ChatPage path; xterm's default DOM
       // renderer paints SGR via CSS classes that visibly mute against our skins.

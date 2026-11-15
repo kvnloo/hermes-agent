@@ -14,6 +14,7 @@ import { useTerminalSession } from './use-terminal-session'
 
 const emulator = vi.hoisted(() => ({
   input: (_data: string) => {},
+  focus: vi.fn(),
   output: '',
   latestFontFamilyRef: { current: 'monospace' },
   mountedRef: { current: false }
@@ -33,7 +34,7 @@ vi.mock('@xterm/xterm', () => ({
     }
     loadAddon() {}
     open() {}
-    focus() {}
+    focus() { emulator.focus() }
     dispose() {}
     refresh() {}
     clearSelection() {}
@@ -184,6 +185,26 @@ afterEach(() => {
   emulator.output = ''
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
+})
+
+// port cline/cline#15061 (mkondratek): a background shell must not take chat focus.
+it('keeps keyboard focus in the composer when an inactive terminal tab mounts', async () => {
+  seedWebappSession('test-token')
+  vi.stubGlobal('WebSocket', Socket)
+  installBrowserDesktopBridge()
+  const composer = document.createElement('textarea')
+  document.body.appendChild(composer)
+  composer.focus()
+  emulator.focus.mockClear()
+
+  try {
+    render(<Harness id={createTerminal('/work')} />)
+    await waitFor(() => expect(screen.getByText('open')).toBeTruthy())
+    expect(emulator.focus).not.toHaveBeenCalled()
+    expect(document.activeElement).toBe(composer)
+  } finally {
+    composer.remove()
+  }
 })
 
 it.each([1006, 1000])('retains the saved tab on transport loss (%s) and lets Enter recover in the same scrollback', async code => {
