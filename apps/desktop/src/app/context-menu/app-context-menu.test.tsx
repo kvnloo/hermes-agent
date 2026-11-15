@@ -1,5 +1,9 @@
+import { EventEmitter } from 'node:events'
+import { runInNewContext } from 'node:vm'
+
 import { cleanup, createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
+import { createSourceFile, isFunctionDeclaration, ScriptTarget, transpile } from 'typescript'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { FileEntryContextMenu, InlineRenameInput } from '@/app/right-sidebar/file-actions'
@@ -9,6 +13,8 @@ import { ContextMenu, ContextMenuTrigger, HERMES_CONTEXT_MENU_TRIGGER_ATTR } fro
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { $previewTabs, closeRightRail } from '@/store/preview'
 import { $connection } from '@/store/session'
+
+import mainProcessSource from '../../../electron/main.ts?raw'
 
 import { AppContextMenu } from './app-context-menu'
 import {
@@ -28,6 +34,49 @@ function installBridge(partial: Partial<Window['hermesDesktop']> = {}) {
     writeClipboard: vi.fn().mockResolvedValue(true),
     ...partial
   } as unknown as Window['hermesDesktop']
+}
+
+function installNativeSpellcheckBridge() {
+  // Execute the real handler without main.ts's application startup or native windows.
+  const source = createSourceFile('main.ts', mainProcessSource, ScriptTarget.Latest, true)
+
+  const bridge = source.statements.find(
+    statement => isFunctionDeclaration(statement) && statement.name?.text === 'installContextMenuBridge'
+  )
+
+  if (!bridge) {
+    throw new Error('Missing native context-menu bridge')
+  }
+
+  const install: unknown = runInNewContext(transpile(`(${bridge.getText(source)})`), {
+    lastContextMenuPoint: new Map()
+  })
+
+  if (typeof install !== 'function') {
+    throw new Error('Native context-menu bridge is not callable')
+  }
+
+  const webContents = Object.assign(new EventEmitter(), {
+    id: 1,
+    send: (channel: string, payload: unknown) => webContents.emit(channel, payload)
+  })
+
+  install({ webContents })
+  installBridge({
+    onContextMenuSpellcheck: callback => {
+      webContents.on('hermes:context-menu-spellcheck', callback)
+
+      return () => { webContents.off('hermes:context-menu-spellcheck', callback) }
+    }
+  })
+
+  return (x: number, y: number) => webContents.emit('context-menu', {}, {
+    x,
+    y,
+    isEditable: false,
+    misspelledWord: 'casssa',
+    dictionarySuggestions: ['casa']
+  })
 }
 
 function mountMenu() {
@@ -428,6 +477,39 @@ describe('AppContextMenu', () => {
 
     expect(await screen.findByText('Add to dictionary')).toBeTruthy()
     expect(screen.getByText('the')).toBeTruthy()
+  })
+
+  it.each(['before', 'after'])('renders native spelling reported %s the DOM gesture despite Chromium editable=false', async order => {
+    const report = installNativeSpellcheckBridge()
+    mountMenu()
+    const host = attach('<textarea>casssa</textarea>')
+    const textarea = host.querySelector('textarea')!
+
+    if (order === 'before') {
+      report(24, 42)
+    }
+
+    fireEvent.contextMenu(textarea, { clientX: 24, clientY: 42 })
+
+    if (order === 'after') {
+      report(24, 42)
+    }
+
+    expect(await screen.findByText('casa')).toBeTruthy()
+    expect(screen.getByText('Add to dictionary')).toBeTruthy()
+  })
+
+  it('does not inherit native spelling from another gesture', async () => {
+    const report = installNativeSpellcheckBridge()
+    mountMenu()
+    const host = attach('<textarea>casssa</textarea>')
+
+    report(24, 42)
+    fireEvent.contextMenu(host.querySelector('textarea')!, { clientX: 50, clientY: 60 })
+
+    expect(await screen.findByText('Paste')).toBeTruthy()
+    expect(screen.queryByText('casa')).toBeNull()
+    expect(screen.queryByText('Add to dictionary')).toBeNull()
   })
 
   it('shows spelling suggestions when Chromium reports before the editable DOM menu opens', async () => {
