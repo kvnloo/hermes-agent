@@ -42,3 +42,28 @@ def test_alias_definition_requires_approval(command):
 ])
 def test_inert_definitions_and_quoted_prose_do_not_prompt(command):
     assert detect_dangerous_command(command)[0] is False
+
+
+@pytest.mark.parametrize("command", [
+    'f(){ rm "$@"; }; f -rf /',
+    'alias cleanup=rm; cleanup -rf /',
+])
+@pytest.mark.parametrize("choice,approved", [("deny", False), ("once", True)])
+def test_forwarders_reach_normal_approval_guard(command, choice, approved, tmp_path, monkeypatch):
+    """Real guard dispatch must prompt, honor the answer, and avoid a hardline refusal."""
+    from tools.approval import check_all_command_guards
+
+    (tmp_path / "config.yaml").write_text("approvals:\n  mode: manual\ncommand_allowlist: []\n")
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("HERMES_INTERACTIVE", "1")
+    prompts = []
+
+    def answer(*args, **kwargs):
+        prompts.append((args, kwargs))
+        return choice
+
+    result = check_all_command_guards(command, "local", approval_callback=answer)
+    assert len(prompts) == 1
+    args, kwargs = prompts[0]
+    assert any(INDIRECTION in str(value) for value in (*args, *kwargs.values()))
+    assert result["approved"] is approved
