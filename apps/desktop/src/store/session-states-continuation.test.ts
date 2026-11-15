@@ -8,14 +8,16 @@ import {
   $sessions,
   setActiveSessionId
 } from '@/store/session'
+import { makeSessionInfo } from '@/test/session-info'
 
 import { $sessionStates, clearAllSessionStates, publishSessionState } from './session-states'
 
 const owner = 'local-creation'
+const middle = 'local-reset-middle'
 const tip = 'local-reset-continuation'
 
 function listResetLineage() {
-  $sessions.set([{ id: tip, _lineage_ids: [owner, tip], _lineage_root_id: owner }] as never)
+  $sessions.set([makeSessionInfo({ id: tip, _lineage_ids: [owner, middle, tip], _lineage_root_id: owner })])
 }
 
 function publish(storedId: string) {
@@ -32,7 +34,7 @@ afterEach(() => {
 })
 
 describe('canonical local reset: one runtime owner, a later stored tip', () => {
-  it('does not rebound the visible continuation to the parent on a late owner projection', () => {
+  it.each([owner, middle])('keeps the visible continuation on a late projection of %s', ancestor => {
     listResetLineage()
     setActiveSessionId(owner)
     $selectedStoredSessionId.set(tip)
@@ -40,11 +42,15 @@ describe('canonical local reset: one runtime owner, a later stored tip', () => {
 
     publish(tip)
     $activeSessionStoredIdRotation.set(null)
-    publish(owner)
+    const incoming = { ...createClientSessionState(ancestor), busy: true }
+    publishSessionState(owner, incoming)
 
     expect($sessionStates.get()[owner]?.storedSessionId).toBe(tip)
+    expect($sessionStates.get()[owner]?.busy).toBe(true)
+    expect(incoming.storedSessionId).toBe(ancestor)
     expect($activeSessionStoredIdRotation.get()).toBeNull()
     expect($selectedStoredSessionId.get()).toBe(tip)
+    expect(window.location.hash).toBe('#/' + tip)
   })
 
   it('still allows a real forward rotation from the creation row to its reset tip', () => {
