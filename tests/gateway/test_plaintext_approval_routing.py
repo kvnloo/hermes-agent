@@ -131,3 +131,44 @@ def test_no_pending_approval_does_not_consume_conversational_yes():
     _clear_approval_state()
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("route", "reply", "choice", "reason"), [
+    ("pending", "sure", "once", None),
+    ("pending", "yes please", "once", None),
+    ("pending", "go ahead", "once", None),
+    ("pending", "stop", "deny", None),
+    ("pending", "don't", "deny", None),
+    ("busy", "yes but change the time to 3", "deny", "yes but change the time to 3"),
+    ("pending", "yes but change the time to 3", "deny", "yes but change the time to 3"),
+    ("busy", "What will this change?", "deny", "What will this change?"),
+    ("pending", "What will this change?", "deny", "What will this change?"),
+    ("busy", "all operations need review", "deny", "all operations need review"),
+    ("pending", "all operations need review", "deny", "all operations need review"),
+])
+async def test_blocking_approval_uses_whole_text_and_preserves_feedback(route, reply, choice, reason):
+    """#156183: a non-exact reply denies one request with its original text, not an approval."""
+    from tools import approval
+    from tools.approval_gateway_wait import _ApprovalEntry
+
+    _clear_approval_state()
+    try:
+        runner, adapter = _make_runner()
+        session_key, entry = _register_blocking_approval(runner)
+        # A leading "all" in natural language must not deny every pending request.
+        next_entry = _ApprovalEntry({"command": "echo next"})
+        approval._gateway_queues[session_key].append(next_entry)
+        event = _make_event(reply)
+
+        if route == "busy":
+            assert await runner._handle_active_session_busy_message(event, session_key) is True
+        else:
+            assert await runner._hm_pending_reply_intercepts(event, event.source, session_key) == ""
+
+        assert entry.event.is_set()
+        assert entry.result == choice
+        assert entry.reason == reason
+        assert not next_entry.event.is_set()
+        assert next_entry.result is None
+        adapter._send_with_retry.assert_awaited()
+    finally:
+        _clear_approval_state()

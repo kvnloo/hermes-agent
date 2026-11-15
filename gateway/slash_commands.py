@@ -1245,7 +1245,7 @@ class GatewaySlashCommandsMixin(
         logger.info("User approved %d dangerous command(s) via /approve (%s)", count, choice)
         return await self._deliver_approval_confirmation(event, confirmation_text, "approve")
 
-    async def _handle_deny_command(self, event: MessageEvent) -> str:
+    async def _handle_deny_command(self, event: MessageEvent, *, reply_reason: Optional[str] = None) -> str:
         """Handle /deny — reject pending dangerous command(s) with a definitive BLOCKED result, as in
         the CLI. ``/deny`` denies the oldest; ``/deny all`` denies everything.
 
@@ -1257,12 +1257,15 @@ class GatewaySlashCommandsMixin(
         # "all") is the optional deny reason relayed to the agent, capped to a sane one-liner.
         raw_args = event.get_command_args().strip()
         tokens = raw_args.split()
-        resolve_all = bool(tokens) and tokens[0].lower() == "all"
+        resolve_all = reply_reason is None and bool(tokens) and tokens[0].lower() == "all"
         session_key, stale, request_ids = self._blocking_approval_or_stale(
             event, "gateway.deny.stale", "gateway.deny.no_pending", resolve_all=resolve_all, choice="deny")
         if stale:
             return stale
-        reason = (raw_args[len(tokens[0]):].strip() if resolve_all else raw_args)[:280].strip()
+        # A natural-language response is always a reason for ONE approval. It is not
+        # slash-command syntax, even when its first word happens to be "all".
+        reason = (reply_reason if reply_reason is not None else
+                  (raw_args[len(tokens[0]):].strip() if resolve_all else raw_args))[:280].strip()
         count = sum(resolve_gateway_approval(session_key, "deny", reason=reason or None, request_id=rid)
                     for rid in request_ids)
         if not count:

@@ -16,8 +16,8 @@ approval:
   cancelled: "      ✗ Cancelled"
   blocklist_message: "This command is on the unconditional blocklist and cannot be approved."
   inputs:
-    approve: "approve,yes,ok,okay,confirm,y"
-    deny: "deny,no,reject,cancel,n"
+    approve: "approve,yes,ok,okay,confirm,y,sure,go ahead,yes please"
+    deny: "deny,no,reject,cancel,n,stop,don't"
     always: "always,approve always,always approve"
     session: "session,approve session,session approve"
     confirm_once: "approve,approve once,once,yes,ok,confirm"
