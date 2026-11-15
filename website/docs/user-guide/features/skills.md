@@ -88,7 +88,7 @@ Every installed skill is automatically available as a slash command:
 ### Stacking multiple skills in one command
 
 You can invoke several skills in a single message by chaining slash commands
-at the start — every leading `/skill` token (up to 5) is loaded, and the rest
+at the start — every distinct leading installed `/skill` token is loaded, and the rest
 becomes your instruction:
 
 ```bash
