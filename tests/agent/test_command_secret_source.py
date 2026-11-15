@@ -70,24 +70,58 @@ def test_profile_helper_does_not_inherit_process_secret(monkeypatch):
     assert output == "unset|profile-value"
 
 
-@pytest.mark.parametrize("home_lookup_succeeds", [True, False])
-def test_strict_shell_helper_gets_home_without_parent_home(tmp_path, monkeypatch, home_lookup_succeeds):
+@pytest.mark.parametrize("home_lookup_error", [None, RuntimeError, OSError])
+def test_strict_shell_helper_gets_home_without_parent_home(tmp_path, monkeypatch, home_lookup_error):
     monkeypatch.delenv("HOME", raising=False)
     monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
-    if home_lookup_succeeds:
+    if home_lookup_error is None:
         expected_home = str(tmp_path / "mock-user-home")
         monkeypatch.setattr(Path, "home", lambda: tmp_path / "mock-user-home")
     else:
         expected_home = "/"
 
         def _no_passwd_entry():
-            raise RuntimeError("Could not determine home directory.")
+            raise home_lookup_error("Could not determine home directory.")
 
         monkeypatch.setattr(Path, "home", _no_passwd_entry)
     helper = _write_helper(tmp_path, 'set -eu\nprintf "CMDTEST_HOME=%s\\n" "$HOME"')
     result = CommandSource().fetch({"enabled": True, "command": str(helper)}, tmp_path)
     assert result.ok
     assert result.secrets == {"CMDTEST_HOME": expected_home}
+
+
+@pytest.mark.parametrize("home", ["", "/configured-home"])
+def test_profile_helper_preserves_explicit_home(monkeypatch, home):
+    def _unexpected_home_lookup():
+        pytest.fail("An explicit HOME must not trigger home lookup")
+
+    monkeypatch.setattr(Path, "home", _unexpected_home_lookup)
+    token = set_source_environment({"HOME": home})
+    try:
+        output = _run_helper('set -eu; printf "<%s>" "$HOME"', "", 3.0, 1024)
+    finally:
+        reset_source_environment(token)
+
+    assert output == f"<{home}>"
+
+
+def test_profile_helper_home_fallback_keeps_environment_isolated(tmp_path, monkeypatch):
+    monkeypatch.setenv("LEAK_CANARY", "global-secret")
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    profile_env = {"PROFILE_ONLY": "profile-value"}
+    token = set_source_environment(profile_env)
+    try:
+        output = _run_helper(
+            'set -eu; printf "%s|%s|%s" "$HOME" "$PROFILE_ONLY" "${LEAK_CANARY-unset}"',
+            "",
+            3.0,
+            1024,
+        )
+    finally:
+        reset_source_environment(token)
+
+    assert output == f"{tmp_path}|profile-value|unset"
+    assert profile_env == {"PROFILE_ONLY": "profile-value"}
 
 
 @pytest.fixture(autouse=True)
