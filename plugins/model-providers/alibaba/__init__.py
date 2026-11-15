@@ -38,6 +38,9 @@ alibaba_token_plan = DashScopeProfile(
     signup_url="https://help.aliyun.com/zh/model-studio/",
     env_vars=("ALIBABA_TOKEN_PLAN_API_KEY", "ALIBABA_TOKEN_PLAN_BASE_URL"),
     base_url="https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1", auth_type="api_key",
+    # Entitlements vary per plan and key tier: a successful /v1/models listing is this key's whole
+    # catalog, so curated ids it omits must not come back (they 404 on every turn, #119481).
+    live_catalog_mode="authoritative",
 )
 
 alibaba_token_plan_cn = DashScopeProfile(
@@ -47,6 +50,7 @@ alibaba_token_plan_cn = DashScopeProfile(
     signup_url="https://help.aliyun.com/zh/model-studio/",
     env_vars=("ALIBABA_TOKEN_PLAN_CN_API_KEY", "ALIBABA_TOKEN_PLAN_API_KEY", "ALIBABA_TOKEN_PLAN_CN_BASE_URL"),
     base_url="https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1", auth_type="api_key",
+    live_catalog_mode="authoritative",
 )
 
 register_provider(alibaba)

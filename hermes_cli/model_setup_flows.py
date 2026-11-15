@@ -730,7 +730,9 @@ def _api_key_provider_model_list(provider_id: str, pconfig, existing_key: str, k
     ``models._profile_live_catalog``; generic /models probe for unregistered providers).
     Providers in ``_SPECIAL_MODEL_LISTS`` have their own resolution."""
     from hermes_cli.config import get_env_value
-    from hermes_cli.models import fetch_api_models, probe_profile_catalog, static_catalog
+    from hermes_cli.models import (
+        _live_catalog_is_authoritative, fetch_api_models, probe_profile_catalog, static_catalog,
+    )
     curated = static_catalog(provider_id)
     api_key_for_probe = existing_key or (get_env_value(key_env) if key_env else "")
 
@@ -743,8 +745,9 @@ def _api_key_provider_model_list(provider_id: str, pconfig, existing_key: str, k
     if model_list:
         _report_live_models(model_list, "models.dev registry")
         return model_list
-    if curated and len(curated) >= 8:
-        # Substantial curated list — use it directly, skip live probe
+    if curated and len(curated) >= 8 and not _live_catalog_is_authoritative(provider_id):
+        # Substantial curated list — use it directly, skip live probe (unless the live listing is
+        # the key's whole catalog: the curated floor then carries ids this account can't call)
         _show_curated(curated)
         return curated
     from providers import get_provider_profile
