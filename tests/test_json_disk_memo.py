@@ -116,3 +116,55 @@ def test_concurrent_readers_parse_single_version_once(tmp_path):
         results = list(pool.map(lambda _: memo.read_json_disk_memo(path), range(12)))
     assert all(result == original for result in results)
     assert memo.json_disk_memo_parse_count() == 1
+
+
+def test_seeded_home_catalog_readers_in_fresh_process(tmp_path):
+    """Real catalog entry points share disk parses without loader mocks or network."""
+    import subprocess
+    import sys
+    import textwrap
+
+    home = tmp_path / "hermes"
+    home.mkdir()
+    (home / "models_dev_cache.json").write_text(
+        json.dumps({"xai": {"models": {"grok-memo-fixture": {}}}}), encoding="utf-8"
+    )
+    (home / "cache").mkdir()
+    (home / "cache" / "plugin-catalog.json").write_text(
+        json.dumps({
+            "entries": [{
+                "name": "memo-fixture", "repo": "https://example.invalid/memo-fixture",
+                "sha": "a" * 40,
+            }],
+            "removed": [{"name": "revoked-fixture", "reason": "test"}],
+        }), encoding="utf-8"
+    )
+    probe = textwrap.dedent("""
+        from agent.models_dev import fetch_models_dev
+        from hermes_cli.models_catalog_static import _xai_curated_models
+        from hermes_cli.plugin_catalog import (
+            fetch_live_catalog, get_live_catalog_entry, live_removed_list,
+        )
+        from json_disk_memo import clear_json_disk_memo, json_disk_memo_parse_count
+
+        clear_json_disk_memo()
+        assert "grok-memo-fixture" in fetch_models_dev(allow_network=False)["xai"]["models"]
+        assert "grok-memo-fixture" in _xai_curated_models()
+        assert get_live_catalog_entry("memo-fixture").sha == "a" * 40
+        assert live_removed_list()[0].name == "revoked-fixture"
+        first = fetch_live_catalog()
+        first["entries"][0]["name"] = "mutated"
+        first["removed"].clear()
+        assert get_live_catalog_entry("memo-fixture").sha == "a" * 40
+        assert live_removed_list()[0].name == "revoked-fixture"
+        assert json_disk_memo_parse_count() == 2
+        print("models.dev discovery and plugin lookup/removals: two disk parses")
+    """)
+    env = {k: v for k, v in os.environ.items() if not k.startswith("HERMES_")}
+    env.update(HOME=str(tmp_path), HERMES_HOME=str(home))
+    result = subprocess.run(
+        [sys.executable, "-c", probe], cwd=Path(__file__).resolve().parents[1],
+        env=env, capture_output=True, text=True, timeout=60, check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "two disk parses" in result.stdout
