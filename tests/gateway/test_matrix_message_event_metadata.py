@@ -184,6 +184,35 @@ async def test_reply_carries_target_text_and_author(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_element_x_reply_without_inline_fallback_fetches_target(monkeypatch):
+    """Element X replies omit the quote, but must still supply the prompt's reply context."""
+    adapter = _make_adapter(require_mention=True, monkeypatch=monkeypatch)
+    adapter._startup_ts = time.time() - 10
+
+    get_event = AsyncMock(return_value=SimpleNamespace(
+        sender="@carol:example.org",
+        content={"msgtype": "m.text", "body": "original question"},
+    ))
+    adapter._client = SimpleNamespace(get_event=get_event)
+
+    event = _make_event(
+        "because reasons",
+        sender="@alice:example.org",
+        in_reply_to_event_id="$original1",
+    )
+    await adapter._on_room_message(event)
+
+    get_event.assert_awaited_once_with("!room1:example.org", "$original1")
+    adapter.handle_message.assert_awaited_once()
+    msg = adapter.handle_message.await_args.args[0]
+    assert msg.text == "because reasons"
+    assert msg.reply_to_message_id == "$original1"
+    assert msg.reply_to_text == "original question"
+    assert msg.reply_to_author_id == "@carol:example.org"
+    assert msg.reply_to_author_name == "carol"
+
+
+@pytest.mark.asyncio
 async def test_non_reply_message_has_no_reply_context(monkeypatch):
     """A non-reply message must not spuriously set reply_to_* fields."""
     adapter = _make_adapter(monkeypatch=monkeypatch)
