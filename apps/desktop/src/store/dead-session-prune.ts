@@ -149,7 +149,9 @@ function collectCandidates(): string[] {
   }
 
   for (const key of Object.keys($queuedPromptsBySession.get())) {
-    if (!covered.has(key)) {
+    // Queued follow-ups while session.create is pending still use the fresh-chat key.
+    // It is not a persisted session id and must never be probed or pruned on a 404.
+    if (!covered.has(key) && !isFreshDraftScope(key)) {
       candidates.add(key)
     }
   }

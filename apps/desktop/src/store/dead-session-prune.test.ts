@@ -14,7 +14,7 @@ vi.mock('@/hermes', async importOriginal => {
   }
 })
 
-import { clearSessionDraft, stashSessionDraft, takeSessionDraft } from '@/store/composer'
+import { clearSessionDraft, rotateFreshDraftKey, stashSessionDraft, takeSessionDraft } from '@/store/composer'
 import { $queuedPromptsBySession, enqueueQueuedPrompt, getQueuedPrompts } from '@/store/composer-queue'
 import { $pinnedSessionIds } from '@/store/layout'
 import { $activeGatewayProfile, $profiles } from '@/store/profile'
@@ -123,6 +123,21 @@ describe('__runDeadSessionPrunePass', () => {
 
     expect(takeSessionDraft('dead-draft-session').text).toBe('')
     expect(takeSessionDraft('__new__').text).toBe('brand new')
+  })
+
+  it('does not prune a fresh-chat follow-up queued while session.create is pending', async () => {
+    const freshKey = rotateFreshDraftKey()
+    $sessions.set([row('unrelated')])
+    enqueueQueuedPrompt(freshKey, { text: 'follow-up during create', attachments: [] })
+    enqueueQueuedPrompt('dead-queue-session', { text: 'stale', attachments: [] })
+    getSessionMock.mockRejectedValue(notFound())
+
+    await __runDeadSessionPrunePass()
+
+    // A fresh-chat key is not a persisted session id; 404 cannot authorize discarding its queue.
+    expect(getSessionMock.mock.calls.map(([id]) => id)).not.toContain(freshKey)
+    expect(getQueuedPrompts(freshKey).map(item => item.text)).toEqual(['follow-up during create'])
+    expect(getQueuedPrompts('dead-queue-session')).toEqual([])
   })
 
   it('drops queued prompts for dead sessions and keeps live ones', async () => {
