@@ -133,3 +133,38 @@ def test_headless_catalog_install_reports_upstream_repo(monkeypatch, tmp_path):
     from tui_gateway.contracts.connectors_operation import ConnectionOperationTarget
     ConnectionOperationTarget.model_validate(
         {"name": "brag", "kind": "skill", "action": "install", "state": "connected", **row, "detail": detail})
+
+
+@pytest.mark.parametrize("skip_confirm", [False, True])
+def test_index_fallback_install_discloses_upstream_repo(monkeypatch, tmp_path, skip_confirm):
+    """A stale local catalog must not hide live upstream provenance when the index serves the skill."""
+    from hermes_cli import skills_hub as hub_cli
+    from tools.skills_hub_github import GitHubAuth
+    from tools.skills_hub_models import SkillBundle
+    from tools.skills_hub_official import HermesIndexSource, OptionalSkillSource
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "home"))
+    official = OptionalSkillSource()
+    # Simulate an older checkout whose optional catalog cannot fetch this live stub.
+    monkeypatch.setattr(official, "inspect", lambda _identifier: None)
+    monkeypatch.setattr(official, "fetch", lambda _identifier: None)
+
+    index = HermesIndexSource(auth=GitHubAuth())
+    index._index, index._loaded = {"skills": [
+        {"name": "brag", "source": "official", "identifier": "official/creative/brag",
+         "trust_level": "trusted", "repo": "example-owner/brag", "path": "skills/brag"},
+    ]}, True
+    monkeypatch.setattr(index, "_get_github", lambda: SimpleNamespace(fetch=lambda _ident: SkillBundle(
+        name="brag", files={"SKILL.md": SAFE_SKILL_MD}, source="github",
+        identifier="example-owner/brag/skills/brag", trust_level="community")))
+    monkeypatch.setattr(hub_cli, "_sources", lambda: [official, index])
+    monkeypatch.setattr(hub_cli, "_confirm_or_cancel", lambda *_a, **_k: True)
+    monkeypatch.setattr("tools.skills_sync_bundled_ops.bundled_skill_for_install", lambda _ident: None)
+
+    out = StringIO()
+    assert hub_cli.do_install("official/creative/brag", skip_confirm=skip_confirm,
+                              console=Console(file=out, width=200), invalidate_cache=False) is True
+    output = out.getvalue()
+    assert "https://github.com/example-owner/brag" in output
+    assert "not maintained by Nous Research" in output
+    assert ("Third-party content" if skip_confirm else "Third-Party Skill") in output

@@ -759,7 +759,7 @@ def _upstream_repo(bundle) -> Optional[str]:
 def _confirm_install(c: Console, bundle, category: str, official: bool) -> bool:
     """Source-appropriate disclaimer panel + `Install '<name>'?` prompt."""
     files_at = f"Files will be at: [cyan]{display_hermes_home()}/skills/{category + '/' if category else ''}{bundle.name}/[/]"
-    upstream_repo = _upstream_repo(bundle) if official else None
+    upstream_repo = _upstream_repo(bundle)
     kind = "upstream" if upstream_repo else "official" if official else "external"
     body, title, style = _INSTALL_PANELS[kind]
     body = body.replace("{repo}", str(upstream_repo or ""))
@@ -994,7 +994,7 @@ def _install_skill(identifier: str, category: str, force: bool, c: Console, skip
     c.print(f"[dim]Files: {', '.join(bundle.files.keys())}[/]")
     # Unprompted installs never showed the Third-Party panel; print its notice last, so a log view that
     # keeps only the tail (the dashboard's action log) still shows it after a long file list.
-    if official and (upstream_repo := _upstream_repo(bundle)) and (force or skip_confirm):
+    if (upstream_repo := _upstream_repo(bundle)) and (force or skip_confirm):
         c.print(f"[yellow]Third-party content:[/] '{bundle.name}' installs the live default branch of "
                 f"[cyan]https://github.com/{upstream_repo}[/] (not maintained by Nous Research).")
     c.print()
