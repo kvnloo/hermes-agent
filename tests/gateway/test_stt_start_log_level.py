@@ -9,6 +9,7 @@ from unittest.mock import patch
 import pytest
 
 from gateway.config import GatewayConfig
+from gateway.platforms.helpers import hash_for_log
 
 VOICE_NOTE = Path(__file__).resolve().parents[1] / "fixtures" / "audio" / "voice_note.ogg"
 
@@ -33,5 +34,6 @@ async def test_transcription_start_is_logged_at_info_before_stt_runs(tmp_path, c
         result, transcripts = await runner._enrich_message_with_transcription("", [str(clip)])
 
     assert transcripts == ["hola"]
-    assert seen_before_stt == [[f"Transcribing user voice: {clip}"]]
+    assert seen_before_stt == [[f"Transcribing user voice: {hash_for_log(str(clip))}"]]
+    assert str(clip) not in "\n".join(seen_before_stt[0])
     assert '"hola"' in result

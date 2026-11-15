@@ -10,6 +10,7 @@ import threading
 from collections import OrderedDict
 from typing import Optional
 
+from gateway.platforms.helpers import hash_for_log
 from gateway.run_common import _UNSET
 
 # Log-record parity with the origin module.
@@ -188,7 +189,8 @@ class GatewayInboundTranscriptionMixin:
                     if clip_memo is not None:
                         clip_memo[path] = (transcript, note)
                 else:
-                    logger.info("Transcribing user voice: %s", path)
+                    logger.info("Transcribing user voice: %s", hash_for_log(path))
+                    logger.debug("Transcribing user voice: %s", path)
                     transcript, note = await self._transcribe_one_clip(
                         path, transcribe_audio, transcribe_audio_local_fallback,
                     )
