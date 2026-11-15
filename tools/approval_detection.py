@@ -767,6 +767,28 @@ _PATTERN_KEY_ALIASES.setdefault("git branch force delete", set()).add(_old_branc
 _PATTERN_KEY_ALIASES.setdefault(_old_branch_key, set()).add("git branch force delete")
 
 
+# #130511 changed the container flag grammar and #132483 extended the lifecycle rule.
+# Older command_allowlist entries may still hold the regex-derived keys from before those
+# changes. Preserve that exact spelling for the six pre-existing container approval classes.
+_PRE_SPACING_CONTAINER_FLAGS = r'(?:-\S++(?:\s(?!-\S)\S++)?\s++)*'
+for _canonical_key, _old_key in (
+    ("docker with remote daemon redirect (-H/--host)",
+     r"docker\s+" + _PRE_SPACING_CONTAINER_FLAGS + r"(?:-h|--host)[=\s]+\S+"),
+    ("docker with daemon redirect (--context: alternate daemon)",
+     r"docker\s+" + _PRE_SPACING_CONTAINER_FLAGS + r"(?:-c|--context)[=\s]+\S+"),
+    ("podman with remote daemon redirect (--url/--connection/--identity)",
+     r"podman\s+" + _PRE_SPACING_CONTAINER_FLAGS + r"(?:--url|--connection|--identity)[=\s]+\S+"),
+    ("podman remote mode (-r/--remote: remote daemon)",
+     r"podman\s+" + _PRE_SPACING_CONTAINER_FLAGS + r"(?:-r"),
+    ("docker compose restart/stop/kill/down (container lifecycle)",
+     r"docker(?:-compose|\s+compose)\s+" + _PRE_SPACING_CONTAINER_FLAGS + r"(restart|stop|kill|down)"),
+    ("docker restart/stop/kill (container lifecycle)",
+     r"docker\s+" + _PRE_SPACING_CONTAINER_FLAGS + r"(restart|stop|kill)"),
+):
+    _PATTERN_KEY_ALIASES.setdefault(_canonical_key, set()).add(_old_key)
+    _PATTERN_KEY_ALIASES.setdefault(_old_key, set()).add(_canonical_key)
+
+
 def _approval_key_aliases(pattern_key: str) -> set[str]:
     """All approval keys for this pattern: the description plus the historical regex-derived key
     older allowlist/session entries may still use."""
