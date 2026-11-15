@@ -351,6 +351,23 @@ def _prompt_for_category(c: Console, existing: list[str]) -> str:
 
 # --- search / browse / inspect ---
 
+def _warn_if_index_unavailable(sources, source: str, console: Console, *, as_json: bool) -> None:
+    """A missing central index must not look like a complete hub search."""
+    from tools.skills_hub_github import _provider_filter_of
+
+    # Explicit source searches do not ask the central index.
+    if source != "all" and not _provider_filter_of(source):
+        return
+    index = next((src for src in sources if src.source_id() == "hermes-index"), None)
+    if index is None or index.is_available:
+        return
+    message = "Skills index unavailable; results may be incomplete (other sources searched)."
+    if as_json:
+        print(message, file=sys.stderr)
+    else:
+        console.print(f"[yellow]{message}[/]")
+
+
 def do_search(query: str, source: str = "all", limit: int = 10, console: Optional[Console] = None,
               as_json: bool = False) -> None:
     """Search registries -> Rich table, or a clean JSON array (``as_json``) for scripting."""
@@ -359,13 +376,15 @@ def do_search(query: str, source: str = "all", limit: int = 10, console: Optiona
     sources = _sources()
     if as_json:
         results = unified_search(query, sources, source_filter=source, limit=limit)
+        _warn_if_index_unavailable(sources, source, c, as_json=True)
         print(json.dumps([_row(r, "name", "identifier", "source", "trust_level", "description")
                           for r in results], indent=2))
         return
 
     c.print(f"\n[bold]Searching for:[/] {query}")
-    with c.status("[bold]Searching registries..."):
+    with c.status("[bold]Searching registries (large index refresh if cache expired)..."):
         results = unified_search(query, sources, source_filter=source, limit=limit)
+    _warn_if_index_unavailable(sources, source, c, as_json=False)
     if not results:
         c.print("[dim]No skills found matching your query.[/]\n")
         return

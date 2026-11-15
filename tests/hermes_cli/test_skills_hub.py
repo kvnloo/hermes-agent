@@ -488,6 +488,45 @@ def test_do_search_json_flag_emits_full_identifiers(capsys):
 
 
 
+def test_do_search_warns_when_central_index_unavailable_without_hiding_local_hits(monkeypatch, capsys):
+    """Regression for #156140: a missing index must never resemble a complete result set."""
+    import json
+
+    import hermes_cli.skills_hub as cli_hub
+    from tools.skills_hub_models import SkillMeta
+    from tools.skills_hub_official import HermesIndexSource
+
+    # The cold fetch failed and no stale index exists; no network access in the test.
+    index = HermesIndexSource(auth=None)
+    index._index = None
+    index._loaded = True
+    hit = SkillMeta(
+        name="git-helper", description="Git tips", source="official",
+        identifier="official/git-helper", trust_level="builtin",
+    )
+
+    class LocalSource:
+        def source_id(self):
+            return "official"
+
+        def search(self, query, limit=10):
+            assert query == "git"
+            return [hit]
+
+    monkeypatch.setattr(cli_hub, "_sources", lambda: [index, LocalSource()])
+    sink = StringIO()
+    console = Console(file=sink, force_terminal=False, color_system=None, width=120)
+
+    cli_hub.do_search("git", console=console)
+    assert "Skills index unavailable" in sink.getvalue()
+    assert "git-helper" in sink.getvalue()
+
+    cli_hub.do_search("git", console=console, as_json=True)
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)[0]["identifier"] == "official/git-helper"
+    assert "Skills index unavailable" in captured.err
+
+
 # ---------------------------------------------------------------------------
 # Local-edit protection in do_update (ported from paperclipai/paperclip#10978)
 # ---------------------------------------------------------------------------
