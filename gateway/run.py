@@ -4067,7 +4067,11 @@ class GatewayRunner(
         ("compression", "proactive_prune_min_result_chars"),
         ("compression", "proactive_prune_min_reclaim_tokens"),
         ("compression", "min_tail_user_messages"), ("agent", "disabled_toolsets"),
-        ("memory", "provider"), ("checkpoints", "enabled"), ("checkpoints", "max_snapshots"),
+        ("memory", "provider"),
+        # memory_char_limit / user_char_limit are passed to MemoryStore at agent construction;
+        # changing them mid-session must rebuild the cached agent so the new caps apply next message.
+        ("memory", "memory_char_limit"), ("memory", "user_char_limit"),
+        ("checkpoints", "enabled"), ("checkpoints", "max_snapshots"),
         ("checkpoints", "max_total_size_mb"), ("checkpoints", "max_file_size_mb"))
 
     @staticmethod

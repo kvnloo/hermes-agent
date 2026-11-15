@@ -182,6 +182,49 @@ class TestExtractCacheBustingConfig:
         assert out["compression.threshold"] == DEFAULT_CONFIG["compression"]["threshold"]
         assert out["model.context_length"] == 100_000
 
+    def test_reads_memory_char_limit_subkeys(self):
+        """memory_char_limit / user_char_limit must be picked up so editing
+        the cap in config.yaml invalidates the cached agent on the next
+        message (no gateway restart)."""
+        from gateway.run import GatewayRunner
+
+        out = GatewayRunner._extract_cache_busting_config(
+            {
+                "memory": {
+                    "memory_char_limit": 5000,
+                    "user_char_limit": 2500,
+                }
+            }
+        )
+        assert out["memory.memory_char_limit"] == 5000
+        assert out["memory.user_char_limit"] == 2500
+
+    def test_memory_char_limit_change_busts_signature(self):
+        """Changing memory_char_limit between messages must produce a
+        different agent-config signature, so the gateway rebuilds the
+        cached AIAgent and the new cap takes effect immediately."""
+        from gateway.run import GatewayRunner
+
+        sig_default = GatewayRunner._agent_config_signature(
+            model="minimax/MiniMax-M2.7",
+            runtime={"api_key": "k", "base_url": "u", "provider": "p", "api_mode": ""},
+            enabled_toolsets=["memory"],
+            ephemeral_prompt="",
+            cache_keys=GatewayRunner._extract_cache_busting_config(
+                {"memory": {"memory_char_limit": 2200, "user_char_limit": 1375}}
+            ),
+        )
+        sig_bumped = GatewayRunner._agent_config_signature(
+            model="minimax/MiniMax-M2.7",
+            runtime={"api_key": "k", "base_url": "u", "provider": "p", "api_mode": ""},
+            enabled_toolsets=["memory"],
+            ephemeral_prompt="",
+            cache_keys=GatewayRunner._extract_cache_busting_config(
+                {"memory": {"memory_char_limit": 5000, "user_char_limit": 2500}}
+            ),
+        )
+        assert sig_default != sig_bumped
+
     def test_none_config_is_safe(self):
         from gateway.run import GatewayRunner
 
