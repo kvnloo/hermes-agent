@@ -348,7 +348,7 @@ def _peer_run_ctl(args, action: str, peer_name: str, profile: str | None, base: 
     if getattr(args, "json", False):
         print(json.dumps({"peer": peer_name, "profile": profile, **result}))
         return 0
-    print(f"{run_id}: {sanitize_display_text(str(result.get('status', 'unknown')))}")
+    print(f"{sanitize_display_text(run_id)}: {sanitize_display_text(str(result.get('status', 'unknown')))}")
     if not stop and result.get("output"):
         print(sanitize_display_text(str(result["output"])))
     elif not stop and result.get("error"):

@@ -4,6 +4,7 @@ import json
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from types import SimpleNamespace
+from urllib.parse import quote
 
 import pytest
 
@@ -198,6 +199,7 @@ class _FakePeer(BaseHTTPRequestHandler):
     run_idempotency_keys: list = []
     auth_seen: list = []
     chat_reply_content: str = "reply from the other machine"
+    run_id: str = "run_1"
     run_status: str = "completed"
     run_output: str = "async reply from the other machine"
 
@@ -223,10 +225,10 @@ class _FakePeer(BaseHTTPRequestHandler):
                     }
                 }
             )
-        if self.path == "/v1/runs/run_1":
+        if self.path == f"/v1/runs/{quote(type(self).run_id, safe='')}":
             return self._json({
                 "object": "hermes.run",
-                "run_id": "run_1",
+                "run_id": type(self).run_id,
                 "status": type(self).run_status,
                 "session_id": "bc_existing",
                 "output": type(self).run_output,
@@ -265,7 +267,7 @@ class _FakePeer(BaseHTTPRequestHandler):
                 self.headers.get("Idempotency-Key", "")
             )
             return self._json(
-                {"run_id": "run_1", "status": "started", "replayed": False},
+                {"run_id": type(self).run_id, "status": "started", "replayed": False},
                 202,
             )
 
@@ -287,6 +289,7 @@ def fake_peer_server():
     _FakePeer.run_idempotency_keys = []
     _FakePeer.auth_seen = []
     _FakePeer.chat_reply_content = "reply from the other machine"
+    _FakePeer.run_id = "run_1"
     _FakePeer.run_status = "completed"
     _FakePeer.run_output = "async reply from the other machine"
     server = HTTPServer(("127.0.0.1", 0), _FakePeer)
@@ -774,6 +777,26 @@ def test_status_output_sanitized_e2e(monkeypatch, capsys, fake_peer_server):
     assert "\x1b" not in captured.out + captured.err
     assert "partial out" in captured.out
     assert "failed" in captured.out
+
+
+def test_status_sanitizes_run_id_reused_from_peer_run_json(monkeypatch, capsys, fake_peer_server):
+    """A peer-supplied run ID must not control the terminal when reused from --json."""
+    monkeypatch.setattr(peer_cmd, "_load_peers", lambda: {"spark": {"url": fake_peer_server}})
+    monkeypatch.setattr(peer_cmd, "_peer_secret", lambda name: "secret-key-123456")
+    _FakePeer.run_id = "run_1\x1b]2;spoofed title\x07\x1b[2J"
+
+    rc = peer_cmd.cmd_peer(SimpleNamespace(
+        peer_action="run", target="spark", message="long task", idempotency_key="ticket-1", json=True))
+    assert rc == 0
+    run_id = json.loads(capsys.readouterr().out)["run_id"]
+    assert run_id == _FakePeer.run_id
+
+    rc = peer_cmd.cmd_peer(SimpleNamespace(
+        peer_action="status", target="spark", run_id=run_id, json=False))
+    assert rc == 0
+    output = capsys.readouterr().out
+    assert "\x1b" not in output and "\x07" not in output
+    assert "run_1: completed" in output
 
 
 def test_status_json_output_stays_structured(monkeypatch, capsys, fake_peer_server):
