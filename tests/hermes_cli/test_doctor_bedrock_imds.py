@@ -73,3 +73,21 @@ def test_doctor_keeps_the_metadata_lookup_off_when_bedrock_is_not_the_provider(m
     doctor._check_api_connectivity(False)
 
     assert seen == ["true"]  # no multi-second IMDS timeout for users who don't run on Bedrock
+
+def test_doctor_reports_bedrock_healthy_when_it_is_only_a_fallback(monkeypatch, capsys):
+    _install_fake_boto3(monkeypatch)
+    _instance_role_host(monkeypatch, provider="openrouter")
+    config_path = get_hermes_home() / "config.yaml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8")
+        + "fallback_providers:\n  - provider: aws\n    model: anthropic.claude-sonnet-5\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(doctor, "build_probes", lambda: [("AWS Bedrock", dc._probe_bedrock)])
+
+    finding = doctor._check_api_connectivity(False)
+
+    out = capsys.readouterr().out
+    assert "(AWS_PROFILE, us-east-1, 3 models)" in out
+    assert "NoCredentialsError" not in out
+    assert finding.issues == []

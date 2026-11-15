@@ -227,13 +227,23 @@ def _model_cfg() -> dict:
 
 
 def bedrock_is_configured_provider() -> bool:
-    """True when ``model.provider`` is Bedrock (or an alias). The doctor then keeps boto3's EC2 metadata
-    lookup: on an instance-role host that is where the Bedrock credential comes from (#153434)."""
-    provider = str(_model_cfg().get("provider") or "").strip()
-    if not provider:
+    """Keep IMDS for Bedrock as primary or fallback; instance roles need it (#153434)."""
+    try:
+        from hermes_cli.config import load_config_readonly
+        cfg = load_config_readonly() or {}
+    except Exception:
         return False
+    if not isinstance(cfg, dict):
+        return False
+
     from hermes_cli.providers import normalize_provider
-    return normalize_provider(provider) == "bedrock"
+    model = cfg.get("model") if isinstance(cfg.get("model"), dict) else {}
+    primary = str(model.get("provider") or "").strip()
+    if primary and normalize_provider(primary) == "bedrock":
+        return True
+
+    from hermes_cli.fallback_config import get_fallback_chain
+    return any(normalize_provider(entry["provider"]) == "bedrock" for entry in get_fallback_chain(cfg))
 
 
 def _apikey_request(key: str, base_env, default_url) -> tuple:
