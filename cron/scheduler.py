@@ -286,6 +286,14 @@ def _summarize_cron_failure_for_delivery(job: dict, error: str | None) -> str:
     if re.search(r"idle for \d+s\s*\(limit \d+s\)", lower):
         return inactivity_notice(job_name, job_id)
 
+    # Script and monitor failures originate before any model request. Their stderr can
+    # contain provider-shaped strings and arbitrary user data, so do not classify
+    # or echo that raw output in a chat delivery (see #156227).
+    if lower.startswith(("script exited with code ", "script execution failed:")):
+        return generic_failure_notice(job_name, job_id, "script failed before the agent ran")
+    if lower.startswith(("monitor_url fetch failed:", "monitor_url must be http(s):")):
+        return generic_failure_notice(job_name, job_id, "monitor source failed before the agent ran")
+
     # no_agent jobs never reach a model, so provider errors are structurally impossible for them:
     # gate on job MODE before classifying, or a script's own wording ("429", "timed out") would
     # blame the wrong subsystem.
