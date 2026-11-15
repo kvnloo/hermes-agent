@@ -657,6 +657,19 @@ def _init_anthropic_client(agent, api_key, base_url, _provider_timeout):
     # Falling back would send Anthropic credentials to third-party endpoints (Fixes #1739, #minimax-401).
     _is_native_anthropic = agent.provider == "anthropic"
     effective_key = api_key or (resolve_anthropic_token(model=getattr(agent, "model", None)) if _is_native_anthropic else None) or ""
+    if _is_native_anthropic and not effective_key:
+        # A missing key is an operator config error; a benched pool is a billing/quota
+        # condition instead. Never create an Anthropic client with an empty bearer.
+        from agent.auxiliary_unavailable import (
+            ProviderCredentialsExhaustedError, ProviderNotConfiguredError,
+            missing_provider_credentials_message, pool_billing_message, pool_cooldown_message,
+        )
+        exhausted = (pool_billing_message("anthropic", model=agent.model)
+                     or pool_cooldown_message("anthropic"))
+        if exhausted:
+            raise ProviderCredentialsExhaustedError(exhausted, provider="anthropic")
+        raise ProviderNotConfiguredError(
+            missing_provider_credentials_message("anthropic"), provider="anthropic")
 
     # MiniMax OAuth tokens live ~15 min and the SDK freezes api_key at construction, so use a
     # callable provider: build_anthropic_client mints a fresh bearer per request (re-reading
@@ -844,7 +857,8 @@ def _routed_client_kwargs(agent, fallback_model, _provider_timeout) -> Optional[
     if _explicit and _explicit not in {"auto", "openrouter", "custom"}:
         # Explicit non-OpenRouter provider with no creds and no usable fallback: fail fast.
         from agent.auxiliary_unavailable import ProviderNotConfiguredError, missing_provider_credentials_message
-        raise ProviderNotConfiguredError(missing_provider_credentials_message(_explicit))
+        raise ProviderNotConfiguredError(missing_provider_credentials_message(_explicit),
+                                         provider=_explicit)
     from hermes_constants import profile_cli_selector
     from agent.auxiliary_unavailable import ProviderNotConfiguredError
     _sel = profile_cli_selector()
