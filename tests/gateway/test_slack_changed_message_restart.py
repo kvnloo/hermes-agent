@@ -124,6 +124,22 @@ def test_change_slack_made_to_an_already_answered_message_is_not_a_new_turn(shap
     assert len(delivered) == already_delivered
 
 
+def test_metadata_update_with_partial_previous_message_is_not_new_turn():
+    """A previous_message without text does not establish a user text edit."""
+    delivered = []
+    adapter = _adapter(delivered)
+    parent_ts = _slack_ts(time.time() - 600)
+    event = _changed_event(parent_ts)
+    # Slack may include only previous reply metadata, not the original text.
+    event["previous_message"] = {
+        "type": "message", "ts": parent_ts, "reply_count": 0,
+    }
+
+    _run(adapter, event)
+
+    assert delivered == []
+
+
 def test_edit_made_after_the_restart_still_reaches_the_agent():
     """An @mention edited into an older, unanswered message still wakes the bot once."""
     delivered = []

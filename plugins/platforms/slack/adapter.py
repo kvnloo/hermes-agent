@@ -4270,7 +4270,10 @@ class SlackAdapter(BasePlatformAdapter):
         if message_s is None or message_s > floor:
             return False
         previous = event.get("previous_message")
-        if isinstance(previous, dict) and previous.get("text") != message.get("text"):
+        if (
+            isinstance(previous, dict) and "text" in previous
+            and previous["text"] != message.get("text")
+        ):
             return False
         if edited_ts:
             # A user edit's change carries ``edited.ts`` equal to its own ts; an older
