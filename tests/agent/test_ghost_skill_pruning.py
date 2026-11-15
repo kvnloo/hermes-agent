@@ -235,13 +235,16 @@ class TestMarkerSurvivesRealCompress:
         # Stored iterative-update state carries the marker too.
         assert _skill_pruned_marker("pdf") in c._previous_summary
 
-    def test_marker_survives_iterative_recompression(self):
+    def test_marker_survives_iterative_recompression(self, tmp_path):
         """Markers in a rehydrated handoff summary survive iterative rewrites.
 
         On re-compression the previous handoff (carrying the marker) is
         rehydrated into ``_previous_summary``; even when the summarizer's
-        iterative update drops the marker, re-injection restores it.
+        iterative update drops the marker, re-injection restores it. Only
+        names that still resolve are carried (#131487), so ``pdf`` is installed.
         """
+        (tmp_path / "pdf").mkdir()
+        (tmp_path / "pdf" / "SKILL.md").write_text("---\nname: pdf\ndescription: PDF.\n---\n\n# pdf\n")
         c = _make_compressor(protect_first_n=1, protect_last_n=2)
         prior_handoff = (
             SUMMARY_PREFIX
@@ -257,6 +260,7 @@ class TestMarkerSurvivesRealCompress:
         ]
         drop_response = self._mock_response("## Goal\nNext task in flight.")
         with (
+            patch("tools.skills_tool.SKILLS_DIR", tmp_path),
             patch.object(c, "_find_tail_cut_by_tokens", return_value=8),
             patch("agent.context_compressor.call_llm", return_value=drop_response),
         ):

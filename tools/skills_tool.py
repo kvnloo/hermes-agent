@@ -606,6 +606,15 @@ def locate_skill(name: str, local_category_name: Optional[str], roots):
     return None, skill_dir, skill_md
 
 
+def skill_name_resolves(name: str) -> bool:
+    """Whether skill_view(name) finds a skill under that name, using its own lookup without loading it. A
+    ``ns:skill`` name resolves through the plugin registry at load time and a disabled skill's refusal is
+    itself useful to the model, so both count as found."""
+    if skill_lookup_path_error(name):
+        return False
+    return ":" in name or locate_skill(name, None, skill_search_dirs()[0])[0] is None
+
+
 def _owned_relative(skill_dir: Optional[Path], skill_md: Path, all_dirs) -> str:
     """Exact load path of a candidate: its skill dir (or flat ``.md`` stem) relative to its root."""
     root = _owning_search_dir(skill_md, all_dirs)

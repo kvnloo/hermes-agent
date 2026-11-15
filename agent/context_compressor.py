@@ -44,6 +44,10 @@ from agent.context_compressor_tail import (
     elide_keeping_skill_safety_rule, with_skill_safety_rule, without_skill_safety_rule, tail_cut_progress_floor,
 )
 from agent.context_compressor_telemetry import CompressionTelemetryMixin
+from agent.context_compressor_skill_markers import (
+    _MAX_PRUNED_SKILL_MARKERS, _SKILL_PRUNED_MARKER_LINE_RE, _SKILL_PRUNED_MARKER_RE, SKILL_PRUNED_MARKER_PREFIX,
+    _extract_pruned_skill_names, _resolvable_skill_names, _skill_pruned_marker, _validated_pruned_skill_names,
+)
 from agent.error_classifier import ClassifiedError, FailoverReason, classify_api_error
 from agent.micro_compaction import MicroCompactionMixin
 from agent.prompt_builder import STEER_DISPLAY_KIND
@@ -849,51 +853,6 @@ def _is_summary_stub(content: str) -> bool:
 # user answer is never re-summarized away on a later prune pass.
 _PRUNE_MIN_CHARS = 200
 
-# Ghost-skill defense: the ONE canonical prune marker; emit sites and presence
-# checks must use the same string so they cannot drift.
-# Ghost-skill defense (#32106): when compaction reduces an old ``skill_view`` result to a 1-line metadata
-# summary, the model still believes the skill is loaded even though its instructions are gone. The marker
-# below is the ONE canonical prune signal — ``_skill_pruned_marker()`` builds it and every presence check
-# matches against the same string, so the emit side and the check side can never drift apart (the original
-# PR #44166 emitted ``[SKILL_PRUNED:`` but presence-checked ``[SKILL_PRUNED]``, making re-injection fire
-# even when the marker had survived).
-SKILL_PRUNED_MARKER_PREFIX = "[SKILL_PRUNED:"
-# Bounds the re-injected "## Pruned Skills" block; newest-referenced win.
-_MAX_PRUNED_SKILL_MARKERS = 20
-
-
-def _skill_pruned_marker(skill_name: str) -> str:
-    """Return the canonical prune marker for *skill_name* (shared by emit and check sites)."""
-    return (
-        f"{SKILL_PRUNED_MARKER_PREFIX} content lost in compression; "
-        f"reload with skill_view(name='{skill_name}')]"
-    )
-
-
-# Anchored on the shared prefix so marker wording changes stay in sync.
-_SKILL_PRUNED_MARKER_RE = re.compile(
-    re.escape(SKILL_PRUNED_MARKER_PREFIX) + r"[^\]]*?reload with skill_view\(name='([^']+)'\)",
-)
-
-
-def _extract_pruned_skill_names(text: str) -> list[str]:
-    """Return skill names referenced by prune markers in *text*, in order."""
-    return list(dict.fromkeys(m.group(1) for m in _SKILL_PRUNED_MARKER_RE.finditer(text or "")))
-
-
-def _validated_pruned_skill_names(text: str) -> list[str]:
-    """Return pruned skill names that are currently loadable for this session."""
-    names = _extract_pruned_skill_names(text)
-    if not names:
-        return []
-    try:
-        from tools.skills_tool import _find_all_skills
-        available = {str(skill.get("name") or "") for skill in _find_all_skills()}
-    except Exception:
-        logger.debug("Could not validate pruned skill markers", exc_info=True)
-        return []
-    return [name for name in names if name in available]
-
 
 def _skill_view_failed(content: Any) -> bool:
     """True for a ``skill_view`` that loaded nothing: the raw failure payload or its ``[skill_view] … FAILED`` stub."""
@@ -924,9 +883,16 @@ _PRUNED_SKILLS_SECTION_HEADING = "## Pruned Skills"
 
 
 def _reinject_pruned_skill_markers(summary: str, skill_names: list[str]) -> str:
-    """Deterministically restore prune markers the summarizer dropped.
+    """Deterministically restore prune markers the summarizer dropped, and drop the ones it wrote for a skill
+    that does not resolve: it copies every marker it sees, including a garbled name from the previous summary,
+    which would otherwise ride every later compaction (#131487).
     Presence is checked against the canonical marker string; the appended block is plain body text (no
     handoff prefix/scaffolding) and is redacted like all others."""
+    written = _extract_pruned_skill_names(summary)
+    loadable = set(skill_names) | set(_resolvable_skill_names([n for n in written if n not in skill_names]))
+    if stale := [n for n in written if n not in loadable]:
+        logger.info("Dropping reload markers for skills that do not resolve: %s", ", ".join(stale))
+        summary = _SKILL_PRUNED_MARKER_LINE_RE.sub(lambda m: "" if m.group(1) in stale else m.group(0), summary)
     missing = [_skill_pruned_marker(name) for name in skill_names if _skill_pruned_marker(name) not in summary]
     if not missing:
         return summary
