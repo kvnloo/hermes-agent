@@ -143,3 +143,28 @@ def test_a_bare_text_result_still_counts_its_own_lines():
 def test_output_text_falls_back_when_the_envelope_is_malformed():
     broken = '{"output": "unterminated'
     assert _tool_output_text("terminal", broken) == broken
+
+
+def test_parallel_unread_results_each_keep_evidence_when_round_exceeds_hard_share():
+    """A two-tool pending batch can exceed the hard share although each result fits."""
+    comp = _compressor()
+    msgs = _transcript()[:-2]
+    calls = [_call(i)["tool_calls"][0] for i in (98, 99)]
+    msgs.append({"role": "assistant", "content": "", "tool_calls": calls})
+    for i, marker in ((98, "A"), (99, "B")):
+        body = f"FIRST_PARALLEL_{marker}\\n" + (marker * 110_000) + f"\\nLAST_PARALLEL_{marker}"
+        msgs.append(_result(i, body=body))
+
+    assert list(_pending_tool_round(msgs)) == [len(msgs) - 2, len(msgs) - 1]
+    assert not comp._spared_pending_tool_round(msgs), "the real 20% hard share is exceeded"
+    # Use the compressor's actual configured tail budget, not a reduced testing limit.
+    pruned, count = comp._prune_old_tool_results(
+        msgs, protect_tail_count=comp.protect_last_n, protect_tail_tokens=comp.tail_token_budget
+    )
+    assert count > 0
+    by_call = {m.get("tool_call_id"): m["content"] for m in pruned if m.get("role") == "tool"}
+    for i, marker in ((98, "A"), (99, "B")):
+        body = by_call[f"c{i}"]
+        assert f"FIRST_PARALLEL_{marker}" in body
+        assert f"LAST_PARALLEL_{marker}" in body
+    assert "excerpt" in by_call["c98"].lower(), "the earlier unread result needs an excerpt, not a one-line stub"

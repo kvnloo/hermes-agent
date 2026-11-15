@@ -3281,12 +3281,15 @@ class ContextCompressor(
             return sum(_estimate_msg_budget_tokens(result[i]) for i in range(start, len(result)))
 
         demoted = 0
+        unread = _pending_tool_round(result)
 
         def _shrink_at(i: int) -> None:
             nonlocal demoted
             if i in spared:
                 return
-            if self._demote_tool_result_at(result, i, call_id_to_tool, min_prune_chars):
+            if i in unread:
+                _shrink_unread(range(i, i + 1))
+            elif self._demote_tool_result_at(result, i, call_id_to_tool, min_prune_chars):
                 demoted += 1
 
         def _shrink_unread(round_indices: range) -> None:
