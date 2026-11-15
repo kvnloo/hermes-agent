@@ -142,6 +142,14 @@ def _stored_session_runtime_overrides(row: dict | None) -> dict:
     from hermes_state import SessionDB
     route = SessionDB.session_gateway_runtime(row)
     provider, base_url, api_mode = (str(route.get(k) or "").strip() for k in ("provider", "base_url", "api_mode"))
+    runtime = model_config.get("gateway_runtime")
+    if (provider and not (isinstance(runtime, dict) and runtime.get("provider"))
+            and not model_config.get("provider") and "composer_override_profile" not in model_config):
+        config_model, config_provider = _config_model_target()
+        if (model == config_model and config_provider and config_provider != provider
+                and _is_routable_provider(config_provider)):
+            # A billing fallback is not a chat pick; the unchanged default model follows the profile.
+            provider = base_url = api_mode = ""
     service_tier = str(model_config.get("service_tier") or "").strip()
     reasoning_config = model_config.get("reasoning_config")
     from hermes_cli.runtime_provider import is_foreign_provider_endpoint

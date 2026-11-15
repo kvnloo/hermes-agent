@@ -16,6 +16,30 @@ from tui_gateway.server import _stored_session_runtime_overrides
 NOUS_ROUTE = {"base_url": "https://inference-api.nousresearch.com/v1", "api_mode": "chat_completions"}
 
 
+@pytest.mark.parametrize("model, model_config, expected_provider", [
+    pytest.param("default-model", {}, None, id="never-picked-follows-profile"),
+    pytest.param("default-model", {"provider": "anthropic"}, "anthropic", id="explicit-provider-kept"),
+    pytest.param("picked-model", {}, "anthropic", id="different-model-kept"),
+])
+def test_resume_billing_provider_follows_profile_only_when_never_picked(
+    monkeypatch, model, model_config, expected_provider,
+):
+    monkeypatch.setattr("tui_gateway.server._load_cfg", lambda: {
+        "model": {"default": "default-model", "provider": "openrouter"},
+    })
+    row = {"model": model, "billing_provider": "anthropic", "model_config": json.dumps(model_config)}
+
+    overrides = _stored_session_runtime_overrides(row)
+
+    assert overrides["model_override"] == {
+        "model": model, "provider": expected_provider, "base_url": None, "api_mode": None,
+    }
+    if expected_provider is None:
+        assert "provider_override" not in overrides
+    else:
+        assert overrides["provider_override"] == expected_provider
+
+
 @pytest.mark.parametrize("row_origin", ["gateway_model_switch", "row_written_by_older_build"])
 def test_resume_drops_previous_providers_endpoint(tmp_path, row_origin):
     db = SessionDB(db_path=tmp_path / "state.db")
