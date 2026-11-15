@@ -126,16 +126,16 @@ Spawn up to 5 specialist investigator sub-agents using `delegate_task` (batch mo
 git clone https://github.com/OWNER/REPO.git target_repo && cd target_repo
 
 # Full commit log with stats
-git log --all --full-history --stat --format="%H|%ae|%an|%ai|%s" > ../git_log.txt
+git log --all --full-history --stat --format="%H|%ae|%an|%ai" > ../git_log.txt
 
 # Detect force-push evidence (orphaned/dangling commits)
 git fsck --lost-found --unreachable 2>&1 | grep commit > ../dangling_commits.txt
 
 # Check reflog for rewritten history
-git reflog --all > ../reflog.txt
+git reflog --all --format="%H|%gD|%gd" > ../reflog.txt
 
 # List ALL branches including deleted remote refs
-git branch -a -v > ../branches.txt
+git branch -a --format="%(refname)|%(objectname)" > ../branches.txt
 
 # Find suspicious large binary additions
 git log --all --diff-filter=A --name-only --format="%H %ai" -- "*.so" "*.dll" "*.exe" "*.bin" > ../binary_additions.txt
@@ -143,6 +143,8 @@ git log --all --diff-filter=A --name-only --format="%H %ai" -- "*.so" "*.dll" "*
 # Check for GPG signature anomalies
 git log --show-signature --format="%H %ai %aN" > ../signature_check.txt 2>&1
 ```
+
+Commit subjects and reflog messages can contain leaked credentials. These default metadata exports intentionally omit free-text messages; inspect individual messages interactively without saving raw text in the investigation directory. Check any remaining filenames and refnames before archiving (guardrail 8).
 
 **Evidence to collect** (add via `python SKILL_DIR/scripts/evidence-store.py add`):
 - Each dangling commit SHA → type: `git`

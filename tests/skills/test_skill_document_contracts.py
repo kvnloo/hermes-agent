@@ -120,6 +120,46 @@ def test_oss_forensics_raw_secrets_stay_out_of_working_files():
     assert "never the raw secret" in ioc_value
 
 
+
+def test_oss_forensics_git_metadata_exports_do_not_copy_commit_messages(tmp_path):
+    import shlex
+    import shutil
+    import subprocess
+
+    if shutil.which("git") is None:
+        pytest.skip("git is not installed")
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    def git(*args):
+        subprocess.run(
+            ["git", *args], cwd=repo, check=True, capture_output=True, text=True
+        )
+
+    git("init", "--quiet")
+    git("config", "user.name", "Fixture")
+    git("config", "user.email", "fixture@example.invalid")
+    git("config", "commit.gpgsign", "false")
+    secret = "FAKE_SECRET_IN_UNTRUSTED_COMMIT_SUBJECT"
+    git("commit", "--allow-empty", "-m", f"test: {secret}")
+
+    _, body = _document(OSS_FORENSICS)
+    local_git = body.split("### Investigator 1: Local Git Investigator", 1)[1].split(
+        "### Investigator 2: GitHub API Investigator", 1
+    )[0]
+
+    for artifact in ("git_log.txt", "reflog.txt", "branches.txt"):
+        lines = [line for line in local_git.splitlines() if f"> ../{artifact}" in line]
+        assert len(lines) == 1, artifact
+        command = shlex.split(lines[0].split(" > ", 1)[0].strip())
+        assert command[0] == "git"
+        result = subprocess.run(
+            command, cwd=repo, check=True, capture_output=True, text=True
+        )
+        assert secret not in result.stdout, artifact
+
+
 def test_optional_platform_declarations():
     darwinian, _ = _document(DARWINIAN)
     assert "windows" not in darwinian["platforms"]  # func_timeout relies on POSIX signals.
