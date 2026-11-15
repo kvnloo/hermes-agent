@@ -93,7 +93,6 @@ describe('transcript tail cache', () => {
     expect(loadTranscriptTail('sess-54')).not.toBeNull()
   })
 
-
   it('frees old transcript tails before a quota-pressured group room write', async () => {
     // 31 cached tails use ~9.2 MB, like the lost-room report. A full origin
     // leaves no room for a normal 30-message group, even though each tail fits.
@@ -109,6 +108,7 @@ describe('transcript tail cache', () => {
 
     // Browser quotas vary. Reproduce the failure at a deterministic 9.5 MB.
     const quotaBytes = 9_500_000
+
     const storedBytes = (store: Storage): number => {
       let used = 0
 
@@ -119,11 +119,18 @@ describe('transcript tail cache', () => {
 
       return used
     }
-    const nativeSetItem = Storage.prototype.setItem
-    const quota = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+
+    // Node 26's setup fallback is a plain Storage object, not a jsdom instance.
+    const storageTarget = window.localStorage instanceof Storage ? Storage.prototype : window.localStorage
+    const nativeSetItem = storageTarget.setItem
+
+    const quota = vi.spyOn(storageTarget, 'setItem').mockImplementation(function (this: Storage, key, value) {
       let used = storedBytes(this)
       const previous = this.getItem(key)
-      if (previous !== null) used -= 2 * (key.length + previous.length)
+
+      if (previous !== null) {
+        used -= 2 * (key.length + previous.length)
+      }
 
       if (used + 2 * (key.length + value.length) > quotaBytes) {
         throw new DOMException('Storage quota exceeded', 'QuotaExceededError')
@@ -134,21 +141,32 @@ describe('transcript tail cache', () => {
 
     try {
       vi.resetModules()
+
       const [{ loadTranscriptTail }, { writeKey }] = await Promise.all([
         import('./transcript-tail-cache'),
         import('@/lib/storage')
       ])
 
-      // Cold load must trim the old cache even before any new tail is saved.
-      expect(loadTranscriptTail('missing')).toBeNull()
-
       const key = 'hermes.plugin.hermes-bots.group-chats'
+
       const log = Array.from({ length: 30 }, (_, at) => ({
         at,
         from: { kind: 'user', name: 'You' },
         text: 'r'.repeat(5_000)
       }))
+
       const rooms = JSON.stringify({ Team: { log } })
+
+      // Verify the quota applies to the storage implementation used by this runner.
+      writeKey(key, rooms)
+      expect(quota).toHaveBeenCalled()
+      expect(window.localStorage.getItem(key)).toBeNull()
+
+      // Cold load must trim the old cache even before any new tail is saved.
+      expect(loadTranscriptTail('missing')).toBeNull()
+      expect(loadTranscriptTail('old-0')).toBeNull()
+      expect(loadTranscriptTail('old-30')).toHaveLength(1)
+      expect(window.localStorage.getItem('hermes.unrelated')).toBe('u'.repeat(120_000))
 
       // A quota mock alone can silently allow this write. Prove that cold
       // eviction actually reserves enough bytes for the durable room record.
@@ -160,6 +178,32 @@ describe('transcript tail cache', () => {
       quota.mockRestore()
       vi.resetModules()
     }
+  })
+
+  it('keeps later saves within the aggregate budget without removing durable data', () => {
+    const durableKey = 'hermes.plugin.hermes-bots.group-chats'
+    const rooms = JSON.stringify({ Team: { log: [{ text: 'keep this room' }] } })
+
+    window.localStorage.setItem(durableKey, rooms)
+
+    for (let index = 0; index < 20; index += 1) {
+      saveTranscriptTail(`budget-${index}`, [msg(`m${index}`, 100_000)])
+    }
+
+    let bytes = 0
+
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index)
+
+      if (key?.startsWith('hermes.transcript-tail.v2:')) {
+        bytes += 2 * (key.length + (window.localStorage.getItem(key)?.length ?? 0))
+      }
+    }
+
+    expect(bytes).toBeLessThanOrEqual(3 * 1024 * 1024)
+    expect(loadTranscriptTail('budget-0')).toBeNull()
+    expect(loadTranscriptTail('budget-19')?.[0].id).toBe('m19')
+    expect(window.localStorage.getItem(durableKey)).toBe(rooms)
   })
 
   it('repairs a poisoned persisted tail carrying a duplicate toolCallId (#87857)', () => {

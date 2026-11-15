@@ -102,7 +102,11 @@ function storage(): Storage | null {
     if (!budgetChecked) {
       const ids = readIndex(store)
       const retained = trimCacheToBudget(store, ids)
-      if (retained.length !== ids.length) writeIndex(store, retained)
+
+      if (retained.length !== ids.length) {
+        writeIndex(store, retained)
+      }
+
       budgetChecked = true
     }
 
@@ -159,8 +163,10 @@ function writeIndex(store: Storage, ids: string[]): void {
 function trimCacheToBudget(store: Storage, ids: string[]): string[] {
   const sizes = ids.map(id => {
     const value = store.getItem(PREFIX + id)
+
     return value === null ? 0 : 2 * (PREFIX.length + id.length + value.length)
   })
+
   let bytes = sizes.reduce((sum, size) => sum + size, 0)
   let dropped = 0
 
