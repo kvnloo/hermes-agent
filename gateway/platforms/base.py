@@ -21,6 +21,7 @@ from abc import ABC, abstractmethod
 from hermes_dir_acl import make_user_dir, unusable_dir_remedy
 from gateway.platforms.base_log_safety import _log_safe_path, describe_proxy_error, env_proxy_for_redaction, safe_proxy_url_for_log, safe_url_for_log
 from gateway.platforms.base_image_sniff import _looks_like_image
+from gateway.platforms.base_document_cache import safe_document_cache_name
 from gateway.platforms.base_media_flags import pad_inline_flags
 from gateway.runtime_footer import footer_onto_photo_caption, send_footer_unless_captioned
 from gateway.platforms.session_model import _SessionModelSettingsMixin
@@ -1418,22 +1419,7 @@ def cache_document_from_bytes(data: bytes, filename: str) -> str:
     """Save raw document bytes to the cache as ``doc_{uuid12}_{original_name}`` and return
     the absolute path; raises ValueError if the sanitized path escapes the cache directory."""
     cache_dir = get_document_cache_dir()
-    # Sanitize: strip directory components, null bytes, and control characters
-    safe_name = (Path(filename).name if filename else "document").replace("\x00", "").strip()
-    if not safe_name or safe_name in {".", ".."}:
-        safe_name = "document"
-    # Bound the name to the filesystem's per-component limit (255 bytes on APFS/ext4/NTFS)
-    # BEFORE the doc_ uuid prefix is prepended. Display names arriving from chat platforms
-    # can be long and are often percent-encoded (one ASCII byte per CJK codepoint, tripling
-    # size); a naive write raised ENAMETOOLONG mid-ingest and dropped the file message.
-    # Truncate the stem on a UTF-8 byte budget with errors="ignore" so no codepoint is cut
-    # in half, keep the extension intact so MIME/preview heuristics still fire.
-    stem, dot, ext = safe_name.rpartition(".")
-    if not dot:
-        stem, ext = safe_name, ""
-    stem = stem.encode("utf-8")[:180].decode("utf-8", errors="ignore").rstrip() or "document"
-    ext = ext.encode("utf-8")[:32].decode("utf-8", errors="ignore")
-    safe_name = f"{stem}.{ext}" if ext else stem
+    safe_name = safe_document_cache_name(filename)
     filepath = cache_dir / f"doc_{uuid.uuid4().hex[:12]}_{safe_name}"
     # Final safety check: ensure path stays inside cache dir
     if not filepath.resolve().is_relative_to(cache_dir.resolve()):

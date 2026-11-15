@@ -147,6 +147,26 @@ class TestCacheMediaBytes:
 # ---------------------------------------------------------------------------
 
 class TestDocumentNameLength:
+    def test_only_oversized_components_are_shortened(self):
+        """Real NAME_MAX, including the doc_<uuid12>_ prefix, bounds the saved leaf."""
+        # 17 prefix bytes + 224 name bytes = 241: the full name must survive.
+        valid_name = "r" * 220 + ".pdf"
+        valid_path = cache_document_from_bytes(b"in-budget", valid_name)
+        assert os.path.basename(valid_path).endswith("_" + valid_name)
+        assert Path(valid_path).read_bytes() == b"in-budget"
+
+        # A dotfile is a valid short display name, not an empty-stem fallback.
+        dotfile_path = cache_document_from_bytes(b"dotfile", ".env")
+        assert os.path.basename(dotfile_path).endswith("_.env")
+        assert Path(dotfile_path).read_bytes() == b"dotfile"
+
+        # The original WeCom-style overlong input still needs to be bounded.
+        overlong_name = ("4-2.%E4%BB%A3%E8%A1%A8" * 24) + ".doc"
+        overlong_path = cache_document_from_bytes(b"oversized", overlong_name)
+        assert len(os.path.basename(overlong_path).encode("utf-8")) <= 255
+        assert overlong_path.endswith(".doc")
+        assert Path(overlong_path).read_bytes() == b"oversized"
+
     def test_oversized_cjk_name_is_truncated_and_saved(self):
         name = "名单" * 130 + ".doc"  # 520 bytes + ext
         path = cache_document_from_bytes(b"x", name)
