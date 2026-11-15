@@ -38,9 +38,12 @@ class TestSnapshotShutdownContext:
         ({}, "under_systemd=no supervisor=none"),  # a macOS launchd orphan: ppid 1, nothing revives it
         ({"INVOCATION_ID": "abc"}, "under_systemd=yes supervisor=systemd"),
         ({"HERMES_LAUNCHD_LABEL": "ai.hermes.gateway"}, "under_systemd=no supervisor=launchd"),
+        ({"HERMES_S6_SUPERVISED_CHILD": "1"}, "under_systemd=no supervisor=s6"),
+        ({"HERMES_GATEWAY_EXTERNAL_SUPERVISOR": "true"}, "under_systemd=no supervisor=external"),
     ])
     def test_supervisor_comes_from_its_stamp_not_from_ppid_1(self, monkeypatch, env, expected):
-        for key in ("INVOCATION_ID", "XPC_SERVICE_NAME", "HERMES_LAUNCHD_LABEL"):
+        for key in ("INVOCATION_ID", "XPC_SERVICE_NAME", "HERMES_LAUNCHD_LABEL",
+                    "HERMES_S6_SUPERVISED_CHILD", "HERMES_GATEWAY_EXTERNAL_SUPERVISOR"):
             monkeypatch.delenv(key, raising=False)
         for key, value in env.items():
             monkeypatch.setenv(key, value)

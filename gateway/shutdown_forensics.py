@@ -18,7 +18,12 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from gateway.restart import DEFAULT_GATEWAY_CRON_DRAIN_TIMEOUT, launchd_job_label, resolve_systemd_timeout_stop_sec
+from gateway.restart import (
+    DEFAULT_GATEWAY_CRON_DRAIN_TIMEOUT,
+    EXTERNAL_GATEWAY_SUPERVISOR_ENV,
+    launchd_job_label,
+    resolve_systemd_timeout_stop_sec,
+)
 import contextlib
 
 _SIGNAL_NAME_BY_NUM: dict[int, str] = {
@@ -93,7 +98,17 @@ def snapshot_shutdown_context(received_signal: Any = None) -> dict[str, Any]:
     # terminal-started gateway whose parent quit) is reparented to launchd, pid 1, so ppid==1 read
     # "under_systemd=yes" on a gateway nothing would revive (#103236).
     ctx["under_systemd"] = bool(os.environ.get("INVOCATION_ID"))
-    ctx["supervisor"] = "systemd" if ctx["under_systemd"] else ("launchd" if launchd_job_label() else "none")
+    # Match the real gateway restart owners: s6 and --external-supervisor also respawn it.
+    if ctx["under_systemd"]:
+        ctx["supervisor"] = "systemd"
+    elif launchd_job_label():
+        ctx["supervisor"] = "launchd"
+    elif os.environ.get("HERMES_S6_SUPERVISED_CHILD"):
+        ctx["supervisor"] = "s6"
+    elif os.environ.get(EXTERNAL_GATEWAY_SUPERVISOR_ENV, "").strip().lower() in {"1", "true", "yes", "on"}:
+        ctx["supervisor"] = "external"
+    else:
+        ctx["supervisor"] = "none"
     # High load points at "something crushing the box" rather than an external killer.
     with contextlib.suppress(OSError, AttributeError):
         ctx["loadavg_1m"] = os.getloadavg()[0]
