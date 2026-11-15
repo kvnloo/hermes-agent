@@ -11,6 +11,7 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
+import math
 import os
 import re
 import threading
@@ -124,7 +125,16 @@ def _bounded_count(key: str, default: int) -> int:
     onto or past "now" in apply_automatic_transitions(), mass-transitioning every skill with any
     past activity on the next automatic pass — unlike the manual prune path this runs unconfirmed,
     so it falls back to the default instead of acting on the bad value."""
-    value = _config_number(key, default, int)
+    raw = _load_config().get(key, default)
+    # YAML .nan and .inf mean keep forever for retention, but not for the
+    # interval_hours scheduling gate. Keep the public getters integer-valued.
+    if key in ("stale_after_days", "archive_after_days") and isinstance(raw, float):
+        if math.isnan(raw) or raw == math.inf:
+            return timedelta.max.days + 1
+    try:
+        value = int(raw)
+    except (TypeError, ValueError, OverflowError):
+        value = default
     if value < 1:
         # Warn once per (key, bad value): the dashboard status endpoint polls these getters.
         if (key, value) not in _warned_bad_values:

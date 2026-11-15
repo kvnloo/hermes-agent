@@ -194,6 +194,26 @@ def test_bad_bounded_value_warns_once_per_distinct_value(curator_env, monkeypatc
     assert "got 0" in msgs[0] and "got -1" in msgs[1]
 
 
+
+@pytest.mark.parametrize("retention", [float("nan"), float("inf")], ids=("nan", "inf"))
+def test_keep_forever_retention_preserves_old_skill(curator_env, monkeypatch, retention):
+    """A nonfinite retention setting must never silently archive a used skill."""
+    c = curator_env["curator"]
+    u = curator_env["usage"]
+    skill_dir = _write_skill(curator_env["home"] / "skills", "old-but-kept")
+    _backdate(u, "old-but-kept", 200)
+    monkeypatch.setattr(c, "_load_config", lambda: {
+        "stale_after_days": retention,
+        "archive_after_days": retention,
+    })
+
+    counts = c.apply_automatic_transitions()
+
+    assert counts["marked_stale"] == counts["archived"] == 0
+    assert u.load_usage()["old-but-kept"]["state"] == u.STATE_ACTIVE
+    assert skill_dir.is_dir()
+
+
 def test_pinned_skill_is_never_touched(curator_env):
     c = curator_env["curator"]
     u = curator_env["usage"]
