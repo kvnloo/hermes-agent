@@ -1392,6 +1392,46 @@ def _restated_request_text(content: Any) -> str:
     return text
 
 
+def _own_reply_pointer(reply_text: str) -> str:
+    """``gateway.inbound_reply_context.reply_pointer(..., own_message=True)``'s shape, which
+    ``_GATEWAY_REPLY_POINTER_RE`` recognises."""
+    from agent.message_sanitization import strip_internal_markup
+
+    return f'[Replying to your previous message: "{strip_internal_markup(reply_text)}"]'
+
+
+def _folded_reply_before(original: list, inflight: dict, compressed: list, task_text: str) -> str:
+    """Text of the reply the in-flight request answers, when the fold removed it; else ``""``.
+
+    Mid-turn compaction of an over-ceiling turn folds the reply and the request into the
+    summary while the tool chain stays (#131412), and the reply anchor cannot put the reply
+    back beside a tool-call row (#144546). The restated request is then the only verbatim
+    trace of that exchange, and "go ahead" without the plan it approves is ambiguous.
+    """
+    from agent.conversation_compression import _is_real_user_message
+
+    if _GATEWAY_REPLY_POINTER_RE.match(task_text) or ContextCompressor._has_merged_inflight_replay(inflight):
+        return ""  # already quotes what it answers, or a carrier whose own reply was handled last cycle
+    idx = next((i for i, m in enumerate(original) if m is inflight), -1)
+    for message in reversed(original[:max(idx, 0)]):
+        if not isinstance(message, dict) or _is_real_user_message(message):
+            return ""
+        if message.get("role") != "assistant" or message.get("tool_calls"):
+            continue
+        if ContextCompressor._is_context_summary_message(message):
+            return ""
+        text = _content_text_for_contains(message.get("content")).strip()
+        if not text:
+            continue
+        kept = any(
+            isinstance(m, dict) and m.get("role") == "assistant"
+            and _content_text_for_contains(m.get("content")).strip() == text
+            for m in compressed
+        )
+        return "" if kept else text
+    return ""
+
+
 def _authored_request_text(content: Any) -> str:
     """Text the user wrote in a turn, without the gateway's reply-to pointer.
 
@@ -4608,6 +4648,7 @@ Write only the summary body. Do not include any preamble or prefix."""
         self,
         compressed: list[dict[str, Any]],
         inflight: Optional[dict[str, Any]],
+        original: Optional[list[dict[str, Any]]] = None,
     ) -> list[dict[str, Any]]:
         """Restate an unfinished user task after the compaction handoff.
 
@@ -4654,6 +4695,10 @@ Write only the summary body. Do not include any preamble or prefix."""
         task_text = _restated_request_text(inflight.get("content"))
         if not task_text:
             return compressed
+        if folded_reply := _folded_reply_before(original or [], inflight, compressed, task_text):
+            # The request answers a reply that this fold removed ("go ahead", "yes, option 2"):
+            # quote it the way the gateway quotes a replied-to message (#144546).
+            task_text = f"{_own_reply_pointer(folded_reply)}\n\n{task_text}"
 
         if not self.quiet_mode:
             logger.info(
@@ -5195,7 +5240,9 @@ Write only the summary body. Do not include any preamble or prefix."""
         # end, and a replay user row there would strip a genuinely pending assistant(tool_calls).
         compressed = self._sanitize_tool_pairs(compressed)
         spared = _pending_tool_round(compressed) if spare_pending_images else range(0)
-        compressed = self._reappend_inflight_user_task(compressed, self._find_inflight_user_task(messages))
+        compressed = self._reappend_inflight_user_task(
+            compressed, self._find_inflight_user_task(messages), original=messages,
+        )
         self.compression_count += 1
         # Replace historical image payloads with placeholders; multi-MB base64 blobs otherwise
         # exceed body limits.

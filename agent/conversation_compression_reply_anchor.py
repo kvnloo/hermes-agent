@@ -45,7 +45,7 @@ def _ensure_compressed_keeps_last_assistant_reply(
     that is not "the reply is already there" is logged here with its reason.
     """
     from agent.context_compressor import (
-        _DB_PERSISTED_MARKER, _fresh_compaction_message_copy, is_compaction_summary_message,
+        _DB_PERSISTED_MARKER, _fresh_compaction_message_copy, _own_reply_pointer, is_compaction_summary_message,
     )
     from agent.conversation_compression import _message_text
 
@@ -73,6 +73,10 @@ def _ensure_compressed_keeps_last_assistant_reply(
         return _same_visible_content(message, reply, reply_text)
 
     if any(_is_reply_twin(message) for message in compressed):
+        return None
+    # The built-in compressor quotes a folded reply on the request it restates (#144546).
+    quoted = _own_reply_pointer(reply_text)
+    if any(isinstance(m, dict) and m.get("role") == "user" and quoted in _message_text(m) for m in compressed):
         return None
     anchor = _fresh_compaction_message_copy(reply)
     # Identity scan, not list.index(): duplicate rows with identical content
