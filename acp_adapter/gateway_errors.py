@@ -2,6 +2,7 @@
 from contextlib import suppress
 from functools import wraps
 from inspect import signature
+import logging
 
 import acp
 
@@ -9,6 +10,8 @@ from hermes_cli.gateway_client import (
     GatewayClientError, GatewayRPCError, GatewayUnavailableError,
     _bounded_error_data, _bounded_reason,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class GatewayRequestError(acp.RequestError, GatewayClientError):
@@ -40,6 +43,10 @@ def gateway_errors(method):
         except (GatewayClientError, OSError, TimeoutError) as exc:
             session_id = params.bind(self, *args, **kwargs).arguments.get('session_id')
             error = request_error(exc, session_id)
+            if method.__name__ in ('load_session', 'resume_session'):
+                # Log the bounded reason, not the original RPC payload (which may contain secrets).
+                logger.warning('ACP %s refused session=%s reason=%s',
+                               method.__name__, session_id, error.data['reason'])
             if method.__name__ == 'cancel' and self._conn is not None:
                 # session/cancel is a notification: it has no JSON-RPC error reply.
                 with suppress(Exception):

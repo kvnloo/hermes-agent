@@ -130,3 +130,38 @@ def test_owner_data_remains_bounded_and_local_reason_comparisons_survive():
     assert error.data['limit'] == 32 and 'nested' not in error.data
     assert error.data['gatewayCode'] == -32000
     assert error.to_error_obj()['code'] != -32000  # ACP reserves this for authentication required
+
+@pytest.mark.asyncio
+async def test_busy_editor_mcp_load_names_reason_in_acp_and_gateway_log(
+        tmp_path, monkeypatch, caplog):
+    """A changed editor bridge cannot be rebound until the active admission ends."""
+    import logging
+
+    monkeypatch.setattr('acp_adapter.catalog.logical_session_id', lambda _path, sid: sid)
+    agent = GatewayACPAgent()
+
+    async def rpc(method, **params):
+        if method == 'session.info':
+            return {'cwd': str(tmp_path)}
+        if method == 'runtime.describe':
+            return {'capabilities': ['acp-session-mcp-v1']}
+        if method == 'session.resume':
+            raise GatewayRPCError('acp_mcp_policy_conflict', -32001,
+                                  {'reason': 'acp_mcp_policy_conflict'})
+        raise AssertionError(method)
+
+    gateway = SimpleNamespace(rpc=AsyncMock(side_effect=rpc))
+    agent._client = AsyncMock(return_value=gateway)
+    agent._mutations.apply = AsyncMock(side_effect=GatewayRPCError(
+        'session_busy', -32001, {'reason': 'session_busy', 'private': 'do-not-log'}))
+    new_bridge = SimpleNamespace(model_dump=lambda **kwargs: {'name': 'new-bridge'})
+    with caplog.at_level(logging.WARNING, logger='acp_adapter.gateway_errors'):
+        with pytest.raises(acp.RequestError) as caught:
+            await agent.load_session(str(tmp_path), 's', [new_bridge])
+
+    assert caught.value.data['reason'] == 'session_busy'
+    assert caught.value.to_error_obj()['message'].startswith('session_busy:')
+    assert any('ACP load_session refused session=s reason=session_busy' in row.message
+               for row in caplog.records)
+    assert 'do-not-log' not in caplog.text
+    agent._mutations.apply.assert_awaited_once()
