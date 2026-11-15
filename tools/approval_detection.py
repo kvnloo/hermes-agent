@@ -1362,18 +1362,17 @@ def _interpreter_exec_flag(family: str, args: list[str]) -> str | None:
 
 
 def _bash_exec_payload(args: list[str]) -> tuple[bool, str | None]:
-    """Return whether Bash ``-c`` occurs and the command string it owns.
-    Bash's O/o options consume the following argument even when they precede a later ``-c`` or
-    share its short-option bundle; the two startup-file long options own their next token.
-    Parsing those first prevents both missed payloads and false ``-c`` hits."""
-    index = 0
-    seen_c = False
+    """Find Bash's ``-c`` script after options; O/o and startup options own values.
+    ``-n`` and ``-o noexec`` parse without executing the script."""
+    index, seen_c, noexec = 0, False, False
     while index < len(args):
         token = args[index]
         if token in ("--", "-") or not token.startswith(("-", "+")):
             index += token in ("--", "-")
             break
         if token in _BASH_OPTIONS_WITH_ARG:
+            if token in ("-o", "+o") and args[index + 1:index + 2] == ["noexec"]:
+                noexec = token[0] == "-"
             index += 2
             continue
         chars = token[1:]
@@ -1382,10 +1381,11 @@ def _bash_exec_payload(args: list[str]) -> tuple[bool, str | None]:
         if token.startswith("--") or not set(chars) <= _BASH_SHORT_OPTION_LETTERS:
             index += 1
             continue
-        # Options may follow -c (`bash -c -e -- 'rm -rf /'`): the script is the first operand.
+        if "n" in chars or ("o" in chars and args[index + 1:index + 2] == ["noexec"]):
+            noexec = token[0] == "-"
         seen_c = seen_c or "c" in chars
         index += 1 + int("O" in chars or "o" in chars)
-    return (True, args[index] if index < len(args) else None) if seen_c else (False, None)
+    return (True, None if noexec else args[index] if index < len(args) else None) if seen_c else (False, None)
 
 
 def _read_tool_exec_flag(tool: str, args: list[str]) -> tuple[str, str] | None:

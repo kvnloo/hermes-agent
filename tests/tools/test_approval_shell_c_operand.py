@@ -19,3 +19,12 @@ def test_options_after_dash_c_do_not_hide_the_script_from_the_hardline_floor(com
 @pytest.mark.parametrize("command", ["bash -c -- 'echo hi'", "bash -- script.sh -c 'rm -rf /'"])
 def test_harmless_or_non_dash_c_scripts_stay_off_the_floor(command):
     assert detect_hardline_command(command)[0] is False
+
+
+@pytest.mark.parametrize(("syntax_check", "executing"), [
+    ("bash -c -n -- 'reboot'", "bash -c -n +n -- 'reboot'"),
+    ("bash -c -o noexec -- 'reboot'", "bash -c -o noexec +o noexec -- 'reboot'"),
+])
+def test_noexec_after_dash_c_parses_without_executing(syntax_check, executing):
+    assert detect_hardline_command(syntax_check)[0] is False
+    assert detect_hardline_command(executing)[0] is True
