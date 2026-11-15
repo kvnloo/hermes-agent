@@ -47,6 +47,10 @@ const renderEstimateLine = (line: string) => {
 export const compactPreview = (s: string, max: number) => {
   const one = s.replace(WS_RE, ' ').trim()
 
+  // Agent rows can have no room left on narrow terminals. A negative slice
+  // bound otherwise keeps nearly the entire goal instead of clipping it.
+  if (max <= 0) return ''
+
   return !one ? '' : one.length > max ? one.slice(0, max - 1) + '…' : one
 }
 
