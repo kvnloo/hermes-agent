@@ -80,7 +80,25 @@ describe('composer text entry on a touch host (#145166)', () => {
     expect(editor.ownerDocument.activeElement).toBe(editor)
   })
 
-  it('desktop keeps the attributes off and leaves taps to the browser', () => {
+  it('Windows mouse composer enables spelling without autocorrection', () => {
+    const originalPlatform = Object.getOwnPropertyDescriptor(navigator, 'platform')
+    Object.defineProperty(navigator, 'platform', { configurable: true, value: 'Win32' })
+
+    try {
+      const editor = render(<Editor touch={false} />).getByTestId('editor')
+
+      expect(editor.getAttribute('spellcheck')).toBe('true')
+      expect(editor.getAttribute('autocorrect')).toBe('off')
+    } finally {
+      if (originalPlatform) {
+        Object.defineProperty(navigator, 'platform', originalPlatform)
+      } else {
+        Reflect.deleteProperty(navigator, 'platform')
+      }
+    }
+  })
+
+  it('non-Windows desktop keeps spelling off and leaves taps to the browser', () => {
     const editor = render(<Editor touch={false} />).getByTestId('editor')
 
     expect(editor.getAttribute('autocapitalize')).toBe('off')

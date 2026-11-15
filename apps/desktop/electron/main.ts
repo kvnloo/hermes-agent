@@ -6699,10 +6699,14 @@ function installContextMenuBridge(window: BrowserWindow) {
 
     const suggestions = Array.isArray(params.dictionarySuggestions) ? params.dictionarySuggestions : []
 
-    if (params.isEditable && params.misspelledWord) {
+    // Chromium's misspelled word is authoritative even when its editable flag
+    // disagrees with the renderer's contenteditable target at this click.
+    if (params.misspelledWord) {
       window.webContents.send('hermes:context-menu-spellcheck', {
         misspelledWord: params.misspelledWord,
-        suggestions
+        suggestions,
+        x: params.x,
+        y: params.y
       })
     }
   })
