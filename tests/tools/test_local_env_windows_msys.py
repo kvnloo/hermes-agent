@@ -417,3 +417,39 @@ class TestRunBashScriptTransport:
         assert seen, "no command was spawned"
         assert "-c" in seen[-1]
         assert not seen[-1][-1].endswith(".sh")
+
+
+    def test_large_foreground_wrapper_survives_msys_argv_limit(self, tmp_path, monkeypatch):
+        """#156223: configured credential holders can push a one-line command's
+        session wrapper beyond MSYS2's 8,186-byte argv conversion buffer."""
+        import subprocess
+
+        names = tuple(
+            f"TEST_PROVIDER_{index:02d}_CONFIG_DECLARED_CREDENTIAL_HOLDER"
+            for index in range(16)
+        )
+        monkeypatch.setattr(
+            LocalEnvironment, "_snapshot_excluded_passthrough_names", lambda self: names,
+        )
+        env = LocalEnvironment(cwd=str(tmp_path))
+        wrapped = env._wrap_command("echo plain", env.cwd)
+        assert len(wrapped.encode("utf-8")) > 8186
+
+        if local_mod._IS_WINDOWS:
+            # Only native Git Bash can exercise the actual MSYS2 argv limit.
+            result = env.execute("echo plain")
+            assert result["returncode"] == 0, result["output"]
+            assert result["output"].strip() == "plain"
+        else:
+            # On Linux, check the carrier's byte-exact script-file handoff
+            # without pretending that POSIX bash has MSYS2's argv bug.
+            path = env._write_run_script(wrapped)
+            try:
+                result = subprocess.run(
+                    ["bash", path], cwd=env.cwd, capture_output=True,
+                    text=True, check=False, timeout=30,
+                )
+                assert result.returncode == 0, result.stderr
+                assert "plain" in result.stdout
+            finally:
+                os.unlink(path)
