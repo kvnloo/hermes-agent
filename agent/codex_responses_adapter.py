@@ -566,6 +566,12 @@ def _replay_message_items(
             if isinstance(part, dict) and str(part.get("type") or "").strip() in _OUTPUT_TEXT_TYPES
         ]
         if content:
+            # Older rows may contain a commentary item followed by its identical,
+            # id-less, phase-less synthesized copy. Preserve distinct real items.
+            if (replayed and not raw_item.get("id") and not raw_item.get("phase")
+                    and replayed[-1].get("phase") in ("commentary", "analysis")
+                    and replayed[-1].get("content") == content):
+                continue
             if linked_to_reasoning and raw_item.get("id"):
                 raw_item = {k: v for k, v in raw_item.items() if k != "id"}
             replayed.append(_assistant_message_item(
