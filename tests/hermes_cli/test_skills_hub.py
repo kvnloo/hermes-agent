@@ -8,6 +8,18 @@ from cli import ChatConsole
 from hermes_cli.skills_hub import do_check, do_install, do_list, do_update, handle_skills_slash
 
 
+@pytest.mark.parametrize("action,handler", [("search", "do_search"), ("browse", "do_browse")])
+def test_skills_slash_quoted_multiword_provider(action, handler):
+    """A quoted provider name reaches both chat commands as one --source value."""
+    command = f"/skills {action} " + ("tdd " if action == "search" else "") + '--source "matt pocock"'
+    with patch(f"hermes_cli.skills_hub.{handler}") as run:
+        handle_skills_slash(command)
+    run.assert_called_once()
+    assert run.call_args.kwargs["source"] == "matt pocock"
+    if action == "search":
+        assert run.call_args.args == ("tdd",)
+
+
 class _DummyLockFile:
     def __init__(self, installed):
         self._installed = installed

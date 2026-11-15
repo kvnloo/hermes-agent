@@ -4,6 +4,7 @@
 import json
 import logging
 import re
+import shlex
 import shutil
 import sys
 from datetime import datetime, timezone, UTC
@@ -1736,6 +1737,14 @@ def handle_skills_slash(cmd: str, console: Optional[Console] = None) -> None:
         _print_skills_help(c)
         return
     action, args = parts[0].lower(), parts[1:]
+    if action in ("search", "browse"):
+        # Quoted provider names (e.g. "matt pocock") must survive slash parsing.
+        # Other actions keep whitespace splitting for Windows paths and arguments.
+        try:
+            args = shlex.split(" ".join(args))
+        except ValueError as exc:
+            c.print(f"[bold red]Invalid quoted /skills arguments:[/] {exc}")
+            return
     handler = _SLASH_ACTIONS.get(action)
     if handler is None:
         c.print(f"[bold red]Unknown action:[/] {action}")
