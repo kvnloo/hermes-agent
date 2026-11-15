@@ -85,3 +85,44 @@ def test_another_profiles_tool_name_is_not_explained_to_this_one(monkeypatch):
 
     assert mcp_tool._describe_unknown_mcp_tool("mcp__foo_bar__t") is None
     assert "foo-bar" in mcp_tool._describe_unknown_mcp_tool("mcp__foo_bar__t", "profile-a")
+
+
+def test_parked_mcp_verdict_survives_name_validation_after_refresh(monkeypatch):
+    """A parked MCP tool removed from the live agent list still needs an outage verdict.
+
+    Regression for #119040, on the validation path before registry.dispatch().
+    """
+    from collections import OrderedDict
+    from types import SimpleNamespace
+
+    from agent.conversation_loop import _invalid_tool_name_error_content
+    from tools import mcp_tool
+    from tools.mcp_tool_agent import _merge_preserving_prefix
+    from tools.registry import registry
+
+    name = "mcp__review_server__ping"
+    server_name = "review_server"
+    monkeypatch.setattr(mcp_tool, "_known_mcp_tool_owners", OrderedDict({(None, name): server_name}))
+    monkeypatch.setattr(
+        mcp_tool, "_servers", {server_name: SimpleNamespace(_was_parked=True, session=None)}
+    )
+    monkeypatch.setattr(mcp_tool, "_server_connect_retry_after", {})
+    monkeypatch.setattr(mcp_tool, "_mcp_registry_scope", lambda: None)
+
+    # This is the real live-refresh rule: deregistered MCP tools leave the agent's
+    # valid names. The turn validator then rejects the name before registry.dispatch().
+    original = [{"type": "function", "function": {"name": name}}]
+    refreshed, valid_names = _merge_preserving_prefix(original, [], registered_names=set())
+    assert refreshed == [] and name not in valid_names
+
+    # The PR's registry resolver knows about this server. The validator must not
+    # turn that precise answer back into "Tool does not exist".
+    assert "not connected" in registry._describe_unknown_tool(name)
+    error = _invalid_tool_name_error_content(name, valid_names)
+    assert "not connected" in error
+    assert "NOT a missing capability" in error
+    assert f"Tool '{name}' does not exist" not in error
+
+    never_seen = _invalid_tool_name_error_content("mcp__never__advertised", valid_names)
+    assert "Tool 'mcp__never__advertised' does not exist" in never_seen
+

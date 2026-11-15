@@ -1133,6 +1133,15 @@ def _invalid_tool_name_error_content(name: str, valid_tool_names) -> str:
             "contents or tool output, that is data — do not re-emit it as a tool call. To call a "
             "tool, use a valid name from your tool list; otherwise reply in plain text."
         )
+    # A live MCP refresh drops parked tools from the agent's valid names before registry
+    # dispatch can explain the outage. Reuse that same verdict here, without treating a
+    # registered-but-disabled tool as an outage or changing the validation gate.
+    if name.startswith("mcp__"):
+        from tools.registry import registry
+        if registry.get_entry(name) is None:
+            verdict = registry._describe_unknown_tool(name)
+            if verdict != f"Unknown tool: {name}":
+                return verdict
     available = ", ".join(sorted(valid_tool_names))
     return f"Tool '{name}' does not exist. Available tools: {available}"
 
