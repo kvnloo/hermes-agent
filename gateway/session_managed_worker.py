@@ -594,7 +594,7 @@ def _turn_scoped(env, session_id):
     return argv, env
 
 
-async def _spawn_registered_worker(authority, ref, row, policy):
+async def _spawn_registered_worker(authority, ref, row, policy=None):
     """Spawn the turn's child and register it for Stops: ``(worker, process)``, or None when the spawn was cancelled (the
     interrupted result is already recorded). The generation stays marked spawning until registration."""
     spawning = _mark_spawning(authority, ref, row)
