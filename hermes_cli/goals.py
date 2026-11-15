@@ -62,7 +62,9 @@ CONTINUATION_PROMPT_TEMPLATE = (
     "Goal: {goal}\n\n"
     "Continue working toward this goal. Take the next concrete step. "
     "If you believe the goal is complete, state so explicitly and stop. "
-    "If you are blocked and need input from the user, say so clearly and stop."
+    "If one step needs input or permission, leave that step pending and "
+    "continue other authorized, independent work. Never take the gated "
+    "action without approval. Stop to ask only if no authorized work remains."
 )
 
 # With a completion contract: the block tells the agent what "done" means, how to prove it, what
@@ -76,8 +78,9 @@ CONTINUATION_PROMPT_WITH_CONTRACT_TEMPLATE = (
     "Stay within the stated boundaries and do not violate the constraints. "
     "Before claiming the goal is done, satisfy the Verification criterion and "
     "show the concrete evidence (command output, file contents, test result). "
-    "If you hit the stated stop condition or are otherwise blocked and need "
-    "user input, say so clearly and stop."
+    "If you hit the stated stop condition, stop and ask. Otherwise, leave "
+    "steps needing user permission pending and continue any independent, "
+    "authorized work. Never bypass approval; ask when no work can proceed."
 )
 
 # With /subgoal criteria: surfaced verbatim to the agent and to the judge.
@@ -89,8 +92,9 @@ CONTINUATION_PROMPT_WITH_SUBGOALS_TEMPLATE = (
     "Continue working toward the goal AND all additional criteria. Take "
     "the next concrete step. If you believe the goal and every "
     "additional criterion are complete, state so explicitly and stop. "
-    "If you are blocked and need input from the user, say so clearly "
-    "and stop."
+    "If one criterion needs input or permission, leave it pending and "
+    "continue any other authorized, independent work. Never bypass "
+    "approval; stop and ask only when no authorized work can proceed."
 )
 
 # Fed back when a quality gate fails: bounded output is the evidence to repair against (no judge).
@@ -125,8 +129,13 @@ JUDGE_SYSTEM_PROMPT = (
     "- The response explains the goal is genuinely unachievable (impossible, "
     "out of scope, no valid path to the deliverable), or refuses to "
     "fabricate a deliverable that cannot exist, OR\n"
-    "- The response explains progress is blocked and the next step needs "
-    "user input to proceed.\n"
+    "- The response shows EVERY remaining route to progress requires user "
+    "input, so no authorized work can proceed.\n"
+    "A permission requirement for ONE subtask does not block the whole "
+    "goal. Keep that subtask pending and return CONTINUE while other "
+    "authorized, independent work remains. Never infer or bypass user "
+    "approval for the gated action. If the dependency is unclear, return "
+    "CONTINUE so the agent can investigate other paths.\n"
     "Return BLOCKED with the reason describing what is blocking. BLOCKED is "
     "a refusal, not a completion — never return BLOCKED for a goal that "
     "was achieved.\n"
@@ -228,9 +237,10 @@ JUDGE_USER_PROMPT_WITH_CONTRACT_TEMPLATE = (
     "process to satisfy the Verification criterion (e.g. CI is the "
     "verification and it's still running), return WAIT on that process "
     "instead of re-poking — re-poking now would be pure busy-work.\n"
-    "- If the response explains the work is genuinely unachievable or hits "
-    "the stated Stop condition and needs user input, the goal is NOT done — "
-    "return BLOCKED with the reason describing the block.\n"
+    "- If the response hits the stated Stop condition, or the goal is "
+    "genuinely unachievable, return BLOCKED. Also return BLOCKED when "
+    "EVERY remaining task needs user input and no authorized independent "
+    "work can proceed. Do not treat one gated step as a global block.\n"
     "- Otherwise the goal is NOT done — CONTINUE.\n\n"
     "Is the goal satisfied per its completion contract — done, blocked, continue, or wait?"
 )
