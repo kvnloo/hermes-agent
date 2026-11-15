@@ -78,3 +78,28 @@ async def test_comment_before_a_document_album_with_a_command_caption_reaches_th
     assert len(events) == 1, [e.text for e in events]
     assert events[0].get_command() == "goal", events[0].text
     assert "Look at these" in events[0].get_command_args(), events[0].text
+
+@pytest.mark.asyncio
+async def test_comment_before_video_album_with_later_command_caption_still_runs_command():
+    """A video album has no saved document captions: its merged full text must put /goal first."""
+    adapter = _adapter()
+    adapter.config.extra["media_group_wait_seconds"] = 0.05
+    first = _make_message(media_group_id="video-album")
+    second = _make_message(caption="/goal summarize these", media_group_id="video-album")
+    for msg in (first, second):
+        msg.video = _make_video(_make_file_obj(b"clip"))
+        msg.reply_to_message = None
+    with patch("plugins.platforms.telegram.adapter.cache_video_from_bytes_async",
+               new=AsyncMock(return_value="/v/clip.mp4")):
+        await adapter._handle_text_message(_update(_text("Look at these")), MagicMock())
+        await adapter._handle_media_message(_update(first), MagicMock())
+        await adapter._handle_media_message(_update(second), MagicMock())
+        await async_wait_until(lambda: adapter.handle_message.await_count, timeout=5)
+        await async_wait_until(lambda: not adapter._media_group_events and not adapter._pending_text_batches, timeout=5)
+
+    events = [c.args[0] for c in adapter.handle_message.await_args_list]
+    assert len(events) == 1, [e.text for e in events]
+    assert len(events[0].media_urls) == 2
+    assert events[0].get_command() == "goal", events[0].text
+    assert "Look at these" in events[0].get_command_args(), events[0].text
+

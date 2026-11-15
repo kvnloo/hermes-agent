@@ -75,7 +75,9 @@ def merge_batched_event(pending: dict, key: str, event: MessageEvent, *, merge_c
     existing.extend_media(event)
     captions = command_first(caption_text(existing), caption_text(event), merge_caption) \
         or merged_text(caption_text(existing), event, caption_text(event), merge_caption) or ""
-    existing.text = merged_text(existing.text, event, event.text, merge_caption)
+    # Without inlined file text, the full text also needs the later command first.
+    existing.text = command_first(existing.text or "", event.text or "", merge_caption) \
+        or merged_text(existing.text, event, event.text, merge_caption)
     if CAPTION_TEXT_ATTR in existing.__dict__ or CAPTION_TEXT_ATTR in event.__dict__:  # an item inlined file text
         existing.__dict__[CAPTION_TEXT_ATTR] = captions  # refreshed on every merge, so it never lags the text
         if caption_is_command(captions):
