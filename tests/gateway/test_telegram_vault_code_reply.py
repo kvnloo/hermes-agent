@@ -183,3 +183,35 @@ def test_only_the_card_author_is_captured_whatever_their_reply_points_at(loop):
     other = _update("what is this?", user=OTHER, chat_type="group", reply_to=700, message_id=902).message
     assert asyncio.run_coroutine_threadsafe(consume(other), loop).result(5) is False
     assert adapter._bot.delete_message.await_count == 1
+
+def test_retired_card_code_stays_out_of_sdk_debug_before_handler_runs(loop, caplog, monkeypatch):
+    """PTB logs getUpdates before the adapter can discard a code replied to an ended card."""
+    from plugins.platforms.telegram.telegram_vault_code import _DropPendingCodeUpdates
+
+    # Other tests in this file create independent adapters, but the SDK log filter is process-wide.
+    monkeypatch.setattr(_DropPendingCodeUpdates, "pending", 0)
+    monkeypatch.setattr(_DropPendingCodeUpdates, "ever_sent_code_card", False, raising=False)
+    adapter = _adapter()
+
+    async def post_and_retire():
+        result = await adapter.send_vault_code_prompt(
+            str(CHAT), "login.example.com", "", user_id=str(AUTHOR),
+            submit=lambda _code: False, timeout_s=30)
+        assert result.success
+        await adapter._retire_vault_code_reply((str(CHAT), "700"), "ended")
+
+    asyncio.run_coroutine_threadsafe(post_and_retire(), loop).result(5)
+    assert not adapter._vault_code_replies()
+    assert adapter._retired_vault_code_cards()[(str(CHAT), "700")] == str(AUTHOR)
+    assert _DropPendingCodeUpdates.pending == 0
+
+    caplog.set_level(logging.DEBUG, logger="telegram.Bot")
+    logging.getLogger("telegram.Bot").debug(
+        "Call to Bot API endpoint `getUpdates` finished with return value `%s`",
+        json.dumps([{"message": {"text": CODE, "reply_to_message": {"message_id": 700}}}]))
+    assert CODE not in caplog.text  # RED on the carrier: pending=0 permits this raw SDK log
+
+    asyncio.run_coroutine_threadsafe(
+        adapter._handle_text_message(_update(CODE, chat_type="group", reply_to=700),
+                                     SimpleNamespace()), loop).result(5)
+    adapter._message_handler.assert_not_awaited()

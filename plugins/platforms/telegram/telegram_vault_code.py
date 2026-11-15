@@ -35,13 +35,15 @@ class _CodeReply:
 
 class _DropPendingCodeUpdates(logging.Filter):
     """python-telegram-bot logs every getUpdates result (``telegram.Bot`` / ``telegram.ext.ExtBot``) and every
-    webhook body (``telegram.ext.Updater``) at DEBUG, before any handler runs. While a code reply is pending,
-    drop those records so ``logging.level: DEBUG`` never writes the code into agent.log."""
+    webhook body (``telegram.ext.Updater``) at DEBUG, before any handler runs. A late code can arrive
+    after its card ends, when pending is already zero. Once a code card was sent, keep raw update
+    DEBUG records suppressed: interception runs too late to protect those SDK logs."""
 
     pending = 0
+    ever_sent_code_card = False  # late replies to retired cards are sensitive, even after timeout
 
     def filter(self, record: logging.LogRecord) -> bool:
-        if not _DropPendingCodeUpdates.pending:
+        if not (_DropPendingCodeUpdates.pending or _DropPendingCodeUpdates.ever_sent_code_card):
             return True
         text = record.getMessage()
         return "getUpdates" not in text and "Webhook received data" not in text
@@ -111,6 +113,7 @@ class TelegramVaultCodeMixin:
             self._vault_code_replies()[key] = _CodeReply(
                 submit=submit, user_id=str(user_id), chat_id=pending["chat_id"],
                 prompt_message_id=pending["message_id"], prompt_text=text, expires_at=time.monotonic() + timeout_s)
+            _DropPendingCodeUpdates.ever_sent_code_card = True
             _DropPendingCodeUpdates.pending += 1
             asyncio.get_running_loop().call_later(
                 timeout_s, lambda: asyncio.ensure_future(self._retire_vault_code_reply(key, "ended")))
