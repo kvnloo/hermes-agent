@@ -861,6 +861,43 @@ describe('useComposerSubmit with a clarify parked on the session', () => {
     expect(hasOpenServerRequest('req-two')).toBe(true)
   })
 
+  it('stops queued clarify answers when the first lock expires', async () => {
+    let expireFirst: (reply: { status: string }) => void = () => {}
+    const request = vi
+      .fn()
+      .mockImplementationOnce(() => new Promise<{ status: string }>(resolve => (expireFirst = resolve)))
+      .mockResolvedValue({ status: 'ok', remaining: [] })
+
+    setGateway(request)
+    rememberServerRequest({ fail: vi.fn(), id: 'req-expiring-pair', method: 'clarify', params: {}, respond })
+    $clarifyRequests.set({
+      'runtime-session': {
+        requestId: 'req-expiring-pair',
+        questions: ['q0', 'q1'].map(qid => ({ choices: null, multiSelect: false, qid, question: `${qid}?` })),
+        sessionId: 'runtime-session'
+      }
+    })
+
+    const first = renderSubmitHook({ busy: true, text: 'first' })
+    act(() => first.hook.result.current.submitDraft())
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(1))
+
+    const second = renderSubmitHook({ busy: true, text: 'second' })
+    act(() => second.hook.result.current.submitDraft())
+    // The last answer optimistically closes the card before the first RPC settles.
+    expect($clarifyRequests.get()['runtime-session']).toBeUndefined()
+
+    await act(async () => expireFirst({ status: 'expired' }))
+
+    await waitFor(() => expect(first.loadIntoComposer).toHaveBeenCalledWith('first', []))
+    await waitFor(() => expect(second.loadIntoComposer).toHaveBeenCalledWith('second', []))
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(hasOpenServerRequest('req-expiring-pair')).toBe(false)
+    expect($clarifyRequests.get()['runtime-session']).toBeUndefined()
+    expect(first.onSubmit).not.toHaveBeenCalled()
+    expect(second.onSubmit).not.toHaveBeenCalled()
+  })
+
   it('brings the card back when an earlier lock fails after the last answer cleared it', async () => {
     let failFirst: (error: Error) => void = () => {}
 
