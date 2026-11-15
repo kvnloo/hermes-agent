@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 
-from scripts.code_health.config import ALLOW_SYNTAX, METRIC_FIX, RULES_BY_ID, TARGETS
+from scripts.code_health.config import ALLOW_SYNTAX, METRIC_FIX, RULES_BY_ID, TARGETS, in_scope
 from scripts.code_health.model import FileMeasure, Finding
 
 _ALLOW = re.compile(r"health:\s*allow\s+([A-Za-z0-9_,\- ]+?)\s*(?:--|—|:)\s*(\S.*)$")
@@ -41,7 +41,11 @@ def apply_allows(findings: list[Finding], head: dict[str, FileMeasure]) -> None:
                 finding.detail += f"  [allow comment ignored: it needs a reason, {ALLOW_SYNTAX}]"
 
 
-def _fix_text(rule_id: str) -> str:
+def _fix_text(rule_id: str, path: str) -> str:
+    # Python's folder/`__init__.py` remedy is not applicable to a TypeScript file.
+    if rule_id == "FILE_LINES" and in_scope(path) == "ts":
+        return ("offset growth in the same PR by moving a cohesive function or component "
+                "into a nearby TypeScript module; update its imports, exports and tests")
     if rule_id in METRIC_FIX:
         return METRIC_FIX[rule_id]
     return RULES_BY_ID[rule_id].fix
@@ -55,7 +59,7 @@ def format_findings(findings: list[Finding]) -> str:
         tag = "" if f.blocking else " (advisory)"
         out.append(f"{f.path}:{f.line}  {f.rule}{tag}  {f.scope}")
         out.append(f"    {f.detail}")
-        out.append(f"    fix: {_fix_text(f.rule)}")
+        out.append(f"    fix: {_fix_text(f.rule, f.path)}")
     allowed = [f for f in findings if f.allowed_reason is not None]
     if allowed:
         out.append("")
