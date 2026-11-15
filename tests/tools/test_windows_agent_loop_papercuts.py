@@ -127,13 +127,16 @@ class TestBrowserScreenshotPathRegex:
         assert m == ["C:/Users/u/shots/page.jpeg"]
 
     def test_long_base64_output_does_not_trigger_unbounded_scan(self):
-        import time
-        import tools.browser_use_cli as bu_cli
+        import subprocess
 
-        blob = ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" * 4000)[:200 * 1024]
-        started = time.perf_counter()
-        assert bu_cli._find_screenshot(blob, since=time.time()) is None
-        assert time.perf_counter() - started < 0.05
+        # A subprocess deadline still fires when the regex holds the GIL.
+        # One MiB exposes repeated suffix scans without a brittle 50 ms limit.
+        code = (
+            "from tools.browser_use_cli import _find_screenshot\n"
+            "blob = ('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/' * 16384)\n"
+            "assert _find_screenshot(blob, since=0) is None\n"
+        )
+        subprocess.run([sys.executable, "-c", code], check=True, timeout=10)
 
     def test_posix_path_still_matches(self):
         m = self._re().findall("wrote /tmp/bu-task/shot.webp")
