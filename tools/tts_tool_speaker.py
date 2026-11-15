@@ -110,7 +110,7 @@ class _SyncSentencePipeline:
         self._stop = stop_event
         self._queue: queue.Queue[Optional[tuple[str, Future]]] = queue.Queue(maxsize=max(1, lookahead))
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="tts-sync-synth")
-        self._player = threading.Thread(target=self._drain, name="tts-sync-play", daemon=True)
+        self._player = spawn_context_thread(self._drain, name="tts-sync-play")
         self._player.start()
 
     def speak(self, cleaned: str) -> None:
@@ -176,7 +176,7 @@ class _StreamerPlayback:
         self._audio_queue: queue.Queue[Optional[queue.Queue[Optional[bytes]]]] = queue.Queue()
         self._prefetch_threads: list[threading.Thread] = []
         self._prefetch_sem = threading.Semaphore(3)
-        self._worker = threading.Thread(target=self._playback_worker, daemon=True)
+        self._worker = spawn_context_thread(self._playback_worker, name="tts-stream-play")
         self._worker.start()
 
     def _create_output_stream(self):

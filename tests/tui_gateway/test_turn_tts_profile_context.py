@@ -152,3 +152,53 @@ def test_voice_toggle_leases_tts_as_the_requested_profile(two_profiles, monkeypa
     for worker in [t for t in threading.enumerate() if t.name == "tts-lease-tui:voice-tts"]:
         worker.join(10)
     assert seen == [(home, "b")]
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+def test_turn_tts_playback_uses_turn_profile(two_profiles, monkeypatch, streaming):
+    """The real playback workers must keep the profile that owns the turn, including
+    the environment passed to a system audio-player child process."""
+    from tools import tts_streaming, tts_tool, tts_tool_speaker as speaker, voice_mode
+    from tools.environments.local import hermes_subprocess_env
+    from tui_gateway import server
+
+    home, session = two_profiles
+    seen = []
+    played = threading.Event()
+    monkeypatch.setattr(tts_tool, "check_tts_requirements", lambda: True)
+    monkeypatch.setattr(speaker._StreamerPlayback, "_device_usable", lambda self: False)
+
+    def record_player(*_args):
+        seen.append(hermes_subprocess_env().get("HERMES_HOME"))
+        played.set()
+
+    monkeypatch.setattr(voice_mode, "play_audio_file", record_player)
+    monkeypatch.setattr(speaker, "_play_via_tempfile", record_player)
+
+    class Streamer:
+        sample_rate, channels = 24000, 1
+
+        def stream(self, text):
+            yield b"\x00\x00"
+
+    def synthesize(text, output_path=None, **_kwargs):
+        with open(output_path, "wb") as out:
+            out.write(b"audio")
+        return output_path
+
+    monkeypatch.setattr(tts_streaming, "resolve_streaming_provider",
+                        lambda *_a, **_k: Streamer() if streaming else None)
+    monkeypatch.setattr(tts_tool, "text_to_speech_tool", synthesize)
+
+    with server._session_profile_runtime_scope(session):
+        text_queue = server._tts_stream_begin()
+    assert text_queue is not None
+    finished = server._tts_stream_state["done"]
+    try:
+        text_queue.put("Hello from profile b. ")
+        text_queue.put(None)
+        assert finished.wait(10), "TTS stream did not finish"
+        assert played.wait(10), "playback worker did not run"
+    finally:
+        server._tts_stream_stop(user_barge=False)
+    assert seen == [str(home)]
