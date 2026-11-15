@@ -73,6 +73,8 @@ _COMPLETION_INJECTION_RETRY_MAX_DELAY = 60
 # Drain retries of a refused watch event follow the same bounded-backoff policy, keyed to the
 # 2 s drain cadence instead of the watcher's check interval (#140899).
 _WATCH_INJECTION_RETRY_BASE_DELAY = 4.0
+# A held result stays pending; notify the owning profile only after ten minutes.
+_HELD_COMPLETION_ALERT_AFTER_S = 600.0
 
 
 def _refusal_retry_at(step: int) -> float:
@@ -1131,8 +1133,14 @@ class GatewayNotificationsMixin(GatewayUpdateNotificationsMixin, GatewayNotifica
                 warned.add(key)
                 logger.warning("Async completion held: %s", _held_reason(
                     source, platform, getattr(getattr(self, "config", None), "multiplex_profiles", False)))
+            if source is not None and evt.get("type") == "async_delegation" and not evt.get("task_failure_notice"):
+                try:
+                    await self._notify_held_completion(evt, source, key)
+                except Exception:
+                    logger.warning("Held-completion home notice failed", exc_info=True)
             return False
         warned.discard(key)
+        self.__dict__.setdefault("_held_completion_alerted", set()).discard(key)
         evt.pop("_no_transport", None)
         if not adapter_supports_push(adapter):
             ensure = getattr(adapter, "_ensure_session_db", None)

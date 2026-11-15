@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 import sqlite3
+import time
 from typing import Any, Optional, Sequence, cast
 
 from gateway.session import SessionEntry
@@ -314,3 +315,37 @@ class GatewayNotificationOwnershipMixin:
                 "Async-delegation completion %s: owner not confirmed after admission; %s.", delegation_id,
                 "offered again" if requeued else "not offered again (result remains queryable)",
             )
+
+    async def _notify_held_completion(self, evt: dict, source, key) -> None:
+        """Alert the owning profile's configured home channel; never reroute or settle the result."""
+        from gateway.run_notifications import _HELD_COMPLETION_ALERT_AFTER_S
+        from gateway.warning_notifications import present_notification
+
+        completed_at = evt.get("completed_at")
+        if not isinstance(completed_at, (int, float)) or time.time() - completed_at < _HELD_COMPLETION_ALERT_AFTER_S:
+            return
+        alerted = self.__dict__.setdefault("_held_completion_alerted", set())
+        if key in alerted:
+            return
+        primary = getattr(self, "_primary_profile_name", None) or "default"
+        owner = getattr(source, "profile", None)
+        owner = None if owner in (None, primary) else owner
+        # Binding the event's scope makes warning preferences and credentials profile-local.
+        async with self._completion_event_scope(evt):
+            for profile, platform, _cfg, home, transport in self._served_home_channel_transports():
+                if profile != owner:
+                    continue  # no cross-profile fallback: even a generic alert reveals private activity
+                sent = False
+
+                async def deliver():
+                    nonlocal sent
+                    sent = await self._send_home_channel_message(
+                        platform, home, transport,
+                        "A background delegation result has been held for over 10 minutes because its "
+                        "original chat has no live transport. Delivery remains pending; "
+                        "check `hermes logs` and the delegation ledger.",
+                        "Held completion home notice failed for %s:%s: %s")
+
+                if await present_notification(deliver, platform=platform) and sent:
+                    alerted.add(key)  # once per unavailable lane; a reconnect clears this
+                    return
