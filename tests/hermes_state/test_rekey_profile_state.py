@@ -120,6 +120,49 @@ class TestRekeyProfileState:
         assert payload["session_key"] == "agent:newname:feishu:dm:chatA"
         assert payload["origin"]["profile"] == "newname"
 
+    def test_rename_repins_native_and_cross_routed_chats(self, db):
+        # The receiving bot is renamed, but one chat runs in another profile.
+        # A third chat's unrelated bot must not be stolen by the migration.
+        for sid, runtime, receiving_bot in (
+            ("native", "oldname", "oldname"),
+            ("forwarded", "satellite", "oldname"),
+            ("bystander", "satellite", "other"),
+        ):
+            key = f"agent:{runtime}:telegram:dm:{sid}"
+            db.create_session(sid, "telegram", session_key=key, profile_name=runtime,
+                              chat_id=sid, chat_type="dm")
+            db._write_sql(
+                "UPDATE sessions SET transport_profile = ? WHERE id = ?",
+                (receiving_bot, sid))
+            db.save_gateway_routing_entry(key, json.dumps({
+                "session_key": key, "session_id": sid, "transport_profile": receiving_bot,
+                "origin": {"platform": "telegram", "chat_id": sid, "profile": runtime},
+            }), scope="/root/sessions")
+
+        counts = db.rekey_profile_state("oldname", "newname")
+        assert counts["sessions_transport_profile"] == 2
+        assert counts["gateway_routing"] == 1
+        assert counts["gateway_routing_transport_profile"] == 2
+
+        rows = db.load_gateway_routing_entries(scope="/root/sessions")
+        assert "agent:oldname:telegram:dm:native" not in rows
+        for sid, runtime, receiving_bot in (
+            ("native", "newname", "newname"),
+            ("forwarded", "satellite", "newname"),
+            ("bystander", "satellite", "other"),
+        ):
+            key = f"agent:{runtime}:telegram:dm:{sid}"
+            entry = json.loads(rows[key])
+            assert entry["transport_profile"] == receiving_bot
+            assert entry["origin"]["profile"] == runtime
+            assert entry["session_key"] == key
+            stored = db._read_one(
+                "SELECT session_key, profile_name, transport_profile FROM sessions WHERE id = ?",
+                (sid,))
+            assert stored["transport_profile"] == receiving_bot
+            assert stored["session_key"] == key
+            assert stored["profile_name"] == runtime
+
     def test_rekeys_heartbeats_and_delivery_obligations(self, db, tmp_path, monkeypatch):
         db.register_backend_heartbeat(
             backend_id="be1", pid=123, started_at=time.time(),

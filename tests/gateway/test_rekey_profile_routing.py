@@ -65,3 +65,28 @@ def test_does_not_overwrite_existing_new_namespace_key(tmp_path):
         store.rekey_profile_routing("oldname", "newname")
     assert "agent:oldname:feishu:dm:chatA" in store._entries
     assert "agent:newname:feishu:dm:chatA" in store._entries
+
+def test_rename_repins_live_native_and_cross_routed_chats(tmp_path):
+    store = _make_store(tmp_path)
+    own = _entry("agent:oldname:feishu:dm:a", "a", "oldname")
+    own.transport_profile = "oldname"
+    forwarded = _entry("agent:satellite:feishu:dm:b", "b", "satellite")
+    forwarded.transport_profile = "oldname"
+    bystander = _entry("agent:satellite:feishu:dm:c", "c", "satellite")
+    bystander.transport_profile = "other"
+    with store._lock:
+        store._entries.update({
+            own.session_key: own,
+            forwarded.session_key: forwarded,
+            bystander.session_key: bystander,
+        })
+
+    assert store.rekey_profile_routing("oldname", "newname") == 1
+    assert "agent:oldname:feishu:dm:a" not in store._entries
+    native = store._entries["agent:newname:feishu:dm:a"]
+    assert native.origin.profile == "newname"
+    assert native.transport_profile == "newname"
+    cross_route = store._entries["agent:satellite:feishu:dm:b"]
+    assert cross_route.origin.profile == "satellite"
+    assert cross_route.transport_profile == "newname"
+    assert store._entries["agent:satellite:feishu:dm:c"].transport_profile == "other"

@@ -205,9 +205,8 @@ def _moved_key(key: object, old: str, new: str) -> Optional[str]:
 
 
 def _rekey_entry(entry: dict, old: str, new: str) -> bool:
-    """Move one serialized ``SessionEntry`` (a routing row, a session receipt) from profile *old*
-    to *new*: its ``agent:<old>:`` session-key namespace and its ``origin.profile``. True when
-    either changed."""
+    """Rekey a saved route's runtime, origin, and receiving-bot identity on profile rename.
+    Each field moves only on an exact old-name match. Returns whether anything changed."""
     changed = False
     if (session_key := _moved_key(entry.get("session_key"), old, new)) is not None:
         entry["session_key"] = session_key
@@ -215,6 +214,9 @@ def _rekey_entry(entry: dict, old: str, new: str) -> bool:
     origin = entry.get("origin")
     if isinstance(origin, dict) and origin.get("profile") == old:
         origin["profile"] = new
+        changed = True
+    if entry.get("transport_profile") == old:
+        entry["transport_profile"] = new
         changed = True
     return changed
 
@@ -790,6 +792,9 @@ class SessionGatewayMixin:
 
             counts["sessions_profile_name"] = conn.execute(
                 "UPDATE sessions SET profile_name = ? WHERE profile_name = ?", (new, old)).rowcount
+            counts["sessions_transport_profile"] = conn.execute(
+                "UPDATE sessions SET transport_profile = ? WHERE transport_profile = ?",
+                (new, old)).rowcount
             counts["gateway_heartbeats_profile"] = conn.execute(
                 "UPDATE gateway_heartbeats SET profile = ? WHERE profile = ?", (new, old)).rowcount
             counts["sessions_session_key"] = conn.execute(
@@ -832,11 +837,16 @@ class SessionGatewayMixin:
                     "WHERE substr(session_key, 1, ?) = ?",
                     (new_ns, ns_len + 1, ns_len, old_ns)).rowcount
 
+            # A renamed bot can also receive a chat executed by another profile.
+            # Those routes keep their runtime key, but must follow the bot's new name.
             routing = conn.execute(
-                "SELECT rowid, session_key, entry_json FROM gateway_routing "
-                "WHERE substr(session_key, 1, ?) = ?", (ns_len, old_ns)).fetchall()
+                "SELECT rowid, session_key, entry_json FROM gateway_routing").fetchall()
+            moved_routing = repinned_routing = 0
             for rowid, session_key, entry_json in routing:
-                new_session_key = new_ns + session_key[ns_len:]
+                moved = session_key.startswith(old_ns)
+                if moved:
+                    moved_routing += 1
+                new_session_key = new_ns + session_key[ns_len:] if moved else session_key
                 new_json = entry_json
                 if entry_json:
                     try:
@@ -844,12 +854,16 @@ class SessionGatewayMixin:
                     except (ValueError, TypeError):
                         payload = None
                     if isinstance(payload, dict):
-                        _rekey_entry(payload, old, new)
-                        new_json = json.dumps(payload, ensure_ascii=False)
-                conn.execute(
-                    "UPDATE gateway_routing SET session_key = ?, entry_json = ? WHERE rowid = ?",
-                    (new_session_key, new_json, rowid))
-            counts["gateway_routing"] = len(routing)
+                        if payload.get("transport_profile") == old:
+                            repinned_routing += 1
+                        if _rekey_entry(payload, old, new):
+                            new_json = json.dumps(payload, ensure_ascii=False)
+                if moved or new_json != entry_json:
+                    conn.execute(
+                        "UPDATE gateway_routing SET session_key = ?, entry_json = ? WHERE rowid = ?",
+                        (new_session_key, new_json, rowid))
+            counts["gateway_routing"] = moved_routing
+            counts["gateway_routing_transport_profile"] = repinned_routing
             counts["api_binding_receipts"] = _rekey_session_receipts(conn, API_BINDING_PREFIX, old, new)
             counts["local_policy_receipts"] = _rekey_session_receipts(conn, POLICY_PREFIX, old, new)
 

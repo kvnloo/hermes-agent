@@ -1263,14 +1263,21 @@ class SessionStore(
                 raise ValueError(
                     f"profile routing collision while renaming {old!r} to {new!r}: "
                     f"{collisions[0]!r} already exists")
-            for key in moving:
-                new_key = new_ns + key[len(old_ns):]
-                entry = self._entries.pop(key)
+            changed = False
+            for key, entry in list(self._entries.items()):
+                moved = key.startswith(old_ns)
+                new_key = new_ns + key[len(old_ns):] if moved else key
                 origin = entry.origin
                 if origin is not None and getattr(origin, "profile", None) == old:
                     origin = _dc_replace(origin, profile=new)
-                self._entries[new_key] = _dc_replace(entry, session_key=new_key, origin=origin)
-            if moving:
+                pin = new if entry.transport_profile == old else entry.transport_profile
+                if moved or origin is not entry.origin or pin != entry.transport_profile:
+                    if moved:
+                        self._entries.pop(key)
+                    self._entries[new_key] = _dc_replace(
+                        entry, session_key=new_key, origin=origin, transport_profile=pin)
+                    changed = True
+            if changed:
                 self._save()
         return len(moving)
 
