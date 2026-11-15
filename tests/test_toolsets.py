@@ -130,6 +130,31 @@ class TestValidateToolset:
     def test_invalid(self):
         assert validate_toolset("nonexistent") is False
 
+    def test_registered_plugin_platform_bundle_preserves_own_tool(self, monkeypatch):
+        """A plugin platform bundle must validate and include platform-owned tools (#107098)."""
+        from gateway.platform_registry import PlatformEntry, platform_registry
+
+        platform = "fixture_platform_107098"
+        bundle = f"hermes-{platform}"
+        tool = "fixture_platform_owned_tool"
+        reg = ToolRegistry()
+        reg.register(
+            name=tool, toolset=platform, schema=_make_schema(tool),
+            handler=_dummy_handler,
+        )
+        monkeypatch.setattr("tools.registry.registry", reg)
+        platform_registry.register(PlatformEntry(
+            name=platform, label="Fixture", adapter_factory=lambda cfg: None,
+            check_fn=lambda: True,
+        ))
+        try:
+            assert bundle not in TOOLSETS
+            assert tool in resolve_toolset(bundle)
+            assert validate_toolset(bundle) is True
+            assert validate_toolset("hermes-fixture_platform_typo") is False
+        finally:
+            platform_registry.unregister(platform)
+
     def test_mcp_alias_uses_live_registry(self, monkeypatch):
         reg = ToolRegistry()
         reg.register(
