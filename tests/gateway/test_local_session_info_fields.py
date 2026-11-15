@@ -39,28 +39,50 @@ async def test_gateway_session_info_exposes_the_frozen_terminal_backend(tmp_path
     import json
     from dataclasses import replace
 
+    from gateway.session_controls import AuthorityConnection
     from gateway.session_local import create_local_session, local_session_info
-    from tests.gateway.test_local_post_delivery import _owner, _viewer
+    from tests.gateway.test_local_post_delivery import _owner
     from tui_gateway.contracts.registry import CANONICAL_METHODS
 
     runner, authority, db = await _owner(tmp_path, monkeypatch)
+    connection = AuthorityConnection(authority, object(), {'user_id': 'test-owner'})
     try:
-        ref = create_local_session(authority, _viewer(), {
+        ref = create_local_session(authority, connection.actor, {
             'request_id': 'backend', 'source': 'tui', 'model': 'fixture', 'toolsets': []})
         source = authority.sessions[ref.session_id].source
         policies = runner.adapters[Platform.LOCAL].policies
         policy = policies[source.chat_id]
         monkeypatch.setenv('TERMINAL_ENV', 'ssh')  # gateway process is not this session's policy
 
-        for backend in ('local', 'docker'):
+        for backend, expected in (('local', 'local'), ('docker', 'docker'),
+                                  (' SSH ', 'ssh'), ('', 'local'), (None, 'local')):
             policies[source.chat_id] = replace(
                 policy, terminal_json=json.dumps({
                     **json.loads(policy.terminal_json), 'TERMINAL_ENV': backend}))
             info = local_session_info(authority, ref)
-            assert info['terminal_backend'] == backend
-            assert CANONICAL_METHODS['session.info'].result.model_validate(info).terminal_backend == backend
+            assert info['terminal_backend'] == expected
+            assert CANONICAL_METHODS['session.info'].result.model_validate(info).terminal_backend == expected
+            response = await connection.dispatch({
+                'id': 1, 'method': 'session.info', 'params': {'session_id': ref.session_id}})
+            assert 'error' not in response, response
+            assert response['result']['terminal_backend'] == expected
     finally:
+        await connection.close()
         db.close()
+
+
+def test_session_info_generated_contract_is_current():
+    """The frozen backend reaches the committed client contracts through the generator."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[2]
+    result = subprocess.run(
+        [sys.executable, str(repo / 'scripts/gen_gateway_contracts.py'), '--check'],
+        cwd=repo, capture_output=True, text=True, timeout=60, check=False)
+    assert result.returncode == 0, result.stdout + result.stderr
+
 
 def test_local_viewer_title_republishes_session_info(monkeypatch):
     from gateway.run_turn_runner import TurnRunner
