@@ -186,6 +186,62 @@ class TestBuildToolComplete:
         assert "Traceback" in failure.content[0].content.text
         assert "SyntaxError: bad code" in failure.content[0].content.text
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("success", [True, False])
+    async def test_browser_exec_live_and_replayed_updates_keep_output(self, success):
+        """Browser results survive live projection, replay, and ACP JSON serialization."""
+        import json
+        from unittest.mock import AsyncMock
+
+        from acp_adapter.gateway_server import GatewayACPAgent
+        from acp_adapter.server import _history_replay_updates
+
+        args = {"code": "print('Page title: Example')"}
+        payload = {
+            "success": success,
+            "exit_code": 0 if success else 1,
+            "output": "Page title: Example" if success else "Traceback",
+            "workspace": "/tmp/browser",
+            "screenshot_path": "/tmp/browser/screen.png",
+        }
+        if not success:
+            payload["stderr"] = "SyntaxError: bad code"
+        result = json.dumps(payload)
+        agent = GatewayACPAgent()
+        agent._snapshots["s"] = {}
+        agent._gateway = AsyncMock()
+        agent._conn = AsyncMock()
+        for event_type, extra in (
+            ("tool.start", {}),
+            ("tool.complete", {"result": result, "is_error": not success}),
+        ):
+            await agent._project({
+                "session_id": "s", "admission_id": "a", "type": event_type,
+                "payload": {"tool_call_id": "browser-1", "tool_name": "browser_exec", "args": args, **extra},
+            })
+        live = [call.kwargs["update"] for call in agent._conn.session_update.await_args_list]
+        replay = list(_history_replay_updates([
+            {"role": "assistant", "content": None, "tool_calls": [{
+                "id": "browser-1", "type": "function",
+                "function": {"name": "browser_exec", "arguments": json.dumps(args)},
+            }]},
+            {"role": "tool", "tool_call_id": "browser-1", "tool_name": "browser_exec", "content": result},
+        ]))
+        assert [type(update) for update in live] == [ToolCallStart, ToolCallProgress]
+        assert [update.model_dump(by_alias=True, exclude_none=True) for update in live] == [
+            update.model_dump(by_alias=True, exclude_none=True) for update in replay
+        ]
+        start, complete = [type(update).model_validate_json(update.model_dump_json(by_alias=True)) for update in live]
+        assert start.kind == complete.kind == "execute"
+        assert start.raw_input is complete.raw_output is None
+        assert complete.status == ("completed" if success else "failed")
+        text = complete.content[0].content.text
+        for expected in (payload["output"], "Workspace: /tmp/browser", "Screenshot: /tmp/browser/screen.png"):
+            assert expected in text
+        if not success:
+            assert "stderr: SyntaxError: bad code" in text
+            assert "browser_exec failed (exit 1)" in text
+
     def test_build_tool_complete_for_terminal(self):
         """Completed terminal call should include output text."""
         result = build_tool_complete("tc-2", "terminal", "total 42\ndrwxr-xr-x 2 root root 4096 ...")
