@@ -31,7 +31,7 @@ def refreshed_policy(policy, live, terminal, *, picked=(), mcp_only=False):
     flags, the *picked* policy edits) stay. *secrets* are the refreshed sections' private values, *replaced*
     the sections (``None``: terminal) whose stored private values they supersede. *policy* itself when
     nothing moved; a rotated private value alone (its redacted tree unchanged) moves it."""
-    from gateway.session_policy import _extract_config_secrets, present_sections
+    from gateway.session_policy import _extract_config_secrets, present_sections, terminal_uses_host_cwd
     from gateway.session_policy_credentials import secrets_moved
     old, config = json.loads(policy.config_json), json.loads(policy.config_json)
     live, secrets, replaced = present_sections(live), {}, set()
@@ -46,7 +46,8 @@ def refreshed_policy(policy, live, terminal, *, picked=(), mcp_only=False):
     if (config == old and toolsets == policy.toolsets and terminal == json.loads(policy.terminal_json)
             and not secrets_moved(policy.config_secret_ref, secrets, replaced)):
         return policy, {}, set()
-    policy = replace(policy, toolsets=toolsets, config_json=json.dumps(config), terminal_json=json.dumps(terminal))
+    cwd = terminal['TERMINAL_CWD'] if terminal_uses_host_cwd(terminal) else policy.cwd
+    policy = replace(policy, cwd=cwd, toolsets=toolsets, config_json=json.dumps(config), terminal_json=json.dumps(terminal))
     return policy, secrets, replaced
 
 

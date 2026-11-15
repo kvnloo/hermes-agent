@@ -447,8 +447,9 @@ def build_policy(params, config, *, private_secrets=None, profile_terminal=True,
     row_cwd = params.get('row_cwd')
     if 'row_cwd' in params and (not isinstance(row_cwd, str) or (row_cwd and not Path(row_cwd).is_absolute())):
         _refuse('row_cwd', 'must be an absolute path when set')
-    if params.get('cwd_explicit') is False and 'cwd' in params:
-        cwd = _profile_workspace_cwd(get_hermes_home()) or cwd
+    terminal = build_profile_terminal_scope(get_hermes_home()) if profile_terminal else default_terminal_scope()
+    if params.get('cwd_explicit') is not True and has_profile_local_terminal_cwd(terminal):
+        cwd = terminal['TERMINAL_CWD']
     from gateway.session_local_editor import validate_editor
     validate_editor(source, params.get('editor'))
     if 'client' in params:  # a self-declared label kept in the request as sent; no decision below reads it
@@ -470,7 +471,6 @@ def build_policy(params, config, *, private_secrets=None, profile_terminal=True,
     named = workspace_posture and source != 'tool' and 'cwd' in params and 'toolsets' not in params
     coding_posture = named and _in_coding_workspace(config, source, cwd)
     enabled = _resolve_toolsets(params, config, source, safe_mode, coding_posture, bypass=ignore_user_config)
-    terminal = build_profile_terminal_scope(get_hermes_home()) if profile_terminal else default_terminal_scope()
     # The client's implicit launch folder is a fallback, not an override of a routed profile's
     # explicitly configured local terminal cwd. A deliberate session folder always wins.
     if params.get('cwd_explicit') is True or (
