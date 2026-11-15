@@ -43,6 +43,12 @@ import { $uiState, getUiState } from './uiStore.js'
 
 const isCtrl = (key: { ctrl: boolean }, ch: string, target: string) => key.ctrl && ch.toLowerCase() === target
 
+/** Only plain Ctrl+C cancels a prompt, clears a draft, interrupts a turn or exits. */
+export const isPlainCtrlC = (
+  key: { ctrl: boolean; meta: boolean; shift: boolean; super?: boolean },
+  ch: string
+): boolean => isCtrl(key, ch, 'c') && !key.meta && !key.shift && !key.super
+
 export const shouldAllowIdleHotkeyExit = (dashboardTuiMode = DASHBOARD_TUI_MODE) => !dashboardTuiMode
 
 /** Text or attachments in the composer: Ctrl+D must not exit over an unsent draft (#116443). */
@@ -370,7 +376,7 @@ const CTRL_CHORDS: Record<string, (composer: InputHandlerContext['composer']) =>
 
 /** Keys while the text pager (`overlay.pager`) is open: scroll, page, jump, close. */
 function handlePagerKey(ch: string, key: Key, pagerPageSize: number) {
-  if (key.escape || isCtrl(key, ch, 'c') || ch === 'q') {
+  if (key.escape || isPlainCtrlC(key, ch) || ch === 'q') {
     return patchOverlayState({ pager: null })
   }
 
@@ -749,7 +755,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
       }
 
       if (promptOverlay && !fallThroughForScroll) {
-        if (isCtrl(key, ch, 'c')) {
+        if (isPlainCtrlC(key, ch)) {
           cancelOverlayFromCtrlC()
         }
 
@@ -768,7 +774,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
         return
       }
 
-      if (isCtrl(key, ch, 'c') || (key.escape && hasSensitivePrompt(overlay))) {
+      if (isPlainCtrlC(key, ch) || (key.escape && hasSensitivePrompt(overlay))) {
         cancelOverlayFromCtrlC()
       } else if (key.escape && overlay.sessions) {
         patchOverlayState({ sessions: false })
@@ -934,7 +940,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
       return chord(composer)
     }
 
-    if (key.ctrl && ch.toLowerCase() === 'c') {
+    if (isPlainCtrlC(key, ch)) {
       const ctrlC = resolveCtrlCComposerAction({
         busy: live.busy,
         hasDraft: Boolean(cState.input || cState.inputBuf.length),
