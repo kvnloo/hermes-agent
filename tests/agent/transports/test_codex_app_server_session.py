@@ -487,6 +487,36 @@ class TestRunTurn:
         assert len(r.projected_messages) == 5
 
 
+    def test_missing_named_provider_table_explains_codex_config(self):
+        """#155046: report the missing Codex table at the failing thread/start boundary,
+        but never claim a table is missing on the default-provider path."""
+        from agent.transports.codex_app_server import CodexAppServerError
+
+        client = FakeClient()
+
+        def missing_table(method, params):
+            if method == "thread/start":
+                raise CodexAppServerError(
+                    code=-32600,
+                    message="failed to load configuration: Model provider `my-gateway` not found",
+                )
+            return {}
+
+        client._request_handler = missing_table
+        result = make_session(client, model_provider="my-gateway", codex_home="/tmp/codex-test").run_turn("hi")
+        assert result.should_retire is True
+        assert result.error is not None
+        assert "codex app-server error -32600" in result.error
+        assert "[model_providers.my-gateway]" in result.error
+        assert "/tmp/codex-test/config.toml" in result.error
+        assert "env_key" in result.error
+
+        default_client = FakeClient()
+        default_client._request_handler = missing_table
+        default_result = make_session(default_client).run_turn("hi")
+        assert default_result.error is not None
+        assert "[model_providers.my-gateway]" not in default_result.error
+
     def test_turn_start_failure_attaches_redacted_stderr_tail(self):
         """When codex stderr has content (non-OAuth), the tail gets attached
         to the user-facing error so config/provider problems are debuggable

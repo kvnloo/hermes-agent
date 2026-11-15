@@ -358,6 +358,16 @@ class CodexAppServerSession:
         """User-facing error string plus the force-redacted stderr tail (keeps secrets out of chat output)."""
         exc_str = "" if exc is None else str(exc)
         base = f"{prefix}: {exc_str}" if exc_str else prefix
+        if (isinstance(exc, CodexAppServerError) and exc.code == -32600
+                and self._model_provider and "model provider" in exc.message.lower()
+                and "not found" in exc.message.lower()):
+            codex_home = self._codex_home or os.environ.get("CODEX_HOME") or os.path.expanduser("~/.codex")
+            config_file = os.path.join(codex_home, "config.toml")
+            base += (
+                f"\nCodex has no [model_providers.{self._model_provider}] entry in {config_file}. "
+                "Add the provider table there (base_url, env_key, wire_api); "
+                "a Hermes providers.<name> entry does not configure Codex."
+            )
         try:
             tail = self._client.stderr_tail(tail_lines) if self._client is not None else []
         except Exception:  # pragma: no cover - diagnostic best-effort
