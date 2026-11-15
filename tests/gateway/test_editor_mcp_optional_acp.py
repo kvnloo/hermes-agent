@@ -18,10 +18,12 @@ def _make_acp_import_fail(monkeypatch, missing):
     monkeypatch.setattr(builtins, '__import__', import_without_acp)
 
 
-def test_missing_acp_extra_is_actionable_in_editor_mcp_mutation(monkeypatch):
-    _make_acp_import_fail(monkeypatch, 'acp')
+@pytest.mark.parametrize('missing', ['acp', 'acp.schema'])
+@pytest.mark.parametrize('operation', ['editor_mcp', 'branch'])
+def test_missing_acp_extra_is_actionable_in_editor_mcp_mutation(monkeypatch, missing, operation):
+    _make_acp_import_fail(monkeypatch, missing)
     with pytest.raises(RuntimeStoreError) as caught:
-        private_mutation_payload('editor_mcp', {'mcp_servers': [
+        private_mutation_payload(operation, {'mcp_servers': [
             {'type': 'stdio', 'name': 'editor', 'command': 'python', 'args': []},
         ]})
     refusal = caught.value
@@ -31,8 +33,40 @@ def test_missing_acp_extra_is_actionable_in_editor_mcp_mutation(monkeypatch):
     assert str(refusal) == 'acp_extra_missing'
 
 
-def test_unrelated_import_failure_is_not_misreported_as_missing_acp(monkeypatch):
-    _make_acp_import_fail(monkeypatch, 'other_optional_dependency')
+@pytest.mark.parametrize('missing', ['other_optional_dependency', 'acp.internal_dependency'])
+def test_unrelated_import_failure_is_not_misreported_as_missing_acp(monkeypatch, missing):
+    _make_acp_import_fail(monkeypatch, missing)
     with pytest.raises(ModuleNotFoundError) as caught:
         validate_servers([{'type': 'stdio', 'name': 'editor', 'command': 'python', 'args': []}])
-    assert caught.value.name == 'other_optional_dependency'
+    assert caught.value.name == missing
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('missing', ['acp', 'acp.schema'])
+async def test_missing_acp_extra_reaches_session_create_client(tmp_path, monkeypatch, missing):
+    """Exercise the real create handler and refusal serialization, without a running service."""
+    from types import SimpleNamespace
+
+    from gateway.session_authority import SessionAuthority
+    from gateway.session_controls import AuthorityConnection
+    from hermes_state import SessionDB
+    from hermes_state_runtime import begin_runtime_epoch
+
+    _make_acp_import_fail(monkeypatch, missing)
+    with SessionDB(db_path=tmp_path / 'state.db') as db:
+        epoch = begin_runtime_epoch(db, instance_id='test')
+        runner = SimpleNamespace(_user_config={'platform_toolsets': {'cli': ['terminal']}})
+        authority = SessionAuthority(runner, profile_id='test', instance_id='test', db=db, epoch=epoch)
+        connection = AuthorityConnection(authority, object(), {'user_id': 'human'})
+        reply = await connection.dispatch({'id': 7, 'method': 'session.create', 'params': {
+            'source': 'acp', 'cwd': str(tmp_path), 'editor': {'mcp_servers': [
+                {'type': 'stdio', 'name': 'editor', 'command': 'python', 'args': []},
+            ]},
+        }})
+    assert reply['id'] == 7
+    assert reply['error']['message'] == 'acp_extra_missing'
+    data = reply['error']['data']
+    assert data['reason'] == 'acp_extra_missing'
+    assert data['field'] == 'editor.mcp_servers'
+    assert "'[acp]'" in data['detail']
+    assert 'agent-client-protocol' in data['detail']
