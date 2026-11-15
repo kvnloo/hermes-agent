@@ -50,6 +50,11 @@ export const enErrorCodes: ThreadCopy['errorCodes'] = {
     body: provider =>
       `A firewall in front of ${provider} refused it before it reached the model. Switch provider, or set a custom User-Agent for it.`
   },
+  guardrail_blocked: {
+    title: provider => `${provider}'s prompt-injection guardrail blocked this request`,
+    body: () =>
+      "The provider stopped this request before reaching a model; your API key is fine. On OpenRouter: Workspaces → Guardrails → set Prompt injection detection to Redact or Flag, or allowlist the phrase under Settings → Privacy. Retrying won't help; see Details for matched patterns."
+  },
   ssl_cert_verification: {
     title: provider => `Can't verify ${provider}'s connection`,
     body: provider =>

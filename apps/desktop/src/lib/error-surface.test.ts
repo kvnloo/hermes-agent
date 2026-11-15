@@ -13,6 +13,7 @@ import {
   formatErrorDiagnostics,
   formatResetClock,
   parseErrorSurface,
+  providerSettingsUrl,
   scheduledRetryDelayMs
 } from './error-surface'
 import { errorCardText } from './error-surface-copy'
@@ -115,7 +116,8 @@ describe('error copy never names a hidden Retry', () => {
     'ssl_cert_verification',
     'context_overflow',
     'interpreter_shutdown',
-    'upstream_blocked'
+    'upstream_blocked',
+    'guardrail_blocked'
   ])
 
   const surfaces: ErrorSurface[] = [
@@ -151,6 +153,26 @@ describe('error copy never names a hidden Retry', () => {
     }
 
     expect(errorCardOffers(surface, 'retry')).toBe(true)
+  })
+
+  it('a guardrail 403 shows the account fix, rather than generic provider copy', () => {
+    const surface = parseErrorSurface({
+      code: 'guardrail_blocked',
+      layer: 'provider',
+      provider: 'openrouter',
+      provider_label: 'OpenRouter',
+      retryable: false
+    })!
+
+    const { body, title } = errorCardText(thread, surface)
+    expect(title).toMatch(/prompt-injection guardrail/i)
+    expect(body).toContain('Workspaces → Guardrails')
+    expect(body).toContain('Redact or Flag')
+    expect(body).toMatch(/key is fine/i)
+    expect(body).not.toMatch(/firewall|User-Agent|update.*key|\bretry\b/i)
+    expect(errorCardActions(surface)).toEqual({ primary: 'open_provider_settings', secondary: 'switch_provider' })
+    expect(providerSettingsUrl(surface)).toBe('https://openrouter.ai/settings/privacy')
+    expect(errorCardActions({ ...surface, provider: 'custom' })).toEqual({ primary: 'switch_provider' })
   })
 
   it('a WAF block names the firewall and the User-Agent fix, not the key and not a retry', () => {

@@ -38,6 +38,8 @@ export const ERROR_CODE_KEYS = [
   // A firewall/CDN in front of the endpoint refused the request (usually by
   // User-Agent) before it reached the model: not a key problem, and not retryable.
   'upstream_blocked',
+  // OpenRouter rejected the request payload under its workspace guardrail.
+  'guardrail_blocked',
   'context_overflow',
   'payload_too_large',
   'model_not_found',
@@ -386,6 +388,7 @@ export function providerSettingsUrl(surface?: ErrorSurface | null): string | und
 const CODE_ACTIONS: Partial<Record<ErrorCodeKey, ErrorCardActions>> = {
   billing: { primary: 'open_billing', secondary: 'switch_provider' },
   content_policy_blocked: { primary: 'edit_message' },
+  guardrail_blocked: { primary: 'open_provider_settings', secondary: 'switch_provider' },
   context_overflow: { primary: 'compress', secondary: 'start_new_session' },
   disk_full: { primary: 'open_hermes_folder', secondary: 'retry' },
   free_tier_at_capacity: { primary: 'sign_in_free_tier', secondary: 'retry' },
@@ -486,6 +489,11 @@ export function errorCardActions(surface: ErrorSurface | null | undefined): Erro
   // A provider without a known settings page: choosing another model is the fix left.
   if (surface.code === 'provider_policy_blocked' && !providerSettingsUrl(surface)) {
     return { primary: 'choose_model' }
+  }
+
+  // Only OpenRouter has a known guardrail settings path; other providers need a route switch.
+  if (surface.code === 'guardrail_blocked' && surface.provider?.toLowerCase() !== 'openrouter') {
+    return { primary: 'switch_provider' }
   }
 
   if (byCode) {

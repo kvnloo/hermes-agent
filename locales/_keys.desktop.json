@@ -251,6 +251,8 @@
     "assistant.thread.errorCodes.free_tier_refused.title",
     "assistant.thread.errorCodes.free_tier_route.body",
     "assistant.thread.errorCodes.free_tier_route.title",
+    "assistant.thread.errorCodes.guardrail_blocked.body",
+    "assistant.thread.errorCodes.guardrail_blocked.title",
     "assistant.thread.errorCodes.invalid_response.body",
     "assistant.thread.errorCodes.invalid_response.title",
     "assistant.thread.errorCodes.launch_credentials_unavailable.body",
