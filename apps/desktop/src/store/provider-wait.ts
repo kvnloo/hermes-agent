@@ -45,6 +45,11 @@ export function clearAllProviderWaits(): void {
 export function providerWaitText(text: string): string {
   const value = text.trim()
 
+  // Offline retries have their own live wait frame, separate from the provider wait copy.
+  if (/^🌐\s*no internet access — retrying in \d+s\b/i.test(value)) {
+    return value
+  }
+
   return /^(?:⏳|⚠|↻|⚙)\s*(?:(?:still\s+)?waiting on|loading|processing prompt|no (?:output|response)|model returned|rate limited|provider (?:overloaded|temporarily unavailable))/i.test(
     value
   )

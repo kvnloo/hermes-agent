@@ -29,6 +29,12 @@ describe('providerWaitText', () => {
 })
 
 describe('providerWaitText accepts retry and auto-recovery frames', () => {
+  it('keeps the offline retry in the Desktop wait row', () => {
+    // Exact frame minted by agent/turn_recovery.compute_error_backoff on PR #155979.
+    const frame = '🌐 no internet access — retrying in 5s (attempt 2/3)'
+    expect(providerWaitText(frame)).toBe(frame)
+  })
+
   // Minted by agent/turn_recovery.py (retry backoff) and
   // agent/turn_recovery_autorecover.ladder_notice (outage ladder). Rejecting
   // them left a bare timer for minutes while the backend slept between retries.
