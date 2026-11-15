@@ -57,3 +57,41 @@ def test_auth_error_fallback_requires_explicit_opt_in():
     agent._fallback_on_auth_error = True
     _route_auth_error(agent, 401)
     agent._try_activate_fallback.assert_called_once()
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_conversation_auth_failure_keeps_primary_model(status, monkeypatch):
+    from run_agent import AIAgent
+
+    monkeypatch.setattr("model_tools.get_tool_definitions", lambda **_: [])
+    monkeypatch.setattr("model_tools.check_toolset_requirements", lambda **_: {})
+    monkeypatch.setattr("agent.process_bootstrap.OpenAI", MagicMock())
+    monkeypatch.setattr(
+        "agent.context_compressor.get_model_context_length", lambda *a, **kw: 200_000
+    )
+    agent = AIAgent(
+        model="primary-model", provider="custom",
+        api_key="test-" + "key-12345678", base_url="https://primary.example.com/v1",
+        quiet_mode=True, skip_context_files=True, skip_memory=True,
+        fallback_model={
+            "provider": "custom", "model": "fallback-model",
+            "base_url": "https://fallback.example.com/v1",
+        },
+    )
+    error = RuntimeError(f"Error code: {status} - Not logged in")
+    error.status_code = status
+    request = MagicMock(side_effect=error)
+    activate = MagicMock(return_value=False)
+    monkeypatch.setattr(agent, "_interruptible_api_call", request)
+    monkeypatch.setattr(agent, "_try_activate_fallback", activate)
+    for name in ("_persist_session", "_save_trajectory", "_cleanup_task_resources"):
+        monkeypatch.setattr(agent, name, MagicMock())
+
+    result = agent.run_conversation("hello")
+
+    request.assert_called_once()
+    activate.assert_not_called()
+    assert agent.model == "primary-model"
+    assert result.get("completed") is False
+    assert result.get("failed") is True
+    assert result.get("final_response")

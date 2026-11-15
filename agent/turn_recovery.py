@@ -1806,7 +1806,8 @@ def route_classified_error(
     long-context tier 429 → cap at 200k and compress; eager fallback for rate-limit/billing
     (immediately) and transport failures (after 1 retry) unless credential-pool rotation may
     still recover (upstream-aggregator 429s always fall back); persistent 401/403 → fallback
-    chain once; genuine Nous 429 → cross-session breaker + re-enter the loop exactly once."""
+    chain once only with explicit opt-in; genuine Nous 429 → cross-session breaker + re-enter
+    the loop exactly once."""
     from agent.conversation_compression import conversation_history_after_compression
     from agent.conversation_loop import _arm_fallback_restart, _ra
     from agent.model_metadata import estimate_request_tokens_rough
@@ -1940,10 +1941,12 @@ def route_classified_error(
     # #316: 343 oneshot jobs asked for Opus, got 401 on every call and ran entirely on the
     # fallback). Opt back in per agent with ``_fallback_on_auth_error = True``; a verdict that
     # opts out (a missing CLI login no other provider can fix, #132337) still fails closed.
+    # The later generic client-error handler must honor the same auth policy.
+    if classified.is_auth and not getattr(agent, "_fallback_on_auth_error", False):
+        classified.should_fallback = False
     if (
         classified.is_auth
         and classified.should_fallback
-        and getattr(agent, "_fallback_on_auth_error", False)
         and not _retry.auth_failover_attempted
         and agent._fallback_index < len(agent._fallback_chain)
     ):
