@@ -66,6 +66,20 @@ def test_termux_docker_row_pins_digest(lock):
     assert row["url"] == f"docker://termux/termux-docker@{version}"
 
 
+
+def test_termux_docker_digestless_pin_has_stable_install_identity():
+    """A Docker registry digest is pinned in its URL, not an archive sha256."""
+    from pm.install import _identity
+    from pm.lock import Lockfile
+    from pm.paths import lockfile_path
+
+    target = "linux-arm64-bionic"
+    pins = Lockfile(lockfile_path())
+    artifacts = pins.artifacts("termux-docker", target)
+    assert len(artifacts) == 1 and "sha256" not in artifacts[0]
+    assert _identity(pins, "termux-docker", target) == (target, (None,))
+
+
 def test_python_bionic_pin_is_independent_of_desktop_build_version(lock):
     from pm.registry import get_package
 
