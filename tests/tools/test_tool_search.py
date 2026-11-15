@@ -785,6 +785,29 @@ class TestDeferredCallSchemaProbe:
             "search_depth": "advanced",
         }]
 
+    @pytest.mark.parametrize("shape", ["legacy", "batch"])
+    def test_partial_flattened_optional_mcp_filter_is_not_silently_dropped(self, shape):
+        """The MCP tool must not execute with defaults after losing an optional query.
+
+        A model may put query beside a nonempty arguments object: location is
+        preserved, but query was silently discarded in either bridge shape.
+        """
+        from tools.tool_search_validation import normalize_tool_call_entries
+
+        call = {
+            "name": "mcp__emclient__search_emails",
+            "arguments": {"location": {"account_ids": ["protonmail"]}, "limit": 20},
+            "query": {"properties": {"subject_contains": "ZZZQQQ_NONEXISTENT_12345"}},
+        }
+        envelope = call if shape == "legacy" else {"calls": [call]}
+        entries, err = normalize_tool_call_entries(envelope)
+
+        assert entries == []
+        assert err is not None
+        assert "query" in err
+        assert "arguments" in err
+        assert "NOT invoked" in err
+
     def test_normalize_harvests_flattened_arguments(self):
         """Unit: a flattened entry repairs surplus top-level keys into arguments and
         strips envelope/meta keys."""

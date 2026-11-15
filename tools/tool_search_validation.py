@@ -183,21 +183,19 @@ def normalize_tool_call_entries(args: Dict[str, Any]) -> Tuple[List[Dict[str, An
         if name in BRIDGE_TOOL_NAMES:
             return [], f"tool_call cannot invoke '{name}' (it is itself a bridge tool)"
         raw_args = raw.get("arguments")
+        surplus = {
+            key: value for key, value in raw.items()
+            if key not in _TOOL_CALL_META_KEYS and not str(key).startswith("_")
+        }
         if raw_args is None or (isinstance(raw_args, str) and not raw_args.strip()):
-            # "" / whitespace is how some OpenAI-compatible gateways spell "no arguments" for a
-            # parameterless tool (#83937); the blank path becomes {} below.
-            #
-            # Cheap/free models (e.g. poolside/laguna-s-2.1:free) occasionally emit a *flattened*
-            # tool_call: the `arguments` wrapper is dropped and params sit at the entry root
-            # ({"name":..., "query":..., "search_depth":...}). Without repair that yields an empty
-            # arguments dict and validate_deferred_call_args then fails the call with "missing
-            # required argument(s)". Harvest the surplus top-level keys (envelope/meta keys
-            # excluded) so the call dispatches instead.
-            surplus = {
-                key: value for key, value in raw.items()
-                if key not in _TOOL_CALL_META_KEYS and not str(key).startswith("_")
-            }
-            raw_args = surplus if surplus else {}
+            # Wholly flattened calls are repairable without ambiguity (#135004).
+            raw_args = surplus
+        elif surplus:
+            # A mixed envelope already has an arguments payload: silently ignoring the
+            # sibling keys can remove optional MCP filters while the tool returns success.
+            names = ", ".join(sorted(map(str, surplus)))
+            return [], (f"tool_call calls[{position}] has argument(s) outside "
+                        f"'arguments': {names}. Move them into 'arguments'; tool NOT invoked")
         if isinstance(raw_args, str):
             try:
                 raw_args = json.loads(raw_args)
