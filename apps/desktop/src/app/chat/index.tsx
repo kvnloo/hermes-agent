@@ -383,20 +383,33 @@ export function ChatRuntimeBoundary({
           isCurrent: () => view.$storedId.get() === storedId && view.$runtimeId.get() === runtimeId,
           heldMessages: () => view.$messages.get(),
           applyOlderPage: olderPage => {
-            const current = view.$messages.get()
+            // The foreground view may lag the wiring cache while its RAF flush
+            // is pending. Only the authoritative cache can decide whether a
+            // page will actually prepend rows before we capture scroll.
+            const delegate = sessionTileDelegate()
 
-            if (mergeOlderTranscriptPage(current, olderPage) === current) {
+            if (!delegate) {
               return false
             }
 
-            beforePrepend?.()
-            setWindowPages(pages => pages + 1)
-            sessionTileDelegate()?.updateSession(runtimeId, state => {
-              const merged = mergeOlderTranscriptPage(state.messages, olderPage)
-              grew = merged !== state.messages
+            let added = false
 
-              return grew ? { ...state, messages: merged } : state
+            delegate.updateSession(runtimeId, state => {
+              const merged = mergeOlderTranscriptPage(state.messages, olderPage)
+
+              if (merged === state.messages) {
+                return state
+              }
+
+              beforePrepend?.()
+              setWindowPages(pages => pages + 1)
+              grew = true
+              added = true
+
+              return { ...state, messages: merged }
             })
+
+            return added
           }
         })
 

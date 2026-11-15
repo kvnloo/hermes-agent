@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { stubThreadEnvironment } from '@/components/assistant-ui/test-utils'
 import { type TranscriptWindowValue, useTranscriptWindow } from '@/components/assistant-ui/thread/transcript-window'
 import type * as HermesApi from '@/hermes'
-import type { ChatMessage } from '@/lib/chat-messages'
+import { type ChatMessage, toChatMessages } from '@/lib/chat-messages'
 import type * as SessionStates from '@/store/session-states'
 import { $transcriptTailBySessionId, recordTranscriptTail } from '@/store/transcript-tail'
 
@@ -109,4 +109,77 @@ describe('runtime older-page expansion', () => {
       expect($messages.get()).toHaveLength(addsRows ? 2 : 1)
     }
   )
+
+  it('does not capture a prepend when the displayed view lags the session cache', async () => {
+    // An in-flight RAF can leave the displayed view behind the authoritative
+    // session cache. Reading only $messages then attempts a no-op prepend.
+    const olderRow = { id: 1, role: 'user' as const, content: 'older', timestamp: 1000 }
+    const $messages = atom([message('tail')])
+    const view = {
+      ...PRIMARY_SESSION_VIEW,
+      $messages,
+      $runtimeId: atom<string | null>('runtime'),
+      $storedId: atom<string | null>('stored')
+    }
+
+    recordTranscriptTail('stored', {
+      messages: Array.from({ length: 120 }, (_, index) => ({
+        id: index + 120,
+        role: 'user' as const,
+        content: 'tail',
+        timestamp: index + 2000
+      })),
+      pagination: { limit: 120, offset: 0, order: 'latest', returned: 120 }
+    })
+    vi.mocked(getOlderSessionMessages).mockResolvedValue({
+      session_id: 'stored',
+      messages: [olderRow],
+      pagination: { limit: 120, offset: 120, order: 'latest', returned: 1 }
+    } as never)
+
+    let cached = [toChatMessages([olderRow])[0], message('tail')]
+    const updateSession = vi.fn(
+      (_id: string, update: (state: { messages: ChatMessage[] }) => { messages: ChatMessage[] }) => {
+        cached = update({ messages: cached }).messages
+
+        return { messages: cached }
+      }
+    )
+    vi.mocked(sessionTileDelegate).mockReturnValue({ updateSession } as never)
+    let window!: TranscriptWindowValue
+
+    function Observe() {
+      window = useTranscriptWindow()
+
+      return null
+    }
+
+    render(
+      <SessionViewProvider value={view}>
+        <ChatRuntimeBoundary
+          busy={false}
+          onCancel={() => {}}
+          onEdit={async () => {}}
+          onReload={async () => {}}
+          onThreadMessagesChange={() => {}}
+          suppressMessages={false}
+        >
+          <Observe />
+        </ChatRuntimeBoundary>
+      </SessionViewProvider>
+    )
+
+    const capture = vi.fn()
+    let grew = true
+
+    await act(async () => {
+      grew = await window.expandWindow(capture)
+    })
+
+    expect(grew).toBe(false)
+    expect(capture).not.toHaveBeenCalled()
+    expect(updateSession).toHaveBeenCalledTimes(1)
+    expect(cached).toHaveLength(2)
+    expect($messages.get()).toHaveLength(1)
+  })
 })
