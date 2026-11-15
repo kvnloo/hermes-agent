@@ -486,6 +486,7 @@ class SessionSessionsMixin:
                 "AND typeof(parent.ended_at) IN ('integer', 'real') "
                 "AND child.started_at BETWEEN -? AND ? "
                 "AND parent.ended_at BETWEEN -? AND ? "
+                "AND child.started_at >= parent.started_at "
                 "AND child.started_at >= parent.ended_at)",
                 (session_id, *_RESET_END_REASONS, *([sys.float_info.max] * 4)),
             )
