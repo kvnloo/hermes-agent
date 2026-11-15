@@ -1161,6 +1161,16 @@ def _resolve_target_transport(
             from gateway.config import PlatformConfig
             pconfig = PlatformConfig(enabled=True)
     elif not pconfig or not pconfig.enabled:
+        if (isinstance(adapters, _preflight.SharedRouteAdapters)
+                and adapters._primary.get(platform) is not None):
+            # The primary bot is live: a missing satellite config is not the cause.
+            target_name = f"{platform_name}:{target.get('chat_id') or ''}"
+            if target.get("thread_id"):
+                target_name += f":{target['thread_id']}"
+            return None, (
+                f"target '{target_name}' is not routed to this satellite profile "
+                "(no matching enabled gateway.profile_routes entry)"
+            )
         return None, f"platform '{platform_name}' not configured/enabled"
     return (transport, pconfig, runtime_adapter, target_adapters), None
 

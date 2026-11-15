@@ -143,6 +143,32 @@ def test_guild_scoped_route_authorizes_cron_target_even_when_satellite_has_no_pl
         reset_hermes_home_override(token)
 
 
+def test_satellite_route_miss_names_routing_not_platform_config():
+    """#155047: a live primary adapter cannot deliver to an unrouted satellite target."""
+    from cron.scheduler_delivery import _resolve_target_transport
+
+    route = ProfileRoute(name="space-a", platform="discord", chat_id="A", profile="p2")
+    config = MagicMock()
+    config.platforms = {}
+    target = {"platform": "discord", "chat_id": "B"}
+    shared = SharedRouteAdapters(
+        {Platform.DISCORD: object()}, [route], dispatch_routes=[route])
+
+    resolved, error = _resolve_target_transport(
+        {"id": "job"}, Platform.DISCORD, "discord", target, shared, config)
+    assert resolved is None
+    assert "discord:B" in error
+    assert "not routed" in error and "gateway.profile_routes" in error
+    assert "not configured/enabled" not in error
+
+    # Without a live primary adapter, the old configuration diagnosis is still correct.
+    missing = SharedRouteAdapters({}, [route], dispatch_routes=[route])
+    resolved, error = _resolve_target_transport(
+        {"id": "job"}, Platform.DISCORD, "discord", target, missing, config)
+    assert resolved is None
+    assert "not configured/enabled" in error
+
+
 def test_live_native_adapter_without_platform_block_is_not_treated_as_disabled():
     """#89302: a live native adapter handed in by the gateway is the authorization; an absent
     ``platforms.<p>`` block in the firing profile means "no config", not "disabled"."""
