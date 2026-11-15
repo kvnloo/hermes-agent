@@ -96,6 +96,32 @@ describe('browser visible viewport', () => {
     expect(editor.value).toBe('first line\nsecond line')
   })
 
+  it('keeps a Safari tab shell at the visible bottom when legacy 100vh stays taller', () => {
+    // Safari can report innerHeight === visualViewport.height while 100vh
+    // still sizes the shell to the larger layout viewport.
+    vi.spyOn(root, 'getBoundingClientRect').mockImplementation(
+      () => ({
+        height: root.hasAttribute('data-browser-viewport')
+          ? Number.parseFloat(root.style.getPropertyValue('--browser-viewport-height'))
+          : 800
+      }) as DOMRect
+    )
+    dispose = installBrowserViewport()
+    expect(root.hasAttribute('data-browser-viewport')).toBe(false)
+
+    vi.stubGlobal('innerHeight', 720)
+    resize(720)
+    expect(root.style.getPropertyValue('--browser-viewport-height')).toBe('720px')
+    // The already-corrected shell must not re-expand on the next resize.
+    resize(720)
+    expect(root.style.getPropertyValue('--browser-viewport-height')).toBe('720px')
+
+    // iOS Safari's focus zoom/pan still owns its keyboard scroll.
+    vi.stubGlobal('innerHeight', 361)
+    resize(361, 353, 402 / 359)
+    expect(root.hasAttribute('data-browser-viewport')).toBe(false)
+  })
+
   it('leaves a focus-zoomed iOS keyboard to Safari, whose innerHeight is the visible area', () => {
     vi.stubGlobal('innerHeight', 714)
     viewport.height = 714

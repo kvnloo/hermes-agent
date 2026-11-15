@@ -13,6 +13,7 @@ export function installBrowserViewport(): () => void {
 
   let frame = 0
   let unzoomedTop = 0
+  let chromeConstrained = false
 
   const reset = () => {
     root.removeAttribute('data-browser-viewport')
@@ -32,14 +33,22 @@ export function installBrowserViewport(): () => void {
       return
     }
 
-    // iOS Safari reports the visible area as innerHeight, zoomed or not, and
-    // scrolls the focused field into view itself. Fitting the shell under that
-    // scroll would shrink the app out of the visible area.
+    // Safari tab chrome can leave 100vh taller than the visible viewport
+    // even when visualViewport.height equals innerHeight. Once corrected,
+    // keep the fit across resizes instead of measuring the smaller root and
+    // resetting it. A pinch/pan still belongs to Safari (not the app shell).
     if (Math.abs(viewport.height - window.innerHeight) < 1) {
-      unzoomedTop = 0
-      reset()
+      const tooTall = root.getBoundingClientRect().height > height + 1
+      if (Math.abs(viewport.scale - 1) >= 0.01 || viewport.offsetTop > 1 || (!chromeConstrained && !tooTall)) {
+        chromeConstrained = false
+        unzoomedTop = 0
+        reset()
 
-      return
+        return
+      }
+      chromeConstrained = true
+    } else {
+      chromeConstrained = false
     }
 
     // Offset during a pinch belongs to the user's pan, not the app shell.
