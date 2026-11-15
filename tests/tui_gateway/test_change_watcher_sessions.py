@@ -62,20 +62,62 @@ def test_sessions_signature_changes_for_session_metadata_updates(tmp_path, monke
     assert server._sessions_sig() != before
 
 
-def test_sessions_signature_sees_a_commit_inside_the_same_mtime_tick(tmp_path, monkeypatch):
-    """Filesystem timestamps tick coarsely (~4 ms; whole seconds on some filesystems), and SQLite
-    commits in place: a commit in the tick of the previous read leaves the DB/WAL mtime unchanged."""
+def test_sessions_signature_confirms_same_tick_commit_when_mtime_settles(tmp_path, monkeypatch):
+    """A racy mtime is scanned once, then confirmed when the real 2 s window closes.
+
+    A same-tick commit may be delayed to that confirmation, matching the 2 s
+    sessions.changed broadcast floor rather than scanning every watcher tick.
+    """
     db_path = tmp_path / "state.db"
     _seed_store(db_path)
     monkeypatch.setattr(server, "_watcher_home", lambda: tmp_path)
     monkeypatch.setattr(server, "_served_profile_homes", [])
+    monkeypatch.setattr(server, "_sessions_db_sig_cache", {})
     frozen_mtime = time.time_ns()
     monkeypatch.setattr(server, "_newest_mtime_ns", lambda _paths: frozen_mtime)
+    racy = [True]
+    monkeypatch.setattr("utils.mtime_is_racy", lambda _stamp: racy[0])
+    scans = []
+    read = server._session_rows_sig
 
+    def count_scan(conn, stamp):
+        scans.append(1)
+        return read(conn, stamp)
+
+    monkeypatch.setattr(server, "_session_rows_sig", count_scan)
     before = server._sessions_sig()
+    assert server._sessions_sig() == before
+    assert len(scans) == 1
+
     conn = sqlite3.connect(db_path)
     conn.execute("UPDATE sessions SET title = 'Renamed' WHERE id = 'session-1'")
     conn.commit()
     conn.close()
+    assert server._sessions_sig() == before  # same tick: defer until mtime settles
+    assert len(scans) == 1
 
-    assert server._sessions_sig() != before
+    racy[0] = False  # the real RACY_MTIME_WINDOW_NS elapsed, without lowering it
+    changed = server._sessions_sig()
+    assert changed != before
+    assert len(scans) == 2
+    assert server._sessions_sig() == changed
+    assert len(scans) == 2
+
+
+def test_sessions_signature_avoids_text_pk_index_scan(tmp_path):
+    """The production TEXT PRIMARY KEY must not cause one table seek per session row."""
+    db_path = tmp_path / "state.db"
+    _seed_store(db_path)
+    conn = sqlite3.connect(db_path)
+    try:
+        statements = []
+        conn.set_trace_callback(statements.append)
+        server._session_rows_sig(conn, db_path.stat().st_mtime_ns)
+        conn.set_trace_callback(None)
+        selects = [sql for sql in statements if sql.lstrip().upper().startswith("SELECT ")]
+        assert len(selects) == 1
+        plan = [row[3] for row in conn.execute("EXPLAIN QUERY PLAN " + selects[0])]
+        assert plan
+        assert not any("USING INDEX sqlite_autoindex_sessions" in step for step in plan)
+    finally:
+        conn.close()

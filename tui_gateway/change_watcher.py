@@ -198,11 +198,10 @@ _SESSION_SIGNATURE_FIELDS = (
     "cwd", "git_branch", "git_repo_root", "title", "title_source", "profile_name",
     "archived", "pinned", "hidden", "last_read_at", "handoff_state",
 )
-# path -> (database/WAL mtime, session-table digest, whether that is a fallback rather than a
-# read answer). The mtime guard keeps a normal watch pass stat-only; SQLite is read only
-# after another process actually commits (and for ``utils.RACY_MTIME_WINDOW_NS`` after it, see
-# _settled_mtime).
-_sessions_db_sig_cache: dict[str, tuple[object, tuple | None, bool]] = {}
+# path -> (settled mtime/sentinel, session digest, is_fallback, raw mtime).
+# A successful racy read is reused while its raw mtime is still racy; one
+# confirming read follows when the 2 s mtime window closes.
+_sessions_db_sig_cache: dict[str, tuple[object, tuple | None, bool, int | None]] = {}
 
 
 _MTIME_FALLBACK = "mtime-fallback"
@@ -216,8 +215,15 @@ def _db_content_sig(db_path: Path, cache: dict, read, *, fallback=lambda mtime: 
     mtime = _newest_mtime_ns((db_path, db_path.with_name(f"{db_path.name}-wal")))
     cache_key = str(db_path)
     cached = cache.get(cache_key)
-    if cached is not None and cached[0] == mtime:
-        return cached[1]
+    if cached is not None:
+        if cached[0] == mtime:
+            return cached[1]
+        # A fresh signature was already read for this exact timestamp. Do not
+        # repeat the full SQLite scan every watcher tick; confirm once settled.
+        # Fallback results must still retry immediately after a locked read.
+        if (not cached[2] and mtime is not None and cached[0] is _RACY_MTIME
+                and cached[3] == mtime and _settled_mtime(mtime) is _RACY_MTIME):
+            return cached[1]
     if not db_path.exists():
         cache[cache_key] = (mtime, None, True)
         return None
@@ -234,7 +240,7 @@ def _db_content_sig(db_path: Path, cache: dict, read, *, fallback=lambda mtime: 
     finally:
         if conn is not None:
             conn.close()
-    cache[cache_key] = (_settled_mtime(mtime), signature, is_fallback)
+    cache[cache_key] = (_settled_mtime(mtime), signature, is_fallback, mtime)
     return signature
 
 
@@ -246,7 +252,8 @@ def _session_rows_sig(conn, mtime):
         # A state.db without a readable sessions table (foreign schema, legacy or transient file): keep
         # the old mtime contract so any move still wakes the sidebar instead of silently never broadcasting.
         return (_MTIME_FALLBACK, mtime), True
-    order = " ORDER BY id" if "id" in available else ""
+    # The TEXT id autoindex requires a separate table seek per row; rowid walks table pages.
+    order = " ORDER BY rowid" if "id" in available else ""
     digest = hashlib.blake2b(digest_size=16)
     for row in conn.execute(f"SELECT {', '.join(fields)} FROM sessions{order}"):
         digest.update(repr(tuple(row)).encode("utf-8", "backslashreplace"))
