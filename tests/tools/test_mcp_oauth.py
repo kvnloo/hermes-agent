@@ -860,6 +860,55 @@ class TestNonInteractiveFailFastAtCallbackBoundary:
         err = capsys.readouterr().err
         assert "https://idp.example.com/authorize?x=9" in err
 
+    @pytest.mark.parametrize("unsafe_url", [
+        "file:///tmp/mcp-oauth.txt",
+        "ms-msdt:/id",
+        "javascript:alert(1)",
+        "https:relative-path",
+        "https://[broken-host",
+    ])
+    def test_redirect_handler_rejects_non_http_authorization_urls(self, monkeypatch, capsys, unsafe_url):
+        """Kilo-Org/kilocode#15383: server URLs cannot open local protocol handlers."""
+        import asyncio
+        import tools.mcp_oauth as mod
+
+        monkeypatch.setattr(mod, "_is_interactive", lambda: True)
+        monkeypatch.setattr(mod, "_can_open_browser", lambda: False)
+        monkeypatch.setattr(mod, "get_dashboard_oauth_flow", lambda: None)
+        opener = MagicMock(side_effect=AssertionError("unsafe URL must not reach a browser"))
+        monkeypatch.setattr(mod.webbrowser, "open", opener)
+
+        with pytest.raises(OAuthNonInteractiveError, match=r"HTTP\(S\)"):
+            asyncio.run(mod._make_redirect_handler(49304)(unsafe_url))
+
+        opener.assert_not_called()
+        assert unsafe_url not in capsys.readouterr().err
+
+    def test_redirect_handler_rejects_unsafe_url_before_dashboard_publish(self, monkeypatch):
+        """Dashboard handoff must use the same URL trust boundary as the CLI."""
+        import asyncio
+        import tools.mcp_oauth as mod
+
+        class DashboardFlow:
+            async def publish_authorization_url(self, _url):
+                raise AssertionError("unsafe URL must not be published")
+
+        monkeypatch.setattr(mod, "get_dashboard_oauth_flow", lambda: DashboardFlow())
+        with pytest.raises(OAuthNonInteractiveError, match=r"HTTP\(S\)"):
+            asyncio.run(mod._make_redirect_handler(49304)("file:///tmp/secret"))
+
+    def test_redirect_handler_allows_loopback_http_authorization(self, monkeypatch, capsys):
+        """Local HTTP authorization endpoints remain supported."""
+        import asyncio
+        import tools.mcp_oauth as mod
+
+        monkeypatch.setattr(mod, "_is_interactive", lambda: True)
+        monkeypatch.setattr(mod, "_can_open_browser", lambda: False)
+        monkeypatch.setattr(mod, "get_dashboard_oauth_flow", lambda: None)
+        url = "http://127.0.0.1:49304/authorize?client_id=local"
+        asyncio.run(mod._make_redirect_handler(49304)(url))
+        assert url in capsys.readouterr().err
+
 
 # ---------------------------------------------------------------------------
 # Extracted helper tests (Task 3 of MCP OAuth consolidation)
