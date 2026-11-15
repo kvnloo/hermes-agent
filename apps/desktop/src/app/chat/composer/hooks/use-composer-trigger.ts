@@ -7,6 +7,7 @@ import { desktopSlashCommandArgumentMode } from '@/lib/desktop-slash-commands'
 import {
   COMPLETION_ACTIONS,
   followTriggerPick,
+  implicitSlashAcceptIndex,
   isSkillItem,
   slashArgStage,
   slashChipKindForItem,
@@ -125,10 +126,9 @@ export function useComposerTrigger({
 }: UseComposerTriggerOptions) {
   const [trigger, setTrigger] = useState<TriggerState | null>(null)
   const [triggerActive, setTriggerActive] = useState(0)
-  // The list highlights its first row on open, which is a suggestion rather
-  // than a choice. This records that the user moved the highlight themselves,
-  // which is what lets Enter accept a completion in a free-text argument stage
-  // without stealing prose from everyone who never touched the arrows.
+  // The passive highlight is a suggestion (or the implicit slash match), not
+  // a choice. This records when the user moved it deliberately, which lets Enter
+  // accept free-text argument completions without stealing unchosen prose.
   const [triggerActiveExplicit, setTriggerActiveExplicit] = useState(false)
   const [triggerItems, setTriggerItems] = useState<readonly Unstable_TriggerItem[]>([])
   // Set synchronously in keydown when the open trigger popover consumes a
@@ -245,6 +245,23 @@ export function useComposerTrigger({
 
   const slashFreeTextArgStage = slashArgumentMode === 'mixed' || slashArgumentMode === 'text'
 
+  // Enter already chooses an exact or unique prefix match when arrows were
+  // untouched. Show that SAME row: the popover, Tab, and Enter must agree.
+  const implicitActive =
+    trigger?.kind === '/' && !triggerActiveExplicit
+      ? implicitSlashAcceptIndex(
+          trigger.query,
+          triggerItems.map(item => {
+            const meta = item.metadata as { command?: string; rawText?: string } | undefined
+
+            return meta?.command || meta?.rawText || item.label
+          }),
+          triggerActive,
+          false
+        )
+      : null
+  const displayedTriggerActive = implicitActive ?? triggerActive
+
   const closeTrigger = () => {
     setTrigger(null)
     setTriggerItems([])
@@ -254,7 +271,7 @@ export function useComposerTrigger({
   /** Step the highlight, marking it as the user's own deliberate pick. */
   const moveTriggerActive = (delta: number) => {
     setTriggerActiveExplicit(true)
-    setTriggerActive(idx => (idx + delta + triggerItems.length) % triggerItems.length)
+    setTriggerActive((displayedTriggerActive + delta + triggerItems.length) % triggerItems.length)
   }
 
   // A replaced list (more commands finished loading) must not move Enter/Tab
@@ -482,7 +499,7 @@ export function useComposerTrigger({
     setTriggerActive,
     slashFreeTextArgStage,
     trigger,
-    triggerActive,
+    triggerActive: displayedTriggerActive,
     triggerActiveExplicit,
     triggerItems,
     triggerKeyConsumedRef,

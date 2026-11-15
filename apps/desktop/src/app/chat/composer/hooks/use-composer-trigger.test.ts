@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { rememberDesktopCommandsCatalog } from '@/lib/desktop-slash-commands'
 
+import { implicitSlashAcceptIndex } from '../composer-utils'
 import { composerPlainText, renderComposerContents, RICH_INPUT_SLOT } from '../rich-editor'
 
 import { useComposerTrigger } from './use-composer-trigger'
@@ -385,5 +386,25 @@ describe('useComposerTrigger — a refreshed list keeps the row the user picked'
 
     expect(hook.result.current.triggerActive).toBe(0)
     expect(hook.result.current.triggerActiveExplicit).toBe(false)
+  })
+})
+
+describe('useComposerTrigger — passive slash highlight agrees with Enter', () => {
+  it('highlights the unique skill rather than an unrelated command, then arrows from that row', () => {
+    const { hook } = mountTrigger(mountEditor('/log'), [item('/debug', 'Commands'), item('/log-session')])
+
+    act(() => hook.result.current.refreshTrigger())
+
+    const { trigger, triggerItems, triggerActive, triggerActiveExplicit } = hook.result.current
+    const itemTexts = triggerItems.map(row => (row.metadata as { command: string }).command)
+
+    expect(trigger).toMatchObject({ kind: '/', query: 'log' })
+    expect(triggerActiveExplicit).toBe(false)
+    expect(implicitSlashAcceptIndex('log', itemTexts, triggerActive, false)).toBe(triggerActive)
+    expect(triggerItems[triggerActive]?.label).toBe('log-session')
+
+    act(() => hook.result.current.moveTriggerActive(1))
+    expect(hook.result.current.triggerActiveExplicit).toBe(true)
+    expect(hook.result.current.triggerItems[hook.result.current.triggerActive]?.label).toBe('debug')
   })
 })
