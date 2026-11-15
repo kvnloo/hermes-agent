@@ -2,15 +2,43 @@ import { describe, expect, it } from 'vitest'
 
 import { t } from '../i18n/runtime.js'
 
-import { clarifyRevisitState, edgePreview, formatAbandonedClarify, formatToolCall, stripTrailingPasteNewlines } from './text.js'
+import {
+  clarifyRevisitState,
+  edgePreview,
+  formatAbandonedClarify,
+  formatToolCall,
+  stripTrailingPasteNewlines
+} from './text.js'
 
 describe('Unicode preview boundaries', () => {
-  it('keeps complete emoji in truncated tool labels and paste previews (port gemini-cli#29993)', () => {
+  it('keeps complete emoji in truncated tool labels (port gemini-cli#29993)', () => {
     const toolArgument = 'a'.repeat(62) + '😀' + 'trailing'
-    expect(formatToolCall('terminal', toolArgument)).toBe(`Terminal("${'a'.repeat(62)}😀…")`)
 
+    expect(formatToolCall('terminal', toolArgument)).toBe(`Terminal("${'a'.repeat(62)}😀…")`)
+  })
+
+  it('keeps complete emoji at the head of a paste preview', () => {
     const pasted = 'a'.repeat(15) + '😀' + 'b'.repeat(40)
+
     expect(edgePreview(pasted)).toBe(`${'a'.repeat(15)}😀.. ${'b'.repeat(28)}`)
+  })
+
+  it('keeps complete emoji at the tail of a paste preview', () => {
+    const pasted = 'a'.repeat(40) + '😀' + 'b'.repeat(27)
+
+    expect(edgePreview(pasted)).toBe(`${'a'.repeat(16)}.. 😀${'b'.repeat(27)}`)
+  })
+
+  it('does not truncate tool labels that fit the code-point budget', () => {
+    const toolArgument = 'a'.repeat(63) + '😀'
+
+    expect(formatToolCall('terminal', toolArgument)).toBe(`Terminal("${toolArgument}")`)
+  })
+
+  it('does not truncate paste previews that fit the code-point budget', () => {
+    const pasted = 'a'.repeat(15) + '😀' + 'b'.repeat(32)
+
+    expect(edgePreview(pasted)).toBe(pasted)
   })
 })
 
