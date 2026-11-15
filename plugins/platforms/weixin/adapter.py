@@ -297,10 +297,7 @@ async def _api_get(session: aiohttp.ClientSession, *, base_url: str, endpoint: s
 
 
 async def _get_updates(session: aiohttp.ClientSession, *, base_url: str, token: str, sync_buf: str, timeout_ms: int) -> dict[str, Any]:
-    try:
-        return await _api_post(session, base_url=base_url, endpoint=EP_GET_UPDATES, payload={"get_updates_buf": sync_buf}, token=token, timeout_ms=timeout_ms)
-    except TimeoutError:
-        return {"ret": 0, "msgs": [], "get_updates_buf": sync_buf}
+    return await _api_post(session, base_url=base_url, endpoint=EP_GET_UPDATES, payload={"get_updates_buf": sync_buf}, token=token, timeout_ms=timeout_ms)
 
 
 async def _send_items(
@@ -816,6 +813,7 @@ class WeixinAdapter(OwnAccessPolicyMixin, BasePlatformAdapter):
         sync_buf = _load_sync_buf(self._hermes_home, self._account_id)
         timeout_ms = LONG_POLL_TIMEOUT_MS
         consecutive_failures = 0
+        consecutive_timeouts = 0
 
         async def backoff() -> int:
             """Sleep for the failure streak; returns the new streak count (0 after a full streak)."""
@@ -826,6 +824,7 @@ class WeixinAdapter(OwnAccessPolicyMixin, BasePlatformAdapter):
         while self._running:
             try:
                 response = await _get_updates(self._poll_session, base_url=self._base_url, token=self._token, sync_buf=sync_buf, timeout_ms=timeout_ms)
+                consecutive_timeouts = 0
                 suggested_timeout = response.get("longpolling_timeout_ms")
                 if isinstance(suggested_timeout, int) and suggested_timeout > 0:
                     timeout_ms = suggested_timeout
@@ -853,7 +852,17 @@ class WeixinAdapter(OwnAccessPolicyMixin, BasePlatformAdapter):
                     await asyncio.to_thread(_save_sync_buf, self._hermes_home, self._account_id, sync_buf)
             except asyncio.CancelledError:
                 break
+            except TimeoutError:
+                # A single timeout is normal for iLink long polling. Repeated timeouts without
+                # a successful HTTP response can conceal a dead socket (#155978, #23523).
+                consecutive_timeouts += 1
+                if consecutive_timeouts >= MAX_CONSECUTIVE_FAILURES:
+                    logger.warning("[%s] getUpdates timed out %d consecutive times; recycling poll session",
+                                   self.name, consecutive_timeouts)
+                    await self._recycle_poll_session()
+                    consecutive_timeouts = 0
             except Exception as exc:
+                consecutive_timeouts = 0
                 consecutive_failures += 1
                 logger.error("[%s] poll error (%d/%d): %s", self.name, consecutive_failures, MAX_CONSECUTIVE_FAILURES, exc)
                 consecutive_failures = await backoff()
