@@ -503,7 +503,7 @@ def test_missing_fts_trigger_downgrades_to_exact_scan(tmp_path):
         with db._read_ctx() as conn:
             assert conn.execute(
                 "SELECT value FROM state_meta WHERE key=?",
-                (HISTORY_FTS_READY_KEY,)).fetchone() == ("1",)
+                (HISTORY_FTS_READY_KEY,)).fetchone()[0] == "1"
             assert _history_mentions(conn, [reference]) == _history_mentions_scan(
                 conn, [reference]) == {reference["path"]}
     finally:
