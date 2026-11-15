@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import shlex
+import sqlite3
 from typing import Optional, Union
 
 from agent.i18n import t
@@ -292,6 +293,19 @@ class GatewaySessionCommandsMixin:
         # keeps the slot from becoming a zombie that silently drops all later messages (#28686). Idempotent,
         # so the run's finally calling it again is harmless.
         old_entry = self.session_store._entries.get(session_key)
+        held_count, held_ids = 0, []
+        if old_entry and self._session_db is not None:
+            # Snapshot before /new closes the old route and its pending results become dropped.
+            from gateway.run import _async_profile_runtime_scope
+            from tools.async_delegation import pending_finished_completions_for_session
+            try:
+                home = self.session_store._profile_home_for_key(session_key)
+                async with (_async_profile_runtime_scope(home) if home
+                            else self._async_profile_scope_for_source(source)):
+                    held_count, held_ids = await asyncio.to_thread(
+                        pending_finished_completions_for_session, session_key, old_entry.session_id)
+            except (OSError, ValueError, TypeError, sqlite3.Error):
+                logger.warning("Could not inspect completed background results during /new", exc_info=True)
         await self._cleanup_old_agent_for_reset(session_key)
         self._evict_cached_agent(session_key)
         # Conversation boundary: ALL conversation-scoped per-session state + security state in one
@@ -348,6 +362,11 @@ class GatewaySessionCommandsMixin:
             from gateway.session_authorities import active_authority
             body += t("gateway.reset.paused_left", count=paused_count, discard=discard_command_for(source),
                       session_id=active_authority(self).logical_owner(_old_sid))
+        if held_count:
+            ids = ", ".join(f"`{identifier}`" for identifier in held_ids)
+            if held_count > len(held_ids):
+                ids += f" (+{held_count - len(held_ids)} more)"
+            body += t("gateway.reset.finished_undelivered", count=held_count, ids=ids)
         return EphemeralReply(f"{body}{_tip_line}")
 
     async def _reset_titled_header(self, header: str, session_id: str, title_arg: str) -> str:

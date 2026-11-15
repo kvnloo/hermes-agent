@@ -98,3 +98,40 @@ async def test_new_command_only_clears_own_session():
     assert runner._session_state(other_key).conversation.reasoning_override is not None
     assert session_key not in runner._pending_model_notes
     assert other_key in runner._pending_model_notes
+
+
+@pytest.mark.asyncio
+async def test_new_reports_only_held_finished_results_for_the_old_chat(tmp_path, monkeypatch):
+    """A transport-held completion must be disclosed at /new, never silently lost."""
+    import time
+    from tools import async_delegation as delegation
+
+    runner = _make_runner()
+    runner._session_db = MagicMock()
+    runner.session_store._profile_home_for_key.return_value = tmp_path
+    monkeypatch.setattr(delegation, "get_hermes_home", lambda: tmp_path)
+    key = build_session_key(_make_source())
+
+    def record(name, *, route=key, parent="sess-1", delivery="pending", finished=True):
+        event = {"type": "async_delegation", "delegation_id": name,
+                 "session_key": route, "parent_session_id": parent,
+                 "dispatched_at": time.time(), "status": "completed"}
+        delegation._persist_dispatch(event)
+        if finished:
+            delegation._persist_completion(
+                event, {"status": "completed", "summary": name}, delivery=delivery)
+
+    record("held-one")
+    record("held-two")
+    record("acknowledged-uuid", delivery="delivered")
+    record("foreign-parent-uuid", parent="another-session")
+    record("foreign-chat-uuid", route="agent:main:telegram:dm:foreign")
+    record("running-uuid", finished=False)
+
+    reply = str(await runner._handle_reset_command(_make_event("/new")))
+    assert "2 completed background result(s)" in reply
+    assert "`held-one`" in reply and "`held-two`" in reply
+    assert all(f"`{name}`" not in reply for name in
+               ("acknowledged-uuid", "foreign-parent-uuid", "foreign-chat-uuid", "running-uuid"))
+    assert "SELECT result_json FROM async_delegations" in reply
+    assert delegation.get_durable_delegation("held-one")["delivery_state"] == "pending"

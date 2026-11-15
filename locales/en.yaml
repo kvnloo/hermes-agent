@@ -340,6 +340,7 @@ gateway:
     title_empty_untitled: "\n⚠️ Title is empty after cleanup — session started untitled."
     tip: "\n✦ Tip: {tip}"
     paused_left: "\n⚠️ {count} message(s) you sent while the previous conversation was paused are still saved on the previous conversation, not answered. To run them: /resume {session_id}, then {discard}."
+    finished_undelivered: "\n⚠️ {count} completed background result(s) from the previous session were not delivered before /new. IDs: {ids}. /new discards their delivery, not their saved results. To retrieve them on the gateway host, query this profile's state.db: `SELECT result_json FROM async_delegations WHERE delegation_id = '<ID>';`."
   restart:
     in_progress: "⏳ Gateway restart already in progress..."
     restarting: "♻ Restarting gateway. If you aren't notified within 60 seconds, restart from the console with `hermes gateway restart`."

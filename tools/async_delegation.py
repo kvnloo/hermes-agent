@@ -269,6 +269,25 @@ def _prune_durable_records() -> None:
                    )""", (pending_count - _MAX_DURABLE_PENDING,))
 
 
+def pending_finished_completions_for_session(session_key: str, session_id: str) -> tuple[int, list[str]]:
+    """Read finished, unacknowledged results pinned to one old chat session.
+
+    /new cannot deliver these into its new route; this read is nonmutating and
+    returns bounded IDs so the user can retrieve the saved results instead.
+    """
+    if not session_key or not session_id or not _db_path().is_file():
+        return 0, []
+    where = ("origin_session=? AND parent_session_id=? AND completed_at IS NOT NULL "
+             "AND delivery_state='pending' AND state NOT IN ('running', 'stalling', 'finalizing')")
+    params = (session_key, session_id)
+    with _DB_LOCK, _transaction() as conn:
+        count = conn.execute(f"SELECT COUNT(*) FROM async_delegations WHERE {where}", params).fetchone()[0]
+        ids = [row[0] for row in conn.execute(
+            f"SELECT delegation_id FROM async_delegations WHERE {where} "
+            "ORDER BY completed_at, delegation_id LIMIT 3", params,
+        ).fetchall()]
+    return count, ids
+
 def _persist_completion(event: dict[str, Any], result: dict[str, Any], *, delivery: str = "pending") -> None:
     """*delivery* ``delivered``: a unit whose every child waits on a promised automatic resume is recorded but never
     offered (restart recovery must not resurrect it)."""
