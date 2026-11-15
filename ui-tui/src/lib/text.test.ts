@@ -2,7 +2,17 @@ import { describe, expect, it } from 'vitest'
 
 import { t } from '../i18n/runtime.js'
 
-import { clarifyRevisitState, formatAbandonedClarify, stripTrailingPasteNewlines } from './text.js'
+import { clarifyRevisitState, edgePreview, formatAbandonedClarify, formatToolCall, stripTrailingPasteNewlines } from './text.js'
+
+describe('Unicode preview boundaries', () => {
+  it('keeps complete emoji in truncated tool labels and paste previews (port gemini-cli#29993)', () => {
+    const toolArgument = 'a'.repeat(62) + '😀' + 'trailing'
+    expect(formatToolCall('terminal', toolArgument)).toBe(`Terminal("${'a'.repeat(62)}😀…")`)
+
+    const pasted = 'a'.repeat(15) + '😀' + 'b'.repeat(40)
+    expect(edgePreview(pasted)).toBe(`${'a'.repeat(15)}😀.. ${'b'.repeat(28)}`)
+  })
+})
 
 describe('stripTrailingPasteNewlines', () => {
   it('removes trailing newline runs from pasted text', () => {
