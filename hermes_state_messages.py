@@ -1522,12 +1522,15 @@ class SessionMessagesMixin(SessionDetachedResultsMixin, SessionTodoResultMixin, 
     def get_messages_as_conversation(self, session_id: str, include_ancestors: bool = False,
                                      include_inactive: bool = False, repair_alternation: bool = False,
                                      include_row_ids: bool = False,
-                                     include_compacted: bool = False) -> list[dict[str, Any]]:
+                                     include_compacted: bool = False,
+                                     display_raw_assistant: bool = False) -> list[dict[str, Any]]:
         """Load messages in OpenAI format. ``include_compacted`` (deduped display history) is for DISPLAY reads
         only: the model-fed restore must not regrow what compaction summarized away. ``repair_alternation``
         repairs the loaded list for LIVE REPLAY callers (a durable ``user;user`` pair would re-trigger the
         per-request repair forever), preserving summary markers before repair so derivative context
-        cannot merge with an original user turn; the stored transcript is never mutated."""
+        cannot merge with an original user turn; the stored transcript is never mutated.
+        ``display_raw_assistant`` is only for UI rows passed to the history scrubber;
+        ordinary model/replay loads keep their existing sanitization."""
         display = include_compacted and not include_inactive  # removed rows too: see drop_removed
         rows = self._fetch_conversation_rows(
             self._resume_lineage_ids(session_id) if include_ancestors else [session_id],
@@ -1536,7 +1539,7 @@ class SessionMessagesMixin(SessionDetachedResultsMixin, SessionTodoResultMixin, 
             rows = self._dedupe_display_generations(rows, drop_removed=display)
         return self._rows_to_conversation(rows, session_id=session_id, include_ancestors=include_ancestors,
             repair_alternation=repair_alternation, include_row_ids=include_row_ids,
-            include_summary_markers=repair_alternation)
+            include_summary_markers=repair_alternation, display_raw_assistant=display_raw_assistant)
 
     def conversation_revision(self, session_id: str, include_ancestors: bool = False) -> tuple:
         """A cheap fingerprint of what ``get_messages_as_conversation`` (live rows) would load: the
@@ -1575,7 +1578,8 @@ class SessionMessagesMixin(SessionDetachedResultsMixin, SessionTodoResultMixin, 
 
     def _rows_to_conversation(self, rows, *, session_id: str, include_ancestors: bool, repair_alternation: bool,
                               include_row_ids: bool = False,
-                              include_summary_markers: bool = False) -> list[dict[str, Any]]:
+                              include_summary_markers: bool = False,
+                              display_raw_assistant: bool = False) -> list[dict[str, Any]]:
         """Decode fetched rows (ordered by id, pre-filtered) into OpenAI format, stable key order. Every dict is
         stamped ``_DB_PERSISTED_MARKER_KEY`` (born durable) so an identity-losing handoff never re-appends the
         transcript on flush. Unaddressed live-replay projections also carry the stored-row CAS digest: if a later rewrite
@@ -1597,7 +1601,11 @@ class SessionMessagesMixin(SessionDetachedResultsMixin, SessionTodoResultMixin, 
         # build's) needs the index, so rows this build wrote never pay for it. Indexed in order: same shadowing.
         unindexed_tool_owners: list[dict[str, Any]] = []
         for row in rows:
-            content = self._loaded_view_content(row["role"], self._decode_content(row["content"]))
+            decoded_content = self._decode_content(row["content"])
+            # Sanitizing here destroys an open fence but leaves its private suffix visible.
+            # UI callers must hand the whole assistant block to StreamingContextScrubber.
+            content = (decoded_content if display_raw_assistant and row["role"] == "assistant"
+                       else self._loaded_view_content(row["role"], decoded_content))
             # Underscore-prefixed like ``_row_id``: transports strip it before the wire; compression's
             # assembly copies strip it so rotated child handoffs still flush (_fresh_compaction_message_copy).
             msg = {"role": row["role"], "content": content, _DB_PERSISTED_MARKER_KEY: True}
@@ -1669,7 +1677,8 @@ class SessionMessagesMixin(SessionDetachedResultsMixin, SessionTodoResultMixin, 
                     "see repair_message_sequence", repaired, session_id)
         return messages
 
-    def get_resume_conversations(self, session_id: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    def get_resume_conversations(self, session_id: str, *,
+                                 display_raw_assistant: bool = False) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """``(model_history, display_history)`` for a resume from ONE SELECT; byte-identical to the separate
         reads. model: the tip's active rows, alternation-repaired, summary marker kept for pre-compress
         checkpointing. display: the full lineage (``/branch`` stands alone), compaction-archived rows deduped.
@@ -1692,7 +1701,8 @@ class SessionMessagesMixin(SessionDetachedResultsMixin, SessionTodoResultMixin, 
             include_ancestors=False, repair_alternation=True, include_row_ids=True, include_summary_markers=True)
         display_history = self._rows_to_conversation(
             self._dedupe_display_generations(rows, drop_removed=True), session_id=session_id,
-            include_ancestors=True, repair_alternation=False, include_row_ids=True)
+            include_ancestors=True, repair_alternation=False, include_row_ids=True,
+            display_raw_assistant=display_raw_assistant)
         return model_history, display_history
 
     def _resume_lineage_ids(self, session_id: str) -> list[str]:
