@@ -393,24 +393,64 @@ def _undo_files(home: Path, move_dir: Path, record: dict[str, Any], problems: li
         save()
 
 
+def _skill_fingerprint(directory: Path) -> Optional[str]:
+    """Contents and modes of a skill at the moment this move installed it."""
+    if not directory.exists() and not directory.is_symlink():
+        return None
+    if directory.is_symlink() or not directory.is_dir():
+        return ""
+    digest = hashlib.sha256()
+    for path in sorted(directory.rglob("*")):
+        if path.is_symlink():
+            return ""
+        rel = path.relative_to(directory).as_posix().encode("utf-8")
+        digest.update(len(rel).to_bytes(4, "big"))
+        digest.update(rel)
+        digest.update(b"d" if path.is_dir() else b"f")
+        digest.update((path.stat().st_mode & 0o777).to_bytes(2, "big"))
+        if path.is_file():
+            with path.open("rb") as fh:
+                for block in iter(lambda: fh.read(1024 * 1024), b""):
+                    digest.update(block)
+    return digest.hexdigest()
+
+
+def _skill_unchanged(path: Path, expected: Optional[str]) -> bool:
+    try:
+        current = _skill_fingerprint(path)
+    except OSError:
+        return False
+    # Missing directories cannot contain user edits; an unjournaled existing one is unsafe.
+    return current is None or (expected is not None and current == expected)
+
+
 def _undo_skills(home: Path, move_dir: Path, record: dict[str, Any], problems: list[str], save) -> None:
     root = (home / "skills").resolve()
+    hashes = record.setdefault("skill_hashes", {})
     for rel in list(record.get("added_skills") or []):
         path = home / "skills" / rel
+        if not _skill_unchanged(path, hashes.get(rel)):
+            problems.append(f"changed since the move: skills/{rel}")
+            continue
         if path.resolve().is_relative_to(root):
             shutil.rmtree(path, ignore_errors=True)
         record["added_skills"].remove(rel)
+        hashes.pop(rel, None)
         save()
     for rel in list(record.get("replaced_skills") or []):
         kept, path = move_dir / _SNAPSHOT / "skills" / rel, home / "skills" / rel
         if not kept.is_dir():
             problems.append(f"skills/{rel}: the copy kept for undo is missing")
             continue
+        if not _skill_unchanged(path, hashes.get(rel)):
+            problems.append(f"changed since the move: skills/{rel}")
+            continue
         if path.resolve().is_relative_to(root):
             shutil.rmtree(path, ignore_errors=True)
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(kept), path)
         record["replaced_skills"].remove(rel)
+        hashes.pop(rel, None)
         save()
 
 
@@ -570,6 +610,9 @@ def _apply_skills(home: Path, zf: zipfile.ZipFile, ctx: dict[str, Any]) -> dict[
         if not dest.exists():
             staging = _stage_skill(root, zf, skill)
             try:
+                # Record the exact staged tree before publishing it; a crash cannot lose the witness.
+                undo_rec["skill_hashes"][skill] = _skill_fingerprint(staging)
+                ctx["journal"]()
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 os.replace(staging, dest)
             finally:
@@ -770,7 +813,8 @@ def apply(home: Path, move_id: str, *, sessions, include: Optional[set[str]] = N
             raise MoveError("Finish the upload before applying it.", 409, "not_ready")
         if "undo" not in state:
             state["undo"] = {"files": {}, "written": {}, "added_skills": [], "replaced_skills": [],
-                             "added_sessions": [], "archived_sessions": [], "added_jobs": []}
+                             "skill_hashes": {}, "added_sessions": [], "archived_sessions": [],
+                             "added_jobs": []}
             state["include"] = sorted(include) if include is not None else list(STEPS)
             state["replace"] = sorted(set(replace or ()) & set(state["include"]))
             # Before any step: an earlier step can seed a later one's file (saving config writes a

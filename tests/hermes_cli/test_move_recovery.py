@@ -87,3 +87,31 @@ def test_a_failed_conversation_keeps_the_move_partial_and_retryable_and_one_appl
     assert (move_dir / "bundle.zip").is_file()
     again = move_receive.apply(cloud, state["id"], sessions=OfflineSessions(cloud))
     assert again["status"] == "partial" and again["steps"]["sessions"]["imported"] == 1
+
+
+@pytest.mark.parametrize("replace", [False, True])
+def test_undo_preserves_post_move_skill_edits(tmp_path, replace):
+    """Undo must not silently discard edits made to an added OR replaced skill."""
+    cloud = _cloud(tmp_path)
+    skill = cloud / "skills" / "custom" / "shared" / "SKILL.md"
+    if not replace:
+        shutil.rmtree(skill.parent)
+    state = _received(tmp_path, cloud)
+    state = move_receive.apply(cloud, state["id"], sessions=OfflineSessions(cloud),
+                               include={"skills"}, replace={"skills"} if replace else None)
+    assert state["status"] == "applied", state
+    moved = skill.read_bytes()
+    skill.write_bytes(moved + b"\nuser edit after the move\n")
+
+    undone = move_receive.undo(cloud, state["id"], sessions=OfflineSessions(cloud))
+    assert undone["status"] == "undo_partial", undone
+    assert undone["result"]["undo_problems"] == ["changed since the move: skills/custom/shared"]
+    assert skill.read_bytes() == moved + b"\nuser edit after the move\n"
+
+    skill.write_bytes(moved)
+    undone = move_receive.undo(cloud, state["id"], sessions=OfflineSessions(cloud))
+    assert undone["status"] == "undone", undone
+    if replace:
+        assert "cloud copy" in skill.read_text()
+    else:
+        assert not skill.parent.exists()
