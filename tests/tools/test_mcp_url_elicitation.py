@@ -68,3 +68,13 @@ def test_url_elicitation_with_a_non_http_scheme_declines_without_asking(monkeypa
 
     assert "action=decline" in result
     assert asked == []
+
+@pytest.mark.no_isolate
+@pytest.mark.platforms("posix")
+def test_url_elicitation_with_malformed_https_host_declines_without_prompting(monkeypatch, tmp_path):
+    # The MCP SDK accepts url: str; parsing an unmatched IPv6 bracket raises ValueError.
+    # That must return a protocol decline, not fail the in-flight MCP tool call.
+    result, asked = _call_login(monkeypatch, tmp_path, "https://[broken", "accept")
+
+    assert "action=decline" in result
+    assert asked == []

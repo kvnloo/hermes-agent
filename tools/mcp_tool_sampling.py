@@ -312,8 +312,12 @@ class ElicitationHandler:
             # The user follows the link themselves (OAuth, payment); accept only records consent to go
             # there, so the full URL and its host are shown and nothing is opened or fetched here.
             url = strip_unicode_tags(str(getattr(params, "url", "") or ""))
-            parsed = urlsplit(url)
-            if parsed.scheme not in ("http", "https") or not parsed.hostname:
+            try:
+                parsed = urlsplit(url)
+                valid_url = parsed.scheme in ("http", "https") and bool(parsed.hostname)
+            except ValueError:
+                valid_url = False
+            if not valid_url:
                 logger.warning("MCP server '%s' URL-mode elicitation declined: not an http(s) URL", self.server_name)
                 return self._result("decline", "declined")
             description = (f"MCP server '{self.server_name}' asks you to open this URL in your browser:\n"
