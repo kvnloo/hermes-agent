@@ -109,6 +109,35 @@ async def test_queued_handoff_fires_each_generation(adapter):
     assert adapter._post_delivery_callbacks == {}
 
 
+@pytest.mark.asyncio
+async def test_busy_observer_keeps_older_generation_after_next_turn_registers(adapter):
+    """The authority drain releases the reply marker before the native observer pops its callback.
+
+    That permits the next claimed turn to register before the previous observer finishes.
+    Both callbacks must still run after their respective replies (salvage #100133).
+    """
+    from gateway.session_ingress import _run_own_post_delivery
+
+    source = SessionSource(platform=Platform.TELEGRAM, chat_id="1234", chat_type="private")
+    first = MessageEvent(text="first", message_type=MessageType.TEXT, source=source, message_id="1")
+    second = MessageEvent(text="second", message_type=MessageType.TEXT, source=source, message_id="2")
+    first._hermes_run_generation = 1
+    second._hermes_run_generation = 2
+    key = "agent:main:telegram:dm:1234"
+    fired = []
+
+    adapter.register_post_delivery_callback(key, lambda: fired.append("first"), generation=1)
+    # Native observer 1 has finished delivery but has not yet popped its callback.
+    adapter.register_post_delivery_callback(key, lambda: fired.append("second"), generation=2)
+
+    await _run_own_post_delivery(adapter, key, first)
+    assert fired == ["first"], "the first turn's progress cleanup was overwritten"
+    await _run_own_post_delivery(adapter, key, second)
+    assert fired == ["first", "second"]
+    assert adapter._post_delivery_callbacks == {}
+    assert adapter._post_delivery_callbacks_by_generation == {}
+
+
 class TestPostDeliveryCallbackAsyncChaining:
     """When an async callback is chained, the wrapper must await it.
 

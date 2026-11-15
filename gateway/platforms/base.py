@@ -1896,6 +1896,9 @@ class BasePlatformAdapter(_SessionModelSettingsMixin, ABC):
         # Post-delivery one-shots per session_key: bare callback (legacy) or ``(generation,
         # callback)`` so a stale run can't clear a fresher run's callback.
         self._post_delivery_callbacks: dict[str, Any] = {}
+        # A native delivery waiter can finish after the authority drain starts a newer turn.
+        # Hold the prior turn's callback until that waiter pops its own generation.
+        self._post_delivery_callbacks_by_generation: dict[tuple[str, int], Callable] = {}
         self._expected_cancelled_tasks: set[asyncio.Task] = set()
         self._busy_session_handler: Optional[Callable[[MessageEvent, str], Awaitable[bool]]] = None
         # Owning multiplex profile (None on primary); see _session_key_profile.
@@ -3345,23 +3348,35 @@ class BasePlatformAdapter(_SessionModelSettingsMixin, ABC):
 
     def register_post_delivery_callback(
         self, session_key: str, callback: Callable, *, generation: int | None = None) -> None:
-        """Register a deferred callback to fire after the main response. Same-key registrations are
-        chained (both fire in order, per-callback exception isolation) so independent features
-        coexist; ``generation`` ties it to a gateway run — stale generations never overwrite a
-        fresher slot."""
+        """Run a turn's callbacks after its reply, chaining callbacks from the same generation.
+
+        A native waiter may still be delivering when the authority drain binds the next
+        generation. Preserve that older callback for its own waiter instead of overwriting it.
+        """
         if not session_key or not callable(callback):
             return
+        pending = _lazy_attr(self, "_post_delivery_callbacks_by_generation", dict)
+        if generation is not None:
+            generation = int(generation)
+            old_lane = pending.get((session_key, generation))
+            if old_lane is not None:
+                pending[(session_key, generation)] = self._chain_callbacks(old_lane, callback)
+                return
         existing = self._post_delivery_callbacks.get(session_key)
         if existing is not None:
             existing_gen, existing_cb = _split_post_delivery_entry(existing)
-            if existing_gen is not None and generation is not None and int(generation) < int(existing_gen):
-                return
-            # Same-or-newer generation: chain so both fire in registration order.
-            if callable(existing_cb) and (
-                existing_gen is None or generation is None or int(existing_gen) == int(generation)):
+            if existing_gen is not None and generation is not None:
+                if generation < int(existing_gen):
+                    return  # A stale new registration must not displace the current turn.
+                if generation > int(existing_gen):
+                    if callable(existing_cb):
+                        pending[(session_key, int(existing_gen))] = existing_cb
+                elif callable(existing_cb):
+                    callback = self._chain_callbacks(existing_cb, callback)
+            elif callable(existing_cb):
                 callback = self._chain_callbacks(existing_cb, callback)
         self._post_delivery_callbacks[session_key] = (
-            callback if generation is None else (int(generation), callback))
+            callback if generation is None else (generation, callback))
 
     @staticmethod
     def _chain_callbacks(*callbacks: Callable) -> Callable[[], Awaitable[None]]:
@@ -3379,14 +3394,24 @@ class BasePlatformAdapter(_SessionModelSettingsMixin, ABC):
 
     def pop_post_delivery_callback(
         self, session_key: str, *, generation: int | None = None) -> Callable | None:
-        """Pop a deferred callback, optionally requiring generation ownership."""
-        entry = self._post_delivery_callbacks.get(session_key) if session_key else None
+        """Pop only this turn's callback, including an older waiter still delivering."""
+        if not session_key:
+            return None
+        entry = self._post_delivery_callbacks.get(session_key)
+        if generation is not None:
+            generation = int(generation)
+            if entry is not None:
+                entry_generation, callback = _split_post_delivery_entry(entry)
+                if entry_generation is not None and int(entry_generation) == generation:
+                    self._post_delivery_callbacks.pop(session_key, None)
+                    return callback if callable(callback) else None
+            callback = _lazy_attr(self, "_post_delivery_callbacks_by_generation", dict).pop(
+                (session_key, generation), None)
+            return callback if callable(callback) else None
         if entry is None:
             return None
-        entry_generation, callback = _split_post_delivery_entry(entry)
-        if generation is not None and (entry_generation is None or int(entry_generation) != int(generation)):
-            return None
         self._post_delivery_callbacks.pop(session_key, None)
+        callback = _split_post_delivery_entry(entry)[1]
         return callback if callable(callback) else None
 
     # ── Processing lifecycle hooks (Discord 👀/✅/❌ reactions). Adapters exposing
