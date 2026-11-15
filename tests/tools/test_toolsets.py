@@ -118,6 +118,25 @@ class TestGetToolsetInfo:
         assert info["is_composite"] is True
         assert info["tool_count"] > len(info["direct_tools"])
 
+def test_downstream_runtime_toolset_registration_survives_refactor():
+    """Flyte SDK and Breadboard import this helper before creating an agent."""
+    from toolsets import BUILTIN_TOOLSET_NAMES, create_custom_toolset
+
+    name = "_downstream_toolset_compat"
+    assert name not in TOOLSETS
+    try:
+        create_custom_toolset(name, "Scoped third-party tools", tools=["web_search"], includes=["file"])
+        assert validate_toolset(name)
+        info = get_toolset_info(name)
+        assert info["description"] == "Scoped third-party tools"
+        assert info["direct_tools"] == ["web_search"]
+        assert info["includes"] == ["file"]
+        assert {"web_search", "read_file"} <= set(info["resolved_tools"])
+        assert name not in BUILTIN_TOOLSET_NAMES
+    finally:
+        TOOLSETS.pop(name, None)
+
+
 class TestRegistryOwnedToolsets:
     def test_registry_membership_is_live(self, monkeypatch):
         reg = ToolRegistry()

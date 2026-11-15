@@ -488,6 +488,12 @@ def validate_toolset(name: str) -> bool:
             or name in _get_plugin_toolset_names() or name in _get_registry_toolset_aliases())
 
 
+
+def create_custom_toolset(name: str, description: str, tools: list[str] | None = None, includes: list[str] | None = None) -> None:
+    """Register a runtime toolset for externally embedded Hermes agents."""
+    TOOLSETS[name] = _ts(description, tools or [], includes or [])
+
+
 def get_toolset_info(name: str) -> dict[str, Any]:
     """Toolset definition plus its resolved tools, or None if unknown."""
     toolset = get_toolset(name)
