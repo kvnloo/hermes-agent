@@ -1144,7 +1144,12 @@ def classify_api_error(
     )
     stage, verdict = next(((s, v) for s in _STAGES if (v := s(c)) is not None), (None, _V_UNKNOWN))
     if verdict["reason"] in _REPLAY_ONLY_REASONS and _header_forbids_retry(c.headers):
-        verdict = _V_SERVER_REFUSED_RETRY
+        # The header forbids replay, but a provider's hook still owns fallback and context.
+        verdict = (
+            {**verdict, "reason": _R.server_error, "retryable": False}
+            if stage in (_plugin_verdict, _profile_verdict)
+            else _V_SERVER_REFUSED_RETRY
+        )
     extra = _shape_context(c, verdict, hooked=stage in (_plugin_verdict, _profile_verdict))
     if extra:
         verdict = {**verdict, "error_context": {**(verdict.get("error_context") or {}), **extra}}

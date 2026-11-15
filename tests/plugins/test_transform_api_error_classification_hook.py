@@ -79,6 +79,35 @@ def test_plugin_classification_wins(monkeypatch):
     assert result.provider == "acmecloud"
     assert result.status_code is None
 
+
+
+def test_hook_503_no_retry_preserves_fallback_opt_out(monkeypatch):
+    """An SDK 503 forbids replay, not a plugin's choice to decline fallback."""
+    import httpx
+    import openai
+
+    request = httpx.Request("POST", "http://127.0.0.1:9/v1/chat/completions")
+    body = {"error": {"message": "unavailable", "type": "server_error"}}
+    response = httpx.Response(
+        503, json=body, headers={"x-should-retry": "false"}, request=request,
+    )
+    error = openai.APIStatusError("HTTP 503: unavailable", response=response, body=body)
+    monkeypatch.setattr(
+        plugins_mod, "invoke_hook",
+        lambda name, **kw: [{
+            "reason": "server_error", "retryable": False, "should_fallback": False,
+            "error_context": {"owner_policy": "no_fallback"},
+        }],
+    )
+
+    result = classify_api_error(error, provider="acmecloud")
+
+    assert result.reason == FailoverReason.server_error
+    assert result.retryable is False
+    assert result.should_fallback is False
+    assert result.error_context["owner_policy"] == "no_fallback"
+    assert result.error_context["hook_declines_fallback"] is True
+
 # ── Invalid returns are ignored, first valid wins ───────────────────────
 
 
