@@ -152,6 +152,8 @@ async def _authorize(client, provider, cfg):
         data["scope"] = context.client_metadata.scope
     data.update(google_offline_access_params(context))
     data, headers = context.prepare_token_auth(data, {})
+    # GitHub's device-code endpoint defaults to form data unless JSON is requested (#44592).
+    headers.setdefault("Accept", "application/json")
     response = await client.post(str(context.oauth_metadata.device_authorization_endpoint), data=data, headers=headers)
     authorization = _payload(response, "Device authorization")
     for key in ("device_code", "user_code", "verification_uri"):

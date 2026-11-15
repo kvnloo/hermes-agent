@@ -22,6 +22,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from types import SimpleNamespace
 from unittest.mock import MagicMock
+from urllib.parse import urlencode
 
 import pytest
 
@@ -206,9 +207,11 @@ def device_authorization_server():
             pass
 
         def _reply(self, status, payload):
-            body = json.dumps(payload).encode()
+            # GitHub returns form-encoded device codes unless the caller requests JSON.
+            wants_form = self.path == "/device" and self.headers.get("Accept") != "application/json"
+            body = (urlencode(payload) if wants_form else json.dumps(payload)).encode()
             self.send_response(status)
-            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Type", "application/x-www-form-urlencoded" if wants_form else "application/json")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -283,6 +286,7 @@ def test_device_flow_token_poll_carries_a_user_agent_on_the_wire(
     assert asyncio.run(run()).access_token == "at"
 
     assert [path for path, _ in seen] == ["/device", "/token", "/token"]
+    assert seen[0][1].get("accept") == "application/json"
     agents = [headers.get("user-agent") for _, headers in seen]
     assert all(agents), seen  # nothing leaves Hermes header-less
     polls = [headers.get("user-agent") for path, headers in seen if path == "/token"]
