@@ -163,13 +163,23 @@ export default defineConfig(({ command }) => ({
     //     bundle hit ~28 MB that eval was ~1s of launch on an M-series.
     //   · Default splitting emits a chunk per shiki grammar/theme — thousands
     //     of files, which electron-builder OOMs scanning (#38888).
-    // `advancedChunks` is the middle ground: heavyweight libraries merge into
+    // `codeSplitting` is the middle ground: heavyweight libraries merge into
     // a handful of named vendor chunks loaded on first use, app-level dynamic
     // imports stay lazy, and the file count stays in the tens.
     chunkSizeWarningLimit: 25000,
     rolldownOptions: {
+      // Vite's HTML entry exports no public bindings. Rolldown requires this
+      // explicit setting to inline small automatic common chunks safely.
+      preserveEntrySignatures: false,
       output: {
-        advancedChunks: {
+        codeSplitting: {
+          // Reuse tiny shared helpers in their lazy consumers instead of
+          // adding another request to the browser-hosted startup waterfall.
+          // Keep named vendor chunks lazy; never duplicate stylesheet modules.
+          experimentalInlineCommonChunks: {
+            maxSize: 5 * 1024,
+            exclude: /\.(css|scss|sass|less|styl|stylus|pcss|postcss|sss)(\?|$)/
+          },
           groups: [
             // Shared foundations FIRST (first match wins): an unmatched
             // module shared by the entry and a heavy chunk gets merged INTO
