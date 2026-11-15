@@ -124,3 +124,31 @@ class TestBundledResourceEnvPropagation:
         monkeypatch.setenv("HERMES_TUI_DIR", "/opt/tui")
         env = plistlib.loads(generate_launchd_plist().encode("utf-8"))["EnvironmentVariables"]
         assert env["HERMES_TUI_DIR"] == "/opt/tui"
+
+    def test_optional_mcp_catalog_pointer_survives_supervisor_regeneration(self, monkeypatch, tmp_path):
+        """Nix keeps optional-mcps outside site-packages; supervisors bypass the Nix wrapper."""
+        self._clear_bundled_env(monkeypatch)
+        monkeypatch.delenv("HERMES_OPTIONAL_MCPS", raising=False)
+        unit_path = tmp_path / "hermes-gateway.service"
+        plist_path = tmp_path / "gw.plist"
+        monkeypatch.setattr(gateway_cli, "get_systemd_unit_path", lambda system=False: unit_path)
+        monkeypatch.setattr(gateway_cli, "get_launchd_plist_path", lambda: plist_path)
+        catalog = tmp_path / "optional-mcps"
+        catalog.mkdir()
+
+        # The Nix wrapper exports this real resource root only for the command that generates
+        # the service definition. The supervised gateway itself does not invoke that wrapper.
+        monkeypatch.setenv("HERMES_OPTIONAL_MCPS", str(catalog))
+        plist = generate_launchd_plist()
+        unit = gateway_cli.generate_systemd_unit(system=False)
+        assert plistlib.loads(plist.encode("utf-8"))["EnvironmentVariables"]["HERMES_OPTIONAL_MCPS"] == str(catalog)
+        assert f'Environment="HERMES_OPTIONAL_MCPS={catalog}"' in unit
+
+        # A subsequent wrapper-less restart must not erase the saved catalog pointer.
+        plist_path.write_text(plist, encoding="utf-8")
+        unit_path.write_text(unit, encoding="utf-8")
+        monkeypatch.delenv("HERMES_OPTIONAL_MCPS")
+        regenerated_plist = generate_launchd_plist()
+        regenerated_unit = gateway_cli.generate_systemd_unit(system=False)
+        assert plistlib.loads(regenerated_plist.encode("utf-8"))["EnvironmentVariables"]["HERMES_OPTIONAL_MCPS"] == str(catalog)
+        assert f'Environment="HERMES_OPTIONAL_MCPS={catalog}"' in regenerated_unit
