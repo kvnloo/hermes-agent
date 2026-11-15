@@ -96,6 +96,23 @@ describe('reconcileUnifiedDesktopHalves', () => {
     expect(await reconcileUnifiedDesktopHalves(home, appRoot)).toEqual([])
   })
 
+  it('never rematerializes a backup package as a second desktop plugin (#150919)', async () => {
+    const home = makeHome()
+    const appRoot = path.join(home, 'desktop-plugins')
+    const backup = 'omh.bak.20261107072053'
+    write(path.join(home, 'plugins', 'omh', 'desktop', 'plugin.js'), 'live')
+    write(path.join(home, 'plugins', backup, 'desktop', 'plugin.js'), 'stale backup')
+
+    expect(await reconcileUnifiedDesktopHalves(home, appRoot)).toEqual([path.join(appRoot, 'omh')])
+    expect(fs.readdirSync(appRoot)).toEqual(['omh'])
+
+    // Deleting an old copy must stick across the next pass while the source backup still exists.
+    write(path.join(appRoot, backup, 'plugin.js'), 'old copy')
+    fs.rmSync(path.join(appRoot, backup), { recursive: true, force: true })
+    expect(await reconcileUnifiedDesktopHalves(home, appRoot)).toEqual([])
+    expect(fs.existsSync(path.join(appRoot, backup))).toBe(false)
+  })
+
   it('re-copies when the source half changes, and removes the copy when the package is uninstalled', async () => {
     const home = makeHome()
     const appRoot = path.join(home, 'desktop-plugins')
