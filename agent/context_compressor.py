@@ -2998,6 +2998,11 @@ class ContextCompressor(
         tokens = prompt_tokens if prompt_tokens is not None else self.last_prompt_tokens
         if tokens < self.threshold_tokens:
             return False, None
+        # The fallback window is a guess, not an automatic summarization threshold.
+        # Manual /compress and provider-confirmed overflow recovery bypass this gate.
+        context_default = getattr(self, "_context_default", None)
+        if context_default is not None and context_default[2] == self.context_length:
+            return False, None
         if self._automatic_compression_blocked():
             return False, self._compression_block_reason() or "blocked"
         return True, None

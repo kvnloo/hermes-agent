@@ -72,6 +72,22 @@ class TestFallbackMarker:
         # Same number from the catalog (a listed 256K model) is a known limit.
         assert _resolve_and_mark("gemma-4-31b", **route) == (DEFAULT_FALLBACK_CONTEXT, "")
 
+    def test_unknown_context_window_does_not_trigger_automatic_compaction(self, _quiet_custom_endpoint):
+        """Port cline/cline#14867: a guessed limit must not trigger an unsolicited summary."""
+        from agent.context_compressor import ContextCompressor
+
+        route = dict(model="mystery-model", provider="custom", base_url=LOCAL_URL)
+        unknown = ContextCompressor(**route)
+        assert unknown.should_compress(unknown.threshold_tokens + 1) is False
+
+        pinned = ContextCompressor(**route, config_context_length=256_000)
+        assert pinned.should_compress(pinned.threshold_tokens + 1) is True
+
+        _quiet_custom_endpoint.setattr("agent.model_metadata._resolve_endpoint_context_length",
+                                       lambda *a, **k: 256_000)
+        detected = ContextCompressor(**route)
+        assert detected.should_compress(detected.threshold_tokens + 1) is True
+
     def test_a_window_the_endpoint_reported_is_not_marked_fallback(self, _quiet_custom_endpoint):
         """Greptile: an uncatalogued model whose /models reports 256000 is detected, not defaulted."""
         from agent.model_metadata import DEFAULT_FALLBACK_CONTEXT
