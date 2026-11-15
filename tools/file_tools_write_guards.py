@@ -14,7 +14,7 @@ import fnmatch
 import os
 from pathlib import Path
 
-from agent.file_safety import deny_key, get_nt_namespace_error
+from agent.file_safety import deny_key, get_nt_namespace_error, is_pseudo_filesystem_write_path
 from tools import file_state
 from tools.binary_extensions import (
     has_binary_extension,
@@ -182,6 +182,8 @@ def _check_sensitive_path(filepath: str, task_id: str = "default") -> str | None
         return (
             f"Refusing to write to {filepath}: it climbs above the SSH home and the remote "
             "home could not be detected, so its target cannot be checked. Pass an absolute path.")
+    if any(is_pseudo_filesystem_write_path(c) for c in candidates):
+        return f"Refusing to write to device or kernel pseudo-filesystem path: {filepath}"
     keys = [deny_key(c) for c in candidates]
     if any(k.startswith(_SENSITIVE_PATH_PREFIXES) or k in _SENSITIVE_EXACT_PATHS for k in keys):
         return (
