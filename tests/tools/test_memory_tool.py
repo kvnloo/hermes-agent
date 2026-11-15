@@ -12,6 +12,7 @@ from tools.memory_tool import (
     _scan_memory_content,
 )
 from tools.skill_provenance import reset_current_write_origin, set_current_write_origin
+from tools.memory_tool_store import MEMORY_BLOCK_HEADERS
 
 
 def _blocked(content, pattern_id=None):
@@ -461,6 +462,25 @@ class TestMemoryStoreSnapshot:
         assert "MEMORY" in snapshot
         assert "loaded at start" in snapshot
         assert "added later" not in snapshot
+
+
+    @pytest.mark.parametrize("target", ("memory", "user"))
+    def test_near_full_memory_capacity_stays_out_of_task_prompt(self, tmp_path, monkeypatch, target):
+        """#154988: full memory is not a warning about the current task's context."""
+        monkeypatch.setattr("tools.memory_tool.get_memory_dir", lambda: tmp_path)
+        store = MemoryStore()  # Use real default limits, not the small shared fixture.
+        store.load_from_disk()
+        limit = store.memory_char_limit if target == "memory" else store.user_char_limit
+        entry = ("Local workspace facts; " * limit)[:int(limit * 0.97)]
+
+        result = store.add(target, entry)
+        assert result["success"] is True
+        assert f"/{limit:,} chars" in result["usage"]  # Curation retains capacity feedback.
+
+        store.load_from_disk()
+        snapshot = store.format_for_system_prompt(target)
+        assert snapshot is not None and entry in snapshot
+        assert snapshot.splitlines()[1] == MEMORY_BLOCK_HEADERS[target]
 
 
 # =========================================================================

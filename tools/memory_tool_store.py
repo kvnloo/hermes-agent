@@ -673,12 +673,12 @@ class MemoryStore:
                 "note": "Write saved. This update is complete — do not repeat it."}
 
     def _render_block(self, target: str, entries: list[str]) -> str:
-        """System prompt block: header + usage indicator + entries ("" when empty)."""
+        """System prompt block: title and entries only; capacity belongs to tool results."""
         if not entries:
             return ""
         content, sep = ENTRY_DELIMITER.join(entries), "═" * 46
         title = MEMORY_BLOCK_HEADERS["user" if target == "user" else "memory"]
-        return f"{sep}\n{title} [{self._usage_pct(target, len(content))}]\n{sep}\n{content}"
+        return f"{sep}\n{title}\n{sep}\n{content}"
 
     @staticmethod
     def _read_raw_checked(path: Path) -> tuple[str, bool]:
