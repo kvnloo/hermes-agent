@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ContribController } from '@/app/contrib/controller'
 import {
   handleServerRequest,
   type ServerRequestContext
@@ -17,6 +19,33 @@ import { PromptOverlays } from './prompt-overlays'
 
 vi.mock('@/lib/haptics', () => ({ triggerHaptic: vi.fn() }))
 vi.mock('@/store/notifications', () => ({ notifyError: vi.fn() }))
+
+// Keep gateway boot, native surfaces, and chat panes out of this shell-level prompt test.
+vi.mock('@/app/contrib/wiring', () => ({
+  ContribWiring: ({ children }: { children: ReactNode }) => children,
+  WiredPane: () => null
+}))
+vi.mock('@/components/pane-shell/tree/renderer', () => ({ LayoutTreeRoot: () => null }))
+vi.mock('@/contrib/plugins', () => ({ discoverBundledPlugins: vi.fn() }))
+vi.mock('@/contrib/runtime-loader', () => ({ discoverRuntimePlugins: vi.fn() }))
+vi.mock('@/app/context-menu/app-context-menu', () => ({ AppContextMenu: () => null }))
+vi.mock('@/app/contrib/plugin-preview-consent-dialog', () => ({ PluginPreviewConsentDialog: () => null }))
+vi.mock('@/app/contrib/panes', () => ({ FilesPane: () => null, LogsPane: () => null, ReviewPaneContent: () => null }))
+vi.mock('@/app/chat/browser-popout-shell', () => ({ BrowserPopoutShell: () => null }))
+vi.mock('@/app/hud/hud-shell', () => ({ HudShell: () => null }))
+vi.mock('@/app/chat/preview-tile', () => ({ watchPreviewTiles: vi.fn() }))
+vi.mock('@/app/chat/route-tile', () => ({ watchRouteTiles: vi.fn() }))
+vi.mock('@/app/chat/session-tile', () => ({
+  SessionTileCloseConfirm: () => null,
+  stackSessionTilesIntoMain: vi.fn(),
+  startTileBackendIdentityGuard: vi.fn(),
+  startUnrestoredTileTitleBackfill: vi.fn(),
+  watchSessionTiles: vi.fn(),
+  workspaceTabActions: [],
+  WorkspaceTabMenu: ({ children }: { children: ReactNode }) => children
+}))
+vi.mock('@/app/shell/butterbar', () => ({ Butterbar: () => null }))
+vi.mock('@/app/shell/terms-butterbar', () => ({ TermsButterbar: () => null }))
 
 function renderPrompts(sessionId: string | null = 's1') {
   render(
@@ -40,8 +69,57 @@ afterEach(() => {
 })
 
 describe('PromptOverlays', () => {
+  it('answers a Bot Screen install request through the app shell with no chat mounted', async () => {
+    const respond = vi.fn()
+    const request = vi.fn()
+
+    const deps: ServerRequestContext['deps'] = {
+      activeSessionIdRef: { current: null },
+      sessionInterrupted: () => false,
+      sessionStateByRuntimeIdRef: { current: new Map() },
+      updateSessionState: (_sid, update) => update(createClientSessionState('s1')),
+      upsertToolCall: () => undefined
+    }
+
+    $gateway.set({ request } as never)
+    render(
+      <I18nProvider configClient={null}>
+        <ContribController />
+      </I18nProvider>
+    )
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(
+      handleServerRequest(
+        {
+          fail: vi.fn(),
+          id: 'bot-screen-shell-install',
+          method: 'display.install.sudo',
+          params: { profile_key: 'pieter' },
+          profile: 'pieter',
+          respond
+        },
+        deps,
+        null
+      )
+    ).toBe(true)
+
+    const password = await screen.findByPlaceholderText('sudo password')
+
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(password.getAttribute('type')).toBe('password')
+    fireEvent.change(password, { target: { value: 'test-password' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => expect(respond).toHaveBeenCalledExactlyOnceWith({ value: 'test-password' }))
+    expect(hasOpenServerRequest('bot-screen-shell-install')).toBe(false)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(request).not.toHaveBeenCalled()
+    expect(notifyError).not.toHaveBeenCalled()
+  })
+
   it('answers a Bot Screen install sudo card once while a chat is mounted', async () => {
     const respond = vi.fn()
+
     const deps: ServerRequestContext['deps'] = {
       activeSessionIdRef: { current: 's1' },
       sessionInterrupted: () => false,
@@ -76,9 +154,9 @@ describe('PromptOverlays', () => {
     )
 
     expect(screen.getAllByRole('dialog')).toHaveLength(1)
-    const password = screen.getByPlaceholderText('sudo password') as HTMLInputElement
+    const password = screen.getByPlaceholderText('sudo password')
 
-    expect(password.type).toBe('password')
+    expect(password.getAttribute('type')).toBe('password')
     fireEvent.change(password, { target: { value: 'test-password' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
 
