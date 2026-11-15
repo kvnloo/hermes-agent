@@ -207,6 +207,42 @@ describe("SessionsPage list ordering (#155919)", () => {
       expect(order ?? options?.order).toBe("recent");
     }
   });
+  it("refreshes when an older chat moves up but the first session stays the same", async () => {
+    const intervals = vi.spyOn(globalThis, "setInterval");
+    try {
+      const row = (id: string, lastActive: number) => ({
+        id, profile: "default", source: "cli", model: null, title: id, started_at: 1,
+        ended_at: null, last_active: lastActive, is_active: false, message_count: 2,
+        tool_call_count: 0, input_tokens: 1, output_tokens: 1, preview: "hi",
+      });
+      const head = row("head", 100);
+      const second = row("second", 90);
+      const third = row("third", 80);
+      await renderSessionsPage([head, second, third]);
+
+      const interval = intervals.mock.calls.find(([, delay]) => delay === 5000);
+      if (!interval || typeof interval[0] !== "function") {
+        throw new Error("overview poll was not installed");
+      }
+      const poll = interval[0] as () => void;
+      let rows = [head, second, third];
+      apiMocks.getSessions.mockImplementation(async (limit: number) => ({
+        sessions: rows, total: rows.length, limit, offset: 0,
+      }));
+
+      // First poll establishes the baseline without an unnecessary reload.
+      await act(async () => { poll(); await Promise.resolve(); });
+      apiMocks.getSessions.mockClear();
+
+      // Another surface continues "third": it becomes rank 2, not rank 1.
+      rows = [head, third, second];
+      await act(async () => { poll(); await Promise.resolve(); });
+      expect(apiMocks.getSessions.mock.calls.filter(([limit]) => limit === 20)).toHaveLength(1);
+    } finally {
+      intervals.mockRestore();
+    }
+  });
+
 });
 
 describe("structured reasoning rendering (#59957)", () => {

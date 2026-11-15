@@ -1037,12 +1037,10 @@ export default function SessionsPage() {
     loadStats();
   }, [loadStats]);
 
-  // Refs for the overview poll's new-session detection. The poll effect
-  // below is mounted once with stable deps, so it reads the current page
-  // and the last-seen newest session id through refs instead of capturing
-  // stale values. ``newestSeenRef`` starts null so the first poll sets a
-  // baseline without triggering a redundant reload (mount already loads).
-  const newestSeenRef = useRef<string | null>(null);
+  // Track the first visible page's order, not just its head: activity can
+  // swap rows below the top without changing which session is newest.
+  // Null avoids a duplicate load when the first poll establishes a baseline.
+  const visibleOrderSeenRef = useRef<string | null>(null);
   const pageRef = useRef(page);
 
   useEffect(() => {
@@ -1075,19 +1073,16 @@ export default function SessionsPage() {
         .then((r) => {
           if (cancelled) return;
           setOverviewSessions(r.sessions);
-          // The dashboard server and a terminal CLI are separate
-          // processes sharing one session DB — there is no push channel,
-          // so we detect sessions created or continued in another process
-          // here. The overview poll already fetches the 50 most recently
-          // active sessions, so we reuse its head id as a cheap change
-          // signal: when it changes, silently refresh the paginated list so
-          // the new activity shows up in real time without a visible
-          // loading flicker.
-          const newest = r.sessions[0]?.id ?? null;
-          if (shouldRefreshSessions(newestSeenRef.current, newest)) {
+          // The overview poll already fetches 50 most-recently-active rows.
+          // Compare the visible page's ID order: an older chat can move from
+          // third to second without replacing the first row.
+          const visibleOrder = r.sessions.length
+            ? JSON.stringify(r.sessions.slice(0, PAGE_SIZE).map((s) => s.id))
+            : null;
+          if (shouldRefreshSessions(visibleOrderSeenRef.current, visibleOrder)) {
             loadSessions(pageRef.current, true);
           }
-          newestSeenRef.current = newest;
+          visibleOrderSeenRef.current = visibleOrder;
         })
         .catch(() => {});
     };
