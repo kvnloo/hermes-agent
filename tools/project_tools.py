@@ -132,11 +132,16 @@ def project_create(name: str, path: Optional[str] = None, task_id: Optional[str]
         "moved": moved,
     }
     if not moved:
-        result["warning"] = (
-            "Project created, but this chat was not moved because the project has no folder."
-            if not primary
-            else "Project created, but the live chat workspace could not be moved."
-        )
+        if primary and not os.path.isdir(primary):
+            result["warning"] = (
+                f"Project created, but the primary folder is unavailable on the gateway host: {primary}"
+            )
+        else:
+            result["warning"] = (
+                "Project created, but this chat was not moved because the project has no folder."
+                if not primary
+                else "Project created, but the live chat workspace could not be moved."
+            )
     return json.dumps(result)
 
 
@@ -160,11 +165,16 @@ def project_switch(project: str, task_id: Optional[str] = None) -> str:
         "moved": moved,
     }
     if not moved:
-        result["warning"] = (
-            "Active project changed, but this chat was not moved because the project has no folder."
-            if not primary
-            else "Active project changed, but the live chat workspace could not be moved."
-        )
+        if primary and not os.path.isdir(primary):
+            result["warning"] = (
+                f"Active project changed, but the primary folder is unavailable on the gateway host: {primary}"
+            )
+        else:
+            result["warning"] = (
+                "Active project changed, but this chat was not moved because the project has no folder."
+                if not primary
+                else "Active project changed, but the live chat workspace could not be moved."
+            )
     return json.dumps(result)
 
 
