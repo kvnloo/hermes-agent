@@ -302,6 +302,26 @@ test('listRemoteHermesProfiles inventories Mini-style profile dirs without spawn
   )
 })
 
+test('SSH inventory and install id follow the configured HERMES_HOME wrapper (#156021)', async () => {
+  const launcher = '~/.local/bin/hermes-ddtalk'
+  const wrapperHome = '/Users/lee/hermes-ddtalk'
+  const wrapperId = '869baef8869baef8869baef8869baef8'
+  const ssh = fakeSsh([
+    [/config path/, `${wrapperHome}/config.yaml\n`],
+    [/HERMES_HOME/, '/Users/lee/.hermes\n'],
+    [cmd => cmd.includes(`${wrapperHome}/profiles`), ''],
+    [cmd => cmd.includes(`${wrapperHome}/install_id`), `${wrapperId}\n`],
+    [/ls -1/, 'intake-bot\n'],
+    [/cat .*install_id/, '6252b9836252b9836252b9836252b983\n']
+  ])
+  const platform = { os: 'Darwin', arch: 'arm64' }
+
+  assert.deepEqual(await listRemoteHermesProfiles(ssh, platform, launcher), ['default'])
+  assert.equal(await readRemoteInstallId(ssh, platform, launcher), wrapperId)
+  assert.equal(ssh.calls.filter(cmd => cmd.includes('config path')).length, 2)
+  assert.equal(ssh.calls.some(cmd => cmd.includes('/Users/lee/.hermes/profiles')), false)
+  assert.equal(ssh.calls.some(cmd => cmd.includes('/Users/lee/.hermes/install_id')), false)
+})
 test('listRemoteHermesProfiles rejects a hostile HERMES_HOME', async () => {
   const ssh = fakeSsh([[/HERMES_HOME/, '/tmp/x; echo pwned\n']])
 
@@ -1265,6 +1285,7 @@ test('connect() respawns when the lockfile hermesPath differs from the resolved 
   const lock = ownedLock({ hermesPath: '/old/stale/hermes', tokenFingerprint: fingerprintToken(reuseToken) })
 
   const ssh = fakeSsh([
+    [/config path/, '/home/alice/.hermes/config.yaml\n'],
     [/uname/, 'Linux\nx86_64'],
     [/\[ -x/, 'OK'],
     [/cat .*lock\.json/, JSON.stringify(lock)],

@@ -307,8 +307,23 @@ async function probeRemotePlatform(ssh) {
 // The HERMES_HOME the remote dashboard will use (explicit env wins, else
 // ~/.hermes). Recorded in the lockfile so a future reuse can tell it's the same
 // state store; best-effort.
-async function probeRemoteHermesHome(ssh) {
+async function probeRemoteHermesHome(ssh, remoteHermesPath = '') {
   try {
+    // SSH's non-interactive environment does not inherit a launcher's HERMES_HOME.
+    // Ask the configured launcher which config it actually uses, without starting a backend.
+    if (remoteHermesPath) {
+      const configPath = (await ssh.exec(withRemoteTimeout(`${expandRemotePath(remoteHermesPath)} config path`)))
+        .trim()
+        .split(/\r?\n/)
+        .pop()
+        ?.trim() || ''
+      if (!configPath.endsWith('/config.yaml')) {
+        throw new Error('Remote Hermes launcher did not report a config path.')
+      }
+
+      return assertSafeRemoteHome(configPath.slice(0, -'/config.yaml'.length))
+    }
+
     const out = (await ssh.exec('echo "${HERMES_HOME:-$HOME/.hermes}"')).trim().split('\n').pop()
 
     return out || '~/.hermes'
@@ -379,14 +394,14 @@ async function assertRemoteInstallUpdateClear(ssh, hermesHome, hermesPath = '') 
   throw error
 }
 
-async function listRemoteHermesProfiles(ssh, platform: any = null) {
+async function listRemoteHermesProfiles(ssh, platform: any = null, remoteHermesPath = '') {
   if (platform?.os === 'Windows') {
     const { listWindowsRemoteProfiles } = await import('./windows-remote-inventory')
 
     return listWindowsRemoteProfiles(ssh, platform)
   }
 
-  const home = assertSafeRemoteHome(await probeRemoteHermesHome(ssh))
+  const home = assertSafeRemoteHome(await probeRemoteHermesHome(ssh, remoteHermesPath))
   const dir = expandRemotePath(`${home}/profiles`)
   let listing = ''
 
@@ -402,7 +417,7 @@ async function listRemoteHermesProfiles(ssh, platform: any = null) {
   return parseRemoteProfileListing(listing)
 }
 
-async function readRemoteInstallId(ssh, platform: any = null) {
+async function readRemoteInstallId(ssh, platform: any = null, remoteHermesPath = '') {
   if (platform?.os === 'Windows') {
     const { readWindowsRemoteInstallId } = await import('./windows-remote-inventory')
 
@@ -414,7 +429,7 @@ async function readRemoteInstallId(ssh, platform: any = null) {
   // pinned to `<root>/profiles/<name>` reports the same id as one pointed at the root — they are
   // one backend. Read-only: a missing file is left missing (minting identity is the install's job,
   // never a visiting client's) and simply means "no id", exactly as an older backend reports.
-  const root = remoteInstallRoot(assertSafeRemoteHome(await probeRemoteHermesHome(ssh)))
+  const root = remoteInstallRoot(assertSafeRemoteHome(await probeRemoteHermesHome(ssh, remoteHermesPath)))
   const file = expandRemotePath(`${root}/install_id`)
   let out = ''
 
@@ -1561,7 +1576,7 @@ async function connect(deps) {
   assertBootstrapNotSuperseded(signal)
   const platform = deps.platform ?? (await probeRemotePlatform(ssh))
   log(`remote platform ${platform.os}/${platform.arch}`)
-  const hermesHome = await probeRemoteHermesHome(ssh)
+  const hermesHome = await probeRemoteHermesHome(ssh, remoteHermesPath)
   await assertRemoteInstallUpdateClear(ssh, hermesHome)
   const hermesPath = await locateHermes(ssh, remoteHermesPath)
   log(`located hermes at ${hermesPath}`)
