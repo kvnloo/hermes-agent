@@ -192,6 +192,10 @@ class TestCommandBoundaryFinalization:
         from types import SimpleNamespace
 
         from hermes_cli import main as hermes_main
+        from hermes_cli import update_owning_install
+
+        # Exercise this checkout's wrapper even when pytest uses another install's venv.
+        monkeypatch.setattr(update_owning_install, "owning_install_root", lambda root: None)
 
         def _fake_impl(args, gateway_mode):
             ur.begin_update_receipt()
@@ -574,16 +578,47 @@ class TestPreUpdateBackupStep:
         assert empty["skips"] == []
         assert [step["ok"] for step in empty["steps"]] == [False]
 
+    @staticmethod
+    def _run_backup_phase(receipt_home, monkeypatch, args):
+        """Run the real update orchestration, stopping before any checkout or service mutation."""
+        class BackupFinished(Exception):
+            pass
+
+        def stop_before_pause(opts):
+            raise BackupFinished
+
+        facade = SimpleNamespace(
+            PROJECT_ROOT=receipt_home,
+            _run_pre_update_backup=update_cmd_maint._run_pre_update_backup,
+        )
+        monkeypatch.setattr(update_cmd, "_m", lambda: facade)
+        monkeypatch.setattr(update_cmd, "git_operation_in_progress", lambda root: None)
+        monkeypatch.setattr(update_cmd._commit, "begin_update_attempt", lambda: None)
+        monkeypatch.setattr(update_cmd._check, "clear_git_debris", lambda root: None)
+        monkeypatch.setattr(
+            update_cmd, "_resolve_update_options",
+            lambda args, gateway_mode: SimpleNamespace(gw_input_fn=None, assume_yes=True),
+        )
+        monkeypatch.setattr(
+            update_cmd, "_begin_update_receipt_and_plan", lambda args: ur.begin_update_receipt(),
+        )
+        monkeypatch.setattr(update_cmd, "_pause_gateways_for_update", stop_before_pause)
+        with pytest.raises(BackupFinished):
+            update_cmd._cmd_update_impl(args, gateway_mode=False)
+        return json.loads(_finalize("success").read_text(encoding="utf-8"))
+
+    @pytest.mark.parametrize("snapshot_id", [None, "snapshot-complete"], ids=["no-snapshot", "snapshot"])
     @pytest.mark.parametrize("complete_zip", [False, True], ids=["incomplete", "complete"])
-    def test_full_zip_verdict_reaches_receipt(self, receipt_home, monkeypatch, complete_zip):
+    def test_full_zip_verdict_reaches_receipt(
+        self, receipt_home, monkeypatch, complete_zip, snapshot_id,
+    ):
         """A clean quick snapshot must not certify an incomplete full-home ZIP (#150335)."""
         from hermes_cli import backup
 
         args = SimpleNamespace(no_backup=False, backup=False)
         monkeypatch.setattr(update_cmd_maint, "_load_updates_cfg",
                             lambda: {"pre_update_backup": "full"})
-        monkeypatch.setattr(update_cmd_maint, "_run_quick_snapshots",
-                            lambda: "snapshot-complete")
+        monkeypatch.setattr(update_cmd_maint, "_run_quick_snapshots", lambda: snapshot_id)
 
         zip_path = receipt_home / "backups" / "pre-update.zip"
         zip_path.parent.mkdir()
@@ -594,18 +629,61 @@ class TestPreUpdateBackupStep:
         monkeypatch.setattr(backup, "create_pre_update_backup",
                             lambda *, keep: zip_path if complete_zip else None)
 
-        ur.begin_update_receipt()
-        snapshot_id = update_cmd_maint._run_pre_update_backup(args)
-        update_cmd._record_snapshot_stage(args, snapshot_id)
-        path = _finalize("success")
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = self._run_backup_phase(receipt_home, monkeypatch, args)
         steps = {step["name"]: step for step in payload["steps"]}
 
-        assert snapshot_id == "snapshot-complete"
-        assert steps["pre_update_backup"]["ok"] is complete_zip
+        for name in ("pre_update_backup", "pre_update_full_backup"):
+            assert len([step for step in payload["steps"] if step["name"] == name]) == 1
+        assert steps["pre_update_backup"]["ok"] is (bool(snapshot_id) and complete_zip)
         assert steps["pre_update_full_backup"]["ok"] is complete_zip
-        assert "snapshot=snapshot-complete" in steps["pre_update_backup"]["detail"]
+        assert f"snapshot={snapshot_id or 'failed'}" in steps["pre_update_backup"]["detail"]
         assert [stage["outcome"] for stage in payload["stages"]
-                if stage["name"] == "snapshot"] == ["success"]
+                if stage["name"] == "snapshot"] == ["success" if snapshot_id else "failed"]
+        assert payload["skips"] == []
         if complete_zip:
             assert str(zip_path) in steps["pre_update_full_backup"]["detail"]
+        else:
+            assert "no complete ZIP" in steps["pre_update_full_backup"]["detail"]
+
+    @pytest.mark.parametrize("mode, snapshot_id", [("off", None), ("quick", None), ("quick", "saved")])
+    def test_non_full_receipt_through_update(self, receipt_home, monkeypatch, mode, snapshot_id):
+        args = SimpleNamespace(no_backup=False, backup=False)
+        monkeypatch.setattr(update_cmd_maint, "_load_updates_cfg", lambda: {"pre_update_backup": mode})
+        monkeypatch.setattr(update_cmd_maint, "_run_quick_snapshots", lambda: snapshot_id)
+
+        def unexpected_zip():
+            pytest.fail("off and quick modes must not create a full ZIP")
+
+        monkeypatch.setattr(update_cmd_maint, "_run_full_backup", unexpected_zip)
+        payload = self._run_backup_phase(receipt_home, monkeypatch, args)
+        assert [stage["outcome"] for stage in payload["stages"]
+                if stage["name"] == "snapshot"] == [
+                    "skipped" if mode == "off" else "success" if snapshot_id else "failed"
+                ]
+        if mode == "off":
+            assert payload["steps"] == []
+            assert [skip["name"] for skip in payload["skips"]] == ["pre_update_backup"]
+        else:
+            assert payload["skips"] == []
+            assert [(step["name"], step["ok"]) for step in payload["steps"]] == [
+                ("pre_update_backup", bool(snapshot_id))
+            ]
+
+    def test_real_full_zip_reaches_receipt(self, receipt_home, monkeypatch):
+        """Create and reopen the actual archive, then inspect the persisted update receipt."""
+        (receipt_home / "config.yaml").write_text("model: test\n", encoding="utf-8")
+        args = SimpleNamespace(no_backup=False, backup=True)
+        monkeypatch.setattr(update_cmd_maint, "_load_updates_cfg", lambda: {})
+        monkeypatch.setattr(update_cmd_maint, "_run_quick_snapshots", lambda: "snapshot-complete")
+
+        payload = self._run_backup_phase(receipt_home, monkeypatch, args)
+        archives = list((receipt_home / "backups").glob("pre-update-*.zip"))
+        assert len(archives) == 1
+        with zipfile.ZipFile(archives[0]) as archive:
+            assert archive.testzip() is None
+            config = next(name for name in archive.namelist() if name.endswith("config.yaml"))
+            assert archive.read(config) == b"model: test\n"
+        steps = {step["name"]: step for step in payload["steps"]}
+        assert steps["pre_update_backup"]["ok"] is True
+        assert steps["pre_update_full_backup"]["ok"] is True
+        assert str(archives[0]) in steps["pre_update_full_backup"]["detail"]
