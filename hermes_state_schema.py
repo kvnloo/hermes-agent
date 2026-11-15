@@ -993,6 +993,20 @@ class SessionSchemaMixin:
         # After the commit: the repair takes its own write transaction, and only once per store.
         advance_legacy_refusal_repair(self, self._conn)
 
+        # Keep media-history index backfill out of the schema writer transaction.
+        # One bounded, durable batch per open; scans remain authoritative until
+        # the index and its exceptional-row table are fully published.
+        from hermes_state_history_fts import ensure_history_fts
+        try:
+            ensure_history_fts(
+                self._conn.cursor(),
+                enabled=fts5_available and self._trigram_tokenizer_available(cursor),
+            )
+        except sqlite3.OperationalError as exc:
+            # Contending migrators or low-resource/locked startup must not
+            # prevent opening the store; history retention uses the exact scan.
+            logger.warning("Media history FTS deferred: %s", exc)
+
     def _stamp_settled_fts_layout(self, cursor: sqlite3.Cursor) -> None:
         """Write ``fts_storage_version`` once the stored layout is exactly current and nothing is in flight.
 
