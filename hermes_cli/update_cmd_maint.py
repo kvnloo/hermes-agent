@@ -457,8 +457,10 @@ def _restore_state_db_from_snapshot(state_path: Path, snap_state: Path) -> bool:
         return False
     kept = _keep_replaced_state_db(state_path)
     if not _safe_restore_db(snap_state, state_path):
-        _discard_kept_state_db(kept)
-        print("  ✗ Auto-restore refused or failed; state.db was not restored.")
+        # The fallback can unlink the destination before a failed move; False does
+        # not prove that the original database is still present. Keep its copy.
+        print("  ✗ Auto-restore refused or failed; state.db may have been changed.")
+        print(f"    Pre-restore state.db and sidecars kept at {kept}")
         print("    Stop the owning runtime and close database handles before retrying.")
         print("    If the canonical runtime epoch is unreadable, do not restore in place:")
         print("    use `hermes sessions recover --source <snapshot> --output <separate-path>`")

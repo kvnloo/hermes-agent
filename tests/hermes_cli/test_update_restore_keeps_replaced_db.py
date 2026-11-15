@@ -57,15 +57,38 @@ def test_auto_restore_keeps_the_replaced_db_and_names_it(tmp_path, capsys):
     assert "hermes sessions recover" in out
 
 
-def test_refused_restore_leaves_no_copy_behind(tmp_path, monkeypatch, capsys):
+def test_refused_restore_preserves_original_copy(tmp_path, monkeypatch, capsys):
     home, damaged = _damaged_home_with_old_snapshot(tmp_path)
     monkeypatch.setattr("hermes_cli.backup_restore._safe_restore_db", lambda src, dst: False)
 
     update_cmd_maint._verify_and_restore_one_state_db(home, label="default home")
 
     assert (home / "state.db").read_bytes() == damaged
-    assert not list(home.glob("state.db.replaced-*"))
-    assert "state.db was not restored" in capsys.readouterr().out
+    kept = next(home.glob("state.db.replaced-*"))
+    assert kept.read_bytes() == damaged
+    out = capsys.readouterr().out
+    assert str(kept) in out
+    assert "state.db may have been changed" in out
+
+
+def test_failed_publication_after_unlink_keeps_only_recovery_copy(tmp_path, monkeypatch, capsys):
+    """The SQLite restore fallback can unlink dst, then fail to move its replacement."""
+    home, damaged = _damaged_home_with_old_snapshot(tmp_path)
+
+    def interrupted_publish(_source: Path, target: Path) -> bool:
+        target.unlink()
+        target.with_name(target.name + "-wal").unlink(missing_ok=True)
+        return False
+
+    monkeypatch.setattr("hermes_cli.backup_restore._restore_db_pages", interrupted_publish)
+    update_cmd_maint._verify_and_restore_one_state_db(home, label="default home")
+
+    assert not (home / "state.db").exists()
+    kept = next(home.glob("state.db.replaced-*"))
+    assert kept.read_bytes() == damaged
+    out = capsys.readouterr().out
+    assert str(kept) in out
+    assert "Auto-restore did not complete" in out
 
 
 def test_no_restore_when_the_copy_cannot_be_written(tmp_path, monkeypatch, capsys):
