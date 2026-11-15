@@ -241,7 +241,7 @@ class TestRunSingleChildSchemaValidation:
             "failed": True,
             "completed": False,
             "error": "HTTP 429",
-            "messages": [],
+            "messages": [{"role": "assistant", "content": "Partial work"}],
             "api_calls": 3,
         }
 
@@ -252,6 +252,34 @@ class TestRunSingleChildSchemaValidation:
         assert child.calls == []
         assert first["final_response"] == failure_text
         assert first["api_calls"] == 3
+        assert first["messages"] == [{"role": "assistant", "content": "Partial work"}]
+        assert first["error"] == "HTTP 429"
+        assert first["failed"] is True
+        assert first["completed"] is False
+
+    def test_failed_first_run_preserves_parent_visible_error(self):
+        """The full child runner must return the provider failure without a repair turn."""
+        failure_text = "API call failed after 3 retries: HTTP 429 rate limit"
+
+        class FailedChild(_StubChild):
+            def run_conversation(self, user_message, task_id=None, **kwargs):
+                result = super().run_conversation(user_message, task_id, **kwargs)
+                if len(self.calls) == 1:
+                    result.update(failed=True, completed=False, error="HTTP 429", api_calls=3)
+                return result
+
+        child = FailedChild([failure_text, '{"city": "Paris"}'])
+        child._delegate_output_schema = ADDRESS_SCHEMA
+        entry = _run(child)
+
+        assert len(child.calls) == 1
+        assert entry["status"] == "failed"
+        assert entry["exit_reason"] == "error"
+        assert entry["summary"] == failure_text
+        assert entry["error"] == "HTTP 429"
+        assert entry["api_calls"] == 3
+        assert entry["schema_valid"] is False
+        assert entry.get("schema_retries", 0) == 0
 
     def test_schema_failure_returns_raw_text_with_schema_valid_false(self):
         """A final answer that still violates the contract after the bounded retry is NOT discarded: the
