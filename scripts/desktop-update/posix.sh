@@ -416,6 +416,11 @@ default_browser_is_chromium() {
   command -v xdg-settings >/dev/null 2>&1 || return 0
   handler="$(xdg-settings get default-web-browser 2>/dev/null)" || return 0
   [ -n "$handler" ] || return 0
+  # Omarchy's XDG handler delegates to the browser selected in Omarchy.
+  if [ "$handler" = "omarchy-browser.desktop" ]; then
+    command -v omarchy-cmd-default-browser >/dev/null 2>&1 || return 1
+    handler="$(omarchy-cmd-default-browser 2>/dev/null)" || return 1
+  fi
   case "$handler" in
     *chrome*|*chromium*|*Chrome*|*Chromium*) return 0 ;;
     *) return 1 ;;
