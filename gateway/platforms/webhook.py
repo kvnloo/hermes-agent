@@ -269,8 +269,10 @@ class WebhookAdapter(BasePlatformAdapter):
                              f"Refusing to start to prevent accidental exposure.")
         if pin_error := _signature_pin_error(name, route):
             raise ValueError(pin_error)
+        if not is_dispatchable_target(deliver := route.get("deliver", "log")):
+            raise ValueError(f"[webhook] Route '{name}' has unknown delivery target {deliver!r}. "
+                             "Use a platform name such as 'telegram'; pass a chat ID separately.")
         if route.get("deliver_only"):
-            deliver = route.get("deliver", "log")
             if not deliver or deliver == "log":
                 raise ValueError(f"[webhook] Route '{name}' has deliver_only=true but deliver is '{deliver}'. Direct "
                                  f"delivery requires a real target (telegram, discord, slack, github_comment, etc.).")
