@@ -205,6 +205,51 @@ class TestWeixinStatePersistence:
 
 
 
+class TestWeixinInboundFileIntegrity:
+    @pytest.mark.asyncio
+    async def test_rejects_wrong_key_before_caching(self, monkeypatch):
+        """A file_item with a stale CDN AES key must not become a cached PDF (#150499)."""
+        import hashlib
+
+        plaintext = b"%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF\n"
+        correct_key = bytes(range(16))
+        ciphertext = weixin._aes128_ecb_encrypt(plaintext, correct_key)
+        monkeypatch.setattr(weixin, "_download_bytes", AsyncMock(return_value=ciphertext))
+        cache = AsyncMock(return_value="/cache/worksheet.pdf")
+        monkeypatch.setattr(weixin, "cache_document_from_bytes_async", cache)
+
+        adapter = _make_adapter()
+        adapter._poll_session = Mock()
+        adapter._cdn_base_url = "https://novac2c.cdn.weixin.qq.com/c2c"
+        item = {
+            "type": weixin.ITEM_FILE,
+            "file_item": {
+                "file_name": "worksheet.pdf",
+                "md5": hashlib.md5(plaintext, usedforsecurity=False).hexdigest(),
+                "len": str(len(plaintext)),
+                "media": {
+                    "encrypt_query_param": "encrypted-ref",
+                    "aes_key": base64.b64encode(correct_key.hex().encode("ascii")).decode("ascii"),
+                },
+            },
+        }
+        spec = weixin._INBOUND_MEDIA[weixin.ITEM_FILE]
+
+        path, mime = await adapter._download_media(item, spec)
+        assert (path, mime) == ("/cache/worksheet.pdf", "application/pdf")
+        cache.assert_awaited_once_with(plaintext, "worksheet.pdf")
+
+        # WeChat may reuse an encrypted CDN blob but return a fresh, incorrect key.
+        cache.reset_mock()
+        stale_key = bytes(range(16, 32))
+        item["file_item"]["media"]["aes_key"] = base64.b64encode(
+            stale_key.hex().encode("ascii")
+        ).decode("ascii")
+        path, mime = await adapter._download_media(item, spec)
+        assert (path, mime) == (None, "application/pdf")
+        cache.assert_not_awaited()
+
+
 class TestWeixinSendMessageIntegration:
     def test_parse_target_ref_accepts_weixin_ids(self):
         assert _parse_target_ref("weixin", "wxid_test123") == ("wxid_test123", None, True)
