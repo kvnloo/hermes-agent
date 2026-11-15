@@ -851,3 +851,23 @@ def test_runtime_command_reapplies_pyc_controls(tmp_path, monkeypatch):
 
     assert result.returncode == 8, result.stdout + result.stderr
     assert json.loads(result.stdout) == {"prefix": str(tmp_path / "user-pyc"), "dont": False}
+
+@pytest.mark.platforms("posix")
+def test_launcher_without_home_never_writes_checkout_bytecode(tmp_path, monkeypatch, real_bash):
+    """#155068: an env-reset service can have no HOME or XDG_CACHE_HOME.
+
+    No cache destination must mean no bytecode writes, not fallback to the
+    checkout (which a sudo launch could then contaminate with root-owned pycs).
+    """
+    repo, _home, interpreter = fixture_tree(tmp_path, monkeypatch)
+    select_generation(repo, 1, 1)
+    out = tmp_path / "commands"
+    out.mkdir()
+    launcher = _mint_pycache_probe_launcher(repo, out, interpreter)
+
+    env = _pyc_clean_env()
+    env.pop("HOME", None)
+    receipt = _run_pycache_probe(launcher, env, tmp_path)
+
+    assert receipt == {"prefix": None, "dont": True}
+    assert not list(repo.rglob("__pycache__"))

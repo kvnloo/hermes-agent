@@ -50,6 +50,10 @@ elif not sys.pycache_prefix and not os.environ.get('PYTHONPYCACHEPREFIX'):
         _pyc_tail = ('hermes-pycache',)
     if _pyc_base:
         os.environ['PYTHONPYCACHEPREFIX'] = os.path.join(_pyc_base, *_pyc_tail)
+    else:
+        # A system service may have neither HOME nor XDG_CACHE_HOME. Never fall back
+        # to writing bytecode into a source checkout in that case (#155068).
+        sys.dont_write_bytecode = True
 _pyc_prefix = os.environ.get('PYTHONPYCACHEPREFIX')
 if _pyc_prefix and not sys.pycache_prefix:
     sys.pycache_prefix = _pyc_prefix
