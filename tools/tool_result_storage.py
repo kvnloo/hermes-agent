@@ -431,7 +431,15 @@ def is_pruned_json_archive(path: str) -> bool:
 
 
 def pageable_archive_text(raw: str) -> str:
-    """The pageable rendering of an archived JSON tool result: the text it wraps, nothing dropped."""
+    """Render JSON arrays on separate lines for read_file pagination; the saved bytes stay unchanged."""
+    if raw.lstrip().startswith("["):
+        try:
+            payload = json.loads(raw)
+        except (TypeError, ValueError):
+            pass
+        else:
+            if isinstance(payload, list):
+                return json.dumps(payload, ensure_ascii=False, indent=2)
     return _pageable_text(raw)
 
 
