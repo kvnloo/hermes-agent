@@ -140,6 +140,17 @@ class TestParseResponse:
             if h.get("action") == want:  # a tie keeps the Hermes directive's own fields
                 assert got == shell_hooks._parse_response("pre_tool_call", json.dumps(h)), reply
 
+    @pytest.mark.parametrize("foreign", [
+        {"permission": "ask", "user_message": "Tool approval is not a verify directive"},
+        {"hookSpecificOutput": {"decision": "block"}},
+    ])
+    def test_pre_verify_ignores_inactionable_foreign_directives(self, foreign):
+        """An unusable foreign directive must not hide a valid Hermes keep-going request."""
+        reply = {"action": "continue", "message": "Run the formatter before finishing", **foreign}
+        assert shell_hooks._parse_response("pre_verify", json.dumps(reply)) == {
+            "action": "continue", "message": "Run the formatter before finishing",
+        }
+
 # ── _serialize_payload ────────────────────────────────────────────────────
 
 

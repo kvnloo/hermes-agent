@@ -746,6 +746,10 @@ def _flatten_reply_dialects(event: str, data: dict[str, Any]) -> dict[str, Any]:
     native = _RESPONSE_PARSERS.get(event, _parse_context)({k: v for k, v in data.items() if k not in _FOREIGN_KEYS})
     # Native first: on a tie the reply's own directive (with its message, rule_key, args) wins.
     candidates = ([native] if native and _directive_rank(native) < len(_DIRECTIVE_RANK) else []) + _lowered_directives(event, data)
+    # Only actionable pre_verify directives may outrank a valid keep-going request.
+    # An ask or a message-less Stop block would otherwise suppress it altogether.
+    if event == "pre_verify":
+        candidates = [d for d in candidates if _parse_pre_verify(d) is not None]
     winner = {k: v for k, v in min(candidates, key=_directive_rank, default={}).items() if k != "context"}
     nested = data.get("hookSpecificOutput")
     contexts = [c for c in ((native or {}).get("context"),
