@@ -182,6 +182,33 @@ Memory has strict character limits to keep system prompts bounded:
 | memory | 2,200 chars | 8-15 entries |
 | user | 1,375 chars | 5-10 entries |
 
+The defaults above can be changed with `memory.memory_char_limit` and
+`memory.user_char_limit` in your profile's `config.yaml`. Native built-in stores
+read the current integer limits before a `memory` tool call or approval replay,
+including calls on an agent already running when the limit was edited. A missing
+key restores its default; a non-integer live value or unreadable config retains
+the last usable budget. Refresh requires the store's owning profile scope and
+does not change availability, providers or approval policy. Custom `MemoryStore`
+instances with explicit budgets do not opt into config refresh.
+
+Lowering a quota never truncates existing entries. Writes still satisfy the
+normal final-size and integrity checks. The same live config-owned store remembers
+its highest applied quota, so previously legal long entries can be shortened to
+fit the new limit instead of being misclassified as external drift. This is an
+in-process size heuristic, not persisted history or proof of content provenance.
+A cold store has no old quota history and can refuse a patch of an oversized entry.
+Delete-only recovery remains available even while the store stays over budget;
+removing an entry detected as oversized requires a successful, exclusively created
+backup first. If that backup fails, nothing is deleted.
+
+Execution limits and the system-prompt snapshot are separate: the frozen memory
+block (including its old usage header) stays byte-stable until a normal snapshot
+refresh, such as a new conversation or compression. The refreshed header shows
+the limit last applied by a memory tool call or approval replay; a config edit
+alone does not update that header. Installing new code does not retrofit existing
+Python objects or processes; pre-upgrade agents must be rebuilt normally before
+they can use this behavior. External memory providers are unchanged.
+
 ### What Happens When Memory is Full
 
 When you try to add an entry that would exceed the limit, the tool returns an error:
