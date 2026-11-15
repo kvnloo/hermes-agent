@@ -1,7 +1,13 @@
-import { describe, expect, it, vi } from 'vitest'
+import { PassThrough } from 'node:stream'
 
+import { renderSync } from '@hermes/ink'
+import { createElement } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type { InputHandlerContext } from '../app/interfaces.js'
 import { getOverlayState, patchOverlayState, resetOverlayState } from '../app/overlayStore.js'
 import { rememberServerRequest, resetServerRequestsForTests } from '../app/serverRequestStore.js'
+import { patchUiState, resetUiState } from '../app/uiStore.js'
 import {
   applyVoiceRecordResponse,
   composerHasDraft,
@@ -11,8 +17,226 @@ import {
   resolveCtrlCComposerAction,
   resolveDoubleEscAction,
   shouldDetachEditedHistoryInput,
-  shouldFallThroughForScroll
+  shouldFallThroughForScroll,
+  useInputHandlers
 } from '../app/useInputHandlers.js'
+import { GatewayClient } from '../gatewayClient.js'
+import { DEFAULT_VOICE_RECORD_KEY } from '../lib/platform.js'
+
+describe('Ctrl+C terminal input dispatch', () => {
+  let unmount = () => {}
+
+  beforeEach(() => {
+    resetUiState()
+    resetOverlayState()
+    resetServerRequestsForTests()
+    patchUiState({ busy: false, sid: 'owner' })
+  })
+
+  afterEach(() => {
+    unmount()
+    resetUiState()
+    resetOverlayState()
+    resetServerRequestsForTests()
+  })
+
+  function mount(input = '') {
+    const stdin = Object.assign(new PassThrough(), {
+      isRaw: false,
+      isTTY: true,
+      ref: vi.fn(),
+      setRawMode: vi.fn(),
+      unref: vi.fn()
+    })
+
+    const stdout = Object.assign(new PassThrough(), { columns: 80, isTTY: false, rows: 24 })
+
+    const ctx: InputHandlerContext = {
+      actions: {
+        appendMessage: vi.fn(),
+        cancelClarify: vi.fn(),
+        countPrompts: () => 0,
+        die: vi.fn(),
+        dispatchSubmission: vi.fn(),
+        guardBusySessionSwitch: () => false,
+        newSession: vi.fn(),
+        openBacktrack: vi.fn(),
+        sys: vi.fn()
+      },
+      composer: {
+        actions: {
+          appendPaste: vi.fn(async () => {}),
+          appendText: vi.fn(),
+          attachClipboardImage: vi.fn(),
+          attachImagePath: vi.fn(),
+          attachImagePaths: vi.fn(async () => {}),
+          clearIn: vi.fn(() => {
+            ctx.composer.state.input = ''
+          }),
+          collapsePaste: () => '',
+          dequeue: () => undefined,
+          enqueue: vi.fn(),
+          handleTextPaste: () => null,
+          openEditor: vi.fn(async () => {}),
+          prependQueue: vi.fn(),
+          pushHistory: vi.fn(),
+          queueDraft: () => '',
+          removeQueue: vi.fn(),
+          restoreDraft: () => false,
+          setCompIdx: vi.fn(),
+          setComposerTokens: vi.fn(),
+          setHistoryIdx: vi.fn(),
+          setInput: vi.fn(),
+          setInputBuf: vi.fn(),
+          setQueueEdit: vi.fn(),
+          syncTokens: vi.fn(),
+          takeQueue: () => undefined,
+          togglePaste: () => false
+        },
+        refs: {
+          historyDraftRef: { current: '' },
+          historyRef: { current: [] },
+          queueEditRef: { current: null },
+          queueRef: { current: [] },
+          submitRef: { current: vi.fn() },
+          tokensRef: { current: [] }
+        },
+        state: {
+          compIdx: 0,
+          compReplace: 0,
+          completions: [],
+          historyIdx: null,
+          input,
+          inputBuf: [],
+          pasteExpanded: false,
+          queueEditIdx: null,
+          queuedDisplay: [],
+          tokens: []
+        }
+      },
+      gateway: { gw: new GatewayClient(), rpc: async () => null },
+      terminal: {
+        hasSelection: false,
+        scrollRef: { current: null },
+        scrollWithSelection: vi.fn(),
+        selection: {
+          captureScrolledRows: vi.fn(),
+          clearSelection: vi.fn(),
+          copySelection: async () => '',
+          copySelectionNoClear: async () => '',
+          getState: () => null,
+          shiftAnchor: vi.fn(),
+          shiftSelection: vi.fn(),
+          version: () => 0
+        }
+      },
+      voice: {
+        enabled: false,
+        recording: false,
+        recordKey: DEFAULT_VOICE_RECORD_KEY,
+        setProcessing: vi.fn(),
+        setRecording: vi.fn(),
+        setVoiceEnabled: vi.fn(),
+        setVoiceTts: vi.fn()
+      },
+      wheelStep: 3
+    }
+
+    function Harness() {
+      useInputHandlers(ctx)
+
+      return null
+    }
+
+    const instance = renderSync(createElement(Harness), {
+      exitOnCtrlC: false,
+      patchConsole: false,
+      // Ink types require TTY streams; these in-memory streams implement the input/output contract.
+      stdin: stdin as unknown as NodeJS.ReadStream,
+      stdout: stdout as unknown as NodeJS.WriteStream
+    })
+
+    unmount = () => instance.unmount()
+
+    const send = async (raw: string) => {
+      await new Promise(resolve => setImmediate(resolve))
+      stdin.write(raw)
+      await new Promise(resolve => setTimeout(resolve, 70))
+    }
+
+    return { ctx, send }
+  }
+
+  describe.each([
+    { name: 'Ctrl+C', plain: true, raw: '\x03' },
+    { name: 'uppercase Ctrl+C', plain: true, raw: '\x1b[67;5u' },
+    { name: 'Ctrl+Alt+C', plain: false, raw: '\x1b[99;7u' },
+    { name: 'Ctrl+Shift+C', plain: false, raw: '\x1b[99;6u' },
+    { name: 'Ctrl+Super+C', plain: false, raw: '\x1b[99;13u' }
+  ])('$name', ({ plain, raw }) => {
+    it('only clears an unsent draft for plain Ctrl+C', async () => {
+      const { ctx, send } = mount('unsent draft')
+
+      await send(raw)
+
+      expect(ctx.composer.state.input).toBe(plain ? '' : 'unsent draft')
+      expect(ctx.actions.die).not.toHaveBeenCalled()
+    })
+
+    it('only closes the session picker for plain Ctrl+C', async () => {
+      patchOverlayState({ sessions: true })
+      const { send } = mount()
+
+      await send(raw)
+
+      expect(getOverlayState().sessions).toBe(!plain)
+    })
+
+    it('only closes the pager for plain Ctrl+C', async () => {
+      const pager = { lines: ['keep this visible'], offset: 0 }
+      patchOverlayState({ pager })
+      const { send } = mount()
+
+      await send(raw)
+
+      expect(getOverlayState().pager).toEqual(plain ? null : pager)
+    })
+
+    it('only denies an approval for plain Ctrl+C', async () => {
+      const approval = { command: 'echo test', description: 'test approval', requestId: 'approval-ctrl-c' }
+      const respond = vi.fn()
+      rememberServerRequest({ fail: vi.fn(), id: approval.requestId, method: 'approval', params: {}, respond })
+      patchOverlayState({ approval })
+      const { send } = mount()
+
+      await send(raw)
+
+      expect(getOverlayState().approval).toEqual(plain ? null : approval)
+      expect(respond).toHaveBeenCalledTimes(plain ? 1 : 0)
+
+      if (plain) {
+        expect(respond).toHaveBeenCalledWith({ choice: 'deny' })
+      }
+    })
+
+    it('only dismisses a sensitive prompt for plain Ctrl+C', async () => {
+      const sudo = { requestId: 'sudo-ctrl-c' }
+      const respond = vi.fn()
+      rememberServerRequest({ fail: vi.fn(), id: sudo.requestId, method: 'sudo', params: {}, respond })
+      patchOverlayState({ sudo })
+      const { send } = mount()
+
+      await send(raw)
+
+      expect(getOverlayState().sudo).toEqual(plain ? null : sudo)
+      expect(respond).toHaveBeenCalledTimes(plain ? 1 : 0)
+
+      if (plain) {
+        expect(respond).toHaveBeenCalledWith({ value: '' })
+      }
+    })
+  })
+})
 
 const baseKey = {
   downArrow: false,
