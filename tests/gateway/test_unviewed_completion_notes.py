@@ -114,6 +114,34 @@ async def test_viewer_back_before_execution_gets_the_turn(tmp_path, monkeypatch)
 
 
 @pytest.mark.asyncio
+async def test_refused_completion_note_runs_one_turn_instead_of_dropping_result(tmp_path, monkeypatch):
+    """Regression for #150055: a concurrent process's turn lease rejects the note."""
+    from hermes_state_errors import SessionTurnLeaseLostError
+    runner, authority, ref, _actor = await _local(tmp_path, monkeypatch)
+    try:
+        target = _target(runner, authority, ref)
+        await _deliver(runner, authority, ref, _PROCESS)
+        admitted = _admissions(authority, ref)
+        assert len(admitted) == 1
+        text = admitted[0]['payload']['text']
+        refused = []
+
+        def reject_note(*args):
+            refused.append(args[1])  # the admission identity passed to append_completion_note
+            raise SessionTurnLeaseLostError('held by another process')
+
+        monkeypatch.setattr(authority.db, 'append_completion_note', reject_note)
+        seen = _turns(runner, authority, target)
+        await authority._drain(ref)
+        assert refused == [admitted[0]['admission_id']]
+        assert seen == [(text, 0)], 'the refused note must become one started result turn'
+        assert _notes(authority, target) == []
+        assert [r['outcome'] for r in _admissions(authority, ref)] == ['completed']
+    finally:
+        authority.db.close()
+
+
+@pytest.mark.asyncio
 async def test_note_keeps_the_cached_agent(tmp_path, monkeypatch):
     """A plain disconnect keeps the cached agent; the owner's own note re-baselines its message count,
     so the next turn reuses it instead of reading the note as an outside write and rebuilding."""
