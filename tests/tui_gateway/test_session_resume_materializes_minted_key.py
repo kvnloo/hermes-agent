@@ -49,19 +49,42 @@ def _assert_resumed_ok(resp, target):
     assert resp["result"]["session_id"], "a live runtime must be registered"
 
 
-def test_resume_defers_minted_draft_until_first_prompt(real_db):
-    """Crash recovery succeeds without a row until the first-prompt write hook."""
-    resp = _resume(session_id=MINTED_KEY)
+@pytest.mark.parametrize("source", ["tui", "gui"])
+def test_resume_defers_minted_draft_until_first_prompt(real_db, monkeypatch, source):
+    """Resume stays read-only; prompt.submit persists the row and first message."""
+    resp = _resume(session_id=MINTED_KEY, source=source)
 
     _assert_resumed_ok(resp, MINTED_KEY)
     assert real_db.get_session(MINTED_KEY) is None
-    live = server._sessions[resp["result"]["session_id"]]
+    sid = resp["result"]["session_id"]
+    live = server._sessions[sid]
     assert live["session_key"] == MINTED_KEY
     assert live["history"] == []
-    assert server._ensure_session_db_row(live) is not False
+
+    class InlineThread:
+        def __init__(self, target, **kwargs):
+            self.target = target
+
+        def start(self):
+            self.target()
+
+    monkeypatch.setattr(server.threading, "Thread", InlineThread)
+    monkeypatch.setattr(server, "_start_agent_build", lambda *args: None)
+    monkeypatch.setattr(server, "_restart_completed_failed_agent_build", lambda *args: False)
+    monkeypatch.setattr(server, "_run_after_agent_ready", lambda *args: None)
+    submitted = server.handle_request({"id": "prompt", "method": "prompt.submit", "params": {
+        "session_id": sid, "text": "hello after reconnect"}})
+    assert "error" not in submitted, submitted
+    assert submitted["result"]["status"] == "streaming"
     row = real_db.get_session(MINTED_KEY)
     assert row is not None
-    assert row["source"] == "tui"
+    assert row["source"] == source
+    assert row["profile_name"] == (
+        server.profile_name_for_home(None) or server._current_profile_name())
+    messages = real_db.get_messages_as_conversation(MINTED_KEY, include_row_ids=True)
+    assert [(message["role"], message["content"]) for message in messages] == [
+        ("user", "hello after reconnect")]
+    assert submitted["result"]["user_row_id"] == messages[0]["_row_id"]
 
 
 def test_reconnect_batch_keeps_unspoken_drafts_unpersisted(real_db):
