@@ -126,6 +126,8 @@ def _is_provably_remote(options: list[str], destination: str, remote: list[str])
         return False
     if config.get("proxycommand", "none").lower() != "none":
         return False
+    if config.get("knownhostscommand", "none").lower() != "none":
+        return False  # OpenSSH executes this hook locally during host-key lookup.
     if (config.get("permitlocalcommand", "no").lower() == "yes"
             and config.get("localcommand", "none").lower() != "none"):
         return False

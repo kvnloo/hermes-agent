@@ -33,6 +33,13 @@ def test_local_parts_stay_blocked(remote_host, command):
     assert guard(command) is True
 
 
+def test_configured_known_hosts_command_stays_blocked(remote_host):
+    command = f"ssh chiap04 '{RESTART}'"
+    assert guard(command) is False  # remote commands without local SSH hooks remain allowed
+    remote_host["knownhostscommand"] = f"sh -c '{RESTART}'"
+    assert guard(command) is True  # SSH runs this config hook on the calling host
+
+
 def test_proxycommand_stays_blocked(remote_host):
     remote_host["proxycommand"] = f"sh -c '{RESTART}'"
     assert guard(f"ssh chiap04 '{RESTART}'") is True
