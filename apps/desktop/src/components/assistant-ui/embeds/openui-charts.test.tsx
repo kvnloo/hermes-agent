@@ -30,7 +30,7 @@ const heatmapCode = (width: 12 | 24 | 48, shortenLast = false) => {
     columns.map((_, index) => index % 7),
     columns.map((_, index) => index === 0 ? 3 : 0)
   ]
-  if (shortenLast) counts[1]!.pop()
+  if (shortenLast) {counts[1]!.pop()}
   return [
     'root = Board("Activity", "", [activity])',
     'activity = Heatmap("Hourly usage", "turns", ["Mon", "Tue"], ' +

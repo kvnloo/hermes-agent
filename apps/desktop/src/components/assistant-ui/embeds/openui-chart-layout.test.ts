@@ -7,9 +7,9 @@ import {
   heatmapDensity,
   layoutTreemap,
   shade,
+  type TreemapRow,
   validHeatmapCounts,
-  validTreemapPaths,
-  type TreemapRow
+  validTreemapPaths
 } from './openui-chart-layout'
 
 // Disk-usage fixture from T3 Code's eebe70d411 readability regression.

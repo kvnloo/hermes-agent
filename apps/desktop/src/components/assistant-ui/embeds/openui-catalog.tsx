@@ -1,13 +1,13 @@
 import { createParser } from '@openuidev/lang-core'
 import { createLibrary, defineComponent, Renderer } from '@openuidev/react-lang'
-import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, type ReactNode, useContext, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { z } from 'zod/v4'
-import { appCardProblem, appCardSchemas, isAppCardType } from './openui-app-card-model'
-import { RideOptions, MailList, Route, PullRequest } from './openui-app-cards'
 
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n/context'
 
+import { appCardProblem, appCardSchemas, isAppCardType } from './openui-app-card-model'
+import { MailList, PullRequest, RideOptions, Route } from './openui-app-cards'
 import {
   buildTreemap,
   findTreemapNode,
@@ -15,9 +15,9 @@ import {
   heatmapDensity,
   layoutTreemap,
   shade,
+  type TreemapNode,
   validHeatmapCounts,
-  validTreemapPaths,
-  type TreemapNode
+  validTreemapPaths
 } from './openui-chart-layout'
 
 // Ported from the T3 Code OpenUI experiment. Read-only panels have no actions or tools.
@@ -107,7 +107,7 @@ function Legend({ series }: { series: SeriesEntry[] }) {
 // instead of repeating every value under every chart.
 function SeriesValues({ props }: { props: SeriesData }) {
   return (
-    <div className="sr-only" role="region" aria-label={`${props.title} values`}>
+    <div aria-label={`${props.title} values`} className="sr-only" role="region">
       <table className="w-full border-collapse text-left text-xs tabular-nums">
         <thead>
           <tr>
@@ -166,7 +166,7 @@ const BarChart = defineComponent({
           {props.bars.map((bar, i) => (
             <li className="grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)_auto] items-center gap-2" key={i}>
               <span className="truncate" title={bar.label}>{bar.label}</span>
-              <span aria-label={`${bar.label}: ${formatCount(bar.value)} ${props.unit}`} className="h-2 overflow-hidden rounded-sm bg-muted" role="meter" aria-valuemin={0} aria-valuemax={max} aria-valuenow={bar.value}>
+              <span aria-label={`${bar.label}: ${formatCount(bar.value)} ${props.unit}`} aria-valuemax={max} aria-valuemin={0} aria-valuenow={bar.value} className="h-2 overflow-hidden rounded-sm bg-muted" role="meter">
                 <span className="block h-full bg-primary" style={{ width: `${(bar.value / max) * 100}%` }} />
               </span>
               <span className="text-right font-medium tabular-nums">{formatCount(bar.value)}</span>
@@ -531,7 +531,9 @@ function Reveal({ index, className, children }: { index: number; className: stri
   const { animate } = useContext(PendingPanels)
   useLayoutEffect(() => {
     const el = ref.current
-    if (!animate || !el || reducedMotion() || typeof el.animate !== 'function') return
+    if (!animate || !el || reducedMotion() || typeof el.animate !== 'function') {
+      return
+    }
     el.animate(
       [{ opacity: 0, transform: 'translateY(10px) scale(0.985)' }, { opacity: 1, transform: 'none' }],
       { duration: 420, delay: Math.min(index, 3) * 70, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'both' }
@@ -716,12 +718,14 @@ export function previewStreamingBoard(code: string): OpenUiPreview {
   const cut = body.lastIndexOf('\n')
   let complete = body
   try {
-    if (parser.parse(body).meta.incomplete) complete = cut > 0 ? body.slice(0, cut) : ''
+    if (parser.parse(body).meta.incomplete) {
+      complete = cut > 0 ? body.slice(0, cut) : ''
+    }
   } catch {
     complete = cut > 0 ? body.slice(0, cut) : ''
   }
-  if (!complete) return { kind: 'none' }
-  if (new TextEncoder().encode(complete).byteLength > LIMITS.bytes) return { kind: 'none' }
+  if (!complete) {return { kind: 'none' }}
+  if (new TextEncoder().encode(complete).byteLength > LIMITS.bytes) {return { kind: 'none' }}
   try {
     const parsed = parser.parse(complete)
     if (parsed.queryStatements.length || parsed.mutationStatements.length || Object.keys(parsed.stateDeclarations).length) {

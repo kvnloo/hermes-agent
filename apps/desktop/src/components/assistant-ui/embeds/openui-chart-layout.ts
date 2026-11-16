@@ -26,13 +26,17 @@ export function validTreemapPaths(rows: readonly TreemapRow[]): boolean {
   const paths = new Set<string>()
   for (const row of rows) {
     const path = normalized(row.path)
-    if (!path || paths.has(path)) return false
+    if (!path || paths.has(path)) {
+      return false
+    }
     paths.add(path)
   }
   for (const path of paths) {
     const names = parts(path)
     for (let i = 1; i < names.length; i += 1) {
-      if (paths.has(names.slice(0, i).join('/'))) return false
+      if (paths.has(names.slice(0, i).join('/'))) {
+        return false
+      }
     }
   }
   return true
@@ -72,7 +76,9 @@ export function buildTreemap(rows: readonly TreemapRow[]): TreemapNode {
     node.color = row.color
   }
   const total = (node: TreemapNode): void => {
-    if (!node.children.length) return
+    if (!node.children.length) {
+      return
+    }
     node.size = 0
     node.color = 0
     for (const child of node.children) {
@@ -89,7 +95,9 @@ export function buildTreemap(rows: readonly TreemapRow[]): TreemapNode {
         const only = merged.children[0]!
         merged = { ...only, name: merged.name + '/' + only.name, parent: node }
       }
-      for (const grandchild of merged.children) grandchild.parent = merged
+      for (const grandchild of merged.children) {
+        grandchild.parent = merged
+      }
       node.children[index] = merged
       fold(merged)
     })
@@ -99,7 +107,9 @@ export function buildTreemap(rows: readonly TreemapRow[]): TreemapNode {
     const only = root.children[0]!
     root.path = only.path
     root.children = only.children
-    for (const child of root.children) child.parent = root
+    for (const child of root.children) {
+      child.parent = root
+    }
   }
   return root
 }
@@ -110,7 +120,9 @@ export function findTreemapNode(root: TreemapNode, path: string): TreemapNode {
   let node = root
   while (node.path !== target) {
     const child = node.children.find(candidate => target === candidate.path || target.startsWith(candidate.path + '/'))
-    if (!child) return root
+    if (!child) {
+      return root
+    }
     node = child
   }
   return node
@@ -120,7 +132,9 @@ export function findTreemapNode(root: TreemapNode, path: string): TreemapNode {
 export function layoutTreemap(node: TreemapNode, width: number, height: number): TreemapTile[] {
   const items = node.children.filter(child => child.size > 0).sort((a, b) => b.size - a.size)
   const total = items.reduce((sum, item) => sum + item.size, 0)
-  if (total <= 0 || width <= 0 || height <= 0) return []
+  if (total <= 0 || width <= 0 || height <= 0) {
+    return []
+  }
   const scale = width * height / total
   const tiles: TreemapTile[] = []
   let x = 0
@@ -169,7 +183,9 @@ export function layoutTreemap(node: TreemapNode, width: number, height: number):
       row = [item]
     }
   }
-  if (row.length) place(row)
+  if (row.length) {
+    place(row)
+  }
   return tiles
 }
 
@@ -184,7 +200,9 @@ export function heatmapDensity(columns: number): { dense: boolean; labelEvery: n
 
 export function fitTreemapLabel(label: string, width: number, charWidth: number): string {
   const max = Math.floor(width / charWidth)
-  if (max <= 0) return ''
+  if (max <= 0) {
+    return ''
+  }
   const characters = Array.from(label)
   return characters.length <= max ? label : max === 1 ? '…' : characters.slice(0, max - 1).join('') + '…'
 }

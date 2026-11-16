@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
+import packageJson from '../../../../package.json'
+
 import { inspectOpenUiBoard } from './openui-catalog'
 import { RICH_FENCE_LANGUAGES, RichCodeBlock } from './registry'
 
@@ -20,6 +22,13 @@ const embedded = (code: string, streaming = false) => (
 afterEach(cleanup)
 
 describe('openui-v2 Desktop fence', () => {
+  it('declares its runtime dependencies for a clean desktop install', () => {
+    for (const dependency of ['@openuidev/lang-core', '@openuidev/react-lang', 'zod']) {
+      expect(packageJson.dependencies, `${dependency} must not rely on hoisting`)
+        .toHaveProperty(dependency, expect.stringMatching(/\S/))
+    }
+  })
+
   it('routes only the registered version through the lazy embed', async () => {
     expect(RICH_FENCE_LANGUAGES.has('openui-v2')).toBe(true)
 
