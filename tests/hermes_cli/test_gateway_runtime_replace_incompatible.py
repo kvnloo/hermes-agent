@@ -132,6 +132,27 @@ def test_replacement_stops_the_verified_old_owner_with_a_planned_stop(home, owne
 
 
 @pytest.mark.platforms("linux")
+def test_cron_grandchild_cannot_replace_its_gateway_ancestor(home, owner, monkeypatch):
+    """The verified older owner is an ancestor, not this CLI's direct parent."""
+    import time
+    from hermes_cli import update_lock
+
+    monkeypatch.setattr(replace, "_install_root", lambda: home)
+    ancestry_checks = []
+    # The existing updater's bounded parent walk supplies ancestry; this simulates
+    # gateway -> cron script -> CLI without allowing any process to terminate us.
+    monkeypatch.setattr(update_lock, "_is_ancestor_pid",
+                        lambda pid: ancestry_checks.append(pid) or pid == owner.pid)
+
+    refusal = replace.replace_incompatible_owner(home, deadline=time.monotonic() + 5)
+
+    assert refusal == "owner_unverified"
+    assert ancestry_checks == [owner.pid]
+    assert owner.poll() is None
+    assert not (home / ".gateway-planned-stop.json").exists()
+
+
+@pytest.mark.platforms("linux")
 def test_replacement_refuses_a_recycled_pid(home, owner, monkeypatch):
     import time
     monkeypatch.setattr(replace, "_install_root", lambda: home)
