@@ -56,11 +56,13 @@ describe('archived Settings incremental loading', () => {
 
     listEveryArchivedSession.mockImplementationOnce((options: { onPage: typeof publish }) => {
       publish = options.onPage
+
       return new Promise<SessionInfo[]>((_, reject) => { rejectTail = reject })
     })
     listEveryArchivedSession.mockImplementationOnce(async (options: { onPage: typeof publish }) => {
       const rows = [row('first'), row('second')]
       options.onPage(rows)
+
       return rows
     })
 
@@ -101,11 +103,13 @@ describe('archived Settings incremental loading', () => {
 
     listEveryArchivedSession.mockImplementationOnce((options: { onPage: typeof publishOld }) => {
       publishOld = options.onPage
+
       return new Promise<SessionInfo[]>(resolve => { finishOld = resolve })
     })
     listEveryArchivedSession.mockImplementationOnce(async (options: { onPage: (rows: SessionInfo[]) => void }) => {
       const rows = [row('new-scope')]
       options.onPage(rows)
+
       return rows
     })
 
