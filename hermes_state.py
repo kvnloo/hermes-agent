@@ -1152,11 +1152,13 @@ class SessionDB(
         """``fetchone()`` of one read-only statement via ``_read_ctx``."""
         return self._read_retrying_ioerr(lambda conn: conn.execute(sql, params).fetchone())
 
-    def _read_all(self, sql: str, params: Any = ()) -> list[sqlite3.Row]:
-        """``fetchall()`` of one read-only statement via ``_read_ctx``."""
-        return self._read_retrying_ioerr(lambda conn: conn.execute(sql, params).fetchall())
+    def _read_all(self, sql: str, params: Any = (), *, fts_match: bool = False) -> list[sqlite3.Row]:
+        """``fetchall()`` via ``_read_ctx``. FTS MATCH has its own corruption gate."""
+        return self._read_retrying_ioerr(
+            lambda conn: conn.execute(sql, params).fetchall(), fts_match=fts_match,
+        )
 
-    def _read_retrying_ioerr(self, fn: Callable[[sqlite3.Connection], T]) -> T:
+    def _read_retrying_ioerr(self, fn: Callable[[sqlite3.Connection], T], *, fts_match: bool = False) -> T:
         """Run an idempotent SELECT through ``_read_ctx``, retrying a transient SQLITE_IOERR.
 
         A warm ``mode=ro`` pooled reader can hit the same millisecond-wide WAL transition window as a
@@ -1176,9 +1178,11 @@ class SessionDB(
                     raise
                 time.sleep(_READ_ONLY_IOERR_RETRY_BACKOFF_S)
             except sqlite3.DatabaseError as exc:
-                # A reader is often the only observer (the sidebar poll on a store nobody is
-                # writing to): publish structural damage so the list is not read as empty.
-                note_storage_error(self.db_path, exc)
+                # A confirmed FTS MATCH must check canonical tables at its search owner
+                # before a bare SQLITE_CORRUPT can poison all writers (#149585).
+                # Ordinary reads still publish structural damage immediately.
+                if not fts_match:
+                    note_storage_error(self.db_path, exc)
                 raise
 
     def _ensure_db_file_generation(self) -> None:

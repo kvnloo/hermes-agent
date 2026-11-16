@@ -330,7 +330,8 @@ class SessionFtsSetupMixin:
         return is_fts_scoped_corruption_error(exc)
 
     def _enter_fts_fail_open(
-        self, exc: sqlite3.DatabaseError, *, deadline: float | None = None, patience_s: float | None = None,
+        self, exc: sqlite3.DatabaseError, *, verified_bare_fts: bool = False,
+        deadline: float | None = None, patience_s: float | None = None,
     ) -> bool:
         """Detach corrupt FTS indexes so canonical writes can continue. Breadcrumb +
         trigger drop commit atomically: once triggers are absent the index has a
@@ -340,7 +341,10 @@ class SessionFtsSetupMixin:
         ``_WRITE_PATIENCE_S``), like ``_execute_write``: the writer connection's busy
         timeout is only 1 s, and the usual holder is a sibling writer detaching the
         same corrupt index — giving up after 1 s cost that turn's canonical write."""
-        if not self._fts_enabled or not self._is_fts_write_corruption_error(exc):
+        if not self._fts_enabled or not (
+            self._is_fts_write_corruption_error(exc)
+            or (verified_bare_fts and getattr(exc, "sqlite_errorcode", None) == sqlite3.SQLITE_CORRUPT)
+        ):
             return False
         if patience_s is None:
             patience_s = self._WRITE_PATIENCE_S
