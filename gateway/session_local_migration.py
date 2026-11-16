@@ -90,7 +90,10 @@ def legacy_launch_params(row):
     route = SessionGatewayMixin.session_gateway_runtime(row)
     route = {key: value.strip() for key, value in route.items() if isinstance(value, str) and value.strip()}
     billing_base_url = row.get('billing_base_url')
-    if 'base_url' not in route and isinstance(billing_base_url, str) and billing_base_url.strip():
+    # A bare `custom` provider is a billing label, not a selected endpoint. A prior turn's
+    # billing_base_url is only a usage stamp: do not pin it after the profile route moves.
+    if (route.get('provider', '').lower() != 'custom' and 'base_url' not in route
+            and isinstance(billing_base_url, str) and billing_base_url.strip()):
         route['base_url'] = billing_base_url.strip()
         # The reader returns a bare ``custom`` billing provider with its endpoint and drops ``auto``:
         # an endpoint left without a provider is a custom route, never one to pair with the
