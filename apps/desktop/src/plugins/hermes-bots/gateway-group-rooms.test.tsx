@@ -9,15 +9,16 @@
  */
 
 import type * as HermesSdk from '@hermes/plugin-sdk'
-import { act, cleanup, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { atom } from 'nanostores'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 import { translateBotsIn } from './i18n-test-helper'
 
-const { connection, gateway, requestProfile } = vi.hoisted(() => ({
+const { connection, gateway, profileRoutes, requestProfile } = vi.hoisted(() => ({
   connection: { id: null as unknown },
   gateway: { state: null as unknown },
+  profileRoutes: vi.fn(),
   requestProfile: vi.fn()
 }))
 
@@ -30,7 +31,7 @@ vi.mock('@hermes/plugin-sdk', async importOriginal => {
 
   return {
     ...sdk,
-    host: { ...sdk.host, requestProfile, state: { ...sdk.host.state, connectionId, gateway: state, profile: atom('default') } },
+    host: { ...sdk.host, profileRoutes, requestProfile, state: { ...sdk.host.state, connectionId, gateway: state, profile: atom('default') } },
     usePluginI18n: () => translateBotsIn('en')
   }
 })
@@ -43,6 +44,7 @@ const connectionId = () => connection.id as ReturnType<typeof atom<null | string
 const room = { room_id: 'room-1', name: 'Launch crew', members: [], updated_at: Date.now() / 1000 }
 
 beforeEach(() => {
+  profileRoutes.mockResolvedValue([])
   requestProfile.mockImplementation(async () => {
     if (gatewayState().get() !== 'open') {
       throw new Error('Hermes gateway is not connected')
@@ -115,4 +117,34 @@ it('a disbanded room never comes back: not from a slow read, a failed re-read or
 
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Launch crew' })).toBeNull())
   expect($canonicalGroupBindings.get()).toEqual({})
+})
+
+it('keeps a group from gateway A visible after switching to gateway B, routed to A on open', async () => {
+  gatewayState().set('open')
+  connectionId().set('gateway-a')
+  profileRoutes.mockResolvedValue([
+    { connectionId: 'gateway-a', profile: 'default', targetProfile: 'default', mode: 'remote' },
+    { connectionId: 'gateway-b', profile: 'default', targetProfile: 'default', mode: 'remote' }
+  ])
+  requestProfile.mockImplementation(async (route: { connectionId: string }, method: string) => {
+    if (method !== 'groups.list') {throw new Error(`Unexpected ${method}`)}
+
+    return {
+      rooms: route.connectionId === 'gateway-a'
+        ? [{ ...room, room_id: 'cross-room', name: 'Across machines' }]
+        : [],
+      next_offset: null
+    }
+  })
+  const open = vi.fn()
+  renderGatewayRooms(open)
+  expect(await screen.findByRole('button', { name: 'Across machines' })).toBeTruthy()
+
+  await act(async () => { connectionId().set('gateway-b') })
+  await waitFor(() => expect(requestProfile).toHaveBeenCalledWith(
+    expect.objectContaining({ connectionId: 'gateway-b' }), 'groups.list', expect.anything()
+  ))
+  await act(async () => { await Promise.resolve() })
+  fireEvent.click(screen.getByRole('button', { name: 'Across machines' }))
+  expect(open).toHaveBeenCalledWith('canonical:gateway-a:default:cross-room', 'key')
 })

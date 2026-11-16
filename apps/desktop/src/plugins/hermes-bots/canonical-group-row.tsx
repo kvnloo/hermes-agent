@@ -27,12 +27,13 @@ interface CanonicalGroupRowProps {
   active: boolean
   onOpen: () => void
   room: GatewayGroupRoom
+  connectionLabel?: string
 }
 
 /** One gateway Group Chat in the Bots roster. Same shape as a Desktop group
  *  row (tile, name, age, member line) so the two kinds read as one list; the
  *  live state is whatever an open view of the room last published. */
-export function CanonicalGroupRow({ active, onOpen, room }: CanonicalGroupRowProps) {
+export function CanonicalGroupRow({ active, onOpen, room, connectionLabel }: CanonicalGroupRowProps) {
   const { t } = useI18n()
   const labels = useCanonicalGroupLabels()
   const { group } = useBots()
@@ -101,6 +102,7 @@ export function CanonicalGroupRow({ active, onOpen, room }: CanonicalGroupRowPro
                   />
                 ) : null}
                 <span className="min-w-0 truncate">{memberCount}</span>
+                {connectionLabel ? <span className="min-w-0 truncate" data-device-badge title={`Runs on ${connectionLabel}`}>· {connectionLabel}</span> : null}
               </span>
             </span>
           </RowButton>

@@ -1,4 +1,5 @@
 import { atom, host, useQuery, useValue } from '@hermes/plugin-sdk'
+import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 
 import type { CanonicalGroupMessages } from './canonical-group-locales'
@@ -235,37 +236,66 @@ async function listGatewayGroupRooms(route: CanonicalGroupRoute): Promise<Gatewa
 
 const ROOMS_KEY = [ID, 'gateway-group-rooms']
 
-/** Gateway Group Chats for the Bots roster, kept current without a refresh
- *  button: re-read on a poll, on every socket/source change and after a
- *  create or disband here. A failed read keeps the last good list (the roster
- *  shows rooms, never a transport error); a window whose connection has no
- *  registry id cannot bind a room to an authority, so it lists none. */
+/** Read rooms from every registered (connection, profile), without moving the
+ * foreground gateway. Each authority owns an independent cache: an unreachable
+ * machine must not erase the last good list from other machines. */
 export function useGatewayGroupRooms(): GatewayGroupRoom[] {
   const connectionId = useValue(host.state.connectionId)
   const profile = useValue(host.state.profile)
   const gateway = useValue(host.state.gateway)
   const revision = useValue($canonicalGroupListRevision)
   const disbanded = useValue($disbandedGatewayRooms)
+  const client = useQueryClient()
+  const enabled = Boolean(connectionId && profile) && gateway === 'open'
 
-  const { data, refetch } = useQuery({
-    queryKey: [...ROOMS_KEY, connectionId, profile],
-    enabled: Boolean(connectionId && profile) && gateway === 'open',
-    queryFn: () => listGatewayGroupRooms({ connectionId: connectionId!, profile }),
-    refetchInterval: 10_000,
+  const { data: profileRoutes } = useQuery({
+    queryKey: [...ROOMS_KEY, 'sources', connectionId, profile],
+    enabled,
+    queryFn: () => host.profileRoutes(),
+    refetchInterval: 60_000,
     retry: false,
-    // Always stale, so the socket reopening (boot, reconnect, wake) re-reads at once.
     staleTime: 0
   })
 
-  // A create or disband here re-reads now; a failed re-read keeps the last good list.
-  useEffect(() => {
-    if (revision && host.state.gateway.get() === 'open') {void refetch()}
-  }, [revision, refetch])
+  const routes = useMemo(() => {
+    const candidates: CanonicalGroupRoute[] = [
+      ...(connectionId && profile ? [{ connectionId, profile }] : []),
+      ...(Array.isArray(profileRoutes) ? profileRoutes : [])
+    ]
+    const unique = new Map<string, CanonicalGroupRoute>()
 
-  return useMemo(
-    () => (connectionId ? (data ?? []).filter(room => !disbanded.has(room.key)) : []),
-    [connectionId, data, disbanded]
-  )
+    for (const route of candidates) {
+      if (!route?.connectionId?.trim() || !route.profile?.trim()) {continue}
+      unique.set(JSON.stringify([route.connectionId, route.profile]), {
+        connectionId: route.connectionId, profile: route.profile
+      })
+    }
+
+    return [...unique.values()]
+  }, [connectionId, profile, profileRoutes])
+
+  const queries = useQueries({
+    queries: routes.map(route => ({
+      queryKey: [...ROOMS_KEY, 'room', route.connectionId, route.profile],
+      enabled,
+      queryFn: () => listGatewayGroupRooms(route),
+      refetchInterval: 10_000,
+      retry: false,
+      staleTime: 0
+    }))
+  })
+
+  // Creating or disbanding a room refreshes the whole roster, not just the
+  // foreground source. Keep the disband tombstones across stale/failed reads.
+  useEffect(() => {
+    if (revision && host.state.gateway.get() === 'open') {
+      void client.invalidateQueries({ queryKey: [...ROOMS_KEY, 'room'] })
+    }
+  }, [revision, client])
+
+  return connectionId
+    ? queries.flatMap(query => query.data ?? []).filter(room => !disbanded.has(room.key))
+    : []
 }
 
 /** Disband on the room's own gateway, then retire it everywhere this window shows it.

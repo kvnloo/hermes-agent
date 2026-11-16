@@ -450,6 +450,7 @@ export function BotsPane() {
       active={groupChatName === gateway.key}
       key={gateway.key}
       onOpen={() => openGroupChat(bindGatewayGroupRoom(gateway), 'key')}
+      connectionLabel={sourceByConnection(sourceSnapshot).get(gateway.binding.connectionId)?.label || gateway.binding.connectionId}
       room={gateway}
     />
   ) : (
