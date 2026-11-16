@@ -4579,6 +4579,7 @@ export const deOverrides = {
     },
     approvalMode: {
       title: 'Genehmigungsmodus',
+      perBot: 'Pro Bot',
       ariaLabel: mode => `Genehmigungsmodus: ${mode}`,
       manual: 'Manuell',
       manualDescription: 'Nachfragen bei Aktionen, die eine Genehmigung erfordern',

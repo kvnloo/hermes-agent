@@ -2993,6 +2993,7 @@ export const jaOverrides = {
     },
     approvalMode: {
       title: '承認モード',
+      perBot: 'ボットごと',
       ariaLabel: mode => `承認モード: ${mode}`,
       manual: '手動',
       manualDescription: '承認が必要な操作の前に確認します',

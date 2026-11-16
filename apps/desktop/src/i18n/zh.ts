@@ -3984,6 +3984,7 @@ export const zhOverrides = {
     },
     approvalMode: {
       title: '审批模式',
+      perBot: '按机器人设置',
       ariaLabel: mode => `审批模式：${mode}`,
       manual: '手动',
       manualDescription: '执行需要审批的操作前询问',

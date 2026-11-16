@@ -3594,6 +3594,7 @@ export interface Translations extends NoticeTranslations {
     }
     approvalMode: {
       title: string
+      perBot: string
       ariaLabel: (mode: string) => string
       manual: string
       manualDescription: string

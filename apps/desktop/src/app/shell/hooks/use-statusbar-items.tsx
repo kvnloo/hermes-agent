@@ -15,7 +15,8 @@ import { useCompactConversation } from '@/app/shell/hooks/use-compact-conversati
 import { useContextBreakdown } from '@/app/shell/hooks/use-context-breakdown'
 import { useFocusedSessionRow } from '@/app/shell/hooks/use-focused-session-row'
 import { useSystemResourcesStatusbarItem } from '@/app/shell/system-resources-statusbar'
-import { $paneVisible } from '@/components/pane-shell/tree/store'
+import { findGroup, findGroupOfPane } from '@/components/pane-shell/tree/model'
+import { $activeTreeGroup, $layoutTree, $paneVisible } from '@/components/pane-shell/tree/store'
 import { Badge } from '@/components/ui/badge'
 import { Codicon } from '@/components/ui/codicon'
 import { GlyphSpinner } from '@/components/ui/glyph-spinner'
@@ -155,6 +156,20 @@ export function useStatusbarItems({
   const fileMenu = t.fileMenu
   const primaryActiveSessionId = useStore($activeSessionId)
   const activeGatewayProfile = useStore($activeGatewayProfile)
+  const activeTreeGroup = useStore($activeTreeGroup)
+  // A group room owns several independently gated member sessions. Never show
+  // the ambient profile's approvals mode as the room's execution policy.
+  const groupChatFocused = useStoreSelector($layoutTree, tree => {
+    if (!tree) return false
+    const focusedPane = activeTreeGroup && findGroup(tree, activeTreeGroup)?.active
+    const pane = focusedPane && (
+      focusedPane === 'workspace' ||
+      focusedPane.startsWith('session-tile:') ||
+      focusedPane.startsWith('hermes-bots:group:')
+    ) ? focusedPane : findGroupOfPane(tree, 'workspace')?.active
+
+    return Boolean(pane?.startsWith('hermes-bots:group:'))
+  })
   // What the button paints and flips is whether the terminal is ON SCREEN —
   // the takeover store alone stays true behind a stacked sibling tab or a
   // minimized zone, which lit the button for a pane the user couldn't see.
@@ -385,7 +400,8 @@ export function useStatusbarItems({
     activeGatewayProfile,
     requestApprovalModeGateway,
     gatewayState,
-    activeSocket
+    activeSocket,
+    groupChatFocused
   )
 
   const systemResourcesItem = useSystemResourcesStatusbarItem()

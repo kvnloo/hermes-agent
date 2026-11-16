@@ -4135,6 +4135,7 @@ export const en: Translations = {
     },
     approvalMode: {
       title: 'Approval mode',
+      perBot: 'Per bot',
       ariaLabel: mode => `Approval mode: ${mode}`,
       manual: 'Manual',
       manualDescription: 'Ask before actions that require approval',

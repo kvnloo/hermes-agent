@@ -4588,6 +4588,7 @@ export const frOverrides = {
     },
     approvalMode: {
       title: "Mode d'approbation",
+      perBot: 'Par bot',
       ariaLabel: mode => `Mode d'approbation : ${mode}`,
       manual: 'Manuel',
       manualDescription: 'Demander avant les actions nécessitant une approbation',

@@ -327,6 +327,7 @@ export const zhHantChrome = {
     },
     approvalMode: {
       title: '核准模式',
+      perBot: '按機器人設定',
       ariaLabel: mode => `核准模式：${mode}`,
       manual: '手動',
       manualDescription: '執行需要核准的操作前詢問',

@@ -133,6 +133,28 @@ afterEach(() => {
   $updateStatus.set(null)
 })
 
+describe('approval-mode statusbar in group rooms (#156647)', () => {
+  it('shows a non-toggleable per-bot state instead of editing the ambient profile', () => {
+    const roomPane = 'hermes-bots:group:mixed-approvals'
+    act(() => {
+      $layoutTree.set(group(['workspace', roomPane], { active: roomPane, id: MAIN_GROUP_ID }))
+      noteActiveTreeGroup(MAIN_GROUP_ID)
+    })
+    const { result } = renderHook(() => useStatusbarItems({ ...statusbarOptions, gatewayState: 'open' }), { wrapper })
+    const approval = () => result.current.statusbarItems.find(item => item.id === 'approval-mode')
+
+    expect(approval()?.label).toBe(en.shell.approvalMode.perBot)
+    expect(approval()?.variant).toBe('text')
+    expect(approval()?.menuContent).toBeUndefined()
+
+    act(() => {
+      $layoutTree.set(group(['workspace', roomPane], { active: 'workspace', id: MAIN_GROUP_ID }))
+    })
+    expect(approval()?.variant).toBe('menu')
+    expect(approval()?.menuContent).toBeDefined()
+  })
+})
+
 describe('statusbar update channel vocabulary', () => {
   it('names a stable release update without presenting its commit distance', () => {
     act(() => {

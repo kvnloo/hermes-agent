@@ -24,7 +24,8 @@ export function useApprovalModeStatusbarItem(
   gatewayState: string,
   // Identity of the route the profile is served on (the active socket): a
   // move between gateways that serve the same profile name re-reads the mode.
-  routeIdentity?: unknown
+  routeIdentity?: unknown,
+  groupChatFocused = false
 ): StatusbarItem {
   const { t } = useI18n()
   const copy = t.shell.approvalMode
@@ -52,12 +53,23 @@ export function useApprovalModeStatusbarItem(
     // optimistic 'smart' default until some later session event reconciles
     // it. Gate on the open socket and re-run when it opens (or a reconnect
     // lands), the same way useStatusSnapshot does.
-    if (gatewayState !== 'open') {
+    if (gatewayState !== 'open' || groupChatFocused) {
       return
     }
 
     void syncApprovalModeForProfile(requestGateway, profile).catch(() => undefined)
-  }, [gatewayState, profile, requestGateway, routeIdentity])
+  }, [gatewayState, groupChatFocused, profile, requestGateway, routeIdentity])
+
+  if (groupChatFocused) {
+    return {
+      icon: <Zap className="size-3.5 opacity-70" />,
+      id: 'approval-mode',
+      label: copy.perBot,
+      lockedVisible: true,
+      title: copy.ariaLabel(copy.perBot),
+      variant: 'text'
+    }
+  }
 
   return {
     className: mode === 'off' ? 'bg-(--chrome-action-hover) text-foreground' : undefined,

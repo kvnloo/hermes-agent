@@ -4563,6 +4563,7 @@ export const esOverrides = {
     },
     approvalMode: {
       title: 'Modo de aprobación',
+      perBot: 'Por bot',
       ariaLabel: mode => `Modo de aprobación: ${mode}`,
       manual: 'Manual',
       manualDescription: 'Preguntar antes de acciones que requieran aprobación',

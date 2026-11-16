@@ -3246,6 +3246,7 @@ export const ruOverrides = {
     },
     approvalMode: {
       title: 'Режим подтверждения',
+      perBot: 'Для каждого бота',
       ariaLabel: mode => `Режим подтверждения: ${mode}`,
       manual: 'Ручной',
       manualDescription: 'Спрашивать перед действиями, требующими подтверждения',
