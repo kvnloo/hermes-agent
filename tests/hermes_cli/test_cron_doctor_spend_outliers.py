@@ -32,3 +32,10 @@ def test_warning_clears_once_the_next_fire_is_normal(tmp_path, monkeypatch):
     _audit(tmp_path, monkeypatch, [("job", 10_000_000)] * 5 + [("job", 84_000_000), ("job", 11_000_000)])
 
     assert cron._cron_spend_outliers() == {}
+
+
+def test_unknown_usage_on_latest_fire_does_not_relabel_an_earlier_outlier(tmp_path, monkeypatch):
+    # The scheduler appends total_tokens=null when a later fire fails before usage is known.
+    _audit(tmp_path, monkeypatch, [("job", 10_000_000)] * 4 + [("job", 84_000_000), ("job", None)])
+
+    assert cron._cron_spend_outliers() == {}

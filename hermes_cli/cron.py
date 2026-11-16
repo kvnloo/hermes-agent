@@ -720,20 +720,27 @@ def _cron_spend_outliers() -> dict[str, str]:
     from cron.jobs import CRON_DIR
     # Only the last 11 measured fires per job matter; the audit file grows forever, so stream it.
     fires: dict[str, deque] = {}
+    latest_usage_unknown: set[str] = set()
     try:
         with open(CRON_DIR / "usage_audit.jsonl", encoding="utf-8-sig") as audit:
             for line in audit:
                 try:
                     rec = json.loads(line)
-                    # null = the run failed before usage was known, not a zero-token fire.
-                    if rec.get("total_tokens") is not None:
-                        fires.setdefault(str(rec["job_id"]), deque(maxlen=11)).append(int(rec["total_tokens"]))
+                    job_id = str(rec["job_id"])
+                    # Unknown usage is neither a baseline sample nor a measured last fire.
+                    if rec.get("total_tokens") is None:
+                        latest_usage_unknown.add(job_id)
+                    else:
+                        fires.setdefault(job_id, deque(maxlen=11)).append(int(rec["total_tokens"]))
+                        latest_usage_unknown.discard(job_id)
                 except (ValueError, KeyError, TypeError, AttributeError):
                     continue
     except OSError:
         return {}
     outliers = {}
     for job_id, history in fires.items():
+        if job_id in latest_usage_unknown:
+            continue
         tokens = list(history)
         usual = median(tokens[-11:-1]) if len(tokens) >= 4 else 0
         last = tokens[-1]
