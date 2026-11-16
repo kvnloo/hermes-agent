@@ -41,6 +41,7 @@ import { readChatPanelCollapsed, toggleChatPanelCollapsed } from "@/lib/chat-pan
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { normalizeSessionTitle } from "@/lib/chat-title";
 import { createPtyCompositionForwarder } from "@/lib/pty-composition";
+import { bindDesktopPtyImeInput } from "@/lib/pty-desktop-ime";
 import { shouldRestoreTerminalFocus } from "@/lib/pty-focus";
 import { PtyResumeSanitizer } from "@/lib/pty-resume-sanitizer";
 import {
@@ -797,23 +798,8 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
     });
     term.open(host);
 
-    // IME composition guard (fixes #52111).
-    //
-    // React 18's root-level event delegation intercepts keydown events with
-    // keyCode 229 (the "composition in progress" signal sent by the browser
-    // during non-Latin IME input) and synthesises an onCompositionStart
-    // event.  That synthetic path sets internal composing state that
-    // interferes with xterm.js's own IME handling on its hidden textarea,
-    // causing the first keystroke of each composition chunk to be silently
-    // dropped — most visible with Cyrillic (Ukrainian/Russian) on
-    // Firefox-based browsers, but affects any locale that uses composition
-    // events (CJK, Arabic, Hebrew).
-    //
-    // xterm.js relies on native compositionstart/compositionend on its
-    // internal textarea, not on keydown, so blocking the keyCode-229
-    // keydown from reaching React's delegation layer is safe.  The listener
-    // sits in the *capture* phase on the terminal host so it fires before
-    // the event bubbles up to the React root.
+    // Stop React's keyCode-229 synthetic composition from interfering with
+    // xterm's native IME handling (#52111).
     const _imeCompositionGuard = (e: KeyboardEvent) => {
       if (e.keyCode === 229 || e.key === "Process") {
         e.stopPropagation();
@@ -844,8 +830,7 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
         }
       };
       const markCompositionEnd = (ev: CompositionEvent) => {
-        // Desktop commits are delivered by the IME takeover installed below;
-        // arming the replacement window here is what corrupted them (#106487).
+        // Desktop IME commits bypass mobile replacement (#106487).
         if (!isMobileLike) return;
         mobileReplacementInputUntilRef.current = Date.now() + MOBILE_REPLACEMENT_WINDOW_MS;
         compositionForwarder.onCompositionEnd(ev.data);
@@ -854,79 +839,10 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
       textarea.addEventListener("beforeinput", markReplacementInput, true);
       textarea.addEventListener("compositionend", markCompositionEnd, true);
 
-      // Desktop IME takeover — the actual fix for #106487 (Chinese/CJK input in
-      // /chat). Three independent breakages live in xterm 6 + this page's
-      // `screenReaderMode: true` combination:
-      //
-      //  1. xterm derives a commit as `textarea.value.substring(lenAtStart)`.
-      //     The a11y mode lets that hidden textarea mirror the whole composer
-      //     line and lets arrow keys move its caret, so a commit typed mid-line
-      //     slices out the line's TAIL instead of the typed word
-      //     ("12345f啊6789abcdef") and the composition fallback then appends the
-      //     real word on top of it.
-      //  2. xterm gates its `insertText` path on `!screenReaderMode`, so IMEs
-      //     that commit without composition events (Sogou and other
-      //     quick-commit modes) deliver their text to the textarea and nowhere
-      //     else — the composer stays empty.
-      //  3. Anything the mobile replacement heuristic touches is rewritten.
-      //
-      // So on non-mobile user agents we forward the commit ourselves and keep
-      // xterm out of the IME path entirely: `compositionend.data` (or a bare
-      // non-ASCII `insertText`) is authoritative, and the PTY-side composer is
-      // the only interpreter of it.
-      let desktopImeCleanup: (() => void) | null = null;
-      if (!isMobileLike) {
-        const IME_COMMIT_GRACE_MS = 300;
-        // eslint-disable-next-line no-control-regex -- detect non-keyboard text
-        const NON_ASCII_TEXT = /[^\x00-\x7f]/;
-        let lastDesktopCommitAt = 0;
-
-        const forwardDesktopImeCommit = (ev: Event, data: string) => {
-          ev.preventDefault();
-          // Capture phase: this also stops xterm's own textarea listeners, so
-          // its substring slice never reaches the PTY.
-          ev.stopImmediatePropagation();
-          lastDesktopCommitAt = Date.now();
-          // Drop the mirror so no later `substring(lenAtStart)` can slice
-          // stale pre-commit text out of it.
-          textarea.value = "";
-          try {
-            textarea.setSelectionRange(0, 0);
-          } catch {
-            /* value was just cleared; no selection to reset */
-          }
-          sendComposedText(data);
-        };
-
-        const onDesktopCompositionEnd = (ev: Event) => {
-          const data = (ev as CompositionEvent).data;
-          if (!data) {
-            // Composition ended without text (cancel/Escape) — still mark the
-            // instant so a trailing `insertText` echo is not forwarded twice.
-            lastDesktopCommitAt = Date.now();
-            return;
-          }
-          forwardDesktopImeCommit(ev, data);
-        };
-
-        const onDesktopImeInput = (ev: Event) => {
-          const input = ev as InputEvent;
-          // Text delivered *during* a composition is preedit, not a commit.
-          if (input.isComposing || input.inputType !== "insertText") return;
-          const data = input.data;
-          if (!data || !NON_ASCII_TEXT.test(data)) return;
-          // A composition just delivered this commit through compositionend.
-          if (Date.now() - lastDesktopCommitAt <= IME_COMMIT_GRACE_MS) return;
-          forwardDesktopImeCommit(ev, data);
-        };
-
-        textarea.addEventListener("compositionend", onDesktopCompositionEnd, true);
-        textarea.addEventListener("input", onDesktopImeInput, true);
-        desktopImeCleanup = () => {
-          textarea.removeEventListener("compositionend", onDesktopCompositionEnd, true);
-          textarea.removeEventListener("input", onDesktopImeInput, true);
-        };
-      }
+      // Keep the desktop IME seam out of ChatPage's main effect.
+      const desktopImeCleanup = !isMobileLike
+        ? bindDesktopPtyImeInput(textarea, (data) => sendComposedText(data))
+        : null;
 
       mobileInputCleanup = () => {
         textarea.removeEventListener("beforeinput", markReplacementInput, true);
