@@ -133,3 +133,48 @@ def test_a_broken_update_keeps_the_previous_version_and_says_so(plugin):
     # The fixed release after it loads clean: nothing the broken one half-imported is reused.
     assert "new sessions use this version" in activation_hint(update_to(4))
     assert get_provider_profile("demo-provider").create_client().version == "v4"
+
+
+@pytest.mark.parametrize("edit", ["resource", "preserved-python-metadata"])
+def test_frozen_provider_identity_tracks_copied_content(plugin, edit):
+    """Different frozen bytes must have different provider identities even when stats match."""
+    from providers import get_provider_profile
+
+    _write(plugin, 1)
+    if edit == "resource":
+        resource = plugin / "settings.json"
+        resource.write_text('{"label": "old"}\n')
+        (plugin / "client.py").write_text(
+            "from pathlib import Path\n"
+            "class Client:\n"
+            "    def __init__(self, **kw):\n"
+            "        self.version = Path(__file__).with_name('settings.json').read_text()\n"
+        )
+        before_version = '{"label": "old"}\n'
+    else:
+        before_version = "v1"
+
+    before = get_provider_profile("demo-provider")
+    assert before is not None
+    assert before.create_client().version == before_version
+
+    if edit == "resource":
+        resource.write_text('{"label": "new"}\n')
+        after_version = '{"label": "new"}\n'
+    else:
+        for name in ("setup.py", "client.py"):
+            path = plugin / name
+            old_stat = path.stat()
+            original = path.read_text()
+            assert "v1" in original
+            path.write_text(original.replace("v1", "v2"))
+            os.utime(path, ns=(old_stat.st_atime_ns, old_stat.st_mtime_ns))
+            assert path.stat().st_size == old_stat.st_size
+            assert path.stat().st_mtime_ns == old_stat.st_mtime_ns
+        after_version = "v2"
+
+    _forced_sweep()
+    current = get_provider_profile("demo-provider")
+    assert current is not before
+    assert current.create_client().version == after_version
+    assert before.create_client().version == before_version

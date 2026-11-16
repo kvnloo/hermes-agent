@@ -25,9 +25,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Directories inside a plugin tree that never hold code the provider imports.
-_SKIP_DIRS = frozenset({"__pycache__", ".git", "node_modules", "tests", "evals", ".venv"})
-_SNAPSHOT_IGNORE = shutil.ignore_patterns("__pycache__", ".git", "node_modules", ".venv")
+# Keep frozen-copy and fingerprint exclusions identical, including for non-Python resources.
+_SKIP_NAMES = frozenset({"__pycache__", ".git", "node_modules", ".venv"})
+_SNAPSHOT_IGNORE = shutil.ignore_patterns(*_SKIP_NAMES)
 # One directory per process for the frozen copies; removed when the process exits.
 _snapshot_root: Path | None = None
 _snapshot_lock = threading.Lock()
@@ -59,20 +59,25 @@ def _snapshot(plugin_dir: Path, module_name: str) -> Path:
 
 
 def tree_fingerprint(plugin_dir: Path) -> str:
-    """Digest of the plugin's Python files and manifest (path, size, mtime): it moves whenever an update
-    rewrites them, however the plugin was installed."""
-    entries = []
+    """Identity of all bytes copied into a frozen plugin tree, not filesystem metadata."""
+    digest = hashlib.sha1()
     for root, dirs, files in os.walk(plugin_dir):
-        dirs[:] = sorted(d for d in dirs if d not in _SKIP_DIRS)
+        dirs[:] = sorted(d for d in dirs if d not in _SKIP_NAMES)
         for name in sorted(files):
-            if name.endswith(".py") or name in ("plugin.yaml", "plugin.yml"):
-                path = os.path.join(root, name)
-                try:
-                    st = os.stat(path)
-                except OSError:
-                    continue
-                entries.append(f"{os.path.relpath(path, plugin_dir)}:{st.st_size}:{st.st_mtime_ns}")
-    return hashlib.sha1("\n".join(entries).encode("utf-8")).hexdigest()[:12]
+            if name in _SKIP_NAMES:
+                continue
+            path = os.path.join(root, name)
+            content_hash = hashlib.sha1()
+            try:
+                with open(path, "rb") as stream:
+                    for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                        content_hash.update(chunk)
+            except OSError:
+                continue
+            digest.update(os.path.relpath(path, plugin_dir).encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(content_hash.digest())
+    return digest.hexdigest()[:12]
 
 
 def import_into_layer(plugin_dir: Path, source: str, base_name: str) -> None:
