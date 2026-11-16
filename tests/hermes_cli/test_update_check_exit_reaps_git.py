@@ -95,3 +95,64 @@ def test_exit_during_the_stable_tag_lookup_leaves_no_git_behind(tmp_path):
                 os.kill(pid, 9)
             except ProcessLookupError:
                 pass
+
+
+_GH_CHILD = textwrap.dedent("""
+    import pathlib
+    import sys
+    import threading
+
+    from hermes_cli import github_api, process_identity
+    from tests.waiting import wait_until
+
+    marker = pathlib.Path(sys.argv[1])
+    threading.Thread(target=github_api.github_token, daemon=True).start()
+
+    def registered():
+        pids = marker.read_text().split()
+        if len(pids) < 2:
+            return False
+        # Read only after registration finished writing to the supervisor.
+        with process_identity._supervisor_lock:
+            return (int(pids[0]) in process_identity._supervised_pgids
+                    and process_identity._supervisor is not None)
+
+    wait_until(lambda: len(marker.read_text().split()) >= 2, timeout=10,
+               what="gh and its helper to start")
+    try:
+        wait_until(registered, timeout=2, what="owner-death coverage to be installed")
+    except AssertionError:
+        pass  # On the original head there is no owner; exit while gh still runs.
+""")
+
+
+def test_exit_during_gh_token_lookup_leaves_no_process_behind(tmp_path):
+    """No orphaned gh/keychain helpers when a passive update-check daemon thread is abandoned."""
+    from hermes_cli._subprocess_compat import pid_exists_stdlib
+
+    marker = tmp_path / "gh-pids"
+    marker.write_text("")
+    fake_gh = tmp_path / "gh"
+    fake_gh.write_text(f"#!/bin/sh\nsleep 300 &\necho $$ $! >> {marker}\nwait\n")
+    fake_gh.chmod(0o755)
+    home = tmp_path / "hermes-home"
+    home.mkdir()
+    env = {**os.environ, "HERMES_HOME": str(home), "PYTHONPATH": str(REPO),
+           "PATH": f"{tmp_path}{os.pathsep}{os.environ.get('PATH', '')}"}
+    env.pop("GITHUB_TOKEN", None)
+    env.pop("GH_TOKEN", None)
+    pids: list[int] = []
+    try:
+        child = subprocess.run([sys.executable, "-c", _GH_CHILD, str(marker)],
+                               cwd=REPO, env=env, capture_output=True, text=True, timeout=60, check=False)
+        pids = [int(p) for p in marker.read_text().split()]
+        assert child.returncode == 0, child.stderr
+        assert len(pids) == 2, f"fake gh and its helper never started: {child.stderr}"
+        wait_until(lambda: not any(pid_exists_stdlib(pid) for pid in pids), timeout=15,
+                   what="the update check's gh and helper to die with the CLI")
+    finally:
+        for pid in pids:
+            try:
+                os.kill(pid, 9)
+            except ProcessLookupError:
+                pass
