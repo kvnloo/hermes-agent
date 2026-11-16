@@ -32,16 +32,11 @@ VALID = {
 
 @pytest.fixture
 def repair():
-    """Return a bound _repair_tool_call built on a minimal shell agent.
+    """Bind the real helper without importing AIAgent's bootstrap and home I/O."""
+    from agent.agent_runtime_helpers import repair_tool_call
 
-    We avoid constructing a real AIAgent (which pulls in credential
-    resolution, session DB, etc.) because the repair routine only
-    reads self.valid_tool_names. A SimpleNamespace stub is enough to
-    bind the unbound function.
-    """
-    from run_agent import AIAgent
     stub = SimpleNamespace(valid_tool_names=VALID)
-    return AIAgent._repair_tool_call.__get__(stub, AIAgent)
+    return repair_tool_call.__get__(stub)
 
 
 class TestExistingBehaviorStillWorks:
@@ -142,3 +137,32 @@ class TestAnthropicOAuthContextEngineNames:
 
         agent = SimpleNamespace(valid_tool_names={"notes", "mcp__notes"})
         assert repair_tool_call(agent, "mcp__notes") == "mcp__notes"
+
+    def test_agent_local_tool_survives_oauth_round_trip(self):
+        from agent.agent_runtime_helpers import repair_tool_call
+        from agent.transports.anthropic import AnthropicTransport
+        from tools.registry import registry
+
+        assert registry.get_entry("notes") is None
+        transport = AnthropicTransport()
+        request = transport.build_kwargs(
+            model="claude-sonnet-4-6",
+            messages=[{"role": "user", "content": "Read my notes"}],
+            tools=[{"type": "function", "function": {
+                "name": "notes", "description": "Read context-engine notes",
+                "parameters": {"type": "object", "properties": {}},
+            }}],
+            is_oauth=True,
+        )
+        wire_name = request["tools"][0]["name"]
+        assert wire_name == "mcp__notes"
+        response = SimpleNamespace(
+            content=[SimpleNamespace(type="tool_use", id="call_notes", name=wire_name, input={})],
+            stop_reason="tool_use",
+        )
+        normalized = transport.normalize_response(response, strip_tool_prefix=True)
+        call = normalized.tool_calls[0]
+        assert call.id == "call_notes"
+        assert call.arguments == "{}"
+        agent = SimpleNamespace(valid_tool_names={"notes"})
+        assert repair_tool_call(agent, call.name) == "notes"
