@@ -2323,7 +2323,9 @@ def _try_openrouter(explicit_api_key: Optional[str | Callable[[], str]] = None, 
     or_key = explicit_api_key or _scoped_key_env("OPENROUTER_API_KEY")
     if not or_key:
         _mark_provider_unhealthy(
-            "openrouter", ttl=60, reason=_describe_openrouter_unavailable(or_model), level=logging.DEBUG)
+            "openrouter", ttl=60,
+            reason=_describe_openrouter_unavailable(or_model, main_fallback=main_fallback),
+            level=logging.DEBUG)
         return None, None
     logger.debug("Auxiliary client: OpenRouter")
     return _create_openai_client(

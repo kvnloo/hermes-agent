@@ -487,3 +487,22 @@ def openrouter_client(monkeypatch):
     """No free_only policy; a client is built and returned."""
     client = _install_openrouter_client(monkeypatch)
     yield client
+
+def test_chat_fallback_missing_key_reports_credentials_not_auxiliary_policy(monkeypatch):
+    """The chat-lane health reason must name absent credentials, not a rejected aux route."""
+    monkeypatch.setattr(aux, "_aux_openrouter_settings", lambda: (True, PAID_MODEL))
+    monkeypatch.setattr(aux, "_select_pool_entry", lambda *args, **kwargs: (False, None))
+    monkeypatch.setattr(aux, "_scoped_key_env", lambda name: None)
+    marked = []
+    monkeypatch.setattr(
+        aux, "_mark_provider_unhealthy",
+        lambda provider, **kwargs: marked.append((provider, kwargs["reason"])),
+    )
+
+    assert resolve_provider_client(
+        "openrouter", model=PAID_MODEL, task=MAIN_FALLBACK_TASK
+    ) == (None, None)
+    assert len(marked) == 1
+    assert marked[0][0] == "openrouter"
+    assert "OPENROUTER_API_KEY" in marked[0][1]
+    assert "free_only" not in marked[0][1]
