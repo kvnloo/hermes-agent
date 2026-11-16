@@ -91,3 +91,35 @@ def test_respawn_guard_ignores_auth_words_in_crashed_or_spawn_failed_runs(kanban
         assert kbd.check_respawn_guard(conn, crashed_id) is None
         assert kbd.check_respawn_guard(conn, spawn_failed_id) is None
         assert kbd.check_respawn_guard(conn, timed_out_id) == "blocker_auth"
+
+def test_spawn_failed_workspace_eacces_does_not_become_auth_blocker(kanban_home):
+    """A workspace Permission denied stamp is a spawn failure, not provider auth.
+
+    Regresses the EACCES trace reported by adrianma00 in #63248: the provider
+    was never called, but the raw error text matched the auth guard forever.
+    """
+    with kbc.connect() as conn:
+        task_id = kb.create_task(
+            conn, title="workspace permission failure", assignee="a",
+            workspace_kind="dir", workspace_path="/home/peer/unwritable",
+        )
+        kb.claim_task(conn, task_id)
+        run_id = kb.get_task(conn, task_id).current_run_id
+        conn.execute(
+            "UPDATE task_runs SET outcome='spawn_failed', status='failed', "
+            "ended_at=? WHERE id=?",
+            (5_000_000, run_id),
+        )
+        conn.execute(
+            "UPDATE tasks SET status='ready', current_run_id=NULL, "
+            "claim_lock=NULL, claim_expires=NULL, worker_pid=NULL, "
+            "last_failure_error=? WHERE id=?",
+            (
+                "workspace: [Errno 13] Permission denied: "
+                "'/home/peer/.hermes/kanban/boards/project/workspaces/t_abc'",
+                task_id,
+            ),
+        )
+        conn.commit()
+
+        assert kbd.check_respawn_guard(conn, task_id) is None
