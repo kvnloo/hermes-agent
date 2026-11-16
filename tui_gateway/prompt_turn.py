@@ -1062,6 +1062,11 @@ def _release_turn_scopes(sid: str, session: dict, st: _TurnRun) -> None:
     if st.one_turn_restore:
         try:
             _restore_agent_model_runtime(st.agent, st.one_turn_restore)
+            # /model --once has ended: replace the temporary pivot with the restored route.
+            # Otherwise the next turn (and the timeline after reload) names the once-only model.
+            if restored_model := str(getattr(st.agent, "model", "") or "").strip():
+                _append_model_switch_marker(
+                    session, model=restored_model, provider=str(getattr(st.agent, "provider", "") or ""))
             _restart_slash_worker(sid, session)
             _persist_live_session_runtime(session)
             _persist_live_session_system_prompt(session)

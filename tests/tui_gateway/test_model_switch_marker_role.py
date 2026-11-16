@@ -110,6 +110,37 @@ class TestModelSwitchMarkerDisplayMetadata:
         _append_model_switch_marker(session, model="model-a", provider="")
         assert session["history"][0]["display_metadata"] == {"model": "model-a", "provider": "", "effort": "high"}
 
+    def test_once_restore_replaces_temporary_model_and_effort(self, monkeypatch) -> None:
+        """A /model --once marker must not name the temporary runtime after the turn finishes."""
+        from tui_gateway import server
+        from tui_gateway.prompt_turn import _TurnRun
+
+        class Agent:
+            model = "temporary-model"
+            provider = "once-provider"
+            reasoning_config = {"enabled": True, "effort": "high"}
+            _session_db = None
+
+            def switch_model(self, *, new_model, new_provider, **_kwargs):
+                self.model, self.provider = new_model, new_provider
+
+        agent = Agent()
+        session = {"session_key": "once-session", "agent": agent, "history": []}
+        _append_model_switch_marker(session, model=agent.model, provider=agent.provider, effort="high")
+        for name in ("_restart_slash_worker", "_persist_live_session_runtime",
+                     "_persist_live_session_system_prompt", "_clear_session_context"):
+            monkeypatch.setattr(server, name, lambda *_: None)
+        snapshot = {
+            "model": "restored-model", "provider": "original-provider",
+            "reasoning_config": {"enabled": True, "effort": "low"},
+        }
+        server._release_turn_scopes("once-session", session, _TurnRun(agent, snapshot, None, True))
+
+        assert (agent.model, agent.provider) == ("restored-model", "original-provider")
+        assert [m["display_metadata"] for m in session["history"] if m.get("display_kind") == "model_switch"] == [
+            {"model": "restored-model", "provider": "original-provider", "effort": "low"}
+        ]
+
 
 def _make_marker_entry(model: str) -> dict:
     from tui_gateway.server import _MODEL_SWITCH_MARKER_PREFIX
