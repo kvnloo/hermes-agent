@@ -132,6 +132,23 @@ class TestDerivedDicts:
         assert "reload_mcp" in COMMAND_ALIASES
         assert COMMAND_ALIASES["reload_mcp"].name == "reload-mcp"
 
+    def test_hidden_alias_prefix_still_dispatches(self):
+        """Hiding autocomplete aliases must not remove existing typed-prefix behavior."""
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        from cli import HermesCLI
+        from hermes_cli.commands import COMMANDS
+
+        # Red on the pre-PR base, where aliases were still discovery rows.
+        assert "/reload_mcp" not in COMMANDS
+
+        # /reload_m used to expand to /reload_mcp; its exact spelling still works.
+        dispatch = Mock(return_value=True)
+        fake_cli = SimpleNamespace(process_command=dispatch)
+        assert HermesCLI._expand_slash_prefix(fake_cli, "/reload_m", "/reload_m", {}, {})
+        dispatch.assert_called_once_with("/reload_mcp", redispatch=True)
+
 
 # ---------------------------------------------------------------------------
 # Gateway helpers
