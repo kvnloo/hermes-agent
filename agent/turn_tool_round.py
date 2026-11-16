@@ -93,9 +93,16 @@ def run_tool_round(
     assistant_message.tool_calls = expand_local_tool_batches(
         assistant_message.tool_calls, provider_data=getattr(assistant_message, "provider_data", None))
 
-    # Post-call guardrails.
+    # Post-call guardrails. Guarded desktop runs (RFC #112639) are admitted BEFORE
+    # dedup: intentional repeats (two Tab presses) must survive normalization, so
+    # the admitted calls are exempt from duplicate removal here.
+    from agent.guarded_desktop_runs import find_guarded_desktop_runs, guarded_run_preserve_indices
+    _capped_tool_calls = agent._cap_delegate_task_calls(assistant_message.tool_calls)
     assistant_message.tool_calls = agent._deduplicate_tool_calls(
-        agent._cap_delegate_task_calls(assistant_message.tool_calls)
+        _capped_tool_calls,
+        preserve_indices=guarded_run_preserve_indices(
+            _capped_tool_calls, find_guarded_desktop_runs(_capped_tool_calls)
+        ),
     )
     # Filtering can turn a mixed batch into an all-provider one; re-check the final batch
     # before it is staged (idempotent for already-normalized ids).
