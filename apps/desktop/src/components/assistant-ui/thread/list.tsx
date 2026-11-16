@@ -52,6 +52,7 @@ import { resolveShowEarlierAction, shouldAutoShowEarlier, useTranscriptWindow } 
 import { useMessagesBelow } from './use-messages-below'
 import { useStickyPromptClip } from './use-sticky-prompt-clip'
 import { useTimelineReveal } from './use-timeline-reveal'
+import { useTranscriptRowKeys } from './use-transcript-row-keys'
 
 type ThreadMessageComponents = ComponentProps<typeof ThreadPrimitive.MessageByIndex>['components']
 
@@ -411,43 +412,11 @@ export function liveTailStart(
   return Math.min(floor, Math.max(ceiling, start))
 }
 
-/**
- * React identity of the row a message opens. A stored row's renderer id is
- * built from its position in the page it was read from, so every newest-page
- * re-read that slides the window hands every row in it a new id. Keyed by
- * that id, each settled turn remounted the whole page: a remounted row is a
- * new element with no remembered size, so an off-screen one drops to the
- * contain-intrinsic-size placeholder, the transcript height jumps, and the
- * scrollTop clamp reads as a scroll-up to use-stick-to-bottom (the view stops
- * following). The durable row id is the same row in every page.
- */
-export function transcriptRowKey(message: { id: string; metadata?: { custom?: Record<string, unknown> } }): string {
-  const rowId = message.metadata?.custom?.rowId
-
-  return typeof rowId === 'number' ? `row:${rowId}` : message.id
-}
-
-/**
- * Per-message React keys, indexed like thread.messages. Two rendered messages
- * can carry one durable row (hydration splits a stored row it renders in
- * parts); the later copy keeps its own renderer id as its key.
- */
-export function turnRowKeys(rowKeySignature: string, structuralSignature: string): string[] {
-  const seen = new Set<string>()
-  const ids = structuralSignature.split('\n').map(row => row.split(':')[1])
-
-  return rowKeySignature.split('\n').map((key, index) => {
-    const unique = seen.has(key) ? (ids[index] ?? key) : key
-    seen.add(unique)
-
-    return unique
-  })
-}
-
 interface TurnRowProps {
   components: ThreadMessageComponents
   group: MessageGroup
   resetKey: string
+  rowKeys: readonly string[]
   virtualized: boolean
 }
 
@@ -478,7 +447,7 @@ interface TurnRowProps {
 // The live tail (newest turns) is exempt: virtualizing a turn whose final
 // size hasn't been remembered yet snaps it to a stale height when it scrolls
 // off, drifting stick-to-bottom up over old turns. See liveTailStart.
-const TurnRow = memo(function TurnRow({ components, group, resetKey, virtualized }: TurnRowProps) {
+const TurnRow = memo(function TurnRow({ components, group, resetKey, rowKeys, virtualized }: TurnRowProps) {
   return (
     <div
       className={cn(
@@ -493,7 +462,7 @@ const TurnRow = memo(function TurnRow({ components, group, resetKey, virtualized
             className="composer-human-ai-pair-container relative flex min-w-0 flex-col gap-(--conversation-turn-gap)"
             data-slot="aui_turn-pair"
           >
-            <ResponseMessages components={components} indices={group.indices} />
+            <ResponseMessages components={components} indices={group.indices} rowKeys={rowKeys} />
           </div>
         ) : (
           <ThreadPrimitive.MessageByIndex components={components} index={group.index} />
@@ -515,7 +484,7 @@ const ThreadMessageListInner: FC<ThreadMessageListProps> = ({
 }) => {
   // TWO signatures, deliberately split. The STRUCTURAL one (ids/roles/count)
   // changes only when messages are added/removed/swapped — it keys the error
-  // boundaries and the row identity. The WEIGHT one (parts + character cost)
+  // boundaries and group structure. The WEIGHT one (parts + character cost)
   // ticks while a streaming turn appends content — it feeds only the render
   // budget. Folding weights into the structural key handed every boundary a
   // new resetKey per appended part, which reconciled every turn's subtree on
@@ -534,7 +503,7 @@ const ThreadMessageListInner: FC<ThreadMessageListProps> = ({
   // part-appends can't churn group identity (that would defeat the rows memo
   // below on every tick). Weights are folded in separately for the budget.
   const groups = useMemo(() => buildGroups(structuralSignature), [structuralSignature])
-  const rowKeySignature = useAuiState(s => s.thread.messages.map(transcriptRowKey).join('\n'))
+  const rowKeys = useTranscriptRowKeys(sessionKey ?? sessionId)
   const renderEmpty = groups.length === 0 && Boolean(emptyPlaceholder)
 
   // use-stick-to-bottom owns scrollTop (single writer): follow while locked,
@@ -1584,19 +1553,20 @@ const ThreadMessageListInner: FC<ThreadMessageListProps> = ({
   // changed (measured live: 865 wasted Block renders in one drag, walked to
   // "MessageRenderBoundary (children only)" by explain()). With it, React
   // bails out on element identity and a scroll flip re-renders nothing below.
-  const rows = useMemo(() => {
-    const rowKeys = turnRowKeys(rowKeySignature, structuralSignature)
-
-    return visibleGroups.map((group, indexInVisible) => (
-      <TurnRow
-        components={components}
-        group={group}
-        key={rowKeys[group.kind === 'turn' ? group.indices[0] : group.index] ?? group.id}
-        resetKey={structuralSignature}
-        virtualized={indexInVisible < tailStart}
-      />
-    ))
-  }, [visibleGroups, components, rowKeySignature, structuralSignature, tailStart])
+  const rows = useMemo(
+    () =>
+      visibleGroups.map((group, indexInVisible) => (
+        <TurnRow
+          components={components}
+          group={group}
+          key={rowKeys[group.kind === 'turn' ? group.indices[0] : group.index] ?? group.id}
+          resetKey={structuralSignature}
+          rowKeys={rowKeys}
+          virtualized={indexInVisible < tailStart}
+        />
+      )),
+    [visibleGroups, components, rowKeys, structuralSignature, tailStart]
+  )
 
   useMessagesBelow({ contentRef, scrollRef, isAtBottom, paneVisible, rows, sessionKey, sessionId: scrollSessionId })
   useStickyPromptClip({ contentRef, scrollRef, paneVisible, rows })

@@ -26,11 +26,13 @@ export const ResponseMessageIds = createContext<readonly string[]>([])
 interface ResponseMessagesProps {
   components: ComponentProps<typeof ThreadPrimitive.MessageByIndex>['components']
   indices: readonly number[]
+  rowKeys: readonly string[]
 }
 
 interface ResponseRow {
   index: number
   id: string
+  key: string
   role: string
   hasText: boolean
 }
@@ -43,7 +45,7 @@ interface ResponseSection {
 }
 
 /** Keep message runtimes intact; only their visual container and footer are shared. */
-export function ResponseMessages({ components, indices }: ResponseMessagesProps) {
+export function ResponseMessages({ components, indices, rowKeys }: ResponseMessagesProps) {
   const signature = useAuiState(s =>
     JSON.stringify(
       indices.flatMap(index => {
@@ -55,6 +57,7 @@ export function ResponseMessages({ components, indices }: ResponseMessagesProps)
               {
                 index,
                 id: message.id,
+                key: rowKeys[index] ?? message.id,
                 role: responseMessageRole(message),
                 hasText: contentHasVisibleText(message.content)
               }
@@ -73,7 +76,7 @@ export function ResponseMessages({ components, indices }: ResponseMessagesProps)
       const previous = result.at(-1)
 
       const section: ResponseSection =
-        response && previous?.response ? previous : { key: row.id, indices: [], assistantIds: [], response }
+        response && previous?.response ? previous : { key: row.key, indices: [], assistantIds: [], response }
 
       if (section !== previous) {
         result.push(section)
@@ -94,7 +97,7 @@ export function ResponseMessages({ components, indices }: ResponseMessagesProps)
       <ResponseMessageIds.Provider key={section.key} value={section.assistantIds}>
         <div className="group flex min-w-0 flex-col gap-(--scaffold-block-gap)" data-slot="aui_response-group">
           {section.indices.map(index => (
-            <ThreadPrimitive.MessageByIndex components={components} index={index} key={index} />
+            <ThreadPrimitive.MessageByIndex components={components} index={index} key={rowKeys[index]} />
           ))}
         </div>
       </ResponseMessageIds.Provider>
