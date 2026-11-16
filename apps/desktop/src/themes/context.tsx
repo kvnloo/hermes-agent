@@ -638,6 +638,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const liveProfile = () => normalizeProfileKey($activeGatewayProfile.get())
 
   const setTheme = useCallback((name: string) => {
+    // A plugin may request its skin before registering it. Do not persist the
+    // fallback over the user's existing pick (requestTheme already refuses it).
+    if (!resolveTheme(name) && !RETIRED_SKINS.has(name)) {
+      return
+    }
+
     const next = normalizeSkin(name)
     recordFeatureUse('skins')
     setPreview(null)

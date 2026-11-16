@@ -237,6 +237,26 @@ describe('ThemeProvider highlight preview', () => {
     expect(cssVar('--theme-foreground')).not.toBe(everforestTheme.darkColors!.foreground)
   })
 
+  it('does not persist the fallback when a plugin requests a theme before registration', () => {
+    renderProbe()
+
+    act(() => ctx.setTheme('everforest'))
+    expect(window.localStorage.getItem('hermes-desktop-theme-v2')).toBe('everforest')
+    const painted = cssVar('--theme-foreground')
+
+    // The plugin's THEMES_AREA contribution is not registered yet.
+    act(() => ctx.setTheme('late-plugin-theme'))
+
+    expect(ctx.themeName).toBe('everforest')
+    expect(window.localStorage.getItem('hermes-desktop-theme-v2')).toBe('everforest')
+    expect(cssVar('--theme-foreground')).toBe(painted)
+
+    // Normal manual selection still commits after the rejected early request.
+    act(() => ctx.setTheme('mono'))
+    expect(ctx.themeName).toBe('mono')
+    expect(window.localStorage.getItem('hermes-desktop-theme-v2')).toBe('mono')
+  })
+
   it('ignores a preview of an unknown theme', () => {
     renderProbe()
 
