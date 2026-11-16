@@ -7,7 +7,7 @@ import asyncio
 import ipaddress
 import logging
 import socket
-from typing import Iterable, Optional
+from typing import Awaitable, Callable, Iterable, Optional
 
 import httpx
 
@@ -65,6 +65,25 @@ _UNSET = object()
 def _resolve_proxy_url(target_hosts=None) -> str | None:
     from gateway.platforms.base import resolve_proxy_url  # env vars + macOS system proxy
     return resolve_proxy_url("TELEGRAM_PROXY", target_hosts=target_hosts)
+
+
+class _EvictOnReadFailure(httpx.AsyncByteStream):
+    """Evict the failed pool when a response body stalls *after* its headers arrived."""
+
+    def __init__(self, stream: httpx.AsyncByteStream, evict: Callable[[], Awaitable[None]]) -> None:
+        self._stream = stream
+        self._evict = evict
+
+    async def __aiter__(self):
+        try:
+            async for chunk in self._stream:
+                yield chunk
+        except (httpx.ReadTimeout, httpx.ReadError, httpx.RemoteProtocolError):
+            await self._evict()
+            raise
+
+    async def aclose(self) -> None:
+        await self._stream.aclose()
 
 
 class TelegramFallbackTransport(httpx.AsyncBaseTransport):
@@ -143,7 +162,10 @@ class TelegramFallbackTransport(httpx.AsyncBaseTransport):
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         if request.url.host != _TELEGRAM_API_HOST or not self._fallback_ips:
-            return await self._primary.handle_async_request(request)
+            transport = self._primary
+            response = await transport.handle_async_request(request)
+            response.stream = _EvictOnReadFailure(response.stream, lambda: self._reset_primary(transport))
+            return response
         last_error: Exception | None = None
         for ip in self._attempt_order():
             candidate = request if ip is None else _rewrite_request_for_ip(request, ip)
@@ -166,6 +188,11 @@ class TelegramFallbackTransport(httpx.AsyncBaseTransport):
                             if ip is not None:
                                 log = logger.warning if last_error is not None else logger.info
                                 log("[Telegram] Using sticky IPv4 Telegram API path %s (dual-stack hostname tried last — #87015)", ip)
+                response.stream = _EvictOnReadFailure(
+                    response.stream,
+                    (lambda: self._reset_primary(transport)) if ip is None
+                    else (lambda: self._reset_fallback(ip)),
+                )
                 return response
             except Exception as exc:
                 last_error = exc

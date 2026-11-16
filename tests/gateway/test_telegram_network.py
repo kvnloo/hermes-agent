@@ -568,3 +568,53 @@ class TestPoolTimeoutRecovery:
 
         assert resp.status_code == 200
         assert transport._sticky_ip == "149.154.167.220"
+
+    @pytest.mark.asyncio
+    async def test_body_read_timeout_replaces_stale_pool_before_getfile_retry(self, monkeypatch):
+        """Headers can succeed, then the pooled socket can stall while httpx reads the body."""
+        class StalledBody(httpx.AsyncByteStream):
+            async def __aiter__(self):
+                raise httpx.ReadTimeout("stale connection after headers")
+                yield b""  # keep this an async iterator
+
+            async def aclose(self):
+                pass
+
+        pools = []
+
+        class Pool(httpx.AsyncBaseTransport):
+            def __init__(self, index):
+                self.index = index
+                self.closed = False
+                self.calls = 0
+
+            async def handle_async_request(self, request):
+                self.calls += 1
+                if self.index == 1:  # first fallback pool: body never finishes
+                    return httpx.Response(200, request=request, stream=StalledBody())
+                return httpx.Response(200, request=request, content=b'{"ok":true}')
+
+            async def aclose(self):
+                self.closed = True
+
+        def factory(**_kwargs):
+            pool = Pool(len(pools))
+            pools.append(pool)
+            return pool
+
+        monkeypatch.setattr(tnet.httpx, "AsyncHTTPTransport", factory)
+        transport = tnet.TelegramFallbackTransport(["149.154.166.110"], proxy=None)
+        request = _telegram_request("/botTOKEN/getFile")
+
+        first = await transport.handle_async_request(request)
+        with pytest.raises(httpx.ReadTimeout):
+            await first.aread()
+        await first.aclose()
+
+        retried = await transport.handle_async_request(request)
+        assert await retried.aread() == b'{"ok":true}'
+        await retried.aclose()
+        assert len(pools) == 3  # primary, poisoned fallback, fresh fallback
+        assert pools[1].closed and pools[1].calls == 1
+        assert pools[2].calls == 1
+        await transport.aclose()
