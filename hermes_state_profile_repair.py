@@ -373,7 +373,7 @@ class SessionProfileRepairMixin:
         legacy namespace change; a ``main``-named profile gets the marked ``agent:main~:`` form.
         """
         from gateway.session import _session_key_namespace
-        from hermes_state_local import POLICY_PREFIX
+        from hermes_state_local import API_BINDING_PREFIX, POLICY_PREFIX
         wanted = list(ids)
         if not wanted:
             return 0
@@ -395,7 +395,8 @@ class SessionProfileRepairMixin:
                         (new_ns + session_key[len(_LEGACY_MAIN_PREFIX):], profile,
                          _rekey_origin_json(origin_json, profile), session_id, session_key)).rowcount
 
-                meta_keys = [POLICY_PREFIX + sid for sid in chunk]
+                meta_keys = [prefix + sid for sid in chunk
+                             for prefix in (POLICY_PREFIX, API_BINDING_PREFIX)]
                 meta_rows = conn.execute(
                     f"SELECT key, value FROM state_meta WHERE key IN ({_session_ids_placeholders(meta_keys)})",
                     meta_keys).fetchall()
@@ -403,7 +404,7 @@ class SessionProfileRepairMixin:
                     try:
                         receipt = json.loads(value)
                     except (TypeError, ValueError) as exc:
-                        logger.warning("Failed to reconcile local policy receipt %s: %s", key, exc, exc_info=True)
+                        logger.warning("Failed to reconcile session receipt %s: %s", key, exc, exc_info=True)
                         continue
                     if not isinstance(receipt, dict):
                         continue

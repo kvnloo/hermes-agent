@@ -303,6 +303,39 @@ def test_legacy_main_rekey_aligns_sessions_receipts_and_routing_atomically(homes
     assert not any(f["kind"] == "legacy_main" for f in _report()["findings"])
 
 
+def test_legacy_main_rekey_rewrites_api_binding_receipt(homes):
+    """API resume must see the same route in the row, binding receipt and routing index."""
+    from hermes_state_local import API_BINDING_PREFIX
+
+    sid, legacy_key = "legacy-api", "agent:main:api_server:dm:legacy-api"
+    new_key = "agent:acme:api_server:dm:legacy-api"
+    origin = {"platform": "api_server", "chat_id": sid, "user_id": sid, "profile": "default"}
+    entry = {"session_id": sid, "session_key": legacy_key, "origin": origin}
+    receipt = {"session_id": sid, "route": legacy_key, "entry": entry}
+    db = SessionDB(homes["acme"] / "state.db")
+    try:
+        _session(db, sid, legacy_key, profile="default", source="api_server",
+                 chat_id=sid, origin_json=json.dumps(origin))
+        db.set_meta(API_BINDING_PREFIX + sid, json.dumps(receipt))
+        db.save_gateway_routing_entry(legacy_key, json.dumps(entry), scope="")
+
+        assert db.rekey_legacy_main_sessions([sid], "acme") == 1
+        row = db.get_session(sid)
+        assert (row["session_key"], row["profile_name"]) == (new_key, "acme")
+        saved = json.loads(db.get_meta(API_BINDING_PREFIX + sid))
+        assert saved["route"] == new_key
+        assert saved["entry"]["session_key"] == new_key
+        assert saved["entry"]["origin"]["profile"] == "acme"
+        routing = db.load_gateway_routing_entries(scope="")
+        assert set(routing) == {new_key}
+        assert json.loads(routing[new_key])["session_key"] == new_key
+
+        assert db.rekey_legacy_main_sessions([sid], "acme") == 0
+        assert json.loads(db.get_meta(API_BINDING_PREFIX + sid)) == saved
+    finally:
+        db.close()
+
+
 def test_legacy_main_rekey_for_named_main_profile_is_idempotent(tmp_path, monkeypatch):
     """A profile literally named ``main`` must be marked ``agent:main~:``, never ``agent:main~~:``."""
     from hermes_cli.profiles import create_profile
