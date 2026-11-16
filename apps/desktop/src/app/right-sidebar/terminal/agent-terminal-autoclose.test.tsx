@@ -188,6 +188,25 @@ describe('agent terminal auto-close', () => {
     expect(agentTab(store, 'proc-re')).toBeUndefined()
   })
 
+  it('does not close a replacement tab when the original grace timer expires', async () => {
+    const store = await load()
+    const originalId = store.ensureAgentTerminal('proc-reopen', 'build')
+    store.observeAgentProcessState('proc-reopen', 'running')
+    store.observeAgentProcessState('proc-reopen', 'done')
+
+    // The agent dismisses its tab; the user reopens it from the still-live
+    // status row, then moves to another tab before the original timer fires.
+    store.closeAgentTerminalByProc('proc-reopen')
+    store.openAgentTerminal('proc-reopen', 'build')
+    const reopenedId = agentTab(store, 'proc-reopen')?.id
+    expect(reopenedId).toBeDefined()
+    expect(reopenedId).not.toBe(originalId)
+    store.selectTerminal(store.createTerminal('/repo'))
+
+    vi.advanceTimersByTime(SUCCESS)
+    expect(agentTab(store, 'proc-reopen')?.id).toBe(reopenedId)
+  })
+
   it('an auto-closed tab is not resurfaced by the next snapshot', async () => {
     const store = await load()
     store.ensureAgentTerminal('proc-once', 'build')

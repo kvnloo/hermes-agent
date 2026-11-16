@@ -33,19 +33,32 @@ function cancel(procId: string): void {
   timers.delete(procId)
 }
 
-function schedule(procId: string, delayMs: number): void {
+function schedule(
+  procId: string,
+  delayMs: number,
+  tabId = $terminals.get().find(term => term.kind === 'agent' && term.procId === procId)?.id
+): void {
   cancel(procId)
+  if (!tabId) {
+    return
+  }
+
   timers.set(
     procId,
     setTimeout(() => {
       timers.delete(procId)
 
-      if (lastSeen.get(procId) === 'running') {
+      // A manual close followed by a status-row reopen creates a NEW tab.
+      // A timer armed for the old tab must not remove the replacement.
+      if (
+        lastSeen.get(procId) === 'running' ||
+        !$terminals.get().some(term => term.kind === 'agent' && term.procId === procId && term.id === tabId)
+      ) {
         return
       }
 
       if (onScreen(procId)) {
-        schedule(procId, AGENT_TAB_ON_SCREEN_RECHECK_MS)
+        schedule(procId, AGENT_TAB_ON_SCREEN_RECHECK_MS, tabId)
 
         return
       }
