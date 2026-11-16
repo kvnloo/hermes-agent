@@ -431,3 +431,31 @@ def test_a_read_file_replaced_by_a_fifo_is_refused_without_hanging(skills):
             worker.join(timeout=10)
     assert not hung, "the stale check blocked on the FIFO while holding the skill lock"
     assert box["result"].get("_stale_read") is True, box["result"]
+
+
+def test_a_write_does_not_mark_an_outside_edit_landing_after_publication(skills, monkeypatch):
+    """An editor that ignores skill locks can change the published file before its mark refresh.
+    A second review patch must not treat those unseen bytes as if the fork wrote them."""
+    import tools.skill_manager_tool as smt
+
+    target = skills / "bg-skill" / "SKILL.md"
+    real_scan = smt._security_scan_skill
+    intervened = []
+
+    def edit_between_scan_and_mark(*args, **kwargs):
+        error = real_scan(*args, **kwargs)
+        if error is None and not intervened:
+            intervened.append(True)
+            _other_writer_appends(target)
+        return error
+
+    with _fork():
+        _view("SKILL.md")
+        monkeypatch.setattr(smt, "_security_scan_skill", edit_between_scan_and_mark)
+        first = _dispatch({**WRITES["patch"][0], "name": "bg-skill"})
+        second = _dispatch({"action": "patch", "name": "bg-skill",
+                            "old_string": "Step 1: Do it well.", "new_string": "Step 1: Do it very well."})
+
+    assert intervened and first["success"] is True, first
+    assert second.get("_stale_read") is True, second
+    assert b"Added by someone else." in target.read_bytes()

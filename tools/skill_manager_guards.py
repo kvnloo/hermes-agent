@@ -142,12 +142,16 @@ def _read_mark_entry(path: Path) -> Optional[tuple[str, int]]:
     return None if marks is None else marks.entry(_resolved_str(path))
 
 
-def _refresh_background_review_read_mark(path: Path, expected: Optional[tuple[str, int]]) -> None:
+def _refresh_background_review_read_mark(
+    path: Path, expected: Optional[tuple[str, int]], *, written_text: Optional[str] = None
+) -> None:
     """After the fork's own write: what it knows is now the bytes it wrote, so a second write to
     the same file needs no re-read. ``expected`` is the mark captured (under the skill lock) BEFORE
     the write was published; only that exact update moves, so a read another worker recorded since
     stands. Only a live mark moves (a create is not a read); a file that is gone or unreadable
-    loses its mark (remove_file relies on this)."""
+    loses its mark (remove_file relies on this). When given written_text, only the bytes this
+    fork actually published may become its next read mark; an unsynchronized editor can write
+    between the atomic publish and this refresh."""
     marks = _background_review_read_paths.get()
     if marks is None or expected is None:
         return
@@ -156,6 +160,11 @@ def _refresh_background_review_read_mark(path: Path, expected: Optional[tuple[st
         digest: Optional[str] = _file_sha256(path)
     except OSError:
         digest = None
+    if written_text is not None:
+        # atomic_write_text uses the platform's text-mode newline translation.
+        intended = hashlib.sha256(written_text.replace("\n", os.linesep).encode("utf-8")).hexdigest()
+        if digest != intended:
+            return  # leave the old mark: the next write must report the unseen bytes as stale
     applied, now = marks.compare_and_set(key, expected, digest)
     if applied and (journal := _batch_mark_journal.get()) is not None:
         journal[key] = now  # the update the batch's own write left

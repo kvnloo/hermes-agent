@@ -441,7 +441,7 @@ def _guarded_write(name: str, skill_dir: Path, target: Path, action: str, label:
     atomic_write_text(target, content, preserve_mode=True, create_mode=0o644)
     scan_error = _security_scan_skill(skill_dir, baseline, scope)
     if not scan_error:
-        _refresh_background_review_read_mark(target, mark)
+        _refresh_background_review_read_mark(target, mark, written_text=content)
         return None
     if original_bytes is not None:  # exact bytes: a BOM or CRLF original stays as it was
         atomic_write_bytes(target, original_bytes, preserve_owner=True)
