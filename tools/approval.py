@@ -1502,14 +1502,16 @@ def check_execute_code_guard(code: str, env_type: str, has_host_access: bool = F
     # (-q clears the presence flags, but its unattended context resolves first anyway.)
     approval_callback, is_cli, is_gateway, is_ask = _presence()
     # No user is present to approve arbitrary code in -q / cron / unattended
-    # sessions: the first active context resolves instantly from its mode.
-    for ctx in _unattended_contexts():
+    # sessions: any active deny policy blocks, even if an earlier context allows.
+    contexts = _unattended_contexts()
+    for ctx in contexts:
         if ctx.mode() == "deny":
             return _denied(
                 "BLOCKED: execute_code runs arbitrary local Python (including "
                 "subprocess calls that bypass shell-string approval checks). " + ctx.exec_tail,
                 pattern_key=pattern_key, description=description, outcome="blocked", noun="code",
             )
+    if contexts:
         return _approved()
 
     # Only gateway/ask contexts get the one-shot whole-script approval. In an interactive CLI the script's terminal()
