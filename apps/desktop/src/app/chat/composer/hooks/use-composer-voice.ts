@@ -452,6 +452,7 @@ export function useComposerVoice({
     dictate,
     endConversation,
     handleToggleAutoSpeak,
+    liveEngineActive,
     startConversation,
     voiceActivityState,
     voiceConversationActive,

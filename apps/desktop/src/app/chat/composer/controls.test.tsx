@@ -238,3 +238,41 @@ describe('wake-word ear visibility', () => {
     expect((ear as HTMLButtonElement).disabled).toBe(true)
   })
 })
+
+describe('spoken replies in active voice conversation', () => {
+  const conversation = {
+    active: true,
+    level: 0,
+    muted: false,
+    onEnd: vi.fn(),
+    onStart: vi.fn(),
+    onStopTurn: vi.fn(),
+    onToggleMute: vi.fn(),
+    status: 'listening' as const
+  }
+
+  it.each([false, true])('keeps the spoken-reply state visible and actionable (enabled=%s)', autoSpeak => {
+    const onToggleAutoSpeak = vi.fn()
+    renderControls({ autoSpeak, conversation, onToggleAutoSpeak })
+
+    const label = autoSpeak ? 'Stop reading replies aloud' : 'Read replies aloud'
+    const toggle = screen.getByRole('button', { name: label })
+
+    expect(toggle.getAttribute('aria-pressed')).toBe(String(autoSpeak))
+    expect(toggle.textContent).toContain(label)
+    expect(toggle.querySelector('svg')).not.toBeNull()
+    fireEvent.click(toggle)
+    expect(onToggleAutoSpeak).toHaveBeenCalledOnce()
+  })
+
+  it('keeps the control disabled with the composer', () => {
+    renderControls({ conversation, disabled: true })
+    expect((screen.getByRole('button', { name: 'Read replies aloud' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('does not present Desktop TTS as the GPT-Live output control', () => {
+    renderControls({ conversation: { ...conversation, liveEngineActive: true } })
+    expect(screen.queryByRole('button', { name: 'Read replies aloud' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'End voice conversation' })).toBeTruthy()
+  })
+})

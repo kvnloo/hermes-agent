@@ -6,7 +6,7 @@ import { Tip, TipKeybindLabel } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
 import { hostHas } from '@/lib/host-capabilities'
-import { Ear, EarOff, iconSize, Layers3, Loader2, Square } from '@/lib/icons'
+import { Ear, EarOff, iconSize, Layers3, Loader2, Square, Volume2, VolumeX } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { recordAction } from '@/store/desktop-metrics'
 import { $hudMode, closeHud, resetHudLayout } from '@/store/hud'
@@ -38,6 +38,7 @@ const keepEditorFocus = (event: { preventDefault: () => void }) => {
 interface ConversationProps {
   active: boolean
   level: number
+  liveEngineActive?: boolean
   muted: boolean
   status: ConversationStatus
   onEnd: () => void
@@ -91,7 +92,14 @@ export function ComposerControls({
   const hudMode = useStore($hudMode)
 
   if (conversation.active) {
-    return <ConversationPill {...conversation} disabled={disabled} />
+    return (
+      <ConversationPill
+        {...conversation}
+        autoSpeak={autoSpeak}
+        disabled={disabled}
+        onToggleAutoSpeak={onToggleAutoSpeak}
+      />
+    )
   }
 
   const showVoicePrimary = !busy && !hasComposerPayload
@@ -289,14 +297,17 @@ function HudWindowButtons() {
 }
 
 function ConversationPill({
+  autoSpeak,
   disabled,
   level,
+  liveEngineActive = false,
   muted,
   onEnd,
   onStopTurn,
+  onToggleAutoSpeak,
   onToggleMute,
   status
-}: ConversationProps & { disabled: boolean }) {
+}: ConversationProps & { autoSpeak: boolean; disabled: boolean; onToggleAutoSpeak: () => void }) {
   const { t } = useI18n()
   const c = t.composer
   const speaking = status === 'speaking'
@@ -318,6 +329,31 @@ function ConversationPill({
       {/* Keep the ear visible during voice chat — shown paused, since the
           conversation holds the mic (the one time wake must not listen). */}
       <WakeWordButton disabled={disabled} pausedForVoice />
+      {/* Chained voice chat is STT-only when read-aloud is off. Expose that
+          state and its remedy while the conversation owns the composer. GPT-Live
+          speaks through its own engine and must not advertise this TTS toggle. */}
+      {!liveEngineActive ? (
+        <Tip label={autoSpeak ? c.stopSpeakingReplies : c.speakReplies} placement="control">
+          <Button
+            aria-label={autoSpeak ? c.stopSpeakingReplies : c.speakReplies}
+            aria-pressed={autoSpeak}
+            className={cn(
+              'h-(--composer-control-size) max-w-36 shrink-0 gap-1.5 rounded-full px-2.5 text-xs',
+              !autoSpeak && 'bg-muted text-muted-foreground'
+            )}
+            disabled={disabled}
+            onClick={() => {
+              triggerHaptic(autoSpeak ? 'close' : 'open')
+              onToggleAutoSpeak()
+            }}
+            type="button"
+            variant="ghost"
+          >
+            {autoSpeak ? <Volume2 className={iconSize.sm} /> : <VolumeX className={iconSize.sm} />}
+            <span className="truncate">{autoSpeak ? c.stopSpeakingReplies : c.speakReplies}</span>
+          </Button>
+        </Tip>
+      ) : null}
       <Tip label={muted ? c.unmuteMic : c.muteMic} placement="control">
         <Button
           aria-label={muted ? c.unmuteMic : c.muteMic}

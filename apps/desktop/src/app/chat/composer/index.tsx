@@ -1089,6 +1089,7 @@ export function ChatBar({
     dictate,
     endConversation,
     handleToggleAutoSpeak,
+    liveEngineActive,
     startConversation,
     voiceActivityState,
     voiceConversationActive,
@@ -1136,6 +1137,7 @@ export function ChatBar({
       conversation={{
         active: voiceConversationActive,
         level: conversation.level,
+        liveEngineActive,
         muted: conversation.muted,
         onEnd: endConversation,
         onStart: startConversation,
