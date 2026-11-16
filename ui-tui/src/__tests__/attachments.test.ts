@@ -53,6 +53,15 @@ describe('expandTokens (what the agent actually receives)', () => {
     expect(result.unresolved).toEqual([label])
   })
 
+  it('reports each occurrence when the same missing label appears twice', () => {
+    const label = '[[ missing.. [5 lines] .. end ]]'
+    const input = `${label} then ${label}`
+    const result = expandTokens([])(input)
+
+    expect(result.expanded).toBe(input)
+    expect(result.unresolved).toEqual([label, label])
+  })
+
   it('reports multiple orphaned paste tokens', () => {
     const a = '[[ chunk1 [135 lines] ]]'
     const b = '[[ chunk2.. [9.2k lines] .. tail ]]'

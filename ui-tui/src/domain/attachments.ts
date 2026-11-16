@@ -35,7 +35,7 @@ export const droppedTokens = (tokens: ComposerToken[], value: string) => {
  * user-typed string that happens to be bracketed.
  */
 export const looksLikeOrphanedPasteToken = (label: string): boolean =>
-  PASTE_SNIPPET_RE.test(label) && /\[[\d.]+[kmgt]?\s+lines\]/i.test(label)
+  new RegExp(PASTE_SNIPPET_RE.source).test(label) && /\[[\d.]+[kmgt]?\s+lines\]/i.test(label)
 
 export interface ExpandResult {
   expanded: string
