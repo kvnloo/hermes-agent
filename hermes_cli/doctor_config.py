@@ -627,7 +627,15 @@ def _check_retired_session_reset(should_fix: bool, f: Finding) -> None:
     if found is None:
         check_ok("No idle/daily session_reset policy configured")
     elif reset_plugin_enabled():
-        check_ok(f"{found[0]}.mode: {found[1]} is applied by the session reset plugin")
+        from hermes_cli.profiles import get_active_profile_name
+        check_ok(
+            f"{found[0]}.mode: {found[1]}: hermes-session-reset-policy is enabled "
+            f"in profile '{get_active_profile_name()}'"
+        )
+        check_info(
+            "Enablement only, not a verified reset: the plugin uses pre_gateway_dispatch "
+            "for gateway messages; local CLI/TUI/Desktop turns do not fire that hook."
+        )
     else:
         check_warn(format_notice(*found))
         f.manual_issues.append(format_notice(*found))
