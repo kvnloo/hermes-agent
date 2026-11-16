@@ -16,7 +16,7 @@ _profile_fallback_warned: bool = False
 
 # TUI busy-indicator styles (CLI /indicator, TUI gateway config, /help registry).
 # Keep in sync with INDICATOR_STYLES / DEFAULT_INDICATOR_STYLE in ui-tui/src/app/interfaces.ts.
-INDICATOR_STYLES: tuple[str, ...] = ("ascii", "emoji", "kaomoji", "unicode")
+INDICATOR_STYLES: tuple[str, ...] = ("ascii", "emoji", "kaomoji", "unicode", "static")
 DEFAULT_INDICATOR_STYLE: str = "kaomoji"
 
 # Browser-hosted attachments are staged on the Hermes host and then read back
