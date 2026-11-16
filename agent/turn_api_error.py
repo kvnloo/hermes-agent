@@ -20,7 +20,7 @@ from agent.error_classifier import RETRYABLE_CLIENT_REASONS, FailoverReason, cla
 from agent.route_verdicts import route_visit
 from agent.turn_overflow import recover_from_overflow
 from agent.turn_recovery import (
-    _NONRETRYABLE_LABELS, abort_turn_on_interrupt, compute_error_backoff, free_tier_cooldown_ends_turn,
+    _NONRETRYABLE_LABELS, _desktop_limit_fallback_allowed, abort_turn_on_interrupt, compute_error_backoff, free_tier_cooldown_ends_turn,
     interruptible_backoff_sleep, log_api_error_attempt,
     max_retries_exhausted_result, nonretryable_client_error_result, recover_after_classification,
     recover_before_classification, route_classified_error, settle_delivered_partial,
@@ -370,6 +370,17 @@ def settle_unrecovered_error(
     # An attended session on the free model does not sit through a long cooldown: end the attempt
     # cycle now (fallback, else the reset time and the ways forward); the copy counts attempts made.
     attempts_made = min(retry_count, max_retries)
+    if (
+        is_rate_limited and classified.reason == FailoverReason.rate_limit
+        and retry_count < max_retries and _desktop_limit_fallback_allowed()
+        and not agent._has_pending_fallback()
+    ):
+        from agent.fallback_cooldown import switch_deferred_by_reset
+
+        reset_at = error_context.get("reset_at") if isinstance(error_context, dict) else None
+        if not switch_deferred_by_reset(agent, classified.reason, reset_at):
+            # A Desktop turn cannot use any fallback; don't park on an account cooldown.
+            retry_count = max_retries
     if is_rate_limited and retry_count < max_retries and free_tier_cooldown_ends_turn(agent, api_error, _base):
         logger.info("%sFree-tier cooldown outlasts the attended wait — ending retries after attempt %s",
                     agent.log_prefix, retry_count)

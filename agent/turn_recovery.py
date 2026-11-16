@@ -1816,6 +1816,36 @@ def _is_genuine_nous_rate_limit(agent: Any, api_error: Exception, error_context:
     return _genuine
 
 
+
+def _desktop_limit_fallback_allowed() -> bool:
+    """Only an ordinary Desktop chat may adopt live fallback routes during a turn."""
+    from gateway.session_api_turn import api_runtime_locked
+    from gateway.session_policy import active_policy
+
+    policy = active_policy()
+    return (
+        policy is not None and policy.source == "gui"
+        and not policy.safe_mode and not policy.ignore_user_config
+        and api_runtime_locked() is None
+    )
+
+
+def _refresh_desktop_limit_fallback(agent: Any) -> None:
+    """Re-read the owning profile on a Desktop 429 without rebuilding the system prompt."""
+    if not _desktop_limit_fallback_allowed():
+        return
+    try:
+        from gateway.run import GatewayRunner
+        from hermes_cli.config_effective import load_user_config_effective
+        from hermes_cli.fallback_config import get_fallback_chain
+
+        chain = get_fallback_chain(load_user_config_effective(fail_closed=True))
+        if chain != agent._fallback_chain:
+            GatewayRunner._apply_fallback_chain_to_agent(agent, chain)
+    except Exception:
+        logger.debug("Desktop fallback refresh failed; keeping current chain", exc_info=True)
+
+
 def route_classified_error(
     agent: Any, api_error: Exception, classified: Any, _retry: TurnRetryState, *, error_msg: str,
     error_context: Any, recovered_with_pool: bool, base_url: Any, model: Any,
@@ -1944,6 +1974,8 @@ def route_classified_error(
         (is_rate_limited and _wrapped_output_cap_budget is None)
         or (_is_transport_failure and retry_count >= 2)
     ) and not (getattr(classified, "error_context", None) or {}).get("usage_window")  # never switch models on a plan limit
+    if _should_fallback and classified.reason == FailoverReason.rate_limit:
+        _refresh_desktop_limit_fallback(agent)
     if _should_fallback and agent._fallback_index < len(agent._fallback_chain):
         # No eager fallback while credential pool rotation may recover. Exception: an
         # upstream-aggregator 429 — the pool can't help, always fall back.
