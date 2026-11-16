@@ -60,4 +60,10 @@ describe('technicalTrace', () => {
       'Result:\n{\n  "id": "1234567890123457553",\n  "n": 9007199254740991\n}'
     )
   })
+
+  it('keeps the sign of negative zero in stored tool payloads', () => {
+    const raw = '{"x":-0,"y":-0.0}'
+
+    expect(technicalTrace(undefined, raw)).toBe(`Result:\n${raw}`)
+  })
 })
