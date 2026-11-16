@@ -350,7 +350,7 @@ def test_review_fork_inherited_tools_survive_compaction_refresh():
 
     Acceptance criterion 1 requires the fork to advertise the same tools[] as
     the parent when targeting the same cache scope. Mid-review compaction
-    boundaries invoke refresh_agent_mcp_tools(content_aware=True), which re-reads
+    boundaries invoke refresh_agent_mcp_tools(), which re-reads
     the live registry and drops memory provider tools unless the snapshot
     generation staleness check refuses the rebuild.
     """
@@ -378,7 +378,7 @@ def test_review_fork_inherited_tools_survive_compaction_refresh():
         assert fork.tools is not parent_tools and fork.tools[0] is not parent_tools[0]
 
         # Simulate mid-review compaction boundary tool refresh
-        added = refresh_agent_mcp_tools(fork, content_aware=True)
+        added = refresh_agent_mcp_tools(fork)
         assert added == set()
         assert [t["function"]["name"] for t in fork.tools] == [
             "terminal_command", "read_file", "memory", "fact_store", "fact_feedback"
@@ -420,7 +420,7 @@ def test_unrouted_review_fork_inherits_empty_tool_surface():
         assert fork.valid_tool_names == set()
 
         # Compaction refresh must refuse rebuild on frozen snapshot
-        added = refresh_agent_mcp_tools(fork, content_aware=True)
+        added = refresh_agent_mcp_tools(fork)
         assert added == set()
         assert fork.tools == []
         assert fork.valid_tool_names == set()
