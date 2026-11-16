@@ -29,10 +29,12 @@ def is_valid_scrypt_hash(encoded: str) -> bool:
     try:
         n, r, p = int(parts[1]), int(parts[2]), int(parts[3])
         base64.b64decode(parts[4], validate=True)
-        base64.b64decode(parts[5], validate=True)
+        expected = base64.b64decode(parts[5], validate=True)
     except (ValueError, TypeError):
         return False
-    return n > 0 and r > 0 and p > 0
+    # hashlib.scrypt refuses N=1, non-powers of two and zero-length derived keys.
+    # Those hashes parse structurally but can never authenticate in the provider.
+    return n > 1 and (n & (n - 1)) == 0 and r > 0 and p > 0 and bool(expected)
 
 
 def guard_basic_auth_lockout(key: str, value: Any, user_config: dict[str, Any]) -> None:

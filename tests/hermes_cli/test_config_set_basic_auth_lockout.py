@@ -75,6 +75,24 @@ class TestPasswordHashValidation:
         # Fail-closed: the broken credential never reaches disk.
         assert "basic_auth" not in _read_config(_isolated_hermes_home).get("dashboard", {})
 
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param(VALID_HASH.replace("$16384$", "$3$", 1), id="non-power-of-two-n"),
+            pytest.param(VALID_HASH.rsplit("$", 1)[0] + "$", id="empty-derived-key"),
+        ],
+    )
+    def test_hash_that_provider_cannot_verify_is_rejected(self, _isolated_hermes_home, value, capsys):
+        """A well-delimited hash is not usable if hashlib.scrypt rejects its parameters."""
+        from plugins.dashboard_auth.basic import _verify_password
+
+        assert _verify_password("probe-password", value) is False
+        with pytest.raises(SystemExit) as exc:
+            set_config_value("dashboard.basic_auth.password_hash", value)
+        assert exc.value.code == 1
+        assert "does not parse" in capsys.readouterr().err
+        assert "basic_auth" not in _read_config(_isolated_hermes_home).get("dashboard", {})
+
     def test_shell_expansion_hint_is_named(self, _isolated_hermes_home, capsys):
         """The operator typo that caused the report must be recognisable in the error."""
         with pytest.raises(SystemExit):
