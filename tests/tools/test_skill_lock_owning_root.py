@@ -523,3 +523,25 @@ def test_a_batch_holds_every_lock_from_before_its_snapshot_through_its_rollback(
     assert result["success"] is False, result
     assert "Step 1: Do the thing." in (fleet["shared"] / "shared-skill" / "SKILL.md").read_text()
     assert seen == {"snapshot": ["held"] * 3, "rollback": ["held"] * 3}, seen
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX flock semantics; msvcrt path is equivalent")
+def test_overlapping_external_roots_lock_the_same_nested_skill(fleet, tmp_path, monkeypatch):
+    """One profile lists /shared, another /shared/team, both writing /shared/team/skill."""
+    nested_root = fleet["shared"] / "team"
+    target = nested_root / "nested-skill"
+    target.mkdir(parents=True)
+    (target / "SKILL.md").write_text(SKILL.replace("shared-skill", "nested-skill"), encoding="utf-8")
+    (fleet["b"] / "config.yaml").write_text(
+        "skills:\n  write_approval: false\n  external_dirs:\n    - " + str(nested_root) + "\n",
+        encoding="utf-8",
+    )
+    from agent import skill_utils
+    monkeypatch.setattr(skill_utils, "_EXTERNAL_DIRS_CACHE", {}, raising=False)
+
+    blocked, result = _hold_and_patch(
+        fleet, tmp_path, "nested-skill", "Step 1: Do the thing.", "Step 1: Safely."
+    )
+    assert blocked, "two profiles reached the same skill but held disjoint root locks"
+    assert result["success"] is True, result
+    assert "Step 1: Safely." in (target / "SKILL.md").read_text(encoding="utf-8")
+

@@ -4,7 +4,8 @@ Every mutation takes the profile's own per-skill lock, exactly as before. It als
 the skill folder the write will change, in the skills root that holds that folder (the profile's own,
 an ``external_dirs`` root, a shared ``create_dir``), keyed by the folder's name. Every profile whose
 write resolves to one folder therefore takes one common lock, whatever name it used and whichever
-profile owns the root. Origin-owned state (``_skills_dir``, ``_find_skill``, ``_resolve_skill_dir``)
+profile owns the root. Nested skills also lock their immediate parent: different profiles may
+configure overlapping, rather than identical, root paths. Origin-owned state (``_skills_dir``, ``_find_skill``, ``_resolve_skill_dir``)
 is reached lazily via ``tools.skill_manager_tool`` so test patches keep working."""
 
 import hashlib
@@ -58,6 +59,29 @@ def _target_root_lock(name: str) -> Optional[Path]:
     return None
 
 
+def _nested_parent_lock(name: str) -> Optional[Path]:
+    """Also lock the skill's immediate parent for overlapping configured roots.
+
+    A profile with external_dirs=/shared and one with external_dirs=/shared/team can
+    discover the same /shared/team/skill but choose different owning roots. Both
+    meet at the skill's actual parent; the root lock is still held for creates.
+    """
+    from tools import skill_manager_tool as _smt
+    from tools.skill_manager_guards import _containing_skills_root
+    try:
+        existing = _smt._find_skill(name)
+        if not existing:
+            return None  # New skills are still protected by the existing root lock.
+        target = Path(existing["path"])
+        if _lock_identity(target.parent) == _lock_identity(_containing_skills_root(target)):
+            return None  # Root lock already covers this parent.
+        lock = _lock_file(target.parent, target.name)
+    except Exception:
+        logger.debug("skill parent lock lookup failed for %s", name, exc_info=True)
+        return None
+    return lock if _can_open_lock(lock) else None
+
+
 def _can_open_lock(lock: Path) -> bool:
     """Try the access ``skill_file_lock`` needs (create the dir, open read+write; its Windows "r+"
     needs the same rights) instead of predicting it from permission bits."""
@@ -83,7 +107,7 @@ def _skill_lock_paths(names) -> list[Path]:
         names = [names]
     paths: dict[str, Path] = {}
     for name in names:
-        for path in (_skill_lock_path(name), _target_root_lock(name)):
+        for path in (_skill_lock_path(name), _target_root_lock(name), _nested_parent_lock(name)):
             if path is not None:
                 paths.setdefault(_lock_identity(path), path)
     return [paths[k] for k in sorted(paths)]
