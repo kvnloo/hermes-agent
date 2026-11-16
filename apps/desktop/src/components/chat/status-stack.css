@@ -59,6 +59,19 @@
   align-self: start;
 }
 
+/* Queued prompts keep their controls beside the start of the preview. */
+[data-slot='composer-status-stack'] .status-row-leading-actions {
+  grid-template-columns: var(--status-action-width) var(--status-icon-width) auto minmax(0, 1fr);
+}
+
+[data-slot='composer-status-stack'] .status-row-leading-actions .status-row-actions {
+  grid-column: 3;
+}
+
+[data-slot='composer-status-stack'] .status-row-leading-actions .status-row-content {
+  grid-column: 4;
+}
+
 [data-slot='composer-status-stack'] .status-row-actions > button {
   margin-top: -0.125rem;
 }

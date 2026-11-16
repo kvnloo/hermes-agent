@@ -119,3 +119,20 @@ describe('QueuePanel lost turn', () => {
     expect(await screen.findByText('Turn lost during restart')).toBeTruthy()
   })
 })
+
+
+// #156548: queued actions must be readable before hover and sit next to the preview,
+// not at the far edge after a long message.
+it('keeps queued actions before a long preview and visible at rest', async () => {
+  const { container } = await renderExpandedPanel([entry('long', 'A'.repeat(200))])
+  const row = container.querySelector<HTMLElement>('[data-slot="status-row"]')!
+  const actions = row.querySelector<HTMLElement>('.status-row-actions')!
+  const preview = row.querySelector<HTMLElement>('.status-row-content')!
+
+  expect(row.classList.contains('status-row-leading-actions')).toBe(true)
+  expect(actions.nextElementSibling).toBe(preview)
+  expect(actions.className).toContain('opacity-60')
+  expect(actions.className).not.toContain('opacity-0')
+  expect(preview.textContent).toContain('A'.repeat(200))
+  expect(screen.getByRole('button', { name: /edit/i })).toBeTruthy()
+})

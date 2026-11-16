@@ -14,6 +14,8 @@ interface StatusRowProps {
   expanded?: boolean
   /** Leading glyph slot (spinner / status dot / selection circle). */
   leading?: ReactNode
+  /** Keep actions beside the start of queued content instead of at the right edge. */
+  leadingActions?: boolean
   /** Makes the whole row activatable (adds `cursor-pointer` + keyboard a11y).
    *  Receives the originating event so consumers can branch on modifier keys
    *  (e.g. ⌘/Ctrl-click). Trailing-slot buttons should `stopPropagation` so
@@ -40,12 +42,27 @@ export function StatusRow({
   dismiss,
   expanded,
   leading,
+  leadingActions = false,
   onActivate,
   onContextMenu,
   ref,
   trailing,
   trailingVisible = false
 }: StatusRowProps) {
+  const actions = trailing && (
+    <div
+      className={cn(
+        'status-row-actions flex shrink-0 items-center gap-0.5',
+        !trailingVisible &&
+          (leadingActions
+            ? 'opacity-60 group-hover/status-row:opacity-100 group-focus-within/status-row:opacity-100'
+            : 'opacity-0 group-hover/status-row:opacity-100 group-focus-within/status-row:opacity-100')
+      )}
+    >
+      {trailing}
+    </div>
+  )
+
   return (
     <div
       aria-expanded={expanded}
@@ -53,6 +70,7 @@ export function StatusRow({
         'group/status-row status-row flex min-h-6 items-center gap-2 rounded-md px-1.5 py-1',
         // row-hover bundles cursor:pointer — only when the row actually activates.
         onActivate ? 'row-hover' : 'hover:bg-(--ui-row-hover-background)',
+        leadingActions && 'status-row-leading-actions',
         className
       )}
       data-slot="status-row"
@@ -82,17 +100,9 @@ export function StatusRow({
       {leading !== undefined && (
         <span className="status-row-icon flex size-3.5 shrink-0 items-center justify-center">{leading}</span>
       )}
+      {leadingActions && actions}
       <div className="status-row-content flex min-w-0 flex-1 items-center gap-2">{children}</div>
-      {trailing && (
-        <div
-          className={cn(
-            'status-row-actions flex shrink-0 items-center gap-0.5',
-            !trailingVisible && 'opacity-0 group-hover/status-row:opacity-100 group-focus-within/status-row:opacity-100'
-          )}
-        >
-          {trailing}
-        </div>
-      )}
+      {!leadingActions && actions}
     </div>
   )
 }

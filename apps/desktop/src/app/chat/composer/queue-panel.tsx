@@ -100,6 +100,7 @@ export function QueuePanel({
         dismiss={{ label: c.queueDelete, onDismiss: () => onDelete(entry.id) }}
         key={entry.id}
         leading={<Codicon className="text-muted-foreground/70" name="comment" size="0.8rem" />}
+        leadingActions
         trailing={
           <>
             {canExpand && (
