@@ -156,21 +156,21 @@ def _owns_plugins(rel: str, *, profiles: bool) -> bool:
     return len(parts) >= 3 and parts[2] == PLUGIN_ROOT
 
 
-def _is_bundled_skill(rel: str, *, profiles: bool) -> bool:
+def _is_bundled_skill(rel: str, *, profiles: bool, external_profiles: bool = False) -> bool:
     """skills/** except skills/.archive/**, at both roots (see module docstring),
     plus a profile's rebuildable cache (see _is_profile_cache)."""
     parts = rel.split("/")
     if not profiles:
         return parts[0] == SKILLS_ROOT and not (
             len(parts) > 1 and parts[1] == SKILL_ARCHIVE)
-    if _is_profile_cache(parts):
+    if _is_profile_cache(parts, external_profiles=external_profiles):
         return True
     if len(parts) >= 3 and parts[2] == SKILLS_ROOT:
         return not (len(parts) > 3 and parts[3] == SKILL_ARCHIVE)
     return False
 
 
-def _is_profile_cache(parts: list[str]) -> bool:
+def _is_profile_cache(parts: list[str], *, external_profiles: bool = False) -> bool:
     """A profile's cache/ entry the product rebuilds: advisory, not user state.
 
     Every entry under profiles/ is judged, so a profile's cache was, and its files
@@ -179,9 +179,10 @@ def _is_profile_cache(parts: list[str]) -> bool:
     rebuildable entries are advisory. The subdirs hermes_cli/backup.py keeps because
     nothing can rebuild them (delivered media, the citations ledger) stay judged, as
     does the cache/ dir itself. *parts* is ``profiles/<name>/...`` from the home
-    walk or ``<name>/...`` from a --profiles-dir walk; both are handled.
+    walk or ``<name>/...`` from a --profiles-dir walk; the external flag
+    distinguishes a real ``profiles/`` prefix from a profile named ``profiles``.
     """
-    if parts and parts[0] == PROFILES_DIR:
+    if not external_profiles and parts and parts[0] == PROFILES_DIR:
         parts = parts[1:]
     return (len(parts) >= 3 and parts[1] == CACHE_DIR
             and parts[2] not in KEPT_PROFILE_CACHE_SUBDIRS)
@@ -363,7 +364,8 @@ def _read_entry_record(abs_path: str) -> dict:
     return {"kind": "other"}
 
 
-def _walk_root(home: str, root_rel: str, *, profiles: bool, judged: bool):
+def _walk_root(home: str, root_rel: str, *, profiles: bool, judged: bool,
+               external_profiles: bool = False):
     """Yield (rel_path, abs_path, judged) for every entry under a root, pruning
     the trees owned elsewhere (plugins).
 
@@ -376,7 +378,8 @@ def _walk_root(home: str, root_rel: str, *, profiles: bool, judged: bool):
     root_abs = os.path.join(home, root_rel.replace("/", os.sep))
     if not _lexists(root_abs):
         return
-    yield root_rel, root_abs, judged and not _is_bundled_skill(root_rel, profiles=profiles)
+    yield root_rel, root_abs, judged and not _is_bundled_skill(
+        root_rel, profiles=profiles, external_profiles=external_profiles)
     # Top-level entries include plain FILES (config.yaml, state.db): only a real
     # directory can be descended, and a symlink must never be followed.
     if _is_link(root_abs) or not os.path.isdir(root_abs):
@@ -397,7 +400,8 @@ def _walk_root(home: str, root_rel: str, *, profiles: bool, judged: bool):
             # advisory walk of skills/ must not claim it.
             if not judged and (rel.split("/")[-1] == SKILL_ARCHIVE or "/" + SKILL_ARCHIVE + "/" in rel):
                 continue
-            entry_judged = judged and not _is_bundled_skill(rel, profiles=profiles)
+            entry_judged = judged and not _is_bundled_skill(
+                rel, profiles=profiles, external_profiles=external_profiles)
             if _is_link(abs_path):
                 yield rel, abs_path, entry_judged
                 continue
@@ -438,7 +442,8 @@ def snapshot_home(home: str, profiles_dir: str | None = None) -> dict:
                 entries[rel] = _entry_record(abs_path)
                 if os.path.isdir(abs_path) and not _is_link(abs_path):
                     for sub_rel, sub_abs, sub_judged in _walk_root(
-                            override_abs, name, profiles=True, judged=True):
+                            override_abs, name, profiles=True, judged=True,
+                            external_profiles=True):
                         if sub_rel == name:
                             continue
                         record = _entry_record_unless_vanished(sub_rel, sub_abs)

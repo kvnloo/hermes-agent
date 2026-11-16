@@ -139,6 +139,29 @@ def test_a_rebuilt_profile_cache_is_advisory_but_its_kept_subdirs_stay_judged(tm
     assert "profiles/second/cache/citations/ledger.json" in report["deleted"]
 
 
+def test_external_profile_named_profiles_uses_advisory_cache_policy(tmp_path):
+    # A valid profile named "profiles" must not be mistaken for the home-walk
+    # prefix when --profiles-dir supplies paths relative to its own root.
+    home = _home(tmp_path)
+    profiles_dir = str(tmp_path / "external-profiles")
+    memo = os.path.join(profiles_dir, "profiles", "cache", "schema_columns.json")
+    ledger = os.path.join(profiles_dir, "profiles", "cache", "citations", "ledger.json")
+    _write(memo, '{"schema_hash": "old"}')
+    _write(ledger, '{"claims": [1]}')
+    snap = vus.snapshot_home(str(home), profiles_dir)
+    snap["_profiles_dir"] = profiles_dir
+
+    memo_rel = "profiles/profiles/cache/schema_columns.json"
+    ledger_rel = "profiles/profiles/cache/citations/ledger.json"
+    assert memo_rel in snap["advisory"], "schema memo must remain rebuildable"
+    assert ledger_rel in snap["entries"], "saved citations must remain judged"
+
+    _write(memo, '{"schema_hash": "new"}')
+    report = _verify(home, snap)
+    assert report["ok"], report
+    assert memo_rel in report["advisory"]["modified"]
+
+
 # --- the contract -----------------------------------------------------------
 
 def test_verify_passes_when_nothing_changed(tmp_path):
