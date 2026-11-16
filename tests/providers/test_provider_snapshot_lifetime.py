@@ -8,6 +8,7 @@ import queue
 import subprocess
 import sys
 import textwrap
+import time
 import threading
 from contextlib import contextmanager
 from pathlib import Path
@@ -25,6 +26,9 @@ _CHILD = textwrap.dedent("""
     from pathlib import Path
 
     sys.path.insert(0, sys.argv[1])
+    if sys.argv[2:] == ["scratch"]:
+        from hermes_constants import export_scratch_tmp_env
+        assert export_scratch_tmp_env()
     import providers
     from hermes_constants import get_process_hermes_home
     from providers import get_provider_profile
@@ -111,7 +115,7 @@ def installation(tmp_path):
 
 
 @contextmanager
-def _provider_process(home: Path, os_temp: Path, stderr_path: Path):
+def _provider_process(home: Path, os_temp: Path, stderr_path: Path, *, scratch_tmp: bool = False):
     env = {
         "PATH": os.environ.get("PATH", ""),
         "HOME": str(home),
@@ -123,9 +127,13 @@ def _provider_process(home: Path, os_temp: Path, stderr_path: Path):
     for key in ("SYSTEMROOT", "USERPROFILE", "LOCALAPPDATA"):
         if key in os.environ:
             env[key] = str(home) if key != "SYSTEMROOT" else os.environ[key]
+    if scratch_tmp:
+        for key in ("TMPDIR", "TMP", "TEMP"):
+            env.pop(key)
     with stderr_path.open("w", encoding="utf-8") as stderr:
         process = subprocess.Popen(
-            [sys.executable, "-I", "-B", "-c", _CHILD, str(_REPO)],
+            [sys.executable, "-I", "-B", "-c", _CHILD, str(_REPO),
+             *(["scratch"] if scratch_tmp else [])],
             cwd=_REPO, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=stderr, text=True,
         )
@@ -150,7 +158,8 @@ def _provider_process(home: Path, os_temp: Path, stderr_path: Path):
         try:
             ready = receive()
             assert Path(ready["home"]).resolve() == home.resolve()
-            assert Path(ready["temp"]).resolve() == os_temp.resolve()
+            expected_temp = home / "cache" / "scratch" if scratch_tmp else os_temp
+            assert Path(ready["temp"]).resolve() == expected_temp.resolve()
             assert Path(ready["loader"]).resolve() == _REPO / "providers" / "plugin_reload.py"
             assert ready["isolated"] == 1 and ready["no_bytecode"]
             yield ready, receive
@@ -220,3 +229,33 @@ def test_process_exit_removes_only_its_own_snapshot(installation, tmp_path, reco
         record_property("observation", json.dumps(observation, sort_keys=True))
         assert lazy == helper == {"value": "v1", "error": None}, observation
     assert not Path(second["root"]).exists()
+
+
+def test_live_snapshot_survives_real_scratch_prune(installation, tmp_path):
+    """#156493: a live gateway must retain lazy modules and package-relative helpers."""
+    from hermes_constants import prune_scratch_dir
+
+    home, _plugin, os_temp = installation
+    with _provider_process(home, os_temp, tmp_path / "scratch.stderr", scratch_tmp=True) as (ready, send):
+        scratch = home / "cache" / "scratch"
+        snapshot = Path(ready["root"])
+        assert not ready["lazy_loaded"]
+        assert (Path(ready["package"]) / "lazy.py").exists()
+
+        stale = scratch / "stale-control"
+        stale.mkdir()
+        (stale / "payload").write_text("stale", encoding="utf-8")
+        aged = time.time() - 25 * 3600  # the real 24-hour pruning threshold
+        for entry in (snapshot, stale):
+            for folder, dirs, files in os.walk(entry):
+                for name in dirs + files:
+                    os.utime(Path(folder) / name, (aged, aged))
+            os.utime(entry, (aged, aged))
+
+        prune_scratch_dir(scratch)
+        assert not stale.exists()  # the real pruner actually removed an idle entry
+        assert send({"op": "read", "version": "old", "access": "lazy"}) == {
+            "value": "v1", "error": None}
+        assert send({"op": "read", "version": "old", "access": "helper"}) == {
+            "value": "v1", "error": None}
+    assert not snapshot.exists()
