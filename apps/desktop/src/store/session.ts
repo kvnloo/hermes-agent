@@ -646,9 +646,16 @@ function carriedConnectionId(prev: SessionInfo | undefined, incoming: SessionInf
 export function mergeSessionPage(
   previous: SessionInfo[],
   incoming: SessionInfo[],
-  keepIds: Iterable<string>
+  keepIds: Iterable<string>,
+  activeConnectionId?: string | null
 ): SessionInfo[] {
   const keep = keepIds instanceof Set ? keepIds : new Set(keepIds)
+  // A previous gateway's live session must neither survive the keep-set nor
+  // lend title/activity/owner data to the active gateway's same-id row.
+  // Unified all-profiles pages intentionally omit activeConnectionId.
+  const scopedPrevious = activeConnectionId
+    ? previous.filter(session => !session.connection_id || session.connection_id === activeConnectionId)
+    : previous
 
   // Rows are identified by (profile, id), never bare id: two profiles can
   // hold sessions with the SAME stored id (restored backups, copied
@@ -671,10 +678,10 @@ export function mergeSessionPage(
   // flashing its raw message preview in the gap between persist and the async
   // auto-titler. A real clear sets the local title null first, so this never
   // masks one.
-  const prevById = new Map(previous.map(session => [identity(session), session]))
+  const prevById = new Map(scopedPrevious.map(session => [identity(session), session]))
   // Tip rotation changes the live id — carry activity/title across the lineage
   // root so a mid-turn refresh can't drop a touchSessionActivity bump.
-  const prevByLineage = new Map(previous.map(session => [lineageIdentity(session), session]))
+  const prevByLineage = new Map(scopedPrevious.map(session => [lineageIdentity(session), session]))
 
   const merged = incoming
     .filter(session => !session.is_internal_child)
@@ -749,7 +756,7 @@ export function mergeSessionPage(
   const tombstoned = (session: SessionInfo): boolean =>
     tombstones.size > 0 && tombstoneRowIds(session).some(id => tombstones.has(id))
 
-  const survivors = previous.filter(
+  const survivors = scopedPrevious.filter(
     session =>
       // An internal delegate child is never listed; the authoritative page
       // already omits it, so the keep-list must not resurrect it (#94124).

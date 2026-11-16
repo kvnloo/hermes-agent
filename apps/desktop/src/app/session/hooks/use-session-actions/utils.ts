@@ -18,9 +18,10 @@ import { isMessagingSource, normalizeSessionSource } from '@/lib/session-source'
 import { isLiveTailReplyId } from '@/lib/spoken-reply'
 import { requestDesktopOnboardingForCredentialWarning } from '@/store/onboarding'
 import { pendingSnapshotFence, reconcilePendingSubmissions } from '@/store/pending-submissions'
-import { $activeGatewayProfile, $profiles, normalizeProfileKey } from '@/store/profile'
+import { $activeGatewayProfile, $profiles, $showAllProfiles, normalizeProfileKey } from '@/store/profile'
 import { $projectTree } from '@/store/projects'
 import {
+  $connection,
   $cronSessions,
   $currentCwd,
   $messagingSessions,
@@ -1855,8 +1856,14 @@ function upsertResolvedSession(
   // inserting it into $sessions paints a sidebar row until the next refresh,
   // and the keep-list then holds it there (#113273). Park it on the off-list
   // owner atom the draft stubs ride — owner resolution still finds it via
-  // ownerLookupSessionRows, the sidebar never does.
-  if (session.hidden) {
+  // ownerLookupSessionRows, the sidebar never does. An owner-routed lookup can
+  // also finish on gateway A after the window selected B (#156655): keep A
+  // routable but out of B's list. Unified all-profiles views still show it.
+  const activeConnectionId = $connection.get()?.connectionId
+  const foreignToSelectedGateway =
+    !$showAllProfiles.get() &&
+    Boolean(session.connection_id && activeConnectionId && session.connection_id !== activeConnectionId)
+  if (session.hidden || foreignToSelectedGateway) {
     setUnlistedSessionOwnerRows(prev => [
       session,
       ...prev.filter(existing => (existing._lineage_root_id ?? existing.id) !== lineage)

@@ -1,22 +1,30 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { textWithoutReferenceLines } from '@/components/assistant-ui/reference-kinds'
+import * as hermes from '@/hermes'
 import { type ChatMessage, type ChatMessagePart, chatMessageText, textPart } from '@/lib/chat-messages'
 import { $approvalModes, approvalModeForProfile } from '@/store/approval-mode'
 import { $desktopOnboarding, consumePendingCredentialWarning } from '@/store/onboarding'
-import { $activeGatewayProfile } from '@/store/profile'
+import { $activeGatewayProfile, $showAllProfiles } from '@/store/profile'
 import {
+  $connection,
   $currentBranch,
   $currentCwd,
   $currentModel,
   $currentProvider,
   $currentUsage,
+  $sessions,
+  $unlistedSessionOwnerRows,
+  mergeSessionPage,
+  setConnection,
   setCurrentBranch,
   setCurrentCwd,
   setCurrentModel,
   setCurrentProvider,
   setCurrentUsage,
   setSelectedStoredSessionId,
+  setSessions,
+  setUnlistedSessionOwnerRows,
   workspaceCwdBelongsToSelectedSession
 } from '@/store/session'
 import type { SessionInfo, SessionResumeResult } from '@/types/hermes'
@@ -34,6 +42,7 @@ import {
   overlayConcurrentMessageChanges,
   preserveEquivalentTranscript,
   preserveLocalPendingTurnMessages,
+  probeStoredSession,
   reconcileResumeMessages,
   removeRepresentedLocalLiveProjection,
   resolveResumedBusy,
@@ -62,6 +71,72 @@ const streamingMsg = (id: string, text: string, extra: Partial<ChatMessage> = {}
   }) as ChatMessage
 
 const session = (over: Partial<SessionInfo>): SessionInfo => over as SessionInfo
+
+describe('foreign session on another active gateway (#156655)', () => {
+  it('keeps A routable but absent from B sidebar and refresh survivors', async () => {
+    const originalConnection = $connection.get()
+    const originalAllProfiles = $showAllProfiles.get()
+    const originalSessions = $sessions.get()
+    const originalUnlisted = $unlistedSessionOwnerRows.get()
+    const foreign = session({
+      id: 'running-on-A-156655',
+      connection_id: 'gateway-A',
+      profile: 'default',
+      source: 'desktop',
+      last_active: 200
+    })
+    const local = session({
+      id: 'on-B-156655',
+      connection_id: 'gateway-B',
+      profile: 'default',
+      source: 'desktop',
+      last_active: 10
+    })
+    const getSession = vi.spyOn(hermes, 'getSession').mockResolvedValue({ ...foreign })
+
+    try {
+      $showAllProfiles.set(false)
+      setConnection({ baseUrl: 'https://gateway-b.example', connectionId: 'gateway-B', mode: 'remote' } as never)
+      setSessions([])
+      setUnlistedSessionOwnerRows([])
+
+      expect(await probeStoredSession(foreign.id, { connectionId: 'gateway-A', profile: 'default' })).toMatchObject({
+        status: 'found'
+      })
+      expect(getSession).toHaveBeenCalledWith(foreign.id, { connectionId: 'gateway-A', profile: 'default' })
+      expect($sessions.get()).toEqual([])
+      expect($unlistedSessionOwnerRows.get()).toEqual([foreign])
+
+      const page = mergeSessionPage([foreign, local], [local], [foreign.id], 'gateway-B')
+      expect(page.map(row => row.id)).toEqual([local.id])
+      expect(mergeSessionPage([foreign], [], [foreign.id], 'gateway-A')).toEqual([foreign])
+
+      // A backup can use the same stored id and profile on both machines.
+      // The previous gateway must not supply B's missing title/activity.
+      const aTwin = session({
+        id: 'shared-156655',
+        profile: 'default',
+        connection_id: 'gateway-A',
+        title: 'A only',
+        last_active: 200
+      })
+      const bTwin = session({
+        id: 'shared-156655',
+        profile: 'default',
+        connection_id: 'gateway-B',
+        title: null,
+        last_active: 10
+      })
+      expect(mergeSessionPage([aTwin], [bTwin], [], 'gateway-B')).toEqual([bTwin])
+    } finally {
+      getSession.mockRestore()
+      setSessions(originalSessions)
+      setUnlistedSessionOwnerRows(originalUnlisted)
+      setConnection(originalConnection)
+      $showAllProfiles.set(originalAllProfiles)
+    }
+  })
+})
 
 describe('applyRuntimeInfo approval mode', () => {
   beforeEach(() => {

@@ -18,8 +18,9 @@ import {
   SIDEBAR_FILTERED_PAGE_SIZE,
   SIDEBAR_SESSIONS_PAGE_SIZE
 } from '@/store/layout'
-import { messagingTotalsKey, normalizeProfileKey, sidebarProfileForScope } from '@/store/profile'
+import { ALL_PROFILES, messagingTotalsKey, normalizeProfileKey, sidebarProfileForScope } from '@/store/profile'
 import {
+  $connection,
   $messagingSessions,
   $selectedStoredSessionId,
   $sessions,
@@ -458,7 +459,15 @@ export function useSessionListActions({ profileScope }: UseSessionListActionsArg
             // Filter AFTER the merge: the guard must also catch survivors
             // (a stale previous slice can still hold the doomed row through
             // the keep set once the tombstone prune has cleared membership).
-            const next = dropRemovalRaced(mergeSessionPage(prev, incoming, sessionsToKeep()), removalSnapshot)
+            const next = dropRemovalRaced(
+              mergeSessionPage(
+                prev,
+                incoming,
+                sessionsToKeep(),
+                profileScope === ALL_PROFILES ? null : $connection.get()?.connectionId
+              ),
+              removalSnapshot
+            )
 
             return sameCronSignature(prev, next) ? prev : next
           })
