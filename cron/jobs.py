@@ -1898,6 +1898,10 @@ def create_job(
         "enabled_toolsets": f["enabled_toolsets"],
         "workdir": f["workdir"],
     }
+    if paused:
+        # Atomic paused creation never calls update_job, so stamp both fields here.
+        job["disabled_reason"] = job["paused_reason"]
+        job["disabled_at"] = now
     # Optional keys are persisted only when explicitly set: an absent key falls back to global
     # config (attach/reasoning) or to ``deliver`` (failure_deliver), byte-identical to pre-feature
     # jobs.

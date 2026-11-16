@@ -45,6 +45,19 @@ def _raw_row(tmp_path, job_id):
 # Store level: the reason lands in jobs.json next to the state it explains.
 # ---------------------------------------------------------------------------
 
+def test_create_paused_job_persists_disable_attribution(tmp_path):
+    """A job created paused has no enabled flip to trigger the update stamp."""
+    with _store(tmp_path):
+        for reason in (None, "manual review"):
+            job = jobs.create_job(
+                prompt="watch the lane", schedule="every 1h",
+                paused=True, paused_reason=reason)
+            row = _raw_row(tmp_path, job["id"])
+            assert row["enabled"] is False
+            assert row["disabled_reason"] == row["paused_reason"]
+            assert row["disabled_at"] == row["paused_at"]
+
+
 def test_pause_with_reason_persists_disable_fields(tmp_path):
     with _store(tmp_path):
         job = _create()
