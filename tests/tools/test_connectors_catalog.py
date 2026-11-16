@@ -342,3 +342,30 @@ def test_search_rows_mark_an_installed_clawhub_hit_but_not_another_sources_bare_
     monkeypatch.setattr("tools.skills_hub_search.unified_search", lambda query, sources, limit: hits)
 
     assert [row["installed"] for row in _skill_rows("agent git oracle")] == [True, False]
+
+
+def test_search_id_that_no_longer_resolves_explains_stale_listing(monkeypatch):
+    """Regression for #148824: a search-returned id is not a user typo."""
+    from tools.connectors.catalog_tool import _skill_rows
+    from tools.skills_hub_models import SkillMeta
+
+    identifier = "skills-sh/daymade/claude-code-skills/claude-switch-models-setup"
+    hit = SkillMeta(name="claude-switch-models-setup", description="", source="skills.sh",
+                    identifier=identifier, trust_level="community")
+    monkeypatch.setattr("tools.skills_hub_github.GitHubAuth", lambda: None)
+    monkeypatch.setattr("tools.skills_hub_search.create_source_router", lambda auth: [])
+    monkeypatch.setattr("tools.skills_hub_search.unified_search", lambda query, sources, limit: [hit])
+
+    (searched,) = _skill_rows("claude switcher")
+    assert (searched["kind"], searched["id"]) == ("skill", identifier)
+
+    card = _card(_approve())
+    out = _install([{"kind": searched["kind"], "id": searched["id"]}], FakeInstaller(), card)
+    (failed,) = out["targets"]
+    assert failed["state"] == TargetState.failed.value
+    assert identifier in failed["detail"]
+    assert "may be stale" in failed["detail"]
+    assert "moved or removed upstream" in failed["detail"]
+    assert "temporarily unavailable" in failed["detail"]
+    assert "GitHub folder URL" in failed["detail"]
+    assert not card.seen
