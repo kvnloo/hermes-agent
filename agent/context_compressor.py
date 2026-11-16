@@ -946,7 +946,10 @@ def _synthetic_user_row(content: str) -> bool:
     """True for scaffolding user rows that carry no real user words."""
     if not isinstance(content, str) or not content.strip():
         return True
-    return content.lstrip().startswith(_SYNTHETIC_USER_ROW_PREFIXES)
+    if content.lstrip().startswith(_SYNTHETIC_USER_ROW_PREFIXES):
+        return True
+    from agent.conversation_compression_scaffolding import is_user_role_scaffolding
+    return is_user_role_scaffolding({"role": "user", "content": content})
 
 
 def _typed_user_text(content: str) -> str:

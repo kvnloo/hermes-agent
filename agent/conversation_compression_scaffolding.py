@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
+
+# Batched completion notices start with a count: "[IMPORTANT: 4 background processes completed".
+_BATCH_NOTICE = re.compile(r"\[(?:IMPORTANT: \d+ background process|ASYNC DELEGATION )", re.IGNORECASE)
 
 _SYNTHETIC_USER_PREFIXES = (
     "[System: Your previous response was truncated", "[System: The previous response was cut off",
@@ -35,4 +39,5 @@ def has_scaffolding_flag(message: dict) -> bool:
 
 def is_user_role_scaffolding(message: dict) -> bool:
     """A runtime row in the user role, by flag or opening text (nudges, task-list snapshots, single background-process completion and watch-match notices)."""
-    return has_scaffolding_flag(message) or _message_text(message).strip().startswith(_SYNTHETIC_USER_PREFIXES)
+    text = _message_text(message).strip()
+    return has_scaffolding_flag(message) or text.startswith(_SYNTHETIC_USER_PREFIXES) or bool(_BATCH_NOTICE.match(text))
