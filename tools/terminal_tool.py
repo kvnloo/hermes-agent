@@ -120,6 +120,9 @@ def _current_session_profile() -> str:
 
 
 from tools.approval import (
+    _floor_block,
+    _should_skip_container_guards,
+    _user_deny_block,
     check_all_command_guards as _check_all_guards_impl,
 )
 
@@ -907,10 +910,22 @@ class _ApprovalVerdict:
 
 
 def _run_approval_guards(command: str, env_type: str, config: Dict[str, Any], *, force: bool) -> _ApprovalVerdict:
-    """Run tirith + dangerous-command guards; ``force`` skips them entirely.
+    """Run tirith + dangerous-command guards; ``force`` skips prompts, not floors.
     Raises :class:`_Rejected` when the command may not run (denied, or pending
     gateway approval)."""
     if force:
+        # Pre-confirmed replay skips prompts, not the hardline, sudo-stdin,
+        # or operator deny floors. Isolated backends still honor user denies.
+        host_access = _docker_has_host_access(config)
+        if _should_skip_container_guards(env_type, has_host_access=host_access):
+            blocked = _user_deny_block(command)
+        else:
+            blocked = _floor_block(command, sudo_guard=True)
+        if blocked is not None:
+            raise _Rejected(_error_json(
+                blocked.get("message") or "Command denied by unconditional guard.",
+                status="blocked",
+            ))
         return _ApprovalVerdict(approved_run=True)
     approval = _check_all_guards(command, env_type, has_host_access=_docker_has_host_access(config))
     if not approval["approved"]:

@@ -12,7 +12,11 @@ no recovery path must hit the unconditional floor, and the tool invocations that
 only PRINT (or that target a file rather than a device) must stay runnable.
 """
 
+import json
+
 import pytest
+
+from tools import terminal_tool
 
 from tools.approval import (
     check_all_command_guards,
@@ -393,3 +397,18 @@ def test_yolo_cannot_bypass_disk_wipes(clean_session, monkeypatch, command):
     assert second["approved"] is False, f"yolo leaked {command!r} (check_all_command_guards)"
     assert second.get("hardline") is True
     assert "BLOCKED (hardline)" in second["message"]
+
+
+def test_internal_force_replay_never_skips_disk_wipe_floor(clean_session):
+    """Pre-confirmed terminal replay never overrides a raw-device hardline refusal."""
+    for force in (False, True):
+        with pytest.raises(terminal_tool._Rejected) as exc:
+            terminal_tool._run_approval_guards(
+                "wipefs -a /dev/sda", "local", {"env_type": "local"}, force=force,
+            )
+        assert json.loads(exc.value.result_json)["status"] == "blocked"
+
+    # Force still skips only the soft prompt for an otherwise safe command.
+    assert terminal_tool._run_approval_guards(
+        "printf ok", "local", {"env_type": "local"}, force=True,
+    ).approved_run
