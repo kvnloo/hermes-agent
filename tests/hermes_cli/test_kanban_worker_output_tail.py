@@ -80,3 +80,12 @@ def test_managed_worker_refusal_keeps_its_session_pointer(monkeypatch):
 def test_missing_or_empty_log_returns_empty(monkeypatch):
     assert _output(monkeypatch, None) == ""
     assert _output(monkeypatch, "") == ""
+
+
+def test_noise_only_retry_does_not_quote_previous_attempt(monkeypatch):
+    # The next worker was killed after its Query banner, before producing any answer.
+    # A previous attempt's completed response must never become this crash's cause.
+    detail = _output(monkeypatch, PREVIOUS_ATTEMPT +
+                     'Query: work kanban task t_d9e8f954\n')
+
+    assert detail == ''

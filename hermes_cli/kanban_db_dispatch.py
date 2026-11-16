@@ -1052,7 +1052,10 @@ def _worker_final_output(task_id: str, board: Optional[str] = None) -> str:
         # cause was run 678's closing bullets while the log's own tail said
         # ``Error: Unknown skill(s): sdlc-review``). Keep the newer tail when it has content of its own.
         newer = raw[cut + len(marker):]
-        raw = newer if _has_own_output(newer) else raw[:cut]
+        # A fresh worker can die after logging only its Query banner; that is a new attempt,
+        # not a reason to resurrect the previous attempt's closing answer as crash evidence.
+        restarted = any(line.lstrip().startswith('Query:') for line in newer.splitlines())
+        raw = newer if restarted or _has_own_output(newer) else raw[:cut]
     lines = []
     for ln in raw.splitlines():
         ln = _LOG_CHROME.sub("", ln).strip()
