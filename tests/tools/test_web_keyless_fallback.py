@@ -609,3 +609,30 @@ def test_transport_failover_exhaustion_calls_each_provider_once(monkeypatch):
     assert calls == list(keyless_mcp._KEYLESS_RING)
     assert result["success"] is False
     assert all(vendor in result["error"] for vendor in calls)
+
+
+@pytest.mark.parametrize("vendor", ["exa", "keenable"])
+def test_invalid_request_exception_stops_keyless_failover(monkeypatch, vendor):
+    """A locally invalid HTTP request is not a transport outage (#156380)."""
+    import requests
+
+    monkeypatch.setattr(keyless_mcp, "_vendor_pinned", lambda _: True)
+    monkeypatch.setattr(keyless_mcp, "provider_tier", lambda _: "free")
+    peer = keyless_mcp._ring_order(vendor)[1]
+    calls = []
+
+    def invalid_request(*args, **kwargs):
+        calls.append(vendor)
+        raise requests.exceptions.InvalidURL("bad URL scheme")
+
+    def backup(query, limit):
+        calls.append(peer)
+        return {"success": True, "data": {"web": [{"url": "https://example.org"}]}}
+
+    monkeypatch.setattr(requests, "post", invalid_request)
+    monkeypatch.setitem(keyless_mcp._KEYLESS_SEARCHERS, peer, backup)
+    result = keyless_mcp.search_with_failover(vendor, "public query")
+
+    assert result["success"] is False
+    assert "bad URL scheme" in result["error"]
+    assert calls == [vendor]

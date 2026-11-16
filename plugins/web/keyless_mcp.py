@@ -61,7 +61,7 @@ def _transport_error(exc: Any) -> str:
     import requests
     if isinstance(exc, httpx.HTTPStatusError):
         return f"HTTP {exc.response.status_code}: {exc}"
-    if isinstance(exc, (httpx.RequestError, requests.exceptions.RequestException)):
+    if isinstance(exc, (httpx.TransportError, requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
         return f"request failed: {exc}"
     return str(exc)
 
@@ -178,7 +178,9 @@ def mcp_call(url: str, tool: str, arguments: Dict[str, Any], timeout: int = _TIM
     try:
         response = requests.post(url, json=payload, headers=headers, timeout=timeout)
     except requests.RequestException as exc:
-        raise KeylessMCPError(f"request failed: {exc}") from exc
+        # Client-side validation errors are not vendor outages.
+        label = "request failed" if isinstance(exc, (requests.ConnectionError, requests.Timeout)) else "request error"
+        raise KeylessMCPError(f"{label}: {exc}") from exc
     if response.status_code >= 400:
         raise KeylessMCPError(f"HTTP {response.status_code}: {response.text[:300]}")
     return _parse_mcp_body(response.text)
