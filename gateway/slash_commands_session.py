@@ -146,15 +146,16 @@ def _strip_resume_name(parts: list[str]) -> str:
     return name
 
 
-async def discard_lost_turns(authority, session_id) -> str:
+async def discard_lost_turns(authority, session_id, admission_ids=()) -> str:
     """Messaging ``/discard`` (#134889 GW-10): acknowledge every ``unknown`` (lost-in-restart) turn
     of this chat's FIFO through the owner's fenced ``resolve_unknown``, the path Desktop's Discard,
     the TUI queue and ``hermes sessions discard`` use. Never replays the input; the saved
-    followers run once it commits."""
+    followers run once it commits. ``admission_ids``: only those (``/discard <id>``, ACP's form)."""
     from gateway.session_contract import SessionRef
     from hermes_state_runtime import RuntimeStoreError, list_session_admissions
     rows = await asyncio.to_thread(list_session_admissions, authority.db, session_id=session_id)
-    lost = [row for row in rows if row['status'] == 'unknown']
+    lost = [row for row in rows if row['status'] == 'unknown'
+            and (not admission_ids or row['admission_id'] in admission_ids)]
     if not lost:
         return t("gateway.discard.nothing")
     ref = SessionRef(authority.profile_id, session_id)

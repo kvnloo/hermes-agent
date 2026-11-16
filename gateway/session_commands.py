@@ -39,6 +39,9 @@ _SETTING_COMMANDS = frozenset({'reasoning', 'voice', 'approvals', 'codex-runtime
 # Typed `/approve` / `/deny`: the messaging handler resolves THIS session's waiting approval (its
 # route is the session key), the same waiter `approval.respond` answers by prompt id.
 _APPROVAL_COMMANDS = frozenset({'approve', 'deny'})
+# Typed `/discard` (GW-10): the pause notice tells every surface to send it. Acknowledges this
+# session's lost (``unknown``) turns through the same owner path as messaging's handler.
+_RECOVERY_COMMANDS = frozenset({'discard'})
 # Reports with no messaging handler: the classic CLI's own text, built by the owner for this
 # session (gateway/session_info_reads.py).
 _INFO_READS = frozenset({'toolsets', 'platforms'})
@@ -137,7 +140,7 @@ def command_verdict(name, arg=''):
     if name in _OWNER_COMMANDS:
         return 'read' if cron_read(_split(arg)) is not None else 'control'  # main's /cron handler shlex-splits
     if (name in _CONTROL_COMMANDS or name in _HANDLER_CONTROLS or name in _PROMPT_COMMANDS
-            or name in _SETTING_COMMANDS or name in _APPROVAL_COMMANDS
+            or name in _SETTING_COMMANDS or name in _APPROVAL_COMMANDS or name in _RECOVERY_COMMANDS
             or _CONTROL_ARGUMENTS.get(name, lambda _a: False)(arg)):
         return 'control'
     if name in _INFO_READS or (name in _READ_COMMANDS and _READ_ARGUMENTS.get(name, lambda _arg: True)(arg)):
@@ -485,9 +488,8 @@ async def execute_command(connection, ref, params, *, dispatch=False):
     if canonical in _INFO_READS:
         from gateway.session_info_reads import run_info_read
         return await run_info_read(authority, live, canonical)
-    if canonical in _OWNER_COMMANDS:
-        from gateway.session_cron_commands import run_cron
-        return await run_cron(authority, arg)
+    if canonical in _OWNER_RUNS:
+        return await _OWNER_RUNS[canonical](authority, ref, arg, before)
 
     from gateway.platforms.base import MessageEvent
     from gateway.session_command_sink import capture
@@ -530,6 +532,23 @@ async def execute_command(connection, ref, params, *, dispatch=False):
         return {'type': 'send', 'message': prompt, 'display': sink.display or typed,
                 **({'notice': notice} if notice else {})}
     return {'type': 'exec', 'output': '\n'.join(filter(None, [*sink.notices, _text(output)]))}
+
+
+async def _run_cron(authority, _ref, arg, _before):
+    from gateway.session_cron_commands import run_cron
+    return await run_cron(authority, arg)
+
+
+async def _run_discard(authority, ref, arg, before):
+    """Typed ``/discard [id ...]``: a lost turn leaves the session non-idle, so this runs ahead of
+    the busy dispatcher (and fires ``pre_command`` itself)."""
+    await before()
+    from gateway.slash_commands_session import discard_lost_turns
+    return {'type': 'exec', 'output': await discard_lost_turns(authority, ref.session_id, tuple(arg.split()))}
+
+
+# Commands the owner runs itself rather than through the messaging handler table.
+_OWNER_RUNS = {'cron': _run_cron, 'discard': _run_discard}
 
 
 def _text(output):
