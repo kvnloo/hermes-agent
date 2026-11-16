@@ -6,6 +6,7 @@ from functools import cached_property
 import contextlib
 import json
 import logging
+import posixpath
 from pathlib import Path
 
 from hermes_state_runtime import RuntimeStoreError
@@ -454,7 +455,12 @@ def build_policy(params, config, *, private_secrets=None, profile_terminal=True,
     if 'model' in params and (not isinstance(model, str) or not model.strip()):
         _refuse('model', 'must be a non-empty string')
     cwd = params.get('cwd', str(resolve_agent_cwd()))
-    if not isinstance(cwd, str) or not Path(cwd).is_absolute() or not Path(cwd).is_dir():
+    terminal = build_profile_terminal_scope(get_hermes_home()) if profile_terminal else default_terminal_scope()
+    # An ssh/modal/etc. backend resolves its own cwd on another host, which this host cannot probe, and
+    # that host is POSIX whatever this one is (a Windows gateway with a WSL remote).
+    host_cwd = terminal_uses_host_cwd(terminal)
+    if (not isinstance(cwd, str) or not (Path(cwd).is_absolute() if host_cwd else posixpath.isabs(cwd))
+            or (host_cwd and not Path(cwd).is_dir())):
         _refuse('cwd', 'must be an absolute path to an existing directory')
     row_cwd = params.get('row_cwd')
     if 'row_cwd' in params and (not isinstance(row_cwd, str) or (row_cwd and not Path(row_cwd).is_absolute())):
@@ -482,7 +488,6 @@ def build_policy(params, config, *, private_secrets=None, profile_terminal=True,
     named = workspace_posture and source != 'tool' and 'cwd' in params and 'toolsets' not in params
     coding_posture = named and _in_coding_workspace(config, source, cwd)
     enabled = _resolve_toolsets(params, config, source, safe_mode, coding_posture, bypass=ignore_user_config)
-    terminal = build_profile_terminal_scope(get_hermes_home()) if profile_terminal else default_terminal_scope()
     # The client's launch folder is a path on THIS host: a remote or container backend keeps its own
     # configured cwd unless the user picked this folder for the session.
     if params.get('cwd_explicit') is True or terminal_uses_host_cwd(terminal):
@@ -1116,7 +1121,9 @@ def policy_for_source(runner, source):
 
 def workspace_ready(policy) -> bool:
     """Readiness, not structure: a removed workspace keeps the chat readable and movable, but no
-    turn runs in a missing directory."""
+    turn runs in a missing directory. A remote backend's cwd is not on this host, so it is not probed."""
+    if not terminal_uses_host_cwd(json.loads(policy.terminal_json)):
+        return True
     return Path(policy.cwd).is_dir()
 
 
