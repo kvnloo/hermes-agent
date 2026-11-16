@@ -153,6 +153,36 @@ def test_cron_grandchild_cannot_replace_its_gateway_ancestor(home, owner, monkey
 
 
 @pytest.mark.platforms("linux")
+@pytest.mark.spawns_gateway_lookalike
+def test_live_grandchild_refuses_its_verified_gateway_ancestor(home):
+    """Exercise the real parent walk in a grandchild without ever sending signals."""
+    import json
+    import subprocess
+    import sys
+    from gateway.status import get_process_start_time
+
+    payload = _owner_payload(home, os.getpid(), get_process_start_time(os.getpid()))
+    probe = """
+import json, sys
+from pathlib import Path
+from hermes_cli import gateway_runtime_replace as replace
+home = Path(sys.argv[1])
+replace._install_root = lambda: home
+print(json.dumps(replace._verified_owner(home, json.loads(sys.argv[2]))))
+"""
+    wrapper = """
+import subprocess, sys
+subprocess.run([sys.executable, '-c', *sys.argv[1:]], check=True, timeout=15)
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", wrapper, probe, str(home), json.dumps(payload)],
+        capture_output=True, text=True, check=True, timeout=20,
+    )
+    assert json.loads(result.stdout) == "owner_unverified"
+    assert not (home / ".gateway-planned-stop.json").exists()
+
+
+@pytest.mark.platforms("linux")
 def test_replacement_refuses_a_recycled_pid(home, owner, monkeypatch):
     import time
     monkeypatch.setattr(replace, "_install_root", lambda: home)
