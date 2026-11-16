@@ -681,6 +681,10 @@ def _remove_file(name: str, file_path: str) -> dict[str, Any]:
 
 # --- Main entry point ---------------------------------------------------------
 
+# Buffer per-op ledger snapshots until an atomic batch commits or settles its rollback.
+_batch_ledger_entries: _ctxvars.ContextVar[list[dict[str, Any]] | None] = _ctxvars.ContextVar(
+    "skill_batch_ledger_entries", default=None)
+
 # Set while replaying an approved staged skill write so skill_manage() does not re-gate it.
 _skill_gate_bypass: _ctxvars.ContextVar[bool] = _ctxvars.ContextVar(
     "skill_gate_bypass", default=False)
@@ -776,9 +780,17 @@ def _record_success(action, name, result, *, file_path, absorbed_into, task_id,
         _evidence = ({"absorbed_into": absorbed_into, "archived": bool(result.get("_archived"))}
                      if action == "delete" else {})
         _evidence.update({k: v for k, v in (("session_id", session_id), ("file_path", file_path)) if v})
-        _ledger.record_mutation(
-            action, name, before=ledger_before if ledger_before is not None else [],
-            after_root=_post["path"] if _post else None, evidence=_evidence)
+        batch_entries = _batch_ledger_entries.get()
+        if batch_entries is None:
+            _ledger.record_mutation(
+                action, name, before=ledger_before if ledger_before is not None else [],
+                after_root=_post["path"] if _post else None, evidence=_evidence)
+        elif _ledger.ledger_enabled():
+            batch_entries.append({
+                "action": action, "skill": name,
+                "before": ledger_before if ledger_before is not None else [],
+                "after": _ledger.snapshot_paths(_post["path"] if _post else None),
+                "actor": _ledger.derive_actor(), "evidence": _evidence})
     with suppress(Exception):
         from agent.prompt_builder import clear_skills_system_prompt_cache
         clear_skills_system_prompt_cache(clear_snapshot=True)

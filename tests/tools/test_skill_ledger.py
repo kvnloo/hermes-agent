@@ -780,3 +780,46 @@ def test_concurrent_appends_never_lose_a_middle_row(ledger_env, monkeypatch):
         assert survivors == seq[len(seq) - len(survivors):], (
             f"writer {k}: rows missing from the middle — a concurrent sweep dropped an append"
         )
+
+def test_approved_batch_ledger_marks_rolled_back_ops_and_keeps_committed_steps(ledger_env, monkeypatch):
+    """#156402: failed approval must not present rolled-back patches as committed."""
+    from tools import skill_ledger, write_approval
+    from tools.skill_manager_tool import apply_skill_pending
+
+    assert _create()["success"] is True
+    monkeypatch.setattr(write_approval, "get_hermes_home", lambda: ledger_env["home"])
+    skill_md = ledger_env["skills"] / "my-skill" / "SKILL.md"
+    original = skill_md.read_text(encoding="utf-8")
+
+    def approve(second_old):
+        payload = {"action": "batch", "operations": [
+            {"action": "patch", "name": "my-skill",
+             "old_string": "Original body.", "new_string": "Intermediate body."},
+            {"action": "patch", "name": "my-skill",
+             "old_string": second_old, "new_string": "Final body."},
+        ]}
+        record = write_approval.stage_write(
+            write_approval.SKILLS, payload, summary="two skill patches",
+            origin="background_review")
+        return json.loads(apply_skill_pending(record["payload"], origin=record["origin"]))
+
+    failed = approve("missing anchor")
+    assert failed["success"] is False
+    assert failed["failed_index"] == 1
+    assert skill_md.read_text(encoding="utf-8") == original
+    patches = [r for r in skill_ledger.list_entries("my-skill") if r["action"] == "patch"]
+    assert len(patches) == 1
+    assert patches[0]["rolled_back"] is True
+    assert patches[0]["before"] and patches[0]["after"]
+    ok, why = skill_ledger.rollback_entry(patches[0]["id"])
+    assert ok is False and "already-rolled-back" in why
+    assert skill_md.read_text(encoding="utf-8") == original
+
+    committed = approve("Intermediate body.")
+    assert committed["success"] is True
+    assert "Final body." in skill_md.read_text(encoding="utf-8")
+    patches = [r for r in skill_ledger.list_entries("my-skill") if r["action"] == "patch"]
+    assert len(patches) == 3
+    assert all("rolled_back" not in r for r in patches[:2])
+    before_last_patch = skill_ledger.read_blob(patches[0]["before"][0]["sha256"])
+    assert before_last_patch is not None and b"Intermediate body." in before_last_patch

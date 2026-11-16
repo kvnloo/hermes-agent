@@ -216,6 +216,18 @@ def _rollback(snapshots, find_skill, results):
 _ADVISORY_KEYS = ("lint_warnings", "lint_hint")
 
 
+def _flush_batch_ledger(records, *, rolled_back: bool, rollback_failed: bool = False) -> None:
+    """Publish captured per-op audit rows only after the batch outcome is known."""
+    from tools import skill_ledger
+    for record in records:
+        evidence = dict(record["evidence"])
+        if rollback_failed:
+            evidence["rollback_failed"] = True
+        skill_ledger.append_entry(
+            record["action"], record["skill"], before=record["before"], after=record["after"],
+            actor=record["actor"], evidence=evidence, rolled_back=rolled_back)
+
+
 def _skill_manage_batch(operations, default_name: str | None = None, task_id: str | None = None,
                         session_id: str | None = None) -> str:
     """Apply operations atomically: every touched skill is snapshotted first and any
@@ -265,6 +277,8 @@ def _skill_manage_batch(operations, default_name: str | None = None, task_id: st
         results = []
         rollback_failed = False
         token = _smt._skill_gate_bypass.set(True)
+        ledger_rows = []
+        ledger_token = _smt._batch_ledger_entries.set(ledger_rows)
         try:
             for i, op in enumerate(operations):
                 raw = _smt._skill_manage_from({**op, "name": names[i], "operations": None},
@@ -275,6 +289,8 @@ def _skill_manage_batch(operations, default_name: str | None = None, task_id: st
                     parsed = {"success": False, "error": "unparseable op result"}
                 if not parsed.get("success"):
                     note, rollback_failed = _rollback(snapshots, _smt._find_skill, results)
+                    _flush_batch_ledger(
+                        ledger_rows, rolled_back=not rollback_failed, rollback_failed=rollback_failed)
                     fail = {  # key order is wire-visible
                         "success": False,
                         "error": (f"operations[{i}] ({op['action']} on '{names[i]}') failed: "
@@ -292,7 +308,9 @@ def _skill_manage_batch(operations, default_name: str | None = None, task_id: st
                 # compact success row otherwise hides them and the model never sees a finding.
                 entry.update({k: parsed[k] for k in _ADVISORY_KEYS if parsed.get(k) is not None})
                 results.append(entry)
+            _flush_batch_ledger(ledger_rows, rolled_back=False)
         finally:
+            _smt._batch_ledger_entries.reset(ledger_token)
             _smt._skill_gate_bypass.reset(token)
             if rollback_failed:
                 # Keep the snapshots so the operator can still recover by hand.

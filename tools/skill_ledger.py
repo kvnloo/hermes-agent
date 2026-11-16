@@ -298,7 +298,7 @@ def _delta(before: list[dict[str, str]], after: list[dict[str, str]]) -> tuple[l
 def append_entry(
     action: str, skill: str, before: Optional[list[dict[str, str]]] = None,
     after: Optional[list[dict[str, str]]] = None, actor: Optional[str] = None,
-    evidence: Optional[dict[str, Any]] = None) -> Optional[str]:
+    evidence: Optional[dict[str, Any]] = None, rolled_back: bool = False) -> Optional[str]:
     """Append one entry -> id, or None when disabled / write failed (never raises)."""
     if not ledger_enabled():
         return None
@@ -311,6 +311,8 @@ def append_entry(
             "actor": actor if actor in _VALID_ACTORS else derive_actor(),
             "action": action, "skill": skill, "evidence": evidence or {},
             "before": before or [], "after": after or []}
+        if rolled_back:
+            entry["rolled_back"] = True
         path = ledger_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         with _ledger_lock():
@@ -576,6 +578,8 @@ def rollback_entry(entry_id: str) -> tuple[bool, str]:
     entry = get_entry(entry_id)
     if entry is None:
         return False, f"no ledger entry with id '{entry_id}'"
+    if entry.get("rolled_back"):
+        return False, "entry belongs to an already-rolled-back batch"
     if path_err := _validate_entry_paths(entry):
         return False, f"refusing rollback: {path_err}"
     before = list(entry.get("before") or [])
