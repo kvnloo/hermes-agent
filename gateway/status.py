@@ -1164,6 +1164,23 @@ def _emit_runtime_status_transition(
         from agent.monitoring.gateway_health import emit_runtime_status_transition
         emit_runtime_status_transition(previous_payload, payload)
 
+def _runtime_status_has_foreign_owner() -> bool:
+    """CLI/worker status writes must not replace a gateway's active lifetime record.
+
+    A gateway holds the per-home lock for its lifetime; a different process may
+    read the status but must not restamp its PID or serving state.
+    """
+    from gateway.runtime_ownership import process_ownership
+
+    home = _get_process_hermes_home()
+    # A forked child inherits Python's reservation cache but not its PID.
+    if process_ownership.owns(home):
+        lock_record = _read_gateway_lock_record(home / _GATEWAY_LOCK_FILENAME)
+        if _pid_from_record(lock_record) == os.getpid():
+            return False
+    return is_gateway_runtime_lock_active()
+
+
 def write_runtime_status(
     *, reload_existing: bool = False, wait_timeout: Optional[float] = None, **fields: Any,
 ) -> bool:
@@ -1173,6 +1190,8 @@ def write_runtime_status(
     A timed-out update remains queued for the single background writer.
     Keyword ``fields`` are those of ``_prepare_runtime_status_update``.
     """
+    if _runtime_status_has_foreign_owner():
+        return False
     with _runtime_status_state_lock:
         path, payload, previous_payload = _prepare_runtime_status_update(
             reload_existing=reload_existing, **fields)
@@ -1189,6 +1208,8 @@ def publish_runtime_status(**fields: Any) -> int:
 
     Keyword ``fields`` are those of ``_prepare_runtime_status_update``.
     """
+    if _runtime_status_has_foreign_owner():
+        return 0
     with _runtime_status_state_lock:
         path, payload, previous_payload = _prepare_runtime_status_update(
             load_existing=False, **fields)

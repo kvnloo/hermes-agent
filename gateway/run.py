@@ -4432,6 +4432,14 @@ def _drain_restart_safe_cron_deliveries(adapters, loop, runner=None) -> None:
             cron_scheduler.drain_delivery_queue(profile_adapters, loop)
 
 
+def _write_gateway_runtime_heartbeat(runner=None) -> None:
+    """Repair a lost startup stamp from the serving runner, never undo draining."""
+    if runner is not None and getattr(runner, "_running", False) and not getattr(runner, "_draining", False):
+        _write_runtime_status_quiet(gateway_state=runner._serving_state())
+    else:
+        _write_runtime_status_quiet()
+
+
 def _start_gateway_housekeeping(
     stop_event: threading.Event, adapters=None, loop=None, interval: int = 60, cron_provider=None, runner=None,
     cron_thread=None,
@@ -4447,7 +4455,7 @@ def _start_gateway_housekeeping(
         # ``hermes gateway status`` / ``/api/status`` warn when it ages past 2x ``interval`` with the
         # PID alive — the thread (or a chore blocked on the loop) wedged (#113372). Runs first so a
         # wedged chore stops the NEXT stamp instead of a slow one delaying this tick's.
-        (1, "Runtime heartbeat", _write_runtime_status_quiet)]
+        (1, "Runtime heartbeat", lambda: _write_gateway_runtime_heartbeat(runner))]
     if adapters is not None or runner is not None:
         # Restart-safe cron workers run outside the gateway cgroup and queue their final send for
         # whichever gateway is live; drained here (not the scheduler tick) so external providers get it too.
