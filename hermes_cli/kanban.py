@@ -607,7 +607,7 @@ def _dirty_worktree_refusal(conn, task_id: str) -> Optional[str]:
     """
     try:
         task = kb.get_task(conn, task_id)
-        if task is None:
+        if task is None or (task.status != "running" and task.claim_lock is None):
             return None
         if task.workspace_kind != "worktree" or not task.workspace_path:
             return None

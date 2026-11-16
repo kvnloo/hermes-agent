@@ -184,3 +184,26 @@ def test_reassign_reclaim_dirty_worktree_force_overrides(kanban_home, tmp_path):
         task = _require_task(conn, tid)
         assert task.status != "running"
         assert task.assignee == "other"
+
+@needs_git
+def test_reassign_reclaim_unclaimed_dirty_worktree_needs_no_force(
+    kanban_home, tmp_path
+):
+    """An idempotent --reclaim must not block reassign after the claim is gone."""
+    tree = _make_repo(tmp_path / "tree-already-reclaimed")
+    (tree / "wip.txt").write_text("uncommitted fix\n", encoding="utf-8")
+    with _kb_connect() as conn:
+        tid = _running_task_with_worktree(conn, tree)
+        assert kb.reclaim_task(conn, tid)
+        task = _require_task(conn, tid)
+        assert task.status != "running"
+        assert task.claim_lock is None
+
+    rc = kb_cli._cmd_reassign(_reassign_ns(tid, reclaim=True))
+    assert rc == 0
+    with _kb_connect() as conn:
+        task = _require_task(conn, tid)
+        assert task.assignee == "other"
+        assert task.status != "running"
+        assert task.claim_lock is None
+    assert (tree / "wip.txt").read_text(encoding="utf-8") == "uncommitted fix\n"
