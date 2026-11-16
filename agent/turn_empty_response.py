@@ -18,12 +18,13 @@ from typing import Any, Dict, List, Optional
 from agent import empty_response_guard as _empty_guard
 from agent.message_metadata import append_message
 from agent.message_sanitization import _sanitize_surrogates
+from agent.think_scrubber import THINK_OPEN_TAGS
 from agent.turn_context_compaction import _refund_api_call
 from agent.turn_recovery import interruptible_backoff_sleep
 
 logger = logging.getLogger("agent.conversation_loop")
 
-_INLINE_THINK_RE = re.compile(r'<think>|<thinking>|<reasoning>', re.IGNORECASE)
+_INLINE_THINK_RE = re.compile("|".join(map(re.escape, THINK_OPEN_TAGS)), re.IGNORECASE)
 
 # The persisted user-row display kinds the gateway types as machinery: the self-injected
 # internal_notification turn plus the producer-notice cards (background-process completions,
