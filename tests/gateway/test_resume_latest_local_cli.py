@@ -180,6 +180,46 @@ async def test_compress_mutation_copies_parent_or_uses_the_policy_surface(tmp_pa
         store.close_all_db_handles()
 
 
+
+@pytest.mark.asyncio
+async def test_manual_recompression_reclaims_title_stranded_by_older_rotation(tmp_path, monkeypatch):
+    """A pre-fix manual rotation left the user's name on the ended creation row.
+    The new live tip was auto-titled; another rotation must restore the user name."""
+    from hermes_state_mutation_compress import compress_in_transaction
+    from hermes_state_mutation_prepared import local_snapshot
+
+    store, authority, owner = _owner(tmp_path / 'home', monkeypatch)
+    try:
+        created = await _call(owner, 'session.create', request_id='legacy-title',
+                              source='cli', cwd=str(tmp_path), toolsets=[], model='m')
+        sid = created['session_id']
+        db = authority.db
+        db.set_session_title(sid, 'Weekly digest')
+
+        def compress():
+            def write(conn):
+                prepared = {'snapshot': local_snapshot(db, conn, sid), 'in_place': False,
+                            'messages': [{'role': 'user', 'content': 'hi'}]}
+                return compress_in_transaction(db, conn, sid, {}, prepared)
+            return db._execute_write(write)[1]['target_session_id']
+
+        first_tip = compress()
+        # Persisted state produced by the old /compress rotation: original user title
+        # stayed on the ended root; the new tip received an automatic first-turn title.
+        db.set_session_title(first_tip, '')
+        db.set_session_title(sid, 'Weekly digest')
+        db.set_auto_title(first_tip, 'Say ok.', source='derived')
+        assert db.get_session_title(first_tip) == 'Say ok.'
+
+        second_tip = compress()
+        assert db.get_session_title(second_tip) == 'Weekly digest'
+        assert db.get_session_title(sid) is None
+        assert db.get_session_title(first_tip) is None
+    finally:
+        await owner.close()
+        store.close_all_db_handles()
+
+
 def _listed(db, source, capsys):
     from argparse import Namespace
     from hermes_cli.sessions_cmd import _cmd_list

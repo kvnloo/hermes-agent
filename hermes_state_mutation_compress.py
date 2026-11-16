@@ -22,6 +22,10 @@ def compress_in_transaction(db, conn, session_id, payload, prepared):
         # The conversation's name moves to the live segment, as an automatic rotation's does.
         from hermes_state_local import _title_follows_head
         _title_follows_head(conn, target, child)
+        # Pre-fix manual rotations left the user title on the ended creation row.
+        # Reclaim that higher-priority name from the logical owner on the next rotation.
+        if session_id != target:
+            _title_follows_head(conn, session_id, child)
         affected = set()  # Rotation publication already advances the logical revision.
     conn.execute('UPDATE sessions SET runtime_generation=runtime_generation+1 WHERE id=?', (session_id,))
     generation = conn.execute('SELECT runtime_generation FROM sessions WHERE id=?', (session_id,)).fetchone()[0]
