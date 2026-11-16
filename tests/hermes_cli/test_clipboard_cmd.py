@@ -226,3 +226,30 @@ def test_a_symlink_to_a_directory_is_write_failed(tmp_path, monkeypatch, capsys)
     assert (code, json.loads(out)["reason"]) == (4, "write_failed")
     assert dest.is_symlink()
     assert directory.is_dir() and not any(directory.iterdir())
+
+
+@pytest.mark.platforms("posix")
+def test_replacing_a_symlink_uses_staged_permissions_not_target(
+        tmp_path, monkeypatch, capsys):
+    """Replacing a symlink must not copy permissions from its target file."""
+    def private_save(staged):
+        staged.write_bytes(_PNG)
+        staged.chmod(0o600)
+        return True
+
+    monkeypatch.setattr(clipboard, "save_clipboard_image", private_save)
+    target = tmp_path / "shared.png"
+    target.write_bytes(b"old")
+    target.chmod(0o644)
+    dest = tmp_path / "out" / "paste.png"
+    dest.parent.mkdir()
+    dest.symlink_to(target)
+
+    code, out, _ = _run(capsys, "--out", str(dest), "--json")
+
+    assert (code, json.loads(out)["path"]) == (0, str(dest))
+    assert not dest.is_symlink()
+    assert dest.read_bytes() == _PNG
+    assert dest.stat().st_mode & 0o777 == 0o600
+    assert target.read_bytes() == b"old"
+    assert target.stat().st_mode & 0o777 == 0o644
