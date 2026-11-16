@@ -130,3 +130,30 @@ def test_only_kanban_yields_to_human_and_preflight_head_matches_runtime():
     assert preferred_session_input([kanban, loop, human]) is loop
     assert preferred_session_input([kanban, human]) is human
     assert preferred_session_input([kanban]) is kanban
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('legacy_first', [True, False])
+async def test_legacy_wake_retains_text_across_structured_upgrade(tmp_path, monkeypatch, legacy_first):
+    """A fresh live-state digest must never retire an old wake with no task reference."""
+    from gateway.session_kanban_digest import descriptor, refresh_text
+
+    runner, authority, _actor, ref, live, adapter = await owner(tmp_path, monkeypatch)
+    notice = {'db': str(tmp_path / 'kanban.db'), 'board': 'default', 'task_id': 't_new',
+              'platform': 'local', 'chat_id': 'digest', 'thread_id': ''}
+    arrivals = [('old notification text', {}), ('new notification', {'kanban_notices': [notice]})]
+    if not legacy_first:
+        arrivals.reverse()
+    try:
+        for msg, metadata in arrivals:
+            await admit_route_wake(runner, adapter, live.source, msg, 'kanban-wake', metadata)
+        rows = queued(authority, ref)
+        assert len(rows) == 2
+        snapshots = [(row['payload']['text'], descriptor(row['payload'])) for row in rows]
+        legacy = next(pair for pair in snapshots if not pair[1].get('kanban_notices'))
+        updated = next(pair for pair in snapshots if pair[1].get('kanban_notices'))
+        assert legacy[0] == 'old notification text'
+        assert refresh_text(legacy[1], legacy[0]) == 'old notification text'
+        assert updated[0] == 'new notification'
+        assert updated[1]['kanban_notices'] == [notice]
+    finally:
+        authority.db.close()

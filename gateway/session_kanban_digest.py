@@ -32,10 +32,13 @@ def notice_metadata(metadata):
 def fold_event(authority, sid, event, identity):
     from hermes_state_runtime import list_session_admissions
     category = event.metadata.get('notification_category', 'result')
+    # Reference-free pre-upgrade wakes have no state to refresh: keep their original text.
+    has_live_reference = bool(event.metadata.get('kanban_notices'))
     waiting = [r for r in list_session_admissions(authority.db, session_id=sid)
                if r['status'] == 'queued' and is_kanban(r)
                and r['principal_id'] == 'automation:' + event.metadata['gateway_session_key']
-               and descriptor(r['payload']).get('notification_category', 'result') == category]
+               and descriptor(r['payload']).get('notification_category', 'result') == category
+               and bool(descriptor(r['payload']).get('kanban_notices')) == has_live_reference]
     if not waiting:
         return []
     identities = {identity}
