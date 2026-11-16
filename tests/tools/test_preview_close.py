@@ -35,6 +35,21 @@ def test_normalizes_a_bare_domain_like_open_does():
     assert calls == [("preview.close", {"url": "https://www.cnn.com"})]
 
 
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("www.cnn.com?view=1", "https://www.cnn.com?view=1"),
+        ("localhost:3000?view=1", "http://localhost:3000?view=1"),
+    ],
+)
+def test_bare_host_query_targets_normalize_before_close(raw, expected):
+    calls = []
+    desktop_ui.set_emitter(lambda sid, event, payload: calls.append((event, payload)))
+
+    assert json.loads(_close(url=raw)) == {"success": True, "closed": expected}
+    assert calls == [("preview.close", {"url": expected})]
+
+
 def test_reports_desktop_only_without_emitter():
     assert "desktop app" in json.loads(_close())["error"]
 
