@@ -69,6 +69,15 @@ def test_prepare_spoken_text_strips_quoted_media_paths_but_keeps_prose():
     assert 'MEDIA:"strategy"' in prepare_spoken_text('discussing MEDIA:"strategy" for the campaign')
 
 
+def test_prepare_spoken_text_strips_unquoted_spaced_media_paths():
+    # Delivery accepts interior spaces without quotes (#96657); TTS must too.
+    for text in (
+        "Done MEDIA:/home/hermes/My Slides.pptx thanks",
+        "Done MEDIA:D:/My Documents/Team Slides.pptx thanks",
+    ):
+        assert prepare_spoken_text(text) == "Done thanks"
+
+
 def test_prepare_spoken_text_keeps_sentence_break_after_inline_media_link():
     spoken = prepare_spoken_text("See MEDIA:/tmp/report-2026-q3.xlsx. Then reply.")
     assert "report" not in spoken
