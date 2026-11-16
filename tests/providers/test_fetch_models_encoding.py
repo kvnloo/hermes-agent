@@ -23,6 +23,7 @@ class _EncodedModelHandler(BaseHTTPRequestHandler):
     """Serves /models with a body compressed using the given encoding."""
 
     encoding = "gzip"
+    advertise_encoding = True
     models = [{"id": "k3.1-pro"}, {"id": "k3-256k"}]
 
     def do_GET(self):
@@ -39,7 +40,8 @@ class _EncodedModelHandler(BaseHTTPRequestHandler):
             body = raw
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Encoding", self.encoding)
+        if self.advertise_encoding:
+            self.send_header("Content-Encoding", self.encoding)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -48,11 +50,12 @@ class _EncodedModelHandler(BaseHTTPRequestHandler):
         pass  # suppress noise
 
 
-def _start_server(encoding, models=None):
+def _start_server(encoding, models=None, *, advertise_encoding=True):
     handler = type(
         "_Handler",
         (_EncodedModelHandler,),
-        {"encoding": encoding, "models": models or _EncodedModelHandler.models},
+        {"encoding": encoding, "models": models or _EncodedModelHandler.models,
+         "advertise_encoding": advertise_encoding},
     )
     server = HTTPServer(("127.0.0.1", 0), handler)
     thread = Thread(target=server.serve_forever, daemon=True)
@@ -60,8 +63,8 @@ def _start_server(encoding, models=None):
     return server, server.server_address[1]
 
 
-def _fetch(encoding, models=None):
-    server, port = _start_server(encoding, models)
+def _fetch(encoding, models=None, *, advertise_encoding=True):
+    server, port = _start_server(encoding, models, advertise_encoding=advertise_encoding)
     try:
         profile = ProviderProfile(name="test", base_url=f"http://127.0.0.1:{port}")
         return profile.fetch_models(base_url=f"http://127.0.0.1:{port}")
@@ -75,6 +78,10 @@ class TestFetchModelsCompressedResponse:
     def test_gzip_body_is_decompressed(self, encoding):
         """A gzipped catalog must be parsed, not silently dropped to None."""
         assert _fetch(encoding) == ["k3.1-pro", "k3-256k"]
+
+    def test_gzip_body_without_content_encoding_is_decoded(self):
+        """A proxy may strip the encoding header while forwarding gzip bytes."""
+        assert _fetch("gzip", advertise_encoding=False) == ["k3.1-pro", "k3-256k"]
 
     def test_deflate_body_is_decompressed(self):
         assert _fetch("deflate") == ["k3.1-pro", "k3-256k"]
