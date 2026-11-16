@@ -246,6 +246,27 @@ describe('ephemeral preview panes are scrubbed from the persisted tree', () => {
     expect(model.allPaneIds(storedTree()!)).not.toContain('preview-tile:url:browser')
   })
 
+  it('returning to a mode does not revive previews closed in another mode', async () => {
+    const { model, registerPreview, tree } = await setup()
+    const unregisterClosed = registerPreview('preview-tile:file:closed')
+
+    registerPreview('preview-tile:file:still-open')
+
+    const { setInterfaceMode } = await import('@/store/interface-mode')
+
+    expect(model.allPaneIds(tree.$layoutTree.get()!)).toContain('preview-tile:file:closed')
+
+    setInterfaceMode('simple')
+    unregisterClosed()
+    setInterfaceMode('advanced')
+
+    const restored = model.allPaneIds(tree.$layoutTree.get()!)
+
+    expect(restored).not.toContain('preview-tile:file:closed')
+    expect(restored).toContain('preview-tile:file:still-open')
+    expect(restored).toContain('workspace')
+  })
+
   it('switching interface mode stores the scrubbed tree, not the live one', async () => {
     const { model, registerPreview, tree } = await setup()
 

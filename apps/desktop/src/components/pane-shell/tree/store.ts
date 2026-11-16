@@ -47,7 +47,7 @@ import {
 import { isTreePaneParked } from './parked-panes'
 import { FLOATING_PLACEMENT } from './renderer/floating-rect'
 import { tabStripVisibleForZone } from './renderer/strip-visibility'
-import { encodeStoredTree, persist, scrubEphemeralPanes } from './store-persist'
+import { encodeStoredTree, isEphemeralPane, persist, scrubEphemeralPanes } from './store-persist'
 
 // v2: v1 trees were saved against placeholder panes with index-order zone
 // assignment (chat could land in a corner cell). Retire them wholesale.
@@ -76,6 +76,30 @@ export const $layoutTree = modeLayout.atom<LayoutNode | null>(
   },
   true
 )
+
+// The per-mode memory cache holds the LIVE tree, unlike the stored copy. A
+// preview closed in another mode can remain in that mode's cached layout.
+// Drop only unregistered previews; keep still-open previews in their places.
+modeLayout.onRestore(() => {
+  const tree = $layoutTree.get()
+
+  if (!tree) {
+    return
+  }
+
+  const registered = new Set(registry.getArea('panes').map(pane => pane.id))
+  let next: LayoutNode | null = tree
+
+  for (const id of allPaneIds(tree)) {
+    if (isEphemeralPane(id) && !registered.has(id)) {
+      next = next ? removePane(next, id) : null
+    }
+  }
+
+  if (next !== tree) {
+    $layoutTree.set(next ?? defaultTrees[modeLayout.mode])
+  }
+})
 
 /**
  * Which layout preset the current tree came from; `'custom'` after the user
