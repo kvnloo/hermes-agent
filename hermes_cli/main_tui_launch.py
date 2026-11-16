@@ -517,7 +517,7 @@ def _wait_for_enter(prompt: str, timeout: float) -> None:
     print(file=sys.stderr)
 
 
-def _run_tui(argv: list[str], cwd: Path, env: dict, notices: list[str]) -> int:
+def _run_tui(argv: list[str], cwd: Path, env: dict, notices: list[str], *, probe: bool = False) -> int:
     """Run the TUI. Its first write clears the screen and the scrollback, so when someone is at
     the terminal a launch notice waits for Enter (at most a minute) first; every notice is printed
     again once the TUI exits. A launch that carries its query (``-q``) does not wait."""
@@ -525,7 +525,8 @@ def _run_tui(argv: list[str], cwd: Path, env: dict, notices: list[str]) -> int:
         if notices and not env.get("HERMES_TUI_QUERY") and _someone_at_the_terminal():
             _wait_for_enter(f"  Press Enter to start it, or wait {_NOTICE_WAIT_S} s (Ctrl+C to cancel). ",
                             _NOTICE_WAIT_S)
-        code = subprocess.call(argv, cwd=str(cwd), env=env)  # health: allow HX006 -- the interactive TUI runs until the user quits
+        from hermes_cli.main_tsp_launch import run_tui_frontend
+        code = run_tui_frontend(argv, cwd, env, probe=probe)
     except (KeyboardInterrupt, EOFError):
         code = 130
     for notice in notices:
@@ -640,7 +641,8 @@ def _launch_tui(
     argv, cwd = _make_tui_argv(tui_dir, tui_dev, notices)
     code: Optional[int] = None
     try:
-        code = _run_tui(argv, cwd, env, notices)
+        from hermes_cli.main_tsp_launch import tern_frontend_wanted
+        code = _run_tui(argv, cwd, env, notices, probe=not tui_dev and tern_frontend_wanted(env))
 
         if code in {0, 130}:
             _print_tui_exit_summary(resume_session_id, active_session_file)

@@ -1003,6 +1003,10 @@ export function useComposerState({ gw, submitRef, sys }: UseComposerStateOptions
 
   const refs = useMemo(
     () => ({
+      readDraft: () => ({
+        revision: composerRevision.current,
+        text: [...inputBufRef.current, inputRef.current].join('\n')
+      }),
       historyDraftRef,
       historyRef,
       queueEditRef,
