@@ -212,10 +212,12 @@ async def test_owner_backfill_answers_without_reserving_when_nothing_is_pending(
 
 
 @pytest.mark.asyncio
-async def test_owner_backfill_defers_pending_rows_to_the_live_owner(owner_held, monkeypatch):
-    """Pending rows + a discoverable owner: hand the stamp over instead of 409-ing."""
+async def test_owner_backfill_does_not_ack_pending_rows_as_stamped(owner_held, monkeypatch):
+    """A live owner may have failed startup backfill; discovery is not delegation."""
     from types import SimpleNamespace
 
+    # Simulate a gateway whose best-effort startup backfill failed but whose
+    # reservation and control endpoint remain live. No RPC stamps this row.
     _seed_legacy_null(owner_held / "state.db")
     monkeypatch.setattr(
         "hermes_cli.gateway_runtime.discover_gateway_endpoint",
@@ -224,10 +226,10 @@ async def test_owner_backfill_defers_pending_rows_to_the_live_owner(owner_held, 
 
     async with _split_client(_app()) as client:
         resp = await client.post("/api/sessions/owner-backfill", json={})
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["deferred_to_owner"] is True
-    assert resp.json()["stamped"] == 0
-    # The owner is the writer; this process did not touch the row.
+    assert resp.status_code == 409, resp.text
+    assert "legacy unowned session rows" in resp.json()["detail"]
+    assert "Restart that gateway" in resp.json()["detail"]
+    # Desktop must not mark the one-shot migration successful with this row NULL.
     assert _profiles(owner_held / "state.db")["legacy-null"] is None
 
 

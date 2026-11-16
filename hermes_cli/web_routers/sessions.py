@@ -957,8 +957,16 @@ async def backfill_session_owner_profiles(body: SessionOwnerBackfill, request: R
             if not pending:
                 stamped = 0
             elif await asyncio.to_thread(_gateway_owns_profile, body.profile):
-                deferred_to_owner = True
-                stamped = 0
+                # Discovery proves a writer exists, not that it will perform a stamp.
+                # Owner startup may have failed its best-effort backfill and this
+                # endpoint has no gateway RPC. An OK here makes Desktop permanently
+                # mark the migration attempted while the legacy rows stay unowned.
+                raise HTTPException(
+                    status_code=409,
+                    detail=("Exclusive maintenance refused: a running gateway still has "
+                            "legacy unowned session rows. Restart that gateway to retry "
+                            "its owner startup backfill."),
+                )
             else:
                 stamped = await asyncio.to_thread(
                     _with_db, body.profile, lambda db: db.backfill_null_session_profiles(stamp),
@@ -968,9 +976,6 @@ async def backfill_session_owner_profiles(body: SessionOwnerBackfill, request: R
         _log.info(
             "owner-backfill: stamped %d legacy NULL-profile session row(s) with profile %r",
             stamped, stamp)
-    elif deferred_to_owner:
-        _log.info("owner-backfill: %r is owned by a running gateway; it stamps its own rows",
-                  stamp)
     return {"ok": True, "stamped": stamped, "profile": stamp,
             "deferred_to_owner": deferred_to_owner}
 
