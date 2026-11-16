@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -572,6 +573,98 @@ def test_session_refuses_bend_binary_swap_after_bootstrap(monkeypatch):
         session.verify_with_session_kernel("/project")
     assert caught.value.code == "bend_integrity"
     session._reset_session_kernel_for_tests()
+
+
+@pytest.fixture
+def fake_bend_cli(tmp_path, monkeypatch):
+    """Local protocol double. Adapter I/O, hashing and kernel execution stay real."""
+    root = tmp_path / "bend-dist"
+    binary = root / "bin" / "bend"
+    source = root / "bend2" / "bendtt.lean"
+    binary.parent.mkdir(parents=True)
+    source.parent.mkdir(parents=True)
+    source.write_text("-- test kernel source\n")
+    kernel_script = (
+        '#!/bin/sh\nif [ "$1" = valid ]; then\n'
+        'echo ALL PROOFS CHECK\nelse\necho SOME PROOFS FAIL >&2\nexit 1\nfi\n'
+    )
+    binary.write_text(
+        f"#!{sys.executable}\n"
+        "import hashlib, os, pathlib, subprocess, sys\n"
+        "if sys.argv[1:] == ['version']:\n"
+        "    print('bend 2.0.34')\n"
+        "    sys.exit(0)\n"
+        "assert sys.argv[2:] == ['--verdict']\n"
+        "assert os.environ['BEND_NO_TELEMETRY'] == '1'\n"
+        "assert pathlib.Path(os.environ['BEND_LIB']).is_dir()\n"
+        "if 'BENDTT' in os.environ:\n"
+        "    kernel = pathlib.Path(os.environ['BENDTT'])\n"
+        "else:\n"
+        "    source = pathlib.Path(__file__).parents[1] / 'bend2' / 'bendtt.lean'\n"
+        "    key = hashlib.sha256(source.read_bytes()).hexdigest()[:16]\n"
+        "    kernel = pathlib.Path.home() / '.bend' / 'bendtt' / key / 'bendtt'\n"
+        "    if not kernel.exists():\n"
+        "        kernel.parent.mkdir(parents=True, exist_ok=True)\n"
+        f"        kernel.write_text({kernel_script!r})\n"
+        "        kernel.chmod(0o755)\n"
+        "proof = pathlib.Path(sys.argv[1]).read_text()\n"
+        "case = 'gap' if 'def B(' in proof else 'valid'\n"
+        "sys.exit(subprocess.run([str(kernel), case]).returncode)\n"
+    )
+    binary.chmod(0o755)
+    monkeypatch.setenv("PATH", str(binary.parent) + os.pathsep + os.environ["PATH"])
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    return binary
+
+
+@pytest.mark.platforms("posix")
+@pytest.mark.parametrize("repeats,attacks", [(1, 1), (2, 2)])
+def test_kernel_strategy_rejects_tampering_with_real_subprocesses(
+    fake_bend_cli, tmp_path, monkeypatch, repeats, attacks
+):
+    from evals import bend_adapter_kernel_strategies as strategies
+
+    output = tmp_path / "strategies.json"
+    monkeypatch.setattr(sys, "argv", [
+        "bend-kernel-strategies", "--repeats", str(repeats),
+        "--attacks", str(attacks), "--output", str(output),
+    ])
+    assert strategies.main() == 0
+    payload = json.loads(output.read_text())
+    shared = payload["summary"]["shared_cache"]
+    pinned = payload["summary"]["session_pinned"]
+    assert shared["baseline_gap"] == "fail"
+    assert shared["forged_passes"] == attacks
+    assert pinned["runs"] == repeats * 2
+    assert pinned["mismatch_count"] == 0
+    assert pinned["shared_cache_forged_passes"] == 0
+    assert pinned["private_mutation_rejections"] == attacks
+    assert {row["case"]: row["verdict"] for row in payload["pinned_records"]} == {
+        "valid": "pass", "gap": "fail",
+    }
+
+
+@pytest.mark.platforms("posix")
+def test_registered_tool_verifies_with_session_kernel_end_to_end(fake_bend_cli, tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+    _proof(project)
+    registered = {}
+    register(SimpleNamespace(register_tool=lambda **kwargs: registered.update(kwargs)))
+    session._reset_session_kernel_for_tests()
+    try:
+        assert registered["check_fn"]() is True
+        first = json.loads(registered["handler"]({"project_dir": str(project)}))
+        assert first["success"] is True
+        assert first["kernel_strategy"] == "session-bootstrap"
+        _proof(project, text="def B(): # rejected by the fake kernel\n")
+        second = json.loads(registered["handler"]({"project_dir": str(project)}))
+        assert second["success"] is False
+        assert second["verdict"] == "fail"
+        assert second["kernel_strategy"] == "session-pinned"
+        assert second["session_kernel_sha256"] == first["session_kernel_sha256"]
+    finally:
+        session._reset_session_kernel_for_tests()
 
 
 def test_handler_returns_stable_error_code(monkeypatch):
