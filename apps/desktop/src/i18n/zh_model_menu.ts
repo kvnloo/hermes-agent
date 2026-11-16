@@ -10,6 +10,13 @@ export const zhModelMenu = {
   removeFavorite: '从收藏中移除',
   favoriteShortcut: '⇧ 单击',
   fast: '快速',
+  turboDescriptions: {
+    turbo: '自动选择模型',
+    'free-quality': '侧重回答质量的免费路由',
+    'free-reasoning': '用于推理的免费路由',
+    'free-verify': '用于验证的免费路由',
+    'free-longctx': '用于长上下文的免费路由'
+  },
   free: '免费',
   cacheRead: '缓存读取',
   priceTitle: (input: string, output: string, cache: string) =>
