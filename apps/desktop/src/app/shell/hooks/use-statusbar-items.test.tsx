@@ -1,3 +1,4 @@
+import { LOCAL_CONNECTION_ID } from '@hermes/shared'
 import { act, renderHook } from '@testing-library/react'
 import type { WritableAtom } from 'nanostores'
 import { isValidElement, type ReactNode } from 'react'
@@ -228,6 +229,27 @@ describe('statusbar workspace menu — change working directory', () => {
     expect(selectDesktopPaths).toHaveBeenCalledWith(
       expect.objectContaining({ defaultPath: '/opt/data', directories: true })
     )
+  })
+
+  it('keeps change-workspace available for a connected local tile with a runtime', async () => {
+    const changeSessionCwd = vi.fn(async () => {})
+    selectDesktopPaths.mockResolvedValueOnce(['/opt/data/next'])
+    $connection.set({ mode: 'local' } as never)
+    $selectedStoredSessionId.set('primary')
+    $sessions.set([{ connection_id: LOCAL_CONNECTION_ID, cwd: '/opt/data', id: 'tile' }] as never)
+    $sessionTiles.set([
+      {
+        ownerRoute: { connectionId: LOCAL_CONNECTION_ID, mode: 'local', profile: 'default' },
+        runtimeId: 'tile-rt',
+        storedSessionId: 'tile'
+      }
+    ] as never)
+    focusPane('tile')
+
+    const item = workspaceMenu(changeSessionCwd).find(menuItem => menuItem.id === 'change-workspace-path')
+    expect(item).toBeDefined()
+    item?.onSelect?.()
+    await vi.waitFor(() => expect(changeSessionCwd).toHaveBeenCalledWith('/opt/data/next', 'tile-rt'))
   })
 
   it("targets a focused tile's own runtime, and is absent for a cold tile or another gateway's tile", async () => {
