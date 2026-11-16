@@ -51,4 +51,30 @@ describe('SSH backend retirement', () => {
     expect(forgetEntry).not.toHaveBeenCalled()
     expect(teardownOwner).not.toHaveBeenCalled()
   })
+
+  it('preserves a Windows SSH owner when a POSIX PID check would falsely say dead', async () => {
+    const owner = { pid: 4321, remotePlatform: 'Windows' }
+    const entry = {}
+    // A Windows SSH shell cannot execute remote-lifecycle's POSIX kill -0 check.
+    const isAlive = vi.fn().mockResolvedValue(false)
+    const forgetEntry = vi.fn()
+    const teardownOwner = vi.fn()
+    const retirement = createSshBackendRetirement({
+      getOwner: () => owner,
+      isAlive,
+      getEntry: () => entry,
+      forgetEntry,
+      teardownOwner,
+      withDrain: async (_key, cleanup) => cleanup()
+    })
+
+    expect(await retirement.confirmDead('ssh')).toBe(false)
+    await retirement.retireIfDead('ssh')
+    await retirement.retirePool('ssh', entry)
+
+    expect(isAlive).not.toHaveBeenCalled()
+    expect(forgetEntry).not.toHaveBeenCalled()
+    expect(teardownOwner).not.toHaveBeenCalled()
+  })
+
 })

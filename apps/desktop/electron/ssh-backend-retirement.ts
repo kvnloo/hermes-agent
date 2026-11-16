@@ -1,4 +1,4 @@
-interface SshBackendRetirementOptions<TOwner extends { pid?: number }, TEntry> {
+interface SshBackendRetirementOptions<TOwner extends { pid?: number; remotePlatform?: string }, TEntry> {
   getOwner: (scope: string | null | undefined) => TOwner | undefined
   isAlive: (owner: TOwner) => Promise<boolean>
   getEntry: (key: string) => TEntry | undefined
@@ -8,7 +8,7 @@ interface SshBackendRetirementOptions<TOwner extends { pid?: number }, TEntry> {
 }
 
 /** HTTP failure never authorizes terminating an owner whose PID is alive or unverified. */
-export function createSshBackendRetirement<TOwner extends { pid?: number }, TEntry>({
+export function createSshBackendRetirement<TOwner extends { pid?: number; remotePlatform?: string }, TEntry>({
   getOwner, isAlive, getEntry, forgetEntry, teardownOwner, withDrain
 }: SshBackendRetirementOptions<TOwner, TEntry>) {
   async function confirmDead(scope: string | null | undefined): Promise<boolean> {
@@ -16,6 +16,11 @@ export function createSshBackendRetirement<TOwner extends { pid?: number }, TEnt
 
     if (!owner) {
       return true
+    }
+
+    // remotePidAlive uses POSIX kill -0; a Windows SSH shell cannot prove death with it.
+    if (owner.remotePlatform === 'Windows') {
+      return false
     }
 
     return Boolean(owner.pid) && !(await isAlive(owner)) && getOwner(scope) === owner
