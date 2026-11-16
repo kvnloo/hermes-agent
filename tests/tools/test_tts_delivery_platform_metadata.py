@@ -63,6 +63,44 @@ def test_deferred_plugin_limit_drives_the_real_packer(registry, tmp_path):
     assert loaded == ["pigeon"]
 
 
+def test_registered_limit_drives_tts_output(registry, tmp_path, monkeypatch):
+    import json
+
+    from tools import tts_tool
+
+    scope = registry.current_scope_key()
+    registry.register_deferred(
+        "pigeon", lambda: registry.register(
+            _entry("pigeon", audio_upload_max_bytes=30 * MIB), scope=scope), scope=scope)
+
+    def synthesize(text, output_path, config, **kwargs):
+        with open(output_path, "wb") as output:
+            output.truncate(6 * MIB)
+        return output_path
+
+    def concatenate(paths, output_path, **kwargs):
+        from pathlib import Path
+
+        with open(output_path, "wb") as output:
+            output.truncate(sum(Path(path).stat().st_size for path in paths))
+        return output_path
+
+    monkeypatch.setattr(tts_tool, "_load_tts_config", lambda: {"provider": "openai"})
+    monkeypatch.setattr(tts_tool, "_session_platform", lambda: ("pigeon", False))
+    monkeypatch.setattr(tts_tool, "_generate_openai_tts", synthesize)
+    monkeypatch.setattr("tools.tts_tool_delivery._concat_audio_files", concatenate)
+
+    result = json.loads(tts_tool.text_to_speech_tool(
+        text="A" * 10000, output_path=str(tmp_path / "speech.mp3")))
+
+    assert result["success"] is True
+    assert result["delivery_profile"]["max_file_bytes"] == 30 * MIB
+    assert result["chunk_count"] == 3
+    assert result["delivery_file_count"] == 1
+    assert len(result["file_paths"]) == 1
+    assert result["combined_chunks"] is True
+
+
 def test_explicit_config_wins_over_registered_limit(registry):
     registry.register(_entry("pigeon", audio_upload_max_bytes=30 * MIB), scope=registry.current_scope_key())
     config = {"delivery_profiles": {"pigeon": {"max_file_bytes": 2 * MIB, "safety_ratio": 1.5}}}
