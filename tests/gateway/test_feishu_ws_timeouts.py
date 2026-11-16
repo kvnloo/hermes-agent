@@ -439,3 +439,19 @@ def test_invalid_ws_open_timeout_fails_before_it_disables_the_guard(value):
 def test_ws_open_timeout_preserves_supported_settings(extra, expected):
     settings = feishu_adapter.FeishuAdapter._load_settings(extra)
     assert settings.ws_open_timeout == expected
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "garbage",
+        -1,
+        float("nan"),
+        float("inf"),
+        pytest.param(10**1000, id="conversion-overflow"),
+    ],
+)
+def test_invalid_ws_read_timeout_fails_before_auto_fallback(value):
+    """Invalid explicit read timeout must not silently fall back to auto."""
+    with pytest.raises(ValueError, match=r"feishu\.ws_read_timeout"):
+        feishu_adapter.FeishuAdapter._load_settings({"ws_read_timeout": value})

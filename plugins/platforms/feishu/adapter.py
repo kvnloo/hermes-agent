@@ -464,19 +464,19 @@ def _coerce_optional_float(value: Any, default: Optional[float] = None) -> Optio
 
 
 def _coerce_read_timeout(value: Any) -> Optional[float]:
-    """Tri-state read-timeout parse: null/missing = auto, explicit 0 = off, positive = budget.
+    """Tri-state read timeout: null/missing = auto, 0 = off, positive = budget.
 
-    ``effective_read_timeout`` derives the auto budget from the live ping interval at
-    receive-loop entry; an explicit zero is the operator's way to opt out entirely.
+    Reject malformed explicit values rather than silently falling back to auto,
+    which may leave recv unbounded when no SDK ping interval is available.
     """
     if value is None:
         return None  # auto: resolved later from the effective heartbeat
     try:
         parsed = float(value)
-    except (TypeError, ValueError):
-        return None
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("feishu.ws_read_timeout must be a non-negative finite number or null") from exc
     if parsed != parsed or parsed in (float("inf"), float("-inf")) or parsed < 0:
-        return None
+        raise ValueError("feishu.ws_read_timeout must be a non-negative finite number or null")
     return parsed  # 0.0 = off; > 0 = explicit seconds
 
 
