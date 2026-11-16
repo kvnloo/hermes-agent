@@ -6,6 +6,7 @@ The real ``handle_ws`` dispatcher; only ``_dispatch_request`` is a gated async s
 """
 import asyncio
 import json
+import logging
 
 import pytest
 
@@ -76,6 +77,38 @@ async def settle(predicate, timeout=5.0):
             return False
         await asyncio.sleep(0.01)
     return True
+
+
+@pytest.mark.asyncio
+async def test_prompt_submit_receipt_precedes_blocked_dispatch(rig, caplog):
+    """#156459: a parsed submit is traceable even before the dispatcher can handle it."""
+    sock, gates, log = rig
+    gates["slow.control"] = release = asyncio.Event()
+    task = asyncio.create_task(ws_mod.handle_ws(sock))
+    try:
+        with caplog.at_level(logging.DEBUG, logger="tui_gateway.ws"):
+            sock.inbound.put_nowait(rpc("slow", "slow.control"))
+            assert await settle(lambda: "start:slow" in log)
+            frame = rpc("submit", "prompt.submit")
+            frame["params"] = {
+                "session_id": "ui-sid",
+                "text": "private-prompt-should-not-appear",
+            }
+            sock.inbound.put_nowait(frame)
+            assert await settle(lambda: sock.received == 2)
+            assert "start:submit" not in log
+
+            receipts = [
+                record.getMessage() for record in caplog.records
+                if "ws prompt.submit received" in record.getMessage()
+            ]
+            assert len(receipts) == 1
+            assert "id=submit session=ui-sid" in receipts[0]
+            assert "private-prompt-should-not-appear" not in "\n".join(caplog.messages)
+    finally:
+        release.set()
+        sock.inbound.put_nowait(None)
+        await asyncio.wait_for(task, 10)
 
 
 @pytest.mark.asyncio

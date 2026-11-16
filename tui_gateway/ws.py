@@ -706,6 +706,14 @@ async def handle_ws(ws: Any, *, auth_identity: dict | None = None, subprotocol: 
                 await _reply(_error(-32700, "parse error", None), "send_failed_after_parse_error",
                              "ws parse-error reply send failed peer=%s", peer)
                 continue
+            if isinstance(req, dict) and req.get("method") == "prompt.submit":
+                params = req.get("params")
+                _log.debug(
+                    "ws prompt.submit received peer=%s id=%s session=%s queued=%d",
+                    peer, req.get("id"),
+                    params.get("session_id") if isinstance(params, dict) else None,
+                    pending.qsize(),
+                )
             if isinstance(req, dict) and req.get("method") == "gateway.ping":
                 req_id = req.get("id")
                 await _reply({"jsonrpc": "2.0", "result": {"ok": True}, "id": req_id}, "send_failed_after_heartbeat",
