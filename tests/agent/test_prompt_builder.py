@@ -1031,6 +1031,36 @@ class TestEnvironmentHints:
         assert f"cd -P -- {_shlex.quote(cwd)} 2>/dev/null || exit 0" in script
         assert "@@HCTXabc123def456|" in script
 
+    def test_remote_context_discovery_refuses_outside_symlink_targets(self, tmp_path):
+        """Out-of-project symlinks must not become project instructions on a remote backend.
+
+        Unlike the local loader's resolved-target containment check, the shell-side
+        discovery runs in the backend and must fail closed for symlinked candidates.
+        """
+        import shutil
+        import subprocess
+        import agent.prompt_builder as _pb
+
+        if os.name == "nt" or shutil.which("bash") is None:
+            pytest.skip("POSIX bash required for backend discovery")
+
+        workspace = tmp_path / "workspace"
+        outside = tmp_path / "outside"
+        workspace.mkdir()
+        (outside / "rules").mkdir(parents=True)
+        (outside / "secret").write_text("OUTSIDE_PRIVATE_SENTINEL\n", encoding="utf-8")
+        (outside / "rules" / "leak.mdc").write_text("OUTSIDE_RULE_SENTINEL\n", encoding="utf-8")
+        (workspace / "AGENTS.md").symlink_to(outside / "secret")
+        (workspace / ".cursor").symlink_to(outside, target_is_directory=True)
+        (workspace / "CLAUDE.md").write_text("SAFE_PROJECT_GUIDANCE\n", encoding="utf-8")
+
+        nonce = "abc123def456"
+        script = _pb._remote_context_discovery_script(str(workspace), nonce)
+        run = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
+                             check=True, timeout=10)
+        payload = _pb._parse_remote_context_payload(run.stdout, nonce)
+        assert payload == [("claude_md", "CLAUDE.md", "SAFE_PROJECT_GUIDANCE")]
+
     def test_parse_remote_context_payload_forged_markers_are_content(self):
         """File content carrying another run's markers parses as plain text; a forged END can only clip."""
         import agent.prompt_builder as _pb

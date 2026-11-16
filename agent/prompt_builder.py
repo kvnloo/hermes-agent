@@ -935,7 +935,7 @@ def _remote_context_discovery_script(cwd: str, nonce: str) -> str:
         # ``cd -P`` so $PWD is the physical path: git's --show-toplevel resolves symlinks too, and only a
         # physical PWD lets the ``${f#"$PWD"/}`` label-strip produce the relative labels the local loader uses.
         f"cd -P -- {q} 2>/dev/null || exit 0",
-        f"emit() {{ printf '{marker}|%s|%s@@\\n' \"$1\" \"$2\"; head -c {cap} \"$3\"; printf '\\n{marker}|END@@\\n'; }}",
+        f"emit() {{ [ ! -L \"$3\" ] || return 0; printf '{marker}|%s|%s@@\\n' \"$1\" \"$2\"; head -c {cap} \"$3\"; printf '\\n{marker}|END@@\\n'; }}",
         "root=$(git rev-parse --show-toplevel 2>/dev/null) || root=''",
         "[ -n \"$root\" ] || root=$(pwd)",
         "chain=(); d=$(pwd)",
@@ -945,7 +945,8 @@ def _remote_context_discovery_script(cwd: str, nonce: str) -> str:
         "for dir in \"${chain[@]}\"; do for n in .hermes.md HERMES.md; do f=\"$dir/$n\"; [ -s \"$f\" ] && emit hermes_md \"${f#\"$PWD\"/}\" \"$f\"; done; done",
         "for n in CLAUDE.md claude.md; do f=\"$PWD/$n\"; [ -s \"$f\" ] && emit claude_md \"$n\" \"$f\"; done",
         "[ -s \"$PWD/.cursorrules\" ] && emit cursorrules .cursorrules \"$PWD/.cursorrules\"",
-        "if [ -d \"$PWD/.cursor/rules\" ]; then for f in \"$PWD\"/.cursor/rules/*.mdc; do "
+        "if [ -d \"$PWD/.cursor/rules\" ] && [ ! -L \"$PWD/.cursor\" ] "
+        "&& [ ! -L \"$PWD/.cursor/rules\" ]; then for f in \"$PWD\"/.cursor/rules/*.mdc; do "
         "[ -s \"$f\" ] && emit cursorrules \"${f#\"$PWD\"/}\" \"$f\"; done; fi",
         "exit 0",
     ])
