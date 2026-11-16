@@ -1766,17 +1766,17 @@ class GatewayNotificationsMixin(GatewayUpdateNotificationsMixin, GatewayNotifica
         from gateway.run import _redact_gateway_user_facing_secrets
         from agent.redact import redact_terminal_output
         from tools.ansi_strip import strip_ansi
-        from tools.process_registry import transform_process_output
+        from tools.process_registry import COMPLETION_OUTPUT_CHARS, transform_process_output
         _command = getattr(session, "command", "") or ""
         _raw = strip_ansi(session.output_buffer) if session.output_buffer else ""
         _raw = transform_process_output(_raw, command=_command, returncode=session.exit_code,
                                         task_id=getattr(session, "task_id", "") or "") if _raw else _raw
         _raw = redact_terminal_output(_raw, _command)
-        # Keep the last ~2000 chars snapped to a line boundary, with a marker when cut.
-        _LIMIT = 2000
-        # Truncate at line boundaries so notifications never start mid-line (fixes #23284). Keep the last
-        # ~2000 chars but snap to the nearest preceding newline, then prepend a truncation marker when
-        # output was cut.
+        # Respect the process's registered completion budget: Bot DM replies are payloads,
+        # so their watcher keeps more than the ordinary 2000-char build-log tail (#156513).
+        _LIMIT = getattr(session, "completion_output_chars", 0) or COMPLETION_OUTPUT_CHARS
+        # Snap only at an interior line boundary (fixes #23284 and #152075).
+        # A single-line reply must not be discarded at its trailing newline.
         if len(_raw) > _LIMIT:
             _tail = _raw[-_LIMIT:]
             _nl = _tail.find("\n")

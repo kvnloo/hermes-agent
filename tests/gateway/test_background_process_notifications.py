@@ -915,6 +915,19 @@ class TestBuildProcessCompletionEventTruncation:
         assert "x" * 500 in out
         assert out.startswith("[… output truncated — showing last ")
 
+    def test_bot_mode_reply_honors_registered_completion_budget(self):
+        """#156513: a reply-sized process is not restricted to the default build-log tail."""
+        from gateway.run_notifications import GatewayNotificationsMixin
+        from tools.bot_mode_dm import REPLY_COMPLETION_CHARS
+
+        payload = '{"reply":"' + "x" * 4000 + '"}\n'
+        assert 2000 < len(payload) < REPLY_COMPLETION_CHARS
+        session = self._session(payload)
+        session.completion_output_chars = REPLY_COMPLETION_CHARS
+        event = GatewayNotificationsMixin._build_process_completion_event(
+            _watcher_dict(), session, "proc_bot_reply")
+        assert event["output"] == payload
+
     def test_multi_line_payload_still_snaps_to_line_boundary(self):
         from gateway.run_notifications import GatewayNotificationsMixin
 
