@@ -18,16 +18,17 @@ Real processes throughout:
 Scenarios (the listener answering the advertised port):
 
 * ``impersonator`` echoes every query parameter it was sent plus its OWN ``websocket_url`` carrying a
-  canary token (a rogue process that took over the port). KNOWN: the handshake only compares the reply
-  with what the client just sent, so the echo is accepted (#120604).
+  canary token (a rogue process that took over the port). Must be refused: an echo cannot carry the
+  lease-keyed ``attach_proof`` (#120604, fixed by #120605).
 * ``foreign_owner`` replies with a lease id that is not the registry's (another runtime answering on
   the port). Must be refused today and under any fix.
 * control ``test_genuine_owner_is_attached``: the lease holder itself serves the endpoint and answers with
   its own identity; the TUI must receive that owner's socket and the lease must stay with the owner.
 
-Why the owner side is a test process: no shipped Hermes runtime advertises ``shared_runtime_url`` or
-serves ``/api/session-attach`` yet (``hermes serve`` and the dashboard do not register one), so the
-closest real owner is a process holding the real lease that answers from its own lease knowledge. It
+Why the owner side is a test process: the listener scenarios need a rogue process on the advertised
+port, so the owner is a process holding the real lease that answers from its own lease knowledge. The
+dashboard's own ``/api/session-attach`` is covered in-process by
+``tests/hermes_cli/test_local_session_attach_runtime.py``. It
 speaks both the current dialect (``lease_id`` in the reply) and the proof dialect of the candidate fix
 (``attach_proof`` = HMAC-SHA256 keyed by the lease over the client's nonce), so the control holds on main
 and under that fix.
@@ -63,11 +64,7 @@ pytestmark = [
     pytest.mark.skipif(shutil.which("node") is None, reason="the TUI hand-off needs node on PATH"),
 ]
 
-KNOWN: dict[str, tuple[str, str]] = {
-    "impersonator": (r"^impersonator: TUI was attached to the rogue listener's socket: "
-                     r"ws://127\.0\.0\.1:\d+/api/ws\?token=stolen-ws-token-",
-                     "#120604 attach handshake accepts an echoing loopback listener"),
-}
+KNOWN: dict[str, tuple[str, str]] = {}
 SCENARIOS = ["impersonator", "foreign_owner"]
 
 # The lease holder: creates the session, takes the real lease advertising ``argv[2]`` (or its own
