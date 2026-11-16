@@ -1567,8 +1567,8 @@ def _env_expand_match(m: re.Match) -> str:
         return val
     if inner.startswith("env:"):
         logger.warning(
-            "Config ref %r: %s is not set (check ~/.hermes/.env); "
-            "keeping the literal placeholder", raw, name)
+            "Config ref %r: %s is not set (check %s); "
+            "keeping the literal placeholder", raw, name, get_env_path())
     return raw
 
 

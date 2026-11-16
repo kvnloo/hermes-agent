@@ -92,14 +92,16 @@ class TestEnvRefDotenvFallback:
 
         from hermes_cli.config import invalidate_env_cache
 
-        config_file = tmp_path / "config.yaml"
+        home = tmp_path / "profiles" / "worker"
+        home.mkdir(parents=True)
+        config_file = home / "config.yaml"
         config_file.write_text(
             "model:\n  api_key: ${env:DEFINITELY_MISSING_89199}\n",
             encoding="utf-8",
         )
-        (tmp_path / ".env").write_text("", encoding="utf-8")
+        (home / ".env").write_text("", encoding="utf-8")
 
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("HERMES_HOME", str(home))
         monkeypatch.delenv("DEFINITELY_MISSING_89199", raising=False)
         invalidate_env_cache()
         monkeypatch.setitem(
@@ -110,10 +112,13 @@ class TestEnvRefDotenvFallback:
             config = load_config()
 
         assert config["model"]["api_key"] == "${env:DEFINITELY_MISSING_89199}"
-        assert any(
-            "DEFINITELY_MISSING_89199 is not set" in record.getMessage()
+        warnings = [
+            record.getMessage()
             for record in caplog.records
-        )
+            if "DEFINITELY_MISSING_89199 is not set" in record.getMessage()
+        ]
+        assert warnings
+        assert all(f"check {home / '.env'}" in message for message in warnings)
 
     def test_os_environ_wins_over_dotenv(self, tmp_path, monkeypatch):
         from hermes_cli.config import invalidate_env_cache
