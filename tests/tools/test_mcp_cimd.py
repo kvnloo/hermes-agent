@@ -16,7 +16,10 @@ test lost the race fail on a port another file legitimately held.
 
 import asyncio
 import json
+import os
 import socket
+import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -293,6 +296,61 @@ def test_sequential_profile_logins_keep_distinct_cimd_redirects(
     assert named_cfg["_cimd_url"] == _CIMD_CLIENT_METADATA_URL
     assert named_port in private_ports
     assert named_port != default_port
+
+
+@pytest.mark.parametrize("profiles", [
+    (".", "profiles/first", "profiles/second", "profiles/third"),
+    ("profiles/first", "profiles/second", ".", "profiles/third"),
+])
+def test_profile_port_ownership_survives_real_process_exit(
+    profiles, tmp_path, private_ports
+):
+    """Persist through the SDK storage API, then allocate from a fresh interpreter."""
+    program = """
+import asyncio
+import json
+import sys
+from mcp.shared.auth import OAuthClientInformationFull
+import tools.mcp_oauth as mod
+
+mod._CIMD_PORTS = tuple(json.loads(sys.argv[1]))
+storage = mod.HermesTokenStorage("cloudflare")
+cfg = {}
+port = mod._configure_callback_port(cfg, storage)
+metadata = mod._build_client_metadata(cfg)
+if cfg.get("_cimd_url"):
+    client = OAuthClientInformationFull(
+        client_id=cfg["_cimd_url"], **metadata.model_dump(mode="json")
+    )
+    asyncio.run(storage.set_client_info(client))
+print(json.dumps({"port": port, "cimd": cfg.get("_cimd_url"),
+                  "uri": str(metadata.redirect_uris[0])}))
+"""
+    root = tmp_path / ".hermes"
+    registered = {}
+    chosen = set()
+    for profile in profiles:
+        home = root / profile
+        home.mkdir(parents=True, exist_ok=True)
+        result = subprocess.run(
+            [sys.executable, "-c", program, json.dumps(private_ports)],
+            cwd=Path(__file__).resolve().parents[2],
+            env={**os.environ, "HOME": str(tmp_path), "HERMES_HOME": str(home)},
+            capture_output=True, text=True, check=True, timeout=30,
+        )
+        callback = json.loads(result.stdout)
+        if len(chosen) < len(private_ports):
+            assert callback["cimd"] == _CIMD_CLIENT_METADATA_URL
+            assert callback["port"] in private_ports
+            assert callback["port"] not in chosen
+            chosen.add(callback["port"])
+            client_file = HermesTokenStorage("cloudflare", hermes_home=home)._client_info_path()
+            registered[client_file] = client_file.read_bytes()
+            assert json.loads(registered[client_file])["redirect_uris"] == [callback["uri"]]
+        else:
+            assert callback["cimd"] is None
+            assert callback["port"] not in private_ports
+        assert all(path.read_bytes() == data for path, data in registered.items())
 
 
 def test_self_hosted_document_url_overrides_the_default(
