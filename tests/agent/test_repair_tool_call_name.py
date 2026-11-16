@@ -125,3 +125,20 @@ class TestVolcEngineXmlPollution:
         # rest of the pipeline (fuzzy match at 0.7 cutoff) can still
         # recover the obvious target.
         assert repair('"terminal"') == "terminal"
+
+
+class TestAnthropicOAuthContextEngineNames:
+    """#149710: OAuth wire names must resolve tools injected only into this agent."""
+
+    @pytest.mark.parametrize("tool_name", ["notes", "history"])
+    def test_prefixed_agent_local_tool_resolves(self, tool_name):
+        from agent.agent_runtime_helpers import repair_tool_call
+
+        agent = SimpleNamespace(valid_tool_names={tool_name})
+        assert repair_tool_call(agent, f"mcp__{tool_name}") == tool_name
+
+    def test_native_wire_name_keeps_precedence(self):
+        from agent.agent_runtime_helpers import repair_tool_call
+
+        agent = SimpleNamespace(valid_tool_names={"notes", "mcp__notes"})
+        assert repair_tool_call(agent, "mcp__notes") == "mcp__notes"
