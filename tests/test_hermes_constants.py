@@ -667,3 +667,11 @@ def test_is_launch_only_env_key_folds_case(name):
 @pytest.mark.parametrize("name", ["HERMES_MANAGED_DIRX", "HERMES_HOMEDIR", "PATH", ""])
 def test_is_launch_only_env_key_rejects_other_names(name):
     assert not hermes_constants.is_launch_only_env_key(name)
+
+@pytest.mark.platforms("linux", "macos")
+def test_scratch_dir_usage_bytes_handles_plain_posix_subdirs(tmp_path):
+    """Windows-only reparse tags must not crash a plain POSIX directory walk."""
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    (nested / "payload").write_bytes(b"abc")
+    assert hermes_constants.scratch_dir_usage_bytes(tmp_path) == 3

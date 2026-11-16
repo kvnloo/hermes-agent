@@ -1094,6 +1094,8 @@ def is_ntfs_junction(st: os.stat_result) -> bool:
     NTFS junction. ``os.walk``, ``os.scandir`` and ``Path.rglob`` treat a junction as a plain
     directory (only symlinks answer ``is_symlink()``), so a tree walk that skips links must ask
     this too. POSIX stat results carry no reparse tag, so it is False there."""
+    if os.name != "nt":
+        return False
     return getattr(st, "st_reparse_tag", 0) == stat.IO_REPARSE_TAG_MOUNT_POINT
 
 
