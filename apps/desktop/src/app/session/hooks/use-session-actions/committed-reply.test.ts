@@ -111,6 +111,19 @@ describe('a reconnect page that stores a plain reply the live row is still short
     expect(assistants(overlaid)).toEqual([['assistant-stream-9-1', 'A8 survives the drop']])
   })
 
+  it('preserves the persisted row and tapbacks when a short live reply adopts it', () => {
+    const stored = { ...page[1], reactions: [{ emoji: '👍', author: 'agent', at: 42 }] } as ChatMessage
+    const overlaid = overlayConcurrentMessageChanges(
+      [page[0], stored],
+      [prompt, stream('A8 ')],
+      [prompt, stream('A8 survives the')]
+    )
+
+    expect(assistants(overlaid)).toEqual([['assistant-stream-9-1', 'A8 survives the drop']])
+    expect(overlaid[1].rowId).toBe(17)
+    expect(overlaid[1].reactions).toEqual(stored.reactions)
+  })
+
   // A shared prefix that ends inside a word is not evidence of the same reply.
   it('does not hand the live row a stored reply that only shares a word fragment with it', () => {
     const other: ChatMessage[] = [page[0], { ...page[1], parts: [{ type: 'text', text: 'A8x unrelated reply' }] }]

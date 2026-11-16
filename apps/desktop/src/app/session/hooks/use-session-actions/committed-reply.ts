@@ -145,7 +145,8 @@ function adoptStoredReply(live: ChatMessage, stored: ChatMessage): ChatMessage {
     parts[parts.length - 1] = { ...tail, storedTail: covered }
   }
 
-  return { ...live, parts }
+  // The persisted bubble owns reaction targeting even before the stream completes.
+  return { ...live, parts, rowId: stored.rowId ?? live.rowId, reactions: stored.reactions ?? live.reactions }
 }
 
 /**
