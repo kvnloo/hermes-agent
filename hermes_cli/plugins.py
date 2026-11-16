@@ -72,6 +72,7 @@ from hermes_cli.plugins_context import PluginContext as _PluginContext, _UNSET, 
 class PluginContext(_PluginContext):
     """Extend the existing context with profile-local gateway registration."""
 
+    @_ignore_after_abandoned_load
     @_serialized_replacement
     def register_gateway_method(
         self, name: str, handler: Callable, *, schema: type | None = None,

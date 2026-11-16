@@ -168,8 +168,9 @@ def validate_gateway_registration(
         raise ValueError("plugin registry key is not a valid gateway namespace")
     if not looks_like_plugin_method(name) or not name.startswith(f"{plugin_id}."):
         raise ValueError(f"gateway method must begin with owned namespace {plugin_id!r} and two dotted segments")
-    from tui_gateway.contracts.registry import METHODS, CANONICAL_METHODS
-    if name in METHODS or name in CANONICAL_METHODS:
+    from tui_gateway.contracts.registry import METHODS, CANONICAL_METHODS, CANONICAL_NAMESPACES
+    if (name in METHODS or name in CANONICAL_METHODS
+            or any(name.startswith(namespace.prefix) for namespace in CANONICAL_NAMESPACES.values())):
         raise ValueError(f"gateway method {name!r} collides with a core method")
     if not callable(handler):
         raise TypeError("gateway handler must be a synchronous callable")

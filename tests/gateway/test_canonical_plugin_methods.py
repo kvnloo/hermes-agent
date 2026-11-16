@@ -90,6 +90,25 @@ def install(native, handler, *, name=NAME, schema=None):
 
 
 @pytest.mark.asyncio
+async def test_existing_plugin_rpc_namespace_keeps_its_dispatch(native):
+    ctx = native.plugins.PluginContext(
+        native.plugins.PluginManifest(name="hermes-tern"), native.manager,
+    )
+    ctx.register_rpc("surface.echo", lambda params, *, session_id: {
+        "session_id": session_id, "value": params["value"],
+    })
+    viewer = connect(native.authority)
+    try:
+        await resume(viewer)
+        reply = await request(viewer, "plugin.hermes-tern.surface.echo", {
+            "session_id": "owned", "value": 7,
+        })
+        assert reply["result"] == {"session_id": "owned", "value": 7}
+    finally:
+        await viewer.close()
+
+
+@pytest.mark.asyncio
 async def test_default_native_client_discovers_and_calls_real_fixture_plugin(native, tmp_path, monkeypatch):
     """Default hermes tern bootstrap's canonical path: real plugin discovery + attached RPC."""
     import hermes_yaml as yaml

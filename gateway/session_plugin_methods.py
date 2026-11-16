@@ -29,10 +29,11 @@ def is_plugin_request(method, core_handlers) -> bool:
         return True
     if not looks_like_plugin_method(method):
         return False
-    from tui_gateway.contracts.registry import CANONICAL_METHODS, METHODS
+    from tui_gateway.contracts.registry import CANONICAL_METHODS, CANONICAL_NAMESPACES, METHODS
     from gateway.session_group_controls import GROUP_METHODS
 
     return (method not in METHODS and method not in CANONICAL_METHODS
+            and not any(method.startswith(namespace.prefix) for namespace in CANONICAL_NAMESPACES.values())
             and method not in GROUP_METHODS and method not in core_handlers())
 
 
@@ -77,8 +78,7 @@ def _context(
                 or authority.events.get(actor.transport_id) is not transport
                 or connection.subscriptions.get(sid) != subscription
                 or authority.sessions.get(sid) is not live
-                or live.subscribers.get(subscription) is not actor
-                or live.superseded):
+                or live.subscribers.get(subscription) is not actor):
             return False
         return True
 

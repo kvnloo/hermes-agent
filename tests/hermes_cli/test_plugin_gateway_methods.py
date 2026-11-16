@@ -41,6 +41,13 @@ def test_namespace_and_core_shadowing_fail_closed(tmp_path, name):
     assert manager._gateway_methods == {}
 
 
+def test_reserved_rpc_namespace_cannot_be_claimed(tmp_path):
+    owner, manager = _owner(tmp_path, name="plugin")
+    with pytest.raises(ValueError, match="core"):
+        owner.register_gateway_method("plugin.other.echo", _handler)
+    assert not manager._gateway_methods
+
+
 def test_reject_bad_handler_and_schema(tmp_path):
     owner, manager = _owner(tmp_path)
     for handler in (None, 42, lambda one: one):
@@ -86,6 +93,14 @@ def test_profile_managers_and_targeted_unload_are_independent(tmp_path):
     assert not first.active and second.active
     assert b.unload()
     assert b._gateway_methods == {}
+
+
+def test_abandoned_load_cannot_register_gateway_method(tmp_path):
+    owner, manager = _owner(tmp_path)
+    owner._abandon_load()
+    assert owner.register_gateway_method("hermes-tern.browser.blocks", _handler) is None
+    assert not manager._gateway_methods
+    assert not manager._registration_order
 
 
 def _write_probe(home: Path, *, fail: bool = False) -> None:
