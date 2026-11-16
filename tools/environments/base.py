@@ -158,6 +158,15 @@ class FileFetchError(RuntimeError):
 _FETCH_TIMEOUT_SECONDS = 300
 
 
+class AmbiguousExecutionError(RuntimeError):
+    """A command started, but Hermes lost a trustworthy completion outcome.
+
+    Callers must assume durable or external effects may already have happened.
+    This is distinct from a pre-spawn setup failure: arbitrary shell commands
+    must not be replayed automatically once a process existed.
+    """
+
+
 class EnvironmentConnectionError(RuntimeError):
     """Infrastructure/connection-class failure of a terminal backend (SSH host down, Docker
     daemon not running, remote sync on a dead link) — never a command that merely exited
@@ -806,6 +815,15 @@ class BaseEnvironment(LongLivedProcessMixin, ABC):
                 _spawn_and_wait, bound_s, label=f"terminal.wait:{type(self).__name__}", on_timeout=_on_timeout)
         except (KeyboardInterrupt, SystemExit):
             _on_timeout()
+            raise
+        except Exception as exc:
+            # After a process handle exists, external effects may have landed.
+            # Cleanup is best effort; callers must not retry a lost completion.
+            if proc_holder:
+                _on_timeout()
+                raise AmbiguousExecutionError(
+                    "terminal command outcome is unknown after process spawn"
+                ) from exc
             raise
 
         if bounded.timed_out:

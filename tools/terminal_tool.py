@@ -172,7 +172,7 @@ def _check_all_guards(command: str, env_type: str,
                                   has_host_access=has_host_access)
 
 
-from tools.environments.base import EnvironmentConnectionError
+from tools.environments.base import AmbiguousExecutionError, EnvironmentConnectionError
 
 
 # Tool description for LLM
@@ -1452,6 +1452,14 @@ def _run_foreground(
                                 task_id=task_id, session_key=session_key),
             )
             break
+        except AmbiguousExecutionError:
+            # Once spawned, the shell command may already have side effects.
+            return _error_json(
+                "Command execution outcome is unknown after it started. "
+                "Some effects may already have occurred; verify the target state before resending.",
+                status="ambiguous",
+                outcome_unknown=True,
+            )
         except Exception as e:
             # A backend exception (e.g. an SSH connect timeout) never reached an exit status, so it
             # is not a terminal outcome; Hermes' own deadline arrives as ``hermes_timed_out``.
