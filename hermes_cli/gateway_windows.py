@@ -1905,10 +1905,10 @@ def _collect_gateway_stop_pids(primary_pid: int | None = None) -> list[int]:
     return pids
 
 
-def stop() -> None:
+def stop() -> bool:
     """Stop the gateway: planned-stop marker first so it can drain in-flight agents and persist
     ``resume_pending`` (Windows asyncio can't receive SIGTERM — the marker is our only IPC), then
-    ``schtasks /End``, then a bounded hard-kill of known PIDs."""
+    ``schtasks /End``, then a bounded hard-kill of known PIDs. Return whether anything stopped."""
     _assert_windows()
     from gateway.status import get_running_pid
 
@@ -1941,6 +1941,7 @@ def stop() -> None:
         print("✓ Gateway stopped (drained cleanly)" if drained else "✓ Gateway stopped")
     else:
         print("✗ No gateway was running")
+    return bool(stopped_any)
 
 
 def _wait_for_gateway_absent(timeout_s: float = 30.0, interval_s: float = 0.5) -> bool:

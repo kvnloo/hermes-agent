@@ -4713,7 +4713,7 @@ def _service_backend(*, windows: bool = True) -> str | None:
     return None
 
 
-def _service_call(backend: str, verb: str, system: bool | None = False) -> None:
+def _service_call(backend: str, verb: str, system: bool | None = False) -> bool | None:
     """Run ``verb`` (start/stop/restart/uninstall) on ``backend``. Names resolve at call time so tests
     can monkeypatch them; only systemd takes a scope, and ``system=None`` omits it (wizard restart).
     Each systemd/launchd verb refuses a definition pinning another HERMES_HOME itself."""
@@ -4907,14 +4907,14 @@ def _installed_service_kind() -> str | None:
 
 
 def _stop_installed_service(system: bool) -> bool:
-    """Stop the installed systemd/launchd/Windows service. Returns True if one was stopped."""
+    """Stop the installed service. Windows reports actual stops; POSIX keeps call-success semantics."""
     kind = _installed_service_kind()
     if kind is None:
         return False
     # SystemScopeRequiresRootError is a RuntimeError and must propagate from systemd_stop.
     try:
-        _service_call(kind, "stop", system)
-        return True
+        stopped = _service_call(kind, "stop", system)
+        return bool(stopped) if kind == "windows" else True
     except (subprocess.CalledProcessError, *((RuntimeError,) if kind == "windows" else ())):
         return False
 
