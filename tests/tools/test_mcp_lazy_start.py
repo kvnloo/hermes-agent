@@ -79,11 +79,11 @@ class TestLazyMcpRegistration:
              patch.object(_mcp_loop, "_run_on_mcp_loop") as mock_run:
             try:
                 names = _mcp_discovery.discover_mcp_tools()
-                assert "mcp_playwright_browser_navigate" in names
+                assert "mcp__playwright__browser_navigate" in names
                 assert mcp._lazy_server_configs["playwright"]["lazy"] is True
                 mock_run.assert_not_called()
             finally:
-                registry.deregister("mcp_playwright_browser_navigate")
+                registry.deregister("mcp__playwright__browser_navigate")
 
     def test_registers_from_cache_without_connect(self):
         config = _lazy_config()
