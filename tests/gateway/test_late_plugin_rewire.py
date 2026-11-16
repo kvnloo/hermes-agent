@@ -21,7 +21,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from gateway.config import PlatformConfig, Platform
-from gateway.run_plugin_rewire import GatewayPluginRewireMixin
+# Bootstrap probes the checkout's git dir, so import the facade during collection,
+# before the per-test real-home I/O guard protects the installed checkout's metadata.
+from gateway.run import GatewayPluginRewireMixin
 from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest, discover_plugins, get_plugin_manager
 from plugins.platforms.telegram.adapter import TelegramAdapter
 
