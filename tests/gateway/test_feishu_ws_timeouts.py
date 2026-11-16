@@ -13,6 +13,8 @@ import types
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
+
 from plugins.platforms.feishu import adapter as feishu_adapter
 from plugins.platforms.feishu import adapter_ws
 
@@ -405,3 +407,14 @@ def test_bootstrap_post_gets_a_budget_on_registered_threads(monkeypatch):
     (call,) = real_post.call_args_list
     # (connect, read): the open timeout bounds connecting, 30s bounds a stalled read.
     assert call.kwargs.get("timeout") == (5.0, 30.0)
+
+
+def test_invalid_ws_open_timeout_fails_before_it_disables_the_guard():
+    """Malformed open-timeout settings must never silently opt out of both budgets."""
+    # Default is a real 10s deadline; only explicit null opts out.
+    assert feishu_adapter.FeishuAdapter._load_settings({}).ws_open_timeout == 10.0
+    assert feishu_adapter.FeishuAdapter._load_settings({"ws_open_timeout": None}).ws_open_timeout is None
+
+    for invalid in ("garbage", 0, -1, float("nan"), float("inf")):
+        with pytest.raises(ValueError, match="ws_open_timeout"):
+            feishu_adapter.FeishuAdapter._load_settings({"ws_open_timeout": invalid})
