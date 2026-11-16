@@ -432,6 +432,14 @@ def static_model_provider_conflict(model_name: str, provider: Optional[str], *, 
     requested = (model_name or "").strip()
     normalized = _m.normalize_provider(provider)
     catalog = list(_m._PROVIDER_MODELS.get(normalized, ()))
+    # OpenRouter's model IDs are not bare Ollama build-tagged names. Its usual
+    # aggregator exemption otherwise accepts this pair and can spend a PAYG key.
+    if normalized == "openrouter" and re.fullmatch(r"[^/:\s]+:\d+", requested):
+        return {
+            "model": requested, "provider": normalized, "suggestions": [],
+            "message": (f"Model `{requested}` has an Ollama build tag, not an OpenRouter slug. "
+                        "Select `ollama-cloud` or an OpenRouter `vendor/model` slug."),
+        }
     if not requested or not catalog or normalized == "moa" or normalized in _m._AGGREGATOR_PROVIDERS:
         return None
     if _m._model_in_provider_catalog(requested.lower(), _m._provider_keys(normalized)):

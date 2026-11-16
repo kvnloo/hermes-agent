@@ -476,6 +476,12 @@ def build_policy(params, config, *, private_secrets=None, profile_terminal=True,
         # supersedes it. Without it the first turn's followed route replaces the pick.
         config.setdefault('model', {})['selection_profile'] = list(profile_target(config))
     _apply_launch_overrides(params, config)
+    # Refuse a known-incoherent route before a local session can be committed.
+    # The offline catalog check stays permissive for unknown and custom endpoints.
+    from hermes_cli.models_validate import static_model_provider_conflict
+    configured_model, provider = profile_target(config)
+    if conflict := static_model_provider_conflict(model or configured_model, provider):
+        _refuse('provider', conflict['message'])
     # The posture is opt-in (``session.create`` only) and needs a folder the client named: the daemon's own
     # directory (the fallback above) is no workspace, and ``tool`` is a third-party integration. An explicit
     # pick wins anyway; skipping it here also spares the probe.
