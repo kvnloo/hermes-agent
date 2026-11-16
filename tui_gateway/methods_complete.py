@@ -213,9 +213,11 @@ def _dir_listing_items(root: str, word: str, path_part: str, prefix_tag: str, is
             continue
         full = pth.join(search_dir, entry)
         try:
-            rel = pth.relpath(full, root).replace(os.sep, "/")
+            # Home completion must be relative to home, even when cwd is on another Windows drive.
             home_rel = (pth.relpath(full, os.path.expanduser("~") if local else "~")
                         if word.startswith("~") else None)
+            rel = (home_rel if home_rel is not None
+                   else pth.relpath(full, root).replace(os.sep, "/"))
         except ValueError:
             # Windows: a reserved-name entry (`nul`, `con`, …) or one on another drive is its own mount,
             # so it cannot be expressed under the root. Skip it: one such name must not kill the listing.

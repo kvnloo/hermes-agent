@@ -112,3 +112,34 @@ def test_home_completion_skips_an_entry_on_another_mount(tmp_path, monkeypatch) 
     assert "~/readme.md" in texts, texts
     assert "~/notes.md" in texts, texts
     assert not any(text.endswith("nul") for text in texts), texts
+
+
+def test_home_completion_keeps_entries_on_another_workspace_drive(tmp_path, monkeypatch) -> None:
+    """A valid home entry must survive when the session workspace is on a different drive."""
+    workspace = tmp_path / "workspace"
+    home = tmp_path / "home"
+    workspace.mkdir()
+    home.mkdir()
+    (home / "notes.md").write_text("x")
+    monkeypatch.chdir(workspace)
+
+    real_expanduser = os.path.expanduser
+
+    def expanduser(path: str = "~") -> str:
+        if path == "~":
+            return str(home)
+        if path.startswith("~/"):
+            return str(home) + path[1:]
+        return real_expanduser(path)
+
+    monkeypatch.setattr(os.path, "expanduser", expanduser)
+    real_relpath = os.path.relpath
+
+    def cross_drive_relpath(path, start=None):
+        if os.fspath(path) == str(home / "notes.md") and os.fspath(start) == str(workspace):
+            raise ValueError("path is on mount 'D:', start on mount 'C:'")
+        return real_relpath(path, start) if start is not None else real_relpath(path)
+
+    monkeypatch.setattr(os.path, "relpath", cross_drive_relpath)
+
+    assert _items("~/") == ["~/notes.md"]
