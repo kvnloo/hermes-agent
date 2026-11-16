@@ -3015,7 +3015,7 @@ def _build_user_local_paths(home: Path, path_entries: list[str]) -> list[str]:
     return [p for p in candidates if p not in path_entries and Path(p).exists()]
 
 
-def _build_wsl_interop_paths(path_entries: list[str]) -> list[str]:
+def _build_wsl_interop_paths(path_entries: list[str], *, service_path: str | None = None) -> list[str]:
     """WSL Windows-interop PATH entries for generated units: systemd services don't inherit the
     Windows PATH (``/mnt/c/WINDOWS/System32``…), so ``powershell.exe``/``cmd.exe`` break unless persisted.
 
@@ -3028,7 +3028,9 @@ def _build_wsl_interop_paths(path_entries: list[str]) -> list[str]:
     which() is only a fallback for tools the System32 family doesn't provide (Windows not on
     ``C:``): it resolves against the invoking shell's PATH, which carries the Windows entries in an
     interactive shell but not under systemd/cron, so consulting it unconditionally made the
-    generated unit differ by caller and ``systemd_unit_is_current()`` flap."""
+    generated unit differ by caller and ``systemd_unit_is_current()`` flap.
+    When the fallback is needed, prefer the installed unit's PATH over the invoking shell's.
+    """
     if not is_wsl():
         return []
 
@@ -3047,7 +3049,10 @@ def _build_wsl_interop_paths(path_entries: list[str]) -> list[str]:
     for executable in ("powershell.exe", "cmd.exe", "explorer.exe", "wsl.exe"):
         if any((Path(entry) / executable).exists() for entry in system32_family):
             continue
-        resolved = shutil.which(executable)
+        resolved = (
+            shutil.which(executable, path=service_path)
+            if service_path is not None else shutil.which(executable)
+        )
         if resolved:
             candidates.append(str(Path(resolved).parent))
 
@@ -3316,7 +3321,11 @@ def generate_systemd_unit(system: bool = False, run_as_user: str | None = None) 
     if watchdog_seconds > 0:
         systemd_type, systemd_watchdog_directives = "notify", f"NotifyAccess=main\nWatchdogSec={watchdog_seconds}s\n"
     path_entries.extend(_build_user_local_paths(user_home, path_entries))
-    path_entries.extend(_build_wsl_interop_paths(path_entries))
+    installed_path = (
+        _unit_environment_value(get_systemd_unit_path(system=system), "PATH")
+        if is_wsl() else None
+    )
+    path_entries.extend(_build_wsl_interop_paths(path_entries, service_path=installed_path))
     path_entries.extend(["/usr/local/sbin", "/usr/local/bin", "/usr/sbin", "/usr/bin", "/sbin", "/bin"])
     sane_path = ":".join(path_entries)
     start = installation_command(project_root, [*shlex.split(profile_arg), "gateway", "run"],

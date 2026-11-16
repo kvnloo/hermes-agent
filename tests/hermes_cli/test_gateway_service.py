@@ -478,6 +478,42 @@ class TestWslInteropPaths:
 
         assert from_interactive_shell == from_service_context
 
+
+    def test_non_c_wsl_unit_stays_current_from_shell_without_windows_path(self, monkeypatch, tmp_path):
+        """#46276: D:-drive tools found at install must survive a later service-style PATH."""
+        unit_path = tmp_path / "hermes-gateway.service"
+        monkeypatch.setattr(gateway_cli, "get_systemd_unit_path", lambda system=False: unit_path)
+        monkeypatch.setattr(gateway_cli, "is_wsl", lambda: True)
+
+        original_exists = Path.exists
+
+        def exists(path):
+            if str(path).startswith("/mnt/c/WINDOWS"):
+                return False  # Windows lives on D:; C: family is not installed.
+            return original_exists(path)
+
+        monkeypatch.setattr(Path, "exists", exists)
+
+        def which(name, path=None):
+            lookup = path if path is not None else os.environ.get("PATH", "")
+            if name == "powershell.exe" and "/mnt/d/WindowsTools" in lookup.split(os.pathsep):
+                return "/mnt/d/WindowsTools/powershell.exe"
+            return None
+
+        monkeypatch.setattr(gateway_cli.shutil, "which", which)
+        monkeypatch.setenv("PATH", "/mnt/d/WindowsTools:/usr/bin:/bin")
+        unit_path.write_text(gateway_cli.generate_systemd_unit(system=False), encoding="utf-8")
+        assert "/mnt/d/WindowsTools" in unit_path.read_text()
+
+        # A service/login shell without the Windows mount must not make a valid unit stale.
+        monkeypatch.setenv("PATH", "/usr/bin:/bin")
+        assert gateway_cli.systemd_unit_is_current(system=False)
+        assert "/mnt/d/WindowsTools" in gateway_cli.generate_systemd_unit(system=False)
+
+        # Strict comparison still catches a real non-PATH unit change.
+        unit_path.write_text(unit_path.read_text().replace("RestartSec=5", "RestartSec=19"))
+        assert not gateway_cli.systemd_unit_is_current(system=False)
+
     def test_outside_wsl_nothing_is_added(self, monkeypatch):
         monkeypatch.setattr(gateway_cli, "is_wsl", lambda: False)
         monkeypatch.setenv("PATH", "/usr/local/bin:/mnt/c/WINDOWS/system32")
