@@ -755,7 +755,8 @@ def _routed_client_kwargs(agent, fallback_model, _provider_timeout) -> Optional[
     """
     from agent.auxiliary_client import resolve_provider_client
     _routed_client, _ = resolve_provider_client(
-        agent.provider or "auto", model=agent.model, raw_codex=True)
+        agent.provider or "auto", model=agent.model, raw_codex=True,
+        explicit_base_url=agent.base_url or None)
     if _routed_client is not None:
         from hermes_cli.providers import is_actual_route, normalize_provider
         effective_provider = getattr(_routed_client, "_hermes_aux_effective_provider", "")
