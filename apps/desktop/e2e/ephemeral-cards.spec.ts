@@ -78,6 +78,8 @@ test.describe('ephemeral-ui cards from MCP tool calls', () => {
       await expect(page.locator(`[data-ephemeral-call="${kind}"] iframe[title="${title}"][sandbox="allow-scripts"]`)).toHaveCount(1, {
         timeout: 15_000
       })
+      await expect(page.frameLocator(`[data-ephemeral-call="${kind}"] iframe`).locator('.eu-card')).toBeVisible()
+      await page.screenshot({ path: test.info().outputPath(`live-${kind}.png`) })
 
       if (kind === 'slots') {
         // Pin the calendar card while it is live: it collapses into an input-bar chip.
@@ -107,6 +109,7 @@ test.describe('ephemeral-ui cards from MCP tool calls', () => {
     await page.getByRole('button', { name: 'Add to chat' }).click()
     await expect(composer).toContainText('[ephemeral-ui slots · Google Calendar · sample data]')
     expect(await page.locator('[data-slot="aui_user-message-root"]').count()).toBe(sentBefore)
+    await page.screenshot({ path: test.info().outputPath('calendar-pinned.png') })
 
     // Unpin: the chip leaves the bar and the card is a receipt in the transcript.
     await page.getByRole('button', { name: 'Unpin' }).click()
@@ -149,6 +152,7 @@ test.describe('ephemeral-ui cards from MCP tool calls', () => {
     await card.getByText('lint · failed').click()
     await slot.getByRole('button', { name: 'Add to chat' }).click()
     await expect(composer).toContainText('[ephemeral-ui card · GitHub · agent card] lint')
+    await page.screenshot({ path: test.info().outputPath('agent-card-pick.png') })
 
     // Its ring runs out after the turn: the card leaves a one-line receipt.
     await expect(slot).toHaveAttribute('data-ephemeral-phase', 'receipt', { timeout: 30_000 })
