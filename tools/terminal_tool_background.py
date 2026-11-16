@@ -111,11 +111,12 @@ def _apply_async_support(proc_session, result_data, notify_on_complete, watch_pa
     if not (notify_on_complete or watch_patterns):
         return notify_on_complete, watch_patterns
     from gateway.session_context import async_delivery_supported, get_session_env
+    from gateway.session_finite import finite_turn_required
     from tools.environments.sandbox_scope import hosted_scope
 
-    # A hosted agent's process is invisible outside its scope, and no notification consumer binds
-    # that scope (the gateway watcher and every drain pass over it), so its notice could never land.
-    if async_delivery_supported() and hosted_scope() is None:
+    # Finite gateway turns have a live viewer only until their answer is sent: a process
+    # completion queued behind the turn must not trigger a second, unattended turn.
+    if async_delivery_supported() and finite_turn_required() is not True and hosted_scope() is None:
         _stamp_gateway_routing(proc_session, get_session_env)
         return notify_on_complete, watch_patterns
     result_data["notify_on_complete"] = False
@@ -288,7 +289,8 @@ def yield_to_background_handler(
 def _stamp_routing_if_gateway(process_registry, session, session_key) -> None:
     """Route the adopted session's completion like a normal notify_on_complete spawn."""
     from gateway.session_context import async_delivery_supported, get_session_env
-    if not async_delivery_supported():
+    from gateway.session_finite import finite_turn_required
+    if not async_delivery_supported() or finite_turn_required() is True:
         session.notify_on_complete = False
         return
     _stamp_gateway_routing(session, get_session_env)
