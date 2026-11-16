@@ -120,6 +120,21 @@ for (const [name, registry, available] of cases) {
   })
 }
 
+test('local picker keeps mounted-drive cwd when WSL registrations are absent', async () => {
+  const bridge = await loadBridge({})
+
+  bridge.setWslBridgeProfileState('local', true)
+  bridge.setWslBridgeProfileState('remote', false)
+
+  // A saved /mnt/c cwd still identifies a valid Windows folder after distro removal.
+  assert.equal(bridge.resolvePickerDefaultPath('/mnt/c/Users/alex', undefined, 'local'), 'C:\\Users\\alex')
+  // A remote backend's POSIX paths must never be translated against this host.
+  assert.equal(bridge.resolvePickerDefaultPath('/mnt/c/Users/alex', undefined, 'remote'), '/mnt/c/Users/alex')
+  assert.equal(bridge.resolvePickerDefaultPath('/home/alex', undefined, 'local'), '/home/alex')
+  assert.ok(io.calls.every(call => call.exe === 'reg.exe'))
+  assert.ok(io.probes.every(probe => !probe.startsWith('\\\\')))
+})
+
 test('remote profiles short-circuit without a registry query', async () => {
   const bridge = await loadBridge({ [HKCU]: registration(HKCU) })
 

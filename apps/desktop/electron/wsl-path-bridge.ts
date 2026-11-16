@@ -251,6 +251,13 @@ export function resolvePickerDefaultPath(
   // so the native dialog gets the raw path (it falls back gracefully) instead
   // of triggering a wsl.exe spawn / install prompt. (#66433)
   if (!isWslBridgeActive(profile)) {
+    // A local backend may retain a mounted-drive cwd after its WSL distro is removed.
+    // Drive-only translation needs neither wsl.exe nor a WSL UNC share.
+    const key = profile == null ? activeWslBridgeProfile : normalizeWslBridgeProfile(profile)
+    if (IS_WINDOWS && wslBridgeProfiles.get(key) === true && WSL_MOUNT_RE.test(String(defaultPath).trim())) {
+      return wslPosixToWindowsAccessible(defaultPath, distro)
+    }
+
     return defaultPath
   }
 
