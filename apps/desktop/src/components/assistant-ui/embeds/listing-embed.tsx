@@ -1,5 +1,6 @@
 'use client'
 
+import { useStore } from '@nanostores/react'
 import { useEffect, useState } from 'react'
 
 import { WIDGET_SHELL_CLASS } from '@/components/chat/widget-shell'
@@ -9,8 +10,9 @@ import { Tip } from '@/components/ui/tooltip'
 import { useImageDownload } from '@/hooks/use-image-download'
 import { useI18n } from '@/i18n'
 import { ExternalLink } from '@/lib/external-link'
-import { type Listing, parseListings, specLine } from '@/lib/listing-embed'
+import { type Listing, hostLabel, parseListings, specLine } from '@/lib/listing-embed'
 import { cn } from '@/lib/utils'
+import { $remoteMediaMode } from '@/store/remote-media'
 
 import type { RichFenceProps } from './types'
 
@@ -133,6 +135,8 @@ function ListingCard({ listing }: { listing: Listing }) {
  */
 function ListingGallery({ address, images }: { address: string; images: string[] }) {
   const { t } = useI18n()
+  const askRemote = useStore($remoteMediaMode) === 'ask'
+  const [allowedUrls, setAllowedUrls] = useState<string[]>([])
   const [broken, setBroken] = useState<string[]>([])
   const [openAt, setOpenAt] = useState<number | null>(null)
 
@@ -154,14 +158,22 @@ function ListingGallery({ address, images }: { address: string; images: string[]
 
       if (delta !== 0) {
         event.preventDefault()
-        setOpenAt(prev => ((prev ?? 0) + delta + live.length) % live.length)
+        const next = ((openAt ?? 0) + delta + live.length) % live.length
+        const nextSrc = live[next]
+
+        // Arrow-key navigation is an explicit request to view the next photo.
+        if (askRemote && nextSrc && !allowedUrls.includes(nextSrc)) {
+          setAllowedUrls(current => (current.includes(nextSrc) ? current : [...current, nextSrc]))
+        }
+
+        setOpenAt(next)
       }
     }
 
     window.addEventListener('keydown', onKey)
 
     return () => window.removeEventListener('keydown', onKey)
-  }, [live.length, openAt])
+  }, [allowedUrls, askRemote, live, openAt])
 
   if (live.length === 0) {
     return null
@@ -187,12 +199,15 @@ function ListingGallery({ address, images }: { address: string; images: string[]
         {visible.map((src, tile) => (
           <GalleryTile
             address={address}
+            approved={!askRemote || allowedUrls.includes(src)}
+            consentLabel={t.settings.appearance.remoteMediaLoad(hostLabel(src))}
             // The hero earns its scale only in the 3+ mosaic; with one or two
             // photos every frame is equal.
             className={cn(mosaic && tile === 0 && 'col-span-2 row-span-2')}
             key={src}
             label={t.desktop.openImage}
             more={tile === visible.length - 1 ? live.length - visible.length : 0}
+            onApprove={() => setAllowedUrls(current => (current.includes(src) ? current : [...current, src]))}
             onError={() => setBroken(prev => (prev.includes(src) ? prev : [...prev, src]))}
             onOpen={() => setOpenAt(tile)}
             src={src}
@@ -215,22 +230,47 @@ function ListingGallery({ address, images }: { address: string; images: string[]
 
 function GalleryTile({
   address,
+  approved,
   className,
+  consentLabel,
   more,
+  onApprove,
   onError,
   onOpen,
   src,
   label
 }: {
   address: string
+  approved: boolean
   className?: string
+  consentLabel: string
   /** Photos past the visible tiles; rendered as `+N` over this frame. */
   more: number
+  onApprove: () => void
   onError: () => void
   onOpen: () => void
   src: string
   label: string
 }) {
+  // Listing fences contain model-authored URLs. They bypass MarkdownImage,
+  // so never mount their <img> tags in Ask mode before a grant for this URL.
+  if (!approved) {
+    return (
+      <span
+        className={cn('grid size-full place-items-center bg-muted/55 p-2', className)}
+        data-slot="aui_listing-image-gate"
+      >
+        <button
+          className="max-w-full rounded-md bg-background/80 px-2.5 py-1.5 text-xs font-medium text-foreground"
+          onClick={onApprove}
+          type="button"
+        >
+          {consentLabel}
+        </button>
+      </span>
+    )
+  }
+
   return (
     <Tip label={label}>
       <button
