@@ -14,7 +14,7 @@ import stat
 import sys
 from contextlib import suppress
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Dict, Iterator, List, Optional, Set, Tuple
 
 # Force UTF-8 stdout/stderr: GBK-style Windows locales can't encode the glyphs
@@ -201,6 +201,23 @@ def dir_hash(directory: Path, *, include_runtime_cache: bool = False) -> str:
     return hasher.hexdigest()
 
 
+def _other_os_dir_hash(directory: Path, *, include_runtime_cache: bool = False) -> str:
+    """Exact ownership hash using the other OS's relative paths and sort order."""
+    def sort_key(path: Path):
+        rel = path.relative_to(directory)
+        return rel.as_posix() if os.name == "nt" else PureWindowsPath(*rel.parts)
+
+    hasher = hashlib.md5()
+    with suppress(OSError):
+        for fpath in sorted(directory.rglob("*"), key=sort_key):
+            if (include_runtime_cache or not _is_runtime_cache(fpath, directory)) and fpath.is_file():
+                rel = fpath.relative_to(directory)
+                path_text = rel.as_posix() if os.name == "nt" else "\\".join(rel.parts)
+                hasher.update(path_text.encode("utf-8"))
+                hasher.update(fpath.read_bytes())
+    return hasher.hexdigest()
+
+
 def _matches_origin_hash(directory: Path, origin_hash: str, user_hash: Optional[str] = None) -> bool:
     """Prove unchanged package ownership against a clean OR exact legacy hash.
 
@@ -211,7 +228,12 @@ def _matches_origin_hash(directory: Path, origin_hash: str, user_hash: Optional[
     if not origin_hash:
         return False
     current = dir_hash(directory) if user_hash is None else user_hash
-    return current == origin_hash or dir_hash(directory, include_runtime_cache=True) == origin_hash
+    return (
+        current == origin_hash
+        or dir_hash(directory, include_runtime_cache=True) == origin_hash
+        or _other_os_dir_hash(directory) == origin_hash
+        or _other_os_dir_hash(directory, include_runtime_cache=True) == origin_hash
+    )
 
 
 def _move_dir(src: Path, dest: Path) -> None:

@@ -1,7 +1,9 @@
 """Runtime caches must not take ownership of updater-managed skill packages."""
 
 import hashlib
+import os
 import py_compile
+from pathlib import PureWindowsPath
 
 import pytest
 
@@ -15,6 +17,23 @@ def _legacy_hash(directory):
     for path in sorted(directory.rglob("*")):
         if path.is_file():
             digest.update(str(path.relative_to(directory)).encode("utf-8"))
+            digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def _foreign_path_hash(directory, *, include_cache=False):
+    """Build a manifest origin as another OS would for the same file bytes."""
+    digest = hashlib.md5()
+
+    def sort_key(path):
+        rel = path.relative_to(directory)
+        return rel.as_posix() if os.name == "nt" else PureWindowsPath(*rel.parts)
+
+    for path in sorted(directory.rglob("*"), key=sort_key):
+        if path.is_file() and (include_cache or not ss._is_runtime_cache(path, directory)):
+            rel = path.relative_to(directory)
+            path_text = rel.as_posix() if os.name == "nt" else "\\".join(rel.parts)
+            digest.update(path_text.encode("utf-8"))
             digest.update(path.read_bytes())
     return digest.hexdigest()
 
@@ -43,6 +62,35 @@ def skill_tree(tmp_path, monkeypatch):
     monkeypatch.setattr(ss, "_read_suppressed_names", set)
     assert ss.sync_skills(quiet=True)["copied"] == ["demo"]
     return src, skills / "coding" / "demo"
+
+
+@pytest.mark.parametrize("include_cache", [False, True])
+def test_foreign_path_manifest_upgrades_pristine_bundle(skill_tree, include_cache):
+    """A POSIX-recorded origin on Windows (or Windows-recorded on POSIX) is still pristine."""
+    src, dest = skill_tree
+    if include_cache:
+        _write(dest, "scripts/__pycache__/helper.cpython-311.pyc", "old cache bytes")
+    origin = _foreign_path_hash(dest, include_cache=include_cache)
+    assert origin != ss.dir_hash(dest)
+    ss._write_manifest({"demo": origin})
+
+    assert list_user_modified_bundled_skills() == []
+    _write(src, "scripts/helper.py", "ANSWER = 2\n")
+    assert ss.sync_skills(quiet=True)["updated"] == ["demo"]
+    assert (dest / "scripts/helper.py").read_text(encoding="utf-8") == "ANSWER = 2\n"
+    assert ss._read_manifest()["demo"] == ss.dir_hash(src)
+
+
+def test_foreign_path_manifest_still_protects_real_user_edits(skill_tree):
+    src, dest = skill_tree
+    origin = _foreign_path_hash(dest)
+    ss._write_manifest({"demo": origin})
+    _write(dest, "scripts/helper.py", "USER EDIT\n")
+    _write(src, "scripts/helper.py", "ANSWER = 2\n")
+
+    assert ss.sync_skills(quiet=True)["user_modified"] == ["demo"]
+    assert (dest / "scripts/helper.py").read_text(encoding="utf-8") == "USER EDIT\n"
+    assert ss._read_manifest()["demo"] == origin
 
 
 def test_real_python_compilation_does_not_freeze_update(skill_tree):
