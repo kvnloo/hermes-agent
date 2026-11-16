@@ -284,11 +284,16 @@ def _file_version(resolved: str) -> tuple | None:
             if not stat.S_ISREG(opened.st_mode):
                 return None
             digest = hashlib.file_digest(stream, "sha256").digest()
+            opened_after = os.fstat(stream.fileno())
         after = os.stat(resolved)
         version = tuple(getattr(before, name) for name in _VERSION_FIELDS)
         if version != tuple(getattr(after, name) for name in _VERSION_FIELDS):
             return None
         if any(getattr(opened, name) != getattr(after, name) for name in _HANDLE_IDENTITY_FIELDS):
+            return None
+        # Same-source handle ctime detects in-place writes even when path ctime
+        # stays fixed (Windows) and size/mtime are restored during hashing.
+        if any(getattr(opened, name) != getattr(opened_after, name) for name in _VERSION_FIELDS):
             return None
         return (*version, digest)
     except OSError:

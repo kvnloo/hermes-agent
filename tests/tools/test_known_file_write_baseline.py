@@ -419,3 +419,58 @@ def test_a_native_windows_edit_keeps_its_write_baseline(tmp_path):
         assert path.read_text(encoding="utf-8") == "merged\n"
     finally:
         clear_file_ops_cache(task)
+
+def test_in_place_rewrite_during_hash_invalidates_snapshot(tmp_path, monkeypatch):
+    """A stable path ctime must not hide an in-place change during hashing.
+
+    Windows can keep the pathname's ctime fixed while fstat's change time
+    advances. A same-size rewrite with restored mtime must not mint a
+    digest paired with metadata from a different version of the bytes.
+    """
+    from types import SimpleNamespace
+    from tools import file_tools_read_tracking as tracking
+
+    path = tmp_path / "mid-hash.txt"
+    path.write_bytes(b"old bytes")
+    initial = path.stat()
+    changed = False
+    real_stat, real_fstat = os.stat, os.fstat
+    real_digest = tracking.hashlib.file_digest
+
+    class _CtimeView:
+        def __init__(self, st, ctime):
+            self.st, self.ctime = st, ctime
+
+        def __getattr__(self, name):
+            return self.ctime if name == "st_ctime_ns" else getattr(self.st, name)
+
+    def path_stat(name, *args, **kwargs):
+        st = real_stat(name, *args, **kwargs)
+        return (_CtimeView(st, initial.st_ctime_ns)
+                if os.fspath(name) == str(path) else st)
+
+    def handle_stat(fd):
+        st = real_fstat(fd)
+        if (st.st_dev, st.st_ino) != (initial.st_dev, initial.st_ino):
+            return st
+        # Deterministic split-source ctime, without pretending the host is Windows.
+        return _CtimeView(st, initial.st_ctime_ns + (2 if changed else 1))
+
+    def rewrite_during_digest(stream, algorithm):
+        nonlocal changed
+        digest = real_digest(stream, algorithm)
+        path.write_bytes(b"new bytes")
+        os.utime(path, ns=(initial.st_atime_ns, initial.st_mtime_ns))
+        changed = True
+        return digest
+
+    fake_os = SimpleNamespace(**vars(os))
+    fake_os.stat = path_stat
+    fake_os.fstat = handle_stat
+    monkeypatch.setattr(tracking, "os", fake_os)
+    monkeypatch.setattr(tracking.hashlib, "file_digest", rewrite_during_digest)
+
+    assert tracking._file_version(str(path)) is None
+    assert path.read_bytes() == b"new bytes"
+    assert path.stat().st_size == initial.st_size
+    assert path.stat().st_mtime_ns == initial.st_mtime_ns
