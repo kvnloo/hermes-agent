@@ -707,12 +707,9 @@ function withoutBaseIds(rows: ChatMessage[], baseMessages: ChatMessage[]): ChatM
   return rows.filter(row => !baseIds.has(row.id))
 }
 
-/** Without a matched user interval, the journal can only be stale against what
- *  the transcript already holds. A live row (no durable id yet) is covered by
- *  an equal reply in the tip turn, or by a byte-identical reply a later turn
- *  has already superseded — the journal only ever records the turn being
- *  streamed, so a superseded match means the tail was replayed, not lost. A
- *  durable row needs identity. */
+/** An unknown live reply can match only the latest committed turn.
+ *  Earlier turns may have authored the same text independently; durable rows
+ *  still match by identity regardless of position. */
 function journalTailAlreadyCommitted(tailAssistants: ChatMessage[], baseMessages: ChatMessage[]): boolean {
   const recoverable = tailAssistants.filter(assistantHasRecoverableContent)
 
@@ -732,12 +729,7 @@ function journalTailAlreadyCommitted(tailAssistants: ChatMessage[], baseMessages
       return base.rowId === journaled.rowId
     }
 
-    // Position after the newest prompt (the tip turn), or a turn the transcript
-    // has moved past: a live journal row can only describe the turn streaming
-    // right now, so matching a superseded one means this snapshot is a replay.
-    return (
-      index > lastTurnStart || baseMessages.some((message, later) => later > index && message.role === 'user')
-    )
+    return index > lastTurnStart
   }
 
   return recoverable.every(message =>
@@ -821,7 +813,26 @@ export function mergeInFlightMessages(
     // stale — appending it would re-render the same replies at the end of the
     // conversation. Otherwise, the base never saw this turn at all: append the
     // whole tail (the crash-recovery path the journal exists for).
-    if (journalTailAlreadyCommitted(tailAssistants, baseMessages)) {
+    // On an idle resume a journal is stale if a completed newer reply proves
+    // that the retained page has moved beyond its original turn.
+    const journalUser = tail[tailUserIndex]
+    const oldestStored = baseMessages.find(message => isCommittedRow(message) && message.rowId !== undefined)
+    const newestFinished = baseMessages.findLast(
+      message => message.role === 'assistant' && isCommittedRow(message) && message.durableComplete === true
+    )
+    const journalTime = lastJournalRow?.timestamp ?? journalUser?.timestamp
+    const pageBeyondJournal =
+      !options.keepPending &&
+      newestFinished !== undefined &&
+      ((journalUser?.role === 'user' &&
+        journalUser.rowId !== undefined &&
+        oldestStored?.rowId !== undefined &&
+        journalUser.rowId < oldestStored.rowId) ||
+        (journalTime !== undefined &&
+          newestFinished.timestamp !== undefined &&
+          journalTime < newestFinished.timestamp))
+
+    if (pageBeyondJournal || journalTailAlreadyCommitted(tailAssistants, baseMessages)) {
       return { ...noop, caughtUp: true }
     }
 
