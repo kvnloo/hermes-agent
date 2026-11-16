@@ -677,6 +677,7 @@ export function preserveLocalSystemNotices(nextMessages: ChatMessage[], currentM
             row.id === message.noticeAfterId ||
             (message.noticeAfterRowId !== undefined && row.rowId === message.noticeAfterRowId)
         )
+
         const at =
           directAt >= 0
             ? directAt

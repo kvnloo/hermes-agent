@@ -10,6 +10,7 @@ const row = (id: string, role: 'user' | 'assistant', text: string, rowId: number
 })
 
 const older = [row('old-question', 'user', 'old question', 1), row('old-reply', 'assistant', 'old reply', 2)]
+
 const notice: ChatMessage = {
   id: 'btw-complete-btw_1',
   role: 'system',
@@ -27,12 +28,14 @@ const liveWithLaterTurn = (newReply: ChatMessage) => [
 
 it('keeps a /btw answer in its original turn when an optimistic prompt hydrates (#149380)', () => {
   const newReply = row('new-reply', 'assistant', 'new reply', 4)
+
   const page = [
     row('hydrated-question', 'user', 'old question', 1),
     row('hydrated-reply', 'assistant', 'old reply', 2),
     row('new-question', 'user', 'new question', 3),
     newReply
   ]
+
   const result = preserveLocalSystemNotices(page, liveWithLaterTurn(newReply))
 
   expect(result.map(message => message.id)).toEqual([
@@ -47,6 +50,7 @@ it('keeps a /btw answer in its original turn when an optimistic prompt hydrates 
 
 it('drops a /btw answer instead of moving it into a later turn after compaction (#149380)', () => {
   const newReply = row('new-reply', 'assistant', 'new reply', 7)
+
   const page = [
     row('summary', 'assistant', 'compacted earlier context', 5),
     row('new-question', 'user', 'new question', 6),
@@ -60,11 +64,13 @@ it('keeps a waiting generic notice before its next held row when /btw anchors ea
   const source = row('source', 'assistant', 'answer before aside', 11)
   const middle = row('middle', 'user', 'later question', 12)
   const last = row('last', 'assistant', 'later answer', 13)
+
   const generic: ChatMessage = {
     id: 'background-complete',
     role: 'system',
     parts: [textPart('background finished')]
   }
+
   const anchored: ChatMessage = {
     ...notice,
     id: 'btw-complete-anchored',
@@ -91,7 +97,9 @@ it('reanchors a /btw answer on a hydrated optimistic user row without a rowId (#
     role: 'user',
     parts: [textPart('next question')]
   }
+
   const hydrated = row('hydrated-next', 'user', 'next question', 3)
+
   const anchored: ChatMessage = {
     ...notice,
     id: 'btw-complete-optimistic',

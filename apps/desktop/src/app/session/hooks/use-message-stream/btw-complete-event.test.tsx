@@ -2,7 +2,7 @@ import type { GatewayEvent } from '@hermes/shared'
 import { act, cleanup } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { textPart } from '@/lib/chat-messages'
+import { type ChatMessage, preserveLocalSystemNotices, textPart } from '@/lib/chat-messages'
 
 import { type MessageStreamHarness, renderMessageStream } from './test-harness'
 
@@ -57,6 +57,41 @@ describe('btw.complete event', () => {
     emit('btw.complete', { task_id: 'btw_anchor', question: 'where?', text: 'there' })
 
     expect(lastMessage()).toMatchObject({ noticeAfterId: 'settled-reply', noticeAfterRowId: 42 })
+  })
+
+  it('keeps emitted answers in arrival order beside their source across refreshes and drops them on compaction', () => {
+    const question: ChatMessage = { id: 'question', role: 'user', rowId: 1, parts: [textPart('question')] }
+    const reply: ChatMessage = { id: 'reply', role: 'assistant', rowId: 2, parts: [textPart('reply')] }
+
+    stream.states.set(SID, { ...stream.state(), messages: [question, reply] })
+    emit('btw.complete', { task_id: 'first', text: 'first aside' })
+    emit('btw.complete', { task_id: 'second', text: 'second aside' })
+
+    const laterQuestion: ChatMessage = { id: 'optimistic', role: 'user', parts: [textPart('later question')] }
+    const laterReply: ChatMessage = { id: 'later-reply', role: 'assistant', rowId: 4, parts: [textPart('later reply')] }
+
+    const page = [
+      { ...question, id: 'hydrated-question' },
+      { ...reply, id: 'hydrated-reply' },
+      { ...laterQuestion, id: 'hydrated-later-question', rowId: 3 },
+      laterReply
+    ]
+
+    const refreshed = preserveLocalSystemNotices(page, [...stream.state().messages, laterQuestion, laterReply])
+
+    expect(refreshed.map(message => message.id)).toEqual([
+      'hydrated-question',
+      'hydrated-reply',
+      'btw-complete-first',
+      'btw-complete-second',
+      'hydrated-later-question',
+      'later-reply'
+    ])
+    expect(preserveLocalSystemNotices(page, refreshed)).toEqual(refreshed)
+
+    const compacted = page.slice(2)
+
+    expect(preserveLocalSystemNotices(compacted, refreshed)).toEqual(compacted)
   })
 
   it('keeps another session untouched when the event targets this one', () => {
