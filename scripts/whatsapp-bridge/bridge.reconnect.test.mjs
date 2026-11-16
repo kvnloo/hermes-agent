@@ -131,8 +131,6 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   assert.match(logs[0], /network down/);
 }
 
-console.log('bridge.reconnect.test.mjs: all assertions passed');
-
 // -- pairCloseFailure ------------------------------------------------------
 
 // Pair-only reconnects only on closes a retry can fix; a refused build (405)
@@ -144,3 +142,12 @@ console.log('bridge.reconnect.test.mjs: all assertions passed');
     assert.match(text, new RegExp(`\\(${code ?? 'no status'} Connection Failure\\)`));
   }
 }
+
+// A close after WhatsApp has emitted `open` is not a failed pairing, even if
+// its status would have been fatal before linking (nanoclaw#4372 success guard).
+{
+  assert.equal(pairCloseFailure(405, 'Connection Failure', true), null,
+    'a post-open close must not replace a successful link with an error');
+}
+
+console.log('bridge.reconnect.test.mjs: all assertions passed');

@@ -417,6 +417,8 @@ function enqueueDeliveryStatus(args) {
 
 let sock = null;
 let connectionState = 'disconnected';
+// A completed pair-only connection must not be turned into an error by a late close.
+let pairSucceeded = false;
 
 function emitPairEvent(event) {
   if (!PAIR_JSON) return;
@@ -507,8 +509,8 @@ async function startSocket() {
           console.log('❌ Logged out. Delete session and restart to re-authenticate.');
         }
         process.exit(1);
-      } else if (PAIR_ONLY && pairCloseFailure(reason)) {
-        const error = pairCloseFailure(reason, lastDisconnect?.error?.message);
+      } else if (PAIR_ONLY && pairCloseFailure(reason, lastDisconnect?.error?.message, pairSucceeded)) {
+        const error = pairCloseFailure(reason, lastDisconnect?.error?.message, pairSucceeded);
         emitPairEvent({ event: 'error', error, reason });
         if (!PAIR_JSON) console.log(`❌ ${error}`);
         process.exit(1);
@@ -537,6 +539,7 @@ async function startSocket() {
         console.log('✅ WhatsApp connected!');
       }
       if (PAIR_ONLY) {
+        pairSucceeded = true;
         if (!PAIR_JSON) {
           console.log('✅ Pairing complete. Credentials saved.');
         }

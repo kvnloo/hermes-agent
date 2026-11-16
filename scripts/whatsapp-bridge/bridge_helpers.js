@@ -743,9 +743,9 @@ export function createReconnectScheduler(startFn, {
 // must stop with the code instead of looping with no QR.
 const PAIR_RETRYABLE_CLOSES = new Set([408, 428, 503, 515]);
 
-/** Error text for a pair-only close no reconnect can fix, or null when a reconnect may. */
-export function pairCloseFailure(reason, message = '') {
-  if (PAIR_RETRYABLE_CLOSES.has(reason)) return null;
+/** Error text for a fatal pair-only close, or null when retrying or already paired. */
+export function pairCloseFailure(reason, message = '', pairSucceeded = false) {
+  if (pairSucceeded || PAIR_RETRYABLE_CLOSES.has(reason)) return null;
   const detail = `${reason ?? 'no status'} ${message || ''}`.replace(/\s+/g, ' ').trim();
   return `WhatsApp closed the connection before linking (${detail}). `
     + 'Run pairing again; if it repeats, run `hermes update` (WhatsApp may have refused this WhatsApp Web version).';
