@@ -519,12 +519,17 @@ class CLIStreamMixin:
             line, self._stream_buf = self._stream_buf.split("\n", 1)
             # Table rows are held and re-padded as a block once it ends (already-printed rows
             # can't be re-aligned), so a table appears in one batch when the block closes.
-            if self._in_stream_table:
+            # Code-fence contents are literal, even when a line resembles a table.
+            in_stripped_fence = (
+                self.final_response_markdown == "strip"
+                and getattr(self, "_stream_fence", None) is not None
+            )
+            if self._in_stream_table and not in_stripped_fence:
                 if looks_like_table_row(line) or is_table_divider(line):
                     self._stream_table_buf.append(line)
                     continue
                 self._flush_stream_table_buf()
-            elif looks_like_table_row(line):
+            elif not in_stripped_fence and looks_like_table_row(line):
                 self._stream_table_buf.append(line)
                 self._in_stream_table = True
                 continue

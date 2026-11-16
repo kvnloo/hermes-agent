@@ -59,3 +59,18 @@ def test_fence_state_resets_between_turns(cli_stub):
     cli._flush_stream()
 
     assert "bold text" in "\n".join(_lines(emitted))
+
+
+def test_streamed_fenced_pipe_rows_are_not_reformatted_as_tables(cli_stub):
+    cli, emitted = cli_stub
+    rows = (
+        "| key | __init__ |",
+        "|---|---|",
+        "| literal | **bold** |",
+    )
+    cli._emit_stream_text("~~~text\n" + "\n".join(rows) + "\n~~~\n")
+    cli._flush_stream()
+
+    rendered = "\n".join(_lines(emitted))
+    for row in rows:
+        assert row in rendered
