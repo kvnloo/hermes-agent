@@ -327,3 +327,12 @@ async def test_a_key_prefix_at_a_word_start_or_after_a_separator_is_still_held(k
     adapter = _adapter()
     await _stream(adapter, "Your key is ", *[key[i:i + 3] for i in range(0, len(key), 3)], " - keep it safe.")
     assert not _raw_runs([content for _op, _id, content in adapter.ops], _BODY, width=8)
+
+@pytest.mark.asyncio
+async def test_a_glued_jwt_prefix_split_before_j_is_never_previewed():
+    # The JWT matcher finds eyJ even inside an identifier. A frame ending in ...ey
+    # cannot be sealed: the next delta may supply J and turn it into a masked JWT.
+    adapter = _adapter()
+    await _stream(adapter, "Reply: reportey", "J" + _BODY + " done")
+    assert not any(content.endswith("reportey") for _op, _id, content in adapter.ops)
+    assert not _raw_runs([content for _op, _id, content in adapter.ops], _BODY)

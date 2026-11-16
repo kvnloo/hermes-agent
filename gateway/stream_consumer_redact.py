@@ -90,7 +90,12 @@ def _token_may_be_secret(context: str, token: str) -> bool:
     for i in range(max(0, len(token) - _LITERAL_MAX), len(token)):
         if token[i:].isdigit():
             continue
-        if (not i or not token[i - 1].isalnum()) and any(lit.startswith(token[i:]) for lit in _LITERALS):
+        suffix = token[i:]
+        # These patterns also match inside a word: an ey tail can still become eyJ.
+        if any(lit.startswith(suffix) for lit in _UNANCHORED_LITERALS):
+            return True
+        if (not i or not token[i - 1].isalnum()) and any(
+                lit.startswith(suffix) for lit in _PREFIX_SUBSTRINGS):
             return True
     base = redact_for_egress(context + token)
     return (base != context + token and not base.endswith(token)) or any(
