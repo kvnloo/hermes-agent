@@ -357,10 +357,10 @@ _PROBE_IMAGE_DATA_URL = (
     "AMQDkA4AOEAEA5AOADhAIQDEA4A4QCEAxAOQDgA4QCEAyAPfwN2EeYSJjWGtAAAAABJRU5ErkJggg=="
 )
 
-_VISION_CAPS_MEM: Dict[str, Any] = {}
-_VISION_CAPS_LOADED = False
+# The gateway can serve multiple profile homes in one process.
+_VISION_CAPS_MEM: Dict[Path, Dict[str, Any]] = {}
 _VISION_PROBE_LOCK = threading.Lock()
-_VISION_PROBE_IN_FLIGHT: set = set()
+_VISION_PROBE_IN_FLIGHT: set[Tuple[Path, str]] = set()
 
 
 def _vision_caps_path() -> Path:
@@ -372,16 +372,19 @@ def _vision_caps_key(provider: str, model: str) -> str:
     return f"{(provider or '').strip().lower()}|{(model or '').strip().lower()}"
 
 
+def _vision_probe_key(provider: str, model: str) -> Tuple[Path, str]:
+    return (_vision_caps_path(), _vision_caps_key(provider, model))
+
+
 def _load_vision_caps() -> Dict[str, Any]:
-    global _VISION_CAPS_MEM, _VISION_CAPS_LOADED
-    if not _VISION_CAPS_LOADED:
-        _VISION_CAPS_LOADED = True
+    path = _vision_caps_path()
+    if path not in _VISION_CAPS_MEM:
         try:
-            raw = json.loads(_vision_caps_path().read_text(encoding="utf-8"))
-            _VISION_CAPS_MEM = raw if isinstance(raw, dict) else {}
-        except Exception:
-            _VISION_CAPS_MEM = {}
-    return _VISION_CAPS_MEM
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            _VISION_CAPS_MEM[path] = raw if isinstance(raw, dict) else {}
+        except (OSError, ValueError, UnicodeError):
+            _VISION_CAPS_MEM[path] = {}
+    return _VISION_CAPS_MEM[path]
 
 
 def record_vision_verdict(provider: str, model: str, verdict: bool, source: str = "probe") -> None:
@@ -406,7 +409,8 @@ def record_vision_verdict(provider: str, model: str, verdict: bool, source: str 
 
 
 def _cached_vision_verdict(provider: str, model: str) -> Optional[bool]:
-    raw = _load_vision_caps().get(_vision_caps_key(provider, model))
+    with _VISION_PROBE_LOCK:
+        raw = _load_vision_caps().get(_vision_caps_key(provider, model))
     if isinstance(raw, dict) and isinstance(raw.get("supports_vision"), bool):
         return raw["supports_vision"]
     return None
@@ -456,7 +460,7 @@ def _send_fixture_probe(provider: str, model: str, cfg: Optional[Dict[str, Any]]
 
 
 def _run_vision_probe(provider: str, model: str, cfg: Optional[Dict[str, Any]]) -> None:
-    key = _vision_caps_key(provider, model)
+    key = _vision_probe_key(provider, model)
     verdict: Optional[bool] = None
     try:
         verdict = _send_fixture_probe(provider, model, cfg)
@@ -484,14 +488,14 @@ def _run_vision_probe(provider: str, model: str, cfg: Optional[Dict[str, Any]]) 
 
 
 def _kick_vision_probe(provider: str, model: str, cfg: Optional[Dict[str, Any]]) -> None:
-    key = _vision_caps_key(provider, model)
+    key = _vision_probe_key(provider, model)
     with _VISION_PROBE_LOCK:
         if key in _VISION_PROBE_IN_FLIGHT:
             return
         _VISION_PROBE_IN_FLIGHT.add(key)
     from agent.memory_provider import spawn_context_thread  # bare threads drop the scope
     spawn_context_thread(
-        _run_vision_probe, name="vision-probe-" + key, args=(provider, model, cfg),
+        _run_vision_probe, name="vision-probe-" + key[1], args=(provider, model, cfg),
     ).start()
 
 

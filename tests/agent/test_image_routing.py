@@ -684,7 +684,6 @@ class TestLiveVisionProbe:
         from agent import image_routing as _ir
         monkeypatch.setenv("HERMES_HOME", str(tmp_path))
         monkeypatch.setattr(_ir, "_VISION_CAPS_MEM", {})
-        monkeypatch.setattr(_ir, "_VISION_CAPS_LOADED", False)
         monkeypatch.setattr(_ir, "_VISION_PROBE_IN_FLIGHT", set())
         return _ir
 
@@ -702,6 +701,43 @@ class TestLiveVisionProbe:
         assert saved["opencode-go|m2"]["supports_vision"] is False
         assert saved["opencode-go|m2"]["source"] == "native-400"
 
+    def test_verdicts_do_not_cross_profile_homes(self, ir, tmp_path):
+        """A probe verdict must not select image routing for a different profile."""
+        from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+
+        first, second = tmp_path / "first", tmp_path / "second"
+        token = set_hermes_home_override(first)
+        try:
+            ir.record_vision_verdict("custom", "rolling-model", True)
+            other = set_hermes_home_override(second)
+            try:
+                assert ir._cached_vision_verdict("custom", "rolling-model") is None
+                ir.record_vision_verdict("custom", "rolling-model", False)
+                assert ir._cached_vision_verdict("custom", "rolling-model") is False
+            finally:
+                reset_hermes_home_override(other)
+            assert ir._cached_vision_verdict("custom", "rolling-model") is True
+        finally:
+            reset_hermes_home_override(token)
+
+        first_caps = json.loads((first / "vision_caps_cache.json").read_text(encoding="utf-8"))
+        second_caps = json.loads((second / "vision_caps_cache.json").read_text(encoding="utf-8"))
+        assert first_caps["custom|rolling-model"]["supports_vision"] is True
+        assert second_caps["custom|rolling-model"]["supports_vision"] is False
+
+    def test_probe_single_flight_is_profile_scoped(self, ir, tmp_path):
+        """Two profiles needing the same model must each probe their own endpoint."""
+        from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+
+        with patch("agent.memory_provider.spawn_context_thread") as spawn:
+            for home in (tmp_path / "first", tmp_path / "second"):
+                token = set_hermes_home_override(home)
+                try:
+                    ir._kick_vision_probe("custom", "rolling-model", {})
+                finally:
+                    reset_hermes_home_override(token)
+        assert spawn.call_count == 2
+
     def test_unknown_reports_unknown_and_kicks_once(self, ir):
         with patch.object(ir, "_kick_vision_probe") as kick:
             assert ir._probe_live_vision("opencode-go", "new-model", {}) is None
@@ -712,7 +748,7 @@ class TestLiveVisionProbe:
             ir._kick_vision_probe("opencode-go", "m3", {})
             ir._kick_vision_probe("opencode-go", "m3", {})
         assert spawn.call_count == 1
-        assert "opencode-go|m3" in ir._VISION_PROBE_IN_FLIGHT
+        assert ir._vision_probe_key("opencode-go", "m3") in ir._VISION_PROBE_IN_FLIGHT
 
     def test_probe_true_written_to_cache(self, ir):
         with patch.object(ir, "_send_fixture_probe", return_value=True):
@@ -723,14 +759,14 @@ class TestLiveVisionProbe:
         class Fake400(Exception):
             status_code = 400
 
-        ir._VISION_PROBE_IN_FLIGHT.add("opencode-go|m5")
+        ir._VISION_PROBE_IN_FLIGHT.add(ir._vision_probe_key("opencode-go", "m5"))
         with patch.object(
             ir, "_send_fixture_probe",
             side_effect=Fake400("Error code: 400 - This model does not support image input"),
         ):
             ir._run_vision_probe("opencode-go", "m5", {})
         assert ir._cached_vision_verdict("opencode-go", "m5") is False
-        assert "opencode-go|m5" not in ir._VISION_PROBE_IN_FLIGHT
+        assert ir._vision_probe_key("opencode-go", "m5") not in ir._VISION_PROBE_IN_FLIGHT
 
     def test_http_400_request_shape_caches_nothing(self, ir):
         """Regression: a MissingSessionID 400 once poisoned the cache to
@@ -738,14 +774,14 @@ class TestLiveVisionProbe:
         class Fake400(Exception):
             status_code = 400
 
-        ir._VISION_PROBE_IN_FLIGHT.add("opencode-go|m5b")
+        ir._VISION_PROBE_IN_FLIGHT.add(ir._vision_probe_key("opencode-go", "m5b"))
         with patch.object(
             ir, "_send_fixture_probe",
             side_effect=Fake400('{"type": "MissingSessionID", "message": "Request is missing x-opencode-session"}'),
         ):
             ir._run_vision_probe("opencode-go", "m5b", {})
         assert ir._cached_vision_verdict("opencode-go", "m5b") is None
-        assert "opencode-go|m5b" not in ir._VISION_PROBE_IN_FLIGHT
+        assert ir._vision_probe_key("opencode-go", "m5b") not in ir._VISION_PROBE_IN_FLIGHT
 
     def test_fixture_probe_merges_session_affinity_headers(self, ir):
         """The probe goes through the same client builder vision_analyze uses; relays that
@@ -777,11 +813,11 @@ class TestLiveVisionProbe:
         class Fake429(Exception):
             status_code = 429
 
-        ir._VISION_PROBE_IN_FLIGHT.add("opencode-go|m6")
+        ir._VISION_PROBE_IN_FLIGHT.add(ir._vision_probe_key("opencode-go", "m6"))
         with patch.object(ir, "_send_fixture_probe", side_effect=Fake429("slow down")):
             ir._run_vision_probe("opencode-go", "m6", {})
         assert ir._cached_vision_verdict("opencode-go", "m6") is None
-        assert "opencode-go|m6" not in ir._VISION_PROBE_IN_FLIGHT
+        assert ir._vision_probe_key("opencode-go", "m6") not in ir._VISION_PROBE_IN_FLIGHT
 
     def test_live_probe_is_chain_tail(self, ir):
         assert [name for name, _ in ir._VISION_PROBES][-1] == "live vision probe"

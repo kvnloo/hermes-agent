@@ -324,7 +324,6 @@ class TestRejectionNeverReachesPersistedHistory:
         from agent import image_routing as ir
         monkeypatch.setenv("HERMES_HOME", str(tmp_path))
         monkeypatch.setattr(ir, "_VISION_CAPS_MEM", {})
-        monkeypatch.setattr(ir, "_VISION_CAPS_LOADED", False)
 
     class _Err(Exception):
         status_code = 400
