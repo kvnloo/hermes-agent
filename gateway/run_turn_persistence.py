@@ -110,7 +110,8 @@ class GatewayTurnPersistenceMixin:
         post-compression session_id propagation. Returns
         ``(response, _intentional_silence, agent_messages)``."""
         from gateway.run import (
-            _is_gateway_hidden_reasoning_incomplete_turn, _normalize_empty_agent_response,
+            _gateway_surface_passes_raw_text, _is_gateway_hidden_reasoning_incomplete_turn,
+            _is_long_runtime_failure_text, _normalize_empty_agent_response,
             _sanitize_gateway_final_response, _should_clear_resume_pending_after_turn,
         )
         response = agent_result.get("final_response") or ""
@@ -181,7 +182,16 @@ class GatewayTurnPersistenceMixin:
             # A bot peer gets the model's own words only: the runtime's retry hints and "not
             # processed" lines are new inbound messages for its turn loop (#137027).
             if automatic_notices_allowed(source):
-                response = _normalize_empty_agent_response(agent_result, response, history_len=len(history))
+                # Raw/programmatic surfaces retain provider diagnostics, even when the
+                # failed-turn classifier would otherwise replace a long error envelope.
+                # Keep the existing empty and short-response normalization unchanged.
+                if not (
+                    _gateway_surface_passes_raw_text(source.platform)
+                    and agent_result.get("failed")
+                    and _is_long_runtime_failure_text(response)
+                ):
+                    response = _normalize_empty_agent_response(
+                        agent_result, response, history_len=len(history))
             response = _sanitize_gateway_final_response(source.platform, response, agent_result=agent_result)
 
         # The agent thread already updated the contextvar; propagate to SessionEntry + _save() only

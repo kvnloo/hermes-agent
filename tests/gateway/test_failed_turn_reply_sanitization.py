@@ -112,3 +112,29 @@ def test_context_overflow_failure_keeps_its_own_reply():
 
     assert _normalize_empty_agent_response(overflow, DIAGNOSTIC, history_len=400) == \
         _context_overflow_reply()
+
+
+@pytest.mark.parametrize("platform,raw_output", [
+    (Platform.DISCORD, False),
+    (Platform.LOCAL, True),
+    (Platform.API_SERVER, True),
+    (Platform.WEBHOOK, True),
+    (Platform.MSGRAPH_WEBHOOK, True),
+])
+def test_gateway_shape_preserves_raw_failed_provider_payload(platform, raw_output):
+    """A failed turn hides diagnostics in chat but not in raw/programmatic egress."""
+    result = {**FAILED_RESULT, "final_response": DIAGNOSTIC, "messages": [], "api_calls": 1}
+    runner = SimpleNamespace(_is_intentional_silence=lambda *a, **kw: False)
+    source = SimpleNamespace(platform=platform, chat_id="synthetic-chat")
+    entry = SimpleNamespace(session_id="synthetic-session")
+
+    text, silent, _messages = asyncio.run(GatewayRunner._hmwa_shape_agent_response(
+        runner, result, source, [], entry, "synthetic-key", "synthetic-key", 1,
+        "synthetic-session", platform.value, time.time(),
+        persist_user_display_kind="heartbeat",
+    ))
+
+    expected = DIAGNOSTIC if raw_output else _gateway_provider_error_reply(DIAGNOSTIC)
+    assert text == expected
+    assert silent is False
+    assert result["failed"] is True and result["failure_reason"] == "billing"
