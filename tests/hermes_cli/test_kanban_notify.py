@@ -265,6 +265,34 @@ async def test_notifier_notify_plus_wake_sends_and_wakes(kanban_home):
     assert active_tid in wake_mock.await_args.kwargs["text"]
 
 
+def test_completed_batch_suppresses_superseded_failure_alerts():
+    from types import SimpleNamespace
+
+    from gateway.kanban_watchers import _coalesce_terminal_events
+
+    events = [
+        SimpleNamespace(kind="gave_up"),
+        SimpleNamespace(kind="status"),
+        SimpleNamespace(kind="completed"),
+    ]
+    assert [event.kind for event in _coalesce_terminal_events(events)] == [
+        "status",
+        "completed",
+    ]
+
+
+def test_failure_after_completion_is_not_suppressed():
+    from types import SimpleNamespace
+
+    from gateway.kanban_watchers import _coalesce_terminal_events
+
+    events = [
+        SimpleNamespace(kind="completed"),
+        SimpleNamespace(kind="crashed"),
+    ]
+    assert _coalesce_terminal_events(events) == events
+
+
 @pytest.mark.asyncio
 async def test_notifier_plain_notify_never_wakes_even_with_session_id(kanban_home):
     """Plain/default notify must remain passive even when the task carries a

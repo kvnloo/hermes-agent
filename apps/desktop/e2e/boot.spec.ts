@@ -8,8 +8,9 @@
  *   electron → hermes serve (python) → mock provider → renderer
  *
  * Prerequisite: `npm run build` must have been run so dist/ exists.
- * Run from the nix devshell:
- *   npm exec playwright test e2e/boot.spec.ts --reporter=list
+ * Run through the nested headless compositor (never directly on the live
+ * desktop):
+ *   bash scripts/run-e2e-isolated.sh npx playwright test e2e/boot.spec.ts --reporter=list
  */
 import { expect, test } from './test'
 

@@ -1,5 +1,7 @@
 """Local execution environment — spawn-per-call with session snapshot."""
 
+import ctypes
+import ctypes.util
 import logging
 import ntpath
 import os
@@ -20,6 +22,24 @@ from hermes_cli._subprocess_compat import windows_hide_flags
 _IS_WINDOWS = platform.system() == "Windows"
 
 logger = logging.getLogger(__name__)
+
+# PR_SET_PDEATHSIG constant for prctl syscall (Linux)
+_PR_SET_PDEATHSIG = 1
+_SIGKILL = 9
+
+
+def _set_pdeathsig() -> None:
+    """Set PR_SET_PDEATHSIG=SIGKILL so child dies when parent dies (Linux only)."""
+    if _IS_WINDOWS:
+        return
+    try:
+        # Load libc
+        libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
+        # prctl(PR_SET_PDEATHSIG, SIGKILL)
+        libc.prctl(_PR_SET_PDEATHSIG, _SIGKILL, 0, 0, 0)
+    except Exception:
+        # Best effort - if prctl fails, we still have start_new_session=True
+        pass
 
 
 def _msys_to_windows_path(cwd: str) -> str:
@@ -1539,6 +1559,7 @@ class LocalEnvironment(BaseEnvironment):
             stderr=subprocess.STDOUT,
             stdin=subprocess.PIPE if stdin_data is not None else subprocess.DEVNULL,
             start_new_session=True,
+            preexec_fn=_set_pdeathsig if not _IS_WINDOWS else None,
             cwd=_popen_cwd,
             **_popen_kwargs,
         )
