@@ -239,6 +239,97 @@ class TestFallbackTransport:
         assert response.status_code == 200
         assert [c["url_host"] for c in calls] == ["149.154.167.220", "api.telegram.org"]
 
+class TestOffLoopHostnameDns:
+    @pytest.mark.asyncio
+    async def test_resolver_timeout_returns_before_worker_is_released(self, monkeypatch):
+        import asyncio
+        import threading
+
+        started = asyncio.Event()
+        release = threading.Event()
+        loop = asyncio.get_running_loop()
+
+        def stalled_dns(*args, **kwargs):
+            loop.call_soon_threadsafe(started.set)
+            assert release.wait(timeout=6), "test did not release DNS worker"
+            return []
+
+        monkeypatch.setattr(tnet.socket, "getaddrinfo", stalled_dns)
+        pending = asyncio.create_task(tnet._resolve_connect_ips(timeout=2))
+        try:
+            await asyncio.wait_for(started.wait(), timeout=3)
+            assert await asyncio.wait_for(pending, timeout=3) == []
+            assert not release.is_set()
+        finally:
+            release.set()
+            await asyncio.gather(pending, return_exceptions=True)
+
+    @pytest.mark.asyncio
+    async def test_dns_failure_never_hands_hostname_to_httpx(self, monkeypatch):
+        calls = []
+
+        def failed_dns(*args, **kwargs):
+            raise socket.gaierror("resolver unavailable")
+
+        monkeypatch.setattr(tnet, "_resolve_proxy_url", lambda **kw: None)
+        monkeypatch.setattr(tnet.socket, "getaddrinfo", failed_dns)
+        monkeypatch.setattr(tnet.httpx, "AsyncHTTPTransport", _fake_transport_factory(calls, {}))
+        async with tnet.TelegramFallbackTransport([]) as transport:
+            with pytest.raises(httpx.ConnectError, match="hostname DNS unavailable"):
+                await transport.handle_async_request(_telegram_request())
+        assert calls == []
+
+    @pytest.mark.asyncio
+    async def test_hostname_dns_uses_remaining_connect_budget(self, monkeypatch):
+        seed, resolved = reversed(tnet.SEED_FALLBACK_IPS)
+        calls, dns_timeouts = [], []
+
+        async def resolve(timeout):
+            dns_timeouts.append(timeout)
+            return [resolved, seed, resolved]
+
+        monkeypatch.setattr(tnet, "_resolve_proxy_url", lambda **kw: None)
+        monkeypatch.setattr(tnet, "_resolve_connect_ips", resolve)
+        monkeypatch.setattr(tnet.httpx, "AsyncHTTPTransport", _fake_transport_factory(calls, {seed: "timeout"}))
+        async with tnet.TelegramFallbackTransport([seed], connect_budget=1) as transport:
+            response = await transport.handle_async_request(_telegram_request())
+        assert response.status_code == 200
+        assert len(dns_timeouts) == 1 and 0 < dns_timeouts[0] <= 1
+        assert [call["url_host"] for call in calls] == [seed, resolved]
+
+    @pytest.mark.asyncio
+    async def test_real_httpx_roundtrip_dials_dns_literal_and_preserves_host(self, monkeypatch):
+        import asyncio
+        import ipaddress
+
+        loopback = str(ipaddress.IPv4Address(0x7F000001))
+        received = []
+        finished = asyncio.Event()
+
+        async def serve(reader, writer):
+            try:
+                received.append(await reader.readuntil(b"\r\n\r\n"))
+                writer.write(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok")
+                await writer.drain()
+            finally:
+                writer.close()
+                await writer.wait_closed()
+                finished.set()
+
+        server = await asyncio.start_server(serve, loopback, 0, family=socket.AF_INET)
+        port = server.sockets[0].getsockname()[1]
+        monkeypatch.setattr(tnet, "_resolve_proxy_url", lambda **kw: None)
+        monkeypatch.setattr(tnet.socket, "getaddrinfo", lambda *a, **kw: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", (loopback, port))
+        ])
+        async with server:
+            async with httpx.AsyncClient(transport=tnet.TelegramFallbackTransport([]), timeout=3) as client:
+                response = await client.get(f"http://api.telegram.org:{port}/botTEST/getMe")
+            await asyncio.wait_for(finished.wait(), timeout=3)
+        assert response.status_code == 200 and response.text == "ok"
+        assert b"host: api.telegram.org\r\n" in received[0].lower()
+
+
 class TestFallbackTransportPassthrough:
     """Requests that don't need fallback behavior."""
 

@@ -168,8 +168,8 @@ def _resolve_proxy_url(target_hosts=None) -> str | None:
 
 
 class TelegramFallbackTransport(httpx.AsyncBaseTransport):
-    """Reach the Bot API via known IPv4 literals first, dual-stack hostname last. Host + SNI stay on
-    api.telegram.org (like ``curl --resolve``) so a blackholed IPv6 AAAA can't pin initialize()."""
+    """Reach the Bot API via known IPv4 literals first, off-loop dual-stack DNS last.
+    Preserve api.telegram.org for Host and SNI when dialing resolved literals."""
 
     # Bound every pool: httpx's 100-connection default × (wedged endpoint + seed IPs) can outgrow the fd limit.
     # See #63311.
@@ -192,7 +192,7 @@ class TelegramFallbackTransport(httpx.AsyncBaseTransport):
         # Built on demand and discarded on failure — see _reset_fallback.
         self._fallbacks: dict[str, httpx.AsyncHTTPTransport] = {}
         self._fallback_lock = asyncio.Lock()
-        # ``_UNSET`` / ``None`` / ``str`` = no sticky yet / sticky hostname / sticky IPv4.
+        # ``_UNSET`` / ``None`` / ``str`` = no sticky yet / sticky proxy hostname / sticky IP.
         self._sticky_ip: object = _UNSET
         self._sticky_lock = asyncio.Lock()
         self._last_failure: tuple[str, str] | None = None
