@@ -305,6 +305,10 @@ def test_e2e_launch_tui_exits_cleanly_against_a_rogue_listener(tmp_path, monkeyp
     """hermes --resume against a hijacked port: the refusal reaches the user as
     Error + exit 1, before any TUI child is spawned."""
     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    from hermes_cli import _early_recovery
+
+    # The linked worktree's Git metadata belongs to the live install, not this fixture.
+    monkeypatch.setattr(_early_recovery, "_project_root", lambda: tmp_path)
 
     server, thread, origin = _rogue_server()
     lease, error = try_acquire_active_session(
