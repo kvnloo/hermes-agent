@@ -30,17 +30,18 @@ _EXTRACT_TIMEOUT_SECS = 60.0
 _CACHE_VERSION = 1
 
 
-def load_hosted_profiles(plugin_dir: Path, module_name: str) -> tuple[list[Any], dict[str, str]]:
+def load_hosted_profiles(plugin_dir: Path, module_name: str, *, code_dir: Path | None = None) -> tuple[list[Any], dict[str, str]]:
     """ProviderProfile proxies for a model-provider plugin whose code runs in the plugin host, plus
     ``{profile name: reason}`` for its profiles that cannot cross the host boundary (the caller
-    loads those in-process)."""
+    loads those in-process). The disk cache uses the installed path; hosted code uses *code_dir*."""
     from providers.base import ProviderProfile
-    payload = _cached_extraction(Path(plugin_dir), module_name)
+    version_dir = Path(code_dir) if code_dir is not None else Path(plugin_dir)
+    payload = _cached_extraction(Path(plugin_dir), module_name, code_dir=version_dir)
     if payload.get("error"):
         raise PluginHostUnavailable(str(payload["error"]))
     entries = payload.get("profiles") or []
     in_process = {str(e["name"]): str(e["in_process"]) for e in entries if e.get("in_process")}
-    hosted = [_profile_proxy(ProviderProfile, str(plugin_dir), module_name, e)
+    hosted = [_profile_proxy(ProviderProfile, str(version_dir), module_name, e)
               for e in entries if not e.get("in_process")]
     return hosted, in_process
 
@@ -65,7 +66,7 @@ def _fingerprint(plugin_dir: Path) -> str:
     return digest.hexdigest()
 
 
-def _cached_extraction(plugin_dir: Path, module_name: str) -> dict[str, Any]:
+def _cached_extraction(plugin_dir: Path, module_name: str, *, code_dir: Path | None = None) -> dict[str, Any]:
     from hermes_constants import get_hermes_home
     # Keyed by the full path too: a user and a project plugin may share a directory name.
     path_key = hashlib.sha256(str(plugin_dir.resolve()).encode("utf-8")).hexdigest()[:12]
@@ -77,7 +78,7 @@ def _cached_extraction(plugin_dir: Path, module_name: str) -> dict[str, Any]:
             return cached["payload"]
     except (OSError, ValueError, KeyError):
         pass
-    payload = _extract(plugin_dir, module_name)
+    payload = _extract(code_dir or plugin_dir, module_name)
     if not payload.get("error"):
         cache.parent.mkdir(parents=True, exist_ok=True)
         tmp = cache.with_suffix(f".{os.getpid()}.tmp")

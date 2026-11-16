@@ -89,8 +89,8 @@ def import_into_layer(plugin_dir: Path, source: str, base_name: str) -> None:
     staging = P._HomeLayer()
     token = P._REGISTRATION_TARGET.set(staging)
     try:
-        # In-process code (including a hosted plugin's in-process profiles) reads the frozen copy; the plugin
-        # host keeps the installed path, the stable key of its extraction cache.
+        # The installed path still keys extracted metadata; all executable profile code (hosted or
+        # in-process) runs from the frozen version snapshot.
         P._import_user_module(plugin_dir, source, module_name, code_dir=_snapshot(plugin_dir, module_name))
     except OSError as exc:  # the frozen copy could not be made: keep serving the previous version
         logger.warning("Could not stage provider plugin %s: %s", plugin_dir.name, exc)

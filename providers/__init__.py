@@ -677,8 +677,8 @@ def _import_hosted_plugin_dir(plugin_dir: Path, source: str, module_name: str, *
                               code_dir: Path | None = None) -> None:
     """Register a plugin's profiles as plugin-host proxies; a profile that cannot cross the host
     boundary (e.g. it overrides ``create_client``) is imported in-process ALONE, with a warning,
-    so it never takes its hosted siblings down with it. The host is keyed by *plugin_dir*; that in-process
-    import reads *code_dir* (a frozen copy) when given."""
+    so it never takes its hosted siblings down with it. Metadata is cached by *plugin_dir*;
+    host calls and in-process imports both use *code_dir* (the retained version) when given."""
     global _current_source
     from hermes_cli.plugin_host_profiles import load_hosted_profiles
     layer = _REGISTRATION_TARGET.get()
@@ -686,7 +686,7 @@ def _import_hosted_plugin_dir(plugin_dir: Path, source: str, module_name: str, *
         return  # already imported into this home's layer
     _current_source = source
     try:
-        hosted, in_process = load_hosted_profiles(plugin_dir, module_name)
+        hosted, in_process = load_hosted_profiles(plugin_dir, module_name, code_dir=code_dir)
         for profile in hosted:
             register_provider(profile)
     except Exception as exc:  # health: allow BLE001 -- plugin load boundary (moved from _import_plugin_dir): one broken plugin never breaks discovery

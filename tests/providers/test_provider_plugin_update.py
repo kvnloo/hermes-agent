@@ -133,3 +133,53 @@ def test_a_broken_update_keeps_the_previous_version_and_says_so(plugin):
     # The fixed release after it loads clean: nothing the broken one half-imported is reused.
     assert "new sessions use this version" in activation_hint(update_to(4))
     assert get_provider_profile("demo-provider").create_client().version == "v4"
+
+
+@pytest.mark.platforms("any")  # extraction and RPC run in real child processes
+@pytest.mark.parametrize("warm", [False, True], ids=["delayed-first-rpc", "cached-v1"])
+def test_hosted_profile_rpc_stays_on_its_extracted_version(plugin, warm):
+    """Regression for #156557: hosted proxies must retain their own plugin version across updates."""
+    from hermes_cli.plugin_host_profiles import is_hosted_profile
+    from hermes_cli.plugins import get_plugin_manager
+    from providers import get_provider_profile
+
+    (plugin.parent.parent / "config.yaml").write_text("plugins:\n  isolation: host\n", encoding="utf-8")
+
+    def install(version: int) -> None:
+        plugin.mkdir(parents=True, exist_ok=True)
+        (plugin / "plugin.yaml").write_text(
+            f"name: demo-provider\nkind: model-provider\nversion: {version}.0\n", encoding="utf-8")
+        (plugin / "__init__.py").write_text(textwrap.dedent("""
+            from providers import register_provider
+            from providers.base import ProviderProfile
+
+            class HostedProbe(ProviderProfile):
+                def source_version(self):
+                    from .version import VALUE
+                    return VALUE
+
+            register_provider(HostedProbe(name="demo-provider", base_url="process://demo-provider"))
+        """), encoding="utf-8")
+        (plugin / "version.py").write_text(f"VALUE = 'v{version}'\n", encoding="utf-8")
+        stamp = (version + 1) * 10**12
+        for path in plugin.iterdir():
+            if path.is_file():
+                os.utime(path, ns=(stamp, stamp))
+        shutil.rmtree(plugin / "__pycache__", ignore_errors=True)
+
+    try:
+        install(1)
+        old = get_provider_profile("demo-provider")
+        assert is_hosted_profile(old)
+        if warm:
+            assert old.source_version() == "v1"  # populate the host cache under v1
+        install(2)
+        _forced_sweep()
+        new = get_provider_profile("demo-provider")
+        assert new is not old and is_hosted_profile(new)
+        assert new.source_version() == "v2"
+        assert old.source_version() == "v1"
+    finally:
+        host = getattr(get_plugin_manager(), "_plugin_host_instance", None)
+        if host is not None:
+            host.shutdown()
