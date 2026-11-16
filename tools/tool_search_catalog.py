@@ -238,10 +238,11 @@ def _listing_group_label(source_name: str) -> str:
 
 
 def hidden_declared_sources() -> list[dict[str, Any]]:
-    """Return deterministic summaries for declared MCP servers hidden by their check."""
+    """Unavailable rows for declared sources and configured disconnected MCP servers."""
     from hermes_platform import declaration
     from tools.mcp_liveness import unavailable_details
     from tools.registry import registry
+    from tools.mcp_tool_discovery import mcp_servers_not_connected
 
     grouped: dict[str, list[Any]] = {}
     for entry in registry.get_all_entries():
@@ -259,6 +260,9 @@ def hidden_declared_sources() -> list[dict[str, Any]]:
             continue
         _decl, _current, sentence = details
         rows.append({"name": server_name, "tool_count": len(entries), "unavailable": sentence})
+    for server_name in sorted(set(mcp_servers_not_connected()) - set(grouped)):
+        rows.append({"name": server_name,
+                     "unavailable": "MCP server is configured but not connected"})
     return rows
 
 

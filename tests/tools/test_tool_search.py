@@ -346,6 +346,34 @@ class TestAssembly:
 
 
 class TestBridgeDispatch:
+    def test_parked_mcp_is_reported_to_search_and_listing(self, monkeypatch):
+        """#156262: deregistration must not erase a configured MCP source."""
+        from tools import mcp_tool_discovery
+        from tools.registry import registry
+        from tools.tool_search import ToolSearchConfig, dispatch_tool_search
+        from tools.tool_search_catalog import build_catalog_listing_with_form
+
+        # The parked server has no registered tools; the MCP status API
+        # still knows its configured name.
+        monkeypatch.setattr(registry, "get_all_entries", lambda: [])
+        monkeypatch.setattr(mcp_tool_discovery, "mcp_servers_not_connected",
+                            lambda: ["remote-parked"])
+        response = json.loads(dispatch_tool_search(
+            {"queries": ["a missing action"]}, current_tool_defs=[],
+            config=ToolSearchConfig.from_raw({})))
+        group = response["results"][0]
+        assert group["matches"] == []
+        assert group["available_sources"] == [
+            {"name": "remote-parked",
+             "unavailable": "MCP server is configured but not connected"},
+        ]
+        assert "not currently callable" in group["hint"]
+
+        listing, form = build_catalog_listing_with_form([])
+        assert form != "none"
+        assert ("remote-parked (tools unavailable: "
+                "MCP server is configured but not connected)") in listing
+
     def test_tool_search_requires_queries(self):
         from tools.tool_search import dispatch_tool_search
         result = dispatch_tool_search({}, current_tool_defs=[])

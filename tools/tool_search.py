@@ -470,10 +470,10 @@ def dispatch_tool_search(args: dict[str, Any], *, current_tool_defs: list[dict[s
         if not matches and available_sources:
             group["available_sources"] = available_sources
             group["hint"] = (
-                "This query returned no lexical matches, but the sources above "
-                "are connected and their tools remain available. Retry "
-                "tool_search with the service name plus a concrete action or "
-                "object before concluding the capability is unavailable.")
+                "This query returned no lexical matches. Connected sources remain searchable; "
+                "sources marked unavailable are not currently callable. "
+                "Retry tool_search with the service name plus a concrete action or "
+                "object before concluding the capability is missing.")
         results.append(group)
     remote_count = sum(1 for name in tools_map if is_connector_name(name))
     payload: dict[str, Any] = {"queries": queries, "total_available": len(catalog) + remote_count,
