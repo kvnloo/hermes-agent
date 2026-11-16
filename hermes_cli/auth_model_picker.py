@@ -254,6 +254,18 @@ def _print_numbered_rows(rows: _ModelPickerRows, menu_title: str, ordered: list[
     return num_width
 
 
+
+def chat_model_picker_labels(
+    models: List[str],
+    pricing: Optional[Dict[str, Dict[str, str]]],
+    *,
+    current_model: str = "",
+    sale_chrome: bool = False,
+) -> List[str]:
+    """Same $/Mtok + sale chrome as standalone `hermes model`, for in-chat /model."""
+    rows = _ModelPickerRows(list(models), pricing, current_model=current_model, sale_chrome=sale_chrome)
+    return [rows.label(mid) for mid in models]
+
 def _prompt_model_selection(
     model_ids: list[str], current_model: str = "",
     pricing: Optional[dict[str, dict[str, str]]] = None,
