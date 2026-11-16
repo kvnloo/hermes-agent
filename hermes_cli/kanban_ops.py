@@ -328,6 +328,9 @@ def _cmd_gc(args: argparse.Namespace) -> int:
                 # Same safety predicate: only clean, fully-pushed worktrees go.
                 wt_path = row["workspace_path"]
                 if wt_path and Path(wt_path).is_dir():
+                    # A done parent can still have a child reading this worktree.
+                    if kbw._has_active_children(conn, row["id"]):
+                        continue
                     if kbw._defer_shared_worktree_cleanup(conn, row["id"], wt_path):
                         continue
                     kbw._cleanup_worktree_workspace(row["id"], wt_path, row["branch_name"], conn=conn)

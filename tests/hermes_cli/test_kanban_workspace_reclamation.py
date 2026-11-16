@@ -303,6 +303,36 @@ def test_gc_removes_a_clean_pushed_done_worktree(board, tmp_path):
     assert not tree.exists()
 
 
+def test_gc_keeps_done_worktree_until_its_child_is_terminal(board, tmp_path):
+    """A child may still read a done parent's clean, pushed worktree."""
+    tree = _repo_with_worktree(tmp_path, "t_parent_handoff")
+    with kbc.connect_closing() as conn:
+        parent = kb.create_task(conn, title="worktree parent")
+        with kb.write_txn(conn):
+            conn.execute(
+                "UPDATE tasks SET status='done', workspace_kind='worktree', workspace_path=?, "
+                "branch_name=? WHERE id=?",
+                (str(tree), "wt/t_parent_handoff", parent),
+            )
+        child = kb.create_task(
+            conn, title="child reading parent worktree", parents=[parent],
+            initial_status="blocked",
+        )
+
+    assert kanban_ops._cmd_gc(_gc_args()) == 0
+    assert (tree / "README.md").read_text(encoding="utf-8").splitlines() == ["seed"], (
+        "gc must preserve a done parent's worktree while a child is active"
+    )
+
+    # Simulate the child turning terminal without its completion hook; gc is
+    # the backstop for an abandoned parent worktree.
+    with kbc.connect_closing() as conn:
+        with kb.write_txn(conn):
+            conn.execute("UPDATE tasks SET status='done' WHERE id=?", (child,))
+    assert kanban_ops._cmd_gc(_gc_args()) == 0
+    assert not tree.exists(), "gc must reclaim the worktree after the child finishes"
+
+
 def test_gc_keeps_a_dirty_done_worktree(board, tmp_path):
     tree = _repo_with_worktree(tmp_path, "t_dirty")
     (tree / "uncommitted.txt").write_text("scribble", encoding="utf-8")
