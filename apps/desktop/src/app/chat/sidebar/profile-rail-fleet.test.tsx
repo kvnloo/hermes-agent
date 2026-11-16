@@ -336,6 +336,34 @@ describe('ProfileRail overflow', () => {
   })
 })
 
+describe('ProfileRail condensed dropdown overflow', () => {
+  it('bounds the profile choices separately from create/import so every row stays reachable', async () => {
+    profiles.set(
+      Array.from({ length: 18 }, (_, index) => ({
+        is_default: index === 0,
+        name: index ? `agent${index}` : 'default'
+      }))
+    )
+    render(<ProfileRail />)
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Profiles' }), { button: 0, ctrlKey: false })
+    const last = await screen.findByRole('menuitemradio', { name: 'agent17' })
+    const menu = last.closest('[data-slot="dropdown-menu-content"]')
+    const scroller = last.closest('.overflow-y-auto')
+
+    expect(menu).not.toBeNull()
+    expect(scroller).not.toBeNull()
+    expect(scroller).not.toBe(menu)
+    expect(scroller?.classList.contains('max-h-[min(50vh,22rem)]')).toBe(true)
+    expect(scroller?.contains(screen.getByRole('menuitemradio', { name: 'agent1' }))).toBe(true)
+    expect(scroller?.contains(screen.getByRole('menuitem', { name: 'New profile' }))).toBe(false)
+    expect(scroller?.contains(screen.getByRole('menuitem', { name: 'Import profile…' }))).toBe(false)
+
+    fireEvent.click(last)
+    expect(selectProfile).toHaveBeenCalledWith('agent17')
+  })
+})
+
 describe('ProfileRail fleet mode', () => {
   it.each([false, true])(
     'keeps right-click launch routes exact without selecting a profile (condensed=%s)',

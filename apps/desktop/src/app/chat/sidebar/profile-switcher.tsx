@@ -958,38 +958,40 @@ function ProfileDropdown({
           <span className="truncate">{p.importProfile}</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuRadioGroup onValueChange={name => name && onSelect(name)} value={value}>
-          {profiles.map(profile => (
-            <ProfileDropdownItem
-              color={resolveProfileColor(profile.name, colors)}
-              connectionId={profile.is_default ? homeConnectionId : connectionId}
-              hideStatus={profile.name === value}
-              isDefault={profile.is_default}
-              key={profile.name}
-              label={profileLabel(profile)}
-              name={profile.name}
-              unserved={unserved.has(normalizeProfileKey(profile.name))}
+        <div className="max-h-[min(50vh,22rem)] overflow-y-auto">
+          <DropdownMenuRadioGroup onValueChange={name => name && onSelect(name)} value={value}>
+            {profiles.map(profile => (
+              <ProfileDropdownItem
+                color={resolveProfileColor(profile.name, colors)}
+                connectionId={profile.is_default ? homeConnectionId : connectionId}
+                hideStatus={profile.name === value}
+                isDefault={profile.is_default}
+                key={profile.name}
+                label={profileLabel(profile)}
+                name={profile.name}
+                unserved={unserved.has(normalizeProfileKey(profile.name))}
+              />
+            ))}
+          </DropdownMenuRadioGroup>
+          {restGroups.map(group => (
+            <FleetGatewayMenuGroup
+              group={group}
+              key={group.connectionId}
+              onSelect={onSelectRest}
+              slot="profile-dropdown-gateway"
+              wrapRow={(row, agent, label) => (
+                <ProfileLaunchContextMenu
+                  connectionId={agent.connectionId}
+                  key={agent.profile}
+                  label={label}
+                  profile={agent.profile}
+                >
+                  {row}
+                </ProfileLaunchContextMenu>
+              )}
             />
           ))}
-        </DropdownMenuRadioGroup>
-        {restGroups.map(group => (
-          <FleetGatewayMenuGroup
-            group={group}
-            key={group.connectionId}
-            onSelect={onSelectRest}
-            slot="profile-dropdown-gateway"
-            wrapRow={(row, agent, label) => (
-              <ProfileLaunchContextMenu
-                connectionId={agent.connectionId}
-                key={agent.profile}
-                label={label}
-                profile={agent.profile}
-              >
-                {row}
-              </ProfileLaunchContextMenu>
-            )}
-          />
-        ))}
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   )
