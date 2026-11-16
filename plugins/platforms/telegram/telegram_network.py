@@ -233,8 +233,7 @@ class TelegramFallbackTransport(httpx.AsyncBaseTransport):
             logger.debug("[Telegram] Error closing fallback transport %s: %s", ip, exc)
 
     def _attempt_order(self) -> list[Optional[str]]:
-        """Sticky path first, then IPv4 literals, dual-stack hostname last (a blackholed IPv6 path never
-        errors — Happy Eyeballs waits on AAAA until the OS TCP timeout and can pin the loop)."""
+        """Sticky IP first, known IPv4 literals next, off-loop hostname DNS last."""
         order: list[Optional[str]] = []
         if self._sticky_ip is not _UNSET:
             order.append(None if self._sticky_ip is None else str(self._sticky_ip))
@@ -252,7 +251,10 @@ class TelegramFallbackTransport(httpx.AsyncBaseTransport):
         return remaining - remaining / paths_left if index == 0 and paths_left > 1 else remaining / paths_left
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        if request.url.host != _TELEGRAM_API_HOST or not self._fallback_ips:
+        if request.url.host != _TELEGRAM_API_HOST:
+            return await self._primary.handle_async_request(request)
+        # A proxy resolves its own CONNECT hostname; preserve that path.
+        if not self._fallback_ips and self._transport_kwargs.get("proxy"):
             return await self._primary.handle_async_request(request)
         last_error: Exception | None = None
         order = self._attempt_order()
@@ -264,6 +266,11 @@ class TelegramFallbackTransport(httpx.AsyncBaseTransport):
                 if share <= 0 and last_error is not None:
                     break  # budget spent: surface the last ConnectTimeout before the send deadline masks it
                 candidate = _request_with_connect_budget(request, share)
+            if ip is None and not self._transport_kwargs.get("proxy"):
+                # Keep resolver stalls off the gateway loop; HTTPX only dials literals.
+                dns_timeout = _DOH_TIMEOUT if self._connect_budget is None else min(_DOH_TIMEOUT, share)
+                order.extend(addr for addr in await _resolve_connect_ips(dns_timeout) if addr not in order)
+                continue
             if ip is not None:
                 candidate = _rewrite_request_for_ip(candidate, ip)
             transport = self._primary if ip is None else await self._get_fallback(ip)
@@ -284,7 +291,7 @@ class TelegramFallbackTransport(httpx.AsyncBaseTransport):
                             self._sticky_ip = ip
                             if ip is not None:
                                 log = logger.warning if last_error is not None else logger.info
-                                log("[Telegram] Using sticky IPv4 Telegram API path %s (dual-stack hostname tried last — #87015)", ip)
+                                log("[Telegram] Using sticky %s Telegram API path %s (hostname DNS last)", "IPv6" if ":" in ip else "IPv4", ip)
                 return response
             except Exception as exc:
                 last_error = exc
@@ -304,11 +311,11 @@ class TelegramFallbackTransport(httpx.AsyncBaseTransport):
                     await self._reset_primary(transport)
                     logger.warning("[Telegram] Dual-stack api.telegram.org path failed (%s)", failure)
                     continue
-                logger.warning("[Telegram] IPv4 Telegram API IP %s failed: %s", ip, failure)
+                logger.warning("[Telegram] %s Telegram API IP %s failed: %s", "IPv6" if ":" in ip else "IPv4", ip, failure)
                 await self._reset_fallback(ip)
                 continue
         if last_error is None:
-            raise RuntimeError("All Telegram fallback IPs exhausted but no error was recorded")
+            raise httpx.ConnectError("Telegram fallback routes and hostname DNS unavailable")
         raise last_error
 
     async def aclose(self) -> None:
@@ -354,6 +361,27 @@ def _resolve_system_dns() -> set[str]:
         return {addr[4][0] for addr in results}
     except Exception:
         return set()
+
+
+async def _resolve_connect_ips(timeout: float = _DOH_TIMEOUT) -> list[str]:
+    """Resolve the final hostname path in a worker, bounded independently of TCP."""
+    try:
+        answers = await asyncio.wait_for(
+            asyncio.to_thread(socket.getaddrinfo, _TELEGRAM_API_HOST, 443, type=socket.SOCK_STREAM),
+            timeout=timeout,
+        )
+    except (OSError, TimeoutError) as exc:
+        logger.debug("[Telegram] Off-loop hostname DNS failed: %r", exc)
+        return []
+    ips: list[str] = []
+    for answer in answers:
+        try:
+            ip = str(ipaddress.ip_address(answer[4][0]))
+        except ValueError:
+            continue
+        if ip not in ips:
+            ips.append(ip)
+    return ips
 
 
 async def _query_doh_provider(client: httpx.AsyncClient, provider: dict) -> list[str]:
