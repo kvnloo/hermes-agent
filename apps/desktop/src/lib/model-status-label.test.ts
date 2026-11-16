@@ -36,6 +36,16 @@ describe('model-status-label', () => {
     expect(displayModelName('gpt-6-astra', { provider })).toBe('GPT-6-astra')
   })
 
+  it('keeps source paths for the first-class bare custom endpoint', () => {
+    const ids = ['codex/gpt-6-astra', 'nas/codex/gpt-6-astra']
+
+    expect(ids.map(model => modelDisplayParts(model, { provider: 'custom' }).name)).toEqual([
+      'codex / GPT-6-astra',
+      'nas/codex / GPT-6-astra'
+    ])
+    expect(formatModelPillLabel(ids[1], { provider: 'custom' })).toBe('nas/codex / GPT-6-astra')
+  })
+
   it('strips trailing date-pin snapshots and dots hyphenated Anthropic versions', () => {
     expect(displayModelName('claude-opus-4-5-20251101')).toBe('Opus 4.5')
     expect(displayModelName('anthropic/claude-haiku-4-5-20251001')).toBe('Haiku 4.5')
