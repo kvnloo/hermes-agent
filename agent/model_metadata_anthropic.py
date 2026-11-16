@@ -12,6 +12,7 @@ import time
 from typing import Any, Optional
 
 from agent import model_metadata_http
+from agent.anthropic_credentials import _is_oauth_token
 from agent.model_metadata_memo_bounds import MEMO_LOCK
 from utils import base_url_hostname
 
@@ -43,7 +44,7 @@ def _anthropic_context_credential(base_url: str, api_key: Any) -> Optional[str]:
         except Exception:  # a credential-store failure must not break the context lookup
             logger.debug("Anthropic credential resolution for the window probe failed", exc_info=True)
             token = ""
-    if not token or (token.startswith("sk-ant-oat") and not native):
+    if not token or (_is_oauth_token(token) and not native):
         return None
     return token
 
@@ -58,7 +59,7 @@ def _anthropic_live_context_limits(base_url: str, token: str) -> Optional[dict[s
     if hit is not None and hit[0] > now:
         return hit[1]
     headers = {"anthropic-version": "2023-06-01"}
-    if token.startswith("sk-ant-oat"):
+    if _is_oauth_token(token):
         # A Claude login authenticates as an OAuth bearer, which is accepted only with the OAuth
         # beta (x-api-key answers 401 for these tokens).
         from agent.anthropic_adapter import _OAUTH_ONLY_BETAS
