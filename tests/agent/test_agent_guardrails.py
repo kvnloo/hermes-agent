@@ -240,6 +240,22 @@ class TestDeduplicateToolCalls:
         assert out == [first, distinct]
 
 
+    def test_repeated_computer_key_inputs_are_preserved(self):
+        first = make_tc("computer_use", '{"action":"key","keys":"tab"}')
+        second = make_tc("computer_use", '{"keys":"tab","action":"key"}')
+
+        out = AIAgent._deduplicate_tool_calls([first, second])
+
+        assert out == [first, second]
+
+    def test_duplicate_nonrepeatable_computer_action_still_deduplicates(self):
+        first = make_tc("computer_use", '{"action":"click","element":3}')
+        second = make_tc("computer_use", '{"element":3,"action":"click"}')
+
+        out = AIAgent._deduplicate_tool_calls([first, second])
+
+        assert out == [first]
+
     def test_empty_list_safe(self):
         assert AIAgent._deduplicate_tool_calls([]) == []
 
