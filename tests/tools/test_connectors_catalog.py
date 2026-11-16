@@ -26,7 +26,9 @@ from tests.waiting import wait_until
 
 
 @pytest.fixture(autouse=True)
-def _clean_live():
+def _clean_live(monkeypatch):
+    # Bootstrap must not inspect the live install's Git metadata from a worktree.
+    monkeypatch.setattr("hermes_cli._early_recovery.restore_interrupted_pull", lambda root: False)
     live.reset_for_tests()
     yield
     live.reset_for_tests()
