@@ -604,7 +604,23 @@ class CLITuiMixin:
             _query = state.get("filter", "") or ""
             filtered_pairs = self._filter_model_picker_entries(model_list, _query)
             state["_filtered_pairs"] = filtered_pairs
-            model_labels = [e for (_i, e) in filtered_pairs]
+            from hermes_cli.auth_model_picker import chat_model_picker_labels
+            slug = str(provider_data.get("slug") or "")
+            pricing = state.get("pricing")
+            if pricing is None:
+                try:
+                    from hermes_cli.models_pricing import get_pricing_for_provider
+                    pricing = get_pricing_for_provider(slug, cached_only=True) or {}
+                except Exception:
+                    pricing = {}
+                state["pricing"] = pricing
+            priced = chat_model_picker_labels(
+                model_list,
+                pricing,
+                current_model=str(state.get("current_model") or ""),
+                sale_chrome=slug in {"nous", "nous-portal"},
+            )
+            model_labels = [priced[i] for (i, _e) in filtered_pairs]
             from hermes_cli.model_picker_usage import annotate_window_plan_rows
             row_labels, limit_line = annotate_window_plan_rows(provider_data, model_labels)
             choices = row_labels + [t("cli.shared.back"), t("cli.shared.cancel")]
