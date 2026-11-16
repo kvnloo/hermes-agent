@@ -195,3 +195,70 @@ def test_device_login_carries_configured_headers(access_fronted_server, tmp_path
     assert [path for _, path, _, _ in seen][-2:] == ["/device", "/token"], seen
     assert all(has_token for _, _, has_token, _ in seen), seen
     assert HermesTokenStorage("behind-access").has_cached_tokens()
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("transport_kind", ["streamable", "sse"])
+async def test_oauth_configured_headers_stay_on_origin_across_redirect(transport_kind, monkeypatch):
+    """Even without strict_redirect_headers, a redirected OAuth request must not leak proxy keys.
+
+    Uses the actual transport client factories and their default redirect policy. A synthetic
+    307 redirects OAuth discovery to a different origin; the initial request must carry the
+    configured service token, but the redirected request must not.
+    """
+    from contextlib import asynccontextmanager
+
+    from tools import mcp_tool_transport as transport_mod
+    from tools.mcp_oauth_provider import stamp_configured_headers
+    from tools.mcp_tool import MCPServerTask, sdk_httpx
+
+    httpx = sdk_httpx()
+    endpoint = "https://mcp.example.test/mcp"
+    foreign = "https://different.example.test/collect"
+    seen = []
+
+    async def responder(request):
+        seen.append((request.url.host, request.headers.get("CF-Access-Client-Secret")))
+        if request.url.host == "mcp.example.test":
+            return httpx.Response(307, headers={"Location": foreign})
+        return httpx.Response(200, text="ok")
+
+    wire = httpx.MockTransport(responder)
+    monkeypatch.setattr(transport_mod, "_make_mcp_body_cap_transport", lambda *_: wire)
+    monkeypatch.setattr(transport_mod, "_mcp_proxy_mounts", lambda *_: None)
+
+    async def exercise(client):
+        request = httpx.Request("GET", "https://mcp.example.test/.well-known/oauth-protected-resource/mcp")
+        stamp_configured_headers(request, ACCESS_HEADERS, endpoint)
+        assert request.headers["CF-Access-Client-Secret"] == ACCESS_HEADERS["CF-Access-Client-Secret"]
+        response = await client.send(request)
+        assert response.status_code == 200
+
+    @asynccontextmanager
+    async def fake_streamable(url, *, http_client, **kwargs):
+        await exercise(http_client)
+        yield (None, None)
+
+    @asynccontextmanager
+    async def fake_sse(url, *, httpx_client_factory, headers, timeout, auth, **kwargs):
+        async with httpx_client_factory(headers=headers, timeout=timeout, auth=auth) as client:
+            await exercise(client)
+            yield (None, None)
+
+    task = MCPServerTask("redirect-guard")
+    if transport_kind == "streamable":
+        monkeypatch.setattr(transport_mod._core, "streamable_http_client", fake_streamable)
+        client_context = task._streamable_http_transport(
+            endpoint, dict(ACCESS_HEADERS), 30.0, True, None, httpx.Auth(),
+            False, {key.lower() for key in ACCESS_HEADERS})
+    else:
+        monkeypatch.setattr(transport_mod._core, "sse_client", fake_sse)
+        client_context = task._sse_transport(
+            endpoint, dict(ACCESS_HEADERS), 30.0, True, None, httpx.Auth(), False)
+
+    async with client_context:
+        pass
+
+    assert seen == [
+        ("mcp.example.test", ACCESS_HEADERS["CF-Access-Client-Secret"]),
+        ("different.example.test", None),
+    ]

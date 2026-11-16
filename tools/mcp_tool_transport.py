@@ -565,7 +565,13 @@ class MCPServerTransportMixin:
         _httpx_mod = _core.sdk_httpx()
         def _sse_client_factory(headers=None, timeout=None, auth=None):
             inner_transport = _httpx_mod.AsyncHTTPTransport(verify=ssl_verify, **_present(cert=client_cert))
-            return _httpx_mod.AsyncClient(
+            # OAuth requests get proxy credentials; strip them from any cross-origin
+            # redirect even without the optional strict_redirect_headers setting.
+            return _make_redirect_header_stripper(
+                _httpx_mod, _httpx_mod.URL(url),
+                strict=oauth_auth is not None and bool(headers),
+                configured_header_names={name.lower() for name in (headers or {})},
+            )(
                 follow_redirects=True,
                 timeout=timeout if timeout is not None else _httpx_mod.Timeout(30.0, read=300.0),
                 transport=_make_mcp_body_cap_transport(_httpx_mod, inner_transport),
@@ -589,8 +595,11 @@ class MCPServerTransportMixin:
         # Explicit AsyncClient matching the SDK's create_mcp_http_client defaults; MUST come from the
         # SDK's httpx (httpx2 on mcp >= 2.0) since the SDK sends its own Requests through it.
         httpx = _core.sdk_httpx()
+        # Forwarded OAuth proxy credentials must stay on the MCP origin by default.
+        oauth_proxy_headers = oauth_auth is not None and bool(configured_header_names)
         _build_client = _make_redirect_header_stripper(
-            httpx, httpx.URL(url), strict=strict_cfg_headers, configured_header_names=configured_header_names)
+            httpx, httpx.URL(url), strict=strict_cfg_headers or oauth_proxy_headers,
+            configured_header_names=configured_header_names)
         # verify/cert live on the inner transport: a custom transport= makes client-level TLS kwargs
         # inert — and suppresses httpx's own proxy auto-detection, hence the explicit mounts=.
         inner_transport = httpx.AsyncHTTPTransport(verify=ssl_verify, **_present(cert=client_cert))
