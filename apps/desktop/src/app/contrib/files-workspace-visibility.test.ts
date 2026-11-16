@@ -1,6 +1,8 @@
-import { afterEach, expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 
-import { $fileBrowserOpen, setFileBrowserOpen } from '@/store/layout'
+import { group, split } from '@/components/pane-shell/tree/model'
+import { $hiddenTreePanes, $layoutTree, isPaneVisible, noteActiveTreeGroup } from '@/components/pane-shell/tree/store'
+import { setFileBrowserOpen } from '@/store/layout'
 import {
   $currentCwd,
   $selectedStoredSessionId,
@@ -9,8 +11,53 @@ import {
   setSessions
 } from '@/store/session'
 import { $focusedWorkspaceCwd } from '@/store/session-states'
+import { makeSessionInfo } from '@/test/session-info'
 
-import { $filesPaneVisible, shouldShowFilesPane } from './files-workspace-visibility'
+// Keep the real controller registration, session stores and tree visibility.
+// Renderer surfaces and plugin discovery are outside this workspace gate.
+vi.mock('@/contrib/plugins', () => ({ discoverBundledPlugins: vi.fn() }))
+vi.mock('@/components/pane-shell/tree/renderer', () => ({ LayoutTreeRoot: () => null }))
+vi.mock('@/components/assistant-ui/inline-preview-directive', () => ({ InlinePreviewDirective: () => null }))
+vi.mock('../chat/browser-popout-shell', () => ({ BrowserPopoutShell: () => null }))
+vi.mock('../context-menu/app-context-menu', () => ({ AppContextMenu: () => null }))
+vi.mock('../hud/hud-shell', () => ({ HudShell: () => null }))
+vi.mock('./panes', () => ({ FilesPane: () => null, LogsPane: () => null, ReviewPaneContent: () => null }))
+vi.mock('./wiring', () => ({ ContribWiring: () => null, WiredPane: () => null }))
+
+import './controller'
+
+it.each(['', '/repo/stale'])(
+  'shows Files for the focused session and hides detached chats with profile cwd "%s"',
+  profileCwd => {
+    setCurrentCwdTransient(profileCwd)
+    $workspaceCwdOwner.set('another-session')
+    $selectedStoredSessionId.set('session-in-project')
+    setSessions([makeSessionInfo({ id: 'session-in-project', cwd: '/repo/project' })])
+    $layoutTree.set(
+      split('row', [
+        group(['workspace'], { active: 'workspace', id: 'main' }),
+        group(['files'], { active: 'files', id: 'files-group' })
+      ])
+    )
+    noteActiveTreeGroup('main')
+    setFileBrowserOpen(true)
+
+    expect($currentCwd.get()).toBe(profileCwd)
+    expect($focusedWorkspaceCwd.get()).toBe('/repo/project')
+    expect($hiddenTreePanes.get().has('files')).toBe(false)
+    expect(isPaneVisible('files')).toBe(true)
+
+    setFileBrowserOpen(false)
+    expect(isPaneVisible('files')).toBe(false)
+
+    setFileBrowserOpen(true)
+    setSessions([])
+    $selectedStoredSessionId.set(null)
+    expect($focusedWorkspaceCwd.get()).toBe('')
+    expect($hiddenTreePanes.get().has('files')).toBe(true)
+    expect(isPaneVisible('files')).toBe(false)
+  }
+)
 
 afterEach(() => {
   setSessions([])
@@ -18,34 +65,7 @@ afterEach(() => {
   $selectedStoredSessionId.set(null)
   $workspaceCwdOwner.set(null)
   setFileBrowserOpen(false)
+  $layoutTree.set(null)
+  $hiddenTreePanes.set(new Set())
   window.localStorage.clear()
-})
-
-it('uses the focused session cwd instead of an empty profile cwd to show Files', () => {
-  // Profile memory is empty, but the focused session still has a project.
-  setCurrentCwdTransient('')
-  $workspaceCwdOwner.set('another-session')
-  $selectedStoredSessionId.set('session-in-project')
-  setSessions([{ id: 'session-in-project', cwd: '/repo/project' } as never])
-  setFileBrowserOpen(true)
-
-  expect($currentCwd.get()).toBe('')
-  expect($focusedWorkspaceCwd.get()).toBe('/repo/project')
-  expect($fileBrowserOpen.get()).toBe(true)
-
-  // Using the old profile-scoped cwd here yields false; the production
-  // binding must instead use the focused session's resolved workspace.
-  expect(shouldShowFilesPane($currentCwd.get(), $fileBrowserOpen.get())).toBe(false)
-  expect(shouldShowFilesPane($focusedWorkspaceCwd.get(), $fileBrowserOpen.get())).toBe(true)
-  expect($filesPaneVisible.get()).toBe(true)
-
-  // Closing Files or leaving the project must still hide it.
-  setFileBrowserOpen(false)
-  expect($filesPaneVisible.get()).toBe(false)
-
-  setFileBrowserOpen(true)
-  setSessions([])
-  $selectedStoredSessionId.set(null)
-  expect($focusedWorkspaceCwd.get()).toBe('')
-  expect($filesPaneVisible.get()).toBe(false)
 })
