@@ -323,9 +323,12 @@ class HostedRoomService:
         self.runtime.wakeup()
 
     def _list_tasks(self, room_id: str, statuses) -> Iterator[Mapping[str, Any]]:
-        # One read per scan, grouped by status in the caller's order: a read per status reopened
-        # state.db up to four times per room on every idle poll.
-        tasks = driver.list_tasks(self.db_path, room_id=room_id)
+        # One status-filtered read per scan: retained terminal rows must not be decoded
+        # when checking for live work. Group in the caller's requested status order.
+        statuses = tuple(statuses)
+        if not statuses:
+            return
+        tasks = driver.list_tasks(self.db_path, room_id=room_id, statuses=statuses)
         for status in statuses:
             yield from (task for task in tasks if task["status"] == status)
 

@@ -928,13 +928,21 @@ def get_task(db_path: DbPath, identity: TaskIdentity) -> dict[str, Any]:
         return _task_from_row(_load_task(conn, identity))
 
 
-def list_tasks(db_path: DbPath, *, room_id: Any, status: TaskStatus | None = None) -> list[dict[str, Any]]:
-    """Return room tasks in deterministic admission order."""
+def list_tasks(
+    db_path: DbPath, *, room_id: Any, status: TaskStatus | None = None,
+    statuses: Iterable[TaskStatus] | None = None,
+) -> list[dict[str, Any]]:
+    """Return room tasks in deterministic admission order, optionally filtered by status."""
     room_id = _identifier(room_id, label="room_id")
-    if status is not None and status not in TASK_STATUSES:
+    if status is not None and statuses is not None:
+        raise DriverValidationError("status and statuses are mutually exclusive")
+    requested = tuple(statuses) if statuses is not None else (() if status is None else (status,))
+    if any(item not in TASK_STATUSES for item in requested):
         raise DriverValidationError("invalid task status")
+    if statuses is not None and not requested:
+        return []
     with closing(_connect(db_path)) as conn:
-        return [_task_from_row(row) for row in _tasks_in_order(conn, room_id, () if status is None else (status,))]
+        return [_task_from_row(row) for row in _tasks_in_order(conn, room_id, requested)]
 
 
 def room_task_summary(
