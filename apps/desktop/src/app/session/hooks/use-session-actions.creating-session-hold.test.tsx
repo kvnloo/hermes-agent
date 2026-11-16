@@ -62,6 +62,7 @@ describe('createBackendSessionForSend creatingSessionRef hold (#66057)', () => {
     getRouteToken,
     navigate,
     onCreatedInBackground,
+    onFreshDraft,
     onReady,
     requestGateway,
     routeId,
@@ -71,6 +72,7 @@ describe('createBackendSessionForSend creatingSessionRef hold (#66057)', () => {
     getRouteToken?: () => string
     navigate: (...args: never[]) => unknown
     onCreatedInBackground?: (storedSessionId: string) => void
+    onFreshDraft?: (start: () => void) => void
     onReady: (create: () => Promise<string | null>) => void
     requestGateway: <T>(method: string, params?: Record<string, unknown>) => Promise<T>
     routeId: null | string
@@ -100,7 +102,8 @@ describe('createBackendSessionForSend creatingSessionRef hold (#66057)', () => {
 
     useEffect(() => {
       onReady(() => actions.createBackendSessionForSend(null, { onCreatedInBackground }))
-    }, [actions, onReady])
+      onFreshDraft?.(() => actions.startFreshSessionDraft())
+    }, [actions, onFreshDraft, onReady])
 
     return null
   }
@@ -158,6 +161,69 @@ describe('createBackendSessionForSend creatingSessionRef hold (#66057)', () => {
     expect(calls).not.toContain('session.close')
     expect(navigate).not.toHaveBeenCalled()
     expect(selectedStoredSessionIdRef.current).toBe('session-B')
+    expect(creatingSessionRef.current).toBe(false)
+  })
+
+
+  it('keeps a newer fresh draft selected when an older draft finishes creating (#152701)', async () => {
+    const selectedStoredSessionIdRef: MutableRefObject<string | null> = { current: null }
+    const creatingSessionRef: MutableRefObject<boolean> = { current: false }
+    const navigate = vi.fn()
+    const onCreatedInBackground = vi.fn()
+    const calls: string[] = []
+    let finishCreate: (result: object) => void = () => {}
+    const requestGateway = async <T,>(method: string): Promise<T> => {
+      calls.push(method)
+
+      if (method === 'session.create') {
+        return new Promise<T>(resolve => {
+          finishCreate = result => resolve(result as T)
+        })
+      }
+
+      return {} as T
+    }
+
+    let create: (() => Promise<string | null>) | null = null
+    let openFreshDraft: (() => void) | null = null
+    render(
+      <GuardHarness
+        creatingSessionRef={creatingSessionRef}
+        getRouteToken={() => '/::'}
+        navigate={navigate}
+        onCreatedInBackground={onCreatedInBackground}
+        onFreshDraft={fn => (openFreshDraft = fn)}
+        onReady={fn => (create = fn)}
+        requestGateway={requestGateway}
+        routeId={null}
+        selectedStoredSessionIdRef={selectedStoredSessionIdRef}
+      />
+    )
+    await waitFor(() => expect(create).not.toBeNull())
+    await waitFor(() => expect(openFreshDraft).not.toBeNull())
+
+    let pending!: Promise<string | null>
+    await act(async () => {
+      pending = create!()
+      await waitFor(() => expect(calls).toContain('session.create'))
+    })
+
+    // The user's second New Chat remains /new with null selection, just like A.
+    act(() => openFreshDraft!())
+    const navigationsBeforeACompletes = navigate.mock.calls.length
+
+    expect(navigationsBeforeACompletes).toBe(1)
+    expect(selectedStoredSessionIdRef.current).toBeNull()
+
+    await act(async () => {
+      finishCreate({ session_id: 'rt-A', stored_session_id: 'stored-A' })
+      expect(await pending).toBe('rt-A')
+    })
+
+    expect(onCreatedInBackground).toHaveBeenCalledWith('stored-A')
+    expect(calls).toEqual(['session.create'])
+    expect(navigate).toHaveBeenCalledTimes(navigationsBeforeACompletes)
+    expect(selectedStoredSessionIdRef.current).toBeNull()
     expect(creatingSessionRef.current).toBe(false)
   })
 

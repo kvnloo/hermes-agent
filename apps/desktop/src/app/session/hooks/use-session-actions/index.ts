@@ -689,7 +689,11 @@ export function useSessionActions({
           submitTargetStoredId: stored
         })
 
-        if (drift) {
+        // A new draft has the same /new route and null selection; only the
+        // create intent distinguishes it from the earlier draft's send.
+        const supersededByFreshDraft = createIntentRef.current !== createIntent
+
+        if (drift || supersededByFreshDraft) {
           if (stored && createOverrides?.onCreatedInBackground) {
             // This first send still owns the newly minted session. Publish its
             // owner and sidebar row, but leave the chat now in view untouched.
