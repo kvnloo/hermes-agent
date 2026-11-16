@@ -278,15 +278,19 @@ export function useModelControls({
       const touchesPrimary = !liveSessionId || liveSessionId === primaryRuntimeId
 
       const readSnapshot = (): ModelPickSnapshot => {
-        const tileState = touchesPrimary ? undefined : $sessionStates.get()[liveSessionId!]
+        // The pill reads the live session slice before the composer atoms. Rollback must
+        // use that same route, or a rejected pick can restore a stale draft model.
+        const liveState = liveSessionId ? $sessionStates.get()[liveSessionId] : undefined
 
         return {
           composerSelection: getComposerModelSelection(),
-          model: touchesPrimary ? $currentModel.get() : (tileState?.model ?? ''),
-          provider: touchesPrimary ? $currentProvider.get() : (tileState?.provider ?? ''),
-          reasoningEffortWire: touchesPrimary
-            ? $currentReasoningEffortWire.get()
-            : (tileState?.reasoningEffortWire ?? '')
+          model: liveState ? liveState.model : touchesPrimary ? $currentModel.get() : '',
+          provider: liveState ? liveState.provider : touchesPrimary ? $currentProvider.get() : '',
+          reasoningEffortWire: liveState
+            ? (liveState.reasoningEffortWire ?? '')
+            : touchesPrimary
+              ? $currentReasoningEffortWire.get()
+              : ''
         }
       }
 

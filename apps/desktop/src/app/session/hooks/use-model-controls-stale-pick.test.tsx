@@ -127,6 +127,37 @@ describe('useModelControls stale pick ordering', () => {
     expect(SessionStates.$sessionStates.get()['session-1']).toMatchObject({ model: 'fable-5', provider: 'nous' })
   })
 
+  it('restores the live pill route rather than stale composer atoms after a rejected pick', async () => {
+    $activeSessionId.set('session-1')
+    setCurrentModel('stale-draft')
+    setCurrentProvider('stale-provider')
+    SessionStates.$sessionStates.set({
+      'session-1': { model: 'live-model', provider: 'live-provider', reasoningEffortWire: 'high' }
+    } as never)
+
+    const pending = deferred<never>()
+    const requestGateway = vi.fn(() => pending.promise)
+    let controls!: Controls
+
+    render(<Harness onReady={value => (controls = value)} requestGateway={requestGateway} />)
+
+    const pick = controls.selectModel({ model: 'missing-model', provider: 'missing-provider' })
+
+    expect(SessionStates.$sessionStates.get()['session-1']).toMatchObject({
+      model: 'missing-model',
+      provider: 'missing-provider'
+    })
+
+    pending.reject(new Error('model not found'))
+    await expect(pick).resolves.toBe(false)
+
+    expect(SessionStates.$sessionStates.get()['session-1']).toMatchObject({
+      model: 'live-model',
+      provider: 'live-provider',
+      reasoningEffortWire: 'high'
+    })
+  })
+
   it('does not roll a failed older pick back over a newer one that applied', async () => {
     $activeSessionId.set('session-1')
     setCurrentModel('fable-5')
