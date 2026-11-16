@@ -66,6 +66,21 @@ class TestSendMessageBlocks:
         assert kwargs["text"]  # plain text still sent
 
     @pytest.mark.asyncio
+    async def test_inline_triple_backtick_line_stays_prose_in_rich_blocks(self):
+        # A single-line code span is not a fence; subsequent paragraphs must
+        # be sent as Slack sections rather than preformatted code.
+        adapter, client = _make_adapter({"rich_blocks": True})
+        content = "Install it with:\n\n```pip install foo```\n\nThen **configure** it."
+
+        await adapter.send("C1", content)
+
+        payload = client.chat_postMessage.await_args.kwargs
+        blocks = payload["blocks"]
+        assert [block["type"] for block in blocks] == ["section", "section", "section"]
+        assert "Then" in blocks[-1]["text"]["text"]
+        assert payload["text"]  # Slack accessibility/notification fallback
+
+    @pytest.mark.asyncio
     async def test_unfurl_config_suppresses_previews_without_changing_link_text(self):
         adapter, client = _make_adapter(
             {"unfurl_links": False, "unfurl_media": False}

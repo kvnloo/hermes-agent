@@ -48,7 +48,7 @@ Block = dict[str, Any]
 
 _HR_RE = re.compile(r"^\s{0,3}([-*_])(?:\s*\1){2,}\s*$")
 _HEADER_RE = re.compile(r"^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$")
-_FENCE_RE = re.compile(r"^\s*(`{3,}|~{3,})(.*)$")
+_FENCE_RE = re.compile(r"^\s*(`{3,}(?![^`]*`)|~{3,})(.*)$")
 _ORDERED_RE = re.compile(r"^(\s*)(\d+)[.)]\s+(.*)$")
 _BULLET_RE = re.compile(r"^(\s*)[-*+]\s+(.*)$")
 _QUOTE_RE = re.compile(r"^\s{0,3}>\s?(.*)$")
