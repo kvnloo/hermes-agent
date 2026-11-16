@@ -75,12 +75,22 @@ def reconcile_delivery_receipts(job: dict) -> bool:
                 updates["last_status"] = "ok"
     if not updates:
         return False
-    job.update(updates)
     try:
-        from cron.jobs import update_job
+        from cron.jobs import _with_job, save_jobs
 
-        update_job(job["id"], updates)
-    except Exception as exc:  # health: allow BLE001 -- bookkeeping must not fail a tick or `cron list`; the reconcile simply retries on the next read
+        def apply(jobs, _i, current):
+            # A new run may replace this receipt between the read and the write-back.
+            if current.get("last_delivery_queued") != queued:
+                return False
+            current.update(updates)
+            save_jobs(jobs)
+            return True
+
+        if not _with_job(job["id"], apply, missing=False):
+            return False
+    except Exception as exc:  # health: allow BLE001 -- failed reconciliation retries on the next read
         logger.debug(
             "Job '%s': could not record reconciled delivery state: %s", job.get("id"), exc)
+        return False
+    job.update(updates)
     return True

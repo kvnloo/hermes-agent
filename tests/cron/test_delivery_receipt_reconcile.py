@@ -131,3 +131,24 @@ def test_newer_run_status_survives_a_late_settle(tmp_path, monkeypatch):
         assert reconcile_delivery_receipts(job) is True
         assert job["last_status"] == "error"
         assert job["last_delivery_queued"] is None
+
+
+def test_stale_snapshot_cannot_clear_newer_delivery(tmp_path, monkeypatch):
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    old_id, new_id = "2" * 32, "3" * 32
+    _write_receipt(tmp_path, old_id, "settled")
+    with jobs.use_cron_store(tmp_path / "cron"):
+        # cron list read an old run, then the next run queued its own receipt.
+        stale = _queued_job(old_id)
+        current_marker = {
+            "bot-chat:(own)": {"status": "queued", "delivery_id": new_id}
+        }
+        jobs.update_job(stale["id"], {
+            "last_status": "delivery_queued",
+            "last_delivery_queued": current_marker,
+        })
+
+        assert reconcile_delivery_receipts(stale) is False
+        current = jobs.get_job(stale["id"])
+        assert current["last_status"] == "delivery_queued"
+        assert current["last_delivery_queued"] == current_marker
