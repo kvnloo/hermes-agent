@@ -86,3 +86,27 @@ def test_bulk_reset_and_bulk_assign_skip_moa_slots(saved):
     # Single-slot assignment to a MoA slot is still allowed (exclusion is bulk-only).
     _apply_aux_assignment_sync(cfg, "ollama", "other-ref", "moa_reference", "", "")
     assert cfg["auxiliary"]["moa_reference"]["model"] == "other-ref"
+
+@pytest.mark.parametrize("task", ["goal_judge", "monitor", "memory_query_rewrite", "tts_audio_tags"])
+def test_configured_aux_slot_is_assignable_via_dashboard(task, saved):
+    """A real config-backed auxiliary slot must be assignable through dashboard REST.
+
+    The slots are consumed at runtime; an absent REST allowlist entry previously
+    raised HTTP 400 even when config.yaml defined a valid per-task model block.
+    """
+    from copy import deepcopy
+
+    from hermes_cli.config_defaults import DEFAULT_CONFIG
+    from hermes_cli.main_provider_setup import _all_aux_tasks
+
+    assert task in {key for key, _label, _hint in _all_aux_tasks()}
+    original = deepcopy(DEFAULT_CONFIG["auxiliary"][task])
+    cfg = {"auxiliary": {task: original}}
+
+    result = _apply_aux_assignment_sync(cfg, "openrouter", "google/gemini-2.5-flash", task, "", "")
+
+    assert result["tasks"] == [task]
+    assert cfg["auxiliary"][task]["provider"] == "openrouter"
+    assert cfg["auxiliary"][task]["model"] == "google/gemini-2.5-flash"
+    assert cfg["auxiliary"][task]["timeout"] == original["timeout"]
+    assert saved["auxiliary"][task] == cfg["auxiliary"][task]
