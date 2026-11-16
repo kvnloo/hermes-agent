@@ -36,6 +36,7 @@ import pytest
 
 import hermes_cli.gateway as gateway_cli
 import hermes_cli.update_cmd as update_cmd
+from hermes_cli.update_cmd_fleet import _restart_launchd_gateway_after_update
 
 LABEL = "ai.hermes.gateway"
 
@@ -282,6 +283,27 @@ class TestInvokingProfileIsVerifiedLikeItsSiblings:
         # gateway_fleet_restart_incomplete and makes the update exit 1.
         assert failed_or_stale == [LABEL]
         assert LABEL in capsys.readouterr().out
+
+    def test_pending_drain_does_not_force_kickstart(self, monkeypatch):
+        """#94540: never force-kill a gateway whose drain has live work outstanding.
+
+        launchd_restart returns its pending PID when the drain budget expires.
+        Waiting for a new PID and then forcing kickstart -k kills that work.
+        """
+        calls = _patch_launchd_env(monkeypatch, supervised=False)
+        monkeypatch.setattr(gateway_cli, "_launchctl_supervised_pid", lambda label: 4242)
+        monkeypatch.setattr(gateway_cli, "_is_pid_ancestor_of_current_process", lambda pid: False)
+        monkeypatch.setattr(gateway_cli, "launchd_restart", lambda: 4242)
+        pending: set[int] = set()
+
+        restarted, failed = _restart_launchd_gateway_after_update(
+            self_restart_pending=pending
+        )
+
+        assert (restarted, failed) == ([], [])
+        assert pending == {4242}
+        assert calls["verify"] == 0
+        assert calls["kickstart"] == 0
 
     def test_unverified_restart_is_recovered_by_a_forced_kickstart(
         self, monkeypatch, capsys

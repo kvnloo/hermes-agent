@@ -902,7 +902,11 @@ def _restart_launchd_gateway_after_update(
         # and verification-only — the restart itself is never gated on `launchctl list` (#74973).
         old_pid = _launchctl_supervised_pid(current_label) if supervision_verify else None
         try:
-            launchd_restart()
+            if (pending_pid := launchd_restart()) is not None:
+                # An in-flight drain still owns live turns. A kickstart would kill them.
+                if self_restart_pending is not None:
+                    self_restart_pending.add(pending_pid)
+                return [], []
         except subprocess.CalledProcessError as e:
             stderr = (getattr(e, "stderr", "") or "").strip()
             print(
