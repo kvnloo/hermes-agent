@@ -44,8 +44,15 @@ def _load_contributor_dir(directory: Path | None = None) -> dict:
     return mapping
 
 
-# Effective map: frozen legacy dict + directory entries (directory wins).
-AUTHOR_MAP = {**LEGACY_AUTHOR_MAP, **_load_contributor_dir()}
+# CrowdStrike Falcon kills Windows checkout when this exact commit-author email
+# appears as a tracked filename (#156460). Preserve contributor credit without
+# putting the blocked pathname back into the tree.
+SAFE_FILENAME_AUTHOR_MAP = {
+    "opencode.agent177c@onionmail.org": "matrixneoaiagent",
+}
+
+# Effective map: directory and exceptional entries win over frozen legacy data.
+AUTHOR_MAP = {**LEGACY_AUTHOR_MAP, **_load_contributor_dir(), **SAFE_FILENAME_AUTHOR_MAP}
 
 
 def resolve_author(name: str, email: str) -> str:

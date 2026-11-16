@@ -23,6 +23,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.ci.review_status import action_required, publish
+from scripts.releases.authors import SAFE_FILENAME_AUTHOR_MAP
 
 ARTIFACT = "contributor-check"
 GIT_TIMEOUT = 120
@@ -75,6 +76,8 @@ def is_mapped(email: str, legacy_map: str) -> bool:
     if GITHUB_NOREPLY.search(email):
         return True
     if Path("contributors/emails", email).is_file():
+        return True
+    if email in SAFE_FILENAME_AUTHOR_MAP:
         return True
     return f'"{email}"' in legacy_map
 

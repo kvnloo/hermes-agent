@@ -45,12 +45,13 @@ def read_mapping_file(path: Path) -> str | None:
 
 
 def _legacy_login(email: str) -> str | None:
-    """Look the email up in the frozen legacy AUTHOR_MAP in scripts/releases/authors_legacy.py."""
+    """Look up mappings that must not be written as email-named files."""
     try:
         sys.path.insert(0, str(REPO_ROOT))
+        from scripts.releases.authors import SAFE_FILENAME_AUTHOR_MAP
         from scripts.releases.authors_legacy import LEGACY_AUTHOR_MAP
 
-        return LEGACY_AUTHOR_MAP.get(email)
+        return SAFE_FILENAME_AUTHOR_MAP.get(email) or LEGACY_AUTHOR_MAP.get(email)
     except Exception:
         return None
 

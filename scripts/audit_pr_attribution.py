@@ -69,6 +69,12 @@ def is_mapped(email: str) -> bool:
         return True
     if (REPO_ROOT / "contributors" / "emails" / email).is_file():
         return True
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT))
+    from scripts.releases.authors import SAFE_FILENAME_AUTHOR_MAP
+
+    if email in SAFE_FILENAME_AUTHOR_MAP:
+        return True
     authors_py = REPO_ROOT / "scripts" / "releases" / "authors_legacy.py"
     try:
         if f'"{email}"' in authors_py.read_text(encoding="utf-8-sig", errors="replace"):

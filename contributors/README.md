@@ -36,3 +36,8 @@ janedoe
   `<login>@users.noreply.github.com`) auto-resolve — no file needed.
 - The `Contributor Attribution Check` CI job fails a PR whose commits carry
   an unmapped email; the failure message prints the exact command to run.
+- Exception for [#156460](https://github.com/NousResearch/hermes-agent/issues/156460):
+  CrowdStrike Falcon terminates Windows checkouts that write the filename
+  `opencode.agent177c@onionmail.org`. The email still maps to `matrixneoaiagent`
+  via `SAFE_FILENAME_AUTHOR_MAP` in `scripts/releases/authors.py` rather than
+  a tracked email-named file. Do not recreate that blocked pathname.
