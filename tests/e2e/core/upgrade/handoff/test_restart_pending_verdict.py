@@ -35,5 +35,14 @@ def test_a_report_naming_another_session_fails():
     assert "not the held kanban worker's session local-other" in _verdict(LEFT, FLEET, session="local-other")
 
 
+def test_report_for_a_different_gateway_does_not_claim_the_held_gateway():
+    # The update may report multiple gateways: a pending row for PID 6 cannot borrow
+    # a left-running report for PID 7, even when both name the held session.
+    other_gateway = LEFT.replace("gateway PID 6:", "gateway PID 7:")
+    verdict = _verdict(other_gateway, FLEET)
+    assert "never reported its restart as pending" in verdict
+    assert "Gateway PID 6" in verdict
+
+
 def test_a_gateway_missing_from_the_fleet_pending_rows_fails():
     assert "does not list gateway PID 6 as restart pending" in _verdict(LEFT, FLEET.replace("(pid 6)", "(pid 7)"))

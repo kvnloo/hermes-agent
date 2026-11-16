@@ -444,10 +444,11 @@ def restarts_when_idle(column: str) -> bool:
 def restart_pending_verdict(out: str, old_pid: int, session: str) -> str:
     """'' when the update's output says gateway ``old_pid`` was left running with its restart pending
     and names the managed worker ``session`` as what it waits on; otherwise what is missing."""
-    named = [m.group("what") or "" for m in _LEFT_RUNNING.finditer(out)]
+    named = [m.group("what") or "" for m in _LEFT_RUNNING.finditer(out)
+             if re.fullmatch(rf"gateway PID {old_pid}", m.group("label").strip(), flags=re.IGNORECASE)]
     if not named:
         return ("the update left the busy gateway running but never reported its restart as pending on live work "
-                "(no '↻ …: still running live work (…) — left running' line)")
+                f"(no '↻ Gateway PID {old_pid}: still running live work (…) — left running' line)")
     if not any(re.search(rf"\bmanaged run {re.escape(session)} pid \d+", w) for w in named):
         return f"the update's pending-restart report names {named} but not the held kanban worker's session {session}"
     pending = [int(m.group("pid")) for m in _FLEET_PENDING.finditer(out)]
