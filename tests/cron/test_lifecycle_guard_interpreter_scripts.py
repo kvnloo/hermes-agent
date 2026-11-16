@@ -6,13 +6,15 @@ failed closed on the device. Its text is still scanned and the paths it names ar
 "could not scan" stops being a block, as for an interpreter heredoc body (#113944).
 """
 
-import os
+import shlex
+import subprocess
+import sys
 
 import pytest
 
-from cron.lifecycle_guard import _runs_outside_posix_shell, scan_gateway_lifecycle
+from cron.lifecycle_guard import scan_gateway_lifecycle
 
-posix_only = pytest.mark.skipif(os.name == "nt", reason="needs a POSIX /dev/null device")
+posix_only = pytest.mark.platforms("posix")
 
 PYTHON_TOOL = '#!/usr/bin/env python3\nimport sys\nprint("/dev/null" in sys.argv[1:])\n'
 
@@ -73,4 +75,26 @@ def test_script_named_by_interpreter_script_is_still_read(tmp_path):
     ("", False),
 ])
 def test_runs_outside_posix_shell(text, expected):
+    from cron.lifecycle_guard import _runs_outside_posix_shell
+
     assert _runs_outside_posix_shell(text) is expected
+
+
+@posix_only
+def test_cron_creation_and_direct_python_execution(tmp_path):
+    from cron.jobs import create_job, get_job
+    from cron.lifecycle_guard import GatewayLifecycleBlocked
+
+    tool = _script(tmp_path, "demo-tool", PYTHON_TOOL.replace("/usr/bin/env python3", sys.executable))
+    tool.chmod(0o700)
+    command = f"{shlex.quote(str(tool))} /dev/null"
+    job = create_job(prompt=command, schedule="every 1h", paused=True)
+    assert get_job(job["id"])["prompt"] == command
+    assert job["state"] == "paused"
+
+    completed = subprocess.run([str(tool), "/dev/null"], capture_output=True, text=True, timeout=10)
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout == "True\n"
+
+    with pytest.raises(GatewayLifecycleBlocked):
+        create_job(prompt=f"bash {shlex.quote(str(tool))}", schedule="every 1h", paused=True)
