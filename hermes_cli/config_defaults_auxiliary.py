@@ -7,7 +7,7 @@ def _aux(timeout, *, reasoning_effort=True, **extra):
     reasoning_effort=False omits that key (MoA blocks configure depth per slot);
     ``extra`` keys are appended after the standard ones.
     """
-    d = {"provider": "auto", "model": "", "base_url": "", "api_key": "", "timeout": timeout, "extra_body": {}}
+    d = {"provider": "auto", "model": "", "base_url": "", "api_key": "", "timeout": timeout, "fallback_chain": [], "extra_body": {}}
     if reasoning_effort:
         d["reasoning_effort"] = ""
     d.update(extra)

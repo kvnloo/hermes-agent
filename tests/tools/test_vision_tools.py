@@ -167,6 +167,27 @@ class TestHandleVisionAnalyze:
         ) == "fallback-model"
 
 
+    @pytest.mark.asyncio
+    async def test_explicit_empty_yaml_model_blocks_stale_env(self, tmp_path, monkeypatch):
+        """A user-cleared vision model must not resurrect a launch-time env model."""
+        home = tmp_path / ".hermes"
+        home.mkdir()
+        (home / "config.yaml").write_text(
+            'auxiliary:\n  vision:\n    model: ""\n',
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("HERMES_HOME", str(home))
+        monkeypatch.setenv("AUXILIARY_VISION_MODEL", "retired-vision-model")
+        with (
+            patch("tools.vision_tools._should_use_native_vision_fast_path", return_value=False),
+            patch("tools.vision_tools.vision_analyze_tool", new_callable=AsyncMock) as tool,
+        ):
+            await _handle_vision_analyze(
+                {"image_url": "https://example.com/image.png", "question": "test"}
+            )
+        assert tool.call_args.args[2] is None
+
+
 # ---------------------------------------------------------------------------
 # Error logging with exc_info — verify tracebacks are logged
 # ---------------------------------------------------------------------------

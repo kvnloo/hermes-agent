@@ -1004,14 +1004,22 @@ VISION_ANALYZE_SCHEMA = {
 
 
 def _configured_aux_model(sections: tuple, env_vars: tuple) -> Optional[str]:
-    """First non-empty ``auxiliary.<section>.model`` from config.yaml, else the first non-empty
-    env var (legacy override), else None."""
+    """Configured model wins; an explicit empty user model blocks legacy env fallback."""
     for section in sections:
         _vmodel = _cfg_auxiliary(section, "model")
         if _vmodel:
             if str(_vmodel).strip():
                 return str(_vmodel).strip()
             break
+    # DEFAULT_CONFIG also contains empty model values, so only the effective user
+    # layer can distinguish an explicit clear from an absent model key.
+    from hermes_cli.config_effective import load_user_config_effective
+    auxiliary = load_user_config_effective().get("auxiliary")
+    if isinstance(auxiliary, dict):
+        for section in sections:
+            settings = auxiliary.get(section)
+            if isinstance(settings, dict) and settings.get("model") == "":
+                return None
     return next((v for v in (os.getenv(e, "").strip() for e in env_vars) if v), None)
 
 
