@@ -4699,7 +4699,35 @@ class SlackAdapter(SlackSocketLifecycleMixin, SlackVaultCodeMixin, BasePlatformA
             event, str(team_id or ""), str(user_id or ""))
         if team_id and channel_id:
             self._remember_channel_team(channel_id, team_id)
-        channel_type = event.get("channel_type", "") or ("im" if channel_id.startswith("D") else "")
+        channel_type = event.get("channel_type") or ""
+        # app_mention omits channel_type; an MPIM may have a C or G channel ID.
+        # Use the typed message when present, or resolve cold mentions before session keying.
+        type_cache = self._lazy_attr("_channel_type_cache", dict)
+        type_key = (str(team_id or ""), str(channel_id))
+        if channel_type:
+            if team_id and channel_id:
+                type_cache[type_key] = channel_type
+        elif channel_id.startswith("D"):
+            channel_type = "im"
+        elif channel_id:
+            channel_type = type_cache.get(type_key, "") if team_id else ""
+            if not channel_type:
+                try:
+                    response = await self._get_client(
+                        channel_id, team_id=team_id).conversations_info(channel=channel_id)
+                    payload = _slack_response_payload(response)
+                    info = payload.get("channel") or {}
+                    if payload.get("ok") and isinstance(info, dict):
+                        channel_type = (
+                            "mpim" if info.get("is_mpim") else
+                            "im" if info.get("is_im") else
+                            "group" if info.get("is_group") else
+                            "channel" if info.get("is_channel") else "")
+                        if channel_type and team_id:
+                            type_cache[type_key] = channel_type
+                except Exception as exc:
+                    logger.debug("[Slack] channel type lookup failed for %s: %s", channel_id, exc)
+        self._trim_oldest_dict_entries(type_cache, self._CHANNEL_NAME_CACHE_MAX)
         is_dm = channel_type in {"im", "mpim"}  # Both 1:1 and group DMs
         if is_dm and self._slack_disable_dms():
             logger.info(
