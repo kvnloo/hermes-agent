@@ -166,6 +166,32 @@ class TestFormatSessionInfo:
         assert "custom" in info
 
 
+    def test_same_url_named_entries_show_the_selected_provider(self, runner, tmp_path):
+        """The serving identity, not the first entry with the same URL, owns the banner."""
+        url = "https://proxy.example/v1"
+        config = {
+            "model": {"default": "proxy-model", "provider": "custom:production",
+                      "context_length": 131072},
+            "providers": {
+                "staging": {"api": url, "key_env": "STAGING_API_KEY"},
+                "production": {"api": url, "key_env": "PRODUCTION_API_KEY"},
+            },
+        }
+        p1, p2, p3 = _patch_info(
+            tmp_path,
+            "model:\n  default: proxy-model\n  provider: custom:production\n"
+            "  context_length: 131072\n"
+            "providers:\n  staging:\n    api: https://proxy.example/v1\n"
+            "  production:\n    api: https://proxy.example/v1\n",
+            "proxy-model",
+            {"provider": "custom", "base_url": url, "api_key": "production-key"},
+        )
+        with p1, p2, p3, patch("hermes_cli.runtime_provider.load_config", return_value=config):
+            info = runner._format_session_info()
+        assert "custom:production" in info
+        assert "custom:staging" not in info
+
+
 class TestChannelOverrideSessionInfo:
     """The /new and auto-reset banners must advertise the channel override's
     model/provider (and that provider's runtime endpoint), not the global default."""

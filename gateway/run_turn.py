@@ -375,9 +375,13 @@ class GatewayTurnMixin(GatewayBackgroundMixin, GatewayTurnPrepareMixin, GatewayT
         # saved provider actually serves this session. No match keeps the plain "custom".
         provider_display = resolved.provider or "openrouter"
         if provider_display == "custom" and resolved.base_url:
-            from hermes_cli.runtime_provider_custom import find_custom_provider_identity
+            from hermes_cli.runtime_provider import _get_model_config
+            from hermes_cli.runtime_provider_custom import session_provider_identity
             try:
-                provider_display = find_custom_provider_identity(resolved.base_url) or provider_display
+                requested = (route or {}).get("provider") or _get_model_config().get("provider")
+                provider_display = session_provider_identity(
+                    resolved.provider, requested, resolved.base_url, resolved.model,
+                ) or provider_display
             except Exception:
                 logger.debug("Gateway session banner could not map base_url back to a named "
                              "custom provider; showing the bare adapter id", exc_info=True)
