@@ -324,8 +324,13 @@ async def execute(authority, ref, row, policy):
             # The forwarded ``cron.cancel`` carries no reason, so the operator's marker is read here
             # first: a stopped agent run reports "cancelled on request", not a lost fire claim.
             stop = _CombinedCancelEvent(CancelRequest(execution_id), cancel)
-            result = await asyncio.to_thread(_run_identified, run_job, job, execution_id,
-                                             extra_prompt=data['extra_prompt'], cancel_event=stop)
+            try:
+                result = await asyncio.to_thread(_run_identified, run_job, job, execution_id,
+                                                 extra_prompt=data['extra_prompt'], cancel_event=stop)
+            except Exception:
+                # A pre-agent failure can raise instead of returning a failed cron result.
+                await asyncio.to_thread(_end_unfinished_fire, authority.db, ref.session_id, False)
+                raise
         # run_job stamps run-side verdicts on ITS job copy (quota hold, unreachable model); the
         # firing scheduler's bookkeeping reads them off its own dict, so they ride the result.
         flags = {key: job[key] for key in RUN_JOB_FLAGS if key in job}

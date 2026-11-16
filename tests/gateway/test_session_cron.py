@@ -174,6 +174,42 @@ async def test_a_fire_that_skips_the_agent_still_ends_its_session(tmp_path, monk
     assert session['ended_at'] is not None and session['end_reason'] == end_reason
 
 
+@pytest.mark.asyncio
+async def test_cron_fire_preflight_exception_still_ends_session(tmp_path, monkeypatch):
+    """A cron preflight that raises instead of returning must not strand its opened session."""
+    from contextlib import nullcontext
+    import json
+    from cron import scheduler
+    from gateway import run, session_cron
+    from gateway.session_authority import LiveSession, SessionAuthority
+    from gateway.session_contract import SessionRef
+    from hermes_state import SessionDB
+    from hermes_state_runtime import admit_session_input, begin_runtime_epoch, claim_session_input
+
+    monkeypatch.setenv('HERMES_HOME', str(tmp_path))
+    db = SessionDB(tmp_path / 'state.db')
+    db.create_session('s', source='cron')
+    authority = SessionAuthority(SimpleNamespace(_draining=False), profile_id='p', instance_id='test', db=db,
+                                 epoch=begin_runtime_epoch(db, instance_id='test'))
+    authority.sessions['s'] = LiveSession(SimpleNamespace(platform=None, user_id='cron-owner'), 'route')
+    monkeypatch.setattr(run, '_profile_runtime_scope', lambda home: nullcontext())
+
+    def run_job(job, *, extra_prompt, execution_id, cancel_event):
+        raise RuntimeError('pre-agent failure')
+    monkeypatch.setattr(scheduler, 'run_job', run_job)
+    with db:
+        admit_session_input(db, epoch=authority.epoch, principal_id='cron-owner', session_id='s',
+                            request_id='cron:job:fire', payload={'text': ''})
+        row = claim_session_input(db, epoch=authority.epoch, session_id='s')
+        policy = SimpleNamespace(request_json=json.dumps({
+            'extra_prompt': None, 'request_id': 'cron:job:fire', 'cron_job': {'id': 'job'}}))
+        with pytest.raises(RuntimeError, match='pre-agent failure'):
+            await session_cron.execute(authority, SessionRef('p', 's'), row, policy)
+        session = db.get_session('s')
+    assert session['ended_at'] is not None
+    assert session['end_reason'] == 'cron_incomplete_no_output'
+
+
 def test_draining_owner_still_answers_status_and_cancel_of_admitted_cron_work(tmp_path, monkeypatch):
     """A stop/restart sets ``_draining`` while it waits for in-flight cron work. The in-gateway
     firer polls ``status`` until the run settles: refusing it made the firer raise
