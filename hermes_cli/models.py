@@ -2146,20 +2146,34 @@ def _fetch_anthropic_models(
         try:
             data = _get_json(url, timeout=timeout, headers=headers)
         except urllib.error.HTTPError as http_err:
-            # OAuth subscriptions that 400 the 1M context beta ("long context beta is not yet
-            # available for this subscription"): retry once without it; re-raise anything else.
-            if not (is_oauth and http_err.code == 400):
+            if (
+                is_oauth and http_err.code == 401
+                and urllib.parse.urlparse(url).scheme == "https"
+                and urllib.parse.urlparse(url).hostname == "api.anthropic.com"
+            ):
+                # Refresh only the pool credential that issued this 401; relays must not
+                # receive a rotated grant and plain credential resolution stays read-only.
+                from agent.credential_pool import load_pool
+                refreshed = load_pool("anthropic").try_refresh_matching(api_key_hint=token)
+                new_token = str(getattr(refreshed, "runtime_api_key", "") or "").strip()
+                if not new_token or new_token == token:
+                    raise
+                headers["Authorization"] = f"Bearer {new_token}"
+                data = _get_json(url, timeout=timeout, headers=headers)
+            elif is_oauth and http_err.code == 400:
+                # Some OAuth subscriptions reject the 1M context beta.
+                try:
+                    body_text = http_err.read().decode(errors="ignore").lower()
+                except Exception:
+                    body_text = ""
+                if not ("long context beta" in body_text and "not yet available" in body_text):
+                    raise
+                headers["anthropic-beta"] = ",".join(
+                    [b for b in _COMMON_BETAS if b != _CONTEXT_1M_BETA] + list(_OAUTH_ONLY_BETAS)
+                )
+                data = _get_json(url, timeout=timeout, headers=headers)
+            else:
                 raise
-            try:
-                body_text = http_err.read().decode(errors="ignore").lower()
-            except Exception:
-                body_text = ""
-            if not ("long context beta" in body_text and "not yet available" in body_text):
-                raise
-            headers["anthropic-beta"] = ",".join(
-                [b for b in _COMMON_BETAS if b != _CONTEXT_1M_BETA] + list(_OAUTH_ONLY_BETAS)
-            )
-            data = _get_json(url, timeout=timeout, headers=headers)
         models = [m["id"] for m in data.get("data", []) if m.get("id")]
         seen_cursors: set[str] = set()
         for _page in range(_ANTHROPIC_MODELS_MAX_PAGES):
