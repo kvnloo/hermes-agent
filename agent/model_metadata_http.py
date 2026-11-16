@@ -29,6 +29,7 @@ def resolve_verify(base_url: str = ""):
 def stream(url: str, *, headers=None, params=None, timeout=10.0, verify=None):
     import httpx
     from agent.deadline import DeadlineExpired, run_bounded_sync
+    from agent.model_metadata_probe import _probe_trust_env
     from hermes_cli.urllib_security import url_origin
 
     origin = url_origin(url)
@@ -48,6 +49,7 @@ def stream(url: str, *, headers=None, params=None, timeout=10.0, verify=None):
         timeout=timeout,
         follow_redirects=True,
         event_hooks={"request": [scope_credentials]},
+        trust_env=_probe_trust_env(url),
     ) as client:
         def fetch():
             response = client.send(client.build_request("GET", url, headers=headers, params=params), stream=True)
