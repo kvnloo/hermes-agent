@@ -504,3 +504,40 @@ class TestRemoveBoardLockedDir:
         with pytest.raises(ValueError, match="could not delete board 'lockedrm'"):
             kb.remove_board("lockedrm", archive=False)
         assert kb.board_dir("lockedrm").is_dir()
+
+    @pytest.mark.parametrize("archive", [True, False], ids=["archive", "hard-delete"])
+    def test_failed_removal_keeps_current_board_selected(
+        self, fresh_home, monkeypatch, archive,
+    ):
+        """A locked directory must not switch away from a still-live board."""
+        kb.create_board("selected")
+        kb.set_current_board("selected")
+        lock = {"held": True}
+        real_rename, real_rmtree = Path.rename, shutil.rmtree
+
+        def locked_rename(path, target):
+            if lock["held"] and path == kb.board_dir("selected"):
+                raise PermissionError(13, "board is in use", str(path))
+            return real_rename(path, target)
+
+        def locked_rmtree(path, *args, **kwargs):
+            if lock["held"] and Path(path) == kb.board_dir("selected"):
+                raise PermissionError(13, "board is in use", str(path))
+            return real_rmtree(path, *args, **kwargs)
+
+        if archive:
+            monkeypatch.setattr(Path, "rename", locked_rename)
+        else:
+            monkeypatch.setattr(shutil, "rmtree", locked_rmtree)
+
+        with pytest.raises(ValueError, match="could not"):
+            kb.remove_board("selected", archive=archive)
+
+        assert kb.board_dir("selected").is_dir()
+        assert kb.current_board_path().read_text(encoding="utf-8").strip() == "selected"
+        assert kb.get_current_board() == "selected"
+
+        lock["held"] = False
+        kb.remove_board("selected", archive=archive)
+        assert not kb.current_board_path().exists()
+        assert kb.get_current_board() == "default"

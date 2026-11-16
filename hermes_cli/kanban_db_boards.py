@@ -204,9 +204,8 @@ def remove_board(slug: str, *, archive: bool = True) -> dict:
     if not d.exists():
         raise ValueError(f"board {normed!r} does not exist")
 
-    # If the user removed the currently-active board, revert to default.
-    if _kb.get_current_board() == normed:
-        _kb.clear_current_board()
+    # A failed directory operation leaves the old board live and selected.
+    was_current = _kb.get_current_board() == normed
 
     # A concurrent connect() after the rename recreates an empty DB file; drop
     # the init cache first so the schema pass re-runs on it.
@@ -239,9 +238,13 @@ def remove_board(slug: str, *, archive: bool = True) -> dict:
             project_id=prior_meta.get("project_id"),
             archived=True,
         )
+        if was_current:
+            _kb.clear_current_board()
         return {"slug": normed, "action": "archived", "new_path": str(target)}
     import shutil
     _retry_locked_dir_op(normed, "delete", lambda: shutil.rmtree(d))
+    if was_current:
+        _kb.clear_current_board()
     return {"slug": normed, "action": "deleted", "new_path": ""}
 
 
