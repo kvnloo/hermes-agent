@@ -57,7 +57,7 @@ async def refine_local_session(runner, source, focus):
     def publish(message):
         current = authority.sessions.get(ref.session_id)
         if current is not None:
-            current.event_stream.publish(ref.session_id, {'text': str(message)}, event_type='review.summary')
+            current.event_stream.publish(ref.session_id, {'text': str(message)}, event_type='review.summary', execution={})
 
     def body():
         try:

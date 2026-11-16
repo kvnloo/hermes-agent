@@ -412,7 +412,7 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
                 authority, session_id, _generation = owner
                 live = authority.sessions.get(session_id)
                 if live is not None:
-                    live.event_stream.publish(session_id, {"text": str(message)}, event_type="review.summary")
+                    live.event_stream.publish(session_id, {"text": str(message)}, event_type="review.summary", execution={})
                 return
             if self._status_live():
                 self._send_status_text(
@@ -433,13 +433,13 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
             if local_viewer and owner is not None:
                 # The review fork reports from its own thread while the drain may still be
                 # settling this turn. Hold the row until the authority published the turn's
-                # message.complete (it clears the execution stamp only after that), the order
-                # the in-process TUI produced. Never fenced: a late summary still reaches viewers.
+                # message.complete, the order the in-process TUI produced. The shared
+                # stream stamp survives normal settlement; the running claim does not.
                 authority, session_id, generation = owner
                 live = authority.sessions.get(session_id)
                 deadline = time.monotonic() + 120
                 while (live is not None and time.monotonic() < deadline
-                       and live.event_stream.execution.get("execution_generation") == generation):
+                       and authority.executing.get(session_id) == generation):
                     time.sleep(0.05)
                 deliver(message)
                 return
