@@ -54,9 +54,11 @@ def _response(*, tool, prompt_tokens):
     )
 
 
+@pytest.mark.parametrize("cycles", [1, 2], ids=["first-crossing", "rearmed-crossing"])
+@pytest.mark.parametrize("mode", ["simulated", "committed", "streamed-committed"])
 @pytest.mark.parametrize("platform", ["cli", "web"])
 @pytest.mark.parametrize("preamble_chars", [0, 9_000], ids=["short", "long-preamble"])
-def test_named_engine_compacts_at_cap_midturn(tmp_path, monkeypatch, platform, preamble_chars):
+def test_named_engine_compacts_at_cap_midturn(tmp_path, monkeypatch, platform, preamble_chars, mode, cycles):
     home = tmp_path / "home"
     plugin = home / "plugins" / "midturn_cap"
     plugin.mkdir(parents=True)
@@ -88,15 +90,20 @@ def test_named_engine_compacts_at_cap_midturn(tmp_path, monkeypatch, platform, p
     agent.provider = "claude-subscription-directsdk-experimental"
     agent.client = MagicMock()
     agent._cached_system_prompt = "System"
-    agent._disable_streaming = True
+    agent._disable_streaming = mode != "streamed-committed"
+    agent.stream_delta_callback = lambda _text: None
     agent._use_prompt_caching = False
     agent._compression_feasibility_checked = True
     agent.tool_delay = 0
     agent.save_trajectories = False
+    agent.max_compression_attempts = 1
     compactions = []
+    real_compact = agent._compress_context
 
     def compact(messages, system_message, **kwargs):
         compactions.append(kwargs)
+        if mode != "simulated":
+            return real_compact(messages, system_message, **kwargs)
         agent.context_compressor.awaiting_real_usage_after_compression = True
         agent.context_compressor._verify_compaction_cleared_threshold = True
         agent.context_compressor.last_prompt_tokens = -1
@@ -108,31 +115,58 @@ def test_named_engine_compacts_at_cap_midturn(tmp_path, monkeypatch, platform, p
 
     def provider_call(**kwargs):
         request_compaction_counts.append(len(compactions))
-        if agent.client.chat.completions.create.call_count == 1:
-            return _response(tool=True, prompt_tokens=180_001)
-        return _response(tool=False, prompt_tokens=10_000)
+        call_number = agent.client.chat.completions.create.call_count
+        response = _response(
+            tool=call_number < cycles * 2,
+            prompt_tokens=180_001 if call_number % 2 else 10_000,
+        )
+        for call in response.choices[0].message.tool_calls or []:
+            call.id = f"call_cap_{call_number}"
+        if mode == "streamed-committed":
+            message = response.choices[0].message
+            delta = SimpleNamespace(
+                role="assistant", content=message.content, reasoning_content=None,
+                tool_calls=[SimpleNamespace(index=i, **vars(call))
+                            for i, call in enumerate(message.tool_calls or [])] or None,
+            )
+            return iter([SimpleNamespace(
+                id="claude-native", model=response.model, usage=response.usage,
+                choices=[SimpleNamespace(delta=delta, finish_reason=response.choices[0].finish_reason)],
+            )])
+        return response
 
     agent.client.chat.completions.create.side_effect = provider_call
     history = [
-        {"role": "user" if i % 2 == 0 else "assistant", "content": f"history {i}"}
+        {"role": "user" if i % 2 == 0 else "assistant", "content": f"history {i} " * 100}
         for i in range(30)
     ]
     try:
         with (
             patch.object(agent, "_compress_context", side_effect=compact),
+            patch.object(agent.context_compressor, "_generate_summary", return_value="Prior work is complete."),
+            patch.object(agent, "_build_system_prompt", return_value="System"),
             patch("model_tools.handle_function_call", return_value='{"result":"ok"}'),
             patch.object(agent, "_save_trajectory"),
             patch.object(agent, "_cleanup_task_resources"),
         ):
             result = agent.run_conversation("search then finish", conversation_history=history)
         assert result["final_response"] == "done", result
-        assert request_compaction_counts == [0, 1], "180k cap missed before the next provider request"
-        assert len(compactions) == 1
-        assert compactions[0]["trigger"] == "post_tool"
-        assert 180_000 <= compactions[0]["approx_tokens"] < 190_000
+        assert request_compaction_counts == [(i + 1) // 2 for i in range(cycles * 2)], (
+            "180k cap missed before the next provider request"
+        )
+        assert len(compactions) == cycles
+        assert all(call["trigger"] == "post_tool" for call in compactions)
+        assert all(180_000 <= call["approx_tokens"] < 190_000 for call in compactions)
         assert agent.context_compressor.threshold_tokens == 180_000
         assert agent.context_compressor.last_prompt_tokens == 10_000
         assert not agent.context_compressor.awaiting_real_usage_after_compression
-        assert agent.client.chat.completions.create.call_count == 2
+        assert agent.client.chat.completions.create.call_count == cycles * 2
+        if mode != "simulated":
+            assert agent.context_compressor.compression_count == cycles
+            assert agent.session_id == "midturn-cap"
+            assert any(not row["active"] for row in db.get_messages(agent.session_id, include_inactive=True))
+            reloaded = db.get_messages_as_conversation(agent.session_id)
+            assert len(reloaded) < len(history)
+            assert any("Prior work is complete." in str(row.get("content")) for row in reloaded)
     finally:
         db.close()
