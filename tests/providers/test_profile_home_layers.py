@@ -90,3 +90,36 @@ def test_plugin_installed_after_discovery_is_found_without_a_restart(homes):
 
     assert providers.get_provider_profile("late-install") is not None
     assert "late-install" in {p.name for p in providers.list_providers()}
+
+
+def test_native_provider_names_that_normalize_equal_remain_distinct(homes):
+    """Regression for #156559: independent source dirs must get independent imports."""
+    import os
+    import providers
+
+    launch, _ = homes
+    for name in ("demo-provider", "demo_provider"):
+        _install(launch, name)
+        # Match the real fingerprint inputs (relative path, size, mtime).
+        # The two sources differ only by a same-width punctuation character.
+        for filename in ("__init__.py", "plugin.yaml"):
+            os.utime(launch / "plugins" / name / filename,
+                     ns=(1_700_000_000_000_000_000,) * 2)
+
+    for name in ("demo-provider", "demo_provider"):
+        profile = providers.get_provider_profile(name)
+        assert profile is not None
+        assert profile.base_url == f"process://{name}"
+
+
+def test_long_native_provider_dir_keeps_snapshot_component_bounded(homes):
+    """A 240-byte source directory is legal on common 255-byte-component filesystems."""
+    import providers
+
+    launch, _ = homes
+    name = "p" * 240
+    _install(launch, name)
+
+    profile = providers.get_provider_profile(name)
+    assert profile is not None
+    assert profile.base_url == f"process://{name}"

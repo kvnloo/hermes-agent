@@ -632,8 +632,12 @@ def _plugin_disabled(plugin_dir: Path) -> bool:
 
 
 def _user_module_name(plugin_dir: Path, home_key: str) -> str:
-    digest = hashlib.sha1(home_key.encode("utf-8")).hexdigest()[:10]
-    return f"_hermes_user_provider_{digest}_{plugin_dir.name.replace('-', '_')}"
+    # Frame the home before the raw source path: punctuation must not alias and
+    # a legal source directory name must not overflow the snapshot component.
+    home = home_key.encode("utf-8")
+    identity = len(home).to_bytes(8, "big") + home + os.fsencode(plugin_dir)
+    digest = hashlib.sha256(identity).hexdigest()[:32]
+    return f"_hermes_user_provider_{digest}"
 
 
 def _import_plugin_dir(plugin_dir: Path, source: str, *, home_key: str = "") -> None:
