@@ -374,7 +374,7 @@ def _mcp_target_names(args: dict[str, Any]) -> Optional[list[str]]:
             name = str(item.get("name") or "").strip().lower()
             if name and name not in names:
                 names.append(name)
-    return names or None
+    return names
 
 
 def _mcp_status_rows(names: Optional[list[str]] = None) -> list[dict[str, Any]]:

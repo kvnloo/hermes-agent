@@ -486,7 +486,7 @@ def status_rows(names: Optional[list[str]] = None) -> list[dict]:
     from tools.mcp_tool_discovery import get_mcp_status
 
     configured = _configured_servers()
-    if names:
+    if names is not None:
         wanted = set(names)
         configured = {k: v for k, v in configured.items() if k in wanted}
     if not configured:

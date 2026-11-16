@@ -330,6 +330,17 @@ def test_status_accepts_an_mcp_target_and_filters_to_it():
     assert [row["name"] for row in out["mcp_servers"]] == ["paper"]
 
 
+
+def test_status_hosted_filter_excludes_unrequested_local_mcp_servers():
+    """An explicit hosted-only target must not return every configured local server."""
+    client = FakeClient()
+    out = json.loads(manage_connections(
+        {"action": "status", "connectors": ["gmail"]}, client_factory=lambda: client))
+
+    assert [row["connector"] for row in out["connectors"]] == ["gmail"]
+    assert out["mcp_servers"] == []
+
+
 # ---------------------------------------------------------------------------
 # the inline executor + replay shim
 # ---------------------------------------------------------------------------
