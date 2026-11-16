@@ -3392,6 +3392,7 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
         Mid-stream (``finalize=False``) we keep editing the original message with a truncated preview —
         splitting mid-stream would move the edit target to a continuation and the next accumulated-token
         tick would re-split, looping forever (the Telegram #48648 lesson).
+        A successful final overflow, like an in-place final edit, records the recovery ledger.
         """
         if not self._client:
             return SendResult(success=False, error="Not connected")
@@ -3400,6 +3401,7 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
             msg = channel.get_partial_message(int(message_id))
             formatted = self.format_message(content)
             _preview_key = (str(chat_id), str(message_id))
+            reply_to = (metadata or {}).get("reply_to_message_id")
             _saturated_preview = False
             if finalize:
                 # Saturation state is finished — the final edit delivers full content.
@@ -3411,13 +3413,7 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
                         channel, msg, message_id, content,
                     )
                     if overflow_result.success:
-                        await asyncio.to_thread(
-                            self._record_discord_response,
-                            reply_to=(metadata or {}).get("reply_to_message_id"),
-                            result=overflow_result,
-                            content=content,
-                            final=True,
-                        )
+                        await self._record_response_async(reply_to, overflow_result, content, True)
                     return overflow_result
                 formatted = self.truncate_message(
                     formatted, self.MAX_MESSAGE_LENGTH,
@@ -3443,13 +3439,7 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
                             channel, msg, message_id, content,
                         )
                         if overflow_result.success:
-                            await asyncio.to_thread(
-                                self._record_discord_response,
-                                reply_to=(metadata or {}).get("reply_to_message_id"),
-                                result=overflow_result,
-                                content=content,
-                                final=True,
-                            )
+                            await self._record_response_async(reply_to, overflow_result, content, True)
                         return overflow_result
                     # Mid-stream: truncate and retry in place (no split).
                     truncated = self.truncate_message(
@@ -3464,7 +3454,7 @@ class DiscordAdapter(DiscordAuthorizationMixin, DiscordMediaMixin, DiscordThread
                     raise
             result = SendResult(success=True, message_id=message_id)
             if finalize:
-                await self._record_response_async((metadata or {}).get("reply_to_message_id"), result, content, True)
+                await self._record_response_async(reply_to, result, content, True)
             return result
         except Exception as e:  # pragma: no cover - defensive logging
             logger.error("[%s] Failed to edit Discord message %s: %s", self.name, message_id, e, exc_info=True)
