@@ -646,7 +646,9 @@ def _find_orphan_skill_dir(name: str) -> tuple[Optional[Path], Optional[str]]:
                     and not _is_path_redirect(candidate.parent)
                     and not _is_path_redirect(target) and not target.exists()
                     and not is_excluded_skill_path(target) and candidate not in matches
-                    and not any(candidate.rglob("SKILL.md"))):  # holds skills = a category
+                    and not any(candidate.rglob("SKILL.md"))  # live skills = category
+                    and not any(child.is_dir() and child.name not in ALLOWED_SUBDIRS
+                                for child in candidate.iterdir())):  # orphan-only category
                 matches.append(candidate)
     if len(matches) > 1:
         return None, f"Multiple orphan directories match '{name}'; use '<category>/<name>'."

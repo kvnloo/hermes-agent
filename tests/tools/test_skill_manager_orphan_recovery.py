@@ -70,4 +70,22 @@ def test_orphan_skill_recovery_requires_unambiguous_name(skills_root):
     assert category["success"] is False
     assert not (skills_root / "research" / "SKILL.md").exists()
 
+def test_category_containing_only_orphan_skills_is_not_a_skill(skills_root):
+    # A category with no surviving SKILL.md also needs category protection.
+    orphan = skills_root / "research" / "probe-skill"
+    script = orphan / "scripts" / "run.py"
+    script.parent.mkdir(parents=True)
+    script.write_text("print('hi')\n")
 
+    rejected = json.loads(skill_manage(
+        action="write_file", name="research",
+        file_path="SKILL.md", file_content=SKILL_MD.replace("probe-skill", "research")))
+    assert rejected["success"] is False, rejected
+    assert not (skills_root / "research" / "SKILL.md").exists()
+
+    # Qualified recovery still works for the actual orphan leaf.
+    restored = json.loads(skill_manage(
+        action="write_file", name="research/probe-skill",
+        file_path="SKILL.md", file_content=SKILL_MD))
+    assert restored["success"] is True, restored
+    assert script.read_text() == "print('hi')\n"
