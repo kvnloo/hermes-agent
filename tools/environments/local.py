@@ -196,6 +196,25 @@ def _quote_bash_path(path: str) -> str:
     return shlex.quote(_bash_safe_path(path))
 
 
+def _bash_script_argv(
+    bash: str, cmd_string: str, *, login: bool, windows: bool, temp_dir: str
+) -> tuple[list[str], str | None]:
+    """Put long MSYS2 scripts in a private file instead of bash -c (#156507)."""
+    args = [bash, *(["-l"] if login else [])]
+    if not windows or len(cmd_string.encode("utf-8", errors="replace")) <= 7000:
+        return [*args, "-c", cmd_string], None
+
+    fd, path = tempfile.mkstemp(prefix="hermes-cmd-", suffix=".sh", dir=temp_dir)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", errors="replace", newline="\n") as script:
+            script.write(cmd_string)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(path)
+        raise
+    return [*args, _windows_to_msys_path(path)], path
+
+
 def _cwd_usable(path: str) -> bool:
     """True when *path* is a directory this process can actually chdir into
     (``isdir`` alone passes ``/root`` for a non-root user; ``Popen(cwd=)`` then dies)."""
@@ -1231,17 +1250,28 @@ class LocalEnvironment(BaseEnvironment):
         if login:
             cmd_string = _append_dropped_path_entries(cmd_string, run_env.get("PATH", ""))
             cmd_string = _prepend_shell_init(cmd_string, _resolve_shell_init_files())
-        args = [bash, *(["-l"] if login else []), "-c", cmd_string]
         self._recover_cwd()
+        args, script_path = _bash_script_argv(
+            bash, cmd_string, login=login, windows=_IS_WINDOWS,
+            temp_dir=self.get_temp_dir() if _IS_WINDOWS else "",
+        )
         # Not spawn_owned: an awaited command needs no spawn-ledger entry; own_process_groups below hands
         # its group to the owner-death supervisor and _wait_for_process releases it.
-        proc = subprocess.Popen(
-            args, text=True, env=run_env, encoding="utf-8", errors="replace",
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            stdin=subprocess.PIPE if stdin_data is not None else subprocess.DEVNULL,
-            # detached-spawn: ok — owned via own_process_groups right below
-            start_new_session=True, cwd=self.cwd,
-            **({"creationflags": windows_hide_flags()} if _IS_WINDOWS else {}))
+        try:
+            proc = subprocess.Popen(
+                args, text=True, env=run_env, encoding="utf-8", errors="replace",
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                stdin=subprocess.PIPE if stdin_data is not None else subprocess.DEVNULL,
+                # detached-spawn: ok — owned via own_process_groups right below
+                start_new_session=True, cwd=self.cwd,
+                **({"creationflags": windows_hide_flags()} if _IS_WINDOWS else {}))
+        except BaseException:
+            if script_path is not None:
+                with contextlib.suppress(OSError):
+                    os.unlink(script_path)
+            raise
+        if script_path is not None:
+            proc._hermes_bash_script_path = script_path
         if not _IS_WINDOWS:
             # The command dies with this process however it dies: a SIGKILLed / OOM-killed host left a
             # running `npm run dev` or `sleep` on init. Released once the wait returns (see below).
@@ -1267,6 +1297,9 @@ class LocalEnvironment(BaseEnvironment):
         try:
             return super()._wait_for_process(proc, *args, **kwargs)
         finally:
+            if (script_path := getattr(proc, "_hermes_bash_script_path", None)) is not None:
+                with contextlib.suppress(OSError):
+                    os.unlink(script_path)
             if (owned_pgid := getattr(proc, "_hermes_owned_pgid", None)) is not None:
                 proc._hermes_owned_pgid = None
                 release_process_groups([owned_pgid])
