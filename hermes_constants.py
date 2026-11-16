@@ -1044,6 +1044,14 @@ def get_scratch_dir(home: str | Path | None = None, *, prune: bool = True) -> Pa
     """
     base = Path(home) if home is not None else get_hermes_home()
     scratch = base / "cache" / "scratch"
+    # A routed child can name a marker-free profile shell before its root is recognized.
+    # Refuse that too, as well as deliberate profile-deletion tombstones.
+    assert_named_profile_home_live(scratch)
+    if base.parent.name == "profiles" and not named_profile_is_live(base):
+        raise FileNotFoundError(
+            f"Named profile home does not exist: {base}. "
+            "Create the profile explicitly before using it."
+        )
     try:
         scratch.mkdir(parents=True, exist_ok=True)
         if sys.platform != "win32":
@@ -1118,8 +1126,13 @@ def apply_scratch_tmp_env(env: MutableMapping[str, str]) -> bool:
     try:
         scratch = str(get_scratch_dir(_expand_hermes_home(home) if home else get_process_hermes_home()))
     except (RuntimeError, OSError):
-        # No HERMES_HOME and no resolvable user home (a child env built from nothing on
-        # Windows): there is no scratch dir to point at; the child keeps the OS default.
+        # A missing user home or retired named profile cannot own this child's scratch;
+        # user/OS-selected temp vars returned above, so only remove Hermes-owned values.
+        if ours:
+            for key in SCRATCH_TMP_ENV_VARS:
+                if env.get(key, "").strip() == ours:
+                    env.pop(key, None)
+            env.pop(SCRATCH_DIR_MARKER_ENV, None)
         return False
     for key in SCRATCH_TMP_ENV_VARS:
         env[key] = scratch
