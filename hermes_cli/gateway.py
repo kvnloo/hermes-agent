@@ -824,8 +824,9 @@ def find_windows_gateway_services(
     hide their command lines, so identity = Hermes's own PID file + a parent chain ending at a running
     SCM service PID whose name or binary path is Hermes's (``gateway_windows.hermes_owns_windows_service``).
     The whole service subtree is returned so the Desktop preflight exempts exactly what the updater stops
-    through the SCM; a gateway under any other service (a Scheduled Task's svchost) is a plain process."""
-    if sys.platform != "win32":
+    through the SCM; a gateway under any other service (a Scheduled Task's svchost) is a plain process.
+    An injected psutil adapter exercises discovery independently of the host OS."""
+    if psutil_module is None and sys.platform != "win32":
         return []
     try:
         if psutil_module is None:
