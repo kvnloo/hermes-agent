@@ -870,7 +870,21 @@ def _read_pid_record(pid_path: Optional[Path] = None) -> Optional[dict]:
 
 
 def _read_gateway_lock_record(lock_path: Optional[Path] = None) -> Optional[dict[str, Any]]:
-    return _read_json_file(lock_path or _get_gateway_lock_path(), bare_pid_ok=True)
+    path = lock_path or _get_gateway_lock_path()
+    record = _read_json_file(path, bare_pid_ok=True)
+    if record is not None or not _IS_WINDOWS:
+        return record
+    # A losing Windows contender used to write CRLF over the leading {" while the
+    # lock holder was publishing its JSON. Recover only that exact two-byte damage;
+    # strict identity verification must still prove the PID, start time and home.
+    try:
+        raw = path.read_bytes()
+        if raw.startswith(b'\r\npid":'):
+            recovered = json.loads(b'{"' + raw[2:])
+            return recovered if isinstance(recovered, dict) else None
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        pass
+    return None
 
 
 def _pid_from_record(record: Optional[dict[str, Any]], key: str = "pid") -> Optional[int]:
@@ -926,12 +940,13 @@ def _cleanup_invalid_pid_path(
 def _try_acquire_file_lock(handle) -> bool:
     try:
         if _IS_WINDOWS:
+            handle.seek(_WINDOWS_LOCK_OFFSET)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            # Losing contenders must never modify a live holder's in-progress record.
             handle.seek(0, os.SEEK_END)
             if handle.tell() == 0:
                 handle.write("\n")
                 handle.flush()
-            handle.seek(_WINDOWS_LOCK_OFFSET)
-            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
         else:
             fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         return True

@@ -222,6 +222,31 @@ class TestStrictIdentityWithLiveLock:
             status.get_running_pid_identity_strict(home / "gateway.pid")
 
 
+    @pytest.mark.platforms("windows")
+    def test_failed_windows_lock_probe_never_writes_to_held_empty_record(self, home):
+        """A losing contender must not plant CRLF while the holder publishes JSON."""
+        lock_path = home / "gateway.lock"
+        with open(lock_path, "r+b") as handle:
+            handle.truncate(0)
+        with open(lock_path, "r+", encoding="utf-8") as contender:
+            assert status._try_acquire_file_lock(contender) is False
+        assert lock_path.read_bytes() == b""
+
+    @pytest.mark.platforms("windows")
+    def test_clobbered_windows_lock_head_still_maps_verified_gateway(self, home, gateway_holder):
+        """A known CRLF-clobbered prefix is readable without trusting an unknown PID."""
+        lock_path = home / "gateway.lock"
+        original = status.get_running_pid_identity_strict(home / "gateway.pid")
+        assert original is not None and original[0] == gateway_holder[1]
+        assert lock_path.read_bytes().startswith(b'{"pid"')
+        with open(lock_path, "r+b") as handle:
+            handle.write(b"\r\n")
+        (home / "gateway.pid").unlink()
+
+        assert status.get_running_pid_identity_strict(home / "gateway.pid") == original
+        assert lock_path.read_bytes().startswith(b"\r\n")
+
+
 def test_lock_holder_that_is_not_a_gateway_still_aborts(tmp_path, monkeypatch):
     home = _make_home(tmp_path)
     monkeypatch.setenv("HERMES_HOME", str(home))
