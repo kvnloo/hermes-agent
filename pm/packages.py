@@ -411,10 +411,17 @@ def _seed_tree(src: Path, dst: Path, root: Path) -> None:
 
 
 def uv_cache_path() -> Path:
-    """Where the hermes-owned uv cache lives; unlike uv_cache_dir(), never seeds or writes."""
-    from hermes_constants import get_default_hermes_root
+    """Where the hermes-owned uv cache lives; unlike uv_cache_dir(), never seeds or writes.
 
-    return get_default_hermes_root() / "cache" / "uv"
+    A root that only borrows the checkout (a temporary ``HERMES_HOME``) uses the owner's cache, as it
+    uses the owner's tool store: the cache is content-keyed, and one per temporary home re-downloads
+    every wheel and outlives the call (#147159).
+    """
+    from hermes_constants import get_default_hermes_root
+    from pm.environments import owning_home_root
+    from pm.paths import repo_root
+
+    return (owning_home_root(repo_root()) or get_default_hermes_root()) / "cache" / "uv"
 
 
 def uv_cache_dir() -> Path:

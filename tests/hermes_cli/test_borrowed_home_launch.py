@@ -190,6 +190,28 @@ def test_a_borrowing_launch_syncs_its_own_dependencies_and_nothing_of_the_checko
     assert len(syncs) == 1 and completion_tail == []
 
 
+def test_a_borrowing_launch_shares_the_owners_uv_cache(tmp_path, monkeypatch):
+    """The uv cache is content-keyed, so a borrowing root reuses the owner's like it reuses its tool
+    store. A cache of its own re-downloads every wheel into each temporary home and outlives the
+    call (#147159)."""
+    import pm.paths
+    from pm.packages import uv_cache_path
+
+    root = _checkout(tmp_path, monkeypatch)
+    monkeypatch.setattr(pm.paths, "repo_root", lambda: root)
+    borrower = _home(monkeypatch, tmp_path / "tmp" / "task-home")
+    # Nobody owns the checkout yet: the launching root is about to, and keeps its own cache.
+    assert uv_cache_path() == borrower / "cache" / "uv"
+
+    _state(tmp_path / ".hermes", root)
+    assert uv_cache_path() == tmp_path / ".hermes" / "cache" / "uv"
+    _state(borrower, root)  # the borrowing launch's own sync
+    assert uv_cache_path() == tmp_path / ".hermes" / "cache" / "uv"
+
+    monkeypatch.delenv("HERMES_HOME")  # the owner itself
+    assert uv_cache_path() == tmp_path / ".hermes" / "cache" / "uv"
+
+
 def test_the_owner_still_owes_and_runs_its_tail(tmp_path, monkeypatch, completion_tail):
     """Unchanged for the owner: a stale environment syncs, arms and runs the tail."""
     import pm
