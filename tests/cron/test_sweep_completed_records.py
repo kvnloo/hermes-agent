@@ -106,3 +106,27 @@ def test_disabled_retention_sweeps_nothing(monkeypatch):
     raw = [_record(kind="cron", repeat={"times": 1, "completed": 1})]
     assert jobs._sweep_completed_oneshots(raw, NOW) is False
     assert raw != []
+
+def test_due_scan_reclaims_expired_repeat_output_but_keeps_recent_output(tmp_path):
+    """An aged-out finite repeat loses its saved report, not a retained sibling's report."""
+    expired = (datetime.now(UTC) - timedelta(
+        days=jobs.COMPLETED_ONESHOT_RETENTION_DAYS + 1)).isoformat()
+    fresh = datetime.now(UTC).isoformat()
+    with jobs.use_cron_store(tmp_path):
+        jobs.save_jobs([
+            _record("expired", kind="cron", repeat={"times": 1, "completed": 1},
+                    last_run_at=expired),
+            _record("fresh", kind="cron", repeat={"times": 1, "completed": 1},
+                    last_run_at=fresh),
+        ])
+        output_root = jobs.get_cron_output_dir()
+        for job_id in ("expired", "fresh"):
+            directory = output_root / job_id
+            directory.mkdir(parents=True)
+            (directory / "report.md").write_text("stored report", encoding="utf-8")
+
+        assert jobs.get_due_jobs() == []
+        assert [record["id"] for record in jobs.load_jobs()] == ["fresh"]
+        assert not (output_root / "expired").exists()
+        assert (output_root / "fresh" / "report.md").read_text(
+            encoding="utf-8") == "stored report"

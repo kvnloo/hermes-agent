@@ -3295,8 +3295,10 @@ def _get_due_jobs_locked() -> list[dict[str, Any]]:
     # One-shot run-claim TTL, resolved once per scan (see _oneshot_run_claim_ttl_seconds).
     run_claim_ttl = _oneshot_run_claim_ttl_seconds()
 
-    # Retention sweep: completed one-shots are kept for inspection but must not accumulate forever.
-    if _sweep_completed_oneshots(raw_jobs, scan.now, removed_ids=scan.removed):
+    # Retention sweep: completed records are kept for inspection until their window expires.
+    swept_ids: set[str] = set()
+    if _sweep_completed_oneshots(raw_jobs, scan.now, removed_ids=swept_ids):
+        scan.removed.update(swept_ids)
         scan.needs_save = True
         jobs = [j for j in jobs if scan.find(j.get("id")) is not None]
 
@@ -3326,6 +3328,14 @@ def _get_due_jobs_locked() -> list[dict[str, Any]]:
         except OSError as exc:  # repairs live in memory; the next tick retries the persist
             store_health.note_unwritable(exc, "due-scan repairs not persisted", "scan")
             return due
+    # Reports belong to the removed record; never discard them before its deletion is durable.
+    for job_id in swept_ids:
+        try:
+            output_dir = _job_output_dir(job_id)
+            if output_dir.exists():
+                shutil.rmtree(output_dir)
+        except (OSError, ValueError):
+            logger.warning("Could not prune output for completed job %r", job_id, exc_info=True)
     # Only now is a skipped one-shot claimed or durably due on disk: normal grace applies again.
     store_health.end_recovery_window(_current_cron_store().cron_dir)
     for emit in scan.on_saved:
