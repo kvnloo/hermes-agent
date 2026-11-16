@@ -230,11 +230,32 @@ class MemoryStore:
         if not host_feature_enabled("builtin_memory"):
             return  # hosted: this profile's MEMORY.md/USER.md are never the agent's
 
-        def _sanitize(entry, filename):
+        def _sanitize(entry, filename, target):
             # Strict scope, same as writes; empty / already-blocked entries pass through.
             findings = scan_for_threats(entry, scope="strict") if entry and not entry.startswith("[BLOCKED:") else None
             if not findings:
                 return entry
+            # An externally edited USER.md can be one giant entry without § separators.
+            # Preserve its clean lines in the prompt; tool-sized entries still block as a unit.
+            if target == "user" and len(entry) > self.user_char_limit:
+                filtered, blocked_lines = [], []
+                for line_number, line in enumerate(entry.splitlines(keepends=True), 1):
+                    line_hits = scan_for_threats(line, scope="strict")
+                    if not line_hits:
+                        filtered.append(line)
+                        continue
+                    blocked_lines.append(line_number)
+                    newline = "\n" if line.endswith("\n") else ""
+                    filtered.append(
+                        f"[BLOCKED: {filename} line {line_number} matched {', '.join(line_hits)}. "
+                        "Review the original file before editing it.]" + newline)
+                partial = "".join(filtered)
+                # A cross-line pattern can match even if no individual line does.
+                # Re-scan the assembled prompt so it never retains a detected threat.
+                if blocked_lines and not scan_for_threats(partial, scope="strict"):
+                    logger.warning("Memory entry from %s partially blocked at load time (lines %s): %s",
+                                   filename, ", ".join(map(str, blocked_lines)), ", ".join(findings))
+                    return partial
             logger.warning("Memory entry from %s blocked at load time: %s", filename, ", ".join(findings))
             return (f"[BLOCKED: {filename} entry contained threat pattern(s): {', '.join(findings)}. "
                     f"Removed from system prompt; use memory(action=remove, target='{_store_target(filename)}') "
@@ -255,7 +276,7 @@ class MemoryStore:
                 logger.warning("%s exceeds its char limit on load: %d/%d chars. Entries stay loaded; "
                                "further additions are blocked until it is back under the limit.",
                                path.name, count, limit)
-            self._system_prompt_snapshot[target] = self._render_block(target, [_sanitize(e, path.name) for e in entries])
+            self._system_prompt_snapshot[target] = self._render_block(target, [_sanitize(e, path.name, target) for e in entries])
 
     @staticmethod
     @contextmanager
