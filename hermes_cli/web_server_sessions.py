@@ -186,6 +186,25 @@ def _mutate_offline_store(profile, actor, params):
 
 
 async def _mutate_via_gateway_owner(profile, actor, params):
+    """Forward a session edit, retaining offline reservation and discovery error handling."""
+    call = {key: params[key] for key in
+            ('session_id', 'request_id', 'expected_revision', 'operation', 'payload') if key in params}
+    if params.get('expected_generation') is not None:
+        call['expected_generation'] = params['expected_generation']
+    return await _owner_rpc(profile, actor, 'session.mutate', call,
+                            offline=lambda: _mutate_offline_store(profile, actor, params))
+
+
+async def _discover_session_owner(profile):
+    from hermes_cli.gateway_runtime import discover_gateway_endpoint
+    from hermes_cli.web_server_cron import _cron_profile_home
+    from hermes_state import _default_db_path
+
+    home = Path(_cron_profile_home(profile)[1]) if profile else Path(_default_db_path()).parent
+    return home, await asyncio.to_thread(discover_gateway_endpoint, home, timeout=1.5)
+
+
+async def _owner_rpc(profile, actor, method, call, *, offline=None, discovered=None, **rpc_options):
     """Forward a standalone dashboard mutation to the live gateway owner.
 
     While a gateway serves the same home, a separately launched ``hermes
@@ -214,18 +233,16 @@ async def _mutate_via_gateway_owner(profile, actor, params):
     from fastapi import HTTPException
     from gateway.runtime_ownership import OwnershipConflict
     from hermes_cli.gateway_client import GatewayClientError, GatewayRPCError, connect_gateway
-    from hermes_cli.gateway_runtime import discover_gateway_endpoint
     from hermes_cli.gateway_runtime_discovery import DiscoveryError
-    from hermes_cli.web_server_cron import _cron_profile_home
-    from hermes_state import _default_db_path
 
-    home = Path(_cron_profile_home(profile)[1]) if profile else Path(_default_db_path()).parent
     # Discovery is read-only and never starts a gateway.
-    discovery = await asyncio.to_thread(discover_gateway_endpoint, home, timeout=1.5)
+    home, discovery = discovered if discovered is not None else await _discover_session_owner(profile)
     endpoint = discovery.endpoint
     if endpoint is None:
+        if offline is None:
+            return None
         try:
-            return await asyncio.to_thread(_mutate_offline_store, profile, actor, params)
+            return await asyncio.to_thread(offline)
         except HTTPException as exc:
             if discovery.state == 'absent' or not isinstance(exc.__cause__, OwnershipConflict):
                 raise
@@ -239,10 +256,6 @@ async def _mutate_via_gateway_owner(profile, actor, params):
         # identified as this profile's owner, never on the dashboard launch home's.
         from dataclasses import replace
         endpoint = replace(endpoint, control_home=str(home.expanduser().resolve()))
-    call = {key: params[key] for key in
-            ('session_id', 'request_id', 'expected_revision', 'operation', 'payload') if key in params}
-    if params.get('expected_generation') is not None:
-        call['expected_generation'] = params['expected_generation']
     # A sign-in is the machine owner (owner_identity), which is this same-user socket's own peer
     # subject: let the socket mint it natively. The verifier lets a peer NAME only a structured
     # login subject, so forwarding the owner's OS subject explicitly would be refused.
@@ -250,7 +263,7 @@ async def _mutate_via_gateway_owner(profile, actor, params):
     subject = None if actor.subject == host_owner_subject() else actor.subject
     try:
         async with connect_gateway(endpoint=endpoint, subject=subject) as client:
-            return await client.rpc('session.mutate', **call)
+            return await client.rpc(method, **rpc_options, **call)
     except GatewayRPCError:
         # The owner's own refusal frame: a verdict the caller maps to the direct path's status.
         raise
@@ -259,6 +272,26 @@ async def _mutate_via_gateway_owner(profile, actor, params):
         # control socket that refuses the mint after a restart (DiscoveryError), a raw socket error
         # or a timeout. Retrying is safe because the request reuses its request_id.
         raise HTTPException(status_code=503, detail='owner_unreachable') from exc
+
+
+async def _bulk_via_gateway_owner(request, profile, params):
+    """Forward standalone bulk deletes to the owner, or retain the offline maintenance path."""
+    from fastapi import HTTPException
+    from hermes_cli.gateway_client import GatewayClientError
+    from hermes_cli.sessions_owner import PRUNE_RPC_TIMEOUT
+
+    state = request.app.state
+    if getattr(state, 'session_authority', None) is not None or getattr(state, 'gateway_runner', None) is not None:
+        return None
+    discovered = await _discover_session_owner(profile)
+    if discovered[1].endpoint is None:
+        return None
+    _, actor = _session_mutation_context(request, profile)
+    try:
+        return await _owner_rpc(profile, actor, 'session.prune', params,
+                                discovered=discovered, _timeout=PRUNE_RPC_TIMEOUT)
+    except GatewayClientError as exc:
+        raise HTTPException(status_code=_MUTATION_REFUSAL_STATUS.get(str(exc), 409), detail=str(exc)) from exc
 
 
 # One reason -> HTTP status map for a session mutation refusal, shared by the direct path
@@ -331,7 +364,8 @@ def _with_session_maintenance(profile, operation, *args):
             return operation(*args)
     except OwnershipConflict as exc:
         # uvicorn runs at log_level=warning, so a handled 4xx leaves no server-side trace and the
-        # refusal reads as a UI bug (#138915). Bulk store maintenance has no owner verb: name it.
+        # refusal reads as a UI bug (#138915). Bulk deletes reach the owner first. Remaining
+        # offline maintenance has no owner verb, so name the reservation conflict.
         _log.warning('session write refused for %s: %s', home, exc)
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 

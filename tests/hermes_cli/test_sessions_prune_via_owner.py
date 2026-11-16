@@ -135,3 +135,74 @@ async def test_owner_prune_is_local_operator_only(owned_store, grant):
         await connection.close()
     assert refused['error']['message'] == 'permission_denied', refused
     assert owned_store.db.get_session('old-cli') is not None
+
+
+@pytest.mark.asyncio
+async def test_dashboard_bulk_deletes_under_the_live_owner_are_applied_by_the_owner(owned_store, monkeypatch):
+    """A standalone dashboard beside a running gateway (Docker compose, a service gateway): its
+    offline maintenance reservation always loses to the owner, so bulk delete, "Delete empty" and
+    prune answered "Exclusive maintenance refused" (#138915). The owner applies them via session.prune."""
+    from hermes_cli import gateway_client, gateway_runtime, web_server_sessions
+    from hermes_cli.gateway_client import rpc_error
+    from hermes_cli.web_routers import sessions as routes
+    store = owned_store
+    for sid in ('empty-1', 'empty-2', 'picked'):
+        store.db.create_session(sid, 'cli')
+        store.db.end_session(sid, 'user_exit')
+    store.db.append_message('picked', 'user', 'hand-picked for bulk delete')
+    # An old, still-open session matches the prune filter but must not be deleted.
+    store.db.create_session('open-cron', 'cron')
+    store.db.append_message('open-cron', 'user', 'still open')
+    _aged(store.db, 'open-cron', 200, ended=False)
+
+    @asynccontextmanager
+    async def owner_socket(*_args, **_kwargs):
+        connection = _connection(store.authority, operator=True)
+
+        async def rpc(method, _timeout=None, **params):
+            frame = await connection.dispatch({'id': 1, 'method': method, 'params': params})
+            if 'error' in frame:
+                raise rpc_error(frame['error'])
+            return frame['result']
+        try:
+            yield SimpleNamespace(rpc=rpc)
+        finally:
+            await connection.close()
+
+    def offline(*_args, **_kwargs):
+        raise AssertionError('offline store maintenance while a live owner serves the home')
+
+    monkeypatch.setattr(gateway_runtime, 'discover_gateway_endpoint',
+                        lambda home, **_: gateway_runtime.GatewayDiscovery('ready', endpoint=object()))
+    monkeypatch.setattr(gateway_client, 'connect_gateway', owner_socket)
+    monkeypatch.setattr(web_server_sessions, '_with_session_maintenance', offline)
+    monkeypatch.setattr('hermes_state._default_db_path', lambda: str(store.path))
+    import httpx
+    from fastapi import FastAPI
+
+    app = FastAPI()
+    app.state.auth_required = True
+    app.include_router(routes.manage_router)
+
+    @app.middleware('http')
+    async def authenticate(request, call_next):
+        request.state.session = SimpleNamespace(user_id='user-a', provider='oidc', issuer='https://idp.example')
+        return await call_next(request)
+
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://dashboard.test') as client:
+        empty = await client.delete('/api/sessions/empty')
+        assert empty.status_code == 200, empty.text
+        assert empty.json() == {'ok': True, 'deleted': 2}
+        pruned = await client.post('/api/sessions/prune', json={'source': 'cron', 'older_than_days': 90})
+        assert pruned.status_code == 200, pruned.text
+        assert pruned.json() == {'ok': True, 'removed': 1, 'skipped_open': 1}
+        picked = await client.post('/api/sessions/bulk-delete', json={'ids': ['picked', 'gone']})
+        assert picked.status_code == 200, picked.text
+        assert picked.json() == {'ok': True, 'deleted': 1, 'skipped_active': []}
+    db = store.db
+    assert db.get_session('empty-1') is None and db.get_session('empty-2') is None
+    assert db.get_session('old-cron') is None and db.get_session('picked') is None
+    assert db.get_session('open-cron') is not None  # skipped open history remains intact
+    assert db.get_session('old-cli') is not None and db.get_session('fresh-cli') is not None
+    # The owner retired what it deleted from its own memory (routes, live sessions).
+    assert set(store.retired) == {'empty-1', 'empty-2', 'old-cron', 'picked'}
