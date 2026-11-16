@@ -544,8 +544,8 @@ def register_mcp_servers(servers: dict[str, dict]) -> list[str]:
         # A troubleshooting worker never spawns MCP processes; nor may it borrow tools
         # another caller already connected in this process.
         return []
-    if not _core._ensure_mcp_sdk():
-        logger.debug("MCP SDK not available -- skipping explicit MCP registration")
+    if not _core._MCP_AVAILABLE:
+        logger.debug("MCP SDK not installed -- skipping explicit MCP registration")
         return []
     servers = _config._filter_suspicious_mcp_servers(servers)
     try:
@@ -571,6 +571,15 @@ def _register_mcp_servers(servers: dict[str, dict]) -> list[str]:
         if lazy_registered:
             logger.info("MCP: registered %d lazy tool(s) from schema cache (no processes spawned)",
                         lazy_registered)
+        return _registration._existing_tool_names()
+    # Cached lazy tools need no SDK. Import it only for servers requiring a live connection.
+    if not _core._ensure_mcp_sdk():
+        with _core._lock:
+            for name in new_servers:
+                key = _server_key(name)
+                _core._server_connecting.discard(key)
+                _core._server_scope_keys.pop(key, None)
+        logger.debug("MCP SDK unavailable -- skipping eager server connections")
         return _registration._existing_tool_names()
     _loop._ensure_mcp_loop()
     _run_discovery_pass(new_servers)
@@ -627,10 +636,10 @@ def discover_mcp_tools(allowed_mcp_names: Optional[list[str]] = None) -> list[st
         if not servers:
             logger.debug("No MCP servers in --toolsets filter; skipping MCP load entirely")
             return []
-    # SDK import deferred to here so a config without servers — or a -t filter that keeps
-    # none — never pays it.
-    if not _core._ensure_mcp_sdk():
-        logger.debug("MCP SDK not available -- skipping MCP tool discovery")
+    # The installed-package check is cheap; cached lazy servers should not import
+    # the SDK (and its HTTP server dependencies) before their first tool call.
+    if not _core._MCP_AVAILABLE:
+        logger.debug("MCP SDK not installed -- skipping MCP tool discovery")
         return []
     cookie = _acquire_discovery_lock_with_retry()
     try:
