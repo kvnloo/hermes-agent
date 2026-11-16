@@ -38,6 +38,7 @@ from agent.context_compressor_sampling import SummaryInputSamplingMixin
 from agent.context_compressor_prompt_rules import EPISTEMIC_STANCE_RULE, UNVERIFIED_HYPOTHESES_SECTION, _today_for_prompt
 from agent.context_compressor_retry import retryable_user_text, typed_prompt_content
 from agent.context_compressor_typed_input import TYPED_TURNS_POINTER, typed_summary_messages
+from agent.context_compressor_reply_pointer import _authored_request_text, quote_folded_reply
 from agent.conversation_compression_scaffolding import is_user_role_scaffolding
 from agent.context_compressor_tail import (
     demote_stale_tail_tools, lean_tail_budget, is_demoted_stub, skill_view_names_by_call_id, tail_cut_pricer,
@@ -1368,17 +1369,6 @@ def _content_text_for_contains(content: Any) -> str:
     return "" if content is None else content if isinstance(content, str) else str(content)
 
 
-# Gateway reply pointer prepended to a user turn (gateway/run_inbound.py
-# ``_prepend_inbound_reply_context``), optionally behind the Discord triggering note.
-# Non-greedy: a quote that itself contains the closing delimiter is only partly
-# stripped, which over-counts the request and keeps the conservative anchor.
-_GATEWAY_REPLY_POINTER_RE = re.compile(
-    r'\A(?:\[Triggering message id: [^\n]*\]\n\n)?'
-    r'\[Replying to(?: your previous message| an earlier scheduled cron delivery \([^)\n]*\))?: ".*?"\]\n\n',
-    re.DOTALL,
-)
-
-
 def _restated_request_text(content: Any) -> str:
     """A user turn's text, stripped, after the last in-flight replay header if present.
 
@@ -1390,15 +1380,6 @@ def _restated_request_text(content: Any) -> str:
     if _INFLIGHT_TASK_REPLAY_HEADER in text:
         text = text.rsplit(_INFLIGHT_TASK_REPLAY_HEADER, 1)[1].strip()
     return text
-
-
-def _authored_request_text(content: Any) -> str:
-    """Text the user wrote in a turn, without the gateway's reply-to pointer.
-
-    The pointer quotes another message verbatim; it disambiguates which message is being
-    answered but is not part of the request, so it must not count toward request size.
-    """
-    return _GATEWAY_REPLY_POINTER_RE.sub("", _restated_request_text(content), count=1).strip()
 
 
 def _is_text_only_content(content: Any) -> bool:
@@ -4608,6 +4589,7 @@ Write only the summary body. Do not include any preamble or prefix."""
         self,
         compressed: list[dict[str, Any]],
         inflight: Optional[dict[str, Any]],
+        original: Optional[list[dict[str, Any]]] = None,
     ) -> list[dict[str, Any]]:
         """Restate an unfinished user task after the compaction handoff.
 
@@ -4654,6 +4636,7 @@ Write only the summary body. Do not include any preamble or prefix."""
         task_text = _restated_request_text(inflight.get("content"))
         if not task_text:
             return compressed
+        task_text = quote_folded_reply(original or [], inflight, compressed, task_text)  # #144546
 
         if not self.quiet_mode:
             logger.info(
@@ -5195,7 +5178,7 @@ Write only the summary body. Do not include any preamble or prefix."""
         # end, and a replay user row there would strip a genuinely pending assistant(tool_calls).
         compressed = self._sanitize_tool_pairs(compressed)
         spared = _pending_tool_round(compressed) if spare_pending_images else range(0)
-        compressed = self._reappend_inflight_user_task(compressed, self._find_inflight_user_task(messages))
+        compressed = self._reappend_inflight_user_task(compressed, self._find_inflight_user_task(messages), messages)
         self.compression_count += 1
         # Replace historical image payloads with placeholders; multi-MB base64 blobs otherwise
         # exceed body limits.
