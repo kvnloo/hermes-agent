@@ -99,3 +99,30 @@ print(json.dumps({
     assert str(site) not in result["child_pythonpath"].split(os.pathsep)
     # The marker is consumed by the kernel and never handed onward.
     assert result["strip_marker"] is None
+
+
+@pytest.mark.platforms("linux", "macos", "windows")
+def test_cell_children_keep_empty_operator_pythonpath_entry(child_env, tmp_path, monkeypatch):
+    """An empty PYTHONPATH element means cwd and must survive runtime-path removal."""
+    site = _fake_runtime_site(tmp_path)
+    user_lib = tmp_path / "user-lib"
+    user_lib.mkdir()
+    monkeypatch.setenv("PYTHONPATH", os.pathsep.join([str(site), "", str(user_lib)]))
+    validated, resolver = _with_runtime_site(site, site.parents[2])
+    with validated, resolver:
+        result = run_code(
+            """
+import json, os, subprocess, sys
+child = subprocess.run(
+    [sys.executable, "-c", "import os; print(os.environ['PYTHONPATH'])"],
+    capture_output=True, text=True, check=True,
+).stdout.strip()
+print(json.dumps({"cell": os.environ["PYTHONPATH"], "child": child}))
+""",
+            mode="strict",
+        )
+    for process in ("cell", "child"):
+        parts = result[process].split(os.pathsep)
+        assert str(site) not in parts, "the runtime site-packages must not reach descendants"
+        assert parts.count("") == 1, "the user-provided cwd search entry must be retained"
+        assert str(user_lib) in parts, "independent user library entries must be preserved"

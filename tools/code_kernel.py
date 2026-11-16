@@ -151,9 +151,10 @@ _PARENT_PROCESS_HANDLE = os.environ.pop("HERMES_KERNEL_PARENT_PROCESS_HANDLE", "
 _STRIP_PP = os.environ.pop("HERMES_CHILD_STRIP_PYTHONPATH", "")
 if _STRIP_PP:
     _norm = os.path.normcase(os.path.realpath(_STRIP_PP))
+    # Empty entries denote cwd; only the launcher-injected runtime tree is removed.
     _pp = [
         entry for entry in os.environ.get("PYTHONPATH", "").split(os.pathsep)
-        if entry and os.path.normcase(os.path.realpath(entry)) != _norm
+        if not entry or os.path.normcase(os.path.realpath(entry)) != _norm
     ]
     if _pp:
         os.environ["PYTHONPATH"] = os.pathsep.join(_pp)
