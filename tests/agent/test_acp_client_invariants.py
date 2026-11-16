@@ -575,3 +575,37 @@ def test_terminate_process_closes_the_childs_stdin(tmp_path):
         if proc.poll() is None:
             proc.kill()
             proc.wait()
+
+
+def test_early_exit_does_not_leave_unraisable_broken_pipe(tmp_path, monkeypatch):
+    """Regression for #143798; adapt Caradog-alt's GC repro from PR #143804.
+
+    A CLI that exits before initialize leaves a buffered write on stdin. Merely
+    reaping the child is insufficient: Python 3.14 re-flushes that buffer while
+    finalizing the stream and reports an unraisable BrokenPipeError.
+    """
+    import gc
+
+    client = _AcmeClient(command=sys.executable, args=["-c", "pass"], acp_cwd=str(tmp_path))
+    real_spawn = client._spawn
+    children = []
+
+    def spawn_already_exited():
+        proc = real_spawn()
+        proc.wait(timeout=5)
+        children.append(proc)
+        return proc
+
+    monkeypatch.setattr(client, "_spawn", spawn_already_exited)
+    unraisable = []
+    monkeypatch.setattr(sys, "unraisablehook", unraisable.append)
+
+    with pytest.raises((OSError, RuntimeError)):
+        with client._session(5, allow_file_requests=False):
+            pass
+
+    assert len(children) == 1
+    assert children[0].stdin is not None and children[0].stdin.closed
+    children.clear()
+    gc.collect()
+    assert not [err for err in unraisable if isinstance(err.exc_value, BrokenPipeError)]
