@@ -179,7 +179,8 @@ _PREFIX_PATTERNS = [
     # prefix, so the charset stays broad and the length floor does the discriminating.
     r"am_(?:org_)?[A-Za-z0-9]{20,}",
     r"sk_[A-Za-z0-9_]{10,}",            # ElevenLabs TTS key (sk_ underscore, not sk- dash)
-    r"tvly-(?:(?:dev|prod)-)?[A-Za-z0-9]{10,}",  # Tavily search API key (incl. tvly-dev-/tvly-prod-, #72925)
+    # Tavily single-run, dev/prod, and issued 4-5-long-body keys (#156299).
+    r"tvly-(?:(?:dev|prod)-)?(?:[A-Za-z0-9]{4}-[A-Za-z0-9]{5}-)?[A-Za-z0-9]{10,}",
     r"exa_[A-Za-z0-9]{10,}",            # Exa search API key
     r"gsk_[A-Za-z0-9]{10,}",            # Groq Cloud API key
     r"syt_[A-Za-z0-9]{10,}",            # Matrix access token

@@ -732,8 +732,15 @@ class TestElevenLabsTavilyExaKeys:
                 result = redact_sensitive_text(text)
                 assert "E5fG7hJ9kL1m" not in result, result
 
+    def test_hyphen_segmented_tavily_key_redacted_in_bare_text(self):
+        # Issued shape: tvly-<4 alnum>-<5 alnum>-<42 alnum> (#156299).
+        key = "tvly-abcd-efghi-" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8S9t0Qz"
+        for file_read in (False, True):
+            result = redact_sensitive_text(f"echo {key} done", force=True, file_read=file_read)
+            assert key not in result, result
+
     def test_hyphenated_tavily_names_are_not_keys(self):
-        # Package/file names starting with tvly- are not keys; only an env segment may carry a hyphen.
+        # Ordinary hyphenated package/file names have no opaque key body.
         for text in ("pip install tvly-python-client", "tvly-config-file"):
             assert redact_sensitive_text(text) == text
 
