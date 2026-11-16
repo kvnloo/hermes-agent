@@ -18,12 +18,17 @@ method("ping", params=PingParams, result=PingResult,
        doc="Cheapest liveness probe; answered on the WS reader thread even while every agent is mid-turn.")
 
 
+class GatewayCapabilitiesParams(Params):
+    session_id: str | None = None  # attached transport + live session required for plugin discovery
+
+
 class GatewayCapabilitiesResult(Result):
     per_session_exclusive_submit: bool
+    plugin_methods: list[str]  # current caller-profile names only; never plugins' schemas
 
 
-method("gateway.capabilities", params=PingParams, result=GatewayCapabilitiesResult,
-       doc="What THIS build enforces (a client withholds a feature unless advertised).")
+method("gateway.capabilities", params=GatewayCapabilitiesParams, result=GatewayCapabilitiesResult,
+       doc="Build capabilities and live plugin RPC method names for the attached session's profile.")
 
 
 class ClientCapabilitiesParams(Params):
