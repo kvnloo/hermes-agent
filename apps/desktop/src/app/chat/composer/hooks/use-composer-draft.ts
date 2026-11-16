@@ -365,8 +365,16 @@ export function useComposerDraft({
     adoptedHandoffKeyRef.current = null
 
     if (heldChars) {
-      paintDraft(`${draftRef.current}${heldChars}`, false)
-      focusInput()
+      const freshDraft = takeSessionDraft(null)
+
+      if (freshDraft.text.trim() || freshDraft.attachments.length > 0) {
+        // A saved draft at the destination prevented migration: the keys
+        // belong after the stranded fresh draft, not in the older saved one.
+        stashSessionDraft(null, `${freshDraft.text}${heldChars}`, freshDraft.attachments)
+      } else {
+        paintDraft(`${draftRef.current}${heldChars}`, false)
+        focusInput()
+      }
     }
 
     const offInsert = onComposerInsertRequest(({ mode, target: requested, text, token }) => {

@@ -11,7 +11,8 @@ import {
   mainComposerScope,
   NEW_SESSION_DRAFT_KEY,
   rotateFreshDraftKey,
-  stashSessionDraft
+  stashSessionDraft,
+  takeSessionDraft
 } from '@/store/composer'
 
 import { markActiveComposer, requestComposerFocus } from '../focus'
@@ -145,6 +146,20 @@ describe('useComposerDraft — typing across the cold-start resume remount', () 
     await waitFor(() => expect(document.activeElement).toBe(editor))
     expect(composerPlainText(editor!)).toBe('Hello, can you')
     expect(caretOffsetInEditor(editor!)).toBe('Hello, can you'.length)
+  })
+
+  it('does not put mid-remount keys into a pre-existing saved draft when migration cannot overwrite it', () => {
+    stashSessionDraft('session-created', 'prior unsent reply', [])
+    startColdStartResume('Hello, c', 'session-created')
+    typeWhileUnmounted('an you')
+
+    render(<EditableComposer scope="session-created" />)
+
+    // The destination already has an unsent draft. Keep it intact and append
+    // the held keys to their prefix in the fresh draft instead.
+    expect(composerPlainText(editor!)).toBe('prior unsent reply')
+    expect(takeSessionDraft('session-created').text).toBe('prior unsent reply')
+    expect(takeSessionDraft(null).text).toBe('Hello, can you')
   })
 
   it('never hands the held keys to another chat that mounts before the restored one', async () => {
