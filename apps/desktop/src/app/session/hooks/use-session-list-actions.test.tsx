@@ -765,6 +765,26 @@ describe('refreshSessions identity + loading hygiene', () => {
   })
 })
 
+// #156483: a gateway SimpleX session is a messaging thread, not a local Recent.
+describe('SimpleX sidebar routing', () => {
+  it('excludes SimpleX from the Recents query and keeps its row in messaging', async () => {
+    listSidebarSessions.mockResolvedValue(
+      sidebar({ sessions: [row('local')] }, [], [row('simplex-thread', { source: 'simplex' })])
+    )
+    const { result } = renderHook(() => useSessionListActions({ profileScope: 'default' }))
+
+    await act(async () => {
+      await result.current.refreshSessions()
+    })
+
+    expect(listSidebarSessions).toHaveBeenCalledWith(
+      expect.objectContaining({ recentsExclude: expect.arrayContaining(['simplex']) })
+    )
+    expect($sessions.get().map(session => session.id)).toEqual(['local'])
+    expect($messagingSessions.get().map(session => session.id)).toEqual(['simplex-thread'])
+  })
+})
+
 describe('refreshSessions batches slices into one request', () => {
   it('forwards the active profile scope + section limits to the batched call', async () => {
     listSidebarSessions.mockResolvedValue(sidebar({ sessions: [] }))
