@@ -23,6 +23,7 @@ from gateway.config import Platform
 from gateway.platforms.base import build_auto_tts_output_path
 from gateway.platforms.event import MessageEvent, MessageType
 from gateway.session import SessionSource
+from gateway.session_context import scoped_session_platform
 
 logger = logging.getLogger("gateway.run")  # log-record parity with the origin module
 
@@ -492,8 +493,11 @@ class GatewayVoiceMixin:
             # Platforms whose native voice bubbles require Ogg/Opus (OPUS_VOICE_PLATFORMS) get an
             # explicit .ogg path; the TTS tool's container repair guarantees real Ogg/Opus bytes.
             audio_path = build_auto_tts_output_path(event.source.platform)
-            raw = await asyncio.to_thread(text_to_speech_tool, text=tts_text,
-                                          output_path=audio_path)
+            # This post-handler send also runs with cleared session context. An .ogg
+            # filename alone cannot make a backend's Ogg/Vorbis output Opus.
+            with scoped_session_platform(event.source.platform.value):
+                raw = await asyncio.to_thread(text_to_speech_tool, text=tts_text,
+                                              output_path=audio_path)
             try:
                 result = json.loads(raw)
             except (json.JSONDecodeError, TypeError):

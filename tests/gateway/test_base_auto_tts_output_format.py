@@ -114,3 +114,56 @@ async def test_base_auto_tts_skips_playback_when_tool_reports_failure():
     adapter.play_tts.assert_not_awaited()
     # Text reply still goes out.
     assert adapter.sent and adapter.sent[0]["content"] == "reply text"
+
+@pytest.mark.asyncio
+async def test_post_turn_auto_tts_repairs_vorbis_in_ogg_for_telegram(tmp_path, monkeypatch):
+    """Regression for #122002 / #156321: the post-handler voice path has no session platform.
+
+    A backend that ignores the requested Opus format can produce real Ogg/Vorbis
+    into the .ogg auto-TTS path. The repair must still run before voice delivery.
+    """
+    from pathlib import Path
+
+    from gateway.platforms.base_auto_tts import synthesize_auto_tts
+    from gateway.session_context import clear_session_vars, reset_session_vars
+    from tools import tts_tool
+    from tools.tts_tool_delivery import _sniff_ogg_codec
+
+    def first_ogg_page(codec_id: bytes) -> bytes:
+        return b"OggS" + bytes(22) + bytes((1, len(codec_id))) + codec_id
+
+    def write_vorbis(_provider, _text, file_path, _config, _instructions):
+        Path(file_path).write_bytes(first_ogg_page(b"\x01vorbis"))
+
+    conversions = []
+
+    def repair_to_opus(file_path, **kwargs):
+        assert kwargs["output_path"] == file_path
+        assert _sniff_ogg_codec(file_path) == "vorbis"
+        conversions.append(file_path)
+        Path(file_path).write_bytes(first_ogg_page(b"OpusHead"))
+        return file_path
+
+    monkeypatch.delenv("HERMES_SESSION_PLATFORM", raising=False)
+    monkeypatch.setattr(tts_tool, "_load_tts_config", lambda: {"provider": "openai"})
+    monkeypatch.setattr(tts_tool, "_select_builtin_engine", lambda provider: (provider, None))
+    monkeypatch.setattr(tts_tool, "_synthesize_builtin", write_vorbis)
+    monkeypatch.setattr("tools.tts_tool.check_tts_requirements", lambda: True)
+    monkeypatch.setattr("gateway.platforms.base.transcode_to_ogg_opus", repair_to_opus)
+
+    adapter = _DummyAdapter(Platform.TELEGRAM)
+    adapter.prepare_tts_text = lambda text: text
+    requested = str(tmp_path / "reply.ogg")
+
+    # The actual post-handler path clears these vars before starting TTS.
+    clear_session_vars([])
+    try:
+        files, out = await synthesize_auto_tts(
+            adapter, "hello", None, lambda _platform: requested
+        )
+        assert out == requested
+        assert files == [requested]
+        assert _sniff_ogg_codec(requested) == "opus"
+        assert conversions == [requested]
+    finally:
+        reset_session_vars()

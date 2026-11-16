@@ -132,6 +132,21 @@ def scoped_turn_actor(event: Any, turn: Any) -> Iterator[None]:
 
 
 @contextmanager
+def scoped_session_platform(platform: str) -> Iterator[None]:
+    """Restore only the destination platform during post-turn voice synthesis.
+
+    Auto-TTS runs after the gateway clears turn identity, but codec repair still needs
+    the platform to know whether the voice reply must contain Opus. Do not rebind a
+    sender, session key, or delivery capability after the turn has ended.
+    """
+    token = _SESSION_PLATFORM.set(platform)
+    try:
+        yield
+    finally:
+        _SESSION_PLATFORM.reset(token)
+
+
+@contextmanager
 def scoped_session_key(session_key: str) -> Iterator[None]:
     """Bind only the route key of the session a call works for (a hook fired for it outside its
     turn) and restore the prior value on exit; never touches ``os.environ``."""

@@ -13,6 +13,8 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from gateway.session_context import scoped_session_platform
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,7 +49,10 @@ async def synthesize_auto_tts(adapter, text_content: str, source, output_path_fo
                 if not speech_text:
                     raise ValueError("Empty text after markdown cleanup")
                 requested_path = output_path_for(adapter.platform)
-                paths = await asyncio.to_thread(_synthesize, speech_text, requested_path)
+                # The completed turn cleared HERMES_SESSION_PLATFORM. Restore only the
+                # destination platform while the worker converts Ogg/Vorbis to Opus.
+                with scoped_session_platform(adapter.platform.value):
+                    paths = await asyncio.to_thread(_synthesize, speech_text, requested_path)
     except Exception as tts_err:  # an auto voice reply never fails the text reply it accompanies
         logger.warning("[%s] Auto-TTS failed: %s", adapter.name, tts_err, exc_info=True)
     return paths, requested_path
