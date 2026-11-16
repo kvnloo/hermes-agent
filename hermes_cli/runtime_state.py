@@ -395,7 +395,9 @@ class GenerationResidency:
         try:
             names = os.listdir(pid_dir / "fd")
         except PermissionError:
-            return "" if _owned_by_user(pid_dir) is False else _UNKNOWN
+            # Judge the table itself: a non-dumpable process of ours (sd-pam, ssh-agent) has a
+            # root-owned ``fd`` under a ``pid_dir`` we own, and is as uninspectable as a root one.
+            return "" if _owned_by_user(pid_dir / "fd") is False else _UNKNOWN
         except OSError:
             return ""
         targets = self._fd_targets.get(str(pid_dir))

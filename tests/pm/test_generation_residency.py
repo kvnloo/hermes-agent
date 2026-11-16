@@ -212,6 +212,64 @@ def test_child_executing_from_the_generation_blocks_collection(tmp_path):
     assert collect_generations(root, min_age_seconds=0) == [in_use]
 
 
+_NON_DUMPABLE = (
+    "import ctypes, sys, time\n"
+    "ctypes.CDLL(None, use_errno=True).prctl(4, 0, 0, 0, 0)\n"  # PR_SET_DUMPABLE, 0
+    "print('ready', flush=True)\n"
+    "time.sleep(120)\n"
+)
+
+
+def _non_dumpable_child(argv: list[str]) -> subprocess.Popen:
+    """Our uid, but the kernel hands its ``fd``/``exe`` to root, as for sd-pam or ssh-agent."""
+    child = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    assert child.stdout.readline().strip() == b"ready"
+    if os.access(Path("/proc") / str(child.pid) / "fd", os.R_OK):
+        _stop(child)
+        pytest.skip("this kernel still lets us read a non-dumpable process's descriptors")
+    return child
+
+
+@LINUX
+def test_a_non_dumpable_process_of_ours_does_not_pin_every_generation(tmp_path):
+    """Every systemd login runs ``(sd-pam)`` as the user, non-dumpable. Treating its unreadable
+    descriptor table as "could not be inspected" retains every generation on every desktop host."""
+    from hermes_cli.runtime_state import collect_generations
+
+    root = tmp_path / "hermes-agent"
+    root.mkdir()
+    selected = _app_generation(root, "selected0")
+    _select(root, selected)
+    stale = _app_generation(root, "stale000")
+
+    child = _non_dumpable_child([sys.executable, "-c", _NON_DUMPABLE])
+    try:
+        assert collect_generations(root, min_age_seconds=0) == [stale]
+    finally:
+        _stop(child)
+
+
+@LINUX
+def test_a_non_dumpable_child_running_from_the_generation_still_pins_it(tmp_path):
+    """Its argv stays world-readable, so the argv check still catches it."""
+    from hermes_cli.runtime_state import collect_generations
+
+    root = tmp_path / "hermes-agent"
+    root.mkdir()
+    selected = _app_generation(root, "selected0")
+    _select(root, selected)
+    in_use = _app_generation(root, "inuse000")
+    script = in_use / "venv" / "bin" / "agent.py"
+    script.write_text(_NON_DUMPABLE, encoding="utf-8")
+
+    child = _non_dumpable_child([sys.executable, str(script)])
+    try:
+        assert collect_generations(root, min_age_seconds=0) == []
+        assert in_use.is_dir()
+    finally:
+        _stop(child)
+
+
 @LINUX
 def test_child_whose_image_lives_in_the_generation_blocks_collection(tmp_path):
     """The interpreter itself inside the tree, with argv carrying no path: the exe branch."""
