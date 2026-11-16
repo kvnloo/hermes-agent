@@ -2,7 +2,8 @@
 // fences, flattened to top-level `key: value` rows (nested blocks render as
 // their raw indented text). Display-only — never fed back to the backend.
 export function parseFrontmatter(content: string): { body: string; meta: [string, string][] } {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(content)
+  // A UTF-8 BOM can precede the first logical line of a Markdown note.
+  const match = /^\uFEFF?---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(content)
 
   if (!match) {
     return { body: content, meta: [] }

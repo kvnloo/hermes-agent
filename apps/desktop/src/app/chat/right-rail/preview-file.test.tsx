@@ -29,6 +29,18 @@ describe('MarkdownPreview', () => {
     expect(screen.queryByText(/title: Trip notes/)).toBeNull()
   })
 
+  it('renders BOM-prefixed CRLF frontmatter as metadata instead of body text', () => {
+    const { container } = render(
+      <MarkdownPreview text={'\uFEFF---\r\ntitle: Trip notes\r\nstatus: draft\r\n---\r\n\r\n# Day one'} />
+    )
+
+    const block = container.querySelector('[data-preview-frontmatter]')
+    expect(block?.textContent).toContain('Trip notes')
+    expect(block?.textContent).toContain('draft')
+    expect(container.querySelector('hr')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Day one' })).toBeTruthy()
+  })
+
   it('renders block and inline math through KaTeX', () => {
     // KaTeX marks its output; raw "$" delimiters must be gone.
     const { container } = render(
