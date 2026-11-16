@@ -6,6 +6,7 @@ import functools
 import importlib.util
 import inspect
 import logging
+import os
 import subprocess
 from typing import Any, Dict, Optional
 
@@ -260,8 +261,11 @@ def _build_plugin_env(*, env_type, image, cwd, timeout, cc, task_id, **_):
     provider = _get_plugin_env_provider(env_type)
     if provider is not None:
         _refuse_plugin_host_provider(provider, env_type)
+        # The dispatcher exports HERMES_KANBAN_TASK into every worker's env; forward it so
+        # identity-gating plugin backends can bind the environment to the task they serve.
         env_obj = provider.create_environment(cwd=cwd, timeout=timeout, task_id=task_id, image=image,
-                                              container_config=cc)
+                                              container_config=cc,
+                                              kanban_task_id=os.environ.get("HERMES_KANBAN_TASK"))
         return _stamp_plugin_env(env_obj, provider, cwd)
     try:
         from agent.terminal_env_registry import plugin_backend_names
