@@ -692,7 +692,6 @@ export function ChatBar({
     // the line". Remember the intent; compositionend below lands the break.
     if (
       event.key === 'Enter' &&
-      !event.shiftKey &&
       touchPointer &&
       (composingRef.current || event.nativeEvent.isComposing)
     ) {
@@ -1033,13 +1032,14 @@ export function ChatBar({
       return
     }
 
-    // Touch surfaces have no Shift to pair with Enter, so a phone keyboard's
-    // only "line break" key is plain Enter. Chromium's own break for it is a
+    // On a touch surface, Return (including a latched Shift+Return) opens a
+    // line instead of sending. A phone's software keyboard has no reliable
+    // hardware-keyboard modifier convention. Chromium's own break for it is a
     // block wrapper that normalizeComposerEditorDom strips as the phantom
     // trailing line, so the key read as inert — insert the break ourselves in
     // the shape the renderer emits ("\n" ⇒ <br>), which normalizes and
     // round-trips through the draft. Cmd/Ctrl+Enter keeps queueing above.
-    if (event.key === 'Enter' && !event.shiftKey && touchPointer) {
+    if (event.key === 'Enter' && touchPointer) {
       event.preventDefault()
 
       const editor = editorRef.current

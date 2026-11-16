@@ -896,7 +896,7 @@ export const UserEditComposer: FC<UserEditComposerProps> = ({ cwd, gateway, sess
     // Touch: ↵ is the phone's only line-break key, so it opens a line here too
     // instead of saving the edit mid-sentence (the main composer behaves the
     // same). Saving is the explicit Save button.
-    if (event.key === 'Enter' && !event.shiftKey && touchPointer) {
+    if (event.key === 'Enter' && touchPointer) {
       event.preventDefault()
       insertComposerLineBreak(event.currentTarget)
       rememberInitialDraft()
