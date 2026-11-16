@@ -603,7 +603,8 @@ def _read_managed_approvals() -> set:
     cached = _managed_approvals_cache.get(cache_key)
     if cached is not None and cached[0] == signature:
         return set(cached[1])
-    conn = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True, timeout=5.0)
+    from hermes_cli.sqlite_safe_read import connect_tracked
+    conn = connect_tracked(f"{path.resolve().as_uri()}?mode=ro", tracking_path=path, uri=True, timeout=5.0)
     try:
         rows = conn.execute("SELECT pattern_key FROM command_approvals").fetchall()
     except sqlite3.OperationalError as e:
@@ -626,7 +627,8 @@ def _write_managed_approvals(grants: Iterable[str]) -> None:
         return
     path = _managed_approvals_db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(os.fspath(path), timeout=5.0)
+    from hermes_cli.sqlite_safe_read import connect_tracked
+    conn = connect_tracked(path, tracking_path=path, timeout=5.0)
     try:
         with conn:
             conn.execute(_MANAGED_APPROVALS_DDL)
