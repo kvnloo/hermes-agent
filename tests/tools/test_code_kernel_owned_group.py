@@ -91,7 +91,8 @@ def test_owner_sigkill_reaps_the_kernel_group_not_a_live_owners(tmp_path):
                 owner.wait(timeout=10)
 
 
-def _kernel_with_cell_child(monkeypatch, tmp_path, child_argv, *, register_with_supervisor=False):
+def _kernel_with_cell_child(monkeypatch, tmp_path, child_argv, *, register_with_supervisor=False,
+                            reap_child_on_term=False):
     """A real kernel running a cell child; optionally use the actual owner-death supervisor."""
     from hermes_cli import process_identity
     from tools.code_kernel import SessionKernel, _spawn
@@ -112,8 +113,15 @@ def _kernel_with_cell_child(monkeypatch, tmp_path, child_argv, *, register_with_
     _spawn(kernel, task_id="graceful", child_python=sys.executable, child_cwd="",
            sandbox_tools=frozenset(), max_tool_calls=1)
     receipt = tmp_path / "cell_child.json"
-    code = ("import json, os, subprocess, time, psutil\n"
+    reap_handler = (
+        "def reap_then_exit(*_):\n"
+        "    c.wait(timeout=3)\n"
+        "    raise SystemExit(0)\n"
+        "signal.signal(signal.SIGTERM, reap_then_exit)\n"
+    ) if reap_child_on_term else ""
+    code = ("import json, os, signal, subprocess, time, psutil\n"
             f"c = subprocess.Popen({child_argv!r})\n"
+            f"{reap_handler}"
             "ids = {'pid': c.pid, 'created': psutil.Process(c.pid).create_time()}\n"
             f"open({str(receipt)!r} + '.tmp', 'w').write(json.dumps(ids))\n"
             f"os.replace({str(receipt)!r} + '.tmp', {str(receipt)!r})\n"
@@ -130,8 +138,10 @@ def _kill(identity):
 
 
 def test_teardown_releases_the_kernels_group(monkeypatch, tmp_path):
+    # Reap in the disposable kernel, not a host subreaper that may retain orphan zombies.
     kernel, child, calls = _kernel_with_cell_child(
-        monkeypatch, tmp_path, [sys.executable, "-c", "import time; time.sleep(60)"])
+        monkeypatch, tmp_path, [sys.executable, "-c", "import time; time.sleep(60)"],
+        reap_child_on_term=True)
     try:
         assert calls == [("register", [kernel.proc.pid])]
         kernel.teardown()
