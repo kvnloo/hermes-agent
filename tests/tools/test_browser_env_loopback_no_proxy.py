@@ -7,6 +7,8 @@
 for loopback URLs only.
 """
 
+import urllib.request
+
 import pytest
 
 import tools.browser_session as bs
@@ -27,7 +29,20 @@ def test_browser_env_appends_loopback_to_operator_no_proxy(stub_sanitized_env):
     stub_sanitized_env["NO_PROXY"] = "git.internal, 10.0.0.0/8"
     env = bs.build_browser_env()
     assert env["NO_PROXY"] == "git.internal,10.0.0.0/8,127.0.0.1,localhost,::1"
-    assert env["no_proxy"] == "127.0.0.1,localhost,::1"
+    assert env["no_proxy"] == env["NO_PROXY"]
+
+
+def test_uppercase_operator_no_proxy_bypasses_sidecar_cdp(stub_sanitized_env, monkeypatch):
+    stub_sanitized_env.update({
+        "HTTPS_PROXY": "http://proxy.invalid:8888",
+        "NO_PROXY": "browser,localhost,127.0.0.1",
+    })
+    env = bs.build_browser_env()
+    for key in ("HTTPS_PROXY", "NO_PROXY", "no_proxy"):
+        monkeypatch.setenv(key, env[key])
+    assert urllib.request.proxy_bypass_environment(
+        "browser:3000", urllib.request.getproxies_environment()
+    )
 
 
 def test_operator_no_proxy_wildcard_is_left_alone():

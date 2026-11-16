@@ -96,11 +96,13 @@ def add_loopback_no_proxy(env: dict) -> dict:
     already covers loopback and would stop being the wildcard once anything is appended to it."""
     if any("*" in no_proxy_entries(env.get(key) or "") for key in ("NO_PROXY", "no_proxy")):
         return env  # both casings: requests/urllib read ``no_proxy`` first, so a loopback-only one would win
-    for key in ("NO_PROXY", "no_proxy"):
-        entries = no_proxy_entries(env.get(key) or "")
-        missing = [host for host in LOOPBACK_HOSTS if host not in entries]
-        if missing:
-            env[key] = ",".join(entries + missing)
+    entries = []
+    for key in ("no_proxy", "NO_PROXY"):
+        for entry in no_proxy_entries(env.get(key) or ""):
+            if entry not in entries:
+                entries.append(entry)
+    entries.extend(host for host in LOOPBACK_HOSTS if host not in entries)
+    env["NO_PROXY"] = env["no_proxy"] = ",".join(entries)
     return env
 
 
