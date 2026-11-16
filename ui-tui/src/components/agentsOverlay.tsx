@@ -1044,16 +1044,20 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
       )}
 
       <Box flexDirection="column" flexShrink={0} marginTop={1}>
-        <Text color={t.color.accent} wrap="truncate-end">
-          {replayMode ? T.hint.footerReplay : T.hint.footerLive}
-        </Text>
+        {rows.length > 0 ? (
+          <Text color={t.color.accent} wrap="truncate-end">
+            {replayMode ? T.hint.footerReplay : T.hint.footerLive}
+          </Text>
+        ) : !replayMode && processRows.length > 0 ? (
+          <Text color={t.color.accent} wrap="truncate-end">{T.hint.processOnly}</Text>
+        ) : null}
         {flash ? (
           <Text color={t.color.accent} wrap="truncate-end">
             {flash}
           </Text>
         ) : null}
 
-        {mode === 'list' ? (
+        {rows.length === 0 ? null : mode === 'list' ? (
           <Text color={t.color.muted} wrap="truncate-end">
             {T.hint.list(
               replayMode ? T.hint.listNavReplay : T.hint.listNavLive,
