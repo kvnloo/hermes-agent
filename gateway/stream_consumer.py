@@ -165,6 +165,9 @@ class GatewayStreamConsumer(StreamTransportMixin, StreamFallbackMixin, StreamThi
         self._flood_strikes = 0
         self._current_edit_interval = self.cfg.edit_interval  # adaptive backoff
         self._delivered_commentary_texts: list[str] = []
+        # Last confirmed interim message: the gateway can upgrade a final commentary
+        # with its reasoning prefix in place rather than send a second answer.
+        self._last_commentary_delivery: Optional[tuple[str, str]] = None
         self._delivered_segment_texts: list[str] = []  # finalized text per past segment
         self._last_segment_delivery: Optional[tuple[str, Optional[float], str, set[str]]] = None
         self._superseded_reply_ids: set[str] = set()

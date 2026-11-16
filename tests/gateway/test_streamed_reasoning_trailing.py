@@ -8,8 +8,10 @@ delivers reasoning and answer as ONE message with the 💭 block on top (``_hmwa
 Local viewers are unaffected (they read reasoning off their event stream).
 """
 
-import pytest
+import asyncio
 from types import SimpleNamespace
+
+import pytest
 
 from gateway.config import Platform
 from gateway.platforms.event import MessageEvent, MessageType, SessionSource
@@ -146,3 +148,53 @@ async def test_bot_peer_reasoning_matches_the_non_streamed_path(monkeypatch):
     expected = runner._hmwa_prepend_reasoning(
         {"last_reasoning": "thinking hard about it"}, "the answer is 42", source, False)
     assert returned == expected
+
+
+@pytest.mark.asyncio
+async def test_interim_only_final_commentary_is_updated_with_reasoning_in_place(monkeypatch):
+    """A Codex-style final delivered as commentary must not hide the reasoning or duplicate
+    the answer when the new stream gate disables normal answer deltas."""
+    import gateway.run as gateway_run
+    from gateway.stream_consumer import GatewayStreamConsumer, StreamConsumerConfig
+    from tests.gateway.test_run_progress_topics import MetadataEditProgressCaptureAdapter
+
+    monkeypatch.setattr(gateway_run, "_load_gateway_config",
+                        lambda: {"display": {"show_reasoning": True}})
+    adapter = MetadataEditProgressCaptureAdapter(platform=Platform.TELEGRAM)
+    runner = _make_runner(adapter)
+    source = SessionSource(platform=Platform.TELEGRAM, chat_id="42", chat_type="dm")
+    consumer = GatewayStreamConsumer(adapter, "42", StreamConsumerConfig(cursor=""))
+    consumer.stream_deltas_enabled = False
+    task = asyncio.create_task(consumer.run())
+    consumer.on_commentary("the answer is 42")
+    try:
+        for _ in range(100):
+            if adapter.sent:
+                break
+            await asyncio.sleep(0.01)
+        assert [item["content"] for item in adapter.sent] == ["the answer is 42"]
+    finally:
+        consumer.finish()
+        await asyncio.wait_for(task, timeout=5)
+
+    result = {"final_response": "the answer is 42", "last_reasoning": "thinking hard about it"}
+    turn_ctx = SimpleNamespace(stream_consumer_holder=[consumer], source=source,
+                               session_key="agent:main:telegram:dm:42")
+    await runner._run_agent_mark_streamed_delivery(result, turn_ctx)
+
+    expected = runner._hmwa_prepend_reasoning(result, "the answer is 42", source, False)
+    assert expected.startswith("💭")
+    assert result.get("already_sent") is True
+    assert [item["content"] for item in adapter.sent] == ["the answer is 42"]
+    assert len(adapter.edits) == 1
+    assert adapter.edits[0]["message_id"] == "progress-1"  # edit the original bubble
+    assert adapter.edits[0]["content"] == expected
+
+    class _Entry:
+        session_id = "s1"
+
+    event = MessageEvent(text="hi", message_type=MessageType.TEXT, source=source, message_id="1")
+    returned = await runner._hmwa_deliver_turn_response(
+        event, source, _Entry(), turn_ctx.session_key, None, result, [], expected, None, False)
+    assert returned is None
+    assert len(adapter.sent) == 1

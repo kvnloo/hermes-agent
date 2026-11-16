@@ -561,6 +561,8 @@ class StreamFallbackMixin:
                 # actually carried the final response, vs. unrelated commentary delivered during a session
                 # split (#14238).
                 self._delivered_commentary_texts.append(text)
+                message_id = getattr(result, "message_id", None)
+                self._last_commentary_delivery = (str(message_id), text) if message_id else None
             return result.success
         except Exception as e:
             logger.error("Commentary send error: %s", e)

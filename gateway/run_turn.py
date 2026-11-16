@@ -1863,6 +1863,36 @@ class GatewayTurnMixin(GatewayBackgroundMixin, GatewayTurnPrepareMixin, GatewayT
             return
         _final = response.get("final_response") or ""
         _is_empty_sentinel = not _final or _final == "(empty)"
+        # An interim-only consumer may send the final answer as commentary (Codex app-server).
+        # That bare message is NOT the final with its reasoning prefix, so it must not cause
+        # already_sent to suppress the combined reply. Upgrade that exact commentary in place
+        # when possible: a second send would give the user two answers.
+        if (_sc is not None and not getattr(_sc, "stream_deltas_enabled", True)
+                and not _is_empty_sentinel and response.get("last_reasoning")):
+            with_reasoning = self._hmwa_prepend_reasoning(response, _final, source, False)
+            if with_reasoning != _final:
+                commentary = getattr(_sc, "_last_commentary_delivery", None)
+                if (commentary and _sc._display_payload(commentary[1]) == _sc._display_payload(_final)):
+                    from gateway.run_turn_final_reconcile import (
+                        TURN_REPLACED, _edit_carries_whole, edit_preview_to_final,
+                    )
+                    if _edit_carries_whole(_sc.adapter, source.chat_id, with_reasoning):
+                        try:
+                            edited = await edit_preview_to_final(
+                                _sc.adapter, source.chat_id, commentary[0], with_reasoning,
+                                getattr(_sc, "metadata", None),
+                                still_current=getattr(_sc, "_run_still_current", None),
+                            )
+                            if edited is TURN_REPLACED:
+                                return
+                            if getattr(edited, "success", False):
+                                response["already_sent"] = True
+                                return
+                        except Exception:
+                            logger.debug("Could not prepend reasoning to interim final", exc_info=True)
+                # If an in-place edit is unavailable, the normal send must deliver the
+                # combined text; a bare commentary cannot count as the complete reply.
+                _final = with_reasoning
         # response_previewed: only suppress if that EXACT text was delivered, not unrelated commentary.
         # Unrelated commentary/progress must not be mistaken for the final response (#14238).
         _previewed = bool(response.get("response_previewed"))
