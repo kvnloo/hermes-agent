@@ -140,6 +140,16 @@ def test_unrelated_lifecycle_status_never_suppressed():
     )
 
 
+def test_wait_refresh_quoted_in_final_delivery_warning_is_not_suppressed():
+    # Photon cannot edit messages, but a warning quoting a prior poll is not another poll.
+    platform = Platform("photon")
+    adapter = _human_chat_adapter_without_edits()
+    refresh = _refresh(15)
+    assert _should_suppress_lease_wait_refresh(platform, adapter, refresh) is True
+    warning = f"Final reply could not be delivered; previous status: {refresh}"
+    assert _should_suppress_lease_wait_refresh(platform, adapter, warning) is False
+
+
 class _LeaseWaitDB:
     """Fake store whose lease never frees: drives ``_on_wait`` through the initial
     notice (0s) and one 15s refresh, then reports the wait timeout."""

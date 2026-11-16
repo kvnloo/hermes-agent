@@ -55,4 +55,5 @@ def _should_suppress_lease_wait_refresh(platform, adapter, message) -> bool:
         return False
     if callable(getattr(adapter, "send_or_update_status", None)):
         return False
-    return bool(_session_turn_lease_refresh_re().search(str(message or "")))
+    # Only the producer's standalone poll is disposable; a warning can quote that line.
+    return bool(_session_turn_lease_refresh_re().fullmatch(str(message or "")))
