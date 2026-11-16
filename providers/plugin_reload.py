@@ -18,6 +18,7 @@ import hashlib
 import logging
 import os
 import shutil
+import stat
 import sys
 import tempfile
 import threading
@@ -33,6 +34,35 @@ _snapshot_root: Path | None = None
 _snapshot_lock = threading.Lock()
 
 
+def _cleanup_owned_snapshot(root: Path) -> None:
+    """Remove private frozen copies even when copytree preserved read-only source modes.
+
+    Retry only permission failures, chmod only entries lexically inside this owned
+    tree, and never follow a symlink to its installed source.
+    """
+    def _retry(func, failed, exc_info):
+        exc = exc_info[1] if isinstance(exc_info, tuple) else exc_info
+        if not isinstance(exc, PermissionError):
+            return
+        for candidate in (Path(failed).parent, Path(failed)):
+            if not candidate.is_relative_to(root):
+                continue
+            try:
+                mode = candidate.lstat().st_mode
+                if stat.S_ISDIR(mode):
+                    candidate.chmod(mode | stat.S_IWUSR | stat.S_IXUSR)
+                elif stat.S_ISREG(mode):
+                    candidate.chmod(mode | stat.S_IWUSR)
+            except OSError:
+                pass
+        try:
+            func(failed)
+        except OSError:
+            pass
+
+    shutil.rmtree(root, onerror=_retry)
+
+
 def _snapshot(plugin_dir: Path, module_name: str) -> Path:
     """A frozen copy of *plugin_dir* for *module_name* (per home, plugin and tree), named like the original
     (load errors key on it). Copied into a private directory and published by one rename, so a concurrent scan
@@ -41,7 +71,7 @@ def _snapshot(plugin_dir: Path, module_name: str) -> Path:
     with _snapshot_lock:
         if _snapshot_root is None:
             _snapshot_root = Path(tempfile.mkdtemp(prefix="hermes-provider-plugins-"))
-            atexit.register(shutil.rmtree, _snapshot_root, True)
+            atexit.register(_cleanup_owned_snapshot, _snapshot_root)
     target = _snapshot_root / module_name / plugin_dir.name
     if target.is_dir():
         return target
@@ -49,12 +79,20 @@ def _snapshot(plugin_dir: Path, module_name: str) -> Path:
     private = Path(tempfile.mkdtemp(prefix=".copy-", dir=target.parent))
     try:
         shutil.copytree(plugin_dir, private / plugin_dir.name, ignore=_SNAPSHOT_IGNORE)
-        os.rename(private / plugin_dir.name, target)
+        staged = private / plugin_dir.name
+        copied_mode = stat.S_IMODE(staged.stat().st_mode)
+        # Rename may require write access on the copied directory; restore its source mode after publication.
+        if not copied_mode & stat.S_IWUSR:
+            staged.chmod(copied_mode | stat.S_IWUSR)
+        os.rename(staged, target)
     except OSError:
         if not target.is_dir():  # another scan publishing the same copy first is fine
             raise
+    else:
+        if not copied_mode & stat.S_IWUSR:
+            target.chmod(copied_mode)
     finally:
-        shutil.rmtree(private, ignore_errors=True)
+        _cleanup_owned_snapshot(private)
     return target
 
 
