@@ -95,7 +95,8 @@ _PATTERNS: List[Tuple[str, str, str]] = [
     (r'\b(?:praxis|cobalt\s*strike|sliver|havoc|metasploit|brainworm)\b', "known_c2_framework", "context"),
     # "mythic" alone is too common in creative/persona writing (mythology,
     # fantasy) to flag unconditionally.  Require it near C2-adjacent terms.
-    (r'\bmythic\s+(?:c2|agent|payload|server|implant|callback)\b', "known_c2_framework", "context"),
+    # 'mythic agent/server' also describes benign game and persona content.
+    (r'\bmythic\s+(?:c2|payload|implant|callback)\b', "known_c2_framework", "context"),
     (r'\bc2\s+(?:server|channel|infrastructure|beacon)\b', "c2_explicit", "context"),
     (r'\bcommand\s+and\s+control\b', "c2_explicit_long", "context"),
 

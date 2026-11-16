@@ -163,7 +163,7 @@ class TestC2Patterns:
 
     def test_mythic_with_c2_context_triggers(self):
         """'mythic' near C2-adjacent terms should still be flagged."""
-        for phrase in ("mythic c2", "mythic agent", "mythic payload", "mythic server"):
+        for phrase in ("mythic c2", "mythic payload", "mythic implant", "mythic callback"):
             findings = scan_for_threats(
                 f"Deploy the {phrase} infrastructure.", scope="context"
             )
@@ -250,6 +250,15 @@ class TestFalsePositives:
         )
         findings = scan_for_threats(text, scope="context")
         assert "known_c2_framework" not in findings
+
+
+    def test_wow_mythic_server_memory_is_not_blocked(self):
+        # Real memory writes use first_threat_message(scope="strict").
+        for memory in (
+            "Compare World of Warcraft Retail and WoW Forever mythic server differences.",
+            "A mythic agent in a fantasy game searches for quest items.",
+        ):
+            assert first_threat_message(memory, scope="strict") is None
 
 
 # =========================================================================
