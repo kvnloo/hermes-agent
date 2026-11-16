@@ -736,6 +736,25 @@ def _start_gateway_early_environment_probe() -> None:
         logger.debug("early environment probe did not start", exc_info=True)
 
 
+def _preflight_supervised_openai_import() -> None:
+    """Fail before accepting turns when the supervised gateway lacks its core client."""
+    from gateway.restart import GATEWAY_SERVICE_RESTART_EXIT_CODE, is_gateway_supervisor_process
+
+    # HERMES_SUPERVISED_CHILD is also set for terminal children and Windows
+    # Scheduled Tasks; neither alone guarantees a restart after exit 75.
+    if not is_gateway_supervisor_process():
+        return
+
+    from agent.process_bootstrap import _load_openai_cls
+    try:
+        _load_openai_cls()
+    except ImportError as exc:
+        logger.exception(
+            "Core dependency import failed (openai) before gateway startup; requesting service retry"
+        )
+        raise SystemExit(GATEWAY_SERVICE_RESTART_EXIT_CODE) from exc
+
+
 async def start_gateway(config: Optional[GatewayConfig] = None, replace: bool = False,
                         verbosity: Optional[int] = 0, force: bool = False, idle_exit: bool = False) -> bool:
     """Run the gateway without ever turning an inherited daemon TTY (tmux respawn loop, hidden
@@ -751,6 +770,7 @@ async def _start_gateway_runtime(config: Optional[GatewayConfig] = None, replace
     systemd can auto-restart). ``replace`` kills any existing instance first (avoids restart-loop
     deadlocks); ``force`` starts without consulting the host owner at all; ``idle_exit`` arms the
     unmanaged idle exit (``gateway.run_idle_exit``) for a client-started daemon."""
+    _preflight_supervised_openai_import()
     from gateway.run import (
         GatewayRunner,
         _best_effort,
