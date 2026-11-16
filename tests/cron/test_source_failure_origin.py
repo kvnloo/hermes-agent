@@ -76,3 +76,31 @@ def test_native_httpx_monitor_failure_is_transient(status):
 def test_continuous_short_cron_can_defer(expression):
     from cron.scheduler_failure_copy import defer_transient_source_notice
     assert defer_transient_source_notice(dict(JOB, schedule={"kind": "cron", "expr": expression}), "[monitor_source_failed] HTTP 503")
+
+
+def test_source_notice_never_echoes_script_traceback_or_monitor_url_credentials():
+    """The source diagnosis belongs in chat; untrusted output belongs in the run log."""
+    from cron.monitor import _fetch_monitor_url
+
+    # The URL producer rejects the scheme without making a network request.
+    url = "ftp://monitor-user:secret-token@example.test/feed?access_token=another-secret"
+    ok, rejection = _fetch_monitor_url(url)
+    assert not ok
+    cases = (
+        (f"[monitor_source_failed] {rejection}", "monitor source"),
+        (
+            "Script exited with code 1\\nstderr:\\n"
+            "subprocess.TimeoutExpired: Command '['curl', '-u', 'user:secret-token'] "
+            "timed out after 30 seconds; HTTP 500",
+            "script source",
+        ),
+    )
+    for error, origin in cases:
+        notice = s._summarize_cron_failure_for_delivery(JOB, error)
+        assert origin in notice
+        assert "No model was invoked" in notice
+        assert "`hermes cron runs source-test`" in notice
+        assert "secret-token" not in notice
+        assert "another-secret" not in notice
+        assert "subprocess.TimeoutExpired" not in notice
+        assert "ftp://" not in notice
