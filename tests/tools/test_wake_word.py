@@ -278,10 +278,9 @@ def test_requirements_openwakeword_available(monkeypatch):
 def test_tts_ready_is_a_probe_never_an_installer(monkeypatch):
     """_tts_ready must NOT trigger lazy pip installs from a status poll.
 
-    Regression: check_tts_requirements → _import_edge_tts → pm.ensure_import
-    ran pip inside wake.status; a slow/failed install froze the poll and
-    unmounted the desktop ear. Uninstalled-but-lazy-installable counts as
-    ready WITHOUT calling ensure/check.
+    Regression: check_tts_requirements once imported the TTS SDK and invoked
+    pm.ensure_import during wake.status. A cold lazy SDK must be checked with
+    the passive credential/platform predicate, not installed in this poll.
     """
     import types as _types
 
@@ -291,6 +290,8 @@ def test_tts_ready_is_a_probe_never_an_installer(monkeypatch):
     fake_tts = _types.SimpleNamespace(
         _get_provider=lambda cfg: "edge",
         _load_tts_config=dict,
+        _SDK_ON_DEMAND={"edge": ("edge-tts", None)},
+        _ready_after_first_use_install=lambda _: pm_ensure.lazy_installs_allowed(),
         check_tts_requirements=lambda: (_ for _ in ()).throw(
             AssertionError("check_tts_requirements must not run when deps are missing")
         ),
@@ -310,6 +311,26 @@ def test_tts_ready_is_a_probe_never_an_installer(monkeypatch):
     fake_tts.check_tts_requirements = lambda: True
     monkeypatch.setattr(pm, "available", lambda f: True)
     assert ww._tts_ready() is True
+
+
+
+@pytest.mark.parametrize("provider, expected", [
+    ("edge", True),
+    ("elevenlabs", False),
+    ("mistral", False),
+])
+def test_tts_ready_cold_sdk_requires_provider_key(monkeypatch, provider, expected):
+    """A cold, lazy-installable premium SDK without a key cannot produce wake replies."""
+    from pm import extras
+    from tools import tts_tool
+
+    monkeypatch.setattr(tts_tool, "_load_tts_config", lambda: {"provider": provider})
+    monkeypatch.setattr(tts_tool, "_pm_extra_available", lambda _: False)
+    monkeypatch.setattr(tts_tool, "_resolve_provider_key", lambda env, name: "")
+    monkeypatch.setattr(pm, "available", lambda _: False)
+    monkeypatch.setattr(pm_ensure, "lazy_installs_allowed", lambda: True)
+    monkeypatch.setattr(extras, "extra_supported", lambda _: True)
+    assert ww._tts_ready() is expected
 
 
 def test_requirements_fresh_install_lazy_allowed(monkeypatch):

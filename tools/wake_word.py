@@ -310,48 +310,38 @@ def _stt_ready() -> bool:
 
 
 def _tts_ready() -> bool:
-    """Can the configured text-to-speech provider run (or install at first use)?
+    """Can the configured TTS provider speak (now or after a permitted first-use install)?
 
-    The wake flow is fully hands-free (wake → speak → hear the reply); without
-    TTS the reply is silent and the loop is pointless.
-
-    PROBE, not an installer: ``check_tts_requirements`` lazily pip-installs the
-    provider SDK via ``_import_*`` → ``pm.ensure_import`` — running that inside
-    a status poll froze wake.status for the length of a pip install (and a
-    failed install marked the wake word unavailable, unmounting the desktop
-    ear). When the provider's deps aren't installed yet, "installable at first
-    use" counts as ready and we never touch pip from here.
+    This is a passive wake-status probe: never start an SDK install here. The
+    synthesis path installs on first use; an absent extra is ready only when
+    its platform supports installation and its provider credential is present.
+    Without TTS, the hands-free wake loop has no audible reply.
     """
     try:
-        from tools.tts_tool import _get_provider, _load_tts_config, check_tts_requirements
+        from tools.tts_tool import (
+            _SDK_ON_DEMAND, _get_provider, _load_tts_config,
+            _ready_after_first_use_install, check_tts_requirements,
+        )
         provider = _get_provider(_load_tts_config())
     except Exception:
         return False
 
-    _LAZY_TTS_FEATURES = {
-        "edge": "edge-tts",
-        "elevenlabs": "tts-premium",
-        "mistral": "mistral",
-    }
-    feature = _LAZY_TTS_FEATURES.get(provider)
-    if feature is not None:
+    on_demand = _SDK_ON_DEMAND.get(provider)
+    if on_demand is not None:
         try:
             import pm
-            from pm.install import lazy_installs_allowed
 
-            if not pm.available(feature):
-                # Not installed: ready iff it can install at first speak.
-                return lazy_installs_allowed()
+            if not pm.available(on_demand[0]):
+                # A missing SDK alone is not enough: also require credential
+                # and platform support before reporting wake speech as ready.
+                return bool(_ready_after_first_use_install(provider))
         except Exception:
             return False
 
     try:
-        from tools.tts_tool import check_tts_requirements
-
         return bool(check_tts_requirements())
     except Exception:
         return False
-
 
 def check_wake_word_requirements(cfg: Optional[dict[str, Any]] = None, *,
                                  supported: Callable[[str], bool] | None = None) -> dict[str, Any]:
