@@ -5,6 +5,7 @@ import React from 'react'
 import stripAnsi from 'strip-ansi'
 import { expect, it, vi } from 'vitest'
 
+import tuiKeys from '../../../locales/_keys.tui.json'
 import { applyAgentSnapshot } from '../app/agentRoster.js'
 import { $delegationState, resetDelegationState } from '../app/delegationStore.js'
 import { applyProcessSnapshot } from '../app/processRoster.js'
@@ -12,7 +13,13 @@ import { clearSpawnHistory } from '../app/spawnHistoryStore.js'
 import { patchUiState, resetUiState } from '../app/uiStore.js'
 import { AgentsOverlay } from '../components/agentsOverlay.js'
 import type { GatewayClient } from '../gatewayClient.js'
+import { en } from '../i18n/en.js'
+import { flattenKeys } from '../i18n/keys.js'
 import { DEFAULT_THEME } from '../theme.js'
+
+it('keeps language-pack validation keys in sync with the bundled catalog', () => {
+  expect(tuiKeys).toEqual(flattenKeys(en))
+})
 
 it('does not undo an acknowledged pause when opening status resolves late', async () => {
   resetDelegationState()
