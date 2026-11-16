@@ -93,6 +93,24 @@ class TestGatewayConnectionErrorReply:
                 reply = _gateway_provider_error_reply(text)
                 assert reply != _gateway_provider_error_reply(UNREACHABLE_ENVELOPES[0]), text
 
+    @pytest.mark.parametrize("platform", [Platform.TELEGRAM, "slack", "feishu"])
+    @pytest.mark.parametrize(
+        ("reply", "failure"),
+        [
+            ("✅ **HTTP 202** — accepted, the card was posted.", False),
+            ("HTTP 200 OK", False),
+            ("HTTP 302 Found", False),
+            ("HTTP 400 Bad Request", True),
+            ("HTTP 429 Too Many Requests", True),
+            ("HTTP 503 Service Unavailable", True),
+        ],
+    )
+    def test_http_status_prefix_only_rewrites_failures(self, platform, reply, failure):
+        """Regression for #149547 reported by McLuck: successful HTTP replies survive."""
+        assert _looks_like_gateway_provider_error(reply) is failure
+        delivered = _sanitize_gateway_final_response(platform, reply)
+        assert (delivered != reply) is failure
+
     def test_connection_regex_does_not_match_non_connection_error(self):
         assert not _GATEWAY_CONNECTION_ERROR_RE.search("Rate limited after 3 retries")
         assert not _GATEWAY_CONNECTION_ERROR_RE.search("Provider authentication failed")
