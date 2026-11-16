@@ -1,6 +1,6 @@
 import { isSessionNotOwnedError } from '@/app/session/hooks/use-prompt-actions/utils'
 import { runtimeTranslations, translateNow } from '@/i18n'
-import { textPart } from '@/lib/chat-messages'
+import { isLocalSystemNotice, textPart } from '@/lib/chat-messages'
 import { coerceGatewayText } from '@/lib/chat-runtime'
 import type { ErrorSurface } from '@/lib/error-surface'
 import { errorCardText } from '@/lib/error-surface-copy'
@@ -178,7 +178,7 @@ export function handleStatusEvent(ctx: GatewayEventContext): boolean {
 
   if (event.type === 'btw.complete') {
     // prompt.btw answers a side question and emits this on the originating
-    // session. Persistent transcript line, matching the TUI's `[btw "q"]`
+    // session. Renderer-local transcript line, matching the TUI's `[btw "q"]`
     // — without it Desktop only ever showed the acknowledgement (#99065).
     const text = coerceGatewayText(payload?.text).trim()
 
@@ -188,18 +188,24 @@ export function handleStatusEvent(ctx: GatewayEventContext): boolean {
       const header = `[btw${question ? ` "${question}"` : ''}${taskId ? ` (${taskId})` : ''}]`
 
       flushQueuedDeltas(sessionId)
-      updateSessionState(sessionId, state => ({
-        ...state,
-        messages: [
-          ...state.messages,
-          {
-            id: `btw-complete-${taskId || Date.now()}`,
-            role: 'system',
-            parts: [textPart(`${header}\n${text}`, occurredAt)],
-            timestamp: occurredAt
-          }
-        ]
-      }))
+      updateSessionState(sessionId, state => {
+        const anchor = state.messages.findLast(message => !isLocalSystemNotice(message))
+
+        return {
+          ...state,
+          messages: [
+            ...state.messages,
+            {
+              id: `btw-complete-${taskId || Date.now()}`,
+              role: 'system',
+              parts: [textPart(`${header}\n${text}`, occurredAt)],
+              timestamp: occurredAt,
+              noticeAfterId: anchor?.id,
+              noticeAfterRowId: anchor?.rowId
+            }
+          ]
+        }
+      })
     }
 
     return true
