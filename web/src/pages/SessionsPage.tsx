@@ -6,7 +6,7 @@ import {
   useCallback,
   useRef,
 } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -2081,9 +2081,10 @@ export default function SessionsPage() {
 
               <CardContent className="grid min-w-0 gap-3">
                 {recentSessions.map((s) => (
-                  <div
+                  <Link
                     key={s.id}
-                    className="flex min-w-0 max-w-full flex-col gap-2 border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
+                    to={`/chat?resume=${encodeURIComponent(s.id)}`}
+                    className="flex min-w-0 max-w-full flex-col gap-2 border border-border p-3 text-left transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
                       <span
@@ -2122,7 +2123,7 @@ export default function SessionsPage() {
                       <Database className="mr-1 h-3 w-3" />
                       {s.source ? sourceLabel(s.source) : "local"}
                     </Badge>
-                  </div>
+                  </Link>
                 ))}
               </CardContent>
             </Card>

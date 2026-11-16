@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, useLayoutEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { MemoryRouter, Route, Routes, useNavigate } from "react-router";
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const apiMocks = vi.hoisted(() => ({
@@ -56,12 +56,16 @@ function click(el: Element | null) {
 
 const button = (label: string) => document.querySelector(`button[aria-label="${label}"]`);
 
-async function renderSessionsPage(rows: Record<string, unknown>[]) {
-  // Page list uses limit 20; the overview tab's recent-cards fetch uses 50 —
-  // keep the overview empty so the list view (with row actions) renders.
+function LocationProbe() {
+  const { pathname, search } = useLocation();
+  return <output data-testid="route">{pathname}{search}</output>;
+}
+
+async function renderSessionsPage(rows: Record<string, unknown>[], overviewRows: Record<string, unknown>[] = []) {
+  // Page list uses limit 20; the overview tab's recent-cards fetch uses 50.
   apiMocks.getSessions.mockImplementation(async (limit: number) => ({
-    sessions: limit >= 50 ? [] : rows,
-    total: limit >= 50 ? 0 : rows.length,
+    sessions: limit >= 50 ? overviewRows : rows,
+    total: limit >= 50 ? overviewRows.length : rows.length,
     limit,
     offset: 0,
   }));
@@ -84,6 +88,7 @@ async function renderSessionsPage(rows: Record<string, unknown>[]) {
             <ProfileProvider>
               <PageHeaderProvider pluginTabs={[]}>
                 <SessionsPage />
+                <LocationProbe />
               </PageHeaderProvider>
             </ProfileProvider>
           </SystemActionsProvider>
@@ -91,7 +96,11 @@ async function renderSessionsPage(rows: Record<string, unknown>[]) {
       </I18nProvider>,
     ),
   );
-  await waitFor(() => Boolean(button("Delete session")));
+  await waitFor(() =>
+    overviewRows.length > 0
+      ? container.textContent?.includes(String(overviewRows[0].title)) === true
+      : Boolean(button("Delete session")),
+  );
 }
 
 beforeEach(() => {
@@ -120,6 +129,27 @@ afterEach(async () => {
   await act(async () => root?.unmount());
   container?.remove();
   vi.unstubAllGlobals();
+});
+
+describe("SessionsPage recent cards (#156403)", () => {
+  it("makes an Overview session keyboard-focusable and opens its chat", async () => {
+    await renderSessionsPage([], [
+      { id: "sid/with?reserved", profile: "default", source: "cli", model: null,
+        title: "Open this conversation", started_at: 1, ended_at: 2, last_active: 2,
+        is_active: false, message_count: 2, tool_call_count: 0,
+        input_tokens: 1, output_tokens: 1, preview: "hello" },
+    ]);
+
+    const link = Array.from(container.querySelectorAll<HTMLAnchorElement>("a[href]"))
+      .find((a) => a.textContent?.includes("Open this conversation"));
+    expect(link).toBeInstanceOf(HTMLAnchorElement);
+    expect(link?.getAttribute("href")).toBe("/chat?resume=sid%2Fwith%3Freserved");
+    link!.focus();
+    expect(document.activeElement).toBe(link);
+    await act(async () => click(link!));
+    expect(container.querySelector('[data-testid="route"]')?.textContent)
+      .toBe("/chat?resume=sid%2Fwith%3Freserved");
+  });
 });
 
 describe("SessionsPage per-row profile routing (#99387)", () => {
