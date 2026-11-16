@@ -16,6 +16,7 @@ import os
 import shutil
 import subprocess  # tests monkeypatch ``op.subprocess.run``; production goes through run_cli
 import time
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -127,9 +128,10 @@ def _scrub(text: str) -> str:
     return strip_ansi(text).replace("\x1b", "").strip()
 
 
-def _op_child_env(token_value: str) -> dict[str, str]:
-    source_env = get_source_environment()
-    if os.name == "nt":
+def _build_op_child_env(
+    source_env: Mapping[str, str], token_value: str, *, is_windows: bool,
+) -> dict[str, str]:
+    if is_windows:
         # Staged plain-dict environments lose Windows' case-insensitive lookup.
         folded = {key.upper(): key for key in source_env}
         env = {}
@@ -144,6 +146,10 @@ def _op_child_env(token_value: str) -> dict[str, str]:
         env["OP_SERVICE_ACCOUNT_TOKEN"] = token_value
     env["NO_COLOR"] = "1"
     return env
+
+
+def _op_child_env(token_value: str) -> dict[str, str]:
+    return _build_op_child_env(get_source_environment(), token_value, is_windows=os.name == "nt")
 
 
 def _run_op_read(op: Path, reference: str, *, account: str = "", token_value: str = "") -> str:

@@ -1,8 +1,8 @@
 """Hermetic tests for the 1Password (`op` CLI) secret source.
 
-We never invoke the real ``op`` binary: ``subprocess.run`` is mocked so the
-suite stays fast and offline-safe.  A live resolve is exercised manually via
-``hermes secrets onepassword sync`` outside of pytest.
+We never invoke the real ``op`` binary. Most tests mock ``subprocess.run``;
+one uses a temporary executable to check the child environment end to end.
+Live 1Password resolution is outside this offline suite.
 """
 
 from __future__ import annotations
@@ -228,6 +228,40 @@ def test_op_child_env_forwards_config_directory(monkeypatch):
     assert "UNRELATED_PROVIDER_TOKEN" not in env
 
 
+@pytest.mark.parametrize(("is_windows", "root_key", "expected_root"), [
+    (True, "SYSTEMROOT", r"C:\Windows"),
+    (True, "sYsTeMrOoT", r"C:\Windows"),
+    (False, "SYSTEMROOT", None),
+    (False, "SystemRoot", r"C:\Windows"),
+])
+def test_build_op_child_env_matches_platform_case_rules(is_windows, root_key, expected_root):
+    staged = {
+        root_key: r"C:\Windows",
+        "PATH": "safe-path",
+        "OP_SESSION_example": "fake-session",
+        "OPENAI_API_KEY": "do-not-forward",
+    }
+    expected = {
+        "PATH": "safe-path",
+        "OP_SESSION_example": "fake-session",
+        "OP_SERVICE_ACCOUNT_TOKEN": "fake-token",
+        "NO_COLOR": "1",
+    }
+    if expected_root is not None:
+        expected["SystemRoot"] = expected_root
+
+    assert op._build_op_child_env(staged, "fake-token", is_windows=is_windows) == expected
+    assert staged[root_key] == r"C:\Windows"
+
+
+@pytest.mark.parametrize("is_windows", [True, False])
+def test_build_op_child_env_prefers_exact_case(is_windows):
+    staged = {"SystemRoot": "exact-root", "SYSTEMROOT": "other-root"}
+    assert op._build_op_child_env(staged, "", is_windows=is_windows) == {
+        "SystemRoot": "exact-root", "NO_COLOR": "1",
+    }
+
+
 @pytest.mark.platforms("windows")
 def test_op_read_keeps_systemroot_from_staged_windows_environment(monkeypatch):
     """Regression for #147935: a staged dict uppercases Windows SystemRoot."""
@@ -247,6 +281,34 @@ def test_op_read_keeps_systemroot_from_staged_windows_environment(monkeypatch):
 
     monkeypatch.setattr(op.subprocess, "run", fake_run)
     assert op._run_op_read(Path("op"), "op://Private/Item/field") == "resolved"
+
+
+@pytest.mark.platforms("posix")
+def test_fetch_passes_staged_environment_to_real_child(tmp_path):
+    from agent.secret_sources.base import reset_source_environment, set_source_environment
+
+    fake_op = tmp_path / "op"
+    fake_op.write_text(
+        f"#!{sys.executable}\n"
+        "import os, sys\n"
+        "assert sys.argv[1:] == ['read', '--', 'op://Private/Item/field']\n"
+        "assert os.environ['SystemRoot'] == 'staged-root'\n"
+        "assert 'OPENAI_API_KEY' not in os.environ\n"
+        "print('resolved')\n"
+    )
+    fake_op.chmod(0o755)
+    token = set_source_environment({
+        "SystemRoot": "staged-root", "OPENAI_API_KEY": "do-not-forward",
+    })
+    try:
+        secrets, warnings = op.fetch_onepassword_secrets(
+            references={"K": "op://Private/Item/field"}, binary=fake_op, use_cache=False,
+        )
+    finally:
+        reset_source_environment(token)
+
+    assert secrets == {"K": "resolved"}
+    assert warnings == []
 
 
 @pytest.mark.platforms("posix")
