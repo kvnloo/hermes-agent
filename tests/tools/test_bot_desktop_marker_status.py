@@ -102,3 +102,29 @@ def test_standalone_status_reflects_missing_marker_owned_docker_stack(monkeypatc
 
     assert not status.running and status.blocker and "Xvnc" in status.blocker
     assert "placement: gateway" in status.blocker  # non-running Docker marker retains image guidance.
+
+
+def test_marker_status_uses_default_docker_user_when_pn_is_unavailable(monkeypatch):
+    """A Docker image without 'pn' must remain visible after the gateway loses its env registry."""
+    class DockerEnvironment:
+        _container_id = "recorded-container"
+        _docker_exe = "docker.exe"
+
+    monkeypatch.setattr(sandbox_host, "_user_for", lambda env: None)
+    marker = {**sandbox_host._owner_identity(DockerEnvironment()),
+              "dir": "/tmp/hermes-bot-desktop/lena-tabwright"}
+    assert marker["user"] is None  # explicit fallback survives in the on-disk marker
+
+    commands = []
+
+    def run(argv, **kwargs):
+        commands.append(argv)
+        assert "--user" not in argv, "Docker must use the image default when pn is unavailable"
+        output = (b"DISPLAY=:20\nXAUTHORITY=/tmp/xauth\n"
+                  if "launcher.pid" in argv[-1] else b"")
+        return subprocess.CompletedProcess(argv, 0, output, b"")
+
+    monkeypatch.setattr(sandbox_host.subprocess, "run", run)
+    assert sandbox_host.published_env_from_marker(marker)["DISPLAY"] == ":20"
+    assert sandbox_host.docker_marker_missing_binaries(marker) == []
+    assert len(commands) == 2
