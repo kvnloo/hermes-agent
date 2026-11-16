@@ -59,16 +59,19 @@ def _same_scope(root: ast.AST):
 
 
 def _guards_imports(node: ast.AST) -> bool:
-    """``try`` with an ``except ImportError``/``ModuleNotFoundError`` handler that never re-raises,
-    or ``if TYPE_CHECKING:``."""
+    """Only an unshadowed import-error handler that does not re-raise guards a ``try``;
+    ``if TYPE_CHECKING:`` is inert at runtime."""
     if isinstance(node, ast.Try | ast.TryStar):
-        handlers = [h for h in node.handlers if any(
-            _name(t) in _IMPORT_ERRORS
-            for t in (h.type.elts if isinstance(h.type, ast.Tuple) else [h.type]))]
-        return bool(handlers) and not any(isinstance(n, ast.Raise)
-                                          for h in handlers for n in _same_scope(h))
+        for handler in node.handlers:
+            types = handler.type.elts if isinstance(handler.type, ast.Tuple) else [handler.type]
+            names = {_name(t) for t in types}
+            # A broader handler is reached before any later import-specific handler.
+            if handler.type is None or names & {"Exception", "BaseException"}:
+                return False
+            if names & _IMPORT_ERRORS:
+                return not any(isinstance(n, ast.Raise) for n in _same_scope(handler))
+        return False
     return isinstance(node, ast.If) and _name(node.test) == "TYPE_CHECKING"
-
 
 def _optional_imports(tree: ast.AST) -> set[ast.AST]:
     """Nodes in the body of an import guard, which cannot fail an installed wheel's import: the

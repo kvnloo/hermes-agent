@@ -103,3 +103,17 @@ def test_imports_an_import_guard_does_not_protect_stay_checked(tmp_path):
         **{f"p{i}/__init__.py": "" for i in range(1, 8)},
     })
     assert unshipped_imports(repo) == [f"p{i}" for i in range(1, 8)]
+
+
+def test_a_shadowed_importerror_handler_does_not_make_import_optional(tmp_path):
+    # Exception wins before ImportError; it re-raises the wheel's ModuleNotFoundError.
+    repo = _repo(tmp_path, {
+        "agent/__init__.py": "",
+        "agent/shadowed.py": (
+            "try:\n    import missing_dep\n"
+            "except Exception:\n    raise\n"
+            "except ImportError:\n    pass\n"
+        ),
+        "missing_dep/__init__.py": "",
+    })
+    assert unshipped_imports(repo) == ["missing_dep"]
