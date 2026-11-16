@@ -1219,6 +1219,7 @@ export default function SessionsPage() {
         try {
           await api.deleteSession(id, rowProfile(id));
           setSessions((prev) => prev.filter((s) => s.id !== id));
+          setOverviewSessions((prev) => prev.filter((s) => s.id !== id));
           setTotal((prev) => prev - 1);
           if (expandedId === id) setExpandedId(null);
           // Drop the deleted ID from any active bulk-select set — it

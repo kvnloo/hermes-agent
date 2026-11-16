@@ -56,12 +56,12 @@ function click(el: Element | null) {
 
 const button = (label: string) => document.querySelector(`button[aria-label="${label}"]`);
 
-async function renderSessionsPage(rows: Record<string, unknown>[]) {
+async function renderSessionsPage(rows: Record<string, unknown>[], overviewRows: Record<string, unknown>[] = []) {
   // Page list uses limit 20; the overview tab's recent-cards fetch uses 50 —
   // keep the overview empty so the list view (with row actions) renders.
   apiMocks.getSessions.mockImplementation(async (limit: number) => ({
-    sessions: limit >= 50 ? [] : rows,
-    total: limit >= 50 ? 0 : rows.length,
+    sessions: limit >= 50 ? overviewRows : rows,
+    total: limit >= 50 ? overviewRows.length : rows.length,
     limit,
     offset: 0,
   }));
@@ -187,6 +187,30 @@ describe("SessionsPage per-row profile routing (#99387)", () => {
     await act(async () => click(confirm ?? null));
 
     expect(apiMocks.deleteSession).toHaveBeenCalledWith("sid-worker", "worker");
+  });
+});
+
+
+describe("SessionsPage Overview session deletion (#156056)", () => {
+  it("deletes an overview-only row in its owning profile and removes it without waiting for polling", async () => {
+    await renderSessionsPage([], [
+      { id: "sid-overview", profile: "worker", source: "cli", model: null, title: "Overview only",
+        started_at: 1, ended_at: null, last_active: 1, is_active: false, message_count: 2,
+        tool_call_count: 0, input_tokens: 1, output_tokens: 1, preview: "hello" },
+    ]);
+
+    expect(container.textContent).toContain("Overview only");
+    await act(async () => click(button("Delete session")));
+    await waitFor(() => Boolean(document.querySelector('[role="alertdialog"]')));
+    expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain('"Overview only"');
+
+    const confirm = Array.from(document.querySelectorAll('[role="alertdialog"] button')).find(
+      (b) => b.textContent?.trim() === "Delete",
+    );
+    await act(async () => click(confirm ?? null));
+
+    expect(apiMocks.deleteSession).toHaveBeenCalledWith("sid-overview", "worker");
+    expect(container.textContent).not.toContain("Overview only");
   });
 });
 
