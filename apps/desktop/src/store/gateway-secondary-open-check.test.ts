@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { deferred } from '../test/deferred'
+
 // Regression for issue #92265: a transient first-dial WebSocket failure
 // (e.g. ECONNRESET before the socket reaches `open`) must not let Desktop
 // publish the closed gateway as the active route. entry.connection is set
@@ -111,6 +113,57 @@ describe('secondary activation requires an open socket, not just a connection de
     expect(isActivePrimary()).toBe(true)
     expect(activeGateway()).toBe(primary)
     expect($gateway.get()).toBe(publishedPrimary)
+  })
+
+  it('runs the destructive commit only after a still-owned socket opens, before publishing it', async () => {
+    const primary = makePrimary()
+    setPrimaryGateway(primary as never, 'default')
+    await ensureGatewayForProfile('default')
+    const publishedPrimary = $gateway.get()
+    installAgentDesktop()
+
+    const beforePublish = vi.fn(() => {
+      expect(isActivePrimary()).toBe(true)
+      expect($gateway.get()).toBe(publishedPrimary)
+      return true
+    })
+
+    gatewayMocks.connect.mockRejectedValueOnce(new Error('ECONNRESET'))
+    expect(await ensureGatewayForAgent('homelab', 'research', { beforePublish })).toBe(false)
+    expect(beforePublish).not.toHaveBeenCalled()
+    expect($gateway.get()).toBe(publishedPrimary)
+
+    expect(await ensureGatewayForAgent('homelab', 'research', { beforePublish })).toBe(true)
+    expect(beforePublish).toHaveBeenCalledTimes(1)
+    expect(isActivePrimary()).toBe(false)
+    expect($gateway.get()).not.toBe(publishedPrimary)
+  })
+
+  it.each(['agent', 'profile'] as const)('%s: a superseded dial cannot run the destructive commit', async door => {
+    const primary = makePrimary()
+    setPrimaryGateway(primary as never, 'default')
+    await ensureGatewayForProfile('default')
+    const publishedPrimary = $gateway.get()
+    installAgentDesktop()
+    const dial = deferred()
+    gatewayMocks.connect.mockImplementationOnce(() => dial.promise)
+    const beforePublish = vi.fn(() => true)
+
+    const activation =
+      door === 'agent'
+        ? ensureGatewayForAgent('homelab', 'research', { beforePublish })
+        : ensureGatewayForProfile('research', { beforePublish })
+    await vi.waitFor(() => expect(gatewayMocks.connect).toHaveBeenCalledTimes(1))
+    await ensureGatewayForProfile('default')
+    dial.resolve()
+    const result = await activation
+
+    if (door === 'agent') {
+      expect(result).toBe(false)
+    }
+    expect(beforePublish).not.toHaveBeenCalled()
+    expect($gateway.get()).toBe(publishedPrimary)
+    expect(isActivePrimary()).toBe(true)
   })
 
   it('ensureGatewayForAgent: a successful dial still activates and publishes normally', async () => {

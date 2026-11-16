@@ -1,3 +1,4 @@
+// health: allow FILE_LINES -- keep the late-failure guard at the existing socket activation/publication seam (#147681/#93937); moving it to UI code would permit a stale chat to be cleared before activation.
 import {
   type ConnectionState,
   type GatewayEvent,
@@ -244,7 +245,11 @@ function dispatchServerRequest(request: ServerRequest, profile: string, connecti
     return false
   }
 
-  g.config.onServerRequest({ ...request, ...(connectionId ? { connectionId } : {}), profile: canonicalOwnerProfile(request) ?? profile })
+  g.config.onServerRequest({
+    ...request,
+    ...(connectionId ? { connectionId } : {}),
+    profile: canonicalOwnerProfile(request) ?? profile
+  })
 
   return true
 }
@@ -976,8 +981,13 @@ function createSecondary(profile: string, connectionId: null | string = null): S
   // sockets prove it through this closure. Stamp before registry fan-in,
   // never promote an arbitrary wire `profile` field into ownership.
   entry.offEvent = gateway.onEvent(event => {
-    if (event.type === 'gateway.ready') { recordSecondaryWire(connectionId, entry.connection, gateway.sessionWire) }
-    const scopedEvent = stampSecondaryProfileOwner({ ...event, ...(connectionId ? { connectionId } : {}) }, canonicalOwnerProfile(event) ?? profile)
+    if (event.type === 'gateway.ready') {
+      recordSecondaryWire(connectionId, entry.connection, gateway.sessionWire)
+    }
+    const scopedEvent = stampSecondaryProfileOwner(
+      { ...event, ...(connectionId ? { connectionId } : {}) },
+      canonicalOwnerProfile(event) ?? profile
+    )
 
     g.config?.onEvent(scopedEvent)
     releaseTerminalTurnLease(entry.scope, event)
@@ -1702,21 +1712,49 @@ export async function openGatewayForAgent(
   }
 }
 
+/** Keep the old workspace until the target is ready and the commit is accepted. */
+function readyToPublish(ready: boolean, activationEpoch: number, beforePublish?: () => boolean): boolean {
+  return ready && gatewayActivationEpoch() === activationEpoch && (!beforePublish || beforePublish())
+}
+
+async function activatePrimaryRegistryProfile(
+  profile: string,
+  signal?: AbortSignal,
+  beforePublish?: () => boolean
+): Promise<boolean> {
+  if (signal?.aborted) {
+    return false
+  }
+
+  if (!beforePublish) {
+    await ensureGatewayForProfile(profile)
+    return !signal?.aborted
+  }
+
+  let committed = false
+  await ensureGatewayForProfile(profile, {
+    beforePublish: () => {
+      if (signal?.aborted) {
+        return false
+      }
+
+      committed = beforePublish()
+      return committed
+    }
+  })
+
+  return committed && !signal?.aborted
+}
+
 export async function ensureGatewayForAgent(
   connectionId: null | string,
   profile: string,
-  { signal }: { signal?: AbortSignal } = {}
+  { signal, beforePublish }: { signal?: AbortSignal; beforePublish?: () => boolean } = {}
 ): Promise<boolean> {
   const scope = registryBackendScopeKey(connectionId, profile)
 
   if (scope === normKey(profile) || isPrimaryRegistryRoute(connectionId, profile)) {
-    if (signal?.aborted) {
-      return false
-    }
-
-    await ensureGatewayForProfile(profile)
-
-    return !signal?.aborted
+    return activatePrimaryRegistryProfile(profile, signal, beforePublish)
   }
 
   const activationEpoch = beginGatewayActivation()
@@ -1724,7 +1762,11 @@ export async function ensureGatewayForAgent(
   if (await ridesPrimaryBackend(connectionId, profile)) {
     // A retained primary can be open while the foreground still points at a
     // different source. Reusing its socket must also move the active route.
-    return Boolean(isOpen(g.primaryGateway) && !signal?.aborted && applyActive(g.primaryProfile, activationEpoch))
+    if (!readyToPublish(isOpen(g.primaryGateway) && !signal?.aborted, activationEpoch, beforePublish)) {
+      return false
+    }
+
+    return applyActive(g.primaryProfile, activationEpoch)
   }
 
   if (!window.hermesDesktop?.getConnectionFor) {
@@ -1772,12 +1814,16 @@ export async function ensureGatewayForAgent(
   // failure (caught above, left for scheduleReconnect) must not count as a
   // successful activation just because a connection descriptor exists
   // (issue #92265).
-  const activated =
-    entry.wantOpen &&
-    g.secondaries.get(scope) === entry &&
-    Boolean(entry.connection) &&
-    isOpen(entry.gateway) &&
-    applyActive(scope, activationEpoch)
+  const ready =
+    entry.wantOpen && g.secondaries.get(scope) === entry && Boolean(entry.connection) && isOpen(entry.gateway)
+
+  // A failed/dropped socket or retired registry entry must never discard the
+  // chat still in front. There is no await between the commit and applyActive.
+  if (!readyToPublish(ready && !signal?.aborted, activationEpoch, beforePublish)) {
+    return false
+  }
+
+  const activated = applyActive(scope, activationEpoch)
 
   if (activated && entry.connection) {
     publishActiveConnection(entry.connection)
@@ -1788,11 +1834,18 @@ export async function ensureGatewayForAgent(
 
 // Make `profile` the active gateway, lazily opening its socket if needed. The
 // primary is a no-op fast path. Background sockets are never closed here.
-export async function ensureGatewayForProfile(profile: string): Promise<void> {
+export async function ensureGatewayForProfile(
+  profile: string,
+  { beforePublish }: { beforePublish?: () => boolean } = {}
+): Promise<void> {
   const key = normKey(profile)
   const activationEpoch = beginGatewayActivation()
 
   if (key === g.primaryProfile) {
+    if (beforePublish && !readyToPublish(isOpen(g.primaryGateway), activationEpoch, beforePublish)) {
+      return
+    }
+
     applyActive(key, activationEpoch)
 
     return
@@ -1804,6 +1857,10 @@ export async function ensureGatewayForProfile(profile: string): Promise<void> {
   // descriptor — $activeGatewayProfile still moves to `key`, so request
   // scoping and profile-aware surfaces behave identically.
   if (await sharedPrimaryRoute(key)) {
+    if (beforePublish && !readyToPublish(isOpen(g.primaryGateway), activationEpoch, beforePublish)) {
+      return
+    }
+
     applyActive(g.primaryProfile, activationEpoch)
 
     return
@@ -1852,6 +1909,7 @@ export async function ensureGatewayForProfile(profile: string): Promise<void> {
     entry.wantOpen &&
     g.secondaries.get(key) === entry &&
     isOpen(entry.gateway) &&
+    (!beforePublish || readyToPublish(Boolean(entry.connection), activationEpoch, beforePublish)) &&
     applyActive(key, activationEpoch) &&
     entry.connection
   ) {

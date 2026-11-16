@@ -16,7 +16,9 @@ import { deferred } from '../test/deferred'
 //     without it, two rapid activations could complete out of order and the
 //     EARLIER setActive() landed last.
 
-const ensureGatewayForAgent = vi.fn(async (_connectionId: null | string, _profile: string) => true)
+const ensureGatewayForAgent = vi.fn(
+  async (_connectionId: null | string, _profile: string, _options?: { beforePublish?: () => boolean }) => true
+)
 const ensureGatewayForProfile = vi.fn(async (_profile: string) => undefined)
 const openGatewayForProfile = vi.fn(async (_profile: string) => undefined)
 const $gateway = atom<unknown>({ id: 'live-socket' })
@@ -185,6 +187,34 @@ describe('ensureGatewayAgent → $connection / $activeGatewayProfile sync', () =
     // frame. The invariant that matters — nothing is PUBLISHED for a dead
     // target — is asserted above; the lookup itself is a read-only probe.
     expect(getConnectionFor).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not commit a refused activation, then commits a ready one immediately before publication', async () => {
+    getConnectionFor.mockResolvedValue(agentConn())
+    const beforeActivate = vi.fn(() => true)
+    const beforePublish = vi.fn(() => {
+      expect($connection.get()?.mode).toBe('local')
+      return true
+    })
+
+    ensureGatewayForAgent.mockResolvedValueOnce(false)
+    await ensureGatewayAgent('homelab', 'research', { beforeActivate, beforePublish })
+
+    expect(beforeActivate).toHaveBeenCalledTimes(1)
+    expect(beforePublish).not.toHaveBeenCalled()
+    expect($activeGatewayProfile.get()).toBe('default')
+    expect($connection.get()?.mode).toBe('local')
+
+    // The gateway controls commit timing; the earlier turn claim is NOT
+    // permission to discard the current session.
+    ensureGatewayForAgent.mockImplementationOnce(async (_connectionId, _profile, options) => {
+      return options?.beforePublish?.() ?? true
+    })
+    await ensureGatewayAgent('homelab', 'research', { beforeActivate, beforePublish })
+
+    expect(beforePublish).toHaveBeenCalledTimes(1)
+    expect($activeGatewayProfile.get()).toBe('research')
+    expect($connection.get()?.mode).toBe('remote')
   })
 
   it('falls through to the profile path for a null connectionId', async () => {

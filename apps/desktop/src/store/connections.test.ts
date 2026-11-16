@@ -32,9 +32,11 @@ const $connection = atom<null | {
 // The runtime session id minted by the CURRENT backend — the binding a pick
 // must drop before the next gateway is published (#93937).
 const $activeSessionId = atom<null | string>(null)
+const $selectedStoredSessionId = atom<null | string>(null)
 
 interface ActivationOptions {
   beforeActivate?: () => boolean
+  beforePublish?: () => boolean
   signal?: AbortSignal
 }
 
@@ -52,9 +54,9 @@ const pinLegacyNewChatProfile = vi.fn()
 vi.mock('@/store/session', () => ({
   $connection,
   $activeSessionId,
-  $selectedStoredSessionId: atom(null),
+  $selectedStoredSessionId,
   setActiveSessionId: (id: null | string) => $activeSessionId.set(id),
-  setSelectedStoredSessionId: vi.fn()
+  setSelectedStoredSessionId: (id: null | string) => $selectedStoredSessionId.set(id)
 }))
 vi.mock('@/store/project-scope', () => ({ exitProjectScope }))
 vi.mock('@/store/gateway-switch', () => ({ supersedeGatewaySwitch: vi.fn() }))
@@ -117,10 +119,14 @@ beforeEach(() => {
   isLegacyNewChatProfile.mockReturnValue(false)
   pinLegacyNewChatProfile.mockClear()
   ensureGatewayAgent.mockReset()
-  // Mirrors the real door: beforeActivate runs right before the activation
-  // publishes, and a declined hook publishes nothing.
+  // The first hook claims the serialized turn; only a live target calls the
+  // destructive hook, immediately before publishing its route.
   ensureGatewayAgent.mockImplementation(async (connectionId, profile, options) => {
     if (options?.beforeActivate && !options.beforeActivate()) {
+      return
+    }
+
+    if (options?.beforePublish && !options.beforePublish()) {
       return
     }
 
@@ -140,6 +146,7 @@ beforeEach(() => {
   requestFreshSession.mockClear()
   exitProjectScope.mockClear()
   $activeSessionId.set(null)
+  $selectedStoredSessionId.set(null)
   list.mockClear()
   setLastUsed.mockClear()
   api.mockReset()
@@ -530,26 +537,42 @@ describe('selectConnection', () => {
     expect(published).toEqual([{ activeSessionId: null, connectionId: 'homelab', drafted: 1 }])
   })
 
-  it('a failed activation leaves the gateway in front usable and points the draft back at it', async () => {
-    setConnectionsRegistry(registry)
-    $connection.set({ connectionId: 'local', mode: 'local' })
-    // The pick reached its turn (draft rehomed), then the dial failed.
-    ensureGatewayAgent.mockImplementationOnce(async (_connectionId, _profile, options) => {
-      options?.beforeActivate?.()
+  it.each(['throws', 'withdraws'] as const)(
+    'a warm gateway that %s after the turn grant preserves the open chat and project',
+    async failure => {
+      setConnectionsRegistry(registry)
+      const previous = { connectionId: 'local', mode: 'local' as const }
+      $connection.set(previous)
+      $activeSessionId.set('local-runtime')
+      $selectedStoredSessionId.set('local-stored')
+      $showAllProfiles.set(true)
+      $newChatProfile.set('research')
 
-      throw new Error('offline')
-    })
+      // The serialized turn was granted, but the target fails or is retired
+      // before the gateway can publish it. Neither path may invoke the commit.
+      ensureGatewayAgent.mockImplementationOnce(async (_connectionId, _profile, options) => {
+        expect(options?.beforeActivate?.()).toBe(true)
 
-    await expect(selectConnection('homelab')).rejects.toThrow('offline')
+        if (failure === 'throws') {
+          throw new Error('offline')
+        }
+      })
 
-    expect($connection.get()?.connectionId).toBe('local')
-    // The draft is back to what it was before the click, not on homelab.
-    expect($newChatProfile.get()).toBeNull()
-    expect($newChatConnectionId.get()).toBeNull()
-    expect(requestFreshSession).toHaveBeenCalledTimes(2)
-    expect(setLastUsed).not.toHaveBeenCalled()
-    expect($pendingConnectionId.get()).toBeNull()
-  })
+      await expect(selectConnection('homelab')).rejects.toThrow(
+        failure === 'throws' ? 'offline' : 'did not become active'
+      )
+
+      expect($connection.get()).toBe(previous)
+      expect($activeSessionId.get()).toBe('local-runtime')
+      expect($selectedStoredSessionId.get()).toBe('local-stored')
+      expect($showAllProfiles.get()).toBe(true)
+      expect($newChatProfile.get()).toBe('research')
+      expect(requestFreshSession).not.toHaveBeenCalled()
+      expect(exitProjectScope).not.toHaveBeenCalled()
+      expect(setLastUsed).not.toHaveBeenCalled()
+      expect($pendingConnectionId.get()).toBeNull()
+    }
+  )
 
   it('a failed activation keeps the agent route the user pinned before the click', async () => {
     setConnectionsRegistry(registry)
@@ -588,10 +611,10 @@ describe('selectConnection', () => {
     expect($newChatProfile.get()).toBe('scout')
     expect($newChatRoute.get()).toEqual({ connectionId: 'work-vps', profile: 'scout' })
     expect($newChatConnectionId.get()).toBe('work-vps')
-    expect(requestFreshSession).toHaveBeenCalledTimes(1)
+    expect(requestFreshSession).not.toHaveBeenCalled()
   })
 
-  it('a failed pick restores a legacy profile pin the draft had before the click', async () => {
+  it('a failed pick preserves a legacy profile pin the draft had before the click', async () => {
     setConnectionsRegistry(registry)
     $connection.set({ connectionId: 'local', mode: 'local' })
     // A saved null default pinned the legacy profile door for 'ops'.
@@ -605,7 +628,10 @@ describe('selectConnection', () => {
 
     await expect(selectConnection('homelab')).rejects.toThrow('offline')
 
-    expect(pinLegacyNewChatProfile).toHaveBeenCalledWith('ops')
+    expect($newChatProfile.get()).toBe('ops')
+    expect(isLegacyNewChatProfile('ops')).toBe(true)
+    expect(pinLegacyNewChatProfile).not.toHaveBeenCalled()
+    expect(requestFreshSession).not.toHaveBeenCalled()
   })
 
   describe('two overlapping picks (activations serialized like the profile store mutex)', () => {
@@ -630,7 +656,12 @@ describe('selectConnection', () => {
             return
           }
 
+          if (options?.beforePublish && !options.beforePublish()) {
+            return
+          }
+
           $connection.set({ connectionId, mode: 'remote', profile, registryScoped: true })
+          await holds[`${connectionId}:published`]
         })
 
         queue = turn
@@ -651,8 +682,9 @@ describe('selectConnection', () => {
         (error: Error) => error.message
       )
 
-      // homelab reached its turn and re-homed the draft; work-vps queues behind it.
-      await vi.waitFor(() => expect($newChatConnectionId.get()).toBe('homelab'))
+      // homelab is dialing without touching the draft; work-vps queues behind it.
+      await vi.waitFor(() => expect(ensureGatewayAgent).toHaveBeenCalledTimes(1))
+      expect(requestFreshSession).not.toHaveBeenCalled()
 
       const second = selectConnection('work-vps').then(
         () => 'resolved',
@@ -683,7 +715,7 @@ describe('selectConnection', () => {
       })
 
       const first = selectConnection('homelab')
-      await vi.waitFor(() => expect($newChatConnectionId.get()).toBe('homelab'))
+      await vi.waitFor(() => expect(ensureGatewayAgent).toHaveBeenCalledTimes(1))
       const second = selectConnection('work-vps')
       await vi.waitFor(() => expect(ensureGatewayAgent).toHaveBeenCalledTimes(2))
 
@@ -699,11 +731,11 @@ describe('selectConnection', () => {
     })
 
     it('the first lands and the second fails: the draft stays on the first', async () => {
-      const homelabDial = deferred()
+      const homelabPublished = deferred()
 
       setConnectionsRegistry(registry)
       $connection.set({ connectionId: 'local', mode: 'local' })
-      serializeActivations(new Set(['work-vps']), { 'homelab:dial': homelabDial.promise })
+      serializeActivations(new Set(['work-vps']), { 'homelab:published': homelabPublished.promise })
 
       const first = selectConnection('homelab')
       await vi.waitFor(() => expect($newChatConnectionId.get()).toBe('homelab'))
@@ -715,9 +747,8 @@ describe('selectConnection', () => {
 
       await vi.waitFor(() => expect(ensureGatewayAgent).toHaveBeenCalledTimes(2))
 
-      // homelab publishes, then work-vps takes its turn while homelab's pick
-      // is still finishing, and work-vps never comes up.
-      homelabDial.resolve()
+      // homelab already published; release its trailing work so work-vps takes its turn.
+      homelabPublished.resolve()
       await first
 
       expect(await second).toMatch(/did not become active/)
@@ -737,7 +768,8 @@ describe('selectConnection', () => {
       serializeActivations(new Set(['homelab']), { 'homelab:dial': homelabDial.promise })
 
       const first = selectConnection('homelab')
-      await vi.waitFor(() => expect($newChatConnectionId.get()).toBe('homelab'))
+      await vi.waitFor(() => expect(ensureGatewayAgent).toHaveBeenCalledTimes(1))
+      expect($newChatConnectionId.get()).toBe('local')
 
       // work-vps is down: it fails at the open, before it ever queues.
       openGatewayAgent.mockRejectedValueOnce(new Error('offline'))
@@ -766,6 +798,10 @@ describe('selectConnection', () => {
       await mutex.promise
 
       if (options?.beforeActivate && !options.beforeActivate()) {
+        return
+      }
+
+      if (options?.beforePublish && !options.beforePublish()) {
         return
       }
 
@@ -809,8 +845,14 @@ describe('selectConnection', () => {
 
       setConnectionsRegistry(registry)
       $connection.set({ connectionId: 'local', mode: 'local' })
-      ensureGatewayAgent.mockImplementationOnce(async (connectionId, profile) => {
+      ensureGatewayAgent.mockImplementationOnce(async (connectionId, profile, options) => {
         await dial.promise
+        if (options?.beforeActivate && !options.beforeActivate()) {
+          return
+        }
+        if (options?.beforePublish && !options.beforePublish()) {
+          return
+        }
         $connection.set({ connectionId: connectionId ?? undefined, mode: 'remote', profile, registryScoped: true })
       })
 
@@ -895,6 +937,7 @@ describe('selectConnection', () => {
       // The socket activates and publishes; only a trailing descriptor resync stalls.
       ensureGatewayAgent.mockImplementationOnce((connectionId, _profile, options) => {
         options?.beforeActivate?.()
+        options?.beforePublish?.()
         $connection.set({
           connectionId: connectionId ?? undefined,
           mode: 'remote',
