@@ -110,6 +110,23 @@ async def test_set_config_option_persists_edit_approval_policy_and_returns_all_o
     assert getattr(state, "mode", None) == "accept_edits"
 
 
+@pytest.mark.asyncio
+async def test_unknown_edit_approval_choice_is_rejected_without_resetting_session_mode(agent):
+    """An invalid ACP edit choice cannot silently reset a persisted more-permissive mode."""
+    resp = await agent.new_session(cwd="/tmp")
+    await agent.set_config_option("edit_approval_policy", resp.session_id, "session")
+    state = agent.session_manager.get_session(resp.session_id)
+    assert state.mode == "dont_ask"
+
+    with patch.object(agent.session_manager, "save_session", wraps=agent.session_manager.save_session) as save:
+        with pytest.raises(acp.RequestError) as exc:
+            await agent.set_config_option("edit_approval_policy", resp.session_id, "not-an-offered-policy")
+
+    assert exc.value.code == -32602
+    save.assert_not_called()
+    assert agent.session_manager.get_session(resp.session_id).mode == "dont_ask"
+
+
 # ---------------------------------------------------------------------------
 # initialize
 # ---------------------------------------------------------------------------

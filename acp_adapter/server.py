@@ -1200,7 +1200,9 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
             raise acp.RequestError.invalid_params({"details": f"{config_id} requires a select value"})
         str_value = str(value)
         if config_id == self._EDIT_APPROVAL_POLICY_CONFIG_ID:
-            state.mode = self._EDIT_APPROVAL_POLICY_TO_MODE.get(str_value, self._MODE_DEFAULT)
+            if str_value not in self._EDIT_APPROVAL_POLICY_TO_MODE:
+                raise acp.RequestError.invalid_params({"details": f"Unknown edit approval policy: {str_value}"})
+            state.mode = self._EDIT_APPROVAL_POLICY_TO_MODE[str_value]
         elif config_id == self._MODEL_CONFIG_ID:
             return SetSessionConfigOptionResponse(config_options=await self._set_model_config(str_value, state))
         else:
