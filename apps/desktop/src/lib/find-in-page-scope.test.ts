@@ -455,6 +455,22 @@ describe('scoped find survives React re-render', () => {
     expect(activeFindHitText()).toBe('needle')
   })
 
+  it('highlights the first matching text streamed after a zero-hit search', async () => {
+    const surface = plantSurface('surface', '<p>waiting for the answer</p>')
+    captureFindScope()
+
+    const result = performScopedFind(surface, 'needle', { forward: true, findNext: false })
+    expect(result).toEqual({ count: 0, activeOrdinal: 0 })
+    expect(findHitTexts()).toEqual([])
+
+    // The next streamed paragraph introduces the first occurrence.
+    surface.insertAdjacentHTML('beforeend', '<p>streamed needle</p>')
+    await flushRescan()
+
+    expect(findHitTexts()).toEqual(['needle'])
+    expect(activeFindHitText()).toBe('needle')
+  })
+
   it('a re-render with no new match leaves the highlight set and position alone', async () => {
     const surface = plantSurface('surface', '<p>needle needle</p>')
     captureFindScope()

@@ -416,9 +416,10 @@ export function performScopedFind(root: Element, query: string, options: ScopedF
   activeIndex = options.forward ? 0 : Math.max(0, ranges.length - 1)
 
   if (ranges.length === 0) {
-    // A query that matches nothing has nothing to maintain.
     dropHighlights()
-    stopObserver()
+    // Streaming can introduce the first match after a zero-hit scan.
+    // Keep watching until the query clears or the bar closes.
+    ensureObserver(root)
 
     return DEFAULT_RESULT
   }
