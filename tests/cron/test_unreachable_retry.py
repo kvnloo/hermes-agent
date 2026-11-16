@@ -195,3 +195,20 @@ def test_ladder_reruns_do_not_spend_extra_repeat_budget(tmp_cron_home, monkeypat
     assert held == [True, True, True, False]
     # But a rung whose limit was edited down to the count does retire the job: send its notice.
     assert not ur.will_retry(dict(runs[1], repeat={"times": 1, "completed": 1}))
+
+
+def test_ladder_retry_recognizes_equivalent_instants_across_timezones():
+    """A pinned job can dispatch in local time while retry state stores UTC.
+
+    Comparison must use the same absolute instant, even when tests run with
+    TZ=UTC and the host cannot reproduce a non-UTC local clock by default.
+    """
+    local = "2026-11-17T09:00:00+08:00"
+    utc = "2026-11-17T01:00:00+00:00"
+
+    assert ur.is_retry_run({"_scheduled_instant": local, ur.STATE_KEY: {"at": utc}})
+    assert not ur.is_retry_run({
+        "_scheduled_instant": local,
+        ur.STATE_KEY: {"at": "2026-11-17T01:00:01+00:00"},
+    })
+    assert not ur.is_retry_run({ur.STATE_KEY: {"at": utc}})
