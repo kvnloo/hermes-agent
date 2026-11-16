@@ -7,6 +7,17 @@ the existing submission pipeline keep session, command, history, queue and execu
 No gateway contracts, runtime handlers, desktop code, OpenUI, parity features or second frontend
 are imported. This document is a review receipt, not upstream approval.
 
+## Current HEAD port status
+
+The launcher tests pass on the current HEAD port, including real child fallback and the dev-mode bypass.
+A config-loader regression now rejects a default-enabled composer. The original tests did not catch that mutation.
+
+The SDK is pinned in `ui-tui/package.json`, but current HEAD uses `pnpm-lock.yaml`, not the draft's npm lockfile.
+The pnpm lockfile has no SDK entry. Updating that file is outside this execution's permitted file list.
+The obsolete npm lockfile and npm settings were not restored over the newer package-manager policy.
+A frozen install and a native build remain blocked until the pnpm lockfile is updated.
+No current-port TypeScript build, SDK tests, or real-Tern journey is claimed.
+
 ## Activation policy
 
 - Default `display.tern: false`: no TSP detection, handshake or surface; ordinary Hermes is unchanged.
@@ -38,7 +49,8 @@ are not hidden by fallback. Disable with `hermes config set display.tern false` 
 - Native drafts are limited to 256 Ki UTF-16 units; oversized native edits/sends are refused.
   Edit ranges, lengths and cursor bounds are validated. Native undo is **not advertised**.
 - Protocol input is filtered out before Ink's keyboard parser; ordinary bytes are preserved.
-- `@stencil-hq/tern` is pinned to 0.1.0, with the registry integrity in the lockfile. Its negotiated
+- `@stencil-hq/tern` is pinned to 0.1.0 in the manifest. The original draft recorded registry integrity in its npm lockfile.
+  The current pnpm lockfile still needs the SDK entry. Its negotiated
   credit/ACK renderer holds one replaceable view, not a per-update queue. The adapter only calls
   `render` (no raw operation queue or polling). Compatible hello credits are bounded to 1–8.
 - `gone`, hidden surfaces and cleanup reject further native actions. Modal contents are never
@@ -66,11 +78,10 @@ Fixture-terminal tests are **not real Tern E2E**. Native focus/caret continuity,
 coexistence, suspend/external-editor behavior, host close/reattach, and real inference/tool journeys
 remain promotion gates. Do not merge upstream or into fork main on unit evidence alone.
 
-The full Ink suite currently has five failures in three existing files (markdown OSC8 delimiters,
-cold pending recovery, submission destination receipt removal). Each failure was reproduced on an
-unmodified archive of the pinned upstream base using the same dependency donor and Node binary;
-they are not silently waived as green. Local focused seam, build, type and lint receipts belong in
-the fork draft PR. No upstream PR or comment is authorized by this preparation.
+[The original fork draft](https://github.com/kvnloo/hermes-agent/pull/542) reports five full-suite Ink failures
+on its pinned base in three existing files: markdown delimiters, cold pending recovery, and submission destination receipts.
+Those results are historical, not current-HEAD verification. The TypeScript suite was not rerun for this port.
+No upstream PR or comment is authorized by this preparation.
 
 ## Provenance
 

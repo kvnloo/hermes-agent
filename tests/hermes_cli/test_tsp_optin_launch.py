@@ -29,6 +29,16 @@ def test_detection_alone_is_not_optin(monkeypatch):
     assert not launch.tern_frontend_wanted({"TERM_PROGRAM": "tern"})
 
 
+@pytest.mark.parametrize("display", [{}, {"tern": False}, {"tern": True}])
+def test_real_config_preserves_explicit_optin(display):
+    from hermes_cli import config as cfg
+
+    cfg.atomic_config_write(cfg.get_config_path(), {"display": display})
+    expected = display.get("tern", False)
+    assert cfg.load_config()["display"]["tern"] is expected
+    assert launch.tern_frontend_wanted({"TERM_PROGRAM": "tern"}) is expected
+
+
 def test_config_enables_probe_only_inside_tern(monkeypatch):
     config(monkeypatch, True)
     assert launch.tern_frontend_wanted({"TERM_PROGRAM": "tern"})
@@ -92,8 +102,10 @@ def test_no_handshake_only_falls_back_to_ink(monkeypatch, tmp_path, code):
     assert all(call[1] == str(tmp_path) and call[2] is env for call in calls)
 
 
-def test_real_child_exit_75_retries_same_ink_argv(tmp_path):
+@pytest.fixture
+def child_frontend(tmp_path):
     import sys
+
     child = tmp_path / "frontend.py"
     receipt = tmp_path / "calls.txt"
     child.write_text(
@@ -102,8 +114,33 @@ def test_real_child_exit_75_retries_same_ink_argv(tmp_path):
         "with p.open('a') as f: f.write(('probe' if '--tern-composer' in sys.argv else 'ink') + '\\n')\n"
         "sys.exit(75 if '--tern-composer' in sys.argv else 0)\n"
     )
-    assert launch.run_tui_frontend([sys.executable, str(child), str(receipt)], tmp_path, {}, probe=True) == 0
+    return [sys.executable, str(child), str(receipt)], receipt
+
+
+def test_real_child_exit_75_retries_same_ink_argv(tmp_path, child_frontend):
+    argv, receipt = child_frontend
+    assert launch.run_tui_frontend(argv, tmp_path, {}, probe=True) == 0
     assert receipt.read_text().splitlines() == ["probe", "ink"]
+
+
+@pytest.mark.parametrize("enabled,dev,expected", [
+    (False, False, ["ink"]),
+    (True, False, ["probe", "ink"]),
+    (True, True, ["ink"]),
+])
+def test_real_launch_uses_config_and_dev_gate(monkeypatch, tmp_path, child_frontend, enabled, dev, expected):
+    from hermes_cli import config as cfg
+    from hermes_cli import main_tui_launch as tui
+
+    argv, receipt = child_frontend
+    cfg.atomic_config_write(cfg.get_config_path(), {"display": {"tern": enabled}})
+    monkeypatch.setenv("TERM_PROGRAM", "tern")
+    monkeypatch.setattr(tui, "_make_tui_argv", lambda *_args: (argv, tmp_path))
+    monkeypatch.setattr(tui, "_print_tui_exit_summary", lambda *_args: None)
+    with pytest.raises(SystemExit) as result:
+        tui._launch_tui(tui_dev=dev)
+    assert result.value.code == 0
+    assert receipt.read_text().splitlines() == expected
 
 
 def test_disabled_or_dev_launch_does_not_probe(monkeypatch, tmp_path):
