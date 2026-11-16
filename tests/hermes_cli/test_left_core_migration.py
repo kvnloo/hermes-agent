@@ -409,10 +409,13 @@ def test_old_mcp_serve_spelling_names_the_plugin_command(tmp_path, monkeypatch, 
     line on stderr, never on stdout (the MCP wire); once the plugin is installed only the spelling."""
     import sys
 
-    from hermes_cli import main as main_mod
+    from hermes_cli import _early_recovery
     home = _home(tmp_path)
     monkeypatch.setenv("HERMES_HOME", str(home))
+    # A linked worktree's git metadata can live inside the production home.
+    monkeypatch.setattr(_early_recovery, "interrupted_pull_marker", lambda _root: home / "hermes-update-pull")
     monkeypatch.setattr(sys, "argv", ["hermes", "mcp", "serve", "--tools"])
+    from hermes_cli import main as main_mod
     parser, _ = main_mod._build_cli_parser()
     with pytest.raises(SystemExit) as exc:
         parser.parse_args(["mcp", "serve", "--tools"])
