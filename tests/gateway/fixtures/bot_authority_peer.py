@@ -98,8 +98,23 @@ def probe(base):
             assert json.loads(bot[0]['payload_json'])['local_automation_v1']['turn_author'] == params['author']
             legacy = next(r for r in rows() if 'LEGACY_QUEUED_ONCE' in r['payload_json'])
             assert json.loads(legacy['payload_json'])['local_automation_v1']['turn_author']['id'] == 'bot:legacy'
+            updates = [dict(id=key * 32, profile='default', message=f'R24_STATUS_V{version}',
+                            author={'id': 'bot:reliability', 'name': 'Reliability', 'is_bot': True})
+                       for version, key in enumerate(('e', 'f', '0'), 1)]
+            for update in updates:
+                queued = await rpc(observer, 'bot_relay.deliver', **update)
+                assert queued.get('result', {}).get('status') == 'queued', queued
+            update_rows = [r for r in rows() if r['request_id'] in {'bot:' + u['id'] for u in updates}]
+            assert [r['status'] for r in update_rows] == ['terminal', 'terminal', 'queued'], update_rows
+            assert [r['outcome'] for r in update_rows[:2]] == ['cancelled', 'cancelled'], update_rows
             model.release.set()
             await wait(lambda: all(r['status'] == 'terminal' for r in rows()))
+            newest = await rpc(observer, 'bot_relay.deliver', **updates[-1])
+            assert newest['result']['status'] == 'settled', newest
+            assert newest['result']['reply'] == 'AUTOMATION_ACK', newest
+            for update in updates[:2]:
+                superseded = await rpc(observer, 'bot_relay.deliver', **update)
+                assert superseded['result']['status'] == 'cancelled', superseded
             settled = await rpc(observer, 'bot_relay.deliver', **params)
             assert settled['result']['status'] == 'settled', settled
             assert settled['result']['reply'] == 'AUTOMATION_ACK', settled
@@ -109,6 +124,15 @@ def probe(base):
         assert sum('LOCAL_DM_ONCE' in str(t) for t in texts) == 1, texts
         assert sum('LEGACY_QUEUED_ONCE' in str(t) for t in texts) == 1, texts
         assert not any('LEGACY_CLAIMED_NEVER' in str(t) for t in texts), texts
+        consumed_updates = [str(t) for t in texts if 'R24_STATUS_V' in str(t)]
+        assert len(consumed_updates) == 1, consumed_updates
+        assert 'R24_STATUS_V3' in consumed_updates[0], consumed_updates
+        assert '(2 older updates superseded)' in consumed_updates[0], consumed_updates
+        assert not any(old in consumed_updates[0] for old in ('R24_STATUS_V1', 'R24_STATUS_V2')), consumed_updates
+        summary = {'queued_updates': 3, 'consumed_updates': consumed_updates, 'superseded_count': 2,
+                   'newest_receipt': newest['result'], 'same_target': sid}
+        (base / 'r24-supersede.json').write_text(json.dumps(summary, indent=2) + '\n')
+        print(json.dumps({'r24_supersede': summary}))
         print(json.dumps({'ledger': rows(), 'inputs': texts, 'lost_ack': True, 'same_target': sid}))
         return sid
 
