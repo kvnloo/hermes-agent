@@ -91,6 +91,25 @@ describe('createPluginContext.os', () => {
     }
   })
 
+  it('returns unavailable instead of a staged upload path in the browser webapp', async () => {
+    const selectPaths = vi.fn().mockResolvedValue(['/home/user/.hermes/uploads/web-a1b2c3-tasks.csv'])
+    ;(window as unknown as { hermesDesktop: unknown }).hermesDesktop = { selectPaths }
+    document.documentElement.dataset.hermesDesktopHost = 'browser'
+
+    try {
+      const ctx = createPluginContext('demo')
+
+      await expect(ctx.os.pickOpenPath({
+        filters: [{ extensions: ['csv'], name: 'CSV' }]
+      })).resolves.toBeNull()
+      // Composer uploads still use the browser bridge; plugins must not receive its staged path.
+      expect(selectPaths).not.toHaveBeenCalled()
+    } finally {
+      document.documentElement.removeAttribute('data-hermes-desktop-host')
+      delete (window as unknown as { hermesDesktop?: unknown }).hermesDesktop
+    }
+  })
+
   it('file pickers degrade to null on an older shell that lacks them', async () => {
     ;(window as unknown as { hermesDesktop: unknown }).hermesDesktop = {}
 

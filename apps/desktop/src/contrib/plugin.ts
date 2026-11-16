@@ -23,6 +23,7 @@ import {
   type PluginRunActionResult,
   runPluginAppAction
 } from '@/lib/keybinds/plugin-actions'
+import { isBrowserHostedDesktop } from '@/lib/platform'
 import { readKey, writeKey } from '@/lib/storage'
 import { dispatchPluginNativeNotification, type PluginNativeNotificationInput } from '@/store/native-notifications'
 import { $petActive } from '@/store/pet'
@@ -82,7 +83,8 @@ export interface PluginOs {
    *  to a `rest` call rather than trying to write it from the renderer. */
   pickSavePath: (options?: PluginFileDialogOptions) => Promise<null | string>
   /** Native open dialog, single file. Resolves the chosen path, or null on
-   *  cancel / when unavailable. */
+   *  cancel / when unavailable. The browser-hosted shell cannot expose the
+   *  original local path, so this native capability is unavailable there. */
   pickOpenPath: (options?: PluginFileDialogOptions) => Promise<null | string>
   /** Write text to the system clipboard. Resolves false when unavailable. */
   writeClipboard: (text: string) => Promise<boolean>
@@ -276,6 +278,9 @@ function createPluginOs(pluginId: string): PluginOs {
       }),
     pickOpenPath: options =>
       attemptPath(async bridge => {
+        // Browser selectPaths stages a gateway copy, not a native file path.
+        if (isBrowserHostedDesktop()) {return null}
+
         const picked = await bridge.selectPaths?.({ ...options, multiple: false })
 
         return picked?.[0] ?? null
