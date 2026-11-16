@@ -57,9 +57,25 @@ def check_runtime(project_root: Path) -> str | None:
         return None  # A developer's checkout does not owe managed products.
 
     problems = pm.activate()
+    steward = sealed_steward(Path(project_root))
+    if steward == "docker":
+        from pm.environments import base_venv, selected_venv
+        from pm.lock import Facts
+        from pm.paths import facts_path
+        from pm.plugin_inputs import Members
+
+        # pnpm is a build-only tool omitted from Docker; damaged shipped tools remain drift.
+        if Facts(facts_path()).get("pnpm") is None:
+            problems = [problem for problem in problems if not problem.startswith("pnpm: ")]
+        # Docker records the image venv without plugin members. A selected writable
+        # generation still owes its full member graph, not this image-only baseline.
+        if any(problem.startswith("venv: ") for problem in problems):
+            root = Path(project_root)
+            if (selected_venv(root) == base_venv(root)
+                    and pm.venv_is_current(plugins=Members([]), project_root=root)):
+                problems = [problem for problem in problems if not problem.startswith("venv: ")]
     if not problems:
         return None
-    steward = sealed_steward(Path(project_root))
     remedy = (f"this {steward}-managed install must rebuild the artifact to fix"
               if steward else "run `hermes pm install`")
     return f"install out of sync ({'; '.join(problems)}) — {remedy}"

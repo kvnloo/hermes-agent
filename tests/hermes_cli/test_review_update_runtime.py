@@ -85,3 +85,51 @@ def test_developer_checkout_skips_managed_runtime_warning(tmp_path, monkeypatch)
     (checkout / ".git").mkdir(parents=True)
     monkeypatch.setattr(pm, "activate", lambda: pytest.fail("dev checkout activated managed runtime"))
     assert venv_sync.check_runtime(checkout) is None
+
+
+def test_sealed_docker_startup_ignores_unshipped_tools_and_member_discovery(tmp_path, monkeypatch):
+    """Only the baked image selection ignores unshipped pnpm and discovered plugins."""
+    import pm
+    from pm import environments, paths
+    from pm.plugin_inputs import Members
+
+    root = tmp_path / "image"
+    venv = root / ".venv"
+    venv.mkdir(parents=True)
+    (venv / "pyvenv.cfg").write_text("home = /opt/python\n", encoding="utf-8")
+    (root / "install-stamp.json").write_text(
+        json.dumps({"distribution": "docker", "updateMechanism": "external"}), encoding="utf-8")
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(paths, "repo_root", lambda: root)
+    facts = tmp_path / "tools" / "facts.json"
+    monkeypatch.setattr(paths, "facts_path", lambda: facts)
+    problems = ["pnpm: not installed or outdated", "venv: out of sync with uv.lock"]
+    monkeypatch.setattr(pm, "activate", lambda: list(problems))
+
+    def image_stamp_matches(*, plugins, project_root):
+        assert project_root == root
+        assert isinstance(plugins, Members) and not plugins.dirs
+        return True
+
+    monkeypatch.setattr(pm, "venv_is_current", image_stamp_matches)
+    assert venv_sync.check_runtime(root) is None
+
+    # A missing required shipped tool still reports drift.
+    problems.insert(0, "npm: not installed or outdated")
+    assert venv_sync.check_runtime(root) == (
+        "install out of sync (npm: not installed or outdated) — "
+        "this docker-managed install must rebuild the artifact to fix"
+    )
+    problems.pop(0)
+
+    # Writable dependency generations still compare their plugin members.
+    monkeypatch.setattr(environments, "selected_venv", lambda _: tmp_path / "generation")
+    assert "venv: out of sync with uv.lock" in venv_sync.check_runtime(root)
+
+    # A pnpm package recorded in the sealed store must still report real damage.
+    monkeypatch.setattr(environments, "selected_venv", lambda _: venv)
+    facts.parent.mkdir()
+    facts.write_text(json.dumps({
+        "schema": 1, "packages": {"pnpm": {"entry": "pnpm-broken", "version": "1"}},
+    }), encoding="utf-8")
+    assert "pnpm: not installed or outdated" in venv_sync.check_runtime(root)
