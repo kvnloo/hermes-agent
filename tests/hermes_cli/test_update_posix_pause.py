@@ -265,11 +265,75 @@ def test_bare_update_replay_keeps_gateway_launch_cwd_and_module_path(tmp_path, m
 
         assert pause._relaunch_bare(entries[0]) == 9000
         assert spawned["cwd"] == str(launched)
-        assert spawned["argv"][1:3] == ["-m", "hermes_cli.main"]
+        assert spawned["argv"] == [sys.executable, "-m", "hermes_cli.main", "gateway", "run"]
         assert spawned["env"]["HERMES_HOME"] == str(tmp_path / "home")
-        assert spawned["env"]["PYTHONPATH"].split(os.pathsep)[0] == str(
-            Path(pause.__file__).resolve().parent.parent
-        )
+        assert spawned["env"]["PYTHONPATH"].split(os.pathsep) == [
+            str(Path(pause.__file__).resolve().parent.parent), "/some-other-package",
+        ]
     finally:
         old.kill()
         old.wait(timeout=10)
+
+
+@pytest.mark.platforms("posix")
+@pytest.mark.parametrize("cwd_record", ["present", "legacy", "deleted"])
+def test_bare_replay_child_imports_install_outside_updater_cwd(tmp_path, monkeypatch, cwd_record):
+    """Exercise the real replay spawn with a harmless module probe, never a live gateway."""
+    from hermes_cli import update_cmd_posix_pause as pause
+
+    install_root = Path(pause.__file__).resolve().parent.parent
+    home = tmp_path / "home"
+    home.mkdir()
+    launched = tmp_path / "launch"
+    launched.mkdir()
+    updater = tmp_path / "updater"
+    updater.mkdir()
+    receipt = tmp_path / "receipt.json"
+    prepared = {"HERMES_HOME": str(home), "PYTHONPATH": str(tmp_path / "other-package"),
+                "INVOCATION_ID": "old-unit", "JOURNAL_STREAM": "old-journal",
+                "HERMES_UPDATE_PAUSED": "1", "_HERMES_GATEWAY": "1"}
+    monkeypatch.setattr(pause, "_REPLAY_ENVS", {str(home): dict(prepared)})
+    probe = """
+import json, os, sys
+from pathlib import Path
+from hermes_cli import update_cmd_posix_pause
+receipt = Path(sys.argv[1])
+pending = receipt.with_suffix(".tmp")
+pending.write_text(json.dumps({
+    "pid": os.getpid(), "cwd": os.getcwd(), "module": update_cmd_posix_pause.__file__,
+    "env": dict(os.environ), "argv": sys.argv[1:],
+}))
+pending.replace(receipt)
+"""
+    entry = {"pid": -1, "home": str(home), "argv": [sys.executable, "-c", probe, str(receipt)]}
+    if cwd_record != "legacy":
+        entry["cwd"] = str(launched if cwd_record == "present" else tmp_path / "gone")
+    monkeypatch.chdir(updater)
+    monkeypatch.setattr(pause, "_gateway_on_home",
+                        lambda home, exclude: json.loads(receipt.read_text())["pid"] if receipt.exists() else None)
+    children = []
+    popen = subprocess.Popen
+
+    def spawn(*args, **kwargs):
+        child = popen(*args, **kwargs)
+        children.append(child)
+        return child
+
+    monkeypatch.setattr(pause.subprocess, "Popen", spawn)
+    try:
+        pid = pause._relaunch_bare(entry)
+        assert children[0].wait(timeout=10) == 0
+        got = json.loads(receipt.read_text())
+        assert got["pid"] == pid == children[0].pid
+        assert got["cwd"] == str(launched if cwd_record == "present" else install_root)
+        assert Path(got["module"]).resolve() == Path(pause.__file__).resolve()
+        assert got["argv"] == [str(receipt)]
+        assert got["env"]["HERMES_HOME"] == str(home)
+        assert got["env"]["PYTHONPATH"].split(os.pathsep) == [str(install_root), prepared["PYTHONPATH"]]
+        assert not {"INVOCATION_ID", "JOURNAL_STREAM", "HERMES_UPDATE_PAUSED", "_HERMES_GATEWAY"} & got["env"].keys()
+        assert pause._REPLAY_ENVS[str(home)] == prepared
+    finally:
+        for child in children:
+            if child.poll() is None:
+                child.kill()
+            child.wait(timeout=10)
