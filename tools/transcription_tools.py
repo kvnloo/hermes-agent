@@ -42,6 +42,7 @@ from tools.transcription_cloud import (
     _transcribe_elevenlabs, _transcribe_groq, _transcribe_mistral, _transcribe_openai,
     _transcribe_xai)
 from tools.transcription_command import (
+    _WHISPER_PROMPT_CAPPED_PROVIDERS,
     _apply_pre_transcription_hook, _dispatch_to_plugin_provider, _enforce_prompt_length_limit,
     _resolve_command_stt_provider_config, _transcribe_command_stt, _unregistered_stt_provider_error)
 
@@ -528,18 +529,20 @@ def _transcript_echoes_prompt(transcript: str, prompt: str) -> bool:
     from difflib import SequenceMatcher
 
     heard, hint = _normalize_for_echo(transcript), _normalize_for_echo(prompt)
-    return bool(heard and hint) and SequenceMatcher(None, heard, hint).ratio() >= 0.9
+    return bool(heard and hint) and SequenceMatcher(None, heard, hint, autojunk=False).ratio() >= 0.9
 
 
 def _route_stt_provider(
     file_path: str, provider: str, stt_config: dict[str, Any], model: Optional[str],
     language: Optional[str], prompt: Optional[str]) -> dict[str, Any]:
-    """Transcribe with *provider*; a transcript that only echoes the prompt is decoded once more without it.
+    """Transcribe with *provider*; hosted Whisper prompt echoes are decoded once more without it.
 
     Whisper reads the prompt as text spoken just before the audio, so on silence or faint speech it
     can return the prompt itself as a confident transcript (#155798)."""
     result = _route_stt_provider_once(file_path, provider, stt_config, model, language, prompt)
-    if prompt and result.get("success") and _transcript_echoes_prompt(str(result.get("transcript") or ""), prompt):
+    if (provider in (_WHISPER_PROMPT_CAPPED_PROVIDERS & CLOUD_STT_PROVIDERS)
+            and prompt and result.get("success")
+            and _transcript_echoes_prompt(str(result.get("transcript") or ""), prompt)):
         logger.warning("STT provider %s returned its prompt as the transcript; retrying without the prompt", provider)
         result = _route_stt_provider_once(file_path, provider, stt_config, model, language, None)
     return result
