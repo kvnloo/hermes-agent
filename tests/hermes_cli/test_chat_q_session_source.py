@@ -78,3 +78,24 @@ def test_create_vocabulary_matches_the_canonical_literal():
 
     literal = CanonicalCreateParams.model_fields["source"].annotation
     assert set(literal.__args__) == set(ss.CREATE_SOURCES)
+
+def test_explicit_desktop_alias_clears_the_create_contract(monkeypatch):
+    """An explicit --source desktop uses its gui creation surface, not a refused row label.
+
+    The source-bounding fix must preserve the documented alias from #143593 when rebased.
+    """
+    from hermes_cli.gateway_session_store import GatewaySessionStore
+    from tui_gateway.contracts.registry import CANONICAL_METHODS, canonical_param_problems
+
+    monkeypatch.setenv("HERMES_SESSION_SOURCE", "desktop")
+    monkeypatch.setenv("HERMES_SESSION_SOURCE_EXPLICIT", "1")
+    monkeypatch.setenv("HERMES_SINGLE_QUERY_SESSION", "1")
+    captured = {}
+    store = GatewaySessionStore.__new__(GatewaySessionStore)
+    store.call = lambda method, **params: captured.update(params) or {"stored_session_id": "local-test"}
+    store._adopt = lambda snapshot: "local-test"
+
+    store.create()
+
+    assert captured["source"] == "gui"
+    assert canonical_param_problems(CANONICAL_METHODS["session.create"], captured) == []

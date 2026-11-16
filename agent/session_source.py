@@ -50,6 +50,10 @@ def create_wire_source_for(platform: Optional[str]) -> str:
     of failing the whole launch with ``invalid_params``. An explicit ``--source`` is kept
     verbatim: the gateway refuses what it cannot store, and that refusal is the user's to see."""
     source = session_source_for(platform)
+    # "desktop" is the stored transport label; "gui" is its canonical create surface.
+    # Keep the existing explicit --source desktop CLI alias when this fix is rebased.
+    if source == "desktop":
+        return "gui"
     if source in CREATE_SOURCES or get_session_env("HERMES_SESSION_SOURCE_EXPLICIT", "") == "1":
         return source
     if get_session_env("HERMES_SINGLE_QUERY_SESSION", "") == "1":
