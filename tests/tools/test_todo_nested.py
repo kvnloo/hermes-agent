@@ -46,6 +46,22 @@ class TestParentValidation:
                 seen.add(node["id"])
                 node = by_id[node["parent"]]
 
+    def test_ancestor_cycle_keeps_descendant_attached(self):
+        """A child outside an ancestor cycle keeps its valid parent edge.
+
+        Regression for NousResearch/hermes-agent#156671 (Imad2702).
+        """
+        store = TodoStore()
+        items = store.write([
+            _item("1", parent="2"),
+            _item("2", parent="3"),
+            _item("3", parent="2"),
+        ])
+        by_id = {item["id"]: item for item in items}
+        assert by_id["1"]["parent"] == "2"
+        # One cycle edge is cut; neither participant may remain cyclic.
+        assert sum("parent" not in by_id[i] for i in ("2", "3")) == 1
+
     def test_empty_parent_omitted(self):
         store = TodoStore()
         items = store.write([_item("a", parent="")])

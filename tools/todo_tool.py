@@ -169,7 +169,7 @@ class TodoStore:
             seen, node = {item["id"]}, item
             while node.get("parent"):
                 if node["parent"] in seen:
-                    item.pop("parent", None)
+                    node.pop("parent", None)
                     break
                 seen.add(node["parent"])
                 node = by_id[node["parent"]]
