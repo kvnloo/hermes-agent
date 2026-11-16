@@ -1009,6 +1009,58 @@ class TestAdapterBehavior(unittest.TestCase):
         )
         adapter._dispatch_inbound_event.assert_not_awaited()
 
+
+    def test_quoted_empty_reply_requires_actual_bot_mention(self):
+        """A quote anchor alone must not turn an empty reply into a model request."""
+        from gateway.config import PlatformConfig
+        from plugins.platforms.feishu.adapter import FeishuAdapter
+
+        for has_bot_mention in (True, False):
+            with self.subTest(has_bot_mention=has_bot_mention):
+                adapter = FeishuAdapter(PlatformConfig())
+                adapter._bot_open_id = "ou_bot"
+                adapter._dispatch_inbound_event = AsyncMock()
+                adapter._resolve_sender_name_from_api = AsyncMock(return_value="Alex")
+                adapter.get_chat_info = AsyncMock(
+                    return_value={"chat_id": "oc_chat", "name": "DM", "type": "dm"}
+                )
+                adapter._fetch_message_text = AsyncMock(return_value="Please summarize this")
+                message = SimpleNamespace(
+                    chat_id="oc_chat",
+                    thread_id=None,
+                    message_type="text",
+                    content='{"text":"@_user_1"}' if has_bot_mention else '{"text":" "}',
+                    message_id="om_quote",
+                    parent_id="om_parent",
+                    root_id="om_parent",
+                    mentions=[
+                        SimpleNamespace(
+                            key="@_user_1", name="Bot",
+                            id=SimpleNamespace(open_id="ou_bot", user_id=None),
+                        )
+                    ] if has_bot_mention else [],
+                )
+                data = SimpleNamespace(event=SimpleNamespace(message=message), sender=None)
+                asyncio.run(
+                    adapter._process_inbound_message(
+                        data=data,
+                        message=message,
+                        sender_id=SimpleNamespace(open_id="ou_user", user_id=None, union_id=None),
+                        chat_type="p2p",
+                        message_id="om_quote",
+                    )
+                )
+
+                if has_bot_mention:
+                    adapter._dispatch_inbound_event.assert_awaited_once()
+                    event = adapter._dispatch_inbound_event.await_args.args[0]
+                    self.assertIn("answer the message they quoted", event.text)
+                    self.assertEqual(event.reply_to_message_id, "om_parent")
+                    self.assertEqual(event.reply_to_text, "Please summarize this")
+                else:
+                    adapter._dispatch_inbound_event.assert_not_awaited()
+                    adapter._fetch_message_text.assert_not_awaited()
+
     @patch.dict(
         os.environ,
         {
