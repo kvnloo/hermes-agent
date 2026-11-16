@@ -147,3 +147,52 @@ def test_guest_barriers_cache_unset_synchronous_and_detect_new_config(monkeypatc
     finally:
         conn.close()
     assert loads == [config_path, config_path]
+
+
+def test_guest_ledger_reloads_real_user_and_managed_config(monkeypatch, tmp_path):
+    """Real guest connections preserve journal ownership and observe config edits."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    import hermes_cli.config as config_mod
+    from tools.async_delegation import _connect
+
+    home = tmp_path / "profile"
+    managed = tmp_path / "managed"
+    home.mkdir()
+    managed.mkdir()
+    config = home / "config.yaml"
+    config.write_text("database:\n  synchronous: FULL\n")
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("HERMES_MANAGED_DIR", str(managed))
+    load_config = config_mod.load_config_readonly
+    loads = []
+
+    def counted_load(*args, **kwargs):
+        loads.append(config)
+        return load_config(*args, **kwargs)
+
+    monkeypatch.setattr(config_mod, "load_config_readonly", counted_load)
+
+    def open_guest():
+        conn = _connect()
+        try:
+            return (
+                conn.execute("PRAGMA synchronous").fetchone()[0],
+                conn.execute("PRAGMA journal_mode").fetchone()[0],
+            )
+        finally:
+            conn.close()
+
+    with ThreadPoolExecutor(max_workers=1) as worker:
+        assert [worker.submit(open_guest).result() for _ in range(20)] == [(2, "delete")] * 20
+        assert len(loads) == 1
+        config.write_text("database:\n  synchronous: EXTRA\n")
+        assert worker.submit(open_guest).result() == (3, "delete")
+        assert len(loads) == 2
+        overlay = managed / "config.yaml"
+        overlay.write_text("database:\n  synchronous: FULL\n")
+        assert worker.submit(open_guest).result() == (2, "delete")
+        assert len(loads) == 3
+        overlay.write_text("database:\n  synchronous: EXTRA\n")
+        assert worker.submit(open_guest).result() == (3, "delete")
+        assert len(loads) == 4
