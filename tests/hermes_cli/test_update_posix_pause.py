@@ -14,6 +14,7 @@ import subprocess
 import sys
 import threading
 import time
+from pathlib import Path
 
 import pytest
 
@@ -217,3 +218,58 @@ def test_a_launchd_job_is_paused_through_launchd_and_restarted_through_it(tmp_pa
         assert pid() and pid() != first, "the restart did not bring the job back under launchd"
     finally:
         subprocess.run(["launchctl", "bootout", f"{domain}/{label}"], capture_output=True, check=False)
+
+
+@pytest.mark.platforms("posix")
+def test_bare_update_replay_keeps_gateway_launch_cwd_and_module_path(tmp_path, monkeypatch):
+    """Regression for #148371, reported by AndreaB321: an aborted Desktop gateway update from
+    another directory must not replay the original -m command in the updater's cwd."""
+    from hermes_cli import gateway as gateway_mod
+    from hermes_cli import update_cmd_fleet, update_cmd_posix_pause as pause, update_fleet_scope
+
+    launched, updater = tmp_path / "gateway-launch", tmp_path / "updater-shell"
+    launched.mkdir()
+    updater.mkdir()
+    old = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"],
+                           cwd=launched, stdin=subprocess.DEVNULL)
+    try:
+        monkeypatch.setattr(gateway_mod, "_get_service_pids", lambda **kwargs: set())
+        monkeypatch.setattr(gateway_mod, "find_gateway_pids", lambda **kwargs: [old.pid])
+        monkeypatch.setattr(gateway_mod, "_capture_gateway_argv",
+                            lambda pid: [sys.executable, "-m", "hermes_cli.main", "gateway", "run"])
+        monkeypatch.setattr(update_cmd_fleet, "_scoped_manual_gateway_pids", lambda pids: pids)
+        monkeypatch.setattr(update_fleet_scope, "gateway_pid_home", lambda pid: tmp_path / "home")
+        monkeypatch.setattr(pause, "_supervisor_markers", lambda pid: None)
+
+        entries, notices = pause._discover_bare(set())
+        assert not notices and len(entries) == 1
+        assert entries[0]["cwd"] == str(launched)
+
+        spawned = {}
+
+        class Child:
+            def poll(self):
+                return None
+
+        def capture_spawn(argv, **kwargs):
+            spawned.update(argv=argv, **kwargs)
+            return Child()
+
+        ready = iter((None, 9000))
+        monkeypatch.setattr(pause, "_gateway_on_home", lambda home, exclude: next(ready))
+        monkeypatch.setattr(pause, "_replay_env", lambda home: {
+            "HERMES_HOME": home, "PYTHONPATH": "/some-other-package",
+        })
+        monkeypatch.setattr(pause.subprocess, "Popen", capture_spawn)
+        monkeypatch.chdir(updater)
+
+        assert pause._relaunch_bare(entries[0]) == 9000
+        assert spawned["cwd"] == str(launched)
+        assert spawned["argv"][1:3] == ["-m", "hermes_cli.main"]
+        assert spawned["env"]["HERMES_HOME"] == str(tmp_path / "home")
+        assert spawned["env"]["PYTHONPATH"].split(os.pathsep)[0] == str(
+            Path(pause.__file__).resolve().parent.parent
+        )
+    finally:
+        old.kill()
+        old.wait(timeout=10)
