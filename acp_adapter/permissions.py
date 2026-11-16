@@ -147,7 +147,10 @@ def make_approval_callback(request_permission_fn: Callable, loop: asyncio.Abstra
             # without user response" instead of a user denial.
             return "timeout"
         if response is None:
-            return "deny"
+            # No ACP answer was received; this is not a human refusal.
+            from tools.approval_prompt import Unanswered
+
+            return Unanswered("ACP permission request failed before a user could answer")
         return _map_outcome_to_hermes(response.outcome, allowed_option_ids={option.option_id for option in options})
 
     return _callback

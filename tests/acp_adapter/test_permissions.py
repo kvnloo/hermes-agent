@@ -15,6 +15,7 @@ from acp.schema import (
 
 from acp_adapter.permissions import make_approval_callback
 from tools.approval import prompt_dangerous_approval
+from tools.approval_prompt import Unanswered
 
 
 def _make_response(outcome):
@@ -175,7 +176,7 @@ import warnings
 
 class TestSchedulerFailure:
     def test_scheduler_failure_closes_permission_coroutine(self):
-        """If run_coroutine_threadsafe raises, the coro is closed and we return 'deny'."""
+        """A scheduler failure closes the coroutine and cannot masquerade as human denial."""
         loop = MagicMock(spec=asyncio.AbstractEventLoop)
         created = {"coro": None}
 
@@ -192,11 +193,13 @@ class TestSchedulerFailure:
                 "agent.async_utils.asyncio.run_coroutine_threadsafe",
                 side_effect=RuntimeError("scheduler down"),
             ):
-                cb = make_approval_callback(_request_permission, loop, session_id="s1", timeout=0.01)
+                cb = make_approval_callback(_request_permission, loop, session_id="s1")
                 result = cb("rm -rf /", "dangerous")
             gc.collect()
 
-        assert result == "deny"
+        assert isinstance(result, Unanswered)
+        assert result == "cancelled"
+        assert "permission request failed" in result.cause
         assert created["coro"] is not None
         assert created["coro"].cr_frame is None
         runtime_warnings = [
@@ -206,6 +209,35 @@ class TestSchedulerFailure:
             and "_response_coro" in str(w.message)
         ]
         assert runtime_warnings == []
+
+    def test_request_exception_does_not_impersonate_a_human_refusal(self):
+        request_permission = AsyncMock(name="request_permission")
+        future = MagicMock(spec=Future)
+        future.result.side_effect = ConnectionError("ACP client disconnected")
+
+        def _schedule(coro, _loop, **_kwargs):
+            coro.close()
+            return future
+
+        with patch("agent.async_utils.safe_schedule_threadsafe", side_effect=_schedule):
+            callback = make_approval_callback(
+                request_permission, MagicMock(spec=asyncio.AbstractEventLoop), "s1",
+            )
+            decision = prompt_dangerous_approval(
+                "rm -rf /", "dangerous", approval_callback=callback,
+            )
+
+        assert isinstance(decision, Unanswered)
+        assert decision == "cancelled"
+        assert "permission request failed" in decision.cause
+        future.cancel.assert_called_once()
+
+    def test_explicit_human_deny_still_reports_deny(self):
+        decision, *_ = _invoke_callback(
+            AllowedOutcome(option_id="deny", outcome="selected"),
+            use_prompt_path=True,
+        )
+        assert decision == "deny"
 
 
 class TestPermissionRequestToolCallReachesATerminalStatus:
