@@ -228,6 +228,40 @@ def test_op_child_env_forwards_config_directory(monkeypatch):
     assert "UNRELATED_PROVIDER_TOKEN" not in env
 
 
+@pytest.mark.platforms("windows")
+def test_op_read_keeps_systemroot_from_staged_windows_environment(monkeypatch):
+    """Regression for #147935: a staged dict uppercases Windows SystemRoot."""
+    staged = {
+        "SYSTEMROOT": r"C:\Windows",
+        "PATH": r"C:\Windows\System32",
+        "OPENAI_API_KEY": "do-not-forward",
+    }
+    monkeypatch.setattr(op, "get_source_environment", lambda: staged)
+
+    def fake_run(cmd, **kwargs):
+        assert cmd[-3:] == ["read", "--", "op://Private/Item/field"]
+        assert kwargs["env"]["SystemRoot"] == staged["SYSTEMROOT"]
+        assert kwargs["env"]["PATH"] == staged["PATH"]
+        assert "OPENAI_API_KEY" not in kwargs["env"]
+        return _ok("resolved\n")
+
+    monkeypatch.setattr(op.subprocess, "run", fake_run)
+    assert op._run_op_read(Path("op"), "op://Private/Item/field") == "resolved"
+
+
+@pytest.mark.platforms("posix")
+def test_op_child_env_remains_case_sensitive_on_posix(monkeypatch):
+    staged = {"path": "/untrusted", "SYSTEMROOT": "/not-windows", "PATH": "/usr/bin"}
+    monkeypatch.setattr(op, "get_source_environment", lambda: staged)
+
+    env = op._op_child_env("")
+
+    assert env["PATH"] == "/usr/bin"
+    assert "path" not in env
+    assert "SystemRoot" not in env
+    assert "SYSTEMROOT" not in env
+
+
 # ---------------------------------------------------------------------------
 # apply_onepassword_secrets
 # ---------------------------------------------------------------------------
