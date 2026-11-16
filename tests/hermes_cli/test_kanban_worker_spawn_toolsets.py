@@ -220,3 +220,49 @@ toolsets:
     assert "kanban_complete" in names
     assert "kanban_list" not in names
     assert resolved != ["kanban"]
+
+
+def test_default_spawn_uses_fork_safe_spawn_preserving_detachment(monkeypatch, tmp_path):
+    """A gateway Kanban worker cannot bypass the fork-safe launcher (#97296).
+
+    The dedicated macOS test verifies the launcher's no-fork behavior; this test
+    guards the dispatcher's use of that launcher on every supported host.
+    """
+    from hermes_cli import kanban_db as kb
+    from hermes_cli import kanban_db_dispatch as kbd
+
+    root = tmp_path / ".hermes"
+    (root / "profiles" / "elias").mkdir(parents=True)
+    (root / "config.yaml").write_text("{}\n", encoding="utf-8")
+    monkeypatch.setenv("HERMES_HOME", str(root))
+    monkeypatch.setattr(kbd, "_resolve_hermes_argv", lambda: ["hermes"])
+
+    calls = []
+
+    class FakeWorker:
+        pid = 4246
+
+    def fork_safe_spawn(cmd, **kwargs):
+        calls.append((list(cmd), kwargs))
+        return FakeWorker()
+
+    def unsafe_spawn(*args, **kwargs):
+        raise AssertionError("Kanban dispatcher bypassed fork_safe_popen")
+
+    monkeypatch.setattr(subprocess, "Popen", unsafe_spawn)
+    monkeypatch.setattr(
+        "hermes_cli._subprocess_compat.fork_safe_popen", fork_safe_spawn, raising=False
+    )
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    pid = kbd._default_spawn(_make_task(kb, assignee="elias"), str(workspace))
+
+    assert pid == 4246
+    assert len(calls) == 1
+    _, kwargs = calls[0]
+    assert kwargs["cwd"] == str(workspace)
+    assert kwargs["start_new_session"] is True
+    assert kwargs["stdin"] == subprocess.DEVNULL
+    assert kwargs["stderr"] == subprocess.STDOUT
+    assert kwargs["env"]["HERMES_KANBAN_TASK"] == "t_spawn_tools"
