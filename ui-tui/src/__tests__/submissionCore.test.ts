@@ -260,6 +260,101 @@ describe('submissionCore.submitPrompt — voice marker ownership', () => {
   })
 })
 
+describe('submissionCore.submitPrompt — legacy busy retry', () => {
+  beforeEach(() => {
+    resetUiState()
+    patchUiState({ sid: 'sess-1' })
+  })
+
+  it.each(['session busy', 'waiting for model response'])(
+    'retains image attachment descriptors on %s',
+    async message => {
+      const attachments = [{ path: '/tmp/image.webp', mime: 'image/webp' }]
+      const enqueue = vi.fn()
+
+      const gw = {
+        request: vi.fn().mockRejectedValue(new Error(message))
+      } as unknown as GatewayClient
+
+      submitPrompt('describe this image', makeDeps(gw, { enqueue }), true, 'describe this image', {
+        skipDetectDrop: true,
+        attachments
+      })
+
+      await vi.waitFor(() => expect(enqueue).toHaveBeenCalledTimes(1))
+      expect(enqueue).toHaveBeenCalledWith('describe this image', 'describe this image', expect.anything(), attachments)
+    }
+  )
+
+  it.each([undefined, '[[ pasted note ]]'])('keeps the collapsed paste display with override %s', async displayOverride => {
+    const display = displayOverride ?? '[paste]'
+    const expand = (value: string) => value.replace('[paste]', 'expanded note')
+    const enqueue = vi.fn()
+    const sys = vi.fn()
+
+    const gw = {
+      request: vi.fn().mockRejectedValue(new Error('session busy'))
+    } as unknown as GatewayClient
+
+    submitPrompt('[paste]', makeDeps(gw, { enqueue, expand, sys }), true, displayOverride, { skipDetectDrop: true })
+    await vi.waitFor(() => expect(enqueue).toHaveBeenCalledTimes(1))
+    expect(enqueue).toHaveBeenCalledWith('expanded note', display, expect.anything(), undefined)
+    expect(sys).toHaveBeenCalledWith(`queued: "${display}"`)
+    expect(sys.mock.calls.flat().join(' ')).not.toContain('expanded note')
+  })
+})
+
+it('retains image descriptors from the real composer through the legacy busy queue and journal', async () => {
+  const { PassThrough } = await import('node:stream')
+  const { renderSync } = await import('@hermes/ink')
+  const { createElement } = await import('react')
+  const { useComposerState } = await import('../app/useComposerState.js')
+  const { useSubmission } = await import('../app/useSubmission.js')
+  const { loadPendingInputs } = await import('../lib/pendingInputs.js')
+  const gw = { request: vi.fn().mockResolvedValue({ matched: false }) } as unknown as GatewayClient
+
+  const noop = () => {}
+  const submitRef = { current: noop }
+  let dispatch: ((value: string) => void) | undefined
+  let readQueue: (() => ReturnType<typeof useComposerState>['refs']['queueRef']['current']) | undefined
+
+  resetUiState()
+  patchUiState({ sid: 'busy-image-owner', busy: true, busyInputMode: 'queue' })
+
+  function Harness() {
+    const composer = useComposerState({ gw, submitRef, sys: noop })
+
+    const submission = useSubmission({
+      appendMessage: noop, composerActions: composer.actions, composerRefs: composer.refs,
+      composerState: composer.state, gw, setLastUserMsg: noop, slashRef: { current: () => true }, submitRef, sys: noop
+    })
+
+    composer.refs.tokensRef.current = [{ kind: 'image', index: 1, label: '[[ Image 1 ]]', path: '/tmp/image.webp', mime: 'image/webp' }]
+    dispatch = submission.dispatchSubmission
+    readQueue = () => composer.refs.queueRef.current
+
+    return null
+  }
+
+  const instance = renderSync(createElement(Harness), {
+    stdin: new PassThrough(),
+    stdout: Object.assign(new PassThrough(), { columns: 80, rows: 20, isTTY: false }),
+    stderr: new PassThrough(), patchConsole: false
+  })
+
+  try {
+    expect(dispatch).toBeDefined()
+    dispatch?.('describe [[ Image 1 ]]')
+    const expected = { text: 'describe', display: 'describe [[ Image 1 ]]', attachments: [{ path: '/tmp/image.webp', mime: 'image/webp' }] }
+    expect(readQueue?.()).toEqual([expect.objectContaining(expected)])
+    expect(loadPendingInputs(captureDestination())).toEqual([expect.objectContaining(expected)])
+    expect(gw.request).not.toHaveBeenCalledWith('prompt.submit', expect.anything())
+  } finally {
+    instance.unmount()
+    resetUiState()
+  }
+})
+
 describe('submissionCore.submitPrompt — clarify batch declaration', () => {
   beforeEach(() => {
     resetUiState()
