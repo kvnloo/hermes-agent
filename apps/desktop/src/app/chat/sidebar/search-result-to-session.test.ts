@@ -40,6 +40,28 @@ describe('searchResultToSession', () => {
     expect(s.preview).toBe('...Report "PR #67834 still in draft..."')
   })
 
+  it('preserves an archived FTS hit\'s owning profile outside the loaded sidebar', () => {
+    // The search endpoint already projects these fields; the synthesized row
+    // must not lose them before onResumeSession receives it (#156566).
+    const session = searchResultToSession({
+      archived: true,
+      model: null,
+      profile: 'research',
+      role: 'assistant',
+      session_id: 'local-archived-history',
+      session_started: 1753450000,
+      snippet: '>>>archived<<< transcript',
+      source: 'agent'
+    })
+
+    expect(session).toMatchObject({
+      archived: true,
+      id: 'local-archived-history',
+      preview: 'archived transcript',
+      profile: 'research'
+    })
+  })
+
   it('leaves title null when the backend sends none (untitled session)', () => {
     const s = searchResultToSession({
       session_id: '20260720_233',

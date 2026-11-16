@@ -305,7 +305,7 @@ export function searchResultToSession(result: SessionSearchResult): SessionInfo 
   const ts = result.session_started ?? Date.now() / 1000
 
   return {
-    archived: false,
+    archived: result.archived ?? false,
     cwd: null,
     ended_at: null,
     id: result.session_id,
@@ -317,6 +317,7 @@ export function searchResultToSession(result: SessionSearchResult): SessionInfo 
     model: result.model ?? null,
     output_tokens: 0,
     preview: stripFtsMarkers(result.snippet ?? '').trim() || null,
+    profile: result.profile ?? undefined,
     source: result.source ?? null,
     started_at: ts,
     title: result.title?.trim() || null,
