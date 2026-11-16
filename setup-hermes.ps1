@@ -27,6 +27,7 @@ $lock = Get-Content -Raw $lockPath | ConvertFrom-Json
 $machineArch = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment' -ErrorAction SilentlyContinue).PROCESSOR_ARCHITECTURE
 if (-not $machineArch) { $machineArch = $env:PROCESSOR_ARCHITECTURE }
 $arch = if ($machineArch -eq 'ARM64') { 'arm64' } else { 'x64' }
+$target = "win32-$arch"
 # ---------------------------------------------------------------------------
 # Stage the pinned uv from pm/lock.json into the pm store slot
 # ---------------------------------------------------------------------------
@@ -141,19 +142,29 @@ if (-not $pyCandidate -and $bootPy) {
 
 $synced = $false
 if ($pyCandidate) {
-    & $pyCandidate -m tools.skills_sync 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host 'Skills synced' -ForegroundColor Green
-        $synced = $true
+    Push-Location $repo
+    try {
+        & $pyCandidate -m tools.skills_sync 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host 'Skills synced' -ForegroundColor Green
+            $synced = $true
+        }
+    } finally {
+        Pop-Location
     }
 }
 
 if (-not $synced) {
-    # Fallback: copy if sync script fails (missing deps, etc.)
+    # A raw copy cannot honor manifest, suppression, or user edits. Only seed
+    # a new, opted-in home; leave existing skill state for a later proper sync.
     $bundledSkills = Join-Path $repo 'skills'
-    if (Test-Path $bundledSkills) {
-        Copy-Item -Path (Join-Path $bundledSkills '*') -Destination $skillsDir -Recurse -Force -ErrorAction SilentlyContinue
+    $optedOut = Test-Path -LiteralPath (Join-Path (Split-Path -Parent $skillsDir) '.no-bundled-skills')
+    $hasSkills = @(Get-ChildItem -LiteralPath $skillsDir -Force).Count -gt 0
+    if ((Test-Path -LiteralPath $bundledSkills) -and -not $optedOut -and -not $hasSkills) {
+        Copy-Item -Path (Join-Path $bundledSkills '*') -Destination $skillsDir -Recurse -ErrorAction Stop
         Write-Host 'Skills copied' -ForegroundColor Green
+    } else {
+        Write-Warning 'Skills sync failed; existing skills were left untouched.'
     }
 }
 # ---------------------------------------------------------------------------

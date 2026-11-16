@@ -9,7 +9,7 @@ $repoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvoca
 $installer = Join-Path $repoRoot 'scripts/install.ps1'
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('hermes-utf8-' + [guid]::NewGuid())
 $savedEncoding = [Console]::OutputEncoding
-$envNames = @('HERMES_HOME', 'HERMES_RUNTIME_DIR', 'UTF8_PROBE_PYTHON', 'UTF8_PROBE_CALLS', 'UTF8_PROBE_PM', 'UTF8_PROBE_NEEDS_INSTALL', 'UTF8_PROBE_FIND_EXIT')
+$envNames = @('HERMES_HOME', 'HERMES_RUNTIME_DIR', 'UTF8_PROBE_PYTHON', 'UTF8_PROBE_CALLS', 'UTF8_PROBE_PM', 'UTF8_PROBE_SYNC', 'UTF8_PROBE_SYNC_FAIL', 'UTF8_PROBE_NEEDS_INSTALL', 'UTF8_PROBE_FIND_EXIT')
 $savedEnv = @{}
 foreach ($name in $envNames) { $savedEnv[$name] = [Environment]::GetEnvironmentVariable($name) }
 
@@ -81,6 +81,7 @@ public static class HermesUtf8Host {
     $env:UTF8_PROBE_PYTHON = Join-Path $profileDir 'python.exe'
     $env:UTF8_PROBE_CALLS = Join-Path $testRoot 'uv-calls.txt'
     $env:UTF8_PROBE_PM = Join-Path $testRoot 'pm-call.txt'
+    $env:UTF8_PROBE_SYNC = Join-Path $testRoot 'skills-sync-cwd.txt'
     $fixtureSource = Join-Path $testRoot 'fixture.cs'
     [IO.File]::WriteAllText($fixtureSource, @'
 using System;
@@ -91,6 +92,10 @@ class Fixture {
     static int Main(string[] args) {
         if (args[0] == "--version") { Console.WriteLine("uv 0.12.3 (fixture)"); return 0; }
         if (args[0] == "-m") {
+            if (args.Length > 1 && args[1] == "tools.skills_sync") {
+                File.WriteAllText(Env("UTF8_PROBE_SYNC"), Directory.GetCurrentDirectory());
+                return Env("UTF8_PROBE_SYNC_FAIL") == "1" ? 8 : 0;
+            }
             File.WriteAllText(Env("UTF8_PROBE_PM"), String.Join(" ", args));
             return 0;
         }
@@ -174,6 +179,25 @@ class Fixture {
             }
         }
         $env:UTF8_PROBE_FIND_EXIT = '0'
+
+        # Normal setup must dispatch the sync module from the checkout root
+        # even when PowerShell was started in another working directory.
+        Remove-Item -LiteralPath $env:UTF8_PROBE_SYNC -Force -ErrorAction SilentlyContinue
+        $callerCwd = (Get-Location).Path
+        & $setupScript
+        Assert-Equal $testInstallDir ([IO.File]::ReadAllText($env:UTF8_PROBE_SYNC)) 'skills sync runs from repository root'
+        Assert-Equal $callerCwd (Get-Location).Path 'skills sync restores caller cwd'
+
+        # A failed module sync must not overwrite user-customized skills.
+        $sourceSkill = Join-Path $testInstallDir 'skills\sample'
+        $userSkill = Join-Path $env:HERMES_HOME 'skills\sample'
+        New-Item -ItemType Directory -Path $sourceSkill, $userSkill -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $sourceSkill 'SKILL.md'), 'bundled original')
+        [IO.File]::WriteAllText((Join-Path $userSkill 'SKILL.md'), 'user customized')
+        $env:UTF8_PROBE_SYNC_FAIL = '1'
+        & $setupScript
+        Assert-Equal 'user customized' ([IO.File]::ReadAllText((Join-Path $userSkill 'SKILL.md'))) 'fallback preserves customized skills'
+        Remove-Item env:UTF8_PROBE_SYNC_FAIL -ErrorAction SilentlyContinue
 
         # UTF-8 capture preserves bytes, exit status and caller state,
         # including a terminating failure inside the supplied scriptblock.
