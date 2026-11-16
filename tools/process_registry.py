@@ -603,6 +603,8 @@ class ProcessSession:
     _watch_cooldown_until: float = field(default=0.0, repr=False)
     _watch_strike_candidate: bool = field(default=False, repr=False)
     _watch_consecutive_strikes: int = field(default=0, repr=False)
+    # A watcher can retain this session after the registry drops its per-id dedupe mark.
+    _completion_consumed: bool = field(default=False, repr=False)
     _completion_event: threading.Event = field(default_factory=threading.Event, repr=False)
     # Set by the _move_to_finished call that moved the session out of _running; only that call
     # publishes the completion, so a duplicate finisher must not release waiters early.
@@ -2015,6 +2017,7 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
                 self._poll_observed.add(session.id)
                 if acknowledge:
                     self._completion_consumed.add(session.id)
+                    session._completion_consumed = True
         if session.detached and not session.output_log:
             result.update(detached=True, note="Process recovered after restart -- output history unavailable")
         return result
@@ -2047,6 +2050,7 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
             "total_lines": total_lines, "showing": f"{len(selected)} lines"}
         if exited and observed_completion_output and not finalizing:
             self._completion_consumed.add(session.id)
+            session._completion_consumed = True
         return result
 
     def wait(self, session_id: str, timeout: int | None = None) -> dict:
@@ -2078,6 +2082,7 @@ class ProcessRegistry(ProcessTerminationMixin, ProcessCheckpointMixin, ProcessOu
             result = None
             if session.exited and not self._reader_finalizing(session):
                 self._completion_consumed.add(session.id)
+                session._completion_consumed = True
                 result = self._exit_snapshot(session, "exited")
             elif _is_interrupted():
                 result = {

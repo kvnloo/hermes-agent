@@ -593,6 +593,66 @@ async def test_watcher_delivers_completion_of_a_session_the_registry_dropped_aft
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("already_read", [False, True])
+async def test_evicted_completion_respects_prior_read(monkeypatch, tmp_path, already_read):
+    """A cached watcher delivers an unread exit, but never duplicates wait/log after capacity pruning.
+
+    Regressions: without the carrier's cached session the unread exit vanishes; with the
+    cache alone, pruning erases the id-level consumed marker and re-delivers an already-read exit.
+    """
+    import time
+    import tools.process_registry as pr_module
+    from tools.process_registry import FINISHED_TTL_SECONDS, MAX_PROCESSES, ProcessRegistry, ProcessSession
+
+    registry = ProcessRegistry()
+    session = ProcessSession(
+        id="proc_cached_capacity", command="echo done", task_id="task",
+        started_at=time.time() - FINISHED_TTL_SECONDS - 1,
+        output_buffer="done\n", notify_on_complete=True,
+    )
+    registry._running[session.id] = session
+    monkeypatch.setattr(pr_module, "process_registry", registry)
+
+    ticks = 0
+
+    async def _advance(*_a, **_kw):
+        nonlocal ticks
+        ticks += 1
+        if ticks != 2:
+            return
+        session.mark_exited(0)
+        session.exited_at = time.time()
+        session._completion_event.set()
+        registry._running.pop(session.id)
+        registry._finished[session.id] = session
+        if already_read:
+            assert registry.read_log(session.id)["status"] == "exited"
+            assert registry.is_completion_consumed(session.id)
+        # Use the production capacity (64), not a lowered test-only threshold.
+        for idx in range(MAX_PROCESSES - 1):
+            filler = ProcessSession(
+                id=f"proc_filler_{idx}", command="true", task_id="task",
+                started_at=time.time(), exited=True, exited_at=time.time(),
+            )
+            registry._finished[filler.id] = filler
+        with registry._lock:
+            registry._prune_if_needed()
+        assert session.id not in registry._finished
+        assert not registry.is_completion_consumed(session.id)
+
+    monkeypatch.setattr(asyncio, "sleep", _advance)
+    runner = _build_runner(monkeypatch, tmp_path, "concise")
+    runner._enqueue_process_completion_notification = AsyncMock(return_value=True)
+
+    await runner._run_process_watcher({**_watcher_dict(session.id), "notify_on_complete": True})
+
+    if already_read:
+        runner._enqueue_process_completion_notification.assert_not_awaited()
+    else:
+        runner._enqueue_process_completion_notification.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_watcher_warns_when_the_session_vanishes_before_it_was_ever_seen(monkeypatch, tmp_path, caplog):
     import tools.process_registry as pr_module
 
