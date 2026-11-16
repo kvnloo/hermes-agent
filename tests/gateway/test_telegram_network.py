@@ -675,3 +675,33 @@ class TestPostSendFailureRetiresPath:
         assert resp.status_code == 200
         assert pools[1].closed and transport._sticky_ip == "149.154.167.220"
         await transport.aclose()
+
+
+    @pytest.mark.asyncio
+    async def test_write_error_retires_pool_without_replaying_media(self, monkeypatch):
+        """A broken media upload must use a fresh pool on the caller's next attempt."""
+        def failed_write(_request):
+            raise httpx.WriteError("stale keep-alive socket while writing")
+
+        factory, pools = _pool_factory(failed_write)
+        monkeypatch.setattr(tnet.httpx, "AsyncHTTPTransport", factory)
+        transport = tnet.TelegramFallbackTransport(
+            ["149.154.166.110"], proxy=None, connect_budget=tnet._WALK_CONNECT_BUDGET_S,
+        )
+        request = httpx.Request(
+            "POST", "https://api.telegram.org/botTOKEN/sendVoice", content=b"audio",
+        )
+
+        with pytest.raises(httpx.WriteError):
+            await transport.handle_async_request(request)
+
+        # Do not resend this ambiguous POST inside the transport.
+        assert [p.calls for p in pools] == [0, 1]
+        assert pools[1].closed
+
+        # The caller's separate retry gets a new generation, not the dead socket.
+        retried = await transport.handle_async_request(request)
+        assert await retried.aread() == b'{"ok":true}'
+        await retried.aclose()
+        assert [p.calls for p in pools] == [0, 1, 1]
+        await transport.aclose()

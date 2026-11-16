@@ -583,7 +583,13 @@ def _is_retryable_connect_error(exc: Exception) -> bool:
 #: it on another path could post a message twice, so the path's pool is retired and its sticky pin
 #: cleared, then the error goes to the caller, whose own retry gets a fresh pool. Left unhandled,
 #: the dead socket stayed pinned and every retry reused it until the process restarted (#156504).
-_POST_SEND_FAILURES = (httpx.ReadTimeout, httpx.WriteTimeout, httpx.ReadError, httpx.RemoteProtocolError)
+_POST_SEND_FAILURES = (
+    httpx.ReadTimeout,
+    httpx.WriteTimeout,
+    httpx.WriteError,
+    httpx.ReadError,
+    httpx.RemoteProtocolError,
+)
 
 
 class _RetireOnReadFailure(httpx.AsyncByteStream):
