@@ -75,6 +75,22 @@ def tree_fingerprint(plugin_dir: Path) -> str:
     return hashlib.sha1("\n".join(entries).encode("utf-8")).hexdigest()[:12]
 
 
+def publication_status(plugin_dir: Path) -> tuple[bool, str]:
+    """Read whether this exact installed provider tree published a profile, without rescanning.
+
+    PluginManager holds a manifest-only placeholder. A missing import, a pending scan, or a
+    tree that imported no profiles has no error but is not an activated model provider.
+    """
+    import providers as P
+
+    layer, _home, home_key = P._bound_home_layer()
+    base_name = P._user_module_name(plugin_dir, home_key)
+    live = layer.trees.get(base_name)
+    published = bool(live and live[0] == tree_fingerprint(plugin_dir)
+                     and any(owner == base_name for owner in layer.owner.values()))
+    return published, layer.errors.get(plugin_dir.name, "")
+
+
 def import_into_layer(plugin_dir: Path, source: str, base_name: str) -> None:
     """Import *plugin_dir* into the layer being scanned unless that exact tree is already live there; an
     updated tree replaces the live one only once it imported completely."""

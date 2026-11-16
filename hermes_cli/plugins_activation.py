@@ -64,9 +64,9 @@ def plugin_activation_summary(manager: Any, plugin_key: str) -> dict[str, Any]:
     if getattr(manifest, "kind", None) == "model-provider":
         # providers/ discovery owns these and the forced sweep re-scans them: an updated tree serves new
         # sessions once it imported; a failed import leaves the previous version serving (#153300).
-        from providers import plugin_load_error
-        load_error = plugin_load_error(Path(getattr(manifest, "path", None) or name).name)
-        if not load_error:
+        from providers.plugin_reload import publication_status
+        published, load_error = publication_status(Path(getattr(manifest, "path", None) or name))
+        if published and not load_error:
             now["provider"] = [name]
     deferred: dict[str, list[str]] = {}
     tools = sorted(set(kinds.get("tool", ())) | set(getattr(loaded, "tools_registered", None) or ())
@@ -151,6 +151,15 @@ def activate_plugin_now(name: str, *, in_process: bool = True) -> dict[str, Any]
             "backend": (activation or {}).get("missing_dependencies") or []}
     if reloaded and activation is None:
         activation = gateway_activation
+    if reloaded and (gateway_activation is not None
+                     or ((activation or {}).get("activated_now") or {}).get("provider")):
+        # A backend can import a provider that the gateway did not publish; only the gateway
+        # can attest what its new sessions serve.
+        now = {k: v for k, v in ((activation or {}).get("activated_now") or {}).items()
+               if k != "provider"}
+        if published := ((gateway_activation or {}).get("activated_now") or {}).get("provider"):
+            now["provider"] = published
+        activation = {**(activation or gateway_activation), "activated_now": now}
     missing = sorted({*gaps["gateway"], *gaps["backend"]})
     if missing:
         activation = {**(activation or {"name": name, "key": name}), "missing_dependencies": missing,
