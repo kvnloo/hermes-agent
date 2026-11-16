@@ -96,3 +96,15 @@ def test_clearing_through_a_canonical_bot_chat_ancestor_keeps_its_name(tmp_path)
         with pytest.raises(ValueError, match='canonical Bot Chat'):
             _rename(db, epoch, 'chat', '', 'b1')
         assert db.resolve_session_by_title(db.CANONICAL_BOT_CHAT_TITLE) is not None
+
+
+def test_nonempty_rename_frees_different_old_ancestor_title(tmp_path):
+    """A stale-tab rename must not leave the previous root title reserved but invisible."""
+    with SessionDB(db_path=tmp_path / 'state.db') as db:
+        epoch = _compressed(db, root_title='Old name')
+        assert _rename(db, epoch, 'chat', 'New name', 'n1')['title'] == 'New name'
+        assert db.get_session('chat-2')['title'] == 'New name'
+        assert db.get_session('chat')['title'] is None
+        db.create_session('fresh', source='desktop')
+        assert db.set_session_title('fresh', 'Old name')
+        assert db.get_session_by_title('Old name')['id'] == 'fresh'

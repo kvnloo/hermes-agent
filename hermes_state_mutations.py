@@ -123,6 +123,13 @@ def apply_action(db, conn, session_id, operation, payload, *, prepared=None):
                     for sid in lineage:
                         affected.update(db._set_session_title_in_transaction(
                             conn, sid, value, source=db.TITLE_SOURCE_USER))
+                else:
+                    # The tip's new name supersedes earlier segment titles, even if they differ.
+                    # Otherwise an invisible ancestor keeps the old name reserved forever.
+                    for sid in lineage:
+                        if sid != tip:
+                            affected.update(db._set_session_title_in_transaction(
+                                conn, sid, '', source=db.TITLE_SOURCE_USER))
             result[key] = conn.execute('SELECT title FROM sessions WHERE id=?', (tip,)).fetchone()[0]
         else:
             column = 'last_read_at' if key == 'unread' else key
