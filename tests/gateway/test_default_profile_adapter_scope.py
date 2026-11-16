@@ -71,6 +71,28 @@ def test_default_profile_creation_reads_default_root_value(rig):
     assert seen["factory"] == ["default-root-value"]
 
 
+@pytest.mark.asyncio
+async def test_startup_prefilter_creates_primary_plugin_in_default_scope(rig):
+    runner, seen, _ = rig
+    platform = Platform(NAME)
+    cfg = PlatformConfig(enabled=True)
+    runner.config.platforms[platform] = cfg
+    runner._abort_startup_if_shutdown_requested = AsyncMock(return_value=False)
+    runner._wire_adapter_handlers = MagicMock()
+
+    aborted, enabled, skipped, pending = await runner._start_prefilter_platforms()
+
+    assert not aborted
+    assert enabled == 1
+    assert skipped == []
+    assert len(pending) == 1
+    assert pending[0][0] == platform
+    assert pending[0][2] is not None
+    assert seen == {"validate": ["default-root-value"], "factory": ["default-root-value"]}
+    with pytest.raises(UnscopedSecretError):
+        get_secret(VAR)
+
+
 def test_creation_without_scope_fails_closed(rig):
     runner, seen, _ = rig
     assert runner._create_adapter(Platform(NAME), PlatformConfig(enabled=True)) is None
