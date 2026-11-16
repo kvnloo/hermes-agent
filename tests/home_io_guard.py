@@ -197,8 +197,8 @@ class HomeIOGuard:
                     if _within(absolute, git_dir) or _contains(absolute, git_dir):
                         return
             # The sealed-payload manifest beside the checkout (see _payload_manifest_paths):
-            # hermes_bootstrap's install probe, not Hermes state. Exact paths only.
-            if absolute in _PAYLOAD_MANIFEST_STRS:
+            # hermes_bootstrap's install probe, not Hermes state. Keep writes guarded.
+            if not destructive and absolute in _PAYLOAD_MANIFEST_STRS:
                 return
             # Check the lexical path first: resolving must not probe a protected
             # tree merely to decide that the original path was forbidden.
@@ -213,7 +213,7 @@ class HomeIOGuard:
             for prefix in _INTERPRETER_PREFIX_STRS:
                 if _within(resolved, prefix):
                     return
-            if resolved in _PAYLOAD_MANIFEST_STRS:
+            if not destructive and resolved in _PAYLOAD_MANIFEST_STRS:
                 return
             for root in roots:
                 if _within(resolved, root) and not _disposable_workspace(resolved, root, destructive=destructive):
