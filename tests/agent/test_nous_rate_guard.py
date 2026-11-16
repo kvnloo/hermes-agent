@@ -291,6 +291,8 @@ class TestWelcomeRouteCopy:
     def _drive_guard(base_url, monkeypatch):
         from types import SimpleNamespace
 
+        # The guard is under test, not install recovery in the live checkout.
+        monkeypatch.setattr("hermes_cli._early_recovery.restore_interrupted_pull", lambda root: False)
         from agent import nous_rate_guard
         from agent.turn_api_call import nous_rate_limit_guard
 

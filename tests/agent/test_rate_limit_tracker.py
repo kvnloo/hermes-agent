@@ -113,12 +113,37 @@ class TestPartialHeaders:
         assert state.tokens_min.limit == 1000
         assert state.tokens_min.remaining == 450
         assert state.tokens_min.usage_pct == pytest.approx(55.0)
-        assert "TPM: 450/1000" in format_rate_limit_compact(state)
+        assert "TPM: 450/1.0K" in format_rate_limit_compact(state)
         assert "RPM:" not in format_rate_limit_compact(state)
         rendered = format_rate_limit_display(state)
         assert "(no data)" in rendered
         assert "55.0%" in rendered
         assert "⚠" not in rendered
+
+    @pytest.mark.parametrize("remaining", [None, "0"])
+    def test_captured_response_reaches_display_and_cached_breaker(self, remaining):
+        from types import SimpleNamespace
+
+        from agent.nous_rate_guard import is_genuine_nous_rate_limit
+        from agent.rate_limit_credits import RateLimitCreditsMixin
+
+        agent = RateLimitCreditsMixin()
+        agent.provider = "nous"
+        agent._rate_limit_state = None
+        headers = {
+            "x-ratelimit-limit-requests-1h": "800",
+            "x-ratelimit-reset-requests-1h": "3100",
+        }
+        if remaining is not None:
+            headers["x-ratelimit-remaining-requests-1h"] = remaining
+        agent._capture_rate_limits(SimpleNamespace(headers=headers))
+        state = agent.get_rate_limit_state()
+        assert state is not None
+        exhausted = remaining == "0"
+        assert state.has_data is exhausted
+        assert is_genuine_nous_rate_limit(headers={}, last_known_state=state) is exhausted
+        assert ("⚠ requests/hr at 100%" in format_rate_limit_display(state)) is exhausted
+        assert format_rate_limit_compact(state).startswith("RPH: 0/800") is exhausted
 
     def test_present_zero_remaining_still_warns_without_reset(self):
         state = parse_rate_limit_headers(
