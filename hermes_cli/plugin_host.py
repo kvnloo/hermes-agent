@@ -25,6 +25,7 @@ import dataclasses
 import inspect
 import functools
 import importlib
+import io
 import itertools
 import logging
 import os
@@ -152,7 +153,9 @@ class PluginHost:
             threading.Thread(target=_pump_stderr, args=(proc, self._home.name), daemon=True,
                              name=f"plugin-host-{proc.pid}-stderr").start()
             self._generation += 1
-            channel = Channel(proc.stdout, proc.stdin, self._handle,  # type: ignore[arg-type]
+            # A raw FileIO.readline() makes one read(2) call per byte of a large RPC frame.
+            reader = io.BufferedReader(proc.stdout, buffer_size=1 << 20)  # type: ignore[arg-type]
+            channel = Channel(reader, proc.stdin, self._handle,  # type: ignore[arg-type]
                               name=f"plugin-host[{proc.pid}]",
                               on_close=functools.partial(self._on_channel_close, self._generation),
                               context_for_origin=self._context_for_origin).start()

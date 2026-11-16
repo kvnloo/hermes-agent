@@ -62,6 +62,52 @@ def _home_with_plugins(tmp_path, monkeypatch, plugins: dict, isolation="host"):
     return home
 
 
+def test_parent_buffers_large_plugin_host_reply(tmp_path, monkeypatch):
+    """A hosted ASGI reply must be read in blocks, not one raw read per byte."""
+    import io
+    from types import SimpleNamespace
+    from hermes_cli import plugin_host
+
+    class CountingRaw(io.RawIOBase):
+        def __init__(self, payload):
+            self._payload = io.BytesIO(payload)
+            self.read_calls = 0
+
+        def readable(self):
+            return True
+
+        def readinto(self, buffer):
+            self.read_calls += 1
+            return self._payload.readinto(buffer)
+
+    # A 600 KiB response becomes roughly 800 KiB in the base64 JSON wire frame.
+    frame = b"x" * (800 * 1024) + b"\n"
+    raw = CountingRaw(frame)
+    proc = SimpleNamespace(stdout=raw, stdin=io.BytesIO(), stderr=io.BytesIO(), pid=123)
+
+    class ChannelProbe:
+        def __init__(self, reader, *_args, **_kwargs):
+            self.reader = reader
+
+        def start(self):
+            return self
+
+        def call(self, *_args, **_kwargs):
+            return {"ok": True}
+
+    monkeypatch.setattr(plugin_host.subprocess, "Popen", lambda *_args, **_kwargs: proc)
+    monkeypatch.setattr(plugin_host, "Channel", ChannelProbe)
+    monkeypatch.setattr(plugin_host, "_pump_stderr", lambda *_args: None)
+
+    host = plugin_host.PluginHost(SimpleNamespace(home_path=tmp_path))
+    monkeypatch.setattr(host, "_argv", lambda: ["plugin-host-test"])
+    monkeypatch.setattr(host, "_env", lambda: {})
+    channel = host.ensure_started()
+
+    assert channel.reader.readline() == frame
+    assert raw.read_calls < 128  # A raw reader makes over 800,000 calls.
+
+
 @pytest.mark.platforms("posix")  # os._exit / SIGKILL process semantics
 def test_plugin_runs_out_of_process_with_ctx_round_trips_and_survives_host_crash(tmp_path, monkeypatch):
     from agent import image_gen_registry
