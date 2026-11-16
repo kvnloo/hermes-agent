@@ -38,8 +38,8 @@ def gateway_browser(cli, connection, word: str, rest: str) -> None:
         if not os.environ.get("HERMES_TUI_GATEWAY_URL", "").strip():
             from hermes_cli.browser_connect import DESKTOP_ENV_KEYS
             desktop_env = {key: os.environ[key] for key in DESKTOP_ENV_KEYS if os.environ.get(key)}
-            if desktop_env:
-                params["desktop_env"] = desktop_env
+            # Empty context must clear a stale daemon display as well.
+            params["desktop_env"] = desktop_env
         print(f"   {_t('browser.checking', url=params['url'])}")
     try:
         result = connection.call("browser.manage", **params) or {}

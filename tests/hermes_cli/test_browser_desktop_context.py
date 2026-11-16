@@ -87,3 +87,32 @@ def test_real_browser_child_receives_context(tmp_path, monkeypatch):
     launch_chrome_debug(9222, "Linux", desktop_env={"DISPLAY": ":42"})
     assert json.loads(output.read_text()) == {"display": ":42"}
     assert "DISPLAY" not in os.environ
+
+
+def test_headless_local_cli_clears_stale_gateway_display(monkeypatch, tmp_path):
+    """An attached CLI without a display must not reuse the daemon's older desktop."""
+    from hermes_cli import browser_connect
+
+    monkeypatch.delenv("HERMES_TUI_GATEWAY_URL", raising=False)
+    for key in browser_connect.DESKTOP_ENV_KEYS:
+        monkeypatch.delenv(key, raising=False)
+
+    sent = []
+    connection = SimpleNamespace(call=lambda method, **params: sent.append(params) or {"connected": False})
+    cli_browser_gateway.gateway_browser(SimpleNamespace(session_id="headless"), connection, "connect", "")
+    assert sent[0]["desktop_env"] == {}
+
+    # The gateway is a separate, older process with its own (stale) display.
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("DISPLAY", ":old-gateway")
+    monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-old")
+    monkeypatch.setattr(browser_connect, "get_chrome_debug_candidates", lambda _system: ["fake-browser"])
+    monkeypatch.setattr(browser_connect, "_wait_for_browser_debug_ready_or_exit", lambda *_args: "ready")
+    spawned = []
+    monkeypatch.setattr(
+        browser_connect.subprocess, "Popen",
+        lambda *_args, **kwargs: spawned.append(kwargs) or SimpleNamespace(pid=1),
+    )
+    assert browser_connect.launch_chrome_debug(9222, "Linux", desktop_env=sent[0]["desktop_env"]).launched
+    assert all(key not in spawned[0]["env"] for key in browser_connect.DESKTOP_ENV_KEYS)
+    assert os.environ["DISPLAY"] == ":old-gateway"
