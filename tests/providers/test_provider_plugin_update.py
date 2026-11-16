@@ -133,3 +133,39 @@ def test_a_broken_update_keeps_the_previous_version_and_says_so(plugin):
     # The fixed release after it loads clean: nothing the broken one half-imported is reused.
     assert "new sessions use this version" in activation_hint(update_to(4))
     assert get_provider_profile("demo-provider").create_client().version == "v4"
+
+
+def test_activation_only_claims_a_provider_after_its_version_was_published(plugin, monkeypatch):
+    """#156558: a clean error ledger is not evidence that a placeholder became a provider."""
+    from hermes_cli import plugins_activation
+    from providers import plugin_load_error
+
+    plugin.mkdir(parents=True)
+    (plugin / "plugin.yaml").write_text(
+        "name: demo-provider\nkind: model-provider\nversion: 0.0\n", encoding="utf-8")
+    manager = _forced_sweep()
+    key = next(k for k in manager._plugins if k.endswith("demo-provider"))
+
+    assert plugin_load_error(plugin.name) == ""
+    assert "provider" not in plugins_activation.plugin_activation_summary(manager, key)["activated_now"]
+
+    _write(plugin, 1)
+    manager = _forced_sweep()
+    active = plugins_activation.plugin_activation_summary(manager, key)
+    assert active["activated_now"]["provider"] == ["demo-provider"]
+
+    # The installed version changed, but providers/ has not scanned/published that tree.
+    _write(plugin, 2)
+    assert "provider" not in plugins_activation.plugin_activation_summary(manager, key)["activated_now"]
+
+    manager = _forced_sweep()
+    active = plugins_activation.plugin_activation_summary(manager, key)
+    assert active["activated_now"]["provider"] == ["demo-provider"]
+
+    # A positive Desktop/backend summary must not override a gateway that published nothing.
+    monkeypatch.setattr(plugins_activation, "load_and_go_live", lambda name: active)
+    monkeypatch.setattr(plugins_activation, "reload_running_gateway", lambda: {
+        "reloaded": True, "activations": [{**active, "activated_now": {}}]})
+    result = plugins_activation.activate_plugin_now("demo-provider")
+    assert result["gateway_reloaded"] is True
+    assert "provider" not in result["activation"]["activated_now"]
