@@ -932,9 +932,13 @@ _LEAN_USER_MESSAGES_BUDGET_CHARS = 24_000  # ~6K tokens
 _LEAN_USER_MESSAGE_MAX_CHARS = 4_000
 _LEAN_USER_MESSAGES_HEADING = "## User Messages (verbatim, newest first)"
 _LEAN_RECOVERY_HEADING = "## Context Recovery"
+# Every /goal continuation template (hermes_cli/goals.py) opens with this. The loop re-sends the
+# standing goal as a user-role row after each turn; it is scaffolding, not the person's words.
+GOAL_CONTINUATION_PREFIX = "[Continuing toward your standing goal"
 _SYNTHETIC_USER_ROW_PREFIXES = (
     "[System:", "[CONTEXT", "[PRIOR CONTEXT", "[IMPORTANT: Background", "[Your active task list",
     "[Planning state preserved", "[ASYNC DELEGATION", "[OUT-OF-BAND", "Cronjob Response:",
+    GOAL_CONTINUATION_PREFIX,
 )
 
 
@@ -4255,6 +4259,7 @@ Write only the summary body. Do not include any preamble or prefix."""
             _LENGTH_CONTINUATION_OUTPUT_LIMIT,
         } or text.startswith((
             _BACKGROUND_PROCESS_NOTIFICATION_PREFIX, TODO_INJECTION_HEADER + "\n", _LENGTH_CONTINUATION_DROPPED_TOOLS_PREFIX,
+            GOAL_CONTINUATION_PREFIX,
         ))
 
     @staticmethod
