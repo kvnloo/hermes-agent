@@ -215,6 +215,9 @@ export interface ClientSessionState {
    *  False while a submit is only optimistically armed — the discriminator the
    *  no-payload settle gate needs now that turnStartedAt is seeded at send. */
   turnLive: boolean
+  /** Tool-message owners witnessed in this accepted turn, retained through
+   * interim/settle. Undefined means resumed history without a witnessed fence. */
+  toolTurnOwnerMessageIds?: string[]
   /** Cumulative token usage, updated per completed turn. Per-session twin of
    *  the primary-only $currentUsage — the statusbar reads it for a focused
    *  tile's context count. Null until the first turn reports. */

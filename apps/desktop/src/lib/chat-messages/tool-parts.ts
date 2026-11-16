@@ -426,12 +426,10 @@ export const hasUnresolvedToolCall = (message: ChatMessage) =>
  * sealed with `completedAt` but no `result`, renders as "Result unavailable"),
  * instead of seeding a fresh bubble with a duplicate row (#113035).
  *
- * Only an UNRESOLVED part (never completed: no `result` key, sealed or not)
- * can own an event. Tool call ids are not unique across turns — llama.cpp
- * emits one constant id for every call and Hermes' own deterministic ids
- * repeat — so a part that already carries its completion is a finished call
- * from an earlier turn, not the owner of the new one. Routing to it would
- * draw the new call over the old row and leave the live turn empty.
+ * Tool IDs repeat across turns. A result-bearing part owns a repeated
+ * completion only when its message was witnessed inside this accepted turn's
+ * ownerMessageIds fence. Without that fence, only unresolved parts qualify.
+ * unresolvedOnly keeps preview re-offers limited to first completions.
  *
  * The `phase` splits the sealed-without-result case (a part `sealOpenToolParts`
  * closed with `completedAt` but no `result` because the `tool.complete` was
@@ -460,7 +458,8 @@ export function toolCallOwnerMessageId(
   messages: ChatMessage[],
   payload: GatewayEventPayload | undefined,
   phase: 'running' | 'complete',
-  turnAnchorId?: null | string
+  turnAnchorId?: null | string,
+  options: { ownerMessageIds?: readonly string[]; unresolvedOnly?: boolean } = {}
 ): string | null {
   const stableId = toolId(payload)
 
@@ -469,12 +468,22 @@ export function toolCallOwnerMessageId(
   }
 
   const anchorIndex = turnAnchorId ? messages.findIndex(message => message.id === turnAnchorId) : -1
+  const { ownerMessageIds, unresolvedOnly = false } = options
 
   for (let messageIndex = messages.length - 1; messageIndex >= 0; messageIndex -= 1) {
     const message = messages[messageIndex]
 
+    if (ownerMessageIds !== undefined && !ownerMessageIds.includes(message.id)) {
+      continue
+    }
+
     for (const part of message.parts) {
-      if (part.type !== 'tool-call' || part.toolCallId !== stableId || Object.hasOwn(part, 'result')) {
+      if (part.type !== 'tool-call' || part.toolCallId !== stableId) {
+        continue
+      }
+
+      // A result-bearing part owns a repeat only inside its witnessed turn.
+      if (Object.hasOwn(part, 'result') && (phase !== 'complete' || ownerMessageIds === undefined || unresolvedOnly)) {
         continue
       }
 
@@ -532,13 +541,18 @@ export function toolEventOwnerMessageId(
   payload: GatewayEventPayload | undefined,
   phase: 'running' | 'complete',
   turnLive: boolean,
-  turnAnchorId?: null | string
+  turnAnchorId?: null | string,
+  ownerMessageIds?: readonly string[]
 ): string | null {
   if (turnLive || phase === 'complete') {
-    return toolCallOwnerMessageId(messages, payload, phase, turnAnchorId)
+    return toolCallOwnerMessageId(messages, payload, phase, turnAnchorId, { ownerMessageIds })
   }
 
-  const settledId = toolCallOwnerMessageId(messages, payload, 'complete')
+  const settledId = toolCallOwnerMessageId(messages, payload, 'complete', turnAnchorId, {
+    ownerMessageIds,
+    unresolvedOnly: true
+  })
+
   const stableId = toolId(payload)
 
   const settledPart = messages
@@ -547,7 +561,7 @@ export function toolEventOwnerMessageId(
 
   return settledPart?.type === 'tool-call' && sameCallArgs(settledPart.args, payload)
     ? settledId
-    : toolCallOwnerMessageId(messages, payload, phase, turnAnchorId)
+    : toolCallOwnerMessageId(messages, payload, phase, turnAnchorId, { ownerMessageIds })
 }
 
 const isQueuedPromptRow = (message: ChatMessage) => message.role === 'user' && message.id.startsWith('user-queued-')
@@ -605,7 +619,11 @@ export function isRedeliveredToolEvent(
   messages: ChatMessage[],
   payload: GatewayEventPayload | undefined,
   phase: 'running' | 'complete',
-  { queuedIsNextTurn = false, turnAnchorId }: { queuedIsNextTurn?: boolean; turnAnchorId?: null | string } = {}
+  {
+    queuedIsNextTurn = false,
+    turnAnchorId,
+    ownerMessageIds
+  }: { queuedIsNextTurn?: boolean; turnAnchorId?: null | string; ownerMessageIds?: readonly string[] } = {}
 ): boolean {
   const stableId = toolId(payload)
 
@@ -627,6 +645,10 @@ export function isRedeliveredToolEvent(
 
     if (message.id === ownerId || (message.role === 'user' && !(queuedIsNextTurn && isQueuedPromptRow(message)))) {
       return false
+    }
+
+    if (ownerMessageIds !== undefined && !ownerMessageIds.includes(message.id)) {
+      continue
     }
 
     for (const part of message.parts) {

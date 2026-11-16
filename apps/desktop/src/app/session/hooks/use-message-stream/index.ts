@@ -56,12 +56,7 @@ import { handleServerRequest as dispatchServerRequest } from './gateway-event/se
 import { bindReceiptUserRows } from './receipt-user-rows'
 import { currentResponseParts, mergeCurrentResponseText } from './response-parts'
 import { admitSegmentDelta, admitSegmentSeal, type SegmentCursor, type SegmentStamp } from './segment-identity'
-import {
-  completionErrorText,
-  delegateTaskPayloads,
-  MAX_STREAM_FLUSH_GAP_MS,
-  STREAM_DELTA_FLUSH_MS
-} from './utils'
+import { completionErrorText, delegateTaskPayloads, MAX_STREAM_FLUSH_GAP_MS, STREAM_DELTA_FLUSH_MS } from './utils'
 
 interface MessageStreamOptions {
   activeGatewayProfile?: string
@@ -174,6 +169,7 @@ export function useMessageStream({
       seed: () => ChatMessagePart[],
       opts: {
         pending?: (message: ChatMessage) => boolean
+        trackToolOwner?: boolean
         // Resolve the message an event should mutate by payload identity
         // rather than by the current stream position. A late `tool.complete`
         // that crosses an interim/settle boundary must attach to the bubble
@@ -197,6 +193,15 @@ export function useMessageStream({
 
           const reconciledId = opts.eventTarget?.(state) ?? null
           const streamId = reconciledId ?? state.streamId ?? nextStreamMessageId('assistant-stream')
+
+          const toolOwnerUpdate = opts.trackToolOwner
+            ? {
+                toolTurnOwnerMessageIds: state.toolTurnOwnerMessageIds?.includes(streamId)
+                  ? state.toolTurnOwnerMessageIds
+                  : [...(state.toolTurnOwnerMessageIds ?? []), streamId]
+              }
+            : {}
+
           // The event landed on a bubble that is NOT the live stream (sealed
           // by interim commentary, a mid-turn user message, or turn settle).
           // It is a patch to history: the bubble keeps its own pending bit
@@ -242,11 +247,12 @@ export function useMessageStream({
             // Later deltas must not append into the bubble the late event
             // just updated, and a late event from an earlier phase must not
             // clear the wait state of the turn now in flight.
-            return { ...state, messages: nextMessages }
+            return { ...state, ...toolOwnerUpdate, messages: nextMessages }
           }
 
           return {
             ...state,
+            ...toolOwnerUpdate,
             messages: nextMessages,
             streamId,
             sawAssistantPayload: true,
@@ -624,6 +630,7 @@ export function useMessageStream({
         () => upsertToolPart([], payload, phase, occurredAt),
         {
           pending: m => phase !== 'complete' || (m.pending ?? false),
+          trackToolOwner: true,
           // A tool event belongs to the bubble that owns the call, not to
           // whatever is streaming now. Long tools (browser scrapes run
           // minutes) outlive the boundary that seals their bubble (interim
@@ -638,7 +645,14 @@ export function useMessageStream({
           // of clobbering the prior turn's command. With no turn live, a start
           // carrying a sealed row's exact arguments is a late copy of that call.
           eventTarget: state =>
-            toolEventOwnerMessageId(state.messages, payload, phase, state.turnLive, state.turnAnchorId),
+            toolEventOwnerMessageId(
+              state.messages,
+              payload,
+              phase,
+              state.turnLive,
+              state.turnAnchorId,
+              state.toolTurnOwnerMessageIds
+            ),
           // A copy of a call this turn already finished (re-delivered start or
           // completion) would otherwise draw that call a second time. A queued
           // prompt row is passed over only until its own turn starts; from then
@@ -646,7 +660,8 @@ export function useMessageStream({
           skip: state =>
             isRedeliveredToolEvent(state.messages, payload, phase, {
               queuedIsNextTurn: queuedPromptAwaitsNextTurn(state.messages),
-              turnAnchorId: state.turnAnchorId
+              turnAnchorId: state.turnAnchorId,
+              ownerMessageIds: state.toolTurnOwnerMessageIds
             })
         },
         occurredAt

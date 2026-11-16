@@ -216,6 +216,11 @@ function handleMessageStart(ctx: GatewayEventContext): boolean {
       // Backend accepted the turn — the no-payload settle gate below may
       // now treat a running=false heartbeat as a real turn end.
       turnLive: true,
+      // Keep witnessed owners through interim/settle, not across accepted turns.
+      // Stamped duplicate starts returned above. Legacy live-start copies keep
+      // ownership unless a new optimistic user row marks the next turn.
+      toolTurnOwnerMessageIds:
+        !turnId && state.turnLive && messages.at(-1)?.role !== 'user' ? state.toolTurnOwnerMessageIds : [],
       // A new turn is a new occurrence: the previous turn's late terminal
       // frame (#119569) can no longer claim its heartbeat-settled bubble.
       heartbeatSettledStreamId: null,
