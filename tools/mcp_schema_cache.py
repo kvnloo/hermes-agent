@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 _CACHE_FILENAME = "mcp_schema_cache.json"
+_CACHE_FORMAT_VERSION = 2  # v1 cache rows discarded MCP App visibility metadata
 _cache_lock = threading.Lock()
 
 
@@ -65,6 +66,10 @@ def get_cached_entry(server_name: str, fingerprint: str) -> Optional[dict]:
         entry = _load_all().get(server_name)
     if not isinstance(entry, dict) or entry.get("fingerprint") != fingerprint:
         return None
+    # Old manifests discarded _meta.ui: an app-only tool is indistinguishable from a model tool.
+    # A one-time cache miss forces live discovery before advertising any tools.
+    if entry.get("format_version") != _CACHE_FORMAT_VERSION:
+        return None
     ttl_ms = entry.get("ttl_ms")
     written_at = entry.get("written_at")
     expired = (isinstance(ttl_ms, (int, float)) and isinstance(written_at, (int, float))
@@ -77,7 +82,8 @@ def write_cache_entry(server_name: str, fingerprint: str, *, tools: list[dict],
                       cache_scope: Optional[str] = None) -> None:
     """Persist tool schemas after a successful live connect. ``ttl_ms`` / ``cache_scope`` are
     the server's ``tools/list`` SEP-2549 hints; ``written_at`` anchors TTL expiry."""
-    entry = {"fingerprint": fingerprint, "tools": tools, "utility_tools": utility_tools or []}
+    entry = {"format_version": _CACHE_FORMAT_VERSION, "fingerprint": fingerprint,
+             "tools": tools, "utility_tools": utility_tools or []}
     if isinstance(ttl_ms, (int, float)):
         entry["ttl_ms"] = ttl_ms
         entry["written_at"] = time.time()

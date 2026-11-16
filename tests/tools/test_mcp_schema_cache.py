@@ -69,6 +69,27 @@ class TestCacheRoundTrip:
         assert msc.utility_tools_from_cache_entry({}) == []
 
 
+    def test_pre_visibility_cache_is_not_advertised_on_upgrade(self, monkeypatch, tmp_path):
+        """Old lazy cache rows drop _meta.ui, so an app-only tool cannot be recognized."""
+        import json
+
+        self._isolate(monkeypatch, tmp_path)
+        # Pre-fix write-through stored this tool without its original visibility: ["app"].
+        tool = {"name": "app_only", "description": "", "inputSchema": {"type": "object"}}
+        legacy = {"srv": {"fingerprint": "same", "tools": [tool], "utility_tools": []}}
+        (tmp_path / "cache.json").write_text(json.dumps(legacy), encoding="utf-8")
+
+        assert msc.get_cached_entry("srv", "same") is None
+
+        # Fresh discovery can write the preserved visibility and be reused lazily.
+        msc.write_cache_entry("srv", "same", tools=[
+            {**tool, "ui": {"visibility": ["app"]}}
+        ], utility_tools=[])
+        cached = msc.get_cached_entry("srv", "same")
+        assert cached is not None
+        assert cached["tools"][0]["ui"]["visibility"] == ["app"]
+
+
 class TestCacheFileLocation:
     @pytest.mark.platforms("linux")
     def test_cache_lives_under_hermes_home_cache_dir_with_0600(
