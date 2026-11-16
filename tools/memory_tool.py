@@ -41,7 +41,8 @@ def get_memory_dir() -> Path:
 
 
 from tools.memory_tool_store import (
-    ENTRY_DELIMITER, FAILURE_CLASS, MEMORY_BLOCK_HEADERS, PATCH_DROP_HINT, MemoryStore, _scan_memory_content)
+    DOC_TARGET_PREFIX, ENTRY_DELIMITER, FAILURE_CLASS, MEMORY_BLOCK_HEADERS, PATCH_DROP_HINT, MemoryStore,
+    _echo_safe, _scan_memory_content, doc_name, doc_target)
 
 
 def load_on_disk_store() -> MemoryStore:
@@ -154,7 +155,7 @@ def _validate_single_op(store, action, target, content, old_text) -> Optional[st
             "error": (f"'{action}' needs old_text -- a short unique substring of the entry "
                       f"to {action}. None was provided. Reissue the {action} with old_text "
                       f"set to part of one of the current_entries below."),
-            "current_entries": store._entries_for(target), "usage": store._usage(target)}, ensure_ascii=False)
+            "current_entries": _echo_safe(store._entries_for(target)), "usage": store._usage(target)}, ensure_ascii=False)
     if action == "patch" and not content:
         FAILURE_CLASS.set("missing_content")
         return tool_error(f"content (the new text for the old_text span) is required for 'patch' action. "
@@ -219,17 +220,35 @@ def _background_delete_gate(store, action, operations, target="memory", content=
             "batch); 'add' is still available.", success=False)
 
 
+def _resolve_target(target: str, doc: Optional[str]) -> tuple[str, Optional[str]]:
+    """``(store target, error)``. ``doc`` addresses a chain document hung off the MEMORY.md
+    anchor (#116564): chain docs live in ``memories/docs/<name>.md``, are reached ONLY through
+    ``target='memory'`` + ``doc='<name>'``, and their name is a bare filename (no separators),
+    so a doc can never escape the memories dir."""
+    if not doc:
+        return target, None
+    if target != "memory":
+        return target, ("Chain docs hang off the MEMORY.md anchor: pass target='memory' together "
+                        "with doc='<name>' (the 'user' profile has no chain).")
+    name = doc_name(doc)
+    if name is None:
+        return target, (f"Invalid chain doc name {doc!r}. Use a bare filename — letters, digits, "
+                        "'.', '_', '-' — e.g. doc='conventions-2026-09'.")
+    return doc_target(name), None
+
+
 def memory_tool(action: str | None = None, target: str = "memory", content: str | None = None, old_text: str | None = None,
                 new_text: str | None = None, operations: Optional[list[dict[str, Any]]] = None,
-                store: Optional[MemoryStore] = None) -> str:
+                doc: str | None = None, store: Optional[MemoryStore] = None) -> str:
     """Tool entry point; returns a JSON string. Single op (action + content/old_text)
     or batch (``operations``, atomic against the final budget). ``new_text``
-    aliases ``content``."""
+    aliases ``content``. ``doc`` addresses a MEMORY.md chain document
+    (read/add/patch/remove)."""
     if store is None:
         return tool_error("Memory is not available. It may be disabled in config or this environment.", success=False)
     token = FAILURE_CLASS.set("other")
     try:
-        outcome, result = _memory_tool(action, target, content, old_text, new_text, operations, store)
+        outcome, result = _memory_tool(action, target, content, old_text, new_text, operations, doc, store)
         failure_class = "none" if outcome == "success" else FAILURE_CLASS.get()
     finally:
         FAILURE_CLASS.reset(token)
@@ -247,14 +266,19 @@ def _invalid(message: str) -> tuple[str, str]:
     return "rejected", tool_error(message, success=False)
 
 
-def _memory_tool(action, target, content, old_text, new_text, operations, store) -> tuple[str, str]:
+def _memory_tool(action, target, content, old_text, new_text, operations, doc, store) -> tuple[str, str]:
     """``(outcome, result_json)``: ``rejected`` when refused or held before touching the store."""
     # An omitted optional string can arrive as "" (#90468): let the new_text alias fill it.
     if not content and new_text:
         content = new_text
+    target, doc_error = _resolve_target(target, doc)
+    if doc_error is not None:
+        return _invalid(doc_error)
     target_error = _memory_target_error(store, target, operations)
     if target_error is not None:
         return "rejected", json.dumps(target_error)
+    if action == "read":
+        return _applied(store.read(target))
     if operations:
         if not isinstance(operations, list):
             return _invalid("operations must be a list of {action, content?, old_text?} objects.")
@@ -328,6 +352,12 @@ def _memory_target_error(
             "Missing required target. Retry with target='memory' or target='user' at the top level. "
             "For a batch, remove target from every operation; use separate calls for different stores. "
             "Nothing was written or staged.")}
+    if isinstance(target, str) and target.startswith(DOC_TARGET_PREFIX):  # chain doc: gated with the anchor it hangs off
+        if store.target_enabled("memory"):
+            return None
+        FAILURE_CLASS.set("disabled")
+        return {"success": False, "error": "Built-in MEMORY.md writes are disabled in memory config.",
+                "target": target}
     if not isinstance(target, str) or target not in {"memory", "user"}:
         from tools.registry import _bound_error_text
         FAILURE_CLASS.set("invalid_args")
@@ -389,18 +419,30 @@ MEMORY_SCHEMA = {
         "stay small.\n\n"
         "IF FULL: an add is rejected with the current entries shown. Reissue as ONE batch that "
         "removes or shortens enough stale entries and adds the new one together.\n\n"
+        "CHAIN DOCS: MEMORY.md is an ANCHOR — an entry mentioning '@doc:<name>' chains the "
+        "document memories/docs/<name>.md, which has NO char limit (the anchor's limit is the "
+        "only budget injected into the prompt). Read a chain doc with action='read', doc='<name>'; "
+        "write one with target='memory' + doc='<name>' — writes are refused until MEMORY.md "
+        "references it. Use chain docs for the long tail of dated notes and keep the anchor small.\n\n"
         "TARGETS: 'user' = who the user is (name, role, preferences, style). 'memory' = your "
         "notes (environment, conventions, tool quirks, lessons).\n\n"
         "SKIP: trivial/obvious info, easily re-discovered facts, raw data dumps, task progress, "
         "completed-work logs, temporary TODO state (use session_search for those). Reusable "
         "procedures belong in a skill, not memory."
     ),
-    # Each field is advertised once, inside operations[]. The handler still ACCEPTS the
-    # top-level single-op shape (action/content/old_text) and the new_text alias: models
-    # drift and older transcripts replay them.
+    # Writes stay in operations[]; action=read is the separate inventory accessor.
+    # Legacy top-level writes and new_text remain accepted for transcript replay.
     "parameters": {
         "type": "object",
         "properties": {
+            "action": {
+                "type": "string", "enum": ["read"],
+                "description": "Read current entries without writing. Omit for operations[]."
+            },
+            "doc": {
+                "type": "string",
+                "description": "Chain-document name under memories/docs; requires target=memory. Omit for the anchor."
+            },
             "target": {
                 "type": "string",
                 "enum": ["memory", "user"],
@@ -433,7 +475,7 @@ MEMORY_SCHEMA = {
                 },
             },
         },
-        "required": ["target", "operations"],
+        "required": ["target"],
     },
 }
 
@@ -470,7 +512,8 @@ registry.register(
     toolset="memory",
     schema=MEMORY_SCHEMA,
     handler=lambda args, **kw: memory_tool(
-        action=args.get("action", ""), target=args.get("target"), store=kw.get("store"),
+        action=args.get("action", ""), target=args.get("target"), doc=args.get("doc"),
+        store=kw.get("store"),
         **{k: args.get(k) for k in ("content", "old_text", "new_text", "operations")}),
     check_fn=check_memory_requirements,
     emoji="🧠",

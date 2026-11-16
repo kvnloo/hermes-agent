@@ -51,3 +51,16 @@ def test_memory_alias_persists_with_content_precedence(tmp_path, monkeypatch):
                                              "new_text": "Household owns a coupe."}])
     assert result["success"], result
     assert sink.writes[-1] == ("replace", "user", "Household owns a coupe.")
+
+
+def test_inline_memory_routes_doc_reads_and_writes(tmp_path, monkeypatch):
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    store = MemoryStore()
+    agent = SimpleNamespace(_memory_store=store, _memory_manager=None)
+    ctx = InlineToolContext(effective_task_id="doc-task")
+    def call(**args):
+        return json.loads(INLINE_TOOL_EXECUTORS["memory"](agent, args, ctx))
+    assert call(target="memory", operations=[{"action": "add", "content": "See @doc:notes"}])["success"]
+    assert call(target="memory", doc="notes", operations=[{"action": "add", "content": "doc fact"}])["success"]
+    assert call(action="read", target="memory", doc="notes")["entries"] == ["doc fact"]
+    assert call(action="read", target="memory")["entries"] == ["See @doc:notes"]
