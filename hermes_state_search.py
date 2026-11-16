@@ -1032,7 +1032,7 @@ class SessionSearchMixin:
         )
         return sql, params
 
-    def _recover_fts_match_error(self, exc: sqlite3.DatabaseError) -> bool:
+    def _recover_fts_match_error(self, exc: sqlite3.DatabaseError, *, fail_open: bool = True) -> bool:
         """A known FTS MATCH may emit bare SQLITE_CORRUPT for a damaged derived index.
         Only allow detachment when canonical tables pass table-scoped integrity checks;
         otherwise preserve the global structural quarantine.
@@ -1047,7 +1047,7 @@ class SessionSearchMixin:
                 )
             except sqlite3.DatabaseError:
                 pass
-        if self._enter_fts_fail_open(exc, verified_bare_fts=canonical_ok):
+        if fail_open and self._enter_fts_fail_open(exc, verified_bare_fts=canonical_ok):
             return True
         if not self._is_fts_write_corruption_error(exc) and not canonical_ok:
             note_storage_error(self.db_path, exc)
@@ -1068,7 +1068,7 @@ class SessionSearchMixin:
                 logger.debug(operational_debug, exc_info=True)
             return None
         except sqlite3.DatabaseError as exc:
-            if fail_open is None or not self._recover_fts_match_error(exc):
+            if not self._recover_fts_match_error(exc, fail_open=fail_open is not None):
                 raise
             logger.warning(
                 "%s FTS search hit a corruption error (%s); detached FTS and falling back to canonical LIKE.",
