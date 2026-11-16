@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from hermes_cli.local_runtime import hardware
 
 # nvidia-smi --query-gpu=index,uuid,memory.total,memory.free,name,pci.device_id,
@@ -180,3 +182,41 @@ def test_shared_query_na_utilization_preserves_full_vram_budget(monkeypatch):
     assert query is not None
     assert query["used_bytes"] == 1352 << 20
     assert query["gpu_util_percent"] == 5
+
+
+@pytest.mark.parametrize("first_util, expected_util", [(5, 5), ("N/A", 0)])
+def test_hardware_route_retains_budget_with_unavailable_utilization(
+        monkeypatch, first_util, expected_util):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from hermes_cli.web_routers import local_models
+
+    stdout = (
+        _ROW.format(i=0, total=24576, free=24000, used=576, util=first_util)
+        + _ROW.format(i=1, total=24576, free=23800, used=776, util="N/A")
+    )
+    _fake_smi(monkeypatch, stdout)
+    monkeypatch.setattr(hardware, "_ram_bytes", lambda: (64 << 30, 32 << 30))
+    monkeypatch.setattr(hardware, "_device_pool_view", lambda: None)
+    calls = []
+
+    def run(argv, **kwargs):
+        calls.append(argv)
+        return SimpleNamespace(returncode=0, stdout=stdout)
+
+    monkeypatch.setattr(hardware.subprocess, "run", run)
+    app = FastAPI()
+    app.include_router(local_models.router)
+    with TestClient(app) as client:
+        response = client.get("/api/local-models/hardware")
+    assert response.status_code == 200
+    facts = response.json()
+    assert facts["uma"] is False
+    assert facts["vram_total_bytes"] == 48 << 30
+    assert facts["vram_usable_bytes"] == (47800 << 20) - int((48 << 30) * .09)
+    assert facts["gpu_name"] == "NVIDIA Test GPU x2"
+    assert facts["gpu_util_percent"] == expected_util
+    assert facts["vram_used_bytes"] == 1352 << 20
+    # Budget and statusbar facts must share the same query, not spawn per consumer.
+    assert len(calls) == 1

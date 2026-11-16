@@ -229,6 +229,8 @@ def _patch_hide_flags(monkeypatch):
 
 
 def test_tui_shell_exec_rpc_hides_console_window(monkeypatch):
+    # Importing the TUI must not attempt recovery against the live checkout's Git metadata.
+    monkeypatch.setattr("hermes_cli._early_recovery.restore_interrupted_pull", lambda root: False)
     from tui_gateway import server
 
     captured = []
