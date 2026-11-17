@@ -228,8 +228,8 @@ export function useComposerSubmit({
   // if the turn has already ended, or a steer is not possible, queue it so it
   // runs next. This holds for hidden setup notes and for visible messages a
   // button sends on the user's behalf alike.
-  const externalSubmitRef = useRef({ busy, dispatchSubmit, onSteer, onSteerHidden })
-  externalSubmitRef.current = { busy, dispatchSubmit, onSteer, onSteerHidden }
+  const externalSubmitRef = useRef({ busy, dispatchSubmit, onSteer, onSteerHidden, replyPaused })
+  externalSubmitRef.current = { busy, dispatchSubmit, onSteer, onSteerHidden, replyPaused }
 
   useLayoutEffect(
     () =>
@@ -252,6 +252,14 @@ export function useComposerSubmit({
               ...(id ? { id } : {}),
               ...(displayKind ? { displayKind } : {})
             })
+
+          // Card-triggered sends bypass submitDraft. Hold them behind the
+          // continuation too, rather than submitting or steering the paused reply.
+          if (current.replyPaused) {
+            enqueue()
+
+            return
+          }
 
           if (!current.busy) {
             // Explicitly no attachments: the send must not pick up the draft's files. A rejected

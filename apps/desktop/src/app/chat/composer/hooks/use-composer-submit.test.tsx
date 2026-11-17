@@ -753,6 +753,29 @@ describe('useComposerSubmit while the reply is paused for an automatic continuat
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
+  it.each([false, true] as const)(
+    'holds an external review action behind a paused reply (busy=%s)',
+    busy => {
+      markReplyPaused('stored-session')
+      const { clearDraft, onSteer, onSteerHidden, onSubmit } = renderSubmitHook({
+        busy,
+        text: 'keep my draft'
+      })
+
+      act(() => {
+        expect(requestComposerSubmit('ship this review', { target: 'main' })).toBe(true)
+      })
+
+      expect(getQueuedPrompts('stored-session').map(({ text, attachments }) => ({ text, attachments }))).toEqual([
+        { text: 'ship this review', attachments: [] }
+      ])
+      expect(onSubmit).not.toHaveBeenCalled()
+      expect(onSteer).not.toHaveBeenCalled()
+      expect(onSteerHidden).not.toHaveBeenCalled()
+      expect(clearDraft).not.toHaveBeenCalled()
+    }
+  )
+
   it('queues with Ctrl+Enter while the reply is paused and no turn runs', () => {
     markReplyPaused('stored-session')
     const { hook, queueCurrentDraft } = renderSubmitHook({ text: 'and now read it' })
