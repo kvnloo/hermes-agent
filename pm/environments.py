@@ -447,6 +447,28 @@ def _require_own_dependencies(project_root: Path) -> None:
 
 
 def activate_dependencies(project_root: Path) -> None:
+    """Activate the owning generation when a plugin-free borrowed home has none.
+
+    A borrowed launch may reuse an owner's current venv without copying its facts.json,
+    so activation must select that same generation. The borrower's data home stays active.
+    """
+    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+    from pm import venv_is_current
+
+    owner = owning_home_root(project_root)
+    if (owner is not None and not (dependency_home_root() / "plugins").is_dir()
+            and not venv_is_current(project_root=project_root)):
+        token = set_hermes_home_override(owner)
+        try:
+            if venv_is_current(project_root=project_root):
+                _activate_selected_dependencies(project_root)
+                return
+        finally:
+            reset_hermes_home_override(token)
+    _activate_selected_dependencies(project_root)
+
+
+def _activate_selected_dependencies(project_root: Path) -> None:
     """Select the committed tree at process boot, before third-party imports.
 
     A process with no extension selection keeps its original launch contract.

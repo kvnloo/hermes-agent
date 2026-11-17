@@ -235,3 +235,47 @@ def test_the_owner_still_owes_and_runs_its_tail(tmp_path, monkeypatch, completio
     assert venv_sync.prepare_launch(root, []) == Path(sys.executable)
     assert len(completion_tail) == 1
     assert published == [root]
+
+
+
+def test_a_plugin_free_borrower_activates_owners_generation_without_local_installs(tmp_path, monkeypatch):
+    """#147159: skipping a borrowed sync must still load the owner's committed packages."""
+    import os
+    import subprocess
+    from pm.environments import site_packages
+
+    root = _checkout(tmp_path, monkeypatch)
+    owner = tmp_path / ".hermes"
+    generation = owner / "installs" / install_key(root) / "environments" / "owner" / "venv"
+    site = site_packages(generation)
+    site.mkdir(parents=True)
+    (generation / "pyvenv.cfg").write_text("home = fixture\n", encoding="utf-8")
+    (site / "borrowed_owner_probe.py").write_text("VALUE = 'owner'\n", encoding="utf-8")
+    _state(owner, root).write_text(json.dumps({
+        "schema": 1, "packages": {"venv": {
+            "environment": str(generation), "stamp": "fixture", "extras": [],
+        }},
+    }), encoding="utf-8")
+
+    borrower = tmp_path / "tmp" / "task-home"
+    borrower.mkdir(parents=True)
+    source = Path(__file__).resolve().parents[2]
+    code = (
+        "import sys\n"
+        "from pathlib import Path\n"
+        "sys.path.insert(0, sys.argv[1])\n"
+        "import pm\n"
+        "from pm.environments import activate_dependencies, dependency_home_root\n"
+        "pm.venv_is_current = lambda **kw: dependency_home_root() == Path(sys.argv[3])\n"
+        "activate_dependencies(Path(sys.argv[2]))\n"
+        "import borrowed_owner_probe\n"
+        "print(borrowed_owner_probe.VALUE)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", code, str(source), str(root), str(owner)],
+        cwd=tmp_path, env={**os.environ, "HERMES_HOME": str(borrower)},
+        capture_output=True, text=True, timeout=30, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "owner"
+    assert not (borrower / "installs").exists(), "owner reuse provisioned local dependencies"
