@@ -1550,11 +1550,15 @@ const ThreadMessageListInner: FC<ThreadMessageListProps> = ({
       applyRestoreRef.current?.()
     }
 
+    // A prepend can replace equal-height skipped placeholders: the document
+    // may not grow even though the visible group moved.
+    const hasVisibleGroupAnchor = Boolean(el && prependGroupRef.current && el.contains(prependGroupRef.current.element))
+
     if (
       el &&
       restoreFromBottom != null &&
-      el.scrollHeight > (anchorHeightRef.current ?? 0) &&
-      el.scrollHeight >= restoreFromBottom
+      (hasVisibleGroupAnchor ||
+        (el.scrollHeight > (anchorHeightRef.current ?? 0) && el.scrollHeight >= restoreFromBottom))
     ) {
       if (!applyPrependRef.current?.(true)) {
         el.scrollTop = el.scrollHeight - restoreFromBottom

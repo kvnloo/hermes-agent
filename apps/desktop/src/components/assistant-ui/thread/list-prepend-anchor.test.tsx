@@ -10,17 +10,23 @@ stubThreadEnvironment()
 stubThreadViewportSize()
 
 const CLIENT_H = 600
-// A prepend grows the content: the backfill anchor is consumed only by a
-// taller tree, so the fixture's scrollHeight must track what is mounted.
+// Normal prepends grow the content; the flat-height case simulates deferred
+// prefix materialization canceling that growth.
 const GROUP_H = 400
 let captureCount = Infinity
 let lateHeight = 0
+let flatPrependHeight = false
 
-const scrollHeightNow = () =>
-  lateHeight +
-  (mountedGroups(window.document.body) > captureCount ? 100 : 0) +
-  CLIENT_H +
-  window.document.querySelectorAll('[data-slot="aui_message-group"]').length * GROUP_H
+const scrollHeightNow = () => {
+  const groups = mountedGroups(window.document.body)
+
+  return (
+    lateHeight +
+    (groups > captureCount && !flatPrependHeight ? 100 : 0) +
+    CLIENT_H +
+    (flatPrependHeight ? Math.min(groups, captureCount) : groups) * GROUP_H
+  )
+}
 
 Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
   configurable: true,
@@ -98,7 +104,7 @@ async function settledGroupCount(container: HTMLElement): Promise<number> {
 }
 
 describe('visible-group prepend anchoring', () => {
-  it.each([false, true, 'wheel', 'pointerdown', 'keydown', 'scroll'])(
+  it.each([false, true, 'wheel', 'pointerdown', 'keydown', 'scroll', 'flat-height'])(
     'preserves visual anchoring unless intent cancels it: %s',
     async delayed => {
       const previousObserver = globalThis.ResizeObserver
@@ -159,6 +165,8 @@ describe('visible-group prepend anchoring', () => {
         const before = tracked.getBoundingClientRect().top
         expect(before).toBe(32)
         captureCount = windowed
+        // A bounded/skipped prefix can mount new groups without net height growth.
+        flatPrependHeight = delayed === 'flat-height'
         act(() => viewport.dispatchEvent(new WheelEvent('wheel', { deltaY: -120 })))
         await settle(2)
         expect(mountedGroups(container)).toBeGreaterThan(windowed)
@@ -167,7 +175,7 @@ describe('visible-group prepend anchoring', () => {
         expect(tracked.getBoundingClientRect().top).toBeCloseTo(before, 1)
         let inputTop: number | undefined
 
-        if (delayed) {
+        if (delayed && delayed !== 'flat-height') {
           if (typeof delayed === 'string') {
             inputTop = viewport.scrollTop - 100
 
@@ -225,6 +233,7 @@ describe('visible-group prepend anchoring', () => {
         rect.mockRestore()
         captureCount = Infinity
         lateHeight = 0
+        flatPrependHeight = false
         vi.stubGlobal('ResizeObserver', previousObserver)
       }
     }
