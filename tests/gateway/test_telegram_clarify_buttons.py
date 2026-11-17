@@ -428,6 +428,34 @@ class TestTelegramClarifyCardPrefix:
         assert "❓" not in card + edited
 
 
+    @pytest.mark.asyncio
+    async def test_other_edit_reescapes_locale_markup(self, tmp_path, monkeypatch):
+        """Telegram returns decoded card text; a locale's literal tags must stay literal."""
+        from html import unescape
+        from agent import i18n
+
+        home = tmp_path / "home"
+        (home / "locales").mkdir(parents=True)
+        (home / "locales" / "en.yaml").write_text(
+            'gateway:\n  clarify:\n    question: "¿ <b>{question}</b> & help"\n',
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("HERMES_HOME", str(home))
+        monkeypatch.delenv("HERMES_LANGUAGE", raising=False)
+        i18n.reset_language_cache()
+        try:
+            adapter = _make_adapter()
+            sent_html = await self._ask_and_render(adapter)
+            assert sent_html.startswith("¿ &lt;b&gt;Proceed?&lt;/b&gt; &amp; help")
+            edited_html = await self._tap(adapter, "other", unescape(sent_html))
+        finally:
+            i18n.reset_language_cache()
+
+        assert edited_html.startswith("¿ &lt;b&gt;Proceed?&lt;/b&gt; &amp; help")
+        assert "<b>" not in edited_html
+        assert "❓" not in edited_html
+
+
 # ===========================================================================
 # Base adapter fallback render — text numbered list
 # ===========================================================================
