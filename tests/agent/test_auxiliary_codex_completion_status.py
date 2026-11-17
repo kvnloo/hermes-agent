@@ -74,6 +74,25 @@ def test_aux_adapter_accepts_missing_usage_details(usage):
     assert normalized.input_tokens == (10 if usage else 0)
 
 
+def test_aux_adapter_retains_cache_write_ttl_breakdown_for_usage_normalizer():
+    """Keep the Responses-only TTL split for the current usage normalizer."""
+    usage = SimpleNamespace(
+        input_tokens=10000, output_tokens=100, total_tokens=10100,
+        input_tokens_details=SimpleNamespace(
+            cached_tokens=9000, cache_write_tokens=200,
+            cache_write_tokens_details=SimpleNamespace(ttl_30m_tokens=80, ttl_12h_tokens=120),
+        ),
+        output_tokens_details=SimpleNamespace(reasoning_tokens=40),
+    )
+    final = SimpleNamespace(status="completed", output=[_message("CHECKPOINT")], usage=usage)
+    response = _adapter_response(final, streamed=False)
+
+    normalized = normalize_usage(response.usage, provider="custom", api_mode="chat_completions")
+    assert (normalized.cache_read_tokens, normalized.cache_write_tokens, normalized.reasoning_tokens) == (9000, 200, 40)
+    tiers = response.usage.input_tokens_details.cache_write_tokens_details
+    assert (tiers.ttl_30m_tokens, tiers.ttl_12h_tokens) == (80, 120)
+
+
 def test_compressor_rejects_actual_adapter_partial_summary(monkeypatch):
     partial = SimpleNamespace(
         status="incomplete", output=[_message("PARTIAL_CHECKPOINT")],

@@ -55,6 +55,8 @@ def _parse_codex_final_response(
         usage = SimpleNamespace(
             prompt_tokens=_u("input_tokens"), completion_tokens=_u("output_tokens"),
             total_tokens=_u("total_tokens"),
+            # Keep Responses-only nested fields for cache-write TTL accounting.
+            input_tokens_details=_u("input_tokens_details", None),
             # Aux accounting normalizes the adapter's Chat Completions shape, so
             # carry the nested details under the matching Chat field names too.
             prompt_tokens_details=SimpleNamespace(
