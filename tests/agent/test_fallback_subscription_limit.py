@@ -69,3 +69,31 @@ def test_on_subscription_limit_policy_gates_the_metered_switch(policy, answer, s
         assert agent._fallback_index == 0
         assert _switch(agent, policy) is False
         assert len(calls) == asked
+
+
+def test_ask_skips_resolver_error_and_prompts_for_next_metered_route():
+    """An unusable candidate cannot abort the guarded walk before a usable fallback."""
+    broken = {**METERED, "model": "openai/broken-client"}
+    asked = []
+
+    def clarify(questions):
+        asked.append(questions)
+        return {"answers": {"q0": questions[0]["choices_offered"][0]}, "outcome": "submitted"}
+
+    agent = _codex_agent(clarify, chain=(broken, METERED))
+    from agent.route_binding import resolve_route_entry_client
+
+    def fail_broken_client(entry, provider, model):
+        if model == broken["model"]:
+            raise ValueError("candidate client cannot be constructed")
+        return resolve_route_entry_client(entry, provider, model)
+
+    # The real resolver handles the second entry; only the first models a
+    # provider-client construction error that the fallback walk normally catches.
+    with patch("agent.fallback_billing.resolve_route_entry_client", side_effect=fail_broken_client):
+        assert _switch(agent, "ask") is True
+
+    assert agent.model == METERED["model"]
+    assert len(asked) == 1
+    assert METERED["model"] in asked[0][0]["question"]
+    assert "Continuing on openai/gpt-5 via openrouter, billed per token." in " ".join(agent._pending_fallback_notice)
