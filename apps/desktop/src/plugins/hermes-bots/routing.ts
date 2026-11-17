@@ -41,18 +41,17 @@ export function resolveBotConnectionRoute(bot: Partial<RosterRow> | null | undef
     bot?.route || bot?.sourceScoped || bot?.remoteSource || bot?.connectionKind === 'remote'
   )
 
-  const hasNonLocalConnection = Boolean(connectionId && connectionId !== 'local')
+  const hasConnectionOwner = Boolean(connectionId)
 
-  if (!hasExplicitOwner && !hasNonLocalConnection) {
+  if (!hasExplicitOwner && !hasConnectionOwner) {
     return {
       status: 'not_scoped',
       route: null
     }
   }
 
-  // A concrete non-local connection id is itself an owner descriptor. Older
-  // roster rows may lack the source flags, but must not fall back to whichever
-  // gateway happens to be active when two connections share a profile name.
+  // Even "local" is a concrete owner when the active gateway is remote.
+  // Only a legacy row with no connection id can use the ambient gateway.
   const candidate = bot?.route || {
     connectionId: bot?.connectionId,
     mode: bot?.connectionKind === 'local' ? 'local' : 'remote',

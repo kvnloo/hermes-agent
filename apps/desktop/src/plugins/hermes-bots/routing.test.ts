@@ -231,6 +231,22 @@ describe('a row without a reachable owner', () => {
     expect(hostMock.request).not.toHaveBeenCalled()
   })
 
+  it('keeps a flagless local row on local when a remote gateway is active', async () => {
+    hostMock.state.connectionId.get.mockReturnValue('connection-b')
+    hostMock.requestProfile.mockResolvedValue({ from: 'local' })
+
+    const row = { connectionId: 'local', name: 'default' } as RosterRow
+
+    expect(botConnectionRoute(row)).toMatchObject({ connectionId: 'local', mode: 'local', profile: 'default' })
+    await expect(requestForBot(row, 'session.list', {})).resolves.toEqual({ from: 'local' })
+    expect(hostMock.requestProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ connectionId: 'local', mode: 'local', profile: 'default' }),
+      'session.list',
+      {}
+    )
+    expect(hostMock.request).not.toHaveBeenCalled()
+  })
+
   it('refuses a remote row with no connection id instead of using the active gateway', async () => {
     const row = { connectionKind: 'remote', name: 'default' } as RosterRow
 
