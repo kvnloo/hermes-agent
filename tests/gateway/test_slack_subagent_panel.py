@@ -173,6 +173,34 @@ def test_subagent_events_render_one_panel_with_stop_then_result(no_throttle, liv
     asyncio.run(scenario())
 
 
+def test_running_panel_elapsed_advances_without_tool_events():
+    """A long-running tool emits no further events, but elapsed time must not freeze at 0s."""
+
+    async def scenario():
+        client = _Client()
+        adapter = _adapter(client, {"subagent_panel": True})
+        turn = _turn(adapter, asyncio.get_running_loop())
+        ident = {"subagent_id": "sa-0-idle", "goal": "wait for a slow build", "depth": 0}
+        turn.progress_callback("subagent.start", preview=ident["goal"], **ident)
+        await _published(client, 1)
+        assert "0s" in client.named("chat_postMessage")[0]["blocks"][1]["text"]["text"]
+
+        # Use the production 2.5s throttle: no monkeypatch and no synthetic tool events.
+        await async_wait_until(lambda: bool(client.named("chat_update")), timeout=6.0,
+                               what="elapsed-time refresh without progress events")
+        row = client.named("chat_update")[-1]["blocks"][1]["text"]["text"]
+        assert "0s" not in row
+        assert client.named("chat_update")[-1]["blocks"][2]["elements"][0]["action_id"] == "hermes_subagent_stop"
+
+        turn.progress_callback("subagent.complete", status="completed", summary="ok",
+                               result_text="ok", duration_seconds=3.0, **ident)
+        await async_wait_until(lambda: client.named("chat_update")[-1]["blocks"][2]["elements"][0]["action_id"]
+                               == "hermes_subagent_result", timeout=6.0, what="finished idle child")
+        assert len(client.named("chat_postMessage")) == 1
+
+    asyncio.run(scenario())
+
+
 def test_panel_is_off_by_default(no_throttle):
     """Without the opt-in the same events post nothing (legacy behaviour)."""
 

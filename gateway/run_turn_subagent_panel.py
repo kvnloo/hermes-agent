@@ -144,6 +144,11 @@ class SubagentPanel:
                            getattr(result, "error", None))
             with self._lock:
                 self._failed = True
+        elif PUBLISH_INTERVAL_S > 0 and any(row.running for row in self.rows()):
+            # The zero-throttle test fixture intentionally disables idle refreshes: ticking
+            # at 0s would busy-loop and starve event-triggered updates.
+            # Otherwise keep the elapsed label live during long calls with no progress.
+            self.request_publish()
 
     # ── controls (adapter button handlers) ──
     def stop(self, subagent_id: str) -> bool:
