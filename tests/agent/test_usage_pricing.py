@@ -461,6 +461,16 @@ class TestFormatCostLabel:
     def test_normal_cost_renders_2dp(self):
         assert format_cost_label(Decimal("1.23")) == f"~{CURRENCY_SYMBOL}1.23"
 
+    def test_non_default_symbol_is_applied_at_every_precision(self, monkeypatch):
+        """A display-symbol override applies to zero, sub-cent and regular labels."""
+        from agent import usage_pricing
+
+        monkeypatch.setattr(usage_pricing, "CURRENCY_SYMBOL", "¥", raising=False)
+        assert format_cost_label(Decimal("0")) == "¥0.00"
+        assert format_cost_label(Decimal("0.0046")) == "~¥0.0046"
+        assert format_cost_label(Decimal("0.00005")) == "~¥<0.0001"
+        assert format_cost_label(Decimal("1.23")) == "~¥1.23"
+
 
 
     def test_below_4dp_floor_never_reads_zero(self):
