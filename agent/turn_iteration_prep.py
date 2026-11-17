@@ -528,7 +528,11 @@ def apply_retry_restarts(
         # Every successful failover arms this restart, so the bound must leave room for one
         # full pass over the configured chain: capping at max_retries alone ended the turn
         # before later fallback entries were ever tried.
-        rebuilt_limit = max_retries + len(getattr(agent, "_fallback_chain", None) or ())
+        # A fallback that has actually been activated earns one extra restart.
+        # Untried entries must not extend a same-provider re-arm loop.
+        chain_length = len(getattr(agent, "_fallback_chain", None) or ())
+        activated_entries = getattr(agent, "_fallback_index", chain_length)
+        rebuilt_limit = max_retries + max(0, min(chain_length, activated_entries))
         if restart_count > rebuilt_limit:
             # A stall/failure keeps re-escalating to the fallback chain: stop refunding the
             # iteration budget and re-issuing, or a runaway turn holds the turn lease

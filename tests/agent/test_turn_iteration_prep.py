@@ -82,6 +82,26 @@ def test_rebuilt_restart_bound_covers_the_whole_fallback_chain():
     assert verdict._turn_exit_reason == "rebuilt_restart_limit_exceeded"
 
 
+
+def test_rebuilt_rearms_without_a_new_fallback_do_not_spend_untried_chain():
+    """A stopped fallback walk must not borrow restart headroom from unused entries."""
+    agent = _agent()
+    agent._fallback_chain = [
+        {"provider": "custom", "model": f"backup-{i}"}
+        for i in range(MAX_RETRIES + 3)
+    ]
+    agent._fallback_index = 1  # One fallback activated, others still untried.
+    restart_count, actions = 0, []
+    for _ in range(MAX_RETRIES + 2):
+        verdict = _apply(agent, "restart_with_rebuilt_messages", restart_count)
+        actions.append(verdict.action)
+        restart_count = verdict.restart_count
+
+    assert actions == ["continue"] * (MAX_RETRIES + 1) + ["break"]
+    assert verdict._turn_exit_reason == "rebuilt_restart_limit_exceeded"
+    assert agent.iteration_budget.refunds == MAX_RETRIES + 1
+
+
 def _interrupted_agent(tool_interrupt_reason):
     agent = SimpleNamespace(
         _interrupt_requested=True, _tool_interrupt_reason=tool_interrupt_reason, quiet_mode=True,
