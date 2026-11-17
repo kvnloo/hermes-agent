@@ -194,4 +194,30 @@ describe('preserveLocalPendingTurnMessages — settled reply over a text-less sh
     expect(preserved.map(message => chatMessageText(message))).not.toContain('the pre-compaction answer')
     expect(preserved.filter(message => chatMessageText(message) === 'the rewritten answer')).toHaveLength(1)
   })
+  it('preserves only the matching tool fold, never a newer unrelated ordinal shell', () => {
+    const previous = [
+      msg('old-user', 'user', 'run the first operation', { rowId: 7413 }),
+      settledReply('assistant-99', 7420, 'The first result is 71.', 'call-first')
+    ]
+    const ownFold = [
+      msg('old-user-stored', 'user', 'run the first operation', { rowId: 7413 }),
+      textlessShell('fold-first', 7414, 'call-first')
+    ]
+
+    // The PR's fix is needed for this genuine skewed fold; this half fails on main.
+    expect(preserveLocalPendingTurnMessages(ownFold, previous).map(message => message.id)).toEqual([
+      'old-user-stored',
+      'assistant-99'
+    ])
+
+    // A compacted/replaced page can put a DIFFERENT turn at the same role ordinal.
+    // The old reply has a final row id, but must not hijack the newer tool shell.
+    const foreignFold = [
+      msg('new-user-stored', 'user', 'run the second operation', { rowId: 8013 }),
+      textlessShell('fold-second', 8014, 'call-second')
+    ]
+
+    expect(preserveLocalPendingTurnMessages(foreignFold, previous)).toEqual(foreignFold)
+  })
+
 })

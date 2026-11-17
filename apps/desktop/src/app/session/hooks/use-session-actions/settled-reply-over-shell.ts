@@ -6,6 +6,18 @@ import { conflictingTranscriptIdentity } from './pending-turn-identity'
 
 const answerText = (message: ChatMessage) => textWithoutReferenceLines(chatMessageText(message)).trim()
 
+// A role ordinal is not a turn identity after compaction. Tool-call ids are
+// unique to a turn; disjoint ids prove this is someone else's text-less fold.
+// Permit the legacy/partial projection when either side has no tool ids.
+const foreignToolFold = (local: ChatMessage, shell: ChatMessage): boolean => {
+  const localIds = new Set(
+    local.parts.flatMap(part => (part.type === 'tool-call' && part.toolCallId ? [part.toolCallId] : []))
+  )
+  const shellIds = shell.parts.flatMap(part => (part.type === 'tool-call' && part.toolCallId ? [part.toolCallId] : []))
+
+  return localIds.size > 0 && shellIds.length > 0 && shellIds.every(id => !localIds.has(id))
+}
+
 /**
  * A committed tool round with no prose (`content = ''`, `tool_calls` set)
  * hydrates as a text-less shell. When no later prose row folds into it, the
@@ -57,6 +69,7 @@ export const isSettledReplyOverOrdinalShell = (
   message.hidden !== true &&
   chatMessageText(message).trim() !== '' &&
   ordinalShell !== undefined &&
+  !foreignToolFold(message, ordinalShell) &&
   settledReplyOverEmptyShell(message, ordinalShell)
 
 /**
