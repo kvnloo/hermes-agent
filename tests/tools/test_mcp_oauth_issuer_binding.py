@@ -110,3 +110,35 @@ def test_configured_client_secret_is_never_presented_to_another_authorization_se
     storage.remove()  # `hermes mcp login` wipes state; the binding is what survives it
     _maybe_preregister_client(storage, cfg, _build_client_metadata(cfg))
     assert not credentials_match_issuer(asyncio.run(storage.get_client_info()), as2, None)
+
+
+def test_upgrade_migrates_configured_client_issuer_before_reconnect(tmp_path):
+    """An already-authorized client from before client-binding.json must not disclose its secret
+    if the MCP resource moves to AS2 on the first Hermes run after upgrading."""
+    from mcp.client.auth.utils import credentials_match_issuer
+    from tools.mcp_oauth import _build_client_metadata, _maybe_preregister_client
+
+    as1, as2 = "https://as1.example.com", "https://as2.example.com"
+    cfg = {"client_id": "cfg", "client_secret": "s3cret", "_resolved_port": 1}
+    metadata = _build_client_metadata(cfg)
+
+    # Prior release: client.json and issuer-stamped tokens exist, but no separate client binding.
+    old_storage = HermesTokenStorage("srv", hermes_home=tmp_path)
+    _maybe_preregister_client(old_storage, cfg, metadata)
+    old_storage.bind_issuer(as1)
+    asyncio.run(old_storage.set_tokens(OAuthToken(
+        access_token="old", token_type="Bearer", expires_in=3600, refresh_token="refresh"
+    )))
+    assert not old_storage._client_binding_path().exists()
+
+    upgraded = HermesTokenStorage("srv", hermes_home=tmp_path)
+    _maybe_preregister_client(upgraded, cfg, metadata)
+    info = asyncio.run(upgraded.get_client_info())
+    assert upgraded.configured_client_issuer("cfg") == as1
+    assert credentials_match_issuer(info, as1, None)
+    assert not credentials_match_issuer(info, as2, None)
+
+    # A re-login wipes tokens/client info, but cannot wipe the migrated issuer restriction.
+    upgraded.remove()
+    _maybe_preregister_client(upgraded, cfg, metadata)
+    assert not credentials_match_issuer(asyncio.run(upgraded.get_client_info()), as2, None)

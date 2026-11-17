@@ -582,7 +582,22 @@ class HermesTokenStorage:
         Kept by ``remove()``: a re-login must not hand the configured secret to a server it moved to."""
         data = _read_json(self._client_binding_path())
         issuer = data.get("issuer") if isinstance(data, dict) and data.get("client_id") == client_id else None
-        return issuer if isinstance(issuer, str) and issuer else None
+        if isinstance(issuer, str) and issuer:
+            return issuer
+        # An existing profile may have a configured client and issuer-stamped tokens from before
+        # client-binding.json existed. Migrate that issuer before preregistration rewrites the
+        # client record; otherwise the first reconnect after upgrade can leak the secret to AS2.
+        client = _read_json(self._client_info_path())
+        if not isinstance(client, dict) or client.get("client_id") != client_id:
+            return None
+        tokens = _read_json(self._tokens_path())
+        legacy_issuer = tokens.get("hermes_issuer") if isinstance(tokens, dict) else None
+        if not legacy_issuer:
+            legacy_issuer = client.get("issuer")  # old device-flow registrations
+        if not isinstance(legacy_issuer, str) or not legacy_issuer:
+            return None
+        _write_json(self._client_binding_path(), {"client_id": client_id, "issuer": legacy_issuer})
+        return legacy_issuer
 
     def bind_configured_client(self, client_id: str, issuer: str) -> None:
         """Record *issuer* for the configured client unless one is already recorded for it."""
