@@ -81,3 +81,42 @@ def test_deferring_leaves_the_job_store_untouched(hermes_home):
     after = json.loads((hermes_home / "cron" / "jobs.json").read_text())["jobs"]
     assert fired == 0
     assert [j.get("next_run_at") for j in after] == [j.get("next_run_at") for j in before]
+
+
+def test_update_begins_during_due_scan_defers_without_spending_slot(hermes_home, monkeypatch):
+    """An update arriving between the first fence check and due scan must not consume a fire."""
+    from datetime import datetime, timedelta, timezone
+
+    from cron import jobs, scheduler
+
+    job = jobs.create_job(name="hourly-report", prompt="report", schedule="every 1h")
+    due_at = (datetime.now(timezone.utc) - timedelta(seconds=5)).isoformat()
+    with jobs._jobs_lock():
+        records = jobs.load_jobs()
+        next(j for j in records if j["id"] == job["id"])["next_run_at"] = due_at
+        jobs.save_jobs(records)
+
+    before = jobs.get_job(job["id"])["next_run_at"]
+    get_due_jobs = scheduler.get_due_jobs
+    scanned = []
+
+    def update_during_due_scan():
+        due = get_due_jobs()
+        scanned.extend(j["id"] for j in due)
+        _write_marker(hermes_home / ".hermes-update-in-progress", os.getpid())
+        return due
+
+    monkeypatch.setattr(scheduler, "get_due_jobs", update_during_due_scan)
+    submitted = []
+
+    def capture_submit(job, _pool, _process):
+        submitted.append(job["id"])
+        return None
+
+    monkeypatch.setattr(scheduler, "_get_parallel_pool", lambda *_args: object())
+    monkeypatch.setattr(scheduler, "_submit_with_guard", capture_submit)
+
+    assert scheduler.tick(verbose=False, adapters=[], loop=None, sync=True) == 0
+    assert job["id"] in scanned  # A real occurrence was due when the update began.
+    assert submitted == []
+    assert jobs.get_job(job["id"])["next_run_at"] == before

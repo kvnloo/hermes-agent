@@ -3813,6 +3813,11 @@ def tick(
             logger.debug("Worktree maintenance dispatch failed: %s", _wt_exc)
 
         due_jobs = get_due_jobs()
+        # The updater may publish its marker while the due scan waits for the jobs lock.
+        # Recheck before advancing recurring slots or handing a job to an executor.
+        if _update_in_progress():
+            _log_update_deferral_once()
+            return 0
         _sweep_stale_inflight_for_tick(due_jobs)
 
         if not due_jobs:
