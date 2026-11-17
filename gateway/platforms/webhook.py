@@ -212,7 +212,7 @@ class WebhookAdapter(BasePlatformAdapter):
     serves_profile_prefix: bool = True
 
     def __init__(self, config: PlatformConfig):
-        from hermes_constants import get_hermes_home
+        from hermes_constants import get_routing_process_hermes_home
 
         super().__init__(config, Platform.WEBHOOK)
         extra = config.extra
@@ -222,7 +222,7 @@ class WebhookAdapter(BasePlatformAdapter):
         self._global_secret: str = extra.get("secret", "")
         self._static_routes: dict[str, dict] = extra.get("routes", {})
         # Durable admission reloads routes under the target profile, but the store belongs to the listener.
-        self._subscriptions_path = get_hermes_home() / _DYNAMIC_ROUTES_FILENAME
+        self._subscriptions_path = get_routing_process_hermes_home() / _DYNAMIC_ROUTES_FILENAME
         self._dynamic_routes: dict[str, dict] = {}
         self._dynamic_routes_stat: Optional[tuple] = None
         self._routes: dict[str, dict] = dict(self._static_routes)

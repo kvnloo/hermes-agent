@@ -255,3 +255,31 @@ async def test_fenced_webhook_retry_only_observes_existing_receipt(fence):
         assert (await client.post('/webhooks/fixture', data=body, headers=headers)).status == 503
         assert len(authority.db._read_all('SELECT admission_id FROM session_admissions')) == 1
         assert schedules == []
+
+def test_mirrored_profile_host_uses_pinned_launch_webhook_registry(tmp_path, monkeypatch):
+    """A shared listener reads the launch registry even if the host mirrors a routed HERMES_HOME."""
+    import hermes_constants
+    from gateway.platforms.webhook import _WebhookDeliveryIdentity
+    from gateway.platforms.webhook_delivery import route_digest
+
+    launch = tmp_path / "launch"
+    routed = launch / "profiles" / "worker"
+    routed.mkdir(parents=True)
+    # Embedding hosts may expose the active profile through HERMES_HOME while pinning
+    # the gateway's actual owner for routing decisions.
+    monkeypatch.setenv("HERMES_HOME", str(routed))
+    monkeypatch.setattr(hermes_constants, "_PINNED_PROCESS_HERMES_HOME", str(launch))
+    dynamic = {"profile": "worker", "secret": "dynamic-secret",
+               "prompt": "{text}", "deliver": "log"}
+    static = {"profile": "worker", "secret": "static-secret",
+              "prompt": "{text}", "deliver": "log"}
+    (launch / "webhook_subscriptions.json").write_text(
+        json.dumps({"dynamic": dynamic}), encoding="utf-8")
+    adapter = WebhookAdapter(PlatformConfig.from_dict({
+        "enabled": True, "extra": {"routes": {"static": static}}}))
+    adapter._reload_dynamic_routes()
+    assert set(adapter._routes) == {"static", "dynamic"}
+    chat_id = _WebhookDeliveryIdentity.from_parts("worker", "dynamic", "d1").session_chat_id
+    expected = hashlib.sha256(json.dumps(
+        dynamic, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    assert route_digest(adapter, chat_id) == expected
