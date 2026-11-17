@@ -26,7 +26,7 @@ from pathlib import Path
 
 from hermes_cli.local_runtime.binaries import runtimes_root
 from hermes_cli.local_runtime.endpoint import child_query
-from hermes_cli.local_runtime.processes import server_child_env, spawn_server
+from hermes_cli.local_runtime.processes import server_child_env, server_path_arg, spawn_server
 from hermes_cli.process_identity import release_process_group_once_empty, stop_owned_group_survivors
 
 logger = logging.getLogger(__name__)
@@ -212,6 +212,7 @@ class LlamaServerSupervisor:
 
     def _spawn(self) -> None:
         exe = self.binary
+        cwd = exe.parent
         key_path = api_key_path()
         try:
             # llama-server reads each line of the file verbatim (no BOM/whitespace strip), so the
@@ -222,7 +223,7 @@ class LlamaServerSupervisor:
             key_on_disk = False  # persistence failed earlier: nothing on disk to point at
         # The file keeps the key out of argv (visible to `ps`) and out of the spawn line below.
         if key_on_disk and _api_key_file_supported(exe):
-            key_args = ("--api-key-file", str(key_path))
+            key_args = ("--api-key-file", server_path_arg(key_path, cwd))
         else:
             key_args = ("--api-key", self.api_key)
         cmd = [
@@ -243,9 +244,9 @@ class LlamaServerSupervisor:
             *_direct_io_args(exe),
         ]
         if self.preset_path and self.preset_path.exists():
-            cmd += ["--models-preset", str(self.preset_path)]
+            cmd += ["--models-preset", server_path_arg(self.preset_path, cwd)]
         else:
-            cmd += ["--models-dir", str(self.models_dir)]
+            cmd += ["--models-dir", server_path_arg(self.models_dir, cwd)]
         cmd += self.extra_args
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         if self._log_handle is not None:

@@ -14,6 +14,7 @@ from hermes_cli.local_runtime.context_policy import (
 from hermes_cli.local_runtime.estimator import (
     HardwareBudget, PhysicsRefusal, as_loaded, ctx_bytes, footprint_bytes, profile_from_gguf)
 from hermes_cli.local_runtime.gguf import model_id_from_stem, read_gguf_header
+from hermes_cli.local_runtime.processes import server_path_arg
 
 logger = logging.getLogger(__name__)
 
@@ -369,23 +370,25 @@ def plan_presets(models_dir: Path, budget: HardwareBudget, mtp_capable: set[str]
 def generate_presets(models_dir: Path, budget: HardwareBudget, preset_path: Path,
                      mtp_capable: set[str] | None = None, *,
                      live: HardwareBudget | None = None, residents: int = 1,
-                     engine_tag: str | None = None) -> list[PresetEntry]:
+                     engine_tag: str | None = None,
+                     server_cwd: Path | None = None) -> list[PresetEntry]:
     """Plan every staged model and write one INI. Refused models get no section (the picker
     surfaces the refusal from the returned entries)."""
     entries = plan_presets(models_dir, budget, mtp_capable, live=live, residents=residents,
                            engine_tag=engine_tag)
-    write_presets(entries, preset_path)
+    write_presets(entries, preset_path, server_cwd=server_cwd)
     return entries
 
 
-def write_presets(entries: list[PresetEntry], preset_path: Path) -> None:
+def write_presets(entries: list[PresetEntry], preset_path: Path, *,
+                  server_cwd: Path | None = None) -> None:
     from utils import atomic_write_text
 
-    atomic_write_text(preset_path, render_presets(entries), tmp_prefix=f".{preset_path.name}_", mode=0o600)
+    atomic_write_text(preset_path, render_presets(entries, server_cwd=server_cwd), tmp_prefix=f".{preset_path.name}_", mode=0o600)
     logger.info("wrote %d preset sections to %s", sum(e.keys is not None for e in entries), preset_path)
 
 
-def render_presets(entries: list[PresetEntry]) -> str:
+def render_presets(entries: list[PresetEntry], *, server_cwd: Path | None = None) -> str:
     sections: list[str] = []
     for entry in entries:
         # INI comments preserve non-flag facts atomically with the launch policy.
@@ -393,7 +396,12 @@ def render_presets(entries: list[PresetEntry]) -> str:
             "model_id": entry.model_id, "window": entry.window,
             "spilled": entry.spilled, "refusal": entry.refusal}) + "\n")
         if entry.keys is not None:
-            body = "\n".join(f"{k} = {v}" for k, v in entry.keys.items())
+            values = entry.keys
+            if server_cwd is not None:
+                values = {key: server_path_arg(value, server_cwd)
+                          if key in ("model", "model-draft", "mmproj") else value
+                          for key, value in values.items()}
+            body = "\n".join(f"{k} = {v}" for k, v in values.items())
             sections.append(f"[{entry.model_id}]\n{body}\n")
     return "\n".join(sections)
 

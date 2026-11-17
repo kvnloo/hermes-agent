@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 import ctypes
 from ctypes import wintypes
+import os
+from pathlib import Path
 import subprocess
 import sys
 import threading
@@ -105,6 +107,22 @@ def server_child_env(base_env: Mapping[str, str]) -> dict[str, str]:
         key: value for key, value in base_env.items()
         if not any(marker in key.upper() for marker in _CREDENTIAL_ENV_MARKERS)
     }
+
+
+def server_path_arg(path: str | Path, cwd: Path) -> str:
+    """Avoid non-ASCII ancestors in llama-server's narrow-decoded path arguments.
+
+    The server starts with cwd at the binary directory, so an ASCII relative
+    path survives Windows argv decoding without moving or copying model files.
+    """
+    value = str(path)
+    if value.isascii() or not Path(value).is_absolute():
+        return value
+    try:
+        relative = os.path.relpath(value, cwd)
+    except ValueError:  # different Windows drives cannot use a relative path
+        return value
+    return relative if relative.isascii() else value
 
 
 def spawn_server(cmd, *, owned: bool = False, **kwargs) -> tuple[subprocess.Popen, _WindowsJob | None]:
