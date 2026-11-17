@@ -580,6 +580,35 @@ def _readonly_skill_mount_args() -> list[str]:
                     logger.warning("Docker: skipping %s mount — %s: %s", noun.split()[0], problem, src)
                     continue
                 host_src = docker_host_mapping.apply_host_mapping(entry["host_path"], host_mapping)
+                if (getter == "get_skills_directory_mount" and host_mapping
+                        and src.name.startswith("hermes-skills-safe-")
+                        and host_src == entry["host_path"]):
+                    # Sanitized skills live in /tmp, outside the gateway's host bind.
+                    # The sibling daemon needs a staged, daemon-visible source instead.
+                    staging_root = get_sandbox_dir() / "docker"
+                    host_staging = docker_host_mapping.apply_host_mapping(str(staging_root), host_mapping)
+                    if host_staging != str(staging_root):
+                        try:
+                            fingerprint = "\0".join(
+                                f"{item.relative_to(src)}:{item.stat().st_mtime_ns}:{item.stat().st_size}"
+                                for item in sorted(src.rglob("*")) if item.is_file()
+                            )
+                            staged = staging_root / (
+                                "safe-skills-" + hashlib.sha256(fingerprint.encode()).hexdigest()[:24]
+                            )
+                            staged.parent.mkdir(parents=True, exist_ok=True)
+                            if not staged.is_dir():
+                                with tempfile.TemporaryDirectory(dir=staged.parent) as scratch:
+                                    prepared = Path(scratch) / "skills"
+                                    shutil.copytree(src, prepared)
+                                    try:
+                                        prepared.rename(staged)
+                                    except FileExistsError:
+                                        pass  # another sandbox staged identical content
+                            host_src = docker_host_mapping.apply_host_mapping(str(staged), host_mapping)
+                        except OSError as exc:
+                            logger.warning("Docker: skipping symlink-safe skills mount: %s", exc)
+                            continue
                 suffix = "" if host_src == entry["host_path"] else f" (gateway view: {entry['host_path']})"
                 args.extend(["-v", f"{host_src}:{entry['container_path']}:ro"])
                 logger.info("Docker: mounting %s %s -> %s%s", noun, host_src, entry["container_path"], suffix)
