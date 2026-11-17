@@ -37,6 +37,29 @@ def _reply(turn: int) -> str:
     return "\n".join(" ".join(words[j:j + 21]) for j in range(0, len(words), 21))
 
 
+def _is_live_preview_row(line: str) -> bool:
+    """Uncommitted spinner text is chrome in both CLI layouts, even after tmux reflow."""
+    row = line.lstrip()
+    # Classic shows "… words"; the default glyph layout embeds that same preview
+    # after its rule and braille activity frame. Neither is a committed reply.
+    return row.startswith("…") or bool(re.match(r"^── [⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏] …(?: |$)", row))
+
+
+def test_glyph_spinner_preview_does_not_duplicate_committed_words() -> None:
+    """A preserved top-rule preview may look like a second transcript line (#156776)."""
+    committed = " ".join(f"t3w{i:03d}" for i in range(12, 20))
+    preview = f"── ⠹ … {committed} · 3s"
+    assert _is_live_preview_row(preview)
+    assert _is_live_preview_row(f"… {committed}")  # classic layout
+    assert not _is_live_preview_row(committed)
+    captured = "\n".join((committed, preview))
+    words = Counter(re.findall(r"\bt\dw\d{3}\b", "\n".join(
+        line for line in captured.split("\n") if not _is_live_preview_row(line))))
+    assert all(words[word] == 1 for word in committed.split())
+    # A real duplicate without the spinner prefix must still fail the ledger.
+    assert not _is_live_preview_row(f"t3w012 {committed}")
+
+
 def test_resizes_keep_each_transcript_line_once_in_tmux_scrollback(tmp_path: Path) -> None:
     require_tmux()
     sock = f"hermes-e2e-{uuid.uuid4().hex[:8]}"
@@ -140,7 +163,7 @@ def test_resizes_keep_each_transcript_line_once_in_tmux_scrollback(tmp_path: Pat
     # left rather than erased (a stale chrome row is benign, an erased transcript row is lost) —
     # at most one per mid-stream recovery: the drag's and each step's (#95375).
     lines = final.split("\n")
-    stale_preview = [line for line in lines if line.lstrip().startswith("\u2026")]
+    stale_preview = [line for line in lines if _is_live_preview_row(line)]
     assert len(stale_preview) <= 3, final
     words = Counter(re.findall(r"\bt\dw\d{3}\b", "\n".join(ln for ln in lines if ln not in stale_preview)))
     expected = {f"t{t}w{i:03d}" for t, n in WORDS.items() for i in range(n)}
