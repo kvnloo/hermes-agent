@@ -459,7 +459,7 @@ def build_policy(params, config, *, private_secrets=None, profile_terminal=True,
     # An ssh/modal/etc. backend resolves its own cwd on another host, which this host cannot probe, and
     # that host is POSIX whatever this one is (a Windows gateway with a WSL remote).
     host_cwd = terminal_uses_host_cwd(terminal)
-    if (not isinstance(cwd, str) or not (Path(cwd).is_absolute() if host_cwd else posixpath.isabs(cwd))
+    if (not isinstance(cwd, str) or not (Path(cwd).is_absolute() if host_cwd else remote_cwd_shape(cwd, terminal))
             or (host_cwd and not Path(cwd).is_dir())):
         _refuse('cwd', 'must be an absolute path to an existing directory')
     row_cwd = params.get('row_cwd')
@@ -522,6 +522,13 @@ def terminal_uses_host_cwd(terminal):
     backend = str(terminal.get('TERMINAL_ENV') or 'local').strip().lower()
     mounts = str(terminal.get('TERMINAL_DOCKER_MOUNT_CWD_TO_WORKSPACE') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
     return backend == 'local' or (backend == 'docker' and mounts)
+
+
+def remote_cwd_shape(cwd, terminal):
+    """SSH shell paths may start with ~; other remote backends need POSIX absolute paths."""
+    from hermes_cli.config import _is_ssh_remote_tilde_cwd
+    backend = str(terminal.get('TERMINAL_ENV') or '')
+    return posixpath.isabs(cwd) or _is_ssh_remote_tilde_cwd(backend, cwd)
 
 
 def _profile_workspace_cwd(home):

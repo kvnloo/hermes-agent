@@ -95,8 +95,8 @@ async def test_move_to_project_accepts_a_remote_only_folder_on_ssh(tmp_path, mon
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("cwd", ["~/project", "relative/project"])
-async def test_move_to_project_on_ssh_still_requires_an_absolute_path(tmp_path, monkeypatch, cwd):
+@pytest.mark.parametrize("cwd", ["relative/project"])
+async def test_move_to_project_on_ssh_rejects_relative_path(tmp_path, monkeypatch, cwd):
     from hermes_state_runtime import RuntimeStoreError
 
     with pytest.raises(RuntimeStoreError):
@@ -109,3 +109,25 @@ async def test_move_to_project_on_local_backend_still_requires_an_existing_folde
 
     with pytest.raises(RuntimeStoreError):
         await _move(tmp_path, monkeypatch, "local", "/srv/remote/project")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("cwd", ["~", "~/project"])
+async def test_ssh_remote_home_cwd_kept_for_acp_create_and_move(tmp_path, monkeypatch, cwd):
+    """SSH's ~ names the remote user's home, never the gateway host's home."""
+    from gateway import session_mutation_policy as mutation
+    from gateway.session_policy import build_policy, workspace_ready
+
+    _remote_home(tmp_path, monkeypatch, "ssh")
+    policy = build_policy({"source": "acp", "cwd": cwd, "cwd_explicit": True, "model": "m"}, {})
+    assert policy.cwd == cwd
+    assert json.loads(policy.terminal_json)["TERMINAL_CWD"] == cwd
+    assert workspace_ready(policy)
+
+    prepared = {"snapshot": {"receipt": {"policy": asdict(policy)}}}
+    monkeypatch.setattr(mutation, "_rebind",
+                        lambda authority, prepared, old, new, **extra: (new, extra))
+    moved, extra = await mutation.prepare_workspace(None, None, {"cwd": cwd}, prepared)
+    assert moved.cwd == cwd
+    assert json.loads(moved.terminal_json)["TERMINAL_CWD"] == cwd
+    assert extra == {"git": {"branch": "", "root": ""}}
