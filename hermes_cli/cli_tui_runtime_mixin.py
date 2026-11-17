@@ -136,6 +136,11 @@ class CLITuiRuntimeMixin:
             # A bare number right after a bare `/resume` selects that session (never sent to the agent).
             if self._pending_resume_sessions and self._consume_pending_resume_selection(user_input):
                 return
+            if is_seeded_query and user_input.lstrip().startswith("+"):
+                # Seeded -q skips slash/shell commands, but an opted-in alias is a chat route.
+                user_input = self._take_alias_prefix(user_input)
+                if user_input is None:
+                    return
             if not is_seeded_query:
                 if self.handle_bang_shell(user_input):
                     return

@@ -59,3 +59,26 @@ def test_other_plus_text_and_the_default_leave_the_message_alone(monkeypatch):
     assert disabled._take_alias_prefix("+fast hi there") == "+fast hi there"
     assert (enabled.model, disabled.model) == ("old/model", "old/model")
     assert enabled._pending_one_turn_model_restore is None
+
+
+def test_seeded_interactive_query_uses_alias_for_its_turn(monkeypatch):
+    """A TTY -q seed is a chat message, not a slash command, so its opted-in alias still applies."""
+    _no_io(monkeypatch)
+    stub = _stub(prefix_enabled=True)
+    seen = []
+    stub._tui_dock_drop_dequeued = lambda: None
+    stub._tui_unwrap_input = lambda value: (value, False, True)
+    stub._typed_voice_stop = lambda value: False
+    stub._pending_resume_sessions = []
+    stub._print_user_message_preview = lambda value: None
+    stub._turn_summary_begin = lambda: None
+    stub._app = SimpleNamespace(invalidate=lambda: None)
+    stub.chat = lambda message, **kwargs: seen.append((message, stub.model))
+    stub._tui_after_turn = lambda: None
+
+    from hermes_cli.cli_tui_runtime_mixin import CLITuiRuntimeMixin
+
+    CLITuiRuntimeMixin._tui_process_one_input(stub, "+fast hi there")
+
+    assert seen == [("hi there", "fast/model")]
+    assert stub._pending_one_turn_model_restore["model"] == "old/model"
