@@ -145,3 +145,43 @@ def test_cancel_mid_tick_keeps_the_lock_while_the_tick_thread_runs(watcher, monk
         watcher.runner._release_kanban_dispatcher_lock()
 
     assert state == "contended", "a peer could take the lock while the cancelled tick still ran"
+
+@pytest.mark.platforms("posix")
+def test_cancel_during_startup_delay_frees_lock_for_standby(tmp_path, monkeypatch):
+    """A cancelled watcher with no in-flight tick must not strand the OS lock."""
+    import hermes_cli.config as _cfg_mod
+    import hermes_cli.kanban_db as _kb
+
+    monkeypatch.setattr(_cfg_mod, "load_config", lambda: {"kanban": {"dispatch_in_gateway": True}})
+    monkeypatch.setattr(_kb, "kanban_home", lambda: tmp_path)
+
+    runner = object.__new__(GatewayRunner)
+    runner._running = True
+    in_startup_delay = asyncio.Event()
+
+    async def _park(_seconds):
+        in_startup_delay.set()
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(_kw.asyncio, "sleep", _park)
+
+    async def scenario():
+        task = asyncio.create_task(runner._kanban_dispatcher_watcher())
+        await asyncio.wait_for(in_startup_delay.wait(), timeout=5.0)
+        assert runner._owns_kanban_dispatcher_lock()
+
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+        # The original gateway process is still alive; standby can take over.
+        handle, state = _acquire_singleton_lock(tmp_path / "kanban" / ".dispatcher.lock")
+        try:
+            assert state == "held", "a cancelled pre-tick watcher still excludes standby gateways"
+        finally:
+            _release_singleton_lock(handle)
+
+    try:
+        asyncio.run(scenario())
+    finally:
+        runner._release_kanban_dispatcher_lock()

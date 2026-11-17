@@ -307,7 +307,13 @@ class GatewayKanbanWatchersMixin:
         interval = settings.interval
 
         # Initial delay so adapters are wired before workers spawn (matches the notifier).
-        await asyncio.sleep(5)
+        try:
+            await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            # No process-service thread has started; cancelled boot must not
+            # strand the singleton lock while this gateway process stays alive.
+            self._release_kanban_dispatcher_lock()
+            raise
 
         # Health telemetry (mirrors `_cmd_daemon`): warn when the ready queue
         # is non-empty but spawns are 0 for N consecutive ticks — usually a
