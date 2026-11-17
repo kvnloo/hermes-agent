@@ -75,6 +75,42 @@ async def test_closed_local_session_leaves_memory_and_resumes_with_its_source(tm
 
 
 @pytest.mark.asyncio
+async def test_one_shot_viewer_close_releases_cua_driver_before_default_idle_window(tmp_path, monkeypatch):
+    """An ended gateway-viewer session loses its driver now, without touching another live session."""
+    from agent.runtime_scope import bind_profile_scope
+    from tests.computer_use_fakes import NoopBackend, reset_backend
+    from tools.computer_use import tool as cu
+
+    runner, authority, db = await _owner(tmp_path, monkeypatch)
+    reset_backend()
+
+    class Backend(NoopBackend):
+        def __init__(self):
+            super().__init__()
+            self.stopped = False
+
+        def stop(self):
+            self.stopped = True
+
+    monkeypatch.setattr(cu, "_new_backend", lambda mode: Backend())
+    try:
+        ended, survivor = _create(authority, "completed"), _create(authority, "resumable")
+        with bind_profile_scope(tmp_path, hydrate_secrets=False):
+            dead_backend = cu._get_backend(ended.session_id)
+            live_backend = cu._get_backend(survivor.session_id)
+            # The actual default is 30 minutes; an ended one-shot should not wait for it.
+            assert cu._backend_idle_limits[cu._scoped_sid(ended.session_id)] == 30 * 60
+        await _close(authority, ended)
+        await async_wait_until(lambda: dead_backend.stopped, timeout=10,
+                               what="closed session's cua-driver to stop")
+        assert not live_backend.stopped
+        assert db.get_session(ended.session_id)["end_reason"] == "tui_shutdown"
+    finally:
+        reset_backend()
+        db.close()
+
+
+@pytest.mark.asyncio
 async def test_prompt_admitted_while_the_close_runs_is_never_stranded(tmp_path, monkeypatch):
     """A submit lands while the close lifecycle awaits (its drain is scheduled, and may clear
     ``rescan`` and start claiming, before the lifecycle returns): the turn runs and the session

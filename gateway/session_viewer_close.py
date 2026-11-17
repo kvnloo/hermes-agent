@@ -381,6 +381,21 @@ async def _run_close_lifecycle(authority, live, target, platform, reason):
     evict = getattr(runner, '_evict_cached_agent_at_boundary', None)
     if evict is not None:
         evict(live.route)
+    # Cache eviction is soft because a message session can resume. A viewer's explicit close is
+    # different: its finished, unobserved session must release the cua-driver immediately, not
+    # keep a process pair alive for the default 30-minute idle window (#146772).
+    from agent.runtime_scope import bind_profile_scope
+    from tools.computer_use.tool import release_computer_use_session
+
+    def release_driver():
+        # The gateway can host multiple profiles; a backend is cached under its owning profile.
+        with bind_profile_scope(Path(authority.db.db_path).resolve().parent, hydrate_secrets=False):
+            release_computer_use_session(target)
+
+    try:
+        await asyncio.to_thread(release_driver)
+    except Exception:
+        logger.warning('Failed to release computer_use for closed session %s', target, exc_info=True)
     finalize = getattr(runner, '_finalize_session_off_loop', None)
     if finalize is None:
         return
