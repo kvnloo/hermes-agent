@@ -4,6 +4,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { Slot } from 'radix-ui'
 import * as React from 'react'
 
+import { PANE_TOGGLE_REVEAL_EVENT } from '@/components/pane-shell'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
@@ -13,7 +14,9 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tip, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { CHAT_SIDEBAR_PANE_ID } from '@/store/layout'
 import { $activeSessionId } from '@/store/session'
+import { USER_SESSION_OPEN_EVENT } from '@/store/session-open-intent'
 import { useI18n } from '@/i18n'
 import { PanelLeftIcon } from '@/lib/icons'
 import { cn } from '@/lib/utils'
@@ -69,6 +72,23 @@ function SidebarProvider({
   React.useEffect(() => {
     setOpenMobile(false)
   }, [activeSessionId])
+
+  // Desktop's actual narrow sidebar is a pane-shell overlay (ChatSidebar
+  // renders collapsible="none"), not the Radix Sheet above. A user may focus
+  // an already-open tile or reselect the current chat without changing
+  // $activeSessionId. The explicit open intent covers both and leaves passive
+  // session hydration alone.
+  React.useEffect(() => {
+    const onUserSessionOpen = () => {
+      setOpenMobile(false)
+      window.dispatchEvent(
+        new CustomEvent(PANE_TOGGLE_REVEAL_EVENT, { detail: { id: CHAT_SIDEBAR_PANE_ID, mode: 'close' } })
+      )
+    }
+    window.addEventListener(USER_SESSION_OPEN_EVENT, onUserSessionOpen)
+
+    return () => window.removeEventListener(USER_SESSION_OPEN_EVENT, onUserSessionOpen)
+  }, [])
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.

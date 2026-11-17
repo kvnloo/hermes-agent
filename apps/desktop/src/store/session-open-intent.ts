@@ -3,6 +3,10 @@
 // Route effects that select a chat on their own (the cold-start route resume,
 // runtime recovery) never bump it, so a background restore can tell a chat the
 // user chose, which it must leave open, from one selected automatically.
+// Explicit user selection, not passive route/session hydration. The sidebar
+// provider consumes this to dismiss the *real* narrow layout-tree overlay.
+export const USER_SESSION_OPEN_EVENT = 'hermes:user-session-open'
+
 let userSessionOpenRevision = 0
 
 /** The revision at window start. Module load precedes any input, so a launch
@@ -18,6 +22,9 @@ export function currentUserSessionOpen(): number {
 
 export function noteUserSessionOpen(): void {
   userSessionOpenRevision += 1
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(USER_SESSION_OPEN_EVENT))
+  }
 }
 
 export function _resetUserSessionOpenForTests(): void {

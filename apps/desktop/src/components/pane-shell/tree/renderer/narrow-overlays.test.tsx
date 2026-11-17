@@ -2,10 +2,12 @@ import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { PANE_TOGGLE_REVEAL_EVENT } from '@/components/pane-shell'
+import { SidebarProvider } from '@/components/ui/sidebar'
 import { $narrowOverlayPaneIds } from '@/components/pane-shell/narrow-overlay-state'
 import { registry } from '@/contrib/registry'
 import { $paneStates, setPaneWidthOverride } from '@/store/panes'
 import { $connection } from '@/store/session'
+import { noteUserSessionOpen } from '@/store/session-open-intent'
 import { stubResizeObserver } from '@/test/jsdom'
 
 import { group, split } from '../model'
@@ -115,6 +117,25 @@ describe('narrow overlay in native Desktop', () => {
 })
 
 describe('narrow overlay of a stacked zone', () => {
+  // PR #155183 closes a Radix sheet, but the production ChatSidebar renders
+  // collapsible="none". An explicit open must instead dismiss the pane-shell
+  // overlay, including when a current conversation is reselected (no ID change).
+  it('dismisses the real sessions overlay on an explicit conversation selection', () => {
+    asBrowserHost()
+    render(
+      <SidebarProvider>
+        <NarrowOverlays />
+      </SidebarProvider>
+    )
+
+    revealPane('sessions')
+    expect(document.querySelector('[data-narrow-overlay="sessions"]')).not.toBeNull()
+
+    act(() => noteUserSessionOpen())
+    expect(document.querySelector('[data-narrow-overlay]')).toBeNull()
+    expect($narrowOverlayPaneIds.get().size).toBe(0)
+  })
+
   it('dismisses an outside tap while preserving inside controls and cancelled gestures', () => {
     asBrowserHost()
     render(<NarrowOverlays />)
