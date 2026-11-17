@@ -10,6 +10,7 @@ import type { SessionInfo } from '@/hermes'
 import { createClientSessionState } from '@/lib/chat-runtime'
 import type * as ChatRuntime from '@/lib/chat-runtime'
 import { SESSION_ROW_AREAS, type SessionRowSlotProps } from '@/lib/session-row-slots'
+import { setTimestampFormatFromConfig } from '@/lib/time'
 import type * as Time from '@/lib/time'
 import type * as ComposerStatusStore from '@/store/composer-status'
 import { $sidebarRowMeta } from '@/store/layout'
@@ -351,6 +352,45 @@ describe('SidebarSessionRow keyboard stops', () => {
     noop.mockClear()
     fireEvent.click(pullRequest)
     expect(noop).not.toHaveBeenCalled()
+  })
+})
+
+// A memoized, mounted sidebar row must follow the desktop clock preference,
+// even when the row's session data and every other store remain unchanged.
+describe('SidebarSessionRow clock preference', () => {
+  const originalRowMeta = $sidebarRowMeta.get()
+
+  afterEach(() => {
+    act(() => {
+      setTimestampFormatFromConfig(undefined)
+      $sidebarRowMeta.set(originalRowMeta)
+    })
+  })
+
+  it('repaints the mounted row timestamp tooltip on a 12h → 24h config refresh', () => {
+    const local = new Date(2026, 4, 1, 20, 2, 3)
+    const lastActive = local.getTime() / 1000
+    const formatted = (hourCycle: 'h12' | 'h23') =>
+      new Intl.DateTimeFormat(undefined, {
+        day: 'numeric',
+        hour: 'numeric',
+        hourCycle,
+        minute: '2-digit',
+        month: 'short'
+      }).format(local)
+
+    $sidebarRowMeta.set(['updated'])
+    act(() => setTimestampFormatFromConfig('%I:%M %p'))
+
+    const { container } = renderRow(makeSession({ last_active: lastActive, title: 'Clock preference' }))
+    const stamp = container.querySelector('time')
+
+    expect(stamp?.getAttribute('aria-label')).toContain(formatted('h12'))
+
+    act(() => setTimestampFormatFromConfig('%H:%M'))
+
+    expect(stamp?.getAttribute('aria-label')).toContain(formatted('h23'))
+    expect(stamp?.getAttribute('aria-label')).not.toContain(formatted('h12'))
   })
 })
 
