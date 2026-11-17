@@ -177,6 +177,10 @@ MAX_ITERATIONS_SUMMARY_REQUEST = (
     "Please provide a final response summarizing what you've found and accomplished so far, "
     "without calling any more tools."
 )
+# Internal graph-continuation wakes are persisted as user-role rows so they can
+# resume the owning agent, but they are not operator-authored turns.  The tag is
+# byte-stable across locale catalogs.
+_KANBAN_WAKE_NOTIFICATION_PREFIX = "[kanban] "
 
 
 def _fresh_compaction_message_copy(msg: Dict[str, Any]) -> Dict[str, Any]:
@@ -3796,6 +3800,9 @@ None recoverable from deterministic fallback.
 ## Resolved Questions
 None recoverable from deterministic fallback.
 
+## Historical Pending User Asks
+{chr(10).join(f"- {ask}" for ask in user_asks) if user_asks else "None recoverable from deterministic fallback."}
+
 ## Relevant Files
 {_bullets(relevant_files, limit=12)}
 
@@ -4118,6 +4125,9 @@ Be specific with file paths, commands, line numbers, and results.]
 ## Resolved Questions
 {_resolved_questions_instructions}
 
+## Historical Pending User Asks
+{_pending_asks_instructions}
+
 ## Relevant Files
 [Files read, modified, or created — with brief note on each]
 
@@ -4155,7 +4165,7 @@ PREVIOUS SUMMARY:
 NEW TURNS TO INCORPORATE:
 {content_to_summarize}{_memory_section}
 
-Update the summary using this exact structure. PRESERVE all existing information that is still relevant. ADD new completed actions to the numbered list (continue numbering). Move items from "In Progress" to "Completed Actions" when done. Move answered questions to "Resolved Questions". Update "Active State" to reflect current state. Remove information only if it is clearly obsolete. CRITICAL: Update "## Active Task" to reflect the user's most recent unfulfilled input — this includes any question, decision request, or discussion turn that the assistant has not yet answered. Only write "None" if the last exchange was fully resolved.
+Update the summary using this exact structure. PRESERVE all existing information that is still relevant. ADD new completed actions to the numbered list (continue numbering). Move items from "In Progress" to "Completed Actions" when done. Move answered questions to "Resolved Questions". Update "Historical Pending User Asks" — remove any that are now answered (move to Resolved Questions) and add any new unanswered user asks from the new turns. Update "Active State" to reflect current state. Remove information only if it is clearly obsolete. CRITICAL: Update "## Active Task" to reflect the user's most recent unfulfilled input — this includes any question, decision request, or discussion turn that the assistant has not yet answered. Only write "None" if the last exchange was fully resolved.
 
 {_template_sections}"""
         else:
@@ -4286,6 +4296,13 @@ This compaction should PRIORITISE preserving all information related to the focu
             summary = _reinject_pruned_skill_markers(summary, _pruned_skill_names)
             summary = self._ground_historical_task_snapshot(summary, turns_to_summarize)
             self._validate_summary_user_provenance(summary, has_user_turn)
+            # Deterministic post-build check: every owner ask in the compacted
+            # span must appear verbatim. On shortfall, trigger fallback (which
+            # carries all asks) rather than silently dropping them.
+            checked = self._verify_owner_ask_coverage(summary, turns_to_summarize)
+            if checked is None:
+                return None
+            summary = checked
             # Store for iterative updates on next compaction
             self._previous_summary = summary
             self._clear_compression_failure_cooldown()
@@ -4586,6 +4603,13 @@ This compaction should PRIORITISE preserving all information related to the focu
         """
         if not isinstance(message, dict) or message.get("role") != "user":
             return False
+        # Origin tag wins over content heuristics: a user-role row stamped
+        # with a ``display_kind`` is a runtime/timeline event (kanban goal
+        # continuation, auto-continue, model switch, …), not an owner turn.
+        # Content-prefix checks below stay as the legacy/untagged fallback so
+        # rows persisted before the tag existed are still recognized.
+        if message.get("display_kind"):
+            return True
         if cls._has_compressed_summary_metadata(message):
             return True
         content = message.get("content")
@@ -4620,6 +4644,8 @@ This compaction should PRIORITISE preserving all information related to the focu
         } or text.startswith(
             TODO_INJECTION_HEADER + "\n"
         ) or text.startswith(
+            _KANBAN_WAKE_NOTIFICATION_PREFIX
+        ) or text.startswith(
             _LENGTH_CONTINUATION_DROPPED_TOOLS_PREFIX
         )
 
@@ -4647,6 +4673,79 @@ This compaction should PRIORITISE preserving all information related to the focu
                 "Context compression summary invented user attribution for a "
                 "session with no user-authored turns"
             )
+
+    @classmethod
+    def _verify_owner_ask_coverage(
+        cls, summary: str, turns_to_summarize: List[Dict[str, Any]]
+    ) -> Optional[str]:
+        """Post-build check: every user/owner ask in the compacted span must
+        appear in the summary verbatim (as Historical Task Snapshot or in
+        Historical Pending User Asks) or the capsule is not emitted.
+
+        Returns the summary unchanged if coverage is sufficient, or None if
+        some asks are missing — triggering the deterministic fallback which
+        guarantees all owner asks are preserved.
+        """
+        user_asks = cls._extract_user_asks(turns_to_summarize)
+        if not user_asks:
+            return summary
+
+        missing = []
+        for ask in user_asks:
+            if ask not in summary:
+                missing.append(ask)
+
+        if missing:
+            return None
+        return summary
+
+    @classmethod
+    def _extract_user_asks(
+        cls, turns_to_summarize: List[Dict[str, Any]]
+    ) -> List[str]:
+        """Return the de-duplicated text of all user-authored turns in the
+        compacted span (excluding blank turns, summary handoffs, system-injected
+        echoes, and synthetic compression user turns like TODO markers and
+        continuation nudges)."""
+        asks: List[str] = []
+        seen = set()
+        for turn in turns_to_summarize:
+            if not isinstance(turn, dict) or turn.get("role") != "user":
+                continue
+            content = turn.get("content")
+            if content is None:
+                continue
+            text = content if isinstance(content, str) else str(content)
+            text = text.strip()
+            if not text:
+                continue
+            # Skip summary handoff messages and injected system echoes
+            if cls._is_summary_handoff_text(text):
+                continue
+            # Skip synthetic compression user turns (TODO markers, continuation
+            # nudges, kanban wakes, etc.) — these are not owner asks.
+            if cls._is_synthetic_compression_user_turn(turn):
+                continue
+            if text not in seen:
+                seen.add(text)
+                asks.append(text)
+        return asks
+
+    @staticmethod
+    def _is_summary_handoff_text(text: str) -> bool:
+        """True if *text* looks like a prior context-compaction summary rather
+        than a genuine user-authored message."""
+        return any(
+            text.startswith(prefix)
+            for prefix in (
+                "[Context Compression]",
+                "HANDOFF",
+                HISTORICAL_TASK_HEADING,
+                "Previous context was compressed",
+                "This session was compressed",
+                "## Historical Task Snapshot",
+            )
+        )
 
     @classmethod
     def _is_context_summary_message(cls, message: Any) -> bool:
@@ -4690,6 +4789,10 @@ This compaction should PRIORITISE preserving all information related to the focu
     def _is_actionable_user_turn(cls, message: Any) -> bool:
         """Return whether *message* contains user input worth anchoring."""
         if not isinstance(message, dict) or message.get("role") != "user":
+            return False
+        # Origin tag: runtime/timeline rows (kanban goal continuation, etc.)
+        # are never actionable owner turns.
+        if message.get("display_kind"):
             return False
         if cls._has_compressed_summary_metadata(message):
             return False
