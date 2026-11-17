@@ -32,9 +32,10 @@ class _LateThread(threading.Thread):
     has passed."""
 
     release = threading.Event()
+    hold = HOLD
 
     def run(self):
-        self.release.wait(HOLD)
+        self.release.wait(self.hold)
         super().run()
 
 
@@ -133,3 +134,21 @@ def test_a_stop_right_after_the_start_drains_on_the_loop_thread(late_loop_thread
     assert _loop_mod._stop_mcp_loop()
     assert drained_on == [thread.ident], f"drained on {drained_on}, not on the loop thread {thread.ident}"
     assert not thread.is_alive()
+
+def test_a_starved_start_raises_then_recovers_the_same_thread(late_loop_thread, monkeypatch):
+    # Use the production 5-second timeout, not a shortened test-only limit. A suspended
+    # worker may start its thread after that limit; returning a stopped loop is unsafe.
+    monkeypatch.setattr(_LateThread, "hold", _loop_mod._MCP_LOOP_START_TIMEOUT + 1.0)
+    with pytest.raises(TimeoutError, match="MCP event loop thread did not start running"):
+        _loop_mod._ensure_mcp_loop()
+
+    first_loop = _origin._mcp_loop
+    assert first_loop is not None and not first_loop.is_running()
+    ready = threading.Event()
+    first_loop.call_soon_threadsafe(ready.set)
+    _LateThread.release.set()
+    assert ready.wait(timeout=5)
+    _loop_mod._ensure_mcp_loop()
+    assert _origin._mcp_loop is first_loop
+    assert len(late_loop_thread) == 1, "a delayed start was orphaned by a replacement loop"
+    _halt()
