@@ -1463,3 +1463,32 @@ def test_restart_wait_counts_exclude_only_scoped_workers(tmp_path, monkeypatch):
     keys = {scheduler._inflight_key(job_id) for job_id in jobs}
     assert not keys & scheduler._scope_isolated_job_ids
     assert not keys & set(scheduler._running_worker_pids)
+
+
+def test_webhook_event_context_survives_managed_worker_payload(tmp_path, monkeypatch):
+    """#156832: the webhook's rendered event is transient context, not a job edit."""
+    from cron import scheduler
+    from tools.process_registry import GatewayChildDispatch
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setattr(scheduler, "_get_hermes_home", lambda: tmp_path)
+    monkeypatch.setattr(
+        "tools.process_registry.restart_safe_gateway_child_argv",
+        lambda command, **_: GatewayChildDispatch("scoped", ["scope", "--", *command]),
+    )
+    _spawned, payloads, _handoff, get = _stub_external_worker_launch(scheduler, monkeypatch)
+    # The parent checks the same execution again after adoption and handoff;
+    # this integration test is about payload bytes, not ledger poll counts.
+    get.side_effect = lambda _execution_id: {"id": "exec-1", "status": "completed"}
+    event_context = (
+        "This run was triggered by webhook event 'unknown' on route 'news' "
+        "(not the schedule).\n\n"
+        '{"url":"https://example.org/page","title":"hello"}'
+    )
+    job = {"id": "job-1", "execution_id": "exec-1", "prompt": "Summarize new releases"}
+
+    assert scheduler.run_one_job(job, extra_prompt=event_context) is True
+
+    assert payloads[0]["extra_prompt"] == event_context
+    assert payloads[0]["job"]["prompt"] == "Summarize new releases"
+    assert "manual_run_prompt" not in payloads[0]["job"]
