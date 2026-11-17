@@ -271,6 +271,20 @@ def test_router_prompt_carries_roles_and_recent_messages_and_answer_parsing_is_s
         assert router.parse_router_answer(bad, handles) is None, bad
 
 
+def test_router_canonical_handle_and_friendly_alias_select_member_once():
+    members = [
+        {"member_id": "m-build", "handle": "build", "display_name": "Builder"},
+        {"member_id": "m-review", "handle": "review", "display_name": "Reviewer"},
+    ]
+    handles = router.router_handles(members)
+
+    # The router may name the same member by both tags in one otherwise valid answer.
+    # Its persisted room.routed payload must contain distinct member IDs.
+    assert router.parse_router_answer(
+        '{"members": ["build", "builder", "reviewer"]}', handles
+    ) == ("m-build", "m-review")
+
+
 # -- Continue at the cap ------------------------------------------------------------------------
 
 

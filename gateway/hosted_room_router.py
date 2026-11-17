@@ -225,4 +225,5 @@ def parse_router_answer(text: Any, handles: Mapping[str, str]) -> tuple[str, ...
     keys = [item.strip().lstrip("@").casefold() for item in picked]
     if len(set(keys)) != len(keys) or any(key not in handles for key in keys):
         return None
-    return tuple(handles[key] for key in keys)
+    # Multiple valid names may identify the same member; the routed event must not duplicate IDs.
+    return tuple(dict.fromkeys(handles[key] for key in keys))
