@@ -170,6 +170,23 @@ class TestHooksAccept:
             "event", "command", "approved_at", "script_mtime_at_approval",
         }
 
+    def test_non_tty_write_failure_does_not_claim_consent(self, tmp_path):
+        """An unwritable allowlist must fail the CLI instead of claiming approval.
+
+        save_allowlist intentionally logs and swallows OSError for process-local
+        opt-in; the standalone accept command has no process-local fallback.
+        """
+        script = _hook_script(tmp_path, "#!/usr/bin/env bash\n")
+        cfg = {"hooks": {"post_llm_call": [{"command": str(script)}]}}
+
+        with patch("agent.shell_hooks.atomic_json_write",
+                   side_effect=OSError("read-only allowlist")):
+            with pytest.raises(SystemExit) as exc:
+                self._approve(cfg, command=[str(script)])
+
+        assert exc.value.code == 1
+        assert shell_hooks.allowlist_entry_for("post_llm_call", str(script)) is None
+
     def test_accepts_every_not_yet_allowlisted_hook(self, tmp_path):
         a = _hook_script(tmp_path, "#!/usr/bin/env bash\nprintf '{}\\\\n'\n", name="a.sh")
         b = _hook_script(tmp_path, "#!/usr/bin/env bash\nprintf '{}\\\\n'\n", name="b.sh")

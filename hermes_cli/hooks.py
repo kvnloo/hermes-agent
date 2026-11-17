@@ -126,6 +126,11 @@ def _cmd_accept(args) -> None:
             print(f"  already allowlisted [{spec.event}] {spec.command}")
             continue
         shell_hooks.record_approval(spec.event, spec.command)
+        # save_allowlist logs and swallows OSError: this out-of-process CLI cannot
+        # retain the approval in memory, so it must not report success on failure.
+        if shell_hooks.allowlist_entry_for(spec.event, spec.command) is None:
+            print(f"  ✗ approval not saved [{spec.event}] {spec.command}")
+            raise SystemExit(1)
         print(f"  ✓ approved [{spec.event}] {spec.command}")
         recorded += 1
     print(f"{recorded} new approval(s) recorded in {shell_hooks.allowlist_path()}")
