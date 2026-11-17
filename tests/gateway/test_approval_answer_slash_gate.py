@@ -227,3 +227,40 @@ def test_narrowed_approvers_take_precedence_over_the_slash_gate(approvers, user_
         from gateway.slash_access import policy_for_runner_source  # /whoami and /help list what runs
         listed = policy_for_runner_source(_runner(extra), _event(who, typed).source).user_runnable_commands
         assert (typed[1:] in listed or who == ADMIN) is allowed
+
+
+@pytest.mark.parametrize(
+    ("reply", "choice"),
+    [
+        ("Approve, once.", "once"),
+        ("ALWAYS!", "always"),
+        ("Cancel.", "cancel"),
+    ],
+)
+def test_typed_slash_confirm_accepts_punctuated_reply(reply, choice):
+    """A typed decision must resolve its pending slash confirmation after normalization."""
+    from tools import slash_confirm
+
+    runner = _runner({})
+    key = runner._session_key_for_source(_event(ADMIN, "").source)
+    outcomes = []
+
+    async def handler(answer):
+        outcomes.append(answer)
+        return "confirmed"
+
+    slash_confirm.register(
+        key, "punctuated-reply", "reset", handler,
+        authority={
+            "requester_id": ADMIN,
+            "requester_name": "Req",
+            "chat_type": "dm",
+            "approvers": ["*"],
+        },
+    )
+
+    result = asyncio.run(runner._hm_slash_confirm_reply(_event(ADMIN, reply), key))
+
+    assert result == "confirmed"
+    assert outcomes == [choice]
+    assert slash_confirm.get_pending(key) is None
