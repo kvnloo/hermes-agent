@@ -82,6 +82,87 @@ describe('useSessionLifecycle durable session id', () => {
     mounted.unmount()
   })
 
+
+  it.each(['new', 'activated'] as const)(
+    'follows a %s TUI session after another client persists turns while it is idle',
+    async kind => {
+      let followTick: null | (() => void) = null
+      const intervalSpy = vi.spyOn(globalThis, 'setInterval').mockImplementation((handler, timeout) => {
+        if (timeout === 2000) {
+          followTick = handler as () => void
+        }
+
+        return 1 as unknown as ReturnType<typeof setInterval>
+      })
+
+      const request = vi.fn(async (method: string) =>
+        method === 'session.activate'
+          ? {
+              info: { cwd: '/tmp/w', model: 'test', skills: {}, tools: {} },
+              message_count: 1,
+              messages: [{ role: 'user', text: 'before' }],
+              running: false,
+              session_id: 'runtime-42',
+              session_key: 'durable-key-123',
+              status: 'idle'
+            }
+          : null
+      )
+      const rpc = vi.fn(async (method: string) => {
+        if (method === 'setup.status') {
+          return { provider_configured: true }
+        }
+
+        if (method === 'session.create') {
+          return {
+            info: { cwd: '/tmp/w', model: 'test', skills: {}, tools: {} },
+            session_id: 'runtime-42',
+            stored_session_id: 'durable-key-123'
+          }
+        }
+
+        if (method === 'session.history') {
+          return {
+            count: 2,
+            messages: [
+              { role: 'user', text: 'before' },
+              { role: 'assistant', text: 'arrived elsewhere' }
+            ]
+          }
+        }
+
+        return null
+      })
+
+      const mounted = mountLifecycle(request, rpc)
+      await vi.waitFor(() => expect(mounted.api()).toBeTruthy())
+
+      if (kind === 'new') {
+        await mounted.api().newSession()
+      } else {
+        mounted.api().activateLiveSession('durable-key-123')
+      }
+
+      await vi.waitFor(() => expect(getUiState().sid).toBe('runtime-42'))
+      expect(followTick).toBeTypeOf('function')
+      mounted.setHistoryItems.mockClear()
+
+      followTick!()
+      await vi.waitFor(() => expect(rpc).toHaveBeenCalledWith('session.history', { session_id: 'runtime-42' }))
+      await vi.waitFor(() => expect(mounted.setHistoryItems).toHaveBeenCalled())
+
+      const update = mounted.setHistoryItems.mock.calls.at(-1)?.[0]
+      expect(update([{ info: {}, kind: 'intro', role: 'system', text: '' }])).toEqual([
+        { info: {}, kind: 'intro', role: 'system', text: '' },
+        { role: 'user', text: 'before' },
+        { role: 'assistant', text: 'arrived elsewhere' }
+      ])
+
+      mounted.unmount()
+      intervalSpy.mockRestore()
+    }
+  )
+
   it('refreshes a resumed transcript when another surface persists new messages', async () => {
     let followTick: null | (() => void) = null
 

@@ -300,6 +300,7 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
         storedSid,
         usage: usageFrom(info)
       })
+      followedSessionRef.current = { messageCount: 0, runtimeId: r.session_id }
 
       if (info) {
         setHistoryItems([introMsg(info)])
@@ -397,6 +398,10 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
             storedSid,
             usage: usageFrom(info)
           })
+          followedSessionRef.current = {
+            messageCount: r.message_count ?? r.messages.length,
+            runtimeId: r.session_id
+          }
           hydrateLiveSessionInflight(r.inflight)
           cancelResumeScrollRef.current?.()
           cancelResumeScrollRef.current = scheduleResumeScrollToBottom(scrollRef)
