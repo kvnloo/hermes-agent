@@ -246,6 +246,27 @@ function plainEdit(ta: HTMLTextAreaElement, data: string, options: InputEventIni
 }
 function sent(ws: FakeWebSocket) { return ws.send.mock.calls.map(c => c[0]).join(""); }
 describe("actual ChatPage with real xterm Android keyboard", () => {
+
+ it("forwards soft Backspace after native paste even without a textarea delta", async () => {
+  const {ta, ws} = await mountedTerminal();
+  const paste = new Event("paste", {bubbles: true, cancelable: true});
+  Object.defineProperty(paste, "clipboardData", {value: {
+   types: ["text/plain"], items: [], files: [], getData: () => "P",
+  }});
+  ta.dispatchEvent(paste);
+  expect(sent(ws)).toBe("P");
+
+  // After native paste, a soft keyboard can delete PTY text without a DOM edit.
+  const textareaBeforeDelete = ta.value;
+  ta.dispatchEvent(new KeyboardEvent("keydown", {key: "Process", keyCode: 229, bubbles: true}));
+  ta.dispatchEvent(new InputEvent("beforeinput", {inputType: "deleteContentBackward", bubbles: true}));
+  ta.dispatchEvent(new InputEvent("input", {inputType: "deleteContentBackward", bubbles: true}));
+  ta.dispatchEvent(new KeyboardEvent("keyup", {key: "Process", keyCode: 229, bubbles: true}));
+  expect(ta.value).toBe(textareaBeforeDelete);
+  await settle();
+  expect(sent(ws)).toBe("P" + String.fromCharCode(127));
+ });
+
  it.each([false, true])("does not lose no-keydown text following paste during an active composition (late end=%s)", async (lateEnd) => {
   const {ta, ws} = await mountedTerminal();
   ta.dispatchEvent(new CompositionEvent("compositionstart", {bubbles: true}));

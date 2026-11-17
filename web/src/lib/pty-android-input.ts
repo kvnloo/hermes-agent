@@ -93,6 +93,11 @@ export function createAndroidPtyInput(term: Terminal, send: (data: string) => vo
     const alreadyDelivered = hardwareEdit;
     hardwareEdit = null;
     if (delta && delta !== alreadyDelivered) send(delta);
+    // Native paste may clear the textarea while its contents remain in the PTY.
+    // Android can emit a soft Backspace input with no textarea text to remove.
+    else if (!delta && !alreadyDelivered && ev.inputType === "deleteContentBackward") {
+      send("\x7f");
+    }
   };
   const keyUp = () => { hardwareEdit = null; hardwareData = null; };
   const key = term.onKey(({ key }) => {
