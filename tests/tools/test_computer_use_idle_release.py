@@ -159,3 +159,26 @@ def test_a_cached_backend_does_not_keep_the_installing_call_alive(backends):
     del sink
     gc.collect()
     assert ref() is None
+
+
+def test_profile_rebind_failure_does_not_lose_the_idle_driver(backends, tmp_path, monkeypatch):
+    """A transient profile-secret failure must leave a stop handle for the next sweep."""
+    from hermes_cli import env_loader
+
+    other = _home(tmp_path / "other", 1)
+    with _profile(other):
+        assert "error" not in _call()
+    first = backends[0]
+
+    def unavailable(_home):
+        raise RuntimeError("profile secret source unavailable")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(env_loader, "hydrate_profile_secret_sources", unavailable)
+        with pytest.raises(RuntimeError, match="profile secret source unavailable"):
+            cu.release_idle_backends(now=time.monotonic() + 3600)
+
+    assert not first.stopped
+    assert len(cu.release_idle_backends(now=time.monotonic() + 3600)) == 1
+    assert first.stopped
+    assert first.stopped_in == str(other)

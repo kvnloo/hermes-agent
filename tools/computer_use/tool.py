@@ -225,16 +225,21 @@ def release_idle_backends(now: Optional[float] = None) -> list[str]:
                 if _backend_call_locks.get(sid) is not call_lock or not _idle_due_locked(sid, now):
                     continue
                 home = _backend_homes.get(sid)
-                backend, _ = _detach_locked(sid)
-            _reset_screenshot_dedup(sid)
-            if backend is None:
-                continue
-            logger.info("computer_use backend for session %s idle; released", sid)
             from agent.runtime_scope import bind_profile_scope
+            # Binding can fail (e.g. unavailable profile secrets). Keep the only stop handle cached
+            # until scope is ready, so a later sweep can retry instead of leaking the driver stream.
             with bind_profile_scope(home) if home is not None else contextlib.nullcontext():
+                with _backend_lock:
+                    if _backend_call_locks.get(sid) is not call_lock or not _idle_due_locked(sid, now):
+                        continue
+                    backend, _ = _detach_locked(sid)
+                _reset_screenshot_dedup(sid)
+                if backend is None:
+                    continue
+                logger.info("computer_use backend for session %s idle; released", sid)
                 _stop_backend(backend, None, lambda e: logger.debug(
                     "computer_use idle release failed for session %s", sid, exc_info=True))
-            released.append(sid)
+                released.append(sid)
         finally:
             call_lock.release()
     return released
