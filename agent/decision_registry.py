@@ -30,7 +30,9 @@ def resolve_provider(
             return bool(predicate(provider))
         except Exception as exc:  # noqa: BLE001 - plugin availability is a provider boundary
             logger.warning(
-                "Decision provider %s.is_available() raised %s", provider.name, exc,
+                "Decision provider %s.is_available() raised %s",
+                provider.name,
+                type(exc).__name__,
             )
             return False
 
@@ -39,8 +41,8 @@ def resolve_provider(
         if provider is None:
             return None
         return provider if is_available(provider) else None
-    available = [
+    matches = [
         provider for provider in _registry.list_providers(scope=scope)
         if is_available(provider)
     ]
-    return available[0] if len(available) == 1 else None
+    return matches[0] if len(matches) == 1 else None

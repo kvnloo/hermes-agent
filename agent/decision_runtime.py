@@ -6,6 +6,7 @@ import contextvars
 import copy
 import json
 import logging
+import math
 import queue
 import threading
 import time
@@ -35,12 +36,17 @@ from hermes_constants import reset_hermes_home_override, set_hermes_home_overrid
 logger = logging.getLogger(__name__)
 _VALID_MODES = frozenset({"active", "shadow", "replay"})
 _TELEMETRY_LOCK = threading.Lock()
+_DEFAULT_INFLIGHT = 2
 T = TypeVar("T")
+
+
+class _Unavailable(Exception):
+    """Provider rejected or failed the availability check inside the timed worker."""
 
 
 class _ProviderInvocationError(Exception):
     def __init__(self, error: Exception) -> None:
-        super().__init__(str(error))
+        super().__init__(type(error).__name__)
         self.error = error
 
 
@@ -65,13 +71,22 @@ class DecisionRuntime:
     """Resolve, invoke, validate, and observe providers without touching agent prompt state."""
 
     def __init__(
-        self, *, plugin_id: str, scope: str, recorder: Optional[DecisionRecorder] = None,
+        self,
+        *,
+        plugin_id: str,
+        scope: str,
+        recorder: Optional[DecisionRecorder] = None,
+        max_inflight: int = _DEFAULT_INFLIGHT,
     ) -> None:
         self.plugin_id = plugin_id
         self.scope = scope
         self.recorder: DecisionRecorder = recorder or JsonlDecisionRecorder(
             Path(scope) / "logs" / "decisions.jsonl"
         )
+        if isinstance(max_inflight, bool) or not isinstance(max_inflight, int) or max_inflight <= 0:
+            raise ValueError("decision runtime max_inflight must be a positive integer")
+        self.max_inflight = max_inflight
+        self._admission = threading.BoundedSemaphore(max_inflight)
 
     def evaluate(
         self,
@@ -87,15 +102,24 @@ class DecisionRuntime:
 
         ``state`` is deep-copied into the request. No session, memory, prompt, tool, or plugin state
         is inherited. ``shadow`` changes only telemetry labeling; policy remains entirely with the caller.
+        Availability and evaluate share one monotonic deadline. Admission is acquired before a worker
+        is created and released only after that worker returns.
         """
+        try:
+            timeout = float(timeout)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("decision timeout must be a positive number") from exc
+        if not math.isfinite(timeout) or timeout <= 0:
+            raise ValueError("decision timeout must be a positive number")
+
         request = self._request(task=task, state=state, questions=questions, mode=mode)
         secret_scope = current_secret_scope()
+        deadline = time.monotonic() + timeout
+        # Identity only here. ``is_available`` runs inside the timed worker (R4).
         selected = resolve_provider(
             provider,
             scope=self.scope,
-            available=lambda candidate: self._in_profile_context(
-                candidate.is_available, self.scope, secret_scope,
-            ),
+            available=lambda candidate: True,
         )
         if selected is None:
             name = provider or ""
@@ -105,9 +129,16 @@ class DecisionRuntime:
                 fallback_reason="provider unavailable" if name else "provider selection is ambiguous or unavailable",
             ))
 
+        remaining = deadline - time.monotonic()
         started = time.perf_counter()
+        if remaining <= 0:
+            return self._finish(DecisionResponse(
+                task=request.task, provider=selected.name, model="", version="", mode=request.mode,
+                status=DecisionStatus.TIMEOUT, latency_ms=(time.perf_counter() - started) * 1000,
+                fallback_reason=f"provider timed out after {timeout:g}s",
+            ))
         try:
-            raw = self._invoke(selected, request, timeout, self.scope, secret_scope)
+            raw = self._invoke(selected, request, remaining, self.scope, secret_scope)
         except queue.Empty:
             response = DecisionResponse(
                 task=request.task, provider=selected.name, model="", version="", mode=request.mode,
@@ -115,9 +146,19 @@ class DecisionRuntime:
                 fallback_reason=f"provider timed out after {timeout:g}s",
             )
             return self._finish(response)
+        except _Unavailable:
+            return self._finish(DecisionResponse(
+                task=request.task, provider=selected.name, model="", version="", mode=request.mode,
+                status=DecisionStatus.UNAVAILABLE,
+                latency_ms=(time.perf_counter() - started) * 1000,
+                fallback_reason="provider unavailable",
+            ))
         except _ProviderInvocationError as exc:
             error = exc.error
-            logger.warning("Decision provider %s failed for task %s: %s", selected.name, task, error)
+            logger.warning(
+                "Decision provider %s failed for task %s: %s",
+                selected.name, task, type(error).__name__,
+            )
             response = DecisionResponse(
                 task=request.task, provider=selected.name, model="", version="", mode=request.mode,
                 status=DecisionStatus.PROVIDER_ERROR,
@@ -193,35 +234,53 @@ class DecisionRuntime:
 
         return context.run(run)
 
-    @staticmethod
     def _invoke(
+        self,
         provider: DecisionProvider,
         request: DecisionRequest,
         timeout: float,
         scope: str,
         secret_scope: Optional[Mapping[str, str]],
     ) -> ProviderDecision:
-        try:
-            timeout = float(timeout)
-        except (TypeError, ValueError) as exc:
-            raise ValueError("decision timeout must be a positive number") from exc
-        if timeout <= 0:
-            raise ValueError("decision timeout must be a positive number")
+        if not math.isfinite(timeout) or timeout <= 0:
+            raise queue.Empty
         outcome: queue.Queue[Any] = queue.Queue(maxsize=1)
+        admitted = self._admission.acquire(timeout=timeout)
+        if not admitted:
+            raise queue.Empty
 
         def run() -> None:
             try:
-                outcome.put((True, DecisionRuntime._in_profile_context(
-                    lambda: provider.evaluate(request), scope, secret_scope,
-                )))
-            except Exception as exc:  # provider failures are re-raised and normalized at the boundary
-                outcome.put((False, exc))
+                def work() -> ProviderDecision:
+                    try:
+                        if not bool(provider.is_available()):
+                            raise _Unavailable
+                    except _Unavailable:
+                        raise
+                    except Exception:
+                        raise _Unavailable
+                    return provider.evaluate(request)
+
+                try:
+                    outcome.put((True, DecisionRuntime._in_profile_context(
+                        work, scope, secret_scope,
+                    )))
+                except _Unavailable:
+                    outcome.put((False, _Unavailable()))
+                except Exception as exc:  # provider failures are normalized at the boundary
+                    outcome.put((False, _ProviderInvocationError(exc)))
+            finally:
+                self._admission.release()
 
         threading.Thread(
             target=run, name=f"decision:{provider.name}:{request.task}", daemon=True,
         ).start()
         ok, value = outcome.get(timeout=timeout)
         if not ok:
+            if isinstance(value, _Unavailable):
+                raise value
+            if isinstance(value, _ProviderInvocationError):
+                raise value
             raise _ProviderInvocationError(value)
         return value
 
@@ -248,5 +307,8 @@ class DecisionRuntime:
         try:
             self.recorder.record(event)
         except Exception:
-            logger.warning("Could not record decision telemetry for task %s", response.task, exc_info=True)
+            logger.warning(
+                "Could not record decision telemetry for task %s",
+                response.task,
+            )
         return response
