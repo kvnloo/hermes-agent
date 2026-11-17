@@ -66,7 +66,22 @@ def test_https_url_is_not_treated_as_a_directory():
     result = json.loads(op.open_preview_tool("https://example.com/docs"))
 
     assert result["success"] is True
+    assert "host_context" not in result
     assert emitted[0][0] == "preview.open"
+
+
+def test_loopback_preview_names_client_host_for_remote_gateway():
+    """#156710: a successful open must not imply agent and browser share localhost."""
+    emitted = _capture_emits()
+
+    result = json.loads(op.open_preview_tool("localhost:5173"))
+
+    assert result["success"] is True
+    assert result["url"] == "http://localhost:5173"
+    assert "Desktop client" in result["host_context"]
+    assert "remote URL/cloud gateway" in result["host_context"]
+    assert "SSH" in result["host_context"]
+    assert emitted == [("preview.open", {"url": "http://localhost:5173", "label": ""})]
 
 
 def test_file_uri_directory_is_an_error(tmp_path):

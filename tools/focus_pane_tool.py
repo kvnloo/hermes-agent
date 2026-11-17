@@ -16,9 +16,17 @@ def focus_pane_tool(pane: str) -> str:
     name = (pane or "").strip().lower()
     if name not in PANES:
         return tool_error(f"pane must be one of: {', '.join(PANES)}.")
+    result = {"success": True, "pane": name}
+    if name == "terminal":
+        result["host_context"] = (
+            "This reveals a Desktop terminal pane, not necessarily an agent-host shell. "
+            "A tab's shell belongs to its recorded connection; URL/cloud gateways "
+            "have no shell transport, and an existing local tab can run on the "
+            "Desktop client. Verify the terminal host before giving gateway commands."
+        )
     return desktop_ui.emit_or_error(
         "pane.reveal", {"pane": name}, f"Failed to focus the {name} pane: ",
-        "Pane focus is only available in the Hermes desktop app.", {"success": True, "pane": name})
+        "Pane focus is only available in the Hermes desktop app.", result)
 
 
 registry.register(

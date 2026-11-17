@@ -8,6 +8,7 @@ the pane for the window that asked and never steals focus for a background sessi
 
 import os
 import re
+from ipaddress import ip_address
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
@@ -67,6 +68,20 @@ def _is_existing_directory(target: str) -> bool:
         return False
 
 
+def _is_loopback_preview_url(target: str) -> bool:
+    """Only loopback HTTP(S) needs a client-versus-gateway host caveat."""
+    parsed = urlparse(target)
+    if parsed.scheme.lower() not in ("http", "https"):
+        return False
+    host = (parsed.hostname or "").lower().rstrip(".")
+    if host in ("localhost", "0.0.0.0"):
+        return True
+    try:
+        return ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 def open_preview_tool(url: str, label: str = "") -> str:
     """Ask the desktop GUI to show ``url`` in the preview pane beside the chat."""
     target = _normalize_target(url or "")
@@ -81,9 +96,17 @@ def open_preview_tool(url: str, label: str = "") -> str:
         )
 
     label = (label or "").strip()
+    result = {"success": True, "url": target, "label": label}
+    if _is_loopback_preview_url(target):
+        result["host_context"] = (
+            "The preview browser runs on the Desktop client, not inside the agent. "
+            "For a remote URL/cloud gateway, localhost resolves on the client's "
+            "machine, not the gateway; an SSH connection may forward it. "
+            "Use a client-reachable address if the preview cannot connect."
+        )
     return desktop_ui.emit_or_error(
         "preview.open",
         {"url": target, "label": label},
         "Failed to open the preview pane: ",
         "The preview pane is only available in the Hermes desktop app.",
-        {"success": True, "url": target, "label": label})
+        result)
