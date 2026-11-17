@@ -44,7 +44,7 @@ export function parseDeepLink(
     name = decodeURIComponent((parsed.pathname || '').replace(/^\//, ''))
   } catch {
     // A stray or truncated percent escape (`%E0%A4%A`): URIError.
-    reject(`ignoring ${kind} link with a malformed path`)
+    reject('ignoring deep link with a malformed path')
 
     return null
   }

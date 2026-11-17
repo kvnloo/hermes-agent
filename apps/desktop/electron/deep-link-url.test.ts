@@ -22,6 +22,16 @@ test('a malformed percent escape in the path is refused, never thrown, and the l
   }
 })
 
+test('a malformed deep link never logs its untrusted host', () => {
+  const host = 'private-token-label'
+  const { payload, reasons } = parse(`hermes://${host}/%?token=hidden`)
+
+  assert.equal(payload, null)
+  assert.equal(reasons.length, 1)
+  assert.ok(!reasons[0].includes(host))
+  assert.ok(!reasons[0].includes('hidden'))
+})
+
 test('a payload re-dispatched the way main.ts queues it parses back to itself', () => {
   for (const url of [
     'hermes://blueprint/daily%20brief?slot=morning&tz=UTC',
