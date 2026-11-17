@@ -38,7 +38,10 @@ import {
   $connection,
   $selectedStoredSessionId,
   setActiveSessionId,
-  setSelectedStoredSessionId
+  setCronSessions,
+  setMessagingSessions,
+  setSelectedStoredSessionId,
+  setSessions
 } from '@/store/session'
 import { currentUserSessionOpen, LAUNCH_USER_SESSION_OPEN } from '@/store/session-open-intent'
 import { reloadOpenStarmapGraph, resetStarmapGraph } from '@/store/starmap'
@@ -122,6 +125,12 @@ const $activeConnectionProfile = computed(
 // backend the tags now name. `listen` (not `subscribe`) skips the mount-time
 // fire, and the computed dedupes equal ids, so this only runs on a real switch.
 $activeConnectionId.listen(() => {
+  // A live pick keeps the outgoing gateway running, not its foreground rows.
+  // Pinned, open or recently-settled chats otherwise survive the next page
+  // merge under the newly selected connection (#156878, alongside #149505).
+  setSessions([])
+  setCronSessions([])
+  setMessagingSessions([])
   invalidateProfileScopedQueries()
   // The star map is a scan of one backend's skills and memory; same-named
   // profiles on two gateways are different graphs.

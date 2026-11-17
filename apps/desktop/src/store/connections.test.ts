@@ -32,6 +32,10 @@ const $connection = atom<null | {
 // The runtime session id minted by the CURRENT backend — the binding a pick
 // must drop before the next gateway is published (#93937).
 const $activeSessionId = atom<null | string>(null)
+type OwnedRow = { connection_id: string; id: string; profile: string }
+const $sessions = atom<OwnedRow[]>([])
+const $cronSessions = atom<OwnedRow[]>([])
+const $messagingSessions = atom<OwnedRow[]>([])
 
 interface ActivationOptions {
   beforeActivate?: () => boolean
@@ -54,7 +58,10 @@ vi.mock('@/store/session', () => ({
   $activeSessionId,
   $selectedStoredSessionId: atom(null),
   setActiveSessionId: (id: null | string) => $activeSessionId.set(id),
-  setSelectedStoredSessionId: vi.fn()
+  setCronSessions: (rows: OwnedRow[]) => $cronSessions.set(rows),
+  setMessagingSessions: (rows: OwnedRow[]) => $messagingSessions.set(rows),
+  setSelectedStoredSessionId: vi.fn(),
+  setSessions: (rows: OwnedRow[]) => $sessions.set(rows)
 }))
 vi.mock('@/store/project-scope', () => ({ exitProjectScope }))
 vi.mock('@/store/gateway-switch', () => ({ supersedeGatewaySwitch: vi.fn() }))
@@ -140,6 +147,9 @@ beforeEach(() => {
   requestFreshSession.mockClear()
   exitProjectScope.mockClear()
   $activeSessionId.set(null)
+  $sessions.set([])
+  $cronSessions.set([])
+  $messagingSessions.set([])
   list.mockClear()
   setLastUsed.mockClear()
   api.mockReset()
@@ -367,6 +377,26 @@ describe('selectConnection', () => {
     expect($newChatProfile.get()).toBe('default')
     expect(refreshActiveProfile).toHaveBeenCalledTimes(1)
     expect(setLastUsed).toHaveBeenCalledWith('homelab')
+  })
+
+  it('drops foreign sidebar rows on a successful remote-to-local dropdown pick (#156878)', async () => {
+    setConnectionsRegistry(registry)
+    $connection.set({ connectionId: 'homelab', mode: 'remote', profile: 'default', registryScoped: true })
+    const remoteRow = { connection_id: 'homelab', id: 'remote-pinned', profile: 'default' }
+    $sessions.set([remoteRow])
+    $cronSessions.set([{ ...remoteRow, id: 'remote-cron' }])
+    $messagingSessions.set([{ ...remoteRow, id: 'remote-telegram' }])
+
+    // A failed dial must leave the active connection and its rows alone.
+    openGatewayAgent.mockRejectedValueOnce(new Error('offline'))
+    await expect(selectConnection('local')).rejects.toThrow('offline')
+    expect($sessions.get()).toEqual([remoteRow])
+
+    await selectConnection('local')
+    expect($activeConnectionId.get()).toBe('local')
+    expect($sessions.get()).toEqual([])
+    expect($cronSessions.get()).toEqual([])
+    expect($messagingSessions.get()).toEqual([])
   })
 
   it('does not reset or dial when the active source/profile is selected again', async () => {
