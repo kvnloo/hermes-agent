@@ -74,6 +74,11 @@ import { displayName } from './labels'
 import { startBotRelay, stopBotRelay } from './relay'
 import { $activityToasts } from './roster-actions'
 import {
+  COLLAPSED_ROSTER_SECTIONS_KEY,
+  hydrateCollapsedRosterSections,
+  rosterCollapseRevision
+} from './roster-collapse'
+import {
   botChatOwnsWorkspace,
   BotsPane,
   releaseStaleOpenBotChat,
@@ -236,6 +241,17 @@ export default {
     } catch {
       /* no storage — this window starts with no restored selection */
       $selectedRosterHydrated.set(true)
+    }
+
+    // Collapsed section ids are presentation-only, but must survive a pane remount or reload.
+    // A click during the async read wins over the older stored snapshot.
+    try {
+      const revision = rosterCollapseRevision()
+      Promise.resolve(ctx.storage?.get?.(COLLAPSED_ROSTER_SECTIONS_KEY, []))
+        .then(value => hydrateCollapsedRosterSections(value, revision))
+        .catch(() => undefined)
+    } catch {
+      /* storage unavailable — sections start expanded in this window */
     }
 
     // Bot Mode sessions are always hidden now — the old "hide Bot Chats"

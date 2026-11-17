@@ -43,6 +43,7 @@ import { $activeGroupMemberKeys } from './group-presence'
 import { $showHiddenBots, isBotHidden } from './hidden-bots'
 import { useBots } from './i18n'
 import { $activityToasts } from './roster-actions'
+import { $collapsedRosterSections, toggleCollapsedRosterSection } from './roster-collapse'
 import { renderRosterContent } from './roster-pane-content'
 import { deriveRosterPresentation, deriveRosterRows, type RosterGroupRow, sortRosterBots } from './roster-pane-derivation'
 import { renderRosterDialogs } from './roster-pane-dialogs'
@@ -261,7 +262,7 @@ export function BotsPane() {
   const [rowKindFilter, setRowKindFilter] = useState<RosterKindFilter>('all')
   const [activityFilter, setActivityFilter] = useState<RosterActivityFilter>('all')
   const [gatewayFilter, setGatewayFilter] = useState('all')
-  const [collapsedRosterSections, setCollapsedRosterSections] = useState<Set<string>>(() => new Set())
+  const collapsedRosterSections = useValue($collapsedRosterSections)
   const hiddenSectionRef = useRef<null | HTMLDivElement>(null)
   const activityToasts = useValue($activityToasts)
   const groupChatName = useValue($groupChatWorkspace)
@@ -385,21 +386,8 @@ export function BotsPane() {
     gatewayOptions
   })
 
-  const rosterSectionCollapsed = (id: string): boolean => !hasRosterConstraint && collapsedRosterSections.has(id)
-
-  const toggleRosterSection = (id: string): void => {
-    setCollapsedRosterSections(previous => {
-      const next = new Set(previous)
-
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-
-      return next
-    })
-  }
+  const rosterSectionCollapsed = (id: string): boolean => !hasRosterConstraint && collapsedRosterSections.includes(id)
+  const toggleRosterSection = toggleCollapsedRosterSection
 
   useEffect(() => {
     if (!hiddenExpanded || hasRosterConstraint) {
