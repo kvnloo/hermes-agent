@@ -798,14 +798,13 @@ describe('artifactSessionScope', () => {
   it('leaves an untagged row on the ambient backend', () => {
     const scope = artifactSessionScope(makeSession({ profile: 'default' }))
 
-    expect(scope.connectionId).toBeUndefined()
-    expect(scope.profile).toBe('default')
+    expect(scope).toBe('default')
   })
 
   it('does not route a row that names a connection but no profile', () => {
     const scope = artifactSessionScope(makeSession({ connection_id: 'remote-a' }))
 
-    expect(scope.connectionId).toBeUndefined()
+    expect(scope).toBeUndefined()
   })
 
   it('keeps a remote profile name distinct from the local one', () => {

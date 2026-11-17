@@ -581,7 +581,9 @@ export function collectArtifactsForSession(session: SessionInfo, messages: Sessi
  * name therefore made every cross-host session in the list fail its read, and
  * the panel reported those as unreadable sessions.
  */
-export function artifactSessionScope(session: SessionInfo): { connectionId?: string; profile?: string } {
+export function artifactSessionScope(
+  session: SessionInfo
+): string | undefined | { connectionId: string; profile: string } {
   const connectionId = (session.connection_id ?? '').trim()
   const profile = (session.profile ?? '').trim()
 
@@ -592,7 +594,8 @@ export function artifactSessionScope(session: SessionInfo): { connectionId?: str
     return { connectionId, profile }
   }
 
-  return { profile: session.profile }
+  // An untagged row keeps its original ambient profile argument.
+  return session.profile
 }
 
 export async function loadArtifactsForSessions(

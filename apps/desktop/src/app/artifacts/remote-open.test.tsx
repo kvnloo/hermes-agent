@@ -19,12 +19,15 @@ const paths = vi.hoisted(() => [
 ])
 
 const getSessionMessages = vi.hoisted(() => vi.fn())
+const listAllProfileSessions = vi.hoisted(() =>
+  vi.fn(async () => ({
+    sessions: [{ id: 'artifact-session', title: 'Fixture', profile: 'origin-profile' }]
+  }))
+)
 
 vi.mock('@/hermes', async () => ({
   ...(await vi.importActual('@/hermes')),
-  listAllProfileSessions: async () => ({
-    sessions: [{ id: 'artifact-session', title: 'Fixture', profile: 'origin-profile' }]
-  }),
+  listAllProfileSessions,
   getSessionMessages
 }))
 afterEach(() => {
@@ -98,4 +101,26 @@ it('keeps discovered file paths and originating session scope intact through rem
     offset: 0,
     order: 'oldest'
   })
+})
+
+
+it('reads a registered remote transcript through its owning connection', async () => {
+  listAllProfileSessions.mockResolvedValueOnce({
+    sessions: [{ id: 'foreign-session', title: 'Remote artifact', profile: 'worker', connection_id: 'remote-owner' }]
+  })
+  getSessionMessages.mockResolvedValue({ messages: [], session_id: 'foreign-session' })
+
+  render(
+    <MemoryRouter>
+      <ArtifactsView />
+    </MemoryRouter>
+  )
+
+  await waitFor(() =>
+    expect(getSessionMessages).toHaveBeenCalledWith(
+      'foreign-session',
+      { connectionId: 'remote-owner', profile: 'worker' },
+      expect.objectContaining({ includeCompacted: true, offset: 0, order: 'oldest' })
+    )
+  )
 })
