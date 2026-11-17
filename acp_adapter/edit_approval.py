@@ -225,6 +225,9 @@ def maybe_require_edit_approval(tool_name: str, arguments: dict[str, Any]) -> st
         return None
     try:
         approved = bool(requester(proposal))
+    except TimeoutError as exc:
+        logger.warning("ACP edit approval timed out: %s", exc)
+        return _denied("Edit approval timed out before the ACP client responded; file was not modified.")
     except Exception as exc:
         logger.warning("ACP edit approval requester failed: %s", exc)
         approved = False
@@ -266,12 +269,14 @@ def make_acp_edit_approval_requester(
             except Exception:
                 logger.debug("ACP edit auto-approval policy check failed", exc_info=True)
 
-        response, _timed_out = await_permission(
+        response, timed_out = await_permission(
             request_permission_fn, loop, session_id, tool_call=build_acp_edit_tool_call(proposal),
             options=[PermissionOption(option_id="allow_once", kind="allow_once", name="Allow edit"),
                      PermissionOption(option_id="deny", kind="reject_once", name="Deny")],
             timeout=resolve_permission_timeout(timeout), what="Edit approval request", send_update=send_update,
         )
+        if timed_out:
+            raise TimeoutError(f"no answer from the ACP client for {proposal.path}")
         outcome = getattr(response, "outcome", None)
         return getattr(outcome, "outcome", None) == "selected" and getattr(outcome, "option_id", None) == "allow_once"
 
