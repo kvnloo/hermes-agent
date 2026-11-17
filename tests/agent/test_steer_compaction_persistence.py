@@ -125,3 +125,34 @@ def test_steer_after_model_switch_keeps_correction_through_repair_and_flush(tmp_
     assert len(steer_rows) == 1
     assert "focus on the persistence failure" in steer_rows[0]["content"]
     assert prompt not in steer_rows[0]["content"]
+
+
+def test_turn_timestamp_and_platform_id_never_land_on_a_steer_row(tmp_path, monkeypatch):
+    """Compaction re-anchors ``_persist_user_message_idx`` at ``len(messages)``, the slot the next appended
+    row takes. When that row is a mid-turn steer, the content guard keeps its text, but the turn's
+    timestamp and platform_message_id must not be written onto it either (restart dedup keys on the id)."""
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    db = SessionDB(tmp_path / "state.db")
+    session_id = "steer-turn-metadata"
+    agent = AIAgent(
+        model="test-model", provider="openai-compat", api_key="test", base_url="http://127.0.0.1:1/v1",
+        session_db=db, session_id=session_id, max_iterations=4,
+        quiet_mode=True, skip_context_files=True, skip_memory=True,
+    )
+    agent._ensure_db_session()
+    history = [{"role": "user", "content": "ya go ahead"}, {"role": "assistant", "content": "on it"}]
+    agent._flush_messages_to_session_db(history, [])
+    agent._persist_user_message_idx = len(history)  # the compaction re-anchor
+    agent._persist_user_message_override = "ya go ahead"
+    agent._persist_user_message_timestamp = 1.0
+    agent._persist_user_message_platform_id = "turn-platform-id"
+    steer = steer_user_row("fill in the gaps of the rigging")
+    messages = [*history, steer]
+
+    agent._apply_persist_user_message_override(messages)
+    assert "platform_message_id" not in steer and steer.get("timestamp") != 1.0
+
+    agent._flush_messages_to_session_db(messages, [])
+    row = [r for r in db.get_messages(session_id) if r["display_kind"] == "steer"][-1]
+    assert row["content"] == steer["content"]
+    assert row["timestamp"] != 1.0
