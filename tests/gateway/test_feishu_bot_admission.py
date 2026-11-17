@@ -887,3 +887,27 @@ def test_synthetic_group_drop_warns_once_for_empty_default_allowlist(event_kind,
     assert len(warnings) == 1
     assert "FEISHU_ALLOWED_USERS is empty" in warnings[0]
     assert "oc_unconfigured" in warnings[0]
+
+@pytest.mark.parametrize(
+    "rule, allowed_user, rejected_user",
+    [
+        pytest.param(
+            {"allowlist": ["ou_allowed"]}, "ou_allowed", "ou_other",
+            id="implicit-allowlist",
+        ),
+        pytest.param(
+            {"blacklist": ["ou_blocked"]}, "ou_other", "ou_blocked",
+            id="implicit-blacklist",
+        ),
+    ],
+)
+def test_feishu_implicit_group_list_policy_gates_senders(rule, allowed_user, rejected_user):
+    """An omitted policy must not silently make an explicit group list open."""
+    from plugins.platforms.feishu.adapter import FeishuAdapter
+
+    settings = FeishuAdapter._load_settings({"group_rules": {"oc_group": rule}})
+    adapter = make_adapter_skeleton(group_policy="open")
+    adapter._group_rules = settings.group_rules
+
+    assert adapter._allow_group_message(make_sender(open_id=allowed_user).sender_id, "oc_group")
+    assert not adapter._allow_group_message(make_sender(open_id=rejected_user).sender_id, "oc_group")
