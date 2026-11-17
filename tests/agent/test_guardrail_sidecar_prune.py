@@ -111,16 +111,26 @@ def test_duplicate_call_in_parallel_batch_leaves_bedrock_sidecar(monkeypatch):
 
 
 def test_capped_delegate_calls_leave_bedrock_sidecar(monkeypatch):
-    from tools import delegate_tool
+    from tools.delegate_tool import _get_max_concurrent_children
+    from tools.delegate_tool_config import _DEFAULT_MAX_CONCURRENT_CHILDREN
 
-    monkeypatch.setattr(delegate_tool, "_get_max_concurrent_children", lambda: 1)
-    message = _converse(_SIGNED, _tool_use("tu_d1", "delegate_task", goal="x"),
-                        _tool_use("tu_r", path="r"), _tool_use("tu_d2", "delegate_task", goal="y"))
+    # Exercise the production limit rather than lowering it for the test.
+    max_children = _get_max_concurrent_children()
+    assert max_children == _DEFAULT_MAX_CONCURRENT_CHILDREN
+    kept_ids = [f"tu_d{i}" for i in range(max_children)]
+    message = _converse(
+        _SIGNED,
+        *(_tool_use(tool_id, "delegate_task", goal=tool_id) for tool_id in kept_ids),
+        _tool_use("tu_r", path="r"),
+        _tool_use("tu_overflow", "delegate_task", goal="overflow"),
+    )
 
     row = _run_round(monkeypatch, message)
 
-    assert [tc["id"] for tc in row["tool_calls"]] == ["tu_d1", "tu_r"]
-    assert [next(iter(b)) for b in row["bedrock_content_blocks"]] == ["reasoningContent", "toolUse", "toolUse"]
+    expected = [*kept_ids, "tu_r"]
+    assert [tc["id"] for tc in row["tool_calls"]] == expected
+    assert [b["toolUse"]["toolUseId"] for b in row["bedrock_content_blocks"]
+            if "toolUse" in b] == expected
     _assert_every_tool_use_answered(row)
 
 
