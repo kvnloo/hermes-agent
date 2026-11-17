@@ -106,6 +106,7 @@ class TestNeedsOcrPath(unittest.TestCase):
             return hosted_result
 
         mod.to_markdown = to_markdown
+        mod.to_markdown_bytes = to_markdown
         return mod, calls
 
     def test_hosted_success_returns_ocr_text(self):
@@ -117,6 +118,30 @@ class TestNeedsOcrPath(unittest.TestCase):
             out = rx._extract_anydoc("scan.pdf")
         self.assertEqual(out, "OCR TEXT\n")
         self.assertEqual(calls[1].get("ocr"), "hosted")
+
+    def test_scanned_pdf_bytes_retry_hosted_ocr_or_warn(self):
+        """read_file's byte transport must match the path-based scanned PDF route."""
+        from tools import read_extract as rx
+
+        pdf_bytes = b"%PDF-1.4 scanned"
+        path = "/workspace/scanned.pdf"
+        for enabled in (False, True):
+            with self.subTest(hosted_ocr=enabled):
+                mod, calls = self._fake_mod(hosted_result="OCR TEXT")
+                with (
+                    patch.object(rx, "_anydoc", return_value=mod),
+                    patch.object(rx, "_hosted_ocr_config",
+                                 return_value=(enabled, "fc-key" if enabled else None, None)),
+                ):
+                    output = rx.extract_document_bytes(pdf_bytes, path)
+
+                if enabled:
+                    self.assertEqual(output, "OCR TEXT\n")
+                    self.assertEqual(calls, [{}, {"ocr": "hosted", "api_key": "fc-key"}])
+                else:
+                    self.assertIn("[NEEDS OCR: pages 2, 3", output)
+                    self.assertIn(path, output)
+                    self.assertEqual(calls, [{}])
 
     def test_hosted_failure_warns_and_prefers_local_skills(self):
         from tools import read_extract as rx
