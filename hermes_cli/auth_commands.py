@@ -462,7 +462,7 @@ def auth_add_command(args) -> None:
         requested_type = AUTH_TYPE_OAUTH if oauth_default else AUTH_TYPE_API_KEY
 
     pool = load_pool(provider)
-    if not is_custom:
+    if not is_custom and requested_type != AUTH_TYPE_API_KEY:
         _unsuppress_provider_sources(provider)
 
     wanted_priority = getattr(args, "priority", None)
@@ -473,6 +473,8 @@ def auth_add_command(args) -> None:
         raise SystemExit(f"Login failed: {auth_mod.format_auth_error(exc)}") from exc
     except CredentialNotSavedError as exc:
         raise SystemExit(str(exc)) from exc
+    if not is_custom and requested_type == AUTH_TYPE_API_KEY:
+        _unsuppress_provider_sources(provider)
     if wanted_priority is not None:
         placed_pool = load_pool(provider)
         moved = placed_pool.move_entry(entry.id, int(wanted_priority))

@@ -71,3 +71,20 @@ def test_out_of_credit_key_is_stored_benched(provider_home, monkeypatch, capsys,
     (entry,) = _pool(provider_home)
     assert (entry["last_status"], entry["last_error_code"], entry["failure_reason"]) == ("exhausted", status, "billing")
     assert message in capsys.readouterr().err
+
+
+def test_rejected_key_does_not_reenable_suppressed_sources(provider_home, monkeypatch):
+    """A failed new-key check must not re-enable a previously removed env credential."""
+    import hermes_cli.auth as auth_mod
+
+    source = "env:ACME_API_KEY"
+    auth_mod.suppress_credential_source("acme", source)
+    assert auth_mod.is_source_suppressed("acme", source)
+    monkeypatch.setattr(_Provider, "status", 401)
+    monkeypatch.setattr(_Provider, "body", {"error": {"message": "Invalid API key provided"}})
+
+    with pytest.raises(SystemExit, match="Nothing was stored"):
+        _add()
+
+    assert auth_mod.is_source_suppressed("acme", source)
+    assert auth_mod._load_auth_store().get("credential_pool", {}).get("acme", []) == []
