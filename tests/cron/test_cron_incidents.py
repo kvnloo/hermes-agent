@@ -223,6 +223,35 @@ def test_substantive_error_change_with_round_paths_still_mints_new_incident(monk
     assert inc.count_incidents() == 2
 
 
+def test_round_stamp_dedup_preserves_artifact_identity(monkeypatch, tmp_path):
+    """Different artifacts under stamped round directories are distinct failures."""
+    inc = _point_db(monkeypatch, tmp_path)
+
+    def failure(stamp, artifact):
+        return (
+            "Script exited with code 5\nstdout:\n"
+            f"could not read /srv/erp-sync/rounds/{stamp}/{artifact}.json"
+        )
+
+    first, is_new = inc.upsert_incident(
+        "job-1", failure("20261010T010034Z", "invoices")
+    )
+    assert is_new is True
+    assert inc.ack_incident(first) is True
+
+    repeat, is_repeat_new = inc.upsert_incident(
+        "job-1", failure("20261011T050034Z", "invoices")
+    )
+    other, is_other_new = inc.upsert_incident(
+        "job-1", failure("20261011T050034Z", "payments")
+    )
+    assert repeat == first and is_repeat_new is False
+    assert other != first and is_other_new is True
+    assert inc.get_incident(first)["state"] == "closed"
+    assert inc.get_incident(other)["state"] == "detected"
+    assert inc.count_incidents() == 2
+
+
 def test_bare_date_still_distinguishes_incidents(monkeypatch, tmp_path):
     """Only date+TIME is masked as a log clock value. A bare date can name which backup set or
     billing period failed, so `2026-09-06` vs `2026-10-06` stays two incidents."""

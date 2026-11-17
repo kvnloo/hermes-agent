@@ -54,9 +54,9 @@ _DURATION_RE = re.compile(
 # signature only; the stored error keeps the verbatim text. A bare date is deliberately NOT
 # masked: it can name which backup set or ledger period failed, not just when it was logged.
 _VOLATILE_RES = (
-    # A token embedding a round stamp -- the whole path varies per round -- or the bare stamp
-    # itself outside a path ("round 20261010T010034Z failed").
-    (re.compile(r"[\w./\\-]*\d{8}T\d{6}Z[\w./\\-]*", re.IGNORECASE), "#r"),
+    # Only the stamp varies between rounds: keep the surrounding path so a different
+    # failing artifact (invoices.json vs payments.json) still mints a new incident.
+    (re.compile(r"\d{8}T\d{6}Z", re.IGNORECASE), "#r"),
     # A log clock value in ISO or "date time" form, with optional fraction and zone. The end
     # lookahead (not \b) is load-bearing: "...34.512z" has no boundary between digit and z.
     (
