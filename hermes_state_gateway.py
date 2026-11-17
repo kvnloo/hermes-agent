@@ -950,10 +950,12 @@ class SessionGatewayMixin:
         column = str(row.get("model") or "").strip()
         picked = str(config.get("model") or "").strip()
         runtime, lock = config.get("gateway_runtime"), config.get("browser_model_lock")
-        if isinstance(runtime, dict) and runtime.get("provider"):
-            model = str(runtime.get("model") or "").strip() or column or picked
-        elif isinstance(lock, dict) and lock.get("confirmed") and str(lock.get("model") or "").strip() == column:
+        # A confirmed Browser/API pick was persisted after the last gateway route; unlike
+        # fallback accounting it writes the model column and must supersede that old snapshot.
+        if isinstance(lock, dict) and lock.get("confirmed") and str(lock.get("model") or "").strip() == column:
             model = column or picked
+        elif isinstance(runtime, dict) and runtime.get("provider"):
+            model = str(runtime.get("model") or "").strip() or column or picked
         else:
             model = picked or column
         route_row = row if model == column else {**row, "billing_provider": None}

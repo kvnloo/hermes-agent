@@ -126,3 +126,20 @@ def test_resume_keeps_a_confirmed_browser_model_lock_over_an_older_desktop_pick(
     db.update_session_runtime_lock("s1", model="claude-sonnet-5", provider="anthropic", confirmed=True)
     restored = _stored_session_runtime_overrides(db.get_session("s1"))["model_override"]
     assert (restored["model"], restored["provider"]) == ("claude-sonnet-5", "anthropic")
+
+def test_confirmed_browser_lock_overrides_older_stamped_gateway_route(tmp_path):
+    """An API/Browser model lock can follow a CLI /model; its newer model must survive restart."""
+    db = SessionDB(db_path=tmp_path / "state.db")
+    db.create_session("s1", source="hermes_browser", model="gpt-6-sol")
+    db.update_session_model("s1", "claude-opus-4", provider="anthropic")
+    db.update_session_runtime_lock(
+        "s1", model="claude-sonnet-5", provider="anthropic", confirmed=True)
+    row = db.get_session("s1")
+    config = json.loads(row["model_config"])
+    assert row["model"] == "claude-sonnet-5"
+    assert config["gateway_runtime"]["model"] == "claude-opus-4"
+
+    desktop = _stored_session_runtime_overrides(row)["model_override"]
+    cli = stored_session_route(row, current_model="gpt-6-sol", current_provider="nous")
+    assert (desktop["model"], desktop["provider"]) == ("claude-sonnet-5", "anthropic")
+    assert cli[:2] == ("claude-sonnet-5", "anthropic")
