@@ -961,11 +961,18 @@ def _get_plugin_toolset_key(name: str) -> Optional[str]:
     already loaded), else from ``provides_tools`` in plugin.yaml looked up in the registry."""
     try:
         from tools.registry import registry
+        from toolsets import TOOLSETS
     except Exception:
         return None
 
     def _first_toolset(tool_names) -> Optional[str]:
-        return next((e.toolset for t in tool_names if (e := registry.get_entry(t)) and e.toolset), None)
+        # A plugin may contribute to a declared built-in toolset (Feishu does).
+        # Activating the plugin must not opt every saved platform into that core toolset.
+        return next(
+            (e.toolset for t in tool_names
+             if (e := registry.get_entry(t)) and e.toolset and e.toolset not in TOOLSETS),
+            None,
+        )
 
     def _from_loaded_plugin() -> Optional[str]:
         from hermes_cli.plugins import discover_plugins, get_plugin_manager

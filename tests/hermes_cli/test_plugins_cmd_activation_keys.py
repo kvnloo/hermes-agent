@@ -113,6 +113,34 @@ def test_dashboard_enable_on_a_fresh_config_keeps_the_core_tools(home):
         registry.deregister("zzseed_tool")
 
 
+
+def test_feishu_plugin_enable_preserves_saved_core_toolsets(home):
+    """Enabling Feishu must not add its built-in toolsets to saved CLI/Telegram selections.
+
+    Regression for NousResearch/hermes-agent#156805: Feishu's model tools moved from
+    core registrations to the plugin, but their toolset keys remain built-in.
+    """
+    from hermes_cli.plugins import discover_plugins, get_plugin_manager
+
+    config = load_config()
+    config["platform_toolsets"] = {
+        "cli": ["terminal", "file"],
+        "telegram": ["hermes-telegram"],
+    }
+    save_config(config)
+
+    discover_plugins()  # Real Feishu registration through provides_tools; no mocked registry.
+    feishu = next(
+        plugin for plugin in get_plugin_manager()._plugins.values()
+        if plugin.manifest.name == "feishu-platform"
+    )
+    assert "feishu_doc_read" in feishu.tools_registered
+
+    plugins_cmd._toggle_plugin_toolset("feishu-platform", enable=True)
+
+    assert load_config()["platform_toolsets"] == config["platform_toolsets"]
+
+
 def _restart_backend():
     """A new process: no plugin manager has scanned yet and no plugin tool is registered."""
     from hermes_cli.plugins import _reset_plugin_managers_for_tests
