@@ -668,12 +668,13 @@ def _join_words(words: list[str]) -> str:
 def _humanize_days(blueprint: AutomationBlueprint, dom: str, month: str, dow: str) -> Optional[str]:
     """Which days a template's day-of-month / month / day-of-week fields run on, or None when
     the combination has no plain-English wording here (the caller then stays generic)."""
+    dom = _field_default(blueprint, dom)
+    month = _field_default(blueprint, month)
     if month != "*":
         return None
     if dom != "*" and dow != "*":
         return None  # cron ORs a restricted day-of-month with a restricted day-of-week
     if dom != "*":
-        dom = _field_default(blueprint, dom)
         if dom == "L":
             return "on the last day of each month"
         days = dom.split(",")

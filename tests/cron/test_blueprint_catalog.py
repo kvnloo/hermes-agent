@@ -99,6 +99,22 @@ class TestScheduleWording:
         dom = BlueprintSlot(name="dom", type="enum", label="Day", default="10", options=("1", "10", "28"))
         assert self._wording("{minute} {hour} {dom} * *", dom) == "monthly on the 10th at 09:00"
 
+    @pytest.mark.parametrize(
+        ("template", "slot"),
+        [
+            (
+                "{minute} {hour} {dom} * 1",
+                BlueprintSlot(name="dom", type="enum", label="Day", default="*", options=("*", "15")),
+            ),
+            (
+                "{minute} {hour} * {month} 1",
+                BlueprintSlot(name="month", type="enum", label="Month", default="*", options=("*", "1")),
+            ),
+        ],
+    )
+    def test_wildcard_date_slot_keeps_weekday(self, template, slot):
+        assert self._wording(template, slot) == "every Monday at 09:00"
+
     def test_hour_step_slot_uses_its_default(self):
         step = BlueprintSlot(name="interval_h", type="enum", label="Every", default="6", options=("1", "6"))
         assert self._wording("0 */{interval_h} * * *", step) == "every 6 hours"
