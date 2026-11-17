@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { KANBAN_LAYOUT } from './layout'
+import { KANBAN_LAYOUT, laneRailSnapClass } from './layout'
 
 function classes(value: string): Set<string> {
   return new Set(value.split(/\s+/))
@@ -12,7 +12,8 @@ describe('Kanban responsive layout contract', () => {
     const lane = classes(KANBAN_LAYOUT.lane)
     const collapsed = classes(KANBAN_LAYOUT.collapsedLane)
 
-    expect(rail).toEqual(expect.objectContaining(new Set(['snap-x', 'snap-mandatory', 'md:snap-none'])))
+    expect(rail).toContain('md:snap-none')
+    expect(rail).not.toContain('snap-x')
     expect(lane).toEqual(expect.objectContaining(new Set(['w-full', 'snap-start', 'md:w-64', 'md:snap-none'])))
     expect(collapsed).toEqual(expect.objectContaining(new Set(['w-full', 'snap-start', 'md:w-8', 'md:snap-none'])))
   })
@@ -37,4 +38,12 @@ describe('Kanban responsive layout contract', () => {
       )
     )
   })
+  it('disables mandatory lane snap during a card drag or grab-scroll, then restores it', () => {
+    expect(laneRailSnapClass(false, false)).toBe('snap-x snap-mandatory')
+    expect(laneRailSnapClass(false, true)).toBe('snap-none')
+    expect(laneRailSnapClass(true, false)).toBe('snap-none')
+    expect(laneRailSnapClass(true, true)).toBe('snap-none')
+    expect(laneRailSnapClass(false, false)).toBe('snap-x snap-mandatory')
+  })
+
 })

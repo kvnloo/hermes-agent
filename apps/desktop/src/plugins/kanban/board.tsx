@@ -79,7 +79,7 @@ import {
 } from './api'
 import { BoardSwitcher } from './board-switcher'
 import { TaskDrawer } from './drawer'
-import { KANBAN_LAYOUT } from './layout'
+import { KANBAN_LAYOUT, laneRailSnapClass } from './layout'
 import { EMPTY_OVERRIDE, ModelOverrideField, overrideCreateFields, type TaskModelOverride } from './model-override'
 import { OrchestrationPanel } from './orchestration'
 import { columnMeta, type KanbanBoard, type KanbanTask, type TaskEstimate } from './types'
@@ -1248,6 +1248,7 @@ export function KanbanBoardPage() {
   // Grab-to-scrub the lane strip (shared primitive, same as the dashboard's pan).
   const lanesRef = useRef<HTMLDivElement>(null)
   const { grabbing, onMouseDown } = useGrabScroll(lanesRef)
+  const [cardDragging, setCardDragging] = useState(false)
 
   // Lane collapse: auto (empty → rail) unless the user overrode it. The map
   // stores only deviations from auto, so it stays tiny and self-heals. On a
@@ -1393,7 +1394,9 @@ export function KanbanBoardPage() {
         </div>
       ) : (
         <div
-          className={cn(KANBAN_LAYOUT.laneRail, grabbing && 'cursor-grabbing')}
+          className={cn(KANBAN_LAYOUT.laneRail, laneRailSnapClass(grabbing, cardDragging), grabbing && 'cursor-grabbing')}
+          onDragStart={() => setCardDragging(true)}
+          onDragEnd={() => setCardDragging(false)}
           onMouseDown={onMouseDown}
           ref={lanesRef}
         >
