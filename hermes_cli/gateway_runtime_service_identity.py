@@ -178,7 +178,7 @@ def manager_environment_pairs(value: str) -> dict[str, str]:
     # `systemctl show-environment` prints one KEY=VALUE per line: not the space-separated
     # Environment= property grammar above, so a quoted value is decoded rather than refused.
     result = {}
-    for line in filter(None, value.splitlines()):
+    for line in filter(None, value.split("\n")):
         key, separator, val = line.partition("=")
         if not separator or not key:
             _unverified()
