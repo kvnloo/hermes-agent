@@ -512,6 +512,32 @@ class TestClassifyApiError:
         assert result.reason == FailoverReason.timeout
         assert result.retryable is True
 
+    def test_499_litellm_invalid_request_error_body_is_retryable(self):
+        """An HTTP 499 remains a timeout even when LiteLLM labels its body invalid_request_error.
+
+        This is the reporter's structured response shape (#156837), absent from
+        the carrier's original status-only test.
+        """
+        error = MockAPIError(
+            "Error code: 499 - litellm.APIError: OpenAIException - Client Closed Request",
+            status_code=499,
+            body={"error": {
+                "message": "litellm.APIError: OpenAIException - Client Closed Request",
+                "type": "invalid_request_error",
+                "param": None,
+                "code": "499",
+            }},
+        )
+        result = classify_api_error(
+            error, provider="litellm", model="ws-heretic",
+            base_url="http://127.0.0.1:4000/v1",
+        )
+        assert result.status_code == 499
+        assert result.reason == FailoverReason.timeout
+        assert result.retryable is True
+        assert result.should_fallback is False
+        assert result.should_rotate_credential is False
+
     def test_400_bad_request_still_non_retryable_format_error(self):
         """Guard the boundary: a genuine 400 Bad Request must remain a
         non-retryable format_error and must not be swept up by the 408 branch."""
