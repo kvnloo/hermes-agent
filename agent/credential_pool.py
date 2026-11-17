@@ -10,6 +10,7 @@ from agent.credential_pool_timestamps import _parse_absolute_timestamp
 
 import logging
 import os
+import tempfile
 import threading
 import time
 import uuid
@@ -910,6 +911,29 @@ REFRESHABLE_OAUTH_PROVIDERS = frozenset({"anthropic", "nous", *_TOKENS_SINGLETON
 # its refresh path serializes on its own auth-store lock (``_refresh_entry_impl`` nous branch).
 _SINGLE_USE_REFRESH_PROVIDERS = ("openai-codex", "xai-oauth", "anthropic")
 
+
+def _preflight_auth_store_capacity(path: Path) -> None:
+    """Verify that auth.json's filesystem can stage a durable replacement before OAuth rotation.
+
+    A provider may consume a single-use refresh token on POST. An ENOSPC on the
+    following atomic write leaves that consumed token on disk. Check the same
+    directory with at least the current JSON size plus room for a new token.
+    This is a preflight, not a guarantee against the disk filling during POST.
+    """
+    remaining = (path.stat().st_size if path.exists() else 0) + 4096
+    fd, temporary = tempfile.mkstemp(prefix=".auth-refresh-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as staged:
+            block = b"\\0" * 65536
+            while remaining:
+                length = min(remaining, len(block))
+                staged.write(block[:length])
+                remaining -= length
+            staged.flush()
+            os.fsync(staged.fileno())
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
 # Lock-free window between consecutive auth-store holds in a deferred refresh sweep
 # (_refresh_pending_entries): a waiter with a shorter timeout (Desktop assistant start,
 # AUTH_LOCK_TIMEOUT_SECONDS = 15s) can acquire between two entries' holds instead of
@@ -1652,6 +1676,20 @@ class CredentialPool(CredentialPoolSelectionMixin, CredentialPoolAdminMixin, Cre
         )
 
     def _refresh_entry_impl(self, entry: PooledCredential, *, force: bool, failed_key: Optional[str] = None):
+        # A disk-full auth store must not cause us to spend a single-use refresh token.
+        # Claude Code / Hermes PKCE singletons have their own authoritative files.
+        if self.provider in _SINGLE_USE_REFRESH_PROVIDERS and not (
+            self.provider == "anthropic" and entry.source in ("claude_code", "hermes_pkce")
+        ):
+            target = auth_mod._auth_file_path()
+            if self.provider in SINGLE_USE_REFRESH_POOL_PROVIDERS and not _profile_owns_pool_provider(self.provider):
+                target = _borrowed_single_use_pool_root() or target
+            try:
+                _preflight_auth_store_capacity(target)
+            except OSError as exc:
+                logger.warning("%s: skipping single-use OAuth refresh; auth store cannot stage a write: %s",
+                               self.provider, exc)
+                return None
         # Single-use-token providers adopt fresher tokens from their store
         # BEFORE spending the refresh_token; ``entry`` is rebound to the synced
         # row so the failure path below recovers against the pair we POSTed.
