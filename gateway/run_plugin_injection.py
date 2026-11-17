@@ -180,6 +180,13 @@ class GatewayPluginInjectionMixin:
         """
         from gateway.session_authorities import authority_for_home
         authority = authority_for_home(self, plugin_home) if plugin_home is not None else None
+        # A hot-unserved profile retains its authority slot while finishing old work, but
+        # its admission gate rejects new turns. Do not acknowledge a wake it cannot admit.
+        if authority is not None and (getattr(authority, "retiring", False)
+                                      or getattr(authority, "retired", False)):
+            logger.warning("Plugin message injection refused: plugin=%s session=%s profile authority is retiring",
+                           plugin_id, session_key)
+            return None
         live = authority.sessions.get(source.chat_id) if authority is not None else None
         if live is not None and live.route == session_key:
             return authority

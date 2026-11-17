@@ -193,3 +193,29 @@ async def test_invalid_stored_identity_is_refused_without_restoring(tmp_path, mo
         assert _plugin_rows(authority, ref.session_id, "REFUSED") == []
     finally:
         db.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("lifecycle_flag", ["retiring", "retired"])
+async def test_closed_plugin_injection_refuses_nonserving_profile(tmp_path, monkeypatch, lifecycle_flag):
+    """An authority still registered during hot-unserve must not ACK a cold-route wake it cannot run."""
+    from tests.gateway.test_local_closed_retirement import _close, _create, _owner
+    from tests.gateway.test_plugin_origin_injection_authority import _context, _plugin_rows, _publish
+    from tests.waiting import async_wait_until
+
+    runner, authority, db = await _owner(tmp_path, monkeypatch)
+    try:
+        ref = _create(authority)
+        key = authority.sessions[ref.session_id].route
+        await _close(authority, ref)
+        await async_wait_until(lambda: ref.session_id not in authority.sessions, timeout=10,
+                               what="the local chat to retire")
+        ctx, manager = _context(tmp_path)
+        _publish(runner, manager)
+        setattr(authority, lifecycle_flag, True)
+
+        assert await asyncio.to_thread(ctx.inject_message, "UNSERVED_PROFILE", session_key=key) is False
+        assert ref.session_id not in authority.sessions
+        assert _plugin_rows(authority, ref.session_id, "UNSERVED_PROFILE") == []
+    finally:
+        db.close()
