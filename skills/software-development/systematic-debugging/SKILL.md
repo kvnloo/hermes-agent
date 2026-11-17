@@ -31,9 +31,9 @@ If you haven't completed Phase 1, you cannot propose fixes.
 
 ## The Feedback Loop Rule
 
-The feedback loop is the debugging work. Before reading code to build a theory, create or identify a **tight** command that can go red on the user's exact symptom and green when the bug is fixed. A tight loop is fast, deterministic, agent-runnable, and specific enough to catch this bug — not merely "doesn't crash".
+A tight feedback loop is the preferred debugging tool. When safe and feasible, identify a command that can go red on the user's exact symptom and green when the bug is fixed. A good loop is fast, specific and deterministic — not merely "doesn't crash".
 
-When a clean repro is hard, spend disproportionate effort building the loop. Guessing without a red-capable loop is the failure mode this skill exists to prevent.
+If a safe loop cannot reproduce the symptom within the agreed resource and time limits, stop attempts and continue source investigation using existing logs, traces, instrumentation and environment evidence. Record what remains uncertain instead of creating host contention to force a red result. Lack of a reproduction is not a reason to guess at a fix.
 
 ## When to Use
 
@@ -177,9 +177,9 @@ search_files("variable_name\\s*=", path="src/", file_glob="*.py")
 ### Phase 1 Completion Checklist
 
 - [ ] Error messages fully read and understood
-- [ ] A tight loop command exists and has been run at least once
-- [ ] Loop is red-capable: it asserts the user's exact symptom, not a nearby failure
-- [ ] Loop is deterministic, or a flaky bug has a high enough reproduction rate to debug
+- [ ] A bounded loop was run, or document why a safe repro was unavailable and which existing evidence was examined
+- [ ] The loop or available evidence addresses the user's exact symptom, not unrelated failures
+- [ ] Reproduction attempts stayed within the agreed resource and time limits; unresolved uncertainty is recorded
 - [ ] Recent changes identified and reviewed
 - [ ] Evidence gathered (logs, state, data flow)
 - [ ] Problem isolated to specific component/code

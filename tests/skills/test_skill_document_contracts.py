@@ -116,3 +116,11 @@ def test_optional_skill_available_on_posix(skill):
 def test_optional_skill_availability_on_windows():
     assert skill_matches_platform(_document(QUESTIONNAIRE)[0])
     assert not skill_matches_platform(_document(DARWINIAN)[0])
+
+def test_systematic_debugging_allows_investigation_without_forced_repro():
+    """#152013: no red-loop mandate when reproducing would strain a shared host."""
+    _, body = _document("skills/software-development/systematic-debugging")
+    rule = body.split("## The Feedback Loop Rule", 1)[1].split("## When to Use", 1)[0]
+    checklist = body.split("### Phase 1 Completion Checklist", 1)[1].split("**STOP:**", 1)[0]
+    assert "stop attempts and continue source investigation" in rule
+    assert "or document why a safe repro was unavailable" in checklist
