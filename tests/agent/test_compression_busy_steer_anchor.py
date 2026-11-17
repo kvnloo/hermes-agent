@@ -298,3 +298,31 @@ def test_consume_retires_one_copy_of_two_identical_buffered_steers():
     assert consume_buffered_steer(agent, STEER_B) is True
     assert consume_buffered_steer(agent, "unrelated text") is False
     assert agent._drain_pending_steer() == STEER_B
+
+def test_two_distinct_surviving_steers_retire_both_buffered_tickets():
+    """Two steer rows survived into the compressed tail: neither accepted
+    message may remain buffered for a second delivery after compaction."""
+    from agent.interrupt_control import InterruptControlMixin
+    from agent.prompt_builder import steer_user_row
+
+    first = "Steer one: inspect the logs."
+    second = "Steer two: cancel the deployment."
+    agent = InterruptControlMixin()
+    agent.steer(first, ticket="adm-1")
+    agent.steer(second, ticket="adm-2")
+
+    compressed = [
+        _summary_row(),
+        {"role": "assistant", "content": "Working."},
+        steer_user_row(first),
+        {"role": "assistant", "content": "Working."},
+        steer_user_row(second),
+    ]
+
+    assert _ensure_compressed_has_user_turn(
+        [{"role": "user", "content": REQUEST_A}], compressed, agent=agent
+    ) == "already_present"
+    # Check settlement BEFORE a drain, which would independently stamp the tickets.
+    assert agent.withdraw_steer("adm-1") is False
+    assert agent.withdraw_steer("adm-2") is False
+    assert agent._drain_pending_steer() is None
