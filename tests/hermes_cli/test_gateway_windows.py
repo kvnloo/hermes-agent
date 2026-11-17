@@ -408,7 +408,7 @@ def test_gateway_vbs_script_is_console_less(monkeypatch):
     assert content.endswith("\r\n")
 
 
-def test_gateway_vbs_script_restarts_only_an_abnormal_exit(monkeypatch):
+def test_gateway_vbs_script_caps_abnormal_restarts_per_hour(monkeypatch):
     """RestartOnFailure does not fire on an action's nonzero exit, so the launcher owns the restart. A clean
     exit (planned stop, handoff) and the permanent config refusal (78, as launchd maps it) stay stopped."""
     monkeypatch.setattr(
@@ -418,14 +418,24 @@ def test_gateway_vbs_script_restarts_only_an_abnormal_exit(monkeypatch):
     )
     lines = gateway_windows._build_gateway_vbs_script(r"C:\venv\Scripts\python.exe", r"C:\Hermes", r"C:\Hermes", "").splitlines()
 
-    assert lines[-6] == "Do"
-    assert lines[-5].startswith("  exit_code = sh.Run(") and lines[-5].endswith(", 0, True)")
-    assert lines[-4:] == [
+    assert lines[-15:-12] == ["restarts = 0", "window_start = Now", "Do"]
+    assert lines[-12].startswith("  exit_code = sh.Run(") and lines[-12].endswith(", 0, True)")
+    assert lines[-11:] == [
         "  If exit_code = 0 Or exit_code = 78 Then Exit Do",
+        '  If DateDiff("n", window_start, Now) >= 60 Then',
+        "    restarts = 0",
+        "    window_start = Now",
+        "  End If",
+        "  restarts = restarts + 1",
+        "  If restarts > 5 Then Exit Do",
         "  WScript.Sleep 60000",
         "Loop",
-        "WScript.Quit 0",
+        "If exit_code = 78 Then exit_code = 0",
+        "WScript.Quit exit_code",
     ]
+    # The Startup entry delegates to this same supervised launcher.
+    startup = gateway_windows._build_startup_launcher(Path("Hermes_Gateway.cmd"))
+    assert "wscript.exe" in startup and ", 0, False" in startup
 
 
 def test_gateway_vbs_generated_launcher_passes_the_identity_check(monkeypatch, tmp_path):

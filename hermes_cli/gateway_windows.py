@@ -62,6 +62,7 @@ _TASK_LOGON_DELAY = "PT30S"
 _TASK_RESTART_INTERVAL = "PT1M"
 _TASK_RESTART_COUNT = 999
 _LAUNCHER_RESTART_DELAY_MS = 60000
+_LAUNCHER_MAX_RESTARTS = 5
 
 _GATEWAY_ENV = (("PYTHONIOENCODING", "utf-8"), ("HERMES_GATEWAY_DETACHED", "1"), ("HERMES_SUPERVISED_CHILD", "1"))
 
@@ -434,7 +435,7 @@ def _build_gateway_vbs_script(python_path: str, working_dir: str, hermes_home: s
     lines = [
         f"' {_TASK_DESCRIPTION}",
         "Option Explicit",
-        "Dim sh, env, existing_pp, exit_code",
+        "Dim sh, env, existing_pp, exit_code, restarts, window_start",
         'Set sh = CreateObject("WScript.Shell")',
         'Set env = sh.Environment("PROCESS")',
         f"env.Item({q('HERMES_HOME')}) = {q(hermes_home)}",
@@ -452,12 +453,22 @@ def _build_gateway_vbs_script(python_path: str, working_dir: str, hermes_home: s
         # and IgnoreNew makes a repeated /Run a no-op. Task Scheduler's RestartOnFailure does not fire on
         # an action's nonzero exit (measured on Windows 11), so this loop is what restarts an abnormal
         # exit. A clean exit is a planned stop or a handoff, and 78 a permanent refusal: neither retries.
+        # Cap transient failures at five retries per hour, preserving the exit code after exhaustion.
+        "restarts = 0",
+        "window_start = Now",
         "Do",
         f"  exit_code = sh.Run({q(command_line)}, 0, True)",
         f"  If exit_code = 0 Or exit_code = {GATEWAY_FATAL_CONFIG_EXIT_CODE} Then Exit Do",
+        '  If DateDiff("n", window_start, Now) >= 60 Then',
+        "    restarts = 0",
+        "    window_start = Now",
+        "  End If",
+        "  restarts = restarts + 1",
+        f"  If restarts > {_LAUNCHER_MAX_RESTARTS} Then Exit Do",
         f"  WScript.Sleep {_LAUNCHER_RESTART_DELAY_MS}",
         "Loop",
-        "WScript.Quit 0",
+        f"If exit_code = {GATEWAY_FATAL_CONFIG_EXIT_CODE} Then exit_code = 0",
+        "WScript.Quit exit_code",
     ]
     return "\r\n".join(lines) + "\r\n"
 
