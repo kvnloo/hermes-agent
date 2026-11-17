@@ -139,15 +139,16 @@ class FooteredReply(str):
         instance.runtime_footer = footer
         return instance
 
-    # Immutable value: ``copy``/``deepcopy`` must return self. The default str-subclass
-    # reconstruction calls ``cls.__new__(cls)`` with no args, which this __new__ rejects, so a
-    # plain ``deepcopy`` of any payload holding the reply raised TypeError (the gateway's
-    # ``event_stream.publish`` deepcopies its frame, which killed ``message.complete``).
+    # The str value is immutable, but the attached runtime_footer is writable metadata.
+    # An event replay snapshot must not alias that metadata back to the live reply.
     def __copy__(self):
         return self
 
     def __deepcopy__(self, memo):
-        return self
+        constructor, args = self.__reduce__()
+        copied = constructor(*args)
+        memo[id(self)] = copied
+        return copied
 
     def __reduce__(self):
         return (FooteredReply, (str(self)[: -len(f"\n\n{self.runtime_footer}")], self.runtime_footer))

@@ -21,10 +21,22 @@ def test_deepcopy_of_a_payload_holding_the_reply_keeps_the_footer():
     assert frame["text"].runtime_footer == FOOTER
 
 
+def test_deepcopy_payload_snapshots_mutable_footer_metadata():
+    reply = _reply()
+    frame = deepcopy({"text": reply, "content": reply})
+
+    # The gateway's frame owns its copy; aliases within that frame stay aliased.
+    assert frame["text"] is frame["content"]
+    assert frame["text"] is not reply
+    reply.runtime_footer = "changed after publication"
+    assert frame["text"].runtime_footer == FOOTER
+    assert str(frame["text"]) == f"Here it is\n\n{FOOTER}"
+
+
 def test_copy_returns_the_immutable_reply_itself():
     reply = _reply()
     assert copy(reply) is reply
-    assert deepcopy(reply) is reply
+    assert deepcopy(reply) == reply
 
 
 def test_pickle_roundtrip_keeps_the_footer_once():
