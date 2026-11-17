@@ -225,3 +225,32 @@ def test_flush_swallows_callback_exceptions():
     assert seen == ["first", "second"]
     # Buffer drained regardless of failures.
     assert agent._retry_status_buffer == []
+
+def test_failed_background_wake_preserves_deferred_fallback_notice():
+    """Terminal failure of a wake must not discard a notice deferred to the next user turn."""
+    from agent.fallback_notice import fallback_notice_hidden
+
+    agent = _make_bare_agent()
+    agent._print_fn = lambda *args, **kwargs: None
+    emitted = []
+    agent.status_callback = lambda kind, message: emitted.append((kind, str(message)))
+    notice = (
+        "⚠️ Model fallback: primary via custom could not respond "
+        "(authentication failed); using backup via custom."
+    )
+    agent._pending_fallback_notice = notice
+
+    # build_turn_context intentionally leaves a pre-turn notice pending on machinery turns.
+    agent._turn_display_kind = "internal_notification"
+    assert fallback_notice_hidden(agent)
+    agent._buffer_status("Provider retries exhausted")
+    agent._flush_status_buffer()  # Terminal error path, not the successful wake tested by the PR.
+    assert agent._pending_fallback_notice == notice
+    assert not any(kind == "fallback" for kind, _ in emitted)
+
+    # A cached agent's next ordinary turn should still show the deferred notice exactly once.
+    agent._turn_display_kind = None
+    assert not fallback_notice_hidden(agent)
+    agent._emit_pending_fallback_notice()
+    assert [msg for kind, msg in emitted if kind == "fallback"] == [notice]
+    assert agent._pending_fallback_notice is None

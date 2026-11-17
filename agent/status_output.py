@@ -256,8 +256,12 @@ class StatusOutputMixin:
 
     def _flush_status_buffer(self) -> None:
         """Emit buffered retry messages — call on terminal failure so the user sees what was tried."""
-        # A pre-turn switch notice was already shown at turn start; never repeat it after a failure.
-        self._pending_fallback_notice = None
+        # A background wake never displayed its pre-turn switch; keep that notice for
+        # the next user turn even if the wake exhausts its retries. An interactive
+        # turn has already shown the notice at start, so discard it as before.
+        from agent.fallback_notice import fallback_notice_hidden
+        if not fallback_notice_hidden(self):
+            self._pending_fallback_notice = None
         buf = getattr(self, "_retry_status_buffer", None)
         if not buf:
             return
