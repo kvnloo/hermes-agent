@@ -1,0 +1,69 @@
+{
+  "runner_command": "python /workspace/zer0/oss/hermes-agent/scripts/benchmark_kanban_fixture_quarantine.py --source /home/kvn/.hermes/kanban/boards/zer0-company/kanban.db --copy /tmp/zer0-company-quarantine-benchmark-revised-3129b.db --output kanban-quarantine-performance.json --warmups 3 --runs 15",
+  "copy_creation_method": "sqlite3.Connection.backup",
+  "sqlite_version": "3.53.4",
+  "source": "/home/kvn/.hermes/kanban/boards/zer0-company/kanban.db",
+  "copy": "/tmp/zer0-company-quarantine-benchmark-revised-3129b.db",
+  "source_sha256_before": "c66fed38d3db5cb1daaca2a3f5392cb239fe74b4795a0b9cc19e22ad6c0ac96f",
+  "source_sha256_after": "c66fed38d3db5cb1daaca2a3f5392cb239fe74b4795a0b9cc19e22ad6c0ac96f",
+  "copy_sha256_before": "88aa682e577f3a4631cac6bf474a74cf5bd0a4586035a9ed8ed3cecf943e4a99",
+  "copy_sha256_after": "88aa682e577f3a4631cac6bf474a74cf5bd0a4586035a9ed8ed3cecf943e4a99",
+  "warmup_runs": 3,
+  "measured_runs": 15,
+  "classification_sql": "SELECT count(*) FROM tasks WHERE (\n    (tenant = 'bench' AND title GLOB 'bench [0-9]*'\n     AND substr(title, 7) NOT GLOB '*[^0-9]*')\n OR (created_by IN ('desktop-e2e', 'preview-fixture') AND title LIKE 'Synthetic %')\n OR (created_at = 1787030032 AND created_by IS NULL AND tenant IS NULL\n     AND title GLOB 'Long card [0-7] detail*')\n)",
+  "classified_before": 26659,
+  "classified_active_after": 0,
+  "queries": {
+    "list_active": {
+      "sql": "SELECT id, title, status FROM tasks WHERE status != 'archived' ORDER BY created_at DESC, id",
+      "before": {
+        "sql": "SELECT id, title, status FROM tasks WHERE status != 'archived' ORDER BY created_at DESC, id",
+        "rows": 27940,
+        "median_ms": 19.351,
+        "min_ms": 18.248,
+        "max_ms": 21.108
+      },
+      "after": {
+        "sql": "SELECT id, title, status FROM tasks WHERE status != 'archived' ORDER BY created_at DESC, id",
+        "rows": 1282,
+        "median_ms": 2.614,
+        "min_ms": 2.34,
+        "max_ms": 3.114
+      }
+    },
+    "ready_dispatch_scan": {
+      "sql": "SELECT id FROM tasks WHERE status = 'ready' ORDER BY created_at, id",
+      "before": {
+        "sql": "SELECT id FROM tasks WHERE status = 'ready' ORDER BY created_at, id",
+        "rows": 14696,
+        "median_ms": 6.766,
+        "min_ms": 6.338,
+        "max_ms": 7.479
+      },
+      "after": {
+        "sql": "SELECT id FROM tasks WHERE status = 'ready' ORDER BY created_at, id",
+        "rows": 34,
+        "median_ms": 0.015,
+        "min_ms": 0.014,
+        "max_ms": 0.019
+      }
+    },
+    "board_status_counts": {
+      "sql": "SELECT status, count(*) FROM tasks GROUP BY status ORDER BY status",
+      "before": {
+        "sql": "SELECT status, count(*) FROM tasks GROUP BY status ORDER BY status",
+        "rows": 8,
+        "median_ms": 0.879,
+        "min_ms": 0.873,
+        "max_ms": 0.887
+      },
+      "after": {
+        "sql": "SELECT status, count(*) FROM tasks GROUP BY status ORDER BY status",
+        "rows": 8,
+        "median_ms": 0.989,
+        "min_ms": 0.969,
+        "max_ms": 1.045
+      }
+    }
+  }
+}
