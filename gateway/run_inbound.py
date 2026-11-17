@@ -1211,7 +1211,7 @@ class GatewayInboundMixin(
     async def _hm_pending_reply_intercepts(
         self, event: MessageEvent, source: SessionSource, _quick_key: str
     ) -> Optional[str]:
-        """Replies owned by in-flight work: pending /update prompt, clarify, slash-confirm.
+        """Replies owned by in-flight work: update, clarify, slash-confirm and exec approval.
         Only events that may control the gateway (``allow_gateway_control``) can answer them, never
         an admitted turn: it was offered here before its commit, or a slash command queued it."""
         from gateway.session_ingress import executing_admission
@@ -1222,6 +1222,11 @@ class GatewayInboundMixin(
             _reply = await self._hm_clarify_reply(event, source, _quick_key)
         if _reply is None:
             _reply = await self._hm_slash_confirm_reply(event, _quick_key)
+        if _reply is None and not event.get_command() and not getattr(event, "internal", False):
+            # A background approval can outlive the chat's foreground turn. Intercept its reply
+            # before the idle ingress admits another turn, with the busy path's auth and opt-in.
+            if await self._route_plaintext_approval_while_busy(event, _quick_key):
+                return ""  # the router already sent its confirmation
         return _reply
 
     async def _hm_dispatch_idle_commands(

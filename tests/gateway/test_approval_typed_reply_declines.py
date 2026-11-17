@@ -130,3 +130,21 @@ async def test_api_steer_declines_the_runs_pending_approval(gate):
     assert resp.status == 200 and payload["declined_approvals"] == 1
     agent.steer.assert_not_called()  # delivered once, as the declined approval's reply
     assert REPLY in out["result"]["message"]
+
+@pytest.mark.asyncio
+async def test_pending_approval_reply_uses_inbound_intercept_without_active_turn(gate):
+    """#156183: a background approval still accepts a typed reply when the chat is not busy."""
+    _set_typed_reply_declines(True)
+    runner, adapter = _runner()
+    session_key = runner._session_key_for_source(_source())
+    out, thread = gate(session_key)
+    assert not runner._running_agents  # no foreground turn to reach the busy-message router
+
+    event = MessageEvent(text=REPLY, message_type=MessageType.TEXT, source=_source(), message_id="m1")
+    assert await runner._hm_pending_reply_intercepts(event, event.source, session_key) == ""
+    await asyncio.to_thread(thread.join, 5)
+
+    assert out["result"]["approved"] is False
+    assert REPLY in out["result"]["message"] and "next instruction" in out["result"]["message"]
+    assert not approval_module.has_blocking_approval(session_key)
+    adapter._send_with_retry.assert_awaited()
