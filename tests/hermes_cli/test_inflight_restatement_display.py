@@ -25,11 +25,13 @@ HEADER = (
 
 def _stored_rows(*, stamped: bool) -> list[dict]:
     """The stored shape: the real opener, the compressor's replay row, the reply."""
-    replay = {"role": "user", "id": 2, "content": HEADER + "\nplease rename the widget", "timestamp": 2.0}
+    replay = {"role": "user", "id": 2, "message_uid": "a" * 32,
+              "content": HEADER + "\nplease rename the widget", "timestamp": 2.0}
     if stamped:
         replay["display_metadata"] = {INFLIGHT_TASK_RESTATEMENT: True}
     return [
-        {"role": "user", "id": 1, "content": "please rename the widget", "timestamp": 1.0},
+        {"role": "user", "id": 1, "message_uid": "a" * 32,
+         "content": "please rename the widget", "timestamp": 1.0},
         replay,
         {"role": "assistant", "id": 3, "content": "done", "timestamp": 3.0},
     ]
@@ -68,3 +70,49 @@ def test_an_unstamped_row_with_the_same_header_still_renders():
     projected = _project_for_display(rows)
     assert len(projected) == len(rows)
     assert projected[1].get("display_kind") is None
+
+
+def test_active_only_keeps_the_inflight_request_without_its_frame(tmp_path):
+    """A committed compaction archives the original; the replay is the only active ask."""
+    from agent.context_compressor import (
+        COMPRESSED_SUMMARY_METADATA_KEY, SUMMARY_PREFIX, ContextCompressor, _SUMMARY_END_MARKER,
+    )
+    from hermes_state import SessionDB
+
+    with SessionDB(db_path=tmp_path / "state.db") as db:
+        db.create_session(session_id="active-only", source="desktop")
+        db.append_messages_batch("active-only", [
+            {"role": "user", "content": "earlier question"},
+            {"role": "assistant", "content": "earlier answer"},
+            {"role": "user", "content": "please rename the widget"},
+        ])
+        original = db.get_messages("active-only")[-1]
+        assert original.get("message_uid")
+        carrier = {
+            "role": "assistant", COMPRESSED_SUMMARY_METADATA_KEY: True,
+            "content": f"{SUMMARY_PREFIX}\n## Summary\nprior work\n\n{_SUMMARY_END_MARKER}",
+        }
+        compressor = object.__new__(ContextCompressor)
+        compressor.quiet_mode = True
+        window = compressor._reappend_inflight_user_task([carrier], {**original})
+        db.archive_and_compact("active-only", window)
+
+        active = db.get_messages("active-only", include_compacted=False)
+        assert sum(
+            bool((row.get("display_metadata") or {}).get(INFLIGHT_TASK_RESTATEMENT))
+            for row in active
+        ) == 1
+        expected = ["please rename the widget"]
+        assert [
+            row["content"] for row in _project_for_display(active)
+            if row["role"] == "user" and row.get("display_kind") != "hidden"
+        ] == expected
+        assert [
+            row["text"] for row in _history_to_messages(active) if row["role"] == "user"
+        ] == expected
+
+        lineage = db.get_messages("active-only", include_compacted=True)
+        assert sum(
+            row.get("content") == expected[0] and row.get("display_kind") != "hidden"
+            for row in _project_for_display(lineage, lineage=True)
+        ) == 1

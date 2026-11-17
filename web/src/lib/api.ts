@@ -2120,6 +2120,8 @@ export interface TelegramOnboardingApplyResponse {
 export interface SessionMessage {
   role: "user" | "assistant" | "system" | "tool";
   content: string | null;
+  /** Backend display projection: rows are still paged but must not render as transcript bubbles. */
+  display_kind?: string;
   tool_calls?: Array<{
     id: string;
     function: { name: string; arguments: string };
