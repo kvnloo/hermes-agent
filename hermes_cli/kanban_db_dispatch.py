@@ -2049,18 +2049,14 @@ def dispatch_once(
 _REVIEW_LANE_FORCED_SKILLS: tuple[str, ...] = ("sdlc-review",)
 
 
-def _forced_skills_for_claim(conn: sqlite3.Connection, task_id: str) -> list[str]:
-    """Every skill a ``review`` claim of ``task_id`` would force-load.
+def _forced_skills_for_claim() -> list[str]:
+    """Only the review-specific skill is a hard requirement for this lane.
 
-    The card's own ``skills`` plus the lane-forced set, deduped in claim order
-    -- must stay identical to what :func:`_dispatch_lane_task` writes onto
-    ``claimed.skills``, or the preflight guards a different set than the worker
-    receives.
+    Card skills are also passed to the worker, but its preload gate aborts only
+    when *none* of the requested skills can load. A missing card-specific skill
+    cannot block a review that has a usable sdlc-review skill.
     """
-    row = conn.execute("SELECT skills FROM tasks WHERE id = ?", (task_id,)).fetchone()
-    parsed = _kb._json_or(row["skills"]) if row is not None else None
-    explicit = [str(s) for s in parsed if s] if isinstance(parsed, list) else []
-    return list(dict.fromkeys([*explicit, *_REVIEW_LANE_FORCED_SKILLS]))
+    return list(_REVIEW_LANE_FORCED_SKILLS)
 
 
 def _resolve_skills_as_worker(assignee: str, identifiers: Iterable[str]) -> tuple[list[str], list[str]]:
@@ -2096,7 +2092,7 @@ def _resolve_skills_as_worker(assignee: str, identifiers: Iterable[str]) -> tupl
 
 def _missing_review_skills(conn: sqlite3.Connection, task_id: str, assignee: str) -> list[str]:
     """Missing forced skills for a ``review`` claim; ``[]`` when it can start."""
-    return _resolve_skills_as_worker(assignee, _forced_skills_for_claim(conn, task_id))[1]
+    return _resolve_skills_as_worker(assignee, _forced_skills_for_claim())[1]
 
 
 def _review_skill_preflight(
@@ -2119,7 +2115,7 @@ def _review_skill_preflight(
     A resolver that raises is NOT treated as a missing skill -- that would block
     reviews for a bug in the check itself, so it fails open and logs.
     """
-    forced = _forced_skills_for_claim(conn, task_id)
+    forced = _forced_skills_for_claim()
     try:
         _loaded, missing = _resolve_skills_as_worker(assignee, forced)
     except Exception as exc:  # never let the guard block reviews

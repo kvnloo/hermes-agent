@@ -58,9 +58,9 @@ def _write_skill(home: Path, name: str) -> Path:
     return skill_dir
 
 
-def _review_card(conn, assignee: str = "default") -> str:
+def _review_card(conn, assignee: str = "default", skills: list[str] | None = None) -> str:
     """Create a card and walk it to ``status='review'`` like a real worker would."""
-    tid = kb.create_task(conn, title="impl a feature", assignee=assignee)
+    tid = kb.create_task(conn, title="impl a feature", assignee=assignee, skills=skills)
     assert kb.claim_task(conn, tid)
     claimed = kb.get_task(conn, tid)
     assert claimed is not None
@@ -187,3 +187,39 @@ def test_review_claim_proceeds_when_forced_skill_resolves(kanban_home: Path) -> 
     # preflights the requirement; it does not replace it). The lane appends it to
     # ``claimed.skills``, which is what spawn_fn receives.
     assert REVIEW_SKILL in calls[0][1], calls[0]
+
+
+def test_review_preflight_requires_reviewer_but_allows_missing_card_skill(
+    kanban_home: Path,
+) -> None:
+    """The worker aborts without its reviewer, but tolerates a missing card skill
+    when the reviewer loads. The dispatcher must not reject that runnable card."""
+    from agent.skill_commands import build_preloaded_skills_prompt
+
+    # No reviewer skill exists: preflight must refuse before claiming the card.
+    with kbc.connect() as conn:
+        absent = _review_card(conn)
+        spawn, calls = _spawner()
+        result = kbd.dispatch_once(conn, dry_run=False, spawn_fn=spawn)
+        assert (absent, [REVIEW_SKILL]) in result.review_lane_unavailable
+        assert calls == []
+        assert kb.get_task(conn, absent).status == "review"
+
+        # Once the reviewer is installed, the actual worker preload permits
+        # missing card skills because at least one requested skill loaded.
+        _write_skill(kanban_home, REVIEW_SKILL)
+        missing_card_skill = "uninstalled-kanban-card-skill-regression"
+        _prompt, loaded, missing = build_preloaded_skills_prompt(
+            [missing_card_skill, REVIEW_SKILL]
+        )
+        assert REVIEW_SKILL in loaded
+        assert missing_card_skill in missing
+
+        runnable = _review_card(conn, skills=[missing_card_skill])
+        next_result = kbd.dispatch_once(conn, dry_run=False, spawn_fn=spawn)
+        assert runnable in [task_id for task_id, _skills in calls]
+        assert not any(
+            task_id == runnable for task_id, _missing in next_result.review_lane_unavailable
+        )
+        assert kb.get_task(conn, runnable).status == "running"
+        assert [REVIEW_SKILL, missing_card_skill] != missing
