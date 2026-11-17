@@ -117,6 +117,11 @@ def _render_one(spec: FileSpec, resolved: Path, budget: int) -> tuple[str, Inlin
     version = _file_metadata(str(resolved))
     lines = resolved.read_text(encoding="utf-8-sig", errors="replace").splitlines()
     start = spec.start or 1
+    if spec.start is not None and start > len(lines):
+        raise ValueError(
+            f"'files' entry {spec.path}:{spec.start}-{spec.end} starts at line {start}, "
+            f"but the file has {len(lines)} lines."
+        )
     end = min(spec.end or len(lines), len(lines))
     wanted = lines[start - 1:end] if start <= len(lines) else []
     shown = []
@@ -163,7 +168,10 @@ def read_task_files(specs: list[FileSpec], workspace: Optional[str]) -> tuple[Op
         resolved, err = _refusal(spec, base)
         if resolved is None:
             return None, err
-        text, span = _render_one(spec, resolved, budget)
+        try:
+            text, span = _render_one(spec, resolved, budget)
+        except ValueError as exc:
+            return None, str(exc)
         budget -= len(text.encode("utf-8"))
         parts.append(text)
         spans.append(span)

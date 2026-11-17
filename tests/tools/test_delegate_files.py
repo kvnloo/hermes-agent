@@ -92,3 +92,12 @@ def test_delegate_task_passes_files_through_the_default_backend(tmp_path, monkey
     refused = json.loads(dt.delegate_task(tasks=[{"goal": "edit the small module", "files": ["../x.py"]}],
                                           parent_agent=parent))
     assert "outside the child's workspace" in refused["error"] and len(built) == 1
+
+
+def test_files_refuse_a_stale_range_starting_past_eof(tmp_path):
+    """A stale parent range must fail before spawn, not tell the child an empty window is complete."""
+    _ws, files, err, message = _brief(tmp_path, ["small.py:21-25"])
+    assert files == []
+    assert "starts at line 21" in err
+    assert "the file has 20 lines" in err
+    assert message is None
