@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { ChatBarState } from '@/app/chat/composer/types'
 import { I18nProvider } from '@/i18n'
+import { $touchPointer } from '@/lib/touch-interaction'
 import { $hudMode } from '@/store/hud'
 import { applyWakeStartResult, applyWakeStatus, resetWakeWordState } from '@/store/wake-word'
 
@@ -59,6 +60,7 @@ async function expectShortcutTooltip(label: string, shortcut: string) {
 afterEach(() => {
   cleanup()
   $hudMode.set(false)
+  $touchPointer.set(false)
 })
 
 // The HUD is a Spotlight bar a few hundred pixels wide: the voice controls
@@ -106,6 +108,20 @@ describe('HUD mode', () => {
 
     expect(screen.getByLabelText('Stop dictation')).toBeTruthy()
     expect(screen.queryByLabelText('Voice')).toBeNull()
+  })
+})
+
+// A touch keyboard can hold text in its IME buffer while AUI's composer
+// reports no payload. The primary must not switch to voice until the user can
+// press Send: submitDraft reads the live editor when the press arrives.
+describe('touch Send with pending IME text (#155182)', () => {
+  it('keeps Send present and enabled even while the composer store says empty', () => {
+    $touchPointer.set(true)
+    renderControls({ busy: false, canSubmit: false, hasComposerPayload: false })
+
+    const send = screen.getByLabelText('Send') as HTMLButtonElement
+
+    expect(send.disabled).toBe(false)
   })
 })
 

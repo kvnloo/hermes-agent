@@ -106,7 +106,10 @@ export function ComposerControls({
     return <ConversationPill {...conversation} disabled={disabled} />
   }
 
-  const showVoicePrimary = !busy && !hasComposerPayload
+  // Touch IMEs can leave preedit text in the editor while the composer store
+  // still reports empty. Keep Send available so its DOM-backed submit can run;
+  // the voice action remains accessible in the adjacent voice controls.
+  const showVoicePrimary = !busy && !hasComposerPayload && !touch
   // Steer is just send: a payload keeps the Send affordance mid-turn (it answers
   // a waiting card). Stop only when the composer is empty and a turn is running.
   const showStop = busy && !hasComposerPayload
