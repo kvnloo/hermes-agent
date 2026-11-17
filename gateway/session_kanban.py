@@ -295,23 +295,7 @@ def record_start_failure(frame, exc):
     if context is None:
         return
     from hermes_cli.turn_exit import credential_failure_flags, turn_exit_code
-    from agent.auxiliary_unavailable import ProviderNotConfiguredError
-    # Persist only a controlled config signature, never arbitrary exception text:
-    # construction errors can include private prompts, paths or credentials.
-    config_exc = exc
-    seen = set()
-    while config_exc is not None and id(config_exc) not in seen:
-        if isinstance(config_exc, ProviderNotConfiguredError):
-            break
-        seen.add(id(config_exc))
-        config_exc = config_exc.__cause__ or config_exc.__context__
-    diagnostic = ''
-    if isinstance(config_exc, ProviderNotConfiguredError):
-        provider = config_exc.provider
-        diagnostic = (f"config_error: no credentials for provider '{provider}' (model.provider={provider})"
-                      if provider else "config_error: no LLM provider configured")
-    _record_worker_result(context, turn_exit_code(None, kanban_worker=True,
-                          **credential_failure_flags(exc)), diagnostic)
+    _record_worker_result(context, turn_exit_code(None, kanban_worker=True, **credential_failure_flags(exc)), '')
 
 
 def _record_worker_result(context, code, last_output):
