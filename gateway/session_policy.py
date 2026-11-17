@@ -6,8 +6,7 @@ from functools import cached_property
 import contextlib
 import json
 import logging
-import ntpath
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from hermes_state_runtime import RuntimeStoreError
 
@@ -1009,11 +1008,11 @@ def _stored_cwd_is_absolute(cwd: str) -> bool:
     install keeps ``C:\\Users\\<user>`` (not ``Path.is_absolute()`` on POSIX) and a POSIX install keeps
     ``/home/<user>`` (not absolute to ``WindowsPath``). Judging it with this host's ``Path`` rejected
     the whole otherwise-valid policy, so every control on a migrated session answered
-    ``storage_unavailable``; ``ntpath.isabs`` covers the foreign spelling while still refusing a
-    relative or drive-relative (``C:hermes``) path. Running a turn in that folder stays refused, by
+    ``storage_unavailable``; pure ``PurePosixPath``/``PureWindowsPath`` checks cover both spellings while refusing a
+    relative, drive-relative (``C:hermes``), or Windows rooted-without-drive path. Running a turn in that folder stays refused, by
     name, through :func:`workspace_ready` -> ``workspace_unavailable``.
     """
-    return Path(cwd).is_absolute() or ntpath.isabs(cwd)
+    return PurePosixPath(cwd).is_absolute() or PureWindowsPath(cwd).is_absolute()
 
 
 def restore_policy(data):

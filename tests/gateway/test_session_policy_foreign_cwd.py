@@ -48,3 +48,15 @@ def test_a_non_absolute_cwd_is_still_refused(tmp_path, cwd):
 
     with pytest.raises(RuntimeStoreError, match="storage_unavailable"):
         restore_policy(_stored_receipt(tmp_path, cwd))
+
+
+@pytest.mark.platforms("posix")
+def test_foreign_windows_receipt_requires_a_drive_or_unc_share(tmp_path):
+    """A rooted Windows path without a drive is not a portable absolute path."""
+    from hermes_state_runtime import RuntimeStoreError
+
+    # The valid foreign drive path must still restore on a POSIX host (base-RED).
+    assert restore_policy(_stored_receipt(tmp_path, WINDOWS_CWD)).cwd == WINDOWS_CWD
+    # Python 3.11/3.12 ntpath.isabs() wrongly accepts this drive-relative root.
+    with pytest.raises(RuntimeStoreError, match="storage_unavailable"):
+        restore_policy(_stored_receipt(tmp_path, r"\Users\markl\AppData\Local\hermes"))
