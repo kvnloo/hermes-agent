@@ -636,6 +636,7 @@ class HostedRoomRuntime:
                     try:
                         self.maintain()
                     except Exception as exc:  # health: allow BLE001 -- recorded; the next cycle retries
+                        self._idle_tick = False
                         self._record_error(f"worker maintenance failed: {exc}")
                 with self._status_lock:
                     self._cycles += 1
@@ -643,7 +644,9 @@ class HostedRoomRuntime:
                 # own writes (which wakeup()) or an out-of-process write it must eventually
                 # notice: back the recheck off toward the idle ceiling instead of re-reading
                 # the store every poll on profiles that host nothing (#143256).
-                if self._wake.wait(delay):
+                # Non-idle work and failures must not inherit the previous idle delay.
+                wait_seconds = delay if self._idle_tick else self.poll_interval_seconds
+                if self._wake.wait(wait_seconds):
                     delay = self.poll_interval_seconds
                 elif self._idle_tick:
                     delay = min(delay * 2.0, self.idle_poll_backoff_max_seconds)

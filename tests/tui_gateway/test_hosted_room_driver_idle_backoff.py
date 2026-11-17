@@ -8,6 +8,7 @@ wakeup or owned rooms.
 
 from __future__ import annotations
 
+import threading
 import time
 from contextlib import contextmanager
 from itertools import pairwise
@@ -100,3 +101,41 @@ def test_idle_poll_backoff_ceiling_must_not_undercut_the_base_interval(tmp_path:
             poll_interval_seconds=5.0,
             idle_poll_backoff_max_seconds=1.0,
         )
+
+@pytest.mark.parametrize("failing_step", ("bindings", "maintenance"))
+def test_failed_idle_cycle_retries_at_base_poll_interval(tmp_path: Path, monkeypatch, failing_step: str):
+    # Exercise the actual 5s/60s defaults without making a test sleep for a minute.
+    cycles = 0
+
+    def rooms():
+        nonlocal cycles
+        cycles += 1
+        if failing_step == "bindings" and cycles == 6:
+            raise RuntimeError("temporary store failure")
+        return ()
+
+    def maintain():
+        if failing_step == "maintenance" and cycles == 6:
+            raise RuntimeError("temporary maintenance failure")
+
+    runtime = HostedRoomRuntime(
+        db_path=tmp_path / "state.db",
+        rooms=rooms,
+        rpc=_IdleRPC(),
+        turn_lock=_idle_turn_lock,
+        maintain=maintain,
+    )
+    runtime._thread = threading.current_thread()
+    waits: list[float] = []
+
+    def record_wait(seconds: float) -> bool:
+        waits.append(seconds)
+        if len(waits) == 6:
+            runtime._stop.set()
+        return False
+
+    monkeypatch.setattr(runtime._wake, "wait", record_wait)
+    runtime._worker_loop()
+
+    # Empty polls back off, but a failed pass must retry after 5s, not the stale 60s.
+    assert waits == [5.0, 10.0, 20.0, 40.0, 60.0, 5.0]
