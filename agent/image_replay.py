@@ -71,7 +71,10 @@ def retain_tool_image(data_url: str) -> tuple[str, Optional[str]]:
     try:
         make_user_dir(native_inputs_store() / digest, mode=0o700, parents=True, exist_ok=True)
         path = native_inputs_root() / digest / f"tool_{digest[:32]}{ext}"
-        if path.is_file() and not path.is_symlink():
+        # A same-named cached file is reusable only if its bytes still match the
+        # content address. Otherwise the *live* turn would see altered pixels.
+        if (path.is_file() and not path.is_symlink()
+                and hashlib.sha256(path.read_bytes()).hexdigest() == digest):
             os.utime(path)  # shown again: restart its retention age (sweep_settled_media)
         else:
             fd, temporary = tempfile.mkstemp(prefix=".tool-", dir=path.parent)

@@ -82,3 +82,18 @@ def test_kept_tool_images_leave_at_the_media_cache_age():
 
     assert sweep_settled_media(db) == 1
     assert not old.exists() and fresh.exists()
+
+
+def test_retain_tool_image_repairs_corrupted_content_addressed_copy():
+    """A reused tool image must never substitute changed bytes for the live pixels."""
+    from agent.image_replay import retain_tool_image
+
+    path = _kept(_PNG)
+    path.write_bytes(b"not the retained PNG")
+    original = "data:image/png;base64," + base64.b64encode(_PNG).decode()
+
+    image_url, hint = retain_tool_image(original)
+
+    assert path.read_bytes() == _PNG
+    assert image_url == original
+    assert hint == f"[Image attached at: {path}]"
