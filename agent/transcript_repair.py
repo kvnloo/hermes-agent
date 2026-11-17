@@ -11,11 +11,11 @@ from typing import Any, Callable, Dict, List, Mapping
 
 from agent.context_compressor import _DB_PERSISTED_MARKER
 from agent.message_metadata import (
-    ABSORBED_MESSAGE_UIDS, CANONICAL_ROW, DB_ROW_SNAPSHOT, MESSAGE_UID, RESTORED_FROM_STORE, TOOL_CALL_UIDS, TYPED_ASK,
-    copy_identity_fields, message_uid_or_none)
+    ABSORBED_MESSAGE_UIDS, CANONICAL_ROW, DB_ROW_SNAPSHOT, MESSAGE_UID, RESTORED_FROM_STORE, TOOL_CALL_UID, TOOL_CALL_UIDS, TYPED_ASK,
+    copy_identity_fields, index_tool_call_uids, message_uid_or_none, resolve_tool_call_uid)
 from hermes_state_common import _id_chunks, _placeholders
-from hermes_state_identity import _fill_missing_tool_call_uids, _restore_row_identity
-from hermes_state_messages import _MESSAGE_WRITE_COLUMNS, SessionMessagesMixin
+from hermes_state_identity import _fill_missing_tool_call_uids, _restore_row_identity, _tool_call_uid_or_none
+from hermes_state_messages import _MESSAGE_WRITE_COLUMNS, _parse_tool_calls, SessionMessagesMixin
 
 
 logger = logging.getLogger(__name__)
@@ -211,6 +211,22 @@ def resolve_and_repair_transcript_batch(
     # Late import: agent.session_persistence imports this module at load time.
     from agent.session_persistence import _PERSIST_AFTER_ADMISSION_INTERRUPT
 
+    # A restored assistant may be filtered as already durable while a freshly
+    # re-emitted tool result still needs its call occurrence identity. Resolve
+    # against the whole input batch before that assistant disappears.
+    source_call_index: dict[str, str] = {}
+    for msg in messages:
+        if not isinstance(msg, dict):
+            continue
+        role = msg.get("role")
+        if role == "assistant":
+            index_tool_call_uids(source_call_index, msg)
+        elif role == "user":
+            source_call_index.clear()
+        elif role == "tool" and not _tool_call_uid_or_none(msg):
+            if uid := resolve_tool_call_uid(source_call_index, msg.get("tool_call_id")):
+                msg[TOOL_CALL_UID] = uid
+
     inserted_rows: list[dict[str, Any]] = []
     durable_uids = _active_uid_dedupe(conn, session_id, messages)
     for msg in messages:
@@ -304,8 +320,8 @@ def resolve_and_repair_transcript_batch(
 
 def _latest_active_tool_rows_by_call_id(
     conn: sqlite3.Connection, session_id: str, call_ids: list[str],
-) -> dict[str, sqlite3.Row]:
-    """Newest active tool row per ``tool_call_id`` for *session_id* (one SELECT)."""
+) -> dict[tuple[str, str | None], sqlite3.Row]:
+    """Newest active tool row per provider id and per-occurrence uid (one SELECT)."""
     if not call_ids:
         return {}
     placeholders = _placeholders(call_ids)
@@ -314,11 +330,11 @@ def _latest_active_tool_rows_by_call_id(
         f"AND tool_call_id IN ({placeholders}) ORDER BY id ASC",
         (session_id, *call_ids),
     ).fetchall()
-    latest: dict[str, sqlite3.Row] = {}
+    latest: dict[tuple[str, str | None], sqlite3.Row] = {}
     for row in rows:
         cid = row["tool_call_id"]
         if isinstance(cid, str) and cid:
-            latest[cid] = row
+            latest[(cid, row["tool_call_uid"] or None)] = row
     return latest
 
 
@@ -329,11 +345,20 @@ def suppress_duplicate_tool_call_writes(
     encode_content_fn: Callable[[Any], Any],
     serialize_message_fn: Callable[[dict[str, Any], float], Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Drop redundant tool-result INSERTs for a session-scoped ``tool_call_id``.
+    """Drop duplicate results for one tool-call occurrence, never merely a reused provider id.
 
-    Identical payloads are idempotent; conflicting payloads UPDATE the latest active row in place
-  so readers keep a stable rowid (no DELETE+INSERT).
+    Identical payloads are idempotent; conflicting payloads UPDATE the same occurrence in place.
+    Legacy unpaired results with no occurrence uid are deduped only against other unpaired rows.
     """
+    # An assistant call and its tool result can arrive in one batch. Assign the same
+    # per-occurrence identities that insertion assigns before testing durable duplicates.
+    batch_tool_index: dict[str, str] = {}
+    for msg in inserted_rows:
+        if isinstance(msg, dict):
+            SessionMessagesMixin._stamp_tool_call_uids(
+                msg, _parse_tool_calls(msg.get("tool_calls")), batch_tool_index
+            )
+
     call_ids = sorted({
         cid
         for msg in inserted_rows
@@ -346,7 +371,7 @@ def suppress_duplicate_tool_call_writes(
         return inserted_rows
 
     durable = _latest_active_tool_rows_by_call_id(conn, session_id, call_ids)
-    batch_encoded: dict[str, Any] = {}
+    batch_encoded: dict[tuple[str, str | None], Any] = {}
     out: list[dict[str, Any]] = []
 
     for msg in inserted_rows:
@@ -360,7 +385,8 @@ def suppress_duplicate_tool_call_writes(
             continue
 
         encoded = encode_content_fn(msg.get("content"))
-        row = durable.get(call_id)
+        key = (call_id, _tool_call_uid_or_none(msg))
+        row = durable.get(key)
         if row is not None:
             if row["content"] == encoded:
                 logger.info(
@@ -381,27 +407,29 @@ def suppress_duplicate_tool_call_writes(
                 session_id,
                 row["id"],
             )
-            durable[call_id] = conn.execute(
+            durable[key] = conn.execute(
                 "SELECT * FROM messages WHERE id = ? AND session_id = ?",
                 (int(row["id"]), session_id),
             ).fetchone()
-            batch_encoded[call_id] = encoded
+            batch_encoded[key] = encoded
             continue
 
-        prior_encoded = batch_encoded.get(call_id)
+        prior_encoded = batch_encoded.get(key)
         if prior_encoded is not None:
             if prior_encoded == encoded:
                 continue
             for index in range(len(out) - 1, -1, -1):
                 candidate = out[index]
-                if isinstance(candidate, dict) and candidate.get("tool_call_id") == call_id:
+                if (isinstance(candidate, dict) and candidate.get("role") == "tool"
+                        and candidate.get("tool_call_id") == call_id
+                        and _tool_call_uid_or_none(candidate) == key[1]):
                     out[index] = msg
                     break
-            batch_encoded[call_id] = encoded
+            batch_encoded[key] = encoded
             continue
 
         out.append(msg)
-        batch_encoded[call_id] = encoded
+        batch_encoded[key] = encoded
 
     return out
 

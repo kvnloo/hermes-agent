@@ -3,6 +3,7 @@
 import sqlite3
 from unittest.mock import patch
 
+from agent.message_metadata import TOOL_CALL_UID
 from hermes_state import SessionDB
 
 
@@ -80,6 +81,49 @@ def test_cross_session_same_id_independent(tmp_path):
     db.append_messages_batch("s-two", [dict(row)])
     assert _count_tool_id(db, "s-one", "shared") == 1
     assert _count_tool_id(db, "s-two", "shared") == 1
+
+
+
+def test_reused_provider_id_keeps_distinct_tool_call_occurrences(tmp_path):
+    """One provider id reused on two turns is not one durable tool-result identity."""
+    db = SessionDB(db_path=tmp_path / "state.db")
+    sid = "dedup-occurrences"
+    db.create_session(sid, source="cli")
+
+    def assistant(label):
+        return {
+            "role": "assistant",
+            "content": f"calling {label}",
+            "tool_calls": [
+                {
+                    "id": "call-reused",
+                    "type": "function",
+                    "function": {"name": "terminal", "arguments": "{}"},
+                }
+            ],
+        }
+
+    def result(content, uid=None):
+        msg = {"role": "tool", "tool_call_id": "call-reused", "content": content}
+        if uid:
+            msg[TOOL_CALL_UID] = uid
+        return msg
+
+    db.append_messages_batch(sid, [assistant("first"), result("first")])
+    first_uid = _tool_rows(db, sid)[0].get(TOOL_CALL_UID)
+    assert first_uid
+
+    # Re-flushing the *same* logical call must still be idempotent.
+    db.append_messages_batch(sid, [result("first", first_uid)])
+    assert _count_tool_id(db, sid, "call-reused") == 1
+
+    # Hermes and some providers reuse ids on a later assistant turn.
+    # The new occurrence has a different uid and must not overwrite the first.
+    db.append_messages_batch(sid, [assistant("second"), result("second")])
+    rows = _tool_rows(db, sid)
+    assert [row["content"] for row in rows] == ["first", "second"]
+    assert rows[0][TOOL_CALL_UID] != rows[1][TOOL_CALL_UID]
+
 
 
 def test_batch_with_duplicates_collapses(tmp_path):
