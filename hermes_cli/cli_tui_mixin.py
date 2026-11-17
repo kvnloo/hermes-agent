@@ -1650,7 +1650,7 @@ class CLITuiMixin:
         paste_dir = _hermes_home / "pastes"
         paste_dir.mkdir(parents=True, exist_ok=True)
         paste_file = paste_dir / f"paste_{self._tui_paste_counter}_{datetime.now().strftime('%H%M%S')}.txt"
-        paste_file.write_text(text, encoding="utf-8")
+        paste_file.write_text(replace_lone_surrogates(text), encoding="utf-8")
         logger.info(
             "Collapsed paste #%d: %d lines, %d chars -> %s" + (" (fallback)" if fallback else ""),
             self._tui_paste_counter, line_count + 1, len(text), paste_file)
