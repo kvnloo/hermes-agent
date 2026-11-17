@@ -45,20 +45,52 @@ export function bindTerminalActivity(term: Terminal, host: HTMLElement, markActi
 // would run line by line in the shell.
 const USER_INPUT_EVENT_TYPES = ['keydown', 'keypress', 'input'] as const
 
-/** `onData` carries both what the user types and the replies xterm generates while
- *  parsing a write (DSR/CPR/DA). Replies only come out of parsing, never while a
- *  user input event is dispatching on the terminal, so `isUserInput()` tells the
- *  two apart: true exactly while such an event is still being dispatched. */
-export function trackTerminalUserInput(host: HTMLElement): { dispose: () => void; isUserInput: () => boolean } {
+// During a replay, onData mixes keystrokes with parser replies (DSR/CPR/DA).
+// Event phase identifies synchronous typing; xterm 6 sends IME commits from a
+// timer after compositionend. Match only the pending textarea's exact commit
+// during xterm's next timer turn, without admitting parser replies.
+export function trackTerminalUserInput(host: HTMLElement): { dispose: () => void; isUserInput: (data: string) => boolean } {
   let latest: Event | null = null
+  let composing: { textarea: HTMLTextAreaElement; start: number } | null = null
+  let pending: { textarea: HTMLTextAreaElement; start: number; data: string } | null = null
+  let expire: ReturnType<typeof setTimeout> | null = null
 
   const record = (event: Event) => {
     latest = event
   }
 
+  const onCompositionStart = (event: Event) => {
+    const textarea = event.target
+    composing = textarea instanceof HTMLTextAreaElement
+      ? { textarea, start: textarea.value.length }
+      : null
+  }
+
+  const onCompositionEnd = (event: CompositionEvent) => {
+    if (!composing) {
+      return
+    }
+
+    pending = { ...composing, data: event.data }
+    composing = null
+
+    if (expire !== null) {
+      clearTimeout(expire)
+    }
+
+    // Bubble phase runs after xterm's textarea handler scheduled its send.
+    expire = setTimeout(() => {
+      pending = null
+      expire = null
+    }, 0)
+  }
+
   for (const type of USER_INPUT_EVENT_TYPES) {
     host.addEventListener(type, record, true)
   }
+
+  host.addEventListener('compositionstart', onCompositionStart, true)
+  host.addEventListener('compositionend', onCompositionEnd)
 
   return {
     dispose: () => {
@@ -66,9 +98,37 @@ export function trackTerminalUserInput(host: HTMLElement): { dispose: () => void
         host.removeEventListener(type, record, true)
       }
 
+      host.removeEventListener('compositionstart', onCompositionStart, true)
+      host.removeEventListener('compositionend', onCompositionEnd)
+
+      if (expire !== null) {
+        clearTimeout(expire)
+      }
+
+      expire = null
       latest = null
+      composing = null
+      pending = null
     },
-    isUserInput: () => (latest?.eventPhase ?? Event.NONE) !== Event.NONE
+    isUserInput: data => {
+      if ((latest?.eventPhase ?? Event.NONE) !== Event.NONE) {
+        return true
+      }
+
+      if (!pending || !data || data.startsWith('\x1b')) {
+        return false
+      }
+
+      const committed = pending.textarea.value.slice(pending.start)
+
+      if (data !== committed && data !== pending.data) {
+        return false
+      }
+
+      pending = null
+
+      return true
+    }
   }
 }
 

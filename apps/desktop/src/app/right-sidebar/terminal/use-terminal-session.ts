@@ -384,7 +384,7 @@ export function useTerminalSession({
     cleanup.push(bindTerminalActivity(term, host, markActivity))
 
     const userInput = trackTerminalUserInput(host)
-    const dataDisposable = term.onData(data => session.input(data, userInput.isUserInput()))
+    const dataDisposable = term.onData(data => session.input(data, userInput.isUserInput(data)))
 
     cleanup.push(() => {
       dataDisposable.dispose()

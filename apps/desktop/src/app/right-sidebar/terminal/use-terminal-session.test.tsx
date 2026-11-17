@@ -350,6 +350,42 @@ it('delivers keystrokes typed while a replay parses, but not its query replies',
   expect(socket.sent).toEqual(['l', 's'])
 })
 
+// xterm 6 sends an IME commit from a timer scheduled by compositionend, not
+// synchronously inside keydown/input. It must survive a pending replay write.
+it('delivers a deferred IME commit during replay, without forwarding parser replies', async () => {
+  seedWebappSession('test-token')
+  Socket.persistent = true
+  vi.stubGlobal('WebSocket', Socket)
+  installBrowserDesktopBridge()
+  const id = createTerminal('/work')
+  const { container } = render(<Harness id={id} />)
+  await waitFor(() => expect(screen.getByText('open')).toBeTruthy())
+  const socket = Socket.instances[0]
+  const host = container.querySelector('div')!
+  const textarea = document.createElement('textarea')
+  host.appendChild(textarea)
+
+  // xterm's textarea handler queues its commit before compositionend bubbles
+  // to the host. A CPR reply arriving in the same turn must stay filtered.
+  textarea.addEventListener('compositionend', () => {
+    window.setTimeout(() => {
+      emulator.input('\u001b[2;2R')
+      emulator.input(textarea.value)
+    }, 0)
+  })
+
+  emulator.holdNextWrite = true
+  act(() => socket.output('restored screen\u001b[6n'))
+  act(() => {
+    textarea.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }))
+    textarea.value = '你'
+    textarea.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '你' }))
+  })
+
+  await waitFor(() => expect(socket.sent).toEqual(['你']))
+  act(() => emulator.finishWrite?.())
+})
+
 // Typing `exit` ends the host shell: the tab closes as it does in native Desktop, instead of
 // staying open as an expired terminal.
 it('closes a persistent browser tab when its host shell exits', async () => {
