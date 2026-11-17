@@ -18639,6 +18639,11 @@ def _run_kanban_goal_loop_q(cli: "HermesCLI", first_response: str) -> None:
         result = cli.agent.run_conversation(
             user_message=prompt,
             conversation_history=cli.conversation_history,
+            # The goal-loop prompt is a restated request from the judge/worker
+            # machinery, not an owner turn: tag its row at write time so no
+            # capsule or "User asked" line can quote it as Kevin's words
+            # (handoff-context-rot, sanity class 4).
+            persist_user_display_kind="kanban_goal_continuation",
         )
         # Keep session_id in sync if mid-run compression rotated it.
         if (

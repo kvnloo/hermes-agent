@@ -4586,6 +4586,13 @@ This compaction should PRIORITISE preserving all information related to the focu
         """
         if not isinstance(message, dict) or message.get("role") != "user":
             return False
+        # Origin tag wins over content heuristics: a user-role row stamped with
+        # a ``display_kind`` is a runtime/timeline event (kanban goal
+        # continuation, auto-continue, model switch, …), not an owner turn.
+        # Content markers below stay as the legacy/untagged fallback so rows
+        # persisted before the tag existed are still recognized.
+        if message.get("display_kind"):
+            return True
         if cls._has_compressed_summary_metadata(message):
             return True
         content = message.get("content")
@@ -4690,6 +4697,10 @@ This compaction should PRIORITISE preserving all information related to the focu
     def _is_actionable_user_turn(cls, message: Any) -> bool:
         """Return whether *message* contains user input worth anchoring."""
         if not isinstance(message, dict) or message.get("role") != "user":
+            return False
+        # Origin tag: runtime/timeline rows (kanban goal continuation,
+        # auto-continue, model switch, …) are never actionable owner turns.
+        if message.get("display_kind"):
             return False
         if cls._has_compressed_summary_metadata(message):
             return False
