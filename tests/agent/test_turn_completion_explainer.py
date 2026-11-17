@@ -385,7 +385,7 @@ def test_classify_persistence_error_receipt_timeout_is_not_disk_or_lock():
     observed = "worker_receipt_timeout"  # verbatim WorkerPersistenceError message
     assert classify_persistence_error(observed) == "receipt_transport"
     # The sibling client strings from the same module (sticky-failure and startup paths).
-    for token in ("pending_receipt", "outbox_full", "owner_unavailable"):
+    for token in ("pending_receipt", "owner_unavailable"):
         assert classify_persistence_error(token) == "receipt_transport", token
     # The exception form the worker raises directly (type carries the same text).
     from agent.runtime_session_store import WorkerPersistenceError

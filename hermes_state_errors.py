@@ -98,7 +98,7 @@ def is_disk_full_error(exc: BaseException | str | None) -> bool:
 # Every classify_persistence_error bucket; consumers enumerate this tuple.
 PERSISTENCE_ERROR_CAUSES = (
     "locked", "compression", "compression_closed", "turn_lease", "corrupt", "fts_index",
-    "replaced", "deleted_wal", "disk", "session_row_missing", "receipt_transport", "unknown",
+    "replaced", "deleted_wal", "disk", "session_row_missing", "receipt_transport", "outbox_full", "unknown",
 )
 
 
@@ -293,8 +293,10 @@ _PERSISTENCE_CAUSE_BY_PHRASE = (
     # The bucket must outrank the disk fallback below so a receipt timeout never reads as "free
     # some disk space" or "another process is holding the database" (fleet incident: 511 GiB
     # free, no lock error anywhere; the operator was sent hunting disk for hours).
-    (("worker_receipt_timeout", "pending_receipt", "outbox_full", "owner_unavailable"),
+    (("worker_receipt_timeout", "pending_receipt", "owner_unavailable"),
      "receipt_transport"),
+    # The outbox byte cap is enforced locally by RuntimeSessionStore._save, before any RPC send.
+    (("outbox_full",), "outbox_full"),
 )
 
 
@@ -309,7 +311,8 @@ def classify_persistence_error(exc_or_str) -> str:
     capture inspection; "session_row_missing" = the session row was deleted under a
     live agent (FK rejection; the flush recreates it); "receipt_transport" = the
     owning gateway never confirmed the write within the receipt budget (the store may
-    be healthy; the transcript is NOT on disk — re-send after the writer clears)."""
+    be healthy); "outbox_full" = the local pending journal exceeded its size cap
+    (not a gateway timeout)."""
     if exc_or_str is None:
         return "unknown"
     # Lease refusals contain neither "locked" nor "busy": match by type first,

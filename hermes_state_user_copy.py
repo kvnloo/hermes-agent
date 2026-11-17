@@ -90,6 +90,11 @@ _STORAGE_FAILURES: dict[str, tuple[str, str, str]] = {
     # the request was sent (a lost ACK can still have committed), so the copy confirms nothing
     # in either direction — never "not saved", never "saved" — and names no disk or lock cause:
     # the store may be perfectly healthy (gate t_3aad2064 RED-2, t_0b006df6 YELLOW-2).
+    "outbox_full": (
+        "storage_outbox_full",
+        "the worker's local pending-receipt journal exceeded its size limit",
+        "Reduce the message size before retrying; do not delete the pending journal.",
+    ),
     "receipt_transport": (
         "storage_busy",
         "Hermes could not confirm the message was saved (the gateway was busy or unreachable)",

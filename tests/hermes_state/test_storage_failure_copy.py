@@ -49,10 +49,10 @@ def test_every_classifier_cause_has_a_copy_row():
 
 @pytest.mark.parametrize(
     "token",
-    ["worker_receipt_timeout", "pending_receipt", "outbox_full", "owner_unavailable"],
+    ["worker_receipt_timeout", "pending_receipt", "owner_unavailable"],
 )
 def test_receipt_transport_cause_gets_the_receipt_row(token):
-    """The four client-side receipt strings must land on the receipt row (storage_busy,
+    """The three gateway receipt strings must land on the receipt row (storage_busy,
     outcome-neutral copy), never on the storage_unavailable "could not be opened" fallback
     that sent operators hunting disk on a healthy store (fleet incident 2026-11-13)."""
     failure = describe_storage_failure(token)
@@ -65,6 +65,31 @@ def test_receipt_transport_cause_gets_the_receipt_row(token):
     for wrong in ("disk", "drive", "space", "locked", "holding the database"):
         assert wrong not in failure.gloss.lower(), wrong
     assert "doctor" in failure.action
+
+
+def test_local_outbox_capacity_refusal_is_not_mislabeled_gateway_timeout(tmp_path):
+    """The real default outbox limit rejects an oversized journal before any gateway RPC."""
+    from agent.runtime_session_store import RuntimeSessionStore, WorkerPersistenceError
+
+    called = []
+    store = RuntimeSessionStore(
+        lambda method, **params: called.append((method, params)),
+        {"session_id": "s", "execution_id": "w", "epoch": 1},
+        tmp_path / "worker",
+    )
+    try:
+        with pytest.raises(WorkerPersistenceError, match="outbox_full"):
+            store.append_messages_batch("s", [{"role": "user", "content": "x" * store.max_bytes}])
+        assert called == []
+        failure = describe_storage_failure("outbox_full")
+        assert failure.cause == "outbox_full"
+        assert failure.code == "storage_outbox_full"
+        assert "journal" in failure.gloss.lower()
+        assert "message size" in failure.action.lower()
+        assert "gateway was busy" not in failure.gloss.lower()
+    finally:
+        with pytest.raises(WorkerPersistenceError, match="outbox_full"):
+            store.close()
 
 
 def test_action_command_is_pinned_to_the_failing_profile(monkeypatch, tmp_path):
