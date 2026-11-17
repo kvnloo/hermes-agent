@@ -256,3 +256,27 @@ class TestOversizedDataUrlDownscale:
         monkeypatch.setattr(VisionMessagePrepMixin, "_MAX_DATA_URL_DECODE_BYTES", 10 ** 9)
         encoded = base64.b64encode(b"%PDF-1.7" + b"x" * 4_096).decode("ascii")
         assert VisionMessagePrepMixin._decode_oversized_data_url(encoded, "application/pdf") is None
+
+    def test_default_cap_downscales_real_oversized_jpeg(self):
+        """Rescue a valid image beyond the production 20 MiB base64 cap."""
+        from PIL import Image
+
+        from agent.vision_message_prep import VisionMessagePrepMixin
+
+        encoded = base64.b64encode(_noise_jpeg(5000, 4000)).decode("ascii")
+        assert (VisionMessagePrepMixin._MAX_DATA_URL_BASE64_BYTES
+                < len(encoded) < VisionMessagePrepMixin._MAX_DATA_URL_DECODE_BYTES)
+
+        source = "data:image/jpeg;base64," + encoded
+        path, cleanup = VisionMessagePrepMixin._materialize_data_url_for_vision(source)
+        try:
+            assert path, "an over-cap but valid JPEG must not be dropped"
+            assert cleanup is not None
+            with Image.open(path) as resized:
+                assert resized.format == "JPEG"
+                assert max(resized.size) == VisionMessagePrepMixin._DOWNSCALE_MAX_SIDE
+            assert (len(base64.b64encode(cleanup.read_bytes()))
+                    <= VisionMessagePrepMixin._MAX_DATA_URL_BASE64_BYTES)
+        finally:
+            if cleanup is not None and cleanup.exists():
+                cleanup.unlink()
