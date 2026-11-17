@@ -48,6 +48,10 @@ class WorkerPersistenceError(RuntimeError):
     pass
 
 
+class WorkerOwnerUnavailable(WorkerPersistenceError):
+    """Discovery failed before a send; an owner's error reply is not a dial failure."""
+
+
 def _caller_summary(limit=8):
     """module:function:line of the frames above this store (its own frames skipped), never
     locals or argument values: best-effort callers swallow the guard's raise (#139029)."""
@@ -145,7 +149,7 @@ class WorkerRPC:
         if discovery.state == 'ready' and discovery.endpoint is not None:
             self.endpoint = discovery.endpoint
         elif discovery.state != 'draining' or self.endpoint is None:
-            raise WorkerPersistenceError('owner_unavailable')
+            raise WorkerOwnerUnavailable('owner_unavailable')
         from hermes_cli.gateway_runtime import control_home_for
         endpoint = self.endpoint
         descriptor = query_identify(control_home_for(self.home, endpoint), timeout=5)
@@ -522,7 +526,5 @@ def _is_transient_persist_error(exc):
     discovery miss before the write was ever sent (owner_unavailable). Anything else keeps
     the journal's sticky-failure contract."""
     if isinstance(exc, TimeoutError):
-        return True
-    if isinstance(exc, WorkerPersistenceError) and exc.args and exc.args[0] == 'owner_unavailable':
-        return True
-    return False
+        return str(exc) == 'worker_receipt_timeout'
+    return isinstance(exc, WorkerOwnerUnavailable)

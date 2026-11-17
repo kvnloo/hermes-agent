@@ -6,6 +6,11 @@ import pytest
 from agent.runtime_session_store import RuntimeSessionStore, WorkerPersistenceError
 
 
+def _discovery_unavailable():
+    from agent.runtime_session_store import WorkerOwnerUnavailable
+    return WorkerOwnerUnavailable('owner_unavailable')
+
+
 def test_outbox_freezes_failed_payload_and_reopens_exclusively(tmp_path):
     scope = {'session_id': 's', 'execution_id': 'w', 'epoch': 1}
     rows = [{'role': 'user', 'content': 'frozen'}]
@@ -65,7 +70,7 @@ def test_outbox_capacity_failure_does_not_advance_or_discard(tmp_path):
 
 @pytest.mark.parametrize('raise_error', [
     lambda: TimeoutError('worker_receipt_timeout'),
-    lambda: WorkerPersistenceError('owner_unavailable'),
+    _discovery_unavailable,
 ])
 def test_receipt_timeout_is_transient_and_replays(tmp_path, raise_error):
     """A single missed persist receipt must not poison the turn: the journal replays the
@@ -91,8 +96,8 @@ def test_receipt_timeout_is_transient_and_replays(tmp_path, raise_error):
 
 
 @pytest.mark.parametrize('raise_error, expected', [
-    (lambda: TimeoutError('offline'), 'offline'),
-    (lambda: WorkerPersistenceError('owner_unavailable'), 'owner_unavailable'),
+    (lambda: TimeoutError('worker_receipt_timeout'), 'worker_receipt_timeout'),
+    (_discovery_unavailable, 'owner_unavailable'),
 ])
 def test_receipt_timeout_exhaustion_still_latches(tmp_path, raise_error, expected):
     """Persistent receipt timeouts keep the sticky failure contract: the journal freezes the
@@ -114,6 +119,34 @@ def test_receipt_timeout_exhaustion_still_latches(tmp_path, raise_error, expecte
             store.queue_token_counts('s', input_tokens=1)
     finally:
         with pytest.raises(WorkerPersistenceError, match=expected):
+            store.close()
+
+
+def test_receipt_timeout_does_not_resend_an_owner_error_reply(tmp_path):
+    """An owner's explicit error after a lost receipt is final, not a failed redial."""
+    scope = {'session_id': 's', 'execution_id': 'w', 'epoch': 1}
+    attempts = []
+
+    def rpc(method, **params):
+        assert method == 'worker.persist'
+        attempts.append(json.loads(json.dumps(params)))
+        if len(attempts) == 1:
+            raise TimeoutError('worker_receipt_timeout')
+        if len(attempts) == 2:
+            # WorkerRPC wraps an owner JSON-RPC error in WorkerPersistenceError.
+            raise WorkerPersistenceError('owner_unavailable')
+        return {'count': 1, 'annotations': [{}]}  # an extra send would hide the refusal
+
+    store = RuntimeSessionStore(rpc, scope, tmp_path / 'private')
+    try:
+        with pytest.raises(WorkerPersistenceError, match='owner_unavailable'):
+            store.append_messages_batch('s', [{'role': 'user', 'content': 'frozen'}])
+        assert len(attempts) == 2
+        assert attempts[0] == attempts[1]
+        assert store.failure == 'owner_unavailable'
+        assert len(json.loads(store.path.read_text())['pending']) == 1
+    finally:
+        with pytest.raises(WorkerPersistenceError, match='owner_unavailable'):
             store.close()
 
 
