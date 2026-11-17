@@ -168,3 +168,45 @@ def test_probe_transport_does_not_require_the_httpx_distribution(monkeypatch):
         model_metadata_http.client_module()
     message = str(excinfo.value)
     assert "httpx2" in message and "httpx" in message
+
+def test_metadata_probe_get_works_when_httpx_is_not_importable(servers, monkeypatch):
+    """A real probe must work without the 3.14-only httpx distribution."""
+    import builtins
+    import importlib
+
+    seen = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            seen.append(self.path)
+            body = b'{"data":[]}'
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    url = servers(Handler) + "/models"
+    monkeypatch.setenv("NO_PROXY", "127.0.0.1")
+    original_import = builtins.__import__
+    original_import_module = importlib.import_module
+
+    def without_httpx(name, *args, **kwargs):
+        if name == "httpx" or name.startswith("httpx."):
+            raise ModuleNotFoundError("No module named 'httpx'", name="httpx")
+        return original_import(name, *args, **kwargs)
+
+    def without_httpx_module(name, *args, **kwargs):
+        if name == "httpx" or name.startswith("httpx."):
+            raise ModuleNotFoundError("No module named 'httpx'", name="httpx")
+        return original_import_module(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", without_httpx)
+    monkeypatch.setattr(importlib, "import_module", without_httpx_module)
+
+    response = model_metadata_http.get(url)
+    assert response.status_code == 200
+    assert response.json() == {"data": []}
+    assert seen == ["/models"]
