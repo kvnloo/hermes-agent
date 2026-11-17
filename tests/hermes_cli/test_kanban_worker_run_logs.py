@@ -58,3 +58,18 @@ def test_clean_exit_keeps_each_run_log_and_records_early_stderr(kanban_home, mon
         assert paths[1].read_text(encoding="utf-8") == "retry output\n"
     finally:
         conn.close()
+
+
+def test_read_worker_log_after_upgrade_includes_new_runs_in_chronological_order(kanban_home):
+    """The existing task.log must not hide retries written to task.<run>.log."""
+    task_id = "t_upgrade"
+    legacy = kb.worker_log_path(task_id)
+    legacy.parent.mkdir(parents=True, exist_ok=True)
+    legacy.write_text("original attempt\n", encoding="utf-8")
+
+    for run_id, content in ((10, "tenth attempt\n"), (2, "second attempt\n")):
+        kb.worker_run_log_path(task_id, run_id).write_text(content, encoding="utf-8")
+
+    assert kb.read_worker_log(task_id) == (
+        "original attempt\nsecond attempt\ntenth attempt\n"
+    )

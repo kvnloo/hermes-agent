@@ -23,9 +23,14 @@ def read_worker_log(
         run_path = worker_run_log_path(task_id, run_id, board=board)
         paths = [run_path] if run_path.exists() or not legacy.exists() else [legacy]
     else:
-        paths = [legacy] if legacy.exists() else sorted(
-            log_dir.glob(f"{task_id}.*.log"), key=lambda path: path.name,
+        # Include post-upgrade runs when a legacy per-task log also exists.
+        prefix = f"{task_id}."
+        run_paths = sorted(
+            (path for path in log_dir.glob(f"{task_id}.*.log")
+             if path.name[len(prefix):-4].isdigit()),
+            key=lambda path: int(path.name[len(prefix):-4]),
         )
+        paths = ([legacy] if legacy.exists() else []) + run_paths
     paths = [path for path in paths if path.exists()]
     if not paths:
         return None
