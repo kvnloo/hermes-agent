@@ -1,6 +1,7 @@
 import { PassThrough } from 'node:stream'
 
 import { renderSync, Text } from '@hermes/ink'
+import { load as loadHistory } from '@hermes/shared/prompt-history'
 import { type OutMessage, Surface, type WireNode } from '@stencil-hq/tern'
 import React from 'react'
 import { afterAll, expect, it, vi } from 'vitest'
@@ -10,7 +11,6 @@ import { getUiState, patchUiState, resetUiState } from '../app/uiStore.js'
 import { useComposerState } from '../app/useComposerState.js'
 import { useSubmission } from '../app/useSubmission.js'
 import type { GatewayClient } from '../gatewayClient.js'
-import { load as loadHistory } from '../lib/history.js'
 import { TernComposer } from '../tern/composer.js'
 import { useTernComposer } from '../tern/useTernComposer.js'
 

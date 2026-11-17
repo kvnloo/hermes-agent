@@ -603,6 +603,9 @@ importers:
       '@nanostores/react':
         specifier: 1.1.0
         version: 1.1.0(nanostores@1.4.2)(react@19.3.0)
+      '@stencil-hq/tern':
+        specifier: 0.1.0
+        version: 0.1.0
       ink-text-input:
         specifier: 6.0.0
         version: 6.0.0(ink@7.1.1(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
@@ -2673,6 +2676,10 @@ packages:
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
+
+  '@stencil-hq/tern@0.1.0':
+    resolution: {integrity: sha512-CVwFMnlDcLzU9NeILdpaE3jlxMgiHbKuJr3RJ4cvnBZKT03gItIuO57JvSALEbwW03bXHlfCx24u+qgDXtzJZg==}
+    engines: {node: '>=22'}
 
   '@stitches/react@1.2.8':
     resolution: {integrity: sha512-9g9dWI4gsSVe8bNLlb+lMkBYsnIKCZTmvqvDG+Avnn69XfmHZKiaMrx7cgTaddq7aTPPmXiTsbFcUy0xgI4+wA==}
@@ -8623,6 +8630,8 @@ snapshots:
       '@simple-git/args-pathspec': 1.0.4
 
   '@standard-schema/spec@1.1.0': {}
+
+  '@stencil-hq/tern@0.1.0': {}
 
   '@stitches/react@1.2.8(react@19.3.0)':
     dependencies:

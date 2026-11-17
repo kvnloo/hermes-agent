@@ -12,11 +12,14 @@ are imported. This document is a review receipt, not upstream approval.
 The launcher tests pass on the current HEAD port, including real child fallback and the dev-mode bypass.
 A config-loader regression now rejects a default-enabled composer. The original tests did not catch that mutation.
 
-The SDK is pinned in `ui-tui/package.json`, but current HEAD uses `pnpm-lock.yaml`, not the draft's npm lockfile.
-The pnpm lockfile has no SDK entry. Updating that file is outside this execution's permitted file list.
+The SDK is pinned to 0.1.0 in `ui-tui/package.json` and `pnpm-lock.yaml`, including registry integrity.
+The pnpm 12.15.0 lock update passed the repository's supply-chain policies without changing other locked packages.
+A filtered frozen install passed with lifecycle scripts disabled to avoid installing shared Git hooks.
 The obsolete npm lockfile and npm settings were not restored over the newer package-manager policy.
-A frozen install and a native build remain blocked until the pnpm lockfile is updated.
-No current-port TypeScript build, SDK tests, or real-Tern journey is claimed.
+The TypeScript typecheck, TUI bundle build, 22 Tern tests, and TUI lint pass.
+The bridge test uses current HEAD's shared prompt-history module rather than the removed local module.
+A private pseudo-TTY run of the built entry confirms the SDK hello, exit-75 timeout, and terminal restoration.
+These checks do not qualify a real-Tern journey.
 
 ## Activation policy
 
@@ -49,9 +52,8 @@ are not hidden by fallback. Disable with `hermes config set display.tern false` 
 - Native drafts are limited to 256 Ki UTF-16 units; oversized native edits/sends are refused.
   Edit ranges, lengths and cursor bounds are validated. Native undo is **not advertised**.
 - Protocol input is filtered out before Ink's keyboard parser; ordinary bytes are preserved.
-- `@stencil-hq/tern` is pinned to 0.1.0 in the manifest. The original draft recorded registry integrity in its npm lockfile.
-  The current pnpm lockfile still needs the SDK entry. Its negotiated
-  credit/ACK renderer holds one replaceable view, not a per-update queue. The adapter only calls
+- `@stencil-hq/tern` is pinned to 0.1.0 in the manifest and pnpm lockfile with registry integrity.
+  Its negotiated credit/ACK renderer holds one replaceable view, not a per-update queue. The adapter only calls
   `render` (no raw operation queue or polling). Compatible hello credits are bounded to 1–8.
 - `gone`, hidden surfaces and cleanup reject further native actions. Modal contents are never
   copied into the native composer. Ambient SDK protocol recording is disabled.
@@ -80,7 +82,8 @@ remain promotion gates. Do not merge upstream or into fork main on unit evidence
 
 [The original fork draft](https://github.com/kvnloo/hermes-agent/pull/542) reports five full-suite Ink failures
 on its pinned base in three existing files: markdown delimiters, cold pending recovery, and submission destination receipts.
-Those results are historical, not current-HEAD verification. The TypeScript suite was not rerun for this port.
+Those results are historical. On this port, `pnpm --dir ui-tui exec vitest run --maxWorkers=2` passes
+264 files with 2,018 tests passed and two skipped. TUI lint exits zero with 15 warnings in unchanged files.
 No upstream PR or comment is authorized by this preparation.
 
 ## Provenance
