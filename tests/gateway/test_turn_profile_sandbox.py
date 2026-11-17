@@ -38,3 +38,46 @@ def test_scope_wraps_the_sandbox_and_gets_the_bus(monkeypatch):
     argv, env = smw._turn_scoped({}, "s1", "/h/profiles/clean")
     assert argv[:7] == ["systemd-run", "--scope", "--", "/x/w", "run", "clean", "--"]
     assert env["XDG_RUNTIME_DIR"] == "/run/user/1"
+
+
+def _hello_from(argv):
+    """Spawn ``argv`` the way the owner does and read the worker's hello (pid as IT sees itself)."""
+    import json
+    import subprocess
+    code = ("import json,os,psutil;from hermes_cli.process_identity import worker_birth;"
+            "print(json.dumps({'type':'hello','pid':os.getpid(),'birth':worker_birth(psutil.Process()),"
+            "'ancestors':[]}),flush=True);import time;time.sleep(30)")
+    proc = subprocess.Popen([*argv, sys.executable, "-c", code], stdout=subprocess.PIPE, text=True)
+    assert proc.stdout is not None
+    return proc, json.loads(proc.stdout.readline())
+
+
+def test_owner_maps_a_pid_namespace_worker_to_its_host_pid():
+    import shutil
+    import pytest
+    from gateway.session_worker_reservation import verify_worker_identity
+    if not shutil.which("bwrap") or sys.platform != "linux":
+        pytest.skip("needs bwrap")
+    proc, hello = _hello_from(["bwrap", "--unshare-user", "--unshare-pid", "--die-with-parent",
+                               "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc", "--"])
+    try:
+        pid, birth = verify_worker_identity(proc, hello)
+        assert pid != hello["pid"] and birth == hello["birth"]  # host pid, proven by NSpid + birth
+        import psutil
+        assert psutil.Process(pid).parents()[0].pid in (proc.pid, *[c.pid for c in psutil.Process(proc.pid).children(True)])
+    finally:
+        proc.kill()
+
+
+def test_a_namespace_pid_never_names_a_process_outside_the_spawned_tree():
+    import os
+    import pytest
+    from gateway.session_worker_reservation import verify_worker_identity
+    from hermes_state_runtime import RuntimeStoreError
+    proc, hello = _hello_from([])
+    try:
+        forged = dict(hello, pid=os.getppid())  # a real process, but not ours
+        with pytest.raises(RuntimeStoreError):
+            verify_worker_identity(proc, forged)
+    finally:
+        proc.kill()

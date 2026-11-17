@@ -37,6 +37,9 @@ def verify_worker_identity(process, hello):
         handle = psutil.Process(process.pid)
         if handle.ppid() != os.getpid() or handle.status() == psutil.STATUS_ZOMBIE:
             raise RuntimeStoreError('permission_denied')
+        pid = _host_pid(handle, pid)
+        if pid == os.getpid():
+            raise RuntimeStoreError('permission_denied')
         worker = psutil.Process(pid)
         from hermes_cli.process_identity import worker_birth
         birth = worker_birth(worker)  # kernel start: stable across clock steps (#140580) and btime re-anchors
@@ -49,6 +52,27 @@ def verify_worker_identity(process, hello):
     if pid != process.pid and process.pid not in chain:
         raise RuntimeStoreError('permission_denied')
     return pid, birth
+
+
+def _host_pid(handle, pid):
+    """The host pid of the worker that reported ``pid``.
+
+    A sandbox wrapper (``$HERMES_TURN_SANDBOX``) runs the worker in its own pid namespace, where
+    ``os.getpid()`` is namespace-local. Only descendants of the handle WE spawned are searched,
+    so a namespace pid can never name a process outside that tree; birth is still checked after.
+    """
+    kids = handle.children(recursive=True)
+    if pid == handle.pid or any(k.pid == pid for k in kids):
+        return pid
+    for kid in kids:
+        try:
+            with open(f'/proc/{kid.pid}/status', encoding='ascii') as status:
+                ns = next((line.split()[1:] for line in status if line.startswith('NSpid:')), [])
+        except OSError:
+            continue
+        if len(ns) > 1 and ns[-1] == str(pid):
+            return kid.pid
+    return pid
 
 
 def owner_worker_subject():

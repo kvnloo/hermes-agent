@@ -107,12 +107,25 @@ def encode_frame(frame):
     return data
 
 
+def _is_me(scope):
+    """The reservation names this interpreter. Inside a profile sandbox's pid namespace
+    ``os.getpid()`` is namespace-local while the owner records the host pid it proved from
+    NSpid, so there the kernel start time (namespace-independent) binds the frame instead."""
+    if scope.get('pid') == os.getpid():
+        return True
+    if not os.environ.get('HERMES_PROFILE_SANDBOX') or type(scope.get('pid')) is not int:
+        return False
+    import psutil
+    from hermes_cli.process_identity import worker_birth
+    return scope.get('birth') == worker_birth(psutil.Process())
+
+
 def validate_bootstrap(frame):
     if set(frame) - {'attachments_v1'} != BOOTSTRAP_FIELDS or frame['version'] != 1:
         raise ValueError('invalid_managed_worker_bootstrap')
     scope = frame['scope']
     fields = {'profile_id', 'session_id', 'execution_id', 'generation', 'pid', 'birth', 'secret', 'epoch'}
-    if (not isinstance(scope, dict) or set(scope) != fields or scope['pid'] != os.getpid()
+    if (not isinstance(scope, dict) or set(scope) != fields or not _is_me(scope)
             or scope['profile_id'] != frame['home'] or not Path(frame['home']).is_absolute()
             or not isinstance(frame['policy'], dict)
             or any(not isinstance(frame[k], str) for k in ('text', 'route', 'user_id', 'chat_id'))
@@ -385,7 +398,7 @@ def execute(frame, channel):
             if controls.stopped.is_set():
                 from agent.interrupt_compat import request_hard_interrupt
                 request_hard_interrupt(agent)
-            channel.send('ready', pid=os.getpid())
+            channel.send('ready', pid=scope['pid'])  # the owner's view of us (host pid in a sandbox)
             history = store.get_messages_as_conversation(scope['session_id'])
             from gateway.session_kanban import run_worker_turns
             if 'attachments_v1' in frame:
