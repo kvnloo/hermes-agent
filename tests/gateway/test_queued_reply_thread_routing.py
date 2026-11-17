@@ -196,3 +196,23 @@ async def test_unchanged_delivery_target_keeps_prehandler_metadata(
     assert adapter.sent[-1][0] == opening.message_id
     answered_id = None if text_only_followup else opening.message_id
     assert adapter.client.chat_postMessage.await_args.kwargs["text"] == f"answer {answered_id}"
+
+
+@pytest.mark.asyncio
+async def test_internal_queued_notification_keeps_the_human_reply_anchor(monkeypatch, tmp_path):
+    """Synthetic notifications must not re-anchor the terminal answer onto their own id."""
+    opening = _event("101.001", None)
+    notification = _event("301.001", None)
+    notification.internal = True
+
+    _, adapter, original_source = await _deliver(
+        monkeypatch, tmp_path, opening, [notification],
+    )
+
+    assert adapter.client.chat_postMessage.await_args.kwargs["text"] == (
+        f"answer {notification.message_id}"
+    )
+    assert adapter.sent[-1][0] == opening.message_id
+    assert adapter.client.chat_postMessage.await_args.kwargs.get("thread_ts") == opening.message_id
+    assert opening.reply_anchor_override is None
+    assert opening.source is original_source

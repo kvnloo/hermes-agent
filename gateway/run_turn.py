@@ -3952,12 +3952,9 @@ class GatewayTurnMixin:
         await _run_followup_processing_hook(
             _hook_adapter, pending_event, "on_processing_complete", ProcessingOutcome.SUCCESS)
         merged = _preserve_queued_followup_history_offset(result, followup_result)
-        # The TERMINAL turn of the chain owns the ledger identity for the outer final send, which
-        # the adapter brackets against the event that OPENED the chain. Without this the terminal
-        # reply is recorded under the first message's id, so a first reply that was refused (flood
-        # control) has its outstanding row replaced and marked delivered by an identical-text
-        # terminal reply, and is never redelivered. A deeper recursion has already set its own id,
-        # so only fill the key while it is still absent: the innermost turn wins.
+        # The terminal queued turn owns the ledger id: the outer send still uses the opening
+        # event, so identical-text responses must not collide and lose redelivery of the first.
+        # Deeper recursion already set the id; the innermost turn wins.
         if isinstance(merged, dict) and "queued_terminal_inbound_id" not in merged:
             merged = {
                 **merged,
@@ -3967,11 +3964,12 @@ class GatewayTurnMixin:
                 "queued_terminal_notification_category": (
                     (pending_event.metadata or {}).get("notification_category", "result")
                     if pending_event is not None and pending_event.internal else "result"),
-                # The innermost turn owns final delivery routing as well as ledger identity.
-                "queued_terminal_thread_id": getattr(next_source, "thread_id", None),
-                "queued_terminal_reply_anchor": (
-                    next_message_id if pending_event is not None else turn_ctx.event_message_id),
             }
+            # Synthetic follow-ups do not own a human reply anchor (#144709).
+            if pending_event is None or not pending_event.internal:
+                merged["queued_terminal_thread_id"] = getattr(next_source, "thread_id", None)
+                merged["queued_terminal_reply_anchor"] = (
+                    next_message_id if pending_event is not None else turn_ctx.event_message_id)
         return merged
 
     async def _run_agent_cleanup_turn_tasks(
