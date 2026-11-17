@@ -1,5 +1,6 @@
 """A sandbox background job's kill stops its whole process group, or reports who survived."""
 import shlex
+from pathlib import Path
 import subprocess
 import sys
 import tempfile
@@ -127,12 +128,16 @@ def test_survivors_are_reported_by_pid_and_the_session_stays_killable(tmp_path, 
             partial = registry.kill_process(session.id)
 
             assert partial["status"] == "error" and partial["process_running"] is True, partial
-            if shell_ignores_term:
+            if not Path("/proc").is_dir():
+                # macOS cannot enumerate members through /proc; the group ID is the retry handle.
+                assert partial["survivors"] == [session.pid]
+            elif shell_ignores_term:
                 # The supervisor traps TERM and waits on the TERM-ignoring shell, so all of it lives.
                 assert set(partial["survivors"]) == {proc.pid for proc in tree}
             else:
                 # The shell died and the supervisor recorded its exit; only the writer survives.
                 assert partial["survivors"] == [writer.pid]
+            if not shell_ignores_term:
                 exit_file = tmp_path / f"hermes_bg_{session.id}.exit"
                 wait_until(lambda: exit_file.exists() and exit_file.stat().st_size > 0, what="supervisor exit")
                 # health: allow HX013 -- spans two poller ticks (2 s each) after the supervisor exited
