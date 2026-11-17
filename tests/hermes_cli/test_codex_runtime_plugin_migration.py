@@ -153,6 +153,27 @@ class TestStripExistingManagedBlock:
 class TestMigrate:
 
 
+    def test_profile_migration_preserves_user_default_permissions(self, tmp_path, monkeypatch):
+        """A profile's explicit danger access must not break Hermes tool migration."""
+        import tomllib
+        from agent.transports.hermes_tools_mcp_server import HERMES_TOOLS_MCP_SERVER_NAME
+
+        hermes_home = tmp_path / "profiles" / "coder"
+        codex_home = hermes_home / "codex-home"
+        codex_home.mkdir(parents=True)
+        target = codex_home / "config.toml"
+        target.write_text('default_permissions = ":danger-full-access"\n', encoding="utf-8")
+        monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+
+        report = migrate({"model": {"codex_home_scope": "profile"}}, discover_plugins=False)
+
+        assert report.target_path == target
+        assert report.written, report.errors
+        assert report.wrote_permissions_default is None
+        config = tomllib.loads(target.read_text(encoding="utf-8"))
+        assert config["default_permissions"] == ":danger-full-access"
+        assert HERMES_TOOLS_MCP_SERVER_NAME in config["mcp_servers"]
+
 
     def test_plugin_discovery_writes_plugin_blocks(self, tmp_path, monkeypatch):
         """Discovered curated plugins land as [plugins."<name>@<marketplace>"]

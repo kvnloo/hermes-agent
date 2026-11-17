@@ -469,8 +469,6 @@ def migrate(
         # re-render and may strip pre-existing tables outside the managed block.
         plugin_query_succeeded = not plugin_err
         report.migrated_plugins += [f"{p['name']}@{p['marketplace']}" for p in plugins]
-    if default_permission_profile:
-        report.wrote_permissions_default = default_permission_profile
     if expose_hermes_tools:
         translated[HERMES_TOOLS_MCP_SERVER_NAME] = _build_hermes_tools_mcp_entry()
         if HERMES_TOOLS_MCP_SERVER_NAME not in report.migrated:
@@ -493,12 +491,21 @@ def migrate(
         without_managed = _strip_existing_managed_block(existing)
         if plugin_query_succeeded:
             without_managed = _strip_unmanaged_plugin_tables(without_managed)
+        # A user-owned top-level default_permissions wins over the managed default.
+        # Emitting both makes a valid Codex config invalid TOML and skips MCP migration.
+        try:
+            if "default_permissions" in tomllib.loads(without_managed):
+                default_permission_profile = None
+        except tomllib.TOMLDecodeError:
+            pass  # Leave invalid existing TOML to the final validation below.
         # Preserve-user policy: a name the user already declares outside the managed block is
         # theirs; skip our projection for it instead of emitting a duplicate table header.
         for name in sorted(_unmanaged_mcp_server_names(without_managed) & set(translated)):
             del translated[name]
             report.migrated.remove(name)
             report.preserved_user_servers.append(name)
+    if default_permission_profile:
+        report.wrote_permissions_default = default_permission_profile
     managed_block = render_codex_toml_section(
         translated, plugins=plugins, default_permission_profile=default_permission_profile)
     new_text = _insert_managed_block_at_top_level(without_managed, managed_block)
