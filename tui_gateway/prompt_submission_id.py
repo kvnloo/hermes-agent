@@ -16,6 +16,7 @@ new turn — the client's own id is its only defence there.
 
 from __future__ import annotations
 
+import hashlib
 import threading
 import time
 from collections import OrderedDict
@@ -29,7 +30,7 @@ _TTL_SECONDS = 300.0
 _MAX_ENTRIES = 256
 
 _lock = threading.Lock()
-_answers: OrderedDict[tuple[str, str], tuple[dict, float]] = OrderedDict()
+_answers: OrderedDict[tuple[str, str], tuple[dict, float, bytes]] = OrderedDict()
 
 
 def _key(session_id: str, submission_id: str) -> tuple[str, str]:
@@ -38,24 +39,26 @@ def _key(session_id: str, submission_id: str) -> tuple[str, str]:
     return (session_id, submission_id)
 
 
-def replay(session_id: str, submission_id: str) -> dict | None:
+def replay(session_id: str, submission_id: str, text: str) -> dict | None:
     """The reply the first submit with this id received, flagged ``duplicate``; None if unseen."""
     key = _key(session_id, submission_id)
     with _lock:
         entry = _answers.get(key)
         if entry is None:
             return None
-        answer, stamped = entry
+        answer, stamped, digest = entry
         if time.monotonic() - stamped > _TTL_SECONDS:
             _answers.pop(key, None)
             return None
+        if hashlib.sha256(text.encode("utf-8")).digest() != digest:
+            raise ValueError("submission_id is already bound to different prompt text")
         # Refresh the window so back-to-back retries of one dropped reply cannot age out mid-retry.
-        _answers[key] = (answer, time.monotonic())
+        _answers[key] = (answer, time.monotonic(), digest)
         _answers.move_to_end(key)
         return {**answer, "duplicate": True}
 
 
-def remember(session_id: str, submission_id: str, answer: dict) -> None:
+def remember(session_id: str, submission_id: str, text: str, answer: dict) -> None:
     """Remember the acceptance body a turn's first submit returned.
 
     Only an accepted turn has a ``status``; the typed-stop-phrase reply (``voice_stopped``) admits
@@ -65,7 +68,8 @@ def remember(session_id: str, submission_id: str, answer: dict) -> None:
         return
     key = _key(session_id, submission_id)
     with _lock:
-        _answers[key] = (dict(answer), time.monotonic())
+        digest = hashlib.sha256(text.encode("utf-8")).digest()
+        _answers[key] = (dict(answer), time.monotonic(), digest)
         _answers.move_to_end(key)
         while len(_answers) > _MAX_ENTRIES:
             _answers.popitem(last=False)

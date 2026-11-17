@@ -813,7 +813,7 @@ def _lock_in_submit_turn(
 from gateway.session_surface import SURFACES as _CLIENT_SURFACES
 
 
-def _replayed_submit(rid, sid, submission_id):
+def _replayed_submit(rid, sid, submission_id, text):
     """The answer a retried submit already received, or a refusal for an unusable id.
 
     A client that lost the reply to a submit (an app relaunch, a network drop, a reconnect mid-turn)
@@ -824,7 +824,10 @@ def _replayed_submit(rid, sid, submission_id):
 
     if not isinstance(submission_id, str) or not submission_id.strip():
         return _err(rid, 4000, "submission_id must be a non-empty string")
-    replayed = prompt_submission_id.replay(sid, submission_id)
+    try:
+        replayed = prompt_submission_id.replay(sid, submission_id, text)
+    except ValueError:
+        return _err(rid, 4000, "submission_id is already bound to different prompt text")
     return _ok(rid, replayed) if replayed is not None else None
 
 
@@ -834,7 +837,8 @@ def _remembered_reply(params: dict, reply: dict) -> dict:
 
     submission_id = params.get("submission_id")
     if isinstance(submission_id, str) and isinstance(reply.get("result"), dict):
-        prompt_submission_id.remember(params.get("session_id", ""), submission_id, reply["result"])
+        prompt_submission_id.remember(
+            params.get("session_id", ""), submission_id, params.get("text", ""), reply["result"])
     return reply
 
 
@@ -898,7 +902,7 @@ def _(rid, params: dict) -> dict:
         return stopped
     submission_id = params.get("submission_id")
     if submission_id is not None:
-        retried = _replayed_submit(rid, sid, submission_id)
+        retried = _replayed_submit(rid, sid, submission_id, raw_text)
         if retried is not None:
             return retried
     if params.get("interrupted"):

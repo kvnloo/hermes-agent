@@ -107,6 +107,21 @@ def test_resend_with_the_same_submission_id_answers_the_first_turn(monkeypatch, 
         server._sessions.pop(sid, None)
 
 
+def test_retry_with_changed_text_is_refused_not_silently_accepted(monkeypatch, tmp_path):
+    """One submission identity must not acknowledge a different user instruction."""
+    _env(monkeypatch, tmp_path)
+    sid, agent = _new_session(monkeypatch)
+    try:
+        first = _submit(sid, "summarise the thread", "client-1")
+        assert first["result"]["status"] == "streaming"
+        changed = _submit(sid, "summarise a different thread", "client-1")
+        assert changed["error"]["code"] == 4000, changed
+        assert "submission_id" in changed["error"]["message"]
+        assert agent.turns == ["summarise the thread"]
+    finally:
+        server._sessions.pop(sid, None)
+
+
 def test_a_new_submission_id_is_a_new_turn(monkeypatch, tmp_path):
     _env(monkeypatch, tmp_path)
     sid, agent = _new_session(monkeypatch)
@@ -167,16 +182,16 @@ def test_a_submit_refused_at_the_door_is_not_remembered(monkeypatch, tmp_path):
     _env(monkeypatch, tmp_path)
     refused = _submit("no-such-session", "hello", "client-1")
     assert "error" in refused, refused
-    assert prompt_submission_id.replay("no-such-session", "client-1") is None
+    assert prompt_submission_id.replay("no-such-session", "client-1", "hello") is None
 
 
 @pytest.mark.parametrize("age, expected", [(0.0, True), (299.0, True), (301.0, False)])
 def test_the_retry_window_expires(monkeypatch, age, expected):
     monkeypatch.setattr(prompt_submission_id.time, "monotonic", lambda: 1000.0)
     prompt_submission_id._answers.clear()
-    prompt_submission_id.remember("sid", "client-1", {"status": "streaming", "user_row_id": 7})
+    prompt_submission_id.remember("sid", "client-1", "hello", {"status": "streaming", "user_row_id": 7})
     monkeypatch.setattr(prompt_submission_id.time, "monotonic", lambda: 1000.0 + age)
-    replayed = prompt_submission_id.replay("sid", "client-1")
+    replayed = prompt_submission_id.replay("sid", "client-1", "hello")
     assert (replayed is not None) is expected
     if expected:
         assert replayed == {"status": "streaming", "user_row_id": 7, "duplicate": True}
@@ -185,10 +200,10 @@ def test_the_retry_window_expires(monkeypatch, age, expected):
 def test_the_registry_keeps_only_accepted_turns_and_stays_bounded(monkeypatch):
     prompt_submission_id._answers.clear()
     # The typed-stop-phrase reply admits nothing: it must never answer a later real submit.
-    prompt_submission_id.remember("sid", "stop-1", {"voice_stopped": True})
-    assert prompt_submission_id.replay("sid", "stop-1") is None
+    prompt_submission_id.remember("sid", "stop-1", "stop", {"voice_stopped": True})
+    assert prompt_submission_id.replay("sid", "stop-1", "stop") is None
     for index in range(prompt_submission_id._MAX_ENTRIES + 10):
-        prompt_submission_id.remember("sid", f"client-{index}", {"status": "streaming"})
+        prompt_submission_id.remember("sid", f"client-{index}", f"text-{index}", {"status": "streaming"})
     assert len(prompt_submission_id._answers) == prompt_submission_id._MAX_ENTRIES
-    assert prompt_submission_id.replay("sid", "client-0") is None  # evicted oldest-first
-    assert prompt_submission_id.replay("sid", f"client-{prompt_submission_id._MAX_ENTRIES + 9}") is not None
+    assert prompt_submission_id.replay("sid", "client-0", "text-0") is None  # evicted oldest-first
+    assert prompt_submission_id.replay("sid", f"client-{prompt_submission_id._MAX_ENTRIES + 9}", f"text-{prompt_submission_id._MAX_ENTRIES + 9}") is not None
