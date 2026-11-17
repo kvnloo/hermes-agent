@@ -45,12 +45,17 @@ def read_mapping_file(path: Path) -> str | None:
 
 
 def _legacy_login(email: str) -> str | None:
-    """Look the email up in the frozen legacy AUTHOR_MAP in scripts/releases/authors_legacy.py."""
+    """Look up a legacy email case-insensitively, as the contributor gate does."""
     try:
         sys.path.insert(0, str(REPO_ROOT))
         from scripts.releases.authors_legacy import LEGACY_AUTHOR_MAP
 
-        return LEGACY_AUTHOR_MAP.get(email)
+        folded = email.casefold()
+        return next(
+            (login for mapped_email, login in LEGACY_AUTHOR_MAP.items()
+             if mapped_email.casefold() == folded),
+            None,
+        )
     except Exception:
         return None
 

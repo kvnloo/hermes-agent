@@ -93,6 +93,17 @@ def test_add_refuses_login_conflicting_with_legacy_map(emails_dir):
     assert not (emails_dir / email).exists()
 
 
+def test_add_respects_existing_legacy_mapping_whatever_its_case(emails_dir):
+    # Case-variant legacy emails are already mapped; never create a conflicting override.
+    email, login = next(iter(authors_legacy.LEGACY_AUTHOR_MAP.items()))
+    variant = email.swapcase()
+    assert variant != email
+    assert add_contributor(variant, login) == 0
+    assert not (emails_dir / variant).exists()
+    assert add_contributor(variant, login + "x") == 1
+    assert not (emails_dir / variant).exists()
+
+
 def test_add_accepts_legacy_consecutive_hyphen_login(emails_dir):
     # Legacy GitHub accounts with consecutive hyphens are real (Roger--Han);
     # current signup rules forbid them but existing logins remain valid.
