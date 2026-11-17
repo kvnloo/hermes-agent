@@ -835,7 +835,12 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
         user_content = _content_blocks_to_openai_user_content(prompt)
         text_only_prompt = all(isinstance(block, TextContentBlock) for block in prompt)
         if not user_text and not (isinstance(user_content, list) and user_content):
-            return PromptResponse(stop_reason="end_turn")
+            # An empty request did not run a turn; do not report it as a completed reply.
+            if self._conn:
+                await self._conn.session_update(
+                    session_id, acp.update_agent_message_text("No prompt content to process.")
+                )
+            return PromptResponse(stop_reason="refusal")
 
         user_text, user_content = self._rewrite_prompt_for_interrupt(state, user_text, user_content, text_only_prompt)
 

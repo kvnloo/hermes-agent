@@ -445,6 +445,24 @@ class TestPrompt:
         assert state.agent.run_conversation.call_count == 2
 
     @pytest.mark.asyncio
+    async def test_empty_prompt_reports_no_work_instead_of_silent_completion(self, agent, mock_manager):
+        """An empty ACP request is not an agent reply (#156807)."""
+        resp = await agent.new_session(cwd=".")
+        state = mock_manager.get_session(resp.session_id)
+        mock_conn = MagicMock(spec=acp.Client)
+        mock_conn.session_update = AsyncMock()
+        agent._conn = mock_conn
+
+        result = await agent.prompt(prompt=[], session_id=resp.session_id)
+
+        assert result.stop_reason == "refusal"
+        state.agent.run_conversation.assert_not_called()
+        assert state.is_running is False
+        mock_conn.session_update.assert_awaited_once()
+        update = mock_conn.session_update.await_args.args[1]
+        assert update.content.text == "No prompt content to process."
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("executor_raises", [False, True])
     async def test_prompt_surfaces_turn_failures_as_refusals(self, agent, mock_manager, executor_raises):
         """Provider and executor failures are visible and do not look like completed turns (#138975)."""
