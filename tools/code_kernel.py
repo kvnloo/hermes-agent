@@ -106,6 +106,7 @@ def run_cell(request, execution_count):
     """Exec one cell; returns (response payload, FULL stdout text)."""
     out, err = io.StringIO(), io.StringIO()
     status, trace = "ok", ""
+    memory_error = False
     # An imported module keeps the code it was loaded with: name the ones edited on disk since
     # the last cell, so a fix that "still fails" is not mistaken for a wrong fix.
     stale_modules = _scan_edited_modules(True)
@@ -114,7 +115,8 @@ def run_cell(request, execution_count):
             exec(compile(request["code"], "<cell>", "exec"), GLOBALS)
     except SystemExit as exc:
         status, trace = "exit", "SystemExit: " + repr(exc.code)
-    except BaseException:
+    except BaseException as exc:
+        memory_error = isinstance(exc, MemoryError)
         status, trace = "error", traceback.format_exc()
     _scan_edited_modules(False)  # modules this cell imported are watched from now on
     stdout_text, stdout_clipped = _clip(out.getvalue())
@@ -124,7 +126,7 @@ def run_cell(request, execution_count):
         "id": request.get("id", ""), "status": status,
         "stdout": stdout_text, "stderr": stderr_text,
         "stdout_clipped": stdout_clipped, "stderr_clipped": stderr_clipped,
-        "traceback": trace, "execution_count": execution_count,
+        "traceback": trace, "memory_error": memory_error, "execution_count": execution_count,
     }, out.getvalue()
 '''
 
@@ -1010,7 +1012,7 @@ def _cell_result(kernel: SessionKernel, key: tuple, status: str, payload: dict[s
         trace = clean(str(payload.get("traceback", "")))
         result.update(status="error", exit_code=1, error=trace or "Cell raised an exception.",
                       output=_with_stderr(stdout_text, cell_stderr + trace) if (cell_stderr or trace) else stdout_text)
-        if _cell_raised_memory_error(trace):
+        if payload.get("memory_error") or _cell_raised_memory_error(trace):
             # Ordinary exceptions keep the kernel (state persists across cells), but a
             # MemoryError leaves multi-GB buffers in GLOBALS for the idle reaper (30 min).
             _REGISTRY.discard(key, kernel)

@@ -110,6 +110,23 @@ class TestSessionStatePersistence(unittest.TestCase):
         self.assertIn("NameError", after["error"])
         self.assertEqual(after["kernel"]["reused"], False)
 
+    def test_memory_error_subclass_kills_kernel(self):
+        """A MemoryError subclass (e.g. NumPy's _ArrayMemoryError) must also release state."""
+        with _kernel_config():
+            self.assertEqual(_run("state_before_oom = 13")["status"], "success")
+            oom = _run(
+                "class ArrayAllocationError(MemoryError): pass\n"
+                "raise ArrayAllocationError('allocation failed')"
+            )
+            self.assertEqual(oom["status"], "error", oom)
+            self.assertIn("ArrayAllocationError", oom["error"])
+            self.assertTrue(oom["kernel"]["ended"], oom)
+            self.assertIn("state was lost", oom["warning"])
+            after = _run("print(state_before_oom)")
+        self.assertEqual(after["status"], "error", after)
+        self.assertIn("NameError", after["error"])
+        self.assertEqual(after["kernel"]["reused"], False)
+
     def test_imports_persist(self):
         with _kernel_config():
             _run("import json as _j")
