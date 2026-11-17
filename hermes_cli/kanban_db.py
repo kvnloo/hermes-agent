@@ -2705,7 +2705,12 @@ def _resolve_task_ids_on_other_boards(ids: list[str], current_db: Optional[Path]
         current = None
     for meta in list_boards():
         slug = str(meta.get("slug") or "") or DEFAULT_BOARD
-        db_path = Path(str(meta.get("db_path") or kanban_db_path(slug)))
+        # Board metadata uses kanban_db_path(), which honors HERMES_KANBAN_DB.
+        # A pinned worker must still inspect the actual sibling board files.
+        if slug == DEFAULT_BOARD:
+            db_path = kanban_home() / "kanban.db"
+        else:
+            db_path = board_dir(slug) / "kanban.db"
         try:
             if current is not None and db_path.resolve() == current:
                 continue
@@ -3029,10 +3034,16 @@ def _flag_phantom_prose_refs(
     missing = [p for p in _scan_prose_for_phantom_ids(conn, scan_text) if p not in set(verified_cards)]
     if not missing:
         return
-    cross_board = _resolve_task_ids_on_other_boards(missing, _conn_db_path(conn))
+    queried_db = _conn_db_path(conn)
+    cross_board = _resolve_task_ids_on_other_boards(missing, queried_db)
     phantom_refs = [p for p in missing if p not in cross_board]
     if phantom_refs:
-        payload: dict[str, Any] = {"phantom_refs": phantom_refs, "source": "completion_summary"}
+        payload: dict[str, Any] = {
+            "phantom_refs": phantom_refs,  # Legacy diagnostic/dashboard consumers.
+            "unresolved_refs": phantom_refs,
+            "queried_db": str(queried_db) if queried_db else None,
+            "source": "completion_summary",
+        }
         if cross_board:
             payload["cross_board_refs"] = cross_board
         with write_txn(conn):

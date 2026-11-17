@@ -105,3 +105,21 @@ def test_branch_name_tokens_are_not_card_references(boards_home):
         # The slash-prefixed branch/worktree tokens resolve to nothing yet must
         # not be flagged; only the bare prose reference is.
         assert [event["phantom_refs"] for event in events] == [["t_0123456789ab"]]
+
+def test_pinned_worker_finds_default_board_reference_and_records_scope(boards_home, monkeypatch):
+    """A delegated board pin must not turn a real default-board id into a phantom."""
+    with kbc.connect(board="default") as default:
+        shared = kb.create_task(default, title="shared default-board card", assignee="ops")
+    with kbc.connect(board="alpha") as alpha:
+        worker = kb.create_task(alpha, title="completion on alpha", assignee="ops")
+        queried_db = kb._conn_db_path(alpha)
+        assert queried_db is not None
+        monkeypatch.setenv("HERMES_KANBAN_DB", str(queried_db))
+        kb._flag_phantom_prose_refs(
+            alpha, worker, None, f"linked {shared} and unknown t_00000000cafe", None, [],
+        )
+        events = _flagged(alpha, worker)
+        assert len(events) == 1
+        assert events[0]["phantom_refs"] == ["t_00000000cafe"]
+        assert events[0]["unresolved_refs"] == ["t_00000000cafe"]
+        assert events[0]["queried_db"] == str(queried_db)
