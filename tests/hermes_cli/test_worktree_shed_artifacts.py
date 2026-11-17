@@ -92,3 +92,19 @@ def test_shedding_is_off_by_default(repo):
     worktree_ops._prune_stale_worktrees(str(repo))
     assert (idle / "node_modules" / "left-pad" / "index.js").exists()
     assert (idle / ".venv" / "bin" / "python").exists()
+
+
+def test_recent_nested_ignored_edit_preserves_older_directory(repo):
+    """An in-place dependency edit must not be deleted just because its parent mtimes are old."""
+    _config("worktrees:\n  shed_artifacts_after_hours: 24\n")
+    idle = _tree_with_artifacts(repo, "lane-idle", hours=30)
+    nested = idle / "node_modules" / "left-pad" / "index.js"
+    nested.write_text("updated dependency\n", encoding="utf-8")
+    cutoff = time.time() - 24 * 3600
+    assert idle.stat().st_mtime < cutoff
+    assert (idle / "node_modules").stat().st_mtime < cutoff
+
+    worktree_ops._prune_stale_worktrees(str(repo))
+
+    assert nested.read_text(encoding="utf-8") == "updated dependency\n"
+    assert not (idle / ".venv").exists(), "unmodified old ignored artifacts should still be shed"

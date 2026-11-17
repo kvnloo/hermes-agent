@@ -520,15 +520,24 @@ def _ignored_artifact_dirs(path: str) -> list[str]:
     return found
 
 
-def _holds_repository(path: Path) -> bool:
-    """Whether a ``.git`` (an embedded repository or worktree, whose commits no branch of this
-    tree holds) sits anywhere under *path*. ``--directory`` collapses an ignored dir, so git
-    never reports one inside it. Unreadable = yes."""
+def _artifact_content_blocker(path: Path, idle_since: float) -> Optional[str]:
+    """Preserve embedded repositories, recent nested ignored writes and unreadable content.
+
+    A write to an existing file deep inside node_modules changes only that file's mtime;
+    neither the worktree nor node_modules directory itself gets a new timestamp.
+    Check while walking for embedded .git so a single traversal covers both guards.
+    """
     failed: list = []
-    for _root, dirs, files in os.walk(path, onerror=failed.append):
+    for root, dirs, files in os.walk(path, onerror=failed.append):
         if ".git" in dirs or ".git" in files:
-            return True
-    return bool(failed)
+            return "holds an embedded repository"
+        for name in (*dirs, *files):
+            try:
+                if (Path(root) / name).lstat().st_mtime >= idle_since:
+                    return "nested ignored content changed inside the window"
+            except OSError:
+                return "cannot inspect ignored content"
+    return "cannot inspect ignored content" if failed else None
 
 
 def _shed_blocker(repo_root: str, path: str, target: Path, idle_since: float) -> Optional[str]:
@@ -551,7 +560,7 @@ def _shed_blocker(repo_root: str, path: str, target: Path, idle_since: float) ->
         return "gone"
     if busy := _in_use_since(path, idle_since):
         return busy
-    return "holds an embedded repository" if _holds_repository(target) else None
+    return _artifact_content_blocker(target, idle_since)
 
 
 def _shed_one(entry: Path, rel: str) -> bool:
