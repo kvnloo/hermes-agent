@@ -165,6 +165,33 @@ async def test_run_sse_tool_completed_preview_is_bounded(api, owner):
 
 
 @pytest.mark.asyncio
+async def test_run_sse_failed_tool_completed_keeps_error_preview(api, owner):
+    """A failed tool still exposes its reason in a run's bounded SSE preview (#156792)."""
+    admitted = admit_api_turn(api, session_id='sse-failed-preview', user_message='hello', conversation_history=[])
+    _, ref, _row = admitted
+    launch, queue = _launch(api, admitted)
+
+    async def handle(event):
+        from gateway.session_results import execution_result
+        turn = _turn_runner(owner, ref)
+        args = {'command': 'cat /not-readable'}
+        turn.combined_tool_start_callback('call-fail', 'terminal', args)
+        turn.combined_tool_complete_callback('call-fail', 'terminal', args,
+                                             {'output': '', 'exit_code': 13,
+                                              'error': 'permission denied while reading file'})
+        execution_result.get()['result'] = {'final_response': 'done'}
+        return 'done'
+    owner.runner._handle_message = handle
+    await _execute_run(api, launch, _api_server=_api_server)
+    await asyncio.sleep(0)
+    events = _events(queue)
+    completed = next(e for e in events if e['event'] == 'tool.completed')
+    assert completed['tool_call_id'] == 'call-fail', completed
+    assert completed['error'] is True, completed
+    assert 'permission denied while reading file' in completed['preview'], completed
+
+
+@pytest.mark.asyncio
 async def test_run_sse_tool_completed_times_each_call_by_its_own_id(api, owner, monkeypatch):
     """Canonical tool sinks carry no duration, so the run stream reported 0 for every tool; each
     completion is timed from the start recorded under its own tool call id."""
