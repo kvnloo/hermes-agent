@@ -37,7 +37,7 @@ _log = logging.getLogger(__name__)
 # Prefix-matched bypass list: auth bootstrap routes and static asset mounts. ``/assets/`` with
 # the trailing slash matches ``/assets/foo.css`` but not ``/assetsleak``.
 _GATE_PUBLIC_PREFIXES: tuple[str, ...] = (
-    "/auth/login", "/auth/callback", "/auth/native/authorize", "/auth/native/token",
+    "/auth/login", "/auth/callback", "/auth/complete", "/auth/native/authorize", "/auth/native/token",
     "/auth/native/refresh", "/auth/password-login", "/auth/logout", "/login",
     "/api/auth/providers", "/api/mcp/oauth/callback/",
     "/assets/", "/favicon.ico", "/ds-assets/", "/fonts/", "/fonts-terminal/")
@@ -60,6 +60,17 @@ def _safe_next_target(request: Request) -> str:
         return ""
     query = request.url.query
     return quote(f"{path}?{query}" if query else path, safe="")
+
+
+# --- Z0DIAG (temporary; remove after diagnosis) ---
+def _z0diag(msg: str) -> None:
+    try:
+        import time as _t
+        with open("/tmp/z0-authdiag.log", "a") as _f:
+            _f.write(f"{_t.strftime('%H:%M:%S')} {msg}\n")
+    except Exception:
+        pass
+# --- /Z0DIAG ---
 
 
 def _unauth_response(request: Request, *, reason: str) -> Response:
@@ -155,6 +166,8 @@ async def gated_auth_middleware(
     """Engaged only when ``app.state.auth_required is True``."""
     if not getattr(request.app.state, "auth_required", False):
         return await call_next(request)
+    _z0diag("REQ %s %s cookies=%s" % (
+        request.method, request.url.path, sorted(request.cookies.keys())))
     # Already authenticated by the token-auth seam (service caller on a registered token
     # route): not a cookie session, must not bounce to /login.
     if getattr(request.state, "token_authenticated", False) or _path_is_public(request.url.path):

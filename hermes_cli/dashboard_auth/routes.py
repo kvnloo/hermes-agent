@@ -18,13 +18,14 @@ allowlists the public ones.
 from __future__ import annotations
 
 import logging
+import secrets
 import threading
 import time
 from collections import defaultdict, deque
 from typing import Any, Deque, Dict
 from urllib.parse import quote, unquote, urlencode, urlparse, urlunparse
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
@@ -46,6 +47,17 @@ from hermes_cli.dashboard_auth.request_utils import (
     access_token_max_age, client_ip as _client_ip, is_safe_next_path)
 
 _log = logging.getLogger(__name__)
+
+
+# --- Z0DIAG (temporary; remove after diagnosis) ---
+def _z0diag(msg: str) -> None:
+    try:
+        import time as _t
+        with open("/tmp/z0-authdiag.log", "a") as _f:
+            _f.write(f"{_t.strftime('%H:%M:%S')} {msg}\n")
+    except Exception:
+        pass
+# --- /Z0DIAG ---
 
 router = APIRouter()
 
@@ -98,6 +110,37 @@ def _validate_post_login_target(raw: str) -> str:
 
 def _set_pkce(resp, request: Request, payload: dict[str, str]) -> None:
     set_pkce_cookie(resp, payload=payload, use_https=detect_https(request), prefix=_prefix(request))
+
+
+# --- same-site session handoff (third-party-cookie-safe callback) --------------
+# The callback response is a CROSS-SITE redirect (from the IDP). Browsers with
+# third-party cookie protection (Firefox Total Cookie Protection, ETP Strict, and
+# Chrome's 3P phase-out) discard every Set-Cookie on such a response, so a session
+# minted there never reaches the browser. The session is handed off server-side
+# under a single-use token and written by /auth/complete, which is reached by a
+# SAME-SITE navigation and therefore stores normally.
+_PENDING_SESSION_TTL_SEC = 120.0
+_pending_sessions: Dict[str, tuple] = {}
+_pending_lock = threading.Lock()
+
+
+def _stash_pending_session(session: Session, target: str, prefix: str) -> str:
+    token = secrets.token_urlsafe(32)
+    now = time.time()
+    with _pending_lock:
+        for k in [k for k, v in _pending_sessions.items() if v[0] < now]:
+            _pending_sessions.pop(k, None)
+        _pending_sessions[token] = (now + _PENDING_SESSION_TTL_SEC, session, target, prefix)
+    return token
+
+
+def _pop_pending_session(token: str):
+    """(session, target, prefix) or None; single-use and TTL-bounded."""
+    with _pending_lock:
+        entry = _pending_sessions.pop(token, None)
+    if not entry or entry[0] < time.time():
+        return None
+    return entry[1], entry[2], entry[3]
 
 
 def _set_session(resp, request: Request, session: Session) -> None:
@@ -348,12 +391,39 @@ async def auth_callback(
     target, native = _complete_login(
         request, provider_name, session, broker_state=parts.get("broker", ""),
         next_raw=parts.get("next", ""))
-    resp = RedirectResponse(url=target, status_code=302)
-    if not native:
-        _set_session(resp, request, session)
     prefix = _prefix(request)
+    if native:
+        resp = RedirectResponse(url=target, status_code=302)
+    else:
+        token = _stash_pending_session(session, target, prefix)
+        resp = RedirectResponse(
+            url=f"{prefix}/auth/complete?t={quote(token, safe='')}", status_code=302)
+    _z0diag("callback native=%s target=%r -> %s" % (native, target, resp.headers.get("location")))
     clear_pkce_cookie(resp, use_https=detect_https(request), prefix=prefix)
     # Clear the one-shot auto-SSO loop-guard so it never suppresses a future silent attempt.
+    clear_sso_attempt_cookie(resp, prefix=prefix)
+    return resp
+
+
+@router.get("/auth/complete", name="auth_complete")
+async def auth_complete(request: Request, t: str = "") -> Response:
+    """Mint the session cookies from a SAME-SITE request.
+
+    Reaching this as a first-party navigation is the entire point: browsers that
+    block third-party cookies ignore Set-Cookie on the cross-site callback, so the
+    session is handed off server-side and written here instead.
+    """
+    pending = _pop_pending_session(t)
+    if pending is None:
+        _audit(request, AuditEvent.LOGIN_FAILURE, reason="pending_session_missing")
+        raise _http(400, "Login handoff expired or already used — please sign in again")
+    session, target, prefix = pending
+    resp = RedirectResponse(url=target or "/", status_code=302)
+    _set_session(resp, request, session)
+    _z0diag("complete setcookie=%s -> %s" % (
+        [(h[1].decode().split("=")[0], len(h[1])) for h in resp.raw_headers if h[0].lower() == b"set-cookie"],
+        target))
+    clear_pkce_cookie(resp, use_https=detect_https(request), prefix=prefix)
     clear_sso_attempt_cookie(resp, prefix=prefix)
     return resp
 
