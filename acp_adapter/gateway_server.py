@@ -21,6 +21,10 @@ from acp_adapter.session import _translate_acp_cwd, _normalize_cwd_for_compare
 
 logger = logging.getLogger(__name__)
 
+# A loaded gateway binds the ACP editor's MCP servers before session.create replies (#155773).
+# The editor can wait 300 s; leave headroom for its own request overhead.
+SESSION_CREATE_RPC_TIMEOUT = 240
+
 
 def _slash_command(text):
     """Canonical Hermes command name ``text`` invokes, or None for ordinary text.
@@ -280,7 +284,8 @@ class GatewayACPAgent(GatewayReplyMixin, acp.Agent):
         flags = env_launch_flags()
         if flags.get("safe_mode") or flags.get("ignore_user_config"):
             flags.update(_bypass_route())
-        snapshot = await client.rpc("session.create", request_id=uuid.uuid4().hex,
+        snapshot = await client.rpc("session.create", _timeout=SESSION_CREATE_RPC_TIMEOUT,
+            request_id=uuid.uuid4().hex,
             source="acp", cwd=_translate_acp_cwd(cwd),
             editor={"mcp_servers": [s.model_dump(by_alias=True) for s in mcp_servers or []],
                     "edit_approval_policy": "ask"}, **flags)

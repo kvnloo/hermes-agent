@@ -12,7 +12,7 @@ _FLAGS = ('yolo', 'safe_mode', 'ignore_user_config', 'ignore_rules', 'accept_hoo
 
 
 def _agent(created):
-    async def rpc(method, **params):
+    async def rpc(method, _timeout=None, **params):  # local client deadline is not sent to the owner
         if method == 'runtime.describe':
             return {'session_create': {'sources': ['acp']}, 'capabilities': ['acp-editor-policy-v1']}
         if method == 'config.set':  # the new session's live-reasoning flag (#134889 ACP-4)
@@ -102,3 +102,32 @@ async def test_cli_only_acp_flags_reach_the_session(monkeypatch, tmp_path):
     await _agent(created).new_session(cwd=str(tmp_path))
     assert created[0].get('accept_hooks') is True and created[0].get('ignore_rules') is True
     assert 'yolo' not in created[0] and 'safe_mode' not in created[0]
+
+
+@pytest.mark.asyncio
+async def test_slow_editor_mcp_create_uses_a_separate_acp_rpc_budget(monkeypatch, tmp_path):
+    """The observed 128 s build must outlive the 30 s default without exceeding the editor's 300 s."""
+    from hermes_cli.gateway_client import DEFAULT_RPC_TIMEOUT
+
+    for name in _ENV:
+        monkeypatch.delenv(name, raising=False)
+    created = []
+    agent = _agent(created)
+    normal_rpc = agent._gateway.rpc.side_effect
+    budgets = []
+
+    async def rpc(method, _timeout=None, **params):
+        if method == 'session.create':
+            budgets.append(_timeout)
+        return await normal_rpc(method, **params)
+
+    agent._gateway.rpc.side_effect = rpc
+    editor_server = SimpleNamespace(model_dump=lambda **_: {
+        'name': 'slow', 'command': 'npx', 'args': ['-y', 'test-mcp']})
+    await agent.new_session(cwd=str(tmp_path), mcp_servers=[editor_server])
+
+    assert len(budgets) == 1
+    assert budgets[0] is not None and 120 < budgets[0] < 300
+    assert budgets[0] > DEFAULT_RPC_TIMEOUT
+    assert created[0]['editor']['mcp_servers'] == [editor_server.model_dump()]
+    assert '_timeout' not in created[0]  # RPC-only deadline, never an on-wire session field
