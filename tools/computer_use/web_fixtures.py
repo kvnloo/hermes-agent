@@ -178,30 +178,80 @@ def all_web_fixtures() -> list[WebFixtureFlow]:
     return [two_step_wizard_fixture(), flights_search_fixture()]
 
 
+def _flow_transitions_js(flow: WebFixtureFlow) -> str:
+    mapping: dict[str, str] = {}
+    for (page, element), nxt in flow.transitions.items():
+        mapping[f"{page}:{element}"] = nxt
+    return json.dumps(mapping)
+
+
+def write_flow_html(flow: WebFixtureFlow, path: Path) -> Path:
+    """Materialize one navigable HTML fixture for live browser benchmarks."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    transitions = _flow_transitions_js(flow)
+    done_pages = {p.name for p in flow.pages if p.done}
+    sections: list[str] = []
+    for page in flow.pages:
+        if page.done:
+            sections.append(
+                f'<section data-page="{page.name}" hidden><p>Done</p></section>'
+            )
+            continue
+        buttons: list[str] = []
+        for el in page.elements:
+            buttons.append(
+                f'<button data-fixture-index="{el.index}" data-label="{el.label}">{el.label}</button>'
+            )
+        sections.append(
+            f'<section data-page="{page.name}" hidden>{"".join(buttons)}</section>'
+        )
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>{flow.name}</title>
+<style>
+  body {{ font-family: system-ui, sans-serif; padding: 2rem; }}
+  section[hidden] {{ display: none; }}
+  button {{ margin: 0.5rem; padding: 0.6rem 1rem; }}
+</style></head>
+<body data-page="{flow.pages[0].name}">
+<script>
+const transitions = {transitions};
+const donePages = new Set({json.dumps(sorted(done_pages))});
+window.__fixturePage = document.body.dataset.page;
+window.__fixtureDone = false;
+function showPage(name) {{
+  window.__fixturePage = name;
+  document.body.dataset.page = name;
+  document.querySelectorAll('section[data-page]').forEach((sec) => {{
+    sec.hidden = sec.dataset.page !== name;
+  }});
+  if (donePages.has(name)) {{
+    window.__fixtureDone = true;
+    document.body.dataset.done = 'true';
+  }}
+}}
+document.addEventListener('click', (ev) => {{
+  const btn = ev.target.closest('button[data-fixture-index]');
+  if (!btn) return;
+  const page = window.__fixturePage;
+  const idx = btn.dataset.fixtureIndex;
+  const key = page + ':' + idx;
+  const nxt = transitions[key];
+  if (nxt) showPage(nxt);
+}});
+showPage(window.__fixturePage);
+</script>
+{"".join(sections)}
+</body></html>"""
+    path.write_text(html, encoding="utf-8")
+    return path
+
+
 def write_default_html_fixtures(root: Path | None = None) -> list[Path]:
     """Materialize HTML files for browser-backed E2E (optional)."""
     root = root or _FIXTURES_ROOT
     root.mkdir(parents=True, exist_ok=True)
     files: list[Path] = []
-    wizard = root / "two_step_wizard.html"
-    wizard.write_text(
-        """<!DOCTYPE html><html><body data-page="intro">
-<section data-page="intro"><button data-label="Continue">Continue</button>
-<button data-label="Cancel">Cancel</button></section>
-<section data-page="confirm"><button data-label="Submit">Submit</button>
-<button data-label="Back">Back</button></section>
-<section data-page="complete"><p>Done</p></section></body></html>""",
-        encoding="utf-8",
-    )
-    files.append(wizard)
-    flights = root / "flights_search.html"
-    flights.write_text(
-        """<!DOCTYPE html><html><body data-page="search">
-<input data-label="From" value="SFO"/>
-<input data-label="To" value="JFK"/>
-<button data-label="Search flights">Search</button>
-<button data-label="Select cheapest">Select</button></body></html>""",
-        encoding="utf-8",
-    )
-    files.append(flights)
+    for flow in all_web_fixtures():
+        files.append(write_flow_html(flow, root / f"{flow.name}.html"))
     return files
