@@ -147,3 +147,20 @@ def test_every_action_gate_caller_asks_through_the_selected_transport(transport_
     assert approve() is True
     assert builtin == []
     assert [r["surface"] for r in _transport_requests(home)] == ["cli"]
+
+def test_plugin_escalation_unavailable_transport_fails_closed(transport_home):
+    """An unavailable selected transport cannot silently fall back to a built-in approval."""
+    from hermes_cli.plugins import resolve_pre_tool_block
+
+    home, builtin = transport_home
+    config_path = home / "config.yaml"
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["security"]["approval"]["transport"] = "missing-transport"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+
+    blocked = resolve_pre_tool_block("fixture_tool", {})
+
+    assert blocked is not None
+    assert "Selected approval transport failed (unavailable)" in blocked
+    assert builtin == []
+    assert _transport_requests(home) == []
