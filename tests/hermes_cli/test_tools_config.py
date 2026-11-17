@@ -1048,6 +1048,26 @@ def test_explicit_plugin_toolset_admitted_against_real_a2a_plugin(monkeypatch):
     )
 
 
+def test_old_plugin_cache_does_not_reenable_builtin_web(tmp_path, monkeypatch):
+    """A pre-#156804 cache must not override an explicitly disabled built-in toolset."""
+    import hermes_cli.plugins as plugins
+
+    cache = tmp_path / "plugin_toolset_keys.json"
+    cache.write_text(
+        '{"toolset_keys": ["web"], "portable_mcp": []}', encoding="utf-8"
+    )
+    monkeypatch.setattr(plugins, "_plugin_toolset_keys_cache_path", lambda: cache)
+    # The nowait path reads the saved cache while discovery is still in flight.
+    monkeypatch.setattr(
+        plugins, "_background_discovery_thread", SimpleNamespace(is_alive=lambda: True)
+    )
+
+    config = {"platform_toolsets": {"cli": ["terminal", "file"]}}
+    enabled = _get_platform_tools(config, "cli", include_default_mcp_servers=False)
+    assert {"terminal", "file"} <= enabled
+    assert "web" not in enabled
+
+
 class TestLightpandaPostSetup:
     """The Lightpanda picker row: no Chromium, just the binary check."""
 

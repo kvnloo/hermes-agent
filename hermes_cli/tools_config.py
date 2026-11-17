@@ -170,14 +170,18 @@ def _get_effective_configurable_toolsets():
 
 
 def _get_plugin_toolset_keys() -> set:
-    """Return the set of toolset keys provided by plugins."""
+    """Return toolset keys owned by plugins, excluding built-in toolsets."""
     try:
+        from toolsets import TOOLSETS
+
+        # A previous launch's cache (or an older gateway projection) may still include
+        # built-in keys registered by plugins before #156804. Never auto-enable them.
         if (projected := _projected_plugin_toolsets()) is not None:
-            return {key for key, _, _ in projected[0]}
+            return {key for key, _, _ in projected[0] if key not in TOOLSETS}
         # Non-blocking on CLI startup: while background discovery is still importing, serve last
         # launch's persisted key set instead of joining the discovery thread.
         from hermes_cli.plugins import get_plugin_toolset_keys_nowait
-        return get_plugin_toolset_keys_nowait()
+        return get_plugin_toolset_keys_nowait() - TOOLSETS.keys()
     except Exception:
         return set()
 
