@@ -89,6 +89,17 @@ async def test_inline_self_mention_label(label, text, expected):
     assert msg.reply_expected is True
 
 
+
+@pytest.mark.asyncio
+async def test_pipe_only_mention_gets_label_in_free_response_channel():
+    adapter = _adapter(inline_mention_label=True, free_response_channels=[CHANNEL])
+    await _run(adapter, f"can <@{BOT}|hermes> review PR 12?", ts="1700000000.000007")
+    adapter.handle_message.assert_awaited_once()
+    msg = adapter.handle_message.await_args.args[0]
+    assert msg.text == "can @hermes (you) review PR 12?"
+    assert msg.get_command() is None
+
+
 @pytest.mark.asyncio
 async def test_unauthorized_channel_mention_gets_one_ephemeral_notice():
     adapter = _adapter(unauthorized_mention_notice=True)

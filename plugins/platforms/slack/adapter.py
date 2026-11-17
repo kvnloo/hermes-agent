@@ -52,8 +52,8 @@ from gateway.platforms.base_log_safety import safe_url_for_log
 from gateway.platforms.helpers import MessageDeduplicator, clarify_text_with_choices, inline_document_text
 from plugins.platforms.slack.adapter_config_readers import (
     _extra_or_env_channel_set_getter, _extra_or_env_flag_getter)
-from plugins.platforms.slack.adapter_mention_label import self_mention_rewritten
-from plugins.platforms.slack.adapter_unauthorized_notice import notify_unauthorized_mention
+from plugins.platforms.slack.adapter_mention_label import inline_mention_label_enabled, self_mention_rewritten
+from plugins.platforms.slack.adapter_unauthorized_notice import _mentions_bot, notify_unauthorized_mention
 from gateway.platforms.base import (
     gateway_trust_env, BasePlatformAdapter, ExecApprovalPrompt,
     SendResult, SUPPORTED_DOCUMENT_TYPES, SUPPORTED_VIDEO_TYPES, _TEXT_INJECT_EXTENSIONS,
@@ -4757,6 +4757,10 @@ class SlackAdapter(SlackSocketLifecycleMixin, SlackVaultCodeMixin, BasePlatformA
             text, original_text, command_probe_text, is_command_text = self._apply_bot_mention(
                 text, original_text, command_probe_text, is_command_text, bot_uid, thread_ts,
                 team_id)
+        elif inline_mention_label_enabled(self.config.extra) and _mentions_bot(routing_text, bot_uid):
+            # Pipe-form mentions do not change routing, but admitted free-response
+            # messages still need their opt-in display label.
+            text = self_mention_rewritten(self, text, bot_uid, team_id)
         # Thread history stays out of ``text``: prepending would push a command off char zero.
         (
             channel_context, thread_root_media_urls, thread_root_media_types,
