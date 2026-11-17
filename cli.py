@@ -18639,6 +18639,7 @@ def _run_kanban_goal_loop_q(cli: "HermesCLI", first_response: str) -> None:
         result = cli.agent.run_conversation(
             user_message=prompt,
             conversation_history=cli.conversation_history,
+            persist_user_display_kind="kanban_goal_continuation",
         )
         # Keep session_id in sync if mid-run compression rotated it.
         if (
