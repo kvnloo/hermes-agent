@@ -1765,10 +1765,12 @@ class _AnthropicCompletionsAdapter:
         # The adapter builds the Messages body from a fixed allow-list of kwargs, so before this an
         # unrecognized top-level kwarg was dropped on the floor: the request succeeded but the schema
         # contract silently became prompt compliance (#85626 review, point 2).
-        top_level_response_format = kwargs.get("response_format")
-        if top_level_response_format is not None:
-            _translate_anthropic_response_format(anthropic_kwargs, top_level_response_format)
         caller_extra_body = kwargs.get("extra_body")
+        top_level_response_format = kwargs.get("response_format")
+        if top_level_response_format is not None and not (
+            isinstance(caller_extra_body, dict) and "response_format" in caller_extra_body
+        ):
+            _translate_anthropic_response_format(anthropic_kwargs, top_level_response_format)
         if caller_extra_body and isinstance(caller_extra_body, dict):
             _translate_anthropic_response_format(anthropic_kwargs, caller_extra_body.get("response_format"))
             passthrough = {
