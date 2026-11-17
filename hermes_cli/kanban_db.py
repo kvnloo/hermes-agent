@@ -2256,12 +2256,28 @@ def _latest_event_id(conn: sqlite3.Connection, task_id: str, kinds: tuple) -> Op
 
 
 def _card_is_in_review_lane(conn: sqlite3.Connection, task_id: str) -> bool:
-    """True when the card's newest lane decision is a ``review_requested``."""
+    """True when the last explicit lane handoff still points to review."""
     review = _latest_event_id(conn, task_id, _REVIEW_LANE_EVENTS)
     if review is None:
         return False
     implement = _latest_event_id(conn, task_id, _IMPLEMENT_LANE_EVENTS)
-    return implement is None or review > implement
+    if implement is not None and implement > review:
+        return False
+    # Dashboard done -> ready/todo/triage reopens implementation with a
+    # direct 'status' event, not 'review_reopened'. An ancestor invalidation
+    # also emits 'status', but has no requested_status: it preserves review.
+    row = conn.execute(
+        "SELECT payload FROM task_events WHERE task_id = ? "
+        "AND kind = 'status' AND id > ? ORDER BY id DESC LIMIT 1",
+        (task_id, review),
+    ).fetchone()
+    payload = _json_dict(_row_get(row, "payload"))
+    if (
+        payload.get("status") in {"ready", "todo", "triage"}
+        and payload.get("requested_status") == payload["status"]
+    ):
+        return False
+    return True
 
 
 def _retry_status_for_run(

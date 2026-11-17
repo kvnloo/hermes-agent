@@ -1259,3 +1259,41 @@ def test_ws_events_for_archived_board_does_not_recreate_it(tmp_path, monkeypatch
         "/api/plugins/kanban/events?token=secret-xyz&board=alive"
     ) as ws:
         assert ws is not None
+
+def test_dashboard_reopened_done_review_retries_implementation(client):
+    """A manual done -> ready handoff overrides a prior review decision."""
+    response = client.post(
+        "/api/plugins/kanban/tasks",
+        json={"title": "Rework approved change", "assignee": "builder"},
+    )
+    assert response.status_code == 200, response.text
+    task_id = response.json()["task"]["id"]
+
+    with kbc.connect() as conn:
+        implementation = kb.claim_task(conn, task_id, claimer="builder:first")
+        assert implementation is not None
+        assert kb.request_review(
+            conn, task_id, summary="ready for review", reviewer="reviewer",
+            expected_run_id=implementation.current_run_id,
+        )
+        # Missing claim provenance must still retry review (RED on the PR base).
+        assert kb._retry_status_for_run(conn, task_id) == "review"
+
+    approved = client.patch(
+        f"/api/plugins/kanban/tasks/{task_id}",
+        json={"status": "done", "summary": "approved"},
+    )
+    assert approved.status_code == 200, approved.text
+    reopened = client.patch(
+        f"/api/plugins/kanban/tasks/{task_id}",
+        json={"status": "ready"},
+    )
+    assert reopened.status_code == 200, reopened.text
+    assert reopened.json()["task"]["status"] == "ready"
+
+    with kbc.connect() as conn:
+        rework = kb.claim_task(conn, task_id, claimer="builder:rework")
+        assert rework is not None
+        # Direct dashboard status events are an explicit implementation handoff.
+        assert kb._retry_status_for_run(conn, task_id, rework.current_run_id) == "ready"
+
