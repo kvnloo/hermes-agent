@@ -6,6 +6,7 @@ from dataclasses import dataclass, fields, replace
 from datetime import datetime, timezone, UTC
 from decimal import Decimal
 from typing import Any, Dict, Literal, Optional
+from urllib.parse import urlsplit
 
 from agent.model_metadata import fetch_endpoint_model_metadata, fetch_model_metadata, strip_codex_context_variant_suffix
 from utils import base_url_host_matches, base_url_hostname, base_url_origin
@@ -620,7 +621,19 @@ def _registered_api_key(provider: str, base_url: str) -> str:
         key = str(creds.get("api_key") or "").strip()
         if key == LMSTUDIO_NOAUTH_PLACEHOLDER:
             return ""
-        same_endpoint = base_url.strip().rstrip("/").lower() == str(creds.get("base_url") or "").rstrip("/").lower()
+        # Scheme/hostname are case-insensitive; URL paths and userinfo are not.
+        actual = urlsplit(base_url.strip().rstrip("/"))
+        configured = urlsplit(str(creds.get("base_url") or "").strip().rstrip("/"))
+        same_endpoint = (
+            actual.scheme == configured.scheme
+            and actual.hostname == configured.hostname
+            and actual.port == configured.port
+            and actual.username == configured.username
+            and actual.password == configured.password
+            and actual.path == configured.path
+            and actual.query == configured.query
+            and actual.fragment == configured.fragment
+        )
         return key if same_endpoint else ""
     except Exception:
         logger.debug("Registered API key lookup failed for %s", provider, exc_info=True)

@@ -214,6 +214,12 @@ class TestEndpointMetadataApiKey:
         get_pricing_entry("qwen/qwen3.6", provider="lmstudio", base_url="http://192.0.2.99:1234/v1")
         assert fetched == [("http://192.0.2.99:1234/v1", "")]
 
+    def test_env_key_is_not_sent_to_case_distinct_path(self, fetched):
+        # A same-host reverse proxy may route /v1 and /V1 to different services.
+        alternate_path = self.BASE_URL.replace("/v1", "/V1")
+        get_pricing_entry("qwen/qwen3.6", provider="lmstudio", base_url=alternate_path)
+        assert fetched == [(alternate_path, "")]
+
     def test_noauth_placeholder_is_not_sent(self, fetched, monkeypatch):
         monkeypatch.delenv("LM_API_KEY")
         get_pricing_entry("qwen/qwen3.6", provider="lmstudio", base_url=self.BASE_URL)
