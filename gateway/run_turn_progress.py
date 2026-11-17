@@ -489,6 +489,10 @@ class GatewayTurnProgressMixin:
 
         if st.publication_suppressed:
             return
+        fold = self._history_fold()
+        if st.fallback_msg_id and fold is not None and fold.is_folded(st.fallback_msg_id):
+            # The old card bubble now holds the fold summary; send the next update separately.
+            st.fallback_msg_id = None
         if st.fallback_msg_id:
             result = await st.adapter.edit_message(
                 chat_id=ctx.source.chat_id, message_id=st.fallback_msg_id, content=text, metadata=ctx._progress_metadata,

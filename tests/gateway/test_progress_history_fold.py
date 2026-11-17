@@ -29,7 +29,7 @@ class _Chat:
         self.shown[str(self._next)] = content
         return SendResult(success=True, message_id=str(self._next))
 
-    async def edit_message(self, chat_id, message_id, content, *, finalize=False):
+    async def edit_message(self, chat_id, message_id, content, *, finalize=False, metadata=None):
         self.shown[str(message_id)] = content
         return SendResult(success=True, message_id=message_id)
 
@@ -126,3 +126,29 @@ async def test_slack_renders_the_history_as_a_grey_context_block():
     blocks = client.chat_update.call_args.kwargs["blocks"]
     assert blocks == [{"type": "context", "elements": [
         {"type": "mrkdwn", "text": "Reading the logs · 3 steps\na &lt;b&gt;"}]}]
+
+
+@pytest.mark.asyncio
+async def test_slack_task_card_fallback_update_does_not_replace_fold_history():
+    """A native-card fallback can still update after its first bubble becomes the history."""
+    chat = _Chat()
+    loop = _loop(chat, {"progress_fold_after": 3})
+    state = loop._TaskCardState(chat)
+    state.apply_event({"type": "tool.started", "tool_call_id": "call-1", "tool_name": "terminal"})
+    await loop._task_card_send_or_edit_fallback(state)
+    history_id = state.fallback_msg_id
+    original_card = chat.shown[history_id]
+
+    for index in range(3):
+        sent = await chat.send("C1", f"Checking part {index}")
+        loop._history_fold_note_narration(sent.message_id, f"Checking part {index}")
+    for _ in range(20):
+        await asyncio.sleep(0)
+    assert loop._history_fold().is_folded(history_id)
+    assert chat.shown[history_id] != original_card
+
+    state.apply_event({"type": "tool.completed", "tool_call_id": "call-1", "tool_name": "terminal"})
+    await loop._task_card_send_or_edit_fallback(state)
+    assert state.fallback_msg_id != history_id
+    assert chat.shown[history_id] != state.fallback_text()
+    assert chat.shown[state.fallback_msg_id] == state.fallback_text()
