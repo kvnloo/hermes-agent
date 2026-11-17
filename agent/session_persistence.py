@@ -20,6 +20,7 @@ from agent.context_compressor import (
 )
 from agent.lazy_forward import forward as _forward, forward_static as _forward_static
 from agent.memory_manager import sanitize_context
+from agent.prompt_builder import STEER_DISPLAY_KIND
 
 from agent.tool_dispatch_helpers import _is_multimodal_tool_result, _multimodal_text_summary
 from agent.trajectory import save_trajectory as _save_trajectory_to_file
@@ -205,6 +206,12 @@ def _db_flush_scan_start(agent, messages: List[Dict]) -> int:
     return scan_start
 
 
+def _is_turn_prompt_row(msg: Dict) -> bool:
+    """A user row that can carry the turn prompt. A mid-turn /steer row is user-role but is not the prompt, and
+    compaction can re-anchor ``_persist_user_message_idx`` onto it, so it must never take the turn's metadata."""
+    return msg.get("role") == "user" and msg.get("display_kind") != STEER_DISPLAY_KIND
+
+
 def _db_flush_row(agent, msg: Dict, is_current_turn_user: bool) -> Dict[str, Any]:
     """Build the session-db row for ``msg``, applying the persist override to THIS row only."""
     role = msg.get("role", "unknown")
@@ -212,7 +219,7 @@ def _db_flush_row(agent, msg: Dict, is_current_turn_user: bool) -> Dict[str, Any
     # api_content sidecar: exact bytes sent to the API when they differ from clean content (replay parity).
     api_content = msg.get("api_content") if isinstance(msg.get("api_content"), str) else None
     timestamp = msg.get("timestamp")
-    if is_current_turn_user and role == "user":
+    if is_current_turn_user and _is_turn_prompt_row(msg):
         content, api_content = durable_user_row_content(agent, msg, content, api_content)
         ov_timestamp = getattr(agent, "_persist_user_message_timestamp", None)
         timestamp = timestamp if ov_timestamp is None else ov_timestamp
@@ -427,7 +434,7 @@ class SessionPersistenceMixin:
         if idx is None or (override is None and timestamp is None and platform_id is None):
             return
         msg = messages[idx] if 0 <= idx < len(messages) else None
-        if not (isinstance(msg, dict) and msg.get("role") == "user"):
+        if not (isinstance(msg, dict) and _is_turn_prompt_row(msg)):
             return
         if _override_replaces_content(msg, msg.get("content"), override):
             msg["content"] = _content_with_turn_override(msg, msg.get("content"), override)
