@@ -74,9 +74,9 @@ def _agent_source(
     """The ``sessions.source`` this agent's conversation is recorded under.
 
     ``row_source``: the row's value if already read (``""`` = read, none; ``None`` = look it
-    up). Before the row lands, use the SAME resolver persistence uses, not ``agent.platform``:
-    they diverge under ``HERMES_SESSION_SOURCE`` and the declared scope is memoized at once,
-    so both sides of a ``/new`` would otherwise hash the same scope.
+    up). For a local gateway route, persistence records the transport ``local``, even
+    when ``HERMES_SESSION_SOURCE`` describes the desktop UI as ``gui``. Other agent
+    surfaces keep their session-source resolver when the row is unavailable.
     """
     if row_source is None and session_id and session_db is not None:
         try:
@@ -88,6 +88,10 @@ def _agent_source(
     if row_source:
         return row_source
     platform = getattr(agent, "platform", None)
+    # Match SessionAuthority._reserve_route: the local transport is persisted as "local",
+    # regardless of the GUI surface label in HERMES_SESSION_SOURCE.
+    if platform == "local":
+        return "local"
     from agent.session_source import session_source_for
     return str(session_source_for(platform)).strip()
 

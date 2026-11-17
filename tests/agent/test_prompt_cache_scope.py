@@ -46,6 +46,24 @@ class TestResolvePromptCacheScope:
     def test_no_db_falls_back_to_physical_id(self):
         assert resolve_prompt_cache_scope(_agent("root-sess")) == "root-sess"
 
+    def test_local_declared_scope_matches_persisted_transport(self, db, monkeypatch):
+        """A desktop gui surface cannot re-key one local gateway conversation.
+
+        Outside the turn the agent has no DB, but its persisted row later
+        carries the transport's "local" source, not HERMES_SESSION_SOURCE.
+        """
+        monkeypatch.setenv("HERMES_SESSION_SOURCE", "gui")
+        agent = _agent("desktop-local-conversation")
+        agent.platform = "local"
+        agent._gateway_session_key = "agent:main:local:dm:desktop-local-conversation"
+
+        before = resolve_prompt_cache_scope(agent)
+        assert before.startswith("gwk_")
+
+        db.create_session(agent.session_id, source="local")
+        agent._session_db = db
+        assert resolve_prompt_cache_scope(agent) == before
+
 
     def test_rotation_child_inherits_root_scope(self, db):
         """THE fix: scope survives a compression rotation boundary."""
