@@ -39,6 +39,7 @@ MAX_HISTORY_ROWS = 10_000
 _PRUNE_INTERVAL_SECONDS = 600.0
 
 ACCEPTED, DUPLICATE, IGNORED, FAILED = "accepted", "duplicate", "ignored", "failed"
+BODY_CONFLICT_REASON = "same delivery id, different body"
 # ``ref`` of a terminal answer to an exhausted delivery: not an attempt, so it never counts as one.
 GAVE_UP_REF = "gave_up"
 
@@ -262,7 +263,8 @@ class WebhookReceipts:
                 "INSERT INTO receipts (profile, route, delivery_id, event_type, outcome, reason, ref, received_at)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (identity.profile, identity.route, identity.delivery_id, event_type, outcome, reason, ref, now))
-            if outcome == FAILED and ref != GAVE_UP_REF:  # the terminal answer itself is not an attempt
+            if outcome == FAILED and ref != GAVE_UP_REF and reason != BODY_CONFLICT_REASON:
+                # A rejected, conflicting body never attempted delivery; do not spend the retry budget.
                 self._count_failure(conn, identity.profile, identity.route, identity.delivery_id, now)
 
     def _prune(self, conn: sqlite3.Connection, now: float) -> None:
@@ -327,7 +329,7 @@ def outcome_for_response(status: int, body_text: str) -> tuple[str, str]:
         body = {}
     state = body.get("status")
     if status == 409:
-        return FAILED, "same delivery id, different body"
+        return FAILED, BODY_CONFLICT_REASON
     if state == FAILED and body.get("terminal"):
         return FAILED, f"gave up after {body.get('attempts')} failed attempts"
     if state == DUPLICATE:

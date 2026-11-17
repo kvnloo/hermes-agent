@@ -18,8 +18,9 @@ def _route(identity):
             "deliver_extra": {"chat_id": "fake-chat"}, "prompt": "alert {data.n}"}
 
 
-def _gateway(sent: list, routes: dict) -> WebhookAdapter:
-    adapter = WebhookAdapter(PlatformConfig(enabled=True, extra={"host": "127.0.0.1", "port": 0, "routes": routes}))
+def _gateway(sent: list, routes: dict, **options) -> WebhookAdapter:
+    adapter = WebhookAdapter(PlatformConfig(enabled=True, extra={"host": "127.0.0.1", "port": 0, "routes": routes,
+                                                                 **options}))
     target = AsyncMock()
 
     async def send(chat_id, content, **_kw):
@@ -81,6 +82,22 @@ async def test_agent_route_retry_with_reordered_json_is_a_duplicate_not_a_confli
     assert await _post(adapter, "agent", {"b": 2, "a": 1, "id": "e-1"}) == (200, "duplicate")
     assert admitted == ["e-1"]
 
+
+
+@pytest.mark.asyncio
+async def test_header_conflicts_do_not_consume_delivery_failure_budget():
+    """A 409 rejects the sender's new body; it is not a failed delivery attempt."""
+    sent = []
+    adapter = _gateway(sent, {"acme": _route("header:Acme-Event-Id")}, max_delivery_attempts=2)
+    headers = {"Acme-Event-Id": "same-key"}
+    original = {"data": {"n": 1}}
+
+    assert await _post(adapter, "acme", original, **headers) == (200, "delivered")
+    assert await _post(adapter, "acme", {"data": {"n": 2}}, **headers) == (409, None)
+    assert await _post(adapter, "acme", {"data": {"n": 3}}, **headers) == (409, None)
+    # Replaying the already-delivered original remains a duplicate, not a terminal failure.
+    assert await _post(adapter, "acme", original, **headers) == (200, "duplicate")
+    assert sent == ["alert 1"]
 
 def test_an_identity_that_cannot_dedupe_is_refused_at_startup():
     for bad in ("header:X-Webhook-Timestamp", "body:data/id", "cookie:x", "body:/data/~2"):
