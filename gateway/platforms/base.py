@@ -1690,11 +1690,8 @@ class EphemeralReply(str):
 
 
 class TextOnlyReply(str):
-    """Handler reply that is delivered as text only: bare local paths in it are never promoted to
-    file attachments. For gateway-rendered catalogs (``/help``, ``/commands``) whose text embeds
-    third-party strings such as skill/plugin descriptions — a description that happens to name an
-    existing file (``~/notes/README.md``) must not make the gateway upload that file to whoever
-    typed ``/help``. Explicit ``MEDIA:`` tags are unaffected."""
+    """Gateway-rendered catalog text. No attachment syntax in embedded skill or plugin
+    descriptions may be interpreted as a file, media directive, or image attachment."""
 
 
 def merge_pending_message_event(pending_messages: dict[str, MessageEvent], session_key: str,
@@ -4287,8 +4284,14 @@ class BasePlatformAdapter(_SessionModelSettingsMixin, ABC):
                                         *, is_ephemeral_response: bool, text_only: bool = False) -> _ExtractedResponse:
         """Split a handler response into deliverable text + attachments. Order matters: MEDIA tags →
         image URLs → residual directives → bare local paths (skipped for ephemeral notices so config
-        paths stay text, and for :class:`TextOnlyReply` catalogs that embed third-party text; unknown-extension MEDIA tags survive for the bare-path detector). History
+        paths stay text). :class:`TextOnlyReply` bypasses all attachment parsing; unknown-extension
+        MEDIA tags in ordinary replies survive for the bare-path detector. History
         dedup is bare-path only, off-loop, fail-open. An emptied non-empty response is recovered."""
+        # Catalogs contain third-party prose, not trusted media directives.
+        if text_only:
+            return _ExtractedResponse(
+                text_content=str(response), images=[], media_files=[], local_files=[],
+                force_document_attachments=False, pre_extract=str(response))
         # Captured before extract_media strips it: images then go via send_document (no recompression).
         force_document = "[[as_document]]" in response
         pre_extract = response

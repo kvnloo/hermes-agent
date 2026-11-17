@@ -81,3 +81,19 @@ async def test_catalog_commands_return_text_only(monkeypatch, private_doc, comma
         result, _event(command), "s", is_ephemeral_response=False,
         text_only=isinstance(result, TextOnlyReply))
     assert extracted.local_files == []
+
+@pytest.mark.asyncio
+async def test_text_only_catalog_does_not_extract_directives_or_images(private_doc):
+    """A skill description is literal text even if it resembles an attachment instruction."""
+    adapter = _Adapter()
+    reply = TextOnlyReply(
+        f"/ops - Example path: MEDIA:{private_doc}\n"
+        "![sample](https://example.org/sample.png) [[as_document]]"
+    )
+    extracted = await adapter._extract_response_content(
+        reply, _event(), "s", is_ephemeral_response=False, text_only=True)
+    assert extracted.text_content == reply
+    assert extracted.media_files == []
+    assert extracted.images == []
+    assert extracted.local_files == []
+    assert extracted.force_document_attachments is False
