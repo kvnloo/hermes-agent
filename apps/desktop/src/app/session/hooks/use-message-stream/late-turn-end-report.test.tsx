@@ -14,6 +14,7 @@ import { finalizeStoppedMessages } from '@/app/session/hooks/use-prompt-actions/
 import type { ClientSessionState } from '@/app/types'
 import { finalizeInterruptedMessages } from '@/lib/chat-messages'
 import { createClientSessionState } from '@/lib/chat-runtime'
+import { $compactingSessions, setSessionCompacting } from '@/store/compaction'
 
 import { type MessageStreamHarness, renderMessageStream } from './test-harness'
 import { STREAM_DELTA_FLUSH_MS } from './utils'
@@ -112,8 +113,27 @@ function expectSettled() {
 
 describe("a turn that starts before the previous turn's end-of-turn report arrives", () => {
   afterEach(() => {
+    setSessionCompacting(RUNTIME, false)
     cleanup()
     vi.useRealTimers()
+  })
+
+  it("does not clear the new turn's compaction on the previous turn's late report", async () => {
+    mount()
+    await completedTurn('first')
+
+    submit('second')
+    emit({ payload: {}, type: 'message.start' })
+    emit({ payload: { kind: 'compacting' }, type: 'status.update' })
+    expect($compactingSessions.get()[RUNTIME]).toBe(true)
+
+    // The previous turn's running=false report lands after this turn began compacting.
+    turnEndReport()
+    expectRunning()
+    expect($compactingSessions.get()[RUNTIME]).toBe(true)
+
+    emit({ payload: { kind: 'compacted' }, type: 'status.update' })
+    expect($compactingSessions.get()[RUNTIME]).toBeUndefined()
   })
 
   it('keeps a message drained right after a reply running until its own end', async () => {

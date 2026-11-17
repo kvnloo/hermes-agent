@@ -188,13 +188,6 @@ export function handleSessionInfoEvent(ctx: GatewayEventContext): boolean {
     const providerChanged = typeof payload?.provider === 'string'
     const runningChanged = typeof payload?.running === 'boolean'
 
-    // Reconnect can miss the structured `compacted` edge. A gateway-authored
-    // running=false is a terminal fact; a running heartbeat is intentionally
-    // not used as a timeout-like guess, so genuine compaction stays visible.
-    if (sessionId && payload?.running === false) {
-      reconcileSessionCompacting(sessionId, 'terminal')
-    }
-
     // The backend stamps model/provider (as strings) on EVERY session.info,
     // so the presence flags above are true on every heartbeat/turn edge —
     // fine for the cheap atom writes below (nanostores skips identical
@@ -334,7 +327,16 @@ export function handleSessionInfoEvent(ctx: GatewayEventContext): boolean {
     // A completed turn's end-of-turn report, delivered after the next turn's
     // message.start (ClientSessionState.turnEndReportOwed): it says nothing about
     // the turn now live, so it neither clears that turn's prompts nor settles it.
-    if (runningEdge(ctx, knownState, runningChanged) && sessionId) {
+    const currentTurnRunningEdge = runningEdge(ctx, knownState, runningChanged)
+
+    if (currentTurnRunningEdge && sessionId) {
+      // Reconnect can miss the compacted status edge: a genuine end report
+      // clears compaction, but a previous turn's report cannot end the live
+      // turn's compaction phase.
+      if (payload?.running === false) {
+        reconcileSessionCompacting(sessionId, 'terminal')
+      }
+
       // The agent loop's finally block emits running=false even when a
       // reconnect gap or provider crash swallowed message.complete — and
       // message.complete is where the turn-end prompt clear lives. An
