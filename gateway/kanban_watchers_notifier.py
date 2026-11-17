@@ -576,19 +576,21 @@ class _KanbanNotification:
         return formatter(ev, self)[0] if formatter is not None else None
 
     def _current_wake_event(self) -> Optional[Any]:
-        """The batch's newest wake event: the card's CURRENT state.
+        """Return the newest batch event only when it still needs a wake.
 
-        A batch is a delivery artefact, not a history. With the desktop client or
-        gateway down the events queue, so one delivery can carry several
-        superseded states (``review_requested`` → ``changes_requested`` →
-        ``completed``). Only the newest wake event by ``created_at`` — tie-break
-        on the event row id, since a burst shares one epoch second — is current;
-        older ones must never be rendered as if they were concurrent with it.
+        A queued block can be followed by a silent unblock or status change.
+        Choose across ALL claimed events before checking wake eligibility;
+        otherwise the superseded block is falsely reported as current.
+        Created-at ties resolve by event row id.
         """
-        events = [ev for ev in self.d["events"] if ev.kind in _WAKE_KINDS]
+        events = self.d["events"]
         if not events:
             return None
-        return max(events, key=lambda ev: (int(ev.created_at or 0), int(ev.id or 0)))
+        # Silent terminal events (unblocked, archived, status) can supersede an
+        # actionable one. Never resurrect an older wake just because the newer
+        # event is deliberately silent.
+        current = max(events, key=lambda ev: (int(ev.created_at or 0), int(ev.id or 0)))
+        return current if current.kind in _WAKE_KINDS else None
 
     def build_wake_text(self) -> None:
         """Set ``wake_kinds`` / ``session_key`` / ``synth`` for the wake paths.
@@ -816,23 +818,14 @@ class _KanbanNotification:
         async with self._owner_scope():
             if not await self._send_pings():
                 return
-            # All text pings delivered (or skipped for non-push / wake-only).
-            original_events = self.d["events"]
-            from gateway.warning_notifications import warning_notifications_enabled
-            split = not warning_notifications_enabled(self.platform_str)
-            wake_groups = ([original_events] if not split else [
-                [ev for ev in original_events if diagnostic_event(ev)],
-                [ev for ev in original_events if not diagnostic_event(ev)],
-            ])
-            wake_payloads = []
-            for events in wake_groups:
-                if not events:
-                    continue
-                self.d = {**self.d, "events": events}
-                self.build_wake_text()
-                if self.wake_kinds:
-                    wake_payloads.append((self.synth, self.wake_diagnostic, self.wake_kinds))
-            self.d = {**self.d, "events": original_events}
+            # Select the one current event BEFORE classifying it as diagnostic
+            # or result. Splitting first can wake an older block/timeout even
+            # when a later unblocked/completed event already superseded it.
+            self.build_wake_text()
+            wake_payloads = (
+                [(self.synth, self.wake_diagnostic, self.wake_kinds)]
+                if self.wake_kinds else []
+            )
         is_push = self.is_push_adapter
         from gateway.wake import WakeNotAccepted
 

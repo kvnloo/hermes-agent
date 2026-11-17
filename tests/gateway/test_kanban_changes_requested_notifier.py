@@ -307,3 +307,25 @@ def test_closed_card_never_wakes_with_a_superseded_block(tmp_path, monkeypatch):
     assert "review requested changes" not in late
     assert "implementation is not approved" not in late
     assert "round 1: needs work" not in late
+
+
+def test_unblocked_batch_does_not_wake_with_superseded_block(tmp_path, monkeypatch):
+    """A silent unblock supersedes a queued block, even across wake categories."""
+    monkeypatch.setenv("HERMES_KANBAN_DB", str(tmp_path / "unblocked-batch.db"))
+    kb.init_db()
+    task_id = _create_batched_card("notify+wake")
+    conn = kbc.connect()
+    try:
+        assert kb.block_task(conn, task_id, reason="Temporary operator block") is True
+        assert kb.unblock_task(conn, task_id) is True
+        assert kb.get_task(conn, task_id).status == "ready"
+    finally:
+        conn.close()
+
+    adapter = RecordingAdapter()
+    asyncio.run(_run_one_tick(monkeypatch, _runner(adapter)))
+
+    # Passive event pings are separate; the creator must not get an actionable
+    # wake for a block that has already been released.
+    assert adapter.handled == []
+
