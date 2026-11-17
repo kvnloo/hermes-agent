@@ -528,7 +528,11 @@ def _transcript_echoes_prompt(transcript: str, prompt: str) -> bool:
     from difflib import SequenceMatcher
 
     heard, hint = _normalize_for_echo(transcript), _normalize_for_echo(prompt)
-    return bool(heard and hint) and SequenceMatcher(None, heard, hint).ratio() >= 0.9
+    if not heard or not hint:
+        return False
+    matcher = SequenceMatcher(None, heard, hint, autojunk=False)
+    matched = sum(block.size for block in matcher.get_matching_blocks())
+    return matched >= 0.9 * len(heard) and matched >= 0.9 * len(hint)
 
 
 def _route_stt_provider(

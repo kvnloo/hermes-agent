@@ -57,3 +57,10 @@ def test_a_failed_decode_is_not_retried(tmp_path):
     result, calls = _transcribe(tmp_path, [failure])
     assert calls == [PROMPT]
     assert result is failure
+
+def test_spoken_connective_between_hint_terms_does_not_trigger_a_retry(tmp_path):
+    hint = "PostgreSQL, OpenTelemetry"
+    spoken = "PostgreSQL and OpenTelemetry"
+    result, calls = _transcribe(tmp_path, [_ok(spoken), _ok("unnecessary retry")], prompt=hint)
+    assert calls == [hint]
+    assert result["transcript"] == spoken
