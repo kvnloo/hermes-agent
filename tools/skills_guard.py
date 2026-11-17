@@ -23,7 +23,7 @@ from tools.skills_guard_credentials import SKILL_ONLY_PATTERNS, code_views, rais
 from tools.threat_patterns import FORGET_RULES_RAW_RE, mask_negated_forget
 
 
-SCANNER_VERSION = "skills-guard-v16"
+SCANNER_VERSION = "skills-guard-v17"
 
 # NVIDIA-verified skills each ship a signed `skill.oms.sig` + governance `skill-card.md`.
 TRUSTED_REPOS = {
@@ -611,6 +611,26 @@ def _demote_inert_path_reference(pid: str, severity: str, description: str, line
     return severity, description
 
 
+# A quoted attack phrase in a same-line prohibition is still visible, but needs review
+# rather than an unoverrideable community-install block. Unquoted or separately
+# commanded attacks keep the original critical severity.
+_NEGATED_QUOTED_INJECTION_PREFIX = re.compile(
+    r"\b(?:never|do\s+not|don't)\s+(?:follow|obey)\s+(?:directives|instructions)\b"
+    r"[^()\n]{0,80}\(\s*['\"]$",
+    re.IGNORECASE,
+)
+
+
+def _negated_quoted_injection_example(line: str, match: re.Match[str]) -> bool:
+    if not _NEGATED_QUOTED_INJECTION_PREFIX.search(line[:match.start()]):
+        return False
+    tail = line[match.end():]
+    closing = re.match(r'[,.;:!?]*["\x27][^()\n]{0,160}\)', tail)
+    return bool(closing and not re.search(
+        r"\b(?:ignore|disregard|obey|follow|execute|run|do|send|reveal)\b",
+        tail[closing.end():], re.IGNORECASE))
+
+
 # Structural limits: file count; total KB (5MB, informational only — large skills don't block); single-file KB.
 MAX_FILE_COUNT, MAX_TOTAL_SIZE_KB, MAX_SINGLE_FILE_KB = 50, 5120, 256
 
@@ -812,6 +832,11 @@ def _scan_text(text: str, rel_path: str, suffix: str, skill: bool) -> list[Findi
                 text = line.strip()
                 line_severity, line_description = _demote_inert_path_reference(
                     pid, severity, description, line, lines[owners[i - 1]], suffix)
+                if (pid == "prompt_injection_ignore" and suffix == ".md"
+                        and all(_negated_quoted_injection_example(line, match)
+                                for match in pattern.finditer(scan_line))):
+                    line_severity = "high"
+                    line_description += " (quoted example in an explicit prohibition; review before install)"
                 findings.append(Finding(pid, line_severity, category, rel_path, i,
                                         text if len(text) <= 120 else text[:117] + "...", line_description))
     if skill:
