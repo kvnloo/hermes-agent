@@ -384,6 +384,11 @@ def _cmd_create(args: argparse.Namespace) -> int:
             initial_status=getattr(args, "initial_status", "running"),
             creator_task_id=(os.environ.get("HERMES_KANBAN_TASK")
                              if is_dispatcher_owned_worker_context() else None),
+            # The terminal tool exports the chat's HERMES_SESSION_ID; without it a card made from a
+            # chat cannot be traced to the message that asked for it. A worker's card keeps its
+            # creator's session (creator_task_id) instead of the worker's own.
+            session_id=(None if os.environ.get("HERMES_KANBAN_TASK")
+                        else os.environ.get("HERMES_SESSION_ID") or None),
         )
         task = kb.get_task(conn, task_id)
     if getattr(args, "json", False):
