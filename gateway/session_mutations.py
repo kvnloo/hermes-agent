@@ -33,15 +33,13 @@ def branch_surface(actor, transport=None):
     * ``transport.desktop_local`` — set by ``client.capabilities`` from the Desktop's declaration AND
       a native ticket this machine's private control socket minted (``local_desktop_client``), so it
       is the Desktop app on this host;
-    * otherwise the caller's own capability set: a native connection holds ``session:operator``
-      (``run_api`` grants it to ticket-redeeming local sockets) while a remote/Webapp one does not.
+    * otherwise ``cli``. The ``session:operator`` permission is shared by native CLI/TUI and
+      authenticated dashboard/Webapp callers, so it cannot prove a local Desktop surface.
 
     A client cannot pass a surface in the request: nothing here reads request parameters.
     """
-    capabilities = getattr(actor, 'capabilities', frozenset())
-    if getattr(transport, 'desktop_local', False):
-        return 'gui'
-    return 'gui' if 'session:operator' in capabilities else 'cli'
+    # Operator is an authorization scope, not proof of a local Desktop client.
+    return 'gui' if getattr(transport, 'desktop_local', False) else 'cli'
 
 
 def _authorize_import(authority, actor, ref, params):

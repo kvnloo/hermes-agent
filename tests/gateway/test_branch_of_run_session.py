@@ -172,3 +172,25 @@ def test_branch_of_an_interactive_chat_keeps_its_policy(db):
     assert receipt['policy']['request_json'] == _chat_policy_payload()['request_json']
     assert receipt['principal_id'] == 'owner-a'
     assert db.get_session(result['branched_session_id'])['source'] == 'gui'
+
+def test_run_branch_from_operator_without_desktop_proof_is_cli(db):
+    """A dashboard or TUI operator is not the verified local Desktop application."""
+    from types import SimpleNamespace
+
+    from gateway.session_mutations import branch_surface
+    from hermes_state_local import local_receipt
+
+    actor = SimpleNamespace(capabilities=frozenset({'session:operator'}))
+    non_desktop = SimpleNamespace(desktop_local=False)
+
+    # Native terminal and authenticated dashboard clients both have operator scope.
+    assert branch_surface(actor, non_desktop) == 'cli'
+    assert branch_surface(actor, SimpleNamespace(desktop_local=True)) == 'gui'
+
+    parent = _seed(db, _run_policy_payload())
+    caller = 'sid:S-1-5-21-1-2-3-1001'
+    child = _branch(db, parent, principal=caller,
+                    source=branch_surface(actor, non_desktop))['branched_session_id']
+
+    assert local_receipt(db, child)['policy']['source'] == 'cli'
+    assert db.get_session(child)['created_source'] == 'cli'
