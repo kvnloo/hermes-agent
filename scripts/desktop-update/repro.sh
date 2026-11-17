@@ -131,6 +131,22 @@ case "$MODE" in
     rm -rf "$G"
     [ "$fails" -eq 0 ] && say "gate matrix: all pass" || { say "gate matrix: $fails FAILED"; exit 1; }
     ;;
+  permissions)
+    P="/tmp/hermes-permissions-test.$$"; trap 'rm -rf "$P"' EXIT
+    mkdir -p "$P/hermes-agent/apps/desktop/dist" "$P/hermes-agent/apps/desktop/release/linux-unpacked"
+    printf 'ui\n' > "$P/hermes-agent/apps/desktop/dist/index.js"
+    printf '#!/bin/sh\nexit 0\n' > "$P/hermes-agent/apps/desktop/release/linux-unpacked/hermes"
+    chmod 666 "$P/hermes-agent/apps/desktop/dist/index.js"
+    chmod 777 "$P/hermes-agent/apps/desktop/release/linux-unpacked/hermes"
+    bash "$SCRIPT_DIR/posix.sh" --no-ui --install-root "$P/hermes-agent" --self-test-promote
+    uid="$(id -u)"; gid="$(id -g)"
+    bad="$(find "$P/hermes-agent/apps/desktop/dist" "$P/hermes-agent/apps/desktop/release" \
+      \( ! -user "$uid" -o ! -group "$gid" -o -perm /022 \) -print -quit)"
+    [ -z "$bad" ] || { echo "FAIL unsafe artifact: $bad"; exit 1; }
+    [ -x "$P/hermes-agent/apps/desktop/release/linux-unpacked/hermes" ]
+    "$P/hermes-agent/apps/desktop/release/linux-unpacked/hermes"
+    say "permission promotion: all pass"
+    ;;
   launch)
     # Terminal-lifecycle matrix (gille round 2): launch acceptance is part
     # of the outcome. Each case runs the REAL orchestrator (--no-ui) against

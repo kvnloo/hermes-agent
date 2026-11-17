@@ -223,6 +223,17 @@ function writeEmptyConfig(hermesHome: string): void {
 export function buildAppEnv(sandbox: Sandbox, extra: Record<string, string> = {}): Record<string, string> {
   const clean = stripCredentials(process.env)
 
+  if (
+    process.platform === 'linux' &&
+    (process.env.WAYLAND_DISPLAY || process.env.HYPRLAND_INSTANCE_SIGNATURE) &&
+    process.env.HERMES_GUI_TEST_ISOLATED !== '1'
+  ) {
+    throw new Error(
+      'Refusing to launch Hermes E2E on the live Wayland desktop. ' +
+        'Use npm run test:e2e (the nested headless-compositor harness).',
+    )
+  }
+
   // XDG_RUNTIME_DIR is needed for Electron on Linux when running in a
   // headless/CI context — without it the zygote may fail to initialize.
   if (!clean.XDG_RUNTIME_DIR && process.env.XDG_RUNTIME_DIR) {
@@ -329,6 +340,7 @@ export async function launchDesktop(
       DESKTOP_ROOT, // `electron .` — the `.` is the desktop package dir
       '--disable-gpu',
       '--no-sandbox',
+      ...(env.HERMES_GUI_TEST_ISOLATED === '1' ? ['--ozone-platform=wayland'] : []),
     ],
     env,
     cwd: DESKTOP_ROOT,
