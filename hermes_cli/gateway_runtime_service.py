@@ -220,8 +220,8 @@ def _launchd(home: Path, deadline: float) -> ExistingService | None:
             found.append(ExistingService("launchd", ("launchctl", "kickstart", f"{domain}/{label}"),
                                          "state = running" in result.stdout))
             continue
-        # launchctl's native absent-service code; other errors retain uncertainty.
-        if result.returncode != 113:
+        # 125 means no job can be hosted in this domain (e.g. headless gui/<uid>).
+        if result.returncode not in (113, 125):
             raise RuntimeStartError("service_manager_unavailable")
     if len(found) > 1:
         raise RuntimeStartError("service_scope_conflict", "conflict")

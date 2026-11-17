@@ -398,6 +398,27 @@ def test_native_launchd_ambiguous_domains_cannot_start(tmp_path, monkeypatch):
         discover_existing_gateway_service(tmp_path.resolve(), deadline=time.monotonic()+5)
     assert len(calls) == 2 and all(argv[1] == "print" for argv in calls)
 
+def test_launchd_absent_gui_domain_allows_unmanaged_gateway(tmp_path, monkeypatch):
+    """An unhostable gui/<uid> domain must not block startup when no plist is installed."""
+    from hermes_cli import gateway_runtime_service as service
+
+    probes = []
+    uid = os.getuid()
+
+    def launchctl(argv, **_kwargs):
+        assert argv[:2] == ["launchctl", "print"]
+        probes.append(argv[2])
+        return subprocess.CompletedProcess(
+            argv, 125 if argv[2].startswith(f"gui/{uid}/") else 113,
+            stdout="", stderr="",
+        )
+
+    monkeypatch.setattr(service, "_exists", lambda _path: False)
+    monkeypatch.setattr(service.subprocess, "run", launchctl)
+    assert service._launchd(tmp_path.resolve(), deadline=time.monotonic() + 5) is None
+    assert [p.split("/", 1)[0] for p in probes] == ["gui", "user"]
+
+
 
 @pytest.mark.platforms("linux")
 @pytest.mark.spawns_gateway_lookalike  # stub interpreter records the resolved home then exits; reaped below
