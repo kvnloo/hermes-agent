@@ -1945,6 +1945,10 @@ def _is_real_user_message(message: Any) -> bool:
     """
     if not isinstance(message, dict) or message.get("role") != "user":
         return False
+    # Origin tag: a ``display_kind`` marks a runtime/timeline row (kanban goal
+    # continuation, auto-continue, model switch, …), never an owner turn.
+    if message.get("display_kind"):
+        return False
     if any(message.get(flag) for flag in _SYNTHETIC_USER_FLAGS):
         return False
     text = _message_text(message).strip()

@@ -4299,7 +4299,9 @@ This compaction should PRIORITISE preserving all information related to the focu
             # Deterministic post-build check: every owner ask in the compacted
             # span must appear verbatim. On shortfall, trigger fallback (which
             # carries all asks) rather than silently dropping them.
-            checked = self._verify_owner_ask_coverage(summary, turns_to_summarize)
+            checked = self._verify_owner_ask_coverage(
+                summary, turns_to_summarize, self._previous_summary
+            )
             if checked is None:
                 return None
             summary = checked
@@ -4676,11 +4678,14 @@ This compaction should PRIORITISE preserving all information related to the focu
 
     @classmethod
     def _verify_owner_ask_coverage(
-        cls, summary: str, turns_to_summarize: List[Dict[str, Any]]
+        cls,
+        summary: str,
+        turns_to_summarize: List[Dict[str, Any]],
+        previous_summary: Optional[str] = None,
     ) -> Optional[str]:
         """Post-build check: every user/owner ask in the compacted span must
-        appear in the summary verbatim (as Historical Task Snapshot or in
-        Historical Pending User Asks) or the capsule is not emitted.
+        appear in the summary (or the previous summary, in iterative-update
+        mode) or the capsule is not emitted.
 
         Returns the summary unchanged if coverage is sufficient, or None if
         some asks are missing — triggering the deterministic fallback which
@@ -4690,12 +4695,22 @@ This compaction should PRIORITISE preserving all information related to the focu
         if not user_asks:
             return summary
 
-        missing = []
-        for ask in user_asks:
-            if ask not in summary:
-                missing.append(ask)
+        # In iterative-update mode the previous summary already carries older
+        # asks, so coverage is checked against both texts.  An ask present in
+        # either does not need repeating in the new summary.
+        covered_by = summary
+        if previous_summary is not None and previous_summary.strip():
+            covered_by = f"{summary}\n{previous_summary}"
 
+        missing = [ask for ask in user_asks if ask not in covered_by]
         if missing:
+            logger.debug(
+                "Owner-ask coverage shortfall (%d/%d asks missing) — "
+                "refusing LLM summary so the deterministic fallback carries "
+                "every ask verbatim",
+                len(missing),
+                len(user_asks),
+            )
             return None
         return summary
 
