@@ -280,10 +280,10 @@ def _truncate_wal(db_path) -> bool:
     try:
         conn = sqlite3.connect(str(db_path))
         try:
-            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            busy, _, _ = conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
         finally:
             conn.close()
-        return True
+        return busy == 0
     except Exception:
         return False
 

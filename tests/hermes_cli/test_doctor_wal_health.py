@@ -179,3 +179,28 @@ def test_wal_fix_counts_toward_doctor_fix_summary(monkeypatch, tmp_path):
         assert wal_path.stat().st_size < 50 * 1024 * 1024
     finally:
         keeper.close()
+
+
+
+def test_busy_wal_truncation_is_not_a_fix(tmp_path):
+    """A pinned WAL reader makes TRUNCATE return busy=1, not a successful repair.
+
+    The default SQLite busy timeout is intentional: the user-visible --fix
+    result must follow the returned checkpoint status, not merely no exception.
+    """
+    keeper, db_path, wal_path, _ = _build_db(tmp_path)
+    reader = sqlite3.connect(str(db_path))
+    try:
+        reader.execute("BEGIN")
+        reader.execute("SELECT COUNT(*) FROM t").fetchone()
+        keeper.execute("INSERT INTO t (blob) VALUES (?)", (b"newer-than-reader",))
+        keeper.commit()
+        assert wal_path.stat().st_size > 0
+
+        # A competing reader prevents the WAL reset; it cannot be counted as fixed.
+        assert doctor_mod._truncate_wal(db_path) is False
+        assert wal_path.stat().st_size > 0
+    finally:
+        reader.rollback()
+        reader.close()
+        keeper.close()
