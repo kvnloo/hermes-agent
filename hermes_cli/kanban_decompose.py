@@ -352,17 +352,18 @@ def list_triage_ids(
     counter (``specify_triage_task``) and re-arms with a fresh loop budget.
     """
     with kbc.connect_closing() as conn:
-        rows = kb.list_tasks(conn, status="triage", tenant=tenant, limit=1000)
-    if exclude_loop_limited:
-        kept = [
-            row for row in rows
-            if (getattr(row, "block_recurrences", 0) or 0) < kb.BLOCK_RECURRENCE_LIMIT
-        ]
-        if len(kept) < len(rows):
-            parked = sorted({row.id for row in rows} - {row.id for row in kept})
-            logger.debug(
-                "kanban auto-decompose: skipping %d loop-limited triage card(s) "
-                "parked for a human: %s", len(parked), ", ".join(parked),
+        if exclude_loop_limited:
+            # Filter before LIMIT: a full page of parked escalations must not
+            # hide eligible new ideas from the automatic triage sweep.
+            query = (
+                "SELECT id FROM tasks WHERE status = 'triage' "
+                "AND COALESCE(block_recurrences, 0) < ?"
             )
-        rows = kept
+            params: list[object] = [kb.BLOCK_RECURRENCE_LIMIT]
+            if tenant is not None:
+                query += " AND tenant = ?"
+                params.append(tenant)
+            query += " ORDER BY priority DESC, created_at ASC LIMIT 1000"
+            return [row["id"] for row in conn.execute(query, params)]
+        rows = kb.list_tasks(conn, status="triage", tenant=tenant, limit=1000)
     return [row.id for row in rows]

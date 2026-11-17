@@ -84,6 +84,32 @@ def test_list_triage_ids_excludes_loop_limited(kanban_home: Path) -> None:
         assert decomp.list_triage_ids(exclude_loop_limited=True) == [fresh]
 
 
+def test_eligible_triage_not_starved_by_parked_page(kanban_home: Path) -> None:
+    """A full sweep page of genuine escalations must not hide fresh triage."""
+    from hermes_cli import kanban_decompose as decomp
+
+    with kbc.connect_closing() as conn:
+        parked = _running_task(conn, title="parked by real loop breaker")
+        _escalate_to_triage(conn, parked)
+        assert kb.get_task(conn, parked).block_recurrences == kb.BLOCK_RECURRENCE_LIMIT
+
+        with kb.write_txn(conn):
+            conn.execute("UPDATE tasks SET priority=10 WHERE id=?", (parked,))
+            # Model the same persisted escalation state across the real 1,000
+            # row sweep cap, without changing BLOCK_RECURRENCE_LIMIT.
+            conn.executemany(
+                "INSERT INTO tasks (id, title, assignee, status, priority, created_at, "
+                "block_kind, block_recurrences) "
+                "SELECT ?, title, assignee, status, priority, created_at, "
+                "block_kind, block_recurrences FROM tasks WHERE id = ?",
+                [(f"t_parked_{i:04d}", parked) for i in range(999)],
+            )
+        fresh = kb.create_task(conn, title="eligible new idea", triage=True)
+
+    assert fresh not in decomp.list_triage_ids(), "unfiltered feed retains its 1,000-row cap"
+    assert decomp.list_triage_ids(exclude_loop_limited=True) == [fresh]
+
+
 def test_below_limit_card_still_decomposable(kanban_home: Path) -> None:
     """A triage card that has NOT hit the breaker (recurrences < limit) keeps
     the normal auto-decompose flow — no regression for ordinary triage."""
