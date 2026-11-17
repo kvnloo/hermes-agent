@@ -175,7 +175,8 @@ def _track_completion(runner, card: _Card, settled: ApprovalSettlement) -> bool:
     inner = agent.tool_complete_callback
     if not getattr(inner, "watches_approval_cards", False):
         agent.tool_complete_callback = _completion_observer(runner, inner)
-    ctx.open_approval_cards[settled.tool_call_id] = card
+    # One patch can trigger protected-instruction and shell/SSH approvals under the same call id.
+    ctx.open_approval_cards.setdefault(settled.tool_call_id, []).append(card)
     return True
 
 
@@ -184,13 +185,14 @@ def _completion_observer(runner, inner: Optional[Callable[..., Any]]) -> Callabl
     def observe(call_id, tool_name, args, result):
         if inner is not None:
             inner(call_id, tool_name, args, result)
-        card = runner._ctx.open_approval_cards.pop(call_id, None)
-        if card is None:
+        cards = runner._ctx.open_approval_cards.pop(call_id, [])
+        if not cards:
             return
         failed, detail = _detect_tool_failure(tool_name, result)
         outcome = (ApprovalCardOutcome(ApprovalCardState.FAILED, reason=detail.strip().strip("[]").strip())
                    if failed else ApprovalCardOutcome(ApprovalCardState.APPROVED))
-        runner._schedule(_edit_decided_card(runner._ctx, card, outcome), "Approval card edit scheduling error")
+        for card in cards:
+            runner._schedule(_edit_decided_card(runner._ctx, card, outcome), "Approval card edit scheduling error")
 
     observe.watches_approval_cards = True
     return observe
@@ -200,9 +202,10 @@ def settle_unreported_cards(runner) -> None:
     """At turn end: an approved command whose tool call never reported back may or may not have run."""
     cards = getattr(runner._ctx, "open_approval_cards", None) or {}
     while cards:
-        _call_id, card = cards.popitem()
-        runner._schedule(_edit_decided_card(runner._ctx, card, ApprovalCardOutcome(ApprovalCardState.UNKNOWN)),
-                         "Approval card edit scheduling error")
+        _call_id, pending_cards = cards.popitem()
+        for card in pending_cards:
+            runner._schedule(_edit_decided_card(runner._ctx, card, ApprovalCardOutcome(ApprovalCardState.UNKNOWN)),
+                             "Approval card edit scheduling error")
 
 
 async def _edit_decided_card(ctx, card: _Card, outcome: ApprovalCardOutcome) -> None:

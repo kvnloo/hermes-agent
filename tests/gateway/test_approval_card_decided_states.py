@@ -69,14 +69,14 @@ def gate(monkeypatch):
         approval._gateway_queues.pop(SESSION, None)
 
 
-def _ask(runner, *, tool_call_id: str, session_id: str):
-    """Raise one approval on an agent thread (inside tool call ``tool_call_id``); its button card is
-    delivered as message ``card-1``. Returns (thread, request id)."""
+def _ask(runner, *, tool_call_id: str, session_id: str, card_message_id: str = "card-1"):
+    """Raise one approval on an agent thread (inside tool call ``tool_call_id``); its button card
+    is delivered as ``card_message_id``. Returns (thread, request id)."""
     published, out = threading.Event(), {}
 
     def notify(data):
         out["rid"] = data["request_id"]
-        settle_mod.register_timeout_notice(runner, data, command="rm -rf build", card_message_id="card-1")
+        settle_mod.register_timeout_notice(runner, data, command="rm -rf build", card_message_id=card_message_id)
         published.set()
 
     def wait():
@@ -131,4 +131,31 @@ def test_approved_card_follows_the_command_to_its_real_outcome(gate, result, exp
     applying, final = runner.drain()
     assert applying.startswith(approval_card_notice(ApprovalCardOutcome(ApprovalCardState.APPLYING)))
     assert final.startswith(approval_card_notice(expected))
+    assert runner._ctx.open_approval_cards == {}
+
+
+def test_multiple_approvals_in_one_patch_call_all_show_the_final_failure(gate, monkeypatch):
+    """A multi-file patch can require protected-instruction and shell/SSH approvals in one call.
+    Both cards share the tool-call ID; neither may stay "running" after the patch fails."""
+    monkeypatch.setattr(wait_mod._ctx, "_get_approval_timeout", lambda: 300)
+    agent = SimpleNamespace(session_id="s1", tool_complete_callback=None)
+    runner = _Runner(agent)
+
+    for message_id in ("card-1", "card-2"):
+        thread, out = _ask(runner, tool_call_id="call-patch", session_id="s1",
+                           card_message_id=message_id)
+        assert approval.resolve_gateway_approval(SESSION, "once", request_id=out["rid"]) == 1
+        thread.join(5)
+        assert not thread.is_alive()
+        assert out["decision"]["choice"] == "once"
+
+    agent.tool_complete_callback("call-patch", "patch", {"path": "AGENTS.md"},
+                                 '{"error": "patch failed after approval"}')
+    runner.drain()
+
+    failed = approval_card_notice(ApprovalCardOutcome(
+        ApprovalCardState.FAILED, reason="patch failed after approval"))
+    decided = {message_id for message_id, text in runner._ctx._status_adapter.edits
+               if text.startswith(failed)}
+    assert decided == {"card-1", "card-2"}
     assert runner._ctx.open_approval_cards == {}
