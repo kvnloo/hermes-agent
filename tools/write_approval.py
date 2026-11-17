@@ -116,7 +116,7 @@ def _find_duplicate_pending(subsystem: str, payload: Dict[str, Any]) -> Optional
     return None
 
 
-def stage_write(subsystem: str, payload: Dict[str, Any], *, summary: str, origin: str) -> Dict[str, Any]:
+def _stage_write_unlocked(subsystem: str, payload: Dict[str, Any], *, summary: str, origin: str) -> Dict[str, Any]:
     """Persist a pending write and return its record (``id`` + metadata). ``payload`` is the exact
     kwargs to replay the write on approval; ``origin`` is ``foreground`` or ``background_review``.
     Best-effort: on disk failure it logs and still returns a record — the write is lost, which is
@@ -144,6 +144,20 @@ def stage_write(subsystem: str, payload: Dict[str, Any], *, summary: str, origin
     except Exception as e:  # pragma: no cover - disk failure path
         logger.error("Failed to stage pending %s write: %s", subsystem, e, exc_info=True)
     return record
+
+
+def stage_write(subsystem: str, payload: Dict[str, Any], *, summary: str, origin: str) -> Dict[str, Any]:
+    """Serialize the pending lookup and record creation across review workers."""
+    from hermes_cli.active_sessions import _FileLock
+
+    lock_path = _pending_path(subsystem, "").parent / ".stage.lock"
+    try:
+        with _FileLock(lock_path):
+            return _stage_write_unlocked(subsystem, payload, summary=summary, origin=origin)
+    except (OSError, RuntimeError):
+        # Keep the approval gate's best-effort behavior if the lock is unavailable.
+        logger.warning("Pending %s staging lock unavailable", subsystem, exc_info=True)
+        return _stage_write_unlocked(subsystem, payload, summary=summary, origin=origin)
 
 
 def list_pending(subsystem: str) -> List[Dict[str, Any]]:
