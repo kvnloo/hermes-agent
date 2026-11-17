@@ -128,3 +128,24 @@ def test_an_empty_pick_wins_over_the_coding_posture(store, monkeypatch):
     host, _printed = _launch(monkeypatch, db, toolsets="", coding=["terminal"])
     assert host.enabled_toolsets == []
     assert _created(client)["toolsets"] == []
+
+
+def test_empty_pick_blocks_dispatcher_kanban_tools(store, monkeypatch):
+    """A typed no-tools guard must stay empty in a dispatcher-owned worker, too."""
+    from gateway.session_policy import build_policy
+    from model_tools import get_tool_definitions
+
+    db, client = store
+    monkeypatch.setenv("HERMES_KANBAN_TASK", "t_worker")
+    _launch(monkeypatch, db, toolsets="")
+    params = _created(client)
+    assert params["toolsets"] == []
+
+    policy = build_policy(params, CONFIG)
+    assert policy.current_toolsets(CONFIG) == ()
+    # The real model-tool selector used to append kanban handoff tools to [].
+    assert get_tool_definitions(
+        enabled_toolsets=list(policy.current_toolsets(CONFIG)),
+        quiet_mode=True,
+        skip_tool_search_assembly=True,
+    ) == []
