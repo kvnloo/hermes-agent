@@ -1,6 +1,6 @@
 """Global TUI selections persist only after the canonical receipt commits."""
 import pytest
-import yaml
+import hermes_yaml as yaml
 
 from tests.gateway.test_session_mutation_model_route import (
     _bind_resolver, _configure, _pick,
@@ -110,6 +110,46 @@ async def test_stale_global_pick_does_not_write_profile(home, endpoints):
             'expected_generation': row['runtime_generation']}})
         assert 'error' in response, response
         assert (home / 'config.yaml').read_bytes() == before
+    finally:
+        await owner.close()
+        store.close_all_db_handles()
+
+@pytest.mark.asyncio
+async def test_retry_repairs_global_write_after_newer_session_pick(home, endpoints, monkeypatch):
+    """A local pick cannot prevent repair of the latest committed global default."""
+    from hermes_cli import model_switch
+    (_, url), _ = endpoints
+    _configure(home, 'original', url, 'key-a')
+    store, runner, authority, owner = _owner(home)
+    _bind_resolver(runner)
+    try:
+        live = await _create(owner, authority, home, 'follow')
+        sid = next(sid for sid, value in authority.sessions.items() if value is live)
+        row = authority.db.get_session(sid)
+        params = dict(session_id=sid, request_id='global-write-failed', operation='model',
+                      expected_revision=row['runtime_revision'], expected_generation=row['runtime_generation'],
+                      payload={'model': 'picked', 'scope': 'global'})
+        persist = model_switch.persist_model_selection
+
+        def fail(*args, **kwargs):
+            raise OSError('config write failed')
+
+        monkeypatch.setattr(model_switch, 'persist_model_selection', fail)
+        with pytest.raises(OSError, match='config write failed'):
+            await owner.dispatch({'id': 'first', 'method': 'session.mutate', 'params': params})
+        monkeypatch.setattr(model_switch, 'persist_model_selection', persist)
+
+        local = await _pick(owner, authority, sid, {'model': 'current'}, request_id='local-after-failure')
+        assert 'result' in local, local
+        later_generation = authority.db.get_session(sid)['runtime_generation']
+        assert later_generation == row['runtime_generation'] + 2
+        assert yaml.safe_load((home / 'config.yaml').read_text())['model']['default'] == 'original'
+
+        replay = await owner.dispatch({'id': 'retry', 'method': 'session.mutate', 'params': params})
+        assert 'result' in replay, replay
+        assert replay['result']['execution_generation'] == row['runtime_generation'] + 1
+        assert authority.db.get_session(sid)['runtime_generation'] == later_generation
+        assert yaml.safe_load((home / 'config.yaml').read_text())['model']['default'] == 'picked'
     finally:
         await owner.close()
         store.close_all_db_handles()
