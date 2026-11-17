@@ -550,6 +550,10 @@ $workspaceOwnerLabels.listen(syncWorkspaceTitle)
 $workspaceIsPage.listen(syncWorkspaceTitle)
 $diskPluginsScanPending.listen(syncWorkspaceTitle)
 registry.subscribeArea(WORKSPACE_PAGE_HEADER_AREA, syncWorkspaceTitle)
+// Bundled discovery already started the first disk scan above. Nanostores
+// listen() does not call back immediately, so initialize the workspace header
+// before first paint: a plugin deep link must not show a "New session" tab.
+syncWorkspaceTitle()
 
 // Layout reset collapses every session tile into main as a tab (after the
 // workspace) instead of re-scattering them — pre-placed before adoption.
