@@ -14,7 +14,7 @@ import hermes_state_local
 from gateway.session_local_recovery import release_handed_off_receipts
 from hermes_state import SessionDB
 from hermes_state_local import POLICY_PREFIX
-from hermes_state_runtime import begin_runtime_epoch
+from hermes_state_runtime import RuntimeStoreError, begin_runtime_epoch
 
 
 def _local_chat(db, sid, *, moved_to=None):
@@ -112,3 +112,15 @@ def test_a_point_probe_and_the_whole_scan_agree(db):
         assert set(whole) == {"a", "b"}
         assert hermes_state_local.moved_receipts(conn, owners=["a", "c", "missing"]) == {"a": whole["a"]}
         assert hermes_state_local.moved_receipts(conn, owners=[]) == {}
+
+
+def test_a_clean_stale_boot_still_checks_epoch_without_a_write(db, monkeypatch):
+    """The no-match fast path must keep the epoch fence without acquiring a write lock."""
+    _local_chat(db, "untouched")
+    stale = begin_runtime_epoch(db, instance_id="previous-owner")
+    begin_runtime_epoch(db, instance_id="current-owner")
+    writes, _inside = _track_writes(db, monkeypatch)
+
+    with pytest.raises(RuntimeStoreError, match="stale_epoch"):
+        release_handed_off_receipts(db, epoch=stale)
+    assert writes == [], "checking a clean boot's epoch must not acquire the write lock"

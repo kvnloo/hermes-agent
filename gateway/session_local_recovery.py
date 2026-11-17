@@ -463,6 +463,8 @@ def release_handed_off_receipts(db, *, epoch):
     # the lock. Nearly every boot finds nothing and opens no write; when it finds receipts, the write
     # re-checks just those with a point probe each.
     with db._read_ctx() as conn:
+        # Even a clean scan must refuse a stale boot owner; the former write path did.
+        _epoch(conn, epoch)
         found = on_a_lane(moved_receipts(conn))
     if not found:
         return
