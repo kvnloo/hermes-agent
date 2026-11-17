@@ -200,3 +200,120 @@ def test_wait_for_process_kills_subprocess_on_keyboardinterrupt():
             env.cleanup()
         except Exception:
             pass
+
+
+def _wait_for_pid_exit(pid: int, timeout: float = 10.0) -> bool:
+    """Wait for a specific PID to disappear."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return True
+        time.sleep(0.05)
+    try:
+        os.kill(pid, 0)
+        return False
+    except ProcessLookupError:
+        return True
+
+
+def test_pdeathsig_kills_child_when_parent_dies():
+    """When parent process dies, child with PR_SET_PDEATHSIG=SIGKILL must die too.
+
+    This tests the fix for the orphaned-rg bug: when a Hermes worker is killed
+    by an external timeout (e.g. `timeout 58 python ...`), the subprocess tree
+    (bash → rg) must not survive as orphans reparented to init (PPID=1).
+
+    The test spawns a long-running child via LocalEnvironment, then simulates
+    the parent dying by killing the test process's direct child (the bash
+    wrapper), and verifies the entire process group is gone.
+    """
+    env = LocalEnvironment(cwd="/tmp")
+    try:
+        # Spawn a command that runs long enough to observe the effect
+        # Use a shell builtin that won't exec a separate binary
+        result_holder = {}
+        proc_holder = {}
+        started = threading.Event()
+
+        def worker():
+            try:
+                result_holder["result"] = env.execute("sleep 300", timeout=600)
+            except BaseException as e:  # noqa: BLE001
+                result_holder["exception"] = type(e).__name__
+
+        t = threading.Thread(target=worker, daemon=True)
+        t.start()
+
+        # Wait for the sleep 300 subprocess to appear
+        deadline = time.monotonic() + 20.0
+        target_pid = None
+        while time.monotonic() < deadline:
+            try:
+                import psutil
+                for p in psutil.Process(os.getpid()).children(recursive=True):
+                    try:
+                        if "sleep 300" in " ".join(p.cmdline()):
+                            target_pid = p.pid
+                            break
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        continue
+            except ImportError:
+                ps = subprocess.run(
+                    ["ps", "-eo", "pid,ppid,pgid,cmd"], capture_output=True, text=True,
+                )
+                for line in ps.stdout.splitlines():
+                    if "sleep 300" in line and "grep" not in line:
+                        parts = line.split()
+                        if parts and parts[0].isdigit():
+                            target_pid = int(parts[0])
+                            break
+            if target_pid:
+                break
+            time.sleep(0.1)
+
+        assert target_pid is not None, "test setup: couldn't find 'sleep 300' subprocess"
+        child_pgid = os.getpgid(target_pid)
+        assert _pgid_still_alive(child_pgid), "sanity: subprocess group should be alive"
+
+        # Simulate parent death: kill the bash wrapper (our direct child)
+        # The bash wrapper's PID is the process group leader
+        wrapper_pid = None
+        try:
+            import psutil
+            for p in psutil.Process(os.getpid()).children(recursive=False):
+                try:
+                    if p.pid == target_pid or any(c.pid == target_pid for c in p.children(recursive=True)):
+                        wrapper_pid = p.pid
+                        break
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+        except ImportError:
+            ps = subprocess.run(
+                ["ps", "-eo", "pid,ppid,pgid,cmd"], capture_output=True, text=True,
+            )
+            for line in ps.stdout.splitlines():
+                parts = line.split()
+                if len(parts) >= 3 and parts[0].isdigit():
+                    pid, ppid, pgid = int(parts[0]), int(parts[1]), int(parts[2])
+                    if pgid == child_pgid and ppid == os.getpid():
+                        wrapper_pid = pid
+                        break
+
+        assert wrapper_pid is not None, "could not find bash wrapper PID"
+
+        # Kill the wrapper (simulating the parent Python process dying)
+        # With PR_SET_PDEATHSIG, the entire process group should die
+        os.kill(wrapper_pid, signal.SIGKILL)
+
+        # Wait for the process group to die
+        assert _wait_for_pgid_exit(child_pgid), (
+            f"subprocess group {child_pgid} STILL ALIVE after wrapper killed — "
+            f"PR_SET_PDEATHSIG not working. Snapshot:\\n{_process_group_snapshot(child_pgid)}"
+        )
+    finally:
+        try:
+            env.cleanup()
+        except Exception:
+            pass
