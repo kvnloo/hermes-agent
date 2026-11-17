@@ -251,22 +251,26 @@ export function useSubmission(opts: UseSubmissionOptions) {
         return send(text, true, item.display, value => value, { destination, queueItem: item, skipDetectDrop: true })
       }
 
-      if (text.startsWith('!')) {
+      const display = item?.display ?? text
+      // Old journals have expanded bytes but no token snapshot. Do not infer shell authority.
+      const canInterpolate = !item || item.tokens !== undefined || display === text
+
+      if (display.startsWith('!')) {
         return shellExec(text.slice(1).trim(), destination, item)
       }
 
-      if (hasInterpolation(text)) {
+      if (canInterpolate && hasInterpolation(display)) {
         patchUiState({ busy: true })
 
         return interpolate(
-          text,
-          result => send(result, true, undefined, value => value, { destination, queueItem: item }),
+          display,
+          result => send(expandTokens(item?.tokens ?? [])(result), true, result, value => value, { destination, queueItem: item }),
           destination,
           item
         )
       }
 
-      send(text, true, undefined, value => value, { destination, queueItem: item })
+      send(text, true, display, value => value, { destination, queueItem: item })
     },
     [interpolate, send, shellExec]
   )
@@ -290,12 +294,12 @@ export function useSubmission(opts: UseSubmissionOptions) {
         if (opts.fallbackToFront) {
           composerActions.prependQueue(item, destination)
         } else {
-          composerActions.enqueue(item.text, item.display, destination)
+          composerActions.enqueue(item.text, item.display, destination, item.attachments, item.tokens)
         }
       }
 
       if (gw.isCanonical && mode !== 'queue') {
-        const staged = item.settle ? item : composerActions.stage?.(item.text, item.display, destination)
+        const staged = item.settle ? item : composerActions.stage?.(item.text, item.display, destination, item.attachments, item.tokens)
 
         if (!staged) { return }
         staged.controlMethod ??= mode === 'steer' ? 'session.steer' : 'session.redirect'
@@ -402,7 +406,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
             const preview = plan.display.slice(0, 50)
 
             const saved = journaled(() =>
-              composerActions.enqueue(plan.text, plan.display, destination, submission.attachments)
+              composerActions.enqueue(plan.text, plan.display, destination, submission.attachments, submissionTokens)
             )
 
             if (saved) {
@@ -449,7 +453,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
 
       if (unbound) {
         composerActions.pushHistory(toHistory)
-        journaled(() => composerActions.enqueue(submission.text, submission.display, destination, submission.attachments))
+        journaled(() => composerActions.enqueue(submission.text, submission.display, destination, submission.attachments, submissionTokens))
 
         return
       }
@@ -494,11 +498,11 @@ export function useSubmission(opts: UseSubmissionOptions) {
 
       if (getUiState().busy) {
         return void journaled(() =>
-          handleBusyInput({ ...queueItem(submission.text, submission.display), attachments: submission.attachments }))
+          handleBusyInput({ ...queueItem(submission.text, submission.display, submissionTokens), attachments: submission.attachments }))
       }
 
       if (shouldInterpolateSubmission(full)) {
-        const staged = journaled(() => composerActions.stage?.(submission.text, submission.display, destination, submission.attachments))
+        const staged = journaled(() => composerActions.stage?.(submission.text, submission.display, destination, submission.attachments, submissionTokens))
 
         if (!staged) { return }
         patchUiState({ busy: true })

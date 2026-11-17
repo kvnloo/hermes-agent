@@ -20,6 +20,22 @@ import { t } from '../i18n/runtime.js'
 const directory = (home?: string) =>
   join(home ?? process.env.HERMES_HOME ?? join(homedir(), '.hermes'), 'tui-pending-inputs')
 
+function validTokens(value: unknown): boolean {
+  return Array.isArray(value) && value.every((token: unknown) => {
+    if (!token || typeof token !== 'object' || !('label' in token) || typeof token.label !== 'string' || !('kind' in token)) {
+      return false
+    }
+
+    if (token.kind === 'paste') {
+      return 'text' in token && typeof token.text === 'string'
+    }
+
+    return token.kind === 'image' && 'index' in token && typeof token.index === 'number' &&
+      'path' in token && typeof token.path === 'string' &&
+      (!('mime' in token) || typeof token.mime === 'string')
+  })
+}
+
 const recordName = /^[0-9a-f-]{36}\.json$/
 const successors = new Map<string, SubmissionDestination>()
 export let pendingInputRevision = 0
@@ -95,7 +111,7 @@ export function savePendingInput(item: QueueItem): void {
   const path = join(dir, `${item.submissionId}.json`)
   const temporary = `${path}.${process.pid}.tmp`
   const ownerDestination = pendingInputOwner(item.ownerDestination ?? item.destination)
-  const { submissionId, display, text, preparedText, attachments, controlMethod, executionGeneration, inFlight, failed, createdAt, queued, legacyAttempted } = item
+  const { submissionId, display, text, tokens, preparedText, attachments, controlMethod, executionGeneration, inFlight, failed, createdAt, queued, legacyAttempted } = item
   const destination = inFlight || failed ? item.destination : ownerDestination
   writeFileSync(
     temporary,
@@ -105,6 +121,7 @@ export function savePendingInput(item: QueueItem): void {
       ownerDestination,
       display,
       text,
+      tokens,
       preparedText,
       attachments,
       controlMethod,
@@ -163,7 +180,8 @@ export function loadPendingInputs(destination: SubmissionDestination, durableRes
       if (
         record.submissionId + '.json' !== name ||
         typeof record.text !== 'string' ||
-        typeof record.display !== 'string'
+        typeof record.display !== 'string' ||
+        (record.tokens !== undefined && !validTokens(record.tokens))
       ) {
         throw new Error(t('canonical.queue.invalidRecord', name))
       }

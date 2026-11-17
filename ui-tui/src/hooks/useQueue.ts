@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { useStore } from '@nanostores/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import type { ComposerToken } from '../app/interfaces.js'
 import { isServerQueued } from '../app/pendingBubbles.js'
 import { captureDestination, type SubmissionDestination } from '../app/submissionDestination.js'
 import { $uiState, getUiState, patchUiState } from '../app/uiStore.js'
@@ -19,6 +20,7 @@ import {
 export interface QueueItem {
   display: string
   text: string
+  tokens?: ComposerToken[]
   queued?: boolean
   createdAt?: number
   submissionId?: string
@@ -34,7 +36,9 @@ export interface QueueItem {
   settle?: (accepted: boolean) => void
 }
 
-export const queueItem = (text: string, display = text): QueueItem => ({ display, text })
+export const queueItem = (text: string, display = text, tokens?: ComposerToken[]): QueueItem => ({
+  display, text, ...(tokens?.length ? { tokens: tokens.map(token => ({ ...token })) } : {})
+})
 
 export function prependQueueItem(queue: QueueItem[], item: QueueItem): void {
   queue.unshift(item)
@@ -272,12 +276,12 @@ export function useQueue(gw?: { request: (method: string, params: Record<string,
   )
 
   const draft = useCallback(
-    (text: string, display: string, destination?: SubmissionDestination, attachments?: QueueItem['attachments']) => {
+    (text: string, display: string, destination?: SubmissionDestination, attachments?: QueueItem['attachments'], tokens?: ComposerToken[]) => {
       const owner = pendingInputOwner(destination ?? captureDestination())
       const queue = getQueue(owner)
 
       const item: QueueItem = {
-        ...queueItem(text, display),
+        ...queueItem(text, display, tokens),
         ...(attachments?.length ? { attachments } : {}),
         submissionId: randomUUID(),
         destination: owner,
@@ -290,8 +294,8 @@ export function useQueue(gw?: { request: (method: string, params: Record<string,
   )
 
   const enqueue = useCallback(
-    (text: string, display = text, destination?: SubmissionDestination, attachments?: QueueItem['attachments']) => {
-      const { queue, item } = draft(text, display, destination, attachments)
+    (text: string, display = text, destination?: SubmissionDestination, attachments?: QueueItem['attachments'], tokens?: ComposerToken[]) => {
+      const { queue, item } = draft(text, display, destination, attachments, tokens)
       savePendingInput(item)
       queue.items.push(item)
       syncQueue()
@@ -393,8 +397,8 @@ export function useQueue(gw?: { request: (method: string, params: Record<string,
   // One durable write: the row joins the queue only once its attempt is journaled,
   // so a failed write leaves the composer as the draft's only copy.
   const stage = useCallback(
-    (text: string, display = text, destination = captureDestination(), attachments?: QueueItem['attachments']) => {
-      const { queue, item } = draft(text, display, destination, attachments)
+    (text: string, display = text, destination = captureDestination(), attachments?: QueueItem['attachments'], tokens?: ComposerToken[]) => {
+      const { queue, item } = draft(text, display, destination, attachments, tokens)
       item.queued = false
       claim(queue, item)
       queue.items.push(item)
