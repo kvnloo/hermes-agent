@@ -400,6 +400,11 @@ def _elsewhere(text: str, start: int, end: int, root: str) -> bool:
     while tail < len(text) and text[tail] not in _PATH_DELIMITERS:
         tail += 1
     token = text[start:tail]
+    # Only an unchanged literal can be known to be elsewhere. A method or operator
+    # may redirect it into the locked root (e.g. '/else/skills/x'.replace('/else', home)).
+    if (tail < len(text) and text[tail] in "'\"" and
+            text[tail + 1:].lstrip().startswith((".", "[", "+", "%"))):
+        return False
     if not os.path.isabs(token) or _UNRESOLVED_PATH_CHARS & set(os.path.splitdrive(token)[1]):
         return False
     if _inside(os.path.realpath(token), root):

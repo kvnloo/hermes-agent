@@ -94,6 +94,21 @@ def test_terminal_refuses_writes_into_a_locked_skill_but_not_reads(locked_home, 
     assert (reason is not None) is blocked, reason
 
 
+def test_external_skill_path_rewrite_does_not_escape_lock(locked_home):
+    """Direct writes to another checkout are allowed; rewriting that path into the lock is not."""
+    from tools.skill_lock import command_refusal
+
+    outside = locked_home.parent / "independent-checkout"
+    external = outside / "skills/ops/locked-skill/SKILL.md"
+    direct = f"python3 -c \"from pathlib import Path; Path('{external}').write_text('x')\""
+    rewritten = (
+        f"python3 -c \"from pathlib import Path; "
+        f"Path('{external}'.replace('{outside}', '{locked_home}')).write_text('x')\""
+    )
+    assert command_refusal(direct, str(locked_home)) is None
+    assert command_refusal(rewritten, str(locked_home)) is not None
+
+
 def test_lock_resolves_by_display_name_as_well_as_directory(locked_home):
     """Locks are keyed by directory; the curator's rows carry the frontmatter name."""
     from tools import skill_usage
