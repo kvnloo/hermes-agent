@@ -92,6 +92,19 @@ export const normalizeAgentPluginRow = (row: AgentPluginRow): AgentPluginRow => 
   servers: row.servers ?? []
 })
 
+/** The package folder an agent row lives in: the join key Electron stamps as
+ *  `packageName` (it names the desktop half after the top-level
+ *  `plugins/<folder>/`, and a hand-copied folder need not match its manifest
+ *  name). Nested rows (`image_gen/foo`) keep their unique canonical key; the
+ *  manifest name is the fallback for backends that report no `install_dir`. */
+export function agentPackageName(row: AgentPluginRow): string {
+  if (row.key?.includes('/')) {
+    return row.key
+  }
+
+  return row.install_dir?.split(/[\\/]/).filter(Boolean).pop() ?? row.name
+}
+
 /** A `--ref` pin is a full 40-hex commit SHA; branches and tags are refused server-side. */
 export const COMMIT_SHA_RE = /^[0-9a-f]{40}$/i
 
@@ -179,7 +192,7 @@ export function loadAgentPlugins(request: GatewayRequest, profile?: string | nul
       $agentPluginsProfile.set(scope)
       $agentPluginsStatus.set('ready')
       $agentPluginsError.set(null)
-      noteEnabledAgentPackages(rows.filter(row => row.status === 'enabled').map(row => row.name))
+      noteEnabledAgentPackages(rows.filter(row => row.status === 'enabled').map(agentPackageName))
     } catch (e) {
       if (generation !== loadGeneration) {
         return

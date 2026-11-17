@@ -1,6 +1,8 @@
 import { JsonRpcGatewayError } from '@hermes/shared'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { $pluginDecisions, dropPlugin, noteEnabledAgentPackages, publishPlugin } from '@/contrib/plugins-store'
+
 import {
   $agentPlugins,
   $agentPluginsProfile,
@@ -8,6 +10,7 @@ import {
   inspectAgentPlugin,
   installAgentPlugin,
   isDesktopRelevantPlugin,
+  loadAgentPlugins,
   normalizeAgentPluginRow,
   saveAgentPluginSettings
 } from './agent-plugins'
@@ -18,6 +21,47 @@ const row = (partial: Partial<AgentPluginRow>): AgentPluginRow =>
 afterEach(() => {
   vi.useRealTimers()
   $agentPluginsProfile.set(undefined)
+})
+
+describe('loadAgentPlugins', () => {
+  it('enables a unified desktop half by folder when the manifest name differs', async () => {
+    // A self-cloned package's install folder can differ from plugin.yaml's name.
+    // The Plugins page already joins these halves by install_dir, not row.name.
+    const id = 'meter-boot-test'
+    const activate = vi.fn()
+
+    publishPlugin(
+      { id, name: 'Meter', kind: 'disk', status: 'disabled', packageName: 'hermes-subscription-meter' },
+      { activate, deactivate: vi.fn() }
+    )
+
+    const request = vi.fn(async () => ({
+      plugins: [
+        row({
+          name: 'subscription-meter',
+          key: 'subscription-meter',
+          install_dir: '/home/u/.hermes/plugins/hermes-subscription-meter',
+          has_desktop_half: true,
+          status: 'enabled'
+        })
+      ]
+    }))
+
+    try {
+      await loadAgentPlugins(request as never)
+
+      await vi.waitFor(() => expect(activate).toHaveBeenCalledTimes(1))
+      expect($pluginDecisions.get()[id]).toBe(true)
+      expect(request).toHaveBeenCalledWith('plugins.manage', { action: 'list' })
+    } finally {
+      noteEnabledAgentPackages([])
+      dropPlugin(id)
+      const decisions = { ...$pluginDecisions.get() }
+      delete decisions[id]
+      $pluginDecisions.set(decisions)
+      window.localStorage.setItem('hermes.desktop.pluginDecisions.v2', JSON.stringify(decisions))
+    }
+  })
 })
 
 describe('installAgentPlugin', () => {

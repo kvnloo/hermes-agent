@@ -1,9 +1,9 @@
 import { atom } from 'nanostores'
 
-import { agentPackageName, desktopPackageName } from '@/app/capabilities/plugins/plugin-packages'
+import { desktopPackageName } from '@/app/capabilities/plugins/plugin-packages'
 import { $pluginRecords } from '@/contrib/plugins-store'
 import type { ToolOwnership } from '@/lib/tool-media-renderers'
-import { $agentPlugins, type AgentPluginRow } from '@/store/agent-plugins'
+import { $agentPlugins, agentPackageName, type AgentPluginRow } from '@/store/agent-plugins'
 import {
   activeGateway,
   activeGatewayConnectionId,
