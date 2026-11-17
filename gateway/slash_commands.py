@@ -148,7 +148,10 @@ def _spawn_detached_update(hermes_cmd, output_path, exit_code_path) -> None:
         try:
             subprocess.Popen(
                 update_argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **windows_detach_popen_kwargs())
-        except OSError:
+        except OSError as exc:
+            # Only a refused job breakaway warrants retry; unrelated spawn errors must propagate.
+            if getattr(exc, "winerror", None) != 5:
+                raise
             subprocess.Popen(
                 update_argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 creationflags=windows_detach_flags_without_breakaway())

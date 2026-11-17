@@ -34,7 +34,9 @@ def _win_patches(mock_popen):
 
 def test_breakaway_denied_retries_without_breakaway(tmp_path):
     mock_popen = MagicMock()
-    mock_popen.side_effect = [PermissionError(5, "Access is denied"), MagicMock()]
+    denied = PermissionError(13, "Access is denied")
+    denied.winerror = 5
+    mock_popen.side_effect = [denied, MagicMock()]
 
     patches = _win_patches(mock_popen)
     for p in patches:
@@ -76,3 +78,20 @@ def test_breakaway_allowed_single_spawn(tmp_path):
 
     mock_popen.assert_called_once()
     assert mock_popen.call_args.kwargs["creationflags"] & _BREAKAWAY_BIT
+
+
+@pytest.mark.platforms("windows")
+def test_unrelated_spawn_error_does_not_retry(monkeypatch, tmp_path):
+    """errno=5 is EIO, not WinError 5; no second update child may be spawned."""
+    import subprocess
+
+    error = OSError(5, "Input/output error")
+    popen = MagicMock(side_effect=error)
+    monkeypatch.setattr(subprocess, "Popen", popen)
+
+    with pytest.raises(OSError, match="Input/output error"):
+        slash_commands._spawn_detached_update(
+            ["hermes"], tmp_path / "out.txt", tmp_path / "exit_code"
+        )
+
+    popen.assert_called_once()
