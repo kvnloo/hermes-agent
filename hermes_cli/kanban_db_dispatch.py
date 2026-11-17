@@ -1863,20 +1863,21 @@ def _startup_sync_would_install(skill: str) -> bool:
 
 
 def _profile_has_skill(skill: str) -> bool:
-    """Whether the active home's skill roots hold ``skill`` (directory name or frontmatter ``name``).
+    """Whether the worker can resolve an unambiguous on-disk skill, without loading it.
 
-    Reads files only. The worker's own loader (``skill_view``) records usage counters and seeds the home on
-    every call, which a dispatcher polling each tick must never do to a profile.
+    A file-existence probe accepts two different skills with the same name in
+    one tier, but the worker refuses that collision at preload (#99251).
+    locate_skill shares the worker's resolution rules without the usage
+    writes that skill_view would make on every dispatcher tick.
     """
-    from agent.skill_utils import get_all_skills_dirs, is_excluded_skill_path
-    from tools.skill_usage import read_skill_name
-    roots = [root for root in get_all_skills_dirs() if root.is_dir()]
-    if any(not is_excluded_skill_path(md) for root in roots for md in root.rglob(f"{skill}/SKILL.md")):
-        return True
-    return any(
-        read_skill_name(md, "") == skill
-        for root in roots for md in root.rglob("SKILL.md") if not is_excluded_skill_path(md)
-    )
+    from agent.skill_utils import get_skill_search_roots
+    from tools.skills_tool import locate_skill
+
+    # The dispatcher cannot know the review card's trusted project cwd; keep
+    # the carrier's profile/home-only scope.
+    roots = [(tier, root) for tier, root in get_skill_search_roots(include_project=False) if root.is_dir()]
+    error, _skill_dir, skill_md = locate_skill(skill, None, roots)
+    return error is None and skill_md is not None
 
 
 def review_skill_problem(assignee: str) -> Optional[str]:

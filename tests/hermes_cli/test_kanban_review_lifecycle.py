@@ -1030,6 +1030,34 @@ def test_review_lane_still_spawns_a_healthy_reviewer(kanban_home: Path) -> None:
         assert _events(conn, tid, "review_skill_unavailable") == []
 
 
+def test_review_lane_skips_ambiguous_review_skill_before_claim(kanban_home: Path) -> None:
+    """#99251: two distinct same-tier sdlc-review copies cannot be preloaded by name.
+
+    The worker's skill_view refuses the collision even though the profile has
+    files named sdlc-review/SKILL.md. Never spend a review attempt on it.
+    """
+    profile = _make_reviewer_profile(kanban_home, "reviewer", no_skills=True)
+    duplicate = profile / "skills" / "other" / "sdlc-review" / "SKILL.md"
+    duplicate.parent.mkdir(parents=True)
+    duplicate.write_text(
+        "---\nname: sdlc-review\ndescription: different review logic\n---\nOther review policy.\n",
+        encoding="utf-8",
+    )
+    spawned: list[str] = []
+
+    with kbc.connect() as conn:
+        tid = _park_in_review(conn, "reviewer")
+        result = kbd.dispatch_once(conn, spawn_fn=lambda task, ws, *a, **k: spawned.append(task.id))
+
+        assert spawned == []
+        assert result.spawned == []
+        assert result.skipped_review_skill_unavailable == [(tid, "reviewer", "missing")]
+        assert kb.get_task(conn, tid).status == "review"
+        assert _events(conn, tid, "review_skill_unavailable") == [
+            ("review_skill_unavailable", {"assignee": "reviewer", "skill": "sdlc-review", "reason": "missing"})
+        ]
+
+
 def test_review_lane_trusts_the_startup_sync_to_install_a_skill_the_profile_predates(kanban_home: Path) -> None:
     """A profile created before ``sdlc-review`` shipped lacks it on disk, yet its first launch installs
     it (``sync_skills``). Parking the card would be a false alarm that never recovers, because the
