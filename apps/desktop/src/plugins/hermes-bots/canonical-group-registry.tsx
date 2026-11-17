@@ -202,8 +202,8 @@ export function bindGatewayGroupRoom({ binding, room }: GatewayGroupRoom): strin
   return registerCanonicalGroup(binding, room)
 }
 
-/** The active source's rooms. A backend that predates gateway Group Chats has none. */
-async function listGatewayGroupRooms(route: CanonicalGroupRoute): Promise<GatewayGroupRoom[]> {
+/** A profile owner's rooms. A backend predating gateway Group Chats has none. */
+async function listGatewayGroupRoomsForProfile(route: CanonicalGroupRoute): Promise<GatewayGroupRoom[]> {
   let rooms: CanonicalRoom[]
 
   try {
@@ -231,6 +231,44 @@ async function listGatewayGroupRooms(route: CanonicalGroupRoute): Promise<Gatewa
   if (kept.length !== hidden.size) {$disbandedGatewayRooms.set(new Set(kept))}
 
   return listed
+}
+
+
+/** A room belongs to the profile that created it, not the Bot selected in Desktop.
+ *  Query this connection's registered profile owners without changing the foreground
+ *  route. The original owner stays on each returned room for open and disband. */
+async function listGatewayGroupRooms(route: CanonicalGroupRoute): Promise<GatewayGroupRoom[]> {
+  let routes: CanonicalGroupRoute[] = [route]
+
+  try {
+    const registered = await host.profileRoutes()
+    if (Array.isArray(registered)) {
+      routes = [...registered
+        .filter(candidate => candidate.connectionId === route.connectionId && candidate.profile === candidate.targetProfile)
+        .map(candidate => ({ connectionId: candidate.connectionId, profile: candidate.profile })), route]
+    }
+  } catch {
+    // A transient route inventory failure still permits the active profile read.
+  }
+
+  const seen = new Set<string>()
+  const distinct = routes.filter(candidate => {
+    if (!candidate.profile || seen.has(candidate.profile)) {return false}
+    seen.add(candidate.profile)
+
+    return true
+  })
+  // A failed owner read keeps the previous complete roster through React Query.
+  const pages = await Promise.all(distinct.map(listGatewayGroupRoomsForProfile))
+  const rooms = new Map<string, GatewayGroupRoom>()
+
+  for (const page of pages) {
+    for (const room of page) {
+      if (!rooms.has(room.room.room_id)) {rooms.set(room.room.room_id, room)}
+    }
+  }
+
+  return [...rooms.values()]
 }
 
 const ROOMS_KEY = [ID, 'gateway-group-rooms']

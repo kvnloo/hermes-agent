@@ -9,15 +9,17 @@
  */
 
 import type * as HermesSdk from '@hermes/plugin-sdk'
-import { act, cleanup, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { atom } from 'nanostores'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 import { translateBotsIn } from './i18n-test-helper'
 
-const { connection, gateway, requestProfile } = vi.hoisted(() => ({
+const { active, connection, gateway, profileRoutes, requestProfile } = vi.hoisted(() => ({
+  active: { profile: null as unknown },
   connection: { id: null as unknown },
   gateway: { state: null as unknown },
+  profileRoutes: vi.fn(),
   requestProfile: vi.fn()
 }))
 
@@ -25,12 +27,14 @@ vi.mock('@hermes/plugin-sdk', async importOriginal => {
   const sdk = await importOriginal<typeof HermesSdk>()
   const state = atom('connecting')
   const connectionId = atom<null | string>('local')
+  const profile = atom('default')
+  active.profile = profile
   gateway.state = state
   connection.id = connectionId
 
   return {
     ...sdk,
-    host: { ...sdk.host, requestProfile, state: { ...sdk.host.state, connectionId, gateway: state, profile: atom('default') } },
+    host: { ...sdk.host, profileRoutes, requestProfile, state: { ...sdk.host.state, connectionId, gateway: state, profile } },
     usePluginI18n: () => translateBotsIn('en')
   }
 })
@@ -39,10 +43,12 @@ import { $canonicalGroupBindings, forgetCanonicalGroup, refreshGatewayGroupRooms
 import { renderGatewayRooms } from './gateway-group-rooms-test-harness'
 
 const gatewayState = () => gateway.state as ReturnType<typeof atom<string>>
+const profileState = () => active.profile as ReturnType<typeof atom<string>>
 const connectionId = () => connection.id as ReturnType<typeof atom<null | string>>
 const room = { room_id: 'room-1', name: 'Launch crew', members: [], updated_at: Date.now() / 1000 }
 
 beforeEach(() => {
+  profileRoutes.mockResolvedValue([])
   requestProfile.mockImplementation(async () => {
     if (gatewayState().get() !== 'open') {
       throw new Error('Hermes gateway is not connected')
@@ -58,6 +64,7 @@ afterEach(() => {
   vi.clearAllMocks()
   gatewayState().set('connecting')
   connectionId().set('local')
+  profileState().set('default')
 })
 
 it('lists rooms once the socket opens, with no Refresh button and no error text', async () => {
@@ -70,6 +77,36 @@ it('lists rooms once the socket opens, with no Refresh button and no error text'
   expect(await screen.findByRole('button', { name: 'Launch crew' })).toBeTruthy()
   expect(screen.queryByRole('button', { name: /refresh/i })).toBeNull()
   expect(screen.queryByRole('alert')).toBeNull()
+})
+
+
+it('lists a default-owned room from a named member view and opens its actual owner', async () => {
+  profileRoutes.mockResolvedValue([
+    { connectionId: 'local', mode: 'local', profile: 'default', targetProfile: 'default' },
+    { connectionId: 'local', mode: 'local', profile: 'talent-advisor', targetProfile: 'talent-advisor' },
+    { connectionId: 'other-machine', mode: 'remote', profile: 'default', targetProfile: 'default' }
+  ])
+  requestProfile.mockImplementation(async (route, method, params) => {
+    expect(method).toBe('groups.list')
+    expect(params.profile).toBe(route.profile)
+    if (route.connectionId !== 'local') {throw new Error('read escaped the selected connection')}
+
+    // The gateway launch profile owns the ledger; the seated member does not.
+    return { rooms: route.profile === 'default' ? [room] : [], next_offset: null }
+  })
+  profileState().set('talent-advisor')
+  gatewayState().set('open')
+  const opened = vi.fn()
+
+  renderGatewayRooms(opened)
+  fireEvent.click(await screen.findByRole('button', { name: 'Launch crew' }))
+
+  expect(requestProfile.mock.calls.map(([route]) => route.profile)).toEqual(['default', 'talent-advisor'])
+  expect(screen.getAllByRole('button', { name: 'Launch crew' })).toHaveLength(1)
+  expect(opened).toHaveBeenCalledWith('canonical:local:default:room-1', 'key')
+  expect($canonicalGroupBindings.get()['canonical:local:default:room-1']).toMatchObject({
+    connectionId: 'local', profile: 'default', roomId: 'room-1'
+  })
 })
 
 it('keeps the last good list when a re-read fails', async () => {
