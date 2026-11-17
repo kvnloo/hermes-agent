@@ -754,13 +754,21 @@ let prevBusyByRuntime: Record<string, boolean> = Object.fromEntries(
 // lastTurn at all, so the untracked snapshot is only worth reading once it lands.
 // The paths (not their contents) are what the pane subtracts, so this is one
 // extra status read per turn start rather than a per-file stat/read pass.
+// A slow capture from an earlier turn must never overwrite a newer turn's
+// baseline for the same cwd. Keep the lease bounded like the baseline atoms.
+let nextCaptureVersion = 0
+let latestCaptureByCwd: Record<string, number> = {}
+
 async function captureTurnBaseline(cwd: string): Promise<void> {
+  const version = ++nextCaptureVersion
+  latestCaptureByCwd = boundedBaseline(latestCaptureByCwd, cwd, version)
+  const isLatestCapture = () => latestCaptureByCwd[cwd] === version
   const review = desktopGit()?.review
 
   try {
     const sha = await review?.revParse?.(cwd, 'HEAD')
 
-    if (!sha) {
+    if (!sha || !isLatestCapture()) {
       return
     }
 
@@ -768,7 +776,7 @@ async function captureTurnBaseline(cwd: string): Promise<void> {
 
     const untracked = await review?.untracked?.(cwd)
 
-    if (untracked) {
+    if (untracked && isLatestCapture()) {
       recordTurnUntracked(cwd, untracked)
     }
   } catch {

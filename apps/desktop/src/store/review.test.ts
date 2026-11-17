@@ -749,6 +749,33 @@ describe('turn baseline capture', () => {
     expect($reviewTurnBase.get()).toEqual({ '/repo': 'deadbeef' })
     expect($reviewTurnUntracked.get()).toEqual({})
   })
+
+  it('discards an older untracked read that resolves after the next turn', async () => {
+    // Both turns share HEAD; only the untracked snapshot completion order differs.
+    const firstRead = deferred<string[]>()
+    let reads = 0
+    const review = stubReview({
+      revParse: vi.fn(async () => 'same-head'),
+      untracked: vi.fn(() => {
+        reads += 1
+        return reads === 1 ? firstRead.promise : Promise.resolve(['newer.txt'])
+      })
+    })
+
+    $sessionStates.set({ rt_race: sessionState(true, '/repo') })
+    await Promise.resolve()
+    expect(review.untracked).toHaveBeenCalledTimes(1)
+
+    $sessionStates.set({ rt_race: sessionState(false, '/repo') })
+    $sessionStates.set({ rt_race: sessionState(true, '/repo') })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect($reviewTurnUntracked.get()).toEqual({ '/repo': ['newer.txt'] })
+
+    firstRead.resolve(['stale.txt'])
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect($reviewTurnUntracked.get()).toEqual({ '/repo': ['newer.txt'] })
+  })
+
 })
 
 describe('lastTurn scope', () => {
