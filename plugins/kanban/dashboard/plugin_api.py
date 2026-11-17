@@ -1275,10 +1275,11 @@ def dispatch(dry_run: bool = Query(False), max_n: int = Query(8, alias="max"), b
         try:
             from hermes_cli.config import load_config
             _kcfg = (load_config() or {}).get("kanban", {}) or {}
+            assignee = _kcfg.get("default_assignee")
             caps = dict(
                 max_in_progress=kbd.resolve_max_in_progress(kbd._positive_int(_kcfg.get("max_in_progress"), None)),
                 max_in_progress_per_profile=kbd._positive_int(_kcfg.get("max_in_progress_per_profile"), None),
-                default_assignee=(_kcfg.get("default_assignee") or "").strip() or None,
+                default_assignee=(assignee.strip() or None) if isinstance(assignee, str) else None,
             )
         except Exception:
             caps = {}

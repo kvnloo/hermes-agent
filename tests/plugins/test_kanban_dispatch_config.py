@@ -23,3 +23,29 @@ def test_dashboard_dispatch_uses_configured_policy(monkeypatch):
     dispatch.assert_called_once_with(conn, dry_run=True, max_spawn=8, board="main",
                                      max_in_progress=5, max_in_progress_per_profile=2,
                                      default_assignee="worker")
+
+def test_dashboard_dispatch_invalid_assignee_preserves_concurrency_caps(monkeypatch):
+    """A malformed assignee must not discard independently valid safety caps."""
+    _load_plugin_router()
+    api = sys.modules["hermes_dashboard_plugin_kanban_test"]
+    conn = object()
+
+    @contextmanager
+    def board(_name):
+        yield "main", conn
+
+    monkeypatch.setattr(api, "_board_conn", board)
+    monkeypatch.setattr("hermes_cli.config.load_config", lambda: {"kanban": {
+        "max_in_progress": 3, "max_in_progress_per_profile": 1,
+        "default_assignee": 17,
+    }})
+    dispatch = Mock(return_value={"spawned": []})
+    monkeypatch.setattr(api.kbd, "dispatch_once", dispatch)
+
+    api.dispatch(dry_run=True, max_n=8, board=None)
+
+    dispatch.assert_called_once_with(
+        conn, dry_run=True, max_spawn=8, board="main",
+        max_in_progress=3, max_in_progress_per_profile=1,
+        default_assignee=None,
+    )
