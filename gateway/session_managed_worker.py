@@ -582,12 +582,26 @@ async def _settle_lost(authority, row, scope, recording):
         await tracked_write(authority, partial(lose_admission_worker, authority, row, scope))
 
 
-def _turn_scoped(env, session_id):
+def _sandboxed(argv, home):
+    """``argv`` under ``$HERMES_TURN_SANDBOX run <profile> --`` when the host sets one (else unchanged).
+
+    The gateway hosts every profile's turns, so the per-profile filesystem boundary sits here. The
+    scope wraps the sandbox, not the reverse: the gateway still has the user bus to create the scope,
+    the turn inside does not. A configured but missing wrapper fails the spawn (fail closed)."""
+    wrapper = os.environ.get('HERMES_TURN_SANDBOX')
+    if not wrapper or home is None:
+        return argv
+    path = Path(str(home))
+    return [wrapper, 'run', path.name if path.parent.name == 'profiles' else 'default', '--', *argv]
+
+
+def _turn_scoped(env, session_id, home=None):
     """The worker argv in its own scope beside the gateway (blocking: the scope probe may run), and
     the env systemd-run needs to reach the user manager; the worker inherits only those two keys."""
     from tools.process_registry import systemd_user_bus_env, turn_scope_argv
-    argv = turn_scope_argv([sys.executable, '-m', 'agent.managed_worker'], session_id)
-    if argv[0] != sys.executable:
+    inner = _sandboxed([sys.executable, '-m', 'agent.managed_worker'], home)
+    argv = turn_scope_argv(inner, session_id)
+    if argv[0] != inner[0]:
         bus = systemd_user_bus_env(env)
         env = {**env, **{k: bus[k] for k in ('XDG_RUNTIME_DIR', 'DBUS_SESSION_BUS_ADDRESS') if k in bus}}
     return argv, env
@@ -604,7 +618,7 @@ async def _spawn_registered_worker(authority, ref, row):
         from gateway.session_worker_spawn import acquire_process
         from gateway.session_managed_worker_log import worker_log_path
         log_path = worker_log_path(authority.profile_id)
-        argv, env = await asyncio.to_thread(_turn_scoped, env, ref.session_id)
+        argv, env = await asyncio.to_thread(_turn_scoped, env, ref.session_id, authority.profile_id)
         process = await acquire_process(subprocess.Popen, argv,
             cwd=cwd, stdin=subprocess.PIPE, env=env, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL if log_path is None else subprocess.PIPE, **WORKER_POPEN)
