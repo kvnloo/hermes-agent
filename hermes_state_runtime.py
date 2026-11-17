@@ -71,6 +71,19 @@ def _sqlite_text(text):
     return text
 
 
+def _sqlite_payload_text(text):
+    """Store admission JSON losslessly when SQLite refuses lone surrogates.
+
+    Unlike display/result text, queued payloads are rehashed on rehome: replacing
+    surrogates with U+FFFD would turn an exact retry into admission_conflict.
+    """
+    try:
+        text.encode('utf-8')
+    except UnicodeEncodeError:
+        return text.encode('utf-8', 'backslashreplace').decode('utf-8')
+    return text
+
+
 def _epoch(conn, epoch):
     row = conn.execute('SELECT epoch FROM runtime_epoch WHERE singleton=1').fetchone()
     if type(epoch) is not int or row is None or row[0] != epoch:
@@ -180,7 +193,7 @@ def admit_session_input(db, *, epoch: int, principal_id: str, session_id: str,
         conn.execute('''INSERT INTO session_admissions(admission_id,request_id,principal_id,
             target_session_id,lineage_json,payload_json,payload_digest,intent,status,owner_epoch)
             VALUES(?,?,?,?,?,?,?,?,'queued',?)''',
-            (admission_id, request_id, principal_id, session_id, json.dumps([session_id]), _sqlite_text(encoded), digest, intent, epoch))
+            (admission_id, request_id, principal_id, session_id, json.dumps([session_id]), _sqlite_payload_text(encoded), digest, intent, epoch))
         return _row(_admission(conn, admission_id))
     return db._execute_write(write)
 
@@ -450,7 +463,7 @@ def retarget_local_automation(db, *, epoch: int, session_id: str, principal_id: 
             descriptor['target'] = new_target
             digest = admission_fingerprint(canonical_target=session_id, payload={'input': payload, 'intent': row['intent']})
             conn.execute("UPDATE session_admissions SET payload_json=?,payload_digest=? WHERE admission_id=? AND status='queued'",
-                         (_json(payload), digest, row['admission_id']))
+                         (_sqlite_payload_text(_json(payload)), digest, row['admission_id']))
             moved.append(row['admission_id'])
         if moved:
             conn.execute('UPDATE sessions SET runtime_revision=runtime_revision+1 WHERE id=?', (session_id,))
@@ -611,7 +624,7 @@ def _import_legacy_row(conn, row, epoch, principal_id):
     conn.execute("""INSERT INTO session_admissions(admission_id,request_id,principal_id,
         target_session_id,lineage_json,payload_json,payload_digest,intent,status,outcome,owner_epoch,generation)
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""", (row['admission_id'], row['admission_id'], principal_id,
-        target, json.dumps(chain), _sqlite_text(encoded), digest, intent, status, row['outcome'], epoch, generation))
+        target, json.dumps(chain), _sqlite_payload_text(encoded), digest, intent, status, row['outcome'], epoch, generation))
     if generation is not None:
         conn.execute('UPDATE sessions SET runtime_generation=MAX(runtime_generation,?) WHERE id=?', (generation, target))
 

@@ -119,7 +119,7 @@ def test_admission_with_surrogate_payload_round_trips(tmp_path):
             'SELECT payload_json FROM session_admissions WHERE admission_id=?',
             (first['admission_id'],)).fetchone()[0]
         stored.encode('utf-8')
-        assert json.loads(stored)['text'] == 'truncated umlaut \ufffd end'
+        assert json.loads(stored)['text'] == SURROGATE_TEXT
     finally:
         db.close()
 
@@ -143,5 +143,36 @@ def test_settlement_with_surrogate_result_stores_readable_row(tmp_path):
             (RESULT_PREFIX + claimed['admission_id'],)).fetchone()[0]
         raw.encode('utf-8')
         assert load_result(raw)['note'] == 'truncated umlaut \ufffd end'
+    finally:
+        db.close()
+
+
+def test_rehome_preserves_surrogate_payload_and_exact_retry(tmp_path):
+    """A queued input retargeted after reset must keep its original retry identity."""
+    import hermes_state_runtime as rt
+
+    db = store(tmp_path)
+    db.create_session('after-reset', source='test')
+    try:
+        epoch = rt.begin_runtime_epoch(db, instance_id='boot')
+        original = {'text': SURROGATE_TEXT}
+        first = rt.admit_session_input(
+            db, epoch=epoch, principal_id='human', session_id='s',
+            request_id='one', payload=original)
+        moved = rt.rehome_queued_inputs(
+            db, epoch=epoch, old_session_id='s',
+            new_session_id='after-reset', principal_prefix='human')
+        assert moved == [first['admission_id']]
+        assert rt.get_session_admission(
+            db, admission_id=first['admission_id'])['payload'] == original
+
+        retry = dict(epoch=epoch, principal_id='human',
+                     session_id='after-reset', request_id='one')
+        replay = rt.admit_session_input(db, **retry, payload=original)
+        assert replay['admission_id'] == first['admission_id']
+        with pytest.raises(rt.RuntimeStoreError) as exc:
+            rt.admit_session_input(
+                db, **retry, payload={'text': 'truncated umlaut \ufffd end'})
+        assert exc.value.reason == 'admission_conflict'
     finally:
         db.close()
