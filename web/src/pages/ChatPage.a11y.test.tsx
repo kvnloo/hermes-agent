@@ -328,6 +328,45 @@ describe("ChatPage composer screen-reader accessibility (#36784)", () => {
     expect(textarea.value).toBe("");
   });
 
+  it("leaves finalized IME input to compositionend without clearing xterm's textarea", async () => {
+    const { default: ChatPage } = await import("./ChatPage");
+    await render(
+      <MemoryRouter initialEntries={["/chat"]}>
+        <ChatPage isActive />
+      </MemoryRouter>,
+    );
+
+    await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
+    const socket = FakeWebSocket.instances[0];
+    await act(async () => socket.onopen?.());
+    await act(async () => {
+      await Promise.resolve();
+    });
+    socket.send.mockClear();
+
+    const textarea = FakeTerminal.instances[0].textarea!;
+    await act(async () => {
+      textarea.value = "漢";
+      textarea.dispatchEvent(
+        new CompositionEvent("compositionend", { data: "漢", bubbles: true }),
+      );
+      // Some IMEs send a final input after compositionend. The insertText
+      // recovery handler must not steal or clear that commit before xterm
+      // has finished its deferred composition processing.
+      textarea.dispatchEvent(
+        new InputEvent("input", {
+          data: "漢",
+          inputType: "insertFromComposition",
+          bubbles: true,
+        }),
+      );
+    });
+
+    expect(textarea.value).toBe("漢");
+    await vi.waitFor(() => expect(socket.send).toHaveBeenCalledTimes(1));
+    expect(socket.send).toHaveBeenCalledWith("漢");
+  });
+
   it("exposes the terminal host as a labelled region in the accessibility tree", async () => {
     const { default: ChatPage } = await import("./ChatPage");
     await render(

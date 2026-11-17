@@ -52,9 +52,9 @@ export function createPtyInsertTextForwarder() {
     ): string | null {
       const typed = input.data;
       if (!typed) return null;
-      // Composition text is committed on compositionend through
-      // createPtyCompositionForwarder; forwarding it here would double it up.
-      if (input.isComposing || input.inputType === "insertCompositionText") {
+      // Only bare insertText needs recovery. Finalized IME input belongs to
+      // xterm and the compositionend forwarder; do not clear their textarea.
+      if (input.inputType !== "insertText" || input.isComposing) {
         return null;
       }
       const carried =
