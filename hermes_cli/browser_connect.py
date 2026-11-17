@@ -779,6 +779,8 @@ def _reuse_snapshot(browser: str, dst: str) -> tuple[str, None]:
     """Serve the last completed snapshot as-is when the live profile is locked. Its logins are as
     fresh as that copy; the next launch with the browser closed re-syncs them. Refusing instead
     would drop the session to a signed-out browser although a usable copy is on disk."""
+    # Completed snapshots from earlier Hermes versions can still carry user extensions.
+    _strip_extension_registry(dst)
     _drop_singleton_leftovers(dst)
     logger.info("real-profile: %s holds its profile lock; reusing the last snapshot in %s "
                 "(logins as of that copy)", browser, dst)

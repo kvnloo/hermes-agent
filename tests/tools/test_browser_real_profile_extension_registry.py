@@ -165,6 +165,27 @@ class TestSnapshotCarriesNoExtensionRegistry:
         prefs = _read_json(os.path.join(dst, "Default", "Preferences"))
         assert "commands" not in prefs.get("extensions", {})
 
+    def test_locked_reuse_strips_older_snapshot_registry(self, tmp_path, monkeypatch):
+        """A completed pre-fix snapshot must be scrubbed even when live profile is locked."""
+        import hermes_cli.browser_connect as bc
+
+        live = _profile_with_extensions(tmp_path / "live")
+        home = tmp_path / "hermes-home"
+        monkeypatch.setattr(bc, "get_hermes_home", lambda: home)
+        copy = home / "browser-profile" / "chrome"
+        _profile_with_extensions(copy)
+        (copy / bc._SNAPSHOT_DONE_MARKER).write_text("Default", encoding="utf-8")
+        monkeypatch.setattr(bc, "_profile_is_locked", lambda _src, _profile: True)
+
+        dst, err = bc.snapshot_real_profile("chrome", src=str(live))
+
+        assert err is None
+        assert dst == str(copy)
+        secure = _read_json(copy / "Default" / "Secure Preferences")
+        prefs = _read_json(copy / "Default" / "Preferences")
+        assert "settings" not in secure["extensions"]
+        assert "commands" not in prefs["extensions"]
+
     def test_login_state_still_reaches_the_snapshot(self, tmp_path, monkeypatch):
         """The strip must not cost the consented login state: Cookies/Login Data still arrive."""
         import hermes_cli.browser_connect as bc
