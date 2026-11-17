@@ -1769,6 +1769,57 @@ TERMINAL_SCHEMA = {
 }
 
 
+_QUICK_NOTIFY_INLINE_SECONDS = 3
+
+
+def _inline_quick_notified_result(raw: str) -> str:
+    """Return a completed local notify run inline, consuming its queued completion."""
+    from tools.process_registry import _redact_process_result, process_registry
+    from tools.terminal_tool_result import _truncate_head_tail
+    from tools.ansi_strip import strip_ansi
+    from tools.interrupt import consume_yield, is_interrupted
+
+    try:
+        result = json.loads(raw)
+    except (TypeError, ValueError):
+        return raw
+    if not isinstance(result, dict) or not result.get("notify_on_complete") or not result.get("session_id"):
+        return raw
+    if result.get("heartbeat_seconds"):
+        return raw
+
+    session = process_registry.get(result["session_id"])
+    # No busy wait for a remote poller or an interactive PTY; only a local pipe's
+    # reader can certify that its final output was drained in this short window.
+    if session is None or session.process is None or session.persist_on_release:
+        return raw
+    deadline = time.monotonic() + _QUICK_NOTIFY_INLINE_SECONDS
+    while not session._completion_event.is_set():
+        if is_interrupted() or consume_yield(threading.current_thread().ident):
+            return raw
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return raw
+        session._completion_event.wait(timeout=min(0.1, remaining))
+
+    # wait() is the registry's consumption boundary: it suppresses both the
+    # gateway watcher and CLI drain, after the reader has published the result.
+    if process_registry.wait(session.id, timeout=1).get("status") != "exited":
+        return raw
+    with session._lock:
+        output, exit_code = session.output_buffer, session.exit_code
+    safe = _redact_process_result({
+        "command": session.command, "session_id": session.id,
+        "output": strip_ansi(_truncate_head_tail(output)), "exit_code": exit_code,
+    })
+    result.update(
+        output=safe["output"], exit_code=exit_code, status="exited",
+        notify_on_complete=False,
+        note="Completed inline; no completion notification will follow.",
+    )
+    return json.dumps(result, ensure_ascii=False)
+
+
 def _handle_terminal(args, **kw):
     from agent.terminal_approval_batch import validate_prepared_terminal
     validate_prepared_terminal(args)
@@ -1831,7 +1882,7 @@ def _handle_terminal(args, **kw):
             )
     if heartbeat:
         notify_on_complete = True  # the heartbeat rides the completion delivery path
-    return terminal_tool(
+    return _inline_quick_notified_result(terminal_tool(
         command=args.get("command"),
         background=args.get("background", False),
         timeout=args.get("timeout"),
@@ -1843,7 +1894,7 @@ def _handle_terminal(args, **kw):
         watch_patterns=watch_patterns,
         heartbeat=heartbeat,
         persist_on_release=persist_on_release,
-    )
+    ))
 
 
 def _terminal_deadline_floor(args: dict) -> float | None:
