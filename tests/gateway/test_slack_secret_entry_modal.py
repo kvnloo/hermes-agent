@@ -185,3 +185,33 @@ def test_socket_mode_debug_frames_of_a_secret_submit_are_dropped(caplog):
                                                           "state": {"values": {"v": VALUE}}}}}))
     sdk_logger.debug("Received message (data: %s)", json.dumps({"type": "hello"}))
     assert VALUE not in caplog.text and "hello" in caplog.text
+
+
+def test_secret_submit_requires_resolved_workspace_in_multi_workspace_gateway(loop, tmp_path, monkeypatch):
+    """A matching user ID without a proven workspace cannot save a profile secret."""
+    _default_home, prof_b = _profiles(tmp_path, monkeypatch)
+    adapter, client = _adapter(True)
+    # With multiple installs, a view_submission lacking a team cannot be assigned to T1.
+    adapter._team_clients["T2"] = AsyncMock()
+    out = {}
+    worker = _skill_needs_foo_key(loop, adapter, prof_b, out)
+    wait_until(lambda: client.chat_postMessage.await_count, what="secret card")
+    token = client.chat_postMessage.call_args.kwargs["blocks"][1]["elements"][0]["value"]
+    _run(loop, adapter._handle_entry_open(AsyncMock(), *_click(AUTHOR, token)))
+    view = client.views_open.call_args.kwargs["view"]
+
+    unscoped_body, unscoped_view = _submission(AUTHOR, view, VALUE)
+    unscoped_body.pop("team")
+    assert adapter._event_team_id({}, unscoped_body, install_set=adapter._team_clients) == ""
+    refusal = AsyncMock()
+    _run(loop, adapter._handle_entry_submit(refusal, unscoped_body, unscoped_view))
+    assert refusal.call_args.kwargs["response_action"] == "errors"
+    assert not (prof_b / ".env").exists()
+
+    # The same modal still accepts the real author from the owning workspace.
+    _run(loop, adapter._handle_entry_submit(AsyncMock(), *_submission(AUTHOR, view, VALUE)))
+    worker.join(10)
+    assert not worker.is_alive()
+    assert out["missing_names"] == []
+    assert f"FOO_KEY={VALUE}" in (prof_b / ".env").read_text(encoding="utf-8-sig")
+    assert VALUE not in repr(client.mock_calls)

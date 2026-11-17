@@ -176,6 +176,10 @@ class SlackPrivateEntryMixin:
 
     @staticmethod
     def _entry_author_matches(card: _EntryCard, user_id: str, team_id: str) -> bool:
+        # A missing workspace is not proof of ownership when collecting a persistent secret.
+        # Keep the pre-existing vault-code fallback; secret entry must match its known workspace.
+        if card.kind == SECRET and card.team_id:
+            return user_id == card.user_id and team_id == card.team_id
         return user_id == card.user_id and (not card.team_id or not team_id or team_id == card.team_id)
 
     async def _handle_entry_open(self, ack, body, action) -> None:
