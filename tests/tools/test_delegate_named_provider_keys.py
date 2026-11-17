@@ -5,7 +5,10 @@ from unittest.mock import patch
 
 import pytest
 
-from tools.delegate_tool_config import _resolve_delegation_credentials
+from tools.delegate_tool_config import (
+    _resolve_child_runtime,
+    _resolve_delegation_credentials,
+)
 
 
 @patch("hermes_cli.runtime_provider.resolve_runtime_provider")
