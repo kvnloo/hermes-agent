@@ -320,6 +320,13 @@ def _park_tracked_leftover_for_ff(git_cmd) -> str:
         short = ref[:12]
         print(f"→ Left the tracked leftover in place (stash {short} does not hold every dirty path).")
         return "untouched"
+    # Path coverage alone is insufficient: a second writer can change the
+    # same file after stash push saved its earlier bytes.
+    pathspec = ["--", *sorted(still)]
+    if (_git_run(git_cmd, ["diff", "--quiet", ref, *pathspec]).returncode != 0
+            or _git_run(git_cmd, ["diff", "--cached", "--quiet", "HEAD", *pathspec]).returncode != 0):
+        print("→ Tracked leftover changed after the stash; leaving newer edits untouched.")
+        return "untouched"
     _reset_hard(git_cmd, cwd)
     if _tracked_names(git_cmd):
         short = ref[:12]

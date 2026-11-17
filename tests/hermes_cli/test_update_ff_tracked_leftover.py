@@ -114,3 +114,28 @@ def test_fast_forward_keeps_bytes_the_new_stash_does_not_list(tmp_path, monkeypa
 
     assert (repo / _TRACKED).read_text() == "mine\n"
     assert _git(repo, "rev-parse", "HEAD").strip() == old
+
+def test_fast_forward_preserves_a_post_stash_rewrite(tmp_path, monkeypatch):
+    """A stash of the same filename must not license resetting newer bytes."""
+    repo, old, new = _ancestor_checkout(tmp_path)
+    (repo / _TRACKED).write_text("before-stash\n")
+    monkeypatch.setattr(cli_main, "PROJECT_ROOT", repo)
+    real = update_cmd_git._git_run
+
+    def redirty_after_push(git_cmd, args, cwd=None, **kwargs):
+        result = real(git_cmd, args, cwd=cwd, **kwargs)
+        if list(args)[:2] == ["stash", "push"] and result.returncode == 0 and cwd is not None:
+            (Path(cwd) / _TRACKED).write_text("after-stash\n")
+        return result
+
+    monkeypatch.setattr(update_cmd_git, "_git_run", redirty_after_push)
+
+    with pytest.raises(SystemExit):
+        update_cmd._move_checkout_to(["git"], "main", "origin/main", new, old)
+
+    assert _git(repo, "rev-parse", "HEAD").strip() == old
+    assert (repo / _TRACKED).read_text() == "after-stash\n"
+    stash_patch = _git(repo, "stash", "show", "-p")
+    assert "before-stash" in stash_patch
+    assert "after-stash" not in stash_patch
+
