@@ -310,3 +310,36 @@ it('a queued admission keeps the attachments its window sent, as bounded card fi
     { id: 'adm-1', attachments: [{ id: 'img', kind: 'image', label: 'shot.png', path: '/work/shot.png' }] }
   ])
 })
+// The thumbnail is presentation-only. A noisy 512px screenshot can still take megabytes of
+// base64; storage quota must not abort prompt.submit before it reaches the gateway.
+it('falls back to saved paths when the pending journal is out of thumbnail storage', () => {
+  const original = Storage.prototype.setItem
+  const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    if (key.startsWith('hermes.desktop.pendingSubmissions.v2:') && value.includes('"thumbnailUrl"')) {
+      throw new DOMException('Storage quota exceeded', 'QuotaExceededError')
+    }
+
+    return original.call(this, key, value)
+  })
+
+  try {
+    const screenshot = {
+      id: 'img', kind: 'image' as const, label: 'shot.png', path: '/work/shot.png',
+      thumbnailUrl: `data:image/png;base64,${'A'.repeat(1024 * 1024)}`
+    }
+
+    expect(() => trackPendingSubmission('chat', { id: 'input', text: 'look at this' }, [screenshot])).not.toThrow()
+    expect(readPendingSubmissions('chat').input.attachments).toEqual([
+      { id: 'img', kind: 'image', label: 'shot.png', path: '/work/shot.png' }
+    ])
+
+    reconcilePendingSubmissions('chat', [
+      { admission_id: 'queued', input_id: 'input', status: 'queued', user: 'look at this' }
+    ])
+    expect(getQueuedPrompts('chat')[0]?.attachments).toEqual([
+      { id: 'img', kind: 'image', label: 'shot.png', path: '/work/shot.png' }
+    ])
+  } finally {
+    write.mockRestore()
+  }
+})

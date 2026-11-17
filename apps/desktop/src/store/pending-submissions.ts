@@ -199,7 +199,22 @@ export function trackPendingSubmission(
 
   const held = readPendingSubmission(key, entry.id)
   const card = sent.length ? { ...entry, attachments: sent.map(queuedCardAttachment) } : entry
-  window.localStorage.setItem(entryKey(key, entry.id), JSON.stringify(mergeReceipt(held, card)))
+  const record = mergeReceipt(held, card)
+  const path = entryKey(key, entry.id)
+
+  try {
+    window.localStorage.setItem(path, JSON.stringify(record))
+  } catch (error) {
+    // A 512px screenshot thumbnail can still be a large PNG data URL. If the journal
+    // is at quota, lose only its optional preview, never block prompt.submit itself.
+    if (!(error instanceof DOMException && error.name === 'QuotaExceededError') ||
+        !record.attachments?.some(attachment => attachment.thumbnailUrl)) {
+      throw error
+    }
+
+    const attachments = record.attachments.map(({ thumbnailUrl: _thumbnailUrl, ...attachment }) => attachment)
+    window.localStorage.setItem(path, JSON.stringify({ ...record, attachments }))
+  }
 }
 
 // Array.isArray narrows `unknown` to `any[]`; the helpers keep that wire shape.
