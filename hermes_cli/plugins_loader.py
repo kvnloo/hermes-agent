@@ -514,7 +514,7 @@ class PluginLoaderMixin:
     def _warn_python_dependencies(self, manifest: PluginManifest) -> None:
         """Report missing dependencies without installing during discovery.
 
-        Plugin admission and PM repair own dependency changes.
+        Plugin admission and PM install own dependency changes; repair only replays the recorded graph.
         """
         missing = missing_python_dependencies(manifest)
         if not missing:
@@ -530,7 +530,7 @@ class PluginLoaderMixin:
         else:
             logger.warning(
                 "Plugin %s declares Python dependencies that are not "
-                "installed: %s. For an enabled plugin, run hermes pm repair, "
+                "installed: %s. For an enabled plugin, run hermes pm install, "
                 "then restart Hermes. Discovery does not install dependencies.",
                 key, ", ".join(missing),
             )

@@ -75,6 +75,41 @@ def _discover(caplog):
     return manager, messages
 
 
+def test_fresh_payload_without_plugin_generation_says_install_not_repair(home, caplog, monkeypatch):
+    """A new MSIX install key has no recorded plugin graph to repair.
+
+    Hindsight declares its SDK in pyproject.toml, not in the plugin manifest.
+    A normal PM install must discover this member for the new payload.
+    """
+    from pm.environments import runtime_facts_path
+    from pm.paths import repo_root
+    from hermes_cli import plugins
+
+    assert not runtime_facts_path(repo_root()).exists()
+    plugin = home / "plugins" / "depprobe"
+    (plugin / "plugin.yaml").write_text("name: depprobe\nversion: '1.0'\n", encoding="utf-8")
+    (plugin / "pyproject.toml").write_text(
+        '[project]\nname = "depprobe"\nversion = "1.0"\n'
+        f'dependencies = ["{REQ}"]\n',
+        encoding="utf-8",
+    )
+
+    try:
+        _manager, warnings = _discover(caplog)
+        assert any("not installed" in warning and "hermes pm install" in warning
+                   for warning in warnings), warnings
+        assert not any("hermes pm repair" in warning for warning in warnings), warnings
+
+        _gateway_answers(monkeypatch, [{"name": "depprobe", "key": "depprobe",
+                                         "activated_now": {}, "deferred": {},
+                                         "missing_dependencies": [REQ]}])
+        hint = plugins_activation.activation_hint(
+            plugins_activation.activate_plugin_now("depprobe", in_process=False))
+        assert "hermes pm install" in hint and "hermes pm repair" not in hint
+    finally:
+        plugins._reset_plugin_managers_for_tests()
+
+
 def test_discovery_says_restart_when_the_selected_generation_has_the_dependency(home, caplog):
     _select_generation(home, with_dist=True)
     try:
@@ -88,11 +123,11 @@ def test_discovery_says_restart_when_the_selected_generation_has_the_dependency(
         plugins._reset_plugin_managers_for_tests()
 
 
-def test_discovery_keeps_the_repair_remedy_when_nothing_installed_it(home, caplog):
+def test_discovery_recommends_install_when_nothing_installed_it(home, caplog):
     _select_generation(home, with_dist=False)
     try:
         _manager, messages = _discover(caplog)
-        assert any("not installed" in m and "pm repair" in m for m in messages), messages
+        assert any("not installed" in m and "pm install" in m for m in messages), messages
     finally:
         from hermes_cli import plugins
         plugins._reset_plugin_managers_for_tests()
@@ -146,14 +181,14 @@ def test_restart_names_only_the_process_that_cannot_import(home, monkeypatch):
     assert "desktop app" in hint and "hermes gateway restart" not in hint
 
 
-def test_enable_reports_repair_when_the_dependency_was_never_installed(home, monkeypatch):
+def test_enable_reports_install_when_the_dependency_was_never_installed(home, monkeypatch):
     _select_generation(home, with_dist=False)
     _gateway_answers(monkeypatch, [{"name": "depprobe", "key": "depprobe", "activated_now": {},
                                     "deferred": {}, "missing_dependencies": [REQ]}])
 
     hint = plugins_activation.activation_hint(plugins_activation.activate_plugin_now("depprobe", in_process=False))
 
-    assert "pm repair" in hint
+    assert "pm install" in hint and "pm repair" not in hint
 
 
 def test_enable_needs_no_restart_when_the_gateway_imports_everything(home, monkeypatch):
