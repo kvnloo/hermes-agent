@@ -129,6 +129,27 @@ async def test_voice_message_keeps_the_flat_waveform_when_loudness_is_unmeasurab
 
 
 @pytest.mark.asyncio
+async def test_waveform_exception_preserves_native_voice_message(tmp_path, monkeypatch):
+    """A broken optional envelope cannot downgrade a valid Ogg/Opus voice note to a file."""
+    adapter, channel = _adapter()
+    opus = tmp_path / "reply.ogg"
+    opus.write_bytes(_ogg_opus(3.0))
+
+    def fail_waveform(_path):
+        raise RuntimeError("unexpected waveform decode failure")
+
+    monkeypatch.setattr("plugins.platforms.discord.adapter_media.voice_waveform", fail_waveform)
+
+    result = await adapter.send_voice("222", str(opus))
+
+    assert result.success
+    assert channel.attachments == []
+    assert len(channel.voice_posts) == 1
+    [post] = channel.voice_posts
+    assert post["payload"]["flags"] == 8192
+    assert base64.b64decode(post["payload"]["attachments"][0]["waveform"]) == FLAT_WAVEFORM
+
+@pytest.mark.asyncio
 @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="decoding the envelope needs ffmpeg")
 async def test_voice_message_waveform_is_not_a_uniform_block_for_real_audio(tmp_path):
     """The user-visible defect: real speech rendered as one solid bar. Measured from an actual

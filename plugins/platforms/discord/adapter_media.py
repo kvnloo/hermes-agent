@@ -386,6 +386,11 @@ class DiscordMediaMixin:
             if voice is not None:
                 try:
                     waveform = await asyncio.to_thread(voice_waveform, audio_path)
+                except Exception as waveform_err:
+                    # An optional preview must not turn a valid voice note into a file.
+                    logger.debug("Voice waveform measurement failed, using flat fallback: %s", waveform_err)
+                    waveform = None
+                try:
                     return await self._post_voice_message(
                         channel, *voice, waveform=waveform or FLAT_WAVEFORM,
                         reply_to=reply_to, reference=reference)
