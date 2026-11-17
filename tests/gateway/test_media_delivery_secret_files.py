@@ -3,6 +3,8 @@
 Accident prevention (a debug log or config dump with a live key attached to a chat), opt-in.
 """
 
+import os
+
 import pytest
 
 from agent.redact_env_values import clear_profile_env_secret_cache
@@ -49,3 +51,23 @@ def test_file_holding_a_profile_secret_is_refused_only_when_opted_in(profile, en
     assert "report.txt" in kept_names
     assert ("debug.log" in kept_names) is not enabled
     assert (validate_media_delivery_path(str(leaky)) is None) is enabled
+
+
+def test_atomic_replacement_with_same_mtime_and_size_invalidates_clean_verdict(profile):
+    """Replacing a cached clean attachment must not let a secret-bearing copy through."""
+    home, _leaky, clean = profile
+    _set_refuse(home, "true")
+    clean.write_text("log: " + "x" * len(OPAQUE) + "\n", encoding="utf-8")
+    original = clean.stat()
+    assert validate_media_delivery_path(str(clean)) is not None  # caches a clean verdict
+
+    replacement = clean.with_name("report.new")
+    replacement.write_text("log: " + OPAQUE + "\n", encoding="utf-8")
+    os.utime(replacement, ns=(original.st_atime_ns, original.st_mtime_ns))
+    assert replacement.stat().st_size == original.st_size
+    os.replace(replacement, clean)
+    updated = clean.stat()
+    assert (updated.st_mtime_ns, updated.st_size) == (original.st_mtime_ns, original.st_size)
+
+    # Old cache key (path, mtime, size, forms) returned False and sent the secret to chat.
+    assert validate_media_delivery_path(str(clean)) is None

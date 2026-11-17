@@ -27,9 +27,9 @@ from agent.file_safety import is_project_env_basename
 
 logger = logging.getLogger(__name__)
 
-_MAX_SCAN_BYTES = 16 * 1024 * 1024  # ~40 ms worst case on the delivery path, once per (path, mtime, size)
+_MAX_SCAN_BYTES = 16 * 1024 * 1024  # ~40 ms worst case on the delivery path, once per unchanged file
 _CHUNK = 1024 * 1024
-# (path, mtime_ns, size, forms) -> verdict: one reply checks the same path several times.
+# (path, device, inode, ctime_ns, mtime_ns, size, forms) -> verdict; atomic swaps recheck.
 _VERDICTS: dict[tuple, bool] = {}
 _VERDICTS_MAX = 256
 
@@ -72,7 +72,7 @@ def file_holds_registered_secret(path: Path) -> bool:
         return False
     if st.st_size > _MAX_SCAN_BYTES:
         return False
-    key = (str(path), st.st_mtime_ns, st.st_size, forms)
+    key = (str(path), st.st_dev, st.st_ino, st.st_ctime_ns, st.st_mtime_ns, st.st_size, forms)
     verdict = _VERDICTS.get(key)
     if verdict is None:
         try:
