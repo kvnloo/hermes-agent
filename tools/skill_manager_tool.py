@@ -406,6 +406,15 @@ def _guarded_write(name: str, skill_dir: Path, target: Path, action: str, label:
     """Read-before-write guard (existing targets only), the description budget for the root SKILL.md
     (whichever action and file_path reach it), atomic write, then the security scan; a blocked scan
     restores the original (or unlinks a new file). Error dict or None."""
+    # Background review must not rewrite a shared canonical skill through a local link.
+    # Internal symlinks and intentional foreground edits remain supported.
+    if _is_background_review():
+        skills_root = _skills_dir()
+        if (target.absolute().is_relative_to(skills_root.absolute())
+                and not target.resolve().is_relative_to(skills_root.resolve())):
+            return _err(
+                f"Refusing background curator {action} for skill '{name}': {label} resolves "
+                "outside the active skills directory via a symlink.")
     original = None
     if target.exists():
         if read_guard := _background_review_read_before_write_guard(name, target, action, label):

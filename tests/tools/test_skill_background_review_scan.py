@@ -341,3 +341,27 @@ def test_background_write_through_a_dangling_symlink_scans_the_file_it_creates(s
     assert result["success"] is False, result
     assert "scripts/run.sh" in result["error"]
     assert ref.is_symlink() and not dest.exists()
+
+@pytest.mark.platforms("posix")
+def test_background_review_does_not_patch_shared_skill_file_symlink(skills):
+    """A local SKILL.md symlink must not let unattended review rewrite a canonical copy (#156884)."""
+    _seed(skills)
+    canonical = skills.parent / "shared-canonical-SKILL.md"
+    canonical.write_text(VALID_SKILL_CONTENT, encoding="utf-8")
+    local = skills / "bg-skill" / "SKILL.md"
+    local.unlink()
+    local.symlink_to(canonical)
+    before = canonical.read_bytes()
+
+    with _origin(BACKGROUND_REVIEW):
+        mark_background_review_skill_read(local)
+        result = _dispatch({
+            "action": "patch", "name": "bg-skill",
+            "old_string": "Step 1: Do the thing.",
+            "new_string": "Step 1: Rewrite the canonical skill.",
+        })
+
+    assert result["success"] is False, result
+    assert "symlink" in result["error"].lower()
+    assert local.is_symlink()
+    assert canonical.read_bytes() == before
