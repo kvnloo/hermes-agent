@@ -915,6 +915,23 @@ class TestBuildProcessCompletionEventTruncation:
         assert "x" * 500 in out
         assert out.startswith("[… output truncated — showing last ")
 
+    def test_bot_delivery_json_with_trailing_blank_line_keeps_fields(self):
+        """#156760: a trailing blank line must not erase the long reply envelope."""
+        from gateway.run_notifications import GatewayNotificationsMixin
+        from tools.process_registry_notifications import format_process_notification
+
+        payload = ('{"outcome":"answered","reply":"' + "x" * 4000 +
+                   '","status":"ok","delivery_id":"dm-42"}\n\n')
+        event = GatewayNotificationsMixin._build_process_completion_event(
+            _watcher_dict(), self._session(payload), "proc_blank")
+        tail = event["output"].split("\n", 1)[1]
+        assert len(tail) == 2000
+        assert '"delivery_id":"dm-42"' in tail
+        assert tail.endswith('"}\n\n')
+        notification = format_process_notification(event)
+        assert notification is not None
+        assert '"delivery_id":"dm-42"' in notification
+
     def test_multi_line_payload_still_snaps_to_line_boundary(self):
         from gateway.run_notifications import GatewayNotificationsMixin
 

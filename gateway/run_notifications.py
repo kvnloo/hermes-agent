@@ -1780,10 +1780,11 @@ class GatewayNotificationsMixin(GatewayUpdateNotificationsMixin, GatewayNotifica
         if len(_raw) > _LIMIT:
             _tail = _raw[-_LIMIT:]
             _nl = _tail.find("\n")
-            # A single-line payload has its only newline at the very end; snapping there would
-            # drop the entire tail and report "showing last 0 chars" (#152075). Only snap at a
-            # real interior newline.
-            _tail = _tail[_nl + 1:] if _nl not in (-1, len(_tail) - 1) else _tail
+            # A trailing newline (or blank lines) cannot erase the only substantive line.
+            # Snap only when a non-whitespace complete line survives the cut.
+            _snapped = _tail[_nl + 1:] if _nl != -1 else ""
+            if _snapped.strip():
+                _tail = _snapped
             _out = f"[… output truncated — showing last {len(_tail)} chars]\n{_tail}"
         else:
             _out = _raw
