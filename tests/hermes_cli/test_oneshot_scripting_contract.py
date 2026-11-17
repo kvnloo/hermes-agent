@@ -81,3 +81,14 @@ def test_default_submissions_keep_their_legacy_approval_fields():
     assert RunPolicy().submit_fields(oneshot_z=True) == {"unattended": True}
     assert RunPolicy().submit_fields(oneshot_z=False) == {}
     assert RunPolicy(on_approval="deny").submit_fields(oneshot_z=True) == {"on_approval": "deny"}
+
+
+@pytest.mark.parametrize("argv", [
+    ["-z", "do work", "--timeout", "inf"],
+    ["chat", "-q", "do work", "--timeout", "1e309"],
+])
+def test_timeout_rejects_nonfinite_seconds(argv):
+    """An unbounded float must not silently disable the requested one-shot deadline."""
+    with pytest.raises(SystemExit) as exc:
+        build_top_level_parser()[0].parse_args(argv)
+    assert exc.value.code == 2

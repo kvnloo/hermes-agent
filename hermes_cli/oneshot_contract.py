@@ -7,6 +7,7 @@ submission (the turn runs in the gateway, so a process environment variable woul
 """
 from __future__ import annotations
 
+import math
 import sys
 from dataclasses import dataclass
 from typing import Literal
@@ -45,8 +46,8 @@ def positive_seconds(raw: str) -> float:
         value = float(raw)
     except ValueError:
         raise argparse.ArgumentTypeError(f"invalid seconds: {raw!r}") from None
-    if not value > 0:
-        raise argparse.ArgumentTypeError("--timeout must be greater than 0")
+    if not value > 0 or not math.isfinite(value):
+        raise argparse.ArgumentTypeError("--timeout must be finite and greater than 0")
     return value
 
 
