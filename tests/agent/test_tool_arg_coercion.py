@@ -126,6 +126,21 @@ class TestCoerceToolArgs:
 
 
 
+    def test_large_integral_decimal_preserves_precision_in_tool_args(self):
+        """Decimal/scientific spellings of large integer IDs must not float-round."""
+        for schema_type in ("integer", "number"):
+            schema = self._mock_schema({"message_id": {"type": schema_type}})
+            with patch("tools.arg_coercion.registry.get_schema", return_value=schema):
+                for raw in ("9007199254740993.0", "9007199254740993e0"):
+                    result = coerce_tool_args("test_tool", {"message_id": raw})
+                    assert result["message_id"] == 9007199254740993
+                    assert isinstance(result["message_id"], int)
+                if schema_type == "integer":
+                    fractional = coerce_tool_args(
+                        "test_tool", {"message_id": "9007199254740992.5"}
+                    )
+                    assert fractional["message_id"] == "9007199254740992.5"
+
     def test_leaves_already_correct_types(self):
         schema = self._mock_schema({"limit": {"type": "integer"}})
         with patch("tools.arg_coercion.registry.get_schema", return_value=schema):

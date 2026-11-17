@@ -8,6 +8,7 @@ conservative: originals are kept whenever a repair is not unambiguous.
 
 import json
 import logging
+from decimal import Decimal, InvalidOperation
 from typing import Any, Dict
 
 from tools.registry import registry
@@ -226,7 +227,17 @@ def _coerce_number(value: str, integer_only: bool = False):
         return value
     if f != f or f in (float("inf"), float("-inf")):
         return value  # not JSON-serializable
-    return int(f) if f == int(f) else value if integer_only else f
+    if f == int(f):
+        # The binary float may have rounded a fractional or large integral value.
+        try:
+            exact = Decimal(value)
+        except InvalidOperation:
+            return int(f)  # Keep the legacy fallback for float-only spellings.
+        if exact != exact.to_integral_value():
+            return value if integer_only else f
+        return int(exact)
+    return value if integer_only else f
+
 
 def _coerce_boolean(value: str):
     """Parse "true"/"false" (case-insensitive); original string otherwise."""
