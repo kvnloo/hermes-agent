@@ -1,6 +1,7 @@
 """scripts/move: a folder moved only when every file under it moved; files that leave a folder that stays move alone."""
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -65,3 +66,40 @@ def test_docs_glob_follows_a_move_only_when_every_file_it_matches_moved_together
         "each `hermes_agent/tools/*.py` file, `hermes_agent/tools/blueprint*.py`, "
         "`hermes_agent/tools/cronjob_job_*.py`, `hermes_agent/tools/environments/*.py` "
         "and `hermes_agent/tools/blueprints.py`")
+
+def test_move_destinations_keep_populated_folders(tmp_path):
+    """Regression for #156699: a destination file means its folder did not depart."""
+    renames = _load("renames")
+    scenarios = (
+        ("within", (("a/b/c.py", "a/b/d.py"),)),
+        ("exchange", (("a/b/c.py", "elsewhere/c.py"), ("elsewhere/d.py", "a/b/d.py"))),
+    )
+    for name, moves in scenarios:
+        repo = tmp_path / name
+        for filename, contents in (("a/b/c.py", "VALUE = 1\\n"), ("elsewhere/d.py", "VALUE = 2\\n")):
+            file = repo / filename
+            file.parent.mkdir(parents=True, exist_ok=True)
+            file.write_text(contents)
+
+        def git(*args):
+            return subprocess.run(("git", "-C", str(repo), *args), check=True,
+                                  capture_output=True, text=True).stdout.strip()
+
+        git("init", "-q")
+        git("config", "user.email", "move-test@example.com")
+        git("config", "user.name", "Move Test")
+        git("add", "-A")
+        git("commit", "-qm", "base")
+        for old, new in moves:
+            git("mv", old, new)
+        git("commit", "-qm", "move")
+
+        paths = renames.renamed_paths(repo, git("rev-parse", "HEAD"))
+        assert set(paths) == set(moves)
+        tree = git("ls-tree", "-r", "--name-only", "HEAD^").splitlines()
+        moved = renames.MovedPaths(tuple(paths), renames.emptied_folders(tree, paths))
+        assert moved.emptied == frozenset()
+        assert moved.find_path("a/b/") is None
+        assert moved.find_path("a/b/c.py") == moves[0]
+        assert moved.folders == {old.rsplit("/", 1)[-1] for old, _ in moves}
+        assert moved.departed_files == {old.rsplit("/", 1)[-1] for old, _ in moves}
