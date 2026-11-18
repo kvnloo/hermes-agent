@@ -137,8 +137,8 @@ def _import_and_publish(layer, plugin_dir: Path, source: str, base_name: str, mo
         # bytes and mtimes restored): importing it again would be a no-op that registers nothing, so publish
         # what that import registered.
         staging = completed[1]
-        _publish(layer, base_name, module_name, fingerprint, staging, replacing=live is not None)
-        layer.errors.pop(plugin_dir.name, None)
+        if _publish(layer, base_name, module_name, fingerprint, staging, expected_live=live):
+            layer.errors.pop(plugin_dir.name, None)
         return
     staging = P._HomeLayer()
     token = P._REGISTRATION_TARGET.set(staging)
@@ -154,11 +154,11 @@ def _import_and_publish(layer, plugin_dir: Path, source: str, base_name: str, mo
     if module_name in sys.modules or module_name in staging.hosted:
         if module_name in sys.modules:
             _completed[module_name] = (sys.modules[module_name], staging)
-        _publish(layer, base_name, module_name, fingerprint, staging, replacing=live is not None)
-        layer.errors.pop(plugin_dir.name, None)
-        if live is not None:
-            logger.info("Provider plugin %s changed on disk; new sessions use the updated version",
-                        plugin_dir.name)
+        if _publish(layer, base_name, module_name, fingerprint, staging, expected_live=live):
+            layer.errors.pop(plugin_dir.name, None)
+            if live is not None:
+                logger.info("Provider plugin %s changed on disk; new sessions use the updated version",
+                            plugin_dir.name)
         return
     # A failed import leaves the previous version serving; drop what it half-loaded so a retry is clean.
     prefix = module_name + "."
@@ -168,7 +168,8 @@ def _import_and_publish(layer, plugin_dir: Path, source: str, base_name: str, mo
         layer.errors[plugin_dir.name] = error
 
 
-def _publish(layer, base_name: str, module_name: str, fingerprint: str, staging, *, replacing: bool) -> None:
+def _publish(layer, base_name: str, module_name: str, fingerprint: str, staging, *,
+             expected_live: tuple[str, str] | None) -> bool:
     """Swap *base_name*'s registrations in *layer* for *staging*'s. Lookups take no lock, so a name kept by the
     new release is overwritten in place and the alias table is replaced whole: a reader sees the old entry or
     the new one, never neither. A first import keeps the scan's last-writer-wins order; a reload never takes a
@@ -176,6 +177,10 @@ def _publish(layer, base_name: str, module_name: str, fingerprint: str, staging,
     import providers as P
 
     with P._HOME_LAYERS_LOCK:
+        # A newer tree may have finished while this one was still importing.
+        if layer.trees.get(base_name) != expected_live:
+            return False
+        replacing = expected_live is not None
         previous = {n for n, owner in layer.owner.items() if owner == base_name}
         for name, profile in staging.registry.items():
             if replacing and layer.owner.get(name, base_name) != base_name:
@@ -195,3 +200,4 @@ def _publish(layer, base_name: str, module_name: str, fingerprint: str, staging,
         layer.hosted.update(staging.hosted)
         layer.trees[base_name] = (fingerprint, module_name)
         P._REGISTRY_GENERATION += 1
+        return True
