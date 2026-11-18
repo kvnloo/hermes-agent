@@ -143,21 +143,22 @@ class TestRefreshSiblingLaunchdPlist:
 
 
 class TestLaunchdRealGatewayPid:
-    def test_returns_the_liveness_checked_state_file_pid(self, monkeypatch, tmp_path):
+    def test_returns_the_home_verified_gateway_pid(self, monkeypatch, tmp_path):
         home = tmp_path / "sibling-home"
         home.mkdir()
         (home / "gateway_state.json").write_text('{"pid": 4242}')
         import gateway.status as status
 
-        monkeypatch.setattr(status, "_pid_exists", lambda pid: pid == 4242)
-        monkeypatch.setattr(status, "read_runtime_status", lambda path: {"pid": 4242})
+        monkeypatch.setattr(
+            status, "live_gateway_pid_for_home",
+            lambda target_home: 4242 if target_home == home else None,
+        )
         assert _launchd_real_gateway_pid(str(home)) == 4242
 
     def test_dead_or_missing_gateway_is_none(self, monkeypatch, tmp_path):
         import gateway.status as status
 
-        monkeypatch.setattr(status, "_pid_exists", lambda pid: False)
-        monkeypatch.setattr(status, "read_runtime_status", lambda path: None)
+        monkeypatch.setattr(status, "live_gateway_pid_for_home", lambda home: None)
         assert _launchd_real_gateway_pid(str(tmp_path / "no-such-home")) is None
 
 
@@ -229,9 +230,9 @@ class TestSiblingRestartUsesRealGatewayAndRefresh:
             (sibling_home / "gateway_state.json").write_text(f'{{"pid": {state_pid}}}')
         import gateway.status as status
 
-        monkeypatch.setattr(status, "_pid_exists", lambda pid: pid == state_pid)
         monkeypatch.setattr(
-            status, "read_runtime_status", lambda path: {"pid": state_pid}
+            status, "live_gateway_pid_for_home",
+            lambda target_home: state_pid if target_home == sibling_home else None,
         )
         return drained, refreshed, rec
 

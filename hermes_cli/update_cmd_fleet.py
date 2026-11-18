@@ -1008,17 +1008,14 @@ def _refresh_sibling_launchd_plist(hermes_home: str) -> bool:
 
 
 def _launchd_real_gateway_pid(hermes_home: str) -> int | None:
-    """The gateway process ``hermes_home`` actually runs (its state-file PID,
-    liveness-checked), or None when no live gateway answers — never the launchctl
-    supervised PID, which under the plist template is the osascript wrapper rather
-    than the gateway child (#126883).
+    """Verified gateway PID for this sibling home, never a recycled state-file PID.
+
+    The launchctl-supervised PID may be an osascript wrapper; the gateway's
+    state record alone is not authoritative if its PID has been reused.
     """
     with suppress(Exception):
-        from gateway.status import _pid_exists, read_runtime_status
-        record = read_runtime_status(Path(hermes_home) / "gateway_state.json") or {}
-        pid = record.get("pid")
-        if isinstance(pid, int) and pid > 0 and _pid_exists(pid):
-            return pid
+        from gateway.status import live_gateway_pid_for_home
+        return live_gateway_pid_for_home(Path(hermes_home))
     return None
 
 
