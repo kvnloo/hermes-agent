@@ -20,6 +20,17 @@ def run(argv: list[str], env: dict[str, str], cwd: Path) -> subprocess.Completed
     return result
 
 
+
+def api_server_import_smoke(python: Path, env: dict[str, str], cwd: Path) -> None:
+    """Reject a Termux bundle whose own interpreter cannot load aiohttp.web."""
+    run([
+        str(python), "-c",
+        "from aiohttp import web; "
+        "web.Application(); "
+        "print('API_SERVER_HTTP_BACKEND_OK')",
+    ], env, cwd)
+
+
 def stop_child_tree(child: subprocess.Popen) -> None:
     import psutil
     from agent.deadline import kill_process_tree
@@ -121,6 +132,7 @@ def main() -> None:
             "assert detect_install_method() == 'apt'; "
             "print('CLI_AND_STDLIB_IMPORTS_OK')",
         ], env, home)
+        api_server_import_smoke(python, env, home)
         natives = json.loads((root / "native-wheels.json").read_text(encoding="utf-8-sig"))
         run([
             str(python), str(root / "app/scripts/termux/build_wheels.py"),
