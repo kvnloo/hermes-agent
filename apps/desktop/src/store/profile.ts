@@ -15,7 +15,7 @@ import {
   storedStringRecord
 } from '@/lib/storage'
 import { withTimeout } from '@/lib/with-timeout'
-import { registryConnectionKind } from '@/store/connection-registry-state'
+import { $connectionsRegistry, registryConnectionKind } from '@/store/connection-registry-state'
 import {
   $gateway,
   activeGatewayConnectionId,
@@ -950,18 +950,21 @@ $showAllProfiles.subscribe(value => persistBoolean(SHOW_ALL_PROFILES_STORAGE_KEY
 // whole sidebar with it — a real context switch, not a separate filter to keep
 // in sync.
 //
-// "All profiles" only exists with more than one profile to unite. The flag is
+// "All profiles" needs more than one owner: distinct profile names OR multiple
+// registered gateways (each can have a "default" profile). The flag is
 // reachable at one profile (Grouping → Profile, or persisted from a
 // two-profile era), and honoring it there poisons every profile-scoped writer
-// — projects.* throws (#101642, #94430, #94738) — while the sidebar itself
-// renders flat (index.tsx already exempts single-profile from ALL). So the
-// scope collapses to the gateway profile at exactly one profile, matching the
-// rendering exemption at the single source of truth. The flag stays persisted,
-// so a second profile restores the unified view. An empty list means "not
+// — projects.* throws (#101642, #94430, #94738) — while a lone gateway
+// renders flat. Collapse only with one owner, matching the rendering exemption.
+// The flag stays persisted, so a second profile or gateway restores the view. An empty list means "not
 // loaded yet": keep honoring the flag so a multi-profile boot doesn't flicker
 // scope profile → all → as the list lands.
-export const $profileScope = computed([$showAllProfiles, $activeGatewayProfile, $profiles], (showAll, gateway, profiles) =>
-  showAll && profiles.length !== 1 ? ALL_PROFILES : normalizeProfileKey(gateway)
+export const $profileScope = computed(
+  [$showAllProfiles, $activeGatewayProfile, $profiles, $connectionsRegistry],
+  (showAll, gateway, profiles, registry) =>
+    showAll && (profiles.length !== 1 || (registry?.connections.length ?? 0) > 1)
+      ? ALL_PROFILES
+      : normalizeProfileKey(gateway)
 )
 
 // Switch the active context to `name`: leave "All profiles" mode, point new

@@ -25,7 +25,7 @@ import { modeBound, modeLayout } from '@/store/interface-mode'
 
 import { trackArea } from './desktop-metrics'
 import { $paneStates, ensurePaneRegistered, setPaneOpen, setPaneWidthOverride } from './panes'
-import { $showAllProfiles, setShowAllProfiles } from './profile'
+import { ALL_PROFILES, $profileScope, setShowAllProfiles } from './profile'
 import type { PullRequestBucket } from './pull-requests'
 import type { SessionStatusBucket } from './session-dot-state'
 
@@ -263,8 +263,8 @@ const $sidebarAllProfilesAgentsGrouped = persistentAtom(
 /** Whether the CURRENT scope shows the project tree (reads the scope's own
  *  flag, so each workspace and the all-profiles view remember it separately). */
 export const $sidebarAgentsGrouped: ReadableAtom<boolean> = computed(
-  [$showAllProfiles, $sidebarFlatAgentsGrouped, $sidebarAllProfilesAgentsGrouped],
-  (showAll, flat, allProfiles) => (showAll ? allProfiles : flat)
+  [$profileScope, $sidebarFlatAgentsGrouped, $sidebarAllProfilesAgentsGrouped],
+  (scope, flat, allProfiles) => (scope === ALL_PROFILES ? allProfiles : flat)
 )
 
 /** How the recents list is divided. `date` is the sidebar's long-standing
@@ -403,8 +403,8 @@ export const $sidebarPrFilter = persistentAtom<PullRequestBucket[]>(
 )
 
 export const $sidebarGrouping: ReadableAtom<SidebarGrouping> = computed(
-  [$sidebarAgentsGrouped, $sidebarFlatGrouping, $sidebarAllProfilesGrouping, $showAllProfiles],
-  (grouped, flat, allProfiles, showAll) => (grouped ? 'project' : showAll ? allProfiles : flat)
+  [$sidebarAgentsGrouped, $sidebarFlatGrouping, $sidebarAllProfilesGrouping, $profileScope],
+  (grouped, flat, allProfiles, scope) => (grouped ? 'project' : scope === ALL_PROFILES ? allProfiles : flat)
 )
 
 // A hand-dragged order outranks any sort key — dragging IS how you pick manual,
@@ -744,7 +744,7 @@ export function toggleSidebarMessagingOpen(sourceId: string) {
 
 export function setSidebarAgentsGrouped(grouped: boolean) {
   // Write the flag the current scope reads — see $sidebarAgentsGrouped.
-  ;($showAllProfiles.get() ? $sidebarAllProfilesAgentsGrouped : $sidebarFlatAgentsGrouped).set(grouped)
+  ;($profileScope.get() === ALL_PROFILES ? $sidebarAllProfilesAgentsGrouped : $sidebarFlatAgentsGrouped).set(grouped)
 }
 
 export function setSidebarGrouping(grouping: SidebarGrouping) {
@@ -766,7 +766,7 @@ export function setSidebarGrouping(grouping: SidebarGrouping) {
     return
   }
 
-  if ($showAllProfiles.get()) {
+  if ($profileScope.get() === ALL_PROFILES) {
     $sidebarAllProfilesGrouping.set(grouping)
 
     return

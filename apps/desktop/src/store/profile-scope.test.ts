@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { $connectionsRegistry } from '@/store/connection-registry-state'
+import { $sidebarGrouping, setSidebarGrouping } from '@/store/layout'
+
 import {
   $activeGatewayProfile,
   $profiles,
   $profileScope,
   $showAllProfiles,
-  ALL_PROFILES
+  ALL_PROFILES,
+  sidebarProfileForScope
 } from '@/store/profile'
 import type { ProfileInfo } from '@/types/hermes'
 
@@ -31,6 +35,8 @@ describe('$profileScope single-profile exemption', () => {
     $showAllProfiles.set(false)
     $activeGatewayProfile.set('default')
     $profiles.set([])
+    $connectionsRegistry.set(null)
+    setSidebarGrouping('date')
   })
 
   it('honors the all-profiles flag with multiple profiles', () => {
@@ -73,5 +79,47 @@ describe('$profileScope single-profile exemption', () => {
     $activeGatewayProfile.set('work')
 
     expect($profileScope.get()).toBe('work')
+  })
+
+  it('uses a named session selector and flat grouping with one local owner', () => {
+    $connectionsRegistry.set({
+      version: 2,
+      primary: 'local',
+      secureTokenStorage: true,
+      connections: [
+        { id: 'local', label: 'This device', kind: 'local', tokenSet: false, tokenPreview: null }
+      ]
+    })
+    $profiles.set([profile('default', true)])
+    setSidebarGrouping('profile')
+
+    // A native HTTP ticket for "default" cannot read profile=all.
+    expect(sidebarProfileForScope($profileScope.get())).toBe('default')
+    expect($sidebarGrouping.get()).toBe('date')
+  })
+
+  it('preserves owner groups when two gateways each have only default', () => {
+    const local = { id: 'local', label: 'This device', kind: 'local' as const, tokenSet: false, tokenPreview: null }
+    const remote = { id: 'remote-1', label: 'Homelab', kind: 'remote' as const, tokenSet: false, tokenPreview: null }
+    $connectionsRegistry.set({
+      version: 2,
+      primary: 'local',
+      secureTokenStorage: true,
+      connections: [local, remote]
+    })
+    $profiles.set([profile('default', true)])
+    setSidebarGrouping('profile')
+
+    expect($profileScope.get()).toBe(ALL_PROFILES)
+    expect($sidebarGrouping.get()).toBe('profile')
+
+    $connectionsRegistry.set({
+      version: 2,
+      primary: 'local',
+      secureTokenStorage: true,
+      connections: [local]
+    })
+    expect(sidebarProfileForScope($profileScope.get())).toBe('default')
+    expect($sidebarGrouping.get()).toBe('date')
   })
 })
