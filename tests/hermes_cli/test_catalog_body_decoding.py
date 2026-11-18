@@ -93,6 +93,14 @@ class TestDecodeResponseBody:
         body = gzip.compress(b'{"data": []}')
         assert decode_response_body(_FakeResponse(body), body) == b'{"data": []}'
 
+    @pytest.mark.parametrize("codings", ["gzip, deflate", "deflate, gzip"])
+    def test_stacked_content_encodings_are_decoded_in_reverse_order(self, codings):
+        plain = b'{"data": [{"id": "k3.1-pro"}]}'
+        encoded = plain
+        for coding in codings.split(", "):
+            encoded = gzip.compress(encoded) if coding == "gzip" else zlib.compress(encoded)
+        assert decode_response_body(_FakeResponse(encoded, codings), encoded) == plain
+
     def test_deflate_body_is_decoded(self):
         body = zlib.compress(b'{"data": []}')
         assert decode_response_body(_FakeResponse(body, "deflate"), body) == b'{"data": []}'

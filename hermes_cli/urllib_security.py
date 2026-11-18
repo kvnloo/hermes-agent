@@ -149,6 +149,22 @@ def decode_response_body(resp: Any, body: bytes) -> bytes:
         encoding = (resp.headers.get("Content-Encoding") or "").strip().lower()
     except Exception:
         encoding = ""
+    # Content-Encoding lists stacked codings in application order (RFC 9110).
+    # Undo them from the outside in, before the single-coding/magic-byte path.
+    if "," in encoding:
+        decoded = body
+        for coding in reversed(encoding.split(",")):
+            coding = coding.strip()
+            if coding in ("gzip", "x-gzip"):
+                decoded = gzip.decompress(decoded)
+            elif coding == "deflate":
+                try:
+                    decoded = zlib.decompress(decoded)
+                except zlib.error:
+                    decoded = zlib.decompress(decoded, -zlib.MAX_WBITS)
+            elif coding != "identity":
+                return body
+        return decoded
     if "gzip" in encoding or body[:2] == b"\x1f\x8b":
         try:
             return gzip.decompress(body)
