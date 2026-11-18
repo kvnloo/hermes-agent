@@ -181,6 +181,7 @@ def commit_and_publish(authority, live, ref, row, response, outcome, captured, s
         with live.event_stream.lock:
             live.settling.pop(admission_id, None)
             _publish_completion(authority, live, ref, row, settlement['settled'], settlement['response'], captured)
+            settlement['published'] = True
     finally:
         with live.event_stream.lock:
             live.settling.pop(admission_id, None)
@@ -248,6 +249,18 @@ async def settle_and_deliver(authority, live, ref, row, response, outcome):
         except Exception:
             logger.exception(
                 'Settlement or publication of admission %s failed', admission_id)
+            if settled is not None and not settlement.get('published'):
+                # A committed answer is still readable if its completion payload cannot be
+                # published (for example a reply type that cannot be deep-copied). Request
+                # an authoritative snapshot from any attached viewer rather than lose it.
+                try:
+                    with live.event_stream.lock:
+                        replay_epoch, latest_seq = live.event_stream.watermark()
+                        live.event_stream.publish(
+                            ref.session_id, {'replay_epoch': replay_epoch, 'latest_seq': latest_seq},
+                            event_type='session.replay_gap', execution={})
+                except Exception:
+                    logger.exception('Transcript refresh signal failed for admission %s', admission_id)
             if settled is None:
                 authority.pending_results.setdefault(admission_id, {
                     'result': {'final_response': response, 'failed': outcome == 'failed'}, 'usage': {}})

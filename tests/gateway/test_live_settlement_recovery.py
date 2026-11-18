@@ -171,3 +171,43 @@ async def test_recovered_native_reply_is_sent_only_after_its_outcome_commits(tmp
     else:
         assert status == 'terminal' and sent == [('model reply', 'terminal')]
     assert receipt.admission_id not in authority.pending_deliveries
+
+@pytest.mark.asyncio
+async def test_committed_final_reply_requests_rehydrate_when_publication_fails(tmp_path, monkeypatch):
+    """A completed row stays visible after the completion frame itself cannot be copied."""
+    from gateway import session_finite
+    db, authority = _authority(tmp_path, monkeypatch)
+    monkeypatch.setattr(authority, '_schedule', lambda ref: None)
+    stream = authority.sessions['s'].event_stream
+    frames, runs, attempts = [], [], []
+    stream.observers.add(frames.append)
+    original_publish = stream.publish
+
+    def publish(session_id, payload, **kwargs):
+        if kwargs.get('event_type', 'message.complete') == 'message.complete':
+            attempts.append(payload['admission_id'])
+            raise TypeError('completion payload cannot be deep-copied')
+        return original_publish(session_id, payload, **kwargs)
+
+    monkeypatch.setattr(stream, 'publish', publish)
+
+    async def execute(owner, ref, row):
+        runs.append(row['admission_id'])
+        owner.pending_results[row['admission_id']] = {
+            'result': {'final_response': 'saved answer', 'completed': True}, 'usage': {}}
+        return 'saved answer'
+
+    monkeypatch.setattr(session_finite, 'execute_finite_admission', execute)
+    with db:
+        receipt = await authority.submit(ACTOR, Submission('one', REF, {'text': 'hi'}, 'queue'))
+        await asyncio.wait_for(authority.sessions['s'].task, 5)
+        saved = authority.persistence.admissions.get(admission_id=receipt.admission_id)
+        assert (saved.status, saved.outcome) == ('terminal', 'completed')
+        assert runs == attempts == [receipt.admission_id]
+        assert receipt.admission_id not in authority.pending_results
+        gaps = [f['params'] for f in frames if f['params']['type'] == 'session.replay_gap']
+        assert len(gaps) == 1
+        assert gaps[0]['session_id'] == REF.session_id
+        assert isinstance(gaps[0]['payload']['replay_epoch'], str)
+        assert isinstance(gaps[0]['payload']['latest_seq'], int)
+        assert not any(f['params']['type'] == 'message.complete' for f in frames)
