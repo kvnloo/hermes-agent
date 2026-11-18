@@ -26,6 +26,24 @@ def test_sealed_snapshot_keeps_the_whatsapp_bridge(tmp_path):
     assert not (destination / "scripts/bundles/payload.py").exists()
 
 
+def test_git_archive_child_is_bounded(tmp_path, monkeypatch):
+    """A stalled git archive cannot hang sealed-payload staging forever."""
+    from scripts.bundles import payload
+
+    calls = []
+
+    def capture(argv, **kwargs):
+        calls.append(kwargs)
+        return subprocess.CompletedProcess(argv, 0)
+
+    monkeypatch.setattr(payload.subprocess, "run", capture)
+    payload._write_git_archive(
+        tmp_path, "HEAD", tmp_path / "snapshot.tar", ["scripts/whatsapp-bridge"])
+    assert len(calls) == 1
+    assert isinstance(calls[0].get("timeout"), (int, float))
+    assert calls[0]["timeout"] > 0
+
+
 def test_release_version_comes_from_the_release_identity_not_the_checkout(tmp_path):
     (tmp_path / "pyproject.toml").write_text('[project]\nversion="0.0.0"\n', encoding="utf-8")
     assert release_version(tmp_path, "v1.2.3") == "1.2.3"

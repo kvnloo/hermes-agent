@@ -54,6 +54,12 @@ def test_bundle_stages_git_tree_and_runs_native_children_before_manifest(tmp_pat
     repo.mkdir()
     source = Path(__file__).resolve().parents[2]
     shutil.copytree(source / "pm", repo / "pm", ignore=shutil.ignore_patterns("__pycache__"))
+    # Sealed snapshots retain this runtime tree even while excluding build scripts.
+    shutil.copytree(
+        source / "scripts" / "whatsapp-bridge",
+        repo / "scripts" / "whatsapp-bridge",
+        ignore=shutil.ignore_patterns("node_modules"),
+    )
     (repo / "hermes_cli").mkdir()
     for name in ("__init__.py", "runtime_state.py"):
         shutil.copy2(source / "hermes_cli" / name, repo / "hermes_cli" / name)
@@ -243,6 +249,10 @@ def test_bundle_stages_git_tree_and_runs_native_children_before_manifest(tmp_pat
     assert calls[0]["all_extras"] is True
     assert calls[0]["cache"] == tmp_path / "cache"
     assert (output / "hermes-agent/pyproject.toml").is_file()
+    staged_bridge = output / "hermes-agent/scripts/whatsapp-bridge"
+    assert (staged_bridge / "bridge.js").is_file()
+    assert (staged_bridge / "package-lock.json").is_file()
+    assert not (output / "hermes-agent/scripts/bundles").exists()
     assert 'version="1.0.0"' in (output / "hermes-agent/pyproject.toml").read_text()
     assert not (output / "hermes-agent/hermes_cli/_version.py").exists()
     assert not (output / "hermes-agent/untracked").exists()

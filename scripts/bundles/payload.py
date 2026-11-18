@@ -46,7 +46,7 @@ def _runtime_trees_hidden_by(exclude: tuple[str, ...]) -> tuple[str, ...]:
 def _write_git_archive(repo: Path, ref: str, archive: Path, paths: list[str]) -> None:
     subprocess.run(
         ["git", "archive", "--format=tar", "--output", str(archive), ref, "--", *paths],
-        cwd=repo, check=True)
+        cwd=repo, check=True, timeout=600)
 
 
 def _extract_archive(archive: Path, destination: Path) -> None:
