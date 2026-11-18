@@ -527,6 +527,23 @@ _INFLIGHT_TASK_REPLAY_HEADER = (
     "start over.]"
 )
 
+# conversation_compression._pruned_skill_reload_notice, appended after a restated request ("\n\n" + notice, at the
+# very end) by the handoff capsule's reload pass. Matched to the producer's exact text so it never reads as the ask.
+_RELOAD_NOTICE_TAIL = re.compile(
+    r"\n\n" + re.escape("[Skills pruned during compression — reload before acting on these tasks]\n"
+                        "The task list above crossed the compression boundary verbatim, but the skill instructions "
+                        "that governed it were pruned. Before executing any preserved task that depends on these "
+                        "skills, reload them first: ")
+    + r"skill_view\(name='[^'\n]*'\)(?:; skill_view\(name='[^'\n]*'\))*"
+    + re.escape(". After reloading, re-check that each pending task is still justified — findings recorded before "
+                "the boundary may have invalidated it.") + r"\Z")
+
+
+def _strip_reload_notice(text: str) -> str:
+    """*text* without a trailing pruned-skill reload notice (only ever after a restated request)."""
+    return _RELOAD_NOTICE_TAIL.sub("", text)
+
+
 _SALVAGE_SUMMARY_MAX_CHARS = 8_000
 _SALVAGE_KEEP_RECENT_TOOLS = 2
 
@@ -952,6 +969,65 @@ def _synthetic_user_row(content: str) -> bool:
     return is_user_role_scaffolding({"role": "user", "content": content})
 
 
+def _peel_runtime_wrappers(content: str, steer_ok: bool = True) -> tuple[str, bool]:
+    """``(what the person sent, whether any runtime wrapper was peeled)``. Recovery notes, one-shot notes and
+    the steer delivery marker wrap it, possibly stacked (a recovery note can carry a steer row). "[OUT-OF-BAND"
+    is a scaffolding prefix, so without the unwrap every steer would drop out of the quotes."""
+    from agent.conversation_compression_scaffolding import split_recovery_note, unwrap_steer
+    wrapped = False
+    if content.startswith(_INFLIGHT_TASK_REPLAY_HEADER + "\n"):   # a request restated at a compaction boundary
+        content, wrapped = _strip_reload_notice(content[len(_INFLIGHT_TASK_REPLAY_HEADER) + 1:]), True
+    for _ in range(8):   # every note kind can stack once, plus the steer marker
+        kind, rest = split_recovery_note(content)
+        if kind is not None:
+            content, wrapped = rest, True
+            continue
+        if steer_ok and (steer := unwrap_steer(content)) is not None:
+            return steer, True   # the steer marker is innermost: its payload is the person's, even a literal frame
+        break
+    return content, wrapped
+
+
+def _peeled_text(content: Any) -> tuple[str, bool]:
+    """``(row text with runtime wrappers peeled, whether one was)``; base's flattened text when none was.
+    Producers put a note only in a part list's FIRST text part (cli_render._prepend_note_to_message,
+    gateway recovery captions), so only that part is peeled; a part left empty goes."""
+    if isinstance(content, list):
+        texts = [t for t in map(_part_text, content) if isinstance(t, str) and t]
+        if texts:
+            first, peeled = _peel_runtime_wrappers(texts[0], steer_ok=False)   # steer rows are strings, never parts
+            if peeled:
+                return "\n".join(([first] if first else []) + texts[1:]), True
+        return _content_text_for_contains(content), False
+    return _peel_runtime_wrappers(_content_text_for_contains(content))
+
+
+def _person_text(content: Any) -> str:
+    """The text a summary may quote as the person's for a user-role row, or "" when the row is runtime output.
+    Only an exact producer wrapper or whole runtime row is removed. A peeled payload is what the person sent and
+    is FINAL: no skill, reply or scaffolding parse runs on it (when unsure, keep). An unwrapped row gets exactly
+    base's handling."""
+    from agent.conversation_compression_scaffolding import is_runtime_row
+    if isinstance(content, str) and is_runtime_row(content):   # the producer writes a string row, never parts
+        return ""
+    words, peeled = _peeled_text(content)
+    if peeled:
+        return words
+    typed = _typed_user_text(words)
+    return "" if _synthetic_user_row(typed) else typed
+
+
+def _request_text(content: Any) -> tuple[Any, bool]:
+    """``(content, peeled)`` for task anchors (snapshot, focus, fallback): ``("", False)`` for a whole runtime
+    row, the peeled payload (final: callers must not parse it again) when a wrapper was peeled, else the
+    content itself so those paths keep base's own handling."""
+    from agent.conversation_compression_scaffolding import is_runtime_row
+    if isinstance(content, str) and is_runtime_row(content):
+        return "", False
+    words, peeled = _peeled_text(content)
+    return (words, True) if peeled else (content, False)
+
+
 def _typed_user_text(content: str) -> str:
     """A ``/skill``, bundle or auto-load turn as the user typed it (``/skill do X``); other text unchanged.
     Its inline skill body is not the user's words — it is carried by a ``[SKILL_PRUNED: ...]`` marker instead."""
@@ -961,18 +1037,21 @@ def _typed_user_text(content: str) -> str:
 
 def _build_verbatim_user_section(turns: list[dict[str, Any]]) -> str:
     """Compacted region's REAL user messages verbatim, newest-first under a char budget (straddler truncated); "" if none."""
+    # No dedupe: equal text is no proof of one turn (a crash can replay a repeated request), so both stay.
     collected: list[str] = []
     used = 0
     for msg in reversed(turns):
         if msg.get("role") != "user":
             continue
-        content = _typed_user_text(_content_text_for_contains(msg.get("content")))
-        if _synthetic_user_row(content):
+        content = _person_text(msg.get("content"))
+        if not content.strip():
             continue
         remaining = _LEAN_USER_MESSAGES_BUDGET_CHARS - used
         if remaining <= 0:
             break
-        text = content.strip()
+        # A peeled payload followed the note in base's row, so base's strip never reached its start (indent, blank
+        # lines): only its end is trimmed, as base trimmed the row's.
+        text = content.rstrip() if _peeled_text(msg.get("content"))[1] else content.strip()
         if len(text) > remaining and remaining <= ELISION_MARKER_MAX_LEN:
             break  # no room for marker + content: a marker-only quote would overshoot the budget
         text = elide(text, min(_LEAN_USER_MESSAGE_MAX_CHARS, remaining))
@@ -1236,9 +1315,18 @@ def _compact_fallback_turn(value: Any) -> str:
     return re.sub(r"\bgh[pousr]_[A-Za-z0-9_.-]+", "[REDACTED]", text)
 
 
-def _bullets(items: list[str], limit: int = 8) -> str:
-    """Markdown bullets of the first ``limit`` distinct non-blank items, or ``None.``."""
-    unique = [item for item in dict.fromkeys(item.strip() for item in items) if item][:limit]
+def _bullets(items: list[str], limit: int = 8, keys: Optional[list[str]] = None) -> str:
+    """Markdown bullets of the first ``limit`` distinct non-blank items (distinct by ``keys`` when given), or ``None.``.
+    On a key collision the item that IS its key (the row exactly as base rendered it) wins, so merging an unwrapped
+    row with its authored twin keeps the authored wording in either order."""
+    by_key: Optional[dict[str, str]] = None
+    if keys is not None:
+        by_key = {}
+        for key, item in zip(keys, (item.strip() for item in items)):
+            if key not in by_key or item == key:
+                by_key[key] = item
+    unique = ([item for item in by_key.values() if item] if by_key is not None
+              else [item for item in dict.fromkeys(item.strip() for item in items) if item])[:limit]
     return "\n".join(f"- {item}" for item in unique) if unique else "None."
 
 
@@ -1392,7 +1480,7 @@ def _restated_request_text(content: Any) -> str:
     """
     text = _content_text_for_contains(content).strip()
     if _INFLIGHT_TASK_REPLAY_HEADER in text:
-        text = text.rsplit(_INFLIGHT_TASK_REPLAY_HEADER, 1)[1].strip()
+        text = _strip_reload_notice(text.rsplit(_INFLIGHT_TASK_REPLAY_HEADER, 1)[1]).strip()
     return text
 
 
@@ -3453,6 +3541,7 @@ class ContextCompressor(
         relevant_files: list[str] = []
         blockers: list[str] = []
         last_dropped_turns: list[str] = []
+        last_dropped_keys: list[str] = []
         call_id_to_tool: dict[str, tuple[str, str]] = {}
         for msg in turns_to_summarize:
             if msg.get("role") != "assistant":
@@ -3472,18 +3561,30 @@ class ContextCompressor(
         for msg in turns_to_summarize:
             role = msg.get("role", "unknown")
             content = msg.get("content")
-            text = _compact_fallback_turn(_typed_user_text(content) if role == "user" and isinstance(content, str) else content)
+            peeled = False
+            if role == "user":
+                content, peeled = _request_text(content)
+            text = _compact_fallback_turn(
+                _typed_user_text(content) if role == "user" and isinstance(content, str) and not peeled else content)
             _collect_path_mentions(text, relevant_files)
-            synthetic_user = role == "user" and self._is_synthetic_compression_user_turn(msg)
+            # A whole runtime row (the model-switch marker) is "" here: never a user ask or dropped turn.
+            synthetic_user = role == "user" and (content == "" or self._is_synthetic_compression_user_turn(msg))
             tool_names = [_extract_tool_call_name_and_args(tc)[0] for tc in (msg.get("tool_calls") or [])] if role == "assistant" else []
             turn_text = text
             if tool_names:
                 prefix = "tool calls: " + ", ".join(tool_names[:6])
                 turn_text = f"{prefix}; {turn_text}" if turn_text else prefix
             turn_label = "INTERNAL CONTEXT" if synthetic_user else str(role).upper()
-            if turn_text.strip():
-                last_dropped_turns.append(f"{turn_label}: {turn_text.strip()}")
-                del last_dropped_turns[:-8]
+            # A row whose wrapper was unwrapped dedupes, and holds its slot in the last-8 window, exactly as base's
+            # entry for the row as sent did (note included): an emptied row never lets an older, longer turn crowd
+            # out later words, and two recovered requests merge only when base's entries would have.
+            unwrapped = role == "user" and (peeled or content == "") and bool(msg.get("content"))
+            if turn_text.strip() or unwrapped:
+                last_dropped_turns.append(f"{turn_label}: {turn_text.strip()}" if turn_text.strip() else "")
+                last_dropped_keys.append(f"{str(role).upper()}: {_compact_fallback_turn(msg.get('content')).strip()}"
+                                         if unwrapped
+                                         else last_dropped_turns[-1])
+                del last_dropped_turns[:-8], last_dropped_keys[:-8]
             if len(text) > 600:
                 text = text[:420].rstrip() + " ... " + text[-160:].lstrip()
             if role == "user" and text and not synthetic_user:
@@ -3504,6 +3605,7 @@ class ContextCompressor(
             "relevant_files": relevant_files,
             "blockers": blockers,
             "last_dropped_turns": last_dropped_turns,
+            "last_dropped_keys": last_dropped_keys,
         }
 
     def _build_static_fallback_summary(
@@ -3557,7 +3659,7 @@ None recoverable from deterministic fallback.
 {_bullets(anchors["relevant_files"], limit=12)}
 
 ## Last Dropped Turns
-{_bullets(anchors["last_dropped_turns"], limit=8)}
+{_bullets(anchors["last_dropped_turns"], limit=8, keys=anchors["last_dropped_keys"])}
 
 ## Critical Context
 Summary generation was unavailable, so this is a best-effort deterministic fallback for {len(turns_to_summarize)} compacted message(s).{reason_text}"""
@@ -4337,18 +4439,28 @@ Write only the summary body. Do not include any preamble or prefix."""
     def _derive_auto_focus_topic(cls, messages: list[dict[str, Any]]) -> Optional[str]:
         """Infer a compact focus hint from the most recent real user turns."""
         candidates: list[str] = []
+        slots = 0
         for msg in reversed(messages):
             # display_kind notices are operational traffic, not user intent.
             if msg.get("role") != "user" or cls._is_synthetic_compression_user_turn(msg) or msg.get("display_kind"):
                 continue
-            text = _redact_compaction_text(_typed_user_text(_content_text_for_contains(msg.get("content"))).strip())
+            content, peeled = _request_text(msg.get("content"))
+            raw = _content_text_for_contains(content)
+            text = _redact_compaction_text((raw if peeled else _typed_user_text(raw)).strip())
             if not text:
+                # A row emptied by peeling keeps the slot base gave its note text, so the head-kept cap
+                # below never trades the newest request for an older one.
+                if peeled or (content == "" and _content_text_for_contains(msg.get("content")).strip()):
+                    slots += 1
+                    if slots >= _AUTO_FOCUS_MAX_TURNS:
+                        break
                 continue
             text = " ".join(text.split())
             if len(text) > _AUTO_FOCUS_TURN_MAX_CHARS:
                 text = text[: _AUTO_FOCUS_TURN_MAX_CHARS - 1].rstrip() + "…"
             candidates.append(text)
-            if len(candidates) >= _AUTO_FOCUS_MAX_TURNS:
+            slots += 1
+            if slots >= _AUTO_FOCUS_MAX_TURNS:
                 break
         if not candidates:
             return None
@@ -4368,10 +4480,12 @@ Write only the summary body. Do not include any preamble or prefix."""
         for msg in reversed(messages):
             if msg.get("role") != "user" or not _is_real_user_message(msg):
                 continue
-            text = _redact_compaction_text(_typed_user_text(_content_text_for_contains(msg.get("content"))).strip())
+            content, peeled = _request_text(msg.get("content"))   # a peeled payload is final: no parse below
+            raw = _content_text_for_contains(content)
+            text = _redact_compaction_text((raw if peeled else _typed_user_text(raw)).strip())
             if not text:
                 continue
-            if len(text) > _ACTIVE_TASK_MAX_CHARS:
+            if len(text) > _ACTIVE_TASK_MAX_CHARS and not peeled:
                 # Past the cap, drop a gateway reply quote first so elision cannot keep the quote
                 # and cut the request.
                 text = _redact_compaction_text(_authored_request_text(msg.get("content"))) or text
