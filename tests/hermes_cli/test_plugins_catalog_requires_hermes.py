@@ -133,3 +133,28 @@ def test_portable_catalog_entry_gets_its_hermes_floor_from_the_catalog(gated, tm
     held = pc.dashboard_update_user_plugin("cat-plugin")
     assert held["ok"] is False and REFUSAL in held["error"]
     assert _head(gated["plugins_dir"] / "cat-plugin") == shas[0]
+
+def test_secret_handoff_catalog_floor_blocks_install_before_download(monkeypatch):
+    """At the v0.3.6 pin, an older host must reject the plugin before cloning."""
+    from hermes_cli import plugins_cmd_catalog as catalog
+
+    entry = pc_cat.get_catalog_entry("secret-handoff")
+    assert entry is not None
+    # The pinned plugin.yaml at this SHA declares requires_hermes: ">=0.21.1".
+    assert entry.sha == "f669c2a8adce468790be46ad70cfd312df53ba79"
+
+    monkeypatch.setattr(plugins_manifest, "running_hermes_version", lambda: "0.21.0")
+    # Ignore the unrelated remote removal list; the clone is the boundary under test.
+    monkeypatch.setattr(catalog, "raise_if_removed", lambda *_names: None)
+
+    def unexpected_download(*_args, **_kwargs):
+        pytest.fail("plugin download started before the catalog's Hermes version gate")
+
+    monkeypatch.setattr(pc, "_install_plugin_core", unexpected_download)
+    with pytest.raises(pc.PluginOperationError,
+                       match=r"secret-handoff needs Hermes >=0[.]21[.]1; this is 0[.]21[.]0"):
+        catalog.install_catalog_entry(entry, force=False)
+
+    for version in ("0.21.1", "0.21.5", "unknown"):
+        monkeypatch.setattr(plugins_manifest, "running_hermes_version", lambda v=version: v)
+        assert catalog.catalog_hermes_error(entry) is None
