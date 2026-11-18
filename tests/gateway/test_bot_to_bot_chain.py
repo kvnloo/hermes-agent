@@ -61,6 +61,20 @@ def test_a_second_ask_before_any_reply_is_not_a_reply(clock):
     assert guard.chain_admit(CHAT, PEER, "thanks", is_bot=True) == (False, "reply_to_reply")
 
 
+def test_senderless_bot_is_an_ask_not_a_reply_to_reply(clock):
+    """Slack integrations have a bot_id but no user_id (#156923); keep default guard limits."""
+    guard = BotLoopGuard(settings=lambda: BotLoopGuardSettings(), clock=clock.now)
+    assert guard.chain_admit(CHAT, "", "New bug: ABC-1", is_bot=True) == (True, "ok")
+    guard.note_reply(CHAT, "")
+    assert guard.chain_admit(CHAT, "", "New bug: ABC-1", is_bot=True) == (False, "duplicate")
+    assert guard.chain_admit(CHAT, "", "New bug: ABC-2", is_bot=True) == (True, "ok")
+    assert guard.chain_admit(CHAT, PEER, "Can you help?", is_bot=True) == (True, "ok")
+    guard.note_reply(CHAT, PEER)
+    assert guard.chain_admit(CHAT, PEER, "thanks!", is_bot=True) == (False, "reply_to_reply")
+    assert guard.chain_admit(CHAT, "", "New bug: ABC-3", is_bot=True) == (True, "ok")
+    assert guard.chain_admit(CHAT, "", "New bug: ABC-4", is_bot=True) == (False, "max_hops")
+
+
 def test_the_same_ask_repeated_inside_one_chain_is_one_hop(clock):
     guard = _guard(clock, bot_replies_expect_reply=True)
     assert guard.chain_admit(CHAT, PEER, "Interrupting current task", is_bot=True) == (True, "ok")

@@ -176,7 +176,8 @@ class BotLoopGuard:
             ask = (sender, hashlib.sha256(" ".join(str(text or "").split()).encode()).hexdigest())
             if ask in chain.asks:
                 return False, "duplicate"
-            if not settings.bot_replies_expect_reply and chain.replied_to == sender:
+            # Anonymous bot senders cannot be identified as answering our reply.
+            if not settings.bot_replies_expect_reply and sender and chain.replied_to == sender:
                 return False, "reply_to_reply"
             if chain.hops >= settings.max_hops:
                 return False, "max_hops"
