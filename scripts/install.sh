@@ -213,6 +213,52 @@ uv_bootstrap_pin() {
 }
 # --- END GENERATED: bootstrap pins ---
 
+# Bootstrap has no Python yet, and binutils/readelf is not a prerequisite.
+# Inspect the native ELF program headers with od when the prefix probe misses.
+_elf_interp_number() {
+    local _raw
+    _raw="$(LC_ALL=C od -An -tu"$2" -j "$3" -N "$2" "$1" 2>/dev/null | tr -d '[:space:]')" || return 1
+    [[ "$_raw" =~ ^[0-9]+$ ]] || return 1
+    printf '%s\n' "$((10#$_raw))"
+}
+
+_elf_interp_libc() {
+    local _file="$1" _ident _word _phoff_at _stride_at _count_at _min _offset_at _size_at
+    local _phoff _stride _count _file_size _i _entry _type _offset _size _loader
+    _ident="$(LC_ALL=C od -An -tx1 -N 6 "$_file" 2>/dev/null | tr -d '[:space:]')" || return 1
+    case "$_ident" in
+        7f454c46010[12])
+            _word=4 _phoff_at=28 _stride_at=42 _count_at=44 _min=32 _offset_at=4 _size_at=16 ;;
+        7f454c46020[12])
+            _word=8 _phoff_at=32 _stride_at=54 _count_at=56 _min=56 _offset_at=8 _size_at=32 ;;
+        *) return 1 ;;
+    esac
+    _phoff="$(_elf_interp_number "$_file" "$_word" "$_phoff_at")" || return 1
+    _stride="$(_elf_interp_number "$_file" 2 "$_stride_at")" || return 1
+    _count="$(_elf_interp_number "$_file" 2 "$_count_at")" || return 1
+    _file_size="$(wc -c < "$_file" 2>/dev/null)" || return 1
+    (( _count > 0 && _stride >= _min && _phoff >= 0 &&
+       _phoff + _count * _stride <= _file_size )) || return 1
+
+    for (( _i=0; _i<_count; _i++ )); do
+        _entry=$((_phoff + _i * _stride))
+        _type="$(_elf_interp_number "$_file" 4 "$_entry")" || return 1
+        (( _type == 3 )) || continue  # PT_INTERP
+        _offset="$(_elf_interp_number "$_file" "$_word" "$((_entry + _offset_at))")" || return 1
+        _size="$(_elf_interp_number "$_file" "$_word" "$((_entry + _size_at))")" || return 1
+        (( _offset >= 0 && _size > 0 && _size <= 4096 &&
+           _offset + _size <= _file_size )) || return 1
+        _loader="$(LC_ALL=C tail -c "+$((_offset + 1))" "$_file" 2>/dev/null |
+                   head -c "$_size" | tr -d '\000')" || return 1
+        case "$_loader" in
+            *ld-musl-*) printf '%s\n' musl; return 0 ;;
+            *ld-linux*|*/libc.so*) printf '%s\n' glibc; return 0 ;;
+        esac
+        return 1
+    done
+    return 1
+}
+
 uv_bootstrap_target() {
     # Map this host to a pm/lock.json target key (<os>-<arch>).
     local _arch
@@ -236,6 +282,11 @@ uv_bootstrap_target() {
                     *ld-linux*) _libc="glibc"; break ;;
                 esac
             done
+            if [[ -z "$_libc" ]] && command -v od >/dev/null 2>&1; then
+                for _probe in /bin/sh /bin/ls; do
+                    _libc="$(_elf_interp_libc "$_probe")" && break
+                done
+            fi
             if [[ -z "$_libc" ]]; then
                 _libc="$(ldd --version 2>&1 || true)"
                 _libc="${_libc,,}"
