@@ -31,3 +31,26 @@ def test_global_fast_version_skips_update_check(monkeypatch):
 
     assert _startup_fast.try_fast_version(["--version"]) is True
     assert calls == [{"check_updates": False}]
+
+
+def test_global_version_never_enters_passive_source_check(monkeypatch, capsys, tmp_path):
+    """Regression for #155862: liveness cannot wait for a missing release commit."""
+    from hermes_cli import _startup_fast, banner, config, source_check
+
+    checks = []
+    monkeypatch.setattr(_startup_fast, "container_mode_may_be_active", lambda: False)
+    monkeypatch.setattr(_startup_fast, "project_root_str", lambda: str(tmp_path))
+    monkeypatch.setattr(_startup_fast, "read_openai_version", lambda: None)
+    monkeypatch.setattr(banner, "format_banner_version_label", lambda: "Hermes Agent vtest")
+    monkeypatch.setattr(config, "detect_install_method", lambda _root: "git")
+    monkeypatch.setattr(
+        source_check,
+        "check_for_updates",
+        lambda **kwargs: checks.append(kwargs) or {"behind": 0},
+    )
+
+    assert _startup_fast.try_fast_version(["--version"]) is True
+    output = capsys.readouterr().out
+    assert "Hermes Agent vtest" in output
+    assert "Install method: git" in output
+    assert checks == [], "a --version liveness probe must never attempt a passive release check"
