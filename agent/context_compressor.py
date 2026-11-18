@@ -530,7 +530,7 @@ _INFLIGHT_TASK_REPLAY_HEADER = (
 # conversation_compression._pruned_skill_reload_notice, appended after a restated request ("\n\n" + notice, at the
 # very end) by the handoff capsule's reload pass. Matched to the producer's exact text so it never reads as the ask.
 _RELOAD_NOTICE_TAIL = re.compile(
-    r"\n\n" + re.escape("[Skills pruned during compression — reload before acting on these tasks]\n"
+    r"(?:\A|\n\n)" + re.escape("[Skills pruned during compression — reload before acting on these tasks]\n"
                         "The task list above crossed the compression boundary verbatim, but the skill instructions "
                         "that governed it were pruned. Before executing any preserved task that depends on these "
                         "skills, reload them first: ")
@@ -539,8 +539,22 @@ _RELOAD_NOTICE_TAIL = re.compile(
                 "the boundary may have invalidated it.") + r"\Z")
 
 
+def _drop_merged_todo_snapshot(content: Any) -> Any:
+    """*content* without the todo snapshot (and its coupled reload notice) that compaction merges onto the trailing
+    user turn: conversation_compression appends ``"\\n\\n" + snapshot`` to a string, or a text part to a list.
+    Stock's own inverse (_strip_stale_todo_snapshot) does the cut; a string must carry the producer's separator."""
+    from agent.conversation_compression import _strip_stale_todo_snapshot
+    if isinstance(content, str):
+        if content.startswith(TODO_INJECTION_HEADER) or "\n\n" + TODO_INJECTION_HEADER in content:
+            content = _strip_stale_todo_snapshot(content)
+        # A row that is only the notice (_salvage_reduce_todo_snapshot's leftover; its synthetic flag is not
+        # persisted, so a reloaded session sees a plain user row).
+        return "" if _RELOAD_NOTICE_TAIL.fullmatch(content) else content
+    return _strip_stale_todo_snapshot(content) if isinstance(content, list) else content
+
+
 def _strip_reload_notice(text: str) -> str:
-    """*text* without a trailing pruned-skill reload notice (only ever after a restated request)."""
+    """*text* without a trailing pruned-skill reload notice (after a restated request, or the whole row)."""
     return _RELOAD_NOTICE_TAIL.sub("", text)
 
 
@@ -1010,7 +1024,7 @@ def _person_text(content: Any) -> str:
     from agent.conversation_compression_scaffolding import is_runtime_row
     if isinstance(content, str) and is_runtime_row(content):   # the producer writes a string row, never parts
         return ""
-    words, peeled = _peeled_text(content)
+    words, peeled = _peeled_text(_drop_merged_todo_snapshot(content))
     if peeled:
         return words
     typed = _typed_user_text(words)
@@ -1024,6 +1038,7 @@ def _request_text(content: Any) -> tuple[Any, bool]:
     from agent.conversation_compression_scaffolding import is_runtime_row
     if isinstance(content, str) and is_runtime_row(content):
         return "", False
+    content = _drop_merged_todo_snapshot(content)
     words, peeled = _peeled_text(content)
     return (words, True) if peeled else (content, False)
 
@@ -1480,7 +1495,7 @@ def _restated_request_text(content: Any) -> str:
     """
     text = _content_text_for_contains(content).strip()
     if _INFLIGHT_TASK_REPLAY_HEADER in text:
-        text = _strip_reload_notice(text.rsplit(_INFLIGHT_TASK_REPLAY_HEADER, 1)[1]).strip()
+        text = _strip_reload_notice(_drop_merged_todo_snapshot(text.rsplit(_INFLIGHT_TASK_REPLAY_HEADER, 1)[1])).strip()
     return text
 
 

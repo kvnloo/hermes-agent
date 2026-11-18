@@ -875,3 +875,81 @@ def test_reload_notice_typed_by_the_person_is_kept():
     row = _restated_row_with_reload_notice("x")
     typed = row[len(_INFLIGHT_TASK_REPLAY_HEADER) + 1:]   # no restatement header: the person's own text
     assert "Skills pruned" in _build_verbatim_user_section([{"role": "user", "content": typed}])
+
+
+def test_todo_snapshot_merged_onto_the_users_turn_is_not_their_words():
+    from agent.context_compressor import _INFLIGHT_TASK_REPLAY_HEADER, _restated_request_text
+    from tools.todo_tool import TODO_INJECTION_HEADER
+    plain = _restated_row_with_reload_notice("ASK words").split("\n", 1)[1]
+    ask, notice = plain.split("\n\n", 1)
+    merged = ask + "\n\n" + TODO_INJECTION_HEADER + "\n- [>] a. thing (in_progress)\n\n" + notice
+    for row in (merged, _INFLIGHT_TASK_REPLAY_HEADER + "\n" + merged):
+        rows = [{"role": "user", "content": row}]
+        outs = (_build_verbatim_user_section(rows), ContextCompressor._latest_user_task_snapshot(rows),
+                _restated_request_text(row) if row.startswith(_INFLIGHT_TASK_REPLAY_HEADER) else "ASK words")
+        assert all("ASK words" in o and TODO_INJECTION_HEADER not in o and "Skills pruned" not in o for o in outs)
+
+
+def test_a_reloaded_row_holding_only_the_reload_notice_or_snapshot_is_not_quoted():
+    from tools.todo_tool import TODO_INJECTION_HEADER
+    notice = _restated_row_with_reload_notice("x").split("\n\n", 1)[1]
+    for row in (notice, TODO_INJECTION_HEADER + "\n- [>] a. thing (in_progress)\n\n" + notice):
+        rows = [{"role": "user", "content": row}, {"role": "user", "content": "REAL ask"}][::-1]
+        section = _build_verbatim_user_section(rows)
+        assert "REAL ask" in section and "Skills pruned" not in section and TODO_INJECTION_HEADER not in section
+
+
+@pytest.mark.parametrize("mid_turn", [True, False], ids=["mid-turn", "preflight"])
+def test_three_real_handoffs_never_feed_runtime_text_back_as_the_persons_words(mid_turn):
+    """End to end across three boundaries: compress -> fold the todo snapshot (and its reload notice) -> persist
+    (synthetic flags are not stored) -> more work -> compress again. Mid-turn the active request is restated after
+    each boundary; preflight the person's next message is the tail. Every capsule's quotes, task snapshot and
+    restated request must hold only what the person typed: per-row unit tests cannot see this multi-pass loop."""
+    import json
+    from unittest.mock import patch
+    from agent.context_compressor import _INFLIGHT_TASK_REPLAY_HEADER, _restated_request_text
+    from agent.conversation_compression import _PRUNED_SKILL_RELOAD_NOTICE_HEADER, _fold_todo_snapshot
+    from tools.todo_tool import TODO_INJECTION_HEADER, TodoStore
+
+    store = TodoStore()
+    store.write([{"id": "a", "content": "ship the fix", "status": "in_progress"}])
+    agent = type("Agent", (), {"_todo_store": store})()
+    marker = "[SKILL_PRUNED: content lost in compression; reload with skill_view(name='alpha')]"
+
+    def turn(i, ask):
+        work = []
+        for k in range(4):
+            work += [{"role": "assistant", "content": "", "tool_calls": [{"id": f"c{i}{k}", "type": "function",
+                      "function": {"name": "terminal", "arguments": json.dumps({"command": "echo " + "x" * 300})}}]},
+                     {"role": "tool", "tool_call_id": f"c{i}{k}", "content": marker + "\n" + "y" * 3000}]
+        if mid_turn:   # one ask, then the tool loop keeps going across every boundary
+            return ([{"role": "user", "content": ask}] if i == 0 else []) + work
+        return work + [{"role": "assistant", "content": "done " + "z" * 200}, {"role": "user", "content": ask}]
+
+    def handoff(messages):
+        with patch("agent.context_compressor.get_model_context_length", return_value=100_000):
+            cc = ContextCompressor(model="test/model", threshold_percent=0.85, protect_first_n=0, protect_last_n=3,
+                                   quiet_mode=True)
+            _ = cc.context_length
+        cc.tail_token_budget = 250
+        with patch.object(ContextCompressor, "_call_summary_llm", lambda self, prompt, started: "## Goal\nstub\n"):
+            out = cc.compress(messages, current_tokens=90_000, force=True)
+        _fold_todo_snapshot(agent, out)
+        return [{k: v for k, v in m.items() if k != "_todo_snapshot_synthetic"} for m in out]   # as state.db reloads
+
+    runtime = (TODO_INJECTION_HEADER, _PRUNED_SKILL_RELOAD_NOTICE_HEADER, _INFLIGHT_TASK_REPLAY_HEADER)
+    history = [{"role": "user", "content": "OLDEST ask"}, {"role": "assistant", "content": "ok " * 400}]
+    for i, ask in enumerate(("FIRST ask keep going", "SECOND ask keep going", "THIRD ask keep going")):
+        history = handoff(history + turn(i, ask))
+        assert any(TODO_INJECTION_HEADER in str(m.get("content")) for m in history)   # the fold really ran
+        for m in history:
+            text = m["content"] if isinstance(m.get("content"), str) else ""
+            if "## User Messages (verbatim" in text:
+                quotes = text.split("## User Messages (verbatim", 1)[1].split("\n\n", 1)[0]
+                assert not [k for k in runtime if k in quotes], quotes
+            if "User asked (deterministic" in text:
+                snap = text.split("User asked (deterministic", 1)[1].split("\n", 1)[0]
+                assert not [k for k in runtime if k in snap], snap
+            if _INFLIGHT_TASK_REPLAY_HEADER in text:
+                restated = _restated_request_text(text)
+                assert restated and not [k for k in runtime if k in restated], restated
