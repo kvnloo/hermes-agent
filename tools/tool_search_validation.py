@@ -9,7 +9,7 @@ import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from tools.registry import tool_error
-from tools.tool_search_catalog import BRIDGE_TOOL_NAMES, _registry_entry
+from tools.tool_search_catalog import BRIDGE_TOOL_NAMES, TOOL_CALL_NAME, _registry_entry
 
 logger = logging.getLogger("tools.tool_search")
 
@@ -173,7 +173,12 @@ def normalize_tool_call_entries(args: dict[str, Any]) -> tuple[list[dict[str, An
         if not name:
             return [], f"tool_call calls[{position}] requires a 'name'"
         if name in BRIDGE_TOOL_NAMES:
-            return [], f"tool_call cannot invoke '{name}' (it is itself a bridge tool)"
+            # A refusal without a recovery step makes small models replay the same nested call.
+            correction = (
+                "Do not nest tool_call; put deferred tool entries directly in the outer 'calls' array."
+                if name == TOOL_CALL_NAME else f"Call `{name}` directly, not through `tool_call`."
+            )
+            return [], f"tool_call cannot invoke '{name}' (it is itself a bridge tool). {correction}"
         raw_args = raw.get("arguments")
         if raw_args is None or (isinstance(raw_args, str) and not raw_args.strip()):
             # "" / whitespace is how some OpenAI-compatible gateways spell "no arguments" for a
