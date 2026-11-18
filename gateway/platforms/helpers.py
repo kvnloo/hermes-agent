@@ -318,7 +318,8 @@ def typing_pause_key(chat_id: Any, metadata: Optional[dict]) -> tuple:
     """``_typing_paused`` entry that pauses ONE turn's keep-alive: the chat plus the thread its
     typing metadata (``typing_metadata_for_turn``) targets. A bare ``chat_id`` entry still pauses
     every loop in the chat (approval waits); this one leaves a concurrent topic's typing alone."""
-    return chat_id, (metadata or {}).get("thread_id")
+    thread = (metadata or {}).get("thread_id")
+    return chat_id, thread if thread is not None else (metadata or {}).get("message_thread_id")
 
 
 # Inline markdown-stripping rules, applied in order: bold, italic, bold/italic

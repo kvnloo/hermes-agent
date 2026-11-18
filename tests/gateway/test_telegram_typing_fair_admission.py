@@ -178,3 +178,20 @@ async def test_paused_waiter_uses_the_original_pause_identity(setup, chat_id, me
     clock.now = 102.0
     await obj.send_typing('4242', {'thread_id': '11'})
     assert bot.actions == [(100.0, 11), (102.0, 11)]
+
+@pytest.mark.asyncio
+async def test_message_thread_id_pause_is_topic_local(setup):
+    """Legacy Telegram metadata alias must not pause a sibling topic."""
+    from gateway.platforms.helpers import typing_pause_key
+
+    obj, bot, clock = setup
+    sibling = {'message_thread_id': '11'}
+    paused = {'message_thread_id': '22'}
+    await obj.send_typing('4242', sibling)
+    await obj.send_typing('4242', paused)
+
+    obj._typing_paused.add(typing_pause_key('4242', paused))
+    clock.now = 102.0
+    await obj.send_typing('4242', sibling)
+    await obj.send_typing('4242', paused)
+    assert bot.actions == [(100.0, 11), (102.0, 11)]
