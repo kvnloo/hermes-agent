@@ -248,10 +248,10 @@ def _cfg_get_mtime(params):
     try:
         mtime = version_token(config_version_or_none(_hermes_home / "config.yaml"))
     except Exception:
-        return {"mtime": 0}
+        return {"mtime": 0, "change_events": True}
     # mcp_rev: hash of the MCP-relevant sections so the poller reloads MCP servers only when
     # their config changed — a /skin write bumps mtime but must not cost an MCP reconnect.
-    return {"mtime": mtime, "mcp_rev": _compute_mcp_rev()}
+    return {"mtime": mtime, "mcp_rev": _compute_mcp_rev(), "change_events": True}
 
 
 # key -> getter(params); bind_module rebinds the table's functions onto server.py's globals.

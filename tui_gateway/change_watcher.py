@@ -279,6 +279,21 @@ def _sessions_sig():
     return tuple(None if location is None else _session_db_content_sig(location) for location in locations)
 
 
+def _config_sig():
+    """Stat-only invalidation of launch and served-profile config files."""
+    from utils import file_signature
+
+    signatures = []
+    for root in _watched_homes():
+        path = Path(root) / "config.yaml"
+        try:
+            signature = file_signature(path.stat())
+        except FileNotFoundError:
+            signature = None
+        signatures.append((str(path), signature))
+    return tuple(sorted(signatures))
+
+
 def _projects_sig():
     """Per-file stat signature of projects.db (+ WAL) for the watcher home and every served
     sibling profile. The CLI and other windows write projects.db directly — nothing in
@@ -457,6 +472,7 @@ def _skills_sig():
 # persists platform connect/disconnect/health (the Messaging page's status signal).
 _CHANGE_WATCHES: dict[str, tuple[float, Any, Any] | tuple[float, Any, Any, Any]] = {
     "pet.changed": (2.0, _pet_sig, _pet_changed_payload),
+    "config.changed": (1.0, _config_sig, dict),
     "cron.changed": (1.0, lambda: _home_mtime_ns("cron", "jobs.json"), dict),
     "sessions.changed": (0.5, _sessions_sig, dict),
     # Projects created/switched by CLI or agent tooling write projects.db without any

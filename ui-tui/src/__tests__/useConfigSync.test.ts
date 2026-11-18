@@ -555,9 +555,8 @@ describe('hydrateFullConfig', () => {
     // sees cfg=null and skips the voice setter (Copilot round-8).
     expect(result).toBeNull()
     expect(setVoiceRecordKey).not.toHaveBeenCalled()
-    // bell setter still fires — applyDisplay's null-cfg path applies
-    // the documented bell default (false).
-    expect(setBell).toHaveBeenCalledWith(false)
+    // An unavailable config must preserve the previously rendered settings.
+    expect(setBell).not.toHaveBeenCalled()
   })
 
   it('threads through without a voice setter (back-compat call sites)', async () => {

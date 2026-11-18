@@ -1,6 +1,6 @@
 import type { MouseTrackingMode } from '@hermes/ink'
 import type { ConfigFullResponse, ConfigMtimeResponse, ReloadMcpResponse } from '@hermes/shared/gateway-types'
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 
 import { resolveDetailsMode, resolveSections } from '../domain/details.js'
 import type { GatewayClient } from '../gatewayClient.js'
@@ -302,7 +302,8 @@ export async function hydrateFullConfig(
     return null
   }
 
-  applyDisplay(cfg, setBell, setVoiceRecordKey, setBellOnPrompt, !gw.isCanonical)
+  // Do not replace the last-good display on a transient RPC failure.
+  if (cfg) applyDisplay(cfg, setBell, setVoiceRecordKey, setBellOnPrompt, !gw.isCanonical)
 
   if (gw.isCanonical && BUSY_MODES.has(busy?.value)) {
     patchUiState({ busyInputMode: busy!.value })
@@ -398,97 +399,95 @@ export function useConfigSync({
   setVoiceRecordKey,
   sid
 }: UseConfigSyncOptions) {
-  const mtimeRef = useRef(0)
-  const mcpRevRef = useRef<McpRevState>({ accepted: '', inFlight: false })
-
   useEffect(() => {
-    if (!sid) {
-      return
-    }
-
+    if (!sid) return
     let active = true
+    let running = false
+    let dirty = false
+    let forceHydrate = true
+    let initialized = false
+    let mtime = 0
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const mcp: McpRevState = { accepted: '', inFlight: false }
     const scope = { sid, isCurrent: () => active && getUiState().sid === sid }
 
-    // Keep startup cheap: voice.toggle status probes optional audio/STT deps and
-    // can run long enough to delay prompt.submit on the single stdio RPC pipe.
-    // Environment flags are enough to initialize the UI bit; the heavier status
-    // check still runs when the user opens /voice.
+    const refresh = async () => {
+      if (!scope.isCurrent()) return
+      if (running) {
+        dirty = true
+        return
+      }
+      running = true
+      clearTimeout(timer)
+      let delay = MTIME_POLL_MS
+      try {
+        do {
+          dirty = false
+          const force = forceHydrate
+          forceHydrate = false
+          const r = await quietRpc<ConfigMtimeResponse>(gw, 'config.get', { key: 'mtime', session_id: sid })
+          if (!scope.isCurrent()) return
+          if (!r) {
+            forceHydrate ||= force
+            break
+          }
+          const next = Number(r.mtime ?? 0)
+          const rev = String(r.mcp_rev ?? '')
+          const changed = initialized && next !== mtime
+          if (!initialized) mcp.accepted = rev
+          delay = r.change_events ? 60_000 : MTIME_POLL_MS
+          if (force || !initialized || changed) {
+            const cfg = await hydrateFullConfig(gw, setBellOnComplete, setVoiceRecordKey, setBellOnPrompt, scope)
+            if (!scope.isCurrent()) return
+            if (cfg) {
+              mtime = next
+            } else {
+              forceHydrate = true
+              delay = MTIME_POLL_MS
+            }
+          }
+          if (initialized && rev) {
+            await syncMcpReload(gw, sid, rev, mcp, () => {
+              if (scope.isCurrent()) turnController.pushActivity(t('status.mcpReloaded'))
+            })
+            if (mcp.accepted !== rev) delay = MTIME_POLL_MS
+          } else if (initialized && changed && !rev) {
+            const result = await quietRpc<ReloadMcpResponse>(gw, 'reload.mcp', { session_id: sid, confirm: true })
+            if (!result || result.status !== 'reloaded') {
+              mtime = Number.NaN
+              delay = MTIME_POLL_MS
+            }
+          }
+          initialized = true
+        } while (dirty && scope.isCurrent())
+      } finally {
+        running = false
+        if (scope.isCurrent()) {
+          timer = setTimeout(() => {
+            // Also covers the boot race before the shared watcher seeds its baseline.
+            if (delay === 60_000) forceHydrate = true
+            void refresh()
+          }, delay)
+        }
+      }
+    }
+    const onEvent = (event: { type: string }) => {
+      if (event.type === 'config.changed' || event.type === 'gateway.ready') {
+        forceHydrate = true
+        void refresh()
+      }
+    }
+    // Subscribe first: an edit during hydration queues a trailing refresh.
+    gw.on('event', onEvent)
     setVoiceEnabled(process.env.HERMES_VOICE === '1')
     void hydrateVoiceMode(gw, setVoiceEnabled, scope)
-    quietRpc<ConfigMtimeResponse>(gw, 'config.get', { key: 'mtime', session_id: sid }).then(r => {
-      if (!scope.isCurrent()) {return}
-      mtimeRef.current = Number(r?.mtime ?? 0)
-      // Seed the MCP revision baseline too: after a normal boot mtime is
-      // already non-zero, so the poller's baseline branch never runs, and an
-      // unset baseline would make the FIRST cosmetic write (mtime bump, same
-      // mcp_rev) look like an MCP change and fire a needless reload.mcp.
-      mcpRevRef.current.accepted = String(r?.mcp_rev ?? '')
-    })
-    void hydrateFullConfig(gw, setBellOnComplete, setVoiceRecordKey, setBellOnPrompt, scope)
-
+    void refresh()
     return () => {
       active = false
+      clearTimeout(timer)
+      gw.off('event', onEvent)
     }
   }, [gw, setBellOnComplete, setBellOnPrompt, setVoiceEnabled, setVoiceRecordKey, sid])
-
-  useEffect(() => {
-    if (!sid) {
-      return
-    }
-
-    let active = true
-    const scope = { sid, isCurrent: () => active && getUiState().sid === sid }
-
-    const id = setInterval(() => {
-      quietRpc<ConfigMtimeResponse>(gw, 'config.get', { key: 'mtime', session_id: sid }).then(r => {
-        if (!scope.isCurrent()) {return}
-        const next = Number(r?.mtime ?? 0)
-        const nextMcpRev = String(r?.mcp_rev ?? '')
-
-        if (!mtimeRef.current) {
-          if (next) {
-            mtimeRef.current = next
-            mcpRevRef.current.accepted = nextMcpRev
-          }
-
-          return
-        }
-
-        // Reload MCP only when the MCP-relevant config actually changed.
-        // Cosmetic writes (/skin, /statusbar, /theme) bump mtime constantly;
-        // reconnecting every MCP server for those costs seconds and made
-        // skin switching feel glacial. The handshake runs on EVERY poll tick
-        // (not just mtime changes) so a failed reload retries until the
-        // server confirms the revision was loaded.
-        if (nextMcpRev) {
-          void syncMcpReload(gw, sid, nextMcpRev, mcpRevRef.current, () =>
-            turnController.pushActivity(t('status.mcpReloaded'))
-          )
-        }
-
-        if (!next || next === mtimeRef.current) {
-          return
-        }
-
-        mtimeRef.current = next
-
-        // Older gateways don't send mcp_rev — fall back to
-        // reload-on-any-change there (no ack tracking possible).
-        if (!nextMcpRev) {
-          quietRpc<ReloadMcpResponse>(gw, 'reload.mcp', { session_id: sid, confirm: true }).then(
-            r => r && turnController.pushActivity(t('status.mcpReloaded'))
-          )
-        }
-
-        void hydrateFullConfig(gw, setBellOnComplete, setVoiceRecordKey, setBellOnPrompt, scope)
-      })
-    }, MTIME_POLL_MS)
-
-    return () => {
-      active = false
-      clearInterval(id)
-    }
-  }, [gw, setBellOnComplete, setBellOnPrompt, setVoiceRecordKey, sid])
 }
 
 export interface UseConfigSyncOptions {
