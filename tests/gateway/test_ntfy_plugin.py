@@ -459,6 +459,27 @@ class TestTitleHeader:
         assert _gateway_headers()[1]["X-Title"] == "Alfred"
         assert _standalone_headers()["X-Title"] == "Alfred"
 
+    def test_persisted_home_channel_name_titles_both_paths(self):
+        """A name saved by /sethome in config.yaml must work without an env name."""
+        config = PlatformConfig.from_dict({
+            "enabled": True,
+            "topic": "opaque-private-token",
+            "home_channel": {
+                "platform": "ntfy", "chat_id": "opaque-private-token", "name": "Clippy",
+            },
+        })
+        adapter = NtfyAdapter(config)
+        adapter._http_client = _post_mock()
+        assert _run(adapter.send("opaque-private-token", "hi")).success is True
+        assert adapter._http_client.post.call_args.kwargs["headers"]["X-Title"] == "Clippy"
+
+        client = _post_mock()
+        with patch.object(_ntfy, "httpx") as mock_httpx:
+            mock_httpx.AsyncClient.return_value = client
+            result = _run(_standalone_send(config, "opaque-private-token", "hi"))
+        assert result["success"] is True
+        assert client.post.call_args.kwargs["headers"]["X-Title"] == "Clippy"
+
     def test_unnamed_install_sends_no_title(self):
         assert "X-Title" not in _gateway_headers()[1]
         assert "X-Title" not in _standalone_headers()
