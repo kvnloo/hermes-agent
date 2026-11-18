@@ -730,6 +730,14 @@ def test_service_invalid_agent_timeout_keeps_default_room_deadline(tmp_path: Pat
     assert service.runtime.turn_timeout_seconds == 1830.0
 
 
+def test_service_infinite_agent_timeout_keeps_finite_default(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("HERMES_AGENT_TIMEOUT", "inf")
+
+    service = HostedRoomService(_server(), db_path=tmp_path / "state.db")
+
+    assert service.runtime.turn_timeout_seconds == 1830.0
+
+
 def test_service_publishes_deferred_turn_continues_and_retries_new_generation(
     tmp_path: Path,
 ):

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import math
 import os
 import threading
 import time
@@ -48,6 +49,9 @@ def _hosted_room_turn_timeout_seconds() -> float | None:
         agent_timeout = float(os.getenv("HERMES_AGENT_TIMEOUT", "1800"))
     except (TypeError, ValueError):
         return 1800.0 + _HOSTED_ROOM_TERMINAL_GRACE_SECONDS
+    # Only an explicit zero disables the deadline; non-finite values are invalid.
+    if not math.isfinite(agent_timeout):
+        agent_timeout = 1800.0
     if agent_timeout == 0.0:
         return None
     return (agent_timeout if agent_timeout > 0 else 1800.0) + _HOSTED_ROOM_TERMINAL_GRACE_SECONDS
