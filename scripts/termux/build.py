@@ -45,18 +45,21 @@ def main(argv: list[str] | None = None) -> int:
     for option, path in (("--repo", repo), ("--payload", payload)):
         if not path.is_dir():
             parser.error(f"{option} must name an existing directory: {path}")
-    product = repo / ".build/termux/tui"
+    tui = repo / ".build/termux/tui"
+    web = repo / ".build/termux/web"
     revision = ["--tag", args.tag] if args.tag is not None else ["--commit", args.commit]
     if args.release_commit is not None:
         revision.extend(["--release-commit", args.release_commit])
     commands = [
         ["node", str(repo / "scripts/build/node-deps.mjs"),
-         "--source", str(repo), "--workspace", "ui-tui"],
+         "--source", str(repo), "--workspace", "ui-tui", "--workspace", "web"],
         ["node", str(repo / "scripts/build/tui.mjs"),
-         "--source", str(repo), "--out", str(product)],
+         "--source", str(repo), "--out", str(tui)],
+        ["node", str(repo / "scripts/build/web.mjs"),
+         "--source", str(repo), "--icons", str(repo), "--out", str(web)],
         ["bash", str(repo / "scripts/termux/build_deb.sh"),
          "--repo", str(repo), "--payload", str(payload), "--out", str(out),
-         "--tui-product", str(product), *revision],
+         "--tui-product", str(tui), "--web-product", str(web), *revision],
     ]
     try:
         for command in commands:

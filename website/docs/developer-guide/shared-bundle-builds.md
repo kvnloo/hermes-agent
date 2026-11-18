@@ -173,8 +173,8 @@ python scripts/termux/build.py --repo /work/source --payload /work/termux-payloa
 ```
 
 The Termux driver accepts exactly one of `--tag` or `--commit`. It prepares
-the TUI workspace, calls the shared TUI builder, and passes that product to
-`build_deb.sh`. It does not add the dashboard or replace bionic preparation.
+the TUI and web workspaces together, builds both products on the host, and passes
+them to `build_deb.sh`. Bionic tool and wheel preparation remain unchanged.
 
 The CLI contracts are in `scripts/bundles/desktop.py`,
 `scripts/bundles/stage.py`, `pm/cli.py`, and `scripts/termux/build.py`.
@@ -244,7 +244,7 @@ admission, generation selection, and transaction state. Both paths use
 | Nix web | Web | `$out/index.html` and assets |
 | Nix agent | Agent with TUI/web references | `$out/bin`, `$out/share/hermes-agent`, `$out/ui-tui`, `manifest.json`, and `command-map.json` |
 | Nix desktop | Icons and desktop UI, with the Nix agent | `$out/share/hermes-desktop` and `$out/bin/hermes-desktop` |
-| Termux | TUI and agent | `OUT/hermes-agent_<version>_aarch64.deb`, installed at `$PREFIX/lib/hermes-agent/` |
+| Termux | TUI, dashboard and agent | `OUT/hermes-agent_<version>_aarch64.deb`, installed at `$PREFIX/lib/hermes-agent/` |
 
 Native payloads contain `hermes-agent`, `tools`, `venv`, `pm-runtime`, `bin`,
 `uv-cache`, and their manifests/facts. Copied frontend assets live at

@@ -36,8 +36,9 @@ RELEASE_COMMIT=""
 PAYLOAD=""
 OUT=""
 TUI_PRODUCT=""
+WEB_PRODUCT=""
 
-usage() { printf 'usage: build_deb.sh --repo <dir> (--tag <tag> | --commit <full-sha>) --payload <dir> --tui-product <dir> --out <dir>\n' >&2; exit 2; }
+usage() { printf 'usage: build_deb.sh --repo <dir> (--tag <tag> | --commit <full-sha>) --payload <dir> --tui-product <dir> --web-product <dir> --out <dir>\n' >&2; exit 2; }
 log()  { printf '\n==> %s\n' "$*"; }
 fail() { printf 'build_deb: FAILED: %s\n' "$*" >&2; exit 1; }
 
@@ -49,6 +50,7 @@ while [ "$#" -gt 0 ]; do
         --release-commit) RELEASE_COMMIT="${2:?}"; shift 2 ;;
         --payload) PAYLOAD="${2:?}"; shift 2 ;;
         --tui-product) TUI_PRODUCT="${2:?}"; shift 2 ;;
+        --web-product) WEB_PRODUCT="${2:?}"; shift 2 ;;
         --out) OUT="${2:?}"; shift 2 ;;
         *) usage ;;
     esac
@@ -102,6 +104,9 @@ fi
 [ -n "$TUI_PRODUCT" ] || fail "--tui-product is required (run scripts/termux/build.py)"
 TUI_PRODUCT="$(cd "$TUI_PRODUCT" && pwd)"
 [ -f "$TUI_PRODUCT/dist/entry.js" ] && [ -f "$TUI_PRODUCT/package.json" ] || fail "incomplete TUI product"
+[ -n "$WEB_PRODUCT" ] || fail "--web-product is required (run scripts/termux/build.py)"
+WEB_PRODUCT="$(cd "$WEB_PRODUCT" && pwd)"
+[ -f "$WEB_PRODUCT/index.html" ] || fail "incomplete Web product"
 for d in python node uv npm ffmpeg ripgrep runtime-libs app wheelhouse; do
     [ -d "$PAYLOAD_ABS/$d" ] || fail "payload missing $d/ -- run termux_build.sh + build_cpython.sh + build_node.sh first"
 done
@@ -225,7 +230,7 @@ for tool in python node uv npm ffmpeg ripgrep; do
     cp -a "$PAYLOAD_ABS/$tool" "$DEST/tools/"
 done
 cp -a "$PAYLOAD_ABS/runtime-libs" "$PAYLOAD_ABS/app" "$PAYLOAD_ABS/venv" "$PAYLOAD_ABS/pm-runtime" "$DEST/"
-python3 "$HERE/payload_facts.py" "$DEST" "$PAYLOAD_ABS/.work/build_set.txt" --tui-product "$TUI_PRODUCT"
+python3 "$HERE/payload_facts.py" "$DEST" "$PAYLOAD_ABS/.work/build_set.txt" --tui-product "$TUI_PRODUCT" --web-product "$WEB_PRODUCT"
 
 python3 "$HERE/launchers.py" --payload "$DEST" --control "$STAGE/DEBIAN"
 

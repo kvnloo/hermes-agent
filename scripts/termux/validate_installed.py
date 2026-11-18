@@ -108,6 +108,10 @@ def main() -> None:
             "PYTHONPATH": str(root / "app"),
             "PYTHONPYCACHEPREFIX": str(home / "pycache"),
         }
+        dashboard = root / "app/hermes_cli/web_dist/index.html"
+        if not dashboard.is_file():
+            raise RuntimeError(f"Termux bundle is missing its prebuilt dashboard: {dashboard}")
+        print("PREBUILT_DASHBOARD_OK", flush=True)
         launcher = prefix / "bin/hermes"
         run([str(launcher), "--version"], env, home)
         run([str(launcher), "chat", "--help"], env, home)

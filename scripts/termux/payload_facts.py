@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 PAYLOAD_TOOLS = ("python", "node", "uv", "npm", "ffmpeg", "ripgrep")
 
 
-def write_facts(payload: Path, lock_path: Path, build_set: Path, tui: Path) -> None:
+def write_facts(payload: Path, lock_path: Path, build_set: Path, tui: Path, web: Path) -> None:
     from pm.lock import Lockfile
     from pm.registry import get_package
     from scripts.bundles.payload import record_tools
@@ -34,7 +34,7 @@ def write_facts(payload: Path, lock_path: Path, build_set: Path, tui: Path) -> N
         python=python,
         site_packages=dependency_site(payload / "venv", version, target),
         environment=payload / "venv", tools=payload / "tools", pm_runtime=payload / "pm-runtime",
-        resources={name: repo / name for name in RESOURCE_ENV}, frontends={"tui": tui.resolve()},
+        resources={name: repo / name for name in RESOURCE_ENV}, frontends={"tui": tui.resolve(), "web": web.resolve()},
         stamp=repo / "install-stamp.json",
     ), payload)
 
@@ -44,5 +44,6 @@ if __name__ == "__main__":
     parser.add_argument("payload", type=Path)
     parser.add_argument("build_set", type=Path)
     parser.add_argument("--tui-product", type=Path, required=True)
+    parser.add_argument("--web-product", type=Path, required=True)
     args = parser.parse_args()
-    write_facts(args.payload, args.payload / "app/pm/lock.json", args.build_set, args.tui_product)
+    write_facts(args.payload, args.payload / "app/pm/lock.json", args.build_set, args.tui_product, args.web_product)
