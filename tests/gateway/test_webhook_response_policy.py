@@ -11,7 +11,7 @@ from aiohttp.test_utils import TestClient, TestServer
 
 from gateway.config import Platform, PlatformConfig
 from gateway.platforms.base import SendResult
-from gateway.platforms.webhook import WebhookAdapter, _INSECURE_NO_AUTH
+from gateway.platforms.webhook import WebhookAdapter, _INSECURE_NO_AUTH, _WebhookDeliveryIdentity
 
 URGENT = "[NEEDS-APPROVAL] Server remains offline after automated recovery\nAction required: Open the provider console and check the boot failure.\nEvidence: Two independent HTTP probes time out."
 
@@ -127,5 +127,26 @@ def test_http_dispatch_preserves_policy_and_direct_alerts(tmp_path, monkeypatch,
         assert target.send.await_count == expected
         with pytest.raises(ValueError, match="response_policy"):
             a._validate_route("invalid", _route(response_policy="urgent_ony"))
+
+    asyncio.run(exercise())
+
+
+def test_v2_chat_id_uses_route_policy_after_ephemeral_cache_is_gone(tmp_path, monkeypatch):
+    """A durable webhook reply must not become unfiltered after a restart or TTL pruning."""
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    adapter, target = _adapter()
+    _subscriptions(tmp_path, {"incident": _route(response_policy="urgent_only")})
+    # Admission uses an opaque v2 ID, not the legacy webhook:<route>:<delivery> form.
+    chat = _WebhookDeliveryIdentity.from_parts(None, "incident", "delivery:with:colons").session_chat_id
+    adapter._delivery_info[chat] = {"deliver": "discord", "deliver_extra": {"chat_id": "test-only"}}
+    # Emulate a late resumed turn: the admission-time policy cache is gone.
+    assert chat.startswith("webhook:v2:")
+    assert chat not in adapter._delivery_policies
+
+    async def exercise():
+        assert (await adapter.send(chat, "Routine recovery complete. No owner action required.")).success
+        assert target.send.await_count == 0
+        assert (await adapter.send(chat, URGENT)).success
+        assert target.send.await_count == 1
 
     asyncio.run(exercise())
