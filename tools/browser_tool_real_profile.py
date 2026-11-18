@@ -13,7 +13,8 @@ import sys
 import time
 import json
 import signal
-from contextlib import suppress
+from contextlib import contextmanager, suppress
+from hermes_constants import hermes_home_key
 from typing import Optional, Tuple
 from agent.proxy_bypass import loopback_request_kwargs
 from tools.browser_tool_origin import origin_module as _origin
@@ -23,6 +24,29 @@ from tools import browser_tool_lightpanda_fallback as _lp
 from tools import browser_tool_session as _session
 
 _RP = "browser.use_real_profile is on, but "
+# Keyed by the owning Hermes home; the same gateway can serve several profiles.
+_active_real_profile_calls: dict[str, int] = {}
+
+
+@contextmanager
+def real_profile_call_lease():
+    """Keep an in-flight browser command from losing the shared Chrome to idle cleanup."""
+    home = hermes_home_key()
+    lock = _origin()._real_profile_cdp_lock
+    with lock:
+        _active_real_profile_calls[home] = _active_real_profile_calls.get(home, 0) + 1
+        _mark_real_profile_in_use()
+    try:
+        yield
+    finally:
+        with lock:
+            remaining = _active_real_profile_calls[home] - 1
+            if remaining:
+                _active_real_profile_calls[home] = remaining
+            else:
+                _active_real_profile_calls.pop(home, None)
+            _mark_real_profile_in_use()
+
 
 
 def _terminate_real_profile_chrome() -> None:
@@ -86,6 +110,10 @@ def _close_real_profile_browser() -> None:
             return  # the lane was used again while this closer was due
         if _real_profile_session_live():
             _bt.logger.info("Idle close deferred for %s: a real-profile session is still live", key)
+            _mark_real_profile_in_use()
+            return
+        if _active_real_profile_calls.get(hermes_home_key(), 0):
+            _bt.logger.info("Idle close deferred for %s: a browser command is still running", key)
             _mark_real_profile_in_use()
             return
         if _lane_claimed_by_another_process():
@@ -226,11 +254,10 @@ def _mark_real_profile_in_use(copy_dir: str = "") -> None:
     """
     _bt = _origin()
     from tools import browser_tool_lifecycle as _lifecycle
-    from tools.browser_use_cli import lane_idle_timeout_s
     _lifecycle.register_idle_lane_closer(
         f"real-profile:{_bt._REAL_PROFILE_SESSION}",
         _close_real_profile_browser,
-        lane_idle_timeout_s(),
+        _bt.BROWSER_SESSION_INACTIVITY_TIMEOUT,
         label="real-profile browser",
     )
     # The record is what carries the countdown across a gateway restart: without it a restart makes
@@ -563,11 +590,10 @@ def _declare_real_profile_lane() -> None:
     time without a cycle) and run when the cleanup thread starts.
     """
     from tools import browser_tool_lifecycle as _lifecycle
-    from tools.browser_use_cli import lane_idle_timeout_s
     _lifecycle.declare_idle_lane(
         f"real-profile:{_origin()._REAL_PROFILE_SESSION}",
         _close_real_profile_browser,
-        lane_idle_timeout_s(),
+        _origin().BROWSER_SESSION_INACTIVITY_TIMEOUT,
         label="real-profile browser",
         last_used_reader=_lane_last_used,
     )

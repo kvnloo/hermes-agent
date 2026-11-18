@@ -313,15 +313,51 @@ def test_lane_state_carries_the_countdown_across_a_restart(monkeypatch, tmp_path
 
 
 def test_lane_state_declines_to_close_a_lane_that_was_used_recently(monkeypatch, tmp_path):
-    """The record is the countdown: used 10 minutes ago means the closer must not run yet."""
+    """The record is the countdown: a browser used one minute ago is not idle yet."""
     _isolate(monkeypatch, tmp_path)
     calls = _record_teardown(monkeypatch)
-    real_profile._write_lane_state(time.time() - 600, str(tmp_path))
+    real_profile._write_lane_state(time.time() - 60, str(tmp_path))
     real_profile._declare_real_profile_lane()
 
     lifecycle._run_due_idle_lane_closers()
 
-    assert calls == [], "an hour has not passed since the recorded use"
+    assert calls == [], "the configured idle window has not elapsed"
+
+
+
+def test_real_profile_browser_exec_keeps_chrome_during_a_long_call_then_reaps_at_default_idle(monkeypatch, tmp_path):
+    """120 seconds idle, not the 1800-second tool cap; never kill a running browser_exec."""
+    _isolate(monkeypatch, tmp_path)
+    monkeypatch.setattr(lifecycle, "_declared_lanes", {})
+    calls = _record_teardown(monkeypatch)
+    browser_tool._real_profile_cdp_cache["cdp"] = "http://127.0.0.1:4321"
+    monkeypatch.setattr(browser_use_cli, "_find_cli", lambda: ["browser-use"])
+    monkeypatch.setattr(browser_use_cli, "_base_subprocess_env", lambda: {})
+    monkeypatch.setattr(browser_use_cli, "_workspace_dir", lambda task_id: None)
+    monkeypatch.setattr(browser_use_cli, "_attach_vault_supervisor", lambda env, task_id: None)
+
+    def route(env, session, task_id, local, **kwargs):
+        env["BU_CDP_WS"] = "ws://127.0.0.1:4321/devtools/browser/x"
+        env["_HERMES_BU_REAL_PROFILE_CALL"] = "1"
+
+    monkeypatch.setattr(browser_use_cli, "_route_backend", route)
+    real_profile._mark_real_profile_in_use()
+    assert browser_tool.BROWSER_SESSION_INACTIVITY_TIMEOUT == browser_tool.DEFAULT_SESSION_INACTIVITY_TIMEOUT == 120
+    assert lifecycle._idle_lane_closers[REAL_PROFILE_KEY]["timeout"] == 120
+
+    def run(cmd, code, env, timeout):
+        _age(REAL_PROFILE_KEY, 121)
+        lifecycle._run_due_idle_lane_closers()
+        assert calls == [], "the idle janitor must not kill Chrome during a browser_exec command"
+        return subprocess.CompletedProcess(cmd, 0, "ok", "")
+
+    monkeypatch.setattr(browser_use_cli, "_run_cli_killing_process_group", run)
+    browser_use_cli.browser_exec("print('ok')")
+    assert calls == []
+    assert REAL_PROFILE_KEY in lifecycle._idle_lane_closers
+    _age(REAL_PROFILE_KEY, 121)
+    lifecycle._run_due_idle_lane_closers()
+    assert [call[0] for call in calls] == ["harness", "close-session", "chrome"]
 
 
 def test_reclaim_terminates_only_orphaned_chromes_on_our_own_copy_dir(monkeypatch, tmp_path):

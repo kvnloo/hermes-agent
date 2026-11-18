@@ -37,6 +37,7 @@ _PRIVATE_BROWSER_SENTINEL = "_HERMES_BU_PRIVATE_BROWSER"
 # Internal route provenance: this exec resolved to a browser on the Bot Desktop display and must use
 # the same human-control lease fence as the built-in browser tools. Popped before launching the CLI.
 _BOT_DESKTOP_BROWSER_SENTINEL = "_HERMES_BU_BOT_DESKTOP_BROWSER"
+_REAL_PROFILE_CALL_SENTINEL = "_HERMES_BU_REAL_PROFILE_CALL"
 
 # Prepended to the model's code for named sessions on SHARED browsers (a /browser connect CDP override): the
 # harness daemon attaches to the first existing page at startup, so two fresh named daemons can land on the
@@ -556,6 +557,7 @@ def _resolve_real_profile_cdp(env: dict, force_local: bool) -> Optional[str]:
     if cdp and not err:
         _set_cdp_env(env, cdp)
         env[_BOT_DESKTOP_BROWSER_SENTINEL] = "1"
+        env[_REAL_PROFILE_CALL_SENTINEL] = "1"
     return err or None
 
 
@@ -778,6 +780,7 @@ def browser_exec(code: str, session: str = "", timeout_s: int = _DEFAULT_TIMEOUT
         env["BU_NAME"] = _sidecar_daemon_name(session)
     _exec_route_is_sidecar[route_key] = local_sidecar
     bot_desktop_browser = bool(env.pop(_BOT_DESKTOP_BROWSER_SENTINEL, None))
+    real_profile_call = bool(env.pop(_REAL_PROFILE_CALL_SENTINEL, None))
 
     # SHARED browser (/browser connect CDP override): pin each named session to its own tab (see
     # _OWN_TAB_PREAMBLE). Private per-name browsers skip this — nothing to collide with.
@@ -807,7 +810,12 @@ def browser_exec(code: str, session: str = "", timeout_s: int = _DEFAULT_TIMEOUT
                 lane = _cdp_lane_key(env.get("BU_CDP_WS") or env.get("BU_CDP_URL") or "")
                 _driven_daemons[env.get("BU_NAME", "default")] = lane
         try:
-            return {"proc": _run_cli_killing_process_group(cmd, code, env, timeout)}
+            lease = contextlib.nullcontext()
+            if real_profile_call:
+                from tools.browser_tool_real_profile import real_profile_call_lease
+                lease = real_profile_call_lease()
+            with lease:
+                return {"proc": _run_cli_killing_process_group(cmd, code, env, timeout)}
         except subprocess.TimeoutExpired:
             return {"error_result": tool_error(
                 f"browser-use exec timed out after {timeout}s. The daemon may still be working; retry "

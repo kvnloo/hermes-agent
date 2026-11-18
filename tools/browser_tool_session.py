@@ -11,6 +11,7 @@ import os
 import shutil
 import subprocess
 import uuid
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
@@ -911,8 +912,11 @@ def _run_browser_command(
         except Exception as e:
             _bt.logger.warning("Failed to create browser session for task=%s: %s", task_id, e)
             return {"success": False, "error": f"Failed to create browser session: {e!s}"}
-        engine, result = run_fenced_pair(session_info, lambda: _dispatch_browser_command(
-            task_id, session_info, browser_cmd, command, args, timeout, _engine_override))
+        uses_real_profile = (command != "close" and
+                             bool((session_info.get("features") or {}).get("real_profile")))
+        with (_real_profile.real_profile_call_lease() if uses_real_profile else nullcontext()):
+            engine, result = run_fenced_pair(session_info, lambda: _dispatch_browser_command(
+                task_id, session_info, browser_cmd, command, args, timeout, _engine_override))
         if result.get("code") == "human_has_control":
             return result
         # #115184: a protocol-level failure (exit 101 on a stale session daemon, empty/non-JSON
