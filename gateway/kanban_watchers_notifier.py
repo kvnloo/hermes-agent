@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from datetime import UTC, datetime
 import re
 from functools import partial
 from pathlib import Path
@@ -773,7 +774,8 @@ class _KanbanNotification:
             # API_SERVER_KEY, which a route-only profile legitimately does not have, and an
             # unprefixed self-post would resume the session in the DEFAULT profile's store.
             async with self._owner_scope():
-                await deliver_wake(self.adapter, text=self.synth, session_id=self.session_key,
+                text = f"{self.synth}\n\nEvent measured_at: {self._measured_at() or 'unknown'}"
+                await deliver_wake(self.adapter, text=text, session_id=self.session_key,
                                    profile=self._served_wake_profile(),
                                    notification_category="diagnostic" if self.wake_diagnostic else "result")
             self._log_woke()
@@ -808,13 +810,19 @@ class _KanbanNotification:
                                kanban_notices=[self._notice_reference()])
         self._log_woke()
 
+    def _measured_at(self) -> str:
+        """The newest wake-worthy board event time, stable across retries and busy turns."""
+        times = [ev.created_at for ev in self.d["events"]
+                 if ev.kind in self.wake_kinds and getattr(ev, "created_at", 0)]
+        return datetime.fromtimestamp(max(times), UTC).isoformat() if times else ""
+
     def _notice_reference(self) -> dict:
         from hermes_cli import kanban_db as kb
         with kb.pin_first_board_resolution():
             path = kb.kanban_db_path(board=self.board_slug).resolve()
         return dict(db=str(path), board=self.board_slug or "default", task_id=self.task_id,
                     platform=self.sub["platform"], chat_id=self.sub["chat_id"],
-                    thread_id=self.sub.get("thread_id") or "")
+                    thread_id=self.sub.get("thread_id") or "", measured_at=self._measured_at())
 
     async def _send_event(self, ev: Any, msg: str) -> bool:
         """Send one text ping; raises on adapter exception or SendResult(success=False)."""

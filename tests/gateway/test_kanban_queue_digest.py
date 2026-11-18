@@ -130,3 +130,48 @@ def test_only_kanban_yields_to_human_and_preflight_head_matches_runtime():
     assert preferred_session_input([kanban, loop, human]) is loop
     assert preferred_session_input([kanban, human]) is human
     assert preferred_session_input([kanban]) is kanban
+
+
+def test_event_timestamp_survives_busy_session_and_refresh(tmp_path, monkeypatch):
+    """Refresh the current card without making a hours-old event appear freshly produced."""
+    import sqlite3
+    from datetime import UTC, datetime
+
+    from gateway.kanban_watchers_notifier import _KanbanNotification
+    from gateway.session_kanban_digest import notice_metadata, refresh_text
+    from hermes_cli import kanban_db as kb
+
+    path = tmp_path / 'board.db'
+    monkeypatch.setenv('HERMES_KANBAN_DB', str(path))
+    with sqlite3.connect(path) as conn:
+        conn.executescript(
+            "CREATE TABLE tasks(id TEXT,status TEXT,title TEXT,assignee TEXT);"
+            "CREATE TABLE kanban_notify_subs(task_id TEXT,platform TEXT,chat_id TEXT,thread_id TEXT);"
+            "INSERT INTO tasks VALUES('t_a','blocked','Live title','worker');"
+            "INSERT INTO kanban_notify_subs VALUES('t_a','tui','session','');"
+        )
+    measured = datetime(2026, 11, 17, 7, 52, 6, tzinfo=UTC)
+    later = datetime(2026, 11, 17, 10, 39, 0, tzinfo=UTC)
+    notification = _KanbanNotification.__new__(_KanbanNotification)
+    notification.board_slug = 'default'
+    notification.task_id = 't_a'
+    notification.sub = {'platform': 'tui', 'chat_id': 'session', 'thread_id': ''}
+    notification.wake_kinds = {'completed'}
+    notification.d = {'events': [
+        kb.Event(id=1, task_id='t_a', kind='completed', payload=None, created_at=int(measured.timestamp())),
+        kb.Event(id=2, task_id='t_a', kind='status', payload=None, created_at=int(later.timestamp())),
+    ]}
+    notice = notification._notice_reference()
+    assert notice['measured_at'] == measured.isoformat()
+    assert notice_metadata({'kanban_notices': [notice]}) == {'kanban_notices': [notice]}
+
+    with sqlite3.connect(path) as conn:
+        conn.execute("UPDATE tasks SET status='done' WHERE id='t_a'")
+    delivered = refresh_text({'kanban_notices': [notice]}, 'old blocked notice')
+    assert 'Current status: done' in delivered
+    assert f'Event measured_at: {measured.isoformat()}' in delivered
+    assert 'old blocked notice' not in delivered
+
+    old_notice = {k: v for k, v in notice.items() if k != 'measured_at'}
+    assert 'Event measured_at: unknown (legacy wake)' in refresh_text(
+        {'kanban_notices': [old_notice]}, 'legacy text')

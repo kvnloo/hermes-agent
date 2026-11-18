@@ -22,8 +22,10 @@ def notice_metadata(metadata):
         return {}
     notices = metadata['kanban_notices']
     keys = {'db', 'board', 'task_id', 'platform', 'chat_id', 'thread_id'}
+    allowed = keys | {'measured_at'}  # Old persisted notices have only the six original keys.
     if (not isinstance(notices, list) or not notices or any(
-            not isinstance(n, dict) or set(n) != keys or any(not isinstance(v, str) for v in n.values())
+            not isinstance(n, dict) or not keys.issubset(n) or not set(n).issubset(allowed)
+            or any(not isinstance(v, str) for v in n.values())
             or not Path(n['db']).is_absolute() for n in notices)):
         raise RuntimeStoreError('invalid_params')
     return {'kanban_notices': [dict(n) for n in notices]}
@@ -85,8 +87,10 @@ def refresh_text(desc, historical):
                 task = conn.execute('SELECT status,title,assignee FROM tasks WHERE id=?', (n['task_id'],)).fetchone()
                 if task is None or task['status'] == 'archived':
                     continue
+                measured = n.get('measured_at') or 'unknown (legacy wake)'
                 texts.append(f"[kanban] {n['board']}/{n['task_id']} — Current status: {task['status']}\n"
                              f"Title: {task['title']}\nAssignee: {task['assignee'] or '(none)'}\n"
+                             f"Event measured_at: {measured}\n"
                              'Historical events superseded by this execution-time snapshot.')
         except (OSError, sqlite3.Error, ValueError):
             texts.append('[kanban] Current state unavailable; historical notification withheld.')
