@@ -983,6 +983,13 @@ file_read_max_chars: 200000
 file_read_max_chars: 30000
 ```
 
+`search_files` refuses a search root that is, or contains, the filesystem root or your home directory, because a recursive walk there reads the whole disk. The agent is told to narrow `path` to the directory it needs. Add other large trees (a data mount, a shared workspace) to the list, or turn the check off:
+
+```yaml
+search_files_broad_roots: [/data]     # extra roots to refuse, on top of / and ~
+search_files_refuse_broad_roots: true # default; false disables the check
+```
+
 The agent also deduplicates file reads automatically — if the same file region is read twice and the file hasn't changed, a lightweight stub is returned instead of re-sending the content. This resets on context compression so the agent can re-read files after their content is summarized away.
 
 ## Tool Output Truncation Limits
