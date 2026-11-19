@@ -104,6 +104,23 @@ class TestContentSearchGuard:
         assert not _component_is_cloud_folder("mailboxes")
 
 
+    def test_project_dir_named_box_is_searched(self, method, guarded_tree):
+        """Composed root, not an isolated component: a project directory named
+        ``box`` (or ``My Drive``) below $HOME is searched; ``~/Box`` is refused."""
+        home = guarded_tree["home"]
+        for name in ("box", "My Drive"):
+            proj = home / "work" / name / "src"
+            proj.mkdir(parents=True)
+            (proj / "c.txt").write_text("needle in project\n", encoding="utf-8")
+            res = _search(_ops(proj), method, "needle", proj)
+            assert res.error is None, res.error
+            assert any("needle in project" in m.content for m in res.matches)
+        box_drive = home / "Box" / "shared"
+        box_drive.mkdir(parents=True)
+        res = _search(_ops(home), method, "needle", box_drive)
+        assert res.error and "cloud-sync folder 'box'" in res.error.lower()
+
+
 def _search(ops, method, pattern, path, broad_root_opt_in=False, **kw):
     fn = getattr(ops, method)
     return fn(pattern, str(path), kw.get("file_glob"), kw.get("limit", 50),

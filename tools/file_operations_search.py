@@ -25,23 +25,45 @@ _MACOS_TCC_PROTECTED_HOME_DIRS = (
 
 # Cloud-sync folder names that dehydrate files into reparse-point placeholders:
 # a recursive search that reads file data downloads every placeholder it touches.
-# Compared with spaces stripped and casefolded, against any path component of
+# Compared with spaces stripped and casefolded, against the path components of
 # the search root. Distinctive vendor prefixes (OneDrive - Personal,
-# Dropbox (Company)) match by prefix; short generic names ("box") are
-# boundary-anchored via the exact-name set only.
+# Dropbox (Company)) match by prefix; the rest match by exact name.
 _CLOUD_FOLDER_NAMES = frozenset({
     "googledrive", "mydrive", "iclouddrive", "cloudstorage", "box", "boxsync",
 })
 _CLOUD_FOLDER_PREFIXES = ("onedrive", "dropbox", "icloud~")
+# Generic words that are also ordinary project directory names: they name a cloud
+# folder only where the vendor client puts it, directly under $HOME (``~/Box``,
+# ``~/Box Sync``) or a drive root (``G:\My Drive``). ``work/box/src`` is a project.
+_HOME_ANCHORED_CLOUD_NAMES = frozenset({"box", "boxsync", "mydrive"})
 
 
 def _component_is_cloud_folder(segment: str) -> bool:
     """Whether one path component names a cloud-sync folder (case/space-insensitive;
     prefixes match only distinctive vendor names so ``work/boxed/src`` is safe).
-    A root whose component is exactly ``box`` (or any other exact-name entry)
-    is refused even mid-path — deliberate strictness; pass broad_root_opt_in."""
+    Position is checked by ``_cloud_folder_component``."""
     n = re.sub(r"\s+", "", segment).casefold()
     return n in _CLOUD_FOLDER_NAMES or n.startswith(_CLOUD_FOLDER_PREFIXES)
+
+
+def _cloud_folder_component(root: str, home: str) -> Optional[str]:
+    """First component of normalized ``root`` that names a cloud-sync folder, else
+    None. Generic names (``_HOME_ANCHORED_CLOUD_NAMES``) count only directly under
+    ``home`` or a filesystem/drive root, so a project dir named ``box`` is not one."""
+    def split(value: str) -> list[str]:
+        return [s for s in value.replace("/", "\\").split("\\") if s]
+
+    parts, home_parts = split(root), split(home)
+    for i, segment in enumerate(parts):
+        if not _component_is_cloud_folder(segment):
+            continue
+        if re.sub(r"\s+", "", segment).casefold() in _HOME_ANCHORED_CLOUD_NAMES:
+            parent = parts[:i]
+            at_drive_root = not parent or (len(parent) == 1 and parent[0].endswith(":"))
+            if parent != home_parts and not at_drive_root:
+                continue
+        return segment
+    return None
 
 
 def _macos_protected_search_exclusions(
@@ -985,9 +1007,9 @@ class SearchMixin:
         anchor = drive + os.sep if drive else os.path.abspath(os.sep)
         if root == os.path.normcase(anchor):
             return True
-        # Cloud-sync folder check: any component of the ROOT named like a cloud
+        # Cloud-sync folder check: a component of the ROOT named like a cloud
         # folder (catches the folder itself and everything beneath it).
-        if any(_component_is_cloud_folder(s) for s in root.replace("/", "\\").split("\\") if s):
+        if _cloud_folder_component(root, home):
             return True
         try:
             common = os.path.commonpath([root, home])
@@ -1141,8 +1163,7 @@ class SearchMixin:
         anchor = drive + os.sep if drive else os.path.abspath(os.sep)
         if root == os.path.normcase(anchor):
             return "a filesystem root"
-        cloud = next((s for s in root.replace("/", "\\").split("\\")
-                      if s and _component_is_cloud_folder(s)), None)
+        cloud = _cloud_folder_component(root, home)
         if cloud:
             return f"a path through cloud-sync folder {cloud!r}"
         try:
