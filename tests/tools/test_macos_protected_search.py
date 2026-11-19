@@ -84,7 +84,7 @@ def test_grep_pruned_search_still_finds_nested_protected_names(tmp_path, monkeyp
     ops = ShellFileOperations(LocalEnvironment(cwd=str(home)))
     monkeypatch.setattr(ops, "_has_command", lambda command: command == "grep")
 
-    result = ops.search("needle", path=str(home), target="content")
+    result = ops.search("needle", path=str(home), target="content", broad_root_opt_in=True)
 
     matched_paths = [m.path for m in (result.matches or [])]
     assert any("work/repo/Downloads/notes.txt" in p for p in matched_paths)
@@ -189,7 +189,7 @@ def test_real_ripgrep_does_not_descend_into_protected_folder(tmp_path, monkeypat
     monkeypatch.setattr(file_operations, "_HOME", str(home))
     ops = ShellFileOperations(LocalEnvironment(cwd=str(home)))
 
-    result = ops.search("needle", path=str(home), target="content")
+    result = ops.search("needle", path=str(home), target="content", broad_root_opt_in=True)
 
     paths = [match.path for match in result.matches]
     assert any("visible.txt" in path for path in paths)

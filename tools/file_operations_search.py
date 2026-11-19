@@ -1188,24 +1188,30 @@ class SearchMixin:
                 capability_error = self._modified_rg_capability_error(rg_executable)
                 if capability_error:
                     return SearchResult(error=capability_error)
+            if not broad_root_opt_in:
+                # ``rg --files`` reads no file DATA, so it cannot hydrate a cloud
+                # placeholder: this is a bounded-traversal guard. Refuse before
+                # admission so a refused root never occupies a walk slot.
+                refusal = self._broad_search_refusal(list(roots))
+                if refusal:
+                    return SearchResult(error=refusal)
             keys = _filename_search_root_keys(self.env, roots, self.cwd)
             if not _acquire_filename_search_roots(keys):
                 return SearchResult(error=_ADMISSION_INTERRUPTED_ERROR)
             try:
                 return self._search_files_rg(search_pattern, path, limit, offset, order,
-                                             rg_executable=rg_executable,
-                                             broad_root_opt_in=broad_root_opt_in)
+                                             rg_executable=rg_executable)
             finally:
                 _release_filename_search_roots(keys)
 
         # A local find rooted at/above $HOME or a filesystem root can take minutes and
         # prompt on protected paths: refuse before invoking find.
         if not broad_root_opt_in and any(self._is_broad_local_search_root(root) for root in roots):
-            return SearchResult(error=self._broad_search_refusal(roots) or (
+            reason = self._broad_search_refusal(list(roots))
+            return SearchResult(error=(f"{reason} " if reason else "") + (
                 "Broad local file search without ripgrep is disabled because "
                 "find cannot keep this traversal safely bounded. Install "
-                "ripgrep or search a narrower directory, or pass "
-                "broad_root_opt_in=true if this root is intentional."))
+                "ripgrep or search a narrower directory."))
         if not self._has_command("find"):
             return SearchResult(
                 error="File search requires 'rg' (ripgrep) or 'find'. "
@@ -1274,19 +1280,11 @@ class SearchMixin:
             skipped_paths=_extract_unreadable_paths("\n".join(diagnostics)))
 
     def _search_files_rg(self, pattern: str, path: str | list[str], limit: int, offset: int,
-                         order: str = "discovery", rg_executable: Optional[str] = None,
-                         broad_root_opt_in: bool = False) -> SearchResult:
+                         order: str = "discovery", rg_executable: Optional[str] = None) -> SearchResult:
         """File-name search via ``rg --files`` (respects .gitignore, skips hidden dirs,
         parallel walk). Discovery order stays bounded and fast; exact modification-time
-        ordering is explicit because it scans globally."""
-        if not broad_root_opt_in:
-            # Note on target="files": ``rg --files`` enumerates names and reads no
-            # file DATA, so it cannot hydrate a cloud placeholder — the refusal
-            # here is a bounded-traversal guard, not a hydration guard. Kept for
-            # symmetry; the refusal message names the matched reason.
-            refusal = self._broad_search_refusal([path] if isinstance(path, str) else list(path))
-            if refusal:
-                return SearchResult(error=refusal)
+        ordering is explicit because it scans globally. Broad roots are refused by the
+        caller (``_search_files``) before admission."""
         # Wrap bare names so -g matches at any depth (equivalent to find -name).
         glob_pattern = f"*{pattern}" if ('/' not in pattern and not pattern.startswith('*')) else pattern
         roots = [path] if isinstance(path, str) else path
