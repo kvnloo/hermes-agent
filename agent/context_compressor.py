@@ -937,7 +937,7 @@ _LEAN_USER_MESSAGES_HEADING = "## User Messages (verbatim, newest first)"
 _LEAN_RECOVERY_HEADING = "## Context Recovery"
 _SYNTHETIC_USER_ROW_PREFIXES = (
     "[System:", "[CONTEXT", "[PRIOR CONTEXT", "[IMPORTANT: Background", "[Your active task list",
-    "[Planning state preserved", "[ASYNC DELEGATION", "[OUT-OF-BAND", "Cronjob Response:",
+    "[Planning state preserved", "[ASYNC DELEGATION", "Cronjob Response:",
 )
 
 
@@ -949,9 +949,13 @@ def _synthetic_user_row(content: str) -> bool:
 
 
 def _typed_user_text(content: str) -> str:
-    """A ``/skill``, bundle or auto-load turn as the user typed it (``/skill do X``); other text unchanged.
+    """A ``/skill``, bundle or auto-load turn as the user typed it (``/skill do X``); a mid-turn /steer as its
+    inner words without the OUT-OF-BAND marker; other text unchanged.
     Its inline skill body is not the user's words — it is carried by a ``[SKILL_PRUNED: ...]`` marker instead."""
+    from agent.conversation_compression import _extract_steer_text_from_message
     from agent.skill_commands import describe_skill_invocation, skills_loaded_by_scaffold
+    if isinstance(content, str) and content.lstrip().startswith("[OUT-OF-BAND"):
+        return _extract_steer_text_from_message({"role": "user", "content": content}) or content
     return (describe_skill_invocation(content, separator=" ") or "") if skills_loaded_by_scaffold(content) else content
 
 
