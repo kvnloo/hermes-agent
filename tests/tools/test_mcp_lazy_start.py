@@ -65,6 +65,26 @@ def _lazy_config():
 
 
 class TestLazyMcpRegistration:
+    def test_cached_lazy_discovery_skips_sdk_import(self):
+        """A cached stdio tool is advertised without paying the SDK's cold import cost."""
+        from tools.registry import registry
+        from tools import mcp_tool_config as _mcp_config
+
+        with patch("tools.mcp_tool._MCP_AVAILABLE", True), \
+             patch.object(mcp, "_ensure_mcp_sdk", side_effect=AssertionError("SDK imported during cache load")), \
+             patch.object(_mcp_config, "_load_mcp_config", return_value=_lazy_config()), \
+             patch.object(_mcp_loop, "_try_acquire_mcp_discovery_lock", return_value=mcp._LOCK_UNAVAILABLE), \
+             patch("tools.mcp_schema_cache.config_fingerprint", return_value="abc"), \
+             patch("tools.mcp_schema_cache.get_cached_entry", return_value=_fake_cache_entry()), \
+             patch.object(_mcp_loop, "_run_on_mcp_loop") as mock_run:
+            try:
+                names = _mcp_discovery.discover_mcp_tools()
+                assert "mcp_playwright_browser_navigate" in names
+                assert mcp._lazy_server_configs["playwright"]["lazy"] is True
+                mock_run.assert_not_called()
+            finally:
+                registry.deregister("mcp_playwright_browser_navigate")
+
     def test_registers_from_cache_without_connect(self):
         config = _lazy_config()
         with patch("tools.mcp_tool._MCP_AVAILABLE", True), \
@@ -88,6 +108,7 @@ class TestLazyMcpRegistration:
     def test_cache_miss_falls_back_to_eager_connect(self):
         config = _lazy_config()
         with patch("tools.mcp_tool._MCP_AVAILABLE", True), \
+             patch.object(mcp, "_ensure_mcp_sdk", return_value=True) as mock_sdk, \
              patch("tools.mcp_schema_cache.config_fingerprint", return_value="abc"), \
              patch("tools.mcp_schema_cache.get_cached_entry", return_value=None), \
              patch("tools.mcp_tool_loop._ensure_mcp_loop"), \
@@ -96,6 +117,7 @@ class TestLazyMcpRegistration:
             _mcp_discovery.register_mcp_servers(config)
 
         mock_run.assert_called_once()
+        mock_sdk.assert_called_once()
 
     def test_non_lazy_server_never_touches_cache(self):
         config = {"playwright": {"command": "npx", "args": []}}
