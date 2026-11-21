@@ -261,6 +261,40 @@ def test_occupied_port_moves_to_the_next_in_the_range(
     assert result is not None
     assert result[1] in private_ports[1:]
 
+def test_sequential_profile_logins_keep_distinct_cimd_redirects(
+    tmp_path, monkeypatch, private_ports
+):
+    """Joelmillr's #148040: a completed login's redirect stays owned across processes."""
+    import tools.mcp_oauth as mod
+
+    root = tmp_path / ".hermes"
+    named_home = root / "profiles" / "bot-calendar"
+    named_home.mkdir(parents=True)
+    monkeypatch.setenv("HERMES_HOME", str(root))
+    default_storage = HermesTokenStorage("cloudflare")
+    default_cfg: dict = {}
+    default_port = _configure_callback_port(default_cfg, default_storage)
+    assert default_cfg["_cimd_url"] == _CIMD_CLIENT_METADATA_URL
+
+    client_file = default_storage._client_info_path()
+    client_file.parent.mkdir(parents=True, exist_ok=True)
+    client_file.write_text(json.dumps({
+        "client_id": _CIMD_CLIENT_METADATA_URL,
+        "redirect_uris": [f"http://127.0.0.1:{default_port}/callback"],
+    }))
+
+    # Finishing login closes the listener; a named-profile login then runs
+    # in a fresh process with no inherited in-memory port reservations.
+    mod._reserved_sockets.pop(default_port).close()
+    mod._assigned_cimd_ports.clear()
+    monkeypatch.setenv("HERMES_HOME", str(named_home))
+    named_cfg: dict = {}
+    named_port = _configure_callback_port(named_cfg, HermesTokenStorage("cloudflare"))
+    assert named_cfg["_cimd_url"] == _CIMD_CLIENT_METADATA_URL
+    assert named_port in private_ports
+    assert named_port != default_port
+
+
 def test_self_hosted_document_url_overrides_the_default(
     tmp_path, monkeypatch, private_ports
 ):
