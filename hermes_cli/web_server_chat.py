@@ -214,6 +214,7 @@ def _ws_auth_reason(ws: WebSocket, *, allow_internal: bool = False,
 
     Loopback / ``--insecure``: legacy ``?token=`` (constant-time compared); on the
     gateway's Webapp a one-use socket ticket first (``/api/webapp/socket-ticket``).
+    The standalone gateway WS also accepts a session-token-bound one-use ticket.
     Gated: ``?ticket=`` (browser-minted, single-use, 30s TTL) or ``?internal=``
     (process-lifetime, multi-use, only for server-spawned WS clients so the PTY
     child can reconnect; never injected into the SPA; on the gateway's Webapp it
@@ -239,7 +240,7 @@ def _ws_auth_reason(ws: WebSocket, *, allow_internal: bool = False,
     from hermes_cli.dashboard_auth.native_http import HEADER, authenticate_native_ws, redeem_audio_ws
     from hermes_cli.web_server import _SESSION_TOKEN, app
     from hermes_cli.browser_credential import generation_of
-    from hermes_cli.web_session_sockets import OWN_TICKET_SOCKETS, track
+    from hermes_cli.web_session_sockets import GATEWAY_SOCKET, OWN_TICKET_SOCKETS, track
     auth_required = bool(getattr(app.state, "auth_required", False))
     # The Webapp's own rules (socket tickets on the loopback gate, the server's credential only where
     # its spawned clients dial) apply on its listener; the standalone dashboard and serve keep main's.
@@ -349,9 +350,11 @@ def _ws_auth_reason(ws: WebSocket, *, allow_internal: bool = False,
 
         return "no_credential", "none"
 
-    # Loopback: on the Webapp a one-use ticket ``/api/webapp/socket-ticket`` minted for the
-    # session-token owner (its sockets on this same origin), else the legacy ``?token=``.
-    consumed = _consume_ws_ticket(ws, _ignore_rejection, socket) if webapp else None
+    # Loopback: Webapp tickets, or a token-bound ticket for the standalone gateway
+    # socket. Unnamed/other sockets retain the legacy ``?token=`` requirement.
+    consumed = (_consume_ws_ticket(ws, _ignore_rejection, socket,
+                                   session_token_only=not webapp)
+                if webapp or socket == GATEWAY_SOCKET else None)
     if consumed is not None:
         return consumed
     token = ws.query_params.get("token", "")
@@ -375,7 +378,8 @@ def _audit_ws_rejection(ws: WebSocket, reason: str) -> None:
 
 
 def _consume_ws_ticket(ws: WebSocket, reject, socket: Optional[str] = None, *,
-                       auth_required: bool = False) -> Optional[tuple[Optional[str], str]]:
+                       auth_required: bool = False,
+                       session_token_only: bool = False) -> Optional[tuple[Optional[str], str]]:
     """A one-use ticket offered as the ``hermes-gateway-ticket.`` subprotocol or ``?ticket=``:
     ``(reason, credential)`` once judged, or None when the upgrade presents none. An accepted ticket
     stamps the server-minted identity onto the socket; the client never supplies it through RPC
@@ -393,6 +397,11 @@ def _consume_ws_ticket(ws: WebSocket, reject, socket: Optional[str] = None, *,
         info = consume_ticket(ticket)
     except TicketInvalid as exc:
         reject(str(exc))
+        return "ticket_invalid", "ticket"
+    if session_token_only and (
+        info.get("provider") != "session-token" or not info.get("session_token")
+    ):
+        reject("ticket not minted under the session token")
         return "ticket_invalid", "ticket"
     refusal = ticket_refusal(info, socket, auth_required=auth_required)
     if refusal is not None:
