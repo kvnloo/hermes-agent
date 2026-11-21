@@ -8,7 +8,6 @@ pass ``allow_network=False`` and never do I/O. A corrupt/empty disk cache is
 quarantined, never served as ``{}``. ``models_dev.url`` in config.yaml = mirror."""
 
 import contextlib
-import json
 import logging
 import re
 import threading
@@ -17,6 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from json_disk_memo import clear_json_disk_memo, read_json_disk_memo
 from utils import atomic_json_write, atomic_write_text
 
 from hermes_constants import openrouter_variant_base
@@ -293,8 +293,7 @@ def _load_disk_cache() -> dict[str, Any]:
     try:
         cache_path = _get_cache_path()
         if cache_path.exists():
-            with open(cache_path, encoding="utf-8-sig") as f:
-                data = json.load(f)
+            data = read_json_disk_memo(cache_path)
             if _validate_registry(data):
                 return data
             logger.warning("models.dev disk cache is corrupt or empty; quarantining (will refetch from network)")
@@ -314,6 +313,7 @@ def _quarantine_corrupt_cache(cache_path: Path) -> None:
         cache_path.rename(cache_path.with_suffix(".json.corrupt"))
     except Exception as e:
         logger.debug("Could not quarantine corrupt models.dev cache: %s", e)
+    clear_json_disk_memo()  # An invalid but parseable object may have been memoized.
     _clear_etag()
 
 
@@ -329,7 +329,11 @@ def _disk_cache_age_seconds() -> Optional[float]:
 
 def _save_disk_cache(data: dict[str, Any], etag: str = "") -> None:
     """Save the registry atomically, plus the ETag sidecar when non-empty."""
-    _quietly("save models.dev disk cache", lambda: atomic_json_write(_get_cache_path(), data, indent=None, separators=(",", ":")))
+    def write() -> None:
+        atomic_json_write(_get_cache_path(), data, indent=None, separators=(",", ":"))
+        clear_json_disk_memo()
+
+    _quietly("save models.dev disk cache", write)
     if etag:
         _save_etag(etag)
 
