@@ -788,6 +788,173 @@ class TestSkillsHubScanEndpoint:
         assert body["findings"][0]["file"] == "SKILL.md"
 
 
+class TestSkillsHubSearchEndpoint:
+    """``GET /api/skills/hub/search`` merges sources in parallel and must
+    return the top-`limit` results by TRUST RANK, mirroring
+    ``tools.skills_hub_search.unified_search``. The web router used to slice by
+    source-completion order (``as_completed``), truncating built-in / trusted
+    entries behind a flood of fast community mirrors — see
+    ``test_unified_search_trust_rank_survives_limit_cut`` for the model-layer
+    guard this endpoint must also honor.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, _isolate_hermes_home):
+        self.client, _ = _client()
+
+    # The search path reads .trust_level / .identifier and passes objects
+    # through _skill_meta_to_payload, so a faithful SkillMeta (with every
+    # payload field) is what the real parallel_search_sources returns.
+    @staticmethod
+    def _meta(name, identifier, trust_level, source="skills.sh"):
+        from tools.skills_hub_search import SkillMeta
+
+        return SkillMeta(
+            name=name,
+            description=name,
+            source=source,
+            identifier=identifier,
+            trust_level=trust_level,
+            repo="owner/repo",
+            tags=["a"],
+        )
+
+    def _patch_search(self, monkeypatch, results, source_counts=None, timed_out=None):
+        """Patch the producer seam the endpoint reads at call time, matching
+        how test_unified_search_trust_rank_survives_limit_cut patches
+        ``tools.skills_hub_search.parallel_search_sources``.
+        ``create_source_router`` is stubbed to [] (unused once
+        parallel_search_sources is patched)."""
+        monkeypatch.setattr(
+            "tools.skills_hub_search.create_source_router", list
+        )
+        monkeypatch.setattr(
+            "tools.skills_hub_search.parallel_search_sources",
+            lambda *a, **k: (list(results), dict(source_counts or {}), list(timed_out or [])),
+        )
+        # Keep the installed-provenance map out of the filesystem so the
+        # endpoint's installed-marker pass is deterministic and hermetic.
+        monkeypatch.setattr(
+            "hermes_cli.web_routers.skills._installed_hub_identifiers",
+            lambda profile=None: {},
+        )
+
+    def test_builtin_survives_community_flood_at_limit(self, monkeypatch):
+        # Regression guard for the trust-rank sort before the limit cut,
+        # mirroring test_unified_search_trust_rank_survives_limit_cut for the
+        # web endpoint. 20 community results flood the head of the merged
+        # list (skills.sh completing first via as_completed); 1 builtin lands
+        # at the tail. limit=10 would cut the builtin in completion order —
+        # the trust-rank sort must hoist it to position 0.
+        community = [
+            self._meta(f"s{i}", f"skills-sh/x/s{i}", "community")
+            for i in range(20)
+        ]
+        official = [self._meta("s-official", "official/cat/s-official", "builtin", "official")]
+        self._patch_search(
+            monkeypatch, community + official, source_counts={"skills-sh": 20, "official": 1}
+        )
+
+        r = self.client.get("/api/skills/hub/search?q=s&limit=10")
+        assert r.status_code == 200
+        body = r.json()
+        results = body["results"]
+        assert len(results) == 10
+        assert results[0]["identifier"] == "official/cat/s-official"
+        assert results[0]["trust_level"] == "builtin"
+        # Stable sort preserves community insertion order within the tier.
+        assert results[1]["identifier"] == "skills-sh/x/s0"
+        assert results[1]["trust_level"] == "community"
+
+    def test_trusted_survives_community_flood_at_limit(self, monkeypatch):
+        # All three trust tiers land in completion order community -> trusted ->
+        # builtin; the trust-rank sort must keep all three above the limit cut
+        # and preserve insertion order within each tier.
+        community = [
+            self._meta(f"c{i}", f"skills-sh/x/c{i}", "community")
+            for i in range(12)
+        ]
+        trusted = [
+            self._meta(f"t{i}", f"trusted/x/t{i}", "trusted", "trusted")
+            for i in range(2)
+        ]
+        builtin = [self._meta("b0", "official/cat/b0", "builtin", "official")]
+        self._patch_search(
+            monkeypatch, community + trusted + builtin,
+            source_counts={"skills-sh": 12, "trusted": 2, "official": 1},
+        )
+
+        r = self.client.get("/api/skills/hub/search?q=s&limit=10")
+        assert r.status_code == 200
+        body = r.json()
+        results = body["results"]
+        assert len(results) == 10
+        # Builtin tier first, then trusted, then community — all three survive.
+        assert [x["trust_level"] for x in results] == (
+            ["builtin"] + ["trusted"] * 2 + ["community"] * 7
+        )
+        assert results[0]["identifier"] == "official/cat/b0"
+        # Stable within-tier order preserved.
+        assert results[1]["identifier"] == "trusted/x/t0"
+        assert results[2]["identifier"] == "trusted/x/t1"
+        assert results[3]["identifier"] == "skills-sh/x/c0"
+
+    def test_duplicate_identifier_keeps_highest_trust_before_limit(self, monkeypatch):
+        # A community copy completes first with the same identifier as a later
+        # builtin copy; dedupe must keep the highest-trust payload (builtin),
+        # and that survivor must rank above the limit cut.
+        community_dup = [self._meta("dup", "shared/s", "community")]
+        community_flood = [
+            self._meta(f"f{i}", f"skills-sh/x/f{i}", "community")
+            for i in range(15)
+        ]
+        builtin_dup = [self._meta("dup", "shared/s", "builtin", "official")]
+        self._patch_search(
+            monkeypatch, community_dup + community_flood + builtin_dup,
+            source_counts={"skills-sh": 16, "official": 1},
+        )
+
+        r = self.client.get("/api/skills/hub/search?q=s&limit=10")
+        assert r.status_code == 200
+        body = r.json()
+        results = body["results"]
+        assert len(results) == 10
+        # The single deduped "shared/s" entry is the builtin copy, hoisted to top.
+        dup = [x for x in results if x["identifier"] == "shared/s"]
+        assert len(dup) == 1
+        assert dup[0]["trust_level"] == "builtin"
+        assert results[0]["identifier"] == "shared/s"
+        assert results[0]["trust_level"] == "builtin"
+
+    def test_search_metadata_unchanged_after_trust_ranking(self, monkeypatch):
+        # The ranking/reorder must not alter source_counts, timed_out or the
+        # installed-marker map returned alongside results.
+        community = [
+            self._meta(f"s{i}", f"skills-sh/x/s{i}", "community")
+            for i in range(5)
+        ]
+        builtin = [self._meta("s-official", "official/cat/s-official", "builtin", "official")]
+        self._patch_search(
+            monkeypatch, community + builtin,
+            source_counts={"skills-sh": 5, "official": 1},
+            timed_out=["skills.sh"],
+        )
+        # Override the hermetic installed stub to a real value so pass-through
+        # is observable.
+        monkeypatch.setattr(
+            "hermes_cli.web_routers.skills._installed_hub_identifiers",
+            lambda profile=None: {"official/cat/s-official": "1.0.0"},
+        )
+
+        r = self.client.get("/api/skills/hub/search?q=s&limit=10")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["source_counts"] == {"skills-sh": 5, "official": 1}
+        assert body["timed_out"] == ["skills.sh"]
+        assert body["installed"] == {"official/cat/s-official": "1.0.0"}
+        assert body["results"][0]["identifier"] == "official/cat/s-official"
+
+
 class TestUpdateCheckEndpoint:
     """``GET /api/hermes/update/check`` reports availability without applying.
 
