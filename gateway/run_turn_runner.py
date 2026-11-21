@@ -1372,6 +1372,14 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
         agent, reused_cached_agent = self._resolve_turn_agent(
             turn_route, platform_key, combined_ephemeral, max_iterations, reasoning_config, pr,
         )
+        from gateway.session_api_turn import api_runtime_locked
+        api_lock = api_runtime_locked()
+        if api_lock is not None:
+            # Compare the serving agent with the resolved provider, not its named request alias.
+            agent._hermes_api_runtime = {
+                "provider": runtime_kwargs.get("provider") or getattr(agent, "provider", "") or "",
+                "model": getattr(agent, "model", None) or model,
+                "route_source": api_lock["settings"].get("route_source") or "global"}
         if pending_fallback_notice:
             # Reuse the in-agent one-shot notice so the pre-agent provider switch is user-visible too.
             agent._pending_fallback_notice = pending_fallback_notice
