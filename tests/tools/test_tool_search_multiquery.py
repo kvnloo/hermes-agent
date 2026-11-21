@@ -513,6 +513,50 @@ class TestBatchedDescribe:
         assert "mq_linear_create_issue" in result["tools"]
 
 
+    def test_mcp_schema_refs_are_safe_in_describe_results(self):
+        """Gemini proxies must not parse described MCP refs as functionResponse parts."""
+        from tools.mcp_tool_schema import _normalize_mcp_input_schema
+        from tools.registry import registry
+        from tools.tool_search import ToolSearchConfig, dispatch_tool_describe
+
+        # FastMCP/Pydantic may supply draft-07 definitions. Normalization must
+        # retain a valid callable $ref while the describe result uses _ref.
+        schema = _normalize_mcp_input_schema({
+            "type": "object",
+            "definitions": {"TerminalOpenSource": {"type": "string"}},
+            "properties": {"source": {"$ref": "#/definitions/TerminalOpenSource"}},
+            "required": ["source"],
+        })
+        tool_def = _td("mcp__oxide__terminals_open", "Open a terminal")
+        tool_def["function"]["parameters"] = schema
+        registry.register(
+            name="mcp__oxide__terminals_open",
+            handler=lambda args, **kw: json.dumps({"ok": True}),
+            schema=tool_def,
+            toolset="mcp-oxide",
+        )
+        plain = _register(
+            "mcp__oxide__ping", "mcp-oxide",
+            'Literal "$ref": in text is not a schema key',
+        )
+
+        raw = dispatch_tool_describe(
+            {"names": ["mcp__oxide__terminals_open", "mcp__oxide__ping"]},
+            current_tool_defs=[tool_def, plain],
+            config=ToolSearchConfig.from_raw({}),
+        )
+        tools = json.loads(raw)["tools"]
+        described = tools["mcp__oxide__terminals_open"]["parameters"]
+
+        assert '"$ref":' not in raw  # red on base: Gemini rejects this parsed key
+        assert described["properties"]["source"]["_ref"] == "#/$defs/TerminalOpenSource"
+        assert described["$defs"]["TerminalOpenSource"]["type"] == "string"
+        assert tools["mcp__oxide__ping"]["parameters"] == plain["function"]["parameters"]
+        assert tools["mcp__oxide__ping"]["description"] == plain["function"]["description"]
+        # Do not corrupt tool declarations that providers and local validators use.
+        assert schema["properties"]["source"]["$ref"] == "#/$defs/TerminalOpenSource"
+
+
 # ---------------------------------------------------------------------------
 # Config + bridge schema
 # ---------------------------------------------------------------------------
