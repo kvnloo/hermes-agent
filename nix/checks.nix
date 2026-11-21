@@ -766,6 +766,7 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
             names = lib.attrNames units;
             execOf = name: units.${name}.serviceConfig.ExecStart;
             activation = cfg.system.activationScripts."hermes-agent-setup".text;
+            tmpfiles = cfg.systemd.tmpfiles.rules;
 
             failures =
               lib.optional (names != [
@@ -783,7 +784,13 @@ json.dump(sorted(leaf_paths(DEFAULT_CONFIG)), sys.stdout, indent=2)
               ) "gateway and backend must share one HERMES_HOME"
               ++ lib.optional (
                 !lib.hasInfix "/var/lib/hermes/.hermes/SOUL.md" activation
-              ) "hermesHomeFiles must install into HERMES_HOME";
+              ) "hermesHomeFiles must install into HERMES_HOME"
+              ++ lib.optional (
+                !(lib.elem "d /var/lib/hermes/.hermes                  2750 hermes hermes - -" tmpfiles)
+              ) "tmpfiles must provision HERMES_HOME without group write"
+              ++ lib.optional (
+                !lib.hasInfix "chmod 2750 /var/lib/hermes/.hermes" activation
+              ) "activation must restore HERMES_HOME without group write";
 
             # You cannot use container mode and the backend together. The
             # module says so with an assertion. Without the assertion it
